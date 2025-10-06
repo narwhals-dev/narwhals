@@ -133,7 +133,7 @@ class AggExpr:
 
             cols = list(names)
             native = compliant.native
-            keys, kwargs = group_by._keys, group_by._kwargs
+            keys, kwargs = group_by._keys, group_by._group_by_kwargs
 
             # Implementation based on the following suggestion:
             # https://github.com/pandas-dev/pandas/issues/19254#issuecomment-778661578
@@ -224,7 +224,7 @@ class PandasLikeGroupBy(
     _output_key_names: list[str]
     """Stores the **original** version of group keys."""
 
-    _kwargs: Mapping[str, bool]
+    _group_by_kwargs: Mapping[str, bool]
     """Stores keyword arguments for `DataFrame.groupby` other than `by`."""
 
     @property
@@ -252,13 +252,15 @@ class PandasLikeGroupBy(
         if set(native.index.names).intersection(self.compliant.columns):
             native = native.reset_index(drop=True)
 
-        self._kwargs = {
+        self._group_by_kwargs = {
             "sort": False,
             "as_index": True,
             "dropna": drop_null_keys,
             "observed": True,
         }
-        self._grouped: NativeGroupBy = native.groupby(self._keys.copy(), **self._kwargs)
+        self._grouped: NativeGroupBy = native.groupby(
+            self._keys.copy(), **self._group_by_kwargs
+        )
 
     def agg(self, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:
         all_aggs_are_simple = True

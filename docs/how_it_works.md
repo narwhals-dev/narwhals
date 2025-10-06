@@ -293,7 +293,7 @@ This tells us a few things:
 - We're performing an aggregation.
 - The name of the function is `'std'`. This will be looked up in the compliant object.
 - It takes keyword arguments `ddof=1`.
-- We'll look at the others later.
+- We'll look at `exprs`, `str_as_lit`, and `allow_multi_output` later.
 
 In order for the evaluation to succeed, then `PandasLikeExpr` must have a `std` method defined
 on it, which takes a `ddof` argument. And this is what the `CompliantExpr` Protocol is for: so
@@ -312,7 +312,7 @@ The `str_as_lit` parameter tells us whether string literals should be interprete
 or columns (e.g. `col('foo')`). Finally `allow_multi_output` tells us whether multi-outuput expressions
 (more on this in the next section) are allowed to appear in `exprs`.
 
-Node that the expression in `exprs` also has its own nodes:
+Note that the expression in `exprs` also has its own nodes:
 
 ```python exec="1" result="python" session="pandas_impl" source="above"
 print(expr._nodes[3].exprs[0]._nodes)
@@ -487,8 +487,8 @@ end up with
 nw.col("a").sum().over("c") + nw.col("b").sum().over("c")
 ```
 
-In general, query optimisation is out-of-scope for Narwhals. We consider this
-expression rewrite acceptable because:
-
-- It's simple.
-- It allows us to evaluate operations which otherwise wouldn't be allowed for certain backends.
+!!! info
+    In general, query optimisation is out-of-scope for Narwhals. We consider this
+    expression rewrite acceptable because:
+      - It's simple.
+      - It allows us to evaluate operations which otherwise wouldn't be allowed for certain backends.
