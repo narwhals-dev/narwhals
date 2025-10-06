@@ -25,7 +25,6 @@ if TYPE_CHECKING:
         GroupByResolver,
     )
     from narwhals._plan.compliant.namespace import EagerNamespace
-    from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._plan.dataframe import BaseFrame, DataFrame
     from narwhals._plan.expressions import NamedIR
     from narwhals._plan.options import SortMultipleOptions
@@ -117,7 +116,7 @@ class CompliantDataFrame(
         """
         return self._group_by.from_resolver(self, resolver)
 
-    def filter(self, predicate: ir.ExprIR | CompliantSeries) -> Self: ...
+    def filter(self, predicate: ir.ExprIR | SeriesT) -> Self: ...
     def join(
         self,
         other: Self,

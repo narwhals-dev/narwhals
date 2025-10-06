@@ -1,6 +1,15 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, get_args, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    ClassVar,
+    Generic,
+    Literal,
+    cast,
+    get_args,
+    overload,
+)
 
 from narwhals._plan import _parse
 from narwhals._plan._expansion import prepare_projection
@@ -73,7 +82,7 @@ class BaseFrame(Generic[NativeFrameT_co]):
     def filter(
         self, *predicates: OneOrIterable[IntoExprColumn], **constraints: Any
     ) -> Self:
-        msg = "BaseFrame.filter"
+        msg = "`BaseFrame.filter` needs to use a version of `_parse.parse_predicates_constraints_into_expr_ir`"
         raise NotImplementedError(msg)
         predicate = NotImplementedError
         return self._with_compliant(self._compliant.filter(predicate))
@@ -218,19 +227,24 @@ class DataFrame(
         )
         return self._with_compliant(result)
 
+    @overload
+    def filter(self, mask: list[bool], /) -> Self: ...
+    @overload
+    def filter(
+        self, *predicates: OneOrIterable[IntoExprColumn], **constraints: Any
+    ) -> Self: ...
     def filter(
         self, *predicates: OneOrIterable[IntoExprColumn] | list[bool], **constraints: Any
     ) -> Self:
-        msg = "DataFrame.filter"
-        raise NotImplementedError(msg)
-        if len(predicates) == 1 and is_list_of(predicates[0], bool):
+        if len(predicates) == 1 and is_list_of(predicates[0], bool) and not constraints:
             series = self._series.from_iterable(
                 predicates[0],
                 dtype=self.version.dtypes.Boolean(),
                 backend=self.implementation,
             )._compliant
             return self._with_compliant(self._compliant.filter(series))
-        return super().filter(*predicates, **constraints)
+        non_mask = cast("tuple[OneOrIterable[IntoExprColumn],...]", predicates)
+        return super().filter(*non_mask, **constraints)
 
 
 def _is_join_strategy(obj: Any) -> TypeIs[JoinStrategy]:
