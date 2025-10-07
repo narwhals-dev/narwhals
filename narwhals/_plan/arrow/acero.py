@@ -28,6 +28,7 @@ from pyarrow.acero import Declaration as Decl
 from narwhals._plan.common import ensure_list_str, flatten_hash_safe, temp
 from narwhals._plan.options import SortMultipleOptions
 from narwhals._plan.typing import OneOrSeq
+from narwhals._utils import check_column_names_are_unique
 from narwhals.typing import JoinStrategy, SingleColSelector
 
 if TYPE_CHECKING:
@@ -281,10 +282,6 @@ def join(
     *,
     coalesce_keys: bool = True,
 ) -> Decl:
-    """Heavily based on [`pyarrow.acero._perform_join`].
-
-    [`pyarrow.acero._perform_join`]: https://github.com/apache/arrow/blob/f7320c9a40082639f9e0cf8b3075286e3fc6c0b9/python/pyarrow/acero.py#L82-L260
-    """
     opts = _join_options(
         how,
         left_on,
@@ -404,7 +401,23 @@ def join_tables(
     suffix: str = "_right",
     *,
     coalesce_keys: bool = True,
+    ensure_unique_column_names: bool = True,
 ) -> pa.Table:
+    """Join two tables.
+
+    Based on:
+    - [`pyarrow.Table.join`]
+    - [`pyarrow.acero._perform_join`]
+    - [`narwhals._arrow.dataframe.DataFrame.join`]
+
+    Note:
+        `ensure_unique_column_names` is defined here, as the output names
+        are determined outside of `narwhals`.
+
+    [`pyarrow.Table.join`]: https://github.com/apache/arrow/blob/f7320c9a40082639f9e0cf8b3075286e3fc6c0b9/python/pyarrow/table.pxi#L5764-L5772
+    [`pyarrow.acero._perform_join`]: https://github.com/apache/arrow/blob/f7320c9a40082639f9e0cf8b3075286e3fc6c0b9/python/pyarrow/acero.py#L82-L260
+    [`narwhals._arrow.dataframe.DataFrame.join`]: https://github.com/narwhals-dev/narwhals/blob/f4787d3f9e027306cb1786db7b471f63b393b8d1/narwhals/_arrow/dataframe.py#L393-L433
+    """
     if how == "cross":
         return _join_cross_tables(left, right, suffix)
     join_type = _HOW_JOIN[how]
@@ -413,7 +426,10 @@ def join_tables(
     decl = join(
         left, right, join_type, left_on, right_on, suffix, coalesce_keys=coalesce_keys
     )
-    return collect(decl)
+    result = collect(decl)
+    if ensure_unique_column_names:
+        check_column_names_are_unique(result.column_names)
+    return result
 
 
 # TODO @dangotbanned: Very rough start to get tests passing

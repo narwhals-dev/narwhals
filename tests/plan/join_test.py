@@ -29,15 +29,6 @@ class Keywords(TypedDict, total=False):
     suffix: str
 
 
-XFAIL_DUPLICATE_COLUMN_NAMES = pytest.mark.xfail(
-    reason=(
-        "Did not raise on duplicate column names.\n"
-        "Haven't added validation yet:\n"
-        "https://github.com/narwhals-dev/narwhals/blob/f4787d3f9e027306cb1786db7b471f63b393b8d1/narwhals/_arrow/dataframe.py#L79-L93"
-    )
-)
-
-
 @pytest.fixture
 def data_inner() -> Data:
     return {"a": [1, 3, 2], "b": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0], "idx": [0, 1, 2]}
@@ -106,7 +97,6 @@ def test_join_full(
     assert_equal_data(result, expected)
 
 
-@XFAIL_DUPLICATE_COLUMN_NAMES
 def test_join_full_duplicate() -> None:
     df1 = {"foo": [1, 2, 3], "val1": [1, 2, 3]}
     df2 = {"foo": [1, 2, 3], "foo_right": [1, 2, 3]}
@@ -117,7 +107,6 @@ def test_join_full_duplicate() -> None:
         df_left.join(df_right, "foo", how="full")
 
 
-@XFAIL_DUPLICATE_COLUMN_NAMES
 def test_join_duplicate_column_names() -> None:
     data = {"a": [1, 2, 3, 4, 5], "b": [6, 6, 6, 6, 6]}
     df = dataframe(data)
