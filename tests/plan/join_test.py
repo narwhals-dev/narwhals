@@ -279,7 +279,7 @@ def test_join_filter(
     how: Literal["anti", "semi"],
     expected: Data,
 ) -> None:
-    # NOTE: "anti" and "semi" should be the inverse of eachother
+    # NOTE: "anti" and "semi" should be the inverse of each other
     df = dataframe({"a": [1, 3, 2], "b": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]})
     other = df.filter(predicate if how == "semi" else ~predicate)
     result = df.join(other, on, how=how).sort(on)
