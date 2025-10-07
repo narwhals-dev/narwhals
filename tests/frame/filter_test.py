@@ -92,3 +92,33 @@ def test_filter_missing_column(
     else:
         with pytest.raises(ColumnNotFoundError, match=msg):
             df.filter(c=5)
+
+
+def test_issue_3182_valid_filters(constructor_eager: ConstructorEager) -> None:
+    data = {"a": range(5), "b": [2, 2, 4, 2, 4]}
+
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    result = df.filter([True, False, True, True, False], b=2)
+    expected = {"a": [0, 3], "b": [2, 2]}
+    assert_equal_data(result, expected)
+
+
+def test_issue_3182_invalid_constraints(constructor_eager: ConstructorEager) -> None:
+    data = {"a": range(5), "b": [2, 2, 4, 2, 4]}
+
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    msg = (
+        r"The following columns were not found: \[.*\]"
+        r"\n\nHint: Did you mean one of these columns: \['a', 'b'\]?"
+    )
+    with pytest.raises(ColumnNotFoundError, match=msg):
+        df.filter([True, False, True, True, False], c=1, d=2, e=3, f=4, g=5)
+
+
+def test_multi_boolean_masks(constructor_eager: ConstructorEager) -> None:
+    data = {"a": range(4), "b": [2, 4, 4, 2]}
+
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    result = df.filter([True, False, True, False], [True, True, False, False])
+    expected = {"a": [0], "b": [2]}
+    assert_equal_data(result, expected)

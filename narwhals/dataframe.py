@@ -244,22 +244,25 @@ class BaseFrame(Generic[_FrameT]):
     def filter(
         self, *predicates: IntoExpr | Iterable[IntoExpr] | list[bool], **constraints: Any
     ) -> Self:
-        if len(predicates) == 1 and is_list_of(predicates[0], bool):
-            predicate = predicates[0]
-        else:
-            from narwhals.functions import col
+        from narwhals.functions import col
 
-            flat_predicates = flatten(predicates)
-            check_expressions_preserve_length(*flat_predicates, function_name="filter")
-            plx = self.__narwhals_namespace__()
-            compliant_predicates, _kinds = self._flatten_and_extract(*flat_predicates)
-            compliant_constraints = (
-                (col(name) == v)._to_compliant_expr(plx)
-                for name, v in constraints.items()
-            )
-            predicate = plx.all_horizontal(
-                *chain(compliant_predicates, compliant_constraints), ignore_nulls=False
-            )
+        plx = self.__narwhals_namespace__()
+        parsed_predicates = tuple(
+            plx._series.from_iterable(pred, context=plx).to_narwhals()
+            if is_list_of(pred, bool)
+            else pred
+            for pred in predicates
+        )
+        flat_predicates = flatten(parsed_predicates)
+        check_expressions_preserve_length(*flat_predicates, function_name="filter")
+        plx = self.__narwhals_namespace__()
+        compliant_predicates, _kinds = self._flatten_and_extract(*flat_predicates)
+        compliant_constraints = (
+            (col(name) == v)._to_compliant_expr(plx) for name, v in constraints.items()
+        )
+        predicate = plx.all_horizontal(
+            *chain(compliant_predicates, compliant_constraints), ignore_nulls=False
+        )
         return self._with_compliant(self._compliant_frame.filter(predicate))
 
     def sort(
@@ -2924,9 +2927,7 @@ class LazyFrame(BaseFrame[LazyFrameT]):
             └───────┴───────┴─────────┘
             <BLANKLINE>
         """
-        if (
-            len(predicates) == 1 and is_list_of(predicates[0], bool) and not constraints
-        ):  # pragma: no cover
+        if any(is_list_of(pred, bool) for pred in predicates):  # pragma: no cover
             msg = "`LazyFrame.filter` is not supported with Python boolean masks - use expressions instead."
             raise TypeError(msg)
 
