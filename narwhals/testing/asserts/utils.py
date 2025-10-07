@@ -7,6 +7,9 @@ from narwhals.dependencies import is_narwhals_series
 if TYPE_CHECKING:
     from typing_extensions import Never, TypeAlias
 
+# NOTE: This alias is created to facilitate autocomplete. Feel free to extend it as
+# you please when adding a new feature.
+# See: https://github.com/narwhals-dev/narwhals/pull/2983#discussion_r2337548736
 SeriesDetail: TypeAlias = Literal[
     "implementation mismatch",
     "length mismatch",
