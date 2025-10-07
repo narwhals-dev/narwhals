@@ -108,9 +108,14 @@ def test_issue_3182_invalid_constraints(constructor_eager: ConstructorEager) -> 
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
     msg = (
-        r"The following columns were not found: \[.*\]"
-        r"\n\nHint: Did you mean one of these columns: \['a', 'b'\]?"
+        r"unable to find column \"c\"; valid columns: \[\"a\", \"b\"\]"
+        if "polars" in str(constructor_eager)
+        else (
+            r"The following columns were not found: \[.*\]"
+            r"\n\nHint: Did you mean one of these columns: \['a', 'b'\]?"
+        )
     )
+
     with pytest.raises(ColumnNotFoundError, match=msg):
         df.filter([True, False, True, True, False], c=1, d=2, e=3, f=4, g=5)
 
