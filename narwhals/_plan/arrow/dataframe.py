@@ -29,9 +29,9 @@ if TYPE_CHECKING:
     from narwhals._plan.arrow.namespace import ArrowNamespace
     from narwhals._plan.expressions import ExprIR, NamedIR
     from narwhals._plan.options import SortMultipleOptions
-    from narwhals._plan.typing import Seq
+    from narwhals._plan.typing import NonCrossJoinStrategy, Seq
     from narwhals.dtypes import DType
-    from narwhals.typing import IntoSchema, JoinStrategy
+    from narwhals.typing import IntoSchema
 
 
 class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
@@ -150,13 +150,17 @@ class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
         self,
         other: Self,
         *,
-        how: JoinStrategy,
-        left_on: Sequence[str] | None,
-        right_on: Sequence[str] | None,
+        how: NonCrossJoinStrategy,
+        left_on: Sequence[str],
+        right_on: Sequence[str],
         suffix: str = "_right",
     ) -> Self:
         left, right = self.native, other.native
         result = acero.join_tables(left, right, how, left_on, right_on, suffix=suffix)
+        return self._with_native(result)
+
+    def join_cross(self, other: Self, *, suffix: str = "_right") -> Self:
+        result = acero.join_cross_tables(self.native, other.native, suffix=suffix)
         return self._with_native(result)
 
     def filter(self, predicate: NamedIR | Series) -> Self:

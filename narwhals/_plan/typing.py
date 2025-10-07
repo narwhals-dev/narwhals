@@ -126,3 +126,4 @@ OneOrIterable: TypeAlias = "T | t.Iterable[T]"
 OneOrSeq: TypeAlias = t.Union[T, Seq[T]]
 DataFrameT = TypeVar("DataFrameT", bound="DataFrame[t.Any, t.Any]")
 Order: TypeAlias = t.Literal["ascending", "descending"]
+NonCrossJoinStrategy: TypeAlias = t.Literal["inner", "left", "full", "semi", "anti"]

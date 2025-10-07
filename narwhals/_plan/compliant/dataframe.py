@@ -9,6 +9,7 @@ from narwhals._plan.typing import (
     NativeDataFrameT,
     NativeFrameT_co,
     NativeSeriesT,
+    NonCrossJoinStrategy,
     OneOrIterable,
 )
 
@@ -32,7 +33,7 @@ if TYPE_CHECKING:
     from narwhals._typing import _EagerAllowedImpl
     from narwhals._utils import Implementation, Version
     from narwhals.dtypes import DType
-    from narwhals.typing import IntoSchema, JoinStrategy
+    from narwhals.typing import IntoSchema
 
 Incomplete: TypeAlias = Any
 
@@ -121,11 +122,12 @@ class CompliantDataFrame(
         self,
         other: Self,
         *,
-        how: JoinStrategy,
-        left_on: Sequence[str] | None,
-        right_on: Sequence[str] | None,
+        how: NonCrossJoinStrategy,
+        left_on: Sequence[str],
+        right_on: Sequence[str],
         suffix: str = "_right",
     ) -> Self: ...
+    def join_cross(self, other: Self, *, suffix: str = "_right") -> Self: ...
     def row(self, index: int) -> tuple[Any, ...]: ...
     @overload
     def to_dict(self, *, as_series: Literal[True]) -> dict[str, SeriesT]: ...

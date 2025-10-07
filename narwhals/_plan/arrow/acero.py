@@ -27,7 +27,7 @@ from pyarrow.acero import Declaration as Decl
 
 from narwhals._plan.common import ensure_list_str, flatten_hash_safe, temp
 from narwhals._plan.options import SortMultipleOptions
-from narwhals._plan.typing import OneOrSeq
+from narwhals._plan.typing import NonCrossJoinStrategy, OneOrSeq
 from narwhals._utils import check_column_names_are_unique
 from narwhals.typing import JoinStrategy, SingleColSelector
 
@@ -139,6 +139,10 @@ def _parse_all_horizontal(predicates: Seq[Expr], constraints: dict[str, Any], /)
     return reduce(operator.and_, chain(predicates, it))
 
 
+def _into_decl(source: IntoDecl, /) -> Decl:
+    return source if not isinstance(source, pa.Table) else table_source(source)
+
+
 def table_source(native: pa.Table, /) -> Decl:
     """Start building a logical plan, using `native` as the source table.
 
@@ -217,11 +221,7 @@ def project(**named_exprs: IntoExpr) -> Decl:
     return _project(names=named_exprs.keys(), exprs=exprs)
 
 
-def _add_column(
-    native: pa.Table, index: int, name: str, values: IntoExpr | ArrowAny
-) -> pa.Table:
-    if isinstance(values, (pa.ChunkedArray, pa.Array)):
-        return native.add_column(index, name, values)
+def _add_column(native: pa.Table, index: int, name: str, values: IntoExpr) -> Decl:
     column = values if _is_expr(values) else lit(values)
     schema = native.schema
     schema_names = schema.names
@@ -235,14 +235,14 @@ def _add_column(
         schema_names.insert(index, name)
         names = schema_names
         exprs = tuple(_parse_into_iter_expr(nm if nm != name else column for nm in names))
-    return collect(table_source(native), _project(exprs, names))
+    return declare(table_source(native), _project(exprs, names))
 
 
-def append_column(native: pa.Table, name: str, values: IntoExpr | ArrowAny) -> pa.Table:
+def append_column(native: pa.Table, name: str, values: IntoExpr) -> Decl:
     return _add_column(native, native.num_columns, name, values)
 
 
-def prepend_column(native: pa.Table, name: str, values: IntoExpr | ArrowAny) -> pa.Table:
+def prepend_column(native: pa.Table, name: str, values: IntoExpr) -> Decl:
     return _add_column(native, 0, name, values)
 
 
@@ -269,33 +269,8 @@ def sort_by(
     ).to_arrow_acero(tuple(flatten_hash_safe((by, more_by))))
 
 
-# TODO @dangotbanned: Add a variant that doesn't depend on 2x tables
-# - `_join_options`: just needs iterables (currently sourced from `schema.names``)
-# -`_hashjoin`: can now accept `Declaration`s in either case
-def join(
-    left: pa.Table,
-    right: pa.Table,
-    how: JoinTypeSubset,
-    left_on: OneOrIterable[str],
-    right_on: OneOrIterable[str],
-    suffix: str = "_right",
-    *,
-    coalesce_keys: bool = True,
-) -> Decl:
-    opts = _join_options(
-        how,
-        left_on,
-        right_on,
-        suffix,
-        left.schema.names,
-        right.schema.names,
-        coalesce_keys=coalesce_keys,
-    )
-    return _hashjoin(left, right, opts)
-
-
 def _join_options(
-    how: JoinTypeSubset,
+    how: NonCrossJoinStrategy,
     left_on: OneOrIterable[str],
     right_on: OneOrIterable[str],
     suffix: str = "_right",
@@ -307,15 +282,15 @@ def _join_options(
     right_on = ensure_list_str(right_on)
     rhs_names: Iterable[str] | None = None
     # polars full join does not coalesce keys
-    if not (coalesce_keys and (how != "full outer")):
+    if not (coalesce_keys and (how != "full")):
         lhs_names = None
     else:
         lhs_names = left_names
-        if how in {"inner", "left outer"}:
+        if how in {"inner", "left"}:
             rhs_names = (name for name in right_names if name not in right_on)
     tp: Incomplete = pac.HashJoinNodeOptions
     return tp(  # type: ignore[no-any-return]
-        join_type=how,
+        _HOW_JOIN[how],
         left_keys=ensure_list_str(left_on),
         right_keys=right_on,
         left_output=lhs_names,
@@ -324,27 +299,39 @@ def _join_options(
     )
 
 
-def _into_decl(source: IntoDecl, /) -> Decl:
-    return source if not isinstance(source, pa.Table) else table_source(source)
-
-
 def _hashjoin(
     left: IntoDecl, right: IntoDecl, /, options: pac.HashJoinNodeOptions
 ) -> Decl:
     return Decl("hashjoin", options, [_into_decl(left), _into_decl(right)])
 
 
-def collect(*declarations: Decl, use_threads: bool = True) -> pa.Table:
+def declare(*declarations: Decl) -> Decl:
+    """Compose one or more `Declaration` nodes for execution as a pipeline."""
+    if len(declarations) == 1:
+        return declarations[0]
+    # NOTE: stubs + docs say `list`, but impl allows any iterable
+    decls: Incomplete = declarations
+    return Decl.from_sequence(decls)
+
+
+def collect(
+    *declarations: Decl,
+    use_threads: bool = True,
+    ensure_unique_column_names: bool = False,
+) -> pa.Table:
     """Compose and evaluate a logical plan.
 
     Arguments:
         *declarations: One or more `Declaration` nodes to execute as a pipeline.
             **The first node must be a `table_source`**.
         use_threads: Pass `False` if `declarations` contains any order-dependent aggregation(s).
+        ensure_unique_column_names: Pass `True` if `declarations` adds generated column names that were
+            not explicitly defined on the `narwhals`-side. E.g. `join(suffix=...)`.
     """
-    # NOTE: stubs + docs say `list`, but impl allows any iterable
-    decls: Incomplete = declarations
-    return Decl.from_sequence(decls).to_table(use_threads=use_threads)
+    result = declare(*declarations).to_table(use_threads=use_threads)
+    if ensure_unique_column_names:
+        check_column_names_are_unique(result.column_names)
+    return result
 
 
 def group_by_table(
@@ -395,13 +382,12 @@ def select_names_table(
 def join_tables(
     left: pa.Table,
     right: pa.Table,
-    how: JoinStrategy,
-    left_on: OneOrIterable[str] | None = (),
-    right_on: OneOrIterable[str] | None = (),
+    how: NonCrossJoinStrategy,
+    left_on: OneOrIterable[str],
+    right_on: OneOrIterable[str],
     suffix: str = "_right",
     *,
     coalesce_keys: bool = True,
-    ensure_unique_column_names: bool = True,
 ) -> pa.Table:
     """Join two tables.
 
@@ -410,43 +396,59 @@ def join_tables(
     - [`pyarrow.acero._perform_join`]
     - [`narwhals._arrow.dataframe.DataFrame.join`]
 
-    Note:
-        `ensure_unique_column_names` is defined here, as the output names
-        are determined outside of `narwhals`.
-
     [`pyarrow.Table.join`]: https://github.com/apache/arrow/blob/f7320c9a40082639f9e0cf8b3075286e3fc6c0b9/python/pyarrow/table.pxi#L5764-L5772
     [`pyarrow.acero._perform_join`]: https://github.com/apache/arrow/blob/f7320c9a40082639f9e0cf8b3075286e3fc6c0b9/python/pyarrow/acero.py#L82-L260
     [`narwhals._arrow.dataframe.DataFrame.join`]: https://github.com/narwhals-dev/narwhals/blob/f4787d3f9e027306cb1786db7b471f63b393b8d1/narwhals/_arrow/dataframe.py#L393-L433
     """
-    if how == "cross":
-        return _join_cross_tables(left, right, suffix)
-    join_type = _HOW_JOIN[how]
     left_on = left_on or ()
     right_on = right_on or left_on
-    decl = join(
-        left, right, join_type, left_on, right_on, suffix, coalesce_keys=coalesce_keys
+    opts = _join_options(
+        how,
+        left_on,
+        right_on,
+        suffix,
+        left.schema.names,
+        right.schema.names,
+        coalesce_keys=coalesce_keys,
     )
-    result = collect(decl)
-    if ensure_unique_column_names:
-        check_column_names_are_unique(result.column_names)
-    return result
+    return collect(_hashjoin(left, right, opts), ensure_unique_column_names=True)
 
 
-# TODO @dangotbanned: Very rough start to get tests passing
-# - Decouple from `pa.Table` & collecting 3 times
-# - Reuse the plan from `_add_column`
-# - Write some more specialized parsers for
-#   [x] column names
-#   [ ] indices?
-def _join_cross_tables(
-    left: pa.Table, right: pa.Table, suffix: str = "_right"
+def join_cross_tables(
+    left: pa.Table, right: pa.Table, suffix: str = "_right", *, coalesce_keys: bool = True
 ) -> pa.Table:
-    key_token = temp.column_name(chain(left.column_names, right.column_names))
-    result = join_tables(
-        prepend_column(left, key_token, 0),
-        prepend_column(right, key_token, 0),
+    """Perform a cross join between tables."""
+    left_names, right_names = left.column_names, right.column_names
+    on = temp.column_name(set().union(left_names, right_names))
+    opts = _join_options(
         how="inner",
-        left_on=key_token,
+        left_on=on,
+        right_on=on,
         suffix=suffix,
+        left_names=[on, *left_names],
+        right_names=right_names,
+        coalesce_keys=coalesce_keys,
     )
-    return result.remove_column(0)
+    left_, right_ = prepend_column(left, on, 0), prepend_column(right, on, 0)
+    decl = _hashjoin(left_, right_, opts)
+    return collect(decl, ensure_unique_column_names=True).remove_column(0)
+
+
+def _add_column_table(
+    native: pa.Table, index: int, name: str, values: IntoExpr | ArrowAny
+) -> pa.Table:
+    if isinstance(values, (pa.ChunkedArray, pa.Array)):
+        return native.add_column(index, name, values)
+    return _add_column(native, index, name, values).to_table()
+
+
+def append_column_table(
+    native: pa.Table, name: str, values: IntoExpr | ArrowAny
+) -> pa.Table:
+    return _add_column_table(native, native.num_columns, name, values)
+
+
+def prepend_column_table(
+    native: pa.Table, name: str, values: IntoExpr | ArrowAny
+) -> pa.Table:
+    return _add_column_table(native, 0, name, values)

@@ -226,9 +226,16 @@ class DataFrame(
     ) -> Self:
         how = _validate_join_strategy(how)
         left_on, right_on = normalize_join_on(on, how, left_on, right_on)
-        result = self._compliant.join(
-            other._compliant, how=how, left_on=left_on, right_on=right_on, suffix=suffix
-        )
+        if how == "cross":
+            result = self._compliant.join_cross(other._compliant, suffix=suffix)
+        else:
+            result = self._compliant.join(
+                other._compliant,
+                how=how,
+                left_on=cast("Sequence[str]", left_on),
+                right_on=cast("Sequence[str]", right_on),
+                suffix=suffix,
+            )
         return self._with_compliant(result)
 
     @overload
