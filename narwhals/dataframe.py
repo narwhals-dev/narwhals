@@ -27,6 +27,7 @@ from narwhals._utils import (
     Implementation,
     Version,
     _Implementation,
+    _predicates_has_no_list_of_bool,
     can_lazyframe_collect,
     check_columns_exist,
     flatten,
@@ -242,7 +243,7 @@ class BaseFrame(Generic[_FrameT]):
         return self._with_compliant(self._compliant_frame.drop(columns, strict=strict))
 
     def filter(
-        self, *predicates: IntoExpr | Iterable[IntoExpr] | list[bool], **constraints: Any
+        self, *predicates: IntoExpr | Iterable[IntoExpr], **constraints: Any
     ) -> Self:
         from narwhals.functions import col
 
@@ -2926,7 +2927,7 @@ class LazyFrame(BaseFrame[LazyFrameT]):
             └───────┴───────┴─────────┘
             <BLANKLINE>
         """
-        if any(is_list_of(pred, bool) for pred in predicates):  # pragma: no cover
+        if not _predicates_has_no_list_of_bool(predicates):
             msg = "`LazyFrame.filter` is not supported with Python boolean masks - use expressions instead."
             raise TypeError(msg)
 
