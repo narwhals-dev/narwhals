@@ -1649,7 +1649,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Arguments:
             *predicates: Expression(s) that evaluates to a boolean Series. Can
-                also be a (single!) boolean list.
+                also be a boolean list(s).
             **constraints: Column filters; use `name = value` to filter columns by the supplied value.
                 Each constraint will behave the same as `nw.col(name).eq(value)`, and will be implicitly
                 joined with the other filter conditions using &.
@@ -2860,8 +2860,7 @@ class LazyFrame(BaseFrame[LazyFrameT]):
         The original order of the remaining rows is preserved.
 
         Arguments:
-            *predicates: Expression that evaluates to a boolean Series. Can
-                also be a (single!) boolean list.
+            *predicates: Expression that evaluates to a boolean Series.
             **constraints: Column filters; use `name = value` to filter columns by the supplied value.
                 Each constraint will behave the same as `nw.col(name).eq(value)`, and will be implicitly
                 joined with the other filter conditions using &.

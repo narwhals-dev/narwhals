@@ -114,7 +114,7 @@ def test_filter_missing_column(
             df.filter(c=5)
 
 
-def test_filter_with_predicates_and_contraints(
+def test_filter_with_predicates_and_constraints(
     constructor_eager: ConstructorEager,
 ) -> None:
     # Adapted from https://github.com/narwhals-dev/narwhals/pull/3173/commits/8433b2d75438df98004a3c850ad23628e2376836
