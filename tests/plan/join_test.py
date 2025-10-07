@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, Literal, TypedDict
 import pytest
 
 import narwhals._plan as nwp
-from narwhals.exceptions import DuplicateError, NarwhalsError
+from narwhals.exceptions import DuplicateError
 from tests.plan.utils import assert_equal_data, dataframe
 
 if TYPE_CHECKING:
@@ -30,8 +30,18 @@ class Keywords(TypedDict, total=False):
 
 
 @pytest.fixture
-def data_inner() -> Data:
-    return {"a": [1, 3, 2], "b": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0], "idx": [0, 1, 2]}
+def data() -> Data:
+    return {"a": [1, 3, 2], "b": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
+
+
+@pytest.fixture
+def data_indexed(data: Data) -> Data:
+    return data | {"idx": [0, 1, 2]}
+
+
+@pytest.fixture
+def data_a_only(data: Data) -> Data:
+    return {"a": data["a"]}
 
 
 LEFT_DATA_1 = {"id": [1, 2, 3], "name": ["Alice", "Bob", "Charlie"], "age": [25, 30, 35]}
@@ -98,25 +108,21 @@ def test_join_full(
 
 
 def test_join_full_duplicate() -> None:
-    df1 = {"foo": [1, 2, 3], "val1": [1, 2, 3]}
-    df2 = {"foo": [1, 2, 3], "foo_right": [1, 2, 3]}
-    df_left = dataframe(df1)
-    df_right = dataframe(df2)
-
-    with pytest.raises(NarwhalsError):
-        df_left.join(df_right, "foo", how="full")
+    left = dataframe({"f": [1, 2, 3], "v": [1, 2, 3]})
+    right = left.rename({"v": "f_right"})
+    with pytest.raises(DuplicateError):
+        left.join(right, "f", how="full", suffix="_right")
 
 
-def test_join_duplicate_column_names() -> None:
-    data = {"a": [1, 2, 3, 4, 5], "b": [6, 6, 6, 6, 6]}
-    df = dataframe(data)
+def test_join_inner_x2_duplicate(data_indexed: Data) -> None:
+    df = dataframe(data_indexed)
     with pytest.raises(DuplicateError):
         df.join(df, "a").join(df, "a")
 
 
 @pytest.mark.parametrize("kwds", [Keywords(left_on="a", right_on="a"), Keywords(on="a")])
-def test_join_inner_single_key(data_inner: Data, kwds: Keywords) -> None:
-    df = dataframe(data_inner)
+def test_join_inner_single_key(data_indexed: Data, kwds: Keywords) -> None:
+    df = dataframe(data_indexed)
     result = df.join(df, **kwds).sort("idx").drop("idx_right")
     expected = {
         "a": [1, 3, 2],
@@ -132,8 +138,8 @@ def test_join_inner_single_key(data_inner: Data, kwds: Keywords) -> None:
 @pytest.mark.parametrize(
     "kwds", [Keywords(left_on=["a", "b"], right_on=["a", "b"]), Keywords(on=["a", "b"])]
 )
-def test_join_inner_two_keys(data_inner: Data, kwds: Keywords) -> None:
-    df = dataframe(data_inner)
+def test_join_inner_two_keys(data_indexed: Data, kwds: Keywords) -> None:
+    df = dataframe(data_indexed)
     result = df.join(df, **kwds).sort("idx").drop("idx_right")
     expected = {
         "a": [1, 3, 2],
@@ -163,11 +169,10 @@ def test_join_left() -> None:
 
 
 def test_join_left_multiple_column() -> None:
-    data_left = {"a": [1, 2, 3], "b": [4, 5, 6], "idx": [0, 1, 2]}
-    data_right = {"a": [1, 2, 3], "c": [4, 5, 6], "idx": [0, 1, 2]}
+    df = dataframe({"a": [1, 2, 3], "b": [4, 5, 6], "idx": [0, 1, 2]})
+    right = df.rename({"b": "c"})
     result = (
-        dataframe(data_left)
-        .join(dataframe(data_right), left_on=["a", "b"], right_on=["a", "c"], how="left")
+        df.join(right, left_on=["a", "b"], right_on=["a", "c"], how="left")
         .sort("idx")
         .drop("idx_right")
     )
@@ -204,29 +209,20 @@ def test_join_left_multiple_column() -> None:
 )
 def test_join_left_overlapping_column(kwds: Keywords, expected: dict[str, Any]) -> None:
     kwds["how"] = "left"
-    data_left = {
+    source = {
         "a": [1.0, 2.0, 3.0],
         "b": [4.0, 5.0, 6.0],
         "d": [1.0, 4.0, 2.0],
         "idx": [0.0, 1.0, 2.0],
     }
-    data_right = {
-        "a": [1.0, 2.0, 3.0],
-        "c": [4.0, 5.0, 6.0],
-        "d": [1.0, 4.0, 2.0],
-        "idx": [0.0, 1.0, 2.0],
-    }
-    result = (
-        dataframe(data_left)
-        .join(dataframe(data_right), **kwds)
-        .sort("idx")
-        .drop("idx_right")
-    )
+    df = dataframe(source)
+    right = df.rename({"b": "c"})
+    result = df.join(right, **kwds).sort("idx").drop("idx_right")
     assert_equal_data(result, expected)
 
 
-def test_join_cross() -> None:
-    df = dataframe({"a": [1, 3, 2]})
+def test_join_cross(data_a_only: Data) -> None:
+    df = dataframe(data_a_only)
     result = df.join(df, how="cross").sort("a", "a_right")
     expected = {"a": [1, 1, 1, 2, 2, 2, 3, 3, 3], "a_right": [1, 2, 3, 1, 2, 3, 1, 2, 3]}
     assert_equal_data(result, expected)
@@ -234,8 +230,7 @@ def test_join_cross() -> None:
 
 @pytest.mark.parametrize("how", ["inner", "left"])
 @pytest.mark.parametrize("suffix", ["_right", "_custom_suffix"])
-def test_join_with_suffix(how: JoinStrategy, suffix: str) -> None:
-    data = {"a": [1, 3, 2], "b": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
+def test_join_with_suffix(how: JoinStrategy, suffix: str, data: Data) -> None:
     df = dataframe(data)
     on = ["a", "b"]
     result = df.join(df, left_on=on, right_on=on, how=how, suffix=suffix)
@@ -243,8 +238,8 @@ def test_join_with_suffix(how: JoinStrategy, suffix: str) -> None:
 
 
 @pytest.mark.parametrize("suffix", ["_right", "_custom_suffix"])
-def test_join_cross_with_suffix(suffix: str) -> None:
-    df = dataframe({"a": [1, 3, 2]})
+def test_join_cross_with_suffix(suffix: str, data_a_only: Data) -> None:
+    df = dataframe(data_a_only)
     result = df.join(df, how="cross", suffix=suffix).sort("a", f"a{suffix}")
     expected = {
         "a": [1, 1, 1, 2, 2, 2, 3, 3, 3],
@@ -267,9 +262,10 @@ def test_join_filter(
     predicate: nwp.Expr,
     how: Literal["anti", "semi"],
     expected: Data,
+    data: Data,
 ) -> None:
     # NOTE: "anti" and "semi" should be the inverse of each other
-    df = dataframe({"a": [1, 3, 2], "b": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]})
+    df = dataframe(data)
     other = df.filter(predicate if how == "semi" else ~predicate)
     result = df.join(other, on, how=how).sort(on)
     assert_equal_data(result, expected)
@@ -291,8 +287,10 @@ SAME_LENGTH = r"`left_on` and `right_on`.+same length"
     ],
 )
 @pytest.mark.parametrize("how", ["inner", "left", "semi", "anti"])
-def test_join_keys_exceptions(how: JoinStrategy, kwds: Keywords, message: str) -> None:
-    df = dataframe({"a": [1], "b": [4]})
+def test_join_keys_exceptions(
+    how: JoinStrategy, kwds: Keywords, message: str, data: Data
+) -> None:
+    df = dataframe(data)
     kwds["how"] = how
     with pytest.raises(ValueError, match=message):
         df.join(df, **kwds)
@@ -307,17 +305,17 @@ def test_join_keys_exceptions(how: JoinStrategy, kwds: Keywords, message: str) -
         Keywords(left_on="a", right_on="a"),
     ],
 )
-def test_join_cross_keys_exceptions(kwds: Keywords) -> None:
-    df = dataframe({"a": [1, 3, 2]})
+def test_join_cross_keys_exceptions(kwds: Keywords, data_a_only: Data) -> None:
+    df = dataframe(data_a_only)
     kwds["how"] = "cross"
     with pytest.raises(ValueError, match=r"not.+ `left_on`.+`right_on`.+`on`.+cross"):
         df.join(df, **kwds)
 
 
-def test_join_not_implemented() -> None:
-    df = dataframe({"b": [4, 4, 6]})
+def test_join_not_implemented(data_a_only: Data) -> None:
+    df = dataframe(data_a_only)
     pattern = (
         r"supported.+'inner', 'left', 'full', 'cross', 'semi', 'anti'.+ found 'right'"
     )
     with pytest.raises(NotImplementedError, match=(pattern)):
-        df.join(df, left_on="b", right_on="b", how="right")  # type: ignore[arg-type]
+        df.join(df, left_on="a", right_on="a", how="right")  # type: ignore[arg-type]

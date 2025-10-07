@@ -35,7 +35,7 @@ from narwhals.schema import Schema
 from narwhals.typing import JoinStrategy
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Mapping, Sequence
 
     import pyarrow as pa
     from typing_extensions import Self, TypeAlias, TypeIs
@@ -123,6 +123,9 @@ class BaseFrame(Generic[NativeFrameT_co]):
     def drop_nulls(self, subset: str | Sequence[str] | None = None) -> Self:
         subset = [subset] if isinstance(subset, str) else subset
         return self._with_compliant(self._compliant.drop_nulls(subset))
+
+    def rename(self, mapping: Mapping[str, str]) -> Self:
+        return self._with_compliant(self._compliant.rename(mapping))
 
 
 class DataFrame(
