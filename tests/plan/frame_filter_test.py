@@ -69,7 +69,7 @@ def test_filter_missing_column() -> None:
 @pytest.mark.xfail(
     reason="Need a resolution to https://github.com/narwhals-dev/narwhals/issues/3182"
 )
-def test_filter_mask_mixed() -> None:
+def test_filter_mask_mixed() -> None:  # pragma: no cover
     df = dataframe({"a": range(5), "b": [2, 2, 4, 2, 4]})
     mask = [True, False, True, True, False]
     mask_2 = [True, True, False, True, False]
