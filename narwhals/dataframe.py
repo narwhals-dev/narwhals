@@ -246,14 +246,7 @@ class BaseFrame(Generic[_FrameT]):
     ) -> Self:
         from narwhals.functions import col
 
-        plx = self.__narwhals_namespace__()
-        parsed_predicates = tuple(
-            plx._series.from_iterable(pred, context=plx).to_narwhals()
-            if is_list_of(pred, bool)
-            else pred
-            for pred in predicates
-        )
-        flat_predicates = flatten(parsed_predicates)
+        flat_predicates = flatten(predicates)
         check_expressions_preserve_length(*flat_predicates, function_name="filter")
         plx = self.__narwhals_namespace__()
         compliant_predicates, _kinds = self._flatten_and_extract(*flat_predicates)
@@ -1698,7 +1691,14 @@ class DataFrame(BaseFrame[DataFrameT]):
                foo  bar ham
             1    2    7   b
         """
-        return super().filter(*predicates, **constraints)
+        plx = self.__narwhals_namespace__()
+        parsed_predicates = tuple(
+            plx._series.from_iterable(pred, context=plx).to_narwhals()
+            if is_list_of(pred, bool)
+            else pred
+            for pred in predicates
+        )
+        return super().filter(*parsed_predicates, **constraints)
 
     @overload
     def group_by(
