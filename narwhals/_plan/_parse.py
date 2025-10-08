@@ -6,7 +6,7 @@ from collections.abc import Iterable, Sequence
 from itertools import chain
 from typing import TYPE_CHECKING
 
-from narwhals._plan._guards import is_expr, is_iterable_reject
+from narwhals._plan._guards import is_expr, is_into_expr_column, is_iterable_reject
 from narwhals._plan.exceptions import (
     invalid_into_expr_error,
     is_iterable_pandas_error,
@@ -23,7 +23,13 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias, TypeIs
 
     from narwhals._plan.expressions import ExprIR
-    from narwhals._plan.typing import IntoExpr, IntoExprColumn, OneOrIterable, Seq
+    from narwhals._plan.typing import (
+        IntoExpr,
+        IntoExprColumn,
+        OneOrIterable,
+        PartialSeries,
+        Seq,
+    )
     from narwhals.typing import IntoDType
 
     T = TypeVar("T")
@@ -86,15 +92,33 @@ We only support cases `a`, `b`, but the typing for most contexts is more permiss
 
 
 def parse_into_expr_ir(
-    input: IntoExpr, *, str_as_lit: bool = False, dtype: IntoDType | None = None
+    input: IntoExpr | list[Any],
+    *,
+    str_as_lit: bool = False,
+    list_as_series: PartialSeries | None = None,
+    dtype: IntoDType | None = None,
 ) -> ExprIR:
-    """Parse a single input into an `ExprIR` node."""
+    """Parse a single input into an `ExprIR` node.
+
+    Arguments:
+        input: The input to be parsed as an expression.
+        str_as_lit: Interpret string input as a string literal. If set to `False` (default),
+            strings are parsed as column names.
+        list_as_series: Interpret list input as a Series literal, using the provided constructor.
+            If set to `None` (default), lists will raise when passed to `lit`.
+        dtype: If the input is expected to resolve to a literal with a known dtype, pass
+            this to the `lit` constructor.
+    """
     from narwhals._plan import col, lit
 
     if is_expr(input):
         expr = input
     elif isinstance(input, str) and not str_as_lit:
         expr = col(input)
+    elif isinstance(input, list):
+        if list_as_series is None:
+            raise TypeError(input)
+        expr = lit(list_as_series(input))
     else:
         expr = lit(input, dtype=dtype)
     return expr._ir
@@ -106,19 +130,26 @@ def parse_into_seq_of_expr_ir(
     **named_inputs: IntoExpr,
 ) -> Seq[ExprIR]:
     """Parse variadic inputs into a flat sequence of `ExprIR` nodes."""
-    return tuple(_parse_into_iter_expr_ir(first_input, *more_inputs, **named_inputs))
+    return tuple(
+        _parse_into_iter_expr_ir(
+            first_input, *more_inputs, _list_as_series=None, **named_inputs
+        )
+    )
 
 
 def parse_predicates_constraints_into_expr_ir(
-    first_predicate: OneOrIterable[IntoExprColumn] = (),
-    *more_predicates: IntoExprColumn | _RaisesInvalidIntoExprError,
+    first_predicate: OneOrIterable[IntoExprColumn] | list[bool] = (),
+    *more_predicates: IntoExprColumn | list[bool] | _RaisesInvalidIntoExprError,
+    _list_as_series: PartialSeries | None = None,
     **constraints: IntoExpr,
 ) -> ExprIR:
     """Parse variadic predicates and constraints into an `ExprIR` node.
 
     The result is an AND-reduction of all inputs.
     """
-    all_predicates = _parse_into_iter_expr_ir(first_predicate, *more_predicates)
+    all_predicates = _parse_into_iter_expr_ir(
+        first_predicate, *more_predicates, _list_as_series=_list_as_series
+    )
     if constraints:
         chained = chain(all_predicates, _parse_constraints(constraints))
         return _combine_predicates(chained)
@@ -145,30 +176,44 @@ def _parse_sort_by_into_iter_expr_ir(
 
 
 def _parse_into_iter_expr_ir(
-    first_input: OneOrIterable[IntoExpr], *more_inputs: IntoExpr, **named_inputs: IntoExpr
+    first_input: OneOrIterable[IntoExpr],
+    *more_inputs: IntoExpr | list[Any],
+    _list_as_series: PartialSeries | None = None,
+    **named_inputs: IntoExpr,
 ) -> Iterator[ExprIR]:
     if not _is_empty_sequence(first_input):
         # NOTE: These need to be separated to introduce an intersection type
         # Otherwise, `str | bytes` always passes through typing
         if _is_iterable(first_input) and not is_iterable_reject(first_input):
-            if more_inputs:
+            if more_inputs and (
+                _list_as_series is None or not isinstance(first_input, list)
+            ):
                 raise invalid_into_expr_error(first_input, more_inputs, named_inputs)
+            # NOTE: Ensures `first_input = [False, True, True] -> lit(Series([False, True, True]))`
+            elif (
+                _list_as_series is not None
+                and isinstance(first_input, list)
+                and not is_into_expr_column(first_input[0])
+            ):
+                yield parse_into_expr_ir(first_input, list_as_series=_list_as_series)
             else:
-                yield from _parse_positional_inputs(first_input)
+                yield from _parse_positional_inputs(first_input, _list_as_series)
         else:
-            yield parse_into_expr_ir(first_input)
+            yield parse_into_expr_ir(first_input, list_as_series=_list_as_series)
     else:
         # NOTE: Passthrough case for no inputs - but gets skipped when calling next
         yield from ()
     if more_inputs:
-        yield from _parse_positional_inputs(more_inputs)
+        yield from _parse_positional_inputs(more_inputs, _list_as_series)
     if named_inputs:
         yield from _parse_named_inputs(named_inputs)
 
 
-def _parse_positional_inputs(inputs: Iterable[IntoExpr], /) -> Iterator[ExprIR]:
+def _parse_positional_inputs(
+    inputs: Iterable[IntoExpr | list[Any]], /, list_as_series: PartialSeries | None = None
+) -> Iterator[ExprIR]:
     for into in inputs:
-        yield parse_into_expr_ir(into)
+        yield parse_into_expr_ir(into, list_as_series=list_as_series)
 
 
 def _parse_named_inputs(named_inputs: dict[str, IntoExpr], /) -> Iterator[ExprIR]:

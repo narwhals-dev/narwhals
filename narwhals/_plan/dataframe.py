@@ -13,8 +13,7 @@ from typing import (
 
 from narwhals._plan import _parse
 from narwhals._plan._expansion import prepare_projection
-from narwhals._plan._guards import is_series
-from narwhals._plan.common import ensure_seq_str
+from narwhals._plan.common import ensure_seq_str, temp
 from narwhals._plan.group_by import GroupBy, Grouped
 from narwhals._plan.options import SortMultipleOptions
 from narwhals._plan.series import Series
@@ -27,15 +26,16 @@ from narwhals._plan.typing import (
     NativeFrameT_co,
     NativeSeriesT,
     OneOrIterable,
+    PartialSeries,
     Seq,
 )
-from narwhals._utils import Implementation, Version, generate_repr, is_list_of
+from narwhals._utils import Implementation, Version, generate_repr
 from narwhals.dependencies import is_pyarrow_table
 from narwhals.schema import Schema
-from narwhals.typing import JoinStrategy
+from narwhals.typing import IntoDType, JoinStrategy
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Iterable, Mapping, Sequence
 
     import pyarrow as pa
     from typing_extensions import Self, TypeAlias, TypeIs
@@ -144,6 +144,18 @@ class DataFrame(
     def _series(self) -> type[Series[NativeSeriesT]]:
         return Series[NativeSeriesT]
 
+    def _partial_series(
+        self, *, dtype: IntoDType | None = None
+    ) -> PartialSeries[NativeSeriesT]:
+        it_names = temp.column_names(self.columns)
+        backend = self.implementation
+        series = self._series.from_iterable
+
+        def fn(values: Iterable[Any], /) -> Series[NativeSeriesT]:
+            return series(values, name=next(it_names), dtype=dtype, backend=backend)
+
+        return fn
+
     @overload
     @classmethod
     def from_native(
@@ -241,30 +253,20 @@ class DataFrame(
             )
         return self._with_compliant(result)
 
-    @overload
-    def filter(self, mask: list[bool], /) -> Self: ...
-    @overload
-    def filter(
-        self, *predicates: OneOrIterable[IntoExprColumn], **constraints: Any
-    ) -> Self: ...
     def filter(
         self, *predicates: OneOrIterable[IntoExprColumn] | list[bool], **constraints: Any
     ) -> Self:
-        if len(predicates) == 1 and not constraints:
-            first = predicates[0]
-            if is_list_of(first, bool):
-                series = self._series.from_iterable(
-                    first,
-                    dtype=self.version.dtypes.Boolean(),
-                    backend=self.implementation,
-                )
-            elif is_series(first):
-                series = first
-            else:
-                return super().filter(first)
-            return self._with_compliant(self._compliant.filter(series._compliant))
-        non_mask = cast("tuple[OneOrIterable[IntoExprColumn],...]", predicates)
-        return super().filter(*non_mask, **constraints)
+        e = _parse.parse_predicates_constraints_into_expr_ir(
+            *predicates,
+            _list_as_series=self._partial_series(dtype=self.version.dtypes.Boolean()),
+            **constraints,
+        )
+        named_irs, _ = prepare_projection((e,), schema=self)
+        if len(named_irs) != 1:
+            # Should be unreachable, but I guess we will see
+            msg = f"Expected a single predicate after expansion, but got {len(named_irs)!r}\n\n{named_irs!r}"
+            raise ValueError(msg)
+        return self._with_compliant(self._compliant.filter(named_irs[0]))
 
 
 def _is_join_strategy(obj: Any) -> TypeIs[JoinStrategy]:

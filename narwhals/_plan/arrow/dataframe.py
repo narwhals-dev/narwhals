@@ -163,14 +163,11 @@ class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
         result = acero.join_cross_tables(self.native, other.native, suffix=suffix)
         return self._with_native(result)
 
-    def filter(self, predicate: NamedIR | Series) -> Self:
+    def filter(self, predicate: NamedIR) -> Self:
         mask: pc.Expression | ChunkedArrayAny
-        if not fn.is_series(predicate):
-            resolved = Expr.from_named_ir(predicate, self)
-            if isinstance(resolved, Expr):
-                mask = resolved.broadcast(len(self)).native
-            else:
-                mask = acero.lit(resolved.native)
+        resolved = Expr.from_named_ir(predicate, self)
+        if isinstance(resolved, Expr):
+            mask = resolved.broadcast(len(self)).native
         else:
-            mask = predicate.native
+            mask = acero.lit(resolved.native)
         return self._with_native(self.native.filter(mask))

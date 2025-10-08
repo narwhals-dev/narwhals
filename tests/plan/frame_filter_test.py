@@ -75,39 +75,25 @@ def test_filter_missing_column() -> None:
         df.filter(c=5)
 
 
-@pytest.mark.xfail(
-    reason="Need a resolution to https://github.com/narwhals-dev/narwhals/issues/3182"
-)
-def test_filter_mask_mixed() -> None:  # pragma: no cover
+def test_filter_mask_mixed() -> None:
     df = dataframe({"a": range(5), "b": [2, 2, 4, 2, 4]})
     mask = [True, False, True, True, False]
     mask_2 = [True, True, False, True, False]
     expected_mask_only = {"a": [0, 2, 3], "b": [2, 4, 2]}
     expected_mixed = {"a": [0, 3], "b": [2, 2]}
 
-    result = df.filter(mask)
-    assert_equal_data(result, expected_mask_only)
+    assert_equal_data(df.filter(mask), expected_mask_only)
 
     with pytest.raises(
         ColumnNotFoundError, match=re.escape("not found: ['c', 'd', 'e', 'f', 'g']")
     ):
-        df.filter(mask, c=1, d=2, e=3, f=4, g=5)  # type: ignore[arg-type]
+        df.filter(mask, c=1, d=2, e=3, f=4, g=5)
 
-    # NOTE: Everything from here is currently undefined
-    result = df.filter(mask, b=2)  # type: ignore[arg-type]
-    assert_equal_data(result, expected_mixed)
-
-    result = df.filter(mask, nwp.col("b") == 2)  # type: ignore[arg-type]
-    assert_equal_data(result, expected_mixed)
-
-    result = df.filter(mask, mask_2)  # type: ignore[arg-type]
-    assert_equal_data(result, expected_mixed)
-
-    result = df.filter(mask, series(mask_2))  # type: ignore[arg-type]
-    assert_equal_data(result, expected_mixed)
-
-    result = df.filter(mask, nwp.col("b") != 4, b=2)  # type: ignore[arg-type]
-    assert_equal_data(result, expected_mixed)
+    assert_equal_data(df.filter(mask, b=2), expected_mixed)
+    assert_equal_data(df.filter(mask, nwp.col("b") == 2), expected_mixed)
+    assert_equal_data(df.filter(mask, mask_2), expected_mixed)
+    assert_equal_data(df.filter(mask, series(mask_2)), expected_mixed)
+    assert_equal_data(df.filter(mask, nwp.col("b") != 4, b=2), expected_mixed)
 
 
 def test_filter_multiple_predicates(data_2: Data) -> None:
