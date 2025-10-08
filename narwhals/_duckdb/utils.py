@@ -9,6 +9,7 @@ from duckdb import Expression
 try:
     import duckdb.sqltypes as duckdb_dtypes
 except ModuleNotFoundError:
+    # DuckDB pre 1.3
     import duckdb.typing as duckdb_dtypes
 
 from narwhals._utils import Version, isinstance_or_issubclass, zip_strict
