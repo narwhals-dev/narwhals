@@ -668,6 +668,10 @@ def backend_version(implementation: Implementation, /) -> tuple[int, ...]:
         import dask  # ignore-banned-import
 
         into_version = dask
+    elif impl.is_bodo():
+        import bodo
+
+        into_version = bodo
     else:
         into_version = native_namespace
     version = parse_version(into_version)
