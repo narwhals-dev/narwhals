@@ -43,7 +43,7 @@ if default_constructors := os.environ.get(
     DEFAULT_CONSTRUCTORS = default_constructors
 else:
     DEFAULT_CONSTRUCTORS = (
-        "pandas,pandas[pyarrow],polars[eager],pyarrow,duckdb,sqlframe,ibis"
+        "pandas,pandas[pyarrow],polars[eager],pyarrow,duckdb,sqlframe,ibis,bodo"
     )
 
 
