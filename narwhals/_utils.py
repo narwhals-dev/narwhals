@@ -2,7 +2,18 @@ from __future__ import annotations
 
 import os
 import re
-from collections.abc import Collection, Container, Iterable, Iterator, Mapping, Sequence
+import sys
+from collections.abc import (
+    Collection,
+    Container,
+    Generator,
+    Iterable,
+    Iterator,
+    Mapping,
+    MappingView,
+    Sequence,
+    Sized,
+)
 from datetime import timezone
 from enum import Enum, auto
 from functools import cache, lru_cache, partial, wraps
@@ -50,7 +61,7 @@ from narwhals.dependencies import (
 from narwhals.exceptions import ColumnNotFoundError, DuplicateError, InvalidOperationError
 
 if TYPE_CHECKING:
-    from collections.abc import Set  # noqa: PYI025
+    from collections.abc import Iterator, Reversible, Set  # noqa: PYI025
     from types import ModuleType
 
     import pandas as pd
@@ -163,6 +174,11 @@ if TYPE_CHECKING:
         @property
         def columns(self) -> Sequence[str]: ...
 
+
+# note: reversed views don't match as instances of MappingView
+if sys.version_info >= (3, 11):
+    _views: list[Reversible[Any]] = [{}.keys(), {}.values(), {}.items()]
+    _reverse_mapping_views = tuple(type(reversed(view)) for view in _views)
 
 _T = TypeVar("_T")
 NativeT_co = TypeVar("NativeT_co", covariant=True)
@@ -689,6 +705,16 @@ def _is_iterable(arg: Any | Iterable[Any]) -> bool:
         raise TypeError(msg)
 
     return isinstance(arg, Iterable) and not isinstance(arg, (str, bytes, Series))
+
+
+def _is_generator(
+    val: object | Iterator[_T] | Generator[_T] | MappingView,
+) -> TypeIs[Iterator[_T] | Generator[_T] | MappingView]:
+    return (
+        (isinstance(val, (Generator, Iterable)) and not isinstance(val, Sized))
+        or isinstance(val, MappingView)
+        or (sys.version_info >= (3, 11) and isinstance(val, _reverse_mapping_views))
+    )
 
 
 def parse_version(version: str | ModuleType | _SupportsVersion) -> tuple[int, ...]:

@@ -155,3 +155,56 @@ def test_filter_with_predicates_and_constraints(
 
     result = df.filter(mask, nw.col("b") != 4, b=2)
     assert_equal_data(result, expected_mixed)
+
+
+def test_filter_multiple_predicates(constructor: Constructor) -> None:
+    """https://github.com/pola-rs/polars/blob/a4522d719de940be3ef99d494ccd1cd6067475c6/py-polars/tests/unit/lazyframe/test_lazyframe.py#L175-L202."""
+    df = nw.from_native(
+        constructor({"a": [1, 1, 1, 2, 2], "b": [1, 1, 2, 2, 2], "c": [1, 1, 2, 3, 4]})
+    )
+
+    # multiple predicates
+    expected = {"a": [1, 1, 1], "b": [1, 1, 2], "c": [1, 1, 2]}
+    for out in (
+        df.filter(nw.col("a") == 1, nw.col("b") <= 2),  # positional/splat
+        df.filter([nw.col("a") == 1, nw.col("b") <= 2]),  # as list
+    ):
+        assert_equal_data(out, expected)
+
+    # multiple kwargs
+    assert_equal_data(df.filter(a=1, b=2), {"a": [1], "b": [2], "c": [2]})
+
+    # both positional and keyword args
+    assert_equal_data(
+        df.filter(nw.col("c") < 4, a=2, b=2), {"a": [2], "b": [2], "c": [3]}
+    )
+
+
+def test_filter_string_predicate(constructor: Constructor) -> None:
+    """https://github.com/pola-rs/polars/blob/a4522d719de940be3ef99d494ccd1cd6067475c6/py-polars/tests/unit/lazyframe/test_lazyframe.py#L204-L210."""
+    df = nw.from_native(
+        constructor({"description": ["eq", "gt", "ge"], "predicate": ["==", ">", ">="]})
+    )
+    expected = {"description": ["eq"], "predicate": ["=="]}
+    result = df.filter(predicate="==")
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    "predicates", [(nw.col("z") < 10,), (nw.col("a") > 0, nw.col("b") > 0)]
+)
+def test_filter_seq_iterable_all_true(constructor: Constructor, predicates: Any) -> None:
+    """https://github.com/pola-rs/polars/blob/a4522d719de940be3ef99d494ccd1cd6067475c6/py-polars/tests/unit/lazyframe/test_lazyframe.py#L213-L233."""
+    df = nw.from_native(constructor(data))
+    predicate = (p for p in predicates)
+    assert_equal_data(df.filter(predicate), df.lazy().collect().to_dict(as_series=False))
+
+
+@pytest.mark.parametrize(
+    "predicates", [(nw.col("z") > 10,), (nw.col("a") < 0, nw.col("b") < 0)]
+)
+def test_filter_seq_iterable_all_false(constructor: Constructor, predicates: Any) -> None:
+    df = nw.from_native(constructor(data))
+    expected: dict[str, list[Any]] = {"a": [], "b": [], "z": []}
+    predicate = (p for p in predicates)
+    assert_equal_data(df.filter(predicate), expected)

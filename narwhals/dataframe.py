@@ -27,6 +27,7 @@ from narwhals._utils import (
     Implementation,
     Version,
     _Implementation,
+    _is_generator,
     _predicates_has_no_list_of_bool,
     can_lazyframe_collect,
     check_columns_exist,
@@ -2927,11 +2928,12 @@ class LazyFrame(BaseFrame[LazyFrameT]):
             └───────┴───────┴─────────┘
             <BLANKLINE>
         """
-        if not _predicates_has_no_list_of_bool(predicates):
+        predicates_ = tuple(tuple(p) if _is_generator(p) else p for p in predicates)
+        if not _predicates_has_no_list_of_bool(predicates_):
             msg = "`LazyFrame.filter` is not supported with Python boolean masks - use expressions instead."
             raise TypeError(msg)
 
-        return super().filter(*predicates, **constraints)
+        return super().filter(*predicates_, **constraints)
 
     def sink_parquet(self, file: str | Path | BytesIO) -> None:
         """Write LazyFrame to Parquet file.
