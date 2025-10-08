@@ -10,6 +10,7 @@ from narwhals._dask.expr_dt import DaskExprDateTimeNamespace
 from narwhals._dask.expr_str import DaskExprStringNamespace
 from narwhals._dask.utils import (
     add_row_index,
+    align_series_full_broadcast,
     maybe_evaluate_expr,
     narwhals_to_native_dtype,
 )
@@ -228,7 +229,24 @@ class DaskExpr(
         return self._binary_op("__truediv__", other)
 
     def __floordiv__(self, other: Any) -> Self:
-        return self._binary_op("__floordiv__", other)
+        def _floordiv(
+            df: DaskLazyFrame, series: dx.Series, other: dx.Series | Any
+        ) -> dx.Series:
+            series, other = align_series_full_broadcast(df, series, other)
+            return (series.__floordiv__(other)).where(other != 0, None)
+
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            other_series = maybe_evaluate_expr(df, other)
+            return [_floordiv(df, series, other_series) for series in self(df)]
+
+        return self.__class__(
+            func,
+            depth=self._depth + 1,
+            function_name=self._function_name + "->__floordiv__",
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
+        )
 
     def __pow__(self, other: Any) -> Self:
         return self._binary_op("__pow__", other)
@@ -267,7 +285,23 @@ class DaskExpr(
         return self._reverse_binary_op("__rtruediv__", lambda a, b: a / b, other)
 
     def __rfloordiv__(self, other: Any) -> Self:
-        return self._reverse_binary_op("__rfloordiv__", lambda a, b: a // b, other)
+        def _rfloordiv(
+            df: DaskLazyFrame, series: dx.Series, other: dx.Series | Any
+        ) -> dx.Series:
+            series, other = align_series_full_broadcast(df, series, other)
+            return (other.__floordiv__(series)).where(series != 0, None)
+
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            return [_rfloordiv(df, series, other) for series in self(df)]
+
+        return self.__class__(
+            func,
+            depth=self._depth + 1,
+            function_name=self._function_name + "->__rfloordiv__",
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
+        ).alias("literal")
 
     def __rpow__(self, other: Any) -> Self:
         return self._reverse_binary_op("__rpow__", lambda a, b: a**b, other)
@@ -534,7 +568,9 @@ class DaskExpr(
     def is_first_distinct(self) -> Self:
         def func(expr: dx.Series) -> dx.Series:
             _name = expr.name
-            col_token = generate_temporary_column_name(n_bytes=8, columns=[_name])
+            col_token = generate_temporary_column_name(
+                n_bytes=8, columns=[_name], prefix="row_index_"
+            )
             frame = add_row_index(expr.to_frame(), col_token)
             first_distinct_index = frame.groupby(_name).agg({col_token: "min"})[col_token]
             return frame[col_token].isin(first_distinct_index)
@@ -544,7 +580,9 @@ class DaskExpr(
     def is_last_distinct(self) -> Self:
         def func(expr: dx.Series) -> dx.Series:
             _name = expr.name
-            col_token = generate_temporary_column_name(n_bytes=8, columns=[_name])
+            col_token = generate_temporary_column_name(
+                n_bytes=8, columns=[_name], prefix="row_index_"
+            )
             frame = add_row_index(expr.to_frame(), col_token)
             last_distinct_index = frame.groupby(_name).agg({col_token: "max"})[col_token]
             return frame[col_token].isin(last_distinct_index)
@@ -691,6 +729,8 @@ class DaskExpr(
         return DaskExprDateTimeNamespace(self)
 
     rank = not_implemented()
+    first = not_implemented()
+    last = not_implemented()
 
     # namespaces
     list: not_implemented = not_implemented()  # type: ignore[assignment]

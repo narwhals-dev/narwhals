@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Callable, Literal, cast, overload
+from typing import TYPE_CHECKING, Any, Callable, Final, Literal, cast, overload
 
 import narwhals as nw
 from narwhals import exceptions, functions as nw_f
@@ -84,6 +84,7 @@ if TYPE_CHECKING:
         IntoDType,
         IntoExpr,
         IntoFrame,
+        IntoSchema,
         IntoSeries,
         NonNestedLiteral,
         SingleColSelector,
@@ -130,6 +131,17 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):  # type: ignore[type-var]
         backend: IntoBackend[EagerAllowed] | None = None,
     ) -> DataFrame[Any]:
         result = super().from_dict(data, schema, backend=backend)
+        return cast("DataFrame[Any]", result)
+
+    @classmethod
+    def from_dicts(
+        cls,
+        data: Sequence[Any],
+        schema: IntoSchema | None = None,
+        *,
+        backend: IntoBackend[EagerAllowed],
+    ) -> DataFrame[Any]:
+        result = super().from_dicts(data, schema, backend=backend)
         return cast("DataFrame[Any]", result)
 
     @classmethod
@@ -1163,6 +1175,11 @@ def concat_str(
     )
 
 
+def format(f_string: str, *args: IntoExpr) -> Expr:
+    """Format expressions as a string."""
+    return _stableify(nw.format(f_string, *args))
+
+
 def coalesce(exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr) -> Expr:
     return _stableify(nw.coalesce(exprs, *more_exprs))
 
@@ -1259,6 +1276,9 @@ def from_dict(
     recommend using `backend`, as that's available beyond just `narwhals.stable.v1`.
     """
     return _stableify(nw_f.from_dict(data, schema, backend=backend))
+
+
+from_dicts: Final = DataFrame.from_dicts
 
 
 @deprecate_native_namespace(required=True)
@@ -1397,8 +1417,10 @@ __all__ = [
     "dtypes",
     "exceptions",
     "exclude",
+    "format",
     "from_arrow",
     "from_dict",
+    "from_dicts",
     "from_native",
     "from_numpy",
     "generate_temporary_column_name",

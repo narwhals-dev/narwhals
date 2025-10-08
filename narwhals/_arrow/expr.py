@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._arrow.series import ArrowSeries
@@ -111,11 +112,8 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
         return {"_return_py_scalar": False} if returns_scalar else {}
 
     def over(self, partition_by: Sequence[str], order_by: Sequence[str]) -> Self:
-        if (
-            partition_by
-            and self._metadata is not None
-            and not self._metadata.is_scalar_like
-        ):
+        meta = self._metadata
+        if partition_by and meta is not None and not meta.is_scalar_like:
             msg = "Only aggregation or literal operations are supported in grouped `over` context for PyArrow."
             raise NotImplementedError(msg)
 
@@ -129,15 +127,24 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
                 df = df.with_row_index(token, order_by=None).sort(
                     *order_by, descending=False, nulls_last=False
                 )
-                result = self(df.drop([token], strict=True))
+                results = self(df.drop([token], strict=True))
+                if meta is not None and meta.is_scalar_like:
+                    # We need to broadcast the results to the original size, since
+                    # `over` is a length-preserving operation.
+                    size = len(df)
+                    return [s._with_native(pa.repeat(s.item(), size)) for s in results]
+
                 # TODO(marco): is there a way to do this efficiently without
                 # doing 2 sorts? Here we're sorting the dataframe and then
                 # again calling `sort_indices`. `ArrowSeries.scatter` would also sort.
                 sorting_indices = pc.sort_indices(df.get_column(token).native)
-                return [s._with_native(s.native.take(sorting_indices)) for s in result]
+                return [s._with_native(s.native.take(sorting_indices)) for s in results]
         else:
 
             def func(df: ArrowDataFrame) -> Sequence[ArrowSeries]:
+                if order_by:
+                    df = df.sort(*order_by, descending=False, nulls_last=False)
+
                 output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
                 if overlap := set(output_names).intersection(partition_by):
                     # E.g. `df.select(nw.all().sum().over('a'))`. This is well-defined,

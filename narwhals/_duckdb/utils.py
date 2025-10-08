@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 import duckdb
 import duckdb.typing as duckdb_dtypes
+from duckdb import Expression
 from duckdb.typing import DuckDBPyType
 
 from narwhals._utils import Version, isinstance_or_issubclass, zip_strict
@@ -13,7 +14,7 @@ from narwhals.exceptions import ColumnNotFoundError
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
-    from duckdb import DuckDBPyRelation, Expression
+    from duckdb import DuckDBPyRelation
 
     from narwhals._compliant.typing import CompliantLazyFrameAny
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
@@ -50,6 +51,22 @@ F = duckdb.FunctionExpression
 """Alias for `duckdb.FunctionExpression`."""
 
 
+def lambda_expr(
+    params: str | Expression | tuple[Expression, ...], expr: Expression, /
+) -> Expression:
+    """Wraps [`duckdb.LambdaExpression`].
+
+    [`duckdb.LambdaExpression`]: https://duckdb.org/docs/stable/sql/functions/lambda
+    """
+    try:
+        from duckdb import LambdaExpression
+    except ModuleNotFoundError as exc:  # pragma: no cover
+        msg = f"DuckDB>=1.2.0 is required for this operation. Found: DuckDB {duckdb.__version__}"
+        raise NotImplementedError(msg) from exc
+    args = (params,) if isinstance(params, Expression) else params
+    return LambdaExpression(args, expr)
+
+
 def concat_str(*exprs: Expression, separator: str = "") -> Expression:
     """Concatenate many strings, NULL inputs are skipped.
 
@@ -59,8 +76,6 @@ def concat_str(*exprs: Expression, separator: str = "") -> Expression:
         exprs: Native columns.
         separator: String that will be used to separate the values of each column.
 
-    Returns:
-        A new native expression.
 
     [concat]: https://duckdb.org/docs/stable/sql/functions/char.html#concatstring-
     [concat_ws]: https://duckdb.org/docs/stable/sql/functions/char.html#concat_wsseparator-string-
@@ -324,11 +339,6 @@ def window_expression(
 ) -> Expression:
     # TODO(unassigned): Replace with `duckdb.WindowExpression` when they release it.
     # https://github.com/duckdb/duckdb/discussions/14725#discussioncomment-11200348
-    try:
-        from duckdb import SQLExpression
-    except ModuleNotFoundError as exc:  # pragma: no cover
-        msg = f"DuckDB>=1.3.0 is required for this operation. Found: DuckDB {duckdb.__version__}"
-        raise NotImplementedError(msg) from exc
     pb = generate_partition_by_sql(*partition_by)
     descending = descending or [False] * len(order_by)
     nulls_last = nulls_last or [False] * len(order_by)
@@ -344,7 +354,7 @@ def window_expression(
         rows = ""
 
     func = f"{str(expr).removesuffix(')')} ignore nulls)" if ignore_nulls else str(expr)
-    return SQLExpression(f"{func} over ({pb} {ob} {rows})")
+    return sql_expression(f"{func} over ({pb} {ob} {rows})")
 
 
 def catch_duckdb_exception(
@@ -375,3 +385,12 @@ def function(name: str, *args: Expression) -> Expression:
             raise NotImplementedError(msg) from exc
         return SQLExpression(f"count(distinct {args[0]})")
     return F(name, *args)
+
+
+def sql_expression(expr: str) -> Expression:
+    try:
+        from duckdb import SQLExpression
+    except ModuleNotFoundError as exc:  # pragma: no cover
+        msg = f"DuckDB>=1.3.0 is required for this operation. Found: DuckDB {duckdb.__version__}"
+        raise NotImplementedError(msg) from exc
+    return SQLExpression(expr)
