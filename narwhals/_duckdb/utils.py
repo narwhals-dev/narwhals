@@ -4,9 +4,12 @@ from functools import lru_cache
 from typing import TYPE_CHECKING
 
 import duckdb
-import duckdb.typing as duckdb_dtypes
 from duckdb import Expression
-from duckdb.typing import DuckDBPyType
+
+try:
+    import duckdb.sqltypes as duckdb_dtypes
+except ModuleNotFoundError:
+    import duckdb.typing as duckdb_dtypes
 
 from narwhals._utils import Version, isinstance_or_issubclass, zip_strict
 from narwhals.exceptions import ColumnNotFoundError
@@ -131,7 +134,9 @@ class DeferredTimeZone:
 
 
 def native_to_narwhals_dtype(
-    duckdb_dtype: DuckDBPyType, version: Version, deferred_time_zone: DeferredTimeZone
+    duckdb_dtype: duckdb_dtypes.DuckDBPyType,
+    version: Version,
+    deferred_time_zone: DeferredTimeZone,
 ) -> DType:
     duckdb_dtype_id = duckdb_dtype.id
     dtypes = version.dtypes
@@ -216,7 +221,7 @@ def _non_nested_native_to_narwhals_dtype(duckdb_dtype_id: str, version: Version)
 
 
 dtypes = Version.MAIN.dtypes
-NW_TO_DUCKDB_DTYPES: Mapping[type[DType], DuckDBPyType] = {
+NW_TO_DUCKDB_DTYPES: Mapping[type[DType], duckdb_dtypes.DuckDBPyType] = {
     dtypes.Float64: duckdb_dtypes.DOUBLE,
     dtypes.Float32: duckdb_dtypes.FLOAT,
     dtypes.Binary: duckdb_dtypes.BLOB,
@@ -228,14 +233,14 @@ NW_TO_DUCKDB_DTYPES: Mapping[type[DType], DuckDBPyType] = {
     dtypes.Int16: duckdb_dtypes.SMALLINT,
     dtypes.Int32: duckdb_dtypes.INTEGER,
     dtypes.Int64: duckdb_dtypes.BIGINT,
-    dtypes.Int128: DuckDBPyType("INT128"),
+    dtypes.Int128: duckdb_dtypes.DuckDBPyType("INT128"),
     dtypes.UInt8: duckdb_dtypes.UTINYINT,
     dtypes.UInt16: duckdb_dtypes.USMALLINT,
     dtypes.UInt32: duckdb_dtypes.UINTEGER,
     dtypes.UInt64: duckdb_dtypes.UBIGINT,
-    dtypes.UInt128: DuckDBPyType("UINT128"),
+    dtypes.UInt128: duckdb_dtypes.DuckDBPyType("UINT128"),
 }
-TIME_UNIT_TO_TIMESTAMP: Mapping[TimeUnit, DuckDBPyType] = {
+TIME_UNIT_TO_TIMESTAMP: Mapping[TimeUnit, duckdb_dtypes.DuckDBPyType] = {
     "s": duckdb_dtypes.TIMESTAMP_S,
     "ms": duckdb_dtypes.TIMESTAMP_MS,
     "us": duckdb_dtypes.TIMESTAMP,
@@ -246,7 +251,7 @@ UNSUPPORTED_DTYPES = (dtypes.Decimal, dtypes.Categorical)
 
 def narwhals_to_native_dtype(  # noqa: PLR0912, C901
     dtype: IntoDType, version: Version, deferred_time_zone: DeferredTimeZone
-) -> DuckDBPyType:
+) -> duckdb_dtypes.DuckDBPyType:
     dtypes = version.dtypes
     base_type = dtype.base_type()
     if duckdb_type := NW_TO_DUCKDB_DTYPES.get(base_type):
@@ -256,7 +261,7 @@ def narwhals_to_native_dtype(  # noqa: PLR0912, C901
             msg = "Converting to Enum is not supported in narwhals.stable.v1"
             raise NotImplementedError(msg)
         if isinstance(dtype, dtypes.Enum):
-            return DuckDBPyType(f"ENUM{dtype.categories!r}")
+            return duckdb_dtypes.DuckDBPyType(f"ENUM{dtype.categories!r}")
         msg = "Can not cast / initialize Enum without categories present"
         raise ValueError(msg)
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
@@ -291,7 +296,7 @@ def narwhals_to_native_dtype(  # noqa: PLR0912, C901
             nw_inner = nw_inner.inner
         duckdb_inner = narwhals_to_native_dtype(nw_inner, version, deferred_time_zone)
         duckdb_shape_fmt = "".join(f"[{item}]" for item in dtype.shape)
-        return DuckDBPyType(f"{duckdb_inner}{duckdb_shape_fmt}")
+        return duckdb_dtypes.DuckDBPyType(f"{duckdb_inner}{duckdb_shape_fmt}")
     if issubclass(base_type, UNSUPPORTED_DTYPES):
         msg = f"Converting to {base_type.__name__} dtype is not supported for DuckDB."
         raise NotImplementedError(msg)

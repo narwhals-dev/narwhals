@@ -41,7 +41,7 @@ if TYPE_CHECKING:
     import pandas as pd
     import pyarrow as pa
     from duckdb import Expression
-    from duckdb.typing import DuckDBPyType
+    from duckdb.sqltypes import DuckDBPyType
     from typing_extensions import Self, TypeIs
 
     from narwhals._compliant.typing import CompliantDataFrameAny
