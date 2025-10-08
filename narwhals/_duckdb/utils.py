@@ -234,12 +234,12 @@ NW_TO_DUCKDB_DTYPES: Mapping[type[DType], duckdb_dtypes.DuckDBPyType] = {
     dtypes.Int16: duckdb_dtypes.SMALLINT,
     dtypes.Int32: duckdb_dtypes.INTEGER,
     dtypes.Int64: duckdb_dtypes.BIGINT,
-    dtypes.Int128: duckdb_dtypes.DuckDBPyType("INT128"),
+    dtypes.Int128: duckdb_dtypes.HUGEINT,
     dtypes.UInt8: duckdb_dtypes.UTINYINT,
     dtypes.UInt16: duckdb_dtypes.USMALLINT,
     dtypes.UInt32: duckdb_dtypes.UINTEGER,
     dtypes.UInt64: duckdb_dtypes.UBIGINT,
-    dtypes.UInt128: duckdb_dtypes.DuckDBPyType("UINT128"),
+    dtypes.UInt128: duckdb_dtypes.UHUGEINT,
 }
 TIME_UNIT_TO_TIMESTAMP: Mapping[TimeUnit, duckdb_dtypes.DuckDBPyType] = {
     "s": duckdb_dtypes.TIMESTAMP_S,
@@ -384,19 +384,14 @@ def function(name: str, *args: Expression) -> Expression:
     if name == "isnull":
         return args[0].isnull()
     if name == "count_distinct":
-        try:
-            from duckdb import SQLExpression
-        except ModuleNotFoundError as exc:  # pragma: no cover
-            msg = f"DuckDB>=1.3.0 is required for this operation. Found: DuckDB {duckdb.__version__}"
-            raise NotImplementedError(msg) from exc
-        return SQLExpression(f"count(distinct {args[0]})")
+        return sql_expression(f"count(distinct {args[0]})")
     return F(name, *args)
 
 
 def sql_expression(expr: str) -> Expression:
     try:
         from duckdb import SQLExpression
-    except ModuleNotFoundError as exc:  # pragma: no cover
+    except ImportError as exc:  # pragma: no cover
         msg = f"DuckDB>=1.3.0 is required for this operation. Found: DuckDB {duckdb.__version__}"
         raise NotImplementedError(msg) from exc
     return SQLExpression(expr)

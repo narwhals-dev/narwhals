@@ -13,6 +13,7 @@ import pytest
 import narwhals as nw
 from narwhals.exceptions import DuplicateError, InvalidOperationError
 from tests.utils import (
+    DUCKDB_VERSION,
     PANDAS_VERSION,
     POLARS_VERSION,
     PYARROW_VERSION,
@@ -204,6 +205,8 @@ def test_group_by_median(constructor: Constructor) -> None:
 
 
 def test_group_by_n_unique_w_missing(constructor: Constructor) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
     data = {"a": [1, 1, 2], "b": [4, None, 5], "c": [None, None, 7], "d": [1, 1, 3]}
     result = (
         nw.from_native(constructor(data))
