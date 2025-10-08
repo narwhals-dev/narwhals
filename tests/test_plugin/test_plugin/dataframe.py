@@ -32,7 +32,7 @@ class DictLazyFrame(
         return self
 
     @property
-    def columns(self) -> list[str]:
+    def columns(self) -> list[str]:  # pragma: no cover
         return list(self._native_frame.keys())
 
     _with_native = not_implemented()
