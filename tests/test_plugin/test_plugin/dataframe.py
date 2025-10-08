@@ -34,12 +34,12 @@ class DictLazyFrame(
     def _with_native(self, df: DictFrame) -> Self:
         return self.__class__(df, version=self._version)
 
-    def _with_version(self, version: Version) -> Self:
-        return self.__class__(self._native_frame, version=version)
-
     @property
     def columns(self) -> list[str]:
         return list(self._native_frame.keys())
+
+    _with_native = not_implemented()
+    _with_version = not_implemented()
 
     # Dunders
     __narwhals_namespace__ = not_implemented()

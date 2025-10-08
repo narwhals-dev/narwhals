@@ -7,8 +7,6 @@ from narwhals._utils import not_implemented
 from tests.test_plugin.test_plugin.dataframe import DictFrame, DictLazyFrame
 
 if TYPE_CHECKING:
-    from typing_extensions import TypeIs
-
     from narwhals.utils import Version
 
 
@@ -19,9 +17,7 @@ class DictNamespace(CompliantNamespace[DictLazyFrame, Any]):
     def from_native(self, native_object: DictFrame) -> DictLazyFrame:
         return DictLazyFrame(native_object, version=self._version)
 
-    def is_native(self, obj: DictFrame) -> TypeIs[DictFrame]:
-        return isinstance(obj, DictLazyFrame)
-
+    is_native: Any = not_implemented()
     _expr: Any = not_implemented()
     _implementation: Any = not_implemented()
     len: Any = not_implemented()

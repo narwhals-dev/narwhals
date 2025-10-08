@@ -63,7 +63,7 @@ class Plugin(Protocol[FrameT, FromNativeR_co]):
 
 
 @cache
-def _might_be(cls: type, type_: str) -> bool:
+def _might_be(cls: type, type_: str) -> bool:  # pragma: no cover
     try:
         return any(type_ in o.__module__.split(".") for o in cls.mro())
     except TypeError:
