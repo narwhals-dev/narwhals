@@ -52,7 +52,7 @@ def test_filter_with_boolean_list_predicates_eager(
     expected: dict[str, list[Any]],
 ) -> None:
     df = nw.from_native(constructor_eager(data))
-    result = df.filter(*predicates)  # type: ignore[arg-type]
+    result = df.filter(*predicates)
     assert_equal_data(result, expected)
 
 
@@ -66,7 +66,7 @@ def test_filter_with_boolean_list_predicates_eager(
     ],
 )
 def test_filter_with_boolean_list_predicates_lazy(
-    constructor: Constructor, predicates: tuple[list[bool], ...]
+    constructor: Constructor, predicates: tuple[list[bool] | nw.Expr, ...]
 ) -> None:
     df = nw.from_native(constructor(data)).lazy()
     with pytest.raises(TypeError, match="not supported with Python boolean masks"):
