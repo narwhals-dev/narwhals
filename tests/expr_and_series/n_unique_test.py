@@ -9,6 +9,8 @@ data = {"a": [1.0, None, None, 3.0], "b": [1.0, None, 4.0, 5.0]}
 
 
 def test_n_unique(constructor: Constructor) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
     df = nw.from_native(constructor(data))
     result = df.select(nw.all().n_unique())
     expected = {"a": [3], "b": [4]}

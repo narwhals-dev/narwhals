@@ -29,7 +29,7 @@ jobs:
           cache-suffix: min-versions-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-minimum-versions
-        run: uv pip install pipdeptree tox virtualenv setuptools pandas==1.1.3 polars==0.20.4 numpy==1.19.3 pyarrow==13.0.0 "pyarrow-stubs<17" scipy==1.6.0 scikit-learn==1.1.0 duckdb==1.0 tzdata --system
+        run: uv pip install pipdeptree tox virtualenv setuptools pandas==1.1.3 polars==0.20.4 numpy==1.19.3 pyarrow==13.0.0 "pyarrow-stubs<17" scipy==1.6.0 scikit-learn==1.1.0 duckdb==1.1 tzdata --system
       - name: install-reqs
         run: |
           uv pip install -e . --group tests --system
@@ -44,9 +44,9 @@ jobs:
           echo "$DEPS" | grep 'pyarrow==13.0.0'
           echo "$DEPS" | grep 'scipy==1.6.0'
           echo "$DEPS" | grep 'scikit-learn==1.1.0'
-          echo "$DEPS" | grep 'duckdb==1.0'
+          echo "$DEPS" | grep 'duckdb==1.1'
       - name: Run pytest
-        run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=50 --runslow --constructors=pandas,pyarrow,polars[eager],polars[lazy]
+        run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=50 --runslow --constructors=pandas,pyarrow,polars[eager],polars[lazy],duckdb
 
   pretty_old_versions:
     strategy:

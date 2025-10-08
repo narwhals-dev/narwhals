@@ -517,6 +517,7 @@ def test_datetime_w_tz_duckdb() -> None:
     assert result["b"] == nw.List(nw.List(nw.Datetime("us", "Asia/Kathmandu")))
 
 
+@pytest.mark.slow
 def test_datetime_w_tz_pyspark() -> None:  # pragma: no cover
     pytest.importorskip("pyspark")
     session = pyspark_session()

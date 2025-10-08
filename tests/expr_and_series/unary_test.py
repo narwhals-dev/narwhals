@@ -75,6 +75,8 @@ def test_unary_two_elements(
 ) -> None:
     if "ibis" in str(constructor):
         request.applymarker(pytest.mark.xfail)
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
     data = {"a": [1, 2], "b": [2, 10], "c": [2.0, None]}
     result = nw.from_native(constructor(data)).select(
         a_nunique=nw.col("a").n_unique(),
@@ -124,6 +126,8 @@ def test_unary_one_element(
         request.applymarker(pytest.mark.xfail)
     if "ibis" in str(constructor):
         request.applymarker(pytest.mark.xfail)
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
     data = {"a": [1], "b": [2], "c": [None]}
     # Dask runs into a divide by zero RuntimeWarning for 1 element skew.
     context = (
