@@ -44,6 +44,7 @@ if TYPE_CHECKING:
         MultiIndexSelector,
         NonNestedLiteral,
         NumericLiteral,
+        PythonLiteral,
         _1DArray,
     )
 
@@ -648,6 +649,16 @@ class PolarsSeries:
     def to_polars(self) -> pl.Series:
         return self.native
 
+    def first(self) -> PythonLiteral:
+        if self._backend_version < (1, 10):  # pragma: no cover
+            return self.native.item(0) if len(self) else None
+        return self.native.first()  # type: ignore[return-value]
+
+    def last(self) -> PythonLiteral:
+        if self._backend_version < (1, 10):  # pragma: no cover
+            return self.native.item(-1) if len(self) else None
+        return self.native.last()  # type: ignore[return-value]
+
     @property
     def dt(self) -> PolarsSeriesDateTimeNamespace:
         return PolarsSeriesDateTimeNamespace(self)
@@ -775,6 +786,11 @@ class PolarsSeriesDateTimeNamespace(
 class PolarsSeriesStringNamespace(
     PolarsSeriesNamespace, PolarsStringNamespace[PolarsSeries, pl.Series]
 ):
+    def to_titlecase(self) -> PolarsSeries:
+        name = self.name
+        ns = self.__narwhals_namespace__()
+        return self.to_frame().select(ns.col(name).str.to_titlecase()).get_column(name)
+
     def zfill(self, width: int) -> PolarsSeries:
         name = self.name
         ns = self.__narwhals_namespace__()

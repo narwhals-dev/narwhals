@@ -185,7 +185,7 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
         order_by: Sequence[str] | None = None,
     ) -> Self:
         if order_by and maintain_order:
-            token = generate_temporary_column_name(8, self.columns)
+            token = generate_temporary_column_name(8, self.columns, prefix="row_index_")
             res = (
                 self.native.with_row_index(token)
                 .sort(order_by, nulls_last=False)
@@ -338,7 +338,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         if not data:
             native = pl.DataFrame(schema=pl_schema)
         elif FROM_DICTS_ACCEPTS_MAPPINGS or isinstance(data[0], dict):
-            native = pl.from_dicts(data, pl_schema)  # type: ignore[arg-type]
+            native = pl.from_dicts(data, pl_schema)
         else:  # pragma: no cover
             columns = pl_schema or tuple(data[0])
             native = pl.DataFrame(

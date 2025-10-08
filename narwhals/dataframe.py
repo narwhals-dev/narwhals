@@ -1842,9 +1842,6 @@ class DataFrame(BaseFrame[DataFrameT]):
             reverse: Consider the k smallest elements of the by column(s) (instead of the k largest).
                 This can be specified per column by passing a sequence of booleans.
 
-        Returns:
-            The dataframe with the `k` largest rows.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -3087,9 +3084,6 @@ class LazyFrame(BaseFrame[LazyFrameT]):
             by: Column(s) used to determine the top rows. Accepts expression input. Strings are parsed as column names.
             reverse: Consider the k smallest elements of the by column(s) (instead of the k largest).
                 This can be specified per column by passing a sequence of booleans.
-
-        Returns:
-            The LazyFrame with the `k` largest rows.
 
         Examples:
             >>> import duckdb

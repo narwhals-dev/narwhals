@@ -698,11 +698,7 @@ def narwhalify(
 
 
 def all() -> Expr:
-    """Instantiate an expression representing all columns.
-
-    Returns:
-        A new expression.
-    """
+    """Instantiate an expression representing all columns."""
     return _stableify(nw.all())
 
 
@@ -711,9 +707,6 @@ def col(*names: str | Iterable[str]) -> Expr:
 
     Arguments:
         names: Name(s) of the columns to use.
-
-    Returns:
-        A new expression.
     """
     return _stableify(nw.col(*names))
 
@@ -723,9 +716,6 @@ def exclude(*names: str | Iterable[str]) -> Expr:
 
     Arguments:
         names: Name(s) of the columns to exclude.
-
-    Returns:
-        A new expression.
     """
     return _stableify(nw.exclude(*names))
 
@@ -739,19 +729,12 @@ def nth(*indices: int | Sequence[int]) -> Expr:
 
     Arguments:
         indices: One or more indices representing the columns to retrieve.
-
-    Returns:
-        A new expression.
     """
     return _stableify(nw.nth(*indices))
 
 
 def len() -> Expr:
-    """Return the number of rows.
-
-    Returns:
-        A new expression.
-    """
+    """Return the number of rows."""
     return _stableify(nw.len())
 
 
@@ -762,9 +745,6 @@ def lit(value: NonNestedLiteral, dtype: IntoDType | None = None) -> Expr:
         value: The value to use as literal.
         dtype: The data type of the literal value. If not provided, the data type will
             be inferred by the native library.
-
-    Returns:
-        A new expression.
     """
     return _stableify(nw.lit(value, dtype))
 
@@ -777,9 +757,6 @@ def min(*columns: str) -> Expr:
 
     Arguments:
         columns: Name(s) of the columns to use in the aggregation function.
-
-    Returns:
-        A new expression.
     """
     return _stableify(nw.min(*columns))
 
@@ -792,9 +769,6 @@ def max(*columns: str) -> Expr:
 
     Arguments:
         columns: Name(s) of the columns to use in the aggregation function.
-
-    Returns:
-        A new expression.
     """
     return _stableify(nw.max(*columns))
 
@@ -807,9 +781,6 @@ def mean(*columns: str) -> Expr:
 
     Arguments:
         columns: Name(s) of the columns to use in the aggregation function
-
-    Returns:
-        A new expression.
     """
     return _stableify(nw.mean(*columns))
 
@@ -824,9 +795,6 @@ def median(*columns: str) -> Expr:
 
     Arguments:
         columns: Name(s) of the columns to use in the aggregation function
-
-    Returns:
-        A new expression.
     """
     return _stableify(nw.median(*columns))
 
@@ -839,9 +807,6 @@ def sum(*columns: str) -> Expr:
 
     Arguments:
         columns: Name(s) of the columns to use in the aggregation function
-
-    Returns:
-        A new expression.
     """
     return _stableify(nw.sum(*columns))
 
@@ -855,9 +820,6 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
             expression input.
-
-    Returns:
-        A new expression.
     """
     return _stableify(nw.sum_horizontal(*exprs))
 
@@ -874,9 +836,6 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool) ->
               is `True`.
             - If `False`, Kleene logic is followed. Note that this is not allowed for
               pandas with classical NumPy dtypes when null values are present.
-
-    Returns:
-        A new expression.
     """
     return _stableify(nw.all_horizontal(*exprs, ignore_nulls=ignore_nulls))
 
@@ -893,9 +852,6 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool) ->
               is `False`.
             - If `False`, Kleene logic is followed. Note that this is not allowed for
               pandas with classical NumPy dtypes when null values are present.
-
-    Returns:
-        A new expression.
     """
     return _stableify(nw.any_horizontal(*exprs, ignore_nulls=ignore_nulls))
 
@@ -906,9 +862,6 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
             expression input.
-
-    Returns:
-        A new expression.
     """
     return _stableify(nw.mean_horizontal(*exprs))
 
@@ -922,9 +875,6 @@ def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
             expression input.
-
-    Returns:
-        A new expression.
     """
     return _stableify(nw.min_horizontal(*exprs))
 
@@ -938,9 +888,6 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
             expression input.
-
-    Returns:
-        A new expression.
     """
     return _stableify(nw.max_horizontal(*exprs))
 
@@ -963,13 +910,20 @@ def concat_str(
         ignore_nulls: Ignore null values (default is `False`).
             If set to `False`, null values will be propagated and if the row contains any
             null values, the output is null.
-
-    Returns:
-        A new expression.
     """
     return _stableify(
         nw.concat_str(exprs, *more_exprs, separator=separator, ignore_nulls=ignore_nulls)
     )
+
+
+def format(f_string: str, *args: IntoExpr) -> Expr:
+    """Format expressions as a string.
+
+    Arguments:
+        f_string: A string that with placeholders.
+        args: Expression(s) that fill the placeholders.
+    """
+    return _stableify(nw.format(f_string, *args))
 
 
 def coalesce(exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr) -> Expr:
@@ -984,9 +938,6 @@ def coalesce(exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr) -> Exp
 
     Raises:
         TypeError: If any of the inputs are not a str, nw.Expr, or nw.Series.
-
-    Returns:
-        A new expression.
     """
     return _stableify(nw.coalesce(exprs, *more_exprs))
 
@@ -1055,9 +1006,6 @@ def new_series(
                 `POLARS`, `MODIN` or `CUDF`.
             - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
-
-    Returns:
-        A new Series
     """
     return _stableify(_new_series_impl(name, values, dtype, backend=backend))
 
@@ -1077,9 +1025,6 @@ def from_arrow(
                 `POLARS`, `MODIN` or `CUDF`.
             - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
-
-    Returns:
-        A new DataFrame.
     """
     return _stableify(nw_f.from_arrow(native_frame, backend=backend))
 
@@ -1112,9 +1057,6 @@ def from_dict(
                 `POLARS`, `MODIN` or `CUDF`.
             - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
-
-    Returns:
-        A new DataFrame.
     """
     return _stableify(nw_f.from_dict(data, schema, backend=backend))
 
@@ -1147,9 +1089,6 @@ def from_numpy(
                 `POLARS`, `MODIN` or `CUDF`.
             - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
-
-    Returns:
-        A new DataFrame.
     """
     return _stableify(nw_f.from_numpy(data, schema, backend=backend))
 
@@ -1171,9 +1110,6 @@ def read_csv(
         kwargs: Extra keyword arguments which are passed to the native CSV reader.
             For example, you could use
             `nw.read_csv('file.csv', backend='pandas', engine='pyarrow')`.
-
-    Returns:
-        DataFrame.
     """
     return _stableify(nw_f.read_csv(source, backend=backend, **kwargs))
 
@@ -1198,9 +1134,6 @@ def scan_csv(
         kwargs: Extra keyword arguments which are passed to the native CSV reader.
             For example, you could use
             `nw.scan_csv('file.csv', backend=pd, engine='pyarrow')`.
-
-    Returns:
-        LazyFrame.
     """
     return _stableify(nw_f.scan_csv(source, backend=backend, **kwargs))
 
@@ -1222,9 +1155,6 @@ def read_parquet(
         kwargs: Extra keyword arguments which are passed to the native parquet reader.
             For example, you could use
             `nw.read_parquet('file.parquet', backend=pd, engine='pyarrow')`.
-
-    Returns:
-        DataFrame.
     """
     return _stableify(nw_f.read_parquet(source, backend=backend, **kwargs))
 
@@ -1263,9 +1193,6 @@ def scan_parquet(
         kwargs: Extra keyword arguments which are passed to the native parquet reader.
             For example, you could use
             `nw.scan_parquet('file.parquet', backend=pd, engine='pyarrow')`.
-
-    Returns:
-        LazyFrame.
     """
     return _stableify(nw_f.scan_parquet(source, backend=backend, **kwargs))
 
@@ -1317,6 +1244,7 @@ __all__ = [
     "dtypes",
     "exceptions",
     "exclude",
+    "format",
     "from_arrow",
     "from_dict",
     "from_dicts",

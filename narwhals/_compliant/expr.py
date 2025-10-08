@@ -124,6 +124,8 @@ class CompliantExpr(
     def mean(self) -> Self: ...
     def sum(self) -> Self: ...
     def median(self) -> Self: ...
+    def first(self) -> Self: ...
+    def last(self) -> Self: ...
     def skew(self) -> Self: ...
     def kurtosis(self) -> Self: ...
     def std(self, *, ddof: int) -> Self: ...
@@ -867,6 +869,12 @@ class EagerExpr(
             nans_equal=nans_equal,
         )
 
+    def first(self) -> Self:
+        return self._reuse_series("first", returns_scalar=True)
+
+    def last(self) -> Self:
+        return self._reuse_series("last", returns_scalar=True)
+
     @property
     def cat(self) -> EagerExprCatNamespace[Self]:
         return EagerExprCatNamespace(self)
@@ -1147,6 +1155,9 @@ class EagerExprStringNamespace(
 
     def zfill(self, width: int) -> EagerExprT:
         return self.compliant._reuse_series_namespace("str", "zfill", width=width)
+
+    def to_titlecase(self) -> EagerExprT:
+        return self.compliant._reuse_series_namespace("str", "to_titlecase")
 
 
 class EagerExprStructNamespace(
