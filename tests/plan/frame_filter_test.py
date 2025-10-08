@@ -8,7 +8,7 @@ import pytest
 pytest.importorskip("pyarrow")
 
 import narwhals._plan as nwp
-from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError, ShapeError
+from narwhals.exceptions import ColumnNotFoundError, ShapeError
 from tests.plan.utils import assert_equal_data, dataframe, series
 
 if TYPE_CHECKING:
@@ -42,11 +42,27 @@ def test_filter_single(
     assert_equal_data(result, expected)
 
 
-@pytest.mark.xfail(reason=("Not sure why this isn't allowed on `main`"))
-def test_filter_raise_on_agg_predicate(data: Data) -> None:
+def test_filter_aggregated_predicate(data: Data) -> None:
+    # NOTE: Unclear why this isn't permitted on `main`
+    pytest.importorskip("polars")
+    import polars as pl
+
+    expected = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
+    expected_invert: Data = {"a": [], "b": [], "z": []}
     df = dataframe(data)
-    with pytest.raises(InvalidOperationError):
-        df.filter(nwp.col("a").max() > 2)
+    df_pl = pl.DataFrame(data)
+    predicate = nwp.col("a").max() > 2
+    predicate_pl = pl.col("a").max() > 2
+
+    result = df.filter(predicate)
+    result_pl = df_pl.filter(predicate_pl).to_dict(as_series=False)
+    assert_equal_data(result, expected)
+    assert_equal_data(result, result_pl)
+
+    result = df.filter(~predicate)
+    result_pl = df_pl.filter(~predicate_pl).to_dict(as_series=False)
+    assert_equal_data(result, expected_invert)
+    assert_equal_data(result, result_pl)
 
 
 def test_filter_raise_on_shape_mismatch(data: Data) -> None:
