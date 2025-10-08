@@ -59,7 +59,7 @@ def test_filter_with_boolean_list_predicates(
         else does_not_raise()
     )
     with context:
-        result = df.filter(*predicates)
+        result = df.filter(*predicates)  # type: ignore[arg-type]
         assert_equal_data(result, expected)
 
 

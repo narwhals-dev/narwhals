@@ -135,7 +135,6 @@ if TYPE_CHECKING:
         CompliantSeries,
         DTypes,
         FileSource,
-        IntoExpr,
         IntoSeriesT,
         MultiIndexSelector,
         SingleIndexSelector,
@@ -1370,17 +1369,10 @@ def is_list_of(obj: Any, tp: type[_T]) -> TypeIs[list[_T]]:
     return bool(isinstance(obj, list) and obj and isinstance(obj[0], tp))
 
 
-def predicates_has_no_list_of_bool(
-    predicates: tuple[IntoExpr | Iterable[IntoExpr] | list[bool], ...],
-) -> TypeIs[tuple[IntoExpr | Iterable[IntoExpr], ...]]:
-    """Guard function to check if predicates contain no `list[bool]` elements.
-
-    This is used in `LazyFrame.filter` to ensure type checker knows that
-    `list[bool]` elements are filtered out before calling `BaseFrame.filter`.
-
-    Returns True if no predicate is a `list[bool]`, False otherwise.
-    """
-    return not any(is_list_of(pred, bool) for pred in predicates)
+def predicates_contains_list_of_bool(
+    predicates: Iterable[Any],
+) -> TypeIs[Iterable[list[bool]]]:
+    return any(is_list_of(pred, bool) for pred in predicates)
 
 
 def is_sequence_of(obj: Any, tp: type[_T]) -> TypeIs[Sequence[_T]]:

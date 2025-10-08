@@ -40,7 +40,7 @@ from narwhals._utils import (
     is_list_of,
     is_sequence_like,
     is_slice_none,
-    predicates_has_no_list_of_bool,
+    predicates_contains_list_of_bool,
     qualified_type_name,
     supports_arrow_c_stream,
     zip_strict,
@@ -2855,7 +2855,7 @@ class LazyFrame(BaseFrame[LazyFrameT]):
         )
 
     def filter(
-        self, *predicates: IntoExpr | Iterable[IntoExpr] | list[bool], **constraints: Any
+        self, *predicates: IntoExpr | Iterable[IntoExpr], **constraints: Any
     ) -> Self:
         r"""Filter the rows in the LazyFrame based on a predicate expression.
 
@@ -2929,7 +2929,7 @@ class LazyFrame(BaseFrame[LazyFrameT]):
             <BLANKLINE>
         """
         predicates_ = tuple(tuple(p) if is_generator(p) else p for p in predicates)
-        if not predicates_has_no_list_of_bool(predicates_):
+        if predicates_contains_list_of_bool(predicates_):
             msg = "`LazyFrame.filter` is not supported with Python boolean masks - use expressions instead."
             raise TypeError(msg)
 
