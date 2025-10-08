@@ -1,15 +1,6 @@
 from __future__ import annotations
 
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    ClassVar,
-    Generic,
-    Literal,
-    cast,
-    get_args,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, get_args, overload
 
 from narwhals._plan import _parse
 from narwhals._plan._expansion import prepare_projection
@@ -25,6 +16,7 @@ from narwhals._plan.typing import (
     NativeDataFrameT_co,
     NativeFrameT_co,
     NativeSeriesT,
+    NonCrossJoinStrategy,
     OneOrIterable,
     PartialSeries,
     Seq,
@@ -239,19 +231,17 @@ class DataFrame(
         right_on: str | Sequence[str] | None = None,
         suffix: str = "_right",
     ) -> Self:
+        left, right = self._compliant, other._compliant
         how = _validate_join_strategy(how)
-        left_on, right_on = normalize_join_on(on, how, left_on, right_on)
         if how == "cross":
-            result = self._compliant.join_cross(other._compliant, suffix=suffix)
-        else:
-            result = self._compliant.join(
-                other._compliant,
-                how=how,
-                left_on=cast("Sequence[str]", left_on),
-                right_on=cast("Sequence[str]", right_on),
-                suffix=suffix,
-            )
-        return self._with_compliant(result)
+            if left_on is not None or right_on is not None or on is not None:
+                msg = "Can not pass `left_on`, `right_on` or `on` keys for cross join"
+                raise ValueError(msg)
+            return self._with_compliant(left.join_cross(right, suffix=suffix))
+        left_on, right_on = normalize_join_on(on, how, left_on, right_on)
+        return self._with_compliant(
+            left.join(right, how=how, left_on=left_on, right_on=right_on, suffix=suffix)
+        )
 
     def filter(
         self, *predicates: OneOrIterable[IntoExprColumn] | list[bool], **constraints: Any
@@ -282,20 +272,15 @@ def _validate_join_strategy(how: str, /) -> JoinStrategy:
 
 def normalize_join_on(
     on: OneOrIterable[str] | None,
-    how: JoinStrategy,
+    how: NonCrossJoinStrategy,
     left_on: OneOrIterable[str] | None,
     right_on: OneOrIterable[str] | None,
     /,
-) -> tuple[Seq[str], Seq[str]] | tuple[None, None]:
+) -> tuple[Seq[str], Seq[str]]:
     """Reduce the 3 potential key (`on*`) arguments to 2.
 
     Ensures the keys spelling is compatible with the join strategy.
     """
-    if how == "cross":
-        if left_on is not None or right_on is not None or on is not None:
-            msg = "Can not pass `left_on`, `right_on` or `on` keys for cross join"
-            raise ValueError(msg)
-        return None, None
     if on is None:
         if left_on is None or right_on is None:
             msg = f"Either (`left_on` and `right_on`) or `on` keys should be specified for {how}."
