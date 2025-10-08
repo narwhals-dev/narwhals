@@ -707,9 +707,7 @@ def _is_iterable(arg: Any | Iterable[Any]) -> bool:
     return isinstance(arg, Iterable) and not isinstance(arg, (str, bytes, Series))
 
 
-def _is_generator(
-    val: object | Iterator[_T] | Generator[_T] | MappingView,
-) -> TypeIs[Iterator[_T] | Generator[_T] | MappingView]:
+def _is_generator(val: Iterable[_T] | Any) -> TypeIs[Iterator[_T]]:
     # Adapted from https://github.com/pola-rs/polars/pull/16254
     return (
         (isinstance(val, (Generator, Iterable)) and not isinstance(val, Sized))
