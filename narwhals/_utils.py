@@ -176,7 +176,7 @@ if TYPE_CHECKING:
 
 
 # note: reversed views don't match as instances of MappingView
-if sys.version_info >= (3, 11):
+if sys.version_info >= (3, 11):  # pragma: no cover
     _views: list[Reversible[Any]] = [{}.keys(), {}.values(), {}.items()]
     _reverse_mapping_views = tuple(type(reversed(view)) for view in _views)
 
@@ -710,6 +710,7 @@ def _is_iterable(arg: Any | Iterable[Any]) -> bool:
 def _is_generator(
     val: object | Iterator[_T] | Generator[_T] | MappingView,
 ) -> TypeIs[Iterator[_T] | Generator[_T] | MappingView]:
+    # Adapted from https://github.com/pola-rs/polars/pull/16254
     return (
         (isinstance(val, (Generator, Iterable)) and not isinstance(val, Sized))
         or isinstance(val, MappingView)
