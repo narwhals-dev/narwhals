@@ -1693,12 +1693,10 @@ class DataFrame(BaseFrame[DataFrameT]):
                foo  bar ham
             1    2    7   b
         """
-        plx = self.__narwhals_namespace__()
-        parsed_predicates = tuple(
-            plx._series.from_iterable(pred, context=plx).to_narwhals()
-            if is_list_of(pred, bool)
-            else pred
-            for pred in predicates
+        impl = self.implementation
+        parsed_predicates = (
+            self._series.from_iterable("", p, backend=impl) if is_list_of(p, bool) else p
+            for p in predicates
         )
         return super().filter(*parsed_predicates, **constraints)
 
