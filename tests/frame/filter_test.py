@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from contextlib import nullcontext as does_not_raise
 from typing import Any
 
 import pytest
@@ -47,20 +46,31 @@ def test_filter_with_series_predicates(constructor_eager: ConstructorEager) -> N
         (([True, True, False], [False, True, True]), {"a": [3], "b": [4], "z": [8.0]}),
     ],
 )
-def test_filter_with_boolean_list_predicates(
-    constructor: Constructor,
+def test_filter_with_boolean_list_predicates_eager(
+    constructor_eager: ConstructorEager,
     predicates: tuple[list[bool], ...],
     expected: dict[str, list[Any]],
 ) -> None:
-    df = nw.from_native(constructor(data))
-    context = (
-        pytest.raises(TypeError, match="not supported")
-        if isinstance(df, nw.LazyFrame)
-        else does_not_raise()
-    )
-    with context:
-        result = df.filter(*predicates)  # type: ignore[arg-type]
-        assert_equal_data(result, expected)
+    df = nw.from_native(constructor_eager(data))
+    result = df.filter(*predicates)  # type: ignore[arg-type]
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    "predicates",
+    [
+        ([False, True, True],),
+        ([True, True, False], [False, True, True]),
+        (nw.col("a") > 1, [False, True, True]),
+        ([True, True, False], nw.col("z") < 9.0),
+    ],
+)
+def test_filter_with_boolean_list_predicates_lazy(
+    constructor: Constructor, predicates: tuple[list[bool], ...]
+) -> None:
+    df = nw.from_native(constructor(data)).lazy()
+    with pytest.raises(TypeError, match="not supported with Python boolean masks"):
+        df.filter(*predicates)  # type: ignore[arg-type]
 
 
 def test_filter_raise_on_agg_predicate(constructor: Constructor) -> None:
