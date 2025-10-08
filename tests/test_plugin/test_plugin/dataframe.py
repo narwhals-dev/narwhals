@@ -31,9 +31,6 @@ class DictLazyFrame(
     def __narwhals_lazyframe__(self) -> Self:
         return self
 
-    def _with_native(self, df: DictFrame) -> Self:
-        return self.__class__(df, version=self._version)
-
     @property
     def columns(self) -> list[str]:
         return list(self._native_frame.keys())
