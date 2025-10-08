@@ -9,6 +9,7 @@ import narwhals as nw
 from narwhals import _plan as nwp
 from narwhals._plan import selectors as npcs
 from narwhals.exceptions import InvalidOperationError
+from tests.plan.utils import assert_equal_data, dataframe
 from tests.utils import PYARROW_VERSION, assert_equal_data as _assert_equal_data
 
 pytest.importorskip("pyarrow")
@@ -20,14 +21,6 @@ if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
     from narwhals._plan.typing import IntoExpr
-
-
-def dataframe(data: dict[str, Any], /) -> nwp.DataFrame[Any, Any]:
-    return nwp.DataFrame.from_native(pa.table(data))
-
-
-def assert_equal_data(result: nwp.DataFrame, expected: Mapping[str, Any]) -> None:
-    _assert_equal_data(result.to_dict(as_series=False), expected)
 
 
 def test_group_by_iter() -> None:

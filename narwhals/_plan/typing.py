@@ -5,13 +5,15 @@ import typing as t
 from narwhals._typing_compat import TypeVar
 
 if t.TYPE_CHECKING:
+    from collections.abc import Callable, Iterable
+
     from typing_extensions import TypeAlias
 
     from narwhals import dtypes
     from narwhals._plan._expr_ir import ExprIR, NamedIR, SelectorIR
     from narwhals._plan._function import Function
     from narwhals._plan.dataframe import DataFrame
-    from narwhals._plan.expr import Expr
+    from narwhals._plan.expr import Expr, Selector
     from narwhals._plan.expressions import operators as ops
     from narwhals._plan.expressions.functions import RollingWindow
     from narwhals._plan.expressions.namespace import IRNamespace
@@ -26,6 +28,7 @@ if t.TYPE_CHECKING:
     )
 
 __all__ = [
+    "ColumnNameOrSelector",
     "DataFrameT",
     "FunctionT",
     "IntoExpr",
@@ -63,7 +66,7 @@ RangeT_co = TypeVar(
 LeftT = TypeVar("LeftT", bound="ExprIR", default="ExprIR")
 OperatorT = TypeVar("OperatorT", bound="ops.Operator", default="ops.Operator")
 RightT = TypeVar("RightT", bound="ExprIR", default="ExprIR")
-OperatorFn: TypeAlias = "t.Callable[[t.Any, t.Any], t.Any]"
+OperatorFn: TypeAlias = "Callable[[t.Any, t.Any], t.Any]"
 ExprIRT = TypeVar("ExprIRT", bound="ExprIR", default="ExprIR")
 ExprIRT2 = TypeVar("ExprIRT2", bound="ExprIR", default="ExprIR")
 NamedOrExprIRT = TypeVar("NamedOrExprIRT", "NamedIR[t.Any]", "ExprIR")
@@ -87,6 +90,7 @@ NonNestedLiteralT = TypeVar(
     "NonNestedLiteralT", bound="NonNestedLiteral", default="NonNestedLiteral"
 )
 NativeSeriesT = TypeVar("NativeSeriesT", bound="NativeSeries", default="NativeSeries")
+NativeSeriesAnyT = TypeVar("NativeSeriesAnyT", bound="NativeSeries", default="t.Any")
 NativeSeriesT_co = TypeVar(
     "NativeSeriesT_co", bound="NativeSeries", covariant=True, default="NativeSeries"
 )
@@ -104,7 +108,7 @@ NativeDataFrameT_co = TypeVar(
     default="NativeDataFrame",
 )
 LiteralT = TypeVar("LiteralT", bound="NonNestedLiteral | Series[t.Any]", default=t.Any)
-MapIR: TypeAlias = "t.Callable[[ExprIR], ExprIR]"
+MapIR: TypeAlias = "Callable[[ExprIR], ExprIR]"
 """A function to apply to all nodes in this tree."""
 
 T = TypeVar("T")
@@ -115,12 +119,15 @@ Seq: TypeAlias = tuple[T, ...]
 Using instead of `Sequence`, as a `list` can be passed there (can't break immutability promise).
 """
 
-Udf: TypeAlias = "t.Callable[[t.Any], t.Any]"
+Udf: TypeAlias = "Callable[[t.Any], t.Any]"
 """Placeholder for `map_batches(function=...)`."""
 
 IntoExprColumn: TypeAlias = "Expr | Series[t.Any] | str"
 IntoExpr: TypeAlias = "NonNestedLiteral | IntoExprColumn"
+ColumnNameOrSelector: TypeAlias = "str | Selector"
 OneOrIterable: TypeAlias = "T | t.Iterable[T]"
 OneOrSeq: TypeAlias = t.Union[T, Seq[T]]
 DataFrameT = TypeVar("DataFrameT", bound="DataFrame[t.Any, t.Any]")
 Order: TypeAlias = t.Literal["ascending", "descending"]
+NonCrossJoinStrategy: TypeAlias = t.Literal["inner", "left", "full", "semi", "anti"]
+PartialSeries: TypeAlias = "Callable[[Iterable[t.Any]], Series[NativeSeriesAnyT]]"

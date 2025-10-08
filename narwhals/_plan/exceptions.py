@@ -137,7 +137,7 @@ def over_row_separable_error(
 
 def invalid_into_expr_error(
     first_input: Iterable[IntoExpr],
-    more_inputs: tuple[IntoExpr, ...],
+    more_inputs: tuple[Any, ...],
     named_inputs: dict[str, IntoExpr],
     /,
 ) -> InvalidIntoExprError:

@@ -4,6 +4,7 @@ from narwhals._plan._expr_ir import (  # prob should move into package?
     ExprIR,
     NamedIR,
     SelectorIR,
+    named_ir,
 )
 from narwhals._plan._function import Function
 from narwhals._plan.expressions import (
@@ -13,7 +14,7 @@ from narwhals._plan.expressions import (
     operators,
     selectors,
 )
-from narwhals._plan.expressions.aggregation import AggExpr, OrderableAggExpr
+from narwhals._plan.expressions.aggregation import AggExpr, OrderableAggExpr, max, min
 from narwhals._plan.expressions.expr import (
     Alias,
     All,
@@ -88,6 +89,9 @@ __all__ = [
     "cols",
     "functions",
     "index_columns",
+    "max",
+    "min",
+    "named_ir",
     "nth",
     "operators",
     "over",

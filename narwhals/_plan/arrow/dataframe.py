@@ -9,14 +9,15 @@ import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._arrow.utils import native_to_narwhals_dtype
-from narwhals._plan.arrow import functions as fn
+from narwhals._plan.arrow import acero, functions as fn
+from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
 from narwhals._plan.arrow.group_by import ArrowGroupBy as GroupBy
 from narwhals._plan.arrow.series import ArrowSeries as Series
 from narwhals._plan.compliant.dataframe import EagerDataFrame
 from narwhals._plan.compliant.typing import namespace
 from narwhals._plan.expressions import NamedIR
 from narwhals._plan.typing import Seq
-from narwhals._utils import Version, parse_columns_to_drop
+from narwhals._utils import Implementation, Version, parse_columns_to_drop
 from narwhals.schema import Schema
 
 if TYPE_CHECKING:
@@ -24,17 +25,17 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
-    from narwhals._arrow.typing import ChunkedArrayAny  # noqa: F401
-    from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
+    from narwhals._arrow.typing import ChunkedArrayAny
     from narwhals._plan.arrow.namespace import ArrowNamespace
     from narwhals._plan.expressions import ExprIR, NamedIR
     from narwhals._plan.options import SortMultipleOptions
-    from narwhals._plan.typing import Seq
+    from narwhals._plan.typing import NonCrossJoinStrategy, Seq
     from narwhals.dtypes import DType
     from narwhals.typing import IntoSchema
 
 
 class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
+    implementation = Implementation.PYARROW
     _native: pa.Table
     _version: Version
 
@@ -144,3 +145,29 @@ class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
     def row(self, index: int) -> tuple[Any, ...]:
         row = self.native.slice(index, 1)
         return tuple(chain.from_iterable(row.to_pydict().values()))
+
+    def join(
+        self,
+        other: Self,
+        *,
+        how: NonCrossJoinStrategy,
+        left_on: Sequence[str],
+        right_on: Sequence[str],
+        suffix: str = "_right",
+    ) -> Self:
+        left, right = self.native, other.native
+        result = acero.join_tables(left, right, how, left_on, right_on, suffix=suffix)
+        return self._with_native(result)
+
+    def join_cross(self, other: Self, *, suffix: str = "_right") -> Self:
+        result = acero.join_cross_tables(self.native, other.native, suffix=suffix)
+        return self._with_native(result)
+
+    def filter(self, predicate: NamedIR) -> Self:
+        mask: pc.Expression | ChunkedArrayAny
+        resolved = Expr.from_named_ir(predicate, self)
+        if isinstance(resolved, Expr):
+            mask = resolved.broadcast(len(self)).native
+        else:
+            mask = acero.lit(resolved.native)
+        return self._with_native(self.native.filter(mask))

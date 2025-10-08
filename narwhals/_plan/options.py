@@ -49,7 +49,10 @@ class FunctionFlags(enum.Flag):
     """
 
     LENGTH_PRESERVING = 1 << 9
-    """mutually exclusive with `RETURNS_SCALAR`"""
+    """In isolation, means that the function is dependent on the context of surrounding rows.
+
+    Mutually exclusive with `RETURNS_SCALAR`.
+    """
 
     def is_elementwise(self) -> bool:
         return (FunctionFlags.ROW_SEPARABLE | FunctionFlags.LENGTH_PRESERVING) in self

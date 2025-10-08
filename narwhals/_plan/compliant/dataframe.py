@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal, Protocol, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, overload
 
 from narwhals._plan.compliant.group_by import Grouped
 from narwhals._plan.compliant.typing import ColumnT_co, HasVersion, SeriesT
@@ -9,6 +9,7 @@ from narwhals._plan.typing import (
     NativeDataFrameT,
     NativeFrameT_co,
     NativeSeriesT,
+    NonCrossJoinStrategy,
     OneOrIterable,
 )
 
@@ -29,7 +30,8 @@ if TYPE_CHECKING:
     from narwhals._plan.expressions import NamedIR
     from narwhals._plan.options import SortMultipleOptions
     from narwhals._plan.typing import Seq
-    from narwhals._utils import Version
+    from narwhals._typing import _EagerAllowedImpl
+    from narwhals._utils import Implementation, Version
     from narwhals.dtypes import DType
     from narwhals.typing import IntoSchema
 
@@ -37,6 +39,8 @@ Incomplete: TypeAlias = Any
 
 
 class CompliantFrame(HasVersion, Protocol[ColumnT_co, NativeFrameT_co]):
+    implementation: ClassVar[Implementation]
+
     def __narwhals_namespace__(self) -> Any: ...
     def _evaluate_irs(
         self, nodes: Iterable[NamedIR[ir.ExprIR]], /
@@ -53,6 +57,9 @@ class CompliantFrame(HasVersion, Protocol[ColumnT_co, NativeFrameT_co]):
     def columns(self) -> list[str]: ...
     def drop(self, columns: Sequence[str], *, strict: bool = True) -> Self: ...
     def drop_nulls(self, subset: Sequence[str] | None) -> Self: ...
+    # Shouldn't *need* to be `NamedIR`, but current impl depends on a name being passed around
+    def filter(self, predicate: NamedIR, /) -> Self: ...
+    def rename(self, mapping: Mapping[str, str]) -> Self: ...
     @property
     def schema(self) -> Mapping[str, DType]: ...
     def select(self, irs: Seq[NamedIR]) -> Self: ...
@@ -65,6 +72,7 @@ class CompliantDataFrame(
     CompliantFrame[SeriesT, NativeDataFrameT],
     Protocol[SeriesT, NativeDataFrameT, NativeSeriesT],
 ):
+    implementation: ClassVar[_EagerAllowedImpl]
     _native: NativeDataFrameT
 
     def __len__(self) -> int: ...
@@ -92,6 +100,7 @@ class CompliantDataFrame(
     def from_dict(
         cls, data: Mapping[str, Any], /, *, schema: IntoSchema | None = None
     ) -> Self: ...
+    def get_column(self, name: str) -> SeriesT: ...
     def group_by_agg(
         self, by: OneOrIterable[IntoExpr], aggs: OneOrIterable[IntoExpr], /
     ) -> Self:
@@ -109,6 +118,17 @@ class CompliantDataFrame(
         """
         return self._group_by.from_resolver(self, resolver)
 
+    def filter(self, predicate: NamedIR, /) -> Self: ...
+    def join(
+        self,
+        other: Self,
+        *,
+        how: NonCrossJoinStrategy,
+        left_on: Sequence[str],
+        right_on: Sequence[str],
+        suffix: str = "_right",
+    ) -> Self: ...
+    def join_cross(self, other: Self, *, suffix: str = "_right") -> Self: ...
     def row(self, index: int) -> tuple[Any, ...]: ...
     @overload
     def to_dict(self, *, as_series: Literal[True]) -> dict[str, SeriesT]: ...
@@ -126,6 +146,7 @@ class CompliantDataFrame(
 
         return DataFrame[NativeDataFrameT, NativeSeriesT](self)
 
+    def to_series(self, index: int = 0) -> SeriesT: ...
     def with_row_index(self, name: str) -> Self: ...
 
 
@@ -141,3 +162,6 @@ class EagerDataFrame(
 
     def with_columns(self, irs: Seq[NamedIR]) -> Self:
         return self.__narwhals_namespace__()._concat_horizontal(self._evaluate_irs(irs))
+
+    def to_series(self, index: int = 0) -> SeriesT:
+        return self.get_column(self.columns[index])

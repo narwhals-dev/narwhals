@@ -143,8 +143,7 @@ class Exclude(_ColumnSelection, child=("expr",)):
 
     @staticmethod
     def from_names(expr: ExprIR, *names: str | t.Iterable[str]) -> Exclude:
-        flat: t.Iterator[str] = flatten_hash_safe(names)
-        return Exclude(expr=expr, names=tuple(flat))
+        return Exclude(expr=expr, names=tuple(flatten_hash_safe(names)))
 
     def __repr__(self) -> str:
         return f"{self.expr!r}.exclude({list(self.names)!r})"
