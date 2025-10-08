@@ -17,6 +17,7 @@ class DictNamespace(CompliantNamespace[DictLazyFrame, Any]):
     def from_native(self, native_object: DictFrame) -> DictLazyFrame:
         return DictLazyFrame(native_object, version=self._version)
 
+    is_native: Any = not_implemented()
     _expr: Any = not_implemented()
     _implementation: Any = not_implemented()
     len: Any = not_implemented()
