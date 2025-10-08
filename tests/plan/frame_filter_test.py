@@ -170,5 +170,5 @@ def test_filter_seq_iterable_all_true(predicate: Any, data: Data) -> None:
 )
 def test_filter_seq_iterable_all_false(predicate: Any, data: Data) -> None:
     df = dataframe(data)
-    expected = {"a": [], "b": [], "z": []}
+    expected: Data = {"a": [], "b": [], "z": []}
     assert_equal_data(df.filter(predicate), expected)
