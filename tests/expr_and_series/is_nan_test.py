@@ -89,6 +89,13 @@ def test_nan_series(constructor_eager: ConstructorEager) -> None:
             "float": [False, False, True],
             "float_na": [True, False, True],
         }
+    elif "pandas" in str(constructor_eager) and PANDAS_VERSION >= (3,):
+        # NaN values are coerced into NA for nullable datatypes by default
+        expected = {
+            "int": [False, False, None],
+            "float": [False, False, None],
+            "float_na": [None, False, None],
+        }
     else:
         # Null are preserved and should be differentiated for nullable datatypes
         expected = {
