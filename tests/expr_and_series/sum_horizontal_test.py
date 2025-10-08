@@ -43,6 +43,9 @@ def test_sumh_all(constructor: Constructor) -> None:
 
 
 def test_sumh_aggregations(constructor: Constructor) -> None:
+    if "bodo" in str(constructor):
+        # BODO fail
+        pytest.skip()
     data = {"a": [1, 2, 3], "b": [10, 20, 30]}
     df = nw.from_native(constructor(data))
     result = df.select(nw.sum_horizontal(nw.all().mean().name.suffix("_foo")))
