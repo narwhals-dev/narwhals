@@ -707,7 +707,7 @@ def _is_iterable(arg: Any | Iterable[Any]) -> bool:
     return isinstance(arg, Iterable) and not isinstance(arg, (str, bytes, Series))
 
 
-def _is_generator(val: Iterable[_T] | Any) -> TypeIs[Iterator[_T]]:
+def is_generator(val: Iterable[_T] | Any) -> TypeIs[Iterator[_T]]:
     # Adapted from https://github.com/pola-rs/polars/pull/16254
     return (
         (isinstance(val, (Generator, Iterable)) and not isinstance(val, Sized))
@@ -1370,7 +1370,7 @@ def is_list_of(obj: Any, tp: type[_T]) -> TypeIs[list[_T]]:
     return bool(isinstance(obj, list) and obj and isinstance(obj[0], tp))
 
 
-def _predicates_has_no_list_of_bool(
+def predicates_has_no_list_of_bool(
     predicates: tuple[IntoExpr | Iterable[IntoExpr] | list[bool], ...],
 ) -> TypeIs[tuple[IntoExpr | Iterable[IntoExpr], ...]]:
     """Guard function to check if predicates contain no `list[bool]` elements.

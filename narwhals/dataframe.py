@@ -27,8 +27,6 @@ from narwhals._utils import (
     Implementation,
     Version,
     _Implementation,
-    _is_generator,
-    _predicates_has_no_list_of_bool,
     can_lazyframe_collect,
     check_columns_exist,
     flatten,
@@ -36,11 +34,13 @@ from narwhals._utils import (
     is_compliant_dataframe,
     is_compliant_lazyframe,
     is_eager_allowed,
+    is_generator,
     is_index_selector,
     is_lazy_allowed,
     is_list_of,
     is_sequence_like,
     is_slice_none,
+    predicates_has_no_list_of_bool,
     qualified_type_name,
     supports_arrow_c_stream,
     zip_strict,
@@ -2928,8 +2928,8 @@ class LazyFrame(BaseFrame[LazyFrameT]):
             └───────┴───────┴─────────┘
             <BLANKLINE>
         """
-        predicates_ = tuple(tuple(p) if _is_generator(p) else p for p in predicates)
-        if not _predicates_has_no_list_of_bool(predicates_):
+        predicates_ = tuple(tuple(p) if is_generator(p) else p for p in predicates)
+        if not predicates_has_no_list_of_bool(predicates_):
             msg = "`LazyFrame.filter` is not supported with Python boolean masks - use expressions instead."
             raise TypeError(msg)
 
