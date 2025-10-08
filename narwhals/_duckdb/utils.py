@@ -400,3 +400,28 @@ def sql_expression(expr: str) -> Expression:
         msg = f"DuckDB>=1.3.0 is required for this operation. Found: DuckDB {duckdb.__version__}"
         raise NotImplementedError(msg) from exc
     return SQLExpression(expr)
+
+
+__all__ = [
+    "UNITS_DICT",
+    "DeferredTimeZone",
+    "F",
+    "catch_duckdb_exception",
+    "col",
+    "concat_str",
+    "duckdb_dtypes",
+    "evaluate_exprs",
+    "fetch_rel_time_zone",
+    "function",
+    "generate_order_by_sql",
+    "generate_partition_by_sql",
+    "join_column_names",
+    "lambda_expr",
+    "lit",
+    "narwhals_to_native_dtype",
+    "native_to_narwhals_dtype",
+    "parse_into_expression",
+    "sql_expression",
+    "when",
+    "window_expression",
+]
