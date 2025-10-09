@@ -7,7 +7,7 @@ import pytest
 
 import narwhals as nw
 from narwhals.exceptions import InvalidOperationError, MultiOutputExpressionError
-from tests.utils import Constructor, ConstructorEager, assert_equal_data
+from tests.utils import DUCKDB_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 if TYPE_CHECKING:
     from narwhals.typing import _1DArray
@@ -198,6 +198,8 @@ def test_when_then_otherwise_aggregate_with_columns(
     expected: list[int],
     constructor: Constructor,
 ) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
     df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
     expr = nw.when(condition).then(then).otherwise(otherwise)
     result = df.with_columns(a_when=expr)

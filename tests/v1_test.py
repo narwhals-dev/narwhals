@@ -34,6 +34,7 @@ from narwhals.stable.v1.dependencies import (
 )
 from narwhals.utils import Version
 from tests.utils import (
+    DUCKDB_VERSION,
     PANDAS_VERSION,
     POLARS_VERSION,
     PYARROW_VERSION,
@@ -421,6 +422,8 @@ def test_all_horizontal() -> None:
 
 
 def test_with_row_index(constructor: Constructor) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
     data = {"abc": ["foo", "bars"], "xyz": [100, 200], "const": [42, 42]}
 
     frame = nw_v1.from_native(constructor(data))

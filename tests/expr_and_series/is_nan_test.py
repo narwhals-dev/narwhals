@@ -14,7 +14,7 @@ from tests.conftest import (
     modin_constructor,
     pandas_constructor,
 )
-from tests.utils import Constructor, ConstructorEager, assert_equal_data
+from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 NON_NULLABLE_CONSTRUCTORS = [
     pandas_constructor,
@@ -42,6 +42,13 @@ def test_nan(constructor: Constructor) -> None:
             "int": [False, False, True],
             "float": [False, False, True],
             "float_na": [True, False, True],
+        }
+    elif "pandas" in str(constructor) and PANDAS_VERSION >= (3,):
+        # NaN values are coerced into NA for nullable datatypes by default
+        expected = {
+            "int": [False, False, None],
+            "float": [False, False, None],
+            "float_na": [None, False, None],
         }
     else:
         # Null are preserved and should be differentiated for nullable datatypes
@@ -81,6 +88,13 @@ def test_nan_series(constructor_eager: ConstructorEager) -> None:
             "int": [False, False, True],
             "float": [False, False, True],
             "float_na": [True, False, True],
+        }
+    elif "pandas" in str(constructor_eager) and PANDAS_VERSION >= (3,):
+        # NaN values are coerced into NA for nullable datatypes by default
+        expected = {
+            "int": [False, False, None],
+            "float": [False, False, None],
+            "float_na": [None, False, None],
         }
     else:
         # Null are preserved and should be differentiated for nullable datatypes
