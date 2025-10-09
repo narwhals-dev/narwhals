@@ -19,7 +19,7 @@ from narwhals._spark_like.utils import (
 )
 from narwhals._sql.namespace import SQLNamespace
 from narwhals._sql.when_then import SQLThen, SQLWhen
-from narwhals._utils import zip_strict
+from narwhals._utils import validate_concat_vertical_schemas, zip_strict
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -142,17 +142,7 @@ class SparkLikeNamespace(
     ) -> SparkLikeLazyFrame:
         dfs = [item._native_frame for item in items]
         if how == "vertical":
-            cols_0 = dfs[0].columns
-            for i, df in enumerate(dfs[1:], start=1):
-                cols_current = df.columns
-                if not ((len(cols_current) == len(cols_0)) and (cols_current == cols_0)):
-                    msg = (
-                        "unable to vstack, column names don't match:\n"
-                        f"   - dataframe 0: {cols_0}\n"
-                        f"   - dataframe {i}: {cols_current}\n"
-                    )
-                    raise TypeError(msg)
-
+            validate_concat_vertical_schemas(item.schema for item in items)
             return SparkLikeLazyFrame(
                 native_dataframe=reduce(lambda x, y: x.union(y), dfs),
                 version=self._version,

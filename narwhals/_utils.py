@@ -2109,3 +2109,22 @@ def normalize_path(source: FileSource, /) -> str:
     from pathlib import Path
 
     return str(Path(source))
+
+
+def validate_concat_vertical_schemas(schemas: Iterable[Mapping[str, DType]]) -> None:
+    schemas_iter = iter(schemas)
+    schema_0 = next(schemas_iter)
+    for idx, schema_current in enumerate(schemas_iter, start=1):
+        if schema_0 != schema_current:
+            msg = (
+                "'union'/'concat' inputs should all have the same schema,got\n"
+                f"{_pretty_format_schema(schema_0, index=0)}\n"
+                " and\n"
+                f"{_pretty_format_schema(schema_current, index=idx)}"
+            )
+            raise InvalidOperationError(msg)
+
+
+def _pretty_format_schema(schema: Mapping[str, DType], index: int) -> str:
+    body = "\n".join(f"name: {name}, field: {field}" for name, field in schema.items())
+    return f"Schema at index: {index}:\n{body}"
