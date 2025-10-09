@@ -152,10 +152,8 @@ jobs:
           uv pip install pandas --pre --index https://pypi.anaconda.org/scientific-python-nightly-wheels/simple --system -U
       - name: install pyarrow nightly
         run: |
-          # commented out nightly whilst it fails to install
-          uv pip install -U pyarrow --system
-          # uv pip uninstall pyarrow --system
-          # uv pip install pyarrow --pre --index https://pypi.fury.io/arrow-nightlies/ --system -U
+          uv pip uninstall pyarrow --system
+          uv pip install pyarrow --pre --index https://pypi.fury.io/arrow-nightlies/ --system -U
       - name: install numpy nightly
         run: |
           uv pip uninstall numpy --system
@@ -174,9 +172,10 @@ jobs:
         run: |
           DEPS=$(uv pip freeze)
           echo "$DEPS" | grep 'pandas.*dev'
-          # echo "$DEPS" | grep 'pyarrow.*dev'
+          echo "$DEPS" | grep 'pyarrow.*dev'
           echo "$DEPS" | grep 'numpy.*dev'
           echo "$DEPS" | grep 'dask.*@'
+          echo "$DEPS" | grep 'duckdb.*dev'
       - name: Run pytest
         run: |
           pytest tests --cov=narwhals --cov=tests --cov-fail-under=50 --runslow \
