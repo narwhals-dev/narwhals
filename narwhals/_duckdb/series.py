@@ -24,7 +24,7 @@ class DuckDBInterchangeSeries:
         return self
 
     def __native_namespace__(self) -> ModuleType:
-        return get_duckdb()  # type: ignore[no-any-return]
+        return get_duckdb()
 
     @property
     def dtype(self) -> DType:

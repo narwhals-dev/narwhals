@@ -342,6 +342,7 @@ module = [
   "narwhals._arrow.*",
   "narwhals._dask.*",
   "narwhals._spark_like.*",
+  "narwhals._duckdb.*"
 ]
 warn_return_any = false
 
