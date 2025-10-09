@@ -3,17 +3,7 @@ from __future__ import annotations
 import os
 import re
 import sys
-from collections.abc import (
-    Collection,
-    Container,
-    Generator,
-    Iterable,
-    Iterator,
-    Mapping,
-    MappingView,
-    Sequence,
-    Sized,
-)
+from collections.abc import Collection, Container, Iterable, Iterator, Mapping, Sequence
 from datetime import timezone
 from enum import Enum, auto
 from functools import cache, lru_cache, partial, wraps
@@ -61,7 +51,7 @@ from narwhals.dependencies import (
 from narwhals.exceptions import ColumnNotFoundError, DuplicateError, InvalidOperationError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Reversible, Set  # noqa: PYI025
+    from collections.abc import Set  # noqa: PYI025
     from types import ModuleType
 
     import pandas as pd
@@ -173,11 +163,6 @@ if TYPE_CHECKING:
         @property
         def columns(self) -> Sequence[str]: ...
 
-
-# note: reversed views don't match as instances of MappingView
-if sys.version_info >= (3, 11):  # pragma: no cover
-    _views: list[Reversible[Any]] = [{}.keys(), {}.values(), {}.items()]
-    _reverse_mapping_views = tuple(type(reversed(view)) for view in _views)
 
 _T = TypeVar("_T")
 NativeT_co = TypeVar("NativeT_co", covariant=True)
@@ -706,13 +691,8 @@ def _is_iterable(arg: Any | Iterable[Any]) -> bool:
     return isinstance(arg, Iterable) and not isinstance(arg, (str, bytes, Series))
 
 
-def is_generator(val: Iterable[_T] | Any) -> TypeIs[Iterator[_T]]:
-    # Adapted from https://github.com/pola-rs/polars/pull/16254
-    return (
-        (isinstance(val, (Generator, Iterable)) and not isinstance(val, Sized))
-        or isinstance(val, MappingView)
-        or (sys.version_info >= (3, 11) and isinstance(val, _reverse_mapping_views))
-    )
+def is_iterator(val: Iterable[_T] | Any) -> TypeIs[Iterator[_T]]:
+    return isinstance(val, Iterator)
 
 
 def parse_version(version: str | ModuleType | _SupportsVersion) -> tuple[int, ...]:
