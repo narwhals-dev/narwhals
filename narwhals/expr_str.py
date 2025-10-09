@@ -6,6 +6,7 @@ from narwhals._expression_parsing import ExprKind, ExprNode
 
 if TYPE_CHECKING:
     from narwhals.expr import Expr
+    from narwhals.typing import IntoExpr
 
 ExprT = TypeVar("ExprT", bound="Expr")
 
@@ -41,7 +42,7 @@ class ExprStringNamespace(Generic[ExprT]):
         return self._expr._with_node(ExprNode(ExprKind.ELEMENTWISE, "str.len_chars"))
 
     def replace(
-        self, pattern: str, value: str | ExprT, *, literal: bool = False, n: int = 1
+        self, pattern: str, value: str | IntoExpr, *, literal: bool = False, n: int = 1
     ) -> ExprT:
         r"""Replace first matching regex/literal substring with a new string value.
 
@@ -78,7 +79,7 @@ class ExprStringNamespace(Generic[ExprT]):
         )
 
     def replace_all(
-        self, pattern: str, value: str | ExprT, *, literal: bool = False
+        self, pattern: str, value: IntoExpr, *, literal: bool = False
     ) -> ExprT:
         r"""Replace all matching regex/literal substring with a new string value.
 
@@ -490,9 +491,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |└─────────────────────────┴─────────────────────────┘|
             └─────────────────────────────────────────────────────┘
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).str.to_titlecase()
-        )
+        return self._expr._with_node(ExprNode(ExprKind.ELEMENTWISE, "str.to_titlecase"))
 
     def zfill(self, width: int) -> ExprT:
         """Transform string to zero-padded variant.
