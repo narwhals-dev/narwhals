@@ -488,9 +488,8 @@ class DuckDBLazyFrame(
         rel = self.native
         original_columns = self.columns
 
-        not_null_condition = col_to_explode.isnotnull() & F("len", col_to_explode) > lit(
-            0
-        )
+        zero = lit(0)
+        not_null_condition = col_to_explode.isnotnull() & F("len", col_to_explode) > zero
         non_null_rel = rel.filter(not_null_condition).select(
             *(
                 F("unnest", col_to_explode).alias(name) if name in columns else name

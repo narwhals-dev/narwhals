@@ -167,7 +167,7 @@ def align_and_extract_native(
             )
         return (lhs.native, rhs.native)
 
-    if True:  # isinstance(rhs, list):
+    if isinstance(rhs, list):
         msg = f"Expected Series or scalar, got {type(rhs)}."
         raise TypeError(msg)
 
