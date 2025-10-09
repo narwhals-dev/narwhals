@@ -151,7 +151,7 @@ class DeferredTimeZone:
 def native_to_narwhals_dtype(
     duckdb_dtype: nw_dd_t.BaseType, version: Version, deferred_time_zone: DeferredTimeZone
 ) -> DType:
-    if nw_dd_t.has_children(duckdb_dtype):
+    if nw_dd_t.has_children(duckdb_dtype) and not nw_dd_t.is_dtype_decimal(duckdb_dtype):
         return _nested_native_to_narwhals_dtype(duckdb_dtype, version, deferred_time_zone)
     if nw_dd_t.is_dtype_timestamp_with_time_zone(duckdb_dtype):
         return version.dtypes.Datetime(time_zone=deferred_time_zone.time_zone)
