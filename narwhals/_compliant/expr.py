@@ -1104,6 +1104,9 @@ class EagerExprStringNamespace(
     def zfill(self, width: int) -> EagerExprT:
         return self.compliant._reuse_series_namespace("str", "zfill", width=width)
 
+    def to_titlecase(self) -> EagerExprT:
+        return self.compliant._reuse_series_namespace("str", "to_titlecase")
+
 
 class EagerExprStructNamespace(
     EagerExprNamespace[EagerExprT], StructNamespace[EagerExprT], Generic[EagerExprT]

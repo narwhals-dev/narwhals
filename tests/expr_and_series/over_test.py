@@ -454,6 +454,8 @@ def test_over_quantile(constructor: Constructor, request: pytest.FixtureRequest)
     if any(x in str(constructor) for x in ("pyarrow_table", "pyspark", "cudf")):
         # cudf: https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
 
     data = {"a": [1, 2, 3, 4, 5, 6], "b": ["x", "x", "x", "y", "y", "y"]}
 
