@@ -71,7 +71,8 @@ typing = [  # keep some of these pinned and bump periodically so there's fewer s
   "mypy~=1.15.0",
   "pyright",
   "pyarrow-stubs==19.2",
-  "sqlframe",
+  # https://github.com/eakmanrq/sqlframe/issues/531
+  "sqlframe>=3.43.0",
   "polars==1.34.0",
   "uv",
   "narwhals[ibis]",
