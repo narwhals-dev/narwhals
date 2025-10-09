@@ -393,7 +393,6 @@ class DuckDBLazyFrame(
         if error := self._check_columns_exist(subset_):
             raise error
         tmp_name = generate_temporary_column_name(8, self.columns, prefix="row_index_")
-
         descending_and_nulls_last_value = (
             (True,) * len(order_by) if order_by and keep == "last" else None
         )

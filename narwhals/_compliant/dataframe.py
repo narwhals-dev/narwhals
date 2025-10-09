@@ -373,8 +373,8 @@ class EagerDataFrame(
         """
         aliases = expr._evaluate_aliases(self)
         result = expr(self)
-        if tuple(aliases) != (
-            result_aliases := tuple(s.name for s in result)
+        if list(aliases) != (
+            result_aliases := [s.name for s in result]
         ):  # pragma: no cover
             msg = f"Safety assertion failed, expected {aliases}, got {result_aliases}"
             raise AssertionError(msg)

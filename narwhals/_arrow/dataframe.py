@@ -809,10 +809,7 @@ class ArrowDataFrame(
                     pa.Table.from_arrays(
                         [
                             *(self.native.column(idx_col) for idx_col in index_),
-                            cast(
-                                "ChunkedArrayAny",
-                                pa.array((on_col,) * n_rows, pa.string()),
-                            ),
+                            pa.repeat(on_col, n_rows).cast(pa.string()),
                             self.native.column(on_col),
                         ],
                         names=names,

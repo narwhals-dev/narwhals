@@ -423,8 +423,8 @@ def pad_series(
     offset_left = window_size // 2
     # subtract one if window_size is even
     offset_right = offset_left - (window_size % 2 == 0)
-    pad_left = pa.array((None,) * offset_left, type=series._type)
-    pad_right = pa.array((None,) * offset_right, type=series._type)
+    pad_left = pa.repeat(None, offset_left).cast(series._type)
+    pad_right = pa.repeat(None, offset_right).cast(series._type)
     concat = pa.concat_arrays([pad_left, *series.native.chunks, pad_right])
     return series._with_native(concat), offset_left + offset_right
 
