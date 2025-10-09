@@ -142,6 +142,7 @@ def test_replace_time_zone_to_connection_tz_duckdb() -> None:
         )
 
 
+@pytest.mark.slow
 def test_replace_time_zone_to_connection_tz_pyspark() -> None:  # pragma: no cover
     pytest.importorskip("pyspark")
 

@@ -111,9 +111,9 @@ class DuckDBNamespace(
                 cols_separated = [
                     y
                     for x in [
-                        (col.cast(VARCHAR),)
+                        (col.cast(duckdb_dtypes.VARCHAR),)
                         if i == len(cols) - 1
-                        else (col.cast(VARCHAR), lit(separator))
+                        else (col.cast(duckdb_dtypes.VARCHAR), lit(separator))
                         for i, col in enumerate(cols)
                     ]
                     for y in x
@@ -133,7 +133,9 @@ class DuckDBNamespace(
             cols = list(cols)
             return reduce(
                 operator.add, (CoalesceOperator(col, lit(0)) for col in cols)
-            ) / reduce(operator.add, (col.isnotnull().cast(BIGINT) for col in cols))
+            ) / reduce(
+                operator.add, (col.isnotnull().cast(duckdb_dtypes.BIGINT) for col in cols)
+            )
 
         return self._expr._from_elementwise_horizontal_op(func, *exprs)
 

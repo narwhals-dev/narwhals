@@ -30,10 +30,8 @@ BACKEND_VERSION = Implementation.DUCKDB._backend_version()
 
 if TYPE_CHECKING or BACKEND_VERSION >= (1, 4):
     from duckdb import sqltypes as duckdb_dtypes
-    from duckdb.sqltypes import DuckDBPyType
 else:
     from duckdb import typing as duckdb_dtypes
-    from duckdb.typing import DuckDBPyType
 
 UNITS_DICT = {
     "y": "year",
@@ -252,12 +250,12 @@ NW_TO_DUCKDB_DTYPES: Mapping[type[DType], DuckDBPyType] = {
     dtypes.Int16: duckdb_dtypes.SMALLINT,
     dtypes.Int32: duckdb_dtypes.INTEGER,
     dtypes.Int64: duckdb_dtypes.BIGINT,
-    dtypes.Int128: DuckDBPyType("INT128"),
+    dtypes.Int128: duckdb_dtypes.HUGEINT,
     dtypes.UInt8: duckdb_dtypes.UTINYINT,
     dtypes.UInt16: duckdb_dtypes.USMALLINT,
     dtypes.UInt32: duckdb_dtypes.UINTEGER,
     dtypes.UInt64: duckdb_dtypes.UBIGINT,
-    dtypes.UInt128: DuckDBPyType("UINT128"),
+    dtypes.UInt128: duckdb_dtypes.UHUGEINT,
 }
 TIME_UNIT_TO_TIMESTAMP: Mapping[TimeUnit, DuckDBPyType] = {
     "s": duckdb_dtypes.TIMESTAMP_S,
@@ -280,7 +278,7 @@ def narwhals_to_native_dtype(  # noqa: PLR0912, C901
             msg = "Converting to Enum is not supported in narwhals.stable.v1"
             raise NotImplementedError(msg)
         if isinstance(dtype, dtypes.Enum):
-            return DuckDBPyType(f"ENUM{dtype.categories!r}")
+            return duckdb_dtypes.DuckDBPyType(f"ENUM{dtype.categories!r}")
         msg = "Can not cast / initialize Enum without categories present"
         raise ValueError(msg)
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
@@ -315,7 +313,7 @@ def narwhals_to_native_dtype(  # noqa: PLR0912, C901
             nw_inner = nw_inner.inner
         duckdb_inner = narwhals_to_native_dtype(nw_inner, version, deferred_time_zone)
         duckdb_shape_fmt = "".join(f"[{item}]" for item in dtype.shape)
-        return DuckDBPyType(f"{duckdb_inner}{duckdb_shape_fmt}")
+        return duckdb_dtypes.DuckDBPyType(f"{duckdb_inner}{duckdb_shape_fmt}")
     if issubclass(base_type, UNSUPPORTED_DTYPES):
         msg = f"Converting to {base_type.__name__} dtype is not supported for DuckDB."
         raise NotImplementedError(msg)
@@ -402,19 +400,39 @@ def function(name: str, *args: Expression) -> Expression:
     if name == "isnull":
         return args[0].isnull()
     if name == "count_distinct":
-        try:
-            from duckdb import SQLExpression
-        except ModuleNotFoundError as exc:  # pragma: no cover
-            msg = f"DuckDB>=1.3.0 is required for this operation. Found: DuckDB {duckdb.__version__}"
-            raise NotImplementedError(msg) from exc
-        return SQLExpression(f"count(distinct {args[0]})")
+        return sql_expression(f"count(distinct {args[0]})")
     return F(name, *args)
 
 
 def sql_expression(expr: str) -> Expression:
     try:
         from duckdb import SQLExpression
-    except ModuleNotFoundError as exc:  # pragma: no cover
+    except ImportError as exc:  # pragma: no cover
         msg = f"DuckDB>=1.3.0 is required for this operation. Found: DuckDB {duckdb.__version__}"
         raise NotImplementedError(msg) from exc
     return SQLExpression(expr)
+
+
+__all__ = [
+    "UNITS_DICT",
+    "DeferredTimeZone",
+    "F",
+    "catch_duckdb_exception",
+    "col",
+    "concat_str",
+    "duckdb_dtypes",
+    "evaluate_exprs",
+    "fetch_rel_time_zone",
+    "function",
+    "generate_order_by_sql",
+    "generate_partition_by_sql",
+    "join_column_names",
+    "lambda_expr",
+    "lit",
+    "narwhals_to_native_dtype",
+    "native_to_narwhals_dtype",
+    "parse_into_expression",
+    "sql_expression",
+    "when",
+    "window_expression",
+]

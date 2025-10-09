@@ -17,7 +17,7 @@ expected = {"a": ["-01", "+01", "001", "012", "123", "99999", "+9999", None]}
 
 
 def test_str_zfill(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if uses_pyarrow_backend(constructor):
+    if uses_pyarrow_backend(constructor) and PANDAS_VERSION < (3,):
         reason = (
             "pandas with pyarrow backend doesn't support str.zfill, see "
             "https://github.com/pandas-dev/pandas/issues/61485"
@@ -43,7 +43,7 @@ def test_str_zfill(request: pytest.FixtureRequest, constructor: Constructor) -> 
 def test_str_zfill_series(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
-    if uses_pyarrow_backend(constructor_eager):
+    if uses_pyarrow_backend(constructor_eager) and PANDAS_VERSION < (3,):
         reason = (
             "pandas with pyarrow backend doesn't support str.zfill, see "
             "https://github.com/pandas-dev/pandas/issues/61485"

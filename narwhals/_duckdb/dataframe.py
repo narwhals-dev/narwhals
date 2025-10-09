@@ -41,7 +41,6 @@ if TYPE_CHECKING:
     import pandas as pd
     import pyarrow as pa
     from duckdb import Expression
-    from duckdb.sqltypes import DuckDBPyType
     from typing_extensions import Self, TypeIs
 
     from narwhals._compliant.typing import CompliantDataFrameAny
@@ -49,6 +48,7 @@ if TYPE_CHECKING:
     from narwhals._duckdb.group_by import DuckDBGroupBy
     from narwhals._duckdb.namespace import DuckDBNamespace
     from narwhals._duckdb.series import DuckDBInterchangeSeries
+    from narwhals._duckdb.utils import duckdb_dtypes
     from narwhals._typing import _EagerAllowedImpl
     from narwhals._utils import _LimitedContext
     from narwhals.dataframe import LazyFrame
@@ -76,7 +76,7 @@ class DuckDBLazyFrame(
     ) -> None:
         self._native_frame: duckdb.DuckDBPyRelation = df
         self._version = version
-        self._cached_native_schema: dict[str, DuckDBPyType] | None = None
+        self._cached_native_schema: dict[str, duckdb_dtypes.DuckDBPyType] | None = None
         self._cached_columns: list[str] | None = None
         if validate_backend_version:
             self._validate_backend_version()
