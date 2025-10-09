@@ -97,10 +97,11 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
 
     def _first(self, expr: Expression, *order_by: str) -> Expression:
         # https://github.com/duckdb/duckdb/discussions/19252
+
         order_by_sql = generate_order_by_sql(
             *order_by,
-            descending=[False] * len(order_by),
-            nulls_last=[False] * len(order_by),
+            descending=(False,) * len(order_by),
+            nulls_last=(False,) * len(order_by),
         )
         return sql_expression(f"first({expr} {order_by_sql})")
 
@@ -108,8 +109,8 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
         # https://github.com/duckdb/duckdb/discussions/19252
         order_by_sql = generate_order_by_sql(
             *order_by,
-            descending=[False] * len(order_by),
-            nulls_last=[False] * len(order_by),
+            descending=(False,) * len(order_by),
+            nulls_last=(False,) * len(order_by),
         )
         return sql_expression(f"last({expr} {order_by_sql})")
 

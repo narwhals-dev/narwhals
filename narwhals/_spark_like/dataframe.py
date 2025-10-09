@@ -326,7 +326,7 @@ class SparkLikeLazyFrame(
 
     def sort(self, *by: str, descending: bool | Sequence[bool], nulls_last: bool) -> Self:
         if isinstance(descending, bool):
-            descending = [descending] * len(by)
+            descending = (descending,) * len(by)
 
         if nulls_last:
             sort_funcs = (
@@ -343,9 +343,9 @@ class SparkLikeLazyFrame(
         return self._with_native(self.native.sort(*sort_cols))
 
     def top_k(self, k: int, *, by: Iterable[str], reverse: bool | Sequence[bool]) -> Self:
-        by = list(by)
+        by = tuple(by)
         if isinstance(reverse, bool):
-            reverse = [reverse] * len(by)
+            reverse = (reverse,) * len(by)
         sort_funcs = (
             self._F.desc_nulls_last if not d else self._F.asc_nulls_last for d in reverse
         )

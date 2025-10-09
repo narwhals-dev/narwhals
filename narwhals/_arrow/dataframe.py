@@ -811,7 +811,7 @@ class ArrowDataFrame(
                             *(self.native.column(idx_col) for idx_col in index_),
                             cast(
                                 "ChunkedArrayAny",
-                                pa.array([on_col] * n_rows, pa.string()),
+                                pa.array((on_col,) * n_rows, pa.string()),
                             ),
                             self.native.column(on_col),
                         ],

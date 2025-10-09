@@ -102,19 +102,20 @@ class DuckDBNamespace(
         self, *exprs: DuckDBExpr, separator: str, ignore_nulls: bool
     ) -> DuckDBExpr:
         def func(df: DuckDBLazyFrame) -> list[Expression]:
-            cols = list(chain.from_iterable(expr(df) for expr in exprs))
+            cols = tuple(chain.from_iterable(expr(df) for expr in exprs))
             if not ignore_nulls:
+                n_cols = len(cols)
                 null_mask_result = reduce(operator.or_, (s.isnull() for s in cols))
-                cols_separated = [
+                cols_separated = (
                     y
-                    for x in [
+                    for x in (
                         (col.cast(duckdb_dtypes.VARCHAR),)
-                        if i == len(cols) - 1
+                        if i == n_cols
                         else (col.cast(duckdb_dtypes.VARCHAR), lit(separator))
-                        for i, col in enumerate(cols)
-                    ]
+                        for i, col in enumerate(cols, start=1)
+                    )
                     for y in x
-                ]
+                )
                 return [when(~null_mask_result, concat_str(*cols_separated))]
             return [concat_str(*cols, separator=separator)]
 
@@ -127,12 +128,12 @@ class DuckDBNamespace(
 
     def mean_horizontal(self, *exprs: DuckDBExpr) -> DuckDBExpr:
         def func(cols: Iterable[Expression]) -> Expression:
-            cols = list(cols)
-            return reduce(
-                operator.add, (CoalesceOperator(col, lit(0)) for col in cols)
-            ) / reduce(
+            cols = tuple(cols)
+            total = reduce(operator.add, (CoalesceOperator(col, lit(0)) for col in cols))
+            count = reduce(
                 operator.add, (col.isnotnull().cast(duckdb_dtypes.BIGINT) for col in cols)
             )
+            return total / count
 
         return self._expr._from_elementwise_horizontal_op(func, *exprs)
 

@@ -61,7 +61,7 @@ def extend_bool(
 
     Stolen from https://github.com/pola-rs/polars/blob/b8bfb07a4a37a8d449d6d1841e345817431142df/py-polars/polars/_utils/various.py#L580-L594
     """
-    return [value] * n_match if isinstance(value, bool) else list(value)
+    return (value,) * n_match if isinstance(value, bool) else tuple(value)
 
 
 BucketUnit: TypeAlias = Literal[

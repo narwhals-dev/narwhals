@@ -235,8 +235,8 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
                         self._function(func_name, expr),
                         inputs.partition_by,
                         inputs.order_by,
-                        descending=[reverse] * len(inputs.order_by),
-                        nulls_last=[reverse] * len(inputs.order_by),
+                        descending=(reverse,) * len(inputs.order_by),
+                        nulls_last=(reverse,) * len(inputs.order_by),
                         rows_end=0,
                     ),
                 )
@@ -613,8 +613,8 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
                     self._function("count", expr),
                     inputs.partition_by,
                     inputs.order_by,
-                    descending=[reverse] * len(inputs.order_by),
-                    nulls_last=[reverse] * len(inputs.order_by),
+                    descending=(reverse,) * len(inputs.order_by),
+                    nulls_last=(reverse,) * len(inputs.order_by),
                     rows_end=0,
                 )
                 for expr in self(df)
@@ -709,8 +709,8 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
                     self._function("row_number"),
                     (*inputs.partition_by, expr),
                     inputs.order_by,
-                    descending=[True] * len(inputs.order_by),
-                    nulls_last=[True] * len(inputs.order_by),
+                    descending=(True,) * len(inputs.order_by),
+                    nulls_last=(True,) * len(inputs.order_by),
                 )
                 == self._lit(1)
                 for expr in self(df)

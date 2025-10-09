@@ -142,8 +142,8 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         nulls_last: Sequence[bool] | None = None,
     ) -> Iterator[Column]:
         F = self._F
-        descending = descending or [False] * len(cols)
-        nulls_last = nulls_last or [False] * len(cols)
+        descending = descending or (False,) * len(cols)
+        nulls_last = nulls_last or (False,) * len(cols)
         mapping = {
             (False, False): F.asc_nulls_first,
             (False, True): F.asc_nulls_last,

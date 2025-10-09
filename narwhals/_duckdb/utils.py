@@ -346,8 +346,8 @@ def window_expression(
     # TODO(unassigned): Replace with `duckdb.WindowExpression` when they release it.
     # https://github.com/duckdb/duckdb/discussions/14725#discussioncomment-11200348
     pb = generate_partition_by_sql(*partition_by)
-    descending = descending or [False] * len(order_by)
-    nulls_last = nulls_last or [False] * len(order_by)
+    descending = descending or (False,) * len(order_by)
+    nulls_last = nulls_last or (False,) * len(order_by)
     ob = generate_order_by_sql(*order_by, descending=descending, nulls_last=nulls_last)
 
     if rows_start is not None and rows_end is not None:

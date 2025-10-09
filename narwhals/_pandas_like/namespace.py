@@ -350,7 +350,7 @@ class PandasLikeNamespace(
                 ]
 
                 sep_array = init_value.from_iterable(
-                    data=[separator] * len(init_value),
+                    data=(separator,) * len(init_value),
                     name="sep",
                     index=init_value.native.index,
                     context=self,

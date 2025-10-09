@@ -387,7 +387,7 @@ class EagerExpr(
             for series in self(df)
         ]
         aliases = self._evaluate_aliases(df)
-        if [s.name for s in out] != list(aliases):  # pragma: no cover
+        if tuple(s.name for s in out) != tuple(aliases):  # pragma: no cover
             msg = (
                 f"Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues\n"
                 f"Expression aliases: {aliases}\n"
