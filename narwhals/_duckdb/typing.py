@@ -68,6 +68,15 @@ class StructType(
     def __getitem__(self, name: str) -> BaseType: ...
 
 
+class DecimalType(
+    _ParentType[
+        Literal["decimal"],
+        tuple[tuple[Literal["precision"], int], tuple[Literal["scale"], int]],
+    ],
+    Protocol,
+): ...
+
+
 def has_children(
     dtype: BaseType | _ParentType[_ID_co, T_co],
 ) -> TypeIs[_ParentType[_ID_co, T_co]]:
@@ -103,3 +112,7 @@ def is_dtype_timestamp_with_time_zone(
     obj: BaseType,
 ) -> TypeIs[BaseType[Literal["timestamp with time zone"]]]:
     return obj.id == "timestamp with time zone"
+
+
+def is_dtype_decimal(obj: BaseType) -> TypeIs[DecimalType]:
+    return obj.id == "decimal"
