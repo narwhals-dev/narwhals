@@ -1370,8 +1370,8 @@ def is_list_of(obj: Any, tp: type[_T]) -> TypeIs[list[_T]]:
 
 
 def predicates_contains_list_of_bool(
-    predicates: Iterable[Any],
-) -> TypeIs[Iterable[list[bool]]]:
+    predicates: Collection[Any],
+) -> TypeIs[Collection[list[bool]]]:
     return any(is_list_of(pred, bool) for pred in predicates)
 
 
