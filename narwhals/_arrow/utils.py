@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._compliant import EagerSeriesNamespace
-from narwhals._utils import Version, isinstance_or_issubclass
+from narwhals._translate import CompliantToPandas, ToPandasFromT_co, ToPandasToT_co
+from narwhals._utils import Implementation, Version, isinstance_or_issubclass, requires
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping
@@ -223,6 +224,22 @@ def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> pa.DataType:
         raise NotImplementedError(msg)
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
+
+
+class ArrowToPandas(CompliantToPandas[ToPandasFromT_co, ToPandasToT_co]):
+    def to_pandas(
+        self, *, use_pyarrow_extension_array: bool = False, **kwds: Any
+    ) -> ToPandasToT_co:
+        import pandas as pd  # ignore-banned-import
+
+        if use_pyarrow_extension_array:
+            pd_version = Implementation.PANDAS._backend_version()
+            kwd: Literal["types_mapper"] = "types_mapper"
+            if pd_version < (1, 5):  # pragma: no cover
+                msg = f"`to_pandas({use_pyarrow_extension_array=})` is only available in 'pandas>=1.5.0', found version {requires._unparse_version(pd_version)!r}."
+                raise NotImplementedError(msg)
+            kwds[kwd] = kwds.pop(kwd, lambda pa_dtype: pd.ArrowDtype(pa_dtype))
+        return self.native.to_pandas(**kwds)
 
 
 def extract_native(

@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Final, Protocol, TypeVar, overl
 import polars as pl
 
 from narwhals._duration import Interval
+from narwhals._translate import CompliantToPandas, ToPandasFromT_co, ToPandasToT_co
 from narwhals._utils import (
     Implementation,
     Version,
@@ -268,6 +269,26 @@ def catch_polars_exception(exception: Exception) -> NarwhalsError | Exception:
         return NarwhalsError(str(exception))  # pragma: no cover
     # Just return exception as-is.
     return exception
+
+
+class PolarsToPandas(CompliantToPandas[ToPandasFromT_co, ToPandasToT_co]):
+    def to_pandas(
+        self, *, use_pyarrow_extension_array: bool = False, **kwds: Any
+    ) -> ToPandasToT_co:
+        always_true = ("self_destruct", "split_blocks")
+        if use_pyarrow_extension_array and kwds:
+            if types_mapper := kwds.get("types_mapper"):  # pragma: no cover
+                msg = f"`use_pyarrow_extension_array` and `types_mapper` are mutually exclusive, got:\n{use_pyarrow_extension_array=}\n{types_mapper=}"
+                raise InvalidOperationError(msg)
+            for kwd in always_true:
+                user_defined = kwds.pop(kwd, True)
+                # NOTE: The `pyarrow` default is False, but `polars` will always use `True` with `use_pyarrow_extension_array`
+                if user_defined is False:  # pragma: no cover
+                    msg = f"`use_pyarrow_extension_array` cannot be used with `{kwd}={user_defined}`."
+                    raise InvalidOperationError(msg)
+        return self.native.to_pandas(  # type: ignore[no-any-return]
+            use_pyarrow_extension_array=use_pyarrow_extension_array, **kwds
+        )
 
 
 class PolarsAnyNamespace(

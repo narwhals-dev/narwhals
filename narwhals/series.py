@@ -1528,8 +1528,21 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._compliant_series.to_numpy(None, copy=None)
 
-    def to_pandas(self) -> pd.Series[Any]:
-        """Convert to pandas Series.
+    def to_pandas(
+        self, *, use_pyarrow_extension_array: bool = False, **kwds: Any
+    ) -> pd.Series[Any]:
+        """Convert this Series to a pandas Series.
+
+        Arguments:
+            use_pyarrow_extension_array: Use PyArrow-backed extension arrays instead of a
+                NumPy array for the pandas Series.
+                This allows zero copy operations and preservation of null values.
+                Subsequent operations on the resulting pandas Series may trigger conversion to
+                NumPy if those operations are not supported by PyArrow compute functions.
+            **kwds: Additional keyword arguments to be passed to [`pyarrow.Array.to_pandas`](https://arrow.apache.org/docs/python/generated/pyarrow.Array.html#pyarrow.Array.to_pandas)
+
+        Notes:
+            This operation always requires `pandas`, and requires `pyarrow` when any arguments are provided.
 
         Examples:
             >>> import polars as pl
@@ -1541,8 +1554,28 @@ class Series(Generic[IntoSeriesT]):
             1    2
             2    3
             Name: a, dtype: int64
+
+            Null values are converted to `NaN`:
+
+            >>> s_native = pl.Series("b", [1, 2, None])
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.to_pandas()
+            0    1.0
+            1    2.0
+            2    NaN
+            Name: b, dtype: float64
+
+            Pass `use_pyarrow_extension_array=True` to preserve nested and/or null values:
+
+            >>> s.to_pandas(use_pyarrow_extension_array=True)
+            0       1
+            1       2
+            2    <NA>
+            Name: b, dtype: int64[pyarrow]
         """
-        return self._compliant_series.to_pandas()
+        return self._compliant_series.to_pandas(
+            use_pyarrow_extension_array=use_pyarrow_extension_array, **kwds
+        )
 
     def to_polars(self) -> pl.Series:
         """Convert to polars Series.
