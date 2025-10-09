@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import duckdb
 import duckdb.typing as duckdb_dtypes
@@ -15,13 +15,15 @@ if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
     from duckdb import DuckDBPyRelation
+    from typing_extensions import TypeAlias
 
     from narwhals._compliant.typing import CompliantLazyFrameAny
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.expr import DuckDBExpr
     from narwhals.dtypes import DType
-    from narwhals.typing import IntoDType, TimeUnit
+    from narwhals.typing import IntoDType, NonNestedLiteral, TimeUnit
 
+Incomplete: TypeAlias = Any
 
 UNITS_DICT = {
     "y": "year",
@@ -41,8 +43,13 @@ NULLS_LAST_TO_NULLS_POS = {True: "nulls last", False: "nulls first"}
 col = duckdb.ColumnExpression
 """Alias for `duckdb.ColumnExpression`."""
 
-lit = duckdb.ConstantExpression
-"""Alias for `duckdb.ConstantExpression`."""
+
+# TODO @dangotbanned: Raise an issue upstream on `Expression | str` too narrow
+def lit(value: Expression | NonNestedLiteral | Sequence[Any]) -> Expression:
+    """Alias for `duckdb.ConstantExpression`."""
+    lit_: Incomplete = duckdb.ConstantExpression
+    return lit_(value)
+
 
 when = duckdb.CaseExpression
 """Alias for `duckdb.CaseExpression`."""
@@ -51,6 +58,8 @@ F = duckdb.FunctionExpression
 """Alias for `duckdb.FunctionExpression`."""
 
 
+# TODO @dangotbanned: Investigate `lhs: Expression | str | tuple[str]`
+# Seems incorrect
 def lambda_expr(
     params: str | Expression | tuple[Expression, ...], expr: Expression, /
 ) -> Expression:
@@ -64,7 +73,8 @@ def lambda_expr(
         msg = f"DuckDB>=1.2.0 is required for this operation. Found: DuckDB {duckdb.__version__}"
         raise NotImplementedError(msg) from exc
     args = (params,) if isinstance(params, Expression) else params
-    return LambdaExpression(args, expr)
+    lambda_expr_: Incomplete = LambdaExpression
+    return lambda_expr_(args, expr)
 
 
 def concat_str(*exprs: Expression, separator: str = "") -> Expression:
