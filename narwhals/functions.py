@@ -4,7 +4,7 @@ import platform
 import sys
 from collections.abc import Iterable, Mapping, Sequence
 from functools import partial
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, Literal, overload
 
 from narwhals._expression_parsing import (
     ExprKind,
@@ -23,6 +23,7 @@ from narwhals._utils import (
     is_sequence_but_not_str,
     normalize_path,
     supports_arrow_c_stream,
+    unstable,
     validate_laziness,
 )
 from narwhals.dependencies import (
@@ -31,6 +32,7 @@ from narwhals.dependencies import (
     is_numpy_array_2d,
     is_pyarrow_table,
 )
+from narwhals.dtypes import Int64
 from narwhals.exceptions import InvalidOperationError
 from narwhals.expr import Expr
 from narwhals.series import Series
@@ -49,6 +51,7 @@ if TYPE_CHECKING:
         ConcatMethod,
         FileSource,
         FrameT,
+        IntegerDType,
         IntoDType,
         IntoExpr,
         IntoSchema,
@@ -1786,3 +1789,152 @@ def format(f_string: str, *args: IntoExpr) -> Expr:
         if len(s) > 0:
             exprs.append(lit(s))
     return concat_str(exprs, separator="")
+
+
+@overload
+def int_range(
+    start: int | Expr,
+    end: int | Expr | None = ...,
+    step: int = ...,
+    *,
+    dtype: IntegerDType = ...,
+    eager: Literal[False] = ...,
+) -> Expr: ...
+
+
+@overload
+def int_range(
+    start: int | Expr,
+    end: int | Expr | None = ...,
+    step: int = ...,
+    *,
+    dtype: IntegerDType = ...,
+    eager: IntoBackend[EagerAllowed],
+) -> Series[Any]: ...
+
+
+@unstable
+def int_range(
+    start: int | Expr,
+    end: int | Expr | None = None,
+    step: int = 1,
+    *,
+    dtype: IntegerDType = Int64,
+    eager: IntoBackend[EagerAllowed] | Literal[False] = False,
+) -> Expr | Series[Any]:
+    """Generate a range of integers.
+
+    Warning:
+        This functionality is considered **unstable**. It may be changed at any point
+        without it being considered a breaking change.
+
+    Arguments:
+        start: Start of the range (inclusive). Defaults to 0.
+        end:  End of the range (exclusive). If set to `None` (default),
+            the value of `start` is used and `start` is set to `0`.
+        step: Step size of the range.
+        dtype: Data type of the range (must be an integer data type).
+        eager: If set to `False` (default), then an expression is returned.
+            If set to an (eager) implementation ("pandas", "polars" or "pyarrow"), then
+            a `Series` is returned.
+
+    Examples:
+        >>> import narwhals as nw
+        >>> nw.int_range(0, 5, step=2, eager="pandas")
+        ┌───────────────────────────┐
+        |      Narwhals Series      |
+        |---------------------------|
+        |0    0                     |
+        |1    2                     |
+        |2    4                     |
+        |Name: literal, dtype: int64|
+        └───────────────────────────┘
+
+        `end` can be omitted for a shorter syntax.
+
+        >>> nw.int_range(5, step=2, eager="pandas")
+        ┌───────────────────────────┐
+        |      Narwhals Series      |
+        |---------------------------|
+        |0    0                     |
+        |1    2                     |
+        |2    4                     |
+        |Name: literal, dtype: int64|
+        └───────────────────────────┘
+
+        Generate an index column by using `int_range` in conjunction with :func:`len`.
+
+        >>> import pandas as pd
+        >>> df = nw.from_native(pd.DataFrame({"a": [1, 3, 5], "b": [2, 4, 6]}))
+        >>> df.select(nw.int_range(nw.len(), dtype=nw.UInt32).alias("index"), nw.all())
+        ┌──────────────────┐
+        |Narwhals DataFrame|
+        |------------------|
+        |     index  a  b  |
+        |  0      0  1  2  |
+        |  1      1  3  4  |
+        |  2      2  5  6  |
+        └──────────────────┘
+    """
+    return _int_range_impl(start, end, step, dtype=dtype, eager=eager)
+
+
+def _int_range_impl(
+    start: int | Expr,
+    end: int | Expr | None,
+    step: int,
+    *,
+    dtype: IntegerDType,
+    eager: IntoBackend[EagerAllowed] | Literal[False],
+) -> Expr | Series[Any]:
+    from narwhals.exceptions import ComputeError
+
+    if not dtype.is_integer():
+        msg = f"non-integer `dtype` passed to `int_range`: {dtype}"
+        raise ComputeError(msg)
+
+    if end is None:
+        end = start
+        start = 0
+
+    if not eager:
+        start = start if isinstance(start, Expr) else lit(start, dtype=dtype)
+        end = end if isinstance(end, Expr) else lit(end, dtype=dtype)
+
+        if start._metadata.expansion_kind.is_multi_output():
+            msg = "`start` must contain exactly one value, got expression returning multiple values"
+            raise ComputeError(msg)
+
+        if end._metadata.expansion_kind.is_multi_output():
+            msg = "`end` must contain exactly one value, got expression returning multiple values"
+            raise ComputeError(msg)
+
+        args = start, end
+        return Expr(
+            lambda plx: apply_n_ary_operation(
+                plx,
+                partial(plx.int_range, step=step, dtype=dtype),
+                *args,
+                str_as_lit=False,
+            ),
+            ExprMetadata.selector_single(),
+        )
+
+    impl = Implementation.from_backend(eager)
+    if is_eager_allowed(impl):
+        if not (isinstance(start, int) and isinstance(end, int)):
+            msg = (
+                f"Expected `start` and `end` to be integer values since `eager={eager}`.\n"
+                f"Found: `start` of type {type(start)} and `end` of type {type(end)}\n\n"
+                "Hint: Calling `nw.int_range` with expressions requires:\n"
+                "  - `eager=False`"
+                "  - a context such as `select` or `with_columns`"
+            )
+            raise InvalidOperationError(msg)
+
+        ns = Version.MAIN.namespace.from_backend(impl).compliant
+        series = ns.int_range_eager(start=start, end=end, step=step, dtype=dtype)
+        return series.to_narwhals()
+
+    msg = f"Cannot create a Series from a lazy backend. Found: {impl}"
+    raise ValueError(msg)

@@ -11,7 +11,7 @@ from narwhals._polars.series import PolarsSeries
 from narwhals._polars.utils import extract_args_kwargs, narwhals_to_native_dtype
 from narwhals._utils import Implementation, requires, zip_strict
 from narwhals.dependencies import is_numpy_array_2d
-from narwhals.dtypes import DType
+from narwhals.dtypes import DType, Int64
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -26,6 +26,7 @@ if TYPE_CHECKING:
     from narwhals.expr import Expr
     from narwhals.series import Series
     from narwhals.typing import (
+        IntegerDType,
         Into1DArray,
         IntoDType,
         IntoSchema,
@@ -229,6 +230,31 @@ class PolarsNamespace:
             pl.concat_str(pl_exprs, separator=separator, ignore_nulls=ignore_nulls),
             version=self._version,
         )
+
+    def int_range_eager(
+        self,
+        start: int,
+        end: int,
+        step: int = 1,
+        *,
+        dtype: IntegerDType = Int64,
+        name: str = "literal",
+    ) -> PolarsSeries:
+        dtype_pl = narwhals_to_native_dtype(dtype, self._version)
+        native = pl.int_range(start, end, step, dtype=dtype_pl, eager=True).alias(name)
+        return self._series.from_native(native, context=self)
+
+    def int_range(
+        self,
+        start: PolarsExpr,
+        end: PolarsExpr,
+        step: int = 1,
+        *,
+        dtype: IntegerDType = Int64,
+    ) -> PolarsExpr:
+        pl_dtype = narwhals_to_native_dtype(dtype, self._version)
+        native = pl.int_range(start.native, end.native, step, dtype=pl_dtype)
+        return self._expr(native, self._version)
 
     # NOTE: Implementation is too different to annotate correctly (vs other `*SelectorNamespace`)
     # 1. Others have lots of private stuff for code reuse

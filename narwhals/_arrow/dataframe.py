@@ -8,7 +8,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._arrow.series import ArrowSeries
-from narwhals._arrow.utils import native_to_narwhals_dtype
+from narwhals._arrow.utils import int_range, native_to_narwhals_dtype
 from narwhals._compliant import EagerDataFrame
 from narwhals._expression_parsing import ExprKind
 from narwhals._utils import (
@@ -506,16 +506,11 @@ class ArrowDataFrame(
     def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self:
         plx = self.__narwhals_namespace__()
         if order_by is None:
-            import numpy as np  # ignore-banned-import
-
-            data = pa.array(np.arange(len(self), dtype=np.int64))
-            row_index = plx._expr._from_series(
-                plx._series.from_iterable(data, context=self, name=name)
-            )
+            row_index = plx._expr._from_series(plx.int_range_eager(0, len(self)))
         else:
             rank = plx.col(order_by[0]).rank("ordinal", descending=False)
-            row_index = (rank.over(partition_by=[], order_by=order_by) - 1).alias(name)
-        return self.select(row_index, plx.all())
+            row_index = rank.over(partition_by=[], order_by=order_by) - 1
+        return self.select(row_index.alias(name), plx.all())
 
     def filter(self, predicate: ArrowExpr) -> Self:
         # `[0]` is safe as the predicate's expression only returns a single column
@@ -691,10 +686,8 @@ class ArrowDataFrame(
         return None
 
     def is_unique(self) -> ArrowSeries:
-        import numpy as np  # ignore-banned-import
-
         col_token = generate_temporary_column_name(n_bytes=8, columns=self.columns)
-        row_index = pa.array(np.arange(len(self)))
+        row_index = int_range(0, len(self))
         keep_idx = (
             self.native.append_column(col_token, row_index)
             .group_by(self.columns)
@@ -718,8 +711,6 @@ class ArrowDataFrame(
     ) -> Self:
         # The param `maintain_order` is only here for compatibility with the Polars API
         # and has no effect on the output.
-        import numpy as np  # ignore-banned-import
-
         if subset and (error := self._check_columns_exist(subset)):
             raise error
         subset = list(subset or self.columns)
@@ -746,7 +737,7 @@ class ArrowDataFrame(
             else:
                 native = self.native
             keep_idx_native = (
-                native.append_column(col_token, pa.array(np.arange(len(self))))
+                native.append_column(col_token, int_range(0, len(self)))
                 .group_by(subset)
                 .aggregate([(col_token, agg_func)])
                 .column(f"{col_token}_{agg_func}")
@@ -765,6 +756,8 @@ class ArrowDataFrame(
     def to_arrow(self) -> pa.Table:
         return self.native
 
+    # TODO @dangotbanned: Replace `np.arange` w/ `utils.int_range`
+    # https://github.com/narwhals-dev/narwhals/issues/2722#issuecomment-3097350688
     def sample(
         self,
         n: int | None,

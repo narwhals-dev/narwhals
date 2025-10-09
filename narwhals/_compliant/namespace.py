@@ -15,13 +15,15 @@ from narwhals._compliant.typing import (
     NativeFrameT,
     NativeSeriesT,
 )
-from narwhals._expression_parsing import is_expr, is_series
+from narwhals._expression_parsing import combine_evaluate_output_names, is_expr, is_series
 from narwhals._utils import (
     exclude_column_names,
     get_column_names,
+    not_implemented,
     passthrough_column_names,
 )
 from narwhals.dependencies import is_numpy_array, is_numpy_array_2d
+from narwhals.dtypes import Int64
 
 if TYPE_CHECKING:
     from collections.abc import Container, Iterable, Sequence
@@ -35,6 +37,7 @@ if TYPE_CHECKING:
     from narwhals.series import Series
     from narwhals.typing import (
         ConcatMethod,
+        IntegerDType,
         Into1DArray,
         IntoDType,
         IntoSchema,
@@ -109,6 +112,14 @@ class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
     def concat_str(
         self, *exprs: CompliantExprT, separator: str, ignore_nulls: bool
     ) -> CompliantExprT: ...
+    def int_range(
+        self,
+        start: CompliantExprT,
+        end: CompliantExprT,
+        step: int = 1,
+        *,
+        dtype: IntegerDType = Int64,
+    ) -> CompliantExprT: ...
     @property
     def selectors(self) -> CompliantSelectorNamespace[Any, Any]: ...
     def coalesce(self, *exprs: CompliantExprT) -> CompliantExprT: ...
@@ -159,6 +170,8 @@ class LazyNamespace(
             return self._lazyframe.from_native(data, context=self)
         msg = f"Unsupported type: {type(data).__name__!r}"  # pragma: no cover
         raise TypeError(msg)
+
+    int_range = not_implemented()  # type: ignore[misc]
 
 
 class EagerNamespace(
@@ -245,3 +258,39 @@ class EagerNamespace(
         else:  # pragma: no cover
             raise NotImplementedError
         return self._dataframe.from_native(native, context=self)
+
+    def int_range_eager(
+        self,
+        start: int,
+        end: int,
+        step: int = 1,
+        *,
+        dtype: IntegerDType = Int64,
+        name: str = "literal",
+    ) -> EagerSeriesT: ...
+
+    def int_range(
+        self,
+        start: EagerExprT,
+        end: EagerExprT,
+        step: int = 1,
+        *,
+        dtype: IntegerDType = Int64,
+    ) -> EagerExprT:
+        def func(df: EagerDataFrameT) -> list[EagerSeriesT]:
+            start_eval = start(df)[0]
+            name = start_eval.name
+            start_value = start_eval.item()
+            end_value = end(df)[0].item()
+            return [
+                self.int_range_eager(start_value, end_value, step, dtype=dtype, name=name)
+            ]
+
+        return self._expr._from_callable(
+            func=func,
+            depth=0,
+            function_name="int_range",
+            evaluate_output_names=combine_evaluate_output_names(start),
+            alias_output_names=None,
+            context=self,
+        )

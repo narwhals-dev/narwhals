@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 
 import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._compliant import EagerSeriesNamespace
-from narwhals._utils import Version, isinstance_or_issubclass
+from narwhals._utils import Implementation, Version, isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping
@@ -21,6 +21,7 @@ if TYPE_CHECKING:
         ArrayOrScalarT1,
         ArrayOrScalarT2,
         ChunkedArrayAny,
+        Incomplete,
         NativeIntervalUnit,
         ScalarAny,
     )
@@ -57,6 +58,9 @@ else:
         is_timestamp,
     )
 
+BACKEND_VERSION = Implementation.PYARROW._backend_version()
+"""Static backend version for `pyarrow`."""
+
 UNITS_DICT: Mapping[IntervalUnit, NativeIntervalUnit] = {
     "y": "year",
     "q": "quarter",
@@ -72,6 +76,9 @@ UNITS_DICT: Mapping[IntervalUnit, NativeIntervalUnit] = {
 
 lit = pa.scalar
 """Alias for `pyarrow.scalar`."""
+
+int64: Final = pa.int64()
+"""Initialized `pyarrow.types.Int64Type`."""
 
 
 def extract_py_scalar(value: Any, /) -> Any:
@@ -439,6 +446,19 @@ def cast_to_comparable_string_types(
         else pa.large_string()
     )
     return (ca.cast(dtype) for ca in chunked_arrays), lit(separator, dtype)
+
+
+def int_range(
+    start: int, end: int, step: int = 1, *, dtype: pa.DataType = int64
+) -> ArrayAny:
+    if BACKEND_VERSION < (21, 0, 0):  # pragma: no cover
+        import numpy as np  # ignore-banned-import
+
+        return pa.array(np.arange(start=start, stop=end, step=step), type=dtype)
+    # NOTE: Added in https://github.com/apache/arrow/pull/46778
+    pa_arange = cast("Incomplete", pa.arange)  # type: ignore[attr-defined]
+    arr: ArrayAny = pa_arange(start=start, stop=end, step=step)
+    return arr.cast(dtype)
 
 
 class ArrowSeriesNamespace(EagerSeriesNamespace["ArrowSeries", "ChunkedArrayAny"]): ...

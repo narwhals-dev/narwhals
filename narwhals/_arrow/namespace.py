@@ -12,13 +12,19 @@ from narwhals._arrow.dataframe import ArrowDataFrame
 from narwhals._arrow.expr import ArrowExpr
 from narwhals._arrow.selectors import ArrowSelectorNamespace
 from narwhals._arrow.series import ArrowSeries
-from narwhals._arrow.utils import cast_to_comparable_string_types
+from narwhals._arrow.utils import (
+    cast_to_comparable_string_types,
+    chunked_array,
+    int_range,
+    narwhals_to_native_dtype,
+)
 from narwhals._compliant import CompliantThen, EagerNamespace, EagerWhen
 from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
 )
 from narwhals._utils import Implementation
+from narwhals.dtypes import Int64
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
@@ -26,7 +32,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.typing import ArrayOrScalar, ChunkedArrayAny, Incomplete
     from narwhals._compliant.typing import ScalarKwargs
     from narwhals._utils import Version
-    from narwhals.typing import IntoDType, NonNestedLiteral
+    from narwhals.typing import IntegerDType, IntoDType, NonNestedLiteral
 
 
 class ArrowNamespace(
@@ -277,6 +283,19 @@ class ArrowNamespace(
             alias_output_names=combine_alias_output_names(*exprs),
             context=self,
         )
+
+    def int_range_eager(
+        self,
+        start: int,
+        end: int,
+        step: int = 1,
+        *,
+        dtype: IntegerDType = Int64,
+        name: str = "literal",
+    ) -> ArrowSeries:
+        dtype_pa = narwhals_to_native_dtype(dtype, version=self._version)
+        data = int_range(start=start, end=end, step=step, dtype=dtype_pa)
+        return self._series.from_native(chunked_array([data]), name=name, context=self)
 
 
 class ArrowWhen(EagerWhen[ArrowDataFrame, ArrowSeries, ArrowExpr, "ChunkedArrayAny"]):

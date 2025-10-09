@@ -22,6 +22,7 @@ Here are the top-level functions available in Narwhals.
         - from_numpy
         - generate_temporary_column_name
         - get_native_namespace
+        - int_range
         - is_ordered_categorical
         - len
         - lit

@@ -501,3 +501,15 @@ def test_mode_different_lengths(constructor_eager: ConstructorEager) -> None:
     df = nw_v2.from_native(constructor_eager({"a": [1, 1, 2], "b": [4, 5, 6]}))
     with pytest.raises(ShapeError):
         df.select(nw_v2.col("a", "b").mode())
+
+
+def test_int_range() -> None:
+    pytest.importorskip("pandas")
+
+    def minimal_function(data: nw_v2.Series[Any]) -> None:
+        data.is_null()
+
+    col = nw_v2.int_range(0, 3, eager="pandas")
+    # check this doesn't raise type-checking errors
+    minimal_function(col)
+    assert isinstance(col, nw_v2.Series)
