@@ -148,21 +148,17 @@ class DaskNamespace(
     def concat(
         self, items: Iterable[DaskLazyFrame], *, how: ConcatMethod
     ) -> DaskLazyFrame:
-        if not items:
-            msg = "No items to concatenate"  # pragma: no cover
-            raise AssertionError(msg)
+        items = list(items)
         dfs = [item._native_frame for item in items]
         if how == "vertical":
             validate_concat_vertical_schemas(item.schema for item in items)
-            return DaskLazyFrame(
-                dd.concat(dfs, axis=0, join="inner"), version=self._version
-            )
-        if how == "diagonal":
-            return DaskLazyFrame(
-                dd.concat(dfs, axis=0, join="outer"), version=self._version
-            )
+            native_result = dd.concat(dfs, axis=0, join="inner")
+        elif how == "diagonal":
+            native_result = dd.concat(dfs, axis=0, join="outer")
+        else:  # pragma: no cover
+            raise NotImplementedError
 
-        raise NotImplementedError
+        return self._lazyframe.from_native(native_result, context=self)
 
     def mean_horizontal(self, *exprs: DaskExpr) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:

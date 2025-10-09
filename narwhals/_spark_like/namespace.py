@@ -143,21 +143,14 @@ class SparkLikeNamespace(
         dfs = [item._native_frame for item in items]
         if how == "vertical":
             validate_concat_vertical_schemas(item.schema for item in items)
-            return SparkLikeLazyFrame(
-                native_dataframe=reduce(lambda x, y: x.union(y), dfs),
-                version=self._version,
-                implementation=self._implementation,
+            native_result = reduce(lambda x, y: x.union(y), dfs)
+        elif how == "diagonal":
+            native_result = reduce(
+                lambda x, y: x.unionByName(y, allowMissingColumns=True), dfs
             )
-
-        if how == "diagonal":
-            return SparkLikeLazyFrame(
-                native_dataframe=reduce(
-                    lambda x, y: x.unionByName(y, allowMissingColumns=True), dfs
-                ),
-                version=self._version,
-                implementation=self._implementation,
-            )
-        raise NotImplementedError
+        else:  # pragma: no cover
+            raise NotImplementedError
+        return self._lazyframe.from_native(native_result, context=self)
 
     def concat_str(
         self, *exprs: SparkLikeExpr, separator: str, ignore_nulls: bool

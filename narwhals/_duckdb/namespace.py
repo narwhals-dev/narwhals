@@ -84,13 +84,16 @@ class DuckDBNamespace(
         if how == "vertical":
             validate_concat_vertical_schemas(item.schema for item in items)
             res = reduce(lambda x, y: x.union(y), (item._native_frame for item in items))
-        if how == "diagonal":
+        elif how == "diagonal":
             res, *others = (item._native_frame for item in items)
             for _item in others:
                 # TODO(unassigned): use relational API when available https://github.com/duckdb/duckdb/discussions/16996
                 res = duckdb.sql("""
                     from res select * union all by name from _item select *
                 """)
+        else:  # pragma: no cover
+            raise NotImplementedError
+
         return self._lazyframe.from_native(res, context=self)
 
     def concat_str(
