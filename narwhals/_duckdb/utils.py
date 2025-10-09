@@ -4,18 +4,17 @@ from functools import lru_cache
 from typing import TYPE_CHECKING, Any
 
 import duckdb
-import duckdb.typing as duckdb_dtypes
 from duckdb import Expression
-from duckdb.typing import DuckDBPyType
 
 import narwhals._duckdb.typing as nw_dd_t
-from narwhals._utils import Version, isinstance_or_issubclass, zip_strict
+from narwhals._utils import Implementation, Version, isinstance_or_issubclass, zip_strict
 from narwhals.exceptions import ColumnNotFoundError, UnsupportedDTypeError
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
     from duckdb import DuckDBPyRelation
+    from duckdb.sqltypes import DuckDBPyType
     from typing_extensions import TypeAlias
 
     from narwhals._compliant.typing import CompliantLazyFrameAny
@@ -25,6 +24,16 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoDType, NonNestedLiteral, TimeUnit
 
 Incomplete: TypeAlias = Any
+
+BACKEND_VERSION = Implementation.DUCKDB._backend_version()
+"""Static backend version for `duckdb`."""
+
+if TYPE_CHECKING or BACKEND_VERSION >= (1, 4):
+    from duckdb import sqltypes as duckdb_dtypes
+    from duckdb.sqltypes import DuckDBPyType
+else:
+    from duckdb import typing as duckdb_dtypes
+    from duckdb.typing import DuckDBPyType
 
 UNITS_DICT = {
     "y": "year",

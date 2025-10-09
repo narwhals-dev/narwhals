@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Any
 
 import duckdb
 from duckdb import CoalesceOperator, Expression
-from duckdb.typing import BIGINT, VARCHAR
 
 from narwhals._duckdb.dataframe import DuckDBLazyFrame
 from narwhals._duckdb.expr import DuckDBExpr
@@ -16,6 +15,7 @@ from narwhals._duckdb.utils import (
     DeferredTimeZone,
     F,
     concat_str,
+    duckdb_dtypes,
     function,
     lit,
     narwhals_to_native_dtype,
@@ -36,6 +36,9 @@ if TYPE_CHECKING:
 
     from narwhals._utils import Version
     from narwhals.typing import ConcatMethod, IntoDType, NonNestedLiteral
+
+BIGINT = duckdb_dtypes.BIGINT
+VARCHAR = duckdb_dtypes.VARCHAR
 
 
 class DuckDBNamespace(
