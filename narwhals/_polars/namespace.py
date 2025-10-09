@@ -163,10 +163,7 @@ class PolarsNamespace:
         return self._expr(pl.any_horizontal(*(expr.native for expr in it)), self._version)
 
     def concat(
-        self,
-        items: Iterable[FrameT],
-        *,
-        how: ConcatMethod,
+        self, items: Iterable[FrameT], *, how: ConcatMethod
     ) -> PolarsDataFrame | PolarsLazyFrame:
         result = pl.concat((item.native for item in items), how=how)
         if isinstance(result, pl.DataFrame):
