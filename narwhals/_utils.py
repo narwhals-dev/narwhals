@@ -620,7 +620,7 @@ MIN_VERSIONS: Mapping[Implementation, tuple[int, ...]] = {
     Implementation.PYSPARK_CONNECT: (3, 5),
     Implementation.POLARS: (0, 20, 4),
     Implementation.DASK: (2024, 8),
-    Implementation.DUCKDB: (1,),
+    Implementation.DUCKDB: (1, 1),
     Implementation.IBIS: (6,),
     Implementation.SQLFRAME: (3, 22, 0),
 }
