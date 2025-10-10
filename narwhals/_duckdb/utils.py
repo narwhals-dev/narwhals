@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 import duckdb
 from duckdb import Expression
 
-import narwhals._duckdb.typing as nw_dd_t
+from narwhals._duckdb.typing import BaseType, has_children, is_dtype
 from narwhals._utils import Implementation, Version, isinstance_or_issubclass, zip_strict
 from narwhals.exceptions import ColumnNotFoundError, UnsupportedDTypeError
 
@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from duckdb.sqltypes import DuckDBPyType
     from typing_extensions import TypeAlias
 
+    import narwhals._duckdb.typing
     from narwhals._compliant.typing import CompliantLazyFrameAny
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.expr import DuckDBExpr
@@ -149,27 +150,27 @@ class DeferredTimeZone:
 
 
 def native_to_narwhals_dtype(
-    duckdb_dtype: nw_dd_t.BaseType, version: Version, deferred_time_zone: DeferredTimeZone
+    duckdb_dtype: BaseType, version: Version, deferred_time_zone: DeferredTimeZone
 ) -> DType:
-    if nw_dd_t.has_children(duckdb_dtype) and not nw_dd_t.is_dtype_decimal(duckdb_dtype):
+    if has_children(duckdb_dtype) and not is_dtype(duckdb_dtype, "decimal"):
         return _nested_native_to_narwhals_dtype(duckdb_dtype, version, deferred_time_zone)
-    if nw_dd_t.is_dtype_timestamp_with_time_zone(duckdb_dtype):
+    if is_dtype(duckdb_dtype, "timestamp with time zone"):
         return version.dtypes.Datetime(time_zone=deferred_time_zone.time_zone)
     return _non_nested_native_to_narwhals_dtype(duckdb_dtype.id, version)
 
 
 def _nested_native_to_narwhals_dtype(
-    duckdb_dtype: nw_dd_t._ParentType,
+    duckdb_dtype: narwhals._duckdb.typing._ParentType,
     version: Version,
     deferred_time_zone: DeferredTimeZone,
 ) -> DType:
     dtypes = version.dtypes
 
-    if nw_dd_t.is_dtype_list(duckdb_dtype):
+    if is_dtype(duckdb_dtype, "list"):
         return dtypes.List(
             native_to_narwhals_dtype(duckdb_dtype.child, version, deferred_time_zone)
         )
-    if nw_dd_t.is_dtype_struct(duckdb_dtype):
+    if is_dtype(duckdb_dtype, "struct"):
         children = duckdb_dtype.children
         return dtypes.Struct(
             [
@@ -180,17 +181,17 @@ def _nested_native_to_narwhals_dtype(
                 for child in children
             ]
         )
-    if nw_dd_t.is_dtype_array(duckdb_dtype):
+    if is_dtype(duckdb_dtype, "array"):
         child, size = duckdb_dtype.children
         shape: list[int] = [size[1]]
 
-        while nw_dd_t.is_dtype_array(child[1]):
+        while is_dtype(child[1], "array"):
             child, size = child[1].children
             shape.insert(0, size[1])
 
         inner = native_to_narwhals_dtype(child[1], version, deferred_time_zone)
         return dtypes.Array(inner=inner, shape=tuple(shape))
-    if nw_dd_t.is_dtype_enum(duckdb_dtype):
+    if is_dtype(duckdb_dtype, "enum"):
         if version is Version.V1:
             return dtypes.Enum()  # type: ignore[call-arg]
         categories = duckdb_dtype.children[0][1]

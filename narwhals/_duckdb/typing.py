@@ -11,6 +11,8 @@ if TYPE_CHECKING:
     from duckdb import DuckDBPyConnection, Expression
     from typing_extensions import TypeAlias, TypeIs
 
+__all__ = ["BaseType", "WindowExpressionKwargs", "has_children", "is_dtype"]
+
 
 class WindowExpressionKwargs(TypedDict, total=False):
     partition_by: Sequence[str | Expression]
@@ -32,9 +34,22 @@ DTypeT_co = TypeVar("DTypeT_co", covariant=True, bound="BaseType", default="Base
 _Child: TypeAlias = tuple[Literal["child"], DTypeT_co]
 _Size: TypeAlias = tuple[Literal["size"], int]
 _ID_co = TypeVar("_ID_co", bound=str, default=str, covariant=True)
+_Array: TypeAlias = Literal["array"]
+_Struct: TypeAlias = Literal["struct"]
+_List: TypeAlias = Literal["list"]
+_Enum: TypeAlias = Literal["enum"]
+_Decimal: TypeAlias = Literal["decimal"]
+_TimestampTZ: TypeAlias = Literal["timestamp with time zone"]
 
 
 class BaseType(Protocol[_ID_co]):
+    """Structural equivalent to [`DuckDBPyType`].
+
+    Excludes attributes which are unsafe to use on most types.
+
+    [`DuckDBPyType`]: https://github.com/duckdb/duckdb-python/blob/df7789cbd31b2d2b8d03d012f14331bc3297fb2d/_duckdb-stubs/_sqltypes.pyi#L35-L75
+    """
+
     def __eq__(self, other: object) -> bool: ...
     def __hash__(self) -> int: ...
     @overload
@@ -45,41 +60,14 @@ class BaseType(Protocol[_ID_co]):
     def id(self) -> _ID_co: ...
 
 
-class _ParentType(BaseType[_ID_co], Protocol[_ID_co, _Children_co]):
-    @property
-    def children(self) -> _Children_co: ...
-
-
-ArrayType: TypeAlias = _ParentType[Literal["array"], tuple[_Child[DTypeT_co], _Size]]
-EnumType: TypeAlias = _ParentType[
-    Literal["enum"], tuple[tuple[Literal["values"], list[str]]]
-]
-DecimalType: TypeAlias = _ParentType[
-    Literal["decimal"],
-    tuple[tuple[Literal["precision"], int], tuple[Literal["scale"], int]],
-]
-
-
-class ListType(
-    _ParentType[Literal["list"], tuple[_Child[DTypeT_co]]], Protocol[DTypeT_co]
-):
-    @property
-    def child(self) -> DTypeT_co: ...
-
-
-class StructType(
-    _ParentType[Literal["struct"], Sequence[tuple[str, BaseType]]], Protocol
-):
-    def __getattr__(self, name: str) -> BaseType: ...
-    def __getitem__(self, name: str) -> BaseType: ...
-
-
 def has_children(
     dtype: BaseType | _ParentType[_ID_co, _Children_co],
 ) -> TypeIs[_ParentType[_ID_co, _Children_co]]:
-    """Using `_hasattr_static` returns `True` on any `DuckDBPyType.
+    """Return True if `dtype.children` can be accessed safely.
 
-    The only way to be sure is forcing an exception.
+    `_hasattr_static` returns True on *any* [`DuckDBPyType`], so the only way to be sure is by forcing an exception.
+
+    [`DuckDBPyType`]: https://github.com/duckdb/duckdb-python/blob/df7789cbd31b2d2b8d03d012f14331bc3297fb2d/_duckdb-stubs/_sqltypes.pyi#L35-L75
     """
     try:
         return hasattr(dtype, "children")
@@ -87,27 +75,47 @@ def has_children(
         return False
 
 
-def is_dtype_array(obj: BaseType) -> TypeIs[ArrayType]:
-    return obj.id == "array"
+@overload
+def is_dtype(obj: BaseType, type_id: _Array, /) -> TypeIs[ArrayType]: ...
+@overload
+def is_dtype(obj: BaseType, type_id: _Struct, /) -> TypeIs[StructType]: ...
+@overload
+def is_dtype(obj: BaseType, type_id: _List, /) -> TypeIs[ListType]: ...
+@overload
+def is_dtype(obj: BaseType, type_id: _Enum, /) -> TypeIs[EnumType]: ...
+@overload
+def is_dtype(obj: BaseType, type_id: _Decimal, /) -> TypeIs[DecimalType]: ...
+@overload
+def is_dtype(
+    obj: BaseType, type_id: _TimestampTZ, /
+) -> TypeIs[BaseType[_TimestampTZ]]: ...
+def is_dtype(
+    obj: BaseType, type_id: _Array | _Struct | _List | _Enum | _Decimal | _TimestampTZ, /
+) -> bool:
+    """Return True if `obj` is the [`DuckDBPyType`] corresponding with `type_id`.
+
+    [`DuckDBPyType`]: https://github.com/duckdb/duckdb-python/blob/df7789cbd31b2d2b8d03d012f14331bc3297fb2d/_duckdb-stubs/_sqltypes.pyi#L35-L75
+    """
+    return obj.id == type_id
 
 
-def is_dtype_struct(obj: BaseType) -> TypeIs[StructType]:
-    return obj.id == "struct"
+class _ParentType(BaseType[_ID_co], Protocol[_ID_co, _Children_co]):
+    @property
+    def children(self) -> _Children_co: ...
 
 
-def is_dtype_list(obj: BaseType) -> TypeIs[ListType]:
-    return obj.id == "list"
+ArrayType: TypeAlias = _ParentType[_Array, tuple[_Child[DTypeT_co], _Size]]
+EnumType: TypeAlias = _ParentType[_Enum, tuple[tuple[Literal["values"], list[str]]]]
+DecimalType: TypeAlias = _ParentType[
+    _Decimal, tuple[tuple[Literal["precision"], int], tuple[Literal["scale"], int]]
+]
 
 
-def is_dtype_enum(obj: BaseType) -> TypeIs[EnumType]:
-    return obj.id == "enum"
+class ListType(_ParentType[_List, tuple[_Child[DTypeT_co]]], Protocol[DTypeT_co]):
+    @property
+    def child(self) -> DTypeT_co: ...
 
 
-def is_dtype_timestamp_with_time_zone(
-    obj: BaseType,
-) -> TypeIs[BaseType[Literal["timestamp with time zone"]]]:
-    return obj.id == "timestamp with time zone"
-
-
-def is_dtype_decimal(obj: BaseType) -> TypeIs[DecimalType]:
-    return obj.id == "decimal"
+class StructType(_ParentType[_Struct, Sequence[tuple[str, BaseType]]], Protocol):
+    def __getattr__(self, name: str) -> BaseType: ...
+    def __getitem__(self, name: str) -> BaseType: ...
