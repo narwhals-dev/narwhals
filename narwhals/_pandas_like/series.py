@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import operator
 import warnings
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Callable, Literal, cast
 
 import numpy as np
 
@@ -387,103 +388,87 @@ class PandasLikeSeries(EagerSeries[Any]):
     def last(self) -> PythonLiteral:
         return self.native.iloc[-1] if len(self.native) else None
 
+    def _with_binary(self, op: Callable[..., PandasLikeSeries], other: Any) -> Self:
+        ser, other_native = align_and_extract_native(self, other)
+        ret = self._with_native(op(ser, other_native)).alias(self.name)
+        if self._broadcast and getattr(other, "_broadcast", True):
+            ret._broadcast = True
+        return ret
+
+    def _with_rbinary(self, op: Callable[..., PandasLikeSeries], other: Any) -> Self:
+        return self._with_binary(lambda x, y: op(y, x), other)
+
     def __eq__(self, other: object) -> Self:  # type: ignore[override]
-        ser, other = align_and_extract_native(self, other)
-        return self._with_native(ser == other).alias(self.name)
+        return self._with_binary(operator.eq, other)
 
     def __ne__(self, other: object) -> Self:  # type: ignore[override]
-        ser, other = align_and_extract_native(self, other)
-        return self._with_native(ser != other).alias(self.name)
+        return self._with_binary(operator.ne, other)
 
     def __ge__(self, other: Any) -> Self:
-        ser, other = align_and_extract_native(self, other)
-        return self._with_native(ser >= other).alias(self.name)
+        return self._with_binary(operator.ge, other)
 
     def __gt__(self, other: Any) -> Self:
-        ser, other = align_and_extract_native(self, other)
-        return self._with_native(ser > other).alias(self.name)
+        return self._with_binary(operator.gt, other)
 
     def __le__(self, other: Any) -> Self:
-        ser, other = align_and_extract_native(self, other)
-        return self._with_native(ser <= other).alias(self.name)
+        return self._with_binary(operator.le, other)
 
     def __lt__(self, other: Any) -> Self:
-        ser, other = align_and_extract_native(self, other)
-        return self._with_native(ser < other).alias(self.name)
+        return self._with_binary(operator.lt, other)
 
     def __and__(self, other: Any) -> Self:
-        ser, other = align_and_extract_native(self, other)
-        return self._with_native(ser & other).alias(self.name)
+        return self._with_binary(operator.and_, other)
 
     def __rand__(self, other: Any) -> Self:
-        ser, other = align_and_extract_native(self, other)
-        ser = cast("pd.Series[Any]", ser)
-        return self._with_native(ser.__and__(other)).alias(self.name)
+        return self._with_rbinary(operator.and_, other).alias(self.name)
 
     def __or__(self, other: Any) -> Self:
-        ser, other = align_and_extract_native(self, other)
-        return self._with_native(ser | other).alias(self.name)
+        return self._with_binary(operator.or_, other)
 
     def __ror__(self, other: Any) -> Self:
-        ser, other = align_and_extract_native(self, other)
-        ser = cast("pd.Series[Any]", ser)
-        return self._with_native(ser.__or__(other)).alias(self.name)
+        return self._with_rbinary(operator.or_, other).alias(self.name)
 
     def __add__(self, other: Any) -> Self:
-        ser, other = align_and_extract_native(self, other)
-        return self._with_native(ser + other).alias(self.name)
+        return self._with_binary(operator.add, other)
 
     def __radd__(self, other: Any) -> Self:
-        _, other_native = align_and_extract_native(self, other)
-        return self._with_native(self.native.__radd__(other_native)).alias(self.name)
+        return self._with_rbinary(operator.add, other).alias(self.name)
 
     def __sub__(self, other: Any) -> Self:
-        ser, other = align_and_extract_native(self, other)
-        return self._with_native(ser - other).alias(self.name)
+        return self._with_binary(operator.sub, other)
 
     def __rsub__(self, other: Any) -> Self:
-        _, other_native = align_and_extract_native(self, other)
-        return self._with_native(self.native.__rsub__(other_native)).alias(self.name)
+        return self._with_rbinary(operator.sub, other).alias(self.name)
 
     def __mul__(self, other: Any) -> Self:
-        ser, other = align_and_extract_native(self, other)
-        return self._with_native(ser * other).alias(self.name)
+        return self._with_binary(operator.mul, other)
 
     def __rmul__(self, other: Any) -> Self:
-        _, other_native = align_and_extract_native(self, other)
-        return self._with_native(self.native.__rmul__(other_native)).alias(self.name)
+        return self._with_rbinary(operator.mul, other).alias(self.name)
 
     def __truediv__(self, other: Any) -> Self:
-        ser, other = align_and_extract_native(self, other)
-        return self._with_native(ser / other).alias(self.name)
+        return self._with_binary(operator.truediv, other)
 
     def __rtruediv__(self, other: Any) -> Self:
-        _, other_native = align_and_extract_native(self, other)
-        return self._with_native(self.native.__rtruediv__(other_native)).alias(self.name)
+        return self._with_rbinary(operator.truediv, other).alias(self.name)
 
     def __floordiv__(self, other: Any) -> Self:
-        ser, other = align_and_extract_native(self, other)
-        return self._with_native(ser // other).alias(self.name)
+        return self._with_binary(operator.floordiv, other)
 
     def __rfloordiv__(self, other: Any) -> Self:
-        _, other_native = align_and_extract_native(self, other)
-        return self._with_native(self.native.__rfloordiv__(other_native)).alias(self.name)
+        return self._with_rbinary(operator.floordiv, other).alias(self.name)
 
     def __pow__(self, other: Any) -> Self:
-        ser, other = align_and_extract_native(self, other)
-        return self._with_native(ser**other).alias(self.name)
+        return self._with_binary(operator.pow, other)
 
     def __rpow__(self, other: Any) -> Self:
-        _, other_native = align_and_extract_native(self, other)
-        return self._with_native(self.native.__rpow__(other_native)).alias(self.name)
+        return self._with_rbinary(operator.pow, other).alias(self.name)
 
     def __mod__(self, other: Any) -> Self:
-        ser, other = align_and_extract_native(self, other)
-        return self._with_native(ser % other).alias(self.name)
+        return self._with_binary(operator.mod, other)
 
     def __rmod__(self, other: Any) -> Self:
-        _, other_native = align_and_extract_native(self, other)
-        return self._with_native(self.native.__rmod__(other_native)).alias(self.name)
+        return self._with_rbinary(operator.mod, other).alias(self.name)
 
     # Unary
 

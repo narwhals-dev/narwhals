@@ -158,6 +158,8 @@ def align_and_extract_native(
         return lhs.native.iloc[0], rhs.native
 
     if isinstance(rhs, PandasLikeSeries):
+        if lhs._broadcast and not rhs._broadcast:
+            return (lhs.native.iloc[0], rhs.native)
         if rhs._broadcast:
             return (lhs.native, rhs.native.iloc[0])
         if rhs.native.index is not lhs_index:
@@ -469,7 +471,6 @@ NW_TO_PD_DTYPES_BACKEND: Mapping[type[DType], Mapping[DTypeBackend, str | type[A
         None: "uint16",
     },
     dtypes.UInt8: {"pyarrow": "UInt8[pyarrow]", "numpy_nullable": "UInt8", None: "uint8"},
-    dtypes.String: {"pyarrow": "string[pyarrow]", "numpy_nullable": "string", None: str},
     dtypes.Boolean: {
         "pyarrow": "boolean[pyarrow]",
         "numpy_nullable": "boolean",
@@ -494,6 +495,14 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912
         return pd_type
     if into_pd_type := NW_TO_PD_DTYPES_BACKEND.get(base_type):
         return into_pd_type[dtype_backend]
+    if isinstance_or_issubclass(dtype, dtypes.String):
+        if dtype_backend == "pyarrow":
+            import pyarrow as pa  # ignore-banned-import
+
+            return pd.ArrowDtype(pa.string())
+        if dtype_backend == "numpy_nullable":
+            return "string"
+        return str
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
         if is_pandas_or_modin(implementation) and PANDAS_VERSION < (
             2,
@@ -533,7 +542,7 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912
         )
     if isinstance_or_issubclass(dtype, dtypes.Date):
         try:
-            import pyarrow as pa  # ignore-banned-import  # noqa: F401
+            import pyarrow as pa  # ignore-banned-import
         except ModuleNotFoundError as exc:  # pragma: no cover
             # BUG: Never re-raised?
             msg = "'pyarrow>=13.0.0' is required for `Date` dtype."

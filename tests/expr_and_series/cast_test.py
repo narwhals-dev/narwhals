@@ -394,3 +394,12 @@ def test_cast_typing_invalid() -> None:
 
     with pytest.raises(AttributeError):
         df.select(a.cast(nw.Array(nw.List, 2)))  # type: ignore[arg-type]
+
+
+@pytest.mark.skipif(PANDAS_VERSION < (2,), reason="too old for pyarrow")
+def test_pandas_pyarrow_dtypes() -> None:
+    s = nw.from_native(
+        pd.Series([123, None]).convert_dtypes(dtype_backend="pyarrow"), series_only=True
+    ).cast(nw.String)
+    result = s.str.len_chars().to_native()
+    assert result.dtype == "Int32[pyarrow]"
