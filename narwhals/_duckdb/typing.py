@@ -20,8 +20,12 @@ class WindowExpressionKwargs(TypedDict, total=False):
     ignore_nulls: bool
 
 
-_Children: TypeAlias = Sequence[tuple[str, Any]]
-T_co = TypeVar("T_co", covariant=True, bound=_Children, default=_Children)
+_Children_co = TypeVar(
+    "_Children_co",
+    covariant=True,
+    bound=Sequence[tuple[str, Any]],
+    default=Sequence[tuple[str, Any]],
+)
 DTypeT_co = TypeVar("DTypeT_co", covariant=True, bound="BaseType", default="BaseType")
 _Child: TypeAlias = tuple[Literal["child"], DTypeT_co]
 _Size: TypeAlias = tuple[Literal["size"], int]
@@ -39,9 +43,9 @@ class BaseType(Protocol[_ID_co]):
     def id(self) -> _ID_co: ...
 
 
-class _ParentType(BaseType[_ID_co], Protocol[_ID_co, T_co]):
+class _ParentType(BaseType[_ID_co], Protocol[_ID_co, _Children_co]):
     @property
-    def children(self) -> T_co: ...
+    def children(self) -> _Children_co: ...
 
 
 class ArrayType(
@@ -78,8 +82,8 @@ class DecimalType(
 
 
 def has_children(
-    dtype: BaseType | _ParentType[_ID_co, T_co],
-) -> TypeIs[_ParentType[_ID_co, T_co]]:
+    dtype: BaseType | _ParentType[_ID_co, _Children_co],
+) -> TypeIs[_ParentType[_ID_co, _Children_co]]:
     """Using `_hasattr_static` returns `True` on any `DuckDBPyType.
 
     The only way to be sure is forcing an exception.
