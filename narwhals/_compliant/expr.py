@@ -53,7 +53,6 @@ if TYPE_CHECKING:
         IntoDType,
         ModeKeepStrategy,
         NonNestedLiteral,
-        NumericLiteral,
         RankMethod,
         RollingInterpolationMethod,
         TimeUnit,
@@ -795,22 +794,6 @@ class EagerExpr(
     ) -> Self:
         return self._reuse_series(
             "is_between", lower_bound=lower_bound, upper_bound=upper_bound, closed=closed
-        )
-
-    def is_close(
-        self,
-        other: Self | NumericLiteral,
-        *,
-        abs_tol: float,
-        rel_tol: float,
-        nans_equal: bool,
-    ) -> Self:
-        return self._reuse_series(
-            "is_close",
-            other=other,
-            abs_tol=abs_tol,
-            rel_tol=rel_tol,
-            nans_equal=nans_equal,
         )
 
     def first(self) -> Self:

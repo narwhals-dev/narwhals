@@ -76,7 +76,7 @@ pn = PandasLikeNamespace(
     implementation=Implementation.PANDAS,
     version=Version.MAIN,
 )
-print(nw.col("a")(pn))
+print(nw.col("a")._to_compliant_expr(pn))
 ```
 
 The result from the last line above is the same as we'd get from `pn.col('a')`, and it's
@@ -213,7 +213,7 @@ pn = PandasLikeNamespace(
     implementation=Implementation.PANDAS,
     version=Version.MAIN,
 )
-expr = (nw.col("a") + 1)(pn)
+expr = (nw.col("a") + 1)._to_compliant_expr(pn)
 print(expr)
 ```
 
@@ -327,9 +327,9 @@ Let's try printing out some compliant expressions' metadata to see what it shows
 ```python exec="1" result="python" session="pandas_impl" source="above"
 import narwhals as nw
 
-print(nw.col("a")(pn)._metadata)
-print(nw.col("a").mean()(pn)._metadata)
-print(nw.col("a").mean().over("b")(pn)._metadata)
+print(nw.col("a")._to_compliant_expr(pn)._metadata)
+print(nw.col("a").mean()._to_compliant_expr(pn)._metadata)
+print(nw.col("a").mean().over("b")._to_compliant_expr(pn)._metadata)
 ```
 
 This section is all about making sense of what that all means, what the rules are, and what it enables.
