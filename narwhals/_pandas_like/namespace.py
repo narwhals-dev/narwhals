@@ -348,9 +348,9 @@ class PandasLikeNamespace(
                 init_value, *values = [
                     s.zip_with(~nm, "") for s, nm in zip_strict(series, null_mask)
                 ]
-
+                array_funcs = series[0]._array_funcs
                 sep_array = init_value.from_iterable(
-                    data=(separator,) * len(init_value),
+                    data=array_funcs.repeat(separator, len(init_value)),
                     name="sep",
                     index=init_value.native.index,
                     context=self,

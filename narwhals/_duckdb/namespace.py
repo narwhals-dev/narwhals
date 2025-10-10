@@ -105,16 +105,15 @@ class DuckDBNamespace(
             cols = tuple(chain.from_iterable(expr(df) for expr in exprs))
             if not ignore_nulls:
                 n_cols = len(cols)
+                sep_exp = lit(separator)
                 null_mask_result = reduce(operator.or_, (s.isnull() for s in cols))
-                cols_separated = (
-                    y
-                    for x in (
-                        (col.cast(duckdb_dtypes.VARCHAR),)
-                        if i == n_cols
-                        else (col.cast(duckdb_dtypes.VARCHAR), lit(separator))
-                        for i, col in enumerate(cols, start=1)
+                cols_separated = chain.from_iterable(
+                    (
+                        col.cast(duckdb_dtypes.VARCHAR),
+                        # Use empty string instead of separator for the trailing character
+                        lit("") if i == n_cols else sep_exp,
                     )
-                    for y in x
+                    for i, col in enumerate(cols, start=1)
                 )
                 return [when(~null_mask_result, concat_str(*cols_separated))]
             return [concat_str(*cols, separator=separator)]
