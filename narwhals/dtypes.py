@@ -60,6 +60,8 @@ def _validate_into_dtype(dtype: Any) -> None:
 
 
 class DType:
+    __slots__ = ()
+
     def __repr__(self) -> str:  # pragma: no cover
         return self.__class__.__qualname__
 
@@ -438,6 +440,8 @@ class Datetime(TemporalType, metaclass=_DatetimeMeta):
         Datetime(time_unit='ms', time_zone='Africa/Accra')
     """
 
+    __slots__ = ("time_unit", "time_zone")
+
     def __init__(
         self, time_unit: TimeUnit = "us", time_zone: str | timezone | None = None
     ) -> None:
@@ -521,6 +525,8 @@ class Duration(TemporalType, metaclass=_DurationMeta):
         Duration(time_unit='ms')
     """
 
+    __slots__ = ("time_unit",)
+
     def __init__(self, time_unit: TimeUnit = "us") -> None:
         if time_unit not in {"s", "ms", "us", "ns"}:
             msg = (
@@ -585,6 +591,8 @@ class Enum(DType):
        >>> nw.Enum(["beluga", "narwhal", "orca"])
        Enum(categories=['beluga', 'narwhal', 'orca'])
     """
+
+    __slots__ = ("_cached_categories", "_delayed_categories")
 
     def __init__(self, categories: Iterable[str] | type[enum.Enum]) -> None:
         self._delayed_categories: _DeferredIterable[str] | None = None
@@ -655,6 +663,7 @@ class Field:
        [Field('a', Int64), Field('b', List(String))]
     """
 
+    __slots__ = ("dtype", "name")
     name: str
     """The name of the field within its parent `Struct`."""
     dtype: IntoDType
@@ -713,6 +722,7 @@ class Struct(NestedType):
        Struct({'a': Int64, 'b': List(String)})
     """
 
+    __slots__ = ("fields",)
     fields: list[Field]
     """The fields that make up the struct."""
 
@@ -782,6 +792,7 @@ class List(NestedType):
        List(String)
     """
 
+    __slots__ = ("inner",)
     inner: IntoDType
     """The DType of the values within each list."""
 
@@ -832,6 +843,7 @@ class Array(NestedType):
         Array(Int32, shape=(2,))
     """
 
+    __slots__ = ("inner", "shape", "size")
     inner: IntoDType
     """The DType of the values within each array."""
     size: int
