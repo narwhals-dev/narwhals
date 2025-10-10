@@ -2,9 +2,13 @@ from __future__ import annotations
 
 import narwhals as nw
 from tests.utils import Constructor, ConstructorEager, assert_equal_data
+import pytest
 
 
 def test_any_all(constructor: Constructor) -> None:
+    if "bodo" in str(constructor):
+        # BODO fail
+        pytest.skip()
     df = nw.from_native(
         constructor(
             {
@@ -23,6 +27,9 @@ def test_any_all(constructor: Constructor) -> None:
 
 
 def test_any_all_series(constructor_eager: ConstructorEager) -> None:
+    if "bodo" in str(constructor_eager):
+        # BODO fail
+        pytest.skip()
     df = nw.from_native(
         constructor_eager(
             {

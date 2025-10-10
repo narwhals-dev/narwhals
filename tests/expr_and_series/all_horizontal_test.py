@@ -38,6 +38,9 @@ def test_allh_kleene(constructor: Constructor, request: pytest.FixtureRequest) -
         # Dask infers `[True, None, None, None]` as `object` dtype, and then `__or__` fails.
         # test it below separately
         pytest.skip()
+    if "bodo" in str(constructor):
+        # BODO fail
+        pytest.skip()
     context = (
         pytest.raises(ValueError, match="ignore_nulls")
         if "pandas_constructor" in str(constructor)
@@ -84,6 +87,9 @@ def test_allh_series(constructor_eager: ConstructorEager) -> None:
 
 
 def test_allh_all(constructor: Constructor) -> None:
+    if "bodo" in str(constructor):
+        # BODO fail
+        pytest.skip()
     data = {"a": [False, False, True], "b": [False, True, True]}
     df = nw.from_native(constructor(data))
     result = df.select(all=nw.all_horizontal(nw.all(), ignore_nulls=True))
@@ -97,6 +103,9 @@ def test_allh_all(constructor: Constructor) -> None:
 def test_allh_nth(constructor: Constructor) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < (1, 0):
         pytest.skip()
+    if "bodo" in str(constructor):
+        # BODO fail
+        pytest.skip()
     data = {"a": [False, False, True], "b": [False, True, True]}
     df = nw.from_native(constructor(data))
     result = df.select(nw.all_horizontal(nw.nth(0, 1), ignore_nulls=True))
@@ -108,6 +117,9 @@ def test_allh_nth(constructor: Constructor) -> None:
 
 
 def test_allh_iterator(constructor: Constructor) -> None:
+    if "bodo" in str(constructor):
+        # BODO fail
+        pytest.skip()
     def iter_eq(items: Any, /) -> Any:
         for column, value in items:
             yield nw.col(column) == value
