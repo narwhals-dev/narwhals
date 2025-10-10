@@ -155,7 +155,7 @@ class BaseFrame(Generic[_FrameT]):
             (parse(expr).alias(alias) for alias, expr in named_exprs.items()),
         )
         for expr in all_exprs:
-            ce = expr(ns)
+            ce = expr._to_compliant_expr(ns)
             out_exprs.append(ce)
             self._validate_metadata(ce._metadata)
         return out_exprs

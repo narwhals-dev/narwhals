@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import partial
-from typing import TYPE_CHECKING, Any, Protocol, cast, overload
+from typing import TYPE_CHECKING, Any, Protocol, overload
 
 from narwhals._compliant.typing import (
     CompliantExprT,
@@ -29,7 +29,6 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.selectors import CompliantSelectorNamespace
     from narwhals._utils import Implementation, Version
-    from narwhals.expr import Expr
     from narwhals.typing import (
         ConcatMethod,
         Into1DArray,
@@ -56,10 +55,6 @@ class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
 
     @property
     def _expr(self) -> type[CompliantExprT]: ...
-    def evaluate_expr(self, data: Expr, /) -> CompliantExprT:
-        ret = data(self)
-        return cast("CompliantExprT", ret)
-
     # NOTE: `polars`
     def all(self) -> CompliantExprT:
         return self._expr.from_column_names(get_column_names, context=self)

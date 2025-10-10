@@ -22,7 +22,6 @@ if TYPE_CHECKING:
     from narwhals._polars.dataframe import Method, PolarsDataFrame, PolarsLazyFrame
     from narwhals._polars.typing import FrameT
     from narwhals._utils import Version, _LimitedContext
-    from narwhals.expr import Expr
     from narwhals.typing import Into1DArray, IntoDType, IntoSchema, TimeUnit, _2DArray
 
 
@@ -44,11 +43,6 @@ class PolarsNamespace:
 
     def __init__(self, *, version: Version) -> None:
         self._version = version
-
-    def evaluate_expr(self, data: Expr, /) -> PolarsExpr:
-        expr = data(self)
-        assert isinstance(expr, self._expr)  # noqa: S101
-        return expr
 
     def __getattr__(self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:

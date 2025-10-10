@@ -50,7 +50,9 @@ class Expr:
     def __init__(self, *nodes: ExprNode) -> None:
         self._nodes = nodes
 
-    def __call__(self, ns: CompliantNamespace[Any, Any]) -> CompliantExpr[Any, Any]:
+    def _to_compliant_expr(
+        self, ns: CompliantNamespace[Any, Any]
+    ) -> CompliantExpr[Any, Any]:
         nodes = self._nodes
         ce = evaluate_root_node(nodes[0], ns)
         for node in nodes[1:]:

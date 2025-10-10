@@ -18,6 +18,7 @@ from narwhals._utils import (
     parse_columns_to_drop,
     zip_strict,
 )
+from narwhals.exceptions import MultiOutputExpressionError
 from narwhals.typing import CompliantLazyFrame
 
 if TYPE_CHECKING:
@@ -106,6 +107,13 @@ class DaskLazyFrame(
     def _iter_columns(self) -> Iterator[dx.Series]:
         for _col, ser in self.native.items():  # noqa: PERF102
             yield ser
+
+    def _evaluate_single_output_expr(self, obj: DaskExpr) -> dx.Series:
+        results = obj._call(self)
+        if len(results) != 1:  # pragma: no cover
+            msg = "multi-output expressions not allowed in this context"
+            raise MultiOutputExpressionError(msg)
+        return results[0]
 
     def with_columns(self, *exprs: DaskExpr) -> Self:
         new_series = evaluate_exprs(self, *exprs)

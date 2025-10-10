@@ -752,9 +752,9 @@ def evaluate_into_exprs(
     allow_multi_output: bool,
 ) -> Iterator[CompliantExprAny]:
     for expr in exprs:
-        ret = ns.evaluate_expr(
-            _parse_into_expr(expr, str_as_lit=str_as_lit, backend=ns._implementation)
-        )
+        ret = _parse_into_expr(
+            expr, str_as_lit=str_as_lit, backend=ns._implementation
+        )._to_compliant_expr(ns)
         if not allow_multi_output and ret._metadata.expansion_kind.is_multi_output():
             msg = "Multi-output expressions are not allowed in this context."
             raise MultiOutputExpressionError(msg)

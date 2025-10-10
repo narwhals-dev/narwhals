@@ -11,7 +11,6 @@ from narwhals._dask.expr_str import DaskExprStringNamespace
 from narwhals._dask.utils import (
     add_row_index,
     align_series_full_broadcast,
-    evaluate_expr,
     narwhals_to_native_dtype,
 )
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
@@ -136,7 +135,7 @@ class DaskExpr(
             native_results: list[dx.Series] = []
             native_series_list = self._call(df)
             other_native_series = {
-                key: evaluate_expr(df, value)
+                key: df._evaluate_single_output_expr(value)
                 for key, value in expressifiable_args.items()
             }
             for native_series in native_series_list:
@@ -212,7 +211,7 @@ class DaskExpr(
             return (series.__floordiv__(other)).where(other != 0, None)
 
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            other_series = evaluate_expr(df, other)
+            other_series = df._evaluate_single_output_expr(other)
             return [_floordiv(df, series, other_series) for series in self(df)]
 
         return self.__class__(
@@ -266,7 +265,7 @@ class DaskExpr(
             return (other.__floordiv__(series)).where(series != 0, None)
 
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            other_native = evaluate_expr(df, other)
+            other_native = df._evaluate_single_output_expr(other)
             return [_rfloordiv(df, series, other_native) for series in self(df)]
 
         return self.__class__(
