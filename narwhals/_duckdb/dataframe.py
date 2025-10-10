@@ -394,24 +394,22 @@ class DuckDBLazyFrame(
         if error := self._check_columns_exist(subset_):
             raise error
         tmp_name = generate_temporary_column_name(8, self.columns, prefix="row_index_")
-        descending_and_nulls_last_value = (
-            (True,) * len(order_by) if order_by and keep == "last" else None
-        )
+        flags = extend_bool(True, len(order_by)) if order_by and keep == "last" else None
         if keep == "none":
             expr = window_expression(
                 F("count", StarExpression()),
                 subset_,
                 order_by or (),
-                descending=descending_and_nulls_last_value,
-                nulls_last=descending_and_nulls_last_value,
+                descending=flags,
+                nulls_last=flags,
             )
         else:
             expr = window_expression(
                 F("row_number"),
                 subset_,
                 order_by or (),
-                descending=descending_and_nulls_last_value,
-                nulls_last=descending_and_nulls_last_value,
+                descending=flags,
+                nulls_last=flags,
             )
         return self._with_native(
             self.native.select(StarExpression(), expr.alias(tmp_name)).filter(
@@ -437,7 +435,7 @@ class DuckDBLazyFrame(
         _rel = self.native
         by = list(by)
         if isinstance(reverse, bool):
-            descending = (not reverse,) * len(by)
+            descending = extend_bool(not reverse, len(by))
         else:
             descending = tuple(not rev for rev in reverse)
         expr = window_expression(
