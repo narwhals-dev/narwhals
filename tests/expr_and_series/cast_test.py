@@ -403,3 +403,14 @@ def test_pandas_pyarrow_dtypes() -> None:
     ).cast(nw.String)
     result = s.str.len_chars().to_native()
     assert result.dtype == "Int32[pyarrow]"
+
+    s = nw.from_native(
+        pd.Series([123, None], dtype="string[pyarrow]"), series_only=True
+    ).cast(nw.String)
+    result = s.str.len_chars().to_native()
+    assert result.dtype == "Int64"
+
+    s = nw.from_native(
+        pd.DataFrame({"a": ["foo", "bar"]}, dtype="string[pyarrow]")
+    ).select(nw.col("a").cast(nw.String))["a"]
+    assert s.to_native().dtype == "string[pyarrow]"
