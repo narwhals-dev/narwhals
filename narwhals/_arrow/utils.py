@@ -116,8 +116,7 @@ def repeat(
     *Optionally*, casting to `dtype` **before** repeating `n` times.
     """
     lit_: Incomplete = lit
-    scalar = lit_(value)
-    return pa.repeat(scalar.cast(dtype) if dtype else scalar, n)
+    return pa.repeat(lit_(value, type=dtype), n)
 
 
 def zeros(n: int, /) -> pa.Int64Array:
@@ -440,10 +439,9 @@ def pad_series(
     offset_left = window_size // 2
     # subtract one if window_size is even
     offset_right = offset_left - (window_size % 2 == 0)
-    pad_left = pa.repeat(None, offset_left).cast(series._type)
-    pad_right = pa.repeat(None, offset_right).cast(series._type)
-    concat = pa.concat_arrays([pad_left, *series.native.chunks, pad_right])
-    return series._with_native(concat), offset_left + offset_right
+    chunks = series.native.chunks
+    arrays = nulls_like(offset_left, series), *chunks, nulls_like(offset_right, series)
+    return series._with_native(pa.concat_arrays(arrays)), offset_left + offset_right
 
 
 def cast_to_comparable_string_types(
