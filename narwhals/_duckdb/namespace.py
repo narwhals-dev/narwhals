@@ -139,11 +139,10 @@ class DuckDBNamespace(
     def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> DuckDBExpr:
         def func(df: DuckDBLazyFrame) -> list[Expression]:
             tz = DeferredTimeZone(df.native)
-            ret = lit(value)
             if dtype is not None:
                 target = narwhals_to_native_dtype(dtype, self._version, tz)
-                return [ret.cast(target)]
-            return [ret]
+                return [lit(value).cast(target)]
+            return [lit(value)]
 
         def window_func(
             df: DuckDBLazyFrame, _window_inputs: WindowInputs[Expression]

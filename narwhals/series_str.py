@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from typing import Generic
+from typing import Any, Generic
 
+from narwhals.dependencies import is_narwhals_series
 from narwhals.typing import SeriesT
 
 
@@ -30,6 +31,9 @@ class SeriesStringNamespace(Generic[SeriesT]):
             self._narwhals_series._compliant_series.str.len_chars()
         )
 
+    def _extract_compliant(self, arg: Any) -> Any:
+        return arg._compliant_series if is_narwhals_series(arg) else arg
+
     def replace(
         self, pattern: str, value: str | SeriesT, *, literal: bool = False, n: int = 1
     ) -> SeriesT:
@@ -51,14 +55,11 @@ class SeriesStringNamespace(Generic[SeriesT]):
             1     abc123
             dtype: object
         """
-        from narwhals.functions import col
-
-        df = self._narwhals_series.to_frame().select(
-            col(self._narwhals_series.name).str.replace(
-                pattern=pattern, value=value, literal=literal, n=n
+        return self._narwhals_series._with_compliant(
+            self._narwhals_series._compliant_series.str.replace(
+                self._extract_compliant(value), pattern=pattern, literal=literal, n=n
             )
         )
-        return df[self._narwhals_series.name]  # type: ignore[return-value]
 
     def replace_all(
         self, pattern: str, value: str | SeriesT, *, literal: bool = False
@@ -80,14 +81,11 @@ class SeriesStringNamespace(Generic[SeriesT]):
             1     123
             dtype: object
         """
-        from narwhals.functions import col
-
-        df = self._narwhals_series.to_frame().select(
-            col(self._narwhals_series.name).str.replace_all(
-                pattern=pattern, value=value, literal=literal
+        return self._narwhals_series._with_compliant(
+            self._narwhals_series._compliant_series.str.replace_all(
+                self._extract_compliant(value), pattern, literal=literal
             )
         )
-        return df[self._narwhals_series.name]  # type: ignore[return-value]
 
     def strip_chars(self, characters: str | None = None) -> SeriesT:
         r"""Remove leading and trailing characters.
