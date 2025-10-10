@@ -3,6 +3,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, Literal, Protocol, TypedDict, overload
 
+import duckdb
+
 from narwhals._typing_compat import TypeVar
 
 if TYPE_CHECKING:
@@ -79,8 +81,6 @@ def has_children(
 
     The only way to be sure is forcing an exception.
     """
-    import duckdb
-
     try:
         return hasattr(dtype, "children")
     except duckdb.InvalidInputException:
