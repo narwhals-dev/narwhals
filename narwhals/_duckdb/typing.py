@@ -48,14 +48,14 @@ class _ParentType(BaseType[_ID_co], Protocol[_ID_co, _Children_co]):
     def children(self) -> _Children_co: ...
 
 
-class ArrayType(
-    _ParentType[Literal["array"], tuple[_Child[DTypeT_co], _Size]], Protocol[DTypeT_co]
-): ...
-
-
-class EnumType(
-    _ParentType[Literal["enum"], tuple[tuple[Literal["values"], list[str]]]], Protocol
-): ...
+ArrayType: TypeAlias = _ParentType[Literal["array"], tuple[_Child[DTypeT_co], _Size]]
+EnumType: TypeAlias = _ParentType[
+    Literal["enum"], tuple[tuple[Literal["values"], list[str]]]
+]
+DecimalType: TypeAlias = _ParentType[
+    Literal["decimal"],
+    tuple[tuple[Literal["precision"], int], tuple[Literal["scale"], int]],
+]
 
 
 class ListType(
@@ -70,15 +70,6 @@ class StructType(
 ):
     def __getattr__(self, name: str) -> BaseType: ...
     def __getitem__(self, name: str) -> BaseType: ...
-
-
-class DecimalType(
-    _ParentType[
-        Literal["decimal"],
-        tuple[tuple[Literal["precision"], int], tuple[Literal["scale"], int]],
-    ],
-    Protocol,
-): ...
 
 
 def has_children(
