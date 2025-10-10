@@ -461,13 +461,9 @@ class PandasLikeDataFrame(
     def row(self, index: int) -> tuple[Any, ...]:
         return tuple(x for x in self.native.iloc[index])
 
-    def filter(self, predicate: PandasLikeExpr | list[bool]) -> Self:
-        if isinstance(predicate, list):
-            mask_native: pd.Series[Any] | list[bool] = predicate
-        else:
-            # `[0]` is safe as the predicate's expression only returns a single column
-            mask = self._evaluate_exprs(predicate)[0]
-            mask_native = self._extract_comparand(mask)
+    def filter(self, predicate: PandasLikeExpr) -> Self:
+        mask = self._evaluate_single_output_expr(predicate)
+        mask_native = self._extract_comparand(mask)
         return self._with_native(
             self.native.loc[mask_native], validate_column_names=False
         )

@@ -40,7 +40,6 @@ if TYPE_CHECKING:
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals._arrow.typing import (  # type: ignore[attr-defined]
         ChunkedArrayAny,
-        Mask,
         Order,
     )
     from narwhals._compliant.typing import CompliantDataFrameAny, CompliantLazyFrameAny
@@ -517,12 +516,8 @@ class ArrowDataFrame(
             )
         return self.select(row_index, plx.all())
 
-    def filter(self, predicate: ArrowExpr | list[bool | None]) -> Self:
-        if isinstance(predicate, list):
-            mask_native: Mask | ChunkedArrayAny = predicate
-        else:
-            # `[0]` is safe as the predicate's expression only returns a single column
-            mask_native = self._evaluate_exprs(predicate)[0].native
+    def filter(self, predicate: ArrowExpr) -> Self:
+        mask_native = self._evaluate_single_output_expr(predicate).native
         return self._with_native(
             self.native.filter(mask_native), validate_column_names=False
         )

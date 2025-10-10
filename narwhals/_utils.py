@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+import sys
 from collections.abc import Collection, Container, Iterable, Iterator, Mapping, Sequence
 from datetime import timezone
 from enum import Enum, auto
@@ -683,6 +684,10 @@ def _is_iterable(arg: Any | Iterable[Any]) -> bool:
     return isinstance(arg, Iterable) and not isinstance(arg, (str, bytes, Series))
 
 
+def is_iterator(val: Iterable[_T] | Any) -> TypeIs[Iterator[_T]]:
+    return isinstance(val, Iterator)
+
+
 def parse_version(version: str | ModuleType | _SupportsVersion) -> tuple[int, ...]:
     """Simple version parser; split into a tuple of ints for comparison.
 
@@ -1335,6 +1340,12 @@ def is_index_selector(
 def is_list_of(obj: Any, tp: type[_T]) -> TypeIs[list[_T]]:
     # Check if an object is a list of `tp`, only sniffing the first element.
     return bool(isinstance(obj, list) and obj and isinstance(obj[0], tp))
+
+
+def predicates_contains_list_of_bool(
+    predicates: Collection[Any],
+) -> TypeIs[Collection[list[bool]]]:
+    return any(is_list_of(pred, bool) for pred in predicates)
 
 
 def is_sequence_of(obj: Any, tp: type[_T]) -> TypeIs[Sequence[_T]]:

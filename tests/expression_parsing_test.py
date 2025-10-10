@@ -13,6 +13,7 @@ from tests.utils import POLARS_VERSION, Constructor, assert_equal_data
         (nw.col("a"), [-1, 2, 3]),
         (nw.col("a").mean(), [4 / 3, 4 / 3, 4 / 3]),
         (nw.col("a").cum_sum().over(order_by="i"), [-1, 1, 4]),
+        (nw.col("a").alias("b").cum_sum().over(order_by="i"), [-1, 1, 4]),
         (nw.col("a").cum_sum().abs().over(order_by="i"), [1, 1, 4]),
         ((nw.col("a").cum_sum() + 1).over(order_by="i"), [0, 2, 5]),
         (
