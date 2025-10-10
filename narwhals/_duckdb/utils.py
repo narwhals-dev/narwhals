@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 import duckdb
 from duckdb import Expression
 
-from narwhals._duckdb.typing import BaseType, has_children, is_dtype
+from narwhals._duckdb.typing import BaseType, IntoDuckDBLiteral, has_children, is_dtype
 from narwhals._utils import Implementation, Version, isinstance_or_issubclass, zip_strict
 from narwhals.exceptions import ColumnNotFoundError, UnsupportedDTypeError
 
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.expr import DuckDBExpr
     from narwhals.dtypes import DType
-    from narwhals.typing import IntoDType, NonNestedLiteral, TimeUnit
+    from narwhals.typing import IntoDType, TimeUnit
 
 Incomplete: TypeAlias = Any
 
@@ -54,7 +54,7 @@ col = duckdb.ColumnExpression
 
 
 # TODO @dangotbanned: Raise an issue upstream on `Expression | str` too narrow
-def lit(value: Expression | NonNestedLiteral | Sequence[Any]) -> Expression:
+def lit(value: IntoDuckDBLiteral | Expression) -> Expression:
     """Alias for `duckdb.ConstantExpression`."""
     lit_: Incomplete = duckdb.ConstantExpression
     return lit_(value)

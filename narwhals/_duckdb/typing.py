@@ -8,10 +8,30 @@ import duckdb
 from narwhals._typing_compat import TypeVar
 
 if TYPE_CHECKING:
+    import uuid
+
+    import numpy as np
+    import pandas as pd
     from duckdb import DuckDBPyConnection, Expression
     from typing_extensions import TypeAlias, TypeIs
 
+    from narwhals.typing import Into1DArray, PythonLiteral
+
+
 __all__ = ["BaseType", "WindowExpressionKwargs", "has_children", "is_dtype"]
+
+IntoDuckDBLiteral: TypeAlias = """
+    PythonLiteral
+    | dict[Any, Any]
+    | uuid.UUID
+    | bytearray
+    | memoryview
+    | Into1DArray
+    | pd.api.typing.NaTType
+    | pd.api.typing.NAType
+    | np.ma.MaskedArray
+    | duckdb.Value
+    """
 
 
 class WindowExpressionKwargs(TypedDict, total=False):
