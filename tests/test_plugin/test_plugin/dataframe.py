@@ -36,7 +36,9 @@ class DictLazyFrame(
         return list(self._native_frame.keys())
 
     _with_native = not_implemented()
-    _with_version = not_implemented()
+
+    def _with_version(self, version: Version) -> Self:
+        return self.__class__(self._native_frame, version=version)
 
     # Dunders
     __narwhals_namespace__ = not_implemented()
