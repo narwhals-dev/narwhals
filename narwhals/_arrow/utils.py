@@ -7,7 +7,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._compliant import EagerSeriesNamespace
-from narwhals._utils import Version, isinstance_or_issubclass
+from narwhals._utils import Implementation, Version, isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping
@@ -21,7 +21,9 @@ if TYPE_CHECKING:
         ArrayOrScalarT1,
         ArrayOrScalarT2,
         ChunkedArrayAny,
+        Incomplete,
         NativeIntervalUnit,
+        PromoteOptions,
         ScalarAny,
     )
     from narwhals._duration import IntervalUnit
@@ -56,6 +58,9 @@ else:
         is_list,
         is_timestamp,
     )
+
+BACKEND_VERSION = Implementation.PYARROW._backend_version()
+"""Static backend version for `pyarrow`."""
 
 UNITS_DICT: Mapping[IntervalUnit, NativeIntervalUnit] = {
     "y": "year",
@@ -101,6 +106,18 @@ def nulls_like(n: int, series: ArrowSeries) -> ArrayAny:
     Uses the type of `series`, without upseting `mypy`.
     """
     return pa.nulls(n, series.native.type)
+
+
+def repeat(
+    value: PythonLiteral | ScalarAny, n: int, /, dtype: pa.DataType | None = None
+) -> ArrayAny:
+    """Create an Array instance whose slots are the given scalar.
+
+    *Optionally*, casting to `dtype` **before** repeating `n` times.
+    """
+    lit_: Incomplete = lit
+    scalar = lit_(value)
+    return pa.repeat(scalar.cast(dtype) if dtype else scalar, n)
 
 
 def zeros(n: int, /) -> pa.Int64Array:
@@ -439,6 +456,28 @@ def cast_to_comparable_string_types(
         else pa.large_string()
     )
     return (ca.cast(dtype) for ca in chunked_arrays), lit(separator, dtype)
+
+
+if BACKEND_VERSION >= (14,):
+    # https://arrow.apache.org/docs/14.0/python/generated/pyarrow.concat_tables.html
+    _PROMOTE: Mapping[PromoteOptions, Mapping[str, Any]] = {
+        "default": {"promote_options": "default"},
+        "permissive": {"promote_options": "permissive"},
+        "none": {"promote_options": "none"},
+    }
+else:
+    # https://arrow.apache.org/docs/13.0/python/generated/pyarrow.concat_tables.html
+    _PROMOTE = {
+        "default": {"promote": True},
+        "permissive": {"promote": True},
+        "none": {"promote": False},
+    }
+
+
+def concat_tables(
+    tables: Iterable[pa.Table], promote_options: PromoteOptions = "none"
+) -> pa.Table:
+    return pa.concat_tables(tables, **_PROMOTE[promote_options])
 
 
 class ArrowSeriesNamespace(EagerSeriesNamespace["ArrowSeries", "ChunkedArrayAny"]): ...
