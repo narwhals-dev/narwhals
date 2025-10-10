@@ -158,8 +158,6 @@ def align_and_extract_native(
         return lhs.native.iloc[0], rhs.native
 
     if isinstance(rhs, PandasLikeSeries):
-        if lhs._broadcast and not rhs._broadcast:
-            return (lhs.native.iloc[0], rhs.native)
         if rhs._broadcast:
             return (lhs.native, rhs.native.iloc[0])
         if rhs.native.index is not lhs_index:
