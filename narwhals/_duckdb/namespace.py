@@ -107,12 +107,12 @@ class DuckDBNamespace(
                 n_cols = len(cols)
                 sep_exp = lit(separator)
                 null_mask_result = reduce(operator.or_, (s.isnull() for s in cols))
+                # Alternate column values and the separator to then concatenate them all
+                # together. We use an empty string instead of the separator after the very
+                # last column (i.e. when i == n_cols) so that when concatenating there is
+                # not extra trailing separator in the result.
                 cols_separated = chain.from_iterable(
-                    (
-                        col.cast(duckdb_dtypes.VARCHAR),
-                        # Use empty string instead of separator for the trailing character
-                        lit("") if i == n_cols else sep_exp,
-                    )
+                    (col.cast(duckdb_dtypes.VARCHAR), lit("") if i == n_cols else sep_exp)
                     for i, col in enumerate(cols, start=1)
                 )
                 return [when(~null_mask_result, concat_str(*cols_separated))]
