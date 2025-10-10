@@ -605,7 +605,7 @@ MIN_VERSIONS: Mapping[Implementation, tuple[int, ...]] = {
     Implementation.PYSPARK_CONNECT: (3, 5),
     Implementation.POLARS: (0, 20, 4),
     Implementation.DASK: (2024, 8),
-    Implementation.DUCKDB: (1,),
+    Implementation.DUCKDB: (1, 1),
     Implementation.IBIS: (6,),
     Implementation.SQLFRAME: (3, 22, 0),
 }
@@ -689,6 +689,10 @@ def _is_iterable(arg: Any | Iterable[Any]) -> bool:
         raise TypeError(msg)
 
     return isinstance(arg, Iterable) and not isinstance(arg, (str, bytes, Series))
+
+
+def is_iterator(val: Iterable[_T] | Any) -> TypeIs[Iterator[_T]]:
+    return isinstance(val, Iterator)
 
 
 def parse_version(version: str | ModuleType | _SupportsVersion) -> tuple[int, ...]:
@@ -1343,6 +1347,12 @@ def is_index_selector(
 def is_list_of(obj: Any, tp: type[_T]) -> TypeIs[list[_T]]:
     # Check if an object is a list of `tp`, only sniffing the first element.
     return bool(isinstance(obj, list) and obj and isinstance(obj[0], tp))
+
+
+def predicates_contains_list_of_bool(
+    predicates: Collection[Any],
+) -> TypeIs[Collection[list[bool]]]:
+    return any(is_list_of(pred, bool) for pred in predicates)
 
 
 def is_sequence_of(obj: Any, tp: type[_T]) -> TypeIs[Sequence[_T]]:
