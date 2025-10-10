@@ -499,6 +499,17 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912
         if dtype_backend == "pyarrow":
             import pyarrow as pa  # ignore-banned-import
 
+            # Note: this is different from `string[pyarrow]`, even though the repr
+            # looks the same.
+            # >>> pd.DataFrame({'a':['foo']}, dtype='string[pyarrow]')['a'].str.len()
+            # 0    3
+            # Name: a, dtype: Int64
+            # >>> pd.DataFrame({'a':['foo']}, dtype=pd.ArrowDtype(pa.string()))['a'].str.len()
+            # 0    3
+            # Name: a, dtype: int32[pyarrow]
+            #
+            # `ArrowDType(pa.string())` is what `.convert_dtypes(dtype_backend='pyarrow')`, so
+            # we use that here.
             return pd.ArrowDtype(pa.string())
         if dtype_backend == "numpy_nullable":
             return "string"
