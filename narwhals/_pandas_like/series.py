@@ -399,7 +399,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         return ret
 
     def _with_rbinary(self, op: Callable[..., PandasLikeSeries], other: Any) -> Self:
-        return self._with_binary(lambda x, y: op(y, x), other)
+        return self._with_binary(lambda x, y: op(y, x), other).alias(self.name)
 
     def __eq__(self, other: object) -> Self:  # type: ignore[override]
         return self._with_binary(operator.eq, other)
@@ -423,55 +423,55 @@ class PandasLikeSeries(EagerSeries[Any]):
         return self._with_binary(operator.and_, other)
 
     def __rand__(self, other: Any) -> Self:
-        return self._with_rbinary(operator.and_, other).alias(self.name)
+        return self._with_rbinary(operator.and_, other)
 
     def __or__(self, other: Any) -> Self:
         return self._with_binary(operator.or_, other)
 
     def __ror__(self, other: Any) -> Self:
-        return self._with_rbinary(operator.or_, other).alias(self.name)
+        return self._with_rbinary(operator.or_, other)
 
     def __add__(self, other: Any) -> Self:
         return self._with_binary(operator.add, other)
 
     def __radd__(self, other: Any) -> Self:
-        return self._with_rbinary(operator.add, other).alias(self.name)
+        return self._with_rbinary(operator.add, other)
 
     def __sub__(self, other: Any) -> Self:
         return self._with_binary(operator.sub, other)
 
     def __rsub__(self, other: Any) -> Self:
-        return self._with_rbinary(operator.sub, other).alias(self.name)
+        return self._with_rbinary(operator.sub, other)
 
     def __mul__(self, other: Any) -> Self:
         return self._with_binary(operator.mul, other)
 
     def __rmul__(self, other: Any) -> Self:
-        return self._with_rbinary(operator.mul, other).alias(self.name)
+        return self._with_rbinary(operator.mul, other)
 
     def __truediv__(self, other: Any) -> Self:
         return self._with_binary(operator.truediv, other)
 
     def __rtruediv__(self, other: Any) -> Self:
-        return self._with_rbinary(operator.truediv, other).alias(self.name)
+        return self._with_rbinary(operator.truediv, other)
 
     def __floordiv__(self, other: Any) -> Self:
         return self._with_binary(operator.floordiv, other)
 
     def __rfloordiv__(self, other: Any) -> Self:
-        return self._with_rbinary(operator.floordiv, other).alias(self.name)
+        return self._with_rbinary(operator.floordiv, other)
 
     def __pow__(self, other: Any) -> Self:
         return self._with_binary(operator.pow, other)
 
     def __rpow__(self, other: Any) -> Self:
-        return self._with_rbinary(operator.pow, other).alias(self.name)
+        return self._with_rbinary(operator.pow, other)
 
     def __mod__(self, other: Any) -> Self:
         return self._with_binary(operator.mod, other)
 
     def __rmod__(self, other: Any) -> Self:
-        return self._with_rbinary(operator.mod, other).alias(self.name)
+        return self._with_rbinary(operator.mod, other)
 
     # Unary
 
