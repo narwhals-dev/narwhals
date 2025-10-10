@@ -358,8 +358,8 @@ class EagerDataFrame(
         # Argument of type "EagerExprT@EagerDataFrame" cannot be assigned to parameter "expr" of type "EagerExprT@EagerDataFrame" in function "_evaluate_into_expr"
         #  Type "EagerExprT@EagerDataFrame" is not assignable to type "EagerExprT@EagerDataFrame"
         return tuple(
-            chain.from_iterable(self._evaluate_into_expr(expr) for expr in exprs)
-        )  # pyright: ignore[reportArgumentType]
+            chain.from_iterable(self._evaluate_into_expr(expr) for expr in exprs)  # pyright: ignore[reportArgumentType]
+        )
 
     def _evaluate_into_expr(self, expr: EagerExprT, /) -> Sequence[EagerSeriesT]:
         """Return list of raw columns.
