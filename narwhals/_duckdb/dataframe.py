@@ -23,6 +23,7 @@ from narwhals._utils import (
     Implementation,
     ValidateBackendVersion,
     Version,
+    extend_bool,
     generate_temporary_column_name,
     not_implemented,
     parse_columns_to_drop,
@@ -419,8 +420,7 @@ class DuckDBLazyFrame(
         ).drop([tmp_name], strict=False)
 
     def sort(self, *by: str, descending: bool | Sequence[bool], nulls_last: bool) -> Self:
-        if isinstance(descending, bool):
-            descending = (descending,) * len(by)
+        descending = extend_bool(descending, len(by))
         if nulls_last:
             it = (
                 col(name).nulls_last() if not desc else col(name).desc().nulls_last()
@@ -444,7 +444,7 @@ class DuckDBLazyFrame(
             F("row_number"),
             order_by=by,
             descending=descending,
-            nulls_last=(True,) * len(by),
+            nulls_last=extend_bool(True, len(by)),
         )
         condition = expr <= lit(k)
         query = f"""
