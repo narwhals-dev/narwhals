@@ -154,29 +154,43 @@ class DType:
 class NumericType(DType):
     """Base class for numeric data types."""
 
+    __slots__ = ()
+
 
 class IntegerType(NumericType):
     """Base class for integer data types."""
+
+    __slots__ = ()
 
 
 class SignedIntegerType(IntegerType):
     """Base class for signed integer data types."""
 
+    __slots__ = ()
+
 
 class UnsignedIntegerType(IntegerType):
     """Base class for unsigned integer data types."""
+
+    __slots__ = ()
 
 
 class FloatType(NumericType):
     """Base class for float data types."""
 
+    __slots__ = ()
+
 
 class TemporalType(DType):
     """Base class for temporal data types."""
 
+    __slots__ = ()
+
 
 class NestedType(DType):
     """Base class for nested data types."""
+
+    __slots__ = ()
 
 
 class Decimal(NumericType):
@@ -189,6 +203,8 @@ class Decimal(NumericType):
         >>> nw.from_native(s, series_only=True).dtype
         Decimal
     """
+
+    __slots__ = ()
 
 
 class Int128(SignedIntegerType):
@@ -210,6 +226,8 @@ class Int128(SignedIntegerType):
         Int128
     """
 
+    __slots__ = ()
+
 
 class Int64(SignedIntegerType):
     """64-bit signed integer type.
@@ -222,6 +240,8 @@ class Int64(SignedIntegerType):
         >>> s.cast(nw.Int64).dtype
         Int64
     """
+
+    __slots__ = ()
 
 
 class Int32(SignedIntegerType):
@@ -236,6 +256,8 @@ class Int32(SignedIntegerType):
         Int32
     """
 
+    __slots__ = ()
+
 
 class Int16(SignedIntegerType):
     """16-bit signed integer type.
@@ -249,6 +271,8 @@ class Int16(SignedIntegerType):
         Int16
     """
 
+    __slots__ = ()
+
 
 class Int8(SignedIntegerType):
     """8-bit signed integer type.
@@ -261,6 +285,8 @@ class Int8(SignedIntegerType):
         >>> s.cast(nw.Int8).dtype
         Int8
     """
+
+    __slots__ = ()
 
 
 class UInt128(UnsignedIntegerType):
@@ -276,6 +302,8 @@ class UInt128(UnsignedIntegerType):
         UInt128
     """
 
+    __slots__ = ()
+
 
 class UInt64(UnsignedIntegerType):
     """64-bit unsigned integer type.
@@ -288,6 +316,8 @@ class UInt64(UnsignedIntegerType):
         >>> s.cast(nw.UInt64).dtype
         UInt64
     """
+
+    __slots__ = ()
 
 
 class UInt32(UnsignedIntegerType):
@@ -302,6 +332,8 @@ class UInt32(UnsignedIntegerType):
         UInt32
     """
 
+    __slots__ = ()
+
 
 class UInt16(UnsignedIntegerType):
     """16-bit unsigned integer type.
@@ -314,6 +346,8 @@ class UInt16(UnsignedIntegerType):
         >>> s.cast(nw.UInt16).dtype
         UInt16
     """
+
+    __slots__ = ()
 
 
 class UInt8(UnsignedIntegerType):
@@ -328,6 +362,8 @@ class UInt8(UnsignedIntegerType):
         UInt8
     """
 
+    __slots__ = ()
+
 
 class Float64(FloatType):
     """64-bit floating point type.
@@ -340,6 +376,8 @@ class Float64(FloatType):
         >>> s.cast(nw.Float64).dtype
         Float64
     """
+
+    __slots__ = ()
 
 
 class Float32(FloatType):
@@ -354,6 +392,8 @@ class Float32(FloatType):
         Float32
     """
 
+    __slots__ = ()
+
 
 class String(DType):
     """UTF-8 encoded string type.
@@ -366,6 +406,8 @@ class String(DType):
         String
     """
 
+    __slots__ = ()
+
 
 class Boolean(DType):
     """Boolean type.
@@ -377,6 +419,8 @@ class Boolean(DType):
         >>> nw.from_native(s_native, series_only=True).dtype
         Boolean
     """
+
+    __slots__ = ()
 
 
 class Object(DType):
@@ -391,6 +435,8 @@ class Object(DType):
         Object
     """
 
+    __slots__ = ()
+
 
 class Unknown(DType):
     """Type representing DataType values that could not be determined statically.
@@ -402,6 +448,8 @@ class Unknown(DType):
         >>> nw.from_native(s_native, series_only=True).dtype
         Unknown
     """
+
+    __slots__ = ()
 
 
 class _DatetimeMeta(type):
@@ -578,6 +626,8 @@ class Categorical(DType):
         >>> nw.from_native(s_native, series_only=True).cast(nw.Categorical).dtype
         Categorical
     """
+
+    __slots__ = ()
 
 
 class Enum(DType):
@@ -922,6 +972,8 @@ class Date(TemporalType):
         Date
     """
 
+    __slots__ = ()
+
 
 class Time(TemporalType):
     """Data type representing the time of day.
@@ -947,6 +999,8 @@ class Time(TemporalType):
        Time
     """
 
+    __slots__ = ()
+
 
 class Binary(DType):
     """Binary type.
@@ -970,3 +1024,5 @@ class Binary(DType):
         >>> nw.from_native(rel).collect_schema()["t"]
         Binary
     """
+
+    __slots__ = ()
