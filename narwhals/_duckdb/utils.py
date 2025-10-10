@@ -193,7 +193,7 @@ def _nested_native_to_narwhals_dtype(
         return dtypes.Array(inner=inner, shape=tuple(shape))
     if is_dtype(duckdb_dtype, "enum"):
         if version is Version.V1:
-            return dtypes.Enum()  # type: ignore[call-arg]
+            return dtypes.Enum()  # pyright: ignore[reportCallIssue]
         categories = duckdb_dtype.children[0][1]
         return dtypes.Enum(categories=categories)
     # `MAP`, `UNION`
