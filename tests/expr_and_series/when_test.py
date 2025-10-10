@@ -116,6 +116,8 @@ def test_when_then_otherwise_into_expr(constructor: Constructor) -> None:
 
 
 def test_when_then_broadcasting(constructor: Constructor) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
     df = nw.from_native(constructor(data))
     result = df.select(nw.when(nw.col("a").sum() > 1).then("c"))
     expected = {"c": [4.1, 5, 6]}
