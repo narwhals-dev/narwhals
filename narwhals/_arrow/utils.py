@@ -465,7 +465,7 @@ if BACKEND_VERSION >= (14,):
         "permissive": {"promote_options": "permissive"},
         "none": {"promote_options": "none"},
     }
-else:
+else:  # pragma: no cover
     # https://arrow.apache.org/docs/13.0/python/generated/pyarrow.concat_tables.html
     _PROMOTE = {
         "default": {"promote": True},
