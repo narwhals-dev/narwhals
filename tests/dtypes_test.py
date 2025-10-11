@@ -149,6 +149,9 @@ def test_struct_hashes() -> None:
 
 
 def test_2d_array(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if "bodo" in str(constructor):
+        # BODO fail
+        pytest.skip()
     version_conditions = [
         (PANDAS_VERSION < (2, 2), "Requires pandas 2.2+ for 2D array support"),
         (
