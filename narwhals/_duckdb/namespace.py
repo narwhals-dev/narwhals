@@ -26,7 +26,6 @@ from narwhals._expression_parsing import (
     combine_evaluate_output_names,
 )
 from narwhals._sql.namespace import SQLNamespace
-from narwhals._sql.when_then import SQLThen, SQLWhen
 from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
@@ -34,6 +33,7 @@ if TYPE_CHECKING:
 
     from duckdb import DuckDBPyRelation  # noqa: F401
 
+    from narwhals._compliant.window import WindowInputs
     from narwhals._utils import Version
     from narwhals.typing import ConcatMethod, IntoDType, NonNestedLiteral
 
@@ -130,9 +130,6 @@ class DuckDBNamespace(
 
         return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
-    def when(self, predicate: DuckDBExpr) -> DuckDBWhen:
-        return DuckDBWhen.from_expr(predicate, context=self)
-
     def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> DuckDBExpr:
         def func(df: DuckDBLazyFrame) -> list[Expression]:
             tz = DeferredTimeZone(df.native)
@@ -141,8 +138,14 @@ class DuckDBNamespace(
                 return [lit(value).cast(target)]
             return [lit(value)]
 
+        def window_func(
+            df: DuckDBLazyFrame, _window_inputs: WindowInputs[Expression]
+        ) -> list[Expression]:
+            return func(df)
+
         return self._expr(
             func,
+            window_func,
             evaluate_output_names=lambda _df: ["literal"],
             alias_output_names=None,
             version=self._version,
@@ -158,12 +161,3 @@ class DuckDBNamespace(
             alias_output_names=None,
             version=self._version,
         )
-
-
-class DuckDBWhen(SQLWhen["DuckDBLazyFrame", Expression, DuckDBExpr]):
-    @property
-    def _then(self) -> type[DuckDBThen]:
-        return DuckDBThen
-
-
-class DuckDBThen(SQLThen["DuckDBLazyFrame", Expression, DuckDBExpr], DuckDBExpr): ...

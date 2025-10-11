@@ -10,6 +10,7 @@ from narwhals._compliant.typing import (
 )
 from narwhals._translate import ToNarwhalsT_co
 from narwhals._utils import check_columns_exist
+from narwhals.exceptions import MultiOutputExpressionError
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -34,12 +35,18 @@ class SQLLazyFrame(
         window_inputs: WindowInputs[NativeExprT],
     ) -> NativeExprT:
         result = expr.window_function(self, window_inputs)
-        assert len(result) == 1  # debug assertion  # noqa: S101
+        if len(result) != 1:  # pragma: no cover
+            msg = "multi-output expressions not allowed in this context"
+            raise MultiOutputExpressionError(msg)
         return result[0]
 
-    def _evaluate_expr(self, expr: CompliantExprT_contra, /) -> Any:
+    def _evaluate_single_output_expr(
+        self, expr: SQLExpr[Self, NativeExprT], /
+    ) -> NativeExprT:
         result = expr(self)
-        assert len(result) == 1  # debug assertion  # noqa: S101
+        if len(result) != 1:  # pragma: no cover
+            msg = "multi-output expressions not allowed in this context"
+            raise MultiOutputExpressionError(msg)
         return result[0]
 
     def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:

@@ -126,17 +126,18 @@ class DaskLazyGroupBy(DepthTrackingGroupBy["DaskLazyFrame", "DaskExpr", Aggregat
             output_names, aliases = evaluate_output_names_and_aliases(
                 expr, self.compliant, exclude
             )
-            if expr._depth == 0:
+            last_node = next(expr._metadata.op_nodes_reversed())
+            if len(list(expr._metadata.op_nodes_reversed())) == 1:
                 # e.g. `agg(nw.len())`
                 column = self._keys[0]
-                agg_fn = self._remap_expr_name(expr._function_name)
+                agg_fn = self._remap_expr_name(last_node.name)
                 simple_aggregations.update(dict.fromkeys(aliases, (column, agg_fn)))
                 continue
 
             # e.g. `agg(nw.mean('a'))`
             agg_fn = self._remap_expr_name(self._leaf_name(expr))
             # deal with n_unique case in a "lazy" mode to not depend on dask globally
-            agg_fn = agg_fn(**expr._scalar_kwargs) if callable(agg_fn) else agg_fn
+            agg_fn = agg_fn(**last_node.kwargs) if callable(agg_fn) else agg_fn
             simple_aggregations.update(
                 (alias, (output_name, agg_fn))
                 for alias, output_name in zip_strict(aliases, output_names)

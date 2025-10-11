@@ -81,7 +81,7 @@ def test_filter_raise_on_agg_predicate(constructor: Constructor) -> None:
 
 def test_filter_raise_on_shape_mismatch(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
-    with pytest.raises(InvalidOperationError):
+    with pytest.raises((InvalidOperationError, NotImplementedError)):
         df.filter(nw.col("b").unique() > 2).lazy().collect()
 
 

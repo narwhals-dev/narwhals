@@ -604,10 +604,4 @@ class SparkLikeLazyFrame(
             validate_backend_version=True,
         )
 
-    gather_every = not_implemented.deprecated(
-        "`LazyFrame.gather_every` is deprecated and will be removed in a future version."
-    )
     join_asof = not_implemented()
-    tail = not_implemented.deprecated(
-        "`LazyFrame.tail` is deprecated and will be removed in a future version."
-    )

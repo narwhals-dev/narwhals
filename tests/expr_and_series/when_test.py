@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 import narwhals as nw
-from narwhals.exceptions import InvalidOperationError, MultiOutputExpressionError
+from narwhals.exceptions import MultiOutputExpressionError
 from tests.utils import DUCKDB_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 if TYPE_CHECKING:
@@ -115,13 +115,16 @@ def test_when_then_otherwise_into_expr(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_when_then_invalid(constructor: Constructor) -> None:
+def test_when_then_broadcasting(constructor: Constructor) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
     df = nw.from_native(constructor(data))
-    with pytest.raises(InvalidOperationError):
-        df.select(nw.when(nw.col("a").sum() > 1).then("c"))
-
-    with pytest.raises(InvalidOperationError):
-        df.select(nw.when(nw.col("a").sum() > 1).then(1).otherwise("c"))
+    result = df.select(nw.when(nw.col("a").sum() > 1).then("c"))
+    expected = {"c": [4.1, 5, 6]}
+    assert_equal_data(result, expected)
+    result = df.select(nw.when(nw.col("a").sum() > 1).then(1).otherwise("c"))
+    expected = {"literal": [1, 1, 1]}
+    assert_equal_data(result, expected)
 
 
 def test_when_then_otherwise_lit_str(constructor: Constructor) -> None:

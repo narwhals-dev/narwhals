@@ -24,7 +24,6 @@ from narwhals._arrow.utils import (
     zeros,
 )
 from narwhals._compliant import EagerSeries, EagerSeriesHist
-from narwhals._expression_parsing import ExprKind
 from narwhals._typing_compat import assert_never
 from narwhals._utils import (
     Implementation,
@@ -68,12 +67,10 @@ if TYPE_CHECKING:
         IntoDType,
         ModeKeepStrategy,
         NonNestedLiteral,
-        NumericLiteral,
         PythonLiteral,
         RankMethod,
         RollingInterpolationMethod,
         SizedMultiIndexSelector,
-        TemporalLiteral,
         _1DArray,
         _2DArray,
         _SliceIndex,
@@ -498,9 +495,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return self.native.to_numpy()
 
     def alias(self, name: str) -> Self:
-        result = self.__class__(self.native, name=name, version=self._version)
-        result._broadcast = self._broadcast
-        return result
+        return self.__class__(self.native, name=name, version=self._version)
 
     @property
     def dtype(self) -> DType:
@@ -847,25 +842,20 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def gather_every(self, n: int, offset: int = 0) -> Self:
         return self._with_native(self.native[offset::n])
 
-    def clip(
-        self,
-        lower_bound: Self | NumericLiteral | TemporalLiteral | None,
-        upper_bound: Self | NumericLiteral | TemporalLiteral | None,
-    ) -> Self:
-        _, lower = (
-            extract_native(self, lower_bound) if lower_bound is not None else (None, None)
-        )
-        _, upper = (
-            extract_native(self, upper_bound) if upper_bound is not None else (None, None)
-        )
-
-        if lower is None:
-            return self._with_native(pc.min_element_wise(self.native, upper))
-        if upper is None:
-            return self._with_native(pc.max_element_wise(self.native, lower))
+    def clip(self, lower_bound: Self, upper_bound: Self) -> Self:
+        _, lower = extract_native(self, lower_bound)
+        _, upper = extract_native(self, upper_bound)
         return self._with_native(
             pc.max_element_wise(pc.min_element_wise(self.native, upper), lower)
         )
+
+    def clip_lower(self, lower_bound: Self) -> Self:
+        _, lower = extract_native(self, lower_bound)
+        return self._with_native(pc.max_element_wise(self.native, lower))
+
+    def clip_upper(self, upper_bound: Self) -> Self:
+        _, upper = extract_native(self, upper_bound)
+        return self._with_native(pc.min_element_wise(self.native, upper))
 
     def to_arrow(self) -> ArrayAny:
         return self.native.combine_chunks()
@@ -877,8 +867,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             name=col_token, normalize=False, sort=False, parallel=False
         )
         result = counts.filter(
-            plx.col(col_token)
-            == plx.col(col_token).max().broadcast(kind=ExprKind.AGGREGATION)
+            plx.col(col_token) == plx.col(col_token).max().broadcast()
         ).get_column(self.name)
         return result.head(1) if keep == "any" else result
 

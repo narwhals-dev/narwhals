@@ -25,70 +25,59 @@ class DaskExprDateTimeNamespace(
     LazyExprNamespace["DaskExpr"], DateTimeNamespace["DaskExpr"]
 ):
     def date(self) -> DaskExpr:
-        return self.compliant._with_callable(lambda expr: expr.dt.date, "date")
+        return self.compliant._with_callable(lambda expr: expr.dt.date)
 
     def year(self) -> DaskExpr:
-        return self.compliant._with_callable(lambda expr: expr.dt.year, "year")
+        return self.compliant._with_callable(lambda expr: expr.dt.year)
 
     def month(self) -> DaskExpr:
-        return self.compliant._with_callable(lambda expr: expr.dt.month, "month")
+        return self.compliant._with_callable(lambda expr: expr.dt.month)
 
     def day(self) -> DaskExpr:
-        return self.compliant._with_callable(lambda expr: expr.dt.day, "day")
+        return self.compliant._with_callable(lambda expr: expr.dt.day)
 
     def hour(self) -> DaskExpr:
-        return self.compliant._with_callable(lambda expr: expr.dt.hour, "hour")
+        return self.compliant._with_callable(lambda expr: expr.dt.hour)
 
     def minute(self) -> DaskExpr:
-        return self.compliant._with_callable(lambda expr: expr.dt.minute, "minute")
+        return self.compliant._with_callable(lambda expr: expr.dt.minute)
 
     def second(self) -> DaskExpr:
-        return self.compliant._with_callable(lambda expr: expr.dt.second, "second")
+        return self.compliant._with_callable(lambda expr: expr.dt.second)
 
     def millisecond(self) -> DaskExpr:
-        return self.compliant._with_callable(
-            lambda expr: expr.dt.microsecond // 1000, "millisecond"
-        )
+        return self.compliant._with_callable(lambda expr: expr.dt.microsecond // 1000)
 
     def microsecond(self) -> DaskExpr:
-        return self.compliant._with_callable(
-            lambda expr: expr.dt.microsecond, "microsecond"
-        )
+        return self.compliant._with_callable(lambda expr: expr.dt.microsecond)
 
     def nanosecond(self) -> DaskExpr:
         return self.compliant._with_callable(
-            lambda expr: expr.dt.microsecond * 1000 + expr.dt.nanosecond, "nanosecond"
+            lambda expr: expr.dt.microsecond * 1000 + expr.dt.nanosecond
         )
 
     def ordinal_day(self) -> DaskExpr:
-        return self.compliant._with_callable(
-            lambda expr: expr.dt.dayofyear, "ordinal_day"
-        )
+        return self.compliant._with_callable(lambda expr: expr.dt.dayofyear)
 
     def weekday(self) -> DaskExpr:
         return self.compliant._with_callable(
-            lambda expr: expr.dt.weekday + 1,  # Dask is 0-6
-            "weekday",
+            lambda expr: expr.dt.weekday + 1  # Dask is 0-6
         )
 
     def to_string(self, format: str) -> DaskExpr:
         return self.compliant._with_callable(
-            lambda expr, format: expr.dt.strftime(format.replace("%.f", ".%f")),
-            "strftime",
-            format=format,
+            lambda expr: expr.dt.strftime(format.replace("%.f", ".%f"))
         )
 
     def replace_time_zone(self, time_zone: str | None) -> DaskExpr:
         return self.compliant._with_callable(
-            lambda expr, time_zone: expr.dt.tz_localize(None).dt.tz_localize(time_zone)
+            lambda expr: expr.dt.tz_localize(None).dt.tz_localize(time_zone)
             if time_zone is not None
-            else expr.dt.tz_localize(None),
-            "tz_localize",
-            time_zone=time_zone,
+            else expr.dt.tz_localize(None)
         )
 
     def convert_time_zone(self, time_zone: str) -> DaskExpr:
-        def func(s: dx.Series, time_zone: str) -> dx.Series:
+        def func(s: dx.Series) -> dx.Series:
             dtype = native_to_narwhals_dtype(
                 s.dtype, self.compliant._version, Implementation.DASK
             )
@@ -96,11 +85,11 @@ class DaskExprDateTimeNamespace(
                 return s.dt.tz_localize("UTC").dt.tz_convert(time_zone)  # pyright: ignore[reportAttributeAccessIssue]
             return s.dt.tz_convert(time_zone)  # pyright: ignore[reportAttributeAccessIssue]
 
-        return self.compliant._with_callable(func, "tz_convert", time_zone=time_zone)
+        return self.compliant._with_callable(func)
 
     # ignoring coverage due to https://github.com/narwhals-dev/narwhals/issues/2808.
     def timestamp(self, time_unit: TimeUnit) -> DaskExpr:  # pragma: no cover
-        def func(s: dx.Series, time_unit: TimeUnit) -> dx.Series:
+        def func(s: dx.Series) -> dx.Series:
             dtype = native_to_narwhals_dtype(
                 s.dtype, self.compliant._version, Implementation.DASK
             )
@@ -124,33 +113,27 @@ class DaskExprDateTimeNamespace(
                 raise TypeError(msg)
             return result.where(~mask_na)  # pyright: ignore[reportReturnType]
 
-        return self.compliant._with_callable(func, "datetime", time_unit=time_unit)
+        return self.compliant._with_callable(func)
 
     def total_minutes(self) -> DaskExpr:
-        return self.compliant._with_callable(
-            lambda expr: expr.dt.total_seconds() // 60, "total_minutes"
-        )
+        return self.compliant._with_callable(lambda expr: expr.dt.total_seconds() // 60)
 
     def total_seconds(self) -> DaskExpr:
-        return self.compliant._with_callable(
-            lambda expr: expr.dt.total_seconds() // 1, "total_seconds"
-        )
+        return self.compliant._with_callable(lambda expr: expr.dt.total_seconds() // 1)
 
     def total_milliseconds(self) -> DaskExpr:
         return self.compliant._with_callable(
-            lambda expr: expr.dt.total_seconds() * MS_PER_SECOND // 1,
-            "total_milliseconds",
+            lambda expr: expr.dt.total_seconds() * MS_PER_SECOND // 1
         )
 
     def total_microseconds(self) -> DaskExpr:
         return self.compliant._with_callable(
-            lambda expr: expr.dt.total_seconds() * US_PER_SECOND // 1,
-            "total_microseconds",
+            lambda expr: expr.dt.total_seconds() * US_PER_SECOND // 1
         )
 
     def total_nanoseconds(self) -> DaskExpr:
         return self.compliant._with_callable(
-            lambda expr: expr.dt.total_seconds() * NS_PER_SECOND // 1, "total_nanoseconds"
+            lambda expr: expr.dt.total_seconds() * NS_PER_SECOND // 1
         )
 
     def truncate(self, every: str) -> DaskExpr:
@@ -160,10 +143,10 @@ class DaskExprDateTimeNamespace(
             msg = f"Truncating to {unit} is not yet supported for dask."
             raise NotImplementedError(msg)
         freq = f"{interval.multiple}{ALIAS_DICT.get(unit, unit)}"
-        return self.compliant._with_callable(lambda expr: expr.dt.floor(freq), "truncate")
+        return self.compliant._with_callable(lambda expr: expr.dt.floor(freq))
 
     def offset_by(self, by: str) -> DaskExpr:
-        def func(s: dx.Series, by: str) -> dx.Series:
+        def func(s: dx.Series) -> dx.Series:
             interval = Interval.parse_no_constraints(by)
             unit = interval.unit
             if unit in {"y", "q", "mo", "d", "ns"}:
@@ -172,4 +155,4 @@ class DaskExprDateTimeNamespace(
             offset = interval.to_timedelta()
             return s.add(offset)
 
-        return self.compliant._with_callable(func, "offset_by", by=by)
+        return self.compliant._with_callable(func)
