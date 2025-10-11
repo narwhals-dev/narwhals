@@ -440,7 +440,9 @@ class ExprMetadata:
         if kind is ExprKind.AGGREGATION:
             return self.with_aggregation(node)
         if kind is ExprKind.ELEMENTWISE:
-            return combine_metadata(ce, *ces, to_single_output=False, current_node=node)
+            return combine_metadata(
+                ce, *ces, to_single_output=False, current_node=node, prev=ce._metadata
+            )
         if kind is ExprKind.FILTRATION:
             return self.with_filtration(node)
         if kind is ExprKind.ORDERABLE_WINDOW:
@@ -501,7 +503,7 @@ class ExprMetadata:
 
     @classmethod
     def from_elementwise(cls, node: ExprNode, *ces: CompliantExprAny) -> ExprMetadata:
-        return combine_metadata(*ces, to_single_output=True, current_node=node)
+        return combine_metadata(*ces, to_single_output=True, current_node=node, prev=None)
 
     @property
     def is_filtration(self) -> bool:
@@ -678,7 +680,10 @@ class ExprMetadata:
 
 
 def combine_metadata(
-    *args: CompliantExprAny, to_single_output: bool, current_node: ExprNode
+    *args: CompliantExprAny,
+    to_single_output: bool,
+    current_node: ExprNode,
+    prev: ExprMetadata | None,
 ) -> ExprMetadata:
     """Combine metadata from `args`.
 
@@ -687,6 +692,7 @@ def combine_metadata(
         to_single_output: Whether the result is always single-output, regardless
             of the inputs (e.g. `nw.sum_horizontal`).
         current_node: The current node being added.
+        prev: ExprMetadata of previous node.
     """
     n_filtrations = 0
     result_expansion_kind = ExpansionKind.SINGLE
@@ -700,14 +706,10 @@ def combine_metadata(
     result_is_scalar_like = True
     # result is literal if all inputs are literal
     result_is_literal = True
-    # Keep reference to first argument's metadata to use as prev
-    first_metadata: ExprMetadata | None = None
 
     for i, arg in enumerate(args):
         metadata = arg._metadata
         assert metadata is not None  # noqa: S101
-        if i == 0:
-            first_metadata = metadata
         if metadata.expansion_kind.is_multi_output():
             expansion_kind = metadata.expansion_kind
             if not to_single_output:
@@ -737,7 +739,7 @@ def combine_metadata(
         is_scalar_like=result_is_scalar_like,
         is_literal=result_is_literal,
         current_node=current_node,
-        prev=first_metadata,
+        prev=prev,
     )
 
 
