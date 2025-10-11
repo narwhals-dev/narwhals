@@ -37,6 +37,8 @@ if TYPE_CHECKING:
     from narwhals._utils import Version
     from narwhals.typing import ConcatMethod, IntoDType, NonNestedLiteral
 
+VARCHAR = duckdb_dtypes.VARCHAR
+
 
 class DuckDBNamespace(
     SQLNamespace[DuckDBLazyFrame, DuckDBExpr, "DuckDBPyRelation", Expression]
@@ -102,21 +104,13 @@ class DuckDBNamespace(
         self, *exprs: DuckDBExpr, separator: str, ignore_nulls: bool
     ) -> DuckDBExpr:
         def func(df: DuckDBLazyFrame) -> list[Expression]:
-            cols = tuple(chain.from_iterable(expr(df) for expr in exprs))
-            if not ignore_nulls:
-                n_cols = len(cols)
-                sep_exp = lit(separator)
-                null_mask_result = reduce(operator.or_, (s.isnull() for s in cols))
-                # Alternate column values and the separator to then concatenate them all
-                # together. We use an empty string instead of the separator after the very
-                # last column (i.e. when i == n_cols) so that when concatenating there is
-                # not extra trailing separator in the result.
-                cols_separated = chain.from_iterable(
-                    (col.cast(duckdb_dtypes.VARCHAR), lit("") if i == n_cols else sep_exp)
-                    for i, col in enumerate(cols, start=1)
-                )
-                return [when(~null_mask_result, concat_str(*cols_separated))]
-            return [concat_str(*cols, separator=separator)]
+            cols: Iterable[Expression] = chain.from_iterable(e(df) for e in exprs)
+            if ignore_nulls:
+                return [concat_str(*cols, separator=separator)]
+            cols = tuple(cols)
+            null_mask = reduce(operator.or_, (s.isnull() for s in cols))
+            cols_str = (c.cast(VARCHAR) for c in cols)
+            return [when(~null_mask, concat_str(*cols_str, separator=separator))]
 
         return self._expr(
             call=func,
