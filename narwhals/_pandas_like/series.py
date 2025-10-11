@@ -309,7 +309,7 @@ class PandasLikeSeries(EagerSeries[Any]):
             # Avoid dealing with pandas' type-system if we can. Note that it's only
             # safe to do this if we're not starting with object dtype, see tests/expr_and_series/cast_test.py::test_cast_object_pandas
             # for an example of why.
-            return self._with_native(self.native)
+            return self._with_native(self.native, preserve_broadcast=True)
         pd_dtype = narwhals_to_native_dtype(
             dtype,
             dtype_backend=get_dtype_backend(self.native.dtype, self._implementation),
