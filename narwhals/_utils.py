@@ -2109,3 +2109,14 @@ def normalize_path(source: FileSource, /) -> str:
     from pathlib import Path
 
     return str(Path(source))
+
+
+def extend_bool(
+    value: bool | Iterable[bool],  # noqa: FBT001
+    n_match: int,
+) -> Sequence[bool]:
+    """Ensure the given bool or sequence of bools is the correct length.
+
+    Stolen from https://github.com/pola-rs/polars/blob/b8bfb07a4a37a8d449d6d1841e345817431142df/py-polars/polars/_utils/various.py#L580-L594
+    """
+    return (value,) * n_match if isinstance(value, bool) else tuple(value)
