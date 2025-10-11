@@ -400,7 +400,7 @@ class PandasLikeSeries(EagerSeries[Any]):
             op(ser, other_native), preserve_broadcast=preserve_broadcast
         ).alias(self.name)
 
-    def _with_rbinary(self, op: Callable[..., PandasLikeSeries], other: Any) -> Self:
+    def _with_binary_right(self, op: Callable[..., PandasLikeSeries], other: Any) -> Self:
         return self._with_binary(lambda x, y: op(y, x), other).alias(self.name)
 
     def __eq__(self, other: object) -> Self:  # type: ignore[override]
