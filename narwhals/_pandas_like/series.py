@@ -395,10 +395,10 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     def _with_binary(self, op: Callable[..., PandasLikeSeries], other: Any) -> Self:
         ser, other_native = align_and_extract_native(self, other)
-        ret = self._with_native(op(ser, other_native)).alias(self.name)
-        if self._broadcast and getattr(other, "_broadcast", True):
-            ret._broadcast = True
-        return ret
+        preserve_broadcast = self._broadcast and getattr(other, "_broadcast", True)
+        return self._with_native(
+            op(ser, other_native), preserve_broadcast=preserve_broadcast
+        ).alias(self.name)
 
     def _with_rbinary(self, op: Callable[..., PandasLikeSeries], other: Any) -> Self:
         return self._with_binary(lambda x, y: op(y, x), other).alias(self.name)
