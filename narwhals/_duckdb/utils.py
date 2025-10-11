@@ -20,7 +20,7 @@ from narwhals._utils import (
     isinstance_or_issubclass,
     zip_strict,
 )
-from narwhals.exceptions import ColumnNotFoundError, UnsupportedDTypeError
+from narwhals.exceptions import ColumnNotFoundError
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
@@ -210,7 +210,7 @@ def _nested_native_to_narwhals_dtype(
         categories = duckdb_dtype.children[0][1]
         return dtypes.Enum(categories=categories)
     # `MAP`, `UNION`
-    raise UnsupportedDTypeError(duckdb_dtype)
+    return dtypes.Unknown()
 
 
 def fetch_rel_time_zone(rel: duckdb.DuckDBPyRelation) -> str:
