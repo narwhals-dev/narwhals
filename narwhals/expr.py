@@ -106,21 +106,17 @@ class Expr:
         """Insert the over node at the determined position."""
         if insertion_idx == len(nodes):
             nodes.append(over_node)
-
         elif over_node.kwargs["order_by"] and any(
             node.is_orderable() for node in nodes[:insertion_idx]
         ):
             nodes.insert(insertion_idx, over_node)
-
         elif over_node.kwargs["partition_by"] and not all(
             node.is_elementwise() for node in nodes[:insertion_idx]
         ):
             nodes.insert(insertion_idx, over_node_without_order_by)
-
         elif all(node.is_elementwise() for node in nodes):
             msg = "Cannot apply `over` to elementwise expression."
             raise InvalidOperationError(msg)
-
         return self.__class__(*nodes)
 
     def __repr__(self) -> str:
