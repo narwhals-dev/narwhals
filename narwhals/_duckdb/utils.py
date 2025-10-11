@@ -1,31 +1,44 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import duckdb
 from duckdb import Expression
 
-try:
-    import duckdb.sqltypes as duckdb_dtypes
-except ModuleNotFoundError:
-    # DuckDB pre 1.3
-    import duckdb.typing as duckdb_dtypes
-
-from narwhals._utils import Version, isinstance_or_issubclass, zip_strict
-from narwhals.exceptions import ColumnNotFoundError
+from narwhals._duckdb.typing import (
+    BaseType,
+    IntoColumnExpr,
+    IntoDuckDBLiteral,
+    has_children,
+    is_dtype,
+)
+from narwhals._utils import Implementation, Version, isinstance_or_issubclass, zip_strict
+from narwhals.exceptions import ColumnNotFoundError, UnsupportedDTypeError
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
     from duckdb import DuckDBPyRelation
+    from duckdb.sqltypes import DuckDBPyType
+    from typing_extensions import TypeAlias
 
+    import narwhals._duckdb.typing
     from narwhals._compliant.typing import CompliantLazyFrameAny
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.expr import DuckDBExpr
     from narwhals.dtypes import DType
     from narwhals.typing import IntoDType, TimeUnit
 
+Incomplete: TypeAlias = Any
+
+BACKEND_VERSION = Implementation.DUCKDB._backend_version()
+"""Static backend version for `duckdb`."""
+
+if TYPE_CHECKING or BACKEND_VERSION >= (1, 4):
+    from duckdb import sqltypes as duckdb_dtypes
+else:  # pragma: no cover
+    from duckdb import typing as duckdb_dtypes
 
 UNITS_DICT = {
     "y": "year",
@@ -45,8 +58,14 @@ NULLS_LAST_TO_NULLS_POS = {True: "nulls last", False: "nulls first"}
 col = duckdb.ColumnExpression
 """Alias for `duckdb.ColumnExpression`."""
 
-lit = duckdb.ConstantExpression
-"""Alias for `duckdb.ConstantExpression`."""
+
+# TODO @dangotbanned: Raise an issue upstream on `Expression | str` too narrow
+# NOTE: https://github.com/duckdb/duckdb-python/blob/df7789cbd31b2d2b8d03d012f14331bc3297fb2d/src/duckdb_py/native/python_conversion.cpp#L916-L1069
+def lit(value: IntoDuckDBLiteral | Expression) -> Expression:
+    """Alias for `duckdb.ConstantExpression`."""
+    lit_: Incomplete = duckdb.ConstantExpression
+    return lit_(value)
+
 
 when = duckdb.CaseExpression
 """Alias for `duckdb.CaseExpression`."""
@@ -55,8 +74,10 @@ F = duckdb.FunctionExpression
 """Alias for `duckdb.FunctionExpression`."""
 
 
+# TODO @dangotbanned: Raise an issue upstream on `Expression | str | tuple[str` too narrow
+# NOTE: https://github.com/duckdb/duckdb-python/blob/df7789cbd31b2d2b8d03d012f14331bc3297fb2d/src/duckdb_py/pyexpression.cpp#L361-L413
 def lambda_expr(
-    params: str | Expression | tuple[Expression, ...], expr: Expression, /
+    params: IntoColumnExpr | tuple[IntoColumnExpr, ...], expr: Expression, /
 ) -> Expression:
     """Wraps [`duckdb.LambdaExpression`].
 
@@ -68,7 +89,8 @@ def lambda_expr(
         msg = f"DuckDB>=1.2.0 is required for this operation. Found: DuckDB {duckdb.__version__}"
         raise NotImplementedError(msg) from exc
     args = (params,) if isinstance(params, Expression) else params
-    return LambdaExpression(args, expr)
+    lambda_expr_: Incomplete = LambdaExpression
+    return lambda_expr_(args, expr)
 
 
 def concat_str(*exprs: Expression, separator: str = "") -> Expression:
@@ -135,20 +157,27 @@ class DeferredTimeZone:
 
 
 def native_to_narwhals_dtype(
-    duckdb_dtype: duckdb_dtypes.DuckDBPyType,
+    duckdb_dtype: BaseType, version: Version, deferred_time_zone: DeferredTimeZone
+) -> DType:
+    if has_children(duckdb_dtype) and not is_dtype(duckdb_dtype, "decimal"):
+        return _nested_native_to_narwhals_dtype(duckdb_dtype, version, deferred_time_zone)
+    if is_dtype(duckdb_dtype, "timestamp with time zone"):
+        return version.dtypes.Datetime(time_zone=deferred_time_zone.time_zone)
+    return _non_nested_native_to_narwhals_dtype(duckdb_dtype.id, version)
+
+
+def _nested_native_to_narwhals_dtype(
+    duckdb_dtype: narwhals._duckdb.typing._ParentType,
     version: Version,
     deferred_time_zone: DeferredTimeZone,
 ) -> DType:
-    duckdb_dtype_id = duckdb_dtype.id
     dtypes = version.dtypes
 
-    # Handle nested data types first
-    if duckdb_dtype_id == "list":
+    if is_dtype(duckdb_dtype, "list"):
         return dtypes.List(
             native_to_narwhals_dtype(duckdb_dtype.child, version, deferred_time_zone)
         )
-
-    if duckdb_dtype_id == "struct":
+    if is_dtype(duckdb_dtype, "struct"):
         children = duckdb_dtype.children
         return dtypes.Struct(
             [
@@ -159,28 +188,23 @@ def native_to_narwhals_dtype(
                 for child in children
             ]
         )
-
-    if duckdb_dtype_id == "array":
+    if is_dtype(duckdb_dtype, "array"):
         child, size = duckdb_dtype.children
         shape: list[int] = [size[1]]
 
-        while child[1].id == "array":
+        while is_dtype(child[1], "array"):
             child, size = child[1].children
             shape.insert(0, size[1])
 
         inner = native_to_narwhals_dtype(child[1], version, deferred_time_zone)
         return dtypes.Array(inner=inner, shape=tuple(shape))
-
-    if duckdb_dtype_id == "enum":
+    if is_dtype(duckdb_dtype, "enum"):
         if version is Version.V1:
-            return dtypes.Enum()  # type: ignore[call-arg]
+            return dtypes.Enum()  # pyright: ignore[reportCallIssue]
         categories = duckdb_dtype.children[0][1]
         return dtypes.Enum(categories=categories)
-
-    if duckdb_dtype_id == "timestamp with time zone":
-        return dtypes.Datetime(time_zone=deferred_time_zone.time_zone)
-
-    return _non_nested_native_to_narwhals_dtype(duckdb_dtype_id, version)
+    # `MAP`, `UNION`
+    raise UnsupportedDTypeError(duckdb_dtype)
 
 
 def fetch_rel_time_zone(rel: duckdb.DuckDBPyRelation) -> str:
@@ -188,7 +212,7 @@ def fetch_rel_time_zone(rel: duckdb.DuckDBPyRelation) -> str:
         "duckdb_settings()", "select value from duckdb_settings() where name = 'TimeZone'"
     ).fetchone()
     assert result is not None  # noqa: S101
-    return result[0]  # type: ignore[no-any-return]
+    return result[0]
 
 
 @lru_cache(maxsize=16)
@@ -222,7 +246,7 @@ def _non_nested_native_to_narwhals_dtype(duckdb_dtype_id: str, version: Version)
 
 
 dtypes = Version.MAIN.dtypes
-NW_TO_DUCKDB_DTYPES: Mapping[type[DType], duckdb_dtypes.DuckDBPyType] = {
+NW_TO_DUCKDB_DTYPES: Mapping[type[DType], DuckDBPyType] = {
     dtypes.Float64: duckdb_dtypes.DOUBLE,
     dtypes.Float32: duckdb_dtypes.FLOAT,
     dtypes.Binary: duckdb_dtypes.BLOB,
@@ -241,7 +265,7 @@ NW_TO_DUCKDB_DTYPES: Mapping[type[DType], duckdb_dtypes.DuckDBPyType] = {
     dtypes.UInt64: duckdb_dtypes.UBIGINT,
     dtypes.UInt128: duckdb_dtypes.UHUGEINT,
 }
-TIME_UNIT_TO_TIMESTAMP: Mapping[TimeUnit, duckdb_dtypes.DuckDBPyType] = {
+TIME_UNIT_TO_TIMESTAMP: Mapping[TimeUnit, DuckDBPyType] = {
     "s": duckdb_dtypes.TIMESTAMP_S,
     "ms": duckdb_dtypes.TIMESTAMP_MS,
     "us": duckdb_dtypes.TIMESTAMP,
@@ -252,7 +276,7 @@ UNSUPPORTED_DTYPES = (dtypes.Decimal, dtypes.Categorical)
 
 def narwhals_to_native_dtype(  # noqa: PLR0912, C901
     dtype: IntoDType, version: Version, deferred_time_zone: DeferredTimeZone
-) -> duckdb_dtypes.DuckDBPyType:
+) -> DuckDBPyType:
     dtypes = version.dtypes
     base_type = dtype.base_type()
     if duckdb_type := NW_TO_DUCKDB_DTYPES.get(base_type):

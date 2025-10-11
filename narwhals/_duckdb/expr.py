@@ -258,7 +258,8 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
         return self._with_elementwise(lambda expr: F("isfinite", expr))
 
     def is_in(self, other: Sequence[Any]) -> Self:
-        return self._with_elementwise(lambda expr: F("contains", lit(other), expr))
+        other_ = tuple(other) if not isinstance(other, (tuple, list)) else other
+        return self._with_elementwise(lambda expr: F("contains", lit(other_), expr))
 
     def fill_null(
         self,
