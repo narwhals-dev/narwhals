@@ -61,36 +61,67 @@ class Expr:
 
     def _with_node(self, node: ExprNode) -> Self:
         if node.kind is ExprKind.OVER:
-            # insert `over` before any elementwise operations.
-            # check "how it works" page in docs for why we do this.
-            new_nodes = list(self._nodes)
-            kwargs_no_order_by = {
-                key: value if key != "order_by" else []
-                for (key, value) in node.kwargs.items()
-            }
-            node_without_order_by = node._with_kwargs(**kwargs_no_order_by)
-            n = len(new_nodes)
-            i = n
-            while i > 0 and (_node := new_nodes[i - 1]).kind is ExprKind.ELEMENTWISE:
-                i -= 1
-                _node._push_down_over_node_in_place(node, node_without_order_by)
-            if i == n:
-                # node could not be pushed down, just append as-is
-                new_nodes.append(node)
-                return self.__class__(*new_nodes)
-            if node.kwargs["order_by"] and any(
-                node.is_orderable() for node in new_nodes[:i]
-            ):
-                new_nodes.insert(i, node)
-            elif node.kwargs["partition_by"] and not all(
-                node.is_elementwise() for node in new_nodes[:i]
-            ):
-                new_nodes.insert(i, node_without_order_by)
-            elif all(node.is_elementwise() for node in new_nodes):
-                msg = "Cannot apply `over` to elementwise expression."
-                raise InvalidOperationError(msg)
-            return self.__class__(*new_nodes)
+            return self._with_over_node(node)
         return self.__class__(*self._nodes, node)
+
+    def _with_over_node(self, over_node: ExprNode) -> Self:
+        """Handle insertion of OVER node with pushdown logic for elementwise operations.
+
+        Check "how it works" page in docs for why we do this.
+        """
+        new_nodes = list(self._nodes)
+        over_node_without_order_by = over_node._with_kwargs(
+            **{
+                key: value if key != "order_by" else []
+                for key, value in over_node.kwargs.items()
+            }
+        )
+        insertion_idx = self._find_over_insertion_point(
+            new_nodes, over_node, over_node_without_order_by
+        )
+        return self._insert_over_node_at_position(
+            new_nodes, insertion_idx, over_node, over_node_without_order_by
+        )
+
+    def _find_over_insertion_point(
+        self,
+        nodes: list[ExprNode],
+        over_node: ExprNode,
+        over_node_without_order_by: ExprNode,
+    ) -> int:
+        """Find where to insert the over node by walking backwards through elementwise operations."""
+        i = len(nodes)
+        while i > 0 and (_node := nodes[i - 1]).kind is ExprKind.ELEMENTWISE:
+            i -= 1
+            _node._push_down_over_node_in_place(over_node, over_node_without_order_by)
+        return i
+
+    def _insert_over_node_at_position(
+        self,
+        nodes: list[ExprNode],
+        insertion_idx: int,
+        over_node: ExprNode,
+        over_node_without_order_by: ExprNode,
+    ) -> Self:
+        """Insert the over node at the determined position."""
+        if insertion_idx == len(nodes):
+            nodes.append(over_node)
+
+        elif over_node.kwargs["order_by"] and any(
+            node.is_orderable() for node in nodes[:insertion_idx]
+        ):
+            nodes.insert(insertion_idx, over_node)
+
+        elif over_node.kwargs["partition_by"] and not all(
+            node.is_elementwise() for node in nodes[:insertion_idx]
+        ):
+            nodes.insert(insertion_idx, over_node_without_order_by)
+
+        elif all(node.is_elementwise() for node in nodes):
+            msg = "Cannot apply `over` to elementwise expression."
+            raise InvalidOperationError(msg)
+
+        return self.__class__(*nodes)
 
     def __repr__(self) -> str:
         """Pretty-print the expression by combining all nodes in the metadata."""
