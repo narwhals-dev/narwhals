@@ -347,14 +347,11 @@ class PandasLikeNamespace(
                 init_value, *values = (
                     s.zip_with(~nm, "") for s, nm in zip_strict(series, null_mask)
                 )
-
-                sep_array = init_value._with_native(
-                    init_value.__native_namespace__().Series(
-                        separator,
-                        name="sep",
-                        index=init_value.native.index,
-                        dtype=init_value.native.dtype,
-                    )
+                sep_array = init_value.__native_namespace__().Series(
+                    data=separator,
+                    name="sep",
+                    index=init_value.native.index,
+                    dtype=init_value.native.dtype,
                 )
                 separators = (sep_array.zip_with(~nm, "") for nm in null_mask[:-1])
                 result = reduce(

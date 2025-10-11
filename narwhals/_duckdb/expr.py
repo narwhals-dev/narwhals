@@ -22,7 +22,7 @@ from narwhals._duckdb.utils import (
 )
 from narwhals._expression_parsing import ExprKind, ExprMetadata
 from narwhals._sql.expr import SQLExpr
-from narwhals._utils import Implementation, Version
+from narwhals._utils import Implementation, Version, extend_bool
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -95,23 +95,21 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
             nulls_last=nulls_last,
         )
 
-    def _first(self, expr: Expression, *order_by: str) -> Expression:
+    def _first_last(
+        self, function: str, expr: Expression, order_by: Sequence[str], /
+    ) -> Expression:
         # https://github.com/duckdb/duckdb/discussions/19252
+        flags = extend_bool(False, len(order_by))
         order_by_sql = generate_order_by_sql(
-            *order_by,
-            descending=[False] * len(order_by),
-            nulls_last=[False] * len(order_by),
+            *order_by, descending=flags, nulls_last=flags
         )
-        return sql_expression(f"first({expr} {order_by_sql})")
+        return sql_expression(f"{function}({expr} {order_by_sql})")
+
+    def _first(self, expr: Expression, *order_by: str) -> Expression:
+        return self._first_last("first", expr, order_by)
 
     def _last(self, expr: Expression, *order_by: str) -> Expression:
-        # https://github.com/duckdb/duckdb/discussions/19252
-        order_by_sql = generate_order_by_sql(
-            *order_by,
-            descending=[False] * len(order_by),
-            nulls_last=[False] * len(order_by),
-        )
-        return sql_expression(f"last({expr} {order_by_sql})")
+        return self._first_last("last", expr, order_by)
 
     def __narwhals_namespace__(self) -> DuckDBNamespace:  # pragma: no cover
         from narwhals._duckdb.namespace import DuckDBNamespace
