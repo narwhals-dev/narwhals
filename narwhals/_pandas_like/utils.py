@@ -506,8 +506,8 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912
             # 0    3
             # Name: a, dtype: int32[pyarrow]
             #
-            # `ArrowDType(pa.string())` is what `.convert_dtypes(dtype_backend='pyarrow')`, so
-            # we use that here.
+            # `ArrowDType(pa.string())` is what `.convert_dtypes(dtype_backend='pyarrow')` converts to,
+            # so we use that here.
             return pd.ArrowDtype(pa.string())
         if dtype_backend == "numpy_nullable":
             return "string"
