@@ -269,14 +269,16 @@ class ExprNode:
         exprs: list[IntoExpr | NonNestedLiteral] = []
         # Note: please keep this as a for-loop (rather than a list-comprehension)
         # so that pytest-cov highlights any uncovered branches.
+        over_node_order_by = over_node.kwargs["order_by"]
+        over_node_partition_by = over_node.kwargs["partition_by"]
         for expr in self.exprs:
             if not is_expr(expr):
                 exprs.append(expr)
-            elif over_node.kwargs["order_by"] and any(
+            elif over_node_order_by and any(
                 expr_node.is_orderable() for expr_node in expr._nodes
             ):
                 exprs.append(expr._with_node(over_node))
-            elif over_node_without_order_by.kwargs["partition_by"] and not all(
+            elif over_node_partition_by and not all(
                 expr_node.is_elementwise() for expr_node in expr._nodes
             ):
                 exprs.append(expr._with_node(over_node_without_order_by))
@@ -394,26 +396,26 @@ class ExprMetadata:
             return cls.from_selector_single(node)
         if node.kind is ExprKind.COL:
             return (
-                ExprMetadata.from_selector_single(node)
+                cls.from_selector_single(node)
                 if len(node.kwargs["names"]) == 1
-                else ExprMetadata.from_selector_multi_named(node)
+                else cls.from_selector_multi_named(node)
             )
         if node.kind is ExprKind.NTH:
             return (
-                ExprMetadata.from_selector_single(node)
+                cls.from_selector_single(node)
                 if len(node.kwargs["indices"]) == 1
-                else ExprMetadata.from_selector_multi_unnamed(node)
+                else cls.from_selector_multi_unnamed(node)
             )
         if node.kind in {ExprKind.ALL, ExprKind.EXCLUDE}:
-            return ExprMetadata.from_selector_multi_unnamed(node)
+            return cls.from_selector_multi_unnamed(node)
         if node.kind is ExprKind.AGGREGATION:
-            return ExprMetadata.from_aggregation(node)
+            return cls.from_aggregation(node)
         if node.kind is ExprKind.LITERAL:
-            return ExprMetadata.from_literal(node)
+            return cls.from_literal(node)
         if node.kind is ExprKind.SELECTOR:
-            return ExprMetadata.from_selector_multi_unnamed(node)
+            return cls.from_selector_multi_unnamed(node)
         if node.kind is ExprKind.ELEMENTWISE:
-            return ExprMetadata.from_elementwise(node, *ces)
+            return cls.from_elementwise(node, *ces)
         msg = f"Unexpected node kind: {node.kind}"  # pragma: no cover
         raise AssertionError(msg)  # pragma: no cover
 
@@ -630,7 +632,7 @@ class ExprMetadata:
         )
 
     def with_orderable_filtration(self, node: ExprNode) -> ExprMetadata:
-        if self.is_scalar_like:  # pragma: no cover
+        if self.is_scalar_like:
             msg = "Can't apply filtration (e.g. `drop_nulls`) to scalar-like expression."
             raise InvalidOperationError(msg)
         return ExprMetadata(

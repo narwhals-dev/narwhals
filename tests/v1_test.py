@@ -901,10 +901,12 @@ def test_unique_series_v1() -> None:
         series.to_frame().select(nw_v1.col("a").unique(maintain_order=False).sum())
 
 
-def test_head_aggregation() -> None:
+def test_invalid() -> None:
     df = nw.from_native(pd.DataFrame({"a": [1, 2]}))
     with pytest.raises(InvalidOperationError):
         df.select(nw_v1.col("a").mean().head())
+    with pytest.raises(InvalidOperationError):
+        df.select(nw_v1.col("a").mean().arg_true())
 
 
 def test_deprecated_expr_methods() -> None:

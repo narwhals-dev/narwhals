@@ -94,10 +94,7 @@ class Expr:
 
     def __repr__(self) -> str:
         """Pretty-print the expression by combining all nodes in the metadata."""
-        result: str = repr(self._nodes[0])
-        for node in self._nodes[1:]:
-            result = f"{result}.{node!r}"
-        return result
+        return ".".join(repr(node) for node in self._nodes)
 
     def __bool__(self) -> NoReturn:
         msg = (
