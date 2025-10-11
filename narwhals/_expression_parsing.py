@@ -380,6 +380,7 @@ class ExprMetadata:
         raise TypeError(msg)
 
     def __repr__(self) -> str:  # pragma: no cover
+        nodes = tuple(reversed(tuple(self.iter_nodes_reversed())))
         return (
             f"ExprMetadata(\n"
             f"  expansion_kind: {self.expansion_kind},\n"
@@ -389,19 +390,9 @@ class ExprMetadata:
             f"  preserves_length: {self.preserves_length},\n"
             f"  is_scalar_like: {self.is_scalar_like},\n"
             f"  is_literal: {self.is_literal},\n"
-            f"  nodes: {tuple(self.iter_nodes())},\n"
+            f"  nodes: {nodes},\n"
             ")"
         )
-
-    def iter_nodes(self) -> Iterator[ExprNode]:  # pragma: no cover
-        """Iterate through all nodes from root to current."""
-        nodes: list[ExprNode] = []
-        current: ExprMetadata | None = self
-        while current is not None:
-            nodes.append(current.current_node)
-            current = current.prev
-        # Reverse to get from root to current
-        return iter(reversed(nodes))
 
     def iter_nodes_reversed(self) -> Iterator[ExprNode]:
         """Iterate through all nodes from current to root."""
