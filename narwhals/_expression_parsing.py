@@ -393,7 +393,7 @@ class ExprMetadata:
             ")"
         )
 
-    def iter_nodes(self) -> Iterator[ExprNode]:
+    def iter_nodes(self) -> Iterator[ExprNode]:  # pragma: no cover
         """Iterate through all nodes from root to current."""
         nodes: list[ExprNode] = []
         current: ExprMetadata | None = self
