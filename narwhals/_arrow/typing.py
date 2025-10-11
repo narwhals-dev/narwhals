@@ -45,6 +45,7 @@ if TYPE_CHECKING:
         "microsecond",
         "nanosecond",
     ]
+    PromoteOptions: TypeAlias = Literal["none", "default", "permissive"]
 
     ChunkedArrayAny: TypeAlias = pa.ChunkedArray[Any]
     ArrayAny: TypeAlias = pa.Array[Any]

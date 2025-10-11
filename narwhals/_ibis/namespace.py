@@ -80,7 +80,7 @@ class IbisNamespace(SQLNamespace[IbisLazyFrame, IbisExpr, "ir.Table", "ir.Value"
         self, *exprs: IbisExpr, separator: str, ignore_nulls: bool
     ) -> IbisExpr:
         def func(df: IbisLazyFrame) -> list[ir.Value]:
-            cols = list(chain.from_iterable(expr(df) for expr in exprs))
+            cols = chain.from_iterable(expr(df) for expr in exprs)
             cols_casted = [s.cast("string") for s in cols]
 
             if not ignore_nulls:
