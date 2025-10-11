@@ -51,7 +51,8 @@ NestedOrEnumDType: TypeAlias = "nw.List | nw.Array | nw.Struct | nw.Enum"
         nw.UInt128,
         nw.Unknown,
         nw.Binary,
-    ]
+    ],
+    ids=lambda tp: tp.__name__,
 )
 def non_nested_type(request: pytest.FixtureRequest) -> type[NonNestedDType]:
     return request.param  # type: ignore[no-any-return]
@@ -63,7 +64,8 @@ def non_nested_type(request: pytest.FixtureRequest) -> type[NonNestedDType]:
         nw.Array(nw.String, 2),
         nw.Struct({"a": nw.Boolean}),
         nw.Enum(["beluga", "narwhal"]),
-    ]
+    ],
+    ids=lambda obj: type(obj).__name__,
 )
 def nested_dtype(request: pytest.FixtureRequest) -> NestedOrEnumDType:
     return request.param  # type: ignore[no-any-return]
@@ -618,8 +620,15 @@ def test_dtype___slots___non_nested(non_nested_type: type[NonNestedDType]) -> No
     dtype = non_nested_type()
     with pytest.raises(AttributeError):
         dtype.i_dont_exist = 100  # type: ignore[union-attr]
+    with pytest.raises(AttributeError):
+        dtype.__dict__  # noqa: B018
+    _ = dtype.__slots__
 
 
 def test_dtype___slots___nested(nested_dtype: NestedOrEnumDType) -> None:
     with pytest.raises(AttributeError):
         nested_dtype.i_dont_exist = 999  # type: ignore[union-attr]
+    with pytest.raises(AttributeError):
+        nested_dtype.__dict__  # noqa: B018
+    slots = nested_dtype.__slots__
+    assert len(slots) != 0, slots
