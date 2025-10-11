@@ -17,7 +17,7 @@ from narwhals._expression_parsing import (
     combine_evaluate_output_names,
 )
 from narwhals._sql.typing import SQLLazyFrameT
-from narwhals._utils import Implementation, Version, not_implemented
+from narwhals._utils import Implementation, Version, extend_bool, not_implemented
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -215,6 +215,7 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
         def func(
             df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
         ) -> Sequence[NativeExprT]:
+            flags = extend_bool(reverse, len(inputs.order_by))
             return [
                 self._when(
                     ~self._function("isnull", expr),  # type: ignore[operator]
@@ -222,8 +223,8 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
                         self._function(func_name, expr),
                         inputs.partition_by,
                         inputs.order_by,
-                        descending=[reverse] * len(inputs.order_by),
-                        nulls_last=[reverse] * len(inputs.order_by),
+                        descending=flags,
+                        nulls_last=flags,
                         rows_end=0,
                     ),
                 )
@@ -586,13 +587,14 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
         def func(
             df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
         ) -> Sequence[NativeExprT]:
+            flags = extend_bool(reverse, len(inputs.order_by))
             return [
                 self._window_expression(
                     self._function("count", expr),
                     inputs.partition_by,
                     inputs.order_by,
-                    descending=[reverse] * len(inputs.order_by),
-                    nulls_last=[reverse] * len(inputs.order_by),
+                    descending=flags,
+                    nulls_last=flags,
                     rows_end=0,
                 )
                 for expr in self(df)
@@ -682,13 +684,14 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
         def func(
             df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
         ) -> Sequence[NativeExprT]:
+            flags = extend_bool(True, len(inputs.order_by))
             return [
                 self._window_expression(
                     self._function("row_number"),
                     (*inputs.partition_by, expr),
                     inputs.order_by,
-                    descending=[True] * len(inputs.order_by),
-                    nulls_last=[True] * len(inputs.order_by),
+                    descending=flags,
+                    nulls_last=flags,
                 )
                 == self._lit(1)
                 for expr in self(df)

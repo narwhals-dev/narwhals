@@ -12,7 +12,7 @@ except ModuleNotFoundError:
     # DuckDB pre 1.3
     import duckdb.typing as duckdb_dtypes
 
-from narwhals._utils import Version, isinstance_or_issubclass, zip_strict
+from narwhals._utils import Version, extend_bool, isinstance_or_issubclass, zip_strict
 from narwhals.exceptions import ColumnNotFoundError
 
 if TYPE_CHECKING:
@@ -348,8 +348,9 @@ def window_expression(
     # TODO(unassigned): Replace with `duckdb.WindowExpression` when they release it.
     # https://github.com/duckdb/duckdb/discussions/14725#discussioncomment-11200348
     pb = generate_partition_by_sql(*partition_by)
-    descending = descending or [False] * len(order_by)
-    nulls_last = nulls_last or [False] * len(order_by)
+    flags = extend_bool(False, len(order_by))
+    descending = descending or flags
+    nulls_last = nulls_last or flags
     ob = generate_order_by_sql(*order_by, descending=descending, nulls_last=nulls_last)
 
     if rows_start is not None and rows_end is not None:

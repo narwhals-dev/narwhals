@@ -123,7 +123,7 @@ class ArrowNamespace(
         int_64 = self._version.dtypes.Int64()
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            expr_results = list(chain.from_iterable(expr(df) for expr in exprs))
+            expr_results = tuple(chain.from_iterable(expr(df) for expr in exprs))
             align = self._series._align_full_broadcast
             series = align(
                 *(s.fill_null(0, strategy=None, limit=None) for s in expr_results)
@@ -141,7 +141,7 @@ class ArrowNamespace(
     def min_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             align = self._series._align_full_broadcast
-            init_series, *series = list(chain.from_iterable(expr(df) for expr in exprs))
+            init_series, *series = tuple(chain.from_iterable(expr(df) for expr in exprs))
             init_series, *series = align(init_series, *series)
             native_series = reduce(
                 pc.min_element_wise, [s.native for s in series], init_series.native
@@ -160,7 +160,7 @@ class ArrowNamespace(
     def max_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             align = self._series._align_full_broadcast
-            init_series, *series = list(chain.from_iterable(expr(df) for expr in exprs))
+            init_series, *series = tuple(chain.from_iterable(expr(df) for expr in exprs))
             init_series, *series = align(init_series, *series)
             native_series = reduce(
                 pc.max_element_wise, [s.native for s in series], init_series.native
@@ -183,7 +183,7 @@ class ArrowNamespace(
 
     def _concat_horizontal(self, dfs: Sequence[pa.Table], /) -> pa.Table:
         names = list(chain.from_iterable(df.column_names for df in dfs))
-        arrays = list(chain.from_iterable(df.itercolumns() for df in dfs))
+        arrays = tuple(chain.from_iterable(df.itercolumns() for df in dfs))
         return pa.Table.from_arrays(arrays, names=names)
 
     def _concat_vertical(self, dfs: Sequence[pa.Table], /) -> pa.Table:

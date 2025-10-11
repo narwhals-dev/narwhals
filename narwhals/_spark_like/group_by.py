@@ -28,7 +28,7 @@ class SparkLikeLazyGroupBy(SQLGroupBy["SparkLikeLazyFrame", "SparkLikeExpr", "Co
     def agg(self, *exprs: SparkLikeExpr) -> SparkLikeLazyFrame:
         result = (
             self.compliant.native.groupBy(*self._keys).agg(*agg_columns)
-            if (agg_columns := list(self._evaluate_exprs(exprs)))
+            if (agg_columns := tuple(self._evaluate_exprs(exprs)))
             else self.compliant.native.select(*self._keys).dropDuplicates()
         )
 
