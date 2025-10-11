@@ -493,7 +493,7 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912
         return pd_type
     if into_pd_type := NW_TO_PD_DTYPES_BACKEND.get(base_type):
         return into_pd_type[dtype_backend]
-    if isinstance_or_issubclass(dtype, dtypes.String):
+    if issubclass(base_type, dtypes.String):
         if dtype_backend == "pyarrow":
             import pyarrow as pa  # ignore-banned-import
 
