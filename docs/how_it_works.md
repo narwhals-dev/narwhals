@@ -178,7 +178,7 @@ The way you access the Narwhals-compliant wrapper depends on the object:
 
 - `narwhals.DataFrame` and `narwhals.LazyFrame`: use the `._compliant_frame` attribute.
 - `narwhals.Series`: use the `._compliant_series` attribute.
-- `narwhals.Expr`: call the `.__call__` method, and pass to it the Narwhals-compliant namespace associated with
+- `narwhals.Expr`: call the `._to_compliant_expr` method, and pass to it the Narwhals-compliant namespace associated with
   the given backend.
 
 🛑 BUT WAIT! What's a Narwhals-compliant namespace?

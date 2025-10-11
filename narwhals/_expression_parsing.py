@@ -269,14 +269,16 @@ class ExprNode:
         exprs: list[IntoExpr | NonNestedLiteral] = []
         # Note: please keep this as a for-loop (rather than a list-comprehension)
         # so that pytest-cov highlights any uncovered branches.
+        over_node_order_by = over_node.kwargs["order_by"]
+        over_node_partition_by = over_node.kwargs["partition_by"]
         for expr in self.exprs:
             if not is_expr(expr):
                 exprs.append(expr)
-            elif over_node.kwargs["order_by"] and any(
+            elif over_node_order_by and any(
                 expr_node.is_orderable() for expr_node in expr._nodes
             ):
                 exprs.append(expr._with_node(over_node))
-            elif over_node_without_order_by.kwargs["partition_by"] and not all(
+            elif over_node_partition_by and not all(
                 expr_node.is_elementwise() for expr_node in expr._nodes
             ):
                 exprs.append(expr._with_node(over_node_without_order_by))
@@ -661,7 +663,7 @@ class ExprMetadata:
         )
 
     def with_orderable_filtration(self, node: ExprNode) -> ExprMetadata:
-        if self.is_scalar_like:  # pragma: no cover
+        if self.is_scalar_like:
             msg = "Can't apply filtration (e.g. `drop_nulls`) to scalar-like expression."
             raise InvalidOperationError(msg)
         return ExprMetadata(
