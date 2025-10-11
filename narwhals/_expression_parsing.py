@@ -412,58 +412,60 @@ class ExprMetadata:
     def from_node(  # noqa: PLR0911
         cls, node: ExprNode, *ces: CompliantExprAny
     ) -> ExprMetadata:
-        if node.kind is ExprKind.SERIES:
+        kind = node.kind
+        if kind is ExprKind.SERIES:
             return cls.from_selector_single(node)
-        if node.kind is ExprKind.COL:
+        if kind is ExprKind.COL:
             return (
-                ExprMetadata.from_selector_single(node)
+                cls.from_selector_single(node)
                 if len(node.kwargs["names"]) == 1
-                else ExprMetadata.from_selector_multi_named(node)
+                else cls.from_selector_multi_named(node)
             )
-        if node.kind is ExprKind.NTH:
+        if kind is ExprKind.NTH:
             return (
-                ExprMetadata.from_selector_single(node)
+                cls.from_selector_single(node)
                 if len(node.kwargs["indices"]) == 1
-                else ExprMetadata.from_selector_multi_unnamed(node)
+                else cls.from_selector_multi_unnamed(node)
             )
-        if node.kind in {ExprKind.ALL, ExprKind.EXCLUDE}:
-            return ExprMetadata.from_selector_multi_unnamed(node)
-        if node.kind is ExprKind.AGGREGATION:
-            return ExprMetadata.from_aggregation(node)
-        if node.kind is ExprKind.LITERAL:
-            return ExprMetadata.from_literal(node)
-        if node.kind is ExprKind.SELECTOR:
-            return ExprMetadata.from_selector_multi_unnamed(node)
-        if node.kind is ExprKind.ELEMENTWISE:
-            return ExprMetadata.from_elementwise(node, *ces)
-        msg = f"Unexpected node kind: {node.kind}"  # pragma: no cover
+        if kind in {ExprKind.ALL, ExprKind.EXCLUDE}:
+            return cls.from_selector_multi_unnamed(node)
+        if kind is ExprKind.AGGREGATION:
+            return cls.from_aggregation(node)
+        if kind is ExprKind.LITERAL:
+            return cls.from_literal(node)
+        if kind is ExprKind.SELECTOR:
+            return cls.from_selector_multi_unnamed(node)
+        if kind is ExprKind.ELEMENTWISE:
+            return cls.from_elementwise(node, *ces)
+        msg = f"Unexpected node kind: {kind}"  # pragma: no cover
         raise AssertionError(msg)  # pragma: no cover
 
     def with_node(  # noqa: PLR0911,C901
         self, node: ExprNode, ce: CompliantExprAny, *ces: CompliantExprAny
     ) -> ExprMetadata:
-        if node.kind is ExprKind.AGGREGATION:
+        kind = node.kind
+        if kind is ExprKind.AGGREGATION:
             return self.with_aggregation(node)
-        if node.kind is ExprKind.ELEMENTWISE:
+        if kind is ExprKind.ELEMENTWISE:
             return combine_metadata(ce, *ces, to_single_output=False, current_node=node)
-        if node.kind is ExprKind.FILTRATION:
+        if kind is ExprKind.FILTRATION:
             return self.with_filtration(node)
-        if node.kind is ExprKind.ORDERABLE_WINDOW:
+        if kind is ExprKind.ORDERABLE_WINDOW:
             return self.with_orderable_window(node)
-        if node.kind is ExprKind.ORDERABLE_FILTRATION:
+        if kind is ExprKind.ORDERABLE_FILTRATION:
             return self.with_orderable_filtration(node)
-        if node.kind is ExprKind.ORDERABLE_AGGREGATION:
+        if kind is ExprKind.ORDERABLE_AGGREGATION:
             return self.with_orderable_aggregation(node)
-        if node.kind is ExprKind.WINDOW:
+        if kind is ExprKind.WINDOW:
             return self.with_window(node)
-        if node.kind is ExprKind.OVER:
+        if kind is ExprKind.OVER:
             if node.kwargs["order_by"]:
                 return self.with_ordered_over(node)
             if not node.kwargs["partition_by"]:  # pragma: no cover
                 msg = "At least one of `partition_by` or `order_by` must be specified."
                 raise InvalidOperationError(msg)
             return self.with_partitioned_over(node)
-        msg = f"Unexpected node kind: {node.kind}"  # pragma: no cover
+        msg = f"Unexpected node kind: {kind}"  # pragma: no cover
         raise AssertionError(msg)  # pragma: no cover
 
     @classmethod
