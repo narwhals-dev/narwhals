@@ -147,7 +147,7 @@ def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> FrameT
     if not items:
         msg = "No items to concatenate."
         raise ValueError(msg)
-    items = list(items)
+    items = tuple(items)
     validate_laziness(items)
     if how not in {"horizontal", "vertical", "diagonal"}:  # pragma: no cover
         msg = "Only vertical, horizontal and diagonal concatenations are supported."

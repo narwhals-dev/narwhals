@@ -124,7 +124,7 @@ class SparkLikeNamespace(
 
     def mean_horizontal(self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
         def func(cols: Iterable[Column]) -> Column:
-            cols = list(cols)
+            cols = tuple(cols)
             F = exprs[0]._F
             numerator = reduce(
                 operator.add, (self._F.coalesce(col, self._F.lit(0)) for col in cols)
