@@ -6,7 +6,13 @@ from typing import TYPE_CHECKING, Any
 import duckdb
 from duckdb import Expression
 
-from narwhals._duckdb.typing import BaseType, IntoDuckDBLiteral, has_children, is_dtype
+from narwhals._duckdb.typing import (
+    BaseType,
+    IntoColumnExpr,
+    IntoDuckDBLiteral,
+    has_children,
+    is_dtype,
+)
 from narwhals._utils import Implementation, Version, isinstance_or_issubclass, zip_strict
 from narwhals.exceptions import ColumnNotFoundError, UnsupportedDTypeError
 
@@ -54,6 +60,7 @@ col = duckdb.ColumnExpression
 
 
 # TODO @dangotbanned: Raise an issue upstream on `Expression | str` too narrow
+# NOTE: https://github.com/duckdb/duckdb-python/blob/df7789cbd31b2d2b8d03d012f14331bc3297fb2d/src/duckdb_py/native/python_conversion.cpp#L916-L1069
 def lit(value: IntoDuckDBLiteral | Expression) -> Expression:
     """Alias for `duckdb.ConstantExpression`."""
     lit_: Incomplete = duckdb.ConstantExpression
@@ -67,10 +74,10 @@ F = duckdb.FunctionExpression
 """Alias for `duckdb.FunctionExpression`."""
 
 
-# TODO @dangotbanned: Investigate `lhs: Expression | str | tuple[str]`
-# Seems incorrect
+# TODO @dangotbanned: Raise an issue upstream on `Expression | str | tuple[str` too narrow
+# NOTE: https://github.com/duckdb/duckdb-python/blob/df7789cbd31b2d2b8d03d012f14331bc3297fb2d/src/duckdb_py/pyexpression.cpp#L361-L413
 def lambda_expr(
-    params: str | Expression | tuple[Expression, ...], expr: Expression, /
+    params: IntoColumnExpr | tuple[IntoColumnExpr, ...], expr: Expression, /
 ) -> Expression:
     """Wraps [`duckdb.LambdaExpression`].
 

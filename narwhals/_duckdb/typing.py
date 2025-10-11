@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any, Literal, Protocol, TypedDict, overload
+from typing import TYPE_CHECKING, Any, Literal, Protocol, TypedDict, Union, overload
 
 import duckdb
+from duckdb import Expression
 
 from narwhals._typing_compat import TypeVar
 
@@ -12,13 +13,19 @@ if TYPE_CHECKING:
 
     import numpy as np
     import pandas as pd
-    from duckdb import DuckDBPyConnection, Expression
+    from duckdb import DuckDBPyConnection
     from typing_extensions import TypeAlias, TypeIs
 
     from narwhals.typing import Into1DArray, PythonLiteral
 
 
-__all__ = ["BaseType", "WindowExpressionKwargs", "has_children", "is_dtype"]
+__all__ = [
+    "BaseType",
+    "IntoColumnExpr",
+    "WindowExpressionKwargs",
+    "has_children",
+    "is_dtype",
+]
 
 IntoDuckDBLiteral: TypeAlias = """
     PythonLiteral
@@ -60,6 +67,8 @@ _List: TypeAlias = Literal["list"]
 _Enum: TypeAlias = Literal["enum"]
 _Decimal: TypeAlias = Literal["decimal"]
 _TimestampTZ: TypeAlias = Literal["timestamp with time zone"]
+IntoColumnExpr: TypeAlias = Union[str, Expression]
+"""A column name, or the result of calling `duckdb.ColumnExpression`."""
 
 
 class BaseType(Protocol[_ID_co]):
