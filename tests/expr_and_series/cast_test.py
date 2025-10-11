@@ -414,3 +414,9 @@ def test_pandas_pyarrow_dtypes() -> None:
         pd.DataFrame({"a": ["foo", "bar"]}, dtype="string[pyarrow]")
     ).select(nw.col("a").cast(nw.String))["a"]
     assert s.to_native().dtype == "string[pyarrow]"
+
+
+def test_cast_object_pandas() -> None:
+    s = nw.from_native(pd.DataFrame({"a": [2, 3, None]}, dtype=object))["a"]
+    assert s[0] == 2
+    assert s.cast(nw.String)[0] == "2"
