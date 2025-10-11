@@ -16,7 +16,13 @@ from narwhals._spark_like.utils import (
     true_divide,
 )
 from narwhals._sql.expr import SQLExpr
-from narwhals._utils import Implementation, Version, not_implemented, zip_strict
+from narwhals._utils import (
+    Implementation,
+    Version,
+    extend_bool,
+    not_implemented,
+    zip_strict,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping, Sequence
@@ -142,8 +148,9 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         nulls_last: Sequence[bool] | None = None,
     ) -> Iterator[Column]:
         F = self._F
-        descending = descending or [False] * len(cols)
-        nulls_last = nulls_last or [False] * len(cols)
+        n = len(cols)
+        descending = extend_bool(descending or False, n)
+        nulls_last = extend_bool(nulls_last or False, n)
         mapping = {
             (False, False): F.asc_nulls_first,
             (False, True): F.asc_nulls_last,
