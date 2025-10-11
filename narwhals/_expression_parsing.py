@@ -330,17 +330,20 @@ class ExprMetadata:
             lazy case, this number must be `0` by the time the expression
             is evaluated.
         preserves_length: Whether the expression preserves the input length.
+        current_node: The current ExprNode in the linked list.
+        prev: Reference to the previous ExprMetadata in the linked list (None for root).
     """
 
     __slots__ = (
+        "current_node",
         "expansion_kind",
         "has_windows",
         "is_elementwise",
         "is_literal",
         "is_scalar_like",
         "n_orderable_ops",
-        "nodes",
         "preserves_length",
+        "prev",
     )
 
     def __init__(
@@ -353,7 +356,8 @@ class ExprMetadata:
         is_elementwise: bool = True,
         is_scalar_like: bool = False,
         is_literal: bool = False,
-        nodes: tuple[ExprNode, ...],
+        current_node: ExprNode,
+        prev: ExprMetadata | None = None,
     ) -> None:
         if is_literal:
             assert is_scalar_like  # noqa: S101  # debug assertion
@@ -366,7 +370,8 @@ class ExprMetadata:
         self.preserves_length: bool = preserves_length
         self.is_scalar_like: bool = is_scalar_like
         self.is_literal: bool = is_literal
-        self.nodes: tuple[ExprNode, ...] = nodes
+        self.current_node: ExprNode = current_node
+        self.prev: ExprMetadata | None = prev
 
     def __init_subclass__(cls, /, *args: Any, **kwds: Any) -> Never:  # pragma: no cover
         msg = f"Cannot subclass {cls.__name__!r}"
@@ -382,9 +387,26 @@ class ExprMetadata:
             f"  preserves_length: {self.preserves_length},\n"
             f"  is_scalar_like: {self.is_scalar_like},\n"
             f"  is_literal: {self.is_literal},\n"
-            f"  nodes: {self.nodes},\n"
+            f"  nodes: {tuple(self.iter_nodes())},\n"
             ")"
         )
+
+    def iter_nodes(self) -> Iterator[ExprNode]:
+        """Iterate through all nodes from root to current."""
+        nodes: list[ExprNode] = []
+        current: ExprMetadata | None = self
+        while current is not None:
+            nodes.append(current.current_node)
+            current = current.prev
+        # Reverse to get from root to current
+        return iter(reversed(nodes))
+
+    def iter_nodes_reversed(self) -> Iterator[ExprNode]:
+        """Iterate through all nodes from current to root."""
+        current: ExprMetadata | None = self
+        while current is not None:
+            yield current.current_node
+            current = current.prev
 
     @classmethod
     def from_node(  # noqa: PLR0911
@@ -423,9 +445,7 @@ class ExprMetadata:
         if node.kind is ExprKind.AGGREGATION:
             return self.with_aggregation(node)
         if node.kind is ExprKind.ELEMENTWISE:
-            return combine_metadata(
-                ce, *ces, to_single_output=False, nodes=(*ce._metadata.nodes, node)
-            )
+            return combine_metadata(ce, *ces, to_single_output=False, current_node=node)
         if node.kind is ExprKind.FILTRATION:
             return self.with_filtration(node)
         if node.kind is ExprKind.ORDERABLE_WINDOW:
@@ -453,7 +473,8 @@ class ExprMetadata:
             is_elementwise=False,
             preserves_length=False,
             is_scalar_like=True,
-            nodes=(node,),
+            current_node=node,
+            prev=None,
         )
 
     @classmethod
@@ -464,27 +485,28 @@ class ExprMetadata:
             preserves_length=False,
             is_literal=True,
             is_scalar_like=True,
-            nodes=(node,),
+            current_node=node,
+            prev=None,
         )
 
     @classmethod
     def from_selector_single(cls, node: ExprNode) -> ExprMetadata:
         # e.g. `nw.col('a')`, `nw.nth(0)`
-        return cls(ExpansionKind.SINGLE, nodes=(node,))
+        return cls(ExpansionKind.SINGLE, current_node=node, prev=None)
 
     @classmethod
     def from_selector_multi_named(cls, node: ExprNode) -> ExprMetadata:
         # e.g. `nw.col('a', 'b')`
-        return cls(ExpansionKind.MULTI_NAMED, nodes=(node,))
+        return cls(ExpansionKind.MULTI_NAMED, current_node=node, prev=None)
 
     @classmethod
     def from_selector_multi_unnamed(cls, node: ExprNode) -> ExprMetadata:
         # e.g. `nw.all()`
-        return cls(ExpansionKind.MULTI_UNNAMED, nodes=(node,))
+        return cls(ExpansionKind.MULTI_UNNAMED, current_node=node, prev=None)
 
     @classmethod
     def from_elementwise(cls, node: ExprNode, *ces: CompliantExprAny) -> ExprMetadata:
-        return combine_metadata(*ces, to_single_output=True, nodes=(node,))
+        return combine_metadata(*ces, to_single_output=True, current_node=node)
 
     @property
     def is_filtration(self) -> bool:
@@ -502,7 +524,8 @@ class ExprMetadata:
             is_elementwise=False,
             is_scalar_like=True,
             is_literal=False,
-            nodes=(*self.nodes, node),
+            current_node=node,
+            prev=self,
         )
 
     def with_orderable_aggregation(self, node: ExprNode) -> ExprMetadata:
@@ -518,7 +541,8 @@ class ExprMetadata:
             is_elementwise=False,
             is_scalar_like=True,
             is_literal=False,
-            nodes=(*self.nodes, node),
+            current_node=node,
+            prev=self,
         )
 
     def with_window(self, node: ExprNode) -> ExprMetadata:
@@ -536,7 +560,8 @@ class ExprMetadata:
             is_elementwise=False,
             is_scalar_like=False,
             is_literal=False,
-            nodes=(*self.nodes, node),
+            current_node=node,
+            prev=self,
         )
 
     def with_orderable_window(self, node: ExprNode) -> ExprMetadata:
@@ -552,7 +577,8 @@ class ExprMetadata:
             is_elementwise=False,
             is_scalar_like=False,
             is_literal=False,
-            nodes=(*self.nodes, node),
+            current_node=node,
+            prev=self,
         )
 
     def with_ordered_over(self, node: ExprNode) -> ExprMetadata:
@@ -590,7 +616,8 @@ class ExprMetadata:
             is_elementwise=False,
             is_scalar_like=False,
             is_literal=False,
-            nodes=(*self.nodes, node),
+            current_node=node,
+            prev=self,
         )
 
     def with_partitioned_over(self, node: ExprNode) -> ExprMetadata:
@@ -611,7 +638,8 @@ class ExprMetadata:
             is_elementwise=False,
             is_scalar_like=False,
             is_literal=False,
-            nodes=(*self.nodes, node),
+            current_node=node,
+            prev=self,
         )
 
     def with_filtration(self, node: ExprNode) -> ExprMetadata:
@@ -626,7 +654,8 @@ class ExprMetadata:
             is_elementwise=False,
             is_scalar_like=False,
             is_literal=False,
-            nodes=(*self.nodes, node),
+            current_node=node,
+            prev=self,
         )
 
     def with_orderable_filtration(self, node: ExprNode) -> ExprMetadata:
@@ -641,19 +670,20 @@ class ExprMetadata:
             is_elementwise=False,
             is_scalar_like=False,
             is_literal=False,
-            nodes=(*self.nodes, node),
+            current_node=node,
+            prev=self,
         )
 
     def op_nodes_reversed(self) -> Iterator[ExprNode]:
-        for node in reversed(self.nodes):
-            if node.name.startswith("name.") or node.name == "alias":
+        for node in self.iter_nodes_reversed():
+            if node.name.startswith(("name.", "alias")):
                 # Skip nodes which only do aliasing.
                 continue
             yield node
 
 
 def combine_metadata(
-    *args: CompliantExprAny, to_single_output: bool, nodes: tuple[ExprNode, ...]
+    *args: CompliantExprAny, to_single_output: bool, current_node: ExprNode
 ) -> ExprMetadata:
     """Combine metadata from `args`.
 
@@ -661,7 +691,7 @@ def combine_metadata(
         args: Arguments, maybe expressions, literals, or Series.
         to_single_output: Whether the result is always single-output, regardless
             of the inputs (e.g. `nw.sum_horizontal`).
-        nodes: Nodes of result node.
+        current_node: The current node being added.
     """
     n_filtrations = 0
     result_expansion_kind = ExpansionKind.SINGLE
@@ -675,10 +705,14 @@ def combine_metadata(
     result_is_scalar_like = True
     # result is literal if all inputs are literal
     result_is_literal = True
+    # Keep reference to first argument's metadata to use as prev
+    first_metadata: ExprMetadata | None = None
 
     for i, arg in enumerate(args):
         metadata = arg._metadata
         assert metadata is not None  # noqa: S101
+        if i == 0:
+            first_metadata = metadata
         if metadata.expansion_kind.is_multi_output():
             expansion_kind = metadata.expansion_kind
             if not to_single_output:
@@ -707,7 +741,8 @@ def combine_metadata(
         is_elementwise=result_is_elementwise,
         is_scalar_like=result_is_scalar_like,
         is_literal=result_is_literal,
-        nodes=nodes,
+        current_node=current_node,
+        prev=first_metadata,
     )
 
 
