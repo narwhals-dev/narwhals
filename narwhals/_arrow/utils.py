@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     )
     from narwhals._duration import IntervalUnit
     from narwhals.dtypes import DType
-    from narwhals.typing import IntoDType, NumericLiteral, PythonLiteral
+    from narwhals.typing import IntoDType, PythonLiteral
 
     # NOTE: stubs don't allow for `ChunkedArray[StructArray]`
     # Intended to represent the `.chunks` property storing `list[pa.StructArray]`
@@ -321,12 +321,6 @@ def cast_for_truediv(
         )
 
     return arrow_array, pa_object
-
-
-def mod_compat(left: ArrowSeries, right: ArrowSeries | NumericLiteral) -> ArrayOrScalar:
-    floor_div = (left // right).native
-    ser, other = extract_native(left, right)
-    return pc.subtract(ser, pc.multiply(floor_div, other))
 
 
 # Regex for date, time, separator and timezone components
