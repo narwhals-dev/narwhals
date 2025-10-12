@@ -209,8 +209,9 @@ def _nested_native_to_narwhals_dtype(
             return dtypes.Enum()  # pyright: ignore[reportCallIssue]
         categories = duckdb_dtype.children[0][1]
         return dtypes.Enum(categories=categories)
+    # TODO @dangotbanned: Get coverage during https://github.com/narwhals-dev/narwhals/issues/3197
     # `MAP`, `UNION`
-    return dtypes.Unknown()
+    return dtypes.Unknown()  # pragma: no cover
 
 
 def fetch_rel_time_zone(rel: duckdb.DuckDBPyRelation) -> str:
