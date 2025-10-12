@@ -54,7 +54,7 @@ jobs:
       - name: install-reqs
         # we are not testing pyspark on Windows here because it is very slow
         # TODO(FBruzzesi): Unpin duckdb version once ibis makes a new release
-        run: uv pip install -e ".[dask, modin, ibis]" ibis-framework --group core-tests --group --system
+        run: uv pip install -e ".[dask, modin, ibis]" ibis-framework --group core-tests --group extra --system
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
@@ -85,7 +85,7 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
         # TODO(FBruzzesi): Unpin duckdb version once ibis makes a new release
-        run: uv pip install -e ".[dask, modin, ibis]" ibis-framework --group core-tests --group --system
+        run: uv pip install -e ".[dask, modin, ibis]" ibis-framework --group core-tests --group extra --system
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
