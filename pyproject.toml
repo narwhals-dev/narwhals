@@ -86,6 +86,7 @@ docs = [
   "jinja2",
   "duckdb",
   "narwhals[ibis]",
+  "ibis-framework", # remove after `ibis>10.8.0` available
   "markdown-exec[ansi]",
   "mkdocs",
   "mkdocs-autorefs",
