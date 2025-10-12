@@ -19,10 +19,13 @@ _ = Version.V2.dtypes
 
 
 def _iter_descendants(*bases: type[T_co]) -> Iterator[type[T_co]]:
+    seen = set[T_co]()
     for base in bases:
         yield base
-        if children := base.__subclasses__():
-            yield from _iter_descendants(*children)
+        if (children := (base.__subclasses__())) and (
+            unseen := set(children).difference(seen)
+        ):
+            yield from _iter_descendants(*unseen)
 
 
 def iter_unslotted_classes(*bases: type[T_co]) -> Iterator[str]:
