@@ -330,15 +330,16 @@ class PandasLikeNamespace(
                 # NOTE: Trying to help `mypy` later
                 # error: Cannot determine type of "values"  [has-type]
                 values: list[PandasLikeSeries]
-                init_value, *values = [
+                init_value, *values = (
                     s.zip_with(~nm, "") for s, nm in zip_strict(series, null_mask)
-                ]
-                array_funcs = series[0]._array_funcs
-                sep_array = init_value.from_iterable(
-                    data=array_funcs.repeat(separator, len(init_value)),
-                    name="sep",
-                    index=init_value.native.index,
-                    context=self,
+                )
+                sep_array = init_value._with_native(
+                    init_value.__native_namespace__().Series(
+                        separator,
+                        name="sep",
+                        index=init_value.native.index,
+                        dtype=init_value.native.dtype,
+                    )
                 )
                 separators = (sep_array.zip_with(~nm, "") for nm in null_mask[:-1])
                 result = reduce(
