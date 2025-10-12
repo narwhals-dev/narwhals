@@ -5,7 +5,8 @@ from typing import TYPE_CHECKING, Any
 from narwhals._arrow.utils import narwhals_to_native_dtype, native_to_narwhals_dtype
 from narwhals._plan.arrow import functions as fn
 from narwhals._plan.compliant.series import CompliantSeries
-from narwhals._utils import Version
+from narwhals._plan.compliant.typing import namespace
+from narwhals._utils import Implementation, Version
 from narwhals.dependencies import is_numpy_array_1d
 
 if TYPE_CHECKING:
@@ -13,12 +14,27 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
-    from narwhals._arrow.typing import ChunkedArrayAny  # noqa: F401
+    from narwhals._arrow.typing import ChunkedArrayAny
+    from narwhals._plan.arrow.dataframe import ArrowDataFrame as DataFrame
+    from narwhals._plan.arrow.namespace import ArrowNamespace
     from narwhals.dtypes import DType
     from narwhals.typing import Into1DArray, IntoDType, _1DArray
 
 
 class ArrowSeries(CompliantSeries["ChunkedArrayAny"]):
+    implementation = Implementation.PYARROW
+    _native: ChunkedArrayAny
+    _version: Version
+    _name: str
+
+    def __narwhals_namespace__(self) -> ArrowNamespace:
+        from narwhals._plan.arrow.namespace import ArrowNamespace
+
+        return ArrowNamespace(self._version)
+
+    def to_frame(self) -> DataFrame:
+        return namespace(self)._dataframe.from_dict({self.name: self.native})
+
     def to_list(self) -> list[Any]:
         return self.native.to_pylist()
 

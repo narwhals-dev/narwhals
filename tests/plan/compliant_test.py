@@ -15,7 +15,7 @@ import narwhals as nw
 from narwhals import _plan as nwp
 from narwhals._utils import Version
 from narwhals.exceptions import ComputeError
-from tests.utils import assert_equal_data
+from tests.plan.utils import assert_equal_data, dataframe
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -411,9 +411,7 @@ def test_select(
     expected: dict[str, Any],
     data_small: dict[str, Any],
 ) -> None:
-    frame = pa.table(data_small)
-    df = nwp.DataFrame.from_native(frame)
-    result = df.select(expr).to_dict(as_series=False)
+    result = dataframe(data_small).select(expr)
     assert_equal_data(result, expected)
 
 
@@ -485,9 +483,7 @@ def test_with_columns(
     expected: dict[str, Any],
     data_smaller: dict[str, Any],
 ) -> None:
-    frame = pa.table(data_smaller)
-    df = nwp.DataFrame.from_native(frame)
-    result = df.with_columns(expr).to_dict(as_series=False)
+    result = dataframe(data_smaller).with_columns(expr)
     assert_equal_data(result, expected)
 
 
@@ -515,11 +511,11 @@ def test_first_last_expr_with_columns(
 ) -> None:
     """Related https://github.com/narwhals-dev/narwhals/pull/2528#discussion_r2225930065."""
     height = len(next(iter(data_indexed.values())))
-    expected_broadcast = height * [expected]
-    frame = nwp.DataFrame.from_native(pa.table(data_indexed))
+    expected_full = {"result": height * [expected]}
+    frame = dataframe(data_indexed)
     expr = agg.over(order_by="idx").alias("result")
-    result = frame.with_columns(expr).select("result").to_dict(as_series=False)
-    assert_equal_data(result, {"result": expected_broadcast})
+    result = frame.with_columns(expr).select("result")
+    assert_equal_data(result, expected_full)
 
 
 @pytest.mark.parametrize(
@@ -528,7 +524,7 @@ def test_first_last_expr_with_columns(
 def test_row_is_py_literal(
     data_indexed: dict[str, Any], index: int, expected: tuple[PythonLiteral, ...]
 ) -> None:
-    frame = nwp.DataFrame.from_native(pa.table(data_indexed))
+    frame = dataframe(data_indexed)
     result = frame.row(index)
     assert all(v is None or isinstance(v, (int, float)) for v in result)
     assert result == expected
@@ -549,12 +545,18 @@ if TYPE_CHECKING:
         doesn't happen elsewhere at the moment.
         """
         pytest.importorskip("pyarrow")
+        from narwhals._plan.arrow.dataframe import ArrowDataFrame
         from narwhals._plan.arrow.expr import ArrowExpr, ArrowScalar
+        from narwhals._plan.arrow.series import ArrowSeries
 
         expr = ArrowExpr()
         scalar = ArrowScalar()
+        df = ArrowDataFrame()
+        ser = ArrowSeries()
         assert expr
         assert scalar
+        assert df
+        assert ser
 
     def test_dataframe_from_native_overloads() -> None:
         """Ensure we can reveal the `NativeSeries` **without** a dependency."""
