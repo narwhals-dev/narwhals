@@ -488,7 +488,9 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return self.native.to_numpy()
 
     def alias(self, name: str) -> Self:
-        return self.__class__(self.native, name=name, version=self._version)
+        ret = self.__class__(self.native, name=name, version=self._version)
+        ret._broadcast = self._broadcast
+        return ret
 
     @property
     def dtype(self) -> DType:
