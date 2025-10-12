@@ -47,6 +47,11 @@ repos:
       entry: python -m utils.check_api_reference
       language: python
       additional_dependencies: [polars]
+    - id: sort-api-reference
+      name: sort-api-reference
+      pass_filenames: false
+      entry: python -m utils.sort_api_reference
+      language: python
     - id: check-slotted-classes
       name: check-slotted-classes
       pass_filenames: false
