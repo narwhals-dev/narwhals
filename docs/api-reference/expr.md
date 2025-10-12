@@ -56,6 +56,8 @@
         - rolling_sum
         - rolling_var
         - round
+        - floor
+        - ceil
         - shift
         - skew
         - sqrt

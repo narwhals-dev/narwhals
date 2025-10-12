@@ -2045,6 +2045,46 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._with_compliant(self._compliant_series.round(decimals))
 
+    def floor(self) -> Self:
+        r"""Compute the numerical floor.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> s_native = pa.chunked_array([[1.1, 4.3, -1.3]])
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.floor().to_native()  # doctest:+ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                1,
+                4,
+                -2
+              ]
+            ]
+        """
+        return self._with_compliant(self._compliant_series.floor())
+
+    def ceil(self) -> Self:
+        r"""Compute the numerical ceiling.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> s_native = pa.chunked_array([[1.1, 4.3, -1.3]])
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.floor().to_native()  # doctest:+ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                2,
+                5,
+                -1
+              ]
+            ]
+        """
+        return self._with_compliant(self._compliant_series.ceil())
+
     def to_dummies(
         self, *, separator: str = "_", drop_first: bool = False
     ) -> DataFrame[Any]:

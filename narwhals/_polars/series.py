@@ -119,6 +119,8 @@ INHERITED_METHODS = frozenset(
         "quantile",
         "rank",
         "round",
+        "floor",
+        "ceil",
         "sample",
         "shift",
         "skew",
@@ -735,6 +737,8 @@ class PolarsSeries:
     quantile: Method[float]
     rank: Method[Self]
     round: Method[Self]
+    floor: Method[Self]
+    ceil: Method[Self]
     sample: Method[Self]
     shift: Method[Self]
     skew: Method[float | None]

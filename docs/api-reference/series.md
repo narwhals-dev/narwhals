@@ -72,6 +72,8 @@
         - rolling_sum
         - rolling_var
         - round
+        - floor
+        - ceil
         - sample
         - scatter
         - shape

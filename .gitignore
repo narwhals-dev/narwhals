@@ -38,3 +38,4 @@ tpch/data/*
 
 # MacOS
 .DS_Store
+/.mypy_cache
