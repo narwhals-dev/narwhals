@@ -12,7 +12,7 @@ import narwhals.stable.v1.dtypes as v1_dtypes
 import narwhals.stable.v2.dtypes as v2_dtypes
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Iterator
     from types import ModuleType, UnionType
 
     from typing_extensions import TypeAlias
@@ -29,7 +29,7 @@ field_type = dtypes_main.Field
 
 def get_unslotted_classes(
     module: ModuleType, bases: _ClassInfo
-) -> Generator[tuple[str, ModuleType], None, None]:
+) -> Iterator[tuple[str, ModuleType]]:
     """Find classes in a `module` that inherit from `bases` but don't define `__slots__`."""
     return (
         (name, module)
@@ -51,7 +51,7 @@ unslotted_classes = tuple(
 if unslotted_classes:
     ret = 1
     msg = "The following classes are expected to define `__slots__` but they don't:\n"
-    cls_list = "\n".join(f"  * {c[0]} from {c[1]}" for c in unslotted_classes)
+    cls_list = "\n".join(f"  * {name} from {mod}" for name, mod in unslotted_classes)
     print(f"{msg}{cls_list}")
 
 sys.exit(ret)
