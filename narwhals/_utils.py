@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+import sys
 from collections.abc import Collection, Container, Iterable, Iterator, Mapping, Sequence
 from datetime import timezone
 from enum import Enum, auto
@@ -604,7 +605,7 @@ MIN_VERSIONS: Mapping[Implementation, tuple[int, ...]] = {
     Implementation.PYSPARK_CONNECT: (3, 5),
     Implementation.POLARS: (0, 20, 4),
     Implementation.DASK: (2024, 8),
-    Implementation.DUCKDB: (1,),
+    Implementation.DUCKDB: (1, 1),
     Implementation.IBIS: (6,),
     Implementation.SQLFRAME: (3, 22, 0),
 }
@@ -688,6 +689,10 @@ def _is_iterable(arg: Any | Iterable[Any]) -> bool:
         raise TypeError(msg)
 
     return isinstance(arg, Iterable) and not isinstance(arg, (str, bytes, Series))
+
+
+def is_iterator(val: Iterable[_T] | Any) -> TypeIs[Iterator[_T]]:
+    return isinstance(val, Iterator)
 
 
 def parse_version(version: str | ModuleType | _SupportsVersion) -> tuple[int, ...]:
@@ -1342,6 +1347,12 @@ def is_index_selector(
 def is_list_of(obj: Any, tp: type[_T]) -> TypeIs[list[_T]]:
     # Check if an object is a list of `tp`, only sniffing the first element.
     return bool(isinstance(obj, list) and obj and isinstance(obj[0], tp))
+
+
+def predicates_contains_list_of_bool(
+    predicates: Collection[Any],
+) -> TypeIs[Collection[list[bool]]]:
+    return any(is_list_of(pred, bool) for pred in predicates)
 
 
 def is_sequence_of(obj: Any, tp: type[_T]) -> TypeIs[Sequence[_T]]:
@@ -2098,3 +2109,14 @@ def normalize_path(source: FileSource, /) -> str:
     from pathlib import Path
 
     return str(Path(source))
+
+
+def extend_bool(
+    value: bool | Iterable[bool],  # noqa: FBT001
+    n_match: int,
+) -> Sequence[bool]:
+    """Ensure the given bool or sequence of bools is the correct length.
+
+    Stolen from https://github.com/pola-rs/polars/blob/b8bfb07a4a37a8d449d6d1841e345817431142df/py-polars/polars/_utils/various.py#L580-L594
+    """
+    return (value,) * n_match if isinstance(value, bool) else tuple(value)

@@ -187,8 +187,6 @@ jobs:
         run: |
           cd py-shiny
           . .venv/bin/activate
-          # temporary to get CI green
-          uv pip install "chatlas<0.9.0"
           make narwhals-install-shiny
       - name: install-narwhals-dev
         run: |
@@ -242,11 +240,6 @@ jobs:
           cd tea-tasting
           uv pip uninstall narwhals
           uv pip install -e ./..
-      - name: temporary pin duckdb # TODO(FBruzzesi): Unpin duckdb
-        run: |
-          cd tea-tasting
-          uv pip uninstall duckdb
-          uv pip install "duckdb<1.4"
       - name: show-deps
         run: |
           cd tea-tasting
@@ -292,8 +285,6 @@ jobs:
         run: |
           uv pip uninstall narwhals --system
           uv pip install -e . --system
-          # temporary pin to get CI green
-          uv pip install "polars<1.30" --system
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest

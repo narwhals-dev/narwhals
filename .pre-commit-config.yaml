@@ -3,7 +3,7 @@ ci:
 repos:
 - repo: https://github.com/astral-sh/ruff-pre-commit
   # Ruff version.
-  rev: 'v0.13.0'
+  rev: 'v0.14.0'
   hooks:
     # Run the formatter.
     - id: ruff-format
@@ -47,6 +47,11 @@ repos:
       entry: python -m utils.check_api_reference
       language: python
       additional_dependencies: [polars]
+    - id: sort-api-reference
+      name: sort-api-reference
+      pass_filenames: false
+      entry: python -m utils.sort_api_reference
+      language: python
     - id: imports-are-banned
       name: import are banned (use `get_pandas` instead of `import pandas`)
       entry: python utils/import_check.py
@@ -87,7 +92,7 @@ repos:
       language: pygrep
       files: ^\.github/workflows/
 - repo: https://github.com/adamchainz/blacken-docs
-  rev: "1.19.1"  # replace with latest tag on GitHub
+  rev: "1.20.0"  # replace with latest tag on GitHub
   hooks:
   -   id: blacken-docs
       args: [--skip-errors]

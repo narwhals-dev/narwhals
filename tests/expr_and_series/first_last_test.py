@@ -5,7 +5,13 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals as nw
-from tests.utils import POLARS_VERSION, PYARROW_VERSION, Constructor, assert_equal_data
+from tests.utils import (
+    DUCKDB_VERSION,
+    POLARS_VERSION,
+    PYARROW_VERSION,
+    Constructor,
+    assert_equal_data,
+)
 
 if TYPE_CHECKING:
     from narwhals.typing import PythonLiteral
@@ -95,6 +101,8 @@ def test_first_expr_over_order_by(
     if "ibis" in str(constructor):
         # https://github.com/ibis-project/ibis/issues/11656
         request.applymarker(pytest.mark.xfail)
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
     frame = nw.from_native(
         constructor(
             {
@@ -139,6 +147,8 @@ def test_first_expr_over_order_by_partition_by(
     if "ibis" in str(constructor):
         # https://github.com/ibis-project/ibis/issues/11656
         request.applymarker(pytest.mark.xfail)
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
     frame = nw.from_native(
         constructor(
             {"a": [1, 1, 2], "b": [4, 5, 6], "c": [None, 7, 8], "i": [1, None, 2]}
