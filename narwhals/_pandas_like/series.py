@@ -817,7 +817,13 @@ class PandasLikeSeries(EagerSeries[Any]):
                 result_arr, dtype=out_dtype, index=native.index, name=native.name
             )
         else:
-            result_native = np.floor(self.native)
+            array_funcs = self._array_funcs
+            result_arr = array_funcs.floor(self.native)
+            result_native = (
+                native_cls(result_arr, index=native.index, name=native.name)
+                if implementation.is_cudf()
+                else result_arr
+            )
         return self._with_native(result_native)
 
     def ceil(self) -> Self:
@@ -839,7 +845,13 @@ class PandasLikeSeries(EagerSeries[Any]):
                 result_arr, dtype=out_dtype, index=native.index, name=native.name
             )
         else:
-            result_native = np.ceil(self.native)
+            array_funcs = self._array_funcs
+            result_arr = array_funcs.ceil(self.native)
+            result_native = (
+                native_cls(result_arr, index=native.index, name=native.name)
+                if implementation.is_cudf()
+                else result_arr
+            )
         return self._with_native(result_native)
 
     def to_dummies(self, *, separator: str, drop_first: bool) -> PandasLikeDataFrame:

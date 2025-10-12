@@ -13,6 +13,7 @@ dist/
 coverage.xml
 .hypothesis/
 .pytest_cache/
+.mypy_cache
 
 # Documentation
 site/
@@ -38,4 +39,3 @@ tpch/data/*
 
 # MacOS
 .DS_Store
-/.mypy_cache
