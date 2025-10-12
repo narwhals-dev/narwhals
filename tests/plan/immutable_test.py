@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, TypeVar
 
 import pytest
 
+from narwhals._plan import when_then
 from narwhals._plan._immutable import Immutable
 
 if TYPE_CHECKING:
@@ -180,11 +181,21 @@ def _iter_descendants(*bases: type[T_co]) -> Iterator[type[T_co]]:
             yield from _iter_descendants(*unseen)
 
 
-@pytest.fixture(
-    params=_collect_immutable_descendants(), ids=lambda tp: tp.__name__, scope="session"
+ALLOW_DICT_TO_AVOID_MULTIPLE_BASES_HAVE_INSTANCE_LAYOUT_CONFLICT_ERROR = frozenset(
+    (when_then.Then, when_then.ChainedThen)
 )
+
+
+@pytest.fixture(params=_collect_immutable_descendants(), ids=lambda tp: tp.__name__)
 def immutable_type(request: pytest.FixtureRequest) -> type[Immutable]:
-    return request.param  # type: ignore[no-any-return]
+    tp: type[Immutable] = request.param
+    request.applymarker(
+        pytest.mark.xfail(
+            tp in ALLOW_DICT_TO_AVOID_MULTIPLE_BASES_HAVE_INSTANCE_LAYOUT_CONFLICT_ERROR,
+            reason="Multiple inheritance + `__slots__` = bad",
+        )
+    )
+    return tp
 
 
 def test_immutable___slots___(immutable_type: type[Immutable]) -> None:
