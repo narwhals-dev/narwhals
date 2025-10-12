@@ -1,12 +1,17 @@
 from __future__ import annotations
 
+import re
 import string
 from itertools import repeat
-from typing import Any
+from typing import TYPE_CHECKING, Any, TypeVar
 
 import pytest
 
 from narwhals._plan._immutable import Immutable
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+T_co = TypeVar("T_co", covariant=True)
 
 
 class Empty(Immutable): ...
@@ -147,3 +152,52 @@ def test_immutable_hash_cache() -> None:
     cached = obj.__immutable_hash_value__
     hash_cache_hit = hash(obj)
     assert hash_cache_miss == cached == hash_cache_hit
+
+
+def _collect_immutable_descendants() -> list[type[Immutable]]:
+    # NOTE: Will populate `__subclasses__` by bringing the defs into scope
+    from narwhals._plan import (
+        _expansion,
+        _expr_ir,
+        _function,
+        expressions,
+        options,
+        schema,
+        when_then,
+    )
+
+    _ = expressions, schema, options, _expansion, _expr_ir, _function, when_then
+    return sorted(set(_iter_descendants(Immutable)), key=repr)
+
+
+def _iter_descendants(*bases: type[T_co]) -> Iterator[type[T_co]]:
+    seen = set[T_co]()
+    for base in bases:
+        yield base
+        if (children := (base.__subclasses__())) and (
+            unseen := set(children).difference(seen)
+        ):
+            yield from _iter_descendants(*unseen)
+
+
+@pytest.fixture(
+    params=_collect_immutable_descendants(), ids=lambda tp: tp.__name__, scope="session"
+)
+def immutable_type(request: pytest.FixtureRequest) -> type[Immutable]:
+    return request.param  # type: ignore[no-any-return]
+
+
+def test_immutable___slots___(immutable_type: type[Immutable]) -> None:
+    featureless_instance = object.__new__(immutable_type)
+
+    # NOTE: If this fails, `__setattr__` has been overriden
+    with pytest.raises(AttributeError, match=r"immutable"):
+        featureless_instance.i_dont_exist = 999  # type: ignore[assignment]
+
+    # NOTE: If this fails, `__slots__` lose the size benefit
+    with pytest.raises(AttributeError, match=re.escape("has no attribute '__dict__'")):
+        _ = featureless_instance.__dict__
+
+    slots = immutable_type.__slots__
+    if slots:
+        assert len(slots) != 0, slots
