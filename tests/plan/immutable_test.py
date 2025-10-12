@@ -146,10 +146,10 @@ def test_immutable_hash_cache() -> None:
     obj = TwoSlot(a=int_long, b=str_long)
 
     with pytest.raises(AttributeError):
-        uncached = obj.__immutable_hash_value__  # noqa: F841
+        _ = getattr(obj, "__immutable_hash_value__")  # noqa: B009
 
     hash_cache_miss = hash(obj)
-    cached = obj.__immutable_hash_value__
+    cached = getattr(obj, "__immutable_hash_value__")  # noqa: B009
     hash_cache_hit = hash(obj)
     assert hash_cache_miss == cached == hash_cache_hit
 

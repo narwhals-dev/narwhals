@@ -1,44 +1,23 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypeVar
+
+from narwhals._plan._meta import ImmutableMeta
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
-    from typing import Any, Callable
+    from collections.abc import Iterable, Iterator
+    from typing import Any
 
-    from typing_extensions import Never, Self, dataclass_transform
+    from typing_extensions import Never, Self
 
-else:
-    # https://docs.python.org/3/library/typing.html#typing.dataclass_transform
-    def dataclass_transform(
-        *,
-        eq_default: bool = True,
-        order_default: bool = False,
-        kw_only_default: bool = False,
-        frozen_default: bool = False,
-        field_specifiers: tuple[type[Any] | Callable[..., Any], ...] = (),
-        **kwargs: Any,
-    ) -> Callable[[T], T]:
-        def decorator(cls_or_fn: T) -> T:
-            cls_or_fn.__dataclass_transform__ = {
-                "eq_default": eq_default,
-                "order_default": order_default,
-                "kw_only_default": kw_only_default,
-                "frozen_default": frozen_default,
-                "field_specifiers": field_specifiers,
-                "kwargs": kwargs,
-            }
-            return cls_or_fn
-
-        return decorator
+    from narwhals._plan.typing import Seq
 
 
 T = TypeVar("T")
 _IMMUTABLE_HASH_NAME: Literal["__immutable_hash_value__"] = "__immutable_hash_value__"
 
 
-@dataclass_transform(kw_only_default=True, frozen_default=True)
-class Immutable:
+class Immutable(metaclass=ImmutableMeta):
     """A poor man's frozen dataclass.
 
     - Keyword-only constructor (IDE supported)
@@ -50,17 +29,16 @@ class Immutable:
     """
 
     __slots__ = (_IMMUTABLE_HASH_NAME,)
-    __immutable_hash_value__: int
+    if not TYPE_CHECKING:
+        # NOTE: Trying to avoid this being added to synthesized `__init__`
+        # Seems to be the only difference when decorating the metaclass
+        __immutable_hash_value__: int
 
-    @property
-    def __immutable_keys__(self) -> Iterator[str]:
-        slots: tuple[str, ...] = self.__slots__
-        for name in slots:
-            if name != _IMMUTABLE_HASH_NAME:
-                yield name
+    __immutable_keys__: ClassVar[Seq[str]]
 
     @property
     def __immutable_values__(self) -> Iterator[Any]:
+        """Override to configure hash seed."""
         for name in self.__immutable_keys__:
             yield getattr(self, name)
 
@@ -72,10 +50,10 @@ class Immutable:
     @property
     def __immutable_hash__(self) -> int:
         if hasattr(self, _IMMUTABLE_HASH_NAME):
-            return self.__immutable_hash_value__
+            return getattr(self, _IMMUTABLE_HASH_NAME)  # type: ignore[no-any-return]
         hash_value = hash((self.__class__, *self.__immutable_values__))
         object.__setattr__(self, _IMMUTABLE_HASH_NAME, hash_value)
-        return self.__immutable_hash_value__
+        return getattr(self, _IMMUTABLE_HASH_NAME)  # type: ignore[no-any-return]
 
     def __setattr__(self, name: str, value: Never) -> Never:
         msg = f"{type(self).__name__!r} is immutable, {name!r} cannot be set."
@@ -95,13 +73,6 @@ class Immutable:
                 if name not in changes or value_current == changes[name]:
                     changes[name] = value_current
         return type(self)(**changes)
-
-    def __init_subclass__(cls, *args: Any, **kwds: Any) -> None:
-        super().__init_subclass__(*args, **kwds)
-        if cls.__slots__:
-            ...
-        else:
-            cls.__slots__ = ()
 
     def __hash__(self) -> int:
         return self.__immutable_hash__
@@ -128,18 +99,9 @@ class Immutable:
             for name, value in kwds.items():
                 object.__setattr__(self, name, value)
         elif missing := required.difference(kwds):
-            msg = (
-                f"{type(self).__name__!r} requires attributes {sorted(required)!r}, \n"
-                f"but missing values for {sorted(missing)!r}"
-            )
-            raise TypeError(msg)
+            raise _init_missing_error(self, required, missing)
         else:
-            extra = set(kwds).difference(required)
-            msg = (
-                f"{type(self).__name__!r} only supports attributes {sorted(required)!r}, \n"
-                f"but got unknown arguments {sorted(extra)!r}"
-            )
-            raise TypeError(msg)
+            raise _init_extra_error(self, required, set(kwds).difference(required))
 
 
 def _field_str(name: str, value: Any) -> str:
@@ -149,3 +111,23 @@ def _field_str(name: str, value: Any) -> str:
     if isinstance(value, str):
         return f"{name}={value!r}"
     return f"{name}={value}"
+
+
+def _init_missing_error(
+    obj: object, required: Iterable[str], missing: Iterable[str]
+) -> TypeError:
+    msg = (
+        f"{type(obj).__name__!r} requires attributes {sorted(required)!r}, \n"
+        f"but missing values for {sorted(missing)!r}"
+    )
+    return TypeError(msg)
+
+
+def _init_extra_error(
+    obj: object, required: Iterable[str], extra: Iterable[str]
+) -> TypeError:
+    msg = (
+        f"{type(obj).__name__!r} only supports attributes {sorted(required)!r}, \n"
+        f"but got unknown arguments {sorted(extra)!r}"
+    )
+    return TypeError(msg)
