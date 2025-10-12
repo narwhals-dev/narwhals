@@ -77,11 +77,11 @@ def report_errors(errors: list[str], temp_files: list[tuple[Path, str]]) -> None
     if not errors:
         return
 
-    print("❌ Ruff issues found in examples:\n")  # noqa: T201
+    print("❌ Ruff issues found in examples:\n")
     for line in errors:
         for temp_file, original_context in temp_files:
             if str(temp_file) in line:
-                print(f"{original_context}{line.replace(str(temp_file), '')}")  # noqa: T201
+                print(f"{original_context}{line.replace(str(temp_file), '')}")
                 break
 
 

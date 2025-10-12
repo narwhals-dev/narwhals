@@ -52,6 +52,11 @@ repos:
       pass_filenames: false
       entry: python -m utils.sort_api_reference
       language: python
+    - id: check-slotted-classes
+      name: check-slotted-classes
+      pass_filenames: false
+      entry: python -m utils.check_slotted_classes
+      language: python
     - id: imports-are-banned
       name: import are banned (use `get_pandas` instead of `import pandas`)
       entry: python utils/import_check.py
