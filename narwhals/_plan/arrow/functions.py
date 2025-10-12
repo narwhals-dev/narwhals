@@ -24,8 +24,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import TypeAlias, TypeIs
 
-    from narwhals._arrow.dataframe import PromoteOptions
-    from narwhals._arrow.typing import Incomplete
+    from narwhals._arrow.typing import Incomplete, PromoteOptions
     from narwhals._plan.arrow.series import ArrowSeries
     from narwhals._plan.arrow.typing import (
         Array,
