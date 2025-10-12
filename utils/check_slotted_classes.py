@@ -1,5 +1,3 @@
-# ruff: noqa: T201
-
 from __future__ import annotations
 
 import inspect
