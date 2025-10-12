@@ -42,6 +42,8 @@ if unslotted_classes:
     ret = 1
     msg = "The following classes are expected to define `__slots__` but they don't:\n"
     cls_list = "\n".join(f"  * {name}" for name in unslotted_classes)
+    url = "https://docs.python.org/3/reference/datamodel.html#slots"
+    hint = f"Hint: See for detail {url!r}"
     print(f"{msg}{cls_list}")
 
 sys.exit(ret)
