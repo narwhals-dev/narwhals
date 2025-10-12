@@ -190,7 +190,7 @@ def immutable_type(request: pytest.FixtureRequest) -> type[Immutable]:
 def test_immutable___slots___(immutable_type: type[Immutable]) -> None:
     featureless_instance = object.__new__(immutable_type)
 
-    # NOTE: If this fails, `__setattr__` has been overriden
+    # NOTE: If this fails, `__setattr__` has been overridden
     with pytest.raises(AttributeError, match=r"immutable"):
         featureless_instance.i_dont_exist = 999  # type: ignore[assignment]
 
