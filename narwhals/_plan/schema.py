@@ -7,7 +7,7 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Protocol, TypeVar, overload
 
 from narwhals._plan._expr_ir import NamedIR
-from narwhals._plan._immutable import _IMMUTABLE_HASH_NAME, Immutable
+from narwhals._plan._immutable import Immutable
 from narwhals._utils import _hasattr_static
 from narwhals.dtypes import Unknown
 
@@ -86,12 +86,9 @@ class FrozenSchema(Immutable):
         return tuple(chain(it, named.values()))
 
     @property
-    def __immutable_hash__(self) -> int:
-        if hasattr(self, _IMMUTABLE_HASH_NAME):
-            return self.__immutable_hash_value__
-        hash_value = hash((self.__class__, *tuple(self._mapping.items())))
-        object.__setattr__(self, _IMMUTABLE_HASH_NAME, hash_value)
-        return self.__immutable_hash_value__
+    def __immutable_values__(self) -> Iterator[Any]:
+        # Repurposed `self._mapping.items()` as a hash seed
+        yield from tuple(self.items())
 
     @property
     def names(self) -> FrozenColumns:
