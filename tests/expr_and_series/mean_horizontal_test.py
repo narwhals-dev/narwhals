@@ -15,6 +15,11 @@ def test_meanh(constructor: Constructor, col_expr: Any) -> None:
     result = df.select(horizontal_mean=nw.mean_horizontal(col_expr, nw.col("b")))
     expected = {"horizontal_mean": [2.5, 3.0, 6.0, None]}
     assert_equal_data(result, expected)
+    result = df.select(
+        horizontal_mean=nw.mean_horizontal(nw.lit(1), col_expr, nw.col("b"))
+    )
+    expected = {"horizontal_mean": [2.0, 2.0, 3.5, 1.0]}
+    assert_equal_data(result, expected)
 
 
 def test_meanh_all(constructor: Constructor) -> None:

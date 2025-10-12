@@ -142,8 +142,8 @@ class ArrowNamespace(
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             expr_results = tuple(chain.from_iterable(expr(df) for expr in exprs))
-            series = (s.fill_null(0, strategy=None, limit=None) for s in expr_results)
-            non_na = (1 - s.is_null().cast(int_64) for s in expr_results)
+            series = [s.fill_null(0, strategy=None, limit=None) for s in expr_results]
+            non_na = [1 - s.is_null().cast(int_64) for s in expr_results]
             return [reduce(operator.add, series) / reduce(operator.add, non_na)]
 
         return self._expr._from_callable(
