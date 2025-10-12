@@ -23,7 +23,12 @@ from narwhals._utils import Implementation
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
 
-    from narwhals._arrow.typing import ArrayOrScalar, ChunkedArrayAny, Incomplete
+    from narwhals._arrow.typing import (
+        ArrayOrScalar,
+        ChunkedArrayAny,
+        Incomplete,
+        ScalarAny,
+    )
     from narwhals._compliant.typing import ScalarKwargs
     from narwhals._utils import Version
     from narwhals.typing import IntoDType, NonNestedLiteral
@@ -48,6 +53,11 @@ class ArrowNamespace(
 
     def __init__(self, *, version: Version) -> None:
         self._version = version
+
+    def extract_native(
+        self, *series: ArrowSeries
+    ) -> Iterator[ChunkedArrayAny | ScalarAny]:
+        return (s.native[0] if s._broadcast else s.native for s in series)
 
     def len(self) -> ArrowExpr:
         # coverage bug? this is definitely hit
@@ -227,16 +237,13 @@ class ArrowNamespace(
         self, *exprs: ArrowExpr, separator: str, ignore_nulls: bool
     ) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            align = self._series._align_full_broadcast
-            compliant_series_list = align(
-                *(chain.from_iterable(expr(df) for expr in exprs))
-            )
-            name = compliant_series_list[0].name
+            series = list(chain.from_iterable(expr(df) for expr in exprs))
+            name = series[0].name
             null_handling: Literal["skip", "emit_null"] = (
                 "skip" if ignore_nulls else "emit_null"
             )
             it, separator_scalar = cast_to_comparable_string_types(
-                *(s.native for s in compliant_series_list), separator=separator
+                *self.extract_native(*series), separator=separator
             )
             # NOTE: stubs indicate `separator` must also be a `ChunkedArray`
             # Reality: `str` is fine
