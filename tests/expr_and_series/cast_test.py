@@ -13,7 +13,7 @@ from tests.utils import (
     Constructor,
     ConstructorEager,
     assert_equal_data,
-    is_windows,
+    is_pyarrow_windows_no_tzdata,
     time_unit_compat,
 )
 
@@ -213,8 +213,9 @@ def test_cast_datetime_tz_aware(
         or "ibis" in str(constructor)
     ):
         request.applymarker(pytest.mark.xfail)
-    if "pyarrow" in str(constructor) and is_windows():
-        pytest.skip()
+    request.applymarker(
+        pytest.mark.xfail(is_pyarrow_windows_no_tzdata(constructor), reason="no tzdata")
+    )
 
     data = {
         "date": [
@@ -242,8 +243,9 @@ def test_cast_datetime_utc(
         or "sqlframe" in str(constructor)
     ):
         request.applymarker(pytest.mark.xfail)
-    if "pyarrow" in str(constructor) and is_windows():
-        pytest.skip()
+    request.applymarker(
+        pytest.mark.xfail(is_pyarrow_windows_no_tzdata(constructor), reason="no tzdata")
+    )
 
     data = {
         "date": [
