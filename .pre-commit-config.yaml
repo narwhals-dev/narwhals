@@ -22,10 +22,12 @@ repos:
       args: [--ignore-words-list=ser]
       exclude: ^docs/api-completeness.md$
 -   repo: https://github.com/pycqa/flake8
-    rev: '7.3.0'  # todo: remove once https://github.com/astral-sh/ruff/issues/458 is addressed
+    rev: '7.3.0'
     hooks:
     -   id: flake8
-        additional_dependencies: [darglint==1.8.1, Flake8-pyproject]
+        # TODO(unassigned): replace with ruff once https://github.com/astral-sh/ruff/issues/458 is addressed.
+        name: darglint
+        alias: darglint
         entry: flake8 --select DAR --ignore DAR101,DAR201,DAR401,DAR402
         exclude: |
             (?x)^(
@@ -39,6 +41,15 @@ repos:
                 # Soft-deprecated, so less crucial to document so carefully
                 narwhals/stable/v1/.*
             )$
+        # Keep in sync with `flake8-typing-imports` so the same venv is reused.
+        additional_dependencies: [darglint==1.8.1, flake8-typing-imports==1.17.0]
+    -   id: flake8
+        # TODO(unassigned): replace with ruff once https://github.com/astral-sh/ruff/issues/2302 is addressed.
+        name: flake8-typing-imports
+        alias: flake8-typing-imports
+        entry: flake8 --select TYP --min-python-version=3.9.0
+        # Keep in sync with `darglint` so the same venv is reused.
+        additional_dependencies: [darglint==1.8.1, flake8-typing-imports==1.17.0]
 - repo: local
   hooks:
     - id: check-api-reference
