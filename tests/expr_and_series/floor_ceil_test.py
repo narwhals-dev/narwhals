@@ -6,7 +6,7 @@ import narwhals as nw
 from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 
-def test_floor(constructor: Constructor) -> None:
+def test_floor_expr(constructor: Constructor) -> None:
     data = {"a": [1.12345, 2.56789, 3.901234, -0.5]}
     df_raw = constructor(data)
     df = nw.from_native(df_raw)
@@ -17,7 +17,7 @@ def test_floor(constructor: Constructor) -> None:
     assert_equal_data(result_frame, expected_data)
 
 
-def test_ceil(constructor: Constructor) -> None:
+def test_ceil_expr(constructor: Constructor) -> None:
     data = {"a": [1.12345, 2.56789, 3.901234, -0.5]}
     df_raw = constructor(data)
     df = nw.from_native(df_raw)
