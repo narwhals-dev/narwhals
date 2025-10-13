@@ -17,7 +17,7 @@ from narwhals._expression_parsing import (
     combine_evaluate_output_names,
 )
 from narwhals._sql.typing import SQLLazyFrameT
-from narwhals._utils import Implementation, Version, not_implemented
+from narwhals._utils import Implementation, Version, extend_bool, not_implemented
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -199,6 +199,8 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
         return self.__narwhals_namespace__()._coalesce(*expr)
 
     def _count_star(self) -> NativeExprT: ...
+    def _first(self, expr: NativeExprT, *order_by: str) -> NativeExprT: ...
+    def _last(self, expr: NativeExprT, *order_by: str) -> NativeExprT: ...
 
     def _when(
         self,
@@ -226,6 +228,7 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
         def func(
             df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
         ) -> Sequence[NativeExprT]:
+            flags = extend_bool(reverse, len(inputs.order_by))
             return [
                 self._when(
                     ~self._function("isnull", expr),  # type: ignore[operator]
@@ -233,8 +236,8 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
                         self._function(func_name, expr),
                         inputs.partition_by,
                         inputs.order_by,
-                        descending=[reverse] * len(inputs.order_by),
-                        nulls_last=[reverse] * len(inputs.order_by),
+                        descending=flags,
+                        nulls_last=flags,
                         rows_end=0,
                     ),
                 )
@@ -606,13 +609,14 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
         def func(
             df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
         ) -> Sequence[NativeExprT]:
+            flags = extend_bool(reverse, len(inputs.order_by))
             return [
                 self._window_expression(
                     self._function("count", expr),
                     inputs.partition_by,
                     inputs.order_by,
-                    descending=[reverse] * len(inputs.order_by),
-                    nulls_last=[reverse] * len(inputs.order_by),
+                    descending=flags,
+                    nulls_last=flags,
                     rows_end=0,
                 )
                 for expr in self(df)
@@ -702,15 +706,42 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
         def func(
             df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
         ) -> Sequence[NativeExprT]:
+            flags = extend_bool(True, len(inputs.order_by))
             return [
                 self._window_expression(
                     self._function("row_number"),
                     (*inputs.partition_by, expr),
                     inputs.order_by,
-                    descending=[True] * len(inputs.order_by),
-                    nulls_last=[True] * len(inputs.order_by),
+                    descending=flags,
+                    nulls_last=flags,
                 )
                 == self._lit(1)
+                for expr in self(df)
+            ]
+
+        return self._with_window_function(func)
+
+    def first(self) -> Self:
+        def func(
+            df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
+        ) -> Sequence[NativeExprT]:
+            return [
+                self._window_expression(
+                    self._first(expr, *inputs.order_by), inputs.partition_by
+                )
+                for expr in self(df)
+            ]
+
+        return self._with_window_function(func)
+
+    def last(self) -> Self:
+        def func(
+            df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
+        ) -> Sequence[NativeExprT]:
+            return [
+                self._window_expression(
+                    self._last(expr, *inputs.order_by), inputs.partition_by
+                )
                 for expr in self(df)
             ]
 
@@ -727,17 +758,15 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
         def _rank(
             expr: NativeExprT,
             partition_by: Sequence[str | NativeExprT] = (),
-            order_by: Sequence[str | NativeExprT] = (),
             *,
-            descending: Sequence[bool],
-            nulls_last: Sequence[bool],
+            descending: bool,
         ) -> NativeExprT:
             count_expr = self._count_star()
             window_kwargs: dict[str, Any] = {
                 "partition_by": partition_by,
-                "order_by": (expr, *order_by),
-                "descending": descending,
-                "nulls_last": nulls_last,
+                "order_by": (expr,),
+                "descending": [descending],
+                "nulls_last": [True],
             }
             count_window_kwargs: dict[str, Any] = {"partition_by": (*partition_by, expr)}
             window = self._window_expression
@@ -763,21 +792,16 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
             return self._when(~F("isnull", expr), rank_expr)  # type: ignore[operator]
 
         def _unpartitioned_rank(expr: NativeExprT) -> NativeExprT:
-            return _rank(expr, descending=[descending], nulls_last=[True])
+            return _rank(expr, descending=descending)
 
         def _partitioned_rank(
             df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
         ) -> Sequence[NativeExprT]:
-            # node: when `descending` / `nulls_last` are supported in `.over`, they should be respected here
-            # https://github.com/narwhals-dev/narwhals/issues/2790
+            if inputs.order_by:
+                msg = "`rank` followed by `over` with `order_by` specified is not supported for SQL-like backends."
+                raise NotImplementedError(msg)
             return [
-                _rank(
-                    expr,
-                    inputs.partition_by,
-                    inputs.order_by,
-                    descending=[descending] + [False] * len(inputs.order_by),
-                    nulls_last=[True] + [False] * len(inputs.order_by),
-                )
+                _rank(expr, inputs.partition_by, descending=descending)
                 for expr in self(df)
             ]
 

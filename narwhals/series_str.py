@@ -392,6 +392,52 @@ class SeriesStringNamespace(Generic[SeriesT]):
             self._narwhals_series._compliant_series.str.to_date(format=format)
         )
 
+    def to_titlecase(self) -> SeriesT:
+        """Modify strings to their titlecase equivalent.
+
+        Notes:
+            This is a form of case transform where the first letter of each word is
+            capitalized, with the rest of the word in lowercase.
+
+        Warning:
+            Different backends might follow different rules to determine what a "word" is:
+
+            - polars uses **non-alphanumeric** characters to define the word boundaries.
+            - pandas-like and pyarrow use **non-alphabetic** characters to define
+                the word boundaries, matching the behavior of
+                [`str.title`](https://docs.python.org/3/library/stdtypes.html#str.title).
+
+            As an example of such difference, in the former case the string `"with123numbers"`
+            is mapped to `"With123numbers"` (notice lowercase **n** after the digits), while
+            in the latter to `"With123Numbers"` (notice uppercase **N** after the digits).
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> s_native = pa.chunked_array(
+            ...     [
+            ...         [
+            ...             "'e.t. phone home'",
+            ...             "you talkin' to me?",
+            ...             "to infinity,and BEYOND!",
+            ...         ]
+            ...     ]
+            ... )
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.str.to_titlecase().to_native()  # doctest: +ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                "'E.T. Phone Home'",
+                "You Talkin' To Me?",
+                "To Infinity,And Beyond!"
+              ]
+            ]
+        """
+        return self._narwhals_series._with_compliant(
+            self._narwhals_series._compliant_series.str.to_titlecase()
+        )
+
     def zfill(self, width: int) -> SeriesT:
         r"""Pad strings with zeros on the left.
 

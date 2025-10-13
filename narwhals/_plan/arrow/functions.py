@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import typing as t
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 import pyarrow as pa  # ignore-banned-import
@@ -13,6 +14,7 @@ from narwhals._arrow.utils import (
     chunked_array as _chunked_array,
     floordiv_compat as floordiv,
 )
+from narwhals._plan import expressions as ir
 from narwhals._plan.arrow import options
 from narwhals._plan.expressions import operators as ops
 from narwhals._utils import Implementation
@@ -20,22 +22,21 @@ from narwhals._utils import Implementation
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
 
-    from typing_extensions import TypeIs
+    from typing_extensions import TypeAlias, TypeIs
 
-    from narwhals._arrow.dataframe import PromoteOptions
-    from narwhals._arrow.typing import (
-        ArrayAny,
-        ArrayOrScalar,
-        ChunkedArrayAny,
-        Incomplete,
-    )
+    from narwhals._arrow.typing import Incomplete, PromoteOptions
     from narwhals._plan.arrow.series import ArrowSeries
     from narwhals._plan.arrow.typing import (
+        Array,
+        ArrayAny,
+        ArrowAny,
         BinaryComp,
         BinaryLogical,
         BinaryNumericTemporal,
         BinOp,
         ChunkedArray,
+        ChunkedArrayAny,
+        ChunkedOrArrayAny,
         ChunkedOrScalar,
         ChunkedOrScalarAny,
         DataType,
@@ -55,6 +56,9 @@ if TYPE_CHECKING:
     from narwhals.typing import ClosedInterval, IntoArrowSchema
 
 BACKEND_VERSION = Implementation.PYARROW._backend_version()
+
+IntoColumnAgg: TypeAlias = Callable[[str], ir.AggExpr]
+"""Helper constructor for single-column aggregations."""
 
 is_null = pc.is_null
 is_not_null = t.cast("UnaryFunction[ScalarAny,pa.BooleanScalar]", pc.is_valid)
@@ -110,6 +114,10 @@ _IS_BETWEEN: Mapping[ClosedInterval, tuple[BinaryComp, BinaryComp]] = {
     "right": (gt, lt_eq),
     "none": (gt, lt),
     "both": (gt_eq, lt_eq),
+}
+IS_FIRST_LAST_DISTINCT: Mapping[type[ir.boolean.BooleanFunction], IntoColumnAgg] = {
+    ir.boolean.IsFirstDistinct: ir.min,
+    ir.boolean.IsLastDistinct: ir.max,
 }
 
 
@@ -210,6 +218,27 @@ def is_between(
     return and_(fn_lhs(native, lower), fn_rhs(native, upper))
 
 
+@t.overload
+def is_in(
+    values: ChunkedArrayAny, /, other: ChunkedOrArrayAny
+) -> ChunkedArray[pa.BooleanScalar]: ...
+@t.overload
+def is_in(values: ArrayAny, /, other: ChunkedOrArrayAny) -> Array[pa.BooleanScalar]: ...
+@t.overload
+def is_in(values: ScalarAny, /, other: ChunkedOrArrayAny) -> pa.BooleanScalar: ...
+def is_in(values: ArrowAny, /, other: ChunkedOrArrayAny) -> ArrowAny:
+    """Check if elements of `values` are present in `other`.
+
+    Roughly equivalent to [`polars.Expr.is_in`](https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.is_in.html)
+
+    Returns a mask with `len(values)` elements.
+    """
+    # NOTE: Stubs don't include a `ChunkedArray` return
+    # NOTE: Replaced ambiguous parameter name (`value_set`)
+    is_in_: Incomplete = pc.is_in
+    return is_in_(values, other)  # type: ignore[no-any-return]
+
+
 def binary(
     lhs: ChunkedOrScalarAny, op: type[ops.Operator], rhs: ChunkedOrScalarAny
 ) -> ChunkedOrScalarAny:
@@ -257,7 +286,7 @@ def array(
 
 
 def chunked_array(
-    arr: ArrayOrScalar | list[Iterable[Any]], dtype: DataType | None = None, /
+    arr: ArrowAny | list[Iterable[Any]], dtype: DataType | None = None, /
 ) -> ChunkedArrayAny:
     return _chunked_array(array(arr) if isinstance(arr, pa.Scalar) else arr, dtype)
 

@@ -121,7 +121,7 @@ def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
             elif isinstance(lhs, float) and math.isnan(lhs):
                 are_equivalent_values = rhs is None or math.isnan(rhs)
             elif isinstance(rhs, float) and math.isnan(rhs):
-                are_equivalent_values = lhs is None or math.isnan(lhs)
+                are_equivalent_values = lhs is None or pd.isna(lhs) or math.isnan(lhs)
             elif lhs is None:
                 are_equivalent_values = rhs is None
             elif isinstance(lhs, list) and isinstance(rhs, list):
@@ -147,7 +147,7 @@ def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
                 are_equivalent_values = lhs == rhs
 
             assert are_equivalent_values, (
-                f"Mismatch at index {i}: {lhs} != {rhs}\nExpected: {expected}\nGot: {result}"
+                f"Mismatch at index {i}, key {key}: {lhs} != {rhs}\nExpected: {expected}\nGot: {result}"
             )
 
 

@@ -10,6 +10,7 @@ from narwhals._plan._parse import (
     parse_into_expr_ir,
     parse_into_seq_of_expr_ir,
     parse_predicates_constraints_into_expr_ir,
+    parse_sort_by_into_seq_of_expr_ir,
 )
 from narwhals._plan.expressions import (
     aggregation as agg,
@@ -25,7 +26,7 @@ from narwhals._plan.options import (
     rolling_options,
 )
 from narwhals._utils import Version
-from narwhals.exceptions import ComputeError, InvalidOperationError
+from narwhals.exceptions import ComputeError
 
 if TYPE_CHECKING:
     from typing_extensions import Never, Self
@@ -48,21 +49,6 @@ if TYPE_CHECKING:
         RollingInterpolationMethod,
         TemporalLiteral,
     )
-
-
-# NOTE: Trying to keep consistent logic between `DataFrame.sort` and `Expr.sort_by`
-def _parse_sort_by(
-    by: OneOrIterable[IntoExpr] = (),
-    *more_by: IntoExpr,
-    descending: OneOrIterable[bool] = False,
-    nulls_last: OneOrIterable[bool] = False,
-) -> tuple[Seq[ir.ExprIR], SortMultipleOptions]:
-    sort_by = parse_into_seq_of_expr_ir(by, *more_by)
-    if length_changing := next((e for e in sort_by if e.is_scalar), None):
-        msg = f"All expressions sort keys must preserve length, but got:\n{length_changing!r}"
-        raise InvalidOperationError(msg)
-    options = SortMultipleOptions.parse(descending=descending, nulls_last=nulls_last)
-    return sort_by, options
 
 
 # NOTE: Overly simplified placeholders for mocking typing
@@ -151,8 +137,8 @@ class Expr:
 
     def over(
         self,
-        *partition_by: OneOrIterable[IntoExpr],
-        order_by: OneOrIterable[IntoExpr] = None,
+        *partition_by: OneOrIterable[IntoExprColumn],
+        order_by: OneOrIterable[IntoExprColumn] | None = None,
         descending: bool = False,
         nulls_last: bool = False,
     ) -> Self:
@@ -175,14 +161,13 @@ class Expr:
 
     def sort_by(
         self,
-        by: OneOrIterable[IntoExpr],
-        *more_by: IntoExpr,
+        by: OneOrIterable[IntoExprColumn],
+        *more_by: IntoExprColumn,
         descending: OneOrIterable[bool] = False,
         nulls_last: OneOrIterable[bool] = False,
     ) -> Self:
-        keys, opts = _parse_sort_by(
-            by, *more_by, descending=descending, nulls_last=nulls_last
-        )
+        keys = parse_sort_by_into_seq_of_expr_ir(by, *more_by)
+        opts = SortMultipleOptions.parse(descending=descending, nulls_last=nulls_last)
         return self._from_ir(ir.SortBy(expr=self._ir, by=keys, options=opts))
 
     def filter(
@@ -209,13 +194,11 @@ class Expr:
             if bin_count is not None:
                 msg = "can only provide one of `bin_count` or `bins`"
                 raise ComputeError(msg)
-            node = F.HistBins(bins=tuple(bins), include_breakpoint=include_breakpoint)
+            node = F.Hist.from_bins(bins, include_breakpoint=include_breakpoint)
         elif bin_count is not None:
-            node = F.HistBinCount(
-                bin_count=bin_count, include_breakpoint=include_breakpoint
-            )
+            node = F.Hist.from_bin_count(bin_count, include_breakpoint=include_breakpoint)
         else:
-            node = F.HistBinCount(include_breakpoint=include_breakpoint)
+            node = F.Hist.from_bin_count(include_breakpoint=include_breakpoint)
         return self._with_unary(node)
 
     def log(self, base: float = math.e) -> Self:

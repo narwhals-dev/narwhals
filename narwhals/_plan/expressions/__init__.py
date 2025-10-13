@@ -4,16 +4,22 @@ from narwhals._plan._expr_ir import (  # prob should move into package?
     ExprIR,
     NamedIR,
     SelectorIR,
+    named_ir,
 )
 from narwhals._plan._function import Function
 from narwhals._plan.expressions import (
     aggregation,
     boolean,
+    categorical,
     functions,
+    lists,
     operators,
     selectors,
+    strings,
+    struct,
+    temporal,
 )
-from narwhals._plan.expressions.aggregation import AggExpr, OrderableAggExpr
+from narwhals._plan.expressions.aggregation import AggExpr, OrderableAggExpr, max, min
 from narwhals._plan.expressions.expr import (
     Alias,
     All,
@@ -84,13 +90,21 @@ __all__ = [
     "_ColumnSelection",
     "aggregation",
     "boolean",
+    "categorical",
     "col",
     "cols",
     "functions",
     "index_columns",
+    "lists",
+    "max",
+    "min",
+    "named_ir",
     "nth",
     "operators",
     "over",
     "over_ordered",
     "selectors",
+    "strings",
+    "struct",
+    "temporal",
 ]

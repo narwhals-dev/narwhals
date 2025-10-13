@@ -13,7 +13,7 @@ from tests.utils import (
     Constructor,
     ConstructorEager,
     assert_equal_data,
-    is_windows,
+    is_pyarrow_windows_no_tzdata,
     time_unit_compat,
 )
 
@@ -209,11 +209,13 @@ def test_cast_datetime_tz_aware(
         "dask" in str(constructor)
         or "duckdb" in str(constructor)
         or "cudf" in str(constructor)  # https://github.com/rapidsai/cudf/issues/16973
-        or ("pyarrow_table" in str(constructor) and is_windows())
         or "pyspark" in str(constructor)
         or "ibis" in str(constructor)
     ):
         request.applymarker(pytest.mark.xfail)
+    request.applymarker(
+        pytest.mark.xfail(is_pyarrow_windows_no_tzdata(constructor), reason="no tzdata")
+    )
 
     data = {
         "date": [
@@ -239,9 +241,11 @@ def test_cast_datetime_utc(
         "dask" in str(constructor)
         # https://github.com/eakmanrq/sqlframe/issues/406
         or "sqlframe" in str(constructor)
-        or ("pyarrow_table" in str(constructor) and is_windows())
     ):
         request.applymarker(pytest.mark.xfail)
+    request.applymarker(
+        pytest.mark.xfail(is_pyarrow_windows_no_tzdata(constructor), reason="no tzdata")
+    )
 
     data = {
         "date": [
@@ -371,7 +375,7 @@ def test_cast_typing_invalid() -> None:
     # feel free to update the types used
     # See (https://github.com/narwhals-dev/narwhals/pull/2654#discussion_r2142263770)
 
-    with pytest.raises(AttributeError):
+    with pytest.raises(TypeError):
         df.select(a.cast(nw.Struct))  # type: ignore[arg-type]
 
     with pytest.raises(AttributeError):
@@ -389,8 +393,34 @@ def test_cast_typing_invalid() -> None:
     with pytest.raises((ValueError, AttributeError)):
         df.select(a.cast(nw.Struct({"a": nw.Int16, "b": nw.Enum})))  # type: ignore[dict-item]
 
-    with pytest.raises(AttributeError):
+    with pytest.raises(TypeError):
         df.select(a.cast(nw.List(nw.Struct)))  # type: ignore[arg-type]
 
     with pytest.raises(AttributeError):
         df.select(a.cast(nw.Array(nw.List, 2)))  # type: ignore[arg-type]
+
+
+@pytest.mark.skipif(PANDAS_VERSION < (2,), reason="too old for pyarrow")
+def test_pandas_pyarrow_dtypes() -> None:
+    s = nw.from_native(
+        pd.Series([123, None]).convert_dtypes(dtype_backend="pyarrow"), series_only=True
+    ).cast(nw.String)
+    result = s.str.len_chars().to_native()
+    assert result.dtype == "Int32[pyarrow]"
+
+    s = nw.from_native(
+        pd.Series([123, None], dtype="string[pyarrow]"), series_only=True
+    ).cast(nw.String)
+    result = s.str.len_chars().to_native()
+    assert result.dtype == "Int64"
+
+    s = nw.from_native(
+        pd.DataFrame({"a": ["foo", "bar"]}, dtype="string[pyarrow]")
+    ).select(nw.col("a").cast(nw.String))["a"]
+    assert s.to_native().dtype == "string[pyarrow]"
+
+
+def test_cast_object_pandas() -> None:
+    s = nw.from_native(pd.DataFrame({"a": [2, 3, None]}, dtype=object))["a"]
+    assert s[0] == 2
+    assert s.cast(nw.String)[0] == "2"

@@ -6,21 +6,17 @@ import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._arrow.utils import narwhals_to_native_dtype
+from narwhals._plan import expressions as ir
 from narwhals._plan.arrow import functions as fn
 from narwhals._plan.arrow.series import ArrowSeries as Series
 from narwhals._plan.arrow.typing import ChunkedOrScalarAny, NativeScalar, StoresNativeT_co
+from narwhals._plan.common import temp
 from narwhals._plan.compliant.column import ExprDispatch
 from narwhals._plan.compliant.expr import EagerExpr
 from narwhals._plan.compliant.scalar import EagerScalar
 from narwhals._plan.compliant.typing import namespace
 from narwhals._plan.expressions import NamedIR
-from narwhals._utils import (
-    Implementation,
-    Version,
-    _StoresNative,
-    generate_temporary_column_name,
-    not_implemented,
-)
+from narwhals._utils import Implementation, Version, _StoresNative, not_implemented
 from narwhals.exceptions import InvalidOperationError, ShapeError
 
 if TYPE_CHECKING:
@@ -29,7 +25,6 @@ if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
 
     from narwhals._arrow.typing import ChunkedArrayAny, Incomplete
-    from narwhals._plan import expressions as ir
     from narwhals._plan.arrow.dataframe import ArrowDataFrame as Frame
     from narwhals._plan.arrow.namespace import ArrowNamespace
     from narwhals._plan.expressions.aggregation import (
@@ -53,6 +48,8 @@ if TYPE_CHECKING:
         All,
         IsBetween,
         IsFinite,
+        IsFirstDistinct,
+        IsLastDistinct,
         IsNan,
         IsNull,
         Not,
@@ -198,6 +195,9 @@ class ArrowExpr(  # type: ignore[misc]
             return ArrowScalar.from_native(result, name, version=self.version)
         return self.from_native(result, name or self.name, self.version)
 
+    # NOTE: I'm not sure what I meant by
+    # > "isn't natively supported on `ChunkedArray`"
+    # Was that supposed to say "is only supported on `ChunkedArray`"?
     def _dispatch_expr(self, node: ir.ExprIR, frame: Frame, name: str) -> Series:
         """Use instead of `_dispatch` *iff* an operation isn't natively supported on `ChunkedArray`.
 
@@ -231,10 +231,8 @@ class ArrowExpr(  # type: ignore[misc]
 
     def sort_by(self, node: ir.SortBy, frame: Frame, name: str) -> Expr:
         series = self._dispatch_expr(node.expr, frame, name)
-        by = (
-            self._dispatch_expr(e, frame, f"<TEMP>_{idx}")
-            for idx, e in enumerate(node.by)
-        )
+        it_names = temp.column_names(frame)
+        by = (self._dispatch_expr(e, frame, nm) for e, nm in zip(node.by, it_names))
         df = namespace(self)._concat_horizontal((series, *by))
         names = df.columns[1:]
         indices = pc.sort_indices(df.native, options=node.options.to_arrow(names))
@@ -342,7 +340,7 @@ class ArrowExpr(  # type: ignore[misc]
         # NOTE: Converting `over(order_by=..., options=...)` into the right shape for `DataFrame.sort`
         sort_by = tuple(NamedIR.from_ir(e) for e in node.order_by)
         options = node.sort_options.to_multiple(len(node.order_by))
-        idx_name = generate_temporary_column_name(8, frame.columns)
+        idx_name = temp.column_name(frame)
         sorted_context = frame.with_row_index(idx_name).sort(sort_by, options)
         evaluated = node.expr.dispatch(self, sorted_context.drop([idx_name]), name)
         if isinstance(evaluated, ArrowScalar):
@@ -373,6 +371,27 @@ class ArrowExpr(  # type: ignore[misc]
 
     def rolling_expr(self, node: ir.RollingExpr, frame: Frame, name: str) -> Self:
         raise NotImplementedError
+
+    def _is_first_last_distinct(
+        self,
+        node: FunctionExpr[IsFirstDistinct | IsLastDistinct],
+        frame: Frame,
+        name: str,
+    ) -> Self:
+        idx_name = temp.column_name([name])
+        expr_ir = fn.IS_FIRST_LAST_DISTINCT[type(node.function)](idx_name)
+        series = self._dispatch_expr(node.input[0], frame, name)
+        df = series.to_frame().with_row_index(idx_name)
+        distinct_index = (
+            df.group_by_names((name,))
+            .agg((ir.named_ir(idx_name, expr_ir),))
+            .get_column(idx_name)
+            .native
+        )
+        return self._with_native(fn.is_in(df.to_series().native, distinct_index), name)
+
+    is_first_distinct = _is_first_last_distinct
+    is_last_distinct = _is_first_last_distinct
 
 
 class ArrowScalar(

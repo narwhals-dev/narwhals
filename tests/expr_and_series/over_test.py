@@ -419,6 +419,22 @@ def test_over_without_partition_by(
     assert_equal_data(result, expected)
 
 
+def test_aggregation_over_without_partition_by(
+    constructor_eager: ConstructorEager,
+) -> None:
+    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 10):
+        pytest.skip()
+
+    df = nw.from_native(constructor_eager({"a": [1, -1, 2], "i": [0, 2, 1]}))
+    result = (
+        df.with_columns(b=nw.col("a").diff().sum().over(order_by="i"))
+        .sort("i")
+        .select("a", "b", "i")
+    )
+    expected = {"a": [1, 2, -1], "b": [-2, -2, -2], "i": [0, 1, 2]}
+    assert_equal_data(result, expected)
+
+
 def test_len_over_2369(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
@@ -438,6 +454,8 @@ def test_over_quantile(constructor: Constructor, request: pytest.FixtureRequest)
     if any(x in str(constructor) for x in ("pyarrow_table", "pyspark", "cudf")):
         # cudf: https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
 
     data = {"a": [1, 2, 3, 4, 5, 6], "b": ["x", "x", "x", "y", "y", "y"]}
 

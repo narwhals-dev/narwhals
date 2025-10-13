@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._plan.expr import Expr
     from narwhals._plan.series import Series
-    from narwhals._plan.typing import NativeSeriesT, Seq
+    from narwhals._plan.typing import IntoExprColumn, NativeSeriesT, Seq
     from narwhals.typing import NonNestedLiteral
 
     T = TypeVar("T")
@@ -65,6 +65,10 @@ def is_column(obj: Any) -> TypeIs[Expr]:
 
 def is_series(obj: Series[NativeSeriesT] | Any) -> TypeIs[Series[NativeSeriesT]]:
     return isinstance(obj, _series().Series)
+
+
+def is_into_expr_column(obj: Any) -> TypeIs[IntoExprColumn]:
+    return isinstance(obj, (str, _expr().Expr, _series().Series))
 
 
 def is_compliant_series(

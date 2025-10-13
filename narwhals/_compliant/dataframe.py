@@ -330,8 +330,12 @@ class EagerDataFrame(
     def to_narwhals(self) -> DataFrame[NativeDataFrameT]:
         return self._version.dataframe(self, level="full")
 
-    def aggregate(self, *exprs: EagerExprT) -> Self:
-        # NOTE: Ignore intermittent [False Negative]
+    def aggregate(self, *exprs: EagerExprT) -> Self:  # pyright: ignore[reportIncompatibleMethodOverride]
+        # NOTE: Ignore intermittent [False Negative] (1)
+        # Method "aggregate" overrides class "CompliantLazyFrame" in an incompatible manner
+        # Keyword parameter "exprs" type mismatch: base parameter is type "EagerExprT@EagerDataFrame", override parameter is type "EagerExprT@EagerDataFrame"
+        #  Type "EagerExprT@EagerDataFrame" is not assignable to type "EagerExprT@EagerDataFrame"
+        # NOTE: Ignore intermittent [False Negative] (2)
         # Argument of type "EagerExprT@EagerDataFrame" cannot be assigned to parameter "exprs" of type "EagerExprT@EagerDataFrame" in function "select"
         #  Type "EagerExprT@EagerDataFrame" is not assignable to type "EagerExprT@EagerDataFrame"
         return self.select(*exprs)  # pyright: ignore[reportArgumentType]
@@ -353,7 +357,9 @@ class EagerDataFrame(
         # NOTE: Ignore intermittent [False Negative]
         # Argument of type "EagerExprT@EagerDataFrame" cannot be assigned to parameter "expr" of type "EagerExprT@EagerDataFrame" in function "_evaluate_into_expr"
         #  Type "EagerExprT@EagerDataFrame" is not assignable to type "EagerExprT@EagerDataFrame"
-        return list(chain.from_iterable(self._evaluate_into_expr(expr) for expr in exprs))  # pyright: ignore[reportArgumentType]
+        return tuple(
+            chain.from_iterable(self._evaluate_into_expr(expr) for expr in exprs)  # pyright: ignore[reportArgumentType]
+        )
 
     def _evaluate_into_expr(self, expr: EagerExprT, /) -> Sequence[EagerSeriesT]:
         """Return list of raw columns.

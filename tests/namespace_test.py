@@ -12,7 +12,7 @@ from narwhals._namespace import Namespace
 from narwhals._utils import Version
 
 if TYPE_CHECKING:
-    from typing_extensions import TypeAlias, assert_type
+    from typing_extensions import Never, TypeAlias, assert_type  # noqa: F401
 
     from narwhals._arrow.namespace import ArrowNamespace  # noqa: F401
     from narwhals._compliant import CompliantNamespace
@@ -177,3 +177,64 @@ def test_namespace_init_subclass() -> None:
     with pytest.raises(TypeError, match=re.compile(r"Expected.+Version.+but got.+str")):
 
         class NamespaceBadVersion(Namespace, version="invalid version"): ...  # type: ignore[arg-type, type-arg]
+
+
+def test_namespace_is_native() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    unrelated: list[int] = [1, 2, 3]
+    native_1 = pl.Series(unrelated)
+    native_2 = pl.DataFrame({"a": unrelated})
+
+    maybe_native: list[pl.Series | list[int]] = [native_1, unrelated]
+    always_native = list["pl.DataFrame | pl.Series"]((native_2, native_1))
+    never_native = [unrelated, 50]
+
+    expected_maybe = [True, False]
+    expected_always = [True, True]
+    expected_never = [False, False]
+
+    ns = Namespace.from_backend("polars").compliant
+    assert [ns.is_native(el) for el in maybe_native] == expected_maybe
+    assert [ns.is_native(el) for el in always_native] == expected_always
+    assert [ns.is_native(el) for el in never_native] == expected_never
+
+    if TYPE_CHECKING:
+        if ns.is_native(native_1):
+            assert_type(native_1, "pl.Series")
+        if not ns.is_native(native_1):
+            assert_type(native_1, "Never")
+
+        if ns.is_native(unrelated):
+            # NOTE: We can't spell intersections *yet* (https://github.com/python/typing/issues/213)
+            # Would be:
+            # `<subclass of list[int] and DataFrame> | <subclass of list[int] and LazyFrame> | <subclass of list[int] and Series>``
+            assert_type(unrelated, "Never")  # pyright: ignore[reportAssertTypeFailure]
+        else:
+            assert_type(unrelated, "list[int]")
+
+        maybe_item = maybe_native[0]
+        assert_type(maybe_item, "pl.Series | list[int]")
+        if ns.is_native(maybe_item):
+            assert_type(maybe_item, "pl.Series")
+        else:
+            assert_type(maybe_item, "list[int]")
+
+        if ns.is_native(native_2):
+            assert_type(native_2, "pl.DataFrame")
+        else:
+            assert_type(native_2, "Never")
+
+        always_item = always_native[1]
+        assert_type(always_item, "pl.DataFrame | pl.Series")
+        if ns.is_native(always_item):
+            assert_type(always_item, "pl.DataFrame | pl.Series")
+            if ns._dataframe._is_native(always_item):
+                assert_type(always_item, "pl.DataFrame")
+            elif ns._series._is_native(always_item):
+                assert_type(always_item, "pl.Series")
+            else:
+                assert_type(always_item, "Never")
+        else:
+            assert_type(always_item, "Never")

@@ -3,14 +3,16 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, ClassVar, Generic
 
 from narwhals._plan.typing import NativeSeriesT, NativeSeriesT_co
-from narwhals._utils import Version
+from narwhals._utils import Implementation, Version, is_eager_allowed
 from narwhals.dependencies import is_pyarrow_chunked_array
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Iterable, Iterator
 
     from narwhals._plan.compliant.series import CompliantSeries
+    from narwhals._typing import EagerAllowed, IntoBackend
     from narwhals.dtypes import DType
+    from narwhals.typing import IntoDType
 
 
 class Series(Generic[NativeSeriesT_co]):
@@ -31,6 +33,29 @@ class Series(Generic[NativeSeriesT_co]):
 
     def __init__(self, compliant: CompliantSeries[NativeSeriesT_co], /) -> None:
         self._compliant = compliant
+
+    @classmethod
+    def from_iterable(
+        cls: type[Series[Any]],
+        values: Iterable[Any],
+        *,
+        name: str = "",
+        dtype: IntoDType | None = None,
+        backend: IntoBackend[EagerAllowed],
+    ) -> Series[Any]:
+        implementation = Implementation.from_backend(backend)
+        if is_eager_allowed(implementation):
+            if implementation is Implementation.PYARROW:
+                from narwhals._plan.arrow.series import ArrowSeries
+
+                return cls(
+                    ArrowSeries.from_iterable(
+                        values, name=name, version=cls._version, dtype=dtype
+                    )
+                )
+            raise NotImplementedError(implementation)
+        msg = f"{implementation} support in Narwhals is lazy-only"
+        raise ValueError(msg)
 
     @classmethod
     def from_native(

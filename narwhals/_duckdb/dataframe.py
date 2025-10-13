@@ -23,11 +23,11 @@ from narwhals._utils import (
     Implementation,
     ValidateBackendVersion,
     Version,
+    extend_bool,
     generate_temporary_column_name,
     not_implemented,
     parse_columns_to_drop,
     requires,
-    to_pyarrow_table,
     zip_strict,
 )
 from narwhals.dependencies import get_duckdb
@@ -42,7 +42,6 @@ if TYPE_CHECKING:
     import pandas as pd
     import pyarrow as pa
     from duckdb import Expression
-    from duckdb.typing import DuckDBPyType
     from typing_extensions import Self, TypeIs
 
     from narwhals._compliant.typing import CompliantDataFrameAny
@@ -50,6 +49,7 @@ if TYPE_CHECKING:
     from narwhals._duckdb.group_by import DuckDBGroupBy
     from narwhals._duckdb.namespace import DuckDBNamespace
     from narwhals._duckdb.series import DuckDBInterchangeSeries
+    from narwhals._duckdb.utils import duckdb_dtypes
     from narwhals._typing import _EagerAllowedImpl
     from narwhals._utils import _LimitedContext
     from narwhals.dataframe import LazyFrame
@@ -77,7 +77,7 @@ class DuckDBLazyFrame(
     ) -> None:
         self._native_frame: duckdb.DuckDBPyRelation = df
         self._version = version
-        self._cached_native_schema: dict[str, DuckDBPyType] | None = None
+        self._cached_native_schema: dict[str, duckdb_dtypes.DuckDBPyType] | None = None
         self._cached_columns: list[str] | None = None
         if validate_backend_version:
             self._validate_backend_version()
@@ -138,8 +138,12 @@ class DuckDBLazyFrame(
         if backend is None or backend is Implementation.PYARROW:
             from narwhals._arrow.dataframe import ArrowDataFrame
 
+            if self._backend_version < (1, 4):
+                ret = self.native.arrow()
+            else:  # pragma: no cover
+                ret = self.native.fetch_arrow_table()
             return ArrowDataFrame(
-                to_pyarrow_table(self.native.arrow()),
+                ret,
                 validate_backend_version=True,
                 version=self._version,
                 validate_column_names=True,
@@ -389,28 +393,23 @@ class DuckDBLazyFrame(
         subset_ = subset or self.columns
         if error := self._check_columns_exist(subset_):
             raise error
-        tmp_name = generate_temporary_column_name(8, self.columns)
-        if order_by and keep == "last":
-            descending = [True] * len(order_by)
-            nulls_last = [True] * len(order_by)
-        else:
-            descending = None
-            nulls_last = None
+        tmp_name = generate_temporary_column_name(8, self.columns, prefix="row_index_")
+        flags = extend_bool(True, len(order_by)) if order_by and keep == "last" else None
         if keep == "none":
             expr = window_expression(
                 F("count", StarExpression()),
                 subset_,
                 order_by or (),
-                descending=descending,
-                nulls_last=nulls_last,
+                descending=flags,
+                nulls_last=flags,
             )
         else:
             expr = window_expression(
                 F("row_number"),
                 subset_,
                 order_by or (),
-                descending=descending,
-                nulls_last=nulls_last,
+                descending=flags,
+                nulls_last=flags,
             )
         return self._with_native(
             self.native.select(StarExpression(), expr.alias(tmp_name)).filter(
@@ -419,8 +418,7 @@ class DuckDBLazyFrame(
         ).drop([tmp_name], strict=False)
 
     def sort(self, *by: str, descending: bool | Sequence[bool], nulls_last: bool) -> Self:
-        if isinstance(descending, bool):
-            descending = [descending] * len(by)
+        descending = extend_bool(descending, len(by))
         if nulls_last:
             it = (
                 col(name).nulls_last() if not desc else col(name).desc().nulls_last()
@@ -434,23 +432,23 @@ class DuckDBLazyFrame(
         return self._with_native(self.native.sort(*it))
 
     def top_k(self, k: int, *, by: Iterable[str], reverse: bool | Sequence[bool]) -> Self:
-        _df = self.native
+        _rel = self.native
         by = list(by)
         if isinstance(reverse, bool):
-            descending = [not reverse] * len(by)
+            descending = extend_bool(not reverse, len(by))
         else:
-            descending = [not rev for rev in reverse]
+            descending = tuple(not rev for rev in reverse)
         expr = window_expression(
             F("row_number"),
             order_by=by,
             descending=descending,
-            nulls_last=[True] * len(by),
+            nulls_last=extend_bool(True, len(by)),
         )
         condition = expr <= lit(k)
         query = f"""
-        SELECT *
-        FROM _df
-        QUALIFY {condition}
+            SELECT *
+            FROM _rel
+            QUALIFY {condition}
         """  # noqa: S608
         return self._with_native(duckdb.sql(query))
 
@@ -520,11 +518,11 @@ class DuckDBLazyFrame(
             raise NotImplementedError(msg)
 
         unpivot_on = join_column_names(*on_)
-        rel = self.native  # noqa: F841
+        _rel = self.native
         # Replace with Python API once
         # https://github.com/duckdb/duckdb/discussions/16980 is addressed.
         query = f"""
-            unpivot rel
+            unpivot _rel
             on {unpivot_on}
             into
                 name {col(variable_name)}
@@ -545,9 +543,9 @@ class DuckDBLazyFrame(
         return self._with_native(self.native.select(expr, StarExpression()))
 
     def sink_parquet(self, file: str | Path | BytesIO) -> None:
-        df = self.native  # noqa: F841
+        _rel = self.native
         query = f"""
-            COPY (SELECT * FROM df)
+            COPY (SELECT * FROM _rel)
             TO '{file}'
             (FORMAT parquet)
             """  # noqa: S608

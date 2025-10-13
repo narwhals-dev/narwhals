@@ -14,7 +14,6 @@ from narwhals._plan.common import flatten_hash_safe
 from narwhals._utils import Version, _parse_time_unit_and_time_zone
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
     from datetime import timezone
     from typing import TypeVar
 
@@ -127,7 +126,7 @@ class Matches(Selector):
     @staticmethod
     def from_names(*names: OneOrIterable[str]) -> Matches:
         """Implements `cs.by_name` to support `__r<op>__` with column selections."""
-        it: Iterator[str] = flatten_hash_safe(names)
+        it = flatten_hash_safe(names)
         return Matches.from_string(f"^({'|'.join(re.escape(name) for name in it)})$")
 
     def __repr__(self) -> str:

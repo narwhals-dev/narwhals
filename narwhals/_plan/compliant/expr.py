@@ -24,7 +24,15 @@ if TYPE_CHECKING:
         boolean,
         functions as F,
     )
-    from narwhals._plan.expressions.boolean import IsBetween, IsFinite, IsNan, IsNull, Not
+    from narwhals._plan.expressions.boolean import (
+        IsBetween,
+        IsFinite,
+        IsFirstDistinct,
+        IsLastDistinct,
+        IsNan,
+        IsNull,
+        Not,
+    )
 
 
 class CompliantExpr(HasVersion, Protocol[FrameT_contra, SeriesT_co]):
@@ -54,6 +62,12 @@ class CompliantExpr(HasVersion, Protocol[FrameT_contra, SeriesT_co]):
     ) -> Self: ...
     def is_finite(
         self, node: FunctionExpr[IsFinite], frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def is_first_distinct(
+        self, node: FunctionExpr[IsFirstDistinct], frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def is_last_distinct(
+        self, node: FunctionExpr[IsLastDistinct], frame: FrameT_contra, name: str
     ) -> Self: ...
     def is_nan(
         self, node: FunctionExpr[IsNan], frame: FrameT_contra, name: str

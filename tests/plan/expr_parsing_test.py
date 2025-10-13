@@ -16,6 +16,7 @@ from narwhals._plan._parse import parse_into_seq_of_expr_ir
 from narwhals._plan.expressions import functions as F, operators as ops
 from narwhals._plan.expressions.literal import SeriesLiteral
 from narwhals.exceptions import (
+    ComputeError,
     InvalidIntoExprError,
     InvalidOperationError,
     InvalidOperationError as LengthChangingExprError,
@@ -468,3 +469,63 @@ def test_operators_left_right(
         assert isinstance(ir_2, ir.FunctionExpr)
         assert isinstance(ir_2.function, op)
         assert tuple(reversed(ir_2.input)) == ir_1.input
+
+
+def test_hist_bins() -> None:
+    bins_values = (0, 1.5, 3.0, 4.5, 6.0)
+    a = nwp.col("a")
+    hist_1 = a.hist(deque(bins_values), include_breakpoint=False)
+    hist_2 = a.hist(list(bins_values), include_breakpoint=False)
+
+    ir_1 = hist_1._ir
+    ir_2 = hist_2._ir
+    assert isinstance(ir_1, ir.FunctionExpr)
+    assert isinstance(ir_2, ir.FunctionExpr)
+    assert isinstance(ir_1.function, F.HistBins)
+    assert isinstance(ir_2.function, F.HistBins)
+    assert ir_1.function.include_breakpoint is False
+    assert_expr_ir_equal(ir_1, ir_2)
+
+
+def test_hist_bin_count() -> None:
+    bin_count_default = 10
+    include_breakpoint_default = True
+    a = nwp.col("a")
+    hist_1 = a.hist(
+        bin_count=bin_count_default, include_breakpoint=include_breakpoint_default
+    )
+    hist_2 = a.hist()
+    hist_3 = a.hist(bin_count=5)
+    hist_4 = a.hist(include_breakpoint=False)
+
+    ir_1 = hist_1._ir
+    ir_2 = hist_2._ir
+    ir_3 = hist_3._ir
+    ir_4 = hist_4._ir
+    assert isinstance(ir_1, ir.FunctionExpr)
+    assert isinstance(ir_2, ir.FunctionExpr)
+    assert isinstance(ir_3, ir.FunctionExpr)
+    assert isinstance(ir_4, ir.FunctionExpr)
+    assert isinstance(ir_1.function, F.HistBinCount)
+    assert isinstance(ir_2.function, F.HistBinCount)
+    assert isinstance(ir_3.function, F.HistBinCount)
+    assert isinstance(ir_4.function, F.HistBinCount)
+    assert ir_1.function.include_breakpoint is include_breakpoint_default
+    assert ir_2.function.bin_count == bin_count_default
+    assert_expr_ir_equal(ir_1, ir_2)
+    assert ir_3.function.include_breakpoint != ir_4.function.include_breakpoint
+    assert ir_4.function.bin_count != ir_3.function.bin_count
+    assert ir_4 != ir_2
+    assert ir_3 != ir_1
+
+
+def test_hist_invalid() -> None:
+    a = nwp.col("a")
+    with pytest.raises(ComputeError, match=r"bin_count.+or.+bins"):
+        a.hist(bins=[1], bin_count=1)
+    with pytest.raises(ComputeError, match=r"bins.+monotonic"):
+        a.hist([1, 5, 4])
+    with pytest.raises(ComputeError, match=r"bins.+monotonic"):
+        a.hist(deque((3, 2, 1)))
+    with pytest.raises(TypeError):
+        a.hist(1)  # type: ignore[arg-type]
