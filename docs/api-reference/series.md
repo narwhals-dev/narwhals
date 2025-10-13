@@ -15,6 +15,7 @@
         - arg_min
         - arg_true
         - cast
+        - ceil
         - clip
         - count
         - cum_count
@@ -31,6 +32,7 @@
         - fill_null
         - filter
         - first
+        - floor
         - from_iterable
         - from_numpy
         - gather_every
@@ -72,8 +74,6 @@
         - rolling_sum
         - rolling_var
         - round
-        - floor
-        - ceil
         - sample
         - scatter
         - shape
