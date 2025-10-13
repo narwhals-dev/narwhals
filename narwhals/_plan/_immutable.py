@@ -1,20 +1,17 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypeVar
+from typing import TYPE_CHECKING
 
 from narwhals._plan._meta import ImmutableMeta
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
-    from typing import Any
+    from typing import Any, ClassVar, Final
 
     from typing_extensions import Never, Self
 
-    from narwhals._plan.typing import Seq
 
-
-T = TypeVar("T")
-_IMMUTABLE_HASH_NAME: Literal["__immutable_hash_value__"] = "__immutable_hash_value__"
+_IMMUTABLE_HASH_NAME: Final = "__immutable_hash_value__"
 
 
 class Immutable(metaclass=ImmutableMeta):
@@ -34,7 +31,7 @@ class Immutable(metaclass=ImmutableMeta):
         # Seems to be the only difference when decorating the metaclass
         __immutable_hash_value__: int
 
-    __immutable_keys__: ClassVar[Seq[str]]
+    __immutable_keys__: ClassVar[tuple[str, ...]]
 
     @property
     def __immutable_values__(self) -> Iterator[Any]:

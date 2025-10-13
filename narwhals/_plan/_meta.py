@@ -7,8 +7,8 @@ from itertools import chain
 from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
-    from typing import Any, Callable, Literal, TypeVar
+    from collections.abc import Callable, Iterable
+    from typing import Any, Final, TypeVar
 
     import _typeshed
     from typing_extensions import dataclass_transform
@@ -45,8 +45,8 @@ else:
 __all__ = ["ImmutableMeta", "SlottedMeta", "dataclass_transform"]
 
 flatten = chain.from_iterable
-_KEYS_NAME = "__immutable_keys__"
-_HASH_NAME: Literal["__immutable_hash_value__"] = "__immutable_hash_value__"
+_KEYS_NAME: Final = "__immutable_keys__"
+_HASH_NAME: Final = "__immutable_hash_value__"
 
 
 class SlottedMeta(type):
