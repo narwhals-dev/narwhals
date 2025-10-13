@@ -10,9 +10,14 @@ from narwhals._plan._function import Function
 from narwhals._plan.expressions import (
     aggregation,
     boolean,
+    categorical,
     functions,
+    lists,
     operators,
     selectors,
+    strings,
+    struct,
+    temporal,
 )
 from narwhals._plan.expressions.aggregation import AggExpr, OrderableAggExpr, max, min
 from narwhals._plan.expressions.expr import (
@@ -85,10 +90,12 @@ __all__ = [
     "_ColumnSelection",
     "aggregation",
     "boolean",
+    "categorical",
     "col",
     "cols",
     "functions",
     "index_columns",
+    "lists",
     "max",
     "min",
     "named_ir",
@@ -97,4 +104,7 @@ __all__ = [
     "over",
     "over_ordered",
     "selectors",
+    "strings",
+    "struct",
+    "temporal",
 ]
