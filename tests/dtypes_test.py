@@ -17,58 +17,8 @@ from tests.utils import PANDAS_VERSION, POLARS_VERSION, PYARROW_VERSION, pyspark
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    from typing_extensions import TypeAlias
-
     from narwhals.typing import IntoFrame, IntoSeries, NonNestedDType
-    from tests.utils import Constructor, ConstructorPandasLike
-
-NestedOrEnumDType: TypeAlias = "nw.List | nw.Array | nw.Struct | nw.Enum"
-"""`DType`s which **cannot** be used as bare types."""
-
-
-@pytest.fixture(
-    params=[
-        nw.Boolean,
-        nw.Categorical,
-        nw.Date,
-        nw.Datetime,
-        nw.Decimal,
-        nw.Duration,
-        nw.Float32,
-        nw.Float64,
-        nw.Int8,
-        nw.Int16,
-        nw.Int32,
-        nw.Int64,
-        nw.Int128,
-        nw.Object,
-        nw.String,
-        nw.Time,
-        nw.UInt8,
-        nw.UInt16,
-        nw.UInt32,
-        nw.UInt64,
-        nw.UInt128,
-        nw.Unknown,
-        nw.Binary,
-    ],
-    ids=lambda tp: tp.__name__,
-)
-def non_nested_type(request: pytest.FixtureRequest) -> type[NonNestedDType]:
-    return request.param  # type: ignore[no-any-return]
-
-
-@pytest.fixture(
-    params=[
-        nw.List(nw.Float32),
-        nw.Array(nw.String, 2),
-        nw.Struct({"a": nw.Boolean}),
-        nw.Enum(["beluga", "narwhal"]),
-    ],
-    ids=lambda obj: type(obj).__name__,
-)
-def nested_dtype(request: pytest.FixtureRequest) -> NestedOrEnumDType:
-    return request.param  # type: ignore[no-any-return]
+    from tests.utils import Constructor, ConstructorPandasLike, NestedOrEnumDType
 
 
 @pytest.mark.parametrize("time_unit", ["us", "ns", "ms"])
