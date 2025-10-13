@@ -8,6 +8,7 @@ See also [Pickling Class Instances](https://docs.python.org/3/library/pickle.htm
 from __future__ import annotations
 
 import pickle
+import string
 
 # ruff: noqa: S301
 from typing import TYPE_CHECKING, Protocol, TypeVar
@@ -106,6 +107,30 @@ def test_serde_enum_v1_dtype(roundtrip: Identity) -> None:
     tp = type(result)
     with pytest.raises(TypeError):
         tp(["a", "b"])  # type: ignore[call-arg]
+
+
+def test_serde_enum_deferred(roundtrip: Identity) -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    categories = tuple(string.printable)
+    dtype_pl = pl.Enum(categories)
+    series_pl = pl.Series(categories).cast(dtype_pl).extend_constant(categories[5], 1000)
+    series_nw = nw.from_native(series_pl, series_only=True)
+    dtype_nw = series_nw.dtype
+    assert isinstance(dtype_nw, nw.Enum)
+    result = roundtrip(dtype_nw)
+    assert isinstance(result, nw.Enum)
+    assert result == dtype_nw
+    assert result == series_nw.dtype
+    assert dtype_nw == roundtrip(result)
+    assert (
+        type(result)(dtype_pl.categories).categories
+        == roundtrip(result).categories
+        == categories
+        == result.categories
+        == roundtrip(dtype_nw).categories
+    )
 
 
 def test_serde_non_nested_dtypes(
