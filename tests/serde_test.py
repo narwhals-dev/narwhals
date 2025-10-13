@@ -17,10 +17,11 @@ import pytest
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
 from narwhals.dtypes import DType
-from narwhals.typing import IntoDType, TimeUnit
+from narwhals.typing import IntoDType, NonNestedDType, TimeUnit
 
 if TYPE_CHECKING:
     from narwhals.typing import DTypes
+    from tests.utils import NestedOrEnumDType
 
 
 IntoDTypeT = TypeVar("IntoDTypeT", bound=IntoDType)
@@ -71,22 +72,16 @@ def test_serde_duration_dtype(
     assert result == namespace.Duration(time_unit)
 
 
-def test_serde_categorical_dtype(roundtrip: Identity) -> None:
-    dtype = nw.Categorical()
-    result = roundtrip(dtype)
-    assert result == nw.Categorical
-
-
-def test_serde_doubly_nested_dtype(roundtrip: Identity) -> None:
+def test_serde_doubly_nested_struct_dtype(roundtrip: Identity) -> None:
     dtype = nw.Struct([nw.Field("a", nw.List(nw.String))])
     result = roundtrip(dtype)
     assert result == nw.Struct([nw.Field("a", nw.List(nw.String))])
 
 
-def test_serde_array_dtype(roundtrip: Identity) -> None:
-    dtype = nw.Array(nw.Int32(), 3)
+def test_serde_doubly_nested_array_dtype(roundtrip: Identity) -> None:
+    dtype = nw.Array(nw.Array(nw.Int32(), 2), 3)
     result = roundtrip(dtype)
-    assert result == nw.Array(nw.Int32(), 3)
+    assert result == nw.Array(nw.Array(nw.Int32(), 2), 3)
 
 
 def test_serde_dtype_class(roundtrip: Identity) -> None:
@@ -94,13 +89,6 @@ def test_serde_dtype_class(roundtrip: Identity) -> None:
     result = roundtrip(dtype_class)
     assert result == dtype_class
     assert isinstance(result, type)
-
-
-def test_serde_instantiated_dtype(roundtrip: Identity) -> None:
-    dtype = nw.Int8()
-    result = roundtrip(dtype)
-    assert result == dtype
-    assert isinstance(result, DType)
 
 
 def test_serde_enum_dtype(roundtrip: Identity) -> None:
@@ -118,3 +106,24 @@ def test_serde_enum_v1_dtype(roundtrip: Identity) -> None:
     tp = type(result)
     with pytest.raises(TypeError):
         tp(["a", "b"])  # type: ignore[call-arg]
+
+
+def test_serde_non_nested_dtypes(
+    non_nested_type: type[NonNestedDType], roundtrip: Identity
+) -> None:
+    dtype = non_nested_type()
+    result = roundtrip(dtype)
+    assert isinstance(result, DType)
+    assert isinstance(result, non_nested_type)
+    assert result == non_nested_type()
+    assert result == non_nested_type
+
+
+def test_serde_nested_dtypes(
+    nested_dtype: NestedOrEnumDType, roundtrip: Identity
+) -> None:
+    result = roundtrip(nested_dtype)
+    assert isinstance(result, DType)
+    assert isinstance(result, nested_dtype.__class__)
+    assert result == nested_dtype
+    assert result == nested_dtype.base_type()
