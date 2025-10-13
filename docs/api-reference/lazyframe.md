@@ -25,8 +25,8 @@
         - sink_parquet
         - sort
         - tail
-        - top_k
         - to_native
+        - top_k
         - unique
         - unpivot
         - with_columns

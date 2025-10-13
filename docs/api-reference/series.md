@@ -59,8 +59,8 @@
         - median
         - min
         - mode
-        - name
         - n_unique
+        - name
         - null_count
         - pipe
         - quantile
@@ -78,8 +78,8 @@
         - scatter
         - shape
         - shift
-        - sort
         - skew
+        - sort
         - sqrt
         - std
         - sum
@@ -88,10 +88,10 @@
         - to_dummies
         - to_frame
         - to_list
+        - to_native
         - to_numpy
         - to_pandas
         - to_polars
-        - to_native
         - unique
         - value_counts
         - var
