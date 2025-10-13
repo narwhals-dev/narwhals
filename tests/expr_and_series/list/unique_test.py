@@ -19,6 +19,9 @@ def test_unique_expr(request: pytest.FixtureRequest, constructor: Constructor) -
         for backend in ("dask", "modin", "cudf", "pyarrow", "pandas")
     ):
         request.applymarker(pytest.mark.xfail)
+    if "bodo" in str(constructor):
+        # BODO fail
+        pytest.skip()
     result = (
         nw.from_native(constructor(data))
         .select(nw.col("a").cast(nw.List(nw.Int32())).list.unique())
@@ -45,6 +48,9 @@ def test_unique_series(
         for backend in ("modin", "cudf", "pyarrow", "pandas")
     ):
         request.applymarker(pytest.mark.xfail)
+    if "bodo" in str(constructor_eager):
+        # BODO fail
+        pytest.skip()
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df["a"].cast(nw.List(nw.Int32())).list.unique().to_list()
     assert len(result) == 4

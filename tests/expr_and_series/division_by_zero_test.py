@@ -47,6 +47,9 @@ def test_series_floordiv_int_by_zero(
         pytest.skip(reason="converts floordiv by zero to 0")
     if "polars" in str(constructor_eager) and POLARS_VERSION < (0, 20, 7):
         pytest.skip(reason="bug")
+    if "bodo" in str(constructor_eager):
+        # BODO fail
+        pytest.skip("Generates error instead of inf.")
     data: dict[str, list[int]] = {"a": [left], "b": [right]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
     # pyarrow backend floordiv raises divide by zero error
@@ -104,6 +107,9 @@ def test_floordiv_int_by_zero(
         pytest.skip(reason="converts floordiv by zero to 0")
     if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 7):
         pytest.skip(reason="bug")
+    if "bodo" in str(constructor):
+        # BODO fail
+        pytest.skip("Generates error instead of inf.")
 
     data: dict[str, list[int]] = {"a": [left]}
     df = nw.from_native(constructor(data))

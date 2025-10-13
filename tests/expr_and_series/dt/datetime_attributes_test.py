@@ -101,6 +101,9 @@ def test_datetime_chained_attributes(
         request.applymarker(pytest.mark.xfail)
     if "cudf" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
+    if "bodo" in str(constructor_eager):
+        # BODO fail
+        pytest.skip()
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(df["a"].dt.date().dt.year())

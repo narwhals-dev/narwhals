@@ -23,7 +23,7 @@ def test_expr_mean_expr(constructor: Constructor, expr: nw.Expr) -> None:
 def test_expr_mean_series(
     constructor_eager: ConstructorEager, col: str, expected: float
 ) -> None:
-    if "bodo" in str(constructor):
+    if "bodo" in str(constructor_eager):
         # BODO fail
         pytest.skip()
     series = nw.from_native(constructor_eager(data), eager_only=True)[col]

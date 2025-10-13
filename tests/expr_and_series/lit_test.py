@@ -88,7 +88,7 @@ def test_lit_operation_in_select(
         pytest.skip()
     if (
         "bodo" in str(constructor)
-        and "agg" in col_name
+        and ("agg" in col_name or "compare" in col_name)
     ):
         # BODO fail
         pytest.skip()

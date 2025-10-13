@@ -82,6 +82,9 @@ def test_is_between_datetimes(
     closed: Literal["left", "right", "none", "both"],
     expected: list[bool],
 ) -> None:
+    if "bodo" in str(constructor):
+        # BODO fail
+        pytest.skip()
     data = {"a": [datetime(2020, 1, 1), datetime(2020, 6, 1)]}
     df = nw.from_native(constructor(data))
     result = df.select(

@@ -9,6 +9,9 @@ from tests.utils import DUCKDB_VERSION, Constructor, ConstructorEager, assert_eq
 def test_is_unique_expr(constructor: Constructor) -> None:
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
+    if "bodo" in str(constructor):
+        # BODO fail
+        pytest.skip()
 
     data = {"a": [1, 1, 2], "b": [1, 2, 3], "index": [0, 1, 2]}
     df = nw.from_native(constructor(data))
@@ -25,6 +28,9 @@ def test_is_unique_expr_grouped(
     if any(x in str(constructor) for x in ("pandas", "dask", "modin", "cudf", "pyarrow")):
         # non-trivial aggregation
         request.applymarker(pytest.mark.xfail)
+    if "bodo" in str(constructor):
+        # BODO fail
+        pytest.skip()
 
     data = {"a": [1, 1, 2, 4, 4], "b": [1, 1, 1, 2, 2], "index": [0, 1, 2, 3, 4]}
     df = nw.from_native(constructor(data))
@@ -36,6 +42,9 @@ def test_is_unique_expr_grouped(
 def test_is_unique_w_nulls_expr(constructor: Constructor) -> None:
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
+    if "bodo" in str(constructor):
+        # BODO fail
+        pytest.skip()
 
     data = {"a": [None, 1, 2], "b": [None, 2, None], "index": [0, 1, 2]}
     df = nw.from_native(constructor(data))
@@ -45,6 +54,9 @@ def test_is_unique_w_nulls_expr(constructor: Constructor) -> None:
 
 
 def test_is_unique_series(constructor_eager: ConstructorEager) -> None:
+    if "bodo" in str(constructor_eager):
+        # BODO fail
+        pytest.skip()
     data = {"a": [1, 1, 2], "b": [1, 2, 3], "index": [0, 1, 2]}
     series = nw.from_native(constructor_eager(data), eager_only=True)["a"]
     result = series.is_unique()

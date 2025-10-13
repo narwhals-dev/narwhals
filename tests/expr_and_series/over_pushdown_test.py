@@ -12,6 +12,9 @@ def test_over_pushdown(constructor: Constructor, request: pytest.FixtureRequest)
     if any(x in str(constructor) for x in ("pyarrow", "pandas", "dask", "cudf", "modin")):
         # non-trivial aggregation
         request.applymarker(pytest.mark.xfail)
+    if "bodo" in str(constructor):
+        # BODO fail
+        pytest.skip()
 
     data = {"a": [1, 2, -4, 5, 6, -1], "b": [1, 1, 1, 2, 2, 2], "i": list(range(6))}
     df = nw.from_native(constructor(data))

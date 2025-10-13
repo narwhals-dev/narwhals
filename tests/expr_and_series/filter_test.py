@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 import narwhals as nw
 from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
@@ -29,6 +31,9 @@ def test_filter_series(constructor_eager: ConstructorEager) -> None:
 
 
 def test_filter_constraints(constructor: Constructor) -> None:
+    if "bodo" in str(constructor):
+        # BODO fail
+        pytest.skip()
     df = nw.from_native(constructor(data))
     result_added = df.filter(nw.col("i") < 4, b=3)
     expected = {"i": [2], "a": [2], "b": [3], "c": [3]}

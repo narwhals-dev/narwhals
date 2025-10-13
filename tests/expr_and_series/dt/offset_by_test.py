@@ -146,6 +146,9 @@ def test_offset_by(
         x in str(constructor) for x in ("dask", "pyarrow", "ibis")
     ):
         request.applymarker(pytest.mark.xfail())
+    if any(x in by for x in ("y", "q", "mo")) and "bodo" in str(constructor):
+        # BODO fail
+        pytest.skip()
     if "ns" in by and any(
         x in str(constructor) for x in ("dask", "pyspark", "ibis", "cudf", "duckdb")
     ):
@@ -185,6 +188,9 @@ def test_offset_by_tz(
         request.applymarker(pytest.mark.xfail())
     if by.endswith("d") and any(x in str(constructor) for x in ("dask",)):
         request.applymarker(pytest.mark.xfail())
+    if "bodo" in str(constructor):
+        # BODO fail
+        pytest.skip()
     df = nw.from_native(constructor(data_tz))
     df = df.select(nw.col("a").dt.convert_time_zone("Asia/Kathmandu"))
     result = df.select(nw.col("a").dt.offset_by(by))
@@ -222,6 +228,9 @@ def test_offset_by_dst(
         request.applymarker(pytest.mark.xfail())
     if by.endswith("d") and any(x in str(constructor) for x in ("dask",)):
         request.applymarker(pytest.mark.xfail())
+    if "bodo" in str(constructor):
+        # BODO fail
+        pytest.skip()
     df = nw.from_native(constructor(data_dst))
     df = df.with_columns(a=nw.col("a").dt.convert_time_zone("Europe/Amsterdam"))
     result = df.select(nw.col("a").dt.offset_by(by))

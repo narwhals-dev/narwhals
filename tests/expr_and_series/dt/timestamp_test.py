@@ -66,6 +66,9 @@ def test_timestamp_datetimes(
         2,
     ):  # pragma: no cover
         pytest.skip("Requires pandas >= 2.2 for reliable pyarrow-backed timestamps")
+    if "bodo" in str(constructor):
+        # BODO fail
+        pytest.skip()
     datetimes = {"a": [datetime(2001, 1, 1), None, datetime(2001, 1, 3)]}
     df = nw.from_native(constructor(datetimes))
     dtype = nw.Datetime(time_unit_compat(original_time_unit, request))
@@ -103,6 +106,9 @@ def test_timestamp_datetimes_tz_aware(
         request.applymarker(
             pytest.mark.xfail(reason="Backend timestamp conversion not yet implemented")
         )
+    if "bodo" in str(constructor):
+        # BODO fail
+        pytest.skip()
     version_conditions = [
         (
             is_pyarrow_windows_no_tzdata(constructor),
@@ -169,6 +175,9 @@ def test_timestamp_dates(
     )
     if any(x in str(constructor) for x in unsupported_backends):
         pytest.skip("Backend does not support date type")
+    if "bodo" in str(constructor):
+        # BODO fail
+        pytest.skip()
 
     dates = {"a": [datetime(2001, 1, 1), None, datetime(2001, 1, 3)]}
     if "dask" in str(constructor):

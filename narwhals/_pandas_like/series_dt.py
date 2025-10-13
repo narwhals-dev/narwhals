@@ -121,7 +121,7 @@ class PandasLikeSeriesDateTimeNamespace(
         # this calculates the sign of each series element
         s_sign = 2 * (s > 0).astype(int_dtype_mapper(s.dtype)) - 1
         s_abs = s.abs() // 60
-        if ~s.isna().any():
+        if not s.isna().any():
             s_abs = s_abs.astype(int_dtype_mapper(s.dtype))
         return self.with_native(s_abs * s_sign)
 
@@ -130,7 +130,7 @@ class PandasLikeSeriesDateTimeNamespace(
         # this calculates the sign of each series element
         s_sign = 2 * (s > 0).astype(int_dtype_mapper(s.dtype)) - 1
         s_abs = s.abs() // 1
-        if ~s.isna().any():
+        if not s.isna().any():
             s_abs = s_abs.astype(int_dtype_mapper(s.dtype))
         return self.with_native(s_abs * s_sign)
 
@@ -139,7 +139,7 @@ class PandasLikeSeriesDateTimeNamespace(
         # this calculates the sign of each series element
         s_sign = 2 * (s > 0).astype(int_dtype_mapper(s.dtype)) - 1
         s_abs = s.abs() // 1
-        if ~s.isna().any():
+        if not s.isna().any():
             s_abs = s_abs.astype(int_dtype_mapper(s.dtype))
         return self.with_native(s_abs * s_sign)
 
@@ -148,7 +148,7 @@ class PandasLikeSeriesDateTimeNamespace(
         # this calculates the sign of each series element
         s_sign = 2 * (s > 0).astype(int_dtype_mapper(s.dtype)) - 1
         s_abs = s.abs() // 1
-        if ~s.isna().any():
+        if not s.isna().any():
             s_abs = s_abs.astype(int_dtype_mapper(s.dtype))
         return self.with_native(s_abs * s_sign)
 
@@ -157,7 +157,7 @@ class PandasLikeSeriesDateTimeNamespace(
         # this calculates the sign of each series element
         s_sign = 2 * (s > 0).astype(int_dtype_mapper(s.dtype)) - 1
         s_abs = s.abs() // 1
-        if ~s.isna().any():
+        if not s.isna().any():
             s_abs = s_abs.astype(int_dtype_mapper(s.dtype))
         return self.with_native(s_abs * s_sign)
 
