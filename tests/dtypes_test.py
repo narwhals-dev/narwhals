@@ -17,8 +17,58 @@ from tests.utils import PANDAS_VERSION, POLARS_VERSION, PYARROW_VERSION, pyspark
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
+    from typing_extensions import TypeAlias
+
     from narwhals.typing import IntoFrame, IntoSeries, NonNestedDType
     from tests.utils import Constructor, ConstructorPandasLike
+
+NestedOrEnumDType: TypeAlias = "nw.List | nw.Array | nw.Struct | nw.Enum"
+"""`DType`s which **cannot** be used as bare types."""
+
+
+@pytest.fixture(
+    params=[
+        nw.Boolean,
+        nw.Categorical,
+        nw.Date,
+        nw.Datetime,
+        nw.Decimal,
+        nw.Duration,
+        nw.Float32,
+        nw.Float64,
+        nw.Int8,
+        nw.Int16,
+        nw.Int32,
+        nw.Int64,
+        nw.Int128,
+        nw.Object,
+        nw.String,
+        nw.Time,
+        nw.UInt8,
+        nw.UInt16,
+        nw.UInt32,
+        nw.UInt64,
+        nw.UInt128,
+        nw.Unknown,
+        nw.Binary,
+    ],
+    ids=lambda tp: tp.__name__,
+)
+def non_nested_type(request: pytest.FixtureRequest) -> type[NonNestedDType]:
+    return request.param  # type: ignore[no-any-return]
+
+
+@pytest.fixture(
+    params=[
+        nw.List(nw.Float32),
+        nw.Array(nw.String, 2),
+        nw.Struct({"a": nw.Boolean}),
+        nw.Enum(["beluga", "narwhal"]),
+    ],
+    ids=lambda obj: type(obj).__name__,
+)
+def nested_dtype(request: pytest.FixtureRequest) -> NestedOrEnumDType:
+    return request.param  # type: ignore[no-any-return]
 
 
 @pytest.mark.parametrize("time_unit", ["us", "ns", "ms"])
@@ -534,43 +584,13 @@ def test_datetime_w_tz_pyspark() -> None:  # pragma: no cover
     assert result["a"] == nw.List(nw.Datetime("us", "UTC"))
 
 
-@pytest.mark.parametrize(
-    "dtype",
-    [
-        nw.Boolean,
-        nw.Categorical,
-        nw.Date,
-        nw.Datetime,
-        nw.Decimal,
-        nw.Duration,
-        nw.Float32,
-        nw.Float64,
-        nw.Int8,
-        nw.Int16,
-        nw.Int32,
-        nw.Int64,
-        nw.Int128,
-        nw.Object,
-        nw.String,
-        nw.Time,
-        nw.UInt8,
-        nw.UInt16,
-        nw.UInt32,
-        nw.UInt64,
-        nw.UInt128,
-        nw.Unknown,
-        nw.Binary,
-    ],
-)
-def test_dtype_base_type_non_nested(dtype: type[NonNestedDType]) -> None:
-    assert dtype.base_type() is dtype().base_type()
+def test_dtype_base_type_non_nested(non_nested_type: type[NonNestedDType]) -> None:
+    assert non_nested_type.base_type() is non_nested_type().base_type()
 
 
-def test_dtype_base_type_nested() -> None:
-    assert nw.List.base_type() is nw.List(nw.Float32).base_type()
-    assert nw.Array.base_type() is nw.Array(nw.String, 2).base_type()
-    assert nw.Struct.base_type() is nw.Struct({"a": nw.Boolean}).base_type()
-    assert nw.Enum.base_type() is nw.Enum(["beluga", "narwhal"]).base_type()
+def test_dtype_base_type_nested(nested_dtype: NestedOrEnumDType) -> None:
+    base = nested_dtype.base_type()
+    assert base.base_type() == nested_dtype.base_type()
 
 
 @pytest.mark.parametrize(
@@ -594,3 +614,21 @@ def test_pandas_datetime_ignored_time_unit_warns(
     ctx = does_not_warn() if PANDAS_VERSION >= (2,) else context
     with ctx:
         df.select(expr)
+
+
+def test_dtype___slots___non_nested(non_nested_type: type[NonNestedDType]) -> None:
+    dtype = non_nested_type()
+    with pytest.raises(AttributeError):
+        dtype.i_dont_exist = 100  # type: ignore[union-attr]
+    with pytest.raises(AttributeError):
+        dtype.__dict__  # noqa: B018
+    _ = dtype.__slots__
+
+
+def test_dtype___slots___nested(nested_dtype: NestedOrEnumDType) -> None:
+    with pytest.raises(AttributeError):
+        nested_dtype.i_dont_exist = 999  # type: ignore[union-attr]
+    with pytest.raises(AttributeError):
+        nested_dtype.__dict__  # noqa: B018
+    slots = nested_dtype.__slots__
+    assert len(slots) != 0, slots
