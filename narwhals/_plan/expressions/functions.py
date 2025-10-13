@@ -73,7 +73,7 @@ class Hist(Function):
 
 
 class HistBins(Hist):
-    __slots__ = ("bins", *Hist.__slots__)
+    __slots__ = ("bins",)
     bins: Seq[float]
 
     def __init__(self, *, bins: Seq[float], include_breakpoint: bool = True) -> None:
@@ -85,7 +85,7 @@ class HistBins(Hist):
 
 
 class HistBinCount(Hist):
-    __slots__ = ("bin_count", *Hist.__slots__)
+    __slots__ = ("bin_count",)
     bin_count: int
 
     def __init__(self, *, bin_count: int = 10, include_breakpoint: bool = True) -> None:

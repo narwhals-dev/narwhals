@@ -50,18 +50,18 @@ class ArgMin(OrderableAggExpr): ...
 class ArgMax(OrderableAggExpr): ...
 # fmt: on
 class Quantile(AggExpr):
-    __slots__ = (*AggExpr.__slots__, "interpolation", "quantile")
+    __slots__ = ("interpolation", "quantile")
     quantile: float
     interpolation: RollingInterpolationMethod
 
 
 class Std(AggExpr):
-    __slots__ = (*AggExpr.__slots__, "ddof")
+    __slots__ = ("ddof",)
     ddof: int
 
 
 class Var(AggExpr):
-    __slots__ = (*AggExpr.__slots__, "ddof")
+    __slots__ = ("ddof",)
     ddof: int
 
 

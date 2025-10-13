@@ -407,7 +407,7 @@ class OrderedWindowExpr(
     child=("expr", "partition_by", "order_by"),
     config=ExprIROptions.renamed("over_ordered"),
 ):
-    __slots__ = ("expr", "partition_by", "order_by", "sort_options", "options")  # noqa: RUF023
+    __slots__ = ("order_by", "sort_options")
     expr: ExprIR
     partition_by: Seq[ExprIR]
     order_by: Seq[ExprIR]

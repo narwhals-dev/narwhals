@@ -312,7 +312,7 @@ class _BaseIROptions(Immutable):
 
 
 class ExprIROptions(_BaseIROptions):
-    __slots__ = (*_BaseIROptions.__slots__, "allow_dispatch")
+    __slots__ = ("allow_dispatch",)
     allow_dispatch: bool
 
     @classmethod
@@ -325,7 +325,7 @@ class ExprIROptions(_BaseIROptions):
 
 
 class FunctionExprOptions(_BaseIROptions):
-    __slots__ = (*_BaseIROptions.__slots__, "accessor_name")
+    __slots__ = ("accessor_name",)
     accessor_name: Accessor | None
     """Namespace accessor name, if any."""
 
