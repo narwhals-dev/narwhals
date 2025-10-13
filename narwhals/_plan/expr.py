@@ -194,13 +194,11 @@ class Expr:
             if bin_count is not None:
                 msg = "can only provide one of `bin_count` or `bins`"
                 raise ComputeError(msg)
-            node = F.HistBins(bins=tuple(bins), include_breakpoint=include_breakpoint)
+            node = F.Hist.from_bins(bins, include_breakpoint=include_breakpoint)
         elif bin_count is not None:
-            node = F.HistBinCount(
-                bin_count=bin_count, include_breakpoint=include_breakpoint
-            )
+            node = F.Hist.from_bin_count(bin_count, include_breakpoint=include_breakpoint)
         else:
-            node = F.HistBinCount(include_breakpoint=include_breakpoint)
+            node = F.Hist.from_bin_count(include_breakpoint=include_breakpoint)
         return self._with_unary(node)
 
     def log(self, base: float = math.e) -> Self:

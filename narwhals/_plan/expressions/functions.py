@@ -9,8 +9,10 @@ from narwhals._plan.exceptions import hist_bins_monotonic_error
 from narwhals._plan.options import FunctionFlags, FunctionOptions
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
     from typing import Any
 
+    from _typeshed import ConvertibleToInt
     from typing_extensions import Self
 
     from narwhals._plan._expr_ir import ExprIR
@@ -71,26 +73,34 @@ class Hist(Function):
     def __repr__(self) -> str:
         return "hist"
 
+    # NOTE: These constructors provide validation + defaults, and avoid
+    # repeating on every `__init__` afterwards
+    # They're also more widely defined to what will work at runtime
+    @staticmethod
+    def from_bins(
+        bins: Iterable[float], /, *, include_breakpoint: bool = True
+    ) -> HistBins:
+        bins = tuple(bins)
+        for i in range(1, len(bins)):
+            if bins[i - 1] >= bins[i]:
+                raise hist_bins_monotonic_error(bins)
+        return HistBins(bins=bins, include_breakpoint=include_breakpoint)
+
+    @staticmethod
+    def from_bin_count(
+        count: ConvertibleToInt = 10, /, *, include_breakpoint: bool = True
+    ) -> HistBinCount:
+        return HistBinCount(bin_count=int(count), include_breakpoint=include_breakpoint)
+
 
 class HistBins(Hist):
     __slots__ = ("bins",)
     bins: Seq[float]
 
-    def __init__(self, *, bins: Seq[float], include_breakpoint: bool = True) -> None:
-        for i in range(1, len(bins)):
-            if bins[i - 1] >= bins[i]:
-                raise hist_bins_monotonic_error(bins)
-        object.__setattr__(self, "bins", bins)
-        object.__setattr__(self, "include_breakpoint", include_breakpoint)
-
 
 class HistBinCount(Hist):
     __slots__ = ("bin_count",)
     bin_count: int
-
-    def __init__(self, *, bin_count: int = 10, include_breakpoint: bool = True) -> None:
-        object.__setattr__(self, "bin_count", bin_count)
-        object.__setattr__(self, "include_breakpoint", include_breakpoint)
 
 
 class Log(Function, options=FunctionOptions.elementwise):
