@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "2.7.0"
+version = "2.8.0"
 dependencies = []
 requires-python = ">=3.9"
 authors = [
@@ -210,8 +210,8 @@ extend-ignore-names = [
   "PLR0916", # too-many-boolean-expressions
 ]
 "tpch/tests/*" = ["S101"]
-"utils/*" = ["S311"]
-"utils/bump_version.py" = ["S603", "S607", "T201"]
+"utils/*" = ["S311", "T201"]
+"utils/bump_version.py" = ["S603", "S607"]
 "tpch/execute/*" = ["T201"]
 "tpch/notebooks/*" = [
   "ANN001",

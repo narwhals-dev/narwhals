@@ -18,7 +18,7 @@ with ZipFile(wheel_path) as wheel_file:
     }
 
     if unexpected_wheel_dirs:
-        print(f"🚨 Unexpected directories in wheel: {unexpected_wheel_dirs}")  # noqa: T201
+        print(f"🚨 Unexpected directories in wheel: {unexpected_wheel_dirs}")
         sys.exit(1)
 
 with TarFile.open(sdist_path, mode="r:gz") as sdist_file:
@@ -35,7 +35,7 @@ with TarFile.open(sdist_path, mode="r:gz") as sdist_file:
     }
 
     if unexpected_sdist_dirs := sdist_dirs - allowed_sdist_dirs:
-        print(f"🚨 Unexpected directories or files in sdist: {unexpected_sdist_dirs}")  # noqa: T201
+        print(f"🚨 Unexpected directories or files in sdist: {unexpected_sdist_dirs}")
         sys.exit(1)
 
 sys.exit(0)

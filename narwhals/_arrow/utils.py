@@ -445,8 +445,8 @@ def pad_series(
 
 
 def cast_to_comparable_string_types(
-    *chunked_arrays: ChunkedArrayAny, separator: str
-) -> tuple[Iterator[ChunkedArrayAny], ScalarAny]:
+    *chunked_arrays: ChunkedArrayAny | ScalarAny, separator: str
+) -> tuple[Iterator[ChunkedArrayAny | ScalarAny], ScalarAny]:
     # Ensure `chunked_arrays` are either all `string` or all `large_string`.
     dtype = (
         pa.string()  # (PyArrow default)

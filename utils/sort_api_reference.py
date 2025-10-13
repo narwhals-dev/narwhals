@@ -1,5 +1,4 @@
 """Script to automatically sort members lists in API reference markdown files."""
-# ruff: noqa: T201
 
 from __future__ import annotations
 
