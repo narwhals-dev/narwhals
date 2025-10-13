@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+# ruff: noqa: N806
 from narwhals._plan._meta import ImmutableMeta
 
 if TYPE_CHECKING:
@@ -11,7 +12,7 @@ if TYPE_CHECKING:
     from typing_extensions import Never, Self
 
 
-_IMMUTABLE_HASH_NAME: Final = "__immutable_hash_value__"
+_HASH_NAME: Final = "__immutable_hash_value__"
 
 
 class Immutable(metaclass=ImmutableMeta):
@@ -25,7 +26,7 @@ class Immutable(metaclass=ImmutableMeta):
     [`copy.replace`]: https://docs.python.org/3.13/library/copy.html#copy.replace
     """
 
-    __slots__ = (_IMMUTABLE_HASH_NAME,)
+    __slots__ = (_HASH_NAME,)
     if not TYPE_CHECKING:
         # NOTE: Trying to avoid this being added to synthesized `__init__`
         # Seems to be the only difference when decorating the metaclass
@@ -36,28 +37,32 @@ class Immutable(metaclass=ImmutableMeta):
     @property
     def __immutable_values__(self) -> Iterator[Any]:
         """Override to configure hash seed."""
+        getattr_ = getattr
         for name in self.__immutable_keys__:
-            yield getattr(self, name)
+            yield getattr_(self, name)
 
     @property
     def __immutable_items__(self) -> Iterator[tuple[str, Any]]:
+        getattr_ = getattr
         for name in self.__immutable_keys__:
-            yield name, getattr(self, name)
+            yield name, getattr_(self, name)
 
     @property
     def __immutable_hash__(self) -> int:
-        if hasattr(self, _IMMUTABLE_HASH_NAME):
-            return getattr(self, _IMMUTABLE_HASH_NAME)  # type: ignore[no-any-return]
-        hash_value = hash((self.__class__, *self.__immutable_values__))
-        object.__setattr__(self, _IMMUTABLE_HASH_NAME, hash_value)
-        return getattr(self, _IMMUTABLE_HASH_NAME)  # type: ignore[no-any-return]
+        HASH = _HASH_NAME
+        if hasattr(self, HASH):
+            hash_value: int = getattr(self, HASH)
+        else:
+            hash_value = hash((self.__class__, *self.__immutable_values__))
+            object.__setattr__(self, HASH, hash_value)
+        return hash_value
 
     def __setattr__(self, name: str, value: Never) -> Never:
         msg = f"{type(self).__name__!r} is immutable, {name!r} cannot be set."
         raise AttributeError(msg)
 
     def __replace__(self, **changes: Any) -> Self:
-        """https://docs.python.org/3.13/library/copy.html#copy.replace"""  # noqa: D415
+        """https://docs.python.org/3.13/library/copy.html#copy.replace."""
         if len(changes) == 1:
             # The most common case is a single field replacement.
             # Iff that field happens to be equal, we can noop, preserving the current object's hash.
@@ -79,8 +84,9 @@ class Immutable(metaclass=ImmutableMeta):
             return True
         if type(self) is not type(other):
             return False
+        getattr_ = getattr
         return all(
-            getattr(self, key) == getattr(other, key) for key in self.__immutable_keys__
+            getattr_(self, key) == getattr_(other, key) for key in self.__immutable_keys__
         )
 
     def __str__(self) -> str:
@@ -88,17 +94,16 @@ class Immutable(metaclass=ImmutableMeta):
         return f"{type(self).__name__}({fields})"
 
     def __init__(self, **kwds: Any) -> None:
-        required: set[str] = set(self.__immutable_keys__)
-        if not required and not kwds:
-            # NOTE: Fastpath for empty slots
-            ...
-        elif required == set(kwds):
-            for name, value in kwds.items():
-                object.__setattr__(self, name, value)
-        elif missing := required.difference(kwds):
-            raise _init_missing_error(self, required, missing)
-        else:
-            raise _init_extra_error(self, required, set(kwds).difference(required))
+        if (keys := self.__immutable_keys__) or kwds:
+            required = set(keys)
+            if required == kwds.keys():
+                object__setattr__ = object.__setattr__
+                for name, value in kwds.items():
+                    object__setattr__(self, name, value)
+            elif missing := required.difference(kwds):
+                raise _init_missing_error(self, required, missing)
+            else:
+                raise _init_extra_error(self, required, set(kwds).difference(required))
 
 
 def _field_str(name: str, value: Any) -> str:

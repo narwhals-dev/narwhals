@@ -4,10 +4,10 @@ from __future__ import annotations
 
 # ruff: noqa: N806
 from itertools import chain
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable
+    from collections.abc import Callable
     from typing import Any, Final, TypeVar
 
     import _typeshed
@@ -82,7 +82,8 @@ class ImmutableMeta(SlottedMeta):
         **kwds: Any,
     ) -> _typeshed.Self:
         KEYS, HASH = _KEYS_NAME, _HASH_NAME
-        it_bases = cast("Iterable[Seq[str]]", (getattr(b, KEYS, ()) for b in bases))
+        getattr_: Callable[..., Seq[str]] = getattr
+        it_bases = (getattr_(b, KEYS, ()) for b in bases)
         it_all = chain(
             flatten(it_bases), namespace.get(KEYS, namespace.get("__slots__", ()))
         )
