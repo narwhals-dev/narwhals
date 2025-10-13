@@ -2073,7 +2073,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import narwhals as nw
             >>> s_native = pa.chunked_array([[1.1, 4.3, -1.3]])
             >>> s = nw.from_native(s_native, series_only=True)
-            >>> s.floor().to_native()  # doctest:+ELLIPSIS
+            >>> s.ceil().to_native()  # doctest:+ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
               [
