@@ -2049,7 +2049,7 @@ class Series(Generic[IntoSeriesT]):
         r"""Compute the numerical floor.
 
         Examples:
-            >>> import pandas as pd
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> s_native = pa.chunked_array([[1.1, 4.3, -1.3]])
             >>> s = nw.from_native(s_native, series_only=True)
@@ -2069,7 +2069,7 @@ class Series(Generic[IntoSeriesT]):
         r"""Compute the numerical ceiling.
 
         Examples:
-            >>> import pandas as pd
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> s_native = pa.chunked_array([[1.1, 4.3, -1.3]])
             >>> s = nw.from_native(s_native, series_only=True)
