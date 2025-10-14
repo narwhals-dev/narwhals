@@ -5,7 +5,7 @@ import re
 import pytest
 
 import narwhals as nw
-from tests.utils import Constructor, ConstructorEager, assert_equal_data
+from tests.utils import Constructor, ConstructorEager, IntoIterable, assert_equal_data
 
 data = {"a": [1, 4, 2, 5]}
 
@@ -23,6 +23,14 @@ def test_expr_is_in_empty_list(constructor: Constructor) -> None:
     result = df.select(nw.col("a").is_in([]))
     expected = {"a": [False, False, False, False]}
 
+    assert_equal_data(result, expected)
+
+
+def test_expr_is_in_iterable(constructor: Constructor, into_iter_4: IntoIterable) -> None:
+    df = nw.from_native(constructor(data))
+    iterable = into_iter_4((4, 2))
+    result = df.select(nw.col("a").is_in(iterable))
+    expected = {"a": [False, True, True, False]}
     assert_equal_data(result, expected)
 
 
