@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import uuid
+from collections import deque
 from copy import deepcopy
 from functools import lru_cache
 from importlib.util import find_spec
@@ -9,11 +10,22 @@ from typing import TYPE_CHECKING, Any, Callable, cast
 
 import pytest
 
-from narwhals._utils import Implementation, generate_temporary_column_name
+from narwhals._utils import (
+    Implementation,
+    generate_temporary_column_name,
+    qualified_type_name,
+)
 from tests.utils import ID_PANDAS_LIKE, PANDAS_VERSION, pyspark_session, sqlframe_session
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import (
+        Generator,
+        Iterable,
+        Iterator,
+        KeysView,
+        Sequence,
+        ValuesView,
+    )
 
     import duckdb
     import ibis
@@ -27,7 +39,7 @@ if TYPE_CHECKING:
     from narwhals._spark_like.dataframe import SQLFrameDataFrame
     from narwhals._typing import EagerAllowed
     from narwhals.typing import NativeDataFrame, NativeLazyFrame
-    from tests.utils import Constructor, ConstructorEager, ConstructorLazy
+    from tests.utils import Constructor, ConstructorEager, ConstructorLazy, IntoIterable
 
     Data: TypeAlias = "dict[str, list[Any]]"
 
@@ -317,7 +329,121 @@ def eager_backend(request: pytest.FixtureRequest) -> EagerAllowed:
     return request.param  # type: ignore[no-any-return]
 
 
-@pytest.fixture(params=[el for el in TEST_EAGER_BACKENDS if not isinstance(el, str)])
+@pytest.fixture(
+    params=[el for el in TEST_EAGER_BACKENDS if not isinstance(el, str)], scope="session"
+)
 def eager_implementation(request: pytest.FixtureRequest) -> EagerAllowed:
     """Use if a test is heavily parametric, skips `str` backend."""
     return request.param  # type: ignore[no-any-return]
+
+
+class UserDefinedIterable:
+    def __init__(self, iterable: Iterable[Any]) -> None:
+        self.iterable: Iterable[Any] = iterable
+
+    def __iter__(self) -> Iterator[Any]:
+        yield from self.iterable
+
+
+def generator_function(iterable: Iterable[Any]) -> Generator[Any, Any, None]:
+    yield from iterable
+
+
+def generator_expression(iterable: Iterable[Any]) -> Generator[Any, None, None]:
+    return (element for element in iterable)
+
+
+def dict_keys(iterable: Iterable[Any]) -> KeysView[Any]:
+    return dict.fromkeys(iterable).keys()
+
+
+def dict_values(iterable: Iterable[Any]) -> ValuesView[Any]:
+    return dict(enumerate(iterable)).values()
+
+
+def chunked_array(iterable: Any) -> Iterable[Any]:
+    import pyarrow as pa
+
+    return pa.chunked_array([iterable])
+
+
+def _ids_into_iter(obj: Any) -> str:
+    module: str = ""
+    if (obj_module := obj.__module__) and obj_module != __name__:
+        module = obj.__module__
+    name = qualified_type_name(obj)
+    if name in {"function", "builtin_function_or_method"} or "_cython" in name:
+        return f"{module}.{obj.__qualname__}" if module else obj.__qualname__
+    return name.removeprefix(__name__).strip(".")
+
+
+def _build_into_iter() -> Iterator[IntoIterable]:  # pragma: no cover
+    yield from (
+        # 1-4: should cover `Iterable`, `Sequence`, `Iterator`
+        list,
+        tuple,
+        iter,
+        deque,
+        # 5-6: cover `Generator`
+        generator_function,
+        generator_expression,
+        # 7-8: `Iterable`, but quite commonly cause issues upstream as they are `Sized` but not `Sequence`
+        dict_keys,
+        dict_values,
+        # 9: duck typing
+        UserDefinedIterable,
+    )
+    # 10: 1D numpy
+    if find_spec("numpy"):
+        import numpy as np
+
+        yield np.array
+    # 11-13: 1D pandas
+    if find_spec("pandas"):
+        import pandas as pd
+
+        yield from (pd.Index, pd.array, pd.Series)
+    # 14: 1D polars
+    if find_spec("polars"):
+        import polars as pl
+
+        yield pl.Series
+    # 15-16: 1D pyarrow
+    if find_spec("pyarrow"):
+        import pyarrow as pa
+
+        yield from (pa.array, chunked_array)
+
+
+def _into_iter_selector() -> Callable[[int], Iterator[IntoIterable]]:
+    callables = tuple(_build_into_iter())
+
+    def pick(n: int, /) -> Iterator[IntoIterable]:
+        yield from callables[:n]
+
+    return pick
+
+
+_into_iter: Callable[[int], Iterator[IntoIterable]] = _into_iter_selector()
+"""`into_iter` fixtures use the suffix `_<n>` to denote the maximum number of constructors.
+
+Anything greater than **10** may return less depending on available dependencies.
+"""
+
+
+@pytest.fixture(params=_into_iter(4), scope="session", ids=_ids_into_iter)
+def into_iter_4(request: pytest.FixtureRequest) -> IntoIterable:
+    function: IntoIterable = request.param
+    return function
+
+
+@pytest.fixture(params=_into_iter(8), scope="session", ids=_ids_into_iter)
+def into_iter_8(request: pytest.FixtureRequest) -> IntoIterable:
+    function: IntoIterable = request.param
+    return function
+
+
+@pytest.fixture(params=_into_iter(16), scope="session", ids=_ids_into_iter)
+def into_iter_16(request: pytest.FixtureRequest) -> IntoIterable:
+    function: IntoIterable = request.param
+    return function

@@ -4,6 +4,7 @@ import math
 import os
 import sys
 import warnings
+from collections.abc import Iterable
 from datetime import date, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, cast
@@ -47,6 +48,8 @@ Constructor: TypeAlias = Callable[[Any], "NativeLazyFrame | NativeDataFrame"]
 ConstructorEager: TypeAlias = Callable[[Any], "NativeDataFrame"]
 ConstructorLazy: TypeAlias = Callable[[Any], "NativeLazyFrame"]
 ConstructorPandasLike: TypeAlias = Callable[[Any], "pd.DataFrame"]
+
+IntoIterable: TypeAlias = Callable[..., Iterable[Any]]
 
 ID_PANDAS_LIKE = frozenset(
     ("pandas", "pandas[nullable]", "pandas[pyarrow]", "modin", "modin[pyarrow]", "cudf")
