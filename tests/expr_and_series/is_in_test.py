@@ -5,7 +5,13 @@ import re
 import pytest
 
 import narwhals as nw
-from tests.utils import Constructor, ConstructorEager, IntoIterable, assert_equal_data
+from tests.utils import (
+    Constructor,
+    ConstructorEager,
+    IntoIterable,
+    assert_equal_data,
+    assert_equal_series,
+)
 
 data = {"a": [1, 4, 2, 5]}
 
@@ -58,3 +64,13 @@ def test_filter_is_in_with_series(constructor_eager: ConstructorEager) -> None:
     result = df.filter(nw.col("a").is_in(df["b"]))
     expected = {"a": [1, 2], "b": [1, 2]}
     assert_equal_data(result, expected)
+
+
+def test_ser_is_in_iterable(
+    constructor_eager: ConstructorEager, into_iter_16: IntoIterable
+) -> None:
+    ser = nw.from_native(constructor_eager(data)).get_column("a")
+    iterable = into_iter_16((4, 2))
+    result = ser.is_in(iterable)
+    expected = [False, True, True, False]
+    assert_equal_series(result, expected, "a")
