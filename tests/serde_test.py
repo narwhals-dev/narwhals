@@ -60,7 +60,7 @@ def test_serde_datetime_dtype(
 ) -> None:
     dtype = namespace.Datetime(time_unit)
     result = roundtrip(dtype)
-    assert result == namespace.Datetime(time_unit)
+    assert result == dtype
 
 
 @namespaces
@@ -70,19 +70,19 @@ def test_serde_duration_dtype(
 ) -> None:
     dtype = namespace.Duration(time_unit)
     result = roundtrip(dtype)
-    assert result == namespace.Duration(time_unit)
+    assert result == dtype
 
 
 def test_serde_doubly_nested_struct_dtype(roundtrip: Identity) -> None:
     dtype = nw.Struct([nw.Field("a", nw.List(nw.String))])
     result = roundtrip(dtype)
-    assert result == nw.Struct([nw.Field("a", nw.List(nw.String))])
+    assert result == dtype
 
 
 def test_serde_doubly_nested_array_dtype(roundtrip: Identity) -> None:
     dtype = nw.Array(nw.Array(nw.Int32(), 2), 3)
     result = roundtrip(dtype)
-    assert result == nw.Array(nw.Array(nw.Int32(), 2), 3)
+    assert result == dtype
 
 
 def test_serde_dtype_class(roundtrip: Identity) -> None:
