@@ -62,8 +62,8 @@ def _validate_into_dtype(dtype: Any) -> None:
 class DTypeClass(type):
     """Metaclass for DType classes.
 
-    * Nicely printing classes.
-    * Guarantee `__slots__` is defined.
+    * Nicely print classes.
+    * Guarantee `__slots__` is defined (empty by default).
     """
 
     def __repr__(cls) -> str:
@@ -79,9 +79,11 @@ class DTypeClass(type):
 
 
 class DType(metaclass=DTypeClass):
-    __slots__ = ()
+    """Base class for all Narwhals data types."""
 
-    def __repr__(self) -> str:  # pragma: no cover
+    __slots__ = ()  # NOTE: Keep this one defined manually for the type checker
+
+    def __repr__(self) -> str:
         return self.__class__.__qualname__
 
     @classmethod

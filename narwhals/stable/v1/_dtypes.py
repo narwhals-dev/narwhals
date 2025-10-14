@@ -49,8 +49,6 @@ if TYPE_CHECKING:
 
 
 class Datetime(NwDatetime):
-    __slots__ = NwDatetime.__slots__
-
     @inherit_doc(NwDatetime)
     def __init__(
         self, time_unit: TimeUnit = "us", time_zone: str | timezone | None = None
@@ -62,8 +60,6 @@ class Datetime(NwDatetime):
 
 
 class Duration(NwDuration):
-    __slots__ = NwDuration.__slots__
-
     @inherit_doc(NwDuration)
     def __init__(self, time_unit: TimeUnit = "us") -> None:
         super().__init__(time_unit)
