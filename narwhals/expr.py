@@ -998,7 +998,8 @@ class Expr:
         if isinstance(other, Iterable) and not isinstance(other, (str, bytes)):
             other = other.to_native() if is_series(other) else iterable_to_sequence(other)
             return self._with_elementwise(
-                lambda plx: self._to_compliant_expr(plx).is_in(other)
+                # TODO @dangotbanned: Fix after getting feedback on https://github.com/narwhals-dev/narwhals/pull/3207#discussion_r2430089632
+                lambda plx: self._to_compliant_expr(plx).is_in(other)  # pyright: ignore[reportArgumentType]
             )
         msg = "Narwhals `is_in` doesn't accept expressions as an argument, as opposed to Polars. You should provide an iterable instead."
         raise NotImplementedError(msg)

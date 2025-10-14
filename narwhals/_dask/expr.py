@@ -601,7 +601,7 @@ class DaskExpr(
 
         return self._with_callable(func, "is_unique")
 
-    def is_in(self, other: Any) -> Self:
+    def is_in(self, other: Sequence[Any]) -> Self:
         return self._with_callable(lambda expr: expr.isin(other), "is_in")
 
     def null_count(self) -> Self:

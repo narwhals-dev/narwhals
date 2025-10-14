@@ -62,7 +62,7 @@ if TYPE_CHECKING:
 
     PandasHistData: TypeAlias = "HistData[pd.Series[Any], list[float]]"
 
-
+Incomplete: TypeAlias = "Any"
 PANDAS_TO_NUMPY_DTYPE_NO_MISSING = {
     "Int64": "int64",
     "int64[pyarrow]": "int64",
@@ -109,7 +109,7 @@ PANDAS_TO_NUMPY_DTYPE_MISSING = {
 }
 
 
-class PandasLikeSeries(EagerSeries[Any]):
+class PandasLikeSeries(EagerSeries[Incomplete]):
     def __init__(
         self, native_series: Any, *, implementation: Implementation, version: Version
     ) -> None:
@@ -125,7 +125,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         self._broadcast = False
 
     @property
-    def native(self) -> Any:
+    def native(self) -> Incomplete:
         return self._native_series
 
     def __native_namespace__(self) -> ModuleType:
@@ -362,7 +362,7 @@ class PandasLikeSeries(EagerSeries[Any]):
             assert_never(closed)
         return self._with_native(res).alias(ser.name)
 
-    def is_in(self, other: Any) -> Self:
+    def is_in(self, other: Sequence[Any] | Incomplete) -> Self:
         return self._with_native(self.native.isin(other))
 
     def arg_true(self) -> Self:
