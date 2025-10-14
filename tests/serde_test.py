@@ -70,7 +70,7 @@ def test_serde_duration_dtype(
 ) -> None:
     dtype = namespace.Duration(time_unit)
     result = roundtrip(dtype)
-    assert result == namespace.Duration(time_unit)
+    assert result == dtype
 
 
 def test_serde_doubly_nested_struct_dtype(roundtrip: Identity) -> None:
