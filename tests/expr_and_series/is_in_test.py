@@ -59,6 +59,24 @@ def test_filter_is_in_with_series(constructor_eager: ConstructorEager) -> None:
     assert_equal_data(result, expected)
 
 
+def test_expr_is_in_series_wrong_backend(constructor: Constructor) -> None:
+    pytest.importorskip("polars")
+    pytest.importorskip("pyarrow")
+
+    import polars as pl
+    import pyarrow as pa
+
+    values = [5, 6, 7, 8]
+    native_pa = pa.chunked_array([values])
+    native_pl = pl.Series(values)
+    df = nw.from_native(constructor(data))
+    is_polars = df.implementation.is_polars()
+    ser = nw.from_native(native_pa if is_polars else native_pl, series_only=True)
+    result = df.select(nw.col("a").is_in(ser)).sort("a")
+    expected = {"a": [False, False, False, True]}
+    assert_equal_data(result, expected)
+
+
 @pytest.mark.slow
 def test_expr_is_in_iterable(
     constructor: Constructor, into_iter_16: IntoIterable, request: pytest.FixtureRequest
