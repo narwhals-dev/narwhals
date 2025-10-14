@@ -926,7 +926,7 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._compliant_series.last()
 
-    def is_in(self, other: Any) -> Self:
+    def is_in(self, other: Iterable[Any]) -> Self:
         """Check if the elements of this Series are in the other sequence.
 
         Arguments:

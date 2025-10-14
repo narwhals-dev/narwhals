@@ -973,7 +973,7 @@ class Expr:
             upper_bound,
         )
 
-    def is_in(self, other: Any) -> Self:
+    def is_in(self, other: Iterable[Any]) -> Self:
         """Check if elements of this expression are present in the other iterable.
 
         Arguments:
