@@ -6,6 +6,7 @@ import pytest
 
 import narwhals as nw
 from tests.utils import (
+    PANDAS_VERSION,
     Constructor,
     ConstructorEager,
     IntoIterable,
@@ -60,8 +61,20 @@ def test_filter_is_in_with_series(constructor_eager: ConstructorEager) -> None:
 
 @pytest.mark.slow
 def test_expr_is_in_iterable(
-    constructor: Constructor, into_iter_16: IntoIterable
+    constructor: Constructor, into_iter_16: IntoIterable, request: pytest.FixtureRequest
 ) -> None:
+    test_name = request.node.name
+    request.applymarker(
+        pytest.mark.xfail(
+            all(part in test_name for part in ("duckdb", "pandas", "array"))
+            and PANDAS_VERSION < (2,),
+            reason=(
+                "Pandas bug produced numpy scalars on `pd.array(...).tolist()`\n"
+                "Not implemented Error: Unable to transform python value of type '<class 'numpy.int64'>' to DuckDB LogicalType\n"
+                "https://github.com/pandas-dev/pandas/pull/49890"
+            ),
+        )
+    )
     df = nw.from_native(constructor(data))
     expected = {"a": [False, True, True, False]}
     iterable = into_iter_16((4, 2))
@@ -83,7 +96,7 @@ def test_ser_is_in_iterable(
     # NOTE: This *could* be supported by using `ExtensionArray.tolist` (same path as numpy)
     request.applymarker(
         pytest.mark.xfail(
-            ("polars" in test_name and "pandas" in test_name and "array" in test_name),
+            all(part in test_name for part in ("polars", "pandas", "array")),
             raises=TypeError,
             reason="Polars doesn't support `pd.array`.\nhttps://github.com/pola-rs/polars/issues/22757",
         )
