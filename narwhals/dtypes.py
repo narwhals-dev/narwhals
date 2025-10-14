@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
     from typing import Any
 
+    import _typeshed
     from typing_extensions import Self, TypeIs
 
     from narwhals.typing import IntoDType, TimeUnit
@@ -63,19 +64,28 @@ class DTypeClass(type):
     """Metaclass for DType classes.
 
     * Nicely print classes.
-    * Guarantee `__slots__` is defined (empty by default).
+    * Ensure [`__slots__`] are always defined to prevent `__dict__` creation (empty by default).
+
+    [`__slots__`]: https://docs.python.org/3/reference/datamodel.html#object.__slots__
     """
 
     def __repr__(cls) -> str:
         return cls.__name__
 
+    # https://github.com/python/typeshed/blob/776508741d76b58f9dcb2aaf42f7d4596a48d580/stdlib/abc.pyi#L13-L19
+    # https://github.com/python/typeshed/blob/776508741d76b58f9dcb2aaf42f7d4596a48d580/stdlib/_typeshed/__init__.pyi#L36-L40
+    # https://github.com/astral-sh/ruff/issues/8353#issuecomment-1786238311
+    # https://docs.python.org/3/reference/datamodel.html#creating-the-class-object
     def __new__(
-        cls, name: str, bases: tuple[type, ...], namespace: dict[str, Any], **kwargs: Any
-    ) -> type:
-        # Only add empty slots if __slots__ isn't already defined
-        if "__slots__" not in namespace:
-            namespace["__slots__"] = ()
-        return super().__new__(cls, name, bases, namespace, **kwargs)
+        metacls: type[_typeshed.Self],
+        cls_name: str,
+        bases: tuple[type, ...],
+        namespace: dict[str, Any],
+        /,
+        **kwds: Any,
+    ) -> _typeshed.Self:
+        namespace.setdefault("__slots__", ())
+        return super().__new__(metacls, cls_name, bases, namespace, **kwds)  # type: ignore[no-any-return, misc]
 
 
 class DType(metaclass=DTypeClass):
