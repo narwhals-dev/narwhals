@@ -34,10 +34,14 @@ def test_expr_is_in_empty_list(constructor: Constructor) -> None:
 
 def test_expr_is_in_iterable(constructor: Constructor, into_iter_4: IntoIterable) -> None:
     df = nw.from_native(constructor(data))
-    iterable = into_iter_4((4, 2))
-    result = df.select(nw.col("a").is_in(iterable))
     expected = {"a": [False, True, True, False]}
+    iterable = into_iter_4((4, 2))
+    expr = nw.col("a").is_in(iterable)
+    result = df.select(expr)
     assert_equal_data(result, expected)
+    # NOTE: For an `Iterator`, this will fail if we haven't collected it first
+    repeated = df.select(expr)
+    assert_equal_data(repeated, expected)
 
 
 def test_ser_is_in(constructor_eager: ConstructorEager) -> None:
