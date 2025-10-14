@@ -431,18 +431,6 @@ Anything greater than **10** may return less depending on available dependencies
 """
 
 
-@pytest.fixture(params=_into_iter(4), scope="session", ids=_ids_into_iter)
-def into_iter_4(request: pytest.FixtureRequest) -> IntoIterable:
-    function: IntoIterable = request.param
-    return function
-
-
-@pytest.fixture(params=_into_iter(8), scope="session", ids=_ids_into_iter)
-def into_iter_8(request: pytest.FixtureRequest) -> IntoIterable:
-    function: IntoIterable = request.param
-    return function
-
-
 @pytest.fixture(params=_into_iter(16), scope="session", ids=_ids_into_iter)
 def into_iter_16(request: pytest.FixtureRequest) -> IntoIterable:
     function: IntoIterable = request.param
