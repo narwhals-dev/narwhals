@@ -116,7 +116,7 @@ def test_list_valid() -> None:
     assert dtype == nw.List
     assert dtype != nw.List(nw.Float32)
     assert dtype != nw.Duration
-    assert repr(dtype) == "List(<class 'narwhals.dtypes.Int64'>)"
+    assert repr(dtype) == "List(Int64)"
     dtype = nw.List(nw.List(nw.Int64))
     assert dtype == nw.List(nw.List(nw.Int64))
     assert dtype == nw.List
@@ -131,7 +131,7 @@ def test_array_valid() -> None:
     assert dtype != nw.Array(nw.Int64, 3)
     assert dtype != nw.Array(nw.Float32, 2)
     assert dtype != nw.Duration
-    assert repr(dtype) == "Array(<class 'narwhals.dtypes.Int64'>, shape=(2,))"
+    assert repr(dtype) == "Array(Int64, shape=(2,))"
     dtype = nw.Array(nw.Array(nw.Int64, 2), 2)
     assert dtype == nw.Array(nw.Array(nw.Int64, 2), 2)
     assert dtype == nw.Array
@@ -151,7 +151,7 @@ def test_struct_valid() -> None:
     assert dtype == nw.Struct
     assert dtype != nw.Struct([nw.Field("a", nw.Float32)])
     assert dtype != nw.Duration
-    assert repr(dtype) == "Struct({'a': <class 'narwhals.dtypes.Int64'>})"
+    assert repr(dtype) == "Struct({'a': Int64})"
 
     dtype = nw.Struct({"a": nw.Int64, "b": nw.String})
     assert dtype == nw.Struct({"a": nw.Int64, "b": nw.String})
@@ -170,7 +170,7 @@ def test_struct_reverse() -> None:
 
 def test_field_repr() -> None:
     dtype = nw.Field("a", nw.Int32)
-    assert repr(dtype) == "Field('a', <class 'narwhals.dtypes.Int32'>)"
+    assert repr(dtype) == "Field('a', Int32)"
 
 
 def test_field_eq() -> None:

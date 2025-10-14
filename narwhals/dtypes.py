@@ -59,7 +59,26 @@ def _validate_into_dtype(dtype: Any) -> None:
         raise TypeError(msg)
 
 
-class DType:
+class DTypeClass(type):
+    """Metaclass for DType classes.
+
+    * Nicely printing classes.
+    * Guarantee `__slots__` is defined.
+    """
+
+    def __repr__(cls) -> str:
+        return cls.__name__
+
+    def __new__(
+        cls, name: str, bases: tuple[type, ...], namespace: dict[str, Any], **kwargs: Any
+    ) -> type:
+        # Only add empty slots if __slots__ isn't already defined
+        if "__slots__" not in namespace:
+            namespace["__slots__"] = ()
+        return super().__new__(cls, name, bases, namespace, **kwargs)
+
+
+class DType(metaclass=DTypeClass):
     __slots__ = ()
 
     def __repr__(self) -> str:  # pragma: no cover
@@ -72,13 +91,11 @@ class DType:
         Examples:
             >>> import narwhals as nw
             >>> nw.Datetime("us").base_type()
-            <class 'narwhals.dtypes.Datetime'>
-
+            Datetime
             >>> nw.String.base_type()
-            <class 'narwhals.dtypes.String'>
-
+            String
             >>> nw.List(nw.Int64).base_type()
-            <class 'narwhals.dtypes.List'>
+            List
         """
         return cls
 
@@ -154,43 +171,29 @@ class DType:
 class NumericType(DType):
     """Base class for numeric data types."""
 
-    __slots__ = ()
-
 
 class IntegerType(NumericType):
     """Base class for integer data types."""
-
-    __slots__ = ()
 
 
 class SignedIntegerType(IntegerType):
     """Base class for signed integer data types."""
 
-    __slots__ = ()
-
 
 class UnsignedIntegerType(IntegerType):
     """Base class for unsigned integer data types."""
-
-    __slots__ = ()
 
 
 class FloatType(NumericType):
     """Base class for float data types."""
 
-    __slots__ = ()
-
 
 class TemporalType(DType):
     """Base class for temporal data types."""
 
-    __slots__ = ()
-
 
 class NestedType(DType):
     """Base class for nested data types."""
-
-    __slots__ = ()
 
 
 class Decimal(NumericType):
@@ -203,8 +206,6 @@ class Decimal(NumericType):
         >>> nw.from_native(s, series_only=True).dtype
         Decimal
     """
-
-    __slots__ = ()
 
 
 class Int128(SignedIntegerType):
@@ -226,8 +227,6 @@ class Int128(SignedIntegerType):
         Int128
     """
 
-    __slots__ = ()
-
 
 class Int64(SignedIntegerType):
     """64-bit signed integer type.
@@ -240,8 +239,6 @@ class Int64(SignedIntegerType):
         >>> s.cast(nw.Int64).dtype
         Int64
     """
-
-    __slots__ = ()
 
 
 class Int32(SignedIntegerType):
@@ -256,8 +253,6 @@ class Int32(SignedIntegerType):
         Int32
     """
 
-    __slots__ = ()
-
 
 class Int16(SignedIntegerType):
     """16-bit signed integer type.
@@ -271,8 +266,6 @@ class Int16(SignedIntegerType):
         Int16
     """
 
-    __slots__ = ()
-
 
 class Int8(SignedIntegerType):
     """8-bit signed integer type.
@@ -285,8 +278,6 @@ class Int8(SignedIntegerType):
         >>> s.cast(nw.Int8).dtype
         Int8
     """
-
-    __slots__ = ()
 
 
 class UInt128(UnsignedIntegerType):
@@ -302,8 +293,6 @@ class UInt128(UnsignedIntegerType):
         UInt128
     """
 
-    __slots__ = ()
-
 
 class UInt64(UnsignedIntegerType):
     """64-bit unsigned integer type.
@@ -316,8 +305,6 @@ class UInt64(UnsignedIntegerType):
         >>> s.cast(nw.UInt64).dtype
         UInt64
     """
-
-    __slots__ = ()
 
 
 class UInt32(UnsignedIntegerType):
@@ -332,8 +319,6 @@ class UInt32(UnsignedIntegerType):
         UInt32
     """
 
-    __slots__ = ()
-
 
 class UInt16(UnsignedIntegerType):
     """16-bit unsigned integer type.
@@ -346,8 +331,6 @@ class UInt16(UnsignedIntegerType):
         >>> s.cast(nw.UInt16).dtype
         UInt16
     """
-
-    __slots__ = ()
 
 
 class UInt8(UnsignedIntegerType):
@@ -362,8 +345,6 @@ class UInt8(UnsignedIntegerType):
         UInt8
     """
 
-    __slots__ = ()
-
 
 class Float64(FloatType):
     """64-bit floating point type.
@@ -376,8 +357,6 @@ class Float64(FloatType):
         >>> s.cast(nw.Float64).dtype
         Float64
     """
-
-    __slots__ = ()
 
 
 class Float32(FloatType):
@@ -392,8 +371,6 @@ class Float32(FloatType):
         Float32
     """
 
-    __slots__ = ()
-
 
 class String(DType):
     """UTF-8 encoded string type.
@@ -406,8 +383,6 @@ class String(DType):
         String
     """
 
-    __slots__ = ()
-
 
 class Boolean(DType):
     """Boolean type.
@@ -419,8 +394,6 @@ class Boolean(DType):
         >>> nw.from_native(s_native, series_only=True).dtype
         Boolean
     """
-
-    __slots__ = ()
 
 
 class Object(DType):
@@ -435,8 +408,6 @@ class Object(DType):
         Object
     """
 
-    __slots__ = ()
-
 
 class Unknown(DType):
     """Type representing DataType values that could not be determined statically.
@@ -449,10 +420,8 @@ class Unknown(DType):
         Unknown
     """
 
-    __slots__ = ()
 
-
-class _DatetimeMeta(type):
+class _DatetimeMeta(DTypeClass):
     @property
     def time_unit(cls) -> TimeUnit:
         """Unit of time. Defaults to `'us'` (microseconds)."""
@@ -546,7 +515,7 @@ class Datetime(TemporalType, metaclass=_DatetimeMeta):
         return f"{class_name}(time_unit={self.time_unit!r}, time_zone={self.time_zone!r})"
 
 
-class _DurationMeta(type):
+class _DurationMeta(DTypeClass):
     @property
     def time_unit(cls) -> TimeUnit:
         """Unit of time. Defaults to `'us'` (microseconds)."""
@@ -627,8 +596,6 @@ class Categorical(DType):
         Categorical
     """
 
-    __slots__ = ()
-
 
 class Enum(DType):
     """A fixed categorical encoding of a unique set of strings.
@@ -686,7 +653,7 @@ class Enum(DType):
             >>> nw.Enum(["a", "b", "c"]) == nw.Enum
             True
         """
-        if type(other) is type:
+        if type(other) is DTypeClass:
             return other is Enum
         return isinstance(other, type(self)) and self.categories == other.categories
 
@@ -801,7 +768,7 @@ class Struct(NestedType):
             >>> nw.Struct({"a": nw.Int64}) == nw.Struct
             True
         """
-        if type(other) is type and issubclass(other, self.__class__):
+        if type(other) is DTypeClass and issubclass(other, self.__class__):
             return True
         if isinstance(other, self.__class__):
             return self.fields == other.fields
@@ -864,7 +831,7 @@ class List(NestedType):
             >>> nw.List(nw.Int64) == nw.List
             True
         """
-        if type(other) is type and issubclass(other, self.__class__):
+        if type(other) is DTypeClass and issubclass(other, self.__class__):
             return True
         if isinstance(other, self.__class__):
             return self.inner == other.inner
@@ -937,7 +904,7 @@ class Array(NestedType):
             >>> nw.Array(nw.Int64, 2) == nw.Array
             True
         """
-        if type(other) is type and issubclass(other, self.__class__):
+        if type(other) is DTypeClass and issubclass(other, self.__class__):
             return True
         if isinstance(other, self.__class__):
             if self.shape != other.shape:
@@ -972,8 +939,6 @@ class Date(TemporalType):
         Date
     """
 
-    __slots__ = ()
-
 
 class Time(TemporalType):
     """Data type representing the time of day.
@@ -999,8 +964,6 @@ class Time(TemporalType):
        Time
     """
 
-    __slots__ = ()
-
 
 class Binary(DType):
     """Binary type.
@@ -1024,5 +987,3 @@ class Binary(DType):
         >>> nw.from_native(rel).collect_schema()["t"]
         Binary
     """
-
-    __slots__ = ()
