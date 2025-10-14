@@ -67,10 +67,21 @@ def test_filter_is_in_with_series(constructor_eager: ConstructorEager) -> None:
 
 
 def test_ser_is_in_iterable(
-    constructor_eager: ConstructorEager, into_iter_16: IntoIterable
+    constructor_eager: ConstructorEager,
+    into_iter_16: IntoIterable,
+    request: pytest.FixtureRequest,
 ) -> None:
-    ser = nw.from_native(constructor_eager(data)).get_column("a")
+    test_name = request.node.name
+    # NOTE: This *could* be supported by using `ExtensionArray.tolist` (same path as numpy)
+    request.applymarker(
+        pytest.mark.xfail(
+            ("polars" in test_name and "pandas" in test_name and "array" in test_name),
+            raises=TypeError,
+            reason="Polars doesn't support `pd.array`.\nhttps://github.com/pola-rs/polars/issues/22757",
+        )
+    )
     iterable = into_iter_16((4, 2))
+    ser = nw.from_native(constructor_eager(data)).get_column("a")
     result = ser.is_in(iterable)
     expected = [False, True, True, False]
     assert_equal_series(result, expected, "a")

@@ -14,6 +14,7 @@ from narwhals._utils import (
     is_compliant_series,
     is_eager_allowed,
     is_index_selector,
+    iterable_to_sequence,
     qualified_type_name,
     supports_arrow_c_stream,
 )
@@ -25,7 +26,6 @@ from narwhals.series_dt import SeriesDateTimeNamespace
 from narwhals.series_list import SeriesListNamespace
 from narwhals.series_str import SeriesStringNamespace
 from narwhals.series_struct import SeriesStructNamespace
-from narwhals.translate import to_native
 from narwhals.typing import IntoSeriesT
 
 if TYPE_CHECKING:
@@ -948,9 +948,12 @@ class Series(Generic[IntoSeriesT]):
               ]
             ]
         """
-        return self._with_compliant(
-            self._compliant_series.is_in(to_native(other, pass_through=True))
+        other = (
+            other.to_native()
+            if isinstance(other, Series)
+            else iterable_to_sequence(other, backend=self.implementation)
         )
+        return self._with_compliant(self._compliant_series.is_in(other))
 
     def arg_true(self) -> Self:
         """Find elements where boolean Series is True.
