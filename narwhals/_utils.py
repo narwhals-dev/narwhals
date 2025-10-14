@@ -2154,7 +2154,6 @@ def can_to_pylist(obj: Any) -> TypeIs[_CanTo_PyList]:
     ) or _hasattr_static(obj, "to_pylist")
 
 
-# TODO @dangotbanned: Use in `{Expr,Series}.is_in`
 # TODO @dangotbanned: Add (brief) doc
 def iterable_to_sequence(
     iterable: Iterable[Any], /, *, backend: EagerAllowed | None = None
