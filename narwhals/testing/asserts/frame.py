@@ -1,0 +1,184 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+from narwhals._utils import Implementation, qualified_type_name
+from narwhals.dataframe import DataFrame, LazyFrame
+from narwhals.dependencies import is_narwhals_dataframe, is_narwhals_lazyframe
+from narwhals.testing.asserts.utils import (
+    raise_assertion_error,
+    raise_frame_assertion_error,
+)
+
+if TYPE_CHECKING:
+    from narwhals.typing import DataFrameT, FrameT
+
+GUARANTEES_ROW_ORDER = {
+    Implementation.PANDAS,
+    Implementation.MODIN,
+    Implementation.CUDF,
+    Implementation.PYARROW,
+    Implementation.POLARS,
+    Implementation.DASK,
+}
+
+
+def assert_frame_equal(
+    left: FrameT,
+    right: FrameT,
+    *,
+    check_row_order: bool = True,
+    check_column_order: bool = True,
+    check_dtypes: bool = True,
+    check_exact: bool = False,
+    rel_tol: float = 1e-5,
+    abs_tol: float = 1e-8,
+    categorical_as_str: bool = False,
+) -> None:
+    """Assert that the left and right frames are equal.
+
+    Raises a detailed `AssertionError` if the frames differ.
+    This function is intended for use in unit tests.
+
+    Arguments:
+        left: The first DataFrame or LazyFrame to compare.
+        right: The second DataFrame or LazyFrame to compare.
+        check_row_order: Requires row order to match. This flag is ignored for backends
+            that do not guarantee row order such as DuckDB, Ibis, PySpark, SQLFrame
+        check_column_order: Requires column order to match.
+        check_dtypes: Requires data types to match.
+        check_exact: Requires float values to match exactly. If set to `False`, values are
+            considered equal when within tolerance of each other (see `rel_tol` and `abs_tol`).
+            Only affects columns with a Float data type.
+        rel_tol: Relative tolerance for inexact checking. Fraction of values in `right`.
+        abs_tol: Absolute tolerance for inexact checking.
+        categorical_as_str: Cast categorical columns to string before comparing.
+            Enabling this helps compare columns that do not share the same string cache.
+
+    Examples:
+        TODO(FBruzzesi): ...
+    """
+    __tracebackhide__ = True
+
+    if any(
+        not (is_narwhals_dataframe(obj) or is_narwhals_lazyframe(obj))
+        for obj in (left, right)
+    ):
+        msg = (
+            "Expected `narwhals.DataFrame` or `narwhals.LazyFrame` instance, found:\n"
+            f"[left]: {qualified_type_name(type(left))}\n"
+            f"[right]: {qualified_type_name(type(right))}\n\n"
+            "Hint: Use `nw.from_native(obj, allow_series=False) to convert each native "
+            "object into a `narwhals.DataFrame` or `narwhals.LazyFrame` first."
+        )
+        raise TypeError(msg)
+
+    left_impl, right_impl = left.implementation, right.implementation
+    if left_impl != right_impl:
+        raise_frame_assertion_error("implementation mismatch", left_impl, right_impl)
+
+    left_eager, right_eager = _check_correct_input_type(left, right)
+
+    _assert_dataframe_equal(
+        left=left_eager,
+        right=right_eager,
+        impl=left_impl,
+        check_row_order=check_row_order,
+        check_column_order=check_column_order,
+        check_dtypes=check_dtypes,
+        check_exact=check_exact,
+        rel_tol=rel_tol,
+        abs_tol=abs_tol,
+        categorical_as_str=categorical_as_str,
+    )
+
+
+def _check_correct_input_type(  # noqa: RET503
+    left: DataFrame[Any] | LazyFrame[Any], right: DataFrame[Any] | LazyFrame[Any]
+) -> tuple[DataFrame[Any], DataFrame[Any]]:
+    # Adapted from https://github.com/pola-rs/polars/blob/afdbf3056d1228cf493901e45f536b0905cec8ea/py-polars/src/polars/testing/asserts/frame.py#L15-L17
+    if isinstance(left, DataFrame) and isinstance(right, DataFrame):
+        return left, right
+
+    if isinstance(left, LazyFrame) and isinstance(right, LazyFrame):
+        return left.collect(), right.collect()
+
+    raise_assertion_error(
+        "inputs",
+        "unexpected input types",
+        left=type(left).__name__,
+        right=type(right).__name__,
+    )
+
+
+def _assert_dataframe_equal(
+    left: DataFrameT,
+    right: DataFrameT,
+    impl: Implementation,
+    *,
+    check_row_order: bool,
+    check_column_order: bool,
+    check_dtypes: bool,
+    check_exact: bool,
+    rel_tol: float,
+    abs_tol: float,
+    categorical_as_str: bool,
+) -> None:
+    # Adapted from https://github.com/pola-rs/polars/blob/afdbf3056d1228cf493901e45f536b0905cec8ea/crates/polars-testing/src/asserts/utils.rs#L829
+    _check_schema_equal(
+        left, right, check_dtypes=check_dtypes, check_column_order=check_column_order
+    )
+
+    left_len, right_len = len(left), len(right)
+    if left_len != right_len:
+        raise_frame_assertion_error("height (row count) mismatch", left_len, right_len)
+
+
+def _check_schema_equal(
+    left: DataFrameT, right: DataFrameT, *, check_dtypes: bool, check_column_order: bool
+) -> None:
+    """Compares DataFrame schema based on specified criteria.
+
+    Adapted from https://github.com/pola-rs/polars/blob/afdbf3056d1228cf493901e45f536b0905cec8ea/crates/polars-testing/src/asserts/utils.rs#L667-L698
+    """
+    lschema, rschema = left.schema, right.schema
+
+    # Fast path for equal DataFrames
+    if lschema == rschema:
+        return
+
+    lnames, rnames = lschema.names(), rschema.names()
+    lset, rset = set(lnames), set(rnames)
+
+    if lset != rset:
+        if left_not_in_right := list(lset.difference(rset)):
+            raise_frame_assertion_error(
+                detail=f"{left_not_in_right} in left, but not in right",
+                left=lset,
+                right=rset,
+            )
+        if right_not_in_left := list(rset.difference(lset)):
+            raise_frame_assertion_error(
+                detail=f"{right_not_in_left} in right, but not in left",
+                left=lset,
+                right=rset,
+            )
+
+    if check_column_order and lnames != rnames:
+        raise_frame_assertion_error(
+            detail="columns are not in the same order", left=lnames, right=rnames
+        )
+
+    if check_dtypes:
+        ldtypes = lschema.dtypes()
+        if check_column_order:
+            rdtypes = rschema.dtypes()
+        else:
+            rdtypes = [rschema[col_name] for col_name in lnames]
+
+        if ldtypes != rdtypes:
+            raise_frame_assertion_error(
+                detail="dtypes do not match", left=ldtypes, right=rdtypes
+            )
+
+    return

@@ -43,3 +43,9 @@ def raise_series_assertion_error(
     detail: SeriesDetail, left: Any, right: Any, *, cause: Exception | None = None
 ) -> Never:
     raise_assertion_error("Series", detail, left, right, cause=cause)
+
+
+def raise_frame_assertion_error(
+    detail: str, left: Any, right: Any, *, cause: Exception | None = None
+) -> Never:
+    raise_assertion_error("DataFrames", detail, left, right, cause=cause)
