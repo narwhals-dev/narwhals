@@ -6,9 +6,10 @@ import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._plan import expressions as ir
+from narwhals._plan._dispatch import dispatch_method_name
 from narwhals._plan._guards import is_agg_expr, is_function_expr
 from narwhals._plan.arrow import acero, functions as fn, options
-from narwhals._plan.common import dispatch_method_name, temp
+from narwhals._plan.common import temp
 from narwhals._plan.compliant.group_by import EagerDataFrameGroupBy
 from narwhals._plan.expressions import aggregation as agg
 from narwhals._utils import Implementation
