@@ -772,7 +772,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             return native_frame.__arrow_c_stream__(requested_schema=requested_schema)
         try:
             pa_version = Implementation.PYARROW._backend_version()
-        except ModuleNotFoundError as exc:  # pragma: no cover
+        except ModuleNotFoundError as exc:
             msg = f"'pyarrow>=14.0.0' is required for `DataFrame.__arrow_c_stream__` for object of type {type(native_frame)}"
             raise ModuleNotFoundError(msg) from exc
         if pa_version < (14, 0):  # pragma: no cover

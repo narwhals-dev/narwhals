@@ -64,7 +64,7 @@ def lambda_expr(
     """
     try:
         from duckdb import LambdaExpression
-    except ModuleNotFoundError as exc:  # pragma: no cover
+    except ModuleNotFoundError as exc:
         msg = f"DuckDB>=1.2.0 is required for this operation. Found: DuckDB {duckdb.__version__}"
         raise NotImplementedError(msg) from exc
     args = (params,) if isinstance(params, Expression) else params
