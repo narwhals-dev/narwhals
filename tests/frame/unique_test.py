@@ -8,7 +8,6 @@ import narwhals as nw
 from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError
 from tests.utils import (
     DUCKDB_VERSION,
-    IBIS_IS_GIT_SOURCE,
     IBIS_VERSION,
     Constructor,
     ConstructorEager,
@@ -166,9 +165,7 @@ def test_unique_none(constructor: Constructor) -> None:
 def test_unique_3069(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     request.applymarker(
         pytest.mark.xfail(
-            "ibis" in str(constructor)
-            and IBIS_VERSION <= (10, 8)
-            and not IBIS_IS_GIT_SOURCE,
+            "ibis" in str(constructor) and IBIS_VERSION < (11,),
             reason="https://github.com/ibis-project/ibis/issues/11591",
         )
     )

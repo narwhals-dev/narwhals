@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-import json
 import math
 import os
 import sys
 import warnings
 from datetime import date, datetime
-from importlib.metadata import PackageNotFoundError, distribution
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, cast
 
@@ -35,29 +33,7 @@ def get_module_version_as_tuple(module_name: str) -> tuple[int, ...]:
         return (0, 0, 0)
 
 
-def is_git_source(distribution_name: str, /) -> bool:  # pragma: no cover
-    """Return True if `distribution_name` is installed and originated from a [git source].
-
-    Use to distinguish `__version__` which refers to the prior release, instead of a pre-release.
-
-    [git source]: https://docs.astral.sh/uv/concepts/projects/dependencies/#git
-    """
-    try:
-        dist = distribution(distribution_name)
-    except PackageNotFoundError:
-        return False
-    return bool(
-        (direct_url := dist.read_text("direct_url.json"))
-        and (backported_3_13_origin := json.loads(direct_url))
-        # https://docs.python.org/3.13/library/importlib.metadata.html#importlib.metadata.Distribution
-        # https://github.com/python/cpython/pull/113175#issuecomment-1858138341
-        and (vcs_info := backported_3_13_origin.get("vcs_info"))
-        and vcs_info.get("vcs") == "git"
-    )
-
-
 IBIS_VERSION: tuple[int, ...] = get_module_version_as_tuple("ibis")
-IBIS_IS_GIT_SOURCE: bool = is_git_source("ibis-framework")
 NUMPY_VERSION: tuple[int, ...] = get_module_version_as_tuple("numpy")
 PANDAS_VERSION: tuple[int, ...] = get_module_version_as_tuple("pandas")
 DUCKDB_VERSION: tuple[int, ...] = get_module_version_as_tuple("duckdb")
