@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Any
 
 import duckdb
 from duckdb import CoalesceOperator, Expression
-from duckdb.typing import BIGINT, VARCHAR
 
 from narwhals._duckdb.dataframe import DuckDBLazyFrame
 from narwhals._duckdb.expr import DuckDBExpr
@@ -16,6 +15,7 @@ from narwhals._duckdb.utils import (
     DeferredTimeZone,
     F,
     concat_str,
+    duckdb_dtypes,
     function,
     lit,
     narwhals_to_native_dtype,
@@ -36,6 +36,8 @@ if TYPE_CHECKING:
 
     from narwhals._utils import Version
     from narwhals.typing import ConcatMethod, IntoDType, NonNestedLiteral
+
+VARCHAR = duckdb_dtypes.VARCHAR
 
 
 class DuckDBNamespace(
@@ -102,21 +104,13 @@ class DuckDBNamespace(
         self, *exprs: DuckDBExpr, separator: str, ignore_nulls: bool
     ) -> DuckDBExpr:
         def func(df: DuckDBLazyFrame) -> list[Expression]:
-            cols = list(chain.from_iterable(expr(df) for expr in exprs))
-            if not ignore_nulls:
-                null_mask_result = reduce(operator.or_, (s.isnull() for s in cols))
-                cols_separated = [
-                    y
-                    for x in [
-                        (col.cast(VARCHAR),)
-                        if i == len(cols) - 1
-                        else (col.cast(VARCHAR), lit(separator))
-                        for i, col in enumerate(cols)
-                    ]
-                    for y in x
-                ]
-                return [when(~null_mask_result, concat_str(*cols_separated))]
-            return [concat_str(*cols, separator=separator)]
+            cols: Iterable[Expression] = chain.from_iterable(e(df) for e in exprs)
+            if ignore_nulls:
+                return [concat_str(*cols, separator=separator)]
+            cols = tuple(cols)
+            null_mask = reduce(operator.or_, (s.isnull() for s in cols))
+            cols_str = (c.cast(VARCHAR) for c in cols)
+            return [when(~null_mask, concat_str(*cols_str, separator=separator))]
 
         return self._expr(
             call=func,
@@ -127,10 +121,12 @@ class DuckDBNamespace(
 
     def mean_horizontal(self, *exprs: DuckDBExpr) -> DuckDBExpr:
         def func(cols: Iterable[Expression]) -> Expression:
-            cols = list(cols)
-            return reduce(
-                operator.add, (CoalesceOperator(col, lit(0)) for col in cols)
-            ) / reduce(operator.add, (col.isnotnull().cast(BIGINT) for col in cols))
+            cols = tuple(cols)
+            total = reduce(operator.add, (CoalesceOperator(col, lit(0)) for col in cols))
+            count = reduce(
+                operator.add, (col.isnotnull().cast(duckdb_dtypes.BIGINT) for col in cols)
+            )
+            return total / count
 
         return self._expr._from_elementwise_horizontal_op(func, *exprs)
 

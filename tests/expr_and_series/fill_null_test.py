@@ -34,6 +34,8 @@ def test_fill_null(constructor: Constructor) -> None:
 
 
 def test_fill_null_w_aggregate(constructor: Constructor) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
     data = {"a": [0.5, None, 2.0, 3.0, 4.5], "b": ["xx", "yy", "zz", None, "yy"]}
     df = nw.from_native(constructor(data))
 

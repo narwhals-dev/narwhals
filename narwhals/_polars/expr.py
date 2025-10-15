@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any, Callable, ClassVar, Literal
 import polars as pl
 
 from narwhals._polars.utils import (
+    BACKEND_VERSION,
     PolarsAnyNamespace,
     PolarsCatNamespace,
     PolarsDateTimeNamespace,
@@ -411,6 +412,21 @@ class PolarsExprDateTimeNamespace(
 class PolarsExprStringNamespace(
     PolarsExprNamespace, PolarsStringNamespace[PolarsExpr, pl.Expr]
 ):
+    def to_titlecase(self) -> PolarsExpr:
+        native_expr = self.native
+
+        if BACKEND_VERSION < (1, 5):
+            native_result = (
+                native_expr.str.to_lowercase()
+                .str.extract_all(r"[a-z0-9]*[^a-z0-9]*")
+                .list.eval(pl.element().str.to_titlecase())
+                .list.join("")
+            )
+        else:
+            native_result = native_expr.str.to_titlecase()
+
+        return self.compliant._with_native(native_result)
+
     @requires.backend_version((0, 20, 5))
     def zfill(self, width: int) -> PolarsExpr:
         backend_version = self.compliant._backend_version

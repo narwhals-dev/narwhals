@@ -387,6 +387,11 @@ def test_all_nulls_pandas() -> None:
 def test_schema_to_pandas(
     dtype_backend: DTypeBackend | Sequence[DTypeBackend] | None, expected: dict[str, Any]
 ) -> None:
+    if (
+        dtype_backend == "pyarrow"
+        or (isinstance(dtype_backend, list) and "pyarrow" in dtype_backend)
+    ) and PANDAS_VERSION < (1, 5):
+        pytest.skip()
     schema = nw.Schema(
         {
             "a": nw.Int64(),

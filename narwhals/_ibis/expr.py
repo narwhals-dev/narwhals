@@ -15,13 +15,18 @@ from narwhals._ibis.utils import (
     asc_nulls_last,
     desc_nulls_first,
     desc_nulls_last,
-    extend_bool,
     is_floating,
     lit,
     narwhals_to_native_dtype,
 )
 from narwhals._sql.expr import SQLExpr
-from narwhals._utils import Implementation, Version, not_implemented, zip_strict
+from narwhals._utils import (
+    Implementation,
+    Version,
+    extend_bool,
+    not_implemented,
+    zip_strict,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence

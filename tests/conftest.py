@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, Callable, cast
 
 import pytest
 
+import narwhals as nw
 from narwhals._utils import Implementation, generate_temporary_column_name
 from tests.utils import ID_PANDAS_LIKE, PANDAS_VERSION, pyspark_session, sqlframe_session
 
@@ -24,10 +25,16 @@ if TYPE_CHECKING:
 
     from narwhals._native import NativeDask, NativeDuckDB, NativePySpark, NativeSQLFrame
     from narwhals._typing import EagerAllowed
-    from narwhals.typing import IntoDataFrame
-    from tests.utils import Constructor, ConstructorEager, ConstructorLazy
+    from narwhals.typing import IntoDataFrame, NonNestedDType
+    from tests.utils import (
+        Constructor,
+        ConstructorEager,
+        ConstructorLazy,
+        NestedOrEnumDType,
+    )
 
     Data: TypeAlias = "dict[str, list[Any]]"
+
 
 MIN_PANDAS_NULLABLE_VERSION = (2,)
 
@@ -319,3 +326,50 @@ def eager_backend(request: pytest.FixtureRequest) -> EagerAllowed:
 def eager_implementation(request: pytest.FixtureRequest) -> EagerAllowed:
     """Use if a test is heavily parametric, skips `str` backend."""
     return request.param  # type: ignore[no-any-return]
+
+
+@pytest.fixture(
+    params=[
+        nw.Boolean,
+        nw.Categorical,
+        nw.Date,
+        nw.Datetime,
+        nw.Decimal,
+        nw.Duration,
+        nw.Float32,
+        nw.Float64,
+        nw.Int8,
+        nw.Int16,
+        nw.Int32,
+        nw.Int64,
+        nw.Int128,
+        nw.Object,
+        nw.String,
+        nw.Time,
+        nw.UInt8,
+        nw.UInt16,
+        nw.UInt32,
+        nw.UInt64,
+        nw.UInt128,
+        nw.Unknown,
+        nw.Binary,
+    ],
+    ids=lambda tp: tp.__name__,
+)
+def non_nested_type(request: pytest.FixtureRequest) -> type[NonNestedDType]:
+    tp_dtype: type[NonNestedDType] = request.param
+    return tp_dtype
+
+
+@pytest.fixture(
+    params=[
+        nw.List(nw.Float32),
+        nw.Array(nw.String, 2),
+        nw.Struct({"a": nw.Boolean}),
+        nw.Enum(["beluga", "narwhal"]),
+    ],
+    ids=lambda obj: type(obj).__name__,
+)
+def nested_dtype(request: pytest.FixtureRequest) -> NestedOrEnumDType:
+    dtype: NestedOrEnumDType = request.param
+    return dtype
