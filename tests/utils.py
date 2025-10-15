@@ -49,6 +49,9 @@ ConstructorEager: TypeAlias = Callable[[Any], "NativeDataFrame"]
 ConstructorLazy: TypeAlias = Callable[[Any], "NativeLazyFrame"]
 ConstructorPandasLike: TypeAlias = Callable[[Any], "pd.DataFrame"]
 
+NestedOrEnumDType: TypeAlias = "nw.List | nw.Array | nw.Struct | nw.Enum"
+"""`DType`s which **cannot** be used as bare types."""
+
 IntoIterable: TypeAlias = Callable[..., Iterable[Any]]
 
 ID_PANDAS_LIKE = frozenset(
