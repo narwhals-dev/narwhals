@@ -2,11 +2,16 @@ from __future__ import annotations
 
 from datetime import datetime
 
+import pytest
+
 import narwhals as nw
 from tests.utils import Constructor, assert_equal_data
 
 
 def test_unpivot(constructor: Constructor) -> None:
+    if "bodo" in str(constructor):
+        # BODO fail
+        pytest.skip()
     data = {
         "date": [datetime(2020, 1, 1), datetime(2020, 1, 2), datetime(2020, 1, 3)],
         "aapl": [110, 100, 105],

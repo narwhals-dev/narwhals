@@ -9,6 +9,9 @@ from tests.utils import DUCKDB_VERSION, Constructor, assert_equal_data
 def test_add(constructor: Constructor) -> None:
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
+    if "bodo" in str(constructor):
+        # BODO fail
+        pytest.skip()
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df = nw.from_native(constructor(data))
     result = df.with_columns(

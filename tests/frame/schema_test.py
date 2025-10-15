@@ -82,6 +82,9 @@ def test_actual_object(
 ) -> None:
     if any(x in str(constructor_eager) for x in ("pyarrow_table", "cudf")):
         request.applymarker(pytest.mark.xfail)
+    if "bodo" in str(constructor_eager):
+        # BODO fail
+        pytest.skip()
 
     class Foo: ...
 

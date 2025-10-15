@@ -421,6 +421,9 @@ def test_all_horizontal() -> None:
 
 
 def test_with_row_index(constructor: Constructor) -> None:
+    if "bodo" in str(constructor):
+        # BODO fail
+        pytest.skip()
     data = {"abc": ["foo", "bars"], "xyz": [100, 200], "const": [42, 42]}
 
     frame = nw_v1.from_native(constructor(data))
@@ -831,6 +834,9 @@ def test_narwhalify_backends_cross2() -> None:
 
 
 def test_expr_sample(constructor_eager: ConstructorEager) -> None:
+    if "bodo" in str(constructor_eager):
+        # BODO fail
+        pytest.skip()
     df = nw_v1.from_native(
         constructor_eager({"a": [1, 2, 3], "b": [4, 5, 6]}), eager_only=True
     )

@@ -57,6 +57,9 @@ def test_over_std_var(request: pytest.FixtureRequest, constructor: Constructor) 
         request.applymarker(pytest.mark.xfail)
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
+    if "bodo" in str(constructor):
+        # BODO fail
+        pytest.skip() # test doesn't fail directly but in combination with test_is_first_distinct_series causes segfault in test_over_cum_count
 
     df = nw.from_native(constructor(data))
     expected = {

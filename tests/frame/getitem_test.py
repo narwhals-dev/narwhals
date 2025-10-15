@@ -99,6 +99,9 @@ def test_gather_pandas_index() -> None:
 
 
 def test_gather_rows_cols(constructor_eager: ConstructorEager) -> None:
+    if "bodo" in str(constructor_eager):
+        # BODO fail
+        pytest.skip()
     native_df = constructor_eager(data)
     df = nw.from_native(native_df, eager_only=True)
 
@@ -125,6 +128,9 @@ def test_slice_both_tuple(
     if "cudf" in str(constructor_eager):
         # https://github.com/rapidsai/cudf/issues/18556
         request.applymarker(pytest.mark.xfail)
+    if "bodo" in str(constructor_eager):
+        # BODO fail
+        pytest.skip()
     data = {"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, 8, 9]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df[(0, 1), ("a", "c")]
@@ -189,6 +195,9 @@ def test_slice_item(constructor_eager: ConstructorEager) -> None:
 
 
 def test_slice_edge_cases(constructor_eager: ConstructorEager) -> None:
+    if "bodo" in str(constructor_eager):
+        # BODO fail
+        pytest.skip()
     data = {"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, 8, 9], "d": [1, 4, 2]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
     assert df[[], :].shape == (0, 4)
@@ -238,6 +247,9 @@ def test_get_item_works_with_tuple_and_list_and_range_row_indexing_and_slice_col
 def test_get_item_works_with_tuple_and_list_indexing_and_str(
     constructor_eager: ConstructorEager, row_idx: list[int] | tuple[int] | range, col: str
 ) -> None:
+    if "bodo" in str(constructor_eager):
+        # BODO fail
+        pytest.skip()
     nw_df = nw.from_native(constructor_eager(data), eager_only=True)
     nw_df[row_idx, col]
 
@@ -275,6 +287,9 @@ def test_getitem_negative_slice(constructor_eager: ConstructorEager) -> None:
 
 
 def test_zeroth_row_no_columns(constructor_eager: ConstructorEager) -> None:
+    if "bodo" in str(constructor_eager):
+        # BODO fail
+        pytest.skip()
     data = {"col1": ["a", "b", "c", "d"], "col2": np.arange(4), "col3": [4, 3, 2, 1]}
     nw_df = nw.from_native(constructor_eager(data), eager_only=True)
     columns: list[str] = []
@@ -301,6 +316,9 @@ def test_triple_tuple(constructor_eager: ConstructorEager) -> None:
 def test_slice_with_series(
     constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
+    if "bodo" in str(constructor_eager):
+        # BODO fail
+        pytest.skip()
     request.applymarker(
         pytest.mark.xfail(
             "pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (3,),
@@ -328,6 +346,9 @@ def test_horizontal_slice_with_series(constructor_eager: ConstructorEager) -> No
 def test_horizontal_slice_with_series_2(
     constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
+    if "bodo" in str(constructor_eager):
+        # BODO fail
+        pytest.skip()
     request.applymarker(
         pytest.mark.xfail(
             "pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (3,),

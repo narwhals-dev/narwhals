@@ -245,9 +245,6 @@ def test_group_by_n_unique_w_missing(constructor: Constructor) -> None:
 
 
 def test_group_by_same_name_twice() -> None:
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
     df = pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
     pattern = re.compile(
         "expected unique.+names.+'b'.+2 times", re.IGNORECASE | re.DOTALL
@@ -257,9 +254,6 @@ def test_group_by_same_name_twice() -> None:
 
 
 def test_group_by_empty_result_pandas() -> None:
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
     df_any = pd.DataFrame({"a": [1, 2, 3], "b": [4, 3, 2]})
     df = nw.from_native(df_any, eager_only=True)
     with pytest.raises(ValueError, match="No results"):
@@ -343,7 +337,7 @@ def test_key_with_nulls_ignored(constructor: Constructor) -> None:
 
 
 def test_key_with_nulls_iter(constructor_eager: ConstructorEager) -> None:
-    if "bodo" in str(constructor):
+    if "bodo" in str(constructor_eager):
         # BODO fail
         pytest.skip()
     data = {
@@ -478,9 +472,6 @@ def test_all_kind_of_aggs(
 
 
 def test_pandas_group_by_index_and_column_overlap() -> None:
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
     df = pd.DataFrame(
         {"a": [1, 1, 2], "b": [4, 5, 6]}, index=pd.Index([0, 1, 2], name="a")
     )

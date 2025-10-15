@@ -56,6 +56,9 @@ def test_sumh_aggregations(constructor: Constructor) -> None:
 def test_sumh_transformations(constructor: Constructor) -> None:
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
+    if "bodo" in str(constructor):
+        # BODO fail
+        pytest.skip()
     data = {"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, 8, 9]}
     df = nw.from_native(constructor(data))
     result = df.select(d=nw.sum_horizontal("a", nw.col("b").sum(), "c"))

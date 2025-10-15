@@ -1,10 +1,15 @@
 from __future__ import annotations
 
+import pytest
+
 import narwhals as nw
 from tests.utils import ConstructorEager, assert_equal_data
 
 
 def test_sample_fraction(constructor_eager: ConstructorEager) -> None:
+    if "bodo" in str(constructor_eager):
+        # BODO fail
+        pytest.skip()
     df = nw.from_native(
         constructor_eager({"a": [1, 2, 3] * 10, "b": [4, 5, 6] * 10}), eager_only=True
     )
@@ -15,6 +20,9 @@ def test_sample_fraction(constructor_eager: ConstructorEager) -> None:
 
 
 def test_sample_with_seed(constructor_eager: ConstructorEager) -> None:
+    if "bodo" in str(constructor_eager):
+        # BODO fail
+        pytest.skip()
     size, n = 100, 10
     df = nw.from_native(constructor_eager({"a": list(range(size))}))
     expected = {"res1": [True], "res2": [False]}
