@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from narwhals._plan._dispatch import dispatch_generate_function, dispatch_method_name
 from narwhals._plan._immutable import Immutable
-from narwhals._plan.common import DispatchGetter, dispatch_method_name, replace
+from narwhals._plan.common import replace
 from narwhals._plan.options import FEOptions, FunctionOptions
 
 if TYPE_CHECKING:
@@ -12,22 +13,11 @@ if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
 
     from narwhals._plan.expressions import ExprIR, FunctionExpr
-    from narwhals._plan.typing import Accessor, FunctionT
+    from narwhals._plan.typing import Accessor
 
 __all__ = ["Function", "HorizontalFunction"]
 
 Incomplete: TypeAlias = "Any"
-
-
-def _dispatch_generate_function(
-    tp: type[FunctionT], /
-) -> Callable[[Incomplete, FunctionExpr[FunctionT], Incomplete, str], Incomplete]:
-    getter = DispatchGetter.from_function(tp)
-
-    def _(ctx: Any, /, node: FunctionExpr[FunctionT], frame: Any, name: str) -> Any:
-        return getter(ctx)(node, frame, name)
-
-    return _
 
 
 class Function(Immutable):
@@ -72,7 +62,7 @@ class Function(Immutable):
             cls._function_options = staticmethod(options)
         if config:
             cls.__expr_ir_config__ = config
-        cls.__expr_ir_dispatch__ = staticmethod(_dispatch_generate_function(cls))
+        cls.__expr_ir_dispatch__ = staticmethod(dispatch_generate_function(cls))
 
     def __repr__(self) -> str:
         return dispatch_method_name(type(self))

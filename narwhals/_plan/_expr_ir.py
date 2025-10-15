@@ -2,15 +2,16 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Generic, cast
 
+from narwhals._plan._dispatch import dispatch_generate
 from narwhals._plan._guards import is_function_expr, is_literal
 from narwhals._plan._immutable import Immutable
-from narwhals._plan.common import DispatchGetter, replace
+from narwhals._plan.common import replace
 from narwhals._plan.options import ExprIROptions
 from narwhals._plan.typing import ExprIRT
 from narwhals.utils import Version
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator
+    from collections.abc import Iterator
     from typing import Any, ClassVar
 
     from typing_extensions import Self, TypeAlias
@@ -23,17 +24,6 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
 
     Incomplete: TypeAlias = "Any"
-
-
-def _dispatch_generate(
-    tp: type[ExprIRT], /
-) -> Callable[[Incomplete, ExprIRT, Incomplete, str], Incomplete]:
-    getter = DispatchGetter.from_expr_ir(tp)
-
-    def _(ctx: Any, /, node: ExprIRT, frame: Any, name: str) -> Any:
-        return getter(ctx)(node, frame, name)
-
-    return _
 
 
 class ExprIR(Immutable):
@@ -59,7 +49,7 @@ class ExprIR(Immutable):
             cls._child = child
         if config:
             cls.__expr_ir_config__ = config
-        cls.__expr_ir_dispatch__ = staticmethod(_dispatch_generate(cls))
+        cls.__expr_ir_dispatch__ = staticmethod(dispatch_generate(cls))
 
     def dispatch(
         self, ctx: Ctx[FrameT_contra, R_co], frame: FrameT_contra, name: str, /

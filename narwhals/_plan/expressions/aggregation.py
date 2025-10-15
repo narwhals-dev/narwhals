@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from narwhals._plan._dispatch import pascal_to_snake_case
 from narwhals._plan._expr_ir import ExprIR
-from narwhals._plan.common import pascal_to_snake_case
 from narwhals._plan.exceptions import agg_scalar_error
 
 if TYPE_CHECKING:
