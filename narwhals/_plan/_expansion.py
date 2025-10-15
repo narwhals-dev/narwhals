@@ -130,16 +130,17 @@ class ExpansionFlags(Immutable):
         has_selector: bool = False
         has_exclude: bool = False
         for e in ir.iter_left():
-            if isinstance(e, (Columns, IndexColumns)):
-                multiple_columns = True
-            elif isinstance(e, Nth):
-                has_nth = True
-            elif isinstance(e, All):
-                has_wildcard = True
-            elif isinstance(e, SelectorIR):
-                has_selector = True
-            elif isinstance(e, Exclude):
-                has_exclude = True
+            if isinstance(e, (_ColumnSelection, SelectorIR)):
+                if isinstance(e, (Columns, IndexColumns)):
+                    multiple_columns = True
+                elif isinstance(e, Nth):
+                    has_nth = True
+                elif isinstance(e, All):
+                    has_wildcard = True
+                elif isinstance(e, SelectorIR):
+                    has_selector = True
+                elif isinstance(e, Exclude):
+                    has_exclude = True
         return ExpansionFlags(
             multiple_columns=multiple_columns,
             has_nth=has_nth,
