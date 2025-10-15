@@ -117,7 +117,6 @@ local-dev = [
   {include-group = "docs"}
 ]
 
-
 [tool.hatch.build.targets.sdist]
 include = [
   "narwhals/*",
@@ -302,6 +301,7 @@ exclude_also = [
   "if .*implementation.is_modin",
   "if .*implementation.is_pyspark",
   "if .*implementation.is_pyspark_connect",
+  "except ModuleNotFoundError",
   'request.applymarker\(pytest.mark.xfail',
   'backend_version <',
   '.*._backend_version\(\) <',

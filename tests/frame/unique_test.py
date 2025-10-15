@@ -6,13 +6,7 @@ import pytest
 
 import narwhals as nw
 from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError
-from tests.utils import (
-    DUCKDB_VERSION,
-    IBIS_VERSION,
-    Constructor,
-    ConstructorEager,
-    assert_equal_data,
-)
+from tests.utils import DUCKDB_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
 
@@ -162,13 +156,7 @@ def test_unique_none(constructor: Constructor) -> None:
         assert_equal_data(result, data)
 
 
-def test_unique_3069(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    request.applymarker(
-        pytest.mark.xfail(
-            "ibis" in str(constructor) and IBIS_VERSION < (11,),
-            reason="https://github.com/ibis-project/ibis/issues/11591",
-        )
-    )
+def test_unique_3069(constructor: Constructor) -> None:
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
     data = {"name": ["a", "b", "c"], "group": ["d", "e", "f"], "value": [1, 2, 3]}
