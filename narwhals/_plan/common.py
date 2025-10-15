@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
     from typing import Any, Callable, ClassVar, TypeVar
 
-    from typing_extensions import TypeIs
+    from typing_extensions import Self, TypeIs
 
     from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._plan.series import Series
@@ -76,11 +76,70 @@ def dispatch_method_name(tp: type[ExprIRT | FunctionT]) -> str:
     return f"{ns}.{name}" if (ns := getattr(config, "accessor_name", "")) else name
 
 
-def dispatch_getter(tp: type[ExprIRT | FunctionT]) -> Callable[[Any], Any]:
-    getter = attrgetter(dispatch_method_name(tp))
-    if tp.__expr_ir_config__.origin == "expr":
-        return getter
-    return lambda ctx: getter(ctx.__narwhals_namespace__())
+def _dispatch_via_namespace(getter: Callable[[Any], Any], /) -> Callable[[Any], Any]:
+    def _(ctx: Any, /) -> Any:
+        return getter(ctx.__narwhals_namespace__())
+
+    return _
+
+
+class DispatchGetter:
+    __slots__ = ("_fn", "_name")
+    _fn: Callable[[Any], Any]
+    _name: str
+
+    def __call__(self, ctx: Any, /) -> Any:
+        result = self._fn(ctx)
+        # this can be `None` iff the method isn't implemented on `CompliantExpr`, but exists as a method on `Expr`
+        if result is not None:
+            # but the issue I have is `result` exists, but returns `None` when called like `result(node, frame, name)`
+            return result
+        raise self._not_implemented_error(ctx)
+
+    @classmethod
+    def no_dispatch(cls, tp: type[ExprIRT]) -> Self:
+        tp_name = tp.__name__
+        obj = cls.__new__(cls)
+        obj._name = tp_name
+
+        # NOTE: Temp weirdness until fixing the original issue with signature that this had (but never got triggered)
+        def _(ctx: Any, /, node: ExprIRT, _: Any, name: str) -> Any:
+            raise obj._no_dispatch_error(ctx, node, name)
+
+        obj._fn = lambda _ctx: _
+        return obj
+
+    @classmethod
+    def from_expr_ir(cls, tp: type[ExprIRT]) -> Self:
+        if not tp.__expr_ir_config__.allow_dispatch:
+            return cls.no_dispatch(tp)
+        return cls._from_configured_type(tp)
+
+    @classmethod
+    def from_function(cls, tp: type[FunctionT]) -> Self:
+        return cls._from_configured_type(tp)
+
+    @classmethod
+    def _from_configured_type(cls, tp: type[ExprIRT | FunctionT]) -> Self:
+        name = dispatch_method_name(tp)
+        getter = attrgetter(name)
+        origin = tp.__expr_ir_config__.origin
+        fn = getter if origin == "expr" else _dispatch_via_namespace(getter)
+        obj = cls.__new__(cls)
+        obj._fn = fn
+        obj._name = name
+        return obj
+
+    def _not_implemented_error(self, ctx: object, /) -> NotImplementedError:
+        msg = f"`{self._name}` is not yet implemented for {type(ctx).__name__!r}"
+        return NotImplementedError(msg)
+
+    def _no_dispatch_error(self, ctx: Any, node: ExprIRT, name: str, /) -> TypeError:
+        msg = (
+            f"{self._name!r} should not appear at the compliant-level.\n\n"
+            f"Make sure to expand all expressions first, got:\n{ctx!r}\n{node!r}\n{name!r}"
+        )
+        return TypeError(msg)
 
 
 def py_to_narwhals_dtype(obj: NonNestedLiteral, version: Version = Version.MAIN) -> DType:

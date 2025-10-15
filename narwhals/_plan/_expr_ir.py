@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Generic, cast
 
 from narwhals._plan._guards import is_function_expr, is_literal
 from narwhals._plan._immutable import Immutable
-from narwhals._plan.common import dispatch_getter, replace
+from narwhals._plan.common import DispatchGetter, replace
 from narwhals._plan.options import ExprIROptions
 from narwhals._plan.typing import ExprIRT
 from narwhals.utils import Version
@@ -28,17 +28,7 @@ if TYPE_CHECKING:
 def _dispatch_generate(
     tp: type[ExprIRT], /
 ) -> Callable[[Incomplete, ExprIRT, Incomplete, str], Incomplete]:
-    if not tp.__expr_ir_config__.allow_dispatch:
-
-        def _(ctx: Any, /, node: ExprIRT, _: Any, name: str) -> Any:
-            msg = (
-                f"{tp.__name__!r} should not appear at the compliant-level.\n\n"
-                f"Make sure to expand all expressions first, got:\n{ctx!r}\n{node!r}\n{name!r}"
-            )
-            raise TypeError(msg)
-
-        return _
-    getter = dispatch_getter(tp)
+    getter = DispatchGetter.from_expr_ir(tp)
 
     def _(ctx: Any, /, node: ExprIRT, frame: Any, name: str) -> Any:
         return getter(ctx)(node, frame, name)

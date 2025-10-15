@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from narwhals._plan._immutable import Immutable
-from narwhals._plan.common import dispatch_getter, dispatch_method_name, replace
+from narwhals._plan.common import DispatchGetter, dispatch_method_name, replace
 from narwhals._plan.options import FEOptions, FunctionOptions
 
 if TYPE_CHECKING:
@@ -22,7 +22,7 @@ Incomplete: TypeAlias = "Any"
 def _dispatch_generate_function(
     tp: type[FunctionT], /
 ) -> Callable[[Incomplete, FunctionExpr[FunctionT], Incomplete, str], Incomplete]:
-    getter = dispatch_getter(tp)
+    getter = DispatchGetter.from_function(tp)
 
     def _(ctx: Any, /, node: FunctionExpr[FunctionT], frame: Any, name: str) -> Any:
         return getter(ctx)(node, frame, name)
