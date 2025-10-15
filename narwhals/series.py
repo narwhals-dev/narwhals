@@ -345,7 +345,7 @@ class Series(Generic[IntoSeriesT]):
             return native_series.__arrow_c_stream__(requested_schema=requested_schema)
         try:
             pa_version = Implementation.PYARROW._backend_version()
-        except ModuleNotFoundError as exc:  # pragma: no cover
+        except ModuleNotFoundError as exc:
             msg = f"'pyarrow>=16.0.0' is required for `Series.__arrow_c_stream__` for object of type {type(native_series)}"
             raise ModuleNotFoundError(msg) from exc
         if pa_version < (16, 0):  # pragma: no cover
