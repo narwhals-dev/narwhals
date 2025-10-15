@@ -2,8 +2,28 @@
 
 If you find yourself being yelled at by a typechecker and ended up here - **do not fear!**
 
-### (1) `Native(*Frame|Series)`
-Minimal [`Protocol`]s for matching *almost any* supported native type of that group:
+We have 5 funky flavors, which tackle two different problem spaces.
+
+How do we describe [Native types] when ...
+- ... **wrapping in** a [Narwhals type]?
+- ... **matching to** an [`Implementation`]?
+
+## Wrapping in a Narwhals type
+[//]: # (TODO @dangotbanned: Replace `Thing` with a better name)
+
+The following examples use the placeholder type `Thing` which represents one of:
+- `DataFrame`: (Eager) 2D data structure representing data as a table with rows and columns.
+- `LazyFrame`: (Lazy) Computation graph/query against a DataFrame/database.
+- `Series`: 1D data structure representing a single column.
+
+Our goal is to **wrap** a *partially-unknown* native object **in** a [generic class]:
+
+    DataFrame[IntoDataFrameT]
+    LazyFrame[IntoLazyFrameT]
+    Series[IntoSeriesT]
+
+### (1) `Native<Thing>`
+Minimal [`Protocol`]s that are [assignable to] *almost any* supported native type of that group:
 
     class NativeThing(Protocol):
         def something_common(self, *args: Any, **kwargs: Any) -> Any: ...
@@ -11,7 +31,7 @@ Minimal [`Protocol`]s for matching *almost any* supported native type of that gr
 Note:
     This group is primarily a building block for more useful types.
 
-### (2) `Into(*Frame|Series)`
+### (2) `Into<Thing>`
 *Publicly* exported [`TypeAlias`]s of **(1)**:
 
     IntoThing: TypeAlias = NativeThing
@@ -23,7 +43,7 @@ Note:
 Tip:
     Reach for these when there **isn't a need to preserve** the original native type.
 
-### (3) `Into(*Frame|Series)T`
+### (3) `Into<Thing>T`
 *Publicly* exported [`TypeVar`]s, bound to **(2)**:
 
     IntoThingT = TypeVar("IntoThingT", bound=IntoThing)
@@ -36,14 +56,10 @@ Putting it all together, we can now add a *narwhals-level* wrapper:
     class Thing(Generic[IntoThingT]):
         def to_native(self) -> IntoThingT: ...
 
+## Matching to an `Implementation`
+[//]: # (TODO @dangotbanned: Introduce this section?)
+
 ### (4) `Native<Backend>`
-Everything so far has been focused on the idea of matching an *unknown* native object to
-a [`Protocol`] used by a [generic class]:
-
-    DataFrame[IntoDataFrameT]
-    LazyFrame[IntoLazyFrameT]
-    Series[IntoSeriesT]
-
 If we want to describe a set of more specific types (e.g. in [`@overload`s]), then these protocols/aliases are the right tool.
 
 For common and easily-installed backends, aliases are composed of the native type(s):
@@ -67,7 +83,11 @@ They differ by checking **all** native types/protocols in a single-call and usin
 
 [structural]: https://typing.python.org/en/latest/spec/glossary.html#term-structural
 [nominal]: https://typing.python.org/en/latest/spec/glossary.html#term-nominal
+[Native types]: https://narwhals-dev.github.io/narwhals/how_it_works/#polars-and-other-implementations
+[Narwhals type]: https://narwhals-dev.github.io/narwhals/api-reference/dataframe/
+[`Implementation`]: https://narwhals-dev.github.io/narwhals/api-reference/implementation/
 [`Protocol`]: https://typing.python.org/en/latest/spec/protocol.html
+[assignable to]: https://typing.python.org/en/latest/spec/glossary.html#term-assignable
 [`TypeAlias`]: https://mypy.readthedocs.io/en/stable/kinds_of_types.html#type-aliases
 [`TypeVar`]: https://mypy.readthedocs.io/en/stable/generics.html#type-variables-with-upper-bounds
 [generic class]: https://docs.python.org/3/library/typing.html#user-defined-generic-types
