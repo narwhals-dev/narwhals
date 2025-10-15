@@ -788,6 +788,62 @@ class PandasLikeSeries(EagerSeries[Any]):
     def round(self, decimals: int) -> Self:
         return self._with_native(self.native.round(decimals=decimals))
 
+    def floor(self) -> Self:
+        native = self.native
+        native_cls = type(native)
+        implementation = self._implementation
+        if get_dtype_backend(native.dtype, implementation=implementation) == "pyarrow":
+            import pyarrow.compute as pc
+
+            from narwhals._arrow.utils import native_to_narwhals_dtype
+
+            ca = native.array._pa_array
+            result_arr = cast("ChunkedArrayAny", pc.floor(ca))
+            nw_dtype = native_to_narwhals_dtype(result_arr.type, self._version)
+            out_dtype = narwhals_to_native_dtype(
+                nw_dtype, "pyarrow", self._implementation, self._version
+            )
+            result_native = native_cls(
+                result_arr, dtype=out_dtype, index=native.index, name=native.name
+            )
+        else:
+            array_funcs = self._array_funcs
+            result_arr = array_funcs.floor(self.native)
+            result_native = (
+                native_cls(result_arr, index=native.index, name=native.name)
+                if implementation.is_cudf()
+                else result_arr
+            )
+        return self._with_native(result_native)
+
+    def ceil(self) -> Self:
+        native = self.native
+        native_cls = type(native)
+        implementation = self._implementation
+        if get_dtype_backend(native.dtype, implementation=implementation) == "pyarrow":
+            import pyarrow.compute as pc
+
+            from narwhals._arrow.utils import native_to_narwhals_dtype
+
+            ca = native.array._pa_array
+            result_arr = cast("ChunkedArrayAny", pc.ceil(ca))
+            nw_dtype = native_to_narwhals_dtype(result_arr.type, self._version)
+            out_dtype = narwhals_to_native_dtype(
+                nw_dtype, "pyarrow", self._implementation, self._version
+            )
+            result_native = native_cls(
+                result_arr, dtype=out_dtype, index=native.index, name=native.name
+            )
+        else:
+            array_funcs = self._array_funcs
+            result_arr = array_funcs.ceil(self.native)
+            result_native = (
+                native_cls(result_arr, index=native.index, name=native.name)
+                if implementation.is_cudf()
+                else result_arr
+            )
+        return self._with_native(result_native)
+
     def to_dummies(self, *, separator: str, drop_first: bool) -> PandasLikeDataFrame:
         from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
