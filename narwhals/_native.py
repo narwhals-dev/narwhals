@@ -18,9 +18,9 @@ The following examples use the placeholder type `Thing` which represents one of:
 
 Our goal is to **wrap** a *partially-unknown* native object **in** a [generic class]:
 
-    DataFrame[IntoDataFrameT]
-    LazyFrame[IntoLazyFrameT]
-    Series[IntoSeriesT]
+    def wrapping_in_df(native: IntoDataFrameT) -> DataFrame[IntoDataFrameT]: ...
+    def wrapping_in_ldf(native: IntoLazyFrameT) -> LazyFrame[IntoLazyFrameT]: ...
+    def wrapping_in_ser(native: IntoSeriesT) -> Series[IntoSeriesT]: ...
 
 ### (1) `Native<Thing>`
 Minimal [`Protocol`]s that are [assignable to] *almost any* supported native type of that group:
@@ -57,24 +57,30 @@ Putting it all together, we can now add a *narwhals-level* wrapper:
         def to_native(self) -> IntoThingT: ...
 
 ## Matching to an `Implementation`
-[//]: # (TODO @dangotbanned: Introduce this section?)
+This problem differs as we need to *create* a relationship between *otherwise-unrelated* types.
+
+Comparing the problems side-by-side, we can more clearly see this difference:
+
+    def wrapping_in_df(native: IntoDataFrameT) -> DataFrame[IntoDataFrameT]: ...
+    def matching_to_polars(native: pl.DataFrame) -> Literal[Implementation.POLARS]: ...
 
 ### (4) `Native<Backend>`
-If we want to describe a set of more specific types (e.g. in [`@overload`s]), then these protocols/aliases are the right tool.
+If we want to describe a set of specific types and **match** them in [`@overload`s], then these the tools we need.
 
-For common and easily-installed backends, aliases are composed of the native type(s):
+For common and easily-installed backends, [`TypeAlias`]s are composed of the native type(s):
 
     NativePolars: TypeAlias = pl.DataFrame | pl.LazyFrame | pl.Series
 
-Otherwise, we need to define a [`Protocol`] which the native type(s) can match against *when* installed:
+Otherwise, we need to define a [`Protocol`] which the native type(s) can **match** against *when* installed:
 
     class NativeDask(NativeLazyFrame, Protocol):
         _partition_type: type[pd.DataFrame]
 
-Important:
-    The goal is to be as minimal as possible, while still being *specific-enough* to **not** match something else.
+Tip:
+    The goal is to be as minimal as possible, while still being *specific-enough* to **not match** something else.
 
-For a more complete example, see [ibis#9276 comment].
+Important:
+    See [ibis#9276 comment] for a more *in-depth* example that doesn't fit here 😄
 
 ### (5) `is_native_<backend>`
 [Type guards] for **(4)**, *similar* to those found in `nw.dependencies`.
