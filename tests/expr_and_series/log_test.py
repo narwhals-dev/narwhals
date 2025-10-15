@@ -41,7 +41,7 @@ def test_log_dtype_pandas() -> None:
 
 
 @pytest.mark.skipif(PANDAS_VERSION < (2, 0, 0), reason="nullable types require pandas2+")
-def test_log_dtype_pandas_nullabe() -> None:
+def test_log_dtype_pandas_nullable() -> None:
     s = pd.Series([1.0, None, 2.0], name="a", dtype="Float32", index=[8, 7, 6])
     result = nw.from_native(s, series_only=True).log().to_native()
     expected = pd.Series(
