@@ -375,7 +375,7 @@ def test_cast_typing_invalid() -> None:
     # feel free to update the types used
     # See (https://github.com/narwhals-dev/narwhals/pull/2654#discussion_r2142263770)
 
-    with pytest.raises(AttributeError):
+    with pytest.raises(TypeError):
         df.select(a.cast(nw.Struct))  # type: ignore[arg-type]
 
     with pytest.raises(AttributeError):
@@ -393,7 +393,7 @@ def test_cast_typing_invalid() -> None:
     with pytest.raises((ValueError, AttributeError)):
         df.select(a.cast(nw.Struct({"a": nw.Int16, "b": nw.Enum})))  # type: ignore[dict-item]
 
-    with pytest.raises(AttributeError):
+    with pytest.raises(TypeError):
         df.select(a.cast(nw.List(nw.Struct)))  # type: ignore[arg-type]
 
     with pytest.raises(AttributeError):
