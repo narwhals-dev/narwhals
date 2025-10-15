@@ -1030,7 +1030,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         else:
             log_func = self._array_funcs.log
 
-            def array_log(arr: Any) -> Any:
+            def array_log(arr: NativeSeriesT) -> NativeSeriesT:
                 return log_func(arr) / log_func(base)
 
             result_native = self._apply_array_func(native, array_log)
@@ -1073,7 +1073,9 @@ class PandasLikeSeries(EagerSeries[Any]):
         )
 
     def _apply_array_func(
-        self, native: NativeSeriesT, array_func: Callable[[NativeSeriesT], Any]
+        self,
+        native: NativeSeriesT,
+        array_func: Callable[[NativeSeriesT], NativeSeriesT | _1DArray],
     ) -> NativeSeriesT:
         native_cls = type(native)
         result_arr = array_func(native)

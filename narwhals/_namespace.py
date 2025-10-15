@@ -30,7 +30,7 @@ from narwhals.dependencies import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Collection, Iterable, Sized
+    from collections.abc import Collection, Sequence, Sized
     from typing import ClassVar
 
     import duckdb
@@ -91,14 +91,16 @@ if TYPE_CHECKING:
 
     class _BasePandasLikeSeries(NativeSeries, _BasePandasLike, Protocol):
         name: Any | None
+        index: Sequence[Any]
 
         def __init__(
             self,
-            data: Iterable[Any] | None = None,
-            index: Iterable[Any] | None = None,
+            data: Sequence[Any] | None = None,
+            index: Sequence[Any] | None = None,
             dtype: Any | None = None,
             name: Any | None = None,
         ) -> None: ...
+
         def where(self, cond: Any, other: Any = ..., /) -> Self | Incomplete: ...
 
     class _NativeDask(NativeLazyFrame, Protocol):
