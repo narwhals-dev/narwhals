@@ -10,6 +10,7 @@ from narwhals._typing_compat import TypeVar
 if TYPE_CHECKING:
     from typing_extensions import Never, TypeAlias
 
+    from narwhals._plan.compliant.typing import Ctx, FrameT_contra, R_co
     from narwhals._plan.expressions import ExprIR, FunctionExpr
     from narwhals._plan.typing import ExprIRT, FunctionT
 
@@ -38,8 +39,13 @@ class Dispatcher(Generic[Node]):
         return f"{type(self).__name__}<{self.name}>"
 
     def __call__(
-        self, ctx: Incomplete, node: Node, frame: Any, name: str, /
-    ) -> Incomplete:
+        self,
+        ctx: Ctx[FrameT_contra, R_co],
+        node: Node,
+        frame: FrameT_contra,
+        name: str,
+        /,
+    ) -> R_co:
         # raises when the method isn't implemented on `CompliantExpr`, but exists as a method on `Expr`
         # gives a more helpful error for things that are namespaced like `col("a").str.replace`
         try:
@@ -48,7 +54,7 @@ class Dispatcher(Generic[Node]):
             raise self._not_implemented_error(ctx) from None
 
         if result := bound_method(node, frame, name):
-            return result
+            return result  # type: ignore[no-any-return]
         # here if is defined on `CompliantExpr`, but not on ctx
         raise self._not_implemented_error(ctx)
 
