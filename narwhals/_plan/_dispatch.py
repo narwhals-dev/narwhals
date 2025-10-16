@@ -20,10 +20,14 @@ Incomplete: TypeAlias = "Any"
 Node = TypeVar("Node")
 
 
+Getter: TypeAlias = Callable[[Any], Any]
+Raiser: TypeAlias = Callable[..., "Never"]
+
+
 @final
 class Dispatcher(Generic[Node]):
     __slots__ = ("_method_getter", "_name")
-    _method_getter: Callable[[Any], Any]
+    _method_getter: Getter
     _name: str
 
     @property
@@ -49,21 +53,11 @@ class Dispatcher(Generic[Node]):
         raise self._not_implemented_error(ctx)
 
     @classmethod
-    def no_dispatch(cls: type[Dispatcher[Any]], tp: type[ExprIRT]) -> Dispatcher[ExprIRT]:
-        tp_name = tp.__name__
-        obj = cls.__new__(cls)
-        obj._name = tp_name
-
-        # NOTE: Temp weirdness until fixing the original issue with signature that this had (but never got triggered)
-        obj._method_getter = lambda _ctx: obj._no_dispatch_error
-        return obj
-
-    @classmethod
     def from_expr_ir(
         cls: type[Dispatcher[Any]], tp: type[ExprIRT]
     ) -> Dispatcher[ExprIRT]:
         if not tp.__expr_ir_config__.allow_dispatch:
-            return cls.no_dispatch(tp)
+            return cls._no_dispatch(tp)
         return Dispatcher._from_configured_type(tp)
 
     @classmethod
@@ -95,19 +89,32 @@ class Dispatcher(Generic[Node]):
         obj._name = name
         return obj
 
-    def _no_dispatch_error(self, node: Node, frame: Any, name: str, /) -> Never:
-        msg = (
-            f"{self.name!r} should not appear at the compliant-level.\n\n"
-            f"Make sure to expand all expressions first, got:\n{node!r}"
-        )
-        raise TypeError(msg)
+    @staticmethod
+    def _no_dispatch(tp: type[ExprIRT], /) -> Dispatcher[ExprIRT]:
+        obj = Dispatcher.__new__(Dispatcher)
+        obj._name = tp.__name__
+        obj._method_getter = obj._make_no_dispatch_error()
+        return obj
+
+    def _make_no_dispatch_error(self) -> Callable[[Any], Raiser]:
+        def _no_dispatch_error(node: Node, *_: Any) -> Never:
+            msg = (
+                f"{self.name!r} should not appear at the compliant-level.\n\n"
+                f"Make sure to expand all expressions first, got:\n{node!r}"
+            )
+            raise TypeError(msg)
+
+        def getter(_: Any, /) -> Raiser:
+            return _no_dispatch_error
+
+        return getter
 
     def _not_implemented_error(self, ctx: object, /) -> NotImplementedError:
         msg = f"`{self.name}` is not yet implemented for {type(ctx).__name__!r}"
         return NotImplementedError(msg)
 
 
-def _dispatch_via_namespace(getter: Callable[[Any], Any], /) -> Callable[[Any], Any]:
+def _dispatch_via_namespace(getter: Getter, /) -> Getter:
     def _(ctx: Any, /) -> Any:
         return getter(ctx.__narwhals_namespace__())
 

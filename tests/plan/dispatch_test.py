@@ -8,6 +8,7 @@ import pytest
 pytest.importorskip("pyarrow")
 import narwhals as nw
 from narwhals import _plan as nwp
+from narwhals._plan import expressions as ir, selectors as ncs
 from narwhals._plan._dispatch import get_dispatch_name
 from tests.plan.utils import assert_equal_data, dataframe, named_ir
 
@@ -37,9 +38,17 @@ def test_dispatch(df: DataFrame[pa.Table, pa.ChunkedArray[Any]]) -> None:
     only_at_compliant_level = nwp.col("c").ewm_mean()
     only_at_narwhals_level = nwp.col("d").str.contains("a")
     forgot_to_expand = (named_ir("howdy", nwp.nth(3, 4).first()),)
+    aliased_after_expand: tuple[ir.NamedIR[Any]] = (
+        ir.NamedIR.from_ir(ir.col("a").alias("b")),
+    )
+
     pattern_expand = re.compile(
         r"IndexColumns.+not.+appear.+compliant.+expand.+expr.+first",
         re.DOTALL | re.IGNORECASE,
+    )
+    bad = re.escape("col('a').alias('b')")
+    pattern_aliased_after_expand = re.compile(
+        rf"Alias.+not.+appear.+got.+{bad}", re.DOTALL | re.IGNORECASE
     )
 
     assert_equal_data(df.select(implemented_full), {"a": [False, True, False]})
@@ -52,6 +61,9 @@ def test_dispatch(df: DataFrame[pa.Table, pa.ChunkedArray[Any]]) -> None:
 
     with pytest.raises(TypeError, match=pattern_expand):
         df._compliant.select(forgot_to_expand)
+
+    with pytest.raises(TypeError, match=pattern_aliased_after_expand):
+        df._compliant.select(aliased_after_expand)
 
     # Not a narwhals method, to make sure this doesn't allow arbitrary calls
     with pytest.raises(AttributeError):
@@ -73,6 +85,8 @@ def test_dispatch(df: DataFrame[pa.Table, pa.ChunkedArray[Any]]) -> None:
         (nwp.nth(1).first(), "first"),
         (nwp.col("a").sum(), "sum"),
         (nwp.col("a").drop_nulls().arg_min(), "arg_min"),
+        pytest.param(nwp.col("a").alias("b"), "Alias", id="no_dispatch-Alias"),
+        pytest.param(ncs.string(), "RootSelector", id="no_dispatch-RootSelector"),
     ],
 )
 def test_dispatch_name(expr: nwp.Expr, expected: str) -> None:
