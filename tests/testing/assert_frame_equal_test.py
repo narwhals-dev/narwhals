@@ -33,7 +33,7 @@ def test_check_narwhals_objects(constructor: Constructor) -> None:
         "Expected `narwhals.DataFrame` or `narwhals.LazyFrame` instance, found"
     )
     with pytest.raises(TypeError, match=msg):
-        assert_frame_equal(frame, frame)  # type: ignore[type-var]
+        assert_frame_equal(frame, frame)  # type: ignore[arg-type]
 
 
 def test_implementation_mismatch() -> None:
@@ -61,7 +61,7 @@ def test_check_same_input_type(constructor_eager: ConstructorEager) -> None:
 
     msg = re.escape("inputs are different (unexpected input types)")
     with pytest.raises(AssertionError, match=msg):
-        assert_frame_equal(frame.lazy(), frame.lazy().collect())  # type: ignore[type-var]
+        assert_frame_equal(frame.lazy(), frame.lazy().collect())
 
 
 @pytest.mark.parametrize(
@@ -178,7 +178,7 @@ def test_check_schema_mismatch(
 def test_height_mismatch(constructor: Constructor) -> None: ...
 
 
-def test_columns_mismatch(constructor: Constructor) -> None: ...
+def test_series_mismatch(constructor: Constructor) -> None: ...
 
 
 def test_self_equal(constructor: Constructor, data: Data) -> None:
@@ -194,4 +194,4 @@ def test_self_equal(constructor: Constructor, data: Data) -> None:
 
     _data = {k: v for k, v in data.items() if k not in cols_to_drop}
     df = nw.from_native(constructor(_data))
-    assert_frame_equal(df, df)  # type: ignore[type-var]
+    assert_frame_equal(df, df)

@@ -12,7 +12,7 @@ from narwhals.testing.asserts.utils import (
 )
 
 if TYPE_CHECKING:
-    from narwhals.typing import DataFrameT, FrameT
+    from narwhals.typing import DataFrameT, LazyFrameT
 
 GUARANTEES_ROW_ORDER = {
     Implementation.PANDAS,
@@ -25,8 +25,8 @@ GUARANTEES_ROW_ORDER = {
 
 
 def assert_frame_equal(
-    left: FrameT,
-    right: FrameT,
+    left: DataFrameT | LazyFrameT,
+    right: DataFrameT | LazyFrameT,
     *,
     check_row_order: bool = True,
     check_column_order: bool = True,
@@ -95,7 +95,7 @@ def assert_frame_equal(
 
 
 def _check_correct_input_type(  # noqa: RET503
-    left: DataFrame[Any] | LazyFrame[Any], right: DataFrame[Any] | LazyFrame[Any]
+    left: DataFrameT | LazyFrameT, right: DataFrameT | LazyFrameT
 ) -> tuple[DataFrame[Any], DataFrame[Any]]:
     # Adapted from https://github.com/pola-rs/polars/blob/afdbf3056d1228cf493901e45f536b0905cec8ea/py-polars/src/polars/testing/asserts/frame.py#L15-L17
     if isinstance(left, DataFrame) and isinstance(right, DataFrame):
@@ -137,11 +137,16 @@ def _assert_dataframe_equal(
     left_schema = left.schema
     if (not check_row_order) or (impl not in GUARANTEES_ROW_ORDER):
         # NOTE: Sort by all the non-nested dtypes columns.
-        # This might lead to wrong results
-        left_cols = [name for name, dtype in left_schema.items() if not dtype.is_nested()]
+        # ! This might lead to wrong results.
+        # If only nested dtypes are available, then we raise an exception.
+        sort_by = [name for name, dtype in left_schema.items() if not dtype.is_nested()]
 
-        left = left.sort(left_cols)
-        right = right.sort(left_cols)
+        if not sort_by:
+            msg = "`check_row_order=False` is not supported (yet) with only nested data type."
+            raise NotImplementedError(msg)
+
+        left = left.sort(sort_by)
+        right = right.sort(sort_by)
 
     for col_name in left_schema.names():
         _series_left = left.get_column(col_name)
