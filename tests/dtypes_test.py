@@ -493,6 +493,17 @@ def test_enum_hash() -> None:
     assert nw.Enum(["a", "b"]) not in {nw.Enum(["a", "b", "c"])}
 
 
+@pytest.mark.parametrize("dtype_name", ["Datetime", "Duration", "Enum"])
+def test_dtype_repr_versioned(dtype_name: str) -> None:
+    from narwhals.stable import v1 as nw_v1
+
+    dtype_class_main = getattr(nw, dtype_name)
+    dtype_class_v1 = getattr(nw_v1, dtype_name)
+
+    assert dtype_class_main is not dtype_class_v1
+    assert repr(dtype_class_main) != repr(dtype_class_v1)
+
+
 def test_datetime_w_tz_duckdb() -> None:
     pytest.importorskip("duckdb")
     import duckdb
