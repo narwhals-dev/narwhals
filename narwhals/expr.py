@@ -1494,7 +1494,7 @@ class Expr:
             |floor: [[1,4,-2]]       |
             └────────────────────────┘
         """
-        return self._with_elementwise(lambda plx: self._to_compliant_expr(plx).floor())
+        return self._with_node(ExprNode(ExprKind.ELEMENTWISE, "floor"))
 
     def ceil(self) -> Self:
         r"""Compute the numerical ceiling.
@@ -1517,7 +1517,7 @@ class Expr:
             |ceil: [[2,5,-1]]        |
             └────────────────────────┘
         """
-        return self._with_elementwise(lambda plx: self._to_compliant_expr(plx).ceil())
+        return self._with_node(ExprNode(ExprKind.ELEMENTWISE, "ceil"))
 
     def len(self) -> Self:
         r"""Return the number of elements in the column.
