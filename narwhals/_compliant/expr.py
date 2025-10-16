@@ -95,7 +95,7 @@ class CompliantExpr(
 
     @property
     def _metadata(self) -> ExprMetadata:
-        if self._opt_metadata is None:
+        if self._opt_metadata is None:  # pragma: no cover
             msg = (
                 "`_opt_metadata` is None. This is usually the result of trying to do "
                 "some operation (such as `over`) which requires access to the metadata "
