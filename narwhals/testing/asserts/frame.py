@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any
 from narwhals._utils import Implementation, qualified_type_name
 from narwhals.dataframe import DataFrame, LazyFrame
 from narwhals.dependencies import is_narwhals_dataframe, is_narwhals_lazyframe
+from narwhals.testing.asserts.series import assert_series_equal
 from narwhals.testing.asserts.utils import (
     raise_assertion_error,
     raise_frame_assertion_error,
@@ -133,6 +134,35 @@ def _assert_dataframe_equal(
     if left_len != right_len:
         raise_frame_assertion_error("height (row count) mismatch", left_len, right_len)
 
+    left_schema = left.schema
+    if (not check_row_order) or (impl not in GUARANTEES_ROW_ORDER):
+        # NOTE: Sort by all the non-nested dtypes columns.
+        # This might lead to wrong results
+        left_cols = [name for name, dtype in left_schema.items() if not dtype.is_nested()]
+
+        left = left.sort(left_cols)
+        right = right.sort(left_cols)
+
+    for col_name in left_schema.names():
+        _series_left = left.get_column(col_name)
+        _series_right = right.get_column(col_name)
+        try:
+            assert_series_equal(
+                _series_left,
+                _series_right,
+                check_dtypes=check_dtypes,
+                check_names=False,
+                check_order=True,
+                check_exact=check_exact,
+                rel_tol=rel_tol,
+                abs_tol=abs_tol,
+                categorical_as_str=categorical_as_str,
+            )
+        except AssertionError:
+            raise_frame_assertion_error(
+                f'value mismatch for column "{col_name}"', _series_left, _series_right
+            )
+
 
 def _check_schema_equal(
     left: DataFrameT, right: DataFrameT, *, check_dtypes: bool, check_column_order: bool
@@ -171,10 +201,11 @@ def _check_schema_equal(
 
     if check_dtypes:
         ldtypes = lschema.dtypes()
-        if check_column_order:
-            rdtypes = rschema.dtypes()
-        else:
-            rdtypes = [rschema[col_name] for col_name in lnames]
+        rdtypes = (
+            rschema.dtypes()
+            if check_column_order
+            else [rschema[col_name] for col_name in lnames]
+        )
 
         if ldtypes != rdtypes:
             raise_frame_assertion_error(
