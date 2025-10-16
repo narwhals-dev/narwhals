@@ -345,7 +345,7 @@ class Series(Generic[IntoSeriesT]):
             return native_series.__arrow_c_stream__(requested_schema=requested_schema)
         try:
             pa_version = Implementation.PYARROW._backend_version()
-        except ModuleNotFoundError as exc:  # pragma: no cover
+        except ModuleNotFoundError as exc:
             msg = f"'pyarrow>=16.0.0' is required for `Series.__arrow_c_stream__` for object of type {type(native_series)}"
             raise ModuleNotFoundError(msg) from exc
         if pa_version < (16, 0):  # pragma: no cover
@@ -2044,6 +2044,46 @@ class Series(Generic[IntoSeriesT]):
             ]
         """
         return self._with_compliant(self._compliant_series.round(decimals))
+
+    def floor(self) -> Self:
+        r"""Compute the numerical floor.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> s_native = pa.chunked_array([[1.1, 4.3, -1.3]])
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.floor().to_native()  # doctest:+ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                1,
+                4,
+                -2
+              ]
+            ]
+        """
+        return self._with_compliant(self._compliant_series.floor())
+
+    def ceil(self) -> Self:
+        r"""Compute the numerical ceiling.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> s_native = pa.chunked_array([[1.1, 4.3, -1.3]])
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.ceil().to_native()  # doctest:+ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                2,
+                5,
+                -1
+              ]
+            ]
+        """
+        return self._with_compliant(self._compliant_series.ceil())
 
     def to_dummies(
         self, *, separator: str = "_", drop_first: bool = False

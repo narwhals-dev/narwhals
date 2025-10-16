@@ -156,10 +156,7 @@ def test_unique_none(constructor: Constructor) -> None:
         assert_equal_data(result, data)
 
 
-def test_unique_3069(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "ibis" in str(constructor):
-        # https://github.com/ibis-project/ibis/issues/11591
-        request.applymarker(pytest.mark.xfail)
+def test_unique_3069(constructor: Constructor) -> None:
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
     data = {"name": ["a", "b", "c"], "group": ["d", "e", "f"], "value": [1, 2, 3]}

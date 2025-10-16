@@ -55,8 +55,7 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
         # we are not testing pyspark on Windows here because it is very slow
-        # TODO(FBruzzesi): Unpin duckdb version once ibis makes a new release
-        run: uv pip install -e ".[dask, modin, ibis]" --group core-tests --group extra "duckdb<1.4" --system
+        run: uv pip install -e ".[dask, modin, ibis]" --group core-tests --group extra --system
       - name: install-test-plugin
         run: uv pip install -e tests/test_plugin --system
       - name: show-deps
@@ -88,8 +87,7 @@ jobs:
           cache-suffix: pytest-full-coverage-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
-        # TODO(FBruzzesi): Unpin duckdb version once ibis makes a new release
-        run: uv pip install -e ".[dask, modin, ibis]" --group core-tests --group extra "duckdb<1.4" --system
+        run: uv pip install -e ".[dask, modin, ibis]" --group core-tests --group extra --system
       - name: install-test-plugin
         run: uv pip install -e tests/test_plugin --system
       - name: show-deps
