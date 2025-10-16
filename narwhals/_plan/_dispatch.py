@@ -52,18 +52,14 @@ class Dispatcher(Generic[Node]):
         # here if is defined on `CompliantExpr`, but not on ctx
         raise self._not_implemented_error(ctx)
 
-    @classmethod
-    def from_expr_ir(
-        cls: type[Dispatcher[Any]], tp: type[ExprIRT]
-    ) -> Dispatcher[ExprIRT]:
+    @staticmethod
+    def from_expr_ir(tp: type[ExprIRT], /) -> Dispatcher[ExprIRT]:
         if not tp.__expr_ir_config__.allow_dispatch:
-            return cls._no_dispatch(tp)
+            return Dispatcher._no_dispatch(tp)
         return Dispatcher._from_configured_type(tp)
 
-    @classmethod
-    def from_function(
-        cls: type[Dispatcher[Any]], tp: type[FunctionT]
-    ) -> Dispatcher[FunctionExpr[FunctionT]]:
+    @staticmethod
+    def from_function(tp: type[FunctionT], /) -> Dispatcher[FunctionExpr[FunctionT]]:
         return Dispatcher._from_configured_type(tp)
 
     @staticmethod
@@ -76,17 +72,16 @@ class Dispatcher(Generic[Node]):
         tp: type[FunctionT], /
     ) -> Dispatcher[FunctionExpr[FunctionT]]: ...
 
+    # TODO @dangotbanned: Can this be done without overloads?
     @staticmethod
     def _from_configured_type(
         tp: type[ExprIRT | FunctionT], /
     ) -> Dispatcher[ExprIRT] | Dispatcher[FunctionExpr[FunctionT]]:
-        name = _dispatch_method_name(tp)
-        getter = attrgetter(name)
-        origin = tp.__expr_ir_config__.origin
-        fn = getter if origin == "expr" else _dispatch_via_namespace(getter)
         obj = Dispatcher.__new__(Dispatcher)
-        obj._method_getter = fn
-        obj._name = name
+        obj._name = _method_name(tp)
+        getter = attrgetter(obj._name)
+        is_namespaced = tp.__expr_ir_config__.is_namespaced
+        obj._method_getter = _via_namespace(getter) if is_namespaced else getter
         return obj
 
     @staticmethod
@@ -114,7 +109,7 @@ class Dispatcher(Generic[Node]):
         return NotImplementedError(msg)
 
 
-def _dispatch_via_namespace(getter: Getter, /) -> Getter:
+def _via_namespace(getter: Getter, /) -> Getter:
     def _(ctx: Any, /) -> Any:
         return getter(ctx.__narwhals_namespace__())
 
@@ -140,7 +135,7 @@ def _re_repl_snake(match: re.Match[str], /) -> str:
     return f"{match.group(1)}_{match.group(2)}"
 
 
-def _dispatch_method_name(tp: type[ExprIRT | FunctionT]) -> str:
+def _method_name(tp: type[ExprIRT | FunctionT]) -> str:
     config = tp.__expr_ir_config__
     name = config.override_name or _pascal_to_snake_case(tp.__name__)
     return f"{ns}.{name}" if (ns := getattr(config, "accessor_name", "")) else name

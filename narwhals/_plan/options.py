@@ -310,6 +310,10 @@ class _BaseIROptions(Immutable):
             cls.default(), origin="__narwhals_namespace__", override_name=override_name
         )
 
+    @property
+    def is_namespaced(self) -> bool:
+        return self.origin == "__narwhals_namespace__"
+
 
 class ExprIROptions(_BaseIROptions):
     __slots__ = ("allow_dispatch",)
