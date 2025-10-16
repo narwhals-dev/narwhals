@@ -403,53 +403,12 @@ class ExprMetadata:
 
     @classmethod
     def from_node(cls, node: ExprNode, *ces: CompliantExprAny) -> ExprMetadata:
-        kind = node.kind
-        if kind in KIND_TO_METADATA_CONSTRUCTOR:
-            return KIND_TO_METADATA_CONSTRUCTOR[kind](node, *ces)
-        if kind is ExprKind.COL:
-            return (
-                cls.from_selector_single(node)
-                if len(node.kwargs["names"]) == 1
-                else cls.from_selector_multi_named(node)
-            )
-        if kind is ExprKind.NTH:
-            return (
-                cls.from_selector_single(node)
-                if len(node.kwargs["indices"]) == 1
-                else cls.from_selector_multi_unnamed(node)
-            )
-        msg = f"Unexpected node kind: {kind}"  # pragma: no cover
-        raise AssertionError(msg)  # pragma: no cover
+        return KIND_TO_METADATA_CONSTRUCTOR[node.kind](node, *ces)
 
-    def with_node(  # noqa: PLR0911,C901
+    def with_node(
         self, node: ExprNode, ce: CompliantExprAny, *ces: CompliantExprAny
     ) -> ExprMetadata:
-        kind = node.kind
-        if kind is ExprKind.AGGREGATION:
-            return self.with_aggregation(node)
-        if kind is ExprKind.ELEMENTWISE:
-            return combine_metadata(
-                ce, *ces, to_single_output=False, current_node=node, prev=ce._metadata
-            )
-        if kind is ExprKind.FILTRATION:
-            return self.with_filtration(node)
-        if kind is ExprKind.ORDERABLE_WINDOW:
-            return self.with_orderable_window(node)
-        if kind is ExprKind.ORDERABLE_FILTRATION:
-            return self.with_orderable_filtration(node)
-        if kind is ExprKind.ORDERABLE_AGGREGATION:
-            return self.with_orderable_aggregation(node)
-        if kind is ExprKind.WINDOW:
-            return self.with_window(node)
-        if kind is ExprKind.OVER:
-            if node.kwargs["order_by"]:
-                return self.with_ordered_over(node)
-            if not node.kwargs["partition_by"]:  # pragma: no cover
-                msg = "At least one of `partition_by` or `order_by` must be specified."
-                raise InvalidOperationError(msg)
-            return self.with_partitioned_over(node)
-        msg = f"Unexpected node kind: {kind}"  # pragma: no cover
-        raise AssertionError(msg)  # pragma: no cover
+        return KIND_TO_METADATA_UPDATER[node.kind](self, node, ce, *ces)
 
     @classmethod
     def from_aggregation(cls, node: ExprNode) -> ExprMetadata:
@@ -475,9 +434,25 @@ class ExprMetadata:
         )
 
     @classmethod
-    def from_selector_single(cls, node: ExprNode) -> ExprMetadata:
-        # e.g. `nw.col('a')`, `nw.nth(0)`
+    def from_series(cls, node: ExprNode) -> ExprMetadata:
         return cls(ExpansionKind.SINGLE, current_node=node, prev=None)
+
+    @classmethod
+    def from_col(cls, node: ExprNode) -> ExprMetadata:
+        # e.g. `nw.col('a')`, `nw.nth(0)`
+        return (
+            cls(ExpansionKind.SINGLE, current_node=node, prev=None)
+            if len(node.kwargs["names"]) == 1
+            else cls.from_selector_multi_named(node)
+        )
+
+    @classmethod
+    def from_nth(cls, node: ExprNode) -> ExprMetadata:
+        return (
+            cls(ExpansionKind.SINGLE, current_node=node, prev=None)
+            if len(node.kwargs["indices"]) == 1
+            else cls.from_selector_multi_unnamed(node)
+        )
 
     @classmethod
     def from_selector_multi_named(cls, node: ExprNode) -> ExprMetadata:
@@ -497,7 +472,7 @@ class ExprMetadata:
     def is_filtration(self) -> bool:
         return not self.preserves_length and not self.is_scalar_like
 
-    def with_aggregation(self, node: ExprNode) -> ExprMetadata:
+    def with_aggregation(self, node: ExprNode, _ce: CompliantExprAny) -> ExprMetadata:
         if self.is_scalar_like:
             msg = "Can't apply aggregations to scalar-like expressions."
             raise InvalidOperationError(msg)
@@ -513,7 +488,16 @@ class ExprMetadata:
             prev=self,
         )
 
-    def with_orderable_aggregation(self, node: ExprNode) -> ExprMetadata:
+    def with_elementwise(
+        self, node: ExprNode, ce: CompliantExprAny, *ces: CompliantExprAny
+    ) -> ExprMetadata:
+        return combine_metadata(
+            ce, *ces, to_single_output=False, current_node=node, prev=ce._metadata
+        )
+
+    def with_orderable_aggregation(
+        self, node: ExprNode, _ce: CompliantExprAny
+    ) -> ExprMetadata:
         # Deprecated, used only in stable.v1.
         if self.is_scalar_like:  # pragma: no cover
             msg = "Can't apply aggregations to scalar-like expressions."
@@ -530,7 +514,7 @@ class ExprMetadata:
             prev=self,
         )
 
-    def with_window(self, node: ExprNode) -> ExprMetadata:
+    def with_window(self, node: ExprNode, _ce: CompliantExprAny) -> ExprMetadata:
         # Window function which may (but doesn't have to) be used with `over(order_by=...)`.
         if self.is_scalar_like:
             msg = "Can't apply window (e.g. `rank`) to scalar-like expression."
@@ -549,7 +533,17 @@ class ExprMetadata:
             prev=self,
         )
 
-    def with_orderable_window(self, node: ExprNode) -> ExprMetadata:
+    def with_over(self, node: ExprNode, _ce: CompliantExprAny) -> ExprMetadata:
+        if node.kwargs["order_by"]:
+            return self.with_ordered_over(node, _ce)
+        if not node.kwargs["partition_by"]:  # pragma: no cover
+            msg = "At least one of `partition_by` or `order_by` must be specified."
+            raise InvalidOperationError(msg)
+        return self.with_partitioned_over(node, _ce)
+
+    def with_orderable_window(
+        self, node: ExprNode, _ce: CompliantExprAny
+    ) -> ExprMetadata:
         # Window function which must be used with `over(order_by=...)`.
         if self.is_scalar_like:
             msg = "Can't apply orderable window (e.g. `diff`, `shift`) to scalar-like expression."
@@ -566,7 +560,7 @@ class ExprMetadata:
             prev=self,
         )
 
-    def with_ordered_over(self, node: ExprNode) -> ExprMetadata:
+    def with_ordered_over(self, node: ExprNode, _ce: CompliantExprAny) -> ExprMetadata:
         if self.has_windows:
             msg = "Cannot nest `over` statements."
             raise InvalidOperationError(msg)
@@ -605,7 +599,9 @@ class ExprMetadata:
             prev=self,
         )
 
-    def with_partitioned_over(self, node: ExprNode) -> ExprMetadata:
+    def with_partitioned_over(
+        self, node: ExprNode, _ce: CompliantExprAny
+    ) -> ExprMetadata:
         if self.has_windows:
             msg = "Cannot nest `over` statements."
             raise InvalidOperationError(msg)
@@ -627,7 +623,9 @@ class ExprMetadata:
             prev=self,
         )
 
-    def with_filtration(self, node: ExprNode) -> ExprMetadata:
+    def with_filtration(
+        self, node: ExprNode, _ce: CompliantExprAny, *_ces: CompliantExprAny
+    ) -> ExprMetadata:
         if self.is_scalar_like:
             msg = "Can't apply filtration (e.g. `drop_nulls`) to scalar-like expression."
             raise InvalidOperationError(msg)
@@ -643,7 +641,9 @@ class ExprMetadata:
             prev=self,
         )
 
-    def with_orderable_filtration(self, node: ExprNode) -> ExprMetadata:
+    def with_orderable_filtration(
+        self, node: ExprNode, _ce: CompliantExprAny
+    ) -> ExprMetadata:
         if self.is_scalar_like:
             msg = "Can't apply filtration (e.g. `drop_nulls`) to scalar-like expression."
             raise InvalidOperationError(msg)
@@ -668,13 +668,26 @@ class ExprMetadata:
 
 
 KIND_TO_METADATA_CONSTRUCTOR = {
-    ExprKind.SERIES: ExprMetadata.from_selector_single,
+    ExprKind.SERIES: ExprMetadata.from_series,
+    ExprKind.COL: ExprMetadata.from_col,
+    ExprKind.NTH: ExprMetadata.from_nth,
     ExprKind.ALL: ExprMetadata.from_selector_multi_unnamed,
     ExprKind.EXCLUDE: ExprMetadata.from_selector_multi_unnamed,
     ExprKind.LITERAL: ExprMetadata.from_literal,
     ExprKind.SELECTOR: ExprMetadata.from_selector_multi_unnamed,
     ExprKind.ELEMENTWISE: ExprMetadata.from_elementwise,
     ExprKind.AGGREGATION: ExprMetadata.from_aggregation,
+}
+
+KIND_TO_METADATA_UPDATER = {
+    ExprKind.AGGREGATION: ExprMetadata.with_aggregation,
+    ExprKind.ELEMENTWISE: ExprMetadata.with_elementwise,
+    ExprKind.FILTRATION: ExprMetadata.with_filtration,
+    ExprKind.ORDERABLE_WINDOW: ExprMetadata.with_orderable_window,
+    ExprKind.ORDERABLE_FILTRATION: ExprMetadata.with_orderable_filtration,
+    ExprKind.ORDERABLE_AGGREGATION: ExprMetadata.with_orderable_aggregation,
+    ExprKind.WINDOW: ExprMetadata.with_window,
+    ExprKind.OVER: ExprMetadata.with_over,
 }
 
 
