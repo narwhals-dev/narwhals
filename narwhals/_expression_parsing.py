@@ -277,11 +277,11 @@ class ExprNode:
             elif over_node_order_by and any(
                 expr_node.is_orderable() for expr_node in expr._nodes
             ):
-                exprs.append(expr._with_node(over_node))
+                exprs.append(expr._append_node(over_node))
             elif over_node_partition_by and not all(
                 expr_node.is_elementwise() for expr_node in expr._nodes
             ):
-                exprs.append(expr._with_node(over_node_without_order_by))
+                exprs.append(expr._append_node(over_node_without_order_by))
             else:
                 # If there's no `partition_by`, then `over_node_without_order_by` is a no-op.
                 exprs.append(expr)

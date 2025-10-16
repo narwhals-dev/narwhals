@@ -373,11 +373,11 @@ class Expr(NwExpr):
 
     def head(self, n: int = 10) -> Self:
         r"""Get the first `n` rows."""
-        return self._with_node(ExprNode(ExprKind.FILTRATION, "head", n=n))
+        return self._append_node(ExprNode(ExprKind.FILTRATION, "head", n=n))
 
     def tail(self, n: int = 10) -> Self:
         r"""Get the last `n` rows."""
-        return self._with_node(ExprNode(ExprKind.FILTRATION, "tail", n=n))
+        return self._append_node(ExprNode(ExprKind.FILTRATION, "tail", n=n))
 
     def gather_every(self, n: int, offset: int = 0) -> Self:
         r"""Take every nth value in the Series and return as new Series.
@@ -386,7 +386,7 @@ class Expr(NwExpr):
             n: Gather every *n*-th row.
             offset: Starting index.
         """
-        return self._with_node(
+        return self._append_node(
             ExprNode(ExprKind.ORDERABLE_FILTRATION, "gather_every", n=n, offset=offset)
         )
 
@@ -398,11 +398,11 @@ class Expr(NwExpr):
                 "You can safely remove this argument."
             )
             issue_warning(msg, UserWarning)
-        return self._with_node(ExprNode(ExprKind.FILTRATION, "unique"))
+        return self._append_node(ExprNode(ExprKind.FILTRATION, "unique"))
 
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
         """Sort this column. Place null values first."""
-        return self._with_node(
+        return self._append_node(
             ExprNode(
                 ExprKind.WINDOW, "sort", descending=descending, nulls_last=nulls_last
             )
@@ -410,15 +410,15 @@ class Expr(NwExpr):
 
     def arg_max(self) -> Self:
         """Returns the index of the maximum value."""
-        return self._with_node(ExprNode(ExprKind.ORDERABLE_AGGREGATION, "arg_max"))
+        return self._append_node(ExprNode(ExprKind.ORDERABLE_AGGREGATION, "arg_max"))
 
     def arg_min(self) -> Self:
         """Returns the index of the minimum value."""
-        return self._with_node(ExprNode(ExprKind.ORDERABLE_AGGREGATION, "arg_min"))
+        return self._append_node(ExprNode(ExprKind.ORDERABLE_AGGREGATION, "arg_min"))
 
     def arg_true(self) -> Self:
         """Find elements where boolean expression is True."""
-        return self._with_node(ExprNode(ExprKind.ORDERABLE_FILTRATION, "arg_true"))
+        return self._append_node(ExprNode(ExprKind.ORDERABLE_FILTRATION, "arg_true"))
 
     def sample(
         self,
@@ -437,7 +437,7 @@ class Expr(NwExpr):
             seed: Seed for the random number generator. If set to None (default), a random
                 seed is generated for each sample operation.
         """
-        return self._with_node(
+        return self._append_node(
             ExprNode(
                 ExprKind.FILTRATION,
                 "sample",

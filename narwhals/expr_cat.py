@@ -36,4 +36,6 @@ class ExprCatNamespace(Generic[ExprT]):
             │ mango  │
             └────────┘
         """
-        return self._expr._with_node(ExprNode(ExprKind.ELEMENTWISE, "cat.get_categories"))
+        return self._expr._append_node(
+            ExprNode(ExprKind.ELEMENTWISE, "cat.get_categories")
+        )

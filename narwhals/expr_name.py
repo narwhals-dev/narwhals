@@ -28,7 +28,7 @@ class ExprNameNamespace(Generic[ExprT]):
             >>> df.select(nw.col("foo").alias("alias_for_foo").name.keep()).columns
             ['foo']
         """
-        return self._expr._with_node(ExprNode(ExprKind.ELEMENTWISE, "name.keep"))
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "name.keep"))
 
     def map(self, function: Callable[[str], str]) -> ExprT:
         r"""Rename the output of an expression by mapping a function over the root name.
@@ -48,7 +48,7 @@ class ExprNameNamespace(Generic[ExprT]):
             >>> df.select(nw.col("foo", "BAR").name.map(renaming_func)).columns
             ['oof', 'RAB']
         """
-        return self._expr._with_node(
+        return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "name.map", function=function)
         )
 
@@ -69,7 +69,7 @@ class ExprNameNamespace(Generic[ExprT]):
             >>> df.select(nw.col("foo", "BAR").name.prefix("with_prefix")).columns
             ['with_prefixfoo', 'with_prefixBAR']
         """
-        return self._expr._with_node(
+        return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "name.prefix", prefix=prefix)
         )
 
@@ -90,7 +90,7 @@ class ExprNameNamespace(Generic[ExprT]):
             >>> df.select(nw.col("foo", "BAR").name.suffix("_with_suffix")).columns
             ['foo_with_suffix', 'BAR_with_suffix']
         """
-        return self._expr._with_node(
+        return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "name.suffix", suffix=suffix)
         )
 
@@ -108,7 +108,9 @@ class ExprNameNamespace(Generic[ExprT]):
             >>> df.select(nw.col("foo", "BAR").name.to_lowercase()).columns
             ['foo', 'bar']
         """
-        return self._expr._with_node(ExprNode(ExprKind.ELEMENTWISE, "name.to_lowercase"))
+        return self._expr._append_node(
+            ExprNode(ExprKind.ELEMENTWISE, "name.to_lowercase")
+        )
 
     def to_uppercase(self) -> ExprT:
         r"""Make the root column name uppercase.
@@ -124,4 +126,6 @@ class ExprNameNamespace(Generic[ExprT]):
             >>> df.select(nw.col("foo", "BAR").name.to_uppercase()).columns
             ['FOO', 'BAR']
         """
-        return self._expr._with_node(ExprNode(ExprKind.ELEMENTWISE, "name.to_uppercase"))
+        return self._expr._append_node(
+            ExprNode(ExprKind.ELEMENTWISE, "name.to_uppercase")
+        )

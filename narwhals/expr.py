@@ -59,38 +59,37 @@ class Expr:
             ce = evaluate_node(ce, node, ns)
         return ce
 
-    def _with_node(self, node: ExprNode) -> Self:
-        if node.kind is ExprKind.OVER:
-            # insert `over` before any elementwise operations.
-            # check "how it works" page in docs for why we do this.
-            new_nodes = list(self._nodes)
-            kwargs_no_order_by = {
-                key: value if key != "order_by" else []
-                for (key, value) in node.kwargs.items()
-            }
-            node_without_order_by = node._with_kwargs(**kwargs_no_order_by)
-            n = len(new_nodes)
-            i = n
-            while i > 0 and (_node := new_nodes[i - 1]).kind is ExprKind.ELEMENTWISE:
-                i -= 1
-                _node._push_down_over_node_in_place(node, node_without_order_by)
-            if i == n:
-                # node could not be pushed down, just append as-is
-                new_nodes.append(node)
-                return self.__class__(*new_nodes)
-            if node.kwargs["order_by"] and any(
-                node.is_orderable() for node in new_nodes[:i]
-            ):
-                new_nodes.insert(i, node)
-            elif node.kwargs["partition_by"] and not all(
-                node.is_elementwise() for node in new_nodes[:i]
-            ):
-                new_nodes.insert(i, node_without_order_by)
-            elif all(node.is_elementwise() for node in new_nodes):
-                msg = "Cannot apply `over` to elementwise expression."
-                raise InvalidOperationError(msg)
-            return self.__class__(*new_nodes)
+    def _append_node(self, node: ExprNode) -> Self:
         return self.__class__(*self._nodes, node)
+
+    def _with_over_node(self, node: ExprNode) -> Self:
+        # insert `over` before any elementwise operations.
+        # check "how it works" page in docs for why we do this.
+        new_nodes = list(self._nodes)
+        kwargs_no_order_by = {
+            key: value if key != "order_by" else []
+            for (key, value) in node.kwargs.items()
+        }
+        node_without_order_by = node._with_kwargs(**kwargs_no_order_by)
+        n = len(new_nodes)
+        i = n
+        while i > 0 and (_node := new_nodes[i - 1]).kind is ExprKind.ELEMENTWISE:
+            i -= 1
+            _node._push_down_over_node_in_place(node, node_without_order_by)
+        if i == n:
+            # node could not be pushed down, just append as-is
+            new_nodes.append(node)
+            return self.__class__(*new_nodes)
+        if node.kwargs["order_by"] and any(node.is_orderable() for node in new_nodes[:i]):
+            new_nodes.insert(i, node)
+        elif node.kwargs["partition_by"] and not all(
+            node.is_elementwise() for node in new_nodes[:i]
+        ):
+            new_nodes.insert(i, node_without_order_by)
+        elif all(node.is_elementwise() for node in new_nodes):
+            msg = "Cannot apply `over` to elementwise expression."
+            raise InvalidOperationError(msg)
+        return self.__class__(*new_nodes)
 
     def __repr__(self) -> str:
         """Pretty-print the expression by combining all nodes in the metadata."""
@@ -135,7 +134,7 @@ class Expr:
             |      1  15       |
             └──────────────────┘
         """
-        return self._with_node(ExprNode(ExprKind.ELEMENTWISE, "alias", name=name))
+        return self._append_node(ExprNode(ExprKind.ELEMENTWISE, "alias", name=name))
 
     def pipe(
         self,
@@ -190,12 +189,12 @@ class Expr:
             └──────────────────┘
         """
         _validate_dtype(dtype)
-        return self._with_node(ExprNode(ExprKind.ELEMENTWISE, "cast", dtype=dtype))
+        return self._append_node(ExprNode(ExprKind.ELEMENTWISE, "cast", dtype=dtype))
 
     # --- binary ---
     def _with_binary(self, attr: str, other: Self | Any) -> Self:
         node = ExprNode(ExprKind.ELEMENTWISE, attr, other, str_as_lit=True)
-        return self._with_node(node)
+        return self._append_node(node)
 
     def __eq__(self, other: Self | Any) -> Self:  # type: ignore[override]
         return self._with_binary("__eq__", other)
@@ -271,7 +270,7 @@ class Expr:
 
     # --- unary ---
     def __invert__(self) -> Self:
-        return self._with_node(ExprNode(ExprKind.ELEMENTWISE, "__invert__"))
+        return self._append_node(ExprNode(ExprKind.ELEMENTWISE, "__invert__"))
 
     def any(self) -> Self:
         """Return whether any of the values in the column are `True`.
@@ -291,7 +290,7 @@ class Expr:
             |  0  True  True   |
             └──────────────────┘
         """
-        return self._with_node(ExprNode(ExprKind.AGGREGATION, "any"))
+        return self._append_node(ExprNode(ExprKind.AGGREGATION, "any"))
 
     def all(self) -> Self:
         """Return whether all values in the column are `True`.
@@ -311,7 +310,7 @@ class Expr:
             |  0  False  True  |
             └──────────────────┘
         """
-        return self._with_node(ExprNode(ExprKind.AGGREGATION, "all"))
+        return self._append_node(ExprNode(ExprKind.AGGREGATION, "all"))
 
     def ewm_mean(
         self,
@@ -396,7 +395,7 @@ class Expr:
             │ 2.428571 │
             └──────────┘
         """
-        return self._with_node(
+        return self._append_node(
             ExprNode(
                 ExprKind.ORDERABLE_WINDOW,
                 "ewm_mean",
@@ -426,7 +425,7 @@ class Expr:
             |   0  0.0  4.0    |
             └──────────────────┘
         """
-        return self._with_node(ExprNode(ExprKind.AGGREGATION, "mean"))
+        return self._append_node(ExprNode(ExprKind.AGGREGATION, "mean"))
 
     def median(self) -> Self:
         """Get median value.
@@ -447,7 +446,7 @@ class Expr:
             |   0  3.0  4.0    |
             └──────────────────┘
         """
-        return self._with_node(ExprNode(ExprKind.AGGREGATION, "median"))
+        return self._append_node(ExprNode(ExprKind.AGGREGATION, "median"))
 
     def std(self, *, ddof: int = 1) -> Self:
         """Get standard deviation.
@@ -469,7 +468,7 @@ class Expr:
             |0  17.79513  1.265789|
             └─────────────────────┘
         """
-        return self._with_node(ExprNode(ExprKind.AGGREGATION, "std", ddof=ddof))
+        return self._append_node(ExprNode(ExprKind.AGGREGATION, "std", ddof=ddof))
 
     def var(self, *, ddof: int = 1) -> Self:
         """Get variance.
@@ -491,7 +490,7 @@ class Expr:
             |0  316.666667  1.602222|
             └───────────────────────┘
         """
-        return self._with_node(ExprNode(ExprKind.AGGREGATION, "var", ddof=ddof))
+        return self._append_node(ExprNode(ExprKind.AGGREGATION, "var", ddof=ddof))
 
     def map_batches(
         self,
@@ -540,7 +539,7 @@ class Expr:
             if returns_scalar
             else ExprKind.ORDERABLE_FILTRATION
         )
-        return self._with_node(
+        return self._append_node(
             ExprNode(
                 kind,
                 "map_batches",
@@ -566,7 +565,7 @@ class Expr:
             | 0  0.0  1.472427 |
             └──────────────────┘
         """
-        return self._with_node(ExprNode(ExprKind.AGGREGATION, "skew"))
+        return self._append_node(ExprNode(ExprKind.AGGREGATION, "skew"))
 
     def kurtosis(self) -> Self:
         """Compute the kurtosis (Fisher's definition) without bias correction.
@@ -587,7 +586,7 @@ class Expr:
             | 0 -1.3  0.210657 |
             └──────────────────┘
         """
-        return self._with_node(ExprNode(ExprKind.AGGREGATION, "kurtosis"))
+        return self._append_node(ExprNode(ExprKind.AGGREGATION, "kurtosis"))
 
     def sum(self) -> Self:
         """Return the sum value.
@@ -611,7 +610,7 @@ class Expr:
             |└────────┴────────┘|
             └───────────────────┘
         """
-        return self._with_node(ExprNode(ExprKind.AGGREGATION, "sum"))
+        return self._append_node(ExprNode(ExprKind.AGGREGATION, "sum"))
 
     def min(self) -> Self:
         """Returns the minimum value(s) from a column(s).
@@ -629,7 +628,7 @@ class Expr:
             |     0  1  3      |
             └──────────────────┘
         """
-        return self._with_node(ExprNode(ExprKind.AGGREGATION, "min"))
+        return self._append_node(ExprNode(ExprKind.AGGREGATION, "min"))
 
     def max(self) -> Self:
         """Returns the maximum value(s) from a column(s).
@@ -647,7 +646,7 @@ class Expr:
             |    0  20  100    |
             └──────────────────┘
         """
-        return self._with_node(ExprNode(ExprKind.AGGREGATION, "max"))
+        return self._append_node(ExprNode(ExprKind.AGGREGATION, "max"))
 
     def count(self) -> Self:
         """Returns the number of non-null elements in the column.
@@ -665,7 +664,7 @@ class Expr:
             |     0  3  2      |
             └──────────────────┘
         """
-        return self._with_node(ExprNode(ExprKind.AGGREGATION, "count"))
+        return self._append_node(ExprNode(ExprKind.AGGREGATION, "count"))
 
     def n_unique(self) -> Self:
         """Returns count of unique values.
@@ -683,7 +682,7 @@ class Expr:
             |     0  5  3      |
             └──────────────────┘
         """
-        return self._with_node(ExprNode(ExprKind.AGGREGATION, "n_unique"))
+        return self._append_node(ExprNode(ExprKind.AGGREGATION, "n_unique"))
 
     def unique(self) -> Self:
         """Return unique values of this expression.
@@ -701,7 +700,7 @@ class Expr:
             |     0  9  12     |
             └──────────────────┘
         """
-        return self._with_node(ExprNode(ExprKind.FILTRATION, "unique"))
+        return self._append_node(ExprNode(ExprKind.FILTRATION, "unique"))
 
     def abs(self) -> Self:
         """Return absolute value of each element.
@@ -720,7 +719,7 @@ class Expr:
             |1 -2  4      2      4|
             └─────────────────────┘
         """
-        return self._with_node(ExprNode(ExprKind.ELEMENTWISE, "abs"))
+        return self._append_node(ExprNode(ExprKind.ELEMENTWISE, "abs"))
 
     def cum_sum(self, *, reverse: bool = False) -> Self:
         """Return cumulative sum.
@@ -749,7 +748,7 @@ class Expr:
             |4  5  6         15|
             └──────────────────┘
         """
-        return self._with_node(
+        return self._append_node(
             ExprNode(ExprKind.ORDERABLE_WINDOW, "cum_sum", reverse=reverse)
         )
 
@@ -792,7 +791,7 @@ class Expr:
             | └─────┴────────┘ |
             └──────────────────┘
         """
-        return self._with_node(ExprNode(ExprKind.ORDERABLE_WINDOW, "diff"))
+        return self._append_node(ExprNode(ExprKind.ORDERABLE_WINDOW, "diff"))
 
     def shift(self, n: int) -> Self:
         """Shift values by `n` positions.
@@ -837,7 +836,7 @@ class Expr:
             └──────────────────┘
         """
         ensure_type(n, int, param_name="n")
-        return self._with_node(ExprNode(ExprKind.ORDERABLE_WINDOW, "shift", n=n))
+        return self._append_node(ExprNode(ExprKind.ORDERABLE_WINDOW, "shift", n=n))
 
     def replace_strict(
         self,
@@ -889,7 +888,7 @@ class Expr:
             new = list(old.values())
             old = list(old.keys())
 
-        return self._with_node(
+        return self._append_node(
             ExprNode(
                 ExprKind.ELEMENTWISE,
                 "replace_strict",
@@ -933,7 +932,7 @@ class Expr:
         node = ExprNode(
             ExprKind.ELEMENTWISE, "is_between", lower_bound, upper_bound, closed=closed
         )
-        return self._with_node(node)
+        return self._append_node(node)
 
     def is_in(self, other: Any) -> Self:
         """Check if elements of this expression are present in the other iterable.
@@ -958,7 +957,7 @@ class Expr:
             └──────────────────┘
         """
         if isinstance(other, Iterable) and not isinstance(other, (str, bytes)):
-            return self._with_node(
+            return self._append_node(
                 ExprNode(
                     ExprKind.ELEMENTWISE,
                     "is_in",
@@ -994,7 +993,7 @@ class Expr:
             |     5  7  12     |
             └──────────────────┘
         """
-        return self._with_node(ExprNode(ExprKind.FILTRATION, "filter", *predicates))
+        return self._append_node(ExprNode(ExprKind.FILTRATION, "filter", *predicates))
 
     def is_null(self) -> Self:
         """Returns a boolean Series indicating which values are null.
@@ -1025,7 +1024,7 @@ class Expr:
             |└───────┴────────┴───────────┴───────────┘|
             └──────────────────────────────────────────┘
         """
-        return self._with_node(ExprNode(ExprKind.ELEMENTWISE, "is_null"))
+        return self._append_node(ExprNode(ExprKind.ELEMENTWISE, "is_null"))
 
     def is_nan(self) -> Self:
         """Indicate which values are NaN.
@@ -1056,7 +1055,7 @@ class Expr:
             |└───────┴────────┴──────────┴──────────┘|
             └────────────────────────────────────────┘
         """
-        return self._with_node(ExprNode(ExprKind.ELEMENTWISE, "is_nan"))
+        return self._append_node(ExprNode(ExprKind.ELEMENTWISE, "is_nan"))
 
     def fill_null(
         self,
@@ -1160,7 +1159,7 @@ class Expr:
                 limit=limit,
                 str_as_lit=True,
             )
-        return self._with_node(node)
+        return self._append_node(node)
 
     def fill_nan(self, value: float | None) -> Self:
         """Fill floating point NaN values with given value.
@@ -1193,7 +1192,7 @@ class Expr:
             |└────────┴────────┴───────────────┴───────────────┘|
             └───────────────────────────────────────────────────┘
         """
-        return self._with_node(ExprNode(ExprKind.ELEMENTWISE, "fill_nan", value=value))
+        return self._append_node(ExprNode(ExprKind.ELEMENTWISE, "fill_nan", value=value))
 
     # --- partial reduction ---
     def drop_nulls(self) -> Self:
@@ -1226,7 +1225,7 @@ class Expr:
             |  └─────┘         |
             └──────────────────┘
         """
-        return self._with_node(ExprNode(ExprKind.FILTRATION, "drop_nulls"))
+        return self._append_node(ExprNode(ExprKind.FILTRATION, "drop_nulls"))
 
     def over(
         self,
@@ -1279,7 +1278,7 @@ class Expr:
         node = ExprNode(
             ExprKind.OVER, "over", partition_by=flat_partition_by, order_by=flat_order_by
         )
-        return self._with_node(node)
+        return self._with_over_node(node)
 
     def is_duplicated(self) -> Self:
         r"""Return a boolean mask indicating duplicated values.
@@ -1300,7 +1299,7 @@ class Expr:
             |3  1  c             True            False|
             └─────────────────────────────────────────┘
         """
-        return self._with_node(ExprNode(ExprKind.WINDOW, "is_duplicated"))
+        return self._append_node(ExprNode(ExprKind.WINDOW, "is_duplicated"))
 
     def is_unique(self) -> Self:
         r"""Return a boolean mask indicating unique values.
@@ -1321,7 +1320,7 @@ class Expr:
             |3  1  c        False         True|
             └─────────────────────────────────┘
         """
-        return self._with_node(ExprNode(ExprKind.WINDOW, "is_unique"))
+        return self._append_node(ExprNode(ExprKind.WINDOW, "is_unique"))
 
     def null_count(self) -> Self:
         r"""Count null values.
@@ -1345,7 +1344,7 @@ class Expr:
             |     0  1  2      |
             └──────────────────┘
         """
-        return self._with_node(ExprNode(ExprKind.AGGREGATION, "null_count"))
+        return self._append_node(ExprNode(ExprKind.AGGREGATION, "null_count"))
 
     def is_first_distinct(self) -> Self:
         r"""Return a boolean mask indicating the first occurrence of each distinct value.
@@ -1372,7 +1371,7 @@ class Expr:
             |3  1  c                False                 True|
             └─────────────────────────────────────────────────┘
         """
-        return self._with_node(ExprNode(ExprKind.ORDERABLE_WINDOW, "is_first_distinct"))
+        return self._append_node(ExprNode(ExprKind.ORDERABLE_WINDOW, "is_first_distinct"))
 
     def is_last_distinct(self) -> Self:
         r"""Return a boolean mask indicating the last occurrence of each distinct value.
@@ -1399,7 +1398,7 @@ class Expr:
             |3  1  c                True                True|
             └───────────────────────────────────────────────┘
         """
-        return self._with_node(ExprNode(ExprKind.ORDERABLE_WINDOW, "is_last_distinct"))
+        return self._append_node(ExprNode(ExprKind.ORDERABLE_WINDOW, "is_last_distinct"))
 
     def quantile(
         self, quantile: float, interpolation: RollingInterpolationMethod
@@ -1432,7 +1431,7 @@ class Expr:
             |  0  24.5  74.5   |
             └──────────────────┘
         """
-        return self._with_node(
+        return self._append_node(
             ExprNode(
                 ExprKind.AGGREGATION,
                 "quantile",
@@ -1471,7 +1470,9 @@ class Expr:
             |2  3.901234        3.9|
             └──────────────────────┘
         """
-        return self._with_node(ExprNode(ExprKind.ELEMENTWISE, "round", decimals=decimals))
+        return self._append_node(
+            ExprNode(ExprKind.ELEMENTWISE, "round", decimals=decimals)
+        )
 
     def floor(self) -> Self:
         r"""Compute the numerical floor.
@@ -1494,7 +1495,7 @@ class Expr:
             |floor: [[1,4,-2]]       |
             └────────────────────────┘
         """
-        return self._with_node(ExprNode(ExprKind.ELEMENTWISE, "floor"))
+        return self._append_node(ExprNode(ExprKind.ELEMENTWISE, "floor"))
 
     def ceil(self) -> Self:
         r"""Compute the numerical ceiling.
@@ -1517,7 +1518,7 @@ class Expr:
             |ceil: [[2,5,-1]]        |
             └────────────────────────┘
         """
-        return self._with_node(ExprNode(ExprKind.ELEMENTWISE, "ceil"))
+        return self._append_node(ExprNode(ExprKind.ELEMENTWISE, "ceil"))
 
     def len(self) -> Self:
         r"""Return the number of elements in the column.
@@ -1540,7 +1541,7 @@ class Expr:
             |    0   2   1     |
             └──────────────────┘
         """
-        return self._with_node(ExprNode(ExprKind.AGGREGATION, "len"))
+        return self._append_node(ExprNode(ExprKind.AGGREGATION, "len"))
 
     def clip(
         self,
@@ -1569,14 +1570,14 @@ class Expr:
             └──────────────────┘
         """
         if upper_bound is None:
-            return self._with_node(
+            return self._append_node(
                 ExprNode(ExprKind.ELEMENTWISE, "clip_lower", lower_bound)
             )
         if lower_bound is None:
-            return self._with_node(
+            return self._append_node(
                 ExprNode(ExprKind.ELEMENTWISE, "clip_upper", upper_bound)
             )
-        return self._with_node(
+        return self._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "clip", lower_bound, upper_bound)
         )
 
@@ -1610,7 +1611,7 @@ class Expr:
             |    1  2  None    |
             └──────────────────┘
         """
-        return self._with_node(ExprNode(ExprKind.ORDERABLE_AGGREGATION, "first"))
+        return self._append_node(ExprNode(ExprKind.ORDERABLE_AGGREGATION, "first"))
 
     def last(self) -> Self:
         """Get the last value.
@@ -1649,7 +1650,7 @@ class Expr:
             |b: [[null,"baz"]] |
             └──────────────────┘
         """
-        return self._with_node(ExprNode(ExprKind.ORDERABLE_AGGREGATION, "last"))
+        return self._append_node(ExprNode(ExprKind.ORDERABLE_AGGREGATION, "last"))
 
     def mode(self, *, keep: ModeKeepStrategy = "all") -> Self:
         r"""Compute the most occurring value(s).
@@ -1678,7 +1679,7 @@ class Expr:
             msg = f"`keep` must be one of {_supported_keep_values}, found '{keep}'"
             raise ValueError(msg)
         kind = ExprKind.AGGREGATION if keep == "any" else ExprKind.FILTRATION
-        return self._with_node(ExprNode(kind, "mode", keep=keep))
+        return self._append_node(ExprNode(kind, "mode", keep=keep))
 
     def is_finite(self) -> Self:
         """Returns boolean values indicating which original values are finite.
@@ -1712,7 +1713,7 @@ class Expr:
             |└──────┴─────────────┘|
             └──────────────────────┘
         """
-        return self._with_node(ExprNode(ExprKind.ELEMENTWISE, "is_finite"))
+        return self._append_node(ExprNode(ExprKind.ELEMENTWISE, "is_finite"))
 
     def cum_count(self, *, reverse: bool = False) -> Self:
         r"""Return the cumulative count of the non-null values in the column.
@@ -1743,7 +1744,7 @@ class Expr:
             |3     d            3                    1|
             └─────────────────────────────────────────┘
         """
-        return self._with_node(
+        return self._append_node(
             ExprNode(ExprKind.ORDERABLE_WINDOW, "cum_count", reverse=reverse)
         )
 
@@ -1776,7 +1777,7 @@ class Expr:
             |3  2.0        1.0                2.0|
             └────────────────────────────────────┘
         """
-        return self._with_node(
+        return self._append_node(
             ExprNode(ExprKind.ORDERABLE_WINDOW, "cum_min", reverse=reverse)
         )
 
@@ -1809,7 +1810,7 @@ class Expr:
             |3  2.0        3.0                2.0|
             └────────────────────────────────────┘
         """
-        return self._with_node(
+        return self._append_node(
             ExprNode(ExprKind.ORDERABLE_WINDOW, "cum_max", reverse=reverse)
         )
 
@@ -1842,7 +1843,7 @@ class Expr:
             |3  2.0         6.0                 2.0|
             └──────────────────────────────────────┘
         """
-        return self._with_node(
+        return self._append_node(
             ExprNode(ExprKind.ORDERABLE_WINDOW, "cum_prod", reverse=reverse)
         )
 
@@ -1891,7 +1892,7 @@ class Expr:
         window_size, min_samples = _validate_rolling_arguments(
             window_size=window_size, min_samples=min_samples
         )
-        return self._with_node(
+        return self._append_node(
             ExprNode(
                 ExprKind.ORDERABLE_WINDOW,
                 "rolling_sum",
@@ -1947,7 +1948,7 @@ class Expr:
             window_size=window_size, min_samples=min_samples
         )
 
-        return self._with_node(
+        return self._append_node(
             ExprNode(
                 ExprKind.ORDERABLE_WINDOW,
                 "rolling_mean",
@@ -2008,7 +2009,7 @@ class Expr:
         window_size, min_samples = _validate_rolling_arguments(
             window_size=window_size, min_samples=min_samples
         )
-        return self._with_node(
+        return self._append_node(
             ExprNode(
                 ExprKind.ORDERABLE_WINDOW,
                 "rolling_var",
@@ -2070,7 +2071,7 @@ class Expr:
         window_size, min_samples = _validate_rolling_arguments(
             window_size=window_size, min_samples=min_samples
         )
-        return self._with_node(
+        return self._append_node(
             ExprNode(
                 ExprKind.ORDERABLE_WINDOW,
                 "rolling_std",
@@ -2135,7 +2136,7 @@ class Expr:
             )
             raise ValueError(msg)
 
-        return self._with_node(
+        return self._append_node(
             ExprNode(ExprKind.WINDOW, "rank", method=method, descending=descending)
         )
 
@@ -2167,7 +2168,7 @@ class Expr:
             |log_2: [[0,1,2]]                                |
             └────────────────────────────────────────────────┘
         """
-        return self._with_node(ExprNode(ExprKind.ELEMENTWISE, "log", base=base))
+        return self._append_node(ExprNode(ExprKind.ELEMENTWISE, "log", base=base))
 
     def exp(self) -> Self:
         r"""Compute the exponent.
@@ -2190,7 +2191,7 @@ class Expr:
             |exp: [[0.36787944117144233,1,2.718281828459045]]|
             └────────────────────────────────────────────────┘
         """
-        return self._with_node(ExprNode(ExprKind.ELEMENTWISE, "exp"))
+        return self._append_node(ExprNode(ExprKind.ELEMENTWISE, "exp"))
 
     def sqrt(self) -> Self:
         r"""Compute the square root.
@@ -2213,7 +2214,7 @@ class Expr:
             |sqrt: [[1,2,3]]   |
             └──────────────────┘
         """
-        return self._with_node(ExprNode(ExprKind.ELEMENTWISE, "sqrt"))
+        return self._append_node(ExprNode(ExprKind.ELEMENTWISE, "sqrt"))
 
     def is_close(  # noqa: PLR0914
         self,

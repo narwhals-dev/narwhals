@@ -22,13 +22,13 @@ class Selector(Expr):
         if isinstance(other, Selector):
             msg = "unsupported operand type(s) for op: ('Selector' + 'Selector')"
             raise TypeError(msg)
-        return self._to_expr()._with_node(
+        return self._to_expr()._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "__add__", other, str_as_lit=True)
         )
 
     def __or__(self, other: Any) -> Expr:  # type: ignore[override]
         if isinstance(other, Selector):
-            return self._with_node(
+            return self._append_node(
                 ExprNode(
                     ExprKind.ELEMENTWISE,
                     "__or__",
@@ -37,13 +37,13 @@ class Selector(Expr):
                     allow_multi_output=True,
                 )
             )
-        return self._to_expr()._with_node(
+        return self._to_expr()._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "__or__", other, str_as_lit=True)
         )
 
     def __and__(self, other: Any) -> Expr:  # type: ignore[override]
         if isinstance(other, Selector):
-            return self._with_node(
+            return self._append_node(
                 ExprNode(
                     ExprKind.ELEMENTWISE,
                     "__and__",
@@ -52,7 +52,7 @@ class Selector(Expr):
                     allow_multi_output=True,
                 )
             )
-        return self._to_expr()._with_node(
+        return self._to_expr()._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "__and__", other, str_as_lit=True)
         )
 

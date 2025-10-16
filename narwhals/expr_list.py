@@ -42,7 +42,7 @@ class ExprListNamespace(Generic[ExprT]):
             |└──────────────┴───────┘|
             └────────────────────────┘
         """
-        return self._expr._with_node(ExprNode(ExprKind.ELEMENTWISE, "list.len"))
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "list.len"))
 
     def unique(self) -> ExprT:
         """Get the unique/distinct values in the list.
@@ -71,7 +71,7 @@ class ExprListNamespace(Generic[ExprT]):
             |└──────────────┴───────────┘|
             └────────────────────────────┘
         """
-        return self._expr._with_node(ExprNode(ExprKind.ELEMENTWISE, "list.unique"))
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "list.unique"))
 
     def contains(self, item: NonNestedLiteral) -> ExprT:
         """Check if sublists contain the given item.
@@ -100,7 +100,7 @@ class ExprListNamespace(Generic[ExprT]):
             |└───────────┴──────────────┘|
             └────────────────────────────┘
         """
-        return self._expr._with_node(
+        return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "list.contains", item=item)
         )
 
@@ -140,6 +140,6 @@ class ExprListNamespace(Generic[ExprT]):
             msg = f"Index {index} is out of bounds: should be greater than or equal to 0."
             raise ValueError(msg)
 
-        return self._expr._with_node(
+        return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "list.get", index=index)
         )

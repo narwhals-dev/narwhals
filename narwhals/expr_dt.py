@@ -40,7 +40,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             │ 2027-12-13 │
             └────────────┘
         """
-        return self._expr._with_node(ExprNode(ExprKind.ELEMENTWISE, "dt.date"))
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "dt.date"))
 
     def year(self) -> ExprT:
         """Extract year from underlying DateTime representation.
@@ -64,7 +64,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             |1 2065-01-01  2065|
             └──────────────────┘
         """
-        return self._expr._with_node(ExprNode(ExprKind.ELEMENTWISE, "dt.year"))
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "dt.year"))
 
     def month(self) -> ExprT:
         """Extract month from underlying DateTime representation.
@@ -85,7 +85,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             a: [[1978-06-01 00:00:00.000000,2065-01-01 00:00:00.000000]]
             month: [[6,1]]
         """
-        return self._expr._with_node(ExprNode(ExprKind.ELEMENTWISE, "dt.month"))
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "dt.month"))
 
     def day(self) -> ExprT:
         """Extract day from underlying DateTime representation.
@@ -106,7 +106,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             a: [[1978-06-01 00:00:00.000000,2065-01-01 00:00:00.000000]]
             day: [[1,1]]
         """
-        return self._expr._with_node(ExprNode(ExprKind.ELEMENTWISE, "dt.day"))
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "dt.day"))
 
     def hour(self) -> ExprT:
         """Extract hour from underlying DateTime representation.
@@ -136,7 +136,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             |└─────────────────────┴──────┘|
             └──────────────────────────────┘
         """
-        return self._expr._with_node(ExprNode(ExprKind.ELEMENTWISE, "dt.hour"))
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "dt.hour"))
 
     def minute(self) -> ExprT:
         """Extract minutes from underlying DateTime representation.
@@ -156,7 +156,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             0 1978-01-01 01:01:00       1
             1 2065-01-01 10:20:00      20
         """
-        return self._expr._with_node(ExprNode(ExprKind.ELEMENTWISE, "dt.minute"))
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "dt.minute"))
 
     def second(self) -> ExprT:
         """Extract seconds from underlying DateTime representation.
@@ -182,7 +182,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             a: [[1978-01-01 01:01:01.000000,2065-01-01 10:20:30.000000]]
             second: [[1,30]]
         """
-        return self._expr._with_node(ExprNode(ExprKind.ELEMENTWISE, "dt.second"))
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "dt.second"))
 
     def millisecond(self) -> ExprT:
         """Extract milliseconds from underlying DateTime representation.
@@ -210,7 +210,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             a: [[1978-01-01 01:01:01.000000,2065-01-01 10:20:30.067000]]
             millisecond: [[0,67]]
         """
-        return self._expr._with_node(ExprNode(ExprKind.ELEMENTWISE, "dt.millisecond"))
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "dt.millisecond"))
 
     def microsecond(self) -> ExprT:
         """Extract microseconds from underlying DateTime representation.
@@ -238,7 +238,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             a: [[1978-01-01 01:01:01.000000,2065-01-01 10:20:30.067000]]
             microsecond: [[0,67000]]
         """
-        return self._expr._with_node(ExprNode(ExprKind.ELEMENTWISE, "dt.microsecond"))
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "dt.microsecond"))
 
     def nanosecond(self) -> ExprT:
         """Extract Nanoseconds from underlying DateTime representation.
@@ -266,7 +266,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             a: [[1978-01-01 01:01:01.000000,2065-01-01 10:20:30.067000]]
             nanosecond: [[0,67000000]]
         """
-        return self._expr._with_node(ExprNode(ExprKind.ELEMENTWISE, "dt.nanosecond"))
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "dt.nanosecond"))
 
     def ordinal_day(self) -> ExprT:
         """Get ordinal day.
@@ -288,7 +288,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             |1 2020-08-03            216|
             └───────────────────────────┘
         """
-        return self._expr._with_node(ExprNode(ExprKind.ELEMENTWISE, "dt.ordinal_day"))
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "dt.ordinal_day"))
 
     def weekday(self) -> ExprT:
         """Extract the week day from the underlying Date representation.
@@ -312,7 +312,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             |1 2020-08-03           1|
             └────────────────────────┘
         """
-        return self._expr._with_node(ExprNode(ExprKind.ELEMENTWISE, "dt.weekday"))
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "dt.weekday"))
 
     def total_minutes(self) -> ExprT:
         """Get total minutes.
@@ -343,7 +343,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             │ 20m 40s      ┆ 20              │
             └──────────────┴─────────────────┘
         """
-        return self._expr._with_node(ExprNode(ExprKind.ELEMENTWISE, "dt.total_minutes"))
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "dt.total_minutes"))
 
     def total_seconds(self) -> ExprT:
         """Get total seconds.
@@ -374,7 +374,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             │ 20s 40ms     ┆ 20              │
             └──────────────┴─────────────────┘
         """
-        return self._expr._with_node(ExprNode(ExprKind.ELEMENTWISE, "dt.total_seconds"))
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "dt.total_seconds"))
 
     def total_milliseconds(self) -> ExprT:
         """Get total milliseconds.
@@ -410,7 +410,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             │ 20040µs      ┆ 20                   │
             └──────────────┴──────────────────────┘
         """
-        return self._expr._with_node(
+        return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "dt.total_milliseconds")
         )
 
@@ -445,7 +445,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             a: [[10,1200]]
             a_total_microseconds: [[10,1200]]
         """
-        return self._expr._with_node(
+        return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "dt.total_microseconds")
         )
 
@@ -479,7 +479,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             0 2024-01-01 00:00:00.000000001                       NaN
             1 2024-01-01 00:00:00.000000002                       1.0
         """
-        return self._expr._with_node(
+        return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "dt.total_nanoseconds")
         )
 
@@ -543,7 +543,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             |└─────────────────────┘|
             └───────────────────────┘
         """
-        return self._expr._with_node(
+        return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "dt.to_string", format=format)
         )
 
@@ -571,7 +571,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             0 2024-01-01 00:00:00+05:45
             1 2024-01-02 00:00:00+05:45
         """
-        return self._expr._with_node(
+        return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "dt.replace_time_zone", time_zone=time_zone)
         )
 
@@ -605,7 +605,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         if time_zone is None:
             msg = "Target `time_zone` cannot be `None` in `convert_time_zone`. Please use `replace_time_zone(None)` if you want to remove the time zone."
             raise TypeError(msg)
-        return self._expr._with_node(
+        return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "dt.convert_time_zone", time_zone=time_zone)
         )
 
@@ -645,7 +645,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
                 f"\n\nExpected one of {{'ns', 'us', 'ms'}}, got {time_unit!r}."
             )
             raise ValueError(msg)
-        return self._expr._with_node(
+        return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "dt.timestamp", time_unit=time_unit)
         )
 
@@ -689,7 +689,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             |└─────────────────────┴─────────────────────┘|
             └─────────────────────────────────────────────┘
         """
-        return self._expr._with_node(
+        return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "dt.truncate", every=every)
         )
 
@@ -733,6 +733,6 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             |└─────────────────────┴───────────────────────┘|
             └───────────────────────────────────────────────┘
         """
-        return self._expr._with_node(
+        return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "dt.offset_by", by=by)
         )

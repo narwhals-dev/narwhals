@@ -42,6 +42,6 @@ class ExprStructNamespace(Generic[ExprT]):
             |└──────────────┴──────┘|
             └───────────────────────┘
         """
-        return self._expr._with_node(
+        return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "struct.field", name=name)
         )

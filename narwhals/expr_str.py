@@ -39,7 +39,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |└───────┴───────────┘|
             └─────────────────────┘
         """
-        return self._expr._with_node(ExprNode(ExprKind.ELEMENTWISE, "str.len_chars"))
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "str.len_chars"))
 
     def replace(
         self, pattern: str, value: str | IntoExpr, *, literal: bool = False, n: int = 1
@@ -66,7 +66,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |1  abc abc123   abc123|
             └──────────────────────┘
         """
-        return self._expr._with_node(
+        return self._expr._append_node(
             ExprNode(
                 ExprKind.ELEMENTWISE,
                 "str.replace",
@@ -102,7 +102,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |1  abc abc123      123|
             └──────────────────────┘
         """
-        return self._expr._with_node(
+        return self._expr._append_node(
             ExprNode(
                 ExprKind.ELEMENTWISE,
                 "str.replace_all",
@@ -132,7 +132,7 @@ class ExprStringNamespace(Generic[ExprT]):
             ... )
             {'fruits': ['apple', '\nmango'], 'stripped': ['apple', 'mango']}
         """
-        return self._expr._with_node(
+        return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "str.strip_chars", characters=characters)
         )
 
@@ -157,7 +157,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |2   None       None|
             └───────────────────┘
         """
-        return self._expr._with_node(
+        return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "str.starts_with", prefix=prefix)
         )
 
@@ -182,7 +182,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |2   None       None|
             └───────────────────┘
         """
-        return self._expr._with_node(
+        return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "str.ends_with", suffix=suffix)
         )
 
@@ -212,7 +212,7 @@ class ExprStringNamespace(Generic[ExprT]):
             default_match: [[true,false,true]]
             case_insensitive_match: [[true,false,true]]
         """
-        return self._expr._with_node(
+        return self._expr._append_node(
             ExprNode(
                 ExprKind.ELEMENTWISE, "str.contains", pattern=pattern, literal=literal
             )
@@ -241,7 +241,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |2  papaya       ya|
             └──────────────────┘
         """
-        return self._expr._with_node(
+        return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "str.slice", offset=offset, length=length)
         )
 
@@ -271,7 +271,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |└─────────┴────────────────┘|
             └────────────────────────────┘
         """
-        return self._expr._with_node(ExprNode(ExprKind.ELEMENTWISE, "str.split", by=by))
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "str.split", by=by))
 
     def head(self, n: int = 5) -> ExprT:
         r"""Take the first n elements of each string.
@@ -295,7 +295,7 @@ class ExprStringNamespace(Generic[ExprT]):
             lyrics: [["taata","taatatata","zukkyun"]]
             lyrics_head: [["taata","taata","zukky"]]
         """
-        return self._expr._with_node(
+        return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "str.slice", offset=0, length=n)
         )
 
@@ -321,7 +321,7 @@ class ExprStringNamespace(Generic[ExprT]):
             lyrics: [["taata","taatatata","zukkyun"]]
             lyrics_tail: [["taata","atata","kkyun"]]
         """
-        return self._expr._with_node(
+        return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "str.slice", offset=-n, length=None)
         )
 
@@ -363,7 +363,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |└─────────────────────┘|
             └───────────────────────┘
         """
-        return self._expr._with_node(
+        return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "str.to_datetime", format=format)
         )
 
@@ -392,7 +392,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |a: [[2020-01-01,2020-01-02]]|
             └────────────────────────────┘
         """
-        return self._expr._with_node(
+        return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "str.to_date", format=format)
         )
 
@@ -418,7 +418,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |1   None      None|
             └──────────────────┘
         """
-        return self._expr._with_node(ExprNode(ExprKind.ELEMENTWISE, "str.to_uppercase"))
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "str.to_uppercase"))
 
     def to_lowercase(self) -> ExprT:
         r"""Transform string to lowercase variant.
@@ -437,7 +437,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |1   None      None|
             └──────────────────┘
         """
-        return self._expr._with_node(ExprNode(ExprKind.ELEMENTWISE, "str.to_lowercase"))
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "str.to_lowercase"))
 
     def to_titlecase(self) -> ExprT:
         """Modify strings to their titlecase equivalent.
@@ -491,7 +491,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |└─────────────────────────┴─────────────────────────┘|
             └─────────────────────────────────────────────────────┘
         """
-        return self._expr._with_node(ExprNode(ExprKind.ELEMENTWISE, "str.to_titlecase"))
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "str.to_titlecase"))
 
     def zfill(self, width: int) -> ExprT:
         """Transform string to zero-padded variant.
@@ -517,6 +517,6 @@ class ExprStringNamespace(Generic[ExprT]):
             |3   None      None|
             └──────────────────┘
         """
-        return self._expr._with_node(
+        return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "str.zfill", width=width)
         )
