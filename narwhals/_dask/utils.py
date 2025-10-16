@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 else:
     try:
         import dask.dataframe.dask_expr as dx
-    except ModuleNotFoundError:  # pragma: no cover
+    except ModuleNotFoundError:
         import dask_expr as dx
 
 

@@ -50,6 +50,7 @@ if TYPE_CHECKING:
     from typing_extensions import assert_type
 
     from narwhals._typing import EagerAllowed
+    from narwhals.dtypes import DType
     from narwhals.stable.v1.typing import IntoDataFrameT
     from narwhals.typing import IntoDType, _1DArray, _2DArray
     from tests.utils import Constructor, ConstructorEager
@@ -1118,3 +1119,11 @@ def test_mode_different_lengths(constructor_eager: ConstructorEager) -> None:
     df = nw_v1.from_native(constructor_eager({"a": [1, 1, 2], "b": [4, 5, 6]}))
     with pytest.raises(ShapeError):
         df.select(nw_v1.col("a", "b").mode())
+
+
+@pytest.mark.parametrize(
+    "dtype", [nw_v1.Datetime(), nw_v1.Duration(), nw_v1.Enum()], ids=str
+)
+def test_dtype___slots__(dtype: DType) -> None:
+    with pytest.raises(AttributeError):
+        dtype.i_also_dont_exist = 528329  # type: ignore[attr-defined]
