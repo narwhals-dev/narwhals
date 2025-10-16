@@ -402,13 +402,20 @@ class ExprMetadata:
             current = current.prev
 
     @classmethod
-    def from_node(cls, node: ExprNode, *ces: CompliantExprAny) -> ExprMetadata:
-        return KIND_TO_METADATA_CONSTRUCTOR[node.kind](node, *ces)
+    def from_node(
+        cls, node: ExprNode, *compliant_exprs: CompliantExprAny
+    ) -> ExprMetadata:
+        return KIND_TO_METADATA_CONSTRUCTOR[node.kind](node, *compliant_exprs)
 
     def with_node(
-        self, node: ExprNode, ce: CompliantExprAny, *ces: CompliantExprAny
+        self,
+        node: ExprNode,
+        compliant_expr: CompliantExprAny,
+        *compliant_expr_args: CompliantExprAny,
     ) -> ExprMetadata:
-        return KIND_TO_METADATA_UPDATER[node.kind](self, node, ce, *ces)
+        return KIND_TO_METADATA_UPDATER[node.kind](
+            self, node, compliant_expr, *compliant_expr_args
+        )
 
     @classmethod
     def from_aggregation(cls, node: ExprNode) -> ExprMetadata:
@@ -465,8 +472,12 @@ class ExprMetadata:
         return cls(ExpansionKind.MULTI_UNNAMED, current_node=node, prev=None)
 
     @classmethod
-    def from_elementwise(cls, node: ExprNode, *ces: CompliantExprAny) -> ExprMetadata:
-        return combine_metadata(*ces, to_single_output=True, current_node=node, prev=None)
+    def from_elementwise(
+        cls, node: ExprNode, *compliant_exprs: CompliantExprAny
+    ) -> ExprMetadata:
+        return combine_metadata(
+            *compliant_exprs, to_single_output=True, current_node=node, prev=None
+        )
 
     @property
     def is_filtration(self) -> bool:
@@ -489,10 +500,17 @@ class ExprMetadata:
         )
 
     def with_elementwise(
-        self, node: ExprNode, ce: CompliantExprAny, *ces: CompliantExprAny
+        self,
+        node: ExprNode,
+        compliant_expr: CompliantExprAny,
+        *compliant_expr_args: CompliantExprAny,
     ) -> ExprMetadata:
         return combine_metadata(
-            ce, *ces, to_single_output=False, current_node=node, prev=ce._metadata
+            compliant_expr,
+            *compliant_expr_args,
+            to_single_output=False,
+            current_node=node,
+            prev=compliant_expr._metadata,
         )
 
     def with_orderable_aggregation(
@@ -692,7 +710,7 @@ KIND_TO_METADATA_UPDATER = {
 
 
 def combine_metadata(
-    *args: CompliantExprAny,
+    *compliant_exprs: CompliantExprAny,
     to_single_output: bool,
     current_node: ExprNode,
     prev: ExprMetadata | None,
@@ -700,7 +718,7 @@ def combine_metadata(
     """Combine metadata from `args`.
 
     Arguments:
-        args: Arguments, maybe expressions, literals, or Series.
+        compliant_exprs: Expression arguments.
         to_single_output: Whether the result is always single-output, regardless
             of the inputs (e.g. `nw.sum_horizontal`).
         current_node: The current node being added.
@@ -719,8 +737,8 @@ def combine_metadata(
     # result is literal if all inputs are literal
     result_is_literal = True
 
-    for i, arg in enumerate(args):
-        metadata = arg._metadata
+    for i, ce in enumerate(compliant_exprs):
+        metadata = ce._metadata
         assert metadata is not None  # noqa: S101
         if metadata.expansion_kind.is_multi_output():
             expansion_kind = metadata.expansion_kind
@@ -805,10 +823,10 @@ def evaluate_into_exprs(
         yield ret
 
 
-def maybe_broadcast_ces(*ces: CompliantExprAny) -> list[CompliantExprAny]:
-    broadcast = any(not is_scalar_like(ce) for ce in ces)
+def maybe_broadcast_ces(*compliant_exprs: CompliantExprAny) -> list[CompliantExprAny]:
+    broadcast = any(not is_scalar_like(ce) for ce in compliant_exprs)
     results: list[CompliantExprAny] = []
-    for compliant_expr in ces:
+    for compliant_expr in compliant_exprs:
         if broadcast and is_scalar_like(compliant_expr):
             _compliant_expr: CompliantExprAny = compliant_expr.broadcast()
             # Make sure to preserve metadata.
@@ -849,7 +867,7 @@ def evaluate_node(
     compliant_expr: CompliantExprAny, node: ExprNode, ns: CompliantNamespaceAny
 ) -> CompliantExprAny:
     md: ExprMetadata = compliant_expr._metadata
-    ce, *ces = maybe_broadcast_ces(
+    compliant_expr, *compliant_expr_args = maybe_broadcast_ces(
         compliant_expr,
         *evaluate_into_exprs(
             *node.exprs,
@@ -858,12 +876,12 @@ def evaluate_node(
             allow_multi_output=node.allow_multi_output,
         ),
     )
-    md = md.with_node(node, ce, *ces)
+    md = md.with_node(node, compliant_expr, *compliant_expr_args)
     if "." in node.name:
         accessor, method = node.name.split(".")
-        func = getattr(getattr(ce, accessor), method)
+        func = getattr(getattr(compliant_expr, accessor), method)
     else:
-        func = getattr(ce, node.name)
-    ret = cast("CompliantExprAny", func(*ces, **node.kwargs))
+        func = getattr(compliant_expr, node.name)
+    ret = cast("CompliantExprAny", func(*compliant_expr_args, **node.kwargs))
     ret._opt_metadata = md
     return ret
