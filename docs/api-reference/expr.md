@@ -9,6 +9,7 @@
         - all
         - any
         - cast
+        - ceil
         - clip
         - count
         - cum_count
@@ -24,6 +25,7 @@
         - fill_null
         - filter
         - first
+        - floor
         - is_between
         - is_close
         - is_duplicated

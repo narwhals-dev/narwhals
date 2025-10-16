@@ -1536,6 +1536,52 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).round(decimals)
         )
 
+    def floor(self) -> Self:
+        r"""Compute the numerical floor.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> df_native = pa.table({"values": [1.1, 4.3, -1.3]})
+            >>> df = nw.from_native(df_native)
+            >>> result = df.with_columns(floor=nw.col("values").floor())
+            >>> result
+            ┌────────────────────────┐
+            |   Narwhals DataFrame   |
+            |------------------------|
+            |pyarrow.Table           |
+            |values: double          |
+            |floor: double           |
+            |----                    |
+            |values: [[1.1,4.3,-1.3]]|
+            |floor: [[1,4,-2]]       |
+            └────────────────────────┘
+        """
+        return self._with_elementwise(lambda plx: self._to_compliant_expr(plx).floor())
+
+    def ceil(self) -> Self:
+        r"""Compute the numerical ceiling.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> df_native = pa.table({"values": [1.1, 4.3, -1.3]})
+            >>> df = nw.from_native(df_native)
+            >>> result = df.with_columns(ceil=nw.col("values").ceil())
+            >>> result
+            ┌────────────────────────┐
+            |   Narwhals DataFrame   |
+            |------------------------|
+            |pyarrow.Table           |
+            |values: double          |
+            |ceil: double            |
+            |----                    |
+            |values: [[1.1,4.3,-1.3]]|
+            |ceil: [[2,5,-1]]        |
+            └────────────────────────┘
+        """
+        return self._with_elementwise(lambda plx: self._to_compliant_expr(plx).ceil())
+
     def len(self) -> Self:
         r"""Return the number of elements in the column.
 
