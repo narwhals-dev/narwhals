@@ -6,7 +6,7 @@ import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._plan import expressions as ir
-from narwhals._plan._dispatch import dispatch_method_name
+from narwhals._plan._dispatch import get_dispatch_name
 from narwhals._plan._guards import is_agg_expr, is_function_expr
 from narwhals._plan.arrow import acero, functions as fn, options
 from narwhals._plan.common import temp
@@ -133,11 +133,7 @@ def group_by_error(
     if reason == "too complex":
         msg = "Non-trivial complex aggregation found, which"
     else:
-        if is_function_expr(expr):
-            func_name = repr(expr.function)
-        else:
-            func_name = dispatch_method_name(type(expr))
-        msg = f"`{func_name}()`"
+        msg = f"`{get_dispatch_name(expr)}()`"
     msg = f"{msg} is not supported in a `group_by` context for {backend!r}:\n{column_name}={expr!r}"
     return InvalidOperationError(msg)
 

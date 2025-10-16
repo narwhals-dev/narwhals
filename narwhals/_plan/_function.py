@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals._plan._dispatch import dispatch_generate_function, dispatch_method_name
+from narwhals._plan._dispatch import Dispatcher
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.common import replace
 from narwhals._plan.options import FEOptions, FunctionOptions
@@ -30,9 +30,7 @@ class Function(Immutable):
         FunctionOptions.default
     )
     __expr_ir_config__: ClassVar[FEOptions] = FEOptions.default()
-    __expr_ir_dispatch__: ClassVar[
-        staticmethod[[Incomplete, FunctionExpr[Self], Incomplete, str], Incomplete]
-    ]
+    __expr_ir_dispatch__: ClassVar[Dispatcher[FunctionExpr[Self]]]
 
     @property
     def function_options(self) -> FunctionOptions:
@@ -62,10 +60,10 @@ class Function(Immutable):
             cls._function_options = staticmethod(options)
         if config:
             cls.__expr_ir_config__ = config
-        cls.__expr_ir_dispatch__ = staticmethod(dispatch_generate_function(cls))
+        cls.__expr_ir_dispatch__ = Dispatcher.from_function(cls)
 
     def __repr__(self) -> str:
-        return dispatch_method_name(type(self))
+        return self.__expr_ir_dispatch__.name
 
 
 class HorizontalFunction(

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Generic, cast
+from typing import TYPE_CHECKING, Generic
 
-from narwhals._plan._dispatch import dispatch_generate
+from narwhals._plan._dispatch import Dispatcher
 from narwhals._plan._guards import is_function_expr, is_literal
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.common import replace
@@ -33,9 +33,7 @@ class ExprIR(Immutable):
     """Nested node names, in iteration order."""
 
     __expr_ir_config__: ClassVar[ExprIROptions] = ExprIROptions.default()
-    __expr_ir_dispatch__: ClassVar[
-        staticmethod[[Incomplete, Self, Incomplete, str], Incomplete]
-    ]
+    __expr_ir_dispatch__: ClassVar[Dispatcher[Self]]
 
     def __init_subclass__(
         cls: type[Self],
@@ -49,13 +47,13 @@ class ExprIR(Immutable):
             cls._child = child
         if config:
             cls.__expr_ir_config__ = config
-        cls.__expr_ir_dispatch__ = staticmethod(dispatch_generate(cls))
+        cls.__expr_ir_dispatch__ = Dispatcher.from_expr_ir(cls)
 
     def dispatch(
-        self, ctx: Ctx[FrameT_contra, R_co], frame: FrameT_contra, name: str, /
+        self: Self, ctx: Ctx[FrameT_contra, R_co], frame: FrameT_contra, name: str, /
     ) -> R_co:
         """Evaluate expression in `frame`, using `ctx` for implementation(s)."""
-        return self.__expr_ir_dispatch__(ctx, cast("Self", self), frame, name)  # type: ignore[no-any-return]
+        return self.__expr_ir_dispatch__(ctx, self, frame, name)  # type: ignore[no-any-return]
 
     def to_narwhals(self, version: Version = Version.MAIN) -> Expr:
         from narwhals._plan import expr
