@@ -95,7 +95,15 @@ class CompliantExpr(
 
     @property
     def _metadata(self) -> ExprMetadata:
-        assert self._opt_metadata is not None  # noqa: S101
+        if self._opt_metadata is None:
+            msg = (
+                "`_opt_metadata` is None. This is usually the result of trying to do "
+                "some operation (such as `over`) which requires access to the metadata "
+                "at the compliant level. You may want to consider rewriting your logic "
+                "so that this operation is not necessary. Ideally you should avoid "
+                "setting `_opt_metadata` manually."
+            )
+            raise AssertionError(msg)
         return self._opt_metadata
 
     def __call__(
