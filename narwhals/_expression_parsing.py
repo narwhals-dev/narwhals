@@ -277,11 +277,11 @@ class ExprNode:
             elif over_node_order_by and any(
                 expr_node.is_orderable() for expr_node in expr._nodes
             ):
-                exprs.append(expr._append_node(over_node))
+                exprs.append(expr._with_over_node(over_node))
             elif over_node_partition_by and not all(
                 expr_node.is_elementwise() for expr_node in expr._nodes
             ):
-                exprs.append(expr._append_node(over_node_without_order_by))
+                exprs.append(expr._with_over_node(over_node_without_order_by))
             else:
                 # If there's no `partition_by`, then `over_node_without_order_by` is a no-op.
                 exprs.append(expr)
@@ -402,12 +402,10 @@ class ExprMetadata:
             current = current.prev
 
     @classmethod
-    def from_node(  # noqa: PLR0911
-        cls, node: ExprNode, *ces: CompliantExprAny
-    ) -> ExprMetadata:
+    def from_node(cls, node: ExprNode, *ces: CompliantExprAny) -> ExprMetadata:
         kind = node.kind
-        if kind is ExprKind.SERIES:
-            return cls.from_selector_single(node)
+        if kind in KIND_TO_METADATA_CONSTRUCTOR:
+            return KIND_TO_METADATA_CONSTRUCTOR[kind](node, *ces)
         if kind is ExprKind.COL:
             return (
                 cls.from_selector_single(node)
@@ -420,16 +418,6 @@ class ExprMetadata:
                 if len(node.kwargs["indices"]) == 1
                 else cls.from_selector_multi_unnamed(node)
             )
-        if kind in {ExprKind.ALL, ExprKind.EXCLUDE}:
-            return cls.from_selector_multi_unnamed(node)
-        if kind is ExprKind.AGGREGATION:
-            return cls.from_aggregation(node)
-        if kind is ExprKind.LITERAL:
-            return cls.from_literal(node)
-        if kind is ExprKind.SELECTOR:
-            return cls.from_selector_multi_unnamed(node)
-        if kind is ExprKind.ELEMENTWISE:
-            return cls.from_elementwise(node, *ces)
         msg = f"Unexpected node kind: {kind}"  # pragma: no cover
         raise AssertionError(msg)  # pragma: no cover
 
@@ -677,6 +665,17 @@ class ExprMetadata:
                 # Skip nodes which only do aliasing.
                 continue
             yield node
+
+
+KIND_TO_METADATA_CONSTRUCTOR = {
+    ExprKind.SERIES: ExprMetadata.from_selector_single,
+    ExprKind.ALL: ExprMetadata.from_selector_multi_unnamed,
+    ExprKind.EXCLUDE: ExprMetadata.from_selector_multi_unnamed,
+    ExprKind.LITERAL: ExprMetadata.from_literal,
+    ExprKind.SELECTOR: ExprMetadata.from_selector_multi_unnamed,
+    ExprKind.ELEMENTWISE: ExprMetadata.from_elementwise,
+    ExprKind.AGGREGATION: ExprMetadata.from_aggregation,
+}
 
 
 def combine_metadata(
