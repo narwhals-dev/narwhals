@@ -406,12 +406,12 @@ class DaskExpr(
     def floor(self) -> Self:
         import dask.array as da
 
-        return self._with_callable(da.floor, "floor")
+        return self._with_callable(da.floor)
 
     def ceil(self) -> Self:
         import dask.array as da
 
-        return self._with_callable(da.ceil, "ceil")
+        return self._with_callable(da.ceil)
 
     def unique(self) -> Self:
         return self._with_callable(lambda expr: expr.unique())
