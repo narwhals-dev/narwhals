@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from narwhals._plan.expressions import ExprIR, FunctionExpr
     from narwhals._plan.typing import ExprIRT, FunctionT
 
-__all__ = ["Dispatcher", "get_dispatch_name", "pascal_to_snake_case"]
+__all__ = ["Dispatcher", "get_dispatch_name"]
 
 Incomplete: TypeAlias = "Any"
 
@@ -114,7 +114,7 @@ def _dispatch_via_namespace(getter: Callable[[Any], Any], /) -> Callable[[Any], 
     return _
 
 
-def pascal_to_snake_case(s: str) -> str:
+def _pascal_to_snake_case(s: str) -> str:
     """Convert a PascalCase, camelCase string to snake_case.
 
     Adapted from https://github.com/pydantic/pydantic/blob/f7a9b73517afecf25bf898e3b5f591dffe669778/pydantic/alias_generators.py#L43-L62
@@ -135,7 +135,7 @@ def _re_repl_snake(match: re.Match[str], /) -> str:
 
 def _dispatch_method_name(tp: type[ExprIRT | FunctionT]) -> str:
     config = tp.__expr_ir_config__
-    name = config.override_name or pascal_to_snake_case(tp.__name__)
+    name = config.override_name or _pascal_to_snake_case(tp.__name__)
     return f"{ns}.{name}" if (ns := getattr(config, "accessor_name", "")) else name
 
 

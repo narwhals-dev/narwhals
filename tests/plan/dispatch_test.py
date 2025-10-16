@@ -69,6 +69,10 @@ def test_dispatch(df: DataFrame[pa.Table, pa.ChunkedArray[Any]]) -> None:
         (nwp.col("a") + nwp.col("b") + 10, "binary_expr"),
         (nwp.when(nwp.col("c")).then(5).when(nwp.col("d")).then(20), "ternary_expr"),
         (nwp.col("a").cast(nw.String).str.starts_with("something"), ("str.starts_with")),
+        (nwp.mean("a"), "mean"),
+        (nwp.nth(1).first(), "first"),
+        (nwp.col("a").sum(), "sum"),
+        (nwp.col("a").drop_nulls().arg_min(), "arg_min"),
     ],
 )
 def test_dispatch_name(expr: nwp.Expr, expected: str) -> None:
