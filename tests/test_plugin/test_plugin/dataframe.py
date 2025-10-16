@@ -10,12 +10,12 @@ from narwhals._utils import (
 )
 from narwhals.typing import CompliantLazyFrame
 
-DictFrame: TypeAlias = dict[str, list[Any]]
-
 if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
 
     from narwhals import LazyFrame  # noqa: F401
+
+DictFrame: TypeAlias = dict[str, list[Any]]
 
 
 class DictLazyFrame(
