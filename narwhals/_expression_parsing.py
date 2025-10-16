@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from enum import Enum, auto
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Callable, Literal, cast
 
 from narwhals._utils import zip_strict
 from narwhals.dependencies import is_numpy_array_1d
@@ -685,27 +685,27 @@ class ExprMetadata:
             yield node
 
 
-KIND_TO_METADATA_CONSTRUCTOR = {
+KIND_TO_METADATA_CONSTRUCTOR: dict[ExprKind, Callable[[ExprNode], ExprMetadata]] = {
+    ExprKind.AGGREGATION: ExprMetadata.from_aggregation,
+    ExprKind.ALL: ExprMetadata.from_selector_multi_unnamed,
+    ExprKind.ELEMENTWISE: ExprMetadata.from_elementwise,
+    ExprKind.EXCLUDE: ExprMetadata.from_selector_multi_unnamed,
     ExprKind.SERIES: ExprMetadata.from_series,
     ExprKind.COL: ExprMetadata.from_col,
-    ExprKind.NTH: ExprMetadata.from_nth,
-    ExprKind.ALL: ExprMetadata.from_selector_multi_unnamed,
-    ExprKind.EXCLUDE: ExprMetadata.from_selector_multi_unnamed,
     ExprKind.LITERAL: ExprMetadata.from_literal,
+    ExprKind.NTH: ExprMetadata.from_nth,
     ExprKind.SELECTOR: ExprMetadata.from_selector_multi_unnamed,
-    ExprKind.ELEMENTWISE: ExprMetadata.from_elementwise,
-    ExprKind.AGGREGATION: ExprMetadata.from_aggregation,
 }
 
-KIND_TO_METADATA_UPDATER = {
+KIND_TO_METADATA_UPDATER: dict[ExprKind, Callable[..., ExprMetadata]] = {
     ExprKind.AGGREGATION: ExprMetadata.with_aggregation,
     ExprKind.ELEMENTWISE: ExprMetadata.with_elementwise,
     ExprKind.FILTRATION: ExprMetadata.with_filtration,
-    ExprKind.ORDERABLE_WINDOW: ExprMetadata.with_orderable_window,
-    ExprKind.ORDERABLE_FILTRATION: ExprMetadata.with_orderable_filtration,
     ExprKind.ORDERABLE_AGGREGATION: ExprMetadata.with_orderable_aggregation,
-    ExprKind.WINDOW: ExprMetadata.with_window,
+    ExprKind.ORDERABLE_FILTRATION: ExprMetadata.with_orderable_filtration,
     ExprKind.OVER: ExprMetadata.with_over,
+    ExprKind.ORDERABLE_WINDOW: ExprMetadata.with_orderable_window,
+    ExprKind.WINDOW: ExprMetadata.with_window,
 }
 
 
