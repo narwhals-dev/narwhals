@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import enum
 from itertools import repeat
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 from narwhals._plan._immutable import Immutable
 
@@ -11,13 +11,11 @@ if TYPE_CHECKING:
 
     import pyarrow.acero
     import pyarrow.compute as pc
-    from typing_extensions import Self, TypeAlias
+    from typing_extensions import Self
 
     from narwhals._plan.arrow.typing import NullPlacement
     from narwhals._plan.typing import Accessor, OneOrIterable, Order, Seq
     from narwhals.typing import RankMethod
-
-DispatchOrigin: TypeAlias = Literal["expr", "__narwhals_namespace__"]
 
 
 class FunctionFlags(enum.Flag):
@@ -285,8 +283,8 @@ def rolling_options(
 
 
 class _BaseIROptions(Immutable):
-    __slots__ = ("origin", "override_name")
-    origin: DispatchOrigin
+    __slots__ = ("is_namespaced", "override_name")
+    is_namespaced: bool
     override_name: str
 
     def __repr__(self) -> str:
@@ -294,7 +292,7 @@ class _BaseIROptions(Immutable):
 
     @classmethod
     def default(cls) -> Self:
-        return cls(origin="expr", override_name="")
+        return cls(is_namespaced=False, override_name="")
 
     @classmethod
     def renamed(cls, name: str, /) -> Self:
@@ -306,13 +304,7 @@ class _BaseIROptions(Immutable):
     def namespaced(cls, override_name: str = "", /) -> Self:
         from narwhals._plan.common import replace
 
-        return replace(
-            cls.default(), origin="__narwhals_namespace__", override_name=override_name
-        )
-
-    @property
-    def is_namespaced(self) -> bool:
-        return self.origin == "__narwhals_namespace__"
+        return replace(cls.default(), is_namespaced=True, override_name=override_name)
 
 
 class ExprIROptions(_BaseIROptions):
@@ -321,11 +313,11 @@ class ExprIROptions(_BaseIROptions):
 
     @classmethod
     def default(cls) -> Self:
-        return cls(origin="expr", override_name="", allow_dispatch=True)
+        return cls(is_namespaced=False, override_name="", allow_dispatch=True)
 
     @staticmethod
     def no_dispatch() -> ExprIROptions:
-        return ExprIROptions(origin="expr", override_name="", allow_dispatch=False)
+        return ExprIROptions(is_namespaced=False, override_name="", allow_dispatch=False)
 
 
 class FunctionExprOptions(_BaseIROptions):
@@ -335,7 +327,7 @@ class FunctionExprOptions(_BaseIROptions):
 
     @classmethod
     def default(cls) -> Self:
-        return cls(origin="expr", override_name="", accessor_name=None)
+        return cls(is_namespaced=False, override_name="", accessor_name=None)
 
 
 FEOptions = FunctionExprOptions
