@@ -2,15 +2,16 @@ from __future__ import annotations
 
 import re
 from operator import attrgetter
-from typing import TYPE_CHECKING, Any, Callable, Generic, final, overload
+from typing import TYPE_CHECKING, Any, Callable, Generic, Protocol, final, overload
 
 from narwhals._plan._guards import is_function_expr
+from narwhals._plan.compliant.typing import FrameT_contra, R_co
 from narwhals._typing_compat import TypeVar
 
 if TYPE_CHECKING:
     from typing_extensions import Never, TypeAlias
 
-    from narwhals._plan.compliant.typing import Ctx, FrameT_contra, R_co
+    from narwhals._plan.compliant.typing import Ctx
     from narwhals._plan.expressions import ExprIR, FunctionExpr
     from narwhals._plan.typing import ExprIRT, FunctionT
 
@@ -18,15 +19,27 @@ __all__ = ["Dispatcher", "get_dispatch_name"]
 
 
 Node = TypeVar("Node", bound="ExprIR | FunctionExpr[Any]")
-Getter: TypeAlias = Callable[[Any], Any]
+Node_contra = TypeVar(
+    "Node_contra", bound="ExprIR | FunctionExpr[Any]", contravariant=True
+)
 Raiser: TypeAlias = Callable[..., "Never"]
+
+
+class Binder(Protocol[Node_contra]):
+    def __call__(
+        self, ctx: Ctx[FrameT_contra, R_co], /
+    ) -> BoundMethod[Node_contra, FrameT_contra, R_co]: ...
+
+
+class BoundMethod(Protocol[Node_contra, FrameT_contra, R_co]):
+    def __call__(self, node: Node_contra, frame: FrameT_contra, name: str, /) -> R_co: ...
 
 
 # TODO @dangotbanned: Clean up `__call__` comments
 @final
 class Dispatcher(Generic[Node]):
-    __slots__ = ("_method_getter", "_name")
-    _method_getter: Getter
+    __slots__ = ("_bind", "_name")
+    _bind: Binder[Node]
     _name: str
 
     @property
@@ -47,12 +60,11 @@ class Dispatcher(Generic[Node]):
         # raises when the method isn't implemented on `CompliantExpr`, but exists as a method on `Expr`
         # gives a more helpful error for things that are namespaced like `col("a").str.replace`
         try:
-            bound_method = self._method_getter(ctx)
+            method = self._bind(ctx)
         except AttributeError:
             raise self._not_implemented_error(ctx) from None
-
-        if result := bound_method(node, frame, name):
-            return result  # type: ignore[no-any-return]
+        if result := method(node, frame, name):
+            return result
         # here if is defined on `CompliantExpr`, but not on ctx
         raise self._not_implemented_error(ctx)
 
@@ -78,14 +90,14 @@ class Dispatcher(Generic[Node]):
         obj._name = _method_name(tp)
         getter = attrgetter(obj._name)
         is_namespaced = tp.__expr_ir_config__.is_namespaced
-        obj._method_getter = _via_namespace(getter) if is_namespaced else getter
+        obj._bind = _via_namespace(getter) if is_namespaced else getter
         return obj
 
     @staticmethod
     def _no_dispatch(tp: type[ExprIRT], /) -> Dispatcher[ExprIRT]:
         obj = Dispatcher.__new__(Dispatcher)
         obj._name = tp.__name__
-        obj._method_getter = obj._make_no_dispatch_error()
+        obj._bind = obj._make_no_dispatch_error()
         return obj
 
     def _make_no_dispatch_error(self) -> Callable[[Any], Raiser]:
@@ -106,7 +118,7 @@ class Dispatcher(Generic[Node]):
         return NotImplementedError(msg)
 
 
-def _via_namespace(getter: Getter, /) -> Getter:
+def _via_namespace(getter: Callable[[Any], Any], /) -> Callable[[Any], Any]:
     def _(ctx: Any, /) -> Any:
         return getter(ctx.__narwhals_namespace__())
 
