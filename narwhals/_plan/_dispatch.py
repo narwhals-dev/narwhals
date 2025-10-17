@@ -22,10 +22,8 @@ Getter: TypeAlias = Callable[[Any], Any]
 Raiser: TypeAlias = Callable[..., "Never"]
 
 
-# TODO @dangotbanned: Can this be done without overloads?
 # TODO @dangotbanned: Clean up `__call__` comments
 # TODO @dangotbanned: Bound `Node`?
-# TODO @dangotbanned: Rename `_from_configured_type`
 @final
 class Dispatcher(Generic[Node]):
     __slots__ = ("_method_getter", "_name")
@@ -63,27 +61,20 @@ class Dispatcher(Generic[Node]):
     def from_expr_ir(tp: type[ExprIRT], /) -> Dispatcher[ExprIRT]:
         if not tp.__expr_ir_config__.allow_dispatch:
             return Dispatcher._no_dispatch(tp)
-        return Dispatcher._from_configured_type(tp)
+        return Dispatcher._from_type(tp)
 
     @staticmethod
     def from_function(tp: type[FunctionT], /) -> Dispatcher[FunctionExpr[FunctionT]]:
-        return Dispatcher._from_configured_type(tp)
+        return Dispatcher._from_type(tp)
 
     @staticmethod
     @overload
-    def _from_configured_type(tp: type[ExprIRT], /) -> Dispatcher[ExprIRT]: ...
-
+    def _from_type(tp: type[ExprIRT], /) -> Dispatcher[ExprIRT]: ...
     @staticmethod
     @overload
-    def _from_configured_type(
-        tp: type[FunctionT], /
-    ) -> Dispatcher[FunctionExpr[FunctionT]]: ...
-
-    # TODO @dangotbanned: Can this be done without overloads?
+    def _from_type(tp: type[FunctionT], /) -> Dispatcher[FunctionExpr[FunctionT]]: ...
     @staticmethod
-    def _from_configured_type(
-        tp: type[ExprIRT | FunctionT], /
-    ) -> Dispatcher[ExprIRT] | Dispatcher[FunctionExpr[FunctionT]]:
+    def _from_type(tp: type[ExprIRT | FunctionT], /) -> Dispatcher[Any]:
         obj = Dispatcher.__new__(Dispatcher)
         obj._name = _method_name(tp)
         getter = attrgetter(obj._name)
