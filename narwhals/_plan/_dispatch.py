@@ -16,15 +16,16 @@ if TYPE_CHECKING:
 
 __all__ = ["Dispatcher", "get_dispatch_name"]
 
-Incomplete: TypeAlias = "Any"
 
 Node = TypeVar("Node")
-
-
 Getter: TypeAlias = Callable[[Any], Any]
 Raiser: TypeAlias = Callable[..., "Never"]
 
 
+# TODO @dangotbanned: Can this be done without overloads?
+# TODO @dangotbanned: Clean up `__call__` comments
+# TODO @dangotbanned: Bound `Node`?
+# TODO @dangotbanned: Rename `_from_configured_type`
 @final
 class Dispatcher(Generic[Node]):
     __slots__ = ("_method_getter", "_name")
