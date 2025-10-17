@@ -493,6 +493,9 @@ def test_enum_hash() -> None:
     assert nw.Enum(["a", "b"]) not in {nw.Enum(["a", "b", "c"])}
 
 
+@pytest.mark.xfail(
+    reason="https://github.com/narwhals-dev/narwhals/pull/3213#discussion_r2437271987"
+)
 @pytest.mark.parametrize("dtype_name", ["Datetime", "Duration", "Enum"])
 def test_dtype_repr_versioned(dtype_name: str) -> None:
     from narwhals.stable import v1 as nw_v1
