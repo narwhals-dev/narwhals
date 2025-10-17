@@ -56,8 +56,8 @@ def get_pandas() -> Any:
 
 def get_modin() -> Any:  # pragma: no cover
     """Get modin.pandas module (if already imported - else return None)."""
-    if (modin := sys.modules.get("modin.pandas", None)) is not None:
-        return modin.pandas
+    if (mpd := sys.modules.get("modin.pandas", None)) is not None:
+        return mpd
     return None
 
 
