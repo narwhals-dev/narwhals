@@ -117,3 +117,28 @@ jobs:
         run: uv pip freeze
       - name: Run pytest
         run: pytest tests --runslow --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow
+
+  python-314:
+    strategy:
+      matrix:
+        python-version: ["3.14", "3.14t"]
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: "true"
+          cache-suffix: python-314-${{ matrix.python-version }}
+          cache-dependency-glob: "pyproject.toml"
+      - name: install-reqs
+        # Most libraries are not yet available in 3.14, gradually add them when they are
+        run: uv pip install -e . --group tests pandas polars --system
+      - name: show-deps
+        run: uv pip freeze
+      - name: Run pytest
+        run: pytest tests --cov=narwhals --cov=tests --runslow --constructors=pandas,pandas[nullable],polars[eager],polars[lazy] --durations=30

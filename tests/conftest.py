@@ -201,6 +201,8 @@ def pyspark_lazy_constructor() -> Callable[[Data], PySparkDataFrame]:  # pragma:
 
 
 def sqlframe_pyspark_lazy_constructor(obj: Data) -> SQLFrameDataFrame:  # pragma: no cover
+    pytest.importorskip("sqlframe")
+    pytest.importorskip("duckdb")
     session = sqlframe_session()
     return session.createDataFrame([*zip(*obj.values())], schema=[*obj.keys()])
 
@@ -214,6 +216,8 @@ def _ibis_backend() -> IbisDuckDBBackend:  # pragma: no cover
 
 
 def ibis_lazy_constructor(obj: Data) -> ibis.Table:  # pragma: no cover
+    pytest.importorskip("ibis")
+    pytest.importorskip("polars")
     import polars as pl
 
     ldf = pl.from_dict(obj).lazy()
