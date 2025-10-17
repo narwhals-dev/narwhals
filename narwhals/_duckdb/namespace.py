@@ -37,6 +37,7 @@ if TYPE_CHECKING:
     from narwhals._utils import Version
     from narwhals.typing import ConcatMethod, IntoDType, NonNestedLiteral
 
+BIGINT = duckdb_dtypes.BIGINT
 VARCHAR = duckdb_dtypes.VARCHAR
 
 
@@ -123,9 +124,7 @@ class DuckDBNamespace(
         def func(cols: Iterable[Expression]) -> Expression:
             cols = tuple(cols)
             total = reduce(operator.add, (CoalesceOperator(col, lit(0)) for col in cols))
-            count = reduce(
-                operator.add, (col.isnotnull().cast(duckdb_dtypes.BIGINT) for col in cols)
-            )
+            count = reduce(operator.add, (col.isnotnull().cast(BIGINT) for col in cols))
             return total / count
 
         return self._expr._from_elementwise_horizontal_op(func, *exprs)
