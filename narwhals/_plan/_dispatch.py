@@ -38,6 +38,18 @@ class BoundMethod(Protocol[Node_contra, FrameT_contra, R_co]):
 # TODO @dangotbanned: Clean up `__call__` comments
 @final
 class Dispatcher(Generic[Node]):
+    """Translate class definitions into error-wrapped method calls.
+
+    Operates over `ExprIR` and `Function` nodes.
+    By default, we dispatch to the compliant-level by calling a method that is the
+    **snake_case**-equivalent of the class name:
+
+        class BinaryExpr(ExprIR): ...
+
+        class CompliantExpr(Protocol):
+            def binary_expr(self, *args: Any): ...
+    """
+
     __slots__ = ("_bind", "_name")
     _bind: Binder[Node]
     _name: str
