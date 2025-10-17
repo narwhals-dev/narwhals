@@ -17,13 +17,12 @@ if TYPE_CHECKING:
 __all__ = ["Dispatcher", "get_dispatch_name"]
 
 
-Node = TypeVar("Node")
+Node = TypeVar("Node", bound="ExprIR | FunctionExpr[Any]")
 Getter: TypeAlias = Callable[[Any], Any]
 Raiser: TypeAlias = Callable[..., "Never"]
 
 
 # TODO @dangotbanned: Clean up `__call__` comments
-# TODO @dangotbanned: Bound `Node`?
 @final
 class Dispatcher(Generic[Node]):
     __slots__ = ("_method_getter", "_name")
