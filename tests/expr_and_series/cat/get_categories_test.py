@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import pyarrow as pa
 import pytest
 
 import narwhals as nw
@@ -25,6 +24,9 @@ def test_get_categories(constructor_eager: ConstructorEager) -> None:
 
 
 def test_get_categories_pyarrow() -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
     # temporary test until we have `cast` in pyarrow - later, fuse
     # this with test above
     table = pa.table(

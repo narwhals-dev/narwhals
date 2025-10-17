@@ -34,9 +34,11 @@ def test_self_equal(
     constructor_eager: ConstructorEager, data: Data, schema: IntoSchema
 ) -> None:
     """Test that a series is equal to itself, including nested dtypes with nulls."""
-    if "pandas" in str(constructor_eager) and PANDAS_VERSION < (2, 2):  # pragma: no cover
-        reason = "Pandas too old for nested dtypes"
-        pytest.skip(reason=reason)
+    if "pandas" in str(constructor_eager):
+        if PANDAS_VERSION < (2, 2):  # pragma: no cover
+            reason = "Pandas too old for nested dtypes"
+            pytest.skip(reason=reason)
+        pytest.importorskip("pyarrow")
 
     if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (
         15,
@@ -136,13 +138,11 @@ def test_check_order(
     context: AbstractContextManager[Any],
 ) -> None:
     """Test check_order behavior with nested and simple data."""
-    if (
-        "pandas" in str(constructor_eager)
-        and PANDAS_VERSION < (2, 2)
-        and dtype.is_nested()
-    ):  # pragma: no cover
-        reason = "Pandas too old for nested dtypes"
-        pytest.skip(reason=reason)
+    if "pandas" in str(constructor_eager):
+        if PANDAS_VERSION < (2, 2) and dtype.is_nested():  # pragma: no cover
+            reason = "Pandas too old for nested dtypes"
+            pytest.skip(reason=reason)
+        pytest.importorskip("pyarrow")
 
     data: list[Any] = [[1, 2, 3]] if dtype.is_nested() else [1, 2, 3]
     frame = nw.from_native(constructor_eager({"a": data}), eager_only=True)
@@ -251,9 +251,11 @@ def test_list_like(
     context: AbstractContextManager[Any],
     dtype: nw.dtypes.DType,
 ) -> None:
-    if "pandas" in str(constructor_eager) and PANDAS_VERSION < (2, 2):  # pragma: no cover
-        reason = "Pandas too old for nested dtypes"
-        pytest.skip(reason=reason)
+    if "pandas" in str(constructor_eager):
+        if PANDAS_VERSION < (2, 2):  # pragma: no cover
+            reason = "Pandas too old for nested dtypes"
+            pytest.skip(reason=reason)
+        pytest.importorskip("pyarrow")
 
     if (
         "pyarrow_table" in str(constructor_eager)
@@ -304,9 +306,11 @@ def test_struct(
     check_exact: bool,
     context: AbstractContextManager[Any],
 ) -> None:
-    if "pandas" in str(constructor_eager) and PANDAS_VERSION < (2, 2):  # pragma: no cover
-        reason = "Pandas too old for nested dtypes"
-        pytest.skip(reason=reason)
+    if "pandas" in str(constructor_eager):
+        if PANDAS_VERSION < (2, 2):  # pragma: no cover
+            reason = "Pandas too old for nested dtypes"
+            pytest.skip(reason=reason)
+        pytest.importorskip("pyarrow")
 
     dtype = nw.Struct({"a": nw.Float32(), "b": nw.List(nw.String())})
     data = {"left": l_vals, "right": r_vals}

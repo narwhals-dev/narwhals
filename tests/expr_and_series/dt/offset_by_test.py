@@ -250,6 +250,7 @@ def test_offset_by_invalid_interval(constructor: Constructor) -> None:
 @pytest.mark.skipif(PANDAS_VERSION < (2, 2), reason="too old for pyarrow date type")
 def test_offset_by_date_pandas() -> None:
     pytest.importorskip("pandas")
+    pytest.importorskip("pyarrow")
     import pandas as pd
 
     df = nw.from_native(pd.DataFrame({"a": [date(2020, 1, 1)]}, dtype="date32[pyarrow]"))

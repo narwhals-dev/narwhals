@@ -6,11 +6,13 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
-import pyarrow as pa
 import pytest
 
 import narwhals as nw
 from narwhals.stable.v1.dependencies import get_cudf
+
+pytest.importorskip("pyarrow")
+import pyarrow as pa
 
 
 @pytest.mark.parametrize(

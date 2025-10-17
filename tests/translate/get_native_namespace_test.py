@@ -20,34 +20,42 @@ def _get_expected_namespace(constructor_name: str) -> Any | None:  # noqa: PLR09
 
         return pd
     if "polars" in constructor_name:
+        pytest.importorskip("polars")
         import polars as pl
 
         return pl
     if "pyarrow_table" in constructor_name:
+        pytest.importorskip("pyarrow")
         import pyarrow as pa
 
         return pa
     if "duckdb" in constructor_name:
+        pytest.importorskip("duckdb")
         import duckdb
 
         return duckdb
     if "cudf" in constructor_name:  # pragma: no cover
+        pytest.importorskip("cudf")
         import cudf
 
         return cudf
     if "modin" in constructor_name:
+        pytest.importorskip("modin")
         import modin.pandas as mpd
 
         return mpd
     if "dask" in constructor_name:
+        pytest.importorskip("dask")
         import dask.dataframe as dd
 
         return dd
     if "ibis" in constructor_name:
+        pytest.importorskip("ibis")
         import ibis
 
         return ibis
     if "sqlframe" in constructor_name:
+        pytest.importorskip("sqlframe")
         import sqlframe
 
         return sqlframe

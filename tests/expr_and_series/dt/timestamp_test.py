@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Literal
 
 import hypothesis.strategies as st
 import pandas as pd
-import pyarrow as pa
 import pytest
 from hypothesis import given
 
@@ -243,7 +242,9 @@ def test_timestamp_hypothesis(
     time_unit: Literal["ms", "us", "ns"],
     starting_time_unit: Literal["ms", "us", "ns"],
 ) -> None:
+    pytest.importorskip("pyarrow")
     import polars as pl
+    import pyarrow as pa
 
     @nw.narwhalify
     def func(s: nw.Series[IntoSeriesT]) -> nw.Series[IntoSeriesT]:

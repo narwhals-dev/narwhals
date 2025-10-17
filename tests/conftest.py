@@ -102,6 +102,7 @@ def pandas_nullable_constructor(obj: Data) -> pd.DataFrame:
 
 
 def pandas_pyarrow_constructor(obj: Data) -> pd.DataFrame:
+    pytest.importorskip("pyarrow")
     import pandas as pd
 
     return pd.DataFrame(obj).convert_dtypes(dtype_backend="pyarrow")
@@ -143,6 +144,8 @@ def polars_lazy_constructor(obj: Data) -> pl.LazyFrame:
 
 
 def duckdb_lazy_constructor(obj: Data) -> duckdb.DuckDBPyRelation:
+    pytest.importorskip("duckdb")
+    pytest.importorskip("pyarrow")
     import duckdb
     import polars as pl
 
@@ -165,6 +168,7 @@ def dask_lazy_p2_constructor(obj: Data) -> NativeLazyFrame:  # pragma: no cover
 
 
 def pyarrow_table_constructor(obj: dict[str, Any]) -> pa.Table:
+    pytest.importorskip("pyarrow")
     import pyarrow as pa
 
     return pa.table(obj)
@@ -201,6 +205,8 @@ def pyspark_lazy_constructor() -> Callable[[Data], PySparkDataFrame]:  # pragma:
 
 
 def sqlframe_pyspark_lazy_constructor(obj: Data) -> SQLFrameDataFrame:  # pragma: no cover
+    pytest.importorskip("sqlframe")
+    pytest.importorskip("duckdb")
     session = sqlframe_session()
     return session.createDataFrame([*zip(*obj.values())], schema=[*obj.keys()])
 
@@ -214,6 +220,8 @@ def _ibis_backend() -> IbisDuckDBBackend:  # pragma: no cover
 
 
 def ibis_lazy_constructor(obj: Data) -> ibis.Table:  # pragma: no cover
+    pytest.importorskip("ibis")
+    pytest.importorskip("polars")
     import polars as pl
 
     ldf = pl.from_dict(obj).lazy()

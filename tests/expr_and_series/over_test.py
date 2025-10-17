@@ -3,7 +3,6 @@ from __future__ import annotations
 from contextlib import nullcontext as does_not_raise
 
 import pandas as pd
-import pyarrow as pa
 import pytest
 
 import narwhals as nw
@@ -391,6 +390,9 @@ def test_over_raise_len_change(constructor: Constructor) -> None:
 
 
 def test_unsupported_over() -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
     data = {"a": [1, 2, 3, 4, 5, 6], "b": ["x", "x", "x", "y", "y", "y"]}
     df = pd.DataFrame(data)
     with pytest.raises(NotImplementedError, match="elementary"):

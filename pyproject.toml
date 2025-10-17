@@ -246,6 +246,7 @@ filterwarnings = [
   'ignore:.*defaulting to pandas implementation:Warning:modin',
   'ignore:.*implementation has mismatches with pandas:Warning:modin',
   'ignore:.*You are using pyarrow version',
+  "ignore:.*'_UnionGenericAlias' is deprecated:DeprecationWarning:duckdb",
   # This warning was temporarily raised by pandas but then reverted.
   'ignore:.*Passing a BlockManager to DataFrame:DeprecationWarning',
   # This warning was temporarily raised by Polars but then reverted.

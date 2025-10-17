@@ -73,6 +73,7 @@ def test_floor_dtype_pandas_nullable() -> None:
 @pytest.mark.skipif(PANDAS_VERSION < (2, 1, 0), reason="nullable types require pandas2+")
 def test_floor_dtype_pandas_pyarrow() -> None:
     pytest.importorskip("pandas")
+    pytest.importorskip("pyarrow")
     import pandas as pd
 
     s = pd.Series([1.0, None, 2.2], name="a", dtype="Float32[pyarrow]", index=[8, 7, 6])
@@ -107,6 +108,7 @@ def test_ceil_dtype_pandas_nullable() -> None:
 @pytest.mark.skipif(PANDAS_VERSION < (2, 1, 0), reason="nullable types require pandas2+")
 def test_ceil_dtype_pandas_pyarrow() -> None:
     pytest.importorskip("pandas")
+    pytest.importorskip("pyarrow")
     import pandas as pd
 
     s = pd.Series([1.0, None, 2.2], name="a", dtype="Float32[pyarrow]", index=[8, 7, 6])

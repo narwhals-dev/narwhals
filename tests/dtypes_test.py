@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 import pandas as pd
-import pyarrow as pa
 import pytest
 
 import narwhals as nw
@@ -159,6 +158,8 @@ def test_2d_array(constructor: Constructor, request: pytest.FixtureRequest) -> N
     for condition, reason in version_conditions:
         if condition:
             pytest.skip(reason)
+    if "pandas" in str(constructor):
+        pytest.importorskip("pyarrow")
 
     if any(x in str(constructor) for x in ("dask", "cudf", "pyspark")):
         request.applymarker(
@@ -176,6 +177,9 @@ def test_2d_array(constructor: Constructor, request: pytest.FixtureRequest) -> N
 
 
 def test_second_time_unit() -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
     s: IntoSeries = pd.Series(np.array([np.datetime64("2020-01-01", "s")]))
     result = nw.from_native(s, series_only=True)
     expected_unit: Literal["ns", "us", "ms", "s"] = (
@@ -216,6 +220,8 @@ def test_pandas_inplace_modification_1267() -> None:
 
 
 def test_pandas_fixed_offset_1302() -> None:
+    pytest.importorskip("pyarrow")
+
     result = nw.from_native(
         pd.Series(pd.to_datetime(["2020-01-01T00:00:00.000000000+01:00"])),
         series_only=True,
@@ -398,9 +404,10 @@ def test_huge_int_to_native() -> None:
 def test_cast_decimal_to_native() -> None:
     pytest.importorskip("duckdb")
     pytest.importorskip("polars")
-
+    pytest.importorskip("pyarrow")
     import duckdb
     import polars as pl
+    import pyarrow as pa
 
     data = {"a": [1, 2, 3]}
 

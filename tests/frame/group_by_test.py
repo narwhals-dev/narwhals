@@ -7,7 +7,6 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
 import pandas as pd
-import pyarrow as pa
 import pytest
 
 import narwhals as nw
@@ -36,6 +35,9 @@ POLARS_COLLECT_STREAMING_ENGINE = os.environ.get("NARWHALS_POLARS_NEW_STREAMING"
 
 
 def test_group_by_complex() -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
     expected = {"a": [1, 3], "b": [-3.5, -3.0]}
 
     df = nw.from_native(df_pandas)

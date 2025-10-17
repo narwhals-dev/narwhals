@@ -22,6 +22,7 @@ import pandas as pd
 @pytest.mark.skipif(PANDAS_VERSION < (2, 2, 0), reason="pyarrow dtype not available")
 @pytest.mark.slow
 def test_total_minutes(timedeltas: timedelta) -> None:
+    pytest.importorskip("pyarrow")
     result_pd = nw.from_native(
         pd.Series([timedeltas]), series_only=True
     ).dt.total_minutes()[0]
@@ -50,6 +51,7 @@ def test_total_minutes(timedeltas: timedelta) -> None:
 @pytest.mark.slow
 def test_total_minutes_polars(timedeltas: timedelta) -> None:
     pytest.importorskip("polars")
+    pytest.importorskip("pyarrow")
     import polars as pl
 
     result_pd = nw.from_native(

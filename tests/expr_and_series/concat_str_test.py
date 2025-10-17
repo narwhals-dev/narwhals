@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from typing import Callable
 
-import pyarrow as pa
 import pytest
 
 import narwhals as nw
 from tests.utils import POLARS_VERSION, Constructor, assert_equal_data
+
+pytest.importorskip("pyarrow")
+import pyarrow as pa
 
 data = {"a": [1, 2, 3], "b": ["dogs", "cats", None], "c": ["play", "swim", "walk"]}
 

@@ -17,6 +17,7 @@ import pandas as pd
 @pytest.mark.skipif(PANDAS_VERSION < (2, 0, 0), reason="pyarrow dtype not available")
 @pytest.mark.slow
 def test_ordinal_day(dates: datetime) -> None:
+    pytest.importorskip("pyarrow")
     result_pd = nw.from_native(pd.Series([dates]), series_only=True).dt.ordinal_day()[0]
     result_pdms = nw.from_native(
         pd.Series([dates]).dt.as_unit("ms"), series_only=True

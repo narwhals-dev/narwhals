@@ -14,8 +14,10 @@ def test_len_expr(request: pytest.FixtureRequest, constructor: Constructor) -> N
     if any(backend in str(constructor) for backend in ("dask", "cudf")):
         request.applymarker(pytest.mark.xfail)
 
-    if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
-        pytest.skip()
+    if "pandas" in str(constructor):
+        if PANDAS_VERSION < (2, 2):
+            pytest.skip()
+        pytest.importorskip("pyarrow")
 
     result = nw.from_native(constructor(data)).select(
         nw.col("a").cast(nw.List(nw.Int32())).list.len()
@@ -30,8 +32,10 @@ def test_len_series(
     if "cudf" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
 
-    if "pandas" in str(constructor_eager) and PANDAS_VERSION < (2, 2):
-        pytest.skip()
+    if "pandas" in str(constructor_eager):
+        if PANDAS_VERSION < (2, 2):
+            pytest.skip()
+        pytest.importorskip("pyarrow")
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
 
@@ -42,6 +46,7 @@ def test_len_series(
 def test_pandas_preserve_index(request: pytest.FixtureRequest) -> None:
     if PANDAS_VERSION < (2, 2):
         request.applymarker(pytest.mark.xfail)
+    pytest.importorskip("pyarrow")
 
     index = pd.Index(["a", "b", "c", "d", "e"])
     df = nw.from_native(pd.DataFrame(data, index=index), eager_only=True)

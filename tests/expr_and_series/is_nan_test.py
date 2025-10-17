@@ -108,6 +108,8 @@ def test_nan_series(constructor_eager: ConstructorEager) -> None:
 
 
 def test_nan_non_float(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    pytest.importorskip("pyarrow")
+
     if (
         ("pyspark" in str(constructor))
         or "duckdb" in str(constructor)
@@ -132,6 +134,7 @@ def test_nan_non_float(constructor: Constructor, request: pytest.FixtureRequest)
 
 
 def test_nan_non_float_series(constructor_eager: ConstructorEager) -> None:
+    pytest.importorskip("pyarrow")
     from pyarrow.lib import ArrowNotImplementedError
 
     from narwhals.exceptions import InvalidOperationError
