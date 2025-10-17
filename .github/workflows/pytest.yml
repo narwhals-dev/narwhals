@@ -137,7 +137,7 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
         # Most libraries are not yet available in 3.14, gradually add them when they are
-        run: uv pip install -e . --group tests pandas polars --system
+        run: uv pip install -e . --group tests pandas polars duckdb --pre --system
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest

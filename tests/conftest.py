@@ -145,6 +145,7 @@ def polars_lazy_constructor(obj: Data) -> pl.LazyFrame:
 
 def duckdb_lazy_constructor(obj: Data) -> duckdb.DuckDBPyRelation:
     pytest.importorskip("duckdb")
+    pytest.importorskip("pyarrow")
     import duckdb
     import polars as pl
 

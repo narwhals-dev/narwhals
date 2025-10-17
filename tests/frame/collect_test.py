@@ -69,6 +69,7 @@ def test_collect_to_valid_backend_pandas(
 def test_collect_to_valid_backend_polars(
     constructor: Constructor, backend: Polars
 ) -> None:
+    pytest.importorskip("pyarrow")
     pytest.importorskip("polars")
     import polars as pl
 
@@ -109,6 +110,7 @@ def test_collect_to_valid_backend_pandas_mod(constructor: Constructor) -> None:
     "ignore:is_sparse is deprecated and will be removed in a future version."
 )
 def test_collect_to_valid_backend_polars_mod(constructor: Constructor) -> None:
+    pytest.importorskip("pyarrow")
     pytest.importorskip("polars")
     import polars as pl
 
