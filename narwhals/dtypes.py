@@ -34,14 +34,12 @@ def _validate_dtype(dtype: DType | type[DType]) -> None:
 
 def _is_into_dtype(obj: Any) -> TypeIs[IntoDType]:
     return isinstance(obj, DType) or (
-        isinstance(obj, type)
-        and issubclass(obj, DType)
-        and not issubclass(obj, NestedType)
+        isinstance(obj, DTypeClass) and not issubclass(obj, NestedType)
     )
 
 
 def _is_nested_type(obj: Any) -> TypeIs[type[NestedType]]:
-    return isinstance(obj, type) and issubclass(obj, NestedType)
+    return isinstance(obj, DTypeClass) and issubclass(obj, NestedType)
 
 
 def _validate_into_dtype(dtype: Any) -> None:
