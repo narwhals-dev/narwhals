@@ -121,6 +121,8 @@ def test_date_lit(constructor: Constructor, request: pytest.FixtureRequest) -> N
         "cudf" in str(constructor) and CUDF_VERSION >= (25, 8, 0)
     ):
         request.applymarker(pytest.mark.xfail)
+    if "pandas" in str(constructor):
+        pytest.importorskip("pyarrow")
     df = nw.from_native(constructor({"a": [1]}))
     result = df.with_columns(nw.lit(date(2020, 1, 1), dtype=nw.Date)).collect_schema()
     if df.implementation.is_cudf():

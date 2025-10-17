@@ -158,6 +158,8 @@ def test_2d_array(constructor: Constructor, request: pytest.FixtureRequest) -> N
     for condition, reason in version_conditions:
         if condition:
             pytest.skip(reason)
+    if "pandas" in str(constructor):
+        pytest.importorskip("pyarrow")
 
     if any(x in str(constructor) for x in ("dask", "cudf", "pyspark")):
         request.applymarker(
@@ -218,6 +220,8 @@ def test_pandas_inplace_modification_1267() -> None:
 
 
 def test_pandas_fixed_offset_1302() -> None:
+    pytest.importorskip("pyarrow")
+
     result = nw.from_native(
         pd.Series(pd.to_datetime(["2020-01-01T00:00:00.000000000+01:00"])),
         series_only=True,
