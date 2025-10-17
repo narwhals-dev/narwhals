@@ -141,4 +141,4 @@ jobs:
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
-        run: pytest tests --cov=narwhals --cov=tests --runslow --constructors=pandas,pandas[nullable],polars[eager],polars[lazy] --durations=30
+        run: pytest tests --cov=narwhals --cov=tests --runslow --constructors=pandas,pandas[nullable],polars[eager],polars[lazy] --durations=30 --cov-fail-under=50
