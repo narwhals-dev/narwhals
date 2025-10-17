@@ -186,13 +186,13 @@ def _check_schema_equal(
     lset, rset = set(lnames), set(rnames)
 
     if lset != rset:
-        if left_not_in_right := list(lset.difference(rset)):
+        if left_not_in_right := sorted(lset.difference(rset)):
             raise_frame_assertion_error(
                 detail=f"{left_not_in_right} in left, but not in right",
                 left=lset,
                 right=rset,
             )
-        if right_not_in_left := list(rset.difference(lset)):
+        if right_not_in_left := sorted(rset.difference(lset)):
             raise_frame_assertion_error(
                 detail=f"{right_not_in_left} in right, but not in left",
                 left=lset,

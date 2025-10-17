@@ -8,6 +8,7 @@ import pytest
 
 import narwhals as nw
 from narwhals.testing import assert_frame_equal
+from narwhals.testing.asserts.frame import GUARANTEES_ROW_ORDER
 from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
@@ -21,9 +22,8 @@ if TYPE_CHECKING:
 
 
 def _assertion_error(detail: str) -> pytest.RaisesExc:
-    return pytest.raises(
-        AssertionError, match=re.escape(f"DataFrames are different ({detail})")
-    )
+    msg = f"DataFrames are different ({detail})"
+    return pytest.raises(AssertionError, match=re.escape(msg))
 
 
 def test_check_narwhals_objects(constructor: Constructor) -> None:
@@ -175,10 +175,60 @@ def test_check_schema_mismatch(
         )
 
 
-def test_height_mismatch(constructor: Constructor) -> None: ...
+def test_height_mismatch(constructor: Constructor) -> None:
+    left = nw.from_native(constructor({"a": [1, 2, 3]}))
+    right = nw.from_native(constructor({"a": [1, 3]}))
+
+    with _assertion_error("height (row count) mismatch"):
+        assert_frame_equal(left, right)
 
 
-def test_series_mismatch(constructor: Constructor) -> None: ...
+@pytest.mark.parametrize("check_row_order", [True, False])
+def test_check_row_order(
+    constructor: Constructor, request: pytest.FixtureRequest, *, check_row_order: bool
+) -> None:
+    if "dask" in str(constructor):
+        reason = "Unsupported List type"
+        request.applymarker(pytest.mark.xfail(reason=reason))
+
+    data = {"a": [1, 2], "b": [["x", "y"], ["x", "z"]]}
+
+    b_expr = nw.col("b").cast(nw.List(nw.String()))
+    left = (
+        nw.from_native(constructor(data)).with_columns(b_expr).sort("a", descending=False)
+    )
+    right = (
+        nw.from_native(constructor(data)).with_columns(b_expr).sort("a", descending=True)
+    )
+
+    context = (
+        _assertion_error('value mismatch for column "a"')
+        if check_row_order and left.implementation in GUARANTEES_ROW_ORDER
+        else does_not_raise()
+    )
+
+    with context:
+        assert_frame_equal(left, right, check_row_order=check_row_order)
+
+
+def test_check_row_order_nested_only(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "dask" in str(constructor):
+        reason = "Unsupported List type"
+        request.applymarker(pytest.mark.xfail(reason=reason))
+
+    data = {"b": [["x", "y"], ["x", "z"]]}
+
+    b_expr = nw.col("b").cast(nw.List(nw.String()))
+    left = nw.from_native(constructor(data)).select(b_expr)
+
+    msg = "`check_row_order=False` is not supported (yet) with only nested data type."
+    with pytest.raises(NotImplementedError, match=re.escape(msg)):
+        assert_frame_equal(left, left, check_row_order=False)
+
+
+def test_values_mismatch(constructor: Constructor) -> None: ...
 
 
 def test_self_equal(constructor: Constructor, data: Data) -> None:
