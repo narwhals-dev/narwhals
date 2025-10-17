@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
+from functools import partial
 from itertools import chain
 from typing import (
     TYPE_CHECKING,
@@ -17,9 +18,8 @@ from typing import (
 
 from narwhals._exceptions import issue_warning
 from narwhals._expression_parsing import (
-    ExprKind,
+    _parse_into_expr,
     check_expressions_preserve_length,
-    is_into_expr_eager,
     is_scalar_like,
 )
 from narwhals._typing import Arrow, Pandas, _LazyAllowedImpl, _LazyFrameCollectImpl
@@ -48,7 +48,6 @@ from narwhals._utils import (
 from narwhals.dependencies import is_numpy_array_2d, is_pyarrow_table
 from narwhals.exceptions import (
     ColumnNotFoundError,
-    InvalidIntoExprError,
     InvalidOperationError,
     PerformanceWarning,
 )
@@ -69,7 +68,8 @@ if TYPE_CHECKING:
     from typing_extensions import Concatenate, ParamSpec, Self, TypeAlias
 
     from narwhals._compliant import CompliantDataFrame, CompliantLazyFrame
-    from narwhals._compliant.typing import CompliantExprAny, EagerNamespaceAny
+    from narwhals._compliant.typing import CompliantExprAny
+    from narwhals._expression_parsing import ExprMetadata
     from narwhals._translate import IntoArrowTable
     from narwhals._typing import EagerAllowed, IntoBackend, LazyAllowed, Polars
     from narwhals.group_by import GroupBy, LazyGroupBy
@@ -144,24 +144,23 @@ class BaseFrame(Generic[_FrameT]):
 
     def _flatten_and_extract(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
-    ) -> tuple[list[CompliantExprAny], list[ExprKind]]:
+    ) -> list[CompliantExprAny]:
         # Process `args` and `kwargs`, extracting underlying objects as we go.
         # NOTE: Strings are interpreted as column names.
         out_exprs = []
-        out_kinds = []
-        for expr in flatten(exprs):
-            compliant_expr = self._extract_compliant(expr)
-            out_exprs.append(compliant_expr)
-            out_kinds.append(ExprKind.from_into_expr(expr, str_as_lit=False))
-        for alias, expr in named_exprs.items():
-            compliant_expr = self._extract_compliant(expr).alias(alias)
-            out_exprs.append(compliant_expr)
-            out_kinds.append(ExprKind.from_into_expr(expr, str_as_lit=False))
-        return out_exprs, out_kinds
-
-    @abstractmethod
-    def _extract_compliant(self, arg: Any) -> Any:
-        raise NotImplementedError
+        ns = self.__narwhals_namespace__()
+        parse = partial(
+            _parse_into_expr, backend=self._compliant._implementation, allow_literal=False
+        )
+        all_exprs = chain(
+            (parse(x) for x in flatten(exprs)),
+            (parse(expr).alias(alias) for alias, expr in named_exprs.items()),
+        )
+        for expr in all_exprs:
+            ce = expr._to_compliant_expr(ns)
+            out_exprs.append(ce)
+            self._validate_metadata(ce._metadata)
+        return out_exprs
 
     def _extract_compliant_frame(self, other: Self | Any, /) -> Any:
         if isinstance(other, type(self)):
@@ -171,6 +170,10 @@ class BaseFrame(Generic[_FrameT]):
 
     def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
         return check_columns_exist(subset, available=self.columns)
+
+    @abstractmethod
+    def _validate_metadata(self, metadata: ExprMetadata) -> None:  # pragma: no cover
+        pass
 
     @property
     def schema(self) -> Schema:
@@ -200,10 +203,12 @@ class BaseFrame(Generic[_FrameT]):
     def with_columns(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> Self:
-        compliant_exprs, kinds = self._flatten_and_extract(*exprs, **named_exprs)
+        compliant_exprs = self._flatten_and_extract(*exprs, **named_exprs)
         compliant_exprs = [
-            compliant_expr.broadcast(kind) if is_scalar_like(kind) else compliant_expr
-            for compliant_expr, kind in zip_strict(compliant_exprs, kinds)
+            compliant_expr.broadcast()
+            if is_scalar_like(compliant_expr)
+            else compliant_expr
+            for compliant_expr in compliant_exprs
         ]
         return self._with_compliant(self._compliant_frame.with_columns(*compliant_exprs))
 
@@ -222,12 +227,14 @@ class BaseFrame(Generic[_FrameT]):
                 if error := self._check_columns_exist(flat_exprs):
                     raise error from e
                 raise
-        compliant_exprs, kinds = self._flatten_and_extract(*flat_exprs, **named_exprs)
-        if compliant_exprs and all(is_scalar_like(kind) for kind in kinds):
+        compliant_exprs = self._flatten_and_extract(*flat_exprs, **named_exprs)
+        if compliant_exprs and all(is_scalar_like(x) for x in compliant_exprs):
             return self._with_compliant(self._compliant_frame.aggregate(*compliant_exprs))
         compliant_exprs = [
-            compliant_expr.broadcast(kind) if is_scalar_like(kind) else compliant_expr
-            for compliant_expr, kind in zip_strict(compliant_exprs, kinds)
+            compliant_expr.broadcast()
+            if is_scalar_like(compliant_expr)
+            else compliant_expr
+            for compliant_expr in compliant_exprs
         ]
         return self._with_compliant(self._compliant_frame.select(*compliant_exprs))
 
@@ -249,11 +256,11 @@ class BaseFrame(Generic[_FrameT]):
         from narwhals.functions import col
 
         flat_predicates = flatten(predicates)
-        check_expressions_preserve_length(*flat_predicates, function_name="filter")
         plx = self.__narwhals_namespace__()
-        compliant_predicates, _kinds = self._flatten_and_extract(*flat_predicates)
-        compliant_constraints = (
-            (col(name) == v)._to_compliant_expr(plx) for name, v in constraints.items()
+        compliant_predicates = self._flatten_and_extract(*flat_predicates)
+        check_expressions_preserve_length(*compliant_predicates, function_name="filter")
+        compliant_constraints = self._flatten_and_extract(
+            *[col(name) == v for name, v in constraints.items()]
         )
         predicate = plx.all_horizontal(
             *chain(compliant_predicates, compliant_constraints), ignore_nulls=False
@@ -473,12 +480,6 @@ class DataFrame(BaseFrame[DataFrameT]):
     def _compliant(self) -> CompliantDataFrame[Any, Any, DataFrameT, Self]:
         return self._compliant_frame
 
-    def _extract_compliant(self, arg: Any) -> Any:
-        if is_into_expr_eager(arg):
-            plx: EagerNamespaceAny = self.__narwhals_namespace__()
-            return plx.parse_into_expr(arg, str_as_lit=False)
-        raise InvalidIntoExprError.from_invalid_type(type(arg))
-
     @property
     def _series(self) -> type[Series[Any]]:
         return Series
@@ -486,6 +487,10 @@ class DataFrame(BaseFrame[DataFrameT]):
     @property
     def _lazyframe(self) -> type[LazyFrame[Any]]:
         return LazyFrame
+
+    def _validate_metadata(self, metadata: ExprMetadata) -> None:
+        # all is valid in eager case.
+        pass
 
     def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
         self._level: Literal["full", "lazy", "interchange"] = level
@@ -1788,8 +1793,10 @@ class DataFrame(BaseFrame[DataFrameT]):
             k if is_expr else col(k)
             for k, is_expr in zip_strict(flat_keys, key_is_expr_or_series)
         ]
-        expr_flat_keys, _kinds = self._flatten_and_extract(*_keys)
-        check_expressions_preserve_length(*_keys, function_name="DataFrame.group_by")
+        expr_flat_keys = self._flatten_and_extract(*_keys)
+        check_expressions_preserve_length(
+            *expr_flat_keys, function_name="DataFrame.group_by"
+        )
         return GroupBy(self, expr_flat_keys, drop_null_keys=drop_null_keys)
 
     def sort(
@@ -2352,44 +2359,34 @@ class LazyFrame(BaseFrame[LazyFrameT]):
     def _compliant(self) -> CompliantLazyFrame[Any, LazyFrameT, Self]:
         return self._compliant_frame
 
-    def _extract_compliant(self, arg: Any) -> Any:
-        from narwhals.expr import Expr
-        from narwhals.series import Series
-
-        if isinstance(arg, Series):  # pragma: no cover
-            msg = "Binary operations between Series and LazyFrame are not supported."
-            raise TypeError(msg)
-        if isinstance(arg, (Expr, str)):
-            if isinstance(arg, Expr):
-                if arg._metadata.n_orderable_ops:
-                    msg = (
-                        "Order-dependent expressions are not supported for use in LazyFrame.\n\n"
-                        "Hint: To make the expression valid, use `.over` with `order_by` specified.\n\n"
-                        "For example, if you wrote `nw.col('price').cum_sum()` and you have a column\n"
-                        "`'date'` which orders your data, then replace:\n\n"
-                        "   nw.col('price').cum_sum()\n\n"
-                        " with:\n\n"
-                        "   nw.col('price').cum_sum().over(order_by='date')\n"
-                        "                            ^^^^^^^^^^^^^^^^^^^^^^\n\n"
-                        "See https://narwhals-dev.github.io/narwhals/concepts/order_dependence/."
-                    )
-                    raise InvalidOperationError(msg)
-                if arg._metadata.is_filtration:
-                    msg = (
-                        "Length-changing expressions are not supported for use in LazyFrame, unless\n"
-                        "followed by an aggregation.\n\n"
-                        "Hints:\n"
-                        "- Instead of `lf.select(nw.col('a').head())`, use `lf.select('a').head()\n"
-                        "- Instead of `lf.select(nw.col('a').drop_nulls()).select(nw.sum('a'))`,\n"
-                        "  use `lf.select(nw.col('a').drop_nulls().sum())\n"
-                    )
-                    raise InvalidOperationError(msg)
-            return self.__narwhals_namespace__().parse_into_expr(arg, str_as_lit=False)
-        raise InvalidIntoExprError.from_invalid_type(type(arg))
-
     @property
     def _dataframe(self) -> type[DataFrame[Any]]:
         return DataFrame
+
+    def _validate_metadata(self, metadata: ExprMetadata) -> None:
+        if metadata.n_orderable_ops > 0:
+            msg = (
+                "Order-dependent expressions are not supported for use in LazyFrame.\n\n"
+                "Hint: To make the expression valid, use `.over` with `order_by` specified.\n\n"
+                "For example, if you wrote `nw.col('price').cum_sum()` and you have a column\n"
+                "`'date'` which orders your data, then replace:\n\n"
+                "   nw.col('price').cum_sum()\n\n"
+                " with:\n\n"
+                "   nw.col('price').cum_sum().over(order_by='date')\n"
+                "                            ^^^^^^^^^^^^^^^^^^^^^^\n\n"
+                "See https://narwhals-dev.github.io/narwhals/concepts/order_dependence/."
+            )
+            raise InvalidOperationError(msg)
+        if metadata.is_filtration:
+            msg = (
+                "Length-changing expressions are not supported for use in LazyFrame, unless\n"
+                "followed by an aggregation.\n\n"
+                "Hints:\n"
+                "- Instead of `lf.select(nw.col('a').head())`, use `lf.select('a').head()\n"
+                "- Instead of `lf.select(nw.col('a').drop_nulls()).select(nw.sum('a'))`,\n"
+                "  use `lf.select(nw.col('a').drop_nulls().sum())\n"
+            )
+            raise InvalidOperationError(msg)
 
     def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
         self._level = level
@@ -3021,9 +3018,10 @@ class LazyFrame(BaseFrame[LazyFrameT]):
         _keys = [
             k if is_expr else col(k) for k, is_expr in zip_strict(flat_keys, key_is_expr)
         ]
-        expr_flat_keys, _kinds = self._flatten_and_extract(*_keys)
-        check_expressions_preserve_length(*_keys, function_name="LazyFrame.group_by")
-
+        expr_flat_keys = self._flatten_and_extract(*_keys)
+        check_expressions_preserve_length(
+            *expr_flat_keys, function_name="LazyFrame.group_by"
+        )
         return LazyGroupBy(self, expr_flat_keys, drop_null_keys=drop_null_keys)
 
     def sort(

@@ -43,7 +43,6 @@ if TYPE_CHECKING:
         ModeKeepStrategy,
         MultiIndexSelector,
         NonNestedLiteral,
-        NumericLiteral,
         PythonLiteral,
         _1DArray,
     )
@@ -289,6 +288,19 @@ class PolarsSeries:
         dtype_pl = narwhals_to_native_dtype(dtype, self._version)
         return self._with_native(self.native.cast(dtype_pl))
 
+    def clip(self, lower_bound: PolarsSeries, upper_bound: PolarsSeries) -> Self:
+        return self._with_native(
+            self.native.clip(extract_native(lower_bound), extract_native(upper_bound))
+        )
+
+    def clip_lower(self, lower_bound: PolarsSeries) -> Self:
+        return self._with_native(self.native.clip(extract_native(lower_bound)))
+
+    def clip_upper(self, upper_bound: PolarsSeries) -> Self:
+        return self._with_native(
+            self.native.clip(upper_bound=extract_native(upper_bound))
+        )
+
     @requires.backend_version((1,))
     def replace_strict(
         self,
@@ -510,30 +522,6 @@ class PolarsSeries:
         except Exception as e:  # noqa: BLE001
             raise catch_polars_exception(e) from None
 
-    def is_close(
-        self,
-        other: Self | NumericLiteral,
-        *,
-        abs_tol: float,
-        rel_tol: float,
-        nans_equal: bool,
-    ) -> PolarsSeries:
-        if self._backend_version < (1, 32, 0):
-            name = self.name
-            ns = self.__narwhals_namespace__()
-            other_expr = (
-                ns.lit(other.native, None) if isinstance(other, PolarsSeries) else other
-            )
-            expr = ns.col(name).is_close(
-                other_expr, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal
-            )
-            return self.to_frame().select(expr).get_column(name)
-        other_series = other.native if isinstance(other, PolarsSeries) else other
-        result = self.native.is_close(
-            other_series, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal
-        )
-        return self._with_native(result)
-
     def mode(self, *, keep: ModeKeepStrategy) -> Self:
         result = self.native.mode()
         return self._with_native(result.head(1) if keep == "any" else result)
@@ -702,7 +690,6 @@ class PolarsSeries:
     arg_min: Method[int]
     arg_true: Method[Self]
     ceil: Method[Self]
-    clip: Method[Self]
     count: Method[int]
     cum_max: Method[Self]
     cum_min: Method[Self]
@@ -799,6 +786,22 @@ class PolarsSeriesStringNamespace(
         name = self.name
         ns = self.__narwhals_namespace__()
         return self.to_frame().select(ns.col(name).str.zfill(width)).get_column(name)
+
+    def replace(
+        self, value: PolarsSeries, pattern: str, *, literal: bool, n: int
+    ) -> PolarsSeries:
+        value_native = extract_native(value)
+        return self.compliant._with_native(
+            self.native.str.replace(pattern, value_native, literal=literal, n=n)  # type: ignore[arg-type]
+        )
+
+    def replace_all(
+        self, value: PolarsSeries, pattern: str, *, literal: bool
+    ) -> PolarsSeries:
+        value_native = extract_native(value)
+        return self.compliant._with_native(
+            self.native.str.replace_all(pattern, value_native, literal=literal)  # type: ignore[arg-type]
+        )
 
 
 class PolarsSeriesCatNamespace(

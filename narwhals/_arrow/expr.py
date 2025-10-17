@@ -21,8 +21,7 @@ if TYPE_CHECKING:
 
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.namespace import ArrowNamespace
-    from narwhals._compliant.typing import AliasNames, EvalNames, EvalSeries, ScalarKwargs
-    from narwhals._expression_parsing import ExprMetadata
+    from narwhals._compliant.typing import AliasNames, EvalNames, EvalSeries
     from narwhals._utils import Version, _LimitedContext
 
 
@@ -33,23 +32,15 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
         self,
         call: EvalSeries[ArrowDataFrame, ArrowSeries],
         *,
-        depth: int,
-        function_name: str,
         evaluate_output_names: EvalNames[ArrowDataFrame],
         alias_output_names: AliasNames | None,
         version: Version,
-        scalar_kwargs: ScalarKwargs | None = None,
-        implementation: Implementation | None = None,
+        implementation: Implementation = Implementation.PYARROW,
     ) -> None:
         self._call = call
-        self._depth = depth
-        self._function_name = function_name
-        self._depth = depth
         self._evaluate_output_names = evaluate_output_names
         self._alias_output_names = alias_output_names
         self._version = version
-        self._scalar_kwargs = scalar_kwargs or {}
-        self._metadata: ExprMetadata | None = None
 
     @classmethod
     def from_column_names(
@@ -58,7 +49,6 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
         /,
         *,
         context: _LimitedContext,
-        function_name: str = "",
     ) -> Self:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             try:
@@ -75,8 +65,6 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
 
         return cls(
             func,
-            depth=0,
-            function_name=function_name,
             evaluate_output_names=evaluate_column_names,
             alias_output_names=None,
             version=context._version,
@@ -94,8 +82,6 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
 
         return cls(
             func,
-            depth=0,
-            function_name="nth",
             evaluate_output_names=cls._eval_names_indices(column_indices),
             alias_output_names=None,
             version=context._version,
@@ -113,7 +99,7 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
 
     def over(self, partition_by: Sequence[str], order_by: Sequence[str]) -> Self:
         meta = self._metadata
-        if partition_by and meta is not None and not meta.is_scalar_like:
+        if partition_by and not meta.is_scalar_like:
             msg = "Only aggregation or literal operations are supported in grouped `over` context for PyArrow."
             raise NotImplementedError(msg)
 
@@ -167,8 +153,6 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
 
         return self.__class__(
             func,
-            depth=self._depth + 1,
-            function_name=self._function_name + "->over",
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             version=self._version,

@@ -13,6 +13,7 @@ from narwhals._compliant.column import CompliantColumn
 from narwhals._compliant.typing import (
     CompliantSeriesT_co,
     EagerDataFrameAny,
+    EagerSeriesT,
     EagerSeriesT_co,
     NativeSeriesT,
     NativeSeriesT_co,
@@ -324,17 +325,17 @@ class EagerSeriesDateTimeNamespace(  # type: ignore[misc]
 ): ...
 
 
-class EagerSeriesListNamespace(  # type: ignore[misc]
-    _SeriesNamespace[EagerSeriesT_co, NativeSeriesT_co],
-    ListNamespace[EagerSeriesT_co],
-    Protocol[EagerSeriesT_co, NativeSeriesT_co],
+class EagerSeriesListNamespace(  # pyright: ignore[reportInvalidTypeVarUse]
+    _SeriesNamespace[EagerSeriesT, NativeSeriesT_co],
+    ListNamespace[EagerSeriesT],
+    Protocol[EagerSeriesT, NativeSeriesT_co],
 ): ...
 
 
-class EagerSeriesStringNamespace(  # type: ignore[misc]
-    _SeriesNamespace[EagerSeriesT_co, NativeSeriesT_co],
-    StringNamespace[EagerSeriesT_co],
-    Protocol[EagerSeriesT_co, NativeSeriesT_co],
+class EagerSeriesStringNamespace(
+    _SeriesNamespace[EagerSeriesT, NativeSeriesT_co],
+    StringNamespace[EagerSeriesT],
+    Protocol[EagerSeriesT, NativeSeriesT_co],
 ): ...
 
 
