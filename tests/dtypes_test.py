@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 import pandas as pd
-import pyarrow as pa
 import pytest
 
 import narwhals as nw
@@ -176,6 +175,9 @@ def test_2d_array(constructor: Constructor, request: pytest.FixtureRequest) -> N
 
 
 def test_second_time_unit() -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
     s: IntoSeries = pd.Series(np.array([np.datetime64("2020-01-01", "s")]))
     result = nw.from_native(s, series_only=True)
     expected_unit: Literal["ns", "us", "ms", "s"] = (
@@ -398,9 +400,10 @@ def test_huge_int_to_native() -> None:
 def test_cast_decimal_to_native() -> None:
     pytest.importorskip("duckdb")
     pytest.importorskip("polars")
-
+    pytest.importorskip("pyarrow")
     import duckdb
     import polars as pl
+    import pyarrow as pa
 
     data = {"a": [1, 2, 3]}
 

@@ -102,6 +102,7 @@ def pandas_nullable_constructor(obj: Data) -> pd.DataFrame:
 
 
 def pandas_pyarrow_constructor(obj: Data) -> pd.DataFrame:
+    pytest.importorskip("pyarrow")
     import pandas as pd
 
     return pd.DataFrame(obj).convert_dtypes(dtype_backend="pyarrow")
@@ -143,6 +144,7 @@ def polars_lazy_constructor(obj: Data) -> pl.LazyFrame:
 
 
 def duckdb_lazy_constructor(obj: Data) -> duckdb.DuckDBPyRelation:
+    pytest.importorskip("duckdb")
     import duckdb
     import polars as pl
 
@@ -165,6 +167,7 @@ def dask_lazy_p2_constructor(obj: Data) -> NativeLazyFrame:  # pragma: no cover
 
 
 def pyarrow_table_constructor(obj: dict[str, Any]) -> pa.Table:
+    pytest.importorskip("pyarrow")
     import pyarrow as pa
 
     return pa.table(obj)
