@@ -689,8 +689,9 @@ class DaskExpr(
     def dt(self) -> DaskExprDateTimeNamespace:
         return DaskExprDateTimeNamespace(self)
 
-    rank = not_implemented()
+    filter = not_implemented()
     first = not_implemented()
+    rank = not_implemented()
     last = not_implemented()
 
     # namespaces
