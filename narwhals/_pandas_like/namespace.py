@@ -292,18 +292,6 @@ class PandasLikeNamespace(
         return self._concat(dfs, axis=HORIZONTAL)
 
     def _concat_vertical(self, dfs: Sequence[NativeDataFrameT], /) -> NativeDataFrameT:
-        cols_0 = dfs[0].columns
-        for i, df in enumerate(dfs[1:], start=1):
-            cols_current = df.columns
-            if not (
-                (len(cols_current) == len(cols_0)) and (cols_current == cols_0).all()
-            ):
-                msg = (
-                    "unable to vstack, column names don't match:\n"
-                    f"   - dataframe 0: {cols_0.to_list()}\n"
-                    f"   - dataframe {i}: {cols_current.to_list()}\n"
-                )
-                raise TypeError(msg)
         if self._implementation.is_pandas() and self._backend_version < (3,):
             return self._concat(dfs, axis=VERTICAL, copy=False)
         return self._concat(dfs, axis=VERTICAL)

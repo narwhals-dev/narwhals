@@ -18,7 +18,7 @@ from narwhals._ibis.selectors import IbisSelectorNamespace
 from narwhals._ibis.utils import function, lit, narwhals_to_native_dtype
 from narwhals._sql.namespace import SQLNamespace
 from narwhals._sql.when_then import SQLThen, SQLWhen
-from narwhals._utils import Implementation, requires
+from narwhals._utils import Implementation, requires, validate_concat_vertical_schemas
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -69,12 +69,10 @@ class IbisNamespace(SQLNamespace[IbisLazyFrame, IbisExpr, "ir.Table", "ir.Value"
             raise NotImplementedError(msg)
 
         items = list(items)
-        native_items = [item.native for item in items]
-        schema = items[0].schema
-        if not all(x.schema == schema for x in items[1:]):
-            msg = "inputs should all have the same schema"
-            raise TypeError(msg)
-        return self._lazyframe.from_native(ibis.union(*native_items), context=self)
+        validate_concat_vertical_schemas(item.schema for item in items)
+        return self._lazyframe.from_native(
+            ibis.union(*(item.native for item in items)), context=self
+        )
 
     def concat_str(
         self, *exprs: IbisExpr, separator: str, ignore_nulls: bool

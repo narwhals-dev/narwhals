@@ -20,6 +20,7 @@ from narwhals._utils import (
     exclude_column_names,
     get_column_names,
     passthrough_column_names,
+    validate_concat_vertical_schemas,
 )
 from narwhals.dependencies import is_numpy_array, is_numpy_array_2d
 
@@ -239,6 +240,7 @@ class EagerNamespace(
         if how == "horizontal":
             native = self._concat_horizontal(dfs)
         elif how == "vertical":
+            validate_concat_vertical_schemas(item.schema for item in items)
             native = self._concat_vertical(dfs)
         elif how == "diagonal":
             native = self._concat_diagonal(dfs)

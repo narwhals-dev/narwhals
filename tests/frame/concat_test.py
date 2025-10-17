@@ -34,10 +34,8 @@ def test_concat_horizontal(constructor_eager: ConstructorEager) -> None:
 
 
 def test_concat_vertical(constructor: Constructor) -> None:
-    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
-    df_left = (
-        nw.from_native(constructor(data)).lazy().rename({"a": "c", "b": "d"}).drop("z")
-    )
+    data = {"c": [1, 3, 2], "d": [4, 4, 6]}
+    df_left = nw.from_native(constructor(data)).lazy()
 
     data_right = {"c": [6, 12, -1], "d": [0, -4, 2]}
     df_right = nw.from_native(constructor(data_right)).lazy()
@@ -49,16 +47,18 @@ def test_concat_vertical(constructor: Constructor) -> None:
     with pytest.raises(ValueError, match="No items"):
         nw.concat([], how="vertical")
 
-    with pytest.raises(
-        (Exception, TypeError),
-        match=r"unable to vstack|inputs should all have the same schema",
-    ):
+    err_msg = r"unable to vstack|unable to append|inputs should all have the same schema|cannot extend/append"
+
+    with pytest.raises((Exception, InvalidOperationError), match=err_msg):
         nw.concat([df_left, df_right.rename({"d": "i"})], how="vertical").collect()
-    with pytest.raises(
-        (Exception, TypeError),
-        match=r"unable to vstack|unable to append|inputs should all have the same schema",
-    ):
+
+    with pytest.raises((Exception, InvalidOperationError), match=err_msg):
         nw.concat([df_left, df_left.select("d")], how="vertical").collect()
+
+    with pytest.raises((Exception, InvalidOperationError), match=err_msg):
+        nw.concat(
+            [df_left, df_left.select("c", nw.col("d").cast(nw.Int32))], how="vertical"
+        ).collect()
 
 
 def test_concat_diagonal(
