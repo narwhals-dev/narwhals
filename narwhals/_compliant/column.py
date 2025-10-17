@@ -86,7 +86,6 @@ class CompliantColumn(Protocol):
     def fill_null(
         self, value: Self | None, strategy: FillNullStrategy | None, limit: int | None
     ) -> Self: ...
-    def filter(self, *predicates: Self) -> Self: ...
     def is_between(
         self, lower_bound: Self, upper_bound: Self, closed: ClosedInterval
     ) -> Self:
