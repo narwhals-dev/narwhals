@@ -114,7 +114,7 @@ def _via_namespace(getter: Getter, /) -> Getter:
 
 
 def _pascal_to_snake_case(s: str) -> str:
-    """Convert a PascalCase, camelCase string to snake_case.
+    """Convert a PascalCase string to snake_case.
 
     Adapted from https://github.com/pydantic/pydantic/blob/f7a9b73517afecf25bf898e3b5f591dffe669778/pydantic/alias_generators.py#L43-L62
     """
