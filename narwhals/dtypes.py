@@ -61,8 +61,8 @@ def _validate_into_dtype(dtype: Any) -> None:
 class DTypeClass(type):
     """Metaclass for DType classes.
 
-    * Nicely print classes.
-    * Ensure [`__slots__`] are always defined to prevent `__dict__` creation (empty by default).
+    - Nicely print classes.
+    - Ensure [`__slots__`] are always defined to prevent `__dict__` creation (empty by default).
 
     [`__slots__`]: https://docs.python.org/3/reference/datamodel.html#object.__slots__
     """
