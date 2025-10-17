@@ -709,6 +709,12 @@ class EagerExpr(
     def round(self, decimals: int) -> Self:
         return self._reuse_series("round", decimals=decimals)
 
+    def floor(self) -> Self:
+        return self._reuse_series("floor")
+
+    def ceil(self) -> Self:
+        return self._reuse_series("ceil")
+
     def len(self) -> Self:
         return self._reuse_series("len", returns_scalar=True)
 
