@@ -642,15 +642,17 @@ class ExprMetadata:
         )
 
     def with_filtration(
-        self, node: ExprNode, _ce: CompliantExprAny, *_ces: CompliantExprAny
+        self, node: ExprNode, *compliant_exprs: CompliantExprAny
     ) -> ExprMetadata:
         if self.is_scalar_like:
             msg = "Can't apply filtration (e.g. `drop_nulls`) to scalar-like expression."
             raise InvalidOperationError(msg)
+        result_has_windows = any(x._metadata.has_windows for x in compliant_exprs)
+        result_n_orderable_ops = sum(x._metadata.n_orderable_ops for x in compliant_exprs)
         return ExprMetadata(
             self.expansion_kind,
-            has_windows=self.has_windows,
-            n_orderable_ops=self.n_orderable_ops,
+            has_windows=result_has_windows,
+            n_orderable_ops=result_n_orderable_ops,
             preserves_length=False,
             is_elementwise=False,
             is_scalar_like=False,

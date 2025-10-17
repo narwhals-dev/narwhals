@@ -104,6 +104,7 @@ def test_per_group_broadcasting(
         nw.col("a").drop_nulls().over("b"),
         nw.col("a").drop_nulls().over("b", order_by="i"),
         nw.col("a").diff().drop_nulls().over("b", order_by="i"),
+        nw.col("a").filter(nw.col("b").sum().over("c") > 1).sum().over("d"),
     ],
 )
 def test_invalid_operations(constructor: Constructor, expr: nw.Expr) -> None:
