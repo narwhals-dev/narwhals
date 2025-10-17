@@ -170,8 +170,6 @@ class DType(metaclass=DTypeClass):
             >>> nw.Date() == nw.Datetime
             False
         """
-        from narwhals._utils import isinstance_or_issubclass
-
         return isinstance_or_issubclass(other, type(self))
 
     def __hash__(self) -> int:
