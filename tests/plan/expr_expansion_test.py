@@ -254,6 +254,11 @@ def test_replace_selector(
     assert_expr_ir_equal(actual, expected)
 
 
+XFAIL_MULTI_EXPAND_NESTED = pytest.mark.xfail(
+    reason="https://github.com/narwhals-dev/narwhals/pull/2572#discussion_r2442614173"
+)
+
+
 @pytest.mark.parametrize(
     ("into_exprs", "expected"),
     [
@@ -439,6 +444,38 @@ def test_replace_selector(
                 ),
             ],
             id="Selector-BinaryExpr-Over-Prefix",
+        ),
+        pytest.param(
+            [
+                nwp.col("c").sort_by(nwp.col("c", "i")).first().alias("Columns"),
+                nwp.col("c").sort_by("c", "i").first().alias("Column_x2"),
+            ],
+            [
+                named_ir(
+                    "Columns", nwp.col("c").sort_by(nwp.col("c"), nwp.col("i")).first()
+                ),
+                named_ir(
+                    "Column_x2", nwp.col("c").sort_by(nwp.col("c"), nwp.col("i")).first()
+                ),
+            ],
+            id="SortBy-Columns",
+            marks=XFAIL_MULTI_EXPAND_NESTED,
+        ),
+        pytest.param(
+            nwp.nth(1).mean().over("k", order_by=nwp.nth(4, 5)),
+            [
+                nwp.col("b")
+                .mean()
+                .over(nwp.col("k"), order_by=(nwp.col("e"), nwp.col("f")))
+            ],
+            id="Over-OrderBy-IndexColumns",
+            marks=XFAIL_MULTI_EXPAND_NESTED,
+        ),
+        pytest.param(
+            nwp.col("f").mean().over(ndcs.by_dtype(nw.Date, nw.Datetime)),
+            [nwp.col("f").max().over(nwp.col("n"), nwp.col("o"))],
+            id="Over-Partitioned-Selector",
+            marks=XFAIL_MULTI_EXPAND_NESTED,
         ),
     ],
 )

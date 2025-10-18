@@ -82,6 +82,16 @@ def duplicate_case(arg: OneOrIterable[IntoExprColumn]) -> ParameterSet:
         duplicate_case(ncs.matches(r"a|b")),
         duplicate_case(ncs.all() - ncs.by_name(["c", "i"])),
     ],
+    ids=[
+        "tuple[str]",
+        "col-col",
+        "nth-nth",
+        "cols",
+        "index_columns",
+        "by_name",
+        "matches",
+        "binary_selector",
+    ],
 )
 def test_over_multiple(data: Data, partition_by: OneOrIterable[IntoExprColumn]) -> None:
     expected = {
