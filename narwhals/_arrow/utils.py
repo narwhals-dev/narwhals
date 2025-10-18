@@ -123,8 +123,14 @@ def zeros(n: int, /) -> pa.Int64Array:
     return pa.repeat(0, n)
 
 
+def native_to_narwhals_dtype(dtype: pa.DataType, version: Version) -> DType:
+    if isinstance(dtype, pa.ExtensionType):
+        return version.dtypes.Unknown()
+    return native_non_extension_to_narwhals_dtype(dtype, version)
+
+
 @lru_cache(maxsize=16)
-def native_to_narwhals_dtype(dtype: pa.DataType, version: Version) -> DType:  # noqa: C901, PLR0912
+def native_non_extension_to_narwhals_dtype(dtype: pa.DataType, version: Version) -> DType:  # noqa: C901, PLR0912
     dtypes = version.dtypes
     if pa.types.is_int64(dtype):
         return dtypes.Int64()
