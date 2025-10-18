@@ -585,7 +585,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             return self._with_native(self.native.slice(max(0, num_rows - n)))
         return self._with_native(self.native.slice(abs(n)))
 
-    def is_in(self, other: Any) -> Self:
+    def is_in(self, other: Sequence[Any] | ChunkedArrayAny) -> Self:
         if self._is_native(other):
             value_set: ArrayOrChunkedArray = other
         else:

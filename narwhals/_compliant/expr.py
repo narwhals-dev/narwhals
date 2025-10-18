@@ -39,7 +39,7 @@ from narwhals.dependencies import is_numpy_array, is_numpy_scalar
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
-    from typing_extensions import Self, TypeIs
+    from typing_extensions import Self, TypeAlias, TypeIs
 
     from narwhals._compliant.namespace import CompliantNamespace, EagerNamespace
     from narwhals._compliant.series import CompliantSeries
@@ -60,6 +60,8 @@ if TYPE_CHECKING:
     )
 
 __all__ = ["CompliantExpr", "DepthTrackingExpr", "EagerExpr", "LazyExpr", "NativeExpr"]
+
+Incomplete: TypeAlias = "Any"
 
 
 class NativeExpr(Protocol):
@@ -613,7 +615,7 @@ class EagerExpr(
             "fill_null", value=value, scalar_kwargs={"strategy": strategy, "limit": limit}
         )
 
-    def is_in(self, other: Any) -> Self:
+    def is_in(self, other: Sequence[Any] | Incomplete) -> Self:
         return self._reuse_series("is_in", other=other)
 
     def arg_true(self) -> Self:

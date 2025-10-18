@@ -5,7 +5,14 @@ import re
 import pytest
 
 import narwhals as nw
-from tests.utils import Constructor, ConstructorEager, assert_equal_data
+from tests.utils import (
+    PANDAS_VERSION,
+    Constructor,
+    ConstructorEager,
+    IntoIterable,
+    assert_equal_data,
+    assert_equal_series,
+)
 
 data = {"a": [1, 4, 2, 5]}
 
@@ -50,3 +57,70 @@ def test_filter_is_in_with_series(constructor_eager: ConstructorEager) -> None:
     result = df.filter(nw.col("a").is_in(df["b"]))
     expected = {"a": [1, 2], "b": [1, 2]}
     assert_equal_data(result, expected)
+
+
+def test_expr_is_in_series_wrong_backend(constructor: Constructor) -> None:
+    pytest.importorskip("polars")
+    pytest.importorskip("pyarrow")
+
+    import polars as pl
+    import pyarrow as pa
+
+    values = [5, 6, 7, 8]
+    native_pa = pa.chunked_array([values])
+    native_pl = pl.Series(values)
+    df = nw.from_native(constructor(data))
+    is_polars = df.implementation.is_polars()
+    ser = nw.from_native(native_pa if is_polars else native_pl, series_only=True)
+    result = df.select(nw.col("a").is_in(ser)).sort("a")
+    expected = {"a": [False, False, False, True]}
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.slow
+def test_expr_is_in_iterable(
+    constructor: Constructor, into_iter_16: IntoIterable, request: pytest.FixtureRequest
+) -> None:
+    test_name = request.node.name
+    request.applymarker(
+        pytest.mark.xfail(
+            all(part in test_name for part in ("duckdb", "pandas", "array"))
+            and PANDAS_VERSION < (2,),
+            reason=(
+                "Pandas bug produced numpy scalars on `pd.array(...).tolist()`\n"
+                "Not implemented Error: Unable to transform python value of type '<class 'numpy.int64'>' to DuckDB LogicalType\n"
+                "https://github.com/pandas-dev/pandas/pull/49890"
+            ),
+        )
+    )
+    df = nw.from_native(constructor(data))
+    expected = {"a": [False, True, True, False]}
+    iterable = into_iter_16((4, 2))
+    expr = nw.col("a").is_in(iterable)
+    result = df.select(expr)
+    assert_equal_data(result, expected)
+    # NOTE: For an `Iterator`, this will fail if we haven't collected it first
+    repeated = df.select(expr)
+    assert_equal_data(repeated, expected)
+
+
+@pytest.mark.slow
+def test_ser_is_in_iterable(
+    constructor_eager: ConstructorEager,
+    into_iter_16: IntoIterable,
+    request: pytest.FixtureRequest,
+) -> None:
+    test_name = request.node.name
+    # NOTE: This *could* be supported by using `ExtensionArray.tolist` (same path as numpy)
+    request.applymarker(
+        pytest.mark.xfail(
+            all(part in test_name for part in ("polars", "pandas", "array")),
+            raises=TypeError,
+            reason="Polars doesn't support `pd.array`.\nhttps://github.com/pola-rs/polars/issues/22757",
+        )
+    )
+    iterable = into_iter_16((4, 2))
+    ser = nw.from_native(constructor_eager(data)).get_column("a")
+    result = ser.is_in(iterable)
+    expected = [False, True, True, False]
+    assert_equal_series(result, expected, "a")
