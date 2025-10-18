@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
 
-class CustomInt16Dtype(pd.api.extensions.ExtensionDtype):
+class CustomInt16Dtype(pd.api.extensions.ExtensionDtype):  # pragma: no cover
     name = "custom_int_16"
     type = int
     _metadata = ("name",)
@@ -49,7 +49,7 @@ class CustomInt16Array(pd.api.extensions.ExtensionArray):  # pragma: no cover
         return type(self)(self._values.copy().tolist())
 
 
-class CustomInt32Dtype(pd.api.extensions.ExtensionDtype):
+class CustomInt32Dtype(pd.api.extensions.ExtensionDtype):  # pragma: no cover
     name = "custom_int_32"
     type = int
     _metadata = ("name",)
@@ -58,7 +58,7 @@ class CustomInt32Dtype(pd.api.extensions.ExtensionDtype):
     def construct_array_type(cls) -> type[pd.api.extensions.ExtensionArray]:  # type: ignore[valid-type]
         return CustomInt32Array
 
-    def __hash__(self) -> int:  # pragma: no cover
+    def __hash__(self) -> int:
         return hash(self.name)
 
 
