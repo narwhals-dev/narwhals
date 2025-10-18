@@ -13,7 +13,7 @@ the next sections for what else you can do.
 We love open source, but we're not "open source absolutists". If you're unable to open
 source your library, then this is how you can make your library compatible with Narwhals.
 
-Make sure that you also define:
+Make sure that you define:
 
   - `DataFrame.__narwhals_dataframe__`: return an object which implements methods from the
     `CompliantDataFrame` protocol in  `narwhals/typing.py`.
@@ -38,8 +38,9 @@ doesn't work, please do raise an issue or contact us on Discord (see the link on
 
 ## Creating a Plugin
 
-Another option is to write a plugin. Narwhals itself has the necessary utilities to detect and handle 
-plugins. For this integration to work, any plugin architecture must contain the following:
+If it's not possible to add extra functions like `__narwhals_namespace__` and others to a dataframe object 
+itself, then another option is to write a plugin. Narwhals itself has the necessary utilities to detect and 
+handle plugins. For this integration to work, any plugin architecture must contain the following:
 
   1. an entrypoint defined in a `pyproject.toml` file:
 
@@ -47,8 +48,9 @@ plugins. For this integration to work, any plugin architecture must contain the 
     [project.entry-points.'narwhals.plugins']
     narwhals-<library name> = 'narwhals_<library name>'
     ```
-    The first line needs to be the same for all plugins, whereas the second is to be adapted to the 
-    library name.
+    The section name needs to be the same for all plugins; inside it, plugin creators can replace their
+    own library name, for example `narwhals-grizzlies = 'narwhals_grizzlies'`
+
 
   2. a top-level `__init__.py` file containing the following: 
   
