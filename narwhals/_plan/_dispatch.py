@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from operator import attrgetter
-from typing import TYPE_CHECKING, Any, Callable, Generic, Protocol, final, overload
+from typing import TYPE_CHECKING, Any, Generic, Literal, Protocol, final, overload
 
 from narwhals._plan._guards import is_function_expr
 from narwhals._plan.compliant.typing import FrameT_contra, R_co
@@ -35,7 +36,6 @@ class BoundMethod(Protocol[Node_contra, FrameT_contra, R_co]):
     def __call__(self, node: Node_contra, frame: FrameT_contra, name: str, /) -> R_co: ...
 
 
-# TODO @dangotbanned: Clean up `__call__` comments
 @final
 class Dispatcher(Generic[Node]):
     """Translate class definitions into error-wrapped method calls.
@@ -61,6 +61,14 @@ class Dispatcher(Generic[Node]):
     def __repr__(self) -> str:
         return f"{type(self).__name__}<{self.name}>"
 
+    def bind(
+        self, ctx: Ctx[FrameT_contra, R_co], /
+    ) -> BoundMethod[Node, FrameT_contra, R_co]:
+        try:
+            return self._bind(ctx)
+        except AttributeError:
+            raise self._not_implemented_error(ctx, "compliant") from None
+
     def __call__(
         self,
         ctx: Ctx[FrameT_contra, R_co],
@@ -69,16 +77,10 @@ class Dispatcher(Generic[Node]):
         name: str,
         /,
     ) -> R_co:
-        # raises when the method isn't implemented on `CompliantExpr`, but exists as a method on `Expr`
-        # gives a more helpful error for things that are namespaced like `col("a").str.replace`
-        try:
-            method = self._bind(ctx)
-        except AttributeError:
-            raise self._not_implemented_error(ctx) from None
+        method = self.bind(ctx)
         if result := method(node, frame, name):
             return result
-        # here if is defined on `CompliantExpr`, but not on ctx
-        raise self._not_implemented_error(ctx)
+        raise self._not_implemented_error(ctx, "context")
 
     @staticmethod
     def from_expr_ir(tp: type[ExprIRT], /) -> Dispatcher[ExprIRT]:
@@ -125,8 +127,16 @@ class Dispatcher(Generic[Node]):
 
         return getter
 
-    def _not_implemented_error(self, ctx: object, /) -> NotImplementedError:
-        msg = f"`{self.name}` is not yet implemented for {type(ctx).__name__!r}"
+    def _not_implemented_error(
+        self, ctx: object, /, missing: Literal["compliant", "context"]
+    ) -> NotImplementedError:
+        if missing == "context":
+            msg = f"`{self.name}` is not yet implemented for {type(ctx).__name__!r}"
+        else:
+            msg = (
+                f"`{self.name}` has not been implemented at the compliant-level.\n"
+                f"Hint: Try adding `CompliantExpr.{self.name}()` or `CompliantNamespace.{self.name}()`"
+            )
         return NotImplementedError(msg)
 
 

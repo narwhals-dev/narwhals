@@ -13,9 +13,17 @@ from narwhals._plan._dispatch import get_dispatch_name
 from tests.plan.utils import assert_equal_data, dataframe, named_ir
 
 if TYPE_CHECKING:
+    import sys
+
     import pyarrow as pa
+    from typing_extensions import TypeAlias
 
     from narwhals._plan.dataframe import DataFrame
+
+    if sys.version_info >= (3, 11):
+        _Flags: TypeAlias = "int | re.RegexFlag"
+    else:
+        _Flags: TypeAlias = int
 
 
 @pytest.fixture
@@ -33,36 +41,40 @@ def df(data: dict[str, Any]) -> DataFrame[pa.Table, pa.ChunkedArray[Any]]:
     return dataframe(data)
 
 
+def re_compile(
+    pattern: str, flags: _Flags = re.DOTALL | re.IGNORECASE
+) -> re.Pattern[str]:
+    return re.compile(pattern, flags)
+
+
 def test_dispatch(df: DataFrame[pa.Table, pa.ChunkedArray[Any]]) -> None:
     implemented_full = nwp.col("a").is_null()
-    only_at_compliant_level = nwp.col("c").ewm_mean()
-    only_at_narwhals_level = nwp.col("d").str.contains("a")
     forgot_to_expand = (named_ir("howdy", nwp.nth(3, 4).first()),)
     aliased_after_expand: tuple[ir.NamedIR[Any]] = (
         ir.NamedIR.from_ir(ir.col("a").alias("b")),
     )
 
-    pattern_expand = re.compile(
-        r"IndexColumns.+not.+appear.+compliant.+expand.+expr.+first",
-        re.DOTALL | re.IGNORECASE,
-    )
-    bad = re.escape("col('a').alias('b')")
-    pattern_aliased_after_expand = re.compile(
-        rf"Alias.+not.+appear.+got.+{bad}", re.DOTALL | re.IGNORECASE
-    )
-
     assert_equal_data(df.select(implemented_full), {"a": [False, True, False]})
 
-    with pytest.raises(NotImplementedError, match=r"ewm_mean"):
-        df.select(only_at_compliant_level)
+    missing_backend = r"ewm_mean.+is not yet implemented for"
+    with pytest.raises(NotImplementedError, match=missing_backend):
+        df.select(nwp.col("c").ewm_mean())
 
-    with pytest.raises(NotImplementedError, match=r"str\.contains"):
-        df.select(only_at_narwhals_level)
+    missing_protocol = re_compile(
+        r"str\.contains.+has not been implemented.+compliant.+"
+        r"Hint.+try adding.+CompliantExpr\.str\.contains\(\)"
+    )
+    with pytest.raises(NotImplementedError, match=missing_protocol):
+        df.select(nwp.col("d").str.contains("a"))
 
-    with pytest.raises(TypeError, match=pattern_expand):
+    with pytest.raises(
+        TypeError,
+        match=re_compile(r"IndexColumns.+not.+appear.+compliant.+expand.+expr.+first"),
+    ):
         df._compliant.select(forgot_to_expand)
 
-    with pytest.raises(TypeError, match=pattern_aliased_after_expand):
+    bad = re.escape("col('a').alias('b')")
+    with pytest.raises(TypeError, match=re_compile(rf"Alias.+not.+appear.+got.+{bad}")):
         df._compliant.select(aliased_after_expand)
 
     # Not a narwhals method, to make sure this doesn't allow arbitrary calls
