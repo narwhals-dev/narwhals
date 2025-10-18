@@ -111,7 +111,7 @@ def assert_frame_equal(
             "Expected `narwhals.DataFrame` or `narwhals.LazyFrame` instance, found:\n"
             f"[left]: {qualified_type_name(type(left))}\n"
             f"[right]: {qualified_type_name(type(right))}\n\n"
-            "Hint: Use `nw.from_native(obj, allow_series=False) to convert each native "
+            "Hint: Use `nw.from_native(obj, allow_series=False)` to convert each native "
             "object into a `narwhals.DataFrame` or `narwhals.LazyFrame` first."
         )
         raise TypeError(msg)
@@ -177,15 +177,18 @@ def _assert_dataframe_equal(
     left_len, right_len = len(left), len(right)
     if left_len != right_len:
         raise_frame_assertion_error("height (row count) mismatch", left_len, right_len)
+    # TODO(FBruzzesi): Should we return early if row count is zero?
 
     left_schema = left.schema
     if (not check_row_order) or (impl not in GUARANTEES_ROW_ORDER):
         # NOTE: Sort by all the non-nested dtypes columns.
-        # ! This might lead to wrong results.
-        # If only nested dtypes are available, then we raise an exception.
+        # See: https://github.com/narwhals-dev/narwhals/issues/2939
+        # ! This might lead to wrong results if there are duplicate values in the sorting
+        # columns as the final order might still be non fully deterministic.
         sort_by = [name for name, dtype in left_schema.items() if not dtype.is_nested()]
 
         if not sort_by:
+            # If only nested dtypes are available, then we raise an exception.
             msg = "`check_row_order=False` is not supported (yet) with only nested data type."
             raise NotImplementedError(msg)
 
@@ -262,5 +265,3 @@ def _check_schema_equal(
             raise_frame_assertion_error(
                 detail="dtypes do not match", left=ldtypes, right=rdtypes
             )
-
-    return
