@@ -81,6 +81,7 @@ INHERITED_METHODS = frozenset(
         "arg_max",
         "arg_min",
         "arg_true",
+        "ceil",
         "clip",
         "count",
         "cum_max",
@@ -93,6 +94,7 @@ INHERITED_METHODS = frozenset(
         "fill_null",
         "fill_nan",
         "filter",
+        "floor",
         "gather_every",
         "head",
         "is_between",
@@ -699,6 +701,7 @@ class PolarsSeries:
     arg_max: Method[int]
     arg_min: Method[int]
     arg_true: Method[Self]
+    ceil: Method[Self]
     clip: Method[Self]
     count: Method[int]
     cum_max: Method[Self]
@@ -711,6 +714,7 @@ class PolarsSeries:
     fill_null: Method[Self]
     fill_nan: Method[Self]
     filter: Method[Self]
+    floor: Method[Self]
     gather_every: Method[Self]
     head: Method[Self]
     is_between: Method[Self]

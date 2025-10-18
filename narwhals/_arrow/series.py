@@ -516,6 +516,12 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             pc.round(self.native, decimals, round_mode="half_towards_infinity")
         )
 
+    def floor(self) -> Self:
+        return self._with_native(pc.floor(self.native))
+
+    def ceil(self) -> Self:
+        return self._with_native(pc.ceil(self.native))
+
     def diff(self) -> Self:
         return self._with_native(pc.pairwise_diff(self.native.combine_chunks()))
 

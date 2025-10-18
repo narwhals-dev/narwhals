@@ -445,6 +445,16 @@ class DaskExpr(
     def round(self, decimals: int) -> Self:
         return self._with_callable(lambda expr: expr.round(decimals), "round")
 
+    def floor(self) -> Self:
+        import dask.array as da
+
+        return self._with_callable(da.floor, "floor")
+
+    def ceil(self) -> Self:
+        import dask.array as da
+
+        return self._with_callable(da.ceil, "ceil")
+
     def unique(self) -> Self:
         return self._with_callable(lambda expr: expr.unique(), "unique")
 
