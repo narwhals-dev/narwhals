@@ -24,7 +24,7 @@ class CustomInt16Dtype(pd.api.extensions.ExtensionDtype):
     _metadata = ("name",)
 
     @classmethod
-    def construct_array_type(cls) -> type[pd.api.extensions.ExtensionArray]:
+    def construct_array_type(cls) -> type[pd.api.extensions.ExtensionArray]:  # type: ignore[valid-type]
         return CustomInt16Array
 
 
@@ -55,7 +55,7 @@ class CustomInt32Dtype(pd.api.extensions.ExtensionDtype):
     _metadata = ("name",)
 
     @classmethod
-    def construct_array_type(cls) -> type[pd.api.extensions.ExtensionArray]:
+    def construct_array_type(cls) -> type[pd.api.extensions.ExtensionArray]:  # type: ignore[valid-type]
         return CustomInt32Array
 
     def __hash__(self) -> int:  # pragma: no cover
@@ -96,16 +96,13 @@ def test_dataframe_with_ext() -> None:
 
 
 def test_schema_with_ext() -> None:
-    pd_dtypes = {
+    pd_schema = {
         "a": "int16",
         "non-hash-int16": CustomInt16Dtype(),
         "hash-int-32": CustomInt32Dtype(),
     }
-    df = pd.DataFrame(
-        {col: pd.array([], dtype=dtype) for col, dtype in pd_dtypes.items()}
-    )
 
-    nw_schema = nw.from_native(df).schema
+    nw_schema = nw.Schema.from_pandas_like(pd_schema)
 
     assert nw_schema == nw.Schema(
         {"a": nw.Int16(), "non-hash-int16": nw.Unknown(), "hash-int-32": nw.Unknown()}
