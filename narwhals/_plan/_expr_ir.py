@@ -52,7 +52,7 @@ class ExprIR(Immutable):
     def dispatch(
         self: Self, ctx: Ctx[FrameT_contra, R_co], frame: FrameT_contra, name: str, /
     ) -> R_co:
-        """Evaluate expression in `frame`, using `ctx` for implementation(s)."""
+        """Evaluate this expression in `frame`, using implementation(s) provided by `ctx`."""
         return self.__expr_ir_dispatch__(ctx, self, frame, name)
 
     def to_narwhals(self, version: Version = Version.MAIN) -> Expr:

@@ -41,6 +41,7 @@ class Dispatcher(Generic[Node]):
     """Translate class definitions into error-wrapped method calls.
 
     Operates over `ExprIR` and `Function` nodes.
+
     By default, we dispatch to the compliant-level by calling a method that is the
     **snake_case**-equivalent of the class name:
 
@@ -64,6 +65,13 @@ class Dispatcher(Generic[Node]):
     def bind(
         self, ctx: Ctx[FrameT_contra, R_co], /
     ) -> BoundMethod[Node, FrameT_contra, R_co]:
+        """Retrieve the implementation of this expression from `ctx`.
+
+        Binds an instance method, most commonly via:
+
+            expr: CompliantExpr
+            method = getattr(expr, "method_name")
+        """
         try:
             return self._bind(ctx)
         except AttributeError:
@@ -77,6 +85,7 @@ class Dispatcher(Generic[Node]):
         name: str,
         /,
     ) -> R_co:
+        """Evaluate this expression in `frame`, using implementation(s) provided by `ctx`."""
         method = self.bind(ctx)
         if result := method(node, frame, name):
             return result
