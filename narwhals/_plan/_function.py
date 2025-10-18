@@ -10,14 +10,12 @@ from narwhals._plan.options import FEOptions, FunctionOptions
 if TYPE_CHECKING:
     from typing import Any, Callable, ClassVar
 
-    from typing_extensions import Self, TypeAlias
+    from typing_extensions import Self
 
     from narwhals._plan.expressions import ExprIR, FunctionExpr
     from narwhals._plan.typing import Accessor
 
 __all__ = ["Function", "HorizontalFunction"]
-
-Incomplete: TypeAlias = "Any"
 
 
 class Function(Immutable):

@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
     from typing import Any, ClassVar
 
-    from typing_extensions import Self, TypeAlias
+    from typing_extensions import Self
 
     from narwhals._plan.compliant.typing import Ctx, FrameT_contra, R_co
     from narwhals._plan.expr import Expr, Selector
@@ -22,8 +22,6 @@ if TYPE_CHECKING:
     from narwhals._plan.meta import MetaNamespace
     from narwhals._plan.typing import ExprIRT2, MapIR, Seq
     from narwhals.dtypes import DType
-
-    Incomplete: TypeAlias = "Any"
 
 
 class ExprIR(Immutable):
