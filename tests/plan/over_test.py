@@ -74,6 +74,9 @@ def duplicate_case(arg: OneOrIterable[IntoExprColumn]) -> ParameterSet:
     "partition_by",
     [
         ("a", "b"),
+        [nwp.col("a"), nwp.col("b")],
+        [nwp.nth(0), nwp.nth(1)],
+        duplicate_case(nwp.col("a", "b")),
         duplicate_case(nwp.nth(0, 1)),
         duplicate_case(ncs.by_name("a", "b")),
         duplicate_case(ncs.matches(r"a|b")),
