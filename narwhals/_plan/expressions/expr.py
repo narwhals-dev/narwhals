@@ -316,7 +316,7 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT_co], child=("input",)):
     def dispatch(
         self: Self, ctx: Ctx[FrameT_contra, R_co], frame: FrameT_contra, name: str
     ) -> R_co:
-        return self.function.__expr_ir_dispatch__(ctx, self, frame, name)
+        return self.function.__expr_ir_dispatch__(self, ctx, frame, name)
 
 
 class RollingExpr(FunctionExpr[RollingT_co]): ...
@@ -330,7 +330,7 @@ class AnonymousExpr(
     def dispatch(
         self: Self, ctx: Ctx[FrameT_contra, R_co], frame: FrameT_contra, name: str
     ) -> R_co:
-        return self.__expr_ir_dispatch__(ctx, self, frame, name)
+        return self.__expr_ir_dispatch__(self, ctx, frame, name)
 
 
 class RangeExpr(FunctionExpr[RangeT_co]):

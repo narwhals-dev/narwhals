@@ -79,8 +79,8 @@ class Dispatcher(Generic[Node]):
 
     def __call__(
         self,
-        ctx: Ctx[FrameT_contra, R_co],
         node: Node,
+        ctx: Ctx[FrameT_contra, R_co],
         frame: FrameT_contra,
         name: str,
         /,
