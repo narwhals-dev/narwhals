@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Any
-
 import pytest
 
 pytest.importorskip("pyarrow")
@@ -15,65 +13,51 @@ def get_struct(data_type: pa.DataType) -> pa.StructType:
     return pa.struct([("num", data_type), ("den", data_type)])
 
 
-class RationalType(pa.ExtensionType):
-    def __init__(self, data_type: pa.DataType) -> None:
-        super().__init__(get_struct(data_type=data_type), "rational_type")
+class CustomInt16(pa.ExtensionType):
+    def __init__(self) -> None:
+        super().__init__(pa.int16(), "custom_int_16")
 
     def __arrow_ext_serialize__(self) -> bytes:
         return b""
 
-    @classmethod
-    def __arrow_ext_deserialize__(
-        cls, storage_type: Any, serialized: Any
-    ) -> RationalType:
-        return RationalType(storage_type[0].type)
 
-
-class HashableRationalType(pa.ExtensionType):
-    def __init__(self, data_type: pa.DataType) -> None:
-        super().__init__(get_struct(data_type=data_type), "hashable_rational_type")
+class CustomInt32(pa.ExtensionType):
+    def __init__(self) -> None:
+        super().__init__(pa.int32(), "custom_int_32")
 
     def __arrow_ext_serialize__(self) -> bytes:
         return b""
 
-    @classmethod
-    def __arrow_ext_deserialize__(
-        cls, storage_type: Any, serialized: Any
-    ) -> HashableRationalType:
-        return HashableRationalType(storage_type[0].type)
-
-    def __hash__(self) -> int:
+    def __hash__(self) -> int:  # pragma: no cover
         return hash((self.__class__.__name__, self.storage_type))
 
 
-pa.register_extension_type(RationalType(pa.int64()))  # type: ignore[arg-type]
-pa.register_extension_type(HashableRationalType(pa.int64()))  # type: ignore[arg-type]
+pa.register_extension_type(CustomInt16())  # type: ignore[arg-type]
+pa.register_extension_type(CustomInt32())  # type: ignore[arg-type]
 
-rational_type = RationalType(pa.int32())
-hash_rational_type = HashableRationalType(pa.int32())
+custom_16 = CustomInt16()
+custom_32 = CustomInt32()
 
 
 def test_table_with_ext() -> None:
-    array = pa.array([{"num": 10, "den": 17}, {"num": 20, "den": 13}])
-    rational_array = rational_type.wrap_array(array.cast(rational_type.storage_type))
-    hash_rational_array = rational_type.wrap_array(
-        array.cast(hash_rational_type.storage_type)
-    )
+    array = pa.array([1, 2])
+    int16_array = custom_16.wrap_array(array.cast(custom_16.storage_type))
+    int32_array = custom_32.wrap_array(array.cast(custom_32.storage_type))
 
-    table = pa.table({"rational": rational_array, "hashable": hash_rational_array})
+    table = pa.table({"non-hash-int16": int16_array, "hash-int-32": int32_array})
 
     assert nw.from_native(table).schema == {
-        "rational": nw.Unknown(),
-        "hashable": nw.Unknown(),
+        "non-hash-int16": nw.Unknown(),
+        "hash-int-32": nw.Unknown(),
     }
 
 
 def test_schema_with_ext() -> None:
     pa_schema = pa.schema(
-        [("a", pa.int16()), ("rational", rational_type), ("hashable", hash_rational_type)]
+        [("a", pa.int16()), ("non-hash-int16", custom_16), ("hash-int-32", custom_32)]
     )
     nw_schema = nw.Schema.from_arrow(pa_schema)
 
     assert nw_schema == nw.Schema(
-        {"a": nw.Int16(), "rational": nw.Unknown(), "hashable": nw.Unknown()}
+        {"a": nw.Int16(), "non-hash-int16": nw.Unknown(), "hash-int-32": nw.Unknown()}
     )
