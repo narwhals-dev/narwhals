@@ -1,19 +1,20 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Generic, cast
+from typing import TYPE_CHECKING, Generic
 
+from narwhals._plan._dispatch import Dispatcher
 from narwhals._plan._guards import is_function_expr, is_literal
 from narwhals._plan._immutable import Immutable
-from narwhals._plan.common import dispatch_getter, replace
+from narwhals._plan.common import replace
 from narwhals._plan.options import ExprIROptions
 from narwhals._plan.typing import ExprIRT
 from narwhals.utils import Version
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator
+    from collections.abc import Iterator
     from typing import Any, ClassVar
 
-    from typing_extensions import Self, TypeAlias
+    from typing_extensions import Self
 
     from narwhals._plan.compliant.typing import Ctx, FrameT_contra, R_co
     from narwhals._plan.expr import Expr, Selector
@@ -21,29 +22,6 @@ if TYPE_CHECKING:
     from narwhals._plan.meta import MetaNamespace
     from narwhals._plan.typing import ExprIRT2, MapIR, Seq
     from narwhals.dtypes import DType
-
-    Incomplete: TypeAlias = "Any"
-
-
-def _dispatch_generate(
-    tp: type[ExprIRT], /
-) -> Callable[[Incomplete, ExprIRT, Incomplete, str], Incomplete]:
-    if not tp.__expr_ir_config__.allow_dispatch:
-
-        def _(ctx: Any, /, node: ExprIRT, _: Any, name: str) -> Any:
-            msg = (
-                f"{tp.__name__!r} should not appear at the compliant-level.\n\n"
-                f"Make sure to expand all expressions first, got:\n{ctx!r}\n{node!r}\n{name!r}"
-            )
-            raise TypeError(msg)
-
-        return _
-    getter = dispatch_getter(tp)
-
-    def _(ctx: Any, /, node: ExprIRT, frame: Any, name: str) -> Any:
-        return getter(ctx)(node, frame, name)
-
-    return _
 
 
 class ExprIR(Immutable):
@@ -53,9 +31,7 @@ class ExprIR(Immutable):
     """Nested node names, in iteration order."""
 
     __expr_ir_config__: ClassVar[ExprIROptions] = ExprIROptions.default()
-    __expr_ir_dispatch__: ClassVar[
-        staticmethod[[Incomplete, Self, Incomplete, str], Incomplete]
-    ]
+    __expr_ir_dispatch__: ClassVar[Dispatcher[Self]]
 
     def __init_subclass__(
         cls: type[Self],
@@ -69,13 +45,13 @@ class ExprIR(Immutable):
             cls._child = child
         if config:
             cls.__expr_ir_config__ = config
-        cls.__expr_ir_dispatch__ = staticmethod(_dispatch_generate(cls))
+        cls.__expr_ir_dispatch__ = Dispatcher.from_expr_ir(cls)
 
     def dispatch(
-        self, ctx: Ctx[FrameT_contra, R_co], frame: FrameT_contra, name: str, /
+        self: Self, ctx: Ctx[FrameT_contra, R_co], frame: FrameT_contra, name: str, /
     ) -> R_co:
-        """Evaluate expression in `frame`, using `ctx` for implementation(s)."""
-        return self.__expr_ir_dispatch__(ctx, cast("Self", self), frame, name)  # type: ignore[no-any-return]
+        """Evaluate this expression in `frame`, using implementation(s) provided by `ctx`."""
+        return self.__expr_ir_dispatch__(self, ctx, frame, name)
 
     def to_narwhals(self, version: Version = Version.MAIN) -> Expr:
         from narwhals._plan import expr

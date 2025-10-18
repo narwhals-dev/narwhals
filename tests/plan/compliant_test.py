@@ -549,7 +549,8 @@ if TYPE_CHECKING:
         from narwhals._plan.arrow.expr import ArrowExpr, ArrowScalar
         from narwhals._plan.arrow.series import ArrowSeries
 
-        expr = ArrowExpr()
+        # NOTE: Intentionally leaving `ewm_mean` without a `not_implemented()` for another test
+        expr = ArrowExpr()  # type: ignore[abstract]
         scalar = ArrowScalar()
         df = ArrowDataFrame()
         ser = ArrowSeries()

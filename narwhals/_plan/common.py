@@ -1,11 +1,9 @@
 from __future__ import annotations
 
 import datetime as dt
-import re
 import sys
 from collections.abc import Iterable
 from decimal import Decimal
-from operator import attrgetter
 from secrets import token_hex
 from typing import TYPE_CHECKING, cast, overload
 
@@ -18,20 +16,13 @@ from narwhals.utils import Version
 if TYPE_CHECKING:
     import reprlib
     from collections.abc import Iterator
-    from typing import Any, Callable, ClassVar, TypeVar
+    from typing import Any, ClassVar, TypeVar
 
     from typing_extensions import TypeIs
 
     from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._plan.series import Series
-    from narwhals._plan.typing import (
-        DTypeT,
-        ExprIRT,
-        FunctionT,
-        NonNestedDTypeT,
-        OneOrIterable,
-        Seq,
-    )
+    from narwhals._plan.typing import DTypeT, NonNestedDTypeT, OneOrIterable, Seq
     from narwhals._utils import _StoresColumns
     from narwhals.typing import NonNestedDType, NonNestedLiteral
 
@@ -49,38 +40,6 @@ else:
             msg = f"replace() does not support {cls.__name__} objects"
             raise TypeError(msg)
         return func(obj, **changes)  # type: ignore[no-any-return]
-
-
-def pascal_to_snake_case(s: str) -> str:
-    """Convert a PascalCase, camelCase string to snake_case.
-
-    Adapted from https://github.com/pydantic/pydantic/blob/f7a9b73517afecf25bf898e3b5f591dffe669778/pydantic/alias_generators.py#L43-L62
-    """
-    # Handle the sequence of uppercase letters followed by a lowercase letter
-    snake = _PATTERN_UPPER_LOWER.sub(_re_repl_snake, s)
-    # Insert an underscore between a lowercase letter and an uppercase letter
-    return _PATTERN_LOWER_UPPER.sub(_re_repl_snake, snake).lower()
-
-
-_PATTERN_UPPER_LOWER = re.compile(r"([A-Z]+)([A-Z][a-z])")
-_PATTERN_LOWER_UPPER = re.compile(r"([a-z])([A-Z])")
-
-
-def _re_repl_snake(match: re.Match[str], /) -> str:
-    return f"{match.group(1)}_{match.group(2)}"
-
-
-def dispatch_method_name(tp: type[ExprIRT | FunctionT]) -> str:
-    config = tp.__expr_ir_config__
-    name = config.override_name or pascal_to_snake_case(tp.__name__)
-    return f"{ns}.{name}" if (ns := getattr(config, "accessor_name", "")) else name
-
-
-def dispatch_getter(tp: type[ExprIRT | FunctionT]) -> Callable[[Any], Any]:
-    getter = attrgetter(dispatch_method_name(tp))
-    if tp.__expr_ir_config__.origin == "expr":
-        return getter
-    return lambda ctx: getter(ctx.__narwhals_namespace__())
 
 
 def py_to_narwhals_dtype(obj: NonNestedLiteral, version: Version = Version.MAIN) -> DType:

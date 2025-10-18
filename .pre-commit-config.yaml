@@ -79,6 +79,8 @@ repos:
       entry: "self: Self"
       language: pygrep
       files: ^narwhals/
+      # mypy needs `Self` for `ExprIR.dispatch`
+      exclude: ^narwhals/_plan/.*\.py
     - id: dtypes-import
       name: don't import from narwhals.dtypes (use `Version.dtypes` instead)
       entry: |

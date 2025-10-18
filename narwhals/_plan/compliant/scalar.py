@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from narwhals._plan import expressions as ir
     from narwhals._plan.expressions import FunctionExpr, aggregation as agg
     from narwhals._plan.expressions.boolean import IsFirstDistinct, IsLastDistinct
+    from narwhals._plan.expressions.functions import EwmMean
     from narwhals._utils import Version
     from narwhals.typing import IntoDType, PythonLiteral
 
@@ -57,6 +58,11 @@ class CompliantScalar(
     def count(self, node: agg.Count, frame: FrameT_contra, name: str) -> Self:
         """Returns 0 if null, else 1."""
         ...
+
+    def ewm_mean(
+        self, node: FunctionExpr[EwmMean], frame: FrameT_contra, name: str
+    ) -> Self:
+        return self._cast_float(node.input[0], frame, name)
 
     def first(self, node: agg.First, frame: FrameT_contra, name: str) -> Self:
         return self._with_evaluated(self._evaluated, name)
