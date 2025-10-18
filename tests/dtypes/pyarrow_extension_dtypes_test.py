@@ -53,7 +53,6 @@ def test_schema_with_ext() -> None:
         [("a", pa.int16()), ("non-hash-int16", custom_16), ("hash-int-32", custom_32)]
     )
     nw_schema = nw.Schema.from_arrow(pa_schema)
-
     assert nw_schema == nw.Schema(
         {"a": nw.Int16(), "non-hash-int16": nw.Unknown(), "hash-int-32": nw.Unknown()}
     )

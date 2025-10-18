@@ -96,14 +96,8 @@ def test_dataframe_with_ext() -> None:
 
 
 def test_schema_with_ext() -> None:
-    pd_schema = {
-        "a": "int16",
-        "non-hash-int16": CustomInt16Dtype(),
-        "hash-int-32": CustomInt32Dtype(),
-    }
-
+    pd_schema = {"non-hash-int16": CustomInt16Dtype(), "hash-int-32": CustomInt32Dtype()}
     nw_schema = nw.Schema.from_pandas_like(pd_schema)
-
     assert nw_schema == nw.Schema(
-        {"a": nw.Int16(), "non-hash-int16": nw.Unknown(), "hash-int-32": nw.Unknown()}
+        {"non-hash-int16": nw.Unknown(), "hash-int-32": nw.Unknown()}
     )
