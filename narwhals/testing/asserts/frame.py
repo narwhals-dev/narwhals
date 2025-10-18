@@ -41,11 +41,16 @@ def assert_frame_equal(
     Raises a detailed `AssertionError` if the frames differ.
     This function is intended for use in unit tests.
 
+    Notes:
+        In the case of backends that do not guarantee the row order, such as DuckDB, Ibis,
+        PySpark, and SQLFrame, `check_row_order` argument is ignored and the comparands
+        are sorted by all the columns regardless.
+
     Arguments:
         left: The first DataFrame or LazyFrame to compare.
         right: The second DataFrame or LazyFrame to compare.
         check_row_order: Requires row order to match. This flag is ignored for backends
-            that do not guarantee row order such as DuckDB, Ibis, PySpark, SQLFrame
+            that do not guarantee row order such as DuckDB, Ibis, PySpark, SQLFrame.
         check_column_order: Requires column order to match.
         check_dtypes: Requires data types to match.
         check_exact: Requires float values to match exactly. If set to `False`, values are
@@ -57,7 +62,44 @@ def assert_frame_equal(
             Enabling this helps compare columns that do not share the same string cache.
 
     Examples:
-        TODO(FBruzzesi): ...
+        >>> import duckdb
+        >>> import narwhals as nw
+        >>> from narwhals.testing import assert_frame_equal
+        >>>
+        >>> left_native = duckdb.sql("SELECT * FROM VALUES (1, ), (2, ), (3, ) df(a)")
+        >>> right_native = duckdb.sql("SELECT * FROM VALUES (1, ), (5, ), (3, ) df(a)")
+        >>> left = nw.from_native(left_native)
+        >>> right = nw.from_native(right_native)
+        >>> assert_frame_equal(left, right)  # doctest: +ELLIPSIS
+        Traceback (most recent call last):
+            ...
+        AssertionError: DataFrames are different (value mismatch for column "a")
+        [left]:
+        ┌────────────────────────────────────────────────┐
+        |                Narwhals Series                 |
+        |------------------------------------------------|
+        |<pyarrow.lib.ChunkedArray object at ...
+        |[                                               |
+        |  [                                             |
+        |    1,                                          |
+        |    2,                                          |
+        |    3                                           |
+        |  ]                                             |
+        |]                                               |
+        └────────────────────────────────────────────────┘
+        [right]:
+        ┌────────────────────────────────────────────────┐
+        |                Narwhals Series                 |
+        |------------------------------------------------|
+        |<pyarrow.lib.ChunkedArray object at ...
+        |[                                               |
+        |  [                                             |
+        |    1,                                          |
+        |    3,                                          |
+        |    5                                           |
+        |  ]                                             |
+        |]                                               |
+        └────────────────────────────────────────────────┘
     """
     __tracebackhide__ = True
 
@@ -126,6 +168,8 @@ def _assert_dataframe_equal(
     categorical_as_str: bool,
 ) -> None:
     # Adapted from https://github.com/pola-rs/polars/blob/afdbf3056d1228cf493901e45f536b0905cec8ea/crates/polars-testing/src/asserts/utils.rs#L829
+    # NOTE: Here `impl` comes from the original dataframe, not the `.collect`-ed one, and
+    # it's used to distinguish between backends that do and do not guarantee row order.
     _check_schema_equal(
         left, right, check_dtypes=check_dtypes, check_column_order=check_column_order
     )
@@ -155,7 +199,7 @@ def _assert_dataframe_equal(
             assert_series_equal(
                 _series_left,
                 _series_right,
-                check_dtypes=check_dtypes,
+                check_dtypes=False,
                 check_names=False,
                 check_order=True,
                 check_exact=check_exact,
@@ -192,7 +236,9 @@ def _check_schema_equal(
                 left=lset,
                 right=rset,
             )
-        if right_not_in_left := sorted(rset.difference(lset)):
+        if right_not_in_left := sorted(rset.difference(lset)):  # pragma: no cover
+            # NOTE: the `pragma: no cover` flag is due to a false negative.
+            # The last test in `test_check_schema_mismatch` does cover this case.
             raise_frame_assertion_error(
                 detail=f"{right_not_in_left} in right, but not in left",
                 left=lset,
