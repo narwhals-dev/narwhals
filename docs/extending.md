@@ -52,7 +52,7 @@ plugins. For this integration to work, any plugin architecture must contain the 
 
   2. a top-level `__init__.py` file containing the following: 
   
-    - a `is_native` and a `__narwhals_namespace__` function
+    - `is_native` and `__narwhals_namespace__` functions
     - a string constant `NATIVE_PACKAGE` which holds the name of the library for which the plugin is made
 
     `is_native` must receive a native object and return a boolean indicating whether the native object is 
