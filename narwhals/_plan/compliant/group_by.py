@@ -203,3 +203,13 @@ class Grouped(Grouper[Resolved]):
     @property
     def _resolver(self) -> type[Resolved]:
         return Resolved
+
+    @classmethod
+    def by_irs(cls, *by: ExprIR) -> Self:
+        obj = cls.__new__(cls)
+        obj._keys = by
+        return obj
+
+    def agg_irs(self, *aggs: ExprIR) -> Self:
+        self._aggs = aggs
+        return self

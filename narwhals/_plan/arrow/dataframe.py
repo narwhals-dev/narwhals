@@ -152,7 +152,7 @@ class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
         *,
         how: NonCrossJoinStrategy,
         left_on: Sequence[str],
-        right_on: Sequence[str],
+        right_on: Sequence[str] = (),
         suffix: str = "_right",
     ) -> Self:
         left, right = self.native, other.native

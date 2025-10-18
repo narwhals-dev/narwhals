@@ -322,13 +322,27 @@ class ArrowExpr(  # type: ignore[misc]
         return self._with_native(result, name)
 
     # TODO @dangotbanned: top-level, complex-ish nodes
-    # - [ ] `over`/`_ordered` (with partitions) requires `group_by`, `join`
-    # - [x] `over_ordered` alone should be possible w/ the current API
-    # - [x] `map_batches` is defined in `EagerExpr`, might be simpler here than on main
+    # - [ ] Over
+    #   - [x] `over_ordered`
+    #   - [x] `group_by`, `join`
+    #   - [!] `over`
+    #   - [ ] `over_ordered` (with partitions)
+    # - [ ] `map_batches`
+    #   - [x] elementwise
+    #   - [ ] scalar
     # - [ ] `rolling_expr` has 4 variants
 
     def over(self, node: ir.WindowExpr, frame: Frame, name: str) -> Self:
-        raise NotImplementedError
+        expr = node.expr
+        resolved = frame._grouper.by_irs(*node.partition_by).agg_irs(expr).resolve(frame)
+        by_names = resolved.key_names
+        result = (
+            frame.select_names(*by_names)
+            .join(resolved.evaluate(frame), how="left", left_on=by_names)
+            .get_column(expr.meta.output_name())
+            .native
+        )
+        return self._with_native(result, name)
 
     def over_ordered(
         self, node: ir.OrderedWindowExpr, frame: Frame, name: str
