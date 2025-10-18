@@ -566,6 +566,7 @@ def from_native(  # noqa: D417
         eager_only=eager_only,
         series_only=series_only,
         allow_series=allow_series,
+        eager_or_interchange_only=False,
         version=Version.V2,
     )
 
