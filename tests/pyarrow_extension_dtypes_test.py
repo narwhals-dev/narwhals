@@ -9,10 +9,6 @@ import pyarrow as pa
 import narwhals as nw
 
 
-def get_struct(data_type: pa.DataType) -> pa.StructType:
-    return pa.struct([("num", data_type), ("den", data_type)])
-
-
 class CustomInt16(pa.ExtensionType):
     def __init__(self) -> None:
         super().__init__(pa.int16(), "custom_int_16")
