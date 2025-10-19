@@ -16,7 +16,7 @@ from narwhals._arrow.utils import (
 )
 from narwhals._plan import expressions as ir
 from narwhals._plan.arrow import options
-from narwhals._plan.expressions import operators as ops
+from narwhals._plan.expressions import functions as F, operators as ops
 from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
@@ -208,11 +208,46 @@ def n_unique(native: Any) -> pa.Int64Scalar:
     return count(native, mode="all")
 
 
-def cum_sum(native: ChunkedArrayAny, *, reverse: bool = False) -> ChunkedArrayAny:
-    if reverse:
-        msg = "TODO: `ArrowExpr.cum_sum(reverse=True)`.\nInvestigate native options"
-        raise NotImplementedError(msg)
+def _reverse(native: ChunkedArrayAny) -> ChunkedArrayAny:
+    msg = "TODO: `ArrowExpr.cum_*(reverse=True)`.\nInvestigate native options"
+    raise NotImplementedError(msg)
+    return native[::-1]
+
+
+def cumulative(native: ChunkedArrayAny, cum_agg: F.CumAgg, /) -> ChunkedArrayAny:
+    func = _CUMULATIVE[type(cum_agg)]
+    if not cum_agg.reverse:
+        return func(native)
+    return _reverse(func(_reverse(native)))
+
+
+def cum_sum(native: ChunkedArrayAny) -> ChunkedArrayAny:
     return pc.cumulative_sum(native, skip_nulls=True)
+
+
+def cum_min(native: ChunkedArrayAny) -> ChunkedArrayAny:
+    return pc.cumulative_min(native, skip_nulls=True)
+
+
+def cum_max(native: ChunkedArrayAny) -> ChunkedArrayAny:
+    return pc.cumulative_max(native, skip_nulls=True)
+
+
+def cum_prod(native: ChunkedArrayAny) -> ChunkedArrayAny:
+    return pc.cumulative_prod(native, skip_nulls=True)
+
+
+def cum_count(native: ChunkedArrayAny) -> ChunkedArrayAny:
+    return cum_sum(is_not_null(native).cast(pa.uint32()))
+
+
+_CUMULATIVE: Mapping[type[F.CumAgg], Callable[[ChunkedArrayAny], ChunkedArrayAny]] = {
+    F.CumSum: cum_sum,
+    F.CumCount: cum_count,
+    F.CumMin: cum_min,
+    F.CumMax: cum_max,
+    F.CumProd: cum_prod,
+}
 
 
 def is_between(

@@ -57,7 +57,7 @@ if TYPE_CHECKING:
     from narwhals._plan.expressions.expr import BinaryExpr, FunctionExpr
     from narwhals._plan.expressions.functions import (
         Abs,
-        CumSum,
+        CumAgg,
         Diff,
         FillNull,
         Pow,
@@ -423,10 +423,15 @@ class ArrowExpr(  # type: ignore[misc]
         result = fn.chunked_array(array)
         return self._with_native(result, name)
 
-    def cum_sum(self, node: ir.FunctionExpr[CumSum], frame: Frame, name: str) -> Self:
+    def _cumulative(self, node: ir.FunctionExpr[CumAgg], frame: Frame, name: str) -> Self:
         series = self._dispatch_expr(node.input[0], frame, name)
-        result = fn.cum_sum(series.native, reverse=node.function.reverse)
-        return self._with_native(result, name)
+        return self._with_native(fn.cumulative(series.native, node.function), name)
+
+    cum_count = _cumulative
+    cum_min = _cumulative
+    cum_max = _cumulative
+    cum_prod = _cumulative
+    cum_sum = _cumulative
 
     def _is_first_last_distinct(
         self,
@@ -539,3 +544,7 @@ class ArrowScalar(
     rolling_expr = not_implemented()
     diff = not_implemented()
     cum_sum = not_implemented()  # TODO @dangotbanned: is this just self?
+    cum_count = not_implemented()
+    cum_min = not_implemented()
+    cum_max = not_implemented()
+    cum_prod = not_implemented()
