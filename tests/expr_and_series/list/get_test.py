@@ -18,8 +18,10 @@ def test_get_expr(
     if any(backend in str(constructor) for backend in ("dask", "cudf")):
         request.applymarker(pytest.mark.xfail)
 
-    if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
-        pytest.skip()
+    if "pandas" in str(constructor):
+        if PANDAS_VERSION < (2, 2):
+            pytest.skip()
+        pytest.importorskip("pyarrow")
 
     result = nw.from_native(constructor(data)).select(
         nw.col("a").cast(nw.List(nw.Int32())).list.get(index)
@@ -38,8 +40,10 @@ def test_get_series(
     if "cudf" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
 
-    if "pandas" in str(constructor_eager) and PANDAS_VERSION < (2, 2):
-        pytest.skip()
+    if "pandas" in str(constructor_eager):
+        if PANDAS_VERSION < (2, 2):
+            pytest.skip()
+        pytest.importorskip("pyarrow")
 
     if (
         constructor_eager.__name__.startswith("pandas")
@@ -65,8 +69,10 @@ def test_get_expr_negative_index(
 
     if any(backend in str(constructor) for backend in ("cudf",)):
         request.applymarker(pytest.mark.xfail)
-    if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
-        pytest.skip()
+    if "pandas" in str(constructor):
+        if PANDAS_VERSION < (2, 2):
+            pytest.skip()
+        pytest.importorskip("pyarrow")
 
     df = nw.from_native(constructor(data))
     msg = re.escape(
@@ -85,8 +91,10 @@ def test_get_series_negative_index(
     if "cudf" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
 
-    if "pandas" in str(constructor_eager) and PANDAS_VERSION < (2, 2):
-        pytest.skip()
+    if "pandas" in str(constructor_eager):
+        if PANDAS_VERSION < (2, 2):
+            pytest.skip()
+        pytest.importorskip("pyarrow")
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
     msg = re.escape(
@@ -104,8 +112,10 @@ def test_get_expr_non_int_index(
 
     if any(backend in str(constructor) for backend in ("cudf",)):
         request.applymarker(pytest.mark.xfail)
-    if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
-        pytest.skip()
+    if "pandas" in str(constructor):
+        if PANDAS_VERSION < (2, 2):
+            pytest.skip()
+        pytest.importorskip("pyarrow")
 
     df = nw.from_native(constructor(data))
     msg = re.escape(
@@ -124,8 +134,10 @@ def test_get_series_non_int_index(
     if "cudf" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
 
-    if "pandas" in str(constructor_eager) and PANDAS_VERSION < (2, 2):
-        pytest.skip()
+    if "pandas" in str(constructor_eager):
+        if PANDAS_VERSION < (2, 2):
+            pytest.skip()
+        pytest.importorskip("pyarrow")
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
     msg = re.escape(

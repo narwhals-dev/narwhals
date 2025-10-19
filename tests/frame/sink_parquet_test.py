@@ -10,6 +10,8 @@ from tests.utils import PANDAS_VERSION
 if TYPE_CHECKING:
     from tests.utils import Constructor
 
+pytest.importorskip("pyarrow")
+
 data = {"a": [1, 2, 3]}
 
 
