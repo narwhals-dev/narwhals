@@ -63,6 +63,11 @@ MULTI_OUTPUT_EXPRS = (
 BIG_EXCLUDE = ("k", "l", "m", "n", "o", "p", "s", "u", "r", "a", "b", "e", "q")
 
 
+XFAIL_BY_DTYPE_CONTAINS_PARAMETRIC = pytest.mark.xfail(
+    reason="`nw.Datetime` and `nw.Datetime()` have a different hash value"
+)
+
+
 def udf_name_map(name: str) -> str:
     original = name
     upper = name.upper()
@@ -243,6 +248,14 @@ def test_map_ir_recursive(expr: nwp.Expr, function: MapIR, expected: nwp.Expr) -
                 .name.to_uppercase()
             ),
         ),
+        pytest.param(
+            ndcs.by_dtype(
+                nw.Datetime, nw.Enum, nw.Duration, nw.Struct, nw.List, nw.Array
+            ),
+            nwp.col("l", "o", "q", "r", "s", "u"),
+            id="ByDType-isinstance",
+            marks=XFAIL_BY_DTYPE_CONTAINS_PARAMETRIC,
+        ),
     ],
 )
 def test_replace_selector(
@@ -252,11 +265,6 @@ def test_replace_selector(
 ) -> None:
     actual = replace_selector(expr._ir, schema=freeze_schema(**schema_1))
     assert_expr_ir_equal(actual, expected)
-
-
-XFAIL_BY_DTYPE_CONTAINS_DATETIME = pytest.mark.xfail(
-    reason="`nw.Datetime` and `nw.Datetime()` have a different hash value"
-)
 
 
 @pytest.mark.parametrize(
@@ -473,7 +481,7 @@ XFAIL_BY_DTYPE_CONTAINS_DATETIME = pytest.mark.xfail(
             nwp.col("f").mean().over(ndcs.by_dtype(nw.Date, nw.Datetime)),
             [nwp.col("f").max().over(nwp.col("l"), nwp.col("n"), nwp.col("o"))],
             id="Over-Partitioned-Selector",
-            marks=XFAIL_BY_DTYPE_CONTAINS_DATETIME,
+            marks=XFAIL_BY_DTYPE_CONTAINS_PARAMETRIC,
         ),
     ],
 )
