@@ -141,13 +141,17 @@ jobs:
           enable-cache: "true"
           cache-suffix: python-314-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
+      - name: install pyarrow nightly
+        run: |
+          uv pip uninstall pyarrow --system
+          uv pip install -i https://pypi.anaconda.org/scientific-python-nightly-wheels/simple pyarrow -U --system
       - name: install-reqs
         # Use `--pre` as most libraries stable release are not yet compatible with 3.14
-        run: uv pip install -e . --group core-tests --pre --system
+        run: uv pip install -e . --group tests --pre pandas polars duckdb sqlframe  --system
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
-        run: pytest tests --cov=narwhals --cov=tests --runslow --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,modin[pyarrow],polars[eager],polars[lazy],dask,duckdb,sqlframe,ibis --cov-fail-under=50
+        run: pytest tests --cov=narwhals --cov=tests --runslow --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe --cov-fail-under=50
 
   python-314t:
     strategy:
@@ -168,10 +172,14 @@ jobs:
           enable-cache: "true"
           cache-suffix: python-314t-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
+      - name: install pyarrow nightly
+        run: |
+          uv pip uninstall pyarrow --system
+          uv pip install -i https://pypi.anaconda.org/scientific-python-nightly-wheels/simple pyarrow -U --system
       - name: install-reqs
         # Use `--pre` as most libraries stable release are not yet compatible with 3.14
-        run: uv pip install -e . --group core-tests --pre --system
+        run: uv pip install -e . --group tests --pre pandas polars duckdb sqlframe  --system
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
-        run: pytest tests --cov=narwhals --cov=tests --runslow --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,modin[pyarrow],polars[eager],polars[lazy],dask,duckdb,sqlframe,ibis --cov-fail-under=50
+        run: pytest tests --cov=narwhals --cov=tests --runslow --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe --cov-fail-under=50
