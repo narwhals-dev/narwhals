@@ -146,7 +146,7 @@ jobs:
           uv pip uninstall pyarrow --system
           uv pip install -i https://pypi.anaconda.org/scientific-python-nightly-wheels/simple pyarrow -U --system
       - name: install-reqs
-        # Use `--pre` as most libraries stable release are not yet compatible with 3.14
+        # Use `--pre` as duckdb stable not compatible with 3.14
         run: uv pip install -e . --group tests --pre pandas polars duckdb sqlframe  --system
       - name: show-deps
         run: uv pip freeze
@@ -177,9 +177,8 @@ jobs:
           uv pip uninstall pyarrow --system
           uv pip install -i https://pypi.anaconda.org/scientific-python-nightly-wheels/simple pyarrow -U --system
       - name: install-reqs
-        # Use `--pre` as most libraries stable release are not yet compatible with 3.14
-        run: uv pip install -e . --group tests --pre pandas polars duckdb sqlframe  --system
+        run: uv pip install -e . --group tests --pre pandas polars --system
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
-        run: pytest tests --cov=narwhals --cov=tests --runslow --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe --cov-fail-under=50
+        run: pytest tests --cov=narwhals --cov=tests --runslow --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy] --cov-fail-under=50
