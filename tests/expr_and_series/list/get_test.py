@@ -22,10 +22,6 @@ def test_get_expr(
         if PANDAS_VERSION < (2, 2):
             pytest.skip()
         pytest.importorskip("pyarrow")
-    if "pandas" in str(constructor):
-        if PANDAS_VERSION < (2, 2):
-            pytest.skip()
-        pytest.importorskip("pyarrow")
 
     result = nw.from_native(constructor(data)).select(
         nw.col("a").cast(nw.List(nw.Int32())).list.get(index)
