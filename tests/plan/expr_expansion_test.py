@@ -254,8 +254,8 @@ def test_replace_selector(
     assert_expr_ir_equal(actual, expected)
 
 
-XFAIL_MULTI_EXPAND_NESTED = pytest.mark.xfail(
-    reason="https://github.com/narwhals-dev/narwhals/pull/2572#discussion_r2442614173"
+XFAIL_BY_DTYPE_CONTAINS_DATETIME = pytest.mark.xfail(
+    reason="`nw.Datetime` and `nw.Datetime()` have a different hash value"
 )
 
 
@@ -471,9 +471,9 @@ XFAIL_MULTI_EXPAND_NESTED = pytest.mark.xfail(
         ),
         pytest.param(
             nwp.col("f").mean().over(ndcs.by_dtype(nw.Date, nw.Datetime)),
-            [nwp.col("f").max().over(nwp.col("n"), nwp.col("o"))],
+            [nwp.col("f").max().over(nwp.col("l"), nwp.col("n"), nwp.col("o"))],
             id="Over-Partitioned-Selector",
-            marks=XFAIL_MULTI_EXPAND_NESTED,
+            marks=XFAIL_BY_DTYPE_CONTAINS_DATETIME,
         ),
     ],
 )
