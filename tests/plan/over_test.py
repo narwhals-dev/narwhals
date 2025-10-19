@@ -28,6 +28,11 @@ def data() -> Data:
     }
 
 
+XFAIL_NO_CUM_SUM = pytest.mark.xfail(
+    reason="Not implemented `CompliantExpr.cum_sum`", raises=NotImplementedError
+)
+
+
 @pytest.mark.parametrize(
     "partition_by",
     [
@@ -146,6 +151,8 @@ def test_over_raise_len_change(data: Data) -> None:
 
 
 # NOTE: Currently raising `InvalidOperationError: `cum_sum()` is not supported in a `group_by` context`
+# (main): https://github.com/narwhals-dev/narwhals/blob/ecde261d799a711c2e0a7acf11b108bc45035dc9/narwhals/_arrow/expr.py#L116-L118
+# NotImplementedError: Only aggregation or literal operations are supported in grouped `over` context for PyArrow.
 @pytest.mark.xfail(reason="Not implemented `cum_sum`", raises=InvalidOperationError)
 def test_unsupported_over(data: Data) -> None:
     df = dataframe(data)
@@ -153,7 +160,7 @@ def test_unsupported_over(data: Data) -> None:
         df.select(nwp.col("a").shift(1).cum_sum().over("b"))
 
 
-@pytest.mark.xfail(reason="Not implemented `cum_sum`", raises=NotImplementedError)
+@XFAIL_NO_CUM_SUM
 def test_over_without_partition_by() -> None:  # pragma: no cover
     df = dataframe({"a": [1, -1, 2], "i": [0, 2, 1]})
     result = (
@@ -165,8 +172,7 @@ def test_over_without_partition_by() -> None:  # pragma: no cover
     assert_equal_data(result, expected)
 
 
-@pytest.mark.xfail(reason="Not implemented `diff`", raises=NotImplementedError)
-def test_aggregation_over_without_partition_by() -> None:  # pragma: no cover
+def test_aggregation_over_without_partition_by() -> None:
     df = dataframe({"a": [1, -1, 2], "i": [0, 2, 1]})
     result = (
         df.with_columns(b=nwp.col("a").diff().sum().over(order_by="i"))

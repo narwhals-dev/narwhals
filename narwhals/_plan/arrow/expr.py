@@ -55,7 +55,7 @@ if TYPE_CHECKING:
         Not,
     )
     from narwhals._plan.expressions.expr import BinaryExpr, FunctionExpr
-    from narwhals._plan.expressions.functions import Abs, FillNull, Pow
+    from narwhals._plan.expressions.functions import Abs, Diff, FillNull, Pow, Shift
     from narwhals.typing import Into1DArray, IntoDType, PythonLiteral
 
     Expr: TypeAlias = "ArrowExpr"
@@ -386,6 +386,32 @@ class ArrowExpr(  # type: ignore[misc]
     def rolling_expr(self, node: ir.RollingExpr, frame: Frame, name: str) -> Self:
         raise NotImplementedError
 
+    def shift(self, node: ir.FunctionExpr[Shift], frame: Frame, name: str) -> Self:
+        n = node.function.n
+        series = self._dispatch_expr(node.input[0], frame, name)
+        native = series.native
+        if n == 0:
+            return self._with_native(native, name)
+        # NOTE: This might be zero-copy and the original wasn't?
+        # here, the non-nulls stay in their own chunk
+        # on main, the two (or more) chunks are merged
+        if n > 0:
+            arrays = [
+                pa.nulls(n, native.type),
+                *native.slice(length=native.length() - n).chunks,
+            ]
+        else:
+            arrays = [*native.slice(offset=-n).chunks, pa.nulls(-n, native.type)]
+        return self._with_native(fn.chunked_array(arrays), name)
+
+    def diff(self, node: ir.FunctionExpr[Diff], frame: Frame, name: str) -> Self:
+        # NOTE: According to the stubs this should work on chunked, but
+        # pyarrow.lib.ArrowInvalid: Vector kernel cannot execute chunkwise and no chunked exec function was defined
+        series = self._dispatch_expr(node.input[0], frame, name)
+        array = pc.pairwise_diff(series.native.combine_chunks())
+        result = fn.chunked_array(array)
+        return self._with_native(result, name)
+
     def _is_first_last_distinct(
         self,
         node: FunctionExpr[IsFirstDistinct | IsLastDistinct],
@@ -494,3 +520,4 @@ class ArrowScalar(
     over_ordered = not_implemented()
     map_batches = not_implemented()
     rolling_expr = not_implemented()
+    diff = not_implemented()
