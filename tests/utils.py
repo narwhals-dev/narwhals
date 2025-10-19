@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, cast
 
 import pandas as pd
-import pyarrow as pa
 
 import narwhals as nw
 from narwhals._utils import Implementation, parse_version, zip_strict
@@ -61,12 +60,13 @@ _CONSTRUCTOR_FIXTURE_NAMES = frozenset[str](
 
 
 def _to_comparable_list(column_values: Any) -> Any:
-    if isinstance(column_values, nw.Series) and isinstance(
-        column_values.to_native(), pa.Array
-    ):  # pragma: no cover
-        # Narwhals Series for PyArrow should be backed by ChunkedArray, not Array.
-        msg = "Did not expect to see Arrow Array here"
-        raise TypeError(msg)
+    if isinstance(column_values, nw.Series) and column_values.implementation.is_pyarrow():
+        import pyarrow as pa
+
+        if isinstance(column_values.to_native(), pa.Array):  # pragma: no cover
+            # Narwhals Series for PyArrow should be backed by ChunkedArray, not Array.
+            msg = "Did not expect to see Arrow Array here"
+            raise TypeError(msg)
     if (
         hasattr(column_values, "_compliant_series")
         and column_values._compliant_series._implementation is Implementation.CUDF

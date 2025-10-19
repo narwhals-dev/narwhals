@@ -38,8 +38,10 @@ def test_explode_single_col(
     if any(backend in str(constructor) for backend in ("dask", "cudf", "pyarrow_table")):
         request.applymarker(pytest.mark.xfail)
 
-    if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
-        pytest.skip()
+    if "pandas" in str(constructor):
+        if PANDAS_VERSION < (2, 2):
+            pytest.skip()
+        pytest.importorskip("pyarrow")
 
     result = (
         nw.from_native(constructor(data))
@@ -88,8 +90,10 @@ def test_explode_multiple_cols(
     ):
         request.applymarker(pytest.mark.xfail)
 
-    if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
-        pytest.skip()
+    if "pandas" in str(constructor):
+        if PANDAS_VERSION < (2, 2):
+            pytest.skip()
+        pytest.importorskip("pyarrow")
 
     result = (
         nw.from_native(constructor(data))
@@ -107,8 +111,10 @@ def test_explode_shape_error(
     if any(backend in str(constructor) for backend in ("dask", "cudf", "pyarrow_table")):
         request.applymarker(pytest.mark.xfail)
 
-    if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
-        pytest.skip()
+    if "pandas" in str(constructor):
+        if PANDAS_VERSION < (2, 2):
+            pytest.skip()
+        pytest.importorskip("pyarrow")
 
     with pytest.raises(
         (ShapeError, NotImplementedError),
