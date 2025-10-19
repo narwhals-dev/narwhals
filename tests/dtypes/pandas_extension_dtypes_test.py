@@ -46,7 +46,7 @@ class CustomInt16Array(pd.api.extensions.ExtensionArray):  # pragma: no cover
         return CustomInt16Dtype()
 
     def copy(self) -> Self:
-        return type(self)(self._values.copy().tolist())
+        return type(self)(list(self._values.copy()))
 
 
 class CustomInt32Dtype(pd.api.extensions.ExtensionDtype):  # pragma: no cover
@@ -80,7 +80,7 @@ class CustomInt32Array(pd.api.extensions.ExtensionArray):  # pragma: no cover
         return CustomInt16Dtype()
 
     def copy(self) -> Self:
-        return type(self)(self._values.copy().tolist())
+        return type(self)(list(self._values.copy()))
 
 
 def test_dataframe_with_ext() -> None:
