@@ -40,10 +40,10 @@ from __future__ import annotations
 
 from collections import deque
 from functools import lru_cache
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-from narwhals._plan import common, meta
-from narwhals._plan._guards import is_horizontal_reduction
+from narwhals._plan import common, expressions as ir, meta
+from narwhals._plan._guards import is_horizontal_reduction, is_window_expr
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.exceptions import (
     column_index_error,
@@ -198,12 +198,46 @@ def _ensure_output_names_unique(exprs: Seq[ExprIR]) -> OutputNames:
     return names
 
 
-def expand_function_inputs(origin: ExprIR, /, *, schema: FrozenSchema) -> ExprIR:
+# NOTE: Recursive for all `input` expressions which themselves contain `Seq[ExprIR]`
+def rewrite_projections(
+    input: Seq[ExprIR], /, keys: GroupByKeys = (), *, schema: FrozenSchema
+) -> Seq[ExprIR]:
+    result: deque[ExprIR] = deque()
+    for expr in input:
+        expanded = _expand_nested_nodes(expr, schema=schema)
+        flags = ExpansionFlags.from_ir(expanded)
+        if flags.has_selector:
+            expanded = replace_selector(expanded, schema=schema)
+            flags = flags.with_multiple_columns()
+        result.extend(iter_replace(expanded, keys, col_names=schema.names, flags=flags))
+    return tuple(result)
+
+
+def _expand_nested_nodes(origin: ExprIR, /, *, schema: FrozenSchema) -> ExprIR:
+    """Adapted from [`expand_function_inputs`].
+
+    Added additional cases for nodes that *also* need to be expanded in the same way.
+
+    [`expand_function_inputs`]: https://github.com/pola-rs/polars/blob/df4d21c30c2b383b651e194f8263244f2afaeda3/crates/polars-plan/src/plans/conversion/expr_expansion.rs#L557-L581
+    """
+    rewrite = rewrite_projections
+
     def fn(child: ExprIR, /) -> ExprIR:
+        if not isinstance(child, (ir.FunctionExpr, ir.WindowExpr, ir.SortBy)):
+            return child
+        expanded: dict[str, Any] = {}
         if is_horizontal_reduction(child):
-            rewrites = rewrite_projections(child.input, schema=schema)
-            return common.replace(child, input=rewrites)
-        return child
+            expanded["input"] = rewrite(child.input, schema=schema)
+        elif is_window_expr(child):
+            if partition_by := child.partition_by:
+                expanded["partition_by"] = rewrite(partition_by, schema=schema)
+            if isinstance(child, ir.OrderedWindowExpr):
+                expanded["order_by"] = rewrite(child.order_by, schema=schema)
+        elif isinstance(child, ir.SortBy):
+            expanded["by"] = rewrite(child.by, schema=schema)
+        if not expanded:
+            return child
+        return common.replace(child, **expanded)
 
     return origin.map_ir(fn)
 
@@ -269,24 +303,6 @@ def expand_selector(selector: SelectorIR, schema: FrozenSchema) -> Columns:
     """Expand `selector` into `Columns`, within the context of `schema`."""
     matches = selector_matches_column
     return cols(*(k for k, v in schema.items() if matches(selector, k, v)))
-
-
-def rewrite_projections(
-    input: Seq[ExprIR],  # `FunctionExpr.input`
-    /,
-    keys: GroupByKeys = (),
-    *,
-    schema: FrozenSchema,
-) -> Seq[ExprIR]:
-    result: deque[ExprIR] = deque()
-    for expr in input:
-        expanded = expand_function_inputs(expr, schema=schema)
-        flags = ExpansionFlags.from_ir(expanded)
-        if flags.has_selector:
-            expanded = replace_selector(expanded, schema=schema)
-            flags = flags.with_multiple_columns()
-        result.extend(iter_replace(expanded, keys, col_names=schema.names, flags=flags))
-    return tuple(result)
 
 
 def iter_replace(

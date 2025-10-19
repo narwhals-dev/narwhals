@@ -459,7 +459,6 @@ XFAIL_MULTI_EXPAND_NESTED = pytest.mark.xfail(
                 ),
             ],
             id="SortBy-Columns",
-            marks=XFAIL_MULTI_EXPAND_NESTED,
         ),
         pytest.param(
             nwp.nth(1).mean().over("k", order_by=nwp.nth(4, 5)),
@@ -469,7 +468,6 @@ XFAIL_MULTI_EXPAND_NESTED = pytest.mark.xfail(
                 .over(nwp.col("k"), order_by=(nwp.col("e"), nwp.col("f")))
             ],
             id="Over-OrderBy-IndexColumns",
-            marks=XFAIL_MULTI_EXPAND_NESTED,
         ),
         pytest.param(
             nwp.col("f").mean().over(ndcs.by_dtype(nw.Date, nw.Datetime)),
