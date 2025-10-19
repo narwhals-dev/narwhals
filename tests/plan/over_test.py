@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 import pytest
 
 pytest.importorskip("pyarrow")
-import pyarrow as pa
 
 import narwhals as nw
 import narwhals._plan as nwp
@@ -132,12 +131,8 @@ def test_over_std_var(data: Data) -> None:
     assert_equal_data(result, expected)
 
 
-# Will try to support here
-@pytest.mark.xfail(
-    reason="No match or multiple matches for key field reference FieldRef.Name(a) on right side of the join",
-    raises=pa.ArrowInvalid,
-)
-def test_over_anonymous_reduction() -> None:  # pragma: no cover
+# NOTE: Supporting this for pyarrow is new 🥳
+def test_over_anonymous_reduction() -> None:
     df = dataframe({"a": [1, 1, 2], "b": [4, 5, 6]})
     result = df.with_columns(nwp.all().sum().over("a").name.suffix("_sum")).sort("a", "b")
     expected = {"a": [1, 1, 2], "b": [4, 5, 6], "a_sum": [2, 2, 2], "b_sum": [9, 9, 6]}

@@ -333,13 +333,17 @@ class ArrowExpr(  # type: ignore[misc]
     # - [ ] `rolling_expr` has 4 variants
 
     def over(self, node: ir.WindowExpr, frame: Frame, name: str) -> Self:
-        expr = node.expr
-        resolved = frame._grouper.by_irs(*node.partition_by).agg_irs(expr).resolve(frame)
+        resolved = (
+            frame._grouper.by_irs(*node.partition_by)
+            # TODO @dangotbanned: Clean this up so the re-alias isn't needed
+            .agg_irs(node.expr.alias(name))
+            .resolve(frame)
+        )
         by_names = resolved.key_names
         result = (
             frame.select_names(*by_names)
             .join(resolved.evaluate(frame), how="left", left_on=by_names)
-            .get_column(expr.meta.output_name())
+            .get_column(name)
             .native
         )
         return self._with_native(result, name)
