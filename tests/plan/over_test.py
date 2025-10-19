@@ -10,12 +10,10 @@ import pyarrow as pa
 import narwhals as nw
 import narwhals._plan as nwp
 from narwhals._plan import selectors as ncs
-from narwhals.exceptions import DuplicateError, InvalidOperationError
+from narwhals.exceptions import InvalidOperationError
 from tests.plan.utils import assert_equal_data, dataframe
 
 if TYPE_CHECKING:
-    from _pytest.mark.structures import ParameterSet
-
     from narwhals._plan.typing import IntoExprColumn, OneOrIterable
     from tests.conftest import Data
 
@@ -57,17 +55,6 @@ def test_over_single(data: Data, partition_by: OneOrIterable[IntoExprColumn]) ->
         .sort("i")
     )
     assert_equal_data(result, expected)
-
-
-# TODO @dangotbanned: High priority fix
-def duplicate_case(arg: OneOrIterable[IntoExprColumn]) -> ParameterSet:
-    return pytest.param(
-        arg,
-        marks=pytest.mark.xfail(
-            reason="BUG: Selectors which resolve to multiple columns are expanding into multiple `over()`",
-            raises=DuplicateError,
-        ),
-    )
 
 
 @pytest.mark.parametrize(

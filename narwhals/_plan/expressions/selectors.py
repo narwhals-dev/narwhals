@@ -7,7 +7,10 @@
 from __future__ import annotations
 
 import builtins
+import operator
 import re
+from collections import deque
+from functools import reduce
 from typing import TYPE_CHECKING
 
 from narwhals._plan._immutable import Immutable
@@ -16,6 +19,7 @@ from narwhals._utils import Version, _parse_time_unit_and_time_zone
 from narwhals.typing import TimeUnit
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Mapping
     from datetime import timezone
     from typing import TypeVar
 
@@ -27,7 +31,8 @@ if TYPE_CHECKING:
 
     T = TypeVar("T")
 
-dtypes = Version.MAIN.dtypes
+_dtypes = Version.MAIN.dtypes
+_dtypes_v1 = Version.V1.dtypes
 
 _ALL_TIME_UNITS = frozenset[TimeUnit](("ms", "us", "ns", "s"))
 
@@ -63,7 +68,7 @@ class Array(Selector):
 
     def matches_column(self, name: str, dtype: DType) -> bool:
         return (
-            isinstance(dtype, dtypes.Array)
+            isinstance(dtype, _dtypes.Array)
             and (not (self.inner) or self.inner.matches_column(name, dtype))
             and (self.size is None or dtype.size == self.size)
         )
@@ -74,18 +79,12 @@ class Boolean(Selector):
         return "ncs.boolean()"
 
     def matches_column(self, name: str, dtype: DType) -> bool:
-        return isinstance(dtype, dtypes.Boolean)
+        return isinstance(dtype, _dtypes.Boolean)
 
 
-# TODO @dangotbanned: Intercept these guys and do something similar to `polars.selectors.Selector._by_dtype`
-# `nw.Datetime, nw.Enum, nw.Duration, nw.Struct, nw.List, nw.Array`
 class ByDType(Selector):
     __slots__ = ("dtypes",)
     dtypes: frozenset[DType | type[DType]]
-
-    @staticmethod
-    def from_dtypes(*dtypes: OneOrIterable[DType | type[DType]]) -> ByDType:
-        return ByDType(dtypes=frozenset(flatten_hash_safe(dtypes)))
 
     def __repr__(self) -> str:
         els = ", ".join(
@@ -102,7 +101,7 @@ class Categorical(Selector):
         return "ncs.categorical()"
 
     def matches_column(self, name: str, dtype: DType) -> bool:
-        return isinstance(dtype, dtypes.Categorical)
+        return isinstance(dtype, _dtypes.Categorical)
 
 
 class Datetime(Selector):
@@ -132,7 +131,7 @@ class Datetime(Selector):
     def matches_column(self, name: str, dtype: DType) -> bool:
         units, zones = self.time_units, self.time_zones
         return (
-            isinstance(dtype, dtypes.Datetime)
+            isinstance(dtype, _dtypes.Datetime)
             and (dtype.time_unit in units)
             and (
                 dtype.time_zone in zones or ("*" in zones and dtype.time_zone is not None)
@@ -158,7 +157,9 @@ class Duration(Selector):
         return f"ncs.duration(time_unit={builtins.list(self.time_units)})"
 
     def matches_column(self, name: str, dtype: DType) -> bool:
-        return isinstance(dtype, dtypes.Duration) and (dtype.time_unit in self.time_units)
+        return isinstance(dtype, _dtypes.Duration) and (
+            dtype.time_unit in self.time_units
+        )
 
 
 class Enum(Selector):
@@ -166,7 +167,7 @@ class Enum(Selector):
         return "ncs.enum()"
 
     def matches_column(self, name: str, dtype: DType) -> bool:
-        return isinstance(dtype, dtypes.Enum)
+        return isinstance(dtype, _dtypes.Enum)
 
 
 class List(Selector):
@@ -178,7 +179,7 @@ class List(Selector):
         return f"ncs.list({inner})"
 
     def matches_column(self, name: str, dtype: DType) -> bool:
-        return isinstance(dtype, dtypes.List) and (
+        return isinstance(dtype, _dtypes.List) and (
             not (self.inner) or self.inner.matches_column(name, dtype)
         )
 
@@ -217,7 +218,7 @@ class String(Selector):
         return "ncs.string()"
 
     def matches_column(self, name: str, dtype: DType) -> bool:
-        return isinstance(dtype, dtypes.String)
+        return isinstance(dtype, _dtypes.String)
 
 
 class Struct(Selector):
@@ -225,7 +226,7 @@ class Struct(Selector):
         return "ncs.struct()"
 
     def matches_column(self, name: str, dtype: DType) -> bool:
-        return isinstance(dtype, dtypes.Struct)
+        return isinstance(dtype, _dtypes.Struct)
 
 
 def all() -> expr.Selector:
@@ -240,7 +241,7 @@ def array(
 
 
 def by_dtype(*dtypes: OneOrIterable[DType | type[DType]]) -> expr.Selector:
-    return ByDType.from_dtypes(*dtypes).to_selector().to_narwhals()
+    return _from_dtypes(*dtypes)
 
 
 def by_name(*names: OneOrIterable[str]) -> expr.Selector:
@@ -293,3 +294,34 @@ def string() -> expr.Selector:
 
 def struct() -> expr.Selector:
     return Struct().to_selector().to_narwhals()
+
+
+_HASH_SENSITIVE_TO_SELECTOR: Mapping[type[DType], Callable[[], expr.Selector]] = {
+    _dtypes.Datetime: datetime,
+    _dtypes_v1.Datetime: datetime,
+    _dtypes.Duration: duration,
+    _dtypes_v1.Duration: duration,
+    _dtypes.Enum: enum,
+    _dtypes_v1.Enum: enum,
+    _dtypes.Array: array,
+    _dtypes.List: list,
+    _dtypes.Struct: struct,
+}
+
+
+def _from_dtypes(*by_dtypes: OneOrIterable[DType | type[DType]]) -> expr.Selector:
+    selectors: deque[expr.Selector] = deque()
+    dtypes: deque[DType | type[DType]] = deque()
+    for dtype in flatten_hash_safe(by_dtypes):
+        if isinstance(dtype, type):
+            if constructor := _HASH_SENSITIVE_TO_SELECTOR.get(dtype):
+                selectors.append(constructor())
+            else:
+                dtypes.append(dtype)
+        else:
+            dtypes.append(dtype)  # type: ignore[arg-type]
+    if dtypes:
+        dtype_selector = ByDType(dtypes=frozenset(dtypes)).to_selector().to_narwhals()
+        selectors.appendleft(dtype_selector)
+    it = iter(selectors)
+    return reduce(operator.or_, it, next(it))
