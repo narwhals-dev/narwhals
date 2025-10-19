@@ -208,6 +208,13 @@ def n_unique(native: Any) -> pa.Int64Scalar:
     return count(native, mode="all")
 
 
+def cum_sum(native: ChunkedArrayAny, *, reverse: bool = False) -> ChunkedArrayAny:
+    if reverse:
+        msg = "TODO: `ArrowExpr.cum_sum(reverse=True)`.\nInvestigate native options"
+        raise NotImplementedError(msg)
+    return pc.cumulative_sum(native, skip_nulls=True)
+
+
 def is_between(
     native: ChunkedOrScalar[ScalarT],
     lower: ChunkedOrScalar[ScalarT],

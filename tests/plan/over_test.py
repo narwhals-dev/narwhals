@@ -155,8 +155,7 @@ def test_unsupported_over(data: Data) -> None:
         df.select(nwp.col("a").shift(1).cum_sum().over("b"))
 
 
-@XFAIL_NO_CUM_SUM
-def test_over_without_partition_by() -> None:  # pragma: no cover
+def test_over_without_partition_by() -> None:
     df = dataframe({"a": [1, -1, 2], "i": [0, 2, 1]})
     result = (
         df.with_columns(b=nwp.col("a").abs().cum_sum().over(order_by="i"))

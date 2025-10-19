@@ -55,7 +55,14 @@ if TYPE_CHECKING:
         Not,
     )
     from narwhals._plan.expressions.expr import BinaryExpr, FunctionExpr
-    from narwhals._plan.expressions.functions import Abs, Diff, FillNull, Pow, Shift
+    from narwhals._plan.expressions.functions import (
+        Abs,
+        CumSum,
+        Diff,
+        FillNull,
+        Pow,
+        Shift,
+    )
     from narwhals.typing import Into1DArray, IntoDType, PythonLiteral
 
     Expr: TypeAlias = "ArrowExpr"
@@ -416,6 +423,11 @@ class ArrowExpr(  # type: ignore[misc]
         result = fn.chunked_array(array)
         return self._with_native(result, name)
 
+    def cum_sum(self, node: ir.FunctionExpr[CumSum], frame: Frame, name: str) -> Self:
+        series = self._dispatch_expr(node.input[0], frame, name)
+        result = fn.cum_sum(series.native, reverse=node.function.reverse)
+        return self._with_native(result, name)
+
     def _is_first_last_distinct(
         self,
         node: FunctionExpr[IsFirstDistinct | IsLastDistinct],
@@ -523,5 +535,7 @@ class ArrowScalar(
     over = not_implemented()
     over_ordered = not_implemented()
     map_batches = not_implemented()
+    # length_preserving
     rolling_expr = not_implemented()
     diff = not_implemented()
+    cum_sum = not_implemented()  # TODO @dangotbanned: is this just self?
