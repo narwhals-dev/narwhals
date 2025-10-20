@@ -267,6 +267,16 @@ class AllowLazy(_AllowLazy, total=False):
     pass_through: bool
 
 
+class AllowLazyV1(_AllowLazy, total=False):
+    pass_through: bool | None
+    eager_or_interchange_only: Literal[False]
+
+
+class AllowLazyStrictV1(_AllowLazy, total=False):
+    strict: bool | None
+    eager_or_interchange_only: Literal[False]
+
+
 class _AllowAny(TypedDict, total=False):
     eager_only: Literal[False]
     series_only: Literal[False]
