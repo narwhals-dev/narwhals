@@ -145,13 +145,13 @@ def test_over_raise_len_change(data: Data) -> None:
         df.select(nwp.col("b").drop_nulls().over("a"))
 
 
-# NOTE: Currently raising `InvalidOperationError: `cum_sum()` is not supported in a `group_by` context`
-# (main): https://github.com/narwhals-dev/narwhals/blob/ecde261d799a711c2e0a7acf11b108bc45035dc9/narwhals/_arrow/expr.py#L116-L118
-# NotImplementedError: Only aggregation or literal operations are supported in grouped `over` context for PyArrow.
-@pytest.mark.xfail(reason="Not implemented `cum_sum`", raises=InvalidOperationError)
+# NOTE: Slightly different error, but same reason for raising
+# (expr-ir): InvalidOperationError: `cum_sum()` is not supported in a `group_by` context
+# (main): NotImplementedError: Only aggregation or literal operations are supported in grouped `over` context for PyArrow.
+# https://github.com/narwhals-dev/narwhals/blob/ecde261d799a711c2e0a7acf11b108bc45035dc9/narwhals/_arrow/expr.py#L116-L118
 def test_unsupported_over(data: Data) -> None:
     df = dataframe(data)
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(InvalidOperationError):
         df.select(nwp.col("a").shift(1).cum_sum().over("b"))
 
 
