@@ -35,10 +35,12 @@ from narwhals._utils import (
     is_compliant_lazyframe,
     is_eager_allowed,
     is_index_selector,
+    is_iterator,
     is_lazy_allowed,
     is_list_of,
     is_sequence_like,
     is_slice_none,
+    predicates_contains_list_of_bool,
     qualified_type_name,
     supports_arrow_c_stream,
     zip_strict,
@@ -242,24 +244,20 @@ class BaseFrame(Generic[_FrameT]):
         return self._with_compliant(self._compliant_frame.drop(columns, strict=strict))
 
     def filter(
-        self, *predicates: IntoExpr | Iterable[IntoExpr] | list[bool], **constraints: Any
+        self, *predicates: IntoExpr | Iterable[IntoExpr], **constraints: Any
     ) -> Self:
-        if len(predicates) == 1 and is_list_of(predicates[0], bool):
-            predicate = predicates[0]
-        else:
-            from narwhals.functions import col
+        from narwhals.functions import col
 
-            flat_predicates = flatten(predicates)
-            check_expressions_preserve_length(*flat_predicates, function_name="filter")
-            plx = self.__narwhals_namespace__()
-            compliant_predicates, _kinds = self._flatten_and_extract(*flat_predicates)
-            compliant_constraints = (
-                (col(name) == v)._to_compliant_expr(plx)
-                for name, v in constraints.items()
-            )
-            predicate = plx.all_horizontal(
-                *chain(compliant_predicates, compliant_constraints), ignore_nulls=False
-            )
+        flat_predicates = flatten(predicates)
+        check_expressions_preserve_length(*flat_predicates, function_name="filter")
+        plx = self.__narwhals_namespace__()
+        compliant_predicates, _kinds = self._flatten_and_extract(*flat_predicates)
+        compliant_constraints = (
+            (col(name) == v)._to_compliant_expr(plx) for name, v in constraints.items()
+        )
+        predicate = plx.all_horizontal(
+            *chain(compliant_predicates, compliant_constraints), ignore_nulls=False
+        )
         return self._with_compliant(self._compliant_frame.filter(predicate))
 
     def sort(
@@ -774,7 +772,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             return native_frame.__arrow_c_stream__(requested_schema=requested_schema)
         try:
             pa_version = Implementation.PYARROW._backend_version()
-        except ModuleNotFoundError as exc:  # pragma: no cover
+        except ModuleNotFoundError as exc:
             msg = f"'pyarrow>=14.0.0' is required for `DataFrame.__arrow_c_stream__` for object of type {type(native_frame)}"
             raise ModuleNotFoundError(msg) from exc
         if pa_version < (14, 0):  # pragma: no cover
@@ -1653,7 +1651,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Arguments:
             *predicates: Expression(s) that evaluates to a boolean Series. Can
-                also be a (single!) boolean list.
+                also be a boolean list(s).
             **constraints: Column filters; use `name = value` to filter columns by the supplied value.
                 Each constraint will behave the same as `nw.col(name).eq(value)`, and will be implicitly
                 joined with the other filter conditions using &.
@@ -1695,7 +1693,12 @@ class DataFrame(BaseFrame[DataFrameT]):
                foo  bar ham
             1    2    7   b
         """
-        return super().filter(*predicates, **constraints)
+        impl = self.implementation
+        parsed_predicates = (
+            self._series.from_iterable("", p, backend=impl) if is_list_of(p, bool) else p
+            for p in predicates
+        )
+        return super().filter(*parsed_predicates, **constraints)
 
     @overload
     def group_by(
@@ -2850,15 +2853,14 @@ class LazyFrame(BaseFrame[LazyFrameT]):
         )
 
     def filter(
-        self, *predicates: IntoExpr | Iterable[IntoExpr] | list[bool], **constraints: Any
+        self, *predicates: IntoExpr | Iterable[IntoExpr], **constraints: Any
     ) -> Self:
         r"""Filter the rows in the LazyFrame based on a predicate expression.
 
         The original order of the remaining rows is preserved.
 
         Arguments:
-            *predicates: Expression that evaluates to a boolean Series. Can
-                also be a (single!) boolean list.
+            *predicates: Expression(s) that evaluates to a boolean Series.
             **constraints: Column filters; use `name = value` to filter columns by the supplied value.
                 Each constraint will behave the same as `nw.col(name).eq(value)`, and will be implicitly
                 joined with the other filter conditions using &.
@@ -2924,13 +2926,12 @@ class LazyFrame(BaseFrame[LazyFrameT]):
             └───────┴───────┴─────────┘
             <BLANKLINE>
         """
-        if (
-            len(predicates) == 1 and is_list_of(predicates[0], bool) and not constraints
-        ):  # pragma: no cover
+        predicates_ = tuple(tuple(p) if is_iterator(p) else p for p in predicates)
+        if predicates_contains_list_of_bool(predicates_):
             msg = "`LazyFrame.filter` is not supported with Python boolean masks - use expressions instead."
             raise TypeError(msg)
 
-        return super().filter(*predicates, **constraints)
+        return super().filter(*predicates_, **constraints)
 
     def sink_parquet(self, file: str | Path | BytesIO) -> None:
         """Write LazyFrame to Parquet file.

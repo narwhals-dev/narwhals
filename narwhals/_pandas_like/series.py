@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import operator
 import warnings
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Callable, Literal, cast
 
 import numpy as np
 
@@ -304,6 +305,11 @@ class PandasLikeSeries(EagerSeries[Any]):
             self.native.iloc[indices.native] = values_native
 
     def cast(self, dtype: IntoDType) -> Self:
+        if self.dtype == dtype and self.native.dtype != "object":
+            # Avoid dealing with pandas' type-system if we can. Note that it's only
+            # safe to do this if we're not starting with object dtype, see tests/expr_and_series/cast_test.py::test_cast_object_pandas
+            # for an example of why.
+            return self._with_native(self.native, preserve_broadcast=True)
         pd_dtype = narwhals_to_native_dtype(
             dtype,
             dtype_backend=get_dtype_backend(self.native.dtype, self._implementation),
@@ -387,103 +393,87 @@ class PandasLikeSeries(EagerSeries[Any]):
     def last(self) -> PythonLiteral:
         return self.native.iloc[-1] if len(self.native) else None
 
+    def _with_binary(self, op: Callable[..., PandasLikeSeries], other: Any) -> Self:
+        ser, other_native = align_and_extract_native(self, other)
+        preserve_broadcast = self._broadcast and getattr(other, "_broadcast", True)
+        return self._with_native(
+            op(ser, other_native), preserve_broadcast=preserve_broadcast
+        ).alias(self.name)
+
+    def _with_binary_right(self, op: Callable[..., PandasLikeSeries], other: Any) -> Self:
+        return self._with_binary(lambda x, y: op(y, x), other).alias(self.name)
+
     def __eq__(self, other: object) -> Self:  # type: ignore[override]
-        ser, other = align_and_extract_native(self, other)
-        return self._with_native(ser == other).alias(self.name)
+        return self._with_binary(operator.eq, other)
 
     def __ne__(self, other: object) -> Self:  # type: ignore[override]
-        ser, other = align_and_extract_native(self, other)
-        return self._with_native(ser != other).alias(self.name)
+        return self._with_binary(operator.ne, other)
 
     def __ge__(self, other: Any) -> Self:
-        ser, other = align_and_extract_native(self, other)
-        return self._with_native(ser >= other).alias(self.name)
+        return self._with_binary(operator.ge, other)
 
     def __gt__(self, other: Any) -> Self:
-        ser, other = align_and_extract_native(self, other)
-        return self._with_native(ser > other).alias(self.name)
+        return self._with_binary(operator.gt, other)
 
     def __le__(self, other: Any) -> Self:
-        ser, other = align_and_extract_native(self, other)
-        return self._with_native(ser <= other).alias(self.name)
+        return self._with_binary(operator.le, other)
 
     def __lt__(self, other: Any) -> Self:
-        ser, other = align_and_extract_native(self, other)
-        return self._with_native(ser < other).alias(self.name)
+        return self._with_binary(operator.lt, other)
 
     def __and__(self, other: Any) -> Self:
-        ser, other = align_and_extract_native(self, other)
-        return self._with_native(ser & other).alias(self.name)
+        return self._with_binary(operator.and_, other)
 
     def __rand__(self, other: Any) -> Self:
-        ser, other = align_and_extract_native(self, other)
-        ser = cast("pd.Series[Any]", ser)
-        return self._with_native(ser.__and__(other)).alias(self.name)
+        return self._with_binary_right(operator.and_, other)
 
     def __or__(self, other: Any) -> Self:
-        ser, other = align_and_extract_native(self, other)
-        return self._with_native(ser | other).alias(self.name)
+        return self._with_binary(operator.or_, other)
 
     def __ror__(self, other: Any) -> Self:
-        ser, other = align_and_extract_native(self, other)
-        ser = cast("pd.Series[Any]", ser)
-        return self._with_native(ser.__or__(other)).alias(self.name)
+        return self._with_binary_right(operator.or_, other)
 
     def __add__(self, other: Any) -> Self:
-        ser, other = align_and_extract_native(self, other)
-        return self._with_native(ser + other).alias(self.name)
+        return self._with_binary(operator.add, other)
 
     def __radd__(self, other: Any) -> Self:
-        _, other_native = align_and_extract_native(self, other)
-        return self._with_native(self.native.__radd__(other_native)).alias(self.name)
+        return self._with_binary_right(operator.add, other)
 
     def __sub__(self, other: Any) -> Self:
-        ser, other = align_and_extract_native(self, other)
-        return self._with_native(ser - other).alias(self.name)
+        return self._with_binary(operator.sub, other)
 
     def __rsub__(self, other: Any) -> Self:
-        _, other_native = align_and_extract_native(self, other)
-        return self._with_native(self.native.__rsub__(other_native)).alias(self.name)
+        return self._with_binary_right(operator.sub, other)
 
     def __mul__(self, other: Any) -> Self:
-        ser, other = align_and_extract_native(self, other)
-        return self._with_native(ser * other).alias(self.name)
+        return self._with_binary(operator.mul, other)
 
     def __rmul__(self, other: Any) -> Self:
-        _, other_native = align_and_extract_native(self, other)
-        return self._with_native(self.native.__rmul__(other_native)).alias(self.name)
+        return self._with_binary_right(operator.mul, other)
 
     def __truediv__(self, other: Any) -> Self:
-        ser, other = align_and_extract_native(self, other)
-        return self._with_native(ser / other).alias(self.name)
+        return self._with_binary(operator.truediv, other)
 
     def __rtruediv__(self, other: Any) -> Self:
-        _, other_native = align_and_extract_native(self, other)
-        return self._with_native(self.native.__rtruediv__(other_native)).alias(self.name)
+        return self._with_binary_right(operator.truediv, other)
 
     def __floordiv__(self, other: Any) -> Self:
-        ser, other = align_and_extract_native(self, other)
-        return self._with_native(ser // other).alias(self.name)
+        return self._with_binary(operator.floordiv, other)
 
     def __rfloordiv__(self, other: Any) -> Self:
-        _, other_native = align_and_extract_native(self, other)
-        return self._with_native(self.native.__rfloordiv__(other_native)).alias(self.name)
+        return self._with_binary_right(operator.floordiv, other)
 
     def __pow__(self, other: Any) -> Self:
-        ser, other = align_and_extract_native(self, other)
-        return self._with_native(ser**other).alias(self.name)
+        return self._with_binary(operator.pow, other)
 
     def __rpow__(self, other: Any) -> Self:
-        _, other_native = align_and_extract_native(self, other)
-        return self._with_native(self.native.__rpow__(other_native)).alias(self.name)
+        return self._with_binary_right(operator.pow, other)
 
     def __mod__(self, other: Any) -> Self:
-        ser, other = align_and_extract_native(self, other)
-        return self._with_native(ser % other).alias(self.name)
+        return self._with_binary(operator.mod, other)
 
     def __rmod__(self, other: Any) -> Self:
-        _, other_native = align_and_extract_native(self, other)
-        return self._with_native(self.native.__rmod__(other_native)).alias(self.name)
+        return self._with_binary_right(operator.mod, other)
 
     # Unary
 
@@ -797,6 +787,62 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     def round(self, decimals: int) -> Self:
         return self._with_native(self.native.round(decimals=decimals))
+
+    def floor(self) -> Self:
+        native = self.native
+        native_cls = type(native)
+        implementation = self._implementation
+        if get_dtype_backend(native.dtype, implementation=implementation) == "pyarrow":
+            import pyarrow.compute as pc
+
+            from narwhals._arrow.utils import native_to_narwhals_dtype
+
+            ca = native.array._pa_array
+            result_arr = cast("ChunkedArrayAny", pc.floor(ca))
+            nw_dtype = native_to_narwhals_dtype(result_arr.type, self._version)
+            out_dtype = narwhals_to_native_dtype(
+                nw_dtype, "pyarrow", self._implementation, self._version
+            )
+            result_native = native_cls(
+                result_arr, dtype=out_dtype, index=native.index, name=native.name
+            )
+        else:
+            array_funcs = self._array_funcs
+            result_arr = array_funcs.floor(self.native)
+            result_native = (
+                native_cls(result_arr, index=native.index, name=native.name)
+                if implementation.is_cudf()
+                else result_arr
+            )
+        return self._with_native(result_native)
+
+    def ceil(self) -> Self:
+        native = self.native
+        native_cls = type(native)
+        implementation = self._implementation
+        if get_dtype_backend(native.dtype, implementation=implementation) == "pyarrow":
+            import pyarrow.compute as pc
+
+            from narwhals._arrow.utils import native_to_narwhals_dtype
+
+            ca = native.array._pa_array
+            result_arr = cast("ChunkedArrayAny", pc.ceil(ca))
+            nw_dtype = native_to_narwhals_dtype(result_arr.type, self._version)
+            out_dtype = narwhals_to_native_dtype(
+                nw_dtype, "pyarrow", self._implementation, self._version
+            )
+            result_native = native_cls(
+                result_arr, dtype=out_dtype, index=native.index, name=native.name
+            )
+        else:
+            array_funcs = self._array_funcs
+            result_arr = array_funcs.ceil(self.native)
+            result_native = (
+                native_cls(result_arr, index=native.index, name=native.name)
+                if implementation.is_cudf()
+                else result_arr
+            )
+        return self._with_native(result_native)
 
     def to_dummies(self, *, separator: str, drop_first: bool) -> PandasLikeDataFrame:
         from narwhals._pandas_like.dataframe import PandasLikeDataFrame

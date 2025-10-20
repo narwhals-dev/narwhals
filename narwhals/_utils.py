@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+import sys
 from collections.abc import Collection, Container, Iterable, Iterator, Mapping, Sequence
 from datetime import timezone
 from enum import Enum, auto
@@ -80,20 +81,20 @@ if TYPE_CHECKING:
         NativeDataFrameT,
         NativeLazyFrameT,
     )
-    from narwhals._namespace import (
-        Namespace,
-        _NativeArrow,
-        _NativeCuDF,
-        _NativeDask,
-        _NativeDuckDB,
-        _NativeIbis,
-        _NativeModin,
-        _NativePandas,
-        _NativePandasLike,
-        _NativePolars,
-        _NativePySpark,
-        _NativePySparkConnect,
-        _NativeSQLFrame,
+    from narwhals._namespace import Namespace
+    from narwhals._native import (
+        NativeArrow,
+        NativeCuDF,
+        NativeDask,
+        NativeDuckDB,
+        NativeIbis,
+        NativeModin,
+        NativePandas,
+        NativePandasLike,
+        NativePolars,
+        NativePySpark,
+        NativePySparkConnect,
+        NativeSQLFrame,
     )
     from narwhals._translate import ArrowStreamExportable, IntoArrowTable, ToNarwhalsT_co
     from narwhals._typing import (
@@ -604,7 +605,7 @@ MIN_VERSIONS: Mapping[Implementation, tuple[int, ...]] = {
     Implementation.PYSPARK_CONNECT: (3, 5),
     Implementation.POLARS: (0, 20, 4),
     Implementation.DASK: (2024, 8),
-    Implementation.DUCKDB: (1,),
+    Implementation.DUCKDB: (1, 1),
     Implementation.IBIS: (6,),
     Implementation.SQLFRAME: (3, 22, 0),
 }
@@ -688,6 +689,10 @@ def _is_iterable(arg: Any | Iterable[Any]) -> bool:
         raise TypeError(msg)
 
     return isinstance(arg, Iterable) and not isinstance(arg, (str, bytes, Series))
+
+
+def is_iterator(val: Iterable[_T] | Any) -> TypeIs[Iterator[_T]]:
+    return isinstance(val, Iterator)
 
 
 def parse_version(version: str | ModuleType | _SupportsVersion) -> tuple[int, ...]:
@@ -1342,6 +1347,12 @@ def is_index_selector(
 def is_list_of(obj: Any, tp: type[_T]) -> TypeIs[list[_T]]:
     # Check if an object is a list of `tp`, only sniffing the first element.
     return bool(isinstance(obj, list) and obj and isinstance(obj[0], tp))
+
+
+def predicates_contains_list_of_bool(
+    predicates: Collection[Any],
+) -> TypeIs[Collection[list[bool]]]:
+    return any(is_list_of(pred, bool) for pred in predicates)
 
 
 def is_sequence_of(obj: Any, tp: type[_T]) -> TypeIs[Sequence[_T]]:
@@ -2040,36 +2051,36 @@ class _Implementation:
         self.__name__: str = name
 
     @overload
-    def __get__(self, instance: Narwhals[_NativePolars], owner: Any) -> _PolarsImpl: ...
+    def __get__(self, instance: Narwhals[NativePolars], owner: Any) -> _PolarsImpl: ...
     @overload
-    def __get__(self, instance: Narwhals[_NativePandas], owner: Any) -> _PandasImpl: ...
+    def __get__(self, instance: Narwhals[NativePandas], owner: Any) -> _PandasImpl: ...
     @overload
-    def __get__(self, instance: Narwhals[_NativeModin], owner: Any) -> _ModinImpl: ...
+    def __get__(self, instance: Narwhals[NativeModin], owner: Any) -> _ModinImpl: ...
     @overload
-    def __get__(self, instance: Narwhals[_NativeCuDF], owner: Any) -> _CuDFImpl: ...
+    def __get__(self, instance: Narwhals[NativeCuDF], owner: Any) -> _CuDFImpl: ...
     @overload
     def __get__(
-        self, instance: Narwhals[_NativePandasLike], owner: Any
+        self, instance: Narwhals[NativePandasLike], owner: Any
     ) -> _PandasLikeImpl: ...
     @overload
-    def __get__(self, instance: Narwhals[_NativeArrow], owner: Any) -> _ArrowImpl: ...
+    def __get__(self, instance: Narwhals[NativeArrow], owner: Any) -> _ArrowImpl: ...
     @overload
     def __get__(
-        self, instance: Narwhals[_NativePolars | _NativeArrow | _NativePandas], owner: Any
+        self, instance: Narwhals[NativePolars | NativeArrow | NativePandas], owner: Any
     ) -> _PolarsImpl | _PandasImpl | _ArrowImpl: ...
     @overload
-    def __get__(self, instance: Narwhals[_NativeDuckDB], owner: Any) -> _DuckDBImpl: ...
+    def __get__(self, instance: Narwhals[NativeDuckDB], owner: Any) -> _DuckDBImpl: ...
     @overload
     def __get__(
-        self, instance: Narwhals[_NativeSQLFrame], owner: Any
+        self, instance: Narwhals[NativeSQLFrame], owner: Any
     ) -> _SQLFrameImpl: ...
     @overload
-    def __get__(self, instance: Narwhals[_NativeDask], owner: Any) -> _DaskImpl: ...
+    def __get__(self, instance: Narwhals[NativeDask], owner: Any) -> _DaskImpl: ...
     @overload
-    def __get__(self, instance: Narwhals[_NativeIbis], owner: Any) -> _IbisImpl: ...
+    def __get__(self, instance: Narwhals[NativeIbis], owner: Any) -> _IbisImpl: ...
     @overload
     def __get__(
-        self, instance: Narwhals[_NativePySpark | _NativePySparkConnect], owner: Any
+        self, instance: Narwhals[NativePySpark | NativePySparkConnect], owner: Any
     ) -> _PySparkImpl | _PySparkConnectImpl: ...
     # NOTE: https://docs.python.org/3/howto/descriptor.html#invocation-from-a-class
     @overload
@@ -2098,3 +2109,14 @@ def normalize_path(source: FileSource, /) -> str:
     from pathlib import Path
 
     return str(Path(source))
+
+
+def extend_bool(
+    value: bool | Iterable[bool],  # noqa: FBT001
+    n_match: int,
+) -> Sequence[bool]:
+    """Ensure the given bool or sequence of bools is the correct length.
+
+    Stolen from https://github.com/pola-rs/polars/blob/b8bfb07a4a37a8d449d6d1841e345817431142df/py-polars/polars/_utils/various.py#L580-L594
+    """
+    return (value,) * n_match if isinstance(value, bool) else tuple(value)

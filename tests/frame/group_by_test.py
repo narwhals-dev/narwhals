@@ -7,12 +7,12 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
 import pandas as pd
-import pyarrow as pa
 import pytest
 
 import narwhals as nw
 from narwhals.exceptions import DuplicateError, InvalidOperationError
 from tests.utils import (
+    DUCKDB_VERSION,
     PANDAS_VERSION,
     POLARS_VERSION,
     PYARROW_VERSION,
@@ -35,6 +35,9 @@ POLARS_COLLECT_STREAMING_ENGINE = os.environ.get("NARWHALS_POLARS_NEW_STREAMING"
 
 
 def test_group_by_complex() -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
     expected = {"a": [1, 3], "b": [-3.5, -3.0]}
 
     df = nw.from_native(df_pandas)
@@ -134,6 +137,8 @@ def test_group_by_depth_1_agg(
         pytest.skip(
             "Known issue with variance calculation in pandas 2.0.x with pyarrow backend in groupby operations"
         )
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
     data = {"a": [1, 1, 1, 2], "b": [1, None, 2, 3]}
     expr = getattr(nw.col("b"), attr)()
     result = nw.from_native(constructor(data)).group_by("a").agg(expr).sort("a")
@@ -204,6 +209,8 @@ def test_group_by_median(constructor: Constructor) -> None:
 
 
 def test_group_by_n_unique_w_missing(constructor: Constructor) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
     data = {"a": [1, 1, 2], "b": [4, None, 5], "c": [None, None, 7], "d": [1, 1, 3]}
     result = (
         nw.from_native(constructor(data))
@@ -391,6 +398,8 @@ def test_all_kind_of_aggs(
         pytest.skip(
             "Pandas < 1.4.0 does not support multiple aggregations with the same column"
         )
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
     df = nw.from_native(constructor({"a": [1, 1, 1, 2, 2, 2], "b": [4, 5, 6, 0, 5, 5]}))
     result = (
         df.group_by("a")
@@ -530,6 +539,8 @@ def test_group_by_raise_if_not_preserves_length(
 
 
 def test_group_by_window(constructor: Constructor) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
     data = {"a": [1, 2, 2, None], "b": [1, 1, 2, 2], "x": [1, 2, 3, 4]}
     df = nw.from_native(constructor(data))
     result = (

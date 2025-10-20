@@ -23,7 +23,12 @@ from narwhals._utils import Implementation
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
 
-    from narwhals._arrow.typing import ArrayOrScalar, ChunkedArrayAny, Incomplete
+    from narwhals._arrow.typing import (
+        ArrayOrScalar,
+        ChunkedArrayAny,
+        Incomplete,
+        ScalarAny,
+    )
     from narwhals._compliant.typing import ScalarKwargs
     from narwhals._utils import Version
     from narwhals.typing import IntoDType, NonNestedLiteral
@@ -48,6 +53,11 @@ class ArrowNamespace(
 
     def __init__(self, *, version: Version) -> None:
         self._version = version
+
+    def extract_native(
+        self, *series: ArrowSeries
+    ) -> Iterator[ChunkedArrayAny | ScalarAny]:
+        return (s.native[0] if s._broadcast else s.native for s in series)
 
     def len(self) -> ArrowExpr:
         # coverage bug? this is definitely hit
@@ -83,10 +93,9 @@ class ArrowNamespace(
     def all_horizontal(self, *exprs: ArrowExpr, ignore_nulls: bool) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             series: Iterator[ArrowSeries] = chain.from_iterable(e(df) for e in exprs)
-            align = self._series._align_full_broadcast
             if ignore_nulls:
                 series = (s.fill_null(True, None, None) for s in series)
-            return [reduce(operator.and_, align(*series))]
+            return [reduce(operator.and_, series)]
 
         return self._expr._from_callable(
             func=func,
@@ -100,10 +109,9 @@ class ArrowNamespace(
     def any_horizontal(self, *exprs: ArrowExpr, ignore_nulls: bool) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             series: Iterator[ArrowSeries] = chain.from_iterable(e(df) for e in exprs)
-            align = self._series._align_full_broadcast
             if ignore_nulls:
                 series = (s.fill_null(False, None, None) for s in series)
-            return [reduce(operator.or_, align(*series))]
+            return [reduce(operator.or_, series)]
 
         return self._expr._from_callable(
             func=func,
@@ -118,8 +126,7 @@ class ArrowNamespace(
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             it = chain.from_iterable(expr(df) for expr in exprs)
             series = (s.fill_null(0, strategy=None, limit=None) for s in it)
-            align = self._series._align_full_broadcast
-            return [reduce(operator.add, align(*series))]
+            return [reduce(operator.add, series)]
 
         return self._expr._from_callable(
             func=func,
@@ -134,12 +141,9 @@ class ArrowNamespace(
         int_64 = self._version.dtypes.Int64()
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            expr_results = list(chain.from_iterable(expr(df) for expr in exprs))
-            align = self._series._align_full_broadcast
-            series = align(
-                *(s.fill_null(0, strategy=None, limit=None) for s in expr_results)
-            )
-            non_na = align(*(1 - s.is_null().cast(int_64) for s in expr_results))
+            expr_results = tuple(chain.from_iterable(expr(df) for expr in exprs))
+            series = [s.fill_null(0, strategy=None, limit=None) for s in expr_results]
+            non_na = [1 - s.is_null().cast(int_64) for s in expr_results]
             return [reduce(operator.add, series) / reduce(operator.add, non_na)]
 
         return self._expr._from_callable(
@@ -153,9 +157,7 @@ class ArrowNamespace(
 
     def min_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            align = self._series._align_full_broadcast
-            init_series, *series = list(chain.from_iterable(expr(df) for expr in exprs))
-            init_series, *series = align(init_series, *series)
+            init_series, *series = tuple(chain.from_iterable(expr(df) for expr in exprs))
             native_series = reduce(
                 pc.min_element_wise, [s.native for s in series], init_series.native
             )
@@ -174,9 +176,7 @@ class ArrowNamespace(
 
     def max_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            align = self._series._align_full_broadcast
-            init_series, *series = list(chain.from_iterable(expr(df) for expr in exprs))
-            init_series, *series = align(init_series, *series)
+            init_series, *series = tuple(chain.from_iterable(expr(df) for expr in exprs))
             native_series = reduce(
                 pc.max_element_wise, [s.native for s in series], init_series.native
             )
@@ -200,7 +200,7 @@ class ArrowNamespace(
 
     def _concat_horizontal(self, dfs: Sequence[pa.Table], /) -> pa.Table:
         names = list(chain.from_iterable(df.column_names for df in dfs))
-        arrays = list(chain.from_iterable(df.itercolumns() for df in dfs))
+        arrays = tuple(chain.from_iterable(df.itercolumns() for df in dfs))
         return pa.Table.from_arrays(arrays, names=names)
 
     def _concat_vertical(self, dfs: Sequence[pa.Table], /) -> pa.Table:
@@ -227,16 +227,13 @@ class ArrowNamespace(
         self, *exprs: ArrowExpr, separator: str, ignore_nulls: bool
     ) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            align = self._series._align_full_broadcast
-            compliant_series_list = align(
-                *(chain.from_iterable(expr(df) for expr in exprs))
-            )
-            name = compliant_series_list[0].name
+            series = list(chain.from_iterable(expr(df) for expr in exprs))
+            name = series[0].name
             null_handling: Literal["skip", "emit_null"] = (
                 "skip" if ignore_nulls else "emit_null"
             )
             it, separator_scalar = cast_to_comparable_string_types(
-                *(s.native for s in compliant_series_list), separator=separator
+                *self.extract_native(*series), separator=separator
             )
             # NOTE: stubs indicate `separator` must also be a `ChunkedArray`
             # Reality: `str` is fine

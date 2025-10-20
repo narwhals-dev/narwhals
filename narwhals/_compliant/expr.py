@@ -386,12 +386,13 @@ class EagerExpr(
             series._from_scalar(method(series)) if returns_scalar else method(series)
             for series in self(df)
         ]
-        aliases = self._evaluate_aliases(df)
-        if [s.name for s in out] != list(aliases):  # pragma: no cover
+        aliases, names = self._evaluate_aliases(df), (s.name for s in out)
+        if any(
+            alias != name for alias, name in zip_strict(aliases, names)
+        ):  # pragma: no cover
             msg = (
                 f"Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues\n"
                 f"Expression aliases: {aliases}\n"
-                f"Series names: {[s.name for s in out]}"
             )
             raise AssertionError(msg)
         return out
@@ -707,6 +708,12 @@ class EagerExpr(
 
     def round(self, decimals: int) -> Self:
         return self._reuse_series("round", decimals=decimals)
+
+    def floor(self) -> Self:
+        return self._reuse_series("floor")
+
+    def ceil(self) -> Self:
+        return self._reuse_series("ceil")
 
     def len(self) -> Self:
         return self._reuse_series("len", returns_scalar=True)
@@ -1155,6 +1162,9 @@ class EagerExprStringNamespace(
 
     def zfill(self, width: int) -> EagerExprT:
         return self.compliant._reuse_series_namespace("str", "zfill", width=width)
+
+    def to_titlecase(self) -> EagerExprT:
+        return self.compliant._reuse_series_namespace("str", "to_titlecase")
 
 
 class EagerExprStructNamespace(

@@ -469,7 +469,6 @@ NW_TO_PD_DTYPES_BACKEND: Mapping[type[DType], Mapping[DTypeBackend, str | type[A
         None: "uint16",
     },
     dtypes.UInt8: {"pyarrow": "UInt8[pyarrow]", "numpy_nullable": "UInt8", None: "uint8"},
-    dtypes.String: {"pyarrow": "string[pyarrow]", "numpy_nullable": "string", None: str},
     dtypes.Boolean: {
         "pyarrow": "boolean[pyarrow]",
         "numpy_nullable": "boolean",
@@ -494,6 +493,25 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912
         return pd_type
     if into_pd_type := NW_TO_PD_DTYPES_BACKEND.get(base_type):
         return into_pd_type[dtype_backend]
+    if issubclass(base_type, dtypes.String):
+        if dtype_backend == "pyarrow":
+            import pyarrow as pa  # ignore-banned-import
+
+            # Note: this is different from `string[pyarrow]`, even though the repr
+            # looks the same.
+            # >>> pd.DataFrame({'a':['foo']}, dtype='string[pyarrow]')['a'].str.len()
+            # 0    3
+            # Name: a, dtype: Int64
+            # >>> pd.DataFrame({'a':['foo']}, dtype=pd.ArrowDtype(pa.string()))['a'].str.len()
+            # 0    3
+            # Name: a, dtype: int32[pyarrow]
+            #
+            # `ArrowDType(pa.string())` is what `.convert_dtypes(dtype_backend='pyarrow')` converts to,
+            # so we use that here.
+            return pd.ArrowDtype(pa.string())
+        if dtype_backend == "numpy_nullable":
+            return "string"
+        return str
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
         if is_pandas_or_modin(implementation) and PANDAS_VERSION < (
             2,
@@ -533,8 +551,8 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912
         )
     if isinstance_or_issubclass(dtype, dtypes.Date):
         try:
-            import pyarrow as pa  # ignore-banned-import  # noqa: F401
-        except ModuleNotFoundError as exc:  # pragma: no cover
+            import pyarrow as pa  # ignore-banned-import
+        except ModuleNotFoundError as exc:
             # BUG: Never re-raised?
             msg = "'pyarrow>=13.0.0' is required for `Date` dtype."
             raise ModuleNotFoundError(msg) from exc

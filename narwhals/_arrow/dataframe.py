@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 from collections.abc import Collection, Iterator, Mapping, Sequence
-from functools import partial
 from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._arrow.series import ArrowSeries
-from narwhals._arrow.utils import native_to_narwhals_dtype
+from narwhals._arrow.utils import concat_tables, native_to_narwhals_dtype, repeat
 from narwhals._compliant import EagerDataFrame
 from narwhals._expression_parsing import ExprKind
 from narwhals._utils import (
@@ -41,7 +40,6 @@ if TYPE_CHECKING:
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals._arrow.typing import (  # type: ignore[attr-defined]
         ChunkedArrayAny,
-        Mask,
         Order,
     )
     from narwhals._compliant.typing import CompliantDataFrameAny, CompliantLazyFrameAny
@@ -73,7 +71,6 @@ if TYPE_CHECKING:
         "right outer",
         "full outer",
     ]
-    PromoteOptions: TypeAlias = Literal["none", "default", "permissive"]
 
 
 class ArrowDataFrame(
@@ -518,12 +515,9 @@ class ArrowDataFrame(
             row_index = (rank.over(partition_by=[], order_by=order_by) - 1).alias(name)
         return self.select(row_index, plx.all())
 
-    def filter(self, predicate: ArrowExpr | list[bool | None]) -> Self:
-        if isinstance(predicate, list):
-            mask_native: Mask | ChunkedArrayAny = predicate
-        else:
-            # `[0]` is safe as the predicate's expression only returns a single column
-            mask_native = self._evaluate_into_exprs(predicate)[0].native
+    def filter(self, predicate: ArrowExpr) -> Self:
+        # `[0]` is safe as the predicate's expression only returns a single column
+        mask_native = self._evaluate_into_exprs(predicate)[0].native
         return self._with_native(
             self.native.filter(mask_native), validate_column_names=False
         )
@@ -794,34 +788,19 @@ class ArrowDataFrame(
         variable_name: str,
         value_name: str,
     ) -> Self:
-        n_rows = len(self)
-        index_ = [] if index is None else index
-        on_ = [c for c in self.columns if c not in index_] if on is None else on
-        concat = (
-            partial(pa.concat_tables, promote_options="permissive")
-            if self._backend_version >= (14, 0, 0)
-            else pa.concat_tables
-        )
-        names = [*index_, variable_name, value_name]
-        return self._with_native(
-            concat(
-                [
-                    pa.Table.from_arrays(
-                        [
-                            *(self.native.column(idx_col) for idx_col in index_),
-                            cast(
-                                "ChunkedArrayAny",
-                                pa.array([on_col] * n_rows, pa.string()),
-                            ),
-                            self.native.column(on_col),
-                        ],
-                        names=names,
-                    )
-                    for on_col in on_
-                ]
-            )
-        )
         # TODO(Unassigned): Even with promote_options="permissive", pyarrow does not
         # upcast numeric to non-numeric (e.g. string) datatypes
+        n = len(self)
+        index = [] if index is None else list(index)
+        on_ = (c for c in self.columns if c not in index) if on is None else iter(on)
+        index_cols = self.native.select(index)
+        column = self.native.column
+        tables = (
+            index_cols.append_column(variable_name, repeat(name, n)).append_column(
+                value_name, column(name)
+            )
+            for name in on_
+        )
+        return self._with_native(concat_tables(tables, "permissive"))
 
     pivot = not_implemented()

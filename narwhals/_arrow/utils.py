@@ -7,7 +7,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._compliant import EagerSeriesNamespace
-from narwhals._utils import Version, isinstance_or_issubclass
+from narwhals._utils import Implementation, Version, isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping
@@ -21,7 +21,9 @@ if TYPE_CHECKING:
         ArrayOrScalarT1,
         ArrayOrScalarT2,
         ChunkedArrayAny,
+        Incomplete,
         NativeIntervalUnit,
+        PromoteOptions,
         ScalarAny,
     )
     from narwhals._duration import IntervalUnit
@@ -56,6 +58,9 @@ else:
         is_list,
         is_timestamp,
     )
+
+BACKEND_VERSION = Implementation.PYARROW._backend_version()
+"""Static backend version for `pyarrow`."""
 
 UNITS_DICT: Mapping[IntervalUnit, NativeIntervalUnit] = {
     "y": "year",
@@ -103,12 +108,29 @@ def nulls_like(n: int, series: ArrowSeries) -> ArrayAny:
     return pa.nulls(n, series.native.type)
 
 
+def repeat(
+    value: PythonLiteral | ScalarAny, n: int, /, dtype: pa.DataType | None = None
+) -> ArrayAny:
+    """Create an Array instance whose slots are the given scalar.
+
+    *Optionally*, casting to `dtype` **before** repeating `n` times.
+    """
+    lit_: Incomplete = lit
+    return pa.repeat(lit_(value, type=dtype), n)
+
+
 def zeros(n: int, /) -> pa.Int64Array:
     return pa.repeat(0, n)
 
 
+def native_to_narwhals_dtype(dtype: pa.DataType, version: Version) -> DType:
+    if isinstance(dtype, pa.ExtensionType):
+        return version.dtypes.Unknown()
+    return native_non_extension_to_narwhals_dtype(dtype, version)
+
+
 @lru_cache(maxsize=16)
-def native_to_narwhals_dtype(dtype: pa.DataType, version: Version) -> DType:  # noqa: C901, PLR0912
+def native_non_extension_to_narwhals_dtype(dtype: pa.DataType, version: Version) -> DType:  # noqa: C901, PLR0912
     dtypes = version.dtypes
     if pa.types.is_int64(dtype):
         return dtypes.Int64()
@@ -423,15 +445,14 @@ def pad_series(
     offset_left = window_size // 2
     # subtract one if window_size is even
     offset_right = offset_left - (window_size % 2 == 0)
-    pad_left = pa.array([None] * offset_left, type=series._type)
-    pad_right = pa.array([None] * offset_right, type=series._type)
-    concat = pa.concat_arrays([pad_left, *series.native.chunks, pad_right])
-    return series._with_native(concat), offset_left + offset_right
+    chunks = series.native.chunks
+    arrays = nulls_like(offset_left, series), *chunks, nulls_like(offset_right, series)
+    return series._with_native(pa.concat_arrays(arrays)), offset_left + offset_right
 
 
 def cast_to_comparable_string_types(
-    *chunked_arrays: ChunkedArrayAny, separator: str
-) -> tuple[Iterator[ChunkedArrayAny], ScalarAny]:
+    *chunked_arrays: ChunkedArrayAny | ScalarAny, separator: str
+) -> tuple[Iterator[ChunkedArrayAny | ScalarAny], ScalarAny]:
     # Ensure `chunked_arrays` are either all `string` or all `large_string`.
     dtype = (
         pa.string()  # (PyArrow default)
@@ -439,6 +460,28 @@ def cast_to_comparable_string_types(
         else pa.large_string()
     )
     return (ca.cast(dtype) for ca in chunked_arrays), lit(separator, dtype)
+
+
+if BACKEND_VERSION >= (14,):
+    # https://arrow.apache.org/docs/14.0/python/generated/pyarrow.concat_tables.html
+    _PROMOTE: Mapping[PromoteOptions, Mapping[str, Any]] = {
+        "default": {"promote_options": "default"},
+        "permissive": {"promote_options": "permissive"},
+        "none": {"promote_options": "none"},
+    }
+else:  # pragma: no cover
+    # https://arrow.apache.org/docs/13.0/python/generated/pyarrow.concat_tables.html
+    _PROMOTE = {
+        "default": {"promote": True},
+        "permissive": {"promote": True},
+        "none": {"promote": False},
+    }
+
+
+def concat_tables(
+    tables: Iterable[pa.Table], promote_options: PromoteOptions = "none"
+) -> pa.Table:
+    return pa.concat_tables(tables, **_PROMOTE[promote_options])
 
 
 class ArrowSeriesNamespace(EagerSeriesNamespace["ArrowSeries", "ChunkedArrayAny"]): ...

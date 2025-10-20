@@ -5,7 +5,7 @@ from operator import and_
 from typing import TYPE_CHECKING, Any
 
 from narwhals._exceptions import issue_warning
-from narwhals._namespace import is_native_spark_like
+from narwhals._native import is_native_spark_like
 from narwhals._spark_like.utils import (
     catch_pyspark_connect_exception,
     catch_pyspark_sql_exception,
@@ -19,6 +19,7 @@ from narwhals._sql.dataframe import SQLLazyFrame
 from narwhals._utils import (
     Implementation,
     ValidateBackendVersion,
+    extend_bool,
     generate_temporary_column_name,
     not_implemented,
     parse_columns_to_drop,
@@ -325,9 +326,7 @@ class SparkLikeLazyFrame(
         return SparkLikeLazyGroupBy(self, keys, drop_null_keys=drop_null_keys)
 
     def sort(self, *by: str, descending: bool | Sequence[bool], nulls_last: bool) -> Self:
-        if isinstance(descending, bool):
-            descending = [descending] * len(by)
-
+        descending = extend_bool(descending, len(by))
         if nulls_last:
             sort_funcs = (
                 self._F.desc_nulls_last if d else self._F.asc_nulls_last
@@ -343,9 +342,8 @@ class SparkLikeLazyFrame(
         return self._with_native(self.native.sort(*sort_cols))
 
     def top_k(self, k: int, *, by: Iterable[str], reverse: bool | Sequence[bool]) -> Self:
-        by = list(by)
-        if isinstance(reverse, bool):
-            reverse = [reverse] * len(by)
+        by = tuple(by)
+        reverse = extend_bool(reverse, len(by))
         sort_funcs = (
             self._F.desc_nulls_last if not d else self._F.asc_nulls_last for d in reverse
         )

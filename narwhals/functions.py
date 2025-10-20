@@ -42,6 +42,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias, TypeIs
 
     from narwhals._compliant import CompliantExpr, CompliantNamespace
+    from narwhals._native import NativeDataFrame, NativeLazyFrame, NativeSeries
     from narwhals._translate import IntoArrowTable
     from narwhals._typing import Backend, EagerAllowed, IntoBackend
     from narwhals.dataframe import DataFrame, LazyFrame
@@ -52,9 +53,6 @@ if TYPE_CHECKING:
         IntoDType,
         IntoExpr,
         IntoSchema,
-        NativeDataFrame,
-        NativeLazyFrame,
-        NativeSeries,
         NonNestedLiteral,
         _1DArray,
         _2DArray,
@@ -147,7 +145,7 @@ def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> FrameT
     if not items:
         msg = "No items to concatenate."
         raise ValueError(msg)
-    items = list(items)
+    items = tuple(items)
     validate_laziness(items)
     if how not in {"horizontal", "vertical", "diagonal"}:  # pragma: no cover
         msg = "Only vertical, horizontal and diagonal concatenations are supported."

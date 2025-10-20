@@ -72,6 +72,7 @@ def test_cast_date_datetime_pyarrow() -> None:
 @pytest.mark.skipif(PANDAS_VERSION < (2, 0, 0), reason="pyarrow dtype not available")
 def test_cast_date_datetime_pandas() -> None:
     pytest.importorskip("pandas")
+    pytest.importorskip("pyarrow")
     import pandas as pd
 
     # pandas: pyarrow date to datetime

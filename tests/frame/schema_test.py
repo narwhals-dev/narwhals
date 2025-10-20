@@ -94,6 +94,7 @@ def test_actual_object(
 @pytest.mark.skipif(PANDAS_VERSION < (2, 0, 0), reason="too old")
 def test_dtypes() -> None:
     pytest.importorskip("polars")
+    pytest.importorskip("pyarrow")
     import polars as pl
 
     df_pl = pl.DataFrame(
@@ -387,6 +388,12 @@ def test_all_nulls_pandas() -> None:
 def test_schema_to_pandas(
     dtype_backend: DTypeBackend | Sequence[DTypeBackend] | None, expected: dict[str, Any]
 ) -> None:
+    if (
+        dtype_backend == "pyarrow"
+        or (isinstance(dtype_backend, list) and "pyarrow" in dtype_backend)
+    ) and PANDAS_VERSION < (1, 5):
+        pytest.skip()
+    pytest.importorskip("pyarrow")
     schema = nw.Schema(
         {
             "a": nw.Int64(),

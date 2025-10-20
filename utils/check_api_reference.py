@@ -118,48 +118,48 @@ top_level_functions = [
 
 documented = read_documented_members(DIR_API_REF / "narwhals.md")
 if missing := set(top_level_functions).difference(documented).difference({"annotations"}):
-    print("top-level functions: not documented")  # noqa: T201
-    print(missing)  # noqa: T201
+    print("top-level functions: not documented")
+    print(missing)
     ret = 1
 if extra := set(documented).difference(top_level_functions):
-    print("top-level functions: outdated")  # noqa: T201
-    print(extra)  # noqa: T201
+    print("top-level functions: outdated")
+    print(extra)
     ret = 1
 
 # DataFrame methods
 dataframe_methods = list(iter_api_reference_names(nw.DataFrame))
 documented = read_documented_members(DIR_API_REF / "dataframe.md")
 if missing := set(dataframe_methods).difference(documented):
-    print("DataFrame: not documented")  # noqa: T201
-    print(missing)  # noqa: T201
+    print("DataFrame: not documented")
+    print(missing)
     ret = 1
 if extra := set(documented).difference(dataframe_methods):
-    print("DataFrame: outdated")  # noqa: T201
-    print(extra)  # noqa: T201
+    print("DataFrame: outdated")
+    print(extra)
     ret = 1
 
 # LazyFrame methods
 lazyframe_methods = list(iter_api_reference_names(nw.LazyFrame))
 documented = read_documented_members(DIR_API_REF / "lazyframe.md")
 if missing := set(lazyframe_methods).difference(documented):
-    print("LazyFrame: not documented")  # noqa: T201
-    print(missing)  # noqa: T201
+    print("LazyFrame: not documented")
+    print(missing)
     ret = 1
 if extra := set(documented).difference(lazyframe_methods):
-    print("LazyFrame: outdated")  # noqa: T201
-    print(extra)  # noqa: T201
+    print("LazyFrame: outdated")
+    print(extra)
     ret = 1
 
 # Series methods
 series_methods = list(iter_api_reference_names(nw.Series))
 documented = read_documented_members(DIR_API_REF / "series.md")
 if missing := set(series_methods).difference(documented).difference(NAMESPACES):
-    print("Series: not documented")  # noqa: T201
-    print(missing)  # noqa: T201
+    print("Series: not documented")
+    print(missing)
     ret = 1
 if extra := set(documented).difference(series_methods):
-    print("Series: outdated")  # noqa: T201
-    print(extra)  # noqa: T201
+    print("Series: outdated")
+    print(extra)
     ret = 1
 
 # Series.{cat, dt, list, str} methods
@@ -171,24 +171,24 @@ for namespace in NAMESPACES.difference({"name"}):
     ]
     documented = read_documented_members(DIR_API_REF / f"series_{namespace}.md")
     if missing := set(series_ns_methods).difference(documented):
-        print(f"Series.{namespace}: not documented")  # noqa: T201
-        print(missing)  # noqa: T201
+        print(f"Series.{namespace}: not documented")
+        print(missing)
         ret = 1
     if extra := set(documented).difference(series_ns_methods):
-        print(f"Series.{namespace}: outdated")  # noqa: T201
-        print(extra)  # noqa: T201
+        print(f"Series.{namespace}: outdated")
+        print(extra)
         ret = 1
 
 # Expr methods
 expr_methods = list(iter_api_reference_names(nw.Expr))
 documented = read_documented_members(DIR_API_REF / "expr.md")
 if missing := set(expr_methods).difference(documented).difference(NAMESPACES):
-    print("Expr: not documented")  # noqa: T201
-    print(missing)  # noqa: T201
+    print("Expr: not documented")
+    print(missing)
     ret = 1
 if extra := set(documented).difference(expr_methods):
-    print("Expr: outdated")  # noqa: T201
-    print(extra)  # noqa: T201
+    print("Expr: outdated")
+    print(extra)
     ret = 1
 
 # Expr.{cat, dt, list, name, str} methods
@@ -200,24 +200,24 @@ for namespace in NAMESPACES:
     ]
     documented = read_documented_members(DIR_API_REF / f"expr_{namespace}.md")
     if missing := set(expr_ns_methods).difference(documented):
-        print(f"Expr.{namespace}: not documented")  # noqa: T201
-        print(missing)  # noqa: T201
+        print(f"Expr.{namespace}: not documented")
+        print(missing)
         ret = 1
     if extra := set(documented).difference(expr_ns_methods):
-        print(f"Expr.{namespace}: outdated")  # noqa: T201
-        print(extra)  # noqa: T201
+        print(f"Expr.{namespace}: outdated")
+        print(extra)
         ret = 1
 
 # DTypes
 dtypes = list(iter_api_reference_names_dtypes(nw.dtypes))
 documented = read_documented_members(DIR_API_REF / "dtypes.md")
 if missing := set(dtypes).difference(documented):
-    print("Dtype: not documented")  # noqa: T201
-    print(missing)  # noqa: T201
+    print("Dtype: not documented")
+    print(missing)
     ret = 1
 if extra := set(documented).difference(dtypes):
-    print("Dtype: outdated")  # noqa: T201
-    print(extra)  # noqa: T201
+    print("Dtype: outdated")
+    print(extra)
     ret = 1
 
 # Schema
@@ -228,22 +228,22 @@ if (
     .difference(documented)
     .difference(iter_api_reference_names(OrderedDict))
 ):
-    print("Schema: not documented")  # noqa: T201
-    print(missing)  # noqa: T201
+    print("Schema: not documented")
+    print(missing)
     ret = 1
 if extra := set(documented).difference(schema_methods):
-    print("Schema: outdated")  # noqa: T201
-    print(extra)  # noqa: T201
+    print("Schema: outdated")
+    print(extra)
     ret = 1
 
 # Check Expr vs Series
 if missing := set(expr_methods).difference(series_methods).difference(EXPR_ONLY_METHODS):
-    print("In Expr but not in Series")  # noqa: T201
-    print(missing)  # noqa: T201
+    print("In Expr but not in Series")
+    print(missing)
     ret = 1
 if extra := set(series_methods).difference(expr_methods).difference(SERIES_ONLY_METHODS):
-    print("In Series but not in Expr")  # noqa: T201
-    print(extra)  # noqa: T201
+    print("In Series but not in Expr")
+    print(extra)
     ret = 1
 
 # Check Expr vs Series internal methods
@@ -259,12 +259,12 @@ for namespace in NAMESPACES.difference({"name"}):
         if not i[0].isupper() and i[0] != "_"
     ]
     if missing := set(expr_internal).difference(series_internal):
-        print(f"In Expr.{namespace} but not in Series.{namespace}")  # noqa: T201
-        print(missing)  # noqa: T201
+        print(f"In Expr.{namespace} but not in Series.{namespace}")
+        print(missing)
         ret = 1
     if extra := set(series_internal).difference(expr_internal):
-        print(f"In Series.{namespace} but not in Expr.{namespace}")  # noqa: T201
-        print(extra)  # noqa: T201
+        print(f"In Series.{namespace} but not in Expr.{namespace}")
+        print(extra)
         ret = 1
 
 sys.exit(ret)
