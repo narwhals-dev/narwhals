@@ -27,11 +27,6 @@ def data() -> Data:
     }
 
 
-XFAIL_NO_CUM_SUM = pytest.mark.xfail(
-    reason="Not implemented `CompliantExpr.cum_sum`", raises=NotImplementedError
-)
-
-
 @pytest.mark.parametrize(
     "partition_by",
     [
