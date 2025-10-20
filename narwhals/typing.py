@@ -35,29 +35,6 @@ if TYPE_CHECKING:
     from narwhals.schema import Schema
     from narwhals.series import Series
 
-    # All dataframes supported by Narwhals have a
-    # `columns` property. Their similarities don't extend
-    # _that_ much further unfortunately...
-    class NativeFrame(Protocol):
-        @property
-        def columns(self) -> Any: ...
-
-        def join(self, *args: Any, **kwargs: Any) -> Any: ...
-
-    class NativeDataFrame(Sized, NativeFrame, Protocol):
-        def drop(self, *args: Any, **kwargs: Any) -> Any: ...
-
-    class NativeLazyFrame(NativeFrame, Protocol):
-        def explain(self, *args: Any, **kwargs: Any) -> Any: ...
-
-    # Needs to have something `NativeDataFrame` doesn't?
-    class NativeSeries(Sized, Iterable[Any], Protocol):
-        def filter(self, *args: Any, **kwargs: Any) -> Any: ...
-        # `pd.DataFrame` has this - the others don't
-        def value_counts(self, *args: Any, **kwargs: Any) -> Any: ...
-        # `pl.DataFrame` has this - the others don't
-        def unique(self, *args: Any, **kwargs: Any) -> Any: ...
-
     class SupportsNativeNamespace(Protocol):
         def __native_namespace__(self) -> ModuleType: ...
 
