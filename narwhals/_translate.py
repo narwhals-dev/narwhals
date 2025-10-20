@@ -187,50 +187,114 @@ class ToNarwhals(Protocol[ToNarwhalsT_co]):
         ...
 
 
-class ExcludeSeries(TypedDict, total=False):
-    pass_through: bool
+class _ExcludeSeries(TypedDict, total=False):
     eager_only: bool
     series_only: Literal[False]
     allow_series: Literal[False] | None
 
 
-class AllowSeries(TypedDict, total=False):
+class ExcludeSeries(_ExcludeSeries, total=False):
     pass_through: bool
+
+
+class _AllowSeries(TypedDict, total=False):
     eager_only: bool
     series_only: Literal[False]
     allow_series: Required[Literal[True]]
 
 
-class OnlySeries(TypedDict, total=False):
+class AllowSeries(_AllowSeries, total=False):
     pass_through: bool
+
+
+class _OnlySeries(TypedDict, total=False):
     eager_only: bool
     series_only: Required[Literal[True]]
     allow_series: bool | None
 
 
-class OnlyEager(TypedDict, total=False):
+class OnlySeries(_OnlySeries, total=False):
     pass_through: bool
+
+
+class _OnlyEager(TypedDict, total=False):
     eager_only: Required[Literal[True]]
     series_only: bool
     allow_series: bool | None
 
 
-class AllowLazy(TypedDict, total=False):
+class OnlyEager(_OnlyEager, total=False):
     pass_through: bool
+
+
+class _AllowLazy(TypedDict, total=False):
     eager_only: Literal[False]
     series_only: Literal[False]
     allow_series: bool | None
 
 
-class AllowAny(TypedDict, total=False):
+class AllowLazy(_AllowLazy, total=False):
     pass_through: bool
+
+
+class _AllowAny(TypedDict, total=False):
     eager_only: Literal[False]
     series_only: Literal[False]
     allow_series: Required[Literal[True]]
 
 
-class PassThroughUnknown(TypedDict, total=False):
-    pass_through: Required[Literal[True]]
+class AllowAny(_AllowAny, total=False):
+    pass_through: bool
+
+
+class _Unknown(TypedDict, total=False):
     eager_only: bool
     series_only: bool
     allow_series: bool | None
+
+
+class PassThroughUnknown(_Unknown, total=False):
+    pass_through: Required[Literal[True]]
+
+
+class PassThroughUnknownV1(_Unknown, total=False):
+    pass_through: Required[Literal[True]]
+    eager_or_interchange_only: bool
+
+
+class StrictUnknownV1(_Unknown, total=False):
+    strict: Required[Literal[False]]
+    eager_or_interchange_only: bool
+
+
+# NOTE: Define everything *without* `pass_through`
+# inherit to add that and then independently for v1 for `strict`
+# which also needs `eager_or_interchange_only`
+class V1(TypedDict, total=False):
+    # mutually exclusive and both include `None` here? :sad:
+    # - Ok
+    #   - None, None
+    #   - bool, None
+    #   - None, bool
+    # - Bad
+    #   - bool, bool
+    strict: bool | None  # None
+    pass_through: bool | None  # None
+
+    # these guys are mutually exclusive *only* when both are `True`
+    # - Ok
+    #   - False, False
+    #   - True, False
+    #   - False, True
+    # - Bad
+    #   - True, True
+    #   - bool, bool
+    #   - True, bool
+    #   - bool, True
+    eager_only: bool  # False
+    # no lazyframe
+    eager_or_interchange_only: bool  # False
+
+    # same as others
+    series_only: bool  # False
+    allow_series: bool | None  # None
