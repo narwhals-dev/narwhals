@@ -37,7 +37,6 @@ if TYPE_CHECKING:
         AllowLazy,
         AllowSeries,
         ExcludeSeries,
-        OnlyEager,  # noqa: F401  # TODO @dangotbanned: Figure out why wasn't this used?
         OnlySeries,
         PassThroughUnknown,
     )
