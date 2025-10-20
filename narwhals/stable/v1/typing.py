@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Protocol, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Protocol, Union
 
-from narwhals._native import IntoSeries, IntoSeriesT
+from narwhals._native import IntoSeries
+from narwhals._typing_compat import TypeVar
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
@@ -123,6 +124,9 @@ Examples:
     ...     return df.with_columns(c=df["a"] + 1)
 """
 
+LazyFrameT = TypeVar("LazyFrameT", bound="LazyFrame[Any]")
+SeriesT = TypeVar("SeriesT", bound="Series[Any]")
+IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries", default=Any)
 
 __all__ = [
     "DataFrameT",
@@ -135,4 +139,6 @@ __all__ = [
     "IntoFrameT",
     "IntoSeries",
     "IntoSeriesT",
+    "LazyFrameT",
+    "SeriesT",
 ]

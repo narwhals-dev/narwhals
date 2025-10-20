@@ -58,7 +58,16 @@ from narwhals.stable.v1.dtypes import (
     UInt128,
     Unknown,
 )
-from narwhals.stable.v1.typing import IntoDataFrameT, IntoLazyFrameT
+from narwhals.stable.v1.typing import (
+    DataFrameT,
+    IntoDataFrameT,
+    IntoFrame,
+    IntoLazyFrameT,
+    IntoSeries,
+    IntoSeriesT,
+    LazyFrameT,
+    SeriesT,
+)
 from narwhals.translate import _from_native_impl, get_native_namespace, to_py_scalar
 
 if TYPE_CHECKING:
@@ -99,9 +108,7 @@ if TYPE_CHECKING:
         FileSource,
         IntoDType,
         IntoExpr,
-        IntoFrame,
         IntoSchema,
-        IntoSeries,
         NonNestedLiteral,
         SingleColSelector,
         SingleIndexSelector,
@@ -109,14 +116,9 @@ if TYPE_CHECKING:
         _2DArray,
     )
 
-    DataFrameT = TypeVar("DataFrameT", bound="DataFrame[Any]")
-    LazyFrameT = TypeVar("LazyFrameT", bound="LazyFrame[Any]")
-    SeriesT = TypeVar("SeriesT", bound="Series[Any]")
     T = TypeVar("T", default=Any)
     P = ParamSpec("P")
     R = TypeVar("R")
-
-IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries", default=Any)
 
 
 # NOTE legit
