@@ -22,7 +22,8 @@ if TYPE_CHECKING:
     from sqlframe.duckdb import DuckDBSession
     from typing_extensions import TypeAlias
 
-    from narwhals.typing import Frame, NativeDataFrame, NativeLazyFrame, TimeUnit
+    from narwhals._native import NativeLazyFrame
+    from narwhals.typing import Frame, IntoDataFrame, TimeUnit
 
 
 def get_module_version_as_tuple(module_name: str) -> tuple[int, ...]:
@@ -42,8 +43,8 @@ PYARROW_VERSION: tuple[int, ...] = get_module_version_as_tuple("pyarrow")
 PYSPARK_VERSION: tuple[int, ...] = get_module_version_as_tuple("pyspark")
 CUDF_VERSION: tuple[int, ...] = get_module_version_as_tuple("cudf")
 
-Constructor: TypeAlias = Callable[[Any], "NativeLazyFrame | NativeDataFrame"]
-ConstructorEager: TypeAlias = Callable[[Any], "NativeDataFrame"]
+Constructor: TypeAlias = Callable[[Any], "NativeLazyFrame | IntoDataFrame"]
+ConstructorEager: TypeAlias = Callable[[Any], "IntoDataFrame"]
 ConstructorLazy: TypeAlias = Callable[[Any], "NativeLazyFrame"]
 ConstructorPandasLike: TypeAlias = Callable[[Any], "pd.DataFrame"]
 
