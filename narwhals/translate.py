@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, overload
 
 from narwhals import plugins
 from narwhals._constants import EPOCH, MS_PER_SECOND
-from narwhals._namespace import (
+from narwhals._native import (
     is_native_arrow,
     is_native_pandas_like,
     is_native_polars,
