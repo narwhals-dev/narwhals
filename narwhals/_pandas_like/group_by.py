@@ -31,14 +31,14 @@ NativeAggregation: TypeAlias = Literal[
     "any",
     "all",
     "count",
-    "first",
     "idxmax",
     "idxmin",
-    "last",
     "max",
     "mean",
     "median",
     "min",
+    "mode",
+    "nth",
     "nunique",
     "prod",
     "quantile",
@@ -57,6 +57,11 @@ _NativeAgg: TypeAlias = "Callable[[Any], pd.DataFrame | pd.Series[Any]]"
 
 NonStrHashable: TypeAlias = Any
 """Because `pandas` allows *"names"* like that 😭"""
+
+_REMAP_ORDERED_INDEX: Mapping[NarwhalsAggregation, Literal[0, -1]] = {
+    "first": 0,
+    "last": -1,
+}
 
 
 @lru_cache(maxsize=32)
@@ -115,6 +120,38 @@ class AggExpr:
             result = ns._concat_horizontal(
                 [ns.from_native(result_single).alias(name).native for name in names]
             )
+        elif self.is_mode():
+            compliant = group_by.compliant
+            if (keep := self.kwargs.get("keep")) != "any":  # pragma: no cover
+                msg = (
+                    f"`Expr.mode(keep='{keep}')` is not implemented in group by context for "
+                    f"backend {compliant._implementation}\n\n"
+                    "Hint: Use `nw.col(...).mode(keep='any')` instead."
+                )
+                raise NotImplementedError(msg)
+
+            cols = list(names)
+            native = compliant.native
+            keys, kwargs = group_by._keys, group_by._kwargs
+
+            # Implementation based on the following suggestion:
+            # https://github.com/pandas-dev/pandas/issues/19254#issuecomment-778661578
+            ns = compliant.__narwhals_namespace__()
+            result = ns._concat_horizontal(
+                [
+                    native.groupby([*keys, col], **kwargs)
+                    .size()
+                    .sort_values(ascending=False)
+                    .reset_index(col)
+                    .groupby(keys, **kwargs)[col]
+                    .head(1)
+                    .sort_index()
+                    for col in cols
+                ]
+            )
+        elif self.is_last() or self.is_first():
+            result = self.native_agg()(group_by._grouped[[*group_by._keys, *names]])
+            result.set_index(group_by._keys, inplace=True)  # noqa: PD002
         else:
             select = names[0] if len(names) == 1 else list(names)
             result = self.native_agg()(group_by._grouped[select])
@@ -126,6 +163,15 @@ class AggExpr:
 
     def is_len(self) -> bool:
         return self.leaf_name == "len"
+
+    def is_last(self) -> bool:
+        return self.leaf_name == "last"
+
+    def is_first(self) -> bool:
+        return self.leaf_name == "first"
+
+    def is_mode(self) -> bool:
+        return self.leaf_name == "mode"
 
     def is_top_level_function(self) -> bool:
         # e.g. `nw.len()`.
@@ -144,9 +190,10 @@ class AggExpr:
 
     def native_agg(self) -> _NativeAgg:
         """Return a partial `DataFrameGroupBy` method, missing only `self`."""
-        return _native_agg(
-            PandasLikeGroupBy._remap_expr_name(self.leaf_name), **self.kwargs
-        )
+        native_name = PandasLikeGroupBy._remap_expr_name(self.leaf_name)
+        if self.leaf_name in _REMAP_ORDERED_INDEX:
+            return methodcaller("nth", n=_REMAP_ORDERED_INDEX[self.leaf_name])
+        return _native_agg(native_name, **self.kwargs)
 
 
 class PandasLikeGroupBy(
@@ -158,6 +205,7 @@ class PandasLikeGroupBy(
         "median": "median",
         "max": "max",
         "min": "min",
+        "mode": "mode",
         "std": "std",
         "var": "var",
         "len": "size",
@@ -166,6 +214,8 @@ class PandasLikeGroupBy(
         "quantile": "quantile",
         "all": "all",
         "any": "any",
+        "first": "nth",
+        "last": "nth",
     }
     _original_columns: tuple[str, ...]
     """Column names *prior* to any aliasing in `ParseKeysGroupBy`."""
@@ -175,6 +225,9 @@ class PandasLikeGroupBy(
 
     _output_key_names: list[str]
     """Stores the **original** version of group keys."""
+
+    _kwargs: Mapping[str, bool]
+    """Stores keyword arguments for `DataFrame.groupby` other than `by`."""
 
     @property
     def exclude(self) -> tuple[str, ...]:
@@ -200,13 +253,14 @@ class PandasLikeGroupBy(
         native = self.compliant.native
         if set(native.index.names).intersection(self.compliant.columns):
             native = native.reset_index(drop=True)
-        self._grouped: NativeGroupBy = native.groupby(
-            self._keys.copy(),
-            sort=False,
-            as_index=True,
-            dropna=drop_null_keys,
-            observed=True,
-        )
+
+        self._kwargs = {
+            "sort": False,
+            "as_index": True,
+            "dropna": drop_null_keys,
+            "observed": True,
+        }
+        self._grouped: NativeGroupBy = native.groupby(self._keys.copy(), **self._kwargs)
 
     def agg(self, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:
         all_aggs_are_simple = True

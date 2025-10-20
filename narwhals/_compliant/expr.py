@@ -28,7 +28,12 @@ from narwhals._compliant.typing import (
     LazyExprT,
     NativeExprT,
 )
-from narwhals._utils import _StoresCompliant, qualified_type_name, zip_strict
+from narwhals._utils import (
+    _StoresCompliant,
+    not_implemented,
+    qualified_type_name,
+    zip_strict,
+)
 from narwhals.dependencies import is_numpy_array, is_numpy_scalar
 
 if TYPE_CHECKING:
@@ -45,6 +50,7 @@ if TYPE_CHECKING:
         ClosedInterval,
         FillNullStrategy,
         IntoDType,
+        ModeKeepStrategy,
         NonNestedLiteral,
         NumericLiteral,
         RankMethod,
@@ -80,6 +86,7 @@ class NativeExpr(Protocol):
 class CompliantExpr(
     CompliantColumn, Protocol[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
 ):
+    # NOTE: `narwhals`
     _implementation: Implementation
     _evaluate_output_names: EvalNames[CompliantFrameT]
     _alias_output_names: AliasNames | None
@@ -88,8 +95,14 @@ class CompliantExpr(
     def __call__(
         self, df: CompliantFrameT
     ) -> Sequence[CompliantSeriesOrNativeExprT_co]: ...
-    def __narwhals_expr__(self) -> None: ...
+    def __narwhals_expr__(self) -> Self:  # pragma: no cover
+        return self
+
     def __narwhals_namespace__(self) -> CompliantNamespace[CompliantFrameT, Self]: ...
+    @classmethod
+    def from_column_indices(
+        cls, *column_indices: int, context: _LimitedContext
+    ) -> Self: ...
     @classmethod
     def from_column_names(
         cls,
@@ -98,18 +111,11 @@ class CompliantExpr(
         *,
         context: _LimitedContext,
     ) -> Self: ...
-    @classmethod
-    def from_column_indices(
-        cls, *column_indices: int, context: _LimitedContext
+    def broadcast(
+        self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]
     ) -> Self: ...
-    @staticmethod
-    def _eval_names_indices(indices: Sequence[int], /) -> EvalNames[CompliantFrameT]:
-        def fn(df: CompliantFrameT) -> Sequence[str]:
-            column_names = df.columns
-            return [column_names[i] for i in indices]
 
-        return fn
-
+    # NOTE: `polars`
     def all(self) -> Self: ...
     def any(self) -> Self: ...
     def count(self) -> Self: ...
@@ -118,6 +124,8 @@ class CompliantExpr(
     def mean(self) -> Self: ...
     def sum(self) -> Self: ...
     def median(self) -> Self: ...
+    def first(self) -> Self: ...
+    def last(self) -> Self: ...
     def skew(self) -> Self: ...
     def kurtosis(self) -> Self: ...
     def std(self, *, ddof: int) -> Self: ...
@@ -136,42 +144,45 @@ class CompliantExpr(
         *,
         returns_scalar: bool,
     ) -> Self: ...
-    def broadcast(
-        self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]
-    ) -> Self: ...
-    def _is_multi_output_unnamed(self) -> bool:
-        """Return `True` for multi-output aggregations without names.
-
-        For example, column `'a'` only appears in the output as a grouping key:
-
-            df.group_by('a').agg(nw.all().sum())
-
-        It does not get included in:
-
-            nw.all().sum().
-        """
-        assert self._metadata is not None  # noqa: S101
-        return self._metadata.expansion_kind.is_multi_unnamed()
-
-    def _evaluate_aliases(
-        self: CompliantExpr[CompliantFrameT, Any], frame: CompliantFrameT, /
-    ) -> Sequence[str]:
-        names = self._evaluate_output_names(frame)
-        return alias(names) if (alias := self._alias_output_names) else names
-
     @property
     def name(self) -> NameNamespace[Self]: ...
 
 
-class DepthTrackingExpr(
+class ImplExpr(
     CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co],
+    Protocol[CompliantFrameT, CompliantSeriesOrNativeExprT_co],
+):
+    @staticmethod
+    def _eval_names_indices(indices: Sequence[int], /) -> EvalNames[CompliantFrameT]:
+        def fn(df: CompliantFrameT) -> Sequence[str]:
+            column_names = df.columns
+            return [column_names[i] for i in indices]
+
+        return fn
+
+    def _evaluate_aliases(self, frame: CompliantFrameT, /) -> Sequence[str]:
+        # NOTE: Ignore intermittent [False Negative]
+        # Argument of type "CompliantFrameT@ImplExpr" cannot be assigned to parameter of type "CompliantFrameT@ImplExpr"
+        #  Type "CompliantFrameT@ImplExpr" is not assignable to type "CompliantFrameT@ImplExpr"
+        names = self._evaluate_output_names(frame)  # pyright: ignore[reportArgumentType]
+        return alias(names) if (alias := self._alias_output_names) else names
+
+
+class DepthTrackingExpr(
+    ImplExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co],
     Protocol[CompliantFrameT, CompliantSeriesOrNativeExprT_co],
 ):
     _depth: int
     _function_name: str
 
+    # NOTE: pyright bug?
+    # Method "from_column_names" overrides class "CompliantExpr" in an incompatible manner
+    # Parameter 2 type mismatch: base parameter is type "EvalNames[CompliantFrameT@DepthTrackingExpr]", override parameter is type "EvalNames[CompliantFrameT@DepthTrackingExpr]"
+    #   Type "EvalNames[CompliantFrameT@DepthTrackingExpr]" is not assignable to type "EvalNames[CompliantFrameT@DepthTrackingExpr]"
+    #     Parameter 1: type "CompliantFrameT@DepthTrackingExpr" is incompatible with type "CompliantFrameT@DepthTrackingExpr"
+    #       Type "CompliantFrameT@DepthTrackingExpr" is not assignable to type "CompliantFrameT@DepthTrackingExpr"
     @classmethod
-    def from_column_names(
+    def from_column_names(  # pyright: ignore[reportIncompatibleMethodOverride]
         cls: type[Self],
         evaluate_column_names: EvalNames[CompliantFrameT],
         /,
@@ -227,8 +238,6 @@ class EagerExpr(
     def __narwhals_namespace__(
         self,
     ) -> EagerNamespace[EagerDataFrameT, EagerSeriesT, Self, Any, Any]: ...
-    def __narwhals_expr__(self) -> None: ...
-
     @classmethod
     def _from_callable(
         cls,
@@ -377,12 +386,13 @@ class EagerExpr(
             series._from_scalar(method(series)) if returns_scalar else method(series)
             for series in self(df)
         ]
-        aliases = self._evaluate_aliases(df)
-        if [s.name for s in out] != list(aliases):  # pragma: no cover
+        aliases, names = self._evaluate_aliases(df), (s.name for s in out)
+        if any(
+            alias != name for alias, name in zip_strict(aliases, names)
+        ):  # pragma: no cover
             msg = (
                 f"Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues\n"
                 f"Expression aliases: {aliases}\n"
-                f"Series names: {[s.name for s in out]}"
             )
             raise AssertionError(msg)
         return out
@@ -590,6 +600,9 @@ class EagerExpr(
     def is_nan(self) -> Self:
         return self._reuse_series("is_nan")
 
+    def fill_nan(self, value: float | None) -> Self:
+        return self._reuse_series("fill_nan", value=value)
+
     def fill_null(
         self,
         value: Self | NonNestedLiteral,
@@ -696,14 +709,20 @@ class EagerExpr(
     def round(self, decimals: int) -> Self:
         return self._reuse_series("round", decimals=decimals)
 
+    def floor(self) -> Self:
+        return self._reuse_series("floor")
+
+    def ceil(self) -> Self:
+        return self._reuse_series("ceil")
+
     def len(self) -> Self:
         return self._reuse_series("len", returns_scalar=True)
 
     def gather_every(self, n: int, offset: int) -> Self:
         return self._reuse_series("gather_every", n=n, offset=offset)
 
-    def mode(self) -> Self:
-        return self._reuse_series("mode")
+    def mode(self, *, keep: ModeKeepStrategy) -> Self:
+        return self._reuse_series("mode", scalar_kwargs={"keep": keep})
 
     def is_finite(self) -> Self:
         return self._reuse_series("is_finite")
@@ -857,6 +876,12 @@ class EagerExpr(
             nans_equal=nans_equal,
         )
 
+    def first(self) -> Self:
+        return self._reuse_series("first", returns_scalar=True)
+
+    def last(self) -> Self:
+        return self._reuse_series("last", returns_scalar=True)
+
     @property
     def cat(self) -> EagerExprCatNamespace[Self]:
         return EagerExprCatNamespace(self)
@@ -884,8 +909,7 @@ class EagerExpr(
 
 # mypy thinks `NativeExprT` should be covariant, pyright thinks it should be invariant
 class LazyExpr(  # type: ignore[misc]
-    CompliantExpr[CompliantLazyFrameT, NativeExprT],
-    Protocol[CompliantLazyFrameT, NativeExprT],
+    ImplExpr[CompliantLazyFrameT, NativeExprT], Protocol[CompliantLazyFrameT, NativeExprT]
 ):
     def _with_alias_output_names(self, func: AliasNames | None, /) -> Self: ...
     def alias(self, name: str) -> Self:
@@ -900,6 +924,12 @@ class LazyExpr(  # type: ignore[misc]
     @property
     def name(self) -> LazyExprNameNamespace[Self]:
         return LazyExprNameNamespace(self)
+
+    ewm_mean = not_implemented()  # type: ignore[misc]
+    map_batches = not_implemented()  # type: ignore[misc]
+    replace_strict = not_implemented()  # type: ignore[misc]
+
+    cat: not_implemented = not_implemented()  # type: ignore[assignment]
 
 
 class _ExprNamespace(  # type: ignore[misc]
@@ -1132,6 +1162,9 @@ class EagerExprStringNamespace(
 
     def zfill(self, width: int) -> EagerExprT:
         return self.compliant._reuse_series_namespace("str", "zfill", width=width)
+
+    def to_titlecase(self) -> EagerExprT:
+        return self.compliant._reuse_series_namespace("str", "to_titlecase")
 
 
 class EagerExprStructNamespace(

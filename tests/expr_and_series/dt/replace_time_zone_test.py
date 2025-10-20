@@ -7,7 +7,13 @@ from zoneinfo import ZoneInfo
 import pytest
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION, Constructor, assert_equal_data, is_windows
+from tests.utils import (
+    PANDAS_VERSION,
+    Constructor,
+    assert_equal_data,
+    is_windows,
+    pyspark_session,
+)
 
 if TYPE_CHECKING:
     from tests.utils import ConstructorEager
@@ -136,17 +142,11 @@ def test_replace_time_zone_to_connection_tz_duckdb() -> None:
         )
 
 
-def test_replace_time_zone_to_connection_tz_pyspark(
-    constructor: Constructor,
-) -> None:  # pragma: no cover
-    if "pyspark" not in str(constructor) or "sqlframe" in str(constructor):
-        pytest.skip()
+@pytest.mark.slow
+def test_replace_time_zone_to_connection_tz_pyspark() -> None:  # pragma: no cover
     pytest.importorskip("pyspark")
-    from pyspark.sql import SparkSession
 
-    session = SparkSession.builder.config(
-        "spark.sql.session.timeZone", "UTC"
-    ).getOrCreate()
+    session = pyspark_session()
     df = nw.from_native(
         session.createDataFrame([(datetime(2020, 1, 1, tzinfo=timezone.utc),)], ["a"])
     )

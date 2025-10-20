@@ -1,6 +1,7 @@
 # Test assorted functions which we overwrite in stable.v1
 from __future__ import annotations
 
+import re
 from collections import deque
 from contextlib import nullcontext as does_not_raise
 from datetime import datetime, timedelta
@@ -13,7 +14,7 @@ import pytest
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
 from narwhals._utils import Implementation
-from narwhals.exceptions import InvalidOperationError
+from narwhals.exceptions import InvalidOperationError, ShapeError
 from narwhals.stable.v1.dependencies import (
     is_cudf_dataframe,
     is_cudf_series,
@@ -33,7 +34,9 @@ from narwhals.stable.v1.dependencies import (
 )
 from narwhals.utils import Version
 from tests.utils import (
+    DUCKDB_VERSION,
     PANDAS_VERSION,
+    POLARS_VERSION,
     PYARROW_VERSION,
     Constructor,
     ConstructorEager,
@@ -47,6 +50,7 @@ if TYPE_CHECKING:
     from typing_extensions import assert_type
 
     from narwhals._typing import EagerAllowed
+    from narwhals.dtypes import DType
     from narwhals.stable.v1.typing import IntoDataFrameT
     from narwhals.typing import IntoDType, _1DArray, _2DArray
     from tests.utils import Constructor, ConstructorEager
@@ -71,6 +75,7 @@ def test_toplevel() -> None:
         mean_h=nw_v1.mean_horizontal("a"),
         len=nw_v1.len(),
         concat_str=nw_v1.concat_str(nw_v1.lit("a"), nw_v1.lit("b")),
+        fmt=nw_v1.format("{}", "a"),
         any_h=nw_v1.any_horizontal(nw_v1.lit(True), nw_v1.lit(True)),
         all_h=nw_v1.all_horizontal(nw_v1.lit(True), nw_v1.lit(True)),
         first=nw_v1.nth(0),
@@ -89,6 +94,7 @@ def test_toplevel() -> None:
         "mean_h": [1, 2, 3],
         "len": [3, 3, 3],
         "concat_str": ["ab", "ab", "ab"],
+        "fmt": ["1", "2", "3"],
         "any_h": [True, True, True],
         "all_h": [True, True, True],
         "first": [1, 2, 3],
@@ -130,6 +136,9 @@ def test_constructors() -> None:
     assert_equal_data(result, {"a": [1, 2, 3]})
     assert isinstance(result, nw_v1.DataFrame)
     result = nw_v1.from_arrow(pd.DataFrame({"a": [1, 2, 3]}), backend="pandas")
+    assert_equal_data(result, {"a": [1, 2, 3]})
+    assert isinstance(result, nw_v1.DataFrame)
+    result = nw_v1.from_dicts([{"a": 1}, {"a": 2}, {"a": 3}], backend="pandas")
     assert_equal_data(result, {"a": [1, 2, 3]})
     assert isinstance(result, nw_v1.DataFrame)
 
@@ -300,10 +309,8 @@ def test_cast_to_enum_v1(
 
     df_native = constructor({"a": ["a", "b"]})
 
-    with pytest.raises(
-        NotImplementedError,
-        match="Converting to Enum is not supported in narwhals.stable.v1",
-    ):
+    msg = re.escape("Converting to Enum is not supported in narwhals.stable.v1")
+    with pytest.raises(NotImplementedError, match=msg):
         nw_v1.from_native(df_native).select(nw_v1.col("a").cast(nw_v1.Enum))  # type: ignore[arg-type]
 
 
@@ -416,6 +423,8 @@ def test_all_horizontal() -> None:
 
 
 def test_with_row_index(constructor: Constructor) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
     data = {"abc": ["foo", "bars"], "xyz": [100, 200], "const": [42, 42]}
 
     frame = nw_v1.from_native(constructor(data))
@@ -797,10 +806,10 @@ def test_narwhalify_backends_cross() -> None:
     ) -> tuple[Any, Any, int]:  # pragma: no cover
         return arg1, arg2, extra
 
-    with pytest.raises(
-        ValueError,
-        match="Found multiple backends. Make sure that all dataframe/series inputs come from the same backend.",
-    ):
+    msg = re.escape(
+        "Found multiple backends. Make sure that all dataframe/series inputs come from the same backend."
+    )
+    with pytest.raises(ValueError, match=msg):
         func(pd.DataFrame(data), pl.DataFrame(data))
 
 
@@ -818,10 +827,10 @@ def test_narwhalify_backends_cross2() -> None:
     ) -> tuple[Any, Any, int]:  # pragma: no cover
         return arg1, arg2, extra
 
-    with pytest.raises(
-        ValueError,
-        match="Found multiple backends. Make sure that all dataframe/series inputs come from the same backend.",
-    ):
+    msg = re.escape(
+        "Found multiple backends. Make sure that all dataframe/series inputs come from the same backend."
+    )
+    with pytest.raises(ValueError, match=msg):
         func(pl.DataFrame(data), pd.Series(data["a"]))
 
 
@@ -976,6 +985,16 @@ def test_dataframe_from_dict(eager_backend: EagerAllowed) -> None:
     assert isinstance(result, nw_v1.DataFrame)
 
 
+def test_dataframe_from_dicts(eager_backend: EagerAllowed) -> None:
+    schema = {"c": nw_v1.Int16(), "d": nw_v1.Float32()}
+    result = nw_v1.DataFrame.from_dicts(
+        [{"c": 1, "d": 5}, {"c": 2, "d": 6}], backend=eager_backend, schema=schema
+    )
+    assert result.collect_schema() == schema
+    assert result._version is Version.V1
+    assert isinstance(result, nw_v1.DataFrame)
+
+
 def test_dataframe_from_arrow(eager_backend: EagerAllowed) -> None:
     pytest.importorskip("pyarrow")
     import pyarrow as pa
@@ -1073,3 +1092,35 @@ def test_series_from_iterable(
     if dtype:
         assert result.dtype == dtype
     assert_equal_series(result, expected, name)
+
+
+def test_mode_single_expr(constructor_eager: ConstructorEager) -> None:
+    data = {"a": [1, 1, 2, 2, 3], "b": [1, 2, 3, 3, 4]}
+    df = nw_v1.from_native(constructor_eager(data))
+    result = df.select(nw_v1.col("a").mode()).sort("a")
+    expected = {"a": [1, 2]}
+    assert_equal_data(result, expected)
+
+
+def test_mode_series(constructor_eager: ConstructorEager) -> None:
+    data = {"a": [1, 1, 2, 2, 3], "b": [1, 2, 3, 3, 4]}
+    series = nw_v1.from_native(constructor_eager(data), eager_only=True)["a"]
+    result = series.mode().sort()
+    expected = {"a": [1, 2]}
+    assert_equal_data({"a": result}, expected)
+
+
+def test_mode_different_lengths(constructor_eager: ConstructorEager) -> None:
+    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 10):
+        pytest.skip()
+    df = nw_v1.from_native(constructor_eager({"a": [1, 1, 2], "b": [4, 5, 6]}))
+    with pytest.raises(ShapeError):
+        df.select(nw_v1.col("a", "b").mode())
+
+
+@pytest.mark.parametrize(
+    "dtype", [nw_v1.Datetime(), nw_v1.Duration(), nw_v1.Enum()], ids=str
+)
+def test_dtype___slots__(dtype: DType) -> None:
+    with pytest.raises(AttributeError):
+        dtype.i_also_dont_exist = 528329  # type: ignore[attr-defined]

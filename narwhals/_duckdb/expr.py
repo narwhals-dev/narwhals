@@ -13,14 +13,16 @@ from narwhals._duckdb.utils import (
     DeferredTimeZone,
     F,
     col,
+    generate_order_by_sql,
     lit,
     narwhals_to_native_dtype,
+    sql_expression,
     when,
     window_expression,
 )
 from narwhals._expression_parsing import ExprKind, ExprMetadata
 from narwhals._sql.expr import SQLExpr
-from narwhals._utils import Implementation, Version
+from narwhals._utils import Implementation, Version, extend_bool
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -93,7 +95,21 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
             nulls_last=nulls_last,
         )
 
-    def __narwhals_expr__(self) -> None: ...
+    def _first_last(
+        self, function: str, expr: Expression, order_by: Sequence[str], /
+    ) -> Expression:
+        # https://github.com/duckdb/duckdb/discussions/19252
+        flags = extend_bool(False, len(order_by))
+        order_by_sql = generate_order_by_sql(
+            *order_by, descending=flags, nulls_last=flags
+        )
+        return sql_expression(f"{function}({expr} {order_by_sql})")
+
+    def _first(self, expr: Expression, *order_by: str) -> Expression:
+        return self._first_last("first", expr, order_by)
+
+    def _last(self, expr: Expression, *order_by: str) -> Expression:
+        return self._first_last("last", expr, order_by)
 
     def __narwhals_namespace__(self) -> DuckDBNamespace:  # pragma: no cover
         from narwhals._duckdb.namespace import DuckDBNamespace
@@ -148,6 +164,8 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
         return self._with_elementwise(invert)
 
     def skew(self) -> Self:
+        W = self._window_expression  # noqa: N806
+
         def func(expr: Expression) -> Expression:
             count = F("count", expr)
             # Adjust population skewness by correction factor to get sample skewness
@@ -162,7 +180,26 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
                 )
             )
 
-        return self._with_callable(func)
+        def window_f(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> list[Expression]:
+            ret = []
+            for expr in self(df):
+                count = W(F("count", expr), inputs.partition_by)
+                # Adjust population skewness by correction factor to get sample skewness
+                sample_skewness = (
+                    W(F("skewness", expr), inputs.partition_by)
+                    * (count - lit(2))
+                    / F("sqrt", count * (count - lit(1)))
+                )
+                ret.append(
+                    when(count == lit(0), lit(None)).otherwise(
+                        when(count == lit(1), lit(float("nan"))).otherwise(
+                            when(count == lit(2), lit(0.0)).otherwise(sample_skewness)
+                        )
+                    )
+                )
+            return ret
+
+        return self._with_callable(func, window_f)
 
     def kurtosis(self) -> Self:
         return self._with_callable(lambda expr: F("kurtosis_pop", expr))
@@ -178,19 +215,10 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
 
         return self._with_callable(func)
 
-    def n_unique(self) -> Self:
-        def func(expr: Expression) -> Expression:
-            # https://stackoverflow.com/a/79338887/4451315
-            return F("array_unique", F("array_agg", expr)) + F(
-                "max", when(expr.isnotnull(), lit(0)).otherwise(lit(1))
-            )
-
-        return self._with_callable(func)
-
     def len(self) -> Self:
         return self._with_callable(lambda _expr: F("count"))
 
-    def std(self, ddof: int) -> Self:
+    def std(self, *, ddof: int) -> Self:
         if ddof == 0:
             return self._with_callable(lambda expr: F("stddev_pop", expr))
         if ddof == 1:
@@ -206,7 +234,7 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
 
         return self._with_callable(_std)
 
-    def var(self, ddof: int) -> Self:
+    def var(self, *, ddof: int) -> Self:
         if ddof == 0:
             return self._with_callable(lambda expr: F("var_pop", expr))
         if ddof == 1:

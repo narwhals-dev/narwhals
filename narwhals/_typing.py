@@ -16,12 +16,12 @@ _Dask: TypeAlias = Literal["dask"]
 _DuckDB: TypeAlias = Literal["duckdb"]
 _Pandas: TypeAlias = Literal["pandas"]
 _Modin: TypeAlias = Literal["modin"]
-_Cudf: TypeAlias = Literal["cudf"]
+_CuDF: TypeAlias = Literal["cudf"]
 _PySpark: TypeAlias = Literal["pyspark"]
 _SQLFrame: TypeAlias = Literal["sqlframe"]
 _PySparkConnect: TypeAlias = Literal["pyspark[connect]"]
 _Ibis: TypeAlias = Literal["ibis"]
-_PandasLike: TypeAlias = Literal[_Pandas, _Cudf, _Modin]
+_PandasLike: TypeAlias = Literal[_Pandas, _CuDF, _Modin]
 _SparkLike: TypeAlias = Literal[_PySpark, _SQLFrame, _PySparkConnect]
 _EagerOnly: TypeAlias = Literal[_PandasLike, _Arrow]
 _EagerAllowed: TypeAlias = Literal[_Polars, _EagerOnly]
@@ -31,7 +31,7 @@ _LazyAllowed: TypeAlias = Literal[_Polars, _LazyOnly]
 # `Implementation` aliases
 _PandasImpl: TypeAlias = Literal[Implementation.PANDAS]
 _ModinImpl: TypeAlias = Literal[Implementation.MODIN]
-_CudfImpl: TypeAlias = Literal[Implementation.CUDF]
+_CuDFImpl: TypeAlias = Literal[Implementation.CUDF]
 _PySparkImpl: TypeAlias = Literal[Implementation.PYSPARK]
 _SQLFrameImpl: TypeAlias = Literal[Implementation.SQLFRAME]
 _PySparkConnectImpl: TypeAlias = Literal[Implementation.PYSPARK_CONNECT]
@@ -40,7 +40,7 @@ _ArrowImpl: TypeAlias = Literal[Implementation.PYARROW]
 _DaskImpl: TypeAlias = Literal[Implementation.DASK]
 _DuckDBImpl: TypeAlias = Literal[Implementation.DUCKDB]
 _IbisImpl: TypeAlias = Literal[Implementation.IBIS]
-_PandasLikeImpl: TypeAlias = Literal[_PandasImpl, _CudfImpl, _ModinImpl]
+_PandasLikeImpl: TypeAlias = Literal[_PandasImpl, _CuDFImpl, _ModinImpl]
 _SparkLikeImpl: TypeAlias = Literal[_PySparkImpl, _SQLFrameImpl, _PySparkConnectImpl]
 _EagerOnlyImpl: TypeAlias = Literal[_PandasLikeImpl, _ArrowImpl]
 _EagerAllowedImpl: TypeAlias = Literal[_EagerOnlyImpl, _PolarsImpl]  # noqa: PYI047
@@ -51,11 +51,10 @@ _LazyAllowedImpl: TypeAlias = Literal[_LazyOnlyImpl, _PolarsImpl]  # noqa: PYI04
 # - https://github.com/narwhals-dev/narwhals/pull/2971#discussion_r2277137003
 # - https://github.com/narwhals-dev/narwhals/pull/3002#issuecomment-3194267667
 _LazyFrameCollectImpl: TypeAlias = Literal[_PandasImpl, _PolarsImpl, _ArrowImpl]  # noqa: PYI047
-_DataFrameLazyImpl: TypeAlias = Literal[_PolarsImpl, _DaskImpl, _DuckDBImpl, _IbisImpl]  # noqa: PYI047
 
 # `str | Implementation` aliases
 Pandas: TypeAlias = Literal[_Pandas, _PandasImpl]
-Cudf: TypeAlias = Literal[_Cudf, _CudfImpl]
+CuDF: TypeAlias = Literal[_CuDF, _CuDFImpl]
 Modin: TypeAlias = Literal[_Modin, _ModinImpl]
 PySpark: TypeAlias = Literal[_PySpark, _PySparkImpl]
 SQLFrame: TypeAlias = Literal[_SQLFrame, _SQLFrameImpl]

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections import deque
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, cast
@@ -13,11 +14,14 @@ import pytest
 import narwhals as nw
 import narwhals.stable.v2 as nw_v2
 from narwhals._utils import Implementation
+from narwhals.exceptions import ShapeError
 from narwhals.utils import Version
 from tests.utils import (
     PANDAS_VERSION,
+    POLARS_VERSION,
     PYARROW_VERSION,
     Constructor,
+    ConstructorEager,
     assert_equal_data,
     assert_equal_series,
 )
@@ -51,6 +55,7 @@ def test_toplevel() -> None:
         mean_h=nw_v2.mean_horizontal("a"),
         len=nw_v2.len(),
         concat_str=nw_v2.concat_str(nw_v2.lit("a"), nw_v2.lit("b")),
+        fmt=nw_v2.format("{}", "a"),
         any_h=nw_v2.any_horizontal(nw_v2.lit(True), nw_v2.lit(True), ignore_nulls=True),
         all_h=nw_v2.all_horizontal(nw_v2.lit(True), nw_v2.lit(True), ignore_nulls=True),
         first=nw_v2.nth(0),
@@ -69,6 +74,7 @@ def test_toplevel() -> None:
         "mean_h": [1, 2, 3],
         "len": [3, 3, 3],
         "concat_str": ["ab", "ab", "ab"],
+        "fmt": ["1", "2", "3"],
         "any_h": [True, True, True],
         "all_h": [True, True, True],
         "first": [1, 2, 3],
@@ -110,6 +116,10 @@ def test_constructors() -> None:
     assert_equal_data(result, {"a": [1, 2, 3]})
     assert isinstance(result, nw_v2.DataFrame)
     result = nw_v2.from_arrow(pd.DataFrame({"a": [1, 2, 3]}), backend="pandas")
+    assert_equal_data(result, {"a": [1, 2, 3]})
+    assert isinstance(result, nw_v2.DataFrame)
+    assert isinstance(result, nw_v2.DataFrame)
+    result = nw_v2.from_dicts([{"a": 1}, {"a": 2}, {"a": 3}], backend="pandas")
     assert_equal_data(result, {"a": [1, 2, 3]})
     assert isinstance(result, nw_v2.DataFrame)
 
@@ -299,10 +309,10 @@ def test_narwhalify_backends_cross() -> None:
     ) -> tuple[Any, Any, int]:  # pragma: no cover
         return arg1, arg2, extra
 
-    with pytest.raises(
-        ValueError,
-        match="Found multiple backends. Make sure that all dataframe/series inputs come from the same backend.",
-    ):
+    msg = re.escape(
+        "Found multiple backends. Make sure that all dataframe/series inputs come from the same backend."
+    )
+    with pytest.raises(ValueError, match=msg):
         func(pd.DataFrame(data), pl.DataFrame(data))
 
 
@@ -352,6 +362,16 @@ def test_dataframe_from_dict(eager_backend: EagerAllowed) -> None:
     schema = {"c": nw_v2.Int16(), "d": nw_v2.Float32()}
     result = nw_v2.DataFrame.from_dict(
         {"c": [1, 2], "d": [5, 6]}, backend=eager_backend, schema=schema
+    )
+    assert result.collect_schema() == schema
+    assert result._version is Version.V2
+    assert isinstance(result, nw_v2.DataFrame)
+
+
+def test_dataframe_from_dicts(eager_backend: EagerAllowed) -> None:
+    schema = {"c": nw_v2.Int16(), "d": nw_v2.Float32()}
+    result = nw_v2.DataFrame.from_dicts(
+        [{"c": 1, "d": 5}, {"c": 2, "d": 6}], backend=eager_backend, schema=schema
     )
     assert result.collect_schema() == schema
     assert result._version is Version.V2
@@ -442,18 +462,12 @@ def test_series_from_numpy(
         (nw_v2.Int64, [5, 2, 0, 1]),
         (nw_v2.String, ("a", "b", "c")),
         (nw_v2.Float64, [5.0, 2.0, 0.0, 1.0]),
-        (
-            nw_v2.Datetime("ms"),
-            deque([datetime(2005, 1, 1, 10), datetime(2002, 1, 1, 10, 43)]),
-        ),
+        (nw_v2.Datetime, deque([datetime(2005, 1, 1, 10), datetime(2002, 1, 1, 10, 43)])),
     ],
     ids=str,
 )
 def test_series_from_iterable(
-    eager_backend: EagerAllowed,
-    dtype: IntoDType | None,
-    expected: Sequence[Any],
-    request: pytest.FixtureRequest,
+    eager_backend: EagerAllowed, dtype: IntoDType | None, expected: Sequence[Any]
 ) -> None:
     data = expected
     name = "abc"
@@ -461,13 +475,29 @@ def test_series_from_iterable(
     assert result._version is Version.V2
     assert isinstance(result, nw_v2.Series)
     if dtype:
-        request.applymarker(
-            pytest.mark.xfail(
-                result.implementation.is_pandas_like()
-                and dtype.is_temporal()
-                and PANDAS_VERSION < (2,),
-                reason='Pandas does not support "ms" or "us" time units before version 2.0',
-            )
-        )
         assert result.dtype == dtype
     assert_equal_series(result, expected, name)
+
+
+def test_mode_single_expr(constructor_eager: ConstructorEager) -> None:
+    data = {"a": [1, 1, 2, 2, 3], "b": [1, 2, 3, 3, 4]}
+    df = nw_v2.from_native(constructor_eager(data))
+    result = df.select(nw_v2.col("a").mode()).sort("a")
+    expected = {"a": [1, 2]}
+    assert_equal_data(result, expected)
+
+
+def test_mode_series(constructor_eager: ConstructorEager) -> None:
+    data = {"a": [1, 1, 2, 2, 3], "b": [1, 2, 3, 3, 4]}
+    series = nw_v2.from_native(constructor_eager(data), eager_only=True)["a"]
+    result = series.mode().sort()
+    expected = {"a": [1, 2]}
+    assert_equal_data({"a": result}, expected)
+
+
+def test_mode_different_lengths(constructor_eager: ConstructorEager) -> None:
+    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 10):
+        pytest.skip()
+    df = nw_v2.from_native(constructor_eager({"a": [1, 1, 2], "b": [4, 5, 6]}))
+    with pytest.raises(ShapeError):
+        df.select(nw_v2.col("a", "b").mode())

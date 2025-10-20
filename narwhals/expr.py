@@ -9,7 +9,6 @@ from narwhals._expression_parsing import (
     ExprMetadata,
     apply_n_ary_operation,
     combine_metadata,
-    extract_compliant,
 )
 from narwhals._utils import _validate_rolling_arguments, ensure_type, flatten
 from narwhals.dtypes import _validate_dtype
@@ -34,6 +33,7 @@ if TYPE_CHECKING:
         FillNullStrategy,
         IntoDType,
         IntoExpr,
+        ModeKeepStrategy,
         NonNestedLiteral,
         NumericLiteral,
         RankMethod,
@@ -1049,8 +1049,7 @@ class Expr:
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/)
-            for reference.
+            See [null_handling](../concepts/null_handling.md/) for reference.
 
         Examples:
             >>> import duckdb
@@ -1081,8 +1080,7 @@ class Expr:
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/)
-            for reference.
+            See [null_handling](../concepts/null_handling.md/) for reference.
 
         Examples:
             >>> import duckdb
@@ -1194,14 +1192,53 @@ class Expr:
             raise ValueError(msg)
 
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).fill_null(
-                value=extract_compliant(plx, value, str_as_lit=True),
-                strategy=strategy,
-                limit=limit,
+            lambda plx: apply_n_ary_operation(
+                plx,
+                lambda *exprs: exprs[0].fill_null(
+                    exprs[1], strategy=strategy, limit=limit
+                ),
+                self,
+                value,
+                str_as_lit=True,
             ),
             self._metadata.with_orderable_window()
             if strategy is not None
             else self._metadata,
+        )
+
+    def fill_nan(self, value: float | None) -> Self:
+        """Fill floating point NaN values with given value.
+
+        Arguments:
+            value: Value used to fill NaN values.
+
+        Notes:
+            This function only fills `'NaN'` values, not null ones, except for pandas
+            which doesn't distinguish between them.
+            See [null_handling](../concepts/null_handling.md/) for reference.
+
+        Examples:
+            >>> import duckdb
+            >>> import narwhals as nw
+            >>> df_native = duckdb.sql(
+            ...     "SELECT * FROM VALUES (5.::DOUBLE, 50.::DOUBLE), ('NaN', null) df(a, b)"
+            ... )
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(nw.col("a", "b").fill_nan(0).name.suffix("_nans_filled"))
+            ┌───────────────────────────────────────────────────┐
+            |                Narwhals LazyFrame                 |
+            |---------------------------------------------------|
+            |┌────────┬────────┬───────────────┬───────────────┐|
+            |│   a    │   b    │ a_nans_filled │ b_nans_filled │|
+            |│ double │ double │    double     │    double     │|
+            |├────────┼────────┼───────────────┼───────────────┤|
+            |│    5.0 │   50.0 │           5.0 │          50.0 │|
+            |│    nan │   NULL │           0.0 │          NULL │|
+            |└────────┴────────┴───────────────┴───────────────┘|
+            └───────────────────────────────────────────────────┘
+        """
+        return self._with_elementwise(
+            lambda plx: self._to_compliant_expr(plx).fill_nan(value)
         )
 
     # --- partial reduction ---
@@ -1210,8 +1247,7 @@ class Expr:
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/)
-            for reference.
+            See [null_handling](../concepts/null_handling.md/) for reference.
 
         Examples:
             >>> import polars as pl
@@ -1352,8 +1388,7 @@ class Expr:
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/)
-            for reference.
+            See [null_handling](../concepts/null_handling.md/) for reference.
 
         Examples:
             >>> import pandas as pd
@@ -1501,6 +1536,52 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).round(decimals)
         )
 
+    def floor(self) -> Self:
+        r"""Compute the numerical floor.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> df_native = pa.table({"values": [1.1, 4.3, -1.3]})
+            >>> df = nw.from_native(df_native)
+            >>> result = df.with_columns(floor=nw.col("values").floor())
+            >>> result
+            ┌────────────────────────┐
+            |   Narwhals DataFrame   |
+            |------------------------|
+            |pyarrow.Table           |
+            |values: double          |
+            |floor: double           |
+            |----                    |
+            |values: [[1.1,4.3,-1.3]]|
+            |floor: [[1,4,-2]]       |
+            └────────────────────────┘
+        """
+        return self._with_elementwise(lambda plx: self._to_compliant_expr(plx).floor())
+
+    def ceil(self) -> Self:
+        r"""Compute the numerical ceiling.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> df_native = pa.table({"values": [1.1, 4.3, -1.3]})
+            >>> df = nw.from_native(df_native)
+            >>> result = df.with_columns(ceil=nw.col("values").ceil())
+            >>> result
+            ┌────────────────────────┐
+            |   Narwhals DataFrame   |
+            |------------------------|
+            |pyarrow.Table           |
+            |values: double          |
+            |ceil: double            |
+            |----                    |
+            |values: [[1.1,4.3,-1.3]]|
+            |ceil: [[2,5,-1]]        |
+            └────────────────────────┘
+        """
+        return self._with_elementwise(lambda plx: self._to_compliant_expr(plx).ceil())
+
     def len(self) -> Self:
         r"""Return the number of elements in the column.
 
@@ -1559,10 +1640,89 @@ class Expr:
             upper_bound,
         )
 
-    def mode(self) -> Self:
+    def first(self) -> Self:
+        """Get the first value.
+
+        Notes:
+            For lazy backends, this can only be used with `over`. We may introduce
+            `min_by` in the future so it can be used as an aggregation.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> data = {"a": [1, 1, 2, 2], "b": ["foo", None, None, "baz"]}
+            >>> df_native = pd.DataFrame(data)
+            >>> df = nw.from_native(df_native)
+            >>> df.select(nw.all().first())
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |       a    b     |
+            |    0  1  foo     |
+            └──────────────────┘
+
+            >>> df.group_by("a").agg(nw.col("b").first())
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |       a     b    |
+            |    0  1   foo    |
+            |    1  2  None    |
+            └──────────────────┘
+        """
+        return self._with_orderable_aggregation(
+            lambda plx: self._to_compliant_expr(plx).first()
+        )
+
+    def last(self) -> Self:
+        """Get the last value.
+
+        Notes:
+            For lazy backends, this can only be used with `over`. We may introduce
+            `max_by` in the future so it can be used as an aggregation.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> data = {"a": [1, 1, 2, 2], "b": ["foo", None, None, "baz"]}
+            >>> df_native = pa.table(data)
+            >>> df = nw.from_native(df_native)
+            >>> df.select(nw.all().last())
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |  pyarrow.Table   |
+            |  a: int64        |
+            |  b: string       |
+            |  ----            |
+            |  a: [[2]]        |
+            |  b: [["baz"]]    |
+            └──────────────────┘
+
+            >>> df.group_by("a").agg(nw.col("b").last())
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |pyarrow.Table     |
+            |a: int64          |
+            |b: string         |
+            |----              |
+            |a: [[1,2]]        |
+            |b: [[null,"baz"]] |
+            └──────────────────┘
+        """
+        return self._with_orderable_aggregation(
+            lambda plx: self._to_compliant_expr(plx).last()
+        )
+
+    def mode(self, *, keep: ModeKeepStrategy = "all") -> Self:
         r"""Compute the most occurring value(s).
 
         Can return multiple values.
+
+        Arguments:
+            keep: Whether to keep all modes or any mode found. Remark that `keep='any'`
+                is not deterministic for multimodal values.
 
         Examples:
             >>> import pandas as pd
@@ -1577,15 +1737,24 @@ class Expr:
             |       0  1       |
             └──────────────────┘
         """
-        return self._with_filtration(lambda plx: self._to_compliant_expr(plx).mode())
+        _supported_keep_values = ("all", "any")
+        if keep not in _supported_keep_values:  # pragma: no cover
+            msg = f"`keep` must be one of {_supported_keep_values}, found '{keep}'"
+            raise ValueError(msg)
+
+        def compliant_expr(plx: Any) -> Any:
+            return self._to_compliant_expr(plx).mode(keep=keep)
+
+        if keep == "any":
+            return self._with_aggregation(compliant_expr)
+        return self._with_filtration(compliant_expr)
 
     def is_finite(self) -> Self:
         """Returns boolean values indicating which original values are finite.
 
         Warning:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/)
-            for reference.
+            See [null_handling](../concepts/null_handling.md/) for reference.
             `is_finite` will return False for NaN and Null's in the Dask and
             pandas non-nullable backend, while for Polars, PyArrow and pandas
             nullable backends null values are kept as such.

@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Literal
 
 import hypothesis.strategies as st
 import pandas as pd
-import pyarrow as pa
 import pytest
 from hypothesis import given
 
@@ -17,6 +16,7 @@ from tests.utils import (
     ConstructorEager,
     assert_equal_data,
     is_pyarrow_windows_no_tzdata,
+    time_unit_compat,
 )
 
 if TYPE_CHECKING:
@@ -67,9 +67,8 @@ def test_timestamp_datetimes(
         pytest.skip("Requires pandas >= 2.2 for reliable pyarrow-backed timestamps")
     datetimes = {"a": [datetime(2001, 1, 1), None, datetime(2001, 1, 3)]}
     df = nw.from_native(constructor(datetimes))
-    result = df.select(
-        nw.col("a").cast(nw.Datetime(original_time_unit)).dt.timestamp(time_unit)
-    )
+    dtype = nw.Datetime(time_unit_compat(original_time_unit, request))
+    result = df.select(nw.col("a").cast(dtype).dt.timestamp(time_unit))
     assert_equal_data(result, {"a": expected})
 
 
@@ -130,9 +129,10 @@ def test_timestamp_datetimes_tz_aware(
         pytest.skip()
     datetimes = {"a": [datetime(2001, 1, 1), None, datetime(2001, 1, 3)]}
     df = nw.from_native(constructor(datetimes))
+    dtype = nw.Datetime(time_unit_compat(original_time_unit, request))
     result = df.select(
         nw.col("a")
-        .cast(nw.Datetime(original_time_unit))
+        .cast(dtype)
         .dt.replace_time_zone("UTC")
         .dt.convert_time_zone("Asia/Kathmandu")
         .dt.timestamp(time_unit)
@@ -242,7 +242,9 @@ def test_timestamp_hypothesis(
     time_unit: Literal["ms", "us", "ns"],
     starting_time_unit: Literal["ms", "us", "ns"],
 ) -> None:
+    pytest.importorskip("pyarrow")
     import polars as pl
+    import pyarrow as pa
 
     @nw.narwhalify
     def func(s: nw.Series[IntoSeriesT]) -> nw.Series[IntoSeriesT]:

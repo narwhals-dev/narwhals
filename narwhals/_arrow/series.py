@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal, cast, overload
+from typing import TYPE_CHECKING, Any, Callable, Literal, cast, overload
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -66,6 +66,7 @@ if TYPE_CHECKING:
         FillNullStrategy,
         Into1DArray,
         IntoDType,
+        ModeKeepStrategy,
         NonNestedLiteral,
         NumericLiteral,
         PythonLiteral,
@@ -147,6 +148,16 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             result._broadcast = self._broadcast
         return result
 
+    def _with_binary(self, op: Callable[..., ArrayOrScalar], other: Any) -> Self:
+        ser, other_native = extract_native(self, other)
+        preserve_broadcast = self._broadcast and getattr(other, "_broadcast", True)
+        return self._with_native(
+            op(ser, other_native), preserve_broadcast=preserve_broadcast
+        ).alias(self.name)
+
+    def _with_binary_right(self, op: Callable[..., ArrayOrScalar], other: Any) -> Self:
+        return self._with_binary(lambda x, y: op(y, x), other).alias(self.name)
+
     @classmethod
     def from_iterable(
         cls,
@@ -213,106 +224,89 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return ArrowNamespace(version=self._version)
 
     def __eq__(self, other: object) -> Self:  # type: ignore[override]
-        other = cast("PythonLiteral | ArrowSeries | None", other)
-        ser, rhs = extract_native(self, other)
-        return self._with_native(pc.equal(ser, rhs))
+        return self._with_binary(pc.equal, other)
 
     def __ne__(self, other: object) -> Self:  # type: ignore[override]
-        other = cast("PythonLiteral | ArrowSeries | None", other)
-        ser, rhs = extract_native(self, other)
-        return self._with_native(pc.not_equal(ser, rhs))
+        return self._with_binary(pc.not_equal, other)
 
     def __ge__(self, other: Any) -> Self:
-        ser, other = extract_native(self, other)
-        return self._with_native(pc.greater_equal(ser, other))
+        return self._with_binary(pc.greater_equal, other)
 
     def __gt__(self, other: Any) -> Self:
-        ser, other = extract_native(self, other)
-        return self._with_native(pc.greater(ser, other))
+        return self._with_binary(pc.greater, other)
 
     def __le__(self, other: Any) -> Self:
-        ser, other = extract_native(self, other)
-        return self._with_native(pc.less_equal(ser, other))
+        return self._with_binary(pc.less_equal, other)
 
     def __lt__(self, other: Any) -> Self:
-        ser, other = extract_native(self, other)
-        return self._with_native(pc.less(ser, other))
+        return self._with_binary(pc.less, other)
 
     def __and__(self, other: Any) -> Self:
-        ser, other = extract_native(self, other)
-        return self._with_native(pc.and_kleene(ser, other))  # type: ignore[arg-type]
+        return self._with_binary(pc.and_kleene, other)
 
     def __rand__(self, other: Any) -> Self:
-        ser, other = extract_native(self, other)
-        return self._with_native(pc.and_kleene(other, ser))  # type: ignore[arg-type]
+        return self._with_binary_right(pc.and_kleene, other)
 
     def __or__(self, other: Any) -> Self:
-        ser, other = extract_native(self, other)
-        return self._with_native(pc.or_kleene(ser, other))  # type: ignore[arg-type]
+        return self._with_binary_right(pc.or_kleene, other)
 
     def __ror__(self, other: Any) -> Self:
-        ser, other = extract_native(self, other)
-        return self._with_native(pc.or_kleene(other, ser))  # type: ignore[arg-type]
+        return self._with_binary_right(pc.or_kleene, other)
 
     def __add__(self, other: Any) -> Self:
-        ser, other = extract_native(self, other)
-        return self._with_native(pc.add(ser, other))
+        return self._with_binary(pc.add, other)
 
     def __radd__(self, other: Any) -> Self:
-        return self + other
+        return self._with_binary_right(pc.add, other)
 
     def __sub__(self, other: Any) -> Self:
-        ser, other = extract_native(self, other)
-        return self._with_native(pc.subtract(ser, other))
+        return self._with_binary(pc.subtract, other)
 
     def __rsub__(self, other: Any) -> Self:
-        return (self - other) * (-1)
+        return self._with_binary_right(pc.subtract, other)
 
     def __mul__(self, other: Any) -> Self:
-        ser, other = extract_native(self, other)
-        return self._with_native(pc.multiply(ser, other))
+        return self._with_binary(pc.multiply, other)
 
     def __rmul__(self, other: Any) -> Self:
-        return self * other
+        return self._with_binary_right(pc.multiply, other)
 
     def __pow__(self, other: Any) -> Self:
-        ser, other = extract_native(self, other)
-        return self._with_native(pc.power(ser, other))
+        return self._with_binary(pc.power, other)
 
     def __rpow__(self, other: Any) -> Self:
-        ser, other = extract_native(self, other)
-        return self._with_native(pc.power(other, ser))
+        return self._with_binary_right(pc.power, other)
 
     def __floordiv__(self, other: Any) -> Self:
-        ser, other = extract_native(self, other)
-        return self._with_native(floordiv_compat(ser, other))
+        return self._with_binary(floordiv_compat, other)
 
     def __rfloordiv__(self, other: Any) -> Self:
-        ser, other = extract_native(self, other)
-        return self._with_native(floordiv_compat(other, ser))
+        return self._with_binary_right(floordiv_compat, other)
 
     def __truediv__(self, other: Any) -> Self:
-        ser, other = extract_native(self, other)
-        return self._with_native(pc.divide(*cast_for_truediv(ser, other)))  # type: ignore[type-var]
+        return self._with_binary(lambda x, y: pc.divide(*cast_for_truediv(x, y)), other)
 
     def __rtruediv__(self, other: Any) -> Self:
-        ser, other = extract_native(self, other)
-        return self._with_native(pc.divide(*cast_for_truediv(other, ser)))  # type: ignore[type-var]
+        return self._with_binary_right(
+            lambda x, y: pc.divide(*cast_for_truediv(x, y)), other
+        )
 
     def __mod__(self, other: Any) -> Self:
+        preserve_broadcast = self._broadcast and getattr(other, "_broadcast", True)
         floor_div = (self // other).native
         ser, other = extract_native(self, other)
         res = pc.subtract(ser, pc.multiply(floor_div, other))
-        return self._with_native(res)
+        return self._with_native(res, preserve_broadcast=preserve_broadcast)
 
     def __rmod__(self, other: Any) -> Self:
+        preserve_broadcast = self._broadcast and getattr(other, "_broadcast", True)
         floor_div = (other // self).native
         ser, other = extract_native(self, other)
         res = pc.subtract(other, pc.multiply(floor_div, ser))
-        return self._with_native(res)
+        return self._with_native(res, preserve_broadcast=preserve_broadcast)
 
     def __invert__(self) -> Self:
-        return self._with_native(pc.invert(self.native))
+        return self._with_native(pc.invert(self.native), preserve_broadcast=True)
 
     @property
     def _type(self) -> pa.DataType:
@@ -328,6 +322,15 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         else:
             other_native = predicate
         return self._with_native(self.native.filter(other_native))
+
+    def first(self, *, _return_py_scalar: bool = True) -> PythonLiteral:
+        result = self.native[0] if len(self.native) else None
+        return maybe_extract_py_scalar(result, _return_py_scalar)
+
+    def last(self, *, _return_py_scalar: bool = True) -> PythonLiteral:
+        ca = self.native
+        result = ca[height - 1] if (height := len(ca)) else None
+        return maybe_extract_py_scalar(result, _return_py_scalar)
 
     def mean(self, *, _return_py_scalar: bool = True) -> float:
         return maybe_extract_py_scalar(pc.mean(self.native), _return_py_scalar)
@@ -372,12 +375,12 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             return self._with_native(self.native)
         return self._with_native(pa.concat_arrays(arrays))
 
-    def std(self, ddof: int, *, _return_py_scalar: bool = True) -> float:
+    def std(self, *, ddof: int, _return_py_scalar: bool = True) -> float:
         return maybe_extract_py_scalar(
             pc.stddev(self.native, ddof=ddof), _return_py_scalar
         )
 
-    def var(self, ddof: int, *, _return_py_scalar: bool = True) -> float:
+    def var(self, *, ddof: int, _return_py_scalar: bool = True) -> float:
         return maybe_extract_py_scalar(
             pc.variance(self.native, ddof=ddof), _return_py_scalar
         )
@@ -512,6 +515,12 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return self._with_native(
             pc.round(self.native, decimals, round_mode="half_towards_infinity")
         )
+
+    def floor(self) -> Self:
+        return self._with_native(pc.floor(self.native))
+
+    def ceil(self) -> Self:
+        return self._with_native(pc.ceil(self.native))
 
     def diff(self) -> Self:
         return self._with_native(pc.pairwise_diff(self.native.combine_chunks()))
@@ -649,6 +658,10 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         idx = np.arange(num_rows)
         mask = rng.choice(idx, size=n, replace=with_replacement)
         return self._with_native(self.native.take(mask))
+
+    def fill_nan(self, value: float | None) -> Self:
+        result = pc.if_else(pc.is_nan(self.native), value, self.native)
+        return self._with_native(result, preserve_broadcast=True)
 
     def fill_null(
         self,
@@ -856,16 +869,17 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def to_arrow(self) -> ArrayAny:
         return self.native.combine_chunks()
 
-    def mode(self) -> ArrowSeries:
+    def mode(self, *, keep: ModeKeepStrategy) -> ArrowSeries:
         plx = self.__narwhals_namespace__()
         col_token = generate_temporary_column_name(n_bytes=8, columns=[self.name])
         counts = self.value_counts(
             name=col_token, normalize=False, sort=False, parallel=False
         )
-        return counts.filter(
+        result = counts.filter(
             plx.col(col_token)
             == plx.col(col_token).max().broadcast(kind=ExprKind.AGGREGATION)
         ).get_column(self.name)
+        return result.head(1) if keep == "any" else result
 
     def is_finite(self) -> Self:
         return self._with_native(pc.is_finite(self.native))

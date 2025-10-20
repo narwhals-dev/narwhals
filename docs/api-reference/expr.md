@@ -9,6 +9,8 @@
         - all
         - any
         - cast
+        - ceil
+        - clip
         - count
         - cum_count
         - cum_max
@@ -19,9 +21,11 @@
         - drop_nulls
         - ewm_mean
         - exp
+        - fill_nan
         - fill_null
         - filter
-        - clip
+        - first
+        - floor
         - is_between
         - is_close
         - is_duplicated
@@ -33,6 +37,7 @@
         - is_null
         - is_unique
         - kurtosis
+        - last
         - len
         - log
         - map_batches
@@ -41,8 +46,8 @@
         - median
         - min
         - mode
-        - null_count
         - n_unique
+        - null_count
         - over
         - pipe
         - quantile

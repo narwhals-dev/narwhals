@@ -90,9 +90,6 @@ class SeriesListNamespace(Generic[SeriesT]):
 
         Negative indices are not accepted.
 
-        Returns:
-            A new series.
-
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw

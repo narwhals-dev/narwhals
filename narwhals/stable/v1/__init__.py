@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Callable, Literal, cast, overload
+from typing import TYPE_CHECKING, Any, Callable, Final, Literal, cast, overload
 
 import narwhals as nw
 from narwhals import exceptions, functions as nw_f
@@ -22,7 +22,6 @@ from narwhals._utils import (
     validate_strict_and_pass_though,
 )
 from narwhals.dataframe import DataFrame as NwDataFrame, LazyFrame as NwLazyFrame
-from narwhals.dependencies import get_polars
 from narwhals.exceptions import InvalidIntoExprError
 from narwhals.expr import Expr as NwExpr
 from narwhals.functions import _new_series_impl, concat, show_versions
@@ -72,20 +71,20 @@ if TYPE_CHECKING:
     from narwhals._typing import (
         Arrow,
         Backend,
-        Dask,
-        DuckDB,
         EagerAllowed,
-        Ibis,
         IntoBackend,
+        LazyAllowed,
         Pandas,
         Polars,
     )
     from narwhals.dataframe import MultiColSelector, MultiIndexSelector
     from narwhals.dtypes import DType
     from narwhals.typing import (
+        FileSource,
         IntoDType,
         IntoExpr,
         IntoFrame,
+        IntoSchema,
         IntoSeries,
         NonNestedLiteral,
         SingleColSelector,
@@ -132,6 +131,17 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):  # type: ignore[type-var]
         backend: IntoBackend[EagerAllowed] | None = None,
     ) -> DataFrame[Any]:
         result = super().from_dict(data, schema, backend=backend)
+        return cast("DataFrame[Any]", result)
+
+    @classmethod
+    def from_dicts(
+        cls,
+        data: Sequence[Any],
+        schema: IntoSchema | None = None,
+        *,
+        backend: IntoBackend[EagerAllowed],
+    ) -> DataFrame[Any]:
+        result = super().from_dicts(data, schema, backend=backend)
         return cast("DataFrame[Any]", result)
 
     @classmethod
@@ -193,9 +203,12 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):  # type: ignore[type-var]
         return super().get_column(name)  # type: ignore[return-value]
 
     def lazy(
-        self, backend: IntoBackend[Polars | DuckDB | Ibis | Dask] | None = None
+        self,
+        backend: IntoBackend[LazyAllowed] | None = None,
+        *,
+        session: Any | None = None,
     ) -> LazyFrame[Any]:
-        return _stableify(super().lazy(backend=backend))
+        return _stableify(super().lazy(backend=backend, session=session))
 
     @overload  # type: ignore[override]
     def to_dict(self, *, as_series: Literal[True] = ...) -> dict[str, Series[Any]]: ...
@@ -203,9 +216,9 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):  # type: ignore[type-var]
     def to_dict(self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
     @overload
     def to_dict(
-        self, *, as_series: bool
+        self, *, as_series: bool = True
     ) -> dict[str, Series[Any]] | dict[str, list[Any]]: ...
-    def to_dict(
+    def to_dict(  # pyright: ignore[reportIncompatibleMethodOverride]
         self, *, as_series: bool = True
     ) -> dict[str, Series[Any]] | dict[str, list[Any]]:
         # Type checkers complain that `nw.Series` is not assignable to `nw.v1.stable.Series`.
@@ -234,31 +247,16 @@ class LazyFrame(NwLazyFrame[IntoLazyFrameT]):
         return DataFrame
 
     def _extract_compliant(self, arg: Any) -> Any:
-        # After v1, we raise when passing order-dependent or length-changing
-        # expressions to LazyFrame
-        from narwhals.dataframe import BaseFrame
+        # After v1, we raise when passing order-dependent, length-changing,
+        # or filtration expressions to LazyFrame
         from narwhals.expr import Expr
         from narwhals.series import Series
 
-        if isinstance(arg, BaseFrame):
-            return arg._compliant_frame
         if isinstance(arg, Series):  # pragma: no cover
             msg = "Mixing Series with LazyFrame is not supported."
             raise TypeError(msg)
-        if isinstance(arg, Expr):
-            # After stable.v1, we raise for order-dependent exprs or filtrations
-            return arg._to_compliant_expr(self.__narwhals_namespace__())
-        if isinstance(arg, str):
-            plx = self.__narwhals_namespace__()
-            return plx.col(arg)
-        if get_polars() is not None and "polars" in str(type(arg)):  # pragma: no cover
-            msg = (
-                f"Expected Narwhals object, got: {type(arg)}.\n\n"
-                "Perhaps you:\n"
-                "- Forgot a `nw.from_native` somewhere?\n"
-                "- Used `pl.col` instead of `nw.col`?"
-            )
-            raise TypeError(msg)
+        if isinstance(arg, (Expr, str)):
+            return self.__narwhals_namespace__().parse_into_expr(arg, str_as_lit=False)
         raise InvalidIntoExprError.from_invalid_type(type(arg))
 
     def collect(
@@ -1177,6 +1175,11 @@ def concat_str(
     )
 
 
+def format(f_string: str, *args: IntoExpr) -> Expr:
+    """Format expressions as a string."""
+    return _stableify(nw.format(f_string, *args))
+
+
 def coalesce(exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr) -> Expr:
     return _stableify(nw.coalesce(exprs, *more_exprs))
 
@@ -1275,6 +1278,9 @@ def from_dict(
     return _stableify(nw_f.from_dict(data, schema, backend=backend))
 
 
+from_dicts: Final = DataFrame.from_dicts
+
+
 @deprecate_native_namespace(required=True)
 def from_numpy(
     data: _2DArray,
@@ -1295,7 +1301,7 @@ def from_numpy(
 
 @deprecate_native_namespace(required=True)
 def read_csv(
-    source: str,
+    source: FileSource,
     *,
     backend: IntoBackend[EagerAllowed] | None = None,
     native_namespace: ModuleType | None = None,  # noqa: ARG001
@@ -1313,7 +1319,7 @@ def read_csv(
 
 @deprecate_native_namespace(required=True)
 def scan_csv(
-    source: str,
+    source: FileSource,
     *,
     backend: IntoBackend[Backend] | None = None,
     native_namespace: ModuleType | None = None,  # noqa: ARG001
@@ -1331,7 +1337,7 @@ def scan_csv(
 
 @deprecate_native_namespace(required=True)
 def read_parquet(
-    source: str,
+    source: FileSource,
     *,
     backend: IntoBackend[EagerAllowed] | None = None,
     native_namespace: ModuleType | None = None,  # noqa: ARG001
@@ -1349,7 +1355,7 @@ def read_parquet(
 
 @deprecate_native_namespace(required=True)
 def scan_parquet(
-    source: str,
+    source: FileSource,
     *,
     backend: IntoBackend[Backend] | None = None,
     native_namespace: ModuleType | None = None,  # noqa: ARG001
@@ -1411,8 +1417,10 @@ __all__ = [
     "dtypes",
     "exceptions",
     "exclude",
+    "format",
     "from_arrow",
     "from_dict",
+    "from_dicts",
     "from_native",
     "from_numpy",
     "generate_temporary_column_name",

@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.exceptions import ColumnNotFoundError
-    from narwhals.typing import AsofJoinStrategy, JoinStrategy, LazyUniqueKeepStrategy
+    from narwhals.typing import AsofJoinStrategy, JoinStrategy, UniqueKeepStrategy
 
 Incomplete: TypeAlias = "Any"
 """Using `_pandas_like` utils with `_dask`.
@@ -237,20 +237,30 @@ class DaskLazyFrame(
         return self._with_native(self.native.head(n=n, compute=False, npartitions=-1))
 
     def unique(
-        self, subset: Sequence[str] | None, *, keep: LazyUniqueKeepStrategy
+        self,
+        subset: Sequence[str] | None,
+        *,
+        keep: UniqueKeepStrategy,
+        order_by: Sequence[str] | None,
     ) -> Self:
         if subset and (error := self._check_columns_exist(subset)):
             raise error
         if keep == "none":
             subset = subset or self.columns
-            token = generate_temporary_column_name(n_bytes=8, columns=subset)
+            token = generate_temporary_column_name(
+                n_bytes=8, columns=subset, prefix="count_"
+            )
             ser = self.native.groupby(subset).size().rename(token)
             ser = ser[ser == 1]
             unique = ser.reset_index().drop(columns=token)
             result = self.native.merge(unique, on=subset, how="inner")
         else:
             mapped_keep = {"any": "first"}.get(keep, keep)
-            result = self.native.drop_duplicates(subset=subset, keep=mapped_keep)
+            if order_by:
+                native = self.sort(*order_by, descending=False, nulls_last=False).native
+            else:
+                native = self.native
+            result = native.drop_duplicates(subset=subset, keep=mapped_keep)
         return self._with_native(result)
 
     def sort(self, *by: str, descending: bool | Sequence[bool], nulls_last: bool) -> Self:
@@ -327,7 +337,7 @@ class DaskLazyFrame(
 
     def _join_cross(self, other: Self, *, suffix: str) -> dd.DataFrame:
         key_token = generate_temporary_column_name(
-            n_bytes=8, columns=(*self.columns, *other.columns)
+            n_bytes=8, columns=(*self.columns, *other.columns), prefix="cross_join_key_"
         )
         return (
             self.native.assign(**{key_token: 0})
@@ -357,7 +367,7 @@ class DaskLazyFrame(
         self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str]
     ) -> dd.DataFrame:
         indicator_token = generate_temporary_column_name(
-            n_bytes=8, columns=(*self.columns, *other.columns)
+            n_bytes=8, columns=(*self.columns, *other.columns), prefix="join_indicator_"
         )
         other_native = self._join_filter_rename(
             other=other,
@@ -469,7 +479,9 @@ class DaskLazyFrame(
         raise NotImplementedError(msg)
 
     def gather_every(self, n: int, offset: int) -> Self:
-        row_index_token = generate_temporary_column_name(n_bytes=8, columns=self.columns)
+        row_index_token = generate_temporary_column_name(
+            n_bytes=8, columns=self.columns, prefix="row_index_"
+        )
         plx = self.__narwhals_namespace__()
         return (
             self.with_row_index(row_index_token, order_by=None)

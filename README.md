@@ -4,7 +4,7 @@
 	<img
 		width="400"
 		alt="narwhals_small"
-		src="https://github.com/narwhals-dev/narwhals/assets/33491632/26be901e-5383-49f2-9fbd-5c97b7696f27">
+		src="https://github.com/user-attachments/assets/968545af-ea0f-48bb-8377-144e93f7abf8">
 </h1>
 
 [![PyPI version](https://badge.fury.io/py/narwhals.svg)](https://badge.fury.io/py/narwhals)

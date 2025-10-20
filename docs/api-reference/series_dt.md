@@ -18,12 +18,12 @@
         - replace_time_zone
         - second
         - timestamp
+        - to_string
         - total_microseconds
         - total_milliseconds
         - total_minutes
         - total_nanoseconds
         - total_seconds
-        - to_string
         - truncate
         - weekday
         - year

@@ -7,23 +7,36 @@ import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._arrow.utils import ArrowSeriesNamespace, lit, parse_datetime_format
+from narwhals._compliant.any_namespace import StringNamespace
 
 if TYPE_CHECKING:
     from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import Incomplete
 
 
-class ArrowSeriesStringNamespace(ArrowSeriesNamespace):
+class ArrowSeriesStringNamespace(ArrowSeriesNamespace, StringNamespace["ArrowSeries"]):
     def len_chars(self) -> ArrowSeries:
         return self.with_native(pc.utf8_length(self.native))
 
     def replace(self, pattern: str, value: str, *, literal: bool, n: int) -> ArrowSeries:
         fn = pc.replace_substring if literal else pc.replace_substring_regex
-        arr = fn(self.native, pattern, replacement=value, max_replacements=n)
+        try:
+            arr = fn(self.native, pattern, replacement=value, max_replacements=n)
+        except TypeError as e:
+            if not isinstance(value, str):
+                msg = "PyArrow backed `.str.replace` only supports str replacement values"
+                raise TypeError(msg) from e
+            raise
         return self.with_native(arr)
 
     def replace_all(self, pattern: str, value: str, *, literal: bool) -> ArrowSeries:
-        return self.replace(pattern, value, literal=literal, n=-1)
+        try:
+            return self.replace(pattern, value, literal=literal, n=-1)
+        except TypeError as e:
+            if not isinstance(value, str):
+                msg = "PyArrow backed `.str.replace_all` only supports str replacement values."
+                raise TypeError(msg) from e
+            raise
 
     def strip_chars(self, characters: str | None) -> ArrowSeries:
         return self.with_native(
@@ -65,6 +78,9 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace):
 
     def to_lowercase(self) -> ArrowSeries:
         return self.with_native(pc.utf8_lower(self.native))
+
+    def to_titlecase(self) -> ArrowSeries:
+        return self.with_native(pc.utf8_title(self.native))
 
     def zfill(self, width: int) -> ArrowSeries:
         binary_join: Incomplete = pc.binary_join_element_wise

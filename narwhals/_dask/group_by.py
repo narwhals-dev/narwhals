@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 else:
     try:
         import dask.dataframe.dask_expr as dx
-    except ModuleNotFoundError:  # pragma: no cover
+    except ModuleNotFoundError:
         import dask_expr as dx
     _DaskGroupBy = dx._groupby.GroupBy
 
@@ -112,7 +112,7 @@ class DaskLazyGroupBy(DepthTrackingGroupBy["DaskLazyFrame", "DaskExpr", Aggregat
             # No aggregation provided
             return (
                 self.compliant.simple_select(*self._keys)
-                .unique(self._keys, keep="any")
+                .unique(self._keys, keep="any", order_by=None)
                 .rename(dict(zip(self._keys, self._output_key_names)))
             )
 

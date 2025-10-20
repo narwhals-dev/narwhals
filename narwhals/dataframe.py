@@ -18,15 +18,15 @@ from typing import (
 from narwhals._exceptions import issue_warning
 from narwhals._expression_parsing import (
     ExprKind,
-    all_exprs_are_scalar_like,
     check_expressions_preserve_length,
+    is_into_expr_eager,
     is_scalar_like,
 )
-from narwhals._typing import Arrow, Pandas, _DataFrameLazyImpl, _LazyFrameCollectImpl
+from narwhals._typing import Arrow, Pandas, _LazyAllowedImpl, _LazyFrameCollectImpl
 from narwhals._utils import (
     Implementation,
     Version,
-    can_dataframe_lazy,
+    _Implementation,
     can_lazyframe_collect,
     check_columns_exist,
     flatten,
@@ -35,18 +35,17 @@ from narwhals._utils import (
     is_compliant_lazyframe,
     is_eager_allowed,
     is_index_selector,
+    is_iterator,
+    is_lazy_allowed,
     is_list_of,
     is_sequence_like,
     is_slice_none,
+    predicates_contains_list_of_bool,
+    qualified_type_name,
     supports_arrow_c_stream,
     zip_strict,
 )
-from narwhals.dependencies import (
-    get_polars,
-    is_numpy_array,
-    is_numpy_array_2d,
-    is_pyarrow_table,
-)
+from narwhals.dependencies import is_numpy_array_2d, is_pyarrow_table
 from narwhals.exceptions import (
     ColumnNotFoundError,
     InvalidIntoExprError,
@@ -72,7 +71,7 @@ if TYPE_CHECKING:
     from narwhals._compliant import CompliantDataFrame, CompliantLazyFrame
     from narwhals._compliant.typing import CompliantExprAny, EagerNamespaceAny
     from narwhals._translate import IntoArrowTable
-    from narwhals._typing import Dask, DuckDB, EagerAllowed, Ibis, IntoBackend, Polars
+    from narwhals._typing import EagerAllowed, IntoBackend, LazyAllowed, Polars
     from narwhals.group_by import GroupBy, LazyGroupBy
     from narwhals.typing import (
         AsofJoinStrategy,
@@ -82,7 +81,6 @@ if TYPE_CHECKING:
         IntoLazyFrame,
         IntoSchema,
         JoinStrategy,
-        LazyUniqueKeepStrategy,
         MultiColSelector as _MultiColSelector,
         MultiIndexSelector as _MultiIndexSelector,
         PivotAgg,
@@ -94,6 +92,7 @@ if TYPE_CHECKING:
     )
 
     PS = ParamSpec("PS")
+    Incomplete: TypeAlias = Any
 
 _FrameT = TypeVar("_FrameT", bound="IntoFrame")
 LazyFrameT = TypeVar("LazyFrameT", bound="IntoLazyFrame")
@@ -107,6 +106,31 @@ MultiIndexSelector: TypeAlias = "_MultiIndexSelector[Series[Any]]"
 class BaseFrame(Generic[_FrameT]):
     _compliant_frame: Any
     _level: Literal["full", "lazy", "interchange"]
+
+    implementation: _Implementation = _Implementation()
+    """Return [`narwhals.Implementation`][] of native frame.
+
+    This can be useful when you need to use special-casing for features outside of
+    Narwhals' scope - for example, when dealing with pandas' Period Dtype.
+
+    Examples:
+        >>> import narwhals as nw
+        >>> import pandas as pd
+        >>> df_native = pd.DataFrame({"a": [1, 2, 3]})
+        >>> df = nw.from_native(df_native)
+        >>> df.implementation
+        <Implementation.PANDAS: 'pandas'>
+        >>> df.implementation.is_pandas()
+        True
+        >>> df.implementation.is_pandas_like()
+        True
+        >>> df.implementation.is_polars()
+        False
+    """
+
+    @property
+    @abstractmethod
+    def _compliant(self) -> Any: ...
 
     def __native_namespace__(self) -> ModuleType:
         return self._compliant_frame.__native_namespace__()  # type: ignore[no-any-return]
@@ -138,6 +162,12 @@ class BaseFrame(Generic[_FrameT]):
     @abstractmethod
     def _extract_compliant(self, arg: Any) -> Any:
         raise NotImplementedError
+
+    def _extract_compliant_frame(self, other: Self | Any, /) -> Any:
+        if isinstance(other, type(self)):
+            return other._compliant_frame
+        msg = f"Expected `other` to be a {qualified_type_name(self)!r}, got: {qualified_type_name(other)!r}"
+        raise TypeError(msg)
 
     def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
         return check_columns_exist(subset, available=self.columns)
@@ -193,7 +223,7 @@ class BaseFrame(Generic[_FrameT]):
                     raise error from e
                 raise
         compliant_exprs, kinds = self._flatten_and_extract(*flat_exprs, **named_exprs)
-        if compliant_exprs and all_exprs_are_scalar_like(*flat_exprs, **named_exprs):
+        if compliant_exprs and all(is_scalar_like(kind) for kind in kinds):
             return self._with_compliant(self._compliant_frame.aggregate(*compliant_exprs))
         compliant_exprs = [
             compliant_expr.broadcast(kind) if is_scalar_like(kind) else compliant_expr
@@ -214,24 +244,20 @@ class BaseFrame(Generic[_FrameT]):
         return self._with_compliant(self._compliant_frame.drop(columns, strict=strict))
 
     def filter(
-        self, *predicates: IntoExpr | Iterable[IntoExpr] | list[bool], **constraints: Any
+        self, *predicates: IntoExpr | Iterable[IntoExpr], **constraints: Any
     ) -> Self:
-        if len(predicates) == 1 and is_list_of(predicates[0], bool):
-            predicate = predicates[0]
-        else:
-            from narwhals.functions import col
+        from narwhals.functions import col
 
-            flat_predicates = flatten(predicates)
-            check_expressions_preserve_length(*flat_predicates, function_name="filter")
-            plx = self.__narwhals_namespace__()
-            compliant_predicates, _kinds = self._flatten_and_extract(*flat_predicates)
-            compliant_constraints = (
-                (col(name) == v)._to_compliant_expr(plx)
-                for name, v in constraints.items()
-            )
-            predicate = plx.all_horizontal(
-                *chain(compliant_predicates, compliant_constraints), ignore_nulls=False
-            )
+        flat_predicates = flatten(predicates)
+        check_expressions_preserve_length(*flat_predicates, function_name="filter")
+        plx = self.__narwhals_namespace__()
+        compliant_predicates, _kinds = self._flatten_and_extract(*flat_predicates)
+        compliant_constraints = (
+            (col(name) == v)._to_compliant_expr(plx) for name, v in constraints.items()
+        )
+        predicate = plx.all_horizontal(
+            *chain(compliant_predicates, compliant_constraints), ignore_nulls=False
+        )
         return self._with_compliant(self._compliant_frame.filter(predicate))
 
     def sort(
@@ -256,7 +282,7 @@ class BaseFrame(Generic[_FrameT]):
 
     def join(
         self,
-        other: Self,
+        other: Incomplete,
         on: str | list[str] | None,
         how: JoinStrategy,
         *,
@@ -269,7 +295,7 @@ class BaseFrame(Generic[_FrameT]):
         left_on = [left_on] if isinstance(left_on, str) else left_on
         right_on = [right_on] if isinstance(right_on, str) else right_on
         compliant = self._compliant_frame
-        other = self._extract_compliant(other)
+        other = self._extract_compliant_frame(other)
 
         if how not in _supported_joins:
             msg = f"Only the following join strategies are supported: {_supported_joins}; found '{how}'."
@@ -307,7 +333,7 @@ class BaseFrame(Generic[_FrameT]):
 
     def join_asof(
         self,
-        other: Self,
+        other: Incomplete,
         *,
         left_on: str | None,
         right_on: str | None,
@@ -357,7 +383,7 @@ class BaseFrame(Generic[_FrameT]):
 
         return self._with_compliant(
             self._compliant_frame.join_asof(
-                self._extract_compliant(other),
+                self._extract_compliant_frame(other),
                 left_on=left_on,
                 right_on=right_on,
                 by_left=by_left,
@@ -443,29 +469,14 @@ class DataFrame(BaseFrame[DataFrameT]):
 
     _version: ClassVar[Version] = Version.MAIN
 
-    def _extract_compliant(self, arg: Any) -> Any:
-        from narwhals.expr import Expr
-        from narwhals.series import Series
+    @property
+    def _compliant(self) -> CompliantDataFrame[Any, Any, DataFrameT, Self]:
+        return self._compliant_frame
 
-        plx: EagerNamespaceAny = self.__narwhals_namespace__()
-        if isinstance(arg, BaseFrame):
-            return arg._compliant_frame
-        if isinstance(arg, Series):
-            return arg._compliant_series._to_expr()
-        if isinstance(arg, Expr):
-            return arg._to_compliant_expr(self.__narwhals_namespace__())
-        if isinstance(arg, str):
-            return plx.col(arg)
-        if get_polars() is not None and "polars" in str(type(arg)):  # pragma: no cover
-            msg = (
-                f"Expected Narwhals object, got: {type(arg)}.\n\n"
-                "Perhaps you:\n"
-                "- Forgot a `nw.from_native` somewhere?\n"
-                "- Used `pl.col` instead of `nw.col`?"
-            )
-            raise TypeError(msg)
-        if is_numpy_array(arg):
-            return plx._series.from_numpy(arg, context=plx)._to_expr()
+    def _extract_compliant(self, arg: Any) -> Any:
+        if is_into_expr_eager(arg):
+            plx: EagerNamespaceAny = self.__narwhals_namespace__()
+            return plx.parse_into_expr(arg, str_as_lit=False)
         raise InvalidIntoExprError.from_invalid_type(type(arg))
 
     @property
@@ -598,6 +609,76 @@ class DataFrame(BaseFrame[DataFrameT]):
         raise ValueError(msg)
 
     @classmethod
+    def from_dicts(
+        cls,
+        data: Sequence[Mapping[str, Any]],
+        schema: IntoSchema | None = None,
+        *,
+        backend: IntoBackend[EagerAllowed],
+    ) -> DataFrame[Any]:
+        """Instantiate DataFrame from a sequence of dictionaries representing rows.
+
+        Notes:
+            For pandas-like dataframes, conversion to schema is applied after dataframe
+            creation.
+
+        Arguments:
+            data: Sequence with dictionaries mapping column name to value.
+            schema: The DataFrame schema as Schema or dict of {name: type}. If not
+                specified, the schema will be inferred by the native library.
+            backend: Specifies which eager backend instantiate to.
+
+                `backend` can be specified in various ways
+
+                - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
+                    `POLARS`, `MODIN` or `CUDF`.
+                - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
+                - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+
+        Tip:
+            If you expect non-uniform keys in `data`, consider passing `schema` for
+            more consistent results, as **inference varies between backends**:
+
+            - pandas uses all rows
+            - polars uses the first 100 rows
+            - pyarrow uses only the first row
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = [
+            ...     {"item": "apple", "weight": 80, "price": 0.60},
+            ...     {"item": "egg", "weight": 55, "price": 0.40},
+            ... ]
+            >>> nw.DataFrame.from_dicts(data, backend="polars")
+            ┌──────────────────────────┐
+            |    Narwhals DataFrame    |
+            |--------------------------|
+            |shape: (2, 3)             |
+            |┌───────┬────────┬───────┐|
+            |│ item  ┆ weight ┆ price │|
+            |│ ---   ┆ ---    ┆ ---   │|
+            |│ str   ┆ i64    ┆ f64   │|
+            |╞═══════╪════════╪═══════╡|
+            |│ apple ┆ 80     ┆ 0.6   │|
+            |│ egg   ┆ 55     ┆ 0.4   │|
+            |└───────┴────────┴───────┘|
+            └──────────────────────────┘
+        """
+        implementation = Implementation.from_backend(backend)
+        if is_eager_allowed(implementation):
+            ns = cls._version.namespace.from_backend(implementation).compliant
+            compliant = ns._dataframe.from_dicts(data, schema=schema, context=ns)
+            return cls(compliant, level="full")
+        # NOTE: (#2786) needs resolving for extensions
+        msg = (
+            f"{implementation} support in Narwhals is lazy-only, but `DataFrame.from_dicts` is an eager-only function.\n\n"
+            "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
+            f"    nw.DataFrame.from_dicts([{{'a': 1}}, {{'a': 2}}], backend='pyarrow').lazy('{implementation}')"
+        )
+        raise ValueError(msg)
+
+    @classmethod
     def from_numpy(
         cls,
         data: _2DArray,
@@ -668,29 +749,6 @@ class DataFrame(BaseFrame[DataFrameT]):
         )
         raise ValueError(msg)
 
-    @property
-    def implementation(self) -> Implementation:
-        """Return implementation of native frame.
-
-        This can be useful when you need to use special-casing for features outside of
-        Narwhals' scope - for example, when dealing with pandas' Period Dtype.
-
-        Examples:
-            >>> import narwhals as nw
-            >>> import pandas as pd
-            >>> df_native = pd.DataFrame({"a": [1, 2, 3]})
-            >>> df = nw.from_native(df_native)
-            >>> df.implementation
-            <Implementation.PANDAS: 'pandas'>
-            >>> df.implementation.is_pandas()
-            True
-            >>> df.implementation.is_pandas_like()
-            True
-            >>> df.implementation.is_polars()
-            False
-        """
-        return self._compliant_frame._implementation
-
     def __len__(self) -> int:
         return self._compliant_frame.__len__()
 
@@ -714,7 +772,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             return native_frame.__arrow_c_stream__(requested_schema=requested_schema)
         try:
             pa_version = Implementation.PYARROW._backend_version()
-        except ModuleNotFoundError as exc:  # pragma: no cover
+        except ModuleNotFoundError as exc:
             msg = f"'pyarrow>=14.0.0' is required for `DataFrame.__arrow_c_stream__` for object of type {type(native_frame)}"
             raise ModuleNotFoundError(msg) from exc
         if pa_version < (14, 0):  # pragma: no cover
@@ -724,7 +782,10 @@ class DataFrame(BaseFrame[DataFrameT]):
         return pa_table.__arrow_c_stream__(requested_schema=requested_schema)  # type: ignore[no-untyped-call]
 
     def lazy(
-        self, backend: IntoBackend[Polars | DuckDB | Ibis | Dask] | None = None
+        self,
+        backend: IntoBackend[LazyAllowed] | None = None,
+        *,
+        session: Any | None = None,
     ) -> LazyFrame[Any]:
         """Restrict available API methods to lazy-only ones.
 
@@ -735,6 +796,18 @@ class DataFrame(BaseFrame[DataFrameT]):
         then this is will only restrict the API to lazy-only operations. This is useful
         if you want to ensure that you write dataframe-agnostic code which all has
         the possibility of running entirely lazily.
+
+        Note:
+            If `backend` is spark-like, then a valid `session` is required.
+
+            For instance:
+
+            ```py
+            import narwhals as nw
+            from sqlframe.duckdb import DuckDBSession
+
+            df.lazy(backend=nw.Implementation.SQLFRAME, session=DuckDBSession())
+            ```
 
         Arguments:
             backend: Which lazy backend collect to. This will be the underlying
@@ -748,6 +821,7 @@ class DataFrame(BaseFrame[DataFrameT]):
                     `IBIS` or `POLARS`.
                 - As a string: `"dask"`, `"duckdb"`, `"ibis"` or `"polars"`
                 - Directly as a module `dask.dataframe`, `duckdb`, `ibis` or `polars`.
+            session: Session to be used if backend is spark-like.
 
         Examples:
             >>> import polars as pl
@@ -783,11 +857,11 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         lazy = self._compliant_frame.lazy
         if backend is None:
-            return self._lazyframe(lazy(None), level="lazy")
+            return self._lazyframe(lazy(None, session=session), level="lazy")
         lazy_backend = Implementation.from_backend(backend)
-        if can_dataframe_lazy(lazy_backend):
-            return self._lazyframe(lazy(lazy_backend), level="lazy")
-        msg = f"Not-supported backend.\n\nExpected one of {get_args(_DataFrameLazyImpl)} or `None`, got {lazy_backend}"
+        if is_lazy_allowed(lazy_backend):
+            return self._lazyframe(lazy(lazy_backend, session=session), level="lazy")
+        msg = f"Not-supported backend.\n\nExpected one of {get_args(_LazyAllowedImpl)} or `None`, got {lazy_backend}"
         raise ValueError(msg)
 
     def to_native(self) -> DataFrameT:
@@ -1105,7 +1179,7 @@ class DataFrame(BaseFrame[DataFrameT]):
     def to_dict(self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
     @overload
     def to_dict(
-        self, *, as_series: bool
+        self, *, as_series: bool = True
     ) -> dict[str, Series[Any]] | dict[str, list[Any]]: ...
     def to_dict(
         self, *, as_series: bool = True
@@ -1529,6 +1603,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         *,
         keep: UniqueKeepStrategy = "any",
         maintain_order: bool = False,
+        order_by: str | Sequence[str] | None = None,
     ) -> Self:
         """Drop duplicate rows from this dataframe.
 
@@ -1544,6 +1619,7 @@ class DataFrame(BaseFrame[DataFrameT]):
                 * 'last': Keep last unique row.
             maintain_order: Keep the same order as the original DataFrame. This may be more
                 expensive to compute.
+            order_by: Column(s) to order by when computing the row index.
 
         Examples:
             >>> import pandas as pd
@@ -1561,7 +1637,9 @@ class DataFrame(BaseFrame[DataFrameT]):
         if isinstance(subset, str):
             subset = [subset]
         return self._with_compliant(
-            self._compliant_frame.unique(subset, keep=keep, maintain_order=maintain_order)
+            self._compliant_frame.unique(
+                subset, keep=keep, maintain_order=maintain_order, order_by=order_by
+            )
         )
 
     def filter(
@@ -1573,7 +1651,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Arguments:
             *predicates: Expression(s) that evaluates to a boolean Series. Can
-                also be a (single!) boolean list.
+                also be a boolean list(s).
             **constraints: Column filters; use `name = value` to filter columns by the supplied value.
                 Each constraint will behave the same as `nw.col(name).eq(value)`, and will be implicitly
                 joined with the other filter conditions using &.
@@ -1615,7 +1693,12 @@ class DataFrame(BaseFrame[DataFrameT]):
                foo  bar ham
             1    2    7   b
         """
-        return super().filter(*predicates, **constraints)
+        impl = self.implementation
+        parsed_predicates = (
+            self._series.from_iterable("", p, backend=impl) if is_list_of(p, bool) else p
+            for p in predicates
+        )
+        return super().filter(*parsed_predicates, **constraints)
 
     @overload
     def group_by(
@@ -1705,16 +1788,8 @@ class DataFrame(BaseFrame[DataFrameT]):
             k if is_expr else col(k)
             for k, is_expr in zip_strict(flat_keys, key_is_expr_or_series)
         ]
-        expr_flat_keys, kinds = self._flatten_and_extract(*_keys)
-
-        if not all(kind is ExprKind.ELEMENTWISE for kind in kinds):
-            from narwhals.exceptions import ComputeError
-
-            msg = (
-                "Group by is not supported with keys that are not elementwise expressions"
-            )
-            raise ComputeError(msg)
-
+        expr_flat_keys, _kinds = self._flatten_and_extract(*_keys)
+        check_expressions_preserve_length(*_keys, function_name="DataFrame.group_by")
         return GroupBy(self, expr_flat_keys, drop_null_keys=drop_null_keys)
 
     def sort(
@@ -1769,9 +1844,6 @@ class DataFrame(BaseFrame[DataFrameT]):
             by: Column(s) used to determine the top rows. Accepts expression input. Strings are parsed as column names.
             reverse: Consider the k smallest elements of the by column(s) (instead of the k largest).
                 This can be specified per column by passing a sequence of booleans.
-
-        Returns:
-            The dataframe with the `k` largest rows.
 
         Examples:
             >>> import pandas as pd
@@ -1977,8 +2049,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/)
-            for reference.
+            See [null_handling](../concepts/null_handling.md/) for reference.
 
         Examples:
             >>> import pyarrow as pa
@@ -2277,52 +2348,44 @@ class LazyFrame(BaseFrame[LazyFrameT]):
         ```
     """
 
+    @property
+    def _compliant(self) -> CompliantLazyFrame[Any, LazyFrameT, Self]:
+        return self._compliant_frame
+
     def _extract_compliant(self, arg: Any) -> Any:
         from narwhals.expr import Expr
         from narwhals.series import Series
 
-        if isinstance(arg, BaseFrame):
-            return arg._compliant_frame
         if isinstance(arg, Series):  # pragma: no cover
             msg = "Binary operations between Series and LazyFrame are not supported."
             raise TypeError(msg)
-        if isinstance(arg, str):  # pragma: no cover
-            plx = self.__narwhals_namespace__()
-            return plx.col(arg)
-        if isinstance(arg, Expr):
-            if arg._metadata.n_orderable_ops:
-                msg = (
-                    "Order-dependent expressions are not supported for use in LazyFrame.\n\n"
-                    "Hint: To make the expression valid, use `.over` with `order_by` specified.\n\n"
-                    "For example, if you wrote `nw.col('price').cum_sum()` and you have a column\n"
-                    "`'date'` which orders your data, then replace:\n\n"
-                    "   nw.col('price').cum_sum()\n\n"
-                    " with:\n\n"
-                    "   nw.col('price').cum_sum().over(order_by='date')\n"
-                    "                            ^^^^^^^^^^^^^^^^^^^^^^\n\n"
-                    "See https://narwhals-dev.github.io/narwhals/concepts/order_dependence/."
-                )
-                raise InvalidOperationError(msg)
-            if arg._metadata.is_filtration:
-                msg = (
-                    "Length-changing expressions are not supported for use in LazyFrame, unless\n"
-                    "followed by an aggregation.\n\n"
-                    "Hints:\n"
-                    "- Instead of `lf.select(nw.col('a').head())`, use `lf.select('a').head()\n"
-                    "- Instead of `lf.select(nw.col('a').drop_nulls()).select(nw.sum('a'))`,\n"
-                    "  use `lf.select(nw.col('a').drop_nulls().sum())\n"
-                )
-                raise InvalidOperationError(msg)
-            return arg._to_compliant_expr(self.__narwhals_namespace__())
-        if get_polars() is not None and "polars" in str(type(arg)):  # pragma: no cover
-            msg = (
-                f"Expected Narwhals object, got: {type(arg)}.\n\n"
-                "Perhaps you:\n"
-                "- Forgot a `nw.from_native` somewhere?\n"
-                "- Used `pl.col` instead of `nw.col`?"
-            )
-            raise TypeError(msg)
-        raise InvalidIntoExprError.from_invalid_type(type(arg))  # pragma: no cover
+        if isinstance(arg, (Expr, str)):
+            if isinstance(arg, Expr):
+                if arg._metadata.n_orderable_ops:
+                    msg = (
+                        "Order-dependent expressions are not supported for use in LazyFrame.\n\n"
+                        "Hint: To make the expression valid, use `.over` with `order_by` specified.\n\n"
+                        "For example, if you wrote `nw.col('price').cum_sum()` and you have a column\n"
+                        "`'date'` which orders your data, then replace:\n\n"
+                        "   nw.col('price').cum_sum()\n\n"
+                        " with:\n\n"
+                        "   nw.col('price').cum_sum().over(order_by='date')\n"
+                        "                            ^^^^^^^^^^^^^^^^^^^^^^\n\n"
+                        "See https://narwhals-dev.github.io/narwhals/concepts/order_dependence/."
+                    )
+                    raise InvalidOperationError(msg)
+                if arg._metadata.is_filtration:
+                    msg = (
+                        "Length-changing expressions are not supported for use in LazyFrame, unless\n"
+                        "followed by an aggregation.\n\n"
+                        "Hints:\n"
+                        "- Instead of `lf.select(nw.col('a').head())`, use `lf.select('a').head()\n"
+                        "- Instead of `lf.select(nw.col('a').drop_nulls()).select(nw.sum('a'))`,\n"
+                        "  use `lf.select(nw.col('a').drop_nulls().sum())\n"
+                    )
+                    raise InvalidOperationError(msg)
+            return self.__narwhals_namespace__().parse_into_expr(arg, str_as_lit=False)
+        raise InvalidIntoExprError.from_invalid_type(type(arg))
 
     @property
     def _dataframe(self) -> type[DataFrame[Any]]:
@@ -2339,22 +2402,6 @@ class LazyFrame(BaseFrame[LazyFrameT]):
 
     def __repr__(self) -> str:  # pragma: no cover
         return generate_repr("Narwhals LazyFrame", self.to_native().__repr__())
-
-    @property
-    def implementation(self) -> Implementation:
-        """Return implementation of native frame.
-
-        This can be useful when you need to use special-casing for features outside of
-        Narwhals' scope - for example, when dealing with pandas' Period Dtype.
-
-        Examples:
-            >>> import narwhals as nw
-            >>> import dask.dataframe as dd
-            >>> lf_native = dd.from_dict({"a": [1, 2]}, npartitions=1)
-            >>> nw.from_native(lf_native).implementation
-            <Implementation.DASK: 'dask'>
-        """
-        return self._compliant_frame._implementation
 
     def __getitem__(self, item: str | slice) -> NoReturn:
         msg = "Slicing is not supported on LazyFrame"
@@ -2487,8 +2534,7 @@ class LazyFrame(BaseFrame[LazyFrameT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/)
-            for reference.
+            See [null_handling](../concepts/null_handling.md/) for reference.
 
         Examples:
             >>> import duckdb
@@ -2758,23 +2804,27 @@ class LazyFrame(BaseFrame[LazyFrameT]):
         self,
         subset: str | list[str] | None = None,
         *,
-        keep: LazyUniqueKeepStrategy = "any",
+        keep: UniqueKeepStrategy = "any",
+        order_by: str | Sequence[str] | None = None,
     ) -> Self:
         """Drop duplicate rows from this LazyFrame.
 
         Arguments:
             subset: Column name(s) to consider when identifying duplicate rows.
                      If set to `None`, use all columns.
-            keep: {'any', 'none'}
+            keep: {'any', 'none', 'first', 'last}
                 Which of the duplicate rows to keep.
 
                 * 'any': Does not give any guarantee of which row is kept.
                 * 'none': Don't keep duplicate rows.
+                * 'first': Keep the first row. Requires `order_by` to be specified.
+                * 'last': Keep the last row. Requires `order_by` to be specified.
+            order_by: Column(s) to order by when computing the row index.
 
         Examples:
             >>> import duckdb
             >>> import narwhals as nw
-            >>> lf_native = duckdb.sql("SELECT * FROM VALUES (1, 1), (3, 4) df(a, b)")
+            >>> lf_native = duckdb.sql("SELECT * FROM VALUES (1, 3), (1, 4) df(a, b)")
             >>> nw.from_native(lf_native).unique("a").sort("a", descending=True)
             ┌──────────────────┐
             |Narwhals LazyFrame|
@@ -2783,33 +2833,34 @@ class LazyFrame(BaseFrame[LazyFrameT]):
             |│   a   │   b   │ |
             |│ int32 │ int32 │ |
             |├───────┼───────┤ |
-            |│     3 │     4 │ |
-            |│     1 │     1 │ |
+            |│     1 │     3 │ |
             |└───────┴───────┘ |
             └──────────────────┘
         """
-        if keep not in {"any", "none"}:
+        if keep not in {"any", "none", "first", "last"}:
+            msg = f"Expected {'any', 'none', 'first', 'last'}, got: {keep}"
+            raise ValueError(msg)
+        if keep in {"first", "last"} and not order_by:
             msg = (
                 "narwhals.LazyFrame makes no assumptions about row order, so only "
-                f"'any' and 'none' are supported for `keep` in `unique`. Got: {keep}."
+                "'first' and 'last' are only supported if `order_by` is passed."
             )
-            raise ValueError(msg)
+            raise InvalidOperationError(msg)
         if isinstance(subset, str):
             subset = [subset]
         return self._with_compliant(
-            self._compliant_frame.unique(subset=subset, keep=keep)
+            self._compliant_frame.unique(subset=subset, keep=keep, order_by=order_by)
         )
 
     def filter(
-        self, *predicates: IntoExpr | Iterable[IntoExpr] | list[bool], **constraints: Any
+        self, *predicates: IntoExpr | Iterable[IntoExpr], **constraints: Any
     ) -> Self:
         r"""Filter the rows in the LazyFrame based on a predicate expression.
 
         The original order of the remaining rows is preserved.
 
         Arguments:
-            *predicates: Expression that evaluates to a boolean Series. Can
-                also be a (single!) boolean list.
+            *predicates: Expression(s) that evaluates to a boolean Series.
             **constraints: Column filters; use `name = value` to filter columns by the supplied value.
                 Each constraint will behave the same as `nw.col(name).eq(value)`, and will be implicitly
                 joined with the other filter conditions using &.
@@ -2875,13 +2926,12 @@ class LazyFrame(BaseFrame[LazyFrameT]):
             └───────┴───────┴─────────┘
             <BLANKLINE>
         """
-        if (
-            len(predicates) == 1 and is_list_of(predicates[0], bool) and not constraints
-        ):  # pragma: no cover
+        predicates_ = tuple(tuple(p) if is_iterator(p) else p for p in predicates)
+        if predicates_contains_list_of_bool(predicates_):
             msg = "`LazyFrame.filter` is not supported with Python boolean masks - use expressions instead."
             raise TypeError(msg)
 
-        return super().filter(*predicates, **constraints)
+        return super().filter(*predicates_, **constraints)
 
     def sink_parquet(self, file: str | Path | BytesIO) -> None:
         """Write LazyFrame to Parquet file.
@@ -2971,15 +3021,8 @@ class LazyFrame(BaseFrame[LazyFrameT]):
         _keys = [
             k if is_expr else col(k) for k, is_expr in zip_strict(flat_keys, key_is_expr)
         ]
-        expr_flat_keys, kinds = self._flatten_and_extract(*_keys)
-
-        if not all(kind is ExprKind.ELEMENTWISE for kind in kinds):
-            from narwhals.exceptions import ComputeError
-
-            msg = (
-                "Group by is not supported with keys that are not elementwise expressions"
-            )
-            raise ComputeError(msg)
+        expr_flat_keys, _kinds = self._flatten_and_extract(*_keys)
+        check_expressions_preserve_length(*_keys, function_name="LazyFrame.group_by")
 
         return LazyGroupBy(self, expr_flat_keys, drop_null_keys=drop_null_keys)
 
@@ -3042,9 +3085,6 @@ class LazyFrame(BaseFrame[LazyFrameT]):
             by: Column(s) used to determine the top rows. Accepts expression input. Strings are parsed as column names.
             reverse: Consider the k smallest elements of the by column(s) (instead of the k largest).
                 This can be specified per column by passing a sequence of booleans.
-
-        Returns:
-            The LazyFrame with the `k` largest rows.
 
         Examples:
             >>> import duckdb

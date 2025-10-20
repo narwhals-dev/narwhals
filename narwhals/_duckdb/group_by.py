@@ -27,7 +27,7 @@ class DuckDBGroupBy(SQLGroupBy["DuckDBLazyFrame", "DuckDBExpr", "Expression"]):
         self._compliant_frame = frame.drop_nulls(self._keys) if drop_null_keys else frame
 
     def agg(self, *exprs: DuckDBExpr) -> DuckDBLazyFrame:
-        agg_columns = list(chain(self._keys, self._evaluate_exprs(exprs)))
+        agg_columns = tuple(chain(self._keys, self._evaluate_exprs(exprs)))
         return self.compliant._with_native(
             self.compliant.native.aggregate(agg_columns)  # type: ignore[arg-type]
         ).rename(dict(zip(self._keys, self._output_key_names)))

@@ -1,18 +1,22 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Any, Callable, Literal
+from typing import TYPE_CHECKING, Any, Callable, Literal, cast
+
+import pandas as pd
 
 from narwhals._compliant import DepthTrackingExpr, LazyExpr
 from narwhals._dask.expr_dt import DaskExprDateTimeNamespace
 from narwhals._dask.expr_str import DaskExprStringNamespace
 from narwhals._dask.utils import (
     add_row_index,
+    align_series_full_broadcast,
     maybe_evaluate_expr,
     narwhals_to_native_dtype,
 )
 from narwhals._expression_parsing import ExprKind, evaluate_output_names_and_aliases
-from narwhals._pandas_like.utils import native_to_narwhals_dtype
+from narwhals._pandas_like.expr import window_kwargs_to_pandas_equivalent
+from narwhals._pandas_like.utils import get_dtype_backend, native_to_narwhals_dtype
 from narwhals._utils import (
     Implementation,
     generate_temporary_column_name,
@@ -34,6 +38,7 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         FillNullStrategy,
         IntoDType,
+        ModeKeepStrategy,
         NonNestedLiteral,
         NumericLiteral,
         RollingInterpolationMethod,
@@ -69,8 +74,6 @@ class DaskExpr(
 
     def __call__(self, df: DaskLazyFrame) -> Sequence[dx.Series]:
         return self._call(df)
-
-    def __narwhals_expr__(self) -> None: ...
 
     def __narwhals_namespace__(self) -> DaskNamespace:  # pragma: no cover
         from narwhals._dask.namespace import DaskNamespace
@@ -226,7 +229,24 @@ class DaskExpr(
         return self._binary_op("__truediv__", other)
 
     def __floordiv__(self, other: Any) -> Self:
-        return self._binary_op("__floordiv__", other)
+        def _floordiv(
+            df: DaskLazyFrame, series: dx.Series, other: dx.Series | Any
+        ) -> dx.Series:
+            series, other = align_series_full_broadcast(df, series, other)
+            return (series.__floordiv__(other)).where(other != 0, None)
+
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            other_series = maybe_evaluate_expr(df, other)
+            return [_floordiv(df, series, other_series) for series in self(df)]
+
+        return self.__class__(
+            func,
+            depth=self._depth + 1,
+            function_name=self._function_name + "->__floordiv__",
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
+        )
 
     def __pow__(self, other: Any) -> Self:
         return self._binary_op("__pow__", other)
@@ -265,7 +285,23 @@ class DaskExpr(
         return self._reverse_binary_op("__rtruediv__", lambda a, b: a / b, other)
 
     def __rfloordiv__(self, other: Any) -> Self:
-        return self._reverse_binary_op("__rfloordiv__", lambda a, b: a // b, other)
+        def _rfloordiv(
+            df: DaskLazyFrame, series: dx.Series, other: dx.Series | Any
+        ) -> dx.Series:
+            series, other = align_series_full_broadcast(df, series, other)
+            return (other.__floordiv__(series)).where(series != 0, None)
+
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            return [_rfloordiv(df, series, other) for series in self(df)]
+
+        return self.__class__(
+            func,
+            depth=self._depth + 1,
+            function_name=self._function_name + "->__rfloordiv__",
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
+        ).alias("literal")
 
     def __rpow__(self, other: Any) -> Self:
         return self._reverse_binary_op("__rpow__", lambda a, b: a**b, other)
@@ -297,14 +333,14 @@ class DaskExpr(
     def max(self) -> Self:
         return self._with_callable(lambda expr: expr.max().to_series(), "max")
 
-    def std(self, ddof: int) -> Self:
+    def std(self, *, ddof: int) -> Self:
         return self._with_callable(
             lambda expr: expr.std(ddof=ddof).to_series(),
             "std",
             scalar_kwargs={"ddof": ddof},
         )
 
-    def var(self, ddof: int) -> Self:
+    def var(self, *, ddof: int) -> Self:
         return self._with_callable(
             lambda expr: expr.var(ddof=ddof).to_series(),
             "var",
@@ -409,6 +445,16 @@ class DaskExpr(
     def round(self, decimals: int) -> Self:
         return self._with_callable(lambda expr: expr.round(decimals), "round")
 
+    def floor(self) -> Self:
+        import dask.array as da
+
+        return self._with_callable(da.floor, "floor")
+
+    def ceil(self) -> Self:
+        import dask.array as da
+
+        return self._with_callable(da.ceil, "ceil")
+
     def unique(self) -> Self:
         return self._with_callable(lambda expr: expr.unique(), "unique")
 
@@ -432,6 +478,23 @@ class DaskExpr(
             "any",
         )
 
+    def fill_nan(self, value: float | None) -> Self:
+        value_nullable = pd.NA if value is None else value
+        value_numpy = float("nan") if value is None else value
+
+        def func(expr: dx.Series) -> dx.Series:
+            # If/when pandas exposes an API which distinguishes NaN vs null, use that.
+            mask = cast("dx.Series", expr != expr)  # noqa: PLR0124
+            mask = mask.fillna(False)
+            fill = (
+                value_nullable
+                if get_dtype_backend(expr.dtype, self._implementation)
+                else value_numpy
+            )
+            return expr.mask(mask, fill)  # pyright: ignore[reportArgumentType]
+
+        return self._with_callable(func, "fill_nan")
+
     def fill_null(
         self,
         value: Self | NonNestedLiteral,
@@ -449,7 +512,7 @@ class DaskExpr(
                 )
             return res_ser
 
-        return self._with_callable(func, "fillna")
+        return self._with_callable(func, "fill_null")
 
     def clip(
         self,
@@ -496,7 +559,7 @@ class DaskExpr(
     ) -> Self:
         if interpolation == "linear":
 
-            def func(expr: dx.Series, quantile: float) -> dx.Series:
+            def func(expr: dx.Series) -> dx.Series:
                 if expr.npartitions > 1:
                     msg = "`Expr.quantile` is not supported for Dask backend with multiple partitions."
                     raise NotImplementedError(msg)
@@ -504,14 +567,20 @@ class DaskExpr(
                     q=quantile, method="dask"
                 ).to_series()  # pragma: no cover
 
-            return self._with_callable(func, "quantile", quantile=quantile)
+            return self._with_callable(
+                func,
+                "quantile",
+                scalar_kwargs={"quantile": quantile, "interpolation": "linear"},
+            )
         msg = "`higher`, `lower`, `midpoint`, `nearest` - interpolation methods are not supported by Dask. Please use `linear` instead."
         raise NotImplementedError(msg)
 
     def is_first_distinct(self) -> Self:
         def func(expr: dx.Series) -> dx.Series:
             _name = expr.name
-            col_token = generate_temporary_column_name(n_bytes=8, columns=[_name])
+            col_token = generate_temporary_column_name(
+                n_bytes=8, columns=[_name], prefix="row_index_"
+            )
             frame = add_row_index(expr.to_frame(), col_token)
             first_distinct_index = frame.groupby(_name).agg({col_token: "min"})[col_token]
             return frame[col_token].isin(first_distinct_index)
@@ -521,7 +590,9 @@ class DaskExpr(
     def is_last_distinct(self) -> Self:
         def func(expr: dx.Series) -> dx.Series:
             _name = expr.name
-            col_token = generate_temporary_column_name(n_bytes=8, columns=[_name])
+            col_token = generate_temporary_column_name(
+                n_bytes=8, columns=[_name], prefix="row_index_"
+            )
             frame = add_row_index(expr.to_frame(), col_token)
             last_distinct_index = frame.groupby(_name).agg({col_token: "max"})[col_token]
             return frame[col_token].isin(last_distinct_index)
@@ -581,6 +652,9 @@ class DaskExpr(
                     f"Supported functions are {', '.join(PandasLikeGroupBy._REMAP_AGGS)}\n"
                 )
                 raise NotImplementedError(msg) from None
+            dask_kwargs = window_kwargs_to_pandas_equivalent(
+                function_name, self._scalar_kwargs
+            )
 
             def func(df: DaskLazyFrame) -> Sequence[dx.Series]:
                 output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
@@ -598,11 +672,11 @@ class DaskExpr(
                             msg = "Safety check failed, please report a bug."
                             raise AssertionError(msg)
                         res_native = grouped.transform(
-                            dask_function_name, **self._scalar_kwargs
+                            dask_function_name, **dask_kwargs
                         ).to_frame(output_names[0])
                     else:
                         res_native = grouped[list(output_names)].transform(
-                            dask_function_name, **self._scalar_kwargs
+                            dask_function_name, **dask_kwargs
                         )
                 result_frame = df._with_native(
                     res_native.rename(columns=dict(zip(output_names, aliases)))
@@ -648,6 +722,14 @@ class DaskExpr(
 
         return self._with_callable(da.sqrt, "sqrt")
 
+    def mode(self, *, keep: ModeKeepStrategy) -> Self:
+        def func(expr: dx.Series) -> dx.Series:
+            _name = expr.name
+            result = expr.to_frame().mode()[_name]
+            return result.head(1) if keep == "any" else result
+
+        return self._with_callable(func, "mode", scalar_kwargs={"keep": keep})
+
     @property
     def str(self) -> DaskExprStringNamespace:
         return DaskExprStringNamespace(self)
@@ -656,21 +738,10 @@ class DaskExpr(
     def dt(self) -> DaskExprDateTimeNamespace:
         return DaskExprDateTimeNamespace(self)
 
-    arg_max: not_implemented = not_implemented()
-    arg_min: not_implemented = not_implemented()
-    arg_true: not_implemented = not_implemented()
-    ewm_mean: not_implemented = not_implemented()
-    gather_every: not_implemented = not_implemented()
-    head: not_implemented = not_implemented()
-    map_batches: not_implemented = not_implemented()
-    mode: not_implemented = not_implemented()
-    sample: not_implemented = not_implemented()
-    rank: not_implemented = not_implemented()
-    replace_strict: not_implemented = not_implemented()
-    sort: not_implemented = not_implemented()
-    tail: not_implemented = not_implemented()
+    rank = not_implemented()
+    first = not_implemented()
+    last = not_implemented()
 
     # namespaces
     list: not_implemented = not_implemented()  # type: ignore[assignment]
-    cat: not_implemented = not_implemented()  # type: ignore[assignment]
     struct: not_implemented = not_implemented()  # type: ignore[assignment]

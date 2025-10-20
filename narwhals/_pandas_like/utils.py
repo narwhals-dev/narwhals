@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import operator
 import re
-from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, cast
 
 import pandas as pd
 
@@ -16,12 +16,14 @@ from narwhals._constants import (
     SECONDS_PER_DAY,
     US_PER_SECOND,
 )
+from narwhals._exceptions import issue_warning
 from narwhals._utils import (
     Implementation,
     Version,
     _DeferredIterable,
     check_columns_exist,
     isinstance_or_issubclass,
+    requires,
 )
 from narwhals.exceptions import ShapeError
 
@@ -202,8 +204,10 @@ def rename(
     if implementation is Implementation.PANDAS and (
         implementation._backend_version() >= (3,)
     ):  # pragma: no cover
-        return obj.rename(*args, **kwargs, inplace=False)
-    return obj.rename(*args, **kwargs, copy=False, inplace=False)
+        result = obj.rename(*args, **kwargs, inplace=False)
+    else:
+        result = obj.rename(*args, **kwargs, copy=False, inplace=False)
+    return cast("NativeNDFrameT", result)  # type: ignore[redundant-cast]
 
 
 @functools.lru_cache(maxsize=16)
@@ -282,7 +286,7 @@ def non_object_native_to_narwhals_dtype(native_dtype: Any, version: Version) -> 
 
 
 def object_native_to_narwhals_dtype(
-    series: PandasLikeSeries, version: Version, implementation: Implementation
+    series: PandasLikeSeries | None, version: Version, implementation: Implementation
 ) -> DType:
     dtypes = version.dtypes
     if implementation is Implementation.CUDF:
@@ -290,8 +294,9 @@ def object_native_to_narwhals_dtype(
         # objects, so we can just return String.
         return dtypes.String()
 
+    infer = pd.api.types.infer_dtype
     # Arbitrary limit of 100 elements to use to sniff dtype.
-    inferred_dtype = pd.api.types.infer_dtype(series.head(100), skipna=True)
+    inferred_dtype = "empty" if series is None else infer(series.head(100), skipna=True)
     if inferred_dtype == "string":
         return dtypes.String()
     if inferred_dtype == "empty" and version is not Version.V1:
@@ -332,7 +337,11 @@ def _cudf_categorical_to_list(
 
 
 def native_to_narwhals_dtype(
-    native_dtype: Any, version: Version, implementation: Implementation
+    native_dtype: Any,
+    version: Version,
+    implementation: Implementation,
+    *,
+    allow_object: bool = False,
 ) -> DType:
     str_dtype = str(native_dtype)
 
@@ -357,6 +366,8 @@ def native_to_narwhals_dtype(
         # Per conversations with their maintainers, they don't support arbitrary
         # objects, so we can just return String.
         return version.dtypes.String()
+    if allow_object:
+        return object_native_to_narwhals_dtype(None, version, implementation)
     msg = (
         "Unreachable code, object dtype should be handled separately"  # pragma: no cover
     )
@@ -458,7 +469,6 @@ NW_TO_PD_DTYPES_BACKEND: Mapping[type[DType], Mapping[DTypeBackend, str | type[A
         None: "uint16",
     },
     dtypes.UInt8: {"pyarrow": "UInt8[pyarrow]", "numpy_nullable": "UInt8", None: "uint8"},
-    dtypes.String: {"pyarrow": "string[pyarrow]", "numpy_nullable": "string", None: str},
     dtypes.Boolean: {
         "pyarrow": "boolean[pyarrow]",
         "numpy_nullable": "boolean",
@@ -483,11 +493,41 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912
         return pd_type
     if into_pd_type := NW_TO_PD_DTYPES_BACKEND.get(base_type):
         return into_pd_type[dtype_backend]
+    if issubclass(base_type, dtypes.String):
+        if dtype_backend == "pyarrow":
+            import pyarrow as pa  # ignore-banned-import
+
+            # Note: this is different from `string[pyarrow]`, even though the repr
+            # looks the same.
+            # >>> pd.DataFrame({'a':['foo']}, dtype='string[pyarrow]')['a'].str.len()
+            # 0    3
+            # Name: a, dtype: Int64
+            # >>> pd.DataFrame({'a':['foo']}, dtype=pd.ArrowDtype(pa.string()))['a'].str.len()
+            # 0    3
+            # Name: a, dtype: int32[pyarrow]
+            #
+            # `ArrowDType(pa.string())` is what `.convert_dtypes(dtype_backend='pyarrow')` converts to,
+            # so we use that here.
+            return pd.ArrowDtype(pa.string())
+        if dtype_backend == "numpy_nullable":
+            return "string"
+        return str
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
-        # Pandas does not support "ms" or "us" time units before version 2.0
         if is_pandas_or_modin(implementation) and PANDAS_VERSION < (
             2,
         ):  # pragma: no cover
+            if isinstance(dtype, dtypes.Datetime) and dtype.time_unit != "ns":
+                found = requires._unparse_version(PANDAS_VERSION)
+                available = f"available in 'pandas>=2.0', found version {found!r}."
+                changelog_url = "https://pandas.pydata.org/docs/dev/whatsnew/v2.0.0.html#construction-with-datetime64-or-timedelta64-dtype-with-unsupported-resolution"
+                msg = (
+                    f"`nw.Datetime(time_unit={dtype.time_unit!r})` is only {available}\n"
+                    "Narwhals has fallen back to using `time_unit='ns'` to avoid an error.\n\n"
+                    "Hint: to avoid this warning, consider either:\n"
+                    f"- Upgrading pandas: {changelog_url}\n"
+                    f"- Using a bare `nw.Datetime`, if this precision is not important"
+                )
+                issue_warning(msg, UserWarning)
             dt_time_unit = "ns"
         else:
             dt_time_unit = dtype.time_unit
@@ -511,8 +551,8 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912
         )
     if isinstance_or_issubclass(dtype, dtypes.Date):
         try:
-            import pyarrow as pa  # ignore-banned-import  # noqa: F401
-        except ModuleNotFoundError as exc:  # pragma: no cover
+            import pyarrow as pa  # ignore-banned-import
+        except ModuleNotFoundError as exc:
             # BUG: Never re-raised?
             msg = "'pyarrow>=13.0.0' is required for `Date` dtype."
             raise ModuleNotFoundError(msg) from exc

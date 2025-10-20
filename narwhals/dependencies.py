@@ -28,6 +28,7 @@ if TYPE_CHECKING:
         IntoDataFrameT,
         IntoLazyFrameT,
         IntoSeriesT,
+        PandasLikeDType,
         _1DArray,
         _1DArrayInt,
         _2DArray,
@@ -55,9 +56,7 @@ def get_pandas() -> Any:
 
 def get_modin() -> Any:  # pragma: no cover
     """Get modin.pandas module (if already imported - else return None)."""
-    if (modin := sys.modules.get("modin", None)) is not None:
-        return modin.pandas
-    return None
+    return sys.modules.get("modin.pandas", None)
 
 
 def get_cudf() -> Any:
@@ -306,6 +305,17 @@ def is_polars_series(ser: Any) -> TypeIs[pl.Series]:
     return (pl := get_polars()) is not None and isinstance(ser, pl.Series)
 
 
+def is_polars_schema(obj: Any) -> TypeIs[pl.Schema]:
+    return (
+        bool(pl := get_polars()) and hasattr(pl, "Schema") and isinstance(obj, pl.Schema)
+    )
+
+
+# NOTE: For `pl.Schema` only instantiated dtypes are expected
+def is_polars_data_type(obj: Any) -> TypeIs[pl.DataType]:
+    return bool(pl := get_polars()) and isinstance(obj, pl.DataType)
+
+
 def is_pyarrow_chunked_array(ser: Any) -> TypeIs[pa.ChunkedArray[Any]]:
     """Check whether `ser` is a PyArrow ChunkedArray without importing PyArrow.
 
@@ -328,6 +338,14 @@ def is_pyarrow_table(df: Any) -> TypeIs[pa.Table]:
 
 def is_pyarrow_scalar(obj: Any) -> TypeIs[pa.Scalar[Any]]:
     return (pa := get_pyarrow()) is not None and isinstance(obj, pa.Scalar)
+
+
+def is_pyarrow_schema(obj: Any) -> TypeIs[pa.Schema]:
+    return bool(pa := get_pyarrow()) and isinstance(obj, pa.Schema)
+
+
+def is_pyarrow_data_type(obj: Any) -> TypeIs[pa.DataType]:
+    return bool(pa := get_pyarrow()) and isinstance(obj, pa.DataType)
 
 
 def is_pyspark_dataframe(df: Any) -> TypeIs[pyspark_sql.DataFrame]:
@@ -438,14 +456,27 @@ def is_pandas_like_index(index: Any) -> bool:
     )  # pragma: no cover
 
 
+def is_pandas_like_dtype(obj: Any) -> TypeIs[PandasLikeDType]:
+    return bool(pd := get_pandas()) and isinstance(
+        obj, (pd.api.extensions.ExtensionDtype, get_numpy().dtype)
+    )
+
+
+def is_cudf_dtype(
+    obj: Any,
+) -> TypeIs[pd.api.extensions.ExtensionDtype]:  # pragma: no cover
+    return (
+        bool(pd := get_pandas())
+        and isinstance(obj, (pd.api.extensions.ExtensionDtype))
+        and hasattr(obj, "to_arrow")
+    )
+
+
 def is_into_series(native_series: Any | IntoSeriesT) -> TypeIs[IntoSeriesT]:
     """Check whether `native_series` can be converted to a Narwhals Series.
 
     Arguments:
         native_series: The object to check.
-
-    Returns:
-        `True` if `native_series` can be converted to a Narwhals Series, `False` otherwise.
 
     Examples:
         >>> import pandas as pd
@@ -480,9 +511,6 @@ def is_into_dataframe(native_dataframe: Any | IntoDataFrameT) -> TypeIs[IntoData
 
     Arguments:
         native_dataframe: The object to check.
-
-    Returns:
-        `True` if `native_dataframe` can be converted to a Narwhals DataFrame, `False` otherwise.
 
     Examples:
         >>> import pandas as pd

@@ -33,7 +33,6 @@ if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias, TypeIs
 
     from narwhals._polars.dataframe import Method, PolarsDataFrame
-    from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.namespace import PolarsNamespace
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
@@ -41,9 +40,11 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         Into1DArray,
         IntoDType,
+        ModeKeepStrategy,
         MultiIndexSelector,
         NonNestedLiteral,
         NumericLiteral,
+        PythonLiteral,
         _1DArray,
     )
 
@@ -80,6 +81,7 @@ INHERITED_METHODS = frozenset(
         "arg_max",
         "arg_min",
         "arg_true",
+        "ceil",
         "clip",
         "count",
         "cum_max",
@@ -90,7 +92,9 @@ INHERITED_METHODS = frozenset(
         "drop_nulls",
         "exp",
         "fill_null",
+        "fill_nan",
         "filter",
+        "floor",
         "gather_every",
         "head",
         "is_between",
@@ -136,7 +140,9 @@ INHERITED_METHODS = frozenset(
 
 
 class PolarsSeries:
-    _implementation = Implementation.POLARS
+    _implementation: Implementation = Implementation.POLARS
+    _native_series: pl.Series
+    _version: Version
 
     _HIST_EMPTY_SCHEMA: ClassVar[Mapping[IncludeBreakpoint, Sequence[str]]] = {
         True: ["breakpoint", "count"],
@@ -144,7 +150,7 @@ class PolarsSeries:
     }
 
     def __init__(self, series: pl.Series, *, version: Version) -> None:
-        self._native_series: pl.Series = series
+        self._native_series = series
         self._version = version
 
     @property
@@ -234,9 +240,6 @@ class PolarsSeries:
         # scalar
         return series
 
-    def _to_expr(self) -> PolarsExpr:
-        return self.__narwhals_namespace__()._expr._from_series(self)
-
     def __getattr__(self, attr: str) -> Any:
         if attr not in INHERITED_METHODS:
             msg = f"{self.__class__.__name__} has not attribute '{attr}'."
@@ -250,6 +253,17 @@ class PolarsSeries:
 
     def __len__(self) -> int:
         return len(self.native)
+
+    def __rfloordiv__(self, other: Any) -> PolarsSeries:
+        if self._backend_version < (1, 10, 0):
+            name = self.name
+            ns = self.__narwhals_namespace__()
+            return (
+                self.to_frame()
+                .select((ns.col(name).__rfloordiv__(other)).alias(name))
+                .get_column(name)
+            )
+        return self._with_native(self.native.__rfloordiv__(extract_native(other)))
 
     @property
     def name(self) -> str:
@@ -507,7 +521,9 @@ class PolarsSeries:
         if self._backend_version < (1, 32, 0):
             name = self.name
             ns = self.__narwhals_namespace__()
-            other_expr = other._to_expr() if isinstance(other, PolarsSeries) else other
+            other_expr = (
+                ns.lit(other.native, None) if isinstance(other, PolarsSeries) else other
+            )
             expr = ns.col(name).is_close(
                 other_expr, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal
             )
@@ -517,6 +533,10 @@ class PolarsSeries:
             other_series, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal
         )
         return self._with_native(result)
+
+    def mode(self, *, keep: ModeKeepStrategy) -> Self:
+        result = self.native.mode()
+        return self._with_native(result.head(1) if keep == "any" else result)
 
     def hist_from_bins(
         self, bins: list[float], *, include_breakpoint: bool
@@ -631,6 +651,16 @@ class PolarsSeries:
     def to_polars(self) -> pl.Series:
         return self.native
 
+    def first(self) -> PythonLiteral:
+        if self._backend_version < (1, 10):  # pragma: no cover
+            return self.native.item(0) if len(self) else None
+        return self.native.first()  # type: ignore[return-value]
+
+    def last(self) -> PythonLiteral:
+        if self._backend_version < (1, 10):  # pragma: no cover
+            return self.native.item(-1) if len(self) else None
+        return self.native.last()  # type: ignore[return-value]
+
     @property
     def dt(self) -> PolarsSeriesDateTimeNamespace:
         return PolarsSeriesDateTimeNamespace(self)
@@ -658,7 +688,6 @@ class PolarsSeries:
     __pow__: Method[Self]
     __radd__: Method[Self]
     __rand__: Method[Self]
-    __rfloordiv__: Method[Self]
     __rmod__: Method[Self]
     __rmul__: Method[Self]
     __ror__: Method[Self]
@@ -672,6 +701,7 @@ class PolarsSeries:
     arg_max: Method[int]
     arg_min: Method[int]
     arg_true: Method[Self]
+    ceil: Method[Self]
     clip: Method[Self]
     count: Method[int]
     cum_max: Method[Self]
@@ -682,7 +712,9 @@ class PolarsSeries:
     drop_nulls: Method[Self]
     exp: Method[Self]
     fill_null: Method[Self]
+    fill_nan: Method[Self]
     filter: Method[Self]
+    floor: Method[Self]
     gather_every: Method[Self]
     head: Method[Self]
     is_between: Method[Self]
@@ -702,7 +734,6 @@ class PolarsSeries:
     max: Method[Any]
     mean: Method[float]
     min: Method[Any]
-    mode: Method[Self]
     n_unique: Method[int]
     null_count: Method[int]
     quantile: Method[float]
@@ -759,6 +790,11 @@ class PolarsSeriesDateTimeNamespace(
 class PolarsSeriesStringNamespace(
     PolarsSeriesNamespace, PolarsStringNamespace[PolarsSeries, pl.Series]
 ):
+    def to_titlecase(self) -> PolarsSeries:
+        name = self.name
+        ns = self.__narwhals_namespace__()
+        return self.to_frame().select(ns.col(name).str.to_titlecase()).get_column(name)
+
     def zfill(self, width: int) -> PolarsSeries:
         name = self.name
         ns = self.__narwhals_namespace__()

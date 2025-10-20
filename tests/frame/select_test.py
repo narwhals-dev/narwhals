@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any
 
 import pandas as pd
-import pyarrow as pa
 import pytest
 
 import narwhals as nw
@@ -76,6 +75,9 @@ def test_select_boolean_cols_multi_group_by() -> None:
 
 
 def test_comparison_with_list_error_message() -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
     msg = "Expected Series or scalar, got list."
     with pytest.raises(TypeError, match=msg):
         nw.from_native(pa.chunked_array([[1, 2, 3]]), series_only=True) == [1, 2, 3]  # noqa: B015
@@ -165,7 +167,7 @@ def test_select_duplicates(constructor: Constructor) -> None:
     df = nw.from_native(constructor({"a": [1, 2]})).lazy()
     with pytest.raises(
         ValueError,
-        match="Expected unique|[Dd]uplicate|more than one|Duplicate column name",
+        match=r"Expected unique|[Dd]uplicate|more than one|Duplicate column name",
     ):
         df.select("a", nw.col("a") + 1).collect()
 

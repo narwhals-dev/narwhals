@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals as nw
+from tests.utils import DUCKDB_VERSION
 
 if TYPE_CHECKING:
     from tests.utils import Constructor, ConstructorEager
@@ -19,6 +20,8 @@ def test_unique_expr(request: pytest.FixtureRequest, constructor: Constructor) -
         for backend in ("dask", "modin", "cudf", "pyarrow", "pandas")
     ):
         request.applymarker(pytest.mark.xfail)
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
     result = (
         nw.from_native(constructor(data))
         .select(nw.col("a").cast(nw.List(nw.Int32())).list.unique())

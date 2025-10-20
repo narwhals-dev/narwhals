@@ -47,6 +47,7 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.group_by import PandasLikeGroupBy
     from narwhals._pandas_like.namespace import PandasLikeNamespace
+    from narwhals._spark_like.utils import SparkSession
     from narwhals._translate import IntoArrowTable
     from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
     from narwhals._utils import Version, _LimitedContext
@@ -173,6 +174,31 @@ class PandasLikeDataFrame(
         if schema:
             backend: Iterable[DTypeBackend] | None = None
             if aligned_data:
+                backend = iter_dtype_backends(native.dtypes, implementation)
+            native = native.astype(Schema(schema).to_pandas(backend))
+        return cls.from_native(native, context=context)
+
+    @classmethod
+    def from_dicts(
+        cls,
+        data: Sequence[Mapping[str, Any]],
+        /,
+        *,
+        context: _LimitedContext,
+        schema: IntoSchema | None,
+    ) -> Self:
+        from narwhals.schema import Schema
+
+        implementation = context._implementation
+        ns = implementation.to_native_namespace()
+        DataFrame = cast("type[pd.DataFrame]", ns.DataFrame)
+        if data or not schema:
+            native = DataFrame.from_records(data)
+        else:
+            native = DataFrame.from_dict({col: [] for col in schema})
+        if schema:
+            backend: Iterable[DTypeBackend] | None = None
+            if data:
                 backend = iter_dtype_backends(native.dtypes, implementation)
             native = native.astype(Schema(schema).to_pandas(backend))
         return cls.from_native(native, context=context)
@@ -435,13 +461,10 @@ class PandasLikeDataFrame(
     def row(self, index: int) -> tuple[Any, ...]:
         return tuple(x for x in self.native.iloc[index])
 
-    def filter(self, predicate: PandasLikeExpr | list[bool]) -> Self:
-        if isinstance(predicate, list):
-            mask_native: pd.Series[Any] | list[bool] = predicate
-        else:
-            # `[0]` is safe as the predicate's expression only returns a single column
-            mask = self._evaluate_into_exprs(predicate)[0]
-            mask_native = self._extract_comparand(mask)
+    def filter(self, predicate: PandasLikeExpr) -> Self:
+        # `[0]` is safe as the predicate's expression only returns a single column
+        mask = self._evaluate_into_exprs(predicate)[0]
+        mask_native = self._extract_comparand(mask)
         return self._with_native(
             self.native.loc[mask_native], validate_column_names=False
         )
@@ -760,19 +783,37 @@ class PandasLikeDataFrame(
         *,
         keep: UniqueKeepStrategy,
         maintain_order: bool | None = None,
+        order_by: Sequence[str] | None,
     ) -> Self:
         # The param `maintain_order` is only here for compatibility with the Polars API
         # and has no effect on the output.
         mapped_keep = {"none": False, "any": "first"}.get(keep, keep)
         if subset and (error := self._check_columns_exist(subset)):
             raise error
-        return self._with_native(
-            self.native.drop_duplicates(subset=subset, keep=mapped_keep),
-            validate_column_names=False,
-        )
+        if order_by and maintain_order:
+            token = generate_temporary_column_name(8, self.columns)
+            res = (
+                self.with_row_index(token, order_by=None)
+                .sort(*order_by, nulls_last=False, descending=False)
+                .native.drop_duplicates(subset or self.columns, keep=mapped_keep)
+                .sort_values(token)
+            )
+            res.drop(columns=token, inplace=True)  # noqa: PD002
+        elif order_by:
+            res = self.sort(
+                *order_by, nulls_last=False, descending=False
+            ).native.drop_duplicates(subset or self.columns, keep=mapped_keep)
+        else:
+            res = self.native.drop_duplicates(subset or self.columns, keep=mapped_keep)
+        return self._with_native(res, validate_column_names=False)
 
     # --- lazy-only ---
-    def lazy(self, backend: _LazyAllowedImpl | None = None) -> CompliantLazyFrameAny:
+    def lazy(
+        self,
+        backend: _LazyAllowedImpl | None = None,
+        *,
+        session: SparkSession | None = None,
+    ) -> CompliantLazyFrameAny:
         pandas_df = self.to_pandas()
         if backend is None:
             return self
@@ -806,7 +847,7 @@ class PandasLikeDataFrame(
                 validate_backend_version=True,
                 version=self._version,
             )
-        if backend.is_ibis():
+        if backend is Implementation.IBIS:
             import ibis  # ignore-banned-import
 
             from narwhals._ibis.dataframe import IbisLazyFrame
@@ -816,6 +857,21 @@ class PandasLikeDataFrame(
                 validate_backend_version=True,
                 version=self._version,
             )
+
+        if backend.is_spark_like():
+            from narwhals._spark_like.dataframe import SparkLikeLazyFrame
+
+            if session is None:
+                msg = "Spark like backends require `session` to be not None."
+                raise ValueError(msg)
+
+            return SparkLikeLazyFrame(
+                session.createDataFrame(pandas_df),
+                version=self._version,
+                implementation=backend,
+                validate_backend_version=True,
+            )
+
         raise AssertionError  # pragma: no cover
 
     @property

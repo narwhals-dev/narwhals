@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Generic, TypeVar
 
+from narwhals._expression_parsing import apply_n_ary_operation
+
 if TYPE_CHECKING:
     from narwhals.expr import Expr
 
@@ -41,7 +43,7 @@ class ExprStringNamespace(Generic[ExprT]):
         )
 
     def replace(
-        self, pattern: str, value: str, *, literal: bool = False, n: int = 1
+        self, pattern: str, value: str | ExprT, *, literal: bool = False, n: int = 1
     ) -> ExprT:
         r"""Replace first matching regex/literal substring with a new string value.
 
@@ -66,12 +68,22 @@ class ExprStringNamespace(Generic[ExprT]):
             └──────────────────────┘
         """
         return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).str.replace(
-                pattern, value, literal=literal, n=n
+            lambda plx: (
+                apply_n_ary_operation(
+                    plx,
+                    lambda self, value: self.str.replace(
+                        pattern, value, literal=literal, n=n
+                    ),
+                    self._expr,
+                    value,
+                    str_as_lit=True,
+                )
             )
         )
 
-    def replace_all(self, pattern: str, value: str, *, literal: bool = False) -> ExprT:
+    def replace_all(
+        self, pattern: str, value: str | ExprT, *, literal: bool = False
+    ) -> ExprT:
         r"""Replace all matching regex/literal substring with a new string value.
 
         Arguments:
@@ -94,8 +106,16 @@ class ExprStringNamespace(Generic[ExprT]):
             └──────────────────────┘
         """
         return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).str.replace_all(
-                pattern, value, literal=literal
+            lambda plx: (
+                apply_n_ary_operation(
+                    plx,
+                    lambda self, value: self.str.replace_all(
+                        pattern, value, literal=literal
+                    ),
+                    self._expr,
+                    value,
+                    str_as_lit=True,
+                )
             )
         )
 
@@ -433,6 +453,62 @@ class ExprStringNamespace(Generic[ExprT]):
         """
         return self._expr._with_elementwise(
             lambda plx: self._expr._to_compliant_expr(plx).str.to_lowercase()
+        )
+
+    def to_titlecase(self) -> ExprT:
+        """Modify strings to their titlecase equivalent.
+
+        Notes:
+            This is a form of case transform where the first letter of each word is
+            capitalized, with the rest of the word in lowercase.
+
+        Warning:
+            Different backends might follow different rules to determine what a "word" is:
+
+            - duckdb, polars and spark-like use non-**alphanumeric** characters to
+                define the word boundaries.
+            - pandas-like, pyarrow and dask use non-**alphabetic** characters to define
+                the word boundaries, matching the behavior of
+                [`str.title`](https://docs.python.org/3/library/stdtypes.html#str.title).
+
+            We can observe the difference with the string `"with123numbers"`:
+
+            - non-**alphanumeric** -> `"With123numbers"`
+                - notice lowercase **n** after the digits
+            - non-**alphabetic** -> `"With123Numbers"`
+                - notice uppercase **N** after the digits
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame(
+            ...     {
+            ...         "quotes": [
+            ...             "'e.t. phone home'",
+            ...             "you talkin' to me?",
+            ...             "to infinity,and BEYOND!",
+            ...         ]
+            ...     }
+            ... )
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(quotes_title=nw.col("quotes").str.to_titlecase())
+            ┌─────────────────────────────────────────────────────┐
+            |                 Narwhals DataFrame                  |
+            |-----------------------------------------------------|
+            |shape: (3, 2)                                        |
+            |┌─────────────────────────┬─────────────────────────┐|
+            |│ quotes                  ┆ quotes_title            │|
+            |│ ---                     ┆ ---                     │|
+            |│ str                     ┆ str                     │|
+            |╞═════════════════════════╪═════════════════════════╡|
+            |│ 'e.t. phone home'       ┆ 'E.T. Phone Home'       │|
+            |│ you talkin' to me?      ┆ You Talkin' To Me?      │|
+            |│ to infinity,and BEYOND! ┆ To Infinity,And Beyond! │|
+            |└─────────────────────────┴─────────────────────────┘|
+            └─────────────────────────────────────────────────────┘
+        """
+        return self._expr._with_elementwise(
+            lambda plx: self._expr._to_compliant_expr(plx).str.to_titlecase()
         )
 
     def zfill(self, width: int) -> ExprT:

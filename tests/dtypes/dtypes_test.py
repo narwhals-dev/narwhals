@@ -1,23 +1,23 @@
 from __future__ import annotations
 
 import enum
+from contextlib import AbstractContextManager, nullcontext as does_not_warn
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 import pandas as pd
-import pyarrow as pa
 import pytest
 
 import narwhals as nw
 from narwhals.exceptions import PerformanceWarning
-from tests.utils import PANDAS_VERSION, POLARS_VERSION, PYARROW_VERSION
+from tests.utils import PANDAS_VERSION, POLARS_VERSION, PYARROW_VERSION, pyspark_session
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    from narwhals.typing import IntoSeries, NonNestedDType
-    from tests.utils import Constructor
+    from narwhals.typing import IntoFrame, IntoSeries, NonNestedDType
+    from tests.utils import Constructor, ConstructorPandasLike, NestedOrEnumDType
 
 
 @pytest.mark.parametrize("time_unit", ["us", "ns", "ms"])
@@ -158,6 +158,8 @@ def test_2d_array(constructor: Constructor, request: pytest.FixtureRequest) -> N
     for condition, reason in version_conditions:
         if condition:
             pytest.skip(reason)
+    if "pandas" in str(constructor):
+        pytest.importorskip("pyarrow")
 
     if any(x in str(constructor) for x in ("dask", "cudf", "pyspark")):
         request.applymarker(
@@ -175,6 +177,9 @@ def test_2d_array(constructor: Constructor, request: pytest.FixtureRequest) -> N
 
 
 def test_second_time_unit() -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
     s: IntoSeries = pd.Series(np.array([np.datetime64("2020-01-01", "s")]))
     result = nw.from_native(s, series_only=True)
     expected_unit: Literal["ns", "us", "ms", "s"] = (
@@ -215,6 +220,8 @@ def test_pandas_inplace_modification_1267() -> None:
 
 
 def test_pandas_fixed_offset_1302() -> None:
+    pytest.importorskip("pyarrow")
+
     result = nw.from_native(
         pd.Series(pd.to_datetime(["2020-01-01T00:00:00.000000000+01:00"])),
         series_only=True,
@@ -234,6 +241,10 @@ def test_pandas_fixed_offset_1302() -> None:
         pass
 
 
+def from_native_collect_schema(native: IntoFrame) -> nw.Schema:
+    return nw.from_native(native).collect_schema()
+
+
 def test_huge_int() -> None:
     pytest.importorskip("duckdb")
     pytest.importorskip("polars")
@@ -244,10 +255,17 @@ def test_huge_int() -> None:
     df = pl.DataFrame({"a": [1, 2, 3]})
 
     if POLARS_VERSION >= (1, 18):
-        result = nw.from_native(df.select(pl.col("a").cast(pl.Int128))).collect_schema()
+        result = from_native_collect_schema(df.select(pl.col("a").cast(pl.Int128)))
         assert result["a"] == nw.Int128
+        assert result.to_polars()["a"] == pl.Int128
     else:  # pragma: no cover
         # Int128 was not available yet
+        pass
+    if POLARS_VERSION >= (1, 34):
+        result = from_native_collect_schema(df.select(pl.col("a").cast(pl.UInt128)))
+        assert result["a"] == nw.UInt128
+        assert result.to_polars()["a"] == pl.UInt128
+    else:  # pragma: no cover
         pass
 
     rel = duckdb.sql("""
@@ -262,7 +280,7 @@ def test_huge_int() -> None:
         select cast(a as uint128) as a
         from df
                      """)
-    result = nw.from_native(rel).collect_schema()
+    result = from_native_collect_schema(rel)
     assert result["a"] == nw.UInt128
 
     # TODO(unassigned): once other libraries support Int128/UInt128,
@@ -386,9 +404,10 @@ def test_huge_int_to_native() -> None:
 def test_cast_decimal_to_native() -> None:
     pytest.importorskip("duckdb")
     pytest.importorskip("polars")
-
+    pytest.importorskip("pyarrow")
     import duckdb
     import polars as pl
+    import pyarrow as pa
 
     data = {"a": [1, 2, 3]}
 
@@ -505,15 +524,10 @@ def test_datetime_w_tz_duckdb() -> None:
     assert result["b"] == nw.List(nw.List(nw.Datetime("us", "Asia/Kathmandu")))
 
 
-def test_datetime_w_tz_pyspark(constructor: Constructor) -> None:  # pragma: no cover
-    if "pyspark" not in str(constructor) or "sqlframe" in str(constructor):
-        pytest.skip()
+@pytest.mark.slow
+def test_datetime_w_tz_pyspark() -> None:  # pragma: no cover
     pytest.importorskip("pyspark")
-    from pyspark.sql import SparkSession
-
-    session = SparkSession.builder.config(
-        "spark.sql.session.timeZone", "UTC"
-    ).getOrCreate()
+    session = pyspark_session()
 
     df = nw.from_native(
         session.createDataFrame([(datetime(2020, 1, 1, tzinfo=timezone.utc),)], ["a"])
@@ -527,40 +541,51 @@ def test_datetime_w_tz_pyspark(constructor: Constructor) -> None:  # pragma: no 
     assert result["a"] == nw.List(nw.Datetime("us", "UTC"))
 
 
+def test_dtype_base_type_non_nested(non_nested_type: type[NonNestedDType]) -> None:
+    assert non_nested_type.base_type() is non_nested_type().base_type()
+
+
+def test_dtype_base_type_nested(nested_dtype: NestedOrEnumDType) -> None:
+    base = nested_dtype.base_type()
+    assert base.base_type() == nested_dtype.base_type()
+
+
 @pytest.mark.parametrize(
-    "dtype",
+    ("dtype", "context"),
     [
-        nw.Boolean,
-        nw.Categorical,
-        nw.Date,
-        nw.Datetime,
-        nw.Decimal,
-        nw.Duration,
-        nw.Float32,
-        nw.Float64,
-        nw.Int8,
-        nw.Int16,
-        nw.Int32,
-        nw.Int64,
-        nw.Int128,
-        nw.Object,
-        nw.String,
-        nw.Time,
-        nw.UInt8,
-        nw.UInt16,
-        nw.UInt32,
-        nw.UInt64,
-        nw.UInt128,
-        nw.Unknown,
-        nw.Binary,
+        (nw.Datetime("ns"), does_not_warn()),
+        (nw.Datetime, does_not_warn()),
+        (nw.Datetime(), pytest.warns(UserWarning, match="time_unit")),
+        (nw.Datetime("us"), pytest.warns(UserWarning, match="time_unit='us'")),
+        (nw.Datetime("s"), pytest.warns(UserWarning, match="time_unit='s'")),
     ],
 )
-def test_dtype_base_type_non_nested(dtype: type[NonNestedDType]) -> None:
-    assert dtype.base_type() is dtype().base_type()
+def test_pandas_datetime_ignored_time_unit_warns(
+    constructor_pandas_like: ConstructorPandasLike,
+    dtype: nw.Datetime | type[nw.Datetime],
+    context: AbstractContextManager[Any],
+) -> None:
+    data = {"a": [datetime(2001, 1, 1), None, datetime(2001, 1, 3)]}
+    expr = nw.col("a").cast(dtype)
+    df = nw.from_native(constructor_pandas_like(data))
+    ctx = does_not_warn() if PANDAS_VERSION >= (2,) else context
+    with ctx:
+        df.select(expr)
 
 
-def test_dtype_base_type_nested() -> None:
-    assert nw.List.base_type() is nw.List(nw.Float32).base_type()
-    assert nw.Array.base_type() is nw.Array(nw.String, 2).base_type()
-    assert nw.Struct.base_type() is nw.Struct({"a": nw.Boolean}).base_type()
-    assert nw.Enum.base_type() is nw.Enum(["beluga", "narwhal"]).base_type()
+def test_dtype___slots___non_nested(non_nested_type: type[NonNestedDType]) -> None:
+    dtype = non_nested_type()
+    with pytest.raises(AttributeError):
+        dtype.i_dont_exist = 100  # type: ignore[union-attr]
+    with pytest.raises(AttributeError):
+        dtype.__dict__  # noqa: B018
+    _ = dtype.__slots__
+
+
+def test_dtype___slots___nested(nested_dtype: NestedOrEnumDType) -> None:
+    with pytest.raises(AttributeError):
+        nested_dtype.i_dont_exist = 999  # type: ignore[union-attr]
+    with pytest.raises(AttributeError):
+        nested_dtype.__dict__  # noqa: B018
+    slots = nested_dtype.__slots__
+    assert len(slots) != 0, slots

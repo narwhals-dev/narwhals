@@ -9,8 +9,9 @@ from typing import TYPE_CHECKING, Any, Callable, cast
 
 import pytest
 
+import narwhals as nw
 from narwhals._utils import Implementation, generate_temporary_column_name
-from tests.utils import PANDAS_VERSION
+from tests.utils import ID_PANDAS_LIKE, PANDAS_VERSION, pyspark_session, sqlframe_session
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -26,10 +27,16 @@ if TYPE_CHECKING:
 
     from narwhals._spark_like.dataframe import SQLFrameDataFrame
     from narwhals._typing import EagerAllowed
-    from narwhals.typing import NativeDataFrame, NativeLazyFrame
-    from tests.utils import Constructor, ConstructorEager, ConstructorLazy
+    from narwhals.typing import NativeDataFrame, NativeLazyFrame, NonNestedDType
+    from tests.utils import (
+        Constructor,
+        ConstructorEager,
+        ConstructorLazy,
+        NestedOrEnumDType,
+    )
 
     Data: TypeAlias = "dict[str, list[Any]]"
+
 
 MIN_PANDAS_NULLABLE_VERSION = (2,)
 
@@ -95,6 +102,7 @@ def pandas_nullable_constructor(obj: Data) -> pd.DataFrame:
 
 
 def pandas_pyarrow_constructor(obj: Data) -> pd.DataFrame:
+    pytest.importorskip("pyarrow")
     import pandas as pd
 
     return pd.DataFrame(obj).convert_dtypes(dtype_backend="pyarrow")
@@ -136,6 +144,8 @@ def polars_lazy_constructor(obj: Data) -> pl.LazyFrame:
 
 
 def duckdb_lazy_constructor(obj: Data) -> duckdb.DuckDBPyRelation:
+    pytest.importorskip("duckdb")
+    pytest.importorskip("pyarrow")
     import duckdb
     import polars as pl
 
@@ -158,6 +168,7 @@ def dask_lazy_p2_constructor(obj: Data) -> NativeLazyFrame:  # pragma: no cover
 
 
 def pyarrow_table_constructor(obj: dict[str, Any]) -> pa.Table:
+    pytest.importorskip("pyarrow")
     import pyarrow as pa
 
     return pa.table(obj)
@@ -168,35 +179,13 @@ def pyspark_lazy_constructor() -> Callable[[Data], PySparkDataFrame]:  # pragma:
     import warnings
     from atexit import register
 
-    is_spark_connect = bool(os.environ.get("SPARK_CONNECT", None))
-
-    if TYPE_CHECKING:
-        from pyspark.sql import SparkSession
-    elif is_spark_connect:
-        from pyspark.sql.connect.session import SparkSession
-    else:
-        from pyspark.sql import SparkSession
-
     with warnings.catch_warnings():
         # The spark session seems to trigger a polars warning.
         # Polars is imported in the tests, but not used in the spark operations
         warnings.filterwarnings(
             "ignore", r"Using fork\(\) can cause Polars", category=RuntimeWarning
         )
-        builder = cast("SparkSession.Builder", SparkSession.builder).appName("unit-tests")
-
-        session = (
-            (
-                builder.remote(f"sc://localhost:{os.environ.get('SPARK_PORT', '15002')}")
-                if is_spark_connect
-                else builder.master("local[1]").config("spark.ui.enabled", "false")
-            )
-            .config("spark.default.parallelism", "1")
-            .config("spark.sql.shuffle.partitions", "2")
-            # common timezone for all tests environments
-            .config("spark.sql.session.timeZone", "UTC")
-            .getOrCreate()
-        )
+        session = pyspark_session()
 
         register(session.stop)
 
@@ -216,9 +205,9 @@ def pyspark_lazy_constructor() -> Callable[[Data], PySparkDataFrame]:  # pragma:
 
 
 def sqlframe_pyspark_lazy_constructor(obj: Data) -> SQLFrameDataFrame:  # pragma: no cover
-    from sqlframe.duckdb import DuckDBSession
-
-    session = DuckDBSession()
+    pytest.importorskip("sqlframe")
+    pytest.importorskip("duckdb")
+    session = sqlframe_session()
     return session.createDataFrame([*zip(*obj.values())], schema=[*obj.keys()])
 
 
@@ -231,6 +220,8 @@ def _ibis_backend() -> IbisDuckDBBackend:  # pragma: no cover
 
 
 def ibis_lazy_constructor(obj: Data) -> ibis.Table:  # pragma: no cover
+    pytest.importorskip("ibis")
+    pytest.importorskip("polars")
     import polars as pl
 
     ldf = pl.from_dict(obj).lazy()
@@ -310,6 +301,18 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
         )
     elif "constructor" in metafunc.fixturenames:
         metafunc.parametrize("constructor", constructors, ids=constructors_ids)
+    elif "constructor_pandas_like" in metafunc.fixturenames:
+        pandas_like_constructors = []
+        pandas_like_constructors_ids = []
+        for fn, name in zip(eager_constructors, eager_constructors_ids):
+            if name in ID_PANDAS_LIKE:
+                pandas_like_constructors.append(fn)
+                pandas_like_constructors_ids.append(name)
+        metafunc.parametrize(
+            "constructor_pandas_like",
+            pandas_like_constructors,
+            ids=pandas_like_constructors_ids,
+        )
 
 
 TEST_EAGER_BACKENDS: list[EagerAllowed] = []
@@ -333,3 +336,50 @@ def eager_backend(request: pytest.FixtureRequest) -> EagerAllowed:
 def eager_implementation(request: pytest.FixtureRequest) -> EagerAllowed:
     """Use if a test is heavily parametric, skips `str` backend."""
     return request.param  # type: ignore[no-any-return]
+
+
+@pytest.fixture(
+    params=[
+        nw.Boolean,
+        nw.Categorical,
+        nw.Date,
+        nw.Datetime,
+        nw.Decimal,
+        nw.Duration,
+        nw.Float32,
+        nw.Float64,
+        nw.Int8,
+        nw.Int16,
+        nw.Int32,
+        nw.Int64,
+        nw.Int128,
+        nw.Object,
+        nw.String,
+        nw.Time,
+        nw.UInt8,
+        nw.UInt16,
+        nw.UInt32,
+        nw.UInt64,
+        nw.UInt128,
+        nw.Unknown,
+        nw.Binary,
+    ],
+    ids=lambda tp: tp.__name__,
+)
+def non_nested_type(request: pytest.FixtureRequest) -> type[NonNestedDType]:
+    tp_dtype: type[NonNestedDType] = request.param
+    return tp_dtype
+
+
+@pytest.fixture(
+    params=[
+        nw.List(nw.Float32),
+        nw.Array(nw.String, 2),
+        nw.Struct({"a": nw.Boolean}),
+        nw.Enum(["beluga", "narwhal"]),
+    ],
+    ids=lambda obj: type(obj).__name__,
+)
+def nested_dtype(request: pytest.FixtureRequest) -> NestedOrEnumDType:
+    dtype: NestedOrEnumDType = request.param
+    return dtype

@@ -19,9 +19,11 @@ from narwhals._sql.dataframe import SQLLazyFrame
 from narwhals._utils import (
     Implementation,
     ValidateBackendVersion,
+    extend_bool,
     generate_temporary_column_name,
     not_implemented,
     parse_columns_to_drop,
+    to_pyarrow_table,
     zip_strict,
 )
 from narwhals.exceptions import InvalidOperationError
@@ -42,11 +44,12 @@ if TYPE_CHECKING:
     from narwhals._spark_like.expr import SparkLikeExpr
     from narwhals._spark_like.group_by import SparkLikeLazyGroupBy
     from narwhals._spark_like.namespace import SparkLikeNamespace
+    from narwhals._spark_like.utils import SparkSession
     from narwhals._typing import _EagerAllowedImpl
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
-    from narwhals.typing import JoinStrategy, LazyUniqueKeepStrategy
+    from narwhals.typing import JoinStrategy, UniqueKeepStrategy
 
     SQLFrameDataFrame = BaseDataFrame[Any, Any, Any, Any, Any]
 
@@ -183,7 +186,7 @@ class SparkLikeLazyFrame(
             pa_schema = self._to_arrow_schema()
             return pa.Table.from_pandas(self.native.toPandas(), schema=pa_schema)
         else:
-            return self.native.toArrow()
+            return to_pyarrow_table(self.native.toArrow())
 
     def _iter_columns(self) -> Iterator[Column]:
         for col in self.columns:
@@ -323,9 +326,7 @@ class SparkLikeLazyFrame(
         return SparkLikeLazyGroupBy(self, keys, drop_null_keys=drop_null_keys)
 
     def sort(self, *by: str, descending: bool | Sequence[bool], nulls_last: bool) -> Self:
-        if isinstance(descending, bool):
-            descending = [descending] * len(by)
-
+        descending = extend_bool(descending, len(by))
         if nulls_last:
             sort_funcs = (
                 self._F.desc_nulls_last if d else self._F.asc_nulls_last
@@ -341,9 +342,8 @@ class SparkLikeLazyFrame(
         return self._with_native(self.native.sort(*sort_cols))
 
     def top_k(self, k: int, *, by: Iterable[str], reverse: bool | Sequence[bool]) -> Self:
-        by = list(by)
-        if isinstance(reverse, bool):
-            reverse = [reverse] * len(by)
+        by = tuple(by)
+        reverse = extend_bool(reverse, len(by))
         sort_funcs = (
             self._F.desc_nulls_last if not d else self._F.asc_nulls_last for d in reverse
         )
@@ -365,25 +365,38 @@ class SparkLikeLazyFrame(
         )
 
     def unique(
-        self, subset: Sequence[str] | None, *, keep: LazyUniqueKeepStrategy
+        self,
+        subset: Sequence[str] | None,
+        *,
+        keep: UniqueKeepStrategy,
+        order_by: Sequence[str] | None,
     ) -> Self:
-        if subset and (error := self._check_columns_exist(subset)):
+        subset_ = subset or self.columns
+        if error := self._check_columns_exist(subset_):
             raise error
-        subset = list(subset) if subset else None
+        tmp_name = generate_temporary_column_name(8, self.columns, prefix="row_index_")
+        window = self._Window.partitionBy(subset_)
+        if order_by and keep == "last":
+            window = window.orderBy(*[self._F.desc_nulls_last(x) for x in order_by])
+        elif order_by:
+            window = window.orderBy(*[self._F.asc_nulls_first(x) for x in order_by])
+        else:
+            window = window.orderBy(self._F.lit(1))
         if keep == "none":
-            tmp = generate_temporary_column_name(8, self.columns)
-            window = self._Window.partitionBy(subset or self.columns)
-            df = (
-                self.native.withColumn(tmp, self._F.count("*").over(window))
-                .filter(self._F.col(tmp) == self._F.lit(1))
-                .drop(self._F.col(tmp))
-            )
-            return self._with_native(df)
-        return self._with_native(self.native.dropDuplicates(subset=subset))
+            expr = self._F.count("*").over(window)
+        else:
+            expr = self._F.row_number().over(window)
+        df = (
+            self.native.withColumn(tmp_name, expr)
+            .filter(self._F.col(tmp_name) == self._F.lit(1))
+            .drop(tmp_name)
+        )
+        return self._with_native(df)
 
     def join(
         self,
         other: Self,
+        *,
         how: JoinStrategy,
         left_on: Sequence[str] | None,
         right_on: Sequence[str] | None,
@@ -560,6 +573,36 @@ class SparkLikeLazyFrame(
 
     def sink_parquet(self, file: str | Path | BytesIO) -> None:
         self.native.write.parquet(file)
+
+    @classmethod
+    def _from_compliant_dataframe(
+        cls,
+        frame: CompliantDataFrameAny,
+        /,
+        *,
+        session: SparkSession,
+        implementation: Implementation,
+        version: Version,
+    ) -> SparkLikeLazyFrame:
+        from importlib.util import find_spec
+
+        impl = implementation
+        is_spark_v4 = (not impl.is_sqlframe()) and impl._backend_version() >= (4, 0, 0)
+        if is_spark_v4:  # pragma: no cover
+            # pyspark.sql requires pyarrow to be installed from v4.0.0
+            # and since v4.0.0 the input to `createDataFrame` can be a PyArrow Table.
+            data: Any = frame.to_arrow()
+        elif find_spec("pandas"):
+            data = frame.to_pandas()
+        else:  # pragma: no cover
+            data = tuple(frame.iter_rows(named=True, buffer_size=512))
+
+        return cls(
+            session.createDataFrame(data),
+            version=version,
+            implementation=implementation,
+            validate_backend_version=True,
+        )
 
     gather_every = not_implemented.deprecated(
         "`LazyFrame.gather_every` is deprecated and will be removed in a future version."

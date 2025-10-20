@@ -6,12 +6,11 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 import narwhals as nw
-from narwhals._utils import is_eager_allowed
 from narwhals.exceptions import ComputeError, InvalidOperationError
 from tests.conftest import (
     dask_lazy_p1_constructor,
@@ -19,7 +18,7 @@ from tests.conftest import (
     modin_constructor,
     pandas_constructor,
 )
-from tests.utils import Constructor, ConstructorEager, assert_equal_data
+from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 if TYPE_CHECKING:
     from narwhals.typing import NumericLiteral
@@ -33,7 +32,7 @@ NON_NULLABLE_CONSTRUCTORS = (
 NULL_PLACEHOLDER, NAN_PLACEHOLDER = 9999.0, -1.0
 INF_POS, INF_NEG = float("inf"), float("-inf")
 
-data = {
+data: dict[str, Any] = {
     "x": [1.001, NULL_PLACEHOLDER, NAN_PLACEHOLDER, INF_POS, INF_NEG, INF_POS],
     "y": [1.005, NULL_PLACEHOLDER, NAN_PLACEHOLDER, INF_POS, 3.0, INF_NEG],
     "non_numeric": list("number"),
@@ -110,15 +109,12 @@ def test_is_close_series_with_series(
     rel_tol: float,
     *,
     nans_equal: bool,
-    expected: list[float],
+    expected: list[Any],
 ) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
     x, y = df["x"], df["y"]
-    backend = df.implementation
-    assert is_eager_allowed(backend)
-
     nulls = nw.new_series(
-        name="nulls", values=[None] * len(x), dtype=nw.Float64(), backend=backend
+        "nulls", [None] * len(x), nw.Float64(), backend=df.implementation
     )
     x = x.zip_with(x != NAN_PLACEHOLDER, x**0.5).zip_with(x != NULL_PLACEHOLDER, nulls)
     y = y.zip_with(y != NAN_PLACEHOLDER, y**0.5).zip_with(y != NULL_PLACEHOLDER, nulls)
@@ -126,6 +122,11 @@ def test_is_close_series_with_series(
 
     if constructor_eager in NON_NULLABLE_CONSTRUCTORS:
         expected = [v if v is not None else nans_equal for v in expected]
+    elif "pandas" in str(constructor_eager) and PANDAS_VERSION >= (3,):
+        expected = [
+            v if data["y"][i] not in {NULL_PLACEHOLDER, NAN_PLACEHOLDER} else None
+            for i, v in enumerate(expected)
+        ]
     assert_equal_data({"result": result}, {"result": expected})
 
 
@@ -137,21 +138,23 @@ def test_is_close_series_with_scalar(
     rel_tol: float,
     *,
     nans_equal: bool,
-    expected: list[float],
+    expected: list[Any],
 ) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
     y = df["y"]
-    backend = df.implementation
-    assert is_eager_allowed(backend)
-
     nulls = nw.new_series(
-        name="nulls", values=[None] * len(y), dtype=nw.Float64(), backend=backend
+        "nulls", [None] * len(y), nw.Float64(), backend=df.implementation
     )
     y = y.zip_with(y != NAN_PLACEHOLDER, y**0.5).zip_with(y != NULL_PLACEHOLDER, nulls)
     result = y.is_close(other, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal)
 
     if constructor_eager in NON_NULLABLE_CONSTRUCTORS:
         expected = [v if v is not None else False for v in expected]
+    elif "pandas" in str(constructor_eager) and PANDAS_VERSION >= (3,):
+        expected = [
+            v if data["y"][i] not in {NULL_PLACEHOLDER, NAN_PLACEHOLDER} else None
+            for i, v in enumerate(expected)
+        ]
     assert_equal_data({"result": result}, {"result": expected})
 
 
@@ -164,7 +167,7 @@ def test_is_close_expr_with_expr(
     rel_tol: float,
     *,
     nans_equal: bool,
-    expected: list[float],
+    expected: list[Any],
 ) -> None:
     if "sqlframe" in str(constructor):
         # TODO(FBruzzesi): Figure out a MRE and report upstream
@@ -192,6 +195,11 @@ def test_is_close_expr_with_expr(
     )
     if constructor in NON_NULLABLE_CONSTRUCTORS:
         expected = [v if v is not None else nans_equal for v in expected]
+    elif "pandas" in str(constructor) and PANDAS_VERSION >= (3,):
+        expected = [
+            v if data["y"][i] not in {NULL_PLACEHOLDER, NAN_PLACEHOLDER} else None
+            for i, v in enumerate(expected)
+        ]
     assert_equal_data(result, {"idx": data["idx"], "result": expected})
 
 
@@ -204,7 +212,7 @@ def test_is_close_expr_with_scalar(
     rel_tol: float,
     *,
     nans_equal: bool,
-    expected: list[float],
+    expected: list[Any],
 ) -> None:
     if "sqlframe" in str(constructor):
         # TODO(FBruzzesi): Figure out a MRE and report upstream
@@ -228,4 +236,9 @@ def test_is_close_expr_with_scalar(
     )
     if constructor in NON_NULLABLE_CONSTRUCTORS:
         expected = [v if v is not None else False for v in expected]
+    elif "pandas" in str(constructor) and PANDAS_VERSION >= (3,):
+        expected = [
+            v if data["y"][i] not in {NULL_PLACEHOLDER, NAN_PLACEHOLDER} else None
+            for i, v in enumerate(expected)
+        ]
     assert_equal_data(result, {"idx": data["idx"], "result": expected})

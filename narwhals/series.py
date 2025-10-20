@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, Callable, ClassVar, Generic, Literal, ove
 from narwhals._utils import (
     Implementation,
     Version,
+    _Implementation,
     _validate_rolling_arguments,
     ensure_type,
     generate_repr,
@@ -44,8 +45,10 @@ if TYPE_CHECKING:
         ClosedInterval,
         FillNullStrategy,
         IntoDType,
+        ModeKeepStrategy,
         NonNestedLiteral,
         NumericLiteral,
+        PythonLiteral,
         RankMethod,
         RollingInterpolationMethod,
         SingleIndexSelector,
@@ -76,6 +79,10 @@ class Series(Generic[IntoSeriesT]):
     """
 
     _version: ClassVar[Version] = Version.MAIN
+
+    @property
+    def _compliant(self) -> CompliantSeries[IntoSeriesT]:
+        return self._compliant_series
 
     @property
     def _dataframe(self) -> type[DataFrame[Any]]:
@@ -185,9 +192,6 @@ class Series(Generic[IntoSeriesT]):
                 - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
                 - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
 
-        Returns:
-            A new Series
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -225,33 +229,26 @@ class Series(Generic[IntoSeriesT]):
         )
         raise ValueError(msg)
 
-    @property
-    def implementation(self) -> Implementation:
-        """Return implementation of native Series.
+    implementation: _Implementation = _Implementation()
+    """Return [`narwhals.Implementation`][] of native Series.
 
-        This can be useful when you need to use special-casing for features outside of
-        Narwhals' scope - for example, when dealing with pandas' Period Dtype.
+    This can be useful when you need to use special-casing for features outside of
+    Narwhals' scope - for example, when dealing with pandas' Period Dtype.
 
-        Examples:
-            >>> import narwhals as nw
-            >>> import pandas as pd
-
-            >>> s_native = pd.Series([1, 2, 3])
-            >>> s = nw.from_native(s_native, series_only=True)
-
-            >>> s.implementation
-            <Implementation.PANDAS: 'pandas'>
-
-            >>> s.implementation.is_pandas()
-            True
-
-            >>> s.implementation.is_pandas_like()
-            True
-
-            >>> s.implementation.is_polars()
-            False
-        """
-        return self._compliant_series._implementation
+    Examples:
+        >>> import narwhals as nw
+        >>> import pandas as pd
+        >>> s_native = pd.Series([1, 2, 3])
+        >>> s = nw.from_native(s_native, series_only=True)
+        >>> s.implementation
+        <Implementation.PANDAS: 'pandas'>
+        >>> s.implementation.is_pandas()
+        True
+        >>> s.implementation.is_pandas_like()
+        True
+        >>> s.implementation.is_polars()
+        False
+    """
 
     def __bool__(self) -> NoReturn:
         msg = (
@@ -348,7 +345,7 @@ class Series(Generic[IntoSeriesT]):
             return native_series.__arrow_c_stream__(requested_schema=requested_schema)
         try:
             pa_version = Implementation.PYARROW._backend_version()
-        except ModuleNotFoundError as exc:  # pragma: no cover
+        except ModuleNotFoundError as exc:
             msg = f"'pyarrow>=16.0.0' is required for `Series.__arrow_c_stream__` for object of type {type(native_series)}"
             raise ModuleNotFoundError(msg) from exc
         if pa_version < (16, 0):  # pragma: no cover
@@ -891,6 +888,44 @@ class Series(Generic[IntoSeriesT]):
             )
         )
 
+    def first(self) -> PythonLiteral:
+        """Get the first element of the Series.
+
+        Returns:
+            A scalar value or `None` if the Series is empty.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>>
+            >>> s_native = pl.Series([1, 2, 3])
+            >>> s_nw = nw.from_native(s_native, series_only=True)
+            >>> s_nw.first()
+            1
+            >>> s_nw.filter(s_nw > 5).first() is None
+            True
+        """
+        return self._compliant_series.first()
+
+    def last(self) -> PythonLiteral:
+        """Get the last element of the Series.
+
+        Returns:
+            A scalar value or `None` if the Series is empty.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>>
+            >>> s_native = pa.chunked_array([[1, 2, 3]])
+            >>> s_nw = nw.from_native(s_native, series_only=True)
+            >>> s_nw.last()
+            3
+            >>> s_nw.filter(s_nw > 5).last() is None
+            True
+        """
+        return self._compliant_series.last()
+
     def is_in(self, other: Any) -> Self:
         """Check if the elements of this Series are in the other sequence.
 
@@ -942,8 +977,7 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/)
-            for reference.
+            See [null_handling](../concepts/null_handling.md/) for reference.
 
         Examples:
             >>> import pandas as pd
@@ -1297,8 +1331,7 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/)
-            for reference.
+            See [null_handling](../concepts/null_handling.md/) for reference.
 
         Examples:
             >>> import pyarrow as pa
@@ -1324,8 +1357,7 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/)
-            for reference.
+            See [null_handling](../concepts/null_handling.md/) for reference.
 
         Examples:
             >>> import pandas as pd
@@ -1395,6 +1427,36 @@ class Series(Generic[IntoSeriesT]):
             self._compliant_series.fill_null(
                 value=self._extract_native(value), strategy=strategy, limit=limit
             )
+        )
+
+    def fill_nan(self, value: float | None) -> Self:
+        """Fill floating point NaN values with given value.
+
+        Arguments:
+            value: Value used to fill NaN values.
+
+        Notes:
+            This function only fills `'NaN'` values, not null ones, except for pandas
+            which doesn't distinguish between them.
+            See [null_handling](../concepts/null_handling.md/) for reference.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s_native = pl.Series([1.0, 2.0, float("nan"), None])
+            >>> result = nw.from_native(s_native, series_only=True).fill_nan(0)
+            >>> result.to_native()  # doctest: +NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: '' [f64]
+            [
+               1.0
+               2.0
+               0.0
+               null
+            ]
+        """
+        return self._with_compliant(
+            self._compliant_series.fill_nan(value=self._extract_native(value))
         )
 
     def is_between(
@@ -1709,8 +1771,7 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/)
-            for reference.
+            See [null_handling](../concepts/null_handling.md/) for reference.
 
         Examples:
             >>> import pyarrow as pa
@@ -1984,6 +2045,46 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._with_compliant(self._compliant_series.round(decimals))
 
+    def floor(self) -> Self:
+        r"""Compute the numerical floor.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> s_native = pa.chunked_array([[1.1, 4.3, -1.3]])
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.floor().to_native()  # doctest:+ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                1,
+                4,
+                -2
+              ]
+            ]
+        """
+        return self._with_compliant(self._compliant_series.floor())
+
+    def ceil(self) -> Self:
+        r"""Compute the numerical ceiling.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> s_native = pa.chunked_array([[1.1, 4.3, -1.3]])
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.ceil().to_native()  # doctest:+ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                2,
+                5,
+                -1
+              ]
+            ]
+        """
+        return self._with_compliant(self._compliant_series.ceil())
+
     def to_dummies(
         self, *, separator: str = "_", drop_first: bool = False
     ) -> DataFrame[Any]:
@@ -2069,10 +2170,24 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._compliant_series.to_arrow()
 
-    def mode(self) -> Self:
+    @overload
+    def mode(self, *, keep: Literal["all"] = "all") -> Self: ...
+
+    @overload
+    def mode(self, *, keep: Literal["any"]) -> NonNestedLiteral: ...
+
+    def mode(self, *, keep: ModeKeepStrategy = "all") -> Self | NonNestedLiteral:
         r"""Compute the most occurring value(s).
 
         Can return multiple values.
+
+        Note:
+            For `keep="any"` a scalar is returned, while for `keep="all"` a Series in
+            returned even in the case of unimodal values.
+
+        Arguments:
+            keep: Whether to keep all modes or any mode found. Remark that `keep='any'`
+                is not deterministic for multimodal values.
 
         Examples:
             >>> import pandas as pd
@@ -2083,7 +2198,13 @@ class Series(Generic[IntoSeriesT]):
             1    2
             dtype: int64
         """
-        return self._with_compliant(self._compliant_series.mode())
+        _supported_keep_values = ("all", "any")
+        if keep not in _supported_keep_values:  # pragma: no cover
+            msg = f"`keep` must be one of {_supported_keep_values}, found '{keep}'"
+            raise ValueError(msg)
+
+        result = self._with_compliant(self._compliant_series.mode(keep=keep))
+        return result.item(0) if keep == "any" else result
 
     def is_finite(self) -> Self:
         """Returns a boolean Series indicating which values are finite.

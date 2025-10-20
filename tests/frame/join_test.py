@@ -471,7 +471,7 @@ def test_join_keys_exceptions(constructor: Constructor, how: JoinStrategy) -> No
         df.join(df, how=how, on="antananarivo", right_on="antananarivo")
 
     with pytest.raises(
-        ValueError, match="`left_on` and `right_on` must have the same length."
+        ValueError, match=re.escape("`left_on` and `right_on` must have the same length.")
     ):
         df.join(df, how=how, left_on=["antananarivo", "bob"], right_on="antananarivo")
 
@@ -693,31 +693,40 @@ def test_joinasof_keys_exceptions(constructor: Constructor) -> None:
 
     with pytest.raises(
         ValueError,
-        match=r"Either \(`left_on` and `right_on`\) or `on` keys should be specified.",
+        match=re.escape(
+            "Either (`left_on` and `right_on`) or `on` keys should be specified."
+        ),
     ):
         df.join_asof(df, left_on="antananarivo")
     with pytest.raises(
         ValueError,
-        match=r"Either \(`left_on` and `right_on`\) or `on` keys should be specified.",
+        match=re.escape(
+            "Either (`left_on` and `right_on`) or `on` keys should be specified."
+        ),
     ):
         df.join_asof(df, right_on="antananarivo")
     with pytest.raises(
         ValueError,
-        match=r"Either \(`left_on` and `right_on`\) or `on` keys should be specified.",
+        match=re.escape(
+            "Either (`left_on` and `right_on`) or `on` keys should be specified."
+        ),
     ):
         df.join_asof(df)
     with pytest.raises(
-        ValueError, match="If `on` is specified, `left_on` and `right_on` should be None."
+        ValueError,
+        match=re.escape("If `on` is specified, `left_on` and `right_on` should be None."),
     ):
         df.join_asof(
             df, left_on="antananarivo", right_on="antananarivo", on="antananarivo"
         )
     with pytest.raises(
-        ValueError, match="If `on` is specified, `left_on` and `right_on` should be None."
+        ValueError,
+        match=re.escape("If `on` is specified, `left_on` and `right_on` should be None."),
     ):
         df.join_asof(df, left_on="antananarivo", on="antananarivo")
     with pytest.raises(
-        ValueError, match="If `on` is specified, `left_on` and `right_on` should be None."
+        ValueError,
+        match=re.escape("If `on` is specified, `left_on` and `right_on` should be None."),
     ):
         df.join_asof(df, right_on="antananarivo", on="antananarivo")
 
@@ -768,6 +777,8 @@ def test_join_duplicate_column_names(
         # need to investigate.
     ):
         request.applymarker(pytest.mark.xfail)
+    data = {"a": [1, 2, 3, 4, 5], "b": [6, 6, 6, 6, 6]}
+    df = nw.from_native(constructor(data))
     if any(
         x in str(constructor)
         for x in ("pandas", "pandas[pyarrow]", "pandas[nullable]", "dask")
@@ -790,11 +801,29 @@ def test_join_duplicate_column_names(
         request.applymarker(pytest.mark.xfail)
     else:
         exception = nw.exceptions.DuplicateError
-    data = {"a": [1, 2, 3, 4, 5], "b": [6, 6, 6, 6, 6]}
-    df = nw.from_native(constructor(data))
     if isinstance(df, nw.LazyFrame):
         with pytest.raises(exception):
             df.join(df, on=["a"]).join(df, on=["a"]).collect()
     else:
         with pytest.raises(exception):
             df.join(df, on=["a"]).join(df, on=["a"])
+
+
+def test_join_same_laziness(constructor: Constructor) -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    data_left = {"id": [1, 2, 3], "age": [25, 30, 35]}
+    data_right = {"id": [2, 3, 4], "active": [False, True, True]}
+    frame = nw.from_native(constructor(data_left))
+    df_pl = pl.DataFrame(data_right)
+    frame_pl: pl.DataFrame | pl.LazyFrame
+    if isinstance(frame, nw.DataFrame):
+        msg = r"Expected.+\.DataFrame.+got.+\.LazyFrame"
+        frame_pl = df_pl.lazy()
+    else:
+        msg = r"Expected.+\.LazyFrame.+got.+\.DataFrame"
+        frame_pl = df_pl
+    other = nw.from_native(frame_pl)
+    with pytest.raises(TypeError, match=msg):
+        frame.join(other, on="id")  # type: ignore[arg-type]

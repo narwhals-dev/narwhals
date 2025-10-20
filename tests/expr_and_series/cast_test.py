@@ -13,7 +13,8 @@ from tests.utils import (
     Constructor,
     ConstructorEager,
     assert_equal_data,
-    is_windows,
+    is_pyarrow_windows_no_tzdata,
+    time_unit_compat,
 )
 
 if TYPE_CHECKING:
@@ -208,11 +209,13 @@ def test_cast_datetime_tz_aware(
         "dask" in str(constructor)
         or "duckdb" in str(constructor)
         or "cudf" in str(constructor)  # https://github.com/rapidsai/cudf/issues/16973
-        or ("pyarrow_table" in str(constructor) and is_windows())
         or "pyspark" in str(constructor)
         or "ibis" in str(constructor)
     ):
         request.applymarker(pytest.mark.xfail)
+    request.applymarker(
+        pytest.mark.xfail(is_pyarrow_windows_no_tzdata(constructor), reason="no tzdata")
+    )
 
     data = {
         "date": [
@@ -223,13 +226,10 @@ def test_cast_datetime_tz_aware(
     expected = {
         "date": ["2024-01-01 01:00:00", "2024-01-02 01:00:00", "2024-01-03 01:00:00"]
     }
-
+    dtype = nw.Datetime(time_unit_compat("ms", request), time_zone="Europe/Rome")
     df = nw.from_native(constructor(data))
     result = df.select(
-        nw.col("date")
-        .cast(nw.Datetime("ms", time_zone="Europe/Rome"))
-        .cast(nw.String())
-        .str.slice(offset=0, length=19)
+        nw.col("date").cast(dtype).cast(nw.String()).str.slice(offset=0, length=19)
     )
     assert_equal_data(result, expected)
 
@@ -241,9 +241,11 @@ def test_cast_datetime_utc(
         "dask" in str(constructor)
         # https://github.com/eakmanrq/sqlframe/issues/406
         or "sqlframe" in str(constructor)
-        or ("pyarrow_table" in str(constructor) and is_windows())
     ):
         request.applymarker(pytest.mark.xfail)
+    request.applymarker(
+        pytest.mark.xfail(is_pyarrow_windows_no_tzdata(constructor), reason="no tzdata")
+    )
 
     data = {
         "date": [
@@ -254,13 +256,10 @@ def test_cast_datetime_utc(
     expected = {
         "date": ["2024-01-01 00:00:00", "2024-01-02 00:00:00", "2024-01-03 00:00:00"]
     }
-
+    dtype = nw.Datetime(time_unit_compat("us", request), time_zone="UTC")
     df = nw.from_native(constructor(data))
     result = df.select(
-        nw.col("date")
-        .cast(nw.Datetime("us", time_zone="UTC"))
-        .cast(nw.String())
-        .str.slice(offset=0, length=19)
+        nw.col("date").cast(dtype).cast(nw.String()).str.slice(offset=0, length=19)
     )
     assert_equal_data(result, expected)
 
@@ -269,8 +268,10 @@ def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -
     if any(backend in str(constructor) for backend in ("dask", "cudf", "sqlframe")):
         request.applymarker(pytest.mark.xfail)
 
-    if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
-        pytest.skip()
+    if "pandas" in str(constructor):
+        if PANDAS_VERSION < (2, 2):
+            pytest.skip()
+        pytest.importorskip("pyarrow")
 
     data = {
         "a": [{"movie ": "Cars", "rating": 4.5}, {"movie ": "Toy Story", "rating": 4.9}]
@@ -319,8 +320,10 @@ def test_raise_if_polars_dtype(constructor: Constructor) -> None:
 
 
 def test_cast_time(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
-        pytest.skip()
+    if "pandas" in str(constructor):
+        if PANDAS_VERSION < (2, 2):
+            pytest.skip()
+        pytest.importorskip("pyarrow")
 
     if any(backend in str(constructor) for backend in ("dask", "pyspark", "cudf")):
         request.applymarker(pytest.mark.xfail)
@@ -332,8 +335,10 @@ def test_cast_time(request: pytest.FixtureRequest, constructor: Constructor) -> 
 
 
 def test_cast_binary(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
-        pytest.skip()
+    if "pandas" in str(constructor):
+        if PANDAS_VERSION < (2, 2):
+            pytest.skip()
+        pytest.importorskip("pyarrow")
 
     if any(backend in str(constructor) for backend in ("cudf", "dask")):
         request.applymarker(pytest.mark.xfail)
@@ -376,7 +381,7 @@ def test_cast_typing_invalid() -> None:
     # feel free to update the types used
     # See (https://github.com/narwhals-dev/narwhals/pull/2654#discussion_r2142263770)
 
-    with pytest.raises(AttributeError):
+    with pytest.raises(TypeError):
         df.select(a.cast(nw.Struct))  # type: ignore[arg-type]
 
     with pytest.raises(AttributeError):
@@ -394,8 +399,35 @@ def test_cast_typing_invalid() -> None:
     with pytest.raises((ValueError, AttributeError)):
         df.select(a.cast(nw.Struct({"a": nw.Int16, "b": nw.Enum})))  # type: ignore[dict-item]
 
-    with pytest.raises(AttributeError):
+    with pytest.raises(TypeError):
         df.select(a.cast(nw.List(nw.Struct)))  # type: ignore[arg-type]
 
     with pytest.raises(AttributeError):
         df.select(a.cast(nw.Array(nw.List, 2)))  # type: ignore[arg-type]
+
+
+@pytest.mark.skipif(PANDAS_VERSION < (2,), reason="too old for pyarrow")
+def test_pandas_pyarrow_dtypes() -> None:
+    pytest.importorskip("pyarrow")
+    s = nw.from_native(
+        pd.Series([123, None]).convert_dtypes(dtype_backend="pyarrow"), series_only=True
+    ).cast(nw.String)
+    result = s.str.len_chars().to_native()
+    assert result.dtype == "Int32[pyarrow]"
+
+    s = nw.from_native(
+        pd.Series([123, None], dtype="string[pyarrow]"), series_only=True
+    ).cast(nw.String)
+    result = s.str.len_chars().to_native()
+    assert result.dtype == "Int64"
+
+    s = nw.from_native(
+        pd.DataFrame({"a": ["foo", "bar"]}, dtype="string[pyarrow]")
+    ).select(nw.col("a").cast(nw.String))["a"]
+    assert s.to_native().dtype == "string[pyarrow]"
+
+
+def test_cast_object_pandas() -> None:
+    s = nw.from_native(pd.DataFrame({"a": [2, 3, None]}, dtype=object))["a"]
+    assert s[0] == 2
+    assert s.cast(nw.String)[0] == "2"
