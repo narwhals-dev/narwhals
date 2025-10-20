@@ -247,14 +247,18 @@ class OnlySeriesStrictV1(_OnlySeries, total=False):
     eager_or_interchange_only: Literal[False]
 
 
-class _OnlyEager(TypedDict, total=False):
-    eager_only: Required[Literal[True]]
-    series_only: bool
+class _OnlyEagerOrInterchange(TypedDict, total=False):
+    eager_or_interchange_only: Required[Literal[True]]
+    series_only: Literal[False]
     allow_series: bool | None
 
 
-class OnlyEager(_OnlyEager, total=False):
-    pass_through: bool
+class OnlyEagerOrInterchange(_OnlyEagerOrInterchange, total=False):
+    pass_through: bool | None
+
+
+class OnlyEagerOrInterchangeStrict(_OnlyEagerOrInterchange, total=False):
+    strict: bool | None
 
 
 class _AllowLazy(TypedDict, total=False):
