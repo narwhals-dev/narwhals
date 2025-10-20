@@ -37,6 +37,7 @@ if TYPE_CHECKING:
         ChunkedArray,
         ChunkedArrayAny,
         ChunkedOrArrayAny,
+        ChunkedOrArrayT,
         ChunkedOrScalar,
         ChunkedOrScalarAny,
         DataType,
@@ -208,7 +209,7 @@ def n_unique(native: Any) -> pa.Int64Scalar:
     return count(native, mode="all")
 
 
-def _reverse(native: ChunkedArrayAny) -> ChunkedArrayAny:
+def _reverse(native: ChunkedOrArrayT) -> ChunkedOrArrayT:
     """Unlike other slicing ops, `[::-1]` creates a full-copy.
 
     https://github.com/apache/arrow/issues/19103#issuecomment-1377671886
@@ -223,19 +224,19 @@ def cumulative(native: ChunkedArrayAny, cum_agg: F.CumAgg, /) -> ChunkedArrayAny
     return _reverse(func(_reverse(native)))
 
 
-def cum_sum(native: ChunkedArrayAny) -> ChunkedArrayAny:
+def cum_sum(native: ChunkedOrArrayT) -> ChunkedOrArrayT:
     return pc.cumulative_sum(native, skip_nulls=True)
 
 
-def cum_min(native: ChunkedArrayAny) -> ChunkedArrayAny:
+def cum_min(native: ChunkedOrArrayT) -> ChunkedOrArrayT:
     return pc.cumulative_min(native, skip_nulls=True)
 
 
-def cum_max(native: ChunkedArrayAny) -> ChunkedArrayAny:
+def cum_max(native: ChunkedOrArrayT) -> ChunkedOrArrayT:
     return pc.cumulative_max(native, skip_nulls=True)
 
 
-def cum_prod(native: ChunkedArrayAny) -> ChunkedArrayAny:
+def cum_prod(native: ChunkedOrArrayT) -> ChunkedOrArrayT:
     return pc.cumulative_prod(native, skip_nulls=True)
 
 
@@ -250,6 +251,15 @@ _CUMULATIVE: Mapping[type[F.CumAgg], Callable[[ChunkedArrayAny], ChunkedArrayAny
     F.CumMax: cum_max,
     F.CumProd: cum_prod,
 }
+
+
+def diff(native: ChunkedOrArrayT) -> ChunkedOrArrayT:
+    # pyarrow.lib.ArrowInvalid: Vector kernel cannot execute chunkwise and no chunked exec function was defined
+    return (
+        pc.pairwise_diff(native)
+        if isinstance(native, pa.Array)
+        else chunked_array(pc.pairwise_diff(native.combine_chunks()))
+    )
 
 
 def is_between(

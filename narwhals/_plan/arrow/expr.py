@@ -416,12 +416,8 @@ class ArrowExpr(  # type: ignore[misc]
         return self._with_native(fn.chunked_array(arrays), name)
 
     def diff(self, node: ir.FunctionExpr[Diff], frame: Frame, name: str) -> Self:
-        # NOTE: According to the stubs this should work on chunked, but
-        # pyarrow.lib.ArrowInvalid: Vector kernel cannot execute chunkwise and no chunked exec function was defined
         series = self._dispatch_expr(node.input[0], frame, name)
-        array = pc.pairwise_diff(series.native.combine_chunks())
-        result = fn.chunked_array(array)
-        return self._with_native(result, name)
+        return self._with_native(fn.diff(series.native), name)
 
     def _cumulative(self, node: ir.FunctionExpr[CumAgg], frame: Frame, name: str) -> Self:
         series = self._dispatch_expr(node.input[0], frame, name)
