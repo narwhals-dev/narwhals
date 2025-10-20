@@ -17,6 +17,7 @@ import polars as pl
 
 @pytest.mark.filterwarnings("ignore:.*Passing a BlockManager.*:DeprecationWarning")
 def test_convert_polars(constructor_eager: ConstructorEager) -> None:
+    pytest.importorskip("pyarrow")
     from polars.testing import assert_frame_equal
 
     data: Mapping[str, Any] = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8.0, 9.0]}

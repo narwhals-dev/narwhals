@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-import pyarrow as pa
 import pytest
 
 import narwhals as nw
+
+pytest.importorskip("pyarrow")
+import pyarrow as pa
 
 if TYPE_CHECKING:
     from tests.utils import ConstructorEager

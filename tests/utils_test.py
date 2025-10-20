@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, Any, Callable, ClassVar, Protocol, cast
 
 import hypothesis.strategies as st
 import pandas as pd
-import pyarrow as pa
 import pytest
 from hypothesis import given
 from pandas.testing import assert_frame_equal, assert_index_equal, assert_series_equal
@@ -357,6 +356,9 @@ def test_check_columns_exists() -> None:
 
 
 def test_not_implemented() -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
     pytest.importorskip("polars")
 
     from narwhals._arrow.expr import ArrowExpr

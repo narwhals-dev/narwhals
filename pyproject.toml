@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "2.8.0"
+version = "2.9.0"
 dependencies = []
 requires-python = ">=3.9"
 authors = [
@@ -246,23 +246,34 @@ filterwarnings = [
   'ignore:.*defaulting to pandas implementation:Warning:modin',
   'ignore:.*implementation has mismatches with pandas:Warning:modin',
   'ignore:.*You are using pyarrow version',
+
+  # https://discuss.python.org/t/types-uniontype-was-merged-with-wrong-class-not-even-a-class/102275/31
+  "ignore:.*'_UnionGenericAlias' is deprecated:DeprecationWarning",
+
   # This warning was temporarily raised by pandas but then reverted.
   'ignore:.*Passing a BlockManager to DataFrame:DeprecationWarning',
+
   # This warning was temporarily raised by Polars but then reverted.
   'ignore:.*The default coalesce behavior of left join will change:DeprecationWarning',
+
   'ignore: unclosed <socket.socket',
   'ignore:.*The distutils package is deprecated and slated for removal in Python 3.12:DeprecationWarning:pyspark',
   'ignore:.*distutils Version classes are deprecated. Use packaging.version instead.*:DeprecationWarning',
   'ignore:.*is_datetime64tz_dtype is deprecated and will be removed in a future version.*:DeprecationWarning:pyspark',
+
   # Warning raised by PyArrow nightly just by importing pandas
   'ignore:.*Python binding for RankQuantileOptions not exposed:RuntimeWarning:pyarrow',
+
   'ignore:.*pandas only supports SQLAlchemy:UserWarning:sqlframe',
   'ignore:.*numpy.core is deprecated and has been renamed to numpy._core.*:DeprecationWarning:sqlframe',
   "ignore:.*__array__ implementation doesn't accept a copy keyword, so passing copy=False failed:DeprecationWarning:modin",
+
   # raised internally by pandas
   "ignore:.*np.find_common_type is deprecated:DeprecationWarning:pandas",
+
   # Warning raised when calling PandasLikeNamespace.from_arrow with old pyarrow
   "ignore:.*is_sparse is deprecated and will be removed in a future version.*:DeprecationWarning:pyarrow",
+
   'ignore:.*invalid value encountered in cast:RuntimeWarning:pandas',
 ]
 xfail_strict = true

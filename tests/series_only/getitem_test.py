@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import pyarrow as pa
 import pytest
 
 import narwhals as nw
@@ -42,6 +41,9 @@ def test_by_slice(constructor_eager: ConstructorEager) -> None:
 
 
 def test_getitem_arrow_scalar() -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
     result = nw.from_native(pa.chunked_array([[1]]), series_only=True)[0]
     assert isinstance(result, int)
 
