@@ -319,36 +319,3 @@ class PassThroughUnknownV1(_Unknown, total=False):
 class StrictUnknownV1(_Unknown, total=False):
     strict: Required[Literal[False]]
     eager_or_interchange_only: bool
-
-
-# NOTE: Define everything *without* `pass_through`
-# inherit to add that and then independently for v1 for `strict`
-# which also needs `eager_or_interchange_only`
-class V1(TypedDict, total=False):
-    # mutually exclusive and both include `None` here? :sad:
-    # - Ok
-    #   - None, None
-    #   - bool, None
-    #   - None, bool
-    # - Bad
-    #   - bool, bool
-    strict: bool | None  # None
-    pass_through: bool | None  # None
-
-    # these guys are mutually exclusive *only* when both are `True`
-    # - Ok
-    #   - False, False
-    #   - True, False
-    #   - False, True
-    # - Bad
-    #   - True, True
-    #   - bool, bool
-    #   - True, bool
-    #   - bool, True
-    eager_only: bool  # False
-    # no lazyframe
-    eager_or_interchange_only: bool  # False
-
-    # same as others
-    series_only: bool  # False
-    allow_series: bool | None  # None
