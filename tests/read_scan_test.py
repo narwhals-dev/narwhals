@@ -106,7 +106,15 @@ def test_read_csv(
 
 @skipif_pandas_lt_1_5
 def test_read_csv_kwargs(csv_path: FileSource) -> None:
+    pytest.importorskip("pyarrow")
+    from pyarrow import csv
+
     assert_equal_eager(nw.read_csv(csv_path, backend=pd, engine="pyarrow"))
+    assert_equal_eager(
+        nw.read_csv(
+            csv_path, backend="pyarrow", parse_options=csv.ParseOptions(delimiter=",")
+        )
+    )
 
 
 @lazy_core_backend
