@@ -247,6 +247,16 @@ class AllowAny(_AllowAny, total=False):
     pass_through: bool
 
 
+class AllowAnyV1(_AllowAny, total=False):
+    pass_through: bool | None
+    eager_or_interchange_only: Literal[False]
+
+
+class AllowAnyStrictV1(_AllowAny, total=False):
+    strict: bool | None
+    eager_or_interchange_only: Literal[False]
+
+
 class _Unknown(TypedDict, total=False):
     eager_only: bool
     series_only: bool

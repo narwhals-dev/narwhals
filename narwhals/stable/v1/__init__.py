@@ -68,6 +68,8 @@ if TYPE_CHECKING:
     from typing_extensions import ParamSpec, Self, Unpack
 
     from narwhals._translate import (
+        AllowAnyStrictV1 as AllowAnyStrict,
+        AllowAnyV1 as AllowAny,
         IntoArrowTable,
         PassThroughUnknownV1 as PassThroughUnknown,
         StrictUnknownV1 as StrictUnknown,
@@ -570,18 +572,6 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: IntoDataFrameT | IntoLazyFrameT | IntoSeriesT,
-    *,
-    strict: Literal[False],
-    eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: Literal[True],
-) -> DataFrame[IntoDataFrameT] | LazyFrame[IntoLazyFrameT] | Series[IntoSeriesT]: ...
-
-
-@overload
-def from_native(
     native_object: IntoSeriesT,
     *,
     strict: Literal[False],
@@ -738,18 +728,6 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: IntoDataFrameT | IntoLazyFrameT | IntoSeriesT,
-    *,
-    pass_through: Literal[True],
-    eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: Literal[True],
-) -> DataFrame[IntoDataFrameT] | LazyFrame[IntoLazyFrameT] | Series[IntoSeriesT]: ...
-
-
-@overload
-def from_native(
     native_object: IntoSeriesT,
     *,
     pass_through: Literal[True],
@@ -844,6 +822,15 @@ def from_native(
 ) -> LazyFrame[IntoLazyFrameT]: ...
 
 
+@overload
+def from_native(
+    native_object: IntoDataFrameT | IntoLazyFrameT | IntoSeriesT, **kwds: Unpack[AllowAny]
+) -> DataFrame[IntoDataFrameT] | LazyFrame[IntoLazyFrameT] | Series[IntoSeriesT]: ...
+@overload
+def from_native(
+    native_object: IntoDataFrameT | IntoLazyFrameT | IntoSeriesT,
+    **kwds: Unpack[AllowAnyStrict],
+) -> DataFrame[IntoDataFrameT] | LazyFrame[IntoLazyFrameT] | Series[IntoSeriesT]: ...
 @overload
 def from_native(native_object: T, **kwds: Unpack[PassThroughUnknown]) -> T: ...
 @overload
