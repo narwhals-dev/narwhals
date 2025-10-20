@@ -197,6 +197,16 @@ class ExcludeSeries(_ExcludeSeries, total=False):
     pass_through: bool
 
 
+class ExcludeSeriesV1(_ExcludeSeries, total=False):
+    pass_through: bool | None
+    eager_or_interchange_only: Literal[False]
+
+
+class ExcludeSeriesStrictV1(_ExcludeSeries, total=False):
+    strict: bool | None
+    eager_or_interchange_only: Literal[False]
+
+
 class _AllowSeries(TypedDict, total=False):
     eager_only: bool
     series_only: Literal[False]

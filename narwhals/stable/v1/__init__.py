@@ -72,6 +72,8 @@ if TYPE_CHECKING:
         AllowAnyV1 as AllowAny,
         AllowSeriesStrictV1 as AllowSeriesStrict,
         AllowSeriesV1 as AllowSeries,
+        ExcludeSeriesStrictV1 as ExcludeSeriesStrict,
+        ExcludeSeriesV1 as ExcludeSeries,
         IntoArrowTable,
         OnlySeriesStrictV1 as OnlySeriesStrict,
         OnlySeriesV1 as OnlySeries,
@@ -517,7 +519,13 @@ def from_native(native_object: SeriesT, **kwds: Unpack[AllowSeries]) -> SeriesT:
 @overload
 def from_native(native_object: SeriesT, **kwds: Unpack[AllowSeriesStrict]) -> SeriesT: ...
 @overload
-def from_native(native_object: DataFrameT, **kwds: Any) -> DataFrameT: ...
+def from_native(
+    native_object: DataFrameT, **kwds: Unpack[ExcludeSeries]
+) -> DataFrameT: ...
+@overload
+def from_native(
+    native_object: DataFrameT, **kwds: Unpack[ExcludeSeriesStrict]
+) -> DataFrameT: ...
 
 
 @overload
@@ -544,25 +552,11 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: IntoDataFrameT,
-    *,
-    strict: Literal[False],
-    eager_only: Literal[True],
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
+    native_object: IntoDataFrameT, **kwds: Unpack[ExcludeSeries]
 ) -> DataFrame[IntoDataFrameT]: ...
-
-
 @overload
 def from_native(
-    native_object: IntoDataFrameT,
-    *,
-    strict: Literal[False],
-    eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
+    native_object: IntoDataFrameT, **kwds: Unpack[ExcludeSeriesStrict]
 ) -> DataFrame[IntoDataFrameT]: ...
 
 
@@ -600,30 +594,6 @@ def from_native(
     series_only: Literal[False] = ...,
     allow_series: None = ...,
 ) -> LazyFrame[IntoLazyFrameT]: ...
-
-
-@overload
-def from_native(
-    native_object: IntoDataFrameT,
-    *,
-    strict: Literal[True] | None = ...,
-    eager_only: Literal[True],
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT]: ...
-
-
-@overload
-def from_native(
-    native_object: IntoDataFrameT,
-    *,
-    strict: Literal[True] | None = ...,
-    eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT]: ...
 
 
 @overload
@@ -652,18 +622,6 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: IntoDataFrameT,
-    *,
-    pass_through: Literal[True],
-    eager_only: Literal[True],
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT]: ...
-
-
-@overload
-def from_native(
     native_object: IntoDataFrameT | IntoLazyFrameT,
     *,
     pass_through: Literal[True],
@@ -681,30 +639,6 @@ def from_native(
     pass_through: Literal[False] = ...,
     eager_only: Literal[False] = ...,
     eager_or_interchange_only: Literal[True],
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT]: ...
-
-
-@overload
-def from_native(
-    native_object: IntoDataFrameT,
-    *,
-    pass_through: Literal[False] = ...,
-    eager_only: Literal[True],
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT]: ...
-
-
-@overload
-def from_native(
-    native_object: IntoDataFrameT,
-    *,
-    pass_through: Literal[False] = ...,
-    eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[False] = ...,
     series_only: Literal[False] = ...,
     allow_series: None = ...,
 ) -> DataFrame[IntoDataFrameT]: ...
