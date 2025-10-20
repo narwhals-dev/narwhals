@@ -209,8 +209,10 @@ def n_unique(native: Any) -> pa.Int64Scalar:
 
 
 def _reverse(native: ChunkedArrayAny) -> ChunkedArrayAny:
-    msg = "TODO: `ArrowExpr.cum_*(reverse=True)`.\nInvestigate native options"
-    raise NotImplementedError(msg)
+    """Unlike other slicing ops, `[::-1]` creates a full-copy.
+
+    https://github.com/apache/arrow/issues/19103#issuecomment-1377671886
+    """
     return native[::-1]
 
 
