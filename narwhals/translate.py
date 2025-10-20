@@ -32,12 +32,12 @@ from narwhals.dependencies import (
 if TYPE_CHECKING:
     from typing_extensions import Unpack
 
-    from narwhals._translate import (  # noqa: F401
+    from narwhals._translate import (
         AllowAny,
         AllowLazy,
         AllowSeries,
         ExcludeSeries,
-        OnlyEager,  # TODO @dangotbanned: Figure out why wasn't this used?
+        OnlyEager,  # noqa: F401  # TODO @dangotbanned: Figure out why wasn't this used?
         OnlySeries,
         PassThroughUnknown,
     )
@@ -111,11 +111,16 @@ def to_native(
 
 
 @overload
-def from_native(native_object: SeriesT, **kwds: Any) -> SeriesT: ...
+def from_native(native_object: SeriesT, **kwds: Unpack[OnlySeries]) -> SeriesT: ...
 @overload
-def from_native(native_object: DataFrameT, **kwds: Any) -> DataFrameT: ...
+def from_native(native_object: SeriesT, **kwds: Unpack[AllowSeries]) -> SeriesT: ...
 @overload
-def from_native(native_object: LazyFrameT, **kwds: Any) -> LazyFrameT: ...
+def from_native(
+    native_object: DataFrameT, **kwds: Unpack[ExcludeSeries]
+) -> DataFrameT: ...
+# Closer to *intended* than https://github.com/narwhals-dev/narwhals/issues/3226
+@overload
+def from_native(native_object: LazyFrameT, **kwds: Unpack[AllowLazy]) -> LazyFrameT: ...
 @overload
 def from_native(
     native_object: IntoDataFrameT, **kwds: Unpack[ExcludeSeries]

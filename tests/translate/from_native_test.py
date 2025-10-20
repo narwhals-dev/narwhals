@@ -343,6 +343,20 @@ def test_dataframe_recursive() -> None:
         assert_type(nw_frame_depth_2, nw.DataFrame[Any])
         assert_type(nw_frame_early_return, nw.DataFrame[pl.DataFrame])
 
+        # NOTE: Invalid parameter combinations
+        # Review runtime in https://github.com/narwhals-dev/narwhals/issues/3226
+        nw.from_native(nw_frame, series_only=True)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, eager_only=True, series_only=True)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, eager_only=True, series_only=True, allow_series=False)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, eager_only=True, series_only=True, allow_series=None)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, eager_only=True, series_only=True, allow_series=True)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, eager_only=False, series_only=True, allow_series=False)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, eager_only=False, series_only=True, allow_series=None)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, eager_only=False, series_only=True, allow_series=True)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, series_only=True, allow_series=False)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, series_only=True, allow_series=None)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, series_only=True, allow_series=True)  # type: ignore[call-overload]
+
 
 def test_lazyframe_recursive() -> None:
     pytest.importorskip("polars")
@@ -363,6 +377,25 @@ def test_lazyframe_recursive() -> None:
         # NOTE: Checking that the type is `LazyFrame[Unknown]`
         assert_type(nw_frame_depth_2, nw.LazyFrame[Any])
         assert_type(nw_frame_early_return, nw.LazyFrame[pl.LazyFrame])
+
+        # NOTE: Invalid parameter combinations
+        # Review runtime in https://github.com/narwhals-dev/narwhals/issues/3226
+        nw.from_native(nw_frame, eager_only=True)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, series_only=True)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, eager_only=True, series_only=True)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, eager_only=True, series_only=False)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, eager_only=True, series_only=True, allow_series=False)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, eager_only=True, series_only=True, allow_series=None)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, eager_only=True, series_only=True, allow_series=True)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, eager_only=True, series_only=False, allow_series=False)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, eager_only=True, series_only=False, allow_series=None)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, eager_only=True, series_only=False, allow_series=True)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, eager_only=False, series_only=True, allow_series=False)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, eager_only=False, series_only=True, allow_series=None)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, eager_only=False, series_only=True, allow_series=True)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, series_only=True, allow_series=False)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, series_only=True, allow_series=None)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, series_only=True, allow_series=True)  # type: ignore[call-overload]
 
 
 def test_series_recursive() -> None:
@@ -385,6 +418,26 @@ def test_series_recursive() -> None:
         # NOTE: Checking that the type is `Series[Unknown]`
         assert_type(nw_series_depth_2, nw.Series[Any])
         assert_type(nw_series_early_return, nw.Series[pl.Series])
+
+        # NOTE: Invalid parameter combinations
+        # Review runtime in https://github.com/narwhals-dev/narwhals/issues/3226
+        nw.from_native(nw_series, eager_only=True)  # type: ignore[call-overload]
+        nw.from_native(nw_series, eager_only=False)  # type: ignore[call-overload]
+        nw.from_native(nw_series, series_only=False)  # type: ignore[call-overload]
+        nw.from_native(nw_series, allow_series=False)  # type: ignore[call-overload]
+        nw.from_native(nw_series, allow_series=None)  # type: ignore[call-overload]
+        nw.from_native(nw_series, eager_only=True, series_only=False)  # type: ignore[call-overload]
+        nw.from_native(nw_series, eager_only=True, allow_series=False)  # type: ignore[call-overload]
+        nw.from_native(nw_series, eager_only=True, allow_series=None)  # type: ignore[call-overload]
+        nw.from_native(nw_series, eager_only=False, series_only=False)  # type: ignore[call-overload]
+        nw.from_native(nw_series, eager_only=False, allow_series=False)  # type: ignore[call-overload]
+        nw.from_native(nw_series, eager_only=False, allow_series=None)  # type: ignore[call-overload]
+        nw.from_native(nw_series, series_only=False, allow_series=False)  # type: ignore[call-overload]
+        nw.from_native(nw_series, series_only=False, allow_series=None)  # type: ignore[call-overload]
+        nw.from_native(nw_series, eager_only=True, series_only=False, allow_series=False)  # type: ignore[call-overload]
+        nw.from_native(nw_series, eager_only=True, series_only=False, allow_series=None)  # type: ignore[call-overload]
+        nw.from_native(nw_series, eager_only=False, series_only=False, allow_series=False)  # type: ignore[call-overload]
+        nw.from_native(nw_series, eager_only=False, series_only=False, allow_series=None)  # type: ignore[call-overload]
 
 
 def test_from_native_invalid_keywords() -> None:
