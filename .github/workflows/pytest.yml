@@ -52,13 +52,13 @@ jobs:
           cache-suffix: pytest-windows-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
-        # we are not testing pyspark on Windows here because it is very slow
-        run: uv pip install -e ".[dask, modin, ibis]" --group core-tests --group extra --system
+        # we are not testing pyspark, modin, or dask on Windows here because nobody got time for that
+        run: uv pip install -e ".[ibis]" --group core-tests --group extra --system
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
         run: |
-          pytest tests --cov=narwhals --cov=tests --runslow --cov-fail-under=95 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,modin[pyarrow],polars[eager],polars[lazy],dask,duckdb,sqlframe,ibis --durations=30
+          pytest tests --cov=narwhals --cov=tests --runslow --cov-fail-under=95 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe,ibis --durations=30
 
   pytest-full-coverage:
     strategy:
@@ -112,8 +112,73 @@ jobs:
           cache-suffix: pytest-narrower-deps-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
-        run: uv pip install -e ".[pandas, pyarrow]" --group tests --system
+        run: uv pip install -e ".[pandas]" --group tests --system
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
-        run: pytest tests --runslow --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow
+        run: pytest tests --runslow --constructors=pandas,pandas[nullable]
+      - name: install-more-reqs
+        run: uv pip install -U pyarrow --system
+      - name: show-deps
+        run: uv pip freeze
+      - name: Run pytest
+        run: pytest tests --runslow --constructors=pandas[pyarrow],pyarrow
+
+  python-314:
+    strategy:
+      matrix:
+        python-version: ["3.14"]
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: "true"
+          cache-suffix: python-314-${{ matrix.python-version }}
+          cache-dependency-glob: "pyproject.toml"
+      - name: install pyarrow nightly
+        run: |
+          uv pip uninstall pyarrow --system
+          uv pip install -i https://pypi.anaconda.org/scientific-python-nightly-wheels/simple pyarrow -U --system
+      - name: install-reqs
+        # Use `--pre` as duckdb stable not compatible with 3.14
+        run: uv pip install -e . --group tests --pre pandas polars duckdb sqlframe  --system
+      - name: show-deps
+        run: uv pip freeze
+      - name: Run pytest
+        run: pytest tests --cov=narwhals --cov=tests --runslow --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe --cov-fail-under=50
+
+  python-314t:
+    strategy:
+      matrix:
+        python-version: ["3.14t"]
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+        PYTHON_GIL: 0
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: "true"
+          cache-suffix: python-314t-${{ matrix.python-version }}
+          cache-dependency-glob: "pyproject.toml"
+      - name: install pyarrow nightly
+        run: |
+          uv pip uninstall pyarrow --system
+          uv pip install -i https://pypi.anaconda.org/scientific-python-nightly-wheels/simple pyarrow -U --system
+      - name: install-reqs
+        run: uv pip install -e . --group tests --pre pandas --system
+      - name: show-deps
+        run: uv pip freeze
+      - name: Run pytest
+        run: pytest tests --cov=narwhals --cov=tests --runslow --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow --cov-fail-under=50
