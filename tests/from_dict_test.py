@@ -38,6 +38,7 @@ def test_from_dict_schema(eager_backend: EagerAllowed) -> None:
 @pytest.mark.parametrize("backend", [Implementation.POLARS, "polars"])
 def test_from_dict_without_backend(constructor: Constructor, backend: Polars) -> None:
     pytest.importorskip("polars")
+    pytest.importorskip("pyarrow")
 
     df = (
         nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
@@ -64,6 +65,7 @@ def test_from_dict_with_backend_invalid() -> None:
 def test_from_dict_one_native_one_narwhals(
     constructor: Constructor, backend: Polars
 ) -> None:
+    pytest.importorskip("pyarrow")
     pytest.importorskip("polars")
 
     df = (

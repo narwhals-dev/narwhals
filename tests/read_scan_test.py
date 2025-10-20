@@ -16,6 +16,7 @@ from tests.utils import (
 )
 
 pytest.importorskip("polars")
+pytest.importorskip("pyarrow")
 import polars as pl
 
 if TYPE_CHECKING:

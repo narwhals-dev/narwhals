@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     )
     from typing_extensions import TypeAlias
 
-    from narwhals.typing import NativeDataFrame, NativeSeries
+    from narwhals._native import NativeDataFrame, NativeSeries
 
     StringScalar: TypeAlias = "Scalar[StringType | LargeStringType]"
     IntegerType: TypeAlias = "Int8Type | Int16Type | Int32Type | Int64Type | Uint8Type | Uint16Type | Uint32Type | Uint64Type"

@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, cast
 
 import pandas as pd
-import pyarrow as pa
 
 import narwhals as nw
 from narwhals._utils import Implementation, parse_version, zip_strict
@@ -23,7 +22,8 @@ if TYPE_CHECKING:
     from sqlframe.duckdb import DuckDBSession
     from typing_extensions import TypeAlias
 
-    from narwhals.typing import Frame, NativeDataFrame, NativeLazyFrame, TimeUnit
+    from narwhals._native import NativeLazyFrame
+    from narwhals.typing import Frame, IntoDataFrame, TimeUnit
 
 
 def get_module_version_as_tuple(module_name: str) -> tuple[int, ...]:
@@ -43,8 +43,8 @@ PYARROW_VERSION: tuple[int, ...] = get_module_version_as_tuple("pyarrow")
 PYSPARK_VERSION: tuple[int, ...] = get_module_version_as_tuple("pyspark")
 CUDF_VERSION: tuple[int, ...] = get_module_version_as_tuple("cudf")
 
-Constructor: TypeAlias = Callable[[Any], "NativeLazyFrame | NativeDataFrame"]
-ConstructorEager: TypeAlias = Callable[[Any], "NativeDataFrame"]
+Constructor: TypeAlias = Callable[[Any], "NativeLazyFrame | IntoDataFrame"]
+ConstructorEager: TypeAlias = Callable[[Any], "IntoDataFrame"]
 ConstructorLazy: TypeAlias = Callable[[Any], "NativeLazyFrame"]
 ConstructorPandasLike: TypeAlias = Callable[[Any], "pd.DataFrame"]
 
@@ -61,12 +61,13 @@ _CONSTRUCTOR_FIXTURE_NAMES = frozenset[str](
 
 
 def _to_comparable_list(column_values: Any) -> Any:
-    if isinstance(column_values, nw.Series) and isinstance(
-        column_values.to_native(), pa.Array
-    ):  # pragma: no cover
-        # Narwhals Series for PyArrow should be backed by ChunkedArray, not Array.
-        msg = "Did not expect to see Arrow Array here"
-        raise TypeError(msg)
+    if isinstance(column_values, nw.Series) and column_values.implementation.is_pyarrow():
+        import pyarrow as pa
+
+        if isinstance(column_values.to_native(), pa.Array):  # pragma: no cover
+            # Narwhals Series for PyArrow should be backed by ChunkedArray, not Array.
+            msg = "Did not expect to see Arrow Array here"
+            raise TypeError(msg)
     if (
         hasattr(column_values, "_compliant_series")
         and column_values._compliant_series._implementation is Implementation.CUDF
