@@ -1,8 +1,8 @@
-"""[Protocols] defining conversion methods between representations.
+"""[Protocols] defining conversion methods between representations, and related [structural] typing.
 
-These come in 3 flavors and are [generic] to promote reuse.
+The protocols come in 3 flavors and are [generic] to promote reuse.
 
-The following examples use the placeholder types `Narwhal` and `Other`:
+These examples use the placeholder types `Narwhal` and `Other`:
 - `Narwhal`: some class written in `narwhals`.
 - `Other`: any other class, could be native, compliant, or a builtin.
 
@@ -53,6 +53,7 @@ To learn more see [moist], [dry], or [even drier] - depending on how deep you wa
 
 [Protocols]: https://typing.python.org/en/latest/spec/protocol.html
 [generic]: https://typing.python.org/en/latest/spec/generics.html
+[structural]: https://typing.python.org/en/latest/spec/glossary.html#term-structural
 [upstream signature]: https://numpy.org/doc/stable/user/basics.interoperability.html#the-array-method
 [positional-only]: https://peps.python.org/pep-0570/
 [moist]: https://mypy.readthedocs.io/en/stable/generics.html#variance-of-generic-types
@@ -63,13 +64,13 @@ To learn more see [moist], [dry], or [even drier] - depending on how deep you wa
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Any, Literal, Protocol, TypedDict
 
 from narwhals._typing_compat import TypeVar
 
 if TYPE_CHECKING:
     import pyarrow as pa
-    from typing_extensions import Self, TypeAlias, TypeIs
+    from typing_extensions import Required, Self, TypeAlias, TypeIs
 
 
 class ArrowStreamExportable(Protocol):
@@ -184,3 +185,52 @@ class ToNarwhals(Protocol[ToNarwhalsT_co]):
     def to_narwhals(self) -> ToNarwhalsT_co:
         """Convert into public representation."""
         ...
+
+
+class ExcludeSeries(TypedDict, total=False):
+    pass_through: bool
+    eager_only: bool
+    series_only: Literal[False]
+    allow_series: Literal[False] | None
+
+
+class AllowSeries(TypedDict, total=False):
+    pass_through: bool
+    eager_only: bool
+    series_only: Literal[False]
+    allow_series: Required[Literal[True]]
+
+
+class OnlySeries(TypedDict, total=False):
+    pass_through: bool
+    eager_only: bool
+    series_only: Required[Literal[True]]
+    allow_series: bool | None
+
+
+class OnlyEager(TypedDict, total=False):
+    pass_through: bool
+    eager_only: Required[Literal[True]]
+    series_only: bool
+    allow_series: bool | None
+
+
+class AllowLazy(TypedDict, total=False):
+    pass_through: bool
+    eager_only: Literal[False]
+    series_only: Literal[False]
+    allow_series: bool | None
+
+
+class AllowAny(TypedDict, total=False):
+    pass_through: bool
+    eager_only: Literal[False]
+    series_only: Literal[False]
+    allow_series: Required[Literal[True]]
+
+
+class PassThroughUnknown(TypedDict, total=False):
+    pass_through: Required[Literal[True]]
+    eager_only: bool
+    series_only: bool
+    allow_series: bool | None

@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime as dt
 from decimal import Decimal
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Callable, Literal, TypedDict, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, overload
 
 from narwhals._constants import EPOCH, MS_PER_SECOND
 from narwhals._native import (
@@ -30,8 +30,17 @@ from narwhals.dependencies import (
 )
 
 if TYPE_CHECKING:
-    from typing_extensions import Required, Unpack
+    from typing_extensions import Unpack
 
+    from narwhals._translate import (  # noqa: F401
+        AllowAny,
+        AllowLazy,
+        AllowSeries,
+        ExcludeSeries,
+        OnlyEager,  # TODO @dangotbanned: Figure out why wasn't this used?
+        OnlySeries,
+        PassThroughUnknown,
+    )
     from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.series import Series
     from narwhals.typing import (
@@ -99,55 +108,6 @@ def to_native(
         msg = f"Expected Narwhals object, got {type(narwhals_object)}."
         raise TypeError(msg)
     return narwhals_object
-
-
-class ExcludeSeries(TypedDict, total=False):
-    pass_through: bool
-    eager_only: bool
-    series_only: Literal[False]
-    allow_series: Literal[False] | None
-
-
-class AllowSeries(TypedDict, total=False):
-    pass_through: bool
-    eager_only: bool
-    series_only: Literal[False]
-    allow_series: Required[Literal[True]]
-
-
-class OnlySeries(TypedDict, total=False):
-    pass_through: bool
-    eager_only: bool
-    series_only: Required[Literal[True]]
-    allow_series: bool | None
-
-
-class OnlyEager(TypedDict, total=False):
-    pass_through: bool
-    eager_only: Required[Literal[True]]
-    series_only: bool
-    allow_series: bool | None
-
-
-class AllowLazy(TypedDict, total=False):
-    pass_through: bool
-    eager_only: Literal[False]
-    series_only: Literal[False]
-    allow_series: bool | None
-
-
-class AllowAny(TypedDict, total=False):
-    pass_through: bool
-    eager_only: Literal[False]
-    series_only: Literal[False]
-    allow_series: Required[Literal[True]]
-
-
-class PassThroughUnknown(TypedDict, total=False):
-    pass_through: Required[Literal[True]]
-    eager_only: bool
-    series_only: bool
-    allow_series: bool | None
 
 
 @overload
