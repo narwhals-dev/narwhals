@@ -227,6 +227,16 @@ class OnlySeries(_OnlySeries, total=False):
     pass_through: bool
 
 
+class OnlySeriesV1(_OnlySeries, total=False):
+    pass_through: bool | None
+    eager_or_interchange_only: Literal[False]
+
+
+class OnlySeriesStrictV1(_OnlySeries, total=False):
+    strict: bool | None
+    eager_or_interchange_only: Literal[False]
+
+
 class _OnlyEager(TypedDict, total=False):
     eager_only: Required[Literal[True]]
     series_only: bool
