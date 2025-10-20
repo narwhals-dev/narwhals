@@ -16,6 +16,7 @@ data = [1, 3, 2]
 
 
 def test_series_to_polars(constructor_eager: ConstructorEager) -> None:
+    pytest.importorskip("pyarrow")
     from polars.testing import assert_series_equal
 
     result = (
