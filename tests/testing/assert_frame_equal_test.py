@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from contextlib import AbstractContextManager, nullcontext as does_not_raise
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -12,13 +12,9 @@ from narwhals.testing.asserts.frame import GUARANTEES_ROW_ORDER
 from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
-    from typing_extensions import TypeAlias
-
     from narwhals.typing import IntoSchema
     from tests.conftest import Data
     from tests.utils import Constructor, ConstructorEager
-
-    SetupFn: TypeAlias = Callable[[nw.Series[Any]], tuple[nw.Series[Any], nw.Series[Any]]]
 
 
 def _assertion_error(detail: str) -> pytest.RaisesExc:

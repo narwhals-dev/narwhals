@@ -81,20 +81,20 @@ if TYPE_CHECKING:
         NativeDataFrameT,
         NativeLazyFrameT,
     )
-    from narwhals._namespace import (
-        Namespace,
-        _NativeArrow,
-        _NativeCuDF,
-        _NativeDask,
-        _NativeDuckDB,
-        _NativeIbis,
-        _NativeModin,
-        _NativePandas,
-        _NativePandasLike,
-        _NativePolars,
-        _NativePySpark,
-        _NativePySparkConnect,
-        _NativeSQLFrame,
+    from narwhals._namespace import Namespace
+    from narwhals._native import (
+        NativeArrow,
+        NativeCuDF,
+        NativeDask,
+        NativeDuckDB,
+        NativeIbis,
+        NativeModin,
+        NativePandas,
+        NativePandasLike,
+        NativePolars,
+        NativePySpark,
+        NativePySparkConnect,
+        NativeSQLFrame,
     )
     from narwhals._translate import ArrowStreamExportable, IntoArrowTable, ToNarwhalsT_co
     from narwhals._typing import (
@@ -2051,36 +2051,36 @@ class _Implementation:
         self.__name__: str = name
 
     @overload
-    def __get__(self, instance: Narwhals[_NativePolars], owner: Any) -> _PolarsImpl: ...
+    def __get__(self, instance: Narwhals[NativePolars], owner: Any) -> _PolarsImpl: ...
     @overload
-    def __get__(self, instance: Narwhals[_NativePandas], owner: Any) -> _PandasImpl: ...
+    def __get__(self, instance: Narwhals[NativePandas], owner: Any) -> _PandasImpl: ...
     @overload
-    def __get__(self, instance: Narwhals[_NativeModin], owner: Any) -> _ModinImpl: ...
+    def __get__(self, instance: Narwhals[NativeModin], owner: Any) -> _ModinImpl: ...
     @overload
-    def __get__(self, instance: Narwhals[_NativeCuDF], owner: Any) -> _CuDFImpl: ...
+    def __get__(self, instance: Narwhals[NativeCuDF], owner: Any) -> _CuDFImpl: ...
     @overload
     def __get__(
-        self, instance: Narwhals[_NativePandasLike], owner: Any
+        self, instance: Narwhals[NativePandasLike], owner: Any
     ) -> _PandasLikeImpl: ...
     @overload
-    def __get__(self, instance: Narwhals[_NativeArrow], owner: Any) -> _ArrowImpl: ...
+    def __get__(self, instance: Narwhals[NativeArrow], owner: Any) -> _ArrowImpl: ...
     @overload
     def __get__(
-        self, instance: Narwhals[_NativePolars | _NativeArrow | _NativePandas], owner: Any
+        self, instance: Narwhals[NativePolars | NativeArrow | NativePandas], owner: Any
     ) -> _PolarsImpl | _PandasImpl | _ArrowImpl: ...
     @overload
-    def __get__(self, instance: Narwhals[_NativeDuckDB], owner: Any) -> _DuckDBImpl: ...
+    def __get__(self, instance: Narwhals[NativeDuckDB], owner: Any) -> _DuckDBImpl: ...
     @overload
     def __get__(
-        self, instance: Narwhals[_NativeSQLFrame], owner: Any
+        self, instance: Narwhals[NativeSQLFrame], owner: Any
     ) -> _SQLFrameImpl: ...
     @overload
-    def __get__(self, instance: Narwhals[_NativeDask], owner: Any) -> _DaskImpl: ...
+    def __get__(self, instance: Narwhals[NativeDask], owner: Any) -> _DaskImpl: ...
     @overload
-    def __get__(self, instance: Narwhals[_NativeIbis], owner: Any) -> _IbisImpl: ...
+    def __get__(self, instance: Narwhals[NativeIbis], owner: Any) -> _IbisImpl: ...
     @overload
     def __get__(
-        self, instance: Narwhals[_NativePySpark | _NativePySparkConnect], owner: Any
+        self, instance: Narwhals[NativePySpark | NativePySparkConnect], owner: Any
     ) -> _PySparkImpl | _PySparkConnectImpl: ...
     # NOTE: https://docs.python.org/3/howto/descriptor.html#invocation-from-a-class
     @overload

@@ -1,4 +1,3 @@
-# ruff: noqa: PYI051
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Literal
@@ -22,19 +21,12 @@ if TYPE_CHECKING:
         "null value mismatch",
         "values not within tolerance",
     ]
-    DataFramesDetail: TypeAlias = (
-        Literal[
-            "columns are not in the same order",
-            "dtypes do not match",
-            "height (row count) mismatch",
-            "implementation mismatch",
-        ]
-        | str
-        # NOTE: `| str` makes the literals above redundant, but they still show
-        # up when typing as autocompletion.
-        # The reason to have `str` is due to the fact that other details are dynamic
-        # and depend upon which columns lead to the assertion error.
-    )
+    DataFramesDetail: TypeAlias = Literal[
+        "columns are not in the same order",
+        "dtypes do not match",
+        "height (row count) mismatch",
+        "implementation mismatch",
+    ]
 
 
 def raise_assertion_error(
@@ -66,6 +58,14 @@ def raise_series_assertion_error(
 
 
 def raise_frame_assertion_error(
-    detail: DataFramesDetail, left: Any, right: Any, *, cause: Exception | None = None
+    detail: DataFramesDetail | str,
+    left: Any,
+    right: Any,
+    *,
+    cause: Exception | None = None,
 ) -> Never:
+    # NOTE: `DataFramesDetail | str` makes the literal (`DataFramesDetail`) redundant.
+    # However, the suggestions still show up as autocompletion in the editor when typing.
+    # The reason to have `str` is due to the fact that some details are dynamic
+    # and depend upon which columns lead to the assertion error.
     raise_assertion_error("DataFrames", detail, left, right, cause=cause)
