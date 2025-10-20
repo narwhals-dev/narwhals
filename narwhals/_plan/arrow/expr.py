@@ -398,22 +398,8 @@ class ArrowExpr(  # type: ignore[misc]
         raise NotImplementedError
 
     def shift(self, node: ir.FunctionExpr[Shift], frame: Frame, name: str) -> Self:
-        n = node.function.n
         series = self._dispatch_expr(node.input[0], frame, name)
-        native = series.native
-        if n == 0:
-            return self._with_native(native, name)
-        # NOTE: This might be zero-copy and the original wasn't?
-        # here, the non-nulls stay in their own chunk
-        # on main, the two (or more) chunks are merged
-        if n > 0:
-            arrays = [
-                pa.nulls(n, native.type),
-                *native.slice(length=native.length() - n).chunks,
-            ]
-        else:
-            arrays = [*native.slice(offset=-n).chunks, pa.nulls(-n, native.type)]
-        return self._with_native(fn.chunked_array(arrays), name)
+        return self._with_native(fn.shift(series.native, node.function.n), name)
 
     def diff(self, node: ir.FunctionExpr[Diff], frame: Frame, name: str) -> Self:
         series = self._dispatch_expr(node.input[0], frame, name)

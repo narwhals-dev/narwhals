@@ -262,6 +262,17 @@ def diff(native: ChunkedOrArrayT) -> ChunkedOrArrayT:
     )
 
 
+def shift(native: ChunkedArrayAny, n: int) -> ChunkedArrayAny:
+    if n == 0:
+        return native
+    arr = native
+    if n > 0:
+        arrays = [nulls_like(n, arr), *arr.slice(length=arr.length() - n).chunks]
+    else:
+        arrays = [*arr.slice(offset=-n).chunks, nulls_like(-n, arr)]
+    return pa.chunked_array(arrays)
+
+
 def is_between(
     native: ChunkedOrScalar[ScalarT],
     lower: ChunkedOrScalar[ScalarT],
@@ -323,6 +334,14 @@ def int_range(
         end = start
         start = 0
     return pa.chunked_array([pa.array(np.arange(start, end, step), dtype)])
+
+
+def nulls_like(n: int, native: ArrowAny) -> ArrayAny:
+    """Create a strongly-typed Array instance with all elements null.
+
+    Uses the type of `native`.
+    """
+    return pa.nulls(n, native.type)  # type: ignore[no-any-return]
 
 
 def lit(value: Any, dtype: DataType | None = None) -> NativeScalar:

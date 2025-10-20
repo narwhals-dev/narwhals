@@ -27,6 +27,11 @@ def data() -> Data:
     }
 
 
+@pytest.fixture
+def data_alt() -> Data:
+    return {"a": [3, 5, 1, 2, None], "b": [0, 1, 3, 2, 1], "c": [9, 1, 2, 1, 1]}
+
+
 @pytest.mark.parametrize(
     "partition_by",
     [
@@ -176,4 +181,17 @@ def test_len_over_2369() -> None:
     df = dataframe({"a": [1, 2, 4], "b": ["x", "x", "y"]})
     result = df.with_columns(a_len_per_group=nwp.len().over("b")).sort("a")
     expected = {"a": [1, 2, 4], "b": ["x", "x", "y"], "a_len_per_group": [2, 2, 1]}
+    assert_equal_data(result, expected)
+
+
+def test_shift_kitchen_sink(data_alt: Data) -> None:
+    result = dataframe(data_alt).select(
+        nwp.nth(1, 2)
+        .shift(-1)
+        .over(order_by=nwp.nth(0))
+        .sort(nulls_last=True)
+        .fill_null(100)
+        * 5
+    )
+    expected = {"b": [0, 5, 10, 15, 500], "c": [5, 5, 10, 45, 500]}
     assert_equal_data(result, expected)
