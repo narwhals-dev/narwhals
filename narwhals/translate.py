@@ -157,7 +157,7 @@ def from_native(
     series_only: bool,
     allow_series: bool | None,
 ) -> Any: ...
-def from_native(  # noqa: D417
+def from_native(
     native_object: IntoLazyFrameT
     | IntoDataFrameT
     | IntoSeriesT
@@ -169,7 +169,6 @@ def from_native(  # noqa: D417
     eager_only: bool = False,
     series_only: bool = False,
     allow_series: bool | None = None,
-    **kwds: Any,
 ) -> LazyFrame[IntoLazyFrameT] | DataFrame[IntoDataFrameT] | Series[IntoSeriesT] | T:
     """Convert `native_object` to Narwhals Dataframe, Lazyframe, or Series.
 
@@ -201,10 +200,6 @@ def from_native(  # noqa: D417
         DataFrame, LazyFrame, Series, or original object, depending
             on which combination of parameters was passed.
     """
-    if kwds:
-        msg = f"from_native() got an unexpected keyword argument {next(iter(kwds))!r}"
-        raise TypeError(msg)
-
     return _from_native_impl(  # type: ignore[no-any-return]
         native_object,
         pass_through=pass_through,
