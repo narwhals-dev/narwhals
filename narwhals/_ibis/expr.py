@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import operator
-from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Callable, TypeVar, cast
 
 import ibis
 
@@ -41,7 +41,6 @@ if TYPE_CHECKING:
         EvalSeries,
         WindowFunction,
     )
-    from narwhals._expression_parsing import ExprKind, ExprMetadata
     from narwhals._ibis.dataframe import IbisLazyFrame
     from narwhals._ibis.namespace import IbisNamespace
     from narwhals._utils import _LimitedContext
@@ -69,7 +68,6 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         self._evaluate_output_names = evaluate_output_names
         self._alias_output_names = alias_output_names
         self._version = version
-        self._metadata: ExprMetadata | None = None
         self._window_function: IbisWindowFunction | None = window_function
 
     @property
@@ -132,7 +130,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
 
         return IbisNamespace(version=self._version)
 
-    def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
+    def broadcast(self) -> Self:
         # Ibis does its own broadcasting.
         return self
 
@@ -184,11 +182,11 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
             version=context._version,
         )
 
-    def _with_binary(self, op: Callable[..., ir.Value], other: Self | Any) -> Self:
+    def _with_binary(self, op: Callable[..., ir.Value], other: Self) -> Self:
         return self._with_callable(op, other=other)
 
     def _with_elementwise(
-        self, op: Callable[..., ir.Value], /, **expressifiable_args: Self | Any
+        self, op: Callable[..., ir.Value], /, **expressifiable_args: Self
     ) -> Self:
         return self._with_callable(op, **expressifiable_args)
 
@@ -207,18 +205,6 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
             msg = "Only linear interpolation methods are supported for Ibis quantile."
             raise NotImplementedError(msg)
         return self._with_callable(lambda expr: expr.quantile(quantile))
-
-    def clip(self, lower_bound: Any, upper_bound: Any) -> Self:
-        def _clip(
-            expr: ir.NumericValue, lower: Any | None = None, upper: Any | None = None
-        ) -> ir.NumericValue:
-            return expr.clip(lower=lower, upper=upper)
-
-        if lower_bound is None:
-            return self._with_callable(_clip, upper=upper_bound)
-        if upper_bound is None:
-            return self._with_callable(_clip, lower=lower_bound)
-        return self._with_callable(_clip, lower=lower_bound, upper=upper_bound)
 
     def n_unique(self) -> Self:
         return self._with_callable(
@@ -240,7 +226,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         return self._with_callable(lambda expr: expr.isnull().sum())
 
     def is_nan(self) -> Self:
-        def func(expr: ir.FloatingValue | Any) -> ir.Value:
+        def func(expr: ir.FloatingValue) -> ir.Value:
             otherwise = expr.isnan() if is_floating(expr.type()) else False
             return ibis.ifelse(expr.isnull(), None, otherwise)
 
@@ -252,7 +238,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
     def is_in(self, other: Sequence[Any]) -> Self:
         return self._with_callable(lambda expr: expr.isin(other))
 
-    def fill_null(self, value: Self | Any, strategy: Any, limit: int | None) -> Self:
+    def fill_null(self, value: Self | None, strategy: Any, limit: int | None) -> Self:
         # Ibis doesn't yet allow ignoring nulls in first/last with window functions, which makes forward/backward
         # strategies inconsistent when there are nulls present: https://github.com/ibis-project/ibis/issues/9539
         if strategy is not None:
@@ -265,6 +251,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         def _fill_null(expr: ir.Value, value: ir.Scalar) -> ir.Value:
             return expr.fill_null(value)
 
+        assert value is not None  # noqa: S101
         return self._with_callable(_fill_null, value=value)
 
     def cast(self, dtype: IntoDType) -> Self:

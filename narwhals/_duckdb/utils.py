@@ -45,8 +45,10 @@ NULLS_LAST_TO_NULLS_POS = {True: "nulls last", False: "nulls first"}
 col = duckdb.ColumnExpression
 """Alias for `duckdb.ColumnExpression`."""
 
-lit = duckdb.ConstantExpression
-"""Alias for `duckdb.ConstantExpression`."""
+
+def lit(value: object) -> duckdb.Expression:
+    return duckdb.ConstantExpression(value)
+
 
 when = duckdb.CaseExpression
 """Alias for `duckdb.CaseExpression`."""
@@ -87,12 +89,12 @@ def concat_str(*exprs: Expression, separator: str = "") -> Expression:
     return F("concat_ws", lit(separator), *exprs) if separator else F("concat", *exprs)
 
 
-def evaluate_exprs(
+def evaluate_exprs_and_aliases(
     df: DuckDBLazyFrame, /, *exprs: DuckDBExpr
 ) -> list[tuple[str, Expression]]:
     native_results: list[tuple[str, Expression]] = []
     for expr in exprs:
-        native_series_list = expr._call(df)
+        native_series_list = expr(df)
         output_names = expr._evaluate_output_names(df)
         if expr._alias_output_names is not None:
             output_names = expr._alias_output_names(output_names)
@@ -406,7 +408,6 @@ __all__ = [
     "col",
     "concat_str",
     "duckdb_dtypes",
-    "evaluate_exprs",
     "fetch_rel_time_zone",
     "function",
     "generate_order_by_sql",

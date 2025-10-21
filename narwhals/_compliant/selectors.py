@@ -229,7 +229,7 @@ class CompliantSelector(
     ) -> TypeIs[CompliantSelector[FrameT, SeriesOrExprT]]:
         return isinstance(other, type(self))
 
-    @overload
+    @overload  # type: ignore[override]
     def __sub__(self, other: Self) -> Self: ...
     @overload
     def __sub__(
@@ -255,7 +255,7 @@ class CompliantSelector(
             return self.selectors._selector.from_callables(series, names, context=self)
         return self._to_expr() - other
 
-    @overload
+    @overload  # type: ignore[override]
     def __or__(self, other: Self) -> Self: ...
     @overload
     def __or__(
@@ -284,7 +284,7 @@ class CompliantSelector(
             return self.selectors._selector.from_callables(series, names, context=self)
         return self._to_expr() | other
 
-    @overload
+    @overload  # type: ignore[override]
     def __and__(self, other: Self) -> Self: ...
     @overload
     def __and__(
