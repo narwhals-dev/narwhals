@@ -5,12 +5,12 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 import narwhals as nw
-from narwhals._plan import selectors as ncs
+from narwhals._plan import Selector, selectors as ncs
 from narwhals._utils import zip_strict
 from tests.plan.utils import assert_equal_data, dataframe
 
 if TYPE_CHECKING:
-    from narwhals._plan.typing import ColumnNameOrSelector
+    from narwhals._plan.typing import ColumnNameOrSelector, OneOrIterable
     from tests.conftest import Data
 
 
@@ -51,5 +51,59 @@ def test_partition_by_single(
 ) -> None:
     df = dataframe(data)
     results = df.partition_by(by, include_key=include_key)
+    for df, expect in zip_strict(results, expected):
+        assert_equal_data(df, expect)
+
+
+@pytest.mark.parametrize(
+    ("include_key", "expected"),
+    [
+        (
+            True,
+            [
+                {"a": ["a", "a"], "b": [1, 1], "c": [5, 3]},
+                {"a": ["b"], "b": [2], "c": [4]},
+                {"a": ["b"], "b": [3], "c": [2]},
+                {"a": ["c"], "b": [3], "c": [1]},
+            ],
+        ),
+        (False, [{"c": [5, 3]}, {"c": [4]}, {"c": [2]}, {"c": [1]}]),
+    ],
+    ids=["include_key", "exclude_key"],
+)
+@pytest.mark.parametrize(
+    ("by", "more_by"),
+    [
+        ("a", "b"),
+        (["a", "b"], ()),
+        (ncs.matches("a|b"), ()),
+        (ncs.string(), "b"),
+        (ncs.by_name("a", "b"), ()),
+        (ncs.by_name("b"), ncs.by_name("a")),
+        (ncs.by_dtype(nw.String) | (ncs.numeric() - ncs.by_name("c")), []),
+    ],
+    ids=[
+        "str-variadic",
+        "str-list",
+        "ncs.matches",
+        "ncs.string-str",
+        "ncs.by_name",
+        "2x-selector",
+        "BinarySelector",
+    ],
+)
+def test_partition_by_multiple(
+    data: Data,
+    by: ColumnNameOrSelector,
+    more_by: OneOrIterable[ColumnNameOrSelector],
+    *,
+    include_key: bool,
+    expected: Any,
+) -> None:
+    df = dataframe(data)
+    if isinstance(more_by, (str, Selector)):
+        results = df.partition_by(by, more_by, include_key=include_key)
+    else:
+        results = df.partition_by(by, *more_by, include_key=include_key)
     for df, expect in zip_strict(results, expected):
         assert_equal_data(df, expect)
