@@ -242,32 +242,6 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
             version=self._version,
         )
 
-    def std(self, *, ddof: int) -> Self:
-        def _std(expr: ir.NumericColumn, ddof: int) -> ir.Value:
-            if ddof == 0:
-                return expr.std(how="pop")
-            if ddof == 1:
-                return expr.std(how="sample")
-            n_samples = expr.count()
-            std_pop = expr.std(how="pop")
-            ddof_lit = lit(ddof)
-            return std_pop * n_samples.sqrt() / (n_samples - ddof_lit).sqrt()
-
-        return self._with_callable(lambda expr: _std(expr, ddof))
-
-    def var(self, *, ddof: int) -> Self:
-        def _var(expr: ir.NumericColumn, ddof: int) -> ir.Value:
-            if ddof == 0:
-                return expr.var(how="pop")
-            if ddof == 1:
-                return expr.var(how="sample")
-            n_samples = expr.count()
-            var_pop = expr.var(how="pop")
-            ddof_lit = lit(ddof)
-            return var_pop * n_samples / (n_samples - ddof_lit)
-
-        return self._with_callable(lambda expr: _var(expr, ddof))
-
     def null_count(self) -> Self:
         return self._with_callable(lambda expr: expr.isnull().sum())
 

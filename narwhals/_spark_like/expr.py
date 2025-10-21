@@ -287,32 +287,6 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
 
         return self._with_callable(_null_count)
 
-    def std(self, *, ddof: int) -> Self:
-        F = self._F
-        if ddof == 0:
-            return self._with_callable(F.stddev_pop)
-        if ddof == 1:
-            return self._with_callable(F.stddev_samp)
-
-        def func(expr: Column) -> Column:
-            n_rows = F.count(expr)
-            return F.stddev_samp(expr) * F.sqrt((n_rows - 1) / (n_rows - ddof))
-
-        return self._with_callable(func)
-
-    def var(self, *, ddof: int) -> Self:
-        F = self._F
-        if ddof == 0:
-            return self._with_callable(F.var_pop)
-        if ddof == 1:
-            return self._with_callable(F.var_samp)
-
-        def func(expr: Column) -> Column:
-            n_rows = F.count(expr)
-            return F.var_samp(expr) * (n_rows - 1) / (n_rows - ddof)
-
-        return self._with_callable(func)
-
     def is_finite(self) -> Self:
         def _is_finite(expr: Column) -> Column:
             # A value is finite if it's not NaN, and not infinite, while NULLs should be
