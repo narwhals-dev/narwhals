@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from narwhals._duration import Interval
-from narwhals._ibis.utils import UNITS_DICT_TRUNCATE, timedelta_to_ibis_interval
+from narwhals._ibis.utils import timedelta_to_ibis_interval
 from narwhals._sql.expr_dt import SQLExprDateTimeNamesSpace
 from narwhals._utils import not_implemented
 
@@ -24,16 +24,6 @@ class IbisExprDateTimeNamespace(SQLExprDateTimeNamesSpace["IbisExpr"]):
     def weekday(self) -> IbisExpr:
         # Ibis uses 0-6 for Monday-Sunday. Add 1 to match polars.
         return self.compliant._with_callable(lambda expr: expr.day_of_week.index() + 1)
-
-    def truncate(self, every: str) -> IbisExpr:
-        interval = Interval.parse(every)
-        multiple, unit = interval.multiple, interval.unit
-        if multiple != 1:
-            # Same issue as https://github.com/duckdb/duckdb/issues/17554.
-            msg = "Truncating datetimes with multiples of the unit not supported in Ibis."
-            raise NotImplementedError(msg)
-        unit_native = UNITS_DICT_TRUNCATE[unit]
-        return self.compliant._with_callable(lambda expr: expr.truncate(unit_native))
 
     def offset_by(self, by: str) -> IbisExpr:
         interval = Interval.parse_no_constraints(by)

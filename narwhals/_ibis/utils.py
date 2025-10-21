@@ -252,4 +252,7 @@ def function(name: str, *args: ir.Value | PythonLiteral) -> ir.Value:
     if name == "substr":
         # Ibis is 0-indexed here, SQL is 1-indexed
         return cast("ir.StringColumn", expr).substr(args[1] - 1, *args[2:])  # type: ignore[operator]  # pyright: ignore[reportArgumentType]
+    if name == "date_trunc":
+        return args[1].truncate(args[0])
+        return cast("ir.StringColumn", expr).substr(args[1] - 1, *args[2:])  # type: ignore[operator]  # pyright: ignore[reportArgumentType]
     return getattr(expr, FUNCTION_REMAPPING.get(name, name))(*args[1:])

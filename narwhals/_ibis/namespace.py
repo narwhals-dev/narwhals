@@ -3,7 +3,7 @@ from __future__ import annotations
 import operator
 from functools import reduce
 from itertools import chain
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import ibis
 import ibis.expr.types as ir
@@ -29,6 +29,18 @@ if TYPE_CHECKING:
 
 class IbisNamespace(SQLNamespace[IbisLazyFrame, IbisExpr, "ir.Table", "ir.Value"]):
     _implementation: Implementation = Implementation.IBIS
+    UNITS_DICT: ClassVar = {
+        "y": "Y",
+        "q": "Q",
+        "mo": "M",
+        "d": "D",
+        "h": "h",
+        "m": "m",
+        "s": "s",
+        "ms": "ms",
+        "us": "us",
+        "ns": "ns",
+    }
 
     def __init__(self, *, version: Version) -> None:
         self._version = version

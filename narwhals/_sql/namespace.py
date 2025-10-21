@@ -9,8 +9,9 @@ from narwhals._compliant.typing import NativeExprT, NativeFrameT
 from narwhals._sql.typing import SQLExprT, SQLLazyFrameT
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Mapping
 
+    from narwhals._duration import IntervalUnit
     from narwhals.typing import PythonLiteral
 
 
@@ -18,6 +19,8 @@ class SQLNamespace(
     LazyNamespace[SQLLazyFrameT, SQLExprT, NativeFrameT],
     Protocol[SQLLazyFrameT, SQLExprT, NativeFrameT, NativeExprT],
 ):
+    UNITS_DICT: Mapping[IntervalUnit, Any]
+
     def _function(self, name: str, *args: NativeExprT | PythonLiteral) -> NativeExprT: ...
     def _lit(self, value: Any) -> NativeExprT: ...
     def _when(

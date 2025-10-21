@@ -5,7 +5,6 @@ from typing import Any, Generic
 from narwhals._compliant import LazyExprNamespace
 from narwhals._compliant.any_namespace import DateTimeNamespace
 from narwhals._duration import Interval
-from narwhals._sql._duration import UNITS_DICT
 from narwhals._sql.typing import SQLExprT
 
 
@@ -61,9 +60,10 @@ class SQLExprDateTimeNamesSpace(
         if unit == "ns":
             msg = "Truncating to nanoseconds is not yet supported for Spark-like."
             raise NotImplementedError(msg)
-        format = UNITS_DICT[unit]
+        ns = self.compliant.__narwhals_namespace__()
+        format = ns.UNITS_DICT[unit]
 
         def _truncate(expr: Any) -> Any:
-            return self._function("date_trunc", self._lit(format), expr)
+            return self._function("date_trunc", format, expr)
 
         return self.compliant._with_elementwise(_truncate)
