@@ -492,7 +492,8 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
                 return self._function("var_samp", expr)
             n_samples = self._function("count", expr)
             return op.mul(
-                self._function("var_samp", expr), (n_samples - 1) / (n_samples - ddof)
+                self._function("var_samp", expr),
+                op.sub(n_samples, 1) / op.sub(n_samples, ddof),
             )
 
         return self._with_callable(func)
