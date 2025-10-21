@@ -477,7 +477,7 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
             if ddof == 1:
                 return self._function("stddev_samp", expr)
             n_samples = self._function("count", expr)
-            return op.mul(
+            return op.mul(  # type: ignore[no-any-return]
                 self._function("stddev_samp", expr),
                 self._function("sqrt", (op.sub(n_samples, 1)) / op.sub(n_samples, ddof)),
             )
@@ -491,7 +491,7 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
             if ddof == 1:
                 return self._function("var_samp", expr)
             n_samples = self._function("count", expr)
-            return op.mul(
+            return op.mul(  # type: ignore[no-any-return]
                 self._function("var_samp", expr),
                 op.sub(n_samples, 1) / op.sub(n_samples, ddof),
             )
