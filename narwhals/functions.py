@@ -33,6 +33,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import TypeAlias, TypeIs
 
+    from narwhals._native import NativeDataFrame, NativeLazyFrame, NativeSeries
     from narwhals._translate import IntoArrowTable
     from narwhals._typing import Backend, EagerAllowed, IntoBackend
     from narwhals.dataframe import DataFrame, LazyFrame
@@ -43,9 +44,6 @@ if TYPE_CHECKING:
         IntoDType,
         IntoExpr,
         IntoSchema,
-        NativeDataFrame,
-        NativeLazyFrame,
-        NativeSeries,
         NonNestedLiteral,
         _2DArray,
     )
