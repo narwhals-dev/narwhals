@@ -96,6 +96,30 @@ class ByDType(Selector):
         return dtype in self.dtypes
 
 
+class ByName(Selector):
+    # NOTE: `polars` allows this and `by_index` to redefine schema order in a `select`
+    # > Matching columns are returned in the order in which they are declared in
+    # > the selector, not the underlying schema order.
+    # If you wanna support that (later), then a `frozenset` won't work
+    __slots__ = ("names",)
+    names: frozenset[str]
+
+    def __repr__(self) -> str:
+        els = ", ".join(f"{nm!r}" for nm in sorted(self.names))
+        return f"ncs.by_name({els})"
+
+    @staticmethod
+    def from_names(*names: OneOrIterable[str]) -> ByName:
+        return ByName(names=frozenset(flatten_hash_safe(names)))
+
+    @staticmethod
+    def from_name(name: str, /) -> ByName:
+        return ByName(names=frozenset((name,)))
+
+    def matches_column(self, name: str, dtype: DType) -> bool:
+        return name in self.names
+
+
 class Categorical(Selector):
     def __repr__(self) -> str:
         return "ncs.categorical()"
@@ -192,12 +216,6 @@ class Matches(Selector):
     def from_string(pattern: str, /) -> Matches:
         return Matches(pattern=re.compile(pattern))
 
-    @staticmethod
-    def from_names(*names: OneOrIterable[str]) -> Matches:
-        """Implements `cs.by_name` to support `__r<op>__` with column selections."""
-        it = flatten_hash_safe(names)
-        return Matches.from_string(f"^({'|'.join(re.escape(name) for name in it)})$")
-
     def __repr__(self) -> str:
         return f"ncs.matches(pattern={self.pattern.pattern!r})"
 
@@ -245,7 +263,11 @@ def by_dtype(*dtypes: OneOrIterable[DType | type[DType]]) -> expr.Selector:
 
 
 def by_name(*names: OneOrIterable[str]) -> expr.Selector:
-    return Matches.from_names(*names).to_selector().to_narwhals()
+    if len(names) == 1 and isinstance(names[0], str):
+        sel = ByName.from_name(names[0])
+    else:
+        sel = ByName.from_names(*names)
+    return sel.to_selector().to_narwhals()
 
 
 def boolean() -> expr.Selector:

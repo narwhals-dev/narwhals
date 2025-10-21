@@ -28,8 +28,18 @@ def data() -> Data:
 
 
 @pytest.fixture
+def data_with_null(data: Data) -> Data:
+    return data | {"b": [1, 2, None, 5, 3]}
+
+
+@pytest.fixture
 def data_alt() -> Data:
     return {"a": [3, 5, 1, 2, None], "b": [0, 1, 3, 2, 1], "c": [9, 1, 2, 1, 1]}
+
+
+XFAIL_REQUIRES_PARTITION_BY = pytest.mark.xfail(
+    reason="Native group_by isn't enough", raises=InvalidOperationError
+)
 
 
 @pytest.mark.parametrize(
@@ -96,6 +106,25 @@ def test_over_multiple(data: Data, partition_by: OneOrIterable[IntoExprColumn]) 
         dataframe(data)
         .with_columns(c_min=nwp.col("c").min().over(partition_by))
         .sort("i")
+    )
+    assert_equal_data(result, expected)
+
+
+@XFAIL_REQUIRES_PARTITION_BY
+def test_over_cum_sum(data_with_null: Data) -> None:  # pragma: no cover
+    df = dataframe(data_with_null)
+    expected = {
+        "a": ["a", "a", "b", "b", "b"],
+        "b": [1, 2, None, 5, 3],
+        "c": [5, 4, 3, 2, 1],
+        "b_cum_sum": [1, 3, None, 5, 8],
+        "c_cum_sum": [5, 9, 3, 5, 6],
+    }
+
+    result = (
+        df.with_columns(nwp.col("b", "c").cum_sum().over("a").name.suffix("_cum_sum"))
+        .sort("i")
+        .drop("i")
     )
     assert_equal_data(result, expected)
 
