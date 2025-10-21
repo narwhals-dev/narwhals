@@ -72,6 +72,7 @@ from narwhals._plan.schema import (
     IntoFrozenSchema,
     freeze_schema,
 )
+from narwhals._utils import check_column_names_are_unique
 from narwhals.dtypes import DType
 from narwhals.exceptions import ComputeError, InvalidOperationError
 
@@ -156,7 +157,7 @@ class ExpansionFlags(Immutable):
 def prepare_projection(
     exprs: Sequence[ExprIR], /, keys: GroupByKeys = (), *, schema: IntoFrozenSchema
 ) -> tuple[Seq[NamedIR], FrozenSchema]:
-    """Expand IRs into named column selections.
+    """Expand IRs into named column projections.
 
     **Primary entry-point**, for `select`, `with_columns`,
     and any other context that requires resolving expression names.
@@ -173,13 +174,33 @@ def prepare_projection(
     return named_irs, frozen_schema
 
 
+def expand_selector_irs_names(
+    selectors: Sequence[SelectorIR],
+    /,
+    keys: GroupByKeys = (),
+    *,
+    schema: IntoFrozenSchema,
+) -> OutputNames:
+    """Expand selector-only input into the column names that match.
+
+    Similar to `prepare_projection`, but intended for allowing a subset of `Expr` and all `Selector`s
+    to be used in more places like `DataFrame.{drop,sort,partition_by}`.
+
+    Arguments:
+        selectors: IRs that **only** contain subclasses of `SelectorIR`.
+        keys: Names of `group_by` columns.
+        schema: Scope to expand multi-column selectors in.
+    """
+    frozen_schema = freeze_schema(schema)
+    names = tuple(_iter_expand_selector_names(selectors, keys, schema=frozen_schema))
+    return _ensure_valid_output_names(names, frozen_schema)
+
+
 def into_named_irs(exprs: Seq[ExprIR], names: OutputNames) -> Seq[NamedIR]:
     if len(exprs) != len(names):
         msg = f"zip length mismatch: {len(exprs)} != {len(names)}"
         raise ValueError(msg)
-    return tuple(
-        NamedIR(expr=remove_alias(ir), name=name) for ir, name in zip(exprs, names)
-    )
+    return tuple(ir.named_ir(name, remove_alias(e)) for e, name in zip(exprs, names))
 
 
 def ensure_valid_exprs(exprs: Seq[ExprIR], schema: FrozenSchema) -> OutputNames:
@@ -191,11 +212,38 @@ def ensure_valid_exprs(exprs: Seq[ExprIR], schema: FrozenSchema) -> OutputNames:
     return output_names
 
 
+def _ensure_valid_output_names(names: Seq[str], schema: FrozenSchema) -> OutputNames:
+    """Selector-only variant of `ensure_valid_exprs`."""
+    check_column_names_are_unique(names)
+    output_names = names
+    if not (set(schema.names).issuperset(output_names)):
+        raise column_not_found_error(output_names, schema)
+    return output_names
+
+
 def _ensure_output_names_unique(exprs: Seq[ExprIR]) -> OutputNames:
     names = tuple(e.meta.output_name() for e in exprs)
     if len(names) != len(set(names)):
         raise duplicate_error(exprs)
     return names
+
+
+def _ensure_columns(expr: ExprIR, /) -> Columns:
+    if not isinstance(expr, Columns):
+        msg = f"Expected only column selections here, but got {expr!r}"
+        raise NotImplementedError(msg)
+    return expr
+
+
+def _iter_expand_selector_names(
+    selectors: Iterable[SelectorIR], /, keys: GroupByKeys = (), *, schema: FrozenSchema
+) -> Iterator[str]:
+    for selector in selectors:
+        names = _ensure_columns(replace_selector(selector, schema=schema)).names
+        if keys:
+            yield from (name for name in names if name not in keys)
+        else:
+            yield from names
 
 
 # NOTE: Recursive for all `input` expressions which themselves contain `Seq[ExprIR]`

@@ -171,3 +171,8 @@ class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
         else:
             mask = acero.lit(resolved.native)
         return self._with_native(self.native.filter(mask))
+
+    def partition_by(self, by: Sequence[str], *, include_key: bool = True) -> list[Self]:
+        """Review https://github.com/pola-rs/polars/blob/870f0e01811b8b0cf9b846ded9d97685f143d27c/crates/polars-core/src/frame/mod.rs#L3225-L3284."""
+        msg = "TODO: `ArrowDataFrame.partition_by`"
+        raise NotImplementedError(msg)

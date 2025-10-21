@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, get_args, overload
 
 from narwhals._plan import _parse
-from narwhals._plan._expansion import prepare_projection
+from narwhals._plan._expansion import expand_selector_irs_names, prepare_projection
 from narwhals._plan.common import ensure_seq_str, temp
 from narwhals._plan.group_by import GroupBy, Grouped
 from narwhals._plan.options import SortMultipleOptions
@@ -257,6 +257,17 @@ class DataFrame(
             msg = f"Expected a single predicate after expansion, but got {len(named_irs)!r}\n\n{named_irs!r}"
             raise ValueError(msg)
         return self._with_compliant(self._compliant.filter(named_irs[0]))
+
+    def partition_by(
+        self,
+        by: OneOrIterable[ColumnNameOrSelector],
+        *more_by: ColumnNameOrSelector,
+        include_key: bool = True,
+    ) -> list[Self]:
+        by_selectors = _parse.parse_into_seq_of_selector_ir(by, *more_by)
+        names = expand_selector_irs_names(by_selectors, schema=self)
+        partitions = self._compliant.partition_by(names, include_key=include_key)
+        return [self._with_compliant(p) for p in partitions]
 
 
 def _is_join_strategy(obj: Any) -> TypeIs[JoinStrategy]:
