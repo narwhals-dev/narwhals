@@ -635,4 +635,6 @@ jobs:
       - name: run-pytest
         run: |
           cd fairlearn
+          # TODO(FBruzzesi): I hope this will be simplified once there is a decision on
+          # https://github.com/fairlearn/fairlearn/issues/1555
           pytest test/unit/preprocessing test/unit/metrics
