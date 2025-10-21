@@ -9,10 +9,11 @@ import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._arrow.utils import native_to_narwhals_dtype
-from narwhals._plan.arrow import acero, functions as fn
+from narwhals._plan.arrow import acero, functions as fn, group_by
 from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
 from narwhals._plan.arrow.group_by import ArrowGroupBy as GroupBy
 from narwhals._plan.arrow.series import ArrowSeries as Series
+from narwhals._plan.common import temp
 from narwhals._plan.compliant.dataframe import EagerDataFrame
 from narwhals._plan.compliant.typing import namespace
 from narwhals._plan.expressions import NamedIR
@@ -172,7 +173,25 @@ class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
             mask = acero.lit(resolved.native)
         return self._with_native(self.native.filter(mask))
 
+    # TODO @dangotbanned: Clean this up after getting more tests in place
     def partition_by(self, by: Sequence[str], *, include_key: bool = True) -> list[Self]:
-        """Review https://github.com/pola-rs/polars/blob/870f0e01811b8b0cf9b846ded9d97685f143d27c/crates/polars-core/src/frame/mod.rs#L3225-L3284."""
-        msg = "TODO: `ArrowDataFrame.partition_by`"
-        raise NotImplementedError(msg)
+        original_names = self.columns
+        temp_name = temp.column_name(original_names)
+        native = self.native
+        composite_values = group_by.concat_str(acero.select_names_table(native, by))
+        re_keyed = native.add_column(0, temp_name, composite_values)
+        source = acero.table_source(re_keyed)
+        if include_key:
+            keep = original_names
+        else:
+            ignore = {*by, temp_name}
+            keep = [name for name in original_names if name not in ignore]
+        select = acero.select_names(keep)
+        key = acero.col(temp_name)
+        # Need to iterate over the whole thing, so py_list first should be faster
+        partitions = (
+            acero.declare(source, acero.filter(key == v), select)
+            for v in composite_values.unique().to_pylist()
+        )
+        from_native = self._with_native
+        return [from_native(decl.to_table()) for decl in partitions]
