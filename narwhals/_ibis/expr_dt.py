@@ -1,21 +1,14 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING
 
 from narwhals._duration import Interval
-from narwhals._ibis.utils import (
-    UNITS_DICT_BUCKET,
-    UNITS_DICT_TRUNCATE,
-    timedelta_to_ibis_interval,
-)
+from narwhals._ibis.utils import UNITS_DICT_TRUNCATE, timedelta_to_ibis_interval
 from narwhals._sql.expr_dt import SQLExprDateTimeNamesSpace
 from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
-    import ibis.expr.types as ir
-
     from narwhals._ibis.expr import IbisExpr
-    from narwhals._ibis.utils import BucketUnit, TruncateUnit
 
 
 class IbisExprDateTimeNamespace(SQLExprDateTimeNamesSpace["IbisExpr"]):
@@ -32,31 +25,15 @@ class IbisExprDateTimeNamespace(SQLExprDateTimeNamesSpace["IbisExpr"]):
         # Ibis uses 0-6 for Monday-Sunday. Add 1 to match polars.
         return self.compliant._with_callable(lambda expr: expr.day_of_week.index() + 1)
 
-    def _bucket(self, kwds: dict[BucketUnit, Any], /) -> Callable[..., ir.TimestampValue]:
-        def fn(expr: ir.TimestampValue) -> ir.TimestampValue:
-            return expr.bucket(**kwds)
-
-        return fn
-
-    def _truncate(self, unit: TruncateUnit, /) -> Callable[..., ir.TimestampValue]:
-        def fn(expr: ir.TimestampValue) -> ir.TimestampValue:
-            return expr.truncate(unit)
-
-        return fn
-
     def truncate(self, every: str) -> IbisExpr:
         interval = Interval.parse(every)
         multiple, unit = interval.multiple, interval.unit
-        if unit == "q":
-            multiple, unit = 3 * multiple, "mo"
         if multiple != 1:
-            if self.compliant._backend_version < (7, 1):  # pragma: no cover
-                msg = "Truncating datetimes with multiples of the unit is only supported in Ibis >= 7.1."
-                raise NotImplementedError(msg)
-            fn = self._bucket({UNITS_DICT_BUCKET[unit]: multiple})
-        else:
-            fn = self._truncate(UNITS_DICT_TRUNCATE[unit])
-        return self.compliant._with_callable(fn)
+            # Same issue as https://github.com/duckdb/duckdb/issues/17554.
+            msg = "Truncating datetimes with multiples of the unit not supported in Ibis."
+            raise NotImplementedError(msg)
+        unit_native = UNITS_DICT_TRUNCATE[unit]
+        return self.compliant._with_callable(lambda expr: expr.truncate(unit_native))
 
     def offset_by(self, by: str) -> IbisExpr:
         interval = Interval.parse_no_constraints(by)

@@ -53,34 +53,9 @@ desc_nulls_first = cast("SortFn", partial(ibis.desc, nulls_first=True))
 desc_nulls_last = cast("SortFn", partial(ibis.desc, nulls_first=False))
 
 
-BucketUnit: TypeAlias = Literal[
-    "years",
-    "quarters",
-    "months",
-    "days",
-    "hours",
-    "minutes",
-    "seconds",
-    "milliseconds",
-    "microseconds",
-    "nanoseconds",
-]
 TruncateUnit: TypeAlias = Literal[
     "Y", "Q", "M", "W", "D", "h", "m", "s", "ms", "us", "ns"
 ]
-
-UNITS_DICT_BUCKET: Mapping[IntervalUnit, BucketUnit] = {
-    "y": "years",
-    "q": "quarters",
-    "mo": "months",
-    "d": "days",
-    "h": "hours",
-    "m": "minutes",
-    "s": "seconds",
-    "ms": "milliseconds",
-    "us": "microseconds",
-    "ns": "nanoseconds",
-}
 
 UNITS_DICT_TRUNCATE: Mapping[IntervalUnit, TruncateUnit] = {
     "y": "Y",

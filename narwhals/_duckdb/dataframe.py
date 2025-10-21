@@ -180,15 +180,15 @@ class DuckDBLazyFrame(
         selection = [val.alias(name) for name, val in evaluate_exprs(self, *exprs)]
         try:
             return self._with_native(self.native.aggregate(selection))  # type: ignore[arg-type]
-        except Exception as e:  # noqa: BLE001
-            raise catch_duckdb_exception(e, self) from None
+        except Exception as e:
+            raise catch_duckdb_exception(e, self) from e
 
     def select(self, *exprs: DuckDBExpr) -> Self:
         selection = (val.alias(name) for name, val in evaluate_exprs(self, *exprs))
         try:
             return self._with_native(self.native.select(*selection))
-        except Exception as e:  # noqa: BLE001
-            raise catch_duckdb_exception(e, self) from None
+        except Exception as e:
+            raise catch_duckdb_exception(e, self) from e
 
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
         columns_to_drop = parse_columns_to_drop(self, columns, strict=strict)

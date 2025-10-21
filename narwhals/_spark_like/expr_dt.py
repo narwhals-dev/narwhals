@@ -83,22 +83,6 @@ class SparkLikeExprDateTimeNamespace(SQLExprDateTimeNamesSpace["SparkLikeExpr"])
     def weekday(self) -> SparkLikeExpr:
         return self.compliant._with_elementwise(self._weekday)
 
-    def truncate(self, every: str) -> SparkLikeExpr:
-        interval = Interval.parse(every)
-        multiple, unit = interval.multiple, interval.unit
-        if multiple != 1:
-            msg = f"Only multiple 1 is currently supported for Spark-like.\nGot {multiple!s}."
-            raise ValueError(msg)
-        if unit == "ns":
-            msg = "Truncating to nanoseconds is not yet supported for Spark-like."
-            raise NotImplementedError(msg)
-        format = UNITS_DICT[unit]
-
-        def _truncate(expr: Column) -> Column:
-            return self.compliant._F.date_trunc(format, expr)
-
-        return self.compliant._with_elementwise(_truncate)
-
     def offset_by(self, by: str) -> SparkLikeExpr:
         interval = Interval.parse_no_constraints(by)
         multiple, unit = interval.multiple, interval.unit

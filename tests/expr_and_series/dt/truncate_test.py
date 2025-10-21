@@ -104,10 +104,10 @@ def test_truncate_multiples(
     every: str,
     expected: list[datetime],
 ) -> None:
-    if any(x in str(constructor) for x in ("cudf", "pyspark", "duckdb")):
+    if any(x in str(constructor) for x in ("cudf", "pyspark", "duckdb", "ibis")):
         # Reasons:
         # - cudf: https://github.com/rapidsai/cudf/issues/18654
-        # - pyspark/sqlframe: Only multiple 1 is currently supported
+        # - sql-like: Only multiple 1 is currently supported
         request.applymarker(pytest.mark.xfail())
     if every.endswith("ns") and any(
         x in str(constructor) for x in ("polars", "duckdb", "ibis")
