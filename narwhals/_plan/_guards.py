@@ -11,7 +11,7 @@ from narwhals._utils import _hasattr_static
 if TYPE_CHECKING:
     from typing_extensions import TypeIs
 
-    from narwhals._plan import expressions as ir
+    from narwhals._plan import expr, expressions as ir
     from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._plan.expr import Expr
     from narwhals._plan.series import Series
@@ -56,6 +56,10 @@ def is_non_nested_literal(obj: Any) -> TypeIs[NonNestedLiteral]:
 
 def is_expr(obj: Any) -> TypeIs[Expr]:
     return isinstance(obj, _expr().Expr)
+
+
+def is_selector(obj: Any) -> TypeIs[expr.Selector]:
+    return isinstance(obj, _expr().Selector)
 
 
 def is_column(obj: Any) -> TypeIs[Expr]:

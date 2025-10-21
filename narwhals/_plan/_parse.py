@@ -6,12 +6,18 @@ from collections.abc import Iterable, Sequence
 from itertools import chain
 from typing import TYPE_CHECKING
 
-from narwhals._plan._guards import is_expr, is_into_expr_column, is_iterable_reject
+from narwhals._plan._guards import (
+    is_expr,
+    is_into_expr_column,
+    is_iterable_reject,
+    is_selector,
+)
 from narwhals._plan.exceptions import (
     invalid_into_expr_error,
     is_iterable_pandas_error,
     is_iterable_polars_error,
 )
+from narwhals._utils import qualified_type_name
 from narwhals.dependencies import get_polars, is_pandas_dataframe, is_pandas_series
 from narwhals.exceptions import InvalidOperationError
 
@@ -22,8 +28,10 @@ if TYPE_CHECKING:
     import polars as pl
     from typing_extensions import TypeAlias, TypeIs
 
-    from narwhals._plan.expressions import ExprIR
+    from narwhals._plan.expr import Expr
+    from narwhals._plan.expressions import ExprIR, SelectorIR
     from narwhals._plan.typing import (
+        ColumnNameOrSelector,
         IntoExpr,
         IntoExprColumn,
         OneOrIterable,
@@ -122,6 +130,21 @@ def parse_into_expr_ir(
     else:
         expr = lit(input, dtype=dtype)
     return expr._ir
+
+
+def parse_into_selector_ir(input: ColumnNameOrSelector | Expr, /) -> SelectorIR:
+    if is_selector(input):
+        selector = input
+    elif isinstance(input, str):
+        from narwhals._plan import selectors as cs
+
+        selector = cs.by_name(input)
+    elif is_expr(input):
+        selector = input.meta.as_selector()
+    else:
+        msg = f"cannot turn {qualified_type_name(input)!r} into selector"
+        raise TypeError(msg)
+    return selector._ir
 
 
 def parse_into_seq_of_expr_ir(

@@ -14,11 +14,13 @@ from narwhals._plan import expressions as ir
 from narwhals._plan._guards import is_literal
 from narwhals._plan.expressions.literal import is_literal_scalar
 from narwhals._plan.expressions.namespace import IRNamespace
-from narwhals.exceptions import ComputeError
+from narwhals.exceptions import ComputeError, InvalidOperationError
 from narwhals.utils import Version
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
+
+    from narwhals._plan import expr
 
 
 class MetaNamespace(IRNamespace):
@@ -74,6 +76,16 @@ class MetaNamespace(IRNamespace):
     def root_names(self) -> list[str]:
         """Get the root column names."""
         return list(_expr_to_leaf_column_names_iter(self._ir))
+
+    def as_selector(self) -> expr.Selector:
+        """Try to turn this expression into a selector.
+
+        Raises if the underlying expressions is not a column or selector.
+        """
+        if not self.is_column_selection():
+            msg = f"cannot turn `{self._ir!r}` into a selector"
+            raise InvalidOperationError(msg)
+        return self._ir.to_selector_ir().to_narwhals()
 
 
 def _expr_to_leaf_column_names_iter(expr: ir.ExprIR, /) -> Iterator[str]:

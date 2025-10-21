@@ -38,7 +38,7 @@ _ALL_TIME_UNITS = frozenset[TimeUnit](("ms", "us", "ns", "s"))
 
 
 class Selector(Immutable):
-    def to_selector(self) -> RootSelector:
+    def to_selector_ir(self) -> RootSelector:
         from narwhals._plan.expressions.expr import RootSelector
 
         return RootSelector(selector=self)
@@ -248,14 +248,14 @@ class Struct(Selector):
 
 
 def all() -> expr.Selector:
-    return All().to_selector().to_narwhals()
+    return All().to_selector_ir().to_narwhals()
 
 
 def array(
     inner: expr.Selector | None = None, *, size: int | None = None
 ) -> expr.Selector:
     s_ir = inner._ir if inner is not None else None
-    return Array(inner=s_ir, size=size).to_selector().to_narwhals()
+    return Array(inner=s_ir, size=size).to_selector_ir().to_narwhals()
 
 
 def by_dtype(*dtypes: OneOrIterable[DType | type[DType]]) -> expr.Selector:
@@ -267,15 +267,15 @@ def by_name(*names: OneOrIterable[str]) -> expr.Selector:
         sel = ByName.from_name(names[0])
     else:
         sel = ByName.from_names(*names)
-    return sel.to_selector().to_narwhals()
+    return sel.to_selector_ir().to_narwhals()
 
 
 def boolean() -> expr.Selector:
-    return Boolean().to_selector().to_narwhals()
+    return Boolean().to_selector_ir().to_narwhals()
 
 
 def categorical() -> expr.Selector:
-    return Categorical().to_selector().to_narwhals()
+    return Categorical().to_selector_ir().to_narwhals()
 
 
 def datetime(
@@ -284,38 +284,38 @@ def datetime(
 ) -> expr.Selector:
     return (
         Datetime.from_time_unit_and_time_zone(time_unit, time_zone)
-        .to_selector()
+        .to_selector_ir()
         .to_narwhals()
     )
 
 
 def list(inner: expr.Selector | None = None) -> expr.Selector:
     s_ir = inner._ir if inner is not None else None
-    return List(inner=s_ir).to_selector().to_narwhals()
+    return List(inner=s_ir).to_selector_ir().to_narwhals()
 
 
 def duration(time_unit: OneOrIterable[TimeUnit] | None = None) -> expr.Selector:
-    return Duration.from_time_unit(time_unit).to_selector().to_narwhals()
+    return Duration.from_time_unit(time_unit).to_selector_ir().to_narwhals()
 
 
 def enum() -> expr.Selector:
-    return Enum().to_selector().to_narwhals()
+    return Enum().to_selector_ir().to_narwhals()
 
 
 def matches(pattern: str) -> expr.Selector:
-    return Matches.from_string(pattern).to_selector().to_narwhals()
+    return Matches.from_string(pattern).to_selector_ir().to_narwhals()
 
 
 def numeric() -> expr.Selector:
-    return Numeric().to_selector().to_narwhals()
+    return Numeric().to_selector_ir().to_narwhals()
 
 
 def string() -> expr.Selector:
-    return String().to_selector().to_narwhals()
+    return String().to_selector_ir().to_narwhals()
 
 
 def struct() -> expr.Selector:
-    return Struct().to_selector().to_narwhals()
+    return Struct().to_selector_ir().to_narwhals()
 
 
 _HASH_SENSITIVE_TO_SELECTOR: Mapping[type[DType], Callable[[], expr.Selector]] = {
@@ -343,7 +343,7 @@ def _from_dtypes(*by_dtypes: OneOrIterable[DType | type[DType]]) -> expr.Selecto
         else:
             dtypes.append(dtype)  # type: ignore[arg-type]
     if dtypes:
-        dtype_selector = ByDType(dtypes=frozenset(dtypes)).to_selector().to_narwhals()
+        dtype_selector = ByDType(dtypes=frozenset(dtypes)).to_selector_ir().to_narwhals()
         selectors.appendleft(dtype_selector)
     it = iter(selectors)
     return reduce(operator.or_, it, next(it))
