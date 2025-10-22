@@ -102,6 +102,8 @@ FUNCTION_REMAPPING = {
     "str_split": "split",
     "dayofyear": "day_of_year",
     "to_date": "date",
+    "bool_and": "all",
+    "bool_or": "any",
 }
 
 
