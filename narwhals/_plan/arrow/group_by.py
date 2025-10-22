@@ -9,7 +9,6 @@ from narwhals._plan import expressions as ir
 from narwhals._plan._dispatch import get_dispatch_name
 from narwhals._plan._guards import is_agg_expr, is_function_expr
 from narwhals._plan.arrow import acero, functions as fn, options
-from narwhals._plan.common import temp
 from narwhals._plan.compliant.group_by import EagerDataFrameGroupBy
 from narwhals._plan.expressions import aggregation as agg
 from narwhals._utils import Implementation
@@ -157,15 +156,14 @@ class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
         return self._df
 
     def __iter__(self) -> Iterator[tuple[Any, Frame]]:
-        temp_name = temp.column_name(self.compliant)
-        native = self.compliant.native
-        composite_values = concat_str(acero.select_names_table(native, self.key_names))
-        re_keyed = native.add_column(0, temp_name, composite_values)
+        from narwhals._plan.arrow.dataframe import partition_by
+
+        by = self.key_names
         from_native = self.compliant._with_native
-        for v in composite_values.unique():
-            t = from_native(acero.filter_table(re_keyed, pc.field(temp_name) == v))
+        for partition in partition_by(self.compliant.native, by):
+            t = from_native(partition)
             yield (
-                t.select_names(*self.key_names).row(0),
+                t.select_names(*by).row(0),
                 t.select_names(*self._column_names_original),
             )
 
