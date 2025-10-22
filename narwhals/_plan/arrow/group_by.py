@@ -9,13 +9,14 @@ from narwhals._plan import expressions as ir
 from narwhals._plan._dispatch import get_dispatch_name
 from narwhals._plan._guards import is_agg_expr, is_function_expr
 from narwhals._plan.arrow import acero, functions as fn, options
+from narwhals._plan.common import temp
 from narwhals._plan.compliant.group_by import EagerDataFrameGroupBy
 from narwhals._plan.expressions import aggregation as agg
 from narwhals._utils import Implementation
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Mapping
+    from collections.abc import Iterator, Mapping, Sequence
 
     from typing_extensions import Self, TypeAlias
 
@@ -137,14 +138,6 @@ def group_by_error(
     return InvalidOperationError(msg)
 
 
-def concat_str(native: pa.Table, *, separator: str = "") -> ChunkedArray:
-    dtype = fn.string_type(native.schema.types)
-    it = fn.cast_table(native, dtype).itercolumns()
-    concat: Incomplete = pc.binary_join_element_wise
-    join = options.join_replace_nulls()
-    return concat(*it, fn.lit(separator, dtype), options=join)  # type: ignore[no-any-return]
-
-
 class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
     _df: Frame
     _keys: Seq[NamedIR]
@@ -156,8 +149,6 @@ class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
         return self._df
 
     def __iter__(self) -> Iterator[tuple[Any, Frame]]:
-        from narwhals._plan.arrow.dataframe import partition_by
-
         by = self.key_names
         from_native = self.compliant._with_native
         for partition in partition_by(self.compliant.native, by):
@@ -176,3 +167,58 @@ class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
         if original := self._key_names_original:
             return result.rename(dict(zip(key_names, original)))
         return result
+
+
+def concat_str(native: pa.Table, *, separator: str = "") -> ChunkedArray:
+    dtype = fn.string_type(native.schema.types)
+    it = fn.cast_table(native, dtype).itercolumns()
+    concat: Incomplete = pc.binary_join_element_wise
+    join = options.join_replace_nulls()
+    return concat(*it, fn.lit(separator, dtype), options=join)  # type: ignore[no-any-return]
+
+
+def partition_by(
+    native: pa.Table, by: Sequence[str], *, include_key: bool = True
+) -> Iterator[pa.Table]:
+    if len(by) == 1:
+        yield from _partition_by_one(native, by[0], include_key=include_key)
+    else:
+        yield from _partition_by_many(native, by, include_key=include_key)
+
+
+def _partition_by_one(
+    native: pa.Table, by: str, *, include_key: bool = True
+) -> Iterator[pa.Table]:
+    """Optimized path for single-column partition."""
+    arr_dict: Incomplete = fn.array(native.column(by).dictionary_encode("encode"))
+    indices: pa.Int32Array = arr_dict.indices
+    if not include_key:
+        native = native.remove_column(native.schema.get_field_index(by))
+    for idx in range(len(arr_dict.dictionary)):
+        # NOTE: Acero filter doesn't support `null_selection_behavior="emit_null"`
+        # Is there any reasonable way to do this in Acero?
+        yield native.filter(pc.equal(pa.scalar(idx), indices))
+
+
+def _partition_by_many(
+    native: pa.Table, by: Sequence[str], *, include_key: bool = True
+) -> Iterator[pa.Table]:
+    original_names = native.column_names
+    temp_name = temp.column_name(original_names)
+    key = acero.col(temp_name)
+    composite_values = concat_str(acero.select_names_table(native, by))
+    # Need to iterate over the whole thing, so py_list first should be faster
+    unique_py = composite_values.unique().to_pylist()
+    re_keyed = native.add_column(0, temp_name, composite_values)
+    source = acero.table_source(re_keyed)
+    if include_key:
+        keep = original_names
+    else:
+        ignore = {*by, temp_name}
+        keep = [name for name in original_names if name not in ignore]
+    select = acero.select_names(keep)
+    for v in unique_py:
+        # NOTE: May want to split the `Declaration` production iterator into it's own function
+        # E.g, to push down column selection to *before* collection
+        # Not needed for this task though
+        yield acero.collect(source, acero.filter(key == v), select)

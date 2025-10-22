@@ -9,11 +9,10 @@ import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._arrow.utils import native_to_narwhals_dtype
-from narwhals._plan.arrow import acero, functions as fn, group_by
+from narwhals._plan.arrow import acero, functions as fn
 from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
-from narwhals._plan.arrow.group_by import ArrowGroupBy as GroupBy
+from narwhals._plan.arrow.group_by import ArrowGroupBy as GroupBy, partition_by
 from narwhals._plan.arrow.series import ArrowSeries as Series
-from narwhals._plan.common import temp
 from narwhals._plan.compliant.dataframe import EagerDataFrame
 from narwhals._plan.compliant.typing import namespace
 from narwhals._plan.expressions import NamedIR
@@ -179,50 +178,3 @@ class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
         from_native = self._with_native
         partitions = partition_by(self.native, by, include_key=include_key)
         return [from_native(df) for df in partitions]
-
-
-def partition_by(
-    native: pa.Table, by: Sequence[str], *, include_key: bool = True
-) -> Iterator[pa.Table]:
-    if len(by) == 1:
-        yield from _partition_by_one(native, by[0], include_key=include_key)
-    else:
-        yield from _partition_by_many(native, by, include_key=include_key)
-
-
-def _partition_by_one(
-    native: pa.Table, by: str, *, include_key: bool = True
-) -> Iterator[pa.Table]:
-    """Optimized path for single-column partition."""
-    arr_dict: Incomplete = fn.array(native.column(by).dictionary_encode("encode"))
-    indices: pa.Int32Array = arr_dict.indices
-    if not include_key:
-        native = native.remove_column(native.schema.get_field_index(by))
-    for idx in range(len(arr_dict.dictionary)):
-        # NOTE: Acero filter doesn't support `null_selection_behavior="emit_null"`
-        # Is there any reasonable way to do this in Acero?
-        yield native.filter(pc.equal(pa.scalar(idx), indices))
-
-
-def _partition_by_many(
-    native: pa.Table, by: Sequence[str], *, include_key: bool = True
-) -> Iterator[pa.Table]:
-    original_names = native.column_names
-    temp_name = temp.column_name(original_names)
-    key = acero.col(temp_name)
-    composite_values = group_by.concat_str(acero.select_names_table(native, by))
-    # Need to iterate over the whole thing, so py_list first should be faster
-    unique_py = composite_values.unique().to_pylist()
-    re_keyed = native.add_column(0, temp_name, composite_values)
-    source = acero.table_source(re_keyed)
-    if include_key:
-        keep = original_names
-    else:
-        ignore = {*by, temp_name}
-        keep = [name for name in original_names if name not in ignore]
-    select = acero.select_names(keep)
-    for v in unique_py:
-        # NOTE: May want to split the `Declaration` production iterator into it's own function
-        # E.g, to push down column selection to *before* collection
-        # Not needed for this task though
-        yield acero.collect(source, acero.filter(key == v), select)
