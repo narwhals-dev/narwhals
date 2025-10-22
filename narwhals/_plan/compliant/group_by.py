@@ -12,7 +12,7 @@ from narwhals._plan.compliant.typing import (
     FrameT_co,
     ResolverT_co,
 )
-from narwhals.exceptions import ComputeError
+from narwhals._plan.exceptions import group_by_no_keys_error
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -51,8 +51,7 @@ class DataFrameGroupBy(CompliantGroupBy[DataFrameT], Protocol[DataFrameT]):
     def key_names(self) -> Seq[str]:
         if names := self._key_names:
             return names
-        msg = "at least one key is required in a group_by operation"
-        raise ComputeError(msg)
+        raise group_by_no_keys_error()
 
 
 class EagerDataFrameGroupBy(DataFrameGroupBy[EagerDataFrameT], Protocol[EagerDataFrameT]):
@@ -163,8 +162,7 @@ class GroupByResolver:
             return names
         if keys := self.keys:
             return tuple(e.name for e in keys)
-        msg = "at least one key is required in a group_by operation"
-        raise ComputeError(msg)
+        raise group_by_no_keys_error()
 
     def requires_projection(self, *, allow_aliasing: bool = False) -> bool:
         """Return True is group keys contain anything that is not a column selection.

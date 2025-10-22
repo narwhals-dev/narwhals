@@ -129,10 +129,6 @@ def test_partition_by_missing_names(data: Data) -> None:  # pragma: no cover
         df.partition_by("c", "e")
 
 
-# TODO @dangotbanned: Stricter selectors (easier task)
-@pytest.mark.xfail(
-    reason="TODO: Guard against empty names returned from `_expansion.expand_selector_irs_names`."
-)
 def test_partition_by_fully_empty_selector(data: Data) -> None:
     df = dataframe(data)
     with pytest.raises(
