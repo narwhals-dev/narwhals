@@ -246,6 +246,15 @@ def prepend_column(native: pa.Table, name: str, values: IntoExpr) -> Decl:
     return _add_column(native, 0, name, values)
 
 
+def _union(declarations: Iterable[Decl], /) -> Decl:
+    """[`union`] merges multiple data streams with the same schema into one, similar to a `SQL UNION ALL` clause.
+
+    [`union`]: https://arrow.apache.org/docs/cpp/acero/user_guide.html#union
+    """
+    decls: Incomplete = declarations
+    return Decl("union", pac.ExecNodeOptions(), decls)
+
+
 def _order_by(
     sort_keys: Iterable[tuple[str, Order]] = (),
     *,
