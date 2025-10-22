@@ -105,7 +105,7 @@ class Matches(Selector):
         return bool(self.pattern.search(name))
 
 
-class Array(Selector):
+class Array(DTypeSelector, dtype=_dtypes.Array):
     __slots__ = ("inner", "size")
     inner: SelectorIR | None
     size: int | None
