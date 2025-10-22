@@ -24,7 +24,7 @@ from narwhals.schema import Schema
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
 
-    from typing_extensions import Self
+    from typing_extensions import Self, TypeAlias
 
     from narwhals._arrow.typing import ChunkedArrayAny
     from narwhals._plan.arrow.namespace import ArrowNamespace
@@ -33,6 +33,8 @@ if TYPE_CHECKING:
     from narwhals._plan.typing import NonCrossJoinStrategy, Seq
     from narwhals.dtypes import DType
     from narwhals.typing import IntoSchema
+
+Incomplete: TypeAlias = Any
 
 
 class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
@@ -173,25 +175,54 @@ class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
             mask = acero.lit(resolved.native)
         return self._with_native(self.native.filter(mask))
 
-    # TODO @dangotbanned: Clean this up after getting more tests in place
     def partition_by(self, by: Sequence[str], *, include_key: bool = True) -> list[Self]:
-        original_names = self.columns
-        temp_name = temp.column_name(original_names)
-        native = self.native
-        composite_values = group_by.concat_str(acero.select_names_table(native, by))
-        re_keyed = native.add_column(0, temp_name, composite_values)
-        source = acero.table_source(re_keyed)
-        if include_key:
-            keep = original_names
-        else:
-            ignore = {*by, temp_name}
-            keep = [name for name in original_names if name not in ignore]
-        select = acero.select_names(keep)
-        key = acero.col(temp_name)
-        # Need to iterate over the whole thing, so py_list first should be faster
-        partitions = (
-            acero.declare(source, acero.filter(key == v), select)
-            for v in composite_values.unique().to_pylist()
-        )
         from_native = self._with_native
-        return [from_native(decl.to_table()) for decl in partitions]
+        partitions = partition_by(self.native, by, include_key=include_key)
+        return [from_native(df) for df in partitions]
+
+
+def partition_by(
+    native: pa.Table, by: Sequence[str], *, include_key: bool = True
+) -> Iterator[pa.Table]:
+    if len(by) == 1:
+        yield from _partition_by_one(native, by[0], include_key=include_key)
+    else:
+        yield from _partition_by_many(native, by, include_key=include_key)
+
+
+def _partition_by_one(
+    native: pa.Table, by: str, *, include_key: bool = True
+) -> Iterator[pa.Table]:
+    """Optimized path for single-column partition."""
+    arr_dict: Incomplete = fn.array(native.column(by).dictionary_encode("encode"))
+    indices: pa.Int32Array = arr_dict.indices
+    if not include_key:
+        native = native.remove_column(native.schema.get_field_index(by))
+    for idx in range(len(arr_dict.dictionary)):
+        # NOTE: Acero filter doesn't support `null_selection_behavior="emit_null"`
+        # Is there any reasonable way to do this in Acero?
+        yield native.filter(pc.equal(pa.scalar(idx), indices))
+
+
+def _partition_by_many(
+    native: pa.Table, by: Sequence[str], *, include_key: bool = True
+) -> Iterator[pa.Table]:
+    original_names = native.column_names
+    temp_name = temp.column_name(original_names)
+    key = acero.col(temp_name)
+    composite_values = group_by.concat_str(acero.select_names_table(native, by))
+    # Need to iterate over the whole thing, so py_list first should be faster
+    unique_py = composite_values.unique().to_pylist()
+    re_keyed = native.add_column(0, temp_name, composite_values)
+    source = acero.table_source(re_keyed)
+    if include_key:
+        keep = original_names
+    else:
+        ignore = {*by, temp_name}
+        keep = [name for name in original_names if name not in ignore]
+    select = acero.select_names(keep)
+    for v in unique_py:
+        # NOTE: May want to split the `Declaration` production iterator into it's own function
+        # E.g, to push down column selection to *before* collection
+        # Not needed for this task though
+        yield acero.collect(source, acero.filter(key == v), select)

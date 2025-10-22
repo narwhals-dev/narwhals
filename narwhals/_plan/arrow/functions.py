@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import typing as t
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, overload
 
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
@@ -54,7 +54,7 @@ if TYPE_CHECKING:
         StringType,
         UnaryFunction,
     )
-    from narwhals.typing import ClosedInterval, IntoArrowSchema
+    from narwhals.typing import ClosedInterval, IntoArrowSchema, PythonLiteral
 
 BACKEND_VERSION = Implementation.PYARROW._backend_version()
 
@@ -348,20 +348,33 @@ def lit(value: Any, dtype: DataType | None = None) -> NativeScalar:
     return pa.scalar(value) if dtype is None else pa.scalar(value, dtype)
 
 
+@overload
+def array(data: ArrowAny, /) -> ArrayAny: ...
+@overload
 def array(
-    value: NativeScalar | Iterable[Any], dtype: DataType | None = None, /
+    data: Iterable[PythonLiteral], dtype: DataType | None = None, /
+) -> ArrayAny: ...
+def array(
+    data: ArrowAny | Iterable[PythonLiteral], dtype: DataType | None = None, /
 ) -> ArrayAny:
-    return (
-        pa.array([value], value.type)
-        if isinstance(value, pa.Scalar)
-        else pa.array(value, dtype)
-    )
+    """Convert `data` into an Array instance.
+
+    Note:
+        `dtype` is not used for existing `pyarrow` data, use `cast` instead.
+    """
+    if isinstance(data, pa.ChunkedArray):
+        return data.combine_chunks()
+    if isinstance(data, pa.Array):
+        return data
+    if isinstance(data, pa.Scalar):
+        return pa.array([data], data.type)
+    return pa.array(data, dtype)
 
 
 def chunked_array(
-    arr: ArrowAny | list[Iterable[Any]], dtype: DataType | None = None, /
+    data: ArrowAny | list[Iterable[Any]], dtype: DataType | None = None, /
 ) -> ChunkedArrayAny:
-    return _chunked_array(array(arr) if isinstance(arr, pa.Scalar) else arr, dtype)
+    return _chunked_array(array(data) if isinstance(data, pa.Scalar) else data, dtype)
 
 
 def concat_vertical_chunked(
