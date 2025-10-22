@@ -169,7 +169,8 @@ class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
         return result
 
 
-def concat_str(native: pa.Table, *, separator: str = "") -> ChunkedArray:
+def _composite_key(native: pa.Table, *, separator: str = "") -> ChunkedArray:
+    """Horizontally join columns to *seed* a unique key per row combination."""
     dtype = fn.string_type(native.schema.types)
     it = fn.cast_table(native, dtype).itercolumns()
     concat: Incomplete = pc.binary_join_element_wise
@@ -206,7 +207,7 @@ def _partition_by_many(
     original_names = native.column_names
     temp_name = temp.column_name(original_names)
     key = acero.col(temp_name)
-    composite_values = concat_str(acero.select_names_table(native, by))
+    composite_values = _composite_key(acero.select_names_table(native, by))
     # Need to iterate over the whole thing, so py_list first should be faster
     unique_py = composite_values.unique().to_pylist()
     re_keyed = native.add_column(0, temp_name, composite_values)
