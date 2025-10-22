@@ -1,3 +1,4 @@
+# TODO @dangotbanned: Update this docstring
 """Deviations from `polars`.
 
 - A `Selector` corresponds to a `nw.selectors` function
@@ -8,11 +9,12 @@ from __future__ import annotations
 
 import builtins
 import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.common import flatten_hash_safe
 from narwhals._utils import Version, _parse_time_unit_and_time_zone
+from narwhals.dtypes import DType, NumericType
 from narwhals.typing import TimeUnit
 
 if TYPE_CHECKING:
@@ -22,7 +24,6 @@ if TYPE_CHECKING:
     from narwhals._plan.expressions import SelectorIR
     from narwhals._plan.expressions.expr import RootSelector
     from narwhals._plan.typing import OneOrIterable
-    from narwhals.dtypes import DType
 
     T = TypeVar("T")
 
@@ -41,53 +42,28 @@ class Selector(Immutable):
         raise NotImplementedError(type(self))
 
 
+class DTypeSelector(Selector):
+    # Will be updating things to be a bit closer to upstream
+    # https://github.com/pola-rs/polars/blob/2b241543851800595efd343be016b65cdbdd3c9f/crates/polars-plan/src/dsl/selector.rs#L110-L172
+    _dtype: ClassVar[type[DType]]
+
+    def __init_subclass__(cls, *args: Any, dtype: type[DType], **kwds: Any) -> None:
+        super().__init_subclass__(*args, **kwds)
+        cls._dtype = dtype
+
+    def __repr__(self) -> str:
+        return f"ncs.{type(self).__name__.lower()}"
+
+    def matches_column(self, name: str, dtype: DType) -> bool:
+        return isinstance(dtype, self._dtype)
+
+
 class All(Selector):
     def __repr__(self) -> str:
         return "ncs.all()"
 
     def matches_column(self, name: str, dtype: DType) -> bool:
         return True
-
-
-class Array(Selector):
-    __slots__ = ("inner", "size")
-    inner: SelectorIR | None
-    size: int | None
-    """Not sure why polars is using the (`0.20.31`) deprecated name `width`."""
-
-    def __repr__(self) -> str:
-        inner = "" if not self.inner else repr(self.inner)
-        size = self.size or "*"
-        return f"ncs.array({inner}, size={size})"
-
-    def matches_column(self, name: str, dtype: DType) -> bool:
-        return (
-            isinstance(dtype, _dtypes.Array)
-            and (not (self.inner) or self.inner.matches_column(name, dtype))
-            and (self.size is None or dtype.size == self.size)
-        )
-
-
-class Boolean(Selector):
-    def __repr__(self) -> str:
-        return "ncs.boolean()"
-
-    def matches_column(self, name: str, dtype: DType) -> bool:
-        return isinstance(dtype, _dtypes.Boolean)
-
-
-class ByDType(Selector):
-    __slots__ = ("dtypes",)
-    dtypes: frozenset[DType | type[DType]]
-
-    def __repr__(self) -> str:
-        els = ", ".join(
-            tp.__name__ if isinstance(tp, type) else repr(tp) for tp in self.dtypes
-        )
-        return f"ncs.by_dtype(dtypes=[{els}])"
-
-    def matches_column(self, name: str, dtype: DType) -> bool:
-        return dtype in self.dtypes
 
 
 class ByName(Selector):
@@ -114,15 +90,61 @@ class ByName(Selector):
         return name in self.names
 
 
-class Categorical(Selector):
+class Matches(Selector):
+    __slots__ = ("pattern",)
+    pattern: re.Pattern[str]
+
+    @staticmethod
+    def from_string(pattern: str, /) -> Matches:
+        return Matches(pattern=re.compile(pattern))
+
     def __repr__(self) -> str:
-        return "ncs.categorical()"
+        return f"ncs.matches(pattern={self.pattern.pattern!r})"
 
     def matches_column(self, name: str, dtype: DType) -> bool:
-        return isinstance(dtype, _dtypes.Categorical)
+        return bool(self.pattern.search(name))
 
 
-class Datetime(Selector):
+class Array(Selector):
+    __slots__ = ("inner", "size")
+    inner: SelectorIR | None
+    size: int | None
+    """Not sure why polars is using the (`0.20.31`) deprecated name `width`."""
+
+    def __repr__(self) -> str:
+        inner = "" if not self.inner else repr(self.inner)
+        size = self.size or "*"
+        return f"ncs.array({inner}, size={size})"
+
+    def matches_column(self, name: str, dtype: DType) -> bool:
+        return (
+            isinstance(dtype, _dtypes.Array)
+            and (not (self.inner) or self.inner.matches_column(name, dtype))
+            and (self.size is None or dtype.size == self.size)
+        )
+
+
+class Boolean(DTypeSelector, dtype=_dtypes.Boolean): ...
+
+
+class ByDType(DTypeSelector, dtype=DType):
+    __slots__ = ("dtypes",)
+    dtypes: frozenset[DType | type[DType]]
+
+    def __repr__(self) -> str:
+        els = ", ".join(
+            tp.__name__ if isinstance(tp, type) else repr(tp) for tp in self.dtypes
+        )
+        return f"ncs.by_dtype(dtypes=[{els}])"
+
+    def matches_column(self, name: str, dtype: DType) -> bool:
+        return dtype in self.dtypes
+
+
+class Categorical(DTypeSelector, dtype=_dtypes.Categorical): ...
+
+
+class Datetime(DTypeSelector, dtype=_dtypes.Datetime):
     """Should swallow the [`utils` functions].
 
     Just re-wrapping them for now, since `CompliantSelectorNamespace` is still using them.
@@ -157,7 +179,7 @@ class Datetime(Selector):
         )
 
 
-class Duration(Selector):
+class Duration(DTypeSelector, dtype=_dtypes.Duration):
     __slots__ = ("time_units",)
     time_units: frozenset[TimeUnit]
 
@@ -180,15 +202,10 @@ class Duration(Selector):
         )
 
 
-class Enum(Selector):
-    def __repr__(self) -> str:
-        return "ncs.enum()"
-
-    def matches_column(self, name: str, dtype: DType) -> bool:
-        return isinstance(dtype, _dtypes.Enum)
+class Enum(DTypeSelector, dtype=_dtypes.Enum): ...
 
 
-class List(Selector):
+class List(DTypeSelector, dtype=_dtypes.List):
     __slots__ = ("inner",)
     inner: SelectorIR | None
 
@@ -197,45 +214,15 @@ class List(Selector):
         return f"ncs.list({inner})"
 
     def matches_column(self, name: str, dtype: DType) -> bool:
-        return isinstance(dtype, _dtypes.List) and (
+        return super().matches_column(name, dtype) and (
             not (self.inner) or self.inner.matches_column(name, dtype)
         )
 
 
-class Matches(Selector):
-    __slots__ = ("pattern",)
-    pattern: re.Pattern[str]
-
-    @staticmethod
-    def from_string(pattern: str, /) -> Matches:
-        return Matches(pattern=re.compile(pattern))
-
-    def __repr__(self) -> str:
-        return f"ncs.matches(pattern={self.pattern.pattern!r})"
-
-    def matches_column(self, name: str, dtype: DType) -> bool:
-        return bool(self.pattern.search(name))
+class Numeric(DTypeSelector, dtype=NumericType): ...
 
 
-class Numeric(Selector):
-    def __repr__(self) -> str:
-        return "ncs.numeric()"
-
-    def matches_column(self, name: str, dtype: DType) -> bool:
-        return dtype.is_numeric()
+class String(DTypeSelector, dtype=_dtypes.String): ...
 
 
-class String(Selector):
-    def __repr__(self) -> str:
-        return "ncs.string()"
-
-    def matches_column(self, name: str, dtype: DType) -> bool:
-        return isinstance(dtype, _dtypes.String)
-
-
-class Struct(Selector):
-    def __repr__(self) -> str:
-        return "ncs.struct()"
-
-    def matches_column(self, name: str, dtype: DType) -> bool:
-        return isinstance(dtype, _dtypes.Struct)
+class Struct(DTypeSelector, dtype=_dtypes.Struct): ...
