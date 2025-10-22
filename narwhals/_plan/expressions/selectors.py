@@ -9,21 +9,25 @@ from __future__ import annotations
 
 import builtins
 import re
+from contextlib import suppress
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.common import flatten_hash_safe
+from narwhals._plan.exceptions import column_index_error, column_not_found_error
 from narwhals._utils import Version, _parse_time_unit_and_time_zone
 from narwhals.dtypes import DType, NumericType
 from narwhals.typing import TimeUnit
 
 if TYPE_CHECKING:
+    from collections.abc import Container, Iterator
     from datetime import timezone
     from typing import TypeVar
 
     from narwhals._plan.expressions import SelectorIR
     from narwhals._plan.expressions.expr import RootSelector
-    from narwhals._plan.typing import OneOrIterable
+    from narwhals._plan.schema import FrozenSchema
+    from narwhals._plan.typing import OneOrIterable, Seq
 
     T = TypeVar("T")
 
@@ -41,6 +45,18 @@ class Selector(Immutable):
     def matches_column(self, name: str, dtype: DType) -> bool:
         raise NotImplementedError(type(self))
 
+    def into_columns(
+        self, schema: FrozenSchema, ignored_columns: Container[str]
+    ) -> Iterator[str]:
+        # /// Turns the selector into an ordered set of selected columns from the schema.
+        #
+        # - The order of the columns corresponds to the order in the schema.
+        # - Column names in `ignored_columns` are only used if they are explicitly mentioned by a `ByName` or `ByIndex`.
+        # - `ignored_columns` are only evaluated against `All` and `Matches`
+        # https://github.com/pola-rs/polars/blob/2b241543851800595efd343be016b65cdbdd3c9f/crates/polars-plan/src/dsl/selector.rs#L192-L193
+        msg = f"{self.into_columns.__qualname__!r}"
+        raise NotImplementedError(msg)
+
 
 class DTypeSelector(Selector):
     # Will be updating things to be a bit closer to upstream
@@ -57,37 +73,91 @@ class DTypeSelector(Selector):
     def matches_column(self, name: str, dtype: DType) -> bool:
         return isinstance(dtype, self._dtype)
 
+    def matches(self, dtype: DType) -> bool:
+        # Exclusive to `DataTypeSelector`
+        return isinstance(dtype, self._dtype)
+
 
 class All(Selector):
+    # Both `Selector::Wildcard` and `DataTypeSelector::Wildcard` exist
+    # Also `Empty`, but that's new
     def __repr__(self) -> str:
         return "ncs.all()"
 
     def matches_column(self, name: str, dtype: DType) -> bool:
         return True
 
+    def into_columns(
+        self, schema: FrozenSchema, ignored_columns: Container[str]
+    ) -> Iterator[str]:
+        if ignored_columns:
+            yield from (name for name in schema if name not in ignored_columns)
+        else:
+            yield from schema
+
+
+class ByIndex(Selector):
+    # returns inputs in given order not in schema order.
+    __slots__ = ("indices", "require_all")
+    indices: Seq[int]
+    require_all: bool
+
+    @staticmethod
+    def from_indices(*indices: OneOrIterable[int], require_all: bool = True) -> ByIndex:
+        return ByIndex(indices=tuple(flatten_hash_safe(indices)), require_all=require_all)
+
+    @staticmethod
+    def from_index(index: int, /, *, require_all: bool = True) -> ByIndex:
+        return ByIndex(indices=(index,), require_all=require_all)
+
+    def into_columns(
+        self, schema: FrozenSchema, ignored_columns: Container[str]
+    ) -> Iterator[str]:
+        names = schema.names
+        if not self.require_all:
+            with suppress(IndexError):
+                for index in self.indices:
+                    yield names[index]
+        else:
+            n_fields = len(names)
+            for index in self.indices:
+                idx = index + n_fields if index < 0 else index
+                if idx < 0 or idx >= n_fields:
+                    raise column_index_error(index, schema)
+                yield names[index]
+
 
 class ByName(Selector):
-    # NOTE: `polars` allows this and `by_index` to redefine schema order in a `select`
-    # > Matching columns are returned in the order in which they are declared in
-    # > the selector, not the underlying schema order.
-    # If you wanna support that (later), then a `frozenset` won't work
-    __slots__ = ("names",)
-    names: frozenset[str]
+    # returns inputs in given order not in schema order.
+    __slots__ = ("names", "require_all")
+    names: Seq[str]
+    require_all: bool
 
     def __repr__(self) -> str:
-        els = ", ".join(f"{nm!r}" for nm in sorted(self.names))
+        els = ", ".join(f"{nm!r}" for nm in self.names)
         return f"ncs.by_name({els})"
 
     @staticmethod
-    def from_names(*names: OneOrIterable[str]) -> ByName:
-        return ByName(names=frozenset(flatten_hash_safe(names)))
+    def from_names(*names: OneOrIterable[str], require_all: bool = True) -> ByName:
+        return ByName(names=tuple(flatten_hash_safe(names)), require_all=require_all)
 
     @staticmethod
-    def from_name(name: str, /) -> ByName:
-        return ByName(names=frozenset((name,)))
+    def from_name(name: str, /, *, require_all: bool = True) -> ByName:
+        return ByName(names=(name,), require_all=require_all)
 
     def matches_column(self, name: str, dtype: DType) -> bool:
         return name in self.names
+
+    def into_columns(
+        self, schema: FrozenSchema, ignored_columns: Container[str]
+    ) -> Iterator[str]:
+        if not self.require_all:
+            keys = schema.keys()
+            yield from (name for name in self.names if name in keys)
+        else:
+            if not set(schema).issuperset(self.names):
+                raise column_not_found_error(self.names, schema)
+            yield from self.names
 
 
 class Matches(Selector):
@@ -103,6 +173,17 @@ class Matches(Selector):
 
     def matches_column(self, name: str, dtype: DType) -> bool:
         return bool(self.pattern.search(name))
+
+    def into_columns(
+        self, schema: FrozenSchema, ignored_columns: Container[str]
+    ) -> Iterator[str]:
+        search = self.pattern.search
+        if ignored_columns:
+            for name in schema:
+                if name not in ignored_columns and search(name):
+                    yield name
+        else:
+            yield from (name for name in schema if search(name))
 
 
 class Array(DTypeSelector, dtype=_dtypes.Array):

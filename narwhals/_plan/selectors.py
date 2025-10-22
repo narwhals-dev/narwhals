@@ -161,11 +161,19 @@ def by_dtype(*dtypes: OneOrIterable[DType | type[DType]]) -> Selector:
     return reduce(operator.or_, it, next(it))
 
 
-def by_name(*names: OneOrIterable[str]) -> Selector:
-    if len(names) == 1 and isinstance(names[0], str):
-        sel = s_ir.ByName.from_name(names[0])
+def by_index(*indices: OneOrIterable[int], require_all: bool = True) -> Selector:
+    if len(indices) == 1 and isinstance(indices[0], int):
+        sel = s_ir.ByIndex.from_index(indices[0], require_all=require_all)
     else:
-        sel = s_ir.ByName.from_names(*names)
+        sel = s_ir.ByIndex.from_indices(*indices, require_all=require_all)
+    return sel.to_selector_ir().to_narwhals()
+
+
+def by_name(*names: OneOrIterable[str], require_all: bool = True) -> Selector:
+    if len(names) == 1 and isinstance(names[0], str):
+        sel = s_ir.ByName.from_name(names[0], require_all=require_all)
+    else:
+        sel = s_ir.ByName.from_names(*names, require_all=require_all)
     return sel.to_selector_ir().to_narwhals()
 
 
