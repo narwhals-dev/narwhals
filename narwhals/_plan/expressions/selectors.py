@@ -7,10 +7,7 @@
 from __future__ import annotations
 
 import builtins
-import operator
 import re
-from collections import deque
-from functools import reduce
 from typing import TYPE_CHECKING
 
 from narwhals._plan._immutable import Immutable
@@ -19,11 +16,9 @@ from narwhals._utils import Version, _parse_time_unit_and_time_zone
 from narwhals.typing import TimeUnit
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping
     from datetime import timezone
     from typing import TypeVar
 
-    from narwhals._plan import expr
     from narwhals._plan.expressions import SelectorIR
     from narwhals._plan.expressions.expr import RootSelector
     from narwhals._plan.typing import OneOrIterable
@@ -32,7 +27,6 @@ if TYPE_CHECKING:
     T = TypeVar("T")
 
 _dtypes = Version.MAIN.dtypes
-_dtypes_v1 = Version.V1.dtypes
 
 _ALL_TIME_UNITS = frozenset[TimeUnit](("ms", "us", "ns", "s"))
 
@@ -245,105 +239,3 @@ class Struct(Selector):
 
     def matches_column(self, name: str, dtype: DType) -> bool:
         return isinstance(dtype, _dtypes.Struct)
-
-
-def all() -> expr.Selector:
-    return All().to_selector_ir().to_narwhals()
-
-
-def array(
-    inner: expr.Selector | None = None, *, size: int | None = None
-) -> expr.Selector:
-    s_ir = inner._ir if inner is not None else None
-    return Array(inner=s_ir, size=size).to_selector_ir().to_narwhals()
-
-
-def by_dtype(*dtypes: OneOrIterable[DType | type[DType]]) -> expr.Selector:
-    return _from_dtypes(*dtypes)
-
-
-def by_name(*names: OneOrIterable[str]) -> expr.Selector:
-    if len(names) == 1 and isinstance(names[0], str):
-        sel = ByName.from_name(names[0])
-    else:
-        sel = ByName.from_names(*names)
-    return sel.to_selector_ir().to_narwhals()
-
-
-def boolean() -> expr.Selector:
-    return Boolean().to_selector_ir().to_narwhals()
-
-
-def categorical() -> expr.Selector:
-    return Categorical().to_selector_ir().to_narwhals()
-
-
-def datetime(
-    time_unit: OneOrIterable[TimeUnit] | None = None,
-    time_zone: OneOrIterable[str | timezone | None] = ("*", None),
-) -> expr.Selector:
-    return (
-        Datetime.from_time_unit_and_time_zone(time_unit, time_zone)
-        .to_selector_ir()
-        .to_narwhals()
-    )
-
-
-def list(inner: expr.Selector | None = None) -> expr.Selector:
-    s_ir = inner._ir if inner is not None else None
-    return List(inner=s_ir).to_selector_ir().to_narwhals()
-
-
-def duration(time_unit: OneOrIterable[TimeUnit] | None = None) -> expr.Selector:
-    return Duration.from_time_unit(time_unit).to_selector_ir().to_narwhals()
-
-
-def enum() -> expr.Selector:
-    return Enum().to_selector_ir().to_narwhals()
-
-
-def matches(pattern: str) -> expr.Selector:
-    return Matches.from_string(pattern).to_selector_ir().to_narwhals()
-
-
-def numeric() -> expr.Selector:
-    return Numeric().to_selector_ir().to_narwhals()
-
-
-def string() -> expr.Selector:
-    return String().to_selector_ir().to_narwhals()
-
-
-def struct() -> expr.Selector:
-    return Struct().to_selector_ir().to_narwhals()
-
-
-_HASH_SENSITIVE_TO_SELECTOR: Mapping[type[DType], Callable[[], expr.Selector]] = {
-    _dtypes.Datetime: datetime,
-    _dtypes_v1.Datetime: datetime,
-    _dtypes.Duration: duration,
-    _dtypes_v1.Duration: duration,
-    _dtypes.Enum: enum,
-    _dtypes_v1.Enum: enum,
-    _dtypes.Array: array,
-    _dtypes.List: list,
-    _dtypes.Struct: struct,
-}
-
-
-def _from_dtypes(*by_dtypes: OneOrIterable[DType | type[DType]]) -> expr.Selector:
-    selectors: deque[expr.Selector] = deque()
-    dtypes: deque[DType | type[DType]] = deque()
-    for dtype in flatten_hash_safe(by_dtypes):
-        if isinstance(dtype, type):
-            if constructor := _HASH_SENSITIVE_TO_SELECTOR.get(dtype):
-                selectors.append(constructor())
-            else:
-                dtypes.append(dtype)
-        else:
-            dtypes.append(dtype)  # type: ignore[arg-type]
-    if dtypes:
-        dtype_selector = ByDType(dtypes=frozenset(dtypes)).to_selector_ir().to_narwhals()
-        selectors.appendleft(dtype_selector)
-    it = iter(selectors)
-    return reduce(operator.or_, it, next(it))

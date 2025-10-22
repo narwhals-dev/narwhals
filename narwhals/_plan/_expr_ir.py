@@ -18,9 +18,10 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._plan.compliant.typing import Ctx, FrameT_contra, R_co
-    from narwhals._plan.expr import Expr, Selector
+    from narwhals._plan.expr import Expr
     from narwhals._plan.expressions.expr import Alias, Cast, Column
     from narwhals._plan.meta import MetaNamespace
+    from narwhals._plan.selectors import Selector
     from narwhals._plan.typing import ExprIRT2, MapIR, Seq
     from narwhals.dtypes import DType
 
@@ -191,11 +192,11 @@ def _map_ir_child(obj: ExprIR | Seq[ExprIR], fn: MapIR, /) -> ExprIR | Seq[ExprI
 
 class SelectorIR(ExprIR, config=ExprIROptions.no_dispatch()):
     def to_narwhals(self, version: Version = Version.MAIN) -> Selector:
-        from narwhals._plan import expr
+        from narwhals._plan.selectors import Selector, SelectorV1
 
         if version is Version.MAIN:
-            return expr.Selector._from_ir(self)
-        return expr.SelectorV1._from_ir(self)
+            return Selector._from_ir(self)
+        return SelectorV1._from_ir(self)
 
     def matches_column(self, name: str, dtype: DType) -> bool:
         """Return True if we can select this column.

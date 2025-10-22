@@ -14,11 +14,12 @@ if t.TYPE_CHECKING:
     from narwhals._plan._expr_ir import ExprIR, NamedIR, SelectorIR
     from narwhals._plan._function import Function
     from narwhals._plan.dataframe import DataFrame
-    from narwhals._plan.expr import Expr, Selector
+    from narwhals._plan.expr import Expr
     from narwhals._plan.expressions import operators as ops
     from narwhals._plan.expressions.functions import RollingWindow
     from narwhals._plan.expressions.namespace import IRNamespace
     from narwhals._plan.expressions.ranges import RangeFunction
+    from narwhals._plan.selectors import Selector
     from narwhals._plan.series import Series
     from narwhals.typing import NonNestedDType, NonNestedLiteral
 
