@@ -7,6 +7,7 @@ import pytest
 import narwhals as nw
 from narwhals._plan import Selector, selectors as ncs
 from narwhals._utils import zip_strict
+from narwhals.exceptions import ColumnNotFoundError, ComputeError
 from tests.plan.utils import assert_equal_data, dataframe
 
 if TYPE_CHECKING:
@@ -114,3 +115,36 @@ def test_partition_by_multiple(
         results = df.partition_by(by, *more_by, include_key=include_key)
     for df, expect in zip_strict(results, expected):
         assert_equal_data(df, expect)
+
+
+# TODO @dangotbanned: Stricter selectors
+@pytest.mark.xfail(
+    reason="TODO: Handle missing columns in `strict`/`require_all` selectors."
+)
+def test_partition_by_missing_names(data: Data) -> None:  # pragma: no cover
+    df = dataframe(data)
+    with pytest.raises(ColumnNotFoundError, match=r"\"d\""):
+        df.partition_by("d")
+    with pytest.raises(ColumnNotFoundError, match=r"\"e\""):
+        df.partition_by("c", "e")
+
+
+# TODO @dangotbanned: Stricter selectors (easier task)
+@pytest.mark.xfail(
+    reason="TODO: Guard against empty names returned from `_expansion.expand_selector_irs_names`."
+)
+def test_partition_by_fully_empty_selector(data: Data) -> None:
+    df = dataframe(data)
+    with pytest.raises(
+        ComputeError, match=r"at least one key is required in a group_by operation"
+    ):
+        df.partition_by(ncs.array(ncs.numeric()), ncs.struct(), ncs.duration())
+
+
+# NOTE: Matching polars behavior
+def test_partition_by_partially_missing_selector(data: Data) -> None:
+    df = dataframe(data)
+    results = df.partition_by(ncs.string() | ncs.list() | ncs.enum())
+    expected = nw.Schema({"a": nw.String(), "b": nw.Int64(), "c": nw.Int64()})
+    for df in results:
+        assert df.schema == expected
