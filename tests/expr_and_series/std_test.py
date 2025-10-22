@@ -18,9 +18,6 @@ expected_results = {
 
 @pytest.mark.parametrize("input_data", [data, data_with_nulls])
 def test_std(constructor: Constructor, input_data: dict[str, list[float | None]]) -> None:
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
     df = nw.from_native(constructor(input_data))
     result = df.select(
         nw.col("a").std(ddof=1).alias("a_ddof_1"),
@@ -39,9 +36,6 @@ def test_std(constructor: Constructor, input_data: dict[str, list[float | None]]
 def test_std_series(
     constructor_eager: ConstructorEager, input_data: dict[str, list[float | None]]
 ) -> None:
-    if "bodo" in str(constructor_eager):
-        # BODO fail
-        pytest.skip()
     df = nw.from_native(constructor_eager(input_data), eager_only=True)
     result = {
         "a_ddof_1": [df["a"].std(ddof=1)],
