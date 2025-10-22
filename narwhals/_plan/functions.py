@@ -3,7 +3,7 @@ from __future__ import annotations
 import builtins
 import typing as t
 
-from narwhals._plan import _guards, _parse, common, expressions as ir
+from narwhals._plan import _guards, _parse, common, expressions as ir, selectors as cs
 from narwhals._plan.expressions import functions as F
 from narwhals._plan.expressions.literal import ScalarLiteral, SeriesLiteral
 from narwhals._plan.expressions.ranges import IntRange
@@ -19,12 +19,14 @@ if t.TYPE_CHECKING:
     from narwhals.typing import IntoDType, NonNestedLiteral
 
 
+# TODO @dangotbanned: Use `by_names` for multi-case
 def col(*names: str | t.Iterable[str]) -> Expr:
     flat = tuple(flatten(names))
     node = ir.col(flat[0]) if builtins.len(flat) == 1 else ir.cols(*flat)
     return node.to_narwhals()
 
 
+# TODO @dangotbanned: Use `by_index` for all cases
 def nth(*indices: int | t.Sequence[int]) -> Expr:
     flat = tuple(flatten(indices))
     node = ir.nth(flat[0]) if builtins.len(flat) == 1 else ir.index_columns(*flat)
@@ -50,12 +52,22 @@ def len() -> Expr:
     return ir.Len().to_narwhals()
 
 
+# TODO @dangotbanned: Swap out with `all_s`
 def all() -> Expr:
     return ir.All().to_narwhals()
 
 
+def all_s() -> Expr:
+    return cs.all().as_expr()
+
+
+# TODO @dangotbanned: Swap out with `exclude_s`
 def exclude(*names: str | t.Iterable[str]) -> Expr:
     return all().exclude(*names)
+
+
+def exclude_s(*names: str | t.Iterable[str]) -> Expr:
+    return cs.all().exclude_s(*names)
 
 
 def max(*columns: str) -> Expr:

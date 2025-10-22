@@ -38,8 +38,18 @@ class Selector(Expr):
         obj._ir = selector_ir
         return obj
 
-    def _to_expr(self) -> Expr:
-        return self._ir.to_narwhals(self.version)
+    def as_expr(self) -> Expr:
+        if self.version is Version.MAIN:
+            return Expr._from_ir(self._ir)
+        if self.version is Version.V1:
+            from narwhals._plan.expr import ExprV1
+
+            return ExprV1._from_ir(self._ir)
+        raise NotImplementedError(self.version)
+
+    # TODO @dangotbanned: Rename to `exclude` (after `Expr.selector` swap)
+    def exclude_s(self, *names: OneOrIterable[str]) -> Selector:
+        return self - by_name(*names)  # pyright: ignore[reportReturnType]
 
     @overload  # type: ignore[override]
     def __or__(self, other: Self) -> Self: ...
@@ -49,7 +59,7 @@ class Selector(Expr):
         if isinstance(other, type(self)):
             op = ops.Or()
             return self._from_ir(op.to_binary_selector(self._ir, other._ir))
-        return self._to_expr() | other
+        return self.as_expr() | other
 
     @overload  # type: ignore[override]
     def __and__(self, other: Self) -> Self: ...
@@ -61,7 +71,7 @@ class Selector(Expr):
         if isinstance(other, type(self)):
             op = ops.And()
             return self._from_ir(op.to_binary_selector(self._ir, other._ir))
-        return self._to_expr() & other
+        return self.as_expr() & other
 
     @overload  # type: ignore[override]
     def __sub__(self, other: Self) -> Self: ...
@@ -71,7 +81,7 @@ class Selector(Expr):
         if isinstance(other, type(self)):
             op = ops.Sub()
             return self._from_ir(op.to_binary_selector(self._ir, other._ir))
-        return self._to_expr() - other
+        return self.as_expr() - other
 
     @overload  # type: ignore[override]
     def __xor__(self, other: Self) -> Self: ...
@@ -81,7 +91,7 @@ class Selector(Expr):
         if isinstance(other, type(self)):
             op = ops.ExclusiveOr()
             return self._from_ir(op.to_binary_selector(self._ir, other._ir))
-        return self._to_expr() ^ other
+        return self.as_expr() ^ other
 
     def __invert__(self) -> Self:
         return self._from_ir(ir.InvertSelector(selector=self._ir))
@@ -90,7 +100,7 @@ class Selector(Expr):
         if isinstance(other, type(self)):
             msg = "unsupported operand type(s) for op: ('Selector' + 'Selector')"
             raise TypeError(msg)
-        return self._to_expr() + other  # type: ignore[no-any-return]
+        return self.as_expr() + other  # type: ignore[no-any-return]
 
     def __radd__(self, other: Any) -> Never:
         msg = "unsupported operand type(s) for op: ('Expr' + 'Selector')"
@@ -107,7 +117,7 @@ class Selector(Expr):
     def __rand__(self, other: IntoExprColumn | int | bool) -> Self | Expr:
         if is_column(other) and (name := other.meta.output_name()):
             return by_name(name) & self
-        return self._to_expr().__rand__(other)
+        return self.as_expr().__rand__(other)
 
     @overload  # type: ignore[override]
     def __ror__(self, other: Self) -> Self: ...
@@ -116,7 +126,7 @@ class Selector(Expr):
     def __ror__(self, other: IntoExprColumn | int | bool) -> Self | Expr:
         if is_column(other) and (name := other.meta.output_name()):
             return by_name(name) | self
-        return self._to_expr().__ror__(other)
+        return self.as_expr().__ror__(other)
 
     @overload  # type: ignore[override]
     def __rxor__(self, other: Self) -> Self: ...
@@ -125,7 +135,7 @@ class Selector(Expr):
     def __rxor__(self, other: IntoExprColumn | int | bool) -> Self | Expr:
         if is_column(other) and (name := other.meta.output_name()):
             return by_name(name) ^ self
-        return self._to_expr().__rxor__(other)
+        return self.as_expr().__rxor__(other)
 
 
 class SelectorV1(Selector):

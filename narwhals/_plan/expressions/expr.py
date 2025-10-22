@@ -68,14 +68,17 @@ def col(name: str, /) -> Column:
     return Column(name=name)
 
 
+# TODO @dangotbanned: Scheduled to be removed, not needed with new selectors
 def cols(*names: str) -> Columns:
     return Columns(names=names)
 
 
+# TODO @dangotbanned: Scheduled to be removed, not needed with new selectors
 def nth(index: int, /) -> Nth:
     return Nth(index=index)
 
 
+# TODO @dangotbanned: Scheduled to be removed, not needed with new selectors
 def index_columns(*indices: int) -> IndexColumns:
     return IndexColumns(indices=indices)
 
@@ -104,10 +107,12 @@ class Column(ExprIR, config=ExprIROptions.namespaced("col")):
         return cs.ByName.from_name(self.name).to_selector_ir()
 
 
+# TODO @dangotbanned: Scheduled to be removed, not needed with new selectors
 class _ColumnSelection(ExprIR, config=ExprIROptions.no_dispatch()):
     """Nodes which can resolve to `Column`(s) with a `Schema`."""
 
 
+# TODO @dangotbanned: Scheduled to be removed, not needed with new selectors
 class Columns(_ColumnSelection):
     __slots__ = ("names",)
     names: Seq[str]
@@ -119,7 +124,7 @@ class Columns(_ColumnSelection):
         return cs.ByName.from_names(*self.names).to_selector_ir()
 
 
-# TODO @dangotbanned: Add `selectors.by_index`
+# TODO @dangotbanned: Scheduled to be removed, not needed with new selectors
 class Nth(_ColumnSelection):
     __slots__ = ("index",)
     index: int
@@ -127,8 +132,11 @@ class Nth(_ColumnSelection):
     def __repr__(self) -> str:
         return f"nth({self.index})"
 
+    def to_selector_ir(self) -> RootSelector:
+        return cs.ByIndex.from_index(self.index).to_selector_ir()
 
-# TODO @dangotbanned: Add `selectors.by_index`
+
+# TODO @dangotbanned: Scheduled to be removed, not needed with new selectors
 class IndexColumns(_ColumnSelection):
     __slots__ = ("indices",)
     indices: Seq[int]
@@ -136,7 +144,11 @@ class IndexColumns(_ColumnSelection):
     def __repr__(self) -> str:
         return f"index_columns({self.indices!r})"
 
+    def to_selector_ir(self) -> RootSelector:
+        return cs.ByIndex.from_indices(self.indices).to_selector_ir()
 
+
+# TODO @dangotbanned: Scheduled to be removed, not needed with new selectors
 class All(_ColumnSelection):
     def __repr__(self) -> str:
         return "all()"
@@ -145,7 +157,7 @@ class All(_ColumnSelection):
         return cs.All().to_selector_ir()
 
 
-# TODO @dangotbanned: Add `selectors.exclude`
+# TODO @dangotbanned: Scheduled to be removed, not needed with new selectors
 class Exclude(_ColumnSelection, child=("expr",)):
     __slots__ = ("expr", "names")
     expr: ExprIR
