@@ -70,10 +70,18 @@ class UnaryFunction(Protocol[ScalarPT_contra, ScalarRT_co]):
     def __call__(
         self, data: ChunkedOrScalar[ScalarPT_contra], *args: Any, **kwds: Any
     ) -> ChunkedOrScalar[ScalarRT_co]: ...
+    @overload
+    def __call__(
+        self, data: Array[ScalarPT_contra], *args: Any, **kwds: Any
+    ) -> Array[ScalarRT_co]: ...
+    @overload
+    def __call__(
+        self, data: ChunkedOrArray[ScalarPT_contra], *args: Any, **kwds: Any
+    ) -> ChunkedOrArray[ScalarRT_co]: ...
 
     def __call__(
-        self, data: ChunkedOrScalar[ScalarPT_contra], *args: Any, **kwds: Any
-    ) -> ChunkedOrScalar[ScalarRT_co]: ...
+        self, data: Arrow[ScalarPT_contra], *args: Any, **kwds: Any
+    ) -> Arrow[ScalarRT_co]: ...
 
 
 class BinaryFunction(Protocol[ScalarPT_contra, ScalarRT_co]):
@@ -130,6 +138,8 @@ ArrayAny: TypeAlias = "Array[Any]"
 ChunkedArrayAny: TypeAlias = "ChunkedArray[Any]"
 ChunkedOrScalarAny: TypeAlias = "ChunkedOrScalar[ScalarAny]"
 ChunkedOrArrayAny: TypeAlias = "ChunkedOrArray[ScalarAny]"
+ChunkedOrArrayT = TypeVar("ChunkedOrArrayT", ChunkedArrayAny, ArrayAny)
+Arrow: TypeAlias = "ChunkedOrScalar[ScalarT_co] | Array[ScalarT_co]"
 ArrowAny: TypeAlias = "ChunkedOrScalarAny | ArrayAny"
 NativeScalar: TypeAlias = ScalarAny
 BinOp: TypeAlias = Callable[..., ChunkedOrScalarAny]

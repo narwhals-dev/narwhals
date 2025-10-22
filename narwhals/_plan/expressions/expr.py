@@ -9,6 +9,7 @@ import typing as t
 from narwhals._plan._expr_ir import ExprIR, SelectorIR
 from narwhals._plan.common import flatten_hash_safe
 from narwhals._plan.exceptions import function_expr_invalid_operation_error
+from narwhals._plan.expressions import selectors as cs
 from narwhals._plan.options import ExprIROptions
 from narwhals._plan.typing import (
     FunctionT_co,
@@ -32,7 +33,6 @@ if t.TYPE_CHECKING:
     from narwhals._plan.compliant.typing import Ctx, FrameT_contra, R_co
     from narwhals._plan.expressions.functions import MapBatches  # noqa: F401
     from narwhals._plan.expressions.literal import LiteralValue
-    from narwhals._plan.expressions.selectors import Selector
     from narwhals._plan.expressions.window import Window
     from narwhals._plan.options import FunctionOptions, SortMultipleOptions, SortOptions
     from narwhals.dtypes import DType
@@ -100,6 +100,9 @@ class Column(ExprIR, config=ExprIROptions.namespaced("col")):
     def __repr__(self) -> str:
         return f"col({self.name!r})"
 
+    def to_selector_ir(self) -> RootSelector:
+        return cs.ByName.from_name(self.name).to_selector_ir()
+
 
 class _ColumnSelection(ExprIR, config=ExprIROptions.no_dispatch()):
     """Nodes which can resolve to `Column`(s) with a `Schema`."""
@@ -112,7 +115,11 @@ class Columns(_ColumnSelection):
     def __repr__(self) -> str:
         return f"cols({list(self.names)!r})"
 
+    def to_selector_ir(self) -> RootSelector:
+        return cs.ByName.from_names(*self.names).to_selector_ir()
 
+
+# TODO @dangotbanned: Add `selectors.by_index`
 class Nth(_ColumnSelection):
     __slots__ = ("index",)
     index: int
@@ -121,6 +128,7 @@ class Nth(_ColumnSelection):
         return f"nth({self.index})"
 
 
+# TODO @dangotbanned: Add `selectors.by_index`
 class IndexColumns(_ColumnSelection):
     __slots__ = ("indices",)
     indices: Seq[int]
@@ -133,7 +141,11 @@ class All(_ColumnSelection):
     def __repr__(self) -> str:
         return "all()"
 
+    def to_selector_ir(self) -> RootSelector:
+        return cs.All().to_selector_ir()
 
+
+# TODO @dangotbanned: Add `selectors.exclude`
 class Exclude(_ColumnSelection, child=("expr",)):
     __slots__ = ("expr", "names")
     expr: ExprIR
@@ -450,7 +462,7 @@ class RootSelector(SelectorIR):
     """A single selector expression."""
 
     __slots__ = ("selector",)
-    selector: Selector
+    selector: cs.Selector
 
     def __repr__(self) -> str:
         return f"{self.selector!r}"

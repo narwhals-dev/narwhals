@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from narwhals._plan import expressions as ir
     from narwhals._plan.expressions import FunctionExpr, aggregation as agg
     from narwhals._plan.expressions.boolean import IsFirstDistinct, IsLastDistinct
-    from narwhals._plan.expressions.functions import EwmMean
+    from narwhals._plan.expressions.functions import EwmMean, Shift
     from narwhals._utils import Version
     from narwhals.typing import IntoDType, PythonLiteral
 
@@ -100,6 +100,11 @@ class CompliantScalar(
 
     def quantile(self, node: agg.Quantile, frame: FrameT_contra, name: str) -> Self:
         return self._cast_float(node.expr, frame, name)
+
+    def shift(self, node: FunctionExpr[Shift], frame: FrameT_contra, name: str) -> Self:
+        if node.function.n == 0:
+            return self._with_evaluated(self._evaluated, name)
+        return self.from_python(None, name, dtype=None, version=self.version)
 
     def sort(self, node: ir.Sort, frame: FrameT_contra, name: str) -> Self:
         return self._with_evaluated(self._evaluated, name)
