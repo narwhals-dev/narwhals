@@ -298,8 +298,33 @@ def test_selector_numeric(schema_non_nested: nw.Schema) -> None:
     df.assert_selects(~ncs.numeric(), "eee", "fgg", "ghi", "JJK", "Lmn", "opp", "qqR")
 
 
-# TODO @dangotbanned: `test_selector_expansion` (using `meta.as_selector`)
-# https://github.com/pola-rs/polars/blob/84d66e960e3d462811f0575e0a6e4e78e34c618c/py-polars/tests/unit/test_selectors.py#L619
+def test_selector_expansion() -> None:
+    # https://github.com/pola-rs/polars/blob/84d66e960e3d462811f0575e0a6e4e78e34c618c/py-polars/tests/unit/test_selectors.py#L619
+    df = Frame.from_names(*list("abcde"))
+
+    s1 = nwp.all().meta.as_selector()
+    s2 = nwp.col(["a", "b"]).meta.as_selector()
+    s = s1 - s2
+    df.assert_selects(s, "c", "d", "e")
+
+    s1 = ncs.matches("^a|b$").meta.as_selector()
+    s = s1 | nwp.col(["d", "e"]).meta.as_selector()
+    df.assert_selects(s, "a", "b", "d", "e")
+
+    s = s - nwp.col("d").meta.as_selector()
+    df.assert_selects(s, "a", "b", "e")
+
+    # add a duplicate, this tests if they are pruned
+    s = s | nwp.col("a").meta.as_selector()
+    df.assert_selects(s, "a", "b", "e")
+
+    s1e = nwp.col(["a", "b", "c"])
+    s2e = nwp.col(["b", "c", "d"])
+
+    s = s1e.meta.as_selector()
+    s = s & s2e.meta.as_selector()
+    df.assert_selects(s, "b", "c")
+
 
 # TODO @dangotbanned: `test_selector_sets` (using `meta.as_selector`)
 # https://github.com/pola-rs/polars/blob/84d66e960e3d462811f0575e0a6e4e78e34c618c/py-polars/tests/unit/test_selectors.py#L672
