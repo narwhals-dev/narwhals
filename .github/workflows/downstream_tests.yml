@@ -622,18 +622,17 @@ jobs:
           git clone https://github.com/fairlearn/fairlearn.git --depth 1
           cd fairlearn
           git log
-      - name: install-deps
+      - name: run pytest
         run: |
           cd fairlearn
           # TODO(FBruzzesi): Align with fairlearn team to get a minimal requirement to test narwhals features
-          uv pip install -e . -r requirements.txt matplotlib polars pyarrow pytest typing-extensions --system
-      - name: install-narwhals-dev
-        run: |
-          cd fairlearn
-          uv pip uninstall narwhals --system
-          uv pip install -e ./.. --system
-          uv pip freeze
-      - name: run-pytest
-        run: |
-          cd fairlearn
-          pytest test/unit -m narwhals
+          uv run \
+            --with . \
+            --with-requirements requirements.txt \
+            --with matplotlib \
+            --with polars \
+            --with pyarrow \
+            --with pytest \
+            --with typing-extensions \
+            --with ./.. \
+            pytest test/unit -m narwhals
