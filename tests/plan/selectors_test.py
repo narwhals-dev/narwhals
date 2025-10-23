@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals as nw
+import narwhals.stable.v1 as nw_v1
 from narwhals import _plan as nwp
 from narwhals._plan import Selector, expressions as ir, selectors as ncs
 from narwhals._plan._expansion import prepare_projection
@@ -20,7 +21,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
     from narwhals._plan.typing import IntoExpr, Seq
-    from narwhals.typing import IntoDType
+    from narwhals.typing import IntoDType, IntoSchema
 
 
 XFAIL_NESTED_INNER_SELECTOR = pytest.mark.xfail(
@@ -95,6 +96,10 @@ class Frame:
         self.schema = schema
         self.columns = tuple(schema.names())
 
+    @staticmethod
+    def from_mapping(mapping: IntoSchema) -> Frame:
+        return Frame(nw.Schema(mapping))
+
     @property
     def width(self) -> int:
         return len(self.columns)
@@ -155,14 +160,13 @@ def test_selector_by_dtype(schema_non_nested: nw.Schema) -> None:
 
 
 def test_selector_by_dtype_timezone_decimal() -> None:
-    schema = nw.Schema(
+    df = Frame.from_mapping(
         {
             "idx": nw.Decimal(),
             "dt1": nw.Datetime("ms"),
             "dt2": nw.Datetime(time_zone="Asia/Tokyo"),
         }
     )
-    df = Frame(schema)
     df.assert_selects(ncs.by_dtype(nw.Decimal), "idx")
     df.assert_selects(ncs.by_dtype(nw.Datetime(time_zone="Asia/Tokyo")), "dt2")
     df.assert_selects(ncs.by_dtype(nw.Datetime("ms", None)), "dt1")
@@ -242,14 +246,42 @@ def test_selector_by_index_reordering(
 # NOTE: Use `parametrize`, the test is waaaaaay too long
 # https://github.com/pola-rs/polars/blob/84d66e960e3d462811f0575e0a6e4e78e34c618c/py-polars/tests/unit/test_selectors.py#L283
 
-# TODO @dangotbanned: `test_selector_duration`
-# https://github.com/pola-rs/polars/blob/84d66e960e3d462811f0575e0a6e4e78e34c618c/py-polars/tests/unit/test_selectors.py#L407
 
-# TODO @dangotbanned: `test_selector_matches`
-# https://github.com/pola-rs/polars/blob/84d66e960e3d462811f0575e0a6e4e78e34c618c/py-polars/tests/unit/test_selectors.py#L498
+def test_selector_duration(schema_non_nested: nw.Schema) -> None:
+    df = Frame(schema_non_nested)
 
-# TODO @dangotbanned: `test_selector_categorical` (part of `test_selector_miscellaneous`)
-# https://github.com/pola-rs/polars/blob/84d66e960e3d462811f0575e0a6e4e78e34c618c/py-polars/tests/unit/test_selectors.py#L518
+    df.assert_selects(ncs.duration("ms"))
+    df.assert_selects(ncs.duration(["ms", "ns"]))
+    df.assert_selects(ncs.duration(), "Lmn")
+
+    df = Frame.from_mapping(
+        {"d1": nw.Duration("ns"), "d2": nw.Duration("us"), "d3": nw.Duration("ms")}
+    )
+    df.assert_selects(ncs.duration("us"), "d2")
+    df.assert_selects(ncs.duration(["ms", "ns"]), "d1", "d3")
+    df.assert_selects(ncs.duration(), "d1", "d2", "d3")
+
+
+# TODO @dangotbanned: Support passing in `re.Pattern` for more control?
+def test_selector_matches(schema_non_nested: nw.Schema) -> None:
+    # NOTE: Slightly modified from `polars`, because python's `re` raises on `^(?i)[E-N]{3}$`
+    # re.PatternError: global flags not at the start of the expression at position 1
+    df = Frame(schema_non_nested)
+
+    df.assert_selects(ncs.matches(r"(?i)[E-N]{3}"), "eee", "fgg", "ghi", "JJK", "Lmn")
+    df.assert_selects(
+        ~ncs.matches(r"(?i)[E-N]{3}"), "abc", "bbb", "cde", "def", "opp", "qqR"
+    )
+
+
+def test_selector_categorical(schema_non_nested: nw.Schema) -> None:
+    df = Frame(schema_non_nested)
+    df.assert_selects(ncs.categorical())
+
+    df = Frame.from_mapping({"a": nw.String(), "b": nw.Binary(), "c": nw.Categorical()})
+    df.assert_selects(ncs.categorical(), "c")
+    df.assert_selects(~ncs.categorical(), "a", "b")
+
 
 # TODO @dangotbanned: `test_selector_numeric`
 # https://github.com/pola-rs/polars/blob/84d66e960e3d462811f0575e0a6e4e78e34c618c/py-polars/tests/unit/test_selectors.py#L536
@@ -265,7 +297,7 @@ def test_selector_by_index_reordering(
 
 
 @XFAIL_NESTED_INNER_SELECTOR
-def test_list_selector(schema_nested_1: nw.Schema) -> None:  # pragma: no cover
+def test_selector_list(schema_nested_1: nw.Schema) -> None:  # pragma: no cover
     df = Frame(schema_nested_1)
     df.assert_selects(ncs.list(), "b", "c", "e")
 
@@ -281,7 +313,7 @@ def test_list_selector(schema_nested_1: nw.Schema) -> None:  # pragma: no cover
 
 
 @XFAIL_NESTED_INNER_SELECTOR
-def test_array_selector(schema_nested_2: nw.Schema) -> None:  # pragma: no cover
+def test_selector_array(schema_nested_2: nw.Schema) -> None:  # pragma: no cover
     df = Frame(schema_nested_2)
     df.assert_selects(ncs.array(), "b", "c", "d", "f")
     df.assert_selects(ncs.array(size=4), "b", "c", "f")
@@ -297,17 +329,43 @@ def test_array_selector(schema_nested_2: nw.Schema) -> None:  # pragma: no cover
         df.project_named_irs(ncs.array(inner=ncs.by_name("???")))
 
 
-# TODO @dangotbanned: `test_enum_selector`
-# https://github.com/pola-rs/polars/blob/84d66e960e3d462811f0575e0a6e4e78e34c618c/py-polars/tests/unit/test_selectors.py#L943
+def test_selector_enum() -> None:
+    df = Frame.from_mapping(
+        {
+            "a": nw.Int32(),
+            "b": nw.UInt32(),
+            "c": nw_v1.Enum(),
+            "d": nw.Categorical(),
+            "e": nw.String(),
+            "f": nw.Enum(["a", "b"]),
+        }
+    )
+    df.assert_selects(ncs.enum(), "c", "f")
+    df.assert_selects(~ncs.enum(), "a", "b", "d", "e")
 
-# TODO @dangotbanned: `test_struct_selector`
-# https://github.com/pola-rs/polars/blob/84d66e960e3d462811f0575e0a6e4e78e34c618c/py-polars/tests/unit/test_selectors.py#L961
 
-# TODO @dangotbanned: `test_matches_selector_22816`
+def test_selector_struct() -> None:
+    df = Frame.from_mapping(
+        {
+            "a": nw.Int32(),
+            "b": nw.Array(nw.Int32, shape=(4,)),
+            "c": nw.Struct({}),
+            "d": nw.Array(nw.UInt32, shape=(4,)),
+            "e": nw.Struct({"x": nw.Int32, "y": nw.String}),
+            "f": nw.List(nw.Int32),
+            "g": nw.Array(nw.String, shape=(4,)),
+            "h": nw.Struct({"x": nw.Int32}),
+        }
+    )
+    df.assert_selects(ncs.struct(), "c", "e", "h")
+    df.assert_selects(~ncs.struct(), "a", "b", "d", "f", "g")
+
+
+# TODO @dangotbanned: `test_selector_matches_22816`
 # https://github.com/pola-rs/polars/blob/84d66e960e3d462811f0575e0a6e4e78e34c618c/py-polars/tests/unit/test_selectors.py#L978
 
-# TODO @dangotbanned: `test_by_name_order_19384`
+# TODO @dangotbanned: `test_selector_by_name_order_19384`
 # https://github.com/pola-rs/polars/blob/84d66e960e3d462811f0575e0a6e4e78e34c618c/py-polars/tests/unit/test_selectors.py#L1074
 
-# TODO @dangotbanned: `test_datetime_selectors_23767`
+# TODO @dangotbanned: `test_selector_datetime_23767`
 # https://github.com/pola-rs/polars/blob/84d66e960e3d462811f0575e0a6e4e78e34c618c/py-polars/tests/unit/test_selectors.py#L1133
