@@ -11,16 +11,14 @@ import pytest
 
 import narwhals as nw
 from narwhals import _plan as nwp
-from narwhals._plan import expressions as ir, selectors as ncs
+from narwhals._plan import Selector, expressions as ir, selectors as ncs
 from narwhals._plan._expansion import prepare_projection
 from narwhals._plan._parse import parse_into_seq_of_expr_ir
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from narwhals._plan.schema import IntoFrozenSchema
     from narwhals._plan.typing import IntoExpr, Seq
-    from narwhals.dtypes import DType
     from narwhals.typing import IntoDType
 
 
@@ -82,78 +80,79 @@ def schema_non_nested() -> nw.Schema:
     )
 
 
-def project_named_irs(*exprs: IntoExpr, schema: IntoFrozenSchema) -> Seq[ir.NamedIR]:
-    named_irs, _ = prepare_projection(parse_into_seq_of_expr_ir(*exprs), schema=schema)
-    return named_irs
+class Frame:
+    def __init__(self, schema: nw.Schema) -> None:
+        self.schema = schema
+        self.columns = tuple(schema.names())
 
+    def project_named_irs(self, *exprs: IntoExpr) -> Seq[ir.NamedIR]:
+        expr_irs = parse_into_seq_of_expr_ir(*exprs)
+        named_irs, _ = prepare_projection(expr_irs, schema=self.schema)
+        return named_irs
 
-def project_names(*exprs: IntoExpr, schema: IntoFrozenSchema) -> Seq[str]:
-    named_irs = project_named_irs(*exprs, schema=schema)
-    return tuple(e.name for e in named_irs)
+    def project_names(self, *exprs: IntoExpr) -> Seq[str]:
+        named_irs = self.project_named_irs(*exprs)
+        return tuple(e.name for e in named_irs)
+
+    def assert_selects(self, selector: Selector, *column_names: str) -> None:
+        projected = self.project_names(selector)
+        expected = column_names
+        assert projected == expected
 
 
 def test_selector_all(schema_non_nested: nw.Schema) -> None:
-    schema = schema_non_nested
-    names = tuple(schema.names())
+    df = Frame(schema_non_nested)
 
-    assert project_names(ncs.all(), schema=schema) == names
-    assert project_names(~ncs.all(), schema=schema) == ()
-    assert project_names(~(~ncs.all()), schema=schema) == names
-    assert project_names(ncs.all() & nwp.col("abc"), schema=schema) == ("abc",)
+    df.assert_selects(ncs.all(), *df.columns)
+    df.assert_selects(~ncs.all())
+    df.assert_selects(~(~ncs.all()), *df.columns)
+
+    # TODO @dangotbanned: Fix typing, this returns a `Selector` at runtime
+    selector_and_col = ncs.all() & nwp.col("abc")
+    df.assert_selects(selector_and_col, "abc")  # type: ignore[arg-type]
 
 
 def test_selector_by_dtype(schema_non_nested: nw.Schema) -> None:
-    schema = schema_non_nested
+    df = Frame(schema_non_nested)
 
-    assert project_names(ncs.boolean() | ncs.by_dtype(nw.UInt16), schema=schema) == (
-        "abc",
-        "eee",
-        "fgg",
+    selector = ncs.boolean() | ncs.by_dtype(nw.UInt16)
+    df.assert_selects(selector, "abc", "eee", "fgg")
+
+    selector = ~ncs.by_dtype(
+        nw.Int8,
+        nw.Int16,
+        nw.Int32,
+        nw.Int64,
+        nw.Int128,
+        nw.UInt8,
+        nw.UInt16,
+        nw.UInt32,
+        nw.UInt64,
+        nw.UInt128,
+        nw.Date,
+        nw.Datetime,
+        nw.Duration,
+        nw.Time,
     )
+    df.assert_selects(selector, "cde", "def", "eee", "fgg", "qqR")
 
-    assert project_names(
-        ~ncs.by_dtype(
-            nw.Int8,
-            nw.Int16,
-            nw.Int32,
-            nw.Int64,
-            nw.Int128,
-            nw.UInt8,
-            nw.UInt16,
-            nw.UInt32,
-            nw.UInt64,
-            nw.UInt128,
-            nw.Date,
-            nw.Datetime,
-            nw.Duration,
-            nw.Time,
-        ),
-        schema=schema,
-    ) == ("cde", "def", "eee", "fgg", "qqR")
+    selector = ncs.by_dtype(nw.Datetime("ns"), nw.Float32, nw.UInt32, nw.Date)
+    df.assert_selects(selector, "bbb", "def", "JJK")
 
-    assert project_names(
-        ncs.by_dtype(nw.Datetime("ns"), nw.Float32, nw.UInt32, nw.Date), schema=schema
-    ) == ("bbb", "def", "JJK")
 
-    # cover timezones and decimal
-    schema_x = _schema(
+def test_selector_by_dtype_timezone_decimal() -> None:
+    schema = nw.Schema(
         {
             "idx": nw.Decimal(),
             "dt1": nw.Datetime("ms"),
             "dt2": nw.Datetime(time_zone="Asia/Tokyo"),
         }
     )
-    assert project_names(ncs.by_dtype(nw.Decimal), schema=schema_x) == ("idx",)
-
-    assert project_names(
-        ncs.by_dtype(nw.Datetime(time_zone="Asia/Tokyo")), schema=schema_x
-    ) == ("dt2",)
-
-    assert project_names(ncs.by_dtype(nw.Datetime("ms", None)), schema=schema_x) == (
-        "dt1",
-    )
-
-    assert project_names(ncs.by_dtype(nw.Datetime), schema=schema_x) == ("dt1", "dt2")
+    df = Frame(schema)
+    df.assert_selects(ncs.by_dtype(nw.Decimal), "idx")
+    df.assert_selects(ncs.by_dtype(nw.Datetime(time_zone="Asia/Tokyo")), "dt2")
+    df.assert_selects(ncs.by_dtype(nw.Datetime("ms", None)), "dt1")
+    df.assert_selects(ncs.by_dtype(nw.Datetime), "dt1", "dt2")
 
 
 @pytest.mark.xfail(
@@ -162,9 +161,10 @@ def test_selector_by_dtype(schema_non_nested: nw.Schema) -> None:
 def test_selector_by_dtype_empty(
     schema_non_nested: nw.Schema,
 ) -> None:  # pragma: no cover
+    df = Frame(schema_non_nested)
     # empty selection selects nothing
-    assert project_names(ncs.by_dtype(), schema=schema_non_nested) == ()
-    assert project_names(ncs.by_dtype([]), schema=schema_non_nested) == ()
+    df.assert_selects(ncs.by_dtype())
+    df.assert_selects(ncs.by_dtype([]))
 
 
 @pytest.mark.xfail(reason="Bug: Forgot to handle this during construction")
@@ -174,33 +174,33 @@ def test_selector_by_dtype_invalid_input() -> None:
 
 
 @XFAIL_NESTED_INNER_SELECTOR
-def test_list_selector(schema_nested_1: Mapping[str, DType]) -> None:  # pragma: no cover
-    schema = schema_nested_1
-    assert project_names(ncs.list(), schema=schema) == ("b", "c", "e")
+def test_list_selector(schema_nested_1: nw.Schema) -> None:  # pragma: no cover
+    df = Frame(schema_nested_1)
+    df.assert_selects(ncs.list(), "b", "c", "e")
 
     # NOTE: bug here
-    assert project_names(ncs.list(inner=ncs.numeric()), schema=schema) == ("b", "c")
-    assert project_names(ncs.list(inner=ncs.string()), schema=schema) == ("e",)
+    df.assert_selects(ncs.list(inner=ncs.numeric()), "b", "c")
+    df.assert_selects(ncs.list(inner=ncs.string()), "e")
 
     # NOTE: Not implemented
     with pytest.raises(
         TypeError, match=r"expected datatype based expression got.+by_name\("
     ):
-        project_named_irs(ncs.list(inner=ncs.by_name("???")), schema=schema)
+        df.project_named_irs(ncs.list(inner=ncs.by_name("???")))
 
 
 @XFAIL_NESTED_INNER_SELECTOR
-def test_array_selector(schema_nested_2: Mapping[str, DType]) -> None:  # pragma: no cover
-    schema = schema_nested_2
-    assert project_names(ncs.array(), schema=schema) == ("b", "c", "d", "f")
-    assert project_names(ncs.array(size=4), schema=schema) == ("b", "c", "f")
+def test_array_selector(schema_nested_2: nw.Schema) -> None:  # pragma: no cover
+    df = Frame(schema_nested_2)
+    df.assert_selects(ncs.array(), "b", "c", "d", "f")
+    df.assert_selects(ncs.array(size=4), "b", "c", "f")
 
     # NOTE: bug here
-    assert project_names(ncs.array(inner=ncs.numeric()), schema=schema) == ("b", "c", "d")
-    assert project_names(ncs.array(inner=ncs.string()), schema=schema) == ("f",)
+    df.assert_selects(ncs.array(inner=ncs.numeric()), "b", "c", "d")
+    df.assert_selects(ncs.array(inner=ncs.string()), "f")
 
     # NOTE: Not implemented
     with pytest.raises(
         TypeError, match=r"expected datatype based expression got.+by_name\("
     ):
-        project_named_irs(ncs.array(inner=ncs.by_name("???")), schema=schema)
+        df.project_named_irs(ncs.array(inner=ncs.by_name("???")))
