@@ -201,6 +201,8 @@ def test_selector_by_dtype_invalid_input() -> None:
 def test_selector_by_index(schema_non_nested: nw.Schema) -> None:  # pragma: no cover
     df = Frame(schema_non_nested)
 
+    WIDTH_COVERAGE = df.width  # noqa: N806
+
     # # one or more positive indices
     df.assert_selects(ncs.by_index(0), "abc")
     df.assert_selects(nwp.nth(0, 1, 2), "abc", "bbb", "cde")  # type: ignore[arg-type]
@@ -214,7 +216,7 @@ def test_selector_by_index(schema_non_nested: nw.Schema) -> None:  # pragma: no 
 
     # exclude by index
     df.assert_selects(
-        ~ncs.by_index(range(0, df.width, 2)), "bbb", "def", "fgg", "JJK", "opp"
+        ~ncs.by_index(range(0, WIDTH_COVERAGE, 2)), "bbb", "def", "fgg", "JJK", "opp"
     )
 
 
