@@ -191,7 +191,6 @@ def test_selector_by_dtype_empty(
     df.assert_selects(ncs.by_dtype([]))
 
 
-@pytest.mark.xfail(reason="Bug: Forgot to handle this during construction")
 def test_selector_by_dtype_invalid_input() -> None:
     with pytest.raises(TypeError):
         ncs.by_dtype(999)  # type: ignore[arg-type]
@@ -220,8 +219,7 @@ def test_selector_by_index(schema_non_nested: nw.Schema) -> None:  # pragma: no 
     )
 
 
-@pytest.mark.xfail(reason="Bug: Forgot to handle this during construction")
-def test_selector_by_index_invalid_input() -> None:  # pragma: no cover
+def test_selector_by_index_invalid_input() -> None:
     with pytest.raises(TypeError):
         ncs.by_index("one")  # type: ignore[arg-type]
 
@@ -294,7 +292,6 @@ def test_selector_by_name_not_found(
         df.project_named_irs(ncs.by_name("stroopwafel"))
 
 
-@pytest.mark.xfail(reason="Bug: Forgot to handle this during construction")
 def test_selector_by_name_invalid_input() -> None:
     with pytest.raises(TypeError):
         ncs.by_name(999)  # type: ignore[arg-type]

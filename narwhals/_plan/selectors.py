@@ -11,6 +11,7 @@ from narwhals._plan.common import flatten_hash_safe
 from narwhals._plan.expr import Expr
 from narwhals._plan.expressions import operators as ops, selectors as s_ir
 from narwhals._utils import Version
+from narwhals.dtypes import DType
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
@@ -19,7 +20,6 @@ if TYPE_CHECKING:
     from typing_extensions import Never, Self
 
     from narwhals._plan.typing import IntoExpr, IntoExprColumn, OneOrIterable
-    from narwhals.dtypes import DType
     from narwhals.typing import TimeUnit
 
 _dtypes = Version.MAIN.dtypes
@@ -154,14 +154,17 @@ def array(inner: Selector | None = None, *, size: int | None = None) -> Selector
 def by_dtype(*dtypes: OneOrIterable[DType | type[DType]]) -> Selector:
     selectors: deque[Selector] = deque()
     dtypes_: deque[DType | type[DType]] = deque()
-    for dtype in flatten_hash_safe(dtypes):
-        if isinstance(dtype, type):
-            if constructor := _HASH_SENSITIVE_TO_SELECTOR.get(dtype):
+    for tp in flatten_hash_safe(dtypes):
+        if isinstance(tp, type) and issubclass(tp, DType):
+            if constructor := _HASH_SENSITIVE_TO_SELECTOR.get(tp):
                 selectors.append(constructor())
             else:
-                dtypes_.append(dtype)
+                dtypes_.append(tp)
+        elif isinstance(tp, DType):
+            dtypes_.append(tp)
         else:
-            dtypes_.append(dtype)  # type: ignore[arg-type]
+            msg = f"invalid dtype: {tp!r}"
+            raise TypeError(msg)
     if dtypes_:
         dtype_selector = (
             s_ir.ByDType(dtypes=frozenset(dtypes_)).to_selector_ir().to_narwhals()

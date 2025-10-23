@@ -103,8 +103,18 @@ class ByIndex(Selector):
     require_all: bool
 
     @staticmethod
+    def _iter_validate(indices: tuple[OneOrIterable[int], ...], /) -> Iterator[int]:
+        for idx in flatten_hash_safe(indices):
+            if not isinstance(idx, int):
+                msg = f"invalid index value: {idx!r}"
+                raise TypeError(msg)
+            yield idx
+
+    @staticmethod
     def from_indices(*indices: OneOrIterable[int], require_all: bool = True) -> ByIndex:
-        return ByIndex(indices=tuple(flatten_hash_safe(indices)), require_all=require_all)
+        return ByIndex(
+            indices=tuple(ByIndex._iter_validate(indices)), require_all=require_all
+        )
 
     @staticmethod
     def from_index(index: int, /, *, require_all: bool = True) -> ByIndex:
@@ -138,8 +148,16 @@ class ByName(Selector):
         return f"ncs.by_name({els})"
 
     @staticmethod
+    def _iter_validate(names: tuple[OneOrIterable[str], ...], /) -> Iterator[str]:
+        for name in flatten_hash_safe(names):
+            if not isinstance(name, str):
+                msg = f"invalid name: {name!r}"
+                raise TypeError(msg)
+            yield name
+
+    @staticmethod
     def from_names(*names: OneOrIterable[str], require_all: bool = True) -> ByName:
-        return ByName(names=tuple(flatten_hash_safe(names)), require_all=require_all)
+        return ByName(names=tuple(ByName._iter_validate(names)), require_all=require_all)
 
     @staticmethod
     def from_name(name: str, /, *, require_all: bool = True) -> ByName:
