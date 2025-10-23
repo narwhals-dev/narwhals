@@ -265,10 +265,6 @@ def test_selector_by_name(schema_non_nested: nw.Schema) -> None:
     df.assert_selects(selector, "cde", "eee")
 
 
-@pytest.mark.xfail(
-    reason="Bug: `Selector.__or__(col(...))` isn't including the right-hand side?",
-    raises=AssertionError,
-)
 def test_selector_by_name_or_col(schema_non_nested: nw.Schema) -> None:
     df = Frame(schema_non_nested)
     df.assert_selects(ncs.by_name("abc") | nwp.col("cde"), "abc", "cde")  # type: ignore[arg-type]

@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import Never, Self
 
-    from narwhals._plan.typing import IntoExpr, IntoExprColumn, OneOrIterable
+    from narwhals._plan.typing import OneOrIterable
     from narwhals.typing import TimeUnit
 
 _dtypes = Version.MAIN.dtypes
@@ -51,90 +51,81 @@ class Selector(Expr):
     def exclude_s(self, *names: OneOrIterable[str]) -> Selector:
         return self - by_name(*names)  # pyright: ignore[reportReturnType]
 
-    @overload  # type: ignore[override]
-    def __or__(self, other: Self) -> Self: ...
-    @overload
-    def __or__(self, other: IntoExprColumn | int | bool) -> Expr: ...
-    def __or__(self, other: IntoExprColumn | int | bool) -> Self | Expr:
-        if isinstance(other, type(self)):
-            op = ops.Or()
-            return self._from_ir(op.to_binary_selector(self._ir, other._ir))
-        return self.as_expr() | other
-
-    @overload  # type: ignore[override]
-    def __and__(self, other: Self) -> Self: ...
-    @overload
-    def __and__(self, other: IntoExprColumn | int | bool) -> Expr: ...
-    def __and__(self, other: IntoExprColumn | int | bool) -> Self | Expr:
-        if is_column(other) and (name := other.meta.output_name()):
-            other = by_name(name)
-        if isinstance(other, type(self)):
-            op = ops.And()
-            return self._from_ir(op.to_binary_selector(self._ir, other._ir))
-        return self.as_expr() & other
-
-    @overload  # type: ignore[override]
-    def __sub__(self, other: Self) -> Self: ...
-    @overload
-    def __sub__(self, other: IntoExpr) -> Expr: ...
-    def __sub__(self, other: IntoExpr) -> Self | Expr:
-        if isinstance(other, type(self)):
-            op = ops.Sub()
-            return self._from_ir(op.to_binary_selector(self._ir, other._ir))
-        return self.as_expr() - other
-
-    @overload  # type: ignore[override]
-    def __xor__(self, other: Self) -> Self: ...
-    @overload
-    def __xor__(self, other: IntoExprColumn | int | bool) -> Expr: ...
-    def __xor__(self, other: IntoExprColumn | int | bool) -> Self | Expr:
-        if isinstance(other, type(self)):
-            op = ops.ExclusiveOr()
-            return self._from_ir(op.to_binary_selector(self._ir, other._ir))
-        return self.as_expr() ^ other
-
     def __invert__(self) -> Self:
         return self._from_ir(ir.InvertSelector(selector=self._ir))
 
     def __add__(self, other: Any) -> Expr:  # type: ignore[override]
         if isinstance(other, type(self)):
+            return self.as_expr().__add__(other.as_expr())
+        return self.as_expr().__add__(other)
+
+    def __radd__(self, other: Any) -> Expr:  # type: ignore[override]
+        if isinstance(other, type(self)):
             msg = "unsupported operand type(s) for op: ('Selector' + 'Selector')"
             raise TypeError(msg)
-        return self.as_expr() + other  # type: ignore[no-any-return]
+        return self.as_expr().__radd__(other)
 
-    def __radd__(self, other: Any) -> Never:
-        msg = "unsupported operand type(s) for op: ('Expr' + 'Selector')"
-        raise TypeError(msg)
+    @overload  # type: ignore[override]
+    def __and__(self, other: Self) -> Self: ...
+    @overload
+    def __and__(self, other: Any) -> Expr: ...
+    def __and__(self, other: Any) -> Self | Expr:
+        if is_column(other):  # @polars>=2.0: remove
+            other = by_name(other.meta.output_name())
+        if isinstance(other, type(self)):
+            op = ops.And()
+            return self._from_ir(op.to_binary_selector(self._ir, other._ir))
+        return self.as_expr().__and__(other)
+
+    def __rand__(self, other: Any) -> Expr:  # type: ignore[override]
+        return self.as_expr().__rand__(other)
+
+    @overload  # type: ignore[override]
+    def __or__(self, other: Self) -> Self: ...
+    @overload
+    def __or__(self, other: Any) -> Expr: ...
+    def __or__(self, other: Any) -> Self | Expr:
+        if is_column(other):  # @polars>=2.0: remove
+            other = by_name(other.meta.output_name())
+        if isinstance(other, type(self)):
+            op = ops.Or()
+            return self._from_ir(op.to_binary_selector(self._ir, other._ir))
+        return self.as_expr().__or__(other)
+
+    def __ror__(self, other: Any) -> Expr:  # type: ignore[override]
+        if is_column(other):
+            other = by_name(other.meta.output_name())
+        return self.as_expr().__ror__(other)
+
+    @overload  # type: ignore[override]
+    def __sub__(self, other: Self) -> Self: ...
+    @overload
+    def __sub__(self, other: Any) -> Expr: ...
+    def __sub__(self, other: Any) -> Self | Expr:
+        if isinstance(other, type(self)):
+            op = ops.Sub()
+            return self._from_ir(op.to_binary_selector(self._ir, other._ir))
+        return self.as_expr().__sub__(other)
 
     def __rsub__(self, other: Any) -> Never:
         msg = "unsupported operand type(s) for op: ('Expr' - 'Selector')"
         raise TypeError(msg)
 
     @overload  # type: ignore[override]
-    def __rand__(self, other: Self) -> Self: ...
+    def __xor__(self, other: Self) -> Self: ...
     @overload
-    def __rand__(self, other: IntoExprColumn | int | bool) -> Expr: ...
-    def __rand__(self, other: IntoExprColumn | int | bool) -> Self | Expr:
-        if is_column(other) and (name := other.meta.output_name()):
-            return by_name(name) & self
-        return self.as_expr().__rand__(other)
+    def __xor__(self, other: Any) -> Expr: ...
+    def __xor__(self, other: Any) -> Self | Expr:
+        if is_column(other):  # @polars>=2.0: remove
+            other = by_name(other.meta.output_name())
+        if isinstance(other, type(self)):
+            op = ops.ExclusiveOr()
+            return self._from_ir(op.to_binary_selector(self._ir, other._ir))
+        return self.as_expr().__xor__(other)
 
-    @overload  # type: ignore[override]
-    def __ror__(self, other: Self) -> Self: ...
-    @overload
-    def __ror__(self, other: IntoExprColumn | int | bool) -> Expr: ...
-    def __ror__(self, other: IntoExprColumn | int | bool) -> Self | Expr:
-        if is_column(other) and (name := other.meta.output_name()):
-            return by_name(name) | self
-        return self.as_expr().__ror__(other)
-
-    @overload  # type: ignore[override]
-    def __rxor__(self, other: Self) -> Self: ...
-    @overload
-    def __rxor__(self, other: IntoExprColumn | int | bool) -> Expr: ...
-    def __rxor__(self, other: IntoExprColumn | int | bool) -> Self | Expr:
-        if is_column(other) and (name := other.meta.output_name()):
-            return by_name(name) ^ self
+    def __rxor__(self, other: Any) -> Expr:  # type: ignore[override]
+        if is_column(other):  # @polars>=2.0: remove
+            other = by_name(other.meta.output_name())
         return self.as_expr().__rxor__(other)
 
 
