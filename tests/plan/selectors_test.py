@@ -302,8 +302,20 @@ def test_selector_numeric(schema_non_nested: nw.Schema) -> None:
 # TODO @dangotbanned: `test_selector_sets` (using `meta.as_selector`)
 # https://github.com/pola-rs/polars/blob/84d66e960e3d462811f0575e0a6e4e78e34c618c/py-polars/tests/unit/test_selectors.py#L672
 
-# TODO @dangotbanned: `test_selector_result_order`
-# https://github.com/pola-rs/polars/blob/84d66e960e3d462811f0575e0a6e4e78e34c618c/py-polars/tests/unit/test_selectors.py#L860
+
+@pytest.mark.parametrize(
+    "selector",
+    [
+        (ncs.string() | ncs.numeric()),
+        (ncs.numeric() | ncs.string()),
+        ~(~ncs.numeric() & ~ncs.string()),
+        ~(~ncs.string() & ~ncs.numeric()),
+        (ncs.by_dtype(nw.Int16) ^ ncs.matches(r"b|e|q")) - ncs.matches("^e"),
+    ],
+)
+def test_selector_result_order(schema_non_nested: nw.Schema, selector: Selector) -> None:
+    df = Frame(schema_non_nested)
+    df.assert_selects(selector, "abc", "bbb", "cde", "def", "qqR")
 
 
 @XFAIL_NESTED_INNER_SELECTOR
