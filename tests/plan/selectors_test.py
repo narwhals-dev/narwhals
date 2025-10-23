@@ -235,6 +235,35 @@ def test_selector_by_index_reordering(
     df.assert_selects(ncs.by_index(range(-3, 0)), "abc", "Lmn", "opp", "qqR")
 
 
+# TODO @dangotbanned: `test_selector_by_name`
+# https://github.com/pola-rs/polars/blob/84d66e960e3d462811f0575e0a6e4e78e34c618c/py-polars/tests/unit/test_selectors.py#L213
+
+# TODO @dangotbanned: `test_selector_datetime`
+# NOTE: Use `parametrize`, the test is waaaaaay too long
+# https://github.com/pola-rs/polars/blob/84d66e960e3d462811f0575e0a6e4e78e34c618c/py-polars/tests/unit/test_selectors.py#L283
+
+# TODO @dangotbanned: `test_selector_duration`
+# https://github.com/pola-rs/polars/blob/84d66e960e3d462811f0575e0a6e4e78e34c618c/py-polars/tests/unit/test_selectors.py#L407
+
+# TODO @dangotbanned: `test_selector_matches`
+# https://github.com/pola-rs/polars/blob/84d66e960e3d462811f0575e0a6e4e78e34c618c/py-polars/tests/unit/test_selectors.py#L498
+
+# TODO @dangotbanned: `test_selector_categorical` (part of `test_selector_miscellaneous`)
+# https://github.com/pola-rs/polars/blob/84d66e960e3d462811f0575e0a6e4e78e34c618c/py-polars/tests/unit/test_selectors.py#L518
+
+# TODO @dangotbanned: `test_selector_numeric`
+# https://github.com/pola-rs/polars/blob/84d66e960e3d462811f0575e0a6e4e78e34c618c/py-polars/tests/unit/test_selectors.py#L536
+
+# TODO @dangotbanned: `test_selector_expansion` (using `meta.as_selector`)
+# https://github.com/pola-rs/polars/blob/84d66e960e3d462811f0575e0a6e4e78e34c618c/py-polars/tests/unit/test_selectors.py#L619
+
+# TODO @dangotbanned: `test_selector_sets` (using `meta.as_selector`)
+# https://github.com/pola-rs/polars/blob/84d66e960e3d462811f0575e0a6e4e78e34c618c/py-polars/tests/unit/test_selectors.py#L672
+
+# TODO @dangotbanned: `test_selector_result_order`
+# https://github.com/pola-rs/polars/blob/84d66e960e3d462811f0575e0a6e4e78e34c618c/py-polars/tests/unit/test_selectors.py#L860
+
+
 @XFAIL_NESTED_INNER_SELECTOR
 def test_list_selector(schema_nested_1: nw.Schema) -> None:  # pragma: no cover
     df = Frame(schema_nested_1)
@@ -266,3 +295,19 @@ def test_array_selector(schema_nested_2: nw.Schema) -> None:  # pragma: no cover
         TypeError, match=r"expected datatype based expression got.+by_name\("
     ):
         df.project_named_irs(ncs.array(inner=ncs.by_name("???")))
+
+
+# TODO @dangotbanned: `test_enum_selector`
+# https://github.com/pola-rs/polars/blob/84d66e960e3d462811f0575e0a6e4e78e34c618c/py-polars/tests/unit/test_selectors.py#L943
+
+# TODO @dangotbanned: `test_struct_selector`
+# https://github.com/pola-rs/polars/blob/84d66e960e3d462811f0575e0a6e4e78e34c618c/py-polars/tests/unit/test_selectors.py#L961
+
+# TODO @dangotbanned: `test_matches_selector_22816`
+# https://github.com/pola-rs/polars/blob/84d66e960e3d462811f0575e0a6e4e78e34c618c/py-polars/tests/unit/test_selectors.py#L978
+
+# TODO @dangotbanned: `test_by_name_order_19384`
+# https://github.com/pola-rs/polars/blob/84d66e960e3d462811f0575e0a6e4e78e34c618c/py-polars/tests/unit/test_selectors.py#L1074
+
+# TODO @dangotbanned: `test_datetime_selectors_23767`
+# https://github.com/pola-rs/polars/blob/84d66e960e3d462811f0575e0a6e4e78e34c618c/py-polars/tests/unit/test_selectors.py#L1133
