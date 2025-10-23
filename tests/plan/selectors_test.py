@@ -13,7 +13,7 @@ import pytest
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
 from narwhals import _plan as nwp
-from narwhals._plan import Selector, expressions as ir, selectors as ncs
+from narwhals._plan import Expr, Selector, expressions as ir, selectors as ncs
 from narwhals._plan._expansion import prepare_projection
 from narwhals._plan._parse import parse_into_seq_of_expr_ir
 from narwhals.exceptions import ColumnNotFoundError
@@ -119,7 +119,7 @@ class Frame:
         named_irs = self.project_named_irs(*exprs)
         return tuple(e.name for e in named_irs)
 
-    def assert_selects(self, selector: Selector, *column_names: str) -> None:
+    def assert_selects(self, selector: Selector | Expr, *column_names: str) -> None:
         projected = self.project_names(selector)
         expected = column_names
         assert projected == expected
@@ -132,9 +132,8 @@ def test_selector_all(schema_non_nested: nw.Schema) -> None:
     df.assert_selects(~ncs.all())
     df.assert_selects(~(~ncs.all()), *df.columns)
 
-    # TODO @dangotbanned: Fix typing, this returns a `Selector` at runtime
     selector_and_col = ncs.all() & nwp.col("abc")
-    df.assert_selects(selector_and_col, "abc")  # type: ignore[arg-type]
+    df.assert_selects(selector_and_col, "abc")
 
 
 def test_selector_by_dtype(schema_non_nested: nw.Schema) -> None:
@@ -199,7 +198,7 @@ def test_selector_by_index(schema_non_nested: nw.Schema) -> None:  # pragma: no 
 
     # # one or more positive indices
     df.assert_selects(ncs.by_index(0), "abc")
-    df.assert_selects(nwp.nth(0, 1, 2), "abc", "bbb", "cde")  # type: ignore[arg-type]
+    df.assert_selects(nwp.nth(0, 1, 2), "abc", "bbb", "cde")
     df.assert_selects(ncs.by_index(0, 1, 2), "abc", "bbb", "cde")
 
     # one or more negative indices
@@ -256,8 +255,8 @@ def test_selector_by_name(schema_non_nested: nw.Schema) -> None:
     df.assert_selects(ncs.by_name("???", require_all=False))
 
     # check "by_name & col"
-    df.assert_selects(ncs.by_name("abc", "cde") & nwp.col("ghi"))  # type: ignore[arg-type]
-    df.assert_selects(ncs.by_name("abc", "cde") & nwp.col("cde"), "cde")  # type: ignore[arg-type]
+    df.assert_selects(ncs.by_name("abc", "cde") & nwp.col("ghi"))
+    df.assert_selects(ncs.by_name("abc", "cde") & nwp.col("cde"), "cde")
     df.assert_selects(ncs.by_name("cde") & ncs.by_name("cde", "abc"), "cde")
 
     # check "by_name & by_name"
@@ -267,7 +266,7 @@ def test_selector_by_name(schema_non_nested: nw.Schema) -> None:
 
 def test_selector_by_name_or_col(schema_non_nested: nw.Schema) -> None:
     df = Frame(schema_non_nested)
-    df.assert_selects(ncs.by_name("abc") | nwp.col("cde"), "abc", "cde")  # type: ignore[arg-type]
+    df.assert_selects(ncs.by_name("abc") | nwp.col("cde"), "abc", "cde")
 
 
 @XFAIL_REQUIRE_ALL
