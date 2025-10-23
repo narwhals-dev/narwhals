@@ -14,6 +14,7 @@ from narwhals import _plan as nwp
 from narwhals._plan import Selector, expressions as ir, selectors as ncs
 from narwhals._plan._expansion import prepare_projection
 from narwhals._plan._parse import parse_into_seq_of_expr_ir
+from narwhals.exceptions import ColumnNotFoundError
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -24,6 +25,15 @@ if TYPE_CHECKING:
 
 XFAIL_NESTED_INNER_SELECTOR = pytest.mark.xfail(
     reason="Bug causing the inner selector to always be falsy?", raises=AssertionError
+)
+XFAIL_REQUIRE_ALL = pytest.mark.xfail(reason="Strict selectors not yet implemented")
+XFAIL_BY_INDEX_MATCHES = pytest.mark.xfail(
+    reason="`cs.by_index()` matching is only partially implemented",
+    raises=NotImplementedError,
+)
+
+XFAIL_REORDERING = pytest.mark.xfail(
+    reason="`cs.by_{index,name}()` reordering is only partially implemented"
 )
 
 
@@ -84,6 +94,10 @@ class Frame:
     def __init__(self, schema: nw.Schema) -> None:
         self.schema = schema
         self.columns = tuple(schema.names())
+
+    @property
+    def width(self) -> int:
+        return len(self.columns)
 
     def project_named_irs(self, *exprs: IntoExpr) -> Seq[ir.NamedIR]:
         expr_irs = parse_into_seq_of_expr_ir(*exprs)
@@ -171,6 +185,54 @@ def test_selector_by_dtype_empty(
 def test_selector_by_dtype_invalid_input() -> None:
     with pytest.raises(TypeError):
         ncs.by_dtype(999)  # type: ignore[arg-type]
+
+
+@XFAIL_BY_INDEX_MATCHES
+def test_selector_by_index(schema_non_nested: nw.Schema) -> None:  # pragma: no cover
+    df = Frame(schema_non_nested)
+
+    # # one or more positive indices
+    df.assert_selects(ncs.by_index(0), "abc")
+    df.assert_selects(nwp.nth(0, 1, 2), "abc", "bbb", "cde")  # type: ignore[arg-type]
+    df.assert_selects(ncs.by_index(0, 1, 2), "abc", "bbb", "cde")
+
+    # one or more negative indices
+    df.assert_selects(ncs.by_index(-1), "qqR")
+
+    # range objects
+    df.assert_selects(ncs.by_index(range(3)), "abc", "bbb", "cde")
+
+    # exclude by index
+    df.assert_selects(
+        ~ncs.by_index(range(0, df.width, 2)), "bbb", "def", "fgg", "JJK", "opp"
+    )
+
+
+@pytest.mark.xfail(reason="Bug: Forgot to handle this during construction")
+def test_selector_by_index_invalid_input() -> None:  # pragma: no cover
+    with pytest.raises(TypeError):
+        ncs.by_index("one")  # type: ignore[arg-type]
+
+    with pytest.raises(TypeError):
+        ncs.by_index(["two", "three"])  # type: ignore[list-item]
+
+
+@XFAIL_REQUIRE_ALL
+def test_selector_by_index_not_found(schema_non_nested: nw.Schema) -> None:
+    df = Frame(schema_non_nested)
+
+    with pytest.raises(ColumnNotFoundError):
+        df.project_named_irs(ncs.by_index(999))
+
+
+@XFAIL_REORDERING
+def test_selector_by_index_reordering(
+    schema_non_nested: nw.Schema,
+) -> None:  # pragma: no cover
+    df = Frame(schema_non_nested)
+
+    df.assert_selects(ncs.by_index(-3, -2, -1), "Lmn", "opp", "qqR")
+    df.assert_selects(ncs.by_index(range(-3, 0)), "abc", "Lmn", "opp", "qqR")
 
 
 @XFAIL_NESTED_INNER_SELECTOR
