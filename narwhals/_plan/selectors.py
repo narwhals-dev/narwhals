@@ -171,7 +171,9 @@ def by_dtype(*dtypes: OneOrIterable[DType | type[DType]]) -> Selector:
         )
         selectors.appendleft(dtype_selector)
     it = iter(selectors)
-    return reduce(operator.or_, it, next(it))
+    if first := next(it, None):
+        return reduce(operator.or_, it, first)
+    return s_ir.ByDType.empty().to_selector_ir().to_narwhals()
 
 
 def by_index(*indices: OneOrIterable[int], require_all: bool = True) -> Selector:

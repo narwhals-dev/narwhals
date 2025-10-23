@@ -239,6 +239,10 @@ class ByDType(DTypeSelector, dtype=DType):
     def matches_column(self, name: str, dtype: DType) -> bool:
         return dtype in self.dtypes
 
+    @staticmethod
+    def empty() -> ByDType:
+        return ByDType(dtypes=frozenset())
+
 
 class Categorical(DTypeSelector, dtype=_dtypes.Categorical): ...
 

@@ -179,12 +179,7 @@ def test_selector_by_dtype_timezone_decimal() -> None:
     df.assert_selects(ncs.by_dtype(nw.Datetime), "dt1", "dt2")
 
 
-@pytest.mark.xfail(
-    reason="Bug: Forgot to handle this during construction", raises=StopIteration
-)
-def test_selector_by_dtype_empty(
-    schema_non_nested: nw.Schema,
-) -> None:  # pragma: no cover
+def test_selector_by_dtype_empty(schema_non_nested: nw.Schema) -> None:
     df = Frame(schema_non_nested)
     # empty selection selects nothing
     df.assert_selects(ncs.by_dtype())
