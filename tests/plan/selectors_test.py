@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+from datetime import timezone
 from typing import TYPE_CHECKING
 
 import pytest
@@ -99,6 +100,11 @@ class Frame:
     @staticmethod
     def from_mapping(mapping: IntoSchema) -> Frame:
         return Frame(nw.Schema(mapping))
+
+    @staticmethod
+    def from_names(*column_names: str) -> Frame:
+        """Construct with all `nw.Int64()`."""
+        return Frame(nw.Schema((name, nw.Int64()) for name in column_names))
 
     @property
     def width(self) -> int:
@@ -283,8 +289,12 @@ def test_selector_categorical(schema_non_nested: nw.Schema) -> None:
     df.assert_selects(~ncs.categorical(), "a", "b")
 
 
-# TODO @dangotbanned: `test_selector_numeric`
-# https://github.com/pola-rs/polars/blob/84d66e960e3d462811f0575e0a6e4e78e34c618c/py-polars/tests/unit/test_selectors.py#L536
+def test_selector_numeric(schema_non_nested: nw.Schema) -> None:
+    df = Frame(schema_non_nested)
+    df.assert_selects(ncs.numeric(), "abc", "bbb", "cde", "def")
+    df.assert_selects(ncs.numeric() - ncs.by_dtype(nw.UInt16), "bbb", "cde", "def")
+    df.assert_selects(~ncs.numeric(), "eee", "fgg", "ghi", "JJK", "Lmn", "opp", "qqR")
+
 
 # TODO @dangotbanned: `test_selector_expansion` (using `meta.as_selector`)
 # https://github.com/pola-rs/polars/blob/84d66e960e3d462811f0575e0a6e4e78e34c618c/py-polars/tests/unit/test_selectors.py#L619
@@ -361,11 +371,23 @@ def test_selector_struct() -> None:
     df.assert_selects(~ncs.struct(), "a", "b", "d", "f", "g")
 
 
-# TODO @dangotbanned: `test_selector_matches_22816`
-# https://github.com/pola-rs/polars/blob/84d66e960e3d462811f0575e0a6e4e78e34c618c/py-polars/tests/unit/test_selectors.py#L978
+def test_selector_matches_22816() -> None:
+    df = Frame.from_names("ham", "hamburger", "foo", "bar")
+    df.assert_selects(ncs.matches(r"^ham.*$"), "ham", "hamburger")
+    df.assert_selects(ncs.matches(r".*burger"), "hamburger")
 
-# TODO @dangotbanned: `test_selector_by_name_order_19384`
-# https://github.com/pola-rs/polars/blob/84d66e960e3d462811f0575e0a6e4e78e34c618c/py-polars/tests/unit/test_selectors.py#L1074
 
-# TODO @dangotbanned: `test_selector_datetime_23767`
-# https://github.com/pola-rs/polars/blob/84d66e960e3d462811f0575e0a6e4e78e34c618c/py-polars/tests/unit/test_selectors.py#L1133
+@XFAIL_REORDERING
+def test_selector_by_name_order_19384() -> None:  # pragma: no cover
+    df = Frame.from_names("a", "b")
+    df.assert_selects(ncs.by_name("b", "a"), "b", "a")
+    df.assert_selects(ncs.by_name("b", "a", require_all=False), "b", "a")
+
+
+def test_selector_datetime_23767() -> None:
+    df = Frame.from_mapping(
+        {"a": nw.Datetime(), "b": nw.Datetime(time_zone=timezone.utc)}
+    )
+    df.assert_selects(ncs.datetime("us", time_zone=None), "a")
+    df.assert_selects(ncs.datetime("us", time_zone=["UTC"]), "b")
+    df.assert_selects(ncs.datetime("us", time_zone=[None, "UTC"]), "a", "b")
