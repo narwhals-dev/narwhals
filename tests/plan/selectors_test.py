@@ -247,8 +247,58 @@ def test_selector_by_index_reordering(
     df.assert_selects(ncs.by_index(range(-3, 0)), "abc", "Lmn", "opp", "qqR")
 
 
-# TODO @dangotbanned: `test_selector_by_name`
-# https://github.com/pola-rs/polars/blob/84d66e960e3d462811f0575e0a6e4e78e34c618c/py-polars/tests/unit/test_selectors.py#L213
+def test_selector_by_name(schema_non_nested: nw.Schema) -> None:
+    df = Frame(schema_non_nested)
+
+    df.assert_selects(ncs.by_name("abc", "cde"), "abc", "cde")
+
+    selector = ~ncs.by_name("abc", "cde", "ghi", "Lmn", "opp", "eee")
+    df.assert_selects(selector, "bbb", "def", "fgg", "JJK", "qqR")
+    df.assert_selects(ncs.by_name())
+    df.assert_selects(ncs.by_name([]))
+
+    df.assert_selects(ncs.by_name("???", "fgg", "!!!", require_all=False), "fgg")
+
+    df.assert_selects(ncs.by_name("missing", require_all=False))
+    df.assert_selects(ncs.by_name("???", require_all=False))
+
+    # check "by_name & col"
+    df.assert_selects(ncs.by_name("abc", "cde") & nwp.col("ghi"))  # type: ignore[arg-type]
+    df.assert_selects(ncs.by_name("abc", "cde") & nwp.col("cde"), "cde")  # type: ignore[arg-type]
+    df.assert_selects(ncs.by_name("cde") & ncs.by_name("cde", "abc"), "cde")
+
+    # check "by_name & by_name"
+    selector = ncs.by_name("abc", "cde", "def", "eee") & ncs.by_name("cde", "eee", "fgg")
+    df.assert_selects(selector, "cde", "eee")
+
+
+@pytest.mark.xfail(
+    reason="Bug: `Selector.__or__(col(...))` isn't including the right-hand side?",
+    raises=AssertionError,
+)
+def test_selector_by_name_or_col(schema_non_nested: nw.Schema) -> None:
+    df = Frame(schema_non_nested)
+    df.assert_selects(ncs.by_name("abc") | nwp.col("cde"), "abc", "cde")  # type: ignore[arg-type]
+
+
+@XFAIL_REQUIRE_ALL
+def test_selector_by_name_not_found(
+    schema_non_nested: nw.Schema,
+) -> None:  # pragma: no cover
+    df = Frame(schema_non_nested)
+
+    with pytest.raises(ColumnNotFoundError):
+        df.project_named_irs(ncs.by_name("xxx", "fgg", "!!!"))
+
+    with pytest.raises(ColumnNotFoundError):
+        df.project_named_irs(ncs.by_name("stroopwafel"))
+
+
+@pytest.mark.xfail(reason="Bug: Forgot to handle this during construction")
+def test_selector_by_name_invalid_input() -> None:
+    with pytest.raises(TypeError):
+        ncs.by_name(999)  # type: ignore[arg-type]
+
 
 # TODO @dangotbanned: `test_selector_datetime`
 # NOTE: Use `parametrize`, the test is waaaaaay too long
