@@ -627,12 +627,10 @@ jobs:
           cd fairlearn
           # TODO(FBruzzesi): Align with fairlearn team to get a minimal requirement to test narwhals features
           uv run \
-            --with . \
-            --with-requirements requirements.txt \
-            --with matplotlib \
-            --with polars \
-            --with pyarrow \
-            --with pytest \
-            --with typing-extensions \
-            --with ./.. \
-            pytest test/unit -m narwhals
+          --with . \
+          --with-requirements requirements.txt \
+          --with matplotlib \
+          --with pytest \
+          --with typing-extensions \
+          --with "./..[polars,pyarrow]"" \
+          pytest test/unit -m narwhals
