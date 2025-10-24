@@ -309,41 +309,45 @@ def test_selector_datetime(schema_non_nested: nw.Schema) -> None:
     df.assert_selects(~ncs.datetime(), *all_columns)
 
 
-# TODO @dangotbanned: Use `parametrize`, the test is waaaaaay too long
-# https://github.com/pola-rs/polars/blob/84d66e960e3d462811f0575e0a6e4e78e34c618c/py-polars/tests/unit/test_selectors.py#L283
-def test_selector_datetime_exhaustive(df_datetime: Frame) -> None:
+@pytest.mark.parametrize(
+    ("selector", "expected"),
+    [
+        (ncs.datetime(), ("d1", "d2", "d3", "d4", "d5")),
+        (~ncs.datetime(), ()),
+        (ncs.datetime(["ms", "ns"]), ("d1", "d2", "d5")),
+        (ncs.datetime(["ms", "ns"], time_zone="*"), ("d1", "d2")),
+        (~ncs.datetime(["ms", "ns"]), ("d3", "d4")),
+        (~ncs.datetime(["ms", "ns"], time_zone="*"), ("d3", "d4", "d5")),
+        (
+            ncs.datetime(time_zone=["UTC", "Asia/Tokyo", "Europe/London"]),
+            ("d1", "d2", "d3"),
+        ),
+        (ncs.datetime(time_zone="*"), ("d1", "d2", "d3")),
+        (ncs.datetime("ns", time_zone="*"), ("d1", "d2")),
+        (ncs.datetime(time_zone="UTC"), ("d2", "d3")),
+        (ncs.datetime("us", time_zone="UTC"), ("d3",)),
+        (ncs.datetime(time_zone="Asia/Tokyo"), ("d1",)),
+        (ncs.datetime("us", time_zone="Asia/Tokyo"), ()),
+        (ncs.datetime(time_zone=None), ("d4", "d5")),
+        (ncs.datetime("ns", time_zone=None), ()),
+        (~ncs.datetime(time_zone="*"), ("d4", "d5")),
+        (~ncs.datetime("ns", time_zone="*"), ("d3", "d4", "d5")),
+        (~ncs.datetime(time_zone="UTC"), ("d1", "d4", "d5")),
+        (~ncs.datetime("us", time_zone="UTC"), ("d1", "d2", "d4", "d5")),
+        (~ncs.datetime(time_zone="Asia/Tokyo"), ("d2", "d3", "d4", "d5")),
+        (~ncs.datetime("us", time_zone="Asia/Tokyo"), ("d1", "d2", "d3", "d4", "d5")),
+        (~ncs.datetime(time_zone=None), ("d1", "d2", "d3")),
+        (~ncs.datetime("ns", time_zone=None), ("d1", "d2", "d3", "d4", "d5")),
+        (ncs.datetime("ns"), ("d1", "d2")),
+        (ncs.datetime("us"), ("d3", "d4")),
+        (ncs.datetime("ms"), ("d5",)),
+    ],
+)
+def test_selector_datetime_exhaustive(
+    df_datetime: Frame, selector: Selector, expected: tuple[str, ...]
+) -> None:
     df = df_datetime
-
-    df.assert_selects(ncs.datetime(), "d1", "d2", "d3", "d4", "d5")
-    df.assert_selects(~ncs.datetime())
-    df.assert_selects(ncs.datetime(["ms", "ns"]), "d1", "d2", "d5")
-    df.assert_selects(ncs.datetime(["ms", "ns"], time_zone="*"), "d1", "d2")
-    df.assert_selects(~ncs.datetime(["ms", "ns"]), "d3", "d4")
-    df.assert_selects(~ncs.datetime(["ms", "ns"], time_zone="*"), "d3", "d4", "d5")
-    df.assert_selects(
-        ncs.datetime(time_zone=["UTC", "Asia/Tokyo", "Europe/London"]), "d1", "d2", "d3"
-    )
-    df.assert_selects(ncs.datetime(time_zone="*"), "d1", "d2", "d3")
-    df.assert_selects(ncs.datetime("ns", time_zone="*"), "d1", "d2")
-    df.assert_selects(ncs.datetime(time_zone="UTC"), "d2", "d3")
-    df.assert_selects(ncs.datetime("us", time_zone="UTC"), "d3")
-    df.assert_selects(ncs.datetime(time_zone="Asia/Tokyo"), "d1")
-    df.assert_selects(ncs.datetime("us", time_zone="Asia/Tokyo"))
-    df.assert_selects(ncs.datetime(time_zone=None), "d4", "d5")
-    df.assert_selects(ncs.datetime("ns", time_zone=None))
-    df.assert_selects(~ncs.datetime(time_zone="*"), "d4", "d5")
-    df.assert_selects(~ncs.datetime("ns", time_zone="*"), "d3", "d4", "d5")
-    df.assert_selects(~ncs.datetime(time_zone="UTC"), "d1", "d4", "d5")
-    df.assert_selects(~ncs.datetime("us", time_zone="UTC"), "d1", "d2", "d4", "d5")
-    df.assert_selects(~ncs.datetime(time_zone="Asia/Tokyo"), "d2", "d3", "d4", "d5")
-    df.assert_selects(
-        ~ncs.datetime("us", time_zone="Asia/Tokyo"), "d1", "d2", "d3", "d4", "d5"
-    )
-    df.assert_selects(~ncs.datetime(time_zone=None), "d1", "d2", "d3")
-    df.assert_selects(~ncs.datetime("ns", time_zone=None), "d1", "d2", "d3", "d4", "d5")
-    df.assert_selects(ncs.datetime("ns"), "d1", "d2")
-    df.assert_selects(ncs.datetime("us"), "d3", "d4")
-    df.assert_selects(ncs.datetime("ms"), "d5")
+    df.assert_selects(selector, *expected)
 
 
 # NOTE: The test is *technically* passing, but the `TypeError` is being raised by `set(time_unit)`
