@@ -25,10 +25,13 @@ class AggExpr(ExprIR, child=("expr",)):
     def iter_output_name(self) -> Iterator[ExprIR]:
         yield from self.expr.iter_output_name()
 
-    def __init__(self, *, expr: ExprIR, **kwds: Any) -> None:
-        if expr.is_scalar:
-            raise agg_scalar_error(self, expr)
-        super().__init__(expr=expr, **kwds)  # pyright: ignore[reportCallIssue]
+    # NOTE: Interacting badly with `pyright` synthesizing the `__replace__` signature
+    if not TYPE_CHECKING:
+
+        def __init__(self, *, expr: ExprIR, **kwds: Any) -> None:
+            if expr.is_scalar:
+                raise agg_scalar_error(self, expr)
+            super().__init__(expr=expr, **kwds)  # pyright: ignore[reportCallIssue]
 
 
 # fmt: off
