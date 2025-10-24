@@ -183,9 +183,11 @@ def test_height_mismatch(constructor: Constructor) -> None:
 def test_check_row_order(
     constructor: Constructor, request: pytest.FixtureRequest, *, check_row_order: bool
 ) -> None:
-    if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):  # pragma: no cover
-        reason = "Pandas too old for nested dtypes"
-        pytest.skip(reason=reason)
+    if "pandas" in str(constructor):  # pragma: no cover
+        if PANDAS_VERSION < (2, 2):
+            reason = "Pandas too old for nested dtypes"
+            pytest.skip(reason=reason)
+        pytest.importorskip("pyarrow")
 
     if "dask" in str(constructor):
         reason = "Unsupported List type"
@@ -214,9 +216,11 @@ def test_check_row_order(
 def test_check_row_order_nested_only(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):  # pragma: no cover
-        reason = "Pandas too old for nested dtypes"
-        pytest.skip(reason=reason)
+    if "pandas" in str(constructor):  # pragma: no cover
+        if PANDAS_VERSION < (2, 2):
+            reason = "Pandas too old for nested dtypes"
+            pytest.skip(reason=reason)
+        pytest.importorskip("pyarrow")
 
     if "dask" in str(constructor):
         reason = "Unsupported List type"

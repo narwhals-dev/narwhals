@@ -625,6 +625,7 @@ jobs:
       - name: install-deps
         run: |
           cd fairlearn
+          # TODO(FBruzzesi): Align with fairlearn team to get a minimal requirement to test narwhals features
           uv pip install -e . -r requirements.txt matplotlib polars pyarrow pytest typing-extensions --system
       - name: install-narwhals-dev
         run: |
@@ -635,6 +636,4 @@ jobs:
       - name: run-pytest
         run: |
           cd fairlearn
-          # TODO(FBruzzesi): I hope this will be simplified once there is a decision on
-          # https://github.com/fairlearn/fairlearn/issues/1555
-          pytest test/unit/preprocessing test/unit/metrics
+          pytest test/unit -m "narwhals"
