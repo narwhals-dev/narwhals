@@ -125,6 +125,19 @@ class Frame:
         assert projected == expected
 
 
+@pytest.fixture(scope="module")
+def df_datetime() -> Frame:
+    return Frame.from_mapping(
+        {
+            "d1": nw.Datetime("ns", "Asia/Tokyo"),
+            "d2": nw.Datetime("ns", "UTC"),
+            "d3": nw.Datetime("us", "UTC"),
+            "d4": nw.Datetime("us"),
+            "d5": nw.Datetime("ms"),
+        }
+    )
+
+
 def test_selector_all(schema_non_nested: nw.Schema) -> None:
     df = Frame(schema_non_nested)
 
@@ -287,9 +300,57 @@ def test_selector_by_name_invalid_input() -> None:
         ncs.by_name(999)  # type: ignore[arg-type]
 
 
-# TODO @dangotbanned: `test_selector_datetime`
-# NOTE: Use `parametrize`, the test is waaaaaay too long
+def test_selector_datetime(schema_non_nested: nw.Schema) -> None:
+    df = Frame(schema_non_nested)
+    df.assert_selects(ncs.datetime(), "opp")
+    df.assert_selects(ncs.datetime("ns"))
+    all_columns = list(df.columns)
+    all_columns.remove("opp")
+    df.assert_selects(~ncs.datetime(), *all_columns)
+
+
+# TODO @dangotbanned: Use `parametrize`, the test is waaaaaay too long
 # https://github.com/pola-rs/polars/blob/84d66e960e3d462811f0575e0a6e4e78e34c618c/py-polars/tests/unit/test_selectors.py#L283
+def test_selector_datetime_exhaustive(df_datetime: Frame) -> None:
+    df = df_datetime
+
+    df.assert_selects(ncs.datetime(), "d1", "d2", "d3", "d4", "d5")
+    df.assert_selects(~ncs.datetime())
+    df.assert_selects(ncs.datetime(["ms", "ns"]), "d1", "d2", "d5")
+    df.assert_selects(ncs.datetime(["ms", "ns"], time_zone="*"), "d1", "d2")
+    df.assert_selects(~ncs.datetime(["ms", "ns"]), "d3", "d4")
+    df.assert_selects(~ncs.datetime(["ms", "ns"], time_zone="*"), "d3", "d4", "d5")
+    df.assert_selects(
+        ncs.datetime(time_zone=["UTC", "Asia/Tokyo", "Europe/London"]), "d1", "d2", "d3"
+    )
+    df.assert_selects(ncs.datetime(time_zone="*"), "d1", "d2", "d3")
+    df.assert_selects(ncs.datetime("ns", time_zone="*"), "d1", "d2")
+    df.assert_selects(ncs.datetime(time_zone="UTC"), "d2", "d3")
+    df.assert_selects(ncs.datetime("us", time_zone="UTC"), "d3")
+    df.assert_selects(ncs.datetime(time_zone="Asia/Tokyo"), "d1")
+    df.assert_selects(ncs.datetime("us", time_zone="Asia/Tokyo"))
+    df.assert_selects(ncs.datetime(time_zone=None), "d4", "d5")
+    df.assert_selects(ncs.datetime("ns", time_zone=None))
+    df.assert_selects(~ncs.datetime(time_zone="*"), "d4", "d5")
+    df.assert_selects(~ncs.datetime("ns", time_zone="*"), "d3", "d4", "d5")
+    df.assert_selects(~ncs.datetime(time_zone="UTC"), "d1", "d4", "d5")
+    df.assert_selects(~ncs.datetime("us", time_zone="UTC"), "d1", "d2", "d4", "d5")
+    df.assert_selects(~ncs.datetime(time_zone="Asia/Tokyo"), "d2", "d3", "d4", "d5")
+    df.assert_selects(
+        ~ncs.datetime("us", time_zone="Asia/Tokyo"), "d1", "d2", "d3", "d4", "d5"
+    )
+    df.assert_selects(~ncs.datetime(time_zone=None), "d1", "d2", "d3")
+    df.assert_selects(~ncs.datetime("ns", time_zone=None), "d1", "d2", "d3", "d4", "d5")
+    df.assert_selects(ncs.datetime("ns"), "d1", "d2")
+    df.assert_selects(ncs.datetime("us"), "d3", "d4")
+    df.assert_selects(ncs.datetime("ms"), "d5")
+
+
+# NOTE: The test is *technically* passing, but the `TypeError` is being raised by `set(time_unit)`
+# `TypeError: 'int' object is not iterable`
+def test_selector_datetime_invalid_input() -> None:
+    with pytest.raises(TypeError):
+        ncs.datetime(999)  # type: ignore[arg-type]
 
 
 def test_selector_duration(schema_non_nested: nw.Schema) -> None:
