@@ -138,7 +138,7 @@ def all() -> Selector:
 
 
 def array(inner: Selector | None = None, *, size: int | None = None) -> Selector:
-    s = inner._ir if inner is not None else None
+    s = inner._ir.to_dtype_selector() if inner is not None else None
     return s_ir.Array(inner=s, size=size).to_selector_ir().to_narwhals()
 
 
@@ -203,7 +203,7 @@ def datetime(
 
 
 def list(inner: Selector | None = None) -> Selector:
-    s = inner._ir if inner is not None else None
+    s = inner._ir.to_dtype_selector() if inner is not None else None
     return s_ir.List(inner=s).to_selector_ir().to_narwhals()
 
 

@@ -7,7 +7,7 @@ from __future__ import annotations
 import typing as t
 
 from narwhals._plan._expr_ir import ExprIR, SelectorIR
-from narwhals._plan.common import flatten_hash_safe
+from narwhals._plan.common import flatten_hash_safe, replace
 from narwhals._plan.exceptions import function_expr_invalid_operation_error
 from narwhals._plan.expressions import selectors as cs
 from narwhals._plan.options import ExprIROptions
@@ -482,6 +482,9 @@ class RootSelector(SelectorIR):
     def matches_column(self, name: str, dtype: DType) -> bool:
         return self.selector.matches_column(name, dtype)
 
+    def to_dtype_selector(self) -> Self:
+        return replace(self, selector=self.selector.to_dtype_selector())
+
 
 class BinarySelector(
     _BinaryOp[LeftSelectorT, SelectorOperatorT, RightSelectorT],
@@ -495,6 +498,11 @@ class BinarySelector(
         right = self.right.matches_column(name, dtype)
         return bool(self.op(left, right))
 
+    def to_dtype_selector(self) -> Self:
+        return replace(
+            self, left=self.left.to_dtype_selector(), right=self.right.to_dtype_selector()
+        )
+
 
 class InvertSelector(SelectorIR, t.Generic[SelectorT]):
     __slots__ = ("selector",)
@@ -505,6 +513,9 @@ class InvertSelector(SelectorIR, t.Generic[SelectorT]):
 
     def matches_column(self, name: str, dtype: DType) -> bool:
         return not self.selector.matches_column(name, dtype)
+
+    def to_dtype_selector(self) -> Self:
+        return replace(self, selector=self.selector.to_dtype_selector())
 
 
 class TernaryExpr(ExprIR, child=("truthy", "falsy", "predicate")):

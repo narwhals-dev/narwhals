@@ -42,6 +42,10 @@ class Selector(Immutable):
 
         return RootSelector(selector=self)
 
+    def to_dtype_selector(self) -> DTypeSelector:
+        msg = f"expected datatype based expression got {self!r}"
+        raise TypeError(msg)
+
     def matches_column(self, name: str, dtype: DType) -> bool:
         raise NotImplementedError(type(self))
 
@@ -70,6 +74,9 @@ class DTypeSelector(Selector):
     def __repr__(self) -> str:
         return f"ncs.{type(self).__name__.lower()}"
 
+    def to_dtype_selector(self) -> DTypeSelector:
+        return self
+
     def matches_column(self, name: str, dtype: DType) -> bool:
         return isinstance(dtype, self._dtype)
 
@@ -78,11 +85,25 @@ class DTypeSelector(Selector):
         return isinstance(dtype, self._dtype)
 
 
+class DTypeAll(DTypeSelector, dtype=DType):
+    def __repr__(self) -> str:
+        return "ncs.all()"
+
+    def matches_column(self, name: str, dtype: DType) -> bool:
+        return True
+
+    def matches(self, dtype: DType) -> bool:
+        return True
+
+
 class All(Selector):
     # Both `Selector::Wildcard` and `DataTypeSelector::Wildcard` exist
     # Also `Empty`, but that's new
     def __repr__(self) -> str:
         return "ncs.all()"
+
+    def to_dtype_selector(self) -> DTypeSelector:
+        return DTypeAll()
 
     def matches_column(self, name: str, dtype: DType) -> bool:
         return True

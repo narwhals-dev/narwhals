@@ -32,12 +32,6 @@ XFAIL_BY_INDEX_MATCHES = pytest.mark.xfail(
 XFAIL_REORDERING = pytest.mark.xfail(
     reason="`cs.by_{index,name}()` reordering is only partially implemented"
 )
-XFAIL_DTYPE_SELECTOR = pytest.mark.xfail(
-    reason=(
-        "`DTypeSelector` is only partially implemented.\n"
-        "Need to raise `TypeError: expected datatype based expression got 'cs.by_name('a', require_all=true)'`"
-    )
-)
 
 
 @pytest.fixture(scope="module")
@@ -485,6 +479,7 @@ def test_selector_result_order(schema_non_nested: nw.Schema, selector: Selector)
 def test_selector_list(schema_nested_1: nw.Schema) -> None:
     df = Frame(schema_nested_1)
     df.assert_selects(ncs.list(), "b", "c", "e")
+    df.assert_selects(ncs.list(ncs.all()), "b", "c", "e")
     df.assert_selects(ncs.list(inner=ncs.numeric()), "b", "c")
     df.assert_selects(ncs.list(inner=ncs.string()), "e")
 
@@ -492,15 +487,13 @@ def test_selector_list(schema_nested_1: nw.Schema) -> None:
 def test_selector_array(schema_nested_2: nw.Schema) -> None:
     df = Frame(schema_nested_2)
     df.assert_selects(ncs.array(), "b", "c", "d", "f")
+    df.assert_selects(ncs.array(ncs.all()), "b", "c", "d", "f")
     df.assert_selects(ncs.array(size=4), "b", "c", "f")
     df.assert_selects(ncs.array(inner=ncs.numeric()), "b", "c", "d")
     df.assert_selects(ncs.array(inner=ncs.string()), "f")
 
 
-@XFAIL_DTYPE_SELECTOR
-def test_selector_non_dtype_inside_dtype(
-    schema_nested_2: nw.Schema,
-) -> None:  # pragma: no cover
+def test_selector_non_dtype_inside_dtype(schema_nested_2: nw.Schema) -> None:
     df = Frame(schema_nested_2)
 
     with pytest.raises(

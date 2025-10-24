@@ -207,6 +207,10 @@ class SelectorIR(ExprIR, config=ExprIROptions.no_dispatch()):
         """
         raise NotImplementedError(type(self))
 
+    def to_dtype_selector(self) -> Self:
+        msg = f"{self.to_dtype_selector.__qualname__!r}"
+        raise NotImplementedError(msg)
+
     def to_selector_ir(self) -> Self:
         return self
 
