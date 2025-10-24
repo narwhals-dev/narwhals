@@ -363,8 +363,47 @@ def test_selector_expansion() -> None:
     df.assert_selects(s, "b", "c")
 
 
-# TODO @dangotbanned: `test_selector_sets` (using `meta.as_selector`)
-# https://github.com/pola-rs/polars/blob/84d66e960e3d462811f0575e0a6e4e78e34c618c/py-polars/tests/unit/test_selectors.py#L672
+def test_selector_sets(schema_non_nested: nw.Schema) -> None:
+    df = Frame(schema_non_nested)
+
+    # NOTE: `cs.temporal` is used a lot in this tests, but `narwhals` doesn't have it
+    temporal = ncs.datetime() | ncs.duration() | ncs.by_dtype(nw.Date, nw.Time)
+
+    # or
+    selector = temporal | ncs.string() | ncs.matches(r"^e")
+    df.assert_selects(selector, "eee", "ghi", "JJK", "Lmn", "opp", "qqR")
+
+    # and
+    selector = temporal & ncs.matches(r"opp|JJK")
+    df.assert_selects(selector, "JJK", "opp")
+
+    # SET A - SET B
+    selector = temporal - ncs.matches(r"opp|JJK")
+    df.assert_selects(selector, "ghi", "Lmn")
+    # NOTE: `cs.exclude` was used, but `narwhals` doesn't have it
+    # Would allow: `str | Expr | DType | type[DType] | Selector | Collection[str | Expr | DType | type[DType] | Selector]`
+    selector = ncs.all() - (~temporal | ncs.matches(r"opp|JJK"))
+    df.assert_selects(selector, "ghi", "Lmn")
+
+    sub_expr = ncs.matches("[yz]$") - nwp.col("colx")
+    assert not isinstance(sub_expr, Selector), (
+        "('Selector' - 'Expr') shouldn't behave as set"
+    )
+    assert isinstance(sub_expr, Expr)
+
+    with pytest.raises(TypeError, match=r"unsupported .* \('Expr' - 'Selector'\)"):
+        nwp.col("colx") - ncs.matches("[yz]$")
+
+    # complement
+    selector = ~ncs.by_dtype([nw.Duration, nw.Time])
+    df.assert_selects(
+        selector, "abc", "bbb", "cde", "def", "eee", "fgg", "JJK", "opp", "qqR"
+    )
+
+    # exclusive or
+    expected = "abc", "bbb", "eee", "fgg", "ghi"
+    df.assert_selects(ncs.matches("e|g") ^ ncs.numeric(), *expected)
+    df.assert_selects(ncs.matches(r"b|g") ^ nwp.col("eee"), *expected)
 
 
 @pytest.mark.parametrize(
