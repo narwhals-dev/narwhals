@@ -19,15 +19,10 @@ from narwhals._plan._parse import parse_into_seq_of_expr_ir
 from narwhals.exceptions import ColumnNotFoundError
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
-
     from narwhals._plan.typing import IntoExpr, Seq
-    from narwhals.typing import IntoDType, IntoSchema
+    from narwhals.typing import IntoSchema
 
 
-XFAIL_NESTED_INNER_SELECTOR = pytest.mark.xfail(
-    reason="Bug causing the inner selector to always be falsy?", raises=AssertionError
-)
 XFAIL_REQUIRE_ALL = pytest.mark.xfail(reason="Strict selectors not yet implemented")
 XFAIL_BY_INDEX_MATCHES = pytest.mark.xfail(
     reason="`cs.by_index()` matching is only partially implemented",
@@ -37,45 +32,46 @@ XFAIL_BY_INDEX_MATCHES = pytest.mark.xfail(
 XFAIL_REORDERING = pytest.mark.xfail(
     reason="`cs.by_{index,name}()` reordering is only partially implemented"
 )
-
-
-def _schema(mapping: Mapping[str, IntoDType]) -> nw.Schema:
-    # NOTE: Runtime isn't as strict as the annotation which requires instantiated `DType`
-    return nw.Schema(mapping)  # type: ignore[arg-type]
+XFAIL_DTYPE_SELECTOR = pytest.mark.xfail(
+    reason=(
+        "`DTypeSelector` is only partially implemented.\n"
+        "Need to raise `TypeError: expected datatype based expression got 'cs.by_name('a', require_all=true)'`"
+    )
+)
 
 
 @pytest.fixture(scope="module")
 def schema_nested_1() -> nw.Schema:
-    return _schema(
+    return nw.Schema(
         {
             "a": nw.Int32(),
             "b": nw.List(nw.Int32()),
-            "c": nw.List(nw.UInt32),
-            "d": nw.Array(nw.Int32, 3),
-            "e": nw.List(nw.String),
-            "f": nw.Struct({"x": nw.Int32}),
+            "c": nw.List(nw.UInt32()),
+            "d": nw.Array(nw.Int32(), 3),
+            "e": nw.List(nw.String()),
+            "f": nw.Struct({"x": nw.Int32()}),
         }
     )
 
 
 @pytest.fixture(scope="module")
 def schema_nested_2() -> nw.Schema:
-    return _schema(
+    return nw.Schema(
         {
             "a": nw.Int32(),
-            "b": nw.Array(nw.Int32, 4),
-            "c": nw.Array(nw.UInt32, 4),
-            "d": nw.Array(nw.Int32, 3),
-            "e": nw.List(nw.Int32),
-            "f": nw.Array(nw.String, 4),
-            "g": nw.Struct({"x": nw.Int32}),
+            "b": nw.Array(nw.Int32(), 4),
+            "c": nw.Array(nw.UInt32(), 4),
+            "d": nw.Array(nw.Int32(), 3),
+            "e": nw.List(nw.Int32()),
+            "f": nw.Array(nw.String(), 4),
+            "g": nw.Struct({"x": nw.Int32()}),
         }
     )
 
 
 @pytest.fixture(scope="module")
 def schema_non_nested() -> nw.Schema:
-    return _schema(
+    return nw.Schema(
         {
             "abc": nw.UInt16(),
             "bbb": nw.UInt32(),
@@ -486,33 +482,32 @@ def test_selector_result_order(schema_non_nested: nw.Schema, selector: Selector)
     df.assert_selects(selector, "abc", "bbb", "cde", "def", "qqR")
 
 
-@XFAIL_NESTED_INNER_SELECTOR
-def test_selector_list(schema_nested_1: nw.Schema) -> None:  # pragma: no cover
+def test_selector_list(schema_nested_1: nw.Schema) -> None:
     df = Frame(schema_nested_1)
     df.assert_selects(ncs.list(), "b", "c", "e")
-
-    # NOTE: bug here
     df.assert_selects(ncs.list(inner=ncs.numeric()), "b", "c")
     df.assert_selects(ncs.list(inner=ncs.string()), "e")
 
-    # NOTE: Not implemented
+
+def test_selector_array(schema_nested_2: nw.Schema) -> None:
+    df = Frame(schema_nested_2)
+    df.assert_selects(ncs.array(), "b", "c", "d", "f")
+    df.assert_selects(ncs.array(size=4), "b", "c", "f")
+    df.assert_selects(ncs.array(inner=ncs.numeric()), "b", "c", "d")
+    df.assert_selects(ncs.array(inner=ncs.string()), "f")
+
+
+@XFAIL_DTYPE_SELECTOR
+def test_selector_non_dtype_inside_dtype(
+    schema_nested_2: nw.Schema,
+) -> None:  # pragma: no cover
+    df = Frame(schema_nested_2)
+
     with pytest.raises(
         TypeError, match=r"expected datatype based expression got.+by_name\("
     ):
         df.project_named_irs(ncs.list(inner=ncs.by_name("???")))
 
-
-@XFAIL_NESTED_INNER_SELECTOR
-def test_selector_array(schema_nested_2: nw.Schema) -> None:  # pragma: no cover
-    df = Frame(schema_nested_2)
-    df.assert_selects(ncs.array(), "b", "c", "d", "f")
-    df.assert_selects(ncs.array(size=4), "b", "c", "f")
-
-    # NOTE: bug here
-    df.assert_selects(ncs.array(inner=ncs.numeric()), "b", "c", "d")
-    df.assert_selects(ncs.array(inner=ncs.string()), "f")
-
-    # NOTE: Not implemented
     with pytest.raises(
         TypeError, match=r"expected datatype based expression got.+by_name\("
     ):

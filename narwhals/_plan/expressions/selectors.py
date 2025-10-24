@@ -218,7 +218,7 @@ class Array(DTypeSelector, dtype=_dtypes.Array):
     def matches_column(self, name: str, dtype: DType) -> bool:
         return (
             isinstance(dtype, _dtypes.Array)
-            and (not (self.inner) or self.inner.matches_column(name, dtype))
+            and (not (self.inner) or self.inner.matches_column(name, dtype.inner))  # type: ignore[arg-type]
             and (self.size is None or dtype.size == self.size)
         )
 
@@ -317,8 +317,8 @@ class List(DTypeSelector, dtype=_dtypes.List):
         return f"ncs.list({inner})"
 
     def matches_column(self, name: str, dtype: DType) -> bool:
-        return super().matches_column(name, dtype) and (
-            not (self.inner) or self.inner.matches_column(name, dtype)
+        return isinstance(dtype, _dtypes.List) and (
+            not (self.inner) or self.inner.matches_column(name, dtype.inner)  # type: ignore[arg-type]
         )
 
 
