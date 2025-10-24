@@ -179,7 +179,7 @@ def prepare_projection(
 def expand_selector_irs_names(
     selectors: Sequence[SelectorIR],
     /,
-    keys: GroupByKeys = (),
+    ignored: GroupByKeys = (),
     *,
     schema: IntoFrozenSchema,
 ) -> OutputNames:
@@ -190,11 +190,11 @@ def expand_selector_irs_names(
 
     Arguments:
         selectors: IRs that **only** contain subclasses of `SelectorIR`.
-        keys: Names of `group_by` columns.
+        ignored: Names of `group_by` columns.
         schema: Scope to expand multi-column selectors in.
     """
     frozen_schema = freeze_schema(schema)
-    names = tuple(_iter_expand_selector_names(selectors, keys, schema=frozen_schema))
+    names = tuple(_iter_expand_selector_names(selectors, ignored, schema=frozen_schema))
     return _ensure_valid_output_names(names, frozen_schema)
 
 
@@ -230,25 +230,19 @@ def _ensure_output_names_unique(exprs: Seq[ExprIR]) -> OutputNames:
     return names
 
 
-def _ensure_columns(expr: ExprIR, /) -> Columns:
-    if not isinstance(expr, Columns):
-        msg = f"Expected only column selections here, but got {expr!r}"
-        raise NotImplementedError(msg)
-    return expr
-
-
 def _iter_expand_selector_names(
-    selectors: Iterable[SelectorIR], /, keys: GroupByKeys = (), *, schema: FrozenSchema
+    selectors: Iterable[SelectorIR],
+    /,
+    ignored_selector_columns: Container[str] = (),
+    *,
+    schema: FrozenSchema,
 ) -> Iterator[str]:
-    for selector in selectors:
-        names = _ensure_columns(replace_selector(selector, schema=schema)).names
-        if keys:
-            yield from (name for name in names if name not in keys)
-        else:
-            yield from names
+    for s in selectors:
+        yield from s.into_columns(schema, ignored_selector_columns)
 
 
-def expand_selector_irs_new(
+# TODO @dangotbanned: Do something with this when removing `replace_selector`
+def _expand_selector_irs_new(
     selectors: Sequence[SelectorIR],
     /,
     ignored_selector_columns: Container[str] = (),
@@ -258,7 +252,7 @@ def expand_selector_irs_new(
     frozen_schema = freeze_schema(schema)
     expanded = tuple(
         chain.from_iterable(
-            expand_expression_rec_selector(
+            _expand_expression_rec_selector(
                 s, ignored_selector_columns, schema=frozen_schema
             )
             for s in selectors
@@ -272,7 +266,7 @@ def expand_selector_irs_new(
 
 # NOTE: Only the selector branch from this for now
 # https://github.com/pola-rs/polars/blob/5b90db75911c70010d0c0a6941046e6144af88d4/crates/polars-plan/src/plans/conversion/dsl_to_ir/expr_expansion.rs#L273-L276
-def expand_expression_rec_selector(
+def _expand_expression_rec_selector(
     expr: SelectorIR,
     ignored_selector_columns: Container[str] = (),
     /,

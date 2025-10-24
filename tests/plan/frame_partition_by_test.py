@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -117,15 +118,11 @@ def test_partition_by_multiple(
         assert_equal_data(df, expect)
 
 
-# TODO @dangotbanned: Stricter selectors
-@pytest.mark.xfail(
-    reason="TODO: Handle missing columns in `strict`/`require_all` selectors."
-)
-def test_partition_by_missing_names(data: Data) -> None:  # pragma: no cover
+def test_partition_by_missing_names(data: Data) -> None:
     df = dataframe(data)
-    with pytest.raises(ColumnNotFoundError, match=r"\"d\""):
+    with pytest.raises(ColumnNotFoundError, match=re.escape("not found: ['d']")):
         df.partition_by("d")
-    with pytest.raises(ColumnNotFoundError, match=r"\"e\""):
+    with pytest.raises(ColumnNotFoundError, match=re.escape("not found: ['e']")):
         df.partition_by("c", "e")
 
 
