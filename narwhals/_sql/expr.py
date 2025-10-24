@@ -470,6 +470,34 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
     def mean(self) -> Self:
         return self._with_callable(lambda expr: self._function("mean", expr))
 
+    def std(self, *, ddof: int) -> Self:
+        def func(expr: NativeExprT) -> NativeExprT:
+            if ddof == 0:
+                return self._function("stddev_pop", expr)
+            if ddof == 1:
+                return self._function("stddev_samp", expr)
+            n_samples = self._function("count", expr)
+            return op.mul(  # type: ignore[no-any-return]
+                self._function("stddev_samp", expr),
+                self._function("sqrt", (op.sub(n_samples, 1)) / op.sub(n_samples, ddof)),
+            )
+
+        return self._with_callable(func)
+
+    def var(self, *, ddof: int) -> Self:
+        def func(expr: NativeExprT) -> NativeExprT:
+            if ddof == 0:
+                return self._function("var_pop", expr)
+            if ddof == 1:
+                return self._function("var_samp", expr)
+            n_samples = self._function("count", expr)
+            return op.mul(  # type: ignore[no-any-return]
+                self._function("var_samp", expr),
+                op.sub(n_samples, 1) / op.sub(n_samples, ddof),
+            )
+
+        return self._with_callable(func)
+
     def median(self) -> Self:
         return self._with_callable(lambda expr: self._function("median", expr))
 
