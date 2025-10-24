@@ -40,6 +40,7 @@ from __future__ import annotations
 
 from collections import deque
 from functools import lru_cache
+from itertools import chain
 from typing import TYPE_CHECKING, Any
 
 from narwhals._plan import common, expressions as ir, meta
@@ -72,12 +73,13 @@ from narwhals._plan.schema import (
     IntoFrozenSchema,
     freeze_schema,
 )
+from narwhals._typing_compat import deprecated
 from narwhals._utils import check_column_names_are_unique
 from narwhals.dtypes import DType
 from narwhals.exceptions import ComputeError, InvalidOperationError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Sequence
+    from collections.abc import Container, Iterable, Iterator, Sequence
 
     from typing_extensions import TypeAlias
 
@@ -246,6 +248,41 @@ def _iter_expand_selector_names(
             yield from names
 
 
+def expand_selector_irs_new(
+    selectors: Sequence[SelectorIR],
+    /,
+    ignored_selector_columns: Container[str] = (),
+    *,
+    schema: IntoFrozenSchema,
+) -> tuple[Seq[ir.Column], OutputNames]:
+    frozen_schema = freeze_schema(schema)
+    expanded = tuple(
+        chain.from_iterable(
+            expand_expression_rec_selector(
+                s, ignored_selector_columns, schema=frozen_schema
+            )
+            for s in selectors
+        )
+    )
+    output_names = _ensure_valid_output_names(
+        tuple(e.name for e in expanded), frozen_schema
+    )
+    return expanded, output_names
+
+
+# NOTE: Only the selector branch from this for now
+# https://github.com/pola-rs/polars/blob/5b90db75911c70010d0c0a6941046e6144af88d4/crates/polars-plan/src/plans/conversion/dsl_to_ir/expr_expansion.rs#L273-L276
+def expand_expression_rec_selector(
+    expr: SelectorIR,
+    ignored_selector_columns: Container[str] = (),
+    /,
+    *,
+    schema: FrozenSchema,
+) -> Iterator[ir.Column]:
+    for name in expr.into_columns(schema, ignored_selector_columns):
+        yield ir.Column(name=name)
+
+
 # NOTE: Recursive for all `input` expressions which themselves contain `Seq[ExprIR]`
 def rewrite_projections(
     input: Seq[ExprIR], /, keys: GroupByKeys = (), *, schema: FrozenSchema
@@ -328,6 +365,9 @@ def replace_with_column(
     return origin.map_ir(fn)
 
 
+# NOTE: The other calls have `lru_cache` swallowing the warning
+# (`expand_selector`, `selector_matches_column`)
+@deprecated("Use `matches` or `into_columns` instead")
 def replace_selector(ir: ExprIR, /, *, schema: FrozenSchema) -> ExprIR:
     def fn(child: ExprIR, /) -> ExprIR:
         return expand_selector(child, schema) if isinstance(child, SelectorIR) else child

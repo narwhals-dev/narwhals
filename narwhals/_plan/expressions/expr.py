@@ -28,6 +28,8 @@ from narwhals._plan.typing import (
 from narwhals.exceptions import InvalidOperationError
 
 if t.TYPE_CHECKING:
+    from collections.abc import Container, Iterable, Iterator
+
     from typing_extensions import Self
 
     from narwhals._plan.compliant.typing import Ctx, FrameT_contra, R_co
@@ -35,6 +37,7 @@ if t.TYPE_CHECKING:
     from narwhals._plan.expressions.literal import LiteralValue
     from narwhals._plan.expressions.window import Window
     from narwhals._plan.options import FunctionOptions, SortMultipleOptions, SortOptions
+    from narwhals._plan.schema import FrozenSchema
     from narwhals.dtypes import DType
 
 __all__ = [
@@ -479,6 +482,14 @@ class RootSelector(SelectorIR):
     def __repr__(self) -> str:
         return f"{self.selector!r}"
 
+    def into_columns(
+        self, schema: FrozenSchema, ignored_columns: Container[str]
+    ) -> Iterator[str]:
+        yield from self.selector.into_columns(schema, ignored_columns)
+
+    def matches(self, dtype: DType) -> bool:
+        return self.selector.to_dtype_selector().matches(dtype)
+
     def matches_column(self, name: str, dtype: DType) -> bool:
         return self.selector.matches_column(name, dtype)
 
@@ -492,6 +503,31 @@ class BinarySelector(
     t.Generic[LeftSelectorT, SelectorOperatorT, RightSelectorT],
 ):
     """Application of two selector exprs via a set operator."""
+
+    def into_columns(
+        self, schema: FrozenSchema, ignored_columns: Container[str]
+    ) -> Iterator[str]:
+        # by_name, by_index (upstream) lose their ability to reorder when used as a binary op
+        # (As designed) https://github.com/pola-rs/polars/issues/19384
+        names = schema.names
+        left = frozenset(self.left.into_columns(schema, ignored_columns))
+        right = frozenset(self.right.into_columns(schema, ignored_columns))
+        remaining: frozenset[str] = self.op(left, right)
+        target: Iterable[str]
+        if remaining:
+            target = (
+                names
+                if len(remaining) == len(names)
+                else (nm for nm in names if nm in remaining)
+            )
+        else:
+            target = ()
+        yield from target
+
+    def matches(self, dtype: DType) -> bool:
+        left = self.left.matches(dtype)
+        right = self.right.matches(dtype)
+        return bool(self.op(left, right))
 
     def matches_column(self, name: str, dtype: DType) -> bool:
         left = self.left.matches_column(name, dtype)
@@ -510,6 +546,28 @@ class InvertSelector(SelectorIR, t.Generic[SelectorT]):
 
     def __repr__(self) -> str:
         return f"~{self.selector!r}"
+
+    def into_columns(
+        self, schema: FrozenSchema, ignored_columns: Container[str]
+    ) -> Iterator[str]:
+        # by_name, by_index (upstream) lose their ability to reorder when used as a binary op
+        # that includes invert, which is implemented as Difference(All, Selector)
+        # (As designed) https://github.com/pola-rs/polars/issues/19384
+        names = schema.names
+        ignore = frozenset(self.selector.into_columns(schema, ignored_columns))
+        target: Iterable[str]
+        if ignore:
+            target = (
+                ()
+                if len(ignore) == len(names)
+                else (nm for nm in names if nm not in ignore)
+            )
+        else:
+            target = names
+        yield from target
+
+    def matches(self, dtype: DType) -> bool:
+        return not self.selector.to_dtype_selector().matches(dtype)
 
     def matches_column(self, name: str, dtype: DType) -> bool:
         return not self.selector.matches_column(name, dtype)

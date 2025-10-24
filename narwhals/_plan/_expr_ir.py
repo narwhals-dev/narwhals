@@ -8,11 +8,12 @@ from narwhals._plan._immutable import Immutable
 from narwhals._plan.common import replace
 from narwhals._plan.options import ExprIROptions
 from narwhals._plan.typing import ExprIRT
+from narwhals._typing_compat import deprecated
 from narwhals.exceptions import InvalidOperationError
 from narwhals.utils import Version
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Container, Iterator
     from typing import Any, ClassVar
 
     from typing_extensions import Self
@@ -21,6 +22,7 @@ if TYPE_CHECKING:
     from narwhals._plan.expr import Expr
     from narwhals._plan.expressions.expr import Alias, Cast, Column
     from narwhals._plan.meta import MetaNamespace
+    from narwhals._plan.schema import FrozenSchema
     from narwhals._plan.selectors import Selector
     from narwhals._plan.typing import ExprIRT2, MapIR, Seq
     from narwhals.dtypes import DType
@@ -198,6 +200,17 @@ class SelectorIR(ExprIR, config=ExprIROptions.no_dispatch()):
             return Selector._from_ir(self)
         return SelectorV1._from_ir(self)
 
+    def into_columns(
+        self, schema: FrozenSchema, ignored_columns: Container[str]
+    ) -> Iterator[str]:
+        msg = f"{type(self).__name__}.into_columns"
+        raise NotImplementedError(msg)
+
+    def matches(self, dtype: DType) -> bool:
+        msg = f"{type(self).__name__}.matches"
+        raise NotImplementedError(msg)
+
+    @deprecated("Use `matches` or `into_columns` instead")
     def matches_column(self, name: str, dtype: DType) -> bool:
         """Return True if we can select this column.
 
@@ -208,7 +221,7 @@ class SelectorIR(ExprIR, config=ExprIROptions.no_dispatch()):
         raise NotImplementedError(type(self))
 
     def to_dtype_selector(self) -> Self:
-        msg = f"{self.to_dtype_selector.__qualname__!r}"
+        msg = f"{type(self).__name__}.to_dtype_selector"
         raise NotImplementedError(msg)
 
     def to_selector_ir(self) -> Self:
