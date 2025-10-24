@@ -632,5 +632,5 @@ jobs:
           --with matplotlib \
           --with pytest \
           --with typing-extensions \
-          --with "./..[polars,pyarrow]"" \
-          pytest test/unit -m narwhals
+          --with "./..[polars,pyarrow]" \
+          pytest test/unit -m "narwhals"
