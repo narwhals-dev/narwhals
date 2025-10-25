@@ -413,21 +413,48 @@ def expand_expression_by_combination_s(
     schema: FrozenSchema,
     replace_in_origin: Callable[[Children], Origin],
 ) -> Iterator[Origin]:
+    expanded = deque[ExprIR]()
     # Expand expressions until we find one that expands to more than 1 expression.
-    # ...
+    expansion_size: int = 0
+    continue_at: int = 0
+    for i, child in enumerate(children):
+        it_expanding_child = expand_expression_rec_s(child, ignored, schema)
+        grandchildren = tuple(it_expanding_child)
+        n_grandchildren = len(grandchildren)
+        if n_grandchildren != 1:
+            expansion_size = n_grandchildren
+            expanded.extend(grandchildren)
+            continue_at = i + 1
+            break
+        else:
+            expanded.append(grandchildren[0])
 
     # Check if all expressions expanded to 1 expression.
-    # ...
+    # This case already works correctly
+    if expansion_size == 0:
+        yield replace_in_origin(tuple(expanded))
+        return
 
     # Now do the remaining expression, and check if they match the size of the original expansion
     # (or 1)
-    # ...
+    for child in children[continue_at:]:
+        it_expanding_child = expand_expression_rec_s(child, ignored, schema)
+        grandchildren = tuple(it_expanding_child)
+        n_grandchildren = len(grandchildren)
+        if n_grandchildren not in {1, expansion_size}:
+            # NOTE: Unclear on the intended goal
+            # Raised https://github.com/pola-rs/polars/issues/25022
+            msg = f"cannot combine selectors that produce a different number of columns ({n_grandchildren} != {expansion_size})"
+            raise InvalidOperationError(msg)
+        expanded.extend(grandchildren)
 
     # Create actual output expressions.
-    # ...
-
-    msg = f"TODO: `expand_expression_by_combination`\n{replace_in_origin!r}\n{children!r}"
+    # TODO @dangotbanned: Fix this, it is silently dropping anything that expanded beyond the length
+    # of the `origin` constructor
+    msg = "TODO: Mixed expansion `expand_expression_by_combination`."
     raise NotImplementedError(msg)
+    # The size/len/indices that polars is tracking are into `out`, to map back onto each expansion
+    yield replace_in_origin(tuple(expanded))
 
 
 def _expand_nested_nodes(origin: ExprIR, /, *, schema: FrozenSchema) -> ExprIR:
