@@ -173,9 +173,8 @@ class SparkLikeNamespace(
         self, *exprs: SparkLikeExpr, separator: str, ignore_nulls: bool
     ) -> SparkLikeExpr:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
-            String = self._version.dtypes.String()  # noqa: N806
             F = self._F
-            cols = tuple(chain.from_iterable(e.cast(String)(df) for e in exprs))
+            cols = tuple(chain.from_iterable(e(df) for e in exprs))
             result = F.concat_ws(separator, *cols)
 
             if not ignore_nulls:
