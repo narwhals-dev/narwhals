@@ -411,10 +411,10 @@ def expand_expression_rec_s(
 
 
 def expand_single_s(
-    child: ExprIR,
+    child: Child,
     ignored: Ignored,
     schema: FrozenSchema,
-    replace_in_origin: Callable[[ExprIR], Origin],
+    replace_in_origin: Callable[[Child], Origin],
 ) -> Iterator[Origin]:
     # Before: `expand_expression_rec`
     # Current: `expand_single`
