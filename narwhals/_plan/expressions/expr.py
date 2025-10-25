@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-# NOTE: Needed to avoid naming collisions
-# - Literal
 import typing as t
+from collections.abc import Callable
 
 from narwhals._plan._expr_ir import ExprIR, SelectorIR
-from narwhals._plan.common import flatten_hash_safe
+from narwhals._plan.common import flatten_hash_safe, replace
 from narwhals._plan.exceptions import function_expr_invalid_operation_error
 from narwhals._plan.expressions import selectors as cs
 from narwhals._plan.options import ExprIROptions
@@ -28,13 +27,16 @@ from narwhals._plan.typing import (
 from narwhals.exceptions import InvalidOperationError
 
 if t.TYPE_CHECKING:
-    from typing_extensions import Self
+    from collections.abc import Container, Iterable, Iterator
+
+    from typing_extensions import Self, TypeAlias
 
     from narwhals._plan.compliant.typing import Ctx, FrameT_contra, R_co
     from narwhals._plan.expressions.functions import MapBatches  # noqa: F401
     from narwhals._plan.expressions.literal import LiteralValue
     from narwhals._plan.expressions.window import Window
     from narwhals._plan.options import FunctionOptions, SortMultipleOptions, SortOptions
+    from narwhals._plan.schema import FrozenSchema
     from narwhals.dtypes import DType
 
 __all__ = [
@@ -63,19 +65,32 @@ __all__ = [
     "col",
 ]
 
+CovariantReplace: TypeAlias = t.Any
+"""Working around an [unresolved] `__replace__` [issue] in the typing spec.
+
+[unresolved]: https://github.com/python/mypy/issues/17623#issuecomment-2266312738
+[issue]: https://discuss.python.org/t/make-replace-stop-interfering-with-variance-inference/96092
+"""
+
+Children: TypeAlias = Seq[ExprIR]
+FnExpand: TypeAlias = Callable[[Children], ExprIR]
+
 
 def col(name: str, /) -> Column:
     return Column(name=name)
 
 
+# TODO @dangotbanned: Scheduled to be removed, not needed with new selectors
 def cols(*names: str) -> Columns:
     return Columns(names=names)
 
 
+# TODO @dangotbanned: Scheduled to be removed, not needed with new selectors
 def nth(index: int, /) -> Nth:
     return Nth(index=index)
 
 
+# TODO @dangotbanned: Scheduled to be removed, not needed with new selectors
 def index_columns(*indices: int) -> IndexColumns:
     return IndexColumns(indices=indices)
 
@@ -104,10 +119,12 @@ class Column(ExprIR, config=ExprIROptions.namespaced("col")):
         return cs.ByName.from_name(self.name).to_selector_ir()
 
 
+# TODO @dangotbanned: Scheduled to be removed, not needed with new selectors
 class _ColumnSelection(ExprIR, config=ExprIROptions.no_dispatch()):
     """Nodes which can resolve to `Column`(s) with a `Schema`."""
 
 
+# TODO @dangotbanned: Scheduled to be removed, not needed with new selectors
 class Columns(_ColumnSelection):
     __slots__ = ("names",)
     names: Seq[str]
@@ -119,7 +136,7 @@ class Columns(_ColumnSelection):
         return cs.ByName.from_names(*self.names).to_selector_ir()
 
 
-# TODO @dangotbanned: Add `selectors.by_index`
+# TODO @dangotbanned: Scheduled to be removed, not needed with new selectors
 class Nth(_ColumnSelection):
     __slots__ = ("index",)
     index: int
@@ -127,8 +144,11 @@ class Nth(_ColumnSelection):
     def __repr__(self) -> str:
         return f"nth({self.index})"
 
+    def to_selector_ir(self) -> RootSelector:
+        return cs.ByIndex.from_index(self.index).to_selector_ir()
 
-# TODO @dangotbanned: Add `selectors.by_index`
+
+# TODO @dangotbanned: Scheduled to be removed, not needed with new selectors
 class IndexColumns(_ColumnSelection):
     __slots__ = ("indices",)
     indices: Seq[int]
@@ -136,7 +156,11 @@ class IndexColumns(_ColumnSelection):
     def __repr__(self) -> str:
         return f"index_columns({self.indices!r})"
 
+    def to_selector_ir(self) -> RootSelector:
+        return cs.ByIndex.from_indices(self.indices).to_selector_ir()
 
+
+# TODO @dangotbanned: Scheduled to be removed, not needed with new selectors
 class All(_ColumnSelection):
     def __repr__(self) -> str:
         return "all()"
@@ -145,7 +169,7 @@ class All(_ColumnSelection):
         return cs.All().to_selector_ir()
 
 
-# TODO @dangotbanned: Add `selectors.exclude`
+# TODO @dangotbanned: Scheduled to be removed, not needed with new selectors
 class Exclude(_ColumnSelection, child=("expr",)):
     __slots__ = ("expr", "names")
     expr: ExprIR
@@ -210,6 +234,15 @@ class BinaryExpr(
     def iter_output_name(self) -> t.Iterator[ExprIR]:
         yield from self.left.iter_output_name()
 
+    def _into_expand(self) -> tuple[Children, FnExpand]:
+        replacer: CovariantReplace = self.__replace__
+        children = self.left, self.right
+
+        def fn(exprs: Children, /) -> BinaryExpr:
+            return replacer(left=exprs[0], right=exprs[1])
+
+        return children, fn
+
 
 class Cast(ExprIR, child=("expr",)):
     __slots__ = ("expr", "dtype")  # noqa: RUF023
@@ -261,6 +294,15 @@ class SortBy(ExprIR, child=("expr", "by")):
 
     def iter_output_name(self) -> t.Iterator[ExprIR]:
         yield from self.expr.iter_output_name()
+
+    def _into_expand(self) -> tuple[Children, FnExpand]:
+        replacer: CovariantReplace = self.__replace__
+        children = (self.expr, *self.by)
+
+        def fn(exprs: Children, /) -> SortBy:
+            return replacer(expr=exprs[0], by=exprs[1:])
+
+        return children, fn
 
 
 # mypy: disable-error-code="misc"
@@ -389,6 +431,15 @@ class Filter(ExprIR, child=("expr", "by")):
     def iter_output_name(self) -> t.Iterator[ExprIR]:
         yield from self.expr.iter_output_name()
 
+    def _into_expand(self) -> tuple[Children, FnExpand]:
+        replacer: CovariantReplace = self.__replace__
+        children = (self.expr, self.by)
+
+        def fn(exprs: Children, /) -> Filter:
+            return replacer(expr=exprs[0], by=exprs[1])
+
+        return children, fn
+
 
 class WindowExpr(
     ExprIR, child=("expr", "partition_by"), config=ExprIROptions.renamed("over")
@@ -412,6 +463,15 @@ class WindowExpr(
 
     def iter_output_name(self) -> t.Iterator[ExprIR]:
         yield from self.expr.iter_output_name()
+
+    def _into_expand(self) -> tuple[Children, FnExpand]:
+        replacer: CovariantReplace = self.__replace__
+        children = (self.expr, *self.partition_by)
+
+        def fn(exprs: Children, /) -> WindowExpr:
+            return replacer(expr=exprs[0], partition_by=exprs[1:])
+
+        return children, fn
 
 
 class OrderedWindowExpr(
@@ -444,6 +504,26 @@ class OrderedWindowExpr(
             yield from e.iter_left()
         yield self
 
+    def _into_expand(self) -> tuple[Children, FnExpand]:
+        replacer: CovariantReplace = self.__replace__
+        children = (self.expr, *self.partition_by, *self.order_by)
+
+        if self.partition_by:
+            end_partitions = len(self.partition_by) + 1
+
+            def fn(exprs: Children, /) -> OrderedWindowExpr:
+                return replacer(
+                    expr=exprs[0],
+                    partition_by=exprs[1:end_partitions],
+                    order_by=exprs[end_partitions:],
+                )
+        else:
+
+            def fn(exprs: Children, /) -> OrderedWindowExpr:
+                return replacer(expr=exprs[0], order_by=exprs[1:])
+
+        return children, fn
+
 
 class Len(ExprIR, config=ExprIROptions.namespaced()):
     @property
@@ -467,8 +547,19 @@ class RootSelector(SelectorIR):
     def __repr__(self) -> str:
         return f"{self.selector!r}"
 
+    def into_columns(
+        self, schema: FrozenSchema, ignored_columns: Container[str]
+    ) -> Iterator[str]:
+        yield from self.selector.into_columns(schema, ignored_columns)
+
+    def matches(self, dtype: DType) -> bool:
+        return self.selector.to_dtype_selector().matches(dtype)
+
     def matches_column(self, name: str, dtype: DType) -> bool:
         return self.selector.matches_column(name, dtype)
+
+    def to_dtype_selector(self) -> Self:
+        return replace(self, selector=self.selector.to_dtype_selector())
 
 
 class BinarySelector(
@@ -478,10 +569,40 @@ class BinarySelector(
 ):
     """Application of two selector exprs via a set operator."""
 
+    def into_columns(
+        self, schema: FrozenSchema, ignored_columns: Container[str]
+    ) -> Iterator[str]:
+        # by_name, by_index (upstream) lose their ability to reorder when used as a binary op
+        # (As designed) https://github.com/pola-rs/polars/issues/19384
+        names = schema.names
+        left = frozenset(self.left.into_columns(schema, ignored_columns))
+        right = frozenset(self.right.into_columns(schema, ignored_columns))
+        remaining: frozenset[str] = self.op(left, right)
+        target: Iterable[str]
+        if remaining:
+            target = (
+                names
+                if len(remaining) == len(names)
+                else (nm for nm in names if nm in remaining)
+            )
+        else:
+            target = ()
+        yield from target
+
+    def matches(self, dtype: DType) -> bool:
+        left = self.left.matches(dtype)
+        right = self.right.matches(dtype)
+        return bool(self.op(left, right))
+
     def matches_column(self, name: str, dtype: DType) -> bool:
         left = self.left.matches_column(name, dtype)
         right = self.right.matches_column(name, dtype)
         return bool(self.op(left, right))
+
+    def to_dtype_selector(self) -> Self:
+        return replace(
+            self, left=self.left.to_dtype_selector(), right=self.right.to_dtype_selector()
+        )
 
 
 class InvertSelector(SelectorIR, t.Generic[SelectorT]):
@@ -491,8 +612,33 @@ class InvertSelector(SelectorIR, t.Generic[SelectorT]):
     def __repr__(self) -> str:
         return f"~{self.selector!r}"
 
+    def into_columns(
+        self, schema: FrozenSchema, ignored_columns: Container[str]
+    ) -> Iterator[str]:
+        # by_name, by_index (upstream) lose their ability to reorder when used as a binary op
+        # that includes invert, which is implemented as Difference(All, Selector)
+        # (As designed) https://github.com/pola-rs/polars/issues/19384
+        names = schema.names
+        ignore = frozenset(self.selector.into_columns(schema, ignored_columns))
+        target: Iterable[str]
+        if ignore:
+            target = (
+                ()
+                if len(ignore) == len(names)
+                else (nm for nm in names if nm not in ignore)
+            )
+        else:
+            target = names
+        yield from target
+
+    def matches(self, dtype: DType) -> bool:
+        return not self.selector.to_dtype_selector().matches(dtype)
+
     def matches_column(self, name: str, dtype: DType) -> bool:
         return not self.selector.matches_column(name, dtype)
+
+    def to_dtype_selector(self) -> Self:
+        return replace(self, selector=self.selector.to_dtype_selector())
 
 
 class TernaryExpr(ExprIR, child=("truthy", "falsy", "predicate")):
@@ -514,3 +660,12 @@ class TernaryExpr(ExprIR, child=("truthy", "falsy", "predicate")):
 
     def iter_output_name(self) -> t.Iterator[ExprIR]:
         yield from self.truthy.iter_output_name()
+
+    def _into_expand(self) -> tuple[Children, FnExpand]:
+        replacer: CovariantReplace = self.__replace__
+        children = (self.predicate, self.truthy, self.falsy)
+
+        def fn(exprs: Children, /) -> TernaryExpr:
+            return replacer(predicate=exprs[0], truthy=exprs[1], falsy=exprs[2])
+
+        return children, fn

@@ -20,7 +20,7 @@ from narwhals.utils import Version
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
 
-    from narwhals._plan import expr
+    from narwhals._plan import Selector
 
 
 class MetaNamespace(IRNamespace):
@@ -77,7 +77,7 @@ class MetaNamespace(IRNamespace):
         """Get the root column names."""
         return list(_expr_to_leaf_column_names_iter(self._ir))
 
-    def as_selector(self) -> expr.Selector:
+    def as_selector(self) -> Selector:
         """Try to turn this expression into a selector.
 
         Raises if the underlying expressions is not a column or selector.

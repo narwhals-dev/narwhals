@@ -11,9 +11,10 @@ from narwhals._utils import _hasattr_static
 if TYPE_CHECKING:
     from typing_extensions import TypeIs
 
-    from narwhals._plan import expr, expressions as ir
+    from narwhals._plan import expressions as ir
     from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._plan.expr import Expr
+    from narwhals._plan.selectors import Selector
     from narwhals._plan.series import Series
     from narwhals._plan.typing import (
         ColumnNameOrSelector,
@@ -49,6 +50,12 @@ def _expr(*_: Any):  # type: ignore[no-untyped-def]  # noqa: ANN202
     return expr
 
 
+def _selectors(*_: Any):  # type: ignore[no-untyped-def]  # noqa: ANN202
+    from narwhals._plan import selectors
+
+    return selectors
+
+
 def _series(*_: Any):  # type: ignore[no-untyped-def]  # noqa: ANN202
     from narwhals._plan import series
 
@@ -63,8 +70,8 @@ def is_expr(obj: Any) -> TypeIs[Expr]:
     return isinstance(obj, _expr().Expr)
 
 
-def is_selector(obj: Any) -> TypeIs[expr.Selector]:
-    return isinstance(obj, _expr().Selector)
+def is_selector(obj: Any) -> TypeIs[Selector]:
+    return isinstance(obj, _selectors().Selector)
 
 
 def is_column(obj: Any) -> TypeIs[Expr]:
@@ -83,7 +90,7 @@ def is_into_expr_column(obj: Any) -> TypeIs[IntoExprColumn]:
 def is_column_name_or_selector(
     obj: Any, *, allow_expr: bool = False
 ) -> TypeIs[ColumnNameOrSelector]:
-    tps = (str, _expr().Selector) if not allow_expr else (str, _expr().Expr)
+    tps = (str, _selectors().Selector) if not allow_expr else (str, _expr().Expr)
     return isinstance(obj, tps)
 
 
