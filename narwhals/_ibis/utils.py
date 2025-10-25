@@ -53,34 +53,9 @@ desc_nulls_first = cast("SortFn", partial(ibis.desc, nulls_first=True))
 desc_nulls_last = cast("SortFn", partial(ibis.desc, nulls_first=False))
 
 
-BucketUnit: TypeAlias = Literal[
-    "years",
-    "quarters",
-    "months",
-    "days",
-    "hours",
-    "minutes",
-    "seconds",
-    "milliseconds",
-    "microseconds",
-    "nanoseconds",
-]
 TruncateUnit: TypeAlias = Literal[
     "Y", "Q", "M", "W", "D", "h", "m", "s", "ms", "us", "ns"
 ]
-
-UNITS_DICT_BUCKET: Mapping[IntervalUnit, BucketUnit] = {
-    "y": "years",
-    "q": "quarters",
-    "mo": "months",
-    "d": "days",
-    "h": "hours",
-    "m": "minutes",
-    "s": "seconds",
-    "ms": "milliseconds",
-    "us": "microseconds",
-    "ns": "nanoseconds",
-}
 
 UNITS_DICT_TRUNCATE: Mapping[IntervalUnit, TruncateUnit] = {
     "y": "Y",
@@ -277,4 +252,6 @@ def function(name: str, *args: ir.Value | PythonLiteral) -> ir.Value:
     if name == "substr":
         # Ibis is 0-indexed here, SQL is 1-indexed
         return cast("ir.StringColumn", expr).substr(args[1] - 1, *args[2:])  # type: ignore[operator]  # pyright: ignore[reportArgumentType]
+    if name == "date_trunc":
+        return cast("ir.TimestampColumn", args[1]).truncate(args[0])  # pyright: ignore[reportArgumentType]
     return getattr(expr, FUNCTION_REMAPPING.get(name, name))(*args[1:])

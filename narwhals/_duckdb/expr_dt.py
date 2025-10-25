@@ -74,23 +74,6 @@ class DuckDBExprDateTimeNamespace(SQLExprDateTimeNamesSpace["DuckDBExpr"]):
             + F("datepart", lit("microsecond"), expr)
         )
 
-    def truncate(self, every: str) -> DuckDBExpr:
-        interval = Interval.parse(every)
-        multiple, unit = interval.multiple, interval.unit
-        if multiple != 1:
-            # https://github.com/duckdb/duckdb/issues/17554
-            msg = f"Only multiple 1 is currently supported for DuckDB.\nGot {multiple!s}."
-            raise ValueError(msg)
-        if unit == "ns":
-            msg = "Truncating to nanoseconds is not yet supported for DuckDB."
-            raise NotImplementedError(msg)
-        format = lit(UNITS_DICT[unit])
-
-        def _truncate(expr: Expression) -> Expression:
-            return F("date_trunc", format, expr)
-
-        return self.compliant._with_elementwise(_truncate)
-
     def offset_by(self, by: str) -> DuckDBExpr:
         interval = Interval.parse_no_constraints(by)
         format = lit(f"{interval.multiple!s} {UNITS_DICT[interval.unit]}")

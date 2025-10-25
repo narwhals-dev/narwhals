@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import operator
 from functools import reduce
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from narwhals._expression_parsing import (
     combine_alias_output_names,
@@ -43,6 +43,19 @@ FUNCTION_REMAPPINGS = {
 class SparkLikeNamespace(
     SQLNamespace[SparkLikeLazyFrame, SparkLikeExpr, "SQLFrameDataFrame", "Column"]
 ):
+    UNITS_DICT: ClassVar = {
+        "y": "year",
+        "q": "quarter",
+        "mo": "month",
+        "d": "day",
+        "h": "hour",
+        "m": "minute",
+        "s": "second",
+        "ms": "millisecond",
+        "us": "microsecond",
+        "ns": "nanosecond",
+    }
+
     def __init__(self, *, version: Version, implementation: Implementation) -> None:
         self._version = version
         self._implementation = implementation

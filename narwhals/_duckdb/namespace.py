@@ -3,7 +3,7 @@ from __future__ import annotations
 import operator
 from functools import reduce
 from itertools import chain
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import duckdb
 from duckdb import CoalesceOperator, Expression
@@ -44,6 +44,18 @@ class DuckDBNamespace(
     SQLNamespace[DuckDBLazyFrame, DuckDBExpr, "DuckDBPyRelation", Expression]
 ):
     _implementation: Implementation = Implementation.DUCKDB
+    UNITS_DICT: ClassVar = {
+        "y": lit("year"),
+        "q": lit("quarter"),
+        "mo": lit("month"),
+        "d": lit("day"),
+        "h": lit("hour"),
+        "m": lit("minute"),
+        "s": lit("second"),
+        "ms": lit("millisecond"),
+        "us": lit("microsecond"),
+        "ns": lit("nanosecond"),
+    }
 
     def __init__(self, *, version: Version) -> None:
         self._version = version
