@@ -3,12 +3,13 @@ from __future__ import annotations
 import pytest
 
 import narwhals as nw
+from narwhals.exceptions import InvalidOperationError
 from tests.utils import PYARROW_VERSION, ConstructorEager, assert_equal_data
 
 data = {"a": ["one", "two", "two"]}
 
 
-def test_get_categories(constructor_eager: ConstructorEager) -> None:
+def test_get_categories_eager(constructor_eager: ConstructorEager) -> None:
     if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (15, 0, 0):
         pytest.skip()
 
@@ -21,6 +22,21 @@ def test_get_categories(constructor_eager: ConstructorEager) -> None:
 
     result_series = df["a"].cat.get_categories()
     assert_equal_data({"a": result_series}, expected)
+
+
+def test_get_categories_lazy(constructor_eager: ConstructorEager) -> None:
+    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (15, 0, 0):
+        pytest.skip()
+
+    df = nw.from_native(constructor_eager(data)).lazy()
+    expr = nw.col("a").cast(nw.Categorical).cat.get_categories()
+    msg = "Length-changing expressions are not supported for use in LazyFrame"
+    with pytest.raises(InvalidOperationError, match=msg):
+        df.select(expr).collect()
+
+    result = df.select(expr.min())
+    expected = {"a": ["one"]}
+    assert_equal_data(result, expected)
 
 
 def test_get_categories_pyarrow() -> None:
