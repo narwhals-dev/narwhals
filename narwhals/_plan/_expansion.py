@@ -39,6 +39,7 @@ Their dependencies are **quite** complex, with the main ones being:
 from __future__ import annotations
 
 from collections import deque
+from collections.abc import Container
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any, Protocol
 
@@ -72,17 +73,17 @@ from narwhals._plan.schema import (
     IntoFrozenSchema,
     freeze_schema,
 )
+from narwhals._plan.typing import Seq
 from narwhals._typing_compat import TypeVar, deprecated
 from narwhals._utils import check_column_names_are_unique
 from narwhals.dtypes import DType
 from narwhals.exceptions import ComputeError, InvalidOperationError
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Container, Iterable, Iterator, Sequence
+    from collections.abc import Callable, Iterable, Iterator, Sequence
 
     from typing_extensions import Self, TypeAlias
 
-    from narwhals._plan.typing import Seq
     from narwhals.dtypes import DType
 
 
@@ -97,6 +98,13 @@ They need to be excluded from expansion.
 
 OutputNames: TypeAlias = "Seq[str]"
 """Fully expanded, validated output column names, for `NamedIR`s."""
+
+
+Ignored: TypeAlias = Container[str]
+"""Ignored `Selector` column names.
+
+Usually names resolved from `group_by(*keys)`.
+"""
 
 
 class ExpansionFlags(Immutable):
@@ -176,16 +184,10 @@ def prepare_projection(
 
 
 def prepare_projection_s(
-    exprs: Sequence[ExprIR],
-    /,
-    ignored_selector_columns: Container[str] = (),
-    *,
-    schema: IntoFrozenSchema,
+    exprs: Sequence[ExprIR], /, ignored: Ignored = (), *, schema: IntoFrozenSchema
 ) -> tuple[Seq[NamedIR], FrozenSchema]:
     frozen_schema = freeze_schema(schema)
-    rewritten = rewrite_projections_s(
-        tuple(exprs), ignored_selector_columns, schema=frozen_schema
-    )
+    rewritten = rewrite_projections_s(tuple(exprs), ignored, schema=frozen_schema)
 
     # TODO @dangotbanned: Plan when to rewrite aliases
     # This will raise because renaming happens at a different level than before
@@ -195,11 +197,7 @@ def prepare_projection_s(
 
 
 def expand_selector_irs_names(
-    selectors: Sequence[SelectorIR],
-    /,
-    ignored: GroupByKeys = (),
-    *,
-    schema: IntoFrozenSchema,
+    selectors: Sequence[SelectorIR], /, ignored: Ignored = (), *, schema: IntoFrozenSchema
 ) -> OutputNames:
     """Expand selector-only input into the column names that match.
 
@@ -249,14 +247,10 @@ def _ensure_output_names_unique(exprs: Seq[ExprIR]) -> OutputNames:
 
 
 def _iter_expand_selector_names(
-    selectors: Iterable[SelectorIR],
-    /,
-    ignored_selector_columns: Container[str] = (),
-    *,
-    schema: FrozenSchema,
+    selectors: Iterable[SelectorIR], /, ignored: Ignored = (), *, schema: FrozenSchema
 ) -> Iterator[str]:
     for s in selectors:
-        yield from s.into_columns(schema, ignored_selector_columns)
+        yield from s.into_columns(schema, ignored)
 
 
 # NOTE: Recursive for all `input` expressions which themselves contain `Seq[ExprIR]`
@@ -275,29 +269,30 @@ def rewrite_projections(
 
 
 def rewrite_projections_s(
-    input: Seq[ExprIR],
-    /,
-    ignored_selector_columns: Container[str],
-    *,
-    schema: FrozenSchema,
+    input: Seq[ExprIR], /, ignored: Ignored, *, schema: FrozenSchema
 ) -> Seq[ExprIR]:
     result: deque[ExprIR] = deque()
     for expr in input:
-        result.extend(expand_expression_s(expr, ignored_selector_columns, schema))
+        result.extend(expand_expression_s(expr, ignored, schema))
     return tuple(result)
 
 
+# TODO @dangotbanned: Remove the `ir._ColumnSelection` branch when they're gone
+# Pretty much a temp reminder for me to **not** use `col("a", "b")` on this path *yet*
 def needs_expansion_s(expr: ExprIR) -> bool:
+    if any(isinstance(e, ir._ColumnSelection) for e in expr.iter_left()):
+        msg = f"Cannot use non-`Selector` column selections here, got: `{expr!r}`.\n\nHint: instead try `{expr!r}.meta.as_selector()`."
+        raise TypeError(msg)
     return any(isinstance(e, ir.SelectorIR) for e in expr.iter_left())
 
 
 def expand_expression_s(
-    expr: ExprIR, ignored_selector_columns: Container[str], schema: FrozenSchema, /
+    expr: ExprIR, ignored: Ignored, schema: FrozenSchema, /
 ) -> Iterator[ExprIR]:
     if all(not needs_expansion_s(e) for e in expr.iter_left()):
         yield expr
     else:
-        yield from expand_expression_rec_s(expr, ignored_selector_columns, schema)
+        yield from expand_expression_rec_s(expr, ignored, schema)
 
 
 class CanExpandSingle(Protocol):
@@ -308,6 +303,7 @@ class CanExpandSingle(Protocol):
 
 CanExpandSingleT = TypeVar("CanExpandSingleT", bound=CanExpandSingle)
 Origin = TypeVar("Origin", bound=ExprIR)
+Children: TypeAlias = Seq[ExprIR]
 Incomplete: TypeAlias = Any
 """Review what these guys should return"""
 
@@ -342,7 +338,7 @@ def _replace_single(origin: CanExpandSingleT, /) -> Callable[[ExprIR], CanExpand
 
 
 def expand_expression_rec_s(
-    expr: ExprIR, ignored_selector_columns: Container[str], schema: FrozenSchema, /
+    expr: ExprIR, ignored: Ignored, schema: FrozenSchema, /
 ) -> Iterator[ExprIR]:
     # https://github.com/pola-rs/polars/blob/5b90db75911c70010d0c0a6941046e6144af88d4/crates/polars-plan/src/plans/conversion/dsl_to_ir/expr_expansion.rs#L253-L850
 
@@ -352,10 +348,9 @@ def expand_expression_rec_s(
 
     # selectors, handled internally
     elif isinstance(expr, ir.SelectorIR):
-        for name in expr.into_columns(schema, ignored_selector_columns):
+        for name in expr.into_columns(schema, ignored):
             yield ir.Column(name=name)
 
-    # NOTE: I'm not convinced this terminates
     # `expand_single`, all stored in `self.expr`
     # `(ir.KeepName, ir.RenameAlias)` Renaming moved to *roughly* whenever `to_expr_ir` is called, leading to the resolving here
     #   https://github.com/pola-rs/polars/blob/5b90db75911c70010d0c0a6941046e6144af88d4/crates/polars-plan/src/plans/conversion/dsl_to_ir/expr_to_ir.rs#L466-L469
@@ -363,13 +358,9 @@ def expand_expression_rec_s(
     elif isinstance(
         expr, (ir.Alias, ir.Cast, ir.AggExpr, ir.Sort, ir.KeepName, ir.RenameAlias)
     ):
-        yield from expand_single_s(
-            expr.expr, ignored_selector_columns, schema, _replace_single(expr)
-        )
+        yield from expand_single_s(expr.expr, ignored, schema, _replace_single(expr))
 
-    # `expand_expression_by_combination`, still need to wrap head around this boi
-    # TODO @dangotbanned: Continue working through here
-    # https://github.com/pola-rs/polars/blob/5b90db75911c70010d0c0a6941046e6144af88d4/crates/polars-plan/src/plans/conversion/dsl_to_ir/expr_expansion.rs#L124-L193
+    # `expand_expression_by_combination`, more than one (direct) child and those can be nested
     elif isinstance(
         expr,
         (
@@ -378,11 +369,14 @@ def expand_expression_rec_s(
             ir.TernaryExpr,
             ir.Filter,
             ir.OrderedWindowExpr,
-            ir.WindowExpr,  # (probably) `expand_expression_by_combination`
+            ir.WindowExpr,
         ),
     ):
-        msg = f"TODO: `expand_expression_by_combination` {type(expr).__name__}"
-        raise NotImplementedError(msg)
+        # The bit here is very similar to single:
+        # - instead of `expand_single(expr.expr)` it is `expand_expr...([expr.child1, expr.child2, ...])
+        # - instead of `_replace_single`, it defines a function that maps `*exprs` -> to the positions per-variant
+        exprs, expand = expr._into_expand()
+        yield from expand_expression_by_combination_s(exprs, ignored, schema, expand)
 
     # Special-cased **outside of** `expand_{single,expression_by_combination}`
     elif isinstance(expr, ir.FunctionExpr):
@@ -396,7 +390,7 @@ def expand_expression_rec_s(
 
 def expand_single_s(
     child: ExprIR,
-    ignored_selector_columns: Container[str],
+    ignored: Ignored,
     schema: FrozenSchema,
     replace_in_origin: Callable[[ExprIR], Origin],
 ) -> Iterator[Origin]:
@@ -406,13 +400,34 @@ def expand_single_s(
     # Recurse: `expand_expression_rec`
 
     # NOTE: Like maybe 60% sure this is correct
-    it_expanding_child = expand_expression_rec_s(child, ignored_selector_columns, schema)
+    it_expanding_child = expand_expression_rec_s(child, ignored, schema)
     for e in it_expanding_child:
         yield replace_in_origin(e)
 
 
-def expand_expression_by_combination_s() -> Incomplete:
-    raise NotImplementedError
+# TODO @dangotbanned: Translating size-based recursive guards
+# https://github.com/pola-rs/polars/blob/5b90db75911c70010d0c0a6941046e6144af88d4/crates/polars-plan/src/plans/conversion/dsl_to_ir/expr_expansion.rs#L124-L193
+def expand_expression_by_combination_s(
+    children: Children,
+    ignored: Ignored,
+    schema: FrozenSchema,
+    replace_in_origin: Callable[[Children], Origin],
+) -> Iterator[Origin]:
+    # Expand expressions until we find one that expands to more than 1 expression.
+    # ...
+
+    # Check if all expressions expanded to 1 expression.
+    # ...
+
+    # Now do the remaining expression, and check if they match the size of the original expansion
+    # (or 1)
+    # ...
+
+    # Create actual output expressions.
+    # ...
+
+    msg = f"TODO: `expand_expression_by_combination`\n{replace_in_origin!r}\n{children!r}"
+    raise NotImplementedError(msg)
 
 
 def _expand_nested_nodes(origin: ExprIR, /, *, schema: FrozenSchema) -> ExprIR:

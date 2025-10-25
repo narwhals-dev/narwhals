@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-# NOTE: Needed to avoid naming collisions
-# - Literal
 import typing as t
+from collections.abc import Callable
 
 from narwhals._plan._expr_ir import ExprIR, SelectorIR
 from narwhals._plan.common import flatten_hash_safe, replace
@@ -30,7 +29,7 @@ from narwhals.exceptions import InvalidOperationError
 if t.TYPE_CHECKING:
     from collections.abc import Container, Iterable, Iterator
 
-    from typing_extensions import Self
+    from typing_extensions import Self, TypeAlias
 
     from narwhals._plan.compliant.typing import Ctx, FrameT_contra, R_co
     from narwhals._plan.expressions.functions import MapBatches  # noqa: F401
@@ -65,6 +64,16 @@ __all__ = [
     "WindowExpr",
     "col",
 ]
+
+CovariantReplace: TypeAlias = t.Any
+"""Working around an [unresolved] `__replace__` [issue] in the typing spec.
+
+[unresolved]: https://github.com/python/mypy/issues/17623#issuecomment-2266312738
+[issue]: https://discuss.python.org/t/make-replace-stop-interfering-with-variance-inference/96092
+"""
+
+Children: TypeAlias = Seq[ExprIR]
+FnExpand: TypeAlias = Callable[[Children], ExprIR]
 
 
 def col(name: str, /) -> Column:
@@ -225,6 +234,15 @@ class BinaryExpr(
     def iter_output_name(self) -> t.Iterator[ExprIR]:
         yield from self.left.iter_output_name()
 
+    def _into_expand(self) -> tuple[Children, FnExpand]:
+        replacer: CovariantReplace = self.__replace__
+        children = self.left, self.right
+
+        def fn(exprs: Children, /) -> BinaryExpr:
+            return replacer(left=exprs[0], right=exprs[1])
+
+        return children, fn
+
 
 class Cast(ExprIR, child=("expr",)):
     __slots__ = ("expr", "dtype")  # noqa: RUF023
@@ -276,6 +294,15 @@ class SortBy(ExprIR, child=("expr", "by")):
 
     def iter_output_name(self) -> t.Iterator[ExprIR]:
         yield from self.expr.iter_output_name()
+
+    def _into_expand(self) -> tuple[Children, FnExpand]:
+        replacer: CovariantReplace = self.__replace__
+        children = (self.expr, *self.by)
+
+        def fn(exprs: Children, /) -> SortBy:
+            return replacer(expr=exprs[0], by=exprs[1:])
+
+        return children, fn
 
 
 # mypy: disable-error-code="misc"
@@ -404,6 +431,15 @@ class Filter(ExprIR, child=("expr", "by")):
     def iter_output_name(self) -> t.Iterator[ExprIR]:
         yield from self.expr.iter_output_name()
 
+    def _into_expand(self) -> tuple[Children, FnExpand]:
+        replacer: CovariantReplace = self.__replace__
+        children = (self.expr, self.by)
+
+        def fn(exprs: Children, /) -> Filter:
+            return replacer(expr=exprs[0], by=exprs[1])
+
+        return children, fn
+
 
 class WindowExpr(
     ExprIR, child=("expr", "partition_by"), config=ExprIROptions.renamed("over")
@@ -427,6 +463,15 @@ class WindowExpr(
 
     def iter_output_name(self) -> t.Iterator[ExprIR]:
         yield from self.expr.iter_output_name()
+
+    def _into_expand(self) -> tuple[Children, FnExpand]:
+        replacer: CovariantReplace = self.__replace__
+        children = (self.expr, *self.partition_by)
+
+        def fn(exprs: Children, /) -> WindowExpr:
+            return replacer(expr=exprs[0], partition_by=exprs[1:])
+
+        return children, fn
 
 
 class OrderedWindowExpr(
@@ -458,6 +503,26 @@ class OrderedWindowExpr(
         for e in self.partition_by:
             yield from e.iter_left()
         yield self
+
+    def _into_expand(self) -> tuple[Children, FnExpand]:
+        replacer: CovariantReplace = self.__replace__
+        children = (self.expr, *self.partition_by, *self.order_by)
+
+        if self.partition_by:
+            end_partitions = len(self.partition_by) + 1
+
+            def fn(exprs: Children, /) -> OrderedWindowExpr:
+                return replacer(
+                    expr=exprs[0],
+                    partition_by=exprs[1:end_partitions],
+                    order_by=exprs[end_partitions:],
+                )
+        else:
+
+            def fn(exprs: Children, /) -> OrderedWindowExpr:
+                return replacer(expr=exprs[0], order_by=exprs[1:])
+
+        return children, fn
 
 
 class Len(ExprIR, config=ExprIROptions.namespaced()):
@@ -595,3 +660,12 @@ class TernaryExpr(ExprIR, child=("truthy", "falsy", "predicate")):
 
     def iter_output_name(self) -> t.Iterator[ExprIR]:
         yield from self.truthy.iter_output_name()
+
+    def _into_expand(self) -> tuple[Children, FnExpand]:
+        replacer: CovariantReplace = self.__replace__
+        children = (self.predicate, self.truthy, self.falsy)
+
+        def fn(exprs: Children, /) -> TernaryExpr:
+            return replacer(predicate=exprs[0], truthy=exprs[1], falsy=exprs[2])
+
+        return children, fn
