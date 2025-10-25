@@ -4,6 +4,7 @@ import math
 import os
 import sys
 import warnings
+from collections.abc import Iterable
 from datetime import date, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, cast
@@ -50,6 +51,8 @@ ConstructorPandasLike: TypeAlias = Callable[[Any], "pd.DataFrame"]
 
 NestedOrEnumDType: TypeAlias = "nw.List | nw.Array | nw.Struct | nw.Enum"
 """`DType`s which **cannot** be used as bare types."""
+
+IntoIterable: TypeAlias = Callable[..., Iterable[Any]]
 
 ID_PANDAS_LIKE = frozenset(
     ("pandas", "pandas[nullable]", "pandas[pyarrow]", "modin", "modin[pyarrow]", "cudf")
