@@ -204,16 +204,6 @@ class ArrowNamespace(
         return pa.Table.from_arrays(arrays, names=names)
 
     def _concat_vertical(self, dfs: Sequence[pa.Table], /) -> pa.Table:
-        cols_0 = dfs[0].column_names
-        for i, df in enumerate(dfs[1:], start=1):
-            cols_current = df.column_names
-            if cols_current != cols_0:
-                msg = (
-                    "unable to vstack, column names don't match:\n"
-                    f"   - dataframe 0: {cols_0}\n"
-                    f"   - dataframe {i}: {cols_current}\n"
-                )
-                raise TypeError(msg)
         return pa.concat_tables(dfs)
 
     @property

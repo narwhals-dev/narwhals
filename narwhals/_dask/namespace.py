@@ -27,7 +27,7 @@ from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
 )
-from narwhals._utils import Implementation, zip_strict
+from narwhals._utils import Implementation, validate_concat_vertical_schemas, zip_strict
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Sequence
@@ -148,32 +148,17 @@ class DaskNamespace(
     def concat(
         self, items: Iterable[DaskLazyFrame], *, how: ConcatMethod
     ) -> DaskLazyFrame:
-        if not items:
-            msg = "No items to concatenate"  # pragma: no cover
-            raise AssertionError(msg)
-        dfs = [i._native_frame for i in items]
-        cols_0 = dfs[0].columns
+        items = list(items)
+        dfs = [item._native_frame for item in items]
         if how == "vertical":
-            for i, df in enumerate(dfs[1:], start=1):
-                cols_current = df.columns
-                if not (
-                    (len(cols_current) == len(cols_0)) and (cols_current == cols_0).all()
-                ):
-                    msg = (
-                        "unable to vstack, column names don't match:\n"
-                        f"   - dataframe 0: {cols_0.to_list()}\n"
-                        f"   - dataframe {i}: {cols_current.to_list()}\n"
-                    )
-                    raise TypeError(msg)
-            return DaskLazyFrame(
-                dd.concat(dfs, axis=0, join="inner"), version=self._version
-            )
-        if how == "diagonal":
-            return DaskLazyFrame(
-                dd.concat(dfs, axis=0, join="outer"), version=self._version
-            )
+            validate_concat_vertical_schemas(item.schema for item in items)
+            native_result = dd.concat(dfs, axis=0, join="inner")
+        elif how == "diagonal":
+            native_result = dd.concat(dfs, axis=0, join="outer")
+        else:  # pragma: no cover
+            raise NotImplementedError
 
-        raise NotImplementedError
+        return self._lazyframe.from_native(native_result, context=self)
 
     def mean_horizontal(self, *exprs: DaskExpr) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:

@@ -2120,3 +2120,22 @@ def extend_bool(
     Stolen from https://github.com/pola-rs/polars/blob/b8bfb07a4a37a8d449d6d1841e345817431142df/py-polars/polars/_utils/various.py#L580-L594
     """
     return (value,) * n_match if isinstance(value, bool) else tuple(value)
+
+
+def validate_concat_vertical_schemas(schemas: Iterable[Mapping[str, DType]]) -> None:
+    schemas_iter = iter(schemas)
+    schema_0 = next(schemas_iter)
+    for idx, schema_current in enumerate(schemas_iter, start=1):
+        if schema_0 != schema_current:
+            msg = (
+                "'union'/'concat' inputs should all have the same schema,got\n"
+                f"{_pretty_format_schema(schema_0, index=0)}\n"
+                " and\n"
+                f"{_pretty_format_schema(schema_current, index=idx)}"
+            )
+            raise InvalidOperationError(msg)
+
+
+def _pretty_format_schema(schema: Mapping[str, DType], index: int) -> str:
+    body = "\n".join(f"name: {name}, field: {field}" for name, field in schema.items())
+    return f"Schema at index: {index}:\n{body}"
