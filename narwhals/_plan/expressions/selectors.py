@@ -7,7 +7,6 @@
 
 from __future__ import annotations
 
-import builtins
 import re
 from contextlib import suppress
 from typing import TYPE_CHECKING, Any, ClassVar
@@ -38,6 +37,9 @@ _ALL_TIME_UNITS = frozenset[TimeUnit](("ms", "us", "ns", "s"))
 
 
 class Selector(Immutable):
+    def __repr__(self) -> str:
+        return f"ncs.{type(self).__name__.lower()}()"
+
     def to_selector_ir(self) -> RootSelector:
         from narwhals._plan.expressions.expr import RootSelector
 
@@ -72,9 +74,6 @@ class DTypeSelector(Selector):
     def __init_subclass__(cls, *args: Any, dtype: type[DType], **kwds: Any) -> None:
         super().__init_subclass__(*args, **kwds)
         cls._dtype = dtype
-
-    def __repr__(self) -> str:
-        return f"ncs.{type(self).__name__.lower()}"
 
     def to_dtype_selector(self) -> DTypeSelector:
         return self
@@ -113,11 +112,6 @@ class DTypeAll(DTypeSelector, dtype=DType):
 
 
 class All(Selector):
-    # Both `Selector::Wildcard` and `DataTypeSelector::Wildcard` exist
-    # Also `Empty`, but that's new
-    def __repr__(self) -> str:
-        return "ncs.all()"
-
     def to_dtype_selector(self) -> DTypeSelector:
         return DTypeAll()
 
@@ -138,6 +132,9 @@ class ByIndex(Selector):
     __slots__ = ("indices", "require_all")
     indices: Seq[int]
     require_all: bool
+
+    def __repr__(self) -> str:
+        return f"ncs.by_index({list(self.indices)}, require_all={self.require_all})"
 
     @staticmethod
     def _iter_validate(indices: tuple[OneOrIterable[int], ...], /) -> Iterator[int]:
@@ -182,7 +179,7 @@ class ByName(Selector):
 
     def __repr__(self) -> str:
         els = ", ".join(f"{nm!r}" for nm in self.names)
-        return f"ncs.by_name({els})"
+        return f"ncs.by_name({els}, require_all={self.require_all})"
 
     @staticmethod
     def _iter_validate(names: tuple[OneOrIterable[str], ...], /) -> Iterator[str]:
@@ -224,7 +221,7 @@ class Matches(Selector):
         return Matches(pattern=re.compile(pattern))
 
     def __repr__(self) -> str:
-        return f"ncs.matches(pattern={self.pattern.pattern!r})"
+        return f"ncs.matches({self.pattern.pattern!r})"
 
     def matches_column(self, name: str, dtype: DType) -> bool:
         return bool(self.pattern.search(name))
@@ -278,7 +275,7 @@ class ByDType(DTypeSelector, dtype=DType):
         els = ", ".join(
             tp.__name__ if isinstance(tp, type) else repr(tp) for tp in self.dtypes
         )
-        return f"ncs.by_dtype(dtypes=[{els}])"
+        return f"ncs.by_dtype([{els}])"
 
     def matches_column(self, name: str, dtype: DType) -> bool:
         return dtype in self.dtypes
@@ -316,7 +313,9 @@ class Datetime(DTypeSelector, dtype=_dtypes.Datetime):
         return Datetime(time_units=frozenset(units), time_zones=frozenset(zones))
 
     def __repr__(self) -> str:
-        return f"ncs.datetime(time_unit={builtins.list(self.time_units)}, time_zone={builtins.list(self.time_zones)})"
+        time_unit = "*" if self.time_units == _ALL_TIME_UNITS else list(self.time_units)
+        time_zone = "*" if self.time_zones == {"*", None} else list(self.time_zones)
+        return f"ncs.datetime(time_unit={time_unit}, time_zone={time_zone})"
 
     def matches_column(self, name: str, dtype: DType) -> bool:
         units, zones = self.time_units, self.time_zones
@@ -354,7 +353,8 @@ class Duration(DTypeSelector, dtype=_dtypes.Duration):
         return Duration(time_units=units)
 
     def __repr__(self) -> str:
-        return f"ncs.duration(time_unit={builtins.list(self.time_units)})"
+        time_unit = "*" if self.time_units == _ALL_TIME_UNITS else list(self.time_units)
+        return f"ncs.duration(time_unit={time_unit})"
 
     def matches_column(self, name: str, dtype: DType) -> bool:
         return isinstance(dtype, _dtypes.Duration) and (
