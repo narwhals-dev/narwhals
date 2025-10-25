@@ -316,9 +316,7 @@ Children: TypeAlias = Seq[ExprIR]
 
 
 def _replace_single(origin: CanExpandSingleT, /) -> Callable[[Child], CanExpandSingleT]:
-    """Purely trying to unravel the rust code.
-
-    Defines a (single, positional-only parameter) constructor for expanding children.
+    """Defines a (single, positional-only parameter) constructor for expanding children.
 
     Say we had:
 
@@ -347,6 +345,7 @@ def _replace_single(origin: CanExpandSingleT, /) -> Callable[[Child], CanExpandS
 def _replace_function_input(
     origin: CanExpandFunctionT, /
 ) -> Callable[[Children], CanExpandFunctionT]:
+    """Like `_replace_single`, but for all non-horizontal `FunctionExpr`s."""
     replace = origin.__replace__
 
     def fn(children: Children, /) -> CanExpandFunctionT:
@@ -355,48 +354,47 @@ def _replace_function_input(
     return fn
 
 
+_EXPAND_NONE = (ir.Column, ir.Literal, ir.Len)
+"""we're at the root."""
+_EXPAND_SINGLE = (ir.Alias, ir.Cast, ir.AggExpr, ir.Sort, ir.KeepName, ir.RenameAlias)
+"""one (direct) child, always stored in `self.expr`."""
+_EXPAND_COMBINATION = (
+    ir.SortBy,
+    ir.BinaryExpr,
+    ir.TernaryExpr,
+    ir.Filter,
+    ir.OrderedWindowExpr,
+    ir.WindowExpr,
+)
+"""more than one (direct) child and those can be nested."""
+
+
 def expand_expression_rec_s(
     expr: ExprIR, ignored: Ignored, schema: FrozenSchema, /
 ) -> Iterator[ExprIR]:
     # https://github.com/pola-rs/polars/blob/5b90db75911c70010d0c0a6941046e6144af88d4/crates/polars-plan/src/plans/conversion/dsl_to_ir/expr_expansion.rs#L253-L850
 
     # no expand
-    if isinstance(expr, (ir.Column, ir.Literal, ir.Len)):
+    if isinstance(expr, _EXPAND_NONE):
         yield expr
 
     # selectors, handled internally
     elif isinstance(expr, ir.SelectorIR):
-        for name in expr.into_columns(schema, ignored):
-            yield ir.Column(name=name)
+        yield from (ir.Column(name=name) for name in expr.into_columns(schema, ignored))
 
-    # `expand_single`, all stored in `self.expr`
     # `(ir.KeepName, ir.RenameAlias)` Renaming moved to *roughly* whenever `to_expr_ir` is called, leading to the resolving here
     #   https://github.com/pola-rs/polars/blob/5b90db75911c70010d0c0a6941046e6144af88d4/crates/polars-plan/src/plans/conversion/dsl_to_ir/expr_to_ir.rs#L466-L469
     #   https://github.com/pola-rs/polars/blob/5b90db75911c70010d0c0a6941046e6144af88d4/crates/polars-plan/src/plans/conversion/dsl_to_ir/expr_to_ir.rs#L481-L485
-    elif isinstance(
-        expr, (ir.Alias, ir.Cast, ir.AggExpr, ir.Sort, ir.KeepName, ir.RenameAlias)
-    ):
+    elif isinstance(expr, _EXPAND_SINGLE):
         yield from expand_single_s(expr.expr, ignored, schema, _replace_single(expr))
 
-    # `expand_expression_by_combination`, more than one (direct) child and those can be nested
-    elif isinstance(
-        expr,
-        (
-            ir.SortBy,
-            ir.BinaryExpr,
-            ir.TernaryExpr,
-            ir.Filter,
-            ir.OrderedWindowExpr,
-            ir.WindowExpr,
-        ),
-    ):
+    elif isinstance(expr, _EXPAND_COMBINATION):
         # The bit here is very similar to single:
         # - instead of `expand_single(expr.expr)` it is `expand_expr...([expr.child1, expr.child2, ...])
         # - instead of `_replace_single`, it defines a function that maps `*exprs` -> to the positions per-variant
         exprs, expand = expr._into_expand()
         yield from expand_expression_by_combination_s(exprs, ignored, schema, expand)
 
-    # Special-cased **outside of** `expand_{single,expression_by_combination}`
     elif isinstance(expr, ir.FunctionExpr):
         if expr.options.is_input_wildcard_expansion():
             it = chain.from_iterable(
