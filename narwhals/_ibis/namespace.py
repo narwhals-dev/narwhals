@@ -83,12 +83,14 @@ class IbisNamespace(SQLNamespace[IbisLazyFrame, IbisExpr, "ir.Table", "ir.Value"
             cols = chain.from_iterable(expr(df) for expr in exprs)
             cols_casted = [s.cast("string") for s in cols]
 
-            if not ignore_nulls:
-                result = cols_casted[0]
-                for col in cols_casted[1:]:
-                    result = result + separator + col
-            else:
+            if ignore_nulls:
                 result = lit(separator).join(cols_casted)
+            else:
+                result = reduce(
+                    lambda acc, col: acc.concat(separator, col),
+                    cols_casted[1:],
+                    cols_casted[0],
+                )
 
             return [result]
 
