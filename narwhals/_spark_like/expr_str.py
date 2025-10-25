@@ -54,7 +54,7 @@ class SparkLikeExprStringNamespace(SQLExprStringNamespace["SparkLikeExpr"]):
             F = self.compliant._F
             lower_expr = F.lower(expr)
             extract_expr = F.regexp_extract_all(
-                lower_expr, regexp=F.lit(r"[a-z0-9]*[^a-z0-9]*"), idx=0
+                lower_expr, regexp=F.lit(r"[a-z]*[^a-z]*"), idx=0
             )
             capitalized_expr = F.transform(extract_expr, f=F.initcap)
             return F.array_join(capitalized_expr, delimiter="")
