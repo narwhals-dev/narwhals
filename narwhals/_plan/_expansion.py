@@ -41,6 +41,7 @@ from __future__ import annotations
 from collections import deque
 from collections.abc import Container
 from functools import lru_cache
+from itertools import chain
 from typing import TYPE_CHECKING, Any, Protocol
 
 from narwhals._plan import common, expressions as ir, meta
@@ -297,18 +298,24 @@ def expand_expression_s(
 
 class CanExpandSingle(Protocol):
     @property
-    def expr(self) -> ExprIR: ...
-    def __replace__(self, *, expr: ExprIR) -> Self: ...
+    def expr(self) -> Child: ...
+    def __replace__(self, *, expr: Child) -> Self: ...
+
+
+class CanExpandFunction(Protocol):
+    @property
+    def input(self) -> Children: ...
+    def __replace__(self, *, input: Children) -> Self: ...
 
 
 CanExpandSingleT = TypeVar("CanExpandSingleT", bound=CanExpandSingle)
+CanExpandFunctionT = TypeVar("CanExpandFunctionT", bound=CanExpandFunction)
 Origin = TypeVar("Origin", bound=ExprIR)
+Child: TypeAlias = ExprIR
 Children: TypeAlias = Seq[ExprIR]
-Incomplete: TypeAlias = Any
-"""Review what these guys should return"""
 
 
-def _replace_single(origin: CanExpandSingleT, /) -> Callable[[ExprIR], CanExpandSingleT]:
+def _replace_single(origin: CanExpandSingleT, /) -> Callable[[Child], CanExpandSingleT]:
     """Purely trying to unravel the rust code.
 
     Defines a (single, positional-only parameter) constructor for expanding children.
@@ -331,8 +338,19 @@ def _replace_single(origin: CanExpandSingleT, /) -> Callable[[ExprIR], CanExpand
     """
     replace = origin.__replace__
 
-    def fn(expr: ExprIR, /) -> CanExpandSingleT:
+    def fn(expr: Child, /) -> CanExpandSingleT:
         return replace(expr=expr)
+
+    return fn
+
+
+def _replace_function_input(
+    origin: CanExpandFunctionT, /
+) -> Callable[[Children], CanExpandFunctionT]:
+    replace = origin.__replace__
+
+    def fn(children: Children, /) -> CanExpandFunctionT:
+        return replace(input=children)
 
     return fn
 
@@ -380,8 +398,14 @@ def expand_expression_rec_s(
 
     # Special-cased **outside of** `expand_{single,expression_by_combination}`
     elif isinstance(expr, ir.FunctionExpr):
-        msg = f"TODO: {type(expr).__name__}"
-        raise NotImplementedError(msg)
+        if expr.options.is_input_wildcard_expansion():
+            it = chain.from_iterable(
+                expand_expression_rec_s(e, ignored, schema) for e in expr.input
+            )
+            yield common.replace(expr, input=tuple(it))
+            return
+        expand = _replace_function_input(expr)
+        yield from expand_expression_by_combination_s(expr.input, ignored, schema, expand)
 
     else:
         msg = f"Didn't expect to see {type(expr).__name__}"
@@ -405,7 +429,7 @@ def expand_single_s(
         yield replace_in_origin(e)
 
 
-# TODO @dangotbanned: Translating size-based recursive guards
+# TODO @dangotbanned: Translating the last branch
 # https://github.com/pola-rs/polars/blob/5b90db75911c70010d0c0a6941046e6144af88d4/crates/polars-plan/src/plans/conversion/dsl_to_ir/expr_expansion.rs#L124-L193
 def expand_expression_by_combination_s(
     children: Children,

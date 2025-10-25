@@ -354,18 +354,22 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT_co], child=("input",)):
         for e in self.input[:1]:
             yield from e.iter_output_name()
 
-    def __init__(
-        self,
-        *,
-        input: Seq[ExprIR],  # noqa: A002
-        function: FunctionT_co,
-        options: FunctionOptions,
-        **kwds: t.Any,
-    ) -> None:
-        parent = input[0]
-        if parent.is_scalar and not options.is_elementwise():
-            raise function_expr_invalid_operation_error(function, parent)
-        super().__init__(**dict(input=input, function=function, options=options, **kwds))
+    # NOTE: Interacting badly with `pyright` synthesizing the `__replace__` signature
+    if not t.TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            input: Seq[ExprIR],  # noqa: A002
+            function: FunctionT_co,
+            options: FunctionOptions,
+            **kwds: t.Any,
+        ) -> None:
+            parent = input[0]
+            if parent.is_scalar and not options.is_elementwise():
+                raise function_expr_invalid_operation_error(function, parent)
+            kwargs = dict(input=input, function=function, options=options, **kwds)
+            super().__init__(**kwargs)
 
     def dispatch(
         self: Self, ctx: Ctx[FrameT_contra, R_co], frame: FrameT_contra, name: str
