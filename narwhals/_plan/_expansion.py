@@ -416,14 +416,7 @@ def expand_single_s(
     schema: FrozenSchema,
     replace_in_origin: Callable[[Child], Origin],
 ) -> Iterator[Origin]:
-    # Before: `expand_expression_rec`
-    # Current: `expand_single`
-    # Next: `try_expand_single`
-    # Recurse: `expand_expression_rec`
-
-    # NOTE: Like maybe 60% sure this is correct
-    it_expanding_child = expand_expression_rec_s(child, ignored, schema)
-    for e in it_expanding_child:
+    for e in expand_expression_rec_s(child, ignored, schema):
         yield replace_in_origin(e)
 
 
