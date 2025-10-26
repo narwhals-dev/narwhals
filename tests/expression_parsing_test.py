@@ -121,3 +121,16 @@ def test_invalid_elementwise_over() -> None:
     # This one raises before it's even evaluated.
     with pytest.raises(InvalidOperationError):
         nw.col("a").fill_null(3).over("b")
+
+
+def test_rank_with_order_by_pushdown() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    df = nw.from_native(pd.DataFrame({"a": [1, 1, 2], "i": [2, 1, 0]}))
+    result = df.select(
+        "a",
+        res=nw.sum_horizontal(nw.col("a").rank("ordinal"), nw.lit(1)).over(order_by="i"),
+    )
+    expected = {"a": [1, 1, 2], "res": [3.0, 2.0, 4.0]}
+    assert_equal_data(result, expected)

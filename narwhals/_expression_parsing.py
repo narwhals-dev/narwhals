@@ -147,9 +147,9 @@ class ExprKind(Enum):
         # `diff`, `rank`, `arg_max`, ...
         return self in {
             ExprKind.ORDERABLE_WINDOW,
-            ExprKind.ORDERABLE_AGGREGATION,
-            ExprKind.FILTRATION,
             ExprKind.WINDOW,
+            ExprKind.ORDERABLE_AGGREGATION,
+            ExprKind.ORDERABLE_FILTRATION,
         }
 
     @property
