@@ -373,11 +373,11 @@ class Expr(NwExpr):
 
     def head(self, n: int = 10) -> Self:
         r"""Get the first `n` rows."""
-        return self._append_node(ExprNode(ExprKind.FILTRATION, "head", n=n))
+        return self._append_node(ExprNode(ExprKind.ORDERABLE_FILTRATION, "head", n=n))
 
     def tail(self, n: int = 10) -> Self:
         r"""Get the last `n` rows."""
-        return self._append_node(ExprNode(ExprKind.FILTRATION, "tail", n=n))
+        return self._append_node(ExprNode(ExprKind.ORDERABLE_FILTRATION, "tail", n=n))
 
     def gather_every(self, n: int, offset: int = 0) -> Self:
         r"""Take every nth value in the Series and return as new Series.

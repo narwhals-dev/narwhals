@@ -273,10 +273,14 @@ class DaskNamespace(
         self, predicate: DaskExpr, then: DaskExpr, otherwise: DaskExpr | None = None
     ) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            then_value = then(df)[0]
-            otherwise_value = otherwise(df)[0] if otherwise is not None else otherwise
+            then_value = df._evaluate_single_output_expr(then)
+            otherwise_value = (
+                df._evaluate_single_output_expr(otherwise)
+                if otherwise is not None
+                else otherwise
+            )
 
-            condition = predicate(df)[0]
+            condition = df._evaluate_single_output_expr(predicate)
             # re-evaluate DataFrame if the condition aggregates to force
             # then/otherwise to be evaluated against the aggregated frame
             if all(
@@ -288,7 +292,7 @@ class DaskNamespace(
                 )
             ):
                 new_df = df._with_native(condition.to_frame())
-                condition = predicate.broadcast()(df)[0]
+                condition = df._evaluate_single_output_expr(predicate.broadcast())
                 df = new_df
 
             if otherwise is None:

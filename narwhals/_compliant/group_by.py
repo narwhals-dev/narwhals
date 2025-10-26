@@ -170,7 +170,7 @@ class DepthTrackingGroupBy(
 
     @classmethod
     def _kwargs(cls, expr: DepthTrackingExprAny, /) -> dict[str, Any]:
-        """Return the last function name in the chain defined by `expr`."""
+        """Return the last function kwargs in the chain defined by `expr`."""
         return next(expr._metadata.op_nodes_reversed()).kwargs
 
 

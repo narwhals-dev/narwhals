@@ -45,10 +45,8 @@ NULLS_LAST_TO_NULLS_POS = {True: "nulls last", False: "nulls first"}
 col = duckdb.ColumnExpression
 """Alias for `duckdb.ColumnExpression`."""
 
-
-def lit(value: object) -> duckdb.Expression:
-    return duckdb.ConstantExpression(value)
-
+lit = duckdb.ConstantExpression
+"""Alias for `duckdb.ConstantExpression`."""
 
 when = duckdb.CaseExpression
 """Alias for `duckdb.CaseExpression`."""

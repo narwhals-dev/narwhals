@@ -71,6 +71,9 @@ class PolarsNamespace:
     def _series(self) -> type[PolarsSeries]:
         return PolarsSeries
 
+    def is_native(self, obj: Any) -> TypeIs[pl.DataFrame | pl.LazyFrame | pl.Series]:
+        return isinstance(obj, (pl.DataFrame, pl.LazyFrame, pl.Series))
+
     @overload
     def from_native(self, data: pl.DataFrame, /) -> PolarsDataFrame: ...
     @overload
@@ -209,13 +212,6 @@ class PolarsNamespace:
         return self._expr(
             pl.when(when_native).then(then_native).otherwise(otherwise_native),
             version=self._version,
-        )
-
-    def is_native(self, obj: Any, /) -> TypeIs[pl.DataFrame | pl.LazyFrame | pl.Series]:
-        return (
-            self._dataframe._is_native(obj)
-            or self._series._is_native(obj)
-            or self._lazyframe._is_native(obj)
         )
 
     # NOTE: Implementation is too different to annotate correctly (vs other `*SelectorNamespace`)
