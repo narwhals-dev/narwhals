@@ -239,7 +239,9 @@ class BinaryExpr(
         children = self.left, self.right
 
         def fn(exprs: Children, /) -> BinaryExpr:
-            return replacer(left=exprs[0], right=exprs[1])
+            # force an error if we got more than 2
+            left, right = exprs
+            return replacer(left=left, right=right)
 
         return children, fn
 
@@ -440,7 +442,9 @@ class Filter(ExprIR, child=("expr", "by")):
         children = (self.expr, self.by)
 
         def fn(exprs: Children, /) -> Filter:
-            return replacer(expr=exprs[0], by=exprs[1])
+            # force an error if we got more than 2
+            expr, by = exprs
+            return replacer(expr=expr, by=by)
 
         return children, fn
 
@@ -670,6 +674,8 @@ class TernaryExpr(ExprIR, child=("truthy", "falsy", "predicate")):
         children = (self.predicate, self.truthy, self.falsy)
 
         def fn(exprs: Children, /) -> TernaryExpr:
-            return replacer(predicate=exprs[0], truthy=exprs[1], falsy=exprs[2])
+            # force an error if we got more than 3
+            predicate, truthy, falsy = exprs
+            return replacer(predicate=predicate, truthy=truthy, falsy=falsy)
 
         return children, fn
