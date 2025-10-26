@@ -241,7 +241,7 @@ def test_check_row_order_nested_only(
 def test_values_mismatch(constructor: Constructor) -> None: ...
 
 
-def test_self_equal(constructor: Constructor, data: Data) -> None:
+def test_self_equal(constructor: Constructor, testing_data: Data) -> None:
     """Test that a dataframe is equal to itself, including nested dtypes with nulls.
 
     We are dropping columns which type is unsupported by _some_ backend.
@@ -252,6 +252,6 @@ def test_self_equal(constructor: Constructor, data: Data) -> None:
         reason = "Pandas too old for nested dtypes"
         pytest.skip(reason=reason)
 
-    _data = {k: v for k, v in data.items() if k not in cols_to_drop}
+    _data = {k: v for k, v in testing_data.items() if k not in cols_to_drop}
     df = nw.from_native(constructor(_data))
     assert_frame_equal(df, df)

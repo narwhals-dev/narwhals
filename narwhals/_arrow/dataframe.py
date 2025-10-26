@@ -9,7 +9,6 @@ import pyarrow.compute as pc
 from narwhals._arrow.series import ArrowSeries
 from narwhals._arrow.utils import concat_tables, native_to_narwhals_dtype, repeat
 from narwhals._compliant import EagerDataFrame
-from narwhals._expression_parsing import ExprKind
 from narwhals._utils import (
     Implementation,
     Version,
@@ -330,7 +329,7 @@ class ArrowDataFrame(
         )
 
     def select(self, *exprs: ArrowExpr) -> Self:
-        new_series = self._evaluate_into_exprs(*exprs)
+        new_series = self._evaluate_exprs(*exprs)
         if not new_series:
             # return empty dataframe, like Polars does
             return self._with_native(
@@ -357,7 +356,7 @@ class ArrowDataFrame(
         # NOTE: We use a faux-mutable variable and repeatedly "overwrite" (native_frame)
         # All `pyarrow` data is immutable, so this is fine
         native_frame = self.native
-        new_columns = self._evaluate_into_exprs(*exprs)
+        new_columns = self._evaluate_exprs(*exprs)
         columns = self.columns
 
         for col_value in new_columns:
@@ -402,12 +401,10 @@ class ArrowDataFrame(
             )
 
             return self._with_native(
-                self.with_columns(
-                    plx.lit(0, None).alias(key_token).broadcast(ExprKind.LITERAL)
-                )
+                self.with_columns(plx.lit(0, None).alias(key_token).broadcast())
                 .native.join(
                     other.with_columns(
-                        plx.lit(0, None).alias(key_token).broadcast(ExprKind.LITERAL)
+                        plx.lit(0, None).alias(key_token).broadcast()
                     ).native,
                     keys=key_token,
                     right_keys=key_token,
@@ -517,8 +514,7 @@ class ArrowDataFrame(
         return self.select(row_index, plx.all())
 
     def filter(self, predicate: ArrowExpr) -> Self:
-        # `[0]` is safe as the predicate's expression only returns a single column
-        mask_native = self._evaluate_into_exprs(predicate)[0].native
+        mask_native = self._evaluate_single_output_expr(predicate).native
         return self._with_native(
             self.native.filter(mask_native), validate_column_names=False
         )
