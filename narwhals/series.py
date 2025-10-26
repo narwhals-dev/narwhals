@@ -31,6 +31,7 @@ from narwhals.dependencies import is_numpy_array, is_numpy_array_1d, is_numpy_sc
 from narwhals.dtypes import _validate_dtype, _validate_into_dtype
 from narwhals.exceptions import ComputeError, InvalidOperationError
 from narwhals.expr import Expr
+from narwhals.functions import col
 from narwhals.series_cat import SeriesCatNamespace
 from narwhals.series_dt import SeriesDateTimeNamespace
 from narwhals.series_list import SeriesListNamespace
@@ -2791,8 +2792,6 @@ class Series(Generic[IntoSeriesT]):
               ]
             ]
         """
-        from narwhals.functions import col
-
         if not self.dtype.is_numeric():
             msg = (
                 f"is_close operation not supported for dtype `{self.dtype}`\n\n"

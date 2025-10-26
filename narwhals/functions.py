@@ -5,7 +5,7 @@ import sys
 from collections.abc import Iterable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any
 
-from narwhals._expression_parsing import ExprKind, ExprNode
+from narwhals._expression_parsing import ExprKind, ExprNode, is_expr, is_series
 from narwhals._utils import (
     Implementation,
     Version,
@@ -25,7 +25,6 @@ from narwhals.dependencies import (
 )
 from narwhals.exceptions import InvalidOperationError
 from narwhals.expr import Expr
-from narwhals.series import Series
 from narwhals.translate import from_native, to_native
 
 if TYPE_CHECKING:
@@ -37,6 +36,7 @@ if TYPE_CHECKING:
     from narwhals._translate import IntoArrowTable
     from narwhals._typing import Backend, EagerAllowed, IntoBackend
     from narwhals.dataframe import DataFrame, LazyFrame
+    from narwhals.series import Series
     from narwhals.typing import (
         ConcatMethod,
         FileSource,
@@ -976,9 +976,7 @@ def exclude(*names: str | Iterable[str]) -> Expr:
         |  └─────┘         |
         └──────────────────┘
     """
-    flat_names = flatten(names)
-    exclude_names = frozenset(flat_names)
-    return Expr(ExprNode(ExprKind.EXCLUDE, "exclude", names=exclude_names))
+    return Expr(ExprNode(ExprKind.EXCLUDE, "exclude", names=frozenset(flatten(names))))
 
 
 def nth(*indices: int | Sequence[int]) -> Expr:
@@ -1240,8 +1238,7 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         |└─────┴──────┴─────┘|
         └────────────────────┘
     """
-    flat_exprs = flatten(exprs)
-    return _expr_with_horizontal_op("sum_horizontal", *flat_exprs)
+    return _expr_with_horizontal_op("sum_horizontal", *flatten(exprs))
 
 
 def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
@@ -1412,9 +1409,8 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool) ->
         |all: [[false,false,true,null,false,null]]|
         └─────────────────────────────────────────┘
     """
-    flat_exprs = flatten(exprs)
     return _expr_with_horizontal_op(
-        "all_horizontal", *flat_exprs, ignore_nulls=ignore_nulls
+        "all_horizontal", *flatten(exprs), ignore_nulls=ignore_nulls
     )
 
 
@@ -1497,9 +1493,8 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool) ->
         |└───────┴───────┴───────┘|
         └─────────────────────────┘
     """
-    flat_exprs = flatten(exprs)
     return _expr_with_horizontal_op(
-        "any_horizontal", *flat_exprs, ignore_nulls=ignore_nulls
+        "any_horizontal", *flatten(exprs), ignore_nulls=ignore_nulls
     )
 
 
@@ -1630,10 +1625,14 @@ def coalesce(
     """
     flat_exprs = flatten([*flatten([exprs]), *more_exprs])
 
-    non_exprs = [expr for expr in flat_exprs if not isinstance(expr, (str, Expr, Series))]
+    non_exprs = [
+        expr
+        for expr in flat_exprs
+        if not (isinstance(expr, str) or is_expr(expr) or is_series(expr))
+    ]
     if non_exprs:
         msg = (
-            f"All arguments to `coalesce` must be of type {str!r}, {Expr!r}, or {Series!r}."
+            f"All arguments to `coalesce` must be of type {str!r}, Expr, or Series."
             "\nGot the following invalid arguments (type, value):"
             f"\n    {', '.join(repr((type(e), e)) for e in non_exprs)}"
         )
