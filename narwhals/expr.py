@@ -9,8 +9,14 @@ from narwhals._expression_parsing import (
     ExprMetadata,
     apply_n_ary_operation,
     combine_metadata,
+    is_series,
 )
-from narwhals._utils import _validate_rolling_arguments, ensure_type, flatten
+from narwhals._utils import (
+    _validate_rolling_arguments,
+    ensure_type,
+    flatten,
+    iterable_to_sequence,
+)
 from narwhals.dtypes import _validate_dtype
 from narwhals.exceptions import ComputeError, InvalidOperationError
 from narwhals.expr_cat import ExprCatNamespace
@@ -19,7 +25,6 @@ from narwhals.expr_list import ExprListNamespace
 from narwhals.expr_name import ExprNameNamespace
 from narwhals.expr_str import ExprStringNamespace
 from narwhals.expr_struct import ExprStructNamespace
-from narwhals.translate import to_native
 
 if TYPE_CHECKING:
     from typing import NoReturn, TypeVar
@@ -968,7 +973,7 @@ class Expr:
             upper_bound,
         )
 
-    def is_in(self, other: Any) -> Self:
+    def is_in(self, other: Iterable[Any]) -> Self:
         """Check if elements of this expression are present in the other iterable.
 
         Arguments:
@@ -991,10 +996,10 @@ class Expr:
             └──────────────────┘
         """
         if isinstance(other, Iterable) and not isinstance(other, (str, bytes)):
+            other = other.to_native() if is_series(other) else iterable_to_sequence(other)
             return self._with_elementwise(
-                lambda plx: self._to_compliant_expr(plx).is_in(
-                    to_native(other, pass_through=True)
-                )
+                # TODO @dangotbanned: Fix after getting feedback on https://github.com/narwhals-dev/narwhals/pull/3207#discussion_r2430089632
+                lambda plx: self._to_compliant_expr(plx).is_in(other)  # pyright: ignore[reportArgumentType]
             )
         msg = "Narwhals `is_in` doesn't accept expressions as an argument, as opposed to Polars. You should provide an iterable instead."
         raise NotImplementedError(msg)

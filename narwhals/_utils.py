@@ -47,6 +47,7 @@ from narwhals.dependencies import (
     is_numpy_array_1d_int,
     is_pandas_like_dataframe,
     is_pandas_like_series,
+    is_polars_series,
 )
 from narwhals.exceptions import ColumnNotFoundError, DuplicateError, InvalidOperationError
 
@@ -124,6 +125,7 @@ if TYPE_CHECKING:
         CompliantLazyFrame,
         CompliantSeries,
         DTypes,
+        EagerAllowed,
         FileSource,
         IntoSeriesT,
         MultiIndexSelector,
@@ -2120,3 +2122,57 @@ def extend_bool(
     Stolen from https://github.com/pola-rs/polars/blob/b8bfb07a4a37a8d449d6d1841e345817431142df/py-polars/polars/_utils/various.py#L580-L594
     """
     return (value,) * n_match if isinstance(value, bool) else tuple(value)
+
+
+class _CanTo_List(Protocol):  # noqa: N801
+    def to_list(self, *args: Any, **kwds: Any) -> list[Any]: ...
+
+
+class _CanToList(Protocol):
+    def tolist(self, *args: Any, **kwds: Any) -> list[Any]: ...
+
+
+class _CanTo_PyList(Protocol):  # noqa: N801
+    def to_pylist(self, *args: Any, **kwds: Any) -> list[Any]: ...
+
+
+def can_to_list(obj: Any) -> TypeIs[_CanTo_List]:
+    return (
+        is_narwhals_series(obj)
+        or is_polars_series(obj)
+        or _hasattr_static(obj, "to_list")
+    )
+
+
+def can_tolist(obj: Any) -> TypeIs[_CanToList]:
+    return is_numpy_array_1d(obj) or _hasattr_static(obj, "tolist")
+
+
+def can_to_pylist(obj: Any) -> TypeIs[_CanTo_PyList]:
+    return (
+        (pa := get_pyarrow()) and isinstance(obj, (pa.Array, pa.ChunkedArray))
+    ) or _hasattr_static(obj, "to_pylist")
+
+
+# TODO @dangotbanned: Add (brief) doc
+def iterable_to_sequence(
+    iterable: Iterable[Any], /, *, backend: EagerAllowed | None = None
+) -> Sequence[Any]:
+    result: Sequence[Any]
+    if backend is not None:
+        from narwhals.series import Series
+
+        result = Series.from_iterable("", iterable, backend=backend).to_list()
+    elif isinstance(iterable, (tuple, list)):
+        result = iterable
+    elif isinstance(iterable, (Iterator, Sequence)):
+        result = tuple(iterable)
+    elif can_to_list(iterable):
+        result = iterable.to_list()
+    elif can_tolist(iterable):
+        result = iterable.tolist()
+    elif can_to_pylist(iterable):
+        result = iterable.to_pylist()
+    else:
+        result = tuple(iterable)
+    return result
