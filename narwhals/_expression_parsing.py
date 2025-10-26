@@ -501,20 +501,6 @@ class ExprMetadata:
             prev=self,
         )
 
-    def with_elementwise(
-        self,
-        node: ExprNode,
-        compliant_expr: CompliantExprAny,
-        *compliant_expr_args: CompliantExprAny,
-    ) -> ExprMetadata:
-        return combine_metadata(
-            compliant_expr,
-            *compliant_expr_args,
-            to_single_output=False,
-            current_node=node,
-            prev=compliant_expr._metadata,
-        )
-
     def with_orderable_aggregation(
         self, node: ExprNode, _ce: CompliantExprAny
     ) -> ExprMetadata:
@@ -532,6 +518,20 @@ class ExprMetadata:
             is_literal=False,
             current_node=node,
             prev=self,
+        )
+
+    def with_elementwise(
+        self,
+        node: ExprNode,
+        compliant_expr: CompliantExprAny,
+        *compliant_expr_args: CompliantExprAny,
+    ) -> ExprMetadata:
+        return combine_metadata(
+            compliant_expr,
+            *compliant_expr_args,
+            to_single_output=False,
+            current_node=node,
+            prev=compliant_expr._metadata,
         )
 
     def with_window(self, node: ExprNode, _ce: CompliantExprAny) -> ExprMetadata:
@@ -552,14 +552,6 @@ class ExprMetadata:
             current_node=node,
             prev=self,
         )
-
-    def with_over(self, node: ExprNode, _ce: CompliantExprAny) -> ExprMetadata:
-        if node.kwargs["order_by"]:
-            return self.with_ordered_over(node, _ce)
-        if not node.kwargs["partition_by"]:  # pragma: no cover
-            msg = "At least one of `partition_by` or `order_by` must be specified."
-            raise InvalidOperationError(msg)
-        return self.with_partitioned_over(node, _ce)
 
     def with_orderable_window(
         self, node: ExprNode, _ce: CompliantExprAny
@@ -642,6 +634,14 @@ class ExprMetadata:
             current_node=node,
             prev=self,
         )
+
+    def with_over(self, node: ExprNode, _ce: CompliantExprAny) -> ExprMetadata:
+        if node.kwargs["order_by"]:
+            return self.with_ordered_over(node, _ce)
+        if not node.kwargs["partition_by"]:  # pragma: no cover
+            msg = "At least one of `partition_by` or `order_by` must be specified."
+            raise InvalidOperationError(msg)
+        return self.with_partitioned_over(node, _ce)
 
     def with_filtration(
         self, node: ExprNode, *compliant_exprs: CompliantExprAny
