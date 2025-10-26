@@ -309,8 +309,8 @@ class ExprNode:
             # anything is uncovered.
             if not self.kind.is_elementwise:  # noqa: SIM114
                 self._is_elementwise_cached = False
-            elif not all(
-                all(node.is_elementwise() for node in expr._nodes)
+            elif any(
+                any(not node.is_elementwise() for node in expr._nodes)
                 for expr in self.exprs
                 if is_expr(expr)
             ):
