@@ -307,7 +307,9 @@ class ExprNode:
         if self._is_elementwise_cached is None:
             # Note: don't combine these if/then statements so that pytest-cov shows if
             # anything is uncovered.
-            if not self.kind.is_elementwise or not all(
+            if not self.kind.is_elementwise:  # noqa: SIM114
+                self._is_elementwise_cached = False
+            elif not all(
                 all(node.is_elementwise() for node in expr._nodes)
                 for expr in self.exprs
                 if is_expr(expr)
