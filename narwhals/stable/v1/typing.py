@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Protocol, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Protocol, Union
 
-from narwhals._native import IntoSeries, IntoSeriesT
+from narwhals._native import IntoSeries
+from narwhals._typing_compat import TypeVar
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
-    from narwhals._native import NativeDataFrame, NativeLazyFrame
+    from narwhals._native import NativeDataFrame, NativeDuckDB, NativeLazyFrame
     from narwhals.stable.v1 import DataFrame, Expr, LazyFrame, Series
 
     class DataFrameLike(Protocol):
@@ -24,7 +25,7 @@ typed to accept `IntoExpr`, as it can either accept a `nw.Expr`
 `nw.Expr`, e.g. `df.select('a')`.
 """
 
-IntoDataFrame: TypeAlias = Union["NativeDataFrame", "DataFrameLike"]
+IntoDataFrame: TypeAlias = Union["NativeDataFrame", "DataFrameLike", "NativeDuckDB"]
 """Anything which can be converted to a Narwhals DataFrame.
 
 Use this if your function accepts a narwhalifiable object but doesn't care about its backend.
@@ -123,6 +124,9 @@ Examples:
     ...     return df.with_columns(c=df["a"] + 1)
 """
 
+LazyFrameT = TypeVar("LazyFrameT", bound="LazyFrame[Any]")
+SeriesT = TypeVar("SeriesT", bound="Series[Any]")
+IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries", default=Any)
 
 __all__ = [
     "DataFrameT",
@@ -135,4 +139,6 @@ __all__ = [
     "IntoFrameT",
     "IntoSeries",
     "IntoSeriesT",
+    "LazyFrameT",
+    "SeriesT",
 ]

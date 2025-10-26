@@ -1,8 +1,8 @@
-"""[Protocols] defining conversion methods between representations.
+"""[Protocols] defining conversion methods between representations, and related [structural] typing.
 
-These come in 3 flavors and are [generic] to promote reuse.
+The protocols come in 3 flavors and are [generic] to promote reuse.
 
-The following examples use the placeholder types `Narwhal` and `Other`:
+These examples use the placeholder types `Narwhal` and `Other`:
 - `Narwhal`: some class written in `narwhals`.
 - `Other`: any other class, could be native, compliant, or a builtin.
 
@@ -53,6 +53,7 @@ To learn more see [moist], [dry], or [even drier] - depending on how deep you wa
 
 [Protocols]: https://typing.python.org/en/latest/spec/protocol.html
 [generic]: https://typing.python.org/en/latest/spec/generics.html
+[structural]: https://typing.python.org/en/latest/spec/glossary.html#term-structural
 [upstream signature]: https://numpy.org/doc/stable/user/basics.interoperability.html#the-array-method
 [positional-only]: https://peps.python.org/pep-0570/
 [moist]: https://mypy.readthedocs.io/en/stable/generics.html#variance-of-generic-types
@@ -63,13 +64,13 @@ To learn more see [moist], [dry], or [even drier] - depending on how deep you wa
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Any, Literal, Protocol, TypedDict
 
 from narwhals._typing_compat import TypeVar
 
 if TYPE_CHECKING:
     import pyarrow as pa
-    from typing_extensions import Self, TypeAlias, TypeIs
+    from typing_extensions import Required, Self, TypeAlias, TypeIs
 
 
 class ArrowStreamExportable(Protocol):
@@ -184,3 +185,137 @@ class ToNarwhals(Protocol[ToNarwhalsT_co]):
     def to_narwhals(self) -> ToNarwhalsT_co:
         """Convert into public representation."""
         ...
+
+
+class _ExcludeSeries(TypedDict, total=False):
+    eager_only: bool
+    series_only: Literal[False]
+    allow_series: Literal[False] | None
+
+
+class ExcludeSeries(_ExcludeSeries, total=False):
+    pass_through: bool
+
+
+class ExcludeSeriesV1(_ExcludeSeries, total=False):
+    pass_through: bool | None
+    eager_or_interchange_only: Literal[False]
+
+
+class ExcludeSeriesStrictV1(_ExcludeSeries, total=False):
+    strict: bool | None
+    eager_or_interchange_only: Literal[False]
+
+
+class _AllowSeries(TypedDict, total=False):
+    eager_only: bool
+    series_only: Literal[False]
+    allow_series: Required[Literal[True]]
+
+
+class AllowSeries(_AllowSeries, total=False):
+    pass_through: bool
+
+
+class AllowSeriesV1(_AllowSeries, total=False):
+    pass_through: bool | None
+    eager_or_interchange_only: Literal[False]
+
+
+class AllowSeriesStrictV1(_AllowSeries, total=False):
+    strict: bool | None
+    eager_or_interchange_only: Literal[False]
+
+
+class _OnlySeries(TypedDict, total=False):
+    eager_only: bool
+    series_only: Required[Literal[True]]
+    allow_series: bool | None
+
+
+class OnlySeries(_OnlySeries, total=False):
+    pass_through: bool
+
+
+class OnlySeriesV1(_OnlySeries, total=False):
+    pass_through: bool | None
+    eager_or_interchange_only: Literal[False]
+
+
+class OnlySeriesStrictV1(_OnlySeries, total=False):
+    strict: bool | None
+    eager_or_interchange_only: Literal[False]
+
+
+class _OnlyEagerOrInterchange(TypedDict, total=False):
+    eager_or_interchange_only: Required[Literal[True]]
+    series_only: Literal[False]
+    allow_series: bool | None
+
+
+class OnlyEagerOrInterchange(_OnlyEagerOrInterchange, total=False):
+    pass_through: bool | None
+
+
+class OnlyEagerOrInterchangeStrict(_OnlyEagerOrInterchange, total=False):
+    strict: bool | None
+
+
+class _AllowLazy(TypedDict, total=False):
+    eager_only: Literal[False]
+    series_only: Literal[False]
+    allow_series: bool | None
+
+
+class AllowLazy(_AllowLazy, total=False):
+    pass_through: bool
+
+
+class AllowLazyV1(_AllowLazy, total=False):
+    pass_through: bool | None
+    eager_or_interchange_only: Literal[False]
+
+
+class AllowLazyStrictV1(_AllowLazy, total=False):
+    strict: bool | None
+    eager_or_interchange_only: Literal[False]
+
+
+class _AllowAny(TypedDict, total=False):
+    eager_only: Literal[False]
+    series_only: Literal[False]
+    allow_series: Required[Literal[True]]
+
+
+class AllowAny(_AllowAny, total=False):
+    pass_through: bool
+
+
+class AllowAnyV1(_AllowAny, total=False):
+    pass_through: bool | None
+    eager_or_interchange_only: Literal[False]
+
+
+class AllowAnyStrictV1(_AllowAny, total=False):
+    strict: bool | None
+    eager_or_interchange_only: Literal[False]
+
+
+class _Unknown(TypedDict, total=False):
+    eager_only: bool
+    series_only: bool
+    allow_series: bool | None
+
+
+class PassThroughUnknown(_Unknown, total=False):
+    pass_through: Required[Literal[True]]
+
+
+class PassThroughUnknownV1(_Unknown, total=False):
+    pass_through: Required[Literal[True]]
+    eager_or_interchange_only: bool
+
+
+class StrictUnknownV1(_Unknown, total=False):
+    strict: Required[Literal[False]]
+    eager_or_interchange_only: bool
