@@ -10,36 +10,31 @@ from narwhals._compliant.typing import (
     DepthTrackingExprT,
     EagerDataFrameT,
     EagerExprT,
-    EagerSeriesT,
+    EagerSeriesT_co,
     LazyExprT,
     NativeFrameT,
     NativeSeriesT,
 )
-from narwhals._expression_parsing import is_expr, is_series
 from narwhals._utils import (
     exclude_column_names,
     get_column_names,
     passthrough_column_names,
 )
-from narwhals.dependencies import is_numpy_array, is_numpy_array_2d
+from narwhals.dependencies import is_numpy_array_2d
 
 if TYPE_CHECKING:
-    from collections.abc import Container, Iterable, Sequence
+    from collections.abc import Iterable, Sequence
 
     from typing_extensions import TypeAlias, TypeIs
 
     from narwhals._compliant.selectors import CompliantSelectorNamespace
-    from narwhals._compliant.when_then import CompliantWhen, EagerWhen
     from narwhals._utils import Implementation, Version
-    from narwhals.expr import Expr
-    from narwhals.series import Series
     from narwhals.typing import (
         ConcatMethod,
         Into1DArray,
         IntoDType,
         IntoSchema,
         NonNestedLiteral,
-        _1DArray,
         _2DArray,
     )
 
@@ -60,33 +55,20 @@ class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
 
     @property
     def _expr(self) -> type[CompliantExprT]: ...
-    def parse_into_expr(
-        self, data: Expr | NonNestedLiteral | Any, /, *, str_as_lit: bool
-    ) -> CompliantExprT | NonNestedLiteral:
-        if is_expr(data):
-            expr = data._to_compliant_expr(self)
-            assert isinstance(expr, self._expr)  # noqa: S101
-            return expr
-        if isinstance(data, str) and not str_as_lit:
-            return self.col(data)
-        return data
-
     # NOTE: `polars`
     def all(self) -> CompliantExprT:
         return self._expr.from_column_names(get_column_names, context=self)
 
-    def col(self, *column_names: str) -> CompliantExprT:
+    def col(self, *names: str) -> CompliantExprT:
+        return self._expr.from_column_names(passthrough_column_names(names), context=self)
+
+    def exclude(self, *names: str) -> CompliantExprT:
         return self._expr.from_column_names(
-            passthrough_column_names(column_names), context=self
+            partial(exclude_column_names, names=names), context=self
         )
 
-    def exclude(self, excluded_names: Container[str]) -> CompliantExprT:
-        return self._expr.from_column_names(
-            partial(exclude_column_names, names=excluded_names), context=self
-        )
-
-    def nth(self, *column_indices: int) -> CompliantExprT:
-        return self._expr.from_column_indices(*column_indices, context=self)
+    def nth(self, indices: Sequence[int]) -> CompliantExprT:
+        return self._expr.from_column_indices(*indices, context=self)
 
     def len(self) -> CompliantExprT: ...
     def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> CompliantExprT: ...
@@ -103,9 +85,6 @@ class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
     def concat(
         self, items: Iterable[CompliantFrameT], *, how: ConcatMethod
     ) -> CompliantFrameT: ...
-    def when(
-        self, predicate: CompliantExprT
-    ) -> CompliantWhen[CompliantFrameT, Incomplete, CompliantExprT]: ...
     def concat_str(
         self, *exprs: CompliantExprT, separator: str, ignore_nulls: bool
     ) -> CompliantExprT: ...
@@ -124,20 +103,14 @@ class DepthTrackingNamespace(
     Protocol[CompliantFrameT, DepthTrackingExprT],
 ):
     def all(self) -> DepthTrackingExprT:
-        return self._expr.from_column_names(
-            get_column_names, function_name="all", context=self
-        )
+        return self._expr.from_column_names(get_column_names, context=self)
 
-    def col(self, *column_names: str) -> DepthTrackingExprT:
-        return self._expr.from_column_names(
-            passthrough_column_names(column_names), function_name="col", context=self
-        )
+    def col(self, *names: str) -> DepthTrackingExprT:
+        return self._expr.from_column_names(passthrough_column_names(names), context=self)
 
-    def exclude(self, excluded_names: Container[str]) -> DepthTrackingExprT:
+    def exclude(self, *names: str) -> DepthTrackingExprT:
         return self._expr.from_column_names(
-            partial(exclude_column_names, names=excluded_names),
-            function_name="exclude",
-            context=self,
+            partial(exclude_column_names, names=names), context=self
         )
 
 
@@ -163,7 +136,7 @@ class LazyNamespace(
 
 class EagerNamespace(
     DepthTrackingNamespace[EagerDataFrameT, EagerExprT],
-    Protocol[EagerDataFrameT, EagerSeriesT, EagerExprT, NativeFrameT, NativeSeriesT],
+    Protocol[EagerDataFrameT, EagerSeriesT_co, EagerExprT, NativeFrameT, NativeSeriesT],
 ):
     @property
     def _backend_version(self) -> tuple[int, ...]:
@@ -172,10 +145,44 @@ class EagerNamespace(
     @property
     def _dataframe(self) -> type[EagerDataFrameT]: ...
     @property
-    def _series(self) -> type[EagerSeriesT]: ...
-    def when(
-        self, predicate: EagerExprT
-    ) -> EagerWhen[EagerDataFrameT, EagerSeriesT, EagerExprT, NativeSeriesT]: ...
+    def _series(self) -> type[EagerSeriesT_co]: ...
+    def _if_then_else(
+        self,
+        when: NativeSeriesT,
+        then: NativeSeriesT,
+        otherwise: NativeSeriesT | None = None,
+    ) -> NativeSeriesT: ...
+    def when_then(
+        self, predicate: EagerExprT, then: EagerExprT, otherwise: EagerExprT | None = None
+    ) -> EagerExprT:
+        def func(df: EagerDataFrameT) -> Sequence[EagerSeriesT_co]:
+            predicate_s = df._evaluate_single_output_expr(predicate)
+            align = predicate_s._align_full_broadcast
+
+            then_s = df._evaluate_single_output_expr(then)
+            if otherwise is None:
+                predicate_s, then_s = align(predicate_s, then_s)
+                result = self._if_then_else(predicate_s.native, then_s.native)
+
+            if otherwise is None:
+                predicate_s, then_s = align(predicate_s, then_s)
+                result = self._if_then_else(predicate_s.native, then_s.native)
+            else:
+                otherwise_s = df._evaluate_single_output_expr(otherwise)
+                predicate_s, then_s, otherwise_s = align(predicate_s, then_s, otherwise_s)
+                result = self._if_then_else(
+                    predicate_s.native, then_s.native, otherwise_s.native
+                )
+            return [then_s._with_native(result)]
+
+        return self._expr._from_callable(
+            func=func,
+            evaluate_output_names=getattr(
+                then, "_evaluate_output_names", lambda _df: ["literal"]
+            ),
+            alias_output_names=getattr(then, "_alias_output_names", None),
+            context=predicate,
+        )
 
     def is_native(self, obj: Any, /) -> TypeIs[NativeFrameT | NativeSeriesT]:
         return self._dataframe._is_native(obj) or self._series._is_native(obj)
@@ -183,10 +190,10 @@ class EagerNamespace(
     @overload
     def from_native(self, data: NativeFrameT, /) -> EagerDataFrameT: ...
     @overload
-    def from_native(self, data: NativeSeriesT, /) -> EagerSeriesT: ...
+    def from_native(self, data: NativeSeriesT, /) -> EagerSeriesT_co: ...
     def from_native(
         self, data: NativeFrameT | NativeSeriesT | Any, /
-    ) -> EagerDataFrameT | EagerSeriesT:
+    ) -> EagerDataFrameT | EagerSeriesT_co:
         if self._dataframe._is_native(data):
             return self._dataframe.from_native(data, context=self)
         if self._series._is_native(data):
@@ -194,23 +201,8 @@ class EagerNamespace(
         msg = f"Unsupported type: {type(data).__name__!r}"
         raise TypeError(msg)
 
-    def parse_into_expr(
-        self,
-        data: Expr | Series[NativeSeriesT] | _1DArray | NonNestedLiteral,
-        /,
-        *,
-        str_as_lit: bool,
-    ) -> EagerExprT | NonNestedLiteral:
-        if not (is_series(data) or is_numpy_array(data)):
-            return super().parse_into_expr(data, str_as_lit=str_as_lit)
-        return self._expr._from_series(
-            data._compliant_series
-            if is_series(data)
-            else self._series.from_numpy(data, context=self)
-        )
-
     @overload
-    def from_numpy(self, data: Into1DArray, /, schema: None = ...) -> EagerSeriesT: ...
+    def from_numpy(self, data: Into1DArray, /, schema: None = ...) -> EagerSeriesT_co: ...
 
     @overload
     def from_numpy(
@@ -222,7 +214,7 @@ class EagerNamespace(
         data: Into1DArray | _2DArray,
         /,
         schema: IntoSchema | Sequence[str] | None = None,
-    ) -> EagerDataFrameT | EagerSeriesT:
+    ) -> EagerDataFrameT | EagerSeriesT_co:
         if is_numpy_array_2d(data):
             return self._dataframe.from_numpy(data, schema=schema, context=self)
         return self._series.from_numpy(data, context=self)

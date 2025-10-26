@@ -57,7 +57,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
         """
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.replace(
-                pattern, self._extract_compliant(value), literal=literal, n=n
+                self._extract_compliant(value), pattern=pattern, literal=literal, n=n
             )
         )
 
@@ -83,7 +83,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
         """
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.replace_all(
-                pattern, self._extract_compliant(value), literal=literal
+                self._extract_compliant(value), pattern, literal=literal
             )
         )
 
