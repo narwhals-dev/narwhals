@@ -82,8 +82,8 @@ class Expr:
             return self.__class__(*new_nodes)
         if node.kwargs["order_by"] and any(node.is_orderable() for node in new_nodes[:i]):
             new_nodes.insert(i, node)
-        elif node.kwargs["partition_by"] and not all(
-            node.is_elementwise() for node in new_nodes[:i]
+        elif node.kwargs["partition_by"] and any(
+            not node.is_elementwise() for node in new_nodes[:i]
         ):
             new_nodes.insert(i, node_without_order_by)
         elif all(node.is_elementwise() for node in new_nodes):
