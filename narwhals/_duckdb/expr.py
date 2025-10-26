@@ -206,34 +206,6 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
     def len(self) -> Self:
         return self._with_callable(lambda _expr: F("count"))
 
-    def std(self, *, ddof: int) -> Self:
-        if ddof == 0:
-            return self._with_callable(lambda expr: F("stddev_pop", expr))
-        if ddof == 1:
-            return self._with_callable(lambda expr: F("stddev_samp", expr))
-
-        def _std(expr: Expression) -> Expression:
-            n_samples = F("count", expr)
-            return (
-                F("stddev_pop", expr)
-                * F("sqrt", n_samples)
-                / (F("sqrt", (n_samples - lit(ddof))))
-            )
-
-        return self._with_callable(_std)
-
-    def var(self, *, ddof: int) -> Self:
-        if ddof == 0:
-            return self._with_callable(lambda expr: F("var_pop", expr))
-        if ddof == 1:
-            return self._with_callable(lambda expr: F("var_samp", expr))
-
-        def _var(expr: Expression) -> Expression:
-            n_samples = F("count", expr)
-            return F("var_pop", expr) * n_samples / (n_samples - lit(ddof))
-
-        return self._with_callable(_var)
-
     def null_count(self) -> Self:
         return self._with_callable(lambda expr: F("sum", expr.isnull().cast("int")))
 

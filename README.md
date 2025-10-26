@@ -171,6 +171,7 @@ Join the party!
 - [altair](https://github.com/vega/altair/)
 - [bokeh](https://github.com/bokeh/bokeh)
 - [darts](https://github.com/unit8co/darts)
+- [fairlearn](https://github.com/fairlearn/fairlearn)
 - [formulaic](https://github.com/matthewwardrop/formulaic)
 - [gt-extras](https://github.com/posit-dev/gt-extras)
 - [hierarchicalforecast](https://github.com/Nixtla/hierarchicalforecast)

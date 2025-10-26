@@ -444,15 +444,14 @@ class PandasLikeDataFrame(
 
     def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self:
         plx = self.__narwhals_namespace__()
-        size = len(self)
-        data = self._array_funcs.arange(size)
+        data = self._array_funcs.arange(len(self))
         row_index_s = plx._series.from_iterable(
             data, context=self, index=self.native.index, name=name
         )
         row_index = plx._expr._from_series(row_index_s)
         if order_by:
             row_index = plx._expr._from_series(
-                self.with_columns(row_index)
+                self.select(row_index, *(plx.col(x) for x in order_by))
                 .sort(*order_by, descending=False, nulls_last=False)
                 .get_column(name)
             )

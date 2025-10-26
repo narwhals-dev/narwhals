@@ -187,6 +187,8 @@ jobs:
         run: |
           cd py-shiny
           . .venv/bin/activate
+          # temporary pin to get CI green
+          uv pip install "flake8-bugbear<25.10.21"
           make narwhals-install-shiny
       - name: install-narwhals-dev
         run: |
@@ -598,3 +600,43 @@ jobs:
         run: |
           cd gt-extras
           uv run --no-sync pytest
+
+  fairlearn:
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+        os: [ubuntu-latest]
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: "true"
+          cache-suffix: fairlearn-${{ matrix.python-version }}
+          cache-dependency-glob: "pyproject.toml"
+      - name: clone-fairlearn
+        run: |
+          git clone https://github.com/fairlearn/fairlearn.git --depth 1
+          cd fairlearn
+          git log
+      - name: install-deps
+        run: |
+          cd fairlearn
+          uv pip install -e . -r requirements.txt matplotlib polars pyarrow pytest typing-extensions --system
+      - name: install-narwhals-dev
+        run: |
+          cd fairlearn
+          uv pip uninstall narwhals --system
+          uv pip install -e ./.. --system
+          uv pip freeze
+      - name: run-pytest
+        run: |
+          cd fairlearn
+          # TODO(FBruzzesi): I hope this will be simplified once there is a decision on
+          # https://github.com/fairlearn/fairlearn/issues/1555
+          pytest test/unit/preprocessing test/unit/metrics

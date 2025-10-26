@@ -502,13 +502,12 @@ class ArrowDataFrame(
         import numpy as np  # ignore-banned-import
 
         plx = self.__narwhals_namespace__()
-        size = len(self)
-        data = pa.array(np.arange(size))
+        data = pa.array(np.arange(len(self)))
         row_index_s = plx._series.from_iterable(data, context=self, name=name)
         row_index = plx._expr._from_series(row_index_s)
         if order_by:
             row_index = plx._expr._from_series(
-                self.with_columns(row_index)
+                self.select(row_index, *(plx.col(x) for x in order_by))
                 .sort(*order_by, descending=False, nulls_last=False)
                 .get_column(name)
             )

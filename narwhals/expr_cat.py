@@ -37,5 +37,5 @@ class ExprCatNamespace(Generic[ExprT]):
             └────────┘
         """
         return self._expr._append_node(
-            ExprNode(ExprKind.ELEMENTWISE, "cat.get_categories")
+            ExprNode(ExprKind.FILTRATION, "cat.get_categories")
         )
