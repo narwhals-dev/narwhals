@@ -34,6 +34,6 @@ class ExprCatNamespace(Generic[ExprT]):
             │ mango  │
             └────────┘
         """
-        return self._expr._with_elementwise(
+        return self._expr._with_filtration(
             lambda plx: self._expr._to_compliant_expr(plx).cat.get_categories()
         )
