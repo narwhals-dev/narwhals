@@ -400,7 +400,7 @@ class PolarsExprStringNamespace(
                 .list.eval(pl.element().str.to_titlecase())
                 .list.join("")
             )
-        else:
+        else:  # pragma: no cover
             native_result = native_expr.str.to_titlecase()
 
         return self.compliant._with_native(native_result)
