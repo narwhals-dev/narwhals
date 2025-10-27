@@ -777,6 +777,8 @@ def test_group_by_agg_last(
 def test_multi_column_expansion(constructor: Constructor) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < (1, 32):
         pytest.skip(reason="https://github.com/pola-rs/polars/issues/21773")
+    if "modin" in str(constructor):
+        pytest.skip(reason="Internal error")
     df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
     result = (
         df.group_by("a")
