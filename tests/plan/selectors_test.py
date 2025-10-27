@@ -13,25 +13,13 @@ import pytest
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
 from narwhals import _plan as nwp
-from narwhals._plan import Expr, Selector, expressions as ir, selectors as ncs
-from narwhals._plan._expansion import prepare_projection
+from narwhals._plan import Expr, Selector, _expansion, expressions as ir, selectors as ncs
 from narwhals._plan._parse import parse_into_seq_of_expr_ir
-from narwhals.exceptions import ColumnNotFoundError, ComputeError
+from narwhals.exceptions import ColumnNotFoundError
 
 if TYPE_CHECKING:
     from narwhals._plan.typing import IntoExpr, Seq
     from narwhals.typing import IntoSchema
-
-
-XFAIL_REQUIRE_ALL = pytest.mark.xfail(reason="Strict selectors not yet implemented")
-XFAIL_BY_INDEX_MATCHES = pytest.mark.xfail(
-    reason="`cs.by_index()` matching is only partially implemented",
-    raises=NotImplementedError,
-)
-
-XFAIL_REORDERING = pytest.mark.xfail(
-    reason="`cs.by_{index,name}()` reordering is only partially implemented"
-)
 
 
 @pytest.fixture(scope="module")
@@ -102,7 +90,7 @@ class Frame:
 
     def project_named_irs(self, *exprs: IntoExpr) -> Seq[ir.NamedIR]:
         expr_irs = parse_into_seq_of_expr_ir(*exprs)
-        named_irs, _ = prepare_projection(expr_irs, schema=self.schema)
+        named_irs, _ = _expansion.prepare_projection_s(expr_irs, schema=self.schema)
         return named_irs
 
     def project_names(self, *exprs: IntoExpr) -> Seq[str]:
@@ -193,15 +181,14 @@ def test_selector_by_dtype_invalid_input() -> None:
         ncs.by_dtype(999)  # type: ignore[arg-type]
 
 
-@XFAIL_BY_INDEX_MATCHES
-def test_selector_by_index(schema_non_nested: nw.Schema) -> None:  # pragma: no cover
+def test_selector_by_index(schema_non_nested: nw.Schema) -> None:
     df = Frame(schema_non_nested)
 
     WIDTH_COVERAGE = df.width  # noqa: N806
 
     # # one or more positive indices
     df.assert_selects(ncs.by_index(0), "abc")
-    df.assert_selects(nwp.nth(0, 1, 2), "abc", "bbb", "cde")
+    df.assert_selects(nwp.nth(0, 1, 2).meta.as_selector(), "abc", "bbb", "cde")
     df.assert_selects(ncs.by_index(0, 1, 2), "abc", "bbb", "cde")
 
     # one or more negative indices
@@ -224,7 +211,6 @@ def test_selector_by_index_invalid_input() -> None:
         ncs.by_index(["two", "three"])  # type: ignore[list-item]
 
 
-@XFAIL_REQUIRE_ALL
 def test_selector_by_index_not_found(schema_non_nested: nw.Schema) -> None:
     df = Frame(schema_non_nested)
 
@@ -232,14 +218,11 @@ def test_selector_by_index_not_found(schema_non_nested: nw.Schema) -> None:
         df.project_named_irs(ncs.by_index(999))
 
 
-@XFAIL_REORDERING
-def test_selector_by_index_reordering(
-    schema_non_nested: nw.Schema,
-) -> None:  # pragma: no cover
+def test_selector_by_index_reordering(schema_non_nested: nw.Schema) -> None:
     df = Frame(schema_non_nested)
 
     df.assert_selects(ncs.by_index(-3, -2, -1), "Lmn", "opp", "qqR")
-    df.assert_selects(ncs.by_index(range(-3, 0)), "abc", "Lmn", "opp", "qqR")
+    df.assert_selects(ncs.by_index(range(-3, 0)), "Lmn", "opp", "qqR")
 
 
 def test_selector_by_name(schema_non_nested: nw.Schema) -> None:
@@ -272,10 +255,7 @@ def test_selector_by_name_or_col(schema_non_nested: nw.Schema) -> None:
     df.assert_selects(ncs.by_name("abc") | nwp.col("cde"), "abc", "cde")
 
 
-@XFAIL_REQUIRE_ALL
-def test_selector_by_name_not_found(
-    schema_non_nested: nw.Schema,
-) -> None:  # pragma: no cover
+def test_selector_by_name_not_found(schema_non_nested: nw.Schema) -> None:
     df = Frame(schema_non_nested)
 
     with pytest.raises(ColumnNotFoundError):
@@ -545,8 +525,7 @@ def test_selector_matches_22816() -> None:
     df.assert_selects(ncs.matches(r".*burger"), "hamburger")
 
 
-@XFAIL_REORDERING
-def test_selector_by_name_order_19384() -> None:  # pragma: no cover
+def test_selector_by_name_order_19384() -> None:
     df = Frame.from_names("a", "b")
     df.assert_selects(ncs.by_name("b", "a"), "b", "a")
     df.assert_selects(ncs.by_name("b", "a", require_all=False), "b", "a")
@@ -561,9 +540,6 @@ def test_selector_datetime_23767() -> None:
     df.assert_selects(ncs.datetime("us", time_zone=[None, "UTC"]), "a", "b")
 
 
-@pytest.mark.xfail(
-    reason="Not implemented multiple `RenameAlias` yet.", raises=AssertionError
-)
 def test_name_map_chain_21164() -> None:
     # https://github.com/pola-rs/polars/blob/5b90db75911c70010d0c0a6941046e6144af88d4/py-polars/tests/unit/operations/namespaces/test_name.py#L110-L115
     df = Frame.from_names("MyCol")
@@ -573,14 +549,7 @@ def test_name_map_chain_21164() -> None:
     df.assert_selects(rename_chain, "mycol_suffix")
 
 
-@pytest.mark.xfail(
-    reason=(
-        "BUG: Not implemented `KeepName` correctly.\n"
-        "TODO: Not implemented mid-chain `KeepName` yet."
-    ),
-    raises=ComputeError,
-)
-def test_when_then_keep_map_13858() -> None:  # pragma: no cover
+def test_when_then_keep_map_13858() -> None:
     # https://github.com/pola-rs/polars/blob/aaa11d6af7383a5f9b62f432e14cc2d4af6d8548/py-polars/tests/unit/operations/namespaces/test_name.py#L118-L138
     # https://github.com/pola-rs/polars/issues/13858
     df = Frame.from_names("a", "b")
@@ -589,8 +558,6 @@ def test_when_then_keep_map_13858() -> None:  # pragma: no cover
         nwp.when(nwp.lit(True))
         .then(nwp.int_range(nwp.len()))
         .otherwise(1 + nwp.col("b"))
-        # `KeepName` raises currently when it finds `lit(1)` instead of a root
-        # need to fix that first
         .name.keep()
         .name.suffix("_other")
     )

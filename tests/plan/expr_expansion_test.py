@@ -637,5 +637,5 @@ def test_prepare_projection_index_error(
 ) -> None:
     irs = parse_into_seq_of_expr_ir(into_exprs)
     pattern = re.compile(r"invalid.+index.+nth", re.DOTALL | re.IGNORECASE)
-    with pytest.raises(ComputeError, match=pattern):
+    with pytest.raises(ColumnNotFoundError, match=pattern):
         prepare_projection(irs, schema=schema_1)

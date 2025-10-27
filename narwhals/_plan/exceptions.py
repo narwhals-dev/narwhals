@@ -205,12 +205,12 @@ def column_not_found_error(
 
 def column_index_error(
     index: int, schema_or_column_names: Iterable[str], /
-) -> ComputeError:
+) -> ColumnNotFoundError:
     # NOTE: If the original expression used a negative index, we should use that as well
     n_names = len(tuple(schema_or_column_names))
     max_nth = f"`nth({n_names - 1})`" if index >= 0 else f"`nth(-{n_names})`"
     msg = f"Invalid column index {index!r}\nHint: The schema's last column is {max_nth}"
-    return ComputeError(msg)
+    return ColumnNotFoundError(msg)
 
 
 def group_by_no_keys_error() -> ComputeError:
