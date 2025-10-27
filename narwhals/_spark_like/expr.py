@@ -3,7 +3,6 @@ from __future__ import annotations
 import operator
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Literal, cast
 
-from narwhals._expression_parsing import ExprKind, ExprMetadata
 from narwhals._spark_like.expr_dt import SparkLikeExprDateTimeNamespace
 from narwhals._spark_like.expr_list import SparkLikeExprListNamespace
 from narwhals._spark_like.expr_str import SparkLikeExprStringNamespace
@@ -41,7 +40,7 @@ if TYPE_CHECKING:
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.namespace import SparkLikeNamespace
     from narwhals._utils import _LimitedContext
-    from narwhals.typing import FillNullStrategy, IntoDType, NonNestedLiteral, RankMethod
+    from narwhals.typing import FillNullStrategy, IntoDType, RankMethod
 
     NativeRankMethod: TypeAlias = Literal["rank", "dense_rank", "row_number"]
     SparkWindowFunction = WindowFunction[SparkLikeLazyFrame, Column]
@@ -64,7 +63,6 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         self._alias_output_names = alias_output_names
         self._version = version
         self._implementation = implementation
-        self._metadata: ExprMetadata | None = None
         self._window_function: SparkWindowFunction | None = window_function
 
     _REMAP_RANK_METHOD: ClassVar[Mapping[RankMethod, NativeRankMethod]] = {
@@ -112,9 +110,7 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         msg = "`last` is not supported for PySpark."
         raise NotImplementedError(msg)
 
-    def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
-        if kind is ExprKind.LITERAL:
-            return self
+    def broadcast(self) -> Self:
         return self.over([self._F.lit(1)], [])
 
     @property
@@ -210,19 +206,19 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
             implementation=context._implementation,
         )
 
-    def __truediv__(self, other: SparkLikeExpr) -> Self:
+    def __truediv__(self, other: Self) -> Self:
         def _truediv(expr: Column, other: Column) -> Column:
             return true_divide(self._F, expr, other)
 
         return self._with_binary(_truediv, other)
 
-    def __rtruediv__(self, other: SparkLikeExpr) -> Self:
+    def __rtruediv__(self, other: Self) -> Self:
         def _rtruediv(expr: Column, other: Column) -> Column:
             return true_divide(self._F, other, expr)
 
         return self._with_binary(_rtruediv, other).alias("literal")
 
-    def __floordiv__(self, other: SparkLikeExpr) -> Self:
+    def __floordiv__(self, other: Self) -> Self:
         def _floordiv(expr: Column, other: Column) -> Column:
             F = self._F
             return F.when(
@@ -231,7 +227,7 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
 
         return self._with_binary(_floordiv, other)
 
-    def __rfloordiv__(self, other: SparkLikeExpr) -> Self:
+    def __rfloordiv__(self, other: Self) -> Self:
         def _rfloordiv(expr: Column, other: Column) -> Column:
             F = self._F
             return F.when(
@@ -328,10 +324,7 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         return self._with_elementwise(_is_nan)
 
     def fill_null(
-        self,
-        value: Self | NonNestedLiteral,
-        strategy: FillNullStrategy | None,
-        limit: int | None,
+        self, value: Self | None, strategy: FillNullStrategy | None, limit: int | None
     ) -> Self:
         if strategy is not None:
 
@@ -359,6 +352,7 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         def _fill_constant(expr: Column, value: Column) -> Column:
             return self._F.ifnull(expr, value)
 
+        assert value is not None  # noqa: S101
         return self._with_elementwise(_fill_constant, value=value)
 
     @property

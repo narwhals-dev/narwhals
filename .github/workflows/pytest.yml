@@ -147,13 +147,9 @@ jobs:
           enable-cache: "true"
           cache-suffix: python-314-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
-      - name: install pyarrow nightly
-        run: |
-          uv pip uninstall pyarrow --system
-          uv pip install -i https://pypi.anaconda.org/scientific-python-nightly-wheels/simple pyarrow -U --system
       - name: install-reqs
         # Use `--pre` as duckdb stable not compatible with 3.14
-        run: uv pip install -e . --group tests --pre pandas polars duckdb sqlframe  --system
+        run: uv pip install -e . --group tests --pre pandas polars pyarrow duckdb sqlframe  --system
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
@@ -178,12 +174,8 @@ jobs:
           enable-cache: "true"
           cache-suffix: python-314t-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
-      - name: install pyarrow nightly
-        run: |
-          uv pip uninstall pyarrow --system
-          uv pip install -i https://pypi.anaconda.org/scientific-python-nightly-wheels/simple pyarrow -U --system
       - name: install-reqs
-        run: uv pip install -e . --group tests --pre pandas --system
+        run: uv pip install -e . --group tests --pre pandas pyarrow --system
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest

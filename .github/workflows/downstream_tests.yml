@@ -187,6 +187,8 @@ jobs:
         run: |
           cd py-shiny
           . .venv/bin/activate
+          # temporary pin to get CI green
+          uv pip install "flake8-bugbear<25.10.21"
           make narwhals-install-shiny
       - name: install-narwhals-dev
         run: |
