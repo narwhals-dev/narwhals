@@ -18,7 +18,7 @@ from narwhals.exceptions import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Sequence
     from typing import Any
 
     import pandas as pd
@@ -170,9 +170,10 @@ def is_iterable_polars_error(
     return TypeError(msg)
 
 
-def duplicate_error(exprs: Seq[ir.ExprIR]) -> DuplicateError:
+def duplicate_error(exprs: Sequence[ir.ExprIR]) -> DuplicateError:
     INDENT = "\n  "  # noqa: N806
     names = [_output_name(expr) for expr in exprs]
+    exprs = sorted(exprs, key=_output_name)
     duplicates = {k for k, v in Counter(names).items() if v > 1}
     group_by_name = groupby(exprs, _output_name)
     name_exprs = {
