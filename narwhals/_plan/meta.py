@@ -119,6 +119,14 @@ def _expr_to_leaf_column_name(expr: ir.ExprIR, /) -> str | ComputeError:
     return ComputeError(msg)
 
 
+def root_name_first(expr: ir.ExprIR, /) -> str:
+    it = _expr_to_leaf_column_names_iter(expr)
+    if name := next(it, None):
+        return name
+    msg = "`name.keep_name` expected at least one column name"
+    raise InvalidOperationError(msg)
+
+
 def root_names_unique(exprs: Iterable[ir.ExprIR], /) -> set[str]:
     return set(chain.from_iterable(_expr_to_leaf_column_names_iter(e) for e in exprs))
 

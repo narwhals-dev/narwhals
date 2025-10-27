@@ -192,11 +192,7 @@ def prepare_projection_s(
 ) -> tuple[Seq[NamedIR], FrozenSchema]:
     frozen_schema = freeze_schema(schema)
     rewritten = rewrite_projections_s(tuple(exprs), ignored, schema=frozen_schema)
-
-    # TODO @dangotbanned: Plan when to rewrite aliases
-    # This will raise because renaming happens at a different level than before
-    output_names = ensure_valid_exprs(rewritten, frozen_schema)
-    named_irs = into_named_irs_s(rewritten, output_names)
+    named_irs = finish_exprs(rewritten, frozen_schema)
     return named_irs, frozen_schema
 
 
@@ -230,6 +226,31 @@ def into_named_irs_s(exprs: Seq[ExprIR], names: OutputNames) -> Seq[NamedIR]:
         msg = f"zip length mismatch: {len(exprs)} != {len(names)}"
         raise ValueError(msg)
     return tuple(ir.named_ir(name, remove_alias_s(e)) for e, name in zip(exprs, names))
+
+
+# TODO @dangotbanned: Clean up
+# Gets more done in a single pass
+def finish_exprs(exprs: Seq[ExprIR], schema: FrozenSchema) -> Seq[NamedIR]:
+    names = deque[str]()
+    named_irs = deque[NamedIR]()
+    for e in exprs:
+        if output_name := e.meta.output_name(raise_if_undetermined=False):
+            names.append(output_name)
+            target = e
+        elif meta.has_expr_ir(e, KeepName):
+            replaced = replace_keep_name(e)
+            output_name = replaced.meta.output_name()
+            target = replaced
+        else:
+            msg = f"Unable to determine output name for expression, got: `{e!r}`"
+            raise NotImplementedError(msg)
+        named_irs.append(ir.named_ir(output_name, remove_alias_s(target)))
+    if len(names) != len(set(names)):
+        raise duplicate_error(exprs)
+    root_names = meta.root_names_unique(exprs)
+    if not (set(schema.names).issuperset(root_names)):
+        raise column_not_found_error(root_names, schema)
+    return tuple(named_irs)
 
 
 def ensure_valid_exprs(exprs: Seq[ExprIR], schema: FrozenSchema) -> OutputNames:
@@ -538,6 +559,15 @@ def remove_alias(origin: ExprIR, /) -> ExprIR:
 def remove_alias_s(origin: ExprIR, /) -> ExprIR:
     def fn(child: ExprIR, /) -> ExprIR:
         return child.expr if isinstance(child, (Alias, RenameAlias)) else child
+
+    return origin.map_ir(fn)
+
+
+def replace_keep_name(origin: ExprIR, /) -> ExprIR:
+    root_name = meta.root_name_first(origin)
+
+    def fn(child: ExprIR, /) -> ExprIR:
+        return child.expr.alias(root_name) if isinstance(child, KeepName) else child
 
     return origin.map_ir(fn)
 
