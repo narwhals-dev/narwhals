@@ -2,21 +2,18 @@ from __future__ import annotations
 
 import argparse
 from importlib import import_module
+from importlib.util import find_spec
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
-import dask.dataframe as dd
-import duckdb
-import pandas as pd
 import polars as pl
-import pyarrow as pa
-import sqlframe
 from polars.testing import assert_frame_equal
-from sqlframe.duckdb import DuckDBSession
 
 import narwhals as nw
 
-pd.options.mode.copy_on_write = True
-pd.options.future.infer_string = True  # pyright: ignore[reportAttributeAccessIssue, reportOptionalMemberAccess]
+if TYPE_CHECKING:
+    from types import ModuleType
+
 pl.Config.set_fmt_float("full")
 
 DATA_DIR = Path("data")
@@ -29,14 +26,46 @@ PARTSUPP_PATH = DATA_DIR / "partsupp.parquet"
 ORDERS_PATH = DATA_DIR / "orders.parquet"
 CUSTOMER_PATH = DATA_DIR / "customer.parquet"
 
-BACKEND_NAMESPACE_KWARGS_MAP = {
-    "pandas[pyarrow]": (pd, {"engine": "pyarrow", "dtype_backend": "pyarrow"}),
-    "polars[lazy]": (pl, {}),
-    "pyarrow": (pa, {}),
-    "duckdb": (duckdb, {}),
-    "dask": (dd, {"engine": "pyarrow", "dtype_backend": "pyarrow"}),
-    "sqlframe": (sqlframe, {"session": DuckDBSession()}),
+BACKEND_NAMESPACE_KWARGS_MAP: dict[str, tuple[ModuleType, dict[str, Any]]] = {
+    "polars[lazy]": (pl, {})
 }
+
+if pyarrow_installed := find_spec("pyarrow"):
+    import pyarrow as pa
+
+    BACKEND_NAMESPACE_KWARGS_MAP["pyarrow"] = (pa, {})
+
+if pyarrow_installed and find_spec("pandas"):
+    import pandas as pd
+
+    pd.options.mode.copy_on_write = True
+    pd.options.future.infer_string = True  # pyright: ignore[reportAttributeAccessIssue, reportOptionalMemberAccess]
+
+    BACKEND_NAMESPACE_KWARGS_MAP["pandas[pyarrow]"] = (
+        pd,
+        {"engine": "pyarrow", "dtype_backend": "pyarrow"},
+    )
+
+if pyarrow_installed and find_spec("dask.dataframe"):
+    import dask.dataframe as dd
+
+    BACKEND_NAMESPACE_KWARGS_MAP["dask"] = (
+        dd,
+        {"engine": "pyarrow", "dtype_backend": "pyarrow"},
+    )
+
+
+if find_spec("duckdb"):
+    import duckdb
+
+    BACKEND_NAMESPACE_KWARGS_MAP["duckdb"] = (duckdb, {})
+
+if find_spec("sqlframe"):
+    import sqlframe
+    from sqlframe.duckdb import DuckDBSession
+
+    BACKEND_NAMESPACE_KWARGS_MAP["sqlframe"] = (sqlframe, {"session": DuckDBSession()})
+
 
 DUCKDB_SKIPS = [
     "q15"  # needs `filter` which works with window expressions
@@ -101,20 +130,29 @@ def execute_query(query_id: str) -> None:
             print(f"\nSkipping {query_id} for {backend}")  # noqa: T201
             continue
 
-        print(f"\nRunning {query_id} with {backend=}")  # noqa: T201
-        result: pl.DataFrame = (
-            query_module.query(
-                *(
-                    nw.scan_parquet(str(path), backend=native_namespace, **kwargs)
-                    for path in data_paths
+        try:
+            print(f"\nRunning {query_id} with {backend=}")  # noqa: T201
+            result: pl.DataFrame = (
+                query_module.query(
+                    *(
+                        nw.scan_parquet(str(path), backend=native_namespace, **kwargs)
+                        for path in data_paths
+                    )
                 )
+                .lazy()
+                .collect(backend=nw.Implementation.POLARS)
+                .to_native()
             )
-            .lazy()
-            .collect(backend=nw.Implementation.POLARS)
-            .to_native()
-        )
 
-        assert_frame_equal(expected, result, check_dtypes=False)
+            assert_frame_equal(expected, result, check_dtypes=False)
+
+        except AssertionError as exc:
+            msg = f"Query {query_id} with {backend=} failed with the following error:\n{exc}"
+            raise AssertionError(msg) from exc
+
+        except Exception as exc:
+            msg = f"Query {query_id} with {backend=} failed with the following error:\n{exc}"
+            raise RuntimeError(msg) from exc
 
 
 def main() -> None:
