@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 
 def _multi_output_error(expr: ExprIR) -> MultiOutputExpressionError:
-    msg = f"Multi-output expressions are not supported in a `when-then-otherwise` context.\n{expr!r}"
+    msg = f"Multi-output expressions are not supported in a `when-then-otherwise` context: `{expr!r}`"
     return MultiOutputExpressionError(msg)
 
 
