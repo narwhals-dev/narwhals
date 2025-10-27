@@ -16,7 +16,7 @@ from narwhals import _plan as nwp
 from narwhals._plan import Expr, Selector, expressions as ir, selectors as ncs
 from narwhals._plan._expansion import prepare_projection
 from narwhals._plan._parse import parse_into_seq_of_expr_ir
-from narwhals.exceptions import ColumnNotFoundError
+from narwhals.exceptions import ColumnNotFoundError, ComputeError
 
 if TYPE_CHECKING:
     from narwhals._plan.typing import IntoExpr, Seq
@@ -559,3 +559,40 @@ def test_selector_datetime_23767() -> None:
     df.assert_selects(ncs.datetime("us", time_zone=None), "a")
     df.assert_selects(ncs.datetime("us", time_zone=["UTC"]), "b")
     df.assert_selects(ncs.datetime("us", time_zone=[None, "UTC"]), "a", "b")
+
+
+@pytest.mark.xfail(
+    reason="Not implemented multiple `RenameAlias` yet.", raises=AssertionError
+)
+def test_name_map_chain_21164() -> None:
+    # https://github.com/pola-rs/polars/blob/5b90db75911c70010d0c0a6941046e6144af88d4/py-polars/tests/unit/operations/namespaces/test_name.py#L110-L115
+    df = Frame.from_names("MyCol")
+    aliased = nwp.col("MyCol").alias("mycol_suffix")
+    rename_chain = ncs.all().name.to_lowercase().name.suffix("_suffix")
+    df.assert_selects(aliased, "mycol_suffix")
+    df.assert_selects(rename_chain, "mycol_suffix")
+
+
+@pytest.mark.xfail(
+    reason=(
+        "BUG: Not implemented `KeepName` correctly.\n"
+        "TODO: Not implemented mid-chain `KeepName` yet."
+    ),
+    raises=ComputeError,
+)
+def test_when_then_keep_map_13858() -> None:  # pragma: no cover
+    # https://github.com/pola-rs/polars/blob/aaa11d6af7383a5f9b62f432e14cc2d4af6d8548/py-polars/tests/unit/operations/namespaces/test_name.py#L118-L138
+    # https://github.com/pola-rs/polars/issues/13858
+    df = Frame.from_names("a", "b")
+    aliased = nwp.int_range(3).alias("b_other")
+    when_keep_chain = (
+        nwp.when(nwp.lit(True))
+        .then(nwp.int_range(nwp.len()))
+        .otherwise(1 + nwp.col("b"))
+        # `KeepName` raises currently when it finds `lit(1)` instead of a root
+        # need to fix that first
+        .name.keep()
+        .name.suffix("_other")
+    )
+    df.assert_selects(aliased, "b_other")
+    df.assert_selects(when_keep_chain, "b_other")
