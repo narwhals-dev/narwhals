@@ -41,8 +41,7 @@ from __future__ import annotations
 from collections import deque
 from collections.abc import Container
 from functools import lru_cache
-from itertools import chain
-from typing import TYPE_CHECKING, Any, Final, Protocol
+from typing import TYPE_CHECKING, Any, Protocol, Union
 
 from narwhals._plan import common, expressions as ir, meta
 from narwhals._plan._guards import is_horizontal_reduction, is_window_expr
@@ -75,10 +74,14 @@ from narwhals._plan.schema import (
     freeze_schema,
 )
 from narwhals._plan.typing import Seq
-from narwhals._typing_compat import TypeVar, deprecated
+from narwhals._typing_compat import TypeVar, assert_never, deprecated
 from narwhals._utils import check_column_names_are_unique
 from narwhals.dtypes import DType
-from narwhals.exceptions import ComputeError, InvalidOperationError
+from narwhals.exceptions import (
+    ComputeError,
+    InvalidOperationError,
+    MultiOutputExpressionError,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Sequence
@@ -369,6 +372,119 @@ _EXPAND_COMBINATION = (
 """more than one (direct) child and those can be nested."""
 
 
+def _expand_inner(
+    children: Children, ignored: Ignored, schema: FrozenSchema, /
+) -> Iterator[ExprIR]:
+    """Use when we want to expand non-root nodes, *without* duplicating the root.
+
+    If we wrote:
+
+        col("a").over(col("c", "d", "e"))
+
+    Then the expanded version should be:
+
+        col("a").over(col("c"), col("d"), col("e"))
+
+    An **incorrect** output would cause an error without aliasing:
+
+        col("a").over(col("c"))
+        col("a").over(col("d"))
+        col("a").over(col("e"))
+
+    And cause an error if we needed to expand both sides:
+
+        col("a", "b").over(col("c", "d", "e"))
+
+    Since that would become:
+
+        col("a").over(col("c"))
+        col("b").over(col("d"))
+        col(<MISSING>).over(col("e"))  # InvalidOperationError: cannot combine selectors that produce a different number of columns (3 != 2)
+    """
+    for child in children:
+        yield from expand_expression_rec_s(child, ignored, schema)
+
+
+def _expand_function_expr(
+    origin: ir.FunctionExpr, ignored: Ignored, schema: FrozenSchema, /
+) -> Iterator[ir.FunctionExpr]:
+    # 1x output
+    if origin.options.is_input_wildcard_expansion():
+        reduced = tuple(_expand_inner(origin.input, ignored, schema))
+        yield origin.__replace__(input=reduced)
+
+    # (potentially) many outputs
+    else:
+        expand = _replace_function_input(origin)
+        if non_root := origin.input[1:]:
+            children = tuple(expand_only_s(child, ignored, schema) for child in non_root)
+        else:
+            children = ()
+        for root in expand_expression_rec_s(origin.input[0], ignored, schema):
+            yield expand((root, *children))
+
+
+def expand_single_s(
+    child: Child,
+    ignored: Ignored,
+    schema: FrozenSchema,
+    replace_in_origin: Callable[[Child], Origin],
+) -> Iterator[Origin]:
+    for e in expand_expression_rec_s(child, ignored, schema):
+        yield replace_in_origin(e)
+
+
+_Combination: TypeAlias = Union[
+    ir.SortBy,
+    ir.BinaryExpr,
+    ir.TernaryExpr,
+    ir.Filter,
+    ir.OrderedWindowExpr,
+    ir.WindowExpr,
+]
+
+
+def expand_only_s(child: Child, ignored: Ignored, schema: FrozenSchema, /) -> ExprIR:
+    iterable = expand_expression_rec_s(child, ignored, schema)
+    first = next(iterable)
+    if second := next(iterable, None):
+        msg = f"Multi-output expressions are not supported in this context, got: `{second!r}`"
+        raise MultiOutputExpressionError(msg)
+    return first
+
+
+# TODO @dangotbanned: Clean up, possibly move to be a method
+def _expand_nested_nodes_s(
+    origin: _Combination, ignored: Ignored, schema: FrozenSchema, /
+) -> Iterator[_Combination]:
+    expands = _expand_inner
+    changes: dict[str, Any] = {}
+    if isinstance(origin, (ir.WindowExpr, ir.Filter, ir.SortBy)):
+        if isinstance(origin, ir.WindowExpr):
+            if partition_by := origin.partition_by:
+                changes["partition_by"] = tuple(expands(partition_by, ignored, schema))
+            if isinstance(origin, ir.OrderedWindowExpr):
+                changes["order_by"] = tuple(expands(origin.order_by, ignored, schema))
+        elif isinstance(origin, ir.SortBy):
+            changes["by"] = tuple(expands(origin.by, ignored, schema))
+        else:
+            changes["by"] = expand_only_s(origin.by, ignored, schema)
+        replaced = common.replace(origin, **changes)
+        for root in expand_expression_rec_s(replaced.expr, ignored, schema):
+            yield common.replace(replaced, expr=root)
+    elif isinstance(origin, ir.BinaryExpr):
+        replaced = origin.__replace__(right=expand_only_s(origin.right, ignored, schema))  # type: ignore[assignment]
+        for root in expand_expression_rec_s(replaced.left, ignored, schema):  # type: ignore[union-attr]
+            yield replaced.__replace__(left=root)  # type: ignore[call-arg]
+    elif isinstance(origin, ir.TernaryExpr):
+        changes["truthy"] = expand_only_s(origin.truthy, ignored, schema)
+        changes["predicate"] = expand_only_s(origin.predicate, ignored, schema)
+        changes["falsy"] = expand_only_s(origin.falsy, ignored, schema)
+        yield origin.__replace__(**changes)
+    else:
+        assert_never(origin)
+
+
 def expand_expression_rec_s(
     expr: ExprIR, ignored: Ignored, schema: FrozenSchema, /
 ) -> Iterator[ExprIR]:
@@ -389,171 +505,14 @@ def expand_expression_rec_s(
         yield from expand_single_s(expr.expr, ignored, schema, _replace_single(expr))
 
     elif isinstance(expr, _EXPAND_COMBINATION):
-        # The bit here is very similar to single:
-        # - instead of `expand_single(expr.expr)` it is `expand_expr...([expr.child1, expr.child2, ...])
-        # - instead of `_replace_single`, it defines a function that maps `*exprs` -> to the positions per-variant
-        exprs, expand = expr._into_expand()
-        yield from expand_expression_by_combination_s(exprs, ignored, schema, expand)
+        yield from _expand_nested_nodes_s(expr, ignored, schema)
 
     elif isinstance(expr, ir.FunctionExpr):
-        if expr.options.is_input_wildcard_expansion():
-            it = chain.from_iterable(
-                expand_expression_rec_s(e, ignored, schema) for e in expr.input
-            )
-            yield common.replace(expr, input=tuple(it))
-            return
-        expand = _replace_function_input(expr)
-        yield from expand_expression_by_combination_s(expr.input, ignored, schema, expand)
+        yield from _expand_function_expr(expr, ignored, schema)
 
     else:
         msg = f"Didn't expect to see {type(expr).__name__}"
         raise TypeError(msg)
-
-
-def expand_single_s(
-    child: Child,
-    ignored: Ignored,
-    schema: FrozenSchema,
-    replace_in_origin: Callable[[Child], Origin],
-) -> Iterator[Origin]:
-    for e in expand_expression_rec_s(child, ignored, schema):
-        yield replace_in_origin(e)
-
-
-_NO_EXPAND: Final = 1
-
-
-class Expander:
-    def __init__(self, children: Children) -> None:
-        self._children: Children = children
-        self._expanded: deque[ExprIR] = deque()
-        self._slices: dict[int, tuple[int, int]] = {}
-        """`{idx_children: (idx_expanded_start, idx_expanded_end)}`."""
-
-        self._expanded_collected: Seq[ExprIR] = ()
-
-    def add(self, i: int, items: Iterable[ExprIR]) -> None:
-        slice_start = len(self._expanded)
-        self._expanded.extend(items)
-        slice_end = len(self._expanded)
-        self._slices[i] = slice_start, slice_end
-
-    def iter_children(self) -> Iterator[tuple[int, ExprIR]]:
-        yield from enumerate(self._children)
-
-    def collect(self) -> Seq[ExprIR]:
-        if collected := self._expanded_collected:
-            return collected
-        self._expanded_collected = tuple(self._expanded)
-        return self._expanded_collected
-
-    def _is_expansion(self, idx: int, /) -> bool:
-        start, end = self._slices[idx]
-        return (end - start) > _NO_EXPAND
-
-    def _root_expansion(self) -> bool:
-        return self._is_expansion(0)
-
-    def _leaves_expansion(self) -> bool:
-        it = iter(self._slices)
-        next(it)
-        return any(self._is_expansion(idx) for idx in it)
-
-    def is_root_only_expansion(self) -> bool:
-        return self._root_expansion() and not self._leaves_expansion()
-
-    def roots(self) -> Seq[ExprIR]:
-        indices = slice(*self._slices[0])
-        return self.collect()[indices]
-
-    def leaves(self) -> Seq[ExprIR]:
-        """All non-root nodes, ungrouped."""
-        start, _ = self._slices[1]
-        return self.collect()[start:]
-
-
-# TODO @dangotbanned: Translating the last branch
-# https://github.com/pola-rs/polars/blob/5b90db75911c70010d0c0a6941046e6144af88d4/crates/polars-plan/src/plans/conversion/dsl_to_ir/expr_expansion.rs#L124-L193
-def expand_expression_by_combination_s(
-    children: Children,
-    ignored: Ignored,
-    schema: FrozenSchema,
-    replace_in_origin: Callable[[Children], Origin],
-) -> Iterator[Origin]:
-    expansion_size: int = _NO_EXPAND
-
-    # Expand expressions until we find one that expands to more than 1 expression.
-    expander = Expander(children)
-    iter_children = expander.iter_children()
-    for i, child in iter_children:
-        it_expanding_child = expand_expression_rec_s(child, ignored, schema)
-        grandchildren = tuple(it_expanding_child)
-        n_grandchildren = len(grandchildren)
-        if n_grandchildren != _NO_EXPAND:
-            expansion_size = n_grandchildren
-            expander.add(i, grandchildren)
-            break
-        else:
-            expander.add(i, grandchildren)
-
-    # Check if all expressions expanded to 1 expression.
-    # This case already works correctly
-    if expansion_size == _NO_EXPAND:
-        yield replace_in_origin(expander.collect())
-        return
-
-    # Now do the remaining expression, and check if they match the size of the original expansion
-    # (or 1)
-    for i, child in iter_children:
-        it_expanding_child = expand_expression_rec_s(child, ignored, schema)
-        grandchildren = tuple(it_expanding_child)
-        n_grandchildren = len(grandchildren)
-        if n_grandchildren not in {_NO_EXPAND, expansion_size}:
-            # NOTE: Unclear on the intended goal
-            # Raised https://github.com/pola-rs/polars/issues/25022
-            msg = f"cannot combine selectors that produce a different number of columns ({n_grandchildren} != {expansion_size})"
-            raise InvalidOperationError(msg)
-        expander.add(i, grandchildren)
-
-    # Create actual output expressions.
-    expanded = expander.collect()
-
-    if len(children) == 1:
-        # Covers cases like `col("a", "b"," c").function()`
-        # `col("a").function()`
-        # `col("b").function()`
-        # `col("c").function()`
-        for e in expanded:
-            yield replace_in_origin((e,))
-        return
-
-    if expander.is_root_only_expansion():
-        # Covers cases like `col("a", "b") + col("c")`
-        # `col("a") + col("c")`
-        # `col("b") + col("c")`
-        leaves = expander.leaves()
-        for root in expander.roots():
-            yield replace_in_origin((root, *leaves))
-        return
-
-    # TODO @dangotbanned: `Seq[ExprIR]` cases are gonna need everything to be redone 😳
-    s_children = "\n".join(repr(c) for c in children)
-    s_expanded = "\n".join(repr(e) for e in expanded)
-    msg = (
-        f"TODO: Mixed expansion `expand_expression_by_combination`:\n"
-        f"{expansion_size=}\n{expander._slices=}\n\n"
-        f"children[{len(children)}]:\n{s_children}\n\nexpanded[{len(expanded)}]:\n{s_expanded}"
-        f"{_try_unsafe_unravel(replace_in_origin)}"
-    )
-    raise NotImplementedError(msg)
-
-
-def _try_unsafe_unravel(replace_in_origin: Callable[[Children], Origin]) -> str:
-    # hacky way to viz the expr we started with
-    if closure := getattr(replace_in_origin, "__closure__", None):
-        expr = closure[0].cell_contents.__self__
-        return f"\n\norigin:\n`{expr!r}`"
-    return ""
 
 
 def _expand_nested_nodes(origin: ExprIR, /, *, schema: FrozenSchema) -> ExprIR:
