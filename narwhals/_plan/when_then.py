@@ -5,14 +5,27 @@ from typing import TYPE_CHECKING, Any
 from narwhals._plan._guards import is_expr
 from narwhals._plan._immutable import Immutable
 from narwhals._plan._parse import (
-    parse_into_expr_ir,
+    parse_into_expr_ir as _parse_into_expr_ir,
     parse_predicates_constraints_into_expr_ir,
 )
 from narwhals._plan.expr import Expr
+from narwhals.exceptions import MultiOutputExpressionError
 
 if TYPE_CHECKING:
     from narwhals._plan.expressions import ExprIR, TernaryExpr
     from narwhals._plan.typing import IntoExpr, IntoExprColumn, OneOrIterable, Seq
+
+
+def _multi_output_error(expr: ExprIR) -> MultiOutputExpressionError:
+    msg = f"Multi-output expressions are not supported in a `when-then-otherwise` context.\n{expr!r}"
+    return MultiOutputExpressionError(msg)
+
+
+def parse_into_expr_ir(statement: IntoExpr, /) -> ExprIR:
+    expr_ir = _parse_into_expr_ir(statement)
+    if expr_ir.meta.has_multiple_outputs():
+        raise _multi_output_error(expr_ir)
+    return expr_ir
 
 
 class When(Immutable):
