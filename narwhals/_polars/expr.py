@@ -393,10 +393,10 @@ class PolarsExprStringNamespace(
     def to_titlecase(self) -> PolarsExpr:
         native_expr = self.native
 
-        if BACKEND_VERSION < (1, 5):
+        if BACKEND_VERSION < (1, 35):
             native_result = (
                 native_expr.str.to_lowercase()
-                .str.extract_all(r"[a-z0-9]*[^a-z0-9]*")
+                .str.extract_all(r"[a-z]*[^a-z]*")
                 .list.eval(pl.element().str.to_titlecase())
                 .list.join("")
             )
