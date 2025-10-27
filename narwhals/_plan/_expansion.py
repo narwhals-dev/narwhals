@@ -84,7 +84,7 @@ from narwhals.exceptions import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Iterator, Sequence
+    from collections.abc import Iterable, Iterator, Sequence
 
     from typing_extensions import Self, TypeAlias
 
@@ -305,57 +305,18 @@ class CanExpandSingle(Protocol):
     def __replace__(self, *, expr: Child) -> Self: ...
 
 
-class CanExpandFunction(Protocol):
-    @property
-    def input(self) -> Children: ...
-    def __replace__(self, *, input: Children) -> Self: ...
-
-
 CanExpandSingleT = TypeVar("CanExpandSingleT", bound=CanExpandSingle)
-CanExpandFunctionT = TypeVar("CanExpandFunctionT", bound=CanExpandFunction)
-Origin = TypeVar("Origin", bound=ExprIR)
+
 Child: TypeAlias = ExprIR
 Children: TypeAlias = Seq[ExprIR]
-
-
-def _replace_single(origin: CanExpandSingleT, /) -> Callable[[Child], CanExpandSingleT]:
-    """Defines a (single, positional-only parameter) constructor for expanding children.
-
-    Say we had:
-
-        origin = Cast(expr=ByName(names=("one", "two"), require_all=True), dtype=String)
-
-    This would expand to:
-
-        cast_one = Cast(expr=Column(name="one"), dtype=String)
-        cast_two = Cast(expr=Column(name="two"), dtype=String)
-
-    The function returned here (`fn`) will allow us to pass in these replacements
-    to generate the expansions:
-
-        fn = _replace_single(origin)
-        cast_one = fn(Column(name="one"))
-        cast_two = fn(Column(name="two"))
-    """
-    replace = origin.__replace__
-
-    def fn(expr: Child, /) -> CanExpandSingleT:
-        return replace(expr=expr)
-
-    return fn
-
-
-def _replace_function_input(
-    origin: CanExpandFunctionT, /
-) -> Callable[[Children], CanExpandFunctionT]:
-    """Like `_replace_single`, but for all non-horizontal `FunctionExpr`s."""
-    replace = origin.__replace__
-
-    def fn(children: Children, /) -> CanExpandFunctionT:
-        return replace(input=children)
-
-    return fn
-
+_Combination: TypeAlias = Union[
+    ir.SortBy,
+    ir.BinaryExpr,
+    ir.TernaryExpr,
+    ir.Filter,
+    ir.OrderedWindowExpr,
+    ir.WindowExpr,
+]
 
 _EXPAND_NONE = (ir.Column, ir.Literal, ir.Len)
 """we're at the root."""
@@ -415,33 +376,31 @@ def _expand_function_expr(
 
     # (potentially) many outputs
     else:
-        expand = _replace_function_input(origin)
         if non_root := origin.input[1:]:
             children = tuple(expand_only_s(child, ignored, schema) for child in non_root)
         else:
             children = ()
         for root in expand_expression_rec_s(origin.input[0], ignored, schema):
-            yield expand((root, *children))
+            yield origin.__replace__(input=(root, *children))
 
 
 def expand_single_s(
-    child: Child,
-    ignored: Ignored,
-    schema: FrozenSchema,
-    replace_in_origin: Callable[[Child], Origin],
-) -> Iterator[Origin]:
-    for e in expand_expression_rec_s(child, ignored, schema):
-        yield replace_in_origin(e)
+    origin: CanExpandSingleT, ignored: Ignored, schema: FrozenSchema
+) -> Iterator[CanExpandSingleT]:
+    """Expand the root of `origin`, yielding each child as a replacement.
 
+    Say we had:
 
-_Combination: TypeAlias = Union[
-    ir.SortBy,
-    ir.BinaryExpr,
-    ir.TernaryExpr,
-    ir.Filter,
-    ir.OrderedWindowExpr,
-    ir.WindowExpr,
-]
+        origin = Cast(expr=ByName(names=("one", "two"), require_all=True), dtype=String)
+
+    This would expand to:
+
+        cast_one = Cast(expr=Column(name="one"), dtype=String)
+        cast_two = Cast(expr=Column(name="two"), dtype=String)
+    """
+    replace = origin.__replace__
+    for e in expand_expression_rec_s(origin.expr, ignored, schema):
+        yield replace(expr=e)
 
 
 def expand_only_s(child: Child, ignored: Ignored, schema: FrozenSchema, /) -> ExprIR:
@@ -502,7 +461,7 @@ def expand_expression_rec_s(
     #   https://github.com/pola-rs/polars/blob/5b90db75911c70010d0c0a6941046e6144af88d4/crates/polars-plan/src/plans/conversion/dsl_to_ir/expr_to_ir.rs#L466-L469
     #   https://github.com/pola-rs/polars/blob/5b90db75911c70010d0c0a6941046e6144af88d4/crates/polars-plan/src/plans/conversion/dsl_to_ir/expr_to_ir.rs#L481-L485
     elif isinstance(expr, _EXPAND_SINGLE):
-        yield from expand_single_s(expr.expr, ignored, schema, _replace_single(expr))
+        yield from expand_single_s(expr, ignored, schema)
 
     elif isinstance(expr, _EXPAND_COMBINATION):
         yield from _expand_nested_nodes_s(expr, ignored, schema)
