@@ -196,7 +196,7 @@ def prepare_projection_s(
     # TODO @dangotbanned: Plan when to rewrite aliases
     # This will raise because renaming happens at a different level than before
     output_names = ensure_valid_exprs(rewritten, frozen_schema)
-    named_irs = into_named_irs(rewritten, output_names)
+    named_irs = into_named_irs_s(rewritten, output_names)
     return named_irs, frozen_schema
 
 
@@ -223,6 +223,13 @@ def into_named_irs(exprs: Seq[ExprIR], names: OutputNames) -> Seq[NamedIR]:
         msg = f"zip length mismatch: {len(exprs)} != {len(names)}"
         raise ValueError(msg)
     return tuple(ir.named_ir(name, remove_alias(e)) for e, name in zip(exprs, names))
+
+
+def into_named_irs_s(exprs: Seq[ExprIR], names: OutputNames) -> Seq[NamedIR]:
+    if len(exprs) != len(names):
+        msg = f"zip length mismatch: {len(exprs)} != {len(names)}"
+        raise ValueError(msg)
+    return tuple(ir.named_ir(name, remove_alias_s(e)) for e, name in zip(exprs, names))
 
 
 def ensure_valid_exprs(exprs: Seq[ExprIR], schema: FrozenSchema) -> OutputNames:
@@ -524,6 +531,13 @@ def is_index_in_range(index: int, n_fields: int) -> bool:
 def remove_alias(origin: ExprIR, /) -> ExprIR:
     def fn(child: ExprIR, /) -> ExprIR:
         return child.expr if isinstance(child, Alias) else child
+
+    return origin.map_ir(fn)
+
+
+def remove_alias_s(origin: ExprIR, /) -> ExprIR:
+    def fn(child: ExprIR, /) -> ExprIR:
+        return child.expr if isinstance(child, (Alias, RenameAlias)) else child
 
     return origin.map_ir(fn)
 

@@ -128,7 +128,12 @@ def _expr_output_name(expr: ir.ExprIR, /) -> str | ComputeError:
     for e in expr.iter_output_name():
         if isinstance(e, (ir.Column, ir.Alias, ir.Literal, ir.Len)):
             return e.name
-        if isinstance(e, (ir.All, ir.KeepName, ir.RenameAlias)):
+        if isinstance(e, ir.RenameAlias):
+            parent_name = _expr_output_name(e.expr)
+            if isinstance(parent_name, str):
+                return e.function(parent_name)
+            return parent_name
+        if isinstance(e, (ir.All, ir.KeepName)):
             msg = "cannot determine output column without a context for this expression"
             return ComputeError(msg)
         if isinstance(e, (ir.Columns, ir.IndexColumns, ir.Nth)):
