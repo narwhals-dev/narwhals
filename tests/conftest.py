@@ -66,7 +66,7 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         "--use-external-constructor",
         action="store_true",
         default=False,
-        help="run tests with all cpu constructors",
+        help="run tests with external constructor",
     )
     parser.addoption(
         "--constructors",
