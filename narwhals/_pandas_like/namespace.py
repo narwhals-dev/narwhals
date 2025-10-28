@@ -260,13 +260,14 @@ class PandasLikeNamespace(
     def _concat_horizontal(
         self, dfs: Sequence[NativeDataFrameT | NativeSeriesT], /
     ) -> NativeDataFrameT:
-        _frame_cls = self._implementation.to_native_namespace().DataFrame
-        names = list(
-            chain.from_iterable(
-                item.columns if isinstance(item, _frame_cls) else (item.name,)  # type: ignore[union-attr]
-                for item in dfs
+        _series_cls = self._implementation.to_native_namespace().Series
+        if any_is_series := any(isinstance(item, _series_cls) for item in dfs):
+            names = list(
+                chain.from_iterable(
+                    (item.name,) if isinstance(item, _series_cls) else item.columns  # type: ignore[union-attr]
+                    for item in dfs
+                )
             )
-        )
         if self._implementation.is_cudf():
             with warnings.catch_warnings():
                 warnings.filterwarnings(
@@ -279,7 +280,9 @@ class PandasLikeNamespace(
             result = self._concat(dfs, axis=HORIZONTAL, copy=False)
         else:
             result = self._concat(dfs, axis=HORIZONTAL)
-        result.columns = names  # pyright: ignore[reportAttributeAccessIssue]
+
+        if any_is_series:
+            result.columns = names  # pyright: ignore[reportAttributeAccessIssue]
         return result
 
     def _concat_vertical(self, dfs: Sequence[NativeDataFrameT], /) -> NativeDataFrameT:
