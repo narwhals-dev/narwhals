@@ -10,7 +10,7 @@ from narwhals import _plan as nwp
 from narwhals._plan import expressions as ir, selectors as ndcs
 from narwhals._utils import zip_strict
 from narwhals.exceptions import ColumnNotFoundError, DuplicateError
-from tests.plan.utils import Frame, assert_expr_ir_equal, cols, named_ir, nth, re_compile
+from tests.plan.utils import Frame, assert_expr_ir_equal, cols, named_ir, re_compile
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -54,7 +54,7 @@ def df_1(schema_1: IntoSchema) -> Frame:
 MULTI_OUTPUT_EXPRS = (
     pytest.param(cols("a", "b", "c")),
     pytest.param(ndcs.numeric() - ndcs.matches("[d-j]")),
-    pytest.param(nth(0, 1, 2)),
+    pytest.param(nwp.nth(0, 1, 2)),
     pytest.param(ndcs.by_dtype(nw.Int64, nw.Int32, nw.Int16)),
     pytest.param(ndcs.by_name("a", "b", "c")),
 )
@@ -244,12 +244,12 @@ def test_expand_selectors_funky_3(df_1: Frame) -> None:
             [nwp.col("b"), nwp.col("c"), nwp.col("d")],
             id="ByName(3)",
         ),
-        pytest.param(nth(6), [nwp.col("g")], id="ByIndex(1)"),
+        pytest.param(nwp.nth(6), [nwp.col("g")], id="ByIndex(1)"),
         pytest.param(
-            nth(9, 8, -5), [nwp.col("j"), nwp.col("i"), nwp.col("p")], id="ByIndex(3)"
+            nwp.nth(9, 8, -5), [nwp.col("j"), nwp.col("i"), nwp.col("p")], id="ByIndex(3)"
         ),
         pytest.param(
-            [nth(2).alias("c again"), nth(-1, -2).name.to_uppercase()],
+            [nwp.nth(2).alias("c again"), nwp.nth(-1, -2).name.to_uppercase()],
             [
                 named_ir("c again", nwp.col("c")),
                 named_ir("U", nwp.col("u")),
@@ -435,7 +435,7 @@ def test_expand_selectors_funky_3(df_1: Frame) -> None:
             id="SortBy-ByName",
         ),
         pytest.param(
-            nth(1).mean().over("k", order_by=nth(4, 5)),
+            nwp.nth(1).mean().over("k", order_by=nwp.nth(4, 5)),
             [
                 nwp.col("b")
                 .mean()
@@ -463,14 +463,14 @@ def test_prepare_projection(
     "expr",
     [
         ndcs.all(),
-        nth(1, 2, 3),
+        nwp.nth(1, 2, 3),
         cols("a", "b", "c"),
         ndcs.boolean() | ndcs.categorical(),
         (ndcs.by_name("a", "b") | ndcs.string()),
         (cols("b", "c") & nwp.col("a")),
         cols("a", "b").min().over("c", order_by="e"),
         (~ndcs.by_dtype(nw.Int64()) - ndcs.datetime()),
-        nth(6, 2).abs().cast(nw.Int32()) + 10,
+        nwp.nth(6, 2).abs().cast(nw.Int32()) + 10,
         *MULTI_OUTPUT_EXPRS,
     ],
 )
@@ -524,7 +524,7 @@ def test_prepare_projection_duplicate(expr: nwp.Expr, df_1: Frame) -> None:
         ([nwp.col("a").sort_by("b", "who").alias("f")], ["who"]),
         (
             [
-                nth(0, 5)
+                nwp.nth(0, 5)
                 .cast(nw.Int64())
                 .abs()
                 .cum_sum()
@@ -553,7 +553,7 @@ def test_prepare_projection_column_not_found(
         (cols("a"), "b", "c"),
         (cols("a", "b"), "c"),
         ("a", cols("b", "c")),
-        ((nth(0), nth(1, 2))),
+        ((nwp.nth(0), nwp.nth(1, 2))),
         *MULTI_OUTPUT_EXPRS,
     ],
 )
@@ -587,10 +587,15 @@ def test_prepare_projection_horizontal_alias(
 
 
 @pytest.mark.parametrize(
-    "into_exprs", [nth(-21), nth(-1, 2, 54, 0), nth(20), nth([-10, -100])]
+    "into_exprs", [nwp.nth(-21), nwp.nth(-1, 2, 54, 0), nwp.nth(20), nwp.nth([-10, -100])]
 )
 def test_prepare_projection_index_error(
     into_exprs: IntoExpr | Iterable[IntoExpr], df_1: Frame
 ) -> None:
-    with pytest.raises(ColumnNotFoundError, match=re_compile(r"invalid.+index.+nth")):
+    with pytest.raises(
+        ColumnNotFoundError,
+        match=re_compile(
+            r"invalid.+column.+index.+schema.+last.+column.+`nth\(\-?\d{2,3}\)`"
+        ),
+    ):
         df_1.project(into_exprs)

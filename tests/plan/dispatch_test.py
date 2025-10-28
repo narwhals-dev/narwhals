@@ -55,7 +55,7 @@ def test_dispatch(df: DataFrame[pa.Table, pa.ChunkedArray[Any]]) -> None:
 
     with pytest.raises(
         TypeError,
-        match=re_compile(r"IndexColumns.+not.+appear.+compliant.+expand.+expr.+first"),
+        match=re_compile(r"RootSelector.+not.+appear.+compliant.+expand.+expr.+first"),
     ):
         df._compliant.select(forgot_to_expand)
 

@@ -26,11 +26,8 @@ def col(*names: str | t.Iterable[str]) -> Expr:
     return node.to_narwhals()
 
 
-# TODO @dangotbanned: Use `by_index` for all cases
 def nth(*indices: int | t.Sequence[int]) -> Expr:
-    flat = tuple(flatten(indices))
-    node = ir.nth(flat[0]) if builtins.len(flat) == 1 else ir.index_columns(*flat)
-    return node.to_narwhals()
+    return cs.by_index(*indices).as_expr()
 
 
 def lit(
@@ -62,7 +59,7 @@ def all_s() -> Expr:
 
 
 def exclude(*names: str | t.Iterable[str]) -> Expr:
-    return cs.all().exclude_s(*names).as_expr()
+    return cs.all().exclude(*names).as_expr()
 
 
 def max(*columns: str) -> Expr:

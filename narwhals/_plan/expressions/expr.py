@@ -5,7 +5,7 @@ from __future__ import annotations
 import typing as t
 
 from narwhals._plan._expr_ir import ExprIR, SelectorIR
-from narwhals._plan.common import flatten_hash_safe, replace
+from narwhals._plan.common import replace
 from narwhals._plan.exceptions import function_expr_invalid_operation_error
 from narwhals._plan.expressions import selectors as cs
 from narwhals._plan.options import ExprIROptions
@@ -47,13 +47,10 @@ __all__ = [
     "Cast",
     "Column",
     "Columns",
-    "Exclude",
     "Filter",
     "FunctionExpr",
-    "IndexColumns",
     "Len",
     "Literal",
-    "Nth",
     "RollingExpr",
     "RootSelector",
     "SelectorIR",
@@ -72,16 +69,6 @@ def col(name: str, /) -> Column:
 # TODO @dangotbanned: Scheduled to be removed, not needed with new selectors
 def cols(*names: str) -> Columns:
     return Columns(names=names)
-
-
-# TODO @dangotbanned: Scheduled to be removed, not needed with new selectors
-def nth(index: int, /) -> Nth:
-    return Nth(index=index)
-
-
-# TODO @dangotbanned: Scheduled to be removed, not needed with new selectors
-def index_columns(*indices: int) -> IndexColumns:
-    return IndexColumns(indices=indices)
 
 
 class Alias(ExprIR, child=("expr",), config=ExprIROptions.no_dispatch()):
@@ -126,52 +113,12 @@ class Columns(_ColumnSelection):
 
 
 # TODO @dangotbanned: Scheduled to be removed, not needed with new selectors
-class Nth(_ColumnSelection):
-    __slots__ = ("index",)
-    index: int
-
-    def __repr__(self) -> str:
-        return f"nth({self.index})"
-
-    def to_selector_ir(self) -> RootSelector:
-        return cs.ByIndex.from_index(self.index).to_selector_ir()
-
-
-# TODO @dangotbanned: Scheduled to be removed, not needed with new selectors
-class IndexColumns(_ColumnSelection):
-    __slots__ = ("indices",)
-    indices: Seq[int]
-
-    def __repr__(self) -> str:
-        return f"index_columns({self.indices!r})"
-
-    def to_selector_ir(self) -> RootSelector:
-        return cs.ByIndex.from_indices(self.indices).to_selector_ir()
-
-
-# TODO @dangotbanned: Scheduled to be removed, not needed with new selectors
 class All(_ColumnSelection):
     def __repr__(self) -> str:
         return "all()"
 
     def to_selector_ir(self) -> RootSelector:
         return cs.All().to_selector_ir()
-
-
-# TODO @dangotbanned: Scheduled to be removed, not needed with new selectors
-class Exclude(_ColumnSelection, child=("expr",)):
-    __slots__ = ("expr", "names")
-    expr: ExprIR
-    """Default is `all()`."""
-    names: Seq[str]
-    """Excluded names."""
-
-    @staticmethod
-    def from_names(expr: ExprIR, *names: str | t.Iterable[str]) -> Exclude:
-        return Exclude(expr=expr, names=tuple(flatten_hash_safe(names)))
-
-    def __repr__(self) -> str:
-        return f"{self.expr!r}.exclude({list(self.names)!r})"
 
 
 class Literal(ExprIR, t.Generic[LiteralT], config=ExprIROptions.namespaced("lit")):

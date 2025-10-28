@@ -211,15 +211,16 @@ def test_invalid_binary_expr_multi() -> None:
     pattern = re.escape("all() + cols(['b', 'c'])\n        ^^^^^^^^^^^^^^^^")
     with pytest.raises(MultiOutputExpressionError, match=pattern):
         nwp.all() + nwp.col("b", "c")
+
     pattern = re.escape(
-        "index_columns((1, 2, 3)) * index_columns((4, 5, 6)).max()\n"
-        "                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
+        "ncs.by_index([1, 2, 3], require_all=True) * ncs.by_index([4, 5, 6], require_all=True).max()\n"
+        "                                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
     )
     with pytest.raises(MultiOutputExpressionError, match=pattern):
         nwp.nth(1, 2, 3) * nwp.nth(4, 5, 6).max()
     pattern = re.escape(
-        "cols(['a', 'b', 'c']).abs().fill_null([lit(int: 0)]).round() * index_columns((9, 10)).cast(Int64).sort(asc)\n"
-        "                                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
+        "cols(['a', 'b', 'c']).abs().fill_null([lit(int: 0)]).round() * ncs.by_index([9, 10], require_all=True).cast(Int64).sort(asc)\n"
+        "                                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
     )
     with pytest.raises(MultiOutputExpressionError, match=pattern):
         nwp.col("a", "b", "c").abs().fill_null(0).round(2) * nwp.nth(9, 10).cast(

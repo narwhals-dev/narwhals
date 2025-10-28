@@ -47,8 +47,7 @@ class Selector(Expr):
             return ExprV1._from_ir(self._ir)
         raise NotImplementedError(self.version)
 
-    # TODO @dangotbanned: Rename to `exclude` (after `Expr.selector` swap)
-    def exclude_s(self, *names: OneOrIterable[str]) -> Selector:
+    def exclude(self, *names: OneOrIterable[str]) -> Selector:
         return self - by_name(*names)  # pyright: ignore[reportReturnType]
 
     def __invert__(self) -> Self:

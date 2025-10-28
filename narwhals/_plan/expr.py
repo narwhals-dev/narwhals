@@ -80,11 +80,7 @@ class Expr:
     def cast(self, dtype: IntoDType) -> Self:
         return self._from_ir(self._ir.cast(common.into_dtype(dtype)))
 
-    # TODO @dangotbanned: Swap out with `exclude_s`
-    def exclude(self, *names: OneOrIterable[str]) -> Self:
-        return self._from_ir(ir.Exclude.from_names(self._ir, *names))
-
-    def exclude_s(self, *names: OneOrIterable[str]) -> Expr:
+    def exclude(self, *names: OneOrIterable[str]) -> Expr:
         from narwhals._plan import selectors as cs
 
         return (self.meta.as_selector() - cs.by_name(*names)).as_expr()

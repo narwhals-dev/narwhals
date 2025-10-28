@@ -41,11 +41,6 @@ def cols(*names: str | Sequence[str]) -> nwp.Expr:
     return ncs.by_name(*names).as_expr()
 
 
-def nth(*indices: int | Sequence[int]) -> nwp.Expr:
-    """**TEMPORARY WHILE TRANSITIONING!**"""  # noqa: D415
-    return ncs.by_index(*indices).as_expr()
-
-
 def first(*names: str | Sequence[str]) -> nwp.Expr:
     return cols(*names).first()
 

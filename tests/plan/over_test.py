@@ -10,7 +10,7 @@ import narwhals as nw
 import narwhals._plan as nwp
 from narwhals._plan import selectors as ncs
 from narwhals.exceptions import InvalidOperationError
-from tests.plan.utils import assert_equal_data, cols, dataframe, nth
+from tests.plan.utils import assert_equal_data, cols, dataframe
 
 if TYPE_CHECKING:
     from narwhals._plan.typing import IntoExprColumn, OneOrIterable
@@ -47,7 +47,7 @@ XFAIL_REQUIRES_PARTITION_BY = pytest.mark.xfail(
     [
         "a",
         ["a"],
-        nth(0),
+        nwp.nth(0),
         ncs.string(),
         ncs.by_dtype(nw.String),
         ncs.by_name("a"),
@@ -76,9 +76,9 @@ def test_over_single(data: Data, partition_by: OneOrIterable[IntoExprColumn]) ->
     [
         ("a", "b"),
         [nwp.col("a"), nwp.col("b")],
-        [nth(0), nth(1)],
+        [nwp.nth(0), nwp.nth(1)],
         cols("a", "b"),
-        nth(0, 1),
+        nwp.nth(0, 1),
         ncs.by_name("a", "b"),
         ncs.matches(r"a|b"),
         ncs.all() - ncs.by_name(["c", "i"]),
@@ -217,7 +217,12 @@ def test_len_over_2369() -> None:
 
 def test_shift_kitchen_sink(data_alt: Data) -> None:
     result = dataframe(data_alt).select(
-        nth(1, 2).shift(-1).over(order_by=nth(0)).sort(nulls_last=True).fill_null(100) * 5
+        nwp.nth(1, 2)
+        .shift(-1)
+        .over(order_by=nwp.nth(0))
+        .sort(nulls_last=True)
+        .fill_null(100)
+        * 5
     )
     expected = {"b": [0, 5, 10, 15, 500], "c": [5, 5, 10, 45, 500]}
     assert_equal_data(result, expected)

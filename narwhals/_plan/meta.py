@@ -144,7 +144,7 @@ def _expr_output_name(expr: ir.ExprIR, /) -> str | ComputeError:
         if isinstance(e, (ir.All, ir.KeepName)):
             msg = "cannot determine output column without a context for this expression"
             return ComputeError(msg)
-        if isinstance(e, (ir.Columns, ir.IndexColumns, ir.Nth)):
+        if isinstance(e, (ir.Columns)):
             msg = "this expression may produce multiple output names"
             return ComputeError(msg)
         continue
@@ -176,7 +176,7 @@ def get_single_leaf_name(expr: ir.ExprIR, /) -> str | ComputeError:
 
 
 def _has_multiple_outputs(expr: ir.ExprIR, /) -> bool:
-    return isinstance(expr, (ir.Columns, ir.IndexColumns, ir.SelectorIR, ir.All))
+    return isinstance(expr, (ir.Columns, ir.SelectorIR, ir.All))
 
 
 def has_expr_ir(expr: ir.ExprIR, *matches: type[ir.ExprIR]) -> bool:
