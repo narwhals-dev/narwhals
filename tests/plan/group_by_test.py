@@ -9,7 +9,7 @@ import narwhals as nw
 from narwhals import _plan as nwp
 from narwhals._plan import selectors as npcs
 from narwhals.exceptions import InvalidOperationError
-from tests.plan.utils import assert_equal_data, dataframe
+from tests.plan.utils import assert_equal_data, cols, dataframe
 from tests.utils import PYARROW_VERSION, assert_equal_data as _assert_equal_data
 
 pytest.importorskip("pyarrow")
@@ -25,10 +25,6 @@ if TYPE_CHECKING:
 XFAIL_KEY_ERROR = pytest.mark.xfail(
     reason="TODO: Investigate 'Field * exists 2 times in schema'", raises=KeyError
 )
-
-
-def cols(*names: str) -> nwp.Expr:
-    return npcs.by_name(*names).as_expr()
 
 
 def test_group_by_iter() -> None:

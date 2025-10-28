@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 from narwhals import _plan as nwp
-from narwhals._plan import expressions as ir
+from narwhals._plan import expressions as ir, selectors as ncs
 from tests.utils import assert_equal_data as _assert_equal_data
 
 pytest.importorskip("pyarrow")
@@ -13,9 +13,25 @@ pytest.importorskip("pyarrow")
 import pyarrow as pa
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping
+    from collections.abc import Iterable, Mapping, Sequence
 
     from typing_extensions import LiteralString
+
+
+def cols(*names: str | Sequence[str]) -> nwp.Expr:
+    return ncs.by_name(*names).as_expr()
+
+
+def nth(*indices: int | Sequence[int]) -> nwp.Expr:
+    return ncs.by_index(*indices).as_expr()
+
+
+def first(*names: str | Sequence[str]) -> nwp.Expr:
+    return cols(*names).first()
+
+
+def last(*names: str | Sequence[str]) -> nwp.Expr:
+    return cols(*names).last()
 
 
 def _unwrap_ir(obj: nwp.Expr | ir.ExprIR | ir.NamedIR) -> ir.ExprIR:

@@ -15,7 +15,7 @@ import narwhals as nw
 from narwhals import _plan as nwp
 from narwhals._utils import Version
 from narwhals.exceptions import ComputeError
-from tests.plan.utils import assert_equal_data, dataframe
+from tests.plan.utils import assert_equal_data, dataframe, first, last, nth
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -444,7 +444,7 @@ def test_select(
             [
                 nwp.col("e").fill_null(nwp.col("e").last()),
                 nwp.col("f").sort(),
-                nwp.nth(1).max(),
+                nth(1).max(),
             ],
             {
                 "a": ["A", "B", "A"],
@@ -485,14 +485,6 @@ def test_with_columns(
 ) -> None:
     result = dataframe(data_smaller).with_columns(expr)
     assert_equal_data(result, expected)
-
-
-def first(*names: str) -> nwp.Expr:
-    return nwp.col(*names).first()
-
-
-def last(*names: str) -> nwp.Expr:
-    return nwp.col(*names).last()
 
 
 @pytest.mark.parametrize(

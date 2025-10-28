@@ -10,7 +10,7 @@ import narwhals as nw
 import narwhals._plan as nwp
 from narwhals._plan import selectors as ncs
 from narwhals.exceptions import InvalidOperationError
-from tests.plan.utils import assert_equal_data, dataframe
+from tests.plan.utils import assert_equal_data, cols, dataframe, nth
 
 if TYPE_CHECKING:
     from narwhals._plan.typing import IntoExprColumn, OneOrIterable
@@ -47,7 +47,7 @@ XFAIL_REQUIRES_PARTITION_BY = pytest.mark.xfail(
     [
         "a",
         ["a"],
-        nwp.nth(0),
+        nth(0),
         ncs.string(),
         ncs.by_dtype(nw.String),
         ncs.by_name("a"),
@@ -76,9 +76,9 @@ def test_over_single(data: Data, partition_by: OneOrIterable[IntoExprColumn]) ->
     [
         ("a", "b"),
         [nwp.col("a"), nwp.col("b")],
-        [nwp.nth(0), nwp.nth(1)],
-        nwp.col("a", "b"),
-        nwp.nth(0, 1),
+        [nth(0), nth(1)],
+        cols("a", "b"),
+        nth(0, 1),
         ncs.by_name("a", "b"),
         ncs.matches(r"a|b"),
         ncs.all() - ncs.by_name(["c", "i"]),
@@ -122,7 +122,7 @@ def test_over_cum_sum(data_with_null: Data) -> None:  # pragma: no cover
     }
 
     result = (
-        df.with_columns(nwp.col("b", "c").cum_sum().over("a").name.suffix("_cum_sum"))
+        df.with_columns(cols("b", "c").cum_sum().over("a").name.suffix("_cum_sum"))
         .sort("i")
         .drop("i")
     )
@@ -163,7 +163,9 @@ def test_over_std_var(data: Data) -> None:
 # NOTE: Supporting this for pyarrow is new 🥳
 def test_over_anonymous_reduction() -> None:
     df = dataframe({"a": [1, 1, 2], "b": [4, 5, 6]})
-    result = df.with_columns(nwp.all().sum().over("a").name.suffix("_sum")).sort("a", "b")
+    result = df.with_columns(
+        nwp.all().meta.as_selector().sum().over("a").name.suffix("_sum")
+    ).sort("a", "b")
     expected = {"a": [1, 1, 2], "b": [4, 5, 6], "a_sum": [2, 2, 2], "b_sum": [9, 9, 6]}
     assert_equal_data(result, expected)
 
