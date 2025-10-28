@@ -111,7 +111,7 @@ class BaseFrame(Generic[NativeFrameT_co]):
     ) -> Self:
         sort = _parse.parse_sort_by_into_seq_of_expr_ir(by, *more_by)
         opts = SortMultipleOptions.parse(descending=descending, nulls_last=nulls_last)
-        named_irs, _ = prepare_projection(sort, schema=self)
+        named_irs, _ = prepare_projection_s(sort, schema=self)
         return self._with_compliant(self._compliant.sort(named_irs, opts))
 
     def drop(self, *columns: str, strict: bool = True) -> Self:
