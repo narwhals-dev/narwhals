@@ -8,8 +8,7 @@ import pytest
 import narwhals as nw
 from narwhals import _plan as nwp
 from narwhals._plan import expressions as ir, selectors as ndcs
-from narwhals._plan._expansion import replace_selector
-from narwhals._plan.schema import freeze_schema
+from narwhals._utils import zip_strict
 from narwhals.exceptions import ColumnNotFoundError, DuplicateError
 from tests.plan.utils import Frame, assert_expr_ir_equal, cols, named_ir, nth, re_compile
 
@@ -187,86 +186,53 @@ def test_map_ir_recursive(expr: nwp.Expr, function: MapIR, expected: nwp.Expr) -
     assert_expr_ir_equal(actual, expected)
 
 
-# TODO @dangotbanned: Need a better way of representing a multi-expansion on the rhs
-# Simply converting everything to use multiple `col` is gonna explode the test size
-# TODO @dangotbanned: Don't compare against `_ColumnSelection`
-# TODO @dangotbanned: Don't use `replace_selector` directly
-@pytest.mark.parametrize(
-    ("expr", "expected"),
-    [
-        (nwp.col("a"), nwp.col("a")),
-        (nwp.col("a").max().alias("z"), nwp.col("a").max().alias("z")),
-        (ndcs.string(), ir.Columns(names=("k",))),
-        (
-            ndcs.by_dtype(nw.Datetime("ms"), nw.Date, nw.List(nw.String)),
-            nwp.col("n", "s"),
-        ),
-        (ndcs.string() | ndcs.boolean(), nwp.col("k", "m")),
-        (
-            ~(ndcs.numeric() | ndcs.string()),
-            nwp.col("l", "m", "n", "o", "p", "q", "r", "s", "u"),
-        ),
-        (
-            (
-                ndcs.all()
-                - (ndcs.categorical() | ndcs.by_name("a", "b") | ndcs.matches("[fqohim]"))
-                ^ ndcs.by_name("u", "a", "b", "d", "e", "f", "g")
-            ).name.suffix("_after"),
-            nwp.col("a", "b", "c", "f", "j", "k", "l", "n", "r", "s").name.suffix(
-                "_after"
-            ),
-        ),
-        (
-            (ndcs.matches("[a-m]") & ~ndcs.numeric()).sort(nulls_last=True).first()
-            != nwp.lit(None),
-            nwp.col("k", "l", "m").sort(nulls_last=True).first() != nwp.lit(None),
-        ),
-        (
-            (
-                ndcs.numeric()
-                .mean()
-                .over("k", order_by=ndcs.by_dtype(nw.Date()) | ndcs.boolean())
-            ),
-            (
-                nwp.col("a", "b", "c", "d", "e", "f", "g", "h", "i", "j")
-                .mean()
-                .over(nwp.col("k"), order_by=nwp.col("m", "n"))
-            ),
-        ),
-        (
-            (
-                ndcs.datetime()
-                .dt.timestamp()
-                .min()
-                .over(ndcs.string() | ndcs.boolean())
-                .last()
-                .name.to_uppercase()
-            ),
-            (
-                nwp.col("l", "o")
-                .dt.timestamp("us")
-                .min()
-                .over(nwp.col("k", "m"))
-                .last()
-                .name.to_uppercase()
-            ),
-        ),
-        pytest.param(
-            ndcs.by_dtype(
-                nw.Datetime, nw.Enum, nw.Duration, nw.Struct, nw.List, nw.Array
-            ),
-            nwp.col("l", "o", "q", "r", "s", "u"),
-            id="ByDType-isinstance",
-        ),
-    ],
-)
-def test_replace_selector(
-    expr: nwp.Selector | nwp.Expr,
-    expected: nwp.Expr | ir.ExprIR,
-    schema_1: dict[str, DType],
-) -> None:
-    actual = replace_selector(expr._ir, schema=freeze_schema(**schema_1))
-    assert_expr_ir_equal(actual, expected)
+def test_expand_selectors_funky_1(df_1: Frame) -> None:
+    # root->selection->transform
+    selector = ndcs.matches("[a-m]") & ~ndcs.numeric()
+    expr = selector.sort(nulls_last=True).first() != nwp.lit(None)
+    expecteds = [
+        named_ir(name, nwp.col(name).sort(nulls_last=True).first() != nwp.lit(None))
+        for name in ("k", "l", "m")
+    ]
+    actuals = df_1.project(expr)
+    for actual, expected in zip_strict(actuals, expecteds):
+        assert_expr_ir_equal(actual, expected)
+
+
+def test_expand_selectors_funky_2(df_1: Frame) -> None:
+    # root->selection->transform
+    # leaf->selection
+    expr = (
+        ndcs.numeric().mean().over("k", order_by=ndcs.by_dtype(nw.Date) | ndcs.boolean())
+    )
+    root_names = "a", "b", "c", "d", "e", "f", "g", "h", "i", "j"
+    expecteds = (
+        named_ir(name, nwp.col(name).mean().over("k", order_by=("m", "n")))
+        for name in root_names
+    )
+    actuals = df_1.project(expr)
+    for actual, expected in zip_strict(actuals, expecteds):
+        assert_expr_ir_equal(actual, expected)
+
+
+def test_expand_selectors_funky_3(df_1: Frame) -> None:
+    # root->selection->transform->rename
+    # leaf->selection
+    expr = (
+        ndcs.datetime()
+        .dt.timestamp()
+        .min()
+        .over(ndcs.string() | ndcs.boolean())
+        .last()
+        .name.to_uppercase()
+    )
+    expecteds = [
+        named_ir(name.upper(), nwp.col(name).dt.timestamp().min().over("k", "m").last())
+        for name in ("l", "o")
+    ]
+    actuals = df_1.project(expr)
+    for actual, expected in zip_strict(actuals, expecteds):
+        assert_expr_ir_equal(actual, expected)
 
 
 @pytest.mark.parametrize(

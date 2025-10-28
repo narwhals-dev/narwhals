@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 from datetime import timezone
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -13,8 +14,14 @@ import narwhals as nw
 import narwhals.stable.v1 as nw_v1
 from narwhals import _plan as nwp
 from narwhals._plan import Expr, Selector, selectors as ncs
+from narwhals._utils import zip_strict
 from narwhals.exceptions import ColumnNotFoundError
-from tests.plan.utils import Frame
+from tests.plan.utils import Frame, assert_expr_ir_equal, named_ir
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
+    from narwhals.dtypes import DType
 
 
 @pytest.fixture(scope="module")
@@ -61,6 +68,34 @@ def schema_non_nested() -> nw.Schema:
             "Lmn": nw.Duration(),
             "opp": nw.Datetime("ms"),
             "qqR": nw.String(),
+        }
+    )
+
+
+@pytest.fixture(scope="module")
+def schema_mixed() -> nw.Schema:
+    return nw.Schema(
+        {
+            "a": nw.Int64(),
+            "b": nw.Int32(),
+            "c": nw.Int16(),
+            "d": nw.Int8(),
+            "e": nw.UInt64(),
+            "f": nw.UInt32(),
+            "g": nw.UInt16(),
+            "h": nw.UInt8(),
+            "i": nw.Float64(),
+            "j": nw.Float32(),
+            "k": nw.String(),
+            "l": nw.Datetime(),
+            "m": nw.Boolean(),
+            "n": nw.Date(),
+            "o": nw.Datetime(),
+            "p": nw.Categorical(),
+            "q": nw.Duration(),
+            "r": nw.Enum(["A", "B", "C"]),
+            "s": nw.List(nw.String()),
+            "u": nw.Struct({"a": nw.Int64(), "k": nw.String()}),
         }
     )
 
@@ -136,6 +171,28 @@ def test_selector_by_dtype_empty(schema_non_nested: nw.Schema) -> None:
     # empty selection selects nothing
     df.assert_selects(ncs.by_dtype())
     df.assert_selects(ncs.by_dtype([]))
+
+
+@pytest.mark.parametrize(
+    ("dtypes", "expected"),
+    [
+        (
+            [nw.Datetime, nw.Enum, nw.Duration, nw.Struct, nw.List, nw.Array],
+            ["l", "o", "q", "r", "s", "u"],
+        ),
+        ([nw.String(), nw.Boolean], ["k", "m"]),
+        ([nw.Datetime("ms"), nw.Date, nw.List(nw.String)], ["n", "s"]),
+        ([nw.Enum(["A", "B", "c"])], []),
+    ],
+)
+def test_selector_by_dtype_mixed(
+    schema_mixed: nw.Schema,
+    dtypes: Iterable[DType | type[DType]],
+    expected: Iterable[str],
+) -> None:
+    df = Frame(schema_mixed)
+    df.assert_selects(ncs.by_dtype(*dtypes), *expected)
+    df.assert_selects(ncs.by_dtype(dtypes), *expected)
 
 
 def test_selector_by_dtype_invalid_input() -> None:
@@ -358,7 +415,7 @@ def test_selector_expansion() -> None:
     df.assert_selects(s, "b", "c")
 
 
-def test_selector_sets(schema_non_nested: nw.Schema) -> None:
+def test_selector_sets(schema_non_nested: nw.Schema, schema_mixed: nw.Schema) -> None:
     df = Frame(schema_non_nested)
 
     # NOTE: `cs.temporal` is used a lot in this tests, but `narwhals` doesn't have it
@@ -399,6 +456,10 @@ def test_selector_sets(schema_non_nested: nw.Schema) -> None:
     expected = "abc", "bbb", "eee", "fgg", "ghi"
     df.assert_selects(ncs.matches("e|g") ^ ncs.numeric(), *expected)
     df.assert_selects(ncs.matches(r"b|g") ^ nwp.col("eee"), *expected)
+
+    df = Frame(schema_mixed)
+    selector = ~(ncs.numeric() | ncs.string())
+    df.assert_selects(selector, "l", "m", "n", "o", "p", "q", "r", "s", "u")
 
 
 @pytest.mark.parametrize(
@@ -498,6 +559,20 @@ def test_selector_datetime_23767() -> None:
     df.assert_selects(ncs.datetime("us", time_zone=None), "a")
     df.assert_selects(ncs.datetime("us", time_zone=["UTC"]), "b")
     df.assert_selects(ncs.datetime("us", time_zone=[None, "UTC"]), "a", "b")
+
+
+def test_name_suffix_complex_selector(schema_mixed: nw.Schema) -> None:
+    df = Frame(schema_mixed)
+    selector = (
+        ncs.all() - (ncs.categorical() | ncs.by_name("a", "b") | ncs.matches("[fqohim]"))
+        ^ ncs.by_name("u", "a", "b", "d", "e", "f", "g")
+    ).name.suffix("_after")
+    selected_names = "a", "b", "c", "f", "j", "k", "l", "n", "r", "s"
+    expecteds = (named_ir(f"{name}_after", nwp.col(name)) for name in selected_names)
+    actuals = df.project(selector)
+
+    for actual, expected in zip_strict(actuals, expecteds):
+        assert_expr_ir_equal(actual, expected)
 
 
 def test_name_map_chain_21164() -> None:
