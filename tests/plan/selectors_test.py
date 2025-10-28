@@ -6,20 +6,15 @@
 from __future__ import annotations
 
 from datetime import timezone
-from typing import TYPE_CHECKING
 
 import pytest
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
 from narwhals import _plan as nwp
-from narwhals._plan import Expr, Selector, _expansion, expressions as ir, selectors as ncs
-from narwhals._plan._parse import parse_into_seq_of_expr_ir
+from narwhals._plan import Expr, Selector, selectors as ncs
 from narwhals.exceptions import ColumnNotFoundError
-
-if TYPE_CHECKING:
-    from narwhals._plan.typing import IntoExpr, Seq
-    from narwhals.typing import IntoSchema
+from tests.plan.utils import Frame
 
 
 @pytest.fixture(scope="module")
@@ -68,39 +63,6 @@ def schema_non_nested() -> nw.Schema:
             "qqR": nw.String(),
         }
     )
-
-
-class Frame:
-    def __init__(self, schema: nw.Schema) -> None:
-        self.schema = schema
-        self.columns = tuple(schema.names())
-
-    @staticmethod
-    def from_mapping(mapping: IntoSchema) -> Frame:
-        return Frame(nw.Schema(mapping))
-
-    @staticmethod
-    def from_names(*column_names: str) -> Frame:
-        """Construct with all `nw.Int64()`."""
-        return Frame(nw.Schema((name, nw.Int64()) for name in column_names))
-
-    @property
-    def width(self) -> int:
-        return len(self.columns)
-
-    def project_named_irs(self, *exprs: IntoExpr) -> Seq[ir.NamedIR]:
-        expr_irs = parse_into_seq_of_expr_ir(*exprs)
-        named_irs, _ = _expansion.prepare_projection_s(expr_irs, schema=self.schema)
-        return named_irs
-
-    def project_names(self, *exprs: IntoExpr) -> Seq[str]:
-        named_irs = self.project_named_irs(*exprs)
-        return tuple(e.name for e in named_irs)
-
-    def assert_selects(self, selector: Selector | Expr, *column_names: str) -> None:
-        projected = self.project_names(selector)
-        expected = column_names
-        assert projected == expected
 
 
 @pytest.fixture(scope="module")
@@ -184,8 +146,6 @@ def test_selector_by_dtype_invalid_input() -> None:
 def test_selector_by_index(schema_non_nested: nw.Schema) -> None:
     df = Frame(schema_non_nested)
 
-    WIDTH_COVERAGE = df.width  # noqa: N806
-
     # # one or more positive indices
     df.assert_selects(ncs.by_index(0), "abc")
     df.assert_selects(nwp.nth(0, 1, 2).meta.as_selector(), "abc", "bbb", "cde")
@@ -199,7 +159,7 @@ def test_selector_by_index(schema_non_nested: nw.Schema) -> None:
 
     # exclude by index
     df.assert_selects(
-        ~ncs.by_index(range(0, WIDTH_COVERAGE, 2)), "bbb", "def", "fgg", "JJK", "opp"
+        ~ncs.by_index(range(0, df.width, 2)), "bbb", "def", "fgg", "JJK", "opp"
     )
 
 
@@ -215,7 +175,7 @@ def test_selector_by_index_not_found(schema_non_nested: nw.Schema) -> None:
     df = Frame(schema_non_nested)
 
     with pytest.raises(ColumnNotFoundError):
-        df.project_named_irs(ncs.by_index(999))
+        df.project(ncs.by_index(999))
 
 
 def test_selector_by_index_reordering(schema_non_nested: nw.Schema) -> None:
@@ -259,10 +219,10 @@ def test_selector_by_name_not_found(schema_non_nested: nw.Schema) -> None:
     df = Frame(schema_non_nested)
 
     with pytest.raises(ColumnNotFoundError):
-        df.project_named_irs(ncs.by_name("xxx", "fgg", "!!!"))
+        df.project(ncs.by_name("xxx", "fgg", "!!!"))
 
     with pytest.raises(ColumnNotFoundError):
-        df.project_named_irs(ncs.by_name("stroopwafel"))
+        df.project(ncs.by_name("stroopwafel"))
 
 
 def test_selector_by_name_invalid_input() -> None:
@@ -479,12 +439,12 @@ def test_selector_non_dtype_inside_dtype(schema_nested_2: nw.Schema) -> None:
     with pytest.raises(
         TypeError, match=r"expected datatype based expression got.+by_name\("
     ):
-        df.project_named_irs(ncs.list(inner=ncs.by_name("???")))
+        df.project(ncs.list(inner=ncs.by_name("???")))
 
     with pytest.raises(
         TypeError, match=r"expected datatype based expression got.+by_name\("
     ):
-        df.project_named_irs(ncs.array(inner=ncs.by_name("???")))
+        df.project(ncs.array(inner=ncs.by_name("???")))
 
 
 def test_selector_enum() -> None:

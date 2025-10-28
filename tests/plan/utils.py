@@ -4,8 +4,16 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
+import narwhals as nw
 from narwhals import _plan as nwp
-from narwhals._plan import expressions as ir, selectors as ncs
+from narwhals._plan import (
+    Expr,
+    Selector,
+    _expansion,
+    _parse,
+    expressions as ir,
+    selectors as ncs,
+)
 from tests.utils import assert_equal_data as _assert_equal_data
 
 pytest.importorskip("pyarrow")
@@ -16,6 +24,9 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping, Sequence
 
     from typing_extensions import LiteralString
+
+    from narwhals._plan.typing import IntoExpr, Seq
+    from narwhals.typing import IntoSchema
 
 
 def cols(*names: str | Sequence[str]) -> nwp.Expr:
@@ -32,6 +43,110 @@ def first(*names: str | Sequence[str]) -> nwp.Expr:
 
 def last(*names: str | Sequence[str]) -> nwp.Expr:
     return cols(*names).last()
+
+
+class Frame:
+    """Schema-only `{Expr,Selector}` projection testing tool.
+
+    Arguments:
+        schema: A Narwhals Schema.
+
+    Examples:
+        >>> import narwhals as nw
+        >>> import narwhals._plan.selectors as ncs
+        >>> df = Frame.from_mapping(
+        ...     {
+        ...         "abc": nw.UInt16(),
+        ...         "bbb": nw.UInt32(),
+        ...         "cde": nw.Float64(),
+        ...         "def": nw.Float32(),
+        ...         "eee": nw.Boolean(),
+        ...     }
+        ... )
+
+        Determine the columns names that expression input would select
+
+        >>> df.project_names(ncs.numeric() - ncs.by_index(1, 2))
+        ('abc', 'def')
+
+        Assert an expression selects names in a given order
+
+        >>> df.assert_selects(ncs.by_name("eee", "abc"), "eee", "abc")
+
+        Raising a helpful error if something went wrong
+
+        >>> df.assert_selects(ncs.duration(), "eee", "abc")
+        Traceback (most recent call last):
+        AssertionError: Projected column names do not match expected names:
+        result  : ()
+        expected: ('eee', 'abc')
+    """
+
+    def __init__(self, schema: nw.Schema) -> None:
+        self.schema = schema
+        self.columns = tuple(schema.names())
+
+    @staticmethod
+    def from_mapping(mapping: IntoSchema) -> Frame:
+        """Construct from inputs accepted in `nw.Schema`."""
+        return Frame(nw.Schema(mapping))
+
+    @staticmethod
+    def from_names(*column_names: str) -> Frame:
+        """Construct with all `nw.Int64()`."""
+        return Frame(nw.Schema((name, nw.Int64()) for name in column_names))
+
+    @property
+    def width(self) -> int:
+        """Get the number of columns in the schema."""
+        return len(self.columns)
+
+    def project(self, *exprs: IntoExpr) -> Seq[ir.NamedIR]:
+        """Parse and expand `exprs` into named representations.
+
+        Arguments:
+            *exprs: Column(s) to select, specified as positional arguments.
+                Accepts expression input. Strings are parsed as column names,
+                other non-expression inputs are parsed as literals.
+
+        Note:
+            `NamedIR` is the form of expression passed to the compliant-level.
+
+        Examples:
+            >>> import datetime as dt
+            >>> import narwhals._plan.selectors as ncs
+            >>> df = Frame.from_names("a", "b", "c", "d", "idx1", "idx2")
+            >>> expr_1 = (
+            ...     ncs.by_name("a", "d")
+            ...     .first()
+            ...     .over(ncs.by_index(range(1, 4)), order_by=ncs.matches(r"idx"))
+            ... )
+            >>> expr_2 = (ncs.by_name("a") | ncs.by_index(2)).abs().name.suffix("_abs")
+            >>> expr_3 = dt.date(2000, 1, 1)
+
+            >>> df.project(expr_1, expr_2, expr_3)  # doctest: +NORMALIZE_WHITESPACE
+            (a=col('a').first().over(partition_by=[col('b'), col('c'), col('d')], order_by=[col('idx1'), col('idx2')]),
+             d=col('d').first().over(partition_by=[col('b'), col('c'), col('d')], order_by=[col('idx1'), col('idx2')]),
+             a_abs=col('a').abs(),
+             c_abs=col('c').abs(),
+             literal=lit(date: 2000-01-01))
+        """
+        expr_irs = _parse.parse_into_seq_of_expr_ir(*exprs)
+        named_irs, _ = _expansion.prepare_projection_s(expr_irs, schema=self.schema)
+        return named_irs
+
+    def project_names(self, *exprs: IntoExpr) -> Seq[str]:
+        named_irs = self.project(*exprs)
+        return tuple(e.name for e in named_irs)
+
+    def assert_selects(self, selector: Selector | Expr, *column_names: str) -> None:
+        result = self.project_names(selector)
+        expected = column_names
+        assert result == expected, (
+            f"Projected column names do not match expected names:\n"
+            f"result  : {result!r}\n"
+            f"expected: {expected!r}"
+        )
 
 
 def _unwrap_ir(obj: nwp.Expr | ir.ExprIR | ir.NamedIR) -> ir.ExprIR:
