@@ -8,7 +8,6 @@ from narwhals._plan._immutable import Immutable
 from narwhals._plan.common import replace
 from narwhals._plan.options import ExprIROptions
 from narwhals._plan.typing import ExprIRT
-from narwhals._typing_compat import deprecated
 from narwhals.exceptions import InvalidOperationError
 from narwhals.utils import Version
 
@@ -207,18 +206,9 @@ class SelectorIR(ExprIR, config=ExprIROptions.no_dispatch()):
         raise NotImplementedError(msg)
 
     def matches(self, dtype: DType) -> bool:
+        """Return True if we can select this dtype."""
         msg = f"{type(self).__name__}.matches"
         raise NotImplementedError(msg)
-
-    @deprecated("Use `matches` or `into_columns` instead")
-    def matches_column(self, name: str, dtype: DType) -> bool:
-        """Return True if we can select this column.
-
-        - Thinking that we could get more cache hits on an individual column basis.
-        - May also be more efficient to not iterate over the schema for every selector
-          - Instead do one pass, evaluating every selector against a single column at a time
-        """
-        raise NotImplementedError(type(self))
 
     def to_dtype_selector(self) -> Self:
         msg = f"{type(self).__name__}.to_dtype_selector"

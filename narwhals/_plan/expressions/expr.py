@@ -492,9 +492,6 @@ class RootSelector(SelectorIR):
     def matches(self, dtype: DType) -> bool:
         return self.selector.to_dtype_selector().matches(dtype)
 
-    def matches_column(self, name: str, dtype: DType) -> bool:
-        return self.selector.matches_column(name, dtype)
-
     def to_dtype_selector(self) -> Self:
         return replace(self, selector=self.selector.to_dtype_selector())
 
@@ -531,11 +528,6 @@ class BinarySelector(
         right = self.right.matches(dtype)
         return bool(self.op(left, right))
 
-    def matches_column(self, name: str, dtype: DType) -> bool:
-        left = self.left.matches_column(name, dtype)
-        right = self.right.matches_column(name, dtype)
-        return bool(self.op(left, right))
-
     def to_dtype_selector(self) -> Self:
         return replace(
             self, left=self.left.to_dtype_selector(), right=self.right.to_dtype_selector()
@@ -570,9 +562,6 @@ class InvertSelector(SelectorIR, t.Generic[SelectorT]):
 
     def matches(self, dtype: DType) -> bool:
         return not self.selector.to_dtype_selector().matches(dtype)
-
-    def matches_column(self, name: str, dtype: DType) -> bool:
-        return not self.selector.matches_column(name, dtype)
 
     def to_dtype_selector(self) -> Self:
         return replace(self, selector=self.selector.to_dtype_selector())

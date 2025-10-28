@@ -14,7 +14,6 @@ from typing import TYPE_CHECKING, Any, ClassVar
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.common import flatten_hash_safe
 from narwhals._plan.exceptions import column_index_error, column_not_found_error
-from narwhals._typing_compat import deprecated
 from narwhals._utils import Version, _parse_time_unit_and_time_zone
 from narwhals.dtypes import DType, NumericType
 from narwhals.typing import TimeUnit
@@ -49,14 +48,10 @@ class Selector(Immutable):
         msg = f"expected datatype based expression got {self!r}"
         raise TypeError(msg)
 
-    @deprecated("Use `matches` or `into_columns` instead")
-    def matches_column(self, name: str, dtype: DType) -> bool:
-        raise NotImplementedError(type(self))
-
     def into_columns(
         self, schema: FrozenSchema, ignored_columns: Container[str]
     ) -> Iterator[str]:
-        # /// Turns the selector into an ordered set of selected columns from the schema.
+        # Turns the selector into an ordered set of selected columns from the schema.
         #
         # - The order of the columns corresponds to the order in the schema.
         # - Column names in `ignored_columns` are only used if they are explicitly mentioned by a `ByName` or `ByIndex`.
@@ -78,9 +73,6 @@ class DTypeSelector(Selector):
     def to_dtype_selector(self) -> DTypeSelector:
         return self
 
-    def matches_column(self, name: str, dtype: DType) -> bool:
-        return isinstance(dtype, self._dtype)
-
     def matches(self, dtype: DType) -> bool:
         # Exclusive to `DataTypeSelector`
         return isinstance(dtype, self._dtype)
@@ -94,9 +86,6 @@ class DTypeSelector(Selector):
 class DTypeAll(DTypeSelector, dtype=DType):
     def __repr__(self) -> str:
         return "ncs.all()"
-
-    def matches_column(self, name: str, dtype: DType) -> bool:
-        return True
 
     def matches(self, dtype: DType) -> bool:
         return True
@@ -114,9 +103,6 @@ class DTypeAll(DTypeSelector, dtype=DType):
 class All(Selector):
     def to_dtype_selector(self) -> DTypeSelector:
         return DTypeAll()
-
-    def matches_column(self, name: str, dtype: DType) -> bool:
-        return True
 
     def into_columns(
         self, schema: FrozenSchema, ignored_columns: Container[str]
@@ -165,8 +151,8 @@ class ByIndex(Selector):
         else:
             n_fields = len(names)
             for index in self.indices:
-                idx = index + n_fields if index < 0 else index
-                if idx < 0 or idx >= n_fields:
+                positive_index = index + n_fields if index < 0 else index
+                if positive_index < 0 or positive_index >= n_fields:
                     raise column_index_error(index, schema)
                 yield names[index]
 
@@ -197,9 +183,6 @@ class ByName(Selector):
     def from_name(name: str, /, *, require_all: bool = True) -> ByName:
         return ByName(names=(name,), require_all=require_all)
 
-    def matches_column(self, name: str, dtype: DType) -> bool:
-        return name in self.names
-
     def into_columns(
         self, schema: FrozenSchema, ignored_columns: Container[str]
     ) -> Iterator[str]:
@@ -222,9 +205,6 @@ class Matches(Selector):
 
     def __repr__(self) -> str:
         return f"ncs.matches({self.pattern.pattern!r})"
-
-    def matches_column(self, name: str, dtype: DType) -> bool:
-        return bool(self.pattern.search(name))
 
     def into_columns(
         self, schema: FrozenSchema, ignored_columns: Container[str]
@@ -249,13 +229,6 @@ class Array(DTypeSelector, dtype=_dtypes.Array):
         size = self.size or "*"
         return f"ncs.array({inner}, size={size})"
 
-    def matches_column(self, name: str, dtype: DType) -> bool:
-        return (
-            isinstance(dtype, _dtypes.Array)
-            and (not (self.inner) or self.inner.matches_column(name, dtype.inner))  # type: ignore[arg-type]
-            and (self.size is None or dtype.size == self.size)
-        )
-
     def matches(self, dtype: DType) -> bool:
         return (
             isinstance(dtype, _dtypes.Array)
@@ -276,9 +249,6 @@ class ByDType(DTypeSelector, dtype=DType):
             tp.__name__ if isinstance(tp, type) else repr(tp) for tp in self.dtypes
         )
         return f"ncs.by_dtype([{els}])"
-
-    def matches_column(self, name: str, dtype: DType) -> bool:
-        return dtype in self.dtypes
 
     def matches(self, dtype: DType) -> bool:
         return dtype in self.dtypes
@@ -317,16 +287,6 @@ class Datetime(DTypeSelector, dtype=_dtypes.Datetime):
         time_zone = "*" if self.time_zones == {"*", None} else list(self.time_zones)
         return f"ncs.datetime(time_unit={time_unit}, time_zone={time_zone})"
 
-    def matches_column(self, name: str, dtype: DType) -> bool:
-        units, zones = self.time_units, self.time_zones
-        return (
-            isinstance(dtype, _dtypes.Datetime)
-            and (dtype.time_unit in units)
-            and (
-                dtype.time_zone in zones or ("*" in zones and dtype.time_zone is not None)
-            )
-        )
-
     def matches(self, dtype: DType) -> bool:
         units, zones = self.time_units, self.time_zones
         return (
@@ -356,11 +316,6 @@ class Duration(DTypeSelector, dtype=_dtypes.Duration):
         time_unit = "*" if self.time_units == _ALL_TIME_UNITS else list(self.time_units)
         return f"ncs.duration(time_unit={time_unit})"
 
-    def matches_column(self, name: str, dtype: DType) -> bool:
-        return isinstance(dtype, _dtypes.Duration) and (
-            dtype.time_unit in self.time_units
-        )
-
     def matches(self, dtype: DType) -> bool:
         return isinstance(dtype, _dtypes.Duration) and (
             dtype.time_unit in self.time_units
@@ -377,11 +332,6 @@ class List(DTypeSelector, dtype=_dtypes.List):
     def __repr__(self) -> str:
         inner = "" if not self.inner else repr(self.inner)
         return f"ncs.list({inner})"
-
-    def matches_column(self, name: str, dtype: DType) -> bool:
-        return isinstance(dtype, _dtypes.List) and (
-            not (self.inner) or self.inner.matches_column(name, dtype.inner)  # type: ignore[arg-type]
-        )
 
     def matches(self, dtype: DType) -> bool:
         return isinstance(dtype, _dtypes.List) and (
