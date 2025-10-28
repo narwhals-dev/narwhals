@@ -261,11 +261,13 @@ class PandasLikeNamespace(
         self, dfs: Sequence[NativeDataFrameT | NativeSeriesT], /
     ) -> NativeDataFrameT:
         _series_cls = self._implementation.to_native_namespace().Series
-        if any_is_series := any(isinstance(item, _series_cls) for item in dfs):
+        any_is_series = False
+        if any(_item_is_series := tuple(isinstance(item, _series_cls) for item in dfs)):
+            any_is_series = True
             names = list(
                 chain.from_iterable(
-                    (item.name,) if isinstance(item, _series_cls) else item.columns  # type: ignore[union-attr]
-                    for item in dfs
+                    (item.name,) if is_series else item.columns  # type: ignore[union-attr]
+                    for item, is_series in zip(dfs, _item_is_series)
                 )
             )
         if self._implementation.is_cudf():
