@@ -177,12 +177,7 @@ def rewrite_projections_s(
     return tuple(result)
 
 
-# TODO @dangotbanned: Remove the `ir._ColumnSelection` branch when they're gone
-# Pretty much a temp reminder for me to **not** use `col("a", "b")` on this path *yet*
 def needs_expansion_s(expr: ExprIR) -> bool:
-    if any(isinstance(e, ir._ColumnSelection) for e in expr.iter_left()):
-        msg = f"Cannot use non-`Selector` column selections here, got: `{expr!r}`.\n\nHint: instead try `{expr!r}.meta.as_selector()`."
-        raise TypeError(msg)
     return any(isinstance(e, ir.SelectorIR) for e in expr.iter_left())
 
 

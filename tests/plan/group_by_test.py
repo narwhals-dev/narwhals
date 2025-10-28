@@ -48,14 +48,10 @@ def test_group_by_iter() -> None:
 
 def test_group_by_nw_all() -> None:
     df = dataframe({"a": [1, 1, 2], "b": [4, 5, 6], "c": [7, 8, 9]})
-    result = df.group_by("a").agg(nwp.all().meta.as_selector().sum()).sort("a")
+    result = df.group_by("a").agg(nwp.all().sum()).sort("a")
     expected = {"a": [1, 2], "b": [9, 6], "c": [15, 9]}
     assert_equal_data(result, expected)
-    result = (
-        df.group_by("a")
-        .agg(nwp.all().meta.as_selector().sum().name.suffix("_sum"))
-        .sort("a")
-    )
+    result = df.group_by("a").agg(nwp.all().sum().name.suffix("_sum")).sort("a")
     expected = {"a": [1, 2], "b_sum": [9, 6], "c_sum": [15, 9]}
     assert_equal_data(result, expected)
 
@@ -364,7 +360,7 @@ def test_all_kind_of_aggs() -> None:
 @XFAIL_KEY_ERROR
 def test_fancy_functions() -> None:
     df = dataframe({"a": [1, 1, 2], "b": [4, 5, 6]})
-    result = df.group_by("a").agg(nwp.all().meta.as_selector().std(ddof=0)).sort("a")
+    result = df.group_by("a").agg(nwp.all().std(ddof=0)).sort("a")
     expected = {"a": [1, 2], "b": [0.5, 0.0]}
     assert_equal_data(result, expected)
     result = df.group_by("a").agg(npcs.numeric().std(ddof=0)).sort("a")
@@ -399,7 +395,7 @@ def test_fancy_functions() -> None:
         ),
         (
             [nwp.col("a")],
-            [nwp.col("a").count().alias("foo-bar"), nwp.all().meta.as_selector().sum()],
+            [nwp.col("a").count().alias("foo-bar"), nwp.all().sum()],
             {"a": [-1, 1, 2], "foo-bar": [1, 2, 2], "x": [4, 1, 5], "y": [1.5, 0, 0]},
             ["a"],
         ),
@@ -411,7 +407,7 @@ def test_fancy_functions() -> None:
         ),
         (
             [nwp.col("a").abs().alias("y")],
-            [nwp.all().meta.as_selector().sum().name.suffix("c")],
+            [nwp.all().sum().name.suffix("c")],
             {"y": [1, 2], "ac": [1, 4], "xc": [5, 5]},
             ["y"],
         ),
@@ -474,9 +470,7 @@ def test_group_by_selector() -> None:
 
 def test_renaming_edge_case() -> None:
     data = {"a": [0, 0, 0], "_a_tmp": [1, 2, 3], "b": [4, 5, 6]}
-    result = (
-        dataframe(data).group_by(nwp.col("a")).agg(nwp.all().meta.as_selector().min())
-    )
+    result = dataframe(data).group_by(nwp.col("a")).agg(nwp.all().min())
     expected = {"a": [0], "_a_tmp": [1], "b": [4]}
     assert_equal_data(result, expected)
 
@@ -498,9 +492,7 @@ def test_group_by_len_1_column() -> None:
 def test_top_level_len() -> None:
     # https://github.com/holoviz/holoviews/pull/6567#issuecomment-3178743331
     df = dataframe({"gender": ["m", "f", "f"], "weight": [4, 5, 6], "age": [None, 8, 9]})
-    result = (
-        df.group_by(["gender"]).agg(nwp.all().meta.as_selector().len()).sort("gender")
-    )
+    result = df.group_by(["gender"]).agg(nwp.all().len()).sort("gender")
     expected = {"gender": ["f", "m"], "weight": [2, 1], "age": [2, 1]}
     assert_equal_data(result, expected)
     result = (
@@ -655,11 +647,7 @@ def test_group_by_all() -> None:
     data = {"a": [1, 2], "b": [1, 2]}
     df = dataframe(data)
     expected = {"a": [1, 2], "b": [1, 2], "a_agg": [1, 2]}
-    result = (
-        df.group_by(nwp.all().meta.as_selector())
-        .agg(nwp.col("a").max().name.suffix("_agg"))
-        .sort("a")
-    )
+    result = df.group_by(nwp.all()).agg(nwp.col("a").max().name.suffix("_agg")).sort("a")
     assert_equal_data(result, expected)
 
 
@@ -720,11 +708,7 @@ def test_group_by_exclude_keys() -> None:
         npcs.boolean().fill_null(False), npcs.numeric().fill_null(0)
     )
     exclude = "b", "c", "d", "e", "f", "g", "j", "k", "l", "m"
-    result = (
-        df.group_by(npcs.all() - npcs.by_name(exclude))
-        .agg(npcs.all().sum())
-        .sort("a", "h")
-    )
+    result = df.group_by(nwp.exclude(exclude)).agg(nwp.all().sum()).sort("a", "h")
     expected = {
         "a": ["A", "A", "B"],
         "h": [False, True, False],

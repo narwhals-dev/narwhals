@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 import pytest
 
 from narwhals import _plan as nwp
-from narwhals._plan import selectors as ncs
 from tests.plan.utils import assert_equal_data, dataframe
 
 if TYPE_CHECKING:
@@ -64,12 +63,12 @@ XFAIL_PARTITIONED_ORDER_BY = pytest.mark.xfail(
 
 
 def test_is_first_distinct(data: Data, expected: Data) -> None:
-    result = dataframe(data).select(ncs.all().is_first_distinct())
+    result = dataframe(data).select(nwp.all().is_first_distinct())
     assert_equal_data(result, expected)
 
 
 def test_is_last_distinct(data: Data, expected_invert: Data) -> None:
-    result = dataframe(data).select(ncs.all().is_last_distinct())
+    result = dataframe(data).select(nwp.all().is_last_distinct())
     assert_equal_data(result, expected_invert)
 
 

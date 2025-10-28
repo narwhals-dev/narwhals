@@ -22,7 +22,6 @@ from narwhals._plan.expressions import (
 from narwhals._plan.expressions.aggregation import AggExpr, OrderableAggExpr, max, min
 from narwhals._plan.expressions.expr import (
     Alias,
-    All,
     AnonymousExpr,
     BinaryExpr,
     BinarySelector,
@@ -41,7 +40,6 @@ from narwhals._plan.expressions.expr import (
     SortBy,
     TernaryExpr,
     WindowExpr,
-    _ColumnSelection,  # if needs exposing, make it public!
     col,
 )
 from narwhals._plan.expressions.name import KeepName, RenameAlias
@@ -50,7 +48,6 @@ from narwhals._plan.expressions.window import over, over_ordered
 __all__ = [
     "AggExpr",
     "Alias",
-    "All",
     "AnonymousExpr",
     "BinaryExpr",
     "BinarySelector",
@@ -76,7 +73,6 @@ __all__ = [
     "SortBy",
     "TernaryExpr",
     "WindowExpr",
-    "_ColumnSelection",
     "aggregation",
     "boolean",
     "categorical",

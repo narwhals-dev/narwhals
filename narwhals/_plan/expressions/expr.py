@@ -40,7 +40,6 @@ if t.TYPE_CHECKING:
 
 __all__ = [
     "Alias",
-    "All",
     "AnonymousExpr",
     "BinaryExpr",
     "BinarySelector",
@@ -87,20 +86,6 @@ class Column(ExprIR, config=ExprIROptions.namespaced("col")):
 
     def to_selector_ir(self) -> RootSelector:
         return cs.ByName.from_name(self.name).to_selector_ir()
-
-
-# TODO @dangotbanned: Scheduled to be removed, not needed with new selectors
-class _ColumnSelection(ExprIR, config=ExprIROptions.no_dispatch()):
-    """Nodes which can resolve to `Column`(s) with a `Schema`."""
-
-
-# TODO @dangotbanned: Scheduled to be removed, not needed with new selectors
-class All(_ColumnSelection):
-    def __repr__(self) -> str:
-        return "all()"
-
-    def to_selector_ir(self) -> RootSelector:
-        return cs.All().to_selector_ir()
 
 
 class Literal(ExprIR, t.Generic[LiteralT], config=ExprIROptions.namespaced("lit")):

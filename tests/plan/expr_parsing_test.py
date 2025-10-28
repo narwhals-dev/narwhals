@@ -209,8 +209,8 @@ def test_filtration_over() -> None:
 
 def test_invalid_binary_expr_multi() -> None:
     pattern = re.escape(
-        "all() + ncs.by_name('b', 'c', require_all=True)\n"
-        "        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
+        "ncs.all() + ncs.by_name('b', 'c', require_all=True)\n"
+        "            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
     )
     with pytest.raises(MultiOutputExpressionError, match=pattern):
         nwp.all() + nwp.col("b", "c")

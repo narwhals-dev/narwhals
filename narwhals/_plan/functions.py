@@ -51,12 +51,7 @@ def len() -> Expr:
     return ir.Len().to_narwhals()
 
 
-# TODO @dangotbanned: Swap out with `all_s`
 def all() -> Expr:
-    return ir.All().to_narwhals()
-
-
-def all_s() -> Expr:
     return cs.all().as_expr()
 
 

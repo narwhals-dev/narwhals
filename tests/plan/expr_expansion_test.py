@@ -258,7 +258,7 @@ def test_expand_selectors_funky_3(df_1: Frame) -> None:
             id="ByIndex(1)-Alias-ByIndex(2)-Uppercase",
         ),
         pytest.param(
-            nwp.all().meta.as_selector(),
+            nwp.all(),
             [
                 nwp.col("a"),
                 nwp.col("b"),
@@ -462,7 +462,7 @@ def test_prepare_projection(
 @pytest.mark.parametrize(
     "expr",
     [
-        ndcs.all(),
+        nwp.all(),
         nwp.nth(1, 2, 3),
         nwp.col("a", "b", "c"),
         ndcs.boolean() | ndcs.categorical(),

@@ -27,16 +27,18 @@ class MetaNamespace(IRNamespace):
     """Methods to modify and traverse existing expressions."""
 
     def has_multiple_outputs(self) -> bool:
-        return any(_has_multiple_outputs(e) for e in self._ir.iter_left())
+        return any(isinstance(e, ir.SelectorIR) for e in self._ir.iter_left())
 
     def is_column(self) -> bool:
         return isinstance(self._ir, ir.Column)
 
     def is_column_selection(self, *, allow_aliasing: bool = False) -> bool:
-        return all(
-            _is_column_selection(e, allow_aliasing=allow_aliasing)
-            for e in self._ir.iter_left()
-        )
+        nodes = self._ir.iter_left()
+        selection = ir.Column, ir.SelectorIR
+        if not allow_aliasing:
+            return all(isinstance(e, selection) for e in nodes)
+        targets = *selection, ir.Alias, ir.KeepName, ir.RenameAlias
+        return all(isinstance(e, targets) for e in nodes)
 
     def is_literal(self, *, allow_aliasing: bool = False) -> bool:
         return all(
@@ -97,7 +99,7 @@ def _expr_to_leaf_column_names_iter(expr: ir.ExprIR, /) -> Iterator[str]:
 
 def _expr_to_leaf_column_exprs_iter(expr: ir.ExprIR, /) -> Iterator[ir.ExprIR]:
     for outer in expr.iter_root_names():
-        if isinstance(outer, (ir.Column, ir.All)):
+        if isinstance(outer, ir.Column):
             yield outer
 
 
@@ -112,9 +114,6 @@ def _expr_to_leaf_column_name(expr: ir.ExprIR, /) -> str | ComputeError:
     leaf = leaves[0]
     if isinstance(leaf, ir.Column):
         return leaf.name
-    if isinstance(leaf, ir.All):
-        msg = "wildcard has no root column name"
-        return ComputeError(msg)
     msg = f"Expected unreachable, got {type(leaf).__name__!r}\n\n{leaf}"
     return ComputeError(msg)
 
@@ -141,7 +140,7 @@ def _expr_output_name(expr: ir.ExprIR, /) -> str | ComputeError:
             if isinstance(parent_name, str):
                 return e.function(parent_name)
             return parent_name
-        if isinstance(e, (ir.All, ir.KeepName)):
+        if isinstance(e, ir.KeepName):
             msg = "cannot determine output column without a context for this expression"
             return ComputeError(msg)
         continue
@@ -149,31 +148,6 @@ def _expr_output_name(expr: ir.ExprIR, /) -> str | ComputeError:
         f"unable to find root column name for expr '{expr!r}' when calling 'output_name'"
     )
     return ComputeError(msg)
-
-
-def get_single_leaf_name(expr: ir.ExprIR, /) -> str | ComputeError:
-    """Find the name at the start of an expression.
-
-    Normal iteration would just return the first root column it found.
-
-    Based on [`polars_plan::utils::get_single_leaf`]
-
-    [`polars_plan::utils::get_single_leaf`]: https://github.com/pola-rs/polars/blob/0fa7141ce718c6f0a4d6ae46865c867b177a59ed/crates/polars-plan/src/utils.rs#L151-L168
-    """
-    for e in expr.iter_right():
-        if isinstance(e, (ir.WindowExpr, ir.SortBy, ir.Filter)):
-            return get_single_leaf_name(e.expr)
-        if isinstance(e, ir.BinaryExpr):
-            return get_single_leaf_name(e.left)
-        # NOTE: `polars` doesn't include `Literal` here
-        if isinstance(e, (ir.Column, ir.Len)):
-            return e.name
-    msg = f"unable to find a single leaf column in expr '{expr!r}'"
-    return ComputeError(msg)
-
-
-def _has_multiple_outputs(expr: ir.ExprIR, /) -> bool:
-    return isinstance(expr, (ir.SelectorIR, ir.All))
 
 
 def has_expr_ir(expr: ir.ExprIR, *matches: type[ir.ExprIR]) -> bool:
@@ -195,10 +169,4 @@ def _is_literal(expr: ir.ExprIR, /, *, allow_aliasing: bool) -> bool:
             and is_literal_scalar(expr.expr)
             and isinstance(expr.expr.dtype, Version.MAIN.dtypes.Datetime)
         )
-    )
-
-
-def _is_column_selection(expr: ir.ExprIR, /, *, allow_aliasing: bool) -> bool:
-    return isinstance(expr, (ir.Column, ir._ColumnSelection, ir.SelectorIR)) or (
-        allow_aliasing and isinstance(expr, (ir.Alias, ir.KeepName, ir.RenameAlias))
     )
