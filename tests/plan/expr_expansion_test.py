@@ -7,7 +7,7 @@ import pytest
 
 import narwhals as nw
 from narwhals import _plan as nwp
-from narwhals._plan import expressions as ir, selectors as ndcs
+from narwhals._plan import expressions as ir, selectors as ncs
 from narwhals._utils import zip_strict
 from narwhals.exceptions import ColumnNotFoundError, DuplicateError
 from tests.plan.utils import Frame, assert_expr_ir_equal, named_ir, re_compile
@@ -53,10 +53,10 @@ def df_1(schema_1: IntoSchema) -> Frame:
 
 MULTI_OUTPUT_EXPRS = (
     pytest.param(nwp.col("a", "b", "c")),
-    pytest.param(ndcs.numeric() - ndcs.matches("[d-j]")),
+    pytest.param(ncs.numeric() - ncs.matches("[d-j]")),
     pytest.param(nwp.nth(0, 1, 2)),
-    pytest.param(ndcs.by_dtype(nw.Int64, nw.Int32, nw.Int16)),
-    pytest.param(ndcs.by_name("a", "b", "c")),
+    pytest.param(ncs.by_dtype(nw.Int64, nw.Int32, nw.Int16)),
+    pytest.param(ncs.by_name("a", "b", "c")),
 )
 """All of these resolve to `["a", "b", "c"]`."""
 
@@ -188,7 +188,7 @@ def test_map_ir_recursive(expr: nwp.Expr, function: MapIR, expected: nwp.Expr) -
 
 def test_expand_selectors_funky_1(df_1: Frame) -> None:
     # root->selection->transform
-    selector = ndcs.matches("[a-m]") & ~ndcs.numeric()
+    selector = ncs.matches("[a-m]") & ~ncs.numeric()
     expr = selector.sort(nulls_last=True).first() != nwp.lit(None)
     expecteds = [
         named_ir(name, nwp.col(name).sort(nulls_last=True).first() != nwp.lit(None))
@@ -202,9 +202,7 @@ def test_expand_selectors_funky_1(df_1: Frame) -> None:
 def test_expand_selectors_funky_2(df_1: Frame) -> None:
     # root->selection->transform
     # leaf->selection
-    expr = (
-        ndcs.numeric().mean().over("k", order_by=ndcs.by_dtype(nw.Date) | ndcs.boolean())
-    )
+    expr = ncs.numeric().mean().over("k", order_by=ncs.by_dtype(nw.Date) | ncs.boolean())
     root_names = "a", "b", "c", "d", "e", "f", "g", "h", "i", "j"
     expecteds = (
         named_ir(name, nwp.col(name).mean().over("k", order_by=("m", "n")))
@@ -219,10 +217,10 @@ def test_expand_selectors_funky_3(df_1: Frame) -> None:
     # root->selection->transform->rename
     # leaf->selection
     expr = (
-        ndcs.datetime()
+        ncs.datetime()
         .dt.timestamp()
         .min()
-        .over(ndcs.string() | ndcs.boolean())
+        .over(ncs.string() | ncs.boolean())
         .last()
         .name.to_uppercase()
     )
@@ -284,7 +282,7 @@ def test_expand_selectors_funky_3(df_1: Frame) -> None:
             id="All",
         ),
         pytest.param(
-            (ndcs.numeric() - ndcs.by_dtype(nw.Float32(), nw.Float64()))
+            (ncs.numeric() - ncs.by_dtype(nw.Float32(), nw.Float64()))
             .cast(nw.Int64)
             .mean()
             .name.suffix("_mean"),
@@ -307,8 +305,7 @@ def test_expand_selectors_funky_3(df_1: Frame) -> None:
         ),
         pytest.param(
             (
-                (ndcs.numeric() ^ (ndcs.matches(r"[abcdg]") | ndcs.by_name("i", "f")))
-                * 100
+                (ncs.numeric() ^ (ncs.matches(r"[abcdg]") | ncs.by_name("i", "f"))) * 100
             ).name.suffix("_mult_100"),
             [
                 named_ir("e_mult_100", (nwp.col("e") * nwp.lit(100))),
@@ -318,7 +315,7 @@ def test_expand_selectors_funky_3(df_1: Frame) -> None:
             id="Selector-XOR-OR-BinaryExpr-Suffix",
         ),
         pytest.param(
-            ndcs.by_dtype(nw.Duration())
+            ncs.by_dtype(nw.Duration())
             .dt.total_minutes()
             .name.map(lambda nm: f"total_mins: {nm!r} ?"),
             [named_ir("total_mins: 'q' ?", nwp.col("q").dt.total_minutes())],
@@ -390,7 +387,7 @@ def test_expand_selectors_funky_3(df_1: Frame) -> None:
             id="Exclude-Suffix",
         ),
         pytest.param(
-            nwp.col("c").alias("c_min_over_order_by").min().over(order_by=ndcs.string()),
+            nwp.col("c").alias("c_min_over_order_by").min().over(order_by=ncs.string()),
             [
                 named_ir(
                     "c_min_over_order_by",
@@ -400,7 +397,7 @@ def test_expand_selectors_funky_3(df_1: Frame) -> None:
             id="Alias-Min-Over-Order-By-Selector",
         ),
         pytest.param(
-            (ndcs.by_name("a", "b", "c") / nwp.col("e").first())
+            (ncs.by_name("a", "b", "c") / nwp.col("e").first())
             .over("g", "f", order_by="f")
             .name.prefix("hi_"),
             [
@@ -444,7 +441,7 @@ def test_expand_selectors_funky_3(df_1: Frame) -> None:
             id="Over-OrderBy-ByIndex(2)",
         ),
         pytest.param(
-            nwp.col("f").max().over(ndcs.by_dtype(nw.Date, nw.Datetime)),
+            nwp.col("f").max().over(ncs.by_dtype(nw.Date, nw.Datetime)),
             [nwp.col("f").max().over(nwp.col("l"), nwp.col("n"), nwp.col("o"))],
             id="Over-Partitioned-Selector",
         ),
@@ -465,11 +462,11 @@ def test_prepare_projection(
         nwp.all(),
         nwp.nth(1, 2, 3),
         nwp.col("a", "b", "c"),
-        ndcs.boolean() | ndcs.categorical(),
-        (ndcs.by_name("a", "b") | ndcs.string()),
+        ncs.boolean() | ncs.categorical(),
+        (ncs.by_name("a", "b") | ncs.string()),
         (nwp.col("b", "c") & nwp.col("a")),
         nwp.col("a", "b").min().over("c", order_by="e"),
-        (~ndcs.by_dtype(nw.Int64()) - ndcs.datetime()),
+        (~ncs.by_dtype(nw.Int64()) - ncs.datetime()),
         nwp.nth(6, 2).abs().cast(nw.Int32()) + 10,
         *MULTI_OUTPUT_EXPRS,
     ],

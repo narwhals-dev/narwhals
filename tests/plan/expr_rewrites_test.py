@@ -1,5 +1,3 @@
-# TODO @dangotbanned: Change tests back to using `col` and `nth` after swapping `prepare_projection_s`
-
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -8,7 +6,7 @@ import pytest
 
 import narwhals as nw
 from narwhals import _plan as nwp
-from narwhals._plan import _parse, expressions as ir, selectors as ndcs
+from narwhals._plan import _parse, expressions as ir, selectors as ncs
 from narwhals._plan._rewrites import (
     rewrite_all,
     rewrite_binary_agg_over,
@@ -104,9 +102,9 @@ def test_rewrite_elementwise_over_complex(schema_2: dict[str, DType]) -> None:
             .alias("x2")
         ),
         ~(nwp.col("d").is_duplicated().alias("d*")).alias("d**").over("b"),
-        ndcs.string().str.contains("some").name.suffix("_some"),
+        ncs.string().str.contains("some").name.suffix("_some"),
         (
-            _to_window_expr(ndcs.by_index(3, 4, 1).null_count().sqrt(), "f", "g", "j")
+            _to_window_expr(nwp.nth(3, 4, 1).null_count().sqrt(), "f", "g", "j")
             .to_narwhals()
             .name.to_uppercase()
         ),
