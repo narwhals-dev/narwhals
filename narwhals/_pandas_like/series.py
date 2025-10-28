@@ -647,6 +647,8 @@ class PandasLikeSeries(EagerSeries[Any]):
         *,
         return_dtype: IntoDType | None,
     ) -> PandasLikeSeries:
+        # Creating a temporary name if series is unnamed as merging with `on=None` would break otherwise
+        self_tmp_name = self.name if self.name is not None else "__nw_replace_strict__"
         tmp_name = f"{self.name}_tmp"
         dtype_backend = get_dtype_backend(self.native.dtype, self._implementation)
         dtype = (
@@ -658,13 +660,12 @@ class PandasLikeSeries(EagerSeries[Any]):
         )
         namespace = self.__native_namespace__()
         other = namespace.DataFrame(
-            {self.name: old, tmp_name: namespace.Series(new, dtype=dtype)}
+            {self_tmp_name: old, tmp_name: namespace.Series(new, dtype=dtype)}
         )
-        result = self._with_native(
-            self.native.to_frame(self.name).merge(other, on=self.name, how="left")[
-                tmp_name
-            ]
-        ).alias(self.name)
+        native_result = self.native.to_frame(self_tmp_name).merge(
+            other, on=self_tmp_name, how="left"
+        )[tmp_name]
+        result = self._with_native(native_result).alias(self.name)
         if result.is_null().sum() != self.is_null().sum():
             msg = (
                 "replace_strict did not replace all non-null values.\n\n"

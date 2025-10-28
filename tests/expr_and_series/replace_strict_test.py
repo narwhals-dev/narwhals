@@ -134,3 +134,12 @@ def test_replace_strict_series_invalid(constructor_eager: ConstructorEager) -> N
         match="`new` argument is required if `old` argument is not a Mapping type",
     ):
         df["a"].replace_strict([1, 2, 3])
+
+
+def test_replace_strict_pandas_unnamed_series() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    ser = nw.from_native(pd.Series([1, 2, 3]), series_only=True)
+    result = ser.replace_strict([1, 2, 3], ["one", "two", "three"])
+    assert result.name is None
