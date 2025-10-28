@@ -401,7 +401,11 @@ class RootSelector(SelectorIR):
     def into_columns(
         self, schema: FrozenSchema, ignored_columns: Container[str]
     ) -> Iterator[str]:
-        yield from self.selector.into_columns(schema, ignored_columns)
+        names = self.selector.into_columns(schema, ignored_columns)
+        if ignored_columns:
+            yield from (name for name in names if name not in ignored_columns)
+        else:
+            yield from names
 
     def matches(self, dtype: DType) -> bool:
         return self.selector.to_dtype_selector().matches(dtype)

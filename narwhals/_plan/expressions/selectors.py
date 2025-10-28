@@ -48,6 +48,8 @@ class Selector(Immutable):
         msg = f"expected datatype based expression got {self!r}"
         raise TypeError(msg)
 
+    # NOTE: Tried following what the upstream doc said, but seems to not apply to group_by
+    # where they are ignored
     def into_columns(
         self, schema: FrozenSchema, ignored_columns: Container[str]
     ) -> Iterator[str]:

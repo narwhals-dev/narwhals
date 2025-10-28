@@ -22,10 +22,6 @@ if TYPE_CHECKING:
 
     from narwhals._plan.typing import IntoExpr
 
-XFAIL_KEY_ERROR = pytest.mark.xfail(
-    reason="TODO: Investigate 'Field * exists 2 times in schema'", raises=KeyError
-)
-
 
 def test_group_by_iter() -> None:
     data = {"a": [1, 1, 3], "b": [4, 4, 6], "c": [7.0, 8.0, 9.0]}
@@ -357,7 +353,6 @@ def test_all_kind_of_aggs() -> None:
     assert_equal_data(result, expected)
 
 
-@XFAIL_KEY_ERROR
 def test_fancy_functions() -> None:
     df = dataframe({"a": [1, 1, 2], "b": [4, 5, 6]})
     result = df.group_by("a").agg(nwp.all().std(ddof=0)).sort("a")
@@ -416,7 +411,6 @@ def test_fancy_functions() -> None:
             [ncs.numeric().sum()],
             {"y": [0.5, 1.0, 1.5], "a": [2, 4, -1], "x": [1, 5, 4]},
             ["y"],
-            marks=XFAIL_KEY_ERROR,
         ),
     ],
 )
@@ -591,7 +585,6 @@ def test_group_by_agg_last(
                 "a": [["c"], ["a"], ["b"], ["b"], ["a"]],
                 "b_first": [3, 1, 3, 2, 1],
             },
-            marks=XFAIL_KEY_ERROR,
         ),
     ],
     ids=["Unique-Single", "Unique-Multi", "Unique-Selector-Fancy"],
