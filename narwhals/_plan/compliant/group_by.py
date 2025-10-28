@@ -3,7 +3,7 @@ from __future__ import annotations
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Protocol
 
-from narwhals._plan._expansion import prepare_projection
+from narwhals._plan._expansion import prepare_projection_s
 from narwhals._plan._parse import parse_into_seq_of_expr_ir
 from narwhals._plan.common import replace, temp
 from narwhals._plan.compliant.typing import (
@@ -136,10 +136,12 @@ class GroupByResolver:
         [`resolve_group_by`]: https://github.com/pola-rs/polars/blob/cdd247aaba8db3332be0bd031e0f31bc3fc33f77/crates/polars-plan/src/plans/conversion/dsl_to_ir/mod.rs#L1125-L1227
         """
         obj = cls.__new__(cls)
-        keys, schema_in = prepare_projection(grouper._keys, schema=context)
+        keys, schema_in = prepare_projection_s(grouper._keys, schema=context)
         obj._keys, obj._schema_in = keys, schema_in
         obj._key_names = tuple(e.name for e in keys)
-        obj._aggs, _ = prepare_projection(grouper._aggs, obj.key_names, schema=schema_in)
+        obj._aggs, _ = prepare_projection_s(
+            grouper._aggs, obj.key_names, schema=schema_in
+        )
         obj._schema = schema_in.select(keys).merge(schema_in.select(obj._aggs))
         obj._drop_null_keys = grouper._drop_null_keys
         return obj
