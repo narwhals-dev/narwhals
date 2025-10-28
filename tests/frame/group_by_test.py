@@ -772,3 +772,31 @@ def test_group_by_agg_last(
         df = df.sort(aggs, **pre_sort)
     result = df.group_by(keys).agg(nw.col(aggs).last()).sort(keys)
     assert_equal_data(result, expected)
+
+
+def test_multi_column_expansion(constructor: Constructor) -> None:
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 32):
+        pytest.skip(reason="https://github.com/pola-rs/polars/issues/21773")
+    if "modin" in str(constructor):
+        pytest.skip(reason="Internal error")
+    df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
+    result = (
+        df.group_by("a")
+        .agg(nw.all().sum().name.suffix("_aggregated"))
+        .sort("a", descending=True)
+    )
+    expected = {"a": [2, 1], "b_aggregated": [6, 9]}
+    assert_equal_data(result, expected)
+    result = (
+        df.group_by("a")
+        .agg(nw.col("a", "b").sum().name.suffix("_aggregated"))
+        .sort("a", descending=True)
+    )
+    expected = {"a": [2, 1], "a_aggregated": [2, 2], "b_aggregated": [6, 9]}
+    assert_equal_data(result, expected)
+    result = (
+        df.group_by("a")
+        .agg(nw.nth(0, 1).sum().name.suffix("_aggregated"))
+        .sort("a", descending=True)
+    )
+    assert_equal_data(result, expected)

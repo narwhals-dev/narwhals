@@ -446,21 +446,8 @@ class ExprStringNamespace(Generic[ExprT]):
             This is a form of case transform where the first letter of each word is
             capitalized, with the rest of the word in lowercase.
 
-        Warning:
-            Different backends might follow different rules to determine what a "word" is:
-
-            - duckdb, polars and spark-like use non-**alphanumeric** characters to
-                define the word boundaries.
-            - pandas-like, pyarrow and dask use non-**alphabetic** characters to define
-                the word boundaries, matching the behavior of
-                [`str.title`](https://docs.python.org/3/library/stdtypes.html#str.title).
-
-            We can observe the difference with the string `"with123numbers"`:
-
-            - non-**alphanumeric** -> `"With123numbers"`
-                - notice lowercase **n** after the digits
-            - non-**alphabetic** -> `"With123Numbers"`
-                - notice uppercase **N** after the digits
+            Word boundaries are defined by non-**alphabetic** characters, matching the
+            behavior of [`str.title`](https://docs.python.org/3/library/stdtypes.html#str.title)
 
         Examples:
             >>> import polars as pl

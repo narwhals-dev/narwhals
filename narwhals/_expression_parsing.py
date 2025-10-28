@@ -460,7 +460,7 @@ class ExprMetadata:
         return (
             cls(ExpansionKind.SINGLE, current_node=node, prev=None)
             if len(node.kwargs["indices"]) == 1
-            else cls.from_selector_multi_unnamed(node)
+            else cls.from_selector_multi_named(node)
         )
 
     @classmethod
