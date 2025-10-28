@@ -9,7 +9,7 @@ import narwhals as nw
 from narwhals import _plan as nwp
 from narwhals._plan import selectors as npcs
 from narwhals.exceptions import InvalidOperationError
-from tests.plan.utils import assert_equal_data, cols, dataframe
+from tests.plan.utils import assert_equal_data, dataframe
 from tests.utils import PYARROW_VERSION, assert_equal_data as _assert_equal_data
 
 pytest.importorskip("pyarrow")
@@ -404,7 +404,7 @@ def test_fancy_functions() -> None:
             ["a"],
         ),
         (
-            [cols("a", "y").abs()],
+            [nwp.col("a", "y").abs()],
             [nwp.col("x").sum()],
             {"a": [1, 1, 2], "y": [0.5, 1.5, 1], "x": [1, 4, 5]},
             ["a", "y"],
@@ -583,7 +583,7 @@ def test_group_by_agg_last(
         (["a"], [nwp.col("b").unique()], {"a": ["a", "b", "c"], "b": [[1], [2, 3], [3]]}),
         (
             ["a"],
-            [cols("b", "d").unique()],
+            [nwp.col("b", "d").unique()],
             {
                 "a": ["a", "b", "c"],
                 "b": [[1], [2, 3], [3]],

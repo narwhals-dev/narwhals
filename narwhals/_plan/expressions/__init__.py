@@ -28,7 +28,6 @@ from narwhals._plan.expressions.expr import (
     BinarySelector,
     Cast,
     Column,
-    Columns,
     Filter,
     FunctionExpr,
     InvertSelector,
@@ -44,7 +43,6 @@ from narwhals._plan.expressions.expr import (
     WindowExpr,
     _ColumnSelection,  # if needs exposing, make it public!
     col,
-    cols,
 )
 from narwhals._plan.expressions.name import KeepName, RenameAlias
 from narwhals._plan.expressions.window import over, over_ordered
@@ -58,7 +56,6 @@ __all__ = [
     "BinarySelector",
     "Cast",
     "Column",
-    "Columns",
     "ExprIR",
     "Filter",
     "Function",
@@ -84,7 +81,6 @@ __all__ = [
     "boolean",
     "categorical",
     "col",
-    "cols",
     "functions",
     "lists",
     "max",

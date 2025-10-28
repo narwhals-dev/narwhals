@@ -7,14 +7,7 @@ import pytest
 
 import narwhals as nw
 from narwhals import _plan as nwp
-from narwhals._plan import (
-    Expr,
-    Selector,
-    _expansion,
-    _parse,
-    expressions as ir,
-    selectors as ncs,
-)
+from narwhals._plan import Expr, Selector, _expansion, _parse, expressions as ir
 from tests.utils import assert_equal_data as _assert_equal_data
 
 pytest.importorskip("pyarrow")
@@ -36,17 +29,12 @@ if TYPE_CHECKING:
         _Flags: TypeAlias = int
 
 
-def cols(*names: str | Sequence[str]) -> nwp.Expr:
-    """**TEMPORARY WHILE TRANSITIONING!**"""  # noqa: D415
-    return ncs.by_name(*names).as_expr()
-
-
 def first(*names: str | Sequence[str]) -> nwp.Expr:
-    return cols(*names).first()
+    return nwp.col(*names).first()
 
 
 def last(*names: str | Sequence[str]) -> nwp.Expr:
-    return cols(*names).last()
+    return nwp.col(*names).last()
 
 
 class Frame:

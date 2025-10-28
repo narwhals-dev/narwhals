@@ -14,7 +14,7 @@ import pyarrow as pa
 import narwhals as nw
 from narwhals import _plan as nwp
 from narwhals._utils import Version
-from tests.plan.utils import assert_equal_data, cols, dataframe, first, last
+from tests.plan.utils import assert_equal_data, dataframe, first, last
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -80,11 +80,11 @@ XFAIL_KLEENE_ALL_NULL = pytest.mark.xfail(
     ("expr", "expected"),
     [
         (nwp.col("a"), {"a": ["A", "B", "A"]}),
-        (cols("a", "b"), {"a": ["A", "B", "A"], "b": [1, 2, 3]}),
+        (nwp.col("a", "b"), {"a": ["A", "B", "A"], "b": [1, 2, 3]}),
         (nwp.lit(1), {"literal": [1]}),
         (nwp.lit(2.0), {"literal": [2.0]}),
         (nwp.lit(None, nw.String), {"literal": [None]}),
-        (cols("a", "b").first(), {"a": ["A"], "b": [1]}),
+        (nwp.col("a", "b").first(), {"a": ["A"], "b": [1]}),
         (nwp.col("d").max(), {"d": [8]}),
         ([nwp.len(), nwp.nth(3).last()], {"len": [3], "d": [8]}),
         (
@@ -104,7 +104,7 @@ XFAIL_KLEENE_ALL_NULL = pytest.mark.xfail(
         ),
         ([ndcs.string().first(), nwp.col("b")], {"a": ["A", "A", "A"], "b": [1, 2, 3]}),
         (
-            cols("c", "d")
+            nwp.col("c", "d")
             .sort_by("a", "b", descending=[True, False])
             .cast(nw.Float32())
             .name.to_uppercase(),
@@ -160,9 +160,9 @@ XFAIL_KLEENE_ALL_NULL = pytest.mark.xfail(
             },
             id="sort",
         ),
-        (cols("e", "d").is_null().any(), {"e": [True], "d": [False]}),
+        (nwp.col("e", "d").is_null().any(), {"e": [True], "d": [False]}),
         (
-            [(~cols("e", "d").is_null()).all(), "b"],
+            [(~nwp.col("e", "d").is_null()).all(), "b"],
             {"e": [False, False, False], "d": [True, True, True], "b": [1, 2, 3]},
         ),
         pytest.param(
@@ -288,8 +288,8 @@ XFAIL_KLEENE_ALL_NULL = pytest.mark.xfail(
                 nwp.col("b").alias("a"),
                 nwp.col("l").alias("b"),
                 nwp.col("m").alias("i"),
-                nwp.any_horizontal(cols("b", "l").sum().cast(nw.Boolean)).alias("any"),
-                nwp.all_horizontal(cols("b", "l").sum().cast(nw.Boolean)).alias("all"),
+                nwp.any_horizontal(nwp.col("b", "l").sum().cast(nw.Boolean)).alias("any"),
+                nwp.all_horizontal(nwp.col("b", "l").sum().cast(nw.Boolean)).alias("all"),
                 nwp.max_horizontal(nwp.sum("b"), nwp.sum("l")).alias("max"),
                 nwp.min_horizontal(nwp.sum("b"), nwp.sum("l")).alias("min"),
                 nwp.sum_horizontal(nwp.sum("b"), nwp.sum("l")).alias("sum"),
@@ -379,7 +379,7 @@ XFAIL_KLEENE_ALL_NULL = pytest.mark.xfail(
             id="map_batches-selector",
         ),
         pytest.param(
-            cols("j", "k")
+            nwp.col("j", "k")
             .fill_null(15)
             .map_batches(lambda s: (s.to_numpy().max()), returns_scalar=True),
             {"j": [15], "k": [42]},

@@ -10,7 +10,7 @@ from narwhals import _plan as nwp
 from narwhals._plan import expressions as ir, selectors as ndcs
 from narwhals._utils import zip_strict
 from narwhals.exceptions import ColumnNotFoundError, DuplicateError
-from tests.plan.utils import Frame, assert_expr_ir_equal, cols, named_ir, re_compile
+from tests.plan.utils import Frame, assert_expr_ir_equal, named_ir, re_compile
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -52,7 +52,7 @@ def df_1(schema_1: IntoSchema) -> Frame:
 
 
 MULTI_OUTPUT_EXPRS = (
-    pytest.param(cols("a", "b", "c")),
+    pytest.param(nwp.col("a", "b", "c")),
     pytest.param(ndcs.numeric() - ndcs.matches("[d-j]")),
     pytest.param(nwp.nth(0, 1, 2)),
     pytest.param(ndcs.by_dtype(nw.Int64, nw.Int32, nw.Int16)),
@@ -240,7 +240,7 @@ def test_expand_selectors_funky_3(df_1: Frame) -> None:
     [
         pytest.param("a", [nwp.col("a")], id="Col"),
         pytest.param(
-            cols("b", "c", "d"),
+            nwp.col("b", "c", "d"),
             [nwp.col("b"), nwp.col("c"), nwp.col("d")],
             id="ByName(3)",
         ),
@@ -325,7 +325,7 @@ def test_expand_selectors_funky_3(df_1: Frame) -> None:
             id="ByDType-TotalMins-Name-Map",
         ),
         pytest.param(
-            cols("f", "g")
+            nwp.col("f", "g")
             .cast(nw.String)
             .str.starts_with("1")
             .all()
@@ -343,7 +343,7 @@ def test_expand_selectors_funky_3(df_1: Frame) -> None:
             id="ByName(2)-Cast-StartsWith-All-Suffix",
         ),
         pytest.param(
-            cols("a", "b")
+            nwp.col("a", "b")
             .first()
             .over("c", "e", order_by="d")
             .name.suffix("_first_over_part_order_1"),
@@ -421,7 +421,7 @@ def test_expand_selectors_funky_3(df_1: Frame) -> None:
         ),
         pytest.param(
             [
-                nwp.col("c").sort_by(cols("c", "i")).first().alias("ByName(2)"),
+                nwp.col("c").sort_by(nwp.col("c", "i")).first().alias("ByName(2)"),
                 nwp.col("c").sort_by("c", "i").first().alias("Column_x2"),
             ],
             [
@@ -464,11 +464,11 @@ def test_prepare_projection(
     [
         ndcs.all(),
         nwp.nth(1, 2, 3),
-        cols("a", "b", "c"),
+        nwp.col("a", "b", "c"),
         ndcs.boolean() | ndcs.categorical(),
         (ndcs.by_name("a", "b") | ndcs.string()),
-        (cols("b", "c") & nwp.col("a")),
-        cols("a", "b").min().over("c", order_by="e"),
+        (nwp.col("b", "c") & nwp.col("a")),
+        nwp.col("a", "b").min().over("c", order_by="e"),
         (~ndcs.by_dtype(nw.Int64()) - ndcs.datetime()),
         nwp.nth(6, 2).abs().cast(nw.Int32()) + 10,
         *MULTI_OUTPUT_EXPRS,
@@ -484,12 +484,12 @@ def test_prepare_projection_duplicate(expr: nwp.Expr, df_1: Frame) -> None:
 @pytest.mark.parametrize(
     ("into_exprs", "missing"),
     [
-        ([cols("y", "z")], ["y", "z"]),
-        ([cols("a", "b", "z")], ["z"]),
-        ([cols("x", "b", "a")], ["x"]),
+        ([nwp.col("y", "z")], ["y", "z"]),
+        ([nwp.col("a", "b", "z")], ["z"]),
+        ([nwp.col("x", "b", "a")], ["x"]),
         (
             [
-                cols(
+                nwp.col(
                     [
                         "a",
                         "b",
@@ -529,7 +529,7 @@ def test_prepare_projection_duplicate(expr: nwp.Expr, df_1: Frame) -> None:
                 .abs()
                 .cum_sum()
                 .over("X", "O", "h", "m", "r", "zee"),
-                cols("d", "j"),
+                nwp.col("d", "j"),
                 "n",
             ],
             ["O", "X", "zee"],
@@ -550,9 +550,9 @@ def test_prepare_projection_column_not_found(
         ("a", "b", "c"),
         (["a", "b", "c"]),
         ("a", "b", nwp.col("c")),
-        (cols("a"), "b", "c"),
-        (cols("a", "b"), "c"),
-        ("a", cols("b", "c")),
+        (nwp.col("a"), "b", "c"),
+        (nwp.col("a", "b"), "c"),
+        ("a", nwp.col("b", "c")),
         ((nwp.nth(0), nwp.nth(1, 2))),
         *MULTI_OUTPUT_EXPRS,
     ],

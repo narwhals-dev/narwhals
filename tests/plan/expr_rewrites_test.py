@@ -70,7 +70,7 @@ def test_rewrite_elementwise_over_multiple(schema_2: dict[str, DType]) -> None:
         nwp.col("c").last().over("d").replace_strict({1: 2}),
     )
     before = _to_window_expr(
-        nwp.col("b", "c").meta.as_selector().last().replace_strict({1: 2}), "d"
+        nwp.col("b", "c").last().replace_strict({1: 2}), "d"
     ).to_narwhals()
     assert_expr_ir_equal(
         before,
@@ -140,10 +140,7 @@ def test_rewrite_binary_agg_over_multiple(schema_2: dict[str, DType]) -> None:
         named_ir("hi_d", nwp.col("d") / nwp.col("e").drop_nulls().first().over("g")),
     )
     before = (
-        (
-            nwp.col("a", "b", "c", "d").meta.as_selector()
-            / nwp.col("e").drop_nulls().first()
-        ).over("g")
+        (nwp.col("a", "b", "c", "d") / nwp.col("e").drop_nulls().first()).over("g")
     ).name.prefix("hi_")
     actual = rewrite_all(before, schema=schema_2, rewrites=[rewrite_binary_agg_over])
     assert len(actual) == 4

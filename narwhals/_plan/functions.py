@@ -19,11 +19,13 @@ if t.TYPE_CHECKING:
     from narwhals.typing import IntoDType, NonNestedLiteral
 
 
-# TODO @dangotbanned: Use `by_names` for multi-case
 def col(*names: str | t.Iterable[str]) -> Expr:
     flat = tuple(flatten(names))
-    node = ir.col(flat[0]) if builtins.len(flat) == 1 else ir.cols(*flat)
-    return node.to_narwhals()
+    return (
+        ir.col(flat[0]).to_narwhals()
+        if builtins.len(flat) == 1
+        else cs.by_name(*flat).as_expr()
+    )
 
 
 def nth(*indices: int | t.Sequence[int]) -> Expr:

@@ -6,7 +6,7 @@ import pytest
 
 from narwhals import _plan as nwp
 from narwhals._plan import selectors as ncs
-from tests.plan.utils import assert_equal_data, cols, dataframe
+from tests.plan.utils import assert_equal_data, dataframe
 
 if TYPE_CHECKING:
     from tests.conftest import Data
@@ -76,7 +76,7 @@ def test_is_last_distinct(data: Data, expected_invert: Data) -> None:
 def test_is_first_distinct_order_by(data_indexed: Data, expected: Data) -> None:
     result = (
         dataframe(data_indexed)
-        .select(cols("a", "b").is_first_distinct().over(order_by="i"), "i")
+        .select(nwp.col("a", "b").is_first_distinct().over(order_by="i"), "i")
         .sort("i")
         .drop("i")
     )
@@ -86,7 +86,7 @@ def test_is_first_distinct_order_by(data_indexed: Data, expected: Data) -> None:
 def test_is_last_distinct_order_by(data_indexed: Data, expected_invert: Data) -> None:
     result = (
         dataframe(data_indexed)
-        .select(cols("a", "b").is_last_distinct().over(order_by="i"), "i")
+        .select(nwp.col("a", "b").is_last_distinct().over(order_by="i"), "i")
         .sort("i")
         .drop("i")
     )

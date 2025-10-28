@@ -205,11 +205,12 @@ def test_selector_by_index(schema_non_nested: nw.Schema) -> None:
 
     # # one or more positive indices
     df.assert_selects(ncs.by_index(0), "abc")
-    df.assert_selects(nwp.nth(0, 1, 2).meta.as_selector(), "abc", "bbb", "cde")
+    df.assert_selects(nwp.nth(0, 1, 2), "abc", "bbb", "cde")
     df.assert_selects(ncs.by_index(0, 1, 2), "abc", "bbb", "cde")
 
     # one or more negative indices
     df.assert_selects(ncs.by_index(-1), "qqR")
+    df.assert_selects(ncs.by_index(-2, -1), "opp", "qqR")
 
     # range objects
     df.assert_selects(ncs.by_index(range(3)), "abc", "bbb", "cde")
@@ -396,7 +397,7 @@ def test_selector_expansion() -> None:
     s = s1 - s2
     df.assert_selects(s, "c", "d", "e")
 
-    s1 = ncs.matches("^a|b$").meta.as_selector()
+    s1 = ncs.matches("^a|b$")
     s = s1 | nwp.col(["d", "e"]).meta.as_selector()
     df.assert_selects(s, "a", "b", "d", "e")
 

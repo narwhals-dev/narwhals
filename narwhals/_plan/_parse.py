@@ -133,8 +133,6 @@ def parse_into_expr_ir(
     return expr._ir
 
 
-# NOTE: Might need to add `require_all`, since selectors are created indirectly from `str`
-# here, but use set semantics
 def parse_into_selector_ir(input: ColumnNameOrSelector | Expr, /) -> SelectorIR:
     if is_selector(input):
         selector = input

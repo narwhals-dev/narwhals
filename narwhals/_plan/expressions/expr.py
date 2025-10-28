@@ -46,7 +46,6 @@ __all__ = [
     "BinarySelector",
     "Cast",
     "Column",
-    "Columns",
     "Filter",
     "FunctionExpr",
     "Len",
@@ -64,11 +63,6 @@ __all__ = [
 
 def col(name: str, /) -> Column:
     return Column(name=name)
-
-
-# TODO @dangotbanned: Scheduled to be removed, not needed with new selectors
-def cols(*names: str) -> Columns:
-    return Columns(names=names)
 
 
 class Alias(ExprIR, child=("expr",), config=ExprIROptions.no_dispatch()):
@@ -98,18 +92,6 @@ class Column(ExprIR, config=ExprIROptions.namespaced("col")):
 # TODO @dangotbanned: Scheduled to be removed, not needed with new selectors
 class _ColumnSelection(ExprIR, config=ExprIROptions.no_dispatch()):
     """Nodes which can resolve to `Column`(s) with a `Schema`."""
-
-
-# TODO @dangotbanned: Scheduled to be removed, not needed with new selectors
-class Columns(_ColumnSelection):
-    __slots__ = ("names",)
-    names: Seq[str]
-
-    def __repr__(self) -> str:
-        return f"cols({list(self.names)!r})"
-
-    def to_selector_ir(self) -> RootSelector:
-        return cs.ByName.from_names(*self.names).to_selector_ir()
 
 
 # TODO @dangotbanned: Scheduled to be removed, not needed with new selectors

@@ -10,7 +10,7 @@ import narwhals as nw
 import narwhals._plan as nwp
 from narwhals._plan import selectors as ncs
 from narwhals.exceptions import InvalidOperationError
-from tests.plan.utils import assert_equal_data, cols, dataframe
+from tests.plan.utils import assert_equal_data, dataframe
 
 if TYPE_CHECKING:
     from narwhals._plan.typing import IntoExprColumn, OneOrIterable
@@ -77,7 +77,7 @@ def test_over_single(data: Data, partition_by: OneOrIterable[IntoExprColumn]) ->
         ("a", "b"),
         [nwp.col("a"), nwp.col("b")],
         [nwp.nth(0), nwp.nth(1)],
-        cols("a", "b"),
+        nwp.col("a", "b"),
         nwp.nth(0, 1),
         ncs.by_name("a", "b"),
         ncs.matches(r"a|b"),
@@ -122,7 +122,7 @@ def test_over_cum_sum(data_with_null: Data) -> None:  # pragma: no cover
     }
 
     result = (
-        df.with_columns(cols("b", "c").cum_sum().over("a").name.suffix("_cum_sum"))
+        df.with_columns(nwp.col("b", "c").cum_sum().over("a").name.suffix("_cum_sum"))
         .sort("i")
         .drop("i")
     )
