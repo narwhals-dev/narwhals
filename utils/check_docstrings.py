@@ -77,7 +77,7 @@ def report_errors(errors: list[str], temp_files: list[tuple[Path, str]]) -> None
     if not errors:
         return
 
-    print("❌ Ruff issues found in examples:\n")
+    print("❌ Ruff issues found in examples:", *errors, sep="\n")
     for line in errors:
         for temp_file, original_context in temp_files:
             if str(temp_file) in line:
