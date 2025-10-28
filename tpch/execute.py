@@ -10,6 +10,7 @@ import polars as pl
 from polars.testing import assert_frame_equal
 
 import narwhals as nw
+from narwhals.exceptions import NarwhalsError
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -130,8 +131,8 @@ def execute_query(query_id: str) -> None:
             print(f"\nSkipping {query_id} for {backend}")  # noqa: T201
             continue
 
+        print(f"\nRunning {query_id} with {backend=}")  # noqa: T201
         try:
-            print(f"\nRunning {query_id} with {backend=}")  # noqa: T201
             result: pl.DataFrame = (
                 query_module.query(
                     *(
@@ -143,16 +144,15 @@ def execute_query(query_id: str) -> None:
                 .collect(backend=nw.Implementation.POLARS)
                 .to_native()
             )
-
-            assert_frame_equal(expected, result, check_dtypes=False)
-
-        except AssertionError as exc:
-            msg = f"Query {query_id} with {backend=} failed with the following error:\n{exc}"
-            raise AssertionError(msg) from exc
-
-        except Exception as exc:
-            msg = f"Query {query_id} with {backend=} failed with the following error:\n{exc}"
+        except NarwhalsError as exc:
+            msg = f"Query {query_id} with {backend=} failed with the following error in Narwhals:\n{exc}"
             raise RuntimeError(msg) from exc
+
+        try:
+            assert_frame_equal(expected, result, check_dtypes=False)
+        except AssertionError as exc:
+            msg = f"Query {query_id} with {backend=} resulted in wrong answer:\n{exc}"
+            raise AssertionError(msg) from exc
 
 
 def main() -> None:
