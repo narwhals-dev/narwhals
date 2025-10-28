@@ -3,7 +3,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, get_args, overload
 
 from narwhals._plan import _parse
-from narwhals._plan._expansion import expand_selector_irs_names, prepare_projection
+from narwhals._plan._expansion import (
+    expand_selector_irs_names,
+    prepare_projection,
+    prepare_projection_s,
+)
 from narwhals._plan.common import ensure_seq_str, temp
 from narwhals._plan.exceptions import group_by_no_keys_error
 from narwhals._plan.group_by import GroupBy, Grouped
@@ -77,7 +81,7 @@ class BaseFrame(Generic[NativeFrameT_co]):
         self, *predicates: OneOrIterable[IntoExprColumn], **constraints: Any
     ) -> Self:
         e = _parse.parse_predicates_constraints_into_expr_ir(*predicates, **constraints)
-        named_irs, _ = prepare_projection((e,), schema=self)
+        named_irs, _ = prepare_projection_s((e,), schema=self)
         if len(named_irs) != 1:
             # Should be unreachable, but I guess we will see
             msg = f"Expected a single predicate after expansion, but got {len(named_irs)!r}\n\n{named_irs!r}"
@@ -252,7 +256,7 @@ class DataFrame(
             _list_as_series=self._partial_series(dtype=self.version.dtypes.Boolean()),
             **constraints,
         )
-        named_irs, _ = prepare_projection((e,), schema=self)
+        named_irs, _ = prepare_projection_s((e,), schema=self)
         if len(named_irs) != 1:
             # Should be unreachable, but I guess we will see
             msg = f"Expected a single predicate after expansion, but got {len(named_irs)!r}\n\n{named_irs!r}"

@@ -234,7 +234,8 @@ def finish_exprs(exprs: Seq[ExprIR], schema: FrozenSchema) -> Seq[NamedIR]:
     names = deque[str]()
     named_irs = deque[NamedIR]()
     for e in exprs:
-        if output_name := e.meta.output_name(raise_if_undetermined=False):
+        # NOTE: Empty string is allowed as a name, but is falsy
+        if (output_name := e.meta.output_name(raise_if_undetermined=False)) is not None:
             names.append(output_name)
             target = e
         elif meta.has_expr_ir(e, KeepName):
