@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals._plan._expansion import prepare_projection
+from narwhals._plan._expansion import prepare_projection_s
 from narwhals._plan._guards import (
     is_aggregation,
     is_binary_expr,
@@ -31,7 +31,7 @@ def rewrite_all(
       - Currently we do a full traversal of each tree per-rewrite function
     - There's no caching *after* `prepare_projection` yet
     """
-    named_irs, _ = prepare_projection(parse_into_seq_of_expr_ir(*exprs), schema=schema)
+    named_irs, _ = prepare_projection_s(parse_into_seq_of_expr_ir(*exprs), schema=schema)
     return tuple(map_ir(ir, *rewrites) for ir in named_irs)
 
 

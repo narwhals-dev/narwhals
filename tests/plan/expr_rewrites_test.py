@@ -1,3 +1,5 @@
+# TODO @dangotbanned: Change tests back to using `col` and `nth` after swapping `prepare_projection_s`
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -68,10 +70,11 @@ def test_rewrite_elementwise_over_multiple(schema_2: dict[str, DType]) -> None:
         nwp.col("c").last().over("d").replace_strict({1: 2}),
     )
     before = _to_window_expr(
-        nwp.col("b", "c").last().replace_strict({1: 2}), "d"
+        nwp.col("b", "c").meta.as_selector().last().replace_strict({1: 2}), "d"
     ).to_narwhals()
     assert_expr_ir_equal(
-        before, "cols(['b', 'c']).last().replace_strict().over([col('d')])"
+        before,
+        "ncs.by_name('b', 'c', require_all=True).last().replace_strict().over([col('d')])",
     )
     actual = rewrite_all(before, schema=schema_2, rewrites=[rewrite_elementwise_over])
     assert len(actual) == 2
@@ -103,7 +106,7 @@ def test_rewrite_elementwise_over_complex(schema_2: dict[str, DType]) -> None:
         ~(nwp.col("d").is_duplicated().alias("d*")).alias("d**").over("b"),
         ndcs.string().str.contains("some").name.suffix("_some"),
         (
-            _to_window_expr(nwp.nth(3, 4, 1).null_count().sqrt(), "f", "g", "j")
+            _to_window_expr(ndcs.by_index(3, 4, 1).null_count().sqrt(), "f", "g", "j")
             .to_narwhals()
             .name.to_uppercase()
         ),
@@ -137,7 +140,10 @@ def test_rewrite_binary_agg_over_multiple(schema_2: dict[str, DType]) -> None:
         named_ir("hi_d", nwp.col("d") / nwp.col("e").drop_nulls().first().over("g")),
     )
     before = (
-        (nwp.col("a", "b", "c", "d") / nwp.col("e").drop_nulls().first()).over("g")
+        (
+            nwp.col("a", "b", "c", "d").meta.as_selector()
+            / nwp.col("e").drop_nulls().first()
+        ).over("g")
     ).name.prefix("hi_")
     actual = rewrite_all(before, schema=schema_2, rewrites=[rewrite_binary_agg_over])
     assert len(actual) == 4
