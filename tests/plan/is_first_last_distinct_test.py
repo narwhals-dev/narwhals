@@ -5,7 +5,8 @@ from typing import TYPE_CHECKING
 import pytest
 
 from narwhals import _plan as nwp
-from tests.plan.utils import assert_equal_data, dataframe
+from narwhals._plan import selectors as ncs
+from tests.plan.utils import assert_equal_data, cols, dataframe
 
 if TYPE_CHECKING:
     from tests.conftest import Data
@@ -63,19 +64,19 @@ XFAIL_PARTITIONED_ORDER_BY = pytest.mark.xfail(
 
 
 def test_is_first_distinct(data: Data, expected: Data) -> None:
-    result = dataframe(data).select(nwp.all().is_first_distinct())
+    result = dataframe(data).select(ncs.all().is_first_distinct())
     assert_equal_data(result, expected)
 
 
 def test_is_last_distinct(data: Data, expected_invert: Data) -> None:
-    result = dataframe(data).select(nwp.all().is_last_distinct())
+    result = dataframe(data).select(ncs.all().is_last_distinct())
     assert_equal_data(result, expected_invert)
 
 
 def test_is_first_distinct_order_by(data_indexed: Data, expected: Data) -> None:
     result = (
         dataframe(data_indexed)
-        .select(nwp.col("a", "b").is_first_distinct().over(order_by="i"), "i")
+        .select(cols("a", "b").is_first_distinct().over(order_by="i"), "i")
         .sort("i")
         .drop("i")
     )
@@ -85,7 +86,7 @@ def test_is_first_distinct_order_by(data_indexed: Data, expected: Data) -> None:
 def test_is_last_distinct_order_by(data_indexed: Data, expected_invert: Data) -> None:
     result = (
         dataframe(data_indexed)
-        .select(nwp.col("a", "b").is_last_distinct().over(order_by="i"), "i")
+        .select(cols("a", "b").is_last_distinct().over(order_by="i"), "i")
         .sort("i")
         .drop("i")
     )

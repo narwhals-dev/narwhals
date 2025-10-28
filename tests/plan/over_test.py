@@ -217,12 +217,7 @@ def test_len_over_2369() -> None:
 
 def test_shift_kitchen_sink(data_alt: Data) -> None:
     result = dataframe(data_alt).select(
-        nwp.nth(1, 2)
-        .shift(-1)
-        .over(order_by=nwp.nth(0))
-        .sort(nulls_last=True)
-        .fill_null(100)
-        * 5
+        nth(1, 2).shift(-1).over(order_by=nth(0)).sort(nulls_last=True).fill_null(100) * 5
     )
     expected = {"b": [0, 5, 10, 15, 500], "c": [5, 5, 10, 45, 500]}
     assert_equal_data(result, expected)

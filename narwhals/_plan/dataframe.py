@@ -3,11 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, get_args, overload
 
 from narwhals._plan import _parse
-from narwhals._plan._expansion import (
-    expand_selector_irs_names,
-    prepare_projection,
-    prepare_projection_s,
-)
+from narwhals._plan._expansion import expand_selector_irs_names, prepare_projection_s
 from narwhals._plan.common import ensure_seq_str, temp
 from narwhals._plan.exceptions import group_by_no_keys_error
 from narwhals._plan.group_by import GroupBy, Grouped
@@ -89,7 +85,7 @@ class BaseFrame(Generic[NativeFrameT_co]):
         return self._with_compliant(self._compliant.filter(named_irs[0]))
 
     def select(self, *exprs: OneOrIterable[IntoExpr], **named_exprs: Any) -> Self:
-        named_irs, schema = prepare_projection(
+        named_irs, schema = prepare_projection_s(
             _parse.parse_into_seq_of_expr_ir(*exprs, **named_exprs), schema=self
         )
         return self._with_compliant(self._compliant.select(schema.select_irs(named_irs)))
