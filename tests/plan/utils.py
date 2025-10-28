@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -21,19 +22,27 @@ pytest.importorskip("pyarrow")
 import pyarrow as pa
 
 if TYPE_CHECKING:
+    import sys
     from collections.abc import Iterable, Mapping, Sequence
 
-    from typing_extensions import LiteralString
+    from typing_extensions import LiteralString, TypeAlias
 
-    from narwhals._plan.typing import IntoExpr, Seq
+    from narwhals._plan.typing import IntoExpr, OneOrIterable, Seq
     from narwhals.typing import IntoSchema
+
+    if sys.version_info >= (3, 11):
+        _Flags: TypeAlias = "int | re.RegexFlag"
+    else:
+        _Flags: TypeAlias = int
 
 
 def cols(*names: str | Sequence[str]) -> nwp.Expr:
+    """**TEMPORARY WHILE TRANSITIONING!**"""  # noqa: D415
     return ncs.by_name(*names).as_expr()
 
 
 def nth(*indices: int | Sequence[int]) -> nwp.Expr:
+    """**TEMPORARY WHILE TRANSITIONING!**"""  # noqa: D415
     return ncs.by_index(*indices).as_expr()
 
 
@@ -101,13 +110,15 @@ class Frame:
         """Get the number of columns in the schema."""
         return len(self.columns)
 
-    def project(self, *exprs: IntoExpr) -> Seq[ir.NamedIR]:
-        """Parse and expand `exprs` into named representations.
+    def project(
+        self, exprs: OneOrIterable[IntoExpr], *more_exprs: IntoExpr
+    ) -> Seq[ir.NamedIR]:
+        """Parse and expand expressions into named representations.
 
         Arguments:
-            *exprs: Column(s) to select, specified as positional arguments.
-                Accepts expression input. Strings are parsed as column names,
+            exprs: Column(s) to select. Accepts expression input. Strings are parsed as column names,
                 other non-expression inputs are parsed as literals.
+            *more_exprs: Column(s) to select, specified as positional arguments.
 
         Note:
             `NamedIR` is the form of expression passed to the compliant-level.
@@ -131,7 +142,7 @@ class Frame:
              c_abs=col('c').abs(),
              literal=lit(date: 2000-01-01))
         """
-        expr_irs = _parse.parse_into_seq_of_expr_ir(*exprs)
+        expr_irs = _parse.parse_into_seq_of_expr_ir(exprs, *more_exprs)
         named_irs, _ = _expansion.prepare_projection_s(expr_irs, schema=self.schema)
         return named_irs
 
@@ -205,3 +216,13 @@ def assert_equal_data(
     result: nwp.DataFrame[Any, Any], expected: Mapping[str, Any]
 ) -> None:
     _assert_equal_data(result.to_dict(as_series=False), expected)
+
+
+def re_compile(
+    pattern: str, flags: _Flags = re.DOTALL | re.IGNORECASE
+) -> re.Pattern[str]:
+    """Compile a regular expression pattern, returning a Pattern object.
+
+    Helper to default to using `flags=re.DOTALL | re.IGNORECASE`.
+    """
+    return re.compile(pattern, flags)

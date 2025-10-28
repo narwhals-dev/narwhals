@@ -61,13 +61,8 @@ def all_s() -> Expr:
     return cs.all().as_expr()
 
 
-# TODO @dangotbanned: Swap out with `exclude_s`
 def exclude(*names: str | t.Iterable[str]) -> Expr:
-    return all().exclude(*names)
-
-
-def exclude_s(*names: str | t.Iterable[str]) -> Expr:
-    return cs.all().exclude_s(*names)
+    return cs.all().exclude_s(*names).as_expr()
 
 
 def max(*columns: str) -> Expr:

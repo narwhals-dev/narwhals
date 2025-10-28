@@ -8,24 +8,20 @@ import pytest
 import narwhals as nw
 from narwhals import _plan as nwp
 from narwhals._plan import expressions as ir, selectors as ndcs
-from narwhals._plan._expansion import (
-    prepare_projection,
-    replace_selector,
-    rewrite_special_aliases,
-)
-from narwhals._plan._parse import parse_into_seq_of_expr_ir
+from narwhals._plan._expansion import replace_selector
 from narwhals._plan.schema import freeze_schema
-from narwhals.exceptions import ColumnNotFoundError, ComputeError, DuplicateError
-from tests.plan.utils import assert_expr_ir_equal, named_ir
+from narwhals.exceptions import ColumnNotFoundError, DuplicateError
+from tests.plan.utils import Frame, assert_expr_ir_equal, cols, named_ir, nth, re_compile
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
 
     from narwhals._plan.typing import IntoExpr, MapIR
     from narwhals.dtypes import DType
+    from narwhals.typing import IntoSchema
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def schema_1() -> dict[str, DType]:
     return {
         "a": nw.Int64(),
@@ -51,16 +47,21 @@ def schema_1() -> dict[str, DType]:
     }
 
 
+@pytest.fixture(scope="module")
+def df_1(schema_1: IntoSchema) -> Frame:
+    return Frame.from_mapping(schema_1)
+
+
 MULTI_OUTPUT_EXPRS = (
-    pytest.param(nwp.col("a", "b", "c")),
+    pytest.param(cols("a", "b", "c")),
     pytest.param(ndcs.numeric() - ndcs.matches("[d-j]")),
-    pytest.param(nwp.nth(0, 1, 2)),
+    pytest.param(nth(0, 1, 2)),
     pytest.param(ndcs.by_dtype(nw.Int64, nw.Int32, nw.Int16)),
     pytest.param(ndcs.by_name("a", "b", "c")),
 )
 """All of these resolve to `["a", "b", "c"]`."""
 
-BIG_EXCLUDE = ("k", "l", "m", "n", "o", "p", "s", "u", "r", "a", "b", "e", "q")
+BIG_EXCLUDE = nwp.exclude("k", "l", "m", "n", "o", "p", "s", "u", "r", "a", "b", "e", "q")
 
 
 def udf_name_map(name: str) -> str:
@@ -104,30 +105,27 @@ def udf_name_map(name: str) -> str:
                 .alias("noise")
                 .name.suffix("_end")
             ),
-            "start_end",
-            marks=pytest.mark.xfail(
-                reason="New logic preserves intermediate alias", raises=AssertionError
-            ),
+            "noise_end",
         ),
     ],
 )
-def test_rewrite_special_aliases_single(expr: nwp.Expr, expected: str) -> None:
-    # NOTE: We can't use `output_name()` without resolving these rewrites
-    # Once they're done, `output_name()` just peeks into `Alias(name=...)`
-    ir_input = expr._ir
-    if isinstance(ir_input, ir.KeepName):
-        with pytest.raises(ComputeError):
-            ir_input.meta.output_name()
-    else:
-        assert ir_input.meta.output_name() == expected
+def test_special_aliases_single(expr: nwp.Expr, expected: str) -> None:
+    df = Frame.from_names(
+        "a",
+        "B",
+        "c",
+        "d",
+        "aBcD EFg hi",
+        "hello",
+        "start",
+        "ignore me",
+        "ignore me as well",
+        "unreferenced",
+    )
+    df.assert_selects(expr, expected)
 
-    ir_output = rewrite_special_aliases(ir_input)
-    assert ir_input != ir_output
-    actual = ir_output.meta.output_name()
-    assert actual == expected
 
-
-def alias_replace_guarded(name: str) -> MapIR:  # pragma: no cover
+def alias_replace_guarded(name: str) -> MapIR:
     """Guards against repeatedly creating the same alias."""
 
     def fn(e_ir: ir.ExprIR) -> ir.ExprIR:
@@ -138,7 +136,7 @@ def alias_replace_guarded(name: str) -> MapIR:  # pragma: no cover
     return fn
 
 
-def alias_replace_unguarded(name: str) -> MapIR:  # pragma: no cover
+def alias_replace_unguarded(name: str) -> MapIR:
     """**Does not guard against recursion**!
 
     Handling the recursion stopping **should be** part of the impl of `ExprIR.map_ir`.
@@ -189,6 +187,10 @@ def test_map_ir_recursive(expr: nwp.Expr, function: MapIR, expected: nwp.Expr) -
     assert_expr_ir_equal(actual, expected)
 
 
+# TODO @dangotbanned: Need a better way of representing a multi-expansion on the rhs
+# Simply converting everything to use multiple `col` is gonna explode the test size
+# TODO @dangotbanned: Don't compare against `_ColumnSelection`
+# TODO @dangotbanned: Don't use `replace_selector` directly
 @pytest.mark.parametrize(
     ("expr", "expected"),
     [
@@ -272,27 +274,25 @@ def test_replace_selector(
     [
         pytest.param("a", [nwp.col("a")], id="Col"),
         pytest.param(
-            nwp.col("b", "c", "d"),
+            cols("b", "c", "d"),
             [nwp.col("b"), nwp.col("c"), nwp.col("d")],
-            id="Columns",
+            id="ByName(3)",
         ),
-        pytest.param(nwp.nth(6), [nwp.col("g")], id="Nth"),
+        pytest.param(nth(6), [nwp.col("g")], id="ByIndex(1)"),
         pytest.param(
-            nwp.nth(9, 8, -5),
-            [nwp.col("j"), nwp.col("i"), nwp.col("p")],
-            id="IndexColumns",
+            nth(9, 8, -5), [nwp.col("j"), nwp.col("i"), nwp.col("p")], id="ByIndex(3)"
         ),
         pytest.param(
-            [nwp.nth(2).alias("c again"), nwp.nth(-1, -2).name.to_uppercase()],
+            [nth(2).alias("c again"), nth(-1, -2).name.to_uppercase()],
             [
                 named_ir("c again", nwp.col("c")),
                 named_ir("U", nwp.col("u")),
                 named_ir("S", nwp.col("s")),
             ],
-            id="Nth-Alias-IndexColumns-Uppercase",
+            id="ByIndex(1)-Alias-ByIndex(2)-Uppercase",
         ),
         pytest.param(
-            nwp.all(),
+            nwp.all().meta.as_selector(),
             [
                 nwp.col("a"),
                 nwp.col("b"),
@@ -359,7 +359,7 @@ def test_replace_selector(
             id="ByDType-TotalMins-Name-Map",
         ),
         pytest.param(
-            nwp.col("f", "g")
+            cols("f", "g")
             .cast(nw.String)
             .str.starts_with("1")
             .all()
@@ -374,10 +374,10 @@ def test_replace_selector(
                     nwp.col("g").cast(nw.String).str.starts_with("1").all(),
                 ),
             ],
-            id="Cast-StartsWith-All-Suffix",
+            id="ByName(2)-Cast-StartsWith-All-Suffix",
         ),
         pytest.param(
-            nwp.col("a", "b")
+            cols("a", "b")
             .first()
             .over("c", "e", order_by="d")
             .name.suffix("_first_over_part_order_1"),
@@ -395,10 +395,10 @@ def test_replace_selector(
                     .over(nwp.col("c"), nwp.col("e"), order_by=[nwp.col("d")]),
                 ),
             ],
-            id="First-Over-Partitioned-Ordered-Suffix",
+            id="ByName(2)-First-Over-Partitioned-Ordered-Suffix",
         ),
         pytest.param(
-            nwp.exclude(BIG_EXCLUDE),
+            BIG_EXCLUDE,
             [
                 nwp.col("c"),
                 nwp.col("d"),
@@ -411,7 +411,7 @@ def test_replace_selector(
             id="Exclude",
         ),
         pytest.param(
-            nwp.exclude(BIG_EXCLUDE).name.suffix("_2"),
+            BIG_EXCLUDE.name.suffix("_2"),
             [
                 named_ir("c_2", nwp.col("c")),
                 named_ir("d_2", nwp.col("d")),
@@ -455,27 +455,27 @@ def test_replace_selector(
         ),
         pytest.param(
             [
-                nwp.col("c").sort_by(nwp.col("c", "i")).first().alias("Columns"),
+                nwp.col("c").sort_by(cols("c", "i")).first().alias("ByName(2)"),
                 nwp.col("c").sort_by("c", "i").first().alias("Column_x2"),
             ],
             [
                 named_ir(
-                    "Columns", nwp.col("c").sort_by(nwp.col("c"), nwp.col("i")).first()
+                    "ByName(2)", nwp.col("c").sort_by(nwp.col("c"), nwp.col("i")).first()
                 ),
                 named_ir(
                     "Column_x2", nwp.col("c").sort_by(nwp.col("c"), nwp.col("i")).first()
                 ),
             ],
-            id="SortBy-Columns",
+            id="SortBy-ByName",
         ),
         pytest.param(
-            nwp.nth(1).mean().over("k", order_by=nwp.nth(4, 5)),
+            nth(1).mean().over("k", order_by=nth(4, 5)),
             [
                 nwp.col("b")
                 .mean()
                 .over(nwp.col("k"), order_by=(nwp.col("e"), nwp.col("f")))
             ],
-            id="Over-OrderBy-IndexColumns",
+            id="Over-OrderBy-ByIndex(2)",
         ),
         pytest.param(
             nwp.col("f").max().over(ndcs.by_dtype(nw.Date, nw.Datetime)),
@@ -485,12 +485,9 @@ def test_replace_selector(
     ],
 )
 def test_prepare_projection(
-    into_exprs: IntoExpr | Sequence[IntoExpr],
-    expected: Sequence[nwp.Expr],
-    schema_1: dict[str, DType],
+    into_exprs: IntoExpr | Sequence[IntoExpr], expected: Sequence[nwp.Expr], df_1: Frame
 ) -> None:
-    irs_in = parse_into_seq_of_expr_ir(into_exprs)
-    actual, _ = prepare_projection(irs_in, schema=schema_1)
+    actual = df_1.project(into_exprs)
     assert len(actual) == len(expected)
     for lhs, rhs in zip(actual, expected):
         assert_expr_ir_equal(lhs, rhs)
@@ -499,34 +496,34 @@ def test_prepare_projection(
 @pytest.mark.parametrize(
     "expr",
     [
-        nwp.all(),
-        nwp.nth(1, 2, 3),
-        nwp.col("a", "b", "c"),
+        ndcs.all(),
+        nth(1, 2, 3),
+        cols("a", "b", "c"),
         ndcs.boolean() | ndcs.categorical(),
         (ndcs.by_name("a", "b") | ndcs.string()),
-        (nwp.col("b", "c") & nwp.col("a")),
-        nwp.col("a", "b").min().over("c", order_by="e"),
+        (cols("b", "c") & nwp.col("a")),
+        cols("a", "b").min().over("c", order_by="e"),
         (~ndcs.by_dtype(nw.Int64()) - ndcs.datetime()),
-        nwp.nth(6, 2).abs().cast(nw.Int32()) + 10,
+        nth(6, 2).abs().cast(nw.Int32()) + 10,
         *MULTI_OUTPUT_EXPRS,
     ],
 )
-def test_prepare_projection_duplicate(expr: nwp.Expr, schema_1: dict[str, DType]) -> None:
-    irs = parse_into_seq_of_expr_ir(expr.alias("dupe"))
+def test_prepare_projection_duplicate(expr: nwp.Expr, df_1: Frame) -> None:
     pattern = re.compile(r"\.alias\(.dupe.\)")
+    expr = expr.alias("dupe")
     with pytest.raises(DuplicateError, match=pattern):
-        prepare_projection(irs, schema=schema_1)
+        df_1.project(expr)
 
 
 @pytest.mark.parametrize(
     ("into_exprs", "missing"),
     [
-        ([nwp.col("y", "z")], ["y", "z"]),
-        ([nwp.col("a", "b", "z")], ["z"]),
-        ([nwp.col("x", "b", "a")], ["x"]),
+        ([cols("y", "z")], ["y", "z"]),
+        ([cols("a", "b", "z")], ["z"]),
+        ([cols("x", "b", "a")], ["x"]),
         (
             [
-                nwp.col(
+                cols(
                     [
                         "a",
                         "b",
@@ -561,12 +558,12 @@ def test_prepare_projection_duplicate(expr: nwp.Expr, schema_1: dict[str, DType]
         ([nwp.col("a").sort_by("b", "who").alias("f")], ["who"]),
         (
             [
-                nwp.nth(0, 5)
+                nth(0, 5)
                 .cast(nw.Int64())
                 .abs()
                 .cum_sum()
                 .over("X", "O", "h", "m", "r", "zee"),
-                nwp.col("d", "j"),
+                cols("d", "j"),
                 "n",
             ],
             ["O", "X", "zee"],
@@ -574,14 +571,11 @@ def test_prepare_projection_duplicate(expr: nwp.Expr, schema_1: dict[str, DType]
     ],
 )
 def test_prepare_projection_column_not_found(
-    into_exprs: IntoExpr | Sequence[IntoExpr],
-    missing: Sequence[str],
-    schema_1: dict[str, DType],
+    into_exprs: IntoExpr | Sequence[IntoExpr], missing: Sequence[str], df_1: Frame
 ) -> None:
     pattern = re.compile(rf"not found: {re.escape(repr(missing))}")
-    irs = parse_into_seq_of_expr_ir(into_exprs)
     with pytest.raises(ColumnNotFoundError, match=pattern):
-        prepare_projection(irs, schema=schema_1)
+        df_1.project(into_exprs)
 
 
 @pytest.mark.parametrize(
@@ -590,10 +584,10 @@ def test_prepare_projection_column_not_found(
         ("a", "b", "c"),
         (["a", "b", "c"]),
         ("a", "b", nwp.col("c")),
-        (nwp.col("a"), "b", "c"),
-        (nwp.col("a", "b"), "c"),
-        ("a", nwp.col("b", "c")),
-        ((nwp.nth(0), nwp.nth(1, 2))),
+        (cols("a"), "b", "c"),
+        (cols("a", "b"), "c"),
+        ("a", cols("b", "c")),
+        ((nth(0), nth(1, 2))),
         *MULTI_OUTPUT_EXPRS,
     ],
 )
@@ -612,30 +606,25 @@ def test_prepare_projection_column_not_found(
 def test_prepare_projection_horizontal_alias(
     into_exprs: IntoExpr | Iterable[IntoExpr],
     function: Callable[..., nwp.Expr],
-    schema_1: dict[str, DType],
+    df_1: Frame,
 ) -> None:
     # NOTE: See https://github.com/narwhals-dev/narwhals/pull/2572#discussion_r2139965411
-    expr = function(into_exprs)
-    alias_1 = expr.alias("alias(x1)")
-    irs = parse_into_seq_of_expr_ir(alias_1)
-    out_irs, _ = prepare_projection(irs, schema=schema_1)
+    alias_1 = function(into_exprs).alias("alias(x1)")
+    out_irs = df_1.project(alias_1)
     assert len(out_irs) == 1
     assert out_irs[0] == named_ir("alias(x1)", function("a", "b", "c"))
 
     alias_2 = alias_1.alias("alias(x2)")
-    irs = parse_into_seq_of_expr_ir(alias_2)
-    out_irs, _ = prepare_projection(irs, schema=schema_1)
+    out_irs = df_1.project(alias_2)
     assert len(out_irs) == 1
     assert out_irs[0] == named_ir("alias(x2)", function("a", "b", "c"))
 
 
 @pytest.mark.parametrize(
-    "into_exprs", [nwp.nth(-21), nwp.nth(-1, 2, 54, 0), nwp.nth(20), nwp.nth([-10, -100])]
+    "into_exprs", [nth(-21), nth(-1, 2, 54, 0), nth(20), nth([-10, -100])]
 )
 def test_prepare_projection_index_error(
-    into_exprs: IntoExpr | Iterable[IntoExpr], schema_1: dict[str, DType]
+    into_exprs: IntoExpr | Iterable[IntoExpr], df_1: Frame
 ) -> None:
-    irs = parse_into_seq_of_expr_ir(into_exprs)
-    pattern = re.compile(r"invalid.+index.+nth", re.DOTALL | re.IGNORECASE)
-    with pytest.raises(ColumnNotFoundError, match=pattern):
-        prepare_projection(irs, schema=schema_1)
+    with pytest.raises(ColumnNotFoundError, match=re_compile(r"invalid.+index.+nth")):
+        df_1.project(into_exprs)
