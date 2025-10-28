@@ -332,7 +332,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
         return PandasLikeDataFrame(
-            self.native.to_frame(),
+            self.native.to_frame(self.name),
             implementation=self._implementation,
             version=self._version,
             validate_column_names=False,
@@ -661,7 +661,9 @@ class PandasLikeSeries(EagerSeries[Any]):
             {self.name: old, tmp_name: namespace.Series(new, dtype=dtype)}
         )
         result = self._with_native(
-            self.native.to_frame().merge(other, on=self.name, how="left")[tmp_name]
+            self.native.to_frame(self.name).merge(other, on=self.name, how="left")[
+                tmp_name
+            ]
         ).alias(self.name)
         if result.is_null().sum() != self.is_null().sum():
             msg = (

@@ -260,6 +260,13 @@ class PandasLikeNamespace(
     def _concat_horizontal(
         self, dfs: Sequence[NativeDataFrameT | NativeSeriesT], /
     ) -> NativeDataFrameT:
+        _frame_cls = self._implementation.to_native_namespace().DataFrame
+        names = list(
+            chain.from_iterable(
+                item.columns if isinstance(item, _frame_cls) else (item.name,)  # type: ignore[union-attr]
+                for item in dfs
+            )
+        )
         if self._implementation.is_cudf():
             with warnings.catch_warnings():
                 warnings.filterwarnings(
@@ -267,10 +274,13 @@ class PandasLikeNamespace(
                     message="The behavior of array concatenation with empty entries is deprecated",
                     category=FutureWarning,
                 )
-                return self._concat(dfs, axis=HORIZONTAL)
+                result = self._concat(dfs, axis=HORIZONTAL)
         elif self._implementation.is_pandas() and self._backend_version < (3,):
-            return self._concat(dfs, axis=HORIZONTAL, copy=False)
-        return self._concat(dfs, axis=HORIZONTAL)
+            result = self._concat(dfs, axis=HORIZONTAL, copy=False)
+        else:
+            result = self._concat(dfs, axis=HORIZONTAL)
+        result.columns = names  # pyright: ignore[reportAttributeAccessIssue]
+        return result
 
     def _concat_vertical(self, dfs: Sequence[NativeDataFrameT], /) -> NativeDataFrameT:
         cols_0 = dfs[0].columns

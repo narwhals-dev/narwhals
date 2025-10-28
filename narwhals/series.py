@@ -2794,16 +2794,16 @@ class Series(Generic[IntoSeriesT]):
         """
         if not self.dtype.is_numeric():
             msg = (
-                f"is_close operation not supported for dtype `{self.dtype}`\n\n"
+                f"`is_close` operation not supported for dtype `{self.dtype}`\n\n"
                 "Hint: `is_close` is only supported for numeric types"
             )
             raise InvalidOperationError(msg)
-        ret_df = self.to_frame().select(
-            col(self.name).is_close(
-                other, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal
-            )
+        name = self.name
+        expr = col(name).is_close(
+            other, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal
         )
-        return cast("Self", ret_df[self.name])
+        ret_df = self.to_frame().select(expr)
+        return cast("Self", ret_df.get_column(name))
 
     @property
     def str(self) -> SeriesStringNamespace[Self]:

@@ -221,7 +221,8 @@ class _BasePandasLike(Sized, Protocol):
         """
 
 
-class _BasePandasLikeFrame(NativeDataFrame, _BasePandasLike, Protocol): ...
+class _BasePandasLikeFrame(NativeDataFrame, _BasePandasLike, Protocol):
+    columns: Any
 
 
 class _BasePandasLikeSeries(NativeSeries, _BasePandasLike, Protocol):

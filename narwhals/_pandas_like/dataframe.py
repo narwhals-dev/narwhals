@@ -1198,7 +1198,8 @@ class PandasLikeDataFrame(
 
         exploded_frame = native_frame[[*other_columns, columns[0]]].explode(columns[0])
         exploded_series = [
-            native_frame[col_name].explode().to_frame() for col_name in columns[1:]
+            native_frame[col_name].explode().to_frame(col_name)
+            for col_name in columns[1:]
         ]
 
         plx = self.__native_namespace__()
