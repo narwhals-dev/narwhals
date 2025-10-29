@@ -71,6 +71,9 @@ class ExprIR(Immutable):
     def is_scalar(self) -> bool:
         return False
 
+    def needs_expansion(self) -> bool:
+        return any(isinstance(e, SelectorIR) for e in self.iter_left())
+
     def map_ir(self, function: MapIR, /) -> ExprIR:
         """Apply `function` to each child node, returning a new `ExprIR`.
 
@@ -217,6 +220,9 @@ class SelectorIR(ExprIR, config=ExprIROptions.no_dispatch()):
 
     def to_selector_ir(self) -> Self:
         return self
+
+    def needs_expansion(self) -> bool:
+        return True
 
 
 class NamedIR(Immutable, Generic[ExprIRT]):

@@ -187,14 +187,10 @@ def rewrite_projections(
     return tuple(result)
 
 
-def needs_expansion(expr: ExprIR) -> bool:
-    return any(isinstance(e, ir.SelectorIR) for e in expr.iter_left())
-
-
 def expand_expression(
     expr: ExprIR, ignored: Ignored, schema: FrozenSchema, /
 ) -> Iterator[ExprIR]:
-    if all(not needs_expansion(e) for e in expr.iter_left()):
+    if all(not e.needs_expansion() for e in expr.iter_left()):
         yield expr
     else:
         yield from expand_expression_rec(expr, ignored, schema)
