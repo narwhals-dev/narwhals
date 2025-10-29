@@ -251,3 +251,6 @@ def test_is_close_pandas_unnamed() -> None:
     ser = nw.from_native(pd.Series([1.1, 1.2]), series_only=True)
     res = ser.is_close(ser)
     assert res.name is None
+    ser = nw.from_native(pd.Series([1.1, 1.2], name="ab"), series_only=True)
+    res = ser.is_close(ser)
+    assert res.name == "ab"
