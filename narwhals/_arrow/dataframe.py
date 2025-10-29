@@ -124,10 +124,10 @@ class ArrowDataFrame(
         if not schema and not data:
             return cls.from_native(pa.table({}), context=context)
         if not schema:
-            return cls.from_native(pa.table(data), context=context)  # pyright: ignore[reportCallIssue,reportArgumentType]
+            return cls.from_native(pa.table(data), context=context)  # type: ignore[arg-type]
         res = pa.table(
             {
-                name: pa.chunked_array(
+                name: pa.chunked_array(  # type: ignore[misc]
                     [data[name] if data else []],
                     type=narwhals_to_native_dtype(nw_dtype, version=context._version)
                     if nw_dtype is not None
