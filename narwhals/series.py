@@ -2798,12 +2798,17 @@ class Series(Generic[IntoSeriesT]):
                 "Hint: `is_close` is only supported for numeric types"
             )
             raise InvalidOperationError(msg)
-        name = self.name
-        expr = col(name).is_close(
+
+        orig_name = self.name
+        name_is_none = orig_name is None
+        tmp_name = "__nw_is_close__" if name_is_none else orig_name
+        expr = col(tmp_name).is_close(
             other, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal
         )
-        ret_df = self.to_frame().select(expr)
-        return cast("Self", ret_df.get_column(name))
+        series = self.rename(tmp_name) if name_is_none else self
+        result = series.to_frame().select(expr).get_column(tmp_name)
+        result = result.rename(orig_name) if name_is_none else result
+        return cast("Self", result)
 
     @property
     def str(self) -> SeriesStringNamespace[Self]:

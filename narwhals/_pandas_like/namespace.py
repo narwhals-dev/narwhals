@@ -260,16 +260,6 @@ class PandasLikeNamespace(
     def _concat_horizontal(
         self, dfs: Sequence[NativeDataFrameT | NativeSeriesT], /
     ) -> NativeDataFrameT:
-        _series_cls = self._implementation.to_native_namespace().Series
-        any_is_series = False
-        if any(_item_is_series := tuple(isinstance(item, _series_cls) for item in dfs)):
-            any_is_series = True
-            names = list(
-                chain.from_iterable(
-                    (item.name,) if is_series else item.columns  # type: ignore[union-attr]
-                    for item, is_series in zip(dfs, _item_is_series)
-                )
-            )
         if self._implementation.is_cudf():
             with warnings.catch_warnings():
                 warnings.filterwarnings(
@@ -277,15 +267,10 @@ class PandasLikeNamespace(
                     message="The behavior of array concatenation with empty entries is deprecated",
                     category=FutureWarning,
                 )
-                result = self._concat(dfs, axis=HORIZONTAL)
+                return self._concat(dfs, axis=HORIZONTAL)
         elif self._implementation.is_pandas() and self._backend_version < (3,):
-            result = self._concat(dfs, axis=HORIZONTAL, copy=False)
-        else:
-            result = self._concat(dfs, axis=HORIZONTAL)
-
-        if any_is_series:
-            result.columns = names  # pyright: ignore[reportAttributeAccessIssue]
-        return result
+            return self._concat(dfs, axis=HORIZONTAL, copy=False)
+        return self._concat(dfs, axis=HORIZONTAL)
 
     def _concat_vertical(self, dfs: Sequence[NativeDataFrameT], /) -> NativeDataFrameT:
         cols_0 = dfs[0].columns

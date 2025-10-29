@@ -332,7 +332,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
         return PandasLikeDataFrame(
-            self.native.to_frame(self.name),
+            self.native.to_frame(),
             implementation=self._implementation,
             version=self._version,
             validate_column_names=False,

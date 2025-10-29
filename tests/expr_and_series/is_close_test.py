@@ -242,3 +242,12 @@ def test_is_close_expr_with_scalar(
             for i, v in enumerate(expected)
         ]
     assert_equal_data(result, {"idx": data["idx"], "result": expected})
+
+
+def test_is_close_pandas_unnamed() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    ser = nw.from_native(pd.Series([1.1, 1.2]), series_only=True)
+    res = ser.is_close(ser)
+    assert res.name is None
