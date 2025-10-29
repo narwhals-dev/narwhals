@@ -125,20 +125,17 @@ class ArrowDataFrame(
             return cls.from_native(pa.table({}), context=context)
         if not schema:
             return cls.from_native(pa.table(data), context=context)  # pyright: ignore[reportCallIssue,reportArgumentType]
-        res = {}
-        for name, nw_dtype in schema.items():
-            list_ = data.get(name, [])
-            pa_type = (
-                narwhals_to_native_dtype(nw_dtype, version=context._version)
-                if nw_dtype is not None
-                else None
-            )
-            ca = (
-                pa.chunked_array([list_], type=pa_type)
-                if pa_type
-                else pa.chunked_array([list_])
-            )
-            res[name] = ca
+        res = pa.table(
+            {
+                name: pa.chunked_array(
+                    [data[name] if data else []],
+                    type=narwhals_to_native_dtype(nw_dtype, version=context._version)
+                    if nw_dtype is not None
+                    else None,
+                )
+                for name, nw_dtype in schema.items()
+            }
+        )
         return cls.from_native(pa.table(res), context=context)
 
     @classmethod

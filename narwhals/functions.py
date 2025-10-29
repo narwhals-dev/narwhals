@@ -274,6 +274,9 @@ def from_dict(
     """
     if backend is None:
         data, backend = _from_dict_no_backend(data)
+    if schema and data and (diff := set(schema.keys()).symmetric_difference(data.keys())):
+        msg = f"Keys in `schema` and `data` are expected to match, found unmatched keys: {diff}"
+        raise InvalidOperationError(msg)
     implementation = Implementation.from_backend(backend)
     if is_eager_allowed(implementation):
         ns = Version.MAIN.namespace.from_backend(implementation).compliant
