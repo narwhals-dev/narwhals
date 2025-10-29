@@ -39,28 +39,12 @@ def table(name: str, schema: IntoSchema) -> LazyFrame[DuckDBPyRelation]:
 
     Examples:
         >>> import narwhals as nw
+        >>> from narwhals.sql import table
         >>> schema = {"date": nw.Date, "price": nw.Int64, "symbol": nw.String}
-        >>> assets = nw.sql.table("assets", schema)
-        >>> result = assets.with_columns(
-        ...     nw.col("price").rolling_mean(5).over("symbol", order_by="date")
-        ... )
-        >>> print(result.to_native().sql(dialect="duckdb"))
-        SELECT
-          "assets"."date" AS "date",
-          CASE
-            WHEN COUNT("assets"."price") OVER (
-              PARTITION BY "assets"."symbol"
-              ORDER BY "assets"."date" NULLS FIRST
-              ROWS BETWEEN 4 PRECEDING AND CURRENT ROW
-            ) >= 5
-            THEN AVG("assets"."price") OVER (
-              PARTITION BY "assets"."symbol"
-              ORDER BY "assets"."date" NULLS FIRST
-              ROWS BETWEEN 4 PRECEDING AND CURRENT ROW
-            )
-          END AS "price",
-          "assets"."symbol" AS "symbol"
-        FROM "assets" AS "assets"
+        >>> assets = table("assets", schema)
+        >>> result = assets.with_columns(price_2=nw.col("price") * 2)
+        >>> print(result.to_native().sql_query())
+        SELECT date, price, symbol, (price * 2) AS price_2 FROM main.assets
     """
     column_mapping = {
         col: narwhals_to_native_dtype(dtype, Version.MAIN, tz)
