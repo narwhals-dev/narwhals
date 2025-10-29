@@ -18,7 +18,7 @@ from narwhals.exceptions import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Sequence
+    from collections.abc import Collection, Iterable
     from typing import Any
 
     import pandas as pd
@@ -170,7 +170,7 @@ def is_iterable_polars_error(
     return TypeError(msg)
 
 
-def duplicate_error(exprs: Sequence[ir.ExprIR]) -> DuplicateError:
+def duplicate_error(exprs: Collection[ir.ExprIR]) -> DuplicateError:
     INDENT = "\n  "  # noqa: N806
     names = [_output_name(expr) for expr in exprs]
     exprs = sorted(exprs, key=_output_name)

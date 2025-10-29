@@ -38,7 +38,7 @@ Their dependencies are **quite** complex, with the main ones being:
 from __future__ import annotations
 
 from collections import deque
-from collections.abc import Container
+from collections.abc import Collection, Container
 from typing import TYPE_CHECKING, Any, Union
 
 from narwhals._plan import common, expressions as ir, meta
@@ -98,9 +98,7 @@ def prepare_projection(
         schema: Scope to expand selectors in.
     """
     expander = Expander(schema, ignored)
-    frozen_schema = expander.schema
-    rewritten = expander.expand_exprs(exprs)
-    return resolve_names(rewritten, frozen_schema), frozen_schema
+    return expander.prepare_projection(exprs), expander.schema
 
 
 def expand_selector_irs_names(
@@ -119,32 +117,6 @@ def expand_selector_irs_names(
     expander = Expander(schema, ignored)
     names = expander.iter_expand_selector_names(selectors)
     return _ensure_valid_output_names(tuple(names), expander.schema)
-
-
-# TODO @dangotbanned: Clean up
-# Gets more done in a single pass
-def resolve_names(exprs: Seq[ExprIR], schema: FrozenSchema) -> Seq[NamedIR]:
-    names = deque[str]()
-    named_irs = deque[NamedIR]()
-    for e in exprs:
-        # NOTE: Empty string is allowed as a name, but is falsy
-        if (output_name := e.meta.output_name(raise_if_undetermined=False)) is not None:
-            names.append(output_name)
-            target = e
-        elif meta.has_expr_ir(e, KeepName):
-            replaced = replace_keep_name(e)
-            output_name = replaced.meta.output_name()
-            target = replaced
-        else:
-            msg = f"Unable to determine output name for expression, got: `{e!r}`"
-            raise NotImplementedError(msg)
-        named_irs.append(ir.named_ir(output_name, remove_alias(target)))
-    if len(names) != len(set(names)):
-        raise duplicate_error(exprs)
-    root_names = meta.root_names_unique(exprs)
-    if not (set(schema.names).issuperset(root_names)):
-        raise column_not_found_error(root_names, schema)
-    return tuple(named_irs)
 
 
 def remove_alias(origin: ExprIR, /) -> ExprIR:
@@ -183,7 +155,7 @@ class Expander:
     def iter_expand_exprs(self, exprs: Iterable[ExprIR], /) -> Iterator[ExprIR]:
         # Iteratively expand all of exprs
         for expr in exprs:
-            yield from self.expand(expr)
+            yield from self._expand(expr)
 
     def iter_expand_selector_names(
         self, selectors: Iterable[SelectorIR], /
@@ -191,18 +163,45 @@ class Expander:
         for s in selectors:
             yield from s.into_columns(self.schema, self.ignored)
 
-    def expand_exprs(self, exprs: Sequence[ExprIR], /) -> Seq[ExprIR]:
-        # Eagerly expand all of exprs
-        return tuple(self.iter_expand_exprs(exprs))
+    def prepare_projection(self, exprs: Collection[ExprIR], /) -> Seq[NamedIR]:
+        output_names = deque[str]()
+        named_irs = deque[NamedIR]()
+        root_names = set[str]()
 
-    def expand(self, expr: ExprIR, /) -> Iterator[ExprIR]:
+        # NOTE: Collecting here isn't ideal (perf-wise), but the expanded `ExprIR`s
+        # have more useful information to add in an error message
+        # Another option could be keeping things lazy, but repeating the work for the error case?
+        # that way, there isn't a cost paid on the happy path - and it doesn't matter when we're raising
+        # if we take our time displaying the message
+        expanded = tuple(self.iter_expand_exprs(exprs))
+        for e in expanded:
+            # NOTE: Empty string is allowed as a name, but is falsy
+            if (name := e.meta.output_name(raise_if_undetermined=False)) is not None:
+                target = e
+            elif meta.has_expr_ir(e, KeepName):
+                replaced = replace_keep_name(e)
+                name = replaced.meta.output_name()
+                target = replaced
+            else:
+                msg = f"Unable to determine output name for expression, got: `{e!r}`"
+                raise NotImplementedError(msg)
+            output_names.append(name)
+            named_irs.append(ir.named_ir(name, remove_alias(target)))
+            root_names.update(meta._expr_to_leaf_column_names_iter(e))
+        if len(output_names) != len(set(output_names)):
+            raise duplicate_error(expanded)
+        if not (set(self.schema).issuperset(root_names)):
+            raise column_not_found_error(root_names, self.schema)
+        return tuple(named_irs)
+
+    def _expand(self, expr: ExprIR, /) -> Iterator[ExprIR]:
         # For a single expr, fully expand all parts of it
         if all(not e.needs_expansion() for e in expr.iter_left()):
             yield expr
         else:
-            yield from self.expand_recursive(expr)
+            yield from self._expand_recursive(expr)
 
-    def expand_recursive(self, origin: ExprIR, /) -> Iterator[ExprIR]:
+    def _expand_recursive(self, origin: ExprIR, /) -> Iterator[ExprIR]:
         # Dispatch the kind of expansion, based on the type of expr
         # Every other method will call back here
         # Based on https://github.com/pola-rs/polars/blob/5b90db75911c70010d0c0a6941046e6144af88d4/crates/polars-plan/src/plans/conversion/dsl_to_ir/expr_expansion.rs#L253-L850
@@ -212,7 +211,7 @@ class Expander:
             names = origin.into_columns(self.schema, self.ignored)
             yield from (ir.Column(name=name) for name in names)
         elif isinstance(origin, _EXPAND_SINGLE):
-            for expr in self.expand_recursive(origin.expr):
+            for expr in self._expand_recursive(origin.expr):
                 yield origin.__replace__(expr=expr)
         elif isinstance(origin, _EXPAND_COMBINATION):
             yield from self._expand_combination(origin)
@@ -253,20 +252,20 @@ class Expander:
         # - `_expand_combination` (tuple fields)
         # - `_expand_function_expr` (horizontal)
         for child in children:
-            yield from self.expand_recursive(child)
+            yield from self._expand_recursive(child)
 
     def _expand_only(self, child: ExprIR, /) -> ExprIR:
         # used by
         # - `_expand_combination` (ExprIR fields)
         # - `_expand_function_expr` (all others that have len(inputs)>=2, call on non-root)
-        iterable = self.expand_recursive(child)
+        iterable = self._expand_recursive(child)
         first = next(iterable)
         if second := next(iterable, None):
             msg = f"Multi-output expressions are not supported in this context, got: `{second!r}`"
             raise MultiOutputExpressionError(msg)
         return first
 
-    # TODO @dangotbanned: Placeholder, don't want to use the current function, too complex
+    # TODO @dangotbanned: It works, but all this class-specfic branching belongs in the classes themselves
     def _expand_combination(self, origin: Combination, /) -> Iterator[Combination]:
         changes: dict[str, Any] = {}
         if isinstance(origin, (ir.WindowExpr, ir.Filter, ir.SortBy)):
@@ -280,11 +279,11 @@ class Expander:
             else:
                 changes["by"] = self._expand_only(origin.by)
             replaced = common.replace(origin, **changes)
-            for root in self.expand_recursive(replaced.expr):
+            for root in self._expand_recursive(replaced.expr):
                 yield common.replace(replaced, expr=root)
         elif isinstance(origin, ir.BinaryExpr):
             binary = origin.__replace__(right=self._expand_only(origin.right))
-            for root in self.expand_recursive(binary.left):
+            for root in self._expand_recursive(binary.left):
                 yield binary.__replace__(left=root)
         elif isinstance(origin, ir.TernaryExpr):
             changes["truthy"] = self._expand_only(origin.truthy)
@@ -305,7 +304,7 @@ class Expander:
                 children = tuple(self._expand_only(child) for child in non_root)
             else:
                 children = ()
-            for root in self.expand_recursive(origin.input[0]):
+            for root in self._expand_recursive(origin.input[0]):
                 yield origin.__replace__(input=(root, *children))
 
 
