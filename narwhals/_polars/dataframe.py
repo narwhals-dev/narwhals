@@ -317,7 +317,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | None,
+        schema: IntoSchema | Mapping[str, DType | None] | None,
     ) -> Self:
         pl_schema = (
             {
@@ -338,7 +338,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | None,
+        schema: IntoSchema | Mapping[str, DType | None] | None,
     ) -> Self:
         pl_schema = (
             {

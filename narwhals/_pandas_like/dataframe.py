@@ -148,7 +148,7 @@ class PandasLikeDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | None,
+        schema: IntoSchema | Mapping[str, DType | None] | None,
     ) -> Self:
         implementation = context._implementation
         ns = implementation.to_native_namespace()
@@ -196,7 +196,7 @@ class PandasLikeDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | None,
+        schema: IntoSchema | Mapping[str, DType | None] | None,
     ) -> Self:
         implementation = context._implementation
         ns = implementation.to_native_namespace()

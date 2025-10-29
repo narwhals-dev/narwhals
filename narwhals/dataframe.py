@@ -559,7 +559,7 @@ class DataFrame(BaseFrame[DataFrameT]):
     def from_dict(
         cls,
         data: Mapping[str, Any],
-        schema: IntoSchema | Mapping[str, type[DType] | DType | None] | None = None,
+        schema: IntoSchema | Mapping[str, DType | None] | None = None,
         *,
         backend: IntoBackend[EagerAllowed] | None = None,
     ) -> DataFrame[Any]:
@@ -620,7 +620,7 @@ class DataFrame(BaseFrame[DataFrameT]):
     def from_dicts(
         cls,
         data: Sequence[Mapping[str, Any]],
-        schema: IntoSchema | Mapping[str, type[DType] | DType | None] | None = None,
+        schema: IntoSchema | Mapping[str, DType | None] | None = None,
         *,
         backend: IntoBackend[EagerAllowed],
     ) -> DataFrame[Any]:

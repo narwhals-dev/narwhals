@@ -190,7 +190,7 @@ class CompliantDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | None,
+        schema: IntoSchema | Mapping[str, DType | None] | None,
     ) -> Self: ...
     @classmethod
     def from_dicts(
@@ -199,7 +199,7 @@ class CompliantDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | None,
+        schema: IntoSchema | Mapping[str, DType | None] | None,
     ) -> Self: ...
     @classmethod
     def from_numpy(

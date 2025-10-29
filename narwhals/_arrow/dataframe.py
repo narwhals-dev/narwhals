@@ -119,7 +119,7 @@ class ArrowDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | None,
+        schema: IntoSchema | Mapping[str, DType | None] | None,
     ) -> Self:
         if not schema and not data:
             return cls.from_native(pa.table({}), context=context)
@@ -145,14 +145,18 @@ class ArrowDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | None,
+        schema: IntoSchema | Mapping[str, DType | None] | None,
     ) -> Self:
         from narwhals.schema import Schema
 
         if schema and any(dtype is None for dtype in schema.values()):
             msg = "`from_dicts` with `schema` where any dtype is `None` is not supported for PyArrow."
             raise NotImplementedError(msg)
-        pa_schema = Schema(schema).to_arrow() if schema is not None else schema
+        pa_schema = (
+            Schema(cast("IntoSchema", schema)).to_arrow()
+            if schema is not None
+            else schema
+        )
         if pa_schema and not data:
             native = pa_schema.empty_table()
         else:
