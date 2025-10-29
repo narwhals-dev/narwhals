@@ -348,9 +348,6 @@ def expand_expression_rec_s(
     elif isinstance(expr, ir.SelectorIR):
         yield from (ir.Column(name=name) for name in expr.into_columns(schema, ignored))
 
-    # `(ir.KeepName, ir.RenameAlias)` Renaming moved to *roughly* whenever `to_expr_ir` is called, leading to the resolving here
-    #   https://github.com/pola-rs/polars/blob/5b90db75911c70010d0c0a6941046e6144af88d4/crates/polars-plan/src/plans/conversion/dsl_to_ir/expr_to_ir.rs#L466-L469
-    #   https://github.com/pola-rs/polars/blob/5b90db75911c70010d0c0a6941046e6144af88d4/crates/polars-plan/src/plans/conversion/dsl_to_ir/expr_to_ir.rs#L481-L485
     elif isinstance(expr, _EXPAND_SINGLE):
         yield from expand_single_s(expr, ignored, schema)
 
