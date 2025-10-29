@@ -47,7 +47,7 @@ if pyarrow_installed and find_spec("pandas"):
         {"engine": "pyarrow", "dtype_backend": "pyarrow"},
     )
 
-if pyarrow_installed and find_spec("dask.dataframe"):
+if pyarrow_installed and find_spec("dask") and find_spec("dask.dataframe"):
     import dask.dataframe as dd
 
     BACKEND_NAMESPACE_KWARGS_MAP["dask"] = (
