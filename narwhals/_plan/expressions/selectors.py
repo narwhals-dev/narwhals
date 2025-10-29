@@ -263,7 +263,7 @@ class ByDType(DTypeSelector, dtype=DType):
         )
         return f"ncs.by_dtype([{els}])"
 
-    def _matches(self, dtype: DType) -> bool:
+    def _matches(self, dtype: DType | type[DType]) -> bool:
         return dtype in self.dtypes
 
     @staticmethod
