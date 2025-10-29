@@ -7,9 +7,10 @@
 
 from __future__ import annotations
 
+import functools
 import re
 from contextlib import suppress
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, final
 
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.common import flatten_hash_safe
@@ -75,8 +76,18 @@ class DTypeSelector(Selector):
     def to_dtype_selector(self) -> DTypeSelector:
         return self
 
+    @final
     def matches(self, dtype: DType) -> bool:
-        # Exclusive to `DataTypeSelector`
+        """Return True if we can select this dtype.
+
+        Important:
+            The result will *only* be cached if this method is **not overridden**.
+            Instead, use `DTypeSelector._matches` to customize the check.
+        """
+        return _selector_matches(self, dtype)
+
+    def _matches(self, dtype: DType) -> bool:
+        """Implementation of `DTypeSelector.matches`."""
         return isinstance(dtype, self._dtype)
 
     def into_columns(
@@ -89,7 +100,7 @@ class DTypeAll(DTypeSelector, dtype=DType):
     def __repr__(self) -> str:
         return "ncs.all()"
 
-    def matches(self, dtype: DType) -> bool:
+    def _matches(self, dtype: DType) -> bool:
         return True
 
     # Special case, needs to behave the same whether it is treated like a `DTypeSelector` or regular
@@ -231,7 +242,7 @@ class Array(DTypeSelector, dtype=_dtypes.Array):
         size = self.size or "*"
         return f"ncs.array({inner}, size={size})"
 
-    def matches(self, dtype: DType) -> bool:
+    def _matches(self, dtype: DType) -> bool:
         return (
             isinstance(dtype, _dtypes.Array)
             and (not (self.inner) or self.inner.matches(dtype.inner))  # type: ignore[arg-type]
@@ -252,7 +263,7 @@ class ByDType(DTypeSelector, dtype=DType):
         )
         return f"ncs.by_dtype([{els}])"
 
-    def matches(self, dtype: DType) -> bool:
+    def _matches(self, dtype: DType) -> bool:
         return dtype in self.dtypes
 
     @staticmethod
@@ -289,7 +300,7 @@ class Datetime(DTypeSelector, dtype=_dtypes.Datetime):
         time_zone = "*" if self.time_zones == {"*", None} else list(self.time_zones)
         return f"ncs.datetime(time_unit={time_unit}, time_zone={time_zone})"
 
-    def matches(self, dtype: DType) -> bool:
+    def _matches(self, dtype: DType) -> bool:
         units, zones = self.time_units, self.time_zones
         return (
             isinstance(dtype, _dtypes.Datetime)
@@ -318,7 +329,7 @@ class Duration(DTypeSelector, dtype=_dtypes.Duration):
         time_unit = "*" if self.time_units == _ALL_TIME_UNITS else list(self.time_units)
         return f"ncs.duration(time_unit={time_unit})"
 
-    def matches(self, dtype: DType) -> bool:
+    def _matches(self, dtype: DType) -> bool:
         return isinstance(dtype, _dtypes.Duration) and (
             dtype.time_unit in self.time_units
         )
@@ -335,7 +346,7 @@ class List(DTypeSelector, dtype=_dtypes.List):
         inner = "" if not self.inner else repr(self.inner)
         return f"ncs.list({inner})"
 
-    def matches(self, dtype: DType) -> bool:
+    def _matches(self, dtype: DType) -> bool:
         return isinstance(dtype, _dtypes.List) and (
             not (self.inner) or self.inner.matches(dtype.inner)  # type: ignore[arg-type]
         )
@@ -348,3 +359,11 @@ class String(DTypeSelector, dtype=_dtypes.String): ...
 
 
 class Struct(DTypeSelector, dtype=_dtypes.Struct): ...
+
+
+@functools.lru_cache(maxsize=128)
+def _selector_matches(selector: DTypeSelector, dtype: DType, /) -> bool:
+    # `DTypeSelector.matches` (uncached)
+    #   -> `_selector_matches` (cached)
+    #   -> `DTypeSelector._matches` (impl)
+    return selector._matches(dtype)
