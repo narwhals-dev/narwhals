@@ -8,7 +8,7 @@ import pytest
 import narwhals as nw
 from narwhals.exceptions import InvalidOperationError
 from narwhals.utils import Implementation
-from tests.utils import Constructor, assert_equal_data
+from tests.utils import PYARROW_VERSION, Constructor, assert_equal_data
 
 if TYPE_CHECKING:
     from narwhals._typing import EagerAllowed, Polars
@@ -91,6 +91,8 @@ def test_from_dict_empty_with_schema(eager_backend: EagerAllowed) -> None:
 
 
 def test_from_dict_dtype_none(eager_backend: EagerAllowed) -> None:
+    if str(eager_backend) == "pyarrow" and PYARROW_VERSION < (14,):
+        pytest.skip()
     schema = {"a": nw.String(), "b": None}
     data = {"a": ["a", "b"], "b": [1, 2]}
     result = nw.from_dict(data, schema, backend=eager_backend)
