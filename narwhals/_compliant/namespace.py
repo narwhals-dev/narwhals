@@ -54,6 +54,9 @@ class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
     _version: Version
 
     @property
+    def _backend_version(self) -> tuple[int, ...]: ...
+
+    @property
     def _expr(self) -> type[CompliantExprT]: ...
     # NOTE: `polars`
     def all(self) -> CompliantExprT:

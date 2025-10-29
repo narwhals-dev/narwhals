@@ -40,7 +40,11 @@ if TYPE_CHECKING:
     import pyarrow as pa
     from typing_extensions import Self, TypeAlias, TypeIs
 
-    from narwhals._compliant.typing import CompliantDataFrameAny, CompliantLazyFrameAny
+    from narwhals._compliant.typing import (
+        CompliantDataFrameAny,
+        CompliantLazyFrameAny,
+        CompliantNamespaceAny,
+    )
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.group_by import PolarsGroupBy, PolarsLazyGroupBy
     from narwhals._spark_like.utils import SparkSession
@@ -316,12 +320,12 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         data: Mapping[str, Any],
         /,
         *,
-        context: _LimitedContext,
+        ns: CompliantNamespaceAny,
         schema: IntoSchema | Mapping[str, DType | None] | None,
     ) -> Self:
         pl_schema = (
             {
-                key: narwhals_to_native_dtype(dtype, context._version)
+                key: narwhals_to_native_dtype(dtype, ns._version)
                 if dtype is not None
                 else None
                 for (key, dtype) in schema.items()
@@ -329,7 +333,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
             if schema
             else None
         )
-        return cls.from_native(pl.from_dict(data, pl_schema), context=context)
+        return cls.from_native(pl.from_dict(data, pl_schema), context=ns)
 
     @classmethod
     def from_dicts(

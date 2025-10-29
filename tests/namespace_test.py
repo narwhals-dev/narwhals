@@ -149,7 +149,7 @@ def test_import_namespace() -> None:
     assert ns.version is Version.MAIN
     assert ns.implementation.is_pandas()
 
-    compliant = ns.compliant._dataframe.from_dict(data, context=ns.compliant, schema=None)
+    compliant = ns.compliant._dataframe.from_dict(data, ns=ns.compliant, schema=None)
     ns_pl = ns.compliant._version.namespace.from_native_object(compliant.to_polars())
     assert ns_pl.version is Version.MAIN
     assert ns_pl.implementation.is_polars()

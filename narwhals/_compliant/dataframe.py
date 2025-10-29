@@ -8,6 +8,7 @@ from narwhals._compliant.typing import (
     CompliantDataFrameAny,
     CompliantExprT_contra,
     CompliantLazyFrameAny,
+    CompliantNamespaceAny,
     CompliantSeriesT,
     EagerExprT,
     EagerSeriesT,
@@ -189,7 +190,7 @@ class CompliantDataFrame(
         data: Mapping[str, Any],
         /,
         *,
-        context: _LimitedContext,
+        ns: CompliantNamespaceAny,
         schema: IntoSchema | Mapping[str, DType | None] | None,
     ) -> Self: ...
     @classmethod

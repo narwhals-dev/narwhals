@@ -46,7 +46,11 @@ if TYPE_CHECKING:
         ChunkedArrayAny,
         Order,
     )
-    from narwhals._compliant.typing import CompliantDataFrameAny, CompliantLazyFrameAny
+    from narwhals._compliant.typing import (
+        CompliantDataFrameAny,
+        CompliantLazyFrameAny,
+        CompliantNamespaceAny,
+    )
     from narwhals._spark_like.utils import SparkSession
     from narwhals._translate import IntoArrowTable
     from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
@@ -118,25 +122,37 @@ class ArrowDataFrame(
         data: Mapping[str, Any],
         /,
         *,
-        context: _LimitedContext,
+        ns: CompliantNamespaceAny,
         schema: IntoSchema | Mapping[str, DType | None] | None,
     ) -> Self:
         if not schema and not data:
-            return cls.from_native(pa.table({}), context=context)
+            return cls.from_native(pa.table({}), context=ns)
         if not schema:
-            return cls.from_native(pa.table(data), context=context)  # type: ignore[arg-type]
+            return cls.from_native(pa.table(data), context=ns)  # type: ignore[arg-type]
+        if not any(dtype is None for dtype in schema.values()):
+            from narwhals.schema import Schema
+
+            pa_schema = Schema(cast("IntoSchema", schema)).to_arrow()
+            if pa_schema and not data:
+                native = pa_schema.empty_table()
+            else:
+                native = pa.Table.from_pydict(data, schema=pa_schema)
+            return cls.from_native(native, context=ns)
+        if ns._backend_version < (14,):
+            msg = "Passing `None` dtype in `from_dict` requires PyArrow>=14"
+            raise NotImplementedError(msg)
         res = pa.table(
             {
                 name: pa.chunked_array(  # type: ignore[misc]
                     [data[name] if data else []],
-                    type=narwhals_to_native_dtype(nw_dtype, version=context._version)
+                    type=narwhals_to_native_dtype(nw_dtype, version=ns._version)
                     if nw_dtype is not None
                     else None,
                 )
                 for name, nw_dtype in schema.items()
             }
         )
-        return cls.from_native(pa.table(res), context=context)
+        return cls.from_native(pa.table(res), context=ns)
 
     @classmethod
     def from_dicts(

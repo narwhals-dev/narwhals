@@ -606,7 +606,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         implementation = Implementation.from_backend(backend)
         if is_eager_allowed(implementation):
             ns = cls._version.namespace.from_backend(implementation).compliant
-            compliant = ns._dataframe.from_dict(data, schema=schema, context=ns)
+            compliant = ns._dataframe.from_dict(data, schema=schema, ns=ns)
             return cls(compliant, level="full")
         # NOTE: (#2786) needs resolving for extensions
         msg = (
