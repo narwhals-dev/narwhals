@@ -7,7 +7,6 @@ from narwhals._plan._guards import is_function_expr
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.exceptions import (
     binary_expr_length_changing_error,
-    binary_expr_multi_output_error,
     binary_expr_shape_error,
 )
 
@@ -46,15 +45,6 @@ class Operator(Immutable):
     ) -> BinaryExpr[LeftT, Self, RightT]:
         from narwhals._plan.expressions.expr import BinaryExpr
 
-        # TODO @dangotbanned: Leave validating this until actually expanding
-        # Only need to raise if outputs are not:
-        # - 1:1
-        # - M:1
-        # - 1:M
-        # - N:N
-        # https://github.com/narwhals-dev/narwhals/pull/3233#discussion_r2473810664
-        if right.meta.has_multiple_outputs():
-            raise binary_expr_multi_output_error(left, self, right)
         if _is_filtration(left):
             if _is_filtration(right):
                 raise binary_expr_length_changing_error(left, self, right)

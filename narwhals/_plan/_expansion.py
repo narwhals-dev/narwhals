@@ -284,7 +284,12 @@ class Expander:
 
         # TODO @dangotbanned: Relax `BinaryExpr.right`
         # - https://github.com/narwhals-dev/narwhals/pull/3233#discussion_r2472757798
-        # - https://github.com/narwhals-dev/narwhals/pull/3233#discussion_r2473810664
+        # - https://github.com/narwhals-dev/narwhals/pull/3233#discussion_r2473810664=
+        # NOTE: Only need to raise if outputs are not:
+        # - 1:1
+        # - M:1
+        # - 1:M
+        # - N:N
         elif isinstance(origin, ir.BinaryExpr):
             binary = origin.__replace__(right=self._expand_only(origin.right))
             for root in self._expand_recursive(binary.left):

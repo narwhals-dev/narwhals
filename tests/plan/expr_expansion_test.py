@@ -9,7 +9,11 @@ import narwhals as nw
 from narwhals import _plan as nwp
 from narwhals._plan import expressions as ir, selectors as ncs
 from narwhals._utils import zip_strict
-from narwhals.exceptions import ColumnNotFoundError, DuplicateError
+from narwhals.exceptions import (
+    ColumnNotFoundError,
+    DuplicateError,
+    MultiOutputExpressionError,
+)
 from tests.plan.utils import Frame, assert_expr_ir_equal, named_ir, re_compile
 
 if TYPE_CHECKING:
@@ -596,3 +600,41 @@ def test_prepare_projection_index_error(
         ),
     ):
         df_1.project(into_exprs)
+
+
+@pytest.mark.xfail(
+    reason="TODO: binary_expr_combination", raises=MultiOutputExpressionError
+)
+def test_expand_binary_expr_combination(df_1: Frame) -> None:  # pragma: no cover
+    three_to_three = nwp.nth(range(3)) * nwp.nth(3, 4, 5).max()
+
+    expecteds = [
+        named_ir("a", nwp.col("a") * nwp.col("d")),
+        named_ir("b", nwp.col("b") * nwp.col("e")),
+        named_ir("c", nwp.col("c") * nwp.col("f")),
+    ]
+    actuals = df_1.project(three_to_three)
+    for actual, expected in zip_strict(actuals, expecteds):
+        assert_expr_ir_equal(actual, expected)
+
+
+@pytest.mark.xfail(reason="TODO: Move fancy error message", raises=AssertionError)
+def test_expand_binary_expr_combination_invalid(df_1: Frame) -> None:  # pragma: no cover
+    pattern = re.escape(
+        "ncs.all() + ncs.by_name('b', 'c', require_all=True)\n"
+        "            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
+    )
+    all_to_two = nwp.all() + nwp.col("b", "c")
+    with pytest.raises(MultiOutputExpressionError, match=pattern):
+        df_1.project(all_to_two)
+
+    pattern = re.escape(
+        "ncs.by_name('a', 'b', 'c', require_all=True).abs().fill_null([lit(int: 0)]).round() * ncs.by_index([9, 10], require_all=True).cast(Int64).sort(asc)\n"
+        "                                                                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
+    )
+    three_to_two = (
+        nwp.col("a", "b", "c").abs().fill_null(0).round(2)
+        * nwp.nth(9, 10).cast(nw.Int64).sort()
+    )
+    with pytest.raises(MultiOutputExpressionError, match=pattern):
+        df_1.project(three_to_two)

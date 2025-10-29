@@ -20,7 +20,6 @@ from narwhals.exceptions import (
     InvalidIntoExprError,
     InvalidOperationError,
     InvalidOperationError as LengthChangingExprError,
-    MultiOutputExpressionError,
     ShapeError,
 )
 from tests.plan.utils import assert_expr_ir_equal
@@ -205,33 +204,6 @@ def test_filtration_over() -> None:
         nwp.col("a").drop_nulls().over("b", order_by="i")
     with pytest.raises(InvalidOperationError, match=pattern):
         nwp.col("a").diff().drop_nulls().over("b", order_by="i")
-
-
-def test_invalid_binary_expr_multi() -> None:
-    # TODO @dangotbanned: Move to `expr_expansion_test`
-    pattern = re.escape(
-        "ncs.all() + ncs.by_name('b', 'c', require_all=True)\n"
-        "            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
-    )
-    with pytest.raises(MultiOutputExpressionError, match=pattern):
-        nwp.all() + nwp.col("b", "c")
-
-    # TODO @dangotbanned: Use as a positive case (3:3)
-    pattern = re.escape(
-        "ncs.by_index([1, 2, 3], require_all=True) * ncs.by_index([4, 5, 6], require_all=True).max()\n"
-        "                                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
-    )
-    with pytest.raises(MultiOutputExpressionError, match=pattern):
-        nwp.nth(1, 2, 3) * nwp.nth(4, 5, 6).max()
-    pattern = re.escape(
-        "ncs.by_name('a', 'b', 'c', require_all=True).abs().fill_null([lit(int: 0)]).round() * ncs.by_index([9, 10], require_all=True).cast(Int64).sort(asc)\n"
-        "                                                                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
-    )
-    # TODO @dangotbanned: Move to `expr_expansion_test`
-    with pytest.raises(MultiOutputExpressionError, match=pattern):
-        nwp.col("a", "b", "c").abs().fill_null(0).round(2) * nwp.nth(9, 10).cast(
-            nw.Int64()
-        ).sort()
 
 
 def test_invalid_binary_expr_length_changing() -> None:
