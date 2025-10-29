@@ -7,7 +7,12 @@ import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._arrow.series import ArrowSeries
-from narwhals._arrow.utils import concat_tables, native_to_narwhals_dtype, repeat
+from narwhals._arrow.utils import (
+    concat_tables,
+    narwhals_to_native_dtype,
+    native_to_narwhals_dtype,
+    repeat,
+)
 from narwhals._compliant import EagerDataFrame
 from narwhals._utils import (
     Implementation,
@@ -116,14 +121,25 @@ class ArrowDataFrame(
         context: _LimitedContext,
         schema: IntoSchema | None,
     ) -> Self:
-        from narwhals.schema import Schema
-
-        pa_schema = Schema(schema).to_arrow() if schema is not None else schema
-        if pa_schema and not data:
-            native = pa_schema.empty_table()
-        else:
-            native = pa.Table.from_pydict(data, schema=pa_schema)
-        return cls.from_native(native, context=context)
+        if not schema and not data:
+            return cls.from_native(pa.table({}), context=context)
+        if not schema:
+            return cls.from_native(pa.table(data), context=context)  # pyright: ignore[reportCallIssue,reportArgumentType]
+        res = {}
+        for name, nw_dtype in schema.items():
+            list_ = data.get(name, [])
+            pa_type = (
+                narwhals_to_native_dtype(nw_dtype, version=context._version)
+                if nw_dtype is not None
+                else None
+            )
+            ca = (
+                pa.chunked_array([list_], type=pa_type)
+                if pa_type
+                else pa.chunked_array([list_])
+            )
+            res[name] = ca
+        return cls.from_native(pa.table(res), context=context)
 
     @classmethod
     def from_dicts(
@@ -136,6 +152,9 @@ class ArrowDataFrame(
     ) -> Self:
         from narwhals.schema import Schema
 
+        if schema and any(dtype is None for dtype in schema.values()):
+            msg = "`from_dicts` with `schema` where any dtype is `None` is not supported for PyArrow."
+            raise NotImplementedError(msg)
         pa_schema = Schema(schema).to_arrow() if schema is not None else schema
         if pa_schema and not data:
             native = pa_schema.empty_table()

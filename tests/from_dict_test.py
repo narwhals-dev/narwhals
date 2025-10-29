@@ -89,6 +89,14 @@ def test_from_dict_empty_with_schema(eager_backend: EagerAllowed) -> None:
     assert result.schema == schema
 
 
+def test_from_dict_dtype_none(eager_backend: EagerAllowed) -> None:
+    schema = {"a": nw.String(), "b": None}
+    data = {"a": ["a", "b"], "b": [1, 2]}
+    result = nw.from_dict(data, schema, backend=eager_backend)
+    assert result.schema == {"a": nw.String(), "b": nw.Int64}
+    assert_equal_data(result, data)
+
+
 def test_alignment() -> None:
     # https://github.com/narwhals-dev/narwhals/issues/1474
     df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})

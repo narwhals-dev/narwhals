@@ -245,7 +245,9 @@ def from_dict(
     Arguments:
         data: Dictionary to create DataFrame from.
         schema: The DataFrame schema as Schema or dict of {name: type}. If not
-            specified, the schema will be inferred by the native library.
+            specified, the schema will be inferred by the native library. If
+            any `dtype` is `None`, the data type for that column will be inferred
+            by the native library.
         backend: specifies which eager backend instantiate to. Only
             necessary if inputs are not Narwhals Series.
 
@@ -325,7 +327,9 @@ def from_dicts(
     Arguments:
         data: Sequence with dictionaries mapping column name to value.
         schema: The DataFrame schema as Schema or dict of {name: type}. If not
-            specified, the schema will be inferred by the native library.
+            specified, the schema will be inferred by the native library. If
+            any `dtype` is `None`, the data type for that column will be inferred
+            by the native library.
         backend: Specifies which eager backend instantiate to.
 
             `backend` can be specified in various ways
