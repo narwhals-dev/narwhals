@@ -63,6 +63,12 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         help="run tests with all cpu constructors",
     )
     parser.addoption(
+        "--use-external-constructor",
+        action="store_true",
+        default=False,
+        help="run tests with external constructor",
+    )
+    parser.addoption(
         "--constructors",
         action="store",
         default=DEFAULT_CONSTRUCTORS,
@@ -250,6 +256,8 @@ GPU_CONSTRUCTORS: dict[str, ConstructorEager] = {"cudf": cudf_constructor}
 
 
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
+    if metafunc.config.getoption("use_external_constructor"):  # pragma: no cover
+        return  # let the plugin handle this
     if metafunc.config.getoption("all_cpu_constructors"):  # pragma: no cover
         selected_constructors: list[str] = [
             *iter(EAGER_CONSTRUCTORS.keys()),

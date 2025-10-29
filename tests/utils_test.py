@@ -524,7 +524,7 @@ def test_deprecate_native_namespace() -> None:
 
 
 def test_requires() -> None:
-    class SomeAccesssor:
+    class SomeAccessor:
         _accessor: ClassVar[Accessor] = "str"
 
         def __init__(self, compliant: ProbablyCompliant) -> None:
@@ -565,8 +565,8 @@ def test_requires() -> None:
             return self.native * n
 
         @property
-        def str(self) -> SomeAccesssor:
-            return SomeAccesssor(self)
+        def str(self) -> SomeAccessor:
+            return SomeAccessor(self)
 
     v_05 = ProbablyCompliant("123", (0, 5))
     v_201 = ProbablyCompliant("123", (2, 0, 1))
