@@ -208,6 +208,7 @@ def test_filtration_over() -> None:
 
 
 def test_invalid_binary_expr_multi() -> None:
+    # TODO @dangotbanned: Move to `expr_expansion_test`
     pattern = re.escape(
         "ncs.all() + ncs.by_name('b', 'c', require_all=True)\n"
         "            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
@@ -215,6 +216,7 @@ def test_invalid_binary_expr_multi() -> None:
     with pytest.raises(MultiOutputExpressionError, match=pattern):
         nwp.all() + nwp.col("b", "c")
 
+    # TODO @dangotbanned: Use as a positive case (3:3)
     pattern = re.escape(
         "ncs.by_index([1, 2, 3], require_all=True) * ncs.by_index([4, 5, 6], require_all=True).max()\n"
         "                                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
@@ -225,6 +227,7 @@ def test_invalid_binary_expr_multi() -> None:
         "ncs.by_name('a', 'b', 'c', require_all=True).abs().fill_null([lit(int: 0)]).round() * ncs.by_index([9, 10], require_all=True).cast(Int64).sort(asc)\n"
         "                                                                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
     )
+    # TODO @dangotbanned: Move to `expr_expansion_test`
     with pytest.raises(MultiOutputExpressionError, match=pattern):
         nwp.col("a", "b", "c").abs().fill_null(0).round(2) * nwp.nth(9, 10).cast(
             nw.Int64()

@@ -265,7 +265,7 @@ class Expander:
             raise MultiOutputExpressionError(msg)
         return first
 
-    # TODO @dangotbanned: It works, but all this class-specfic branching belongs in the classes themselves
+    # TODO @dangotbanned: It works, but all this class-specific branching belongs in the classes themselves
     def _expand_combination(self, origin: Combination, /) -> Iterator[Combination]:
         changes: dict[str, Any] = {}
         if isinstance(origin, (ir.WindowExpr, ir.Filter, ir.SortBy)):
@@ -281,6 +281,10 @@ class Expander:
             replaced = common.replace(origin, **changes)
             for root in self._expand_recursive(replaced.expr):
                 yield common.replace(replaced, expr=root)
+
+        # TODO @dangotbanned: Relax `BinaryExpr.right`
+        # - https://github.com/narwhals-dev/narwhals/pull/3233#discussion_r2472757798
+        # - https://github.com/narwhals-dev/narwhals/pull/3233#discussion_r2473810664
         elif isinstance(origin, ir.BinaryExpr):
             binary = origin.__replace__(right=self._expand_only(origin.right))
             for root in self._expand_recursive(binary.left):
