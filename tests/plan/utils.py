@@ -126,7 +126,7 @@ class Frame:
              literal=lit(date: 2000-01-01))
         """
         expr_irs = _parse.parse_into_seq_of_expr_ir(exprs, *more_exprs)
-        named_irs, _ = _expansion.prepare_projection_s(expr_irs, schema=self.schema)
+        named_irs, _ = _expansion.prepare_projection(expr_irs, schema=self.schema)
         return named_irs
 
     def project_names(self, *exprs: IntoExpr) -> Seq[str]:

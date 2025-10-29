@@ -75,7 +75,7 @@ Usually names resolved from `group_by(*keys)`.
 """
 
 
-def prepare_projection_s(
+def prepare_projection(
     exprs: Sequence[ExprIR], /, ignored: Ignored = (), *, schema: IntoFrozenSchema
 ) -> tuple[Seq[NamedIR], FrozenSchema]:
     """Expand IRs into named column projections.
@@ -89,7 +89,7 @@ def prepare_projection_s(
         schema: Scope to expand selectors in.
     """
     frozen_schema = freeze_schema(schema)
-    rewritten = rewrite_projections_s(tuple(exprs), ignored, schema=frozen_schema)
+    rewritten = rewrite_projections(tuple(exprs), ignored, schema=frozen_schema)
     named_irs = finish_exprs(rewritten, frozen_schema)
     return named_irs, frozen_schema
 
@@ -112,11 +112,11 @@ def expand_selector_irs_names(
     return _ensure_valid_output_names(names, frozen_schema)
 
 
-def into_named_irs_s(exprs: Seq[ExprIR], names: OutputNames) -> Seq[NamedIR]:
+def into_named_irs(exprs: Seq[ExprIR], names: OutputNames) -> Seq[NamedIR]:
     if len(exprs) != len(names):
         msg = f"zip length mismatch: {len(exprs)} != {len(names)}"
         raise ValueError(msg)
-    return tuple(ir.named_ir(name, remove_alias_s(e)) for e, name in zip(exprs, names))
+    return tuple(ir.named_ir(name, remove_alias(e)) for e, name in zip(exprs, names))
 
 
 # TODO @dangotbanned: Clean up
@@ -136,7 +136,7 @@ def finish_exprs(exprs: Seq[ExprIR], schema: FrozenSchema) -> Seq[NamedIR]:
         else:
             msg = f"Unable to determine output name for expression, got: `{e!r}`"
             raise NotImplementedError(msg)
-        named_irs.append(ir.named_ir(output_name, remove_alias_s(target)))
+        named_irs.append(ir.named_ir(output_name, remove_alias(target)))
     if len(names) != len(set(names)):
         raise duplicate_error(exprs)
     root_names = meta.root_names_unique(exprs)
@@ -178,26 +178,26 @@ def _iter_expand_selector_names(
         yield from s.into_columns(schema, ignored)
 
 
-def rewrite_projections_s(
+def rewrite_projections(
     input: Seq[ExprIR], /, ignored: Ignored, *, schema: FrozenSchema
 ) -> Seq[ExprIR]:
     result: deque[ExprIR] = deque()
     for expr in input:
-        result.extend(expand_expression_s(expr, ignored, schema))
+        result.extend(expand_expression(expr, ignored, schema))
     return tuple(result)
 
 
-def needs_expansion_s(expr: ExprIR) -> bool:
+def needs_expansion(expr: ExprIR) -> bool:
     return any(isinstance(e, ir.SelectorIR) for e in expr.iter_left())
 
 
-def expand_expression_s(
+def expand_expression(
     expr: ExprIR, ignored: Ignored, schema: FrozenSchema, /
 ) -> Iterator[ExprIR]:
-    if all(not needs_expansion_s(e) for e in expr.iter_left()):
+    if all(not needs_expansion(e) for e in expr.iter_left()):
         yield expr
     else:
-        yield from expand_expression_rec_s(expr, ignored, schema)
+        yield from expand_expression_rec(expr, ignored, schema)
 
 
 class CanExpandSingle(Protocol):
@@ -264,7 +264,7 @@ def _expand_inner(
         col(<MISSING>).over(col("e"))  # InvalidOperationError: cannot combine selectors that produce a different number of columns (3 != 2)
     """
     for child in children:
-        yield from expand_expression_rec_s(child, ignored, schema)
+        yield from expand_expression_rec(child, ignored, schema)
 
 
 def _expand_function_expr(
@@ -278,14 +278,14 @@ def _expand_function_expr(
     # (potentially) many outputs
     else:
         if non_root := origin.input[1:]:
-            children = tuple(expand_only_s(child, ignored, schema) for child in non_root)
+            children = tuple(expand_only(child, ignored, schema) for child in non_root)
         else:
             children = ()
-        for root in expand_expression_rec_s(origin.input[0], ignored, schema):
+        for root in expand_expression_rec(origin.input[0], ignored, schema):
             yield origin.__replace__(input=(root, *children))
 
 
-def expand_single_s(
+def expand_single(
     origin: CanExpandSingleT, ignored: Ignored, schema: FrozenSchema
 ) -> Iterator[CanExpandSingleT]:
     """Expand the root of `origin`, yielding each child as a replacement.
@@ -300,12 +300,12 @@ def expand_single_s(
         cast_two = Cast(expr=Column(name="two"), dtype=String)
     """
     replace = origin.__replace__
-    for e in expand_expression_rec_s(origin.expr, ignored, schema):
+    for e in expand_expression_rec(origin.expr, ignored, schema):
         yield replace(expr=e)
 
 
-def expand_only_s(child: Child, ignored: Ignored, schema: FrozenSchema, /) -> ExprIR:
-    iterable = expand_expression_rec_s(child, ignored, schema)
+def expand_only(child: Child, ignored: Ignored, schema: FrozenSchema, /) -> ExprIR:
+    iterable = expand_expression_rec(child, ignored, schema)
     first = next(iterable)
     if second := next(iterable, None):
         msg = f"Multi-output expressions are not supported in this context, got: `{second!r}`"
@@ -314,7 +314,7 @@ def expand_only_s(child: Child, ignored: Ignored, schema: FrozenSchema, /) -> Ex
 
 
 # TODO @dangotbanned: Clean up, possibly move to be a method
-def _expand_nested_nodes_s(
+def _expand_nested_nodes(
     origin: _Combination, ignored: Ignored, schema: FrozenSchema, /
 ) -> Iterator[_Combination]:
     expands = _expand_inner
@@ -328,26 +328,26 @@ def _expand_nested_nodes_s(
         elif isinstance(origin, ir.SortBy):
             changes["by"] = tuple(expands(origin.by, ignored, schema))
         else:
-            changes["by"] = expand_only_s(origin.by, ignored, schema)
+            changes["by"] = expand_only(origin.by, ignored, schema)
         replaced = common.replace(origin, **changes)
-        for root in expand_expression_rec_s(replaced.expr, ignored, schema):
+        for root in expand_expression_rec(replaced.expr, ignored, schema):
             yield common.replace(replaced, expr=root)
     elif isinstance(origin, ir.BinaryExpr):
-        replaced = origin.__replace__(right=expand_only_s(origin.right, ignored, schema))  # type: ignore[assignment]
-        for root in expand_expression_rec_s(replaced.left, ignored, schema):  # type: ignore[union-attr]
+        replaced = origin.__replace__(right=expand_only(origin.right, ignored, schema))  # type: ignore[assignment]
+        for root in expand_expression_rec(replaced.left, ignored, schema):  # type: ignore[union-attr]
             # NOTE: Workflow is running in `3.12`, ignore required for `3.13`
             # https://github.com/narwhals-dev/narwhals/actions/runs/18913537046/workflow?pr=3233
             yield replaced.__replace__(left=root)  # type: ignore[call-arg,unused-ignore]
     elif isinstance(origin, ir.TernaryExpr):
-        changes["truthy"] = expand_only_s(origin.truthy, ignored, schema)
-        changes["predicate"] = expand_only_s(origin.predicate, ignored, schema)
-        changes["falsy"] = expand_only_s(origin.falsy, ignored, schema)
+        changes["truthy"] = expand_only(origin.truthy, ignored, schema)
+        changes["predicate"] = expand_only(origin.predicate, ignored, schema)
+        changes["falsy"] = expand_only(origin.falsy, ignored, schema)
         yield origin.__replace__(**changes)
     else:
         assert_never(origin)
 
 
-def expand_expression_rec_s(
+def expand_expression_rec(
     expr: ExprIR, ignored: Ignored, schema: FrozenSchema, /
 ) -> Iterator[ExprIR]:
     # https://github.com/pola-rs/polars/blob/5b90db75911c70010d0c0a6941046e6144af88d4/crates/polars-plan/src/plans/conversion/dsl_to_ir/expr_expansion.rs#L253-L850
@@ -361,10 +361,10 @@ def expand_expression_rec_s(
         yield from (ir.Column(name=name) for name in expr.into_columns(schema, ignored))
 
     elif isinstance(expr, _EXPAND_SINGLE):
-        yield from expand_single_s(expr, ignored, schema)
+        yield from expand_single(expr, ignored, schema)
 
     elif isinstance(expr, _EXPAND_COMBINATION):
-        yield from _expand_nested_nodes_s(expr, ignored, schema)
+        yield from _expand_nested_nodes(expr, ignored, schema)
 
     elif isinstance(expr, ir.FunctionExpr):
         yield from _expand_function_expr(expr, ignored, schema)
@@ -374,7 +374,7 @@ def expand_expression_rec_s(
         raise TypeError(msg)
 
 
-def remove_alias_s(origin: ExprIR, /) -> ExprIR:
+def remove_alias(origin: ExprIR, /) -> ExprIR:
     def fn(child: ExprIR, /) -> ExprIR:
         return child.expr if isinstance(child, (Alias, RenameAlias)) else child
 
