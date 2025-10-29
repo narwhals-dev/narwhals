@@ -78,6 +78,16 @@ Usually names resolved from `group_by(*keys)`.
 def prepare_projection_s(
     exprs: Sequence[ExprIR], /, ignored: Ignored = (), *, schema: IntoFrozenSchema
 ) -> tuple[Seq[NamedIR], FrozenSchema]:
+    """Expand IRs into named column projections.
+
+    **Primary entry-point**, for `select`, `with_columns`,
+    and any other context that requires resolving expression names.
+
+    Arguments:
+        exprs: IRs that *may* contain arbitrarily nested expressions.
+        ignored: Names of `group_by` columns.
+        schema: Scope to expand selectors in.
+    """
     frozen_schema = freeze_schema(schema)
     rewritten = rewrite_projections_s(tuple(exprs), ignored, schema=frozen_schema)
     named_irs = finish_exprs(rewritten, frozen_schema)
@@ -95,7 +105,7 @@ def expand_selector_irs_names(
     Arguments:
         selectors: IRs that **only** contain subclasses of `SelectorIR`.
         ignored: Names of `group_by` columns.
-        schema: Scope to expand multi-column selectors in.
+        schema: Scope to expand selectors in.
     """
     frozen_schema = freeze_schema(schema)
     names = tuple(_iter_expand_selector_names(selectors, ignored, schema=frozen_schema))
