@@ -37,6 +37,7 @@ if t.TYPE_CHECKING:
     from narwhals._plan.options import FunctionOptions, SortMultipleOptions, SortOptions
     from narwhals._plan.schema import FrozenSchema
     from narwhals.dtypes import DType
+    from narwhals.typing import IntoDType
 
 __all__ = [
     "Alias",
@@ -407,7 +408,7 @@ class RootSelector(SelectorIR):
         else:
             yield from names
 
-    def matches(self, dtype: DType) -> bool:
+    def matches(self, dtype: IntoDType) -> bool:
         return self.selector.to_dtype_selector().matches(dtype)
 
     def to_dtype_selector(self) -> Self:
@@ -441,7 +442,7 @@ class BinarySelector(
             target = ()
         yield from target
 
-    def matches(self, dtype: DType) -> bool:
+    def matches(self, dtype: IntoDType) -> bool:
         left = self.left.matches(dtype)
         right = self.right.matches(dtype)
         return bool(self.op(left, right))
@@ -478,7 +479,7 @@ class InvertSelector(SelectorIR, t.Generic[SelectorT]):
             target = names
         yield from target
 
-    def matches(self, dtype: DType) -> bool:
+    def matches(self, dtype: IntoDType) -> bool:
         return not self.selector.to_dtype_selector().matches(dtype)
 
     def to_dtype_selector(self) -> Self:

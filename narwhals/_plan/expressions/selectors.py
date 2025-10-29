@@ -15,15 +15,20 @@ from typing import TYPE_CHECKING, Any, ClassVar, final
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.common import flatten_hash_safe
 from narwhals._plan.exceptions import column_index_error, column_not_found_error
-from narwhals._utils import Version, _parse_time_unit_and_time_zone
+from narwhals._utils import (
+    Version,
+    _parse_time_unit_and_time_zone,
+    isinstance_or_issubclass,
+)
 from narwhals.dtypes import DType, NumericType
-from narwhals.typing import TimeUnit
+from narwhals.typing import IntoDType, TimeUnit
 
 if TYPE_CHECKING:
     from collections.abc import Container, Iterator
     from datetime import timezone
     from typing import TypeVar
 
+    import narwhals.dtypes as nw_dtypes
     from narwhals._plan.expressions import SelectorIR
     from narwhals._plan.expressions.expr import RootSelector
     from narwhals._plan.schema import FrozenSchema
@@ -77,18 +82,19 @@ class DTypeSelector(Selector):
         return self
 
     @final
-    def matches(self, dtype: DType) -> bool:
+    def matches(self, dtype: IntoDType) -> bool:
         """Return True if we can select this dtype.
 
         Important:
             The result will *only* be cached if this method is **not overridden**.
             Instead, use `DTypeSelector._matches` to customize the check.
         """
-        return _selector_matches(self, dtype)
+        # See https://github.com/python/typeshed/issues/6347
+        return _selector_matches(self, dtype)  # type: ignore[arg-type]
 
-    def _matches(self, dtype: DType) -> bool:
+    def _matches(self, dtype: IntoDType) -> bool:
         """Implementation of `DTypeSelector.matches`."""
-        return isinstance(dtype, self._dtype)
+        return isinstance_or_issubclass(dtype, self._dtype)
 
     def into_columns(
         self, schema: FrozenSchema, ignored_columns: Container[str]
@@ -100,7 +106,7 @@ class DTypeAll(DTypeSelector, dtype=DType):
     def __repr__(self) -> str:
         return "ncs.all()"
 
-    def _matches(self, dtype: DType) -> bool:
+    def _matches(self, dtype: IntoDType) -> bool:
         return True
 
     # Special case, needs to behave the same whether it is treated like a `DTypeSelector` or regular
@@ -242,10 +248,10 @@ class Array(DTypeSelector, dtype=_dtypes.Array):
         size = self.size or "*"
         return f"ncs.array({inner}, size={size})"
 
-    def _matches(self, dtype: DType) -> bool:
+    def _matches(self, dtype: IntoDType) -> bool:
         return (
             isinstance(dtype, _dtypes.Array)
-            and (not (self.inner) or self.inner.matches(dtype.inner))  # type: ignore[arg-type]
+            and _inner_selector_matches(self, dtype)
             and (self.size is None or dtype.size == self.size)
         )
 
@@ -300,10 +306,10 @@ class Datetime(DTypeSelector, dtype=_dtypes.Datetime):
         time_zone = "*" if self.time_zones == {"*", None} else list(self.time_zones)
         return f"ncs.datetime(time_unit={time_unit}, time_zone={time_zone})"
 
-    def _matches(self, dtype: DType) -> bool:
+    def _matches(self, dtype: IntoDType) -> bool:
         units, zones = self.time_units, self.time_zones
         return (
-            isinstance(dtype, _dtypes.Datetime)
+            isinstance_or_issubclass(dtype, _dtypes.Datetime)
             and (dtype.time_unit in units)
             and (
                 dtype.time_zone in zones or ("*" in zones and dtype.time_zone is not None)
@@ -329,8 +335,8 @@ class Duration(DTypeSelector, dtype=_dtypes.Duration):
         time_unit = "*" if self.time_units == _ALL_TIME_UNITS else list(self.time_units)
         return f"ncs.duration(time_unit={time_unit})"
 
-    def _matches(self, dtype: DType) -> bool:
-        return isinstance(dtype, _dtypes.Duration) and (
+    def _matches(self, dtype: IntoDType) -> bool:
+        return isinstance_or_issubclass(dtype, _dtypes.Duration) and (
             dtype.time_unit in self.time_units
         )
 
@@ -346,10 +352,8 @@ class List(DTypeSelector, dtype=_dtypes.List):
         inner = "" if not self.inner else repr(self.inner)
         return f"ncs.list({inner})"
 
-    def _matches(self, dtype: DType) -> bool:
-        return isinstance(dtype, _dtypes.List) and (
-            not (self.inner) or self.inner.matches(dtype.inner)  # type: ignore[arg-type]
-        )
+    def _matches(self, dtype: IntoDType) -> bool:
+        return isinstance(dtype, _dtypes.List) and _inner_selector_matches(self, dtype)
 
 
 class Numeric(DTypeSelector, dtype=NumericType): ...
@@ -362,8 +366,14 @@ class Struct(DTypeSelector, dtype=_dtypes.Struct): ...
 
 
 @functools.lru_cache(maxsize=128)
-def _selector_matches(selector: DTypeSelector, dtype: DType, /) -> bool:
+def _selector_matches(selector: DTypeSelector, dtype: IntoDType, /) -> bool:
     # `DTypeSelector.matches` (uncached)
     #   -> `_selector_matches` (cached)
     #   -> `DTypeSelector._matches` (impl)
     return selector._matches(dtype)
+
+
+def _inner_selector_matches(
+    selector: Array | List, dtype: nw_dtypes.Array | nw_dtypes.List
+) -> bool:
+    return selector.inner is None or selector.inner.matches(dtype.inner)

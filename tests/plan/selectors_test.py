@@ -30,9 +30,9 @@ def schema_nested_1() -> nw.Schema:
         {
             "a": nw.Int32(),
             "b": nw.List(nw.Int32()),
-            "c": nw.List(nw.UInt32()),
+            "c": nw.List(nw.UInt32),
             "d": nw.Array(nw.Int32(), 3),
-            "e": nw.List(nw.String()),
+            "e": nw.List(nw.String),
             "f": nw.Struct({"x": nw.Int32()}),
         }
     )
@@ -45,7 +45,7 @@ def schema_nested_2() -> nw.Schema:
             "a": nw.Int32(),
             "b": nw.Array(nw.Int32(), 4),
             "c": nw.Array(nw.UInt32(), 4),
-            "d": nw.Array(nw.Int32(), 3),
+            "d": nw.Array(nw.Int32, 3),
             "e": nw.List(nw.Int32()),
             "f": nw.Array(nw.String(), 4),
             "g": nw.Struct({"x": nw.Int32()}),
@@ -95,7 +95,7 @@ def schema_mixed() -> nw.Schema:
             "q": nw.Duration(),
             "r": nw.Enum(["A", "B", "C"]),
             "s": nw.List(nw.String()),
-            "u": nw.Struct({"a": nw.Int64(), "k": nw.String()}),
+            "u": nw.Struct({"a": nw.Int64(), "k": nw.String}),
         }
     )
 
@@ -141,14 +141,14 @@ def test_selector_by_dtype(schema_non_nested: nw.Schema) -> None:
         nw.UInt32,
         nw.UInt64,
         nw.UInt128,
-        nw.Date,
+        nw.Date(),
         nw.Datetime,
         nw.Duration,
-        nw.Time,
+        nw.Time(),
     )
     df.assert_selects(selector, "cde", "def", "eee", "fgg", "qqR")
 
-    selector = ncs.by_dtype(nw.Datetime("ns"), nw.Float32, nw.UInt32, nw.Date)
+    selector = ncs.by_dtype(nw.Datetime("ns"), nw.Float32(), nw.UInt32, nw.Date)
     df.assert_selects(selector, "bbb", "def", "JJK")
 
 
@@ -177,12 +177,26 @@ def test_selector_by_dtype_empty(schema_non_nested: nw.Schema) -> None:
     ("dtypes", "expected"),
     [
         (
-            [nw.Datetime, nw.Enum, nw.Duration, nw.Struct, nw.List, nw.Array],
+            [
+                nw.Datetime,
+                nw.Enum,
+                nw.Datetime("s"),
+                nw.Duration,
+                nw.Struct,
+                nw.List,
+                nw.Array,
+            ],
             ["l", "o", "q", "r", "s", "u"],
         ),
         ([nw.String(), nw.Boolean], ["k", "m"]),
         ([nw.Datetime("ms"), nw.Date, nw.List(nw.String)], ["n", "s"]),
-        ([nw.Enum(["A", "B", "c"])], []),
+        (
+            [
+                nw.Enum(["A", "B", "c"]),
+                nw.Struct({"a": nw.List(nw.Int64), "k": nw.String}),
+            ],
+            [],
+        ),
     ],
 )
 def test_selector_by_dtype_mixed(

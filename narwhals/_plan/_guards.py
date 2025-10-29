@@ -7,6 +7,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from narwhals._utils import _hasattr_static
+from narwhals.dtypes import DType
 
 if TYPE_CHECKING:
     from typing_extensions import TypeIs
@@ -101,7 +102,9 @@ def is_compliant_series(
 
 
 def is_iterable_reject(obj: Any) -> TypeIs[str | bytes | Series | CompliantSeries]:
-    return isinstance(obj, (str, bytes, _series().Series)) or is_compliant_series(obj)
+    return isinstance(obj, (str, bytes, _series().Series, DType)) or is_compliant_series(
+        obj
+    )
 
 
 def is_window_expr(obj: Any) -> TypeIs[ir.WindowExpr]:

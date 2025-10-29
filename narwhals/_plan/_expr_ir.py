@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from narwhals._plan.selectors import Selector
     from narwhals._plan.typing import ExprIRT2, MapIR, Seq
     from narwhals.dtypes import DType
+    from narwhals.typing import IntoDType
 
 
 class ExprIR(Immutable):
@@ -205,7 +206,7 @@ class SelectorIR(ExprIR, config=ExprIROptions.no_dispatch()):
         msg = f"{type(self).__name__}.into_columns"
         raise NotImplementedError(msg)
 
-    def matches(self, dtype: DType) -> bool:
+    def matches(self, dtype: IntoDType) -> bool:
         """Return True if we can select this dtype."""
         msg = f"{type(self).__name__}.matches"
         raise NotImplementedError(msg)
