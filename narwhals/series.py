@@ -2798,7 +2798,8 @@ class Series(Generic[IntoSeriesT]):
                 "Hint: `is_close` is only supported for numeric types"
             )
             raise InvalidOperationError(msg)
-
+        # Creating a temporary name if series is unnamed (possible in pandas-like scenario)
+        # as `select`-ing a column named `None` would break otherwise
         orig_name = self.name
         name_is_none = orig_name is None
         tmp_name = "__nw_is_close__" if name_is_none else orig_name
