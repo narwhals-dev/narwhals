@@ -335,7 +335,9 @@ def _expand_nested_nodes_s(
     elif isinstance(origin, ir.BinaryExpr):
         replaced = origin.__replace__(right=expand_only_s(origin.right, ignored, schema))  # type: ignore[assignment]
         for root in expand_expression_rec_s(replaced.left, ignored, schema):  # type: ignore[union-attr]
-            yield replaced.__replace__(left=root)  # type: ignore[call-arg]
+            # NOTE: Workflow is running in `3.12`, ignore required for `3.13`
+            # https://github.com/narwhals-dev/narwhals/actions/runs/18913537046/workflow?pr=3233
+            yield replaced.__replace__(left=root)  # type: ignore[call-arg,unused-ignore]
     elif isinstance(origin, ir.TernaryExpr):
         changes["truthy"] = expand_only_s(origin.truthy, ignored, schema)
         changes["predicate"] = expand_only_s(origin.predicate, ignored, schema)
