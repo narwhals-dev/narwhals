@@ -44,11 +44,7 @@ if TYPE_CHECKING:
     import polars as pl
     from typing_extensions import Self, TypeAlias, TypeIs
 
-    from narwhals._compliant.typing import (
-        CompliantDataFrameAny,
-        CompliantLazyFrameAny,
-        CompliantNamespaceAny,
-    )
+    from narwhals._compliant.typing import CompliantDataFrameAny, CompliantLazyFrameAny
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.group_by import PandasLikeGroupBy
     from narwhals._pandas_like.namespace import PandasLikeNamespace
@@ -151,10 +147,10 @@ class PandasLikeDataFrame(
         data: Mapping[str, Any],
         /,
         *,
-        ns: CompliantNamespaceAny,
+        context: _LimitedContext,
         schema: IntoSchema | Mapping[str, DType | None] | None,
     ) -> Self:
-        implementation = ns._implementation
+        implementation = context._implementation
         pdx = implementation.to_native_namespace()
         Series = cast("type[pd.Series[Any]]", pdx.Series)
         DataFrame = cast("type[pd.DataFrame]", pdx.DataFrame)
@@ -162,7 +158,7 @@ class PandasLikeDataFrame(
         left_most: PandasLikeSeries | None = None
         for name, series in data.items():
             if isinstance(series, Series):
-                compliant = PandasLikeSeries.from_native(series, context=ns)
+                compliant = PandasLikeSeries.from_native(series, context=context)
                 if left_most is None:
                     left_most = compliant
                     aligned_data[name] = series
@@ -182,13 +178,16 @@ class PandasLikeDataFrame(
                 backends = (None for _ in range(len(schema)))
             native_schema = {
                 key: narwhals_to_native_dtype(
-                    dtype, backend, implementation=ns._implementation, version=ns._version
+                    dtype,
+                    backend,
+                    implementation=context._implementation,
+                    version=context._version,
                 )
                 for ((key, dtype), backend) in zip(schema.items(), backends)
                 if dtype is not None
             }
             native = native.astype(native_schema)
-        return cls.from_native(native, context=ns)
+        return cls.from_native(native, context=context)
 
     @classmethod
     def from_dicts(

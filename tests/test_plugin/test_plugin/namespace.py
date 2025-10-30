@@ -17,10 +17,6 @@ class DictNamespace(CompliantNamespace[DictLazyFrame, Any]):
     def from_native(self, native_object: DictFrame) -> DictLazyFrame:
         return DictLazyFrame(native_object, version=self._version)
 
-    @property
-    def _backend_version(self) -> tuple[int, ...]:  # pragma: no cover
-        return (0, 0, 0)
-
     is_native: Any = not_implemented()
     _expr: Any = not_implemented()
     _implementation: Any = not_implemented()

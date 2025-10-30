@@ -281,7 +281,7 @@ def from_dict(
     implementation = Implementation.from_backend(backend)
     if is_eager_allowed(implementation):
         ns = Version.MAIN.namespace.from_backend(implementation).compliant
-        return ns._dataframe.from_dict(data, schema=schema, ns=ns).to_narwhals()
+        return ns._dataframe.from_dict(data, schema=schema, context=ns).to_narwhals()
     if implementation is Implementation.UNKNOWN:  # pragma: no cover
         _native_namespace = implementation.to_native_namespace()
         try:

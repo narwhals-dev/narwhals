@@ -190,7 +190,7 @@ class CompliantDataFrame(
         data: Mapping[str, Any],
         /,
         *,
-        ns: CompliantNamespaceAny,
+        context: CompliantNamespaceAny,
         schema: IntoSchema | Mapping[str, DType | None] | None,
     ) -> Self: ...
     @classmethod
