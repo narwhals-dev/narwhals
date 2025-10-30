@@ -62,12 +62,12 @@ def assert_frame_equal(
             Enabling this helps compare columns that do not share the same string cache.
 
     Examples:
-        >>> import duckdb
+        >>> import polars as pl
         >>> import narwhals as nw
         >>> from narwhals.testing import assert_frame_equal
         >>>
-        >>> left_native = duckdb.sql("SELECT * FROM VALUES (1, ), (2, ), (3, ) df(a)")
-        >>> right_native = duckdb.sql("SELECT * FROM VALUES (1, ), (5, ), (3, ) df(a)")
+        >>> left_native = pl.LazyFrame({"a": [1, 2, 3]})
+        >>> right_native = pl.LazyFrame({"a": [1, 5, 3]})
         >>> left = nw.from_native(left_native)
         >>> right = nw.from_native(right_native)
         >>> assert_frame_equal(left, right)  # doctest: +ELLIPSIS
@@ -75,31 +75,29 @@ def assert_frame_equal(
             ...
         AssertionError: DataFrames are different (value mismatch for column "a")
         [left]:
-        ┌────────────────────────────────────────────────┐
-        |                Narwhals Series                 |
-        |------------------------------------------------|
-        |<pyarrow.lib.ChunkedArray object at ...
-        |[                                               |
-        |  [                                             |
-        |    1,                                          |
-        |    2,                                          |
-        |    3                                           |
-        |  ]                                             |
-        |]                                               |
-        └────────────────────────────────────────────────┘
+        ┌─────────────────┐
+        | Narwhals Series |
+        |-----------------|
+        |shape: (3,)      |
+        |Series: 'a' [i64]|
+        |[                |
+        |        1        |
+        |        2        |
+        |        3        |
+        |]                |
+        └─────────────────┘
         [right]:
-        ┌────────────────────────────────────────────────┐
-        |                Narwhals Series                 |
-        |------------------------------------------------|
-        |<pyarrow.lib.ChunkedArray object at ...
-        |[                                               |
-        |  [                                             |
-        |    1,                                          |
-        |    3,                                          |
-        |    5                                           |
-        |  ]                                             |
-        |]                                               |
-        └────────────────────────────────────────────────┘
+        ┌─────────────────┐
+        | Narwhals Series |
+        |-----------------|
+        |shape: (3,)      |
+        |Series: 'a' [i64]|
+        |[                |
+        |        1        |
+        |        5        |
+        |        3        |
+        |]                |
+        └─────────────────┘
     """
     __tracebackhide__ = True
 
