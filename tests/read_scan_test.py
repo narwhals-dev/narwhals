@@ -3,7 +3,6 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, Any, Literal
 
-import pandas as pd
 import pytest
 
 import narwhals as nw
@@ -95,6 +94,10 @@ def test_read_csv(csv_path: FileSource, eager_backend: EagerAllowed) -> None:
 
 @skipif_pandas_lt_1_5
 def test_read_csv_kwargs(csv_path: FileSource) -> None:
+    pytest.importorskip("pandas")
+    pytest.importorskip("pyarrow")
+    import pandas as pd
+
     assert_equal_eager(nw.read_csv(csv_path, backend=pd, engine="pyarrow"))
 
 
@@ -119,6 +122,10 @@ def test_scan_csv(csv_path: FileSource, constructor: Constructor) -> None:
 
 @skipif_pandas_lt_1_5
 def test_scan_csv_kwargs(csv_path: FileSource) -> None:
+    pytest.importorskip("pandas")
+    pytest.importorskip("pyarrow")
+    import pandas as pd
+
     assert_equal_data(nw.scan_csv(csv_path, backend=pd, engine="pyarrow"), data)
 
 
@@ -129,6 +136,10 @@ def test_read_parquet(parquet_path: FileSource, eager_backend: EagerAllowed) -> 
 
 @skipif_pandas_lt_1_5
 def test_read_parquet_kwargs(parquet_path: FileSource) -> None:
+    pytest.importorskip("pandas")
+    pytest.importorskip("pyarrow")
+    import pandas as pd
+
     assert_equal_eager(nw.read_parquet(parquet_path, backend=pd, engine="pyarrow"))
 
 
@@ -158,6 +169,10 @@ def test_scan_parquet(parquet_path: FileSource, constructor: Constructor) -> Non
 
 @skipif_pandas_lt_1_5
 def test_scan_parquet_kwargs(parquet_path: FileSource) -> None:
+    pytest.importorskip("pandas")
+    pytest.importorskip("pyarrow")
+    import pandas as pd
+
     assert_equal_lazy(nw.scan_parquet(parquet_path, backend=pd, engine="pyarrow"))
 
 

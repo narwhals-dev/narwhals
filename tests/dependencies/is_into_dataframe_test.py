@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-import numpy as np
 import pytest
 
 import narwhals as nw
@@ -50,6 +49,9 @@ def test_is_into_dataframe_pandas() -> None:
 
 
 def test_is_into_dataframe_other() -> None:
+    pytest.importorskip("numpy")
+    import numpy as np
+
     assert is_into_dataframe(DictDataFrame(DATA))
     assert not is_into_dataframe(np.array([[1, 4], [2, 5], [3, 6]]))
     assert not is_into_dataframe(DATA)

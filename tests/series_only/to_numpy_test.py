@@ -3,8 +3,10 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-import numpy as np
 import pytest
+
+pytest.importorskip("numpy")
+import numpy as np
 from numpy.testing import assert_array_equal
 
 import narwhals as nw

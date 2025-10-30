@@ -5,8 +5,6 @@ from contextlib import AbstractContextManager, nullcontext as does_not_warn
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any, Literal
 
-import numpy as np
-import pandas as pd
 import pytest
 
 import narwhals as nw
@@ -177,7 +175,10 @@ def test_2d_array(constructor: Constructor, request: pytest.FixtureRequest) -> N
 
 
 def test_second_time_unit() -> None:
+    pytest.importorskip("pandas")
     pytest.importorskip("pyarrow")
+    import numpy as np
+    import pandas as pd
     import pyarrow as pa
 
     s: IntoSeries = pd.Series(np.array([np.datetime64("2020-01-01", "s")]))
@@ -212,6 +213,9 @@ def test_second_time_unit() -> None:
 )
 @pytest.mark.filterwarnings("ignore:Setting an item of incompatible")
 def test_pandas_inplace_modification_1267() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     s = pd.Series([1, 2, 3])
     snw = nw.from_native(s, series_only=True)
     assert snw.dtype == nw.Int64
@@ -221,6 +225,8 @@ def test_pandas_inplace_modification_1267() -> None:
 
 def test_pandas_fixed_offset_1302() -> None:
     pytest.importorskip("pyarrow")
+    pytest.importorskip("pandas")
+    import pandas as pd
 
     result = nw.from_native(
         pd.Series(pd.to_datetime(["2020-01-01T00:00:00.000000000+01:00"])),
@@ -403,9 +409,12 @@ def test_huge_int_to_native() -> None:
 
 def test_cast_decimal_to_native() -> None:
     pytest.importorskip("duckdb")
+    pytest.importorskip("pandas")
     pytest.importorskip("polars")
     pytest.importorskip("pyarrow")
+
     import duckdb
+    import pandas as pd
     import polars as pl
     import pyarrow as pa
 
@@ -432,11 +441,18 @@ def test_cast_decimal_to_native() -> None:
             )
 
 
-@pytest.mark.parametrize(
-    "categories",
-    [["a", "b"], [np.str_("a"), np.str_("b")], enum.Enum("Test", "a b"), [1, 2, 3]],
-)
+@pytest.mark.parametrize("categories", [["a", "b"], enum.Enum("Test", "a b"), [1, 2, 3]])
 def test_enum_valid(categories: Iterable[Any] | type[enum.Enum]) -> None:
+    dtype = nw.Enum(categories)
+    assert dtype == nw.Enum
+    assert len(dtype.categories) == len([*categories])
+
+
+def test_enum_valid_numpy() -> None:
+    pytest.importorskip("numpy")
+    import numpy as np
+
+    categories = [np.str_("a"), np.str_("b")]
     dtype = nw.Enum(categories)
     assert dtype == nw.Enum
     assert len(dtype.categories) == len([*categories])
@@ -462,6 +478,9 @@ def test_enum_categories_immutable() -> None:
 
 
 def test_enum_repr_pd() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df = nw.from_native(
         pd.DataFrame(
             {"a": ["broccoli", "cabbage"]}, dtype=pd.CategoricalDtype(ordered=True)
