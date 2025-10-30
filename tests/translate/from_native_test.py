@@ -316,7 +316,7 @@ def test_from_native_strict_native_series() -> None:
 
 @pytest.mark.skipif(lf_pl is None, reason="polars not found")
 def test_from_native_strict_native_series_polars() -> None:
-    pytest.importorskip("mumpy")
+    pytest.importorskip("numpy")
     obj: list[int] = [1, 2, 3, 4]
     np_array = pl.Series(obj).to_numpy()
     with pytest.raises(TypeError, match=r"got.+numpy.ndarray"):

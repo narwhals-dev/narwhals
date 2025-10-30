@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 
     from narwhals.typing import IntoDataFrame
 
+pytest.importorskip("pandas")
 pytest.importorskip("polars")
 import polars as pl
 
