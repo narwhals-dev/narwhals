@@ -3,10 +3,13 @@ from __future__ import annotations
 import pytest
 
 import narwhals as nw
+from tests.utils import DUCKDB_VERSION
 
 
 def test_sql() -> None:
     pytest.importorskip("duckdb")
+    if DUCKDB_VERSION < (1, 3):
+        pytest.skip()
     from narwhals.sql import table
 
     schema = {"date": nw.Date, "price": nw.Int64, "symbol": nw.String}

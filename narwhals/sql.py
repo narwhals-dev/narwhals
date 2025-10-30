@@ -21,8 +21,8 @@ except ImportError as exc:  # pragma: no cover
     )
     raise ModuleNotFoundError(msg) from exc
 
-conn = duckdb.connect()
-tz = conn.sql("select value from duckdb_settings() where name = 'TimeZone'").fetchone()[0]
+CONN = duckdb.connect()
+TZ = CONN.sql("select value from duckdb_settings() where name = 'TimeZone'").fetchone()[0]  # type: ignore[index]
 
 
 def table(name: str, schema: IntoSchema) -> LazyFrame[DuckDBPyRelation]:
@@ -42,20 +42,20 @@ def table(name: str, schema: IntoSchema) -> LazyFrame[DuckDBPyRelation]:
         >>> from narwhals.sql import table
         >>> schema = {"date": nw.Date, "price": nw.Int64, "symbol": nw.String}
         >>> assets = table("assets", schema)
-        >>> result = assets.with_columns(price_2=nw.col("price") * 2)
+        >>> result = assets.filter(nw.col("price") > 100)
         >>> print(result.to_native().sql_query())
-        SELECT date, price, symbol, (price * 2) AS price_2 FROM main.assets
+        SELECT * FROM main.assets WHERE (price > 100)
     """
     column_mapping = {
-        col: narwhals_to_native_dtype(dtype, Version.MAIN, tz)
+        col: narwhals_to_native_dtype(dtype, Version.MAIN, TZ)
         for col, dtype in schema.items()
     }
     dtypes = ", ".join(f"{col} {dtype}" for col, dtype in column_mapping.items())
-    conn.sql(f"""
+    CONN.sql(f"""
         CREATE TABLE "{name}"
         ({dtypes});
         """)
-    return from_native(conn.table(name))
+    return from_native(CONN.table(name))
 
 
 __all__ = ["table"]
