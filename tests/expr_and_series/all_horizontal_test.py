@@ -117,9 +117,6 @@ def test_allh_nth(constructor: Constructor) -> None:
 
 
 def test_allh_iterator(constructor: Constructor) -> None:
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
     def iter_eq(items: Any, /) -> Any:
         for column, value in items:
             yield nw.col(column) == value

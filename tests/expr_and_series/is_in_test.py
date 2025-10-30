@@ -44,9 +44,6 @@ def test_is_in_other(constructor: Constructor) -> None:
 
 
 def test_filter_is_in_with_series(constructor_eager: ConstructorEager) -> None:
-    if "bodo" in str(constructor_eager):
-        # BODO fail
-        pytest.skip()
     data = {"a": [1, 4, 2, 5], "b": [1, 0, 2, 0]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.filter(nw.col("a").is_in(df["b"]))

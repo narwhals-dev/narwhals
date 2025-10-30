@@ -73,9 +73,6 @@ def test_categorical(request: pytest.FixtureRequest, constructor: Constructor) -
         or "ibis" in str(constructor)
     ):
         request.applymarker(pytest.mark.xfail)
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
     expected = {"b": ["a", "b", "c"]}
 
     df = nw.from_native(constructor(data)).with_columns(nw.col("b").cast(nw.Categorical))

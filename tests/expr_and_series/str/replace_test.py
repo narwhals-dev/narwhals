@@ -107,9 +107,6 @@ def test_str_replace_series_scalar(
     literal: bool,  # noqa: FBT001
     expected: dict[str, list[str]],
 ) -> None:
-    if "bodo" in str(constructor_eager):
-        # BODO fail
-        pytest.skip()
     df = nw.from_native(constructor_eager(data), eager_only=True)
 
     result_series = df["a"].str.replace(
@@ -129,9 +126,6 @@ def test_str_replace_all_series_scalar(
     literal: bool,  # noqa: FBT001
     expected: dict[str, list[str]],
 ) -> None:
-    if "bodo" in str(constructor_eager):
-        # BODO fail
-        pytest.skip()
     df = nw.from_native(constructor_eager(data), eager_only=True)
 
     result_series = df["a"].str.replace_all(pattern=pattern, value=value, literal=literal)
@@ -158,9 +152,6 @@ def test_str_replace_expr_scalar(
                 raises=NotImplementedError,
             )
         )
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
     df = nw.from_native(constructor(data))
     result_df = df.select(
         nw.col("a").str.replace(pattern=pattern, value=value, n=n, literal=literal)
@@ -179,9 +170,6 @@ def test_str_replace_all_expr_scalar(
     literal: bool,  # noqa: FBT001
     expected: dict[str, list[str]],
 ) -> None:
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
     df = nw.from_native(constructor(data))
     result = df.select(
         nw.col("a").str.replace_all(pattern=pattern, value=value, literal=literal)
