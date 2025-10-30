@@ -132,7 +132,7 @@ jobs:
       - name: install-polars
         run: |
           uv pip uninstall pandas pyarrow --system
-          uv pip install polars
+          uv pip install polars --system
           uv pip freeze
       - name: Run pytest (polars)
         run: pytest tests --runslow --constructors=polars[eager],polars[lazy]

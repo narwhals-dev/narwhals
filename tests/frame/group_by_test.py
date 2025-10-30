@@ -67,7 +67,7 @@ def test_invalid_group_by_dask() -> None:
     pytest.importorskip("dask")
     import dask.dataframe as dd
 
-    df_dask = dd.from_dict(data)
+    df_dask = dd.from_dict(data, npartitions=1)
 
     with pytest.raises(ValueError, match=r"Non-trivial complex aggregation found"):
         nw.from_native(df_dask).group_by("a").agg(nw.col("b").abs().min())
