@@ -602,20 +602,80 @@ def test_prepare_projection_index_error(
         df_1.project(into_exprs)
 
 
-@pytest.mark.xfail(
-    reason="TODO: binary_expr_combination", raises=MultiOutputExpressionError
+@pytest.mark.parametrize(
+    ("expr", "expected"),
+    [
+        (
+            nwp.nth(range(3)) * nwp.nth(3, 4, 5).max(),
+            [
+                nwp.col("a") * nwp.col("d").max(),
+                nwp.col("b") * nwp.col("e").max(),
+                nwp.col("c") * nwp.col("f").max(),
+            ],
+        ),
+        (
+            (10 / nwp.col("e", "d", "b", "a")).name.keep(),
+            [
+                named_ir("e", 10 / nwp.col("e")),
+                named_ir("d", 10 / nwp.col("d")),
+                named_ir("b", 10 / nwp.col("b")),
+                named_ir("a", 10 / nwp.col("a")),
+            ],
+        ),
+        (
+            (
+                (ncs.categorical() | ncs.string())
+                .as_expr()
+                .cast(nw.String)
+                .str.len_chars()
+                .name.map(lambda s: f"len_chars({s!r})")
+                - ncs.by_dtype(nw.UInt16).as_expr()
+            ).name.suffix("-col('g')"),
+            [
+                named_ir(
+                    "len_chars('k')-col('g')",
+                    nwp.col("k").cast(nw.String).str.len_chars() - nwp.col("g"),
+                ),
+                named_ir(
+                    "len_chars('p')-col('g')",
+                    nwp.col("p").cast(nw.String).str.len_chars() - nwp.col("g"),
+                ),
+            ],
+        ),
+        (
+            (nwp.all().first() == nwp.all().last()).name.suffix("_first_eq_last"),
+            [
+                named_ir("a_first_eq_last", nwp.col("a").first() == nwp.col("a").last()),
+                named_ir("b_first_eq_last", nwp.col("b").first() == nwp.col("b").last()),
+                named_ir("c_first_eq_last", nwp.col("c").first() == nwp.col("c").last()),
+                named_ir("d_first_eq_last", nwp.col("d").first() == nwp.col("d").last()),
+                named_ir("e_first_eq_last", nwp.col("e").first() == nwp.col("e").last()),
+                named_ir("f_first_eq_last", nwp.col("f").first() == nwp.col("f").last()),
+                named_ir("g_first_eq_last", nwp.col("g").first() == nwp.col("g").last()),
+                named_ir("h_first_eq_last", nwp.col("h").first() == nwp.col("h").last()),
+                named_ir("i_first_eq_last", nwp.col("i").first() == nwp.col("i").last()),
+                named_ir("j_first_eq_last", nwp.col("j").first() == nwp.col("j").last()),
+                named_ir("k_first_eq_last", nwp.col("k").first() == nwp.col("k").last()),
+                named_ir("l_first_eq_last", nwp.col("l").first() == nwp.col("l").last()),
+                named_ir("m_first_eq_last", nwp.col("m").first() == nwp.col("m").last()),
+                named_ir("n_first_eq_last", nwp.col("n").first() == nwp.col("n").last()),
+                named_ir("o_first_eq_last", nwp.col("o").first() == nwp.col("o").last()),
+                named_ir("p_first_eq_last", nwp.col("p").first() == nwp.col("p").last()),
+                named_ir("q_first_eq_last", nwp.col("q").first() == nwp.col("q").last()),
+                named_ir("r_first_eq_last", nwp.col("r").first() == nwp.col("r").last()),
+                named_ir("s_first_eq_last", nwp.col("s").first() == nwp.col("s").last()),
+                named_ir("u_first_eq_last", nwp.col("u").first() == nwp.col("u").last()),
+            ],
+        ),
+    ],
+    ids=["3:3", "1:4", "2:1", "All:All"],
 )
-def test_expand_binary_expr_combination(df_1: Frame) -> None:  # pragma: no cover
-    three_to_three = nwp.nth(range(3)) * nwp.nth(3, 4, 5).max()
-
-    expecteds = [
-        named_ir("a", nwp.col("a") * nwp.col("d")),
-        named_ir("b", nwp.col("b") * nwp.col("e")),
-        named_ir("c", nwp.col("c") * nwp.col("f")),
-    ]
-    actuals = df_1.project(three_to_three)
-    for actual, expected in zip_strict(actuals, expecteds):
-        assert_expr_ir_equal(actual, expected)
+def test_expand_binary_expr_combination(
+    df_1: Frame, expr: nwp.Expr, expected: Iterable[ir.NamedIR | nwp.Expr]
+) -> None:
+    actuals = df_1.project(expr)
+    for actual, expect in zip_strict(actuals, expected):
+        assert_expr_ir_equal(actual, expect)
 
 
 @pytest.mark.xfail(reason="TODO: Move fancy error message", raises=AssertionError)

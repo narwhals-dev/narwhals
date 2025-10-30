@@ -53,7 +53,7 @@ from narwhals._plan.expressions import (
 )
 from narwhals._plan.schema import FrozenSchema, IntoFrozenSchema, freeze_schema
 from narwhals._typing_compat import assert_never
-from narwhals._utils import check_column_names_are_unique
+from narwhals._utils import check_column_names_are_unique, zip_strict
 from narwhals.exceptions import MultiOutputExpressionError
 
 if TYPE_CHECKING:
@@ -281,19 +281,8 @@ class Expander:
             replaced = common.replace(origin, **changes)
             for root in self._expand_recursive(replaced.expr):
                 yield common.replace(replaced, expr=root)
-
-        # TODO @dangotbanned: Relax `BinaryExpr.right`
-        # - https://github.com/narwhals-dev/narwhals/pull/3233#discussion_r2472757798
-        # - https://github.com/narwhals-dev/narwhals/pull/3233#discussion_r2473810664=
-        # NOTE: Only need to raise if outputs are not:
-        # - 1:1
-        # - M:1
-        # - 1:M
-        # - N:N
         elif isinstance(origin, ir.BinaryExpr):
-            binary = origin.__replace__(right=self._expand_only(origin.right))
-            for root in self._expand_recursive(binary.left):
-                yield binary.__replace__(left=root)
+            yield from self._expand_binary_expr(origin)
         elif isinstance(origin, ir.TernaryExpr):
             changes["truthy"] = self._expand_only(origin.truthy)
             changes["predicate"] = self._expand_only(origin.predicate)
@@ -301,6 +290,33 @@ class Expander:
             yield origin.__replace__(**changes)
         else:
             assert_never(origin)
+
+    def _expand_binary_expr(self, origin: ir.BinaryExpr, /) -> Iterator[ir.BinaryExpr]:
+        it_lefts = self._expand_recursive(origin.left)
+        it_rights = self._expand_recursive(origin.right)
+        # NOTE: Fast-path that doesn't require collection
+        # - Will miss selectors that expand to 1 column
+        if not origin.meta.has_multiple_outputs():
+            for left, right in zip_strict(it_lefts, it_rights):
+                yield origin.__replace__(left=left, right=right)
+            return
+        # NOTE: Covers 1:1 (where either is a selector), N:N
+        lefts, rights = tuple(it_lefts), tuple(it_rights)
+        len_left, len_right = len(lefts), len(rights)
+        if len_left == len_right:
+            for left, right in zip_strict(lefts, rights):
+                yield origin.__replace__(left=left, right=right)
+        # NOTE: 1:M
+        elif len_left == 1:
+            binary = origin.__replace__(left=lefts[0])
+            yield from (binary.__replace__(right=right) for right in rights)
+        # NOTE: M:1
+        elif len_right == 1:
+            binary = origin.__replace__(right=rights[0])
+            yield from (binary.__replace__(left=left) for left in lefts)
+        else:
+            msg = "TODO: `binary_expr_multi_output_error`"
+            raise MultiOutputExpressionError(msg)
 
     def _expand_function_expr(
         self, origin: ir.FunctionExpr, /
