@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
+pytest.importorskip("numpy")
+
 import narwhals as nw
 from tests.utils import (
     PANDAS_VERSION,

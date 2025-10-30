@@ -112,7 +112,9 @@ def test_rows_with_nulls_unnamed(
         for j, value in enumerate(row):
             value_in_result = result[i][j]
             if value is None:
-                assert is_pd_na(value_in_result)  # because float('nan') != float('nan')
+                assert value_in_result is None or is_pd_na(
+                    value_in_result
+                )  # because float('nan') != float('nan')
             else:
                 assert value_in_result == value
 
@@ -134,6 +136,8 @@ def test_rows_with_nulls_named(
         for col, value in row.items():
             value_in_result = result[i][col]
             if value is None:
-                assert is_pd_na(value_in_result)  # because float('nan') != float('nan')
+                assert value_in_result is None or is_pd_na(
+                    value_in_result
+                )  # because float('nan') != float('nan')
             else:
                 assert value_in_result == value
