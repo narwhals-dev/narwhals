@@ -12,6 +12,7 @@ from narwhals._utils import zip_strict
 from narwhals.exceptions import (
     ColumnNotFoundError,
     DuplicateError,
+    InvalidOperationError,
     MultiOutputExpressionError,
 )
 from tests.plan.utils import Frame, assert_expr_ir_equal, named_ir, re_compile
@@ -126,6 +127,14 @@ def test_special_aliases_single(expr: nwp.Expr, expected: str) -> None:
         "unreferenced",
     )
     df.assert_selects(expr, expected)
+
+
+def test_keep_name_no_names(df_1: Frame) -> None:
+    with pytest.raises(
+        InvalidOperationError,
+        match=r"expected at least one.+name.+got.+lit.+1.+name.keep",
+    ):
+        df_1.project(nwp.lit(1).name.keep())
 
 
 def alias_replace_guarded(name: str) -> MapIR:

@@ -191,7 +191,7 @@ class Expander:
                 raise NotImplementedError(msg)
             output_names.append(name)
             named_irs.append(ir.named_ir(name, remove_alias(target)))
-            root_names.update(meta._expr_to_leaf_column_names_iter(e))
+            root_names.update(meta.iter_root_names(e))
         if len(output_names) != len(set(output_names)):
             raise duplicate_error(expanded)
         if not (set(self.schema).issuperset(root_names)):

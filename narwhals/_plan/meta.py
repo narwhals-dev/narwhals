@@ -7,7 +7,6 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from itertools import chain
 from typing import TYPE_CHECKING, Literal, overload
 
 from narwhals._plan import expressions as ir
@@ -19,7 +18,7 @@ from narwhals.exceptions import ComputeError, InvalidOperationError
 from narwhals.utils import Version
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator
+    from collections.abc import Iterator
 
     from narwhals._plan import Selector
 
@@ -78,7 +77,7 @@ class MetaNamespace(IRNamespace):
 
     def root_names(self) -> list[str]:
         """Get the root column names."""
-        return list(_expr_to_leaf_column_names_iter(self._ir))
+        return list(iter_root_names(self._ir))
 
     def as_selector(self) -> Selector:
         """Try to turn this expression into a selector.
@@ -91,44 +90,15 @@ class MetaNamespace(IRNamespace):
         return self._ir.to_selector_ir().to_narwhals()
 
 
-def _expr_to_leaf_column_names_iter(expr: ir.ExprIR, /) -> Iterator[str]:
-    for e in _expr_to_leaf_column_exprs_iter(expr):
-        result = _expr_to_leaf_column_name(e)
-        if isinstance(result, str):
-            yield result
-
-
-def _expr_to_leaf_column_exprs_iter(expr: ir.ExprIR, /) -> Iterator[ir.ExprIR]:
-    for outer in expr.iter_root_names():
-        if isinstance(outer, ir.Column):
-            yield outer
-
-
-def _expr_to_leaf_column_name(expr: ir.ExprIR, /) -> str | ComputeError:
-    leaves = list(_expr_to_leaf_column_exprs_iter(expr))
-    if not len(leaves) <= 1:
-        msg = "found more than one root column name"
-        return ComputeError(msg)
-    if not leaves:
-        msg = "no root column name found"
-        return ComputeError(msg)
-    leaf = leaves[0]
-    if isinstance(leaf, ir.Column):
-        return leaf.name
-    msg = f"Expected unreachable, got {type(leaf).__name__!r}\n\n{leaf}"
-    return ComputeError(msg)
+def iter_root_names(expr: ir.ExprIR, /) -> Iterator[str]:
+    yield from (e.name for e in expr.iter_root_names() if isinstance(e, ir.Column))
 
 
 def root_name_first(expr: ir.ExprIR, /) -> str:
-    it = _expr_to_leaf_column_names_iter(expr)
-    if name := next(it, None):
+    if name := next(iter_root_names(expr), None):
         return name
-    msg = "`name.keep_name` expected at least one column name"
+    msg = f"`name.keep_name` expected at least one column name, got `{expr!r}`"
     raise InvalidOperationError(msg)
-
-
-def root_names_unique(exprs: Iterable[ir.ExprIR], /) -> set[str]:
-    return set(chain.from_iterable(_expr_to_leaf_column_names_iter(e) for e in exprs))
 
 
 @lru_cache(maxsize=32)

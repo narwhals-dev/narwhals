@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime as dt
 import re
+import string
 from typing import Any
 
 import pytest
@@ -56,6 +57,11 @@ XFAIL_LITERAL_LIST = pytest.mark.xfail(
         ),
         (nwp.all().mean(), pl.all().mean(), []),
         (nwp.all().mean().sort_by("d"), pl.all().mean().sort_by("d"), ["d"]),
+        (
+            nwp.all_horizontal(*string.ascii_letters),
+            pl.all_horizontal(*string.ascii_letters),
+            list(string.ascii_letters),
+        ),
     ],
 )
 def test_meta_root_names(
@@ -319,6 +325,7 @@ def test_literal_output_name() -> None:
     assert e.meta.output_name() == ""
 
 
+# NOTE: Very low-priority
 @pytest.mark.xfail(
     reason="TODO: `Expr.struct.field` influences `meta.output_name`.",
     raises=AssertionError,
