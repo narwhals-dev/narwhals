@@ -45,3 +45,10 @@ def test_is_finite_series(constructor_eager: ConstructorEager) -> None:
     result = {"a": df["a"].is_finite()}
 
     assert_equal_data(result, expected)
+
+
+def test_is_finite_integer_column(constructor: Constructor) -> None:
+    # Test for https://github.com/narwhals-dev/narwhals/issues/3255
+    df = nw.from_native(constructor({"a": [1, 2, 3]}))
+    result = df.select(nw.col("a").is_finite())
+    assert_equal_data(result, {"a": [True, True, True]})
