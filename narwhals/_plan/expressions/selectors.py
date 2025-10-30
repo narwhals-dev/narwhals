@@ -70,7 +70,6 @@ class Selector(Immutable):
 
 
 class DTypeSelector(Selector):
-    # Will be updating things to be a bit closer to upstream
     # https://github.com/pola-rs/polars/blob/2b241543851800595efd343be016b65cdbdd3c9f/crates/polars-plan/src/dsl/selector.rs#L110-L172
     _dtype: ClassVar[type[DType]]
 
