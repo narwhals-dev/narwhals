@@ -678,23 +678,42 @@ def test_expand_binary_expr_combination(
         assert_expr_ir_equal(actual, expect)
 
 
-@pytest.mark.xfail(reason="TODO: Move fancy error message", raises=AssertionError)
-def test_expand_binary_expr_combination_invalid(df_1: Frame) -> None:  # pragma: no cover
-    pattern = re.escape(
+def test_expand_binary_expr_combination_invalid(df_1: Frame) -> None:
+    # fmt: off
+    expr = re.escape(
         "ncs.all() + ncs.by_name('b', 'c', require_all=True)\n"
-        "            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
+        "^^^^^^^^^"
     )
+    # fmt: on
+    shapes = "(20 != 2)"
+    pattern = rf"{shapes}.+\n{expr}"
     all_to_two = nwp.all() + nwp.col("b", "c")
     with pytest.raises(MultiOutputExpressionError, match=pattern):
         df_1.project(all_to_two)
 
-    pattern = re.escape(
-        "ncs.by_name('a', 'b', 'c', require_all=True).abs().fill_null([lit(int: 0)]).round() * ncs.by_index([9, 10], require_all=True).cast(Int64).sort(asc)\n"
-        "                                                                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
+    expr = re.escape(
+        "ncs.by_name('a', 'b', require_all=True).abs().fill_null([lit(int: 0)]).round() * ncs.by_index([9, 10, 11], require_all=True).cast(Int64).sort(asc)\n"
+        "                                                                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
     )
-    three_to_two = (
-        nwp.col("a", "b", "c").abs().fill_null(0).round(2)
-        * nwp.nth(9, 10).cast(nw.Int64).sort()
+    shapes = "(2 != 3)"
+    pattern = rf"{shapes}.+\n{expr}"
+    two_to_three = (
+        nwp.col("a", "b").abs().fill_null(0).round(2)
+        * nwp.nth(9, 10, 11).cast(nw.Int64).sort()
     )
     with pytest.raises(MultiOutputExpressionError, match=pattern):
-        df_1.project(three_to_two)
+        df_1.project(two_to_three)
+
+    # fmt: off
+    expr = re.escape(
+        "ncs.numeric() / [(ncs.numeric()) - (ncs.by_dtype([Int64]))]\n"
+        "^^^^^^^^^^^^^"
+    )
+    # fmt: on
+    shapes = "(10 != 9)"
+    pattern = rf"{shapes}.+\n{expr}"
+    ten_to_nine = (
+        ncs.numeric().as_expr() / (ncs.numeric() - ncs.by_dtype(nw.Int64)).as_expr()
+    )
+    with pytest.raises(MultiOutputExpressionError, match=pattern):
+        df_1.project(ten_to_nine)

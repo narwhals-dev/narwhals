@@ -54,35 +54,41 @@ def hist_bins_monotonic_error(bins: Seq[float]) -> ComputeError:  # noqa: ARG001
     return ComputeError(msg)
 
 
-# NOTE: Always underlining `right`, since the message refers to both types of exprs
-# Assuming the most recent as the issue
+def _binary_underline(
+    left: ir.ExprIR,
+    operator: Operator,
+    right: ir.ExprIR,
+    /,
+    *,
+    underline_right: bool = True,
+) -> str:
+    lhs, op, rhs = repr(left), repr(operator), repr(right)
+    if underline_right:
+        indent = (len(lhs) + len(op) + 2) * " "
+        underline = len(rhs) * "^"
+    else:
+        indent = ""
+        underline = len(lhs) * "^"
+    return f"{lhs} {op} {rhs}\n{indent}{underline}"
+
+
 def binary_expr_shape_error(
     left: ir.ExprIR, op: Operator, right: ir.ExprIR
 ) -> ShapeError:
-    lhs_op = f"{left!r} {op!r} "
-    rhs = repr(right)
-    indent = len(lhs_op) * " "
-    underline = len(rhs) * "^"
+    expr = _binary_underline(left, op, right, underline_right=True)
     msg = (
-        f"Cannot combine length-changing expressions with length-preserving ones.\n"
-        f"{lhs_op}{rhs}\n{indent}{underline}"
+        f"Cannot combine length-changing expressions with length-preserving ones.\n{expr}"
     )
     return ShapeError(msg)
 
 
-# TODO @dangotbanned: Share the right underline code w/ `binary_expr_shape_error`
 def binary_expr_multi_output_error(
-    left: ir.ExprIR, op: Operator, right: ir.ExprIR
+    origin: ir.BinaryExpr, left_expand: Seq[ir.ExprIR], right_expand: Seq[ir.ExprIR]
 ) -> MultiOutputExpressionError:
-    lhs_op = f"{left!r} {op!r} "
-    rhs = repr(right)
-    indent = len(lhs_op) * " "
-    underline = len(rhs) * "^"
-    msg = (
-        "Multi-output expressions are only supported on the "
-        f"left-hand side of a binary operation.\n"
-        f"{lhs_op}{rhs}\n{indent}{underline}"
-    )
+    len_left, len_right = len(left_expand), len(right_expand)
+    lhs, op, rhs = origin.left, origin.op, origin.right
+    expr = _binary_underline(lhs, op, rhs, underline_right=len_left < len_right)
+    msg = f"Cannot combine selectors that produce a different number of columns ({len_left} != {len_right}).\n{expr}"
     return MultiOutputExpressionError(msg)
 
 

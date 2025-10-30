@@ -42,7 +42,11 @@ from collections.abc import Collection, Container
 from typing import TYPE_CHECKING, Any, Union
 
 from narwhals._plan import common, expressions as ir, meta
-from narwhals._plan.exceptions import column_not_found_error, duplicate_error
+from narwhals._plan.exceptions import (
+    binary_expr_multi_output_error,
+    column_not_found_error,
+    duplicate_error,
+)
 from narwhals._plan.expressions import (
     Alias,
     ExprIR,
@@ -315,8 +319,7 @@ class Expander:
             binary = origin.__replace__(right=rights[0])
             yield from (binary.__replace__(left=left) for left in lefts)
         else:
-            msg = "TODO: `binary_expr_multi_output_error`"
-            raise MultiOutputExpressionError(msg)
+            raise binary_expr_multi_output_error(origin, lefts, rights)
 
     def _expand_function_expr(
         self, origin: ir.FunctionExpr, /
