@@ -118,17 +118,24 @@ jobs:
           cache-suffix: pytest-narrower-deps-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
-        run: uv pip install -e ".[pandas]" --group tests --system
-      - name: show-deps
-        run: uv pip freeze
-      - name: Run pytest
+        run: |
+          uv pip install -e ".[pandas]" --group tests --system
+          uv pip freeze
+      - name: Run pytest (pandas and pandas[nullable])
         run: pytest tests --runslow --constructors=pandas,pandas[nullable]
       - name: install-more-reqs
-        run: uv pip install -U pyarrow --system
-      - name: show-deps
-        run: uv pip freeze
-      - name: Run pytest
+        run: |
+          uv pip install -U pyarrow --system
+          uv pip freeze
+      - name: Run pytest (pandas[pyarrow] and pyarrow)
         run: pytest tests --runslow --constructors=pandas[pyarrow],pyarrow
+      - name: install-polars
+        run: |
+          uv pip uninstall pandas pyarrow --system
+          uv pip install polars
+          uv pip freeze
+      - name: Run pytest (polars)
+        run: pytest tests --runslow --constructors=polars[eager],polars[lazy]
 
   python-314:
     strategy:
