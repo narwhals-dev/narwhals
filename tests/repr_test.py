@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import pandas as pd
 import pytest
 
 import narwhals as nw
@@ -9,7 +8,9 @@ from tests.utils import PANDAS_VERSION
 
 def test_repr(request: pytest.FixtureRequest) -> None:
     pytest.importorskip("duckdb")
+    pytest.importorskip("pandas")
     import duckdb
+    import pandas as pd
 
     if PANDAS_VERSION >= (3,):
         # https://github.com/duckdb/duckdb/issues/18297

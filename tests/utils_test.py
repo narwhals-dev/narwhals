@@ -7,10 +7,8 @@ from itertools import chain
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Protocol, cast
 
 import hypothesis.strategies as st
-import pandas as pd
 import pytest
 from hypothesis import given
-from pandas.testing import assert_frame_equal, assert_index_equal, assert_series_equal
 
 import narwhals as nw
 from narwhals._utils import (
@@ -22,6 +20,10 @@ from narwhals._utils import (
     requires,
 )
 from tests.utils import get_module_version_as_tuple
+
+pytest.importorskip("pandas")
+import pandas as pd
+from pandas.testing import assert_frame_equal, assert_index_equal, assert_series_equal
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator

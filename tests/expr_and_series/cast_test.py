@@ -3,7 +3,6 @@ from __future__ import annotations
 from datetime import datetime, time, timedelta, timezone
 from typing import TYPE_CHECKING, cast
 
-import pandas as pd
 import pytest
 
 import narwhals as nw
@@ -165,6 +164,9 @@ def test_cast_series(
 
 
 def test_cast_string() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     s_pd = pd.Series([1, 2]).convert_dtypes()
     s = nw.from_native(s_pd, series_only=True)
     s = s.cast(nw.String)
@@ -408,7 +410,10 @@ def test_cast_typing_invalid() -> None:
 
 @pytest.mark.skipif(PANDAS_VERSION < (2,), reason="too old for pyarrow")
 def test_pandas_pyarrow_dtypes() -> None:
+    pytest.importorskip("pandas")
     pytest.importorskip("pyarrow")
+    import pandas as pd
+
     s = nw.from_native(
         pd.Series([123, None]).convert_dtypes(dtype_backend="pyarrow"), series_only=True
     ).cast(nw.String)
@@ -428,6 +433,9 @@ def test_pandas_pyarrow_dtypes() -> None:
 
 
 def test_cast_object_pandas() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     s = nw.from_native(pd.DataFrame({"a": [2, 3, None]}, dtype=object))["a"]
     assert s[0] == 2
     assert s.cast(nw.String)[0] == "2"
