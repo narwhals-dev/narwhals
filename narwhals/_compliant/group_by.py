@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Protocol, TypeVar
 
@@ -29,9 +28,6 @@ __all__ = ["CompliantGroupBy", "DepthTrackingGroupBy", "EagerGroupBy"]
 NativeAggregationT_co = TypeVar(
     "NativeAggregationT_co", bound="str | Callable[..., Any]", covariant=True
 )
-
-
-_RE_LEAF_NAME: re.Pattern[str] = re.compile(r"(\w+->)")
 
 
 def _evaluate_aliases(
@@ -170,7 +166,12 @@ class DepthTrackingGroupBy(
     @classmethod
     def _leaf_name(cls, expr: DepthTrackingExprAny, /) -> NarwhalsAggregation | Any:
         """Return the last function name in the chain defined by `expr`."""
-        return _RE_LEAF_NAME.sub("", expr._function_name)
+        return next(expr._metadata.op_nodes_reversed()).name
+
+    @classmethod
+    def _kwargs(cls, expr: DepthTrackingExprAny, /) -> dict[str, Any]:
+        """Return the last function kwargs in the chain defined by `expr`."""
+        return next(expr._metadata.op_nodes_reversed()).kwargs
 
 
 class EagerGroupBy(

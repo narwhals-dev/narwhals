@@ -98,7 +98,17 @@ if TYPE_CHECKING:
         def Binary(self) -> type[dtypes.Binary]: ...
 
 
-IntoExpr: TypeAlias = Union["Expr", str, "Series[Any]"]
+_ShapeT = TypeVar("_ShapeT", bound="tuple[int, ...]")
+_NDArray: TypeAlias = "np.ndarray[_ShapeT, Any]"
+_1DArray: TypeAlias = "_NDArray[tuple[int]]"
+_1DArrayInt: TypeAlias = "np.ndarray[tuple[int], np.dtype[np.integer[Any]]]"
+_2DArray: TypeAlias = "_NDArray[tuple[int, int]]"  # noqa: PYI047
+_AnyDArray: TypeAlias = "_NDArray[tuple[int, ...]]"  # noqa: PYI047
+_NumpyScalar: TypeAlias = "np.generic[Any]"
+Into1DArray: TypeAlias = "_1DArray | _NumpyScalar"
+"""A 1-dimensional `numpy.ndarray` or scalar that can be converted into one."""
+
+IntoExpr: TypeAlias = Union["Expr", str, "Series[Any]", _1DArray]
 """Anything which can be converted to an expression.
 
 Use this to mean "either a Narwhals expression, or something which can be converted
@@ -250,15 +260,6 @@ ModeKeepStrategy: TypeAlias = Literal["any", "all"]
 - *"all"*: Keeps all the mode's.
 """
 
-_ShapeT = TypeVar("_ShapeT", bound="tuple[int, ...]")
-_NDArray: TypeAlias = "np.ndarray[_ShapeT, Any]"
-_1DArray: TypeAlias = "_NDArray[tuple[int]]"
-_1DArrayInt: TypeAlias = "np.ndarray[tuple[int], np.dtype[np.integer[Any]]]"
-_2DArray: TypeAlias = "_NDArray[tuple[int, int]]"  # noqa: PYI047
-_AnyDArray: TypeAlias = "_NDArray[tuple[int, ...]]"  # noqa: PYI047
-_NumpyScalar: TypeAlias = "np.generic[Any]"
-Into1DArray: TypeAlias = "_1DArray | _NumpyScalar"
-"""A 1-dimensional `numpy.ndarray` or scalar that can be converted into one."""
 
 PandasLikeDType: TypeAlias = "pd.api.extensions.ExtensionDtype | np.dtype[Any]"
 

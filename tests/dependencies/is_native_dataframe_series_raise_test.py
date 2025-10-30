@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
-import pandas as pd
 import pytest
+
+pytest.importorskip("pandas")
+import pandas as pd
 
 import narwhals as nw
 from narwhals.dependencies import (

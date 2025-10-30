@@ -7,8 +7,6 @@ from collections import deque
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, cast
 
-import numpy as np
-import pandas as pd
 import pytest
 
 import narwhals as nw
@@ -97,7 +95,11 @@ def test_when_then() -> None:
 
 
 def test_constructors() -> None:
+    pytest.importorskip("pandas")
     pytest.importorskip("pyarrow")
+    import numpy as np
+    import pandas as pd
+
     if PANDAS_VERSION < (2, 2):
         pytest.skip()
     assert nw_v2.new_series("a", [1, 2, 3], backend="pandas").to_list() == [1, 2, 3]
@@ -409,6 +411,9 @@ def test_dataframe_from_arrow(eager_backend: EagerAllowed) -> None:
 
 
 def test_dataframe_from_numpy(eager_backend: EagerAllowed) -> None:
+    pytest.importorskip("numpy")
+    import numpy as np
+
     arr: _2DArray = cast("_2DArray", np.array([[5, 2, 0, 1], [1, 4, 7, 8], [1, 2, 3, 9]]))
     schema = {
         "c": nw_v2.Int16(),
@@ -445,6 +450,9 @@ def test_dataframe_from_numpy(eager_backend: EagerAllowed) -> None:
 def test_series_from_numpy(
     eager_backend: EagerAllowed, dtype: IntoDType | None, expected: Sequence[Any]
 ) -> None:
+    pytest.importorskip("numpy")
+    import numpy as np
+
     arr: _1DArray = cast("_1DArray", np.array([5, 2, 0, 1]))
     name = "abc"
     result = nw_v2.Series.from_numpy(name, arr, backend=eager_backend, dtype=dtype)

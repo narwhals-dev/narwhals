@@ -340,7 +340,7 @@ def _stableify(
     if isinstance(obj, NwSeries):
         return Series(obj._compliant_series._with_version(Version.V2), level=obj._level)
     if isinstance(obj, NwExpr):
-        return Expr(obj._to_compliant_expr, obj._metadata)
+        return Expr(*obj._nodes)
     assert_never(obj)
 
 
@@ -566,6 +566,7 @@ def from_native(  # noqa: D417
         eager_only=eager_only,
         series_only=series_only,
         allow_series=allow_series,
+        eager_or_interchange_only=False,
         version=Version.V2,
     )
 
@@ -953,7 +954,7 @@ class When(nw_f.When):
 class Then(nw_f.Then, Expr):
     @classmethod
     def from_then(cls, then: nw_f.Then) -> Then:
-        return cls(then._to_compliant_expr, then._metadata)
+        return cls(*then._nodes)
 
     def otherwise(self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Expr:
         return _stableify(super().otherwise(value))

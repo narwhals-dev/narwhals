@@ -4,7 +4,6 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Literal
 
 import hypothesis.strategies as st
-import pandas as pd
 import pytest
 from hypothesis import given
 
@@ -242,7 +241,9 @@ def test_timestamp_hypothesis(
     time_unit: Literal["ms", "us", "ns"],
     starting_time_unit: Literal["ms", "us", "ns"],
 ) -> None:
+    pytest.importorskip("pandas")
     pytest.importorskip("pyarrow")
+    import pandas as pd
     import polars as pl
     import pyarrow as pa
 

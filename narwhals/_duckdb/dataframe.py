@@ -12,7 +12,7 @@ from narwhals._duckdb.utils import (
     F,
     catch_duckdb_exception,
     col,
-    evaluate_exprs,
+    evaluate_exprs_and_aliases,
     join_column_names,
     lit,
     native_to_narwhals_dtype,
@@ -25,7 +25,6 @@ from narwhals._utils import (
     Version,
     extend_bool,
     generate_temporary_column_name,
-    not_implemented,
     parse_columns_to_drop,
     requires,
     zip_strict,
@@ -177,14 +176,18 @@ class DuckDBLazyFrame(
         return self._with_native(self.native.select(*column_names))
 
     def aggregate(self, *exprs: DuckDBExpr) -> Self:
-        selection = [val.alias(name) for name, val in evaluate_exprs(self, *exprs)]
+        selection = [
+            val.alias(name) for name, val in evaluate_exprs_and_aliases(self, *exprs)
+        ]
         try:
             return self._with_native(self.native.aggregate(selection))  # type: ignore[arg-type]
         except Exception as e:  # noqa: BLE001
             raise catch_duckdb_exception(e, self) from None
 
     def select(self, *exprs: DuckDBExpr) -> Self:
-        selection = (val.alias(name) for name, val in evaluate_exprs(self, *exprs))
+        selection = (
+            val.alias(name) for name, val in evaluate_exprs_and_aliases(self, *exprs)
+        )
         try:
             return self._with_native(self.native.select(*selection))
         except Exception as e:  # noqa: BLE001
@@ -206,7 +209,7 @@ class DuckDBLazyFrame(
         return self
 
     def with_columns(self, *exprs: DuckDBExpr) -> Self:
-        new_columns_map = dict(evaluate_exprs(self, *exprs))
+        new_columns_map = dict(evaluate_exprs_and_aliases(self, *exprs))
         result = [
             new_columns_map.pop(name).alias(name)
             if name in new_columns_map
@@ -224,8 +227,8 @@ class DuckDBLazyFrame(
         mask = predicate(self)[0]
         try:
             return self._with_native(self.native.filter(mask))
-        except Exception as e:  # noqa: BLE001
-            raise catch_duckdb_exception(e, self) from None
+        except Exception as e:
+            raise catch_duckdb_exception(e, self) from e
 
     @property
     def schema(self) -> dict[str, DType]:
@@ -480,9 +483,8 @@ class DuckDBLazyFrame(
         rel = self.native
         original_columns = self.columns
 
-        not_null_condition = col_to_explode.isnotnull() & F("len", col_to_explode) > lit(
-            0
-        )
+        zero = lit(0)
+        not_null_condition = col_to_explode.isnotnull() & F("len", col_to_explode) > zero
         non_null_rel = rel.filter(not_null_condition).select(
             *(
                 F("unnest", col_to_explode).alias(name) if name in columns else name
@@ -550,10 +552,3 @@ class DuckDBLazyFrame(
             (FORMAT parquet)
             """  # noqa: S608
         duckdb.sql(query)
-
-    gather_every = not_implemented.deprecated(
-        "`LazyFrame.gather_every` is deprecated and will be removed in a future version."
-    )
-    tail = not_implemented.deprecated(
-        "`LazyFrame.tail` is deprecated and will be removed in a future version."
-    )
