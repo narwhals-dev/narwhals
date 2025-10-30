@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Literal, overload
 
 from narwhals._plan import expressions as ir
 from narwhals._plan._guards import is_literal
+from narwhals._plan.expressions import selectors as cs
 from narwhals._plan.expressions.literal import is_literal_scalar
 from narwhals._plan.expressions.namespace import IRNamespace
 from narwhals.exceptions import ComputeError, InvalidOperationError
@@ -143,6 +144,17 @@ def _expr_output_name(expr: ir.ExprIR, /) -> str | ComputeError:
         if isinstance(e, ir.KeepName):
             msg = "cannot determine output column without a context for this expression"
             return ComputeError(msg)
+        # https://github.com/pola-rs/polars/pull/24064
+        if isinstance(e, ir.SelectorIR):
+            # Selector with single `by_name` is fine.
+            if (
+                isinstance(e, ir.RootSelector)
+                and isinstance(e.selector, cs.ByName)
+                and len(e.selector.names) == 1
+            ):
+                return e.selector.names[0]
+            # Other selectors aren't possible right now.
+            break
         continue
     msg = (
         f"unable to find root column name for expr '{expr!r}' when calling 'output_name'"

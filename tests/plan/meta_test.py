@@ -327,13 +327,15 @@ def test_struct_field_output_name_24003() -> None:
     assert nwp.col("ball").struct.field("radius").meta.output_name() == "radius"
 
 
-@pytest.mark.xfail(
-    reason="TODO: Single `cs.by_name` can return the name.", raises=ComputeError
-)
 def test_selector_by_name_single() -> None:
     assert ncs.by_name("foo").meta.output_name() == "foo"
 
 
 def test_selector_by_name_multiple() -> None:
-    with pytest.raises(ComputeError):
+    with pytest.raises(
+        ComputeError,
+        match=re.escape(
+            "unable to find root column name for expr 'ncs.by_name('foo', 'bar', require_all=True)' when calling 'output_name'"
+        ),
+    ):
         ncs.by_name(["foo", "bar"]).meta.output_name()
