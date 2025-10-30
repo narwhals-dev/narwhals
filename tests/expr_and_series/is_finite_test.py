@@ -14,7 +14,7 @@ from tests.conftest import (
     modin_constructor,
     pandas_constructor,
 )
-from tests.utils import Constructor, ConstructorEager, assert_equal_data
+from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 NON_NULLABLE_CONSTRUCTORS = [
     pandas_constructor,
@@ -78,6 +78,8 @@ def test_is_finite_integer_column(constructor: Constructor) -> None:
 def test_is_finite_integer_column_with_null(constructor: Constructor) -> None:
     if "sqlframe" in str(constructor):
         pytest.skip("duckdb does not handle this")
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 0, 0):
+        pytest.skip("need newer polars version")
     df = nw.from_native(constructor({"a": [1, 2, None]}))
     result = df.select(nw.col("a").is_finite())
 
