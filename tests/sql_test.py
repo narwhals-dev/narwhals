@@ -12,7 +12,7 @@ def test_sql() -> None:
         pytest.skip()
     from narwhals.sql import table
 
-    schema = {"date": nw.Date, "price": nw.Int64, "symbol": nw.String}
+    schema = {"date": nw.Date(), "price": nw.Int64(), "symbol": nw.String()}
     assets = table("assets", schema)
     result = (
         assets.with_columns(
