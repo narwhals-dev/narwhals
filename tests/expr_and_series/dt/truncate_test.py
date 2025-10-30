@@ -3,7 +3,6 @@ from __future__ import annotations
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-import pandas as pd
 import pytest
 
 import narwhals as nw
@@ -187,6 +186,9 @@ def test_truncate_invalid_multiple(constructor: Constructor) -> None:
 
 
 def test_pandas_numpy_nat() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     # The pandas implementation goes via NumPy, so check NaT are preserved.
     df = nw.from_native(
         pd.DataFrame({"a": [datetime(2020, 1, 1), None, datetime(2020, 1, 2)]})

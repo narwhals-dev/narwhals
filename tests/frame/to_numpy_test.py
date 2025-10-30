@@ -3,8 +3,10 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-import numpy as np
 import pytest
+
+pytest.importorskip("numpy")
+import numpy as np
 
 import narwhals as nw
 from tests.utils import PANDAS_VERSION, is_windows

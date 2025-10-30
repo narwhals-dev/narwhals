@@ -3,8 +3,10 @@ from __future__ import annotations
 from datetime import timedelta
 from typing import Literal
 
-import numpy as np
 import pytest
+
+pytest.importorskip("numpy")
+import numpy as np
 
 import narwhals as nw
 from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data

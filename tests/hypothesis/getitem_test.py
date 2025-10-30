@@ -3,10 +3,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Callable, cast
 
 import hypothesis.strategies as st
-import numpy as np
 import pytest
 from hypothesis import assume, given
-from hypothesis.extra.numpy import arrays
 
 import narwhals as nw
 from tests.conftest import pandas_constructor, pyarrow_table_constructor
@@ -73,6 +71,10 @@ single_selector = st.one_of(
 
 @st.composite
 def tuple_selector(draw: st.DrawFn) -> tuple[Any, Any]:
+    pytest.importorskip("numpy")
+    import numpy as np
+    from hypothesis.extra.numpy import arrays
+
     rows = st.one_of(
         st.lists(
             st.integers(
