@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals._duckdb.utils import narwhals_to_native_dtype
+from narwhals._duckdb.utils import DeferredTimeZone, narwhals_to_native_dtype
 from narwhals.translate import from_native
 from narwhals.utils import Version
 
@@ -14,15 +14,17 @@ if TYPE_CHECKING:
 
 try:
     import duckdb  # ignore-banned-import
-except ImportError as exc:  # pragma: no cover
+except ImportError as _exc:  # pragma: no cover
     msg = (
         "`narwhals.sql` requires DuckDB to be installed.\n\n"
         "Hint: run `pip install -U narwhals[sql]`"
     )
-    raise ModuleNotFoundError(msg) from exc
+    raise ModuleNotFoundError(msg) from _exc
 
 CONN = duckdb.connect()
-TZ = CONN.sql("select value from duckdb_settings() where name = 'TimeZone'").fetchone()[0]  # type: ignore[index]
+TZ = DeferredTimeZone(
+    CONN.sql("select value from duckdb_settings() where name = 'TimeZone'")
+)
 
 
 def table(name: str, schema: IntoSchema) -> LazyFrame[DuckDBPyRelation]:
