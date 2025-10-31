@@ -15,11 +15,13 @@ from narwhals._plan import expressions as ir
 from narwhals._plan._parse import parse_into_seq_of_expr_ir
 from narwhals._plan.expressions import functions as F, operators as ops
 from narwhals._plan.expressions.literal import SeriesLiteral
+from narwhals._plan.expressions.ranges import IntRange
 from narwhals.exceptions import (
     ComputeError,
     InvalidIntoExprError,
     InvalidOperationError,
     InvalidOperationError as LengthChangingExprError,
+    MultiOutputExpressionError,
     ShapeError,
 )
 from tests.plan.utils import assert_expr_ir_equal, re_compile
@@ -127,7 +129,7 @@ def test_valid_windows() -> None:
         assert nwp.sum_horizontal(a.diff().abs(), a.cum_sum()).over(order_by="i")
 
 
-def test_invalid_repeat_agg() -> None:
+def test_repeat_agg_invalid() -> None:
     with pytest.raises(InvalidOperationError):
         nwp.col("a").mean().mean()
     with pytest.raises(InvalidOperationError):
@@ -144,7 +146,7 @@ def test_invalid_repeat_agg() -> None:
 
 # NOTE: Previously multiple different errors, but they can be reduced to the same thing
 # Once we are scalar, only elementwise is allowed
-def test_invalid_agg_non_elementwise() -> None:
+def test_agg_non_elementwise_invalid() -> None:
     pattern = re.compile(r"cannot use.+rank.+aggregated.+mean", re.IGNORECASE)
     with pytest.raises(InvalidOperationError, match=pattern):
         nwp.col("a").mean().rank()
@@ -167,7 +169,7 @@ def test_agg_non_elementwise_range_special() -> None:
     assert isinstance(e_ir.expr.input[1], ir.Len)
 
 
-def test_invalid_int_range() -> None:
+def test_int_range_invalid() -> None:
     pattern = re.compile(r"scalar.+agg", re.IGNORECASE)
     with pytest.raises(InvalidOperationError, match=pattern):
         nwp.int_range(nwp.col("a"))
@@ -177,16 +179,37 @@ def test_invalid_int_range() -> None:
         nwp.int_range(0, nwp.col("a").abs())
     with pytest.raises(InvalidOperationError, match=pattern):
         nwp.int_range(nwp.col("a") + 1)
+    with pytest.raises(InvalidOperationError, match=pattern):
+        nwp.int_range((1 + nwp.col("b")).name.keep())
+    int_range = IntRange(step=1, dtype=nw.Int64())
+    with pytest.raises(InvalidOperationError, match=r"at least 2 inputs.+int_range"):
+        int_range.to_function_expr(ir.col("a"))
 
 
-# NOTE: Non-`polars`` rule
-def test_invalid_over() -> None:
+@pytest.mark.xfail(
+    reason="Not implemented `int_range(eager=True)`", raises=NotImplementedError
+)
+def test_int_range_series() -> None:
+    assert isinstance(nwp.int_range(50, eager=True), nwp.Series)
+
+
+def test_over_invalid() -> None:
+    with pytest.raises(TypeError, match=r"one of.+partition_by.+or.+order_by"):
+        nwp.col("a").last().over()
+
+    # NOTE: Non-`polars` rule
     pattern = re.compile(r"cannot use.+over.+elementwise", re.IGNORECASE)
     with pytest.raises(InvalidOperationError, match=pattern):
         nwp.col("a").fill_null(3).over("b")
 
+    # NOTE: This version isn't elementwise
+    expr_ir = nwp.col("a").fill_null(strategy="backward").over("b")._ir
+    assert isinstance(expr_ir, ir.WindowExpr)
+    assert isinstance(expr_ir.expr, ir.FunctionExpr)
+    assert isinstance(expr_ir.expr.function, F.FillNullWithStrategy)
 
-def test_nested_over() -> None:
+
+def test_over_nested() -> None:
     pattern = re.compile(r"cannot nest.+over", re.IGNORECASE)
     with pytest.raises(InvalidOperationError, match=pattern):
         nwp.col("a").mean().over("b").over("c")
@@ -196,7 +219,7 @@ def test_nested_over() -> None:
 
 # NOTE: This *can* error in polars, but only if the length **actually changes**
 # The rule then breaks down to needing the same length arrays in all parts of the over
-def test_filtration_over() -> None:
+def test_over_filtration() -> None:
     pattern = re.compile(r"cannot use.+over.+change length", re.IGNORECASE)
     with pytest.raises(InvalidOperationError, match=pattern):
         nwp.col("a").drop_nulls().over("b")
@@ -206,9 +229,9 @@ def test_filtration_over() -> None:
         nwp.col("a").diff().drop_nulls().over("b", order_by="i")
 
 
-def test_invalid_binary_expr_length_changing() -> None:
+def test_binary_expr_length_changing_invalid() -> None:
     a = nwp.col("a")
-    b = nwp.col("b")
+    b = nwp.col("b").exp()
 
     with pytest.raises(LengthChangingExprError):
         a.unique() + b.unique()
@@ -247,7 +270,7 @@ def test_binary_expr_length_changing_agg() -> None:
     )
 
 
-def test_invalid_binary_expr_shape() -> None:
+def test_binary_expr_shape_invalid() -> None:
     pattern = re.compile(
         re.escape("Cannot combine length-changing expressions with length-preserving"),
         re.IGNORECASE,
@@ -261,6 +284,8 @@ def test_invalid_binary_expr_shape() -> None:
         a.map_batches(lambda x: x, is_elementwise=True) * b.gather_every(1, 0)
     with pytest.raises(ShapeError, match=pattern):
         a / b.drop_nulls()
+    with pytest.raises(ShapeError, match=pattern):
+        a.fill_null(1) // b.rolling_mean(5)
 
 
 @pytest.mark.parametrize("into_iter", [list, tuple, deque, iter, dict.fromkeys, set])
@@ -306,7 +331,7 @@ def test_is_in_series() -> None:
         ),
     ],
 )
-def test_invalid_is_in(other: Any, context: AbstractContextManager[Any]) -> None:
+def test_is_in_invalid(other: Any, context: AbstractContextManager[Any]) -> None:
     with context:
         nwp.col("a").is_in(other)
 
