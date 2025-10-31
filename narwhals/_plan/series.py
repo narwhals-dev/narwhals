@@ -56,8 +56,9 @@ class Series(Generic[NativeSeriesT_co]):
                     )
                 )
             raise NotImplementedError(implementation)
-        msg = f"{implementation} support in Narwhals is lazy-only"
-        raise ValueError(msg)
+        else:  # pragma: no cover  # noqa: RET506
+            msg = f"{implementation} support in Narwhals is lazy-only"
+            raise ValueError(msg)
 
     @classmethod
     def from_native(
@@ -76,7 +77,7 @@ class Series(Generic[NativeSeriesT_co]):
     def to_list(self) -> list[Any]:
         return self._compliant.to_list()
 
-    def __iter__(self) -> Iterator[Any]:
+    def __iter__(self) -> Iterator[Any]:  # pragma: no cover
         yield from self.to_native()
 
     def alias(self, name: str) -> Self:
