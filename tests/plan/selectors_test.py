@@ -15,8 +15,8 @@ import narwhals.stable.v1 as nw_v1
 from narwhals import _plan as nwp
 from narwhals._plan import Expr, Selector, selectors as ncs
 from narwhals._utils import zip_strict
-from narwhals.exceptions import ColumnNotFoundError
-from tests.plan.utils import Frame, assert_expr_ir_equal, named_ir
+from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError
+from tests.plan.utils import Frame, assert_expr_ir_equal, named_ir, re_compile
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -428,6 +428,11 @@ def test_selector_expansion() -> None:
     s = s1e.meta.as_selector()
     s = s & s2e.meta.as_selector()
     df.assert_selects(s, "b", "c")
+
+    with pytest.raises(
+        InvalidOperationError, match=re_compile(r"cannot turn.+max.+into a selector")
+    ):
+        nwp.col("a").max().meta.as_selector()
 
 
 def test_selector_sets(schema_non_nested: nw.Schema, schema_mixed: nw.Schema) -> None:
