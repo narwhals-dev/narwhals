@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from narwhals._plan._guards import is_expr
 from narwhals._plan._immutable import Immutable
 from narwhals._plan._parse import (
     parse_into_expr_ir as _parse_into_expr_ir,
@@ -67,10 +66,8 @@ class Then(Immutable, Expr):
     def _from_ir(cls, expr_ir: ExprIR, /) -> Expr:  # type: ignore[override]
         return Expr._from_ir(expr_ir)
 
-    def __eq__(self, value: object) -> Expr | bool:  # type: ignore[override]
-        if is_expr(value):
-            return super(Expr, self).__eq__(value)
-        return super().__eq__(value)
+    def __eq__(self, other: IntoExpr) -> Expr:  # type: ignore[override]
+        return Expr.__eq__(self, other)
 
 
 class ChainedWhen(Immutable):
@@ -115,10 +112,8 @@ class ChainedThen(Immutable, Expr):
     def _from_ir(cls, expr_ir: ExprIR, /) -> Expr:  # type: ignore[override]
         return Expr._from_ir(expr_ir)
 
-    def __eq__(self, value: object) -> Expr | bool:  # type: ignore[override]
-        if is_expr(value):
-            return super(Expr, self).__eq__(value)
-        return super().__eq__(value)
+    def __eq__(self, other: IntoExpr) -> Expr:  # type: ignore[override]
+        return Expr.__eq__(self, other)
 
 
 def ternary_expr(predicate: ExprIR, truthy: ExprIR, falsy: ExprIR, /) -> TernaryExpr:

@@ -508,3 +508,33 @@ def test_hist_invalid() -> None:
         a.hist(deque((3, 2, 1)))
     with pytest.raises(TypeError):
         a.hist(1)  # type: ignore[arg-type]
+def test_when_invalid() -> None:
+    pattern = re_compile(r"multi-output expr.+not supported in.+when.+context")
+
+    when = nwp.when(nwp.col("a", "b", "c").is_finite())
+    when_then = when.then(nwp.col("d").is_unique())
+    when_then_when = when_then.when(
+        (nwp.median("a", "b", "c") > 2) | nwp.col("d").is_nan()
+    )
+    with pytest.raises(MultiOutputExpressionError, match=pattern):
+        when.then(nwp.max("c", "d"))
+    with pytest.raises(MultiOutputExpressionError, match=pattern):
+        when_then.otherwise(nwp.min("h", "i", "j"))
+    with pytest.raises(MultiOutputExpressionError, match=pattern):
+        when_then_when.then(nwp.col(["b", "y", "e"]))
+
+
+# NOTE: `Then`, `ChainedThen` use multi-inheritance, but **need** to use `Expr.__eq__`
+def test_then_equal() -> None:
+    expr = nwp.col("a").clip(nwp.col("a").kurtosis(), nwp.col("a").log())
+    other = "other"
+    then = nwp.when(a="b").then(nwp.col("c").skew())
+    chained_then = then.when("d").then("e")
+
+    assert isinstance(then == expr, nwp.Expr)
+    assert isinstance(then == other, nwp.Expr)
+
+    assert isinstance(chained_then == expr, nwp.Expr)
+    assert isinstance(chained_then == other, nwp.Expr)
+
+    assert isinstance(then == chained_then, nwp.Expr)
