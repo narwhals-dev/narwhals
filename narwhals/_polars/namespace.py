@@ -197,13 +197,10 @@ class PolarsNamespace:
             pl.concat_str(pl_exprs, separator=separator, ignore_nulls=ignore_nulls),
             version=self._version,
         )
-    
+
     def concat_struct(self, *exprs: PolarsExpr) -> PolarsExpr:
         pl_exprs = [expr._native_expr for expr in exprs]
-        return self._expr(
-        pl.struct(pl_exprs),
-        version=self._version,
-    )
+        return self._expr(pl.struct(pl_exprs), version=self._version)
 
     def when_then(
         self, when: PolarsExpr, then: PolarsExpr, otherwise: PolarsExpr | None = None
