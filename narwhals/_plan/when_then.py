@@ -36,10 +36,6 @@ class When(Immutable):
         return Then(condition=self.condition, statement=parse_into_expr_ir(expr))
 
     @staticmethod
-    def _from_expr(expr: Expr, /) -> When:
-        return When(condition=expr._ir)
-
-    @staticmethod
     def _from_ir(expr_ir: ExprIR, /) -> When:
         return When(condition=expr_ir)
 
