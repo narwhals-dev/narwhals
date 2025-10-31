@@ -236,10 +236,8 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         def func(expr: ir.IntegerValue | ir.FloatingValue) -> ir.Value:
             if is_floating(expr.type()):
                 expr = cast("ir.FloatingValue", expr)
-                otherwise = ~(expr.isinf() | expr.isnan())
-            else:
-                otherwise = True
-            return ibis.ifelse(expr.isnull(), None, otherwise)
+                return ~(expr.isinf() | expr.isnan())
+            return ibis.ifelse(expr.isnull(), None, lit(True))
 
         return self._with_callable(func)
 
