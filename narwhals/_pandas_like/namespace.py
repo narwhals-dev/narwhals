@@ -342,9 +342,6 @@ class PandasLikeNamespace(
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             # Evaluate each expression to a PandasLikeSeries
             series_list = [s for _expr in exprs for s in _expr(df)]
-            if not series_list:
-                msg = "At least one expression must be passed to `concat_struct`"
-                raise ValueError(msg)
 
             # Horizontally concatenate the series into a native DataFrame.
             df = self.concat(
