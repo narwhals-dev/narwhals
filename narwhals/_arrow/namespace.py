@@ -226,6 +226,22 @@ class ArrowNamespace(
             alias_output_names=combine_alias_output_names(*exprs),
             context=self,
         )
+    
+    def concat_struct(self, *exprs: ArrowExpr) -> ArrowExpr:
+        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+            series = list(chain.from_iterable(expr(df) for expr in exprs))
+            arrays = [s._native_series.combine_chunks() for s in series]
+            name = series[0].name
+            struct_array = pc.make_struct(*arrays, field_names=[s.name for s in series])
+            return [
+                self._series(struct_array, name=name, version=self._version)
+            ]
+        return self._expr._from_callable(
+            func=func,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            context=self,
+        )
 
     def coalesce(self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
