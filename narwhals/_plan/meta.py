@@ -107,25 +107,15 @@ def _expr_output_name(expr: ir.ExprIR, /) -> str | ComputeError:
         if isinstance(e, (ir.Column, ir.Alias, ir.Literal, ir.Len)):
             return e.name
         if isinstance(e, ir.RenameAlias):
-            parent_name = _expr_output_name(e.expr)
-            if isinstance(parent_name, str):
-                return e.function(parent_name)
-            return parent_name
+            parent = _expr_output_name(e.expr)
+            return e.function(parent) if isinstance(parent, str) else parent
         if isinstance(e, ir.KeepName):
             msg = "cannot determine output column without a context for this expression"
             return ComputeError(msg)
-        # https://github.com/pola-rs/polars/pull/24064
-        if isinstance(e, ir.SelectorIR):
-            # Selector with single `by_name` is fine.
-            if (
-                isinstance(e, ir.RootSelector)
-                and isinstance(e.selector, cs.ByName)
-                and len(e.selector.names) == 1
-            ):
-                return e.selector.names[0]
-            # Other selectors aren't possible right now.
-            break
-        continue
+        if isinstance(e, ir.RootSelector) and (
+            isinstance(e.selector, cs.ByName) and len(e.selector.names) == 1
+        ):
+            return e.selector.names[0]
     msg = (
         f"unable to find root column name for expr '{expr!r}' when calling 'output_name'"
     )
