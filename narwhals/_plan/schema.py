@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from functools import lru_cache
 from itertools import chain
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, Protocol, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Protocol, TypeVar, final, overload
 
 from narwhals._plan._expr_ir import NamedIR
 from narwhals._plan._immutable import Immutable
@@ -12,7 +12,7 @@ from narwhals._utils import _hasattr_static
 from narwhals.dtypes import Unknown
 
 if TYPE_CHECKING:
-    from collections.abc import ItemsView, Iterator, KeysView, ValuesView
+    from collections.abc import ItemsView, Iterable, Iterator, KeysView, ValuesView
 
     from typing_extensions import Never, TypeAlias, TypeIs
 
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 
 IntoFrozenSchema: TypeAlias = (
-    "IntoSchema | Iterator[tuple[str, DType]] | FrozenSchema | HasSchema"
+    "IntoSchema | Iterable[tuple[str, DType]] | FrozenSchema | HasSchema"
 )
 """A schema to freeze, or an already frozen one.
 
@@ -35,14 +35,15 @@ _FrozenSchemaHash: TypeAlias = "Seq[tuple[str, DType]]"
 _T2 = TypeVar("_T2")
 
 
+@final
 class FrozenSchema(Immutable):
     """Use `freeze_schema(...)` constructor to trigger caching!"""
 
     __slots__ = ("_mapping",)
     _mapping: MappingProxyType[str, DType]
 
-    def __init_subclass__(cls, *_: Never, **__: Never) -> Never:  # pragma: no cover
-        msg = f"Cannot subclass {cls.__name__!r}"
+    def __init_subclass__(cls, *_: Never, **__: Never) -> Never:
+        msg = f"Cannot subclass {FrozenSchema.__name__!r}"
         raise TypeError(msg)
 
     def merge(self, other: FrozenSchema, /) -> FrozenSchema:
@@ -111,7 +112,7 @@ class FrozenSchema(Immutable):
     def keys(self) -> KeysView[str]:
         return self._mapping.keys()
 
-    def values(self) -> ValuesView[DType]:  # pragma: no cover
+    def values(self) -> ValuesView[DType]:
         return self._mapping.values()
 
     @overload
@@ -121,15 +122,15 @@ class FrozenSchema(Immutable):
     def get(self, key: str, default: DType | _T2 | None = None, /) -> DType | _T2 | None:
         if default is not None:
             return self._mapping.get(key, default)
-        return self._mapping.get(key)  # pragma: no cover
+        return self._mapping.get(key)
 
     def __iter__(self) -> Iterator[str]:
         yield from self._mapping
 
-    def __contains__(self, key: object) -> bool:  # pragma: no cover
+    def __contains__(self, key: object) -> bool:
         return self._mapping.__contains__(key)
 
-    def __getitem__(self, key: str, /) -> DType:  # pragma: no cover
+    def __getitem__(self, key: str, /) -> DType:
         return self._mapping.__getitem__(key)
 
     def __len__(self) -> int:
