@@ -1587,6 +1587,47 @@ def concat_str(
     )
 
 
+def concat_struct(
+    exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr
+) -> Expr:
+    r"""
+    Horizontally combine multiple columns into a single struct column.
+
+    Arguments:
+        exprs: One or more expressions to combine into a struct. Strings are treated as column names.
+        *more_exprs: Additional columns or expressions, passed as positional arguments.
+
+    Returns:
+        An expression that produces a single struct column containing the given fields.
+
+    Example:
+        >>> import pandas as pd
+        >>> import narwhals as nw
+        >>>
+        >>> data = {
+        ...     "a": [1, 2, 3],
+        ...     "b": ["dogs", "cats", None],
+        ...     "c": ["play", "swim", "walk"],
+        ... }
+        >>> df_native = pd.DataFrame(data)
+        >>> (
+        ...     nw.from_native(df_native).select(
+        ...         nw.struct([nw.col("a") * 2, nw.col("b"), nw.col("c")]).alias("my_struct")
+        ...     )
+        ... )
+        ┌──────────────────────────┐
+        |     Narwhals DataFrame   |
+        |--------------------------|
+        |     my_struct            |
+        | 0  {'a': 1, 'b': 'dogs'} |
+        | 1  {'a': 2, 'b': 'cats'} |
+        | 2  {'a': 3, 'b': None}   |
+        └──────────────────────────┘
+    """
+    flat_exprs = flatten([*flatten([exprs]), *more_exprs])
+    return _expr_with_horizontal_op("concat_struct", *flat_exprs)
+
+
 def coalesce(
     exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr | NonNestedLiteral
 ) -> Expr:

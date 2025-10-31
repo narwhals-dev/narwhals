@@ -334,6 +334,37 @@ class PandasLikeNamespace(
             alias_output_names=combine_alias_output_names(*exprs),
             context=self,
         )
+    
+    def concat_struct(
+        self, *exprs: PandasLikeExpr
+    ) -> PandasLikeExpr:
+        import pyarrow.compute as pc # TODO: where to put this import?
+        import pandas as pd  # TODO: where pd.ArrowDtype should come from?
+
+        def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+            # Evaluate each expression to a PandasLikeSeries
+            series_list = [s for _expr in exprs for s in _expr(df)]
+            if not series_list:
+                msg = "At least one expression must be passed to `concat_struct`"
+                raise ValueError(msg)
+
+            # Horizontally concatenate the series into a native DataFrame.
+            df = self.concat((s.to_frame() for s in series_list), how="horizontal")._native_frame
+            df_arrow = df.convert_dtypes(dtype_backend="pyarrow")
+            arrays = [df_arrow[col].array._pa_array for col in df.columns]
+            struct_array = pc.make_struct(*arrays, field_names=df.columns)
+            struct_series = struct_array.to_pandas(types_mapper=lambda x: pd.ArrowDtype(x))
+            result = PandasLikeSeries(
+                struct_series, implementation=self._implementation, version=self._version
+            ).alias("struct")
+            return [result]
+
+        return self._expr._from_callable(
+            func=func,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            context=self,
+        )
 
     def _if_then_else(
         self,
