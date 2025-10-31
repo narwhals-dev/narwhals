@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator, Mapping, Sequence
 from itertools import chain, product
 from typing import TYPE_CHECKING, Any, Callable, Literal, cast, overload
 
@@ -33,8 +32,10 @@ from narwhals._utils import (
 )
 from narwhals.dependencies import is_pandas_like_dataframe
 from narwhals.exceptions import InvalidOperationError, ShapeError
+from narwhals.schema import Schema
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator, Mapping, Sequence
     from io import BytesIO
     from pathlib import Path
     from types import ModuleType
@@ -55,7 +56,6 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         AsofJoinStrategy,
         DTypeBackend,
-        IntoSchema,
         JoinStrategy,
         PivotAgg,
         SizedMultiIndexSelector,
@@ -147,10 +147,8 @@ class PandasLikeDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | None,
+        schema: Schema | None,
     ) -> Self:
-        from narwhals.schema import Schema
-
         implementation = context._implementation
         ns = implementation.to_native_namespace()
         Series = cast("type[pd.Series[Any]]", ns.Series)
@@ -175,7 +173,7 @@ class PandasLikeDataFrame(
             backend: Iterable[DTypeBackend] | None = None
             if aligned_data:
                 backend = iter_dtype_backends(native.dtypes, implementation)
-            native = native.astype(Schema(schema).to_pandas(backend))
+            native = native.astype(schema.to_pandas(backend))
         return cls.from_native(native, context=context)
 
     @classmethod
@@ -185,10 +183,8 @@ class PandasLikeDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | None,
+        schema: Schema | None,
     ) -> Self:
-        from narwhals.schema import Schema
-
         implementation = context._implementation
         ns = implementation.to_native_namespace()
         DataFrame = cast("type[pd.DataFrame]", ns.DataFrame)
@@ -200,7 +196,7 @@ class PandasLikeDataFrame(
             backend: Iterable[DTypeBackend] | None = None
             if data:
                 backend = iter_dtype_backends(native.dtypes, implementation)
-            native = native.astype(Schema(schema).to_pandas(backend))
+            native = native.astype(schema.to_pandas(backend))
         return cls.from_native(native, context=context)
 
     @staticmethod
@@ -223,20 +219,16 @@ class PandasLikeDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | Sequence[str] | None,
+        schema: Schema | Sequence[str] | None,
     ) -> Self:
-        from narwhals.schema import Schema
-
         implementation = context._implementation
         DataFrame: Constructor = implementation.to_native_namespace().DataFrame
-        if isinstance(schema, (Mapping, Schema)):
+        if isinstance(schema, Schema):
             it: Iterable[DTypeBackend] = (
                 get_dtype_backend(native_type, implementation)
                 for native_type in schema.values()
             )
-            native = DataFrame(data, columns=schema.keys()).astype(
-                Schema(schema).to_pandas(it)
-            )
+            native = DataFrame(data, columns=schema.keys()).astype(schema.to_pandas(it))
         else:
             native = DataFrame(data, columns=cls._numpy_column_names(data, schema))
         return cls.from_native(native, context=context)

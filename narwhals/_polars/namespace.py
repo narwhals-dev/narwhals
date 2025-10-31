@@ -22,7 +22,8 @@ if TYPE_CHECKING:
     from narwhals._polars.dataframe import Method, PolarsDataFrame, PolarsLazyFrame
     from narwhals._polars.typing import FrameT
     from narwhals._utils import Version, _LimitedContext
-    from narwhals.typing import Into1DArray, IntoDType, IntoSchema, TimeUnit, _2DArray
+    from narwhals.schema import Schema
+    from narwhals.typing import Into1DArray, IntoDType, TimeUnit, _2DArray
 
 
 class PolarsNamespace:
@@ -97,14 +98,14 @@ class PolarsNamespace:
 
     @overload
     def from_numpy(
-        self, data: _2DArray, /, schema: IntoSchema | Sequence[str] | None
+        self, data: _2DArray, /, schema: Schema | Sequence[str] | None
     ) -> PolarsDataFrame: ...
 
     def from_numpy(
         self,
         data: Into1DArray | _2DArray,
         /,
-        schema: IntoSchema | Sequence[str] | None = None,
+        schema: Schema | Sequence[str] | None = None,
     ) -> PolarsDataFrame | PolarsSeries:
         if is_numpy_array_2d(data):
             return self._dataframe.from_numpy(data, schema=schema, context=self)

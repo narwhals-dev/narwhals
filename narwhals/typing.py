@@ -302,10 +302,9 @@ Examples:
     └──────────────────┘
 """
 
-
-# TODO @dangotbanned: fix this?
-# Constructor allows tuples, but we don't support that *everywhere* yet
-IntoSchema: TypeAlias = "Mapping[str, dtypes.DType] | Schema"
+IntoSchema: TypeAlias = (
+    "Mapping[str, IntoDType] | Sequence[tuple[str, IntoDType]] | Schema"
+)
 """Anything that can be converted into a Narwhals Schema.
 
 Defined by column names and their associated *instantiated* Narwhals DType.

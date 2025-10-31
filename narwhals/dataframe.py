@@ -39,6 +39,7 @@ from narwhals._utils import (
     is_lazy_allowed,
     is_list_of,
     is_sequence_like,
+    is_sequence_of,
     is_slice_none,
     predicates_contains_list_of_bool,
     qualified_type_name,
@@ -603,7 +604,8 @@ class DataFrame(BaseFrame[DataFrameT]):
         implementation = Implementation.from_backend(backend)
         if is_eager_allowed(implementation):
             ns = cls._version.namespace.from_backend(implementation).compliant
-            compliant = ns._dataframe.from_dict(data, schema=schema, context=ns)
+            schema_ = Schema(schema) if schema is not None else None
+            compliant = ns._dataframe.from_dict(data, schema=schema_, context=ns)
             return cls(compliant, level="full")
         # NOTE: (#2786) needs resolving for extensions
         msg = (
@@ -673,7 +675,8 @@ class DataFrame(BaseFrame[DataFrameT]):
         implementation = Implementation.from_backend(backend)
         if is_eager_allowed(implementation):
             ns = cls._version.namespace.from_backend(implementation).compliant
-            compliant = ns._dataframe.from_dicts(data, schema=schema, context=ns)
+            schema_ = Schema(schema) if schema is not None else None
+            compliant = ns._dataframe.from_dicts(data, schema=schema_, context=ns)
             return cls(compliant, level="full")
         # NOTE: (#2786) needs resolving for extensions
         msg = (
@@ -745,8 +748,13 @@ class DataFrame(BaseFrame[DataFrameT]):
             raise TypeError(msg)
         implementation = Implementation.from_backend(backend)
         if is_eager_allowed(implementation):
+            schema_ = (
+                schema
+                if schema is None or is_sequence_of(schema, str)
+                else Schema(schema)
+            )
             ns = cls._version.namespace.from_backend(implementation).compliant
-            return cls(ns.from_numpy(data, schema), level="full")
+            return cls(ns.from_numpy(data, schema_), level="full")
         msg = (
             f"{implementation} support in Narwhals is lazy-only, but `DataFrame.from_numpy` is an eager-only function.\n\n"
             "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"

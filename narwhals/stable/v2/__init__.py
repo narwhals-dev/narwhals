@@ -74,7 +74,6 @@ if TYPE_CHECKING:
         Polars,
     )
     from narwhals.dataframe import MultiColSelector, MultiIndexSelector
-    from narwhals.dtypes import DType
     from narwhals.typing import (
         IntoDType,
         IntoExpr,
@@ -120,7 +119,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     def from_dict(
         cls,
         data: Mapping[str, Any],
-        schema: Mapping[str, DType] | Schema | None = None,
+        schema: IntoSchema | None = None,
         *,
         backend: IntoBackend[EagerAllowed] | None = None,
     ) -> DataFrame[Any]:
@@ -142,7 +141,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     def from_numpy(
         cls,
         data: _2DArray,
-        schema: Mapping[str, DType] | Schema | Sequence[str] | None = None,
+        schema: IntoSchema | Sequence[str] | None = None,
         *,
         backend: IntoBackend[EagerAllowed],
     ) -> DataFrame[Any]:
@@ -311,9 +310,7 @@ class Schema(NwSchema):
     _version = Version.V2
 
     @inherit_doc(NwSchema)
-    def __init__(
-        self, schema: Mapping[str, DType] | Iterable[tuple[str, DType]] | None = None
-    ) -> None:
+    def __init__(self, schema: IntoSchema | None = None) -> None:
         super().__init__(schema)
 
 
@@ -1031,7 +1028,7 @@ def from_arrow(
 
 def from_dict(
     data: Mapping[str, Any],
-    schema: Mapping[str, DType] | Schema | None = None,
+    schema: IntoSchema | None = None,
     *,
     backend: IntoBackend[EagerAllowed] | None = None,
 ) -> DataFrame[Any]:
@@ -1066,7 +1063,7 @@ from_dicts: Final = DataFrame.from_dicts
 
 def from_numpy(
     data: _2DArray,
-    schema: Mapping[str, DType] | Schema | Sequence[str] | None = None,
+    schema: IntoSchema | Sequence[str] | None = None,
     *,
     backend: IntoBackend[EagerAllowed],
 ) -> DataFrame[Any]:

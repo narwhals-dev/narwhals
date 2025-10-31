@@ -29,6 +29,7 @@ from narwhals._utils import (
 )
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import ColumnNotFoundError
+from narwhals.schema import Schema
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -49,7 +50,6 @@ if TYPE_CHECKING:
     from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.dtypes import DType
     from narwhals.typing import (
-        IntoSchema,
         JoinStrategy,
         MultiColSelector,
         MultiIndexSelector,
@@ -316,11 +316,9 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | None,
+        schema: Schema | None,
     ) -> Self:
-        from narwhals.schema import Schema
-
-        pl_schema = Schema(schema).to_polars() if schema is not None else schema
+        pl_schema = schema.to_polars() if schema is not None else schema
         return cls.from_native(pl.from_dict(data, pl_schema), context=context)
 
     @classmethod
@@ -330,11 +328,9 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | None,
+        schema: Schema | None,
     ) -> Self:
-        from narwhals.schema import Schema
-
-        pl_schema = Schema(schema).to_polars() if schema is not None else schema
+        pl_schema = schema.to_polars() if schema is not None else schema
         if not data:
             native = pl.DataFrame(schema=pl_schema)
         elif FROM_DICTS_ACCEPTS_MAPPINGS or isinstance(data[0], dict):
@@ -358,15 +354,9 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         /,
         *,
         context: _LimitedContext,  # NOTE: Maybe only `Implementation`?
-        schema: IntoSchema | Sequence[str] | None,
+        schema: Schema | Sequence[str] | None,
     ) -> Self:
-        from narwhals.schema import Schema
-
-        pl_schema = (
-            Schema(schema).to_polars()
-            if isinstance(schema, (Mapping, Schema))
-            else schema
-        )
+        pl_schema = schema.to_polars() if isinstance(schema, Schema) else schema
         return cls.from_native(pl.from_numpy(data, pl_schema), context=context)
 
     def to_narwhals(self) -> DataFrame[pl.DataFrame]:

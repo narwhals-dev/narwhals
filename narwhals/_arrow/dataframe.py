@@ -47,8 +47,8 @@ if TYPE_CHECKING:
     from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
+    from narwhals.schema import Schema
     from narwhals.typing import (
-        IntoSchema,
         JoinStrategy,
         SizedMultiIndexSelector,
         SizedMultiNameSelector,
@@ -114,11 +114,9 @@ class ArrowDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | None,
+        schema: Schema | None,
     ) -> Self:
-        from narwhals.schema import Schema
-
-        pa_schema = Schema(schema).to_arrow() if schema is not None else schema
+        pa_schema = schema.to_arrow() if schema is not None else schema
         if pa_schema and not data:
             native = pa_schema.empty_table()
         else:
@@ -132,11 +130,9 @@ class ArrowDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | None,
+        schema: Schema | None,
     ) -> Self:
-        from narwhals.schema import Schema
-
-        pa_schema = Schema(schema).to_arrow() if schema is not None else schema
+        pa_schema = schema.to_arrow() if schema is not None else schema
         if pa_schema and not data:
             native = pa_schema.empty_table()
         else:
@@ -158,13 +154,13 @@ class ArrowDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | Sequence[str] | None,
+        schema: Schema | Sequence[str] | None,
     ) -> Self:
         from narwhals.schema import Schema
 
         arrays = [pa.array(val) for val in data.T]
-        if isinstance(schema, (Mapping, Schema)):
-            native = pa.Table.from_arrays(arrays, schema=Schema(schema).to_arrow())
+        if isinstance(schema, Schema):
+            native = pa.Table.from_arrays(arrays, schema=schema.to_arrow())
         else:
             native = pa.Table.from_arrays(arrays, cls._numpy_column_names(data, schema))
         return cls.from_native(native, context=context)

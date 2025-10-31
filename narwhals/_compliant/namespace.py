@@ -29,11 +29,11 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.selectors import CompliantSelectorNamespace
     from narwhals._utils import Implementation, Version
+    from narwhals.schema import Schema
     from narwhals.typing import (
         ConcatMethod,
         Into1DArray,
         IntoDType,
-        IntoSchema,
         NonNestedLiteral,
         _2DArray,
     )
@@ -206,14 +206,14 @@ class EagerNamespace(
 
     @overload
     def from_numpy(
-        self, data: _2DArray, /, schema: IntoSchema | Sequence[str] | None
+        self, data: _2DArray, /, schema: Schema | Sequence[str] | None
     ) -> EagerDataFrameT: ...
 
     def from_numpy(
         self,
         data: Into1DArray | _2DArray,
         /,
-        schema: IntoSchema | Sequence[str] | None = None,
+        schema: Schema | Sequence[str] | None = None,
     ) -> EagerDataFrameT | EagerSeriesT_co:
         if is_numpy_array_2d(data):
             return self._dataframe.from_numpy(data, schema=schema, context=self)

@@ -58,9 +58,9 @@ if TYPE_CHECKING:
     from narwhals.dataframe import DataFrame
     from narwhals.dtypes import DType
     from narwhals.exceptions import ColumnNotFoundError
+    from narwhals.schema import Schema
     from narwhals.typing import (
         AsofJoinStrategy,
-        IntoSchema,
         JoinStrategy,
         MultiColSelector,
         MultiIndexSelector,
@@ -190,7 +190,7 @@ class CompliantDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | None,
+        schema: Schema | None,
     ) -> Self: ...
     @classmethod
     def from_dicts(
@@ -199,7 +199,7 @@ class CompliantDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | None,
+        schema: Schema | None,
     ) -> Self: ...
     @classmethod
     def from_numpy(
@@ -208,7 +208,7 @@ class CompliantDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | Sequence[str] | None,
+        schema: Schema | Sequence[str] | None,
     ) -> Self: ...
     def __array__(self, dtype: Any, *, copy: bool | None) -> _2DArray: ...
     def __getitem__(
