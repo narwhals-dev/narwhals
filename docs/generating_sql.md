@@ -33,28 +33,25 @@ from narwhals.sql import table
 
 prices = table("prices", {"date": nw.Date, "price": nw.Float64})
 
-sql_query = (
+result = (
     prices.group_by(nw.col("date").dt.truncate("1mo"))
     .agg(nw.col("price").mean())
     .sort("date")
-    .to_native()
-    .sql_query()
 )
-print(sql_query)
+print(result.to_sql())
 ```
 
-To make it look a bit prettier, or to then transpile it to other SQL dialects, you can pass it to [SQLGlot](https://github.com/tobymao/sqlglot):
+To make it look a bit prettier, or to then transpile it to other SQL dialects, you can pass `pretty=True`, but
+note that this currently requires [sqlglot](https://github.com/tobymao/sqlglot) to be installed.
 
 ```python exec="1" source="above" session="generating-sql" result="sql"
-import sqlglot
-
-print(sqlglot.transpile(sql_query, pretty=True)[0])
+print(result.to_sql(pretty=True))
 ```
 
 You can even pass a [different dialect](https://github.com/tobymao/sqlglot?tab=readme-ov-file#supported-dialects):
 
 ```python exec="1" source="above" session="generating-sql" result="sql"
-print(sqlglot.transpile(sql_query, pretty=True, dialect="databricks")[0])
+print(result.to_sql(pretty=True, dialect="databricks"))
 ```
 
 
