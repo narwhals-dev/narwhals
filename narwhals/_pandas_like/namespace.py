@@ -334,12 +334,10 @@ class PandasLikeNamespace(
             alias_output_names=combine_alias_output_names(*exprs),
             context=self,
         )
-    
-    def concat_struct(
-        self, *exprs: PandasLikeExpr
-    ) -> PandasLikeExpr:
-        import pyarrow.compute as pc
+
+    def concat_struct(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         import pandas as pd
+        import pyarrow.compute as pc
 
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             # Evaluate each expression to a PandasLikeSeries
