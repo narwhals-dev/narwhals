@@ -22,7 +22,7 @@ from narwhals.exceptions import (
     InvalidOperationError as LengthChangingExprError,
     ShapeError,
 )
-from tests.plan.utils import assert_expr_ir_equal
+from tests.plan.utils import assert_expr_ir_equal, re_compile
 
 if TYPE_CHECKING:
     from contextlib import AbstractContextManager
@@ -508,6 +508,18 @@ def test_hist_invalid() -> None:
         a.hist(deque((3, 2, 1)))
     with pytest.raises(TypeError):
         a.hist(1)  # type: ignore[arg-type]
+
+
+def test_into_expr_invalid() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    with pytest.raises(
+        TypeError, match=re_compile(r"expected.+narwhals.+got.+polars.+hint")
+    ):
+        nwp.col("a").max().over(pl.col("b"))  # type: ignore[arg-type]
+
+
 def test_when_invalid() -> None:
     pattern = re_compile(r"multi-output expr.+not supported in.+when.+context")
 
