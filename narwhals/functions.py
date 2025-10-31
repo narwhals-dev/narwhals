@@ -1587,11 +1587,8 @@ def concat_str(
     )
 
 
-def concat_struct(
-    exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr
-) -> Expr:
-    r"""
-    Horizontally combine multiple columns into a single struct column.
+def concat_struct(exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr) -> Expr:
+    r"""Horizontally combine multiple columns into a single struct column.
 
     Arguments:
         exprs: One or more expressions to combine into a struct. Strings are treated as column names.
@@ -1612,7 +1609,9 @@ def concat_struct(
         >>> df_native = pd.DataFrame(data)
         >>> (
         ...     nw.from_native(df_native).select(
-        ...         nw.struct([nw.col("a") * 2, nw.col("b"), nw.col("c")]).alias("my_struct")
+        ...         nw.struct([nw.col("a") * 2, nw.col("b"), nw.col("c")]).alias(
+        ...             "my_struct"
+        ...         )
         ...     )
         ... )
         ┌──────────────────────────┐
