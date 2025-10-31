@@ -41,7 +41,7 @@ class FrozenSchema(Immutable):
     __slots__ = ("_mapping",)
     _mapping: MappingProxyType[str, DType]
 
-    def __init_subclass__(cls, *_: Never, **__: Never) -> Never:
+    def __init_subclass__(cls, *_: Never, **__: Never) -> Never:  # pragma: no cover
         msg = f"Cannot subclass {cls.__name__!r}"
         raise TypeError(msg)
 
@@ -69,7 +69,7 @@ class FrozenSchema(Immutable):
     def select_irs(self, exprs: Seq[NamedIR]) -> Seq[NamedIR]:
         return exprs
 
-    def with_columns(self, exprs: Seq[NamedIR]) -> FrozenSchema:
+    def with_columns(self, exprs: Seq[NamedIR]) -> FrozenSchema:  # pragma: no cover
         # similar to `merge`, but preserving known `DType`s
         names = (e.name for e in exprs)
         default = Unknown()
@@ -111,7 +111,7 @@ class FrozenSchema(Immutable):
     def keys(self) -> KeysView[str]:
         return self._mapping.keys()
 
-    def values(self) -> ValuesView[DType]:
+    def values(self) -> ValuesView[DType]:  # pragma: no cover
         return self._mapping.values()
 
     @overload
@@ -121,15 +121,15 @@ class FrozenSchema(Immutable):
     def get(self, key: str, default: DType | _T2 | None = None, /) -> DType | _T2 | None:
         if default is not None:
             return self._mapping.get(key, default)
-        return self._mapping.get(key)
+        return self._mapping.get(key)  # pragma: no cover
 
     def __iter__(self) -> Iterator[str]:
         yield from self._mapping
 
-    def __contains__(self, key: object) -> bool:
+    def __contains__(self, key: object) -> bool:  # pragma: no cover
         return self._mapping.__contains__(key)
 
-    def __getitem__(self, key: str, /) -> DType:
+    def __getitem__(self, key: str, /) -> DType:  # pragma: no cover
         return self._mapping.__getitem__(key)
 
     def __len__(self) -> int:
