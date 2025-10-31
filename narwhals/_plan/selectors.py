@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, overload
 from narwhals._plan import expressions as ir
 from narwhals._plan._guards import is_column
 from narwhals._plan.common import flatten_hash_safe
-from narwhals._plan.expr import Expr
+from narwhals._plan.expr import Expr, ExprV1
 from narwhals._plan.expressions import operators as ops, selectors as s_ir
 from narwhals._utils import Version
 from narwhals.dtypes import DType
@@ -39,13 +39,8 @@ class Selector(Expr):
         return obj
 
     def as_expr(self) -> Expr:
-        if self.version is Version.MAIN:
-            return Expr._from_ir(self._ir)
-        if self.version is Version.V1:
-            from narwhals._plan.expr import ExprV1
-
-            return ExprV1._from_ir(self._ir)
-        raise NotImplementedError(self.version)
+        tp = Expr if self.version is Version.MAIN else ExprV1
+        return tp._from_ir(self._ir)
 
     def exclude(self, *names: OneOrIterable[str]) -> Selector:
         return self - by_name(*names)  # pyright: ignore[reportReturnType]

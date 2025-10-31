@@ -199,9 +199,8 @@ class SelectorIR(ExprIR, config=ExprIROptions.no_dispatch()):
     def to_narwhals(self, version: Version = Version.MAIN) -> Selector:
         from narwhals._plan.selectors import Selector, SelectorV1
 
-        if version is Version.MAIN:
-            return Selector._from_ir(self)
-        return SelectorV1._from_ir(self)
+        tp = Selector if version is Version.MAIN else SelectorV1
+        return tp._from_ir(self)
 
     def into_columns(
         self, schema: FrozenSchema, ignored_columns: Container[str]

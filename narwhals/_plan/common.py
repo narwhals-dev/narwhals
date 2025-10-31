@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 
 if sys.version_info >= (3, 13):
     from copy import replace as replace  # noqa: PLC0414
-else:
+else:  # pragma: no cover
 
     def replace(obj: T, /, **changes: Any) -> T:
         cls = obj.__class__

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import typing as t
+from typing import TYPE_CHECKING
 
 from narwhals._plan._expr_ir import ExprIR, SelectorIR
 from narwhals._plan.common import replace
@@ -25,7 +26,7 @@ from narwhals._plan.typing import (
 )
 from narwhals.exceptions import InvalidOperationError
 
-if t.TYPE_CHECKING:
+if TYPE_CHECKING:
     from collections.abc import Container, Iterable, Iterator
 
     from typing_extensions import Self
@@ -241,7 +242,7 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT_co], child=("input",)):
             yield from e.iter_output_name()
 
     # NOTE: Interacting badly with `pyright` synthesizing the `__replace__` signature
-    if not t.TYPE_CHECKING:
+    if not TYPE_CHECKING:
 
         def __init__(
             self,
@@ -256,6 +257,8 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT_co], child=("input",)):
                 raise function_expr_invalid_operation_error(function, parent)
             kwargs = dict(input=input, function=function, options=options, **kwds)
             super().__init__(**kwargs)
+    else:  # pragma: no cover
+        ...
 
     def dispatch(
         self: Self, ctx: Ctx[FrameT_contra, R_co], frame: FrameT_contra, name: str

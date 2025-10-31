@@ -31,6 +31,8 @@ class Immutable(metaclass=ImmutableMeta):
         # NOTE: Trying to avoid this being added to synthesized `__init__`
         # Seems to be the only difference when decorating the metaclass
         __immutable_hash_value__: int
+    else:  # pragma: no cover
+        ...
 
     __immutable_keys__: ClassVar[tuple[str, ...]]
 

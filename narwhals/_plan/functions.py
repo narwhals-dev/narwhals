@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import builtins
 import typing as t
+from typing import TYPE_CHECKING
 
 from narwhals._plan import _guards, _parse, common, expressions as ir, selectors as cs
 from narwhals._plan.expressions import functions as F
@@ -11,7 +12,7 @@ from narwhals._plan.expressions.strings import ConcatStr
 from narwhals._plan.when_then import When
 from narwhals._utils import Version, flatten
 
-if t.TYPE_CHECKING:
+if TYPE_CHECKING:
     from narwhals._plan.expr import Expr
     from narwhals._plan.series import Series
     from narwhals._plan.typing import IntoExpr, IntoExprColumn, NativeSeriesT
