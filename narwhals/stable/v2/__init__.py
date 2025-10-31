@@ -1030,7 +1030,7 @@ def from_arrow(
 
 def from_dict(
     data: Mapping[str, Any],
-    schema: IntoSchema | Mapping[str, IntoDType | None] | None = None,
+    schema: IntoSchema | IntoNullableSchema | None = None,
     *,
     backend: IntoBackend[EagerAllowed] | None = None,
 ) -> DataFrame[Any]:
