@@ -22,7 +22,7 @@ repos:
       args: [--ignore-words-list=ser]
       exclude: ^docs/api-completeness.md$
 - repo: https://github.com/crate-ci/typos
-  rev: 'v1'
+  rev: 'v1.39.0'
   hooks:
     - id: typos
 -   repo: https://github.com/pycqa/flake8
