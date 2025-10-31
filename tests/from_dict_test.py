@@ -100,8 +100,12 @@ def test_from_dict_dtype_none(eager_backend: EagerAllowed) -> None:
     assert_equal_data(result, data)
 
 
-def test_from_dict_schema_too_long(eager_backend: EagerAllowed) -> None:
+def test_from_dict_schema_mismatched(eager_backend: EagerAllowed) -> None:
     schema = {"a": nw.String(), "b": None, "c": None}
+    data = {"a": ["a", "b"], "b": [1, 2]}
+    with pytest.raises(InvalidOperationError):
+        nw.from_dict(data, schema, backend=eager_backend)
+    schema = {"a": nw.String()}
     data = {"a": ["a", "b"], "b": [1, 2]}
     with pytest.raises(InvalidOperationError):
         nw.from_dict(data, schema, backend=eager_backend)
