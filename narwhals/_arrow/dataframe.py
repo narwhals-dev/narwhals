@@ -16,10 +16,12 @@ from narwhals._arrow.utils import (
 from narwhals._compliant import EagerDataFrame
 from narwhals._utils import (
     Implementation,
+    NullableSchema,
     Version,
     check_column_names_are_unique,
     convert_str_slice_to_int_slice,
     generate_temporary_column_name,
+    is_sequence_of,
     not_implemented,
     parse_columns_to_drop,
     scale_bytes,
@@ -53,6 +55,7 @@ if TYPE_CHECKING:
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.typing import (
+        IntoNullableSchema,
         IntoSchema,
         JoinStrategy,
         SizedMultiIndexSelector,
@@ -119,36 +122,37 @@ class ArrowDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | Mapping[str, DType | None] | None,
+        schema: IntoSchema | IntoNullableSchema | None = None,
     ) -> Self:
         if not schema and not data:
             return cls.from_native(pa.table({}), context=context)
         if not schema:
             return cls.from_native(pa.table(data), context=context)  # type: ignore[arg-type]
-        if not any(dtype is None for dtype in schema.values()):
-            from narwhals.schema import Schema
+        nullable_schema = NullableSchema(schema)
 
-            pa_schema = Schema(cast("IntoSchema", schema)).to_arrow()
-            if pa_schema and not data:
-                native = pa_schema.empty_table()
-            else:
-                native = pa.Table.from_pydict(data, schema=pa_schema)
-            return cls.from_native(native, context=context)
-        if context._implementation._backend_version() < (14,):
-            msg = "Passing `None` dtype in `from_dict` requires PyArrow>=14"
-            raise NotImplementedError(msg)
-        res = pa.table(
-            {
-                name: pa.chunked_array(  # type: ignore[misc]
-                    [data[name] if data else []],
-                    type=narwhals_to_native_dtype(nw_dtype, version=context._version)
-                    if nw_dtype is not None
-                    else None,
-                )
-                for name, nw_dtype in schema.items()
-            }
-        )
-        return cls.from_native(pa.table(res), context=context)
+        if nullable_schema.is_nullable:
+            if context._implementation._backend_version() < (14,):
+                msg = "Passing `None` dtype in `from_dict` requires PyArrow>=14"
+                raise NotImplementedError(msg)
+            res = pa.table(
+                {
+                    name: pa.chunked_array(  # type: ignore[misc]
+                        [data[name] if data else []],
+                        type=narwhals_to_native_dtype(nw_dtype, version=context._version)
+                        if nw_dtype is not None
+                        else None,
+                    )
+                    for name, nw_dtype in nullable_schema.items()
+                }
+            )
+            return cls.from_native(pa.table(res), context=context)
+
+        pa_schema = nullable_schema.to_schema().to_arrow()
+        if pa_schema and not data:
+            native = pa_schema.empty_table()
+        else:
+            native = pa.Table.from_pydict(data, schema=pa_schema)
+        return cls.from_native(native, context=context)
 
     @classmethod
     def from_dicts(
@@ -157,17 +161,13 @@ class ArrowDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | Mapping[str, DType | None] | None,
+        schema: IntoSchema | IntoNullableSchema | None = None,
     ) -> Self:
-        from narwhals.schema import Schema
-
-        if schema and any(dtype is None for dtype in schema.values()):
+        if schema and (nullable_schema := NullableSchema(schema)).is_nullable:
             msg = "`from_dicts` with `schema` where any dtype is `None` is not supported for PyArrow."
             raise NotImplementedError(msg)
         pa_schema = (
-            Schema(cast("IntoSchema", schema)).to_arrow()
-            if schema is not None
-            else schema
+            nullable_schema.to_schema().to_arrow() if schema is not None else schema
         )
         if pa_schema and not data:
             native = pa_schema.empty_table()
@@ -195,10 +195,10 @@ class ArrowDataFrame(
         from narwhals.schema import Schema
 
         arrays = [pa.array(val) for val in data.T]
-        if isinstance(schema, (Mapping, Schema)):
-            native = pa.Table.from_arrays(arrays, schema=Schema(schema).to_arrow())
-        else:
+        if is_sequence_of(schema, str) or schema is None:
             native = pa.Table.from_arrays(arrays, cls._numpy_column_names(data, schema))
+        else:
+            native = pa.Table.from_arrays(arrays, schema=Schema(schema).to_arrow())
         return cls.from_native(native, context=context)
 
     def __narwhals_namespace__(self) -> ArrowNamespace:

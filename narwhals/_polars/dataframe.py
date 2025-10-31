@@ -16,6 +16,7 @@ from narwhals._polars.utils import (
 )
 from narwhals._utils import (
     Implementation,
+    NullableSchema,
     _into_arrow_table,
     convert_str_slice_to_int_slice,
     generate_temporary_column_name,
@@ -23,6 +24,7 @@ from narwhals._utils import (
     is_index_selector,
     is_range,
     is_sequence_like,
+    is_sequence_of,
     is_slice_index,
     is_slice_none,
     parse_columns_to_drop,
@@ -50,6 +52,7 @@ if TYPE_CHECKING:
     from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.dtypes import DType
     from narwhals.typing import (
+        IntoNullableSchema,
         IntoSchema,
         JoinStrategy,
         MultiColSelector,
@@ -317,14 +320,14 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | Mapping[str, DType | None] | None,
+        schema: IntoSchema | IntoNullableSchema | None = None,
     ) -> Self:
         pl_schema = (
             {
                 key: narwhals_to_native_dtype(dtype, context._version)
                 if dtype is not None
                 else None
-                for (key, dtype) in schema.items()
+                for (key, dtype) in NullableSchema(schema).items()
             }
             if schema
             else None
@@ -338,14 +341,14 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | Mapping[str, DType | None] | None,
+        schema: IntoSchema | IntoNullableSchema | None = None,
     ) -> Self:
         pl_schema = (
             {
                 key: narwhals_to_native_dtype(dtype, context._version)
                 if dtype is not None
                 else None
-                for (key, dtype) in schema.items()
+                for (key, dtype) in NullableSchema(schema).items()
             }
             if schema
             else None
@@ -378,9 +381,9 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         from narwhals.schema import Schema
 
         pl_schema = (
-            Schema(schema).to_polars()
-            if isinstance(schema, (Mapping, Schema))
-            else schema
+            schema
+            if is_sequence_of(schema, str) or schema is None
+            else Schema(schema).to_polars()
         )
         return cls.from_native(pl.from_numpy(data, pl_schema), context=context)
 

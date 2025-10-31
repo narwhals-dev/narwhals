@@ -302,13 +302,12 @@ Examples:
     └──────────────────┘
 """
 
-
-# TODO @dangotbanned: fix this?
-# Constructor allows tuples, but we don't support that *everywhere* yet
-IntoSchema: TypeAlias = "Mapping[str, dtypes.DType] | Schema"
+IntoSchema: TypeAlias = (
+    "Mapping[str, IntoDType] | Sequence[tuple[str, IntoDType]] | Schema"
+)
 """Anything that can be converted into a Narwhals Schema.
 
-Defined by column names and their associated *instantiated* Narwhals DType.
+Defined by column names and their associated Narwhals DType.
 
 Examples:
     >>> import narwhals as nw
@@ -331,7 +330,30 @@ Examples:
     |b: [[null,"hi","howdy"]]|
     |c: [[2.1,2,null]]       |
     └────────────────────────┘
+
+    >>> nw.DataFrame.from_dict(
+    ...     data,
+    ...     schema=[("a", nw.Int32()), ("b", nw.String), ("c", nw.Float64())],
+    ...     backend="pyarrow",
+    ... )
+    ┌────────────────────────┐
+    |   Narwhals DataFrame   |
+    |------------------------|
+    |pyarrow.Table           |
+    |a: int32                |
+    |b: string               |
+    |c: float                |
+    |----                    |
+    |a: [[1,2,3]]            |
+    |b: [[null,"hi","howdy"]]|
+    |c: [[2.1,2,null]]       |
+    └────────────────────────┘
 """
+
+IntoNullableSchema: TypeAlias = (
+    "Mapping[str, IntoDType | None] | Sequence[tuple[str, IntoDType | None]]"
+)
+"""Schema specification with possible None values."""
 
 IntoArrowSchema: TypeAlias = "pa.Schema | Mapping[str, pa.DataType]"
 IntoPolarsSchema: TypeAlias = "pl.Schema | Mapping[str, pl.DataType]"

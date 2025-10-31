@@ -17,12 +17,7 @@ from narwhals._utils import (
     supports_arrow_c_stream,
     validate_laziness,
 )
-from narwhals.dependencies import (
-    is_narwhals_series,
-    is_numpy_array,
-    is_numpy_array_2d,
-    is_pyarrow_table,
-)
+from narwhals.dependencies import is_narwhals_series, is_numpy_array, is_pyarrow_table
 from narwhals.exceptions import InvalidOperationError
 from narwhals.expr import Expr
 from narwhals.translate import from_native, to_native
@@ -30,13 +25,12 @@ from narwhals.translate import from_native, to_native
 if TYPE_CHECKING:
     from types import ModuleType
 
-    from typing_extensions import TypeAlias, TypeIs
+    from typing_extensions import TypeIs
 
     from narwhals._native import NativeDataFrame, NativeLazyFrame, NativeSeries
     from narwhals._translate import IntoArrowTable
     from narwhals._typing import Backend, EagerAllowed, IntoBackend
     from narwhals.dataframe import DataFrame, LazyFrame
-    from narwhals.dtypes import DType
     from narwhals.series import Series
     from narwhals.typing import (
         ConcatMethod,
@@ -44,12 +38,11 @@ if TYPE_CHECKING:
         FrameT,
         IntoDType,
         IntoExpr,
+        IntoNullableSchema,
         IntoSchema,
         NonNestedLiteral,
         _2DArray,
     )
-
-    _IntoSchema: TypeAlias = "IntoSchema | Sequence[str] | None"
 
 
 def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> FrameT:
@@ -229,7 +222,7 @@ def _new_series_impl(
 @deprecate_native_namespace(warn_version="1.26.0")
 def from_dict(
     data: Mapping[str, Any],
-    schema: IntoSchema | Mapping[str, DType | None] | None = None,
+    schema: IntoSchema | IntoNullableSchema | None = None,
     *,
     backend: IntoBackend[EagerAllowed] | None = None,
     native_namespace: ModuleType | None = None,  # noqa: ARG001
@@ -273,33 +266,7 @@ def from_dict(
         |     1  2  4      |
         └──────────────────┘
     """
-    if backend is None:
-        data, backend = _from_dict_no_backend(data)
-    if schema and data and (diff := set(schema.keys()).symmetric_difference(data.keys())):
-        msg = f"Keys in `schema` and `data` are expected to match, found unmatched keys: {diff}"
-        raise InvalidOperationError(msg)
-    implementation = Implementation.from_backend(backend)
-    if is_eager_allowed(implementation):
-        ns = Version.MAIN.namespace.from_backend(implementation).compliant
-        return ns._dataframe.from_dict(data, schema=schema, context=ns).to_narwhals()
-    if implementation is Implementation.UNKNOWN:  # pragma: no cover
-        _native_namespace = implementation.to_native_namespace()
-        try:
-            # implementation is UNKNOWN, Narwhals extension using this feature should
-            # implement `from_dict` function in the top-level namespace.
-            native_frame: NativeDataFrame = _native_namespace.from_dict(
-                data, schema=schema
-            )
-        except AttributeError as e:
-            msg = "Unknown namespace is expected to implement `from_dict` function."
-            raise AttributeError(msg) from e
-        return from_native(native_frame, eager_only=True)
-    msg = (
-        f"{implementation} support in Narwhals is lazy-only, but `from_dict` is an eager-only function.\n\n"
-        "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
-        f"    nw.from_dict({{'a': [1, 2]}}, backend='pyarrow').lazy('{implementation}')"
-    )
-    raise ValueError(msg)
+    return Version.MAIN.dataframe.from_dict(data, schema, backend=backend)
 
 
 def _from_dict_no_backend(
@@ -318,7 +285,7 @@ def _from_dict_no_backend(
 
 def from_dicts(
     data: Sequence[Mapping[str, Any]],
-    schema: IntoSchema | Mapping[str, DType | None] | None = None,
+    schema: IntoSchema | IntoNullableSchema | None = None,
     *,
     backend: IntoBackend[EagerAllowed],
 ) -> DataFrame[Any]:
@@ -423,41 +390,10 @@ def from_numpy(
         |  e: [[1,3]]      |
         └──────────────────┘
     """
-    if not is_numpy_array_2d(data):
-        msg = "`from_numpy` only accepts 2D numpy arrays"
-        raise ValueError(msg)
-    if not _is_into_schema(schema):
-        msg = (
-            "`schema` is expected to be one of the following types: "
-            "IntoSchema | Sequence[str]. "
-            f"Got {type(schema)}."
-        )
-        raise TypeError(msg)
-    implementation = Implementation.from_backend(backend)
-    if is_eager_allowed(implementation):
-        ns = Version.MAIN.namespace.from_backend(implementation).compliant
-        return ns.from_numpy(data, schema).to_narwhals()
-    if implementation is Implementation.UNKNOWN:  # pragma: no cover
-        _native_namespace = implementation.to_native_namespace()
-        try:
-            # implementation is UNKNOWN, Narwhals extension using this feature should
-            # implement `from_numpy` function in the top-level namespace.
-            native_frame: NativeDataFrame = _native_namespace.from_numpy(
-                data, schema=schema
-            )
-        except AttributeError as e:
-            msg = "Unknown namespace is expected to implement `from_numpy` function."
-            raise AttributeError(msg) from e
-        return from_native(native_frame, eager_only=True)
-    msg = (
-        f"{implementation} support in Narwhals is lazy-only, but `from_numpy` is an eager-only function.\n\n"
-        "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
-        f"    nw.from_numpy(arr, backend='pyarrow').lazy('{implementation}')"
-    )
-    raise ValueError(msg)
+    return Version.MAIN.dataframe.from_numpy(data, schema, backend=backend)
 
 
-def _is_into_schema(obj: Any) -> TypeIs[_IntoSchema]:
+def _is_into_schema(obj: Any) -> TypeIs[IntoSchema]:
     from narwhals.schema import Schema
 
     return (

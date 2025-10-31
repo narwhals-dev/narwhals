@@ -61,6 +61,7 @@ if TYPE_CHECKING:
     from narwhals.exceptions import ColumnNotFoundError
     from narwhals.typing import (
         AsofJoinStrategy,
+        IntoNullableSchema,
         IntoSchema,
         JoinStrategy,
         MultiColSelector,
@@ -191,7 +192,7 @@ class CompliantDataFrame(
         /,
         *,
         context: CompliantNamespaceAny,
-        schema: IntoSchema | Mapping[str, DType | None] | None,
+        schema: IntoSchema | IntoNullableSchema | None,
     ) -> Self: ...
     @classmethod
     def from_dicts(
@@ -200,7 +201,7 @@ class CompliantDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | Mapping[str, DType | None] | None,
+        schema: IntoSchema | IntoNullableSchema | None,
     ) -> Self: ...
     @classmethod
     def from_numpy(
