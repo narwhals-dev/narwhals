@@ -26,7 +26,7 @@ TZ = DeferredTimeZone(
 )
 
 
-class SQLTable(LazyFrame["DuckDBPyRelation"]):
+class SQLTable(LazyFrame[duckdb.DuckDBPyRelation]):
     def __init__(
         self, df: CompliantLazyFrameAny, level: Literal["full", "interchange", "lazy"]
     ) -> None:
