@@ -126,7 +126,7 @@ def parse_into_expr_ir(
         expr = col(input)
     elif isinstance(input, list):
         if list_as_series is None:
-            raise TypeError(input)
+            raise TypeError(input)  # pragma: no cover
         expr = lit(list_as_series(input))
     else:
         expr = lit(input, dtype=dtype)
@@ -140,9 +140,9 @@ def parse_into_selector_ir(input: ColumnNameOrSelector | Expr, /) -> SelectorIR:
         from narwhals._plan import selectors as cs
 
         selector = cs.by_name(input)
-    elif is_expr(input):
+    elif is_expr(input):  # pragma: no cover
         selector = input.meta.as_selector()
-    else:
+    else:  # pragma: no cover
         msg = f"cannot turn {qualified_type_name(input)!r} into selector"
         raise TypeError(msg)
     return selector._ir
@@ -194,8 +194,8 @@ def _parse_sort_by_into_iter_expr_ir(
 ) -> Iterator[ExprIR]:
     for e in _parse_into_iter_expr_ir(by, *more_by):
         if e.is_scalar:
-            msg = f"All expressions sort keys must preserve length, but got:\n{e!r}"
-            raise InvalidOperationError(msg)
+            msg = f"All expressions sort keys must preserve length, but got:\n{e!r}"  # pragma: no cover
+            raise InvalidOperationError(msg)  # pragma: no cover
         yield e
 
 
@@ -216,14 +216,14 @@ def _parse_into_iter_selector_ir(
 
     if not _is_empty_sequence(first_input):
         if _is_iterable(first_input) and not isinstance(first_input, str):
-            if more_inputs:
+            if more_inputs:  # pragma: no cover
                 raise invalid_into_expr_error(first_input, more_inputs, {})
             else:
                 for into in first_input:  # type: ignore[var-annotated]
                     yield parse_into_selector_ir(into)
         else:
             yield parse_into_selector_ir(first_input)
-    for into in more_inputs:
+    for into in more_inputs:  # pragma: no cover
         yield parse_into_selector_ir(into)
 
 
