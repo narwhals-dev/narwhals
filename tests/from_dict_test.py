@@ -5,8 +5,9 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals as nw
+from narwhals.exceptions import InvalidOperationError
 from narwhals.utils import Implementation
-from tests.utils import Constructor, assert_equal_data
+from tests.utils import PYARROW_VERSION, Constructor, assert_equal_data
 
 if TYPE_CHECKING:
     from narwhals._typing import EagerAllowed, Polars
@@ -86,6 +87,27 @@ def test_from_dict_empty_with_schema(eager_backend: EagerAllowed) -> None:
     schema = nw.Schema({"a": nw.String(), "b": nw.Int8()})
     result = nw.from_dict({}, schema, backend=eager_backend)
     assert result.schema == schema
+
+
+def test_from_dict_dtype_none(eager_backend: EagerAllowed) -> None:
+    if str(eager_backend) == "pyarrow" and PYARROW_VERSION < (14,):
+        pytest.skip()
+    schema = {"a": nw.String(), "b": None}
+    data = {"a": ["a", "b"], "b": [1, 2]}
+    result = nw.from_dict(data, schema, backend=eager_backend)
+    assert result.schema == {"a": nw.String(), "b": nw.Int64}
+    assert_equal_data(result, data)
+
+
+def test_from_dict_schema_mismatched(eager_backend: EagerAllowed) -> None:
+    schema = {"a": nw.String(), "b": None, "c": None}
+    data = {"a": ["a", "b"], "b": [1, 2]}
+    with pytest.raises(InvalidOperationError):
+        nw.from_dict(data, schema, backend=eager_backend)
+    schema = {"a": nw.String()}
+    data = {"a": ["a", "b"], "b": [1, 2]}
+    with pytest.raises(InvalidOperationError):
+        nw.from_dict(data, schema, backend=eager_backend)
 
 
 def test_alignment() -> None:

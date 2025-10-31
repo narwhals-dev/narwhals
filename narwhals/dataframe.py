@@ -72,6 +72,7 @@ if TYPE_CHECKING:
     from narwhals._expression_parsing import ExprMetadata
     from narwhals._translate import IntoArrowTable
     from narwhals._typing import EagerAllowed, IntoBackend, LazyAllowed, Polars
+    from narwhals.dtypes import DType
     from narwhals.group_by import GroupBy, LazyGroupBy
     from narwhals.typing import (
         AsofJoinStrategy,
@@ -558,7 +559,7 @@ class DataFrame(BaseFrame[DataFrameT]):
     def from_dict(
         cls,
         data: Mapping[str, Any],
-        schema: IntoSchema | None = None,
+        schema: IntoSchema | Mapping[str, DType | None] | None = None,
         *,
         backend: IntoBackend[EagerAllowed] | None = None,
     ) -> DataFrame[Any]:
@@ -574,7 +575,9 @@ class DataFrame(BaseFrame[DataFrameT]):
         Arguments:
             data: Dictionary to create DataFrame from.
             schema: The DataFrame schema as Schema or dict of {name: type}. If not
-                specified, the schema will be inferred by the native library.
+                specified, the schema will be inferred by the native library. If
+                any `dtype` is `None`, the data type for that column will be inferred
+                by the native library.
             backend: specifies which eager backend instantiate to. Only
                 necessary if inputs are not Narwhals Series.
 
@@ -617,7 +620,7 @@ class DataFrame(BaseFrame[DataFrameT]):
     def from_dicts(
         cls,
         data: Sequence[Mapping[str, Any]],
-        schema: IntoSchema | None = None,
+        schema: IntoSchema | Mapping[str, DType | None] | None = None,
         *,
         backend: IntoBackend[EagerAllowed],
     ) -> DataFrame[Any]:
@@ -630,7 +633,9 @@ class DataFrame(BaseFrame[DataFrameT]):
         Arguments:
             data: Sequence with dictionaries mapping column name to value.
             schema: The DataFrame schema as Schema or dict of {name: type}. If not
-                specified, the schema will be inferred by the native library.
+                specified, the schema will be inferred by the native library. If
+                any `dtype` is `None`, the data type for that column will be inferred
+                by the native library.
             backend: Specifies which eager backend instantiate to.
 
                 `backend` can be specified in various ways
