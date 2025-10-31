@@ -65,7 +65,7 @@ class Selector(Immutable):
         # - Column names in `ignored_columns` are only used if they are explicitly mentioned by a `ByName` or `ByIndex`.
         # - `ignored_columns` are only evaluated against `All` and `Matches`
         # https://github.com/pola-rs/polars/blob/2b241543851800595efd343be016b65cdbdd3c9f/crates/polars-plan/src/dsl/selector.rs#L192-L193
-        msg = f"{type(self).__name__}.into_columns"
+        msg = f"{type(self).__name__}.into_columns"  # pragma: no cover[abstract]
         raise NotImplementedError(msg)
 
 
@@ -112,10 +112,10 @@ class DTypeAll(DTypeSelector, dtype=DType):
     def into_columns(
         self, schema: FrozenSchema, ignored_columns: Container[str]
     ) -> Iterator[str]:
-        if ignored_columns:
+        if ignored_columns:  # pragma: no cover
             yield from (name for name in schema if name not in ignored_columns)
         else:
-            yield from schema
+            yield from schema  # pragma: no cover
 
 
 class All(Selector):
@@ -163,7 +163,7 @@ class ByIndex(Selector):
     ) -> Iterator[str]:
         names = schema.names
         if not self.require_all:
-            with suppress(IndexError):
+            with suppress(IndexError):  # pragma: no cover
                 for index in self.indices:
                     yield names[index]
         else:

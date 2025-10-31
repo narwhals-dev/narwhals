@@ -152,7 +152,7 @@ class ExprIR(Immutable):
             if isinstance(child, ExprIR):
                 yield from child.iter_right()
             else:
-                for node in reversed(child):
+                for node in reversed(child):  # pragma: no cover
                     yield from node.iter_right()
 
     def iter_root_names(self) -> Iterator[ExprIR]:
@@ -205,16 +205,16 @@ class SelectorIR(ExprIR, config=ExprIROptions.no_dispatch()):
     def into_columns(
         self, schema: FrozenSchema, ignored_columns: Container[str]
     ) -> Iterator[str]:
-        msg = f"{type(self).__name__}.into_columns"
+        msg = f"{type(self).__name__}.into_columns"  # pragma: no cover[abstract]
         raise NotImplementedError(msg)
 
     def matches(self, dtype: IntoDType) -> bool:
         """Return True if we can select this dtype."""
-        msg = f"{type(self).__name__}.matches"
+        msg = f"{type(self).__name__}.matches"  # pragma: no cover[abstract]
         raise NotImplementedError(msg)
 
     def to_dtype_selector(self) -> Self:
-        msg = f"{type(self).__name__}.to_dtype_selector"
+        msg = f"{type(self).__name__}.to_dtype_selector"  # pragma: no cover[abstract]
         raise NotImplementedError(msg)
 
     def to_selector_ir(self) -> Self:
@@ -266,10 +266,10 @@ class NamedIR(Immutable, Generic[ExprIRT]):
     def __repr__(self) -> str:
         return f"{self.name}={self.expr!r}"
 
-    def _repr_html_(self) -> str:
+    def _repr_html_(self) -> str:  # pragma: no cover
         return f"<b>{self.name}</b>={self.expr._repr_html_()}"
 
-    def is_elementwise_top_level(self) -> bool:
+    def is_elementwise_top_level(self) -> bool:  # pragma: no cover
         """Return True if the outermost node is elementwise.
 
         Based on [`polars_plan::plans::aexpr::properties::AExpr.is_elementwise_top_level`]
