@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import operator
+from datetime import date, datetime
 from functools import reduce
 from itertools import chain
 from typing import TYPE_CHECKING, cast
@@ -8,12 +9,7 @@ from typing import TYPE_CHECKING, cast
 import dask.dataframe as dd
 import pandas as pd
 
-from narwhals._compliant import (
-    CompliantThen,
-    CompliantWhen,
-    DepthTrackingNamespace,
-    LazyNamespace,
-)
+from narwhals._compliant import DepthTrackingNamespace, LazyNamespace
 from narwhals._dask.dataframe import DaskLazyFrame
 from narwhals._dask.expr import DaskExpr
 from narwhals._dask.selectors import DaskSelectorNamespace
@@ -23,18 +19,16 @@ from narwhals._dask.utils import (
     validate_comparand,
 )
 from narwhals._expression_parsing import (
-    ExprKind,
     combine_alias_output_names,
     combine_evaluate_output_names,
 )
 from narwhals._utils import Implementation, zip_strict
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Sequence
+    from collections.abc import Iterable, Iterator
 
     import dask.dataframe.dask_expr as dx
 
-    from narwhals._compliant.typing import ScalarKwargs
     from narwhals._utils import Version
     from narwhals.typing import ConcatMethod, IntoDType, NonNestedLiteral
 
@@ -65,6 +59,13 @@ class DaskNamespace(
             if dtype is not None:
                 native_dtype = narwhals_to_native_dtype(dtype, self._version)
                 native_pd_series = pd.Series([value], dtype=native_dtype, name="literal")
+            elif isinstance(value, date) and not isinstance(
+                value, datetime
+            ):  # pragma: no cover
+                # Dask auto-infers this as object type, which causes issues down the line.
+                # This shows up in TPC-H q8.
+                native_dtype = "date32[pyarrow]"
+                native_pd_series = pd.Series([value], dtype=native_dtype, name="literal")
             else:
                 native_pd_series = pd.Series([value], name="literal")
             npartitions = df._native_frame.npartitions
@@ -73,8 +74,6 @@ class DaskNamespace(
 
         return self._expr(
             func,
-            depth=0,
-            function_name="lit",
             evaluate_output_names=lambda _df: ["literal"],
             alias_output_names=None,
             version=self._version,
@@ -87,8 +86,6 @@ class DaskNamespace(
 
         return self._expr(
             func,
-            depth=0,
-            function_name="len",
             evaluate_output_names=lambda _df: ["len"],
             alias_output_names=None,
             version=self._version,
@@ -106,8 +103,6 @@ class DaskNamespace(
 
         return self._expr(
             call=func,
-            depth=max(x._depth for x in exprs) + 1,
-            function_name="all_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
             version=self._version,
@@ -122,8 +117,6 @@ class DaskNamespace(
 
         return self._expr(
             call=func,
-            depth=max(x._depth for x in exprs) + 1,
-            function_name="any_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
             version=self._version,
@@ -138,8 +131,6 @@ class DaskNamespace(
 
         return self._expr(
             call=func,
-            depth=max(x._depth for x in exprs) + 1,
-            function_name="sum_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
             version=self._version,
@@ -188,8 +179,6 @@ class DaskNamespace(
 
         return self._expr(
             call=func,
-            depth=max(x._depth for x in exprs) + 1,
-            function_name="mean_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
             version=self._version,
@@ -205,8 +194,6 @@ class DaskNamespace(
 
         return self._expr(
             call=func,
-            depth=max(x._depth for x in exprs) + 1,
-            function_name="min_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
             version=self._version,
@@ -222,15 +209,10 @@ class DaskNamespace(
 
         return self._expr(
             call=func,
-            depth=max(x._depth for x in exprs) + 1,
-            function_name="max_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
             version=self._version,
         )
-
-    def when(self, predicate: DaskExpr) -> DaskWhen:
-        return DaskWhen.from_expr(predicate, context=self)
 
     def concat_str(
         self, *exprs: DaskExpr, separator: str, ignore_nulls: bool
@@ -266,8 +248,6 @@ class DaskNamespace(
 
         return self._expr(
             call=func,
-            depth=max(x._depth for x in exprs) + 1,
-            function_name="concat_str",
             evaluate_output_names=getattr(
                 exprs[0], "_evaluate_output_names", lambda _df: ["literal"]
             ),
@@ -284,55 +264,55 @@ class DaskNamespace(
 
         return self._expr(
             call=func,
-            depth=max(x._depth for x in exprs) + 1,
-            function_name="coalesce",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
             version=self._version,
         )
 
+    def when_then(
+        self, predicate: DaskExpr, then: DaskExpr, otherwise: DaskExpr | None = None
+    ) -> DaskExpr:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            then_value = df._evaluate_single_output_expr(then)
+            otherwise_value = (
+                df._evaluate_single_output_expr(otherwise)
+                if otherwise is not None
+                else otherwise
+            )
 
-class DaskWhen(CompliantWhen[DaskLazyFrame, "dx.Series", DaskExpr]):  # pyright: ignore[reportInvalidTypeArguments]
-    @property
-    def _then(self) -> type[DaskThen]:
-        return DaskThen
+            condition = df._evaluate_single_output_expr(predicate)
+            # re-evaluate DataFrame if the condition aggregates to force
+            # then/otherwise to be evaluated against the aggregated frame
+            if all(
+                x._metadata.is_scalar_like
+                for x in (
+                    (predicate, then)
+                    if otherwise is None
+                    else (predicate, then, otherwise)
+                )
+            ):
+                new_df = df._with_native(condition.to_frame())
+                condition = df._evaluate_single_output_expr(predicate.broadcast())
+                df = new_df
 
-    def __call__(self, df: DaskLazyFrame) -> Sequence[dx.Series]:
-        then_value = (
-            self._then_value(df)[0]
-            if isinstance(self._then_value, DaskExpr)
-            else self._then_value
-        )
-        otherwise_value = (
-            self._otherwise_value(df)[0]
-            if isinstance(self._otherwise_value, DaskExpr)
-            else self._otherwise_value
-        )
-
-        condition = self._condition(df)[0]
-        # re-evaluate DataFrame if the condition aggregates to force
-        #   then/otherwise to be evaluated against the aggregated frame
-        assert self._condition._metadata is not None  # noqa: S101
-        if self._condition._metadata.is_scalar_like:
-            new_df = df._with_native(condition.to_frame())
-            condition = self._condition.broadcast(ExprKind.AGGREGATION)(df)[0]
-            df = new_df
-
-        if self._otherwise_value is None:
-            (condition, then_series) = align_series_full_broadcast(
-                df, condition, then_value
+            if otherwise is None:
+                (condition, then_series) = align_series_full_broadcast(
+                    df, condition, then_value
+                )
+                validate_comparand(condition, then_series)
+                return [then_series.where(condition)]  # pyright: ignore[reportArgumentType]
+            (condition, then_series, otherwise_series) = align_series_full_broadcast(
+                df, condition, then_value, otherwise_value
             )
             validate_comparand(condition, then_series)
-            return [then_series.where(condition)]  # pyright: ignore[reportArgumentType]
-        (condition, then_series, otherwise_series) = align_series_full_broadcast(
-            df, condition, then_value, otherwise_value
+            validate_comparand(condition, otherwise_series)
+            return [then_series.where(condition, otherwise_series)]  # pyright: ignore[reportArgumentType]
+
+        return self._expr(
+            call=func,
+            evaluate_output_names=getattr(
+                then, "_evaluate_output_names", lambda _df: ["literal"]
+            ),
+            alias_output_names=getattr(then, "_alias_output_names", None),
+            version=self._version,
         )
-        validate_comparand(condition, then_series)
-        validate_comparand(condition, otherwise_series)
-        return [then_series.where(condition, otherwise_series)]  # pyright: ignore[reportArgumentType]
-
-
-class DaskThen(CompliantThen[DaskLazyFrame, "dx.Series", DaskExpr, DaskWhen], DaskExpr):  # pyright: ignore[reportInvalidTypeArguments]
-    _depth: int = 0
-    _scalar_kwargs: ScalarKwargs = {}  # noqa: RUF012
-    _function_name: str = "whenthen"

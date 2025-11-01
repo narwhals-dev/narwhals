@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import pandas as pd
 import pytest
 
 import narwhals as nw
@@ -44,9 +43,12 @@ def test_len_series(
 
 
 def test_pandas_preserve_index(request: pytest.FixtureRequest) -> None:
+    pytest.importorskip("pandas")
+    pytest.importorskip("pyarrow")
+    import pandas as pd
+
     if PANDAS_VERSION < (2, 2):
         request.applymarker(pytest.mark.xfail)
-    pytest.importorskip("pyarrow")
 
     index = pd.Index(["a", "b", "c", "d", "e"])
     df = nw.from_native(pd.DataFrame(data, index=index), eager_only=True)
@@ -57,9 +59,8 @@ def test_pandas_preserve_index(request: pytest.FixtureRequest) -> None:
 
 
 def test_pandas_object_series() -> None:
+    pytest.importorskip("pandas")
     import pandas as pd
-
-    import narwhals as nw
 
     s_native = pd.Series(data=data["a"])
     s = nw.from_native(s_native, series_only=True)

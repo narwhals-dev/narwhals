@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Generic, TypeVar
 
+from narwhals._expression_parsing import ExprKind, ExprNode
+
 if TYPE_CHECKING:
     from narwhals.expr import Expr
     from narwhals.typing import NonNestedLiteral
@@ -40,9 +42,7 @@ class ExprListNamespace(Generic[ExprT]):
             |└──────────────┴───────┘|
             └────────────────────────┘
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).list.len()
-        )
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "list.len"))
 
     def unique(self) -> ExprT:
         """Get the unique/distinct values in the list.
@@ -71,9 +71,7 @@ class ExprListNamespace(Generic[ExprT]):
             |└──────────────┴───────────┘|
             └────────────────────────────┘
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).list.unique()
-        )
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "list.unique"))
 
     def contains(self, item: NonNestedLiteral) -> ExprT:
         """Check if sublists contain the given item.
@@ -102,8 +100,8 @@ class ExprListNamespace(Generic[ExprT]):
             |└───────────┴──────────────┘|
             └────────────────────────────┘
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).list.contains(item)
+        return self._expr._append_node(
+            ExprNode(ExprKind.ELEMENTWISE, "list.contains", item=item)
         )
 
     def get(self, index: int) -> ExprT:
@@ -142,6 +140,6 @@ class ExprListNamespace(Generic[ExprT]):
             msg = f"Index {index} is out of bounds: should be greater than or equal to 0."
             raise ValueError(msg)
 
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).list.get(index)
+        return self._expr._append_node(
+            ExprNode(ExprKind.ELEMENTWISE, "list.get", index=index)
         )

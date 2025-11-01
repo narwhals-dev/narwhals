@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import operator
-from typing import TYPE_CHECKING, Any, Callable, Literal, cast
+from typing import TYPE_CHECKING, Any, Callable, cast
 
 from duckdb import CoalesceOperator, StarExpression
 
@@ -20,7 +20,6 @@ from narwhals._duckdb.utils import (
     when,
     window_expression,
 )
-from narwhals._expression_parsing import ExprKind, ExprMetadata
 from narwhals._sql.expr import SQLExpr
 from narwhals._utils import Implementation, Version, extend_bool
 
@@ -40,12 +39,7 @@ if TYPE_CHECKING:
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.namespace import DuckDBNamespace
     from narwhals._utils import _LimitedContext
-    from narwhals.typing import (
-        FillNullStrategy,
-        IntoDType,
-        NonNestedLiteral,
-        RollingInterpolationMethod,
-    )
+    from narwhals.typing import FillNullStrategy, IntoDType, RollingInterpolationMethod
 
     DuckDBWindowFunction = WindowFunction[DuckDBLazyFrame, Expression]
     DuckDBWindowInputs = WindowInputs[Expression]
@@ -68,7 +62,6 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
         self._evaluate_output_names = evaluate_output_names
         self._alias_output_names = alias_output_names
         self._version = version
-        self._metadata: ExprMetadata | None = None
         self._window_function: DuckDBWindowFunction | None = window_function
 
     def _count_star(self) -> Expression:
@@ -116,12 +109,7 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
 
         return DuckDBNamespace(version=self._version)
 
-    def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
-        if kind is ExprKind.LITERAL:
-            return self
-        if self._backend_version < (1, 3):
-            msg = "At least version 1.3 of DuckDB is required for binary operations between aggregates and columns."
-            raise NotImplementedError(msg)
+    def broadcast(self) -> Self:
         return self.over([lit(1)], [])
 
     @classmethod
@@ -218,34 +206,6 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
     def len(self) -> Self:
         return self._with_callable(lambda _expr: F("count"))
 
-    def std(self, *, ddof: int) -> Self:
-        if ddof == 0:
-            return self._with_callable(lambda expr: F("stddev_pop", expr))
-        if ddof == 1:
-            return self._with_callable(lambda expr: F("stddev_samp", expr))
-
-        def _std(expr: Expression) -> Expression:
-            n_samples = F("count", expr)
-            return (
-                F("stddev_pop", expr)
-                * F("sqrt", n_samples)
-                / (F("sqrt", (n_samples - lit(ddof))))
-            )
-
-        return self._with_callable(_std)
-
-    def var(self, *, ddof: int) -> Self:
-        if ddof == 0:
-            return self._with_callable(lambda expr: F("var_pop", expr))
-        if ddof == 1:
-            return self._with_callable(lambda expr: F("var_samp", expr))
-
-        def _var(expr: Expression) -> Expression:
-            n_samples = F("count", expr)
-            return F("var_pop", expr) * n_samples / (n_samples - lit(ddof))
-
-        return self._with_callable(_var)
-
     def null_count(self) -> Self:
         return self._with_callable(lambda expr: F("sum", expr.isnull().cast("int")))
 
@@ -259,10 +219,7 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
         return self._with_elementwise(lambda expr: F("contains", lit(other), expr))
 
     def fill_null(
-        self,
-        value: Self | NonNestedLiteral,
-        strategy: FillNullStrategy | None,
-        limit: int | None,
+        self, value: Self | None, strategy: FillNullStrategy | None, limit: int | None
     ) -> Self:
         if strategy is not None:
             if self._backend_version < (1, 3):  # pragma: no cover
@@ -295,6 +252,7 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
         def _fill_constant(expr: Expression, value: Any) -> Expression:
             return CoalesceOperator(expr, value)
 
+        assert value is not None  # noqa: S101
         return self._with_elementwise(_fill_constant, value=value)
 
     def cast(self, dtype: IntoDType) -> Self:
