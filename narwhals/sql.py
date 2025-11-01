@@ -62,7 +62,7 @@ class SQLTable(LazyFrame[duckdb.DuckDBPyRelation]):
                 "Hint: run `pip install -U narwhals[sql]`"
             )
             raise ModuleNotFoundError(msg) from _exc
-        return sqlparse.format(sql_query, reindent=True, keyword_case="upper")
+        return sqlparse.format(sql_query, reindent=True, keyword_case="upper")  # type: ignore[no-any-return]
 
 
 def table(name: str, schema: IntoSchema) -> SQLTable:
