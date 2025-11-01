@@ -3,11 +3,10 @@ from __future__ import annotations
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-import pandas as pd
 import pytest
 
 import narwhals as nw
-from tests.utils import Constructor, ConstructorEager, assert_equal_data
+from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 data = {
     "a": [datetime(2021, 3, 1, 12, 34, 56, 49012), datetime(2020, 1, 2, 2, 4, 14, 715123)]
@@ -54,9 +53,13 @@ def test_truncate(
     expected: list[datetime],
 ) -> None:
     if every.endswith("ns") and any(
-        x in str(constructor) for x in ("polars", "duckdb", "pyspark", "ibis")
+        x in str(constructor) for x in ("duckdb", "pyspark", "ibis")
     ):
         request.applymarker(pytest.mark.xfail())
+
+    if every.endswith("ns") and "polars" in str(constructor) and POLARS_VERSION < (1, 35):
+        request.applymarker(pytest.mark.xfail())
+
     if any(every.endswith(x) for x in ("mo", "q", "y")) and any(
         x in str(constructor) for x in ("dask", "cudf")
     ):
@@ -109,14 +112,16 @@ def test_truncate_multiples(
         # - cudf: https://github.com/rapidsai/cudf/issues/18654
         # - pyspark/sqlframe: Only multiple 1 is currently supported
         request.applymarker(pytest.mark.xfail())
-    if every.endswith("ns") and any(
-        x in str(constructor) for x in ("polars", "duckdb", "ibis")
-    ):
+
+    if every.endswith("ns") and any(x in str(constructor) for x in ("duckdb", "ibis")):
         request.applymarker(pytest.mark.xfail())
-    if any(every.endswith(x) for x in ("mo", "q", "y")) and any(
-        x in str(constructor) for x in ("dask",)
-    ):
+
+    if every.endswith("ns") and "polars" in str(constructor) and POLARS_VERSION < (1, 35):
+        request.applymarker(pytest.mark.xfail())
+
+    if any(every.endswith(x) for x in ("mo", "q", "y")) and "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail(reason="Not implemented"))
+
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").dt.truncate(every))
     assert_equal_data(result, {"a": expected})
@@ -181,6 +186,9 @@ def test_truncate_invalid_multiple(constructor: Constructor) -> None:
 
 
 def test_pandas_numpy_nat() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     # The pandas implementation goes via NumPy, so check NaT are preserved.
     df = nw.from_native(
         pd.DataFrame({"a": [datetime(2020, 1, 1), None, datetime(2020, 1, 2)]})

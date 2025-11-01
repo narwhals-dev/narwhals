@@ -4,7 +4,6 @@ import re
 from datetime import date
 from typing import TYPE_CHECKING, Any
 
-import numpy as np
 import pytest
 
 import narwhals as nw
@@ -36,6 +35,9 @@ def test_lit(
 
 
 def test_lit_error(constructor: Constructor) -> None:
+    pytest.importorskip("numpy")
+    import numpy as np
+
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df_raw = constructor(data)
     df = nw.from_native(df_raw).lazy()

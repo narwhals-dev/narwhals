@@ -78,6 +78,7 @@ pn = PandasLikeNamespace(
 )
 print(nw.col("a")._to_compliant_expr(pn))
 ```
+
 The result from the last line above is the same as we'd get from `pn.col('a')`, and it's
 a `narwhals._pandas_like.expr.PandasLikeExpr` object, which we'll call `PandasLikeExpr` for
 short.
@@ -215,6 +216,7 @@ pn = PandasLikeNamespace(
 expr = (nw.col("a") + 1)._to_compliant_expr(pn)
 print(expr)
 ```
+
 If we then extract a Narwhals-compliant dataframe from `df` by
 calling `._compliant_frame`, we get a `PandasLikeDataFrame` - and that's an object which we can pass `expr` to!
 
@@ -228,6 +230,7 @@ We can then view the underlying pandas Dataframe which was produced by calling `
 ```python exec="1" result="python" session="pandas_api_mapping" source="above"
 print(result._native_frame)
 ```
+
 which is the same as we'd have obtained by just using the Narwhals API directly:
 
 ```python exec="1" result="python" session="pandas_api_mapping" source="above"
@@ -238,10 +241,12 @@ print(nw.to_native(df.select(nw.col("a") + 1)))
 
 Group-by is probably one of Polars' most significant innovations (on the syntax side) with respect
 to pandas. We can write something like
+
 ```python
 df: pl.DataFrame
 df.group_by("a").agg((pl.col("c") > pl.col("b").mean()).max())
 ```
+
 To do this in pandas, we need to either use `GroupBy.apply` (sloooow), or do some crazy manual
 optimisations to get it to work.
 
@@ -249,38 +254,85 @@ In Narwhals, here's what we do:
 
 - if somebody uses a simple group-by aggregation (e.g. `df.group_by('a').agg(nw.col('b').mean())`),
   then on the pandas side we translate it to
-  ```python
-  df: pd.DataFrame
-  df.groupby("a").agg({"b": ["mean"]})
-  ```
+
+    ```python
+    df: pd.DataFrame
+    df.groupby("a").agg({"b": ["mean"]})
+    ```
+
 - if somebody passes a complex group-by aggregation, then we use `apply` and raise a `UserWarning`, warning
   users of the performance penalty and advising them to refactor their code so that the aggregation they perform
   ends up being a simple one.
 
-In order to tell whether an aggregation is simple, Narwhals uses the private `_depth` attribute of `PandasLikeExpr`:
+## Nodes
+
+If we have a Narwhals expression, we can look at the operations which make it up by accessing `_nodes`:
 
 ```python exec="1" result="python" session="pandas_impl" source="above"
-print(pn.col("a").mean())
-print((pn.col("a") + 1).mean())
+import narwhals as nw
+
+expr = nw.col("a").abs().std(ddof=1) + nw.col("b")
+print(expr._nodes)
 ```
 
-For simple aggregations, Narwhals can just look at `_depth` and `function_name` and figure out
-which (efficient) elementary operation this corresponds to in pandas.
+Each node represents an operation. Here, we have 4 operations:
+
+1. Given some dataframe, select column `'a'`.
+2. Take its absolute value.
+3. Take its standard deviation, with `ddof=1`.
+4. Sum column `'b'`.
+
+Let's take a look at a couple of these nodes. Let's start with the third one:
+
+```python exec="1" result="python" session="pandas_impl" source="above"
+print(expr._nodes[2].as_dict())
+```
+
+This tells us a few things:
+
+- We're performing an aggregation.
+- The name of the function is `'std'`. This will be looked up in the compliant object.
+- It takes keyword arguments `ddof=1`.
+- We'll look at `exprs`, `str_as_lit`, and `allow_multi_output` later.
+
+In order for the evaluation to succeed, then `PandasLikeExpr` must have a `std` method defined
+on it, which takes a `ddof` argument. And this is what the `CompliantExpr` Protocol is for: so
+long as a backend's implementation complies with the protocol, then Narwhals will be able to
+unpack a `ExprNode` and turn it into a valid call.
+
+Let's take a look at the fourth node:
+
+```python exec="1" result="python" session="pandas_impl" source="above"
+print(expr._nodes[3].as_dict())
+```
+
+Note how now, the `exprs` attribute is populated. Indeed, we are summing another expression: `col('b')`.
+The `exprs` parameter holds arguments which are either expressions, or should be interpreted as expressions.
+The `str_as_lit` parameter tells us whether string literals should be interpreted as literals (e.g. `lit('foo')`)
+or columns (e.g. `col('foo')`). Finally `allow_multi_output` tells us whether multi-output expressions
+(more on this in the next section) are allowed to appear in `exprs`.
+
+Note that the expression in `exprs` also has its own nodes:
+
+```python exec="1" result="python" session="pandas_impl" source="above"
+print(expr._nodes[3].exprs[0]._nodes)
+```
+
+It's nodes all the way down!
 
 ## Expression Metadata
 
-Let's try printing out a few expressions to the console to see what they show us:
+Let's try printing out some compliant expressions' metadata to see what it shows us:
 
-```python exec="1" result="python" session="metadata" source="above"
+```python exec="1" result="python" session="pandas_impl" source="above"
 import narwhals as nw
 
-print(nw.col("a"))
-print(nw.col("a").mean())
-print(nw.col("a").mean().over("b"))
+print(nw.col("a")._to_compliant_expr(pn)._metadata)
+print(nw.col("a").mean()._to_compliant_expr(pn)._metadata)
+print(nw.col("a").mean().over("b")._to_compliant_expr(pn)._metadata)
 ```
 
-Note how they tell us something about their metadata. This section is all about
-making sense of what that all means, what the rules are, and what it enables.
+This section is all about making sense of what that all means, what the rules are, and what it enables.
 
 Here's a brief description of each piece of metadata:
 
@@ -293,8 +345,6 @@ Here's a brief description of each piece of metadata:
     - `ExpansionKind.MULTI_UNNAMED`: Produces multiple outputs whose names depend
       on the input dataframe. For example, `nw.nth(0, 1)` or `nw.selectors.numeric()`.
 
-- `last_node`: Kind of the last operation in the expression. See
-  `narwhals._expression_parsing.ExprKind` for the various options.
 - `has_windows`: Whether the expression already contains an `over(...)` statement.
 - `n_orderable_ops`: How many order-dependent operations the expression contains.
   
@@ -311,8 +361,9 @@ Here's a brief description of each piece of metadata:
 - `is_scalar_like`: Whether the output of the expression is always length-1.
 - `is_literal`: Whether the expression doesn't depend on any column but instead
   only on literal values, like `nw.lit(1)`.
+- `nodes`: List of operations which this expression applies when evaluated.
 
-#### Chaining
+### Chaining
 
 Say we have `expr.expr_method()`. How does `expr`'s `ExprMetadata` change?
 This depends on `expr_method`. Details can be found in `narwhals/_expression_parsing`,
@@ -356,7 +407,7 @@ is:
   then `n_orderable_ops` is decreased by 1. This is the only way that
   `n_orderable_ops` can decrease.
 
-### Broadcasting
+## Broadcasting
 
 When performing comparisons between columns and aggregations or scalars, we operate as if the
 aggregation or scalar was broadcasted to the length of the whole column. For example, if we
@@ -377,3 +428,67 @@ Narwhals triggers a broadcast in these situations:
 
 Each backend is then responsible for doing its own broadcasting, as defined in each
 `CompliantExpr.broadcast` method.
+
+## Elementwise push-down
+
+SQL is picky about `over` operations. For example:
+
+- `sum(a) over (partition by b)` is valid.
+- `sum(abs(a)) over (partition by b)` is valid.
+- `abs(sum(a)) over (partition by b)` is not valid.
+
+In Polars, however, all three of
+
+- `pl.col('a').sum().over('b')` is valid.
+- `pl.col('a').abs().sum().over('b')` is valid.
+- `pl.col('a').sum().abs().over('b')` is valid.
+
+How can we retain Polars' level of flexibility when translating to SQL engines?
+
+The answer is: by rewriting expressions. Specifically, we push down `over` nodes past elementwise ones.
+To see this, let's try printing the Narwhals equivalent of the last expression above (the one that SQL rejects):
+
+```python exec="1" result="python" session="pushdown" source="above"
+import narwhals as nw
+
+print(nw.col("a").sum().abs().over("b"))
+```
+
+Note how Narwhals automatically inserted the `over` operation _before_ the `abs` one. In other words, instead
+of doing
+
+- `sum` -> `abs` -> `over`
+
+it did
+
+- `sum` -> `over` -> `abs`
+
+thus allowing the expression to be valid for SQL engines!
+
+This is what we refer to as "pushing down `over` nodes". The idea is:
+
+- Elementwise operations operate row-by-row and don't depend on the rows around them.
+- An `over` node partitions or orders a computation.
+- Therefore, an elementwise operation followed by an `over` operation is the same
+  as doing the `over` operation followed by that same elementwise operation!
+
+Note that the pushdown also applies to any arguments to the elementwise operation.
+For example, if we have
+
+```python
+(nw.col("a").sum() + nw.col("b").sum()).over("c")
+```
+
+then `+` is an elementwise operation and so can be swapped with `over`. We just need
+to take care to apply the `over` operation to all the arguments of `+`, so that we
+end up with
+
+```python
+nw.col("a").sum().over("c") + nw.col("b").sum().over("c")
+```
+
+!!! info
+    In general, query optimisation is out-of-scope for Narwhals. We consider this
+    expression rewrite acceptable because:
+      - It's simple.
+      - It allows us to evaluate operations which otherwise wouldn't be allowed for certain backends.

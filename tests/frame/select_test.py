@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-import pandas as pd
 import pytest
 
 import narwhals as nw
@@ -34,6 +33,9 @@ def test_empty_select(constructor_eager: ConstructorEager) -> None:
 
 
 def test_non_string_select() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df = nw.from_native(pd.DataFrame({0: [1, 2], "b": [3, 4]}))
     result = nw.to_native(df.select(nw.col(0)))  # type: ignore[arg-type]
     expected = pd.Series([1, 2], name=0).to_frame()
@@ -41,6 +43,9 @@ def test_non_string_select() -> None:
 
 
 def test_int_select_pandas() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df = nw.from_native(pd.DataFrame({0: [1, 2], "b": [3, 4]}))
     with pytest.raises(InvalidIntoExprError, match="\n\nHint:\n- if you were trying"):
         nw.to_native(df.select(0))  # type: ignore[arg-type]
@@ -53,6 +58,9 @@ def test_invalid_select(constructor: Constructor, invalid_select: Any) -> None:
 
 
 def test_select_boolean_cols() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df = nw.from_native(pd.DataFrame({True: [1, 2], False: [3, 4]}), eager_only=True)
     result = df.group_by(True).agg(nw.col(False).max())  # type: ignore[arg-type, call-overload]
     assert_equal_data(result.to_dict(as_series=False), {True: [1, 2]})  # type: ignore[dict-item]
@@ -61,6 +69,9 @@ def test_select_boolean_cols() -> None:
 
 
 def test_select_boolean_cols_multi_group_by() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df = nw.from_native(
         pd.DataFrame({True: [1, 2], False: [3, 4], 2: [1, 1]}), eager_only=True
     )
@@ -76,6 +87,8 @@ def test_select_boolean_cols_multi_group_by() -> None:
 
 def test_comparison_with_list_error_message() -> None:
     pytest.importorskip("pyarrow")
+    pytest.importorskip("pandas")
+    import pandas as pd
     import pyarrow as pa
 
     msg = "Expected Series or scalar, got list."
@@ -176,4 +189,15 @@ def test_binary_window_aggregation(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager({"a": [1, 1, 2]}))
     result = df.select(nw.col("a").cum_sum() + nw.col("a").sum())
     expected = {"a": [5, 6, 8]}
+    assert_equal_data(result, expected)
+
+
+def test_pandas_unnamed() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    df = nw.from_native(pd.DataFrame({None: [1, 2, 3]}), eager_only=True)
+    result = df.select((nw.col(None) * 2).alias("foo"))  # type: ignore[arg-type]
+
+    expected = {"foo": [2, 4, 6]}
     assert_equal_data(result, expected)

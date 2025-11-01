@@ -66,14 +66,7 @@ if TYPE_CHECKING:
         TypeIs,
     )
 
-    from narwhals._compliant import (
-        CompliantExpr,
-        CompliantExprT,
-        CompliantFrameT,
-        CompliantSeriesOrNativeExprT_co,
-        CompliantSeriesT,
-        NativeSeriesT_co,
-    )
+    from narwhals._compliant import CompliantExprT, CompliantSeriesT, NativeSeriesT_co
     from narwhals._compliant.any_namespace import NamespaceAccessor
     from narwhals._compliant.typing import (
         Accessor,
@@ -1583,12 +1576,6 @@ def is_compliant_series_int(
     return is_compliant_series(obj) and obj.dtype.is_integer()
 
 
-def is_compliant_expr(
-    obj: CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co] | Any,
-) -> TypeIs[CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co]]:
-    return hasattr(obj, "__narwhals_expr__")
-
-
 def _is_namespace_accessor(obj: _IntoContext) -> TypeIs[NamespaceAccessor[_FullContext]]:
     # NOTE: Only `compliant` has false positives **internally**
     # - https://github.com/narwhals-dev/narwhals/blob/cc69bac35eb8c81a1106969c49bfba9fd569b856/narwhals/_compliant/group_by.py#L44-L49
@@ -1785,7 +1772,7 @@ class not_implemented:  # noqa: N801
         return self.__get__("raise")
 
     @classmethod
-    def deprecated(cls, message: LiteralString, /) -> Self:
+    def deprecated(cls, message: LiteralString, /) -> Self:  # pragma: no cover
         """Alt constructor, wraps with `@deprecated`.
 
         Arguments:

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-import numpy as np
 import pytest
 
 import narwhals as nw
@@ -47,6 +46,9 @@ def test_is_into_series_pandas() -> None:
 
 
 def test_is_into_series() -> None:
+    pytest.importorskip("numpy")
+    import numpy as np
+
     assert is_into_series(ListBackedSeries("a", [1, 4, 2]))
     assert not is_into_series(np.array([1, 2, 3]))
     assert not is_into_series([1, 2, 3])

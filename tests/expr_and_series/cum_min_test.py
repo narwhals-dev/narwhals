@@ -7,6 +7,7 @@ from tests.utils import (
     DUCKDB_VERSION,
     PANDAS_VERSION,
     POLARS_VERSION,
+    PYARROW_VERSION,
     Constructor,
     ConstructorEager,
     assert_equal_data,
@@ -97,7 +98,7 @@ def test_lazy_cum_min_ordered_by_nulls(
     if "cudf" in str(constructor):
         # https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
-    if "pyarrow" in str(constructor) and is_windows():
+    if "pyarrow" in str(constructor) and is_windows() and PYARROW_VERSION < (22, 0):
         # https://github.com/pandas-dev/pandas/issues/62477
         request.applymarker(pytest.mark.xfail)
 
