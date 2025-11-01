@@ -604,14 +604,8 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         if backend is None:
             data, backend = _from_dict_no_backend(data)
-        if (
-            schema
-            and data
-            and (
-                diff := set(NullableSchema(schema).keys()).symmetric_difference(
-                    data.keys()
-                )
-            )
+        if (schema and data) and (
+            diff := set(NullableSchema(schema).keys()).symmetric_difference(data.keys())
         ):
             msg = f"Keys in `schema` and `data` are expected to match, found unmatched keys: {diff}"
             raise InvalidOperationError(msg)
