@@ -107,15 +107,6 @@ class DTypeAll(DTypeSelector, dtype=DType):
     def _matches(self, dtype: IntoDType) -> bool:
         return True
 
-    # Special case, needs to behave the same whether it is treated like a `DTypeSelector` or regular
-    def into_columns(
-        self, schema: FrozenSchema, ignored_columns: Container[str]
-    ) -> Iterator[str]:
-        if ignored_columns:  # pragma: no cover
-            yield from (name for name in schema if name not in ignored_columns)
-        else:  # pragma: no cover
-            yield from schema
-
 
 class All(Selector):
     def to_dtype_selector(self) -> DTypeSelector:
