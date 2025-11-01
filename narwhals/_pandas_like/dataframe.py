@@ -22,7 +22,6 @@ from narwhals._pandas_like.utils import (
 from narwhals._typing_compat import assert_never
 from narwhals._utils import (
     Implementation,
-    NullableSchema,
     _into_arrow_table,
     _remap_full_join_keys,
     check_column_names_are_unique,
@@ -174,6 +173,8 @@ class PandasLikeDataFrame(
         else:
             native = DataFrame.from_dict({col: [] for col in schema})
         if schema:
+            from narwhals._utils import NullableSchema
+
             backends: Iterable[DTypeBackend]
             if aligned_data:
                 backends = iter_dtype_backends(native.dtypes, implementation)
@@ -211,6 +212,8 @@ class PandasLikeDataFrame(
         else:
             native = DataFrame.from_dict({col: [] for col in schema})
         if schema:
+            from narwhals._utils import NullableSchema
+
             backends: Iterable[DTypeBackend]
             if data:
                 backends = iter_dtype_backends(native.dtypes, implementation)

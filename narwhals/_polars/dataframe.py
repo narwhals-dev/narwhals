@@ -16,7 +16,6 @@ from narwhals._polars.utils import (
 )
 from narwhals._utils import (
     Implementation,
-    NullableSchema,
     _into_arrow_table,
     convert_str_slice_to_int_slice,
     generate_temporary_column_name,
@@ -322,6 +321,8 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         context: _LimitedContext,
         schema: IntoSchema | IntoNullableSchema | None = None,
     ) -> Self:
+        from narwhals._utils import NullableSchema
+
         pl_schema = (
             {
                 key: narwhals_to_native_dtype(dtype, context._version)
@@ -343,6 +344,8 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         context: _LimitedContext,
         schema: IntoSchema | IntoNullableSchema | None = None,
     ) -> Self:
+        from narwhals._utils import NullableSchema
+
         pl_schema = (
             {
                 key: narwhals_to_native_dtype(dtype, context._version)

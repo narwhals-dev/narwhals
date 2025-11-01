@@ -25,7 +25,6 @@ from narwhals._expression_parsing import (
 from narwhals._typing import Arrow, Pandas, _LazyAllowedImpl, _LazyFrameCollectImpl
 from narwhals._utils import (
     Implementation,
-    NullableSchema,
     Version,
     _Implementation,
     can_lazyframe_collect,
@@ -602,6 +601,8 @@ class DataFrame(BaseFrame[DataFrameT]):
             |     1  2  4      |
             └──────────────────┘
         """
+        from narwhals._utils import NullableSchema
+
         if backend is None:
             data, backend = _from_dict_no_backend(data)
         if (schema and data) and (

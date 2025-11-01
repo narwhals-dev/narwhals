@@ -16,7 +16,6 @@ from narwhals._arrow.utils import (
 from narwhals._compliant import EagerDataFrame
 from narwhals._utils import (
     Implementation,
-    NullableSchema,
     Version,
     check_column_names_are_unique,
     convert_str_slice_to_int_slice,
@@ -124,6 +123,8 @@ class ArrowDataFrame(
         context: _LimitedContext,
         schema: IntoSchema | IntoNullableSchema | None = None,
     ) -> Self:
+        from narwhals._utils import NullableSchema
+
         if not schema and not data:
             return cls.from_native(pa.table({}), context=context)
         if not schema:
@@ -163,6 +164,8 @@ class ArrowDataFrame(
         context: _LimitedContext,
         schema: IntoSchema | IntoNullableSchema | None = None,
     ) -> Self:
+        from narwhals._utils import NullableSchema
+
         if schema and (nullable_schema := NullableSchema(schema)).is_nullable:
             msg = "`from_dicts` with `schema` where any dtype is `None` is not supported for PyArrow."
             raise NotImplementedError(msg)
