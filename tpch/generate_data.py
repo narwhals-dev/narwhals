@@ -8,7 +8,8 @@ import pyarrow as pa
 import pyarrow.csv as pc
 import pyarrow.parquet as pq
 
-Path("data").mkdir(exist_ok=True)
+data_path = Path("data")
+data_path.mkdir(exist_ok=True)
 
 SCALE_FACTOR = 0.1
 con = duckdb.connect(database=":memory:")
@@ -43,7 +44,7 @@ for t in tables:
     tbl_arrow = tbl.to_arrow_table()
     new_schema = convert_schema(tbl_arrow.schema)
     tbl_arrow = tbl_arrow.cast(new_schema)
-    pq.write_table(tbl_arrow, Path("data") / f"{t}.parquet")
+    pq.write_table(tbl_arrow, data_path / f"{t}.parquet")
 
 
 results = con.query(
@@ -51,7 +52,7 @@ results = con.query(
     SELECT query_nr, answer
     FROM tpch_answers()
     WHERE scale_factor={SCALE_FACTOR}
-"""  # noqa: S608
+    """  # noqa: S608
 )
 
 while row := results.fetchmany(1):
@@ -62,4 +63,4 @@ while row := results.fetchmany(1):
     new_schema = convert_schema(tbl_answer.schema)
     tbl_answer = tbl_answer.cast(new_schema)
 
-    pq.write_table(tbl_answer, Path("data") / f"result_q{query_nr}.parquet")
+    pq.write_table(tbl_answer, data_path / f"result_q{query_nr}.parquet")

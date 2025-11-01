@@ -30,7 +30,8 @@ class DuckDBGroupBy(SQLGroupBy["DuckDBLazyFrame", "DuckDBExpr", "Expression"]):
     def agg(self, *exprs: DuckDBExpr) -> DuckDBLazyFrame:
         agg_columns = tuple(self._evaluate_exprs(exprs))
         result = self.compliant.native.aggregate(
-            tuple(chain(self._keys, agg_columns)), join_column_names(*self._keys)
+            tuple(chain(self._keys, agg_columns)),  # type: ignore[arg-type]
+            join_column_names(*self._keys),
         )
 
         return self.compliant._with_native(result).rename(

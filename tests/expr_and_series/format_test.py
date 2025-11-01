@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import pandas as pd
 import pytest
 
 import narwhals as nw
@@ -33,6 +32,9 @@ def test_format(constructor: Constructor) -> None:
 
 
 def test_format_invalid() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df = nw.from_native(
         pd.DataFrame(
             {
