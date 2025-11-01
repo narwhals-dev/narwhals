@@ -41,19 +41,12 @@ result = (
 print(result.to_sql())
 ```
 
-To make it look a bit prettier, or to then transpile it to other SQL dialects, you can pass `pretty=True`, but
-note that this currently requires [sqlglot](https://github.com/tobymao/sqlglot) to be installed.
+To make it look a bit prettier, you can pass `pretty=True`, but
+note that this currently requires [sqlparse](https://github.com/andialbrecht/sqlparse) to be installed.
 
 ```python exec="1" source="above" session="generating-sql" result="sql"
 print(result.to_sql(pretty=True))
 ```
-
-You can even pass a [different dialect](https://github.com/tobymao/sqlglot?tab=readme-ov-file#supported-dialects):
-
-```python exec="1" source="above" session="generating-sql" result="sql"
-print(result.to_sql(pretty=True, dialect="databricks"))
-```
-
 
 ## Via Ibis
 

@@ -27,27 +27,42 @@ TZ = DeferredTimeZone(
 
 
 class SQLTable(LazyFrame[duckdb.DuckDBPyRelation]):
+    """A LazyFrame with an additional `to_sql` method."""
+
     def __init__(
         self, df: CompliantLazyFrameAny, level: Literal["full", "interchange", "lazy"]
     ) -> None:
         super().__init__(df, level=level)
 
-    def to_sql(self, *, pretty: bool = False, dialect: str = "duckdb") -> str:
+    def to_sql(self, *, pretty: bool = False) -> str:
+        """Convert to SQL query.
+
+        Arguments:
+            pretty: Whether to pretty-print SQL query. If `True`, requires `sqlparse`
+                to be installed.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> from narwhals.sql import table
+            >>> schema = {"date": nw.Date, "price": nw.Int64, "symbol": nw.String}
+            >>> assets = table("assets", schema)
+            >>> result = assets.filter(nw.col("price") > 100)
+            >>> print(result.to_sql())
+            SELECT * FROM main.assets WHERE (price > 100)
+        """
         sql_query = self.to_native().sql_query()
-        if not pretty and dialect == "duckdb":
+        if not pretty:
             return sql_query
         try:
-            import sqlglot
+            import sqlparse
         except ImportError as _exc:  # pragma: no cover
             msg = (
-                "`SQLTable.to_sql` with `pretty=True` or `dialect!='duckdb'` "
-                "requires `sqlglot` to be installed.\n\n"
+                "`SQLTable.to_sql` with `pretty=True`"
+                "requires `sqlparse` to be installed.\n\n"
                 "Hint: run `pip install -U narwhals[sql]`"
             )
             raise ModuleNotFoundError(msg) from _exc
-        return sqlglot.transpile(
-            sql_query, read="duckdb", identity=False, write=dialect, pretty=pretty
-        )[0]
+        return sqlparse.format(sql_query, reindent=True, keyword_case="upper")
 
 
 def table(name: str, schema: IntoSchema) -> SQLTable:
@@ -59,17 +74,21 @@ def table(name: str, schema: IntoSchema) -> SQLTable:
         name: Table name.
         schema: Table schema.
 
-    Returns:
-        A LazyFrame.
-
     Examples:
         >>> import narwhals as nw
         >>> from narwhals.sql import table
-        >>> schema = {"date": nw.Date, "price": nw.Int64, "symbol": nw.String}
-        >>> assets = table("assets", schema)
-        >>> result = assets.filter(nw.col("price") > 100)
-        >>> print(result.to_sql())
-        SELECT * FROM main.assets WHERE (price > 100)
+        >>> schema = {"date": nw.Date, "price": nw.List(nw.Int64), "symbol": nw.String}
+        >>> table("t", schema)
+        ┌────────────────────────────┐
+        |     Narwhals LazyFrame     |
+        |----------------------------|
+        |┌──────┬─────────┬─────────┐|
+        |│ date │  price  │ symbol  │|
+        |│ date │ int64[] │ varchar │|
+        |├──────┴─────────┴─────────┤|
+        |│          0 rows          │|
+        |└──────────────────────────┘|
+        └────────────────────────────┘
     """
     column_mapping = {
         col: narwhals_to_native_dtype(dtype, Version.MAIN, TZ)

@@ -45,7 +45,7 @@ dask = ["dask[dataframe]>=2024.8"]
 duckdb = ["duckdb>=1.1"]
 ibis = ["ibis-framework>=6.0.0", "rich", "packaging", "pyarrow_hotfix"]
 sqlframe = ["sqlframe>=3.22.0,!=3.39.3"]
-sql = ["duckdb>=1.1"]
+sql = ["duckdb>=1.1", "sqlparse"]
 
 [dependency-groups]
 core = [
