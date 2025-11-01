@@ -118,9 +118,11 @@ def expand_selector_irs_names(
         ignored: Names of `group_by` columns.
         schema: Scope to expand selectors in.
     """
-    expander = Expander(schema, ignored)
-    names = expander.iter_expand_selector_names(selectors)
-    return _ensure_valid_output_names(tuple(names), expander.schema)
+    names = tuple(Expander(schema, ignored).iter_expand_selector_names(selectors))
+    if len(names) != len(set(names)):
+        # NOTE: Can't easily reuse `duplicate_error`, falling back to main for now
+        check_column_names_are_unique(names)
+    return names
 
 
 def remove_alias(origin: ExprIR, /) -> ExprIR:
@@ -137,14 +139,6 @@ def replace_keep_name(origin: ExprIR, /) -> ExprIR:
         return child.expr.alias(root_name) if isinstance(child, KeepName) else child
 
     return origin.map_ir(fn)
-
-
-def _ensure_valid_output_names(names: Seq[str], schema: FrozenSchema) -> OutputNames:
-    check_column_names_are_unique(names)
-    output_names = names
-    if not (set(schema.names).issuperset(output_names)):
-        raise column_not_found_error(output_names, schema)  # pragma: no cover
-    return output_names
 
 
 class Expander:
