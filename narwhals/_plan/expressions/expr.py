@@ -238,8 +238,11 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT_co], child=("input",)):
             FunctionExpr(..., [Alias(..., name='...'), Literal(...), ...])
             #                  ^^^^^            ^^^
         """
-        for e in self.input[:1]:  # pragma: no cover (the empty case is uncovered?)
+        for e in self.input[:1]:
             yield from e.iter_output_name()
+        # NOTE: Covering the empty case doesn't make sense without implementing `FunctionFlags.ALLOW_EMPTY_INPUTS`
+        # https://github.com/pola-rs/polars/blob/df69276daf5d195c8feb71eef82cbe9804e0f47f/crates/polars-plan/src/plans/options.rs#L106-L107
+        return  # pragma: no cover
 
     # NOTE: Interacting badly with `pyright` synthesizing the `__replace__` signature
     if not TYPE_CHECKING:
