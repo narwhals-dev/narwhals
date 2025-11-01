@@ -8,6 +8,7 @@ from tests.utils import DUCKDB_VERSION
 
 def test_sql() -> None:
     pytest.importorskip("duckdb")
+    pytest.importorskip("sqlparse")
     if DUCKDB_VERSION < (1, 3):
         pytest.skip()
     from narwhals.sql import table
