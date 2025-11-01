@@ -5,7 +5,6 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 from unittest import mock
 
-import pandas as pd
 import pytest
 
 import narwhals as nw
@@ -23,6 +22,8 @@ def test_q1(library: str) -> None:
     if library == "pandas" and PANDAS_VERSION < (1, 5):
         pytest.skip()
     elif library == "pandas":
+        import pandas as pd
+
         df_raw: IntoFrame = pd.read_csv("tests/data/lineitem.csv")
     elif library == "polars":
         pytest.importorskip("polars")
@@ -32,6 +33,7 @@ def test_q1(library: str) -> None:
     elif library == "dask":
         pytest.importorskip("dask")
         import dask.dataframe as dd
+        import pandas as pd
 
         df_raw = dd.from_pandas(
             pd.read_csv("tests/data/lineitem.csv", dtype_backend="pyarrow")
@@ -105,6 +107,8 @@ def test_q1_w_generic_funcs(library: str) -> None:
     if library == "pandas" and PANDAS_VERSION < (1, 5):
         pytest.skip()
     elif library == "pandas":
+        import pandas as pd
+
         df_raw: pd.DataFrame | pl.DataFrame = pd.read_csv("tests/data/lineitem.csv")
     else:
         pytest.importorskip("polars")
@@ -167,6 +171,9 @@ def test_q1_w_generic_funcs(library: str) -> None:
 @mock.patch.dict(os.environ, {"NARWHALS_FORCE_GENERIC": "1"})
 @pytest.mark.filterwarnings("ignore:.*Passing a BlockManager.*:DeprecationWarning")
 def test_q1_w_pandas_agg_generic_path() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df_raw = pd.read_csv("tests/data/lineitem.csv")
     df_raw["l_shipdate"] = pd.to_datetime(df_raw["l_shipdate"])
     var_1 = datetime(1998, 9, 2)

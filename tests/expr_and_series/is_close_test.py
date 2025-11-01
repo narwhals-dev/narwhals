@@ -45,7 +45,7 @@ def test_is_close_series_raise_non_numeric(constructor_eager: ConstructorEager) 
     df = nw.from_native(constructor_eager(data), eager_only=True)
     x, y = df["non_numeric"], df["y"]
 
-    msg = "is_close operation not supported for dtype"
+    msg = "`is_close` operation not supported for dtype"
     with pytest.raises(InvalidOperationError, match=msg):
         x.is_close(y)
 
@@ -242,3 +242,15 @@ def test_is_close_expr_with_scalar(
             for i, v in enumerate(expected)
         ]
     assert_equal_data(result, {"idx": data["idx"], "result": expected})
+
+
+def test_is_close_pandas_unnamed() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    ser = nw.from_native(pd.Series([1.1, 1.2]), series_only=True)
+    res = ser.is_close(ser)
+    assert res.name is None
+    ser = nw.from_native(pd.Series([1.1, 1.2], name="ab"), series_only=True)
+    res = ser.is_close(ser)
+    assert res.name == "ab"

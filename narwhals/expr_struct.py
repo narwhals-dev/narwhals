@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Generic, TypeVar
 
+from narwhals._expression_parsing import ExprKind, ExprNode
+
 if TYPE_CHECKING:
     from narwhals.expr import Expr
 
@@ -40,6 +42,6 @@ class ExprStructNamespace(Generic[ExprT]):
             |└──────────────┴──────┘|
             └───────────────────────┘
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).struct.field(name)
+        return self._expr._append_node(
+            ExprNode(ExprKind.ELEMENTWISE, "struct.field", name=name)
         )

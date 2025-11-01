@@ -74,7 +74,7 @@ if TYPE_CHECKING:
         Polars,
     )
     from narwhals.dataframe import MultiColSelector, MultiIndexSelector
-    from narwhals.dtypes import DType
+    from narwhals.stable.v2.dtypes import DType
     from narwhals.typing import (
         IntoDType,
         IntoExpr,
@@ -120,7 +120,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     def from_dict(
         cls,
         data: Mapping[str, Any],
-        schema: Mapping[str, DType] | Schema | None = None,
+        schema: IntoSchema | Mapping[str, DType | None] | None = None,
         *,
         backend: IntoBackend[EagerAllowed] | None = None,
     ) -> DataFrame[Any]:
@@ -131,7 +131,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     def from_dicts(
         cls,
         data: Sequence[Mapping[str, Any]],
-        schema: IntoSchema | None = None,
+        schema: IntoSchema | Mapping[str, DType | None] | None = None,
         *,
         backend: IntoBackend[EagerAllowed],
     ) -> DataFrame[Any]:
@@ -340,7 +340,7 @@ def _stableify(
     if isinstance(obj, NwSeries):
         return Series(obj._compliant_series._with_version(Version.V2), level=obj._level)
     if isinstance(obj, NwExpr):
-        return Expr(obj._to_compliant_expr, obj._metadata)
+        return Expr(*obj._nodes)
     assert_never(obj)
 
 
@@ -566,6 +566,7 @@ def from_native(  # noqa: D417
         eager_only=eager_only,
         series_only=series_only,
         allow_series=allow_series,
+        eager_or_interchange_only=False,
         version=Version.V2,
     )
 
@@ -953,7 +954,7 @@ class When(nw_f.When):
 class Then(nw_f.Then, Expr):
     @classmethod
     def from_then(cls, then: nw_f.Then) -> Then:
-        return cls(then._to_compliant_expr, then._metadata)
+        return cls(*then._nodes)
 
     def otherwise(self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Expr:
         return _stableify(super().otherwise(value))
@@ -1046,7 +1047,9 @@ def from_dict(
     Arguments:
         data: Dictionary to create DataFrame from.
         schema: The DataFrame schema as Schema or dict of {name: type}. If not
-            specified, the schema will be inferred by the native library.
+            specified, the schema will be inferred by the native library. If
+            any `dtype` is `None`, the data type for that column will be inferred
+            by the native library.
         backend: specifies which eager backend instantiate to. Only
             necessary if inputs are not Narwhals Series.
 

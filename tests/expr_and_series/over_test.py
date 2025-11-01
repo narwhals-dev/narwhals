@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from contextlib import nullcontext as does_not_raise
 
-import pandas as pd
 import pytest
 
 import narwhals as nw
@@ -297,6 +296,9 @@ def test_over_anonymous_reduction(
 
 
 def test_over_unsupported() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     dfpd = pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
     with pytest.raises(NotImplementedError):
         nw.from_native(dfpd).select(nw.col("a").null_count().over("a"))
@@ -305,6 +307,7 @@ def test_over_unsupported() -> None:
 def test_over_unsupported_dask() -> None:
     pytest.importorskip("dask")
     import dask.dataframe as dd
+    import pandas as pd
 
     df = dd.from_pandas(pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]}))
     with pytest.raises(NotImplementedError):
@@ -385,12 +388,14 @@ def test_over_cum_reverse(
 def test_over_raise_len_change(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
 
-    with pytest.raises(InvalidOperationError):
+    with pytest.raises((InvalidOperationError, NotImplementedError)):
         nw.from_native(df).select(nw.col("b").drop_nulls().over("a"))
 
 
 def test_unsupported_over() -> None:
+    pytest.importorskip("pandas")
     pytest.importorskip("pyarrow")
+    import pandas as pd
     import pyarrow as pa
 
     data = {"a": [1, 2, 3, 4, 5, 6], "b": ["x", "x", "x", "y", "y", "y"]}

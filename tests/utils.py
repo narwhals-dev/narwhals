@@ -8,15 +8,15 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, cast
 
-import pandas as pd
-
 import narwhals as nw
 from narwhals._utils import Implementation, parse_version, zip_strict
+from narwhals.dependencies import get_pandas
 from narwhals.translate import from_native
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
+    import pandas as pd
     import pytest
     from pyspark.sql import SparkSession
     from sqlframe.duckdb import DuckDBSession
@@ -78,6 +78,10 @@ def _to_comparable_list(column_values: Any) -> Any:
     return list(column_values)
 
 
+def is_pd_na(value: Any) -> bool:
+    return (pd := get_pandas()) is not None and pd.isna(value)
+
+
 def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
     is_duckdb = (
         hasattr(result, "_compliant_frame")
@@ -125,15 +129,15 @@ def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
             elif isinstance(lhs, float) and math.isnan(lhs):
                 are_equivalent_values = rhs is None or math.isnan(rhs)
             elif isinstance(rhs, float) and math.isnan(rhs):
-                are_equivalent_values = lhs is None or pd.isna(lhs) or math.isnan(lhs)
+                are_equivalent_values = lhs is None or is_pd_na(lhs) or math.isnan(lhs)
             elif lhs is None:
                 are_equivalent_values = rhs is None
             elif isinstance(lhs, list) and isinstance(rhs, list):
                 are_equivalent_values = all(
                     left_side == right_side for left_side, right_side in zip(lhs, rhs)
                 )
-            elif pd.isna(lhs):
-                are_equivalent_values = pd.isna(rhs)
+            elif is_pd_na(lhs):
+                are_equivalent_values = is_pd_na(rhs)
             elif type(lhs) is date and type(rhs) is datetime:
                 are_equivalent_values = datetime(lhs.year, lhs.month, lhs.day) == rhs
             elif (

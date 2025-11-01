@@ -145,7 +145,7 @@ def test_str_replace_expr_scalar(
     literal: bool,  # noqa: FBT001
     expected: dict[str, list[str]],
 ) -> None:
-    if any(x in str(constructor) for x in ["pyspark", "duckdb", "ibis", "cudf", "cudf"]):
+    if any(x in str(constructor) for x in ["pyspark", "duckdb", "ibis"]):
         request.applymarker(
             pytest.mark.xfail(
                 reason=f"{constructor} only supports `replace_all`.",
