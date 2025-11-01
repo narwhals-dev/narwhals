@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import functools
 import re
-from contextlib import suppress
 from typing import TYPE_CHECKING, Any, ClassVar, final
 
 from narwhals._plan._immutable import Immutable
@@ -162,17 +161,18 @@ class ByIndex(Selector):
         self, schema: FrozenSchema, ignored_columns: Container[str]
     ) -> Iterator[str]:
         names = schema.names
+        n_fields = len(names)
         if not self.require_all:
-            with suppress(IndexError):  # pragma: no cover
-                for index in self.indices:
-                    yield names[index]
+            if n_fields == 0:
+                yield from ()
+            else:
+                yield from (names[idx] for idx in self.indices if abs(idx) < n_fields)
         else:
-            n_fields = len(names)
-            for index in self.indices:
-                positive_index = index + n_fields if index < 0 else index
-                if positive_index < 0 or positive_index >= n_fields:
-                    raise column_index_error(index, schema)
-                yield names[index]
+            for idx in self.indices:
+                if abs(idx) < n_fields:
+                    yield names[idx]
+                else:
+                    raise column_index_error(idx, schema)
 
 
 class ByName(Selector):

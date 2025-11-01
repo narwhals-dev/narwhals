@@ -234,6 +234,10 @@ def test_selector_by_index(schema_non_nested: nw.Schema) -> None:
         ~ncs.by_index(range(0, df.width, 2)), "bbb", "def", "fgg", "JJK", "opp"
     )
 
+    df.assert_selects(ncs.by_index(0, 999, require_all=False), "abc")
+    df.assert_selects(ncs.by_index(-1, -999, require_all=False), "qqR")
+    df.assert_selects(ncs.by_index(1234, 5678, require_all=False))
+
 
 def test_selector_by_index_invalid_input() -> None:
     with pytest.raises(TypeError):
@@ -249,12 +253,20 @@ def test_selector_by_index_not_found(schema_non_nested: nw.Schema) -> None:
     with pytest.raises(ColumnNotFoundError):
         df.project(ncs.by_index(999))
 
+    df.assert_selects(ncs.by_index(999, -50, require_all=False))
+
+    df = Frame(nw.Schema())
+    df.assert_selects(ncs.by_index(111, -112, require_all=False))
+
 
 def test_selector_by_index_reordering(schema_non_nested: nw.Schema) -> None:
     df = Frame(schema_non_nested)
 
     df.assert_selects(ncs.by_index(-3, -2, -1), "Lmn", "opp", "qqR")
     df.assert_selects(ncs.by_index(range(-3, 0)), "Lmn", "opp", "qqR")
+    df.assert_selects(
+        ncs.by_index(-3, 999, -2, -1, -48, require_all=False), "Lmn", "opp", "qqR"
+    )
 
 
 def test_selector_by_name(schema_non_nested: nw.Schema) -> None:
