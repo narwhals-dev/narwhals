@@ -80,7 +80,7 @@ class Expr:
     def cast(self, dtype: IntoDType) -> Self:
         return self._from_ir(self._ir.cast(common.into_dtype(dtype)))
 
-    def exclude(self, *names: OneOrIterable[str]) -> Expr:  # pragma: no cover
+    def exclude(self, *names: OneOrIterable[str]) -> Expr:
         from narwhals._plan import selectors as cs
 
         return (self.meta.as_selector() - cs.by_name(*names)).as_expr()

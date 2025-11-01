@@ -456,6 +456,8 @@ def test_selector_sets(schema_non_nested: nw.Schema, schema_mixed: nw.Schema) ->
     # Would allow: `str | Expr | DType | type[DType] | Selector | Collection[str | Expr | DType | type[DType] | Selector]`
     selector = ncs.all() - (~temporal | ncs.matches(r"opp|JJK"))
     df.assert_selects(selector, "ghi", "Lmn")
+    selector = nwp.all().exclude("opp", "JJK").meta.as_selector() - (~temporal)
+    df.assert_selects(selector, "ghi", "Lmn")
 
     sub_expr = ncs.matches("[yz]$") - nwp.col("colx")
     assert not isinstance(sub_expr, Selector), (
@@ -499,10 +501,20 @@ def test_selector_result_order(schema_non_nested: nw.Schema, selector: Selector)
 
 def test_selector_list(schema_nested_1: nw.Schema) -> None:
     df = Frame(schema_nested_1)
+
+    # inner None
     df.assert_selects(ncs.list(), "b", "c", "e")
+    # Inner All (as a DTypeSelector)
     df.assert_selects(ncs.list(ncs.all()), "b", "c", "e")
-    df.assert_selects(ncs.list(inner=ncs.numeric()), "b", "c")
+    # inner DTypeSelector
+    df.assert_selects(ncs.list(ncs.numeric()), "b", "c")
     df.assert_selects(ncs.list(inner=ncs.string()), "e")
+    # inner BinarySelector
+    df.assert_selects(
+        ncs.list(ncs.by_dtype(nw.Int32) | ncs.by_dtype(nw.UInt32)), "b", "c"
+    )
+    # inner InvertSelector
+    df.assert_selects(ncs.list(~ncs.all()))
 
 
 def test_selector_array(schema_nested_2: nw.Schema) -> None:

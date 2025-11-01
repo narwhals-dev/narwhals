@@ -114,8 +114,8 @@ class DTypeAll(DTypeSelector, dtype=DType):
     ) -> Iterator[str]:
         if ignored_columns:  # pragma: no cover
             yield from (name for name in schema if name not in ignored_columns)
-        else:
-            yield from schema  # pragma: no cover
+        else:  # pragma: no cover
+            yield from schema
 
 
 class All(Selector):

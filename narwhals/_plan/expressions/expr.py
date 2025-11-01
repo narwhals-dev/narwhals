@@ -445,12 +445,12 @@ class BinarySelector(
             target = ()
         yield from target
 
-    def matches(self, dtype: IntoDType) -> bool:  # pragma: no cover
+    def matches(self, dtype: IntoDType) -> bool:
         left = self.left.matches(dtype)
         right = self.right.matches(dtype)
         return bool(self.op(left, right))
 
-    def to_dtype_selector(self) -> Self:  # pragma: no cover
+    def to_dtype_selector(self) -> Self:
         return replace(
             self, left=self.left.to_dtype_selector(), right=self.right.to_dtype_selector()
         )
@@ -482,10 +482,10 @@ class InvertSelector(SelectorIR, t.Generic[SelectorT]):
             target = names
         yield from target
 
-    def matches(self, dtype: IntoDType) -> bool:  # pragma: no cover
+    def matches(self, dtype: IntoDType) -> bool:
         return not self.selector.to_dtype_selector().matches(dtype)
 
-    def to_dtype_selector(self) -> Self:  # pragma: no cover
+    def to_dtype_selector(self) -> Self:
         return replace(self, selector=self.selector.to_dtype_selector())
 
 
