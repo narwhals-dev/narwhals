@@ -12,8 +12,8 @@ if TYPE_CHECKING:
     from tests.conftest import Data
 
 
-@pytest.fixture
-def schema() -> IntoSchema:
+@pytest.fixture(scope="module")
+def testing_schema() -> IntoSchema:
     return {
         "int": nw.Int32(),
         "float": nw.Float32(),
@@ -32,8 +32,8 @@ def schema() -> IntoSchema:
     }
 
 
-@pytest.fixture
-def data() -> Data:
+@pytest.fixture(scope="module")
+def testing_data() -> Data:
     return {
         "int": [1, 2, 3, 4],
         "float": [1.0, float("nan"), float("inf"), None],

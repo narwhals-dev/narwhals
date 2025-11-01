@@ -74,7 +74,8 @@ jobs:
           java-version: 17
 
       - name: install-reqs
-        run: uv pip install -e . --group core-tests --group extra --system
+        # temporary pin to get CI green
+        run: uv pip install -e . --group core-tests --group extra "pyarrow<22.0" --system
       - name: install pyspark
         run: echo "setuptools<78" | uv pip install -e . "pyspark[connect]==${SPARK_VERSION}" --system
       - name: show-deps

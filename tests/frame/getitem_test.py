@@ -3,8 +3,6 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, cast
 
-import numpy as np
-import pandas as pd
 import pytest
 
 import narwhals as nw
@@ -77,6 +75,9 @@ def test_slice_fails(constructor_eager: ConstructorEager) -> None:
 
 
 def test_gather(constructor_eager: ConstructorEager) -> None:
+    pytest.importorskip("numpy")
+    import numpy as np
+
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df[[0, 3, 1]]
     expected = {"a": [1.0, 4.0, 2.0], "b": [11, 14, 12]}
@@ -87,6 +88,9 @@ def test_gather(constructor_eager: ConstructorEager) -> None:
 
 
 def test_gather_pandas_index() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     # check that we're slicing positionally, and not on the pandas index
     df = pd.DataFrame({"a": [4, 1, 2], "b": [1, 4, 2]}, index=[2, 1, 3])
     result = nw.from_native(df, eager_only=True)[[1, 2]]
@@ -99,6 +103,9 @@ def test_gather_pandas_index() -> None:
 
 
 def test_gather_rows_cols(constructor_eager: ConstructorEager) -> None:
+    pytest.importorskip("numpy")
+    import numpy as np
+
     native_df = constructor_eager(data)
     df = nw.from_native(native_df, eager_only=True)
 
@@ -243,6 +250,9 @@ def test_get_item_works_with_tuple_and_list_indexing_and_str(
 
 
 def test_getitem_ndarray_columns(constructor_eager: ConstructorEager) -> None:
+    pytest.importorskip("numpy")
+    import numpy as np
+
     data = {"col1": ["a", "b", "c", "d"], "col2": np.arange(4), "col3": [4, 3, 2, 1]}
     nw_df = nw.from_native(constructor_eager(data), eager_only=True)
     arr = np.arange(2)
@@ -252,6 +262,9 @@ def test_getitem_ndarray_columns(constructor_eager: ConstructorEager) -> None:
 
 
 def test_getitem_ndarray_columns_labels(constructor_eager: ConstructorEager) -> None:
+    pytest.importorskip("numpy")
+    import numpy as np
+
     data = {"col1": ["a", "b", "c", "d"], "col2": np.arange(4), "col3": [4, 3, 2, 1]}
     nw_df = nw.from_native(constructor_eager(data), eager_only=True)
     arr: np.ndarray[tuple[int], np.dtype[Any]] = np.array(["col1", "col2"])  # pyright: ignore[reportAssignmentType]
@@ -261,6 +274,9 @@ def test_getitem_ndarray_columns_labels(constructor_eager: ConstructorEager) -> 
 
 
 def test_getitem_negative_slice(constructor_eager: ConstructorEager) -> None:
+    pytest.importorskip("numpy")
+    import numpy as np
+
     data = {"col1": ["a", "b", "c", "d"], "col2": np.arange(4), "col3": [4, 3, 2, 1]}
     nw_df = nw.from_native(constructor_eager(data), eager_only=True)
     result = nw_df[-3:-2, ["col3", "col1"]]
@@ -275,6 +291,9 @@ def test_getitem_negative_slice(constructor_eager: ConstructorEager) -> None:
 
 
 def test_zeroth_row_no_columns(constructor_eager: ConstructorEager) -> None:
+    pytest.importorskip("numpy")
+    import numpy as np
+
     data = {"col1": ["a", "b", "c", "d"], "col2": np.arange(4), "col3": [4, 3, 2, 1]}
     nw_df = nw.from_native(constructor_eager(data), eager_only=True)
     columns: list[str] = []
@@ -352,6 +371,9 @@ def test_pandas_non_str_columns() -> None:
     # The general rule with getitem is: ints are always treated as positions. The rest, we should
     # be able to hand down to the native frame. Here we check what happens for pandas with
     # datetime column names.
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df = nw.from_native(
         pd.DataFrame({datetime(2020, 1, 1): [1, 2, 3], datetime(2020, 1, 2): [4, 5, 6]}),
         eager_only=True,

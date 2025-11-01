@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, Callable, Final, Literal, cast, overload
 import narwhals as nw
 from narwhals import exceptions, functions as nw_f
 from narwhals._exceptions import issue_warning
+from narwhals._expression_parsing import ExprKind, ExprNode, is_expr
 from narwhals._typing_compat import TypeVar, assert_never
 from narwhals._utils import (
     Implementation,
@@ -67,6 +68,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import ParamSpec, Self
 
+    from narwhals._expression_parsing import ExprMetadata
     from narwhals._translate import IntoArrowTable
     from narwhals._typing import (
         Arrow,
@@ -126,7 +128,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):  # type: ignore[type-var]
     def from_dict(
         cls,
         data: Mapping[str, Any],
-        schema: Mapping[str, DType] | Schema | None = None,
+        schema: IntoSchema | Mapping[str, DType | None] | None = None,
         *,
         backend: IntoBackend[EagerAllowed] | None = None,
     ) -> DataFrame[Any]:
@@ -137,7 +139,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):  # type: ignore[type-var]
     def from_dicts(
         cls,
         data: Sequence[Any],
-        schema: IntoSchema | None = None,
+        schema: IntoSchema | Mapping[str, DType | None] | None = None,
         *,
         backend: IntoBackend[EagerAllowed],
     ) -> DataFrame[Any]:
@@ -246,18 +248,9 @@ class LazyFrame(NwLazyFrame[IntoLazyFrameT]):
     def _dataframe(self) -> type[DataFrame[Any]]:
         return DataFrame
 
-    def _extract_compliant(self, arg: Any) -> Any:
-        # After v1, we raise when passing order-dependent, length-changing,
-        # or filtration expressions to LazyFrame
-        from narwhals.expr import Expr
-        from narwhals.series import Series
-
-        if isinstance(arg, Series):  # pragma: no cover
-            msg = "Mixing Series with LazyFrame is not supported."
-            raise TypeError(msg)
-        if isinstance(arg, (Expr, str)):
-            return self.__narwhals_namespace__().parse_into_expr(arg, str_as_lit=False)
-        raise InvalidIntoExprError.from_invalid_type(type(arg))
+    def _validate_metadata(self, metadata: ExprMetadata) -> None:
+        # After v1, we raise for order-dependent operations.
+        pass
 
     def collect(
         self, backend: IntoBackend[Polars | Pandas | Arrow] | None = None, **kwargs: Any
@@ -380,15 +373,11 @@ class Expr(NwExpr):
 
     def head(self, n: int = 10) -> Self:
         r"""Get the first `n` rows."""
-        return self._with_orderable_filtration(
-            lambda plx: self._to_compliant_expr(plx).head(n)  # type: ignore[attr-defined]
-        )
+        return self._append_node(ExprNode(ExprKind.ORDERABLE_FILTRATION, "head", n=n))
 
     def tail(self, n: int = 10) -> Self:
         r"""Get the last `n` rows."""
-        return self._with_orderable_filtration(
-            lambda plx: self._to_compliant_expr(plx).tail(n)  # type: ignore[attr-defined]
-        )
+        return self._append_node(ExprNode(ExprKind.ORDERABLE_FILTRATION, "tail", n=n))
 
     def gather_every(self, n: int, offset: int = 0) -> Self:
         r"""Take every nth value in the Series and return as new Series.
@@ -397,8 +386,8 @@ class Expr(NwExpr):
             n: Gather every *n*-th row.
             offset: Starting index.
         """
-        return self._with_orderable_filtration(
-            lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset)  # type: ignore[attr-defined]
+        return self._append_node(
+            ExprNode(ExprKind.ORDERABLE_FILTRATION, "gather_every", n=n, offset=offset)
         )
 
     def unique(self, *, maintain_order: bool | None = None) -> Self:
@@ -409,33 +398,27 @@ class Expr(NwExpr):
                 "You can safely remove this argument."
             )
             issue_warning(msg, UserWarning)
-        return self._with_filtration(lambda plx: self._to_compliant_expr(plx).unique())
+        return self._append_node(ExprNode(ExprKind.FILTRATION, "unique"))
 
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
         """Sort this column. Place null values first."""
-        return self._with_window(
-            lambda plx: self._to_compliant_expr(plx).sort(  # type: ignore[attr-defined]
-                descending=descending, nulls_last=nulls_last
+        return self._append_node(
+            ExprNode(
+                ExprKind.WINDOW, "sort", descending=descending, nulls_last=nulls_last
             )
         )
 
     def arg_max(self) -> Self:
         """Returns the index of the maximum value."""
-        return self._with_orderable_aggregation(
-            lambda plx: self._to_compliant_expr(plx).arg_max()  # type: ignore[attr-defined]
-        )
+        return self._append_node(ExprNode(ExprKind.ORDERABLE_AGGREGATION, "arg_max"))
 
     def arg_min(self) -> Self:
         """Returns the index of the minimum value."""
-        return self._with_orderable_aggregation(
-            lambda plx: self._to_compliant_expr(plx).arg_min()  # type: ignore[attr-defined]
-        )
+        return self._append_node(ExprNode(ExprKind.ORDERABLE_AGGREGATION, "arg_min"))
 
     def arg_true(self) -> Self:
         """Find elements where boolean expression is True."""
-        return self._with_orderable_filtration(
-            lambda plx: self._to_compliant_expr(plx).arg_true()  # type: ignore[attr-defined]
-        )
+        return self._append_node(ExprNode(ExprKind.ORDERABLE_FILTRATION, "arg_true"))
 
     def sample(
         self,
@@ -454,9 +437,14 @@ class Expr(NwExpr):
             seed: Seed for the random number generator. If set to None (default), a random
                 seed is generated for each sample operation.
         """
-        return self._with_filtration(
-            lambda plx: self._to_compliant_expr(plx).sample(  # type: ignore[attr-defined]
-                n, fraction=fraction, with_replacement=with_replacement, seed=seed
+        return self._append_node(
+            ExprNode(
+                ExprKind.FILTRATION,
+                "sample",
+                n=n,
+                fraction=fraction,
+                with_replacement=with_replacement,
+                seed=seed,
             )
         )
 
@@ -494,7 +482,7 @@ def _stableify(
     if isinstance(obj, NwSeries):
         return Series(obj._compliant_series._with_version(Version.V1), level=obj._level)
     if isinstance(obj, NwExpr):
-        return Expr(obj._to_compliant_expr, obj._metadata)
+        return Expr(*obj._nodes)
     assert_never(obj)
 
 
@@ -1215,7 +1203,7 @@ class When(nw_f.When):
 class Then(nw_f.Then, Expr):
     @classmethod
     def from_then(cls, then: nw_f.Then) -> Then:
-        return cls(then._to_compliant_expr, then._metadata)
+        return cls(*then._nodes)
 
     def otherwise(self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Expr:
         return _stableify(super().otherwise(value))
@@ -1392,6 +1380,7 @@ __all__ = [
     "Int32",
     "Int64",
     "Int128",
+    "InvalidIntoExprError",
     "LazyFrame",
     "List",
     "Object",
@@ -1426,6 +1415,7 @@ __all__ = [
     "generate_temporary_column_name",
     "get_level",
     "get_native_namespace",
+    "is_expr",
     "is_ordered_categorical",
     "len",
     "lit",
