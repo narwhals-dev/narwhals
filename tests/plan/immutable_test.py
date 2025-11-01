@@ -212,3 +212,25 @@ def test_immutable___slots___(immutable_type: type[Immutable]) -> None:
     slots = immutable_type.__slots__
     if slots:
         assert len(slots) != 0, slots
+
+
+def test_immutable_str() -> None:
+    class MixedFields(Immutable):
+        __slots__ = ("name", "unique_id", "aliases")  # noqa: RUF023
+        name: str
+        unique_id: int
+        aliases: tuple[str, str, str]
+
+    class Parent(Immutable):
+        __slots__ = ("children",)
+        children: tuple[MixedFields, ...]
+
+    bob = MixedFields(name="bob", unique_id=123, aliases=("robert", "bobert", "Bob"))
+    parent = Parent(children=(bob,))
+
+    expected_child = (
+        "MixedFields(name='bob', unique_id=123, aliases=['robert', 'bobert', 'Bob'])"
+    )
+    expected_parent = f"Parent(children=[{expected_child}])"
+    assert str(bob) == expected_child
+    assert str(parent) == expected_parent

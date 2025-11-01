@@ -3,12 +3,13 @@ from __future__ import annotations
 # NOTE: Needed to avoid naming collisions
 # - Any
 import typing as t
+from typing import TYPE_CHECKING
 
 from narwhals._plan._function import Function, HorizontalFunction
 from narwhals._plan.options import FEOptions, FunctionOptions
 from narwhals._typing_compat import TypeVar
 
-if t.TYPE_CHECKING:
+if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._plan._expr_ir import ExprIR

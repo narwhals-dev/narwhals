@@ -88,7 +88,7 @@ def map_ir(
     origin: NamedOrExprIRT, function: MapIR, *more_functions: MapIR
 ) -> NamedOrExprIRT:
     """Apply one or more functions, sequentially, to all of `origin`'s children."""
-    if more_functions:
+    if more_functions:  # pragma: no cover
         result = origin
         for fn in (function, *more_functions):
             result = result.map_ir(fn)

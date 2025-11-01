@@ -84,30 +84,32 @@ class IRStringNamespace(IRNamespace):
 
     def replace(
         self, pattern: str, value: str, *, literal: bool = False, n: int = 1
-    ) -> Replace:
+    ) -> Replace:  # pragma: no cover
         return Replace(pattern=pattern, value=value, literal=literal, n=n)
 
     def replace_all(
         self, pattern: str, value: str, *, literal: bool = False
-    ) -> ReplaceAll:
+    ) -> ReplaceAll:  # pragma: no cover
         return ReplaceAll(pattern=pattern, value=value, literal=literal)
 
-    def strip_chars(self, characters: str | None = None) -> StripChars:
+    def strip_chars(
+        self, characters: str | None = None
+    ) -> StripChars:  # pragma: no cover
         return StripChars(characters=characters)
 
     def contains(self, pattern: str, *, literal: bool = False) -> Contains:
         return Contains(pattern=pattern, literal=literal)
 
-    def slice(self, offset: int, length: int | None = None) -> Slice:
+    def slice(self, offset: int, length: int | None = None) -> Slice:  # pragma: no cover
         return Slice(offset=offset, length=length)
 
-    def head(self, n: int = 5) -> Slice:
+    def head(self, n: int = 5) -> Slice:  # pragma: no cover
         return self.slice(0, n)
 
-    def tail(self, n: int = 5) -> Slice:
+    def tail(self, n: int = 5) -> Slice:  # pragma: no cover
         return self.slice(-n)
 
-    def to_datetime(self, format: str | None = None) -> ToDatetime:
+    def to_datetime(self, format: str | None = None) -> ToDatetime:  # pragma: no cover
         return ToDatetime(format=format)
 
 
@@ -121,41 +123,43 @@ class ExprStringNamespace(ExprNamespace[IRStringNamespace]):
 
     def replace(
         self, pattern: str, value: str, *, literal: bool = False, n: int = 1
-    ) -> Expr:
+    ) -> Expr:  # pragma: no cover
         return self._with_unary(self._ir.replace(pattern, value, literal=literal, n=n))
 
-    def replace_all(self, pattern: str, value: str, *, literal: bool = False) -> Expr:
+    def replace_all(
+        self, pattern: str, value: str, *, literal: bool = False
+    ) -> Expr:  # pragma: no cover
         return self._with_unary(self._ir.replace_all(pattern, value, literal=literal))
 
-    def strip_chars(self, characters: str | None = None) -> Expr:
+    def strip_chars(self, characters: str | None = None) -> Expr:  # pragma: no cover
         return self._with_unary(self._ir.strip_chars(characters))
 
-    def starts_with(self, prefix: str) -> Expr:
+    def starts_with(self, prefix: str) -> Expr:  # pragma: no cover
         return self._with_unary(self._ir.starts_with(prefix=prefix))
 
-    def ends_with(self, suffix: str) -> Expr:
+    def ends_with(self, suffix: str) -> Expr:  # pragma: no cover
         return self._with_unary(self._ir.ends_with(suffix=suffix))
 
     def contains(self, pattern: str, *, literal: bool = False) -> Expr:
         return self._with_unary(self._ir.contains(pattern, literal=literal))
 
-    def slice(self, offset: int, length: int | None = None) -> Expr:
+    def slice(self, offset: int, length: int | None = None) -> Expr:  # pragma: no cover
         return self._with_unary(self._ir.slice(offset, length))
 
-    def head(self, n: int = 5) -> Expr:
+    def head(self, n: int = 5) -> Expr:  # pragma: no cover
         return self._with_unary(self._ir.head(n))
 
-    def tail(self, n: int = 5) -> Expr:
+    def tail(self, n: int = 5) -> Expr:  # pragma: no cover
         return self._with_unary(self._ir.tail(n))
 
-    def split(self, by: str) -> Expr:
+    def split(self, by: str) -> Expr:  # pragma: no cover
         return self._with_unary(self._ir.split(by=by))
 
-    def to_datetime(self, format: str | None = None) -> Expr:
+    def to_datetime(self, format: str | None = None) -> Expr:  # pragma: no cover
         return self._with_unary(self._ir.to_datetime(format))
 
-    def to_lowercase(self) -> Expr:
+    def to_lowercase(self) -> Expr:  # pragma: no cover
         return self._with_unary(self._ir.to_lowercase())
 
-    def to_uppercase(self) -> Expr:
+    def to_uppercase(self) -> Expr:  # pragma: no cover
         return self._with_unary(self._ir.to_uppercase())

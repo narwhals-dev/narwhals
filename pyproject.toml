@@ -300,8 +300,10 @@ omit = [
   'narwhals/_ibis/typing.py',
   # Remove after finishing eager sub-protocols
   'narwhals/_compliant/namespace.py',
-  # Doesn't have a full impl yet
-  'narwhals/_plan/*'
+  # NOTE: Gradually adding as things become more stable
+  'narwhals/_plan/arrow/*',
+  'narwhals/_plan/compliant/*',
+  'narwhals/_plan/**/typing.py',
 ]
 exclude_also = [
   "if sys.version_info() <",
@@ -321,7 +323,9 @@ exclude_also = [
   'if ".*" in str\(constructor',
   'pytest.skip\(',
   'assert_never\(',
-  'PANDAS_VERSION < \('
+  'PANDAS_VERSION < \(',
+  'def __repr__',
+  'def __str__',
 ]
 
 [tool.mypy]

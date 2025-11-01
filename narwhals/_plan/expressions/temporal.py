@@ -62,7 +62,7 @@ class Timestamp(TemporalFunction):
 
     @staticmethod
     def from_time_unit(time_unit: TimeUnit = "us", /) -> Timestamp:
-        if not _is_polars_time_unit(time_unit):
+        if not _is_polars_time_unit(time_unit):  # pragma: no cover
             msg = f"invalid `time_unit` \n\nExpected one of ['ns', 'us', 'ms'], got {time_unit!r}."
             raise ValueError(msg)
         return Timestamp(time_unit=time_unit)
@@ -77,11 +77,11 @@ class Truncate(TemporalFunction):
     unit: IntervalUnit
 
     @staticmethod
-    def from_string(every: str, /) -> Truncate:
+    def from_string(every: str, /) -> Truncate:  # pragma: no cover
         return Truncate.from_interval(Interval.parse(every))
 
     @staticmethod
-    def from_interval(every: Interval, /) -> Truncate:
+    def from_interval(every: Interval, /) -> Truncate:  # pragma: no cover
         return Truncate(multiple=every.multiple, unit=every.unit)
 
 
@@ -115,68 +115,68 @@ class ExprDateTimeNamespace(ExprNamespace[IRDateTimeNamespace]):
     def _ir_namespace(self) -> type[IRDateTimeNamespace]:
         return IRDateTimeNamespace
 
-    def date(self) -> Expr:
+    def date(self) -> Expr:  # pragma: no cover
         return self._with_unary(self._ir.date())
 
-    def year(self) -> Expr:
+    def year(self) -> Expr:  # pragma: no cover
         return self._with_unary(self._ir.year())
 
-    def month(self) -> Expr:
+    def month(self) -> Expr:  # pragma: no cover
         return self._with_unary(self._ir.month())
 
-    def day(self) -> Expr:
+    def day(self) -> Expr:  # pragma: no cover
         return self._with_unary(self._ir.day())
 
-    def hour(self) -> Expr:
+    def hour(self) -> Expr:  # pragma: no cover
         return self._with_unary(self._ir.hour())
 
-    def minute(self) -> Expr:
+    def minute(self) -> Expr:  # pragma: no cover
         return self._with_unary(self._ir.minute())
 
-    def second(self) -> Expr:
+    def second(self) -> Expr:  # pragma: no cover
         return self._with_unary(self._ir.second())
 
-    def millisecond(self) -> Expr:
+    def millisecond(self) -> Expr:  # pragma: no cover
         return self._with_unary(self._ir.millisecond())
 
-    def microsecond(self) -> Expr:
+    def microsecond(self) -> Expr:  # pragma: no cover
         return self._with_unary(self._ir.microsecond())
 
-    def nanosecond(self) -> Expr:
+    def nanosecond(self) -> Expr:  # pragma: no cover
         return self._with_unary(self._ir.nanosecond())
 
-    def ordinal_day(self) -> Expr:
+    def ordinal_day(self) -> Expr:  # pragma: no cover
         return self._with_unary(self._ir.ordinal_day())
 
-    def weekday(self) -> Expr:
+    def weekday(self) -> Expr:  # pragma: no cover
         return self._with_unary(self._ir.weekday())
 
     def total_minutes(self) -> Expr:
         return self._with_unary(self._ir.total_minutes())
 
-    def total_seconds(self) -> Expr:
+    def total_seconds(self) -> Expr:  # pragma: no cover
         return self._with_unary(self._ir.total_seconds())
 
-    def total_milliseconds(self) -> Expr:
+    def total_milliseconds(self) -> Expr:  # pragma: no cover
         return self._with_unary(self._ir.total_milliseconds())
 
-    def total_microseconds(self) -> Expr:
+    def total_microseconds(self) -> Expr:  # pragma: no cover
         return self._with_unary(self._ir.total_microseconds())
 
-    def total_nanoseconds(self) -> Expr:
+    def total_nanoseconds(self) -> Expr:  # pragma: no cover
         return self._with_unary(self._ir.total_nanoseconds())
 
-    def to_string(self, format: str) -> Expr:
+    def to_string(self, format: str) -> Expr:  # pragma: no cover
         return self._with_unary(self._ir.to_string(format=format))
 
-    def replace_time_zone(self, time_zone: str | None) -> Expr:
+    def replace_time_zone(self, time_zone: str | None) -> Expr:  # pragma: no cover
         return self._with_unary(self._ir.replace_time_zone(time_zone=time_zone))
 
-    def convert_time_zone(self, time_zone: str) -> Expr:
+    def convert_time_zone(self, time_zone: str) -> Expr:  # pragma: no cover
         return self._with_unary(self._ir.convert_time_zone(time_zone=time_zone))
 
     def timestamp(self, time_unit: TimeUnit = "us") -> Expr:
         return self._with_unary(self._ir.timestamp(time_unit))
 
-    def truncate(self, every: str) -> Expr:
+    def truncate(self, every: str) -> Expr:  # pragma: no cover
         return self._with_unary(self._ir.truncate(every))

@@ -50,7 +50,7 @@ class BaseFrame(Generic[NativeFrameT_co]):
         return self._version
 
     @property
-    def implementation(self) -> Implementation:
+    def implementation(self) -> Implementation:  # pragma: no cover
         return self._compliant.implementation
 
     @property
@@ -61,7 +61,7 @@ class BaseFrame(Generic[NativeFrameT_co]):
     def columns(self) -> list[str]:
         return self._compliant.columns
 
-    def __repr__(self) -> str:  # pragma: no cover
+    def __repr__(self) -> str:
         return generate_repr(f"nw.{type(self).__name__}", self.to_native().__repr__())
 
     def __init__(self, compliant: CompliantFrame[Any, NativeFrameT_co], /) -> None:
@@ -70,12 +70,12 @@ class BaseFrame(Generic[NativeFrameT_co]):
     def _with_compliant(self, compliant: CompliantFrame[Any, Incomplete], /) -> Self:
         return type(self)(compliant)
 
-    def to_native(self) -> NativeFrameT_co:
+    def to_native(self) -> NativeFrameT_co:  # pragma: no cover
         return self._compliant.native
 
     def filter(
         self, *predicates: OneOrIterable[IntoExprColumn], **constraints: Any
-    ) -> Self:
+    ) -> Self:  # pragma: no cover
         e = _parse.parse_predicates_constraints_into_expr_ir(*predicates, **constraints)
         named_irs, _ = prepare_projection((e,), schema=self)
         if len(named_irs) != 1:
@@ -113,7 +113,9 @@ class BaseFrame(Generic[NativeFrameT_co]):
     def drop(self, *columns: str, strict: bool = True) -> Self:
         return self._with_compliant(self._compliant.drop(columns, strict=strict))
 
-    def drop_nulls(self, subset: str | Sequence[str] | None = None) -> Self:
+    def drop_nulls(
+        self, subset: str | Sequence[str] | None = None
+    ) -> Self:  # pragma: no cover
         subset = [subset] if isinstance(subset, str) else subset
         return self._with_compliant(self._compliant.drop_nulls(subset))
 
@@ -130,7 +132,7 @@ class DataFrame(
     def implementation(self) -> _EagerAllowedImpl:
         return self._compliant.implementation
 
-    def __len__(self) -> int:
+    def __len__(self) -> int:  # pragma: no cover
         return len(self._compliant)
 
     @property
@@ -183,17 +185,17 @@ class DataFrame(
     def to_dict(
         self, *, as_series: bool = True
     ) -> dict[str, Series[NativeSeriesT]] | dict[str, list[Any]]:
-        if as_series:
+        if as_series:  # pragma: no cover
             return {
                 key: self._series(value)
                 for key, value in self._compliant.to_dict(as_series=as_series).items()
             }
         return self._compliant.to_dict(as_series=as_series)
 
-    def to_series(self, index: int = 0) -> Series[NativeSeriesT]:
+    def to_series(self, index: int = 0) -> Series[NativeSeriesT]:  # pragma: no cover
         return self._series(self._compliant.to_series(index))
 
-    def get_column(self, name: str) -> Series[NativeSeriesT]:
+    def get_column(self, name: str) -> Series[NativeSeriesT]:  # pragma: no cover
         return self._series(self._compliant.get_column(name))
 
     @overload
@@ -253,7 +255,7 @@ class DataFrame(
             **constraints,
         )
         named_irs, _ = prepare_projection((e,), schema=self)
-        if len(named_irs) != 1:
+        if len(named_irs) != 1:  # pragma: no cover
             # Should be unreachable, but I guess we will see
             msg = f"Expected a single predicate after expansion, but got {len(named_irs)!r}\n\n{named_irs!r}"
             raise ValueError(msg)

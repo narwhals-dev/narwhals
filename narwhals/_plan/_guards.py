@@ -132,9 +132,7 @@ def is_literal(obj: Any) -> TypeIs[ir.Literal[Any]]:
     return isinstance(obj, _ir().Literal)
 
 
-def is_horizontal_reduction(obj: Any) -> TypeIs[ir.FunctionExpr[Any]]:
-    return is_function_expr(obj) and obj.options.is_input_wildcard_expansion()
-
-
-def is_tuple_of(obj: Any, tp: type[T]) -> TypeIs[Seq[T]]:
+# TODO @dangotbanned: Coverage
+# Used in `ArrowNamespace._vertical`, but only horizontal is covered
+def is_tuple_of(obj: Any, tp: type[T]) -> TypeIs[Seq[T]]:  # pragma: no cover
     return bool(isinstance(obj, tuple) and obj and isinstance(obj[0], tp))

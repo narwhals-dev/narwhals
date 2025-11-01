@@ -20,7 +20,7 @@ class IRCatNamespace(IRNamespace):
 class ExprCatNamespace(ExprNamespace[IRCatNamespace]):
     @property
     def _ir_namespace(self) -> type[IRCatNamespace]:
-        return IRCatNamespace
+        return IRCatNamespace  # pragma: no cover
 
     def get_categories(self) -> Expr:
-        return self._with_unary(self._ir.get_categories())
+        return self._with_unary(self._ir.get_categories())  # pragma: no cover

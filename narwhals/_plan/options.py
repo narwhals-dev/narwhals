@@ -59,7 +59,7 @@ class FunctionFlags(enum.Flag):
         return FunctionFlags.RETURNS_SCALAR in self
 
     def is_length_preserving(self) -> bool:
-        return FunctionFlags.LENGTH_PRESERVING in self
+        return FunctionFlags.LENGTH_PRESERVING in self  # pragma: no cover
 
     def is_row_separable(self) -> bool:
         return FunctionFlags.ROW_SEPARABLE in self
@@ -92,7 +92,7 @@ class FunctionOptions(Immutable):
         return self.flags.returns_scalar()
 
     def is_length_preserving(self) -> bool:
-        return self.flags.is_length_preserving()
+        return self.flags.is_length_preserving()  # pragma: no cover
 
     def is_row_separable(self) -> bool:
         return self.flags.is_row_separable()
@@ -102,8 +102,8 @@ class FunctionOptions(Immutable):
 
     def with_flags(self, flags: FunctionFlags, /) -> FunctionOptions:
         if (FunctionFlags.RETURNS_SCALAR | FunctionFlags.LENGTH_PRESERVING) in flags:
-            msg = "A function cannot both return a scalar and preserve length, they are mutually exclusive."
-            raise TypeError(msg)
+            msg = "A function cannot both return a scalar and preserve length, they are mutually exclusive."  # pragma: no cover
+            raise TypeError(msg)  # pragma: no cover
         obj = FunctionOptions.__new__(FunctionOptions)
         object.__setattr__(obj, "flags", self.flags | flags)
         return obj
@@ -155,10 +155,6 @@ class SortOptions(Immutable):
         args = f"descending={self.descending!r}, nulls_last={self.nulls_last!r}"
         return f"{type(self).__name__}({args})"
 
-    @staticmethod
-    def default() -> SortOptions:
-        return SortOptions(descending=False, nulls_last=False)
-
     def to_arrow(self) -> pc.ArraySortOptions:
         import pyarrow.compute as pc
 
@@ -171,7 +167,7 @@ class SortOptions(Immutable):
         if n_repeat == 1:
             desc: Seq[bool] = (self.descending,)
             nulls: Seq[bool] = (self.nulls_last,)
-        else:
+        else:  # pragma: no cover
             desc = tuple(repeat(self.descending, n_repeat))
             nulls = tuple(repeat(self.nulls_last, n_repeat))
         return SortMultipleOptions(descending=desc, nulls_last=nulls)
@@ -201,7 +197,7 @@ class SortMultipleOptions(Immutable):
     ) -> tuple[Sequence[tuple[str, Order]], NullPlacement]:
         first = self.nulls_last[0]
         if len(self.nulls_last) != 1 and any(x != first for x in self.nulls_last[1:]):
-            msg = f"pyarrow doesn't support multiple values for `nulls_last`, got: {self.nulls_last!r}"
+            msg = f"pyarrow doesn't support multiple values for `nulls_last`, got: {self.nulls_last!r}"  # pragma: no cover
             raise NotImplementedError(msg)
         if len(self.descending) == 1:
             descending: Iterable[bool] = repeat(self.descending[0], len(by))
@@ -219,7 +215,9 @@ class SortMultipleOptions(Immutable):
         sort_keys, placement = self._to_arrow_args(by)
         return pc.SortOptions(sort_keys=sort_keys, null_placement=placement)
 
-    def to_arrow_acero(self, by: Sequence[str]) -> pyarrow.acero.Declaration:
+    def to_arrow_acero(
+        self, by: Sequence[str]
+    ) -> pyarrow.acero.Declaration:  # pragma: no cover
         from narwhals._plan.arrow import acero
 
         sort_keys, placement = self._to_arrow_args(by)
@@ -291,7 +289,7 @@ class _BaseIROptions(Immutable):
         return self.__str__()
 
     @classmethod
-    def default(cls) -> Self:
+    def default(cls) -> Self:  # pragma: no cover[abstract]
         return cls(is_namespaced=False, override_name="")
 
     @classmethod

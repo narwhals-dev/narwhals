@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import typing as t
+from typing import TYPE_CHECKING
 
 from narwhals._typing_compat import TypeVar
 
-if t.TYPE_CHECKING:
+if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
 
     from typing_extensions import TypeAlias

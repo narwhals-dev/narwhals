@@ -143,7 +143,7 @@ def _ensure_valid_output_names(names: Seq[str], schema: FrozenSchema) -> OutputN
     check_column_names_are_unique(names)
     output_names = names
     if not (set(schema.names).issuperset(output_names)):
-        raise column_not_found_error(output_names, schema)
+        raise column_not_found_error(output_names, schema)  # pragma: no cover
     return output_names
 
 
@@ -187,7 +187,7 @@ class Expander:
                 name = replaced.meta.output_name()
                 target = replaced
             else:
-                msg = f"Unable to determine output name for expression, got: `{e!r}`"
+                msg = f"Unable to determine output name for expression, got: `{e!r}`"  # pragma: no cover
                 raise NotImplementedError(msg)
             output_names.append(name)
             named_irs.append(ir.named_ir(name, remove_alias(target)))
@@ -221,7 +221,7 @@ class Expander:
             yield from self._expand_combination(origin)
         elif isinstance(origin, ir.FunctionExpr):
             yield from self._expand_function_expr(origin)
-        else:
+        else:  # pragma: no cover
             msg = f"Didn't expect to see {type(origin).__name__}"
             raise TypeError(msg)
 
@@ -265,8 +265,8 @@ class Expander:
         iterable = self._expand_recursive(child)
         first = next(iterable)
         if second := next(iterable, None):
-            msg = f"Multi-output expressions are not supported in this context, got: `{second!r}`"
-            raise MultiOutputExpressionError(msg)
+            msg = f"Multi-output expressions are not supported in this context, got: `{second!r}`"  # pragma: no cover
+            raise MultiOutputExpressionError(msg)  # pragma: no cover
         return first
 
     # TODO @dangotbanned: It works, but all this class-specific branching belongs in the classes themselves
