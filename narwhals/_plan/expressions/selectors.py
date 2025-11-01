@@ -87,8 +87,7 @@ class DTypeSelector(Selector):
             The result will *only* be cached if this method is **not overridden**.
             Instead, use `DTypeSelector._matches` to customize the check.
         """
-        # See https://github.com/python/typeshed/issues/6347
-        return _selector_matches(self, dtype)  # type: ignore[arg-type]
+        return _selector_matches(self, dtype)
 
     def _matches(self, dtype: IntoDType) -> bool:
         """Implementation of `DTypeSelector.matches`."""
