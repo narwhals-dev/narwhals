@@ -6,12 +6,19 @@ from collections.abc import Iterable, Sequence
 from itertools import chain
 from typing import TYPE_CHECKING
 
-from narwhals._plan._guards import is_expr, is_into_expr_column, is_iterable_reject
+from narwhals._plan._guards import (
+    is_column_name_or_selector,
+    is_expr,
+    is_into_expr_column,
+    is_iterable_reject,
+    is_selector,
+)
 from narwhals._plan.exceptions import (
     invalid_into_expr_error,
     is_iterable_pandas_error,
     is_iterable_polars_error,
 )
+from narwhals._utils import qualified_type_name
 from narwhals.dependencies import get_polars, is_pandas_dataframe, is_pandas_series
 from narwhals.exceptions import InvalidOperationError
 
@@ -22,8 +29,10 @@ if TYPE_CHECKING:
     import polars as pl
     from typing_extensions import TypeAlias, TypeIs
 
-    from narwhals._plan.expressions import ExprIR
+    from narwhals._plan.expr import Expr
+    from narwhals._plan.expressions import ExprIR, SelectorIR
     from narwhals._plan.typing import (
+        ColumnNameOrSelector,
         IntoExpr,
         IntoExprColumn,
         OneOrIterable,
@@ -124,6 +133,23 @@ def parse_into_expr_ir(
     return expr._ir
 
 
+# NOTE: Might need to add `require_all`, since selectors are created indirectly from `str`
+# here, but use set semantics
+def parse_into_selector_ir(input: ColumnNameOrSelector | Expr, /) -> SelectorIR:
+    if is_selector(input):
+        selector = input
+    elif isinstance(input, str):
+        from narwhals._plan import selectors as cs
+
+        selector = cs.by_name(input)
+    elif is_expr(input):
+        selector = input.meta.as_selector()
+    else:
+        msg = f"cannot turn {qualified_type_name(input)!r} into selector"
+        raise TypeError(msg)
+    return selector._ir
+
+
 def parse_into_seq_of_expr_ir(
     first_input: OneOrIterable[IntoExpr] = (),
     *more_inputs: IntoExpr | _RaisesInvalidIntoExprError,
@@ -173,6 +199,34 @@ def _parse_sort_by_into_iter_expr_ir(
             msg = f"All expressions sort keys must preserve length, but got:\n{e!r}"
             raise InvalidOperationError(msg)
         yield e
+
+
+def parse_into_seq_of_selector_ir(
+    first_input: OneOrIterable[ColumnNameOrSelector], *more_inputs: ColumnNameOrSelector
+) -> Seq[SelectorIR]:
+    return tuple(_parse_into_iter_selector_ir(first_input, more_inputs))
+
+
+def _parse_into_iter_selector_ir(
+    first_input: OneOrIterable[ColumnNameOrSelector],
+    more_inputs: tuple[ColumnNameOrSelector, ...],
+    /,
+) -> Iterator[SelectorIR]:
+    if is_column_name_or_selector(first_input) and not more_inputs:
+        yield parse_into_selector_ir(first_input)
+        return
+
+    if not _is_empty_sequence(first_input):
+        if _is_iterable(first_input) and not isinstance(first_input, str):
+            if more_inputs:
+                raise invalid_into_expr_error(first_input, more_inputs, {})
+            else:
+                for into in first_input:  # type: ignore[var-annotated]
+                    yield parse_into_selector_ir(into)
+        else:
+            yield parse_into_selector_ir(first_input)
+    for into in more_inputs:
+        yield parse_into_selector_ir(into)
 
 
 def _parse_into_iter_expr_ir(

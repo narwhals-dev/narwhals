@@ -8,6 +8,7 @@ from narwhals._plan._immutable import Immutable
 from narwhals._plan.common import replace
 from narwhals._plan.options import ExprIROptions
 from narwhals._plan.typing import ExprIRT
+from narwhals.exceptions import InvalidOperationError
 from narwhals.utils import Version
 
 if TYPE_CHECKING:
@@ -58,6 +59,10 @@ class ExprIR(Immutable):
 
         tp = expr.Expr if version is Version.MAIN else expr.ExprV1
         return tp._from_ir(self)
+
+    def to_selector_ir(self) -> SelectorIR:
+        msg = f"cannot turn `{self!r}` into a selector"
+        raise InvalidOperationError(msg)
 
     @property
     def is_scalar(self) -> bool:
@@ -200,6 +205,9 @@ class SelectorIR(ExprIR, config=ExprIROptions.no_dispatch()):
           - Instead do one pass, evaluating every selector against a single column at a time
         """
         raise NotImplementedError(type(self))
+
+    def to_selector_ir(self) -> Self:
+        return self
 
 
 class NamedIR(Immutable, Generic[ExprIRT]):

@@ -11,7 +11,7 @@ import pyarrow.compute as pc  # ignore-banned-import
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._plan.arrow import acero, functions as fn
 from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
-from narwhals._plan.arrow.group_by import ArrowGroupBy as GroupBy
+from narwhals._plan.arrow.group_by import ArrowGroupBy as GroupBy, partition_by
 from narwhals._plan.arrow.series import ArrowSeries as Series
 from narwhals._plan.compliant.dataframe import EagerDataFrame
 from narwhals._plan.compliant.typing import namespace
@@ -23,7 +23,7 @@ from narwhals.schema import Schema
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
 
-    from typing_extensions import Self
+    from typing_extensions import Self, TypeAlias
 
     from narwhals._arrow.typing import ChunkedArrayAny
     from narwhals._plan.arrow.namespace import ArrowNamespace
@@ -32,6 +32,8 @@ if TYPE_CHECKING:
     from narwhals._plan.typing import NonCrossJoinStrategy, Seq
     from narwhals.dtypes import DType
     from narwhals.typing import IntoSchema
+
+Incomplete: TypeAlias = Any
 
 
 class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
@@ -152,7 +154,7 @@ class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
         *,
         how: NonCrossJoinStrategy,
         left_on: Sequence[str],
-        right_on: Sequence[str],
+        right_on: Sequence[str] = (),
         suffix: str = "_right",
     ) -> Self:
         left, right = self.native, other.native
@@ -171,3 +173,8 @@ class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
         else:
             mask = acero.lit(resolved.native)
         return self._with_native(self.native.filter(mask))
+
+    def partition_by(self, by: Sequence[str], *, include_key: bool = True) -> list[Self]:
+        from_native = self._with_native
+        partitions = partition_by(self.native, by, include_key=include_key)
+        return [from_native(df) for df in partitions]

@@ -11,11 +11,16 @@ from narwhals._utils import _hasattr_static
 if TYPE_CHECKING:
     from typing_extensions import TypeIs
 
-    from narwhals._plan import expressions as ir
+    from narwhals._plan import expr, expressions as ir
     from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._plan.expr import Expr
     from narwhals._plan.series import Series
-    from narwhals._plan.typing import IntoExprColumn, NativeSeriesT, Seq
+    from narwhals._plan.typing import (
+        ColumnNameOrSelector,
+        IntoExprColumn,
+        NativeSeriesT,
+        Seq,
+    )
     from narwhals.typing import NonNestedLiteral
 
     T = TypeVar("T")
@@ -58,6 +63,10 @@ def is_expr(obj: Any) -> TypeIs[Expr]:
     return isinstance(obj, _expr().Expr)
 
 
+def is_selector(obj: Any) -> TypeIs[expr.Selector]:
+    return isinstance(obj, _expr().Selector)
+
+
 def is_column(obj: Any) -> TypeIs[Expr]:
     """Indicate if the given object is a basic/unaliased column."""
     return is_expr(obj) and obj.meta.is_column()
@@ -69,6 +78,13 @@ def is_series(obj: Series[NativeSeriesT] | Any) -> TypeIs[Series[NativeSeriesT]]
 
 def is_into_expr_column(obj: Any) -> TypeIs[IntoExprColumn]:
     return isinstance(obj, (str, _expr().Expr, _series().Series))
+
+
+def is_column_name_or_selector(
+    obj: Any, *, allow_expr: bool = False
+) -> TypeIs[ColumnNameOrSelector]:
+    tps = (str, _expr().Selector) if not allow_expr else (str, _expr().Expr)
+    return isinstance(obj, tps)
 
 
 def is_compliant_series(

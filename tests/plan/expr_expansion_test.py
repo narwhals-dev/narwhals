@@ -243,6 +243,13 @@ def test_map_ir_recursive(expr: nwp.Expr, function: MapIR, expected: nwp.Expr) -
                 .name.to_uppercase()
             ),
         ),
+        pytest.param(
+            ndcs.by_dtype(
+                nw.Datetime, nw.Enum, nw.Duration, nw.Struct, nw.List, nw.Array
+            ),
+            nwp.col("l", "o", "q", "r", "s", "u"),
+            id="ByDType-isinstance",
+        ),
     ],
 )
 def test_replace_selector(
@@ -439,6 +446,35 @@ def test_replace_selector(
                 ),
             ],
             id="Selector-BinaryExpr-Over-Prefix",
+        ),
+        pytest.param(
+            [
+                nwp.col("c").sort_by(nwp.col("c", "i")).first().alias("Columns"),
+                nwp.col("c").sort_by("c", "i").first().alias("Column_x2"),
+            ],
+            [
+                named_ir(
+                    "Columns", nwp.col("c").sort_by(nwp.col("c"), nwp.col("i")).first()
+                ),
+                named_ir(
+                    "Column_x2", nwp.col("c").sort_by(nwp.col("c"), nwp.col("i")).first()
+                ),
+            ],
+            id="SortBy-Columns",
+        ),
+        pytest.param(
+            nwp.nth(1).mean().over("k", order_by=nwp.nth(4, 5)),
+            [
+                nwp.col("b")
+                .mean()
+                .over(nwp.col("k"), order_by=(nwp.col("e"), nwp.col("f")))
+            ],
+            id="Over-OrderBy-IndexColumns",
+        ),
+        pytest.param(
+            nwp.col("f").max().over(ndcs.by_dtype(nw.Date, nw.Datetime)),
+            [nwp.col("f").max().over(nwp.col("l"), nwp.col("n"), nwp.col("o"))],
+            id="Over-Partitioned-Selector",
         ),
     ],
 )

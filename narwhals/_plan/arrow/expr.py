@@ -55,7 +55,14 @@ if TYPE_CHECKING:
         Not,
     )
     from narwhals._plan.expressions.expr import BinaryExpr, FunctionExpr
-    from narwhals._plan.expressions.functions import Abs, FillNull, Pow
+    from narwhals._plan.expressions.functions import (
+        Abs,
+        CumAgg,
+        Diff,
+        FillNull,
+        Pow,
+        Shift,
+    )
     from narwhals.typing import Into1DArray, IntoDType, PythonLiteral
 
     Expr: TypeAlias = "ArrowExpr"
@@ -322,13 +329,31 @@ class ArrowExpr(  # type: ignore[misc]
         return self._with_native(result, name)
 
     # TODO @dangotbanned: top-level, complex-ish nodes
-    # - [ ] `over`/`_ordered` (with partitions) requires `group_by`, `join`
-    # - [x] `over_ordered` alone should be possible w/ the current API
-    # - [x] `map_batches` is defined in `EagerExpr`, might be simpler here than on main
+    # - [ ] Over
+    #   - [x] `over_ordered`
+    #   - [x] `group_by`, `join`
+    #   - [!] `over`
+    #   - [ ] `over_ordered` (with partitions)
+    # - [ ] `map_batches`
+    #   - [x] elementwise
+    #   - [ ] scalar
     # - [ ] `rolling_expr` has 4 variants
 
     def over(self, node: ir.WindowExpr, frame: Frame, name: str) -> Self:
-        raise NotImplementedError
+        resolved = (
+            frame._grouper.by_irs(*node.partition_by)
+            # TODO @dangotbanned: Clean this up so the re-alias isn't needed
+            .agg_irs(node.expr.alias(name))
+            .resolve(frame)
+        )
+        by_names = resolved.key_names
+        result = (
+            frame.select_names(*by_names)
+            .join(resolved.evaluate(frame), how="left", left_on=by_names)
+            .get_column(name)
+            .native
+        )
+        return self._with_native(result, name)
 
     def over_ordered(
         self, node: ir.OrderedWindowExpr, frame: Frame, name: str
@@ -371,6 +396,24 @@ class ArrowExpr(  # type: ignore[misc]
 
     def rolling_expr(self, node: ir.RollingExpr, frame: Frame, name: str) -> Self:
         raise NotImplementedError
+
+    def shift(self, node: ir.FunctionExpr[Shift], frame: Frame, name: str) -> Self:
+        series = self._dispatch_expr(node.input[0], frame, name)
+        return self._with_native(fn.shift(series.native, node.function.n), name)
+
+    def diff(self, node: ir.FunctionExpr[Diff], frame: Frame, name: str) -> Self:
+        series = self._dispatch_expr(node.input[0], frame, name)
+        return self._with_native(fn.diff(series.native), name)
+
+    def _cumulative(self, node: ir.FunctionExpr[CumAgg], frame: Frame, name: str) -> Self:
+        series = self._dispatch_expr(node.input[0], frame, name)
+        return self._with_native(fn.cumulative(series.native, node.function), name)
+
+    cum_count = _cumulative
+    cum_min = _cumulative
+    cum_max = _cumulative
+    cum_prod = _cumulative
+    cum_sum = _cumulative
 
     def _is_first_last_distinct(
         self,
@@ -479,4 +522,11 @@ class ArrowScalar(
     over = not_implemented()
     over_ordered = not_implemented()
     map_batches = not_implemented()
+    # length_preserving
     rolling_expr = not_implemented()
+    diff = not_implemented()
+    cum_sum = not_implemented()  # TODO @dangotbanned: is this just self?
+    cum_count = not_implemented()
+    cum_min = not_implemented()
+    cum_max = not_implemented()
+    cum_prod = not_implemented()

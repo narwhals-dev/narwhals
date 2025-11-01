@@ -210,3 +210,8 @@ def column_index_error(
     max_nth = f"`nth({n_names - 1})`" if index >= 0 else f"`nth(-{n_names})`"
     msg = f"Invalid column index {index!r}\nHint: The schema's last column is {max_nth}"
     return ComputeError(msg)
+
+
+def group_by_no_keys_error() -> ComputeError:
+    msg = "at least one key is required in a group_by operation"
+    return ComputeError(msg)
