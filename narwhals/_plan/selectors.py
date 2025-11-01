@@ -49,15 +49,12 @@ class Selector(Expr):
         return self._from_ir(ir.InvertSelector(selector=self._ir))
 
     def __add__(self, other: Any) -> Expr:  # type: ignore[override]
-        if isinstance(other, type(self)):  # pragma: no cover
+        if isinstance(other, type(self)):
             return self.as_expr().__add__(other.as_expr())
-        return self.as_expr().__add__(other)  # pragma: no cover
+        return self.as_expr().__add__(other)
 
     def __radd__(self, other: Any) -> Expr:  # type: ignore[override]
-        if isinstance(other, type(self)):  # pragma: no cover
-            msg = "unsupported operand type(s) for op: ('Selector' + 'Selector')"
-            raise TypeError(msg)
-        return self.as_expr().__radd__(other)  # pragma: no cover
+        return self.as_expr().__radd__(other)
 
     @overload  # type: ignore[override]
     def __and__(self, other: Self) -> Self: ...
@@ -69,10 +66,10 @@ class Selector(Expr):
         if isinstance(other, type(self)):
             op = ops.And()
             return self._from_ir(op.to_binary_selector(self._ir, other._ir))
-        return self.as_expr().__and__(other)  # pragma: no cover
+        return self.as_expr().__and__(other)
 
     def __rand__(self, other: Any) -> Expr:  # type: ignore[override]
-        return self.as_expr().__rand__(other)  # pragma: no cover
+        return self.as_expr().__rand__(other)
 
     @overload  # type: ignore[override]
     def __or__(self, other: Self) -> Self: ...
@@ -84,12 +81,12 @@ class Selector(Expr):
         if isinstance(other, type(self)):
             op = ops.Or()
             return self._from_ir(op.to_binary_selector(self._ir, other._ir))
-        return self.as_expr().__or__(other)  # pragma: no cover
+        return self.as_expr().__or__(other)
 
     def __ror__(self, other: Any) -> Expr:  # type: ignore[override]
-        if is_column(other):  # pragma: no cover
+        if is_column(other):
             other = by_name(other.meta.output_name())
-        return self.as_expr().__ror__(other)  # pragma: no cover
+        return self.as_expr().__ror__(other)
 
     @overload  # type: ignore[override]
     def __sub__(self, other: Self) -> Self: ...
@@ -115,12 +112,12 @@ class Selector(Expr):
         if isinstance(other, type(self)):
             op = ops.ExclusiveOr()
             return self._from_ir(op.to_binary_selector(self._ir, other._ir))
-        return self.as_expr().__xor__(other)  # pragma: no cover
+        return self.as_expr().__xor__(other)
 
     def __rxor__(self, other: Any) -> Expr:  # type: ignore[override]
-        if is_column(other):  # @polars>=2.0: remove # pragma: no cover
+        if is_column(other):  # @polars>=2.0: remove
             other = by_name(other.meta.output_name())
-        return self.as_expr().__rxor__(other)  # pragma: no cover
+        return self.as_expr().__rxor__(other)
 
 
 class SelectorV1(Selector):

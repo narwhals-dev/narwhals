@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import operator
 from datetime import timezone
 from typing import TYPE_CHECKING
 
@@ -13,14 +14,23 @@ import pytest
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
 from narwhals import _plan as nwp
-from narwhals._plan import Expr, Selector, selectors as ncs
+from narwhals._plan import Selector, selectors as ncs
+from narwhals._plan._guards import is_expr, is_selector
 from narwhals._utils import zip_strict
 from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError
-from tests.plan.utils import Frame, assert_expr_ir_equal, named_ir, re_compile
+from tests.plan.utils import (
+    Frame,
+    assert_expr_ir_equal,
+    assert_not_selector,
+    is_expr_ir_equal,
+    named_ir,
+    re_compile,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
+    from narwhals._plan.typing import IntoExpr, OperatorFn
     from narwhals.dtypes import DType
 
 
@@ -447,7 +457,7 @@ def test_selector_expansion() -> None:
         nwp.col("a").max().meta.as_selector()
 
 
-def test_selector_sets(schema_non_nested: nw.Schema, schema_mixed: nw.Schema) -> None:
+def test_selector_set_ops(schema_non_nested: nw.Schema, schema_mixed: nw.Schema) -> None:
     df = Frame(schema_non_nested)
 
     # NOTE: `cs.temporal` is used a lot in this tests, but `narwhals` doesn't have it
@@ -472,10 +482,7 @@ def test_selector_sets(schema_non_nested: nw.Schema, schema_mixed: nw.Schema) ->
     df.assert_selects(selector, "ghi", "Lmn")
 
     sub_expr = ncs.matches("[yz]$") - nwp.col("colx")
-    assert not isinstance(sub_expr, Selector), (
-        "('Selector' - 'Expr') shouldn't behave as set"
-    )
-    assert isinstance(sub_expr, Expr)
+    assert_not_selector(sub_expr)
 
     with pytest.raises(TypeError, match=r"unsupported .* \('Expr' - 'Selector'\)"):
         nwp.col("colx") - ncs.matches("[yz]$")
@@ -494,6 +501,54 @@ def test_selector_sets(schema_non_nested: nw.Schema, schema_mixed: nw.Schema) ->
     df = Frame(schema_mixed)
     selector = ~(ncs.numeric() | ncs.string())
     df.assert_selects(selector, "l", "m", "n", "o", "p", "q", "r", "s", "u")
+
+
+def _is_binary_operator(function: OperatorFn) -> bool:
+    return function in {operator.and_, operator.or_, operator.xor}
+
+
+def _is_selector_operator(function: OperatorFn) -> bool:
+    return function in {operator.and_, operator.or_, operator.xor, operator.sub}
+
+
+@pytest.mark.parametrize(
+    "arg_2",
+    [1, nwp.col("a"), nwp.col("a").max(), ncs.numeric()],
+    ids=["Scalar", "Column", "Expr", "Selector"],
+)
+@pytest.mark.parametrize(
+    "function", [operator.and_, operator.or_, operator.xor, operator.add, operator.sub]
+)
+def test_selector_arith_binary_ops(
+    arg_2: IntoExpr | Selector, function: OperatorFn
+) -> None:
+    # NOTE: These are the `polars.selectors` semantics
+    # Parts of it may change with `polars>=2.0`, due to how confusing they are
+    arg_1 = ncs.string()
+    result_1 = function(arg_1, arg_2)
+    if (
+        _is_binary_operator(function)
+        and is_expr(arg_2)
+        and is_expr_ir_equal(arg_2, nwp.col("a"))
+    ) or (_is_selector_operator(function) and is_selector(arg_2)):
+        assert is_selector(result_1)
+    else:
+        assert_not_selector(result_1)
+
+    if _is_binary_operator(function) and is_selector(arg_2):
+        result_2 = function(arg_2, arg_1)
+        assert is_selector(result_2)
+    # `__sub__` is allowed, but `__rsub__` is not ...
+    elif function is not operator.sub:
+        result_2 = function(arg_2, arg_1)
+        assert_not_selector(result_2)
+    # ... unless both are `Selector`
+    elif is_selector(arg_2):
+        result_2 = function(arg_2, arg_1)
+        assert is_selector(result_2)
+    else:
+        with pytest.raises(TypeError):
+            function(arg_2, arg_1)
 
 
 @pytest.mark.parametrize(
