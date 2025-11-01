@@ -62,9 +62,9 @@ class Timestamp(TemporalFunction):
 
     @staticmethod
     def from_time_unit(time_unit: TimeUnit = "us", /) -> Timestamp:
-        if not _is_polars_time_unit(time_unit):  # pragma: no cover
+        if not _is_polars_time_unit(time_unit):
             msg = f"invalid `time_unit` \n\nExpected one of ['ns', 'us', 'ms'], got {time_unit!r}."
-            raise ValueError(msg)
+            raise TypeError(msg)
         return Timestamp(time_unit=time_unit)
 
     def __repr__(self) -> str:
@@ -77,11 +77,11 @@ class Truncate(TemporalFunction):
     unit: IntervalUnit
 
     @staticmethod
-    def from_string(every: str, /) -> Truncate:  # pragma: no cover
+    def from_string(every: str, /) -> Truncate:
         return Truncate.from_interval(Interval.parse(every))
 
     @staticmethod
-    def from_interval(every: Interval, /) -> Truncate:  # pragma: no cover
+    def from_interval(every: Interval, /) -> Truncate:
         return Truncate(multiple=every.multiple, unit=every.unit)
 
 
@@ -178,5 +178,5 @@ class ExprDateTimeNamespace(ExprNamespace[IRDateTimeNamespace]):
     def timestamp(self, time_unit: TimeUnit = "us") -> Expr:
         return self._with_unary(self._ir.timestamp(time_unit))
 
-    def truncate(self, every: str) -> Expr:  # pragma: no cover
+    def truncate(self, every: str) -> Expr:
         return self._with_unary(self._ir.truncate(every))

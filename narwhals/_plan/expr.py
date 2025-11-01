@@ -340,18 +340,18 @@ class Expr:
         before: Seq[Any]
         after: Seq[Any]
         if new is None:
-            if not isinstance(old, Mapping):  # pragma: no cover
+            if not isinstance(old, Mapping):
                 msg = "`new` argument is required if `old` argument is not a Mapping type"
                 raise TypeError(msg)
             before = tuple(old)
             after = tuple(old.values())
-        elif isinstance(old, Mapping):  # pragma: no cover
+        elif isinstance(old, Mapping):
             msg = "`new` argument cannot be used if `old` argument is a Mapping type"
             raise TypeError(msg)
-        else:  # pragma: no cover
+        else:
             before = tuple(old)
             after = tuple(new)
-        if return_dtype is not None:  # pragma: no cover
+        if return_dtype is not None:
             return_dtype = common.into_dtype(return_dtype)
         function = F.ReplaceStrict(old=before, new=after, return_dtype=return_dtype)
         return self._with_unary(function)

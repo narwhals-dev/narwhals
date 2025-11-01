@@ -575,3 +575,38 @@ def test_then_equal() -> None:
     assert isinstance(chained_then == other, nwp.Expr)
 
     assert isinstance(then == chained_then, nwp.Expr)
+
+
+def test_dt_timestamp_invalid() -> None:
+    assert nwp.col("a").dt.timestamp()
+    with pytest.raises(
+        TypeError, match=re_compile(r"invalid.+time_unit.+expected.+got 's'")
+    ):
+        nwp.col("a").dt.timestamp("s")
+
+
+def test_dt_truncate_invalid() -> None:
+    assert nwp.col("a").dt.truncate("1d")
+    with pytest.raises(ValueError, match=re_compile(r"invalid.+every.+abcd")):
+        nwp.col("a").dt.truncate("abcd")
+
+
+def test_replace_strict() -> None:
+    a = nwp.col("a")
+    remapping = a.replace_strict({1: 3, 2: 4}, return_dtype=nw.Int8)
+    sequences = a.replace_strict(old=[1, 2], new=[3, 4], return_dtype=nw.Int8())
+    assert_expr_ir_equal(remapping, sequences)
+
+
+def test_replace_strict_invalid() -> None:
+    with pytest.raises(
+        TypeError,
+        match="`new` argument is required if `old` argument is not a Mapping type",
+    ):
+        nwp.col("a").replace_strict("b")
+
+    with pytest.raises(
+        TypeError,
+        match="`new` argument cannot be used if `old` argument is a Mapping type",
+    ):
+        nwp.col("a").replace_strict(old={1: 2, 3: 4}, new=[5, 6, 7])
