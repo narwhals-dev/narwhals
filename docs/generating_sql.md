@@ -48,6 +48,10 @@ note that this currently requires [sqlparse](https://github.com/andialbrecht/sql
 print(result.to_sql(pretty=True))
 ```
 
+Note that the generated SQL follows DuckDB's dialect. To translate it to other dialects,
+you may want to look into [sqlglot](https://github.com/tobymao/sqlglot), or use one of the
+solutions below (which also use sqlglot).
+
 ## Via Ibis
 
 You can also use Ibis or SQLFrame to generate SQL:
