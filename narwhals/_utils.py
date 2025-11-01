@@ -2118,15 +2118,14 @@ class NullableSchema(OrderedDict[str, "IntoDType | None"]):
     def __init__(self, schema: IntoSchema | IntoNullableSchema | None = None) -> None:
         schema = schema or {}
         super().__init__(schema)
-
         self.is_nullable = None in self.values()
 
     def to_schema(self) -> Schema:
         """Converts to Schema by filtering out None values."""
         from narwhals.schema import Schema
 
-        if self.is_nullable:
-            msg = "Cannot convert nullable mapping into Schema"
+        if self.is_nullable:  # pragma: no cover
+            msg = "Cannot convert nullable mapping into `Schema`"
             raise AssertionError(msg)
 
         return Schema(self.items())  # type: ignore[arg-type]
