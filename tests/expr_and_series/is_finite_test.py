@@ -65,13 +65,7 @@ def test_is_finite_series(constructor_eager: ConstructorEager) -> None:
     assert_equal_data(result, expected)
 
 
-def test_is_finite_integer_column(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    if "sqlframe" in str(constructor):
-        # https://github.com/eakmanrq/sqlframe/issues/542
-        request.applymarker(pytest.mark.xfail)
-
+def test_is_finite_integer_column(constructor: Constructor) -> None:
     # Test for https://github.com/narwhals-dev/narwhals/issues/3255
     df = nw.from_native(constructor({"a": [1, 2, 3]}))
     result = df.select(nw.col("a").is_finite())
@@ -79,12 +73,7 @@ def test_is_finite_integer_column(
 
 
 @pytest.mark.parametrize("data", [[1, 2, None], [1.0, 2.0, None]])
-def test_is_finite_column_with_null(
-    constructor: Constructor, request: pytest.FixtureRequest, data: list[float]
-) -> None:
-    if "sqlframe" in str(constructor) and isinstance(data[0], int):
-        # https://github.com/eakmanrq/sqlframe/issues/542
-        request.applymarker(pytest.mark.xfail)
+def test_is_finite_column_with_null(constructor: Constructor, data: list[float]) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < (1, 0, 0):
         pytest.skip("need newer polars version")
     df = nw.from_native(constructor({"a": data}))
