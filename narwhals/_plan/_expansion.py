@@ -181,7 +181,7 @@ class Expander:
                 name = replaced.meta.output_name()
                 target = replaced
             else:
-                msg = f"Unable to determine output name for expression, got: `{e!r}`"  # pragma: no cover
+                msg = f"Unable to determine output name for expression, got: `{e!r}`"
                 raise NotImplementedError(msg)
             output_names.append(name)
             named_irs.append(ir.named_ir(name, remove_alias(target)))
@@ -215,9 +215,9 @@ class Expander:
             yield from self._expand_combination(origin)
         elif isinstance(origin, ir.FunctionExpr):
             yield from self._expand_function_expr(origin)
-        else:  # pragma: no cover
+        else:
             msg = f"Didn't expect to see {type(origin).__name__}"
-            raise TypeError(msg)
+            raise NotImplementedError(msg)
 
     def _expand_inner(self, children: Seq[ExprIR], /) -> Iterator[ExprIR]:
         """Use when we want to expand non-root nodes, *without* duplicating the root.

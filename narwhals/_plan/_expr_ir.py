@@ -205,16 +205,16 @@ class SelectorIR(ExprIR, config=ExprIROptions.no_dispatch()):
     def into_columns(
         self, schema: FrozenSchema, ignored_columns: Container[str]
     ) -> Iterator[str]:
-        msg = f"{type(self).__name__}.into_columns"  # pragma: no cover[abstract]
+        msg = f"{type(self).__name__}.into_columns"
         raise NotImplementedError(msg)
 
     def matches(self, dtype: IntoDType) -> bool:
         """Return True if we can select this dtype."""
-        msg = f"{type(self).__name__}.matches"  # pragma: no cover[abstract]
+        msg = f"{type(self).__name__}.matches"
         raise NotImplementedError(msg)
 
     def to_dtype_selector(self) -> Self:
-        msg = f"{type(self).__name__}.to_dtype_selector"  # pragma: no cover[abstract]
+        msg = f"{type(self).__name__}.to_dtype_selector"
         raise NotImplementedError(msg)
 
     def to_selector_ir(self) -> Self:

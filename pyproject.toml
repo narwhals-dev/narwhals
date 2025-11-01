@@ -326,6 +326,11 @@ exclude_also = [
   'PANDAS_VERSION < \(',
   'def __repr__',
   'def __str__',
+  # Extends a `covdefaults` pattern to account for `EM10{1,2}`
+  # https://github.com/asottile/covdefaults/blob/a5228df597ffc7933bb2fb5b7bad94119a40a896/covdefaults.py#L90-L92
+  # https://docs.astral.sh/ruff/rules/raw-string-in-exception/
+  # https://docs.astral.sh/ruff/rules/f-string-in-exception/
+  '^\s*msg = .+\n\s*raise NotImplementedError\b'
 ]
 
 [tool.mypy]
