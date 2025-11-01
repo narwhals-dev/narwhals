@@ -125,8 +125,10 @@ class Schema(OrderedDict[str, "IntoDType"]):
         from narwhals._arrow.utils import native_to_narwhals_dtype
 
         return cls(
-            (field.name, native_to_narwhals_dtype(field.type, cls._version))
-            for field in schema
+            {
+                field.name: native_to_narwhals_dtype(field.type, cls._version)
+                for field in schema
+            }
         )
 
     @classmethod
@@ -231,8 +233,10 @@ class Schema(OrderedDict[str, "IntoDType"]):
         from narwhals._polars.utils import native_to_narwhals_dtype
 
         return cls(
-            (name, native_to_narwhals_dtype(dtype, cls._version))
-            for name, dtype in schema.items()
+            {
+                name: native_to_narwhals_dtype(dtype, cls._version)
+                for name, dtype in schema.items()
+            }
         )
 
     def to_arrow(self) -> pa.Schema:
@@ -359,6 +363,10 @@ class Schema(OrderedDict[str, "IntoDType"]):
 
         impl = implementation
         return cls(
-            (name, native_to_narwhals_dtype(dtype, cls._version, impl, allow_object=True))
-            for name, dtype in schema.items()
+            {
+                name: native_to_narwhals_dtype(
+                    dtype, cls._version, impl, allow_object=True
+                )
+                for name, dtype in schema.items()
+            }
         )

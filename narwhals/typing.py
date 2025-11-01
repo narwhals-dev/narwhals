@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any, Literal, Protocol, TypeVar, Union
 
 from narwhals._compliant import CompliantDataFrame, CompliantLazyFrame, CompliantSeries
@@ -304,7 +304,7 @@ Examples:
 """
 
 IntoSchema: TypeAlias = (
-    "SupportsKeysAndGetItem[str, IntoDType] | Iterable[tuple[str, IntoDType]] | Schema"
+    "SupportsKeysAndGetItem[str, IntoDType] | Sequence[tuple[str, IntoDType]] | Schema"
 )
 """Anything that can be converted into a Narwhals Schema.
 
@@ -351,7 +351,7 @@ Examples:
     └────────────────────────┘
 """
 
-IntoNullableSchema: TypeAlias = "SupportsKeysAndGetItem[str, IntoDType | None] | Iterable[tuple[str, IntoDType | None]]"
+IntoNullableSchema: TypeAlias = "SupportsKeysAndGetItem[str, IntoDType | None] | Sequence[tuple[str, IntoDType | None]]"
 """Schema specification with possible None values."""
 
 IntoArrowSchema: TypeAlias = "pa.Schema | Mapping[str, pa.DataType]"
