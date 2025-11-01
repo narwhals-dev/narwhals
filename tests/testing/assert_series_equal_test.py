@@ -11,9 +11,11 @@ from narwhals.testing import assert_series_equal
 from tests.utils import PANDAS_VERSION, POLARS_VERSION, PYARROW_VERSION
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from typing_extensions import TypeAlias
 
-    from narwhals.typing import IntoSchema, IntoSeriesT
+    from narwhals.typing import IntoDType, IntoSeriesT
     from tests.conftest import Data
     from tests.utils import ConstructorEager
 
@@ -31,7 +33,9 @@ def series_from_native(native: IntoSeriesT) -> nw.Series[IntoSeriesT]:
 
 
 def test_self_equal(
-    constructor_eager: ConstructorEager, testing_data: Data, testing_schema: IntoSchema
+    constructor_eager: ConstructorEager,
+    testing_data: Data,
+    testing_schema: Mapping[str, IntoDType],
 ) -> None:
     """Test that a series is equal to itself, including nested dtypes with nulls."""
     if "pandas" in str(constructor_eager):

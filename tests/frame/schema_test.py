@@ -410,9 +410,9 @@ def test_schema_to_pandas(
     pytest.importorskip("pyarrow")
     schema = nw.Schema(
         {
-            "a": nw.Int64(),
+            "a": nw.Int64,
             "b": nw.String(),
-            "c": nw.Boolean(),
+            "c": nw.Boolean,
             "d": nw.Float64(),
             "e": nw.Datetime("ns"),
         }
@@ -425,10 +425,10 @@ def test_schema_to_pandas_strict_zip() -> None:
 
     schema = nw.Schema(
         {
-            "a": nw.Int64(),
+            "a": nw.Int64,
             "b": nw.String(),
             "c": nw.Boolean(),
-            "d": nw.Float64(),
+            "d": nw.Float64,
             "e": nw.Datetime("ns"),
         }
     )
@@ -700,3 +700,9 @@ def test_schema_from_to_roundtrip() -> None:
     assert nw_schema_1 == nw_schema_2
     assert nw_schema_2 == nw_schema_3
     assert py_schema_1 == py_schema_2
+
+
+def test_schema_from_sequence() -> None:
+    into_schema_mapping = {"a": nw.Int64, "b": nw.Int64, "z": nw.Float64}
+    into_schema_sequence = list(into_schema_mapping.items())
+    assert nw.Schema(into_schema_mapping) == nw.Schema(into_schema_sequence)

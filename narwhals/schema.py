@@ -30,19 +30,20 @@ if TYPE_CHECKING:
     import pyarrow as pa
     from typing_extensions import Self
 
-    from narwhals.dtypes import DType
     from narwhals.typing import (
         DTypeBackend,
         IntoArrowSchema,
+        IntoDType,
         IntoPandasSchema,
         IntoPolarsSchema,
+        IntoSchema,
     )
 
 
 __all__ = ["Schema"]
 
 
-class Schema(OrderedDict[str, "DType"]):
+class Schema(OrderedDict[str, "IntoDType"]):
     """Ordered mapping of column names to their data type.
 
     Arguments:
@@ -74,9 +75,7 @@ class Schema(OrderedDict[str, "DType"]):
 
     _version: ClassVar[Version] = Version.MAIN
 
-    def __init__(
-        self, schema: Mapping[str, DType] | Iterable[tuple[str, DType]] | None = None
-    ) -> None:
+    def __init__(self, schema: IntoSchema | None = None) -> None:
         schema = schema or {}
         super().__init__(schema)
 
@@ -84,7 +83,7 @@ class Schema(OrderedDict[str, "DType"]):
         """Get the column names of the schema."""
         return list(self.keys())
 
-    def dtypes(self) -> list[DType]:
+    def dtypes(self) -> list[IntoDType]:
         """Get the data types of the schema."""
         return list(self.values())
 
@@ -126,8 +125,10 @@ class Schema(OrderedDict[str, "DType"]):
         from narwhals._arrow.utils import native_to_narwhals_dtype
 
         return cls(
-            (field.name, native_to_narwhals_dtype(field.type, cls._version))
-            for field in schema
+            {
+                field.name: native_to_narwhals_dtype(field.type, cls._version)
+                for field in schema
+            }
         )
 
     @classmethod
@@ -232,8 +233,10 @@ class Schema(OrderedDict[str, "DType"]):
         from narwhals._polars.utils import native_to_narwhals_dtype
 
         return cls(
-            (name, native_to_narwhals_dtype(dtype, cls._version))
-            for name, dtype in schema.items()
+            {
+                name: native_to_narwhals_dtype(dtype, cls._version)
+                for name, dtype in schema.items()
+            }
         )
 
     def to_arrow(self) -> pa.Schema:
@@ -360,6 +363,10 @@ class Schema(OrderedDict[str, "DType"]):
 
         impl = implementation
         return cls(
-            (name, native_to_narwhals_dtype(dtype, cls._version, impl, allow_object=True))
-            for name, dtype in schema.items()
+            {
+                name: native_to_narwhals_dtype(
+                    dtype, cls._version, impl, allow_object=True
+                )
+                for name, dtype in schema.items()
+            }
         )

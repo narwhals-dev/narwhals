@@ -8,12 +8,14 @@ import pytest
 import narwhals as nw
 
 if TYPE_CHECKING:
-    from narwhals.typing import IntoSchema
+    from collections.abc import Mapping
+
+    from narwhals.typing import IntoDType
     from tests.conftest import Data
 
 
 @pytest.fixture(scope="module")
-def testing_schema() -> IntoSchema:
+def testing_schema() -> Mapping[str, IntoDType]:
     return {
         "int": nw.Int32(),
         "float": nw.Float32(),
