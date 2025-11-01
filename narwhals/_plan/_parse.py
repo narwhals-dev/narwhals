@@ -6,6 +6,7 @@ from collections.abc import Iterable, Sequence
 from itertools import chain
 from typing import TYPE_CHECKING
 
+from narwhals._native import is_native_pandas
 from narwhals._plan._guards import (
     is_column_name_or_selector,
     is_expr,
@@ -13,20 +14,15 @@ from narwhals._plan._guards import (
     is_iterable_reject,
     is_selector,
 )
-from narwhals._plan.exceptions import (
-    invalid_into_expr_error,
-    is_iterable_pandas_error,
-    is_iterable_polars_error,
-)
+from narwhals._plan.exceptions import invalid_into_expr_error, is_iterable_error
 from narwhals._utils import qualified_type_name
-from narwhals.dependencies import get_polars, is_pandas_dataframe, is_pandas_series
+from narwhals.dependencies import get_polars
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
     from typing import Any, TypeVar
 
-    import polars as pl
     from typing_extensions import TypeAlias, TypeIs
 
     from narwhals._plan.expr import Expr
@@ -126,7 +122,7 @@ def parse_into_expr_ir(
         expr = col(input)
     elif isinstance(input, list):
         if list_as_series is None:
-            raise TypeError(input)
+            raise TypeError(input)  # pragma: no cover
         expr = lit(list_as_series(input))
     else:
         expr = lit(input, dtype=dtype)
@@ -140,9 +136,9 @@ def parse_into_selector_ir(input: ColumnNameOrSelector | Expr, /) -> SelectorIR:
         from narwhals._plan import selectors as cs
 
         selector = cs.by_name(input)
-    elif is_expr(input):
+    elif is_expr(input):  # pragma: no cover
         selector = input.meta.as_selector()
-    else:
+    else:  # pragma: no cover
         msg = f"cannot turn {qualified_type_name(input)!r} into selector"
         raise TypeError(msg)
     return selector._ir
@@ -194,8 +190,8 @@ def _parse_sort_by_into_iter_expr_ir(
 ) -> Iterator[ExprIR]:
     for e in _parse_into_iter_expr_ir(by, *more_by):
         if e.is_scalar:
-            msg = f"All expressions sort keys must preserve length, but got:\n{e!r}"
-            raise InvalidOperationError(msg)
+            msg = f"All expressions sort keys must preserve length, but got:\n{e!r}"  # pragma: no cover
+            raise InvalidOperationError(msg)  # pragma: no cover
         yield e
 
 
@@ -216,14 +212,14 @@ def _parse_into_iter_selector_ir(
 
     if not _is_empty_sequence(first_input):
         if _is_iterable(first_input) and not isinstance(first_input, str):
-            if more_inputs:
+            if more_inputs:  # pragma: no cover
                 raise invalid_into_expr_error(first_input, more_inputs, {})
             else:
                 for into in first_input:  # type: ignore[var-annotated]
                     yield parse_into_selector_ir(into)
         else:
             yield parse_into_selector_ir(first_input)
-    for into in more_inputs:
+    for into in more_inputs:  # pragma: no cover
         yield parse_into_selector_ir(into)
 
 
@@ -298,18 +294,13 @@ def _combine_predicates(predicates: Iterator[ExprIR], /) -> ExprIR:
 
 
 def _is_iterable(obj: Iterable[T] | Any) -> TypeIs[Iterable[T]]:
-    if is_pandas_dataframe(obj) or is_pandas_series(obj):
-        raise is_iterable_pandas_error(obj)
-    if _is_polars(obj):
-        raise is_iterable_polars_error(obj)
+    if is_native_pandas(obj) or (
+        (pl := get_polars())
+        and isinstance(obj, (pl.Series, pl.Expr, pl.DataFrame, pl.LazyFrame))
+    ):
+        raise is_iterable_error(obj)
     return isinstance(obj, Iterable)
 
 
 def _is_empty_sequence(obj: Any) -> bool:
     return isinstance(obj, Sequence) and not obj
-
-
-def _is_polars(obj: Any) -> TypeIs[pl.Series | pl.Expr | pl.DataFrame | pl.LazyFrame]:
-    return (pl := get_polars()) is not None and isinstance(
-        obj, (pl.Series, pl.Expr, pl.DataFrame, pl.LazyFrame)
-    )

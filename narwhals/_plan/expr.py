@@ -250,16 +250,16 @@ class Expr:
         it = parse_into_seq_of_expr_ir(lower_bound, upper_bound)
         return self._from_ir(F.Clip().to_function_expr(self._ir, *it))
 
-    def cum_count(self, *, reverse: bool = False) -> Self:
+    def cum_count(self, *, reverse: bool = False) -> Self:  # pragma: no cover
         return self._with_unary(F.CumCount(reverse=reverse))
 
-    def cum_min(self, *, reverse: bool = False) -> Self:
+    def cum_min(self, *, reverse: bool = False) -> Self:  # pragma: no cover
         return self._with_unary(F.CumMin(reverse=reverse))
 
-    def cum_max(self, *, reverse: bool = False) -> Self:
+    def cum_max(self, *, reverse: bool = False) -> Self:  # pragma: no cover
         return self._with_unary(F.CumMax(reverse=reverse))
 
-    def cum_prod(self, *, reverse: bool = False) -> Self:
+    def cum_prod(self, *, reverse: bool = False) -> Self:  # pragma: no cover
         return self._with_unary(F.CumProd(reverse=reverse))
 
     def cum_sum(self, *, reverse: bool = False) -> Self:
@@ -267,7 +267,7 @@ class Expr:
 
     def rolling_sum(
         self, window_size: int, *, min_samples: int | None = None, center: bool = False
-    ) -> Self:
+    ) -> Self:  # pragma: no cover
         options = rolling_options(window_size, min_samples, center=center)
         return self._with_unary(F.RollingSum(options=options))
 
@@ -284,7 +284,7 @@ class Expr:
         min_samples: int | None = None,
         center: bool = False,
         ddof: int = 1,
-    ) -> Self:
+    ) -> Self:  # pragma: no cover
         options = rolling_options(window_size, min_samples, center=center, ddof=ddof)
         return self._with_unary(F.RollingVar(options=options))
 
@@ -295,7 +295,7 @@ class Expr:
         min_samples: int | None = None,
         center: bool = False,
         ddof: int = 1,
-    ) -> Self:
+    ) -> Self:  # pragma: no cover
         options = rolling_options(window_size, min_samples, center=center, ddof=ddof)
         return self._with_unary(F.RollingStd(options=options))
 
@@ -542,7 +542,7 @@ class Expr:
         return ExprNameNamespace(_expr=self)
 
     @property
-    def cat(self) -> ExprCatNamespace:
+    def cat(self) -> ExprCatNamespace:  # pragma: no cover
         from narwhals._plan.expressions.categorical import ExprCatNamespace
 
         return ExprCatNamespace(_expr=self)
@@ -560,7 +560,7 @@ class Expr:
         return ExprDateTimeNamespace(_expr=self)
 
     @property
-    def list(self) -> ExprListNamespace:
+    def list(self) -> ExprListNamespace:  # pragma: no cover
         from narwhals._plan.expressions.lists import ExprListNamespace
 
         return ExprListNamespace(_expr=self)

@@ -84,9 +84,6 @@ class MetaNamespace(IRNamespace):
 
         Raises if the underlying expressions is not a column or selector.
         """
-        if not self.is_column_selection():
-            msg = f"cannot turn `{self._ir!r}` into a selector"
-            raise InvalidOperationError(msg)
         return self._ir.to_selector_ir().to_narwhals()
 
 

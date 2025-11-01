@@ -8,6 +8,7 @@ import pytest
 import narwhals as nw
 from narwhals import _plan as nwp
 from narwhals._plan import Expr, Selector, _expansion, _parse, expressions as ir
+from narwhals._utils import qualified_type_name
 from tests.utils import assert_equal_data as _assert_equal_data
 
 pytest.importorskip("pyarrow")
@@ -180,6 +181,25 @@ def assert_expr_ir_equal(
     else:
         rhs = expected._ir if isinstance(expected, nwp.Expr) else expected
         assert lhs == rhs, f"\nlhs:\n    {lhs!r}\n\nrhs:\n    {rhs!r}"
+
+
+def assert_not_selector(actual: Expr | Selector, /) -> None:
+    """Assert that `actual` was converted into an `Expr`."""
+    assert isinstance(actual, Expr), (
+        f"Didn't expect you to pass a {qualified_type_name(actual)!r} here, got: {actual!r}"
+    )
+    assert not isinstance(actual, Selector), (
+        f"This operation should have returned `Expr`, but got {qualified_type_name(actual)!r}\n{actual!r}"
+    )
+
+
+def is_expr_ir_equal(actual: Expr | ir.ExprIR, expected: Expr | ir.ExprIR, /) -> bool:
+    """Return True if `actual` is equivalent to `expected`.
+
+    Note:
+        Prefer `assert_expr_ir_equal` unless you need a `bool` for branching.
+    """
+    return _unwrap_ir(actual) == _unwrap_ir(expected)
 
 
 def named_ir(name: str, expr: nwp.Expr | ir.ExprIR, /) -> ir.NamedIR[ir.ExprIR]:

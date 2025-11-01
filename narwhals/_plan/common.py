@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 
 if sys.version_info >= (3, 13):
     from copy import replace as replace  # noqa: PLC0414
-else:
+else:  # pragma: no cover
 
     def replace(obj: T, /, **changes: Any) -> T:
         cls = obj.__class__
@@ -98,20 +98,20 @@ def flatten_hash_safe(iterable: Iterable[OneOrIterable[T]], /) -> Iterator[T]:
             yield element  # type: ignore[misc]
 
 
-def _not_one_or_iterable_str_error(obj: Any, /) -> TypeError:
+def _not_one_or_iterable_str_error(obj: Any, /) -> TypeError:  # pragma: no cover
     msg = f"Expected one or an iterable of strings, but got: {qualified_type_name(obj)!r}\n{obj!r}"
     return TypeError(msg)
 
 
 def ensure_seq_str(obj: OneOrIterable[str], /) -> Seq[str]:
     if not isinstance(obj, Iterable):
-        raise _not_one_or_iterable_str_error(obj)
+        raise _not_one_or_iterable_str_error(obj)  # pragma: no cover
     return (obj,) if isinstance(obj, str) else tuple(obj)
 
 
 def ensure_list_str(obj: OneOrIterable[str], /) -> list[str]:
     if not isinstance(obj, Iterable):
-        raise _not_one_or_iterable_str_error(obj)
+        raise _not_one_or_iterable_str_error(obj)  # pragma: no cover
     return [obj] if isinstance(obj, str) else list(obj)
 
 
@@ -246,7 +246,7 @@ class temp:  # noqa: N801
         available_chars = n_chars - len_prefix
         if available_chars < 0:
             visualize = ""
-        else:
+        else:  # pragma: no cover (has coverage, but there's randomness in the test)
             okay = "✔" * available_chars
             bad = "✖" * (cls._MIN_RANDOM_CHARS - available_chars)
             visualize = f"\n    Preview: '{prefix}{okay}{bad}'"

@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import functools
 import re
-from contextlib import suppress
 from typing import TYPE_CHECKING, Any, ClassVar, final
 
 from narwhals._plan._immutable import Immutable
@@ -65,7 +64,7 @@ class Selector(Immutable):
         # - Column names in `ignored_columns` are only used if they are explicitly mentioned by a `ByName` or `ByIndex`.
         # - `ignored_columns` are only evaluated against `All` and `Matches`
         # https://github.com/pola-rs/polars/blob/2b241543851800595efd343be016b65cdbdd3c9f/crates/polars-plan/src/dsl/selector.rs#L192-L193
-        msg = f"{type(self).__name__}.into_columns"
+        msg = f"{type(self).__name__}.into_columns"  # pragma: no cover[abstract]
         raise NotImplementedError(msg)
 
 
@@ -88,8 +87,7 @@ class DTypeSelector(Selector):
             The result will *only* be cached if this method is **not overridden**.
             Instead, use `DTypeSelector._matches` to customize the check.
         """
-        # See https://github.com/python/typeshed/issues/6347
-        return _selector_matches(self, dtype)  # type: ignore[arg-type]
+        return _selector_matches(self, dtype)
 
     def _matches(self, dtype: IntoDType) -> bool:
         """Implementation of `DTypeSelector.matches`."""
@@ -107,15 +105,6 @@ class DTypeAll(DTypeSelector, dtype=DType):
 
     def _matches(self, dtype: IntoDType) -> bool:
         return True
-
-    # Special case, needs to behave the same whether it is treated like a `DTypeSelector` or regular
-    def into_columns(
-        self, schema: FrozenSchema, ignored_columns: Container[str]
-    ) -> Iterator[str]:
-        if ignored_columns:
-            yield from (name for name in schema if name not in ignored_columns)
-        else:
-            yield from schema
 
 
 class All(Selector):
@@ -162,17 +151,18 @@ class ByIndex(Selector):
         self, schema: FrozenSchema, ignored_columns: Container[str]
     ) -> Iterator[str]:
         names = schema.names
+        n_fields = len(names)
         if not self.require_all:
-            with suppress(IndexError):
-                for index in self.indices:
-                    yield names[index]
+            if n_fields == 0:
+                yield from ()
+            else:
+                yield from (names[idx] for idx in self.indices if abs(idx) < n_fields)
         else:
-            n_fields = len(names)
-            for index in self.indices:
-                positive_index = index + n_fields if index < 0 else index
-                if positive_index < 0 or positive_index >= n_fields:
-                    raise column_index_error(index, schema)
-                yield names[index]
+            for idx in self.indices:
+                if abs(idx) < n_fields:
+                    yield names[idx]
+                else:
+                    raise column_index_error(idx, schema)
 
 
 class ByName(Selector):

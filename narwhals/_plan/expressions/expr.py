@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import typing as t
+from typing import TYPE_CHECKING
 
 from narwhals._plan._expr_ir import ExprIR, SelectorIR
 from narwhals._plan.common import replace
@@ -25,7 +26,7 @@ from narwhals._plan.typing import (
 )
 from narwhals.exceptions import InvalidOperationError
 
-if t.TYPE_CHECKING:
+if TYPE_CHECKING:
     from collections.abc import Container, Iterable, Iterator
 
     from typing_extensions import Self
@@ -239,9 +240,12 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT_co], child=("input",)):
         """
         for e in self.input[:1]:
             yield from e.iter_output_name()
+        # NOTE: Covering the empty case doesn't make sense without implementing `FunctionFlags.ALLOW_EMPTY_INPUTS`
+        # https://github.com/pola-rs/polars/blob/df69276daf5d195c8feb71eef82cbe9804e0f47f/crates/polars-plan/src/plans/options.rs#L106-L107
+        return  # pragma: no cover
 
     # NOTE: Interacting badly with `pyright` synthesizing the `__replace__` signature
-    if not t.TYPE_CHECKING:
+    if not TYPE_CHECKING:
 
         def __init__(
             self,
@@ -256,6 +260,8 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT_co], child=("input",)):
                 raise function_expr_invalid_operation_error(function, parent)
             kwargs = dict(input=input, function=function, options=options, **kwds)
             super().__init__(**kwargs)
+    else:  # pragma: no cover
+        ...
 
     def dispatch(
         self: Self, ctx: Ctx[FrameT_contra, R_co], frame: FrameT_contra, name: str

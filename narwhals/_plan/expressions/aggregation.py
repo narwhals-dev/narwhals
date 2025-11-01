@@ -32,6 +32,8 @@ class AggExpr(ExprIR, child=("expr",)):
             if expr.is_scalar:
                 raise agg_scalar_error(self, expr)
             super().__init__(expr=expr, **kwds)  # pyright: ignore[reportCallIssue]
+    else:  # pragma: no cover
+        ...
 
 
 # fmt: off

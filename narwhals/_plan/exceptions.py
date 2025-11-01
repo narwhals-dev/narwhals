@@ -6,6 +6,7 @@ from collections import Counter
 from itertools import groupby
 from typing import TYPE_CHECKING
 
+from narwhals._utils import qualified_type_name
 from narwhals.exceptions import (
     ColumnNotFoundError,
     ComputeError,
@@ -20,9 +21,6 @@ from narwhals.exceptions import (
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable
     from typing import Any
-
-    import pandas as pd
-    import polars as pl
 
     from narwhals._plan import expressions as ir
     from narwhals._plan._function import Function
@@ -156,19 +154,9 @@ def invalid_into_expr_error(
     return InvalidIntoExprError(msg)
 
 
-def is_iterable_pandas_error(obj: pd.DataFrame | pd.Series[Any], /) -> TypeError:
+def is_iterable_error(obj: object, /) -> TypeError:
     msg = (
-        f"Expected Narwhals class or scalar, got: {type(obj)}. "
-        "Perhaps you forgot a `nw.from_native` somewhere?"
-    )
-    return TypeError(msg)
-
-
-def is_iterable_polars_error(
-    obj: pl.Series | pl.Expr | pl.DataFrame | pl.LazyFrame, /
-) -> TypeError:
-    msg = (
-        f"Expected Narwhals class or scalar, got: {type(obj)}.\n\n"
+        f"Expected Narwhals class or scalar, got: {qualified_type_name(obj)!r}.\n\n"
         "Hint: Perhaps you\n"
         "- forgot a `nw.from_native` somewhere?\n"
         "- used `pl.col` instead of `nw.col`?"

@@ -152,7 +152,7 @@ class ExprIR(Immutable):
             if isinstance(child, ExprIR):
                 yield from child.iter_right()
             else:
-                for node in reversed(child):
+                for node in reversed(child):  # pragma: no cover
                     yield from node.iter_right()
 
     def iter_root_names(self) -> Iterator[ExprIR]:
@@ -199,9 +199,8 @@ class SelectorIR(ExprIR, config=ExprIROptions.no_dispatch()):
     def to_narwhals(self, version: Version = Version.MAIN) -> Selector:
         from narwhals._plan.selectors import Selector, SelectorV1
 
-        if version is Version.MAIN:
-            return Selector._from_ir(self)
-        return SelectorV1._from_ir(self)
+        tp = Selector if version is Version.MAIN else SelectorV1
+        return tp._from_ir(self)
 
     def into_columns(
         self, schema: FrozenSchema, ignored_columns: Container[str]
@@ -267,10 +266,10 @@ class NamedIR(Immutable, Generic[ExprIRT]):
     def __repr__(self) -> str:
         return f"{self.name}={self.expr!r}"
 
-    def _repr_html_(self) -> str:
+    def _repr_html_(self) -> str:  # pragma: no cover
         return f"<b>{self.name}</b>={self.expr._repr_html_()}"
 
-    def is_elementwise_top_level(self) -> bool:
+    def is_elementwise_top_level(self) -> bool:  # pragma: no cover
         """Return True if the outermost node is elementwise.
 
         Based on [`polars_plan::plans::aexpr::properties::AExpr.is_elementwise_top_level`]
