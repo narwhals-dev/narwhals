@@ -26,6 +26,18 @@ def test_expr_is_in_empty_list(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+def test_expr_is_in_iterable(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if any(x in str(constructor) for x in ("sqlframe", "polars")):
+        request.applymarker(pytest.mark.xfail)
+    df = nw.from_native(constructor(data))
+    sequence = 4, 2
+    result = df.select(nw.col("a").is_in(iter(sequence)))
+    expected = {"a": [False, True, True, False]}
+    assert_equal_data(result, expected)
+
+
 def test_ser_is_in(constructor_eager: ConstructorEager) -> None:
     ser = nw.from_native(constructor_eager(data), eager_only=True)["a"]
     result = {"a": ser.is_in([4, 5])}
