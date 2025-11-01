@@ -152,6 +152,9 @@ class PandasLikeDataFrame(
         context: _LimitedContext,
         schema: IntoSchema | IntoNullableSchema | None = None,
     ) -> Self:
+        from narwhals._utils import NullableSchema
+
+        schema = NullableSchema(schema) if schema is not None else None
         implementation = context._implementation
         pdx = implementation.to_native_namespace()
         Series = cast("type[pd.Series[Any]]", pdx.Series)
@@ -173,8 +176,6 @@ class PandasLikeDataFrame(
         else:
             native = DataFrame.from_dict({col: [] for col in schema})
         if schema:
-            from narwhals._utils import NullableSchema
-
             backends: Iterable[DTypeBackend]
             if aligned_data:
                 backends = iter_dtype_backends(native.dtypes, implementation)
@@ -187,9 +188,7 @@ class PandasLikeDataFrame(
                     implementation=context._implementation,
                     version=context._version,
                 )
-                for ((key, dtype), backend) in zip(
-                    NullableSchema(schema).items(), backends
-                )
+                for ((key, dtype), backend) in zip(schema.items(), backends)
                 if dtype is not None
             }
             native = native.astype(native_schema)
@@ -204,6 +203,9 @@ class PandasLikeDataFrame(
         context: _LimitedContext,
         schema: IntoSchema | IntoNullableSchema | None = None,
     ) -> Self:
+        from narwhals._utils import NullableSchema
+
+        schema = NullableSchema(schema) if schema is not None else None
         implementation = context._implementation
         ns = implementation.to_native_namespace()
         DataFrame = cast("type[pd.DataFrame]", ns.DataFrame)
@@ -212,8 +214,6 @@ class PandasLikeDataFrame(
         else:
             native = DataFrame.from_dict({col: [] for col in schema})
         if schema:
-            from narwhals._utils import NullableSchema
-
             backends: Iterable[DTypeBackend]
             if data:
                 backends = iter_dtype_backends(native.dtypes, implementation)
@@ -226,9 +226,7 @@ class PandasLikeDataFrame(
                     implementation=context._implementation,
                     version=context._version,
                 )
-                for ((key, dtype), backend) in zip(
-                    NullableSchema(schema).items(), backends
-                )
+                for ((key, dtype), backend) in zip(schema.items(), backends)
                 if dtype is not None
             }
             native = native.astype(native_schema)
