@@ -133,8 +133,6 @@ def parse_into_expr_ir(
     return expr._ir
 
 
-# NOTE: Might need to add `require_all`, since selectors are created indirectly from `str`
-# here, but use set semantics
 def parse_into_selector_ir(input: ColumnNameOrSelector | Expr, /) -> SelectorIR:
     if is_selector(input):
         selector = input
@@ -290,8 +288,13 @@ def _combine_predicates(predicates: Iterator[ExprIR], /) -> ExprIR:
         msg = "at least one predicate or constraint must be provided"
         raise TypeError(msg)
     if second := next(predicates, None):
-        return AllHorizontal().to_function_expr(first, second, *predicates)
-    return first
+        inputs = first, second, *predicates
+    elif first.meta.has_multiple_outputs():
+        # NOTE: Safeguarding against https://github.com/pola-rs/polars/issues/25022
+        inputs = (first,)
+    else:
+        return first
+    return AllHorizontal().to_function_expr(*inputs)
 
 
 def _is_iterable(obj: Iterable[T] | Any) -> TypeIs[Iterable[T]]:

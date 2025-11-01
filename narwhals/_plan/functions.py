@@ -3,7 +3,7 @@ from __future__ import annotations
 import builtins
 import typing as t
 
-from narwhals._plan import _guards, _parse, common, expressions as ir
+from narwhals._plan import _guards, _parse, common, expressions as ir, selectors as cs
 from narwhals._plan.expressions import functions as F
 from narwhals._plan.expressions.literal import ScalarLiteral, SeriesLiteral
 from narwhals._plan.expressions.ranges import IntRange
@@ -21,14 +21,15 @@ if t.TYPE_CHECKING:
 
 def col(*names: str | t.Iterable[str]) -> Expr:
     flat = tuple(flatten(names))
-    node = ir.col(flat[0]) if builtins.len(flat) == 1 else ir.cols(*flat)
-    return node.to_narwhals()
+    return (
+        ir.col(flat[0]).to_narwhals()
+        if builtins.len(flat) == 1
+        else cs.by_name(*flat).as_expr()
+    )
 
 
 def nth(*indices: int | t.Sequence[int]) -> Expr:
-    flat = tuple(flatten(indices))
-    node = ir.nth(flat[0]) if builtins.len(flat) == 1 else ir.index_columns(*flat)
-    return node.to_narwhals()
+    return cs.by_index(*indices).as_expr()
 
 
 def lit(
@@ -51,11 +52,11 @@ def len() -> Expr:
 
 
 def all() -> Expr:
-    return ir.All().to_narwhals()
+    return cs.all().as_expr()
 
 
 def exclude(*names: str | t.Iterable[str]) -> Expr:
-    return all().exclude(*names)
+    return cs.all().exclude(*names).as_expr()
 
 
 def max(*columns: str) -> Expr:

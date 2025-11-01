@@ -357,6 +357,7 @@ module = [
   "narwhals._arrow.*",
   "narwhals._dask.*",
   "narwhals._spark_like.*",
+  "narwhals._plan.expressions.expr"
 ]
 warn_return_any = false
 

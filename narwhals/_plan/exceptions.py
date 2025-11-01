@@ -18,7 +18,7 @@ from narwhals.exceptions import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Collection, Iterable
     from typing import Any
 
     import pandas as pd
@@ -54,35 +54,41 @@ def hist_bins_monotonic_error(bins: Seq[float]) -> ComputeError:  # noqa: ARG001
     return ComputeError(msg)
 
 
-# NOTE: Always underlining `right`, since the message refers to both types of exprs
-# Assuming the most recent as the issue
+def _binary_underline(
+    left: ir.ExprIR,
+    operator: Operator,
+    right: ir.ExprIR,
+    /,
+    *,
+    underline_right: bool = True,
+) -> str:
+    lhs, op, rhs = repr(left), repr(operator), repr(right)
+    if underline_right:
+        indent = (len(lhs) + len(op) + 2) * " "
+        underline = len(rhs) * "^"
+    else:
+        indent = ""
+        underline = len(lhs) * "^"
+    return f"{lhs} {op} {rhs}\n{indent}{underline}"
+
+
 def binary_expr_shape_error(
     left: ir.ExprIR, op: Operator, right: ir.ExprIR
 ) -> ShapeError:
-    lhs_op = f"{left!r} {op!r} "
-    rhs = repr(right)
-    indent = len(lhs_op) * " "
-    underline = len(rhs) * "^"
+    expr = _binary_underline(left, op, right, underline_right=True)
     msg = (
-        f"Cannot combine length-changing expressions with length-preserving ones.\n"
-        f"{lhs_op}{rhs}\n{indent}{underline}"
+        f"Cannot combine length-changing expressions with length-preserving ones.\n{expr}"
     )
     return ShapeError(msg)
 
 
-# TODO @dangotbanned: Share the right underline code w/ `binary_expr_shape_error`
 def binary_expr_multi_output_error(
-    left: ir.ExprIR, op: Operator, right: ir.ExprIR
+    origin: ir.BinaryExpr, left_expand: Seq[ir.ExprIR], right_expand: Seq[ir.ExprIR]
 ) -> MultiOutputExpressionError:
-    lhs_op = f"{left!r} {op!r} "
-    rhs = repr(right)
-    indent = len(lhs_op) * " "
-    underline = len(rhs) * "^"
-    msg = (
-        "Multi-output expressions are only supported on the "
-        f"left-hand side of a binary operation.\n"
-        f"{lhs_op}{rhs}\n{indent}{underline}"
-    )
+    len_left, len_right = len(left_expand), len(right_expand)
+    lhs, op, rhs = origin.left, origin.op, origin.right
+    expr = _binary_underline(lhs, op, rhs, underline_right=len_left < len_right)
+    msg = f"Cannot combine selectors that produce a different number of columns ({len_left} != {len_right}).\n{expr}"
     return MultiOutputExpressionError(msg)
 
 
@@ -170,9 +176,10 @@ def is_iterable_polars_error(
     return TypeError(msg)
 
 
-def duplicate_error(exprs: Seq[ir.ExprIR]) -> DuplicateError:
+def duplicate_error(exprs: Collection[ir.ExprIR]) -> DuplicateError:
     INDENT = "\n  "  # noqa: N806
     names = [_output_name(expr) for expr in exprs]
+    exprs = sorted(exprs, key=_output_name)
     duplicates = {k for k, v in Counter(names).items() if v > 1}
     group_by_name = groupby(exprs, _output_name)
     name_exprs = {
@@ -204,12 +211,12 @@ def column_not_found_error(
 
 def column_index_error(
     index: int, schema_or_column_names: Iterable[str], /
-) -> ComputeError:
+) -> ColumnNotFoundError:
     # NOTE: If the original expression used a negative index, we should use that as well
     n_names = len(tuple(schema_or_column_names))
     max_nth = f"`nth({n_names - 1})`" if index >= 0 else f"`nth(-{n_names})`"
     msg = f"Invalid column index {index!r}\nHint: The schema's last column is {max_nth}"
-    return ComputeError(msg)
+    return ColumnNotFoundError(msg)
 
 
 def group_by_no_keys_error() -> ComputeError:

@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-# NOTE: Needed to avoid naming collisions
-# - Literal
 import typing as t
 
 from narwhals._plan._expr_ir import ExprIR, SelectorIR
-from narwhals._plan.common import flatten_hash_safe
+from narwhals._plan.common import replace
 from narwhals._plan.exceptions import function_expr_invalid_operation_error
 from narwhals._plan.expressions import selectors as cs
 from narwhals._plan.options import ExprIROptions
@@ -28,6 +26,8 @@ from narwhals._plan.typing import (
 from narwhals.exceptions import InvalidOperationError
 
 if t.TYPE_CHECKING:
+    from collections.abc import Container, Iterable, Iterator
+
     from typing_extensions import Self
 
     from narwhals._plan.compliant.typing import Ctx, FrameT_contra, R_co
@@ -35,24 +35,21 @@ if t.TYPE_CHECKING:
     from narwhals._plan.expressions.literal import LiteralValue
     from narwhals._plan.expressions.window import Window
     from narwhals._plan.options import FunctionOptions, SortMultipleOptions, SortOptions
+    from narwhals._plan.schema import FrozenSchema
     from narwhals.dtypes import DType
+    from narwhals.typing import IntoDType
 
 __all__ = [
     "Alias",
-    "All",
     "AnonymousExpr",
     "BinaryExpr",
     "BinarySelector",
     "Cast",
     "Column",
-    "Columns",
-    "Exclude",
     "Filter",
     "FunctionExpr",
-    "IndexColumns",
     "Len",
     "Literal",
-    "Nth",
     "RollingExpr",
     "RootSelector",
     "SelectorIR",
@@ -66,18 +63,6 @@ __all__ = [
 
 def col(name: str, /) -> Column:
     return Column(name=name)
-
-
-def cols(*names: str) -> Columns:
-    return Columns(names=names)
-
-
-def nth(index: int, /) -> Nth:
-    return Nth(index=index)
-
-
-def index_columns(*indices: int) -> IndexColumns:
-    return IndexColumns(indices=indices)
 
 
 class Alias(ExprIR, child=("expr",), config=ExprIROptions.no_dispatch()):
@@ -102,63 +87,6 @@ class Column(ExprIR, config=ExprIROptions.namespaced("col")):
 
     def to_selector_ir(self) -> RootSelector:
         return cs.ByName.from_name(self.name).to_selector_ir()
-
-
-class _ColumnSelection(ExprIR, config=ExprIROptions.no_dispatch()):
-    """Nodes which can resolve to `Column`(s) with a `Schema`."""
-
-
-class Columns(_ColumnSelection):
-    __slots__ = ("names",)
-    names: Seq[str]
-
-    def __repr__(self) -> str:
-        return f"cols({list(self.names)!r})"
-
-    def to_selector_ir(self) -> RootSelector:
-        return cs.ByName.from_names(*self.names).to_selector_ir()
-
-
-# TODO @dangotbanned: Add `selectors.by_index`
-class Nth(_ColumnSelection):
-    __slots__ = ("index",)
-    index: int
-
-    def __repr__(self) -> str:
-        return f"nth({self.index})"
-
-
-# TODO @dangotbanned: Add `selectors.by_index`
-class IndexColumns(_ColumnSelection):
-    __slots__ = ("indices",)
-    indices: Seq[int]
-
-    def __repr__(self) -> str:
-        return f"index_columns({self.indices!r})"
-
-
-class All(_ColumnSelection):
-    def __repr__(self) -> str:
-        return "all()"
-
-    def to_selector_ir(self) -> RootSelector:
-        return cs.All().to_selector_ir()
-
-
-# TODO @dangotbanned: Add `selectors.exclude`
-class Exclude(_ColumnSelection, child=("expr",)):
-    __slots__ = ("expr", "names")
-    expr: ExprIR
-    """Default is `all()`."""
-    names: Seq[str]
-    """Excluded names."""
-
-    @staticmethod
-    def from_names(expr: ExprIR, *names: str | t.Iterable[str]) -> Exclude:
-        return Exclude(expr=expr, names=tuple(flatten_hash_safe(names)))
-
-    def __repr__(self) -> str:
-        return f"{self.expr!r}.exclude({list(self.names)!r})"
 
 
 class Literal(ExprIR, t.Generic[LiteralT], config=ExprIROptions.namespaced("lit")):
@@ -312,18 +240,22 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT_co], child=("input",)):
         for e in self.input[:1]:
             yield from e.iter_output_name()
 
-    def __init__(
-        self,
-        *,
-        input: Seq[ExprIR],  # noqa: A002
-        function: FunctionT_co,
-        options: FunctionOptions,
-        **kwds: t.Any,
-    ) -> None:
-        parent = input[0]
-        if parent.is_scalar and not options.is_elementwise():
-            raise function_expr_invalid_operation_error(function, parent)
-        super().__init__(**dict(input=input, function=function, options=options, **kwds))
+    # NOTE: Interacting badly with `pyright` synthesizing the `__replace__` signature
+    if not t.TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            input: Seq[ExprIR],  # noqa: A002
+            function: FunctionT_co,
+            options: FunctionOptions,
+            **kwds: t.Any,
+        ) -> None:
+            parent = input[0]
+            if parent.is_scalar and not options.is_elementwise():
+                raise function_expr_invalid_operation_error(function, parent)
+            kwargs = dict(input=input, function=function, options=options, **kwds)
+            super().__init__(**kwargs)
 
     def dispatch(
         self: Self, ctx: Ctx[FrameT_contra, R_co], frame: FrameT_contra, name: str
@@ -467,8 +399,20 @@ class RootSelector(SelectorIR):
     def __repr__(self) -> str:
         return f"{self.selector!r}"
 
-    def matches_column(self, name: str, dtype: DType) -> bool:
-        return self.selector.matches_column(name, dtype)
+    def into_columns(
+        self, schema: FrozenSchema, ignored_columns: Container[str]
+    ) -> Iterator[str]:
+        names = self.selector.into_columns(schema, ignored_columns)
+        if ignored_columns:
+            yield from (name for name in names if name not in ignored_columns)
+        else:
+            yield from names
+
+    def matches(self, dtype: IntoDType) -> bool:
+        return self.selector.to_dtype_selector().matches(dtype)
+
+    def to_dtype_selector(self) -> Self:
+        return replace(self, selector=self.selector.to_dtype_selector())
 
 
 class BinarySelector(
@@ -478,10 +422,35 @@ class BinarySelector(
 ):
     """Application of two selector exprs via a set operator."""
 
-    def matches_column(self, name: str, dtype: DType) -> bool:
-        left = self.left.matches_column(name, dtype)
-        right = self.right.matches_column(name, dtype)
+    def into_columns(
+        self, schema: FrozenSchema, ignored_columns: Container[str]
+    ) -> Iterator[str]:
+        # by_name, by_index (upstream) lose their ability to reorder when used as a binary op
+        # (As designed) https://github.com/pola-rs/polars/issues/19384
+        names = schema.names
+        left = frozenset(self.left.into_columns(schema, ignored_columns))
+        right = frozenset(self.right.into_columns(schema, ignored_columns))
+        remaining: frozenset[str] = self.op(left, right)
+        target: Iterable[str]
+        if remaining:
+            target = (
+                names
+                if len(remaining) == len(names)
+                else (nm for nm in names if nm in remaining)
+            )
+        else:
+            target = ()
+        yield from target
+
+    def matches(self, dtype: IntoDType) -> bool:
+        left = self.left.matches(dtype)
+        right = self.right.matches(dtype)
         return bool(self.op(left, right))
+
+    def to_dtype_selector(self) -> Self:
+        return replace(
+            self, left=self.left.to_dtype_selector(), right=self.right.to_dtype_selector()
+        )
 
 
 class InvertSelector(SelectorIR, t.Generic[SelectorT]):
@@ -491,8 +460,30 @@ class InvertSelector(SelectorIR, t.Generic[SelectorT]):
     def __repr__(self) -> str:
         return f"~{self.selector!r}"
 
-    def matches_column(self, name: str, dtype: DType) -> bool:
-        return not self.selector.matches_column(name, dtype)
+    def into_columns(
+        self, schema: FrozenSchema, ignored_columns: Container[str]
+    ) -> Iterator[str]:
+        # by_name, by_index (upstream) lose their ability to reorder when used as a binary op
+        # that includes invert, which is implemented as Difference(All, Selector)
+        # (As designed) https://github.com/pola-rs/polars/issues/19384
+        names = schema.names
+        ignore = frozenset(self.selector.into_columns(schema, ignored_columns))
+        target: Iterable[str]
+        if ignore:
+            target = (
+                ()
+                if len(ignore) == len(names)
+                else (nm for nm in names if nm not in ignore)
+            )
+        else:
+            target = names
+        yield from target
+
+    def matches(self, dtype: IntoDType) -> bool:
+        return not self.selector.to_dtype_selector().matches(dtype)
+
+    def to_dtype_selector(self) -> Self:
+        return replace(self, selector=self.selector.to_dtype_selector())
 
 
 class TernaryExpr(ExprIR, child=("truthy", "falsy", "predicate")):

@@ -7,7 +7,7 @@ import pytest
 
 import narwhals as nw
 from narwhals import _plan as nwp
-from narwhals._plan import selectors as npcs
+from narwhals._plan import selectors as ncs
 from narwhals.exceptions import InvalidOperationError
 from tests.plan.utils import assert_equal_data, dataframe
 from tests.utils import PYARROW_VERSION, assert_equal_data as _assert_equal_data
@@ -358,16 +358,16 @@ def test_fancy_functions() -> None:
     result = df.group_by("a").agg(nwp.all().std(ddof=0)).sort("a")
     expected = {"a": [1, 2], "b": [0.5, 0.0]}
     assert_equal_data(result, expected)
-    result = df.group_by("a").agg(npcs.numeric().std(ddof=0)).sort("a")
+    result = df.group_by("a").agg(ncs.numeric().std(ddof=0)).sort("a")
     assert_equal_data(result, expected)
-    result = df.group_by("a").agg(npcs.matches("b").std(ddof=0)).sort("a")
+    result = df.group_by("a").agg(ncs.matches("b").std(ddof=0)).sort("a")
     assert_equal_data(result, expected)
-    result = df.group_by("a").agg(npcs.matches("b").std(ddof=0).alias("c")).sort("a")
+    result = df.group_by("a").agg(ncs.matches("b").std(ddof=0).alias("c")).sort("a")
     expected = {"a": [1, 2], "c": [0.5, 0.0]}
     assert_equal_data(result, expected)
     result = (
         df.group_by("a")
-        .agg(npcs.matches("b").std(ddof=0).name.map(lambda _x: "c"))
+        .agg(ncs.matches("b").std(ddof=0).name.map(lambda _x: "c"))
         .sort("a")
     )
     assert_equal_data(result, expected)
@@ -406,9 +406,9 @@ def test_fancy_functions() -> None:
             {"y": [1, 2], "ac": [1, 4], "xc": [5, 5]},
             ["y"],
         ),
-        (
-            [npcs.by_dtype(nw.Float64()).abs()],
-            [npcs.numeric().sum()],
+        pytest.param(
+            [ncs.by_dtype(nw.Float64()).abs()],
+            [ncs.numeric().sum()],
             {"y": [0.5, 1.0, 1.5], "a": [2, 4, -1], "x": [1, 5, 4]},
             ["y"],
         ),
@@ -454,7 +454,7 @@ def test_group_by_selector() -> None:
     }
     result = (
         dataframe(data)
-        .group_by(npcs.by_dtype(nw.Int64), "c")
+        .group_by(ncs.by_dtype(nw.Int64), "c")
         .agg(nwp.col("x").mean())
         .sort("a", "b")
     )
@@ -576,9 +576,9 @@ def test_group_by_agg_last(
                 "d": [["three", "one"], ["three"], ["one"]],
             },
         ),
-        (
+        pytest.param(
             ["d", "c"],
-            [npcs.string().unique(), nwp.col("b").first().alias("b_first")],
+            [ncs.string().unique(), nwp.col("b").first().alias("b_first")],
             {
                 "d": ["one", "one", "three", "three", "three"],
                 "c": [1, 3, 2, 4, 5],
@@ -698,10 +698,10 @@ def test_group_by_exclude_keys() -> None:
         "m": [0, 1, 2],
     }
     df = dataframe(data).with_columns(
-        npcs.boolean().fill_null(False), npcs.numeric().fill_null(0)
+        ncs.boolean().fill_null(False), ncs.numeric().fill_null(0)
     )
     exclude = "b", "c", "d", "e", "f", "g", "j", "k", "l", "m"
-    result = df.group_by(nwp.exclude(exclude)).agg(npcs.all().sum()).sort("a", "h")
+    result = df.group_by(nwp.exclude(exclude)).agg(nwp.all().sum()).sort("a", "h")
     expected = {
         "a": ["A", "A", "B"],
         "h": [False, True, False],

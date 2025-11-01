@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from narwhals._plan import selectors as ndcs
+from narwhals._plan import selectors as ncs
 
 pytest.importorskip("pyarrow")
 pytest.importorskip("numpy")
@@ -14,8 +14,7 @@ import pyarrow as pa
 import narwhals as nw
 from narwhals import _plan as nwp
 from narwhals._utils import Version
-from narwhals.exceptions import ComputeError
-from tests.plan.utils import assert_equal_data, dataframe
+from tests.plan.utils import assert_equal_data, dataframe, first, last
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -69,12 +68,6 @@ def _ids_ir(expr: nwp.Expr | Any) -> str:
     return repr(expr)
 
 
-XFAIL_REWRITE_SPECIAL_ALIASES = pytest.mark.xfail(
-    reason="https://github.com/narwhals-dev/narwhals/blob/3732e5a6b56411157f13307dfdbd25e397d5b8e6/narwhals/_plan/meta.py#L142-L162\n"
-    "Matches behavior of `polars`\n"
-    "pl.select(pl.lit(1).name.suffix('_suffix'))",
-    raises=ComputeError,
-)
 XFAIL_KLEENE_ALL_NULL = pytest.mark.xfail(
     reason="`pyarrow` uses `pa.null()`, which also fails in current `narwhals`.\n"
     "In `polars`, the same op is supported and it uses `pl.Null`.\n\n"
@@ -107,11 +100,9 @@ XFAIL_KLEENE_ALL_NULL = pytest.mark.xfail(
         (nwp.col("b").cast(nw.Float64()), {"b": [1.0, 2.0, 3.0]}),
         (nwp.lit(1).cast(nw.Float64).alias("literal_cast"), {"literal_cast": [1.0]}),
         pytest.param(
-            nwp.lit(1).cast(nw.Float64()).name.suffix("_cast"),
-            {"literal_cast": [1.0]},
-            marks=XFAIL_REWRITE_SPECIAL_ALIASES,
+            nwp.lit(1).cast(nw.Float64()).name.suffix("_cast"), {"literal_cast": [1.0]}
         ),
-        ([ndcs.string().first(), nwp.col("b")], {"a": ["A", "A", "A"], "b": [1, 2, 3]}),
+        ([ncs.string().first(), nwp.col("b")], {"a": ["A", "A", "A"], "b": [1, 2, 3]}),
         (
             nwp.col("c", "d")
             .sort_by("a", "b", descending=[True, False])
@@ -381,7 +372,7 @@ XFAIL_KLEENE_ALL_NULL = pytest.mark.xfail(
             id="map_batches-numpy",
         ),
         pytest.param(
-            ndcs.by_name("b", "c", "d")
+            ncs.by_name("b", "c", "d")
             .map_batches(lambda s: np.append(s.to_numpy(), [10, 2]), is_elementwise=True)
             .sort(),
             {"b": [1, 2, 2, 3, 10], "c": [2, 2, 4, 9, 10], "d": [2, 7, 8, 8, 10]},
@@ -430,7 +421,7 @@ def test_select(
             },
         ),
         (
-            ndcs.numeric().cast(nw.String),
+            ncs.numeric().cast(nw.String),
             {
                 "a": ["A", "B", "A"],
                 "b": ["1", "2", "3"],
@@ -458,7 +449,7 @@ def test_select(
         pytest.param(
             [
                 nwp.col("a").alias("a?"),
-                ndcs.by_name("a"),
+                ncs.by_name("a"),
                 nwp.col("b").cast(nw.Float64).name.suffix("_float"),
                 nwp.col("c").max() + 1,
                 nwp.sum_horizontal(1, "d", nwp.col("b"), nwp.lit(3)),
@@ -485,14 +476,6 @@ def test_with_columns(
 ) -> None:
     result = dataframe(data_smaller).with_columns(expr)
     assert_equal_data(result, expected)
-
-
-def first(*names: str) -> nwp.Expr:
-    return nwp.col(*names).first()
-
-
-def last(*names: str) -> nwp.Expr:
-    return nwp.col(*names).last()
 
 
 @pytest.mark.parametrize(

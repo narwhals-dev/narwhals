@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from narwhals._plan import selectors
 from narwhals._plan.dataframe import DataFrame
-from narwhals._plan.expr import Expr, Selector
-from narwhals._plan.expressions import selectors
+from narwhals._plan.expr import Expr
 from narwhals._plan.functions import (
     all,
     all_horizontal,
@@ -25,6 +25,7 @@ from narwhals._plan.functions import (
     sum_horizontal,
     when,
 )
+from narwhals._plan.selectors import Selector
 from narwhals._plan.series import Series
 
 __all__ = [

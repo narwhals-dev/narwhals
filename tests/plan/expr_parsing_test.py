@@ -20,7 +20,6 @@ from narwhals.exceptions import (
     InvalidIntoExprError,
     InvalidOperationError,
     InvalidOperationError as LengthChangingExprError,
-    MultiOutputExpressionError,
     ShapeError,
 )
 from tests.plan.utils import assert_expr_ir_equal
@@ -205,26 +204,6 @@ def test_filtration_over() -> None:
         nwp.col("a").drop_nulls().over("b", order_by="i")
     with pytest.raises(InvalidOperationError, match=pattern):
         nwp.col("a").diff().drop_nulls().over("b", order_by="i")
-
-
-def test_invalid_binary_expr_multi() -> None:
-    pattern = re.escape("all() + cols(['b', 'c'])\n        ^^^^^^^^^^^^^^^^")
-    with pytest.raises(MultiOutputExpressionError, match=pattern):
-        nwp.all() + nwp.col("b", "c")
-    pattern = re.escape(
-        "index_columns((1, 2, 3)) * index_columns((4, 5, 6)).max()\n"
-        "                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
-    )
-    with pytest.raises(MultiOutputExpressionError, match=pattern):
-        nwp.nth(1, 2, 3) * nwp.nth(4, 5, 6).max()
-    pattern = re.escape(
-        "cols(['a', 'b', 'c']).abs().fill_null([lit(int: 0)]).round() * index_columns((9, 10)).cast(Int64).sort(asc)\n"
-        "                                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
-    )
-    with pytest.raises(MultiOutputExpressionError, match=pattern):
-        nwp.col("a", "b", "c").abs().fill_null(0).round(2) * nwp.nth(9, 10).cast(
-            nw.Int64()
-        ).sort()
 
 
 def test_invalid_binary_expr_length_changing() -> None:

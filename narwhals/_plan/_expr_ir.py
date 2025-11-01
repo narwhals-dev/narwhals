@@ -12,17 +12,20 @@ from narwhals.exceptions import InvalidOperationError
 from narwhals.utils import Version
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Container, Iterator
     from typing import Any, ClassVar
 
     from typing_extensions import Self
 
     from narwhals._plan.compliant.typing import Ctx, FrameT_contra, R_co
-    from narwhals._plan.expr import Expr, Selector
+    from narwhals._plan.expr import Expr
     from narwhals._plan.expressions.expr import Alias, Cast, Column
     from narwhals._plan.meta import MetaNamespace
+    from narwhals._plan.schema import FrozenSchema
+    from narwhals._plan.selectors import Selector
     from narwhals._plan.typing import ExprIRT2, MapIR, Seq
     from narwhals.dtypes import DType
+    from narwhals.typing import IntoDType
 
 
 class ExprIR(Immutable):
@@ -67,6 +70,9 @@ class ExprIR(Immutable):
     @property
     def is_scalar(self) -> bool:
         return False
+
+    def needs_expansion(self) -> bool:
+        return any(isinstance(e, SelectorIR) for e in self.iter_left())
 
     def map_ir(self, function: MapIR, /) -> ExprIR:
         """Apply `function` to each child node, returning a new `ExprIR`.
@@ -191,23 +197,32 @@ def _map_ir_child(obj: ExprIR | Seq[ExprIR], fn: MapIR, /) -> ExprIR | Seq[ExprI
 
 class SelectorIR(ExprIR, config=ExprIROptions.no_dispatch()):
     def to_narwhals(self, version: Version = Version.MAIN) -> Selector:
-        from narwhals._plan import expr
+        from narwhals._plan.selectors import Selector, SelectorV1
 
         if version is Version.MAIN:
-            return expr.Selector._from_ir(self)
-        return expr.SelectorV1._from_ir(self)
+            return Selector._from_ir(self)
+        return SelectorV1._from_ir(self)
 
-    def matches_column(self, name: str, dtype: DType) -> bool:
-        """Return True if we can select this column.
+    def into_columns(
+        self, schema: FrozenSchema, ignored_columns: Container[str]
+    ) -> Iterator[str]:
+        msg = f"{type(self).__name__}.into_columns"
+        raise NotImplementedError(msg)
 
-        - Thinking that we could get more cache hits on an individual column basis.
-        - May also be more efficient to not iterate over the schema for every selector
-          - Instead do one pass, evaluating every selector against a single column at a time
-        """
-        raise NotImplementedError(type(self))
+    def matches(self, dtype: IntoDType) -> bool:
+        """Return True if we can select this dtype."""
+        msg = f"{type(self).__name__}.matches"
+        raise NotImplementedError(msg)
+
+    def to_dtype_selector(self) -> Self:
+        msg = f"{type(self).__name__}.to_dtype_selector"
+        raise NotImplementedError(msg)
 
     def to_selector_ir(self) -> Self:
         return self
+
+    def needs_expansion(self) -> bool:
+        return True
 
 
 class NamedIR(Immutable, Generic[ExprIRT]):

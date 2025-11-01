@@ -9,6 +9,8 @@ from narwhals.dependencies import is_pyarrow_chunked_array
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
 
+    from typing_extensions import Self
+
     from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._typing import EagerAllowed, IntoBackend
     from narwhals.dtypes import DType
@@ -76,6 +78,9 @@ class Series(Generic[NativeSeriesT_co]):
 
     def __iter__(self) -> Iterator[Any]:
         yield from self.to_native()
+
+    def alias(self, name: str) -> Self:
+        return type(self)(self._compliant.alias(name))
 
 
 class SeriesV1(Series[NativeSeriesT_co]):

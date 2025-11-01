@@ -6,7 +6,7 @@ import pytest
 
 import narwhals as nw
 from narwhals import _plan as nwp
-from narwhals._plan import _parse, expressions as ir, selectors as ndcs
+from narwhals._plan import _parse, expressions as ir, selectors as ncs
 from narwhals._plan._rewrites import (
     rewrite_all,
     rewrite_binary_agg_over,
@@ -71,7 +71,8 @@ def test_rewrite_elementwise_over_multiple(schema_2: dict[str, DType]) -> None:
         nwp.col("b", "c").last().replace_strict({1: 2}), "d"
     ).to_narwhals()
     assert_expr_ir_equal(
-        before, "cols(['b', 'c']).last().replace_strict().over([col('d')])"
+        before,
+        "ncs.by_name('b', 'c', require_all=True).last().replace_strict().over([col('d')])",
     )
     actual = rewrite_all(before, schema=schema_2, rewrites=[rewrite_elementwise_over])
     assert len(actual) == 2
@@ -101,7 +102,7 @@ def test_rewrite_elementwise_over_complex(schema_2: dict[str, DType]) -> None:
             .alias("x2")
         ),
         ~(nwp.col("d").is_duplicated().alias("d*")).alias("d**").over("b"),
-        ndcs.string().str.contains("some").name.suffix("_some"),
+        ncs.string().str.contains("some").name.suffix("_some"),
         (
             _to_window_expr(nwp.nth(3, 4, 1).null_count().sqrt(), "f", "g", "j")
             .to_narwhals()

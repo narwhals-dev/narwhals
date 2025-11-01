@@ -10,20 +10,12 @@ import narwhals as nw
 from narwhals import _plan as nwp
 from narwhals._plan import expressions as ir, selectors as ncs
 from narwhals._plan._dispatch import get_dispatch_name
-from tests.plan.utils import assert_equal_data, dataframe, named_ir
+from tests.plan.utils import assert_equal_data, dataframe, named_ir, re_compile
 
 if TYPE_CHECKING:
-    import sys
-
     import pyarrow as pa
-    from typing_extensions import TypeAlias
 
     from narwhals._plan.dataframe import DataFrame
-
-    if sys.version_info >= (3, 11):
-        _Flags: TypeAlias = "int | re.RegexFlag"
-    else:
-        _Flags: TypeAlias = int
 
 
 @pytest.fixture
@@ -39,12 +31,6 @@ def data() -> dict[str, Any]:
 @pytest.fixture
 def df(data: dict[str, Any]) -> DataFrame[pa.Table, pa.ChunkedArray[Any]]:
     return dataframe(data)
-
-
-def re_compile(
-    pattern: str, flags: _Flags = re.DOTALL | re.IGNORECASE
-) -> re.Pattern[str]:
-    return re.compile(pattern, flags)
 
 
 def test_dispatch(df: DataFrame[pa.Table, pa.ChunkedArray[Any]]) -> None:
@@ -69,7 +55,7 @@ def test_dispatch(df: DataFrame[pa.Table, pa.ChunkedArray[Any]]) -> None:
 
     with pytest.raises(
         TypeError,
-        match=re_compile(r"IndexColumns.+not.+appear.+compliant.+expand.+expr.+first"),
+        match=re_compile(r"RootSelector.+not.+appear.+compliant.+expand.+expr.+first"),
     ):
         df._compliant.select(forgot_to_expand)
 
