@@ -1586,6 +1586,45 @@ def concat_str(
         "concat_str", *flat_exprs, separator=separator, ignore_nulls=ignore_nulls
     )
 
+def concat_list(exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr) -> Expr:
+    r"""Horizontally combine multiple columns into a single column with a list of the elements.
+
+    Arguments:
+        exprs: One or more expressions to combine into a struct. Strings are treated as column names.
+        *more_exprs: Additional columns or expressions, passed as positional arguments.
+
+    Returns:
+        An expression that produces a single column containing a list of the given fields.
+
+    Example:
+        >>> import pandas as pd
+        >>> import narwhals as nw
+        >>>
+        >>> data = {
+        ...     "a": [1, 2, 3],
+        ...     "b": ["dogs", "cats", None],
+        ...     "c": ["play", "swim", "walk"],
+        ... }
+        >>> df_native = pd.DataFrame(data)
+        >>> (
+        ...     nw.from_native(df_native).select(
+        ...         nw.concat_list([nw.col("a"), nw.col("b"), nw.col("c")]).alias(
+        ...             "my_list"
+        ...         )
+        ...     )
+        ... )
+        ┌──────────────────────────┐
+        |     Narwhals DataFrame   |
+        |--------------------------|
+        |     my_list              |
+        | 0  [1, "dogs", "play"]   |
+        | 1  [2, "cats", "swim]    |
+        | 2  [3, None, "walk"]     |
+        └──────────────────────────┘
+    """
+    flat_exprs = flatten([*flatten([exprs]), *more_exprs])
+    return _expr_with_horizontal_op("concat_list", *flat_exprs)
+
 
 def coalesce(
     exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr | NonNestedLiteral

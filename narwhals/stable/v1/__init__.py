@@ -1163,6 +1163,10 @@ def concat_str(
     )
 
 
+def concat_list(exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr) -> Expr:
+    return _stableify(nw.concat_list(exprs, *more_exprs))
+
+
 def format(f_string: str, *args: IntoExpr) -> Expr:
     """Format expressions as a string."""
     return _stableify(nw.format(f_string, *args))
@@ -1402,6 +1406,7 @@ __all__ = [
     "col",
     "concat",
     "concat_str",
+    "concat_list",
     "dependencies",
     "dtypes",
     "exceptions",

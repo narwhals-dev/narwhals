@@ -916,6 +916,20 @@ def concat_str(
     )
 
 
+
+def concat_list(exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr) -> Expr:
+    """Horizontally combine multiple columns into a single list column.
+
+    Arguments:
+        exprs: One or more expressions to combine into a list. Strings are treated as column names.
+        *more_exprs: Additional columns or expressions, passed as positional arguments.
+
+    Returns:
+        An expression that produces a single list column containing the given fields.
+    """
+    return _stableify(nw.concat_list(exprs, *more_exprs))
+
+
 def format(f_string: str, *args: IntoExpr) -> Expr:
     """Format expressions as a string.
 
@@ -1241,6 +1255,7 @@ __all__ = [
     "col",
     "concat",
     "concat_str",
+    "concat_list",
     "dependencies",
     "dtypes",
     "dtypes",
