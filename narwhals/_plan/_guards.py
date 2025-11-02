@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import re  # `_utils` imports at module-level
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any, TypeVar
 
@@ -136,3 +137,7 @@ def is_literal(obj: Any) -> TypeIs[ir.Literal[Any]]:
 # Used in `ArrowNamespace._vertical`, but only horizontal is covered
 def is_tuple_of(obj: Any, tp: type[T]) -> TypeIs[Seq[T]]:  # pragma: no cover
     return bool(isinstance(obj, tuple) and obj and isinstance(obj[0], tp))
+
+
+def is_re_pattern(obj: Any) -> TypeIs[re.Pattern[str]]:
+    return isinstance(obj, re.Pattern)

@@ -6,7 +6,7 @@ from functools import reduce
 from typing import TYPE_CHECKING, Any, ClassVar, overload
 
 from narwhals._plan import expressions as ir
-from narwhals._plan._guards import is_column
+from narwhals._plan._guards import is_column, is_re_pattern
 from narwhals._plan.common import flatten_hash_safe
 from narwhals._plan.expr import Expr, ExprV1
 from narwhals._plan.expressions import operators as ops, selectors as s_ir
@@ -14,6 +14,7 @@ from narwhals._utils import Version
 from narwhals.dtypes import DType
 
 if TYPE_CHECKING:
+    import re
     from collections.abc import Callable, Mapping
     from datetime import timezone
 
@@ -206,8 +207,10 @@ def enum() -> Selector:
     return s_ir.Enum().to_selector_ir().to_narwhals()
 
 
-def matches(pattern: str) -> Selector:
-    return s_ir.Matches.from_string(pattern).to_selector_ir().to_narwhals()
+def matches(pattern: str | re.Pattern[str]) -> Selector:
+    tp = s_ir.Matches
+    s = tp(pattern=pattern) if is_re_pattern(pattern) else tp.from_string(pattern)
+    return s.to_selector_ir().to_narwhals()
 
 
 def numeric() -> Selector:

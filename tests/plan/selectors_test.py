@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import operator
+import re
 from datetime import timezone
 from typing import TYPE_CHECKING
 
@@ -396,16 +397,22 @@ def test_selector_duration(schema_non_nested: nw.Schema) -> None:
     df.assert_selects(ncs.duration(), "d1", "d2", "d3")
 
 
-# TODO @dangotbanned: Support passing in `re.Pattern` for more control?
 def test_selector_matches(schema_non_nested: nw.Schema) -> None:
-    # NOTE: Slightly modified from `polars`, because python's `re` raises on `^(?i)[E-N]{3}$`
-    # re.PatternError: global flags not at the start of the expression at position 1
     df = Frame(schema_non_nested)
+    # NOTE: python's `re` raises on the original pattern this test used
+    # > re.PatternError: global flags not at the start of the expression at position 1
+    # https://github.com/pola-rs/polars/blob/84d66e960e3d462811f0575e0a6e4e78e34c618c/py-polars/tests/unit/test_selectors.py#L499
+    pattern_str = r"(?i)[E-N]{3}"
+    # We can get closer though, by accepting pre-compiled pattern
+    pattern = re.compile(r"^[E-N]{3}$", re.IGNORECASE)
+    positive = "eee", "fgg", "ghi", "JJK", "Lmn"
+    negative = "abc", "bbb", "cde", "def", "opp", "qqR"
 
-    df.assert_selects(ncs.matches(r"(?i)[E-N]{3}"), "eee", "fgg", "ghi", "JJK", "Lmn")
-    df.assert_selects(
-        ~ncs.matches(r"(?i)[E-N]{3}"), "abc", "bbb", "cde", "def", "opp", "qqR"
-    )
+    df.assert_selects(ncs.matches(pattern_str), *positive)
+    df.assert_selects(ncs.matches(pattern), *positive)
+
+    df.assert_selects(~ncs.matches(pattern_str), *negative)
+    df.assert_selects(~ncs.matches(pattern), *negative)
 
 
 def test_selector_categorical(schema_non_nested: nw.Schema) -> None:
