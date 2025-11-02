@@ -1627,8 +1627,6 @@ def struct(exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr) -> Expr:
     return _expr_with_horizontal_op("struct", *flat_exprs)
 
 
-
-
 def coalesce(
     exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr | NonNestedLiteral
 ) -> Expr:
