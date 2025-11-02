@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     T = TypeVar("T")
 
 
-if sys.version_info >= (3, 13):
+if sys.version_info >= (3, 13):  # pragma: no cover
     from copy import replace as replace  # noqa: PLC0414
 else:  # pragma: no cover
 
@@ -124,7 +124,7 @@ def _reprlib_repr_backport() -> reprlib.Repr:
     # but also a useful constructor https://github.com/python/cpython/issues/94343
     import reprlib
 
-    if sys.version_info >= (3, 12):
+    if sys.version_info >= (3, 12):  # pragma: no cover
         return reprlib.Repr(indent=4, maxlist=10)
     else:  # pragma: no cover  # noqa: RET505
         obj = reprlib.Repr()
