@@ -199,4 +199,3 @@ class SparkLikeNamespace(
         )
 
     struct = not_implemented()
-

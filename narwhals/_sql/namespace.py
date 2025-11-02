@@ -87,5 +87,5 @@ class SQLNamespace(
         return self._expr._from_elementwise_horizontal_op(
             func_with_otherwise, then, predicate, otherwise
         )
-    
+
     struct = not_implemented()

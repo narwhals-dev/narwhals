@@ -22,7 +22,7 @@ from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
 )
-from narwhals._utils import Implementation, zip_strict, not_implemented
+from narwhals._utils import Implementation, not_implemented, zip_strict
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
@@ -254,7 +254,7 @@ class DaskNamespace(
             alias_output_names=getattr(exprs[0], "_alias_output_names", None),
             version=self._version,
         )
-    
+
     struct = not_implemented()
 
     def coalesce(self, *exprs: DaskExpr) -> DaskExpr:
