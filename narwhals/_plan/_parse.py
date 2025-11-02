@@ -136,10 +136,10 @@ def parse_into_selector_ir(input: ColumnNameOrSelector | Expr, /) -> SelectorIR:
         from narwhals._plan import selectors as cs
 
         selector = cs.by_name(input)
-    elif is_expr(input):  # pragma: no cover
+    elif is_expr(input):
         selector = input.meta.as_selector()
-    else:  # pragma: no cover
-        msg = f"cannot turn {qualified_type_name(input)!r} into selector"
+    else:
+        msg = f"cannot turn {qualified_type_name(input)!r} into a selector"
         raise TypeError(msg)
     return selector._ir
 

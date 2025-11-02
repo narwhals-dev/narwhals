@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 from narwhals._plan import selectors as ncs
+from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError
 
 pytest.importorskip("pyarrow")
 pytest.importorskip("numpy")
@@ -19,7 +20,9 @@ from tests.plan.utils import assert_equal_data, dataframe, first, last
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    from narwhals._plan.typing import ColumnNameOrSelector, OneOrIterable
     from narwhals.typing import PythonLiteral
+    from tests.conftest import Data
 
 
 @pytest.fixture
@@ -44,9 +47,16 @@ def data_small() -> dict[str, Any]:
 
 
 @pytest.fixture
-def data_smaller(data_small: dict[str, Any]) -> dict[str, Any]:
+def data_small_af(data_small: dict[str, Any]) -> dict[str, Any]:
     """Use only columns `"a"-"f"`."""
     keep = {"a", "b", "c", "d", "e", "f"}
+    return {k: v for k, v in data_small.items() if k in keep}
+
+
+@pytest.fixture
+def data_small_dh(data_small: dict[str, Any]) -> dict[str, Any]:
+    """Use only columns `"d"-"h"`."""
+    keep = {"d", "e", "f", "g", "h"}
     return {k: v for k, v in data_small.items() if k in keep}
 
 
@@ -472,9 +482,9 @@ def test_select(
 def test_with_columns(
     expr: nwp.Expr | Sequence[nwp.Expr],
     expected: dict[str, Any],
-    data_smaller: dict[str, Any],
+    data_small_af: dict[str, Any],
 ) -> None:
-    result = dataframe(data_smaller).with_columns(expr)
+    result = dataframe(data_small_af).with_columns(expr)
     assert_equal_data(result, expected)
 
 
@@ -516,6 +526,62 @@ def test_row_is_py_literal(
 
     polars_result = pl.DataFrame(data_indexed).row(index)
     assert result == polars_result
+
+
+def test_drop_nulls(data_small_dh: Data) -> None:
+    df = dataframe(data_small_dh)
+    expected: Data = {"d": [], "e": [], "f": [], "g": [], "h": []}
+    result = df.drop_nulls()
+    assert_equal_data(result, expected)
+
+
+def test_drop_nulls_invalid(data_small_dh: Data) -> None:
+    df = dataframe(data_small_dh)
+    with pytest.raises(TypeError, match=r"cannot turn.+int.+into a selector"):
+        df.drop_nulls(123)  # type: ignore[arg-type]
+    with pytest.raises(
+        InvalidOperationError, match=r"cannot turn.+col\('a'\).first\(\).+into a selector"
+    ):
+        df.drop_nulls(nwp.col("a").first())  # type: ignore[arg-type]
+
+    with pytest.raises(ColumnNotFoundError):
+        df.drop_nulls(["j", "k"])
+
+    with pytest.raises(ColumnNotFoundError):
+        df.drop_nulls(ncs.by_name("j", "k"))
+
+    with pytest.raises(ColumnNotFoundError):
+        df.drop_nulls(ncs.by_index(-999))
+
+
+DROP_ROW_1: Data = {
+    "d": [7, 8],
+    "e": [9, 7],
+    "f": [False, None],
+    "g": [None, False],
+    "h": [None, True],
+}
+KEEP_ROW_3: Data = {"d": [8], "e": [7], "f": [None], "g": [False], "h": [True]}
+
+
+@pytest.mark.parametrize(
+    ("subset", "expected"),
+    [
+        ("e", DROP_ROW_1),
+        (nwp.col("e"), DROP_ROW_1),
+        (ncs.by_index(1), DROP_ROW_1),
+        (ncs.integer(), DROP_ROW_1),
+        ([ncs.numeric() | ~ncs.boolean()], DROP_ROW_1),
+        (["g", "h"], KEEP_ROW_3),
+        ([ncs.by_name("g", "h"), "d"], KEEP_ROW_3),
+    ],
+)
+def test_drop_nulls_subset(
+    data_small_dh: Data, subset: OneOrIterable[ColumnNameOrSelector], expected: Data
+) -> None:
+    df = dataframe(data_small_dh)
+    result = df.drop_nulls(subset)
+    assert_equal_data(result, expected)
 
 
 if TYPE_CHECKING:

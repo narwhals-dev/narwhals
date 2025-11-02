@@ -114,9 +114,11 @@ class BaseFrame(Generic[NativeFrameT_co]):
         return self._with_compliant(self._compliant.drop(columns, strict=strict))
 
     def drop_nulls(
-        self, subset: str | Sequence[str] | None = None
-    ) -> Self:  # pragma: no cover
-        subset = [subset] if isinstance(subset, str) else subset
+        self, subset: OneOrIterable[ColumnNameOrSelector] | None = None
+    ) -> Self:
+        if subset is not None:
+            s_irs = _parse.parse_into_seq_of_selector_ir(subset)
+            subset = expand_selector_irs_names(s_irs, schema=self)
         return self._with_compliant(self._compliant.drop_nulls(subset))
 
     def rename(self, mapping: Mapping[str, str]) -> Self:
