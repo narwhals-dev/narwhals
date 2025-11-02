@@ -396,6 +396,27 @@ class Len(ExprIR, config=ExprIROptions.namespaced()):
         return "len()"
 
 
+class TernaryExpr(ExprIR, child=("truthy", "falsy", "predicate")):
+    """When-Then-Otherwise."""
+
+    __slots__ = ("truthy", "falsy", "predicate")  # noqa: RUF023
+    predicate: ExprIR
+    truthy: ExprIR
+    falsy: ExprIR
+
+    @property
+    def is_scalar(self) -> bool:
+        return self.predicate.is_scalar and self.truthy.is_scalar and self.falsy.is_scalar
+
+    def __repr__(self) -> str:
+        return (
+            f".when({self.predicate!r}).then({self.truthy!r}).otherwise({self.falsy!r})"
+        )
+
+    def iter_output_name(self) -> t.Iterator[ExprIR]:
+        yield from self.truthy.iter_output_name()
+
+
 class RootSelector(SelectorIR):
     """A single selector expression."""
 
@@ -490,24 +511,3 @@ class InvertSelector(SelectorIR, t.Generic[SelectorT]):
 
     def to_dtype_selector(self) -> Self:
         return replace(self, selector=self.selector.to_dtype_selector())
-
-
-class TernaryExpr(ExprIR, child=("truthy", "falsy", "predicate")):
-    """When-Then-Otherwise."""
-
-    __slots__ = ("truthy", "falsy", "predicate")  # noqa: RUF023
-    predicate: ExprIR
-    truthy: ExprIR
-    falsy: ExprIR
-
-    @property
-    def is_scalar(self) -> bool:
-        return self.predicate.is_scalar and self.truthy.is_scalar and self.falsy.is_scalar
-
-    def __repr__(self) -> str:
-        return (
-            f".when({self.predicate!r}).then({self.truthy!r}).otherwise({self.falsy!r})"
-        )
-
-    def iter_output_name(self) -> t.Iterator[ExprIR]:
-        yield from self.truthy.iter_output_name()
