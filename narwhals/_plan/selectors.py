@@ -23,6 +23,30 @@ if TYPE_CHECKING:
     from narwhals._plan.typing import OneOrIterable
     from narwhals.typing import TimeUnit
 
+__all__ = [
+    "Selector",
+    "all",
+    "array",
+    "boolean",
+    "by_dtype",
+    "by_index",
+    "by_name",
+    "categorical",
+    "datetime",
+    "duration",
+    "enum",
+    "first",
+    "float",
+    "integer",
+    "last",
+    "list",
+    "matches",
+    "numeric",
+    "string",
+    "struct",
+    "temporal",
+]
+
 _dtypes = Version.MAIN.dtypes
 _dtypes_v1 = Version.V1.dtypes
 
