@@ -16,14 +16,14 @@ from narwhals.dtypes import DType, FloatType, IntegerType, NumericType, Temporal
 from narwhals.typing import IntoDType, TimeUnit
 
 if TYPE_CHECKING:
-    from collections.abc import Container, Iterator
+    from collections.abc import Iterator
     from datetime import timezone
 
     import narwhals.dtypes as nw_dtypes
     from narwhals._plan.expressions import SelectorIR
     from narwhals._plan.expressions.expr import RootSelector
     from narwhals._plan.schema import FrozenSchema
-    from narwhals._plan.typing import OneOrIterable, Seq
+    from narwhals._plan.typing import Ignored, OneOrIterable, Seq
 
 
 _dtypes = Version.MAIN.dtypes
@@ -44,18 +44,26 @@ class Selector(Immutable):
         msg = f"expected datatype based expression got {self!r}"
         raise TypeError(msg)
 
-    # NOTE: Tried following what the upstream doc said, but seems to not apply to group_by
-    # where they are ignored
-    def into_columns(
-        self, schema: FrozenSchema, ignored_columns: Container[str]
+    def iter_expand(
+        self, schema: FrozenSchema, ignored_columns: Ignored
     ) -> Iterator[str]:
-        # Turns the selector into an ordered set of selected columns from the schema.
-        #
-        # - The order of the columns corresponds to the order in the schema.
-        # - Column names in `ignored_columns` are only used if they are explicitly mentioned by a `ByName` or `ByIndex`.
-        # - `ignored_columns` are only evaluated against `All` and `Matches`
-        # https://github.com/pola-rs/polars/blob/2b241543851800595efd343be016b65cdbdd3c9f/crates/polars-plan/src/dsl/selector.rs#L192-L193
-        msg = f"{type(self).__name__}.into_columns"  # pragma: no cover[abstract]
+        """Yield column names that match the selector, in `schema` order[^1].
+
+        Adapted from [upstream].
+
+        Arguments:
+            schema: Target scope to expand the selector in.
+            ignored_columns: Names of `group_by` columns, which are excluded[^2] from the result.
+
+        Note:
+            [^1]: `ByName`, `ByIndex` return their inputs in given order not in schema order.
+
+        Note:
+            [^2]: `ByName`, `ByIndex` will never be ignored.
+
+        [upstream]: https://github.com/pola-rs/polars/blob/2b241543851800595efd343be016b65cdbdd3c9f/crates/polars-plan/src/dsl/selector.rs#L188-L198
+        """
+        msg = f"{type(self).__name__}.iter_expand"
         raise NotImplementedError(msg)
 
 
@@ -84,8 +92,8 @@ class DTypeSelector(Selector):
         """Implementation of `DTypeSelector.matches`."""
         return isinstance_or_issubclass(dtype, self._dtype)
 
-    def into_columns(
-        self, schema: FrozenSchema, ignored_columns: Container[str]
+    def iter_expand(
+        self, schema: FrozenSchema, ignored_columns: Ignored
     ) -> Iterator[str]:
         if ignored_columns:
             for name, dtype in schema.items():
@@ -107,8 +115,8 @@ class All(Selector):
     def to_dtype_selector(self) -> DTypeSelector:
         return DTypeAll()
 
-    def into_columns(
-        self, schema: FrozenSchema, ignored_columns: Container[str]
+    def iter_expand(
+        self, schema: FrozenSchema, ignored_columns: Ignored
     ) -> Iterator[str]:
         if ignored_columns:
             yield from (name for name in schema if name not in ignored_columns)
@@ -117,7 +125,6 @@ class All(Selector):
 
 
 class ByIndex(Selector):
-    # returns inputs in given order not in schema order.
     __slots__ = ("indices", "require_all")
     indices: Seq[int]
     require_all: bool
@@ -146,8 +153,8 @@ class ByIndex(Selector):
     def from_index(index: int, /, *, require_all: bool = True) -> ByIndex:
         return ByIndex(indices=(index,), require_all=require_all)
 
-    def into_columns(
-        self, schema: FrozenSchema, ignored_columns: Container[str]
+    def iter_expand(
+        self, schema: FrozenSchema, ignored_columns: Ignored
     ) -> Iterator[str]:
         names = schema.names
         n_fields = len(names)
@@ -165,7 +172,6 @@ class ByIndex(Selector):
 
 
 class ByName(Selector):
-    # returns inputs in given order not in schema order.
     __slots__ = ("names", "require_all")
     names: Seq[str]
     require_all: bool
@@ -190,8 +196,8 @@ class ByName(Selector):
     def from_name(name: str, /, *, require_all: bool = True) -> ByName:
         return ByName(names=(name,), require_all=require_all)
 
-    def into_columns(
-        self, schema: FrozenSchema, ignored_columns: Container[str]
+    def iter_expand(
+        self, schema: FrozenSchema, ignored_columns: Ignored
     ) -> Iterator[str]:
         if not self.require_all:
             keys = schema.keys()
@@ -213,8 +219,8 @@ class Matches(Selector):
     def __repr__(self) -> str:
         return f"ncs.matches({self.pattern.pattern!r})"
 
-    def into_columns(
-        self, schema: FrozenSchema, ignored_columns: Container[str]
+    def iter_expand(
+        self, schema: FrozenSchema, ignored_columns: Ignored
     ) -> Iterator[str]:
         search = self.pattern.search
         if ignored_columns:

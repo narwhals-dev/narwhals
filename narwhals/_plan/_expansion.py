@@ -38,7 +38,6 @@ Their dependencies are **quite** complex, with the main ones being:
 from __future__ import annotations
 
 from collections import deque
-from collections.abc import Collection, Container
 from typing import TYPE_CHECKING, Any, Union
 
 from narwhals._plan import common, expressions as ir, meta
@@ -61,22 +60,16 @@ from narwhals._utils import check_column_names_are_unique, zip_strict
 from narwhals.exceptions import MultiOutputExpressionError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Sequence
+    from collections.abc import Collection, Iterable, Iterator, Sequence
 
     from typing_extensions import TypeAlias
 
-    from narwhals._plan.typing import Seq
+    from narwhals._plan.typing import Ignored, Seq
 
 
 OutputNames: TypeAlias = "Seq[str]"
 """Fully expanded, validated output column names, for `NamedIR`s."""
 
-
-Ignored: TypeAlias = Container[str]
-"""Ignored `Selector` column names.
-
-Usually names resolved from `group_by(*keys)`.
-"""
 
 Combination: TypeAlias = Union[
     ir.SortBy,
@@ -159,7 +152,7 @@ class Expander:
         self, selectors: Iterable[SelectorIR], /
     ) -> Iterator[str]:
         for s in selectors:
-            yield from s.into_columns(self.schema, self.ignored)
+            yield from s.iter_expand_names(self.schema, self.ignored)
 
     def prepare_projection(self, exprs: Collection[ExprIR], /) -> Seq[NamedIR]:
         output_names = deque[str]()
@@ -206,7 +199,7 @@ class Expander:
         if isinstance(origin, _EXPAND_NONE):
             yield origin
         elif isinstance(origin, ir.SelectorIR):
-            names = origin.into_columns(self.schema, self.ignored)
+            names = origin.iter_expand_names(self.schema, self.ignored)
             yield from (ir.Column(name=name) for name in names)
         elif isinstance(origin, _EXPAND_SINGLE):
             for expr in self._expand_recursive(origin.expr):

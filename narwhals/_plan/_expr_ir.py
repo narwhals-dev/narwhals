@@ -7,12 +7,12 @@ from narwhals._plan._guards import is_function_expr, is_literal
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.common import replace
 from narwhals._plan.options import ExprIROptions
-from narwhals._plan.typing import ExprIRT
+from narwhals._plan.typing import ExprIRT, Ignored
 from narwhals.exceptions import InvalidOperationError
 from narwhals.utils import Version
 
 if TYPE_CHECKING:
-    from collections.abc import Container, Iterator
+    from collections.abc import Iterator
     from typing import Any, ClassVar
 
     from typing_extensions import Self
@@ -202,10 +202,28 @@ class SelectorIR(ExprIR, config=ExprIROptions.no_dispatch()):
         tp = Selector if version is Version.MAIN else SelectorV1
         return tp._from_ir(self)
 
-    def into_columns(
-        self, schema: FrozenSchema, ignored_columns: Container[str]
+    # NOTE: Corresponds with `Selector.iter_expand`
+    # A longer name is used here to distinguish expression and name-only expansion
+    def iter_expand_names(
+        self, schema: FrozenSchema, ignored_columns: Ignored
     ) -> Iterator[str]:
-        msg = f"{type(self).__name__}.into_columns"
+        """Yield column names that match the selector, in `schema` order[^1].
+
+        Adapted from [upstream].
+
+        Arguments:
+            schema: Target scope to expand the selector in.
+            ignored_columns: Names of `group_by` columns, which are excluded[^2] from the result.
+
+        Note:
+            [^1]: `ByName`, `ByIndex` return their inputs in given order not in schema order.
+
+        Note:
+            [^2]: `ByName`, `ByIndex` will never be ignored.
+
+        [upstream]: https://github.com/pola-rs/polars/blob/2b241543851800595efd343be016b65cdbdd3c9f/crates/polars-plan/src/dsl/selector.rs#L188-L198
+        """
+        msg = f"{type(self).__name__}.iter_expand_names"
         raise NotImplementedError(msg)
 
     def matches(self, dtype: IntoDType) -> bool:

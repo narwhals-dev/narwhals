@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import typing as t
+from collections.abc import Container
 from typing import TYPE_CHECKING
 
 from narwhals._typing_compat import TypeVar
@@ -28,6 +29,7 @@ __all__ = [
     "ColumnNameOrSelector",
     "DataFrameT",
     "FunctionT",
+    "Ignored",
     "IntoExpr",
     "IntoExprColumn",
     "LeftSelectorT",
@@ -128,3 +130,10 @@ DataFrameT = TypeVar("DataFrameT", bound="DataFrame[t.Any, t.Any]")
 Order: TypeAlias = t.Literal["ascending", "descending"]
 NonCrossJoinStrategy: TypeAlias = t.Literal["inner", "left", "full", "semi", "anti"]
 PartialSeries: TypeAlias = "Callable[[Iterable[t.Any]], Series[NativeSeriesAnyT]]"
+
+
+Ignored: TypeAlias = Container[str]
+"""Names of `group_by` columns, which are excluded[^1] when expanding a `Selector`.
+
+[^1]: `ByName`, `ByIndex` will never be ignored.
+"""
