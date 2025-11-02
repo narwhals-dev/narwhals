@@ -25,7 +25,6 @@ from narwhals.typing import IntoDType, TimeUnit
 if TYPE_CHECKING:
     from collections.abc import Container, Iterator
     from datetime import timezone
-    from typing import TypeVar
 
     import narwhals.dtypes as nw_dtypes
     from narwhals._plan.expressions import SelectorIR
@@ -33,7 +32,6 @@ if TYPE_CHECKING:
     from narwhals._plan.schema import FrozenSchema
     from narwhals._plan.typing import OneOrIterable, Seq
 
-    T = TypeVar("T")
 
 _dtypes = Version.MAIN.dtypes
 
@@ -256,10 +254,7 @@ class ByDType(DTypeSelector, dtype=DType):
     dtypes: frozenset[DType | type[DType]]
 
     def __repr__(self) -> str:
-        els = ", ".join(
-            tp.__name__ if isinstance(tp, type) else repr(tp) for tp in self.dtypes
-        )
-        return f"ncs.by_dtype([{els}])"
+        return f"ncs.by_dtype([{', '.join(sorted(map(repr, self.dtypes)))}])"
 
     def _matches(self, dtype: DType | type[DType]) -> bool:
         return dtype in self.dtypes

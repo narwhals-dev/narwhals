@@ -148,6 +148,17 @@ def test_selector_by_dtype(schema_non_nested: nw.Schema) -> None:
 
     selector = ncs.by_dtype(nw.Datetime("ns"), nw.Float32(), nw.UInt32, nw.Date)
     df.assert_selects(selector, "bbb", "def", "JJK")
+    selector = ncs.by_dtype(
+        nw.Int64,
+        nw.Int128,
+        nw.Duration("ns"),
+        nw.Int8,
+        nw.Binary(),
+        nw.Int32(),
+        nw.String,
+    )
+    expected = "ncs.by_dtype([Binary, Duration(time_unit='ns'), Int128, Int32, Int64, Int8, String])"
+    assert_expr_ir_equal(selector, expected)
 
 
 def test_selector_by_dtype_timezone_decimal() -> None:
