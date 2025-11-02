@@ -20,7 +20,8 @@ import pyarrow as pa
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
-    from narwhals._plan.typing import IntoExpr
+    from narwhals._plan.typing import IntoExpr, OneOrIterable
+    from tests.conftest import Data
 
 
 def test_group_by_iter() -> None:
@@ -716,4 +717,46 @@ def test_group_by_exclude_keys() -> None:
         "l": [4, 6, 5],
         "m": [0, 2, 1],
     }
+    assert_equal_data(result, expected)
+
+
+IGNORE_KEYS: Data = {"a": [1, 2], "b_sum": [9, 6]}
+EXPAND_KEYS: Data = {"a": [1, 2], "a_sum": [2, 2], "b_sum": [9, 6]}
+
+
+@pytest.mark.parametrize(
+    ("aggs", "expected"),
+    [
+        (nwp.all().sum().name.suffix("_sum"), IGNORE_KEYS),
+        (ncs.all().sum().name.suffix("_sum"), IGNORE_KEYS),
+        (ncs.matches(r"a|b").sum().name.suffix("_sum"), IGNORE_KEYS),
+        (ncs.integer().sum().name.suffix("_sum"), IGNORE_KEYS),
+        (nwp.col("a", "b").sum().name.suffix("_sum"), EXPAND_KEYS),
+        (nwp.nth(0, 1).sum().name.suffix("_sum"), EXPAND_KEYS),
+        (
+            [nwp.nth(0).sum().alias("a_sum"), ncs.last().sum().name.suffix("_sum")],
+            EXPAND_KEYS,
+        ),
+        (
+            [nwp.col("a").sum().name.suffix("_sum"), nwp.col("b").sum().alias("b_sum")],
+            EXPAND_KEYS,
+        ),
+    ],
+    ids=[
+        "nw.All",
+        "cs.All",
+        "Matches",
+        "Integer",
+        "ByName",
+        "ByIndex",
+        "ByIndex-2",
+        "Column-2",
+    ],
+)
+def test_group_by_consistent_exclude_21773(
+    aggs: OneOrIterable[IntoExpr], expected: Data
+) -> None:
+    # NOTE: See https://github.com/pola-rs/polars/issues/21773
+    df = dataframe({"a": [1, 1, 2], "b": [4, 5, 6]})
+    result = df.group_by("a").agg(aggs)
     assert_equal_data(result, expected)

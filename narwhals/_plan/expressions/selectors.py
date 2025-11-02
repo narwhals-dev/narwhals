@@ -87,7 +87,12 @@ class DTypeSelector(Selector):
     def into_columns(
         self, schema: FrozenSchema, ignored_columns: Container[str]
     ) -> Iterator[str]:
-        yield from (name for name, dtype in schema.items() if self.matches(dtype))
+        if ignored_columns:
+            for name, dtype in schema.items():
+                if self.matches(dtype) and name not in ignored_columns:
+                    yield name
+        else:
+            yield from (name for name, dtype in schema.items() if self.matches(dtype))
 
 
 class DTypeAll(DTypeSelector, dtype=DType):
