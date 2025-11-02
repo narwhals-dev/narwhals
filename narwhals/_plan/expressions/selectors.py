@@ -1,10 +1,3 @@
-# TODO @dangotbanned: Update this docstring
-"""Deviations from `polars`.
-
-- A `Selector` corresponds to a `nw.selectors` function
-- Binary ops are represented as a `BinarySelector`, similar to `BinaryExpr`.
-"""
-
 from __future__ import annotations
 
 import functools
@@ -231,7 +224,6 @@ class Array(DTypeSelector, dtype=_dtypes.Array):
     __slots__ = ("inner", "size")
     inner: SelectorIR | None
     size: int | None
-    """Not sure why polars is using the (`0.20.31`) deprecated name `width`."""
 
     def __repr__(self) -> str:
         inner = "" if not self.inner else repr(self.inner)
@@ -268,13 +260,6 @@ class Categorical(DTypeSelector, dtype=_dtypes.Categorical): ...
 
 
 class Datetime(DTypeSelector, dtype=_dtypes.Datetime):
-    """Should swallow the [`utils` functions].
-
-    Just re-wrapping them for now, since `CompliantSelectorNamespace` is still using them.
-
-    [`utils` functions]: https://github.com/narwhals-dev/narwhals/blob/6d524ba04fca6fe2d6d25bdd69f75fabf1d79039/narwhals/utils.py#L1565-L1596
-    """
-
     __slots__ = ("time_units", "time_zones")
     time_units: frozenset[TimeUnit]
     time_zones: frozenset[str | None]
