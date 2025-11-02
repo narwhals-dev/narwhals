@@ -335,7 +335,7 @@ class PandasLikeNamespace(
             context=self,
         )
 
-    def concat_struct(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
+    def struct(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         import pandas as pd
         import pyarrow.compute as pc
 

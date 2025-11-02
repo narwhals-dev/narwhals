@@ -916,7 +916,7 @@ def concat_str(
     )
 
 
-def concat_struct(exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr) -> Expr:
+def struct(exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr) -> Expr:
     """Horizontally combine multiple columns into a single struct column.
 
     Arguments:
@@ -926,7 +926,7 @@ def concat_struct(exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr) -
     Returns:
         An expression that produces a single struct column containing the given fields.
     """
-    return _stableify(nw.concat_struct(exprs, *more_exprs))
+    return _stableify(nw.struct(exprs, *more_exprs))
 
 
 def format(f_string: str, *args: IntoExpr) -> Expr:
@@ -1254,7 +1254,7 @@ __all__ = [
     "col",
     "concat",
     "concat_str",
-    "concat_struct",
+    "struct",
     "dependencies",
     "dtypes",
     "dtypes",

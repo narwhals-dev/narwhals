@@ -198,7 +198,7 @@ class PolarsNamespace:
             version=self._version,
         )
 
-    def concat_struct(self, *exprs: PolarsExpr) -> PolarsExpr:
+    def struct(self, *exprs: PolarsExpr) -> PolarsExpr:
         pl_exprs = [expr._native_expr for expr in exprs]
         return self._expr(pl.struct(pl_exprs), version=self._version)
 

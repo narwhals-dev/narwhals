@@ -1163,8 +1163,8 @@ def concat_str(
     )
 
 
-def concat_struct(exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr) -> Expr:
-    return _stableify(nw.concat_struct(exprs, *more_exprs))
+def struct(exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr) -> Expr:
+    return _stableify(nw.struct(exprs, *more_exprs))
 
 
 def format(f_string: str, *args: IntoExpr) -> Expr:
@@ -1406,7 +1406,7 @@ __all__ = [
     "col",
     "concat",
     "concat_str",
-    "concat_struct",
+    "struct",
     "dependencies",
     "dtypes",
     "exceptions",

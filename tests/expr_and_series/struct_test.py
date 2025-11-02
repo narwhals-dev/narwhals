@@ -17,6 +17,7 @@ def test_dryrun(constructor: Constructor, *, request: pytest.FixtureRequest) -> 
 
     df = nw.from_native(constructor(data))
     result = df.select(
-        nw.concat_struct([nw.col("a"), nw.col("b"), nw.col("c")]).alias("s")
+        nw.struct([nw.col("a"), nw.col("b"), nw.col("c")]).alias("s")
     )
     print(result)
+

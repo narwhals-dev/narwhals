@@ -1587,7 +1587,7 @@ def concat_str(
     )
 
 
-def concat_struct(exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr) -> Expr:
+def struct(exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr) -> Expr:
     r"""Horizontally combine multiple columns into a single struct column.
 
     Arguments:
@@ -1624,7 +1624,9 @@ def concat_struct(exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr) -
         └──────────────────────────┘
     """
     flat_exprs = flatten([*flatten([exprs]), *more_exprs])
-    return _expr_with_horizontal_op("concat_struct", *flat_exprs)
+    return _expr_with_horizontal_op("struct", *flat_exprs)
+
+
 
 
 def coalesce(

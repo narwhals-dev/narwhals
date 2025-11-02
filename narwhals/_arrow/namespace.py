@@ -227,7 +227,7 @@ class ArrowNamespace(
             context=self,
         )
 
-    def concat_struct(self, *exprs: ArrowExpr) -> ArrowExpr:
+    def struct(self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             series = list(chain.from_iterable(expr(df) for expr in exprs))
             arrays = [s._native_series.combine_chunks() for s in series]
