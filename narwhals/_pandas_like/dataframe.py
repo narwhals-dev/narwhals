@@ -57,10 +57,10 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         AsofJoinStrategy,
         DTypeBackend,
-        IntoNullableSchema,
         IntoSchema,
         JoinStrategy,
         PivotAgg,
+        SchemaDefinition,
         SizedMultiIndexSelector,
         SizedMultiNameSelector,
         SizeUnit,
@@ -150,7 +150,7 @@ class PandasLikeDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | IntoNullableSchema | None = None,
+        schema: SchemaDefinition | None,
     ) -> Self:
         from narwhals._utils import NullableSchema
 
@@ -201,7 +201,7 @@ class PandasLikeDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | IntoNullableSchema | None = None,
+        schema: SchemaDefinition | None,
     ) -> Self:
         from narwhals._utils import NullableSchema
 

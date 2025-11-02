@@ -79,12 +79,12 @@ if TYPE_CHECKING:
         IntoExpr,
         IntoFrame,
         IntoLazyFrame,
-        IntoNullableSchema,
         IntoSchema,
         JoinStrategy,
         MultiColSelector as _MultiColSelector,
         MultiIndexSelector as _MultiIndexSelector,
         PivotAgg,
+        SchemaDefinition,
         SingleColSelector,
         SingleIndexSelector,
         SizeUnit,
@@ -559,7 +559,7 @@ class DataFrame(BaseFrame[DataFrameT]):
     def from_dict(
         cls,
         data: Mapping[str, Any],
-        schema: IntoSchema | IntoNullableSchema | None = None,
+        schema: SchemaDefinition | None = None,
         *,
         backend: IntoBackend[EagerAllowed] | None = None,
     ) -> DataFrame[Any]:
@@ -627,7 +627,7 @@ class DataFrame(BaseFrame[DataFrameT]):
     def from_dicts(
         cls,
         data: Sequence[Mapping[str, Any]],
-        schema: IntoSchema | IntoNullableSchema | None = None,
+        schema: SchemaDefinition | None = None,
         *,
         backend: IntoBackend[EagerAllowed],
     ) -> DataFrame[Any]:

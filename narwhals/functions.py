@@ -38,9 +38,9 @@ if TYPE_CHECKING:
         FrameT,
         IntoDType,
         IntoExpr,
-        IntoNullableSchema,
         IntoSchema,
         NonNestedLiteral,
+        SchemaDefinition,
         _2DArray,
     )
 
@@ -222,7 +222,7 @@ def _new_series_impl(
 @deprecate_native_namespace(warn_version="1.26.0")
 def from_dict(
     data: Mapping[str, Any],
-    schema: IntoSchema | IntoNullableSchema | None = None,
+    schema: SchemaDefinition | None = None,
     *,
     backend: IntoBackend[EagerAllowed] | None = None,
     native_namespace: ModuleType | None = None,  # noqa: ARG001
@@ -285,7 +285,7 @@ def _from_dict_no_backend(
 
 def from_dicts(
     data: Sequence[Mapping[str, Any]],
-    schema: IntoSchema | IntoNullableSchema | None = None,
+    schema: SchemaDefinition | None = None,
     *,
     backend: IntoBackend[EagerAllowed],
 ) -> DataFrame[Any]:

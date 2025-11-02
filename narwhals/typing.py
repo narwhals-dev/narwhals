@@ -27,7 +27,6 @@ if TYPE_CHECKING:
     import pandas as pd
     import polars as pl
     import pyarrow as pa
-    from _typeshed import SupportsKeysAndGetItem
     from typing_extensions import TypeAlias
 
     from narwhals import dtypes
@@ -304,7 +303,7 @@ Examples:
 """
 
 IntoSchema: TypeAlias = (
-    "SupportsKeysAndGetItem[str, IntoDType] | Sequence[tuple[str, IntoDType]] | Schema"
+    "Mapping[str, IntoDType] | Sequence[tuple[str, IntoDType]] | Schema"
 )
 """Anything that can be converted into a Narwhals Schema.
 
@@ -351,8 +350,10 @@ Examples:
     └────────────────────────┘
 """
 
-IntoNullableSchema: TypeAlias = "SupportsKeysAndGetItem[str, IntoDType | None] | Sequence[tuple[str, IntoDType | None]]"
-"""Schema specification with possible None values."""
+SchemaDefinition: TypeAlias = (
+    "Mapping[str, IntoDType | None] | Sequence[tuple[str, IntoDType | None]]"
+)
+"""Either a {str: IntoDType| None} mapping or a Sequence of (str, IntoDType | None) pairs."""
 
 IntoArrowSchema: TypeAlias = "pa.Schema | Mapping[str, pa.DataType]"
 IntoPolarsSchema: TypeAlias = "pl.Schema | Mapping[str, pl.DataType]"
@@ -406,7 +407,6 @@ __all__ = [
     "IntoFrameT",
     "IntoLazyFrame",
     "IntoLazyFrameT",
-    "IntoNullableSchema",
     "IntoSchema",
     "IntoSeries",
     "IntoSeriesT",

@@ -79,10 +79,10 @@ if TYPE_CHECKING:
         IntoDType,
         IntoExpr,
         IntoFrame,
-        IntoNullableSchema,
         IntoSchema,
         IntoSeries,
         NonNestedLiteral,
+        SchemaDefinition,
         SingleColSelector,
         SingleIndexSelector,
         _1DArray,
@@ -121,7 +121,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     def from_dict(
         cls,
         data: Mapping[str, Any],
-        schema: IntoSchema | IntoNullableSchema | None = None,
+        schema: SchemaDefinition | None = None,
         *,
         backend: IntoBackend[EagerAllowed] | None = None,
     ) -> DataFrame[Any]:
@@ -132,7 +132,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     def from_dicts(
         cls,
         data: Sequence[Mapping[str, Any]],
-        schema: IntoSchema | IntoNullableSchema | None = None,
+        schema: SchemaDefinition | None = None,
         *,
         backend: IntoBackend[EagerAllowed],
     ) -> DataFrame[Any]:
@@ -1030,7 +1030,7 @@ def from_arrow(
 
 def from_dict(
     data: Mapping[str, Any],
-    schema: IntoSchema | IntoNullableSchema | None = None,
+    schema: SchemaDefinition | None = None,
     *,
     backend: IntoBackend[EagerAllowed] | None = None,
 ) -> DataFrame[Any]:

@@ -54,9 +54,9 @@ if TYPE_CHECKING:
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.typing import (
-        IntoNullableSchema,
         IntoSchema,
         JoinStrategy,
+        SchemaDefinition,
         SizedMultiIndexSelector,
         SizedMultiNameSelector,
         SizeUnit,
@@ -121,7 +121,7 @@ class ArrowDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | IntoNullableSchema | None = None,
+        schema: SchemaDefinition | None,
     ) -> Self:
         from narwhals._utils import NullableSchema
 
@@ -162,7 +162,7 @@ class ArrowDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | IntoNullableSchema | None = None,
+        schema: SchemaDefinition | None,
     ) -> Self:
         from narwhals._utils import NullableSchema
 

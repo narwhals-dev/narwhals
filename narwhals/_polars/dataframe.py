@@ -51,12 +51,12 @@ if TYPE_CHECKING:
     from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.dtypes import DType
     from narwhals.typing import (
-        IntoNullableSchema,
         IntoSchema,
         JoinStrategy,
         MultiColSelector,
         MultiIndexSelector,
         PivotAgg,
+        SchemaDefinition,
         SingleIndexSelector,
         UniqueKeepStrategy,
         _2DArray,
@@ -319,7 +319,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | IntoNullableSchema | None = None,
+        schema: SchemaDefinition | None,
     ) -> Self:
         from narwhals._utils import NullableSchema
 
@@ -342,7 +342,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | IntoNullableSchema | None = None,
+        schema: SchemaDefinition | None,
     ) -> Self:
         from narwhals._utils import NullableSchema
 

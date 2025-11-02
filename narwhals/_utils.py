@@ -121,10 +121,9 @@ if TYPE_CHECKING:
         DTypes,
         FileSource,
         IntoDType,
-        IntoNullableSchema,
-        IntoSchema,
         IntoSeriesT,
         MultiIndexSelector,
+        SchemaDefinition,
         SingleIndexSelector,
         SizedMultiIndexSelector,
         SizeUnit,
@@ -2115,7 +2114,7 @@ def extend_bool(
 
 
 class NullableSchema(OrderedDict[str, "IntoDType | None"]):
-    def __init__(self, schema: IntoSchema | IntoNullableSchema | None = None) -> None:
+    def __init__(self, schema: SchemaDefinition | None = None) -> None:
         schema = schema or {}
         super().__init__(schema)
         self.is_nullable = None in self.values()
