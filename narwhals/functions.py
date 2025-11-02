@@ -1586,6 +1586,7 @@ def concat_str(
         "concat_str", *flat_exprs, separator=separator, ignore_nulls=ignore_nulls
     )
 
+
 def concat_list(exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr) -> Expr:
     r"""Horizontally combine multiple columns into a single column with a list of the elements.
 

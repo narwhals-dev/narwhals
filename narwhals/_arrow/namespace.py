@@ -229,7 +229,8 @@ class ArrowNamespace(
 
     def concat_list(self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            raise NotImplementedError("TODO: ARROW")
+            msg = "TODO: ARROW"
+            raise NotImplementedError(msg)
             # series = list(chain.from_iterable(expr(df) for expr in exprs))
             # arrays = [s._native_series.combine_chunks() for s in series]
             # name = series[0].name

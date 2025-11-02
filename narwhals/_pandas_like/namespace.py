@@ -337,8 +337,9 @@ class PandasLikeNamespace(
 
     def concat_list(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            raise NotImplementedError("TODO: PANDAS")
-            
+            msg = "TODO: PANDAS"
+            raise NotImplementedError(msg)
+
         return self._expr._from_callable(
             func=func,
             evaluate_output_names=combine_evaluate_output_names(*exprs),

@@ -16,13 +16,11 @@ def test_dryrun(constructor: Constructor, *, request: pytest.FixtureRequest) -> 
         request.applymarker(pytest.mark.xfail)
 
     # FIXME: for now only polars>1.0 works.
-    if not "polars"in str(constructor):
+    if "polars" not in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
-    result = df.select(
-        nw.concat_list([nw.col("a"), nw.col("b"), nw.col("c")]).alias("s")
-    )
-    
+    result = df.select(nw.concat_list([nw.col("a"), nw.col("b"), nw.col("c")]).alias("s"))
+
     # FIXME: assert instead of print
     print(result)

@@ -916,7 +916,6 @@ def concat_str(
     )
 
 
-
 def concat_list(exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr) -> Expr:
     """Horizontally combine multiple columns into a single list column.
 
@@ -1254,8 +1253,8 @@ __all__ = [
     "coalesce",
     "col",
     "concat",
-    "concat_str",
     "concat_list",
+    "concat_str",
     "dependencies",
     "dtypes",
     "dtypes",
