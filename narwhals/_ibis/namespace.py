@@ -17,7 +17,7 @@ from narwhals._ibis.expr import IbisExpr
 from narwhals._ibis.selectors import IbisSelectorNamespace
 from narwhals._ibis.utils import function, lit, narwhals_to_native_dtype
 from narwhals._sql.namespace import SQLNamespace
-from narwhals._utils import Implementation
+from narwhals._utils import Implementation, not_implemented
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -99,6 +99,8 @@ class IbisNamespace(SQLNamespace[IbisLazyFrame, IbisExpr, "ir.Table", "ir.Value"
             alias_output_names=combine_alias_output_names(*exprs),
             version=self._version,
         )
+
+    struct = not_implemented()
 
     def mean_horizontal(self, *exprs: IbisExpr) -> IbisExpr:
         def func(cols: Iterable[ir.Value]) -> ir.Value:

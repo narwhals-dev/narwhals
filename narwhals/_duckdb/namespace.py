@@ -26,7 +26,7 @@ from narwhals._expression_parsing import (
     combine_evaluate_output_names,
 )
 from narwhals._sql.namespace import SQLNamespace
-from narwhals._utils import Implementation
+from narwhals._utils import Implementation, not_implemented
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -118,6 +118,8 @@ class DuckDBNamespace(
             alias_output_names=combine_alias_output_names(*exprs),
             version=self._version,
         )
+    
+    struct = not_implemented()
 
     def mean_horizontal(self, *exprs: DuckDBExpr) -> DuckDBExpr:
         def func(cols: Iterable[Expression]) -> Expression:

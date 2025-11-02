@@ -19,6 +19,7 @@ from narwhals._spark_like.utils import (
     true_divide,
 )
 from narwhals._sql.namespace import SQLNamespace
+from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -196,3 +197,6 @@ class SparkLikeNamespace(
             version=self._version,
             implementation=self._implementation,
         )
+
+    struct = not_implemented()
+

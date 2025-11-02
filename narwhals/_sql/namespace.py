@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, Protocol
 from narwhals._compliant import LazyNamespace
 from narwhals._compliant.typing import NativeExprT, NativeFrameT
 from narwhals._sql.typing import SQLExprT, SQLLazyFrameT
+from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -86,3 +87,5 @@ class SQLNamespace(
         return self._expr._from_elementwise_horizontal_op(
             func_with_otherwise, then, predicate, otherwise
         )
+    
+    struct = not_implemented()
