@@ -127,6 +127,9 @@ class ByIndex(Selector):
     require_all: bool
 
     def __repr__(self) -> str:
+        if len(self.indices) == 1 and self.indices[0] in {0, -1}:
+            name = "first" if self.indices[0] == 0 else "last"
+            return f"ncs.{name}()"
         return f"ncs.by_index({list(self.indices)}, require_all={self.require_all})"
 
     @staticmethod

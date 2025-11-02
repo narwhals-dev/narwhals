@@ -202,12 +202,20 @@ def enum() -> Selector:
     return s_ir.Enum().to_selector_ir().to_narwhals()
 
 
+def first() -> Selector:
+    return s_ir.ByIndex.from_index(0).to_selector_ir().to_narwhals()
+
+
 def float() -> Selector:
     return s_ir.Float().to_selector_ir().to_narwhals()
 
 
 def integer() -> Selector:
     return s_ir.Integer().to_selector_ir().to_narwhals()
+
+
+def last() -> Selector:
+    return s_ir.ByIndex.from_index(-1).to_selector_ir().to_narwhals()
 
 
 def list(inner: Selector | None = None) -> Selector:

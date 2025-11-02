@@ -7,6 +7,7 @@ from typing import Any
 
 import pytest
 
+import narwhals as nw
 import narwhals._plan.selectors as ncs
 from narwhals import _plan as nwp
 from narwhals.exceptions import ComputeError
@@ -250,7 +251,6 @@ def test_is_column() -> None:
     assert not e.meta.is_column()
 
 
-# TODO @dangotbanned: Uncomment the cases as they're added
 @pytest.mark.parametrize(
     ("expr", "is_column_selection"),
     [
@@ -263,13 +263,13 @@ def test_is_column() -> None:
         (nwp.col("foo") * nwp.col("bar"), False),
         # selectors / expressions
         (ncs.numeric() * 100, False),
-        # (ncs.temporal() - ncs.time(), True),  # noqa: ERA001
+        (ncs.temporal() - ncs.by_dtype(nw.Time), True),
         (ncs.numeric().exclude("value"), True),
-        # ((ncs.temporal() - ncs.time()).exclude("dt"), True),  # noqa: ERA001
+        ((ncs.temporal() - ncs.by_dtype(nw.Time())).exclude("dt"), True),
         # top-level selection funcs
         (nwp.nth(2), True),
-        # (nwp.first(), True),  # noqa: ERA001
-        # (nwp.last(), True),  # noqa: ERA001
+        (ncs.first(), True),
+        (ncs.last(), True),
     ],
 )
 def test_is_column_selection(expr: nwp.Expr, *, is_column_selection: bool) -> None:

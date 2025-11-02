@@ -217,11 +217,13 @@ def test_selector_by_index(schema_non_nested: nw.Schema) -> None:
 
     # # one or more positive indices
     df.assert_selects(ncs.by_index(0), "abc")
+    df.assert_selects(ncs.first(), "abc")
     df.assert_selects(nwp.nth(0, 1, 2), "abc", "bbb", "cde")
     df.assert_selects(ncs.by_index(0, 1, 2), "abc", "bbb", "cde")
 
     # one or more negative indices
     df.assert_selects(ncs.by_index(-1), "qqR")
+    df.assert_selects(ncs.last(), "qqR")
     df.assert_selects(ncs.by_index(-2, -1), "opp", "qqR")
 
     # range objects
@@ -310,6 +312,28 @@ def test_selector_by_name_not_found(schema_non_nested: nw.Schema) -> None:
 def test_selector_by_name_invalid_input() -> None:
     with pytest.raises(TypeError):
         ncs.by_name(999)  # type: ignore[arg-type]
+
+
+def test_selector_first_last(schema_non_nested: nw.Schema) -> None:
+    df = Frame(schema_non_nested)
+    first_name = "abc"
+    mid_names = "bbb", "cde", "def", "eee", "fgg", "ghi", "JJK", "Lmn", "opp"
+    last_name = "qqR"
+
+    df.assert_selects(ncs.first(), first_name)
+    df.assert_selects(~ncs.first(), *mid_names, last_name)
+    df.assert_selects(ncs.last(), last_name)
+    df.assert_selects(~ncs.last(), first_name, *mid_names)
+    df.assert_selects(ncs.last() | ncs.first(), first_name, last_name)
+
+    assert_expr_ir_equal(ncs.first(), "ncs.first()")
+    assert_expr_ir_equal(ncs.last(), "ncs.last()")
+    assert_expr_ir_equal(ncs.by_index(0), "ncs.first()")
+    assert_expr_ir_equal(ncs.by_index(-1), "ncs.last()")
+
+    repr_other = repr(ncs.by_index(1))
+    assert "ncs.by_index(" in repr_other
+    assert repr_other == repr_other.replace("ncs.first", "").replace("ncs.last", "")
 
 
 def test_selector_datetime(schema_non_nested: nw.Schema) -> None:

@@ -48,6 +48,7 @@ XFAIL_REQUIRES_PARTITION_BY = pytest.mark.xfail(
         "a",
         ["a"],
         nwp.nth(0),
+        ncs.first(),
         ncs.string(),
         ncs.by_dtype(nw.String),
         ncs.by_name("a"),
@@ -217,7 +218,7 @@ def test_shift_kitchen_sink(data_alt: Data) -> None:
     result = dataframe(data_alt).select(
         nwp.nth(1, 2)
         .shift(-1)
-        .over(order_by=nwp.nth(0))
+        .over(order_by=ncs.last())
         .sort(nulls_last=True)
         .fill_null(100)
         * 5
