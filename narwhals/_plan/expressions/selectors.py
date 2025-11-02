@@ -19,7 +19,7 @@ from narwhals._utils import (
     _parse_time_unit_and_time_zone,
     isinstance_or_issubclass,
 )
-from narwhals.dtypes import DType, NumericType
+from narwhals.dtypes import DType, FloatType, IntegerType, NumericType, TemporalType
 from narwhals.typing import IntoDType, TimeUnit
 
 if TYPE_CHECKING:
@@ -333,6 +333,12 @@ class Duration(DTypeSelector, dtype=_dtypes.Duration):
 class Enum(DTypeSelector, dtype=_dtypes.Enum): ...
 
 
+class Float(DTypeSelector, dtype=FloatType): ...
+
+
+class Integer(DTypeSelector, dtype=IntegerType): ...
+
+
 class List(DTypeSelector, dtype=_dtypes.List):
     __slots__ = ("inner",)
     inner: SelectorIR | None
@@ -352,6 +358,9 @@ class String(DTypeSelector, dtype=_dtypes.String): ...
 
 
 class Struct(DTypeSelector, dtype=_dtypes.Struct): ...
+
+
+class Temporal(DTypeSelector, dtype=TemporalType): ...
 
 
 @functools.lru_cache(maxsize=128)

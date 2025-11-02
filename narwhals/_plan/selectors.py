@@ -194,17 +194,25 @@ def datetime(
     )
 
 
-def list(inner: Selector | None = None) -> Selector:
-    s = inner._ir.to_dtype_selector() if inner is not None else None
-    return s_ir.List(inner=s).to_selector_ir().to_narwhals()
-
-
 def duration(time_unit: OneOrIterable[TimeUnit] | None = None) -> Selector:
     return s_ir.Duration.from_time_unit(time_unit).to_selector_ir().to_narwhals()
 
 
 def enum() -> Selector:
     return s_ir.Enum().to_selector_ir().to_narwhals()
+
+
+def float() -> Selector:
+    return s_ir.Float().to_selector_ir().to_narwhals()
+
+
+def integer() -> Selector:
+    return s_ir.Integer().to_selector_ir().to_narwhals()
+
+
+def list(inner: Selector | None = None) -> Selector:
+    s = inner._ir.to_dtype_selector() if inner is not None else None
+    return s_ir.List(inner=s).to_selector_ir().to_narwhals()
 
 
 def matches(pattern: str | re.Pattern[str]) -> Selector:
@@ -223,6 +231,10 @@ def string() -> Selector:
 
 def struct() -> Selector:
     return s_ir.Struct().to_selector_ir().to_narwhals()
+
+
+def temporal() -> Selector:
+    return s_ir.Temporal().to_selector_ir().to_narwhals()
 
 
 _HASH_SENSITIVE_TO_SELECTOR: Mapping[type[DType], Callable[[], Selector]] = {

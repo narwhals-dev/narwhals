@@ -141,21 +141,8 @@ def test_selector_by_dtype(schema_non_nested: nw.Schema) -> None:
     selector = ncs.boolean() | ncs.by_dtype(nw.UInt16)
     df.assert_selects(selector, "abc", "eee", "fgg")
 
-    selector = ~ncs.by_dtype(
-        nw.Int8,
-        nw.Int16,
-        nw.Int32,
-        nw.Int64,
-        nw.Int128,
-        nw.UInt8,
-        nw.UInt16,
-        nw.UInt32,
-        nw.UInt64,
-        nw.UInt128,
-        nw.Date(),
-        nw.Datetime,
-        nw.Duration,
-        nw.Time(),
+    selector = ~(
+        ncs.integer() | ncs.by_dtype(nw.Date(), nw.Datetime, nw.Duration, nw.Time())
     )
     df.assert_selects(selector, "cde", "def", "eee", "fgg", "qqR")
 
@@ -431,6 +418,30 @@ def test_selector_numeric(schema_non_nested: nw.Schema) -> None:
     df.assert_selects(~ncs.numeric(), "eee", "fgg", "ghi", "JJK", "Lmn", "opp", "qqR")
 
 
+def test_selector_temporal(schema_non_nested: nw.Schema) -> None:
+    df = Frame(schema_non_nested)
+    positive = "ghi", "JJK", "Lmn", "opp"
+    negative = "abc", "bbb", "cde", "def", "eee", "fgg", "qqR"
+    df.assert_selects(ncs.temporal(), *positive)
+    df.assert_selects(~ncs.temporal(), *negative)
+
+
+def test_selector_float(schema_non_nested: nw.Schema) -> None:
+    df = Frame(schema_non_nested)
+    positive = "cde", "def"
+    negative = "abc", "bbb", "eee", "fgg", "ghi", "JJK", "Lmn", "opp", "qqR"
+    df.assert_selects(ncs.float(), *positive)
+    df.assert_selects(~ncs.float(), *negative)
+
+
+def test_selector_integer(schema_non_nested: nw.Schema) -> None:
+    df = Frame(schema_non_nested)
+    positive = "abc", "bbb"
+    negative = "cde", "def", "eee", "fgg", "ghi", "JJK", "Lmn", "opp", "qqR"
+    df.assert_selects(ncs.integer(), *positive)
+    df.assert_selects(~ncs.integer(), *negative)
+
+
 def test_selector_expansion() -> None:
     # https://github.com/pola-rs/polars/blob/84d66e960e3d462811f0575e0a6e4e78e34c618c/py-polars/tests/unit/test_selectors.py#L619
     df = Frame.from_names(*list("abcde"))
@@ -467,8 +478,7 @@ def test_selector_expansion() -> None:
 def test_selector_set_ops(schema_non_nested: nw.Schema, schema_mixed: nw.Schema) -> None:
     df = Frame(schema_non_nested)
 
-    # NOTE: `cs.temporal` is used a lot in this tests, but `narwhals` doesn't have it
-    temporal = ncs.datetime() | ncs.duration() | ncs.by_dtype(nw.Date, nw.Time)
+    temporal = ncs.temporal()
 
     # or
     selector = temporal | ncs.string() | ncs.matches(r"^e")
@@ -581,7 +591,7 @@ def test_selector_list(schema_nested_1: nw.Schema) -> None:
     # Inner All (as a DTypeSelector)
     df.assert_selects(ncs.list(ncs.all()), "b", "c", "e")
     # inner DTypeSelector
-    df.assert_selects(ncs.list(ncs.numeric()), "b", "c")
+    df.assert_selects(ncs.list(ncs.integer()), "b", "c")
     df.assert_selects(ncs.list(inner=ncs.string()), "e")
     # inner BinarySelector
     df.assert_selects(
@@ -596,7 +606,7 @@ def test_selector_array(schema_nested_2: nw.Schema) -> None:
     df.assert_selects(ncs.array(), "b", "c", "d", "f")
     df.assert_selects(ncs.array(ncs.all()), "b", "c", "d", "f")
     df.assert_selects(ncs.array(size=4), "b", "c", "f")
-    df.assert_selects(ncs.array(inner=ncs.numeric()), "b", "c", "d")
+    df.assert_selects(ncs.array(inner=ncs.integer()), "b", "c", "d")
     df.assert_selects(ncs.array(inner=ncs.string()), "f")
 
 
