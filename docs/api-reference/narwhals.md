@@ -45,6 +45,7 @@ Here are the top-level functions available in Narwhals.
         - scan_csv
         - scan_parquet
         - show_versions
+        - struct
         - sum
         - sum_horizontal
         - to_native
