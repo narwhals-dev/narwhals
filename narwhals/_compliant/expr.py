@@ -46,13 +46,16 @@ if TYPE_CHECKING:
     from narwhals._compliant.series import CompliantSeries
     from narwhals._compliant.typing import AliasNames, EvalNames, EvalSeries
     from narwhals._expression_parsing import ExprMetadata
+    from narwhals._typing import NoDefault
     from narwhals._utils import Implementation, Version, _LimitedContext
     from narwhals.typing import (
         ClosedInterval,
         FillNullStrategy,
         IntoDType,
+        IntoExpr,
         ModeKeepStrategy,
         NonNestedLiteral,
+        PythonLiteral,
         RankMethod,
         RollingInterpolationMethod,
         TimeUnit,
@@ -602,10 +605,11 @@ class EagerExpr(
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any],
         *,
+        default: PythonLiteral | IntoExpr | NoDefault,
         return_dtype: IntoDType | None,
     ) -> Self:
         return self._reuse_series(
-            "replace_strict", old=old, new=new, return_dtype=return_dtype
+            "replace_strict", old=old, new=new, default=default, return_dtype=return_dtype
         )
 
     def sort(self, *, descending: bool, nulls_last: bool) -> Self:

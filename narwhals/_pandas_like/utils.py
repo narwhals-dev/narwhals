@@ -144,7 +144,7 @@ def is_pandas_or_modin(implementation: Implementation) -> bool:
 
 def align_and_extract_native(
     lhs: PandasLikeSeries, rhs: PandasLikeSeries | object
-) -> tuple[pd.Series[Any] | object, pd.Series[Any] | object]:
+) -> tuple[pd.Series[Any], pd.Series[Any] | object]:
     """Validate RHS of binary operation.
 
     If the comparison isn't supported, return `NotImplemented` so that the

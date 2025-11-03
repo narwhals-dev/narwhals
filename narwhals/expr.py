@@ -10,7 +10,7 @@ from narwhals._expression_parsing import (
     evaluate_node,
     evaluate_root_node,
 )
-from narwhals._utils import _validate_rolling_arguments, ensure_type, flatten
+from narwhals._utils import _validate_rolling_arguments, ensure_type, flatten, no_default
 from narwhals.dtypes import _validate_dtype
 from narwhals.exceptions import ComputeError, InvalidOperationError
 from narwhals.expr_cat import ExprCatNamespace
@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     from typing_extensions import Concatenate, ParamSpec, Self
 
     from narwhals._compliant import CompliantExpr, CompliantNamespace
+    from narwhals._typing import NoDefault
     from narwhals.dtypes import DType
     from narwhals.series import Series
     from narwhals.typing import (
@@ -37,6 +38,7 @@ if TYPE_CHECKING:
         ModeKeepStrategy,
         NonNestedLiteral,
         NumericLiteral,
+        PythonLiteral,
         RankMethod,
         RollingInterpolationMethod,
         TemporalLiteral,
@@ -843,6 +845,7 @@ class Expr:
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any] | None = None,
         *,
+        default: PythonLiteral | IntoExpr | NoDefault = no_default,
         return_dtype: IntoDType | None = None,
     ) -> Self:
         """Replace all values by different values.
@@ -854,6 +857,9 @@ class Expr:
                 their replacement as syntactic sugar for
                 `replace_strict(old=list(mapping.keys()), new=list(mapping.values()))`.
             new: Sequence of values to replace by. Length must match the length of `old`.
+            default: Set values that were not replaced to this value. If no default is
+                specified, (default), an error is raised if any values were not replaced.
+                Accepts expression input. Non-expression inputs are parsed as literals.
             return_dtype: The data type of the resulting expression. If set to `None`
                 (default), the data type is determined automatically based on the other
                 inputs.
@@ -879,6 +885,44 @@ class Expr:
             |   2  1    one    |
             |   3  2    two    |
             └──────────────────┘
+
+            Replace values and set a default for values not in the mapping:
+
+            >>> df = nw.from_native(pd.DataFrame({"a": [1, 2, 3, 4]}))
+            >>> df.with_columns(
+            ...     b=nw.col("a").replace_strict(
+            ...         [1, 2], ["one", "two"], default="other", return_dtype=nw.String
+            ...     )
+            ... )
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |      a      b    |
+            |   0  1    one    |
+            |   1  2    two    |
+            |   2  3  other    |
+            |   3  4  other    |
+            └──────────────────┘
+
+            >>> df = nw.from_native(
+            ...     pd.DataFrame(
+            ...         {"a": [1, 2, 3, 4], "b": ["beluga", "narwhal", "orca", "vaquita"]}
+            ...     )
+            ... )
+            >>> df.with_columns(
+            ...     a_replaced=nw.col("a").replace_strict(
+            ...         {1: "one", 2: "two"}, default=nw.col("b"), return_dtype=nw.String
+            ...     )
+            ... )
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |      a      b    |
+            |   0  1    one    |
+            |   1  2    two    |
+            |   2  3  other    |
+            |   3  4  other    |
+            └──────────────────┘
         """
         if new is None:
             if not isinstance(old, Mapping):
@@ -894,6 +938,7 @@ class Expr:
                 "replace_strict",
                 old=old,
                 new=new,
+                default=default,
                 return_dtype=return_dtype,
             )
         )

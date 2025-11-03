@@ -15,12 +15,15 @@ if TYPE_CHECKING:
         StructNamespace,
     )
     from narwhals._compliant.namespace import CompliantNamespace
+    from narwhals._typing import NoDefault
     from narwhals._utils import Version
     from narwhals.typing import (
         ClosedInterval,
         FillNullStrategy,
         IntoDType,
+        IntoExpr,
         ModeKeepStrategy,
+        PythonLiteral,
         RankMethod,
     )
 
@@ -115,6 +118,7 @@ class CompliantColumn(Protocol):
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any],
         *,
+        default: PythonLiteral | IntoExpr | NoDefault,
         return_dtype: IntoDType | None,
     ) -> Self: ...
     def rolling_mean(

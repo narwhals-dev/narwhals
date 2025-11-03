@@ -29,6 +29,7 @@ from narwhals._utils import (
     Implementation,
     generate_temporary_column_name,
     is_list_of,
+    no_default,
     not_implemented,
 )
 from narwhals.dependencies import is_numpy_array_1d
@@ -58,6 +59,7 @@ if TYPE_CHECKING:
         _BasicDataType,
     )
     from narwhals._compliant.series import HistData
+    from narwhals._typing import NoDefault
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.typing import (
@@ -770,21 +772,29 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any],
         *,
+        default: Any | NoDefault,
         return_dtype: IntoDType | None,
     ) -> Self:
         # https://stackoverflow.com/a/79111029/4451315
         idxs = pc.index_in(self.native, pa.array(old))
         result_native = pc.take(pa.array(new), idxs)
         if return_dtype is not None:
-            result_native.cast(narwhals_to_native_dtype(return_dtype, self._version))
-        result = self._with_native(result_native)
-        if result.is_null().sum() != self.is_null().sum():
-            msg = (
-                "replace_strict did not replace all non-null values.\n\n"
-                "The following did not get replaced: "
-                f"{self.filter(~self.is_null() & result.is_null()).unique(maintain_order=False).to_list()}"
+            result_native = result_native.cast(
+                narwhals_to_native_dtype(return_dtype, self._version)
             )
-            raise ValueError(msg)
+        result = self._with_native(result_native)
+        if default is no_default:
+            if result.is_null().sum() != self.is_null().sum():
+                msg = (
+                    "replace_strict did not replace all non-null values.\n\n"
+                    "The following did not get replaced: "
+                    f"{self.filter(~self.is_null() & result.is_null()).unique(maintain_order=False).to_list()}"
+                )
+                raise ValueError(msg)
+        else:
+            result_native, default = extract_native(result, default)
+            non_null_mask = (~result.is_null()).native
+            result = self._with_native(pc.if_else(non_null_mask, result.native, default))
         return result
 
     def sort(self, *, descending: bool, nulls_last: bool) -> Self:

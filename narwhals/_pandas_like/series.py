@@ -24,7 +24,7 @@ from narwhals._pandas_like.utils import (
     set_index,
 )
 from narwhals._typing_compat import assert_never
-from narwhals._utils import Implementation, is_list_of, parse_version
+from narwhals._utils import Implementation, is_list_of, no_default, parse_version
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_like_series
 from narwhals.exceptions import InvalidOperationError
 
@@ -41,6 +41,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.series import HistData
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
+    from narwhals._typing import NoDefault
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.typing import (
@@ -645,6 +646,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any],
         *,
+        default: PythonLiteral | Any | NoDefault = no_default,
         return_dtype: IntoDType | None,
     ) -> PandasLikeSeries:
         # Creating a temporary name if series is unnamed as merging with `on=None` would break otherwise
@@ -666,12 +668,18 @@ class PandasLikeSeries(EagerSeries[Any]):
             other, on=self_tmp_name, how="left"
         )[tmp_name]
         result = self._with_native(native_result).alias(self.name)
-        if result.is_null().sum() != self.is_null().sum():
-            msg = (
-                "replace_strict did not replace all non-null values.\n\n"
-                f"The following did not get replaced: {self.filter(~self.is_null() & result.is_null()).unique(maintain_order=False).to_list()}"
-            )
-            raise ValueError(msg)
+
+        if default is no_default:
+            if self.is_null().sum() != result.is_null().sum():
+                msg = (
+                    "replace_strict did not replace all non-null values.\n\n"
+                    f"The following did not get replaced: {self.filter(~self.is_null() & result.is_null()).unique(maintain_order=False).to_list()}"
+                )
+                raise ValueError(msg)
+        else:
+            result_native, default = align_and_extract_native(result, default)
+            non_null_mask = (~result.is_null()).native
+            result = self._with_native(result_native.where(non_null_mask, default))
         return result
 
     def sort(self, *, descending: bool, nulls_last: bool) -> PandasLikeSeries:
