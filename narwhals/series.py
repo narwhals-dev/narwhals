@@ -1356,7 +1356,10 @@ class Series(Generic[IntoSeriesT]):
 
         return self._with_compliant(
             self._compliant_series.replace_strict(
-                old, new, default=self._extract_native(default), return_dtype=return_dtype
+                old=old,
+                new=new,
+                default=self._extract_native(default),
+                return_dtype=return_dtype,
             )
         )
 

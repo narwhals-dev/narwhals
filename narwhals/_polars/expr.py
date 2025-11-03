@@ -210,10 +210,10 @@ class PolarsExpr:
     @requires.backend_version((1,))
     def replace_strict(
         self,
+        default: Any | NoDefault,
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any],
         *,
-        default: Any | NoDefault,
         return_dtype: IntoDType | None,
     ) -> Self:
         return_dtype_pl = (

@@ -352,12 +352,10 @@ class EagerExpr(
         **kwargs: Any,
     ) -> Sequence[EagerSeriesT]:
         kwargs = {
-            **{
-                name: df._evaluate_single_output_expr(value)
-                if self._is_expr(value)
-                else value
-                for name, value in kwargs.items()
-            }
+            name: df._evaluate_single_output_expr(value)
+            if self._is_expr(value)
+            else value
+            for name, value in kwargs.items()
         }
         method = methodcaller(
             method_name,
@@ -602,10 +600,10 @@ class EagerExpr(
 
     def replace_strict(
         self,
+        default: PythonLiteral | IntoExpr | NoDefault,
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any],
         *,
-        default: PythonLiteral | IntoExpr | NoDefault,
         return_dtype: IntoDType | None,
     ) -> Self:
         return self._reuse_series(

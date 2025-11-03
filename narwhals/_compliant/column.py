@@ -115,10 +115,10 @@ class CompliantColumn(Protocol):
     def rank(self, method: RankMethod, *, descending: bool) -> Self: ...
     def replace_strict(
         self,
+        default: PythonLiteral | IntoExpr | NoDefault,
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any],
         *,
-        default: PythonLiteral | IntoExpr | NoDefault,
         return_dtype: IntoDType | None,
     ) -> Self: ...
     def rolling_mean(

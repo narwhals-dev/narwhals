@@ -643,10 +643,10 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     def replace_strict(
         self,
+        default: Any | PythonLiteral | NoDefault,
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any],
         *,
-        default: PythonLiteral | Any | NoDefault = no_default,
         return_dtype: IntoDType | None,
     ) -> PandasLikeSeries:
         # Creating a temporary name if series is unnamed as merging with `on=None` would break otherwise
@@ -664,22 +664,31 @@ class PandasLikeSeries(EagerSeries[Any]):
         other = namespace.DataFrame(
             {self_tmp_name: old, tmp_name: namespace.Series(new, dtype=dtype)}
         )
-        native_result = self.native.to_frame(self_tmp_name).merge(
-            other, on=self_tmp_name, how="left"
-        )[tmp_name]
+        merged = self.native.to_frame(self_tmp_name).merge(
+            other, on=self_tmp_name, how="left", indicator=True
+        )
+        native_result = merged[tmp_name]
+        was_matched = merged["_merge"] == "both"
         result = self._with_native(native_result).alias(self.name)
 
         if default is no_default:
-            if self.is_null().sum() != result.is_null().sum():
+            # Check that all non-null input values were matched
+            unmatched_mask = (~self.is_null().native) & (~was_matched)
+            if unmatched_mask.any():
+                unmatched_values = (
+                    self._with_native(self.native[unmatched_mask])
+                    .unique(maintain_order=False)
+                    .to_list()
+                )
                 msg = (
                     "replace_strict did not replace all non-null values.\n\n"
-                    f"The following did not get replaced: {self.filter(~self.is_null() & result.is_null()).unique(maintain_order=False).to_list()}"
+                    f"The following did not get replaced: {unmatched_values}"
                 )
                 raise ValueError(msg)
         else:
             result_native, default = align_and_extract_native(result, default)
-            non_null_mask = (~result.is_null()).native
-            result = self._with_native(result_native.where(non_null_mask, default))
+            # Only fill with default where the value wasn't matched (not where result is null due to mapping)
+            result = self._with_native(result_native.where(was_matched, default))
         return result
 
     def sort(self, *, descending: bool, nulls_last: bool) -> PandasLikeSeries:

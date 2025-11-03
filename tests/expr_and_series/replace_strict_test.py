@@ -230,8 +230,7 @@ def test_replace_strict_with_default_as_series(
 
     data = {"a": [1, 2, 3, 4], "b": ["beluga", "narwhal", "orca", "vaquita"]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
-    series = df["a"]
-    default = df["b"]
+    series, default = df["a"], df["b"]
     result = series.replace_strict(
         {1: "one", 2: "two"}, default=default, return_dtype=nw.String
     )

@@ -911,18 +911,20 @@ class Expr:
             ... )
             >>> df.with_columns(
             ...     a_replaced=nw.col("a").replace_strict(
-            ...         {1: "one", 2: "two"}, default=nw.col("b"), return_dtype=nw.String
+            ...         {1: "one", 2: "two"},
+            ...         default=nw.concat_str(nw.lit("default_"), nw.col("b")),
+            ...         return_dtype=nw.String,
             ...     )
             ... )
-            ┌──────────────────┐
-            |Narwhals DataFrame|
-            |------------------|
-            |      a      b    |
-            |   0  1    one    |
-            |   1  2    two    |
-            |   2  3  other    |
-            |   3  4  other    |
-            └──────────────────┘
+            ┌──────────────────────────────┐
+            |      Narwhals DataFrame      |
+            |------------------------------|
+            |   a        b       a_replaced|
+            |0  1   beluga              one|
+            |1  2  narwhal              two|
+            |2  3     orca     default_orca|
+            |3  4  vaquita  default_vaquita|
+            └──────────────────────────────┘
         """
         if new is None:
             if not isinstance(old, Mapping):
@@ -932,16 +934,25 @@ class Expr:
             new = list(old.values())
             old = list(old.keys())
 
-        return self._append_node(
-            ExprNode(
+        if isinstance(default, Expr):
+            node = ExprNode(
                 ExprKind.ELEMENTWISE,
                 "replace_strict",
+                default,
                 old=old,
                 new=new,
-                default=default,
                 return_dtype=return_dtype,
             )
-        )
+        else:
+            node = ExprNode(
+                ExprKind.ELEMENTWISE,
+                "replace_strict",
+                default=default,
+                old=old,
+                new=new,
+                return_dtype=return_dtype,
+            )
+        return self._append_node(node)
 
     # --- transform ---
     def is_between(

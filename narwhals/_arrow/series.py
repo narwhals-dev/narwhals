@@ -769,14 +769,16 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
 
     def replace_strict(
         self,
+        default: Any | PythonLiteral | NoDefault,
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any],
         *,
-        default: Any | NoDefault,
         return_dtype: IntoDType | None,
     ) -> Self:
         # https://stackoverflow.com/a/79111029/4451315
         idxs = pc.index_in(self.native, pa.array(old))
+        # Tracks which values were found in the mapping (even if mapped to None)
+        was_matched = pc.is_valid(idxs)
         result_native = pc.take(pa.array(new), idxs)
         if return_dtype is not None:
             result_native = result_native.cast(
@@ -784,17 +786,25 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             )
         result = self._with_native(result_native)
         if default is no_default:
-            if result.is_null().sum() != self.is_null().sum():
+            # Check that all non-null input values were matched
+            # (result may have more nulls if mapping contains {value: None})
+            unmatched_mask = pc.and_(pc.is_valid(self.native), pc.invert(was_matched))
+            if pc.any(unmatched_mask):
+                unmatched_values = (
+                    self.filter(self._with_native(unmatched_mask))
+                    .unique(maintain_order=False)
+                    .to_list()
+                )
                 msg = (
                     "replace_strict did not replace all non-null values.\n\n"
-                    "The following did not get replaced: "
-                    f"{self.filter(~self.is_null() & result.is_null()).unique(maintain_order=False).to_list()}"
+                    f"The following did not get replaced: {unmatched_values}"
                 )
                 raise ValueError(msg)
         else:
             result_native, default = extract_native(result, default)
-            non_null_mask = (~result.is_null()).native
-            result = self._with_native(pc.if_else(non_null_mask, result.native, default))
+            # Only fill with default where the value wasn't matched (not where result is null due to mapping)
+            # If was_matched, keep result.native; otherwise use default
+            result = self._with_native(pc.if_else(was_matched, result.native, default))
         return result
 
     def sort(self, *, descending: bool, nulls_last: bool) -> Self:
