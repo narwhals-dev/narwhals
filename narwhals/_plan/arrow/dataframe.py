@@ -17,7 +17,7 @@ from narwhals._plan.compliant.dataframe import EagerDataFrame
 from narwhals._plan.compliant.typing import namespace
 from narwhals._plan.expressions import NamedIR
 from narwhals._plan.typing import Seq
-from narwhals._utils import Implementation, Version, parse_columns_to_drop
+from narwhals._utils import Implementation, Version
 from narwhals.schema import Schema
 
 if TYPE_CHECKING:
@@ -106,9 +106,8 @@ class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
         chunked = self.native.column(name)
         return Series.from_native(chunked, name, version=self.version)
 
-    def drop(self, columns: Sequence[str], *, strict: bool = True) -> Self:
-        to_drop = parse_columns_to_drop(self, columns, strict=strict)
-        return self._with_native(self.native.drop(to_drop))
+    def drop(self, columns: Sequence[str]) -> Self:
+        return self._with_native(self.native.drop(list(columns)))
 
     def drop_nulls(self, subset: Sequence[str] | None) -> Self:
         if subset is None:

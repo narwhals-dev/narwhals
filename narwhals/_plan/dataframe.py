@@ -110,8 +110,12 @@ class BaseFrame(Generic[NativeFrameT_co]):
         named_irs, _ = prepare_projection(sort, schema=self)
         return self._with_compliant(self._compliant.sort(named_irs, opts))
 
-    def drop(self, *columns: str, strict: bool = True) -> Self:
-        return self._with_compliant(self._compliant.drop(columns, strict=strict))
+    def drop(
+        self, *columns: OneOrIterable[ColumnNameOrSelector], strict: bool = True
+    ) -> Self:
+        s_ir = _parse.parse_into_combined_selector_ir(*columns, require_all=strict)
+        names = expand_selector_irs_names((s_ir,), schema=self)
+        return self._with_compliant(self._compliant.drop(names))
 
     def drop_nulls(
         self, subset: OneOrIterable[ColumnNameOrSelector] | None = None

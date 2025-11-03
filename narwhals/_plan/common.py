@@ -22,7 +22,13 @@ if TYPE_CHECKING:
 
     from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._plan.series import Series
-    from narwhals._plan.typing import DTypeT, NonNestedDTypeT, OneOrIterable, Seq
+    from narwhals._plan.typing import (
+        ColumnNameOrSelector,
+        DTypeT,
+        NonNestedDTypeT,
+        OneOrIterable,
+        Seq,
+    )
     from narwhals._utils import _StoresColumns
     from narwhals.typing import NonNestedDType, NonNestedLiteral
 
@@ -85,8 +91,12 @@ def flatten_hash_safe(
     iterable: Iterable[OneOrIterable[CompliantSeries]], /
 ) -> Iterator[CompliantSeries]: ...
 @overload
+def flatten_hash_safe(
+    iterable: Iterable[OneOrIterable[ColumnNameOrSelector]], /
+) -> Iterator[ColumnNameOrSelector]: ...
+@overload
 def flatten_hash_safe(iterable: Iterable[OneOrIterable[T]], /) -> Iterator[T]: ...
-def flatten_hash_safe(iterable: Iterable[OneOrIterable[T]], /) -> Iterator[T]:
+def flatten_hash_safe(iterable: Iterable[OneOrIterable[Any]], /) -> Iterator[Any]:
     """Fully unwrap all levels of nesting.
 
     Aiming to reduce the chances of passing an unhashable argument.
@@ -95,7 +105,7 @@ def flatten_hash_safe(iterable: Iterable[OneOrIterable[T]], /) -> Iterator[T]:
         if isinstance(element, Iterable) and not is_iterable_reject(element):
             yield from flatten_hash_safe(element)
         else:
-            yield element  # type: ignore[misc]
+            yield element
 
 
 def _not_one_or_iterable_str_error(obj: Any, /) -> TypeError:  # pragma: no cover

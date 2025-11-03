@@ -257,6 +257,8 @@ class ByDType(DTypeSelector, dtype=DType):
     dtypes: frozenset[DType | type[DType]]
 
     def __repr__(self) -> str:
+        if not self.dtypes:
+            return "ncs.empty()"
         return f"ncs.by_dtype([{', '.join(sorted(map(repr, self.dtypes)))}])"
 
     def _matches(self, dtype: DType | type[DType]) -> bool:

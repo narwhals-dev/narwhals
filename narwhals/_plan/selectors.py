@@ -34,6 +34,7 @@ __all__ = [
     "categorical",
     "datetime",
     "duration",
+    "empty",
     "enum",
     "first",
     "float",
@@ -180,7 +181,7 @@ def by_dtype(*dtypes: OneOrIterable[DType | type[DType]]) -> Selector:
     it = iter(selectors)
     if first := next(it, None):
         return reduce(operator.or_, it, first)
-    return s_ir.ByDType.empty().to_selector_ir().to_narwhals()
+    return empty()
 
 
 def by_index(*indices: OneOrIterable[int], require_all: bool = True) -> Selector:
@@ -220,6 +221,10 @@ def datetime(
 
 def duration(time_unit: OneOrIterable[TimeUnit] | None = None) -> Selector:
     return s_ir.Duration.from_time_unit(time_unit).to_selector_ir().to_narwhals()
+
+
+def empty() -> Selector:
+    return s_ir.ByDType.empty().to_selector_ir().to_narwhals()
 
 
 def enum() -> Selector:

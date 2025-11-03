@@ -1,8 +1,11 @@
 from __future__ import annotations
 
-from collections.abc import Iterable, Sequence
+import operator
+from collections import deque
+from collections.abc import Collection, Iterable, Sequence
 
 # ruff: noqa: A002
+from functools import reduce
 from itertools import chain
 from typing import TYPE_CHECKING
 
@@ -14,6 +17,7 @@ from narwhals._plan._guards import (
     is_iterable_reject,
     is_selector,
 )
+from narwhals._plan.common import flatten_hash_safe
 from narwhals._plan.exceptions import invalid_into_expr_error, is_iterable_error
 from narwhals._utils import qualified_type_name
 from narwhals.dependencies import get_polars
@@ -27,6 +31,7 @@ if TYPE_CHECKING:
 
     from narwhals._plan.expr import Expr
     from narwhals._plan.expressions import ExprIR, SelectorIR
+    from narwhals._plan.selectors import Selector
     from narwhals._plan.typing import (
         ColumnNameOrSelector,
         IntoExpr,
@@ -129,19 +134,55 @@ def parse_into_expr_ir(
     return expr._ir
 
 
-def parse_into_selector_ir(input: ColumnNameOrSelector | Expr, /) -> SelectorIR:
+def parse_into_selector_ir(
+    input: ColumnNameOrSelector | Expr, /, *, require_all: bool = True
+) -> SelectorIR:
+    return _parse_into_selector(input, require_all=require_all)._ir
+
+
+def _parse_into_selector(
+    input: ColumnNameOrSelector | Expr, /, *, require_all: bool = True
+) -> Selector:
     if is_selector(input):
         selector = input
     elif isinstance(input, str):
-        from narwhals._plan import selectors as cs
+        import narwhals._plan.selectors as cs
 
-        selector = cs.by_name(input)
+        selector = cs.by_name(input, require_all=require_all)
     elif is_expr(input):
         selector = input.meta.as_selector()
     else:
         msg = f"cannot turn {qualified_type_name(input)!r} into a selector"
         raise TypeError(msg)
-    return selector._ir
+    return selector
+
+
+def parse_into_combined_selector_ir(
+    *inputs: OneOrIterable[ColumnNameOrSelector], require_all: bool = True
+) -> SelectorIR:
+    import narwhals._plan.selectors as cs
+
+    flat = tuple(flatten_hash_safe(inputs))
+    selectors = deque["Selector"]()
+    if names := tuple(el for el in flat if isinstance(el, str)):
+        selector = cs.by_name(names, require_all=require_all)
+        if len(names) == len(flat):
+            return selector._ir
+        selectors.append(selector)
+    selectors.extend(_parse_into_selector(el) for el in flat if not isinstance(el, str))
+    return _any_of(selectors)._ir
+
+
+def _any_of(selectors: Iterable[Selector], /) -> Selector:
+    import narwhals._plan.selectors as cs
+
+    if isinstance(selectors, Collection):
+        if not selectors:
+            return cs.empty()
+        if len(selectors) == 1:
+            return next(iter(selectors))  # type: ignore[no-any-return]
+    s: Selector = reduce(operator.or_, selectors)
+    return s
 
 
 def parse_into_seq_of_expr_ir(
