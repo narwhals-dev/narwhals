@@ -347,6 +347,21 @@ class PandasLikeNamespace(
             df = self.concat(
                 (s.to_frame() for s in series_list), how="horizontal"
             )._native_frame
+
+            # Check for consistent types within each column
+            for col in df.columns:
+                values = df[col].tolist()
+                non_null_values = [v for v in values if v is not None]
+                if not non_null_values:
+                    continue  # all nulls, skip
+                first_type = type(non_null_values[0])
+                for v in non_null_values[1:]:
+                    if type(v) != first_type:
+                        raise TypeError(
+                            f"unexpected value while building Series of type {first_type.__name__}; "
+                            f"found value of type {type(v).__name__}: {v}\n\n"
+                            f"Hint: ensure all values in each column have the same dtype."
+                        )
             df_arrow = df.convert_dtypes(dtype_backend="pyarrow")
             arrays = [df_arrow[col].array._pa_array for col in df.columns]
             struct_array = pc.make_struct(*arrays, field_names=df.columns)
