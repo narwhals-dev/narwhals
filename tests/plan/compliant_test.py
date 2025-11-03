@@ -551,6 +551,8 @@ def test_drop(columns: OneOrIterable[ColumnNameOrSelector], expected: list[str])
     df = dataframe(data)
     if isinstance(columns, (str, nwp.Selector, list)):
         assert df.drop(columns).collect_schema().names() == expected
+    else:  # pragma: no cover
+        ...
     if not isinstance(columns, str) and isinstance(columns, Iterable):
         assert df.drop(*columns).collect_schema().names() == expected
 
