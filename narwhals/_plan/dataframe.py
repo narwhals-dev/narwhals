@@ -128,6 +128,9 @@ class BaseFrame(Generic[NativeFrameT_co]):
     def rename(self, mapping: Mapping[str, str]) -> Self:
         return self._with_compliant(self._compliant.rename(mapping))
 
+    def collect_schema(self) -> Schema:
+        return self.schema
+
 
 class DataFrame(
     BaseFrame[NativeDataFrameT_co], Generic[NativeDataFrameT_co, NativeSeriesT]

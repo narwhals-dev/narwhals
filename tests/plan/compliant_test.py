@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -526,6 +528,42 @@ def test_row_is_py_literal(
 
     polars_result = pl.DataFrame(data_indexed).row(index)
     assert result == polars_result
+
+
+@pytest.mark.parametrize(
+    ("columns", "expected"),
+    [
+        ("a", ["b", "c"]),
+        (["a"], ["b", "c"]),
+        (ncs.first(), ["b", "c"]),
+        ([ncs.first()], ["b", "c"]),
+        (["a", "b"], ["c"]),
+        (~ncs.last(), ["c"]),
+        ([ncs.integer() | ncs.enum()], ["c"]),
+        ([ncs.first(), "b"], ["c"]),
+        (ncs.all(), []),
+        ([], ["a", "b", "c"]),
+        (ncs.struct(), ["a", "b", "c"]),
+    ],
+)
+def test_drop(columns: OneOrIterable[ColumnNameOrSelector], expected: list[str]) -> None:
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "c": [7.0, 8.0, 9.0]}
+    df = dataframe(data)
+    if isinstance(columns, (str, nwp.Selector, list)):
+        assert df.drop(columns).collect_schema().names() == expected
+    if not isinstance(columns, str) and isinstance(columns, Iterable):
+        assert df.drop(*columns).collect_schema().names() == expected
+
+
+def test_drop_strict() -> None:
+    data = {"a": [1, 3, 2], "b": [4, 4, 6]}
+    df = dataframe(data)
+    with pytest.raises(ColumnNotFoundError):
+        df.drop("z")
+    with pytest.raises(ColumnNotFoundError, match=re.escape("not found: ['z']")):
+        df.drop(ncs.last(), "z")
+    assert df.drop("z", strict=False).collect_schema().names() == ["a", "b"]
+    assert df.drop(ncs.last(), "z", strict=False).collect_schema().names() == ["a"]
 
 
 def test_drop_nulls(data_small_dh: Data) -> None:

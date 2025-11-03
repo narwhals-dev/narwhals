@@ -173,15 +173,15 @@ def parse_into_combined_selector_ir(
     return _any_of(selectors)._ir
 
 
-def _any_of(selectors: Iterable[Selector], /) -> Selector:
+def _any_of(selectors: Collection[Selector], /) -> Selector:
     import narwhals._plan.selectors as cs
 
-    if isinstance(selectors, Collection):
-        if not selectors:
-            return cs.empty()
-        if len(selectors) == 1:
-            return next(iter(selectors))  # type: ignore[no-any-return]
-    s: Selector = reduce(operator.or_, selectors)
+    if not selectors:
+        s: Selector = cs.empty()
+    elif len(selectors) == 1:
+        s = next(iter(selectors))
+    else:
+        s = reduce(operator.or_, selectors)
     return s
 
 
