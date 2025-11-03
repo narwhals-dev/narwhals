@@ -789,7 +789,9 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             # Check that all non-null input values were matched
             # (result may have more nulls if mapping contains {value: None})
             unmatched_mask = pc.and_(pc.is_valid(self.native), pc.invert(was_matched))
-            if pc.any(unmatched_mask):
+            if maybe_extract_py_scalar(
+                pc.any(unmatched_mask, min_count=0), return_py_scalar=True
+            ):
                 unmatched_values = (
                     self.filter(self._with_native(unmatched_mask))
                     .unique(maintain_order=False)
