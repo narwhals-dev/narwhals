@@ -356,7 +356,7 @@ class PandasLikeNamespace(
                     continue  # all nulls, skip
                 first_type = type(non_null_values[0])
                 for v in non_null_values[1:]:
-                    if type(v) != first_type:
+                    if not isinstance(v, first_type):
                         msg = (
                             f"unexpected value while building Series of type {first_type.__name__}; "
                             f"found value of type {type(v).__name__}: {v}\n\n"
