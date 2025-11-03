@@ -357,10 +357,13 @@ class PandasLikeNamespace(
                 first_type = type(non_null_values[0])
                 for v in non_null_values[1:]:
                     if type(v) != first_type:
-                        raise TypeError(
+                        msg = (
                             f"unexpected value while building Series of type {first_type.__name__}; "
                             f"found value of type {type(v).__name__}: {v}\n\n"
                             f"Hint: ensure all values in each column have the same dtype."
+                        )
+                        raise TypeError(
+                            msg
                         )
             df_arrow = df.convert_dtypes(dtype_backend="pyarrow")
             arrays = [df_arrow[col].array._pa_array for col in df.columns]
