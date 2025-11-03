@@ -362,9 +362,7 @@ class PandasLikeNamespace(
                             f"found value of type {type(v).__name__}: {v}\n\n"
                             f"Hint: ensure all values in each column have the same dtype."
                         )
-                        raise TypeError(
-                            msg
-                        )
+                        raise TypeError(msg)
             df_arrow = df.convert_dtypes(dtype_backend="pyarrow")
             arrays = [df_arrow[col].array._pa_array for col in df.columns]
             struct_array = pc.make_struct(*arrays, field_names=df.columns)

@@ -9,6 +9,7 @@ pytest.importorskip("pyarrow")
 
 data = {"a": [1, 2, 3], "b": ["dogs", "cats", None], "c": ["play", "swim", "walk"]}
 
+
 def test_struct(constructor: Constructor, *, request: pytest.FixtureRequest) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < (1, 0, 0):
         request.applymarker(pytest.mark.xfail)
@@ -24,7 +25,7 @@ def test_struct(constructor: Constructor, *, request: pytest.FixtureRequest) -> 
         "struct": [
             {"a": 1, "b": "dogs", "c": "play"},
             {"a": 2, "b": "cats", "c": "swim"},
-            {"a": 3, "b": None,  "c": "walk"},
+            {"a": 3, "b": None, "c": "walk"},
         ]
     }
 
