@@ -17,6 +17,7 @@ from narwhals._plan.compliant.dataframe import EagerDataFrame
 from narwhals._plan.compliant.typing import namespace
 from narwhals._plan.expressions import NamedIR
 from narwhals._plan.typing import Seq
+from narwhals._typing_compat import deprecated
 from narwhals._utils import Implementation, Version
 from narwhals.schema import Schema
 
@@ -94,7 +95,14 @@ class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
         from_named_ir = ns._expr.from_named_ir
         yield from ns._expr.align(from_named_ir(e, self) for e in nodes)
 
-    def sort(self, by: Seq[NamedIR], options: SortMultipleOptions) -> Self:
+    def sort(self, by: Sequence[str], options: SortMultipleOptions) -> Self:
+        native = self.native
+        indices = pc.sort_indices(native.select(list(by)), options=options.to_arrow(by))
+        return self._with_native(native.take(indices))
+
+    # TODO @dangotbanned: Finish scoping out what breaks if removed
+    @deprecated("Use `DataFrame.sort` instead", category=None)
+    def sort_by_ir(self, by: Seq[NamedIR], options: SortMultipleOptions) -> Self:
         df_by = self.select(by)
         indices = pc.sort_indices(df_by.native, options=options.to_arrow(df_by.columns))
         return self._with_native(self.native.take(indices))

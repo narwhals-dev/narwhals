@@ -366,7 +366,7 @@ class ArrowExpr(  # type: ignore[misc]
         sort_by = tuple(NamedIR.from_ir(e) for e in node.order_by)
         options = node.sort_options.to_multiple(len(node.order_by))
         idx_name = temp.column_name(frame)
-        sorted_context = frame.with_row_index(idx_name).sort(sort_by, options)
+        sorted_context = frame.with_row_index(idx_name).sort_by_ir(sort_by, options)
         evaluated = node.expr.dispatch(self, sorted_context.drop([idx_name]), name)
         if isinstance(evaluated, ArrowScalar):
             # NOTE: We're already sorted, defer broadcasting to the outer context
