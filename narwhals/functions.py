@@ -1614,14 +1614,14 @@ def struct(exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr) -> Expr:
         ...         )
         ...     )
         ... )
-        ┌──────────────────────────┐
-        |     Narwhals DataFrame   |
-        |--------------------------|
-        |     my_struct            |
-        | 0  {'a': 1, 'b': 'dogs'} |
-        | 1  {'a': 2, 'b': 'cats'} |
-        | 2  {'a': 3, 'b': None}   |
-        └──────────────────────────┘
+        ┌─────────────────────────────────────┐
+        |         Narwhals DataFrame          |
+        |-------------------------------------|
+        |                            my_struct|
+        |0  {'a': 2, 'b': 'dogs', 'c': 'play'}|
+        |1  {'a': 4, 'b': 'cats', 'c': 'swim'}|
+        |2    {'a': 6, 'b': None, 'c': 'walk'}|
+        └─────────────────────────────────────┘
     """
     flat_exprs = flatten([*flatten([exprs]), *more_exprs])
     return _expr_with_horizontal_op("struct", *flat_exprs)
