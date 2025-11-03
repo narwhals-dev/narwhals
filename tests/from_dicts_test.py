@@ -37,6 +37,19 @@ def test_from_dicts_schema(eager_backend: EagerAllowed) -> None:
     assert result.collect_schema() == schema
 
 
+def test_from_dicts_dtype_none(
+    eager_backend: EagerAllowed, request: pytest.FixtureRequest
+) -> None:
+    if str(eager_backend) == "pyarrow":
+        request.applymarker(pytest.mark.xfail)
+    schema = {"c": nw.Int16(), "d": None}
+    data = [{"c": 1, "d": 5}, {"c": 2, "d": 6}]
+    result = nw.from_dicts(data, backend=eager_backend, schema=schema)
+    assert result.collect_schema() == {"c": nw.Int16(), "d": nw.Int64}
+    expected = {"c": [1, 2], "d": [5, 6]}
+    assert_equal_data(result, expected)
+
+
 def test_from_dicts_non_eager() -> None:
     pytest.importorskip("duckdb")
     with pytest.raises(ValueError, match="lazy-only"):

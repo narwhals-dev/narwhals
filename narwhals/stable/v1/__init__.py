@@ -128,7 +128,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):  # type: ignore[type-var]
     def from_dict(
         cls,
         data: Mapping[str, Any],
-        schema: Mapping[str, DType] | Schema | None = None,
+        schema: IntoSchema | Mapping[str, DType | None] | None = None,
         *,
         backend: IntoBackend[EagerAllowed] | None = None,
     ) -> DataFrame[Any]:
@@ -139,7 +139,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):  # type: ignore[type-var]
     def from_dicts(
         cls,
         data: Sequence[Any],
-        schema: IntoSchema | None = None,
+        schema: IntoSchema | Mapping[str, DType | None] | None = None,
         *,
         backend: IntoBackend[EagerAllowed],
     ) -> DataFrame[Any]:

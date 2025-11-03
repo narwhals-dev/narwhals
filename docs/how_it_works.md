@@ -309,7 +309,7 @@ print(expr._nodes[3].as_dict())
 Note how now, the `exprs` attribute is populated. Indeed, we are summing another expression: `col('b')`.
 The `exprs` parameter holds arguments which are either expressions, or should be interpreted as expressions.
 The `str_as_lit` parameter tells us whether string literals should be interpreted as literals (e.g. `lit('foo')`)
-or columns (e.g. `col('foo')`). Finally `allow_multi_output` tells us whether multi-outuput expressions
+or columns (e.g. `col('foo')`). Finally `allow_multi_output` tells us whether multi-output expressions
 (more on this in the next section) are allowed to appear in `exprs`.
 
 Note that the expression in `exprs` also has its own nodes:

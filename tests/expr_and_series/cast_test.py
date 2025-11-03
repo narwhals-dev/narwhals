@@ -17,7 +17,10 @@ from tests.utils import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from narwhals._native import NativeSQLFrame
+    from narwhals.typing import NonNestedDType
 
 DATA = {
     "a": [1],
@@ -37,7 +40,7 @@ DATA = {
     "o": ["a"],
     "p": [1],
 }
-SCHEMA = {
+SCHEMA: Mapping[str, type[NonNestedDType]] = {
     "a": nw.Int64,
     "b": nw.Int32,
     "c": nw.Int16,
@@ -85,7 +88,7 @@ def test_cast(constructor: Constructor) -> None:
         nw.col(col_).cast(dtype) for col_, dtype in schema.items()
     )
 
-    cast_map = {
+    cast_map: Mapping[str, type[NonNestedDType]] = {
         "a": nw.Int32,
         "b": nw.Int16,
         "c": nw.Int8,
@@ -133,7 +136,7 @@ def test_cast_series(
         .lazy()
         .collect()
     )
-    cast_map = {
+    cast_map: Mapping[str, type[NonNestedDType]] = {
         "a": nw.Int32,
         "b": nw.Int16,
         "c": nw.Int8,
