@@ -236,3 +236,29 @@ def test_replace_strict_with_default_as_series(
     )
 
     assert_equal_data({"a": result}, {"a": ["one", "two", "orca", "vaquita"]})
+
+
+def test_mapping_key_not_in_self_expr(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    xfail_lazy_non_polars_constructor(constructor, request)
+
+    if "polars" in str(constructor) and polars_lt_v1:
+        pytest.skip(reason=skip_reason)
+
+    data = {"a": [1, 2]}
+    df = nw.from_native(constructor(data))
+    result = df.select(nw.col("a").replace_strict({1: "one", 2: "two", 3: "three"}))
+
+    assert_equal_data(result, {"a": ["one", "two"]})
+
+
+def test_mapping_key_not_in_self_series(constructor_eager: ConstructorEager) -> None:
+    if "polars" in str(constructor_eager) and polars_lt_v1:
+        pytest.skip(reason=skip_reason)
+
+    data = {"a": [1, 2]}
+    df = nw.from_native(constructor_eager(data))
+    result = df["a"].replace_strict({1: "one", 2: "two", 3: "three"})
+
+    assert_equal_data({"a": result}, {"a": ["one", "two"]})

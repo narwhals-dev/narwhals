@@ -21,9 +21,7 @@ if TYPE_CHECKING:
         ClosedInterval,
         FillNullStrategy,
         IntoDType,
-        IntoExpr,
         ModeKeepStrategy,
-        PythonLiteral,
         RankMethod,
     )
 
@@ -115,7 +113,7 @@ class CompliantColumn(Protocol):
     def rank(self, method: RankMethod, *, descending: bool) -> Self: ...
     def replace_strict(
         self,
-        default: PythonLiteral | IntoExpr | NoDefault,
+        default: Any | NoDefault,
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any],
         *,

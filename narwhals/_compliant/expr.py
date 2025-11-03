@@ -52,10 +52,8 @@ if TYPE_CHECKING:
         ClosedInterval,
         FillNullStrategy,
         IntoDType,
-        IntoExpr,
         ModeKeepStrategy,
         NonNestedLiteral,
-        PythonLiteral,
         RankMethod,
         RollingInterpolationMethod,
         TimeUnit,
@@ -600,7 +598,7 @@ class EagerExpr(
 
     def replace_strict(
         self,
-        default: PythonLiteral | IntoExpr | NoDefault,
+        default: Any | NoDefault,
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any],
         *,

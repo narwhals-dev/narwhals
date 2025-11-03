@@ -641,9 +641,9 @@ class PandasLikeSeries(EagerSeries[Any]):
     def shift(self, n: int) -> Self:
         return self._with_native(self.native.shift(n))
 
-    def replace_strict(
+    def replace_strict(  # noqa: PLR0914
         self,
-        default: Any | PythonLiteral | NoDefault,
+        default: Any | NoDefault,
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any],
         *,
@@ -664,11 +664,23 @@ class PandasLikeSeries(EagerSeries[Any]):
         other = namespace.DataFrame(
             {self_tmp_name: old, tmp_name: namespace.Series(new, dtype=dtype)}
         )
+        impl_is_modin = self._implementation.is_modin()
+        indicator_token = f"{self_tmp_name}_indicator_token__"
         merged = self.native.to_frame(self_tmp_name).merge(
-            other, on=self_tmp_name, how="left", indicator=True
+            other,
+            on=self_tmp_name,
+            # TODO(FBruzzesi): See https://github.com/modin-project/modin/issues/7384
+            how="outer" if impl_is_modin else "left",
+            indicator=indicator_token,
         )
-        native_result = merged[tmp_name]
-        was_matched = merged["_merge"] == "both"
+        # In principle it's possible that the mapping contains a key not in the series.
+        # This would lead to native result having more rows that original series.
+        native_result = (
+            merged.loc[merged[indicator_token] != "right_only", tmp_name]
+            if impl_is_modin
+            else merged[tmp_name]
+        )
+        was_matched = merged[indicator_token] == "both"
         result = self._with_native(native_result).alias(self.name)
 
         if default is no_default:

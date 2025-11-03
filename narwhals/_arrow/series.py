@@ -769,7 +769,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
 
     def replace_strict(
         self,
-        default: Any | PythonLiteral | NoDefault,
+        default: Any | NoDefault,
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any],
         *,

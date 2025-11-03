@@ -38,7 +38,6 @@ if TYPE_CHECKING:
         ModeKeepStrategy,
         NonNestedLiteral,
         NumericLiteral,
-        PythonLiteral,
         RankMethod,
         RollingInterpolationMethod,
         TemporalLiteral,
@@ -845,7 +844,7 @@ class Expr:
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any] | None = None,
         *,
-        default: PythonLiteral | IntoExpr | NoDefault = no_default,
+        default: Any | NoDefault = no_default,
         return_dtype: IntoDType | None = None,
     ) -> Self:
         """Replace all values by different values.

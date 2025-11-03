@@ -1288,7 +1288,7 @@ class Series(Generic[IntoSeriesT]):
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any] | None = None,
         *,
-        default: PythonLiteral | Self | NoDefault = no_default,
+        default: Any | NoDefault = no_default,
         return_dtype: IntoDType | None = None,
     ) -> Self:
         """Replace all values by different values.
