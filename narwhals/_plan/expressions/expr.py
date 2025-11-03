@@ -7,7 +7,10 @@ from typing import TYPE_CHECKING
 
 from narwhals._plan._expr_ir import ExprIR, SelectorIR
 from narwhals._plan.common import replace
-from narwhals._plan.exceptions import function_expr_invalid_operation_error
+from narwhals._plan.exceptions import (
+    function_expr_invalid_operation_error,
+    over_order_by_names_error,
+)
 from narwhals._plan.expressions import selectors as cs
 from narwhals._plan.options import ExprIROptions
 from narwhals._plan.typing import (
@@ -382,6 +385,19 @@ class OrderedWindowExpr(
         for e in self.partition_by:
             yield from e.iter_left()
         yield self
+
+    def order_by_names(self) -> Iterator[str]:
+        """Yield the names resolved from expanding `order_by`.
+
+        Raises:
+            InvalidOperationError: If used *before* expansion, or
+                `order_by` contains expressions that do more than select.
+        """
+        for by in self.order_by:
+            if isinstance(by, Column):
+                yield by.name
+            else:
+                raise over_order_by_names_error(self, by)
 
 
 class Len(ExprIR, config=ExprIROptions.namespaced()):

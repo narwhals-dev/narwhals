@@ -726,3 +726,16 @@ def test_expand_binary_expr_combination_invalid(df_1: Frame) -> None:
     )
     with pytest.raises(MultiOutputExpressionError, match=pattern):
         df_1.project(ten_to_nine)
+
+
+def test_over_order_by_names() -> None:
+    expr = nwp.col("a").first().over(order_by=ncs.string())
+    e_ir = expr._ir
+    assert isinstance(e_ir, ir.OrderedWindowExpr)
+    with pytest.raises(
+        InvalidOperationError,
+        match=re_compile(
+            r"cannot use.+order_by_names.+before.+expansion.+ncs.string\(\)"
+        ),
+    ):
+        list(e_ir.order_by_names())

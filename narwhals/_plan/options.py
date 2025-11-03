@@ -167,7 +167,7 @@ class SortOptions(Immutable):
         if n_repeat == 1:
             desc: Seq[bool] = (self.descending,)
             nulls: Seq[bool] = (self.nulls_last,)
-        else:  # pragma: no cover
+        else:
             desc = tuple(repeat(self.descending, n_repeat))
             nulls = tuple(repeat(self.nulls_last, n_repeat))
         return SortMultipleOptions(descending=desc, nulls_last=nulls)

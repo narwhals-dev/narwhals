@@ -139,6 +139,24 @@ def over_row_separable_error(
     return InvalidOperationError(msg)
 
 
+def over_order_by_names_error(
+    expr: ir.OrderedWindowExpr, by: ir.ExprIR
+) -> InvalidOperationError:
+    if by.meta.is_column_selection(allow_aliasing=True):
+        # narwhals dev error
+        msg = (
+            f"Cannot use `{type(expr).__name__}.order_by_names()` before expression expansion.\n"
+            f"Found unresolved selection {by!r}, in:\n{expr!r}"
+        )
+    else:
+        # user error
+        msg = (
+            f"Only column selection expressions are supported in `over(order_by=...)`.\n"
+            f"Found {by!r}, in:\n{expr!r}"
+        )
+    return InvalidOperationError(msg)
+
+
 def invalid_into_expr_error(
     first_input: Iterable[IntoExpr],
     more_inputs: tuple[Any, ...],

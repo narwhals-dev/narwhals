@@ -16,8 +16,6 @@ from narwhals._plan.arrow.series import ArrowSeries as Series
 from narwhals._plan.compliant.dataframe import EagerDataFrame
 from narwhals._plan.compliant.typing import namespace
 from narwhals._plan.expressions import NamedIR
-from narwhals._plan.typing import Seq
-from narwhals._typing_compat import deprecated
 from narwhals._utils import Implementation, Version
 from narwhals.schema import Schema
 
@@ -30,7 +28,7 @@ if TYPE_CHECKING:
     from narwhals._plan.arrow.namespace import ArrowNamespace
     from narwhals._plan.expressions import ExprIR, NamedIR
     from narwhals._plan.options import SortMultipleOptions
-    from narwhals._plan.typing import NonCrossJoinStrategy, Seq
+    from narwhals._plan.typing import NonCrossJoinStrategy
     from narwhals.dtypes import DType
     from narwhals.typing import IntoSchema
 
@@ -99,13 +97,6 @@ class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
         native = self.native
         indices = pc.sort_indices(native.select(list(by)), options=options.to_arrow(by))
         return self._with_native(native.take(indices))
-
-    # TODO @dangotbanned: Finish scoping out what breaks if removed
-    @deprecated("Use `DataFrame.sort` instead", category=None)
-    def sort_by_ir(self, by: Seq[NamedIR], options: SortMultipleOptions) -> Self:
-        df_by = self.select(by)
-        indices = pc.sort_indices(df_by.native, options=options.to_arrow(df_by.columns))
-        return self._with_native(self.native.take(indices))
 
     def with_row_index(self, name: str) -> Self:
         return self._with_native(self.native.add_column(0, name, fn.int_range(len(self))))
