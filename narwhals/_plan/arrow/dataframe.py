@@ -16,8 +16,7 @@ from narwhals._plan.arrow.series import ArrowSeries as Series
 from narwhals._plan.compliant.dataframe import EagerDataFrame
 from narwhals._plan.compliant.typing import namespace
 from narwhals._plan.expressions import NamedIR
-from narwhals._plan.typing import Seq
-from narwhals._utils import Implementation, Version, parse_columns_to_drop
+from narwhals._utils import Implementation, Version
 from narwhals.schema import Schema
 
 if TYPE_CHECKING:
@@ -29,7 +28,7 @@ if TYPE_CHECKING:
     from narwhals._plan.arrow.namespace import ArrowNamespace
     from narwhals._plan.expressions import ExprIR, NamedIR
     from narwhals._plan.options import SortMultipleOptions
-    from narwhals._plan.typing import NonCrossJoinStrategy, Seq
+    from narwhals._plan.typing import NonCrossJoinStrategy
     from narwhals.dtypes import DType
     from narwhals.typing import IntoSchema
 
@@ -94,10 +93,10 @@ class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
         from_named_ir = ns._expr.from_named_ir
         yield from ns._expr.align(from_named_ir(e, self) for e in nodes)
 
-    def sort(self, by: Seq[NamedIR], options: SortMultipleOptions) -> Self:
-        df_by = self.select(by)
-        indices = pc.sort_indices(df_by.native, options=options.to_arrow(df_by.columns))
-        return self._with_native(self.native.take(indices))
+    def sort(self, by: Sequence[str], options: SortMultipleOptions) -> Self:
+        native = self.native
+        indices = pc.sort_indices(native.select(list(by)), options=options.to_arrow(by))
+        return self._with_native(native.take(indices))
 
     def with_row_index(self, name: str) -> Self:
         return self._with_native(self.native.add_column(0, name, fn.int_range(len(self))))
@@ -106,9 +105,8 @@ class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
         chunked = self.native.column(name)
         return Series.from_native(chunked, name, version=self.version)
 
-    def drop(self, columns: Sequence[str], *, strict: bool = True) -> Self:
-        to_drop = parse_columns_to_drop(self, columns, strict=strict)
-        return self._with_native(self.native.drop(to_drop))
+    def drop(self, columns: Sequence[str]) -> Self:
+        return self._with_native(self.native.drop(list(columns)))
 
     def drop_nulls(self, subset: Sequence[str] | None) -> Self:
         if subset is None:

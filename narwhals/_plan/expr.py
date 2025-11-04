@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import math
 from collections.abc import Iterable, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, ClassVar, overload
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from narwhals._plan import common, expressions as ir
-from narwhals._plan._guards import is_column, is_expr, is_series
+from narwhals._plan._guards import is_expr, is_series
 from narwhals._plan._parse import (
     parse_into_expr_ir,
     parse_into_seq_of_expr_ir,
@@ -17,7 +17,6 @@ from narwhals._plan.expressions import (
     functions as F,
     operators as ops,
 )
-from narwhals._plan.expressions.selectors import by_name
 from narwhals._plan.options import (
     EWMOptions,
     RankOptions,
@@ -29,7 +28,7 @@ from narwhals._utils import Version
 from narwhals.exceptions import ComputeError
 
 if TYPE_CHECKING:
-    from typing_extensions import Never, Self
+    from typing_extensions import Self
 
     from narwhals._plan._function import Function
     from narwhals._plan.expressions.categorical import ExprCatNamespace
@@ -51,8 +50,6 @@ if TYPE_CHECKING:
     )
 
 
-# NOTE: Overly simplified placeholders for mocking typing
-# Entirely ignoring namespace + function binding
 class Expr:
     _ir: ir.ExprIR
     _version: ClassVar[Version] = Version.MAIN
@@ -83,8 +80,10 @@ class Expr:
     def cast(self, dtype: IntoDType) -> Self:
         return self._from_ir(self._ir.cast(common.into_dtype(dtype)))
 
-    def exclude(self, *names: OneOrIterable[str]) -> Self:
-        return self._from_ir(ir.Exclude.from_names(self._ir, *names))
+    def exclude(self, *names: OneOrIterable[str]) -> Expr:
+        from narwhals._plan import selectors as cs
+
+        return (self.meta.as_selector() - cs.by_name(*names)).as_expr()
 
     def count(self) -> Self:
         return self._from_ir(agg.Count(expr=self._ir))
@@ -251,16 +250,16 @@ class Expr:
         it = parse_into_seq_of_expr_ir(lower_bound, upper_bound)
         return self._from_ir(F.Clip().to_function_expr(self._ir, *it))
 
-    def cum_count(self, *, reverse: bool = False) -> Self:
+    def cum_count(self, *, reverse: bool = False) -> Self:  # pragma: no cover
         return self._with_unary(F.CumCount(reverse=reverse))
 
-    def cum_min(self, *, reverse: bool = False) -> Self:
+    def cum_min(self, *, reverse: bool = False) -> Self:  # pragma: no cover
         return self._with_unary(F.CumMin(reverse=reverse))
 
-    def cum_max(self, *, reverse: bool = False) -> Self:
+    def cum_max(self, *, reverse: bool = False) -> Self:  # pragma: no cover
         return self._with_unary(F.CumMax(reverse=reverse))
 
-    def cum_prod(self, *, reverse: bool = False) -> Self:
+    def cum_prod(self, *, reverse: bool = False) -> Self:  # pragma: no cover
         return self._with_unary(F.CumProd(reverse=reverse))
 
     def cum_sum(self, *, reverse: bool = False) -> Self:
@@ -268,7 +267,7 @@ class Expr:
 
     def rolling_sum(
         self, window_size: int, *, min_samples: int | None = None, center: bool = False
-    ) -> Self:
+    ) -> Self:  # pragma: no cover
         options = rolling_options(window_size, min_samples, center=center)
         return self._with_unary(F.RollingSum(options=options))
 
@@ -285,7 +284,7 @@ class Expr:
         min_samples: int | None = None,
         center: bool = False,
         ddof: int = 1,
-    ) -> Self:
+    ) -> Self:  # pragma: no cover
         options = rolling_options(window_size, min_samples, center=center, ddof=ddof)
         return self._with_unary(F.RollingVar(options=options))
 
@@ -296,7 +295,7 @@ class Expr:
         min_samples: int | None = None,
         center: bool = False,
         ddof: int = 1,
-    ) -> Self:
+    ) -> Self:  # pragma: no cover
         options = rolling_options(window_size, min_samples, center=center, ddof=ddof)
         return self._with_unary(F.RollingStd(options=options))
 
@@ -536,14 +535,14 @@ class Expr:
             >>>
             >>> renamed = nw.col("a", "b").name.suffix("_changed")
             >>> str(renamed._ir)
-            "RenameAlias(expr=Columns(names=[a, b]), function=Suffix(suffix='_changed'))"
+            "RenameAlias(expr=RootSelector(selector=ByName(names=[a, b], require_all=True)), function=Suffix(suffix='_changed'))"
         """
         from narwhals._plan.expressions.name import ExprNameNamespace
 
         return ExprNameNamespace(_expr=self)
 
     @property
-    def cat(self) -> ExprCatNamespace:
+    def cat(self) -> ExprCatNamespace:  # pragma: no cover
         from narwhals._plan.expressions.categorical import ExprCatNamespace
 
         return ExprCatNamespace(_expr=self)
@@ -561,7 +560,7 @@ class Expr:
         return ExprDateTimeNamespace(_expr=self)
 
     @property
-    def list(self) -> ExprListNamespace:
+    def list(self) -> ExprListNamespace:  # pragma: no cover
         from narwhals._plan.expressions.lists import ExprListNamespace
 
         return ExprListNamespace(_expr=self)
@@ -573,111 +572,5 @@ class Expr:
         return ExprStringNamespace(_expr=self)
 
 
-class Selector(Expr):
-    _ir: ir.SelectorIR
-
-    def __repr__(self) -> str:
-        return f"nw._plan.Selector({self.version.name.lower()}):\n{self._ir!r}"
-
-    @classmethod
-    def _from_ir(cls, selector_ir: ir.SelectorIR, /) -> Self:  # type: ignore[override]
-        obj = cls.__new__(cls)
-        obj._ir = selector_ir
-        return obj
-
-    def _to_expr(self) -> Expr:
-        return self._ir.to_narwhals(self.version)
-
-    @overload  # type: ignore[override]
-    def __or__(self, other: Self) -> Self: ...
-    @overload
-    def __or__(self, other: IntoExprColumn | int | bool) -> Expr: ...
-    def __or__(self, other: IntoExprColumn | int | bool) -> Self | Expr:
-        if isinstance(other, type(self)):
-            op = ops.Or()
-            return self._from_ir(op.to_binary_selector(self._ir, other._ir))
-        return self._to_expr() | other
-
-    @overload  # type: ignore[override]
-    def __and__(self, other: Self) -> Self: ...
-    @overload
-    def __and__(self, other: IntoExprColumn | int | bool) -> Expr: ...
-    def __and__(self, other: IntoExprColumn | int | bool) -> Self | Expr:
-        if is_column(other) and (name := other.meta.output_name()):
-            other = by_name(name)
-        if isinstance(other, type(self)):
-            op = ops.And()
-            return self._from_ir(op.to_binary_selector(self._ir, other._ir))
-        return self._to_expr() & other
-
-    @overload  # type: ignore[override]
-    def __sub__(self, other: Self) -> Self: ...
-    @overload
-    def __sub__(self, other: IntoExpr) -> Expr: ...
-    def __sub__(self, other: IntoExpr) -> Self | Expr:
-        if isinstance(other, type(self)):
-            op = ops.Sub()
-            return self._from_ir(op.to_binary_selector(self._ir, other._ir))
-        return self._to_expr() - other
-
-    @overload  # type: ignore[override]
-    def __xor__(self, other: Self) -> Self: ...
-    @overload
-    def __xor__(self, other: IntoExprColumn | int | bool) -> Expr: ...
-    def __xor__(self, other: IntoExprColumn | int | bool) -> Self | Expr:
-        if isinstance(other, type(self)):
-            op = ops.ExclusiveOr()
-            return self._from_ir(op.to_binary_selector(self._ir, other._ir))
-        return self._to_expr() ^ other
-
-    def __invert__(self) -> Self:
-        return self._from_ir(ir.InvertSelector(selector=self._ir))
-
-    def __add__(self, other: Any) -> Expr:  # type: ignore[override]
-        if isinstance(other, type(self)):
-            msg = "unsupported operand type(s) for op: ('Selector' + 'Selector')"
-            raise TypeError(msg)
-        return self._to_expr() + other  # type: ignore[no-any-return]
-
-    def __radd__(self, other: Any) -> Never:
-        msg = "unsupported operand type(s) for op: ('Expr' + 'Selector')"
-        raise TypeError(msg)
-
-    def __rsub__(self, other: Any) -> Never:
-        msg = "unsupported operand type(s) for op: ('Expr' - 'Selector')"
-        raise TypeError(msg)
-
-    @overload  # type: ignore[override]
-    def __rand__(self, other: Self) -> Self: ...
-    @overload
-    def __rand__(self, other: IntoExprColumn | int | bool) -> Expr: ...
-    def __rand__(self, other: IntoExprColumn | int | bool) -> Self | Expr:
-        if is_column(other) and (name := other.meta.output_name()):
-            return by_name(name) & self
-        return self._to_expr().__rand__(other)
-
-    @overload  # type: ignore[override]
-    def __ror__(self, other: Self) -> Self: ...
-    @overload
-    def __ror__(self, other: IntoExprColumn | int | bool) -> Expr: ...
-    def __ror__(self, other: IntoExprColumn | int | bool) -> Self | Expr:
-        if is_column(other) and (name := other.meta.output_name()):
-            return by_name(name) | self
-        return self._to_expr().__ror__(other)
-
-    @overload  # type: ignore[override]
-    def __rxor__(self, other: Self) -> Self: ...
-    @overload
-    def __rxor__(self, other: IntoExprColumn | int | bool) -> Expr: ...
-    def __rxor__(self, other: IntoExprColumn | int | bool) -> Self | Expr:
-        if is_column(other) and (name := other.meta.output_name()):
-            return by_name(name) ^ self
-        return self._to_expr().__rxor__(other)
-
-
 class ExprV1(Expr):
-    _version: ClassVar[Version] = Version.V1
-
-
-class SelectorV1(Selector):
     _version: ClassVar[Version] = Version.V1

@@ -15,7 +15,6 @@ from narwhals._plan.compliant.column import ExprDispatch
 from narwhals._plan.compliant.expr import EagerExpr
 from narwhals._plan.compliant.scalar import EagerScalar
 from narwhals._plan.compliant.typing import namespace
-from narwhals._plan.expressions import NamedIR
 from narwhals._utils import Implementation, Version, _StoresNative, not_implemented
 from narwhals.exceptions import InvalidOperationError, ShapeError
 
@@ -363,8 +362,8 @@ class ArrowExpr(  # type: ignore[misc]
             raise NotImplementedError(msg)
 
         # NOTE: Converting `over(order_by=..., options=...)` into the right shape for `DataFrame.sort`
-        sort_by = tuple(NamedIR.from_ir(e) for e in node.order_by)
-        options = node.sort_options.to_multiple(len(node.order_by))
+        sort_by = tuple(node.order_by_names())
+        options = node.sort_options.to_multiple(len(sort_by))
         idx_name = temp.column_name(frame)
         sorted_context = frame.with_row_index(idx_name).sort(sort_by, options)
         evaluated = node.expr.dispatch(self, sorted_context.drop([idx_name]), name)

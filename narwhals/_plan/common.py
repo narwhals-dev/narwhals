@@ -22,16 +22,22 @@ if TYPE_CHECKING:
 
     from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._plan.series import Series
-    from narwhals._plan.typing import DTypeT, NonNestedDTypeT, OneOrIterable, Seq
+    from narwhals._plan.typing import (
+        ColumnNameOrSelector,
+        DTypeT,
+        NonNestedDTypeT,
+        OneOrIterable,
+        Seq,
+    )
     from narwhals._utils import _StoresColumns
     from narwhals.typing import NonNestedDType, NonNestedLiteral
 
     T = TypeVar("T")
 
 
-if sys.version_info >= (3, 13):
+if sys.version_info >= (3, 13):  # pragma: no cover
     from copy import replace as replace  # noqa: PLC0414
-else:
+else:  # pragma: no cover
 
     def replace(obj: T, /, **changes: Any) -> T:
         cls = obj.__class__
@@ -85,8 +91,12 @@ def flatten_hash_safe(
     iterable: Iterable[OneOrIterable[CompliantSeries]], /
 ) -> Iterator[CompliantSeries]: ...
 @overload
+def flatten_hash_safe(
+    iterable: Iterable[OneOrIterable[ColumnNameOrSelector]], /
+) -> Iterator[ColumnNameOrSelector]: ...
+@overload
 def flatten_hash_safe(iterable: Iterable[OneOrIterable[T]], /) -> Iterator[T]: ...
-def flatten_hash_safe(iterable: Iterable[OneOrIterable[T]], /) -> Iterator[T]:
+def flatten_hash_safe(iterable: Iterable[OneOrIterable[Any]], /) -> Iterator[Any]:
     """Fully unwrap all levels of nesting.
 
     Aiming to reduce the chances of passing an unhashable argument.
@@ -95,23 +105,23 @@ def flatten_hash_safe(iterable: Iterable[OneOrIterable[T]], /) -> Iterator[T]:
         if isinstance(element, Iterable) and not is_iterable_reject(element):
             yield from flatten_hash_safe(element)
         else:
-            yield element  # type: ignore[misc]
+            yield element
 
 
-def _not_one_or_iterable_str_error(obj: Any, /) -> TypeError:
+def _not_one_or_iterable_str_error(obj: Any, /) -> TypeError:  # pragma: no cover
     msg = f"Expected one or an iterable of strings, but got: {qualified_type_name(obj)!r}\n{obj!r}"
     return TypeError(msg)
 
 
 def ensure_seq_str(obj: OneOrIterable[str], /) -> Seq[str]:
     if not isinstance(obj, Iterable):
-        raise _not_one_or_iterable_str_error(obj)
+        raise _not_one_or_iterable_str_error(obj)  # pragma: no cover
     return (obj,) if isinstance(obj, str) else tuple(obj)
 
 
 def ensure_list_str(obj: OneOrIterable[str], /) -> list[str]:
     if not isinstance(obj, Iterable):
-        raise _not_one_or_iterable_str_error(obj)
+        raise _not_one_or_iterable_str_error(obj)  # pragma: no cover
     return [obj] if isinstance(obj, str) else list(obj)
 
 
@@ -124,7 +134,7 @@ def _reprlib_repr_backport() -> reprlib.Repr:
     # but also a useful constructor https://github.com/python/cpython/issues/94343
     import reprlib
 
-    if sys.version_info >= (3, 12):
+    if sys.version_info >= (3, 12):  # pragma: no cover
         return reprlib.Repr(indent=4, maxlist=10)
     else:  # pragma: no cover  # noqa: RET505
         obj = reprlib.Repr()
@@ -246,7 +256,7 @@ class temp:  # noqa: N801
         available_chars = n_chars - len_prefix
         if available_chars < 0:
             visualize = ""
-        else:
+        else:  # pragma: no cover (has coverage, but there's randomness in the test)
             okay = "✔" * available_chars
             bad = "✖" * (cls._MIN_RANDOM_CHARS - available_chars)
             visualize = f"\n    Preview: '{prefix}{okay}{bad}'"

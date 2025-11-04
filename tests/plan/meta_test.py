@@ -1,8 +1,17 @@
 from __future__ import annotations
 
+import datetime as dt
+import re
+import string
+from typing import Any
+
 import pytest
 
+import narwhals as nw
+import narwhals._plan.selectors as ncs
 from narwhals import _plan as nwp
+from narwhals.exceptions import ComputeError
+from tests.plan.utils import series
 from tests.utils import POLARS_VERSION
 
 pytest.importorskip("polars")
@@ -21,6 +30,11 @@ if POLARS_VERSION >= (0, 20, 5):
     LEN_CASE = (nwp.len(), pl.len(), "len")
 else:  # pragma: no cover
     LEN_CASE = (nwp.len().alias("count"), pl.count(), "count")
+
+
+XFAIL_LITERAL_LIST = pytest.mark.xfail(
+    reason="'list' is not supported in `nw.lit`", raises=TypeError
+)
 
 
 @pytest.mark.parametrize(
@@ -44,6 +58,11 @@ else:  # pragma: no cover
         ),
         (nwp.all().mean(), pl.all().mean(), []),
         (nwp.all().mean().sort_by("d"), pl.all().mean().sort_by("d"), ["d"]),
+        (
+            nwp.all_horizontal(*string.ascii_letters),
+            pl.all_horizontal(*string.ascii_letters),
+            list(string.ascii_letters),
+        ),
     ],
 )
 def test_meta_root_names(
@@ -181,3 +200,149 @@ def test_meta_output_name(nw_expr: nwp.Expr, pl_expr: pl.Expr, expected: str) ->
     nw_result = nw_expr.meta.output_name()
     assert nw_result == expected
     assert nw_result == pl_result
+
+
+def test_root_and_output_names() -> None:
+    e = nwp.col("foo") * nwp.col("bar")
+    assert e.meta.output_name() == "foo"
+    assert e.meta.root_names() == ["foo", "bar"]
+
+    e = nwp.col("foo").filter(bar=13)
+    assert e.meta.output_name() == "foo"
+    assert e.meta.root_names() == ["foo", "bar"]
+
+    e = nwp.sum("foo").over("groups")
+    assert e.meta.output_name() == "foo"
+    assert e.meta.root_names() == ["foo", "groups"]
+
+    e = nwp.sum("foo").is_between(nwp.len() - 10, nwp.col("bar"))
+    assert e.meta.output_name() == "foo"
+    assert e.meta.root_names() == ["foo", "bar"]
+
+    e = nwp.len()
+    assert e.meta.output_name() == "len"
+
+    with pytest.raises(
+        ComputeError,
+        match=re.escape(
+            "unable to find root column name for expr 'ncs.all()' when calling 'output_name'"
+        ),
+    ):
+        nwp.all().name.suffix("_").meta.output_name()
+
+    assert (
+        nwp.all().name.suffix("_").meta.output_name(raise_if_undetermined=False) is None
+    )
+
+
+def test_meta_has_multiple_outputs() -> None:
+    e = nwp.col(["a", "b"]).name.suffix("_foo")
+    assert e.meta.has_multiple_outputs()
+
+
+def test_is_column() -> None:
+    e = nwp.col("foo")
+    assert e.meta.is_column()
+
+    e = nwp.col("foo").alias("bar")
+    assert not e.meta.is_column()
+
+    e = nwp.col("foo") * nwp.col("bar")
+    assert not e.meta.is_column()
+
+
+@pytest.mark.parametrize(
+    ("expr", "is_column_selection"),
+    [
+        # columns
+        (nwp.col("foo"), True),
+        (nwp.col("foo", "bar"), True),
+        # column expressions
+        (nwp.col("foo") + 100, False),
+        (nwp.col("foo").__floordiv__(10), False),
+        (nwp.col("foo") * nwp.col("bar"), False),
+        # selectors / expressions
+        (ncs.numeric() * 100, False),
+        (ncs.temporal() - ncs.by_dtype(nw.Time), True),
+        (ncs.numeric().exclude("value"), True),
+        ((ncs.temporal() - ncs.by_dtype(nw.Time())).exclude("dt"), True),
+        # top-level selection funcs
+        (nwp.nth(2), True),
+        (ncs.first(), True),
+        (ncs.last(), True),
+    ],
+)
+def test_is_column_selection(expr: nwp.Expr, *, is_column_selection: bool) -> None:
+    if is_column_selection:
+        assert expr.meta.is_column_selection()
+        assert expr.meta.is_column_selection(allow_aliasing=True)
+        expr = (
+            expr.name.suffix("!") if expr.meta.has_multiple_outputs() else expr.alias("!")
+        )
+        assert not expr.meta.is_column_selection()
+        assert expr.meta.is_column_selection(allow_aliasing=True)
+    else:
+        assert not expr.meta.is_column_selection()
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        None,
+        1234,
+        567.89,
+        float("inf"),
+        dt.date(2000, 1, 1),
+        dt.datetime(1974, 1, 1, 12, 45, 1),
+        dt.time(10, 30, 45),
+        dt.timedelta(hours=-24),
+        pytest.param(["x", "y", "z"], marks=XFAIL_LITERAL_LIST),
+        series([None, None]),
+        pytest.param([[10, 20], [30, 40]], marks=XFAIL_LITERAL_LIST),
+        "this is the way",
+    ],
+)
+def test_is_literal(value: Any) -> None:
+    e = nwp.lit(value)
+    assert e.meta.is_literal()
+
+    e = nwp.lit(value).alias("foo")
+    assert not e.meta.is_literal()
+
+    e = nwp.lit(value).alias("foo")
+    assert e.meta.is_literal(allow_aliasing=True)
+
+
+def test_literal_output_name() -> None:
+    e = nwp.lit(1)
+    data = 1, 2, 3
+    assert e.meta.output_name() == "literal"
+
+    e = nwp.lit(series(data).alias("abc"))
+    assert e.meta.output_name() == "abc"
+
+    e = nwp.lit(series(data))
+    assert e.meta.output_name() == ""
+
+
+# NOTE: Very low-priority
+@pytest.mark.xfail(
+    reason="TODO: `Expr.struct.field` influences `meta.output_name`.",
+    raises=AssertionError,
+)
+def test_struct_field_output_name_24003() -> None:
+    assert nwp.col("ball").struct.field("radius").meta.output_name() == "radius"
+
+
+def test_selector_by_name_single() -> None:
+    assert ncs.by_name("foo").meta.output_name() == "foo"
+
+
+def test_selector_by_name_multiple() -> None:
+    with pytest.raises(
+        ComputeError,
+        match=re.escape(
+            "unable to find root column name for expr 'ncs.by_name('foo', 'bar', require_all=True)' when calling 'output_name'"
+        ),
+    ):
+        ncs.by_name(["foo", "bar"]).meta.output_name()

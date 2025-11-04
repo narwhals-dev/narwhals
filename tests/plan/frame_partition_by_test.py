@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -7,8 +8,8 @@ import pytest
 import narwhals as nw
 from narwhals._plan import Selector, selectors as ncs
 from narwhals._utils import zip_strict
-from narwhals.exceptions import ColumnNotFoundError, ComputeError
-from tests.plan.utils import assert_equal_data, dataframe
+from narwhals.exceptions import ColumnNotFoundError, ComputeError, DuplicateError
+from tests.plan.utils import assert_equal_data, dataframe, re_compile
 
 if TYPE_CHECKING:
     from narwhals._plan.typing import ColumnNameOrSelector, OneOrIterable
@@ -117,16 +118,18 @@ def test_partition_by_multiple(
         assert_equal_data(df, expect)
 
 
-# TODO @dangotbanned: Stricter selectors
-@pytest.mark.xfail(
-    reason="TODO: Handle missing columns in `strict`/`require_all` selectors."
-)
-def test_partition_by_missing_names(data: Data) -> None:  # pragma: no cover
+def test_partition_by_missing_names(data: Data) -> None:
     df = dataframe(data)
-    with pytest.raises(ColumnNotFoundError, match=r"\"d\""):
+    with pytest.raises(ColumnNotFoundError, match=re.escape("not found: ['d']")):
         df.partition_by("d")
-    with pytest.raises(ColumnNotFoundError, match=r"\"e\""):
+    with pytest.raises(ColumnNotFoundError, match=re.escape("not found: ['e']")):
         df.partition_by("c", "e")
+
+
+def test_partition_by_duplicate_names(data: Data) -> None:
+    df = dataframe(data)
+    with pytest.raises(DuplicateError, match=re_compile(r"expected.+unique.+got.+'c'")):
+        df.partition_by("c", ncs.numeric())
 
 
 def test_partition_by_fully_empty_selector(data: Data) -> None:

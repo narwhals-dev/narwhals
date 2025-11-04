@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import re
+from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from narwhals._plan import selectors as ndcs
+from narwhals._plan import selectors as ncs
+from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError
 
 pytest.importorskip("pyarrow")
 pytest.importorskip("numpy")
@@ -14,13 +17,14 @@ import pyarrow as pa
 import narwhals as nw
 from narwhals import _plan as nwp
 from narwhals._utils import Version
-from narwhals.exceptions import ComputeError
-from tests.plan.utils import assert_equal_data, dataframe
+from tests.plan.utils import assert_equal_data, dataframe, first, last
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    from narwhals._plan.typing import ColumnNameOrSelector, OneOrIterable
     from narwhals.typing import PythonLiteral
+    from tests.conftest import Data
 
 
 @pytest.fixture
@@ -45,9 +49,16 @@ def data_small() -> dict[str, Any]:
 
 
 @pytest.fixture
-def data_smaller(data_small: dict[str, Any]) -> dict[str, Any]:
+def data_small_af(data_small: dict[str, Any]) -> dict[str, Any]:
     """Use only columns `"a"-"f"`."""
     keep = {"a", "b", "c", "d", "e", "f"}
+    return {k: v for k, v in data_small.items() if k in keep}
+
+
+@pytest.fixture
+def data_small_dh(data_small: dict[str, Any]) -> dict[str, Any]:
+    """Use only columns `"d"-"h"`."""
+    keep = {"d", "e", "f", "g", "h"}
     return {k: v for k, v in data_small.items() if k in keep}
 
 
@@ -69,12 +80,6 @@ def _ids_ir(expr: nwp.Expr | Any) -> str:
     return repr(expr)
 
 
-XFAIL_REWRITE_SPECIAL_ALIASES = pytest.mark.xfail(
-    reason="https://github.com/narwhals-dev/narwhals/blob/3732e5a6b56411157f13307dfdbd25e397d5b8e6/narwhals/_plan/meta.py#L142-L162\n"
-    "Matches behavior of `polars`\n"
-    "pl.select(pl.lit(1).name.suffix('_suffix'))",
-    raises=ComputeError,
-)
 XFAIL_KLEENE_ALL_NULL = pytest.mark.xfail(
     reason="`pyarrow` uses `pa.null()`, which also fails in current `narwhals`.\n"
     "In `polars`, the same op is supported and it uses `pl.Null`.\n\n"
@@ -107,11 +112,9 @@ XFAIL_KLEENE_ALL_NULL = pytest.mark.xfail(
         (nwp.col("b").cast(nw.Float64()), {"b": [1.0, 2.0, 3.0]}),
         (nwp.lit(1).cast(nw.Float64).alias("literal_cast"), {"literal_cast": [1.0]}),
         pytest.param(
-            nwp.lit(1).cast(nw.Float64()).name.suffix("_cast"),
-            {"literal_cast": [1.0]},
-            marks=XFAIL_REWRITE_SPECIAL_ALIASES,
+            nwp.lit(1).cast(nw.Float64()).name.suffix("_cast"), {"literal_cast": [1.0]}
         ),
-        ([ndcs.string().first(), nwp.col("b")], {"a": ["A", "A", "A"], "b": [1, 2, 3]}),
+        ([ncs.string().first(), nwp.col("b")], {"a": ["A", "A", "A"], "b": [1, 2, 3]}),
         (
             nwp.col("c", "d")
             .sort_by("a", "b", descending=[True, False])
@@ -381,7 +384,7 @@ XFAIL_KLEENE_ALL_NULL = pytest.mark.xfail(
             id="map_batches-numpy",
         ),
         pytest.param(
-            ndcs.by_name("b", "c", "d")
+            ncs.by_name("b", "c", "d")
             .map_batches(lambda s: np.append(s.to_numpy(), [10, 2]), is_elementwise=True)
             .sort(),
             {"b": [1, 2, 2, 3, 10], "c": [2, 2, 4, 9, 10], "d": [2, 7, 8, 8, 10]},
@@ -430,7 +433,7 @@ def test_select(
             },
         ),
         (
-            ndcs.numeric().cast(nw.String),
+            ncs.numeric().cast(nw.String),
             {
                 "a": ["A", "B", "A"],
                 "b": ["1", "2", "3"],
@@ -458,7 +461,7 @@ def test_select(
         pytest.param(
             [
                 nwp.col("a").alias("a?"),
-                ndcs.by_name("a"),
+                ncs.by_name("a"),
                 nwp.col("b").cast(nw.Float64).name.suffix("_float"),
                 nwp.col("c").max() + 1,
                 nwp.sum_horizontal(1, "d", nwp.col("b"), nwp.lit(3)),
@@ -481,18 +484,10 @@ def test_select(
 def test_with_columns(
     expr: nwp.Expr | Sequence[nwp.Expr],
     expected: dict[str, Any],
-    data_smaller: dict[str, Any],
+    data_small_af: dict[str, Any],
 ) -> None:
-    result = dataframe(data_smaller).with_columns(expr)
+    result = dataframe(data_small_af).with_columns(expr)
     assert_equal_data(result, expected)
-
-
-def first(*names: str) -> nwp.Expr:
-    return nwp.col(*names).first()
-
-
-def last(*names: str) -> nwp.Expr:
-    return nwp.col(*names).last()
 
 
 @pytest.mark.parametrize(
@@ -533,6 +528,100 @@ def test_row_is_py_literal(
 
     polars_result = pl.DataFrame(data_indexed).row(index)
     assert result == polars_result
+
+
+@pytest.mark.parametrize(
+    ("columns", "expected"),
+    [
+        ("a", ["b", "c"]),
+        (["a"], ["b", "c"]),
+        (ncs.first(), ["b", "c"]),
+        ([ncs.first()], ["b", "c"]),
+        (["a", "b"], ["c"]),
+        (~ncs.last(), ["c"]),
+        ([ncs.integer() | ncs.enum()], ["c"]),
+        ([ncs.first(), "b"], ["c"]),
+        (ncs.all(), []),
+        ([], ["a", "b", "c"]),
+        (ncs.struct(), ["a", "b", "c"]),
+    ],
+)
+def test_drop(columns: OneOrIterable[ColumnNameOrSelector], expected: list[str]) -> None:
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "c": [7.0, 8.0, 9.0]}
+    df = dataframe(data)
+    if isinstance(columns, (str, nwp.Selector, list)):
+        assert df.drop(columns).collect_schema().names() == expected
+    else:  # pragma: no cover
+        ...
+    if not isinstance(columns, str) and isinstance(columns, Iterable):
+        assert df.drop(*columns).collect_schema().names() == expected
+
+
+def test_drop_strict() -> None:
+    data = {"a": [1, 3, 2], "b": [4, 4, 6]}
+    df = dataframe(data)
+    with pytest.raises(ColumnNotFoundError):
+        df.drop("z")
+    with pytest.raises(ColumnNotFoundError, match=re.escape("not found: ['z']")):
+        df.drop(ncs.last(), "z")
+    assert df.drop("z", strict=False).collect_schema().names() == ["a", "b"]
+    assert df.drop(ncs.last(), "z", strict=False).collect_schema().names() == ["a"]
+
+
+def test_drop_nulls(data_small_dh: Data) -> None:
+    df = dataframe(data_small_dh)
+    expected: Data = {"d": [], "e": [], "f": [], "g": [], "h": []}
+    result = df.drop_nulls()
+    assert_equal_data(result, expected)
+
+
+def test_drop_nulls_invalid(data_small_dh: Data) -> None:
+    df = dataframe(data_small_dh)
+    with pytest.raises(TypeError, match=r"cannot turn.+int.+into a selector"):
+        df.drop_nulls(123)  # type: ignore[arg-type]
+    with pytest.raises(
+        InvalidOperationError, match=r"cannot turn.+col\('a'\).first\(\).+into a selector"
+    ):
+        df.drop_nulls(nwp.col("a").first())  # type: ignore[arg-type]
+
+    with pytest.raises(ColumnNotFoundError):
+        df.drop_nulls(["j", "k"])
+
+    with pytest.raises(ColumnNotFoundError):
+        df.drop_nulls(ncs.by_name("j", "k"))
+
+    with pytest.raises(ColumnNotFoundError):
+        df.drop_nulls(ncs.by_index(-999))
+
+
+DROP_ROW_1: Data = {
+    "d": [7, 8],
+    "e": [9, 7],
+    "f": [False, None],
+    "g": [None, False],
+    "h": [None, True],
+}
+KEEP_ROW_3: Data = {"d": [8], "e": [7], "f": [None], "g": [False], "h": [True]}
+
+
+@pytest.mark.parametrize(
+    ("subset", "expected"),
+    [
+        ("e", DROP_ROW_1),
+        (nwp.col("e"), DROP_ROW_1),
+        (ncs.by_index(1), DROP_ROW_1),
+        (ncs.integer(), DROP_ROW_1),
+        ([ncs.numeric() | ~ncs.boolean()], DROP_ROW_1),
+        (["g", "h"], KEEP_ROW_3),
+        ([ncs.by_name("g", "h"), "d"], KEEP_ROW_3),
+    ],
+)
+def test_drop_nulls_subset(
+    data_small_dh: Data, subset: OneOrIterable[ColumnNameOrSelector], expected: Data
+) -> None:
+    df = dataframe(data_small_dh)
+    result = df.drop_nulls(subset)
+    assert_equal_data(result, expected)
 
 
 if TYPE_CHECKING:

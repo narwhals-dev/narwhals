@@ -10,7 +10,7 @@ import narwhals as nw
 import narwhals._plan as nwp
 from narwhals._plan import selectors as ncs
 from narwhals.exceptions import InvalidOperationError
-from tests.plan.utils import assert_equal_data, dataframe
+from tests.plan.utils import assert_equal_data, dataframe, re_compile
 
 if TYPE_CHECKING:
     from narwhals._plan.typing import IntoExprColumn, OneOrIterable
@@ -48,6 +48,7 @@ XFAIL_REQUIRES_PARTITION_BY = pytest.mark.xfail(
         "a",
         ["a"],
         nwp.nth(0),
+        ncs.first(),
         ncs.string(),
         ncs.by_dtype(nw.String),
         ncs.by_name("a"),
@@ -217,10 +218,29 @@ def test_shift_kitchen_sink(data_alt: Data) -> None:
     result = dataframe(data_alt).select(
         nwp.nth(1, 2)
         .shift(-1)
-        .over(order_by=nwp.nth(0))
+        .over(order_by=ncs.last())
         .sort(nulls_last=True)
         .fill_null(100)
         * 5
     )
     expected = {"b": [0, 5, 10, 15, 500], "c": [5, 5, 10, 45, 500]}
     assert_equal_data(result, expected)
+
+
+def test_over_order_by_expr(data_alt: Data) -> None:
+    df = dataframe(data_alt)
+    result = df.select(
+        nwp.all()
+        + nwp.all().last().over(order_by=[nwp.nth(1), ncs.first()], descending=True)
+    )
+    expected = {"a": [6, 8, 4, 5, None], "b": [0, 1, 3, 2, 1], "c": [18, 10, 11, 10, 10]}
+    assert_equal_data(result, expected)
+
+
+def test_over_order_by_expr_invalid(data_alt: Data) -> None:
+    df = dataframe(data_alt)
+    with pytest.raises(
+        InvalidOperationError,
+        match=re_compile(r"only.+column.+selection.+in.+order_by.+found.+sort"),
+    ):
+        df.select(nwp.col("a").first().over(order_by=nwp.col("b").sort()))
