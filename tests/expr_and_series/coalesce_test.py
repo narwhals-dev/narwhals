@@ -64,3 +64,19 @@ def test_coalesce_raises_non_expr(constructor: Constructor) -> None:
 
     with pytest.raises(TypeError, match="All arguments to `coalesce` must be of type"):
         df.select(implicit_lit=nw.coalesce("a", "b", "c", 10))
+
+
+def test_coalesce_multi_output(constructor: Constructor) -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/3277
+    df = nw.from_native(
+        constructor(
+            {
+                "col1": [None, False, False, None],
+                "col2": [False, True, False, None],
+                "col3": [True, None, False, True],
+            }
+        )
+    )
+    result = df.select(nw.coalesce(nw.all()))
+    expected = {"col1": [False, False, False, True]}
+    assert_equal_data(result, expected)

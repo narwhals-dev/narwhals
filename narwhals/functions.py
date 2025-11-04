@@ -1646,7 +1646,9 @@ def coalesce(
         )
         raise TypeError(msg)
 
-    return Expr(ExprNode(ExprKind.ELEMENTWISE, "coalesce", *flat_exprs))
+    return Expr(
+        ExprNode(ExprKind.ELEMENTWISE, "coalesce", *flat_exprs, allow_multi_output=True)
+    )
 
 
 def format(f_string: str, *args: IntoExpr) -> Expr:
