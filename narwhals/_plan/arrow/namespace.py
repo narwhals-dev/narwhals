@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime as dt
 from functools import reduce
 from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
@@ -11,6 +12,7 @@ from narwhals._plan._guards import is_tuple_of
 from narwhals._plan.arrow import functions as fn
 from narwhals._plan.compliant.namespace import EagerNamespace
 from narwhals._plan.expressions.literal import is_literal_scalar
+from narwhals._typing_compat import TypeVar
 from narwhals._utils import Version
 from narwhals.exceptions import InvalidOperationError
 
@@ -24,10 +26,13 @@ if TYPE_CHECKING:
     from narwhals._plan.expressions import expr, functions as F
     from narwhals._plan.expressions.boolean import AllHorizontal, AnyHorizontal
     from narwhals._plan.expressions.expr import FunctionExpr, RangeExpr
-    from narwhals._plan.expressions.ranges import IntRange
+    from narwhals._plan.expressions.ranges import DateRange, IntRange
     from narwhals._plan.expressions.strings import ConcatStr
     from narwhals._plan.series import Series as NwSeries
     from narwhals.typing import ConcatMethod, NonNestedLiteral, PythonLiteral
+
+
+PythonLiteralT = TypeVar("PythonLiteralT", bound="PythonLiteral")
 
 
 class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
@@ -155,12 +160,12 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
             return self._scalar.from_native(result, name, self.version)
         return self._expr.from_native(result, name, self.version)
 
-    def int_range(self, node: RangeExpr[IntRange], frame: Frame, name: str) -> Expr:
+    def _range_function_inputs(
+        self, node: RangeExpr, frame: Frame, valid_type: type[PythonLiteralT]
+    ) -> tuple[PythonLiteralT, PythonLiteralT]:
         start_: PythonLiteral
         end_: PythonLiteral
         start, end = node.function.unwrap_input(node)
-        step = node.function.step
-        dtype = node.function.dtype
         if is_literal_scalar(start) and is_literal_scalar(end):
             start_, end_ = start.unwrap(), end.unwrap()
         else:
@@ -172,21 +177,28 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
                 start_, end_ = scalar_start.to_python(), scalar_end.to_python()
             else:
                 msg = (
-                    f"All inputs for `int_range()` must be scalar or aggregations, but got \n"
+                    f"All inputs for `{node.function}()` must be scalar or aggregations, but got \n"
                     f"{scalar_start.native!r}\n{scalar_end.native!r}"
                 )
                 raise InvalidOperationError(msg)
-        if isinstance(start_, int) and isinstance(end_, int):
-            pa_dtype = narwhals_to_native_dtype(dtype, self.version)
-            if not pa.types.is_integer(pa_dtype):
-                raise TypeError(pa_dtype)
-            native = fn.int_range(start_, end_, step, dtype=pa_dtype)
-            return self._expr.from_native(native, name, self.version)
-
-        msg = (
-            f"All inputs for `int_range()` resolve to int, but got \n{start_!r}\n{end_!r}"
-        )
+        if isinstance(start_, valid_type) and isinstance(end_, valid_type):
+            return start_, end_
+        msg = f"All inputs for `{node.function}()` resolve to {valid_type.__name__}, but got \n{start_!r}\n{end_!r}"
         raise InvalidOperationError(msg)
+
+    def int_range(self, node: RangeExpr[IntRange], frame: Frame, name: str) -> Expr:
+        start, end = self._range_function_inputs(node, frame, int)
+        dtype = narwhals_to_native_dtype(node.function.dtype, self.version)
+        if not pa.types.is_integer(dtype):
+            raise TypeError(dtype)
+        native = fn.int_range(start, end, node.function.step, dtype=dtype)
+        return self._expr.from_native(native, name, self.version)
+
+    def date_range(self, node: RangeExpr[DateRange], frame: Frame, name: str) -> Expr:
+        start, end = self._range_function_inputs(node, frame, dt.date)
+        func = node.function
+        native = fn.date_range(start, end, func.interval, closed=func.closed)
+        return self._expr.from_native(native, name, self.version)
 
     @overload
     def concat(self, items: Iterable[Frame], *, how: ConcatMethod) -> Frame: ...

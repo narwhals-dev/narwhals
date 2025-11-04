@@ -1,23 +1,26 @@
 from __future__ import annotations
 
 import builtins
+import datetime as dt
 import typing as t
 from typing import TYPE_CHECKING
 
+from narwhals._duration import Interval
 from narwhals._plan import _guards, _parse, common, expressions as ir, selectors as cs
 from narwhals._plan.expressions import functions as F
 from narwhals._plan.expressions.literal import ScalarLiteral, SeriesLiteral
-from narwhals._plan.expressions.ranges import IntRange
+from narwhals._plan.expressions.ranges import DateRange, IntRange
 from narwhals._plan.expressions.strings import ConcatStr
 from narwhals._plan.when_then import When
 from narwhals._utils import Version, flatten
+from narwhals.exceptions import ComputeError
 
 if TYPE_CHECKING:
     from narwhals._plan.expr import Expr
     from narwhals._plan.series import Series
     from narwhals._plan.typing import IntoExpr, IntoExprColumn, NativeSeriesT
     from narwhals.dtypes import IntegerType
-    from narwhals.typing import IntoDType, NonNestedLiteral
+    from narwhals.typing import ClosedInterval, IntoDType, NonNestedLiteral
 
 
 def col(*names: str | t.Iterable[str]) -> Expr:
@@ -161,3 +164,36 @@ def int_range(
         .to_function_expr(*_parse.parse_into_seq_of_expr_ir(start, end))
         .to_narwhals()
     )
+
+
+def date_range(
+    start: dt.date | IntoExprColumn,
+    end: dt.date | IntoExprColumn,
+    interval: str | dt.timedelta = "1d",
+    *,
+    closed: ClosedInterval = "both",
+    eager: bool = False,
+) -> Expr:
+    if eager:
+        msg = f"{eager=}"
+        raise NotImplementedError(msg)
+    return (
+        DateRange(interval=_interval_days(interval), closed=closed)
+        .to_function_expr(*_parse.parse_into_seq_of_expr_ir(start, end))
+        .to_narwhals()
+    )
+
+
+def _interval_days(interval: str | dt.timedelta, /) -> int:
+    if not isinstance(interval, dt.timedelta):
+        if interval == "1d":
+            return 1
+        parsed = Interval.parse_no_constraints(interval)
+        if parsed.unit not in {"d", "mo", "q", "y"}:
+            msg = f"`interval` input for `date_range` must consist of full days, got: {parsed.multiple}{parsed.unit}"
+            raise ComputeError(msg)
+        if parsed.unit in {"mo", "q", "y"}:
+            msg = f"`interval` input for `date_range` does not support {parsed.unit!r} yet, got: {parsed.multiple}{parsed.unit}"
+            raise NotImplementedError(msg)
+        interval = parsed.to_timedelta()
+    return interval.days
