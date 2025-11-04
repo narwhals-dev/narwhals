@@ -341,11 +341,18 @@ class PandasLikeNamespace(
             df = self.concat(
                 (s.to_frame() for s in series_list), how="horizontal"
             )._native_frame
+            
+            try:
+                import pandas as pd
+                import pyarrow.compute as pc
+            except ModuleNotFoundError as exc:
+                msg = "'pyarrow' and 'pandas' are required to use `struct()` in this backend."
+                raise ModuleNotFoundError(msg) from exc
 
             # Check for consistent types within each column
             for col in df.columns:
                 values = df[col].tolist()
-                non_null_values = [v for v in values if v is not None]
+                non_null_values = [v for v in values if not pd.isna(v)]
                 if not non_null_values:
                     continue  # all nulls, skip
                 first_type = type(non_null_values[0])
@@ -357,12 +364,6 @@ class PandasLikeNamespace(
                             f"Hint: ensure all values in each column have the same dtype."
                         )
                         raise TypeError(msg)
-            try:
-                import pandas as pd  # only for ArrowDtype
-                import pyarrow.compute as pc
-            except ModuleNotFoundError as exc:
-                msg = "'pyarrow' and 'pandas' are required to use `struct()` in this backend."
-                raise ModuleNotFoundError(msg) from exc
 
             df_arrow = df.convert_dtypes(dtype_backend="pyarrow")
             arrays = [df_arrow[col].array._pa_array for col in df.columns]
