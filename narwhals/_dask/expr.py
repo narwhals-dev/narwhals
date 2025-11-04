@@ -19,6 +19,7 @@ from narwhals._pandas_like.utils import get_dtype_backend, native_to_narwhals_dt
 from narwhals._utils import (
     Implementation,
     generate_temporary_column_name,
+    no_default,
     not_implemented,
 )
 from narwhals.exceptions import InvalidOperationError
@@ -37,6 +38,7 @@ if TYPE_CHECKING:
     )
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.namespace import DaskNamespace
+    from narwhals._typing import NoDefault
     from narwhals._utils import Version, _LimitedContext
     from narwhals.typing import (
         FillNullStrategy,
@@ -680,6 +682,45 @@ class DaskExpr(
             return result.head(1) if keep == "any" else result
 
         return self._with_callable(func)
+
+    def replace_strict(
+        self,
+        default: Any | NoDefault,
+        old: Sequence[Any],
+        new: Sequence[Any],
+        *,
+        return_dtype: IntoDType | None,
+    ) -> Self:
+        if default is no_default:
+            msg = "`replace_strict` requires an explicit value for `default` for dask backend."
+            raise ValueError(msg)
+
+        mapping = dict(zip(old, new))
+        old_ = list(old)
+
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            default_series = (
+                df._evaluate_single_output_expr(default)
+                if isinstance(default, DaskExpr)
+                else default
+            )
+            results = [
+                series.replace(mapping).where(series.isin(old_), default_series)
+                for series in self(df)
+            ]
+
+            if return_dtype:
+                native_dtype = narwhals_to_native_dtype(return_dtype, self._version)
+                return [res.astype(native_dtype) for res in results]
+
+            return results
+
+        return self.__class__(
+            func,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
+        )
 
     @property
     def str(self) -> DaskExprStringNamespace:
