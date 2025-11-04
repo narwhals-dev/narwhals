@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-pytest.importorskip("pandas")
+pytest.importorskip("pandas", minversion="1.5.0")
 import pandas as pd
 
 import narwhals.stable.v1 as nw_v1
@@ -11,12 +11,10 @@ from tests.utils import PANDAS_VERSION
 data = {"a": [1, 2, 3], "b": [4.0, 5.0, 6.0], "z": ["x", "y", "z"]}
 
 
-def test_interchange_to_pandas(request: pytest.FixtureRequest) -> None:
-    if PANDAS_VERSION < (1, 5, 0):
-        request.applymarker(pytest.mark.xfail)
+@pytest.mark.filterwarnings("ignore:.*Interchange Protocol:DeprecationWarning")
+def test_interchange_to_pandas() -> None:
     df_raw = pd.DataFrame(data)
     df = nw_v1.from_native(df_raw.__dataframe__(), eager_or_interchange_only=True)
-
     assert df.to_pandas().equals(df_raw)
 
 

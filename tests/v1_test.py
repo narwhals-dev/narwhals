@@ -253,6 +253,7 @@ def test_hist_v1() -> None:
     assert isinstance(result, nw_v1.DataFrame)
 
 
+@pytest.mark.filterwarnings("ignore:.*Interchange Protocol:DeprecationWarning")
 @pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="requires interchange protocol")
 def test_is_ordered_categorical_interchange_protocol() -> None:
     pytest.importorskip("pandas")
