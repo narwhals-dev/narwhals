@@ -341,7 +341,7 @@ class PandasLikeNamespace(
             df = self.concat(
                 (s.to_frame() for s in series_list), how="horizontal"
             )._native_frame
-            
+
             try:
                 import pandas as pd
                 import pyarrow.compute as pc
