@@ -1,10 +1,15 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pandas as pd
 import polars as pl
 import pyarrow as pa
+
 import narwhals as nw
-from narwhals.typing import IntoFrame
+
+if TYPE_CHECKING:
+    from narwhals.typing import IntoFrame
 
 
 def agnostic_get_columns(df_native: IntoFrame) -> list[str]:

@@ -336,7 +336,6 @@ class PandasLikeNamespace(
         )
 
     def struct(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
-
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             series_list = [s for _expr in exprs for s in _expr(df)]
             df = self.concat(
@@ -357,16 +356,14 @@ class PandasLikeNamespace(
                             f"found value of type {type(v).__name__}: {v}\n\n"
                             f"Hint: ensure all values in each column have the same dtype."
                         )
-                        raise TypeError(
-                            msg
-                        )
+                        raise TypeError(msg)
             try:
-                import pyarrow.compute as pc
                 import pandas as pd  # only for ArrowDtype
+                import pyarrow.compute as pc
             except ModuleNotFoundError as exc:
                 msg = "'pyarrow' and 'pandas' are required to use `struct()` in this backend."
-                raise ModuleNotFoundError(msg) from exc            
-            
+                raise ModuleNotFoundError(msg) from exc
+
             df_arrow = df.convert_dtypes(dtype_backend="pyarrow")
             arrays = [df_arrow[col].array._pa_array for col in df.columns]
             struct_array = pc.make_struct(*arrays, field_names=df.columns)
