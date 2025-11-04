@@ -2114,7 +2114,7 @@ class _NoDefault(Enum):
     # https://github.com/pandas-dev/pandas/blob/e7859983a814b1823cf26e3b491ae2fa3be47c53/pandas/_libs/lib.pyx#L2736-L2748
     no_default = "NO_DEFAULT"
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # pragma: no cover
         return "<no_default>"
 
 

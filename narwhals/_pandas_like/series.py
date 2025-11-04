@@ -666,7 +666,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         was_matched = idxs >= 0
 
         new_series = namespace.Series(new, dtype=dtype, name=self.name)
-        if dtype_backend:
+        if return_dtype is None and dtype_backend is not None:
             new_series = new_series.convert_dtypes(dtype_backend=dtype_backend)
 
         # Take values from new_series, using index or 0 (will be masked for unmatched)
