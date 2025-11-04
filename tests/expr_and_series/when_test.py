@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -216,5 +216,5 @@ def test_when_then_otherwise_aggregate_with_columns(
 def test_when_then_empty(constructor: Constructor) -> None:
     df = nw.from_native(constructor({"a": [-1]})).filter(nw.col("a") > 0)
     result = df.with_columns(nw.when(nw.col("a") == 1).then(nw.lit(1)).alias("new_col"))
-    expected = {"a": [], "new_col": []}
+    expected: dict[str, Any] = {"a": [], "new_col": []}
     assert_equal_data(result, expected)
