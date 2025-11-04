@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
 from functools import partial
 from operator import methodcaller
 from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, Protocol
@@ -38,7 +37,7 @@ from narwhals.dependencies import is_numpy_array, is_numpy_scalar
 from narwhals.exceptions import MultiOutputExpressionError
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Sequence
 
     from typing_extensions import Self, TypeIs
 
@@ -599,7 +598,7 @@ class EagerExpr(
     def replace_strict(
         self,
         default: Any | NoDefault,
-        old: Sequence[Any] | Mapping[Any, Any],
+        old: Sequence[Any],
         new: Sequence[Any],
         *,
         return_dtype: IntoDType | None,

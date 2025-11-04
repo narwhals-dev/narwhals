@@ -19,7 +19,7 @@ from narwhals._polars.utils import (
 from narwhals._utils import Implementation, no_default, requires
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Sequence
 
     from typing_extensions import Self
 
@@ -211,7 +211,7 @@ class PolarsExpr:
     def replace_strict(
         self,
         default: Any | NoDefault,
-        old: Sequence[Any] | Mapping[Any, Any],
+        old: Sequence[Any],
         new: Sequence[Any],
         *,
         return_dtype: IntoDType | None,

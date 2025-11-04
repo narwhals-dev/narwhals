@@ -1354,6 +1354,9 @@ class Series(Generic[IntoSeriesT]):
             new = list(old.values())
             old = list(old.keys())
 
+        assert isinstance(new, Sequence)  # noqa: S101, help mypy
+        assert isinstance(old, Sequence)  # noqa: S101, help mypy
+
         return self._with_compliant(
             self._compliant_series.replace_strict(
                 old=old,

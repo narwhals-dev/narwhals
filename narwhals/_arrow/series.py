@@ -36,7 +36,7 @@ from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import InvalidOperationError, ShapeError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Mapping, Sequence
+    from collections.abc import Iterable, Iterator, Sequence
     from types import ModuleType
 
     import pandas as pd
@@ -770,7 +770,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def replace_strict(
         self,
         default: Any | NoDefault,
-        old: Sequence[Any] | Mapping[Any, Any],
+        old: Sequence[Any],
         new: Sequence[Any],
         *,
         return_dtype: IntoDType | None,

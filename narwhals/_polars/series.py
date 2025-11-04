@@ -306,7 +306,7 @@ class PolarsSeries:
     def replace_strict(
         self,
         default: Any | NoDefault,
-        old: Sequence[Any] | Mapping[Any, Any],
+        old: Sequence[Any],
         new: Sequence[Any],
         *,
         return_dtype: IntoDType | None,

@@ -29,7 +29,7 @@ from narwhals.dependencies import is_numpy_array_1d, is_pandas_like_series
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
-    from collections.abc import Hashable, Iterable, Iterator, Mapping, Sequence
+    from collections.abc import Hashable, Iterable, Iterator, Sequence
     from types import ModuleType
 
     import pandas as pd
@@ -641,54 +641,44 @@ class PandasLikeSeries(EagerSeries[Any]):
     def shift(self, n: int) -> Self:
         return self._with_native(self.native.shift(n))
 
-    def replace_strict(  # noqa: PLR0914
+    def replace_strict(
         self,
         default: Any | NoDefault,
-        old: Sequence[Any] | Mapping[Any, Any],
+        old: Sequence[Any],
         new: Sequence[Any],
         *,
         return_dtype: IntoDType | None,
     ) -> PandasLikeSeries:
-        # Creating a temporary name if series is unnamed as merging with `on=None` would break otherwise
-        self_tmp_name = self.name if self.name is not None else "__nw_replace_strict__"
-        tmp_name = f"{self.name}_tmp"
-        dtype_backend = get_dtype_backend(self.native.dtype, self._implementation)
+        namespace = self.__native_namespace__()
+        array_funcs = self._array_funcs
+        native = self.native
+        impl = self._implementation
+
+        dtype_backend = get_dtype_backend(native.dtype, impl)
         dtype = (
-            narwhals_to_native_dtype(
-                return_dtype, dtype_backend, self._implementation, self._version
-            )
+            narwhals_to_native_dtype(return_dtype, dtype_backend, impl, self._version)
             if return_dtype
             else None
         )
-        namespace = self.__native_namespace__()
-        other = namespace.DataFrame(
-            {self_tmp_name: old, tmp_name: namespace.Series(new, dtype=dtype)}
-        )
-        impl_is_modin = self._implementation.is_modin()
-        indicator_token = f"{self_tmp_name}_indicator_token__"
-        merged = self.native.to_frame(self_tmp_name).merge(
-            other,
-            on=self_tmp_name,
-            # TODO(FBruzzesi): See https://github.com/modin-project/modin/issues/7384
-            how="outer" if impl_is_modin else "left",
-            indicator=indicator_token,
-        )
-        # In principle it's possible that the mapping contains a key not in the series.
-        # This would lead to native result having more rows that original series.
-        native_result = (
-            merged.loc[merged[indicator_token] != "right_only", tmp_name]
-            if impl_is_modin
-            else merged[tmp_name]
-        )
-        was_matched = merged[indicator_token] == "both"
-        result = self._with_native(native_result).alias(self.name)
+
+        # Use pandas Index.get_indexer to find positions of values in old
+        idxs = namespace.Index(old).get_indexer(native)
+        was_matched = idxs >= 0
+
+        new_series = namespace.Series(new, dtype=dtype, name=self.name)
+        if dtype_backend:
+            new_series = new_series.convert_dtypes(dtype_backend=dtype_backend)
+
+        # Take values from new_series, using index or 0 (will be masked for unmatched)
+        native_result = new_series.iloc[array_funcs.where(was_matched, idxs, 0)]
+        native_result.index = native.index
 
         if default is no_default:
             # Check that all non-null input values were matched
-            unmatched_mask = (~self.is_null().native) & (~was_matched)
+            unmatched_mask = native.notna() & (~was_matched)
             if unmatched_mask.any():
                 unmatched_values = (
-                    self._with_native(self.native[unmatched_mask])
+                    self._with_native(native[unmatched_mask])
                     .unique(maintain_order=False)
                     .to_list()
                 )
@@ -697,11 +687,14 @@ class PandasLikeSeries(EagerSeries[Any]):
                     f"The following did not get replaced: {unmatched_values}"
                 )
                 raise ValueError(msg)
+            # For unmatched values (nulls in original), set to null
+            native_result = native_result.where(was_matched, None)
         else:
-            result_native, default = align_and_extract_native(result, default)
-            # Only fill with default where the value wasn't matched (not where result is null due to mapping)
-            result = self._with_native(result_native.where(was_matched, default))
-        return result
+            # For unmatched values, use default
+            _, default = align_and_extract_native(self, default)
+            native_result = native_result.where(was_matched, default)
+
+        return self._with_native(native_result)
 
     def sort(self, *, descending: bool, nulls_last: bool) -> PandasLikeSeries:
         na_position = "last" if nulls_last else "first"
