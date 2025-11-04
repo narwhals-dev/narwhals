@@ -688,7 +688,7 @@ class PandasLikeSeries(EagerSeries[Any]):
                     "replace_strict did not replace all non-null values.\n\n"
                     f"The following did not get replaced: {unmatched_values}"
                 )
-                raise ValueError(msg)
+                raise InvalidOperationError(msg)
             # For unmatched values (nulls in original), set to null
             native_result = native_result.where(was_matched, None)
         else:

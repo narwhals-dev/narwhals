@@ -1293,8 +1293,6 @@ class Series(Generic[IntoSeriesT]):
     ) -> Self:
         """Replace all values by different values.
 
-        This function must replace all non-null input values (else it raises an error).
-
         Arguments:
             old: Sequence of values to replace. It also accepts a mapping of values to
                 their replacement as syntactic sugar for
@@ -1306,6 +1304,10 @@ class Series(Generic[IntoSeriesT]):
             return_dtype: The data type of the resulting expression. If set to `None`
                 (default), the data type is determined automatically based on the other
                 inputs.
+
+        Raises:
+            InvalidOperationError: If any non-null values in the original column were not
+                replaced, and no default was specified.
 
         Examples:
             >>> import pandas as pd
@@ -1322,16 +1324,6 @@ class Series(Generic[IntoSeriesT]):
             Name: a, dtype: object
 
             Replace values and set a default for values not in the mapping:
-
-            >>> s_native = pd.Series([1, 2, 3, 4], name="a")
-            >>> nw.from_native(s_native, series_only=True).replace_strict(
-            ...     [1, 2], ["one", "two"], default="other", return_dtype=nw.String
-            ... ).to_native()
-            0      one
-            1      two
-            2    other
-            3    other
-            Name: a, dtype: object
 
             >>> s_native = pd.Series([1, 2, 3, 4], name="a")
             >>> s_default = pd.Series(["beluga", "narwhal", "orca", "vaquita"])

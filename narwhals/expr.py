@@ -849,8 +849,6 @@ class Expr:
     ) -> Self:
         """Replace all values by different values.
 
-        This function must replace all non-null input values (else it raises an error).
-
         Arguments:
             old: Sequence of values to replace. It also accepts a mapping of values to
                 their replacement as syntactic sugar for
@@ -862,6 +860,10 @@ class Expr:
             return_dtype: The data type of the resulting expression. If set to `None`
                 (default), the data type is determined automatically based on the other
                 inputs.
+
+        Raises:
+            InvalidOperationError: If any non-null values in the original column were not
+                replaced, and no default was specified.
 
         Examples:
             >>> import pandas as pd
@@ -887,27 +889,8 @@ class Expr:
 
             Replace values and set a default for values not in the mapping:
 
-            >>> df = nw.from_native(pd.DataFrame({"a": [1, 2, 3, 4]}))
-            >>> df.with_columns(
-            ...     b=nw.col("a").replace_strict(
-            ...         [1, 2], ["one", "two"], default="other", return_dtype=nw.String
-            ...     )
-            ... )
-            ┌──────────────────┐
-            |Narwhals DataFrame|
-            |------------------|
-            |      a      b    |
-            |   0  1    one    |
-            |   1  2    two    |
-            |   2  3  other    |
-            |   3  4  other    |
-            └──────────────────┘
-
-            >>> df = nw.from_native(
-            ...     pd.DataFrame(
-            ...         {"a": [1, 2, 3, 4], "b": ["beluga", "narwhal", "orca", "vaquita"]}
-            ...     )
-            ... )
+            >>> data = {"a": [1, 2, 3, 4], "b": ["beluga", "narwhal", "orca", "vaquita"]}
+            >>> df = nw.from_native(pd.DataFrame(data))
             >>> df.with_columns(
             ...     a_replaced=nw.col("a").replace_strict(
             ...         {1: "one", 2: "two"},
@@ -933,11 +916,11 @@ class Expr:
             new = list(old.values())
             old = list(old.keys())
 
-        if isinstance(default, Expr):
+        if default is no_default:
             node = ExprNode(
                 ExprKind.ELEMENTWISE,
                 "replace_strict",
-                default,
+                default=default,
                 old=old,
                 new=new,
                 return_dtype=return_dtype,
@@ -946,10 +929,11 @@ class Expr:
             node = ExprNode(
                 ExprKind.ELEMENTWISE,
                 "replace_strict",
-                default=default,
+                default,
                 old=old,
                 new=new,
                 return_dtype=return_dtype,
+                str_as_lit=True,
             )
         return self._append_node(node)
 

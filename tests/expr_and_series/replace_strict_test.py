@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 import narwhals as nw
-from narwhals.exceptions import NarwhalsError
+from narwhals.exceptions import InvalidOperationError
 from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 if TYPE_CHECKING:
@@ -84,12 +84,12 @@ def test_replace_strict_non_full(
 
     df = nw.from_native(constructor({"a": [1, 2, 3]}))
     if isinstance(df, nw.LazyFrame):
-        with pytest.raises((ValueError, NarwhalsError)):
+        with pytest.raises((ValueError, InvalidOperationError)):
             df.select(
                 nw.col("a").replace_strict([1, 3], [3, 4], return_dtype=nw.Int64)
             ).collect()
     else:
-        with pytest.raises((ValueError, NarwhalsError)):
+        with pytest.raises((ValueError, InvalidOperationError)):
             df.select(nw.col("a").replace_strict([1, 3], [3, 4], return_dtype=nw.Int64))
 
 

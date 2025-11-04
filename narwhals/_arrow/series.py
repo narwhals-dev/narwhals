@@ -803,7 +803,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
                     "replace_strict did not replace all non-null values.\n\n"
                     f"The following did not get replaced: {unmatched_values}"
                 )
-                raise ValueError(msg)
+                raise InvalidOperationError(msg)
         else:
             result_native, default = extract_native(result, default)
             # Only fill with default where the value wasn't matched (not where result is null due to mapping)
