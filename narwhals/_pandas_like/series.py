@@ -202,8 +202,10 @@ class PandasLikeSeries(EagerSeries[Any]):
     def _align_full_broadcast(cls, *series: Self) -> Sequence[Self]:
         Series = series[0].__native_namespace__().Series
         lengths = [len(s) for s in series]
-        max_length = max(lengths)
-        idx = series[lengths.index(max_length)].native.index
+        target_length = max(
+            length for length, s in zip(lengths, series) if not s._broadcast
+        )
+        idx = series[lengths.index(target_length)].native.index
         reindexed = []
         for s in series:
             if s._broadcast:
