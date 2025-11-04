@@ -64,3 +64,25 @@ def test_coalesce_raises_non_expr(constructor: Constructor) -> None:
 
     with pytest.raises(TypeError, match="All arguments to `coalesce` must be of type"):
         df.select(implicit_lit=nw.coalesce("a", "b", "c", 10))
+
+
+def test_coalesce_multi_output(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/3277
+    if "dask" in str(constructor):
+        # Dask infers the type to be `string` :shrug:
+        # https://github.com/narwhals-dev/narwhals/issues/3279
+        request.applymarker(pytest.mark.fail)
+    df = nw.from_native(
+        constructor(
+            {
+                "col1": [True, None, False, False, None],
+                "col2": [True, False, True, False, None],
+                "col3": [True, True, None, False, True],
+            }
+        )
+    )
+    result = df.select(nw.coalesce(nw.all()))
+    expected = {"col1": [True, False, False, False, True]}
+    assert_equal_data(result, expected)
