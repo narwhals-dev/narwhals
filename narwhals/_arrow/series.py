@@ -199,16 +199,18 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     @classmethod
     def _align_full_broadcast(cls, *series: Self) -> Sequence[Self]:
         lengths = [len(s) for s in series]
-        max_length = max(lengths)
-        fast_path = all(_len == max_length for _len in lengths)
+        target_length = max(
+            length for length, s in zip(lengths, series) if not s._broadcast
+        )
+        fast_path = all(_len == target_length for _len in lengths)
         if fast_path:
             return series
         reshaped = []
         for s in series:
             if s._broadcast:
-                compliant = s._with_native(pa.repeat(s.native[0], max_length))
-            elif (actual_len := len(s)) != max_length:
-                msg = f"Expected object of length {max_length}, got {actual_len}."
+                compliant = s._with_native(pa.repeat(s.native[0], target_length))
+            elif (actual_len := len(s)) != target_length:
+                msg = f"Expected object of length {target_length}, got {actual_len}."
                 raise ShapeError(msg)
             else:
                 compliant = s
