@@ -17,9 +17,7 @@ polars_lt_v1 = POLARS_VERSION < (1, 0, 0)
 skip_reason = "replace_strict only available after 1.0"
 
 
-def xfail_lazy_non_polars_constructor(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
+def xfail_if_no_default(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     lazy_non_polars_constructors = ("dask", "duckdb", "ibis", "pyspark", "sqlframe")
     if any(x in str(constructor) for x in lazy_non_polars_constructors):
         request.applymarker(pytest.mark.xfail)
@@ -28,9 +26,9 @@ def xfail_lazy_non_polars_constructor(
 @pytest.mark.parametrize(
     ("old", "new", "return_dtype"),
     [
-        (["one", "two", "three"], [1, 2, 3], nw.UInt32()),
+        (["one", "two", "three"], [1, 2, 3], nw.Int8()),
         (["one", "two", "three"], [1, 2, 3], None),
-        ({"one": 1, "two": 2, "three": 3}, None, nw.Int8()),
+        ({"one": 1, "two": 2, "three": 3}, None, nw.Float32()),
     ],
 )
 def test_replace_strict_expr_basic(
@@ -40,7 +38,7 @@ def test_replace_strict_expr_basic(
     new: Sequence[Any] | None,
     return_dtype: DType | None,
 ) -> None:
-    xfail_lazy_non_polars_constructor(constructor, request)
+    xfail_if_no_default(constructor, request)
 
     if "polars" in str(constructor) and polars_lt_v1:
         pytest.skip(reason=skip_reason)
@@ -77,20 +75,17 @@ def test_replace_strict_series_basic(
 def test_replace_strict_non_full(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    xfail_lazy_non_polars_constructor(constructor, request)
-
     if "polars" in str(constructor) and polars_lt_v1:
         pytest.skip(reason=skip_reason)
 
     df = nw.from_native(constructor({"a": [1, 2, 3]}))
+    expr = nw.col("a").replace_strict([1, 3], [3, 4], return_dtype=nw.Int64)
     if isinstance(df, nw.LazyFrame):
         with pytest.raises((ValueError, InvalidOperationError)):
-            df.select(
-                nw.col("a").replace_strict([1, 3], [3, 4], return_dtype=nw.Int64)
-            ).collect()
+            df.select(expr).collect()
     else:
         with pytest.raises((ValueError, InvalidOperationError)):
-            df.select(nw.col("a").replace_strict([1, 3], [3, 4], return_dtype=nw.Int64))
+            df.select(expr)
 
 
 def test_replace_strict_invalid_expr(constructor_eager: ConstructorEager) -> None:
@@ -127,8 +122,6 @@ def test_replace_strict_pandas_unnamed_series() -> None:
 def test_replace_strict_expr_with_default(
     constructor: Constructor, request: pytest.FixtureRequest, return_dtype: DType | None
 ) -> None:
-    xfail_lazy_non_polars_constructor(constructor, request)
-
     if "polars" in str(constructor) and polars_lt_v1:
         pytest.skip(reason=skip_reason)
 
@@ -160,8 +153,6 @@ def test_replace_strict_series_with_default(
 def test_replace_strict_with_default_and_nulls(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    xfail_lazy_non_polars_constructor(constructor, request)
-
     if "polars" in str(constructor) and polars_lt_v1:
         pytest.skip(reason=skip_reason)
 
@@ -175,8 +166,6 @@ def test_replace_strict_with_default_and_nulls(
 def test_replace_strict_with_default_mapping(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    xfail_lazy_non_polars_constructor(constructor, request)
-
     if "polars" in str(constructor) and polars_lt_v1:
         pytest.skip(reason=skip_reason)
 
@@ -192,8 +181,6 @@ def test_replace_strict_with_default_mapping(
 def test_replace_strict_with_expressified_default(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    xfail_lazy_non_polars_constructor(constructor, request)
-
     if "polars" in str(constructor) and polars_lt_v1:
         pytest.skip(reason=skip_reason)
 
