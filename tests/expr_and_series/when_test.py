@@ -211,3 +211,10 @@ def test_when_then_otherwise_aggregate_with_columns(
     expr = nw.when(condition).then(then).otherwise(otherwise)
     result = df.with_columns(a_when=expr)
     assert_equal_data(result.select(nw.col("a_when")), {"a_when": expected})
+
+
+def test_when_then_empty(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [-1]})).filter(nw.col("a") > 0)
+    result = df.with_columns(nw.when(nw.col("a") == 1).then(nw.lit(1)).alias("new_col"))
+    expected = {"a": [], "new_col": []}
+    assert_equal_data(result, expected)
