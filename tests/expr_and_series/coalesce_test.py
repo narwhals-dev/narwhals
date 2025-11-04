@@ -73,7 +73,7 @@ def test_coalesce_multi_output(
     if "dask" in str(constructor):
         # Dask infers the type to be `string` :shrug:
         # https://github.com/narwhals-dev/narwhals/issues/3279
-        request.applymarker(pytest.mark.fail)
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(
         constructor(
             {
