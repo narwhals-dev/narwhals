@@ -52,6 +52,7 @@ SUPPORTED_FUNCTION: Mapping[type[ir.Function], acero.Aggregation] = {
     ir.boolean.All: "hash_all",
     ir.boolean.Any: "hash_any",
     ir.functions.Unique: "hash_distinct",  # `hash_aggregate` only
+    ir.functions.NullCount: "hash_count",
 }
 
 REQUIRES_PYARROW_20: tuple[Literal["kurtosis"], Literal["skew"]] = ("kurtosis", "skew")

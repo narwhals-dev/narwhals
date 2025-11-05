@@ -80,11 +80,12 @@ def _generate_agg() -> Mapping[type[agg.AggExpr], acero.AggregateOptions]:
 
 
 def _generate_function() -> Mapping[type[ir.Function], acero.AggregateOptions]:
-    from narwhals._plan.expressions import boolean
+    from narwhals._plan.expressions import boolean, functions
 
     return {
         boolean.All: scalar_aggregate(ignore_nulls=True),
         boolean.Any: scalar_aggregate(ignore_nulls=True),
+        functions.NullCount: count("only_null"),
     }
 
 

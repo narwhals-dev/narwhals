@@ -153,7 +153,7 @@ def test_over_std_var(data: Data) -> None:
         .with_columns(
             c_std0=nwp.col("c").std(ddof=0).over("a"),
             c_std1=nwp.col("c").std(ddof=1).over("a"),
-            c_var0=nwp.col("c").var(ddof=0).over("a"),
+            c_var0=nwp.col("c").var(ddof=0).over(ncs.string()),
             c_var1=nwp.col("c").var(ddof=1).over("a"),
         )
         .sort("i")
@@ -244,3 +244,24 @@ def test_over_order_by_expr_invalid(data_alt: Data) -> None:
         match=re_compile(r"only.+column.+selection.+in.+order_by.+found.+sort"),
     ):
         df.select(nwp.col("a").first().over(order_by=nwp.col("b").sort()))
+
+
+def test_null_count_over() -> None:
+    data = {
+        "a": ["a", "b", None, None, "b", "c"],
+        "b": [1, 2, 1, 5, 3, 3],
+        "c": [5, 4, 3, 6, 2, 1],
+    }
+    expected = {
+        "a": ["a", "b", None, None, "b", "c"],
+        "b": [1, 2, 1, 5, 3, 3],
+        "c": [5, 4, 3, 6, 2, 1],
+        "first_null_count_over_b": [1, 0, 1, 1, 0, 0],
+    }
+    df = dataframe(data)
+    result = df.with_columns(
+        first_null_count_over_b=ncs.first()
+        .null_count()
+        .over(ncs.integer() - ncs.by_name("c"))
+    )
+    assert_equal_data(result, expected)

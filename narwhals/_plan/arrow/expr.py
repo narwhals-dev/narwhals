@@ -15,6 +15,7 @@ from narwhals._plan.compliant.column import ExprDispatch
 from narwhals._plan.compliant.expr import EagerExpr
 from narwhals._plan.compliant.scalar import EagerScalar
 from narwhals._plan.compliant.typing import namespace
+from narwhals._plan.expressions.functions import NullCount
 from narwhals._utils import Implementation, Version, _StoresNative, not_implemented
 from narwhals.exceptions import InvalidOperationError, ShapeError
 
@@ -59,6 +60,7 @@ if TYPE_CHECKING:
         CumAgg,
         Diff,
         FillNull,
+        NullCount,
         Pow,
         Shift,
     )
@@ -435,6 +437,12 @@ class ArrowExpr(  # type: ignore[misc]
     is_first_distinct = _is_first_last_distinct
     is_last_distinct = _is_first_last_distinct
 
+    def null_count(
+        self, node: ir.FunctionExpr[NullCount], frame: Frame, name: str
+    ) -> Scalar:
+        series = self._dispatch_expr(node.input[0], frame, name)
+        return self._with_native(fn.lit(series.native.null_count), name)
+
 
 class ArrowScalar(
     _ArrowDispatch["ArrowScalar"],
@@ -516,6 +524,12 @@ class ArrowScalar(
     def count(self, node: Count, frame: Frame, name: str) -> Scalar:
         native = node.expr.dispatch(self, frame, name).native
         return self._with_native(pa.scalar(1 if native.is_valid else 0), name)
+
+    def null_count(
+        self, node: ir.FunctionExpr[NullCount], frame: Frame, name: str
+    ) -> Self:
+        native = node.input[0].dispatch(self, frame, name).native
+        return self._with_native(pa.scalar(0 if native.is_valid else 1), name)
 
     filter = not_implemented()
     over = not_implemented()
