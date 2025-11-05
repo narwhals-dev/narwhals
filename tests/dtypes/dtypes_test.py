@@ -441,7 +441,9 @@ def test_cast_decimal_to_native() -> None:
             )
 
 
-@pytest.mark.parametrize("categories", [["a", "b"], enum.Enum("Test", "a b"), [1, 2, 3]])
+@pytest.mark.parametrize(
+    "categories", [["a", "b"], enum.Enum("Test", "a b"), [1, 2, 3], []]
+)
 def test_enum_valid(categories: Iterable[Any] | type[enum.Enum]) -> None:
     dtype = nw.Enum(categories)
     assert dtype == nw.Enum

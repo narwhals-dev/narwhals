@@ -633,9 +633,9 @@ class Enum(DType):
     @property
     def categories(self) -> tuple[str, ...]:
         """The categories in the dataset."""
-        if cached := self._cached_categories:
+        if (cached := self._cached_categories) is not None:
             return cached
-        if delayed := self._delayed_categories:
+        if (delayed := self._delayed_categories) is not None:
             self._cached_categories = delayed.to_tuple()
             return self._cached_categories
         msg = f"Internal structure of {type(self).__name__!r} is invalid."  # pragma: no cover
