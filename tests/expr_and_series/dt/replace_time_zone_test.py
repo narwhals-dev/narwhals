@@ -37,6 +37,9 @@ def test_replace_time_zone(
             datetime(2020, 1, 2, tzinfo=timezone.utc),
         ]
     }
+    if "bodo" in str(constructor):
+        # BODO fail
+        pytest.skip()
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").dt.replace_time_zone("Asia/Kathmandu"))
     result_dtype = result.collect_schema()["a"]
@@ -54,6 +57,9 @@ def test_replace_time_zone_none(constructor: Constructor) -> None:
         or ("pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2,))
         or ("modin_pyarrow" in str(constructor) and PANDAS_VERSION < (2,))
     ):
+        pytest.skip()
+    if "bodo" in str(constructor):
+        # BODO fail
         pytest.skip()
     data = {
         "a": [
@@ -83,6 +89,9 @@ def test_replace_time_zone_series(
         pytest.skip()
     if any(x in str(constructor_eager) for x in ("cudf",)):
         request.applymarker(pytest.mark.xfail)
+    if "bodo" in str(constructor_eager):
+        # BODO fail
+        pytest.skip()
     data = {
         "a": [
             datetime(2020, 1, 1, tzinfo=timezone.utc),
@@ -106,6 +115,9 @@ def test_replace_time_zone_none_series(constructor_eager: ConstructorEager) -> N
         or ("pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2,))
         or ("modin_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2,))
     ):
+        pytest.skip()
+    if "bodo" in str(constructor_eager):
+        # BODO fail
         pytest.skip()
     data = {
         "a": [

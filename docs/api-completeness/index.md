@@ -11,5 +11,5 @@ class and backend.
 !!! info
 
     - By design, Polars supports all the methods of the Narwhals API.
-    - "pandas-like" means pandas, cuDF and Modin.
+    - "pandas-like" means pandas, cuDF, Modin and Bodo.
     - "spark-like" means PySpark, but we may extend this to also cover SQLFrame.

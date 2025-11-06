@@ -17,9 +17,9 @@ def run_common(session: Session, coverage_threshold: float) -> None:
     if session.python == "3.8":
         session.install("-e . --group dev-core")
     elif session.python == "3.12":
-        session.install("-e .[dask,modin] --group dev-core --group extra")
+        session.install("-e .[dask,modin,bodo] --group dev-core --group extra")
     else:
-        session.install("-e .[dask,modin,pyspark,ibis] --group dev-core --group extra")
+        session.install("-e .[dask,modin,pyspark,ibis,bodo] --group dev-core --group extra")
 
     session.run(
         "pytest",

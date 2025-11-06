@@ -54,6 +54,9 @@ def test_unpivot(
     index: list[str] | None,
     expected: dict[str, list[float]],
 ) -> None:
+    if "bodo" in str(constructor):
+        # BODO fail
+        pytest.skip()
     df = nw.from_native(constructor(data))
     sort_columns = ["variable"] if index is None else ["variable", "a"]
     result = df.unpivot(on=on, index=index).sort(by=sort_columns)

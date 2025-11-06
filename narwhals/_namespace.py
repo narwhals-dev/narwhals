@@ -18,6 +18,7 @@ from narwhals._utils import Implementation, Version
 from narwhals.dependencies import (
     get_cudf,
     get_modin,
+    get_bodo,
     get_pandas,
     get_polars,
     get_pyarrow,
@@ -113,6 +114,12 @@ if TYPE_CHECKING:
     class _ModinSeries(_BasePandasLikeSeries, Protocol):
         _pandas_class: type[pd.Series[Any]]
 
+    class _BodoDataFrame(_BasePandasLikeFrame, Protocol):
+        _pandas_class: type[pd.DataFrame]
+
+    class _BodoSeries(_BasePandasLikeSeries, Protocol):
+        _pandas_class: type[pd.Series[Any]]
+
     # NOTE: Using `pyspark.sql.DataFrame` creates false positives in overloads when not installed
     class _PySparkDataFrame(NativeLazyFrame, Protocol):
         # Arbitrary method that `sqlframe` doesn't have and unlikely to appear anywhere else
@@ -124,10 +131,11 @@ if TYPE_CHECKING:
     _NativeDuckDB: TypeAlias = "duckdb.DuckDBPyRelation"
     _NativePandas: TypeAlias = "pd.DataFrame | pd.Series[Any]"
     _NativeModin: TypeAlias = "_ModinDataFrame | _ModinSeries"
+    _NativeBodo: TypeAlias = "_BodoDataFrame | _BodoSeries"
     _NativeCuDF: TypeAlias = "_CuDFDataFrame | _CuDFSeries"
-    _NativePandasLikeSeries: TypeAlias = "pd.Series[Any] | _CuDFSeries | _ModinSeries"
+    _NativePandasLikeSeries: TypeAlias = "pd.Series[Any] | _CuDFSeries | _ModinSeries | _BodoSeries"
     _NativePandasLikeDataFrame: TypeAlias = (
-        "pd.DataFrame | _CuDFDataFrame | _ModinDataFrame"
+        "pd.DataFrame | _CuDFDataFrame | _ModinDataFrame | _BodoDataFrame"
     )
     _NativePandasLike: TypeAlias = "_NativePandasLikeDataFrame |_NativePandasLikeSeries"
     _NativeSQLFrame: TypeAlias = "SQLFrameDataFrame"
@@ -310,6 +318,12 @@ class Namespace(Generic[CompliantNamespaceT_co]):
     @overload
     @classmethod
     def from_native_object(
+        cls, native: _NativeBodo, /
+    ) -> Namespace[PandasLikeNamespace[_BodoDataFrame, _BodoSeries]]: ...
+
+    @overload
+    @classmethod
+    def from_native_object(
         cls, native: _NativeCuDF, /
     ) -> Namespace[PandasLikeNamespace[_CuDFDataFrame, _CuDFSeries]]: ...
 
@@ -352,6 +366,8 @@ class Namespace(Generic[CompliantNamespaceT_co]):
             impl = Implementation.CUDF
         elif is_native_modin(native):  # pragma: no cover
             impl = Implementation.MODIN
+        elif is_native_bodo(native):  # pragma: no cover
+            impl = Implementation.BODO
         elif is_native_ibis(native):
             impl = Implementation.IBIS
         else:
@@ -394,6 +410,12 @@ def is_native_modin(obj: Any) -> TypeIs[_NativeModin]:
     )  # pragma: no cover
 
 
+def is_native_bodo(obj: Any) -> TypeIs[_NativeBodo]:
+    return (bd := get_bodo()) is not None and isinstance(
+        obj, (bd.DataFrame, bd.Series)
+    )  # pragma: no cover
+
+
 def is_native_cudf(obj: Any) -> TypeIs[_NativeCuDF]:
     return (cudf := get_cudf()) is not None and isinstance(
         obj, (cudf.DataFrame, cudf.Series)
@@ -402,7 +424,7 @@ def is_native_cudf(obj: Any) -> TypeIs[_NativeCuDF]:
 
 def is_native_pandas_like(obj: Any) -> TypeIs[_NativePandasLike]:
     return (
-        is_native_pandas(obj) or is_native_cudf(obj) or is_native_modin(obj)
+        is_native_pandas(obj) or is_native_cudf(obj) or is_native_modin(obj) or is_native_bodo(obj)
     )  # pragma: no cover
 
 

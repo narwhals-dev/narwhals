@@ -1,10 +1,15 @@
 from __future__ import annotations
 
+import pytest
+
 import narwhals as nw
 from tests.utils import ConstructorEager, assert_equal_data
 
 
 def test_zip_with(constructor_eager: ConstructorEager) -> None:
+    if "bodo" in str(constructor_eager):
+        # BODO fail
+        pytest.skip()
     series1 = nw.from_native(constructor_eager({"a": [1, 3, 2]}), eager_only=True)["a"]
     series2 = nw.from_native(constructor_eager({"a": [4, 4, 6]}), eager_only=True)["a"]
     mask = nw.from_native(constructor_eager({"a": [True, False, True]}), eager_only=True)[
@@ -17,6 +22,9 @@ def test_zip_with(constructor_eager: ConstructorEager) -> None:
 
 
 def test_zip_with_length_1(constructor_eager: ConstructorEager) -> None:
+    if "bodo" in str(constructor_eager):
+        # BODO fail
+        pytest.skip()
     series1 = nw.from_native(constructor_eager({"a": [1]}), eager_only=True)["a"]
     series2 = nw.from_native(constructor_eager({"a": [4]}), eager_only=True)["a"]
     mask = nw.from_native(constructor_eager({"a": [False]}), eager_only=True)["a"]

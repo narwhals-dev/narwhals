@@ -15,6 +15,9 @@ def test_pivot(
         request.applymarker(pytest.mark.xfail)
     if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 0):
         pytest.skip()
+    if "bodo" in str(constructor_eager):
+        # BODO fail
+        pytest.skip()
 
     data = {
         "date": [

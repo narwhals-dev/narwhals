@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     import duckdb
     import ibis
     import modin.pandas as mpd
+    import bodo.pandas as bd
     import pandas as pd
     import polars as pl
     import pyarrow as pa
@@ -58,6 +59,13 @@ def get_modin() -> Any:  # pragma: no cover
     """Get modin.pandas module (if already imported - else return None)."""
     if (modin := sys.modules.get("modin", None)) is not None:
         return modin.pandas
+    return None
+
+
+def get_bodo() -> Any:  # pragma: no cover
+    """Get modin.pandas module (if already imported - else return None)."""
+    if (bodo := sys.modules.get("bodo", None)) is not None:
+        return bodo.pandas
     return None
 
 
@@ -208,6 +216,31 @@ def is_modin_series(ser: Any) -> TypeIs[mpd.Series]:
 def is_modin_index(index: Any) -> TypeIs[mpd.Index[Any]]:  # pragma: no cover
     """Check whether `index` is a modin Index without importing modin."""
     return (mpd := get_modin()) is not None and isinstance(index, mpd.Index)
+
+
+def is_bodo_dataframe(df: Any) -> TypeIs[bd.DataFrame]:
+    """Check whether `df` is a bodo DataFrame without importing bodo.
+
+    Warning:
+        This method cannot be called on a Narwhals DataFrame/LazyFrame.
+    """
+    _warn_if_narwhals_df_or_lf(df)
+    return (bd := get_bodo()) is not None and isinstance(df, bd.DataFrame)
+
+
+def is_bodo_series(ser: Any) -> TypeIs[bd.Series]:
+    """Check whether `ser` is a bodo Series without importing bodo.
+
+    Warning:
+        This method cannot be called on Narwhals Series.
+    """
+    _warn_if_narwhals_series(ser)
+    return (bd := get_bodo()) is not None and isinstance(ser, bd.Series)
+
+
+def is_bodo_index(index: Any) -> TypeIs[bd.Index[Any]]:  # pragma: no cover
+    """Check whether `index` is a bodo Index without importing bodo."""
+    return (bd := get_bodo()) is not None and isinstance(index, bd.Index)
 
 
 def is_cudf_dataframe(df: Any) -> TypeIs[cudf.DataFrame]:
@@ -427,34 +460,34 @@ def is_numpy_scalar(scalar: Any) -> TypeGuard[_NumpyScalar]:
 def is_pandas_like_dataframe(df: Any) -> bool:
     """Check whether `df` is a pandas-like DataFrame without doing any imports.
 
-    By "pandas-like", we mean: pandas, Modin, cuDF.
+    By "pandas-like", we mean: pandas, Modin, cuDF, Bodo.
 
     Warning:
         This method cannot be called on a Narwhals DataFrame/LazyFrame.
     """
     _warn_if_narwhals_df_or_lf(df)
-    return is_pandas_dataframe(df) or is_modin_dataframe(df) or is_cudf_dataframe(df)
+    return is_pandas_dataframe(df) or is_modin_dataframe(df) or is_cudf_dataframe(df) or is_bodo_dataframe(df)
 
 
 def is_pandas_like_series(ser: Any) -> bool:
     """Check whether `ser` is a pandas-like Series without doing any imports.
 
-    By "pandas-like", we mean: pandas, Modin, cuDF.
+    By "pandas-like", we mean: pandas, Modin, cuDF, Bodo.
 
     Warning:
         This method cannot be called on Narwhals Series.
     """
     _warn_if_narwhals_series(ser)
-    return is_pandas_series(ser) or is_modin_series(ser) or is_cudf_series(ser)
+    return is_pandas_series(ser) or is_modin_series(ser) or is_cudf_series(ser) or is_bodo_series(ser)
 
 
 def is_pandas_like_index(index: Any) -> bool:
     """Check whether `index` is a pandas-like Index without doing any imports.
 
-    By "pandas-like", we mean: pandas, Modin, cuDF.
+    By "pandas-like", we mean: pandas, Modin, cuDF, Bodo.
     """
     return (
-        is_pandas_index(index) or is_modin_index(index) or is_cudf_index(index)
+        is_pandas_index(index) or is_modin_index(index) or is_cudf_index(index) or is_bodo_index(index)
     )  # pragma: no cover
 
 
@@ -596,6 +629,7 @@ __all__ = [
     "get_cudf",
     "get_ibis",
     "get_modin",
+    "get_bodo",
     "get_numpy",
     "get_pandas",
     "get_polars",
@@ -608,6 +642,8 @@ __all__ = [
     "is_into_series",
     "is_modin_dataframe",
     "is_modin_series",
+    "is_bodo_dataframe",
+    "is_bodo_series",
     "is_narwhals_dataframe",
     "is_narwhals_lazyframe",
     "is_narwhals_series",

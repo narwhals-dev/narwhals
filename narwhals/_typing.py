@@ -16,12 +16,13 @@ _Dask: TypeAlias = Literal["dask"]
 _DuckDB: TypeAlias = Literal["duckdb"]
 _Pandas: TypeAlias = Literal["pandas"]
 _Modin: TypeAlias = Literal["modin"]
+_Bodo: TypeAlias = Literal["bodo"]
 _CuDF: TypeAlias = Literal["cudf"]
 _PySpark: TypeAlias = Literal["pyspark"]
 _SQLFrame: TypeAlias = Literal["sqlframe"]
 _PySparkConnect: TypeAlias = Literal["pyspark[connect]"]
 _Ibis: TypeAlias = Literal["ibis"]
-_PandasLike: TypeAlias = Literal[_Pandas, _CuDF, _Modin]
+_PandasLike: TypeAlias = Literal[_Pandas, _CuDF, _Modin, _Bodo]
 _SparkLike: TypeAlias = Literal[_PySpark, _SQLFrame, _PySparkConnect]
 _EagerOnly: TypeAlias = Literal[_PandasLike, _Arrow]
 _EagerAllowed: TypeAlias = Literal[_Polars, _EagerOnly]
@@ -31,6 +32,7 @@ _LazyAllowed: TypeAlias = Literal[_Polars, _LazyOnly]
 # `Implementation` aliases
 _PandasImpl: TypeAlias = Literal[Implementation.PANDAS]
 _ModinImpl: TypeAlias = Literal[Implementation.MODIN]
+_BodoImpl: TypeAlias = Literal[Implementation.BODO]
 _CuDFImpl: TypeAlias = Literal[Implementation.CUDF]
 _PySparkImpl: TypeAlias = Literal[Implementation.PYSPARK]
 _SQLFrameImpl: TypeAlias = Literal[Implementation.SQLFRAME]
@@ -40,7 +42,7 @@ _ArrowImpl: TypeAlias = Literal[Implementation.PYARROW]
 _DaskImpl: TypeAlias = Literal[Implementation.DASK]
 _DuckDBImpl: TypeAlias = Literal[Implementation.DUCKDB]
 _IbisImpl: TypeAlias = Literal[Implementation.IBIS]
-_PandasLikeImpl: TypeAlias = Literal[_PandasImpl, _CuDFImpl, _ModinImpl]
+_PandasLikeImpl: TypeAlias = Literal[_PandasImpl, _CuDFImpl, _ModinImpl, _BodoImpl]
 _SparkLikeImpl: TypeAlias = Literal[_PySparkImpl, _SQLFrameImpl, _PySparkConnectImpl]
 _EagerOnlyImpl: TypeAlias = Literal[_PandasLikeImpl, _ArrowImpl]
 _EagerAllowedImpl: TypeAlias = Literal[_EagerOnlyImpl, _PolarsImpl]  # noqa: PYI047
@@ -56,6 +58,7 @@ _LazyFrameCollectImpl: TypeAlias = Literal[_PandasImpl, _PolarsImpl, _ArrowImpl]
 Pandas: TypeAlias = Literal[_Pandas, _PandasImpl]
 CuDF: TypeAlias = Literal[_CuDF, _CuDFImpl]
 Modin: TypeAlias = Literal[_Modin, _ModinImpl]
+Bodo: TypeAlias = Literal[_Bodo, _BodoImpl]
 PySpark: TypeAlias = Literal[_PySpark, _PySparkImpl]
 SQLFrame: TypeAlias = Literal[_SQLFrame, _SQLFrameImpl]
 PySparkConnect: TypeAlias = Literal[_PySparkConnect, _PySparkConnectImpl]
@@ -71,7 +74,7 @@ LazyOnly: TypeAlias = Literal[SparkLike, Dask, DuckDB, Ibis]
 EagerAllowed: TypeAlias = Literal[EagerOnly, Polars]
 """A string name or [`narwhals.Implementation`][] of an eager backend.
 
-- A string name, one of: `"cudf"`, `"modin"`, `"pandas"`, `"pyarrow"`, `"polars"`.
+- A string name, one of: `"cudf"`, `"modin"`, `"pandas"`, `"pyarrow"`, `"polars"`, `"bodo"`,.
 - An Implementation, such as: `Implementation.CUDF`, `Implementation.MODIN`, ...
 """
 
@@ -98,7 +101,7 @@ IntoBackend: TypeAlias = Union[BackendT, ModuleType]
 `backend` can be specified in three ways.
 
 Examples:
-    A string backend name, such as: `"pandas"`, `"pyarrow"`, `"modin"`, `"cudf"`
+    A string backend name, such as: `"pandas"`, `"pyarrow"`, `"modin"`, `"cudf"`, `"bodo"`
 
     >>> import pandas as pd
     >>> import narwhals as nw

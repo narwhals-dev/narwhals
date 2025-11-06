@@ -43,7 +43,7 @@ if default_constructors := os.environ.get(
     DEFAULT_CONSTRUCTORS = default_constructors
 else:
     DEFAULT_CONSTRUCTORS = (
-        "pandas,pandas[pyarrow],polars[eager],pyarrow,duckdb,sqlframe,ibis"
+        "pandas,pandas[pyarrow],polars[eager],pyarrow,duckdb,sqlframe,ibis,bodo"
     )
 
 
@@ -113,6 +113,14 @@ def modin_pyarrow_constructor(obj: Data) -> NativeDataFrame:  # pragma: no cover
     import pandas as pd
 
     df = mpd.DataFrame(pd.DataFrame(obj)).convert_dtypes(dtype_backend="pyarrow")
+    return cast("NativeDataFrame", df)
+
+
+def bodo_constructor(obj: Data) -> NativeDataFrame:  # pragma: no cover
+    import bodo.pandas as bd
+    import pandas as pd
+
+    df = bd.DataFrame(pd.DataFrame(obj))
     return cast("NativeDataFrame", df)
 
 
@@ -221,6 +229,7 @@ EAGER_CONSTRUCTORS: dict[str, ConstructorEager] = {
     "pyarrow": pyarrow_table_constructor,
     "modin": modin_constructor,
     "modin[pyarrow]": modin_pyarrow_constructor,
+    "bodo": bodo_constructor,
     "cudf": cudf_constructor,
     "polars[eager]": polars_eager_constructor,
 }

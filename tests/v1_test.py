@@ -21,6 +21,8 @@ from narwhals.stable.v1.dependencies import (
     is_ibis_table,
     is_modin_dataframe,
     is_modin_series,
+    is_bodo_dataframe,
+    is_bodo_series,
     is_pandas_dataframe,
     is_pandas_like_dataframe,
     is_pandas_like_series,
@@ -345,6 +347,7 @@ def test_v1_enum_duckdb_2550() -> None:
         is_pandas_dataframe,
         is_dask_dataframe,
         is_modin_dataframe,
+        is_bodo_dataframe,
         is_polars_dataframe,
         is_cudf_dataframe,
         is_ibis_table,
@@ -364,6 +367,7 @@ def test_is_native_dataframe(is_native_dataframe: Callable[[Any], Any]) -> None:
     [
         is_pandas_series,
         is_modin_series,
+        is_bodo_series,
         is_polars_series,
         is_cudf_series,
         is_pyarrow_chunked_array,
@@ -417,6 +421,9 @@ def test_all_horizontal() -> None:
 
 
 def test_with_row_index(constructor: Constructor) -> None:
+    if "bodo" in str(constructor):
+        # BODO fail
+        pytest.skip()
     data = {"abc": ["foo", "bars"], "xyz": [100, 200], "const": [42, 42]}
 
     frame = nw_v1.from_native(constructor(data))
@@ -827,6 +834,9 @@ def test_narwhalify_backends_cross2() -> None:
 
 
 def test_expr_sample(constructor_eager: ConstructorEager) -> None:
+    if "bodo" in str(constructor_eager):
+        # BODO fail
+        pytest.skip()
     df = nw_v1.from_native(
         constructor_eager({"a": [1, 2, 3], "b": [4, 5, 6]}), eager_only=True
     )

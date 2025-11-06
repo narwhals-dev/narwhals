@@ -95,6 +95,9 @@ def test_datetime(constructor: Constructor, request: pytest.FixtureRequest) -> N
         request.applymarker(pytest.mark.xfail)
     if "modin" in str(constructor):
         pytest.skip(reason="too slow")
+    if "bodo" in str(constructor):
+        # BODO fail
+        pytest.skip()
 
     ts1 = datetime(2000, 11, 20, 18, 12, 16, 600000)
     ts2 = datetime(2020, 10, 30, 10, 20, 25, 123000)
@@ -220,6 +223,9 @@ def test_set_ops(
     ):
         # https://github.com/narwhals-dev/narwhals/issues/2469
         request.applymarker(pytest.mark.xfail)
+    if "bodo" in str(constructor):
+        # BODO fail
+        pytest.skip()
     df = nw.from_native(constructor(data))
     result = df.select(selector).collect_schema().names()
     assert sorted(result) == expected

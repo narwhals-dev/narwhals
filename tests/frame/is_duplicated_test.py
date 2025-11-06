@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 import narwhals as nw
 from tests.utils import ConstructorEager, assert_equal_data
 
@@ -14,6 +16,9 @@ def test_is_duplicated(constructor_eager: ConstructorEager) -> None:
 
 
 def test_is_duplicated_with_nulls(constructor_eager: ConstructorEager) -> None:
+    if "bodo" in str(constructor_eager):
+        # BODO fail
+        pytest.skip()
     data = {"col1": [1, 2, 3], "col2": ["one", None, None]}
     df_raw = constructor_eager(data)
     df = nw.from_native(df_raw, eager_only=True)

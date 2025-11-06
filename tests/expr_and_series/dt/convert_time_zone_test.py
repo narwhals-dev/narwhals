@@ -32,6 +32,9 @@ def test_convert_time_zone(
         pytest.skip()
     if any(x in str(constructor) for x in ("cudf", "duckdb", "pyspark", "ibis")):
         request.applymarker(pytest.mark.xfail)
+    if "bodo" in str(constructor):
+        # BODO fail
+        pytest.skip()
     data = {
         "a": [
             datetime(2020, 1, 1, tzinfo=timezone.utc),
@@ -61,6 +64,9 @@ def test_convert_time_zone_series(
         pytest.skip()
     if any(x in str(constructor_eager) for x in ("cudf",)):
         request.applymarker(pytest.mark.xfail)
+    if "bodo" in str(constructor_eager):
+        # BODO fail
+        pytest.skip()
     data = {
         "a": [
             datetime(2020, 1, 1, tzinfo=timezone.utc),
@@ -92,6 +98,9 @@ def test_convert_time_zone_from_none(
         request.applymarker(pytest.mark.xfail)
     if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 7):
         # polars used to disallow this
+        pytest.skip()
+    if "bodo" in str(constructor):
+        # BODO fail
         pytest.skip()
     data = {
         "a": [

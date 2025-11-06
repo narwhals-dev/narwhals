@@ -123,8 +123,8 @@ class Series(Generic[IntoSeriesT]):
 
                 - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
                     `POLARS`, `MODIN` or `CUDF`.
-                - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
-                - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+                - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"`, `"bodo"`, or `"cudf"`.
+                - Directly as a module `pandas`, `pyarrow`, `polars`, `modin`, `bodo`, or `cudf`.
 
         Examples:
             >>> import numpy as np
@@ -188,8 +188,8 @@ class Series(Generic[IntoSeriesT]):
 
                 - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
                     `POLARS`, `MODIN` or `CUDF`.
-                - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
-                - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+                - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"`, `"bodo"`, or `"cudf"`.
+                - Directly as a module `pandas`, `pyarrow`, `polars`, `modin`, `bodo`, or `cudf`.
 
         Returns:
             A new Series

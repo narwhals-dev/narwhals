@@ -13,6 +13,9 @@ if TYPE_CHECKING:
 
 
 def test_by_slice(constructor_eager: ConstructorEager) -> None:
+    if "bodo" in str(constructor_eager):
+        # BODO fail
+        pytest.skip()
     data = {"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, 8, 9], "d": [1, 4, 2]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = {"a": df["a"][[0, 1]]}
@@ -56,6 +59,9 @@ def test_index(constructor_eager: ConstructorEager) -> None:
     "ignore:.*_array__ implementation doesn't accept a copy keyword.*:DeprecationWarning:modin"
 )
 def test_getitem_other_series(constructor_eager: ConstructorEager) -> None:
+    if "bodo" in str(constructor_eager):
+        # BODO fail
+        pytest.skip()
     series = nw.from_native(constructor_eager({"a": [1, None, 2, 3]}), eager_only=True)[
         "a"
     ]

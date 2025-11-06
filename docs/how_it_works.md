@@ -169,7 +169,7 @@ Things generally go through a couple of layers:
     - `PandasLikeSeries` / `ArrowSeries` / `PolarsSeries` / ...
     - `PandasLikeExpr` / `ArrowExpr` / `PolarsExpr` / ...
 - The dataframe wrapper forwards the call to the underlying library, e.g.:
-    - `PandasLikeDataFrame` forwards the call to the underlying pandas/Modin/cuDF dataframe.
+    - `PandasLikeDataFrame` forwards the call to the underlying pandas/Modin/cuDF/Bodo dataframe.
     - `ArrowDataFrame` forwards the call to the underlying PyArrow table.
     - `PolarsDataFrame` forwards the call to the underlying Polars DataFrame.
 

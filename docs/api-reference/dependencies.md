@@ -7,6 +7,7 @@
         - get_cudf
         - get_ibis
         - get_modin
+        - get_bodo
         - get_pandas
         - get_polars
         - get_pyarrow
@@ -20,6 +21,9 @@
         - is_modin_dataframe
         - is_modin_index
         - is_modin_series
+        - is_bodo_dataframe
+        - is_bodo_index
+        - is_bodo_series
         - is_numpy_array
         - is_pandas_dataframe
         - is_pandas_index

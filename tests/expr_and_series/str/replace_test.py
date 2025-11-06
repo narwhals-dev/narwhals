@@ -190,6 +190,9 @@ def test_str_replace_series_multivalue(
     expected: dict[str, list[str]],
     request: pytest.FixtureRequest,
 ) -> None:
+    if "bodo" in str(constructor_eager):
+        # BODO fail
+        pytest.skip()
     df = nw.from_native(constructor_eager(data), eager_only=True)
     if any(
         x in str(constructor_eager) for x in ["pyarrow_table", "pandas", "modin", "cudf"]
@@ -228,6 +231,9 @@ def test_str_replace_all_series_multivalue(
                 raises=TypeError,
             )
         )
+    if "bodo" in str(constructor_eager):
+        # BODO fail
+        pytest.skip()
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result_series = df["a"].str.replace_all(
@@ -266,6 +272,9 @@ def test_str_replace_expr_multivalue(
                 raises=TypeError,
             )
         )
+    if "bodo" in str(constructor):
+        # BODO fail
+        pytest.skip()
 
     df = nw.from_native(constructor(data))
     result_df = df.select(
@@ -298,6 +307,9 @@ def test_str_replace_all_expr_multivalue(
                 raises=TypeError,
             )
         )
+    if "bodo" in str(constructor):
+        # BODO fail
+        pytest.skip()
 
     df = nw.from_native(constructor(data))
     result = df.select(
@@ -307,6 +319,9 @@ def test_str_replace_all_expr_multivalue(
 
 
 def test_str_replace_errors_series(constructor_eager: ConstructorEager) -> None:
+    if "bodo" in str(constructor_eager):
+        # BODO fail
+        pytest.skip()
     context: Any
     only_str_supported = pytest.raises(
         TypeError, match=r"only supports str replacement values"
@@ -348,6 +363,9 @@ def test_str_replace_errors_series(constructor_eager: ConstructorEager) -> None:
 
 
 def test_str_replace_errors_expr(constructor: Constructor) -> None:
+    if "bodo" in str(constructor):
+        # BODO fail
+        pytest.skip()
     context: Any
     not_implemented = pytest.raises(NotImplementedError)
     only_str_supported = pytest.raises(

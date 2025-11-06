@@ -57,6 +57,7 @@ PANDAS_LIKE_IMPLEMENTATION = {
     Implementation.PANDAS,
     Implementation.CUDF,
     Implementation.MODIN,
+    Implementation.BODO,
 }
 PD_DATETIME_RGX = r"""^
     datetime64\[
@@ -139,7 +140,7 @@ Always available if we reached here, due to a module-level import.
 
 
 def is_pandas_or_modin(implementation: Implementation) -> bool:
-    return implementation in {Implementation.PANDAS, Implementation.MODIN}
+    return implementation in {Implementation.PANDAS, Implementation.MODIN, Implementation.BODO}
 
 
 def align_and_extract_native(
@@ -668,7 +669,7 @@ def is_non_nullable_boolean(s: PandasLikeSeries) -> bool:
 
 def import_array_module(implementation: Implementation, /) -> ModuleType:
     """Returns numpy or cupy module depending on the given implementation."""
-    if implementation in {Implementation.PANDAS, Implementation.MODIN}:
+    if implementation in {Implementation.PANDAS, Implementation.MODIN, Implementation.BODO}:
         import numpy as np
 
         return np
@@ -676,7 +677,7 @@ def import_array_module(implementation: Implementation, /) -> ModuleType:
         import cupy as cp  # ignore-banned-import  # cuDF dependency.
 
         return cp
-    msg = f"Expected pandas/modin/cudf, got: {implementation}"  # pragma: no cover
+    msg = f"Expected pandas/modin/cudf/bodo, got: {implementation}"  # pragma: no cover
     raise AssertionError(msg)
 
 

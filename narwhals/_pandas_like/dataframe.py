@@ -231,11 +231,12 @@ class PandasLikeDataFrame(
         if self._implementation in {
             Implementation.PANDAS,
             Implementation.MODIN,
+            Implementation.BODO,
             Implementation.CUDF,
         }:
             return self._implementation.to_native_namespace()
 
-        msg = f"Expected pandas/modin/cudf, got: {type(self._implementation)}"  # pragma: no cover
+        msg = f"Expected pandas/modin/cudf/bodo, got: {type(self._implementation)}"  # pragma: no cover
         raise AssertionError(msg)
 
     def __len__(self) -> int:
@@ -603,7 +604,7 @@ class PandasLikeDataFrame(
     def _join_cross(self, other: Self, *, suffix: str) -> pd.DataFrame:
         implementation = self._implementation
         backend_version = self._backend_version
-        if (implementation.is_modin() or implementation.is_cudf()) or (
+        if (implementation.is_modin() or implementation.is_bodo() or implementation.is_cudf()) or (
             implementation.is_pandas() and backend_version < (1, 4)
         ):
             key_token = generate_temporary_column_name(
@@ -905,6 +906,8 @@ class PandasLikeDataFrame(
             return self.native.to_pandas()
         if self._implementation is Implementation.MODIN:
             return self.native._to_pandas()
+        if self._implementation is Implementation.BODO:
+            return pd.DataFrame(self.native)
         msg = f"Unknown implementation: {self._implementation}"  # pragma: no cover
         raise AssertionError(msg)
 

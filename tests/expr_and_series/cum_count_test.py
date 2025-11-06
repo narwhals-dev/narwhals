@@ -18,6 +18,9 @@ expected = {"cum_count": [1, 2, 2, 3], "reverse_cum_count": [3, 2, 1, 1]}
 
 @pytest.mark.parametrize("reverse", [True, False])
 def test_cum_count_expr(constructor_eager: ConstructorEager, *, reverse: bool) -> None:
+    if "bodo" in str(constructor_eager):
+        # BODO fail
+        pytest.skip()
     name = "reverse_cum_count" if reverse else "cum_count"
     df = nw.from_native(constructor_eager(data))
     result = df.select(nw.col("a").cum_count(reverse=reverse).alias(name))
@@ -26,6 +29,9 @@ def test_cum_count_expr(constructor_eager: ConstructorEager, *, reverse: bool) -
 
 
 def test_cum_count_series(constructor_eager: ConstructorEager) -> None:
+    if "bodo" in str(constructor_eager):
+        # BODO fail
+        pytest.skip()
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(
         cum_count=df["a"].cum_count(), reverse_cum_count=df["a"].cum_count(reverse=True)

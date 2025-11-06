@@ -185,9 +185,9 @@ def new_series(
             `backend` can be specified in various ways
 
             - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
-                `POLARS`, `MODIN` or `CUDF`.
-            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
-            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+                `POLARS`, `MODIN`, `BODO` or `CUDF`.
+            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"`, `"bodo"` or `"cudf"`.
+            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin`, `bodo` or `cudf`.
 
     Returns:
         A new Series
@@ -268,9 +268,9 @@ def from_dict(
             `backend` can be specified in various ways
 
             - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
-                `POLARS`, `MODIN` or `CUDF`.
-            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
-            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+                `POLARS`, `MODIN`, `BODO` or `CUDF`.
+            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"`, `"bodo"` or `"cudf"`.
+            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin`, `bodo` or `cudf`.
         native_namespace: deprecated, same as `backend`.
 
     Returns:
@@ -351,9 +351,9 @@ def from_numpy(
             `backend` can be specified in various ways
 
             - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
-                `POLARS`, `MODIN` or `CUDF`.
-            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
-            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+                `POLARS`, `MODIN`, `BODO` or `CUDF`.
+            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"`, `"bodo"` or `"cudf"`.
+            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin`, `bodo` or `cudf`.
 
     Returns:
         A new DataFrame.
@@ -433,9 +433,9 @@ def from_arrow(
             `backend` can be specified in various ways
 
             - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
-                `POLARS`, `MODIN` or `CUDF`.
-            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
-            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+                `POLARS`, `MODIN`, `BODO` or `CUDF`.
+            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"`, `"bodo"` or `"cudf"`.
+            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin`, `bodo` or `cudf`.
 
     Returns:
         A new DataFrame.
@@ -574,9 +574,9 @@ def read_csv(
             `backend` can be specified in various ways
 
             - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
-                `POLARS`, `MODIN` or `CUDF`.
-            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
-            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+                `POLARS`, `MODIN`, `BODO` or `CUDF`.
+            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"`, `"bodo"` or `"cudf"`.
+            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin`, `bodo` or `cudf`.
         kwargs: Extra keyword arguments which are passed to the native CSV reader.
             For example, you could use
             `nw.read_csv('file.csv', backend='pandas', engine='pyarrow')`.
@@ -602,6 +602,7 @@ def read_csv(
         Implementation.POLARS,
         Implementation.PANDAS,
         Implementation.MODIN,
+        Implementation.BODO,
         Implementation.CUDF,
     }:
         native_frame = native_namespace.read_csv(source, **kwargs)
@@ -647,9 +648,9 @@ def scan_csv(
             `backend` can be specified in various ways
 
             - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
-                `POLARS`, `MODIN` or `CUDF`.
-            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
-            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+                `POLARS`, `MODIN`, `BODO` or `CUDF`.
+            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"`, `"bodo"` or `"cudf"`.
+            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin`, `bodo` or `cudf`.
         kwargs: Extra keyword arguments which are passed to the native CSV reader.
             For example, you could use
             `nw.scan_csv('file.csv', backend=pd, engine='pyarrow')`.
@@ -679,6 +680,7 @@ def scan_csv(
     elif implementation in {
         Implementation.PANDAS,
         Implementation.MODIN,
+        Implementation.BODO,
         Implementation.CUDF,
         Implementation.DASK,
         Implementation.DUCKDB,
@@ -725,9 +727,9 @@ def read_parquet(
             `backend` can be specified in various ways
 
             - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
-                `POLARS`, `MODIN` or `CUDF`.
-            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
-            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+                `POLARS`, `MODIN`, `BODO` or `CUDF`.
+            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"`, `"bodo"` or `"cudf"`.
+            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin`, `bodo` or `cudf`.
         kwargs: Extra keyword arguments which are passed to the native parquet reader.
             For example, you could use
             `nw.read_parquet('file.parquet', backend=pd, engine='pyarrow')`.
@@ -758,6 +760,7 @@ def read_parquet(
         Implementation.POLARS,
         Implementation.PANDAS,
         Implementation.MODIN,
+        Implementation.BODO,
         Implementation.CUDF,
     }:
         native_frame = native_namespace.read_parquet(source, **kwargs)
@@ -815,11 +818,11 @@ def scan_parquet(
             `backend` can be specified in various ways
 
             - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
-                `POLARS`, `MODIN`, `CUDF`, `PYSPARK` or `SQLFRAME`.
+                `POLARS`, `MODIN`, `CUDF`, `PYSPARK`, `BODO` or `SQLFRAME`.
             - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"`, `"cudf"`,
-                `"pyspark"` or `"sqlframe"`.
+                `"pyspark"`, `"bodo"` or `"sqlframe"`.
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin`, `cudf`,
-                `pyspark.sql` or `sqlframe`.
+                `pyspark.sql`, `bodo` or `sqlframe`.
         kwargs: Extra keyword arguments which are passed to the native parquet reader.
             For example, you could use
             `nw.scan_parquet('file.parquet', backend=pd, engine='pyarrow')`.
@@ -862,6 +865,7 @@ def scan_parquet(
     elif implementation in {
         Implementation.PANDAS,
         Implementation.MODIN,
+        Implementation.BODO,
         Implementation.CUDF,
         Implementation.DASK,
         Implementation.DUCKDB,

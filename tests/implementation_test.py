@@ -20,6 +20,7 @@ if TYPE_CHECKING:
         _PandasImpl,
         _PolarsImpl,
         _SQLFrameImpl,
+        _BodoImpl,
     )
     from narwhals.typing import IntoDataFrame, IntoLazyFrame, IntoSeries
 
@@ -57,6 +58,7 @@ def test_implementation_polars() -> None:
     [
         ("PANDAS", "pandas"),
         ("MODIN", "modin"),
+        ("BODO", "bodo"),
         ("CUDF", "cudf"),
         ("PYARROW", "pyarrow"),
         ("PYSPARK", "pyspark"),
@@ -113,6 +115,7 @@ if TYPE_CHECKING:
     import duckdb
     import ibis
     import modin.pandas as mpd
+    import bodo.pandas as bd
     import pandas as pd
     import polars as pl
     import pyarrow as pa
@@ -262,6 +265,23 @@ if TYPE_CHECKING:
         assert_type(df_impl, _ModinImpl)
         assert_type(ser_impl, _ModinImpl)
 
+    def test_bodo_typing(native: bd.DataFrame) -> None:
+        df = nw.from_native(native)
+        # NOTE: Arbitrary method that returns a `Series`
+        ser = nw.from_native(native.duplicated(), series_only=True)
+
+        df_impl = df.implementation
+        ser_impl = ser.implementation
+
+        # [True Negative]
+        any_df.lazy(df_impl)  # pyright: ignore[reportArgumentType]
+        any_df.lazy(ser_impl)  # pyright: ignore[reportArgumentType]
+        any_ldf.collect(df_impl)  # pyright: ignore[reportArgumentType]
+        any_ldf.collect(ser_impl)  # pyright: ignore[reportArgumentType]
+
+        assert_type(df_impl, _BodoImpl)
+        assert_type(ser_impl, _BodoImpl)
+
     def test_any_typing() -> None:
         df_impl = any_df.implementation
         ldf_impl = any_ldf.implementation
@@ -303,8 +323,8 @@ if TYPE_CHECKING:
         assert_type(ser_impl, _EagerAllowedImpl)
 
     def test_mixed_eager_typing(
-        *args: nw.DataFrame[pl.DataFrame | pd.DataFrame | pa.Table]
-        | nw.Series[pl.Series | pd.Series[Any] | pa.ChunkedArray[Any]],
+        *args: nw.DataFrame[pl.DataFrame | pd.DataFrame | pa.Table | bd.DataFrame]
+        | nw.Series[pl.Series | pd.Series[Any] | bd.Series | pa.ChunkedArray[Any]],
     ) -> None:
         # NOTE: Any combination of eager objects that **does not** include `cuDF`, `modin` should
         # preserve that detail
@@ -315,4 +335,4 @@ if TYPE_CHECKING:
         # [True Positive]
         any_ldf.collect(mix_impl)
 
-        assert_type(mix_impl, _PolarsImpl | _PandasImpl | _ArrowImpl)
+        assert_type(mix_impl, _PolarsImpl | _PandasImpl | _ArrowImpl | _BodoImpl)

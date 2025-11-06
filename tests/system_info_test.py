@@ -28,6 +28,7 @@ def test_get_deps_info() -> None:
     assert "polars" in deps_info
     assert "cudf" in deps_info
     assert "modin" in deps_info
+    assert "bodo" in deps_info
     assert "pyarrow" in deps_info
     assert "numpy" in deps_info
     assert "pandas-stubs" not in deps_info
