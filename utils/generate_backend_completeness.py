@@ -176,7 +176,7 @@ def find_backend_class(
     return None
 
 
-def get_backend_methods(  # noqa: C901
+def get_backend_methods(  # noqa: C901, PLR0912
     module_name: str, backend: Backend, target_class_name: str
 ) -> set[str]:
     """Get all implemented methods for a backend's implementation of a class."""
@@ -223,6 +223,9 @@ def get_backend_methods(  # noqa: C901
     # Some functions are implemented by composing other pieces:
     # - min, max, mean, median, sum: implemented via col + Expr.<method>
     # - format: implemented via concat_str
+    # - when: implemented via when_then in the namespace (returns When class)
+    # - I/O functions: read_csv, read_parquet (eager only), scan_csv, scan_parquet (all backends)
+    # - Constructor functions: from_dict, from_dicts, from_arrow, from_numpy (eager only)
     if module_name == "functions":
         # Get Expr methods to check for composed functions
         expr_methods = get_backend_methods("expr", backend, "Expr")
@@ -236,6 +239,64 @@ def get_backend_methods(  # noqa: C901
         # format is implemented via concat_str
         if "concat_str" in methods:
             methods.add("format")
+
+        # when is implemented via the when_then method in the namespace
+        # The when function returns a When object, and the actual logic uses when_then
+        if "when_then" in methods:
+            methods.add("when")
+
+        # I/O functions are defined directly in functions.py for all backends
+        # read_* are eager-only, scan_* are available for all backends
+        if backend.type_ in {BackendType.EAGER, BackendType.BOTH}:
+            methods.update({"read_csv", "read_parquet"})
+        methods.update({"scan_csv", "scan_parquet"})
+
+        # Constructor functions are implemented via DataFrame class methods (eager only)
+        if backend.type_ in {BackendType.EAGER, BackendType.BOTH}:
+            methods.update(
+                {"from_arrow", "from_dict", "from_dicts", "from_numpy", "new_series"}
+            )
+
+    # Special case: Expr.is_close is implemented at wrapper level via other methods
+    # It's composed from sub/abs operations, available for all backends
+    if module_name == "expr" and target_class_name == "Expr":
+        methods.add("is_close")
+
+    # Special case: Series methods implemented at wrapper level or via composition
+    if module_name == "series" and target_class_name == "Series":
+        # is_close is composed from other operations, available for all backends
+        methods.add("is_close")
+
+        # hist is implemented via hist_from_bins and hist_from_bin_count
+        if "hist_from_bins" in methods and "hist_from_bin_count" in methods:
+            methods.add("hist")
+
+        # These are implemented directly in the Series wrapper class (eager only)
+        if backend.type_ in {BackendType.EAGER, BackendType.BOTH}:
+            methods.update({"from_iterable", "from_numpy", "shape"})
+
+        # rename is implemented via alias at wrapper level
+        if "alias" in methods:
+            methods.add("rename")
+
+    # Special case: DataFrame methods implemented at wrapper level or via composition
+    if module_name == "dataframe" and target_class_name == "DataFrame":
+        # Constructor methods are implemented in DataFrame class (eager only)
+        if backend.type_ in {BackendType.EAGER, BackendType.BOTH}:
+            methods.update({"from_arrow", "from_dict", "from_dicts", "from_numpy"})
+
+        # is_duplicated is implemented via is_unique at wrapper level
+        if "is_unique" in methods:
+            methods.add("is_duplicated")
+
+        # null_count is implemented via Expr.null_count at wrapper level
+        # Available for all backends that support expressions
+        expr_methods = get_backend_methods("expr", backend, "Expr")
+        if "null_count" in expr_methods:
+            methods.add("null_count")
+
+        # is_empty is implemented via len() at wrapper level, available for all backends
+        methods.add("is_empty")
 
     # Add always-implemented methods
     methods.update(ALWAYS_IMPLEMENTED)
