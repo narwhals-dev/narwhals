@@ -37,11 +37,6 @@ def data_alt() -> Data:
     return {"a": [3, 5, 1, 2, None], "b": [0, 1, 3, 2, 1], "c": [9, 1, 2, 1, 1]}
 
 
-XFAIL_REQUIRES_PARTITION_BY = pytest.mark.xfail(
-    reason="Native group_by isn't enough", raises=InvalidOperationError
-)
-
-
 @pytest.mark.parametrize(
     "partition_by",
     [
@@ -111,8 +106,11 @@ def test_over_multiple(data: Data, partition_by: OneOrIterable[IntoExprColumn]) 
     assert_equal_data(result, expected)
 
 
-@XFAIL_REQUIRES_PARTITION_BY
-def test_over_cum_sum(data_with_null: Data) -> None:  # pragma: no cover
+# NOTE: Not planned
+@pytest.mark.xfail(
+    reason="Native `pyarrow` `group_by` isn't enough", raises=InvalidOperationError
+)
+def test_over_cum_sum_partition_by(data_with_null: Data) -> None:  # pragma: no cover
     df = dataframe(data_with_null)
     expected = {
         "a": ["a", "a", "b", "b", "b"],
