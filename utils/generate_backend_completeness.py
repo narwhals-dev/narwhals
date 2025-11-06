@@ -1,33 +1,13 @@
 """Generate backend API completeness tables.
 
-This script analyzes the narwhals codebase to create comprehensive tables showing which
-methods are implemented by each backend. It performs the following:
+Analyzes the narwhals codebase to create tables showing which methods are implemented
+by each backend (arrow, dask, duckdb, ibis, pandas-like, spark-like).
 
-1. For each narwhals top-level class (DataFrame, LazyFrame, Series, Expr, etc.):
-   - Discovers all public methods and properties
-   - Checks each backend's implementation for those methods
-   - Properly handles `not_implemented` markers in the MRO
-   - Accounts for lazy vs eager backend differences
-
-2. Key features:
-   - Walks through the full Method Resolution Order (MRO) to find implementations
-   - Detects `not_implemented` markers on both methods and properties
-   - Maps DataFrame to LazyFrame for lazy-only backends (dask, duckdb, spark-like)
-   - For arrow and pandas-like backends, detects Expr methods that reuse Series
-     implementations (via the `_reuse_series` pattern in EagerExpr)
-   - Generates markdown tables with visual indicators (✓ or ✗)
-
-3. Series-reusing pattern:
-   - Arrow and pandas-like backends inherit from EagerExpr, which provides
-     `_reuse_series` methods to delegate Expr implementations to Series
-   - When processing expr/expr_* modules, the script automatically checks the
-     corresponding series/series_* modules to find inherited implementations
-   - This ensures that methods like `filter`, `contains`, `len_chars`, etc. are
-     correctly marked as supported when they exist in the Series implementation
-
-4. Output:
-   - Creates separate markdown files for each class in docs/api-completeness/
-   - Tables show: Method name | backend support | polars (always ✓)
+For each class (DataFrame, LazyFrame, Series, Expr, etc.), the script:
+- Discovers all public methods
+- Checks backend implementations, handling `not_implemented` markers
+- Accounts for lazy vs eager backends and Series-reusing patterns in Expr classes
+- Generates markdown tables in docs/api-completeness/ with ✓/✗ indicators
 """
 
 from __future__ import annotations
@@ -96,10 +76,25 @@ ALWAYS_IMPLEMENTED = {"pipe", "to_native"}
 # Backends that reuse Series implementations for Expr (and subnamespaces)
 SERIES_REUSING_BACKENDS = {"arrow", "pandas-like"}
 
+# Constructor functions available for eager backends
+EAGER_CONSTRUCTOR_METHODS = {"from_arrow", "from_dict", "from_dicts", "from_numpy"}
 
-def inherits_from_eager_expr(kls: type[Any]) -> bool:
-    """Check if a class inherits from EagerExpr (uses _reuse_series pattern)."""
-    return any(base.__name__ == "EagerExpr" for base in inspect.getmro(kls))
+
+def _is_eager_allowed(backend: Backend) -> bool:
+    """Check if a backend supports eager evaluation."""
+    return backend.type_ in {BackendType.EAGER, BackendType.BOTH}
+
+
+def _get_public_methods_and_properties(obj: type[Any]) -> set[str]:
+    """Get all public method and property names from a class."""
+    methods = set()
+    for name in dir(obj):
+        if name.startswith("_"):
+            continue
+        attr = getattr(obj, name, None)
+        if callable(attr) or isinstance(attr, property):
+            methods.add(name)
+    return methods
 
 
 def get_implemented_methods_from_class(kls: type[Any]) -> set[str]:
@@ -110,51 +105,47 @@ def get_implemented_methods_from_class(kls: type[Any]) -> set[str]:
     implemented = set()
 
     for name in dir(kls):
+        # Skip non public methods
         if name.startswith("_"):
             continue
 
         try:
-            # Get the attribute from the class (not instance)
             attr = inspect.getattr_static(kls, name)
 
-            # Check if it's a not_implemented marker
-            if isinstance(attr, not_implemented):
+            # Check if it's a `not_implemented` marker. For properties, check if the `fget` is `not_implemented`
+            if isinstance(attr, not_implemented) or (
+                isinstance(attr, property) and isinstance(attr.fget, not_implemented)
+            ):
                 continue
 
-            # For properties, check if the fget is not_implemented
-            if isinstance(attr, property) and isinstance(attr.fget, not_implemented):
-                continue
-
-            # If we get here, it's implemented
             if callable(attr) or isinstance(attr, property):
                 implemented.add(name)
+
         except AttributeError:
-            # If we can't get the attribute, skip it
             continue
 
     return implemented
 
 
-def find_backend_class(
-    module_name: str, backend_module: str, target_class_name: str
+def find_compliant_class(
+    module_name: str, compliant_module: str, target_class_name: str
 ) -> type[Any] | None:
-    """Find the backend implementation class for a given narwhals class.
+    """Find the compliant implementation class for a given narwhals class.
 
-    Args:
+    Arguments:
         module_name: The narwhals module name (e.g., "dataframe")
-        backend_module: The backend module path (e.g., "_arrow")
+        compliant_module: The compliant module path (e.g., "_arrow")
         target_class_name: The class name to find (e.g., "DataFrame")
-        backend_type: Whether the backend is lazy or eager
 
     Returns:
-        The backend class if found, None otherwise.
+        The compliant class if found, None otherwise.
     """
     # Special case: for functions, look for the Namespace class
     if module_name == "functions":
         module_name, target_class_name = "namespace", "Namespace"
 
     try:
-        module = importlib.import_module(f"narwhals.{backend_module}.{module_name}")
+        module = importlib.import_module(f"narwhals.{compliant_module}.{module_name}")
     except ModuleNotFoundError:
         return None
 
@@ -176,7 +167,104 @@ def find_backend_class(
     return None
 
 
-def get_backend_methods(  # noqa: C901, PLR0912
+def _add_series_reusing_methods(
+    methods: set[str], module_name: str, backend: Backend, target_class_name: str
+) -> set[str]:
+    """Add methods from Series implementations for arrow and pandas-like Expr classes."""
+    if backend.name not in SERIES_REUSING_BACKENDS or not module_name.startswith("expr"):
+        return methods
+
+    # Map expr module to corresponding series module
+    series_module = module_name.replace("expr", "series")
+    series_class_name = target_class_name.replace("Expr", "Series")
+
+    # Get methods from the corresponding Series class
+    series_class = find_compliant_class(series_module, backend.module, series_class_name)
+
+    if series_class is not None:
+        series_methods = get_implemented_methods_from_class(series_class)
+        methods.update(series_methods)
+    return methods
+
+
+def _add_string_namespace_methods(methods: set[str], module_name: str) -> set[str]:
+    """Add head/tail methods for StringNamespace when slice is available."""
+    if module_name in {"expr_str", "series_str"} and "slice" in methods:
+        methods.update({"head", "tail"})
+    return methods
+
+
+def _add_functions_methods(methods: set[str], backend: Backend) -> set[str]:
+    """Add composed and wrapper-level methods for the functions module."""
+    # Get Expr methods to check for composed functions
+    expr_methods = get_backend_methods("expr", backend, "Expr")
+
+    # Aggregation functions: implemented via col + Expr.<method>
+    if "col" in methods:
+        for agg_method in ("min", "max", "mean", "median", "sum"):
+            if agg_method in expr_methods:
+                methods.add(agg_method)
+
+    # format is implemented via concat_str
+    if "concat_str" in methods:
+        methods.add("format")
+
+    # when is implemented via when_then in the namespace
+    if "when_then" in methods:
+        methods.add("when")
+
+    # I/O functions: read_* are eager-only, scan_* are for all backends
+    if _is_eager_allowed(backend):
+        methods.update({"read_csv", "read_parquet"})
+    methods.update({"scan_csv", "scan_parquet"})
+
+    # Constructor functions (eager only)
+    if _is_eager_allowed(backend):
+        methods.update(EAGER_CONSTRUCTOR_METHODS | {"new_series"})
+    return methods
+
+
+def _add_series_methods(methods: set[str], backend: Backend) -> set[str]:
+    """Add composed and wrapper-level methods for the Series class."""
+    # is_close is composed from other operations
+    methods.add("is_close")
+
+    # hist is implemented via hist_from_bins and hist_from_bin_count
+    if "hist_from_bins" in methods and "hist_from_bin_count" in methods:
+        methods.add("hist")
+
+    # Wrapper-level methods (eager only)
+    if _is_eager_allowed(backend):
+        methods.update({"from_iterable", "from_numpy", "shape"})
+
+    # rename is implemented via alias
+    if "alias" in methods:
+        methods.add("rename")
+
+    return methods
+
+
+def _add_dataframe_methods(methods: set[str], backend: Backend) -> set[str]:
+    """Add composed and wrapper-level methods for the DataFrame class."""
+    # Constructor methods (eager only)
+    if _is_eager_allowed(backend):
+        methods.update(EAGER_CONSTRUCTOR_METHODS)
+
+    # is_duplicated is implemented via is_unique
+    if "is_unique" in methods:
+        methods.add("is_duplicated")
+
+    # null_count is implemented via Expr.null_count
+    expr_methods = get_backend_methods("expr", backend, "Expr")
+    if "null_count" in expr_methods:
+        methods.add("null_count")
+
+    # is_empty is implemented via len()
+    methods.add("is_empty")
+    return methods
+
+
+def get_backend_methods(
     module_name: str, backend: Backend, target_class_name: str
 ) -> set[str]:
     """Get all implemented methods for a backend's implementation of a class."""
@@ -185,118 +273,29 @@ def get_backend_methods(  # noqa: C901, PLR0912
     if module_name == "expr_name" and target_class_name == "ExprNameNamespace":
         return get_narwhals_methods(module_name, target_class_name)
 
-    backend_class = find_backend_class(module_name, backend.module, target_class_name)
+    backend_class = find_compliant_class(module_name, backend.module, target_class_name)
 
     methods = set()
     if backend_class is not None:
         methods = get_implemented_methods_from_class(backend_class)
 
-    # For arrow and pandas-like backends, Expr classes reuse Series implementations
-    # This applies to:
-    # - Expr -> Series (main expression class)
-    # - expr_str -> series_str (ExprStringNamespace -> SeriesStringNamespace)
-    # - expr_list -> series_list (ExprListNamespace -> SeriesListNamespace)
-    # - expr_dt -> series_dt (ExprDateTimeNamespace -> SeriesDateTimeNamespace)
-    # - expr_cat -> series_cat (ExprCatNamespace -> SeriesCatNamespace)
-    # - expr_struct -> series_struct (ExprStructNamespace -> SeriesStructNamespace)
-    if backend.name in SERIES_REUSING_BACKENDS and module_name.startswith("expr"):
-        # Map expr module to corresponding series module
-        series_module = module_name.replace("expr", "series")
-        series_class_name = target_class_name.replace("Expr", "Series")
+    # Add methods from Series implementations for Expr classes (arrow, pandas-like)
+    methods = _add_series_reusing_methods(
+        methods, module_name, backend, target_class_name
+    )
 
-        # Get methods from the corresponding Series class
-        series_class = find_backend_class(
-            series_module, backend.module, series_class_name
-        )
+    # Add head/tail for StringNamespace when slice is available
+    methods = _add_string_namespace_methods(methods, module_name)
 
-        if series_class is not None:
-            series_methods = get_implemented_methods_from_class(series_class)
-            # Add all series methods to expr methods (union)
-            methods.update(series_methods)
-
-    # Special case: StringNamespace.head and StringNamespace.tail are implemented via slice
-    # This applies to both ExprStringNamespace and SeriesStringNamespace
-    if module_name in {"expr_str", "series_str"} and "slice" in methods:
-        methods.update({"head", "tail"})
-
-    # Special case: functions module composed methods
-    # Some functions are implemented by composing other pieces:
-    # - min, max, mean, median, sum: implemented via col + Expr.<method>
-    # - format: implemented via concat_str
-    # - when: implemented via when_then in the namespace (returns When class)
-    # - I/O functions: read_csv, read_parquet (eager only), scan_csv, scan_parquet (all backends)
-    # - Constructor functions: from_dict, from_dicts, from_arrow, from_numpy (eager only)
+    # Add module-specific composed and wrapper-level methods
     if module_name == "functions":
-        # Get Expr methods to check for composed functions
-        expr_methods = get_backend_methods("expr", backend, "Expr")
-
-        # If backend has 'col', check which aggregation methods are available on Expr
-        if "col" in methods:
-            for agg_method in ("min", "max", "mean", "median", "sum"):
-                if agg_method in expr_methods:
-                    methods.add(agg_method)
-
-        # format is implemented via concat_str
-        if "concat_str" in methods:
-            methods.add("format")
-
-        # when is implemented via the when_then method in the namespace
-        # The when function returns a When object, and the actual logic uses when_then
-        if "when_then" in methods:
-            methods.add("when")
-
-        # I/O functions are defined directly in functions.py for all backends
-        # read_* are eager-only, scan_* are available for all backends
-        if backend.type_ in {BackendType.EAGER, BackendType.BOTH}:
-            methods.update({"read_csv", "read_parquet"})
-        methods.update({"scan_csv", "scan_parquet"})
-
-        # Constructor functions are implemented via DataFrame class methods (eager only)
-        if backend.type_ in {BackendType.EAGER, BackendType.BOTH}:
-            methods.update(
-                {"from_arrow", "from_dict", "from_dicts", "from_numpy", "new_series"}
-            )
-
-    # Special case: Expr.is_close is implemented at wrapper level via other methods
-    # It's composed from sub/abs operations, available for all backends
-    if module_name == "expr" and target_class_name == "Expr":
+        methods = _add_functions_methods(methods, backend)
+    elif module_name == "series" and target_class_name == "Series":
+        methods = _add_series_methods(methods, backend)
+    elif module_name == "dataframe" and target_class_name == "DataFrame":
+        methods = _add_dataframe_methods(methods, backend)
+    elif module_name == "expr" and target_class_name == "Expr":
         methods.add("is_close")
-
-    # Special case: Series methods implemented at wrapper level or via composition
-    if module_name == "series" and target_class_name == "Series":
-        # is_close is composed from other operations, available for all backends
-        methods.add("is_close")
-
-        # hist is implemented via hist_from_bins and hist_from_bin_count
-        if "hist_from_bins" in methods and "hist_from_bin_count" in methods:
-            methods.add("hist")
-
-        # These are implemented directly in the Series wrapper class (eager only)
-        if backend.type_ in {BackendType.EAGER, BackendType.BOTH}:
-            methods.update({"from_iterable", "from_numpy", "shape"})
-
-        # rename is implemented via alias at wrapper level
-        if "alias" in methods:
-            methods.add("rename")
-
-    # Special case: DataFrame methods implemented at wrapper level or via composition
-    if module_name == "dataframe" and target_class_name == "DataFrame":
-        # Constructor methods are implemented in DataFrame class (eager only)
-        if backend.type_ in {BackendType.EAGER, BackendType.BOTH}:
-            methods.update({"from_arrow", "from_dict", "from_dicts", "from_numpy"})
-
-        # is_duplicated is implemented via is_unique at wrapper level
-        if "is_unique" in methods:
-            methods.add("is_duplicated")
-
-        # null_count is implemented via Expr.null_count at wrapper level
-        # Available for all backends that support expressions
-        expr_methods = get_backend_methods("expr", backend, "Expr")
-        if "null_count" in expr_methods:
-            methods.add("null_count")
-
-        # is_empty is implemented via len() at wrapper level, available for all backends
-        methods.add("is_empty")
 
     # Add always-implemented methods
     methods.update(ALWAYS_IMPLEMENTED)
@@ -322,7 +321,7 @@ def get_narwhals_methods(module_name: str, class_name: str) -> set[str]:
     if kls is None:
         return set()
 
-    return _get_public_methods_from_class(kls)
+    return _get_public_methods_and_properties(kls)
 
 
 def _get_public_functions_from_module(module: Any) -> set[str]:
@@ -356,16 +355,18 @@ def _get_public_functions_from_module(module: Any) -> set[str]:
     return methods
 
 
-def _get_public_methods_from_class(kls: type[Any]) -> set[str]:
-    """Get all public methods/properties from a class."""
-    methods = set()
-    for name in dir(kls):
-        if name.startswith("_"):
-            continue
-        attr = getattr(kls, name)
-        if callable(attr) or isinstance(attr, property):
-            methods.add(name)
-    return methods
+def _get_relevant_backends(class_name: str) -> tuple[Backend, ...]:
+    """Get backends relevant for a specific class.
+
+    - LazyFrame: only lazy backends
+    - DataFrame, Series, Series*: only eager backends
+    - Expr, Expr*, functions: all backends
+    """
+    if class_name == "LazyFrame":
+        return tuple(b for b in BACKENDS if b.type_ == BackendType.LAZY)
+    if class_name == "DataFrame" or class_name.startswith("Series"):
+        return tuple(b for b in BACKENDS if b.type_ == BackendType.EAGER)
+    return BACKENDS
 
 
 def create_completeness_dataframe(module_name: str, class_name: str) -> pl.DataFrame:
@@ -380,18 +381,8 @@ def create_completeness_dataframe(module_name: str, class_name: str) -> pl.DataF
         {"Backend": "narwhals", "Method": method, "Supported": True}
         for method in sorted(nw_methods)
     ]
-    # Determine which backends are relevant for this class
-    #   * LazyFrame: only lazy backends
-    #   * DataFrame, Series, Series*: only eager backends
-    #   * Expr, Expr*, functions: all backends
-    if class_name == "LazyFrame":
-        relevant_backends = (b for b in BACKENDS if b.type_ == BackendType.LAZY)
-    elif class_name == "DataFrame" or class_name.startswith("Series"):
-        relevant_backends = (b for b in BACKENDS if b.type_ == BackendType.EAGER)
-    else:
-        relevant_backends = BACKENDS
 
-    for backend in relevant_backends:
+    for backend in _get_relevant_backends(class_name):
         backend_methods = get_backend_methods(module_name, backend, class_name)
         data.extend(
             {
