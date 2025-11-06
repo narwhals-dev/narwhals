@@ -28,6 +28,7 @@ nav:
   - Resources: resources.md
   - API Completeness:
     - api-completeness/index.md
+    - Supported Top-level functions: api-completeness/functions.md
     - Supported DataFrame methods: api-completeness/dataframe.md
     - Supported LazyFrame methods: api-completeness/lazyframe.md
     - Supported Expr methods: api-completeness/expr.md

@@ -77,6 +77,7 @@ MODULES_CONFIG = {
     "series_str": ["SeriesStringNamespace"],
     "series_list": ["SeriesListNamespace"],
     "series_struct": ["SeriesStructNamespace"],
+    "functions": ["functions"],
 }
 """Mapping of narwhals top-level modules to their main classes."""
 
@@ -135,10 +136,7 @@ def get_implemented_methods_from_class(kls: type[Any]) -> set[str]:
 
 
 def find_backend_class(
-    module_name: str,
-    backend_module: str,
-    target_class_name: str,
-    backend_type: BackendType,
+    module_name: str, backend_module: str, target_class_name: str
 ) -> type[Any] | None:
     """Find the backend implementation class for a given narwhals class.
 
@@ -151,15 +149,14 @@ def find_backend_class(
     Returns:
         The backend class if found, None otherwise.
     """
+    # Special case: for functions, look for the Namespace class
+    if module_name == "functions":
+        module_name, target_class_name = "namespace", "Namespace"
+
     try:
         module = importlib.import_module(f"narwhals.{backend_module}.{module_name}")
     except ModuleNotFoundError:
         return None
-
-    # For lazy backends processing DataFrame, look for LazyFrame instead
-    search_name = target_class_name
-    if target_class_name == "DataFrame" and backend_type == BackendType.LAZY:
-        search_name = "LazyFrame"
 
     # Look for classes that match the pattern
     # Backend classes usually have names like ArrowDataFrame, PandasLikeDataFrame, etc.
@@ -173,30 +170,22 @@ def find_backend_class(
             continue
 
         # Match pattern: class name should end with or contain the target class name
-        if search_name in name:
+        if target_class_name in name:
             return obj
 
     return None
 
 
-def get_backend_methods(
+def get_backend_methods(  # noqa: C901
     module_name: str, backend: Backend, target_class_name: str
 ) -> set[str]:
     """Get all implemented methods for a backend's implementation of a class."""
     # Special case: ExprNameNamespace is implemented via CompliantExprNameNamespace
     # at the compliant level, so all backends with Expr support have all its methods
     if module_name == "expr_name" and target_class_name == "ExprNameNamespace":
-        # Check if this backend has Expr support
-        expr_class = find_backend_class("expr", backend.module, "Expr", backend.type_)
-        if expr_class is not None:
-            # If backend has Expr, it has all name namespace methods
-            nw_methods = get_narwhals_methods(module_name, target_class_name)
-            return nw_methods | ALWAYS_IMPLEMENTED
-        return set()
+        return get_narwhals_methods(module_name, target_class_name)
 
-    backend_class = find_backend_class(
-        module_name, backend.module, target_class_name, backend.type_
-    )
+    backend_class = find_backend_class(module_name, backend.module, target_class_name)
 
     methods = set()
     if backend_class is not None:
@@ -217,7 +206,7 @@ def get_backend_methods(
 
         # Get methods from the corresponding Series class
         series_class = find_backend_class(
-            series_module, backend.module, series_class_name, backend.type_
+            series_module, backend.module, series_class_name
         )
 
         if series_class is not None:
@@ -230,6 +219,24 @@ def get_backend_methods(
     if module_name in {"expr_str", "series_str"} and "slice" in methods:
         methods.update({"head", "tail"})
 
+    # Special case: functions module composed methods
+    # Some functions are implemented by composing other pieces:
+    # - min, max, mean, median, sum: implemented via col + Expr.<method>
+    # - format: implemented via concat_str
+    if module_name == "functions":
+        # Get Expr methods to check for composed functions
+        expr_methods = get_backend_methods("expr", backend, "Expr")
+
+        # If backend has 'col', check which aggregation methods are available on Expr
+        if "col" in methods:
+            for agg_method in ("min", "max", "mean", "median", "sum"):
+                if agg_method in expr_methods:
+                    methods.add(agg_method)
+
+        # format is implemented via concat_str
+        if "concat_str" in methods:
+            methods.add("format")
+
     # Add always-implemented methods
     methods.update(ALWAYS_IMPLEMENTED)
 
@@ -237,25 +244,67 @@ def get_backend_methods(
 
 
 def get_narwhals_methods(module_name: str, class_name: str) -> set[str]:
-    """Get all public methods from a narwhals top-level class."""
+    """Get all public methods from a narwhals top-level class.
+
+    For the special case of 'functions', returns all public functions from the module.
+    """
     try:
         module = importlib.import_module(f"narwhals.{module_name}")
-        kls = getattr(module, class_name, None)
-
-        if kls is None:
-            return set()
-
-        # Get all public methods/properties
-        methods = set()
-        for name in dir(kls):
-            if not name.startswith("_"):
-                attr = getattr(kls, name)
-                if callable(attr) or isinstance(attr, property):
-                    methods.add(name)
     except (ModuleNotFoundError, AttributeError):
         return set()
-    else:
-        return methods
+
+    # Special case: for functions module, get all public functions
+    if module_name == class_name == "functions":
+        return _get_public_functions_from_module(module)
+
+    kls = getattr(module, class_name, None)
+    if kls is None:
+        return set()
+
+    return _get_public_methods_from_class(kls)
+
+
+def _get_public_functions_from_module(module: Any) -> set[str]:
+    """Get all public functions from a module.
+
+    For the functions module, we only include functions that are exported
+    in narwhals.__init__.py to avoid including internal utilities.
+    """
+    # Get the list of functions exported from narwhals.__init__
+    import narwhals
+
+    all_exports = getattr(narwhals, "__all__", [])
+
+    # Functions to exclude from the completeness table
+    # show_versions is metadata-only, not a backend-specific function
+    excluded_functions = {"show_versions"}
+
+    # Get all functions from the module
+    methods = set()
+    for name in dir(module):
+        if name.startswith("_") or name in excluded_functions:
+            continue
+        attr = getattr(module, name)
+        if not (callable(attr) and inspect.isfunction(attr)):
+            continue
+
+        # Check if this function (or its alias) is exported in __all__
+        # Handle aliases like all_ -> all, len_ -> len
+        if (exported_name := name.rstrip("_")) in all_exports:
+            methods.add(exported_name)
+    return methods
+
+
+def _get_public_methods_from_class(kls: type[Any]) -> set[str]:
+    """Get all public methods/properties from a class."""
+    methods = set()
+    for name in dir(kls):
+        if name.startswith("_"):
+            continue
+        attr = getattr(kls, name)
+        if callable(attr) or isinstance(attr, property):
+            methods.add(name)
+    return methods
 
 
 def create_completeness_dataframe(module_name: str, class_name: str) -> pl.DataFrame:
@@ -266,10 +315,14 @@ def create_completeness_dataframe(module_name: str, class_name: str) -> pl.DataF
     if not nw_methods:
         return pl.DataFrame()
 
+    data = [
+        {"Backend": "narwhals", "Method": method, "Supported": True}
+        for method in sorted(nw_methods)
+    ]
     # Determine which backends are relevant for this class
     #   * LazyFrame: only lazy backends
     #   * DataFrame, Series, Series*: only eager backends
-    #   * Expr, Expr*: all backends
+    #   * Expr, Expr*, functions: all backends
     if class_name == "LazyFrame":
         relevant_backends = (b for b in BACKENDS if b.type_ == BackendType.LAZY)
     elif class_name == "DataFrame" or class_name.startswith("Series"):
@@ -277,13 +330,6 @@ def create_completeness_dataframe(module_name: str, class_name: str) -> pl.DataF
     else:
         relevant_backends = BACKENDS
 
-    # Collect data for all backends
-    data = [
-        {"Backend": "narwhals", "Method": method, "Supported": True}
-        for method in sorted(nw_methods)
-    ]
-
-    # Add backend rows
     for backend in relevant_backends:
         backend_methods = get_backend_methods(module_name, backend, class_name)
         data.extend(
@@ -366,8 +412,9 @@ def generate_completeness_tables() -> None:
             if not df.is_empty():
                 # Determine title and filename
                 if class_name in {"DataFrame", "LazyFrame"}:
-                    title = class_name
-                    filename = class_name.lower()
+                    title, filename = class_name, class_name.lower()
+                elif module_name == "functions":
+                    title = filename = "functions"
                 else:
                     title = f"{module_name}.{class_name}".replace("_", ".")
                     filename = module_name
