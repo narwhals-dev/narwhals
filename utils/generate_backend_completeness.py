@@ -474,5 +474,4 @@ def generate_completeness_tables() -> None:
                 render_table_and_write_to_output(df, title, filename)
 
 
-if __name__ == "__main__":
-    generate_completeness_tables()
+generate_completeness_tables()
