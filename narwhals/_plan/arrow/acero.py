@@ -158,14 +158,6 @@ def _aggregate(aggs: Iterable[AggSpec], /, keys: Iterable[Field] | None = None) 
     return Decl("aggregate", pac.AggregateNodeOptions(aggs_, keys=keys_))
 
 
-def aggregate(aggs: Iterable[AggSpec], /) -> Decl:
-    """May only use [Scalar aggregate] functions.
-
-    [Scalar aggregate]: https://arrow.apache.org/docs/cpp/compute.html#aggregations
-    """
-    return _aggregate(aggs)
-
-
 def group_by(keys: Iterable[Field], aggs: Iterable[AggSpec], /) -> Decl:
     """May only use [Hash aggregate] functions, requires grouping.
 
@@ -244,15 +236,6 @@ def append_column(native: pa.Table, name: str, values: IntoExpr) -> Decl:
 
 def prepend_column(native: pa.Table, name: str, values: IntoExpr) -> Decl:
     return _add_column(native, 0, name, values)
-
-
-def _union(declarations: Iterable[Decl], /) -> Decl:
-    """[`union`] merges multiple data streams with the same schema into one, similar to a `SQL UNION ALL` clause.
-
-    [`union`]: https://arrow.apache.org/docs/cpp/acero/user_guide.html#union
-    """
-    decls: Incomplete = declarations
-    return Decl("union", pac.ExecNodeOptions(), decls)
 
 
 def _order_by(
