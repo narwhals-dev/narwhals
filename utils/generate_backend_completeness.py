@@ -55,11 +55,13 @@ class BackendType(Enum):
 
 class Backend(NamedTuple):
     name: str
-    module: str
     type_: BackendType
 
+    @property
+    def module(self) -> str:
+        return f"_{self.name.replace('-', '_')}"
 
-# Mapping of narwhals top-level modules to their main classes
+
 MODULES_CONFIG = {
     "dataframe": ["DataFrame", "LazyFrame"],
     "series": ["Series"],
@@ -76,14 +78,16 @@ MODULES_CONFIG = {
     "series_list": ["SeriesListNamespace"],
     "series_struct": ["SeriesStructNamespace"],
 }
+"""Mapping of narwhals top-level modules to their main classes."""
 
-BACKENDS = [
-    Backend(name="arrow", module="_arrow", type_=BackendType.EAGER),
-    Backend(name="dask", module="_dask", type_=BackendType.LAZY),
-    Backend(name="duckdb", module="_duckdb", type_=BackendType.LAZY),
-    Backend(name="pandas-like", module="_pandas_like", type_=BackendType.EAGER),
-    Backend(name="spark-like", module="_spark_like", type_=BackendType.LAZY),
-]
+BACKENDS = (
+    Backend(name="arrow", type_=BackendType.EAGER),
+    Backend(name="dask", type_=BackendType.LAZY),
+    Backend(name="duckdb", type_=BackendType.LAZY),
+    Backend(name="ibis", type_=BackendType.LAZY),
+    Backend(name="pandas-like", type_=BackendType.EAGER),
+    Backend(name="spark-like", type_=BackendType.LAZY),
+)
 
 # Methods that are always implemented at the wrapper level
 ALWAYS_IMPLEMENTED = {"pipe", "to_native"}
@@ -262,6 +266,17 @@ def create_completeness_dataframe(module_name: str, class_name: str) -> pl.DataF
     if not nw_methods:
         return pl.DataFrame()
 
+    # Determine which backends are relevant for this class
+    #   * LazyFrame: only lazy backends
+    #   * DataFrame, Series, Series*: only eager backends
+    #   * Expr, Expr*: all backends
+    if class_name == "LazyFrame":
+        relevant_backends = (b for b in BACKENDS if b.type_ == BackendType.LAZY)
+    elif class_name == "DataFrame" or class_name.startswith("Series"):
+        relevant_backends = (b for b in BACKENDS if b.type_ == BackendType.EAGER)
+    else:
+        relevant_backends = BACKENDS
+
     # Collect data for all backends
     data = [
         {"Backend": "narwhals", "Method": method, "Supported": True}
@@ -269,7 +284,7 @@ def create_completeness_dataframe(module_name: str, class_name: str) -> pl.DataF
     ]
 
     # Add backend rows
-    for backend in BACKENDS:
+    for backend in relevant_backends:
         backend_methods = get_backend_methods(module_name, backend, class_name)
         data.extend(
             {
