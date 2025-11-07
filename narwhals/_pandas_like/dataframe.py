@@ -474,14 +474,14 @@ class PandasLikeDataFrame(
                 )
             )
         else:
-            rank = nw_col(order_by[0]).rank(method="ordinal")._to_compliant_expr(plx)
-            row_index = cast(
+            rank = cast(
                 "PandasLikeExpr",
-                (
-                    rank.over(partition_by=[], order_by=order_by)
-                    - plx.lit(1, None).broadcast()
-                ).alias(name),
+                nw_col(order_by[0]).rank(method="ordinal")._to_compliant_expr(plx),
             )
+            row_index = (
+                rank.over(partition_by=[], order_by=order_by)
+                - plx.lit(1, None).broadcast()
+            ).alias(name)
         return self.select(row_index, plx.all())
 
     def row(self, index: int) -> tuple[Any, ...]:
