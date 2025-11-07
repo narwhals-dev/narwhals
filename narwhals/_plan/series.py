@@ -9,6 +9,8 @@ from narwhals.dependencies import is_pyarrow_chunked_array
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
 
+    from typing_extensions import Self
+
     from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._typing import EagerAllowed, IntoBackend
     from narwhals.dtypes import DType
@@ -54,8 +56,9 @@ class Series(Generic[NativeSeriesT_co]):
                     )
                 )
             raise NotImplementedError(implementation)
-        msg = f"{implementation} support in Narwhals is lazy-only"
-        raise ValueError(msg)
+        else:  # pragma: no cover  # noqa: RET506
+            msg = f"{implementation} support in Narwhals is lazy-only"
+            raise ValueError(msg)
 
     @classmethod
     def from_native(
@@ -74,8 +77,11 @@ class Series(Generic[NativeSeriesT_co]):
     def to_list(self) -> list[Any]:
         return self._compliant.to_list()
 
-    def __iter__(self) -> Iterator[Any]:
+    def __iter__(self) -> Iterator[Any]:  # pragma: no cover
         yield from self.to_native()
+
+    def alias(self, name: str) -> Self:
+        return type(self)(self._compliant.alias(name))
 
 
 class SeriesV1(Series[NativeSeriesT_co]):

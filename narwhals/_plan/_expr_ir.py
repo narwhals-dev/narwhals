@@ -7,7 +7,8 @@ from narwhals._plan._guards import is_function_expr, is_literal
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.common import replace
 from narwhals._plan.options import ExprIROptions
-from narwhals._plan.typing import ExprIRT
+from narwhals._plan.typing import ExprIRT, Ignored
+from narwhals.exceptions import InvalidOperationError
 from narwhals.utils import Version
 
 if TYPE_CHECKING:
@@ -17,11 +18,14 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._plan.compliant.typing import Ctx, FrameT_contra, R_co
-    from narwhals._plan.expr import Expr, Selector
+    from narwhals._plan.expr import Expr
     from narwhals._plan.expressions.expr import Alias, Cast, Column
     from narwhals._plan.meta import MetaNamespace
+    from narwhals._plan.schema import FrozenSchema
+    from narwhals._plan.selectors import Selector
     from narwhals._plan.typing import ExprIRT2, MapIR, Seq
     from narwhals.dtypes import DType
+    from narwhals.typing import IntoDType
 
 
 class ExprIR(Immutable):
@@ -59,9 +63,16 @@ class ExprIR(Immutable):
         tp = expr.Expr if version is Version.MAIN else expr.ExprV1
         return tp._from_ir(self)
 
+    def to_selector_ir(self) -> SelectorIR:
+        msg = f"cannot turn `{self!r}` into a selector"
+        raise InvalidOperationError(msg)
+
     @property
     def is_scalar(self) -> bool:
         return False
+
+    def needs_expansion(self) -> bool:
+        return any(isinstance(e, SelectorIR) for e in self.iter_left())
 
     def map_ir(self, function: MapIR, /) -> ExprIR:
         """Apply `function` to each child node, returning a new `ExprIR`.
@@ -141,7 +152,7 @@ class ExprIR(Immutable):
             if isinstance(child, ExprIR):
                 yield from child.iter_right()
             else:
-                for node in reversed(child):
+                for node in reversed(child):  # pragma: no cover
                     yield from node.iter_right()
 
     def iter_root_names(self) -> Iterator[ExprIR]:
@@ -186,20 +197,49 @@ def _map_ir_child(obj: ExprIR | Seq[ExprIR], fn: MapIR, /) -> ExprIR | Seq[ExprI
 
 class SelectorIR(ExprIR, config=ExprIROptions.no_dispatch()):
     def to_narwhals(self, version: Version = Version.MAIN) -> Selector:
-        from narwhals._plan import expr
+        from narwhals._plan.selectors import Selector, SelectorV1
 
-        if version is Version.MAIN:
-            return expr.Selector._from_ir(self)
-        return expr.SelectorV1._from_ir(self)
+        tp = Selector if version is Version.MAIN else SelectorV1
+        return tp._from_ir(self)
 
-    def matches_column(self, name: str, dtype: DType) -> bool:
-        """Return True if we can select this column.
+    # NOTE: Corresponds with `Selector.iter_expand`
+    # A longer name is used here to distinguish expression and name-only expansion
+    def iter_expand_names(
+        self, schema: FrozenSchema, ignored_columns: Ignored
+    ) -> Iterator[str]:
+        """Yield column names that match the selector, in `schema` order[^1].
 
-        - Thinking that we could get more cache hits on an individual column basis.
-        - May also be more efficient to not iterate over the schema for every selector
-          - Instead do one pass, evaluating every selector against a single column at a time
+        Adapted from [upstream].
+
+        Arguments:
+            schema: Target scope to expand the selector in.
+            ignored_columns: Names of `group_by` columns, which are excluded[^2] from the result.
+
+        Note:
+            [^1]: `ByName`, `ByIndex` return their inputs in given order not in schema order.
+
+        Note:
+            [^2]: `ByName`, `ByIndex` will never be ignored.
+
+        [upstream]: https://github.com/pola-rs/polars/blob/2b241543851800595efd343be016b65cdbdd3c9f/crates/polars-plan/src/dsl/selector.rs#L188-L198
         """
-        raise NotImplementedError(type(self))
+        msg = f"{type(self).__name__}.iter_expand_names"
+        raise NotImplementedError(msg)
+
+    def matches(self, dtype: IntoDType) -> bool:
+        """Return True if we can select this dtype."""
+        msg = f"{type(self).__name__}.matches"
+        raise NotImplementedError(msg)
+
+    def to_dtype_selector(self) -> Self:
+        msg = f"{type(self).__name__}.to_dtype_selector"
+        raise NotImplementedError(msg)
+
+    def to_selector_ir(self) -> Self:
+        return self
+
+    def needs_expansion(self) -> bool:
+        return True
 
 
 class NamedIR(Immutable, Generic[ExprIRT]):
@@ -244,10 +284,10 @@ class NamedIR(Immutable, Generic[ExprIRT]):
     def __repr__(self) -> str:
         return f"{self.name}={self.expr!r}"
 
-    def _repr_html_(self) -> str:
+    def _repr_html_(self) -> str:  # pragma: no cover
         return f"<b>{self.name}</b>={self.expr._repr_html_()}"
 
-    def is_elementwise_top_level(self) -> bool:
+    def is_elementwise_top_level(self) -> bool:  # pragma: no cover
         """Return True if the outermost node is elementwise.
 
         Based on [`polars_plan::plans::aexpr::properties::AExpr.is_elementwise_top_level`]

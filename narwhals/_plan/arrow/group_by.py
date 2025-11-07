@@ -16,7 +16,7 @@ from narwhals._utils import Implementation
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Mapping
+    from collections.abc import Iterator, Mapping, Sequence
 
     from typing_extensions import Self, TypeAlias
 
@@ -52,6 +52,7 @@ SUPPORTED_FUNCTION: Mapping[type[ir.Function], acero.Aggregation] = {
     ir.boolean.All: "hash_all",
     ir.boolean.Any: "hash_any",
     ir.functions.Unique: "hash_distinct",  # `hash_aggregate` only
+    ir.functions.NullCount: "hash_count",
 }
 
 REQUIRES_PYARROW_20: tuple[Literal["kurtosis"], Literal["skew"]] = ("kurtosis", "skew")
@@ -138,14 +139,6 @@ def group_by_error(
     return InvalidOperationError(msg)
 
 
-def concat_str(native: pa.Table, *, separator: str = "") -> ChunkedArray:
-    dtype = fn.string_type(native.schema.types)
-    it = fn.cast_table(native, dtype).itercolumns()
-    concat: Incomplete = pc.binary_join_element_wise
-    join = options.join_replace_nulls()
-    return concat(*it, fn.lit(separator, dtype), options=join)  # type: ignore[no-any-return]
-
-
 class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
     _df: Frame
     _keys: Seq[NamedIR]
@@ -157,15 +150,12 @@ class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
         return self._df
 
     def __iter__(self) -> Iterator[tuple[Any, Frame]]:
-        temp_name = temp.column_name(self.compliant)
-        native = self.compliant.native
-        composite_values = concat_str(acero.select_names_table(native, self.key_names))
-        re_keyed = native.add_column(0, temp_name, composite_values)
+        by = self.key_names
         from_native = self.compliant._with_native
-        for v in composite_values.unique():
-            t = from_native(acero.filter_table(re_keyed, pc.field(temp_name) == v))
+        for partition in partition_by(self.compliant.native, by):
+            t = from_native(partition)
             yield (
-                t.select_names(*self.key_names).row(0),
+                t.select_names(*by).row(0),
                 t.select_names(*self._column_names_original),
             )
 
@@ -178,3 +168,59 @@ class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
         if original := self._key_names_original:
             return result.rename(dict(zip(key_names, original)))
         return result
+
+
+def _composite_key(native: pa.Table, *, separator: str = "") -> ChunkedArray:
+    """Horizontally join columns to *seed* a unique key per row combination."""
+    dtype = fn.string_type(native.schema.types)
+    it = fn.cast_table(native, dtype).itercolumns()
+    concat: Incomplete = pc.binary_join_element_wise
+    join = options.join_replace_nulls()
+    return concat(*it, fn.lit(separator, dtype), options=join)  # type: ignore[no-any-return]
+
+
+def partition_by(
+    native: pa.Table, by: Sequence[str], *, include_key: bool = True
+) -> Iterator[pa.Table]:
+    if len(by) == 1:
+        yield from _partition_by_one(native, by[0], include_key=include_key)
+    else:
+        yield from _partition_by_many(native, by, include_key=include_key)
+
+
+def _partition_by_one(
+    native: pa.Table, by: str, *, include_key: bool = True
+) -> Iterator[pa.Table]:
+    """Optimized path for single-column partition."""
+    arr_dict: Incomplete = fn.array(native.column(by).dictionary_encode("encode"))
+    indices: pa.Int32Array = arr_dict.indices
+    if not include_key:
+        native = native.remove_column(native.schema.get_field_index(by))
+    for idx in range(len(arr_dict.dictionary)):
+        # NOTE: Acero filter doesn't support `null_selection_behavior="emit_null"`
+        # Is there any reasonable way to do this in Acero?
+        yield native.filter(pc.equal(pa.scalar(idx), indices))
+
+
+def _partition_by_many(
+    native: pa.Table, by: Sequence[str], *, include_key: bool = True
+) -> Iterator[pa.Table]:
+    original_names = native.column_names
+    temp_name = temp.column_name(original_names)
+    key = acero.col(temp_name)
+    composite_values = _composite_key(acero.select_names_table(native, by))
+    # Need to iterate over the whole thing, so py_list first should be faster
+    unique_py = composite_values.unique().to_pylist()
+    re_keyed = native.add_column(0, temp_name, composite_values)
+    source = acero.table_source(re_keyed)
+    if include_key:
+        keep = original_names
+    else:
+        ignore = {*by, temp_name}
+        keep = [name for name in original_names if name not in ignore]
+    select = acero.select_names(keep)
+    for v in unique_py:
+        # NOTE: May want to split the `Declaration` production iterator into it's own function
+        # E.g, to push down column selection to *before* collection
+        # Not needed for this task though
+        yield acero.collect(source, acero.filter(key == v), select)

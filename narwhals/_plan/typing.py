@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import typing as t
+from collections.abc import Container
+from typing import TYPE_CHECKING
 
 from narwhals._typing_compat import TypeVar
 
-if t.TYPE_CHECKING:
+if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
 
     from typing_extensions import TypeAlias
@@ -14,11 +16,12 @@ if t.TYPE_CHECKING:
     from narwhals._plan._expr_ir import ExprIR, NamedIR, SelectorIR
     from narwhals._plan._function import Function
     from narwhals._plan.dataframe import DataFrame
-    from narwhals._plan.expr import Expr, Selector
+    from narwhals._plan.expr import Expr
     from narwhals._plan.expressions import operators as ops
     from narwhals._plan.expressions.functions import RollingWindow
     from narwhals._plan.expressions.namespace import IRNamespace
     from narwhals._plan.expressions.ranges import RangeFunction
+    from narwhals._plan.selectors import Selector
     from narwhals._plan.series import Series
     from narwhals.typing import NonNestedDType, NonNestedLiteral
 
@@ -26,6 +29,7 @@ __all__ = [
     "ColumnNameOrSelector",
     "DataFrameT",
     "FunctionT",
+    "Ignored",
     "IntoExpr",
     "IntoExprColumn",
     "LeftSelectorT",
@@ -126,3 +130,10 @@ DataFrameT = TypeVar("DataFrameT", bound="DataFrame[t.Any, t.Any]")
 Order: TypeAlias = t.Literal["ascending", "descending"]
 NonCrossJoinStrategy: TypeAlias = t.Literal["inner", "left", "full", "semi", "anti"]
 PartialSeries: TypeAlias = "Callable[[Iterable[t.Any]], Series[NativeSeriesAnyT]]"
+
+
+Ignored: TypeAlias = Container[str]
+"""Names of `group_by` columns, which are excluded[^1] when expanding a `Selector`.
+
+[^1]: `ByName`, `ByIndex` will never be ignored.
+"""

@@ -158,14 +158,6 @@ def _aggregate(aggs: Iterable[AggSpec], /, keys: Iterable[Field] | None = None) 
     return Decl("aggregate", pac.AggregateNodeOptions(aggs_, keys=keys_))
 
 
-def aggregate(aggs: Iterable[AggSpec], /) -> Decl:
-    """May only use [Scalar aggregate] functions.
-
-    [Scalar aggregate]: https://arrow.apache.org/docs/cpp/compute.html#aggregations
-    """
-    return _aggregate(aggs)
-
-
 def group_by(keys: Iterable[Field], aggs: Iterable[AggSpec], /) -> Decl:
     """May only use [Hash aggregate] functions, requires grouping.
 

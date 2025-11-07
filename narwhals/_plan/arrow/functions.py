@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import typing as t
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, overload
 
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
@@ -16,7 +16,7 @@ from narwhals._arrow.utils import (
 )
 from narwhals._plan import expressions as ir
 from narwhals._plan.arrow import options
-from narwhals._plan.expressions import operators as ops
+from narwhals._plan.expressions import functions as F, operators as ops
 from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
@@ -37,6 +37,7 @@ if TYPE_CHECKING:
         ChunkedArray,
         ChunkedArrayAny,
         ChunkedOrArrayAny,
+        ChunkedOrArrayT,
         ChunkedOrScalar,
         ChunkedOrScalarAny,
         DataType,
@@ -53,7 +54,7 @@ if TYPE_CHECKING:
         StringType,
         UnaryFunction,
     )
-    from narwhals.typing import ClosedInterval, IntoArrowSchema
+    from narwhals.typing import ClosedInterval, IntoArrowSchema, PythonLiteral
 
 BACKEND_VERSION = Implementation.PYARROW._backend_version()
 
@@ -91,19 +92,24 @@ def modulus(lhs: Any, rhs: Any) -> Any:
     return sub(lhs, multiply(floor_div, rhs))
 
 
+# TODO @dangotbanned: Somehow fix the typing on this
+# - `_ArrowDispatch` is relying on the gradual typing
 _DISPATCH_BINARY: Mapping[type[ops.Operator], BinOp] = {
+    # BinaryComp
     ops.Eq: eq,
     ops.NotEq: not_eq,
     ops.Lt: lt,
     ops.LtEq: lt_eq,
     ops.Gt: gt,
     ops.GtEq: gt_eq,
-    ops.Add: add,
-    ops.Sub: sub,
-    ops.Multiply: multiply,
-    ops.TrueDivide: truediv,
-    ops.FloorDivide: floordiv,
-    ops.Modulus: modulus,
+    # BinaryFunction (well it should be)
+    ops.Add: add,  # BinaryNumericTemporal
+    ops.Sub: sub,  # pyarrow-stubs
+    ops.Multiply: multiply,  # pyarrow-stubs
+    ops.TrueDivide: truediv,  # [[Any, Any], Any]
+    ops.FloorDivide: floordiv,  # [[ArrayOrScalar, ArrayOrScalar], Any]
+    ops.Modulus: modulus,  # [[Any, Any], Any]
+    # BinaryLogical
     ops.And: and_,
     ops.Or: or_,
     ops.ExclusiveOr: xor,
@@ -208,6 +214,70 @@ def n_unique(native: Any) -> pa.Int64Scalar:
     return count(native, mode="all")
 
 
+def _reverse(native: ChunkedOrArrayT) -> ChunkedOrArrayT:
+    """Unlike other slicing ops, `[::-1]` creates a full-copy.
+
+    https://github.com/apache/arrow/issues/19103#issuecomment-1377671886
+    """
+    return native[::-1]
+
+
+def cumulative(native: ChunkedArrayAny, cum_agg: F.CumAgg, /) -> ChunkedArrayAny:
+    func = _CUMULATIVE[type(cum_agg)]
+    if not cum_agg.reverse:
+        return func(native)
+    return _reverse(func(_reverse(native)))
+
+
+def cum_sum(native: ChunkedOrArrayT) -> ChunkedOrArrayT:
+    return pc.cumulative_sum(native, skip_nulls=True)
+
+
+def cum_min(native: ChunkedOrArrayT) -> ChunkedOrArrayT:
+    return pc.cumulative_min(native, skip_nulls=True)
+
+
+def cum_max(native: ChunkedOrArrayT) -> ChunkedOrArrayT:
+    return pc.cumulative_max(native, skip_nulls=True)
+
+
+def cum_prod(native: ChunkedOrArrayT) -> ChunkedOrArrayT:
+    return pc.cumulative_prod(native, skip_nulls=True)
+
+
+def cum_count(native: ChunkedArrayAny) -> ChunkedArrayAny:
+    return cum_sum(is_not_null(native).cast(pa.uint32()))
+
+
+_CUMULATIVE: Mapping[type[F.CumAgg], Callable[[ChunkedArrayAny], ChunkedArrayAny]] = {
+    F.CumSum: cum_sum,
+    F.CumCount: cum_count,
+    F.CumMin: cum_min,
+    F.CumMax: cum_max,
+    F.CumProd: cum_prod,
+}
+
+
+def diff(native: ChunkedOrArrayT) -> ChunkedOrArrayT:
+    # pyarrow.lib.ArrowInvalid: Vector kernel cannot execute chunkwise and no chunked exec function was defined
+    return (
+        pc.pairwise_diff(native)
+        if isinstance(native, pa.Array)
+        else chunked_array(pc.pairwise_diff(native.combine_chunks()))
+    )
+
+
+def shift(native: ChunkedArrayAny, n: int) -> ChunkedArrayAny:
+    if n == 0:
+        return native
+    arr = native
+    if n > 0:
+        arrays = [nulls_like(n, arr), *arr.slice(length=arr.length() - n).chunks]
+    else:
+        arrays = [*arr.slice(offset=-n).chunks, nulls_like(-n, arr)]
+    return pa.chunked_array(arrays)
+
+
 def is_between(
     native: ChunkedOrScalar[ScalarT],
     lower: ChunkedOrScalar[ScalarT],
@@ -271,24 +341,45 @@ def int_range(
     return pa.chunked_array([pa.array(np.arange(start, end, step), dtype)])
 
 
+def nulls_like(n: int, native: ArrowAny) -> ArrayAny:
+    """Create a strongly-typed Array instance with all elements null.
+
+    Uses the type of `native`.
+    """
+    return pa.nulls(n, native.type)  # type: ignore[no-any-return]
+
+
 def lit(value: Any, dtype: DataType | None = None) -> NativeScalar:
     return pa.scalar(value) if dtype is None else pa.scalar(value, dtype)
 
 
+@overload
+def array(data: ArrowAny, /) -> ArrayAny: ...
+@overload
 def array(
-    value: NativeScalar | Iterable[Any], dtype: DataType | None = None, /
+    data: Iterable[PythonLiteral], dtype: DataType | None = None, /
+) -> ArrayAny: ...
+def array(
+    data: ArrowAny | Iterable[PythonLiteral], dtype: DataType | None = None, /
 ) -> ArrayAny:
-    return (
-        pa.array([value], value.type)
-        if isinstance(value, pa.Scalar)
-        else pa.array(value, dtype)
-    )
+    """Convert `data` into an Array instance.
+
+    Note:
+        `dtype` is not used for existing `pyarrow` data, use `cast` instead.
+    """
+    if isinstance(data, pa.ChunkedArray):
+        return data.combine_chunks()
+    if isinstance(data, pa.Array):
+        return data
+    if isinstance(data, pa.Scalar):
+        return pa.array([data], data.type)
+    return pa.array(data, dtype)
 
 
 def chunked_array(
-    arr: ArrowAny | list[Iterable[Any]], dtype: DataType | None = None, /
+    data: ArrowAny | list[Iterable[Any]], dtype: DataType | None = None, /
 ) -> ChunkedArrayAny:
-    return _chunked_array(array(arr) if isinstance(arr, pa.Scalar) else arr, dtype)
+    return _chunked_array(array(data) if isinstance(data, pa.Scalar) else data, dtype)
 
 
 def concat_vertical_chunked(

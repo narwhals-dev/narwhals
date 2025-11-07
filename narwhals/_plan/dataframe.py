@@ -3,8 +3,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, get_args, overload
 
 from narwhals._plan import _parse
-from narwhals._plan._expansion import prepare_projection
+from narwhals._plan._expansion import expand_selector_irs_names, prepare_projection
 from narwhals._plan.common import ensure_seq_str, temp
+from narwhals._plan.exceptions import group_by_no_keys_error
 from narwhals._plan.group_by import GroupBy, Grouped
 from narwhals._plan.options import SortMultipleOptions
 from narwhals._plan.series import Series
@@ -49,7 +50,7 @@ class BaseFrame(Generic[NativeFrameT_co]):
         return self._version
 
     @property
-    def implementation(self) -> Implementation:
+    def implementation(self) -> Implementation:  # pragma: no cover
         return self._compliant.implementation
 
     @property
@@ -60,7 +61,7 @@ class BaseFrame(Generic[NativeFrameT_co]):
     def columns(self) -> list[str]:
         return self._compliant.columns
 
-    def __repr__(self) -> str:  # pragma: no cover
+    def __repr__(self) -> str:
         return generate_repr(f"nw.{type(self).__name__}", self.to_native().__repr__())
 
     def __init__(self, compliant: CompliantFrame[Any, NativeFrameT_co], /) -> None:
@@ -69,12 +70,12 @@ class BaseFrame(Generic[NativeFrameT_co]):
     def _with_compliant(self, compliant: CompliantFrame[Any, Incomplete], /) -> Self:
         return type(self)(compliant)
 
-    def to_native(self) -> NativeFrameT_co:
+    def to_native(self) -> NativeFrameT_co:  # pragma: no cover
         return self._compliant.native
 
     def filter(
         self, *predicates: OneOrIterable[IntoExprColumn], **constraints: Any
-    ) -> Self:
+    ) -> Self:  # pragma: no cover
         e = _parse.parse_predicates_constraints_into_expr_ir(*predicates, **constraints)
         named_irs, _ = prepare_projection((e,), schema=self)
         if len(named_irs) != 1:
@@ -104,20 +105,31 @@ class BaseFrame(Generic[NativeFrameT_co]):
         descending: OneOrIterable[bool] = False,
         nulls_last: OneOrIterable[bool] = False,
     ) -> Self:
-        sort = _parse.parse_sort_by_into_seq_of_expr_ir(by, *more_by)
+        s_irs = _parse.parse_into_seq_of_selector_ir(by, *more_by)
+        names = expand_selector_irs_names(s_irs, schema=self)
         opts = SortMultipleOptions.parse(descending=descending, nulls_last=nulls_last)
-        named_irs, _ = prepare_projection(sort, schema=self)
-        return self._with_compliant(self._compliant.sort(named_irs, opts))
+        return self._with_compliant(self._compliant.sort(names, opts))
 
-    def drop(self, *columns: str, strict: bool = True) -> Self:
-        return self._with_compliant(self._compliant.drop(columns, strict=strict))
+    def drop(
+        self, *columns: OneOrIterable[ColumnNameOrSelector], strict: bool = True
+    ) -> Self:
+        s_ir = _parse.parse_into_combined_selector_ir(*columns, require_all=strict)
+        names = expand_selector_irs_names((s_ir,), schema=self)
+        return self._with_compliant(self._compliant.drop(names))
 
-    def drop_nulls(self, subset: str | Sequence[str] | None = None) -> Self:
-        subset = [subset] if isinstance(subset, str) else subset
+    def drop_nulls(
+        self, subset: OneOrIterable[ColumnNameOrSelector] | None = None
+    ) -> Self:
+        if subset is not None:
+            s_irs = _parse.parse_into_seq_of_selector_ir(subset)
+            subset = expand_selector_irs_names(s_irs, schema=self)
         return self._with_compliant(self._compliant.drop_nulls(subset))
 
     def rename(self, mapping: Mapping[str, str]) -> Self:
         return self._with_compliant(self._compliant.rename(mapping))
+
+    def collect_schema(self) -> Schema:
+        return self.schema
 
 
 class DataFrame(
@@ -129,7 +141,7 @@ class DataFrame(
     def implementation(self) -> _EagerAllowedImpl:
         return self._compliant.implementation
 
-    def __len__(self) -> int:
+    def __len__(self) -> int:  # pragma: no cover
         return len(self._compliant)
 
     @property
@@ -182,17 +194,17 @@ class DataFrame(
     def to_dict(
         self, *, as_series: bool = True
     ) -> dict[str, Series[NativeSeriesT]] | dict[str, list[Any]]:
-        if as_series:
+        if as_series:  # pragma: no cover
             return {
                 key: self._series(value)
                 for key, value in self._compliant.to_dict(as_series=as_series).items()
             }
         return self._compliant.to_dict(as_series=as_series)
 
-    def to_series(self, index: int = 0) -> Series[NativeSeriesT]:
+    def to_series(self, index: int = 0) -> Series[NativeSeriesT]:  # pragma: no cover
         return self._series(self._compliant.to_series(index))
 
-    def get_column(self, name: str) -> Series[NativeSeriesT]:
+    def get_column(self, name: str) -> Series[NativeSeriesT]:  # pragma: no cover
         return self._series(self._compliant.get_column(name))
 
     @overload
@@ -252,11 +264,24 @@ class DataFrame(
             **constraints,
         )
         named_irs, _ = prepare_projection((e,), schema=self)
-        if len(named_irs) != 1:
+        if len(named_irs) != 1:  # pragma: no cover
             # Should be unreachable, but I guess we will see
             msg = f"Expected a single predicate after expansion, but got {len(named_irs)!r}\n\n{named_irs!r}"
             raise ValueError(msg)
         return self._with_compliant(self._compliant.filter(named_irs[0]))
+
+    def partition_by(
+        self,
+        by: OneOrIterable[ColumnNameOrSelector],
+        *more_by: ColumnNameOrSelector,
+        include_key: bool = True,
+    ) -> list[Self]:
+        by_selectors = _parse.parse_into_seq_of_selector_ir(by, *more_by)
+        names = expand_selector_irs_names(by_selectors, schema=self)
+        if not names:
+            raise group_by_no_keys_error()
+        partitions = self._compliant.partition_by(names, include_key=include_key)
+        return [self._with_compliant(p) for p in partitions]
 
 
 def _is_join_strategy(obj: Any) -> TypeIs[JoinStrategy]:

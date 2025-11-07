@@ -7,34 +7,38 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from itertools import chain
 from typing import TYPE_CHECKING, Literal, overload
 
 from narwhals._plan import expressions as ir
 from narwhals._plan._guards import is_literal
+from narwhals._plan.expressions import selectors as cs
 from narwhals._plan.expressions.literal import is_literal_scalar
 from narwhals._plan.expressions.namespace import IRNamespace
-from narwhals.exceptions import ComputeError
+from narwhals.exceptions import ComputeError, InvalidOperationError
 from narwhals.utils import Version
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator
+    from collections.abc import Iterator
+
+    from narwhals._plan import Selector
 
 
 class MetaNamespace(IRNamespace):
     """Methods to modify and traverse existing expressions."""
 
     def has_multiple_outputs(self) -> bool:
-        return any(_has_multiple_outputs(e) for e in self._ir.iter_left())
+        return any(isinstance(e, ir.SelectorIR) for e in self._ir.iter_left())
 
     def is_column(self) -> bool:
         return isinstance(self._ir, ir.Column)
 
     def is_column_selection(self, *, allow_aliasing: bool = False) -> bool:
-        return all(
-            _is_column_selection(e, allow_aliasing=allow_aliasing)
-            for e in self._ir.iter_left()
-        )
+        nodes = self._ir.iter_left()
+        selection = ir.Column, ir.SelectorIR
+        if not allow_aliasing:
+            return all(isinstance(e, selection) for e in nodes)
+        targets = *selection, ir.Alias, ir.KeepName, ir.RenameAlias
+        return all(isinstance(e, targets) for e in nodes)
 
     def is_literal(self, *, allow_aliasing: bool = False) -> bool:
         return all(
@@ -73,42 +77,25 @@ class MetaNamespace(IRNamespace):
 
     def root_names(self) -> list[str]:
         """Get the root column names."""
-        return list(_expr_to_leaf_column_names_iter(self._ir))
+        return list(iter_root_names(self._ir))
+
+    def as_selector(self) -> Selector:
+        """Try to turn this expression into a selector.
+
+        Raises if the underlying expressions is not a column or selector.
+        """
+        return self._ir.to_selector_ir().to_narwhals()
 
 
-def _expr_to_leaf_column_names_iter(expr: ir.ExprIR, /) -> Iterator[str]:
-    for e in _expr_to_leaf_column_exprs_iter(expr):
-        result = _expr_to_leaf_column_name(e)
-        if isinstance(result, str):
-            yield result
+def iter_root_names(expr: ir.ExprIR, /) -> Iterator[str]:
+    yield from (e.name for e in expr.iter_root_names() if isinstance(e, ir.Column))
 
 
-def _expr_to_leaf_column_exprs_iter(expr: ir.ExprIR, /) -> Iterator[ir.ExprIR]:
-    for outer in expr.iter_root_names():
-        if isinstance(outer, (ir.Column, ir.All)):
-            yield outer
-
-
-def _expr_to_leaf_column_name(expr: ir.ExprIR, /) -> str | ComputeError:
-    leaves = list(_expr_to_leaf_column_exprs_iter(expr))
-    if not len(leaves) <= 1:
-        msg = "found more than one root column name"
-        return ComputeError(msg)
-    if not leaves:
-        msg = "no root column name found"
-        return ComputeError(msg)
-    leaf = leaves[0]
-    if isinstance(leaf, ir.Column):
-        return leaf.name
-    if isinstance(leaf, ir.All):
-        msg = "wildcard has no root column name"
-        return ComputeError(msg)
-    msg = f"Expected unreachable, got {type(leaf).__name__!r}\n\n{leaf}"
-    return ComputeError(msg)
-
-
-def root_names_unique(exprs: Iterable[ir.ExprIR], /) -> set[str]:
-    return set(chain.from_iterable(_expr_to_leaf_column_names_iter(e) for e in exprs))
+def root_name_first(expr: ir.ExprIR, /) -> str:
+    if name := next(iter_root_names(expr), None):
+        return name
+    msg = f"`name.keep_name` expected at least one column name, got `{expr!r}`"
+    raise InvalidOperationError(msg)
 
 
 @lru_cache(maxsize=32)
@@ -116,42 +103,20 @@ def _expr_output_name(expr: ir.ExprIR, /) -> str | ComputeError:
     for e in expr.iter_output_name():
         if isinstance(e, (ir.Column, ir.Alias, ir.Literal, ir.Len)):
             return e.name
-        if isinstance(e, (ir.All, ir.KeepName, ir.RenameAlias)):
+        if isinstance(e, ir.RenameAlias):
+            parent = _expr_output_name(e.expr)
+            return e.function(parent) if isinstance(parent, str) else parent
+        if isinstance(e, ir.KeepName):
             msg = "cannot determine output column without a context for this expression"
             return ComputeError(msg)
-        if isinstance(e, (ir.Columns, ir.IndexColumns, ir.Nth)):
-            msg = "this expression may produce multiple output names"
-            return ComputeError(msg)
-        continue
+        if isinstance(e, ir.RootSelector) and (
+            isinstance(e.selector, cs.ByName) and len(e.selector.names) == 1
+        ):
+            return e.selector.names[0]
     msg = (
         f"unable to find root column name for expr '{expr!r}' when calling 'output_name'"
     )
     return ComputeError(msg)
-
-
-def get_single_leaf_name(expr: ir.ExprIR, /) -> str | ComputeError:
-    """Find the name at the start of an expression.
-
-    Normal iteration would just return the first root column it found.
-
-    Based on [`polars_plan::utils::get_single_leaf`]
-
-    [`polars_plan::utils::get_single_leaf`]: https://github.com/pola-rs/polars/blob/0fa7141ce718c6f0a4d6ae46865c867b177a59ed/crates/polars-plan/src/utils.rs#L151-L168
-    """
-    for e in expr.iter_right():
-        if isinstance(e, (ir.WindowExpr, ir.SortBy, ir.Filter)):
-            return get_single_leaf_name(e.expr)
-        if isinstance(e, ir.BinaryExpr):
-            return get_single_leaf_name(e.left)
-        # NOTE: `polars` doesn't include `Literal` here
-        if isinstance(e, (ir.Column, ir.Len)):
-            return e.name
-    msg = f"unable to find a single leaf column in expr '{expr!r}'"
-    return ComputeError(msg)
-
-
-def _has_multiple_outputs(expr: ir.ExprIR, /) -> bool:
-    return isinstance(expr, (ir.Columns, ir.IndexColumns, ir.SelectorIR, ir.All))
 
 
 def has_expr_ir(expr: ir.ExprIR, *matches: type[ir.ExprIR]) -> bool:
@@ -173,10 +138,4 @@ def _is_literal(expr: ir.ExprIR, /, *, allow_aliasing: bool) -> bool:
             and is_literal_scalar(expr.expr)
             and isinstance(expr.expr.dtype, Version.MAIN.dtypes.Datetime)
         )
-    )
-
-
-def _is_column_selection(expr: ir.ExprIR, /, *, allow_aliasing: bool) -> bool:
-    return isinstance(expr, (ir.Column, ir._ColumnSelection, ir.SelectorIR)) or (
-        allow_aliasing and isinstance(expr, (ir.Alias, ir.KeepName, ir.RenameAlias))
     )

@@ -15,7 +15,7 @@ from narwhals._plan.compliant.column import ExprDispatch
 from narwhals._plan.compliant.expr import EagerExpr
 from narwhals._plan.compliant.scalar import EagerScalar
 from narwhals._plan.compliant.typing import namespace
-from narwhals._plan.expressions import NamedIR
+from narwhals._plan.expressions.functions import NullCount
 from narwhals._utils import Implementation, Version, _StoresNative, not_implemented
 from narwhals.exceptions import InvalidOperationError, ShapeError
 
@@ -55,7 +55,15 @@ if TYPE_CHECKING:
         Not,
     )
     from narwhals._plan.expressions.expr import BinaryExpr, FunctionExpr
-    from narwhals._plan.expressions.functions import Abs, FillNull, Pow
+    from narwhals._plan.expressions.functions import (
+        Abs,
+        CumAgg,
+        Diff,
+        FillNull,
+        NullCount,
+        Pow,
+        Shift,
+    )
     from narwhals.typing import Into1DArray, IntoDType, PythonLiteral
 
     Expr: TypeAlias = "ArrowExpr"
@@ -322,13 +330,31 @@ class ArrowExpr(  # type: ignore[misc]
         return self._with_native(result, name)
 
     # TODO @dangotbanned: top-level, complex-ish nodes
-    # - [ ] `over`/`_ordered` (with partitions) requires `group_by`, `join`
-    # - [x] `over_ordered` alone should be possible w/ the current API
-    # - [x] `map_batches` is defined in `EagerExpr`, might be simpler here than on main
+    # - [ ] Over
+    #   - [x] `over_ordered`
+    #   - [x] `group_by`, `join`
+    #   - [x] `over` (with partitions)
+    #   - [ ] `over_ordered` (with partitions)
+    # - [ ] `map_batches`
+    #   - [x] elementwise
+    #   - [ ] scalar
     # - [ ] `rolling_expr` has 4 variants
 
     def over(self, node: ir.WindowExpr, frame: Frame, name: str) -> Self:
-        raise NotImplementedError
+        resolved = (
+            frame._grouper.by_irs(*node.partition_by)
+            # TODO @dangotbanned: Clean this up so the re-alias isn't needed
+            .agg_irs(node.expr.alias(name))
+            .resolve(frame)
+        )
+        by_names = resolved.key_names
+        result = (
+            frame.select_names(*by_names)
+            .join(resolved.evaluate(frame), how="left", left_on=by_names)
+            .get_column(name)
+            .native
+        )
+        return self._with_native(result, name)
 
     def over_ordered(
         self, node: ir.OrderedWindowExpr, frame: Frame, name: str
@@ -338,8 +364,8 @@ class ArrowExpr(  # type: ignore[misc]
             raise NotImplementedError(msg)
 
         # NOTE: Converting `over(order_by=..., options=...)` into the right shape for `DataFrame.sort`
-        sort_by = tuple(NamedIR.from_ir(e) for e in node.order_by)
-        options = node.sort_options.to_multiple(len(node.order_by))
+        sort_by = tuple(node.order_by_names())
+        options = node.sort_options.to_multiple(len(sort_by))
         idx_name = temp.column_name(frame)
         sorted_context = frame.with_row_index(idx_name).sort(sort_by, options)
         evaluated = node.expr.dispatch(self, sorted_context.drop([idx_name]), name)
@@ -372,6 +398,24 @@ class ArrowExpr(  # type: ignore[misc]
     def rolling_expr(self, node: ir.RollingExpr, frame: Frame, name: str) -> Self:
         raise NotImplementedError
 
+    def shift(self, node: ir.FunctionExpr[Shift], frame: Frame, name: str) -> Self:
+        series = self._dispatch_expr(node.input[0], frame, name)
+        return self._with_native(fn.shift(series.native, node.function.n), name)
+
+    def diff(self, node: ir.FunctionExpr[Diff], frame: Frame, name: str) -> Self:
+        series = self._dispatch_expr(node.input[0], frame, name)
+        return self._with_native(fn.diff(series.native), name)
+
+    def _cumulative(self, node: ir.FunctionExpr[CumAgg], frame: Frame, name: str) -> Self:
+        series = self._dispatch_expr(node.input[0], frame, name)
+        return self._with_native(fn.cumulative(series.native, node.function), name)
+
+    cum_count = _cumulative
+    cum_min = _cumulative
+    cum_max = _cumulative
+    cum_prod = _cumulative
+    cum_sum = _cumulative
+
     def _is_first_last_distinct(
         self,
         node: FunctionExpr[IsFirstDistinct | IsLastDistinct],
@@ -392,6 +436,12 @@ class ArrowExpr(  # type: ignore[misc]
 
     is_first_distinct = _is_first_last_distinct
     is_last_distinct = _is_first_last_distinct
+
+    def null_count(
+        self, node: ir.FunctionExpr[NullCount], frame: Frame, name: str
+    ) -> Scalar:
+        series = self._dispatch_expr(node.input[0], frame, name)
+        return self._with_native(fn.lit(series.native.null_count), name)
 
 
 class ArrowScalar(
@@ -475,8 +525,21 @@ class ArrowScalar(
         native = node.expr.dispatch(self, frame, name).native
         return self._with_native(pa.scalar(1 if native.is_valid else 0), name)
 
+    def null_count(
+        self, node: ir.FunctionExpr[NullCount], frame: Frame, name: str
+    ) -> Self:
+        native = node.input[0].dispatch(self, frame, name).native
+        return self._with_native(pa.scalar(0 if native.is_valid else 1), name)
+
     filter = not_implemented()
     over = not_implemented()
     over_ordered = not_implemented()
     map_batches = not_implemented()
+    # length_preserving
     rolling_expr = not_implemented()
+    diff = not_implemented()
+    cum_sum = not_implemented()  # TODO @dangotbanned: is this just self?
+    cum_count = not_implemented()
+    cum_min = not_implemented()
+    cum_max = not_implemented()
+    cum_prod = not_implemented()

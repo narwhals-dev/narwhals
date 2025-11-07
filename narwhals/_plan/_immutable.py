@@ -31,6 +31,8 @@ class Immutable(metaclass=ImmutableMeta):
         # NOTE: Trying to avoid this being added to synthesized `__init__`
         # Seems to be the only difference when decorating the metaclass
         __immutable_hash_value__: int
+    else:  # pragma: no cover
+        ...
 
     __immutable_keys__: ClassVar[tuple[str, ...]]
 
@@ -108,7 +110,9 @@ class Immutable(metaclass=ImmutableMeta):
 
 def _field_str(name: str, value: Any) -> str:
     if isinstance(value, tuple):
-        inner = ", ".join(f"{v}" for v in value)
+        inner = ", ".join(
+            (f"{v!s}" if not isinstance(v, str) else f"{v!r}") for v in value
+        )
         return f"{name}=[{inner}]"
     if isinstance(value, str):
         return f"{name}={value!r}"

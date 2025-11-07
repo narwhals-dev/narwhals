@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import datetime as dt
+import re  # `_utils` imports at module-level
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from narwhals._utils import _hasattr_static
+from narwhals.dtypes import DType
 
 if TYPE_CHECKING:
     from typing_extensions import TypeIs
@@ -14,8 +16,14 @@ if TYPE_CHECKING:
     from narwhals._plan import expressions as ir
     from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._plan.expr import Expr
+    from narwhals._plan.selectors import Selector
     from narwhals._plan.series import Series
-    from narwhals._plan.typing import IntoExprColumn, NativeSeriesT, Seq
+    from narwhals._plan.typing import (
+        ColumnNameOrSelector,
+        IntoExprColumn,
+        NativeSeriesT,
+        Seq,
+    )
     from narwhals.typing import NonNestedLiteral
 
     T = TypeVar("T")
@@ -44,6 +52,12 @@ def _expr(*_: Any):  # type: ignore[no-untyped-def]  # noqa: ANN202
     return expr
 
 
+def _selectors(*_: Any):  # type: ignore[no-untyped-def]  # noqa: ANN202
+    from narwhals._plan import selectors
+
+    return selectors
+
+
 def _series(*_: Any):  # type: ignore[no-untyped-def]  # noqa: ANN202
     from narwhals._plan import series
 
@@ -56,6 +70,10 @@ def is_non_nested_literal(obj: Any) -> TypeIs[NonNestedLiteral]:
 
 def is_expr(obj: Any) -> TypeIs[Expr]:
     return isinstance(obj, _expr().Expr)
+
+
+def is_selector(obj: Any) -> TypeIs[Selector]:
+    return isinstance(obj, _selectors().Selector)
 
 
 def is_column(obj: Any) -> TypeIs[Expr]:
@@ -71,6 +89,13 @@ def is_into_expr_column(obj: Any) -> TypeIs[IntoExprColumn]:
     return isinstance(obj, (str, _expr().Expr, _series().Series))
 
 
+def is_column_name_or_selector(
+    obj: Any, *, allow_expr: bool = False
+) -> TypeIs[ColumnNameOrSelector]:
+    tps = (str, _selectors().Selector) if not allow_expr else (str, _expr().Expr)
+    return isinstance(obj, tps)
+
+
 def is_compliant_series(
     obj: CompliantSeries[NativeSeriesT] | Any,
 ) -> TypeIs[CompliantSeries[NativeSeriesT]]:
@@ -78,7 +103,9 @@ def is_compliant_series(
 
 
 def is_iterable_reject(obj: Any) -> TypeIs[str | bytes | Series | CompliantSeries]:
-    return isinstance(obj, (str, bytes, _series().Series)) or is_compliant_series(obj)
+    return isinstance(obj, (str, bytes, _series().Series, DType)) or is_compliant_series(
+        obj
+    )
 
 
 def is_window_expr(obj: Any) -> TypeIs[ir.WindowExpr]:
@@ -106,9 +133,11 @@ def is_literal(obj: Any) -> TypeIs[ir.Literal[Any]]:
     return isinstance(obj, _ir().Literal)
 
 
-def is_horizontal_reduction(obj: Any) -> TypeIs[ir.FunctionExpr[Any]]:
-    return is_function_expr(obj) and obj.options.is_input_wildcard_expansion()
-
-
-def is_tuple_of(obj: Any, tp: type[T]) -> TypeIs[Seq[T]]:
+# TODO @dangotbanned: Coverage
+# Used in `ArrowNamespace._vertical`, but only horizontal is covered
+def is_tuple_of(obj: Any, tp: type[T]) -> TypeIs[Seq[T]]:  # pragma: no cover
     return bool(isinstance(obj, tuple) and obj and isinstance(obj[0], tp))
+
+
+def is_re_pattern(obj: Any) -> TypeIs[re.Pattern[str]]:
+    return isinstance(obj, re.Pattern)

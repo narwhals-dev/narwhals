@@ -1,29 +1,39 @@
 from __future__ import annotations
 
-from collections.abc import Iterable, Sequence
+import operator
+from collections import deque
+from collections.abc import Collection, Iterable, Sequence
 
 # ruff: noqa: A002
+from functools import reduce
 from itertools import chain
 from typing import TYPE_CHECKING
 
-from narwhals._plan._guards import is_expr, is_into_expr_column, is_iterable_reject
-from narwhals._plan.exceptions import (
-    invalid_into_expr_error,
-    is_iterable_pandas_error,
-    is_iterable_polars_error,
+from narwhals._native import is_native_pandas
+from narwhals._plan._guards import (
+    is_column_name_or_selector,
+    is_expr,
+    is_into_expr_column,
+    is_iterable_reject,
+    is_selector,
 )
-from narwhals.dependencies import get_polars, is_pandas_dataframe, is_pandas_series
+from narwhals._plan.common import flatten_hash_safe
+from narwhals._plan.exceptions import invalid_into_expr_error, is_iterable_error
+from narwhals._utils import qualified_type_name
+from narwhals.dependencies import get_polars
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
     from typing import Any, TypeVar
 
-    import polars as pl
     from typing_extensions import TypeAlias, TypeIs
 
-    from narwhals._plan.expressions import ExprIR
+    from narwhals._plan.expr import Expr
+    from narwhals._plan.expressions import ExprIR, SelectorIR
+    from narwhals._plan.selectors import Selector
     from narwhals._plan.typing import (
+        ColumnNameOrSelector,
         IntoExpr,
         IntoExprColumn,
         OneOrIterable,
@@ -117,11 +127,62 @@ def parse_into_expr_ir(
         expr = col(input)
     elif isinstance(input, list):
         if list_as_series is None:
-            raise TypeError(input)
+            raise TypeError(input)  # pragma: no cover
         expr = lit(list_as_series(input))
     else:
         expr = lit(input, dtype=dtype)
     return expr._ir
+
+
+def parse_into_selector_ir(
+    input: ColumnNameOrSelector | Expr, /, *, require_all: bool = True
+) -> SelectorIR:
+    return _parse_into_selector(input, require_all=require_all)._ir
+
+
+def _parse_into_selector(
+    input: ColumnNameOrSelector | Expr, /, *, require_all: bool = True
+) -> Selector:
+    if is_selector(input):
+        selector = input
+    elif isinstance(input, str):
+        import narwhals._plan.selectors as cs
+
+        selector = cs.by_name(input, require_all=require_all)
+    elif is_expr(input):
+        selector = input.meta.as_selector()
+    else:
+        msg = f"cannot turn {qualified_type_name(input)!r} into a selector"
+        raise TypeError(msg)
+    return selector
+
+
+def parse_into_combined_selector_ir(
+    *inputs: OneOrIterable[ColumnNameOrSelector], require_all: bool = True
+) -> SelectorIR:
+    import narwhals._plan.selectors as cs
+
+    flat = tuple(flatten_hash_safe(inputs))
+    selectors = deque["Selector"]()
+    if names := tuple(el for el in flat if isinstance(el, str)):
+        selector = cs.by_name(names, require_all=require_all)
+        if len(names) == len(flat):
+            return selector._ir
+        selectors.append(selector)
+    selectors.extend(_parse_into_selector(el) for el in flat if not isinstance(el, str))
+    return _any_of(selectors)._ir
+
+
+def _any_of(selectors: Collection[Selector], /) -> Selector:
+    import narwhals._plan.selectors as cs
+
+    if not selectors:
+        s: Selector = cs.empty()
+    elif len(selectors) == 1:
+        s = next(iter(selectors))
+    else:
+        s = reduce(operator.or_, selectors)
+    return s
 
 
 def parse_into_seq_of_expr_ir(
@@ -170,9 +231,37 @@ def _parse_sort_by_into_iter_expr_ir(
 ) -> Iterator[ExprIR]:
     for e in _parse_into_iter_expr_ir(by, *more_by):
         if e.is_scalar:
-            msg = f"All expressions sort keys must preserve length, but got:\n{e!r}"
-            raise InvalidOperationError(msg)
+            msg = f"All expressions sort keys must preserve length, but got:\n{e!r}"  # pragma: no cover
+            raise InvalidOperationError(msg)  # pragma: no cover
         yield e
+
+
+def parse_into_seq_of_selector_ir(
+    first_input: OneOrIterable[ColumnNameOrSelector], *more_inputs: ColumnNameOrSelector
+) -> Seq[SelectorIR]:
+    return tuple(_parse_into_iter_selector_ir(first_input, more_inputs))
+
+
+def _parse_into_iter_selector_ir(
+    first_input: OneOrIterable[ColumnNameOrSelector],
+    more_inputs: tuple[ColumnNameOrSelector, ...],
+    /,
+) -> Iterator[SelectorIR]:
+    if is_column_name_or_selector(first_input) and not more_inputs:
+        yield parse_into_selector_ir(first_input)
+        return
+
+    if not _is_empty_sequence(first_input):
+        if _is_iterable(first_input) and not isinstance(first_input, str):
+            if more_inputs:  # pragma: no cover
+                raise invalid_into_expr_error(first_input, more_inputs, {})
+            else:
+                for into in first_input:  # type: ignore[var-annotated]
+                    yield parse_into_selector_ir(into)
+        else:
+            yield parse_into_selector_ir(first_input)
+    for into in more_inputs:  # pragma: no cover
+        yield parse_into_selector_ir(into)
 
 
 def _parse_into_iter_expr_ir(
@@ -236,23 +325,23 @@ def _combine_predicates(predicates: Iterator[ExprIR], /) -> ExprIR:
         msg = "at least one predicate or constraint must be provided"
         raise TypeError(msg)
     if second := next(predicates, None):
-        return AllHorizontal().to_function_expr(first, second, *predicates)
-    return first
+        inputs = first, second, *predicates
+    elif first.meta.has_multiple_outputs():
+        # NOTE: Safeguarding against https://github.com/pola-rs/polars/issues/25022
+        inputs = (first,)
+    else:
+        return first
+    return AllHorizontal().to_function_expr(*inputs)
 
 
 def _is_iterable(obj: Iterable[T] | Any) -> TypeIs[Iterable[T]]:
-    if is_pandas_dataframe(obj) or is_pandas_series(obj):
-        raise is_iterable_pandas_error(obj)
-    if _is_polars(obj):
-        raise is_iterable_polars_error(obj)
+    if is_native_pandas(obj) or (
+        (pl := get_polars())
+        and isinstance(obj, (pl.Series, pl.Expr, pl.DataFrame, pl.LazyFrame))
+    ):
+        raise is_iterable_error(obj)
     return isinstance(obj, Iterable)
 
 
 def _is_empty_sequence(obj: Any) -> bool:
     return isinstance(obj, Sequence) and not obj
-
-
-def _is_polars(obj: Any) -> TypeIs[pl.Series | pl.Expr | pl.DataFrame | pl.LazyFrame]:
-    return (pl := get_polars()) is not None and isinstance(
-        obj, (pl.Series, pl.Expr, pl.DataFrame, pl.LazyFrame)
-    )
