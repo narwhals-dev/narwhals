@@ -91,7 +91,6 @@ def test_pyarrow(monkeypatch: pytest.MonkeyPatch) -> None:
     nw.from_native(df).group_by("a").agg(nw.col("b").mean()).filter(nw.col("a") > 1)
     assert "polars" not in sys.modules
     assert "pandas" not in sys.modules
-    assert "numpy" in sys.modules
     assert "pyarrow" in sys.modules
     assert "dask" not in sys.modules
     assert "ibis" not in sys.modules

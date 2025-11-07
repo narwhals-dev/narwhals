@@ -361,6 +361,16 @@ class PolarsSeries:
             return self._with_native(pl.select(select)[self.name])
         return self._with_native(native_is_nan)
 
+    def is_finite(self) -> Self:
+        try:
+            native_is_finite = self.native.is_finite()
+        except Exception as e:  # noqa: BLE001
+            raise catch_polars_exception(e) from None
+        if self._backend_version < (1, 18):  # pragma: no cover
+            select = pl.when(self.native.is_not_null()).then(native_is_finite)
+            return self._with_native(pl.select(select)[self.name])
+        return self._with_native(native_is_finite)
+
     def median(self) -> Any:
         from narwhals.exceptions import InvalidOperationError
 
@@ -707,7 +717,6 @@ class PolarsSeries:
     is_between: Method[Self]
     is_duplicated: Method[Self]
     is_empty: Method[bool]
-    is_finite: Method[Self]
     is_first_distinct: Method[Self]
     is_in: Method[Self]
     is_last_distinct: Method[Self]
