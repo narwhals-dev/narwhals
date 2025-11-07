@@ -92,19 +92,24 @@ def modulus(lhs: Any, rhs: Any) -> Any:
     return sub(lhs, multiply(floor_div, rhs))
 
 
+# TODO @dangotbanned: Somehow fix the typing on this
+# - `_ArrowDispatch` is relying on the gradual typing
 _DISPATCH_BINARY: Mapping[type[ops.Operator], BinOp] = {
+    # BinaryComp
     ops.Eq: eq,
     ops.NotEq: not_eq,
     ops.Lt: lt,
     ops.LtEq: lt_eq,
     ops.Gt: gt,
     ops.GtEq: gt_eq,
-    ops.Add: add,
-    ops.Sub: sub,
-    ops.Multiply: multiply,
-    ops.TrueDivide: truediv,
-    ops.FloorDivide: floordiv,
-    ops.Modulus: modulus,
+    # BinaryFunction (well it should be)
+    ops.Add: add,  # BinaryNumericTemporal
+    ops.Sub: sub,  # pyarrow-stubs
+    ops.Multiply: multiply,  # pyarrow-stubs
+    ops.TrueDivide: truediv,  # [[Any, Any], Any]
+    ops.FloorDivide: floordiv,  # [[ArrayOrScalar, ArrayOrScalar], Any]
+    ops.Modulus: modulus,  # [[Any, Any], Any]
+    # BinaryLogical
     ops.And: and_,
     ops.Or: or_,
     ops.ExclusiveOr: xor,
