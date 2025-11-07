@@ -66,6 +66,7 @@ if TYPE_CHECKING:
         MultiColSelector,
         MultiIndexSelector,
         PivotAgg,
+        SchemaDefinition,
         SingleIndexSelector,
         SizedMultiIndexSelector,
         SizedMultiNameSelector,
@@ -191,7 +192,7 @@ class CompliantDataFrame(
         /,
         *,
         context: CompliantNamespaceAny,
-        schema: IntoSchema | Mapping[str, DType | None] | None,
+        schema: SchemaDefinition | None,
     ) -> Self: ...
     @classmethod
     def from_dicts(
@@ -200,7 +201,7 @@ class CompliantDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | Mapping[str, DType | None] | None,
+        schema: SchemaDefinition | None,
     ) -> Self: ...
     @classmethod
     def from_numpy(

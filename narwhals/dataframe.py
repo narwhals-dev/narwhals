@@ -72,7 +72,6 @@ if TYPE_CHECKING:
     from narwhals._expression_parsing import ExprMetadata
     from narwhals._translate import IntoArrowTable
     from narwhals._typing import EagerAllowed, IntoBackend, LazyAllowed, Polars
-    from narwhals.dtypes import DType
     from narwhals.group_by import GroupBy, LazyGroupBy
     from narwhals.typing import (
         AsofJoinStrategy,
@@ -85,6 +84,7 @@ if TYPE_CHECKING:
         MultiColSelector as _MultiColSelector,
         MultiIndexSelector as _MultiIndexSelector,
         PivotAgg,
+        SchemaDefinition,
         SingleColSelector,
         SingleIndexSelector,
         SizeUnit,
@@ -559,7 +559,7 @@ class DataFrame(BaseFrame[DataFrameT]):
     def from_dict(
         cls,
         data: Mapping[str, Any],
-        schema: IntoSchema | Mapping[str, DType | None] | None = None,
+        schema: SchemaDefinition | None = None,
         *,
         backend: IntoBackend[EagerAllowed] | None = None,
     ) -> DataFrame[Any]:
@@ -601,8 +601,15 @@ class DataFrame(BaseFrame[DataFrameT]):
             |     1  2  4      |
             └──────────────────┘
         """
+        from narwhals._utils import NullableSchema
+
         if backend is None:
             data, backend = _from_dict_no_backend(data)
+        if (schema and data) and (
+            diff := set(NullableSchema(schema).keys()).symmetric_difference(data.keys())
+        ):
+            msg = f"Keys in `schema` and `data` are expected to match, found unmatched keys: {diff}"
+            raise InvalidOperationError(msg)
         implementation = Implementation.from_backend(backend)
         if is_eager_allowed(implementation):
             ns = cls._version.namespace.from_backend(implementation).compliant
@@ -620,7 +627,7 @@ class DataFrame(BaseFrame[DataFrameT]):
     def from_dicts(
         cls,
         data: Sequence[Mapping[str, Any]],
-        schema: IntoSchema | Mapping[str, DType | None] | None = None,
+        schema: SchemaDefinition | None = None,
         *,
         backend: IntoBackend[EagerAllowed],
     ) -> DataFrame[Any]:

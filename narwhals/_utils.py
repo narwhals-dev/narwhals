@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import re
 import sys
+from collections import OrderedDict
 from collections.abc import Collection, Container, Iterable, Iterator, Mapping, Sequence
 from datetime import timezone
 from enum import Enum, auto
@@ -111,6 +112,7 @@ if TYPE_CHECKING:
     )
     from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.dtypes import DType
+    from narwhals.schema import Schema
     from narwhals.series import Series
     from narwhals.typing import (
         CompliantDataFrame,
@@ -118,8 +120,10 @@ if TYPE_CHECKING:
         CompliantSeries,
         DTypes,
         FileSource,
+        IntoDType,
         IntoSeriesT,
         MultiIndexSelector,
+        SchemaDefinition,
         SingleIndexSelector,
         SizedMultiIndexSelector,
         SizeUnit,
@@ -2107,3 +2111,20 @@ def extend_bool(
     Stolen from https://github.com/pola-rs/polars/blob/b8bfb07a4a37a8d449d6d1841e345817431142df/py-polars/polars/_utils/various.py#L580-L594
     """
     return (value,) * n_match if isinstance(value, bool) else tuple(value)
+
+
+class NullableSchema(OrderedDict[str, "IntoDType | None"]):
+    def __init__(self, schema: SchemaDefinition | None = None) -> None:
+        schema = schema or {}
+        super().__init__(schema)
+        self.is_nullable = None in self.values()
+
+    def to_schema(self) -> Schema:
+        """Converts to Schema by filtering out None values."""
+        from narwhals.schema import Schema
+
+        if self.is_nullable:  # pragma: no cover
+            msg = "Cannot convert nullable mapping into `Schema`"
+            raise AssertionError(msg)
+
+        return Schema(self.items())  # type: ignore[arg-type]

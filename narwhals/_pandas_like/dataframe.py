@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator, Mapping, Sequence
 from itertools import chain, product
 from typing import TYPE_CHECKING, Any, Callable, Literal, cast, overload
 
@@ -28,6 +27,7 @@ from narwhals._utils import (
     check_column_names_are_unique,
     exclude_column_names,
     generate_temporary_column_name,
+    is_sequence_of,
     parse_columns_to_drop,
     scale_bytes,
     zip_strict,
@@ -36,6 +36,7 @@ from narwhals.dependencies import is_pandas_like_dataframe
 from narwhals.exceptions import InvalidOperationError, ShapeError
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator, Mapping, Sequence
     from io import BytesIO
     from pathlib import Path
     from types import ModuleType
@@ -59,6 +60,7 @@ if TYPE_CHECKING:
         IntoSchema,
         JoinStrategy,
         PivotAgg,
+        SchemaDefinition,
         SizedMultiIndexSelector,
         SizedMultiNameSelector,
         SizeUnit,
@@ -148,8 +150,11 @@ class PandasLikeDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | Mapping[str, DType | None] | None,
+        schema: SchemaDefinition | None,
     ) -> Self:
+        from narwhals._utils import NullableSchema
+
+        schema = NullableSchema(schema) if schema is not None else None
         implementation = context._implementation
         pdx = implementation.to_native_namespace()
         Series = cast("type[pd.Series[Any]]", pdx.Series)
@@ -196,8 +201,11 @@ class PandasLikeDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | Mapping[str, DType | None] | None,
+        schema: SchemaDefinition | None,
     ) -> Self:
+        from narwhals._utils import NullableSchema
+
+        schema = NullableSchema(schema) if schema is not None else None
         implementation = context._implementation
         ns = implementation.to_native_namespace()
         DataFrame = cast("type[pd.DataFrame]", ns.DataFrame)
@@ -250,16 +258,15 @@ class PandasLikeDataFrame(
 
         implementation = context._implementation
         DataFrame: Constructor = implementation.to_native_namespace().DataFrame
-        if isinstance(schema, (Mapping, Schema)):
+        if is_sequence_of(schema, str) or schema is None:
+            native = DataFrame(data, columns=cls._numpy_column_names(data, schema))
+        else:
+            schema = Schema(schema)
             it: Iterable[DTypeBackend] = (
                 get_dtype_backend(native_type, implementation)
                 for native_type in schema.values()
             )
-            native = DataFrame(data, columns=schema.keys()).astype(
-                Schema(schema).to_pandas(it)
-            )
-        else:
-            native = DataFrame(data, columns=cls._numpy_column_names(data, schema))
+            native = DataFrame(data, columns=schema.keys()).astype(schema.to_pandas(it))
         return cls.from_native(native, context=context)
 
     def __narwhals_dataframe__(self) -> Self:
