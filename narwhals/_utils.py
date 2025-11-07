@@ -672,6 +672,8 @@ def backend_version(implementation: Implementation, /) -> tuple[int, ...]:
         import bodo
 
         into_version = bodo
+        if "dev" in bodo.__version__:
+            return bodo.__version__
     else:
         into_version = native_namespace
     version = parse_version(into_version)
