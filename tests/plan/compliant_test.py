@@ -11,6 +11,8 @@ from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError
 
 pytest.importorskip("pyarrow")
 pytest.importorskip("numpy")
+import datetime as dt
+
 import numpy as np
 import pyarrow as pa
 
@@ -20,7 +22,6 @@ from narwhals._utils import Version
 from tests.plan.utils import assert_equal_data, dataframe, first, last
 
 if TYPE_CHECKING:
-    import datetime as dt
     from collections.abc import Sequence
 
     from narwhals._plan.typing import ColumnNameOrSelector, OneOrIterable
@@ -127,6 +128,35 @@ XFAIL_KLEENE_ALL_NULL = pytest.mark.xfail(
         ([nwp.int_range(nwp.len())], {"literal": [0, 1, 2]}),
         (nwp.int_range(nwp.len() * 5, 20).alias("lol"), {"lol": [15, 16, 17, 18, 19]}),
         (nwp.int_range(nwp.col("b").min() + 4, nwp.col("d").last()), {"b": [5, 6, 7]}),
+        (
+            [
+                nwp.date_range(
+                    dt.date(2020, 1, 1),
+                    dt.date(2020, 4, 30),
+                    interval="25d",
+                    closed="none",
+                )
+            ],
+            {
+                "literal": [
+                    dt.date(2020, 1, 26),
+                    dt.date(2020, 2, 20),
+                    dt.date(2020, 3, 16),
+                    dt.date(2020, 4, 10),
+                ]
+            },
+        ),
+        (
+            (
+                nwp.date_range(
+                    dt.date(2021, 1, 30),
+                    nwp.lit(18747, nw.Int32).cast(nw.Date),
+                    interval="90d",
+                    closed="left",
+                ).alias("date_range_cast_expr"),
+                {"date_range_cast_expr": [dt.date(2021, 1, 30)]},
+            )
+        ),
         (nwp.col("b") ** 2, {"b": [1, 4, 9]}),
         (
             [2 ** nwp.col("b"), (nwp.lit(2.0) ** nwp.nth(1)).alias("lit")],
