@@ -145,6 +145,13 @@ class PolarsExpr:
             native = pl.when(self.native.is_not_null()).then(self.native.is_nan())
         return self._with_native(native)
 
+    def is_finite(self) -> Self:
+        if self._backend_version >= (1, 18):
+            native = self.native.is_finite()
+        else:  # pragma: no cover
+            native = pl.when(self.native.is_not_null()).then(self.native.is_finite())
+        return self._with_native(native)
+
     def over(self, partition_by: Sequence[str], order_by: Sequence[str]) -> Self:
         # Use `pl.repeat(1, pl.len())` instead of `pl.lit(1)` to avoid issues for
         # non-numeric types: https://github.com/pola-rs/polars/issues/24756.
@@ -346,7 +353,6 @@ class PolarsExpr:
     head: Method[Self]
     is_between: Method[Self]
     is_duplicated: Method[Self]
-    is_finite: Method[Self]
     is_first_distinct: Method[Self]
     is_in: Method[Self]
     is_last_distinct: Method[Self]

@@ -244,6 +244,7 @@ def test_to_dict_as_series() -> None:
 )
 def test_hist_v1() -> None:
     pytest.importorskip("pyarrow")
+    pytest.importorskip("numpy")
     import pyarrow as pa
 
     df = nw_v1.from_native(pa.table({"a": [1, 1, 2]}), eager_only=True)
