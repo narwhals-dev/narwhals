@@ -44,6 +44,11 @@ class Backend(NamedTuple):
     def module(self) -> str:
         return f"_{self.name.replace('-', '_')}"
 
+    @property
+    def is_eager_allowed(self) -> bool:
+        """Check if a backend supports eager evaluation."""
+        return self.type_ in {BackendType.EAGER, BackendType.BOTH}
+
 
 CLASS_NAME_TO_MODULE_NAME = {
     "DataFrame": "dataframe",
@@ -100,11 +105,6 @@ DEPRECATED_METHODS = {
 
 EXCLUDED_FUNCTIONS = {"show_versions"}
 """Functions to exclude, because not backend specific"""
-
-
-def _is_eager_allowed(backend: Backend) -> bool:
-    """Check if a backend supports eager evaluation."""
-    return backend.type_ in {BackendType.EAGER, BackendType.BOTH}
 
 
 def _get_public_methods_and_properties(obj: type[Any]) -> set[str]:
@@ -230,7 +230,7 @@ def _add_functions_methods(methods: set[str], backend: Backend) -> set[str]:
     if "when_then" in methods:
         methods.add("when")
 
-    if _is_eager_allowed(backend):
+    if backend.is_eager_allowed:
         methods.update(
             {"read_csv", "read_parquet", "new_series"} | DATAFRAME_CONSTRUCTOR_METHODS
         )
@@ -252,11 +252,11 @@ def _add_series_methods(methods: set[str], backend: Backend) -> set[str]:
     if "hist_from_bins" in methods and "hist_from_bin_count" in methods:
         methods.add("hist")
 
-    if _is_eager_allowed(backend):
-        methods.update({"from_iterable", "from_numpy", "shape"})
-
     if "alias" in methods:
         methods.add("rename")
+
+    if backend.is_eager_allowed:
+        methods.update({"from_iterable", "from_numpy", "shape"})
 
     return methods
 
@@ -268,7 +268,7 @@ def _add_dataframe_methods(methods: set[str], backend: Backend) -> set[str]:
     * `is_duplicated` is implemented via `is_unique`
     * `null_count` is implemented via `Expr.null_count`
     """
-    if _is_eager_allowed(backend):
+    if backend.is_eager_allowed:
         methods.update(DATAFRAME_CONSTRUCTOR_METHODS | {"is_empty"})
 
     if "is_unique" in methods:
