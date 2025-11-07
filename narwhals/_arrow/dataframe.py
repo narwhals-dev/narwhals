@@ -540,22 +540,23 @@ class ArrowDataFrame(
                 plx._series.from_iterable(data, context=self, name=name)
             )
             return self.select(row_index, plx.all())
-        if self._backend_version >= (20,):
-            native = self.native
-            indices = pc.sort_indices(native, [(by, "ascending") for by in order_by])
-            new_col = pc.scatter(  # type: ignore[attr-defined]
-                arange(0, len(self), 1, backend_version=self._backend_version),
-                indices.cast(pa.int64()),
+        if self._backend_version < (20,):
+            rank = cast(
+                "ArrowExpr",
+                nw_col(order_by[0]).rank(method="ordinal")._to_compliant_expr(plx),
             )
-            return self._with_native(self.native.add_column(0, name, new_col))
-        rank = cast(
-            "ArrowExpr",
-            nw_col(order_by[0]).rank(method="ordinal")._to_compliant_expr(plx),
+            row_index = (
+                rank.over(partition_by=[], order_by=order_by)
+                - plx.lit(1, None).broadcast()
+            )
+            return self.select(row_index.alias(name), plx.all())
+        native = self.native
+        indices = pc.sort_indices(native, [(by, "ascending") for by in order_by])
+        new_col = pc.scatter(  # type: ignore[attr-defined]
+            arange(0, len(self), 1, backend_version=self._backend_version),
+            indices.cast(pa.int64()),
         )
-        row_index = (
-            rank.over(partition_by=[], order_by=order_by) - plx.lit(1, None).broadcast()
-        )
-        return self.select(row_index.alias(name), plx.all())
+        return self._with_native(self.native.add_column(0, name, new_col))
 
     def filter(self, predicate: ArrowExpr) -> Self:
         mask_native = self._evaluate_single_output_expr(predicate).native
