@@ -45,6 +45,8 @@ def test_with_row_index_lazy(
         pytest.skip(reason=reason)
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+        pytest.skip()
 
     result = (
         nw.from_native(constructor(data))
