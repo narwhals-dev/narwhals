@@ -485,3 +485,11 @@ def concat_tables(
 
 
 class ArrowSeriesNamespace(EagerSeriesNamespace["ArrowSeries", "ChunkedArrayAny"]): ...
+
+
+def arange(start: int, end: int, step: int, backend_version: tuple[int, ...]) -> ArrayAny:
+    if backend_version >= (22,):
+        return pa.arange(start, end, step)  # type: ignore[attr-defined]
+    import numpy as np  # ignore-banned-import
+
+    return pa.array(np.arange(start, end, step))
