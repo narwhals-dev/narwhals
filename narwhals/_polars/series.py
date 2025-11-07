@@ -362,10 +362,7 @@ class PolarsSeries:
         return self._with_native(native_is_nan)
 
     def is_finite(self) -> Self:
-        try:
-            native_is_finite = self.native.is_finite()
-        except Exception as e:  # noqa: BLE001
-            raise catch_polars_exception(e) from None
+        native_is_finite = self.native.is_finite()
         if self._backend_version < (1, 18):  # pragma: no cover
             select = pl.when(self.native.is_not_null()).then(native_is_finite)
             return self._with_native(pl.select(select)[self.name])
