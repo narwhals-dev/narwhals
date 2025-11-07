@@ -70,14 +70,29 @@ BACKENDS = (
     Backend(name="spark-like", type_=BackendType.LAZY),
 )
 
-# Methods that are always implemented at the wrapper level
 ALWAYS_IMPLEMENTED = {"pipe", "to_native"}
+"""Methods that are always implemented at the wrapper level"""
 
-# Backends that reuse Series implementations for Expr (and subnamespaces)
 SERIES_REUSING_BACKENDS = {"arrow", "pandas-like"}
+"""Backends that reuse Series implementations for Expr (and subnamespaces)"""
 
-# Constructor functions available for eager backends
 EAGER_CONSTRUCTOR_METHODS = {"from_arrow", "from_dict", "from_dicts", "from_numpy"}
+"""Constructor functions available for eager backends"""
+
+DEPRECATED_METHODS = {
+    "Expr": {
+        "arg_max",
+        "arg_min",
+        "arg_true",
+        "gather_every",
+        "head",
+        "sample",
+        "sort",
+        "tail",
+    },
+    "LazyFrame": {"gather_every", "tail"},
+}
+"""Deprecated methods to exclude from completeness tables"""
 
 
 def _is_eager_allowed(backend: Backend) -> bool:
@@ -369,10 +384,28 @@ def _get_relevant_backends(class_name: str) -> tuple[Backend, ...]:
     return BACKENDS
 
 
+def _filter_deprecated_methods(methods: set[str], class_name: str) -> set[str]:
+    """Remove deprecated methods from the set of methods.
+
+    Arguments:
+        methods: Set of method names to filter
+        module_name: The module name (e.g., "expr", "dataframe")
+        class_name: The class name (e.g., "Expr", "LazyFrame")
+
+    Returns:
+        Filtered set of methods with deprecated ones removed
+    """
+    deprecated = DEPRECATED_METHODS.get(class_name)
+    if not deprecated:
+        return methods
+
+    return methods - deprecated
+
+
 def create_completeness_dataframe(module_name: str, class_name: str) -> pl.DataFrame:
     """Create a dataframe showing backend completeness for a specific class."""
-    # Get narwhals methods
     nw_methods = get_narwhals_methods(module_name, class_name)
+    nw_methods = _filter_deprecated_methods(nw_methods, class_name)
 
     if not nw_methods:
         return pl.DataFrame()
