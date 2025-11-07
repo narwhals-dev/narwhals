@@ -333,7 +333,7 @@ class ArrowExpr(  # type: ignore[misc]
     # - [ ] Over
     #   - [x] `over_ordered`
     #   - [x] `group_by`, `join`
-    #   - [!] `over`
+    #   - [x] `over` (with partitions)
     #   - [ ] `over_ordered` (with partitions)
     # - [ ] `map_batches`
     #   - [x] elementwise
