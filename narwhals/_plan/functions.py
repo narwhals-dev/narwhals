@@ -282,6 +282,7 @@ def date_range(
     eager: IntoBackend[EagerAllowed] | t.Literal[False] = False,
 ) -> Expr | Series:
     days = _interval_days(interval)
+    closed = _ensure_closed_interval(closed)
     if eager:
         ns = _eager_namespace(eager)
         return _date_range_eager(start, end, days, closed=closed, ns=ns)
@@ -290,6 +291,14 @@ def date_range(
         .to_function_expr(*_parse.parse_into_seq_of_expr_ir(start, end))
         .to_narwhals()
     )
+
+
+def _ensure_closed_interval(closed: ClosedInterval, /) -> ClosedInterval:
+    closed_intervals = "left", "right", "none", "both"
+    if closed not in closed_intervals:
+        msg = f"`closed` must be one of {closed_intervals!r}, got {closed!r}"
+        raise TypeError(msg)
+    return closed
 
 
 # TODO @dangotbanned: Deduplicate `_{int,date}_range_eager`
