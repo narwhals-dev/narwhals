@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -17,14 +18,25 @@ polars_lt_v1 = POLARS_VERSION < (1, 0, 0)
 skip_reason = "replace_strict only available after 1.0"
 pl_skip_reason = "replace_strict only available after 1.0"
 sqlframe_xfail_reason = (
-    "AttributeError: module 'sqlframe.duckdb.functions' has no attribute 'map_keys'"
+    "AttributeError: module 'sqlframe.duckdb.functions' has no attribute 'map_keys'.\n"
+    "Issue tracker: https://github.com/eakmanrq/sqlframe/issues/545"
 )
 
 
 def xfail_if_no_default(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     lazy_non_polars_constructors = ("dask", "duckdb", "ibis", "pyspark", "sqlframe")
     if any(x in str(constructor) for x in lazy_non_polars_constructors):
-        request.applymarker(pytest.mark.xfail)
+        reason = "non-polars lazy backends require default parameter to be provided"
+        request.applymarker(pytest.mark.xfail(reason=reason))
+
+
+def xfail_if_pyspark_connect(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    is_spark_connect = os.environ.get("SPARK_CONNECT", None)
+    if is_spark_connect and "pyspark" in str(constructor):
+        reason = "`mapping_expr[expr]` raises: pyspark.errors.exceptions.base.PySparkTypeError: [UNSUPPORTED_DATA_TYPE] Unsupported DataType `Column`."
+        request.applymarker(pytest.mark.xfail(reason=reason))
 
 
 @pytest.mark.parametrize(
@@ -127,6 +139,8 @@ def test_replace_strict_pandas_unnamed_series() -> None:
 def test_replace_strict_expr_with_default(
     constructor: Constructor, request: pytest.FixtureRequest, return_dtype: DType | None
 ) -> None:
+    xfail_if_pyspark_connect(constructor, request)
+
     if "polars" in str(constructor) and polars_lt_v1:
         pytest.skip(reason=pl_skip_reason)
 
@@ -161,6 +175,8 @@ def test_replace_strict_series_with_default(
 def test_replace_strict_with_default_and_nulls(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
+    xfail_if_pyspark_connect(constructor, request)
+
     if "polars" in str(constructor) and polars_lt_v1:
         pytest.skip(reason=pl_skip_reason)
 
@@ -177,6 +193,8 @@ def test_replace_strict_with_default_and_nulls(
 def test_replace_strict_with_default_mapping(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
+    xfail_if_pyspark_connect(constructor, request)
+
     if "polars" in str(constructor) and polars_lt_v1:
         pytest.skip(reason=pl_skip_reason)
 
@@ -195,6 +213,8 @@ def test_replace_strict_with_default_mapping(
 def test_replace_strict_with_expressified_default(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
+    xfail_if_pyspark_connect(constructor, request)
+
     if "polars" in str(constructor) and polars_lt_v1:
         pytest.skip(reason=pl_skip_reason)
 
@@ -229,6 +249,8 @@ def test_replace_strict_with_series_default(constructor_eager: ConstructorEager)
 def test_mapping_key_not_in_expr(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
+    xfail_if_pyspark_connect(constructor, request)
+
     if "polars" in str(constructor) and polars_lt_v1:
         pytest.skip(reason=pl_skip_reason)
 

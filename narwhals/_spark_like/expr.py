@@ -357,7 +357,7 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         assert value is not None  # noqa: S101
         return self._with_elementwise(_fill_constant, value=value)
 
-    def replace_strict(
+    def replace_strict(  # pragma: no cover
         self,
         default: Any | NoDefault,
         old: Sequence[Any],
@@ -368,6 +368,11 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         if default is no_default:
             msg = "`replace_strict` requires an explicit value for `default` for any spark-like backend."
             raise ValueError(msg)
+
+        if self._implementation is not Implementation.PYSPARK:
+            # Issue tracker: https://github.com/eakmanrq/sqlframe/issues/545
+            msg = f"`replace_strict` is not (yet) implemented for {self._implementation}."
+            raise NotImplementedError(msg)
 
         from itertools import chain
 
