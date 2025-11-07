@@ -8,6 +8,7 @@ import narwhals as nw
 from tests.utils import (
     DUCKDB_VERSION,
     PANDAS_VERSION,
+    POLARS_VERSION,
     Constructor,
     ConstructorEager,
     assert_equal_data,
@@ -78,6 +79,8 @@ def test_with_row_index_lazy_meaner_examples(
     constructor: Constructor, order_by: list[str], expected_index: list[int]
 ) -> None:
     # https://github.com/narwhals-dev/narwhals/issues/3289
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+        pytest.skip()
     data = {"a": ["A", "B", "A"], "b": [1, 2, 3], "c": [9, 2, 4]}
     df = nw.from_native(constructor(data))
     result = df.with_row_index(name="index", order_by=order_by).sort("b")
