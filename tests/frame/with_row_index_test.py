@@ -83,6 +83,11 @@ def test_with_row_index_lazy_meaner_examples(
     # https://github.com/narwhals-dev/narwhals/issues/3289
     if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
         pytest.skip()
+    if "pandas" in str(constructor) and PANDAS_VERSION < (1, 3):  # pragma: no cover
+        reason = "ValueError: first not supported for non-numeric data."
+        pytest.skip(reason=reason)
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
     data = {"a": ["A", "B", "A"], "b": [1, 2, 3], "c": [9, 2, 4]}
     df = nw.from_native(constructor(data))
     result = df.with_row_index(name="index", order_by=order_by).sort("b")
