@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
 
 polars_lt_v1 = POLARS_VERSION < (1, 0, 0)
+skip_reason = "replace_strict only available after 1.0"
 pl_skip_reason = "replace_strict only available after 1.0"
 sqlframe_xfail_reason = (
     "AttributeError: module 'sqlframe.duckdb.functions' has no attribute 'map_keys'"
@@ -71,6 +72,8 @@ def test_replace_strict_series_basic(
         pytest.skip(reason=pl_skip_reason)
 
     df = nw.from_native(constructor_eager({"a": [1, 2, 3]}))
+    result = df["a"].replace_strict(old, new, return_dtype=return_dtype)
+    assert_equal_data({"a": result}, {"a": ["one", "two", "three"]})
     result = df["a"].replace_strict(old, new, return_dtype=return_dtype)
     assert_equal_data({"a": result}, {"a": ["one", "two", "three"]})
 
