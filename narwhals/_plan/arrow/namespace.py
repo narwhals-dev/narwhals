@@ -13,7 +13,7 @@ from narwhals._plan.arrow import functions as fn
 from narwhals._plan.compliant.namespace import EagerNamespace
 from narwhals._plan.expressions.literal import is_literal_scalar
 from narwhals._typing_compat import TypeVar
-from narwhals._utils import Version
+from narwhals._utils import Implementation, Version
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
@@ -23,19 +23,24 @@ if TYPE_CHECKING:
     from narwhals._plan.arrow.dataframe import ArrowDataFrame as Frame
     from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
     from narwhals._plan.arrow.series import ArrowSeries as Series
+    from narwhals._plan.arrow.typing import ChunkedArray, IntegerScalar
     from narwhals._plan.expressions import expr, functions as F
     from narwhals._plan.expressions.boolean import AllHorizontal, AnyHorizontal
     from narwhals._plan.expressions.expr import FunctionExpr, RangeExpr
     from narwhals._plan.expressions.ranges import DateRange, IntRange
     from narwhals._plan.expressions.strings import ConcatStr
     from narwhals._plan.series import Series as NwSeries
+    from narwhals.dtypes import IntegerType
     from narwhals.typing import ConcatMethod, NonNestedLiteral, PythonLiteral
 
 
 PythonLiteralT = TypeVar("PythonLiteralT", bound="PythonLiteral")
+Int64 = Version.MAIN.dtypes.Int64()
 
 
 class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
+    implementation = Implementation.PYARROW
+
     def __init__(self, version: Version = Version.MAIN) -> None:
         self._version = version
 
@@ -186,13 +191,32 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
         msg = f"All inputs for `{node.function}()` resolve to {valid_type.__name__}, but got \n{start_!r}\n{end_!r}"
         raise InvalidOperationError(msg)
 
+    def _int_range(
+        self, start: int, end: int, step: int, dtype: IntegerType, /
+    ) -> ChunkedArray[IntegerScalar]:
+        if dtype is not Int64:
+            pa_dtype = narwhals_to_native_dtype(dtype, self.version)
+            if not pa.types.is_integer(pa_dtype):
+                raise TypeError(dtype)
+            return fn.int_range(start, end, step, dtype=pa_dtype)
+        return fn.int_range(start, end, step)
+
     def int_range(self, node: RangeExpr[IntRange], frame: Frame, name: str) -> Expr:
         start, end = self._range_function_inputs(node, frame, int)
-        dtype = narwhals_to_native_dtype(node.function.dtype, self.version)
-        if not pa.types.is_integer(dtype):
-            raise TypeError(dtype)
-        native = fn.int_range(start, end, node.function.step, dtype=dtype)
+        native = self._int_range(start, end, node.function.step, node.function.dtype)
         return self._expr.from_native(native, name, self.version)
+
+    def int_range_eager(
+        self,
+        start: int,
+        end: int,
+        step: int = 1,
+        *,
+        dtype: IntegerType = Int64,
+        name: str = "literal",
+    ) -> Series:
+        native = self._int_range(start, end, step, dtype)
+        return self._series.from_native(native, name, version=self.version)
 
     def date_range(self, node: RangeExpr[DateRange], frame: Frame, name: str) -> Expr:
         start, end = self._range_function_inputs(node, frame, dt.date)

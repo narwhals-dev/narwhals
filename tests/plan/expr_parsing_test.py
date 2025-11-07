@@ -16,6 +16,7 @@ from narwhals._plan._parse import parse_into_seq_of_expr_ir
 from narwhals._plan.expressions import functions as F, operators as ops
 from narwhals._plan.expressions.literal import SeriesLiteral
 from narwhals._plan.expressions.ranges import IntRange
+from narwhals._utils import Implementation
 from narwhals.exceptions import (
     ComputeError,
     InvalidIntoExprError,
@@ -186,11 +187,21 @@ def test_int_range_invalid() -> None:
         int_range.to_function_expr(ir.col("a"))
 
 
-@pytest.mark.xfail(
-    reason="Not implemented `int_range(eager=True)`", raises=NotImplementedError
-)
-def test_int_range_series() -> None:
-    assert isinstance(nwp.int_range(50, eager=True), nwp.Series)
+def test_int_range_eager() -> None:
+    series = nwp.int_range(50, eager="pyarrow")
+    assert isinstance(series, nwp.Series)
+    assert series.to_list() == list(range(50))
+    series = nwp.int_range(50, eager=Implementation.PYARROW)
+    assert series.to_list() == list(range(50))
+
+    with pytest.raises(InvalidOperationError):
+        nwp.int_range(nwp.len(), eager="pyarrow")  # type: ignore[call-overload]
+    with pytest.raises(InvalidOperationError):
+        nwp.int_range(10, nwp.col("a").last(), eager=Implementation.PYARROW)  # type: ignore[call-overload]
+    with pytest.raises(NotImplementedError):
+        nwp.int_range(10, eager="pandas")
+    with pytest.raises(ValueError, match=r"lazy-only"):
+        nwp.int_range(10, eager="duckdb")  # type: ignore[call-overload]
 
 
 def test_over_invalid() -> None:

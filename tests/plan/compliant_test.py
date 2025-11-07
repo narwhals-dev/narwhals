@@ -658,3 +658,11 @@ if TYPE_CHECKING:
         native_bad = native_good.to_batches()[0]
         nwp.DataFrame.from_native(native_bad)  # type: ignore[call-overload]
         assert_type(native_bad, "pa.RecordBatch")
+
+    def test_int_range_overloads() -> None:
+        series = nwp.int_range(50, eager="pyarrow")
+        assert_type(series, "nwp.Series[pa.ChunkedArray[Any]]")
+        native = series.to_native()
+        assert_type(native, "pa.ChunkedArray[Any]")
+        roundtrip = nwp.Series.from_native(native)
+        assert_type(roundtrip, "nwp.Series[pa.ChunkedArray[Any]]")

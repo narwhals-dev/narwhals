@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal, Protocol, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, overload
 
 from narwhals._plan.compliant.typing import (
     ConcatT1,
@@ -16,6 +16,7 @@ from narwhals._plan.compliant.typing import (
     ScalarT_co,
     SeriesT,
 )
+from narwhals._utils import Implementation, Version
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -27,10 +28,15 @@ if TYPE_CHECKING:
     from narwhals._plan.expressions.ranges import DateRange, IntRange
     from narwhals._plan.expressions.strings import ConcatStr
     from narwhals._plan.series import Series
+    from narwhals.dtypes import IntegerType
     from narwhals.typing import ConcatMethod, NonNestedLiteral
+
+Int64 = Version.MAIN.dtypes.Int64()
 
 
 class CompliantNamespace(HasVersion, Protocol[FrameT, ExprT_co, ScalarT_co]):
+    implementation: ClassVar[Implementation]
+
     @property
     def _expr(self) -> type[ExprT_co]: ...
     @property
@@ -131,6 +137,15 @@ class EagerNamespace(
     def lit(
         self, node: ir.Literal[Any], frame: EagerDataFrameT, name: str
     ) -> EagerExprT_co | EagerScalarT_co: ...
+    def int_range_eager(
+        self,
+        start: int,
+        end: int,
+        step: int = 1,
+        *,
+        dtype: IntegerType = Int64,
+        name: str = "literal",
+    ) -> SeriesT: ...
 
 
 class LazyNamespace(

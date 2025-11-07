@@ -12,15 +12,27 @@ from narwhals._plan.expressions.literal import ScalarLiteral, SeriesLiteral
 from narwhals._plan.expressions.ranges import DateRange, IntRange
 from narwhals._plan.expressions.strings import ConcatStr
 from narwhals._plan.when_then import When
-from narwhals._utils import Version, flatten
-from narwhals.exceptions import ComputeError
+from narwhals._utils import Implementation, Version, flatten, is_eager_allowed
+from narwhals.exceptions import ComputeError, InvalidOperationError
 
 if TYPE_CHECKING:
+    import pyarrow as pa
+
+    from narwhals._plan import arrow as _arrow
+    from narwhals._plan.compliant.namespace import EagerNamespace
+    from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._plan.expr import Expr
     from narwhals._plan.series import Series
     from narwhals._plan.typing import IntoExpr, IntoExprColumn, NativeSeriesT
+    from narwhals._typing import Arrow
     from narwhals.dtypes import IntegerType
-    from narwhals.typing import ClosedInterval, IntoDType, NonNestedLiteral
+    from narwhals.typing import (
+        ClosedInterval,
+        EagerAllowed,
+        IntoBackend,
+        IntoDType,
+        NonNestedLiteral,
+    )
 
 
 def col(*names: str | t.Iterable[str]) -> Expr:
@@ -145,25 +157,92 @@ def when(
     return When._from_ir(condition)
 
 
+@t.overload
+def int_range(
+    start: int | IntoExprColumn = ...,
+    end: int | IntoExprColumn | None = ...,
+    step: int = ...,
+    *,
+    dtype: IntegerType | type[IntegerType] = ...,
+    eager: t.Literal[False] = ...,
+) -> Expr: ...
+@t.overload
+def int_range(
+    start: int = ...,
+    end: int | None = ...,
+    step: int = ...,
+    *,
+    dtype: IntegerType | type[IntegerType] = ...,
+    eager: Arrow,
+) -> Series[pa.ChunkedArray[t.Any]]: ...
+@t.overload
+def int_range(
+    start: int = ...,
+    end: int | None = ...,
+    step: int = ...,
+    *,
+    dtype: IntegerType | type[IntegerType] = ...,
+    eager: IntoBackend[EagerAllowed],
+) -> Series: ...
 def int_range(
     start: int | IntoExprColumn = 0,
     end: int | IntoExprColumn | None = None,
     step: int = 1,
     *,
     dtype: IntegerType | type[IntegerType] = Version.MAIN.dtypes.Int64,
-    eager: bool = False,
-) -> Expr:
+    eager: IntoBackend[EagerAllowed] | t.Literal[False] = False,
+) -> Expr | Series:
     if end is None:
         end = start
         start = 0
+    dtype = common.into_dtype(dtype)
     if eager:
-        msg = f"{eager=}"
-        raise NotImplementedError(msg)
+        return _int_range_eager(start, end, step, dtype=dtype, ns=_eager_namespace(eager))
     return (
-        IntRange(step=step, dtype=common.into_dtype(dtype))
+        IntRange(step=step, dtype=dtype)
         .to_function_expr(*_parse.parse_into_seq_of_expr_ir(start, end))
         .to_narwhals()
     )
+
+
+def _int_range_eager(
+    start: t.Any,
+    end: t.Any,
+    step: int,
+    *,
+    dtype: IntegerType,
+    ns: EagerNamespace[t.Any, CompliantSeries[NativeSeriesT], t.Any, t.Any],
+) -> Series[NativeSeriesT]:
+    if not (isinstance(start, int) and isinstance(end, int)):
+        msg = (
+            f"Expected `start` and `end` to be integer values since `eager={ns.implementation}`.\n"
+            f"Found: `start` of type {type(start)} and `end` of type {type(end)}\n\n"
+            "Hint: Calling `nw.int_range` with expressions requires:\n"
+            "  - `eager=False`"
+            "  - a context such as `select` or `with_columns`"
+        )
+        raise InvalidOperationError(msg)
+    return ns.int_range_eager(start, end, step, dtype=dtype).to_narwhals()
+
+
+@t.overload
+def _eager_namespace(backend: Arrow, /) -> _arrow.Namespace: ...
+@t.overload
+def _eager_namespace(
+    backend: IntoBackend[EagerAllowed], /
+) -> EagerNamespace[t.Any, t.Any, t.Any, t.Any]: ...
+def _eager_namespace(
+    backend: IntoBackend[EagerAllowed], /
+) -> EagerNamespace[t.Any, t.Any, t.Any, t.Any] | _arrow.Namespace:
+    impl = Implementation.from_backend(backend)
+    if is_eager_allowed(impl):
+        if impl is Implementation.PYARROW:
+            from narwhals._plan.arrow.namespace import ArrowNamespace
+
+            return ArrowNamespace(Version.MAIN)
+        raise NotImplementedError(impl)
+    msg = f"{impl} support in Narwhals is lazy-only"
+    raise ValueError(msg)
 
 
 def date_range(
