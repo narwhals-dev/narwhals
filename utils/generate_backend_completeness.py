@@ -16,12 +16,15 @@ import importlib
 import inspect
 from enum import Enum, auto
 from pathlib import Path
-from typing import Any, Final, NamedTuple
+from typing import TYPE_CHECKING, Any, Final, NamedTuple
 
 import polars as pl
 from jinja2 import Template
 
 from narwhals._utils import not_implemented
+
+if TYPE_CHECKING:
+    from types import ModuleType
 
 TEMPLATE_PATH: Final[Path] = Path("utils") / "api-completeness.md.jinja"
 DESTINATION_PATH: Final[Path] = Path("docs") / "api-completeness"
@@ -42,24 +45,25 @@ class Backend(NamedTuple):
         return f"_{self.name.replace('-', '_')}"
 
 
-MODULES_CONFIG = {
-    "dataframe": ["DataFrame", "LazyFrame"],
-    "series": ["Series"],
-    "expr": ["Expr"],
-    "expr_dt": ["ExprDateTimeNamespace"],
-    "expr_cat": ["ExprCatNamespace"],
-    "expr_str": ["ExprStringNamespace"],
-    "expr_list": ["ExprListNamespace"],
-    "expr_name": ["ExprNameNamespace"],
-    "expr_struct": ["ExprStructNamespace"],
-    "series_dt": ["SeriesDateTimeNamespace"],
-    "series_cat": ["SeriesCatNamespace"],
-    "series_str": ["SeriesStringNamespace"],
-    "series_list": ["SeriesListNamespace"],
-    "series_struct": ["SeriesStructNamespace"],
-    "functions": ["functions"],
+CLASS_NAME_TO_MODULE_NAME = {
+    "DataFrame": "dataframe",
+    "LazyFrame": "dataframe",
+    "Series": "series",
+    "Expr": "expr",
+    "ExprDateTimeNamespace": "expr_dt",
+    "ExprCatNamespace": "expr_cat",
+    "ExprStringNamespace": "expr_str",
+    "ExprListNamespace": "expr_list",
+    "ExprNameNamespace": "expr_name",
+    "ExprStructNamespace": "expr_struct",
+    "SeriesDateTimeNamespace": "series_dt",
+    "SeriesCatNamespace": "series_cat",
+    "SeriesStringNamespace": "series_str",
+    "SeriesListNamespace": "series_list",
+    "SeriesStructNamespace": "series_struct",
+    "functions": "functions",
 }
-"""Mapping of narwhals top-level modules to their main classes."""
+"""Mapping of narwhals public classes and functions to the modules where they are defined."""
 
 BACKENDS = (
     Backend(name="arrow", type_=BackendType.EAGER),
@@ -76,7 +80,7 @@ ALWAYS_IMPLEMENTED = {"pipe", "to_native"}
 SERIES_REUSING_BACKENDS = {"arrow", "pandas-like"}
 """Backends that reuse Series implementations for Expr (and subnamespaces)"""
 
-EAGER_CONSTRUCTOR_METHODS = {"from_arrow", "from_dict", "from_dicts", "from_numpy"}
+DATAFRAME_CONSTRUCTOR_METHODS = {"from_arrow", "from_dict", "from_dicts", "from_numpy"}
 """Constructor functions available for eager backends"""
 
 DEPRECATED_METHODS = {
@@ -92,7 +96,10 @@ DEPRECATED_METHODS = {
     },
     "LazyFrame": {"gather_every", "tail"},
 }
-"""Deprecated methods to exclude from completeness tables"""
+"""Deprecated methods to exclude from completeness tables for a given class"""
+
+EXCLUDED_FUNCTIONS = {"show_versions"}
+"""Functions to exclude, because not backend specific"""
 
 
 def _is_eager_allowed(backend: Backend) -> bool:
@@ -120,14 +127,12 @@ def get_implemented_methods_from_class(kls: type[Any]) -> set[str]:
     implemented = set()
 
     for name in dir(kls):
-        # Skip non public methods
         if name.startswith("_"):
             continue
 
         try:
             attr = inspect.getattr_static(kls, name)
 
-            # Check if it's a `not_implemented` marker. For properties, check if the `fget` is `not_implemented`
             if isinstance(attr, not_implemented) or (
                 isinstance(attr, property) and isinstance(attr.fget, not_implemented)
             ):
@@ -155,8 +160,8 @@ def find_compliant_class(
     Returns:
         The compliant class if found, None otherwise.
     """
-    # Special case: for functions, look for the Namespace class
     if module_name == "functions":
+        # Special case: for functions, look for the Namespace class
         module_name, target_class_name = "namespace", "Namespace"
 
     try:
@@ -164,19 +169,17 @@ def find_compliant_class(
     except ModuleNotFoundError:
         return None
 
-    # Look for classes that match the pattern
-    # Backend classes usually have names like ArrowDataFrame, PandasLikeDataFrame, etc.
-    for name, obj in inspect.getmembers(module, inspect.isclass):
-        # Skip protocols and test classes
-        if name.startswith(("Compliant", "DuckDBInterchange")):
+    for cls_name, obj in inspect.getmembers(module, inspect.isclass):
+        if (
+            cls_name.startswith("Compliant")
+            or "Interchange" in cls_name
+            or obj.__module__ != module.__name__
+        ):
+            # Skip protocols, Interchange classes and if classes not defined in the module
             continue
 
-        # Check if this class is defined in this module (not imported)
-        if obj.__module__ != module.__name__:
-            continue
-
-        # Match pattern: class name should end with or contain the target class name
-        if target_class_name in name:
+        if cls_name.endswith(target_class_name):
+            # Compliant classes follow the pattern <Backend><cls_name> e.g. ArrowDataFrame, DuckDBExpr
             return obj
 
     return None
@@ -186,18 +189,15 @@ def _add_series_reusing_methods(
     methods: set[str], module_name: str, backend: Backend, target_class_name: str
 ) -> set[str]:
     """Add methods from Series implementations for arrow and pandas-like Expr classes."""
-    if backend.name not in SERIES_REUSING_BACKENDS or not module_name.startswith("expr"):
-        return methods
-
-    # Map expr module to corresponding series module
     series_module = module_name.replace("expr", "series")
     series_class_name = target_class_name.replace("Expr", "Series")
 
-    # Get methods from the corresponding Series class
-    series_class = find_compliant_class(series_module, backend.module, series_class_name)
+    compliant_series_class = find_compliant_class(
+        series_module, backend.module, series_class_name
+    )
 
-    if series_class is not None:
-        series_methods = get_implemented_methods_from_class(series_class)
+    if compliant_series_class is not None:
+        series_methods = get_implemented_methods_from_class(compliant_series_class)
         methods.update(series_methods)
     return methods
 
@@ -210,49 +210,51 @@ def _add_string_namespace_methods(methods: set[str], module_name: str) -> set[st
 
 
 def _add_functions_methods(methods: set[str], backend: Backend) -> set[str]:
-    """Add composed and wrapper-level methods for the functions module."""
-    # Get Expr methods to check for composed functions
-    expr_methods = get_backend_methods("expr", backend, "Expr")
+    """Add composed and wrapper-level methods for the functions module.
 
-    # Aggregation functions: implemented via col + Expr.<method>
+    * `nw.{max, mean, median, min, sum}` are implemented via `nw.col + Expr.<method>`
+    * `nw.format` is implemented via `nw.concat_str`
+    * `nw.when` is implemented via `CompliantNamespace.when_then`
+    * I/O functions: `read_*` are eager-only, `scan_*` are for all backends, implemented at top level
+    * `nw.{from_arrow, from_dict, from_dicts, from_numpy, new_series}` are implemented at top level for eager only
+    """
+    expr_methods = get_backend_methods(backend, "expr", "Expr")
+
     if "col" in methods:
         for agg_method in ("min", "max", "mean", "median", "sum"):
             if agg_method in expr_methods:
                 methods.add(agg_method)
 
-    # format is implemented via concat_str
     if "concat_str" in methods:
         methods.add("format")
-
-    # when is implemented via when_then in the namespace
     if "when_then" in methods:
         methods.add("when")
 
-    # I/O functions: read_* are eager-only, scan_* are for all backends
     if _is_eager_allowed(backend):
-        methods.update({"read_csv", "read_parquet"})
-    methods.update({"scan_csv", "scan_parquet"})
+        methods.update(
+            {"read_csv", "read_parquet", "new_series"} | DATAFRAME_CONSTRUCTOR_METHODS
+        )
 
-    # Constructor functions (eager only)
-    if _is_eager_allowed(backend):
-        methods.update(EAGER_CONSTRUCTOR_METHODS | {"new_series"})
+    methods.update({"scan_csv", "scan_parquet"})
     return methods
 
 
 def _add_series_methods(methods: set[str], backend: Backend) -> set[str]:
-    """Add composed and wrapper-level methods for the Series class."""
-    # is_close is composed from other operations
+    """Add composed and wrapper-level methods for the Series class.
+
+    * `is_close` is implemented at the narwhals level via other Series methods
+    * `hist` is implemented via `hist_from_bins` and `hist_from_bin_count`
+    * `Series` class constructors
+    * `rename` is an alias for `alias`
+    """
     methods.add("is_close")
 
-    # hist is implemented via hist_from_bins and hist_from_bin_count
     if "hist_from_bins" in methods and "hist_from_bin_count" in methods:
         methods.add("hist")
 
-    # Wrapper-level methods (eager only)
     if _is_eager_allowed(backend):
         methods.update({"from_iterable", "from_numpy", "shape"})
 
-    # rename is implemented via alias
     if "alias" in methods:
         methods.add("rename")
 
@@ -260,60 +262,62 @@ def _add_series_methods(methods: set[str], backend: Backend) -> set[str]:
 
 
 def _add_dataframe_methods(methods: set[str], backend: Backend) -> set[str]:
-    """Add composed and wrapper-level methods for the DataFrame class."""
-    # Constructor methods (eager only)
-    if _is_eager_allowed(backend):
-        methods.update(EAGER_CONSTRUCTOR_METHODS)
+    """Add composed and wrapper-level methods for the DataFrame class.
 
-    # is_duplicated is implemented via is_unique
+    * Eager: `DataFrame` class constructors and `is_empty`
+    * `is_duplicated` is implemented via `is_unique`
+    * `null_count` is implemented via `Expr.null_count`
+    """
+    if _is_eager_allowed(backend):
+        methods.update(DATAFRAME_CONSTRUCTOR_METHODS | {"is_empty"})
+
     if "is_unique" in methods:
         methods.add("is_duplicated")
 
-    # null_count is implemented via Expr.null_count
-    expr_methods = get_backend_methods("expr", backend, "Expr")
+    expr_methods = get_backend_methods(backend, "expr", "Expr")
     if "null_count" in expr_methods:
         methods.add("null_count")
 
-    # is_empty is implemented via len()
-    methods.add("is_empty")
     return methods
 
 
 def get_backend_methods(
-    module_name: str, backend: Backend, target_class_name: str
+    backend: Backend, module_name: str, target_class_name: str
 ) -> set[str]:
-    """Get all implemented methods for a backend's implementation of a class."""
-    # Special case: ExprNameNamespace is implemented via CompliantExprNameNamespace
-    # at the compliant level, so all backends with Expr support have all its methods
+    """Get all implemented methods for a backend's implementation of a class.
+
+    'Special' cases:
+
+    * `ExprNameNamespace` is implemented via `CompliantExprNameNamespace` at the compliant level,
+        so all backends with `Expr` support have all its methods
+    * Arrow and Pandas-like `Expr` methods reuse `Series` implementation
+    * `{Expr, Series}.str.{head, tail}` are implemented via `{Expr, Series}.str.slice`
+    *
+    """
     if module_name == "expr_name" and target_class_name == "ExprNameNamespace":
         return get_narwhals_methods(module_name, target_class_name)
 
-    backend_class = find_compliant_class(module_name, backend.module, target_class_name)
+    compliant_class = find_compliant_class(module_name, backend.module, target_class_name)
 
-    methods = set()
-    if backend_class is not None:
-        methods = get_implemented_methods_from_class(backend_class)
+    methods = set(ALWAYS_IMPLEMENTED)
+    if compliant_class is not None:
+        methods = get_implemented_methods_from_class(compliant_class)
 
-    # Add methods from Series implementations for Expr classes (arrow, pandas-like)
-    methods = _add_series_reusing_methods(
-        methods, module_name, backend, target_class_name
-    )
+    if backend.name not in SERIES_REUSING_BACKENDS or not module_name.startswith("expr"):
+        methods = _add_series_reusing_methods(
+            methods, module_name, backend, target_class_name
+        )
 
-    # Add head/tail for StringNamespace when slice is available
     methods = _add_string_namespace_methods(methods, module_name)
 
-    # Add module-specific composed and wrapper-level methods
     if module_name == "functions":
         methods = _add_functions_methods(methods, backend)
-    elif module_name == "series" and target_class_name == "Series":
-        methods = _add_series_methods(methods, backend)
-    elif module_name == "dataframe" and target_class_name == "DataFrame":
+    elif target_class_name == "DataFrame":
         methods = _add_dataframe_methods(methods, backend)
-    elif module_name == "expr" and target_class_name == "Expr":
+    elif target_class_name == "Series":
+        methods = _add_series_methods(methods, backend)
+    elif target_class_name == "Expr":
         methods.add("is_close")
-
-    # Add always-implemented methods
-    methods.update(ALWAYS_IMPLEMENTED)
 
     return methods
 
@@ -328,7 +332,6 @@ def get_narwhals_methods(module_name: str, class_name: str) -> set[str]:
     except (ModuleNotFoundError, AttributeError):
         return set()
 
-    # Special case: for functions module, get all public functions
     if module_name == class_name == "functions":
         return _get_public_functions_from_module(module)
 
@@ -339,25 +342,19 @@ def get_narwhals_methods(module_name: str, class_name: str) -> set[str]:
     return _get_public_methods_and_properties(kls)
 
 
-def _get_public_functions_from_module(module: Any) -> set[str]:
+def _get_public_functions_from_module(module: ModuleType) -> set[str]:
     """Get all public functions from a module.
 
     For the functions module, we only include functions that are exported
     in narwhals.__init__.py to avoid including internal utilities.
     """
-    # Get the list of functions exported from narwhals.__init__
     import narwhals
 
     all_exports = getattr(narwhals, "__all__", [])
-
-    # Functions to exclude from the completeness table
-    # show_versions is metadata-only, not a backend-specific function
-    excluded_functions = {"show_versions"}
-
-    # Get all functions from the module
     methods = set()
+
     for name in dir(module):
-        if name.startswith("_") or name in excluded_functions:
+        if name.startswith("_") or name in EXCLUDED_FUNCTIONS:
             continue
         attr = getattr(module, name)
         if not (callable(attr) and inspect.isfunction(attr)):
@@ -389,16 +386,12 @@ def _filter_deprecated_methods(methods: set[str], class_name: str) -> set[str]:
 
     Arguments:
         methods: Set of method names to filter
-        module_name: The module name (e.g., "expr", "dataframe")
         class_name: The class name (e.g., "Expr", "LazyFrame")
 
     Returns:
         Filtered set of methods with deprecated ones removed
     """
-    deprecated = DEPRECATED_METHODS.get(class_name)
-    if not deprecated:
-        return methods
-
+    deprecated = DEPRECATED_METHODS.get(class_name, set())
     return methods - deprecated
 
 
@@ -408,15 +401,16 @@ def create_completeness_dataframe(module_name: str, class_name: str) -> pl.DataF
     nw_methods = _filter_deprecated_methods(nw_methods, class_name)
 
     if not nw_methods:
-        return pl.DataFrame()
+        msg = f"Could not generate completeness dataframe for {module_name}.{class_name}"
+        raise AssertionError(msg)
 
     data = [
-        {"Backend": "narwhals", "Method": method, "Supported": True}
+        {"Backend": "polars", "Method": method, "Supported": True}
         for method in sorted(nw_methods)
     ]
 
     for backend in _get_relevant_backends(class_name):
-        backend_methods = get_backend_methods(module_name, backend, class_name)
+        backend_methods = get_backend_methods(backend, module_name, class_name)
         data.extend(
             {
                 "Backend": backend.name,
@@ -432,11 +426,6 @@ def render_table_and_write_to_output(
     df: pl.DataFrame, title: str, output_filename: str
 ) -> None:
     """Render a markdown table and write it to a file."""
-    if df.is_empty():
-        print(f"Warning: No data for {title}")
-        return
-
-    # Pivot to create the comparison table
     table_df = (
         df.with_columns(
             pl.when(pl.col("Supported"))
@@ -448,22 +437,11 @@ def render_table_and_write_to_output(
         .sort("Method")
     )
 
-    # Reorder columns: Method, then alphabetically sorted backends, then polars
+    # Reorder columns: Method, then alphabetically sorted backends
     backend_cols = [c for c in table_df.columns if c != "Method"]
-
-    # Add polars column (always supported)
-    if "narwhals" in backend_cols:
-        table_df = table_df.drop("narwhals")
-        backend_cols.remove("narwhals")
-
-    # Add polars as always supported
-    table_df = table_df.with_columns(polars=pl.lit(":white_check_mark:"))
-
-    # Reorder columns
-    final_cols = ["Method", *sorted(backend_cols), "polars"]
+    final_cols = ["Method", *sorted(backend_cols)]
     table_df = table_df.select(final_cols)
 
-    # Format as markdown table
     with pl.Config(
         tbl_formatting="ASCII_MARKDOWN",
         tbl_hide_column_data_types=True,
@@ -473,7 +451,6 @@ def render_table_and_write_to_output(
     ):
         table = str(table_df)
 
-    # Write to file
     with TEMPLATE_PATH.open(mode="r") as stream:
         content = Template(stream.read()).render({"backend_table": table, "title": title})
 
@@ -484,27 +461,26 @@ def render_table_and_write_to_output(
     print(f"Generated: {output_path}")
 
 
+def create_title_and_filename(module_name: str, class_name: str) -> tuple[str, str]:
+    """Create markdown filename and page title from class and module name."""
+    if module_name == "dataframe":
+        filename, title = class_name.lower(), class_name
+    elif module_name == "functions":
+        filename = title = "functions"
+    else:
+        filename = module_name
+        title = f"{module_name}.{class_name}".replace("_", ".")
+
+    return filename, title
+
+
 def generate_completeness_tables() -> None:
     """Generate all backend completeness tables."""
-    for module_name, class_names in MODULES_CONFIG.items():
-        print(f"\nProcessing module: {module_name}")
+    for class_name, module_name in CLASS_NAME_TO_MODULE_NAME.items():
+        completeness_frame = create_completeness_dataframe(module_name, class_name)
+        filename, title = create_title_and_filename(module_name, class_name)
 
-        for class_name in class_names:
-            print(f"  Processing class: {class_name}")
-
-            df = create_completeness_dataframe(module_name, class_name)
-
-            if not df.is_empty():
-                # Determine title and filename
-                if class_name in {"DataFrame", "LazyFrame"}:
-                    title, filename = class_name, class_name.lower()
-                elif module_name == "functions":
-                    title = filename = "functions"
-                else:
-                    title = f"{module_name}.{class_name}".replace("_", ".")
-                    filename = module_name
-
-                render_table_and_write_to_output(df, title, filename)
+        render_table_and_write_to_output(completeness_frame, title, filename)
 
 
 generate_completeness_tables()
