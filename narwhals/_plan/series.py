@@ -83,6 +83,9 @@ class Series(Generic[NativeSeriesT_co]):
     def alias(self, name: str) -> Self:
         return type(self)(self._compliant.alias(name))
 
+    def __len__(self) -> int:
+        return len(self._compliant)
+
 
 class SeriesV1(Series[NativeSeriesT_co]):
     _version: ClassVar[Version] = Version.V1

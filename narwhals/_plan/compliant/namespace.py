@@ -19,6 +19,7 @@ from narwhals._plan.compliant.typing import (
 from narwhals._utils import Implementation, Version
 
 if TYPE_CHECKING:
+    import datetime as dt
     from collections.abc import Iterable
 
     from typing_extensions import TypeIs
@@ -29,7 +30,7 @@ if TYPE_CHECKING:
     from narwhals._plan.expressions.strings import ConcatStr
     from narwhals._plan.series import Series
     from narwhals.dtypes import IntegerType
-    from narwhals.typing import ConcatMethod, NonNestedLiteral
+    from narwhals.typing import ClosedInterval, ConcatMethod, NonNestedLiteral
 
 Int64 = Version.MAIN.dtypes.Int64()
 
@@ -137,6 +138,15 @@ class EagerNamespace(
     def lit(
         self, node: ir.Literal[Any], frame: EagerDataFrameT, name: str
     ) -> EagerExprT_co | EagerScalarT_co: ...
+    def date_range_eager(
+        self,
+        start: dt.date,
+        end: dt.date,
+        interval: int = 1,
+        *,
+        closed: ClosedInterval = "both",
+        name: str = "literal",
+    ) -> SeriesT: ...
     def int_range_eager(
         self,
         start: int,

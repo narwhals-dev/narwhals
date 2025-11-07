@@ -20,6 +20,7 @@ from narwhals._utils import Version
 from tests.plan.utils import assert_equal_data, dataframe, first, last
 
 if TYPE_CHECKING:
+    import datetime as dt
     from collections.abc import Sequence
 
     from narwhals._plan.typing import ColumnNameOrSelector, OneOrIterable
@@ -661,6 +662,14 @@ if TYPE_CHECKING:
 
     def test_int_range_overloads() -> None:
         series = nwp.int_range(50, eager="pyarrow")
+        assert_type(series, "nwp.Series[pa.ChunkedArray[Any]]")
+        native = series.to_native()
+        assert_type(native, "pa.ChunkedArray[Any]")
+        roundtrip = nwp.Series.from_native(native)
+        assert_type(roundtrip, "nwp.Series[pa.ChunkedArray[Any]]")
+
+    def test_date_range_overloads() -> None:
+        series = nwp.date_range(dt.date(2000, 1, 1), dt.date(2002, 1, 1), eager="pyarrow")
         assert_type(series, "nwp.Series[pa.ChunkedArray[Any]]")
         native = series.to_native()
         assert_type(native, "pa.ChunkedArray[Any]")

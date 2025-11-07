@@ -205,6 +205,7 @@ def int_range(
     )
 
 
+# TODO @dangotbanned: Deduplicate `_{int,date}_range_eager`
 def _int_range_eager(
     start: t.Any,
     end: t.Any,
@@ -245,22 +246,71 @@ def _eager_namespace(
     raise ValueError(msg)
 
 
+@t.overload
+def date_range(
+    start: dt.date | IntoExprColumn,
+    end: dt.date | IntoExprColumn,
+    interval: str | dt.timedelta = ...,
+    *,
+    closed: ClosedInterval = ...,
+    eager: t.Literal[False] = ...,
+) -> Expr: ...
+@t.overload
+def date_range(
+    start: dt.date,
+    end: dt.date,
+    interval: str | dt.timedelta = ...,
+    *,
+    closed: ClosedInterval = ...,
+    eager: Arrow,
+) -> Series[pa.ChunkedArray[t.Any]]: ...
+@t.overload
+def date_range(
+    start: dt.date,
+    end: dt.date,
+    interval: str | dt.timedelta = ...,
+    *,
+    closed: ClosedInterval = ...,
+    eager: IntoBackend[EagerAllowed],
+) -> Series: ...
 def date_range(
     start: dt.date | IntoExprColumn,
     end: dt.date | IntoExprColumn,
     interval: str | dt.timedelta = "1d",
     *,
     closed: ClosedInterval = "both",
-    eager: bool = False,
-) -> Expr:
+    eager: IntoBackend[EagerAllowed] | t.Literal[False] = False,
+) -> Expr | Series:
+    days = _interval_days(interval)
     if eager:
-        msg = f"{eager=}"
-        raise NotImplementedError(msg)
+        ns = _eager_namespace(eager)
+        return _date_range_eager(start, end, days, closed=closed, ns=ns)
     return (
-        DateRange(interval=_interval_days(interval), closed=closed)
+        DateRange(interval=days, closed=closed)
         .to_function_expr(*_parse.parse_into_seq_of_expr_ir(start, end))
         .to_narwhals()
     )
+
+
+# TODO @dangotbanned: Deduplicate `_{int,date}_range_eager`
+def _date_range_eager(
+    start: t.Any,
+    end: t.Any,
+    interval: int,
+    *,
+    closed: ClosedInterval,
+    ns: EagerNamespace[t.Any, CompliantSeries[NativeSeriesT], t.Any, t.Any],
+) -> Series[NativeSeriesT]:
+    if not (isinstance(start, dt.date) and isinstance(end, dt.date)):
+        msg = (
+            f"Expected `start` and `end` to be date values since `eager={ns.implementation}`.\n"
+            f"Found: `start` of type {type(start)} and `end` of type {type(end)}\n\n"
+            "Hint: Calling `nw.date_range` with expressions requires:\n"
+            "  - `eager=False`"
+            "  - a context such as `select` or `with_columns`"
+        )
+        raise InvalidOperationError(msg)
+    return ns.date_range_eager(start, end, interval, closed=closed).to_narwhals()
 
 
 def _interval_days(interval: str | dt.timedelta, /) -> int:

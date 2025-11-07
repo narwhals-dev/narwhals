@@ -31,7 +31,12 @@ if TYPE_CHECKING:
     from narwhals._plan.expressions.strings import ConcatStr
     from narwhals._plan.series import Series as NwSeries
     from narwhals.dtypes import IntegerType
-    from narwhals.typing import ConcatMethod, NonNestedLiteral, PythonLiteral
+    from narwhals.typing import (
+        ClosedInterval,
+        ConcatMethod,
+        NonNestedLiteral,
+        PythonLiteral,
+    )
 
 
 PythonLiteralT = TypeVar("PythonLiteralT", bound="PythonLiteral")
@@ -223,6 +228,18 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
         func = node.function
         native = fn.date_range(start, end, func.interval, closed=func.closed)
         return self._expr.from_native(native, name, self.version)
+
+    def date_range_eager(
+        self,
+        start: dt.date,
+        end: dt.date,
+        interval: int = 1,
+        *,
+        closed: ClosedInterval = "both",
+        name: str = "literal",
+    ) -> Series:
+        native = fn.date_range(start, end, interval, closed=closed)
+        return self._series.from_native(native, name, version=self.version)
 
     @overload
     def concat(self, items: Iterable[Frame], *, how: ConcatMethod) -> Frame: ...

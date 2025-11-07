@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime as dt
 import operator
 import re
 from collections import deque
@@ -202,6 +203,18 @@ def test_int_range_eager() -> None:
         nwp.int_range(10, eager="pandas")
     with pytest.raises(ValueError, match=r"lazy-only"):
         nwp.int_range(10, eager="duckdb")  # type: ignore[call-overload]
+
+
+def test_date_range_eager() -> None:
+    leap_year = 2024
+    series_leap = nwp.date_range(
+        dt.date(leap_year, 2, 25), dt.date(leap_year, 3, 25), eager="pyarrow"
+    )
+    series_regular = nwp.date_range(
+        dt.date(leap_year + 1, 2, 25), dt.date(leap_year + 1, 3, 25), eager="pyarrow"
+    )
+    assert len(series_regular) == 29
+    assert len(series_leap) == 30
 
 
 def test_over_invalid() -> None:
