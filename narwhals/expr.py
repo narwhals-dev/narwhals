@@ -910,7 +910,7 @@ class Expr:
         Arguments:
             lower_bound: Lower bound value. String literals are interpreted as column names.
             upper_bound: Upper bound value. String literals are interpreted as column names.
-            closed: Define which sides of the interval are closed (inclusive).
+            closed({'left', 'right', 'none', 'both'}): Define which sides of the interval are closed (inclusive).
 
         Examples:
             >>> import pandas as pd
