@@ -16,10 +16,10 @@ from narwhals._polars.utils import (
     extract_native,
     narwhals_to_native_dtype,
 )
-from narwhals._utils import Implementation, requires
+from narwhals._utils import Implementation, no_default, requires
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Sequence
 
     from typing_extensions import Self
 
@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from narwhals._polars.dataframe import Method
     from narwhals._polars.namespace import PolarsNamespace
     from narwhals._polars.series import PolarsSeries
+    from narwhals._typing import NoDefault
     from narwhals._utils import Version
     from narwhals.typing import IntoDType, ModeKeepStrategy
 
@@ -209,7 +210,8 @@ class PolarsExpr:
     @requires.backend_version((1,))
     def replace_strict(
         self,
-        old: Sequence[Any] | Mapping[Any, Any],
+        default: Any | NoDefault,
+        old: Sequence[Any],
         new: Sequence[Any],
         *,
         return_dtype: IntoDType | None,
@@ -219,7 +221,16 @@ class PolarsExpr:
             if return_dtype
             else None
         )
-        native = self.native.replace_strict(old, new, return_dtype=return_dtype_pl)
+        extra_kwargs = (
+            {}
+            if default is no_default
+            else {"default": default.native}
+            if isinstance(default, PolarsExpr)
+            else {"default": default}
+        )
+        native = self.native.replace_strict(
+            old, new, return_dtype=return_dtype_pl, **extra_kwargs
+        )
         return self._with_native(native)
 
     def __eq__(self, other: PolarsExpr) -> Self:  # type: ignore[override]

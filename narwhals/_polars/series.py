@@ -20,7 +20,7 @@ from narwhals._polars.utils import (
     narwhals_to_native_dtype,
     native_to_narwhals_dtype,
 )
-from narwhals._utils import Implementation, requires
+from narwhals._utils import Implementation, no_default, requires
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_index
 
 if TYPE_CHECKING:
@@ -34,6 +34,7 @@ if TYPE_CHECKING:
 
     from narwhals._polars.dataframe import Method, PolarsDataFrame
     from narwhals._polars.namespace import PolarsNamespace
+    from narwhals._typing import NoDefault
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.series import Series
@@ -304,7 +305,8 @@ class PolarsSeries:
     @requires.backend_version((1,))
     def replace_strict(
         self,
-        old: Sequence[Any] | Mapping[Any, Any],
+        default: Any | NoDefault,
+        old: Sequence[Any],
         new: Sequence[Any],
         *,
         return_dtype: IntoDType | None,
@@ -315,7 +317,17 @@ class PolarsSeries:
             if return_dtype
             else None
         )
-        return self._with_native(ser.replace_strict(old, new, return_dtype=dtype))
+
+        extra_kwargs = (
+            {}
+            if default is no_default
+            else {"default": default.native}
+            if isinstance(default, PolarsSeries)
+            else {"default": default}
+        )
+        return self._with_native(
+            ser.replace_strict(old, new, return_dtype=dtype, **extra_kwargs)
+        )
 
     def to_numpy(self, dtype: Any = None, *, copy: bool | None = None) -> _1DArray:
         return self.__array__(dtype, copy=copy)
