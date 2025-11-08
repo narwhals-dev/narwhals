@@ -39,7 +39,7 @@ __all__ = [
     "NonNestedLiteralT",
     "OperatorFn",
     "OperatorT",
-    "RangeT",
+    "RangeT_co",
     "RightSelectorT",
     "RightT",
     "RollingT",
@@ -52,7 +52,6 @@ __all__ = [
 
 FunctionT = TypeVar("FunctionT", bound="Function", default="Function")
 RollingT = TypeVar("RollingT", bound="RollingWindow", default="RollingWindow")
-RangeT = TypeVar("RangeT", bound="RangeFunction", default="RangeFunction")
 FunctionT_co = TypeVar(
     "FunctionT_co", bound="Function", default="Function", covariant=True
 )

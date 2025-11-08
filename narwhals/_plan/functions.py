@@ -291,6 +291,7 @@ def _eager_namespace(
     raise ValueError(msg)
 
 
+# NOTE: If anything beyond `{date,int}_range` are added, move to `RangeFunction`
 def _ensure_range_scalar(
     start: t.Any,
     end: t.Any,
