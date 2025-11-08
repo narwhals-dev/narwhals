@@ -10,6 +10,7 @@ if TYPE_CHECKING:
 
     from narwhals._plan.expressions import ExprIR, RangeExpr
     from narwhals.dtypes import IntegerType
+    from narwhals.typing import ClosedInterval
 
 
 class RangeFunction(Function, config=FEOptions.namespaced()):
@@ -17,6 +18,10 @@ class RangeFunction(Function, config=FEOptions.namespaced()):
         from narwhals._plan.expressions.expr import RangeExpr
 
         return RangeExpr(input=inputs, function=self, options=self.function_options)
+
+    def unwrap_input(self, node: RangeExpr[Self], /) -> tuple[ExprIR, ExprIR]:
+        start, end = node.input
+        return start, end
 
 
 class IntRange(RangeFunction, options=FunctionOptions.row_separable):
@@ -26,6 +31,10 @@ class IntRange(RangeFunction, options=FunctionOptions.row_separable):
     step: int
     dtype: IntegerType
 
-    def unwrap_input(self, node: RangeExpr[Self], /) -> tuple[ExprIR, ExprIR]:
-        start, end = node.input
-        return start, end
+
+class DateRange(RangeFunction, options=FunctionOptions.row_separable):
+    """N-ary (start, end)."""
+
+    __slots__ = ("interval", "closed")  # noqa: RUF023
+    interval: int
+    closed: ClosedInterval

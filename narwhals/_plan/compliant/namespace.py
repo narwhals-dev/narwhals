@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal, Protocol, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, overload
 
 from narwhals._plan.compliant.typing import (
     ConcatT1,
@@ -16,21 +16,28 @@ from narwhals._plan.compliant.typing import (
     ScalarT_co,
     SeriesT,
 )
+from narwhals._utils import Implementation, Version
 
 if TYPE_CHECKING:
+    import datetime as dt
     from collections.abc import Iterable
 
     from typing_extensions import TypeIs
 
     from narwhals._plan import expressions as ir
     from narwhals._plan.expressions import FunctionExpr, boolean, functions as F
-    from narwhals._plan.expressions.ranges import IntRange
+    from narwhals._plan.expressions.ranges import DateRange, IntRange
     from narwhals._plan.expressions.strings import ConcatStr
     from narwhals._plan.series import Series
-    from narwhals.typing import ConcatMethod, NonNestedLiteral
+    from narwhals.dtypes import IntegerType
+    from narwhals.typing import ClosedInterval, ConcatMethod, NonNestedLiteral
+
+Int64 = Version.MAIN.dtypes.Int64()
 
 
 class CompliantNamespace(HasVersion, Protocol[FrameT, ExprT_co, ScalarT_co]):
+    implementation: ClassVar[Implementation]
+
     @property
     def _expr(self) -> type[ExprT_co]: ...
     @property
@@ -47,6 +54,9 @@ class CompliantNamespace(HasVersion, Protocol[FrameT, ExprT_co, ScalarT_co]):
     def concat_str(
         self, node: FunctionExpr[ConcatStr], frame: FrameT, name: str
     ) -> ExprT_co | ScalarT_co: ...
+    def date_range(
+        self, node: ir.RangeExpr[DateRange], frame: FrameT, name: str
+    ) -> ExprT_co: ...
     def int_range(
         self, node: ir.RangeExpr[IntRange], frame: FrameT, name: str
     ) -> ExprT_co: ...
@@ -128,6 +138,24 @@ class EagerNamespace(
     def lit(
         self, node: ir.Literal[Any], frame: EagerDataFrameT, name: str
     ) -> EagerExprT_co | EagerScalarT_co: ...
+    def date_range_eager(
+        self,
+        start: dt.date,
+        end: dt.date,
+        interval: int = 1,
+        *,
+        closed: ClosedInterval = "both",
+        name: str = "literal",
+    ) -> SeriesT: ...
+    def int_range_eager(
+        self,
+        start: int,
+        end: int,
+        step: int = 1,
+        *,
+        dtype: IntegerType = Int64,
+        name: str = "literal",
+    ) -> SeriesT: ...
 
 
 class LazyNamespace(

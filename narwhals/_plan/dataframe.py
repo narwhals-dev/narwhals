@@ -175,9 +175,9 @@ class DataFrame(
         cls: type[DataFrame[Any, Any]], native: NativeDataFrameT, /
     ) -> DataFrame[Any, Any]:
         if is_pyarrow_table(native):
-            from narwhals._plan.arrow.dataframe import ArrowDataFrame
+            from narwhals._plan import arrow as _arrow
 
-            return cls(ArrowDataFrame.from_native(native, cls._version))
+            return cls(_arrow.DataFrame.from_native(native, cls._version))
 
         raise NotImplementedError(type(native))
 

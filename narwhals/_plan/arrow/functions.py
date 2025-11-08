@@ -20,6 +20,7 @@ from narwhals._plan.expressions import functions as F, operators as ops
 from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
+    import datetime as dt
     from collections.abc import Iterable, Mapping
 
     from typing_extensions import TypeAlias, TypeIs
@@ -43,6 +44,7 @@ if TYPE_CHECKING:
         DataType,
         DataTypeRemap,
         DataTypeT,
+        DateScalar,
         IntegerScalar,
         IntegerType,
         LargeStringType,
@@ -333,12 +335,38 @@ def int_range(
     *,
     dtype: IntegerType = pa.int64(),  # noqa: B008
 ) -> ChunkedArray[IntegerScalar]:
-    import numpy as np  # ignore-banned-import
-
     if end is None:
         end = start
         start = 0
-    return pa.chunked_array([pa.array(np.arange(start, end, step), dtype)])
+    if BACKEND_VERSION < (21, 0, 0):  # pragma: no cover
+        import numpy as np  # ignore-banned-import
+
+        arr = pa.array(np.arange(start=start, stop=end, step=step), type=dtype)
+    else:
+        int_range_: Incomplete = t.cast("Incomplete", pa.arange)  # type: ignore[attr-defined]
+        arr = t.cast("ArrayAny", int_range_(start=start, stop=end, step=step)).cast(dtype)
+    return pa.chunked_array([arr])
+
+
+def date_range(
+    start: dt.date,
+    end: dt.date,
+    interval: int,  # (* assuming the `Interval` part is solved)
+    *,
+    closed: ClosedInterval = "both",
+) -> ChunkedArray[DateScalar]:
+    start_i = pa.scalar(start).cast(pa.int32()).as_py()
+    end_i = pa.scalar(end).cast(pa.int32()).as_py()
+    ca = int_range(start_i, end_i + 1, interval, dtype=pa.int32())
+    if closed == "both":
+        return ca.cast(pa.date32())
+    if closed == "left":
+        ca = ca.slice(length=ca.length() - 1)
+    elif closed == "none":
+        ca = ca.slice(1, length=ca.length() - 1)
+    else:
+        ca = ca.slice(1)
+    return ca.cast(pa.date32())
 
 
 def nulls_like(n: int, native: ArrowAny) -> ArrayAny:

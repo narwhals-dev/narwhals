@@ -48,10 +48,10 @@ class Series(Generic[NativeSeriesT_co]):
         implementation = Implementation.from_backend(backend)
         if is_eager_allowed(implementation):
             if implementation is Implementation.PYARROW:
-                from narwhals._plan.arrow.series import ArrowSeries
+                from narwhals._plan import arrow as _arrow
 
                 return cls(
-                    ArrowSeries.from_iterable(
+                    _arrow.Series.from_iterable(
                         values, name=name, version=cls._version, dtype=dtype
                     )
                 )
@@ -65,9 +65,9 @@ class Series(Generic[NativeSeriesT_co]):
         cls: type[Series[Any]], native: NativeSeriesT, name: str = "", /
     ) -> Series[NativeSeriesT]:
         if is_pyarrow_chunked_array(native):
-            from narwhals._plan.arrow.series import ArrowSeries
+            from narwhals._plan import arrow as _arrow
 
-            return cls(ArrowSeries.from_native(native, name, version=cls._version))
+            return cls(_arrow.Series.from_native(native, name, version=cls._version))
 
         raise NotImplementedError(type(native))
 
@@ -82,6 +82,9 @@ class Series(Generic[NativeSeriesT_co]):
 
     def alias(self, name: str) -> Self:
         return type(self)(self._compliant.alias(name))
+
+    def __len__(self) -> int:
+        return len(self._compliant)
 
 
 class SeriesV1(Series[NativeSeriesT_co]):

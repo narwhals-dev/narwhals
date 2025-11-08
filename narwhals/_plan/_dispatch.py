@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from typing_extensions import Never, TypeAlias
 
     from narwhals._plan.compliant.typing import Ctx
-    from narwhals._plan.expressions import ExprIR, FunctionExpr
+    from narwhals._plan.expressions import ExprIR, Function, FunctionExpr
     from narwhals._plan.typing import ExprIRT, FunctionT
 
 __all__ = ["Dispatcher", "get_dispatch_name"]
@@ -181,7 +181,7 @@ def _method_name(tp: type[ExprIRT | FunctionT]) -> str:
     return f"{ns}.{name}" if (ns := getattr(config, "accessor_name", "")) else name
 
 
-def get_dispatch_name(expr: ExprIR, /) -> str:
+def get_dispatch_name(expr: ExprIR | type[Function], /) -> str:
     """Return the synthesized method name for `expr`."""
     return (
         repr(expr.function) if is_function_expr(expr) else expr.__expr_ir_dispatch__.name

@@ -11,6 +11,8 @@ from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError
 
 pytest.importorskip("pyarrow")
 pytest.importorskip("numpy")
+import datetime as dt
+
 import numpy as np
 import pyarrow as pa
 
@@ -126,6 +128,35 @@ XFAIL_KLEENE_ALL_NULL = pytest.mark.xfail(
         ([nwp.int_range(nwp.len())], {"literal": [0, 1, 2]}),
         (nwp.int_range(nwp.len() * 5, 20).alias("lol"), {"lol": [15, 16, 17, 18, 19]}),
         (nwp.int_range(nwp.col("b").min() + 4, nwp.col("d").last()), {"b": [5, 6, 7]}),
+        (
+            [
+                nwp.date_range(
+                    dt.date(2020, 1, 1),
+                    dt.date(2020, 4, 30),
+                    interval="25d",
+                    closed="none",
+                )
+            ],
+            {
+                "literal": [
+                    dt.date(2020, 1, 26),
+                    dt.date(2020, 2, 20),
+                    dt.date(2020, 3, 16),
+                    dt.date(2020, 4, 10),
+                ]
+            },
+        ),
+        (
+            (
+                nwp.date_range(
+                    dt.date(2021, 1, 30),
+                    nwp.lit(18747, nw.Int32).cast(nw.Date),
+                    interval="90d",
+                    closed="left",
+                ).alias("date_range_cast_expr"),
+                {"date_range_cast_expr": [dt.date(2021, 1, 30)]},
+            )
+        ),
         (nwp.col("b") ** 2, {"b": [1, 4, 9]}),
         (
             [2 ** nwp.col("b"), (nwp.lit(2.0) ** nwp.nth(1)).alias("lit")],
@@ -634,15 +665,13 @@ if TYPE_CHECKING:
         doesn't happen elsewhere at the moment.
         """
         pytest.importorskip("pyarrow")
-        from narwhals._plan.arrow.dataframe import ArrowDataFrame
-        from narwhals._plan.arrow.expr import ArrowExpr, ArrowScalar
-        from narwhals._plan.arrow.series import ArrowSeries
+        from narwhals._plan import arrow as _arrow
 
         # NOTE: Intentionally leaving `ewm_mean` without a `not_implemented()` for another test
-        expr = ArrowExpr()  # type: ignore[abstract]
-        scalar = ArrowScalar()
-        df = ArrowDataFrame()
-        ser = ArrowSeries()
+        expr = _arrow.Expr()  # type: ignore[abstract]
+        scalar = _arrow.Scalar()
+        df = _arrow.DataFrame()
+        ser = _arrow.Series()
         assert expr
         assert scalar
         assert df
@@ -658,3 +687,19 @@ if TYPE_CHECKING:
         native_bad = native_good.to_batches()[0]
         nwp.DataFrame.from_native(native_bad)  # type: ignore[call-overload]
         assert_type(native_bad, "pa.RecordBatch")
+
+    def test_int_range_overloads() -> None:
+        series = nwp.int_range(50, eager="pyarrow")
+        assert_type(series, "nwp.Series[pa.ChunkedArray[Any]]")
+        native = series.to_native()
+        assert_type(native, "pa.ChunkedArray[Any]")
+        roundtrip = nwp.Series.from_native(native)
+        assert_type(roundtrip, "nwp.Series[pa.ChunkedArray[Any]]")
+
+    def test_date_range_overloads() -> None:
+        series = nwp.date_range(dt.date(2000, 1, 1), dt.date(2002, 1, 1), eager="pyarrow")
+        assert_type(series, "nwp.Series[pa.ChunkedArray[Any]]")
+        native = series.to_native()
+        assert_type(native, "pa.ChunkedArray[Any]")
+        roundtrip = nwp.Series.from_native(native)
+        assert_type(roundtrip, "nwp.Series[pa.ChunkedArray[Any]]")

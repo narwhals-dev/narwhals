@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime as dt
 import operator
 import re
 from collections import deque
@@ -16,6 +17,7 @@ from narwhals._plan._parse import parse_into_seq_of_expr_ir
 from narwhals._plan.expressions import functions as F, operators as ops
 from narwhals._plan.expressions.literal import SeriesLiteral
 from narwhals._plan.expressions.ranges import IntRange
+from narwhals._utils import Implementation
 from narwhals.exceptions import (
     ComputeError,
     InvalidIntoExprError,
@@ -186,11 +188,98 @@ def test_int_range_invalid() -> None:
         int_range.to_function_expr(ir.col("a"))
 
 
-@pytest.mark.xfail(
-    reason="Not implemented `int_range(eager=True)`", raises=NotImplementedError
-)
-def test_int_range_series() -> None:
-    assert isinstance(nwp.int_range(50, eager=True), nwp.Series)
+def test_date_range_invalid() -> None:
+    start, end = dt.date(2000, 1, 1), dt.date(2001, 1, 1)
+    pattern = re.compile(r"scalar.+agg", re.IGNORECASE)
+    with pytest.raises(InvalidOperationError, match=pattern):
+        nwp.date_range(nwp.col("a"), nwp.col("b"))
+    with pytest.raises(InvalidOperationError, match=pattern):
+        nwp.date_range(start, nwp.col("b"))
+    with pytest.raises(TypeError, match=r"`closed` must be one of.+, got.+middle"):
+        nwp.date_range(start, end, closed="middle")  # type: ignore[call-overload]
+    with pytest.raises(
+        ComputeError, match="`interval` input for `date_range` must consist of full days"
+    ):
+        nwp.date_range(start, end, interval="24h")
+    with pytest.raises(NotImplementedError, match=r"not support.+'mo'.+yet"):
+        nwp.date_range(start, end, interval="1mo")
+    with pytest.raises(NotImplementedError, match=r"not support.+'q'.+yet"):
+        nwp.date_range(start, end, interval="2q")
+    with pytest.raises(NotImplementedError, match=r"not support.+'y'.+yet"):
+        nwp.date_range(start, end, interval="3y")
+
+
+def test_int_range_eager() -> None:
+    series = nwp.int_range(50, eager="pyarrow")
+    assert isinstance(series, nwp.Series)
+    assert series.to_list() == list(range(50))
+    series = nwp.int_range(50, eager=Implementation.PYARROW)
+    assert series.to_list() == list(range(50))
+
+    with pytest.raises(InvalidOperationError):
+        nwp.int_range(nwp.len(), eager="pyarrow")  # type: ignore[call-overload]
+    with pytest.raises(InvalidOperationError):
+        nwp.int_range(10, nwp.col("a").last(), eager=Implementation.PYARROW)  # type: ignore[call-overload]
+    with pytest.raises(NotImplementedError):
+        nwp.int_range(10, eager="pandas")
+    with pytest.raises(ValueError, match=r"lazy-only"):
+        nwp.int_range(10, eager="duckdb")  # type: ignore[call-overload]
+
+
+def test_date_range_eager() -> None:
+    leap_year = 2024
+    series_leap = nwp.date_range(
+        dt.date(leap_year, 2, 25), dt.date(leap_year, 3, 25), eager="pyarrow"
+    )
+    series_regular = nwp.date_range(
+        dt.date(leap_year + 1, 2, 25),
+        dt.date(leap_year + 1, 3, 25),
+        interval=dt.timedelta(days=1),
+        eager="pyarrow",
+    )
+    assert len(series_regular) == 29
+    assert len(series_leap) == 30
+
+    expected = [
+        dt.date(2000, 1, 1),
+        dt.date(2002, 9, 14),
+        dt.date(2005, 5, 28),
+        dt.date(2008, 2, 9),
+        dt.date(2010, 10, 23),
+        dt.date(2013, 7, 6),
+        dt.date(2016, 3, 19),
+        dt.date(2018, 12, 1),
+        dt.date(2021, 8, 14),
+    ]
+
+    series = nwp.date_range(
+        dt.date(2000, 1, 1), dt.date(2023, 8, 31), interval="987d", eager="pyarrow"
+    )
+    result = series.to_list()
+    assert result == expected
+
+    expected = [dt.date(2006, 10, 14), dt.date(2013, 7, 27), dt.date(2020, 5, 9)]
+    result = nwp.date_range(
+        dt.date(2000, 1, 1),
+        dt.date(2023, 8, 31),
+        interval="354w",
+        closed="right",
+        eager="pyarrow",
+    ).to_list()
+    assert result == expected
+
+
+def test_date_range_eager_invalid() -> None:
+    start, end = dt.date(2000, 1, 1), dt.date(2001, 1, 1)
+
+    with pytest.raises(InvalidOperationError):
+        nwp.date_range(nwp.len(), end, eager="pyarrow")  # type: ignore[call-overload]
+    with pytest.raises(InvalidOperationError):
+        nwp.date_range(start, nwp.col("a").last(), eager=Implementation.PYARROW)  # type: ignore[call-overload]
+    with pytest.raises(NotImplementedError):
+        nwp.date_range(start, end, eager="cudf")
+    with pytest.raises(ValueError, match=r"lazy-only"):
+        nwp.date_range(start, end, eager="sqlframe")  # type: ignore[call-overload]
 
 
 def test_over_invalid() -> None:

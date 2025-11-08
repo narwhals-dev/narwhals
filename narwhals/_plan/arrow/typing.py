@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     import pyarrow as pa
     import pyarrow.compute as pc
     from pyarrow.lib import (
+        Date32Type,
         Int8Type,
         Int16Type,
         Int32Type,
@@ -28,6 +29,7 @@ if TYPE_CHECKING:
     StringScalar: TypeAlias = "Scalar[StringType | LargeStringType]"
     IntegerType: TypeAlias = "Int8Type | Int16Type | Int32Type | Int64Type | Uint8Type | Uint16Type | Uint32Type | Uint64Type"
     IntegerScalar: TypeAlias = "Scalar[IntegerType]"
+    DateScalar: TypeAlias = "Scalar[Date32Type]"
 
     class NativeArrowSeries(NativeSeries, Protocol):
         @property
