@@ -343,8 +343,8 @@ def int_range(
 
         arr = pa.array(np.arange(start=start, stop=end, step=step), type=dtype)
     else:
-        pa_arange: Incomplete = t.cast("Incomplete", pa.arange)  # type: ignore[attr-defined]
-        arr = t.cast("ArrayAny", pa_arange(start=start, stop=end, step=step)).cast(dtype)
+        pa_arrange: Incomplete = t.cast("Incomplete", pa.arange)  # type: ignore[attr-defined]
+        arr = t.cast("ArrayAny", pa_arrange(start=start, stop=end, step=step)).cast(dtype)
     return pa.chunked_array([arr])
 
 
