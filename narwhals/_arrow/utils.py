@@ -249,7 +249,7 @@ def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> pa.DataType:
 
 def extract_native(
     lhs: ArrowSeries, rhs: ArrowSeries | PythonLiteral | ScalarAny
-) -> tuple[ChunkedArrayAny | ScalarAny, ChunkedArrayAny | ScalarAny]:
+) -> tuple[ChunkedArrayAny, ChunkedArrayAny | ScalarAny]:
     """Extract native objects in binary  operation.
 
     If the comparison isn't supported, return `NotImplemented` so that the
