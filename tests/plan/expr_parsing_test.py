@@ -258,6 +258,16 @@ def test_date_range_eager() -> None:
     result = series.to_list()
     assert result == expected
 
+    expected = [dt.date(2006, 10, 14), dt.date(2013, 7, 27), dt.date(2020, 5, 9)]
+    result = nwp.date_range(
+        dt.date(2000, 1, 1),
+        dt.date(2023, 8, 31),
+        interval="354w",
+        closed="right",
+        eager="pyarrow",
+    ).to_list()
+    assert result == expected
+
 
 def test_date_range_eager_invalid() -> None:
     start, end = dt.date(2000, 1, 1), dt.date(2001, 1, 1)

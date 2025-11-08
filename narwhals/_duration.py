@@ -13,7 +13,9 @@ if TYPE_CHECKING:
 
 __all__ = ["IntervalUnit"]
 
-IntervalUnit: TypeAlias = Literal["ns", "us", "ms", "s", "m", "h", "d", "mo", "q", "y"]
+IntervalUnit: TypeAlias = Literal[
+    "ns", "us", "ms", "s", "m", "h", "d", "w", "mo", "q", "y"
+]
 """A Polars duration string interval unit.
 
 - 'ns': nanosecond.
@@ -23,20 +25,22 @@ IntervalUnit: TypeAlias = Literal["ns", "us", "ms", "s", "m", "h", "d", "mo", "q
 - 'm': minute.
 - 'h': hour.
 - 'd': day.
+- 'w': week.
 - 'mo': month.
 - 'q': quarter.
 - 'y': year.
 """
 TimedeltaKwd: TypeAlias = Literal[
-    "days", "hours", "minutes", "seconds", "milliseconds", "microseconds"
+    "weeks", "days", "hours", "minutes", "seconds", "milliseconds", "microseconds"
 ]
 
 PATTERN_INTERVAL: re.Pattern[str] = re.compile(
-    r"^(?P<multiple>-?\d+)(?P<unit>ns|us|ms|mo|m|s|h|d|q|y)\Z"
+    r"^(?P<multiple>-?\d+)(?P<unit>ns|us|ms|mo|m|s|h|d|w|q|y)\Z"
 )
 MONTH_MULTIPLES = frozenset([1, 2, 3, 4, 6, 12])
 QUARTER_MULTIPLES = frozenset([1, 2, 4])
 UNIT_TO_TIMEDELTA: Mapping[IntervalUnit, TimedeltaKwd] = {
+    "w": "weeks",
     "d": "days",
     "h": "hours",
     "m": "minutes",

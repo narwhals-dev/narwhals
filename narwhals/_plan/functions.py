@@ -327,7 +327,7 @@ def _interval_days(interval: str | dt.timedelta, /) -> int:
         if interval == "1d":
             return 1
         parsed = Interval.parse_no_constraints(interval)
-        if parsed.unit not in {"d", "mo", "q", "y"}:
+        if parsed.unit not in {"d", "w", "mo", "q", "y"}:
             msg = f"`interval` input for `date_range` must consist of full days, got: {parsed.multiple}{parsed.unit}"
             raise ComputeError(msg)
         if parsed.unit in {"mo", "q", "y"}:
