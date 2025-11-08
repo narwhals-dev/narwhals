@@ -488,8 +488,9 @@ class ArrowSeriesNamespace(EagerSeriesNamespace["ArrowSeries", "ChunkedArrayAny"
 
 
 def arange(start: int, end: int, step: int) -> ArrayAny:
-    if BACKEND_VERSION < (22,):
+    if BACKEND_VERSION < (21,):
         import numpy as np  # ignore-banned-import
 
         return pa.array(np.arange(start, end, step))
+    # NOTE: Added in https://github.com/apache/arrow/pull/46778
     return pa.arange(start, end, step)  # type: ignore[attr-defined]
