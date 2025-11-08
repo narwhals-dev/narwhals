@@ -30,7 +30,7 @@ def xfail_if_no_default(constructor: Constructor, request: pytest.FixtureRequest
         request.applymarker(pytest.mark.xfail(reason=reason))
 
 
-def xfail_if_pyspark_connect(
+def xfail_if_pyspark_connect(  # pragma: no cover
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     is_spark_connect = os.environ.get("SPARK_CONNECT", None)
