@@ -2107,3 +2107,17 @@ def extend_bool(
     Stolen from https://github.com/pola-rs/polars/blob/b8bfb07a4a37a8d449d6d1841e345817431142df/py-polars/polars/_utils/various.py#L580-L594
     """
     return (value,) * n_match if isinstance(value, bool) else tuple(value)
+
+
+class _NoDefault(Enum):
+    # "borrowed" from
+    # https://github.com/pandas-dev/pandas/blob/e7859983a814b1823cf26e3b491ae2fa3be47c53/pandas/_libs/lib.pyx#L2736-L2748
+    no_default = "NO_DEFAULT"
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return "<no_default>"
+
+
+# the "no_default" sentinel should typically be used when one of the valid parameter
+# values is None, as otherwise we cannot determine if the caller has set that value.
+no_default = _NoDefault.no_default

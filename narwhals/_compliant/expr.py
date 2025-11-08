@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
 from functools import partial
 from operator import methodcaller
 from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, Protocol
@@ -38,7 +37,7 @@ from narwhals.dependencies import is_numpy_array, is_numpy_scalar
 from narwhals.exceptions import MultiOutputExpressionError
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Sequence
 
     from typing_extensions import Self, TypeIs
 
@@ -46,6 +45,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.series import CompliantSeries
     from narwhals._compliant.typing import AliasNames, EvalNames, EvalSeries
     from narwhals._expression_parsing import ExprMetadata
+    from narwhals._typing import NoDefault
     from narwhals._utils import Implementation, Version, _LimitedContext
     from narwhals.typing import (
         ClosedInterval,
@@ -349,12 +349,10 @@ class EagerExpr(
         **kwargs: Any,
     ) -> Sequence[EagerSeriesT]:
         kwargs = {
-            **{
-                name: df._evaluate_single_output_expr(value)
-                if self._is_expr(value)
-                else value
-                for name, value in kwargs.items()
-            }
+            name: df._evaluate_single_output_expr(value)
+            if self._is_expr(value)
+            else value
+            for name, value in kwargs.items()
         }
         method = methodcaller(
             method_name,
@@ -599,13 +597,14 @@ class EagerExpr(
 
     def replace_strict(
         self,
-        old: Sequence[Any] | Mapping[Any, Any],
+        default: Any | NoDefault,
+        old: Sequence[Any],
         new: Sequence[Any],
         *,
         return_dtype: IntoDType | None,
     ) -> Self:
         return self._reuse_series(
-            "replace_strict", old=old, new=new, return_dtype=return_dtype
+            "replace_strict", old=old, new=new, default=default, return_dtype=return_dtype
         )
 
     def sort(self, *, descending: bool, nulls_last: bool) -> Self:
