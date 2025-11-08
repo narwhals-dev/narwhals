@@ -283,9 +283,9 @@ def _eager_namespace(
     impl = Implementation.from_backend(backend)
     if is_eager_allowed(impl):
         if impl is Implementation.PYARROW:
-            from narwhals._plan.arrow.namespace import ArrowNamespace
+            from narwhals._plan import arrow as _arrow
 
-            return ArrowNamespace(Version.MAIN)
+            return _arrow.Namespace(Version.MAIN)
         raise NotImplementedError(impl)
     msg = f"{impl} support in Narwhals is lazy-only"
     raise ValueError(msg)

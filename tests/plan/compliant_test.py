@@ -665,15 +665,13 @@ if TYPE_CHECKING:
         doesn't happen elsewhere at the moment.
         """
         pytest.importorskip("pyarrow")
-        from narwhals._plan.arrow.dataframe import ArrowDataFrame
-        from narwhals._plan.arrow.expr import ArrowExpr, ArrowScalar
-        from narwhals._plan.arrow.series import ArrowSeries
+        from narwhals._plan import arrow as _arrow
 
         # NOTE: Intentionally leaving `ewm_mean` without a `not_implemented()` for another test
-        expr = ArrowExpr()  # type: ignore[abstract]
-        scalar = ArrowScalar()
-        df = ArrowDataFrame()
-        ser = ArrowSeries()
+        expr = _arrow.Expr()  # type: ignore[abstract]
+        scalar = _arrow.Scalar()
+        df = _arrow.DataFrame()
+        ser = _arrow.Series()
         assert expr
         assert scalar
         assert df
