@@ -7,23 +7,36 @@ from typing import TYPE_CHECKING
 
 from narwhals._duration import Interval
 from narwhals._plan import _guards, _parse, common, expressions as ir, selectors as cs
+from narwhals._plan._dispatch import get_dispatch_name
 from narwhals._plan.expressions import functions as F
 from narwhals._plan.expressions.literal import ScalarLiteral, SeriesLiteral
-from narwhals._plan.expressions.ranges import DateRange, IntRange
+from narwhals._plan.expressions.ranges import DateRange, IntRange, RangeFunction
 from narwhals._plan.expressions.strings import ConcatStr
 from narwhals._plan.when_then import When
-from narwhals._utils import Implementation, Version, flatten, is_eager_allowed
+from narwhals._utils import (
+    Implementation,
+    Version,
+    flatten,
+    is_eager_allowed,
+    qualified_type_name,
+)
 from narwhals.exceptions import ComputeError, InvalidOperationError
 
 if TYPE_CHECKING:
     import pyarrow as pa
+    from typing_extensions import TypeAlias
 
     from narwhals._plan import arrow as _arrow
     from narwhals._plan.compliant.namespace import EagerNamespace
     from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._plan.expr import Expr
     from narwhals._plan.series import Series
-    from narwhals._plan.typing import IntoExpr, IntoExprColumn, NativeSeriesT
+    from narwhals._plan.typing import (
+        IntoExpr,
+        IntoExprColumn,
+        NativeSeriesT,
+        NonNestedLiteralT,
+    )
     from narwhals._typing import Arrow
     from narwhals.dtypes import IntegerType
     from narwhals.typing import (
@@ -33,6 +46,11 @@ if TYPE_CHECKING:
         IntoDType,
         NonNestedLiteral,
     )
+
+    # NOTE: Use when you have a function that calls a namespace method, and eventually returns `Series[NativeSeriesT]`
+    EagerNs: TypeAlias = EagerNamespace[
+        t.Any, CompliantSeries[NativeSeriesT], t.Any, t.Any
+    ]
 
 
 def col(*names: str | t.Iterable[str]) -> Expr:
@@ -197,53 +215,14 @@ def int_range(
         start = 0
     dtype = common.into_dtype(dtype)
     if eager:
-        return _int_range_eager(start, end, step, dtype=dtype, ns=_eager_namespace(eager))
+        ns = _eager_namespace(eager)
+        start, end = _ensure_range_scalar(start, end, int, IntRange, eager)
+        return _int_range_eager(start, end, step, dtype, ns)
     return (
         IntRange(step=step, dtype=dtype)
         .to_function_expr(*_parse.parse_into_seq_of_expr_ir(start, end))
         .to_narwhals()
     )
-
-
-# TODO @dangotbanned: Deduplicate `_{int,date}_range_eager`
-def _int_range_eager(
-    start: t.Any,
-    end: t.Any,
-    step: int,
-    *,
-    dtype: IntegerType,
-    ns: EagerNamespace[t.Any, CompliantSeries[NativeSeriesT], t.Any, t.Any],
-) -> Series[NativeSeriesT]:
-    if not (isinstance(start, int) and isinstance(end, int)):
-        msg = (
-            f"Expected `start` and `end` to be integer values since `eager={ns.implementation}`.\n"
-            f"Found: `start` of type {type(start)} and `end` of type {type(end)}\n\n"
-            "Hint: Calling `nw.int_range` with expressions requires:\n"
-            "  - `eager=False`"
-            "  - a context such as `select` or `with_columns`"
-        )
-        raise InvalidOperationError(msg)
-    return ns.int_range_eager(start, end, step, dtype=dtype).to_narwhals()
-
-
-@t.overload
-def _eager_namespace(backend: Arrow, /) -> _arrow.Namespace: ...
-@t.overload
-def _eager_namespace(
-    backend: IntoBackend[EagerAllowed], /
-) -> EagerNamespace[t.Any, t.Any, t.Any, t.Any]: ...
-def _eager_namespace(
-    backend: IntoBackend[EagerAllowed], /
-) -> EagerNamespace[t.Any, t.Any, t.Any, t.Any] | _arrow.Namespace:
-    impl = Implementation.from_backend(backend)
-    if is_eager_allowed(impl):
-        if impl is Implementation.PYARROW:
-            from narwhals._plan.arrow.namespace import ArrowNamespace
-
-            return ArrowNamespace(Version.MAIN)
-        raise NotImplementedError(impl)
-    msg = f"{impl} support in Narwhals is lazy-only"
-    raise ValueError(msg)
 
 
 @t.overload
@@ -285,12 +264,72 @@ def date_range(
     closed = _ensure_closed_interval(closed)
     if eager:
         ns = _eager_namespace(eager)
-        return _date_range_eager(start, end, days, closed=closed, ns=ns)
+        start, end = _ensure_range_scalar(start, end, dt.date, DateRange, eager)
+        return _date_range_eager(start, end, days, closed, ns)
     return (
         DateRange(interval=days, closed=closed)
         .to_function_expr(*_parse.parse_into_seq_of_expr_ir(start, end))
         .to_narwhals()
     )
+
+
+@t.overload
+def _eager_namespace(backend: Arrow, /) -> _arrow.Namespace: ...
+@t.overload
+def _eager_namespace(backend: IntoBackend[EagerAllowed], /) -> EagerNs[t.Any]: ...
+def _eager_namespace(
+    backend: IntoBackend[EagerAllowed], /
+) -> EagerNs[t.Any] | _arrow.Namespace:
+    impl = Implementation.from_backend(backend)
+    if is_eager_allowed(impl):
+        if impl is Implementation.PYARROW:
+            from narwhals._plan.arrow.namespace import ArrowNamespace
+
+            return ArrowNamespace(Version.MAIN)
+        raise NotImplementedError(impl)
+    msg = f"{impl} support in Narwhals is lazy-only"
+    raise ValueError(msg)
+
+
+def _ensure_range_scalar(
+    start: t.Any,
+    end: t.Any,
+    valid_type: type[NonNestedLiteralT],
+    function: type[RangeFunction],
+    eager: IntoBackend[EagerAllowed],
+) -> tuple[NonNestedLiteralT, NonNestedLiteralT]:
+    if isinstance(start, valid_type) and isinstance(end, valid_type):
+        return start, end
+    tp_start = qualified_type_name(start)
+    tp_end = qualified_type_name(end)
+    msg = (
+        f"Expected `start` and `end` to be {valid_type.__name__} values since `eager={eager}`, but got: ({tp_start}, {tp_end})\n\n"
+        f"Hint: Calling `nw.{get_dispatch_name(function)}` with expressions requires:\n"
+        "  - `eager=False`\n"
+        "  - a context such as `select` or `with_columns`"
+    )
+    raise InvalidOperationError(msg)
+
+
+# NOTE: The extra level of indirection here is to satisfy `mypy`
+# AFAICT, `pyright` is able to use bidirectional inference from the `{date,int}_range` overloads.
+# `mypy` would treat the same call as an `Any`
+def _date_range_eager(
+    start: dt.date,
+    end: dt.date,
+    interval: int,
+    closed: ClosedInterval,
+    ns: EagerNs[NativeSeriesT],
+    /,
+) -> Series[NativeSeriesT]:
+    return ns.date_range_eager(start, end, interval, closed=closed).to_narwhals()
+
+
+# NOTE: See `_date_range_eager`
+def _int_range_eager(
+    start: int, end: int, step: int, dtype: IntegerType, ns: EagerNs[NativeSeriesT], /
+) -> Series[NativeSeriesT]:
+    return ns.int_range_eager(start, end, step, dtype=dtype).to_narwhals()
 
 
 def _ensure_closed_interval(closed: ClosedInterval, /) -> ClosedInterval:
@@ -299,27 +338,6 @@ def _ensure_closed_interval(closed: ClosedInterval, /) -> ClosedInterval:
         msg = f"`closed` must be one of {closed_intervals!r}, got {closed!r}"
         raise TypeError(msg)
     return closed
-
-
-# TODO @dangotbanned: Deduplicate `_{int,date}_range_eager`
-def _date_range_eager(
-    start: t.Any,
-    end: t.Any,
-    interval: int,
-    *,
-    closed: ClosedInterval,
-    ns: EagerNamespace[t.Any, CompliantSeries[NativeSeriesT], t.Any, t.Any],
-) -> Series[NativeSeriesT]:
-    if not (isinstance(start, dt.date) and isinstance(end, dt.date)):
-        msg = (
-            f"Expected `start` and `end` to be date values since `eager={ns.implementation}`.\n"
-            f"Found: `start` of type {type(start)} and `end` of type {type(end)}\n\n"
-            "Hint: Calling `nw.date_range` with expressions requires:\n"
-            "  - `eager=False`"
-            "  - a context such as `select` or `with_columns`"
-        )
-        raise InvalidOperationError(msg)
-    return ns.date_range_eager(start, end, interval, closed=closed).to_narwhals()
 
 
 def _interval_days(interval: str | dt.timedelta, /) -> int:

@@ -12,7 +12,6 @@ from narwhals._plan._guards import is_tuple_of
 from narwhals._plan.arrow import functions as fn
 from narwhals._plan.compliant.namespace import EagerNamespace
 from narwhals._plan.expressions.literal import is_literal_scalar
-from narwhals._typing_compat import TypeVar
 from narwhals._utils import Implementation, Version
 from narwhals.exceptions import InvalidOperationError
 
@@ -30,6 +29,7 @@ if TYPE_CHECKING:
     from narwhals._plan.expressions.ranges import DateRange, IntRange
     from narwhals._plan.expressions.strings import ConcatStr
     from narwhals._plan.series import Series as NwSeries
+    from narwhals._plan.typing import NonNestedLiteralT
     from narwhals.dtypes import IntegerType
     from narwhals.typing import (
         ClosedInterval,
@@ -39,7 +39,6 @@ if TYPE_CHECKING:
     )
 
 
-PythonLiteralT = TypeVar("PythonLiteralT", bound="PythonLiteral")
 Int64 = Version.MAIN.dtypes.Int64()
 
 
@@ -171,8 +170,8 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
         return self._expr.from_native(result, name, self.version)
 
     def _range_function_inputs(
-        self, node: RangeExpr, frame: Frame, valid_type: type[PythonLiteralT]
-    ) -> tuple[PythonLiteralT, PythonLiteralT]:
+        self, node: RangeExpr, frame: Frame, valid_type: type[NonNestedLiteralT]
+    ) -> tuple[NonNestedLiteralT, NonNestedLiteralT]:
         start_: PythonLiteral
         end_: PythonLiteral
         start, end = node.function.unwrap_input(node)
@@ -193,7 +192,7 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
                 raise InvalidOperationError(msg)
         if isinstance(start_, valid_type) and isinstance(end_, valid_type):
             return start_, end_
-        msg = f"All inputs for `{node.function}()` resolve to {valid_type.__name__}, but got \n{start_!r}\n{end_!r}"
+        msg = f"All inputs for `{node.function}()` must resolve to {valid_type.__name__}, but got \n{start_!r}\n{end_!r}"
         raise InvalidOperationError(msg)
 
     def _int_range(
