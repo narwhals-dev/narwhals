@@ -535,7 +535,7 @@ class ArrowDataFrame(
     def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self:
         plx = self.__narwhals_namespace__()
         if order_by is None:
-            data = arange(0, len(self), 1, self._backend_version)
+            data = arange(0, len(self), 1)
             row_index = plx._expr._from_series(
                 plx._series.from_iterable(data, context=self, name=name)
             )
@@ -553,8 +553,7 @@ class ArrowDataFrame(
         native = self.native
         indices = pc.sort_indices(native, [(by, "ascending") for by in order_by])
         new_col = pc.scatter(  # type: ignore[attr-defined]
-            arange(0, len(self), 1, backend_version=self._backend_version),
-            indices.cast(pa.int64()),
+            arange(0, len(self), 1), indices.cast(pa.int64())
         )
         return self._with_native(self.native.add_column(0, name, new_col))
 
