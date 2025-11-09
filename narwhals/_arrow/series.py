@@ -29,13 +29,14 @@ from narwhals._utils import (
     Implementation,
     generate_temporary_column_name,
     is_list_of,
+    no_default,
     not_implemented,
 )
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import InvalidOperationError, ShapeError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Mapping, Sequence
+    from collections.abc import Iterable, Iterator, Sequence
     from types import ModuleType
 
     import pandas as pd
@@ -58,6 +59,7 @@ if TYPE_CHECKING:
         _BasicDataType,
     )
     from narwhals._compliant.series import HistData
+    from narwhals._typing import NoDefault
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.typing import (
@@ -769,24 +771,44 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
 
     def replace_strict(
         self,
-        old: Sequence[Any] | Mapping[Any, Any],
+        default: Any | NoDefault,
+        old: Sequence[Any],
         new: Sequence[Any],
         *,
         return_dtype: IntoDType | None,
     ) -> Self:
         # https://stackoverflow.com/a/79111029/4451315
         idxs = pc.index_in(self.native, pa.array(old))
+        # Tracks which values were found in the mapping (even if mapped to None)
+        was_matched = pc.is_valid(idxs)
         result_native = pc.take(pa.array(new), idxs)
         if return_dtype is not None:
-            result_native.cast(narwhals_to_native_dtype(return_dtype, self._version))
-        result = self._with_native(result_native)
-        if result.is_null().sum() != self.is_null().sum():
-            msg = (
-                "replace_strict did not replace all non-null values.\n\n"
-                "The following did not get replaced: "
-                f"{self.filter(~self.is_null() & result.is_null()).unique(maintain_order=False).to_list()}"
+            result_native = result_native.cast(
+                narwhals_to_native_dtype(return_dtype, self._version)
             )
-            raise ValueError(msg)
+        result = self._with_native(result_native)
+        if default is no_default:
+            # Check that all non-null input values were matched
+            # (result may have more nulls if mapping contains {value: None})
+            unmatched_mask = pc.and_(pc.is_valid(self.native), pc.invert(was_matched))
+            if maybe_extract_py_scalar(
+                pc.any(unmatched_mask, min_count=0), return_py_scalar=True
+            ):
+                unmatched_values = (
+                    self.filter(self._with_native(unmatched_mask))
+                    .unique(maintain_order=False)
+                    .to_list()
+                )
+                msg = (
+                    "replace_strict did not replace all non-null values.\n\n"
+                    f"The following did not get replaced: {unmatched_values}"
+                )
+                raise InvalidOperationError(msg)
+        else:
+            result_native, default = extract_native(result, default)
+            # Only fill with default where the value wasn't matched (not where result is null due to mapping)
+            # If was_matched, keep result.native; otherwise use default
+            result = self._with_native(pc.if_else(was_matched, result.native, default))
         return result
 
     def sort(self, *, descending: bool, nulls_last: bool) -> Self:
