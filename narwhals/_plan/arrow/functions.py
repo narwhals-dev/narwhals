@@ -57,6 +57,7 @@ if TYPE_CHECKING:
         UnaryFunction,
     )
     from narwhals._plan.options import RankOptions
+    from narwhals._plan.typing import Order
     from narwhals.typing import ClosedInterval, IntoArrowSchema, PythonLiteral
 
 BACKEND_VERSION = Implementation.PYARROW._backend_version()
@@ -282,13 +283,24 @@ def shift(native: ChunkedArrayAny, n: int) -> ChunkedArrayAny:
 
 
 def rank(native: ChunkedArrayAny, rank_options: RankOptions) -> ChunkedArrayAny:
-    # TODO @dangotbanned: Wasn't there an alternative to rank here?
-    # Would be helpful, since average is the default
     arr = native if BACKEND_VERSION >= (14,) else array(native)
-    ranked = pc.rank(arr, options=rank_options.to_arrow())
-    if has_nulls(native):
-        ranked = pc.if_else(native.is_null(), lit(None, ranked.type), ranked)
+    if rank_options.method == "average":
+        return _rank_average(arr, descending=rank_options.descending)
+    ranked = preserve_nulls(native, pc.rank(arr, options=rank_options.to_arrow()))
     return chunked_array(ranked)
+
+
+def _rank_average(
+    native: ChunkedOrArrayAny, *, descending: bool = False
+) -> ChunkedArrayAny:
+    # Adapted from pandas
+    # https://github.com/pandas-dev/pandas/blob/f4851e500a43125d505db64e548af0355227714b/pandas/core/arrays/arrow/array.py#L2290-L2316
+    sort_keys: Order = "descending" if descending else "ascending"
+    f64 = pa.float64()
+    rank_min = pc.rank(native, sort_keys=sort_keys, tiebreaker="min").cast(f64)
+    rank_max = pc.rank(native, sort_keys=sort_keys, tiebreaker="max").cast(f64)
+    rank_min = preserve_nulls(native, rank_min)
+    return chunked_array(pc.divide(pc.add(rank_min, rank_max), lit(2, f64)))
 
 
 def scatter(values: ChunkedArrayAny, indices: ArrayAny) -> ChunkedArrayAny:
@@ -306,6 +318,14 @@ def scatter(values: ChunkedArrayAny, indices: ArrayAny) -> ChunkedArrayAny:
 
 def has_nulls(native: ChunkedOrArrayAny) -> bool:
     return bool(native.null_count)
+
+
+def preserve_nulls(
+    before: ChunkedOrArrayAny, after: ChunkedOrArrayT, /
+) -> ChunkedOrArrayT:
+    if has_nulls(before):
+        after = pc.if_else(before.is_null(), lit(None, after.type), after)
+    return after
 
 
 def is_between(

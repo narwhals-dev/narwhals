@@ -25,10 +25,6 @@ if TYPE_CHECKING:
     )
     from typing_extensions import TypeAlias
 
-    from narwhals._arrow.typing import (  # type: ignore[attr-defined]
-        Order as Order,
-        TieBreaker as TieBreaker,
-    )
     from narwhals._native import NativeDataFrame, NativeSeries
 
     StringScalar: TypeAlias = "Scalar[StringType | LargeStringType]"

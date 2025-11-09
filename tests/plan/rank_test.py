@@ -24,13 +24,6 @@ DESC = True
 @pytest.fixture(params=["average", "min", "max", "dense", "ordinal"])
 def rank_method(request: pytest.FixtureRequest) -> RankMethod:
     method: RankMethod = request.param
-    request.applymarker(
-        pytest.mark.xfail(
-            method == "average",
-            reason="rank('average') not yet implemented for pyarrow",
-            raises=NotImplementedError,
-        )
-    )
     return method
 
 

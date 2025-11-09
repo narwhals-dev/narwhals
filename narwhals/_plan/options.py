@@ -5,6 +5,7 @@ from itertools import repeat
 from typing import TYPE_CHECKING
 
 from narwhals._plan._immutable import Immutable
+from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -232,12 +233,9 @@ class RankOptions(Immutable):
     def to_arrow(self) -> pc.RankOptions:
         import pyarrow.compute as pc
 
-        if self.method == "average":
-            msg = (
-                "`rank` with `method='average' is not supported for pyarrow backend. "
-                "The available methods are {'min', 'max', 'dense', 'ordinal'}."
-            )
-            raise NotImplementedError(msg)
+        if self.method == "average":  # pragma: no cover
+            msg = f"`RankOptions.to_arrow` is not compatible with {self.method=}."
+            raise InvalidOperationError(msg)
         order: Order = "descending" if self.descending else "ascending"
         return pc.RankOptions(
             sort_keys=order,
