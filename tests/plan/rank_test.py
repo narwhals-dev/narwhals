@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals._plan as nwp
+from narwhals.exceptions import InvalidOperationError
 from tests.plan.utils import assert_equal_data, dataframe
 
 if TYPE_CHECKING:
@@ -58,9 +59,36 @@ EXPECTED: Mapping[tuple[RankMethod, bool], Sequence[float | None]] = {
     ("ordinal", ASC): [3, 4, 1, 2, None, 5],
     ("ordinal", DESC): [3, 1, 4, 5, None, 2],
 }
+EXPECTED_PARTITION_BY: Mapping[tuple[RankMethod, bool], Sequence[float | None]] = {
+    ("average", ASC): [2.0, 3.0, 1.0, 1.0, None, 2.0],
+    ("average", DESC): [2.0, 1.0, 2.0, 3.0, None, 1.0],
+    ("min", ASC): [2, 3, 1, 1, None, 2],
+    ("min", DESC): [2, 1, 2, 3, None, 1],
+    ("max", ASC): [2, 3, 1, 1, None, 2],
+    ("max", DESC): [2, 1, 2, 3, None, 1],
+    ("dense", ASC): [2, 3, 1, 1, None, 2],
+    ("dense", DESC): [2, 1, 2, 3, None, 1],
+    ("ordinal", ASC): [2, 3, 1, 1, None, 2],
+    ("ordinal", DESC): [2, 1, 2, 3, None, 1],
+}
 
 
 @pytest.mark.parametrize("descending", [ASC, DESC], ids=["asc", "desc"])
 def test_rank_expr(rank_method: RankMethod, data: Data, *, descending: bool) -> None:
     result = dataframe(data).select(nwp.col("a").rank(rank_method, descending=descending))
     assert_equal_data(result, {"a": EXPECTED[rank_method, descending]})
+
+
+@pytest.mark.xfail(
+    reason="`ArrowExpr.rank().over(*partition_by)` is not implemented on main",
+    raises=InvalidOperationError,
+)
+@pytest.mark.parametrize("descending", [ASC, DESC], ids=["asc", "desc"])
+def test_rank_expr_partition_by(
+    rank_method: RankMethod, data: Data, *, descending: bool
+) -> None:  # pragma: no cover
+    # `test_rank_expr_in_over_context`
+    result = dataframe(data).select(
+        nwp.col("a").rank(rank_method, descending=descending).over("b")
+    )
+    assert_equal_data(result, {"a": EXPECTED_PARTITION_BY[rank_method, descending]})
