@@ -71,6 +71,18 @@ EXPECTED_PARTITION_BY: Mapping[tuple[RankMethod, bool], Sequence[float | None]] 
     ("ordinal", ASC): [2, 3, 1, 1, None, 2],
     ("ordinal", DESC): [2, 1, 2, 3, None, 1],
 }
+EXPECTED_ORDER_BY: Mapping[tuple[RankMethod, bool], Sequence[float | None]] = {
+    ("average", ASC): [3.0, 4.5, 1.5, 1.5, None, 4.5],
+    ("average", DESC): [3.0, 1.5, 4.5, 4.5, None, 1.5],
+    ("min", ASC): [3, 4, 1, 1, None, 4],
+    ("min", DESC): [3, 1, 4, 4, None, 1],
+    ("max", ASC): [3, 5, 2, 2, None, 5],
+    ("max", DESC): [3, 2, 5, 5, None, 2],
+    ("dense", ASC): [2, 3, 1, 1, None, 3],
+    ("dense", DESC): [2, 1, 3, 3, None, 1],
+    ("ordinal", ASC): [3, 4, 1, 2, None, 5],
+    ("ordinal", DESC): [3, 1, 4, 5, None, 2],
+}
 
 
 @pytest.mark.parametrize("descending", [ASC, DESC], ids=["asc", "desc"])
@@ -92,3 +104,13 @@ def test_rank_expr_partition_by(
         nwp.col("a").rank(rank_method, descending=descending).over("b")
     )
     assert_equal_data(result, {"a": EXPECTED_PARTITION_BY[rank_method, descending]})
+
+
+@pytest.mark.parametrize("descending", [ASC, DESC], ids=["asc", "desc"])
+def test_rank_expr_order_by(
+    rank_method: RankMethod, data: Data, *, descending: bool
+) -> None:
+    result = dataframe(data).select(
+        nwp.col("a").rank(rank_method, descending=descending).over(order_by="i")
+    )
+    assert_equal_data(result, {"a": EXPECTED_ORDER_BY[rank_method, descending]})
