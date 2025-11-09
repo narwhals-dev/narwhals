@@ -131,6 +131,14 @@ class BaseFrame(Generic[NativeFrameT_co]):
     def collect_schema(self) -> Schema:
         return self.schema
 
+    def with_row_index(
+        self, name: str = "index", *, order_by: OneOrIterable[ColumnNameOrSelector]
+    ) -> Self:
+        by_selectors = _parse.parse_into_seq_of_selector_ir(order_by)
+        # TODO @dangotbanned: Add an option in `_expansion.py` to raise on empty names result
+        by_names = expand_selector_irs_names(by_selectors, schema=self)
+        return self._with_compliant(self._compliant.with_row_index_by(name, by_names))
+
 
 class DataFrame(
     BaseFrame[NativeDataFrameT_co], Generic[NativeDataFrameT_co, NativeSeriesT]
@@ -282,6 +290,16 @@ class DataFrame(
             raise group_by_no_keys_error()
         partitions = self._compliant.partition_by(names, include_key=include_key)
         return [self._with_compliant(p) for p in partitions]
+
+    def with_row_index(
+        self,
+        name: str = "index",
+        *,
+        order_by: OneOrIterable[ColumnNameOrSelector] | None = None,
+    ) -> Self:
+        if order_by is None:
+            return self._with_compliant(self._compliant.with_row_index(name))
+        return super().with_row_index(name, order_by=order_by)
 
 
 def _is_join_strategy(obj: Any) -> TypeIs[JoinStrategy]:

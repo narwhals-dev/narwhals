@@ -99,6 +99,10 @@ class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
     def with_row_index(self, name: str) -> Self:
         return self._with_native(self.native.add_column(0, name, fn.int_range(len(self))))
 
+    def with_row_index_by(self, name: str, order_by: Sequence[str]) -> Self:
+        msg = "TODO: ArrowDataFrame.with_row_index_by"
+        raise NotImplementedError(msg)
+
     def get_column(self, name: str) -> Series:
         chunked = self.native.column(name)
         return Series.from_native(chunked, name, version=self.version)
