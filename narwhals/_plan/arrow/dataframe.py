@@ -9,6 +9,7 @@ import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._arrow.utils import native_to_narwhals_dtype
+from narwhals._plan import expressions as ir
 from narwhals._plan.arrow import acero, functions as fn
 from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
 from narwhals._plan.arrow.group_by import ArrowGroupBy as GroupBy, partition_by
@@ -100,8 +101,23 @@ class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
         return self._with_native(self.native.add_column(0, name, fn.int_range(len(self))))
 
     def with_row_index_by(self, name: str, order_by: Sequence[str]) -> Self:
-        msg = "TODO: ArrowDataFrame.with_row_index_by"
-        raise NotImplementedError(msg)
+        if fn.BACKEND_VERSION < (20,):
+            # NOTE: Other branch uses pc.scatter (requires pyarrow>=20)
+            # TODO @dangotbanned: Try again without relying on narwhals-level
+            row_index = (
+                ir.col(order_by[0])
+                .to_narwhals()
+                .rank(method="ordinal")
+                .over(order_by=order_by)
+                - 1
+            ).alias(name)
+            return self._with_native(
+                self.to_narwhals().select(row_index, *self.columns).to_native()
+            )
+        native = self.native
+        indices = pc.sort_indices(native, [(by, "ascending") for by in order_by])
+        column = pc.scatter(fn.int_range(len(self)), indices.cast(pa.int64()))  # type: ignore[attr-defined]
+        return self._with_native(native.add_column(0, name, column))
 
     def get_column(self, name: str) -> Series:
         chunked = self.native.column(name)
