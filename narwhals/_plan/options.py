@@ -229,6 +229,21 @@ class RankOptions(Immutable):
     method: RankMethod
     descending: bool
 
+    def to_arrow(self) -> pc.RankOptions:
+        import pyarrow.compute as pc
+
+        if self.method == "average":
+            msg = (
+                "`rank` with `method='average' is not supported for pyarrow backend. "
+                "The available methods are {'min', 'max', 'dense', 'ordinal'}."
+            )
+            raise NotImplementedError(msg)
+        order: Order = "descending" if self.descending else "ascending"
+        return pc.RankOptions(
+            sort_keys=order,
+            tiebreaker=("first" if self.method == "ordinal" else self.method),
+        )
+
 
 class EWMOptions(Immutable):
     """Deviates from polars, since we aren't pre-computing alpha.

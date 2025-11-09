@@ -446,9 +446,7 @@ class ArrowExpr(  # type: ignore[misc]
 
     def rank(self, node: ir.FunctionExpr[Rank], frame: Frame, name: str) -> Self:
         native = self._dispatch_expr(node.input[0], frame, name).native
-        opts = node.function.options
-        result = fn.rank(native, opts.method, descending=opts.descending)
-        return self._with_native(result, name)
+        return self._with_native(fn.rank(native, node.function.options), name)
 
 
 class ArrowScalar(
