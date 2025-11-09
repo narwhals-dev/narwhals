@@ -291,6 +291,17 @@ def rank(native: ChunkedArrayAny, rank_options: RankOptions) -> ChunkedArrayAny:
     return chunked_array(ranked)
 
 
+def scatter(values: ChunkedArrayAny, indices: ArrayAny) -> ChunkedArrayAny:
+    """`pyarrow.compute.scatter` compatibility wrapper.
+
+    Note:
+        Somewhat different to `polars.Series.scatter`.
+    """
+    if BACKEND_VERSION < (20,):
+        return chunked_array(values).take(pc.sort_indices(indices))
+    return pc.scatter(values, indices)  # type: ignore[attr-defined]
+
+
 def has_nulls(native: ChunkedOrArrayAny) -> bool:
     return bool(native.null_count)
 
