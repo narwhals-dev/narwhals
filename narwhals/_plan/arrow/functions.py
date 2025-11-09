@@ -297,9 +297,11 @@ def scatter(values: ChunkedArrayAny, indices: ArrayAny) -> ChunkedArrayAny:
     Note:
         Somewhat different to `polars.Series.scatter`.
     """
-    if BACKEND_VERSION < (20,):
-        return chunked_array(values).take(pc.sort_indices(indices))
-    return pc.scatter(values, indices)  # type: ignore[attr-defined]
+    return (
+        pc.scatter(values, indices)  # type: ignore[attr-defined]
+        if BACKEND_VERSION >= (20,)
+        else values.take(pc.sort_indices(indices))
+    )
 
 
 def has_nulls(native: ChunkedOrArrayAny) -> bool:
