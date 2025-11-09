@@ -533,7 +533,7 @@ class ArrowDataFrame(
 
     def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self:
         plx = self.__narwhals_namespace__()
-        data = arange(0, len(self), 1, self._backend_version)
+        data = arange(0, len(self), 1)
         if order_by is None:
             row_index = plx._expr._from_series(
                 plx._series.from_iterable(data, context=self, name=name)
