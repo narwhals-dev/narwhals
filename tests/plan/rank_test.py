@@ -114,3 +114,27 @@ def test_rank_expr_order_by(
         nwp.col("a").rank(rank_method, descending=descending).over(order_by="i")
     )
     assert_equal_data(result, {"a": EXPECTED_ORDER_BY[rank_method, descending]})
+
+
+def test_rank_expr_order_by_3177() -> None:
+    # NOTE: #3177
+    data = {"a": [1, 1, 2, 2, 3, 3], "b": [3, None, 4, 3, 5, 6], "i": list(range(6))}
+    df = dataframe(data)
+    result = df.with_columns(c=nwp.col("a").rank("ordinal").over(order_by="b")).sort("i")
+    expected = {
+        "a": [1, 1, 2, 2, 3, 3],
+        "b": [3, None, 4, 3, 5, 6],
+        "i": [0, 1, 2, 3, 4, 5],
+        "c": [2, 1, 4, 3, 5, 6],
+    }
+    assert_equal_data(result, expected)
+
+    data = {"i": [0, 1, 2], "j": [1, 2, 1]}
+    df = dataframe(data)
+    result = (
+        df.with_columns(z=nwp.col("j").rank("min").over(order_by="i"))
+        .sort("i")
+        .select("z")
+    )
+    expected = {"z": [1.0, 3.0, 1.0]}
+    assert_equal_data(result, expected)
