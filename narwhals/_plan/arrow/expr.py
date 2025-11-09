@@ -364,11 +364,10 @@ class ArrowExpr(  # type: ignore[misc]
             msg = f"Need to implement `group_by`, `join` for:\n{node!r}"
             raise NotImplementedError(msg)
 
-        # NOTE: Converting `over(order_by=..., options=...)` into the right shape for `DataFrame.sort`
-        sort_by = tuple(node.order_by_names())
-        options = node.sort_options.to_multiple(len(sort_by))
+        order_by = tuple(node.order_by_names())
+        options = node.sort_options.to_multiple(len(order_by))
         idx_name = temp.column_name(frame)
-        sorted_context = frame.with_row_index(idx_name).sort(sort_by, options)
+        sorted_context = frame.with_row_index(idx_name).sort(order_by, options)
         evaluated = node.expr.dispatch(self, sorted_context.drop([idx_name]), name)
         if isinstance(evaluated, ArrowScalar):
             # NOTE: We're already sorted, defer broadcasting to the outer context
@@ -377,8 +376,7 @@ class ArrowExpr(  # type: ignore[misc]
             # - https://github.com/narwhals-dev/narwhals/pull/2528/commits/b8066c4c57d4b0b6c38d58a0f5de05eefc2cae70
             return self._with_native(evaluated.native, name)
         indices = pc.sort_indices(sorted_context.get_column(idx_name).native)
-        height = len(sorted_context)
-        result = evaluated.broadcast(height).native.take(indices)
+        result = evaluated.broadcast(len(frame)).native.take(indices)
         return self._with_native(result, name)
 
     # NOTE: Can't implement in `EagerExpr`, since it doesn't derive `ExprDispatch`
