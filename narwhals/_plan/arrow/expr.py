@@ -62,6 +62,7 @@ if TYPE_CHECKING:
         FillNull,
         NullCount,
         Pow,
+        Rank,
         Shift,
     )
     from narwhals.typing import Into1DArray, IntoDType, PythonLiteral
@@ -443,6 +444,12 @@ class ArrowExpr(  # type: ignore[misc]
         series = self._dispatch_expr(node.input[0], frame, name)
         return self._with_native(fn.lit(series.native.null_count), name)
 
+    def rank(self, node: ir.FunctionExpr[Rank], frame: Frame, name: str) -> Self:
+        native = self._dispatch_expr(node.input[0], frame, name).native
+        opts = node.function.options
+        result = fn.rank(native, opts.method, descending=opts.descending)
+        return self._with_native(result, name)
+
 
 class ArrowScalar(
     _ArrowDispatch["ArrowScalar"],
@@ -535,6 +542,7 @@ class ArrowScalar(
     over = not_implemented()
     over_ordered = not_implemented()
     map_batches = not_implemented()
+    rank = not_implemented()
     # length_preserving
     rolling_expr = not_implemented()
     diff = not_implemented()

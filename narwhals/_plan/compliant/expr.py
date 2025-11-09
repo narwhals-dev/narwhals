@@ -120,6 +120,9 @@ class CompliantExpr(HasVersion, Protocol[FrameT_contra, SeriesT_co]):
     def cum_sum(
         self, node: FunctionExpr[F.CumSum], frame: FrameT_contra, name: str
     ) -> Self: ...
+    def rank(
+        self, node: FunctionExpr[F.Rank], frame: FrameT_contra, name: str
+    ) -> Self: ...
     # series -> scalar
     def all(
         self, node: FunctionExpr[boolean.All], frame: FrameT_contra, name: str

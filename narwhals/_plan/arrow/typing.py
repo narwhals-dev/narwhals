@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# ruff: noqa: PLC0414
 from collections.abc import Callable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Literal, Protocol, overload
 
@@ -15,8 +16,8 @@ if TYPE_CHECKING:
         Int16Type,
         Int32Type,
         Int64Type,
-        LargeStringType as LargeStringType,  # noqa: PLC0414
-        StringType as StringType,  # noqa: PLC0414
+        LargeStringType as LargeStringType,
+        StringType as StringType,
         Uint8Type,
         Uint16Type,
         Uint32Type,
@@ -24,6 +25,10 @@ if TYPE_CHECKING:
     )
     from typing_extensions import TypeAlias
 
+    from narwhals._arrow.typing import (  # type: ignore[attr-defined]
+        Order as Order,
+        TieBreaker as TieBreaker,
+    )
     from narwhals._native import NativeDataFrame, NativeSeries
 
     StringScalar: TypeAlias = "Scalar[StringType | LargeStringType]"

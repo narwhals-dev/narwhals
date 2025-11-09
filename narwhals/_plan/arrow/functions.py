@@ -49,14 +49,16 @@ if TYPE_CHECKING:
         IntegerType,
         LargeStringType,
         NativeScalar,
+        Order,
         Scalar,
         ScalarAny,
         ScalarT,
         StringScalar,
         StringType,
+        TieBreaker,
         UnaryFunction,
     )
-    from narwhals.typing import ClosedInterval, IntoArrowSchema, PythonLiteral
+    from narwhals.typing import ClosedInterval, IntoArrowSchema, PythonLiteral, RankMethod
 
 BACKEND_VERSION = Implementation.PYARROW._backend_version()
 
@@ -278,6 +280,30 @@ def shift(native: ChunkedArrayAny, n: int) -> ChunkedArrayAny:
     else:
         arrays = [*arr.slice(offset=-n).chunks, nulls_like(-n, arr)]
     return pa.chunked_array(arrays)
+
+
+def rank(
+    native: ChunkedArrayAny, method: RankMethod, *, descending: bool = False
+) -> ChunkedArrayAny:
+    # TODO @dangotbanned: Wasn't there an alternative to rank here?
+    # Would be helpful, since average is the default
+    if method == "average":
+        msg = (
+            "`rank` with `method='average' is not supported for pyarrow backend. "
+            "The available methods are {'min', 'max', 'dense', 'ordinal'}."
+        )
+        raise NotImplementedError(msg)
+    sort_keys: Order = "descending" if descending else "ascending"
+    tiebreaker: TieBreaker = "first" if method == "ordinal" else method
+    arr = native if BACKEND_VERSION >= (14,) else array(native)
+    ranked = pc.rank(arr, sort_keys=sort_keys, tiebreaker=tiebreaker)
+    if has_nulls(native):
+        ranked = pc.if_else(native.is_null(), lit(None, ranked.type), ranked)
+    return chunked_array(ranked)
+
+
+def has_nulls(native: ChunkedOrArrayAny) -> bool:
+    return bool(native.null_count)
 
 
 def is_between(
