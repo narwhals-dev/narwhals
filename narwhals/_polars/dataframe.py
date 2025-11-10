@@ -104,6 +104,7 @@ NativePolarsFrame = TypeVar("NativePolarsFrame", pl.DataFrame, pl.LazyFrame)
 
 
 class PolarsBaseFrame(Generic[NativePolarsFrame]):
+    clear: Method[Self]
     drop_nulls: Method[Self]
     explode: Method[Self]
     filter: Method[Self]

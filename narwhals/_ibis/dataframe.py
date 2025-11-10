@@ -425,15 +425,15 @@ class IbisLazyFrame(
 
     def clear(self, n: int) -> Self:
         if n == 0:
-            native = self.native.limit(0)
+            native_result = self.native.limit(0)
         else:
             native_schema = self.native.schema().fields.items()
             range_table = ibis.range(n).name("idx").as_table().unnest("idx")
             null_cols = (
                 ibis.null().cast(dtype).name(name) for name, dtype in native_schema
             )
-            native = range_table.select(*null_cols)
-        return self._with_native(native)
+            native_result = range_table.select(*null_cols)
+        return self._with_native(native_result)
 
     # Intentionally not implemented, as Ibis does its own expression rewriting.
     _evaluate_window_expr = not_implemented()
