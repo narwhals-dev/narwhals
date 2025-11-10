@@ -578,7 +578,7 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
 
     if not pass_through:
         msg = f"Unsupported dataframe type, got: {type(native_object)}"
-        if hint := plugins._show_suggestions(type(native_object)):
+        if hint := plugins._show_suggestions(type(native_object)):  # pragma: no cover
             msg += "\n\n" + hint
         raise TypeError(msg)
     return native_object
