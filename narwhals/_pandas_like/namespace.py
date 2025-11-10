@@ -335,6 +335,18 @@ class PandasLikeNamespace(
             context=self,
         )
 
+    def concat_list(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
+        def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+            msg = "TODO: PANDAS"
+            raise NotImplementedError(msg)
+
+        return self._expr._from_callable(
+            func=func,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            context=self,
+        )
+
     def _if_then_else(
         self,
         when: NativeSeriesT,
