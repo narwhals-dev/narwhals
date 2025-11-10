@@ -449,6 +449,12 @@ class BaseFrame(Generic[_FrameT]):
 
         return self._with_compliant(self._compliant_frame.explode(columns=to_explode))
 
+    def clear(self, n: int = 0) -> Self:
+        if n < 0:
+            msg = f"`n` should be greater than or equal to 0, got {n}"
+            raise ValueError(msg)
+        return self._with_compliant(self._compliant_frame.clear(n=n))
+
 
 class DataFrame(BaseFrame[DataFrameT]):
     """Narwhals DataFrame, backed by a native eager dataframe.
@@ -2347,10 +2353,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         return super().explode(columns, *more_columns)
 
     def clear(self, n: int = 0) -> Self:
-        if n < 0:
-            msg = f"`n` should be greater than or equal to 0, got {n}"
-            raise ValueError(msg)
-        return self._with_compliant(self._compliant_frame.clear(n=n))
+        return super().clear(n)
 
 
 class LazyFrame(BaseFrame[LazyFrameT]):
@@ -3354,3 +3357,6 @@ class LazyFrame(BaseFrame[LazyFrameT]):
             <BLANKLINE>
         """
         return super().explode(columns, *more_columns)
+
+    def clear(self, n: int = 0) -> Self:
+        return super().clear(n)
