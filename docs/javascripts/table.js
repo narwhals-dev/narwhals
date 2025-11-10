@@ -203,8 +203,14 @@ function addColumnSelector(table) {
   container.appendChild(button)
   container.appendChild(dropdown)
   
-  // Insert before the table
-  table.parentNode.insertBefore(container, table)
+  // Wrap table in a container for better layout control
+  var tableContainer = document.createElement('div')
+  tableContainer.className = 'table-container'
+  table.parentNode.insertBefore(tableContainer, table)
+  tableContainer.appendChild(table)
+  
+  // Insert button container before the table container
+  tableContainer.parentNode.insertBefore(container, tableContainer)
 }
 
 function toggleColumn(table, columnIndex, visible) {

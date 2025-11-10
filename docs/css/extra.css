@@ -7,6 +7,28 @@
   margin-left: 5vw;
 }
 
+/* API Completeness Table Styles */
+.table-container {
+  overflow-x: auto;
+}
+
+article table:not([class]) {
+  width: auto !important;
+  max-width: 100%;
+  table-layout: auto;
+}
+
+article table:not([class]) th,
+article table:not([class]) td {
+  white-space: nowrap;
+  padding: 0.6rem 1rem;
+}
+
+article table:not([class]) th:first-child,
+article table:not([class]) td:first-child {
+  min-width: 150px;
+}
+
 /* Column Selector Styles */
 .column-selector-button:hover {
   background: var(--md-primary-fg-color--dark, #303f9f) !important;
