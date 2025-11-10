@@ -3,11 +3,11 @@ from __future__ import annotations
 import pytest
 
 import narwhals as nw
-from tests.utils import ConstructorEager, assert_equal_data
+from tests.utils import Constructor, assert_equal_data
 
 
 @pytest.mark.parametrize("n", [0, 1, 10])
-def test_clear(constructor: ConstructorEager, n: int) -> None:
+def test_clear(request: pytest.FixtureRequest, constructor: Constructor, n: int) -> None:
     data = {
         "int": [1, 2, 3],
         "str": ["foo", "bar", "baz"],
@@ -15,6 +15,12 @@ def test_clear(constructor: ConstructorEager, n: int) -> None:
         "bool": [True, False, True],
     }
     df = nw.from_native(constructor(data))
+    impl = df.implementation
+
+    if n > 0 and (impl.is_pandas_like() or impl.is_dask()):
+        reason = "NotImplementedError"
+        request.applymarker(pytest.mark.xfail(reason))
+
     df_clear = df.clear(n=n).lazy().collect()
     assert len(df_clear) == n
     assert df.collect_schema() == df_clear.collect_schema()
@@ -22,7 +28,7 @@ def test_clear(constructor: ConstructorEager, n: int) -> None:
     assert_equal_data(df_clear, {k: [None] * n for k in data})
 
 
-def test_clear_negative(constructor: ConstructorEager) -> None:
+def test_clear_negative(constructor: Constructor) -> None:
     n = -1
     data = {"a": [1, 2, 3]}
     df = nw.from_native(constructor(data))
