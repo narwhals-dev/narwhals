@@ -645,7 +645,7 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     def replace_strict(
         self,
-        default: Any | NoDefault,
+        default: PandasLikeSeries | NoDefault,
         old: Sequence[Any],
         new: Sequence[Any],
         *,
@@ -693,8 +693,8 @@ class PandasLikeSeries(EagerSeries[Any]):
             native_result = native_result.where(was_matched, None)
         else:
             # For unmatched values, use default
-            _, default = align_and_extract_native(self, default)
-            native_result = native_result.where(was_matched, default)
+            _, default_native = align_and_extract_native(self, default)
+            native_result = native_result.where(was_matched, default_native)
 
         return self._with_native(native_result)
 

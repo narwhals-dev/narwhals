@@ -21,7 +21,7 @@ from narwhals._duckdb.utils import (
     window_expression,
 )
 from narwhals._sql.expr import SQLExpr
-from narwhals._utils import Implementation, Version, extend_bool
+from narwhals._utils import Implementation, Version, extend_bool, no_default
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -38,6 +38,7 @@ if TYPE_CHECKING:
     )
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.namespace import DuckDBNamespace
+    from narwhals._typing import NoDefault
     from narwhals._utils import _LimitedContext
     from narwhals.typing import FillNullStrategy, IntoDType, RollingInterpolationMethod
 
@@ -269,6 +270,48 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
         return self.__class__(
             func,
             window_f,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
+        )
+
+    def replace_strict(
+        self,
+        default: DuckDBExpr | NoDefault,
+        old: Sequence[Any],
+        new: Sequence[Any],
+        *,
+        return_dtype: IntoDType | None,
+    ) -> Self:
+        if default is no_default:
+            msg = "`replace_strict` requires an explicit value for `default` for duckdb backend."
+            raise ValueError(msg)
+
+        old_, new_ = lit(list(old)), lit(list(new))
+        mapping_expr = F("map", old_, new_)
+
+        def func(df: DuckDBLazyFrame) -> list[Expression]:
+            default_col = df._evaluate_single_output_expr(default)
+
+            results = [
+                when(
+                    F("contains", old_, expr),
+                    # From [map_extract docs](https://duckdb.org/docs/stable/sql/functions/map#map_extractmap-key)
+                    #   "Return the value for a given key as a list, or NULL if the key is not contained in the map."
+                    F("list_extract", F("map_extract", mapping_expr, expr), lit(1)),
+                ).otherwise(default_col)
+                for expr in self(df)
+            ]
+
+            if return_dtype:
+                tz = DeferredTimeZone(df.native)
+                native_dtype = narwhals_to_native_dtype(return_dtype, self._version, tz)
+                return [res.cast(native_dtype) for res in results]
+            return results
+
+        return self.__class__(
+            func,
+            None,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             version=self._version,
