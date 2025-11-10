@@ -244,6 +244,7 @@ def test_to_dict_as_series() -> None:
 )
 def test_hist_v1() -> None:
     pytest.importorskip("pyarrow")
+    pytest.importorskip("numpy")
     import pyarrow as pa
 
     df = nw_v1.from_native(pa.table({"a": [1, 1, 2]}), eager_only=True)
@@ -540,13 +541,7 @@ def test_dtypes() -> None:
 @pytest.mark.parametrize(
     ("strict", "context"),
     [
-        (
-            True,
-            pytest.raises(
-                TypeError,
-                match="Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe",
-            ),
-        ),
+        (True, pytest.raises(TypeError, match="Unsupported dataframe type")),
         (False, does_not_raise()),
     ],
 )
