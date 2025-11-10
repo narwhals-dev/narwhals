@@ -15,6 +15,7 @@ from narwhals._plan.compliant.column import ExprDispatch
 from narwhals._plan.compliant.expr import EagerExpr
 from narwhals._plan.compliant.scalar import EagerScalar
 from narwhals._plan.compliant.typing import namespace
+from narwhals._plan.expressions.boolean import IsFirstDistinct, IsLastDistinct
 from narwhals._plan.expressions.functions import NullCount
 from narwhals._utils import Implementation, Version, _StoresNative, not_implemented
 from narwhals.exceptions import InvalidOperationError, ShapeError
@@ -48,8 +49,6 @@ if TYPE_CHECKING:
         All,
         IsBetween,
         IsFinite,
-        IsFirstDistinct,
-        IsLastDistinct,
         IsNan,
         IsNull,
         Not,
@@ -335,7 +334,7 @@ class ArrowExpr(  # type: ignore[misc]
     #   - [x] `over_ordered`
     #   - [x] `group_by`, `join`
     #   - [x] `over` (with partitions)
-    #   - [ ] `over_ordered` (with partitions)
+    #   - [!] `over_ordered` (with partitions)
     # - [ ] `map_batches`
     #   - [x] elementwise
     #   - [ ] scalar
@@ -357,16 +356,40 @@ class ArrowExpr(  # type: ignore[misc]
         )
         return self._with_native(result, name)
 
+    # NOTE: Very rough, but working for most aggregations
     def over_ordered(
         self, node: ir.OrderedWindowExpr, frame: Frame, name: str
     ) -> Self | Scalar:
-        if node.partition_by:
-            msg = f"Need to implement `group_by`, `join` for:\n{node!r}"
-            raise NotImplementedError(msg)
-
         order_by = tuple(node.order_by_names())
         options = node.sort_options.to_multiple(len(order_by))
         idx_name = temp.column_name(frame)
+        if node.partition_by:
+            if isinstance(node.expr, ir.FunctionExpr) and isinstance(
+                node.expr.function, (IsFirstDistinct, IsLastDistinct)
+            ):
+                msg = (
+                    f"TODO: {node.expr.function!r}\n"
+                    f"Need to adapt impl to reduce the number of sorts when used in {node!r}"
+                )
+                raise NotImplementedError(msg)
+            sorted_context = frame.with_row_index_by(idx_name, order_by).sort(
+                [idx_name], options
+            )
+            resolved = (
+                frame._grouper.by_irs(*node.partition_by)
+                .agg_irs(node.expr.alias(name))
+                .resolve(frame)
+            )
+            by_names = resolved.key_names
+            result_ca = (
+                frame.select_names(*by_names)
+                # TODO @dangotbanned: Revise after https://github.com/narwhals-dev/narwhals/issues/3300
+                .join(resolved.evaluate(sorted_context), how="left", left_on=by_names)
+                .get_column(name)
+                .native
+            )
+            return self._with_native(result_ca, name)
+
         sorted_context = frame.with_row_index(idx_name).sort(order_by, options)
         evaluated = node.expr.dispatch(self, sorted_context.drop([idx_name]), name)
         if isinstance(evaluated, ArrowScalar):
