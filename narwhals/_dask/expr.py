@@ -638,11 +638,7 @@ class DaskExpr(
         old_ = list(old)
 
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            default_series = (
-                df._evaluate_single_output_expr(default)
-                # if isinstance(default, DaskExpr)
-                # else default
-            )
+            default_series = df._evaluate_single_output_expr(default)
             results = [
                 series.replace(mapping).where(series.isin(old_), default_series)
                 for series in self(df)
