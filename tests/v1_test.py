@@ -541,13 +541,7 @@ def test_dtypes() -> None:
 @pytest.mark.parametrize(
     ("strict", "context"),
     [
-        (
-            True,
-            pytest.raises(
-                TypeError,
-                match="Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe",
-            ),
-        ),
+        (True, pytest.raises(TypeError, match="Unsupported dataframe type")),
         (False, does_not_raise()),
     ],
 )
