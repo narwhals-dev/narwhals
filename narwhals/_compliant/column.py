@@ -113,7 +113,7 @@ class CompliantColumn(Protocol):
     def rank(self, method: RankMethod, *, descending: bool) -> Self: ...
     def replace_strict(
         self,
-        default: Any | NoDefault,
+        default: Self | NoDefault,
         old: Sequence[Any],
         new: Sequence[Any],
         *,

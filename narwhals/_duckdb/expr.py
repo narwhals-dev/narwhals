@@ -277,7 +277,7 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
 
     def replace_strict(
         self,
-        default: Any | NoDefault,
+        default: DuckDBExpr | NoDefault,
         old: Sequence[Any],
         new: Sequence[Any],
         *,
@@ -291,9 +291,7 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
         mapping_expr = F("map", old_, new_)
 
         def func(df: DuckDBLazyFrame) -> list[Expression]:
-            default_col = (
-                default(df)[0] if isinstance(default, DuckDBExpr) else lit(default)
-            )
+            default_col = df._evaluate_single_output_expr(default)
 
             results = [
                 when(

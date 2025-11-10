@@ -159,7 +159,7 @@ class CompliantExpr(
     ) -> Self: ...
     def replace_strict(
         self,
-        default: Any | NoDefault,
+        default: Self | NoDefault,
         old: Sequence[Any],
         new: Sequence[Any],
         *,
@@ -605,7 +605,7 @@ class EagerExpr(
 
     def replace_strict(
         self,
-        default: Any | NoDefault,
+        default: Self | NoDefault,
         old: Sequence[Any],
         new: Sequence[Any],
         *,

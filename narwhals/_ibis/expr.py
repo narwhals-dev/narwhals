@@ -319,7 +319,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
 
     def replace_strict(
         self,
-        default: Any | NoDefault,
+        default: IbisExpr | NoDefault,
         old: Sequence[Any],
         new: Sequence[Any],
         *,
@@ -335,9 +335,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         mapping_expr = ibis.map(keys, values)
 
         def func(df: IbisLazyFrame) -> list[ir.Value]:
-            default_col = (
-                default(df)[0] if isinstance(default, IbisExpr) else lit(default)
-            )
+            default_col = df._evaluate_single_output_expr(default)
 
             results = [
                 ns._when(expr.isin(keys), mapping_expr[expr], default_col)

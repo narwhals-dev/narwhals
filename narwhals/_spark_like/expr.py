@@ -359,7 +359,7 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
 
     def replace_strict(  # pragma: no cover
         self,
-        default: Any | NoDefault,
+        default: SparkLikeExpr | NoDefault,
         old: Sequence[Any],
         new: Sequence[Any],
         *,
@@ -382,9 +382,7 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         mapping_expr = F.create_map([F.lit(x) for x in chain(*mapping.items())])
 
         def func(df: SparkLikeLazyFrame) -> list[Column]:
-            default_col = (
-                default(df)[0] if isinstance(default, SparkLikeExpr) else F.lit(default)
-            )
+            default_col = df._evaluate_single_output_expr(default)
 
             results = [
                 F.when(

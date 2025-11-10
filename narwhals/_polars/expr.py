@@ -217,7 +217,7 @@ class PolarsExpr:
     @requires.backend_version((1,))
     def replace_strict(
         self,
-        default: Any | NoDefault,
+        default: PolarsExpr | NoDefault,
         old: Sequence[Any],
         new: Sequence[Any],
         *,
@@ -229,11 +229,7 @@ class PolarsExpr:
             else None
         )
         extra_kwargs = (
-            {}
-            if default is no_default
-            else {"default": default.native}
-            if isinstance(default, PolarsExpr)
-            else {"default": default}
+            {} if default is no_default else {"default": extract_native(default)}
         )
         native = self.native.replace_strict(
             old, new, return_dtype=return_dtype_pl, **extra_kwargs
