@@ -606,12 +606,16 @@ class SparkLikeLazyFrame(
 
     def clear(self, n: int) -> Self:
         if n == 0:
-            native = self.native.limit(0)
+            native_result = self.native.limit(0)
         else:
-            schema = self.native.schema
-            num_columns = len(schema.fields)
-            data = [[None] * num_columns for _ in range(n)]
-            native = self.native.sparkSession.createDataFrame(data, schema=schema)
-        return self._with_native(native)
+            session = self.native.sparkSession
+            native_schema = self.native.schema
+            native_result = session.range(n).select(
+                [
+                    self._F.lit(None).cast(field.dataType).alias(field.name)
+                    for field in native_schema.fields
+                ]
+            )
+        return self._with_native(native_result)
 
     join_asof = not_implemented()
