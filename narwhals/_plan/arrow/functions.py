@@ -226,7 +226,7 @@ def _reverse(native: ChunkedOrArrayT) -> ChunkedOrArrayT:
     return native[::-1]
 
 
-def cumulative(native: ChunkedArrayAny, cum_agg: F.CumAgg, /) -> ChunkedArrayAny:
+def cumulative(native: ChunkedArrayAny, cum_agg: F.CumAgg) -> ChunkedArrayAny:
     func = _CUMULATIVE[type(cum_agg)]
     if not cum_agg.reverse:
         return func(native)
@@ -288,6 +288,10 @@ def rank(native: ChunkedArrayAny, rank_options: RankOptions) -> ChunkedArrayAny:
         return _rank_average(arr, descending=rank_options.descending)
     ranked = preserve_nulls(native, pc.rank(arr, options=rank_options.to_arrow()))
     return chunked_array(ranked)
+
+
+def null_count(native: ChunkedOrArrayAny) -> pa.Int64Scalar:
+    return pc.count(native, mode="only_null")
 
 
 def _rank_average(
