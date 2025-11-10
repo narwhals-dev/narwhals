@@ -324,19 +324,25 @@ def test_over_partition_by_order_by(
     assert_equal_data(result, expected)
 
 
-@pytest.mark.xfail(
-    reason="FIXME: `over(null_last=...)` not respected. Always equivalent to `nulls_last=True`.",
-    raises=AssertionError,
-)
-def test_over_partition_by_order_by_nulls_first_last() -> None:
+def test_over_partition_by_order_by_asc_desc_nulls_first_last() -> None:
     # https://github.com/pola-rs/polars/issues/24989
     data = {"a": [1, 1, 2], "b": [4, 5, 6], "c": [None, 7, 8], "i": [1, None, 2]}
     b_first = nwp.col("b").first()
     result = (
         dataframe(data)
         .with_columns(
-            nulls_first=b_first.over("a", order_by="i", nulls_last=False),
-            nulls_last=b_first.over("a", order_by="i", nulls_last=True),
+            asc_nulls_first=b_first.over(
+                "a", order_by="i", descending=False, nulls_last=False
+            ),
+            asc_nulls_last=b_first.over(
+                "a", order_by="i", descending=False, nulls_last=True
+            ),
+            desc_nulls_first=b_first.over(
+                "a", order_by="i", descending=True, nulls_last=False
+            ),
+            desc_nulls_last=b_first.over(
+                "a", order_by="i", descending=True, nulls_last=True
+            ),
         )
         .sort("i")
     )
@@ -345,7 +351,9 @@ def test_over_partition_by_order_by_nulls_first_last() -> None:
         "b": [5, 4, 6],
         "c": [7.0, None, 8.0],
         "i": [None, 1, 2],
-        "nulls_first": [5, 5, 6],
-        "nulls_last": [4, 4, 6],
+        "asc_nulls_first": [5, 5, 6],
+        "asc_nulls_last": [4, 4, 6],
+        "desc_nulls_first": [4, 4, 6],
+        "desc_nulls_last": [5, 5, 6],
     }
     assert_equal_data(result, expected)

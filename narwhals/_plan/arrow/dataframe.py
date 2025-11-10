@@ -99,9 +99,15 @@ class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
     def with_row_index(self, name: str) -> Self:
         return self._with_native(self.native.add_column(0, name, fn.int_range(len(self))))
 
-    def with_row_index_by(self, name: str, order_by: Sequence[str]) -> Self:
+    def with_row_index_by(
+        self, name: str, order_by: Sequence[str], *, nulls_last: bool = False
+    ) -> Self:
         native = self.native
-        indices = pc.sort_indices(native, [(by, "ascending") for by in order_by])
+        indices = pc.sort_indices(
+            native,
+            [(by, "ascending") for by in order_by],
+            null_placement="at_end" if nulls_last else "at_start",
+        )
         column = fn.scatter(fn.int_range(len(self)), indices.cast(pa.int64()))
         return self._with_native(native.add_column(0, name, column))
 

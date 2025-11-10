@@ -372,9 +372,9 @@ class ArrowExpr(  # type: ignore[misc]
                     f"Need to adapt impl to reduce the number of sorts when used in {node!r}"
                 )
                 raise NotImplementedError(msg)
-            sorted_context = frame.with_row_index_by(idx_name, order_by).sort(
-                [idx_name], options
-            )
+            sorted_context = frame.with_row_index_by(
+                idx_name, order_by, nulls_last=options.nulls_last[0]
+            ).sort([idx_name], options)
             resolved = (
                 frame._grouper.by_irs(*node.partition_by)
                 .agg_irs(node.expr.alias(name))
