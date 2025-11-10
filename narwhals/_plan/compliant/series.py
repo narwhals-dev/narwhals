@@ -27,6 +27,9 @@ class CompliantSeries(HasVersion, Protocol[NativeSeriesT]):
     def __len__(self) -> int:
         return len(self.native)
 
+    def len(self) -> int:
+        return len(self.native)
+
     def __narwhals_namespace__(self) -> Incomplete: ...
     def __narwhals_series__(self) -> Self:
         return self
