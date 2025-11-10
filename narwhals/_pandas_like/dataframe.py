@@ -1235,14 +1235,34 @@ class PandasLikeDataFrame(
         )
 
     def clear(self, n: int) -> Self:
-        if n > 0:
-            msg = f"Unable to safely perform `DataFrame.clear(n={n})` for pandas-like backend."
-            raise NotImplementedError(msg)
+        impl = self._implementation
+        if n == 0:
+            native_result = self.head(0).native
 
-        native_result = self.head(0).native
-        if self._implementation.is_modin():
+            if impl.is_modin():
+                native_dtypes = self.native.dtypes
+                native_schema = {col: native_dtypes[col] for col in self.native.columns}
+                native_result = native_result.astype(native_schema)
+        else:
+            import pandas as pd
+
+            ns = self.__native_namespace__()
+
             native_dtypes = self.native.dtypes
             native_schema = {col: native_dtypes[col] for col in self.native.columns}
-            native_result = native_result.astype(native_schema)
+
+            columns: list[pd.Series[Any]] = []
+            index = list(range(n))
+            for name, dtype in native_schema.items():
+                if get_dtype_backend(dtype, impl) is None:
+                    msg = (
+                        f"Unable to safely perform `DataFrame.clear(n={n})` with non-nullable "
+                        f"dtypes backend for column {name} and backend {self._implementation}."
+                    )
+                    raise NotImplementedError(msg)
+
+                columns.append(ns.Series(pd.NA, index=index, dtype=dtype, name=name))
+
+            native_result = self.__narwhals_namespace__()._concat_horizontal(columns)
 
         return self._with_native(native_result)
