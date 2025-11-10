@@ -8,6 +8,7 @@ import pyarrow.compute as pc
 
 from narwhals._arrow.series import ArrowSeries
 from narwhals._arrow.utils import (
+    arange,
     concat_tables,
     narwhals_to_native_dtype,
     native_to_narwhals_dtype,
@@ -531,19 +532,19 @@ class ArrowDataFrame(
         return {ser.name: ser.to_list() for ser in it}
 
     def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self:
-        import numpy as np  # ignore-banned-import
-
         plx = self.__narwhals_namespace__()
-        data = pa.array(np.arange(len(self)))
-        row_index_s = plx._series.from_iterable(data, context=self, name=name)
-        row_index = plx._expr._from_series(row_index_s)
-        if order_by:
+        data = arange(0, len(self), 1)
+        if order_by is None:
             row_index = plx._expr._from_series(
-                self.select(row_index, *(plx.col(x) for x in order_by))
-                .sort(*order_by, descending=False, nulls_last=False)
-                .get_column(name)
+                plx._series.from_iterable(data, context=self, name=name)
             )
-        return self.select(row_index, plx.all())
+            return self.select(row_index, plx.all())
+        indices = pc.sort_indices(self.native, [(by, "ascending") for by in order_by])
+        if self._backend_version < (20,):
+            new_col = data.take(pc.sort_indices(indices))
+        else:
+            new_col = pc.scatter(data, indices.cast(pa.int64()))  # type: ignore[attr-defined]
+        return self._with_native(self.native.add_column(0, name, new_col))
 
     def filter(self, predicate: ArrowExpr) -> Self:
         mask_native = self._evaluate_single_output_expr(predicate).native

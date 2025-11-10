@@ -20,7 +20,7 @@ from narwhals._polars.utils import (
     narwhals_to_native_dtype,
     native_to_narwhals_dtype,
 )
-from narwhals._utils import Implementation, requires
+from narwhals._utils import Implementation, no_default, requires
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_index
 
 if TYPE_CHECKING:
@@ -34,6 +34,7 @@ if TYPE_CHECKING:
 
     from narwhals._polars.dataframe import Method, PolarsDataFrame
     from narwhals._polars.namespace import PolarsNamespace
+    from narwhals._typing import NoDefault
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.series import Series
@@ -304,7 +305,8 @@ class PolarsSeries:
     @requires.backend_version((1,))
     def replace_strict(
         self,
-        old: Sequence[Any] | Mapping[Any, Any],
+        default: PolarsSeries | NoDefault,
+        old: Sequence[Any],
         new: Sequence[Any],
         *,
         return_dtype: IntoDType | None,
@@ -315,7 +317,13 @@ class PolarsSeries:
             if return_dtype
             else None
         )
-        return self._with_native(ser.replace_strict(old, new, return_dtype=dtype))
+
+        extra_kwargs = (
+            {} if default is no_default else {"default": extract_native(default)}
+        )
+        return self._with_native(
+            ser.replace_strict(old, new, return_dtype=dtype, **extra_kwargs)
+        )
 
     def to_numpy(self, dtype: Any = None, *, copy: bool | None = None) -> _1DArray:
         return self.__array__(dtype, copy=copy)
@@ -360,6 +368,13 @@ class PolarsSeries:
             select = pl.when(self.native.is_not_null()).then(native_is_nan)
             return self._with_native(pl.select(select)[self.name])
         return self._with_native(native_is_nan)
+
+    def is_finite(self) -> Self:
+        native_is_finite = self.native.is_finite()
+        if self._backend_version < (1, 18):  # pragma: no cover
+            select = pl.when(self.native.is_not_null()).then(native_is_finite)
+            return self._with_native(pl.select(select)[self.name])
+        return self._with_native(native_is_finite)
 
     def median(self) -> Any:
         from narwhals.exceptions import InvalidOperationError
@@ -707,7 +722,6 @@ class PolarsSeries:
     is_between: Method[Self]
     is_duplicated: Method[Self]
     is_empty: Method[bool]
-    is_finite: Method[Self]
     is_first_distinct: Method[Self]
     is_in: Method[Self]
     is_last_distinct: Method[Self]

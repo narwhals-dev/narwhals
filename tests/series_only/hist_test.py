@@ -84,6 +84,8 @@ def test_hist_bin(
     else:
         import pyarrow as pa
 
+        pytest.importorskip("numpy")
+
         constructor_eager = pa.table
 
     df = nw.from_native(constructor_eager(data)).with_columns(
@@ -142,6 +144,7 @@ def test_hist_count(
         constructor_eager = pl.DataFrame
     else:
         pa = pytest.importorskip("pyarrow")
+        pytest.importorskip("numpy")
         constructor_eager = pa.table
     df = nw.from_native(constructor_eager(data)).with_columns(
         float=nw.col("int").cast(nw.Float64)
@@ -195,6 +198,7 @@ def test_hist_count_no_spread(library: str) -> None:
         constructor_eager = pl.DataFrame
     else:
         pa = pytest.importorskip("pyarrow")
+        pytest.importorskip("numpy")
         constructor_eager = pa.table
     data = {"all_zero": [0, 0, 0], "all_non_zero": [5, 5, 5]}
     df = nw.from_native(constructor_eager(data))
@@ -237,6 +241,7 @@ def test_hist_no_data(library: str, *, include_breakpoint: bool) -> None:
         constructor_eager = pl.DataFrame
     else:
         pa = pytest.importorskip("pyarrow")
+        pytest.importorskip("numpy")
         constructor_eager = pa.table
     s = nw.from_native(constructor_eager({"values": []})).select(
         nw.col("values").cast(nw.Float64)
@@ -269,6 +274,7 @@ def test_hist_small_bins(library: str) -> None:
         constructor_eager = pl.DataFrame
     else:
         pa = pytest.importorskip("pyarrow")
+        pytest.importorskip("numpy")
         constructor_eager = pa.table
     s = nw.from_native(constructor_eager({"values": [1, 2, 3]}))
     result = s["values"].hist(bins=None, bin_count=None)
@@ -333,6 +339,7 @@ def test_hist_bin_hypotheis(
         constructor_eager = pl.DataFrame
     else:
         pa = pytest.importorskip("pyarrow")
+        pytest.importorskip("numpy")
         constructor_eager = pa.table
     pytest.importorskip("polars")
     import polars as pl
@@ -386,6 +393,7 @@ def test_hist_count_hypothesis(
         constructor_eager = pl.DataFrame
     else:
         pa = pytest.importorskip("pyarrow")
+        pytest.importorskip("numpy")
         constructor_eager = pa.table
     df = nw.from_native(constructor_eager({"values": data})).select(
         nw.col("values").cast(nw.Float64)

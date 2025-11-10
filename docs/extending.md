@@ -65,6 +65,4 @@ handle plugins. For this integration to work, any plugin architecture must conta
     function, whose input parameter is the Narwhals version and which returns a compliant Narwhals LazyFrame
     which wraps the native dataframe. 
 
-If you want to see an example of a plugin, we have implemented a bare-bones version for the `daft` library
-that allows users to pass daft dataframes to Narwhals: 
-[narwhals-daft](https://github.com/MarcoGorelli/narwhals-daft). 
+For a reference plugin, please check out [narwhals-daft](https://github.com/MarcoGorelli/narwhals-daft).
