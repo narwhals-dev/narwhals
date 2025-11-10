@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Generic, TypeVar
 
+from narwhals._expression_parsing import ExprKind, ExprNode
+
 if TYPE_CHECKING:
     from narwhals.expr import Expr
     from narwhals.typing import TimeUnit
@@ -15,9 +17,6 @@ class ExprDateTimeNamespace(Generic[ExprT]):
 
     def date(self) -> ExprT:
         """Extract the date from underlying DateTime representation.
-
-        Returns:
-            A new expression.
 
         Raises:
             NotImplementedError: If pandas default backend is being used.
@@ -41,17 +40,12 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             │ 2027-12-13 │
             └────────────┘
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.date()
-        )
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "dt.date"))
 
     def year(self) -> ExprT:
         """Extract year from underlying DateTime representation.
 
         Returns the year number in the calendar date.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> from datetime import datetime
@@ -70,17 +64,12 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             |1 2065-01-01  2065|
             └──────────────────┘
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.year()
-        )
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "dt.year"))
 
     def month(self) -> ExprT:
         """Extract month from underlying DateTime representation.
 
         Returns the month number starting from 1. The return value ranges from 1 to 12.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> from datetime import datetime
@@ -96,17 +85,12 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             a: [[1978-06-01 00:00:00.000000,2065-01-01 00:00:00.000000]]
             month: [[6,1]]
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.month()
-        )
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "dt.month"))
 
     def day(self) -> ExprT:
         """Extract day from underlying DateTime representation.
 
         Returns the day of month starting from 1. The return value ranges from 1 to 31. (The last day of month differs by months.)
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> from datetime import datetime
@@ -122,17 +106,12 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             a: [[1978-06-01 00:00:00.000000,2065-01-01 00:00:00.000000]]
             day: [[1,1]]
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.day()
-        )
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "dt.day"))
 
     def hour(self) -> ExprT:
         """Extract hour from underlying DateTime representation.
 
         Returns the hour number from 0 to 23.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> from datetime import datetime
@@ -157,17 +136,12 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             |└─────────────────────┴──────┘|
             └──────────────────────────────┘
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.hour()
-        )
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "dt.hour"))
 
     def minute(self) -> ExprT:
         """Extract minutes from underlying DateTime representation.
 
         Returns the minute number from 0 to 59.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> from datetime import datetime
@@ -182,15 +156,10 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             0 1978-01-01 01:01:00       1
             1 2065-01-01 10:20:00      20
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.minute()
-        )
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "dt.minute"))
 
     def second(self) -> ExprT:
         """Extract seconds from underlying DateTime representation.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> from datetime import datetime
@@ -213,15 +182,10 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             a: [[1978-01-01 01:01:01.000000,2065-01-01 10:20:30.000000]]
             second: [[1,30]]
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.second()
-        )
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "dt.second"))
 
     def millisecond(self) -> ExprT:
         """Extract milliseconds from underlying DateTime representation.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> from datetime import datetime
@@ -246,15 +210,10 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             a: [[1978-01-01 01:01:01.000000,2065-01-01 10:20:30.067000]]
             millisecond: [[0,67]]
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.millisecond()
-        )
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "dt.millisecond"))
 
     def microsecond(self) -> ExprT:
         """Extract microseconds from underlying DateTime representation.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> from datetime import datetime
@@ -279,15 +238,10 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             a: [[1978-01-01 01:01:01.000000,2065-01-01 10:20:30.067000]]
             microsecond: [[0,67000]]
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.microsecond()
-        )
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "dt.microsecond"))
 
     def nanosecond(self) -> ExprT:
         """Extract Nanoseconds from underlying DateTime representation.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> from datetime import datetime
@@ -312,15 +266,10 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             a: [[1978-01-01 01:01:01.000000,2065-01-01 10:20:30.067000]]
             nanosecond: [[0,67000000]]
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.nanosecond()
-        )
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "dt.nanosecond"))
 
     def ordinal_day(self) -> ExprT:
         """Get ordinal day.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> from datetime import datetime
@@ -339,15 +288,12 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             |1 2020-08-03            216|
             └───────────────────────────┘
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.ordinal_day()
-        )
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "dt.ordinal_day"))
 
     def weekday(self) -> ExprT:
         """Extract the week day from the underlying Date representation.
 
-        Returns:
-            Returns the ISO weekday number where monday = 1 and sunday = 7
+        Note that Monday = 1 and Sunday = 7.
 
         Examples:
             >>> from datetime import datetime
@@ -366,15 +312,10 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             |1 2020-08-03           1|
             └────────────────────────┘
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.weekday()
-        )
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "dt.weekday"))
 
     def total_minutes(self) -> ExprT:
         """Get total minutes.
-
-        Returns:
-            A new expression.
 
         Notes:
             The function outputs the total minutes in the int dtype by default,
@@ -402,15 +343,10 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             │ 20m 40s      ┆ 20              │
             └──────────────┴─────────────────┘
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.total_minutes()
-        )
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "dt.total_minutes"))
 
     def total_seconds(self) -> ExprT:
         """Get total seconds.
-
-        Returns:
-            A new expression.
 
         Notes:
             The function outputs the total seconds in the int dtype by default,
@@ -438,15 +374,10 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             │ 20s 40ms     ┆ 20              │
             └──────────────┴─────────────────┘
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.total_seconds()
-        )
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "dt.total_seconds"))
 
     def total_milliseconds(self) -> ExprT:
         """Get total milliseconds.
-
-        Returns:
-            A new expression.
 
         Notes:
             The function outputs the total milliseconds in the int dtype by default,
@@ -479,15 +410,12 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             │ 20040µs      ┆ 20                   │
             └──────────────┴──────────────────────┘
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.total_milliseconds()
+        return self._expr._append_node(
+            ExprNode(ExprKind.ELEMENTWISE, "dt.total_milliseconds")
         )
 
     def total_microseconds(self) -> ExprT:
         """Get total microseconds.
-
-        Returns:
-            A new expression.
 
         Notes:
             The function outputs the total microseconds in the int dtype by default,
@@ -517,15 +445,12 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             a: [[10,1200]]
             a_total_microseconds: [[10,1200]]
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.total_microseconds()
+        return self._expr._append_node(
+            ExprNode(ExprKind.ELEMENTWISE, "dt.total_microseconds")
         )
 
     def total_nanoseconds(self) -> ExprT:
         """Get total nanoseconds.
-
-        Returns:
-            A new expression.
 
         Notes:
             The function outputs the total nanoseconds in the int dtype by default,
@@ -554,8 +479,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             0 2024-01-01 00:00:00.000000001                       NaN
             1 2024-01-01 00:00:00.000000002                       1.0
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.total_nanoseconds()
+        return self._expr._append_node(
+            ExprNode(ExprKind.ELEMENTWISE, "dt.total_nanoseconds")
         )
 
     def to_string(self, format: str) -> ExprT:
@@ -563,9 +488,6 @@ class ExprDateTimeNamespace(Generic[ExprT]):
 
         Arguments:
             format: Format to format temporal column with.
-
-        Returns:
-            A new expression.
 
         Notes:
             Unfortunately, different libraries interpret format directives a bit
@@ -621,8 +543,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             |└─────────────────────┘|
             └───────────────────────┘
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.to_string(format)
+        return self._expr._append_node(
+            ExprNode(ExprKind.ELEMENTWISE, "dt.to_string", format=format)
         )
 
     def replace_time_zone(self, time_zone: str | None) -> ExprT:
@@ -630,9 +552,6 @@ class ExprDateTimeNamespace(Generic[ExprT]):
 
         Arguments:
             time_zone: Target time zone.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> from datetime import datetime, timezone
@@ -652,8 +571,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             0 2024-01-01 00:00:00+05:45
             1 2024-01-02 00:00:00+05:45
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.replace_time_zone(time_zone)
+        return self._expr._append_node(
+            ExprNode(ExprKind.ELEMENTWISE, "dt.replace_time_zone", time_zone=time_zone)
         )
 
     def convert_time_zone(self, time_zone: str) -> ExprT:
@@ -664,9 +583,6 @@ class ExprDateTimeNamespace(Generic[ExprT]):
 
         Arguments:
             time_zone: Target time zone.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> from datetime import datetime, timezone
@@ -689,8 +605,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         if time_zone is None:
             msg = "Target `time_zone` cannot be `None` in `convert_time_zone`. Please use `replace_time_zone(None)` if you want to remove the time zone."
             raise TypeError(msg)
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.convert_time_zone(time_zone)
+        return self._expr._append_node(
+            ExprNode(ExprKind.ELEMENTWISE, "dt.convert_time_zone", time_zone=time_zone)
         )
 
     def timestamp(self, time_unit: TimeUnit = "us") -> ExprT:
@@ -701,9 +617,6 @@ class ExprDateTimeNamespace(Generic[ExprT]):
                 - 'ns': nanosecond.
                 - 'us': microsecond.
                 - 'ms': millisecond.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> from datetime import date
@@ -732,8 +645,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
                 f"\n\nExpected one of {{'ns', 'us', 'ms'}}, got {time_unit!r}."
             )
             raise ValueError(msg)
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.timestamp(time_unit)
+        return self._expr._append_node(
+            ExprNode(ExprKind.ELEMENTWISE, "dt.timestamp", time_unit=time_unit)
         )
 
     def truncate(self, every: str) -> ExprT:
@@ -753,9 +666,6 @@ class ExprDateTimeNamespace(Generic[ExprT]):
                 - 'mo': month.
                 - 'q': quarter.
                 - 'y': year.
-
-        Returns:
-            Expression of data type `Date` or `Datetime`.
 
         Examples:
             >>> from datetime import datetime
@@ -779,8 +689,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             |└─────────────────────┴─────────────────────┘|
             └─────────────────────────────────────────────┘
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.truncate(every)
+        return self._expr._append_node(
+            ExprNode(ExprKind.ELEMENTWISE, "dt.truncate", every=every)
         )
 
     def offset_by(self, by: str) -> ExprT:
@@ -800,9 +710,6 @@ class ExprDateTimeNamespace(Generic[ExprT]):
                 - 'mo': month.
                 - 'q': quarter.
                 - 'y': year.
-
-        Returns:
-            Expression of data type `Date` or `Datetime`.
 
         Examples:
             >>> from datetime import datetime
@@ -826,6 +733,6 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             |└─────────────────────┴───────────────────────┘|
             └───────────────────────────────────────────────┘
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.offset_by(by)
+        return self._expr._append_node(
+            ExprNode(ExprKind.ELEMENTWISE, "dt.offset_by", by=by)
         )

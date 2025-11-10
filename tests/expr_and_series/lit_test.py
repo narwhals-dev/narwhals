@@ -1,10 +1,9 @@
 from __future__ import annotations
 
+import re
 from datetime import date
 from typing import TYPE_CHECKING, Any
 
-import numpy as np
-import pyarrow as pa
 import pytest
 
 import narwhals as nw
@@ -36,6 +35,9 @@ def test_lit(
 
 
 def test_lit_error(constructor: Constructor) -> None:
+    pytest.importorskip("numpy")
+    import numpy as np
+
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df_raw = constructor(data)
     df = nw.from_native(df_raw).lazy()
@@ -44,11 +46,11 @@ def test_lit_error(constructor: Constructor) -> None:
     ):
         _ = df.with_columns(nw.lit(np.array([1, 2])).alias("lit"))  # pyright: ignore[reportArgumentType]
     with pytest.raises(
-        NotImplementedError, match="Nested datatypes are not supported yet."
+        NotImplementedError, match=re.escape("Nested datatypes are not supported yet.")
     ):
         _ = df.with_columns(nw.lit((1, 2)).alias("lit"))  # type: ignore[arg-type]
     with pytest.raises(
-        NotImplementedError, match="Nested datatypes are not supported yet."
+        NotImplementedError, match=re.escape("Nested datatypes are not supported yet.")
     ):
         _ = df.with_columns(nw.lit([1, 2]).alias("lit"))  # type: ignore[arg-type]
 
@@ -121,6 +123,8 @@ def test_date_lit(constructor: Constructor, request: pytest.FixtureRequest) -> N
         "cudf" in str(constructor) and CUDF_VERSION >= (25, 8, 0)
     ):
         request.applymarker(pytest.mark.xfail)
+    if "pandas" in str(constructor):
+        pytest.importorskip("pyarrow")
     df = nw.from_native(constructor({"a": [1]}))
     result = df.with_columns(nw.lit(date(2020, 1, 1), dtype=nw.Date)).collect_schema()
     if df.implementation.is_cudf():
@@ -131,6 +135,9 @@ def test_date_lit(constructor: Constructor, request: pytest.FixtureRequest) -> N
 
 
 def test_pyarrow_lit_string() -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
     df = nw.from_native(pa.table({"a": [1, 2, 3]}))
     result = df.select(nw.lit("foo")).to_native().schema.field("literal")
     assert pa.types.is_string(result.type)

@@ -7,12 +7,18 @@ from datetime import timezone
 from itertools import starmap
 from typing import TYPE_CHECKING
 
-from narwhals._utils import _DeferredIterable, isinstance_or_issubclass
+from narwhals._utils import (
+    _DeferredIterable,
+    isinstance_or_issubclass,
+    qualified_type_name,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
+    from typing import Any
 
-    from typing_extensions import Self
+    import _typeshed
+    from typing_extensions import Self, TypeIs
 
     from narwhals.typing import IntoDType, TimeUnit
 
@@ -26,45 +32,144 @@ def _validate_dtype(dtype: DType | type[DType]) -> None:
         raise TypeError(msg)
 
 
-class DType:
-    def __repr__(self) -> str:  # pragma: no cover
+def _is_into_dtype(obj: Any) -> TypeIs[IntoDType]:
+    return isinstance(obj, DType) or (
+        isinstance(obj, DTypeClass) and not issubclass(obj, NestedType)
+    )
+
+
+def _is_nested_type(obj: Any) -> TypeIs[type[NestedType]]:
+    return isinstance(obj, DTypeClass) and issubclass(obj, NestedType)
+
+
+def _validate_into_dtype(dtype: Any) -> None:
+    if not _is_into_dtype(dtype):
+        if _is_nested_type(dtype):
+            name = f"nw.{dtype.__name__}"
+            msg = (
+                f"{name!r} is not valid in this context.\n\n"
+                f"Hint: instead of:\n\n"
+                f"    {name}\n\n"
+                "use:\n\n"
+                f"    {name}(...)"
+            )
+        else:
+            msg = f"Expected Narwhals dtype, got: {qualified_type_name(dtype)!r}."
+        raise TypeError(msg)
+
+
+class DTypeClass(type):
+    """Metaclass for DType classes.
+
+    - Nicely print classes.
+    - Ensure [`__slots__`] are always defined to prevent `__dict__` creation (empty by default).
+
+    [`__slots__`]: https://docs.python.org/3/reference/datamodel.html#object.__slots__
+    """
+
+    def __repr__(cls) -> str:
+        return cls.__name__
+
+    # https://github.com/python/typeshed/blob/776508741d76b58f9dcb2aaf42f7d4596a48d580/stdlib/abc.pyi#L13-L19
+    # https://github.com/python/typeshed/blob/776508741d76b58f9dcb2aaf42f7d4596a48d580/stdlib/_typeshed/__init__.pyi#L36-L40
+    # https://github.com/astral-sh/ruff/issues/8353#issuecomment-1786238311
+    # https://docs.python.org/3/reference/datamodel.html#creating-the-class-object
+    def __new__(
+        metacls: type[_typeshed.Self],
+        cls_name: str,
+        bases: tuple[type, ...],
+        namespace: dict[str, Any],
+        /,
+        **kwds: Any,
+    ) -> _typeshed.Self:
+        namespace.setdefault("__slots__", ())
+        return super().__new__(metacls, cls_name, bases, namespace, **kwds)  # type: ignore[no-any-return, misc]
+
+
+class DType(metaclass=DTypeClass):
+    """Base class for all Narwhals data types."""
+
+    __slots__ = ()  # NOTE: Keep this one defined manually for the type checker
+
+    def __repr__(self) -> str:
         return self.__class__.__qualname__
 
     @classmethod
+    def base_type(cls) -> type[Self]:
+        """Return this DType's fundamental/root type class.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> nw.Datetime("us").base_type()
+            Datetime
+            >>> nw.String.base_type()
+            String
+            >>> nw.List(nw.Int64).base_type()
+            List
+        """
+        return cls
+
+    @classmethod
     def is_numeric(cls: type[Self]) -> bool:
+        """Check whether the data type is a numeric type."""
         return issubclass(cls, NumericType)
 
     @classmethod
     def is_integer(cls: type[Self]) -> bool:
+        """Check whether the data type is an integer type."""
         return issubclass(cls, IntegerType)
 
     @classmethod
     def is_signed_integer(cls: type[Self]) -> bool:
+        """Check whether the data type is a signed integer type."""
         return issubclass(cls, SignedIntegerType)
 
     @classmethod
     def is_unsigned_integer(cls: type[Self]) -> bool:
+        """Check whether the data type is an unsigned integer type."""
         return issubclass(cls, UnsignedIntegerType)
 
     @classmethod
     def is_float(cls: type[Self]) -> bool:
+        """Check whether the data type is a floating point type."""
         return issubclass(cls, FloatType)
 
     @classmethod
     def is_decimal(cls: type[Self]) -> bool:
+        """Check whether the data type is a decimal type."""
         return issubclass(cls, Decimal)
 
     @classmethod
     def is_temporal(cls: type[Self]) -> bool:
+        """Check whether the data type is a temporal type."""
         return issubclass(cls, TemporalType)
 
     @classmethod
     def is_nested(cls: type[Self]) -> bool:
+        """Check whether the data type is a nested type."""
         return issubclass(cls, NestedType)
 
-    def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
-        from narwhals._utils import isinstance_or_issubclass
+    @classmethod
+    def is_boolean(cls: type[Self]) -> bool:
+        """Check whether the data type is a boolean type."""
+        return issubclass(cls, Boolean)
 
+    def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
+        """Check if this DType is equivalent to another DType.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> nw.String() == nw.String()
+            True
+            >>> nw.String() == nw.String
+            True
+            >>> nw.Int16() == nw.Int32
+            False
+            >>> nw.Boolean() == nw.Int8
+            False
+            >>> nw.Date() == nw.Datetime
+            False
+        """
         return isinstance_or_issubclass(other, type(self))
 
     def __hash__(self) -> int:
@@ -324,13 +429,15 @@ class Unknown(DType):
     """
 
 
-class _DatetimeMeta(type):
+class _DatetimeMeta(DTypeClass):
     @property
     def time_unit(cls) -> TimeUnit:
+        """Unit of time. Defaults to `'us'` (microseconds)."""
         return "us"
 
     @property
     def time_zone(cls) -> str | None:
+        """Time zone string. Defaults to `None`."""
         return None
 
 
@@ -358,6 +465,8 @@ class Datetime(TemporalType, metaclass=_DatetimeMeta):
         Datetime(time_unit='ms', time_zone='Africa/Accra')
     """
 
+    __slots__ = ("time_unit", "time_zone")
+
     def __init__(
         self, time_unit: TimeUnit = "us", time_zone: str | timezone | None = None
     ) -> None:
@@ -372,16 +481,39 @@ class Datetime(TemporalType, metaclass=_DatetimeMeta):
             time_zone = str(time_zone)
 
         self.time_unit: TimeUnit = time_unit
+        """Unit of time."""
         self.time_zone: str | None = time_zone
+        """Time zone string, as defined in zoneinfo.
 
-    def __eq__(self, other: object) -> bool:
-        # allow comparing object instances to class
+        Notes:
+            To see valid strings run `import zoneinfo; zoneinfo.available_timezones()` for a full list.
+        """
+
+    def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
+        """Check if this Datetime is equivalent to another DType.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> nw.Datetime("s") == nw.Datetime("s")
+            True
+            >>> nw.Datetime() == nw.Datetime("us")
+            True
+            >>> nw.Datetime("us") == nw.Datetime("ns")
+            False
+            >>> nw.Datetime("us", "UTC") == nw.Datetime(time_unit="us", time_zone="UTC")
+            True
+            >>> nw.Datetime(time_zone="UTC") == nw.Datetime(time_zone="EST")
+            False
+            >>> nw.Datetime() == nw.Duration()
+            False
+            >>> nw.Datetime("ms") == nw.Datetime
+            True
+        """
         if type(other) is _DatetimeMeta:
             return True
-        elif isinstance(other, self.__class__):
+        if isinstance(other, self.__class__):
             return self.time_unit == other.time_unit and self.time_zone == other.time_zone
-        else:  # pragma: no cover
-            return False
+        return False  # pragma: no cover
 
     def __hash__(self) -> int:  # pragma: no cover
         return hash((self.__class__, self.time_unit, self.time_zone))
@@ -391,9 +523,10 @@ class Datetime(TemporalType, metaclass=_DatetimeMeta):
         return f"{class_name}(time_unit={self.time_unit!r}, time_zone={self.time_zone!r})"
 
 
-class _DurationMeta(type):
+class _DurationMeta(DTypeClass):
     @property
     def time_unit(cls) -> TimeUnit:
+        """Unit of time. Defaults to `'us'` (microseconds)."""
         return "us"
 
 
@@ -417,6 +550,8 @@ class Duration(TemporalType, metaclass=_DurationMeta):
         Duration(time_unit='ms')
     """
 
+    __slots__ = ("time_unit",)
+
     def __init__(self, time_unit: TimeUnit = "us") -> None:
         if time_unit not in {"s", "ms", "us", "ns"}:
             msg = (
@@ -426,15 +561,29 @@ class Duration(TemporalType, metaclass=_DurationMeta):
             raise ValueError(msg)
 
         self.time_unit: TimeUnit = time_unit
+        """Unit of time."""
 
-    def __eq__(self, other: object) -> bool:
-        # allow comparing object instances to class
+    def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
+        """Check if this Duration is equivalent to another DType.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> nw.Duration("us") == nw.Duration("us")
+            True
+            >>> nw.Duration() == nw.Duration("us")
+            True
+            >>> nw.Duration("us") == nw.Duration("ns")
+            False
+            >>> nw.Duration() == nw.Datetime()
+            False
+            >>> nw.Duration("ms") == nw.Duration
+            True
+        """
         if type(other) is _DurationMeta:
             return True
-        elif isinstance(other, self.__class__):
+        if isinstance(other, self.__class__):
             return self.time_unit == other.time_unit
-        else:  # pragma: no cover
-            return False
+        return False  # pragma: no cover
 
     def __hash__(self) -> int:  # pragma: no cover
         return hash((self.__class__, self.time_unit))
@@ -468,6 +617,8 @@ class Enum(DType):
        Enum(categories=['beluga', 'narwhal', 'orca'])
     """
 
+    __slots__ = ("_cached_categories", "_delayed_categories")
+
     def __init__(self, categories: Iterable[str] | type[enum.Enum]) -> None:
         self._delayed_categories: _DeferredIterable[str] | None = None
         self._cached_categories: tuple[str, ...] | None = None
@@ -481,18 +632,36 @@ class Enum(DType):
 
     @property
     def categories(self) -> tuple[str, ...]:
-        if cached := self._cached_categories:
+        """The categories in the dataset."""
+        if (cached := self._cached_categories) is not None:
             return cached
-        elif delayed := self._delayed_categories:
+        if (delayed := self._delayed_categories) is not None:
             self._cached_categories = delayed.to_tuple()
             return self._cached_categories
-        else:  # pragma: no cover
-            msg = f"Internal structure of {type(self).__name__!r} is invalid."
-            raise TypeError(msg)
+        msg = f"Internal structure of {type(self).__name__!r} is invalid."  # pragma: no cover
+        raise TypeError(msg)  # pragma: no cover
 
-    def __eq__(self, other: object) -> bool:
-        # allow comparing object instances to class
-        if type(other) is type:
+    def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
+        """Check if this Enum is equivalent to another DType.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> nw.Enum(["a", "b", "c"]) == nw.Enum(["a", "b", "c"])
+            True
+            >>> import polars as pl
+            >>> categories = pl.Series(["a", "b", "c"])
+            >>> nw.Enum(["a", "b", "c"]) == nw.Enum(categories)
+            True
+            >>> nw.Enum(["a", "b", "c"]) == nw.Enum(["b", "a", "c"])
+            False
+            >>> nw.Enum(["a", "b", "c"]) == nw.Enum(["a"])
+            False
+            >>> nw.Enum(["a", "b", "c"]) == nw.Categorical
+            False
+            >>> nw.Enum(["a", "b", "c"]) == nw.Enum
+            True
+        """
+        if type(other) is DTypeClass:
             return other is Enum
         return isinstance(other, type(self)) and self.categories == other.categories
 
@@ -504,11 +673,11 @@ class Enum(DType):
 
 
 class Field:
-    """Definition of a single field within a `Struct` DataType.
+    """Definition of a single field within a `Struct` DType.
 
     Arguments:
         name: The name of the field within its parent `Struct`.
-        dtype: The `DataType` of the field's values.
+        dtype: The `DType` of the field's values.
 
     Examples:
        >>> import pyarrow as pa
@@ -519,15 +688,39 @@ class Field:
        [Field('a', Int64), Field('b', List(String))]
     """
 
+    __slots__ = ("dtype", "name")
     name: str
+    """The name of the field within its parent `Struct`."""
     dtype: IntoDType
+    """The `DType` of the field's values."""
 
     def __init__(self, name: str, dtype: IntoDType) -> None:
         self.name = name
         self.dtype = dtype
 
     def __eq__(self, other: Field) -> bool:  # type: ignore[override]
-        return (self.name == other.name) & (self.dtype == other.dtype)
+        """Check if this Field is equivalent to another Field.
+
+        Two fields are equivalent if they have the same name and the same dtype.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> nw.Field("a", nw.String) == nw.Field("a", nw.String())
+            True
+            >>> nw.Field("a", nw.String) == nw.Field("a", nw.String)
+            True
+            >>> nw.Field("a", nw.String) == nw.Field("a", nw.Datetime)
+            False
+            >>> nw.Field("a", nw.String) == nw.Field("b", nw.String)
+            False
+            >>> nw.Field("a", nw.String) == nw.String
+            False
+        """
+        return (
+            isinstance(other, Field)
+            and (self.name == other.name)
+            and (self.dtype == other.dtype)
+        )
 
     def __hash__(self) -> int:
         return hash((self.name, self.dtype))
@@ -554,7 +747,9 @@ class Struct(NestedType):
        Struct({'a': Int64, 'b': List(String)})
     """
 
+    __slots__ = ("fields",)
     fields: list[Field]
+    """The fields that make up the struct."""
 
     def __init__(self, fields: Sequence[Field] | Mapping[str, IntoDType]) -> None:
         if isinstance(fields, Mapping):
@@ -563,16 +758,29 @@ class Struct(NestedType):
             self.fields = list(fields)
 
     def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
-        # The comparison allows comparing objects to classes, and specific
-        # inner types to those without (eg: inner=None). if one of the
-        # arguments is not specific about its inner type we infer it
-        # as being equal. (See the List type for more info).
-        if type(other) is type and issubclass(other, self.__class__):
+        """Check if this Struct is equivalent to another DType.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> nw.Struct({"a": nw.Int64}) == nw.Struct({"a": nw.Int64})
+            True
+            >>> nw.Struct({"a": nw.Int64}) == nw.Struct({"a": nw.Boolean})
+            False
+            >>> nw.Struct({"a": nw.Int64}) == nw.Struct({"b": nw.Int64})
+            False
+            >>> nw.Struct({"a": nw.Int64}) == nw.Struct([nw.Field("a", nw.Int64)])
+            True
+
+            If a parent type is not specific about its inner type, we infer it as equal
+
+            >>> nw.Struct({"a": nw.Int64}) == nw.Struct
+            True
+        """
+        if type(other) is DTypeClass and issubclass(other, self.__class__):
             return True
-        elif isinstance(other, self.__class__):
+        if isinstance(other, self.__class__):
             return self.fields == other.fields
-        else:
-            return False
+        return False
 
     def __hash__(self) -> int:
         return hash((self.__class__, tuple(self.fields)))
@@ -590,11 +798,7 @@ class Struct(NestedType):
         return f"{class_name}({dict(self)})"
 
     def to_schema(self) -> OrderedDict[str, IntoDType]:
-        """Return Struct dtype as a schema dict.
-
-        Returns:
-            Mapping from column name to dtype.
-        """
+        """Return Struct dtype as a schema dict."""
         return OrderedDict(self)
 
 
@@ -613,25 +817,33 @@ class List(NestedType):
        List(String)
     """
 
+    __slots__ = ("inner",)
     inner: IntoDType
+    """The DType of the values within each list."""
 
     def __init__(self, inner: IntoDType) -> None:
         self.inner = inner
 
     def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
-        # This equality check allows comparison of type classes and type instances.
-        # If a parent type is not specific about its inner type, we infer it as equal:
-        # > list[i64] == list[i64] -> True
-        # > list[i64] == list[f32] -> False
-        # > list[i64] == list      -> True
+        """Check if this List is equivalent to another DType.
 
-        # allow comparing object instances to class
-        if type(other) is type and issubclass(other, self.__class__):
+        Examples:
+            >>> import narwhals as nw
+            >>> nw.List(nw.Int64) == nw.List(nw.Int64)
+            True
+            >>> nw.List(nw.Int64) == nw.List(nw.Float32)
+            False
+
+            If a parent type is not specific about its inner type, we infer it as equal
+
+            >>> nw.List(nw.Int64) == nw.List
+            True
+        """
+        if type(other) is DTypeClass and issubclass(other, self.__class__):
             return True
-        elif isinstance(other, self.__class__):
+        if isinstance(other, self.__class__):
             return self.inner == other.inner
-        else:
-            return False
+        return False
 
     def __hash__(self) -> int:
         return hash((self.__class__, self.inner))
@@ -656,9 +868,13 @@ class Array(NestedType):
         Array(Int32, shape=(2,))
     """
 
+    __slots__ = ("inner", "shape", "size")
     inner: IntoDType
+    """The DType of the values within each array."""
     size: int
+    """The size of the Array."""
     shape: tuple[int, ...]
+    """The shape of the arrays."""
 
     def __init__(self, inner: IntoDType, shape: int | tuple[int, ...]) -> None:
         inner_shape: tuple[int, ...] = inner.shape if isinstance(inner, Array) else ()
@@ -680,22 +896,29 @@ class Array(NestedType):
             raise TypeError(msg)
 
     def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
-        # This equality check allows comparison of type classes and type instances.
-        # If a parent type is not specific about its inner type, we infer it as equal:
-        # > array[i64] == array[i64] -> True
-        # > array[i64] == array[f32] -> False
-        # > array[i64] == array      -> True
+        """Check if this Array is equivalent to another DType.
 
-        # allow comparing object instances to class
-        if type(other) is type and issubclass(other, self.__class__):
+        Examples:
+            >>> import narwhals as nw
+            >>> nw.Array(nw.Int64, 2) == nw.Array(nw.Int64, 2)
+            True
+            >>> nw.Array(nw.Int64, 2) == nw.Array(nw.String, 2)
+            False
+            >>> nw.Array(nw.Int64, 2) == nw.Array(nw.Int64, 4)
+            False
+
+            If a parent type is not specific about its inner type, we infer it as equal
+
+            >>> nw.Array(nw.Int64, 2) == nw.Array
+            True
+        """
+        if type(other) is DTypeClass and issubclass(other, self.__class__):
             return True
-        elif isinstance(other, self.__class__):
+        if isinstance(other, self.__class__):
             if self.shape != other.shape:
                 return False
-            else:
-                return self.inner == other.inner
-        else:
-            return False
+            return self.inner == other.inner
+        return False
 
     def __hash__(self) -> int:
         return hash((self.__class__, self.inner, self.shape))

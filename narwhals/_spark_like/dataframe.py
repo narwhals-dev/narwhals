@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import warnings
 from functools import reduce
 from operator import and_
 from typing import TYPE_CHECKING, Any
 
-from narwhals._namespace import is_native_spark_like
+from narwhals._exceptions import issue_warning
+from narwhals._native import is_native_spark_like
 from narwhals._spark_like.utils import (
     catch_pyspark_connect_exception,
     catch_pyspark_sql_exception,
@@ -19,15 +19,17 @@ from narwhals._sql.dataframe import SQLLazyFrame
 from narwhals._utils import (
     Implementation,
     ValidateBackendVersion,
-    find_stacklevel,
+    extend_bool,
     generate_temporary_column_name,
     not_implemented,
     parse_columns_to_drop,
+    to_pyarrow_table,
+    zip_strict,
 )
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Mapping, Sequence
+    from collections.abc import Iterable, Iterator, Mapping, Sequence
     from io import BytesIO
     from pathlib import Path
     from types import ModuleType
@@ -42,10 +44,12 @@ if TYPE_CHECKING:
     from narwhals._spark_like.expr import SparkLikeExpr
     from narwhals._spark_like.group_by import SparkLikeLazyGroupBy
     from narwhals._spark_like.namespace import SparkLikeNamespace
+    from narwhals._spark_like.utils import SparkSession
+    from narwhals._typing import _EagerAllowedImpl
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
-    from narwhals.typing import JoinStrategy, LazyUniqueKeepStrategy
+    from narwhals.typing import JoinStrategy, UniqueKeepStrategy
 
     SQLFrameDataFrame = BaseDataFrame[Any, Any, Any, Any, Any]
 
@@ -78,13 +82,12 @@ class SparkLikeLazyFrame(
         return self._implementation._backend_version()
 
     @property
-    def _F(self):  # type: ignore[no-untyped-def] # noqa: ANN202, N802
+    def _F(self):  # type: ignore[no-untyped-def] # noqa: ANN202
         if TYPE_CHECKING:
             from sqlframe.base import functions
 
             return functions
-        else:
-            return import_functions(self._implementation)
+        return import_functions(self._implementation)
 
     @property
     def _native_dtypes(self):  # type: ignore[no-untyped-def] # noqa: ANN202
@@ -92,17 +95,15 @@ class SparkLikeLazyFrame(
             from sqlframe.base import types
 
             return types
-        else:
-            return import_native_dtypes(self._implementation)
+        return import_native_dtypes(self._implementation)
 
     @property
-    def _Window(self) -> type[Window]:  # noqa: N802
+    def _Window(self) -> type[Window]:
         if TYPE_CHECKING:
             from sqlframe.base.window import Window
 
             return Window
-        else:
-            return import_window(self._implementation)
+        return import_window(self._implementation)
 
     @staticmethod
     def _is_native(obj: SQLFrameDataFrame | Any) -> TypeIs[SQLFrameDataFrame]:
@@ -156,9 +157,9 @@ class SparkLikeLazyFrame(
                 # We can avoid the check when we introduce `nw.Null` dtype.
                 null_type = self._native_dtypes.NullType  # pyright: ignore[reportAttributeAccessIssue]
                 if not isinstance(native_spark_dtype, null_type):
-                    warnings.warn(
+                    issue_warning(
                         f"Could not convert dtype {native_spark_dtype} to PyArrow dtype, {exc!r}",
-                        stacklevel=find_stacklevel(),
+                        UserWarning,
                     )
                 schema.append((key, pa.null()))
             else:
@@ -178,15 +179,14 @@ class SparkLikeLazyFrame(
                     data: dict[str, list[Any]] = {k: [] for k in self.columns}
                     pa_schema = self._to_arrow_schema()
                     return pa.Table.from_pydict(data, schema=pa_schema)
-                else:  # pragma: no cover
-                    raise
+                raise  # pragma: no cover
         elif self._implementation.is_pyspark_connect() and self._backend_version < (4,):
             import pyarrow as pa  # ignore-banned-import
 
             pa_schema = self._to_arrow_schema()
             return pa.Table.from_pandas(self.native.toPandas(), schema=pa_schema)
         else:
-            return self.native.toArrow()
+            return to_pyarrow_table(self.native.toArrow())
 
     def _iter_columns(self) -> Iterator[Column]:
         for col in self.columns:
@@ -203,7 +203,7 @@ class SparkLikeLazyFrame(
         return self._cached_columns
 
     def _collect(
-        self, backend: ModuleType | Implementation | str | None, **kwargs: Any
+        self, backend: _EagerAllowedImpl | None, **kwargs: Any
     ) -> CompliantDataFrameAny:
         if backend is Implementation.PANDAS:
             from narwhals._pandas_like.dataframe import PandasLikeDataFrame
@@ -216,7 +216,7 @@ class SparkLikeLazyFrame(
                 validate_column_names=True,
             )
 
-        elif backend is None or backend is Implementation.PYARROW:
+        if backend is None or backend is Implementation.PYARROW:
             from narwhals._arrow.dataframe import ArrowDataFrame
 
             return ArrowDataFrame(
@@ -226,7 +226,7 @@ class SparkLikeLazyFrame(
                 validate_column_names=True,
             )
 
-        elif backend is Implementation.POLARS:
+        if backend is Implementation.POLARS:
             import polars as pl  # ignore-banned-import
 
             from narwhals._polars.dataframe import PolarsDataFrame
@@ -241,7 +241,7 @@ class SparkLikeLazyFrame(
         raise ValueError(msg)  # pragma: no cover
 
     def collect(
-        self, backend: ModuleType | Implementation | str | None, **kwargs: Any
+        self, backend: _EagerAllowedImpl | None, **kwargs: Any
     ) -> CompliantDataFrameAny:
         if self._implementation.is_pyspark_connect():
             try:
@@ -326,9 +326,7 @@ class SparkLikeLazyFrame(
         return SparkLikeLazyGroupBy(self, keys, drop_null_keys=drop_null_keys)
 
     def sort(self, *by: str, descending: bool | Sequence[bool], nulls_last: bool) -> Self:
-        if isinstance(descending, bool):
-            descending = [descending] * len(by)
-
+        descending = extend_bool(descending, len(by))
         if nulls_last:
             sort_funcs = (
                 self._F.desc_nulls_last if d else self._F.asc_nulls_last
@@ -340,8 +338,17 @@ class SparkLikeLazyFrame(
                 for d in descending
             )
 
-        sort_cols = [sort_f(col) for col, sort_f in zip(by, sort_funcs)]
+        sort_cols = [sort_f(col) for col, sort_f in zip_strict(by, sort_funcs)]
         return self._with_native(self.native.sort(*sort_cols))
+
+    def top_k(self, k: int, *, by: Iterable[str], reverse: bool | Sequence[bool]) -> Self:
+        by = tuple(by)
+        reverse = extend_bool(reverse, len(by))
+        sort_funcs = (
+            self._F.desc_nulls_last if not d else self._F.asc_nulls_last for d in reverse
+        )
+        sort_cols = [sort_f(col) for col, sort_f in zip_strict(by, sort_funcs)]
+        return self._with_native(self.native.sort(*sort_cols).limit(k))
 
     def drop_nulls(self, subset: Sequence[str] | None) -> Self:
         subset = list(subset) if subset else None
@@ -358,25 +365,38 @@ class SparkLikeLazyFrame(
         )
 
     def unique(
-        self, subset: Sequence[str] | None, *, keep: LazyUniqueKeepStrategy
+        self,
+        subset: Sequence[str] | None,
+        *,
+        keep: UniqueKeepStrategy,
+        order_by: Sequence[str] | None,
     ) -> Self:
-        if subset and (error := self._check_columns_exist(subset)):
+        subset_ = subset or self.columns
+        if error := self._check_columns_exist(subset_):
             raise error
-        subset = list(subset) if subset else None
+        tmp_name = generate_temporary_column_name(8, self.columns, prefix="row_index_")
+        window = self._Window.partitionBy(subset_)
+        if order_by and keep == "last":
+            window = window.orderBy(*[self._F.desc_nulls_last(x) for x in order_by])
+        elif order_by:
+            window = window.orderBy(*[self._F.asc_nulls_first(x) for x in order_by])
+        else:
+            window = window.orderBy(self._F.lit(1))
         if keep == "none":
-            tmp = generate_temporary_column_name(8, self.columns)
-            window = self._Window.partitionBy(subset or self.columns)
-            df = (
-                self.native.withColumn(tmp, self._F.count("*").over(window))
-                .filter(self._F.col(tmp) == self._F.lit(1))
-                .drop(self._F.col(tmp))
-            )
-            return self._with_native(df)
-        return self._with_native(self.native.dropDuplicates(subset=subset))
+            expr = self._F.count("*").over(window)
+        else:
+            expr = self._F.row_number().over(window)
+        df = (
+            self.native.withColumn(tmp_name, expr)
+            .filter(self._F.col(tmp_name) == self._F.lit(1))
+            .drop(tmp_name)
+        )
+        return self._with_native(df)
 
     def join(
         self,
         other: Self,
+        *,
         how: JoinStrategy,
         left_on: Sequence[str] | None,
         right_on: Sequence[str] | None,
@@ -428,7 +448,7 @@ class SparkLikeLazyFrame(
                 and_,
                 (
                     getattr(self.native, left_key) == getattr(other_native, right_key)
-                    for left_key, right_key in zip(left_on_, right_on_remapped)
+                    for left_key, right_key in zip_strict(left_on_, right_on_remapped)
                 ),
             )
             if how == "full"
@@ -475,7 +495,7 @@ class SparkLikeLazyFrame(
                     ]
                 )
             )
-        elif self._implementation.is_sqlframe():
+        if self._implementation.is_sqlframe():
             # Not every sqlframe dialect supports `explode_outer` function
             # (see https://github.com/eakmanrq/sqlframe/blob/3cb899c515b101ff4c197d84b34fae490d0ed257/sqlframe/base/functions.py#L2288-L2289)
             # therefore we simply explode the array column which will ignore nulls and
@@ -504,9 +524,8 @@ class SparkLikeLazyFrame(
                     )
                 )
             )
-        else:  # pragma: no cover
-            msg = "Unreachable code, please report an issue at https://github.com/narwhals-dev/narwhals/issues"
-            raise AssertionError(msg)
+        msg = "Unreachable code, please report an issue at https://github.com/narwhals-dev/narwhals/issues"  # pragma: no cover
+        raise AssertionError(msg)
 
     def unpivot(
         self,
@@ -555,10 +574,34 @@ class SparkLikeLazyFrame(
     def sink_parquet(self, file: str | Path | BytesIO) -> None:
         self.native.write.parquet(file)
 
-    gather_every = not_implemented.deprecated(
-        "`LazyFrame.gather_every` is deprecated and will be removed in a future version."
-    )
+    @classmethod
+    def _from_compliant_dataframe(
+        cls,
+        frame: CompliantDataFrameAny,
+        /,
+        *,
+        session: SparkSession,
+        implementation: Implementation,
+        version: Version,
+    ) -> SparkLikeLazyFrame:
+        from importlib.util import find_spec
+
+        impl = implementation
+        is_spark_v4 = (not impl.is_sqlframe()) and impl._backend_version() >= (4, 0, 0)
+        if is_spark_v4:  # pragma: no cover
+            # pyspark.sql requires pyarrow to be installed from v4.0.0
+            # and since v4.0.0 the input to `createDataFrame` can be a PyArrow Table.
+            data: Any = frame.to_arrow()
+        elif find_spec("pandas"):
+            data = frame.to_pandas()
+        else:  # pragma: no cover
+            data = tuple(frame.iter_rows(named=True, buffer_size=512))
+
+        return cls(
+            session.createDataFrame(data),
+            version=version,
+            implementation=implementation,
+            validate_backend_version=True,
+        )
+
     join_asof = not_implemented()
-    tail = not_implemented.deprecated(
-        "`LazyFrame.tail` is deprecated and will be removed in a future version."
-    )

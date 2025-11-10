@@ -6,7 +6,7 @@ from functools import reduce
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Literal, Protocol, overload
 
-from narwhals._compliant import CompliantThen, EagerNamespace, EagerWhen
+from narwhals._compliant import EagerNamespace
 from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
@@ -17,13 +17,13 @@ from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.typing import NativeDataFrameT, NativeSeriesT
 from narwhals._pandas_like.utils import is_non_nullable_boolean
+from narwhals._utils import zip_strict
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
 
     from typing_extensions import TypeAlias
 
-    from narwhals._compliant.typing import ScalarKwargs
     from narwhals._utils import Implementation, Version
     from narwhals.typing import IntoDType, NonNestedLiteral
 
@@ -71,16 +71,13 @@ class PandasLikeNamespace(
 
     def coalesce(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            align = self._series._align_full_broadcast
-            series = align(*(s for _expr in exprs for s in _expr(df)))
+            series = (s for _expr in exprs for s in _expr(df))
             return [
                 reduce(lambda x, y: x.fill_null(y, strategy=None, limit=None), series)
             ]
 
         return self._expr._from_callable(
             func=func,
-            depth=max(x._depth for x in exprs) + 1,
-            function_name="coalesce",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
             context=self,
@@ -100,8 +97,6 @@ class PandasLikeNamespace(
 
         return PandasLikeExpr(
             lambda df: [_lit_pandas_series(df)],
-            depth=0,
-            function_name="lit",
             evaluate_output_names=lambda _df: ["literal"],
             alias_output_names=None,
             implementation=self._implementation,
@@ -115,8 +110,6 @@ class PandasLikeNamespace(
                     [len(df._native_frame)], name="len", index=[0], context=self
                 )
             ],
-            depth=0,
-            function_name="len",
             evaluate_output_names=lambda _df: ["len"],
             alias_output_names=None,
             implementation=self._implementation,
@@ -126,16 +119,12 @@ class PandasLikeNamespace(
     # --- horizontal ---
     def sum_horizontal(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            align = self._series._align_full_broadcast
             it = chain.from_iterable(expr(df) for expr in exprs)
-            series = align(*it)
-            native_series = (s.fill_null(0, None, None) for s in series)
+            native_series = (s.fill_null(0, None, None) for s in it)
             return [reduce(operator.add, native_series)]
 
         return self._expr._from_callable(
             func=func,
-            depth=max(x._depth for x in exprs) + 1,
-            function_name="sum_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
             context=self,
@@ -145,7 +134,6 @@ class PandasLikeNamespace(
         self, *exprs: PandasLikeExpr, ignore_nulls: bool
     ) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            align = self._series._align_full_broadcast
             series = [s for _expr in exprs for s in _expr(df)]
             if not ignore_nulls and any(
                 s.native.dtype == "object" and s.is_null().any() for s in series
@@ -157,18 +145,16 @@ class PandasLikeNamespace(
             it = (
                 (
                     # NumPy-backed 'bool' dtype can't contain nulls so doesn't need filling.
-                    s if is_non_nullable_boolean(s) else s.fill_null(True, None, None)  # noqa: FBT003
+                    s if is_non_nullable_boolean(s) else s.fill_null(True, None, None)
                     for s in series
                 )
                 if ignore_nulls
                 else iter(series)
             )
-            return [reduce(operator.and_, align(*it))]
+            return [reduce(operator.and_, it)]
 
         return self._expr._from_callable(
             func=func,
-            depth=max(x._depth for x in exprs) + 1,
-            function_name="all_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
             context=self,
@@ -178,7 +164,6 @@ class PandasLikeNamespace(
         self, *exprs: PandasLikeExpr, ignore_nulls: bool
     ) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            align = self._series._align_full_broadcast
             series = [s for _expr in exprs for s in _expr(df)]
             if not ignore_nulls and any(
                 s.native.dtype == "object" and s.is_null().any() for s in series
@@ -190,18 +175,16 @@ class PandasLikeNamespace(
             it = (
                 (
                     # NumPy-backed 'bool' dtype can't contain nulls so doesn't need filling.
-                    s if is_non_nullable_boolean(s) else s.fill_null(False, None, None)  # noqa: FBT003
+                    s if is_non_nullable_boolean(s) else s.fill_null(False, None, None)
                     for s in series
                 )
                 if ignore_nulls
                 else iter(series)
             )
-            return [reduce(operator.or_, align(*it))]
+            return [reduce(operator.or_, it)]
 
         return self._expr._from_callable(
             func=func,
-            depth=max(x._depth for x in exprs) + 1,
-            function_name="any_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
             context=self,
@@ -210,17 +193,12 @@ class PandasLikeNamespace(
     def mean_horizontal(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             expr_results = [s for _expr in exprs for s in _expr(df)]
-            align = self._series._align_full_broadcast
-            series = align(
-                *(s.fill_null(0, strategy=None, limit=None) for s in expr_results)
-            )
-            non_na = align(*(1 - s.is_null() for s in expr_results))
+            series = (s.fill_null(0, strategy=None, limit=None) for s in expr_results)
+            non_na = (1 - s.is_null() for s in expr_results)
             return [reduce(operator.add, series) / reduce(operator.add, non_na)]
 
         return self._expr._from_callable(
             func=func,
-            depth=max(x._depth for x in exprs) + 1,
-            function_name="mean_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
             context=self,
@@ -228,10 +206,7 @@ class PandasLikeNamespace(
 
     def min_horizontal(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            it = chain.from_iterable(expr(df) for expr in exprs)
-            align = self._series._align_full_broadcast
-            series = align(*it)
-
+            series = list(chain.from_iterable(expr(df) for expr in exprs))
             return [
                 PandasLikeSeries(
                     self.concat(
@@ -244,8 +219,6 @@ class PandasLikeNamespace(
 
         return self._expr._from_callable(
             func=func,
-            depth=max(x._depth for x in exprs) + 1,
-            function_name="min_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
             context=self,
@@ -253,10 +226,7 @@ class PandasLikeNamespace(
 
     def max_horizontal(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            it = chain.from_iterable(expr(df) for expr in exprs)
-            align = self._series._align_full_broadcast
-            series = align(*it)
-
+            series = list(chain.from_iterable(expr(df) for expr in exprs))
             return [
                 PandasLikeSeries(
                     self.concat(
@@ -269,8 +239,6 @@ class PandasLikeNamespace(
 
         return self._expr._from_callable(
             func=func,
-            depth=max(x._depth for x in exprs) + 1,
-            function_name="max_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
             context=self,
@@ -321,9 +289,6 @@ class PandasLikeNamespace(
             return self._concat(dfs, axis=VERTICAL, copy=False)
         return self._concat(dfs, axis=VERTICAL)
 
-    def when(self, predicate: PandasLikeExpr) -> PandasWhen[NativeSeriesT]:
-        return PandasWhen[NativeSeriesT].from_expr(predicate, context=self)
-
     def concat_str(
         self, *exprs: PandasLikeExpr, separator: str, ignore_nulls: bool
     ) -> PandasLikeExpr:
@@ -331,9 +296,8 @@ class PandasLikeNamespace(
 
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             expr_results = [s for _expr in exprs for s in _expr(df)]
-            align = self._series._align_full_broadcast
-            series = align(*(s.cast(string) for s in expr_results))
-            null_mask = align(*(s.is_null() for s in expr_results))
+            series = [s.cast(string) for s in expr_results]
+            null_mask = [s.is_null() for s in expr_results]
 
             if not ignore_nulls:
                 null_mask_result = reduce(operator.or_, null_mask)
@@ -344,31 +308,41 @@ class PandasLikeNamespace(
                 # NOTE: Trying to help `mypy` later
                 # error: Cannot determine type of "values"  [has-type]
                 values: list[PandasLikeSeries]
-                init_value, *values = [
-                    s.zip_with(~nm, "") for s, nm in zip(series, null_mask)
-                ]
-
-                sep_array = init_value.from_iterable(
-                    data=[separator] * len(init_value),
-                    name="sep",
-                    index=init_value.native.index,
-                    context=self,
+                init_value, *values = (
+                    s.zip_with(~nm, "") for s, nm in zip_strict(series, null_mask)
+                )
+                sep_array = init_value._with_native(
+                    init_value.__native_namespace__().Series(
+                        separator,
+                        name="sep",
+                        index=init_value.native.index,
+                        dtype=init_value.native.dtype,
+                    )
                 )
                 separators = (sep_array.zip_with(~nm, "") for nm in null_mask[:-1])
                 result = reduce(
-                    operator.add, (s + v for s, v in zip(separators, values)), init_value
+                    operator.add,
+                    (s + v for s, v in zip_strict(separators, values)),
+                    init_value,
                 )
 
             return [result]
 
         return self._expr._from_callable(
             func=func,
-            depth=max(x._depth for x in exprs) + 1,
-            function_name="concat_str",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
             context=self,
         )
+
+    def _if_then_else(
+        self,
+        when: NativeSeriesT,
+        then: NativeSeriesT,
+        otherwise: NativeSeriesT | None = None,
+    ) -> NativeSeriesT:
+        where: Incomplete = then.where
+        return where(when) if otherwise is None else where(when, otherwise)
 
 
 class _NativeConcat(Protocol[NativeDataFrameT, NativeSeriesT]):
@@ -408,31 +382,3 @@ class _NativeConcat(Protocol[NativeDataFrameT, NativeSeriesT]):
         axis: Axis,
         copy: bool | None = None,
     ) -> NativeDataFrameT | NativeSeriesT: ...
-
-
-class PandasWhen(
-    EagerWhen[PandasLikeDataFrame, PandasLikeSeries, PandasLikeExpr, NativeSeriesT]
-):
-    @property
-    # Signature of "_then" incompatible with supertype "CompliantWhen"
-    # ArrowWhen seems to follow the same pattern, but no mypy complaint there?
-    def _then(self) -> type[PandasThen]:  # type: ignore[override]
-        return PandasThen
-
-    def _if_then_else(
-        self,
-        when: NativeSeriesT,
-        then: NativeSeriesT,
-        otherwise: NativeSeriesT | NonNestedLiteral,
-    ) -> NativeSeriesT:
-        where: Incomplete = then.where
-        return where(when) if otherwise is None else where(when, otherwise)
-
-
-class PandasThen(
-    CompliantThen[PandasLikeDataFrame, PandasLikeSeries, PandasLikeExpr, PandasWhen],
-    PandasLikeExpr,
-):
-    _depth: int = 0
-    _scalar_kwargs: ScalarKwargs = {}  # noqa: RUF012
-    _function_name: str = "whenthen"

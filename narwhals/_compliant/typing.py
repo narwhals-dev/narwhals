@@ -8,6 +8,7 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.dataframe import (
         CompliantDataFrame,
+        CompliantFrame,
         CompliantLazyFrame,
         EagerDataFrame,
     )
@@ -15,16 +16,18 @@ if TYPE_CHECKING:
         CompliantExpr,
         DepthTrackingExpr,
         EagerExpr,
+        ImplExpr,
         LazyExpr,
         NativeExpr,
     )
     from narwhals._compliant.namespace import CompliantNamespace, EagerNamespace
     from narwhals._compliant.series import CompliantSeries, EagerSeries
     from narwhals._compliant.window import WindowInputs
+    from narwhals._native import NativeDataFrame, NativeFrame, NativeSeries
     from narwhals.typing import (
         FillNullStrategy,
-        NativeFrame,
-        NativeSeries,
+        IntoLazyFrame,
+        ModeKeepStrategy,
         RankMethod,
         RollingInterpolationMethod,
     )
@@ -41,6 +44,7 @@ if TYPE_CHECKING:
         half_life: float | None
         ignore_nulls: bool
         interpolation: RollingInterpolationMethod
+        keep: ModeKeepStrategy
         limit: int | None
         method: RankMethod
         min_samples: int
@@ -61,7 +65,6 @@ __all__ = [
     "CompliantSeriesT",
     "EvalNames",
     "EvalSeries",
-    "IntoCompliantExpr",
     "NarwhalsAggregation",
     "NativeFrameT_co",
     "NativeSeriesT_co",
@@ -71,8 +74,10 @@ CompliantSeriesAny: TypeAlias = "CompliantSeries[Any]"
 CompliantSeriesOrNativeExprAny: TypeAlias = "CompliantSeriesAny | NativeExpr"
 CompliantDataFrameAny: TypeAlias = "CompliantDataFrame[Any, Any, Any, Any]"
 CompliantLazyFrameAny: TypeAlias = "CompliantLazyFrame[Any, Any, Any]"
-CompliantFrameAny: TypeAlias = "CompliantDataFrameAny | CompliantLazyFrameAny"
+CompliantFrameAny: TypeAlias = "CompliantFrame[Any, Any, Any]"
 CompliantNamespaceAny: TypeAlias = "CompliantNamespace[Any, Any]"
+
+ImplExprAny: TypeAlias = "ImplExpr[Any, Any]"
 
 DepthTrackingExprAny: TypeAlias = "DepthTrackingExpr[Any, Any]"
 
@@ -90,6 +95,8 @@ NativeSeriesT_co = TypeVar("NativeSeriesT_co", bound="NativeSeries", covariant=T
 NativeSeriesT_contra = TypeVar(
     "NativeSeriesT_contra", bound="NativeSeries", contravariant=True
 )
+NativeDataFrameT = TypeVar("NativeDataFrameT", bound="NativeDataFrame")
+NativeLazyFrameT = TypeVar("NativeLazyFrameT", bound="IntoLazyFrame")
 NativeFrameT = TypeVar("NativeFrameT", bound="NativeFrame")
 NativeFrameT_co = TypeVar("NativeFrameT_co", bound="NativeFrame", covariant=True)
 NativeFrameT_contra = TypeVar(
@@ -130,7 +137,7 @@ CompliantNamespaceT_co = TypeVar(
     "CompliantNamespaceT_co", bound=CompliantNamespaceAny, covariant=True
 )
 
-IntoCompliantExpr: TypeAlias = "CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co] | CompliantSeriesOrNativeExprT_co"
+ImplExprT_contra = TypeVar("ImplExprT_contra", bound=ImplExprAny, contravariant=True)
 
 DepthTrackingExprT = TypeVar("DepthTrackingExprT", bound=DepthTrackingExprAny)
 DepthTrackingExprT_contra = TypeVar(
@@ -176,6 +183,7 @@ NarwhalsAggregation: TypeAlias = Literal[
     "median",
     "max",
     "min",
+    "mode",
     "std",
     "var",
     "len",
@@ -184,6 +192,8 @@ NarwhalsAggregation: TypeAlias = Literal[
     "quantile",
     "all",
     "any",
+    "first",
+    "last",
 ]
 """`Expr` methods we aim to support in `DepthTrackingGroupBy`.
 
@@ -194,3 +204,8 @@ Be sure to update me if you're working on one of these:
 - https://github.com/narwhals-dev/narwhals/issues/2526
 - https://github.com/narwhals-dev/narwhals/issues/2660
 """
+
+Accessor: TypeAlias = Literal[
+    "arr", "cat", "dt", "list", "meta", "name", "str", "bin", "struct"
+]
+"""`{Expr,Series}` method namespace accessor name."""

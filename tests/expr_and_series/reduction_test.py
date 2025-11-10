@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from itertools import chain
 from typing import Any
 
 import pytest
@@ -94,7 +95,6 @@ def test_empty_scalar_reduction_select(constructor: Constructor) -> None:
 def test_empty_scalar_reduction_with_columns(constructor: Constructor) -> None:
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
-    from itertools import chain
 
     data = {
         "str": [*"abcde"],

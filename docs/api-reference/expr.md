@@ -8,10 +8,9 @@
         - alias
         - all
         - any
-        - arg_max
-        - arg_min
-        - arg_true
         - cast
+        - ceil
+        - clip
         - count
         - cum_count
         - cum_max
@@ -22,12 +21,13 @@
         - drop_nulls
         - ewm_mean
         - exp
+        - fill_nan
         - fill_null
         - filter
-        - gather_every
-        - head
-        - clip
+        - first
+        - floor
         - is_between
+        - is_close
         - is_duplicated
         - is_finite
         - is_first_distinct
@@ -37,6 +37,7 @@
         - is_null
         - is_unique
         - kurtosis
+        - last
         - len
         - log
         - map_batches
@@ -45,8 +46,8 @@
         - median
         - min
         - mode
-        - null_count
         - n_unique
+        - null_count
         - over
         - pipe
         - quantile
@@ -57,14 +58,11 @@
         - rolling_sum
         - rolling_var
         - round
-        - sample
         - shift
-        - sort
         - skew
         - sqrt
         - std
         - sum
-        - tail
         - unique
         - var
       show_source: false

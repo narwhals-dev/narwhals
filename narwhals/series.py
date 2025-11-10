@@ -1,21 +1,38 @@
 from __future__ import annotations
 
 import math
-from collections.abc import Iterator, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, overload
+from collections.abc import Iterable, Iterator, Mapping, Sequence
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    ClassVar,
+    Generic,
+    Literal,
+    cast,
+    overload,
+)
 
+from narwhals._expression_parsing import ExprKind, ExprNode
 from narwhals._utils import (
     Implementation,
+    Version,
+    _Implementation,
     _validate_rolling_arguments,
     ensure_type,
     generate_repr,
     is_compliant_series,
+    is_eager_allowed,
     is_index_selector,
+    no_default,
+    qualified_type_name,
     supports_arrow_c_stream,
 )
-from narwhals.dependencies import is_numpy_scalar
-from narwhals.dtypes import _validate_dtype
-from narwhals.exceptions import ComputeError
+from narwhals.dependencies import is_numpy_array, is_numpy_array_1d, is_numpy_scalar
+from narwhals.dtypes import _validate_dtype, _validate_into_dtype
+from narwhals.exceptions import ComputeError, InvalidOperationError
+from narwhals.expr import Expr
+from narwhals.functions import col
 from narwhals.series_cat import SeriesCatNamespace
 from narwhals.series_dt import SeriesDateTimeNamespace
 from narwhals.series_list import SeriesListNamespace
@@ -26,6 +43,7 @@ from narwhals.typing import IntoSeriesT
 
 if TYPE_CHECKING:
     from types import ModuleType
+    from typing import NoReturn
 
     import pandas as pd
     import polars as pl
@@ -33,14 +51,17 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._compliant import CompliantSeries
+    from narwhals._typing import EagerAllowed, IntoBackend, NoDefault
     from narwhals.dataframe import DataFrame, MultiIndexSelector
     from narwhals.dtypes import DType
     from narwhals.typing import (
         ClosedInterval,
         FillNullStrategy,
         IntoDType,
+        ModeKeepStrategy,
         NonNestedLiteral,
         NumericLiteral,
+        PythonLiteral,
         RankMethod,
         RollingInterpolationMethod,
         SingleIndexSelector,
@@ -70,11 +91,22 @@ class Series(Generic[IntoSeriesT]):
             ```
     """
 
+    _version: ClassVar[Version] = Version.MAIN
+
+    @property
+    def _compliant(self) -> CompliantSeries[IntoSeriesT]:
+        return self._compliant_series
+
     @property
     def _dataframe(self) -> type[DataFrame[Any]]:
         from narwhals.dataframe import DataFrame
 
         return DataFrame
+
+    def _to_expr(self) -> Expr:
+        return Expr(
+            ExprNode(ExprKind.SERIES, "_expr._from_series", series=self._compliant)
+        )
 
     def __init__(
         self, series: Any, *, level: Literal["full", "lazy", "interchange"]
@@ -88,36 +120,165 @@ class Series(Generic[IntoSeriesT]):
             msg = f"Expected Polars Series or an object which implements `__narwhals_series__`, got: {type(series)}."
             raise AssertionError(msg)
 
-    @property
-    def implementation(self) -> Implementation:
-        """Return implementation of native Series.
+    @classmethod
+    def from_numpy(
+        cls,
+        name: str,
+        values: _1DArray,
+        dtype: IntoDType | None = None,
+        *,
+        backend: IntoBackend[EagerAllowed],
+    ) -> Series[Any]:
+        """Construct a Series from a NumPy ndarray.
 
-        This can be useful when you need to use special-casing for features outside of
-        Narwhals' scope - for example, when dealing with pandas' Period Dtype.
+        Arguments:
+            name: Name of resulting Series.
+            values: One-dimensional data represented as a NumPy ndarray.
+            dtype: (Narwhals) dtype. If not provided, the native library
+                may auto-infer it from `values`.
+            backend: specifies which eager backend instantiate to.
 
-        Returns:
-            Implementation.
+                `backend` can be specified in various ways
+
+                - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
+                    `POLARS`, `MODIN` or `CUDF`.
+                - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
+                - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
 
         Examples:
+            >>> import numpy as np
+            >>> import polars as pl
             >>> import narwhals as nw
-            >>> import pandas as pd
-
-            >>> s_native = pd.Series([1, 2, 3])
-            >>> s = nw.from_native(s_native, series_only=True)
-
-            >>> s.implementation
-            <Implementation.PANDAS: 'pandas'>
-
-            >>> s.implementation.is_pandas()
-            True
-
-            >>> s.implementation.is_pandas_like()
-            True
-
-            >>> s.implementation.is_polars()
-            False
+            >>>
+            >>> arr = np.arange(5, 10)
+            >>> nw.Series.from_numpy("arr", arr, dtype=nw.Int8, backend="polars")
+            ┌──────────────────┐
+            | Narwhals Series  |
+            |------------------|
+            |shape: (5,)       |
+            |Series: 'arr' [i8]|
+            |[                 |
+            |        5         |
+            |        6         |
+            |        7         |
+            |        8         |
+            |        9         |
+            |]                 |
+            └──────────────────┘
         """
-        return self._compliant_series._implementation
+        if not is_numpy_array_1d(values):
+            msg = "`from_numpy` only accepts 1D numpy arrays"
+            raise ValueError(msg)
+        if dtype:
+            _validate_into_dtype(dtype)
+        implementation = Implementation.from_backend(backend)
+        if is_eager_allowed(implementation):
+            ns = cls._version.namespace.from_backend(implementation).compliant
+            compliant = ns.from_numpy(values).alias(name)
+            if dtype:
+                return cls(compliant.cast(dtype), level="full")
+            return cls(compliant, level="full")
+        msg = (
+            f"{implementation} support in Narwhals is lazy-only, but `Series.from_numpy` is an eager-only function.\n\n"
+            "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
+            f"    nw.Series.from_numpy(arr, backend='pyarrow').to_frame().lazy('{implementation}')"
+        )
+        raise ValueError(msg)
+
+    @classmethod
+    def from_iterable(
+        cls,
+        name: str,
+        values: Iterable[Any],
+        dtype: IntoDType | None = None,
+        *,
+        backend: IntoBackend[EagerAllowed],
+    ) -> Series[Any]:
+        """Construct a Series from an iterable.
+
+        Arguments:
+            name: Name of resulting Series.
+            values: One-dimensional data represented as an iterable.
+            dtype: (Narwhals) dtype. If not provided, the native library
+                may auto-infer it from `values`.
+            backend: specifies which eager backend instantiate to.
+
+                `backend` can be specified in various ways
+
+                - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
+                    `POLARS`, `MODIN` or `CUDF`.
+                - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
+                - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>>
+            >>> values = [4, 1, 3, 2]
+            >>> nw.Series.from_iterable("a", values, dtype=nw.UInt32, backend="pandas")
+            ┌──────────────────────┐
+            |   Narwhals Series    |
+            |----------------------|
+            |0    4                |
+            |1    1                |
+            |2    3                |
+            |3    2                |
+            |Name: a, dtype: uint32|
+            └──────────────────────┘
+        """
+        if is_numpy_array(values):
+            return cls.from_numpy(name, values, dtype, backend=backend)
+        if dtype:
+            _validate_into_dtype(dtype)
+        if not isinstance(values, Iterable):
+            msg = f"Expected values to be an iterable, got: {qualified_type_name(values)!r}."
+            raise TypeError(msg)
+        implementation = Implementation.from_backend(backend)
+        if is_eager_allowed(implementation):
+            ns = cls._version.namespace.from_backend(implementation).compliant
+            compliant = ns._series.from_iterable(
+                values, context=ns, name=name, dtype=dtype
+            )
+            return cls(compliant, level="full")
+        msg = (
+            f"{implementation} support in Narwhals is lazy-only, but `Series.from_iterable` is an eager-only function.\n\n"
+            "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
+            f"    nw.Series.from_iterable('a', [1,2,3], backend='pyarrow').to_frame().lazy('{implementation}')"
+        )
+        raise ValueError(msg)
+
+    implementation: _Implementation = _Implementation()
+    """Return [`narwhals.Implementation`][] of native Series.
+
+    This can be useful when you need to use special-casing for features outside of
+    Narwhals' scope - for example, when dealing with pandas' Period Dtype.
+
+    Examples:
+        >>> import narwhals as nw
+        >>> import pandas as pd
+        >>> s_native = pd.Series([1, 2, 3])
+        >>> s = nw.from_native(s_native, series_only=True)
+        >>> s.implementation
+        <Implementation.PANDAS: 'pandas'>
+        >>> s.implementation.is_pandas()
+        True
+        >>> s.implementation.is_pandas_like()
+        True
+        >>> s.implementation.is_polars()
+        False
+    """
+
+    def __bool__(self) -> NoReturn:
+        msg = (
+            "the truth value of a Series is ambiguous"
+            "\n\n"
+            "Here are some things you might want to try:\n"
+            "- instead of `if s`, use `if not s.is_empty()`\n"
+            "- instead of `s1 and s2`, use `s1 & s2`\n"
+            "- instead of `s1 or s2`, use `s1 | s2`\n"
+            "- instead of `s in [y, z]`, use `s.is_in([y, z])`\n"
+        )
+        raise TypeError(msg)
 
     def __array__(self, dtype: Any = None, copy: bool | None = None) -> _1DArray:  # noqa: FBT001
         return self._compliant_series.__array__(dtype=dtype, copy=copy)
@@ -202,7 +363,7 @@ class Series(Generic[IntoSeriesT]):
             return native_series.__arrow_c_stream__(requested_schema=requested_schema)
         try:
             pa_version = Implementation.PYARROW._backend_version()
-        except ModuleNotFoundError as exc:  # pragma: no cover
+        except ModuleNotFoundError as exc:
             msg = f"'pyarrow>=16.0.0' is required for `Series.__arrow_c_stream__` for object of type {type(native_series)}"
             raise ModuleNotFoundError(msg) from exc
         if pa_version < (16, 0):  # pragma: no cover
@@ -215,9 +376,6 @@ class Series(Generic[IntoSeriesT]):
 
     def to_native(self) -> IntoSeriesT:
         """Convert Narwhals series to native series.
-
-        Returns:
-            Series of class that user started with.
 
         Examples:
             >>> import polars as pl
@@ -241,9 +399,6 @@ class Series(Generic[IntoSeriesT]):
         Arguments:
             indices: Position(s) to set items at.
             values: Values to set.
-
-        Returns:
-            A new Series with values set at given positions.
 
         Note:
             This method always returns a new Series, without modifying the original one.
@@ -288,9 +443,6 @@ class Series(Generic[IntoSeriesT]):
     def shape(self) -> tuple[int]:
         """Get the shape of the Series.
 
-        Returns:
-            A tuple containing the length of the Series.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -313,9 +465,6 @@ class Series(Generic[IntoSeriesT]):
 
     def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:
         """Pipe function call.
-
-        Returns:
-            A new Series with the results of the piped function applied.
 
         Examples:
             >>> import polars as pl
@@ -344,9 +493,6 @@ class Series(Generic[IntoSeriesT]):
 
         Null values count towards the total.
 
-        Returns:
-            The number of elements in the Series.
-
         Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
@@ -361,9 +507,6 @@ class Series(Generic[IntoSeriesT]):
     def dtype(self) -> DType:
         """Get the data type of the Series.
 
-        Returns:
-            The data type of the Series.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -377,9 +520,6 @@ class Series(Generic[IntoSeriesT]):
     @property
     def name(self) -> str:
         """Get the name of the Series.
-
-        Returns:
-            The name of the Series.
 
         Examples:
             >>> import polars as pl
@@ -436,9 +576,6 @@ class Series(Generic[IntoSeriesT]):
                   $1-\alpha$ and $1$ if `adjust=True`,
                   and $1-\alpha$ and $\alpha$ if `adjust=False`.
 
-        Returns:
-            Series
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -470,9 +607,6 @@ class Series(Generic[IntoSeriesT]):
         Arguments:
             dtype: Data type that the object will be cast into.
 
-        Returns:
-            A new Series with the specified data type.
-
         Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
@@ -493,9 +627,6 @@ class Series(Generic[IntoSeriesT]):
 
     def to_frame(self) -> DataFrame[Any]:
         """Convert to dataframe.
-
-        Returns:
-            A DataFrame containing this Series as a single column.
 
         Examples:
             >>> import polars as pl
@@ -524,9 +655,6 @@ class Series(Generic[IntoSeriesT]):
             your original dataframe, so we recommend only calling this
             when you absolutely need to.
 
-        Returns:
-            A list of Python objects.
-
         Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
@@ -539,9 +667,6 @@ class Series(Generic[IntoSeriesT]):
 
     def mean(self) -> float:
         """Reduce this Series to the mean value.
-
-        Returns:
-            The average of all elements in the Series.
 
         Examples:
             >>> import pandas as pd
@@ -559,9 +684,6 @@ class Series(Generic[IntoSeriesT]):
         Notes:
             Results might slightly differ across backends due to differences in the underlying algorithms used to compute the median.
 
-        Returns:
-            The median value of all elements in the Series.
-
         Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
@@ -574,9 +696,6 @@ class Series(Generic[IntoSeriesT]):
 
     def skew(self) -> float | None:
         """Calculate the sample skewness of the Series.
-
-        Returns:
-            The sample skewness of the Series.
 
         Examples:
             >>> import polars as pl
@@ -598,9 +717,6 @@ class Series(Generic[IntoSeriesT]):
         Kurtosis is the fourth central moment divided by the square of the variance.
         The Fisher's definition is used where 3.0 is subtracted from the result to give 0.0 for a normal distribution.
 
-        Returns:
-            The kurtosis (Fisher's definition) without bias correction of the column.
-
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -613,9 +729,6 @@ class Series(Generic[IntoSeriesT]):
 
     def count(self) -> int:
         """Returns the number of non-null elements in the Series.
-
-        Returns:
-            The number of non-null elements in the Series.
 
         Examples:
             >>> import pyarrow as pa
@@ -635,9 +748,6 @@ class Series(Generic[IntoSeriesT]):
         Notes:
             Only works on Series of data type Boolean.
 
-        Returns:
-            A boolean indicating if any values in the Series are True.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -653,9 +763,6 @@ class Series(Generic[IntoSeriesT]):
 
         If there are no non-null elements, the result is `True`.
 
-        Returns:
-            A boolean indicating if all values in the Series are True.
-
         Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
@@ -669,9 +776,6 @@ class Series(Generic[IntoSeriesT]):
     def min(self) -> Any:
         """Get the minimal value in this Series.
 
-        Returns:
-            The minimum value in the Series.
-
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -684,9 +788,6 @@ class Series(Generic[IntoSeriesT]):
 
     def max(self) -> Any:
         """Get the maximum value in this Series.
-
-        Returns:
-            The maximum value in the Series.
 
         Examples:
             >>> import pandas as pd
@@ -729,9 +830,6 @@ class Series(Generic[IntoSeriesT]):
 
         If there are no non-null elements, the result is zero.
 
-        Returns:
-            The sum of all elements in the Series.
-
         Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
@@ -747,10 +845,7 @@ class Series(Generic[IntoSeriesT]):
 
         Arguments:
             ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
-                     where N represents the number of elements.
-
-        Returns:
-            The standard deviation of all elements in the Series.
+                    where N represents the number of elements.
 
         Examples:
             >>> import polars as pl
@@ -767,7 +862,7 @@ class Series(Generic[IntoSeriesT]):
 
         Arguments:
             ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
-                     where N represents the number of elements.
+                    where N represents the number of elements.
 
         Examples:
             >>> import pyarrow as pa
@@ -790,9 +885,6 @@ class Series(Generic[IntoSeriesT]):
             lower_bound: Lower bound value.
             upper_bound: Upper bound value.
 
-        Returns:
-            A new Series with values clipped to the specified bounds.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -807,6 +899,18 @@ class Series(Generic[IntoSeriesT]):
             5    3
             dtype: int64
         """
+        if lower_bound is None:
+            return self._with_compliant(
+                self._compliant_series.clip_upper(
+                    upper_bound=self._extract_native(upper_bound)
+                )
+            )
+        if upper_bound is None:
+            return self._with_compliant(
+                self._compliant_series.clip_lower(
+                    lower_bound=self._extract_native(lower_bound)
+                )
+            )
         return self._with_compliant(
             self._compliant_series.clip(
                 lower_bound=self._extract_native(lower_bound),
@@ -814,14 +918,49 @@ class Series(Generic[IntoSeriesT]):
             )
         )
 
+    def first(self) -> PythonLiteral:
+        """Get the first element of the Series.
+
+        Returns:
+            A scalar value or `None` if the Series is empty.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>>
+            >>> s_native = pl.Series([1, 2, 3])
+            >>> s_nw = nw.from_native(s_native, series_only=True)
+            >>> s_nw.first()
+            1
+            >>> s_nw.filter(s_nw > 5).first() is None
+            True
+        """
+        return self._compliant_series.first()
+
+    def last(self) -> PythonLiteral:
+        """Get the last element of the Series.
+
+        Returns:
+            A scalar value or `None` if the Series is empty.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>>
+            >>> s_native = pa.chunked_array([[1, 2, 3]])
+            >>> s_nw = nw.from_native(s_native, series_only=True)
+            >>> s_nw.last()
+            3
+            >>> s_nw.filter(s_nw > 5).last() is None
+            True
+        """
+        return self._compliant_series.last()
+
     def is_in(self, other: Any) -> Self:
         """Check if the elements of this Series are in the other sequence.
 
         Arguments:
             other: Sequence of primitive type.
-
-        Returns:
-            A new Series with boolean values indicating if the elements are in the other sequence.
 
         Examples:
             >>> import pyarrow as pa
@@ -846,9 +985,6 @@ class Series(Generic[IntoSeriesT]):
     def arg_true(self) -> Self:
         """Find elements where boolean Series is True.
 
-        Returns:
-            A new Series with the indices of elements that are True.
-
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -871,11 +1007,7 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/)
-            for reference.
-
-        Returns:
-            A new Series with null values removed.
+            See [null_handling](../concepts/null_handling.md/) for reference.
 
         Examples:
             >>> import pandas as pd
@@ -893,9 +1025,6 @@ class Series(Generic[IntoSeriesT]):
 
     def abs(self) -> Self:
         """Calculate the absolute value of each element.
-
-        Returns:
-            A new Series with the absolute values of the original elements.
 
         Examples:
             >>> import pyarrow as pa
@@ -922,9 +1051,6 @@ class Series(Generic[IntoSeriesT]):
         Arguments:
             reverse: reverse the operation
 
-        Returns:
-            A new Series with the cumulative sum of non-null values.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -945,9 +1071,6 @@ class Series(Generic[IntoSeriesT]):
             maintain_order: Keep the same order as the original series. This may be more
                 expensive to compute. Settings this to `True` blocks the possibility
                 to run on the streaming engine for Polars.
-
-        Returns:
-            A new Series with duplicate values removed.
 
         Examples:
             >>> import polars as pl
@@ -982,9 +1105,6 @@ class Series(Generic[IntoSeriesT]):
 
                 s.diff().fill_null(0).cast(nw.Int64)
 
-        Returns:
-            A new Series with the difference between each element and its predecessor.
-
         Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
@@ -1010,9 +1130,6 @@ class Series(Generic[IntoSeriesT]):
         Arguments:
             n: Number of indices to shift forward. If a negative value is passed,
                 values are shifted in the opposite direction instead.
-
-        Returns:
-            A new Series with values shifted by n positions.
 
         Notes:
             pandas may change the dtype here, for example when introducing missing
@@ -1054,9 +1171,6 @@ class Series(Generic[IntoSeriesT]):
             with_replacement: Allow values to be sampled more than once.
             seed: Seed for the random number generator. If set to None (default), a random
                 seed is generated for each sample operation.
-
-        Returns:
-            A new Series containing randomly sampled values from the original Series.
 
         Notes:
             The `sample` method returns a Series with a specified number of
@@ -1112,9 +1226,6 @@ class Series(Generic[IntoSeriesT]):
         Arguments:
             name: The new name.
 
-        Returns:
-            A new Series with the updated name.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -1155,9 +1266,6 @@ class Series(Generic[IntoSeriesT]):
         Arguments:
             name: The new name.
 
-        Returns:
-            A new Series with the updated name.
-
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -1180,23 +1288,26 @@ class Series(Generic[IntoSeriesT]):
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any] | None = None,
         *,
+        default: Any | NoDefault = no_default,
         return_dtype: IntoDType | None = None,
     ) -> Self:
         """Replace all values by different values.
-
-        This function must replace all non-null input values (else it raises an error).
 
         Arguments:
             old: Sequence of values to replace. It also accepts a mapping of values to
                 their replacement as syntactic sugar for
                 `replace_strict(old=list(mapping.keys()), new=list(mapping.values()))`.
             new: Sequence of values to replace by. Length must match the length of `old`.
+            default: Set values that were not replaced to this value. If no default is
+                specified, (default), an error is raised if any values were not replaced.
+                Accepts expression input. Non-expression inputs are parsed as literals.
             return_dtype: The data type of the resulting expression. If set to `None`
                 (default), the data type is determined automatically based on the other
                 inputs.
 
-        Returns:
-            A new Series with values replaced according to the mapping.
+        Raises:
+            InvalidOperationError: If any non-null values in the original column were not
+                replaced, and no default was specified.
 
         Examples:
             >>> import pandas as pd
@@ -1211,6 +1322,21 @@ class Series(Generic[IntoSeriesT]):
             2      one
             3      two
             Name: a, dtype: object
+
+            Replace values and set a default for values not in the mapping:
+
+            >>> s_native = pd.Series([1, 2, 3, 4], name="a")
+            >>> s_default = pd.Series(["beluga", "narwhal", "orca", "vaquita"])
+            >>> nw.from_native(s_native, series_only=True).replace_strict(
+            ...     {1: "one", 2: "two"},
+            ...     default=nw.from_native(s_default, series_only=True),
+            ...     return_dtype=nw.String,
+            ... ).to_native()
+            0        one
+            1        two
+            2       orca
+            3    vaquita
+            Name: a, dtype: object
         """
         if new is None:
             if not isinstance(old, Mapping):
@@ -1220,8 +1346,16 @@ class Series(Generic[IntoSeriesT]):
             new = list(old.values())
             old = list(old.keys())
 
+        assert isinstance(new, Sequence)  # noqa: S101, help mypy
+        assert isinstance(old, Sequence)  # noqa: S101, help mypy
+
         return self._with_compliant(
-            self._compliant_series.replace_strict(old, new, return_dtype=return_dtype)
+            self._compliant_series.replace_strict(
+                old=old,
+                new=new,
+                default=self._extract_native(default),
+                return_dtype=return_dtype,
+            )
         )
 
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
@@ -1230,9 +1364,6 @@ class Series(Generic[IntoSeriesT]):
         Arguments:
             descending: Sort in descending order.
             nulls_last: Place null values last instead of first.
-
-        Returns:
-            A new sorted Series.
 
         Examples:
             >>> import polars as pl
@@ -1259,11 +1390,7 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/)
-            for reference.
-
-        Returns:
-            A boolean Series indicating which values are null.
+            See [null_handling](../concepts/null_handling.md/) for reference.
 
         Examples:
             >>> import pyarrow as pa
@@ -1287,13 +1414,9 @@ class Series(Generic[IntoSeriesT]):
     def is_nan(self) -> Self:
         """Returns a boolean Series indicating which values are NaN.
 
-        Returns:
-            A boolean Series indicating which values are NaN.
-
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/)
-            for reference.
+            See [null_handling](../concepts/null_handling.md/) for reference.
 
         Examples:
             >>> import pandas as pd
@@ -1327,9 +1450,6 @@ class Series(Generic[IntoSeriesT]):
               for reference.
             - For pandas Series of `object` dtype, `fill_null` will not automatically change the
               Series' dtype as pandas used to do. Explicitly call `cast` if you want the dtype to change.
-
-        Returns:
-            A new Series with null values filled according to the specified value or strategy.
 
         Examples:
             >>> import pandas as pd
@@ -1368,6 +1488,36 @@ class Series(Generic[IntoSeriesT]):
             )
         )
 
+    def fill_nan(self, value: float | None) -> Self:
+        """Fill floating point NaN values with given value.
+
+        Arguments:
+            value: Value used to fill NaN values.
+
+        Notes:
+            This function only fills `'NaN'` values, not null ones, except for pandas
+            which doesn't distinguish between them.
+            See [null_handling](../concepts/null_handling.md/) for reference.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s_native = pl.Series([1.0, 2.0, float("nan"), None])
+            >>> result = nw.from_native(s_native, series_only=True).fill_nan(0)
+            >>> result.to_native()  # doctest: +NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: '' [f64]
+            [
+               1.0
+               2.0
+               0.0
+               null
+            ]
+        """
+        return self._with_compliant(
+            self._compliant_series.fill_nan(value=self._extract_native(value))
+        )
+
     def is_between(
         self,
         lower_bound: Any | Self,
@@ -1379,14 +1529,11 @@ class Series(Generic[IntoSeriesT]):
         Arguments:
             lower_bound: Lower bound value.
             upper_bound: Upper bound value.
-            closed: Define which sides of the interval are closed (inclusive).
+            closed: Define which sides of the interval are closed (inclusive). Options are {"left", "right", "none", "both"}.
 
         Notes:
             If the value of the `lower_bound` is greater than that of the `upper_bound`,
             then the values will be False, as no value can satisfy the condition.
-
-        Returns:
-            A boolean Series indicating which values are between the given bounds.
 
         Examples:
             >>> import pyarrow as pa
@@ -1417,9 +1564,6 @@ class Series(Generic[IntoSeriesT]):
     def n_unique(self) -> int:
         """Count the number of unique values.
 
-        Returns:
-            Number of unique values in the Series.
-
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -1433,9 +1577,6 @@ class Series(Generic[IntoSeriesT]):
     def to_numpy(self) -> _1DArray:
         """Convert to numpy.
 
-        Returns:
-            NumPy ndarray representation of the Series.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -1448,9 +1589,6 @@ class Series(Generic[IntoSeriesT]):
 
     def to_pandas(self) -> pd.Series[Any]:
         """Convert to pandas Series.
-
-        Returns:
-            A pandas Series containing the data from this Series.
 
         Examples:
             >>> import polars as pl
@@ -1467,9 +1605,6 @@ class Series(Generic[IntoSeriesT]):
 
     def to_polars(self) -> pl.Series:
         """Convert to polars Series.
-
-        Returns:
-            A polars Series containing the data from this Series.
 
         Examples:
             >>> import pyarrow as pa
@@ -1616,9 +1751,6 @@ class Series(Generic[IntoSeriesT]):
     def filter(self, predicate: Any) -> Self:
         """Filter elements in the Series based on a condition.
 
-        Returns:
-            A new Series with elements that satisfy the condition.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -1639,9 +1771,6 @@ class Series(Generic[IntoSeriesT]):
     def is_duplicated(self) -> Self:
         r"""Get a mask of all duplicated rows in the Series.
 
-        Returns:
-            A new Series with boolean values indicating duplicated rows.
-
         Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
@@ -1660,13 +1789,10 @@ class Series(Generic[IntoSeriesT]):
               ]
             ]
         """
-        return ~self.is_unique()
+        return self._with_compliant(self._compliant_series.is_duplicated())
 
     def is_empty(self) -> bool:
         r"""Check if the series is empty.
-
-        Returns:
-            A boolean indicating if the series is empty.
 
         Examples:
             >>> import polars as pl
@@ -1680,13 +1806,10 @@ class Series(Generic[IntoSeriesT]):
             >>> s_nw.filter(s_nw > 10).is_empty()
             True
         """
-        return self._compliant_series.len() == 0
+        return self._compliant_series.is_empty()
 
     def is_unique(self) -> Self:
         r"""Get a mask of all unique rows in the Series.
-
-        Returns:
-            A new Series with boolean values indicating unique rows.
 
         Examples:
             >>> import pandas as pd
@@ -1707,11 +1830,7 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/)
-            for reference.
-
-        Returns:
-            The number of null values in the Series.
+            See [null_handling](../concepts/null_handling.md/) for reference.
 
         Examples:
             >>> import pyarrow as pa
@@ -1725,9 +1844,6 @@ class Series(Generic[IntoSeriesT]):
 
     def is_first_distinct(self) -> Self:
         r"""Return a boolean mask indicating the first occurrence of each distinct value.
-
-        Returns:
-            A new Series with boolean values indicating the first occurrence of each distinct value.
 
         Examples:
             >>> import polars as pl
@@ -1752,9 +1868,6 @@ class Series(Generic[IntoSeriesT]):
     def is_last_distinct(self) -> Self:
         r"""Return a boolean mask indicating the last occurrence of each distinct value.
 
-        Returns:
-            A new Series with boolean values indicating the last occurrence of each distinct value.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -1775,9 +1888,6 @@ class Series(Generic[IntoSeriesT]):
 
         Arguments:
             descending: Check if the Series is sorted in descending order.
-
-        Returns:
-            A boolean indicating if the Series is sorted.
 
         Examples:
             >>> import pyarrow as pa
@@ -1811,9 +1921,6 @@ class Series(Generic[IntoSeriesT]):
             name: Give the resulting count column a specific name; if `normalize` is True
                 defaults to "proportion", otherwise defaults to "count".
             normalize: If true gives relative frequencies of the unique values
-
-        Returns:
-            A DataFrame with two columns
 
                 - The original values as first column
                 - Either count or proportion as second column, depending on normalize parameter.
@@ -1850,9 +1957,6 @@ class Series(Generic[IntoSeriesT]):
             quantile: Quantile between 0.0 and 1.0.
             interpolation: Interpolation method.
 
-        Returns:
-            The quantile value.
-
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -1878,9 +1982,6 @@ class Series(Generic[IntoSeriesT]):
         Arguments:
             mask: Boolean Series
             other: Series of same type.
-
-        Returns:
-            A new Series with values selected from self or other based on the mask.
 
         Examples:
             >>> import pyarrow as pa
@@ -1917,9 +2018,6 @@ class Series(Generic[IntoSeriesT]):
         If no index is provided, this is equivalent to `s[0]`, with a check
         that the shape is (1,). With an index, this is equivalent to `s[index]`.
 
-        Returns:
-            The scalar value of the Series or the element at the given index.
-
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -1937,9 +2035,6 @@ class Series(Generic[IntoSeriesT]):
 
         Arguments:
             n: Number of rows to return.
-
-        Returns:
-            A new Series containing the first n rows.
 
         Examples:
             >>> import pandas as pd
@@ -1959,9 +2054,6 @@ class Series(Generic[IntoSeriesT]):
 
         Arguments:
             n: Number of rows to return.
-
-        Returns:
-            A new Series with the last n rows.
 
         Examples:
             >>> import pyarrow as pa
@@ -1986,9 +2078,6 @@ class Series(Generic[IntoSeriesT]):
 
         Arguments:
             decimals: Number of decimals to round by.
-
-        Returns:
-            A new Series with rounded values.
 
         Notes:
             For values exactly halfway between rounded decimal values pandas behaves differently than Polars and Arrow.
@@ -2015,6 +2104,46 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._with_compliant(self._compliant_series.round(decimals))
 
+    def floor(self) -> Self:
+        r"""Compute the numerical floor.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> s_native = pa.chunked_array([[1.1, 4.3, -1.3]])
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.floor().to_native()  # doctest:+ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                1,
+                4,
+                -2
+              ]
+            ]
+        """
+        return self._with_compliant(self._compliant_series.floor())
+
+    def ceil(self) -> Self:
+        r"""Compute the numerical ceiling.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> s_native = pa.chunked_array([[1.1, 4.3, -1.3]])
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.ceil().to_native()  # doctest:+ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                2,
+                5,
+                -1
+              ]
+            ]
+        """
+        return self._with_compliant(self._compliant_series.ceil())
+
     def to_dummies(
         self, *, separator: str = "_", drop_first: bool = False
     ) -> DataFrame[Any]:
@@ -2023,9 +2152,6 @@ class Series(Generic[IntoSeriesT]):
         Arguments:
             separator: Separator/delimiter used when generating column names.
             drop_first: Remove the first category from the variable being encoded.
-
-        Returns:
-            A new DataFrame containing the dummy/indicator variables.
 
         Notes:
             pandas and Polars handle null values differently. Polars distinguishes
@@ -2062,9 +2188,6 @@ class Series(Generic[IntoSeriesT]):
             n: Gather every *n*-th row.
             offset: Starting index.
 
-        Returns:
-            A new Series with every nth value starting from the offset.
-
         Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
@@ -2088,9 +2211,6 @@ class Series(Generic[IntoSeriesT]):
     def to_arrow(self) -> pa.Array[Any]:
         r"""Convert to arrow.
 
-        Returns:
-            A PyArrow Array containing the data from the Series.
-
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -2109,13 +2229,24 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._compliant_series.to_arrow()
 
-    def mode(self) -> Self:
+    @overload
+    def mode(self, *, keep: Literal["all"] = "all") -> Self: ...
+
+    @overload
+    def mode(self, *, keep: Literal["any"]) -> NonNestedLiteral: ...
+
+    def mode(self, *, keep: ModeKeepStrategy = "all") -> Self | NonNestedLiteral:
         r"""Compute the most occurring value(s).
 
         Can return multiple values.
 
-        Returns:
-            A new Series containing the mode(s) (values that appear most frequently).
+        Note:
+            For `keep="any"` a scalar is returned, while for `keep="all"` a Series in
+            returned even in the case of unimodal values.
+
+        Arguments:
+            keep: Whether to keep all modes or any mode found. Remark that `keep='any'`
+                is not deterministic for multimodal values.
 
         Examples:
             >>> import pandas as pd
@@ -2126,7 +2257,13 @@ class Series(Generic[IntoSeriesT]):
             1    2
             dtype: int64
         """
-        return self._with_compliant(self._compliant_series.mode())
+        _supported_keep_values = ("all", "any")
+        if keep not in _supported_keep_values:  # pragma: no cover
+            msg = f"`keep` must be one of {_supported_keep_values}, found '{keep}'"
+            raise ValueError(msg)
+
+        result = self._with_compliant(self._compliant_series.mode(keep=keep))
+        return result.item(0) if keep == "any" else result
 
     def is_finite(self) -> Self:
         """Returns a boolean Series indicating which values are finite.
@@ -2135,9 +2272,6 @@ class Series(Generic[IntoSeriesT]):
             Different backend handle null values differently. `is_finite` will return
             False for NaN and Null's in the Dask and pandas non-nullable backend, while
             for Polars, PyArrow and pandas nullable backends null values are kept as such.
-
-        Returns:
-            Expression of `Boolean` data type.
 
         Examples:
             >>> import pyarrow as pa
@@ -2165,9 +2299,6 @@ class Series(Generic[IntoSeriesT]):
         Arguments:
             reverse: reverse the operation
 
-        Returns:
-            A new Series with the cumulative count of non-null values.
-
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -2193,9 +2324,6 @@ class Series(Generic[IntoSeriesT]):
         Arguments:
             reverse: reverse the operation
 
-        Returns:
-            A new Series with the cumulative min of non-null values.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -2216,9 +2344,6 @@ class Series(Generic[IntoSeriesT]):
         Arguments:
             reverse: reverse the operation
 
-        Returns:
-            A new Series with the cumulative max of non-null values.
-
         Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
@@ -2236,7 +2361,6 @@ class Series(Generic[IntoSeriesT]):
                 3
               ]
             ]
-
         """
         return self._with_compliant(self._compliant_series.cum_max(reverse=reverse))
 
@@ -2245,9 +2369,6 @@ class Series(Generic[IntoSeriesT]):
 
         Arguments:
             reverse: reverse the operation
-
-        Returns:
-            A new Series with the cumulative product of non-null values.
 
         Examples:
             >>> import polars as pl
@@ -2287,9 +2408,6 @@ class Series(Generic[IntoSeriesT]):
                 `window_size`. If provided, it must be a strictly positive integer, and
                 less than or equal to `window_size`
             center: Set the labels at the center of the window.
-
-        Returns:
-            A new series.
 
         Examples:
             >>> import pandas as pd
@@ -2337,9 +2455,6 @@ class Series(Generic[IntoSeriesT]):
                 `window_size`. If provided, it must be a strictly positive integer, and
                 less than or equal to `window_size`
             center: Set the labels at the center of the window.
-
-        Returns:
-            A new series.
 
         Examples:
             >>> import pyarrow as pa
@@ -2398,9 +2513,6 @@ class Series(Generic[IntoSeriesT]):
             center: Set the labels at the center of the window.
             ddof: Delta Degrees of Freedom; the divisor for a length N window is N - ddof.
 
-        Returns:
-            A new series.
-
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -2456,9 +2568,6 @@ class Series(Generic[IntoSeriesT]):
                 less than or equal to `window_size`.
             center: Set the labels at the center of the window.
             ddof: Delta Degrees of Freedom; the divisor for a length N window is N - ddof.
-
-        Returns:
-            A new series.
 
         Examples:
             >>> import pandas as pd
@@ -2517,9 +2626,6 @@ class Series(Generic[IntoSeriesT]):
 
             descending: Rank in descending order.
 
-        Returns:
-            A new series with rank data as values.
-
         Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
@@ -2569,9 +2675,6 @@ class Series(Generic[IntoSeriesT]):
             bin_count: If no bins provided, this will be used to determine the distance of the bins.
             include_breakpoint: Include a column that shows the intervals as categories.
 
-        Returns:
-            A new DataFrame containing the counts of values that occur within each passed bin.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -2613,9 +2716,6 @@ class Series(Generic[IntoSeriesT]):
         Arguments:
             base: Given base, defaults to `e`
 
-        Returns:
-            A new series.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -2635,9 +2735,6 @@ class Series(Generic[IntoSeriesT]):
 
     def exp(self) -> Self:
         r"""Compute the exponent.
-
-        Returns:
-            A new series.
 
         Examples:
             >>> import pandas as pd
@@ -2659,9 +2756,6 @@ class Series(Generic[IntoSeriesT]):
     def sqrt(self) -> Self:
         r"""Compute the square root.
 
-        Returns:
-            A new series.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -2678,6 +2772,74 @@ class Series(Generic[IntoSeriesT]):
             └───────────────────────┘
         """
         return self._with_compliant(self._compliant_series.sqrt())
+
+    def is_close(
+        self,
+        other: Self | NumericLiteral,
+        *,
+        abs_tol: float = 0.0,
+        rel_tol: float = 1e-09,
+        nans_equal: bool = False,
+    ) -> Self:
+        r"""Get a boolean mask of the values being close to the other values.
+
+        Two values `a` and `b` are considered close if the following condition holds:
+
+        $$
+        |a-b| \le max \{ \text{rel\_tol} \cdot max \{ |a|, |b| \}, \text{abs\_tol} \}
+        $$
+
+        Arguments:
+            other: Values to compare with.
+            abs_tol: Absolute tolerance. This is the maximum allowed absolute difference
+                between two values. Must be non-negative.
+            rel_tol: Relative tolerance. This is the maximum allowed difference between
+                two values, relative to the larger absolute value. Must be in the range
+                [0, 1).
+            nans_equal: Whether NaN values should be considered equal.
+
+        Notes:
+            The implementation of this method is symmetric and mirrors the behavior of
+            `math.isclose`. Specifically note that this behavior is different to
+            `numpy.isclose`.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>>
+            >>> data = [1.0, float("inf"), 1.41, None, float("nan")]
+            >>> s_native = pa.chunked_array([data])
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.is_close(1.4, abs_tol=0.1).to_native()  # doctest:+ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                false,
+                false,
+                true,
+                null,
+                false
+              ]
+            ]
+        """
+        if not self.dtype.is_numeric():
+            msg = (
+                f"`is_close` operation not supported for dtype `{self.dtype}`\n\n"
+                "Hint: `is_close` is only supported for numeric types"
+            )
+            raise InvalidOperationError(msg)
+        # Creating a temporary name if series is unnamed (possible in pandas-like scenario)
+        # as `select`-ing a column named `None` would break otherwise
+        orig_name = self.name
+        name_is_none = orig_name is None
+        tmp_name = "__nw_is_close__" if name_is_none else orig_name
+        expr = col(tmp_name).is_close(
+            other, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal
+        )
+        series = self.rename(tmp_name) if name_is_none else self
+        result = series.to_frame().select(expr).get_column(tmp_name)
+        result = result.rename(orig_name) if name_is_none else result
+        return cast("Self", result)
 
     @property
     def str(self) -> SeriesStringNamespace[Self]:

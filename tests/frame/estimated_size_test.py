@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING
 
 import pytest
@@ -21,8 +22,6 @@ def test_estimated_size(constructor_eager: ConstructorEager) -> None:
     assert df.estimated_size("gb") == (df.estimated_size("mb") / 1024)
     assert df.estimated_size("tb") == (df.estimated_size("gb") / 1024)
 
-    with pytest.raises(
-        ValueError,
-        match="`unit` must be one of {'b', 'kb', 'mb', 'gb', 'tb'}, got 'pizza'",
-    ):
+    msg = re.escape("`unit` must be one of {'b', 'kb', 'mb', 'gb', 'tb'}, got 'pizza'")
+    with pytest.raises(ValueError, match=msg):
         df.estimated_size("pizza")  # type: ignore[arg-type]

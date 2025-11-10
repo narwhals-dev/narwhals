@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 import pytest
 
 import narwhals as nw
@@ -34,12 +36,11 @@ def test_ser_is_in(constructor_eager: ConstructorEager) -> None:
 
 def test_is_in_other(constructor: Constructor) -> None:
     df_raw = constructor(data)
-    with pytest.raises(
-        NotImplementedError,
-        match=(
-            "Narwhals `is_in` doesn't accept expressions as an argument, as opposed to Polars. You should provide an iterable instead."
-        ),
-    ):
+    msg = re.escape(
+        "Narwhals `is_in` doesn't accept expressions as an argument, as opposed to "
+        "Polars. You should provide an iterable instead."
+    )
+    with pytest.raises(NotImplementedError, match=msg):
         nw.from_native(df_raw).with_columns(contains=nw.col("a").is_in("sets"))
 
 

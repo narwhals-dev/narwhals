@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import pandas as pd
-import pyarrow as pa
+from typing import cast
+
 import pytest
 
 import narwhals as nw
@@ -9,6 +9,9 @@ from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_eq
 
 
 def test_get_field_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
     if any(backend in str(constructor) for backend in ("dask", "modin")):
         request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2, 0):
@@ -18,7 +21,9 @@ def test_get_field_expr(request: pytest.FixtureRequest, constructor: Constructor
     df_native = constructor(data)
 
     if "pandas" in str(constructor):
-        df_native = df_native.assign(  # type: ignore[union-attr]
+        import pandas as pd
+
+        df_native = cast("pd.DataFrame", df_native).assign(
             user=pd.Series(
                 data["user"],
                 dtype=pd.ArrowDtype(
@@ -42,6 +47,9 @@ def test_get_field_expr(request: pytest.FixtureRequest, constructor: Constructor
 def test_get_field_series(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
     if any(backend in str(constructor_eager) for backend in ("modin",)):
         request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor_eager) and PANDAS_VERSION < (2, 2, 0):
@@ -53,7 +61,9 @@ def test_get_field_series(
     df_native = constructor_eager(data)
 
     if "pandas" in str(constructor_eager):
-        df_native = df_native.assign(  # type: ignore[union-attr]
+        import pandas as pd
+
+        df_native = cast("pd.DataFrame", df_native).assign(
             user=pd.Series(
                 data["user"],
                 dtype=pd.ArrowDtype(
@@ -72,6 +82,9 @@ def test_get_field_series(
 
 
 def test_pandas_object_series() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     s_native = pd.Series(data=[{"id": "0", "name": "john"}, {"id": "1", "name": "jane"}])
     s = nw.from_native(s_native, series_only=True)
 

@@ -2,16 +2,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, TypeVar
 
-import pandas as pd
 import pytest
 
 import narwhals as nw
 from narwhals.exceptions import MultiOutputExpressionError
 from tests.utils import NUMPY_VERSION, POLARS_VERSION, Constructor
-
-if TYPE_CHECKING:
-    from narwhals.typing import Frame
-
 
 T = TypeVar("T")
 
@@ -21,14 +16,17 @@ T = TypeVar("T")
 )
 def test_all_vs_all(constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6]}
-    df: Frame = nw.from_native(constructor(data))
+    df = nw.from_native(constructor(data))
     with pytest.raises(MultiOutputExpressionError):
         df.lazy().select(nw.all() + nw.col("b", "a")).collect()
 
 
 def test_invalid() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
-    df: Frame = nw.from_native(pd.DataFrame(data))
+    df = nw.from_native(pd.DataFrame(data))
     with pytest.raises(ValueError, match="Multi-output"):
         df.select(nw.all() + nw.all())
 
@@ -37,17 +35,19 @@ def test_invalid_pyarrow() -> None:
     pytest.importorskip("pyarrow")
     import pyarrow as pa
 
-    df: Frame = nw.from_native(pa.table({"a": [1, 2], "b": [3, 4]}))
+    df = nw.from_native(pa.table({"a": [1, 2], "b": [3, 4]}))
     with pytest.raises(MultiOutputExpressionError):
         df.select(nw.all() + nw.all())
 
 
 def test_invalid_polars() -> None:
+    pytest.importorskip("pandas")
     pytest.importorskip("polars")
+    import pandas as pd
     import polars as pl
 
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
-    df: Frame = nw.from_native(pd.DataFrame(data))
+    df = nw.from_native(pd.DataFrame(data))
     with pytest.raises(TypeError, match="Perhaps you"):
         df.select([pl.col("a")])  # type: ignore[list-item]
     with pytest.raises(TypeError, match="Expected Narwhals dtype"):
@@ -55,6 +55,9 @@ def test_invalid_polars() -> None:
 
 
 def test_native_vs_non_native() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     s_pd = pd.Series([1, 2, 3])
     df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
     with pytest.raises(TypeError, match="Perhaps you\n- forgot"):
@@ -87,6 +90,9 @@ def test_validate_laziness() -> None:
 @pytest.mark.skipif(NUMPY_VERSION < (1, 26, 4), reason="too old")
 def test_memmap() -> None:
     pytest.importorskip("sklearn")
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     # the headache this caused me...
     from sklearn.utils import check_X_y
 

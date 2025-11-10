@@ -7,7 +7,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._compliant import EagerSeriesNamespace
-from narwhals._utils import isinstance_or_issubclass
+from narwhals._utils import Implementation, Version, isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping
@@ -21,11 +21,12 @@ if TYPE_CHECKING:
         ArrayOrScalarT1,
         ArrayOrScalarT2,
         ChunkedArrayAny,
+        Incomplete,
         NativeIntervalUnit,
+        PromoteOptions,
         ScalarAny,
     )
     from narwhals._duration import IntervalUnit
-    from narwhals._utils import Version
     from narwhals.dtypes import DType
     from narwhals.typing import IntoDType, PythonLiteral
 
@@ -58,6 +59,9 @@ else:
         is_timestamp,
     )
 
+BACKEND_VERSION = Implementation.PYARROW._backend_version()
+"""Static backend version for `pyarrow`."""
+
 UNITS_DICT: Mapping[IntervalUnit, NativeIntervalUnit] = {
     "y": "year",
     "q": "quarter",
@@ -81,6 +85,11 @@ def extract_py_scalar(value: Any, /) -> Any:
     return maybe_extract_py_scalar(value, return_py_scalar=True)
 
 
+def is_array_or_scalar(obj: Any) -> TypeIs[ArrayOrScalar]:
+    """Return True for any base `pyarrow` container."""
+    return isinstance(obj, (pa.ChunkedArray, pa.Array, pa.Scalar))
+
+
 def chunked_array(
     arr: ArrayOrScalar | list[Iterable[Any]], dtype: pa.DataType | None = None, /
 ) -> ChunkedArrayAny:
@@ -88,8 +97,7 @@ def chunked_array(
         return arr
     if isinstance(arr, list):
         return pa.chunked_array(arr, dtype)
-    else:
-        return pa.chunked_array([arr], arr.type)
+    return pa.chunked_array([arr], dtype)
 
 
 def nulls_like(n: int, series: ArrowSeries) -> ArrayAny:
@@ -100,12 +108,29 @@ def nulls_like(n: int, series: ArrowSeries) -> ArrayAny:
     return pa.nulls(n, series.native.type)
 
 
+def repeat(
+    value: PythonLiteral | ScalarAny, n: int, /, dtype: pa.DataType | None = None
+) -> ArrayAny:
+    """Create an Array instance whose slots are the given scalar.
+
+    *Optionally*, casting to `dtype` **before** repeating `n` times.
+    """
+    lit_: Incomplete = lit
+    return pa.repeat(lit_(value, type=dtype), n)
+
+
 def zeros(n: int, /) -> pa.Int64Array:
     return pa.repeat(0, n)
 
 
+def native_to_narwhals_dtype(dtype: pa.DataType, version: Version) -> DType:
+    if isinstance(dtype, pa.ExtensionType):
+        return version.dtypes.Unknown()
+    return native_non_extension_to_narwhals_dtype(dtype, version)
+
+
 @lru_cache(maxsize=16)
-def native_to_narwhals_dtype(dtype: pa.DataType, version: Version) -> DType:  # noqa: C901, PLR0912
+def native_non_extension_to_narwhals_dtype(dtype: pa.DataType, version: Version) -> DType:  # noqa: C901, PLR0912
     dtypes = version.dtypes
     if pa.types.is_int64(dtype):
         return dtypes.Int64()
@@ -170,44 +195,38 @@ def native_to_narwhals_dtype(dtype: pa.DataType, version: Version) -> DType:  # 
     return dtypes.Unknown()  # pragma: no cover
 
 
-def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> pa.DataType:  # noqa: C901, PLR0912
+dtypes = Version.MAIN.dtypes
+NW_TO_PA_DTYPES: Mapping[type[DType], pa.DataType] = {
+    dtypes.Float64: pa.float64(),
+    dtypes.Float32: pa.float32(),
+    dtypes.Binary: pa.binary(),
+    dtypes.String: pa.string(),
+    dtypes.Boolean: pa.bool_(),
+    dtypes.Categorical: pa.dictionary(pa.uint32(), pa.string()),
+    dtypes.Date: pa.date32(),
+    dtypes.Time: pa.time64("ns"),
+    dtypes.Int8: pa.int8(),
+    dtypes.Int16: pa.int16(),
+    dtypes.Int32: pa.int32(),
+    dtypes.Int64: pa.int64(),
+    dtypes.UInt8: pa.uint8(),
+    dtypes.UInt16: pa.uint16(),
+    dtypes.UInt32: pa.uint32(),
+    dtypes.UInt64: pa.uint64(),
+}
+UNSUPPORTED_DTYPES = (dtypes.Decimal, dtypes.Object)
+
+
+def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> pa.DataType:
     dtypes = version.dtypes
-    if isinstance_or_issubclass(dtype, dtypes.Decimal):
-        msg = "Casting to Decimal is not supported yet."
-        raise NotImplementedError(msg)
-    if isinstance_or_issubclass(dtype, dtypes.Float64):
-        return pa.float64()
-    if isinstance_or_issubclass(dtype, dtypes.Float32):
-        return pa.float32()
-    if isinstance_or_issubclass(dtype, dtypes.Int64):
-        return pa.int64()
-    if isinstance_or_issubclass(dtype, dtypes.Int32):
-        return pa.int32()
-    if isinstance_or_issubclass(dtype, dtypes.Int16):
-        return pa.int16()
-    if isinstance_or_issubclass(dtype, dtypes.Int8):
-        return pa.int8()
-    if isinstance_or_issubclass(dtype, dtypes.UInt64):
-        return pa.uint64()
-    if isinstance_or_issubclass(dtype, dtypes.UInt32):
-        return pa.uint32()
-    if isinstance_or_issubclass(dtype, dtypes.UInt16):
-        return pa.uint16()
-    if isinstance_or_issubclass(dtype, dtypes.UInt8):
-        return pa.uint8()
-    if isinstance_or_issubclass(dtype, dtypes.String):
-        return pa.string()
-    if isinstance_or_issubclass(dtype, dtypes.Boolean):
-        return pa.bool_()
-    if isinstance_or_issubclass(dtype, dtypes.Categorical):
-        return pa.dictionary(pa.uint32(), pa.string())
+    base_type = dtype.base_type()
+    if pa_type := NW_TO_PA_DTYPES.get(base_type):
+        return pa_type
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
         unit = dtype.time_unit
         return pa.timestamp(unit, tz) if (tz := dtype.time_zone) else pa.timestamp(unit)
     if isinstance_or_issubclass(dtype, dtypes.Duration):
         return pa.duration(dtype.time_unit)
-    if isinstance_or_issubclass(dtype, dtypes.Date):
-        return pa.date32()
     if isinstance_or_issubclass(dtype, dtypes.List):
         return pa.list_(value_type=narwhals_to_native_dtype(dtype.inner, version=version))
     if isinstance_or_issubclass(dtype, dtypes.Struct):
@@ -221,18 +240,16 @@ def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> pa.DataType:
         inner = narwhals_to_native_dtype(dtype.inner, version=version)
         list_size = dtype.size
         return pa.list_(inner, list_size=list_size)
-    if isinstance_or_issubclass(dtype, dtypes.Time):
-        return pa.time64("ns")
-    if isinstance_or_issubclass(dtype, dtypes.Binary):
-        return pa.binary()
-
+    if issubclass(base_type, UNSUPPORTED_DTYPES):
+        msg = f"Converting to {base_type.__name__} dtype is not supported for PyArrow."
+        raise NotImplementedError(msg)
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
 
 
 def extract_native(
     lhs: ArrowSeries, rhs: ArrowSeries | PythonLiteral | ScalarAny
-) -> tuple[ChunkedArrayAny | ScalarAny, ChunkedArrayAny | ScalarAny]:
+) -> tuple[ChunkedArrayAny, ChunkedArrayAny | ScalarAny]:
     """Extract native objects in binary  operation.
 
     If the comparison isn't supported, return `NotImplemented` so that the
@@ -263,9 +280,15 @@ def extract_native(
 def floordiv_compat(left: ArrayOrScalar, right: ArrayOrScalar, /) -> Any:
     # The following lines are adapted from pandas' pyarrow implementation.
     # Ref: https://github.com/pandas-dev/pandas/blob/262fcfbffcee5c3116e86a951d8b693f90411e68/pandas/core/arrays/arrow/array.py#L124-L154
+    # We modify it to add `safe_mask` so as to align with Polars' behaviour when dividing by zero.
+    safe_mask = pc.not_equal(right, lit(0, type=right.type))
+    safe_right = pc.if_else(safe_mask, right, lit(1, type=right.type))  # Dummy value
+    non_safe_result = lit(None, type=left.type)
 
     if pa.types.is_integer(left.type) and pa.types.is_integer(right.type):
-        divided = pc.divide_checked(left, right)
+        divided = pc.if_else(
+            safe_mask, pc.divide_checked(left, safe_right), non_safe_result
+        )
         # TODO @dangotbanned: Use a `TypeVar` in guards
         # Narrowing to a `Union` isn't interacting well with the rest of the stubs
         # https://github.com/zen-xu/pyarrow-stubs/pull/215
@@ -284,7 +307,7 @@ def floordiv_compat(left: ArrayOrScalar, right: ArrayOrScalar, /) -> Any:
             result = divided  # pragma: no cover
         result = result.cast(left.type)
     else:
-        divided = pc.divide(left, right)
+        divided = pc.if_else(safe_mask, pc.divide(left, safe_right), non_safe_result)
         result = pc.floor(divided)
     return result
 
@@ -381,7 +404,7 @@ def _parse_date_format(arr: pc.StringArray) -> str:
         matches = pc.extract_regex(arr, pattern=date_rgx)
         if date_fmt == "%Y%m%d" and pc.all(matches.is_valid()).as_py():
             return date_fmt
-        elif (
+        if (
             pc.all(matches.is_valid()).as_py()
             and pc.count(pc.unique(sep1 := matches.field("sep1"))).as_py() == 1
             and pc.count(pc.unique(sep2 := matches.field("sep2"))).as_py() == 1
@@ -422,15 +445,14 @@ def pad_series(
     offset_left = window_size // 2
     # subtract one if window_size is even
     offset_right = offset_left - (window_size % 2 == 0)
-    pad_left = pa.array([None] * offset_left, type=series._type)
-    pad_right = pa.array([None] * offset_right, type=series._type)
-    concat = pa.concat_arrays([pad_left, *series.native.chunks, pad_right])
-    return series._with_native(concat), offset_left + offset_right
+    chunks = series.native.chunks
+    arrays = nulls_like(offset_left, series), *chunks, nulls_like(offset_right, series)
+    return series._with_native(pa.concat_arrays(arrays)), offset_left + offset_right
 
 
 def cast_to_comparable_string_types(
-    *chunked_arrays: ChunkedArrayAny, separator: str
-) -> tuple[Iterator[ChunkedArrayAny], ScalarAny]:
+    *chunked_arrays: ChunkedArrayAny | ScalarAny, separator: str
+) -> tuple[Iterator[ChunkedArrayAny | ScalarAny], ScalarAny]:
     # Ensure `chunked_arrays` are either all `string` or all `large_string`.
     dtype = (
         pa.string()  # (PyArrow default)
@@ -440,4 +462,35 @@ def cast_to_comparable_string_types(
     return (ca.cast(dtype) for ca in chunked_arrays), lit(separator, dtype)
 
 
+if BACKEND_VERSION >= (14,):
+    # https://arrow.apache.org/docs/14.0/python/generated/pyarrow.concat_tables.html
+    _PROMOTE: Mapping[PromoteOptions, Mapping[str, Any]] = {
+        "default": {"promote_options": "default"},
+        "permissive": {"promote_options": "permissive"},
+        "none": {"promote_options": "none"},
+    }
+else:  # pragma: no cover
+    # https://arrow.apache.org/docs/13.0/python/generated/pyarrow.concat_tables.html
+    _PROMOTE = {
+        "default": {"promote": True},
+        "permissive": {"promote": True},
+        "none": {"promote": False},
+    }
+
+
+def concat_tables(
+    tables: Iterable[pa.Table], promote_options: PromoteOptions = "none"
+) -> pa.Table:
+    return pa.concat_tables(tables, **_PROMOTE[promote_options])
+
+
 class ArrowSeriesNamespace(EagerSeriesNamespace["ArrowSeries", "ChunkedArrayAny"]): ...
+
+
+def arange(start: int, end: int, step: int) -> ArrayAny:
+    if BACKEND_VERSION < (21,):
+        import numpy as np  # ignore-banned-import
+
+        return pa.array(np.arange(start, end, step))
+    # NOTE: Added in https://github.com/apache/arrow/pull/46778
+    return pa.arange(start, end, step)  # type: ignore[attr-defined]

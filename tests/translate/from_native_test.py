@@ -29,6 +29,7 @@ import pytest
 
 import narwhals as nw
 from narwhals._utils import Version
+from tests.conftest import sqlframe_pyspark_lazy_constructor
 from tests.utils import Constructor, maybe_get_modin_df
 
 if TYPE_CHECKING:
@@ -258,10 +259,7 @@ def test_eager_only_lazy_dask(eager_only: Any, context: Any) -> None:
 
 def test_series_only_sqlframe() -> None:  # pragma: no cover
     pytest.importorskip("sqlframe")
-    from sqlframe.duckdb import DuckDBSession
-
-    session = DuckDBSession()
-    df = session.createDataFrame([*zip(*data.values())], schema=[*data.keys()])
+    df = sqlframe_pyspark_lazy_constructor(data)
 
     with pytest.raises(TypeError, match="Cannot only use `series_only`"):
         nw.from_native(df, series_only=True)  # pyright: ignore[reportArgumentType, reportCallIssue]
@@ -282,10 +280,7 @@ def test_series_only_sqlframe() -> None:  # pragma: no cover
 )
 def test_eager_only_sqlframe(eager_only: Any, context: Any) -> None:  # pragma: no cover
     pytest.importorskip("sqlframe")
-    from sqlframe.duckdb import DuckDBSession
-
-    session = DuckDBSession()
-    df = session.createDataFrame([*zip(*data.values())], schema=[*data.keys()])
+    df = sqlframe_pyspark_lazy_constructor(data)
 
     with context:
         res = nw.from_native(df, eager_only=eager_only)
@@ -301,7 +296,7 @@ def test_interchange_protocol_non_v1() -> None:
     result = nw.from_native(mockdf, pass_through=True)
     assert result is mockdf
     with pytest.raises(TypeError):
-        nw.from_native(mockdf)
+        nw.from_native(mockdf)  # type: ignore[call-overload]
 
 
 def test_from_native_strict_native_series() -> None:
@@ -309,21 +304,22 @@ def test_from_native_strict_native_series() -> None:
     array_like = cast("Iterable[Any]", obj)
     not_array_like: Literal[1] = 1
 
-    with pytest.raises(TypeError, match="got.+list"):
+    with pytest.raises(TypeError, match=r"got.+list"):
         nw.from_native(obj, series_only=True)  # type: ignore[call-overload]
 
-    with pytest.raises(TypeError, match="got.+list"):
+    with pytest.raises(TypeError, match=r"got.+list"):
         nw.from_native(array_like, series_only=True)  # type: ignore[call-overload]
 
-    with pytest.raises(TypeError, match="got.+int"):
+    with pytest.raises(TypeError, match=r"got.+int"):
         nw.from_native(not_array_like, series_only=True)  # type: ignore[call-overload]
 
 
 @pytest.mark.skipif(lf_pl is None, reason="polars not found")
 def test_from_native_strict_native_series_polars() -> None:
+    pytest.importorskip("numpy")
     obj: list[int] = [1, 2, 3, 4]
     np_array = pl.Series(obj).to_numpy()
-    with pytest.raises(TypeError, match="got.+numpy.ndarray"):
+    with pytest.raises(TypeError, match=r"got.+numpy.ndarray"):
         nw.from_native(np_array, series_only=True)  # type: ignore[call-overload]
 
 

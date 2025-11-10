@@ -8,11 +8,11 @@ from narwhals._utils import Version, parse_version
 if TYPE_CHECKING:
     import pandas as pd
     import pyarrow as pa
-    from typing_extensions import Self
+    from typing_extensions import Self, TypeIs
 
     from narwhals._interchange.series import InterchangeSeries
     from narwhals.dtypes import DType
-    from narwhals.typing import DataFrameLike
+    from narwhals.stable.v1.typing import DataFrameLike
 
 
 class DtypeKind(enum.IntEnum):
@@ -97,14 +97,13 @@ class InterchangeFrame:
     def to_pandas(self) -> pd.DataFrame:
         import pandas as pd  # ignore-banned-import()
 
-        if parse_version(pd) >= (1, 5, 0):
-            return pd.api.interchange.from_dataframe(self._interchange_frame)
-        else:  # pragma: no cover
+        if parse_version(pd) < (1, 5, 0):  # pragma: no cover
             msg = (
                 "Conversion to pandas is achieved via interchange protocol which requires"
                 f" 'pandas>=1.5.0' to be installed, found {pd.__version__}"
             )
             raise NotImplementedError(msg)
+        return pd.api.interchange.from_dataframe(self._interchange_frame)
 
     def to_arrow(self) -> pa.Table:
         from pyarrow.interchange.from_dataframe import (  # ignore-banned-import()
@@ -154,3 +153,7 @@ class InterchangeFrame:
             "at https://github.com/narwhals-dev/narwhals/issues."
         )
         raise NotImplementedError(msg)
+
+
+def supports_dataframe_interchange(obj: Any) -> TypeIs[DataFrameLike]:
+    return hasattr(obj, "__dataframe__")

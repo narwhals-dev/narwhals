@@ -7,8 +7,7 @@ import pytest
 import narwhals as nw
 
 if TYPE_CHECKING:
-    from narwhals.typing import Frame
-    from tests.utils import Constructor
+    from tests.utils import Constructor, ConstructorEager
 
 
 data = {"a": [1, 2, 3]}
@@ -20,35 +19,43 @@ def _get_expected_namespace(constructor_name: str) -> Any | None:  # noqa: PLR09
         import pandas as pd
 
         return pd
-    elif "polars" in constructor_name:
+    if "polars" in constructor_name:
+        pytest.importorskip("polars")
         import polars as pl
 
         return pl
-    elif "pyarrow_table" in constructor_name:
+    if "pyarrow_table" in constructor_name:
+        pytest.importorskip("pyarrow")
         import pyarrow as pa
 
         return pa
-    elif "duckdb" in constructor_name:
+    if "duckdb" in constructor_name:
+        pytest.importorskip("duckdb")
         import duckdb
 
         return duckdb
-    elif "cudf" in constructor_name:  # pragma: no cover
+    if "cudf" in constructor_name:  # pragma: no cover
+        pytest.importorskip("cudf")
         import cudf
 
         return cudf
-    elif "modin" in constructor_name:
+    if "modin" in constructor_name:
+        pytest.importorskip("modin")
         import modin.pandas as mpd
 
         return mpd
-    elif "dask" in constructor_name:
+    if "dask" in constructor_name:
+        pytest.importorskip("dask")
         import dask.dataframe as dd
 
         return dd
-    elif "ibis" in constructor_name:
+    if "ibis" in constructor_name:
+        pytest.importorskip("ibis")
         import ibis
 
         return ibis
-    elif "sqlframe" in constructor_name:
+    if "sqlframe" in constructor_name:
+        pytest.importorskip("sqlframe")
         import sqlframe
 
         return sqlframe
@@ -62,25 +69,25 @@ def test_native_namespace_frame(constructor: Constructor) -> None:
 
     expected_namespace = _get_expected_namespace(constructor_name=constructor_name)
 
-    df: Frame = nw.from_native(constructor(data))
+    df = nw.from_native(constructor(data))
     assert nw.get_native_namespace(df) is expected_namespace
     assert nw.get_native_namespace(df.to_native()) is expected_namespace
     assert nw.get_native_namespace(df.lazy().to_native()) is expected_namespace
 
 
-def test_native_namespace_series(constructor_eager: Constructor) -> None:
+def test_native_namespace_series(constructor_eager: ConstructorEager) -> None:
     constructor_name = constructor_eager.__name__
 
     expected_namespace = _get_expected_namespace(constructor_name=constructor_name)
 
-    df: Frame = nw.from_native(constructor_eager(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
 
     assert nw.get_native_namespace(df["a"].to_native()) is expected_namespace
     assert nw.get_native_namespace(df, df["a"].to_native()) is expected_namespace
 
 
 def test_get_native_namespace_invalid() -> None:
-    with pytest.raises(TypeError, match="Could not get native namespace"):
+    with pytest.raises(TypeError, match="Unsupported type: 'int'"):
         nw.get_native_namespace(1)  # type: ignore[arg-type]
     with pytest.raises(ValueError, match="At least one object"):
         nw.get_native_namespace()

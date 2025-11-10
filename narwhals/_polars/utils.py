@@ -1,14 +1,19 @@
 from __future__ import annotations
 
+import abc
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, TypeVar, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Final, Protocol, TypeVar, overload
 
 import polars as pl
 
+from narwhals._duration import Interval
 from narwhals._utils import (
     Implementation,
     Version,
     _DeferredIterable,
+    _StoresCompliant,
+    _StoresNative,
+    deep_getattr,
     isinstance_or_issubclass,
 )
 from narwhals.exceptions import (
@@ -21,11 +26,14 @@ from narwhals.exceptions import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Mapping
+    from collections.abc import Callable, Iterable, Iterator, Mapping
 
     from typing_extensions import TypeIs
 
-    from narwhals._utils import _StoresNative
+    from narwhals._compliant.typing import Accessor
+    from narwhals._polars.dataframe import Method
+    from narwhals._polars.expr import PolarsExpr
+    from narwhals._polars.series import PolarsSeries
     from narwhals.dtypes import DType
     from narwhals.typing import IntoDType
 
@@ -34,8 +42,30 @@ if TYPE_CHECKING:
         "NativeT", bound="pl.DataFrame | pl.LazyFrame | pl.Series | pl.Expr"
     )
 
+NativeT_co = TypeVar("NativeT_co", "pl.Series", "pl.Expr", covariant=True)
+CompliantT_co = TypeVar("CompliantT_co", "PolarsSeries", "PolarsExpr", covariant=True)
+CompliantT = TypeVar("CompliantT", "PolarsSeries", "PolarsExpr")
+
 BACKEND_VERSION = Implementation.POLARS._backend_version()
 """Static backend version for `polars`."""
+
+SERIES_ACCEPTS_PD_INDEX: Final[bool] = BACKEND_VERSION >= (0, 20, 7)
+"""`pl.Series(values: pd.Index)` fixed in https://github.com/pola-rs/polars/pull/14087"""
+
+SERIES_RESPECTS_DTYPE: Final[bool] = BACKEND_VERSION >= (0, 20, 26)
+"""`pl.Series(dtype=...)` fixed in https://github.com/pola-rs/polars/pull/15962
+
+Includes `SERIES_ACCEPTS_PD_INDEX`.
+"""
+
+HAS_INT_128 = BACKEND_VERSION >= (1, 18, 0)
+"""https://github.com/pola-rs/polars/pull/20232"""
+
+FROM_DICTS_ACCEPTS_MAPPINGS: Final[bool] = BACKEND_VERSION >= (1, 30, 0)
+"""`pl.from_dicts(data: Iterable[Mapping[str, Any]])` since https://github.com/pola-rs/polars/pull/22638"""
+
+HAS_UINT_128 = BACKEND_VERSION >= (1, 34, 0)
+"""https://github.com/pola-rs/polars/pull/24346"""
 
 
 @overload
@@ -72,8 +102,7 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
         return dtypes.Float64()
     if dtype == pl.Float32:
         return dtypes.Float32()
-    if hasattr(pl, "Int128") and dtype == pl.Int128:  # pragma: no cover
-        # Not available for Polars pre 1.8.0
+    if HAS_INT_128 and dtype == pl.Int128:
         return dtypes.Int128()
     if dtype == pl.Int64:
         return dtypes.Int64()
@@ -83,8 +112,7 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
         return dtypes.Int16()
     if dtype == pl.Int8:
         return dtypes.Int8()
-    if hasattr(pl, "UInt128") and dtype == pl.UInt128:  # pragma: no cover
-        # Not available for Polars pre 1.8.0
+    if HAS_UINT_128 and dtype == pl.UInt128:
         return dtypes.UInt128()
     if dtype == pl.UInt64:
         return dtypes.UInt64()
@@ -141,41 +169,47 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
     return dtypes.Unknown()
 
 
-def narwhals_to_native_dtype(  # noqa: C901, PLR0912
+dtypes = Version.MAIN.dtypes
+
+
+def _version_dependent_dtypes() -> dict[type[DType], pl.DataType]:
+    if not HAS_INT_128:  # pragma: no cover
+        return {}
+    nw_to_pl: dict[type[DType], pl.DataType] = {dtypes.Int128: pl.Int128()}
+    return nw_to_pl | {dtypes.UInt128: pl.UInt128()} if HAS_UINT_128 else nw_to_pl
+
+
+NW_TO_PL_DTYPES: Mapping[type[DType], pl.DataType] = {
+    dtypes.Float64: pl.Float64(),
+    dtypes.Float32: pl.Float32(),
+    dtypes.Binary: pl.Binary(),
+    dtypes.String: pl.String(),
+    dtypes.Boolean: pl.Boolean(),
+    dtypes.Categorical: pl.Categorical(),
+    dtypes.Date: pl.Date(),
+    dtypes.Time: pl.Time(),
+    dtypes.Int8: pl.Int8(),
+    dtypes.Int16: pl.Int16(),
+    dtypes.Int32: pl.Int32(),
+    dtypes.Int64: pl.Int64(),
+    dtypes.UInt8: pl.UInt8(),
+    dtypes.UInt16: pl.UInt16(),
+    dtypes.UInt32: pl.UInt32(),
+    dtypes.UInt64: pl.UInt64(),
+    dtypes.Object: pl.Object(),
+    dtypes.Unknown: pl.Unknown(),
+    **_version_dependent_dtypes(),
+}
+UNSUPPORTED_DTYPES = (dtypes.Decimal,)
+
+
+def narwhals_to_native_dtype(  # noqa: C901
     dtype: IntoDType, version: Version
 ) -> pl.DataType:
     dtypes = version.dtypes
-    if dtype == dtypes.Float64:
-        return pl.Float64()
-    if dtype == dtypes.Float32:
-        return pl.Float32()
-    if dtype == dtypes.Int128 and hasattr(pl, "Int128"):
-        # Not available for Polars pre 1.8.0
-        return pl.Int128()
-    if dtype == dtypes.Int64:
-        return pl.Int64()
-    if dtype == dtypes.Int32:
-        return pl.Int32()
-    if dtype == dtypes.Int16:
-        return pl.Int16()
-    if dtype == dtypes.Int8:
-        return pl.Int8()
-    if dtype == dtypes.UInt64:
-        return pl.UInt64()
-    if dtype == dtypes.UInt32:
-        return pl.UInt32()
-    if dtype == dtypes.UInt16:
-        return pl.UInt16()
-    if dtype == dtypes.UInt8:
-        return pl.UInt8()
-    if dtype == dtypes.String:
-        return pl.String()
-    if dtype == dtypes.Boolean:
-        return pl.Boolean()
-    if dtype == dtypes.Object:  # pragma: no cover
-        return pl.Object()
-    if dtype == dtypes.Categorical:
-        return pl.Categorical()
+    base_type = dtype.base_type()
+    if pl_type := NW_TO_PL_DTYPES.get(base_type):
+        return pl_type
     if isinstance_or_issubclass(dtype, dtypes.Enum):
         if version is Version.V1:
             msg = "Converting to Enum is not supported in narwhals.stable.v1"
@@ -184,15 +218,6 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912
             return pl.Enum(dtype.categories)
         msg = "Can not cast / initialize Enum without categories present"
         raise ValueError(msg)
-    if dtype == dtypes.Date:
-        return pl.Date()
-    if dtype == dtypes.Time:
-        return pl.Time()
-    if dtype == dtypes.Binary:
-        return pl.Binary()
-    if dtype == dtypes.Decimal:
-        msg = "Casting to Decimal is not supported yet."
-        raise NotImplementedError(msg)
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
         return pl.Datetime(dtype.time_unit, dtype.time_zone)  # type: ignore[arg-type]
     if isinstance_or_issubclass(dtype, dtypes.Duration):
@@ -209,6 +234,9 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912
         size = dtype.size
         kwargs = {"width": size} if BACKEND_VERSION < (0, 20, 30) else {"shape": size}
         return pl.Array(narwhals_to_native_dtype(dtype.inner, version), **kwargs)
+    if issubclass(base_type, UNSUPPORTED_DTYPES):
+        msg = f"Converting to {base_type.__name__} dtype is not supported for Polars."
+        raise NotImplementedError(msg)
     return pl.Unknown()  # pragma: no cover
 
 
@@ -228,15 +256,113 @@ def _is_cudf_exception(exception: Exception) -> bool:
 def catch_polars_exception(exception: Exception) -> NarwhalsError | Exception:
     if isinstance(exception, pl.exceptions.ColumnNotFoundError):
         return ColumnNotFoundError(str(exception))
-    elif isinstance(exception, pl.exceptions.ShapeError):
+    if isinstance(exception, pl.exceptions.ShapeError):
         return ShapeError(str(exception))
-    elif isinstance(exception, pl.exceptions.InvalidOperationError):
+    if isinstance(exception, pl.exceptions.InvalidOperationError):
         return InvalidOperationError(str(exception))
-    elif isinstance(exception, pl.exceptions.DuplicateError):
+    if isinstance(exception, pl.exceptions.DuplicateError):
         return DuplicateError(str(exception))
-    elif isinstance(exception, pl.exceptions.ComputeError):
+    if isinstance(exception, pl.exceptions.ComputeError):
         return ComputeError(str(exception))
     if _is_polars_exception(exception) or _is_cudf_exception(exception):
         return NarwhalsError(str(exception))  # pragma: no cover
     # Just return exception as-is.
     return exception
+
+
+class PolarsAnyNamespace(
+    _StoresCompliant[CompliantT_co],
+    _StoresNative[NativeT_co],
+    Protocol[CompliantT_co, NativeT_co],
+):
+    _accessor: ClassVar[Accessor]
+
+    def __getattr__(self, attr: str) -> Callable[..., CompliantT_co]:
+        def func(*args: Any, **kwargs: Any) -> CompliantT_co:
+            pos, kwds = extract_args_kwargs(args, kwargs)
+            method = deep_getattr(self.native, self._accessor, attr)
+            return self.compliant._with_native(method(*pos, **kwds))
+
+        return func
+
+
+class PolarsDateTimeNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
+    _accessor: ClassVar[Accessor] = "dt"
+
+    def truncate(self, every: str) -> CompliantT:
+        # Ensure consistent error message is raised.
+        Interval.parse(every)
+        return self.__getattr__("truncate")(every)
+
+    def offset_by(self, by: str) -> CompliantT:
+        # Ensure consistent error message is raised.
+        Interval.parse_no_constraints(by)
+        return self.__getattr__("offset_by")(by)
+
+    to_string: Method[CompliantT]
+    replace_time_zone: Method[CompliantT]
+    convert_time_zone: Method[CompliantT]
+    timestamp: Method[CompliantT]
+    date: Method[CompliantT]
+    year: Method[CompliantT]
+    month: Method[CompliantT]
+    day: Method[CompliantT]
+    hour: Method[CompliantT]
+    minute: Method[CompliantT]
+    second: Method[CompliantT]
+    millisecond: Method[CompliantT]
+    microsecond: Method[CompliantT]
+    nanosecond: Method[CompliantT]
+    ordinal_day: Method[CompliantT]
+    weekday: Method[CompliantT]
+    total_minutes: Method[CompliantT]
+    total_seconds: Method[CompliantT]
+    total_milliseconds: Method[CompliantT]
+    total_microseconds: Method[CompliantT]
+    total_nanoseconds: Method[CompliantT]
+
+
+class PolarsStringNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
+    _accessor: ClassVar[Accessor] = "str"
+
+    # NOTE: Use `abstractmethod` if we have defs to implement, but also `Method` usage
+    @abc.abstractmethod
+    def to_titlecase(self) -> CompliantT: ...
+
+    @abc.abstractmethod
+    def zfill(self, width: int) -> CompliantT: ...
+
+    len_chars: Method[CompliantT]
+    replace: Method[CompliantT]
+    replace_all: Method[CompliantT]
+    strip_chars: Method[CompliantT]
+    starts_with: Method[CompliantT]
+    ends_with: Method[CompliantT]
+    contains: Method[CompliantT]
+    slice: Method[CompliantT]
+    split: Method[CompliantT]
+    to_date: Method[CompliantT]
+    to_datetime: Method[CompliantT]
+    to_lowercase: Method[CompliantT]
+    to_uppercase: Method[CompliantT]
+
+
+class PolarsCatNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
+    _accessor: ClassVar[Accessor] = "cat"
+    get_categories: Method[CompliantT]
+
+
+class PolarsListNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
+    _accessor: ClassVar[Accessor] = "list"
+
+    @abc.abstractmethod
+    def len(self) -> CompliantT: ...
+
+    get: Method[CompliantT]
+
+    unique: Method[CompliantT]
+
+
+class PolarsStructNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
+    _accessor: ClassVar[Accessor] = "struct"
+    field: Method[CompliantT]

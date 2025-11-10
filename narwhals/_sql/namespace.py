@@ -5,7 +5,7 @@ from functools import reduce
 from typing import TYPE_CHECKING, Any, Protocol
 
 from narwhals._compliant import LazyNamespace
-from narwhals._compliant.typing import NativeExprT, NativeFrameT_co
+from narwhals._compliant.typing import NativeExprT, NativeFrameT
 from narwhals._sql.typing import SQLExprT, SQLLazyFrameT
 
 if TYPE_CHECKING:
@@ -15,34 +15,33 @@ if TYPE_CHECKING:
 
 
 class SQLNamespace(
-    LazyNamespace[SQLLazyFrameT, SQLExprT, NativeFrameT_co],
-    Protocol[SQLLazyFrameT, SQLExprT, NativeFrameT_co, NativeExprT],
+    LazyNamespace[SQLLazyFrameT, SQLExprT, NativeFrameT],
+    Protocol[SQLLazyFrameT, SQLExprT, NativeFrameT, NativeExprT],
 ):
     def _function(self, name: str, *args: NativeExprT | PythonLiteral) -> NativeExprT: ...
     def _lit(self, value: Any) -> NativeExprT: ...
-    def _when(self, condition: NativeExprT, value: NativeExprT) -> NativeExprT: ...
+    def _when(
+        self,
+        condition: NativeExprT,
+        value: NativeExprT,
+        otherwise: NativeExprT | None = None,
+    ) -> NativeExprT: ...
     def _coalesce(self, *exprs: NativeExprT) -> NativeExprT: ...
 
     # Horizontal functions
     def any_horizontal(self, *exprs: SQLExprT, ignore_nulls: bool) -> SQLExprT:
         def func(cols: Iterable[NativeExprT]) -> NativeExprT:
-            it = (
-                (self._coalesce(col, self._lit(False)) for col in cols)  # noqa: FBT003
-                if ignore_nulls
-                else cols
-            )
-            return reduce(operator.or_, it)
+            if ignore_nulls:
+                cols = (self._coalesce(col, self._lit(False)) for col in cols)
+            return reduce(operator.or_, cols)
 
         return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
     def all_horizontal(self, *exprs: SQLExprT, ignore_nulls: bool) -> SQLExprT:
         def func(cols: Iterable[NativeExprT]) -> NativeExprT:
-            it = (
-                (self._coalesce(col, self._lit(True)) for col in cols)  # noqa: FBT003
-                if ignore_nulls
-                else cols
-            )
-            return reduce(operator.and_, it)
+            if ignore_nulls:
+                cols = (self._coalesce(col, self._lit(True)) for col in cols)
+            return reduce(operator.and_, cols)
 
         return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
@@ -72,3 +71,18 @@ class SQLNamespace(
             return self._coalesce(*cols)
 
         return self._expr._from_elementwise_horizontal_op(func, *exprs)
+
+    def when_then(
+        self, predicate: SQLExprT, then: SQLExprT, otherwise: SQLExprT | None = None
+    ) -> SQLExprT:
+        def func(cols: list[NativeExprT]) -> NativeExprT:
+            return self._when(cols[1], cols[0])
+
+        def func_with_otherwise(cols: list[NativeExprT]) -> NativeExprT:
+            return self._when(cols[1], cols[0], cols[2])
+
+        if otherwise is None:
+            return self._expr._from_elementwise_horizontal_op(func, then, predicate)
+        return self._expr._from_elementwise_horizontal_op(
+            func_with_otherwise, then, predicate, otherwise
+        )

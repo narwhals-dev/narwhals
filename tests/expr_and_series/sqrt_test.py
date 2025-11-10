@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import pandas as pd
 import pytest
 
 import narwhals as nw
@@ -26,6 +25,9 @@ def test_sqrt_series(constructor_eager: ConstructorEager) -> None:
 
 
 def test_sqrt_dtype_pandas() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     s = pd.Series([1.0, 2.0], name="a", dtype="float32", index=[8, 7])
     result = nw.from_native(s, series_only=True).sqrt().to_native()
     expected = pd.Series([1, 1.414213], name="a", dtype="float32", index=[8, 7])
@@ -34,6 +36,9 @@ def test_sqrt_dtype_pandas() -> None:
 
 @pytest.mark.skipif(PANDAS_VERSION < (2, 0, 0), reason="nullable types require pandas2+")
 def test_sqrt_dtype_pandas_nullable() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     s = pd.Series([1.0, None, 2.0], name="a", dtype="Float32", index=[8, 7, 6])
     result = nw.from_native(s, series_only=True).sqrt().to_native()
     expected = pd.Series([1, None, 1.414213], name="a", dtype="Float32", index=[8, 7, 6])
@@ -42,6 +47,10 @@ def test_sqrt_dtype_pandas_nullable() -> None:
 
 @pytest.mark.skipif(PANDAS_VERSION < (2, 1, 0), reason="nullable types require pandas2+")
 def test_sqrt_dtype_pandas_pyarrow() -> None:
+    pytest.importorskip("pandas")
+    pytest.importorskip("pyarrow")
+    import pandas as pd
+
     s = pd.Series([1.0, None, 2.0], name="a", dtype="Float32[pyarrow]", index=[8, 7, 6])
     result = nw.from_native(s, series_only=True).sqrt().to_native()
     expected = pd.Series(

@@ -6,6 +6,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._arrow.utils import UNITS_DICT, ArrowSeriesNamespace, floordiv_compat, lit
+from narwhals._compliant.any_namespace import DateTimeNamespace
 from narwhals._constants import (
     MS_PER_MINUTE,
     MS_PER_SECOND,
@@ -36,7 +37,9 @@ if TYPE_CHECKING:
     IntoRhs: TypeAlias = int
 
 
-class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
+class ArrowSeriesDateTimeNamespace(
+    ArrowSeriesNamespace, DateTimeNamespace["ArrowSeries"]
+):
     _TIMESTAMP_DATE_FACTOR: ClassVar[Mapping[TimeUnit, int]] = {
         "ns": NS_PER_SECOND,
         "us": US_PER_SECOND,
@@ -98,13 +101,12 @@ class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
                 msg = f"unexpected time unit {current}, please report an issue at https://github.com/narwhals-dev/narwhals"
                 raise AssertionError(msg)
             return self.with_native(result)
-        elif isinstance(ser.dtype, dtypes.Date):
+        if isinstance(ser.dtype, dtypes.Date):
             time_s = pc.multiply(self.native.cast(pa.int32()), lit(SECONDS_PER_DAY))
             factor = self._TIMESTAMP_DATE_FACTOR[time_unit]
             return self.with_native(pc.multiply(time_s, lit(factor)))
-        else:
-            msg = "Input should be either of Date or Datetime type"
-            raise TypeError(msg)
+        msg = "Input should be either of Date or Datetime type"
+        raise TypeError(msg)
 
     def date(self) -> ArrowSeries:
         return self.with_native(self.native.cast(pa.date32()))

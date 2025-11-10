@@ -1,23 +1,21 @@
 from __future__ import annotations
 
 import enum
+from contextlib import AbstractContextManager, nullcontext as does_not_warn
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any, Literal
 
-import numpy as np
-import pandas as pd
-import pyarrow as pa
 import pytest
 
 import narwhals as nw
 from narwhals.exceptions import PerformanceWarning
-from tests.utils import PANDAS_VERSION, POLARS_VERSION, PYARROW_VERSION
+from tests.utils import PANDAS_VERSION, POLARS_VERSION, PYARROW_VERSION, pyspark_session
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    from narwhals.typing import IntoSeries
-    from tests.utils import Constructor
+    from narwhals.typing import IntoFrame, IntoSeries, NonNestedDType
+    from tests.utils import Constructor, ConstructorPandasLike, NestedOrEnumDType
 
 
 @pytest.mark.parametrize("time_unit", ["us", "ns", "ms"])
@@ -65,7 +63,7 @@ def test_list_valid() -> None:
     assert dtype == nw.List
     assert dtype != nw.List(nw.Float32)
     assert dtype != nw.Duration
-    assert repr(dtype) == "List(<class 'narwhals.dtypes.Int64'>)"
+    assert repr(dtype) == "List(Int64)"
     dtype = nw.List(nw.List(nw.Int64))
     assert dtype == nw.List(nw.List(nw.Int64))
     assert dtype == nw.List
@@ -80,7 +78,7 @@ def test_array_valid() -> None:
     assert dtype != nw.Array(nw.Int64, 3)
     assert dtype != nw.Array(nw.Float32, 2)
     assert dtype != nw.Duration
-    assert repr(dtype) == "Array(<class 'narwhals.dtypes.Int64'>, shape=(2,))"
+    assert repr(dtype) == "Array(Int64, shape=(2,))"
     dtype = nw.Array(nw.Array(nw.Int64, 2), 2)
     assert dtype == nw.Array(nw.Array(nw.Int64, 2), 2)
     assert dtype == nw.Array
@@ -100,7 +98,7 @@ def test_struct_valid() -> None:
     assert dtype == nw.Struct
     assert dtype != nw.Struct([nw.Field("a", nw.Float32)])
     assert dtype != nw.Duration
-    assert repr(dtype) == "Struct({'a': <class 'narwhals.dtypes.Int64'>})"
+    assert repr(dtype) == "Struct({'a': Int64})"
 
     dtype = nw.Struct({"a": nw.Int64, "b": nw.String})
     assert dtype == nw.Struct({"a": nw.Int64, "b": nw.String})
@@ -119,7 +117,23 @@ def test_struct_reverse() -> None:
 
 def test_field_repr() -> None:
     dtype = nw.Field("a", nw.Int32)
-    assert repr(dtype) == "Field('a', <class 'narwhals.dtypes.Int32'>)"
+    assert repr(dtype) == "Field('a', Int32)"
+
+
+def test_field_eq() -> None:
+    field_1 = nw.Field("a", nw.String)
+    field_2 = nw.Field("a", nw.String())
+    field_3 = nw.Field("b", nw.Datetime())
+    field_4 = nw.Field("b", nw.Datetime("ms"))
+    field_5 = nw.Field("b", nw.Datetime)
+
+    assert field_1 == field_2
+    assert field_2 != field_3
+    # bit of a head-scratcher
+    assert field_3 != field_4
+    assert field_3 == field_5
+    assert field_4 == field_5
+    assert field_1 != field_1.dtype
 
 
 def test_struct_hashes() -> None:
@@ -142,8 +156,10 @@ def test_2d_array(constructor: Constructor, request: pytest.FixtureRequest) -> N
     for condition, reason in version_conditions:
         if condition:
             pytest.skip(reason)
+    if "pandas" in str(constructor):
+        pytest.importorskip("pyarrow")
 
-    if any(x in str(constructor) for x in ("dask", "modin", "cudf", "pyspark")):
+    if any(x in str(constructor) for x in ("dask", "cudf", "pyspark")):
         request.applymarker(
             pytest.mark.xfail(
                 reason="2D array operations not supported in these backends"
@@ -159,6 +175,12 @@ def test_2d_array(constructor: Constructor, request: pytest.FixtureRequest) -> N
 
 
 def test_second_time_unit() -> None:
+    pytest.importorskip("pandas")
+    pytest.importorskip("pyarrow")
+    import numpy as np
+    import pandas as pd
+    import pyarrow as pa
+
     s: IntoSeries = pd.Series(np.array([np.datetime64("2020-01-01", "s")]))
     result = nw.from_native(s, series_only=True)
     expected_unit: Literal["ns", "us", "ms", "s"] = (
@@ -191,6 +213,9 @@ def test_second_time_unit() -> None:
 )
 @pytest.mark.filterwarnings("ignore:Setting an item of incompatible")
 def test_pandas_inplace_modification_1267() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     s = pd.Series([1, 2, 3])
     snw = nw.from_native(s, series_only=True)
     assert snw.dtype == nw.Int64
@@ -199,6 +224,10 @@ def test_pandas_inplace_modification_1267() -> None:
 
 
 def test_pandas_fixed_offset_1302() -> None:
+    pytest.importorskip("pyarrow")
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     result = nw.from_native(
         pd.Series(pd.to_datetime(["2020-01-01T00:00:00.000000000+01:00"])),
         series_only=True,
@@ -218,6 +247,10 @@ def test_pandas_fixed_offset_1302() -> None:
         pass
 
 
+def from_native_collect_schema(native: IntoFrame) -> nw.Schema:
+    return nw.from_native(native).collect_schema()
+
+
 def test_huge_int() -> None:
     pytest.importorskip("duckdb")
     pytest.importorskip("polars")
@@ -228,10 +261,17 @@ def test_huge_int() -> None:
     df = pl.DataFrame({"a": [1, 2, 3]})
 
     if POLARS_VERSION >= (1, 18):
-        result = nw.from_native(df.select(pl.col("a").cast(pl.Int128))).collect_schema()
+        result = from_native_collect_schema(df.select(pl.col("a").cast(pl.Int128)))
         assert result["a"] == nw.Int128
+        assert result.to_polars()["a"] == pl.Int128
     else:  # pragma: no cover
         # Int128 was not available yet
+        pass
+    if POLARS_VERSION >= (1, 34):
+        result = from_native_collect_schema(df.select(pl.col("a").cast(pl.UInt128)))
+        assert result["a"] == nw.UInt128
+        assert result.to_polars()["a"] == pl.UInt128
+    else:  # pragma: no cover
         pass
 
     rel = duckdb.sql("""
@@ -246,7 +286,7 @@ def test_huge_int() -> None:
         select cast(a as uint128) as a
         from df
                      """)
-    result = nw.from_native(rel).collect_schema()
+    result = from_native_collect_schema(rel)
     assert result["a"] == nw.UInt128
 
     # TODO(unassigned): once other libraries support Int128/UInt128,
@@ -315,6 +355,7 @@ def test_dtype_is_x() -> None:
     is_decimal = {nw.Decimal}
     is_temporal = {nw.Datetime, nw.Date, nw.Duration, nw.Time}
     is_nested = {nw.Array, nw.List, nw.Struct}
+    is_boolean = {nw.Boolean}
 
     for dtype in dtypes:
         assert dtype.is_numeric() == (
@@ -332,6 +373,7 @@ def test_dtype_is_x() -> None:
         assert dtype.is_decimal() == (dtype in is_decimal)
         assert dtype.is_temporal() == (dtype in is_temporal)
         assert dtype.is_nested() == (dtype in is_nested)
+        assert dtype.is_boolean() == (dtype in is_boolean)
 
 
 @pytest.mark.skipif(POLARS_VERSION < (1, 18), reason="too old for Int128")
@@ -367,10 +409,14 @@ def test_huge_int_to_native() -> None:
 
 def test_cast_decimal_to_native() -> None:
     pytest.importorskip("duckdb")
+    pytest.importorskip("pandas")
     pytest.importorskip("polars")
+    pytest.importorskip("pyarrow")
 
     import duckdb
+    import pandas as pd
     import polars as pl
+    import pyarrow as pa
 
     data = {"a": [1, 2, 3]}
 
@@ -387,9 +433,7 @@ def test_cast_decimal_to_native() -> None:
         ),
     ]
     for obj in library_obj_to_test:
-        with pytest.raises(
-            NotImplementedError, match="Casting to Decimal is not supported yet."
-        ):
+        with pytest.raises(NotImplementedError, match=r"to.+Decimal.+not supported."):
             (
                 nw.from_native(obj)  # type: ignore[call-overload]
                 .with_columns(a=nw.col("a").cast(nw.Decimal()))
@@ -398,10 +442,19 @@ def test_cast_decimal_to_native() -> None:
 
 
 @pytest.mark.parametrize(
-    "categories",
-    [["a", "b"], [np.str_("a"), np.str_("b")], enum.Enum("Test", "a b"), [1, 2, 3]],
+    "categories", [["a", "b"], enum.Enum("Test", "a b"), [1, 2, 3], []]
 )
 def test_enum_valid(categories: Iterable[Any] | type[enum.Enum]) -> None:
+    dtype = nw.Enum(categories)
+    assert dtype == nw.Enum
+    assert len(dtype.categories) == len([*categories])
+
+
+def test_enum_valid_numpy() -> None:
+    pytest.importorskip("numpy")
+    import numpy as np
+
+    categories = [np.str_("a"), np.str_("b")]
     dtype = nw.Enum(categories)
     assert dtype == nw.Enum
     assert len(dtype.categories) == len([*categories])
@@ -427,6 +480,9 @@ def test_enum_categories_immutable() -> None:
 
 
 def test_enum_repr_pd() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df = nw.from_native(
         pd.DataFrame(
             {"a": ["broccoli", "cabbage"]}, dtype=pd.CategoricalDtype(ordered=True)
@@ -465,6 +521,20 @@ def test_enum_hash() -> None:
     assert nw.Enum(["a", "b"]) not in {nw.Enum(["a", "b", "c"])}
 
 
+@pytest.mark.xfail(
+    reason="https://github.com/narwhals-dev/narwhals/pull/3213#discussion_r2437271987"
+)
+@pytest.mark.parametrize("dtype_name", ["Datetime", "Duration", "Enum"])
+def test_dtype_repr_versioned(dtype_name: str) -> None:
+    from narwhals.stable import v1 as nw_v1
+
+    dtype_class_main = getattr(nw, dtype_name)
+    dtype_class_v1 = getattr(nw_v1, dtype_name)
+
+    assert dtype_class_main is not dtype_class_v1
+    assert repr(dtype_class_main) != repr(dtype_class_v1)
+
+
 def test_datetime_w_tz_duckdb() -> None:
     pytest.importorskip("duckdb")
     import duckdb
@@ -489,15 +559,10 @@ def test_datetime_w_tz_duckdb() -> None:
     assert result["b"] == nw.List(nw.List(nw.Datetime("us", "Asia/Kathmandu")))
 
 
-def test_datetime_w_tz_pyspark(constructor: Constructor) -> None:  # pragma: no cover
-    if "pyspark" not in str(constructor) or "sqlframe" in str(constructor):
-        pytest.skip()
+@pytest.mark.slow
+def test_datetime_w_tz_pyspark() -> None:  # pragma: no cover
     pytest.importorskip("pyspark")
-    from pyspark.sql import SparkSession
-
-    session = SparkSession.builder.config(
-        "spark.sql.session.timeZone", "UTC"
-    ).getOrCreate()
+    session = pyspark_session()
 
     df = nw.from_native(
         session.createDataFrame([(datetime(2020, 1, 1, tzinfo=timezone.utc),)], ["a"])
@@ -509,3 +574,53 @@ def test_datetime_w_tz_pyspark(constructor: Constructor) -> None:  # pragma: no 
     )
     result = df.collect_schema()
     assert result["a"] == nw.List(nw.Datetime("us", "UTC"))
+
+
+def test_dtype_base_type_non_nested(non_nested_type: type[NonNestedDType]) -> None:
+    assert non_nested_type.base_type() is non_nested_type().base_type()
+
+
+def test_dtype_base_type_nested(nested_dtype: NestedOrEnumDType) -> None:
+    base = nested_dtype.base_type()
+    assert base.base_type() == nested_dtype.base_type()
+
+
+@pytest.mark.parametrize(
+    ("dtype", "context"),
+    [
+        (nw.Datetime("ns"), does_not_warn()),
+        (nw.Datetime, does_not_warn()),
+        (nw.Datetime(), pytest.warns(UserWarning, match="time_unit")),
+        (nw.Datetime("us"), pytest.warns(UserWarning, match="time_unit='us'")),
+        (nw.Datetime("s"), pytest.warns(UserWarning, match="time_unit='s'")),
+    ],
+)
+def test_pandas_datetime_ignored_time_unit_warns(
+    constructor_pandas_like: ConstructorPandasLike,
+    dtype: nw.Datetime | type[nw.Datetime],
+    context: AbstractContextManager[Any],
+) -> None:
+    data = {"a": [datetime(2001, 1, 1), None, datetime(2001, 1, 3)]}
+    expr = nw.col("a").cast(dtype)
+    df = nw.from_native(constructor_pandas_like(data))
+    ctx = does_not_warn() if PANDAS_VERSION >= (2,) else context
+    with ctx:
+        df.select(expr)
+
+
+def test_dtype___slots___non_nested(non_nested_type: type[NonNestedDType]) -> None:
+    dtype = non_nested_type()
+    with pytest.raises(AttributeError):
+        dtype.i_dont_exist = 100  # type: ignore[union-attr]
+    with pytest.raises(AttributeError):
+        dtype.__dict__  # noqa: B018
+    _ = dtype.__slots__
+
+
+def test_dtype___slots___nested(nested_dtype: NestedOrEnumDType) -> None:
+    with pytest.raises(AttributeError):
+        nested_dtype.i_dont_exist = 999  # type: ignore[union-attr]
+    with pytest.raises(AttributeError):
+        nested_dtype.__dict__  # noqa: B018
+    slots = nested_dtype.__slots__
+    assert len(slots) != 0, slots

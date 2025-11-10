@@ -1,17 +1,17 @@
 from __future__ import annotations
 
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Callable, Literal, cast, overload
-from warnings import warn
+from typing import TYPE_CHECKING, Any, Callable, Final, Literal, cast, overload
 
 import narwhals as nw
 from narwhals import exceptions, functions as nw_f
+from narwhals._exceptions import issue_warning
+from narwhals._expression_parsing import ExprKind, ExprNode, is_expr
 from narwhals._typing_compat import TypeVar, assert_never
 from narwhals._utils import (
     Implementation,
     Version,
     deprecate_native_namespace,
-    find_stacklevel,
     generate_temporary_column_name,
     inherit_doc,
     is_ordered_categorical,
@@ -23,7 +23,6 @@ from narwhals._utils import (
     validate_strict_and_pass_though,
 )
 from narwhals.dataframe import DataFrame as NwDataFrame, LazyFrame as NwLazyFrame
-from narwhals.dependencies import get_polars
 from narwhals.exceptions import InvalidIntoExprError
 from narwhals.expr import Expr as NwExpr
 from narwhals.functions import _new_series_impl, concat, show_versions
@@ -60,8 +59,8 @@ from narwhals.stable.v1.dtypes import (
     UInt128,
     Unknown,
 )
+from narwhals.stable.v1.typing import IntoDataFrameT, IntoLazyFrameT
 from narwhals.translate import _from_native_impl, get_native_namespace, to_py_scalar
-from narwhals.typing import IntoDataFrameT, IntoFrameT
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping, Sequence
@@ -69,14 +68,25 @@ if TYPE_CHECKING:
 
     from typing_extensions import ParamSpec, Self
 
+    from narwhals._expression_parsing import ExprMetadata
     from narwhals._translate import IntoArrowTable
+    from narwhals._typing import (
+        Arrow,
+        Backend,
+        EagerAllowed,
+        IntoBackend,
+        LazyAllowed,
+        Pandas,
+        Polars,
+    )
     from narwhals.dataframe import MultiColSelector, MultiIndexSelector
     from narwhals.dtypes import DType
     from narwhals.typing import (
+        FileSource,
         IntoDType,
         IntoExpr,
         IntoFrame,
-        IntoLazyFrameT,
+        IntoSchema,
         IntoSeries,
         NonNestedLiteral,
         SingleColSelector,
@@ -95,7 +105,8 @@ if TYPE_CHECKING:
 IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries", default=Any)
 
 
-class DataFrame(NwDataFrame[IntoDataFrameT]):
+# NOTE legit
+class DataFrame(NwDataFrame[IntoDataFrameT]):  # type: ignore[type-var]
     _version = Version.V1
 
     @inherit_doc(NwDataFrame)
@@ -108,7 +119,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
 
     @classmethod
     def from_arrow(
-        cls, native_frame: IntoArrowTable, *, backend: ModuleType | Implementation | str
+        cls, native_frame: IntoArrowTable, *, backend: IntoBackend[EagerAllowed]
     ) -> DataFrame[Any]:
         result = super().from_arrow(native_frame, backend=backend)
         return cast("DataFrame[Any]", result)
@@ -117,11 +128,33 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     def from_dict(
         cls,
         data: Mapping[str, Any],
-        schema: Mapping[str, DType] | Schema | None = None,
+        schema: IntoSchema | Mapping[str, DType | None] | None = None,
         *,
-        backend: ModuleType | Implementation | str | None = None,
+        backend: IntoBackend[EagerAllowed] | None = None,
     ) -> DataFrame[Any]:
         result = super().from_dict(data, schema, backend=backend)
+        return cast("DataFrame[Any]", result)
+
+    @classmethod
+    def from_dicts(
+        cls,
+        data: Sequence[Any],
+        schema: IntoSchema | Mapping[str, DType | None] | None = None,
+        *,
+        backend: IntoBackend[EagerAllowed],
+    ) -> DataFrame[Any]:
+        result = super().from_dicts(data, schema, backend=backend)
+        return cast("DataFrame[Any]", result)
+
+    @classmethod
+    def from_numpy(
+        cls,
+        data: _2DArray,
+        schema: Mapping[str, DType] | Schema | Sequence[str] | None = None,
+        *,
+        backend: IntoBackend[EagerAllowed],
+    ) -> DataFrame[Any]:
+        result = super().from_numpy(data, schema, backend=backend)
         return cast("DataFrame[Any]", result)
 
     @property
@@ -172,9 +205,12 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         return super().get_column(name)  # type: ignore[return-value]
 
     def lazy(
-        self, backend: ModuleType | Implementation | str | None = None
+        self,
+        backend: IntoBackend[LazyAllowed] | None = None,
+        *,
+        session: Any | None = None,
     ) -> LazyFrame[Any]:
-        return _stableify(super().lazy(backend=backend))
+        return _stableify(super().lazy(backend=backend, session=session))
 
     @overload  # type: ignore[override]
     def to_dict(self, *, as_series: Literal[True] = ...) -> dict[str, Series[Any]]: ...
@@ -182,9 +218,9 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     def to_dict(self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
     @overload
     def to_dict(
-        self, *, as_series: bool
+        self, *, as_series: bool = True
     ) -> dict[str, Series[Any]] | dict[str, list[Any]]: ...
-    def to_dict(
+    def to_dict(  # pyright: ignore[reportIncompatibleMethodOverride]
         self, *, as_series: bool = True
     ) -> dict[str, Series[Any]] | dict[str, list[Any]]:
         # Type checkers complain that `nw.Series` is not assignable to `nw.v1.stable.Series`.
@@ -198,15 +234,11 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         return _stableify(super().is_unique())
 
     def _l1_norm(self) -> Self:
-        """Private, just used to test the stable API.
-
-        Returns:
-            A new DataFrame.
-        """
+        # Private, just used to test the stable API.
         return self.select(all()._l1_norm())
 
 
-class LazyFrame(NwLazyFrame[IntoFrameT]):
+class LazyFrame(NwLazyFrame[IntoLazyFrameT]):
     @inherit_doc(NwLazyFrame)
     def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
         assert df._version is Version.V1  # noqa: S101
@@ -216,56 +248,21 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
     def _dataframe(self) -> type[DataFrame[Any]]:
         return DataFrame
 
-    def _extract_compliant(self, arg: Any) -> Any:
-        # After v1, we raise when passing order-dependent or length-changing
-        # expressions to LazyFrame
-        from narwhals.dataframe import BaseFrame
-        from narwhals.expr import Expr
-        from narwhals.series import Series
-
-        if isinstance(arg, BaseFrame):
-            return arg._compliant_frame
-        if isinstance(arg, Series):  # pragma: no cover
-            msg = "Mixing Series with LazyFrame is not supported."
-            raise TypeError(msg)
-        if isinstance(arg, Expr):
-            # After stable.v1, we raise for order-dependent exprs or filtrations
-            return arg._to_compliant_expr(self.__narwhals_namespace__())
-        if isinstance(arg, str):
-            plx = self.__narwhals_namespace__()
-            return plx.col(arg)
-        if get_polars() is not None and "polars" in str(type(arg)):  # pragma: no cover
-            msg = (
-                f"Expected Narwhals object, got: {type(arg)}.\n\n"
-                "Perhaps you:\n"
-                "- Forgot a `nw.from_native` somewhere?\n"
-                "- Used `pl.col` instead of `nw.col`?"
-            )
-            raise TypeError(msg)
-        raise InvalidIntoExprError.from_invalid_type(type(arg))
+    def _validate_metadata(self, metadata: ExprMetadata) -> None:
+        # After v1, we raise for order-dependent operations.
+        pass
 
     def collect(
-        self, backend: ModuleType | Implementation | str | None = None, **kwargs: Any
+        self, backend: IntoBackend[Polars | Pandas | Arrow] | None = None, **kwargs: Any
     ) -> DataFrame[Any]:
         return _stableify(super().collect(backend=backend, **kwargs))
 
     def _l1_norm(self) -> Self:
-        """Private, just used to test the stable API.
-
-        Returns:
-            A new lazyframe.
-        """
+        # Private, just used to test the stable API.
         return self.select(all()._l1_norm())
 
     def tail(self, n: int = 5) -> Self:
-        r"""Get the last `n` rows.
-
-        Arguments:
-            n: Number of rows to return.
-
-        Returns:
-            A subset of the LazyFrame of shape (n, n_columns).
-        """
+        r"""Get the last `n` rows."""
         return super().tail(n)
 
     def gather_every(self, n: int, offset: int = 0) -> Self:
@@ -274,26 +271,14 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
         Arguments:
             n: Gather every *n*-th row.
             offset: Starting index.
-
-        Returns:
-            The LazyFrame containing only the selected rows.
         """
         return self._with_compliant(
-            self._compliant_frame.gather_every(n=n, offset=offset)
+            self._compliant_frame.gather_every(n=n, offset=offset)  # type: ignore[attr-defined]
         )
 
     def with_row_index(
         self, name: str = "index", *, order_by: str | Sequence[str] | None = None
     ) -> Self:
-        """Insert column which enumerates rows.
-
-        Arguments:
-            name: The name of the column as a string. The default is "index".
-            order_by: Column(s) to order by when computing the row index.
-
-        Returns:
-            The original object with the column added.
-        """
         order_by_ = [order_by] if isinstance(order_by, str) else order_by
         return self._with_compliant(
             self._compliant_frame.with_row_index(
@@ -304,6 +289,8 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
 
 
 class Series(NwSeries[IntoSeriesT]):
+    _version = Version.V1
+
     @inherit_doc(NwSeries)
     def __init__(
         self, series: Any, *, level: Literal["full", "lazy", "interchange"]
@@ -313,6 +300,30 @@ class Series(NwSeries[IntoSeriesT]):
 
     # We need to override any method which don't return Self so that type
     # annotations are correct.
+
+    @classmethod
+    def from_numpy(
+        cls,
+        name: str,
+        values: _1DArray,
+        dtype: IntoDType | None = None,
+        *,
+        backend: IntoBackend[EagerAllowed],
+    ) -> Series[Any]:
+        result = super().from_numpy(name, values, dtype, backend=backend)
+        return cast("Series[Any]", result)
+
+    @classmethod
+    def from_iterable(
+        cls,
+        name: str,
+        values: Iterable[Any],
+        dtype: IntoDType | None = None,
+        *,
+        backend: IntoBackend[EagerAllowed],
+    ) -> Series[Any]:
+        result = super().from_iterable(name, values, dtype, backend=backend)
+        return cast("Series[Any]", result)
 
     @property
     def _dataframe(self) -> type[DataFrame[Any]]:
@@ -342,14 +353,13 @@ class Series(NwSeries[IntoSeriesT]):
         bin_count: int | None = None,
         include_breakpoint: bool = True,
     ) -> DataFrame[Any]:
-        from narwhals._utils import find_stacklevel
         from narwhals.exceptions import NarwhalsUnstableWarning
 
         msg = (
             "`Series.hist` is being called from the stable API although considered "
             "an unstable feature."
         )
-        warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
+        issue_warning(msg, NarwhalsUnstableWarning)
         return _stableify(
             super().hist(
                 bins=bins, bin_count=bin_count, include_breakpoint=include_breakpoint
@@ -362,30 +372,12 @@ class Expr(NwExpr):
         return super()._taxicab_norm()
 
     def head(self, n: int = 10) -> Self:
-        r"""Get the first `n` rows.
-
-        Arguments:
-            n: Number of rows to return.
-
-        Returns:
-            A new expression.
-        """
-        return self._with_orderable_filtration(
-            lambda plx: self._to_compliant_expr(plx).head(n)
-        )
+        r"""Get the first `n` rows."""
+        return self._append_node(ExprNode(ExprKind.ORDERABLE_FILTRATION, "head", n=n))
 
     def tail(self, n: int = 10) -> Self:
-        r"""Get the last `n` rows.
-
-        Arguments:
-            n: Number of rows to return.
-
-        Returns:
-            A new expression.
-        """
-        return self._with_orderable_filtration(
-            lambda plx: self._to_compliant_expr(plx).tail(n)
-        )
+        r"""Get the last `n` rows."""
+        return self._append_node(ExprNode(ExprKind.ORDERABLE_FILTRATION, "tail", n=n))
 
     def gather_every(self, n: int, offset: int = 0) -> Self:
         r"""Take every nth value in the Series and return as new Series.
@@ -393,78 +385,40 @@ class Expr(NwExpr):
         Arguments:
             n: Gather every *n*-th row.
             offset: Starting index.
-
-        Returns:
-            A new expression.
         """
-        return self._with_orderable_filtration(
-            lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset)
+        return self._append_node(
+            ExprNode(ExprKind.ORDERABLE_FILTRATION, "gather_every", n=n, offset=offset)
         )
 
     def unique(self, *, maintain_order: bool | None = None) -> Self:
-        """Return unique values of this expression.
-
-        Arguments:
-            maintain_order: Keep the same order as the original expression.
-                This is deprecated and will be removed in a future version,
-                but will still be kept around in `narwhals.stable.v1`.
-
-        Returns:
-            A new expression.
-        """
+        """Return unique values of this expression."""
         if maintain_order is not None:
             msg = (
                 "`maintain_order` has no effect and is only kept around for backwards-compatibility. "
                 "You can safely remove this argument."
             )
-            warn(message=msg, category=UserWarning, stacklevel=find_stacklevel())
-        return self._with_filtration(lambda plx: self._to_compliant_expr(plx).unique())
+            issue_warning(msg, UserWarning)
+        return self._append_node(ExprNode(ExprKind.FILTRATION, "unique"))
 
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
-        """Sort this column. Place null values first.
-
-        Arguments:
-            descending: Sort in descending order.
-            nulls_last: Place null values last instead of first.
-
-        Returns:
-            A new expression.
-        """
-        return self._with_window(
-            lambda plx: self._to_compliant_expr(plx).sort(
-                descending=descending, nulls_last=nulls_last
+        """Sort this column. Place null values first."""
+        return self._append_node(
+            ExprNode(
+                ExprKind.WINDOW, "sort", descending=descending, nulls_last=nulls_last
             )
         )
 
     def arg_max(self) -> Self:
-        """Returns the index of the maximum value.
-
-        Returns:
-            A new expression.
-        """
-        return self._with_orderable_aggregation(
-            lambda plx: self._to_compliant_expr(plx).arg_max()
-        )
+        """Returns the index of the maximum value."""
+        return self._append_node(ExprNode(ExprKind.ORDERABLE_AGGREGATION, "arg_max"))
 
     def arg_min(self) -> Self:
-        """Returns the index of the minimum value.
-
-        Returns:
-            A new expression.
-        """
-        return self._with_orderable_aggregation(
-            lambda plx: self._to_compliant_expr(plx).arg_min()
-        )
+        """Returns the index of the minimum value."""
+        return self._append_node(ExprNode(ExprKind.ORDERABLE_AGGREGATION, "arg_min"))
 
     def arg_true(self) -> Self:
-        """Find elements where boolean expression is True.
-
-        Returns:
-            A new expression.
-        """
-        return self._with_orderable_filtration(
-            lambda plx: self._to_compliant_expr(plx).arg_true()
-        )
+        """Find elements where boolean expression is True."""
+        return self._append_node(ExprNode(ExprKind.ORDERABLE_FILTRATION, "arg_true"))
 
     def sample(
         self,
@@ -482,13 +436,15 @@ class Expr(NwExpr):
             with_replacement: Allow values to be sampled more than once.
             seed: Seed for the random number generator. If set to None (default), a random
                 seed is generated for each sample operation.
-
-        Returns:
-            A new expression.
         """
-        return self._with_filtration(
-            lambda plx: self._to_compliant_expr(plx).sample(
-                n, fraction=fraction, with_replacement=with_replacement, seed=seed
+        return self._append_node(
+            ExprNode(
+                ExprKind.FILTRATION,
+                "sample",
+                n=n,
+                fraction=fraction,
+                with_replacement=with_replacement,
+                seed=seed,
             )
         )
 
@@ -504,9 +460,9 @@ class Schema(NwSchema):
 
 
 @overload
-def _stableify(obj: NwDataFrame[IntoFrameT]) -> DataFrame[IntoFrameT]: ...
+def _stableify(obj: NwDataFrame[IntoDataFrameT]) -> DataFrame[IntoDataFrameT]: ...  # type: ignore[type-var]
 @overload
-def _stableify(obj: NwLazyFrame[IntoFrameT]) -> LazyFrame[IntoFrameT]: ...
+def _stableify(obj: NwLazyFrame[IntoLazyFrameT]) -> LazyFrame[IntoLazyFrameT]: ...
 @overload
 def _stableify(obj: NwSeries[IntoSeriesT]) -> Series[IntoSeriesT]: ...
 @overload
@@ -514,11 +470,11 @@ def _stableify(obj: NwExpr) -> Expr: ...
 
 
 def _stableify(
-    obj: NwDataFrame[IntoFrameT]
-    | NwLazyFrame[IntoFrameT]
+    obj: NwDataFrame[IntoDataFrameT]  # type: ignore[type-var]
+    | NwLazyFrame[IntoLazyFrameT]
     | NwSeries[IntoSeriesT]
     | NwExpr,
-) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series[IntoSeriesT] | Expr:
+) -> DataFrame[IntoDataFrameT] | LazyFrame[IntoLazyFrameT] | Series[IntoSeriesT] | Expr:
     if isinstance(obj, NwDataFrame):
         return DataFrame(obj._compliant_frame._with_version(Version.V1), level=obj._level)
     if isinstance(obj, NwLazyFrame):
@@ -526,7 +482,7 @@ def _stableify(
     if isinstance(obj, NwSeries):
         return Series(obj._compliant_series._with_version(Version.V1), level=obj._level)
     if isinstance(obj, NwExpr):
-        return Expr(obj._to_compliant_expr, obj._metadata)
+        return Expr(*obj._nodes)
     assert_never(obj)
 
 
@@ -622,14 +578,14 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: IntoFrameT | IntoSeriesT,
+    native_object: IntoDataFrameT | IntoLazyFrameT | IntoSeriesT,
     *,
     strict: Literal[False],
     eager_only: Literal[False] = ...,
     eager_or_interchange_only: Literal[False] = ...,
     series_only: Literal[False] = ...,
     allow_series: Literal[True],
-) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series[IntoSeriesT]: ...
+) -> DataFrame[IntoDataFrameT] | LazyFrame[IntoLazyFrameT] | Series[IntoSeriesT]: ...
 
 
 @overload
@@ -646,14 +602,26 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: IntoFrameT,
+    native_object: IntoDataFrameT,
     *,
     strict: Literal[False],
     eager_only: Literal[False] = ...,
     eager_or_interchange_only: Literal[False] = ...,
     series_only: Literal[False] = ...,
     allow_series: None = ...,
-) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT]: ...
+) -> DataFrame[IntoDataFrameT]: ...
+
+
+@overload
+def from_native(
+    native_object: IntoLazyFrameT,
+    *,
+    strict: Literal[False],
+    eager_only: Literal[False] = ...,
+    eager_or_interchange_only: Literal[False] = ...,
+    series_only: Literal[False] = ...,
+    allow_series: None = ...,
+) -> LazyFrame[IntoLazyFrameT]: ...
 
 
 @overload
@@ -672,7 +640,7 @@ def from_native(
 def from_native(
     native_object: IntoDataFrameT,
     *,
-    strict: Literal[True] = ...,
+    strict: Literal[True] | None = ...,
     eager_only: Literal[False] = ...,
     eager_or_interchange_only: Literal[True],
     series_only: Literal[False] = ...,
@@ -682,9 +650,21 @@ def from_native(
 
 @overload
 def from_native(
+    native_object: IntoLazyFrameT,
+    *,
+    strict: Literal[True] | None = ...,
+    eager_only: Literal[False] = ...,
+    eager_or_interchange_only: Literal[False] = ...,
+    series_only: Literal[False] = ...,
+    allow_series: None = ...,
+) -> LazyFrame[IntoLazyFrameT]: ...
+
+
+@overload
+def from_native(
     native_object: IntoDataFrameT,
     *,
-    strict: Literal[True] = ...,
+    strict: Literal[True] | None = ...,
     eager_only: Literal[True],
     eager_or_interchange_only: Literal[False] = ...,
     series_only: Literal[False] = ...,
@@ -696,7 +676,7 @@ def from_native(
 def from_native(
     native_object: IntoFrame | IntoSeries,
     *,
-    strict: Literal[True] = ...,
+    strict: Literal[True] | None = ...,
     eager_only: Literal[False] = ...,
     eager_or_interchange_only: Literal[False] = ...,
     series_only: Literal[False] = ...,
@@ -708,7 +688,7 @@ def from_native(
 def from_native(
     native_object: IntoSeriesT,
     *,
-    strict: Literal[True] = ...,
+    strict: Literal[True] | None = ...,
     eager_only: Literal[False] = ...,
     eager_or_interchange_only: Literal[False] = ...,
     series_only: Literal[True],
@@ -718,27 +698,14 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: IntoLazyFrameT,
+    native_object: IntoDataFrameT,
     *,
-    strict: Literal[True] = ...,
+    strict: Literal[True] | None = ...,
     eager_only: Literal[False] = ...,
     eager_or_interchange_only: Literal[False] = ...,
     series_only: Literal[False] = ...,
     allow_series: None = ...,
-) -> LazyFrame[IntoLazyFrameT]: ...
-
-
-# NOTE: `pl.LazyFrame` originally matched here
-@overload
-def from_native(
-    native_object: IntoFrameT,
-    *,
-    strict: Literal[True] = ...,
-    eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT]: ...
+) -> DataFrame[IntoDataFrameT]: ...
 
 
 @overload
@@ -815,14 +782,14 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: IntoFrameT | IntoSeriesT,
+    native_object: IntoDataFrameT | IntoLazyFrameT | IntoSeriesT,
     *,
     pass_through: Literal[True],
     eager_only: Literal[False] = ...,
     eager_or_interchange_only: Literal[False] = ...,
     series_only: Literal[False] = ...,
     allow_series: Literal[True],
-) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series[IntoSeriesT]: ...
+) -> DataFrame[IntoDataFrameT] | LazyFrame[IntoLazyFrameT] | Series[IntoSeriesT]: ...
 
 
 @overload
@@ -839,14 +806,14 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: IntoFrameT,
+    native_object: IntoDataFrameT | IntoLazyFrameT,
     *,
     pass_through: Literal[True],
     eager_only: Literal[False] = ...,
     eager_or_interchange_only: Literal[False] = ...,
     series_only: Literal[False] = ...,
     allow_series: None = ...,
-) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT]: ...
+) -> DataFrame[IntoDataFrameT] | LazyFrame[IntoLazyFrameT]: ...
 
 
 @overload
@@ -911,14 +878,26 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: IntoFrameT,
+    native_object: IntoDataFrameT,
     *,
     pass_through: Literal[False] = ...,
     eager_only: Literal[False] = ...,
     eager_or_interchange_only: Literal[False] = ...,
     series_only: Literal[False] = ...,
     allow_series: None = ...,
-) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT]: ...
+) -> DataFrame[IntoDataFrameT]: ...
+
+
+@overload
+def from_native(
+    native_object: IntoLazyFrameT,
+    *,
+    pass_through: Literal[False] = ...,
+    eager_only: Literal[False] = ...,
+    eager_or_interchange_only: Literal[False] = ...,
+    series_only: Literal[False] = ...,
+    allow_series: None = ...,
+) -> LazyFrame[IntoLazyFrameT]: ...
 
 
 # All params passed in as variables
@@ -934,8 +913,13 @@ def from_native(
 ) -> Any: ...
 
 
-def from_native(  # noqa: D417
-    native_object: IntoFrameT | IntoFrame | IntoSeriesT | IntoSeries | T,
+def from_native(
+    native_object: IntoDataFrameT
+    | IntoLazyFrameT
+    | IntoFrame
+    | IntoSeriesT
+    | IntoSeries
+    | T,
     *,
     strict: bool | None = None,
     pass_through: bool | None = None,
@@ -944,56 +928,12 @@ def from_native(  # noqa: D417
     series_only: bool = False,
     allow_series: bool | None = None,
     **kwds: Any,
-) -> LazyFrame[IntoFrameT] | DataFrame[IntoFrameT] | Series[IntoSeriesT] | T:
+) -> LazyFrame[IntoLazyFrameT] | DataFrame[IntoDataFrameT] | Series[IntoSeriesT] | T:
     """Convert `native_object` to Narwhals Dataframe, Lazyframe, or Series.
 
-    Arguments:
-        native_object: Raw object from user.
-            Depending on the other arguments, input object can be
-
-            - a Dataframe / Lazyframe / Series supported by Narwhals (pandas, Polars, PyArrow, ...)
-            - an object which implements `__narwhals_dataframe__`, `__narwhals_lazyframe__`,
-              or `__narwhals_series__`
-        strict: Determine what happens if the object can't be converted to Narwhals
-
-            - `True` or `None` (default): raise an error
-            - `False`: pass object through as-is
-
-            *Deprecated* (v1.13.0)
-
-            Please use `pass_through` instead. Note that `strict` is still available
-            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-            see [perfect backwards compatibility policy](../backcompat.md/).
-        pass_through: Determine what happens if the object can't be converted to Narwhals
-
-            - `False` or `None` (default): raise an error
-            - `True`: pass object through as-is
-        eager_only: Whether to only allow eager objects
-
-            - `False` (default): don't require `native_object` to be eager
-            - `True`: only convert to Narwhals if `native_object` is eager
-        eager_or_interchange_only: Whether to only allow eager objects or objects which
-            have interchange-level support in Narwhals
-
-            - `False` (default): don't require `native_object` to either be eager or to
-              have interchange-level support in Narwhals
-            - `True`: only convert to Narwhals if `native_object` is eager or has
-              interchange-level support in Narwhals
-
-            See [interchange-only support](../extending.md/#interchange-only-support)
-            for more details.
-        series_only: Whether to only allow Series
-
-            - `False` (default): don't require `native_object` to be a Series
-            - `True`: only convert to Narwhals if `native_object` is a Series
-        allow_series: Whether to allow Series (default is only Dataframe / Lazyframe)
-
-            - `False` or `None` (default): don't convert to Narwhals if `native_object` is a Series
-            - `True`: allow `native_object` to be a Series
-
-    Returns:
-        DataFrame, LazyFrame, Series, or original object, depending
-            on which combination of parameters was passed.
+    See `narwhals.from_native` for full docstring. Note that `native_namespace` is
+    an is the same as `backend` but only accepts module types - for new code, we
+    recommend using `backend`, as that's available beyond just `narwhals.stable.v1`.
     """
     # Early returns
     if isinstance(native_object, (DataFrame, LazyFrame)) and not series_only:
@@ -1002,7 +942,7 @@ def from_native(  # noqa: D417
         return native_object
 
     pass_through = validate_strict_and_pass_though(
-        strict, pass_through, pass_through_default=False, emit_deprecation_warning=False
+        strict, pass_through, pass_through_default=False
     )
     if kwds:
         msg = f"from_native() got an unexpected keyword argument {next(iter(kwds))!r}"
@@ -1025,8 +965,8 @@ def to_native(
 ) -> IntoDataFrameT: ...
 @overload
 def to_native(
-    narwhals_object: LazyFrame[IntoFrameT], *, strict: Literal[True] = ...
-) -> IntoFrameT: ...
+    narwhals_object: LazyFrame[IntoLazyFrameT], *, strict: Literal[True] = ...
+) -> IntoLazyFrameT: ...
 @overload
 def to_native(
     narwhals_object: Series[IntoSeriesT], *, strict: Literal[True] = ...
@@ -1039,8 +979,8 @@ def to_native(
 ) -> IntoDataFrameT: ...
 @overload
 def to_native(
-    narwhals_object: LazyFrame[IntoFrameT], *, pass_through: Literal[False] = ...
-) -> IntoFrameT: ...
+    narwhals_object: LazyFrame[IntoLazyFrameT], *, pass_through: Literal[False] = ...
+) -> IntoLazyFrameT: ...
 @overload
 def to_native(
     narwhals_object: Series[IntoSeriesT], *, pass_through: Literal[False] = ...
@@ -1051,38 +991,22 @@ def to_native(narwhals_object: Any, *, pass_through: bool) -> Any: ...
 
 def to_native(
     narwhals_object: DataFrame[IntoDataFrameT]
-    | LazyFrame[IntoFrameT]
+    | LazyFrame[IntoLazyFrameT]
     | Series[IntoSeriesT],
     *,
     strict: bool | None = None,
     pass_through: bool | None = None,
-) -> IntoFrameT | IntoSeriesT | Any:
+) -> IntoLazyFrameT | IntoDataFrameT | IntoSeriesT | Any:
     """Convert Narwhals object to native one.
 
-    Arguments:
-        narwhals_object: Narwhals object.
-        strict: Determine what happens if `narwhals_object` isn't a Narwhals class
-
-            - `True` (default): raise an error
-            - `False`: pass object through as-is
-
-            *Deprecated* (v1.13.0)
-
-            Please use `pass_through` instead. Note that `strict` is still available
-            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-            see [perfect backwards compatibility policy](../backcompat.md/).
-        pass_through: Determine what happens if `narwhals_object` isn't a Narwhals class
-
-            - `False` (default): raise an error
-            - `True`: pass object through as-is
-
-    Returns:
-        Object of class that user started with.
+    See `narwhals.to_native` for full docstring. Note that `native_namespace` is
+    an is the same as `backend` but only accepts module types - for new code, we
+    recommend using `backend`, as that's available beyond just `narwhals.stable.v1`.
     """
     from narwhals._utils import validate_strict_and_pass_though
 
     pass_through = validate_strict_and_pass_though(
-        strict, pass_through, pass_through_default=False, emit_deprecation_warning=False
+        strict, pass_through, pass_through_default=False
     )
     return nw.to_native(narwhals_object, pass_through=pass_through)
 
@@ -1099,58 +1023,12 @@ def narwhalify(
 ) -> Callable[..., Any]:
     """Decorate function so it becomes dataframe-agnostic.
 
-    This will try to convert any dataframe/series-like object into the Narwhals
-    respective DataFrame/Series, while leaving the other parameters as they are.
-    Similarly, if the output of the function is a Narwhals DataFrame or Series, it will be
-    converted back to the original dataframe/series type, while if the output is another
-    type it will be left as is.
-    By setting `pass_through=False`, then every input and every output will be required to be a
-    dataframe/series-like object.
-
-    Arguments:
-        func: Function to wrap in a `from_native`-`to_native` block.
-        strict: Determine what happens if the object can't be converted to Narwhals
-
-            *Deprecated* (v1.13.0)
-
-            Please use `pass_through` instead. Note that `strict` is still available
-            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-            see [perfect backwards compatibility policy](../backcompat.md/).
-
-            - `True` or `None` (default): raise an error
-            - `False`: pass object through as-is
-        pass_through: Determine what happens if the object can't be converted to Narwhals
-
-            - `False` or `None` (default): raise an error
-            - `True`: pass object through as-is
-        eager_only: Whether to only allow eager objects
-
-            - `False` (default): don't require `native_object` to be eager
-            - `True`: only convert to Narwhals if `native_object` is eager
-        eager_or_interchange_only: Whether to only allow eager objects or objects which
-            have interchange-level support in Narwhals
-
-            - `False` (default): don't require `native_object` to either be eager or to
-              have interchange-level support in Narwhals
-            - `True`: only convert to Narwhals if `native_object` is eager or has
-              interchange-level support in Narwhals
-
-            See [interchange-only support](../extending.md/#interchange-only-support)
-            for more details.
-        series_only: Whether to only allow Series
-
-            - `False` (default): don't require `native_object` to be a Series
-            - `True`: only convert to Narwhals if `native_object` is a Series
-        allow_series: Whether to allow Series (default is only Dataframe / Lazyframe)
-
-            - `False` or `None`: don't convert to Narwhals if `native_object` is a Series
-            - `True` (default): allow `native_object` to be a Series
-
-    Returns:
-        Decorated function.
+    See `narwhals.narwhalify` for full docstring. Note that `native_namespace` is
+    an is the same as `backend` but only accepts module types - for new code, we
+    recommend using `backend`, as that's available beyond just `narwhals.stable.v1`.
     """
     pass_through = validate_strict_and_pass_though(
-        strict, pass_through, pass_through_default=True, emit_deprecation_warning=False
+        strict, pass_through, pass_through_default=True
     )
 
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -1198,260 +1076,79 @@ def narwhalify(
 
     if func is None:
         return decorator
-    else:
-        # If func is not None, it means the decorator is used without arguments
-        return decorator(func)
+    # If func is not None, it means the decorator is used without arguments
+    return decorator(func)
 
 
 def all() -> Expr:
-    """Instantiate an expression representing all columns.
-
-    Returns:
-        A new expression.
-    """
     return _stableify(nw.all())
 
 
 def col(*names: str | Iterable[str]) -> Expr:
-    """Creates an expression that references one or more columns by their name(s).
-
-    Arguments:
-        names: Name(s) of the columns to use.
-
-    Returns:
-        A new expression.
-    """
     return _stableify(nw.col(*names))
 
 
 def exclude(*names: str | Iterable[str]) -> Expr:
-    """Creates an expression that excludes columns by their name(s).
-
-    Arguments:
-        names: Name(s) of the columns to exclude.
-
-    Returns:
-        A new expression.
-    """
     return _stableify(nw.exclude(*names))
 
 
 def nth(*indices: int | Sequence[int]) -> Expr:
-    """Creates an expression that references one or more columns by their index(es).
-
-    Notes:
-        `nth` is not supported for Polars version<1.0.0. Please use
-        [`narwhals.col`][] instead.
-
-    Arguments:
-        indices: One or more indices representing the columns to retrieve.
-
-    Returns:
-        A new expression.
-    """
     return _stableify(nw.nth(*indices))
 
 
 def len() -> Expr:
-    """Return the number of rows.
-
-    Returns:
-        A new expression.
-    """
     return _stableify(nw.len())
 
 
 def lit(value: NonNestedLiteral, dtype: IntoDType | None = None) -> Expr:
-    """Return an expression representing a literal value.
-
-    Arguments:
-        value: The value to use as literal.
-        dtype: The data type of the literal value. If not provided, the data type will
-            be inferred by the native library.
-
-    Returns:
-        A new expression.
-    """
     return _stableify(nw.lit(value, dtype))
 
 
 def min(*columns: str) -> Expr:
-    """Return the minimum value.
-
-    Note:
-       Syntactic sugar for ``nw.col(columns).min()``.
-
-    Arguments:
-        columns: Name(s) of the columns to use in the aggregation function.
-
-    Returns:
-        A new expression.
-    """
     return _stableify(nw.min(*columns))
 
 
 def max(*columns: str) -> Expr:
-    """Return the maximum value.
-
-    Note:
-       Syntactic sugar for ``nw.col(columns).max()``.
-
-    Arguments:
-        columns: Name(s) of the columns to use in the aggregation function.
-
-    Returns:
-        A new expression.
-    """
     return _stableify(nw.max(*columns))
 
 
 def mean(*columns: str) -> Expr:
-    """Get the mean value.
-
-    Note:
-        Syntactic sugar for ``nw.col(columns).mean()``
-
-    Arguments:
-        columns: Name(s) of the columns to use in the aggregation function
-
-    Returns:
-        A new expression.
-    """
     return _stableify(nw.mean(*columns))
 
 
 def median(*columns: str) -> Expr:
-    """Get the median value.
-
-    Notes:
-        - Syntactic sugar for ``nw.col(columns).median()``
-        - Results might slightly differ across backends due to differences in the
-            underlying algorithms used to compute the median.
-
-    Arguments:
-        columns: Name(s) of the columns to use in the aggregation function
-
-    Returns:
-        A new expression.
-    """
     return _stableify(nw.median(*columns))
 
 
 def sum(*columns: str) -> Expr:
-    """Sum all values.
-
-    Note:
-        Syntactic sugar for ``nw.col(columns).sum()``
-
-    Arguments:
-        columns: Name(s) of the columns to use in the aggregation function
-
-    Returns:
-        A new expression.
-    """
     return _stableify(nw.sum(*columns))
 
 
 def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
-    """Sum all values horizontally across columns.
-
-    Warning:
-        Unlike Polars, we support horizontal sum over numeric columns only.
-
-    Arguments:
-        exprs: Name(s) of the columns to use in the aggregation function. Accepts
-            expression input.
-
-    Returns:
-        A new expression.
-    """
     return _stableify(nw.sum_horizontal(*exprs))
 
 
 def all_horizontal(
     *exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool = False
 ) -> Expr:
-    r"""Compute the bitwise AND horizontally across columns.
-
-    Arguments:
-        exprs: Name(s) of the columns to use in the aggregation function. Accepts
-            expression input.
-        ignore_nulls: Whether to ignore nulls:
-
-            - If `True`, null values are ignored. If there are no elements, the result
-              is `True`.
-            - If `False` (default), Kleene logic is followed. Note that this is not allowed for
-              pandas with classical NumPy dtypes when null values are present.
-
-    Returns:
-        A new expression.
-    """
     return _stableify(nw.all_horizontal(*exprs, ignore_nulls=ignore_nulls))
 
 
 def any_horizontal(
     *exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool = False
 ) -> Expr:
-    r"""Compute the bitwise OR horizontally across columns.
-
-    Arguments:
-        exprs: Name(s) of the columns to use in the aggregation function. Accepts
-            expression input.
-        ignore_nulls: Whether to ignore nulls:
-
-            - If `True`, null values are ignored. If there are no elements, the result
-              is `False`.
-            - If `False` (default), Kleene logic is followed. Note that this is not allowed for
-              pandas with classical NumPy dtypes when null values are present.
-
-    Returns:
-        A new expression.
-    """
     return _stableify(nw.any_horizontal(*exprs, ignore_nulls=ignore_nulls))
 
 
 def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
-    """Compute the mean of all values horizontally across columns.
-
-    Arguments:
-        exprs: Name(s) of the columns to use in the aggregation function. Accepts
-            expression input.
-
-    Returns:
-        A new expression.
-    """
     return _stableify(nw.mean_horizontal(*exprs))
 
 
 def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
-    """Get the minimum value horizontally across columns.
-
-    Notes:
-        We support `min_horizontal` over numeric columns only.
-
-    Arguments:
-        exprs: Name(s) of the columns to use in the aggregation function. Accepts
-            expression input.
-
-    Returns:
-        A new expression.
-    """
     return _stableify(nw.min_horizontal(*exprs))
 
 
 def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
-    """Get the maximum value horizontally across columns.
-
-    Notes:
-        We support `max_horizontal` over numeric columns only.
-
-    Arguments:
-        exprs: Name(s) of the columns to use in the aggregation function. Accepts
-            expression input.
-
-    Returns:
-        A new expression.
-    """
     return _stableify(nw.max_horizontal(*exprs))
 
 
@@ -1461,43 +1158,17 @@ def concat_str(
     separator: str = "",
     ignore_nulls: bool = False,
 ) -> Expr:
-    r"""Horizontally concatenate columns into a single string column.
-
-    Arguments:
-        exprs: Columns to concatenate into a single string column. Accepts expression
-            input. Strings are parsed as column names, other non-expression inputs are
-            parsed as literals. Non-`String` columns are cast to `String`.
-        *more_exprs: Additional columns to concatenate into a single string column,
-            specified as positional arguments.
-        separator: String that will be used to separate the values of each column.
-        ignore_nulls: Ignore null values (default is `False`).
-            If set to `False`, null values will be propagated and if the row contains any
-            null values, the output is null.
-
-    Returns:
-        A new expression.
-    """
     return _stableify(
         nw.concat_str(exprs, *more_exprs, separator=separator, ignore_nulls=ignore_nulls)
     )
 
 
+def format(f_string: str, *args: IntoExpr) -> Expr:
+    """Format expressions as a string."""
+    return _stableify(nw.format(f_string, *args))
+
+
 def coalesce(exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr) -> Expr:
-    """Folds the columns from left to right, keeping the first non-null value.
-
-    Arguments:
-        exprs: Columns to coalesce, must be a str, nw.Expr, or nw.Series
-            where strings are parsed as column names and both nw.Expr/nw.Series
-            are passed through as-is. Scalar values must be wrapped in `nw.lit`.
-
-        *more_exprs: Additional columns to coalesce, specified as positional arguments.
-
-    Raises:
-        TypeError: If any of the inputs are not a str, nw.Expr, or nw.Series.
-
-    Returns:
-        A new expression.
-    """
     return _stableify(nw.coalesce(exprs, *more_exprs))
 
 
@@ -1532,33 +1203,13 @@ class When(nw_f.When):
 class Then(nw_f.Then, Expr):
     @classmethod
     def from_then(cls, then: nw_f.Then) -> Then:
-        return cls(then._to_compliant_expr, then._metadata)
+        return cls(*then._nodes)
 
     def otherwise(self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Expr:
         return _stableify(super().otherwise(value))
 
 
 def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
-    """Start a `when-then-otherwise` expression.
-
-    Expression similar to an `if-else` statement in Python. Always initiated by a
-    `pl.when(<condition>).then(<value if condition>)`, and optionally followed by a
-    `.otherwise(<value if condition is false>)` can be appended at the end. If not
-    appended, and the condition is not `True`, `None` will be returned.
-
-    Info:
-        Chaining multiple `.when(<condition>).then(<value>)` statements is currently
-        not supported.
-        See [Narwhals#668](https://github.com/narwhals-dev/narwhals/issues/668).
-
-    Arguments:
-        predicates: Condition(s) that must be met in order to apply the subsequent
-            statement. Accepts one or more boolean expressions, which are implicitly
-            combined with `&`. String input is parsed as a column name.
-
-    Returns:
-        A "when" object, which `.then` can be called on.
-    """
     return When.from_when(nw_f.when(*predicates))
 
 
@@ -1568,36 +1219,16 @@ def new_series(
     values: Any,
     dtype: IntoDType | None = None,
     *,
-    backend: ModuleType | Implementation | str | None = None,
+    backend: IntoBackend[EagerAllowed] | None = None,
     native_namespace: ModuleType | None = None,  # noqa: ARG001
 ) -> Series[Any]:
     """Instantiate Narwhals Series from iterable (e.g. list or array).
 
-    Arguments:
-        name: Name of resulting Series.
-        values: Values of make Series from.
-        dtype: (Narwhals) dtype. If not provided, the native library
-            may auto-infer it from `values`.
-        backend: specifies which eager backend instantiate to.
-
-            `backend` can be specified in various ways
-
-            - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
-                `POLARS`, `MODIN` or `CUDF`.
-            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
-            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
-        native_namespace: The native library to use for DataFrame creation.
-
-            *Deprecated* (v1.31.0)
-
-            Please use `backend` instead. Note that `native_namespace` is still available
-            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-            see [perfect backwards compatibility policy](../backcompat.md/).
-
-    Returns:
-        A new Series
+    See `narwhals.new_series` for full docstring. Note that `native_namespace` is
+    an is the same as `backend` but only accepts module types - for new code, we
+    recommend using `backend`, as that's available beyond just `narwhals.stable.v1`.
     """
-    backend = cast("ModuleType | Implementation | str", backend)
+    backend = cast("IntoBackend[EagerAllowed]", backend)
     return _stableify(_new_series_impl(name, values, dtype, backend=backend))
 
 
@@ -1605,33 +1236,16 @@ def new_series(
 def from_arrow(
     native_frame: IntoArrowTable,
     *,
-    backend: ModuleType | Implementation | str | None = None,
+    backend: IntoBackend[EagerAllowed] | None = None,
     native_namespace: ModuleType | None = None,  # noqa: ARG001
 ) -> DataFrame[Any]:
     """Construct a DataFrame from an object which supports the PyCapsule Interface.
 
-    Arguments:
-        native_frame: Object which implements `__arrow_c_stream__`.
-        backend: specifies which eager backend instantiate to.
-
-            `backend` can be specified in various ways
-
-            - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
-                `POLARS`, `MODIN` or `CUDF`.
-            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
-            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
-        native_namespace: The native library to use for DataFrame creation.
-
-            *Deprecated* (v1.31.0)
-
-            Please use `backend` instead. Note that `native_namespace` is still available
-            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-            see [perfect backwards compatibility policy](../backcompat.md/).
-
-    Returns:
-        A new DataFrame.
+    See `narwhals.from_arrow` for full docstring. Note that `native_namespace` is
+    an is the same as `backend` but only accepts module types - for new code, we
+    recommend using `backend`, as that's available beyond just `narwhals.stable.v1`.
     """
-    backend = cast("ModuleType | Implementation | str", backend)
+    backend = cast("IntoBackend[EagerAllowed]", backend)
     return _stableify(nw_f.from_arrow(native_frame, backend=backend))
 
 
@@ -1640,43 +1254,19 @@ def from_dict(
     data: Mapping[str, Any],
     schema: Mapping[str, DType] | Schema | None = None,
     *,
-    backend: ModuleType | Implementation | str | None = None,
+    backend: IntoBackend[EagerAllowed] | None = None,
     native_namespace: ModuleType | None = None,  # noqa: ARG001
 ) -> DataFrame[Any]:
     """Instantiate DataFrame from dictionary.
 
-    Indexes (if present, for pandas-like backends) are aligned following
-    the [left-hand-rule](../concepts/pandas_index.md/).
-
-    Notes:
-        For pandas-like dataframes, conversion to schema is applied after dataframe
-        creation.
-
-    Arguments:
-        data: Dictionary to create DataFrame from.
-        schema: The DataFrame schema as Schema or dict of {name: type}. If not
-            specified, the schema will be inferred by the native library.
-        backend: specifies which eager backend instantiate to. Only
-            necessary if inputs are not Narwhals Series.
-
-            `backend` can be specified in various ways
-
-            - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
-                `POLARS`, `MODIN` or `CUDF`.
-            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
-            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
-        native_namespace: The native library to use for DataFrame creation.
-
-            *Deprecated* (v1.26.0)
-
-            Please use `backend` instead. Note that `native_namespace` is still available
-            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-            see [perfect backwards compatibility policy](../backcompat.md/).
-
-    Returns:
-        A new DataFrame.
+    See `narwhals.from_dict` for full docstring. Note that `native_namespace` is
+    an is the same as `backend` but only accepts module types - for new code, we
+    recommend using `backend`, as that's available beyond just `narwhals.stable.v1`.
     """
     return _stableify(nw_f.from_dict(data, schema, backend=backend))
+
+
+from_dicts: Final = DataFrame.from_dicts
 
 
 @deprecate_native_namespace(required=True)
@@ -1684,208 +1274,88 @@ def from_numpy(
     data: _2DArray,
     schema: Mapping[str, DType] | Schema | Sequence[str] | None = None,
     *,
-    backend: ModuleType | Implementation | str | None = None,
+    backend: IntoBackend[EagerAllowed] | None = None,
     native_namespace: ModuleType | None = None,  # noqa: ARG001
 ) -> DataFrame[Any]:
     """Construct a DataFrame from a NumPy ndarray.
 
-    Notes:
-        Only row orientation is currently supported.
-
-        For pandas-like dataframes, conversion to schema is applied after dataframe
-        creation.
-
-    Arguments:
-        data: Two-dimensional data represented as a NumPy ndarray.
-        schema: The DataFrame schema as Schema, dict of {name: type}, or a sequence of str.
-        backend: specifies which eager backend instantiate to.
-
-            `backend` can be specified in various ways
-
-            - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
-                `POLARS`, `MODIN` or `CUDF`.
-            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
-            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
-        native_namespace: The native library to use for DataFrame creation.
-
-            *Deprecated* (v1.31.0)
-
-            Please use `backend` instead. Note that `native_namespace` is still available
-            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-            see [perfect backwards compatibility policy](../backcompat.md/).
-
-    Returns:
-        A new DataFrame.
+    See `narwhals.from_numpy` for full docstring. Note that `native_namespace` is
+    an is the same as `backend` but only accepts module types - for new code, we
+    recommend using `backend`, as that's available beyond just `narwhals.stable.v1`.
     """
-    backend = cast("ModuleType | Implementation | str", backend)
+    backend = cast("IntoBackend[EagerAllowed]", backend)
     return _stableify(nw_f.from_numpy(data, schema, backend=backend))
 
 
 @deprecate_native_namespace(required=True)
 def read_csv(
-    source: str,
+    source: FileSource,
     *,
-    backend: ModuleType | Implementation | str | None = None,
+    backend: IntoBackend[EagerAllowed] | None = None,
     native_namespace: ModuleType | None = None,  # noqa: ARG001
     **kwargs: Any,
 ) -> DataFrame[Any]:
     """Read a CSV file into a DataFrame.
 
-    Arguments:
-        source: Path to a file.
-        backend: The eager backend for DataFrame creation.
-            `backend` can be specified in various ways
-
-            - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
-                `POLARS`, `MODIN` or `CUDF`.
-            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
-            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
-        native_namespace: The native library to use for DataFrame creation.
-
-            *Deprecated* (v1.27.2)
-
-            Please use `backend` instead. Note that `native_namespace` is still available
-            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-            see [perfect backwards compatibility policy](../backcompat.md/).
-        kwargs: Extra keyword arguments which are passed to the native CSV reader.
-            For example, you could use
-            `nw.read_csv('file.csv', backend='pandas', engine='pyarrow')`.
-
-    Returns:
-        DataFrame.
+    See `narwhals.read_csv` for full docstring. Note that `native_namespace` is
+    an is the same as `backend` but only accepts module types - for new code, we
+    recommend using `backend`, as that's available beyond just `narwhals.stable.v1`.
     """
-    backend = cast("ModuleType | Implementation | str", backend)
+    backend = cast("IntoBackend[EagerAllowed]", backend)
     return _stableify(nw_f.read_csv(source, backend=backend, **kwargs))
 
 
 @deprecate_native_namespace(required=True)
 def scan_csv(
-    source: str,
+    source: FileSource,
     *,
-    backend: ModuleType | Implementation | str | None = None,
+    backend: IntoBackend[Backend] | None = None,
     native_namespace: ModuleType | None = None,  # noqa: ARG001
     **kwargs: Any,
 ) -> LazyFrame[Any]:
     """Lazily read from a CSV file.
 
-    For the libraries that do not support lazy dataframes, the function reads
-    a csv file eagerly and then converts the resulting dataframe to a lazyframe.
-
-    Arguments:
-        source: Path to a file.
-        backend: The eager backend for DataFrame creation.
-            `backend` can be specified in various ways
-
-            - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
-                `POLARS`, `MODIN` or `CUDF`.
-            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
-            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
-        native_namespace: The native library to use for DataFrame creation.
-
-            *Deprecated* (v1.31.0)
-
-            Please use `backend` instead. Note that `native_namespace` is still available
-            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-            see [perfect backwards compatibility policy](../backcompat.md/).
-        kwargs: Extra keyword arguments which are passed to the native CSV reader.
-            For example, you could use
-            `nw.scan_csv('file.csv', backend=pd, engine='pyarrow')`.
-
-    Returns:
-        LazyFrame.
+    See `narwhals.scan_csv` for full docstring. Note that `native_namespace` is
+    an is the same as `backend` but only accepts module types - for new code, we
+    recommend using `backend`, as that's available beyond just `narwhals.stable.v1`.
     """
-    backend = cast("ModuleType | Implementation | str", backend)
+    backend = cast("IntoBackend[Backend]", backend)
     return _stableify(nw_f.scan_csv(source, backend=backend, **kwargs))
 
 
 @deprecate_native_namespace(required=True)
 def read_parquet(
-    source: str,
+    source: FileSource,
     *,
-    backend: ModuleType | Implementation | str | None = None,
+    backend: IntoBackend[EagerAllowed] | None = None,
     native_namespace: ModuleType | None = None,  # noqa: ARG001
     **kwargs: Any,
 ) -> DataFrame[Any]:
     """Read into a DataFrame from a parquet file.
 
-    Arguments:
-        source: Path to a file.
-        backend: The eager backend for DataFrame creation.
-            `backend` can be specified in various ways
-
-            - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
-                `POLARS`, `MODIN` or `CUDF`.
-            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
-            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
-        native_namespace: The native library to use for DataFrame creation.
-
-            *Deprecated* (v1.31.0)
-
-            Please use `backend` instead. Note that `native_namespace` is still available
-            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-            see [perfect backwards compatibility policy](../backcompat.md/).
-        kwargs: Extra keyword arguments which are passed to the native parquet reader.
-            For example, you could use
-            `nw.read_parquet('file.parquet', backend=pd, engine='pyarrow')`.
-
-    Returns:
-        DataFrame.
+    See `narwhals.read_parquet` for full docstring. Note that `native_namespace` is
+    an is the same as `backend` but only accepts module types - for new code, we
+    recommend using `backend`, as that's available beyond just `narwhals.stable.v1`.
     """
-    backend = cast("ModuleType | Implementation | str", backend)
+    backend = cast("IntoBackend[EagerAllowed]", backend)
     return _stableify(nw_f.read_parquet(source, backend=backend, **kwargs))
 
 
 @deprecate_native_namespace(required=True)
 def scan_parquet(
-    source: str,
+    source: FileSource,
     *,
-    backend: ModuleType | Implementation | str | None = None,
+    backend: IntoBackend[Backend] | None = None,
     native_namespace: ModuleType | None = None,  # noqa: ARG001
     **kwargs: Any,
 ) -> LazyFrame[Any]:
     """Lazily read from a parquet file.
 
-    For the libraries that do not support lazy dataframes, the function reads
-    a parquet file eagerly and then converts the resulting dataframe to a lazyframe.
-
-    Note:
-        Spark like backends require a session object to be passed in `kwargs`.
-
-        For instance:
-
-        ```py
-        import narwhals as nw
-        from sqlframe.duckdb import DuckDBSession
-
-        nw.scan_parquet(source, backend="sqlframe", session=DuckDBSession())
-        ```
-
-    Arguments:
-        source: Path to a file.
-        backend: The eager backend for DataFrame creation.
-            `backend` can be specified in various ways
-
-            - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
-                `POLARS`, `MODIN`, `CUDF`, `PYSPARK` or `SQLFRAME`.
-            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"`, `"cudf"`,
-                `"pyspark"` or `"sqlframe"`.
-            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin`, `cudf`,
-                `pyspark.sql` or `sqlframe`.
-        native_namespace: The native library to use for DataFrame creation.
-
-            *Deprecated* (v1.31.0)
-
-            Please use `backend` instead. Note that `native_namespace` is still available
-            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-            see [perfect backwards compatibility policy](../backcompat.md/).
-        kwargs: Extra keyword arguments which are passed to the native parquet reader.
-            For example, you could use
-            `nw.scan_parquet('file.parquet', backend=pd, engine='pyarrow')`.
-
-    Returns:
-        LazyFrame.
+    See `narwhals.scan_parquet` for full docstring. Note that `native_namespace` is
+    an is the same as `backend` but only accepts module types - for new code, we
+    recommend using `backend`, as that's available beyond just `narwhals.stable.v1`.
     """
-    backend = cast("ModuleType | Implementation | str", backend)
+    backend = cast("IntoBackend[Backend]", backend)
     return _stableify(nw_f.scan_parquet(source, backend=backend, **kwargs))
 
 
@@ -1910,6 +1380,7 @@ __all__ = [
     "Int32",
     "Int64",
     "Int128",
+    "InvalidIntoExprError",
     "LazyFrame",
     "List",
     "Object",
@@ -1935,13 +1406,16 @@ __all__ = [
     "dtypes",
     "exceptions",
     "exclude",
+    "format",
     "from_arrow",
     "from_dict",
+    "from_dicts",
     "from_native",
     "from_numpy",
     "generate_temporary_column_name",
     "get_level",
     "get_native_namespace",
+    "is_expr",
     "is_ordered_categorical",
     "len",
     "lit",

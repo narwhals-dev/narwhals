@@ -13,7 +13,7 @@ from narwhals._utils import Implementation
 from tests.utils import PYARROW_VERSION, assert_equal_data
 
 if TYPE_CHECKING:
-    from narwhals._namespace import EagerAllowed
+    from narwhals._typing import EagerAllowed
 
 
 @pytest.fixture
@@ -76,9 +76,16 @@ def test_dataframe_from_arrow_to_polars_no_pandas(
     assert "pandas" not in sys.modules
 
 
+def test_dataframe_from_arrow_modin(table: pa.Table, data: dict[str, Any]) -> None:
+    pytest.importorskip("modin.pandas")
+    result = nw.DataFrame.from_arrow(table, backend="modin")
+    assert result.implementation.is_modin()
+    assert_equal_data(result, data)
+
+
 def test_dataframe_from_arrow_invalid(table: pa.Table, data: dict[str, Any]) -> None:
     with pytest.raises(TypeError, match="PyCapsule"):
         nw.DataFrame.from_arrow(data, backend=pa)  # type: ignore[arg-type]
     pytest.importorskip("sqlframe")
     with pytest.raises(ValueError, match="lazy"):
-        nw.DataFrame.from_arrow(table, backend="sqlframe")
+        nw.DataFrame.from_arrow(table, backend="sqlframe")  # type: ignore[arg-type]

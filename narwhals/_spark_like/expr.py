@@ -3,7 +3,6 @@ from __future__ import annotations
 import operator
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Literal, cast
 
-from narwhals._expression_parsing import ExprKind, ExprMetadata
 from narwhals._spark_like.expr_dt import SparkLikeExprDateTimeNamespace
 from narwhals._spark_like.expr_list import SparkLikeExprListNamespace
 from narwhals._spark_like.expr_str import SparkLikeExprStringNamespace
@@ -16,7 +15,14 @@ from narwhals._spark_like.utils import (
     true_divide,
 )
 from narwhals._sql.expr import SQLExpr
-from narwhals._utils import Implementation, Version, not_implemented
+from narwhals._utils import (
+    Implementation,
+    Version,
+    extend_bool,
+    no_default,
+    not_implemented,
+    zip_strict,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping, Sequence
@@ -34,8 +40,9 @@ if TYPE_CHECKING:
     )
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.namespace import SparkLikeNamespace
+    from narwhals._typing import NoDefault
     from narwhals._utils import _LimitedContext
-    from narwhals.typing import FillNullStrategy, IntoDType, NonNestedLiteral, RankMethod
+    from narwhals.typing import FillNullStrategy, IntoDType, RankMethod
 
     NativeRankMethod: TypeAlias = Literal["rank", "dense_rank", "row_number"]
     SparkWindowFunction = WindowFunction[SparkLikeLazyFrame, Column]
@@ -58,7 +65,6 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         self._alias_output_names = alias_output_names
         self._version = version
         self._implementation = implementation
-        self._metadata: ExprMetadata | None = None
         self._window_function: SparkWindowFunction | None = window_function
 
     _REMAP_RANK_METHOD: ClassVar[Mapping[RankMethod, NativeRankMethod]] = {
@@ -96,19 +102,26 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
             window = window.rowsBetween(rows_start, self._Window.unboundedFollowing)
         return expr.over(window)
 
-    def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
-        if kind is ExprKind.LITERAL:
-            return self
+    def _first(self, expr: Column, *order_by: str) -> Column:
+        # Docs say it's non-deterministic, with no way to specify order.
+        msg = "`first` is not supported for PySpark."
+        raise NotImplementedError(msg)
+
+    def _last(self, expr: Column, *order_by: str) -> Column:  # pragma: no cover
+        # Docs say it's non-deterministic, with no way to specify order.
+        msg = "`last` is not supported for PySpark."
+        raise NotImplementedError(msg)
+
+    def broadcast(self) -> Self:
         return self.over([self._F.lit(1)], [])
 
     @property
-    def _F(self):  # type: ignore[no-untyped-def] # noqa: ANN202, N802
+    def _F(self):  # type: ignore[no-untyped-def] # noqa: ANN202
         if TYPE_CHECKING:
             from sqlframe.base import functions
 
             return functions
-        else:
-            return import_functions(self._implementation)
+        return import_functions(self._implementation)
 
     @property
     def _native_dtypes(self):  # type: ignore[no-untyped-def] # noqa: ANN202
@@ -116,17 +129,15 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
             from sqlframe.base import types
 
             return types
-        else:
-            return import_native_dtypes(self._implementation)
+        return import_native_dtypes(self._implementation)
 
     @property
-    def _Window(self) -> type[Window]:  # noqa: N802
+    def _Window(self) -> type[Window]:
         if TYPE_CHECKING:
             from sqlframe.base.window import Window
 
             return Window
-        else:
-            return import_window(self._implementation)
+        return import_window(self._implementation)
 
     def _sort(
         self,
@@ -134,9 +145,10 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         descending: Sequence[bool] | None = None,
         nulls_last: Sequence[bool] | None = None,
     ) -> Iterator[Column]:
-        F = self._F  # noqa: N806
-        descending = descending or [False] * len(cols)
-        nulls_last = nulls_last or [False] * len(cols)
+        F = self._F
+        n = len(cols)
+        descending = extend_bool(descending or False, n)
+        nulls_last = extend_bool(nulls_last or False, n)
         mapping = {
             (False, False): F.asc_nulls_first,
             (False, True): F.asc_nulls_last,
@@ -145,14 +157,12 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         }
         yield from (
             mapping[(_desc, _nulls_last)](col)
-            for col, _desc, _nulls_last in zip(cols, descending, nulls_last)
+            for col, _desc, _nulls_last in zip_strict(cols, descending, nulls_last)
         )
 
     def partition_by(self, *cols: Column | str) -> WindowSpec:
         """Wraps `Window().partitionBy`, with default and `WindowInputs` handling."""
         return self._Window.partitionBy(*cols or [self._F.lit(1)])
-
-    def __narwhals_expr__(self) -> None: ...
 
     def __narwhals_namespace__(self) -> SparkLikeNamespace:  # pragma: no cover
         from narwhals._spark_like.namespace import SparkLikeNamespace
@@ -198,27 +208,33 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
             implementation=context._implementation,
         )
 
-    def __truediv__(self, other: SparkLikeExpr) -> Self:
+    def __truediv__(self, other: Self) -> Self:
         def _truediv(expr: Column, other: Column) -> Column:
             return true_divide(self._F, expr, other)
 
         return self._with_binary(_truediv, other)
 
-    def __rtruediv__(self, other: SparkLikeExpr) -> Self:
+    def __rtruediv__(self, other: Self) -> Self:
         def _rtruediv(expr: Column, other: Column) -> Column:
             return true_divide(self._F, other, expr)
 
         return self._with_binary(_rtruediv, other).alias("literal")
 
-    def __floordiv__(self, other: SparkLikeExpr) -> Self:
+    def __floordiv__(self, other: Self) -> Self:
         def _floordiv(expr: Column, other: Column) -> Column:
-            return self._F.floor(true_divide(self._F, expr, other))
+            F = self._F
+            return F.when(
+                other != F.lit(0), F.floor(true_divide(F, expr, other))
+            ).otherwise(F.lit(None))
 
         return self._with_binary(_floordiv, other)
 
-    def __rfloordiv__(self, other: SparkLikeExpr) -> Self:
+    def __rfloordiv__(self, other: Self) -> Self:
         def _rfloordiv(expr: Column, other: Column) -> Column:
-            return self._F.floor(true_divide(self._F, other, expr))
+            F = self._F
+            return F.when(
+                expr != F.lit(0), F.floor(true_divide(F, other, expr))
+            ).otherwise(F.lit(None))
 
         return self._with_binary(_rfloordiv, other).alias("literal")
 
@@ -269,32 +285,6 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
 
         return self._with_callable(_null_count)
 
-    def std(self, ddof: int) -> Self:
-        F = self._F  # noqa: N806
-        if ddof == 0:
-            return self._with_callable(F.stddev_pop)
-        if ddof == 1:
-            return self._with_callable(F.stddev_samp)
-
-        def func(expr: Column) -> Column:
-            n_rows = F.count(expr)
-            return F.stddev_samp(expr) * F.sqrt((n_rows - 1) / (n_rows - ddof))
-
-        return self._with_callable(func)
-
-    def var(self, ddof: int) -> Self:
-        F = self._F  # noqa: N806
-        if ddof == 0:
-            return self._with_callable(F.var_pop)
-        if ddof == 1:
-            return self._with_callable(F.var_samp)
-
-        def func(expr: Column) -> Column:
-            n_rows = F.count(expr)
-            return F.var_samp(expr) * (n_rows - 1) / (n_rows - ddof)
-
-        return self._with_callable(func)
-
     def is_finite(self) -> Self:
         def _is_finite(expr: Column) -> Column:
             # A value is finite if it's not NaN, and not infinite, while NULLs should be
@@ -310,9 +300,9 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
 
         return self._with_elementwise(_is_finite)
 
-    def is_in(self, values: Sequence[Any]) -> Self:
+    def is_in(self, other: Sequence[Any]) -> Self:
         def _is_in(expr: Column) -> Column:
-            return expr.isin(values) if values else self._F.lit(False)  # noqa: FBT003
+            return expr.isin(other) if other else self._F.lit(False)
 
         return self._with_elementwise(_is_in)
 
@@ -329,14 +319,6 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
     def kurtosis(self) -> Self:
         return self._with_callable(self._F.kurtosis)
 
-    def n_unique(self) -> Self:
-        def _n_unique(expr: Column) -> Column:
-            return self._F.count_distinct(expr) + self._F.max(
-                self._F.isnull(expr).cast(self._native_dtypes.IntegerType())
-            )
-
-        return self._with_callable(_n_unique)
-
     def is_nan(self) -> Self:
         def _is_nan(expr: Column) -> Column:
             return self._F.when(self._F.isnull(expr), None).otherwise(self._F.isnan(expr))
@@ -344,10 +326,7 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         return self._with_elementwise(_is_nan)
 
     def fill_null(
-        self,
-        value: Self | NonNestedLiteral,
-        strategy: FillNullStrategy | None,
-        limit: int | None,
+        self, value: Self | None, strategy: FillNullStrategy | None, limit: int | None
     ) -> Self:
         if strategy is not None:
 
@@ -375,25 +354,58 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         def _fill_constant(expr: Column, value: Column) -> Column:
             return self._F.ifnull(expr, value)
 
+        assert value is not None  # noqa: S101
         return self._with_elementwise(_fill_constant, value=value)
 
-    def log(self, base: float) -> Self:
-        def _log(expr: Column) -> Column:
-            return (
-                self._F.when(expr < 0, self._F.lit(float("nan")))
-                .when(expr == 0, self._F.lit(float("-inf")))
-                .otherwise(self._F.log(float(base), expr))
-            )
+    def replace_strict(  # pragma: no cover
+        self,
+        default: SparkLikeExpr | NoDefault,
+        old: Sequence[Any],
+        new: Sequence[Any],
+        *,
+        return_dtype: IntoDType | None,
+    ) -> Self:
+        if default is no_default:
+            msg = "`replace_strict` requires an explicit value for `default` for any spark-like backend."
+            raise ValueError(msg)
 
-        return self._with_elementwise(_log)
+        if self._implementation is not Implementation.PYSPARK:
+            # Issue tracker: https://github.com/eakmanrq/sqlframe/issues/545
+            msg = f"`replace_strict` is not (yet) implemented for {self._implementation}."
+            raise NotImplementedError(msg)
 
-    def sqrt(self) -> Self:
-        def _sqrt(expr: Column) -> Column:
-            return self._F.when(expr < 0, self._F.lit(float("nan"))).otherwise(
-                self._F.sqrt(expr)
-            )
+        from itertools import chain
 
-        return self._with_elementwise(_sqrt)
+        F = self._F
+
+        mapping = dict(zip(old, new))
+        mapping_expr = F.create_map([F.lit(x) for x in chain(*mapping.items())])
+
+        def func(df: SparkLikeLazyFrame) -> list[Column]:
+            default_col = df._evaluate_single_output_expr(default)
+
+            results = [
+                F.when(
+                    F.array_contains(F.map_keys(mapping_expr), expr), mapping_expr[expr]
+                ).otherwise(default_col)
+                for expr in self(df)
+            ]
+            if return_dtype:
+                session = df.native.sparkSession
+                spark_dtype = narwhals_to_native_dtype(
+                    return_dtype, self._version, self._native_dtypes, session
+                )
+                return [result.cast(spark_dtype) for result in results]
+            return results
+
+        return self.__class__(
+            func,
+            None,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
+            implementation=self._implementation,
+        )
 
     @property
     def str(self) -> SparkLikeExprStringNamespace:

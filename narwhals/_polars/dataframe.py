@@ -8,15 +8,17 @@ import polars as pl
 from narwhals._polars.namespace import PolarsNamespace
 from narwhals._polars.series import PolarsSeries
 from narwhals._polars.utils import (
+    FROM_DICTS_ACCEPTS_MAPPINGS,
     catch_polars_exception,
     extract_args_kwargs,
+    narwhals_to_native_dtype,
     native_to_narwhals_dtype,
 )
 from narwhals._utils import (
     Implementation,
     _into_arrow_table,
-    check_columns_exist,
     convert_str_slice_to_int_slice,
+    generate_temporary_column_name,
     is_compliant_series,
     is_index_selector,
     is_range,
@@ -30,6 +32,7 @@ from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import ColumnNotFoundError
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
     from types import ModuleType
     from typing import Callable
 
@@ -40,17 +43,20 @@ if TYPE_CHECKING:
     from narwhals._compliant.typing import CompliantDataFrameAny, CompliantLazyFrameAny
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.group_by import PolarsGroupBy, PolarsLazyGroupBy
+    from narwhals._spark_like.utils import SparkSession
     from narwhals._translate import IntoArrowTable
+    from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.dtypes import DType
-    from narwhals.schema import Schema
     from narwhals.typing import (
+        IntoSchema,
         JoinStrategy,
         MultiColSelector,
         MultiIndexSelector,
         PivotAgg,
         SingleIndexSelector,
+        UniqueKeepStrategy,
         _2DArray,
     )
 
@@ -88,7 +94,6 @@ INHERITED_METHODS = frozenset(
         "tail",
         "to_arrow",
         "to_pandas",
-        "unique",
         "with_columns",
         "write_csv",
         "write_parquet",
@@ -109,10 +114,11 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
     select: Method[Self]
     sort: Method[Self]
     tail: Method[Self]
-    unique: Method[Self]
     with_columns: Method[Self]
 
+    _native_frame: NativePolarsFrame
     _implementation = Implementation.POLARS
+    _version: Version
 
     def __init__(
         self,
@@ -121,7 +127,7 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
         version: Version,
         validate_backend_version: bool = False,
     ) -> None:
-        self._native_frame: NativePolarsFrame = df
+        self._native_frame = df
         self._version = version
         if validate_backend_version:
             self._validate_backend_version()
@@ -166,16 +172,36 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
     def from_native(cls, data: NativePolarsFrame, /, *, context: _LimitedContext) -> Self:
         return cls(data, version=context._version)
 
-    def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
-        return check_columns_exist(  # pragma: no cover
-            subset, available=self.columns
-        )
-
     def simple_select(self, *column_names: str) -> Self:
         return self._with_native(self.native.select(*column_names))
 
     def aggregate(self, *exprs: Any) -> Self:
         return self.select(*exprs)
+
+    def unique(
+        self,
+        subset: Sequence[str] | None,
+        *,
+        keep: UniqueKeepStrategy,
+        maintain_order: bool | None = None,
+        order_by: Sequence[str] | None = None,
+    ) -> Self:
+        if order_by and maintain_order:
+            token = generate_temporary_column_name(8, self.columns, prefix="row_index_")
+            res = (
+                self.native.with_row_index(token)
+                .sort(order_by, nulls_last=False)
+                .unique(subset or self.columns, keep=keep)
+                .sort(token)
+                .drop(token)
+            )
+        elif order_by:
+            res = self.native.sort(order_by).unique(subset, keep=keep)
+        else:
+            res = self.native.unique(
+                subset, keep=keep, maintain_order=maintain_order or False
+            )
+        return self._with_native(res)
 
     @property
     def schema(self) -> dict[str, DType]:
@@ -183,7 +209,7 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
 
     def join(
         self,
-        other: Self,
+        other: PolarsBaseFrame[NativePolarsFrame],
         *,
         how: JoinStrategy,
         left_on: Sequence[str] | None,
@@ -202,6 +228,19 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
                 suffix=suffix,
             )
         )
+
+    def top_k(
+        self, k: int, *, by: str | Iterable[str], reverse: bool | Sequence[bool]
+    ) -> Self:
+        if self._backend_version < (1, 0, 0):
+            return self._with_native(
+                self.native.top_k(
+                    k=k,
+                    by=by,
+                    descending=reverse,  # type: ignore[call-arg]
+                )
+            )
+        return self._with_native(self.native.top_k(k=k, by=by, reverse=reverse))
 
     def unpivot(
         self,
@@ -238,9 +277,8 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
         if order_by is None:
             result = frame.with_row_index(name)
         else:
-            end = pl.count() if self._backend_version < (0, 20, 5) else pl.len()
             result = frame.select(
-                pl.int_range(start=0, end=end).sort_by(order_by).alias(name), pl.all()
+                pl.int_range(pl.len()).over(order_by=order_by).alias(name), pl.all()
             )
 
         return self._with_native(result)
@@ -264,9 +302,6 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
     write_csv: Method[Any]
     write_parquet: Method[None]
 
-    # CompliantDataFrame
-    _evaluate_aliases: Any
-
     @classmethod
     def from_arrow(cls, data: IntoArrowTable, /, *, context: _LimitedContext) -> Self:
         if context._implementation._backend_version() >= (1, 3):
@@ -282,12 +317,50 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         /,
         *,
         context: _LimitedContext,
-        schema: Mapping[str, DType] | Schema | None,
+        schema: IntoSchema | Mapping[str, DType | None] | None,
     ) -> Self:
-        from narwhals.schema import Schema
-
-        pl_schema = Schema(schema).to_polars() if schema is not None else schema
+        pl_schema = (
+            {
+                key: narwhals_to_native_dtype(dtype, context._version)
+                if dtype is not None
+                else None
+                for (key, dtype) in schema.items()
+            }
+            if schema
+            else None
+        )
         return cls.from_native(pl.from_dict(data, pl_schema), context=context)
+
+    @classmethod
+    def from_dicts(
+        cls,
+        data: Sequence[Mapping[str, Any]],
+        /,
+        *,
+        context: _LimitedContext,
+        schema: IntoSchema | Mapping[str, DType | None] | None,
+    ) -> Self:
+        pl_schema = (
+            {
+                key: narwhals_to_native_dtype(dtype, context._version)
+                if dtype is not None
+                else None
+                for (key, dtype) in schema.items()
+            }
+            if schema
+            else None
+        )
+        if not data:
+            native = pl.DataFrame(schema=pl_schema)
+        elif FROM_DICTS_ACCEPTS_MAPPINGS or isinstance(data[0], dict):
+            native = pl.from_dicts(data, pl_schema)
+        else:  # pragma: no cover
+            columns = pl_schema or tuple(data[0])
+            native = pl.DataFrame(
+                (tuple(row.values()) for row in data), schema=columns, orient="row"
+            )
+
+        return cls.from_native(native, context=context)
 
     @staticmethod
     def _is_native(obj: pl.DataFrame | Any) -> TypeIs[pl.DataFrame]:
@@ -300,7 +373,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         /,
         *,
         context: _LimitedContext,  # NOTE: Maybe only `Implementation`?
-        schema: Mapping[str, DType] | Schema | Sequence[str] | None,
+        schema: IntoSchema | Sequence[str] | None,
     ) -> Self:
         from narwhals.schema import Schema
 
@@ -390,7 +463,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
             selector = rows_native, columns_native
             selected = self.native.__getitem__(selector)  # type: ignore[index]
             return self._from_native_object(selected)
-        else:  # pragma: no cover
+        else:  # pragma: no cover # noqa: RET505
             # TODO(marco): we can delete this branch after Polars==0.20.30 becomes the minimum
             # Polars version we support
             # This mostly mirrors the logic in `EagerDataFrame.__getitem__`.
@@ -408,7 +481,9 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
                         native = native.select(
                             self.columns[slice(columns.start, columns.stop, columns.step)]
                         )
-                    elif is_compliant_series(columns):
+                    # NOTE: `mypy` loses track of `PolarsSeries` when `is_compliant_series` is used here
+                    # `pyright` is fine
+                    elif isinstance(columns, PolarsSeries):
                         native = native[:, columns.native.to_list()]
                     else:
                         native = native[:, columns]
@@ -448,20 +523,24 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         for series in self.native.iter_columns():
             yield PolarsSeries.from_native(series, context=self)
 
-    def lazy(self, *, backend: Implementation | None = None) -> CompliantLazyFrameAny:
+    def lazy(
+        self,
+        backend: _LazyAllowedImpl | None = None,
+        *,
+        session: SparkSession | None = None,
+    ) -> CompliantLazyFrameAny:
         if backend is None or backend is Implementation.POLARS:
             return PolarsLazyFrame.from_native(self.native.lazy(), context=self)
-        elif backend is Implementation.DUCKDB:
+        if backend is Implementation.DUCKDB:
             import duckdb  # ignore-banned-import
 
             from narwhals._duckdb.dataframe import DuckDBLazyFrame
 
-            # NOTE: (F841) is a false positive
-            df = self.native  # noqa: F841
+            _df = self.native
             return DuckDBLazyFrame(
-                duckdb.table("df"), validate_backend_version=True, version=self._version
+                duckdb.table("_df"), validate_backend_version=True, version=self._version
             )
-        elif backend is Implementation.DASK:
+        if backend is Implementation.DASK:
             import dask.dataframe as dd  # ignore-banned-import
 
             from narwhals._dask.dataframe import DaskLazyFrame
@@ -471,7 +550,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
                 validate_backend_version=True,
                 version=self._version,
             )
-        elif backend.is_ibis():
+        if backend is Implementation.IBIS:
             import ibis  # ignore-banned-import
 
             from narwhals._ibis.dataframe import IbisLazyFrame
@@ -479,6 +558,20 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
             return IbisLazyFrame(
                 ibis.memtable(self.native, columns=self.columns),
                 validate_backend_version=True,
+                version=self._version,
+            )
+
+        if backend.is_spark_like():
+            from narwhals._spark_like.dataframe import SparkLikeLazyFrame
+
+            if session is None:
+                msg = "Spark like backends require `session` to be not None."
+                raise ValueError(msg)
+
+            return SparkLikeLazyFrame._from_compliant_dataframe(
+                self,  # pyright: ignore[reportArgumentType]
+                session=session,
+                implementation=backend,
                 version=self._version,
             )
 
@@ -498,8 +591,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
                 name: PolarsSeries.from_native(col, context=self)
                 for name, col in self.native.to_dict().items()
             }
-        else:
-            return self.native.to_dict(as_series=False)
+        return self.native.to_dict(as_series=False)
 
     def group_by(
         self, keys: Sequence[str] | Sequence[PolarsExpr], *, drop_null_keys: bool
@@ -541,7 +633,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
 
     def join(
         self,
-        other: Self,
+        other: PolarsBaseFrame[pl.DataFrame],
         *,
         how: JoinStrategy,
         left_on: Sequence[str] | None,
@@ -555,12 +647,17 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         except Exception as e:  # noqa: BLE001
             raise catch_polars_exception(e) from None
 
+    def top_k(
+        self, k: int, *, by: str | Iterable[str], reverse: bool | Sequence[bool]
+    ) -> Self:
+        try:
+            return super().top_k(k=k, by=by, reverse=reverse)
+        except Exception as e:  # noqa: BLE001  # pragma: no cover
+            raise catch_polars_exception(e) from None
+
 
 class PolarsLazyFrame(PolarsBaseFrame[pl.LazyFrame]):
-    # CompliantLazyFrame
     sink_parquet: Method[None]
-    _evaluate_expr: Any
-    _evaluate_aliases: Any
 
     @staticmethod
     def _is_native(obj: pl.LazyFrame | Any) -> TypeIs[pl.LazyFrame]:
@@ -590,7 +687,7 @@ class PolarsLazyFrame(PolarsBaseFrame[pl.LazyFrame]):
         return func
 
     def _iter_columns(self) -> Iterator[PolarsSeries]:  # pragma: no cover
-        yield from self.collect(self._implementation).iter_columns()
+        yield from self.collect(Implementation.POLARS).iter_columns()
 
     def collect_schema(self) -> dict[str, DType]:
         try:
@@ -599,7 +696,7 @@ class PolarsLazyFrame(PolarsBaseFrame[pl.LazyFrame]):
             raise catch_polars_exception(e) from None
 
     def collect(
-        self, backend: Implementation | None, **kwargs: Any
+        self, backend: _EagerAllowedImpl | None, **kwargs: Any
     ) -> CompliantDataFrameAny:
         try:
             result = self.native.collect(**kwargs)

@@ -12,6 +12,7 @@ from narwhals.dtypes import (
     Datetime as NwDatetime,
     Decimal,
     DType,
+    DTypeClass,
     Duration as NwDuration,
     Enum as NwEnum,
     Field,
@@ -85,7 +86,7 @@ class Enum(NwEnum):
         super(NwEnum, self).__init__()
 
     def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
-        if type(other) is type:
+        if type(other) is DTypeClass:
             return other in {type(self), NwEnum}
         return isinstance(other, type(self))
 

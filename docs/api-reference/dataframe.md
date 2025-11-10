@@ -17,6 +17,8 @@
         - filter
         - from_arrow
         - from_dict
+        - from_dicts
+        - from_numpy
         - gather_every
         - get_column
         - group_by
@@ -49,6 +51,7 @@
         - to_numpy
         - to_pandas
         - to_polars
+        - top_k
         - unique
         - unpivot
         - with_columns
@@ -57,3 +60,4 @@
         - write_parquet
       show_source: false
       show_bases: false
+      inherited_members: true

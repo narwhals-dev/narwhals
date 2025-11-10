@@ -6,13 +6,12 @@ import re
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
-import pandas as pd
-import pyarrow as pa
 import pytest
 
 import narwhals as nw
-from narwhals.exceptions import ComputeError, DuplicateError, InvalidOperationError
+from narwhals.exceptions import DuplicateError, InvalidOperationError
 from tests.utils import (
+    DUCKDB_VERSION,
     PANDAS_VERSION,
     POLARS_VERSION,
     PYARROW_VERSION,
@@ -22,22 +21,25 @@ from tests.utils import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Mapping, Sequence
 
     from narwhals.typing import NonNestedLiteral
 
 
 data: Mapping[str, Any] = {"a": [1, 1, 3], "b": [4, 4, 6], "c": [7.0, 8.0, 9.0]}
 
-df_pandas = pd.DataFrame(data)
-
 POLARS_COLLECT_STREAMING_ENGINE = os.environ.get("NARWHALS_POLARS_NEW_STREAMING", None)
 
 
 def test_group_by_complex() -> None:
+    pytest.importorskip("pandas")
+    pytest.importorskip("pyarrow")
+    import pandas as pd
+    import pyarrow as pa
+
     expected = {"a": [1, 3], "b": [-3.5, -3.0]}
 
-    df = nw.from_native(df_pandas)
+    df = nw.from_native(pd.DataFrame(data))
     with pytest.warns(UserWarning, match="complex group-by"):
         result_pd = nw.to_native(
             df.group_by("a").agg((nw.col("b") - nw.col("c").mean()).mean()).sort("a")
@@ -65,7 +67,7 @@ def test_invalid_group_by_dask() -> None:
     pytest.importorskip("dask")
     import dask.dataframe as dd
 
-    df_dask = dd.from_pandas(df_pandas)
+    df_dask = dd.from_dict(data, npartitions=1)
 
     with pytest.raises(ValueError, match=r"Non-trivial complex aggregation found"):
         nw.from_native(df_dask).group_by("a").agg(nw.col("b").abs().min())
@@ -94,6 +96,9 @@ def test_group_by_iter(constructor_eager: ConstructorEager) -> None:
 
 
 def test_group_by_iter_non_str_pandas() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     expected = {"a": {0: [1], 1: ["a"]}, "b": {0: [2], 1: ["b"]}}
     df = nw.from_native(pd.DataFrame({0: [1, 2], 1: ["a", "b"]}))
     groups: dict[Any, Any] = {keys[0]: df for keys, df in df.group_by(1)}  # type: ignore[call-overload]
@@ -134,6 +139,8 @@ def test_group_by_depth_1_agg(
         pytest.skip(
             "Known issue with variance calculation in pandas 2.0.x with pyarrow backend in groupby operations"
         )
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
     data = {"a": [1, 1, 1, 2], "b": [1, None, 2, 3]}
     expr = getattr(nw.col("b"), attr)()
     result = nw.from_native(constructor(data)).group_by("a").agg(expr).sort("a")
@@ -161,7 +168,7 @@ def test_group_by_depth_1_agg_bool_ops(
     expected: dict[str, list[bool]],
 ) -> None:
     if ("dask-nullable" in request.node.callspec.id) or ("cudf" in str(constructor)):
-        request.applymarker(pytest.mark.xfail(strict=True))
+        request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1, 1, 2, 2, 3, 3], **values}
     result = (
@@ -204,6 +211,8 @@ def test_group_by_median(constructor: Constructor) -> None:
 
 
 def test_group_by_n_unique_w_missing(constructor: Constructor) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
     data = {"a": [1, 1, 2], "b": [4, None, 5], "c": [None, None, 7], "d": [1, 1, 3]}
     result = (
         nw.from_native(constructor(data))
@@ -227,6 +236,9 @@ def test_group_by_n_unique_w_missing(constructor: Constructor) -> None:
 
 
 def test_group_by_same_name_twice() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df = pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
     pattern = re.compile(
         "expected unique.+names.+'b'.+2 times", re.IGNORECASE | re.DOTALL
@@ -236,6 +248,9 @@ def test_group_by_same_name_twice() -> None:
 
 
 def test_group_by_empty_result_pandas() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df_any = pd.DataFrame({"a": [1, 2, 3], "b": [4, 3, 2]})
     df = nw.from_native(df_any, eager_only=True)
     with pytest.raises(ValueError, match="No results"):
@@ -364,7 +379,7 @@ def test_group_by_shift_raises(constructor: Constructor) -> None:
     df_native = {"a": [1, 2, 3], "b": [1, 1, 2]}
     df = nw.from_native(constructor(df_native))
     with pytest.raises(InvalidOperationError, match="does not aggregate"):
-        df.group_by("b").agg(nw.col("a").shift(1))
+        df.group_by("b").agg(nw.col("a").abs())
 
 
 def test_double_same_aggregation(
@@ -391,6 +406,8 @@ def test_all_kind_of_aggs(
         pytest.skip(
             "Pandas < 1.4.0 does not support multiple aggregations with the same column"
         )
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
     df = nw.from_native(constructor({"a": [1, 1, 1, 2, 2, 2], "b": [4, 5, 6, 0, 5, 5]}))
     result = (
         df.group_by("a")
@@ -421,6 +438,9 @@ def test_all_kind_of_aggs(
 
 
 def test_pandas_group_by_index_and_column_overlap() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df = pd.DataFrame(
         {"a": [1, 1, 2], "b": [4, 5, 6]}, index=pd.Index([0, 1, 2], name="a")
     )
@@ -511,36 +531,36 @@ def test_group_by_expr(
 
 
 @pytest.mark.parametrize(
-    ("keys", "lazy_context"),
+    "keys",
     [
-        ([nw.col("a").drop_nulls()], pytest.raises(InvalidOperationError)),  # Filtration
-        (
-            [nw.col("a").alias("foo"), nw.col("a").drop_nulls()],
-            pytest.raises(InvalidOperationError),
-        ),  # Transform and Filtration
-        (
-            [nw.col("a").alias("foo"), nw.col("a").max()],
-            pytest.raises(ComputeError),
-        ),  # Transform and Aggregation
-        (
-            [nw.col("a").alias("foo"), nw.col("a").cum_max()],
-            pytest.raises(InvalidOperationError),
-        ),  # Transform and Window
-        ([nw.lit(42)], pytest.raises(ComputeError)),  # Literal
-        ([nw.lit(42).abs()], pytest.raises(ComputeError)),  # Literal
+        [nw.col("a").drop_nulls()],  # Transform and Filtration
+        [nw.col("a").alias("foo"), nw.col("a").drop_nulls()],  # Transform and Filtration
+        [nw.col("a").alias("foo"), nw.col("a").max()],  # Transform and Aggregation
+        [nw.lit(42)],  # Literal
+        [nw.lit(42).abs()],  # Literal
     ],
 )
-def test_group_by_raise_if_not_elementwise(
-    constructor: Constructor, keys: list[nw.Expr], lazy_context: Any
+def test_group_by_raise_if_not_preserves_length(
+    constructor: Constructor, keys: list[nw.Expr]
 ) -> None:
     data = {"a": [1, 2, 2, None], "b": [0, 1, 2, 3], "x": [1, 2, 3, 4]}
     df = nw.from_native(constructor(data))
-
-    context: Any = (
-        lazy_context if isinstance(df, nw.LazyFrame) else pytest.raises(ComputeError)
-    )
-    with context:
+    with pytest.raises((InvalidOperationError, NotImplementedError)):
         df.group_by(keys).agg(nw.col("x").max())
+
+
+def test_group_by_window(constructor: Constructor) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
+    data = {"a": [1, 2, 2, None], "b": [1, 1, 2, 2], "x": [1, 2, 3, 4]}
+    df = nw.from_native(constructor(data))
+    result = (
+        df.group_by(nw.col("a").mean().over("b"))
+        .agg(nw.col("x").max())
+        .sort("a", nulls_last=True)
+    )
+    expected = {"a": [1.5, 2.0], "x": [2, 4]}
+    assert_equal_data(result, expected)
 
 
 @pytest.mark.parametrize(
@@ -558,14 +578,19 @@ def test_group_by_raise_drop_null_keys_with_exprs(
 
 
 def test_group_by_selector(constructor: Constructor) -> None:
-    data = {"a": [1, 1, 1], "b": [4, 4, 6], "c": [7.5, 8.5, 9.0]}
+    data = {
+        "a": [1, 1, 1],
+        "b": [4, 4, 6],
+        "c": ["foo", "foo", "bar"],
+        "x": [7.5, 8.5, 9.0],
+    }
     result = (
         nw.from_native(constructor(data))
-        .group_by(nw.selectors.by_dtype(nw.Int64))
-        .agg(nw.col("c").mean())
+        .group_by(nw.selectors.by_dtype(nw.Int64), "c")
+        .agg(nw.col("x").mean())
         .sort("a", "b")
     )
-    expected = {"a": [1, 1], "b": [4, 6], "c": [8.0, 9.0]}
+    expected = {"a": [1, 1], "b": [4, 6], "c": ["foo", "bar"], "x": [8.0, 9.0]}
     assert_equal_data(result, expected)
 
 
@@ -657,4 +682,132 @@ def test_group_by_no_preserve_dtype(
     )
     actual_dtype = result.schema["n_unique"]
     assert actual_dtype.is_integer()
+    assert_equal_data(result, expected)
+
+
+def test_top_level_len(constructor: Constructor) -> None:
+    # https://github.com/holoviz/holoviews/pull/6567#issuecomment-3178743331
+    df = nw.from_native(
+        constructor({"gender": ["m", "f", "f"], "weight": [4, 5, 6], "age": [None, 8, 9]})
+    )
+    result = df.group_by(["gender"]).agg(nw.all().len()).sort("gender")
+    expected = {"gender": ["f", "m"], "weight": [2, 1], "age": [2, 1]}
+    assert_equal_data(result, expected)
+    result = (
+        df.group_by("gender")
+        .agg(nw.col("weight").len(), nw.col("age").len())
+        .sort("gender")
+    )
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("keys", "aggs", "expected", "pre_sort"),
+    [
+        (["a"], ["b"], {"a": [1, 2, 3, 4], "b": [1, 2, 4, 6]}, None),
+        (["a"], ["b"], {"a": [1, 2, 3, 4], "b": [1, 3, 5, 6]}, {"descending": True}),
+        (["a"], ["c"], {"a": [1, 2, 3, 4], "c": [None, "A", None, "B"]}, None),
+        (
+            ["a"],
+            ["c"],
+            {"a": [1, 2, 3, 4], "c": [None, "A", "B", "B"]},
+            {"nulls_last": True},
+        ),
+    ],
+    ids=["no-sort", "sort-descending", "NA-order-nulls-first", "NA-order-nulls-last"],
+)
+def test_group_by_agg_first(
+    constructor_eager: ConstructorEager,
+    keys: Sequence[str],
+    aggs: Sequence[str],
+    expected: Mapping[str, Any],
+    pre_sort: Mapping[str, Any] | None,
+    request: pytest.FixtureRequest,
+) -> None:
+    request.applymarker(
+        pytest.mark.xfail(
+            "pyarrow_table" in str(constructor_eager) and (PYARROW_VERSION < (14, 0)),
+            reason="https://github.com/apache/arrow/issues/36709",
+            raises=NotImplementedError,
+        )
+    )
+    data = {
+        "a": [1, 2, 2, 3, 3, 4],
+        "b": [1, 2, 3, 4, 5, 6],
+        "c": [None, "A", "A", None, "B", "B"],
+    }
+    df = nw.from_native(constructor_eager(data))
+    if pre_sort:
+        df = df.sort(aggs, **pre_sort)
+    result = df.group_by(keys).agg(nw.col(aggs).first()).sort(keys)
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("keys", "aggs", "expected", "pre_sort"),
+    [
+        (["a"], ["b"], {"a": [1, 2, 3, 4], "b": [1, 3, 5, 6]}, None),
+        (["a"], ["b"], {"a": [1, 2, 3, 4], "b": [1, 2, 4, 6]}, {"descending": True}),
+        (["a"], ["c"], {"a": [1, 2, 3, 4], "c": [None, "A", "B", "B"]}, None),
+        (
+            ["a"],
+            ["c"],
+            {"a": [1, 2, 3, 4], "c": [None, "A", None, "B"]},
+            {"nulls_last": True},
+        ),
+    ],
+    ids=["no-sort", "sort-descending", "NA-order-nulls-first", "NA-order-nulls-last"],
+)
+def test_group_by_agg_last(
+    constructor_eager: ConstructorEager,
+    keys: Sequence[str],
+    aggs: Sequence[str],
+    expected: Mapping[str, Any],
+    pre_sort: Mapping[str, Any] | None,
+    request: pytest.FixtureRequest,
+) -> None:
+    request.applymarker(
+        pytest.mark.xfail(
+            "pyarrow_table" in str(constructor_eager) and (PYARROW_VERSION < (14, 0)),
+            reason="https://github.com/apache/arrow/issues/36709",
+            raises=NotImplementedError,
+        )
+    )
+    data = {
+        "a": [1, 2, 2, 3, 3, 4],
+        "b": [1, 2, 3, 4, 5, 6],
+        "c": [None, "A", "A", None, "B", "B"],
+    }
+    df = nw.from_native(constructor_eager(data))
+    if pre_sort:
+        df = df.sort(aggs, **pre_sort)
+    result = df.group_by(keys).agg(nw.col(aggs).last()).sort(keys)
+    assert_equal_data(result, expected)
+
+
+def test_multi_column_expansion(constructor: Constructor) -> None:
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 32):
+        pytest.skip(reason="https://github.com/pola-rs/polars/issues/21773")
+    if "modin" in str(constructor):
+        pytest.skip(reason="Internal error")
+    df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
+    result = (
+        df.group_by("a")
+        .agg(nw.all().sum().name.suffix("_aggregated"))
+        .sort("a", descending=True)
+    )
+    expected = {"a": [2, 1], "b_aggregated": [6, 9]}
+    assert_equal_data(result, expected)
+    result = (
+        df.group_by("a")
+        .agg(nw.col("a", "b").sum().name.suffix("_aggregated"))
+        .sort("a", descending=True)
+    )
+    expected = {"a": [2, 1], "a_aggregated": [2, 2], "b_aggregated": [6, 9]}
+    assert_equal_data(result, expected)
+    result = (
+        df.group_by("a")
+        .agg(nw.nth(0, 1).sum().name.suffix("_aggregated"))
+        .sort("a", descending=True)
+    )
     assert_equal_data(result, expected)

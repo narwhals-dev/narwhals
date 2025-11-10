@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals._compliant import LazyExprNamespace
-from narwhals._compliant.any_namespace import DateTimeNamespace
 from narwhals._constants import US_PER_SECOND
 from narwhals._duration import Interval
 from narwhals._spark_like.utils import (
@@ -11,6 +9,7 @@ from narwhals._spark_like.utils import (
     fetch_session_time_zone,
     strptime_to_pyspark_format,
 )
+from narwhals._sql.expr_dt import SQLExprDateTimeNamesSpace
 from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
@@ -22,15 +21,13 @@ if TYPE_CHECKING:
     from narwhals._spark_like.expr import SparkLikeExpr
 
 
-class SparkLikeExprDateTimeNamespace(
-    LazyExprNamespace["SparkLikeExpr"], DateTimeNamespace["SparkLikeExpr"]
-):
+class SparkLikeExprDateTimeNamespace(SQLExprDateTimeNamesSpace["SparkLikeExpr"]):
     def _weekday(self, expr: Column) -> Column:
         # PySpark's dayofweek returns 1-7 for Sunday-Saturday
         return (self.compliant._F.dayofweek(expr) + 6) % 7
 
     def to_string(self, format: str) -> SparkLikeExpr:
-        F = self.compliant._F  # noqa: N806
+        F = self.compliant._F
 
         def _to_string(expr: Column) -> Column:
             # Handle special formats
@@ -63,27 +60,6 @@ class SparkLikeExprDateTimeNamespace(
 
         return self.compliant._with_elementwise(_to_string)
 
-    def date(self) -> SparkLikeExpr:
-        return self.compliant._with_elementwise(self.compliant._F.to_date)
-
-    def year(self) -> SparkLikeExpr:
-        return self.compliant._with_elementwise(self.compliant._F.year)
-
-    def month(self) -> SparkLikeExpr:
-        return self.compliant._with_elementwise(self.compliant._F.month)
-
-    def day(self) -> SparkLikeExpr:
-        return self.compliant._with_elementwise(self.compliant._F.day)
-
-    def hour(self) -> SparkLikeExpr:
-        return self.compliant._with_elementwise(self.compliant._F.hour)
-
-    def minute(self) -> SparkLikeExpr:
-        return self.compliant._with_elementwise(self.compliant._F.minute)
-
-    def second(self) -> SparkLikeExpr:
-        return self.compliant._with_elementwise(self.compliant._F.second)
-
     def millisecond(self) -> SparkLikeExpr:
         def _millisecond(expr: Column) -> Column:
             return self.compliant._F.floor(
@@ -103,9 +79,6 @@ class SparkLikeExprDateTimeNamespace(
             return (self.compliant._F.unix_micros(expr) % US_PER_SECOND) * 1000
 
         return self.compliant._with_elementwise(_nanosecond)
-
-    def ordinal_day(self) -> SparkLikeExpr:
-        return self.compliant._with_elementwise(self.compliant._F.dayofyear)
 
     def weekday(self) -> SparkLikeExpr:
         return self.compliant._with_elementwise(self._weekday)
@@ -133,7 +106,7 @@ class SparkLikeExprDateTimeNamespace(
             msg = "Offsetting by nanoseconds is not yet supported for Spark-like."
             raise NotImplementedError(msg)
 
-        F = self.compliant._F  # noqa: N806
+        F = self.compliant._F
 
         def _offset_by(expr: Column) -> Column:
             # https://github.com/eakmanrq/sqlframe/issues/441
@@ -174,12 +147,11 @@ class SparkLikeExprDateTimeNamespace(
             return self.compliant._with_elementwise(
                 lambda expr: expr.cast("timestamp_ntz")
             )
-        else:
-            return self._no_op_time_zone(time_zone)
+        return self._no_op_time_zone(time_zone)
 
     def _format_iso_week_with_day(self, expr: Column) -> Column:
         """Format datetime as ISO week string with day."""
-        F = self.compliant._F  # noqa: N806
+        F = self.compliant._F
 
         year = F.date_format(expr, "yyyy")
         week = F.lpad(F.weekofyear(expr).cast("string"), 2, "0")
@@ -188,7 +160,7 @@ class SparkLikeExprDateTimeNamespace(
 
     def _format_iso_week(self, expr: Column) -> Column:
         """Format datetime as ISO week string."""
-        F = self.compliant._F  # noqa: N806
+        F = self.compliant._F
 
         year = F.date_format(expr, "yyyy")
         week = F.lpad(F.weekofyear(expr).cast("string"), 2, "0")
@@ -198,7 +170,7 @@ class SparkLikeExprDateTimeNamespace(
         self, expr: Column, format: str
     ) -> tuple[str, tuple[Column, ...]]:
         """Format microseconds if present in format, else it's a no-op."""
-        F = self.compliant._F  # noqa: N806
+        F = self.compliant._F
 
         suffix: tuple[Column, ...]
         if format.endswith((".%f", "%.f")):

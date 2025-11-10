@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
-import numpy as np
 import pytest
+
+pytest.importorskip("numpy")
+import numpy as np
 
 import narwhals as nw
 from tests.utils import ConstructorEager, assert_equal_data
@@ -55,7 +57,7 @@ def test_from_numpy_schema_notvalid(constructor_eager: ConstructorEager) -> None
 def test_from_numpy_non_eager() -> None:
     pytest.importorskip("duckdb")
     with pytest.raises(ValueError, match="lazy-only"):
-        nw.from_numpy(arr, backend="duckdb")
+        nw.from_numpy(arr, backend="duckdb")  # type: ignore[arg-type]
 
 
 def test_from_numpy_not2d(constructor_eager: ConstructorEager) -> None:

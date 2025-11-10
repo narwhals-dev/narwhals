@@ -8,6 +8,7 @@ import pytest
 
 import narwhals as nw
 from tests.utils import (
+    DASK_VERSION,
     DUCKDB_VERSION,
     POLARS_VERSION,
     Constructor,
@@ -33,12 +34,28 @@ def test_fill_null(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+def test_fill_null_w_aggregate(constructor: Constructor) -> None:
+    if "dask" in str(constructor) and DASK_VERSION < (2024, 12):
+        # Bug in old version of Dask.
+        pytest.skip()
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
+    data = {"a": [0.5, None, 2.0, 3.0, 4.5], "b": ["xx", "yy", "zz", None, "yy"]}
+    df = nw.from_native(constructor(data))
+
+    result = df.select(
+        nw.col("a").fill_null(nw.col("a").mean()), nw.col("b").fill_null("a")
+    )
+    expected = {"a": [0.5, 2.5, 2.0, 3.0, 4.5], "b": ["xx", "yy", "zz", "a", "yy"]}
+    assert_equal_data(result, expected)
+
+
 def test_fill_null_pandas_downcast() -> None:
     pytest.importorskip("pandas")
     import pandas as pd
 
     df = nw.from_native(pd.DataFrame({"a": [True, None]}))
-    result = df.select(nw.col("a").fill_null(False))  # noqa: FBT003
+    result = df.select(nw.col("a").fill_null(False))
     expected = {"a": [True, False]}
     assert_equal_data(result, expected)
     assert result["a"].to_native().dtype == "object"

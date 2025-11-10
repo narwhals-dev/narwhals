@@ -1,24 +1,30 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import duckdb
+from duckdb import Expression
 
-from narwhals._utils import Version, isinstance_or_issubclass
+try:
+    import duckdb.sqltypes as duckdb_dtypes
+except ModuleNotFoundError:
+    # DuckDB pre 1.3
+    import duckdb.typing as duckdb_dtypes
+
+from narwhals._utils import Version, extend_bool, isinstance_or_issubclass, zip_strict
 from narwhals.exceptions import ColumnNotFoundError
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Mapping, Sequence
 
-    from duckdb import DuckDBPyRelation, Expression
-    from duckdb.typing import DuckDBPyType
+    from duckdb import DuckDBPyRelation
 
     from narwhals._compliant.typing import CompliantLazyFrameAny
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.expr import DuckDBExpr
     from narwhals.dtypes import DType
-    from narwhals.typing import IntoDType
+    from narwhals.typing import IntoDType, TimeUnit
 
 
 UNITS_DICT = {
@@ -32,12 +38,6 @@ UNITS_DICT = {
     "ms": "millisecond",
     "us": "microsecond",
     "ns": "nanosecond",
-}
-UNIT_TO_TIMESTAMPS = {
-    "s": "TIMESTAMP_S",
-    "ms": "TIMESTAMP_MS",
-    "us": "TIMESTAMP",
-    "ns": "TIMESTAMP_NS",
 }
 DESCENDING_TO_ORDER = {True: "desc", False: "asc"}
 NULLS_LAST_TO_NULLS_POS = {True: "nulls last", False: "nulls first"}
@@ -55,6 +55,22 @@ F = duckdb.FunctionExpression
 """Alias for `duckdb.FunctionExpression`."""
 
 
+def lambda_expr(
+    params: str | Expression | tuple[Expression, ...], expr: Expression, /
+) -> Expression:
+    """Wraps [`duckdb.LambdaExpression`].
+
+    [`duckdb.LambdaExpression`]: https://duckdb.org/docs/stable/sql/functions/lambda
+    """
+    try:
+        from duckdb import LambdaExpression
+    except ModuleNotFoundError as exc:
+        msg = f"DuckDB>=1.2.0 is required for this operation. Found: DuckDB {duckdb.__version__}"
+        raise NotImplementedError(msg) from exc
+    args = (params,) if isinstance(params, Expression) else params
+    return LambdaExpression(args, expr)
+
+
 def concat_str(*exprs: Expression, separator: str = "") -> Expression:
     """Concatenate many strings, NULL inputs are skipped.
 
@@ -64,8 +80,6 @@ def concat_str(*exprs: Expression, separator: str = "") -> Expression:
         exprs: Native columns.
         separator: String that will be used to separate the values of each column.
 
-    Returns:
-        A new native expression.
 
     [concat]: https://duckdb.org/docs/stable/sql/functions/char.html#concatstring-
     [concat_ws]: https://duckdb.org/docs/stable/sql/functions/char.html#concat_wsseparator-string-
@@ -73,12 +87,12 @@ def concat_str(*exprs: Expression, separator: str = "") -> Expression:
     return F("concat_ws", lit(separator), *exprs) if separator else F("concat", *exprs)
 
 
-def evaluate_exprs(
+def evaluate_exprs_and_aliases(
     df: DuckDBLazyFrame, /, *exprs: DuckDBExpr
 ) -> list[tuple[str, Expression]]:
     native_results: list[tuple[str, Expression]] = []
     for expr in exprs:
-        native_series_list = expr._call(df)
+        native_series_list = expr(df)
         output_names = expr._evaluate_output_names(df)
         if expr._alias_output_names is not None:
             output_names = expr._alias_output_names(output_names)
@@ -121,7 +135,9 @@ class DeferredTimeZone:
 
 
 def native_to_narwhals_dtype(
-    duckdb_dtype: DuckDBPyType, version: Version, deferred_time_zone: DeferredTimeZone
+    duckdb_dtype: duckdb_dtypes.DuckDBPyType,
+    version: Version,
+    deferred_time_zone: DeferredTimeZone,
 ) -> DType:
     duckdb_dtype_id = duckdb_dtype.id
     dtypes = version.dtypes
@@ -205,63 +221,55 @@ def _non_nested_native_to_narwhals_dtype(duckdb_dtype_id: str, version: Version)
     }.get(duckdb_dtype_id, dtypes.Unknown())
 
 
-def narwhals_to_native_dtype(  # noqa: PLR0912,PLR0915,C901
+dtypes = Version.MAIN.dtypes
+NW_TO_DUCKDB_DTYPES: Mapping[type[DType], duckdb_dtypes.DuckDBPyType] = {
+    dtypes.Float64: duckdb_dtypes.DOUBLE,
+    dtypes.Float32: duckdb_dtypes.FLOAT,
+    dtypes.Binary: duckdb_dtypes.BLOB,
+    dtypes.String: duckdb_dtypes.VARCHAR,
+    dtypes.Boolean: duckdb_dtypes.BOOLEAN,
+    dtypes.Date: duckdb_dtypes.DATE,
+    dtypes.Time: duckdb_dtypes.TIME,
+    dtypes.Int8: duckdb_dtypes.TINYINT,
+    dtypes.Int16: duckdb_dtypes.SMALLINT,
+    dtypes.Int32: duckdb_dtypes.INTEGER,
+    dtypes.Int64: duckdb_dtypes.BIGINT,
+    dtypes.Int128: duckdb_dtypes.HUGEINT,
+    dtypes.UInt8: duckdb_dtypes.UTINYINT,
+    dtypes.UInt16: duckdb_dtypes.USMALLINT,
+    dtypes.UInt32: duckdb_dtypes.UINTEGER,
+    dtypes.UInt64: duckdb_dtypes.UBIGINT,
+    dtypes.UInt128: duckdb_dtypes.UHUGEINT,
+}
+TIME_UNIT_TO_TIMESTAMP: Mapping[TimeUnit, duckdb_dtypes.DuckDBPyType] = {
+    "s": duckdb_dtypes.TIMESTAMP_S,
+    "ms": duckdb_dtypes.TIMESTAMP_MS,
+    "us": duckdb_dtypes.TIMESTAMP,
+    "ns": duckdb_dtypes.TIMESTAMP_NS,
+}
+UNSUPPORTED_DTYPES = (dtypes.Decimal, dtypes.Categorical)
+
+
+def narwhals_to_native_dtype(  # noqa: PLR0912, C901
     dtype: IntoDType, version: Version, deferred_time_zone: DeferredTimeZone
-) -> str:
+) -> duckdb_dtypes.DuckDBPyType:
     dtypes = version.dtypes
-    if isinstance_or_issubclass(dtype, dtypes.Decimal):
-        msg = "Casting to Decimal is not supported yet."
-        raise NotImplementedError(msg)
-    if isinstance_or_issubclass(dtype, dtypes.Float64):
-        return "DOUBLE"
-    if isinstance_or_issubclass(dtype, dtypes.Float32):
-        return "FLOAT"
-    if isinstance_or_issubclass(dtype, dtypes.Int128):
-        return "INT128"
-    if isinstance_or_issubclass(dtype, dtypes.Int64):
-        return "BIGINT"
-    if isinstance_or_issubclass(dtype, dtypes.Int32):
-        return "INTEGER"
-    if isinstance_or_issubclass(dtype, dtypes.Int16):
-        return "SMALLINT"
-    if isinstance_or_issubclass(dtype, dtypes.Int8):
-        return "TINYINT"
-    if isinstance_or_issubclass(dtype, dtypes.UInt128):
-        return "UINT128"
-    if isinstance_or_issubclass(dtype, dtypes.UInt64):
-        return "UBIGINT"
-    if isinstance_or_issubclass(dtype, dtypes.UInt32):
-        return "UINTEGER"
-    if isinstance_or_issubclass(dtype, dtypes.UInt16):  # pragma: no cover
-        return "USMALLINT"
-    if isinstance_or_issubclass(dtype, dtypes.UInt8):  # pragma: no cover
-        return "UTINYINT"
-    if isinstance_or_issubclass(dtype, dtypes.String):
-        return "VARCHAR"
-    if isinstance_or_issubclass(dtype, dtypes.Boolean):  # pragma: no cover
-        return "BOOLEAN"
-    if isinstance_or_issubclass(dtype, dtypes.Time):
-        return "TIME"
-    if isinstance_or_issubclass(dtype, dtypes.Binary):
-        return "BLOB"
-    if isinstance_or_issubclass(dtype, dtypes.Categorical):
-        msg = "Categorical not supported by DuckDB"
-        raise NotImplementedError(msg)
+    base_type = dtype.base_type()
+    if duckdb_type := NW_TO_DUCKDB_DTYPES.get(base_type):
+        return duckdb_type
     if isinstance_or_issubclass(dtype, dtypes.Enum):
         if version is Version.V1:
             msg = "Converting to Enum is not supported in narwhals.stable.v1"
             raise NotImplementedError(msg)
         if isinstance(dtype, dtypes.Enum):
-            categories = "'" + "', '".join(dtype.categories) + "'"
-            return f"ENUM ({categories})"
+            return duckdb_dtypes.DuckDBPyType(f"ENUM{dtype.categories!r}")
         msg = "Can not cast / initialize Enum without categories present"
         raise ValueError(msg)
-
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
         tu = dtype.time_unit
         tz = dtype.time_zone
         if not tz:
-            return UNIT_TO_TIMESTAMPS[tu]
+            return TIME_UNIT_TO_TIMESTAMP[tu]
         if tu != "us":
             msg = f"Only microsecond precision is supported for timezone-aware `Datetime` in DuckDB, got {tu} precision"
             raise ValueError(msg)
@@ -269,30 +277,30 @@ def narwhals_to_native_dtype(  # noqa: PLR0912,PLR0915,C901
             msg = f"Only the connection time zone {rel_tz} is supported, got: {tz}."
             raise ValueError(msg)
         # TODO(unassigned): cover once https://github.com/narwhals-dev/narwhals/issues/2742 addressed
-        return "TIMESTAMPTZ"  # pragma: no cover
+        return duckdb_dtypes.TIMESTAMP_TZ  # pragma: no cover
     if isinstance_or_issubclass(dtype, dtypes.Duration):
         if (tu := dtype.time_unit) != "us":  # pragma: no cover
             msg = f"Only microsecond-precision Duration is supported, got {tu} precision"
-        return "INTERVAL"
-    if isinstance_or_issubclass(dtype, dtypes.Date):
-        return "DATE"
+        return duckdb_dtypes.INTERVAL
     if isinstance_or_issubclass(dtype, dtypes.List):
         inner = narwhals_to_native_dtype(dtype.inner, version, deferred_time_zone)
-        return f"{inner}[]"
+        return duckdb.list_type(inner)
     if isinstance_or_issubclass(dtype, dtypes.Struct):
-        inner = ", ".join(
-            f'"{field.name}" {narwhals_to_native_dtype(field.dtype, version, deferred_time_zone)}'
+        fields = {
+            field.name: narwhals_to_native_dtype(field.dtype, version, deferred_time_zone)
             for field in dtype.fields
-        )
-        return f"STRUCT({inner})"
-    if isinstance_or_issubclass(dtype, dtypes.Array):
-        shape = dtype.shape
-        duckdb_shape_fmt = "".join(f"[{item}]" for item in shape)
-        inner_dtype: Any = dtype
-        for _ in shape:
-            inner_dtype = inner_dtype.inner
-        duckdb_inner = narwhals_to_native_dtype(inner_dtype, version, deferred_time_zone)
-        return f"{duckdb_inner}{duckdb_shape_fmt}"
+        }
+        return duckdb.struct_type(fields)
+    if isinstance(dtype, dtypes.Array):
+        nw_inner: IntoDType = dtype
+        while isinstance(nw_inner, dtypes.Array):
+            nw_inner = nw_inner.inner
+        duckdb_inner = narwhals_to_native_dtype(nw_inner, version, deferred_time_zone)
+        duckdb_shape_fmt = "".join(f"[{item}]" for item in dtype.shape)
+        return duckdb_dtypes.DuckDBPyType(f"{duckdb_inner}{duckdb_shape_fmt}")
+    if issubclass(base_type, UNSUPPORTED_DTYPES):
+        msg = f"Converting to {base_type.__name__} dtype is not supported for DuckDB."
+        raise NotImplementedError(msg)
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
 
@@ -308,6 +316,10 @@ def generate_partition_by_sql(*partition_by: str | Expression) -> str:
     return f"partition by {by_sql}"
 
 
+def join_column_names(*names: str) -> str:
+    return ", ".join(str(col(name)) for name in names)
+
+
 def generate_order_by_sql(
     *order_by: str | Expression, descending: Sequence[bool], nulls_last: Sequence[bool]
 ) -> str:
@@ -315,7 +327,7 @@ def generate_order_by_sql(
         return ""
     by_sql = ",".join(
         f"{parse_into_expression(x)} {DESCENDING_TO_ORDER[_descending]} {NULLS_LAST_TO_NULLS_POS[_nulls_last]}"
-        for x, _descending, _nulls_last in zip(order_by, descending, nulls_last)
+        for x, _descending, _nulls_last in zip_strict(order_by, descending, nulls_last)
     )
     return f"order by {by_sql}"
 
@@ -333,14 +345,10 @@ def window_expression(
 ) -> Expression:
     # TODO(unassigned): Replace with `duckdb.WindowExpression` when they release it.
     # https://github.com/duckdb/duckdb/discussions/14725#discussioncomment-11200348
-    try:
-        from duckdb import SQLExpression
-    except ModuleNotFoundError as exc:  # pragma: no cover
-        msg = f"DuckDB>=1.3.0 is required for this operation. Found: DuckDB {duckdb.__version__}"
-        raise NotImplementedError(msg) from exc
     pb = generate_partition_by_sql(*partition_by)
-    descending = descending or [False] * len(order_by)
-    nulls_last = nulls_last or [False] * len(order_by)
+    flags = extend_bool(False, len(order_by))
+    descending = descending or flags
+    nulls_last = nulls_last or flags
     ob = generate_order_by_sql(*order_by, descending=descending, nulls_last=nulls_last)
 
     if rows_start is not None and rows_end is not None:
@@ -353,7 +361,7 @@ def window_expression(
         rows = ""
 
     func = f"{str(expr).removesuffix(')')} ignore nulls)" if ignore_nulls else str(expr)
-    return SQLExpression(f"{func} over ({pb} {ob} {rows})")
+    return sql_expression(f"{func} over ({pb} {ob} {rows})")
 
 
 def catch_duckdb_exception(
@@ -376,4 +384,39 @@ def catch_duckdb_exception(
 def function(name: str, *args: Expression) -> Expression:
     if name == "isnull":
         return args[0].isnull()
+    if name == "count_distinct":
+        return sql_expression(f"count(distinct {args[0]})")
     return F(name, *args)
+
+
+def sql_expression(expr: str) -> Expression:
+    try:
+        from duckdb import SQLExpression
+    except ImportError as exc:  # pragma: no cover
+        msg = f"DuckDB>=1.3.0 is required for this operation. Found: DuckDB {duckdb.__version__}"
+        raise NotImplementedError(msg) from exc
+    return SQLExpression(expr)
+
+
+__all__ = [
+    "UNITS_DICT",
+    "DeferredTimeZone",
+    "F",
+    "catch_duckdb_exception",
+    "col",
+    "concat_str",
+    "duckdb_dtypes",
+    "fetch_rel_time_zone",
+    "function",
+    "generate_order_by_sql",
+    "generate_partition_by_sql",
+    "join_column_names",
+    "lambda_expr",
+    "lit",
+    "narwhals_to_native_dtype",
+    "native_to_narwhals_dtype",
+    "parse_into_expression",
+    "sql_expression",
+    "when",
+    "window_expression",
+]

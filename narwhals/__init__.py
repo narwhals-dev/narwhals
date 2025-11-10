@@ -54,10 +54,11 @@ from narwhals.functions import (
     concat,
     concat_str,
     exclude,
+    format,
     from_arrow,
     from_dict,
+    from_dicts,
     from_numpy,
-    get_level,
     len_ as len,
     lit,
     max,
@@ -136,12 +137,13 @@ __all__ = [
     "dtypes",
     "exceptions",
     "exclude",
+    "format",
     "from_arrow",
     "from_dict",
+    "from_dicts",
     "from_native",
     "from_numpy",
     "generate_temporary_column_name",
-    "get_level",
     "get_native_namespace",
     "is_ordered_categorical",
     "len",
@@ -183,6 +185,5 @@ def __getattr__(name: _t.Literal["__version__"]) -> str:  # type: ignore[misc]
 
         __version__ = metadata.version(__name__)
         return __version__
-    else:
-        msg = f"module {__name__!r} has no attribute {name!r}"
-        raise AttributeError(msg)
+    msg = f"module {__name__!r} has no attribute {name!r}"
+    raise AttributeError(msg)

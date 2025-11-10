@@ -2,21 +2,25 @@ from __future__ import annotations
 
 import operator
 from io import BytesIO
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import ibis
 import ibis.expr.types as ir
 
-from narwhals._ibis.utils import evaluate_exprs, native_to_narwhals_dtype
+from narwhals._ibis.expr import IbisExpr
+from narwhals._ibis.utils import evaluate_exprs, lit, native_to_narwhals_dtype
+from narwhals._sql.dataframe import SQLLazyFrame
 from narwhals._utils import (
     Implementation,
     ValidateBackendVersion,
     Version,
+    generate_temporary_column_name,
     not_implemented,
     parse_columns_to_drop,
+    to_pyarrow_table,
+    zip_strict,
 )
-from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError
-from narwhals.typing import CompliantLazyFrame
+from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
@@ -29,23 +33,21 @@ if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias, TypeIs
 
     from narwhals._compliant.typing import CompliantDataFrameAny
-    from narwhals._ibis.expr import IbisExpr
     from narwhals._ibis.group_by import IbisGroupBy
     from narwhals._ibis.namespace import IbisNamespace
     from narwhals._ibis.series import IbisInterchangeSeries
+    from narwhals._typing import _EagerAllowedImpl
     from narwhals._utils import _LimitedContext
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.stable.v1 import DataFrame as DataFrameV1
-    from narwhals.typing import AsofJoinStrategy, JoinStrategy, LazyUniqueKeepStrategy
+    from narwhals.typing import AsofJoinStrategy, JoinStrategy, UniqueKeepStrategy
 
     JoinPredicates: TypeAlias = "Sequence[ir.BooleanColumn] | Sequence[str]"
 
 
 class IbisLazyFrame(
-    CompliantLazyFrame[
-        "IbisExpr", "ir.Table", "LazyFrame[ir.Table] | DataFrameV1[ir.Table]"
-    ],
+    SQLLazyFrame["IbisExpr", "ir.Table", "LazyFrame[ir.Table] | DataFrameV1[ir.Table]"],
     ValidateBackendVersion,
 ):
     _implementation = Implementation.IBIS
@@ -103,13 +105,13 @@ class IbisLazyFrame(
             yield self.native[name]
 
     def collect(
-        self, backend: ModuleType | Implementation | str | None, **kwargs: Any
+        self, backend: _EagerAllowedImpl | None, **kwargs: Any
     ) -> CompliantDataFrameAny:
         if backend is None or backend is Implementation.PYARROW:
             from narwhals._arrow.dataframe import ArrowDataFrame
 
             return ArrowDataFrame(
-                self.native.to_pyarrow(),
+                to_pyarrow_table(self.native.to_pyarrow()),
                 validate_backend_version=True,
                 version=self._version,
                 validate_column_names=True,
@@ -165,7 +167,7 @@ class IbisLazyFrame(
         selection = (col for col in self.columns if col not in columns_to_drop)
         return self._with_native(self.native.select(*selection))
 
-    def lazy(self, *, backend: Implementation | None = None) -> Self:
+    def lazy(self, backend: None = None, **_: None) -> Self:
         # The `backend`` argument has no effect but we keep it here for
         # backwards compatibility because in `narwhals.stable.v1`
         # function `.from_native()` will return a DataFrame for Ibis.
@@ -309,7 +311,7 @@ class IbisLazyFrame(
             return left_on
         return [
             cast("ir.BooleanColumn", (self.native[left] == other.native[right]))
-            for left, right in zip(left_on, right_on)
+            for left, right in zip_strict(left_on, right_on)
         ]
 
     def collect_schema(self) -> dict[str, DType]:
@@ -319,34 +321,46 @@ class IbisLazyFrame(
         }
 
     def unique(
-        self, subset: Sequence[str] | None, *, keep: LazyUniqueKeepStrategy
+        self,
+        subset: Sequence[str] | None,
+        *,
+        keep: UniqueKeepStrategy,
+        order_by: Sequence[str] | None,
     ) -> Self:
-        if subset_ := subset if keep == "any" else (subset or self.columns):
-            # Sanitise input
-            if any(x not in self.columns for x in subset_):
-                msg = f"Columns {set(subset_).difference(self.columns)} not found in {self.columns}."
-                raise ColumnNotFoundError(msg)
-
-            mapped_keep: dict[str, Literal["first"] | None] = {
-                "any": "first",
-                "none": None,
-            }
-            to_keep = mapped_keep[keep]
-            return self._with_native(self.native.distinct(on=subset_, keep=to_keep))
-        return self._with_native(self.native.distinct(on=subset))
+        subset_ = subset or self.columns
+        if error := self._check_columns_exist(subset_):
+            raise error
+        tmp_name = generate_temporary_column_name(8, self.columns, prefix="row_index_")
+        if order_by and keep == "last":
+            order_by_ = IbisExpr._sort(*order_by, descending=True, nulls_last=True)
+        elif order_by:
+            order_by_ = IbisExpr._sort(*order_by, descending=False, nulls_last=False)
+        else:
+            order_by_ = lit(1)
+        window = ibis.window(group_by=subset_, order_by=order_by_)
+        if keep == "none":
+            expr = self.native.count().over(window)
+        else:
+            expr = ibis.row_number().over(window) + lit(1)
+        df = (
+            self.native.mutate(**{tmp_name: expr})
+            .filter(ibis._[tmp_name] == lit(1))
+            .drop(tmp_name)
+        )
+        return self._with_native(df)
 
     def sort(self, *by: str, descending: bool | Sequence[bool], nulls_last: bool) -> Self:
-        if isinstance(descending, bool):
-            descending = [descending for _ in range(len(by))]
+        from narwhals._ibis.expr import IbisExpr
 
-        sort_cols = []
+        cols = IbisExpr._sort(*by, descending=descending, nulls_last=nulls_last)
+        return self._with_native(self.native.order_by(*cols))
 
-        for i in range(len(by)):
-            direction_fn = ibis.desc if descending[i] else ibis.asc
-            col = direction_fn(by[i], nulls_first=not nulls_last)
-            sort_cols.append(cast("ir.Column", col))
+    def top_k(self, k: int, *, by: Iterable[str], reverse: bool | Sequence[bool]) -> Self:
+        from narwhals._ibis.expr import IbisExpr
 
-        return self._with_native(self.native.order_by(*sort_cols))
+        desc = not reverse if isinstance(reverse, bool) else [not el for el in reverse]
+        cols = IbisExpr._sort(*by, descending=desc, nulls_last=True)
+        return self._with_native(self.native.order_by(*cols).head(k))
 
     def drop_nulls(self, subset: Sequence[str] | None) -> Self:
         subset_ = subset if subset is not None else self.columns
@@ -408,13 +422,6 @@ class IbisLazyFrame(
             msg = "Writing to BytesIO is not supported for Ibis backend."
             raise NotImplementedError(msg)
         self.native.to_parquet(file)
-
-    gather_every = not_implemented.deprecated(
-        "`LazyFrame.gather_every` is deprecated and will be removed in a future version."
-    )
-    tail = not_implemented.deprecated(
-        "`LazyFrame.tail` is deprecated and will be removed in a future version."
-    )
 
     # Intentionally not implemented, as Ibis does its own expression rewriting.
     _evaluate_window_expr = not_implemented()

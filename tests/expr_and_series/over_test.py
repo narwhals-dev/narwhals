@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from contextlib import nullcontext as does_not_raise
 
-import pandas as pd
-import pyarrow as pa
 import pytest
 
 import narwhals as nw
@@ -298,6 +296,9 @@ def test_over_anonymous_reduction(
 
 
 def test_over_unsupported() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     dfpd = pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
     with pytest.raises(NotImplementedError):
         nw.from_native(dfpd).select(nw.col("a").null_count().over("a"))
@@ -306,6 +307,7 @@ def test_over_unsupported() -> None:
 def test_over_unsupported_dask() -> None:
     pytest.importorskip("dask")
     import dask.dataframe as dd
+    import pandas as pd
 
     df = dd.from_pandas(pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]}))
     with pytest.raises(NotImplementedError):
@@ -386,11 +388,16 @@ def test_over_cum_reverse(
 def test_over_raise_len_change(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
 
-    with pytest.raises(InvalidOperationError):
+    with pytest.raises((InvalidOperationError, NotImplementedError)):
         nw.from_native(df).select(nw.col("b").drop_nulls().over("a"))
 
 
 def test_unsupported_over() -> None:
+    pytest.importorskip("pandas")
+    pytest.importorskip("pyarrow")
+    import pandas as pd
+    import pyarrow as pa
+
     data = {"a": [1, 2, 3, 4, 5, 6], "b": ["x", "x", "x", "y", "y", "y"]}
     df = pd.DataFrame(data)
     with pytest.raises(NotImplementedError, match="elementary"):
@@ -419,6 +426,22 @@ def test_over_without_partition_by(
     assert_equal_data(result, expected)
 
 
+def test_aggregation_over_without_partition_by(
+    constructor_eager: ConstructorEager,
+) -> None:
+    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 10):
+        pytest.skip()
+
+    df = nw.from_native(constructor_eager({"a": [1, -1, 2], "i": [0, 2, 1]}))
+    result = (
+        df.with_columns(b=nw.col("a").diff().sum().over(order_by="i"))
+        .sort("i")
+        .select("a", "b", "i")
+    )
+    expected = {"a": [1, 2, -1], "b": [-2, -2, -2], "i": [0, 1, 2]}
+    assert_equal_data(result, expected)
+
+
 def test_len_over_2369(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
@@ -438,6 +461,8 @@ def test_over_quantile(constructor: Constructor, request: pytest.FixtureRequest)
     if any(x in str(constructor) for x in ("pyarrow_table", "pyspark", "cudf")):
         # cudf: https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
 
     data = {"a": [1, 2, 3, 4, 5, 6], "b": ["x", "x", "x", "y", "y", "y"]}
 

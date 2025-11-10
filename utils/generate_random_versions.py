@@ -59,8 +59,3 @@ pyarrow_version = random.choice(PYARROW_VERSION)
 
 reqs = f"pandas=={pandas_version}\nnumpy=={numpy_version}\npolars=={polars_version}\npyarrow=={pyarrow_version}\n"
 Path("random-requirements.txt").write_text(reqs, "utf-8")
-old_warnings = 'filterwarnings = [\n  "error",\n]'
-new_warnings = "filterwarnings = [\n  \"error\",\n  'ignore:distutils Version classes are deprecated:DeprecationWarning',\n]"
-pyproject = Path("pyproject.toml")
-content = pyproject.read_text("utf-8").replace(old_warnings, new_warnings)
-pyproject.write_text(content, "utf-8")

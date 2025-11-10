@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 import pytest
 
 import narwhals as nw
@@ -68,6 +70,6 @@ def test_median_series_raises_on_str(
     series = nw.from_native(constructor_eager(data), eager_only=True)[col]
     with pytest.raises(
         InvalidOperationError,
-        match="`median` operation not supported for non-numeric input type.",
+        match=re.escape("`median` operation not supported for non-numeric input type."),
     ):
         series.median()

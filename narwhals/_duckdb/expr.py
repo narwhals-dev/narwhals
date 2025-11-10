@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import operator
-from typing import TYPE_CHECKING, Any, Callable, Literal, cast
+from typing import TYPE_CHECKING, Any, Callable, cast
 
 from duckdb import CoalesceOperator, StarExpression
-from duckdb.typing import DuckDBPyType
 
 from narwhals._duckdb.expr_dt import DuckDBExprDateTimeNamespace
 from narwhals._duckdb.expr_list import DuckDBExprListNamespace
@@ -14,14 +13,15 @@ from narwhals._duckdb.utils import (
     DeferredTimeZone,
     F,
     col,
+    generate_order_by_sql,
     lit,
     narwhals_to_native_dtype,
+    sql_expression,
     when,
     window_expression,
 )
-from narwhals._expression_parsing import ExprKind, ExprMetadata
 from narwhals._sql.expr import SQLExpr
-from narwhals._utils import Implementation, Version
+from narwhals._utils import Implementation, Version, extend_bool, no_default
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -38,13 +38,9 @@ if TYPE_CHECKING:
     )
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.namespace import DuckDBNamespace
+    from narwhals._typing import NoDefault
     from narwhals._utils import _LimitedContext
-    from narwhals.typing import (
-        FillNullStrategy,
-        IntoDType,
-        NonNestedLiteral,
-        RollingInterpolationMethod,
-    )
+    from narwhals.typing import FillNullStrategy, IntoDType, RollingInterpolationMethod
 
     DuckDBWindowFunction = WindowFunction[DuckDBLazyFrame, Expression]
     DuckDBWindowInputs = WindowInputs[Expression]
@@ -67,7 +63,6 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
         self._evaluate_output_names = evaluate_output_names
         self._alias_output_names = alias_output_names
         self._version = version
-        self._metadata: ExprMetadata | None = None
         self._window_function: DuckDBWindowFunction | None = window_function
 
     def _count_star(self) -> Expression:
@@ -94,19 +89,28 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
             nulls_last=nulls_last,
         )
 
-    def __narwhals_expr__(self) -> None: ...
+    def _first_last(
+        self, function: str, expr: Expression, order_by: Sequence[str], /
+    ) -> Expression:
+        # https://github.com/duckdb/duckdb/discussions/19252
+        flags = extend_bool(False, len(order_by))
+        order_by_sql = generate_order_by_sql(
+            *order_by, descending=flags, nulls_last=flags
+        )
+        return sql_expression(f"{function}({expr} {order_by_sql})")
+
+    def _first(self, expr: Expression, *order_by: str) -> Expression:
+        return self._first_last("first", expr, order_by)
+
+    def _last(self, expr: Expression, *order_by: str) -> Expression:
+        return self._first_last("last", expr, order_by)
 
     def __narwhals_namespace__(self) -> DuckDBNamespace:  # pragma: no cover
         from narwhals._duckdb.namespace import DuckDBNamespace
 
         return DuckDBNamespace(version=self._version)
 
-    def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
-        if kind is ExprKind.LITERAL:
-            return self
-        if self._backend_version < (1, 3):
-            msg = "At least version 1.3 of DuckDB is required for binary operations between aggregates and columns."
-            raise NotImplementedError(msg)
+    def broadcast(self) -> Self:
         return self.over([lit(1)], [])
 
     @classmethod
@@ -149,6 +153,8 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
         return self._with_elementwise(invert)
 
     def skew(self) -> Self:
+        W = self._window_expression  # noqa: N806
+
         def func(expr: Expression) -> Expression:
             count = F("count", expr)
             # Adjust population skewness by correction factor to get sample skewness
@@ -163,7 +169,26 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
                 )
             )
 
-        return self._with_callable(func)
+        def window_f(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> list[Expression]:
+            ret = []
+            for expr in self(df):
+                count = W(F("count", expr), inputs.partition_by)
+                # Adjust population skewness by correction factor to get sample skewness
+                sample_skewness = (
+                    W(F("skewness", expr), inputs.partition_by)
+                    * (count - lit(2))
+                    / F("sqrt", count * (count - lit(1)))
+                )
+                ret.append(
+                    when(count == lit(0), lit(None)).otherwise(
+                        when(count == lit(1), lit(float("nan"))).otherwise(
+                            when(count == lit(2), lit(0.0)).otherwise(sample_skewness)
+                        )
+                    )
+                )
+            return ret
+
+        return self._with_callable(func, window_f)
 
     def kurtosis(self) -> Self:
         return self._with_callable(lambda expr: F("kurtosis_pop", expr))
@@ -179,45 +204,8 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
 
         return self._with_callable(func)
 
-    def n_unique(self) -> Self:
-        def func(expr: Expression) -> Expression:
-            # https://stackoverflow.com/a/79338887/4451315
-            return F("array_unique", F("array_agg", expr)) + F(
-                "max", when(expr.isnotnull(), lit(0)).otherwise(lit(1))
-            )
-
-        return self._with_callable(func)
-
     def len(self) -> Self:
         return self._with_callable(lambda _expr: F("count"))
-
-    def std(self, ddof: int) -> Self:
-        if ddof == 0:
-            return self._with_callable(lambda expr: F("stddev_pop", expr))
-        if ddof == 1:
-            return self._with_callable(lambda expr: F("stddev_samp", expr))
-
-        def _std(expr: Expression) -> Expression:
-            n_samples = F("count", expr)
-            return (
-                F("stddev_pop", expr)
-                * F("sqrt", n_samples)
-                / (F("sqrt", (n_samples - lit(ddof))))
-            )
-
-        return self._with_callable(_std)
-
-    def var(self, ddof: int) -> Self:
-        if ddof == 0:
-            return self._with_callable(lambda expr: F("var_pop", expr))
-        if ddof == 1:
-            return self._with_callable(lambda expr: F("var_samp", expr))
-
-        def _var(expr: Expression) -> Expression:
-            n_samples = F("count", expr)
-            return F("var_pop", expr) * n_samples / (n_samples - lit(ddof))
-
-        return self._with_callable(_var)
 
     def null_count(self) -> Self:
         return self._with_callable(lambda expr: F("sum", expr.isnull().cast("int")))
@@ -232,10 +220,7 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
         return self._with_elementwise(lambda expr: F("contains", lit(other), expr))
 
     def fill_null(
-        self,
-        value: Self | NonNestedLiteral,
-        strategy: FillNullStrategy | None,
-        limit: int | None,
+        self, value: Self | None, strategy: FillNullStrategy | None, limit: int | None
     ) -> Self:
         if strategy is not None:
             if self._backend_version < (1, 3):  # pragma: no cover
@@ -268,21 +253,19 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
         def _fill_constant(expr: Expression, value: Any) -> Expression:
             return CoalesceOperator(expr, value)
 
+        assert value is not None  # noqa: S101
         return self._with_elementwise(_fill_constant, value=value)
 
     def cast(self, dtype: IntoDType) -> Self:
         def func(df: DuckDBLazyFrame) -> list[Expression]:
             tz = DeferredTimeZone(df.native)
             native_dtype = narwhals_to_native_dtype(dtype, self._version, tz)
-            return [expr.cast(DuckDBPyType(native_dtype)) for expr in self(df)]
+            return [expr.cast(native_dtype) for expr in self(df)]
 
         def window_f(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> list[Expression]:
             tz = DeferredTimeZone(df.native)
             native_dtype = narwhals_to_native_dtype(dtype, self._version, tz)
-            return [
-                expr.cast(DuckDBPyType(native_dtype))
-                for expr in self.window_function(df, inputs)
-            ]
+            return [expr.cast(native_dtype) for expr in self.window_function(df, inputs)]
 
         return self.__class__(
             func,
@@ -292,22 +275,47 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
             version=self._version,
         )
 
-    def log(self, base: float) -> Self:
-        def _log(expr: Expression) -> Expression:
-            log = F("log", expr)
-            return (
-                when(expr < lit(0), lit(float("nan")))
-                .when(expr == lit(0), lit(float("-inf")))
-                .otherwise(log / F("log", lit(base)))
-            )
+    def replace_strict(
+        self,
+        default: DuckDBExpr | NoDefault,
+        old: Sequence[Any],
+        new: Sequence[Any],
+        *,
+        return_dtype: IntoDType | None,
+    ) -> Self:
+        if default is no_default:
+            msg = "`replace_strict` requires an explicit value for `default` for duckdb backend."
+            raise ValueError(msg)
 
-        return self._with_elementwise(_log)
+        old_, new_ = lit(list(old)), lit(list(new))
+        mapping_expr = F("map", old_, new_)
 
-    def sqrt(self) -> Self:
-        def _sqrt(expr: Expression) -> Expression:
-            return when(expr < lit(0), lit(float("nan"))).otherwise(F("sqrt", expr))
+        def func(df: DuckDBLazyFrame) -> list[Expression]:
+            default_col = df._evaluate_single_output_expr(default)
 
-        return self._with_elementwise(_sqrt)
+            results = [
+                when(
+                    F("contains", old_, expr),
+                    # From [map_extract docs](https://duckdb.org/docs/stable/sql/functions/map#map_extractmap-key)
+                    #   "Return the value for a given key as a list, or NULL if the key is not contained in the map."
+                    F("list_extract", F("map_extract", mapping_expr, expr), lit(1)),
+                ).otherwise(default_col)
+                for expr in self(df)
+            ]
+
+            if return_dtype:
+                tz = DeferredTimeZone(df.native)
+                native_dtype = narwhals_to_native_dtype(return_dtype, self._version, tz)
+                return [res.cast(native_dtype) for res in results]
+            return results
+
+        return self.__class__(
+            func,
+            None,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
+        )
 
     @property
     def str(self) -> DuckDBExprStringNamespace:

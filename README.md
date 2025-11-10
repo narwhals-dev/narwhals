@@ -4,7 +4,7 @@
 	<img
 		width="400"
 		alt="narwhals_small"
-		src="https://github.com/narwhals-dev/narwhals/assets/33491632/26be901e-5383-49f2-9fbd-5c97b7696f27">
+		src="https://github.com/user-attachments/assets/968545af-ea0f-48bb-8377-144e93f7abf8">
 </h1>
 
 [![PyPI version](https://badge.fury.io/py/narwhals.svg)](https://badge.fury.io/py/narwhals)
@@ -15,7 +15,7 @@
 Extremely lightweight and extensible compatibility layer between dataframe libraries!
 
 - **Full API support**: cuDF, Modin, pandas, Polars, PyArrow.
-- **Lazy-only support**: Dask, DuckDB, Ibis, PySpark, SQLFrame. Work in progress: Daft.
+- **Lazy-only support**: Daft, Dask, DuckDB, Ibis, PySpark, SQLFrame.
 
 Seamlessly support all, without depending on any!
 
@@ -171,6 +171,7 @@ Join the party!
 - [altair](https://github.com/vega/altair/)
 - [bokeh](https://github.com/bokeh/bokeh)
 - [darts](https://github.com/unit8co/darts)
+- [fairlearn](https://github.com/fairlearn/fairlearn)
 - [formulaic](https://github.com/matthewwardrop/formulaic)
 - [gt-extras](https://github.com/posit-dev/gt-extras)
 - [hierarchicalforecast](https://github.com/Nixtla/hierarchicalforecast)
@@ -181,6 +182,7 @@ Join the party!
 - [plotly](https://plotly.com)
 - [pointblank](https://github.com/posit-dev/pointblank)
 - [pymarginaleffects](https://github.com/vincentarelbundock/pymarginaleffects)
+- [pyreadstat](https://github.com/Roche/pyreadstat)
 - [py-shiny](https://github.com/posit-dev/py-shiny)
 - [rio](https://github.com/rio-labs/rio)
 - [scikit-lego](https://github.com/koaning/scikit-lego)

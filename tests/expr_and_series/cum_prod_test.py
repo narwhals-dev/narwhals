@@ -45,7 +45,7 @@ def test_cum_prod_series(
 
 
 @pytest.mark.parametrize(
-    ("reverse", "expected_a"), [(False, [2, 2, 6]), (True, [3, 6, 3])]
+    ("reverse", "expected_a"), [(False, [2, 2, 6, None]), (True, [3, 6, 3, None])]
 )
 def test_lazy_cum_prod_grouped(
     constructor: Constructor,
@@ -76,10 +76,10 @@ def test_lazy_cum_prod_grouped(
     df = nw.from_native(
         constructor(
             {
-                "arg entina": [1, 2, 3],
-                "ban gkok": [1, 0, 2],
-                "i ran": [0, 1, 2],
-                "g": [1, 1, 1],
+                "arg entina": [1, 2, 3, None],
+                "ban gkok": [1, 0, 2, 3],
+                "i ran": [0, 1, 2, 3],
+                "g": [1, 1, 1, 1],
             }
         )
     )
@@ -88,8 +88,8 @@ def test_lazy_cum_prod_grouped(
     ).sort("i ran")
     expected = {
         "arg entina": expected_a,
-        "ban gkok": [1, 0, 2],
-        "i ran": [0, 1, 2],
-        "g": [1, 1, 1],
+        "ban gkok": [1, 0, 2, 3],
+        "i ran": [0, 1, 2, 3],
+        "g": [1, 1, 1, 1],
     }
     assert_equal_data(result, expected)

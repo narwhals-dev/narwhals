@@ -1,18 +1,18 @@
 # Test assorted functions which we overwrite in stable.v1
 from __future__ import annotations
 
+import re
+from collections import deque
 from contextlib import nullcontext as does_not_raise
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, cast
 
-import numpy as np
-import pandas as pd
 import pytest
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
 from narwhals._utils import Implementation
-from narwhals.exceptions import InvalidOperationError
+from narwhals.exceptions import InvalidOperationError, ShapeError
 from narwhals.stable.v1.dependencies import (
     is_cudf_dataframe,
     is_cudf_series,
@@ -32,18 +32,25 @@ from narwhals.stable.v1.dependencies import (
 )
 from narwhals.utils import Version
 from tests.utils import (
+    DUCKDB_VERSION,
     PANDAS_VERSION,
+    POLARS_VERSION,
     PYARROW_VERSION,
     Constructor,
     ConstructorEager,
     assert_equal_data,
+    assert_equal_series,
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from typing_extensions import assert_type
 
-    from narwhals._namespace import EagerAllowed
-    from narwhals.typing import IntoDataFrameT
+    from narwhals._typing import EagerAllowed
+    from narwhals.dtypes import DType
+    from narwhals.stable.v1.typing import IntoDataFrameT
+    from narwhals.typing import IntoDType, _1DArray, _2DArray
     from tests.utils import Constructor, ConstructorEager
 
 
@@ -66,8 +73,9 @@ def test_toplevel() -> None:
         mean_h=nw_v1.mean_horizontal("a"),
         len=nw_v1.len(),
         concat_str=nw_v1.concat_str(nw_v1.lit("a"), nw_v1.lit("b")),
-        any_h=nw_v1.any_horizontal(nw_v1.lit(True), nw_v1.lit(True)),  # noqa: FBT003
-        all_h=nw_v1.all_horizontal(nw_v1.lit(True), nw_v1.lit(True)),  # noqa: FBT003
+        fmt=nw_v1.format("{}", "a"),
+        any_h=nw_v1.any_horizontal(nw_v1.lit(True), nw_v1.lit(True)),
+        all_h=nw_v1.all_horizontal(nw_v1.lit(True), nw_v1.lit(True)),
         first=nw_v1.nth(0),
         no_first=nw_v1.exclude("a", "c"),
         coalesce=nw_v1.coalesce("c", "a"),
@@ -84,6 +92,7 @@ def test_toplevel() -> None:
         "mean_h": [1, 2, 3],
         "len": [3, 3, 3],
         "concat_str": ["ab", "ab", "ab"],
+        "fmt": ["1", "2", "3"],
         "any_h": [True, True, True],
         "all_h": [True, True, True],
         "first": [1, 2, 3],
@@ -106,7 +115,11 @@ def test_when_then() -> None:
 
 
 def test_constructors() -> None:
+    pytest.importorskip("pandas")
     pytest.importorskip("pyarrow")
+    import numpy as np
+    import pandas as pd
+
     if PANDAS_VERSION < (2, 2):
         pytest.skip()
     assert nw_v1.new_series("a", [1, 2, 3], backend="pandas").to_list() == [1, 2, 3]
@@ -125,6 +138,9 @@ def test_constructors() -> None:
     assert_equal_data(result, {"a": [1, 2, 3]})
     assert isinstance(result, nw_v1.DataFrame)
     result = nw_v1.from_arrow(pd.DataFrame({"a": [1, 2, 3]}), backend="pandas")
+    assert_equal_data(result, {"a": [1, 2, 3]})
+    assert isinstance(result, nw_v1.DataFrame)
+    result = nw_v1.from_dicts([{"a": 1}, {"a": 2}, {"a": 3}], backend="pandas")
     assert_equal_data(result, {"a": [1, 2, 3]})
     assert isinstance(result, nw_v1.DataFrame)
 
@@ -228,6 +244,7 @@ def test_to_dict_as_series() -> None:
 )
 def test_hist_v1() -> None:
     pytest.importorskip("pyarrow")
+    pytest.importorskip("numpy")
     import pyarrow as pa
 
     df = nw_v1.from_native(pa.table({"a": [1, 1, 2]}), eager_only=True)
@@ -237,6 +254,7 @@ def test_hist_v1() -> None:
     assert isinstance(result, nw_v1.DataFrame)
 
 
+@pytest.mark.filterwarnings("ignore:.*Interchange Protocol:DeprecationWarning")
 @pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="requires interchange protocol")
 def test_is_ordered_categorical_interchange_protocol() -> None:
     pytest.importorskip("pandas")
@@ -251,6 +269,9 @@ def test_is_ordered_categorical_interchange_protocol() -> None:
 
 
 def test_all_nulls_pandas() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     assert (
         nw_v1.from_native(pd.Series([None] * 3, dtype="object"), series_only=True).dtype
         == nw_v1.Object
@@ -258,6 +279,9 @@ def test_all_nulls_pandas() -> None:
 
 
 def test_int_select_pandas() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df = nw_v1.from_native(pd.DataFrame({0: [1, 2], "b": [3, 4]}))
     with pytest.raises(
         nw_v1.exceptions.InvalidIntoExprError, match="\n\nHint:\n- if you were trying"
@@ -295,14 +319,15 @@ def test_cast_to_enum_v1(
 
     df_native = constructor({"a": ["a", "b"]})
 
-    with pytest.raises(
-        NotImplementedError,
-        match="Converting to Enum is not supported in narwhals.stable.v1",
-    ):
+    msg = re.escape("Converting to Enum is not supported in narwhals.stable.v1")
+    with pytest.raises(NotImplementedError, match=msg):
         nw_v1.from_native(df_native).select(nw_v1.col("a").cast(nw_v1.Enum))  # type: ignore[arg-type]
 
 
 def test_v1_ordered_categorical_pandas() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     s = nw_v1.from_native(
         pd.Series([0, 1], dtype=pd.CategoricalDtype(ordered=True)), series_only=True
     )
@@ -348,6 +373,9 @@ def test_v1_enum_duckdb_2550() -> None:
     ],
 )
 def test_is_native_dataframe(is_native_dataframe: Callable[[Any], Any]) -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     data = {"a": [1, 2], "b": ["bar", "foo"]}
     df = nw.from_native(pd.DataFrame(data))
     assert not is_native_dataframe(df)
@@ -365,6 +393,9 @@ def test_is_native_dataframe(is_native_dataframe: Callable[[Any], Any]) -> None:
     ],
 )
 def test_is_native_series(is_native_series: Callable[[Any], Any]) -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     data = {"a": [1, 2]}
     ser = nw.from_native(pd.DataFrame(data))["a"]
     assert not is_native_series(ser)
@@ -375,8 +406,6 @@ def test_get_level() -> None:
     import polars as pl
 
     df = pl.DataFrame({"a": [1, 2, 3]})
-    with pytest.deprecated_call():
-        assert nw.get_level(nw.from_native(df)) == "full"
     assert nw_v1.get_level(nw_v1.from_native(df)) == "full"
     assert (
         nw_v1.get_level(
@@ -397,9 +426,6 @@ def test_any_horizontal() -> None:
     result = df.select(nw_v1.any_horizontal("a", "b"))
     expected = {"a": [True, True, None]}
     assert_equal_data(result, expected)
-    with pytest.deprecated_call(match="ignore_nulls"):
-        result = df.select(nw.any_horizontal("a", "b"))
-    assert_equal_data(result, expected)
 
 
 def test_all_horizontal() -> None:
@@ -413,12 +439,11 @@ def test_all_horizontal() -> None:
     result = df.select(nw_v1.all_horizontal("a", "b"))
     expected = {"a": [True, None, False]}
     assert_equal_data(result, expected)
-    with pytest.deprecated_call(match="ignore_nulls"):
-        result = df.select(nw.all_horizontal("a", "b"))
-    assert_equal_data(result, expected)
 
 
 def test_with_row_index(constructor: Constructor) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
     data = {"abc": ["foo", "bars"], "xyz": [100, 200], "const": [42, 42]}
 
     frame = nw_v1.from_native(constructor(data))
@@ -478,8 +503,8 @@ def test_renamed_taxicab_norm_dataframe() -> None:
     result = nw_v1.from_native(pa.table({"a": [1, 2, 3, -4, 5]}))._l1_norm()
     expected = {"a": [15]}
     assert_equal_data(result, expected)
-    result = nw_v1.from_native(pa.table({"a": [1, 2, 3, -4, 5]})).lazy()._l1_norm()
-    assert_equal_data(result, expected)
+    result_lazy = nw_v1.from_native(pa.table({"a": [1, 2, 3, -4, 5]})).lazy()._l1_norm()
+    assert_equal_data(result_lazy, expected)
 
 
 def test_renamed_taxicab_norm_dataframe_narwhalify() -> None:
@@ -499,6 +524,9 @@ def test_renamed_taxicab_norm_dataframe_narwhalify() -> None:
 
 
 def test_dtypes() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df = nw_v1.from_native(
         pd.DataFrame({"a": [1], "b": [datetime(2020, 1, 1)], "c": [timedelta(1)]})
     )
@@ -513,17 +541,14 @@ def test_dtypes() -> None:
 @pytest.mark.parametrize(
     ("strict", "context"),
     [
-        (
-            True,
-            pytest.raises(
-                TypeError,
-                match="Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe",
-            ),
-        ),
+        (True, pytest.raises(TypeError, match="Unsupported dataframe type")),
         (False, does_not_raise()),
     ],
 )
 def test_strict(strict: Any, context: Any) -> None:
+    pytest.importorskip("numpy")
+    import numpy as np
+
     arr = np.array([1, 2, 3])
 
     with context:
@@ -539,10 +564,6 @@ def test_from_native_strict_false_typing() -> None:
     nw_v1.from_native(df, strict=False)
     nw_v1.from_native(df, strict=False, eager_only=True)
     nw_v1.from_native(df, strict=False, eager_or_interchange_only=True)
-
-    with pytest.deprecated_call(match="please use `pass_through` instead"):
-        nw.from_native(df, strict=False)  # type: ignore[call-overload]
-        nw.from_native(df, strict=False, eager_only=True)  # type: ignore[call-overload]
 
 
 def test_from_native_strict_false_invalid() -> None:
@@ -586,16 +607,11 @@ def test_dataframe_recursive_v1() -> None:
 
     if TYPE_CHECKING:
         assert_type(pl_frame, pl.DataFrame)
-        assert_type(
-            nw_frame, "nw_v1.DataFrame[pl.DataFrame] | nw_v1.LazyFrame[pl.DataFrame]"
-        )
+        assert_type(nw_frame, "nw_v1.DataFrame[pl.DataFrame]")
         nw_frame_depth_2 = nw_v1.DataFrame(nw_frame, level="full")  # type: ignore[var-annotated]
         assert_type(nw_frame_depth_2, nw_v1.DataFrame[Any])
         # NOTE: Checking that the type is `DataFrame[Unknown]`
-        assert_type(
-            nw_frame_early_return,
-            "nw_v1.DataFrame[pl.DataFrame] | nw_v1.LazyFrame[pl.DataFrame]",
-        )
+        assert_type(nw_frame_early_return, "nw_v1.DataFrame[pl.DataFrame]")
 
 
 def test_lazyframe_recursive_v1() -> None:
@@ -626,7 +642,8 @@ def test_series_recursive_v1() -> None:
 
     pl_series = pl.Series(name="test", values=[1, 2, 3])
     nw_series = nw_v1.from_native(pl_series, series_only=True)
-    with pytest.raises(AttributeError):
+    # NOTE: (#2629) combined with passing in `nw_v1.Series` (w/ a `_version`) into itself changes the error
+    with pytest.raises(AssertionError):
         nw_v1.Series(nw_series, level="full")
 
     nw_series_early_return = nw_v1.from_native(nw_series, series_only=True)
@@ -808,10 +825,10 @@ def test_narwhalify_backends_cross() -> None:
     ) -> tuple[Any, Any, int]:  # pragma: no cover
         return arg1, arg2, extra
 
-    with pytest.raises(
-        ValueError,
-        match="Found multiple backends. Make sure that all dataframe/series inputs come from the same backend.",
-    ):
+    msg = re.escape(
+        "Found multiple backends. Make sure that all dataframe/series inputs come from the same backend."
+    )
+    with pytest.raises(ValueError, match=msg):
         func(pd.DataFrame(data), pl.DataFrame(data))
 
 
@@ -829,10 +846,10 @@ def test_narwhalify_backends_cross2() -> None:
     ) -> tuple[Any, Any, int]:  # pragma: no cover
         return arg1, arg2, extra
 
-    with pytest.raises(
-        ValueError,
-        match="Found multiple backends. Make sure that all dataframe/series inputs come from the same backend.",
-    ):
+    msg = re.escape(
+        "Found multiple backends. Make sure that all dataframe/series inputs come from the same backend."
+    )
+    with pytest.raises(ValueError, match=msg):
         func(pl.DataFrame(data), pd.Series(data["a"]))
 
 
@@ -844,11 +861,6 @@ def test_expr_sample(constructor_eager: ConstructorEager) -> None:
     result_expr = df.select(nw_v1.col("a").sample(n=2)).shape
     expected_expr = (2, 1)
     assert result_expr == expected_expr
-
-    with pytest.deprecated_call(
-        match="is deprecated and will be removed in a future version"
-    ):
-        df.select(nw.col("a").sample(n=2))
 
 
 def test_is_frame() -> None:
@@ -876,19 +888,13 @@ def test_gather_every(constructor_eager: ConstructorEager, n: int, offset: int) 
     expected = {"a": data["a"][offset::n]}
     assert_equal_data(result, expected)
 
-    # Test deprecation for LazyFrame in main namespace
-    lf = nw.from_native(constructor_eager(data)).lazy()
-    with pytest.deprecated_call(
-        match="is deprecated and will be removed in a future version"
-    ):
-        lf.gather_every(n=n, offset=offset)
-
 
 @pytest.mark.parametrize("n", [1, 2])
 @pytest.mark.parametrize("offset", [1, 2])
 def test_gather_every_dask_v1(n: int, offset: int) -> None:
     pytest.importorskip("dask")
     import dask.dataframe as dd
+    import pandas as pd
 
     data = {"a": list(range(10))}
 
@@ -916,12 +922,21 @@ def test_unique_series_v1() -> None:
         series.to_frame().select(nw_v1.col("a").unique(maintain_order=False).sum())
 
 
-def test_head_aggregation() -> None:
+def test_invalid() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    df = nw.from_native(pd.DataFrame({"a": [1, 2]}))
     with pytest.raises(InvalidOperationError):
-        nw_v1.col("a").mean().head()
+        df.select(nw_v1.col("a").mean().head())
+    with pytest.raises(InvalidOperationError):
+        df.select(nw_v1.col("a").mean().arg_true())
 
 
 def test_deprecated_expr_methods() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     data = {"a": [0, 0, 2, -1]}
     df = nw_v1.from_native(pd.DataFrame(data), eager_only=True)
     result = df.select(
@@ -942,22 +957,13 @@ def test_deprecated_expr_methods() -> None:
     }
     assert_equal_data(result, expected)
 
-    with pytest.deprecated_call():
-        df.select(
-            c=nw.col("a").sort().head(2),
-            d=nw.col("a").sort().tail(2),
-            e=(nw.col("a") == 0).arg_true(),
-            f=nw.col("a").gather_every(2),
-            g=nw.col("a").arg_min(),
-            h=nw.col("a").arg_max(),
-        )
-
 
 def test_dask_order_dependent_ops() -> None:
     # Preserve these for narwhals.stable.v1, even though they
     # raise after stable.v1.
     pytest.importorskip("dask")
     import dask.dataframe as dd
+    import pandas as pd
 
     df = nw_v1.from_native(dd.from_pandas(pd.DataFrame({"a": [1, 2, 3]})))
     result = df.select(
@@ -1009,6 +1015,16 @@ def test_dataframe_from_dict(eager_backend: EagerAllowed) -> None:
     assert isinstance(result, nw_v1.DataFrame)
 
 
+def test_dataframe_from_dicts(eager_backend: EagerAllowed) -> None:
+    schema = {"c": nw_v1.Int16(), "d": nw_v1.Float32()}
+    result = nw_v1.DataFrame.from_dicts(
+        [{"c": 1, "d": 5}, {"c": 2, "d": 6}], backend=eager_backend, schema=schema
+    )
+    assert result.collect_schema() == schema
+    assert result._version is Version.V1
+    assert isinstance(result, nw_v1.DataFrame)
+
+
 def test_dataframe_from_arrow(eager_backend: EagerAllowed) -> None:
     pytest.importorskip("pyarrow")
     import pyarrow as pa
@@ -1037,3 +1053,110 @@ def test_dataframe_from_arrow(eager_backend: EagerAllowed) -> None:
             assert isinstance(result.to_native(), pa.Table)
         else:
             assert not isinstance(result.to_native(), pa.Table)
+
+
+def test_dataframe_from_numpy(eager_backend: EagerAllowed) -> None:
+    pytest.importorskip("numpy")
+    import numpy as np
+
+    arr: _2DArray = cast("_2DArray", np.array([[5, 2, 0, 1], [1, 4, 7, 8], [1, 2, 3, 9]]))
+    schema = {"c": nw.Int16(), "d": nw.Float32(), "e": nw.Int16(), "f": nw.Float64()}
+    expected = {"c": [5, 1, 1], "d": [2, 4, 2], "e": [0, 7, 3], "f": [1, 8, 9]}
+    result = nw_v1.DataFrame.from_numpy(arr, backend=eager_backend, schema=schema)
+    result_schema = result.collect_schema()
+    assert result._version is Version.V1
+    assert isinstance(result, nw_v1.DataFrame)
+    assert result_schema == schema
+    assert_equal_data(result, expected)
+
+    # NOTE: Existing bug, `schema` and `collect_schema` should be redefined for `v1`
+    with pytest.raises(AssertionError):
+        assert isinstance(result_schema, nw_v1.Schema)
+
+    assert isinstance(result_schema, nw.Schema)
+
+
+@pytest.mark.parametrize(
+    ("dtype", "expected"),
+    [
+        (None, [5, 2, 0, 1]),
+        (nw_v1.Int64, [5, 2, 0, 1]),
+        (nw_v1.Int16(), [5, 2, 0, 1]),
+        (nw_v1.Float64, [5.0, 2.0, 0.0, 1.0]),
+        (nw_v1.Float32(), [5.0, 2.0, 0.0, 1.0]),
+    ],
+    ids=str,
+)
+def test_series_from_numpy(
+    eager_backend: EagerAllowed, dtype: IntoDType | None, expected: Sequence[Any]
+) -> None:
+    pytest.importorskip("numpy")
+    import numpy as np
+
+    arr: _1DArray = cast("_1DArray", np.array([5, 2, 0, 1]))
+    name = "abc"
+    result = nw_v1.Series.from_numpy(name, arr, backend=eager_backend, dtype=dtype)
+    assert result._version is Version.V1
+    assert isinstance(result, nw_v1.Series)
+    if dtype:
+        assert result.dtype == dtype
+    assert_equal_data(result.to_frame(), {name: expected})
+
+
+@pytest.mark.parametrize(
+    ("dtype", "expected"),
+    [
+        (None, [5, 2, 0, 1]),
+        (nw_v1.Int64, [5, 2, 0, 1]),
+        (nw_v1.String, ("a", "b", "c")),
+        (nw_v1.Float64, [5.0, 2.0, 0.0, 1.0]),
+        (
+            nw_v1.Datetime("ns"),
+            deque([datetime(2005, 1, 1, 10), datetime(2002, 1, 1, 10, 43)]),
+        ),
+    ],
+    ids=str,
+)
+def test_series_from_iterable(
+    eager_backend: EagerAllowed, dtype: IntoDType | None, expected: Sequence[Any]
+) -> None:
+    data = expected
+    name = "abc"
+    result = nw_v1.Series.from_iterable(name, data, backend=eager_backend, dtype=dtype)
+    assert result._version is Version.V1
+    assert isinstance(result, nw_v1.Series)
+    if dtype:
+        assert result.dtype == dtype
+    assert_equal_series(result, expected, name)
+
+
+def test_mode_single_expr(constructor_eager: ConstructorEager) -> None:
+    data = {"a": [1, 1, 2, 2, 3], "b": [1, 2, 3, 3, 4]}
+    df = nw_v1.from_native(constructor_eager(data))
+    result = df.select(nw_v1.col("a").mode()).sort("a")
+    expected = {"a": [1, 2]}
+    assert_equal_data(result, expected)
+
+
+def test_mode_series(constructor_eager: ConstructorEager) -> None:
+    data = {"a": [1, 1, 2, 2, 3], "b": [1, 2, 3, 3, 4]}
+    series = nw_v1.from_native(constructor_eager(data), eager_only=True)["a"]
+    result = series.mode().sort()
+    expected = {"a": [1, 2]}
+    assert_equal_data({"a": result}, expected)
+
+
+def test_mode_different_lengths(constructor_eager: ConstructorEager) -> None:
+    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 10):
+        pytest.skip()
+    df = nw_v1.from_native(constructor_eager({"a": [1, 1, 2], "b": [4, 5, 6]}))
+    with pytest.raises(ShapeError):
+        df.select(nw_v1.col("a", "b").mode())
+
+
+@pytest.mark.parametrize(
+    "dtype", [nw_v1.Datetime(), nw_v1.Duration(), nw_v1.Enum()], ids=str
+)
+def test_dtype___slots__(dtype: DType) -> None:
+    with pytest.raises(AttributeError):
+        dtype.i_also_dont_exist = 528329  # type: ignore[attr-defined]

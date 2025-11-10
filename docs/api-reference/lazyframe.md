@@ -26,6 +26,7 @@
         - sort
         - tail
         - to_native
+        - top_k
         - unique
         - unpivot
         - with_columns
@@ -33,3 +34,4 @@
       show_root_heading: false
       show_source: false
       show_bases: false
+      inherited_members: true

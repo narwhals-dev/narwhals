@@ -8,20 +8,21 @@ import polars as pl
 from narwhals._polars.expr import PolarsExpr
 from narwhals._polars.series import PolarsSeries
 from narwhals._polars.utils import extract_args_kwargs, narwhals_to_native_dtype
-from narwhals._utils import Implementation, requires
+from narwhals._utils import Implementation, requires, zip_strict
 from narwhals.dependencies import is_numpy_array_2d
 from narwhals.dtypes import DType
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping, Sequence
+    from collections.abc import Iterable, Sequence
     from datetime import timezone
 
-    from narwhals._compliant import CompliantSelectorNamespace, CompliantWhen
+    from typing_extensions import TypeIs
+
+    from narwhals._compliant import CompliantSelectorNamespace
     from narwhals._polars.dataframe import Method, PolarsDataFrame, PolarsLazyFrame
     from narwhals._polars.typing import FrameT
     from narwhals._utils import Version, _LimitedContext
-    from narwhals.schema import Schema
-    from narwhals.typing import Into1DArray, IntoDType, TimeUnit, _2DArray
+    from narwhals.typing import Into1DArray, IntoDType, IntoSchema, TimeUnit, _2DArray
 
 
 class PolarsNamespace:
@@ -33,11 +34,8 @@ class PolarsNamespace:
     min_horizontal: Method[PolarsExpr]
     max_horizontal: Method[PolarsExpr]
 
-    # NOTE: `pyright` accepts, `mypy` doesn't highlight the issue
-    #   error: Type argument "PolarsExpr" of "CompliantWhen" must be a subtype of "CompliantExpr[Any, Any]"
-    when: Method[CompliantWhen[PolarsDataFrame, PolarsSeries, PolarsExpr]]  # type: ignore[type-var]
-
-    _implementation = Implementation.POLARS
+    _implementation: Implementation = Implementation.POLARS
+    _version: Version
 
     @property
     def _backend_version(self) -> tuple[int, ...]:
@@ -73,6 +71,9 @@ class PolarsNamespace:
     def _series(self) -> type[PolarsSeries]:
         return PolarsSeries
 
+    def is_native(self, obj: Any) -> TypeIs[pl.DataFrame | pl.LazyFrame | pl.Series]:
+        return isinstance(obj, (pl.DataFrame, pl.LazyFrame, pl.Series))
+
     @overload
     def from_native(self, data: pl.DataFrame, /) -> PolarsDataFrame: ...
     @overload
@@ -84,30 +85,26 @@ class PolarsNamespace:
     ) -> PolarsDataFrame | PolarsLazyFrame | PolarsSeries:
         if self._dataframe._is_native(data):
             return self._dataframe.from_native(data, context=self)
-        elif self._series._is_native(data):
+        if self._series._is_native(data):
             return self._series.from_native(data, context=self)
-        elif self._lazyframe._is_native(data):
+        if self._lazyframe._is_native(data):
             return self._lazyframe.from_native(data, context=self)
-        else:  # pragma: no cover
-            msg = f"Unsupported type: {type(data).__name__!r}"
-            raise TypeError(msg)
+        msg = f"Unsupported type: {type(data).__name__!r}"  # pragma: no cover
+        raise TypeError(msg)  # pragma: no cover
 
     @overload
     def from_numpy(self, data: Into1DArray, /, schema: None = ...) -> PolarsSeries: ...
 
     @overload
     def from_numpy(
-        self,
-        data: _2DArray,
-        /,
-        schema: Mapping[str, DType] | Schema | Sequence[str] | None,
+        self, data: _2DArray, /, schema: IntoSchema | Sequence[str] | None
     ) -> PolarsDataFrame: ...
 
     def from_numpy(
         self,
         data: Into1DArray | _2DArray,
         /,
-        schema: Mapping[str, DType] | Schema | Sequence[str] | None = None,
+        schema: IntoSchema | Sequence[str] | None = None,
     ) -> PolarsDataFrame | PolarsSeries:
         if is_numpy_array_2d(data):
             return self._dataframe.from_numpy(data, schema=schema, context=self)
@@ -116,7 +113,7 @@ class PolarsNamespace:
     @requires.backend_version(
         (1, 0, 0), "Please use `col` for columns selection instead."
     )
-    def nth(self, *indices: int) -> PolarsExpr:
+    def nth(self, indices: Sequence[int]) -> PolarsExpr:
         return self._expr(pl.nth(*indices), version=self._version)
 
     def len(self) -> PolarsExpr:
@@ -125,11 +122,11 @@ class PolarsNamespace:
         return self._expr(pl.len(), self._version)
 
     def all_horizontal(self, *exprs: PolarsExpr, ignore_nulls: bool) -> PolarsExpr:
-        it = (expr.fill_null(True) for expr in exprs) if ignore_nulls else iter(exprs)  # noqa: FBT003
+        it = (expr.fill_null(True) for expr in exprs) if ignore_nulls else iter(exprs)
         return self._expr(pl.all_horizontal(*(expr.native for expr in it)), self._version)
 
     def any_horizontal(self, *exprs: PolarsExpr, ignore_nulls: bool) -> PolarsExpr:
-        it = (expr.fill_null(False) for expr in exprs) if ignore_nulls else iter(exprs)  # noqa: FBT003
+        it = (expr.fill_null(False) for expr in exprs) if ignore_nulls else iter(exprs)
         return self._expr(pl.any_horizontal(*(expr.native for expr in it)), self._version)
 
     def concat(
@@ -182,7 +179,7 @@ class PolarsNamespace:
             else:
                 init_value, *values = [
                     pl.when(nm).then(pl.lit("")).otherwise(expr.cast(pl.String()))
-                    for expr, nm in zip(pl_exprs, null_mask)
+                    for expr, nm in zip_strict(pl_exprs, null_mask)
                 ]
                 separators = [
                     pl.when(~nm).then(sep).otherwise(pl.lit("")) for nm in null_mask[:-1]
@@ -191,13 +188,29 @@ class PolarsNamespace:
                 result = pl.fold(  # type: ignore[assignment]
                     acc=init_value,
                     function=operator.add,
-                    exprs=[s + v for s, v in zip(separators, values)],
+                    exprs=[s + v for s, v in zip_strict(separators, values)],
                 )
 
             return self._expr(result, version=self._version)
 
         return self._expr(
             pl.concat_str(pl_exprs, separator=separator, ignore_nulls=ignore_nulls),
+            version=self._version,
+        )
+
+    def when_then(
+        self, when: PolarsExpr, then: PolarsExpr, otherwise: PolarsExpr | None = None
+    ) -> PolarsExpr:
+        if otherwise is None:
+            (when_native, then_native), _ = extract_args_kwargs((when, then), {})
+            return self._expr(
+                pl.when(when_native).then(then_native), version=self._version
+            )
+        (when_native, then_native, otherwise_native), _ = extract_args_kwargs(
+            (when, then, otherwise), {}
+        )
+        return self._expr(
+            pl.when(when_native).then(then_native).otherwise(otherwise_native),
             version=self._version,
         )
 

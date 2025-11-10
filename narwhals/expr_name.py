@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Callable, Generic, TypeVar
 
+from narwhals._expression_parsing import ExprKind, ExprNode
+
 if TYPE_CHECKING:
     from narwhals.expr import Expr
 
@@ -15,13 +17,8 @@ class ExprNameNamespace(Generic[ExprT]):
     def keep(self) -> ExprT:
         r"""Keep the original root name of the expression.
 
-        Returns:
-            A new expression.
-
         Notes:
-            This will undo any previous renaming operations on the expression.
-            Due to implementation constraints, this method can only be called as the last
-            expression in a chain. Only one name operation per expression will work.
+            For Polars versions prior to 1.32, this will undo any previous renaming operations on the expression.
 
         Examples:
             >>> import pandas as pd
@@ -31,9 +28,7 @@ class ExprNameNamespace(Generic[ExprT]):
             >>> df.select(nw.col("foo").alias("alias_for_foo").name.keep()).columns
             ['foo']
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).name.keep()
-        )
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "name.keep"))
 
     def map(self, function: Callable[[str], str]) -> ExprT:
         r"""Rename the output of an expression by mapping a function over the root name.
@@ -41,13 +36,8 @@ class ExprNameNamespace(Generic[ExprT]):
         Arguments:
             function: Function that maps a root name to a new name.
 
-        Returns:
-            A new expression.
-
         Notes:
-            This will undo any previous renaming operations on the expression.
-            Due to implementation constraints, this method can only be called as the last
-            expression in a chain. Only one name operation per expression will work.
+            For Polars versions prior to 1.32, this will undo any previous renaming operations on the expression.
 
         Examples:
             >>> import pandas as pd
@@ -58,8 +48,8 @@ class ExprNameNamespace(Generic[ExprT]):
             >>> df.select(nw.col("foo", "BAR").name.map(renaming_func)).columns
             ['oof', 'RAB']
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).name.map(function)
+        return self._expr._append_node(
+            ExprNode(ExprKind.ELEMENTWISE, "name.map", function=function)
         )
 
     def prefix(self, prefix: str) -> ExprT:
@@ -68,13 +58,8 @@ class ExprNameNamespace(Generic[ExprT]):
         Arguments:
             prefix: Prefix to add to the root column name.
 
-        Returns:
-            A new expression.
-
         Notes:
-            This will undo any previous renaming operations on the expression.
-            Due to implementation constraints, this method can only be called as the last
-            expression in a chain. Only one name operation per expression will work.
+            For Polars versions prior to 1.32, this will undo any previous renaming operations on the expression.
 
         Examples:
             >>> import polars as pl
@@ -84,8 +69,8 @@ class ExprNameNamespace(Generic[ExprT]):
             >>> df.select(nw.col("foo", "BAR").name.prefix("with_prefix")).columns
             ['with_prefixfoo', 'with_prefixBAR']
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).name.prefix(prefix)
+        return self._expr._append_node(
+            ExprNode(ExprKind.ELEMENTWISE, "name.prefix", prefix=prefix)
         )
 
     def suffix(self, suffix: str) -> ExprT:
@@ -94,13 +79,8 @@ class ExprNameNamespace(Generic[ExprT]):
         Arguments:
             suffix: Suffix to add to the root column name.
 
-        Returns:
-            A new expression.
-
         Notes:
-            This will undo any previous renaming operations on the expression.
-            Due to implementation constraints, this method can only be called as the last
-            expression in a chain. Only one name operation per expression will work.
+            For Polars versions prior to 1.32, this will undo any previous renaming operations on the expression.
 
         Examples:
             >>> import polars as pl
@@ -110,20 +90,15 @@ class ExprNameNamespace(Generic[ExprT]):
             >>> df.select(nw.col("foo", "BAR").name.suffix("_with_suffix")).columns
             ['foo_with_suffix', 'BAR_with_suffix']
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).name.suffix(suffix)
+        return self._expr._append_node(
+            ExprNode(ExprKind.ELEMENTWISE, "name.suffix", suffix=suffix)
         )
 
     def to_lowercase(self) -> ExprT:
         r"""Make the root column name lowercase.
 
-        Returns:
-            A new expression.
-
         Notes:
-            This will undo any previous renaming operations on the expression.
-            Due to implementation constraints, this method can only be called as the last
-            expression in a chain. Only one name operation per expression will work.
+            For Polars versions prior to 1.32, this will undo any previous renaming operations on the expression.
 
         Examples:
             >>> import pyarrow as pa
@@ -133,20 +108,15 @@ class ExprNameNamespace(Generic[ExprT]):
             >>> df.select(nw.col("foo", "BAR").name.to_lowercase()).columns
             ['foo', 'bar']
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).name.to_lowercase()
+        return self._expr._append_node(
+            ExprNode(ExprKind.ELEMENTWISE, "name.to_lowercase")
         )
 
     def to_uppercase(self) -> ExprT:
         r"""Make the root column name uppercase.
 
-        Returns:
-            A new expression.
-
         Notes:
-            This will undo any previous renaming operations on the expression.
-            Due to implementation constraints, this method can only be called as the last
-            expression in a chain. Only one name operation per expression will work.
+            For Polars versions prior to 1.32, this will undo any previous renaming operations on the expression.
 
         Examples:
             >>> import pyarrow as pa
@@ -156,6 +126,6 @@ class ExprNameNamespace(Generic[ExprT]):
             >>> df.select(nw.col("foo", "BAR").name.to_uppercase()).columns
             ['FOO', 'BAR']
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).name.to_uppercase()
+        return self._expr._append_node(
+            ExprNode(ExprKind.ELEMENTWISE, "name.to_uppercase")
         )

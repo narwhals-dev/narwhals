@@ -3,27 +3,17 @@ from __future__ import annotations
 import platform
 import sys
 from collections.abc import Iterable, Mapping, Sequence
-from functools import partial
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any
 
-from narwhals._expression_parsing import (
-    ExprKind,
-    ExprMetadata,
-    apply_n_ary_operation,
-    combine_metadata,
-    extract_compliant,
-    is_scalar_like,
-)
-from narwhals._typing_compat import deprecated
+from narwhals._expression_parsing import ExprKind, ExprNode, is_expr, is_series
 from narwhals._utils import (
     Implementation,
     Version,
     deprecate_native_namespace,
     flatten,
-    is_compliant_expr,
     is_eager_allowed,
     is_sequence_but_not_str,
-    issue_deprecation_warning,
+    normalize_path,
     supports_arrow_c_stream,
     validate_laziness,
 )
@@ -35,7 +25,6 @@ from narwhals.dependencies import (
 )
 from narwhals.exceptions import InvalidOperationError
 from narwhals.expr import Expr
-from narwhals.series import Series
 from narwhals.translate import from_native, to_native
 
 if TYPE_CHECKING:
@@ -43,26 +32,24 @@ if TYPE_CHECKING:
 
     from typing_extensions import TypeAlias, TypeIs
 
-    from narwhals._compliant import CompliantExpr, CompliantNamespace
+    from narwhals._native import NativeDataFrame, NativeLazyFrame, NativeSeries
     from narwhals._translate import IntoArrowTable
+    from narwhals._typing import Backend, EagerAllowed, IntoBackend
     from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.dtypes import DType
-    from narwhals.schema import Schema
+    from narwhals.series import Series
     from narwhals.typing import (
         ConcatMethod,
+        FileSource,
         FrameT,
         IntoDType,
         IntoExpr,
-        IntoSeriesT,
-        NativeFrame,
-        NativeLazyFrame,
-        NativeSeries,
+        IntoSchema,
         NonNestedLiteral,
-        _1DArray,
         _2DArray,
     )
 
-    _IntoSchema: TypeAlias = "Mapping[str, DType] | Schema | Sequence[str] | None"
+    _IntoSchema: TypeAlias = "IntoSchema | Sequence[str] | None"
 
 
 def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> FrameT:
@@ -78,9 +65,6 @@ def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> FrameT
                 when all inputs are (eager) DataFrames.
             - diagonal: Finds a union between the column schemas and fills missing column
                 values with null.
-
-    Returns:
-        A new DataFrame or LazyFrame resulting from the concatenation.
 
     Raises:
         TypeError: The items to concatenate should either all be eager, or all lazy
@@ -152,7 +136,7 @@ def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> FrameT
     if not items:
         msg = "No items to concatenate."
         raise ValueError(msg)
-    items = list(items)
+    items = tuple(items)
     validate_laziness(items)
     if how not in {"horizontal", "vertical", "diagonal"}:  # pragma: no cover
         msg = "Only vertical, horizontal and diagonal concatenations are supported."
@@ -170,14 +154,12 @@ def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> FrameT
     )
 
 
-@deprecate_native_namespace(warn_version="1.31.0", required=True)
 def new_series(
     name: str,
     values: Any,
     dtype: IntoDType | None = None,
     *,
-    backend: ModuleType | Implementation | str | None = None,
-    native_namespace: ModuleType | None = None,  # noqa: ARG001
+    backend: IntoBackend[EagerAllowed],
 ) -> Series[Any]:
     """Instantiate Narwhals Series from iterable (e.g. list or array).
 
@@ -194,16 +176,6 @@ def new_series(
                 `POLARS`, `MODIN` or `CUDF`.
             - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
-        native_namespace: The native library to use for DataFrame creation.
-
-            *Deprecated* (v1.31.0)
-
-            Please use `backend` instead. Note that `native_namespace` is still available
-            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-            see [perfect backwards compatibility policy](../backcompat.md/).
-
-    Returns:
-        A new Series
 
     Examples:
         >>> import pandas as pd
@@ -221,7 +193,6 @@ def new_series(
         |Name: a, dtype: int32|
         └─────────────────────┘
     """
-    backend = cast("ModuleType | Implementation | str", backend)
     return _new_series_impl(name, values, dtype, backend=backend)
 
 
@@ -230,14 +201,14 @@ def _new_series_impl(
     values: Any,
     dtype: IntoDType | None = None,
     *,
-    backend: ModuleType | Implementation | str,
+    backend: IntoBackend[EagerAllowed],
 ) -> Series[Any]:
     implementation = Implementation.from_backend(backend)
     if is_eager_allowed(implementation):
         ns = Version.MAIN.namespace.from_backend(implementation).compliant
         series = ns._series.from_iterable(values, name=name, context=ns, dtype=dtype)
         return series.to_narwhals()
-    elif implementation is Implementation.UNKNOWN:  # pragma: no cover
+    if implementation is Implementation.UNKNOWN:  # pragma: no cover
         _native_namespace = implementation.to_native_namespace()
         try:
             native_series: NativeSeries = _native_namespace.new_series(
@@ -258,9 +229,9 @@ def _new_series_impl(
 @deprecate_native_namespace(warn_version="1.26.0")
 def from_dict(
     data: Mapping[str, Any],
-    schema: Mapping[str, DType] | Schema | None = None,
+    schema: IntoSchema | Mapping[str, DType | None] | None = None,
     *,
-    backend: ModuleType | Implementation | str | None = None,
+    backend: IntoBackend[EagerAllowed] | None = None,
     native_namespace: ModuleType | None = None,  # noqa: ARG001
 ) -> DataFrame[Any]:
     """Instantiate DataFrame from dictionary.
@@ -275,7 +246,9 @@ def from_dict(
     Arguments:
         data: Dictionary to create DataFrame from.
         schema: The DataFrame schema as Schema or dict of {name: type}. If not
-            specified, the schema will be inferred by the native library.
+            specified, the schema will be inferred by the native library. If
+            any `dtype` is `None`, the data type for that column will be inferred
+            by the native library.
         backend: specifies which eager backend instantiate to. Only
             necessary if inputs are not Narwhals Series.
 
@@ -285,16 +258,7 @@ def from_dict(
                 `POLARS`, `MODIN` or `CUDF`.
             - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
-        native_namespace: The native library to use for DataFrame creation.
-
-            *Deprecated* (v1.26.0)
-
-            Please use `backend` instead. Note that `native_namespace` is still available
-            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-            see [perfect backwards compatibility policy](../backcompat.md/).
-
-    Returns:
-        A new DataFrame.
+        native_namespace: deprecated, same as `backend`.
 
     Examples:
         >>> import pandas as pd
@@ -311,16 +275,21 @@ def from_dict(
     """
     if backend is None:
         data, backend = _from_dict_no_backend(data)
+    if schema and data and (diff := set(schema.keys()).symmetric_difference(data.keys())):
+        msg = f"Keys in `schema` and `data` are expected to match, found unmatched keys: {diff}"
+        raise InvalidOperationError(msg)
     implementation = Implementation.from_backend(backend)
     if is_eager_allowed(implementation):
         ns = Version.MAIN.namespace.from_backend(implementation).compliant
         return ns._dataframe.from_dict(data, schema=schema, context=ns).to_narwhals()
-    elif implementation is Implementation.UNKNOWN:  # pragma: no cover
+    if implementation is Implementation.UNKNOWN:  # pragma: no cover
         _native_namespace = implementation.to_native_namespace()
         try:
             # implementation is UNKNOWN, Narwhals extension using this feature should
             # implement `from_dict` function in the top-level namespace.
-            native_frame: NativeFrame = _native_namespace.from_dict(data, schema=schema)
+            native_frame: NativeDataFrame = _native_namespace.from_dict(
+                data, schema=schema
+            )
         except AttributeError as e:
             msg = "Unknown namespace is expected to implement `from_dict` function."
             raise AttributeError(msg) from e
@@ -347,13 +316,71 @@ def _from_dict_no_backend(
     return data, native_namespace
 
 
-@deprecate_native_namespace(warn_version="1.31.0", required=True)
+def from_dicts(
+    data: Sequence[Mapping[str, Any]],
+    schema: IntoSchema | Mapping[str, DType | None] | None = None,
+    *,
+    backend: IntoBackend[EagerAllowed],
+) -> DataFrame[Any]:
+    """Instantiate DataFrame from a sequence of dictionaries representing rows.
+
+    Notes:
+        For pandas-like dataframes, conversion to schema is applied after dataframe
+        creation.
+
+    Arguments:
+        data: Sequence with dictionaries mapping column name to value.
+        schema: The DataFrame schema as Schema or dict of {name: type}. If not
+            specified, the schema will be inferred by the native library. If
+            any `dtype` is `None`, the data type for that column will be inferred
+            by the native library.
+        backend: Specifies which eager backend instantiate to.
+
+            `backend` can be specified in various ways
+
+            - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
+                `POLARS`, `MODIN` or `CUDF`.
+            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
+            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+
+    Tip:
+        If you expect non-uniform keys in `data`, consider passing `schema` for
+        more consistent results, as **inference varies between backends**:
+
+        - pandas uses all rows
+        - polars uses the first 100 rows
+        - pyarrow uses only the first row
+
+    Examples:
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>> data = [
+        ...     {"item": "apple", "weight": 80, "price": 0.60},
+        ...     {"item": "egg", "weight": 55, "price": 0.40},
+        ... ]
+        >>> nw.DataFrame.from_dicts(data, backend="polars")
+        ┌──────────────────────────┐
+        |    Narwhals DataFrame    |
+        |--------------------------|
+        |shape: (2, 3)             |
+        |┌───────┬────────┬───────┐|
+        |│ item  ┆ weight ┆ price │|
+        |│ ---   ┆ ---    ┆ ---   │|
+        |│ str   ┆ i64    ┆ f64   │|
+        |╞═══════╪════════╪═══════╡|
+        |│ apple ┆ 80     ┆ 0.6   │|
+        |│ egg   ┆ 55     ┆ 0.4   │|
+        |└───────┴────────┴───────┘|
+        └──────────────────────────┘
+    """
+    return Version.MAIN.dataframe.from_dicts(data, schema, backend=backend)
+
+
 def from_numpy(
     data: _2DArray,
-    schema: Mapping[str, DType] | Schema | Sequence[str] | None = None,
+    schema: IntoSchema | Sequence[str] | None = None,
     *,
-    backend: ModuleType | Implementation | str | None = None,
-    native_namespace: ModuleType | None = None,  # noqa: ARG001
+    backend: IntoBackend[EagerAllowed],
 ) -> DataFrame[Any]:
     """Construct a DataFrame from a NumPy ndarray.
 
@@ -374,16 +401,6 @@ def from_numpy(
                 `POLARS`, `MODIN` or `CUDF`.
             - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
-        native_namespace: The native library to use for DataFrame creation.
-
-            *Deprecated* (v1.31.0)
-
-            Please use `backend` instead. Note that `native_namespace` is still available
-            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-            see [perfect backwards compatibility policy](../backcompat.md/).
-
-    Returns:
-        A new DataFrame.
 
     Examples:
         >>> import numpy as np
@@ -406,14 +423,13 @@ def from_numpy(
         |  e: [[1,3]]      |
         └──────────────────┘
     """
-    backend = cast("ModuleType | Implementation | str", backend)
     if not is_numpy_array_2d(data):
         msg = "`from_numpy` only accepts 2D numpy arrays"
         raise ValueError(msg)
     if not _is_into_schema(schema):
         msg = (
             "`schema` is expected to be one of the following types: "
-            "Mapping[str, DType] | Schema | Sequence[str]. "
+            "IntoSchema | Sequence[str]. "
             f"Got {type(schema)}."
         )
         raise TypeError(msg)
@@ -421,12 +437,14 @@ def from_numpy(
     if is_eager_allowed(implementation):
         ns = Version.MAIN.namespace.from_backend(implementation).compliant
         return ns.from_numpy(data, schema).to_narwhals()
-    elif implementation is Implementation.UNKNOWN:  # pragma: no cover
+    if implementation is Implementation.UNKNOWN:  # pragma: no cover
         _native_namespace = implementation.to_native_namespace()
         try:
             # implementation is UNKNOWN, Narwhals extension using this feature should
             # implement `from_numpy` function in the top-level namespace.
-            native_frame: NativeFrame = _native_namespace.from_numpy(data, schema=schema)
+            native_frame: NativeDataFrame = _native_namespace.from_numpy(
+                data, schema=schema
+            )
         except AttributeError as e:
             msg = "Unknown namespace is expected to implement `from_numpy` function."
             raise AttributeError(msg) from e
@@ -447,12 +465,8 @@ def _is_into_schema(obj: Any) -> TypeIs[_IntoSchema]:
     )
 
 
-@deprecate_native_namespace(warn_version="1.31.0", required=True)
 def from_arrow(
-    native_frame: IntoArrowTable,
-    *,
-    backend: ModuleType | Implementation | str | None = None,
-    native_namespace: ModuleType | None = None,  # noqa: ARG001
+    native_frame: IntoArrowTable, *, backend: IntoBackend[EagerAllowed]
 ) -> DataFrame[Any]:  # pragma: no cover
     """Construct a DataFrame from an object which supports the PyCapsule Interface.
 
@@ -466,16 +480,6 @@ def from_arrow(
                 `POLARS`, `MODIN` or `CUDF`.
             - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
-        native_namespace: The native library to use for DataFrame creation.
-
-            *Deprecated* (v1.31.0)
-
-            Please use `backend` instead. Note that `native_namespace` is still available
-            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-            see [perfect backwards compatibility policy](../backcompat.md/).
-
-    Returns:
-        A new DataFrame.
 
     Examples:
         >>> import pandas as pd
@@ -498,7 +502,6 @@ def from_arrow(
         |  └─────┴─────┘   |
         └──────────────────┘
     """
-    backend = cast("ModuleType | Implementation | str", backend)
     if not (supports_arrow_c_stream(native_frame) or is_pyarrow_table(native_frame)):
         msg = f"Given object of type {type(native_frame)} does not support PyCapsule interface"
         raise TypeError(msg)
@@ -506,12 +509,12 @@ def from_arrow(
     if is_eager_allowed(implementation):
         ns = Version.MAIN.namespace.from_backend(implementation).compliant
         return ns._dataframe.from_arrow(native_frame, context=ns).to_narwhals()
-    elif implementation is Implementation.UNKNOWN:  # pragma: no cover
+    if implementation is Implementation.UNKNOWN:  # pragma: no cover
         _native_namespace = implementation.to_native_namespace()
         try:
             # implementation is UNKNOWN, Narwhals extension using this feature should
             # implement PyCapsule support
-            native: NativeFrame = _native_namespace.DataFrame(native_frame)
+            native: NativeDataFrame = _native_namespace.DataFrame(native_frame)
         except AttributeError as e:
             msg = "Unknown namespace is expected to implement `DataFrame` class which accepts object which supports PyCapsule Interface."
             raise AttributeError(msg) from e
@@ -601,47 +604,8 @@ def show_versions() -> None:
         print(f"{k:>13}: {stat}")  # noqa: T201
 
 
-@deprecated(
-    "`get_level` is deprecated, as Narwhals no longer supports the Dataframe Interchange Protocol."
-)
-def get_level(
-    obj: DataFrame[Any] | LazyFrame[Any] | Series[IntoSeriesT],
-) -> Literal["full", "lazy", "interchange"]:
-    """Level of support Narwhals has for current object.
-
-    Warning:
-        `get_level` is deprecated and will be removed in a future version.
-        "DuckDB and Ibis now have full lazy support in Narwhals, and passing
-        them to `nw.from_native` returns `nw.LazyFrame`.
-        Note: this will remain available in `narwhals.stable.v1`.
-        See [stable api](../backcompat.md/) for more information.
-
-    Arguments:
-        obj: Dataframe or Series.
-
-    Returns:
-        This can be one of
-
-            - 'full': full Narwhals API support
-            - 'lazy': only lazy operations are supported. This excludes anything
-              which involves iterating over rows in Python.
-    """
-    issue_deprecation_warning(
-        "`get_level` is deprecated, as Narwhals no longer supports the Dataframe Interchange Protocol.\n"
-        "DuckDB and Ibis now have full lazy support in Narwhals, and passing them to `nw.from_native` \n"
-        "returns `nw.LazyFrame`.",
-        "1.43",
-    )
-    return obj._level
-
-
-@deprecate_native_namespace(warn_version="1.27.2", required=True)
 def read_csv(
-    source: str,
-    *,
-    backend: ModuleType | Implementation | str | None = None,
-    native_namespace: ModuleType | None = None,
-    **kwargs: Any,
+    source: FileSource, *, backend: IntoBackend[EagerAllowed], **kwargs: Any
 ) -> DataFrame[Any]:
     """Read a CSV file into a DataFrame.
 
@@ -654,19 +618,9 @@ def read_csv(
                 `POLARS`, `MODIN` or `CUDF`.
             - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
-        native_namespace: The native library to use for DataFrame creation.
-
-            *Deprecated* (v1.27.2)
-
-            Please use `backend` instead. Note that `native_namespace` is still available
-            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-            see [perfect backwards compatibility policy](../backcompat.md/).
         kwargs: Extra keyword arguments which are passed to the native CSV reader.
             For example, you could use
             `nw.read_csv('file.csv', backend='pandas', engine='pyarrow')`.
-
-    Returns:
-        DataFrame.
 
     Examples:
         >>> import narwhals as nw
@@ -679,21 +633,33 @@ def read_csv(
         |     1  2   5     |
         └──────────────────┘
     """
-    backend = cast("ModuleType | Implementation | str", backend)
-    eager_backend = Implementation.from_backend(backend)
-    native_namespace = eager_backend.to_native_namespace()
-    native_frame: NativeFrame
-    if eager_backend in {
+    impl = Implementation.from_backend(backend)
+    native_namespace = impl.to_native_namespace()
+    native_frame: NativeDataFrame
+    if impl in {
         Implementation.POLARS,
         Implementation.PANDAS,
         Implementation.MODIN,
         Implementation.CUDF,
     }:
-        native_frame = native_namespace.read_csv(source, **kwargs)
-    elif eager_backend is Implementation.PYARROW:
+        native_frame = native_namespace.read_csv(normalize_path(source), **kwargs)
+    elif impl is Implementation.PYARROW:
         from pyarrow import csv  # ignore-banned-import
 
         native_frame = csv.read_csv(source, **kwargs)
+    elif impl in {
+        Implementation.PYSPARK,
+        Implementation.DASK,
+        Implementation.DUCKDB,
+        Implementation.IBIS,
+        Implementation.SQLFRAME,
+        Implementation.PYSPARK_CONNECT,
+    }:
+        msg = (
+            f"Expected eager backend, found {impl}.\n\n"
+            f"Hint: use nw.scan_csv(source={source}, backend={backend})"
+        )
+        raise ValueError(msg)
     else:  # pragma: no cover
         try:
             # implementation is UNKNOWN, Narwhals extension using this feature should
@@ -705,13 +671,8 @@ def read_csv(
     return from_native(native_frame, eager_only=True)
 
 
-@deprecate_native_namespace(warn_version="1.31.0", required=True)
 def scan_csv(
-    source: str,
-    *,
-    backend: ModuleType | Implementation | str | None = None,
-    native_namespace: ModuleType | None = None,
-    **kwargs: Any,
+    source: FileSource, *, backend: IntoBackend[Backend], **kwargs: Any
 ) -> LazyFrame[Any]:
     """Lazily read from a CSV file.
 
@@ -727,19 +688,9 @@ def scan_csv(
                 `POLARS`, `MODIN` or `CUDF`.
             - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
-        native_namespace: The native library to use for DataFrame creation.
-
-            *Deprecated* (v1.31.0)
-
-            Please use `backend` instead. Note that `native_namespace` is still available
-            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-            see [perfect backwards compatibility policy](../backcompat.md/).
         kwargs: Extra keyword arguments which are passed to the native CSV reader.
             For example, you could use
             `nw.scan_csv('file.csv', backend=pd, engine='pyarrow')`.
-
-    Returns:
-        LazyFrame.
 
     Examples:
         >>> import duckdb
@@ -755,10 +706,10 @@ def scan_csv(
         │ z       │     3 │
         └─────────┴───────┘
     """
-    backend = cast("ModuleType | Implementation | str", backend)
     implementation = Implementation.from_backend(backend)
     native_namespace = implementation.to_native_namespace()
-    native_frame: NativeFrame | NativeLazyFrame
+    native_frame: NativeDataFrame | NativeLazyFrame
+    source = normalize_path(source)
     if implementation is Implementation.POLARS:
         native_frame = native_namespace.scan_csv(source, **kwargs)
     elif implementation in {
@@ -778,7 +729,6 @@ def scan_csv(
         if (session := kwargs.pop("session", None)) is None:
             msg = "Spark like backends require a session object to be passed in `kwargs`."
             raise ValueError(msg)
-
         csv_reader = session.read.format("csv")
         native_frame = (
             csv_reader.load(source)
@@ -799,13 +749,8 @@ def scan_csv(
     return from_native(native_frame).lazy()
 
 
-@deprecate_native_namespace(warn_version="1.31.0", required=True)
 def read_parquet(
-    source: str,
-    *,
-    backend: ModuleType | Implementation | str | None = None,
-    native_namespace: ModuleType | None = None,
-    **kwargs: Any,
+    source: FileSource, *, backend: IntoBackend[EagerAllowed], **kwargs: Any
 ) -> DataFrame[Any]:
     """Read into a DataFrame from a parquet file.
 
@@ -818,19 +763,9 @@ def read_parquet(
                 `POLARS`, `MODIN` or `CUDF`.
             - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
-        native_namespace: The native library to use for DataFrame creation.
-
-            *Deprecated* (v1.31.0)
-
-            Please use `backend` instead. Note that `native_namespace` is still available
-            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-            see [perfect backwards compatibility policy](../backcompat.md/).
         kwargs: Extra keyword arguments which are passed to the native parquet reader.
             For example, you could use
             `nw.read_parquet('file.parquet', backend=pd, engine='pyarrow')`.
-
-    Returns:
-        DataFrame.
 
     Examples:
         >>> import pyarrow as pa
@@ -848,23 +783,34 @@ def read_parquet(
         |c: [[0.2,0.1]]    |
         └──────────────────┘
     """
-    backend = cast("ModuleType | Implementation | str", backend)
-    implementation = Implementation.from_backend(backend)
-    native_namespace = implementation.to_native_namespace()
-    native_frame: NativeFrame
-    if implementation in {
+    impl = Implementation.from_backend(backend)
+    native_namespace = impl.to_native_namespace()
+    native_frame: NativeDataFrame
+    if impl in {
         Implementation.POLARS,
         Implementation.PANDAS,
         Implementation.MODIN,
         Implementation.CUDF,
-        Implementation.DUCKDB,
-        Implementation.IBIS,
     }:
+        source = normalize_path(source)
         native_frame = native_namespace.read_parquet(source, **kwargs)
-    elif implementation is Implementation.PYARROW:
+    elif impl is Implementation.PYARROW:
         import pyarrow.parquet as pq  # ignore-banned-import
 
-        native_frame = pq.read_table(source, **kwargs)
+        native_frame = pq.read_table(source, **kwargs)  # type: ignore[arg-type]
+    elif impl in {
+        Implementation.PYSPARK,
+        Implementation.DASK,
+        Implementation.DUCKDB,
+        Implementation.IBIS,
+        Implementation.SQLFRAME,
+        Implementation.PYSPARK_CONNECT,
+    }:
+        msg = (
+            f"Expected eager backend, found {impl}.\n\n"
+            f"Hint: use nw.scan_parquet(source={source}, backend={backend})"
+        )
+        raise ValueError(msg)
     else:  # pragma: no cover
         try:
             # implementation is UNKNOWN, Narwhals extension using this feature should
@@ -876,13 +822,8 @@ def read_parquet(
     return from_native(native_frame, eager_only=True)
 
 
-@deprecate_native_namespace(warn_version="1.31.0", required=True)
 def scan_parquet(
-    source: str,
-    *,
-    backend: ModuleType | Implementation | str | None = None,
-    native_namespace: ModuleType | None = None,
-    **kwargs: Any,
+    source: FileSource, *, backend: IntoBackend[Backend], **kwargs: Any
 ) -> LazyFrame[Any]:
     """Lazily read from a parquet file.
 
@@ -912,19 +853,9 @@ def scan_parquet(
                 `"pyspark"` or `"sqlframe"`.
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin`, `cudf`,
                 `pyspark.sql` or `sqlframe`.
-        native_namespace: The native library to use for DataFrame creation.
-
-            *Deprecated* (v1.31.0)
-
-            Please use `backend` instead. Note that `native_namespace` is still available
-            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-            see [perfect backwards compatibility policy](../backcompat.md/).
         kwargs: Extra keyword arguments which are passed to the native parquet reader.
             For example, you could use
             `nw.scan_parquet('file.parquet', backend=pd, engine='pyarrow')`.
-
-    Returns:
-        LazyFrame.
 
     Examples:
         >>> import dask.dataframe as dd
@@ -953,10 +884,10 @@ def scan_parquet(
         |  b: [[4,5]]      |
         └──────────────────┘
     """
-    backend = cast("ModuleType | Implementation | str", backend)
     implementation = Implementation.from_backend(backend)
     native_namespace = implementation.to_native_namespace()
-    native_frame: NativeFrame | NativeLazyFrame
+    native_frame: NativeDataFrame | NativeLazyFrame
+    source = normalize_path(source)
     if implementation is Implementation.POLARS:
         native_frame = native_namespace.scan_parquet(source, **kwargs)
     elif implementation in {
@@ -976,7 +907,6 @@ def scan_parquet(
         if (session := kwargs.pop("session", None)) is None:
             msg = "Spark like backends require a session object to be passed in `kwargs`."
             raise ValueError(msg)
-
         pq_reader = session.read.format("parquet")
         native_frame = (
             pq_reader.load(source)
@@ -1004,9 +934,6 @@ def col(*names: str | Iterable[str]) -> Expr:
     Arguments:
         names: Name(s) of the columns to use.
 
-    Returns:
-        A new expression.
-
     Examples:
         >>> import polars as pl
         >>> import narwhals as nw
@@ -1028,16 +955,7 @@ def col(*names: str | Iterable[str]) -> Expr:
         └──────────────────┘
     """
     flat_names = flatten(names)
-
-    def func(plx: Any) -> Any:
-        return plx.col(*flat_names)
-
-    return Expr(
-        func,
-        ExprMetadata.selector_single()
-        if len(flat_names) == 1
-        else ExprMetadata.selector_multi_named(),
-    )
+    return Expr(ExprNode(ExprKind.COL, "col", names=flat_names))
 
 
 def exclude(*names: str | Iterable[str]) -> Expr:
@@ -1045,9 +963,6 @@ def exclude(*names: str | Iterable[str]) -> Expr:
 
     Arguments:
         names: Name(s) of the columns to exclude.
-
-    Returns:
-        A new expression.
 
     Examples:
         >>> import polars as pl
@@ -1069,12 +984,7 @@ def exclude(*names: str | Iterable[str]) -> Expr:
         |  └─────┘         |
         └──────────────────┘
     """
-    exclude_names = frozenset(flatten(names))
-
-    def func(plx: Any) -> Any:
-        return plx.exclude(exclude_names)
-
-    return Expr(func, ExprMetadata.selector_multi_unnamed())
+    return Expr(ExprNode(ExprKind.EXCLUDE, "exclude", names=frozenset(flatten(names))))
 
 
 def nth(*indices: int | Sequence[int]) -> Expr:
@@ -1086,9 +996,6 @@ def nth(*indices: int | Sequence[int]) -> Expr:
 
     Arguments:
         indices: One or more indices representing the columns to retrieve.
-
-    Returns:
-        A new expression.
 
     Examples:
         >>> import pyarrow as pa
@@ -1108,24 +1015,12 @@ def nth(*indices: int | Sequence[int]) -> Expr:
         └──────────────────┘
     """
     flat_indices = flatten(indices)
-
-    def func(plx: Any) -> Any:
-        return plx.nth(*flat_indices)
-
-    return Expr(
-        func,
-        ExprMetadata.selector_single()
-        if len(flat_indices) == 1
-        else ExprMetadata.selector_multi_unnamed(),
-    )
+    return Expr(ExprNode(ExprKind.NTH, "nth", indices=flat_indices))
 
 
 # Add underscore so it doesn't conflict with builtin `all`
 def all_() -> Expr:
     """Instantiate an expression representing all columns.
-
-    Returns:
-        A new expression.
 
     Examples:
         >>> import pandas as pd
@@ -1141,15 +1036,12 @@ def all_() -> Expr:
         |   1  4  0.246    |
         └──────────────────┘
     """
-    return Expr(lambda plx: plx.all(), ExprMetadata.selector_multi_unnamed())
+    return Expr(ExprNode(ExprKind.ALL, "all"))
 
 
 # Add underscore so it doesn't conflict with builtin `len`
 def len_() -> Expr:
     """Return the number of rows.
-
-    Returns:
-        A new expression.
 
     Examples:
         >>> import polars as pl
@@ -1170,11 +1062,7 @@ def len_() -> Expr:
         |  └─────┘         |
         └──────────────────┘
     """
-
-    def func(plx: Any) -> Any:
-        return plx.len()
-
-    return Expr(func, ExprMetadata.aggregation())
+    return Expr(ExprNode(ExprKind.AGGREGATION, "len"))
 
 
 def sum(*columns: str) -> Expr:
@@ -1185,9 +1073,6 @@ def sum(*columns: str) -> Expr:
 
     Arguments:
         columns: Name(s) of the columns to use in the aggregation function
-
-    Returns:
-        A new expression.
 
     Examples:
         >>> import pandas as pd
@@ -1213,9 +1098,6 @@ def mean(*columns: str) -> Expr:
 
     Arguments:
         columns: Name(s) of the columns to use in the aggregation function
-
-    Returns:
-        A new expression.
 
     Examples:
         >>> import pyarrow as pa
@@ -1248,9 +1130,6 @@ def median(*columns: str) -> Expr:
     Arguments:
         columns: Name(s) of the columns to use in the aggregation function
 
-    Returns:
-        A new expression.
-
     Examples:
         >>> import polars as pl
         >>> import narwhals as nw
@@ -1282,9 +1161,6 @@ def min(*columns: str) -> Expr:
     Arguments:
         columns: Name(s) of the columns to use in the aggregation function.
 
-    Returns:
-        A new expression.
-
     Examples:
         >>> import pyarrow as pa
         >>> import narwhals as nw
@@ -1314,9 +1190,6 @@ def max(*columns: str) -> Expr:
     Arguments:
         columns: Name(s) of the columns to use in the aggregation function.
 
-    Returns:
-        A new expression.
-
     Examples:
         >>> import pandas as pd
         >>> import narwhals as nw
@@ -1333,6 +1206,15 @@ def max(*columns: str) -> Expr:
     return col(*columns).max()
 
 
+def _expr_with_horizontal_op(name: str, *exprs: IntoExpr, **kwargs: Any) -> Expr:
+    if not exprs:
+        msg = f"At least one expression must be passed to `{name}`"
+        raise ValueError(msg)
+    return Expr(
+        ExprNode(ExprKind.ELEMENTWISE, name, *exprs, **kwargs, allow_multi_output=True)
+    )
+
+
 def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     """Sum all values horizontally across columns.
 
@@ -1342,9 +1224,6 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
             expression input.
-
-    Returns:
-        A new expression.
 
     Examples:
         >>> import polars as pl
@@ -1367,16 +1246,7 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         |└─────┴──────┴─────┘|
         └────────────────────┘
     """
-    if not exprs:
-        msg = "At least one expression must be passed to `sum_horizontal`"
-        raise ValueError(msg)
-    flat_exprs = flatten(exprs)
-    return Expr(
-        lambda plx: apply_n_ary_operation(
-            plx, plx.sum_horizontal, *flat_exprs, str_as_lit=False
-        ),
-        ExprMetadata.from_horizontal_op(*flat_exprs),
-    )
+    return _expr_with_horizontal_op("sum_horizontal", *flatten(exprs))
 
 
 def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
@@ -1388,9 +1258,6 @@ def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
             expression input.
-
-    Returns:
-        A new expression.
 
     Examples:
         >>> import pyarrow as pa
@@ -1411,16 +1278,7 @@ def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         | h_min: [[1,5,3]] |
         └──────────────────┘
     """
-    if not exprs:
-        msg = "At least one expression must be passed to `min_horizontal`"
-        raise ValueError(msg)
-    flat_exprs = flatten(exprs)
-    return Expr(
-        lambda plx: apply_n_ary_operation(
-            plx, plx.min_horizontal, *flat_exprs, str_as_lit=False
-        ),
-        ExprMetadata.from_horizontal_op(*flat_exprs),
-    )
+    return _expr_with_horizontal_op("min_horizontal", *flatten(exprs))
 
 
 def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
@@ -1432,9 +1290,6 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
             expression input.
-
-    Returns:
-        A new expression.
 
     Examples:
         >>> import polars as pl
@@ -1457,80 +1312,29 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         |└─────┴──────┴───────┘|
         └──────────────────────┘
     """
-    if not exprs:
-        msg = "At least one expression must be passed to `max_horizontal`"
-        raise ValueError(msg)
-    flat_exprs = flatten(exprs)
-    return Expr(
-        lambda plx: apply_n_ary_operation(
-            plx, plx.max_horizontal, *flat_exprs, str_as_lit=False
-        ),
-        ExprMetadata.from_horizontal_op(*flat_exprs),
-    )
+    return _expr_with_horizontal_op("max_horizontal", *flatten(exprs))
 
 
 class When:
     def __init__(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> None:
         self._predicate = all_horizontal(*flatten(predicates), ignore_nulls=False)
 
-    def then(self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Then:
-        kind = ExprKind.from_into_expr(value, str_as_lit=False)
-        if self._predicate._metadata.is_scalar_like and not kind.is_scalar_like:
-            msg = (
-                "If you pass a scalar-like predicate to `nw.when`, then "
-                "the `then` value must also be scalar-like."
-            )
-            raise InvalidOperationError(msg)
-
+    def then(self, value: IntoExpr | NonNestedLiteral) -> Then:
         return Then(
-            lambda plx: apply_n_ary_operation(
-                plx,
-                lambda *args: plx.when(args[0]).then(args[1]),
+            ExprNode(
+                ExprKind.ELEMENTWISE,
+                "when_then",
                 self._predicate,
                 value,
-                str_as_lit=False,
-            ),
-            combine_metadata(
-                self._predicate,
-                value,
-                str_as_lit=False,
                 allow_multi_output=False,
-                to_single_output=False,
-            ),
+            )
         )
 
 
 class Then(Expr):
-    def otherwise(self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Expr:
-        kind = ExprKind.from_into_expr(value, str_as_lit=False)
-        if self._metadata.is_scalar_like and not is_scalar_like(kind):
-            msg = (
-                "If you pass a scalar-like predicate to `nw.when`, then "
-                "the `otherwise` value must also be scalar-like."
-            )
-            raise InvalidOperationError(msg)
-
-        def func(plx: CompliantNamespace[Any, Any]) -> CompliantExpr[Any, Any]:
-            compliant_expr = self._to_compliant_expr(plx)
-            compliant_value = extract_compliant(plx, value, str_as_lit=False)
-            if (
-                not self._metadata.is_scalar_like
-                and is_scalar_like(kind)
-                and is_compliant_expr(compliant_value)
-            ):
-                compliant_value = compliant_value.broadcast(kind)
-            return compliant_expr.otherwise(compliant_value)  # type: ignore[attr-defined, no-any-return]
-
-        return Expr(
-            func,
-            combine_metadata(
-                self,
-                value,
-                str_as_lit=False,
-                allow_multi_output=False,
-                to_single_output=False,
-            ),
-        )
+    def otherwise(self, value: IntoExpr | NonNestedLiteral) -> Expr:
+        node = self._nodes[0]
+        return Expr(ExprNode(ExprKind.ELEMENTWISE, "when_then", *node.exprs, value))
 
 
 def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
@@ -1575,9 +1379,7 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
     return When(*predicates)
 
 
-def all_horizontal(
-    *exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool | None = None
-) -> Expr:
+def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool) -> Expr:
     r"""Compute the bitwise AND horizontally across columns.
 
     Arguments:
@@ -1587,11 +1389,8 @@ def all_horizontal(
 
             - If `True`, null values are ignored. If there are no elements, the result
               is `True`.
-            - If `False` (default), Kleene logic is followed. Note that this is not allowed for
+            - If `False`, Kleene logic is followed. Note that this is not allowed for
               pandas with classical NumPy dtypes when null values are present.
-
-    Returns:
-        A new expression.
 
     Examples:
         >>> import pyarrow as pa
@@ -1617,26 +1416,9 @@ def all_horizontal(
         |b: [[false,true,true,null,null,null]]    |
         |all: [[false,false,true,null,false,null]]|
         └─────────────────────────────────────────┘
-
     """
-    if not exprs:
-        msg = "At least one expression must be passed to `all_horizontal`"
-        raise ValueError(msg)
-    if ignore_nulls is None:
-        issue_deprecation_warning(
-            "`ignore_nulls` will become a required argument in Narwhals 2.0. Please specify `ignore_nulls=True` or `ignore_nulls=False` to silence this warning.",
-            _version="1.45",
-        )
-        ignore_nulls = False
-    flat_exprs = flatten(exprs)
-    return Expr(
-        lambda plx: apply_n_ary_operation(
-            plx,
-            partial(plx.all_horizontal, ignore_nulls=ignore_nulls),
-            *flat_exprs,
-            str_as_lit=False,
-        ),
-        ExprMetadata.from_horizontal_op(*flat_exprs),
+    return _expr_with_horizontal_op(
+        "all_horizontal", *flatten(exprs), ignore_nulls=ignore_nulls
     )
 
 
@@ -1647,9 +1429,6 @@ def lit(value: NonNestedLiteral, dtype: IntoDType | None = None) -> Expr:
         value: The value to use as literal.
         dtype: The data type of the literal value. If not provided, the data type will
             be inferred by the native library.
-
-    Returns:
-        A new expression.
 
     Examples:
         >>> import pandas as pd
@@ -1676,12 +1455,10 @@ def lit(value: NonNestedLiteral, dtype: IntoDType | None = None) -> Expr:
         msg = f"Nested datatypes are not supported yet. Got {value}"
         raise NotImplementedError(msg)
 
-    return Expr(lambda plx: plx.lit(value, dtype), ExprMetadata.literal())
+    return Expr(ExprNode(ExprKind.LITERAL, "lit", value=value, dtype=dtype))
 
 
-def any_horizontal(
-    *exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool | None = None
-) -> Expr:
+def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool) -> Expr:
     r"""Compute the bitwise OR horizontally across columns.
 
     Arguments:
@@ -1691,11 +1468,8 @@ def any_horizontal(
 
             - If `True`, null values are ignored. If there are no elements, the result
               is `False`.
-            - If `False` (default), Kleene logic is followed. Note that this is not allowed for
+            - If `False`, Kleene logic is followed. Note that this is not allowed for
               pandas with classical NumPy dtypes when null values are present.
-
-    Returns:
-        A new expression.
 
     Examples:
         >>> import polars as pl
@@ -1727,24 +1501,8 @@ def any_horizontal(
         |└───────┴───────┴───────┘|
         └─────────────────────────┘
     """
-    if not exprs:
-        msg = "At least one expression must be passed to `any_horizontal`"
-        raise ValueError(msg)
-    if ignore_nulls is None:
-        issue_deprecation_warning(
-            "`ignore_nulls` will become a required argument in Narwhals 2.0. Please specify `ignore_nulls=True` or `ignore_nulls=False` to silence this warning.",
-            _version="1.45",
-        )
-        ignore_nulls = False
-    flat_exprs = flatten(exprs)
-    return Expr(
-        lambda plx: apply_n_ary_operation(
-            plx,
-            partial(plx.any_horizontal, ignore_nulls=ignore_nulls),
-            *flat_exprs,
-            str_as_lit=False,
-        ),
-        ExprMetadata.from_horizontal_op(*flat_exprs),
+    return _expr_with_horizontal_op(
+        "any_horizontal", *flatten(exprs), ignore_nulls=ignore_nulls
     )
 
 
@@ -1754,9 +1512,6 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
             expression input.
-
-    Returns:
-        A new expression.
 
     Examples:
         >>> import pyarrow as pa
@@ -1778,16 +1533,7 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         | a: [[2.5,6.5,3]] |
         └──────────────────┘
     """
-    if not exprs:
-        msg = "At least one expression must be passed to `mean_horizontal`"
-        raise ValueError(msg)
-    flat_exprs = flatten(exprs)
-    return Expr(
-        lambda plx: apply_n_ary_operation(
-            plx, plx.mean_horizontal, *flat_exprs, str_as_lit=False
-        ),
-        ExprMetadata.from_horizontal_op(*flat_exprs),
-    )
+    return _expr_with_horizontal_op("mean_horizontal", *flatten(exprs))
 
 
 def concat_str(
@@ -1808,9 +1554,6 @@ def concat_str(
         ignore_nulls: Ignore null values (default is `False`).
             If set to `False`, null values will be propagated and if the row contains any
             null values, the output is null.
-
-    Returns:
-        A new expression.
 
     Examples:
         >>> import pandas as pd
@@ -1839,18 +1582,8 @@ def concat_str(
         └──────────────────┘
     """
     flat_exprs = flatten([*flatten([exprs]), *more_exprs])
-    return Expr(
-        lambda plx: apply_n_ary_operation(
-            plx,
-            lambda *args: plx.concat_str(
-                *args, separator=separator, ignore_nulls=ignore_nulls
-            ),
-            *flat_exprs,
-            str_as_lit=False,
-        ),
-        combine_metadata(
-            *flat_exprs, str_as_lit=False, allow_multi_output=True, to_single_output=True
-        ),
+    return _expr_with_horizontal_op(
+        "concat_str", *flat_exprs, separator=separator, ignore_nulls=ignore_nulls
     )
 
 
@@ -1869,52 +1602,90 @@ def coalesce(
     Raises:
         TypeError: If any of the inputs are not a str, nw.Expr, or nw.Series.
 
-    Returns:
-        A new expression.
-
     Examples:
-    >>> import polars as pl
-    >>> import narwhals as nw
-    >>> data = [
-    ...     (1, 5, None),
-    ...     (None, 6, None),
-    ...     (None, None, 9),
-    ...     (4, 8, 10),
-    ...     (None, None, None),
-    ... ]
-    >>> df = pl.DataFrame(data, schema=["a", "b", "c"], orient="row")
-    >>> nw.from_native(df).select(nw.coalesce("a", "b", "c", nw.lit(-1)))
-    ┌──────────────────┐
-    |Narwhals DataFrame|
-    |------------------|
-    |  shape: (5, 1)   |
-    |  ┌─────┐         |
-    |  │ a   │         |
-    |  │ --- │         |
-    |  │ i64 │         |
-    |  ╞═════╡         |
-    |  │ 1   │         |
-    |  │ 6   │         |
-    |  │ 9   │         |
-    |  │ 4   │         |
-    |  │ -1  │         |
-    |  └─────┘         |
-    └──────────────────┘
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>> data = [
+        ...     (1, 5, None),
+        ...     (None, 6, None),
+        ...     (None, None, 9),
+        ...     (4, 8, 10),
+        ...     (None, None, None),
+        ... ]
+        >>> df = pl.DataFrame(data, schema=["a", "b", "c"], orient="row")
+        >>> nw.from_native(df).select(nw.coalesce("a", "b", "c", nw.lit(-1)))
+        ┌──────────────────┐
+        |Narwhals DataFrame|
+        |------------------|
+        |  shape: (5, 1)   |
+        |  ┌─────┐         |
+        |  │ a   │         |
+        |  │ --- │         |
+        |  │ i64 │         |
+        |  ╞═════╡         |
+        |  │ 1   │         |
+        |  │ 6   │         |
+        |  │ 9   │         |
+        |  │ 4   │         |
+        |  │ -1  │         |
+        |  └─────┘         |
+        └──────────────────┘
     """
     flat_exprs = flatten([*flatten([exprs]), *more_exprs])
 
-    non_exprs = [expr for expr in flat_exprs if not isinstance(expr, (str, Expr, Series))]
+    non_exprs = [
+        expr
+        for expr in flat_exprs
+        if not (isinstance(expr, str) or is_expr(expr) or is_series(expr))
+    ]
     if non_exprs:
         msg = (
-            f"All arguments to `coalesce` must be of type {str!r}, {Expr!r}, or {Series!r}."
+            f"All arguments to `coalesce` must be of type {str!r}, Expr, or Series."
             "\nGot the following invalid arguments (type, value):"
             f"\n    {', '.join(repr((type(e), e)) for e in non_exprs)}"
         )
         raise TypeError(msg)
 
     return Expr(
-        lambda plx: apply_n_ary_operation(
-            plx, lambda *args: plx.coalesce(*args), *flat_exprs, str_as_lit=False
-        ),
-        ExprMetadata.from_horizontal_op(*flat_exprs),
+        ExprNode(ExprKind.ELEMENTWISE, "coalesce", *flat_exprs, allow_multi_output=True)
     )
+
+
+def format(f_string: str, *args: IntoExpr) -> Expr:
+    """Format expressions as a string.
+
+    Arguments:
+        f_string: A string that with placeholders.
+        args: Expression(s) that fill the placeholders.
+
+    Examples:
+        >>> import duckdb
+        >>> import narwhals as nw
+        >>> rel = duckdb.sql("select * from values ('a', 1), ('b', 2), ('c', 3) df(a, b)")
+        >>> df = nw.from_native(rel)
+        >>> df.with_columns(formatted=nw.format("foo_{}_bar_{}", nw.col("a"), "b"))
+        ┌─────────────────────────────────┐
+        |       Narwhals LazyFrame        |
+        |---------------------------------|
+        |┌─────────┬───────┬─────────────┐|
+        |│    a    │   b   │  formatted  │|
+        |│ varchar │ int32 │   varchar   │|
+        |├─────────┼───────┼─────────────┤|
+        |│ a       │     1 │ foo_a_bar_1 │|
+        |│ b       │     2 │ foo_b_bar_2 │|
+        |│ c       │     3 │ foo_c_bar_3 │|
+        |└─────────┴───────┴─────────────┘|
+        └─────────────────────────────────┘
+    """
+    if (n_placeholders := f_string.count("{}")) != len(args):
+        msg = f"number of placeholders should equal the number of arguments. Expected {n_placeholders} arguments, got {len(args)}."
+        raise ValueError(msg)
+
+    exprs = []
+    it = iter(args)
+    for i, s in enumerate(f_string.split("{}")):
+        if i > 0:
+            exprs.append(next(it))
+        if len(s) > 0:
+            exprs.append(lit(s))
+    return concat_str(exprs, separator="")
