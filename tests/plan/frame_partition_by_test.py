@@ -8,7 +8,7 @@ import pytest
 import narwhals as nw
 from narwhals._plan import Selector, selectors as ncs
 from narwhals._utils import zip_strict
-from narwhals.exceptions import ColumnNotFoundError, ComputeError, DuplicateError
+from narwhals.exceptions import ColumnNotFoundError, DuplicateError
 from tests.plan.utils import assert_equal_data, dataframe, re_compile
 
 if TYPE_CHECKING:
@@ -135,7 +135,7 @@ def test_partition_by_duplicate_names(data: Data) -> None:
 def test_partition_by_fully_empty_selector(data: Data) -> None:
     df = dataframe(data)
     with pytest.raises(
-        ComputeError, match=r"at least one key is required in a group_by operation"
+        ColumnNotFoundError, match=re_compile(r"ncs.array.+ncs.struct.+ncs.duration")
     ):
         df.partition_by(ncs.array(ncs.numeric()), ncs.struct(), ncs.duration())
 

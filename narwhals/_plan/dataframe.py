@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, get_args, ove
 from narwhals._plan import _parse
 from narwhals._plan._expansion import expand_selector_irs_names, prepare_projection
 from narwhals._plan.common import ensure_seq_str, temp
-from narwhals._plan.exceptions import group_by_no_keys_error
 from narwhals._plan.group_by import GroupBy, Grouped
 from narwhals._plan.options import SortMultipleOptions
 from narwhals._plan.series import Series
@@ -106,7 +105,7 @@ class BaseFrame(Generic[NativeFrameT_co]):
         nulls_last: OneOrIterable[bool] = False,
     ) -> Self:
         s_irs = _parse.parse_into_seq_of_selector_ir(by, *more_by)
-        names = expand_selector_irs_names(s_irs, schema=self)
+        names = expand_selector_irs_names(s_irs, schema=self, require_any=True)
         opts = SortMultipleOptions.parse(descending=descending, nulls_last=nulls_last)
         return self._with_compliant(self._compliant.sort(names, opts))
 
@@ -114,15 +113,18 @@ class BaseFrame(Generic[NativeFrameT_co]):
         self, *columns: OneOrIterable[ColumnNameOrSelector], strict: bool = True
     ) -> Self:
         s_ir = _parse.parse_into_combined_selector_ir(*columns, require_all=strict)
-        names = expand_selector_irs_names((s_ir,), schema=self)
-        return self._with_compliant(self._compliant.drop(names))
+        if names := expand_selector_irs_names((s_ir,), schema=self):
+            compliant = self._compliant.drop(names)
+        else:
+            compliant = self._compliant._with_native(self.to_native())
+        return self._with_compliant(compliant)
 
     def drop_nulls(
         self, subset: OneOrIterable[ColumnNameOrSelector] | None = None
     ) -> Self:
         if subset is not None:
             s_irs = _parse.parse_into_seq_of_selector_ir(subset)
-            subset = expand_selector_irs_names(s_irs, schema=self)
+            subset = expand_selector_irs_names(s_irs, schema=self) or None
         return self._with_compliant(self._compliant.drop_nulls(subset))
 
     def rename(self, mapping: Mapping[str, str]) -> Self:
@@ -135,8 +137,7 @@ class BaseFrame(Generic[NativeFrameT_co]):
         self, name: str = "index", *, order_by: OneOrIterable[ColumnNameOrSelector]
     ) -> Self:
         by_selectors = _parse.parse_into_seq_of_selector_ir(order_by)
-        # TODO @dangotbanned: Add an option in `_expansion.py` to raise on empty names result
-        by_names = expand_selector_irs_names(by_selectors, schema=self)
+        by_names = expand_selector_irs_names(by_selectors, schema=self, require_any=True)
         return self._with_compliant(self._compliant.with_row_index_by(name, by_names))
 
 
@@ -285,9 +286,7 @@ class DataFrame(
         include_key: bool = True,
     ) -> list[Self]:
         by_selectors = _parse.parse_into_seq_of_selector_ir(by, *more_by)
-        names = expand_selector_irs_names(by_selectors, schema=self)
-        if not names:
-            raise group_by_no_keys_error()
+        names = expand_selector_irs_names(by_selectors, schema=self, require_any=True)
         partitions = self._compliant.partition_by(names, include_key=include_key)
         return [self._with_compliant(p) for p in partitions]
 

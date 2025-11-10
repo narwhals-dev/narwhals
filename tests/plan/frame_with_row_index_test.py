@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals._plan.selectors as ncs
-from narwhals.exceptions import ColumnNotFoundError, NarwhalsError
-from tests.plan.utils import assert_equal_data, dataframe
+from narwhals.exceptions import ColumnNotFoundError
+from tests.plan.utils import assert_equal_data, dataframe, re_compile
 
 if TYPE_CHECKING:
     from narwhals._plan.typing import ColumnNameOrSelector, OneOrIterable
@@ -61,11 +61,13 @@ def test_with_row_index_by_invalid() -> None:
         df.with_row_index(order_by=ncs.by_index(5))
 
 
-@pytest.mark.xfail(
-    reason="TODO @dangotbanned: Add an option in `_expansion.py` to raise on empty names result"
-)
 def test_with_row_index_by_empty_selection() -> None:
     data = {"a": ["A", "B", "A"], "b": [1, 2, 3], "c": [9, 2, 4]}
     df = dataframe(data)
-    with pytest.raises(NarwhalsError):
+    with pytest.raises(ColumnNotFoundError, match=re.escape("ncs.datetime(")):
         df.with_row_index(order_by=ncs.datetime())
+
+    schema = re.escape("{'a': String, 'b': Int64, 'c': Int64}")
+    pattern = re_compile(rf"ncs.float\(\).*ncs.temporal\(\).*Hint:.+{schema}")
+    with pytest.raises(ColumnNotFoundError, match=pattern):
+        df.with_row_index(order_by=[ncs.float(), ncs.temporal()])

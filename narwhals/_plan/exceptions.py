@@ -26,7 +26,9 @@ if TYPE_CHECKING:
     from narwhals._plan._function import Function
     from narwhals._plan.expressions.operators import Operator
     from narwhals._plan.options import SortOptions
+    from narwhals._plan.schema import FrozenSchema
     from narwhals._plan.typing import IntoExpr, Seq
+    from narwhals.typing import IntoSchema
 
 
 # NOTE: Using verbose names to start with
@@ -225,6 +227,24 @@ def column_index_error(
     return ColumnNotFoundError(msg)
 
 
-def group_by_no_keys_error() -> ComputeError:
+# TODO @dangotbanned: Remove or get coverage for failing:
+# - `GroupByResolver.key_names`
+# - `DataFrameGroupBy.key_names`
+def group_by_no_keys_error() -> ComputeError:  # pragma: no cover
     msg = "at least one key is required in a group_by operation"
     return ComputeError(msg)
+
+
+def selectors_not_found_error(
+    selectors: Collection[ir.SelectorIR], schema: IntoSchema | FrozenSchema
+) -> ColumnNotFoundError:
+    msg = "Found no columns when expanding:"
+    if len(selectors) == 1:
+        msg = f"{msg} {next(iter(selectors))!r}"
+    else:
+        indent = " " * 2
+        reprs = "\n".join(f"{indent}{el!r}" for el in selectors)
+        msg = f"{msg}\n{reprs}"
+    items = dict(schema)
+    msg = f"{msg}\n\nHint: Did you mean one of these columns: {items!r}?"
+    return ColumnNotFoundError(msg)
