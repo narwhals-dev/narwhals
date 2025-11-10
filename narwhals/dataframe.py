@@ -2353,6 +2353,50 @@ class DataFrame(BaseFrame[DataFrameT]):
         return super().explode(columns, *more_columns)
 
     def clear(self, n: int = 0) -> Self:
+        """Create an empty (n=0) or n-row null-filled (n>0) copy of the DataFrame.
+
+        Returns a n-row null-filled DataFrame with an identical schema. n can be greater
+        than the current number of rows in the DataFrame.
+
+        Arguments:
+            n: Number of (null-filled) rows to return in the cleared frame.
+
+        Example:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> data = {
+            ...     "a": [None, 2, 3, 4],
+            ...     "b": [0.5, None, 2.5, 13],
+            ...     "c": [True, True, False, None],
+            ... }
+            >>> df_native = pa.table(data)
+            >>> nw.from_native(df_native).clear()
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |  pyarrow.Table   |
+            |  a: int64        |
+            |  b: double       |
+            |  c: bool         |
+            |  ----            |
+            |  a: [[]]         |
+            |  b: [[]]         |
+            |  c: [[]]         |
+            └──────────────────┘
+            >>> nw.from_native(df_native).clear(n=5)
+            ┌───────────────────────────────┐
+            |      Narwhals DataFrame       |
+            |-------------------------------|
+            |pyarrow.Table                  |
+            |a: int64                       |
+            |b: double                      |
+            |c: bool                        |
+            |----                           |
+            |a: [[null,null,null,null,null]]|
+            |b: [[null,null,null,null,null]]|
+            |c: [[null,null,null,null,null]]|
+            └───────────────────────────────┘
+        """
         return super().clear(n)
 
 
@@ -3359,4 +3403,42 @@ class LazyFrame(BaseFrame[LazyFrameT]):
         return super().explode(columns, *more_columns)
 
     def clear(self, n: int = 0) -> Self:
+        """Create an empty (n=0) or n-row null-filled (n>0) copy of the LazyFrame.
+
+        Returns a n-row null-filled LazyFrame with an identical schema. n can be greater
+        than the current number of rows in the LazyFrame.
+
+        Arguments:
+            n: Number of (null-filled) rows to return in the cleared frame.
+
+        Example:
+            >>> import duckdb
+            >>> import narwhals as nw
+            >>> lf_native = duckdb.sql(
+            ...     "SELECT * FROM VALUES (NULL, 0.5, True), (2, NULL, True) df(a, b, c)"
+            ... )
+            >>> nw.from_native(lf_native).clear()
+            ┌──────────────────────────────────┐
+            |        Narwhals LazyFrame        |
+            |----------------------------------|
+            |┌───────┬──────────────┬─────────┐|
+            |│   a   │      b       │    c    │|
+            |│ int32 │ decimal(2,1) │ boolean │|
+            |├───────┴──────────────┴─────────┤|
+            |│             0 rows             │|
+            |└────────────────────────────────┘|
+            └──────────────────────────────────┘
+            >>> nw.from_native(lf_native).clear(n=2)
+            ┌──────────────────────────────────┐
+            |        Narwhals LazyFrame        |
+            |----------------------------------|
+            |┌───────┬──────────────┬─────────┐|
+            |│   a   │      b       │    c    │|
+            |│ int32 │ decimal(2,1) │ boolean │|
+            |├───────┼──────────────┼─────────┤|
+            |│  NULL │         NULL │ NULL    │|
+            |│  NULL │         NULL │ NULL    │|
+            |└───────┴──────────────┴─────────┘|
+            └──────────────────────────────────┘
+        """
         return super().clear(n)
