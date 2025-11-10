@@ -1765,7 +1765,7 @@ class not_implemented:  # noqa: N801
         implementation = getattr(instance, "_implementation", Implementation.UNKNOWN)
         if implementation is not Implementation.UNKNOWN:
             who = repr(implementation)
-        else:  # pragma: no cover
+        else:
             who = self._name_owner
         _raise_not_implemented_error(self._name, who)
         return None  # pragma: no cover
