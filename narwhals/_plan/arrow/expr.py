@@ -7,7 +7,7 @@ import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._plan import expressions as ir
-from narwhals._plan.arrow import functions as fn, options as pa_options
+from narwhals._plan.arrow import functions as fn
 from narwhals._plan.arrow.series import ArrowSeries as Series
 from narwhals._plan.arrow.typing import ChunkedOrScalarAny, NativeScalar, StoresNativeT_co
 from narwhals._plan.common import temp
@@ -399,7 +399,7 @@ class ArrowExpr(  # type: ignore[misc]
         self, node: ir.OrderedWindowExpr, frame: Frame, name: str
     ) -> Self | Scalar:
         order_by = tuple(node.order_by_names())
-        options = node.sort_options.to_multiple(len(order_by))
+        sort_options = node.sort_options
         idx_name = temp.column_name(frame)
         if node.partition_by:
             if isinstance(node.expr, ir.FunctionExpr) and isinstance(
@@ -410,44 +410,32 @@ class ArrowExpr(  # type: ignore[misc]
                     f"Need to adapt impl to reduce the number of sorts when used in {node!r}"
                 )
                 raise NotImplementedError(msg)
-            sorting = frame.with_row_index_by(
-                idx_name, order_by, nulls_last=options.nulls_last[0]
-            )
-            # TODO @dangotbanned: Split more sorting stuff out
-            # NOTE: Reusing `options` was causing a zip-length mismatch
-            indices = pc.array_sort_indices(
-                sorting.get_column(idx_name).native,
-                options=pa_options.array_sort(
-                    descending=options.descending[0], nulls_last=options.nulls_last[0]
-                ),
-            )
-            sorted_context = sorting._with_native(sorting.native.take(indices))
-            resolved = (
+            nulls_last = sort_options.nulls_last
+            sorting = frame.with_row_index_by(idx_name, order_by, nulls_last=nulls_last)
+            gb_resolved = (
                 frame._grouper.by_irs(*node.partition_by)
                 .agg_irs(node.expr.alias(name))
                 .resolve(frame)
             )
-            by_names = resolved.key_names
-            result_ca = (
-                frame.select_names(*by_names)
-                # TODO @dangotbanned: Revise after https://github.com/narwhals-dev/narwhals/issues/3300
-                .join(resolved.evaluate(sorted_context), how="left", left_on=by_names)
-                .get_column(name)
-                .native
+            # TODO @dangotbanned: Split more sorting stuff out
+            indices = pc.array_sort_indices(
+                sorting.to_series().native, options=sort_options.to_arrow()
             )
-            return self._with_native(result_ca, name)
-
+            gb_evaluated = gb_resolved.evaluate(sorting.gather(indices))
+            # TODO @dangotbanned: Revise (join) after https://github.com/narwhals-dev/narwhals/issues/3300
+            return self.from_series(
+                frame.select_names(*gb_resolved.key_names)
+                .join(gb_evaluated, how="left", left_on=gb_resolved.key_names)
+                .get_column(name)
+            )
+        options = sort_options.to_multiple(len(order_by))
         sorted_context = frame.with_row_index(idx_name).sort(order_by, options)
         evaluated = node.expr.dispatch(self, sorted_context.drop([idx_name]), name)
         if isinstance(evaluated, ArrowScalar):
             # NOTE: We're already sorted, defer broadcasting to the outer context
-            # Wouldn't be suitable for partitions, but will be fine here
-            # - https://github.com/narwhals-dev/narwhals/pull/2528/commits/2ae42458cae91f4473e01270919815fcd7cb9667
-            # - https://github.com/narwhals-dev/narwhals/pull/2528/commits/b8066c4c57d4b0b6c38d58a0f5de05eefc2cae70
-            return self._with_native(evaluated.native, name)
-        indices = pc.sort_indices(sorted_context.get_column(idx_name).native)
-        result = evaluated.broadcast(len(frame)).native.take(indices)
-        return self._with_native(result, name)
+            return evaluated
+        indices = pc.sort_indices(sorted_context.to_series().native)
+        return self.from_series(evaluated.broadcast(len(frame)).gather(indices))
 
     # NOTE: Can't implement in `EagerExpr`, since it doesn't derive `ExprDispatch`
     def map_batches(self, node: ir.AnonymousExpr, frame: Frame, name: str) -> Self:

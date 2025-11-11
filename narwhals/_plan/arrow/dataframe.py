@@ -25,7 +25,10 @@ if TYPE_CHECKING:
     import polars as pl
     from typing_extensions import Self
 
-    from narwhals._arrow.typing import ChunkedArrayAny
+    from narwhals._arrow.typing import (  # type: ignore[attr-defined]
+        ChunkedArrayAny,
+        Indices,
+    )
     from narwhals._plan.arrow.namespace import ArrowNamespace
     from narwhals._plan.expressions import ExprIR, NamedIR
     from narwhals._plan.options import SortMultipleOptions
@@ -190,3 +193,7 @@ class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
         from_native = self._with_native
         partitions = partition_by(self.native, by, include_key=include_key)
         return [from_native(df) for df in partitions]
+
+    def gather(self, indices: Series | Indices) -> Self:
+        s = indices.native if fn.is_series(indices) else indices
+        return self._with_native(self.native.take(s))

@@ -15,7 +15,10 @@ if TYPE_CHECKING:
     import polars as pl
     from typing_extensions import Self
 
-    from narwhals._arrow.typing import ChunkedArrayAny
+    from narwhals._arrow.typing import (  # type: ignore[attr-defined]
+        ChunkedArrayAny,
+        Indices,
+    )
     from narwhals._plan.arrow.dataframe import ArrowDataFrame as DataFrame
     from narwhals._plan.arrow.namespace import ArrowNamespace
     from narwhals.dtypes import DType
@@ -78,3 +81,7 @@ class ArrowSeries(CompliantSeries["ChunkedArrayAny"]):
     def cast(self, dtype: IntoDType) -> Self:
         dtype_pa = narwhals_to_native_dtype(dtype, self.version)
         return self._with_native(fn.cast(self.native, dtype_pa))
+
+    def gather(self, indices: Self | Indices) -> Self:
+        s = indices.native if fn.is_series(indices) else indices
+        return self._with_native(self.native.take(s))
