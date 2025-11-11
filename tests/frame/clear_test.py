@@ -3,7 +3,8 @@ from __future__ import annotations
 import pytest
 
 import narwhals as nw
-from tests.utils import Constructor, assert_equal_data
+from tests.conftest import MIN_PANDAS_NULLABLE_VERSION
+from tests.utils import PANDAS_VERSION, Constructor, assert_equal_data
 
 
 @pytest.mark.parametrize("n", [0, 1, 10])
@@ -48,6 +49,7 @@ def test_clear_negative(constructor: Constructor) -> None:
         df.clear(n=n)
 
 
+@pytest.mark.skipif(PANDAS_VERSION < MIN_PANDAS_NULLABLE_VERSION)
 @pytest.mark.parametrize("n", [0, 1, 10])
 def test_clear_pandas_nullable(n: int) -> None:
     pytest.importorskip("pandas")
