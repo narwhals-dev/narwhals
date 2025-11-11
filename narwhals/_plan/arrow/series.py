@@ -12,6 +12,7 @@ from narwhals.dependencies import is_numpy_array_1d
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
+    import polars as pl
     from typing_extensions import Self
 
     from narwhals._arrow.typing import ChunkedArrayAny
@@ -40,6 +41,12 @@ class ArrowSeries(CompliantSeries["ChunkedArrayAny"]):
 
     def to_numpy(self, dtype: Any = None, *, copy: bool | None = None) -> _1DArray:
         return self.native.to_numpy()
+
+    def to_polars(self) -> pl.Series:
+        import polars as pl  # ignore-banned-import
+        # NOTE: Recommended in https://github.com/pola-rs/polars/issues/22921#issuecomment-2908506022
+
+        return pl.Series(self.native)
 
     def __len__(self) -> int:
         return self.native.length()
