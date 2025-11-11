@@ -20,7 +20,7 @@ help:  ## Display this help screen
 
 .PHONY: typing
 typing: ## Run typing checks
-	$(VENV_BIN)/uv pip install -e tests/test_plugin
+	$(VENV_BIN)/uv pip install -e test_plugin
 	$(VENV_BIN)/uv pip install -e . --group typing-ci
 	$(VENV_BIN)/pyright
 	$(VENV_BIN)/mypy

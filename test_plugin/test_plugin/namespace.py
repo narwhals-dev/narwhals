@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from tests.test_plugin.test_plugin.dataframe import DictFrame, DictLazyFrame
+
 from narwhals._compliant import CompliantNamespace
 from narwhals._utils import not_implemented
-from tests.test_plugin.test_plugin.dataframe import DictFrame, DictLazyFrame
 
 if TYPE_CHECKING:
     from narwhals.utils import Version

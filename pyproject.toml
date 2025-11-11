@@ -324,7 +324,7 @@ exclude_also = [
 ]
 
 [tool.mypy]
-files = ["narwhals", "tests"]
+files = ["narwhals", "tests", "test_plugin"]
 pretty = true
 strict = true
 
@@ -370,7 +370,7 @@ reportMissingModuleSource = "none"
 reportPrivateImportUsage = "none"
 reportUnusedExpression = "none"    # handled by (https://docs.astral.sh/ruff/rules/unused-variable/)
 typeCheckingMode = "basic"
-include = ["narwhals", "tests"]
+include = ["narwhals", "tests", "test_plugin"]
 ignore = [
   "../.venv/",
   "../../../**/Lib",      # stdlib
