@@ -450,6 +450,9 @@ class BaseFrame(Generic[_FrameT]):
         return self._with_compliant(self._compliant_frame.explode(columns=to_explode))
 
     def clear(self, n: int = 0) -> Self:
+        if not isinstance(n, int):
+            msg = f"`n` should be an integer, got type '{qualified_type_name(type(n))}'"
+            raise TypeError(msg)
         if n < 0:
             msg = f"`n` should be greater than or equal to 0, got {n}"
             raise ValueError(msg)

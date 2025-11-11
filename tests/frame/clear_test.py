@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 
 import narwhals as nw
@@ -46,6 +48,16 @@ def test_clear_negative(constructor: Constructor) -> None:
 
     msg = f"`n` should be greater than or equal to 0, got {n}"
     with pytest.raises(ValueError, match=msg):
+        df.clear(n=n)
+
+
+@pytest.mark.parametrize("n", ["foo", 2.0, 1 + 1j])
+def test_clear_non_integer(constructor: Constructor, n: Any) -> None:
+    data = {"a": [1, 2, 3]}
+    df = nw.from_native(constructor(data))
+
+    msg = "`n` should be an integer, got type"
+    with pytest.raises(TypeError, match=msg):
         df.clear(n=n)
 
 
