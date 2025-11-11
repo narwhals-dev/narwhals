@@ -27,6 +27,7 @@ def test_cum_max_expr(
     name = "reverse_cum_max" if reverse else "cum_max"
     df = nw.from_native(constructor_eager(data))
     result = df.select(nw.col("a").cum_max(reverse=reverse).alias(name))
+
     assert_equal_data(result, {name: expected[name]})
 
 

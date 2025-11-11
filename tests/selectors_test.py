@@ -223,9 +223,7 @@ def test_set_ops(
     ):
         # https://github.com/narwhals-dev/narwhals/issues/2469
         request.applymarker(pytest.mark.xfail)
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
+
     df = nw.from_native(constructor(data))
     result = df.select(selector).collect_schema().names()
     assert sorted(result) == expected
