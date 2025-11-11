@@ -9,6 +9,7 @@ from narwhals.dependencies import is_pyarrow_chunked_array
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
 
+    import polars as pl
     from typing_extensions import Self
 
     from narwhals._plan.compliant.series import CompliantSeries
@@ -76,6 +77,9 @@ class Series(Generic[NativeSeriesT_co]):
 
     def to_list(self) -> list[Any]:
         return self._compliant.to_list()
+
+    def to_polars(self) -> pl.Series:
+        return self._compliant.to_polars()
 
     def __iter__(self) -> Iterator[Any]:  # pragma: no cover
         yield from self.to_native()

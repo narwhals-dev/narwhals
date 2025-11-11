@@ -9,6 +9,7 @@ from narwhals._utils import Version
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
+    import polars as pl
     from typing_extensions import Self, TypeAlias
 
     from narwhals._plan.series import Series
@@ -79,3 +80,4 @@ class CompliantSeries(HasVersion, Protocol[NativeSeriesT]):
         return Series[NativeSeriesT](self)
 
     def to_numpy(self, dtype: Any = None, *, copy: bool | None = None) -> _1DArray: ...
+    def to_polars(self) -> pl.Series: ...

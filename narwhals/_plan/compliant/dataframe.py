@@ -16,6 +16,7 @@ from narwhals._plan.typing import (
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
 
+    import polars as pl
     from typing_extensions import Self, TypeAlias
 
     from narwhals._plan import expressions as ir
@@ -150,6 +151,7 @@ class CompliantDataFrame(
         return DataFrame[NativeDataFrameT, NativeSeriesT](self)
 
     def to_series(self, index: int = 0) -> SeriesT: ...
+    def to_polars(self) -> pl.DataFrame: ...
     def with_row_index(self, name: str) -> Self: ...
 
 
