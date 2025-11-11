@@ -5,7 +5,7 @@ from decimal import Decimal
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, overload
 
-from narwhals import _plugins
+from narwhals import plugins
 from narwhals._constants import EPOCH, MS_PER_SECOND
 from narwhals._native import (
     is_native_arrow,
@@ -564,7 +564,7 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
             raise TypeError(msg)
         return Version.V1.dataframe(InterchangeFrame(native_object), level="interchange")
 
-    compliant_object = _plugins.from_native(native_object, version)
+    compliant_object = plugins.from_native(native_object, version)
     if compliant_object is not None:
         return _translate_if_compliant(
             compliant_object,
@@ -578,7 +578,7 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
 
     if not pass_through:
         msg = f"Unsupported dataframe type, got: {type(native_object)}"
-        if hint := _plugins._show_suggestions(type(native_object)):  # pragma: no cover
+        if hint := plugins._show_suggestions(type(native_object)):  # pragma: no cover
             msg += "\n\n" + hint
         raise TypeError(msg)
     return native_object

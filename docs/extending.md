@@ -44,10 +44,10 @@ handle plugins. For this integration to work, any plugin architecture must conta
     The section name needs to be the same for all plugins; inside it, plugin creators can replace their
     own library name, for example `narwhals-grizzlies = 'narwhals_grizzlies'`
 
-  2. a top-level `__init__.py` file containing the following: 
+  2. a top-level `__init__.py` file containing the following:
   
-    - `is_native` and `__narwhals_namespace__` functions
-    - a string constant `NATIVE_PACKAGE` which holds the name of the library for which the plugin is made
+    - `is_native` and `__narwhals_namespace__` functions.
+    - a string constant `NATIVE_PACKAGE` which holds the name of the library for which the plugin is made.
 
     `is_native` accepts a native object and returns a boolean indicating whether the native object is 
     a dataframe of the library the plugin was written for.
@@ -56,6 +56,9 @@ handle plugins. For this integration to work, any plugin architecture must conta
     i.e. one that complies with the CompliantNamespace protocol. This protocol specifies a `from_native` 
     function, whose input parameter is the Narwhals version and which returns a compliant Narwhals LazyFrame
     which wraps the native dataframe. 
+  
+    Take a look at the `Plugin` protocol in `narwhals/plugins.py` for the
+    signatures.
   
 ## Can I see an example?
 
