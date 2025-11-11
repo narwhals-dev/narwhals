@@ -22,6 +22,7 @@ from narwhals.schema import Schema
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
 
+    import polars as pl
     from typing_extensions import Self
 
     from narwhals._arrow.typing import ChunkedArrayAny
@@ -85,6 +86,12 @@ class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
         if as_series:
             return {ser.name: ser for ser in it}
         return {ser.name: ser.to_list() for ser in it}
+
+    def to_polars(self) -> pl.DataFrame:
+        import polars as pl  # ignore-banned-import
+        # NOTE: Recommended in https://github.com/pola-rs/polars/issues/22921#issuecomment-2908506022
+
+        return pl.DataFrame(self.native)
 
     def _evaluate_irs(self, nodes: Iterable[NamedIR[ExprIR]], /) -> Iterator[Series]:
         ns = namespace(self)

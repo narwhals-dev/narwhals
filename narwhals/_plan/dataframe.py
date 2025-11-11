@@ -29,6 +29,7 @@ from narwhals.typing import IntoDType, JoinStrategy
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping, Sequence
 
+    import polars as pl
     import pyarrow as pa
     from typing_extensions import Self, TypeAlias, TypeIs
 
@@ -212,6 +213,9 @@ class DataFrame(
 
     def to_series(self, index: int = 0) -> Series[NativeSeriesT]:  # pragma: no cover
         return self._series(self._compliant.to_series(index))
+
+    def to_polars(self) -> pl.DataFrame:
+        return self._compliant.to_polars()
 
     def get_column(self, name: str) -> Series[NativeSeriesT]:  # pragma: no cover
         return self._series(self._compliant.get_column(name))

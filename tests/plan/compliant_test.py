@@ -19,7 +19,7 @@ import pyarrow as pa
 import narwhals as nw
 from narwhals import _plan as nwp
 from narwhals._utils import Version
-from tests.plan.utils import assert_equal_data, dataframe, first, last
+from tests.plan.utils import assert_equal_data, dataframe, first, last, series
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -653,6 +653,45 @@ def test_drop_nulls_subset(
     df = dataframe(data_small_dh)
     result = df.drop_nulls(subset)
     assert_equal_data(result, expected)
+
+
+def test_dataframe_to_polars() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+    from polars.testing import assert_frame_equal as pl_assert_frame_equal
+
+    data = {
+        "a": [1, 3, 2],
+        "b": [None, 4, 6],
+        "c": ["A", "C", "B"],
+        "d": ["D", None, "E"],
+        "e": [1.9, 5.0, 3.3],
+        "f": [1.5, 3.4, None],
+    }
+    expected = pl.DataFrame(data)
+    result = dataframe(data).to_polars()
+    pl_assert_frame_equal(result, expected)
+
+
+@pytest.mark.parametrize(
+    "values",
+    [
+        [1, 3, 2],
+        [None, 4, 6],
+        ["A", "C", "B"],
+        ["D", None, "E"],
+        [1.9, 5.0, 3.3],
+        [1.5, 3.4, None],
+    ],
+)
+def test_series_to_polars(values: Sequence[PythonLiteral]) -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+    from polars.testing import assert_series_equal as pl_assert_series_equal
+
+    expected = pl.Series(values)
+    result = series(values).to_polars()
+    pl_assert_series_equal(result, expected)
 
 
 if TYPE_CHECKING:
