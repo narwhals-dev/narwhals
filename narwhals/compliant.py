@@ -17,7 +17,6 @@ from narwhals._compliant.any_namespace import (
     StringNamespace,
     StructNamespace,
 )
-from narwhals._compliant.window import WindowInputs
 
 __all__ = [
     "CatNamespace",
@@ -31,5 +30,4 @@ __all__ = [
     "ListNamespace",
     "StringNamespace",
     "StructNamespace",
-    "WindowInputs",
 ]
