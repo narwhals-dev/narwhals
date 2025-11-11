@@ -1,0 +1,265 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+import pytest
+
+pytest.importorskip("pyarrow")
+
+import narwhals as nw
+import narwhals._plan as nwp
+from narwhals._plan import selectors as ncs
+from narwhals.exceptions import InvalidOperationError
+from tests.plan.utils import assert_equal_data, dataframe, re_compile
+
+if TYPE_CHECKING:
+    from narwhals._plan.typing import IntoExprColumn, OneOrIterable
+    from tests.conftest import Data
+
+
+@pytest.fixture
+def data() -> Data:
+    return {
+        "a": ["a", "a", "b", "b", "b"],
+        "b": [1, 2, 3, 5, 3],
+        "c": [5, 4, 3, 2, 1],
+        "i": [0, 1, 2, 3, 4],
+    }
+
+
+@pytest.fixture
+def data_with_null(data: Data) -> Data:
+    return data | {"b": [1, 2, None, 5, 3]}
+
+
+@pytest.fixture
+def data_alt() -> Data:
+    return {"a": [3, 5, 1, 2, None], "b": [0, 1, 3, 2, 1], "c": [9, 1, 2, 1, 1]}
+
+
+@pytest.mark.parametrize(
+    "partition_by",
+    [
+        "a",
+        ["a"],
+        nwp.nth(0),
+        ncs.first(),
+        ncs.string(),
+        ncs.by_dtype(nw.String),
+        ncs.by_name("a"),
+        ncs.matches(r"a"),
+        ncs.all() - ncs.numeric(),
+    ],
+)
+def test_over_single(data: Data, partition_by: OneOrIterable[IntoExprColumn]) -> None:
+    expected = {
+        "a": ["a", "a", "b", "b", "b"],
+        "b": [1, 2, 3, 5, 3],
+        "c": [5, 4, 3, 2, 1],
+        "i": [0, 1, 2, 3, 4],
+        "c_max": [5, 5, 3, 3, 3],
+    }
+    result = (
+        dataframe(data)
+        .with_columns(c_max=nwp.col("c").max().over(partition_by))
+        .sort("i")
+    )
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    "partition_by",
+    [
+        ("a", "b"),
+        [nwp.col("a"), nwp.col("b")],
+        [nwp.nth(0), nwp.nth(1)],
+        nwp.col("a", "b"),
+        nwp.nth(0, 1),
+        ncs.by_name("a", "b"),
+        ncs.matches(r"a|b"),
+        ncs.all() - ncs.by_name(["c", "i"]),
+    ],
+    ids=[
+        "tuple[str]",
+        "col-col",
+        "nth-nth",
+        "cols",
+        "index_columns",
+        "by_name",
+        "matches",
+        "binary_selector",
+    ],
+)
+def test_over_multiple(data: Data, partition_by: OneOrIterable[IntoExprColumn]) -> None:
+    expected = {
+        "a": ["a", "a", "b", "b", "b"],
+        "b": [1, 2, 3, 5, 3],
+        "c": [5, 4, 3, 2, 1],
+        "i": [0, 1, 2, 3, 4],
+        "c_min": [5, 4, 1, 2, 1],
+    }
+    result = (
+        dataframe(data)
+        .with_columns(c_min=nwp.col("c").min().over(partition_by))
+        .sort("i")
+    )
+    assert_equal_data(result, expected)
+
+
+# NOTE: Not planned
+@pytest.mark.xfail(
+    reason="Native `pyarrow` `group_by` isn't enough", raises=InvalidOperationError
+)
+def test_over_cum_sum_partition_by(data_with_null: Data) -> None:  # pragma: no cover
+    df = dataframe(data_with_null)
+    expected = {
+        "a": ["a", "a", "b", "b", "b"],
+        "b": [1, 2, None, 5, 3],
+        "c": [5, 4, 3, 2, 1],
+        "b_cum_sum": [1, 3, None, 5, 8],
+        "c_cum_sum": [5, 9, 3, 5, 6],
+    }
+
+    result = (
+        df.with_columns(nwp.col("b", "c").cum_sum().over("a").name.suffix("_cum_sum"))
+        .sort("i")
+        .drop("i")
+    )
+    assert_equal_data(result, expected)
+
+
+def test_over_std_var(data: Data) -> None:
+    expected = {
+        "a": ["a", "a", "b", "b", "b"],
+        "b": [1, 2, 3, 5, 3],
+        "c": [5, 4, 3, 2, 1],
+        "i": [0, 1, 2, 3, 4],
+        "c_std0": [0.5, 0.5, 0.816496580927726, 0.816496580927726, 0.816496580927726],
+        "c_std1": [0.7071067811865476, 0.7071067811865476, 1.0, 1.0, 1.0],
+        "c_var0": [
+            0.25,
+            0.25,
+            0.6666666666666666,
+            0.6666666666666666,
+            0.6666666666666666,
+        ],
+        "c_var1": [0.5, 0.5, 1.0, 1.0, 1.0],
+    }
+
+    result = (
+        dataframe(data)
+        .with_columns(
+            c_std0=nwp.col("c").std(ddof=0).over("a"),
+            c_std1=nwp.col("c").std(ddof=1).over("a"),
+            c_var0=nwp.col("c").var(ddof=0).over(ncs.string()),
+            c_var1=nwp.col("c").var(ddof=1).over("a"),
+        )
+        .sort("i")
+    )
+    assert_equal_data(result, expected)
+
+
+# NOTE: Supporting this for pyarrow is new 🥳
+def test_over_anonymous_reduction() -> None:
+    df = dataframe({"a": [1, 1, 2], "b": [4, 5, 6]})
+    result = df.with_columns(nwp.all().sum().over("a").name.suffix("_sum")).sort("a", "b")
+    expected = {"a": [1, 1, 2], "b": [4, 5, 6], "a_sum": [2, 2, 2], "b_sum": [9, 9, 6]}
+    assert_equal_data(result, expected)
+
+
+def test_over_raise_len_change(data: Data) -> None:
+    df = dataframe(data)
+    with pytest.raises(InvalidOperationError):
+        df.select(nwp.col("b").drop_nulls().over("a"))
+
+
+# NOTE: Slightly different error, but same reason for raising
+# (expr-ir): InvalidOperationError: `cum_sum()` is not supported in a `group_by` context
+# (main): NotImplementedError: Only aggregation or literal operations are supported in grouped `over` context for PyArrow.
+# https://github.com/narwhals-dev/narwhals/blob/ecde261d799a711c2e0a7acf11b108bc45035dc9/narwhals/_arrow/expr.py#L116-L118
+def test_unsupported_over(data: Data) -> None:
+    df = dataframe(data)
+    with pytest.raises(InvalidOperationError):
+        df.select(nwp.col("a").shift(1).cum_sum().over("b"))
+
+
+def test_over_without_partition_by() -> None:
+    df = dataframe({"a": [1, -1, 2], "i": [0, 2, 1]})
+    result = (
+        df.with_columns(b=nwp.col("a").abs().cum_sum().over(order_by="i"))
+        .sort("i")
+        .select("a", "b", "i")
+    )
+    expected = {"a": [1, 2, -1], "b": [1, 3, 4], "i": [0, 1, 2]}
+    assert_equal_data(result, expected)
+
+
+def test_aggregation_over_without_partition_by() -> None:
+    df = dataframe({"a": [1, -1, 2], "i": [0, 2, 1]})
+    result = (
+        df.with_columns(b=nwp.col("a").diff().sum().over(order_by="i"))
+        .sort("i")
+        .select("a", "b", "i")
+    )
+    expected = {"a": [1, 2, -1], "b": [-2, -2, -2], "i": [0, 1, 2]}
+    assert_equal_data(result, expected)
+
+
+def test_len_over_2369() -> None:
+    df = dataframe({"a": [1, 2, 4], "b": ["x", "x", "y"]})
+    result = df.with_columns(a_len_per_group=nwp.len().over("b")).sort("a")
+    expected = {"a": [1, 2, 4], "b": ["x", "x", "y"], "a_len_per_group": [2, 2, 1]}
+    assert_equal_data(result, expected)
+
+
+def test_shift_kitchen_sink(data_alt: Data) -> None:
+    result = dataframe(data_alt).select(
+        nwp.nth(1, 2)
+        .shift(-1)
+        .over(order_by=ncs.last())
+        .sort(nulls_last=True)
+        .fill_null(100)
+        * 5
+    )
+    expected = {"b": [0, 5, 10, 15, 500], "c": [5, 5, 10, 45, 500]}
+    assert_equal_data(result, expected)
+
+
+def test_over_order_by_expr(data_alt: Data) -> None:
+    df = dataframe(data_alt)
+    result = df.select(
+        nwp.all()
+        + nwp.all().last().over(order_by=[nwp.nth(1), ncs.first()], descending=True)
+    )
+    expected = {"a": [6, 8, 4, 5, None], "b": [0, 1, 3, 2, 1], "c": [18, 10, 11, 10, 10]}
+    assert_equal_data(result, expected)
+
+
+def test_over_order_by_expr_invalid(data_alt: Data) -> None:
+    df = dataframe(data_alt)
+    with pytest.raises(
+        InvalidOperationError,
+        match=re_compile(r"only.+column.+selection.+in.+order_by.+found.+sort"),
+    ):
+        df.select(nwp.col("a").first().over(order_by=nwp.col("b").sort()))
+
+
+def test_null_count_over() -> None:
+    data = {
+        "a": ["a", "b", None, None, "b", "c"],
+        "b": [1, 2, 1, 5, 3, 3],
+        "c": [5, 4, 3, 6, 2, 1],
+    }
+    expected = {
+        "a": ["a", "b", None, None, "b", "c"],
+        "b": [1, 2, 1, 5, 3, 3],
+        "c": [5, 4, 3, 6, 2, 1],
+        "first_null_count_over_b": [1, 0, 1, 1, 0, 0],
+    }
+    df = dataframe(data)
+    result = df.with_columns(
+        first_null_count_over_b=ncs.first()
+        .null_count()
+        .over(ncs.integer() - ncs.by_name("c"))
+    )
+    assert_equal_data(result, expected)
