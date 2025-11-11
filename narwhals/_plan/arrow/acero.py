@@ -48,13 +48,8 @@ if TYPE_CHECKING:
         Aggregation as _Aggregation,
     )
     from narwhals._plan.arrow.group_by import AggSpec
-    from narwhals._plan.arrow.typing import (
-        ArrowAny,
-        JoinTypeSubset,
-        NullPlacement,
-        ScalarAny,
-    )
-    from narwhals._plan.typing import OneOrIterable, Order, Seq
+    from narwhals._plan.arrow.typing import ArrowAny, JoinTypeSubset, ScalarAny
+    from narwhals._plan.typing import OneOrIterable, Seq
     from narwhals.typing import NonNestedLiteral
 
 Incomplete: TypeAlias = Any
@@ -238,27 +233,16 @@ def prepend_column(native: pa.Table, name: str, values: IntoExpr) -> Decl:
     return _add_column(native, 0, name, values)
 
 
-def _order_by(
-    sort_keys: Iterable[tuple[str, Order]] = (),
-    *,
-    null_placement: NullPlacement = "at_end",
-) -> Decl:
-    # NOTE: There's no runtime type checking of `sort_keys` wrt shape
-    # Just need to be `Iterable`and unpack like a 2-tuple
-    # https://github.com/apache/arrow/blob/9b96bdbc733d62f0375a2b1b9806132abc19cd3f/python/pyarrow/_compute.pyx#L77-L88
-    keys: Incomplete = sort_keys
-    return Decl("order_by", pac.OrderByNodeOptions(keys, null_placement=null_placement))
-
-
 def sort_by(
     by: OneOrIterable[str],
     *more_by: str,
     descending: OneOrIterable[bool] = False,
     nulls_last: bool = False,
 ) -> Decl:
-    return SortMultipleOptions.parse(
+    opts = SortMultipleOptions.parse(
         descending=descending, nulls_last=nulls_last
     ).to_arrow_acero(tuple(flatten_hash_safe((by, more_by))))
+    return Decl("order_by", opts)
 
 
 def _join_options(

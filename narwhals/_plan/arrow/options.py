@@ -9,29 +9,49 @@ from __future__ import annotations
 import functools
 from typing import TYPE_CHECKING, Any, Literal
 
-import pyarrow.compute as pc  # ignore-banned-import
+import pyarrow.acero as pac
+import pyarrow.compute as pc
+
+from narwhals._utils import zip_strict
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Mapping, Sequence
 
     from narwhals._plan import expressions as ir
     from narwhals._plan.arrow import acero
+    from narwhals._plan.arrow.typing import NullPlacement, RankMethodSingle
     from narwhals._plan.expressions import aggregation as agg
+    from narwhals._plan.typing import Order, Seq
 
 
 __all__ = [
     "AGG",
     "FUNCTION",
+    "array_sort",
     "count",
     "join",
     "join_replace_nulls",
+    "order_by_node",
+    "rank",
     "scalar_aggregate",
+    "sort",
     "variance",
 ]
 
 
 AGG: Mapping[type[agg.AggExpr], acero.AggregateOptions]
 FUNCTION: Mapping[type[ir.Function], acero.AggregateOptions]
+
+_NULLS_LAST = True
+_NULLS_FIRST = False
+_ASC = False
+_DESC = True
+
+NULL_PLACEMENT: Mapping[bool, NullPlacement] = {
+    _NULLS_LAST: "at_end",
+    _NULLS_FIRST: "at_start",
+}
+ORDER: Mapping[bool, Order] = {_ASC: "ascending", _DESC: "descending"}
 
 
 @functools.cache
@@ -65,6 +85,67 @@ def join(*, ignore_nulls: bool = False) -> pc.JoinOptions:
 @functools.cache
 def join_replace_nulls(*, replacement: str = "__nw_null_value__") -> pc.JoinOptions:
     return pc.JoinOptions(null_handling="replace", null_replacement=replacement)
+
+
+@functools.cache
+def array_sort(
+    *, descending: bool = False, nulls_last: bool = False
+) -> pc.ArraySortOptions:
+    return pc.ArraySortOptions(
+        order=ORDER[descending], null_placement=NULL_PLACEMENT[nulls_last]
+    )
+
+
+@functools.lru_cache(maxsize=16)
+def _sort_key(by: str, *, descending: bool = False) -> tuple[str, Order]:
+    return by, ORDER[descending]
+
+
+@functools.lru_cache(maxsize=8)
+def _sort_keys_every(
+    by: tuple[str, ...], *, descending: bool = False
+) -> Seq[tuple[str, Order]]:
+    if len(by) == 1:
+        return (_sort_key(by[0], descending=descending),)
+    order = ORDER[descending]
+    return tuple((key, order) for key in by)
+
+
+def _sort_keys(
+    by: tuple[str, ...], *, descending: bool | Sequence[bool]
+) -> Seq[tuple[str, Order]]:
+    if not isinstance(descending, bool) and len(descending) == 1:
+        descending = descending[0]
+    if isinstance(descending, bool):
+        return _sort_keys_every(by, descending=descending)
+    it = zip_strict(by, descending)
+    return tuple(_sort_key(key, descending=desc) for (key, desc) in it)
+
+
+def sort(
+    *by: str, descending: bool | Sequence[bool] = False, nulls_last: bool = False
+) -> pc.SortOptions:
+    keys = _sort_keys(by, descending=descending)
+    return pc.SortOptions(sort_keys=keys, null_placement=NULL_PLACEMENT[nulls_last])
+
+
+@functools.cache
+def rank(
+    method: RankMethodSingle, *, descending: bool = False, nulls_last: bool = True
+) -> pc.RankOptions:
+    return pc.RankOptions(
+        sort_keys=ORDER[descending],
+        null_placement=NULL_PLACEMENT[nulls_last],
+        tiebreaker=("first" if method == "ordinal" else method),
+    )
+
+
+def order_by_node(
+    *by: str, descending: bool | Sequence[bool] = False, nulls_last: bool = False
+) -> pac.OrderByNodeOptions:
+    nulls = NULL_PLACEMENT[nulls_last]
+    keys = _sort_keys(by, descending=descending)
+    return pac.OrderByNodeOptions(sort_keys=keys, null_placement=nulls)
 
 
 def _generate_agg() -> Mapping[type[agg.AggExpr], acero.AggregateOptions]:

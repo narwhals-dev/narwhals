@@ -57,7 +57,6 @@ if TYPE_CHECKING:
         UnaryFunction,
     )
     from narwhals._plan.options import RankOptions
-    from narwhals._plan.typing import Order
     from narwhals.typing import ClosedInterval, IntoArrowSchema, PythonLiteral
 
 BACKEND_VERSION = Implementation.PYARROW._backend_version()
@@ -299,11 +298,11 @@ def _rank_average(
 ) -> ChunkedArrayAny:
     # Adapted from pandas
     # https://github.com/pandas-dev/pandas/blob/f4851e500a43125d505db64e548af0355227714b/pandas/core/arrays/arrow/array.py#L2290-L2316
-    sort_keys: Order = "descending" if descending else "ascending"
     f64 = pa.float64()
-    rank_min = pc.rank(native, sort_keys=sort_keys, tiebreaker="min").cast(f64)
-    rank_max = pc.rank(native, sort_keys=sort_keys, tiebreaker="max").cast(f64)
-    rank_min = preserve_nulls(native, rank_min)
+    opt = options.rank("max", descending=descending)
+    rank_max = pc.rank(native, options=opt).cast(f64)
+    opt = options.rank("min", descending=descending)
+    rank_min = preserve_nulls(native, pc.rank(native, options=opt).cast(f64))
     return chunked_array(pc.divide(pc.add(rank_min, rank_max), lit(2, f64)))
 
 

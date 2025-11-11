@@ -1,21 +1,21 @@
 from __future__ import annotations
 
 import enum
-from itertools import repeat
 from typing import TYPE_CHECKING
 
 from narwhals._plan._immutable import Immutable
+from narwhals._utils import Implementation
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Sequence
+    from collections.abc import Sequence
 
     import pyarrow.acero
     import pyarrow.compute as pc
     from typing_extensions import Self
 
-    from narwhals._plan.arrow.typing import NullPlacement
-    from narwhals._plan.typing import Accessor, OneOrIterable, Order, Seq
+    from narwhals._plan.typing import Accessor, OneOrIterable, Seq
+    from narwhals._typing import Backend
     from narwhals.typing import RankMethod
 
 
@@ -157,20 +157,16 @@ class SortOptions(Immutable):
         return f"{type(self).__name__}({args})"
 
     def to_arrow(self) -> pc.ArraySortOptions:
-        import pyarrow.compute as pc
+        from narwhals._plan.arrow.options import array_sort
 
-        return pc.ArraySortOptions(
-            order=("descending" if self.descending else "ascending"),
-            null_placement=("at_end" if self.nulls_last else "at_start"),
-        )
+        return array_sort(descending=self.descending, nulls_last=self.nulls_last)
 
     def to_multiple(self, n_repeat: int = 1, /) -> SortMultipleOptions:
-        if n_repeat == 1:
-            desc: Seq[bool] = (self.descending,)
-            nulls: Seq[bool] = (self.nulls_last,)
-        else:
-            desc = tuple(repeat(self.descending, n_repeat))
-            nulls = tuple(repeat(self.nulls_last, n_repeat))
+        desc: Seq[bool] = (self.descending,)
+        nulls: Seq[bool] = (self.nulls_last,)
+        if n_repeat != 1:
+            desc = desc * n_repeat
+            nulls = nulls * n_repeat
         return SortMultipleOptions(descending=desc, nulls_last=nulls)
 
 
@@ -193,36 +189,26 @@ class SortMultipleOptions(Immutable):
         nulls = (nulls_last,) if isinstance(nulls_last, bool) else tuple(nulls_last)
         return SortMultipleOptions(descending=desc, nulls_last=nulls)
 
-    def _to_arrow_args(
-        self, by: Sequence[str]
-    ) -> tuple[Sequence[tuple[str, Order]], NullPlacement]:
+    def _ensure_single_nulls_last(self, backend: Backend, /) -> bool:
         first = self.nulls_last[0]
         if len(self.nulls_last) != 1 and any(x != first for x in self.nulls_last[1:]):
-            msg = f"pyarrow doesn't support multiple values for `nulls_last`, got: {self.nulls_last!r}"  # pragma: no cover
+            msg = f"{Implementation.from_backend(backend)!r} does not support multiple values for `nulls_last`, got: {self.nulls_last!r}"  # pragma: no cover
             raise NotImplementedError(msg)
-        if len(self.descending) == 1:
-            descending: Iterable[bool] = repeat(self.descending[0], len(by))
-        else:
-            descending = self.descending
-        sorting = tuple[tuple[str, "Order"]](
-            (key, "descending" if desc else "ascending")
-            for key, desc in zip(by, descending)
-        )
-        return sorting, "at_end" if first else "at_start"
+        return first
 
     def to_arrow(self, by: Sequence[str]) -> pc.SortOptions:
-        import pyarrow.compute as pc
+        from narwhals._plan.arrow.options import sort
 
-        sort_keys, placement = self._to_arrow_args(by)
-        return pc.SortOptions(sort_keys=sort_keys, null_placement=placement)
+        nulls_last = self._ensure_single_nulls_last("pyarrow")
+        return sort(*by, descending=self.descending, nulls_last=nulls_last)
 
     def to_arrow_acero(
         self, by: Sequence[str]
-    ) -> pyarrow.acero.Declaration:  # pragma: no cover
-        from narwhals._plan.arrow import acero
+    ) -> pyarrow.acero.OrderByNodeOptions:  # pragma: no cover
+        from narwhals._plan.arrow.options import order_by_node
 
-        sort_keys, placement = self._to_arrow_args(by)
-        return acero._order_by(sort_keys, null_placement=placement)
+        nulls_last = self._ensure_single_nulls_last("pyarrow")
+        return order_by_node(*by, descending=self.descending, nulls_last=nulls_last)
 
 
 class RankOptions(Immutable):
@@ -231,16 +217,12 @@ class RankOptions(Immutable):
     descending: bool
 
     def to_arrow(self) -> pc.RankOptions:
-        import pyarrow.compute as pc
-
         if self.method == "average":  # pragma: no cover
             msg = f"`RankOptions.to_arrow` is not compatible with {self.method=}."
             raise InvalidOperationError(msg)
-        order: Order = "descending" if self.descending else "ascending"
-        return pc.RankOptions(
-            sort_keys=order,
-            tiebreaker=("first" if self.method == "ordinal" else self.method),
-        )
+        from narwhals._plan.arrow.options import rank
+
+        return rank(self.method, descending=self.descending)
 
 
 class EWMOptions(Immutable):

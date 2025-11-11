@@ -7,7 +7,7 @@ import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._plan import expressions as ir
-from narwhals._plan.arrow import functions as fn
+from narwhals._plan.arrow import functions as fn, options as pa_options
 from narwhals._plan.arrow.series import ArrowSeries as Series
 from narwhals._plan.arrow.typing import ChunkedOrScalarAny, NativeScalar, StoresNativeT_co
 from narwhals._plan.common import temp
@@ -410,9 +410,18 @@ class ArrowExpr(  # type: ignore[misc]
                     f"Need to adapt impl to reduce the number of sorts when used in {node!r}"
                 )
                 raise NotImplementedError(msg)
-            sorted_context = frame.with_row_index_by(
+            sorting = frame.with_row_index_by(
                 idx_name, order_by, nulls_last=options.nulls_last[0]
-            ).sort([idx_name], options)
+            )
+            # TODO @dangotbanned: Split more sorting stuff out
+            # NOTE: Reusing `options` was causing a zip-length mismatch
+            indices = pc.array_sort_indices(
+                sorting.get_column(idx_name).native,
+                options=pa_options.array_sort(
+                    descending=options.descending[0], nulls_last=options.nulls_last[0]
+                ),
+            )
+            sorted_context = sorting._with_native(sorting.native.take(indices))
             resolved = (
                 frame._grouper.by_irs(*node.partition_by)
                 .agg_irs(node.expr.alias(name))

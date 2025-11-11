@@ -9,7 +9,7 @@ import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._arrow.utils import native_to_narwhals_dtype
-from narwhals._plan.arrow import acero, functions as fn
+from narwhals._plan.arrow import acero, functions as fn, options as pa_options
 from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
 from narwhals._plan.arrow.group_by import ArrowGroupBy as GroupBy, partition_by
 from narwhals._plan.arrow.series import ArrowSeries as Series
@@ -110,11 +110,8 @@ class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
         self, name: str, order_by: Sequence[str], *, nulls_last: bool = False
     ) -> Self:
         native = self.native
-        indices = pc.sort_indices(
-            native,
-            [(by, "ascending") for by in order_by],
-            null_placement="at_end" if nulls_last else "at_start",
-        )
+        options = pa_options.sort(*order_by, nulls_last=nulls_last)
+        indices = pc.sort_indices(native, options=options)
         column = fn.scatter(fn.int_range(len(self)), indices.cast(pa.int64()))
         return self._with_native(native.add_column(0, name, column))
 

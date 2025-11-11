@@ -154,3 +154,9 @@ JoinTypeSubset: TypeAlias = Literal[
     "inner", "left outer", "full outer", "left anti", "left semi"
 ]
 """Only the `pyarrow` `JoinType`'s we use in narwhals"""
+
+RankMethodSingle: TypeAlias = Literal["min", "max", "dense", "ordinal"]
+"""Subset of `narwhals` `RankMethod` that is supported directly in `pyarrow`.
+
+`"average"` requires calculating both `"min"` and `"max"`.
+"""
