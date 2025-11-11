@@ -49,7 +49,9 @@ def test_clear_negative(constructor: Constructor) -> None:
         df.clear(n=n)
 
 
-@pytest.mark.skipif(PANDAS_VERSION < MIN_PANDAS_NULLABLE_VERSION)
+@pytest.mark.skipif(
+    PANDAS_VERSION < MIN_PANDAS_NULLABLE_VERSION, reason="too old for nullable"
+)
 @pytest.mark.parametrize("n", [0, 1, 10])
 def test_clear_pandas_nullable(n: int) -> None:
     pytest.importorskip("pandas")
