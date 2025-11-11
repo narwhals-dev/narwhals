@@ -106,9 +106,6 @@ def test_timestamp_datetimes_tz_aware(
         request.applymarker(
             pytest.mark.xfail(reason="Backend timestamp conversion not yet implemented")
         )
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
     version_conditions = [
         (
             is_pyarrow_windows_no_tzdata(constructor),
