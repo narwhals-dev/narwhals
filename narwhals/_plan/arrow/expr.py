@@ -173,6 +173,17 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
         result = pc.if_else(when.native, then.native, otherwise.native)
         return self._with_native(result, name)
 
+    exp = not_implemented()  # type: ignore[misc]
+    log = not_implemented()  # type: ignore[misc]
+    sqrt = not_implemented()  # type: ignore[misc]
+    round = not_implemented()  # type: ignore[misc]
+    clip = not_implemented()  # type: ignore[misc]
+    drop_nulls = not_implemented()  # type: ignore[misc]
+    replace_strict = not_implemented()  # type: ignore[misc]
+    is_in_seq = not_implemented()  # type: ignore[misc]
+    is_in_expr = not_implemented()  # type: ignore[misc]
+    is_in_series = not_implemented()  # type: ignore[misc]
+
 
 class ArrowExpr(  # type: ignore[misc]
     _ArrowDispatch["ArrowExpr | ArrowScalar"],
@@ -485,6 +496,18 @@ class ArrowExpr(  # type: ignore[misc]
 
     def rank(self, node: FExpr[Rank], frame: Frame, name: str) -> Self:
         return self._function_expr(fn.rank, node.function.options)(node, frame, name)
+
+    # ewm_mean = not_implemented()  # noqa: ERA001
+    hist_bins = not_implemented()
+    hist_bin_count = not_implemented()
+    mode = not_implemented()
+    unique = not_implemented()
+    fill_null_with_strategy = not_implemented()
+    kurtosis = not_implemented()
+    skew = not_implemented()
+    gather_every = not_implemented()
+    is_duplicated = not_implemented()
+    is_unique = not_implemented()
 
 
 class ArrowScalar(
