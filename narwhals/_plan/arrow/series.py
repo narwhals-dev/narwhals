@@ -2,11 +2,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+import pyarrow.compute as pc
+
 from narwhals._arrow.utils import narwhals_to_native_dtype, native_to_narwhals_dtype
-from narwhals._plan.arrow import functions as fn
+from narwhals._plan.arrow import functions as fn, options
+from narwhals._plan.arrow.common import ArrowFrameSeries as FrameSeries
 from narwhals._plan.compliant.series import CompliantSeries
 from narwhals._plan.compliant.typing import namespace
-from narwhals._utils import Implementation, Version
+from narwhals._utils import Version
 from narwhals.dependencies import is_numpy_array_1d
 
 if TYPE_CHECKING:
@@ -15,26 +18,17 @@ if TYPE_CHECKING:
     import polars as pl
     from typing_extensions import Self
 
-    from narwhals._arrow.typing import (  # type: ignore[attr-defined]
-        ChunkedArrayAny,
-        Indices,
-    )
     from narwhals._plan.arrow.dataframe import ArrowDataFrame as DataFrame
-    from narwhals._plan.arrow.namespace import ArrowNamespace
+    from narwhals._plan.arrow.typing import ChunkedArrayAny
     from narwhals.dtypes import DType
     from narwhals.typing import Into1DArray, IntoDType, _1DArray
 
 
-class ArrowSeries(CompliantSeries["ChunkedArrayAny"]):
-    implementation = Implementation.PYARROW
-    _native: ChunkedArrayAny
-    _version: Version
+class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayAny"]):
     _name: str
 
-    def __narwhals_namespace__(self) -> ArrowNamespace:
-        from narwhals._plan.arrow.namespace import ArrowNamespace
-
-        return ArrowNamespace(self._version)
+    def _with_native(self, native: ChunkedArrayAny) -> Self:
+        return self.from_native(native, self.name, version=self.version)
 
     def to_frame(self) -> DataFrame:
         return namespace(self)._dataframe.from_dict({self.name: self.native})
@@ -82,6 +76,7 @@ class ArrowSeries(CompliantSeries["ChunkedArrayAny"]):
         dtype_pa = narwhals_to_native_dtype(dtype, self.version)
         return self._with_native(fn.cast(self.native, dtype_pa))
 
-    def gather(self, indices: Self | Indices) -> Self:
-        s = indices.native if fn.is_series(indices) else indices
-        return self._with_native(self.native.take(s))
+    def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
+        opts = options.array_sort(descending=descending, nulls_last=nulls_last)
+        indices = pc.array_sort_indices(self.native, options=opts)
+        return self._with_native(self._gather(indices))

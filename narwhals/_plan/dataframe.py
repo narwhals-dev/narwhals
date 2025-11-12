@@ -304,6 +304,9 @@ class DataFrame(
             return self._with_compliant(self._compliant.with_row_index(name))
         return super().with_row_index(name, order_by=order_by)
 
+    def slice(self, offset: int, length: int | None = None) -> Self:  # pragma: no cover
+        return type(self)(self._compliant.slice(offset=offset, length=length))
+
 
 def _is_join_strategy(obj: Any) -> TypeIs[JoinStrategy]:
     return obj in {"inner", "left", "full", "cross", "anti", "semi"}

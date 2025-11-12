@@ -271,9 +271,10 @@ class ArrowExpr(  # type: ignore[misc]
         return len(self._evaluated)
 
     def sort(self, node: ir.Sort, frame: Frame, name: str) -> Expr:
-        native = self._dispatch_expr(node.expr, frame, name).native
-        sorted_indices = pc.array_sort_indices(native, options=node.options.to_arrow())
-        return self._with_native(native.take(sorted_indices), name)
+        series = self._dispatch_expr(node.expr, frame, name)
+        opts = node.options
+        result = series.sort(descending=opts.descending, nulls_last=opts.nulls_last)
+        return self.from_series(result)
 
     def sort_by(self, node: ir.SortBy, frame: Frame, name: str) -> Expr:
         series = self._dispatch_expr(node.expr, frame, name)
@@ -446,7 +447,7 @@ class ArrowExpr(  # type: ignore[misc]
         series = self._dispatch_expr(node.input[0], frame, name)
         udf = node.function.function
         result: Series | Into1DArray = udf(series)
-        if not fn.is_series(result):
+        if not isinstance(result, Series):
             result = Series.from_numpy(result, name, version=self.version)
         if dtype := node.function.return_dtype:
             result = result.cast(dtype)

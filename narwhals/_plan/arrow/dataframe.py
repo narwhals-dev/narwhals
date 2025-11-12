@@ -10,13 +10,14 @@ import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._plan.arrow import acero, functions as fn, options as pa_options
+from narwhals._plan.arrow.common import ArrowFrameSeries as FrameSeries
 from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
 from narwhals._plan.arrow.group_by import ArrowGroupBy as GroupBy, partition_by
 from narwhals._plan.arrow.series import ArrowSeries as Series
 from narwhals._plan.compliant.dataframe import EagerDataFrame
 from narwhals._plan.compliant.typing import namespace
 from narwhals._plan.expressions import NamedIR
-from narwhals._utils import Implementation, Version
+from narwhals._utils import Version
 from narwhals.schema import Schema
 
 if TYPE_CHECKING:
@@ -25,11 +26,7 @@ if TYPE_CHECKING:
     import polars as pl
     from typing_extensions import Self
 
-    from narwhals._arrow.typing import (  # type: ignore[attr-defined]
-        ChunkedArrayAny,
-        Indices,
-    )
-    from narwhals._plan.arrow.namespace import ArrowNamespace
+    from narwhals._plan.arrow.typing import ChunkedArrayAny
     from narwhals._plan.expressions import ExprIR, NamedIR
     from narwhals._plan.options import SortMultipleOptions
     from narwhals._plan.typing import NonCrossJoinStrategy
@@ -37,15 +34,11 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoSchema
 
 
-class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
-    implementation = Implementation.PYARROW
-    _native: pa.Table
-    _version: Version
-
-    def __narwhals_namespace__(self) -> ArrowNamespace:
-        from narwhals._plan.arrow.namespace import ArrowNamespace
-
-        return ArrowNamespace(self._version)
+class ArrowDataFrame(
+    FrameSeries["pa.Table"], EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]
+):
+    def _with_native(self, native: pa.Table) -> Self:
+        return self.from_native(native, self.version)
 
     @property
     def _group_by(self) -> type[GroupBy]:
@@ -193,7 +186,3 @@ class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
         from_native = self._with_native
         partitions = partition_by(self.native, by, include_key=include_key)
         return [from_native(df) for df in partitions]
-
-    def gather(self, indices: Series | Indices) -> Self:
-        s = indices.native if fn.is_series(indices) else indices
-        return self._with_native(self.native.take(s))

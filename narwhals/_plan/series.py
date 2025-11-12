@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._typing import EagerAllowed, IntoBackend
     from narwhals.dtypes import DType
-    from narwhals.typing import IntoDType
+    from narwhals.typing import IntoDType, SizedMultiIndexSelector
 
 
 class Series(Generic[NativeSeriesT_co]):
@@ -89,6 +89,21 @@ class Series(Generic[NativeSeriesT_co]):
 
     def __len__(self) -> int:
         return len(self._compliant)
+
+    def gather(self, indices: SizedMultiIndexSelector[Self]) -> Self:  # pragma: no cover
+        if len(indices) == 0:
+            return self.slice(0, 0)
+        rows = indices._compliant if isinstance(indices, Series) else indices
+        return type(self)(self._compliant.gather(rows))
+
+    def slice(self, offset: int, length: int | None = None) -> Self:  # pragma: no cover
+        return type(self)(self._compliant.slice(offset=offset, length=length))
+
+    def sort(
+        self, *, descending: bool = False, nulls_last: bool = False
+    ) -> Self:  # pragma: no cover
+        result = self._compliant.sort(descending=descending, nulls_last=nulls_last)
+        return type(self)(result)
 
 
 class SeriesV1(Series[NativeSeriesT_co]):

@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Protocol
 
 from narwhals._plan.compliant.typing import HasVersion
 from narwhals._plan.typing import NativeSeriesT
-from narwhals._utils import Version
+from narwhals._utils import Version, _StoresNative
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from narwhals._plan.series import Series
     from narwhals._typing import _EagerAllowedImpl
     from narwhals.dtypes import DType
-    from narwhals.typing import Into1DArray, IntoDType, _1DArray
+    from narwhals.typing import Into1DArray, IntoDType, SizedMultiIndexSelector, _1DArray
 
 Incomplete: TypeAlias = Any
 
@@ -75,6 +75,12 @@ class CompliantSeries(HasVersion, Protocol[NativeSeriesT]):
         return self.from_native(self.native, name, version=self.version)
 
     def cast(self, dtype: IntoDType) -> Self: ...
+    def gather(
+        self,
+        indices: SizedMultiIndexSelector[NativeSeriesT] | _StoresNative[NativeSeriesT],
+    ) -> Self: ...
+    def slice(self, offset: int, length: int | None = None) -> Self: ...
+    def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self: ...
     def to_frame(self) -> Incomplete: ...
     def to_list(self) -> list[Any]: ...
     def to_narwhals(self) -> Series[NativeSeriesT]:

@@ -26,7 +26,6 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias, TypeIs
 
     from narwhals._arrow.typing import Incomplete, PromoteOptions
-    from narwhals._plan.arrow.series import ArrowSeries
     from narwhals._plan.arrow.typing import (
         Array,
         ArrayAny,
@@ -482,12 +481,6 @@ else:
 
     def concat_diagonal(tables: Iterable[pa.Table]) -> pa.Table:
         return pa.concat_tables(tables, promote=True)
-
-
-def is_series(obj: t.Any) -> TypeIs[ArrowSeries]:
-    from narwhals._plan.arrow.series import ArrowSeries
-
-    return isinstance(obj, ArrowSeries)
 
 
 def _is_into_pyarrow_schema(obj: Mapping[Any, Any]) -> TypeIs[Mapping[str, DataType]]:

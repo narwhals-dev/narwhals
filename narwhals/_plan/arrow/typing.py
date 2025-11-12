@@ -26,6 +26,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals._native import NativeDataFrame, NativeSeries
+    from narwhals.typing import SizedMultiIndexSelector as _SizedMultiIndexSelector
 
     StringScalar: TypeAlias = "Scalar[StringType | LargeStringType]"
     IntegerType: TypeAlias = "Int8Type | Int16Type | Int32Type | Int64Type | Uint8Type | Uint16Type | Uint32Type | Uint64Type"
@@ -142,6 +143,11 @@ ChunkedArrayAny: TypeAlias = "ChunkedArray[Any]"
 ChunkedOrScalarAny: TypeAlias = "ChunkedOrScalar[ScalarAny]"
 ChunkedOrArrayAny: TypeAlias = "ChunkedOrArray[ScalarAny]"
 ChunkedOrArrayT = TypeVar("ChunkedOrArrayT", ChunkedArrayAny, ArrayAny)
+ChunkedOrArrayInt: TypeAlias = "ChunkedOrArray[pc.IntegerScalar]"
+"""Narrowed to the native types supported in `Indices`."""
+
+SizedMultiIndexSelector: TypeAlias = "_SizedMultiIndexSelector[ChunkedOrArrayInt]"
+
 Arrow: TypeAlias = "ChunkedOrScalar[ScalarT_co] | Array[ScalarT_co]"
 ArrowAny: TypeAlias = "ChunkedOrScalarAny | ArrayAny"
 NativeScalar: TypeAlias = ScalarAny
