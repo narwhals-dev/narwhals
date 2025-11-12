@@ -207,8 +207,10 @@ def named_ir(name: str, expr: nwp.Expr | ir.ExprIR, /) -> ir.NamedIR[ir.ExprIR]:
     return ir.NamedIR(expr=expr._ir if isinstance(expr, nwp.Expr) else expr, name=name)
 
 
-def dataframe(data: dict[str, Any], /) -> nwp.DataFrame[pa.Table, pa.ChunkedArray[Any]]:
-    return nwp.DataFrame.from_native(pa.table(data))
+def dataframe(
+    data: Mapping[str, Any], /
+) -> nwp.DataFrame[pa.Table, pa.ChunkedArray[Any]]:
+    return nwp.DataFrame.from_native(pa.Table.from_pydict(data))
 
 
 def series(values: Iterable[Any], /) -> nwp.Series[pa.ChunkedArray[Any]]:
