@@ -94,10 +94,20 @@ class ArrowDataFrame(
         from_named_ir = ns._expr.from_named_ir
         yield from ns._expr.align(from_named_ir(e, self) for e in nodes)
 
-    def sort(self, by: Sequence[str], options: SortMultipleOptions) -> Self:
-        native = self.native
-        indices = pc.sort_indices(native.select(list(by)), options=options.to_arrow(by))
-        return self._with_native(native.take(indices))
+    def sort(
+        self,
+        by: Sequence[str],
+        options: SortMultipleOptions | None = None,
+        *,
+        descending: bool = False,
+        nulls_last: bool = False,
+    ) -> Self:
+        opts = (
+            options.to_arrow(by)
+            if options
+            else pa_options.sort(*by, descending=descending, nulls_last=nulls_last)
+        )
+        return self.gather(pc.sort_indices(self.native.select(list(by)), options=opts))
 
     def with_row_index(self, name: str) -> Self:
         return self._with_native(self.native.add_column(0, name, fn.int_range(len(self))))

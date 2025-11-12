@@ -7,6 +7,7 @@ import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._plan import expressions as ir
+from narwhals._plan._guards import is_function_expr
 from narwhals._plan.arrow import functions as fn
 from narwhals._plan.arrow.series import ArrowSeries as Series
 from narwhals._plan.arrow.typing import ChunkedOrScalarAny, NativeScalar, StoresNativeT_co
@@ -276,6 +277,7 @@ class ArrowExpr(  # type: ignore[misc]
         result = series.sort(descending=opts.descending, nulls_last=opts.nulls_last)
         return self.from_series(result)
 
+    # TODO @dangotbanned: Sorting (complicated)
     def sort_by(self, node: ir.SortBy, frame: Frame, name: str) -> Expr:
         series = self._dispatch_expr(node.expr, frame, name)
         it_names = temp.column_names(frame)
@@ -373,70 +375,61 @@ class ArrowExpr(  # type: ignore[misc]
     #   - [x] `over_ordered`
     #   - [x] `group_by`, `join`
     #   - [x] `over` (with partitions)
-    #   - [!] `over_ordered` (with partitions)
+    #   - [x] `over_ordered` (with partitions)
+    #   - [ ] fix: join on nulls after https://github.com/narwhals-dev/narwhals/issues/3300
     # - [ ] `map_batches`
     #   - [x] elementwise
     #   - [ ] scalar
     # - [ ] `rolling_expr` has 4 variants
 
-    def over(self, node: ir.WindowExpr, frame: Frame, name: str) -> Self:
+    def over(
+        self,
+        node: ir.WindowExpr,
+        frame: Frame,
+        name: str,
+        *,
+        reordered: Frame | None = None,
+    ) -> Self:
+        # TODO @dangotbanned: Can the alias in `agg_irs` be avoided?
         resolved = (
             frame._grouper.by_irs(*node.partition_by)
-            # TODO @dangotbanned: Clean this up so the re-alias isn't needed
             .agg_irs(node.expr.alias(name))
             .resolve(frame)
         )
         by_names = resolved.key_names
-        result = (
+        windowed = resolved.evaluate(frame if reordered is None else reordered)
+        return self.from_series(
             frame.select_names(*by_names)
-            .join(resolved.evaluate(frame), how="left", left_on=by_names)
+            .join(windowed, how="left", left_on=by_names)
             .get_column(name)
-            .native
         )
-        return self._with_native(result, name)
 
-    # NOTE: Very rough, but working for most aggregations
+    # TODO @dangotbanned: Partitioned & ordered `is_{first,last}_distinct`
     def over_ordered(
         self, node: ir.OrderedWindowExpr, frame: Frame, name: str
     ) -> Self | Scalar:
         order_by = tuple(node.order_by_names())
-        sort_options = node.sort_options
+        descending = node.sort_options.descending
+        nulls_last = node.sort_options.nulls_last
         idx_name = temp.column_name(frame)
         if node.partition_by:
-            if isinstance(node.expr, ir.FunctionExpr) and isinstance(
+            if is_function_expr(node.expr) and isinstance(
                 node.expr.function, (IsFirstDistinct, IsLastDistinct)
             ):
-                msg = (
-                    f"TODO: {node.expr.function!r}\n"
-                    f"Need to adapt impl to reduce the number of sorts when used in {node!r}"
-                )
+                msg = f"TODO: {node.expr.function!r}\nNeed to adapt impl to reduce the number of sorts when used in {node!r}"
                 raise NotImplementedError(msg)
-            nulls_last = sort_options.nulls_last
-            sorting = frame.with_row_index_by(idx_name, order_by, nulls_last=nulls_last)
-            gb_resolved = (
-                frame._grouper.by_irs(*node.partition_by)
-                .agg_irs(node.expr.alias(name))
-                .resolve(frame)
-            )
-            # TODO @dangotbanned: Split more sorting stuff out
-            indices = pc.array_sort_indices(
-                sorting.to_series().native, options=sort_options.to_arrow()
-            )
-            gb_evaluated = gb_resolved.evaluate(sorting.gather(indices))
-            # TODO @dangotbanned: Revise (join) after https://github.com/narwhals-dev/narwhals/issues/3300
-            return self.from_series(
-                frame.select_names(*gb_resolved.key_names)
-                .join(gb_evaluated, how="left", left_on=gb_resolved.key_names)
-                .get_column(name)
-            )
-        options = sort_options.to_multiple(len(order_by))
-        sorted_context = frame.with_row_index(idx_name).sort(order_by, options)
-        evaluated = node.expr.dispatch(self, sorted_context.drop([idx_name]), name)
+            reordered = frame.with_row_index_by(
+                idx_name, order_by, nulls_last=nulls_last
+            ).sort((idx_name,), descending=descending)
+            return self.over(node, frame, name, reordered=reordered)
+        frame_idx = frame.with_row_index(idx_name).sort(
+            order_by, descending=descending, nulls_last=nulls_last
+        )
+        evaluated = node.expr.dispatch(self, frame_idx.drop([idx_name]), name)
         if isinstance(evaluated, ArrowScalar):
-            # NOTE: We're already sorted, defer broadcasting to the outer context
             return evaluated
-        indices = pc.sort_indices(sorted_context.to_series().native)
-        return self.from_series(evaluated.broadcast(len(frame)).gather(indices))
+        idx = frame_idx.to_series()
+        return self.from_series(evaluated.broadcast(len(frame)).sort_by(idx))
 
     # NOTE: Can't implement in `EagerExpr`, since it doesn't derive `ExprDispatch`
     def map_batches(self, node: ir.AnonymousExpr, frame: Frame, name: str) -> Self:
@@ -477,6 +470,7 @@ class ArrowExpr(  # type: ignore[misc]
         idx_name = temp.column_name([name])
         expr_ir = fn.IS_FIRST_LAST_DISTINCT[type(node.function)](idx_name)
         series = self._dispatch_expr(node.input[0], frame, name)
+        # TODO @dangotbanned: Sorting
         df = series.to_frame().with_row_index(idx_name)
         distinct_index = (
             df.group_by_names((name,))

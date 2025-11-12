@@ -10,7 +10,6 @@ from narwhals.exceptions import InvalidOperationError
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    import pyarrow.acero
     import pyarrow.compute as pc
     from typing_extensions import Self
 
@@ -156,19 +155,6 @@ class SortOptions(Immutable):
         args = f"descending={self.descending!r}, nulls_last={self.nulls_last!r}"
         return f"{type(self).__name__}({args})"
 
-    def to_arrow(self) -> pc.ArraySortOptions:
-        from narwhals._plan.arrow.options import array_sort
-
-        return array_sort(descending=self.descending, nulls_last=self.nulls_last)
-
-    def to_multiple(self, n_repeat: int = 1, /) -> SortMultipleOptions:
-        desc: Seq[bool] = (self.descending,)
-        nulls: Seq[bool] = (self.nulls_last,)
-        if n_repeat != 1:
-            desc = desc * n_repeat
-            nulls = nulls * n_repeat
-        return SortMultipleOptions(descending=desc, nulls_last=nulls)
-
 
 class SortMultipleOptions(Immutable):
     __slots__ = ("descending", "nulls_last")
@@ -201,14 +187,6 @@ class SortMultipleOptions(Immutable):
 
         nulls_last = self._ensure_single_nulls_last("pyarrow")
         return sort(*by, descending=self.descending, nulls_last=nulls_last)
-
-    def to_arrow_acero(
-        self, by: Sequence[str]
-    ) -> pyarrow.acero.OrderByNodeOptions:  # pragma: no cover
-        from narwhals._plan.arrow.options import order_by_node
-
-        nulls_last = self._ensure_single_nulls_last("pyarrow")
-        return order_by_node(*by, descending=self.descending, nulls_last=nulls_last)
 
 
 class RankOptions(Immutable):

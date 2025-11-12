@@ -25,8 +25,7 @@ import pyarrow.acero as pac
 import pyarrow.compute as pc  # ignore-banned-import
 from pyarrow.acero import Declaration as Decl
 
-from narwhals._plan.common import ensure_list_str, flatten_hash_safe, temp
-from narwhals._plan.options import SortMultipleOptions
+from narwhals._plan.common import ensure_list_str, temp
 from narwhals._plan.typing import NonCrossJoinStrategy, OneOrSeq
 from narwhals._utils import check_column_names_are_unique
 from narwhals.typing import JoinStrategy, SingleColSelector
@@ -231,18 +230,6 @@ def append_column(native: pa.Table, name: str, values: IntoExpr) -> Decl:
 
 def prepend_column(native: pa.Table, name: str, values: IntoExpr) -> Decl:
     return _add_column(native, 0, name, values)
-
-
-def sort_by(
-    by: OneOrIterable[str],
-    *more_by: str,
-    descending: OneOrIterable[bool] = False,
-    nulls_last: bool = False,
-) -> Decl:
-    opts = SortMultipleOptions.parse(
-        descending=descending, nulls_last=nulls_last
-    ).to_arrow_acero(tuple(flatten_hash_safe((by, more_by))))
-    return Decl("order_by", opts)
 
 
 def _join_options(

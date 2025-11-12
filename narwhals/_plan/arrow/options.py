@@ -9,7 +9,6 @@ from __future__ import annotations
 import functools
 from typing import TYPE_CHECKING, Any, Literal
 
-import pyarrow.acero as pac
 import pyarrow.compute as pc
 
 from narwhals._utils import zip_strict
@@ -31,7 +30,6 @@ __all__ = [
     "count",
     "join",
     "join_replace_nulls",
-    "order_by_node",
     "rank",
     "scalar_aggregate",
     "sort",
@@ -138,14 +136,6 @@ def rank(
         null_placement=NULL_PLACEMENT[nulls_last],
         tiebreaker=("first" if method == "ordinal" else method),
     )
-
-
-def order_by_node(
-    *by: str, descending: bool | Sequence[bool] = False, nulls_last: bool = False
-) -> pac.OrderByNodeOptions:
-    nulls = NULL_PLACEMENT[nulls_last]
-    keys = _sort_keys(by, descending=descending)
-    return pac.OrderByNodeOptions(sort_keys=keys, null_placement=nulls)
 
 
 def _generate_agg() -> Mapping[type[agg.AggExpr], acero.AggregateOptions]:

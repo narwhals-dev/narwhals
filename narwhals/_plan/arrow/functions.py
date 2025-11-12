@@ -280,6 +280,7 @@ def shift(native: ChunkedArrayAny, n: int) -> ChunkedArrayAny:
     return pa.chunked_array(arrays)
 
 
+# TODO @dangotbanned: Sorting
 def rank(native: ChunkedArrayAny, rank_options: RankOptions) -> ChunkedArrayAny:
     arr = native if BACKEND_VERSION >= (14,) else array(native)
     if rank_options.method == "average":
@@ -292,6 +293,7 @@ def null_count(native: ChunkedOrArrayAny) -> pa.Int64Scalar:
     return pc.count(native, mode="only_null")
 
 
+# TODO @dangotbanned: Sorting
 def _rank_average(
     native: ChunkedOrArrayAny, *, descending: bool = False
 ) -> ChunkedArrayAny:
@@ -305,6 +307,7 @@ def _rank_average(
     return chunked_array(pc.divide(pc.add(rank_min, rank_max), lit(2, f64)))
 
 
+# TODO @dangotbanned: Sorting
 def scatter(values: ChunkedArrayAny, indices: ArrayAny) -> ChunkedArrayAny:
     """`pyarrow.compute.scatter` compatibility wrapper.
 
