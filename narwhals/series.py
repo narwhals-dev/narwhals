@@ -2876,12 +2876,10 @@ class Series(Generic[IntoSeriesT]):
             |]                 |
             └──────────────────┘
         """
-        if not isinstance(n, int):
-            msg = f"`n` should be an integer, got type '{qualified_type_name(type(n))}'"
-            raise TypeError(msg)
-        if n < 0:
-            msg = f"`n` should be greater than or equal to 0, got {n}"
-            raise ValueError(msg)
+        if not (is_int := isinstance(n, int)) or n < 0:
+            msg = f"`n` should be an integer >= 0, got {n}"
+            err = TypeError if not is_int else ValueError
+            raise err(msg)
         return self._with_compliant(self._compliant_series.clear(n=n))
 
     @property

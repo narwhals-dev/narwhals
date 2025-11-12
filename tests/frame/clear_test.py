@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 import pytest
@@ -41,23 +42,13 @@ def test_clear(request: pytest.FixtureRequest, constructor: Constructor, n: int)
     assert_equal_data(df_clear, {k: [None] * n for k in data})
 
 
-def test_clear_negative(constructor: Constructor) -> None:
-    n = -1
+@pytest.mark.parametrize("n", [-1, "foo", 2.0, 1 + 1j])
+def test_clear_exception(constructor: Constructor, n: Any) -> None:
     data = {"a": [1, 2, 3]}
     df = nw.from_native(constructor(data))
 
-    msg = f"`n` should be greater than or equal to 0, got {n}"
-    with pytest.raises(ValueError, match=msg):
-        df.clear(n=n)
-
-
-@pytest.mark.parametrize("n", ["foo", 2.0, 1 + 1j])
-def test_clear_non_integer(constructor: Constructor, n: Any) -> None:
-    data = {"a": [1, 2, 3]}
-    df = nw.from_native(constructor(data))
-
-    msg = "`n` should be an integer, got type"
-    with pytest.raises(TypeError, match=msg):
+    msg = re.escape(f"`n` should be an integer >= 0, got {n}")
+    with pytest.raises((ValueError, TypeError), match=msg):
         df.clear(n=n)
 
 
