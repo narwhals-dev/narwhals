@@ -521,4 +521,11 @@ class DaskLazyFrame(
     def sink_parquet(self, file: str | Path | BytesIO) -> None:
         self.native.to_parquet(file)
 
+    def clear(self, n: int) -> Self:
+        if n > 0:
+            msg = f"Unable to safely perform `DataFrame.clear(n={n})` for Dask backend."
+            raise NotImplementedError(msg)
+
+        return self.head(0)
+
     explode = not_implemented()
