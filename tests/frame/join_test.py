@@ -331,9 +331,6 @@ def test_semi_join(
     filter_expr: nw.Expr,
     expected: dict[str, list[Any]],
 ) -> None:
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
     data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
     df = from_native_lazy(constructor(data))
     other = df.filter(filter_expr)
