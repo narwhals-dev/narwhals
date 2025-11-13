@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import typing as t
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, overload
+from typing import TYPE_CHECKING, Any, Literal, overload
 
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
@@ -36,6 +36,7 @@ if TYPE_CHECKING:
         BinOp,
         ChunkedArray,
         ChunkedArrayAny,
+        ChunkedOrArray,
         ChunkedOrArrayAny,
         ChunkedOrArrayT,
         ChunkedOrScalar,
@@ -380,14 +381,38 @@ def concat_str(
     return concat(*it, lit(separator, dtype), options=join)  # type: ignore[no-any-return]
 
 
+_i64 = pa.int64()
+
+
+@overload
+def int_range(
+    start: int = ...,
+    end: int | None = ...,
+    step: int = ...,
+    /,
+    *,
+    dtype: IntegerType = ...,
+    chunked: Literal[True] = ...,
+) -> ChunkedArray[IntegerScalar]: ...
+@overload
+def int_range(
+    start: int = ...,
+    end: int | None = ...,
+    step: int = ...,
+    /,
+    *,
+    dtype: IntegerType = ...,
+    chunked: Literal[False],
+) -> Array[IntegerScalar]: ...
 def int_range(
     start: int = 0,
     end: int | None = None,
     step: int = 1,
     /,
     *,
-    dtype: IntegerType = pa.int64(),  # noqa: B008
-) -> ChunkedArray[IntegerScalar]:
+    dtype: IntegerType = _i64,
+    chunked: bool = True,
+) -> ChunkedOrArray[IntegerScalar]:
     if end is None:
         end = start
         start = 0
@@ -396,9 +421,9 @@ def int_range(
 
         arr = pa.array(np.arange(start=start, stop=end, step=step), type=dtype)
     else:
-        int_range_: Incomplete = t.cast("Incomplete", pa.arange)  # type: ignore[attr-defined]
+        int_range_: Incomplete = pa.arange  # type: ignore[attr-defined]
         arr = t.cast("ArrayAny", int_range_(start=start, stop=end, step=step)).cast(dtype)
-    return pa.chunked_array([arr])
+    return arr if not chunked else pa.chunked_array([arr])
 
 
 def date_range(
