@@ -6,9 +6,6 @@ from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 
 def test_null(constructor: Constructor) -> None:
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
     data_na = {"a": [None, 3, 2], "z": [7.0, None, None]}
     expected = {"a": [True, False, False], "z": [True, False, False]}
     df = nw.from_native(constructor(data_na))
