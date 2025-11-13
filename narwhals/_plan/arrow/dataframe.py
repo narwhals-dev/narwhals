@@ -118,7 +118,11 @@ class ArrowDataFrame(
         native = self.native
         options = pa_options.sort(*order_by, nulls_last=nulls_last)
         indices = pc.sort_indices(native, options=options)
-        column = fn.scatter(fn.int_range(len(self)), indices.cast(pa.int64()))
+        int_range = fn.int_range(len(self))
+        if fn.HAS_SCATTER:
+            column = pc.scatter(int_range, indices.cast(pa.int64()))  # type: ignore[attr-defined]
+        else:
+            column = int_range.take(pc.sort_indices(indices))
         return self._with_native(native.add_column(0, name, column))
 
     def get_column(self, name: str) -> Series:

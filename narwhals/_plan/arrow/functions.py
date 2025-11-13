@@ -317,20 +317,6 @@ def _rank_average(
     return chunked_array(pc.divide(pc.add(rank_min, rank_max), lit(2, f64)))
 
 
-# TODO @dangotbanned: Sorting
-def scatter(values: ChunkedArrayAny, indices: ArrayAny) -> ChunkedArrayAny:
-    """`pyarrow.compute.scatter` compatibility wrapper.
-
-    Note:
-        Somewhat different to `polars.Series.scatter`.
-    """
-    return (
-        pc.scatter(values, indices)  # type: ignore[attr-defined]
-        if HAS_SCATTER
-        else values.take(pc.sort_indices(indices))
-    )
-
-
 def has_nulls(native: ChunkedOrArrayAny) -> bool:
     return bool(native.null_count)
 
