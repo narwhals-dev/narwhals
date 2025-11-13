@@ -22,9 +22,9 @@ from narwhals._utils import Implementation, Version, _StoresNative, not_implemen
 from narwhals.exceptions import InvalidOperationError, ShapeError
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Sequence
 
-    from typing_extensions import ParamSpec, Self, TypeAlias
+    from typing_extensions import ParamSpec, Self, TypeAlias, TypeIs
 
     from narwhals._arrow.typing import ChunkedArrayAny, Incomplete
     from narwhals._plan.arrow.dataframe import ArrowDataFrame as Frame
@@ -65,6 +65,7 @@ if TYPE_CHECKING:
         Rank,
         Shift,
     )
+    from narwhals._plan.typing import Seq
     from narwhals._typing_compat import TypeVar
     from narwhals.typing import Into1DArray, IntoDType, PythonLiteral
 
@@ -83,6 +84,10 @@ if TYPE_CHECKING:
 
 
 BACKEND_VERSION = Implementation.PYARROW._backend_version()
+
+
+def is_seq_column(exprs: Seq[ir.ExprIR]) -> TypeIs[Seq[ir.Column]]:
+    return all(isinstance(e, ir.Column) for e in exprs)
 
 
 class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], Protocol):
@@ -277,16 +282,20 @@ class ArrowExpr(  # type: ignore[misc]
         result = series.sort(descending=opts.descending, nulls_last=opts.nulls_last)
         return self.from_series(result)
 
-    # TODO @dangotbanned: Sorting (complicated)
     def sort_by(self, node: ir.SortBy, frame: Frame, name: str) -> Expr:
+        if is_seq_column(node.by):
+            # fastpath, roughly the same as `DataFrame.sort`, but only taking indices
+            # of a single column
+            keys: Sequence[str] = tuple(e.name for e in node.by)
+            df = frame
+        else:
+            it_names = temp.column_names(frame)
+            by = (self._dispatch_expr(e, frame, nm) for e, nm in zip(node.by, it_names))
+            df = namespace(self)._concat_horizontal(by)
+            keys = df.columns
+        indices = pc.sort_indices(df.native, options=node.options.to_arrow(keys))
         series = self._dispatch_expr(node.expr, frame, name)
-        it_names = temp.column_names(frame)
-        by = (self._dispatch_expr(e, frame, nm) for e, nm in zip(node.by, it_names))
-        df = namespace(self)._concat_horizontal((series, *by))
-        names = df.columns[1:]
-        indices = pc.sort_indices(df.native, options=node.options.to_arrow(names))
-        result: ChunkedArrayAny = df.native.column(0).take(indices)
-        return self._with_native(result, name)
+        return self.from_series(series.gather(indices))
 
     def filter(self, node: ir.Filter, frame: Frame, name: str) -> Expr:
         return self._with_native(
