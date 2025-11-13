@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import typing as t
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, Literal, overload
+from typing import TYPE_CHECKING, Any, Final, Literal, overload
 
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
@@ -60,6 +60,15 @@ if TYPE_CHECKING:
     from narwhals.typing import ClosedInterval, IntoArrowSchema, PythonLiteral
 
 BACKEND_VERSION = Implementation.PYARROW._backend_version()
+"""Static backend version for `pyarrow`."""
+
+RANK_ACCEPTS_CHUNKED: Final = BACKEND_VERSION >= (14,)
+
+HAS_SCATTER: Final = BACKEND_VERSION >= (20,)
+"""`pyarrow.compute.scatter` added in https://github.com/apache/arrow/pull/44394"""
+
+HAS_ARANGE: Final = BACKEND_VERSION >= (21,)
+"""`pyarrow.arange` added in https://github.com/apache/arrow/pull/46778"""
 
 IntoColumnAgg: TypeAlias = Callable[[str], ir.AggExpr]
 """Helper constructor for single-column aggregations."""
@@ -283,7 +292,7 @@ def shift(native: ChunkedArrayAny, n: int) -> ChunkedArrayAny:
 
 # TODO @dangotbanned: Sorting
 def rank(native: ChunkedArrayAny, rank_options: RankOptions) -> ChunkedArrayAny:
-    arr = native if BACKEND_VERSION >= (14,) else array(native)
+    arr = native if RANK_ACCEPTS_CHUNKED else array(native)
     if rank_options.method == "average":
         return _rank_average(arr, descending=rank_options.descending)
     ranked = preserve_nulls(native, pc.rank(arr, options=rank_options.to_arrow()))
@@ -317,7 +326,7 @@ def scatter(values: ChunkedArrayAny, indices: ArrayAny) -> ChunkedArrayAny:
     """
     return (
         pc.scatter(values, indices)  # type: ignore[attr-defined]
-        if BACKEND_VERSION >= (20,)
+        if HAS_SCATTER
         else values.take(pc.sort_indices(indices))
     )
 
@@ -416,7 +425,7 @@ def int_range(
     if end is None:
         end = start
         start = 0
-    if BACKEND_VERSION < (21, 0, 0):  # pragma: no cover
+    if not HAS_ARANGE:  # pragma: no cover
         import numpy as np  # ignore-banned-import
 
         arr = pa.array(np.arange(start=start, stop=end, step=step), type=dtype)
