@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import typing as t
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, overload
+from typing import TYPE_CHECKING, Any, Final, Literal, overload
 
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
@@ -36,6 +36,7 @@ if TYPE_CHECKING:
         BinOp,
         ChunkedArray,
         ChunkedArrayAny,
+        ChunkedOrArray,
         ChunkedOrArrayAny,
         ChunkedOrArrayT,
         ChunkedOrScalar,
@@ -59,6 +60,15 @@ if TYPE_CHECKING:
     from narwhals.typing import ClosedInterval, IntoArrowSchema, PythonLiteral
 
 BACKEND_VERSION = Implementation.PYARROW._backend_version()
+"""Static backend version for `pyarrow`."""
+
+RANK_ACCEPTS_CHUNKED: Final = BACKEND_VERSION >= (14,)
+
+HAS_SCATTER: Final = BACKEND_VERSION >= (20,)
+"""`pyarrow.compute.scatter` added in https://github.com/apache/arrow/pull/44394"""
+
+HAS_ARANGE: Final = BACKEND_VERSION >= (21,)
+"""`pyarrow.arange` added in https://github.com/apache/arrow/pull/46778"""
 
 IntoColumnAgg: TypeAlias = Callable[[str], ir.AggExpr]
 """Helper constructor for single-column aggregations."""
@@ -282,7 +292,7 @@ def shift(native: ChunkedArrayAny, n: int) -> ChunkedArrayAny:
 
 # TODO @dangotbanned: Sorting
 def rank(native: ChunkedArrayAny, rank_options: RankOptions) -> ChunkedArrayAny:
-    arr = native if BACKEND_VERSION >= (14,) else array(native)
+    arr = native if RANK_ACCEPTS_CHUNKED else array(native)
     if rank_options.method == "average":
         return _rank_average(arr, descending=rank_options.descending)
     ranked = preserve_nulls(native, pc.rank(arr, options=rank_options.to_arrow()))
@@ -305,20 +315,6 @@ def _rank_average(
     opt = options.rank("min", descending=descending)
     rank_min = preserve_nulls(native, pc.rank(native, options=opt).cast(f64))
     return chunked_array(pc.divide(pc.add(rank_min, rank_max), lit(2, f64)))
-
-
-# TODO @dangotbanned: Sorting
-def scatter(values: ChunkedArrayAny, indices: ArrayAny) -> ChunkedArrayAny:
-    """`pyarrow.compute.scatter` compatibility wrapper.
-
-    Note:
-        Somewhat different to `polars.Series.scatter`.
-    """
-    return (
-        pc.scatter(values, indices)  # type: ignore[attr-defined]
-        if BACKEND_VERSION >= (20,)
-        else values.take(pc.sort_indices(indices))
-    )
 
 
 def has_nulls(native: ChunkedOrArrayAny) -> bool:
@@ -380,25 +376,49 @@ def concat_str(
     return concat(*it, lit(separator, dtype), options=join)  # type: ignore[no-any-return]
 
 
+_i64 = pa.int64()
+
+
+@overload
+def int_range(
+    start: int = ...,
+    end: int | None = ...,
+    step: int = ...,
+    /,
+    *,
+    dtype: IntegerType = ...,
+    chunked: Literal[True] = ...,
+) -> ChunkedArray[IntegerScalar]: ...
+@overload
+def int_range(
+    start: int = ...,
+    end: int | None = ...,
+    step: int = ...,
+    /,
+    *,
+    dtype: IntegerType = ...,
+    chunked: Literal[False],
+) -> Array[IntegerScalar]: ...
 def int_range(
     start: int = 0,
     end: int | None = None,
     step: int = 1,
     /,
     *,
-    dtype: IntegerType = pa.int64(),  # noqa: B008
-) -> ChunkedArray[IntegerScalar]:
+    dtype: IntegerType = _i64,
+    chunked: bool = True,
+) -> ChunkedOrArray[IntegerScalar]:
     if end is None:
         end = start
         start = 0
-    if BACKEND_VERSION < (21, 0, 0):  # pragma: no cover
+    if not HAS_ARANGE:  # pragma: no cover
         import numpy as np  # ignore-banned-import
 
         arr = pa.array(np.arange(start=start, stop=end, step=step), type=dtype)
     else:
-        int_range_: Incomplete = t.cast("Incomplete", pa.arange)  # type: ignore[attr-defined]
+        int_range_: Incomplete = pa.arange  # type: ignore[attr-defined]
         arr = t.cast("ArrayAny", int_range_(start=start, stop=end, step=step)).cast(dtype)
-    return pa.chunked_array([arr])
+    return arr if not chunked else pa.chunked_array([arr])
 
 
 def date_range(
