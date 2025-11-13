@@ -7,15 +7,18 @@ from narwhals._utils import Implementation, Version, is_eager_allowed
 from narwhals.dependencies import is_pyarrow_chunked_array
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator
+    from collections.abc import Iterable, Iterator, Sequence
 
     import polars as pl
-    from typing_extensions import Self
+    from typing_extensions import Self, TypeAlias
 
     from narwhals._plan.compliant.series import CompliantSeries
-    from narwhals._typing import EagerAllowed, IntoBackend
+    from narwhals._plan.dataframe import DataFrame
+    from narwhals._typing import EagerAllowed, IntoBackend, _EagerAllowedImpl
     from narwhals.dtypes import DType
     from narwhals.typing import IntoDType, SizedMultiIndexSelector
+
+Incomplete: TypeAlias = Any
 
 
 class Series(Generic[NativeSeriesT_co]):
@@ -33,6 +36,10 @@ class Series(Generic[NativeSeriesT_co]):
     @property
     def name(self) -> str:
         return self._compliant.name
+
+    @property
+    def implementation(self) -> _EagerAllowedImpl:
+        return self._compliant.implementation
 
     def __init__(self, compliant: CompliantSeries[NativeSeriesT_co], /) -> None:
         self._compliant = compliant
@@ -72,6 +79,12 @@ class Series(Generic[NativeSeriesT_co]):
 
         raise NotImplementedError(type(native))
 
+    # NOTE: Missing placeholder for `DataFrameV1`
+    def to_frame(self) -> DataFrame[Incomplete, NativeSeriesT_co]:  # pragma: no cover
+        import narwhals._plan.dataframe as _df
+
+        return _df.DataFrame(self._compliant.to_frame())
+
     def to_native(self) -> NativeSeriesT_co:
         return self._compliant.native
 
@@ -104,6 +117,10 @@ class Series(Generic[NativeSeriesT_co]):
     ) -> Self:  # pragma: no cover
         result = self._compliant.sort(descending=descending, nulls_last=nulls_last)
         return type(self)(result)
+
+    def scatter(self, indices: int | Sequence[int], values: Any) -> Self:
+        msg = "Series.scatter"
+        raise NotImplementedError(msg)
 
 
 class SeriesV1(Series[NativeSeriesT_co]):

@@ -223,6 +223,12 @@ def assert_equal_data(
     _assert_equal_data(result.to_dict(as_series=False), expected)
 
 
+def assert_equal_series(
+    result: nwp.Series[Any], expected: Sequence[Any], name: str
+) -> None:
+    assert_equal_data(result.to_frame(), {name: expected})
+
+
 def re_compile(
     pattern: str, flags: _Flags = re.DOTALL | re.IGNORECASE
 ) -> re.Pattern[str]:
