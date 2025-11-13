@@ -21,23 +21,27 @@ XFAIL_NOT_IMPL_SCATTER = pytest.mark.xfail(
 @pytest.mark.parametrize(
     ("data", "indices", "values", "expected"),
     [
-        pytest.param(
-            [1, 2, 3], [0, 1], [999, 888], [999, 888, 3], marks=XFAIL_NOT_IMPL_SCATTER
-        ),
+        pytest.param([1, 2, 3], [0, 1], [999, 888], [999, 888, 3]),
         pytest.param(
             [142, 124, 13],
             [0, 2, 1],
             series([142, 124, 13]),
             [142, 132, 124],
-            marks=XFAIL_NOT_IMPL_SCATTER,
+            marks=pytest.mark.xfail(
+                reason=(
+                    "BUG:"  # no: fmt
+                    "Expected: {'ser': [142, 132, 124]}\n]"  # no: fmt
+                    "Got: {'ser': [142, 13, 124]}"
+                ),
+                raises=AssertionError,
+            ),
         ),
-        pytest.param([1, 2, 3], 0, 999, [999, 2, 3], marks=XFAIL_NOT_IMPL_SCATTER),
+        pytest.param([1, 2, 3], 0, 999, [999, 2, 3]),
         pytest.param(
             [16, 12, 10, 9, 6, 5, 2],
             [6, 1, 0, 5, 3, 2, 4],
             series([16, 12, 10, 9, 6, 5, 2]),
             [10, 12, 5, 6, 2, 9, 16],
-            marks=XFAIL_NOT_IMPL_SCATTER,
         ),
         pytest.param([5.5, 9.2, 1.0], (), (), [5.5, 9.2, 1.0]),
     ],
@@ -55,8 +59,7 @@ def test_scatter(
     assert_equal_series(ser.scatter(indices, values), expected, "ser")
 
 
-@XFAIL_NOT_IMPL_SCATTER
-def test_scatter_unchanged() -> None:  # pragma: no cover
+def test_scatter_unchanged() -> None:
     df = dataframe({"a": [1, 2, 3], "b": [142, 124, 132]})
     a = df.get_column("a")
     b = df.get_column("b")
@@ -64,8 +67,7 @@ def test_scatter_unchanged() -> None:  # pragma: no cover
     assert_equal_data(df, {"a": [1, 2, 3], "b": [142, 124, 132]})
 
 
-@XFAIL_NOT_IMPL_SCATTER
-def test_scatter_2862() -> None:  # pragma: no cover
+def test_scatter_2862() -> None:
     ser = series([1, 2, 3]).alias("a")
     assert_equal_series(ser.scatter(1, 999), [1, 999, 3], "a")
     assert_equal_series(ser.scatter([0, 2], [999, 888]), [999, 2, 888], "a")

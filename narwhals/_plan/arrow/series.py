@@ -90,5 +90,17 @@ class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayA
         return self._with_native(self._gather(indices))
 
     def scatter(self, indices: Self, values: Self) -> Self:
-        msg = "TODO: ArrowSeries.scatter"
-        raise NotImplementedError(msg)
+        indices_native = indices.native
+        values_native = values.native
+
+        sorting_indices = pc.sort_indices(indices_native)
+        indices_native_taken = indices_native.take(sorting_indices)
+        values_native_taken = values_native.take(sorting_indices)
+
+        # TODO @dangotbanned: Try rewriting without `numpy`
+        import numpy as np  # ignore-banned-import
+
+        mask: _1DArray = np.zeros(self.len(), dtype=bool)
+        mask[indices_native_taken] = True
+        result = pc.replace_with_mask(self.native, mask, fn.array(values_native_taken))  # type: ignore[arg-type]
+        return self._with_native(result)

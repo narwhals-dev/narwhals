@@ -5,7 +5,13 @@ from typing import TYPE_CHECKING, Any, ClassVar, Generic
 
 from narwhals._plan._guards import is_series
 from narwhals._plan.typing import NativeSeriesT, NativeSeriesT_co, OneOrIterable
-from narwhals._utils import Implementation, Version, is_eager_allowed, qualified_type_name
+from narwhals._utils import (
+    Implementation,
+    Version,
+    generate_repr,
+    is_eager_allowed,
+    qualified_type_name,
+)
 from narwhals.dependencies import is_pyarrow_chunked_array
 
 if TYPE_CHECKING:
@@ -45,6 +51,9 @@ class Series(Generic[NativeSeriesT_co]):
 
     def __init__(self, compliant: CompliantSeries[NativeSeriesT_co], /) -> None:
         self._compliant = compliant
+
+    def __repr__(self) -> str:
+        return generate_repr(f"nw.{type(self).__name__}", self.to_native().__repr__())
 
     @classmethod
     def from_iterable(
