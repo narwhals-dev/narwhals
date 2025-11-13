@@ -19,9 +19,6 @@ from tests.utils import Constructor, ConstructorEager, assert_equal_data
 def test_kurtosis_series(
     constructor_eager: ConstructorEager, data: list[float], expected: float | None
 ) -> None:
-    if "bodo" in str(constructor_eager):
-        # BODO fail
-        pytest.skip()
     result = nw.from_native(constructor_eager({"a": data}), eager_only=True)[
         "a"
     ].kurtosis()
@@ -52,9 +49,6 @@ def test_kurtosis_expr(
 
     if "pyspark" in str(constructor) and int(request.node.callspec.id[-1]) == 0:
         # Can not infer schema from empty dataset.
-        pytest.skip()
-    if "bodo" in str(constructor):
-        # BODO fail
         pytest.skip()
 
     result = nw.from_native(constructor({"a": data})).select(nw.col("a").kurtosis())
