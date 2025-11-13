@@ -160,7 +160,7 @@ class Series(Generic[NativeSeriesT_co]):
         result = self._compliant.scatter(
             self._unwrap_compliant(indices), self._unwrap_compliant(values)
         )
-        return type(self)(result)  # pragma: no cover
+        return type(self)(result)
 
 
 class SeriesV1(Series[NativeSeriesT_co]):

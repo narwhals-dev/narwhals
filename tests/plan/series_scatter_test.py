@@ -13,37 +13,19 @@ if TYPE_CHECKING:
     from narwhals._plan.typing import OneOrIterable
 
 
-XFAIL_NOT_IMPL_SCATTER = pytest.mark.xfail(
-    reason="`Series.scatter` is not yet implemented", raises=NotImplementedError
-)
-
-
 @pytest.mark.parametrize(
     ("data", "indices", "values", "expected"),
     [
-        pytest.param([1, 2, 3], [0, 1], [999, 888], [999, 888, 3]),
-        pytest.param(
-            [142, 124, 13],
-            [0, 2, 1],
-            series([142, 124, 13]),
-            [142, 132, 124],
-            marks=pytest.mark.xfail(
-                reason=(
-                    "BUG:"  # no: fmt
-                    "Expected: {'ser': [142, 132, 124]}\n]"  # no: fmt
-                    "Got: {'ser': [142, 13, 124]}"
-                ),
-                raises=AssertionError,
-            ),
-        ),
-        pytest.param([1, 2, 3], 0, 999, [999, 2, 3]),
-        pytest.param(
+        ([1, 2, 3], [0, 1], [999, 888], [999, 888, 3]),
+        ([142, 124, 13], [0, 2, 1], series([142, 124, 13]), [142, 13, 124]),
+        ([1, 2, 3], 0, 999, [999, 2, 3]),
+        (
             [16, 12, 10, 9, 6, 5, 2],
             [6, 1, 0, 5, 3, 2, 4],
             series([16, 12, 10, 9, 6, 5, 2]),
             [10, 12, 5, 6, 2, 9, 16],
         ),
-        pytest.param([5.5, 9.2, 1.0], (), (), [5.5, 9.2, 1.0]),
+        ([5.5, 9.2, 1.0], (), (), [5.5, 9.2, 1.0]),
     ],
     ids=["lists", "single-series", "integer", "unordered-indices", "empty-indices"],
 )
