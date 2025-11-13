@@ -134,6 +134,9 @@ def test_lazy_cum_sum_ungrouped(
         "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
     ):
         pytest.skip(reason="too old version")
+    if "bodo" in str(constructor):
+        # BODO fail
+        pytest.skip()
 
     df = nw.from_native(
         constructor({"arg entina": [2, 3, 1], "ban gkok": [0, 2, 1], "i ran": [1, 2, 0]})

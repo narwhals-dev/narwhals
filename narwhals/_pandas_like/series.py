@@ -722,6 +722,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         if self._implementation is Implementation.MODIN:
             return self.native._to_pandas()
         if self._implementation is Implementation.BODO:
+            import pandas as pd
             return pd.Series(self.native)
         msg = f"Unknown implementation: {self._implementation}"  # pragma: no cover
         raise AssertionError(msg)

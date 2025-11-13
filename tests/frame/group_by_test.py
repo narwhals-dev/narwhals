@@ -104,9 +104,6 @@ def test_group_by_iter_non_str_pandas() -> None:
 
 
 def test_group_by_nw_all(constructor: Constructor) -> None:
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
     df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6], "c": [7, 8, 9]}))
     result = df.group_by("a").agg(nw.all().sum()).sort("a")
     expected = {"a": [1, 2], "b": [9, 6], "c": [15, 9]}
@@ -137,9 +134,6 @@ def test_group_by_depth_1_agg(
         pytest.skip(
             "Known issue with variance calculation in pandas 2.0.x with pyarrow backend in groupby operations"
         )
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
     data = {"a": [1, 1, 1, 2], "b": [1, None, 2, 3]}
     expr = getattr(nw.col("b"), attr)()
     result = nw.from_native(constructor(data)).group_by("a").agg(expr).sort("a")
@@ -168,9 +162,6 @@ def test_group_by_depth_1_agg_bool_ops(
 ) -> None:
     if ("dask-nullable" in request.node.callspec.id) or ("cudf" in str(constructor)):
         request.applymarker(pytest.mark.xfail)
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
 
     data = {"a": [1, 1, 2, 2, 3, 3], **values}
     result = (
@@ -186,9 +177,6 @@ def test_group_by_depth_1_agg_bool_ops(
     ("attr", "ddof"), [("std", 0), ("var", 0), ("std", 2), ("var", 2)]
 )
 def test_group_by_depth_1_std_var(constructor: Constructor, attr: str, ddof: int) -> None:
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
     data = {"a": [1, 1, 1, 2, 2, 2], "b": [4, 5, 6, 0, 5, 5]}
     _pow = 0.5 if attr == "std" else 1
     expected = {
@@ -204,9 +192,6 @@ def test_group_by_depth_1_std_var(constructor: Constructor, attr: str, ddof: int
 
 
 def test_group_by_median(constructor: Constructor) -> None:
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
     data = {"a": [1, 1, 1, 2, 2, 2], "b": [5, 4, 6, 7, 3, 2]}
     result = (
         nw.from_native(constructor(data))
@@ -219,9 +204,6 @@ def test_group_by_median(constructor: Constructor) -> None:
 
 
 def test_group_by_n_unique_w_missing(constructor: Constructor) -> None:
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
     data = {"a": [1, 1, 2], "b": [4, None, 5], "c": [None, None, 7], "d": [1, 1, 3]}
     result = (
         nw.from_native(constructor(data))
@@ -263,9 +245,6 @@ def test_group_by_empty_result_pandas() -> None:
 
 
 def test_group_by_simple_named(constructor: Constructor) -> None:
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
     data = {"a": [1, 1, 2], "b": [4, 5, 6], "c": [7, 2, 1]}
     df = nw.from_native(constructor(data)).lazy()
     result = (
@@ -276,9 +255,6 @@ def test_group_by_simple_named(constructor: Constructor) -> None:
 
 
 def test_group_by_simple_unnamed(constructor: Constructor) -> None:
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
     data = {"a": [1, 1, 2], "b": [4, 5, 6], "c": [7, 2, 1]}
     df = nw.from_native(constructor(data)).lazy()
     result = df.group_by("a").agg(nw.col("b").min(), nw.col("c").max()).sort("a")
@@ -287,9 +263,6 @@ def test_group_by_simple_unnamed(constructor: Constructor) -> None:
 
 
 def test_group_by_multiple_keys(constructor: Constructor) -> None:
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
     data = {"a": [1, 1, 2], "b": [4, 4, 6], "c": [7, 2, 1]}
     df = nw.from_native(constructor(data)).lazy()
     result = (
@@ -304,9 +277,6 @@ def test_group_by_multiple_keys(constructor: Constructor) -> None:
 def test_key_with_nulls(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if "modin" in str(constructor):
         request.applymarker(pytest.mark.xfail(reason="Modin flaky here", strict=False))
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
 
     data = {"b": [4, 5, None], "a": [1, 2, 3]}
     result = (
@@ -321,9 +291,6 @@ def test_key_with_nulls(constructor: Constructor, request: pytest.FixtureRequest
 
 
 def test_key_with_nulls_ignored(constructor: Constructor) -> None:
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
     data = {"b": [4, 5, None], "a": [1, 2, 3]}
     result = (
         nw.from_native(constructor(data))
@@ -337,9 +304,6 @@ def test_key_with_nulls_ignored(constructor: Constructor) -> None:
 
 
 def test_key_with_nulls_iter(constructor_eager: ConstructorEager) -> None:
-    if "bodo" in str(constructor_eager):
-        # BODO fail
-        pytest.skip()
     data = {
         "b": [None, "4", "5", None, "7"],
         "a": [None, 1, 2, 3, 4],
@@ -366,9 +330,6 @@ def test_key_with_nulls_iter(constructor_eager: ConstructorEager) -> None:
 
 
 def test_no_agg(constructor: Constructor) -> None:
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
     result = nw.from_native(constructor(data)).group_by(["a", "b"]).agg().sort("a", "b")
 
     expected = {"a": [1, 3], "b": [4, 6]}
@@ -403,9 +364,6 @@ def test_group_by_categorical(constructor: Constructor) -> None:
 
 
 def test_group_by_shift_raises(constructor: Constructor) -> None:
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
     df_native = {"a": [1, 2, 3], "b": [1, 1, 2]}
     df = nw.from_native(constructor(df_native))
     with pytest.raises(InvalidOperationError, match="does not aggregate"):
@@ -415,9 +373,6 @@ def test_group_by_shift_raises(constructor: Constructor) -> None:
 def test_double_same_aggregation(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
     if any(x in str(constructor) for x in ("dask",)):
         # bugged in dask https://github.com/dask/dask/issues/11612
         # and cudf https://github.com/rapidsai/cudf/issues/17649
@@ -431,9 +386,6 @@ def test_double_same_aggregation(
 def test_all_kind_of_aggs(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
     if any(x in str(constructor) for x in ("dask",)):
         # bugged in dask https://github.com/dask/dask/issues/11612
         # and cudf https://github.com/rapidsai/cudf/issues/17649
@@ -486,9 +438,6 @@ def test_pandas_group_by_index_and_column_overlap() -> None:
 
 
 def test_fancy_functions(constructor: Constructor) -> None:
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
     df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
     result = df.group_by("a").agg(nw.all().std(ddof=0)).sort("a")
     expected = {"a": [1, 2], "b": [0.5, 0.0]}
@@ -558,9 +507,6 @@ def test_group_by_expr(
     expected: dict[str, list[Any]],
     sort_by: list[str],
 ) -> None:
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
     data = {"a": [1, 1, 2, 2, -1], "x": [0, 1, 2, 3, 4], "y": [0.5, -0.5, 1.0, -1.0, 1.5]}
     df = nw.from_native(constructor(data))
     result = df.group_by(*keys).agg(*aggs).sort(*sort_by)
@@ -590,9 +536,6 @@ def test_group_by_expr(
 def test_group_by_raise_if_not_elementwise(
     constructor: Constructor, keys: list[nw.Expr], lazy_context: Any
 ) -> None:
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
     data = {"a": [1, 2, 2, None], "b": [0, 1, 2, 3], "x": [1, 2, 3, 4]}
     df = nw.from_native(constructor(data))
 
@@ -609,9 +552,6 @@ def test_group_by_raise_if_not_elementwise(
 def test_group_by_raise_drop_null_keys_with_exprs(
     constructor: Constructor, keys: list[nw.Expr | str]
 ) -> None:
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
     data = {"a": [1, 1, 2, 2, -1], "x": [0, 1, 2, 3, 4], "y": [0.5, -0.5, 1.0, -1.0, 1.5]}
     df = nw.from_native(constructor(data))
     with pytest.raises(
@@ -621,9 +561,6 @@ def test_group_by_raise_drop_null_keys_with_exprs(
 
 
 def test_group_by_selector(constructor: Constructor) -> None:
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
     data = {
         "a": [1, 1, 1],
         "b": [4, 4, 6],
@@ -641,9 +578,6 @@ def test_group_by_selector(constructor: Constructor) -> None:
 
 
 def test_renaming_edge_case(constructor: Constructor) -> None:
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
     data = {"a": [0, 0, 0], "_a_tmp": [1, 2, 3], "b": [4, 5, 6]}
     result = nw.from_native(constructor(data)).group_by(nw.col("a")).agg(nw.all().min())
     expected = {"a": [0], "_a_tmp": [1], "b": [4]}
@@ -658,9 +592,6 @@ def test_group_by_len_1_column(
     - https://github.com/marimo-team/marimo/blob/036fd3ff89ef3a0e598bebb166637028024f98bc/tests/_plugins/ui/_impl/tables/test_narwhals.py#L1098-L1108
     - https://github.com/marimo-team/marimo/blob/036fd3ff89ef3a0e598bebb166637028024f98bc/marimo/_plugins/ui/_impl/tables/narwhals_table.py#L163-L188
     """
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
     if any(x in str(constructor) for x in ("dask",)):
         # `dask`
         #     ValueError: conflicting aggregation functions: [('size', 'a'), ('size', 'a')]
@@ -722,9 +653,6 @@ def test_group_by_no_preserve_dtype(
         pytest.skip("Decimal support in group_by for polars didn't stabilize until 1.0.0")
     if any(x == request.node.callspec.id for x in ("cudf-time", "cudf-bytes")):
         request.applymarker(pytest.mark.xfail)
-    if "bodo" in str(constructor_eager):
-        # BODO fail
-        pytest.skip()
 
     data = {
         "col_a": ["A", "B", None, "A", "A", "B", None],
@@ -741,9 +669,6 @@ def test_group_by_no_preserve_dtype(
 
 
 def test_top_level_len(constructor: Constructor) -> None:
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
     # https://github.com/holoviz/holoviews/pull/6567#issuecomment-3178743331
     df = nw.from_native(
         constructor({"gender": ["m", "f", "f"], "weight": [4, 5, 6], "age": [None, 8, 9]})

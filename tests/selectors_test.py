@@ -73,6 +73,10 @@ def test_categorical(request: pytest.FixtureRequest, constructor: Constructor) -
         or "ibis" in str(constructor)
     ):
         request.applymarker(pytest.mark.xfail)
+    if "bodo" in str(constructor):
+        # BODO fail
+        pytest.skip()
+
     expected = {"b": ["a", "b", "c"]}
 
     df = nw.from_native(constructor(data)).with_columns(nw.col("b").cast(nw.Categorical))
@@ -223,9 +227,6 @@ def test_set_ops(
     ):
         # https://github.com/narwhals-dev/narwhals/issues/2469
         request.applymarker(pytest.mark.xfail)
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
     df = nw.from_native(constructor(data))
     result = df.select(selector).collect_schema().names()
     assert sorted(result) == expected

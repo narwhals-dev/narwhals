@@ -40,9 +40,6 @@ def test_item_value_error(
     column: int | str | None,
     err_msg: str,
 ) -> None:
-    if "bodo" in str(constructor_eager):
-        # BODO fail
-        pytest.skip()
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     with pytest.raises(ValueError, match=err_msg):
         nw.from_native(constructor_eager(data), eager_only=True).item(row, column)

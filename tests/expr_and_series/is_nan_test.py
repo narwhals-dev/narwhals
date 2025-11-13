@@ -69,9 +69,6 @@ def test_nan(constructor: Constructor) -> None:
 
 
 def test_nan_series(constructor_eager: ConstructorEager) -> None:
-    if "bodo" in str(constructor_eager):
-        # BODO fail
-        pytest.skip()
     data_na = {"int": [0, 1, None]}
     df = nw.from_native(constructor_eager(data_na), eager_only=True).with_columns(
         float=nw.col("int").cast(nw.Float64), float_na=nw.col("int") / nw.col("int")

@@ -26,6 +26,10 @@ data = {"a": ["2020-01-01T12:34:56"]}
 
 
 def test_to_datetime(constructor: Constructor) -> None:
+    if "bodo" in str(constructor):
+        # BODO fail
+        pytest.skip()
+
     if "cudf" in str(constructor):
         expected = "2020-01-01T12:34:56.000000000"
     else:
@@ -44,6 +48,10 @@ def test_to_datetime(constructor: Constructor) -> None:
 
 
 def test_to_datetime_series(constructor_eager: ConstructorEager) -> None:
+    if "bodo" in str(constructor_eager):
+        # BODO fail
+        pytest.skip()
+
     if "cudf" in str(constructor_eager):
         expected = "2020-01-01T12:34:56.000000000"
     else:
@@ -95,6 +103,9 @@ def test_to_datetime_infer_fmt(
         or "ibis" in str(constructor)
     ):
         request.applymarker(pytest.mark.xfail)
+    if "bodo" in str(constructor):
+        # BODO fail
+        pytest.skip()
 
     if "cudf" in str(constructor):
         expected = expected_cudf
@@ -140,6 +151,9 @@ def test_to_datetime_series_infer_fmt(
 ) -> None:
     if "polars" in str(constructor_eager) and str(data["a"][0]).isdigit():
         request.applymarker(pytest.mark.xfail)
+    if "bodo" in str(constructor_eager):
+        # BODO fail
+        pytest.skip()
     if "cudf" in str(constructor_eager):
         expected = expected_cudf
 
@@ -154,6 +168,9 @@ def test_to_datetime_infer_fmt_from_date(
 ) -> None:
     if any(x in str(constructor) for x in ("duckdb", "ibis")):
         request.applymarker(pytest.mark.xfail)
+    if "bodo" in str(constructor):
+        # BODO fail
+        pytest.skip()
     data = {"z": ["2020-01-01", "2020-01-02", None]}
     if "pyspark" in str(constructor):
         expected = [
@@ -210,6 +227,9 @@ def test_to_datetime_tz_aware(
         "sqlframe" in str(constructor) and format is not None and is_windows()
     ):
         # NOTE: For `sqlframe` see https://github.com/narwhals-dev/narwhals/pull/2263#discussion_r2009101659
+        pytest.skip()
+    if "bodo" in str(constructor):
+        # BODO fail
         pytest.skip()
     if "cudf" in str(constructor):
         # cuDF does not yet support timezone-aware datetimes

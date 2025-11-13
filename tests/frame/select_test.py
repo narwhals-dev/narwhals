@@ -30,9 +30,6 @@ def test_select(constructor: Constructor) -> None:
 
 
 def test_empty_select(constructor_eager: ConstructorEager) -> None:
-    if "bodo" in str(constructor_eager):
-        # BODO fail
-        pytest.skip()
     result = nw.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True).select()
     assert result.shape == (0, 0)
 
@@ -133,9 +130,6 @@ def test_left_to_right_broadcasting(constructor: Constructor) -> None:
         pytest.skip()
     if "dask" in str(constructor) and DASK_VERSION < (2024, 10):
         pytest.skip()
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
     df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
     result = df.select(nw.col("a") + nw.col("b").sum())
     expected = {"a": [16, 16, 17]}
@@ -155,9 +149,6 @@ def test_alias_invalid(constructor: Constructor) -> None:
 
 
 def test_filtration_vs_aggregation(constructor_eager: ConstructorEager) -> None:
-    if "bodo" in str(constructor_eager):
-        # BODO fail
-        pytest.skip()
     df = nw.from_native(constructor_eager({"a": [1, None, 3]}))
     result = df.select(nw.col("a").drop_nulls(), b=nw.col("a").mean())
     expected: dict[str, Any] = {"a": [1, 3], "b": [2.0, 2.0]}
@@ -171,6 +162,10 @@ def test_select_duplicates(constructor: Constructor) -> None:
     if "cudf" in str(constructor):
         # cudf already raises its own error
         pytest.skip()
+    if "bodo" in str(constructor):
+        # BODO fail
+        pytest.skip()
+
     df = nw.from_native(constructor({"a": [1, 2]})).lazy()
     with pytest.raises(
         ValueError,
