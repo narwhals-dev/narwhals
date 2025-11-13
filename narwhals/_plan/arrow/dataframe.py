@@ -122,7 +122,7 @@ class ArrowDataFrame(
         if fn.HAS_SCATTER:
             column = pc.scatter(int_range, indices.cast(pa.int64()))  # type: ignore[attr-defined]
         else:
-            column = int_range.take(pc.sort_indices(indices))
+            column = int_range.take(indices.sort())
         return self._with_native(native.add_column(0, name, column))
 
     def get_column(self, name: str) -> Series:
