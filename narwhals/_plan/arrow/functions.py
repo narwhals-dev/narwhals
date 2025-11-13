@@ -290,31 +290,22 @@ def shift(native: ChunkedArrayAny, n: int) -> ChunkedArrayAny:
     return pa.chunked_array(arrays)
 
 
-# TODO @dangotbanned: Sorting
 def rank(native: ChunkedArrayAny, rank_options: RankOptions) -> ChunkedArrayAny:
     arr = native if RANK_ACCEPTS_CHUNKED else array(native)
     if rank_options.method == "average":
-        return _rank_average(arr, descending=rank_options.descending)
-    ranked = preserve_nulls(native, pc.rank(arr, options=rank_options.to_arrow()))
+        # Adapted from https://github.com/pandas-dev/pandas/blob/f4851e500a43125d505db64e548af0355227714b/pandas/core/arrays/arrow/array.py#L2290-L2316
+        order = options.ORDER[rank_options.descending]
+        f64 = pa.float64()
+        min = preserve_nulls(arr, pc.rank(arr, order, tiebreaker="min").cast(f64))
+        max = pc.rank(arr, order, tiebreaker="max").cast(f64)
+        ranked = pc.divide(pc.add(min, max), lit(2, f64))
+    else:
+        ranked = preserve_nulls(native, pc.rank(arr, options=rank_options.to_arrow()))
     return chunked_array(ranked)
 
 
 def null_count(native: ChunkedOrArrayAny) -> pa.Int64Scalar:
     return pc.count(native, mode="only_null")
-
-
-# TODO @dangotbanned: Sorting
-def _rank_average(
-    native: ChunkedOrArrayAny, *, descending: bool = False
-) -> ChunkedArrayAny:
-    # Adapted from pandas
-    # https://github.com/pandas-dev/pandas/blob/f4851e500a43125d505db64e548af0355227714b/pandas/core/arrays/arrow/array.py#L2290-L2316
-    f64 = pa.float64()
-    opt = options.rank("max", descending=descending)
-    rank_max = pc.rank(native, options=opt).cast(f64)
-    opt = options.rank("min", descending=descending)
-    rank_min = preserve_nulls(native, pc.rank(native, options=opt).cast(f64))
-    return chunked_array(pc.divide(pc.add(rank_min, rank_max), lit(2, f64)))
 
 
 def has_nulls(native: ChunkedOrArrayAny) -> bool:
