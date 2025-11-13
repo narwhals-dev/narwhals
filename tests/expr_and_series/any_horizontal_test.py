@@ -25,9 +25,6 @@ def test_anyh_kleene(constructor: Constructor, request: pytest.FixtureRequest) -
         # Dask infers `[True, None, None, None]` as `object` dtype, and then `__or__` fails.
         # test it below separately
         pytest.skip()
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
     context = (
         pytest.raises(ValueError, match="ignore_nulls")
         if "pandas_constructor" in str(constructor)
@@ -79,9 +76,6 @@ def test_anyh_dask(constructor: Constructor) -> None:
 def test_anyh_all(constructor: Constructor) -> None:
     if "dask" in str(constructor):
         # Can't use `ignore_nulls` for NumPy-backed Dask, test it separately below
-        pytest.skip()
-    if "bodo" in str(constructor):
-        # BODO fail
         pytest.skip()
     data = {"a": [False, False, True], "b": [False, True, True]}
     df = nw.from_native(constructor(data))

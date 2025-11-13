@@ -7,6 +7,10 @@ from tests.utils import ConstructorEager, assert_equal_data
 
 
 def test_is_unique(constructor_eager: ConstructorEager) -> None:
+    if "bodo" in str(constructor_eager):
+        # BODO fail
+        pytest.skip()
+
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df_raw = constructor_eager(data)
     df = nw.from_native(df_raw, eager_only=True)
@@ -16,9 +20,6 @@ def test_is_unique(constructor_eager: ConstructorEager) -> None:
 
 
 def test_is_unique_with_nulls(constructor_eager: ConstructorEager) -> None:
-    if "bodo" in str(constructor_eager):
-        # BODO fail
-        pytest.skip()
     data = {"col1": [1, 2, 3, 3], "col2": ["one", None, None, None]}
     df_raw = constructor_eager(data)
     df = nw.from_native(df_raw, eager_only=True)

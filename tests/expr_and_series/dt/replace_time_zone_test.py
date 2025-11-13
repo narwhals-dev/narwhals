@@ -55,9 +55,6 @@ def test_replace_time_zone_none(constructor: Constructor) -> None:
         or ("modin_pyarrow" in str(constructor) and PANDAS_VERSION < (2,))
     ):
         pytest.skip()
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
     data = {
         "a": [
             datetime(2020, 1, 1, tzinfo=timezone.utc),

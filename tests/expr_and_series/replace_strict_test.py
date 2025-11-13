@@ -27,9 +27,6 @@ def test_replace_strict(
         or "ibis" in str(constructor)
     ):
         request.applymarker(pytest.mark.xfail)
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip() # test doesn't fail directly but in combination with test_is_first_distinct_series causes segfault in test_over_cum_count
     df = nw.from_native(constructor({"a": [1, 2, 3]}))
     result = df.select(
         nw.col("a").replace_strict(
@@ -46,9 +43,6 @@ def test_replace_strict(
 def test_replace_strict_series(
     constructor_eager: ConstructorEager, return_dtype: DType | None
 ) -> None:
-    if "bodo" in str(constructor_eager):
-        # BODO fail
-        pytest.skip() # test doesn't fail directly but in combination with test_is_first_distinct_series causes segfault in test_over_cum_count
     df = nw.from_native(constructor_eager({"a": [1, 2, 3]}))
     result = df.select(
         df["a"].replace_strict(
@@ -72,9 +66,6 @@ def test_replace_non_full(
         or "ibis" in str(constructor)
     ):
         request.applymarker(pytest.mark.xfail)
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip() # test doesn't fail directly but in combination with test_is_first_distinct_series causes segfault in test_over_cum_count
     df = nw.from_native(constructor({"a": [1, 2, 3]}))
     if isinstance(df, nw.LazyFrame):
         with pytest.raises((ValueError, NarwhalsError)):
@@ -100,9 +91,6 @@ def test_replace_strict_mapping(
         or "ibis" in str(constructor)
     ):
         request.applymarker(pytest.mark.xfail)
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip() # test doesn't fail directly but in combination with test_is_first_distinct_series causes segfault in test_over_cum_count
 
     df = nw.from_native(constructor({"a": [1, 2, 3]}))
     result = df.select(
@@ -117,9 +105,6 @@ def test_replace_strict_mapping(
     POLARS_VERSION < (1, 0), reason="replace_strict only available after 1.0"
 )
 def test_replace_strict_series_mapping(constructor_eager: ConstructorEager) -> None:
-    if "bodo" in str(constructor_eager):
-        # BODO fail
-        pytest.skip() # test doesn't fail directly but in combination with test_is_first_distinct_series causes segfault in test_over_cum_count
     df = nw.from_native(constructor_eager({"a": [1, 2, 3]}))
     result = df.select(
         df["a"].replace_strict({1: "one", 2: "two", 3: "three"}, return_dtype=nw.String())

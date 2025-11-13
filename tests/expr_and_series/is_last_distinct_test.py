@@ -15,9 +15,6 @@ data = {"a": [1, 1, 2, 3, 2], "b": [1, 2, 3, 2, 1]}
 
 
 def test_is_last_distinct_expr(constructor_eager: ConstructorEager) -> None:
-    if "bodo" in str(constructor_eager):
-        # BODO fail
-        pytest.skip()
     df = nw.from_native(constructor_eager(data))
     result = df.select(nw.all().is_last_distinct())
     expected = {
@@ -112,9 +109,6 @@ def test_is_last_distinct_expr_lazy_grouped_nulls(
 
 
 def test_is_last_distinct_series(constructor_eager: ConstructorEager) -> None:
-    if "bodo" in str(constructor_eager):
-        # BODO fail
-        pytest.skip()
     series = nw.from_native(constructor_eager(data), eager_only=True)["a"]
     result = series.is_last_distinct()
     expected = {"a": [False, True, False, True, True]}

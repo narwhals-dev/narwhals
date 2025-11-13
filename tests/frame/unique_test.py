@@ -81,9 +81,6 @@ def test_unique_full_subset(
 ) -> None:
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
     data = {"a": [1, 1, 1, 2], "b": [3, 3, 4, 4]}
     df_raw = constructor(data)
     df = nw.from_native(df_raw)

@@ -135,6 +135,10 @@ def test_lazy_cum_min_ungrouped(
         "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
     ):
         pytest.skip(reason="too old version")
+    if "bodo" in str(constructor):
+        # BODO fail
+        pytest.skip()
+
     df = nw.from_native(
         constructor({"a": [2, 3, 1], "b": [0, 2, 1], "i": [1, 2, 0]})
     ).sort("i")

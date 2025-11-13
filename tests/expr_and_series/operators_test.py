@@ -40,9 +40,6 @@ def test_comparand_operators_scalar_expr(
 def test_comparand_operators_expr(
     constructor: Constructor, operator: str, expected: list[bool]
 ) -> None:
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
     data = {"a": [0, 1, 1], "b": [0, 0, 2]}
     df = nw.from_native(constructor(data))
     result = df.select(getattr(nw.col("a"), operator)(nw.col("b")))
@@ -56,9 +53,6 @@ def test_comparand_operators_expr(
 def test_logic_operators_expr(
     constructor: Constructor, operator: str, expected: list[bool]
 ) -> None:
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip() # doesn't fail when run alone...only after manhy other tests
     data = {"a": [True, True, False, False], "b": [True, False, True, False]}
     df = nw.from_native(constructor(data))
 
@@ -75,9 +69,6 @@ def test_logic_operators_expr_kleene(
     if "dask" in str(constructor):
         # Dask infers `[True, None, None, None]` as `object` dtype, and then `__or__` fails.
         request.applymarker(pytest.mark.xfail)
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip() # doesn't fail when run alone...only after manhy other tests
     data = {"a": [True, True, False, None], "b": [True, None, None, None]}
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a") | (nw.col("b")))
@@ -115,9 +106,6 @@ def test_logic_operators_expr_scalar(
         and operator in {"__rand__", "__ror__"}
     ):
         request.applymarker(pytest.mark.xfail)
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip() # doesn't fail when run alone...only after manhy other tests
     data = {"a": [True, True, False, False]}
     df = nw.from_native(constructor(data))
 
@@ -139,9 +127,6 @@ def test_logic_operators_expr_scalar(
 def test_comparand_operators_scalar_series(
     constructor_eager: ConstructorEager, operator: str, expected: list[bool]
 ) -> None:
-    if "bodo" in str(constructor_eager):
-        # BODO fail
-        pytest.skip() # doesn't fail when run alone...only after manhy other tests
     data = {"a": [0, 1, 2]}
     s = nw.from_native(constructor_eager(data), eager_only=True)["a"]
     result = {"a": (getattr(s, operator)(1))}
@@ -162,9 +147,6 @@ def test_comparand_operators_scalar_series(
 def test_comparand_operators_series(
     constructor_eager: ConstructorEager, operator: str, expected: list[bool]
 ) -> None:
-    if "bodo" in str(constructor_eager):
-        # BODO fail
-        pytest.skip() # doesn't fail when run alone...only after manhy other tests
     data = {"a": [0, 1, 1], "b": [0, 0, 2]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
     series, other = df["a"], df["b"]
@@ -184,9 +166,6 @@ def test_comparand_operators_series(
 def test_logic_operators_series(
     constructor_eager: ConstructorEager, operator: str, expected: list[bool]
 ) -> None:
-    if "bodo" in str(constructor_eager):
-        # BODO fail
-        pytest.skip() # doesn't fail when run alone...only after manhy other tests
     data = {"a": [True, True, False, False], "b": [True, False, True, False]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
     series, other = df["a"], df["b"]

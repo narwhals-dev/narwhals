@@ -195,9 +195,6 @@ def test_slice_item(constructor_eager: ConstructorEager) -> None:
 
 
 def test_slice_edge_cases(constructor_eager: ConstructorEager) -> None:
-    if "bodo" in str(constructor_eager):
-        # BODO fail
-        pytest.skip()
     data = {"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, 8, 9], "d": [1, 4, 2]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
     assert df[[], :].shape == (0, 4)
@@ -287,9 +284,6 @@ def test_getitem_negative_slice(constructor_eager: ConstructorEager) -> None:
 
 
 def test_zeroth_row_no_columns(constructor_eager: ConstructorEager) -> None:
-    if "bodo" in str(constructor_eager):
-        # BODO fail
-        pytest.skip()
     data = {"col1": ["a", "b", "c", "d"], "col2": np.arange(4), "col3": [4, 3, 2, 1]}
     nw_df = nw.from_native(constructor_eager(data), eager_only=True)
     columns: list[str] = []

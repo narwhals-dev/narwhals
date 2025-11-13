@@ -346,6 +346,11 @@ class Namespace(Generic[CompliantNamespaceT_co]):
         impl: Backend
         if is_native_polars(native):
             impl = Implementation.POLARS
+        # Has to be before PANDAS check since Bodo
+        # derives from Pandas and is_native_pandas will
+        # think a Bodo dataframe is a Pandas one.
+        elif is_native_bodo(native):  # pragma: no cover
+            impl = Implementation.BODO
         elif is_native_pandas(native):
             impl = Implementation.PANDAS
         elif is_native_arrow(native):
@@ -366,8 +371,6 @@ class Namespace(Generic[CompliantNamespaceT_co]):
             impl = Implementation.CUDF
         elif is_native_modin(native):  # pragma: no cover
             impl = Implementation.MODIN
-        elif is_native_bodo(native):  # pragma: no cover
-            impl = Implementation.BODO
         elif is_native_ibis(native):
             impl = Implementation.IBIS
         else:
