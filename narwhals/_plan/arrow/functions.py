@@ -67,7 +67,7 @@ RANK_ACCEPTS_CHUNKED: Final = BACKEND_VERSION >= (14,)
 HAS_SCATTER: Final = BACKEND_VERSION >= (20,)
 """`pyarrow.compute.scatter` added in https://github.com/apache/arrow/pull/44394"""
 
-HAS_ARANGE: Final = BACKEND_VERSION >= (21,)
+HAS_ARRANGE: Final = BACKEND_VERSION >= (21,)
 """`pyarrow.arange` added in https://github.com/apache/arrow/pull/46778"""
 
 IntoColumnAgg: TypeAlias = Callable[[str], ir.AggExpr]
@@ -411,7 +411,7 @@ def int_range(
     if end is None:
         end = start
         start = 0
-    if not HAS_ARANGE:  # pragma: no cover
+    if not HAS_ARRANGE:  # pragma: no cover
         import numpy as np  # ignore-banned-import
 
         arr = pa.array(np.arange(start=start, stop=end, step=step), type=dtype)
