@@ -88,3 +88,7 @@ class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayA
         opts = options.array_sort(descending=descending, nulls_last=nulls_last)
         indices = pc.array_sort_indices(by.native, options=opts)
         return self._with_native(self._gather(indices))
+
+    def scatter(self, indices: Self, values: Self) -> Self:
+        msg = "TODO: ArrowSeries.scatter"
+        raise NotImplementedError(msg)

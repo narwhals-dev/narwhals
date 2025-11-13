@@ -1,13 +1,15 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any, ClassVar, Generic
 
-from narwhals._plan.typing import NativeSeriesT, NativeSeriesT_co
-from narwhals._utils import Implementation, Version, is_eager_allowed
+from narwhals._plan._guards import is_series
+from narwhals._plan.typing import NativeSeriesT, NativeSeriesT_co, OneOrIterable
+from narwhals._utils import Implementation, Version, is_eager_allowed, qualified_type_name
 from narwhals.dependencies import is_pyarrow_chunked_array
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Sequence
+    from collections.abc import Iterator
 
     import polars as pl
     from typing_extensions import Self, TypeAlias
@@ -16,7 +18,7 @@ if TYPE_CHECKING:
     from narwhals._plan.dataframe import DataFrame
     from narwhals._typing import EagerAllowed, IntoBackend, _EagerAllowedImpl
     from narwhals.dtypes import DType
-    from narwhals.typing import IntoDType, SizedMultiIndexSelector
+    from narwhals.typing import IntoDType, NonNestedLiteral, SizedMultiIndexSelector
 
 Incomplete: TypeAlias = Any
 
@@ -118,9 +120,38 @@ class Series(Generic[NativeSeriesT_co]):
         result = self._compliant.sort(descending=descending, nulls_last=nulls_last)
         return type(self)(result)
 
-    def scatter(self, indices: int | Sequence[int], values: Any) -> Self:
-        msg = "Series.scatter"
+    def is_empty(self) -> bool:
+        return self._compliant.is_empty()
+
+    def _unwrap_compliant(
+        self, other: Series[Any], /
+    ) -> CompliantSeries[NativeSeriesT_co]:
+        compliant = other._compliant
+        if isinstance(compliant, type(self._compliant)):
+            return compliant
+        msg = f"Expected {qualified_type_name(self._compliant)!r}, got {qualified_type_name(compliant)!r}"
         raise NotImplementedError(msg)
+
+    def scatter(
+        self,
+        indices: Self | OneOrIterable[int],
+        values: Self | OneOrIterable[NonNestedLiteral],
+    ) -> Self:
+        series = self.from_iterable
+        if not isinstance(indices, Iterable):
+            indices = [indices]
+        backend = self.implementation
+        indices = series(indices, backend=backend) if not is_series(indices) else indices
+        if indices.is_empty():
+            return self
+        if not is_series(values):
+            if not isinstance(values, Iterable) or isinstance(values, str):
+                values = [values]
+            values = series(values, backend=backend)
+        result = self._compliant.scatter(
+            self._unwrap_compliant(indices), self._unwrap_compliant(values)
+        )
+        return type(self)(result)  # pragma: no cover
 
 
 class SeriesV1(Series[NativeSeriesT_co]):

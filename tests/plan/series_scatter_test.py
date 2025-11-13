@@ -18,28 +18,37 @@ XFAIL_NOT_IMPL_SCATTER = pytest.mark.xfail(
 )
 
 
-@XFAIL_NOT_IMPL_SCATTER
 @pytest.mark.parametrize(
     ("data", "indices", "values", "expected"),
     [
-        ([1, 2, 3], [0, 1], [999, 888], [999, 888, 3]),
-        ([142, 124, 13], [0, 2, 1], series([142, 124, 13]), [142, 132, 124]),
-        ([1, 2, 3], 0, 999, [999, 2, 3]),
-        (
+        pytest.param(
+            [1, 2, 3], [0, 1], [999, 888], [999, 888, 3], marks=XFAIL_NOT_IMPL_SCATTER
+        ),
+        pytest.param(
+            [142, 124, 13],
+            [0, 2, 1],
+            series([142, 124, 13]),
+            [142, 132, 124],
+            marks=XFAIL_NOT_IMPL_SCATTER,
+        ),
+        pytest.param([1, 2, 3], 0, 999, [999, 2, 3], marks=XFAIL_NOT_IMPL_SCATTER),
+        pytest.param(
             [16, 12, 10, 9, 6, 5, 2],
             [6, 1, 0, 5, 3, 2, 4],
             series([16, 12, 10, 9, 6, 5, 2]),
             [10, 12, 5, 6, 2, 9, 16],
+            marks=XFAIL_NOT_IMPL_SCATTER,
         ),
+        pytest.param([5.5, 9.2, 1.0], (), (), [5.5, 9.2, 1.0]),
     ],
-    ids=["lists", "single-series", "integer", "unordered-indices"],
+    ids=["lists", "single-series", "integer", "unordered-indices", "empty-indices"],
 )
 def test_scatter(
     data: list[Any],
     indices: int | Sequence[int],
     values: OneOrIterable[int],
     expected: list[Any],
-) -> None:  # pragma: no cover
+) -> None:
     ser = series(data).alias("ser")
     if isinstance(values, nwp.Series):
         assert ser.implementation is values.implementation
