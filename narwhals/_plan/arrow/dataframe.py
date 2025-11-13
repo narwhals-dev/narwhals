@@ -119,7 +119,7 @@ class ArrowDataFrame(
         options = pa_options.sort(*order_by, nulls_last=nulls_last)
         indices = pc.sort_indices(native, options=options)
         int_range = fn.int_range(len(self))
-        if not fn.HAS_SCATTER:
+        if fn.HAS_SCATTER:
             column = pc.scatter(int_range, indices.cast(pa.int64()))  # type: ignore[attr-defined]
         else:
             # NOTE: Some version in the range (`15<...<=22`)
