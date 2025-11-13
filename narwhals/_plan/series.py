@@ -91,7 +91,7 @@ class Series(Generic[NativeSeriesT_co]):
         raise NotImplementedError(type(native))
 
     # NOTE: Missing placeholder for `DataFrameV1`
-    def to_frame(self) -> DataFrame[Incomplete, NativeSeriesT_co]:  # pragma: no cover
+    def to_frame(self) -> DataFrame[Incomplete, NativeSeriesT_co]:
         import narwhals._plan.dataframe as _df
 
         return _df.DataFrame(self._compliant.to_frame())
