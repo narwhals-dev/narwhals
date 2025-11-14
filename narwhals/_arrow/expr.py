@@ -142,7 +142,10 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
                     raise NotImplementedError(msg)
 
                 tmp = df.group_by(partition_by, drop_null_keys=False).agg(self)
-                if any(ca.null_count > 0 for ca in tmp.native.columns):
+                if any(
+                    ca.null_count > 0
+                    for ca in tmp.simple_select(*partition_by).native.columns
+                ):
                     msg = "`over` with `partition_by` which contains null values is not yet supported for PyArrow"
                     raise NotImplementedError(msg)
                 tmp = df.simple_select(*partition_by).join(

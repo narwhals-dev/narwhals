@@ -43,6 +43,25 @@ def test_is_first_distinct_expr_lazy(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+def test_is_first_distinct_expr_lazy_w_nulls(constructor: Constructor) -> None:
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+        pytest.skip()
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
+    data = {"a": [None, None, 2, 3, 2], "b": [1, 2, 3, 2, 1], "i": [None, 1, 2, 3, 4]}
+    df = nw.from_native(constructor(data))
+    result = (
+        df.select(nw.col("a", "b").is_first_distinct().over(order_by="i"), "i")
+        .sort("i")
+        .drop("i")
+    )
+    expected = {
+        "a": [True, False, True, True, False],
+        "b": [True, True, True, False, False],
+    }
+    assert_equal_data(result, expected)
+
+
 def test_is_first_distinct_expr_lazy_grouped(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
