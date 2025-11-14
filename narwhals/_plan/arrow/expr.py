@@ -403,11 +403,7 @@ class ArrowExpr(  # type: ignore[misc]
             node.expr.function, (IsFirstDistinct, IsLastDistinct)
         ):
             return self._is_first_last_distinct_partition_by(
-                # TODO @dangotbanned: `reordered` needs to be handled and then we're done!
-                node.expr,
-                frame,
-                name,
-                node.partition_by,
+                node.expr, frame, name, node.partition_by, reordered=reordered
             )
         # TODO @dangotbanned: Can the alias in `agg_irs` be avoided?
         resolved = (
@@ -423,7 +419,6 @@ class ArrowExpr(  # type: ignore[misc]
             .get_column(name)
         )
 
-    # TODO @dangotbanned: Partitioned & ordered `is_{first,last}_distinct`
     def over_ordered(
         self, node: ir.OrderedWindowExpr, frame: Frame, name: str
     ) -> Self | Scalar:
@@ -476,18 +471,31 @@ class ArrowExpr(  # type: ignore[misc]
     cum_prod = _cumulative
     cum_sum = _cumulative
 
-    # order_by and partition_by now both work (when not together)
     def _is_first_last_distinct_partition_by(
         self,
         node: FExpr[IsFirstDistinct | IsLastDistinct],
         frame: Frame,
         name: str,
         partition_by: Seq[ir.ExprIR],
+        *,
+        reordered: Frame | None = None,
     ) -> Self:
         idx_name = temp.column_name([name])
         expr_ir = fn.IS_FIRST_LAST_DISTINCT[type(node.function)](idx_name)
-        frame_ctx = frame._with_columns([node.input[0].dispatch(self, frame, name)])
-        df = frame_ctx.with_row_index(idx_name)
+        previous = node.input[0].dispatch(self, frame, name)
+
+        # we need to use `reordered` to influence the index for `idx_name`
+        # TODO @dangotbanned: Figure out why this only works for `is_first_distinct`?
+        if reordered is not None:
+            order_by_index = reordered.to_series()
+            order_by_unsort_index = pc.sort_indices(order_by_index.native)
+            df = (
+                reordered.with_row_index(idx_name)
+                .gather(order_by_unsort_index)
+                ._with_columns([previous])
+            )
+        else:
+            df = frame._with_columns([previous]).with_row_index(idx_name)
         resolved = (
             df._grouper.by_irs(ir.col(name), *partition_by)
             .agg_irs(expr_ir.alias(idx_name))

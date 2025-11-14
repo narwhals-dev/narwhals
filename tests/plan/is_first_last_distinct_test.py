@@ -34,13 +34,6 @@ def expected_invert(expected: Data) -> Data:
     return {k: [not el for el in v] for k, v in expected.items()}
 
 
-# NOTE: Isn't supported on `main` for `pyarrow` + lots of other cases (non-elementary group-by agg)
-# Could be interesting to attempt here?
-XFAIL_PARTITIONED_AND_ORDERED_DISTINCT = pytest.mark.xfail(
-    reason="TODO: Support ordereding as well!", raises=AssertionError
-)
-
-
 def test_is_first_distinct(data: Data, expected: Data) -> None:
     result = dataframe(data).select(nwp.all().is_first_distinct())
     assert_equal_data(result, expected)
@@ -69,6 +62,9 @@ def test_is_last_distinct_order_by(data_indexed: Data, expected_invert: Data) ->
         .drop("i")
     )
     assert_equal_data(result, expected_invert)
+
+
+# NOTE: Everything from here onwards is not supported on `main`
 
 
 @pytest.fixture
@@ -101,8 +97,7 @@ def test_is_first_last_distinct_partitioned(grouped: Data) -> None:
     assert_equal_data(result, expected)
 
 
-@XFAIL_PARTITIONED_AND_ORDERED_DISTINCT
-def test_is_first_distinct_partitioned_order_by(grouped: Data) -> None:
+def test_is_first_last_distinct_partitioned_order_by_desc(grouped: Data) -> None:
     expected = {
         "group": ["A", "A", "B", "B", "B"],
         "value": [1, 3, 3, 2, 3],
@@ -126,8 +121,11 @@ def test_is_first_distinct_partitioned_order_by(grouped: Data) -> None:
     assert_equal_data(result, expected)
 
 
-@XFAIL_PARTITIONED_AND_ORDERED_DISTINCT
-def test_is_last_distinct_partitioned_order_by_nulls() -> None:
+@pytest.mark.xfail(
+    reason="TODO: fix `is_last_distinct` is giving the inverse of the nulls I asked for!",
+    raises=AssertionError,
+)
+def test_is_first_last_distinct_partitioned_order_by_nulls() -> None:
     data_ = {
         "group": ["A", "A", "B", "B", "B"],
         "value": [1, 3, 3, 3, 3],
@@ -142,6 +140,17 @@ def test_is_last_distinct_partitioned_order_by_nulls() -> None:
         "first_distinct_nulls_last": [True, True, True, False, False],
         "last_distinct_nulls_first": [True, True, False, False, True],
         "last_distinct_nulls_last": [True, True, False, True, False],
+    }
+    GOT = {  # noqa: F841, N806
+        "group": ["A", "A", "B", "B", "B"],
+        "value": [1, 3, 3, 3, 3],
+        "first_distinct_nulls_first": [True, True, False, True, False],  # +
+        "first_distinct_nulls_last": [True, True, True, False, False],  # +
+        # I have the correct results but they're the wrong way round for `last_distinct`` 🤦‍♂️🤦‍♂️🤦‍♂️
+        "last_distinct_nulls_first": [True, False, True, False, True],  # -
+        #                                   ^^^^^  ^^^^ (inverted?)
+        "last_distinct_nulls_last": [True, True, False, False, True],  # -
+        #                                               ^^^^^  ^^^^ (inverted?)
     }
     value = nwp.col("value")
     first = value.is_first_distinct()
