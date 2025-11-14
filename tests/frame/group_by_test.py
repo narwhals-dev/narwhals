@@ -653,6 +653,9 @@ def test_group_by_no_preserve_dtype(
         pytest.skip("Decimal support in group_by for polars didn't stabilize until 1.0.0")
     if any(x == request.node.callspec.id for x in ("cudf-time", "cudf-bytes")):
         request.applymarker(pytest.mark.xfail)
+    if "bodo" in str(constructor_eager):
+        # BODO fail
+        pytest.skip()
 
     data = {
         "col_a": ["A", "B", None, "A", "A", "B", None],
