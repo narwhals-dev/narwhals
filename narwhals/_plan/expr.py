@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Iterable, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
 
 from narwhals._plan import common, expressions as ir
 from narwhals._plan._guards import is_expr, is_series
@@ -28,7 +28,10 @@ from narwhals._utils import Version
 from narwhals.exceptions import ComputeError
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
+    from collections.abc import Callable
+    from typing import TypeVar
+
+    from typing_extensions import Concatenate, ParamSpec, Self
 
     from narwhals._plan._function import Function
     from narwhals._plan.expressions.categorical import ExprCatNamespace
@@ -48,6 +51,9 @@ if TYPE_CHECKING:
         RollingInterpolationMethod,
         TemporalLiteral,
     )
+
+    P = ParamSpec("P")
+    R = TypeVar("R")
 
 
 class Expr:
@@ -425,6 +431,11 @@ class Expr:
             return self._with_unary(ir.boolean.IsInExpr(other=other._ir))
         msg = f"`is_in` only supports iterables, got: {type(other).__name__}"
         raise TypeError(msg)
+
+    def pipe(
+        self, function: Callable[Concatenate[Self, P], R], *args: P.args, **kwds: P.kwargs
+    ) -> R:
+        return function(self, *args, **kwds)
 
     def _with_binary(
         self,

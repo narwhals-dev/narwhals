@@ -1,28 +1,28 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal
+from operator import methodcaller
+from typing import TYPE_CHECKING, Any, Literal, TypeVar
 
 import pytest
 
 pytest.importorskip("pyarrow")
 
-from collections.abc import Mapping
 
 import narwhals as nw
 import narwhals._plan as nwp
 from narwhals._plan import selectors as ncs
 from narwhals._utils import zip_strict
 from narwhals.exceptions import InvalidOperationError
-from narwhals.typing import NonNestedLiteral
-from tests.plan.utils import assert_equal_data, dataframe, first, last, re_compile
+from tests.plan.utils import assert_equal_data, dataframe, re_compile
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Sequence
+    from collections.abc import Callable, Mapping, Sequence
 
     from _pytest.mark import ParameterSet
     from typing_extensions import TypeAlias
 
     from narwhals._plan.typing import IntoExprColumn, OneOrIterable
+    from narwhals.typing import NonNestedLiteral
     from tests.conftest import Data
 
 
@@ -333,15 +333,18 @@ def test_over_partition_by_order_by(
     assert_equal_data(result, expected)
 
 
+def _ensure_list(arg: T | list[T]) -> list[T]:
+    return [arg] if not isinstance(arg, list) else arg
+
+
 ValueColumn: TypeAlias = Literal["v1", "v2", "v3"]
 OrderColumn: TypeAlias = Literal["o1", "o2", "o3", "o4", "o5"]
 Agg: TypeAlias = Literal["first", "last"]
+T = TypeVar("T")
 
-DataOrder: TypeAlias = Mapping[str, list[NonNestedLiteral]]
-
-_AGG_EXPR_FUNCTION: Mapping[Agg, Callable[[str | Sequence[str]], nwp.Expr]] = {
-    "first": first,
-    "last": last,
+_AGG_EXPR_METHOD: Mapping[Agg, Callable[[nwp.Expr], nwp.Expr]] = {
+    "first": methodcaller("first"),
+    "last": methodcaller("last"),
 }
 
 
@@ -365,81 +368,98 @@ def order_case(
     /,
     order_by: OrderColumn | Sequence[OrderColumn],
     *,
-    expected: NonNestedLiteral | list[NonNestedLiteral],
     descending: bool = False,
     nulls_last: bool = False,
+    expected: NonNestedLiteral | list[NonNestedLiteral],
 ) -> ParameterSet:
-    direction = "desc" if descending else "asc"
-    nulls = "nulls_last" if nulls_last else "nulls_first"
-    suffix = f"_{aggregation}-{order_by}-{direction}-{nulls}"
-    column_names = [columns] if not isinstance(columns, list) else columns
-    expected_values = [expected] if not isinstance(expected, list) else expected
-    expr = (
-        _AGG_EXPR_FUNCTION[aggregation](columns)
+    """Generate `Expr`s and an expected dataset for ordered aggregations.
+
+    Covers both `over(order_by=...)` and `sort_by(...)` to ensure their results are identical in a
+    select context.
+    """
+    # Encoding argument combinations into column names and the shared test id
+    ordering = f"{order_by}-{'desc' if descending else 'asc'}-{'nulls_last' if nulls_last else 'nulls_first'}"
+    suffix_over = f"_{aggregation}-over-{ordering}"
+    suffix_sort_by = f"_sort_by-{ordering}-{aggregation}"
+    test_id = f"{columns}_{aggregation}-{ordering}"
+
+    # Generating what our expected dataset should be
+    names_values = list(zip_strict(_ensure_list(columns), _ensure_list(expected)))
+    result_data = {
+        f"{name}{suffix}": [expect]
+        for suffix in (suffix_over, suffix_sort_by)
+        for name, expect in names_values
+    }
+
+    # Finally, all the expressions
+    cols = nwp.col(columns)
+    agg = _AGG_EXPR_METHOD[aggregation]
+    over = (
+        cols.pipe(agg)
         .over(order_by=order_by, descending=descending, nulls_last=nulls_last)
-        .name.suffix(suffix)
+        .name.suffix(suffix_over)
     )
-    return pytest.param(
-        expr,
-        {
-            f"{name}{suffix}": [expect]
-            for name, expect in zip_strict(column_names, expected_values)
-        },
-        id=f"{columns}{suffix}",
+    sort_by = (
+        cols.sort_by(order_by, descending=descending, nulls_last=nulls_last)
+        .pipe(agg)
+        .name.suffix(suffix_sort_by)
     )
+    return pytest.param([over, sort_by], result_data, id=test_id)
 
 
 @pytest.mark.parametrize(
     ("expr", "expected"),
     [
         order_case("v1", "first", order_by="o4", expected=2),
-        order_case("v1", "first", order_by="o4", expected=2, descending=True),
-        order_case("v1", "first", order_by="o4", expected=5, nulls_last=True),
+        order_case("v1", "first", order_by="o4", descending=True, expected=2),
+        order_case("v1", "first", order_by="o4", nulls_last=True, expected=5),
         order_case(
-            "v1", "first", order_by="o4", expected=1, descending=True, nulls_last=True
+            "v1", "first", order_by="o4", descending=True, nulls_last=True, expected=1
         ),
         order_case("v2", "last", order_by=["o3", "o5"], expected="magic"),
         order_case(
-            "v2", "last", order_by=["o3", "o5"], expected="unicorn", descending=True
+            "v2", "last", order_by=["o3", "o5"], descending=True, expected="unicorn"
         ),
         order_case(
-            "v2", "last", order_by=["o3", "o5"], expected="under", nulls_last=True
+            "v2", "last", order_by=["o3", "o5"], nulls_last=True, expected="under"
         ),
         order_case(
             "v2",
             "last",
             order_by=["o3", "o5"],
-            expected="under",
             descending=True,
             nulls_last=True,
+            expected="under",
         ),
         order_case(["v3", "v2"], "last", order_by=["o2", "o5"], expected=[5.9, "under"]),
         order_case(
             ["v3", "v2"],
             "first",
             order_by=["o2", "o5"],
-            expected=[1.2, "water"],
             descending=True,
+            expected=[1.2, "water"],
         ),
         order_case(
             ["v3", "v2"],
             "first",
             order_by=["o2", "o5"],
-            expected=[999.1, "magic"],
             nulls_last=True,
+            expected=[999.1, "magic"],
         ),
         order_case(
             ["v3", "v2"],
             "last",
             order_by=["o5", "o2"],
-            expected=[22.9, "unicorn"],
             nulls_last=True,
             descending=True,
+            expected=[22.9, "unicorn"],
         ),
     ],
 )
-def test_over_order_by_asc_desc_nulls_first_last(
-    expr: nwp.Expr, expected: Data, data_order: Mapping[str, list[NonNestedLiteral]]
+def test_over_order_by_sort_by_asc_desc_nulls_first_last(
+    expr: OneOrIterable[nwp.Expr],
+    expected: Data,
+    data_order: Mapping[str, list[NonNestedLiteral]],
 ) -> None:
     result = dataframe(data_order).select(expr)
     assert_equal_data(result, expected)
