@@ -7,7 +7,13 @@ import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._arrow.series import ArrowSeries
-from narwhals._arrow.utils import concat_tables, native_to_narwhals_dtype, repeat
+from narwhals._arrow.utils import (
+    arange,
+    concat_tables,
+    narwhals_to_native_dtype,
+    native_to_narwhals_dtype,
+    repeat,
+)
 from narwhals._compliant import EagerDataFrame
 from narwhals._utils import (
     Implementation,
@@ -114,16 +120,36 @@ class ArrowDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | None,
+        schema: IntoSchema | Mapping[str, DType | None] | None,
     ) -> Self:
-        from narwhals.schema import Schema
+        if not schema and not data:
+            return cls.from_native(pa.table({}), context=context)
+        if not schema:
+            return cls.from_native(pa.table(data), context=context)  # type: ignore[arg-type]
+        if not any(dtype is None for dtype in schema.values()):
+            from narwhals.schema import Schema
 
-        pa_schema = Schema(schema).to_arrow() if schema is not None else schema
-        if pa_schema and not data:
-            native = pa_schema.empty_table()
-        else:
-            native = pa.Table.from_pydict(data, schema=pa_schema)
-        return cls.from_native(native, context=context)
+            pa_schema = Schema(cast("IntoSchema", schema)).to_arrow()
+            if pa_schema and not data:
+                native = pa_schema.empty_table()
+            else:
+                native = pa.Table.from_pydict(data, schema=pa_schema)
+            return cls.from_native(native, context=context)
+        if context._implementation._backend_version() < (14,):
+            msg = "Passing `None` dtype in `from_dict` requires PyArrow>=14"
+            raise NotImplementedError(msg)
+        res = pa.table(
+            {
+                name: pa.chunked_array(  # type: ignore[misc]
+                    [data[name] if data else []],
+                    type=narwhals_to_native_dtype(nw_dtype, version=context._version)
+                    if nw_dtype is not None
+                    else None,
+                )
+                for name, nw_dtype in schema.items()
+            }
+        )
+        return cls.from_native(pa.table(res), context=context)
 
     @classmethod
     def from_dicts(
@@ -132,11 +158,18 @@ class ArrowDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | None,
+        schema: IntoSchema | Mapping[str, DType | None] | None,
     ) -> Self:
         from narwhals.schema import Schema
 
-        pa_schema = Schema(schema).to_arrow() if schema is not None else schema
+        if schema and any(dtype is None for dtype in schema.values()):
+            msg = "`from_dicts` with `schema` where any dtype is `None` is not supported for PyArrow."
+            raise NotImplementedError(msg)
+        pa_schema = (
+            Schema(cast("IntoSchema", schema)).to_arrow()
+            if schema is not None
+            else schema
+        )
         if pa_schema and not data:
             native = pa_schema.empty_table()
         else:
@@ -499,19 +532,19 @@ class ArrowDataFrame(
         return {ser.name: ser.to_list() for ser in it}
 
     def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self:
-        import numpy as np  # ignore-banned-import
-
         plx = self.__narwhals_namespace__()
-        data = pa.array(np.arange(len(self)))
-        row_index_s = plx._series.from_iterable(data, context=self, name=name)
-        row_index = plx._expr._from_series(row_index_s)
-        if order_by:
+        data = arange(0, len(self), 1)
+        if order_by is None:
             row_index = plx._expr._from_series(
-                self.select(row_index, *(plx.col(x) for x in order_by))
-                .sort(*order_by, descending=False, nulls_last=False)
-                .get_column(name)
+                plx._series.from_iterable(data, context=self, name=name)
             )
-        return self.select(row_index, plx.all())
+            return self.select(row_index, plx.all())
+        indices = pc.sort_indices(self.native, [(by, "ascending") for by in order_by])
+        if self._backend_version < (20,):
+            new_col = data.take(pc.sort_indices(indices))
+        else:
+            new_col = pc.scatter(data, indices.cast(pa.int64()))  # type: ignore[attr-defined]
+        return self._with_native(self.native.add_column(0, name, new_col))
 
     def filter(self, predicate: ArrowExpr) -> Self:
         mask_native = self._evaluate_single_output_expr(predicate).native

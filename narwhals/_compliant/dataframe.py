@@ -8,6 +8,7 @@ from narwhals._compliant.typing import (
     CompliantDataFrameAny,
     CompliantExprT_contra,
     CompliantLazyFrameAny,
+    CompliantNamespaceAny,
     CompliantSeriesT,
     EagerExprT,
     EagerSeriesT,
@@ -189,8 +190,8 @@ class CompliantDataFrame(
         data: Mapping[str, Any],
         /,
         *,
-        context: _LimitedContext,
-        schema: IntoSchema | None,
+        context: CompliantNamespaceAny,
+        schema: IntoSchema | Mapping[str, DType | None] | None,
     ) -> Self: ...
     @classmethod
     def from_dicts(
@@ -199,7 +200,7 @@ class CompliantDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | None,
+        schema: IntoSchema | Mapping[str, DType | None] | None,
     ) -> Self: ...
     @classmethod
     def from_numpy(

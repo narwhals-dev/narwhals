@@ -12,6 +12,7 @@ from narwhals.dtypes import (
     Datetime as NwDatetime,
     Decimal,
     DType,
+    DTypeClass,
     Duration as NwDuration,
     Enum as NwEnum,
     Field,
@@ -48,8 +49,6 @@ if TYPE_CHECKING:
 
 
 class Datetime(NwDatetime):
-    __slots__ = NwDatetime.__slots__
-
     @inherit_doc(NwDatetime)
     def __init__(
         self, time_unit: TimeUnit = "us", time_zone: str | timezone | None = None
@@ -61,8 +60,6 @@ class Datetime(NwDatetime):
 
 
 class Duration(NwDuration):
-    __slots__ = NwDuration.__slots__
-
     @inherit_doc(NwDuration)
     def __init__(self, time_unit: TimeUnit = "us") -> None:
         super().__init__(time_unit)
@@ -85,13 +82,11 @@ class Enum(NwEnum):
        Enum
     """
 
-    __slots__ = ()
-
     def __init__(self) -> None:
         super(NwEnum, self).__init__()
 
     def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
-        if type(other) is type:
+        if type(other) is DTypeClass:
             return other in {type(self), NwEnum}
         return isinstance(other, type(self))
 

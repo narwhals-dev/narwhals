@@ -19,6 +19,7 @@ from narwhals._utils import (
     Implementation,
     Version,
     extend_bool,
+    no_default,
     not_implemented,
     zip_strict,
 )
@@ -39,6 +40,7 @@ if TYPE_CHECKING:
     )
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.namespace import SparkLikeNamespace
+    from narwhals._typing import NoDefault
     from narwhals._utils import _LimitedContext
     from narwhals.typing import FillNullStrategy, IntoDType, RankMethod
 
@@ -354,6 +356,56 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
 
         assert value is not None  # noqa: S101
         return self._with_elementwise(_fill_constant, value=value)
+
+    def replace_strict(  # pragma: no cover
+        self,
+        default: SparkLikeExpr | NoDefault,
+        old: Sequence[Any],
+        new: Sequence[Any],
+        *,
+        return_dtype: IntoDType | None,
+    ) -> Self:
+        if default is no_default:
+            msg = "`replace_strict` requires an explicit value for `default` for any spark-like backend."
+            raise ValueError(msg)
+
+        if self._implementation is not Implementation.PYSPARK:
+            # Issue tracker: https://github.com/eakmanrq/sqlframe/issues/545
+            msg = f"`replace_strict` is not (yet) implemented for {self._implementation}."
+            raise NotImplementedError(msg)
+
+        from itertools import chain
+
+        F = self._F
+
+        mapping = dict(zip(old, new))
+        mapping_expr = F.create_map([F.lit(x) for x in chain(*mapping.items())])
+
+        def func(df: SparkLikeLazyFrame) -> list[Column]:
+            default_col = df._evaluate_single_output_expr(default)
+
+            results = [
+                F.when(
+                    F.array_contains(F.map_keys(mapping_expr), expr), mapping_expr[expr]
+                ).otherwise(default_col)
+                for expr in self(df)
+            ]
+            if return_dtype:
+                session = df.native.sparkSession
+                spark_dtype = narwhals_to_native_dtype(
+                    return_dtype, self._version, self._native_dtypes, session
+                )
+                return [result.cast(spark_dtype) for result in results]
+            return results
+
+        return self.__class__(
+            func,
+            None,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
+            implementation=self._implementation,
+        )
 
     @property
     def str(self) -> SparkLikeExprStringNamespace:

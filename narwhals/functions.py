@@ -36,6 +36,7 @@ if TYPE_CHECKING:
     from narwhals._translate import IntoArrowTable
     from narwhals._typing import Backend, EagerAllowed, IntoBackend
     from narwhals.dataframe import DataFrame, LazyFrame
+    from narwhals.dtypes import DType
     from narwhals.series import Series
     from narwhals.typing import (
         ConcatMethod,
@@ -228,7 +229,7 @@ def _new_series_impl(
 @deprecate_native_namespace(warn_version="1.26.0")
 def from_dict(
     data: Mapping[str, Any],
-    schema: IntoSchema | None = None,
+    schema: IntoSchema | Mapping[str, DType | None] | None = None,
     *,
     backend: IntoBackend[EagerAllowed] | None = None,
     native_namespace: ModuleType | None = None,  # noqa: ARG001
@@ -245,7 +246,9 @@ def from_dict(
     Arguments:
         data: Dictionary to create DataFrame from.
         schema: The DataFrame schema as Schema or dict of {name: type}. If not
-            specified, the schema will be inferred by the native library.
+            specified, the schema will be inferred by the native library. If
+            any `dtype` is `None`, the data type for that column will be inferred
+            by the native library.
         backend: specifies which eager backend instantiate to. Only
             necessary if inputs are not Narwhals Series.
 
@@ -272,6 +275,9 @@ def from_dict(
     """
     if backend is None:
         data, backend = _from_dict_no_backend(data)
+    if schema and data and (diff := set(schema.keys()).symmetric_difference(data.keys())):
+        msg = f"Keys in `schema` and `data` are expected to match, found unmatched keys: {diff}"
+        raise InvalidOperationError(msg)
     implementation = Implementation.from_backend(backend)
     if is_eager_allowed(implementation):
         ns = Version.MAIN.namespace.from_backend(implementation).compliant
@@ -312,7 +318,7 @@ def _from_dict_no_backend(
 
 def from_dicts(
     data: Sequence[Mapping[str, Any]],
-    schema: IntoSchema | None = None,
+    schema: IntoSchema | Mapping[str, DType | None] | None = None,
     *,
     backend: IntoBackend[EagerAllowed],
 ) -> DataFrame[Any]:
@@ -325,7 +331,9 @@ def from_dicts(
     Arguments:
         data: Sequence with dictionaries mapping column name to value.
         schema: The DataFrame schema as Schema or dict of {name: type}. If not
-            specified, the schema will be inferred by the native library.
+            specified, the schema will be inferred by the native library. If
+            any `dtype` is `None`, the data type for that column will be inferred
+            by the native library.
         backend: Specifies which eager backend instantiate to.
 
             `backend` can be specified in various ways
@@ -1638,7 +1646,9 @@ def coalesce(
         )
         raise TypeError(msg)
 
-    return Expr(ExprNode(ExprKind.ELEMENTWISE, "coalesce", *flat_exprs))
+    return Expr(
+        ExprNode(ExprKind.ELEMENTWISE, "coalesce", *flat_exprs, allow_multi_output=True)
+    )
 
 
 def format(f_string: str, *args: IntoExpr) -> Expr:

@@ -74,7 +74,7 @@ if TYPE_CHECKING:
         Polars,
     )
     from narwhals.dataframe import MultiColSelector, MultiIndexSelector
-    from narwhals.dtypes import DType
+    from narwhals.stable.v2.dtypes import DType
     from narwhals.typing import (
         IntoDType,
         IntoExpr,
@@ -120,7 +120,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     def from_dict(
         cls,
         data: Mapping[str, Any],
-        schema: Mapping[str, DType] | Schema | None = None,
+        schema: IntoSchema | Mapping[str, DType | None] | None = None,
         *,
         backend: IntoBackend[EagerAllowed] | None = None,
     ) -> DataFrame[Any]:
@@ -131,7 +131,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     def from_dicts(
         cls,
         data: Sequence[Mapping[str, Any]],
-        schema: IntoSchema | None = None,
+        schema: IntoSchema | Mapping[str, DType | None] | None = None,
         *,
         backend: IntoBackend[EagerAllowed],
     ) -> DataFrame[Any]:
@@ -1047,7 +1047,9 @@ def from_dict(
     Arguments:
         data: Dictionary to create DataFrame from.
         schema: The DataFrame schema as Schema or dict of {name: type}. If not
-            specified, the schema will be inferred by the native library.
+            specified, the schema will be inferred by the native library. If
+            any `dtype` is `None`, the data type for that column will be inferred
+            by the native library.
         backend: specifies which eager backend instantiate to. Only
             necessary if inputs are not Narwhals Series.
 

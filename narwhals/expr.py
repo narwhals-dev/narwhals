@@ -10,7 +10,7 @@ from narwhals._expression_parsing import (
     evaluate_node,
     evaluate_root_node,
 )
-from narwhals._utils import _validate_rolling_arguments, ensure_type, flatten
+from narwhals._utils import _validate_rolling_arguments, ensure_type, flatten, no_default
 from narwhals.dtypes import _validate_dtype
 from narwhals.exceptions import ComputeError, InvalidOperationError
 from narwhals.expr_cat import ExprCatNamespace
@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     from typing_extensions import Concatenate, ParamSpec, Self
 
     from narwhals._compliant import CompliantExpr, CompliantNamespace
+    from narwhals._typing import NoDefault
     from narwhals.dtypes import DType
     from narwhals.series import Series
     from narwhals.typing import (
@@ -843,20 +844,26 @@ class Expr:
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any] | None = None,
         *,
+        default: Any | NoDefault = no_default,
         return_dtype: IntoDType | None = None,
     ) -> Self:
         """Replace all values by different values.
-
-        This function must replace all non-null input values (else it raises an error).
 
         Arguments:
             old: Sequence of values to replace. It also accepts a mapping of values to
                 their replacement as syntactic sugar for
                 `replace_strict(old=list(mapping.keys()), new=list(mapping.values()))`.
             new: Sequence of values to replace by. Length must match the length of `old`.
+            default: Set values that were not replaced to this value. If no default is
+                specified, (default), an error is raised if any values were not replaced.
+                Accepts expression input. Non-expression inputs are parsed as literals.
             return_dtype: The data type of the resulting expression. If set to `None`
                 (default), the data type is determined automatically based on the other
                 inputs.
+
+        Raises:
+            InvalidOperationError: If any non-null values in the original column were not
+                replaced, and no default was specified.
 
         Examples:
             >>> import pandas as pd
@@ -879,6 +886,27 @@ class Expr:
             |   2  1    one    |
             |   3  2    two    |
             └──────────────────┘
+
+            Replace values and set a default for values not in the mapping:
+
+            >>> data = {"a": [1, 2, 3, 4], "b": ["beluga", "narwhal", "orca", "vaquita"]}
+            >>> df = nw.from_native(pd.DataFrame(data))
+            >>> df.with_columns(
+            ...     a_replaced=nw.col("a").replace_strict(
+            ...         {1: "one", 2: "two"},
+            ...         default=nw.concat_str(nw.lit("default_"), nw.col("b")),
+            ...         return_dtype=nw.String,
+            ...     )
+            ... )
+            ┌──────────────────────────────┐
+            |      Narwhals DataFrame      |
+            |------------------------------|
+            |   a        b       a_replaced|
+            |0  1   beluga              one|
+            |1  2  narwhal              two|
+            |2  3     orca     default_orca|
+            |3  4  vaquita  default_vaquita|
+            └──────────────────────────────┘
         """
         if new is None:
             if not isinstance(old, Mapping):
@@ -888,15 +916,26 @@ class Expr:
             new = list(old.values())
             old = list(old.keys())
 
-        return self._append_node(
-            ExprNode(
+        if default is no_default:
+            node = ExprNode(
                 ExprKind.ELEMENTWISE,
                 "replace_strict",
+                default=default,
                 old=old,
                 new=new,
                 return_dtype=return_dtype,
             )
-        )
+        else:
+            node = ExprNode(
+                ExprKind.ELEMENTWISE,
+                "replace_strict",
+                default,
+                old=old,
+                new=new,
+                return_dtype=return_dtype,
+                str_as_lit=True,
+            )
+        return self._append_node(node)
 
     # --- transform ---
     def is_between(
@@ -910,7 +949,7 @@ class Expr:
         Arguments:
             lower_bound: Lower bound value. String literals are interpreted as column names.
             upper_bound: Upper bound value. String literals are interpreted as column names.
-            closed: Define which sides of the interval are closed (inclusive).
+            closed: Define which sides of the interval are closed (inclusive). Options are {"left", "right", "none", "both"}.
 
         Examples:
             >>> import pandas as pd

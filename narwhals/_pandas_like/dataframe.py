@@ -13,6 +13,7 @@ from narwhals._pandas_like.utils import (
     get_dtype_backend,
     import_array_module,
     iter_dtype_backends,
+    narwhals_to_native_dtype,
     native_to_narwhals_dtype,
     object_native_to_narwhals_dtype,
     rename,
@@ -33,6 +34,7 @@ from narwhals._utils import (
 )
 from narwhals.dependencies import is_pandas_like_dataframe
 from narwhals.exceptions import InvalidOperationError, ShapeError
+from narwhals.functions import col as nw_col
 
 if TYPE_CHECKING:
     from io import BytesIO
@@ -147,14 +149,12 @@ class PandasLikeDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | None,
+        schema: IntoSchema | Mapping[str, DType | None] | None,
     ) -> Self:
-        from narwhals.schema import Schema
-
         implementation = context._implementation
-        ns = implementation.to_native_namespace()
-        Series = cast("type[pd.Series[Any]]", ns.Series)
-        DataFrame = cast("type[pd.DataFrame]", ns.DataFrame)
+        pdx = implementation.to_native_namespace()
+        Series = cast("type[pd.Series[Any]]", pdx.Series)
+        DataFrame = cast("type[pd.DataFrame]", pdx.DataFrame)
         aligned_data: dict[str, pd.Series[Any] | Any] = {}
         left_most: PandasLikeSeries | None = None
         for name, series in data.items():
@@ -172,10 +172,22 @@ class PandasLikeDataFrame(
         else:
             native = DataFrame.from_dict({col: [] for col in schema})
         if schema:
-            backend: Iterable[DTypeBackend] | None = None
+            backends: Iterable[DTypeBackend]
             if aligned_data:
-                backend = iter_dtype_backends(native.dtypes, implementation)
-            native = native.astype(Schema(schema).to_pandas(backend))
+                backends = iter_dtype_backends(native.dtypes, implementation)
+            else:
+                backends = (None for _ in range(len(schema)))
+            native_schema = {
+                key: narwhals_to_native_dtype(
+                    dtype,
+                    backend,
+                    implementation=context._implementation,
+                    version=context._version,
+                )
+                for ((key, dtype), backend) in zip(schema.items(), backends)
+                if dtype is not None
+            }
+            native = native.astype(native_schema)
         return cls.from_native(native, context=context)
 
     @classmethod
@@ -185,10 +197,8 @@ class PandasLikeDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | None,
+        schema: IntoSchema | Mapping[str, DType | None] | None,
     ) -> Self:
-        from narwhals.schema import Schema
-
         implementation = context._implementation
         ns = implementation.to_native_namespace()
         DataFrame = cast("type[pd.DataFrame]", ns.DataFrame)
@@ -197,10 +207,22 @@ class PandasLikeDataFrame(
         else:
             native = DataFrame.from_dict({col: [] for col in schema})
         if schema:
-            backend: Iterable[DTypeBackend] | None = None
+            backends: Iterable[DTypeBackend]
             if data:
-                backend = iter_dtype_backends(native.dtypes, implementation)
-            native = native.astype(Schema(schema).to_pandas(backend))
+                backends = iter_dtype_backends(native.dtypes, implementation)
+            else:
+                backends = (None for _ in range(len(schema)))
+            native_schema = {
+                key: narwhals_to_native_dtype(
+                    dtype,
+                    backend,
+                    implementation=context._implementation,
+                    version=context._version,
+                )
+                for ((key, dtype), backend) in zip(schema.items(), backends)
+                if dtype is not None
+            }
+            native = native.astype(native_schema)
         return cls.from_native(native, context=context)
 
     @staticmethod
@@ -444,17 +466,22 @@ class PandasLikeDataFrame(
 
     def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self:
         plx = self.__narwhals_namespace__()
-        data = self._array_funcs.arange(len(self))
-        row_index_s = plx._series.from_iterable(
-            data, context=self, index=self.native.index, name=name
-        )
-        row_index = plx._expr._from_series(row_index_s)
-        if order_by:
+        if order_by is None:
+            data = self._array_funcs.arange(len(self))
             row_index = plx._expr._from_series(
-                self.select(row_index, *(plx.col(x) for x in order_by))
-                .sort(*order_by, descending=False, nulls_last=False)
-                .get_column(name)
+                plx._series.from_iterable(
+                    data, context=self, index=self.native.index, name=name
+                )
             )
+        else:
+            rank = cast(
+                "PandasLikeExpr",
+                nw_col(order_by[0]).rank(method="ordinal")._to_compliant_expr(plx),
+            )
+            row_index = (
+                rank.over(partition_by=[], order_by=order_by)
+                - plx.lit(1, None).broadcast()
+            ).alias(name)
         return self.select(row_index, plx.all())
 
     def row(self, index: int) -> tuple[Any, ...]:
