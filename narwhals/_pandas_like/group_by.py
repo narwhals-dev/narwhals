@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal
 from narwhals._compliant import EagerGroupBy
 from narwhals._exceptions import issue_warning
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
+from narwhals._pandas_like.utils import make_group_by_kwargs
 from narwhals._utils import zip_strict
 from narwhals.dependencies import is_pandas_like_dataframe
 
@@ -252,12 +253,7 @@ class PandasLikeGroupBy(
         if set(native.index.names).intersection(self.compliant.columns):
             native = native.reset_index(drop=True)
 
-        self._group_by_kwargs = {
-            "sort": False,
-            "as_index": True,
-            "dropna": drop_null_keys,
-            "observed": True,
-        }
+        self._group_by_kwargs = make_group_by_kwargs(drop_null_keys=drop_null_keys)
         self._grouped: NativeGroupBy = native.groupby(
             self._keys.copy(), **self._group_by_kwargs
         )
