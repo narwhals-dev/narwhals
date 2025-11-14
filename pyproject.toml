@@ -11,7 +11,7 @@ requires-python = ">=3.9"
 authors = [
   { name = "Marco Gorelli", email = "hello_narwhals@proton.me" },
 ]
-license = {file = "LICENSE"}
+license = {file = "LICENSE.md"}
 description = "Extremely lightweight compatibility layer between dataframe libraries"
 readme = "README.md"
 keywords = ["dataframes", "interoperability", "pandas", "polars", "pyarrow", "dask", "modin", "cudf"]
