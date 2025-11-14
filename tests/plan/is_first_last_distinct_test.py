@@ -22,26 +22,6 @@ def data_indexed(data: Data) -> Data:
 
 
 @pytest.fixture
-def data_alt_1() -> Data:
-    return {"a": [1, 1, 2, 2, 2], "b": [1, 3, 3, 2, 3]}
-
-
-@pytest.fixture
-def data_alt_1_indexed(data_alt_1: Data) -> Data:
-    return data_alt_1 | {"i": [0, 1, 2, 3, 4]}
-
-
-@pytest.fixture
-def data_alt_2() -> Data:
-    return {"a": [1, 1, 2, 2, 2], "b": [1, 2, 2, 2, 1]}
-
-
-@pytest.fixture
-def data_alt_2_indexed(data_alt_2: Data) -> Data:
-    return data_alt_2 | {"i": [None, 1, 2, 3, 4]}
-
-
-@pytest.fixture
 def expected() -> Data:
     return {
         "a": [True, False, True, True, False, False],
