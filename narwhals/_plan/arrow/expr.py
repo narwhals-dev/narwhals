@@ -8,7 +8,7 @@ import pyarrow.compute as pc  # ignore-banned-import
 from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._plan import expressions as ir
 from narwhals._plan._guards import is_function_expr
-from narwhals._plan.arrow import functions as fn
+from narwhals._plan.arrow import functions as fn, options as pa_options
 from narwhals._plan.arrow.series import ArrowSeries as Series
 from narwhals._plan.arrow.typing import ChunkedOrScalarAny, NativeScalar, StoresNativeT_co
 from narwhals._plan.common import temp
@@ -420,25 +420,23 @@ class ArrowExpr(  # type: ignore[misc]
         order_by = tuple(node.order_by_names())
         descending = node.sort_options.descending
         nulls_last = node.sort_options.nulls_last
-        idx_name = temp.column_name(frame)
         if node.partition_by:
             if is_function_expr(node.expr) and isinstance(
                 node.expr.function, (IsFirstDistinct, IsLastDistinct)
             ):
                 msg = f"TODO: {node.expr.function!r}\nNeed to adapt impl to reduce the number of sorts when used in {node!r}"
                 raise NotImplementedError(msg)
+            idx_name = temp.column_name(frame)
             reordered = frame.with_row_index_by(
                 idx_name, order_by, nulls_last=nulls_last
             ).sort((idx_name,), descending=descending)
             return self.over(node, frame, name, reordered=reordered)
-        frame_idx = frame.with_row_index(idx_name).sort(
-            order_by, descending=descending, nulls_last=nulls_last
-        )
-        evaluated = node.expr.dispatch(self, frame_idx.drop([idx_name]), name)
+        opts = pa_options.sort(*order_by, descending=descending, nulls_last=nulls_last)
+        indices = pc.sort_indices(frame.native, options=opts)
+        evaluated = node.expr.dispatch(self, frame.gather(indices), name)
         if isinstance(evaluated, ArrowScalar):
             return evaluated
-        idx = frame_idx.to_series()
-        return self.from_series(evaluated.broadcast(len(frame)).sort_by(idx))
+        return self.from_series(evaluated.broadcast(len(frame)).gather(indices))
 
     # NOTE: Can't implement in `EagerExpr`, since it doesn't derive `ExprDispatch`
     def map_batches(self, node: ir.AnonymousExpr, frame: Frame, name: str) -> Self:

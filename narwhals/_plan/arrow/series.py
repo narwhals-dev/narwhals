@@ -81,14 +81,6 @@ class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayA
         indices = pc.array_sort_indices(self.native, options=opts)
         return self._with_native(self._gather(indices))
 
-    def sort_by(
-        self, by: Self, /, *, descending: bool = False, nulls_last: bool = False
-    ) -> Self:
-        """Sort by another Series."""
-        opts = options.array_sort(descending=descending, nulls_last=nulls_last)
-        indices = pc.array_sort_indices(by.native, options=opts)
-        return self._with_native(self._gather(indices))
-
     def scatter(self, indices: Self, values: Self) -> Self:
         mask = fn.is_in(fn.int_range(len(self), chunked=False), indices.native)
         replacements = fn.array(values._gather(pc.sort_indices(indices.native)))
