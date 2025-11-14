@@ -399,6 +399,16 @@ class ArrowExpr(  # type: ignore[misc]
         *,
         reordered: Frame | None = None,
     ) -> Self:
+        if is_function_expr(node.expr) and isinstance(
+            node.expr.function, (IsFirstDistinct, IsLastDistinct)
+        ):
+            return self._is_first_last_distinct_partition_by(
+                # TODO @dangotbanned: `reordered` needs to be handled and then we're done!
+                node.expr,
+                frame,
+                name,
+                node.partition_by,
+            )
         # TODO @dangotbanned: Can the alias in `agg_irs` be avoided?
         resolved = (
             frame._grouper.by_irs(*node.partition_by)
@@ -421,11 +431,6 @@ class ArrowExpr(  # type: ignore[misc]
         descending = node.sort_options.descending
         nulls_last = node.sort_options.nulls_last
         if node.partition_by:
-            if is_function_expr(node.expr) and isinstance(
-                node.expr.function, (IsFirstDistinct, IsLastDistinct)
-            ):
-                msg = f"TODO: {node.expr.function!r}\nNeed to adapt impl to reduce the number of sorts when used in {node!r}"
-                raise NotImplementedError(msg)
             idx_name = temp.column_name(frame)
             reordered = frame.with_row_index_by(
                 idx_name, order_by, nulls_last=nulls_last
@@ -471,13 +476,32 @@ class ArrowExpr(  # type: ignore[misc]
     cum_prod = _cumulative
     cum_sum = _cumulative
 
+    # order_by and partition_by now both work (when not together)
+    def _is_first_last_distinct_partition_by(
+        self,
+        node: FExpr[IsFirstDistinct | IsLastDistinct],
+        frame: Frame,
+        name: str,
+        partition_by: Seq[ir.ExprIR],
+    ) -> Self:
+        idx_name = temp.column_name([name])
+        expr_ir = fn.IS_FIRST_LAST_DISTINCT[type(node.function)](idx_name)
+        frame_ctx = frame._with_columns([node.input[0].dispatch(self, frame, name)])
+        df = frame_ctx.with_row_index(idx_name)
+        resolved = (
+            df._grouper.by_irs(ir.col(name), *partition_by)
+            .agg_irs(expr_ir.alias(idx_name))
+            .resolve(df)
+        )
+        distinct_index = resolved.evaluate(df).get_column(idx_name).native
+        return self._with_native(fn.is_in(df.to_series().native, distinct_index), name)
+
     def _is_first_last_distinct(
         self, node: FExpr[IsFirstDistinct | IsLastDistinct], frame: Frame, name: str
     ) -> Self:
         idx_name = temp.column_name([name])
         expr_ir = fn.IS_FIRST_LAST_DISTINCT[type(node.function)](idx_name)
         series = self._dispatch_expr(node.input[0], frame, name)
-        # TODO @dangotbanned: Sorting
         df = series.to_frame().with_row_index(idx_name)
         distinct_index = (
             df.group_by_names((name,))
