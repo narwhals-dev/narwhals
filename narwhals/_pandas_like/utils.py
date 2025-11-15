@@ -700,3 +700,7 @@ def import_array_module(implementation: Implementation, /) -> ModuleType:
 
 
 class PandasLikeSeriesNamespace(EagerSeriesNamespace["PandasLikeSeries", Any]): ...
+
+
+def make_group_by_kwargs(*, drop_null_keys: bool) -> dict[str, bool]:
+    return {"sort": False, "as_index": True, "dropna": drop_null_keys, "observed": True}
