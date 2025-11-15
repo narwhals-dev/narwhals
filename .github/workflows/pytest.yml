@@ -34,7 +34,7 @@ jobs:
       - name: Run pytest
         run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=75 --constructors=pandas,pyarrow,polars[eager],polars[lazy]
       - name: install-test-plugin
-        run: uv pip install -e tests/test_plugin --system  
+        run: uv pip install -e test-plugin/. --system  
 
   pytest-windows:
     strategy:
@@ -57,7 +57,7 @@ jobs:
         # we are not testing pyspark, modin, or dask on Windows here because nobody got time for that
         run: uv pip install -e ".[ibis]" --group core-tests --group extra --system
       - name: install-test-plugin
-        run: uv pip install -e tests/test_plugin --system
+        run: uv pip install -e test-plugin/. --system
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
@@ -89,7 +89,7 @@ jobs:
       - name: install-reqs
         run: uv pip install -e ".[dask, modin, ibis]" --group core-tests --group extra --system
       - name: install-test-plugin
-        run: uv pip install -e tests/test_plugin --system
+        run: uv pip install -e test-plugin/. --system
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest

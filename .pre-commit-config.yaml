@@ -122,7 +122,7 @@ repos:
       exclude: |
         (?x)
           ^(tests/utils\.py)
-          |^(tests/test_plugin/)
+          |^(test_plugin/)
   -   id: no-commit-to-branch
   -   id: end-of-file-fixer
       exclude: .svg$

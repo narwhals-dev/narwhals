@@ -1,0 +1,33 @@
+"""Public protocols for plugin authors."""
+
+from __future__ import annotations
+
+from narwhals._compliant import (
+    CompliantDataFrame,
+    CompliantExpr,
+    CompliantGroupBy,
+    CompliantLazyFrame,
+    CompliantNamespace,
+    CompliantSeries,
+)
+from narwhals._compliant.any_namespace import (
+    CatNamespace,
+    DateTimeNamespace,
+    ListNamespace,
+    StringNamespace,
+    StructNamespace,
+)
+
+__all__ = [
+    "CatNamespace",
+    "CompliantDataFrame",
+    "CompliantExpr",
+    "CompliantGroupBy",
+    "CompliantLazyFrame",
+    "CompliantNamespace",
+    "CompliantSeries",
+    "DateTimeNamespace",
+    "ListNamespace",
+    "StringNamespace",
+    "StructNamespace",
+]

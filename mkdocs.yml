@@ -21,7 +21,7 @@ nav:
     - concepts/null_handling.md
   - Overhead: overhead.md
   - Perfect backwards compatibility policy: backcompat.md
-  - Supported libraries and extending Narwhals: extending.md
+  - Extensions and Plugins: extending.md
   - How it works: how_it_works.md
   - Ecosystem: ecosystem.md
   - Security: security.md
