@@ -72,10 +72,17 @@ def test_is_in_other(data: Data) -> None:
         df.with_columns(contains=nwp.col("a").is_in("sets"))
 
 
-@pytest.mark.xfail(reason="Not implemented `is_in_series`", raises=NotImplementedError)
-def test_filter_is_in_with_series(data: Data) -> None:  # pragma: no cover
+def test_expr_is_in_series(data: Data) -> None:
     df = dataframe(data)
-    expr = nwp.col("a").is_in(df.get_column("b"))
-    result = df.filter(expr)
-    expected = {"a": [1, 2], "b": [1, 2]}
-    assert_equal_data(result, expected)
+
+    a = nwp.col("a")
+    a_first = a.first()
+    a_last = a.last()
+    a_ser = df.get_column("a")
+    b_ser = df.get_column("b")
+
+    assert_equal_data(df.filter(a.is_in(b_ser)), {"a": [1, 2], "b": [1, 2]})
+    assert_equal_data(df.select(a_last.is_in(b_ser)), {"a": [False]})
+    assert_equal_data(df.select(a_first.is_in(b_ser)), {"a": [True]})
+    assert_equal_data(df.select((a_last - a_first).is_in(a_ser)), {"a": [True]})
+    assert_equal_data(df.select((a_last - a_first).is_in(b_ser)), {"a": [False]})

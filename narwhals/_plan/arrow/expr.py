@@ -16,7 +16,7 @@ from narwhals._plan.compliant.column import ExprDispatch
 from narwhals._plan.compliant.expr import EagerExpr
 from narwhals._plan.compliant.scalar import EagerScalar
 from narwhals._plan.compliant.typing import namespace
-from narwhals._plan.expressions.boolean import IsFirstDistinct, IsLastDistinct
+from narwhals._plan.expressions.boolean import IsFirstDistinct, IsInSeries, IsLastDistinct
 from narwhals._plan.expressions.functions import NullCount
 from narwhals._utils import Implementation, Version, _StoresNative, not_implemented
 from narwhals.exceptions import InvalidOperationError, ShapeError
@@ -156,6 +156,13 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
     ) -> StoresNativeT_co:
         return self._unary_function(fn.is_finite)(node, frame, name)
 
+    def is_in_series(
+        self, node: FExpr[IsInSeries[ChunkedArrayAny]], frame: Frame, name: str
+    ) -> StoresNativeT_co:
+        native = node.input[0].dispatch(self, frame, name).native
+        other = node.function.other.unwrap().to_native()
+        return self._with_native(fn.is_in(native, other), name)
+
     def is_nan(self, node: FExpr[IsNan], frame: Frame, name: str) -> StoresNativeT_co:
         return self._unary_function(fn.is_nan)(node, frame, name)
 
@@ -188,7 +195,6 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
     replace_strict = not_implemented()  # type: ignore[misc]
     is_in_seq = not_implemented()  # type: ignore[misc]
     is_in_expr = not_implemented()  # type: ignore[misc]
-    is_in_series = not_implemented()  # type: ignore[misc]
 
 
 class ArrowExpr(  # type: ignore[misc]
@@ -502,6 +508,13 @@ class ArrowExpr(  # type: ignore[misc]
         distinct_index = df.group_by_agg_irs(by, agg).get_column(idx_name)
         return self.from_series(df.to_series().alias(name).is_in(distinct_index))
 
+    # NOTE: Ideas on how to shrink
+    # - [x] Add `Series.is_in`
+    #   - the last parts move into native on both sides, then rewrap from native into expr
+    # - (nope) Change the shape of `fn.IS_FIRST_LAST_DISTINCT` to handle more
+    # - [x] Also might not need the aliasing for branches outside of this one?
+    # - [x] Can any of the resolve/evaluate be simplified?
+    #   - Above, I know that `by` and `aggs` are disjoint , since `aggs has a freshly generated unique name
     def _is_first_last_distinct(
         self, node: FExpr[IsFirstDistinct | IsLastDistinct], frame: Frame, name: str
     ) -> Self:
