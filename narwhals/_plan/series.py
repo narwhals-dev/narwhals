@@ -129,7 +129,7 @@ class Series(Generic[NativeSeriesT_co]):
         result = self._compliant.sort(descending=descending, nulls_last=nulls_last)
         return type(self)(result)
 
-    def is_empty(self) -> bool:
+    def is_empty(self) -> bool:  # pragma: no cover
         return self._compliant.is_empty()
 
     def _unwrap_compliant(

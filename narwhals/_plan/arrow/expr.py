@@ -442,11 +442,8 @@ class ArrowExpr(  # type: ignore[misc]
                     .resolve(df)
                     .evaluate(df)
                     .get_column(idx_name)
-                    .native
                 )
-                return self._with_native(
-                    fn.is_in(df.to_series().native, distinct_index), name
-                )
+                return self.from_series(df.to_series().alias(name).is_in(distinct_index))
             frame_indexed = frame.with_row_index_by(
                 idx_name, order_by, nulls_last=nulls_last
             )
@@ -509,9 +506,8 @@ class ArrowExpr(  # type: ignore[misc]
             .resolve(df)
             .evaluate(df)
             .get_column(idx_name)
-            .native
         )
-        return self._with_native(fn.is_in(df.to_series().native, distinct_index), name)
+        return self.from_series(df.to_series().alias(name).is_in(distinct_index))
 
     def _is_first_last_distinct(
         self, node: FExpr[IsFirstDistinct | IsLastDistinct], frame: Frame, name: str
@@ -524,9 +520,8 @@ class ArrowExpr(  # type: ignore[misc]
             df.group_by_names((name,))
             .agg((ir.named_ir(idx_name, expr_ir),))
             .get_column(idx_name)
-            .native
         )
-        return self._with_native(fn.is_in(df.to_series().native, distinct_index), name)
+        return self.from_series(df.to_series().alias(name).is_in(distinct_index))
 
     is_first_distinct = _is_first_last_distinct
     is_last_distinct = _is_first_last_distinct
