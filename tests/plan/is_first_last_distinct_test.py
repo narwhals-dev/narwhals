@@ -138,29 +138,14 @@ def test_is_first_last_distinct_partitioned_order_by_desc(grouped: Data) -> None
 
 # NOTE: `polars` *currently* ignores the `nulls_last` argument
 # https://github.com/pola-rs/polars/issues/24989
-@pytest.mark.xfail(
-    reason="TODO: fix `is_last_distinct` is giving the inverse of the nulls I asked for!",
-    raises=AssertionError,
-)
 def test_is_first_last_distinct_partitioned_order_by_nulls(grouped: Data) -> None:
     expected = {
         GROUP: ["A", "A", "B", "B", "B"],
         VALUE_2: [1, 3, 3, 3, 3],
         "first_distinct_nulls_first": [True, True, False, True, False],
-        "first_distinct_nulls_last": [True, True, True, False, False],
         "last_distinct_nulls_first": [True, True, False, False, True],
+        "first_distinct_nulls_last": [True, True, True, False, False],
         "last_distinct_nulls_last": [True, True, False, True, False],
-    }
-    GOT = {  # noqa: F841, N806
-        GROUP: ["A", "A", "B", "B", "B"],
-        VALUE_2: [1, 3, 3, 3, 3],
-        "first_distinct_nulls_first": [True, True, False, True, False],  # +
-        "first_distinct_nulls_last": [True, True, True, False, False],  # +
-        # I have the correct results but they're the wrong way round for `last_distinct`` 🤦‍♂️🤦‍♂️🤦‍♂️
-        "last_distinct_nulls_first": [True, False, True, False, True],  # -
-        #                                   ^^^^^  ^^^^ (inverted?)
-        "last_distinct_nulls_last": [True, True, False, False, True],  # -
-        #                                               ^^^^^  ^^^^ (inverted?)
     }
     df = dataframe(grouped).drop(VALUE_1)
     value = nwp.col(VALUE_2)
@@ -169,10 +154,10 @@ def test_is_first_last_distinct_partitioned_order_by_nulls(grouped: Data) -> Non
     result = (
         df.with_columns(
             first_distinct_nulls_first=first.over(GROUP, order_by=ORDER_NULL),
+            last_distinct_nulls_first=last.over(GROUP, order_by=ORDER_NULL),
             first_distinct_nulls_last=first.over(
                 GROUP, order_by=ORDER_NULL, nulls_last=True
             ),
-            last_distinct_nulls_first=last.over(GROUP, order_by=ORDER_NULL),
             last_distinct_nulls_last=last.over(
                 GROUP, order_by=ORDER_NULL, nulls_last=True
             ),

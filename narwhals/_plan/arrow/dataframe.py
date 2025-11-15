@@ -113,10 +113,15 @@ class ArrowDataFrame(
         return self._with_native(self.native.add_column(0, name, fn.int_range(len(self))))
 
     def with_row_index_by(
-        self, name: str, order_by: Sequence[str], *, nulls_last: bool = False
+        self,
+        name: str,
+        order_by: Sequence[str],
+        *,
+        descending: bool = False,
+        nulls_last: bool = False,
     ) -> Self:
         native = self.native
-        options = pa_options.sort(*order_by, nulls_last=nulls_last)
+        options = pa_options.sort(*order_by, nulls_last=nulls_last, descending=descending)
         indices = pc.sort_indices(native, options=options)
         int_range = fn.int_range(len(self))
         if fn.HAS_SCATTER:

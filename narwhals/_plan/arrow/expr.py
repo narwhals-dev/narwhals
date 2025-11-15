@@ -403,7 +403,7 @@ class ArrowExpr(  # type: ignore[misc]
             node.expr.function, (IsFirstDistinct, IsLastDistinct)
         ):
             return self._is_first_last_distinct_partition_by(
-                node.expr, frame, name, node.partition_by, reordered=reordered
+                node.expr, frame, name, node.partition_by
             )
         # TODO @dangotbanned: Can the alias in `agg_irs` be avoided?
         resolved = (
@@ -427,9 +427,30 @@ class ArrowExpr(  # type: ignore[misc]
         nulls_last = node.sort_options.nulls_last
         if node.partition_by:
             idx_name = temp.column_name(frame)
-            reordered = frame.with_row_index_by(
+            if is_function_expr(node.expr) and isinstance(
+                node.expr.function, (IsFirstDistinct, IsLastDistinct)
+            ):
+                frame = frame.with_row_index_by(
+                    idx_name, order_by, descending=descending, nulls_last=nulls_last
+                )
+                expr_ir = fn.IS_FIRST_LAST_DISTINCT[type(node.expr.function)](idx_name)
+                previous = node.expr.input[0].dispatch(self, frame, name)
+                df = frame._with_columns([previous])
+                distinct_index = (
+                    df._grouper.by_irs(ir.col(name), *node.partition_by)
+                    .agg_irs(expr_ir.alias(idx_name))
+                    .resolve(df)
+                    .evaluate(df)
+                    .get_column(idx_name)
+                    .native
+                )
+                return self._with_native(
+                    fn.is_in(df.to_series().native, distinct_index), name
+                )
+            frame_indexed = frame.with_row_index_by(
                 idx_name, order_by, nulls_last=nulls_last
-            ).sort((idx_name,), descending=descending)
+            )
+            reordered = frame_indexed.sort((idx_name,), descending=descending)
             return self.over(node, frame, name, reordered=reordered)
         opts = pa_options.sort(*order_by, descending=descending, nulls_last=nulls_last)
         indices = pc.sort_indices(frame.native, options=opts)
@@ -477,31 +498,19 @@ class ArrowExpr(  # type: ignore[misc]
         frame: Frame,
         name: str,
         partition_by: Seq[ir.ExprIR],
-        *,
-        reordered: Frame | None = None,
     ) -> Self:
         idx_name = temp.column_name([name])
         expr_ir = fn.IS_FIRST_LAST_DISTINCT[type(node.function)](idx_name)
         previous = node.input[0].dispatch(self, frame, name)
-
-        # we need to use `reordered` to influence the index for `idx_name`
-        # TODO @dangotbanned: Figure out why this only works for `is_first_distinct`?
-        if reordered is not None:
-            order_by_index = reordered.to_series()
-            order_by_unsort_index = pc.sort_indices(order_by_index.native)
-            df = (
-                reordered.with_row_index(idx_name)
-                .gather(order_by_unsort_index)
-                ._with_columns([previous])
-            )
-        else:
-            df = frame._with_columns([previous]).with_row_index(idx_name)
-        resolved = (
+        df = frame._with_columns([previous]).with_row_index(idx_name)
+        distinct_index = (
             df._grouper.by_irs(ir.col(name), *partition_by)
             .agg_irs(expr_ir.alias(idx_name))
             .resolve(df)
+            .evaluate(df)
+            .get_column(idx_name)
+            .native
         )
-        distinct_index = resolved.evaluate(df).get_column(idx_name).native
         return self._with_native(fn.is_in(df.to_series().native, distinct_index), name)
 
     def _is_first_last_distinct(
