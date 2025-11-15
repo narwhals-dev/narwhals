@@ -16,7 +16,7 @@ three ways to go about it:
 
 ## Making a library Narwhals-compliant
 
-It's possible to make your library compliant with Narwhals with zero code changes
+It's possible to integrate your library with Narwhals with zero code changes
 in Narwhals. To do this, you'll need to make sure that your library complies with
 the Narwhals protocols found in `narwhals/compliant.py`.
 
