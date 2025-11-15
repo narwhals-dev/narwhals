@@ -10,7 +10,7 @@ from narwhals._compliant import EagerSeriesNamespace
 from narwhals._utils import Implementation, Version, isinstance_or_issubclass
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Mapping, Sequence
+    from collections.abc import Iterable, Iterator, Mapping
 
     from typing_extensions import TypeAlias, TypeIs
 
@@ -494,41 +494,3 @@ def arange(start: int, end: int, step: int) -> ArrayAny:
         return pa.array(np.arange(start, end, step))
     # NOTE: Added in https://github.com/apache/arrow/pull/46778
     return pa.arange(start, end, step)  # type: ignore[attr-defined]
-
-
-def create_composite_key_column(
-    table: pa.Table, composite_columns: Sequence[str], col_token: str
-) -> tuple[pa.Table, ChunkedArrayAny]:
-    """Create a composite key column by concatenating specified columns.
-
-    This function takes multiple columns from a PyArrow table and creates a new composite key column
-    by concatenating their string representations. The new column is added as the first column (index 0)
-    of the returned table.
-
-    Notes:
-        - Null values in the source columns are replaced with "__null_token_value__"
-        - All columns are cast to comparable string types before concatenation
-
-    Arguments:
-        table: The input PyArrow table containing the columns to be concatenated.
-        composite_columns: Sequence of column names to be used for creating the composite key.
-            These columns will be concatenated in the order provided.
-        col_token: The name for the new composite key column that will be added to the table.
-
-    Returns:
-        A tuple containing:
-            - New PyArrow table with the composite key column added as the first column
-            - The composite key column values as a ChunkedArray
-    """
-    null_token: str = "__null_token_value__"  # noqa: S105
-
-    it, separator_scalar = cast_to_comparable_string_types(
-        *(table[key] for key in composite_columns), separator=""
-    )
-    # NOTE: stubs indicate `separator` must also be a `ChunkedArray`
-    # Reality: `str` is fine
-    concat_str: Incomplete = pc.binary_join_element_wise
-    key_values = concat_str(
-        *it, separator_scalar, null_handling="replace", null_replacement=null_token
-    )
-    return table.add_column(i=0, field_=col_token, column=key_values), key_values
