@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import typing as t
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, overload
+from typing import TYPE_CHECKING, Any, Final, Literal, overload
 
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
@@ -26,7 +26,6 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias, TypeIs
 
     from narwhals._arrow.typing import Incomplete, PromoteOptions
-    from narwhals._plan.arrow.series import ArrowSeries
     from narwhals._plan.arrow.typing import (
         Array,
         ArrayAny,
@@ -37,6 +36,7 @@ if TYPE_CHECKING:
         BinOp,
         ChunkedArray,
         ChunkedArrayAny,
+        ChunkedOrArray,
         ChunkedOrArrayAny,
         ChunkedOrArrayT,
         ChunkedOrScalar,
@@ -56,9 +56,19 @@ if TYPE_CHECKING:
         StringType,
         UnaryFunction,
     )
+    from narwhals._plan.options import RankOptions
     from narwhals.typing import ClosedInterval, IntoArrowSchema, PythonLiteral
 
 BACKEND_VERSION = Implementation.PYARROW._backend_version()
+"""Static backend version for `pyarrow`."""
+
+RANK_ACCEPTS_CHUNKED: Final = BACKEND_VERSION >= (14,)
+
+HAS_SCATTER: Final = BACKEND_VERSION >= (20,)
+"""`pyarrow.compute.scatter` added in https://github.com/apache/arrow/pull/44394"""
+
+HAS_ARANGE: Final = BACKEND_VERSION >= (21,)
+"""`pyarrow.arange` added in https://github.com/apache/arrow/pull/46778"""
 
 IntoColumnAgg: TypeAlias = Callable[[str], ir.AggExpr]
 """Helper constructor for single-column aggregations."""
@@ -224,7 +234,7 @@ def _reverse(native: ChunkedOrArrayT) -> ChunkedOrArrayT:
     return native[::-1]
 
 
-def cumulative(native: ChunkedArrayAny, cum_agg: F.CumAgg, /) -> ChunkedArrayAny:
+def cumulative(native: ChunkedArrayAny, cum_agg: F.CumAgg) -> ChunkedArrayAny:
     func = _CUMULATIVE[type(cum_agg)]
     if not cum_agg.reverse:
         return func(native)
@@ -280,6 +290,36 @@ def shift(native: ChunkedArrayAny, n: int) -> ChunkedArrayAny:
     return pa.chunked_array(arrays)
 
 
+def rank(native: ChunkedArrayAny, rank_options: RankOptions) -> ChunkedArrayAny:
+    arr = native if RANK_ACCEPTS_CHUNKED else array(native)
+    if rank_options.method == "average":
+        # Adapted from https://github.com/pandas-dev/pandas/blob/f4851e500a43125d505db64e548af0355227714b/pandas/core/arrays/arrow/array.py#L2290-L2316
+        order = options.ORDER[rank_options.descending]
+        f64 = pa.float64()
+        min = preserve_nulls(arr, pc.rank(arr, order, tiebreaker="min").cast(f64))
+        max = pc.rank(arr, order, tiebreaker="max").cast(f64)
+        ranked = pc.divide(pc.add(min, max), lit(2, f64))
+    else:
+        ranked = preserve_nulls(native, pc.rank(arr, options=rank_options.to_arrow()))
+    return chunked_array(ranked)
+
+
+def null_count(native: ChunkedOrArrayAny) -> pa.Int64Scalar:
+    return pc.count(native, mode="only_null")
+
+
+def has_nulls(native: ChunkedOrArrayAny) -> bool:
+    return bool(native.null_count)
+
+
+def preserve_nulls(
+    before: ChunkedOrArrayAny, after: ChunkedOrArrayT, /
+) -> ChunkedOrArrayT:
+    if has_nulls(before):
+        after = pc.if_else(before.is_null(), lit(None, after.type), after)
+    return after
+
+
 def is_between(
     native: ChunkedOrScalar[ScalarT],
     lower: ChunkedOrScalar[ScalarT],
@@ -327,25 +367,49 @@ def concat_str(
     return concat(*it, lit(separator, dtype), options=join)  # type: ignore[no-any-return]
 
 
+_i64 = pa.int64()
+
+
+@overload
+def int_range(
+    start: int = ...,
+    end: int | None = ...,
+    step: int = ...,
+    /,
+    *,
+    dtype: IntegerType = ...,
+    chunked: Literal[True] = ...,
+) -> ChunkedArray[IntegerScalar]: ...
+@overload
+def int_range(
+    start: int = ...,
+    end: int | None = ...,
+    step: int = ...,
+    /,
+    *,
+    dtype: IntegerType = ...,
+    chunked: Literal[False],
+) -> Array[IntegerScalar]: ...
 def int_range(
     start: int = 0,
     end: int | None = None,
     step: int = 1,
     /,
     *,
-    dtype: IntegerType = pa.int64(),  # noqa: B008
-) -> ChunkedArray[IntegerScalar]:
+    dtype: IntegerType = _i64,
+    chunked: bool = True,
+) -> ChunkedOrArray[IntegerScalar]:
     if end is None:
         end = start
         start = 0
-    if BACKEND_VERSION < (21, 0, 0):  # pragma: no cover
+    if not HAS_ARANGE:  # pragma: no cover
         import numpy as np  # ignore-banned-import
 
         arr = pa.array(np.arange(start=start, stop=end, step=step), type=dtype)
     else:
-        int_range_: Incomplete = t.cast("Incomplete", pa.arange)  # type: ignore[attr-defined]
+        int_range_: Incomplete = pa.arange  # type: ignore[attr-defined]
         arr = t.cast("ArrayAny", int_range_(start=start, stop=end, step=step)).cast(dtype)
-    return pa.chunked_array([arr])
+    return arr if not chunked else pa.chunked_array([arr])
 
 
 def date_range(
@@ -431,12 +495,6 @@ else:
 
     def concat_diagonal(tables: Iterable[pa.Table]) -> pa.Table:
         return pa.concat_tables(tables, promote=True)
-
-
-def is_series(obj: t.Any) -> TypeIs[ArrowSeries]:
-    from narwhals._plan.arrow.series import ArrowSeries
-
-    return isinstance(obj, ArrowSeries)
 
 
 def _is_into_pyarrow_schema(obj: Mapping[Any, Any]) -> TypeIs[Mapping[str, DataType]]:

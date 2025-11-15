@@ -59,7 +59,15 @@ class SupportsBroadcast(Protocol[SeriesT, LengthT]):
             for e in exprs:
                 yield e.broadcast(length)
 
-    def broadcast(self, length: LengthT, /) -> SeriesT: ...
+    def broadcast(self, length: LengthT, /) -> SeriesT:
+        """Repeat a `Scalar`, or unwrap an `Expr` into a `Series`.
+
+        For `Scalar`, this is always safe, but will be less efficient than if we can operate on (`Scalar`,` Series`).
+
+        For `Expr`, mismatched `length` will raise, but the operation is otherwise free.
+        """
+        ...
+
     @classmethod
     def from_series(cls, series: SeriesT, /) -> Self: ...
     def to_series(self) -> SeriesT: ...

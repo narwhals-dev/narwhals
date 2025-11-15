@@ -9,14 +9,15 @@ import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._arrow.utils import native_to_narwhals_dtype
-from narwhals._plan.arrow import acero, functions as fn
+from narwhals._plan.arrow import acero, functions as fn, options as pa_options
+from narwhals._plan.arrow.common import ArrowFrameSeries as FrameSeries
 from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
 from narwhals._plan.arrow.group_by import ArrowGroupBy as GroupBy, partition_by
 from narwhals._plan.arrow.series import ArrowSeries as Series
 from narwhals._plan.compliant.dataframe import EagerDataFrame
 from narwhals._plan.compliant.typing import namespace
 from narwhals._plan.expressions import NamedIR
-from narwhals._utils import Implementation, Version
+from narwhals._utils import Version
 from narwhals.schema import Schema
 
 if TYPE_CHECKING:
@@ -25,8 +26,7 @@ if TYPE_CHECKING:
     import polars as pl
     from typing_extensions import Self
 
-    from narwhals._arrow.typing import ChunkedArrayAny
-    from narwhals._plan.arrow.namespace import ArrowNamespace
+    from narwhals._plan.arrow.typing import ChunkedArrayAny
     from narwhals._plan.expressions import ExprIR, NamedIR
     from narwhals._plan.options import SortMultipleOptions
     from narwhals._plan.typing import NonCrossJoinStrategy
@@ -34,15 +34,11 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoSchema
 
 
-class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
-    implementation = Implementation.PYARROW
-    _native: pa.Table
-    _version: Version
-
-    def __narwhals_namespace__(self) -> ArrowNamespace:
-        from narwhals._plan.arrow.namespace import ArrowNamespace
-
-        return ArrowNamespace(self._version)
+class ArrowDataFrame(
+    FrameSeries["pa.Table"], EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]
+):
+    def _with_native(self, native: pa.Table) -> Self:
+        return self.from_native(native, self.version)
 
     @property
     def _group_by(self) -> type[GroupBy]:
@@ -98,13 +94,43 @@ class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
         from_named_ir = ns._expr.from_named_ir
         yield from ns._expr.align(from_named_ir(e, self) for e in nodes)
 
-    def sort(self, by: Sequence[str], options: SortMultipleOptions) -> Self:
-        native = self.native
-        indices = pc.sort_indices(native.select(list(by)), options=options.to_arrow(by))
-        return self._with_native(native.take(indices))
+    def sort(
+        self,
+        by: Sequence[str],
+        options: SortMultipleOptions | None = None,
+        *,
+        descending: bool = False,
+        nulls_last: bool = False,
+    ) -> Self:
+        opts = (
+            options.to_arrow(by)
+            if options
+            else pa_options.sort(*by, descending=descending, nulls_last=nulls_last)
+        )
+        return self.gather(pc.sort_indices(self.native.select(list(by)), options=opts))
 
     def with_row_index(self, name: str) -> Self:
         return self._with_native(self.native.add_column(0, name, fn.int_range(len(self))))
+
+    def with_row_index_by(
+        self,
+        name: str,
+        order_by: Sequence[str],
+        *,
+        descending: bool = False,
+        nulls_last: bool = False,
+    ) -> Self:
+        native = self.native
+        options = pa_options.sort(*order_by, nulls_last=nulls_last, descending=descending)
+        indices = pc.sort_indices(native, options=options)
+        int_range = fn.int_range(len(self))
+        if fn.HAS_SCATTER:
+            column = pc.scatter(int_range, indices.cast(pa.int64()))  # type: ignore[attr-defined]
+        else:
+            # NOTE: Some version in the range (`15<...<=22`)
+            # started returning the correct result via `indices.sort()`
+            column = int_range.take(pc.sort_indices(indices))
+        return self._with_native(native.add_column(0, name, column))
 
     def get_column(self, name: str) -> Series:
         chunked = self.native.column(name)

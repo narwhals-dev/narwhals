@@ -22,26 +22,6 @@ def data_indexed(data: Data) -> Data:
 
 
 @pytest.fixture
-def data_alt_1() -> Data:
-    return {"a": [1, 1, 2, 2, 2], "b": [1, 3, 3, 2, 3]}
-
-
-@pytest.fixture
-def data_alt_1_indexed(data_alt_1: Data) -> Data:
-    return data_alt_1 | {"i": [0, 1, 2, 3, 4]}
-
-
-@pytest.fixture
-def data_alt_2() -> Data:
-    return {"a": [1, 1, 2, 2, 2], "b": [1, 2, 2, 2, 1]}
-
-
-@pytest.fixture
-def data_alt_2_indexed(data_alt_2: Data) -> Data:
-    return data_alt_2 | {"i": [None, 1, 2, 3, 4]}
-
-
-@pytest.fixture
 def expected() -> Data:
     return {
         "a": [True, False, True, True, False, False],
@@ -52,14 +32,6 @@ def expected() -> Data:
 @pytest.fixture
 def expected_invert(expected: Data) -> Data:
     return {k: [not el for el in v] for k, v in expected.items()}
-
-
-# NOTE: Isn't supported on `main` for `pyarrow` + lots of other cases (non-elementary group-by agg)
-# Could be interesting to attempt here?
-XFAIL_PARTITIONED_ORDER_BY = pytest.mark.xfail(
-    reason="Not supporting `over(*partition_by, order_by=...)` yet",
-    raises=NotImplementedError,
-)
 
 
 def test_is_first_distinct(data: Data, expected: Data) -> None:
@@ -92,43 +64,106 @@ def test_is_last_distinct_order_by(data_indexed: Data, expected_invert: Data) ->
     assert_equal_data(result, expected_invert)
 
 
-@XFAIL_PARTITIONED_ORDER_BY
-def test_is_first_distinct_partitioned_order_by(
-    data_alt_1_indexed: Data,
-) -> None:  # pragma: no cover
-    expected = {"b": [True, True, True, True, False]}
+# NOTE: Everything from here onwards is not supported on `main`
+
+
+@pytest.fixture
+def grouped() -> Data:
+    return {
+        "group": ["A", "A", "B", "B", "B"],
+        "value_1": [1, 3, 3, 2, 3],
+        "value_2": [1, 3, 3, 3, 3],
+        "o_asc": [0, 1, 2, 3, 4],
+        "o_null": [0, 1, 2, None, 4],
+    }
+
+
+GROUP = "group"
+VALUE_1 = "value_1"
+VALUE_2 = "value_2"
+ORDER_ASC = "o_asc"
+ORDER_NULL = "o_null"
+
+
+# NOTE: For `pyarrow`, the result is identical to `order_by`, because the index is already in order
+def test_is_first_last_distinct_partitioned(grouped: Data) -> None:
+    expected = {
+        GROUP: ["A", "A", "B", "B", "B"],
+        VALUE_1: [1, 3, 3, 2, 3],
+        "is_first_distinct": [True, True, True, True, False],
+        "is_last_distinct": [True, True, False, True, True],
+    }
+    df = dataframe(grouped).drop(VALUE_2, ORDER_NULL)
+    value = nwp.col(VALUE_1)
     result = (
-        dataframe(data_alt_1_indexed)
-        .select(nwp.col("b").is_first_distinct().over("a", order_by="i"), "i")
-        .sort("i")
-        .drop("i")
+        df.with_columns(
+            is_first_distinct=value.is_first_distinct().over(GROUP),
+            is_last_distinct=value.is_last_distinct().over(GROUP),
+        )
+        .sort(ORDER_ASC)
+        .drop(ORDER_ASC)
     )
     assert_equal_data(result, expected)
 
 
-@XFAIL_PARTITIONED_ORDER_BY
-def test_is_last_distinct_partitioned_order_by(
-    data_alt_1_indexed: Data,
-) -> None:  # pragma: no cover
-    expected = {"b": [True, True, False, True, True]}
+# NOTE: This works the same as `polars`
+def test_is_first_last_distinct_partitioned_order_by_desc(grouped: Data) -> None:
+    expected = {
+        GROUP: ["A", "A", "B", "B", "B"],
+        VALUE_2: [1, 3, 3, 3, 3],
+        # (1) Same result
+        "first_distinct": [True, True, True, False, False],
+        "last_distinct_desc": [True, True, True, False, False],
+        # (2) Same result
+        "last_distinct": [True, True, False, False, True],
+        "first_distinct_desc": [True, True, False, False, True],
+    }
+    df = dataframe(grouped).drop(VALUE_1, ORDER_NULL)
+    value = nwp.col(VALUE_2)
+    first = value.is_first_distinct()
+    last = value.is_last_distinct()
+
     result = (
-        dataframe(data_alt_1_indexed)
-        .select(nwp.col("b").is_last_distinct().over("a", order_by="i"), "i")
-        .sort("i")
-        .drop("i")
+        df.with_columns(
+            first_distinct=first.over(GROUP, order_by=ORDER_ASC),
+            last_distinct_desc=last.over(GROUP, order_by=ORDER_ASC, descending=True),
+            last_distinct=last.over(GROUP, order_by=ORDER_ASC),
+            first_distinct_desc=first.over(GROUP, order_by=ORDER_ASC, descending=True),
+        )
+        .sort(ORDER_ASC)
+        .drop(ORDER_ASC)
     )
     assert_equal_data(result, expected)
 
 
-@XFAIL_PARTITIONED_ORDER_BY
-def test_is_last_distinct_partitioned_order_by_nulls(
-    data_alt_2_indexed: Data,
-) -> None:  # pragma: no cover
-    expected = {"b": [True, True, False, True, True]}
+# NOTE: `polars` *currently* ignores the `nulls_last` argument
+# https://github.com/pola-rs/polars/issues/24989
+def test_is_first_last_distinct_partitioned_order_by_nulls(grouped: Data) -> None:
+    expected = {
+        GROUP: ["A", "A", "B", "B", "B"],
+        VALUE_2: [1, 3, 3, 3, 3],
+        "first_distinct_nulls_first": [True, True, False, True, False],
+        "last_distinct_nulls_first": [True, True, False, False, True],
+        "first_distinct_nulls_last": [True, True, True, False, False],
+        "last_distinct_nulls_last": [True, True, False, True, False],
+    }
+    df = dataframe(grouped).drop(VALUE_1)
+    value = nwp.col(VALUE_2)
+    first = value.is_first_distinct()
+    last = value.is_last_distinct()
     result = (
-        dataframe(data_alt_2_indexed)
-        .select(nwp.col("b").is_last_distinct().over("a", order_by="i"), "i")
-        .sort("i")
-        .drop("i")
+        df.with_columns(
+            first_distinct_nulls_first=first.over(GROUP, order_by=ORDER_NULL),
+            last_distinct_nulls_first=last.over(GROUP, order_by=ORDER_NULL),
+            first_distinct_nulls_last=first.over(
+                GROUP, order_by=ORDER_NULL, nulls_last=True
+            ),
+            last_distinct_nulls_last=last.over(
+                GROUP, order_by=ORDER_NULL, nulls_last=True
+            ),
+        )
+        .sort(ORDER_ASC)
+        .drop(ORDER_ASC, ORDER_NULL)
     )
+
     assert_equal_data(result, expected)

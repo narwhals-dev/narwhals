@@ -1,19 +1,28 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from operator import methodcaller
+from typing import TYPE_CHECKING, Any, Literal, TypeVar
 
 import pytest
 
 pytest.importorskip("pyarrow")
 
+
 import narwhals as nw
 import narwhals._plan as nwp
 from narwhals._plan import selectors as ncs
+from narwhals._utils import zip_strict
 from narwhals.exceptions import InvalidOperationError
 from tests.plan.utils import assert_equal_data, dataframe, re_compile
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Mapping, Sequence
+
+    from _pytest.mark import ParameterSet
+    from typing_extensions import TypeAlias
+
     from narwhals._plan.typing import IntoExprColumn, OneOrIterable
+    from narwhals.typing import NonNestedLiteral
     from tests.conftest import Data
 
 
@@ -263,3 +272,245 @@ def test_null_count_over() -> None:
         .over(ncs.integer() - ncs.by_name("c"))
     )
     assert_equal_data(result, expected)
+
+
+@pytest.fixture
+def data_groups() -> Data:
+    return {
+        "a": ["a", "b", "d", "d", "b", "c"],
+        "b": [1, 2, 1, 5, 3, 3],
+        "c": [5, 4, 3, 6, 2, 1],
+        #     ^        ^  ^  ^ = Only value in group `"c"`
+        #     |        |  2 = Last (first -> descending) value in group `"b"`
+        #     |        6 = Last (first -> descending) value in group `None`/"d"
+        #     5 = Only value in group `"a"`
+        # NOTE: Joining back is an issue for `None` group
+        "i": [0, 1, 2, 3, 4, 5],
+    }
+
+
+@pytest.fixture
+def data_groups_nulls(data_groups: Data) -> Data:
+    a_d_nulls = [el if el != "d" else None for el in data_groups["a"]]
+    return data_groups | {"a": a_d_nulls}
+
+
+@pytest.mark.xfail(
+    reason="https://github.com/narwhals-dev/narwhals/issues/3300", raises=AssertionError
+)
+def test_over_partition_by_nulls_order_by(data_groups_nulls: Data) -> None:
+    expected = data_groups_nulls | {"result": [5, 2, 6, 6, 2, 1]}
+    df = dataframe(data_groups_nulls)
+    expr = nwp.col("c").first().over("a", order_by="i", descending=True)
+    result = df.with_columns(result=expr).sort("i")
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("expr", "result_values"),
+    [
+        (
+            nwp.col("c").first().over("a", order_by="i", descending=True),
+            [5, 2, 6, 6, 2, 1],
+        ),
+        (nwp.col("c").first().over("a", order_by="i"), [5, 4, 3, 3, 4, 1]),
+        (
+            nwp.col("c").mean().over(ncs.integer(), order_by="i"),
+            [5.0, 4.0, 3.0, 6.0, 2.0, 1.0],
+        ),
+        (
+            nwp.col("c").min().over(ncs.first(), order_by=[ncs.first(), ncs.last()]),
+            [5, 2, 3, 3, 2, 1],
+        ),
+    ],
+)
+def test_over_partition_by_order_by(
+    data_groups: Data, expr: nwp.Expr, result_values: list[Any]
+) -> None:
+    expected = data_groups | {"result": result_values}
+    df = dataframe(data_groups)
+    result = df.with_columns(result=expr).sort("i")
+    assert_equal_data(result, expected)
+
+
+def _ensure_list(arg: T | list[T]) -> list[T]:
+    return [arg] if not isinstance(arg, list) else arg
+
+
+ValueColumn: TypeAlias = Literal["v1", "v2", "v3"]
+OrderColumn: TypeAlias = Literal["o1", "o2", "o3", "o4", "o5"]
+Agg: TypeAlias = Literal["first", "last"]
+T = TypeVar("T")
+
+_AGG_EXPR_METHOD: Mapping[Agg, Callable[[nwp.Expr], nwp.Expr]] = {
+    "first": methodcaller("first"),
+    "last": methodcaller("last"),
+}
+
+
+@pytest.fixture(scope="module")
+def data_order() -> Mapping[str, list[NonNestedLiteral]]:
+    return {
+        "o1": [0, 1, 2, 3],
+        "o2": ["y", "y", "x", "a"],
+        "o3": [None, 5, 2, 5],
+        "o4": ["L", "M", "A", None],
+        "o5": [1, None, None, -1],
+        "v1": [12, 1, 5, 2],
+        "v2": ["under", "water", "unicorn", "magic"],
+        "v3": [5.9, 1.2, 22.9, 999.1],
+    }
+
+
+def order_case(
+    columns: ValueColumn | list[ValueColumn],
+    aggregation: Agg,
+    /,
+    order_by: OrderColumn | Sequence[OrderColumn],
+    *,
+    descending: bool = False,
+    nulls_last: bool = False,
+    expected: NonNestedLiteral | list[NonNestedLiteral],
+) -> ParameterSet:
+    """Generate `Expr`s and an expected dataset for ordered aggregations.
+
+    Covers both `over(order_by=...)` and `sort_by(...)` to ensure their results are identical in a
+    select context.
+    """
+    # Encoding argument combinations into column names and the shared test id
+    ordering = f"{order_by}-{'desc' if descending else 'asc'}-{'nulls_last' if nulls_last else 'nulls_first'}"
+    suffix_over = f"_{aggregation}-over-{ordering}"
+    suffix_sort_by = f"_sort_by-{ordering}-{aggregation}"
+    test_id = f"{columns}_{aggregation}-{ordering}"
+
+    # Generating what our expected dataset should be
+    names_values = list(zip_strict(_ensure_list(columns), _ensure_list(expected)))
+    result_data = {
+        f"{name}{suffix}": [expect]
+        for suffix in (suffix_over, suffix_sort_by)
+        for name, expect in names_values
+    }
+
+    # Finally, all the expressions
+    cols = nwp.col(columns)
+    agg = _AGG_EXPR_METHOD[aggregation]
+    over = (
+        cols.pipe(agg)
+        .over(order_by=order_by, descending=descending, nulls_last=nulls_last)
+        .name.suffix(suffix_over)
+    )
+    sort_by = (
+        cols.sort_by(order_by, descending=descending, nulls_last=nulls_last)
+        .pipe(agg)
+        .name.suffix(suffix_sort_by)
+    )
+    return pytest.param([over, sort_by], result_data, id=test_id)
+
+
+@pytest.mark.parametrize(
+    ("expr", "expected"),
+    [
+        order_case("v1", "first", order_by="o4", expected=2),
+        order_case("v1", "first", order_by="o4", descending=True, expected=2),
+        order_case("v1", "first", order_by="o4", nulls_last=True, expected=5),
+        order_case(
+            "v1", "first", order_by="o4", descending=True, nulls_last=True, expected=1
+        ),
+        order_case("v2", "last", order_by=["o3", "o5"], expected="magic"),
+        order_case(
+            "v2", "last", order_by=["o3", "o5"], descending=True, expected="unicorn"
+        ),
+        order_case(
+            "v2", "last", order_by=["o3", "o5"], nulls_last=True, expected="under"
+        ),
+        order_case(
+            "v2",
+            "last",
+            order_by=["o3", "o5"],
+            descending=True,
+            nulls_last=True,
+            expected="under",
+        ),
+        order_case(["v3", "v2"], "last", order_by=["o2", "o5"], expected=[5.9, "under"]),
+        order_case(
+            ["v3", "v2"],
+            "first",
+            order_by=["o2", "o5"],
+            descending=True,
+            expected=[1.2, "water"],
+        ),
+        order_case(
+            ["v3", "v2"],
+            "first",
+            order_by=["o2", "o5"],
+            nulls_last=True,
+            expected=[999.1, "magic"],
+        ),
+        order_case(
+            ["v3", "v2"],
+            "last",
+            order_by=["o5", "o2"],
+            nulls_last=True,
+            descending=True,
+            expected=[22.9, "unicorn"],
+        ),
+    ],
+)
+def test_over_order_by_sort_by_asc_desc_nulls_first_last(
+    expr: OneOrIterable[nwp.Expr],
+    expected: Data,
+    data_order: Mapping[str, list[NonNestedLiteral]],
+) -> None:
+    result = dataframe(data_order).select(expr)
+    assert_equal_data(result, expected)
+
+
+def test_over_partition_by_order_by_asc_desc_nulls_first_last() -> None:
+    # https://github.com/pola-rs/polars/issues/24989
+    data = {"a": [1, 1, 2], "b": [4, 5, 6], "c": [None, 7, 8], "i": [1, None, 2]}
+    b_first = nwp.col("b").first()
+    result = (
+        dataframe(data)
+        .with_columns(
+            asc_nulls_first=b_first.over(
+                "a", order_by="i", descending=False, nulls_last=False
+            ),
+            asc_nulls_last=b_first.over(
+                "a", order_by="i", descending=False, nulls_last=True
+            ),
+            desc_nulls_first=b_first.over(
+                "a", order_by="i", descending=True, nulls_last=False
+            ),
+            desc_nulls_last=b_first.over(
+                "a", order_by="i", descending=True, nulls_last=True
+            ),
+        )
+        .sort("i")
+    )
+    expected = {
+        "a": [1, 1, 2],
+        "b": [5, 4, 6],
+        "c": [7.0, None, 8.0],
+        "i": [None, 1, 2],
+        "asc_nulls_first": [5, 5, 6],
+        "asc_nulls_last": [4, 4, 6],
+        "desc_nulls_first": [4, 4, 6],
+        "desc_nulls_last": [5, 5, 6],
+    }
+    assert_equal_data(result, expected)
+
+
+# NOTE: This can be possible, but missed coverage for it
+@pytest.mark.xfail(
+    reason="TODO: Support non-selecting expressions in `over(*partition_by)`",
+    raises=NotImplementedError,
+)
+def test_over_partition_by_projection() -> None:
+    data = {"a": [1, 1, 2], "b": [4, 5, 6], "d": [10, -1, -9]}
+    expected = {"a": [1, 1, 2], "b": [4, 5, 6], "d": [10, -1, -9], "c": [4.0, 5.5, 5.5]}
+    result = (
+        dataframe(data)
+        .with_columns(nwp.col("b").mean().alias("c").over(nwp.col("b") - nwp.col("a")))
+        .sort("b")
+    )
+    assert_equal_data(result, expected)  # pragma: no cover

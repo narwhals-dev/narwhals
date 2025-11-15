@@ -45,6 +45,7 @@ from narwhals._plan.exceptions import (
     binary_expr_multi_output_error,
     column_not_found_error,
     duplicate_error,
+    selectors_not_found_error,
 )
 from narwhals._plan.expressions import (
     Alias,
@@ -99,7 +100,12 @@ def prepare_projection(
 
 
 def expand_selector_irs_names(
-    selectors: Sequence[SelectorIR], /, ignored: Ignored = (), *, schema: IntoFrozenSchema
+    selectors: Sequence[SelectorIR],
+    /,
+    ignored: Ignored = (),
+    *,
+    schema: IntoFrozenSchema,
+    require_any: bool = False,
 ) -> OutputNames:
     """Expand selector-only input into the column names that match.
 
@@ -110,11 +116,15 @@ def expand_selector_irs_names(
         selectors: IRs that **only** contain subclasses of `SelectorIR`.
         ignored: Names of `group_by` columns.
         schema: Scope to expand selectors in.
+        require_any: Raise if the entire expansion selected zero columns.
     """
-    names = tuple(Expander(schema, ignored).iter_expand_selector_names(selectors))
-    if len(names) != len(set(names)):
-        # NOTE: Can't easily reuse `duplicate_error`, falling back to main for now
-        check_column_names_are_unique(names)
+    expander = Expander(schema, ignored)
+    if names := tuple(expander.iter_expand_selector_names(selectors)):
+        if len(names) != len(set(names)):
+            # NOTE: Can't easily reuse `duplicate_error`, falling back to main for now
+            check_column_names_are_unique(names)
+    elif require_any:
+        raise selectors_not_found_error(selectors, expander.schema)
     return names
 
 

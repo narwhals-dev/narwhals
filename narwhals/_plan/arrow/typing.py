@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# ruff: noqa: PLC0414
 from collections.abc import Callable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Literal, Protocol, overload
 
@@ -15,8 +16,8 @@ if TYPE_CHECKING:
         Int16Type,
         Int32Type,
         Int64Type,
-        LargeStringType as LargeStringType,  # noqa: PLC0414
-        StringType as StringType,  # noqa: PLC0414
+        LargeStringType as LargeStringType,
+        StringType as StringType,
         Uint8Type,
         Uint16Type,
         Uint32Type,
@@ -25,6 +26,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals._native import NativeDataFrame, NativeSeries
+    from narwhals.typing import SizedMultiIndexSelector as _SizedMultiIndexSelector
 
     StringScalar: TypeAlias = "Scalar[StringType | LargeStringType]"
     IntegerType: TypeAlias = "Int8Type | Int16Type | Int32Type | Int64Type | Uint8Type | Uint16Type | Uint32Type | Uint64Type"
@@ -141,6 +143,11 @@ ChunkedArrayAny: TypeAlias = "ChunkedArray[Any]"
 ChunkedOrScalarAny: TypeAlias = "ChunkedOrScalar[ScalarAny]"
 ChunkedOrArrayAny: TypeAlias = "ChunkedOrArray[ScalarAny]"
 ChunkedOrArrayT = TypeVar("ChunkedOrArrayT", ChunkedArrayAny, ArrayAny)
+ChunkedOrArrayInt: TypeAlias = "ChunkedOrArray[pc.IntegerScalar]"
+"""Narrowed to the native types supported in `Indices`."""
+
+SizedMultiIndexSelector: TypeAlias = "_SizedMultiIndexSelector[ChunkedOrArrayInt]"
+
 Arrow: TypeAlias = "ChunkedOrScalar[ScalarT_co] | Array[ScalarT_co]"
 ArrowAny: TypeAlias = "ChunkedOrScalarAny | ArrayAny"
 NativeScalar: TypeAlias = ScalarAny
@@ -153,3 +160,9 @@ JoinTypeSubset: TypeAlias = Literal[
     "inner", "left outer", "full outer", "left anti", "left semi"
 ]
 """Only the `pyarrow` `JoinType`'s we use in narwhals"""
+
+RankMethodSingle: TypeAlias = Literal["min", "max", "dense", "ordinal"]
+"""Subset of `narwhals` `RankMethod` that is supported directly in `pyarrow`.
+
+`"average"` requires calculating both `"min"` and `"max"`.
+"""
