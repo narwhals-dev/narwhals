@@ -71,79 +71,89 @@ def test_is_last_distinct_order_by(data_indexed: Data, expected_invert: Data) ->
 def grouped() -> Data:
     return {
         "group": ["A", "A", "B", "B", "B"],
-        "value": [1, 3, 3, 2, 3],
+        "value_1": [1, 3, 3, 2, 3],
+        "value_2": [1, 3, 3, 3, 3],
         "o_asc": [0, 1, 2, 3, 4],
+        "o_null": [0, 1, 2, None, 4],
     }
+
+
+GROUP = "group"
+VALUE_1 = "value_1"
+VALUE_2 = "value_2"
+ORDER_ASC = "o_asc"
+ORDER_NULL = "o_null"
 
 
 # NOTE: For `pyarrow`, the result is identical to `order_by`, because the index is already in order
 def test_is_first_last_distinct_partitioned(grouped: Data) -> None:
     expected = {
-        "group": ["A", "A", "B", "B", "B"],
-        "value": [1, 3, 3, 2, 3],
+        GROUP: ["A", "A", "B", "B", "B"],
+        VALUE_1: [1, 3, 3, 2, 3],
         "is_first_distinct": [True, True, True, True, False],
         "is_last_distinct": [True, True, False, True, True],
     }
-
+    df = dataframe(grouped).drop(VALUE_2, ORDER_NULL)
+    value = nwp.col(VALUE_1)
     result = (
-        dataframe(grouped)
-        .with_columns(
-            is_first_distinct=nwp.col("value").is_first_distinct().over("group"),
-            is_last_distinct=nwp.col("value").is_last_distinct().over("group"),
+        df.with_columns(
+            is_first_distinct=value.is_first_distinct().over(GROUP),
+            is_last_distinct=value.is_last_distinct().over(GROUP),
         )
-        .sort("o_asc")
-        .drop("o_asc")
+        .sort(ORDER_ASC)
+        .drop(ORDER_ASC)
     )
     assert_equal_data(result, expected)
 
 
+# NOTE: This works the same as `polars`
 def test_is_first_last_distinct_partitioned_order_by_desc(grouped: Data) -> None:
     expected = {
-        "group": ["A", "A", "B", "B", "B"],
-        "value": [1, 3, 3, 2, 3],
-        "is_first_distinct_desc": [True, True, False, True, True],
-        "is_last_distinct_desc": [True, True, True, True, False],
+        GROUP: ["A", "A", "B", "B", "B"],
+        VALUE_2: [1, 3, 3, 3, 3],
+        # (1) Same result
+        "first_distinct": [True, True, True, False, False],
+        "last_distinct_desc": [True, True, True, False, False],
+        # (2) Same result
+        "last_distinct": [True, True, False, False, True],
+        "first_distinct_desc": [True, True, False, False, True],
     }
-    value = nwp.col("value")
+    df = dataframe(grouped).drop(VALUE_1, ORDER_NULL)
+    value = nwp.col(VALUE_2)
+    first = value.is_first_distinct()
+    last = value.is_last_distinct()
+
     result = (
-        dataframe(grouped)
-        .with_columns(
-            is_first_distinct_desc=value.is_first_distinct().over(
-                "group", order_by="o_asc", descending=True
-            ),
-            is_last_distinct_desc=value.is_last_distinct().over(
-                "group", order_by="o_asc", descending=True
-            ),
+        df.with_columns(
+            first_distinct=first.over(GROUP, order_by=ORDER_ASC),
+            last_distinct_desc=last.over(GROUP, order_by=ORDER_ASC, descending=True),
+            last_distinct=last.over(GROUP, order_by=ORDER_ASC),
+            first_distinct_desc=first.over(GROUP, order_by=ORDER_ASC, descending=True),
         )
-        .sort("o_asc")
-        .drop("o_asc")
+        .sort(ORDER_ASC)
+        .drop(ORDER_ASC)
     )
     assert_equal_data(result, expected)
 
 
+# NOTE: `polars` *currently* ignores the `nulls_last` argument
+# https://github.com/pola-rs/polars/issues/24989
 @pytest.mark.xfail(
     reason="TODO: fix `is_last_distinct` is giving the inverse of the nulls I asked for!",
     raises=AssertionError,
 )
-def test_is_first_last_distinct_partitioned_order_by_nulls() -> None:
-    data_ = {
-        "group": ["A", "A", "B", "B", "B"],
-        "value": [1, 3, 3, 3, 3],
-        "o_asc": [0, 1, 2, 3, 4],
-        "o_null": [0, 1, 2, None, 4],
-    }
-    df = dataframe(data_)
+def test_is_first_last_distinct_partitioned_order_by_nulls(grouped: Data) -> None:
     expected = {
-        "group": ["A", "A", "B", "B", "B"],
-        "value": [1, 3, 3, 3, 3],
+        GROUP: ["A", "A", "B", "B", "B"],
+        VALUE_2: [1, 3, 3, 3, 3],
         "first_distinct_nulls_first": [True, True, False, True, False],
         "first_distinct_nulls_last": [True, True, True, False, False],
         "last_distinct_nulls_first": [True, True, False, False, True],
         "last_distinct_nulls_last": [True, True, False, True, False],
     }
     GOT = {  # noqa: F841, N806
-        "group": ["A", "A", "B", "B", "B"],
-        "value": [1, 3, 3, 3, 3],
+        GROUP: ["A", "A", "B", "B", "B"],
+        VALUE_2: [1, 3, 3, 3, 3],
         "first_distinct_nulls_first": [True, True, False, True, False],  # +
         "first_distinct_nulls_last": [True, True, True, False, False],  # +
         # I have the correct results but they're the wrong way round for `last_distinct`` 🤦‍♂️🤦‍♂️🤦‍♂️
@@ -152,22 +162,23 @@ def test_is_first_last_distinct_partitioned_order_by_nulls() -> None:
         "last_distinct_nulls_last": [True, True, False, False, True],  # -
         #                                               ^^^^^  ^^^^ (inverted?)
     }
-    value = nwp.col("value")
+    df = dataframe(grouped).drop(VALUE_1)
+    value = nwp.col(VALUE_2)
     first = value.is_first_distinct()
     last = value.is_last_distinct()
     result = (
         df.with_columns(
-            first.over("group", order_by="o_null").alias("first_distinct_nulls_first"),
-            first.over("group", order_by="o_null", nulls_last=True).alias(
-                "first_distinct_nulls_last"
+            first_distinct_nulls_first=first.over(GROUP, order_by=ORDER_NULL),
+            first_distinct_nulls_last=first.over(
+                GROUP, order_by=ORDER_NULL, nulls_last=True
             ),
-            last.over("group", order_by="o_null").alias("last_distinct_nulls_first"),
-            last.over("group", order_by="o_null", nulls_last=True).alias(
-                "last_distinct_nulls_last"
+            last_distinct_nulls_first=last.over(GROUP, order_by=ORDER_NULL),
+            last_distinct_nulls_last=last.over(
+                GROUP, order_by=ORDER_NULL, nulls_last=True
             ),
         )
-        .sort("o_asc")
-        .drop("o_asc", "o_null")
+        .sort(ORDER_ASC)
+        .drop(ORDER_ASC, ORDER_NULL)
     )
 
     assert_equal_data(result, expected)
