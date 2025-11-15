@@ -527,6 +527,8 @@ def test_over_with_nulls_in_partition(
     expected_max: list[int],
 ) -> None:
     # https://github.com/narwhals-dev/narwhals/issues/3300
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
     context = (
         pytest.raises(NotImplementedError, match="`over` with `partition_by`")
         if "pyarrow_table" in str(constructor) and len(partition) > 1
