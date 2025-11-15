@@ -87,5 +87,4 @@ class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayA
         return self._with_native(pc.replace_with_mask(self.native, mask, replacements))
 
     def is_in(self, other: Self) -> Self:
-        msg = "ArrowSeries.is_in"
-        raise NotImplementedError(msg)
+        return self._with_native(fn.is_in(self.native, other.native))

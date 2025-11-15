@@ -14,6 +14,10 @@ if TYPE_CHECKING:
 
     from tests.conftest import Data
 
+pytest.importorskip("pyarrow")
+
+import pyarrow as pa
+
 
 @pytest.fixture
 def data() -> Data:
@@ -41,16 +45,23 @@ def test_expr_is_in(
     assert_equal_data(result, expected)
 
 
-@pytest.mark.xfail(reason="Not implemented `Series.is_in`", raises=NotImplementedError)
 @pytest.mark.parametrize(
-    ("column", "other", "expected"), [("a", [4, 5], [False, True, False, True])]
+    ("column", "other", "expected"),
+    [
+        ("a", [4, 5], [False, True, False, True]),
+        ("a", [], [False, False, False, False]),
+        ("b", deque([0, 1]), [True, True, False, True]),
+        ("c", ("howdy", None), [True, False, False, True]),
+        ("b", series([2]), [False, False, True, False]),
+        ("c", pa.array(["hi", "hello"]), [False, True, True, False]),
+    ],
 )
 def test_ser_is_in(
     data: Data,
     column: Literal["a", "b", "c"],
     other: Iterable[Any],
     expected: Sequence[Any],
-) -> None:  # pragma: no cover
+) -> None:
     result = series(data[column]).alias(column).is_in(other)
     assert_equal_series(result, expected, column)
 
