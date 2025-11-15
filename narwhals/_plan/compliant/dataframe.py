@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, overload
 
 from narwhals._plan.compliant.group_by import Grouped
@@ -14,7 +15,7 @@ from narwhals._plan.typing import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Mapping, Sequence
+    from collections.abc import Iterator, Mapping, Sequence
 
     import polars as pl
     from typing_extensions import Self, TypeAlias
@@ -110,6 +111,17 @@ class CompliantDataFrame(
     ) -> Self:
         """Compliant-level `group_by(by).agg(agg)`, allows `Expr`."""
         return self._grouper.by(by).agg(aggs).resolve(self).evaluate(self)
+
+    def group_by_agg_irs(
+        self, by: OneOrIterable[ir.ExprIR], aggs: OneOrIterable[ir.ExprIR], /
+    ) -> Self:
+        """Compliant-level `group_by(by).agg(agg)`, allows `ExprIR`.
+
+        Useful for rewriting `over(*partition_by)`.
+        """
+        by = (by,) if not isinstance(by, Iterable) else by
+        aggs = (aggs,) if not isinstance(aggs, Iterable) else aggs
+        return self._grouper.by_irs(*by).agg_irs(*aggs).resolve(self).evaluate(self)
 
     def group_by_names(self, names: Seq[str], /) -> DataFrameGroupBy[Self]:
         """Compliant-level `group_by`, allowing only `str` keys."""

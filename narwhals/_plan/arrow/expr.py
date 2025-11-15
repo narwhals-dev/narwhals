@@ -425,7 +425,7 @@ class ArrowExpr(  # type: ignore[misc]
         order_by = tuple(node.order_by_names())
         descending = node.sort_options.descending
         nulls_last = node.sort_options.nulls_last
-        if node.partition_by:
+        if partition_by := node.partition_by:
             idx_name = temp.column_name(frame)
             if is_function_expr(node.expr) and isinstance(
                 node.expr.function, (IsFirstDistinct, IsLastDistinct)
@@ -433,16 +433,11 @@ class ArrowExpr(  # type: ignore[misc]
                 frame = frame.with_row_index_by(
                     idx_name, order_by, descending=descending, nulls_last=nulls_last
                 )
-                expr_ir = fn.IS_FIRST_LAST_DISTINCT[type(node.expr.function)](idx_name)
                 previous = node.expr.input[0].dispatch(self, frame, name)
                 df = frame._with_columns([previous])
-                distinct_index = (
-                    df._grouper.by_irs(ir.col(name), *node.partition_by)
-                    .agg_irs(expr_ir)
-                    .resolve(df)
-                    .evaluate(df)
-                    .get_column(idx_name)
-                )
+                by = (ir.col(name), *partition_by)
+                agg = fn.IS_FIRST_LAST_DISTINCT[type(node.expr.function)](idx_name)
+                distinct_index = df.group_by_agg_irs(by, agg).get_column(idx_name)
                 return self.from_series(df.to_series().alias(name).is_in(distinct_index))
             frame_indexed = frame.with_row_index_by(
                 idx_name, order_by, nulls_last=nulls_last
@@ -497,16 +492,11 @@ class ArrowExpr(  # type: ignore[misc]
         partition_by: Seq[ir.ExprIR],
     ) -> Self:
         idx_name = temp.column_name([name])
-        expr_ir = fn.IS_FIRST_LAST_DISTINCT[type(node.function)](idx_name)
         previous = node.input[0].dispatch(self, frame, name)
         df = frame._with_columns([previous]).with_row_index(idx_name)
-        distinct_index = (
-            df._grouper.by_irs(ir.col(name), *partition_by)
-            .agg_irs(expr_ir)
-            .resolve(df)
-            .evaluate(df)
-            .get_column(idx_name)
-        )
+        by = (ir.col(name), *partition_by)
+        agg = fn.IS_FIRST_LAST_DISTINCT[type(node.function)](idx_name)
+        distinct_index = df.group_by_agg_irs(by, agg).get_column(idx_name)
         return self.from_series(df.to_series().alias(name).is_in(distinct_index))
 
     def _is_first_last_distinct(
