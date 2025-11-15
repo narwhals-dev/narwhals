@@ -141,26 +141,32 @@ class Series(Generic[NativeSeriesT_co]):
         msg = f"Expected {qualified_type_name(self._compliant)!r}, got {qualified_type_name(compliant)!r}"
         raise NotImplementedError(msg)
 
+    def _parse_into_compliant(
+        self, other: Series[Any] | Iterable[Any], /
+    ) -> CompliantSeries[NativeSeriesT_co]:
+        if is_series(other):
+            return self._unwrap_compliant(other)
+        return self._compliant.from_iterable(other, version=self.version)
+
     def scatter(
         self,
         indices: Self | OneOrIterable[int],
         values: Self | OneOrIterable[NonNestedLiteral],
     ) -> Self:
-        series = self.from_iterable
         if not isinstance(indices, Iterable):
             indices = [indices]
-        backend = self.implementation
-        indices = series(indices, backend=backend) if not is_series(indices) else indices
-        if indices.is_empty():
+        indices_ = self._parse_into_compliant(indices)
+        if indices_.is_empty():
             return self
-        if not is_series(values):
-            if not isinstance(values, Iterable) or isinstance(values, str):
-                values = [values]
-            values = series(values, backend=backend)
-        result = self._compliant.scatter(
-            self._unwrap_compliant(indices), self._unwrap_compliant(values)
-        )
+        if not is_series(values) and (
+            not isinstance(values, Iterable) or isinstance(values, str)
+        ):
+            values = [values]
+        result = self._compliant.scatter(indices_, self._parse_into_compliant(values))
         return type(self)(result)
+
+    def is_in(self, other: Iterable[Any]) -> Self:
+        return type(self)(self._compliant.is_in(self._parse_into_compliant(other)))
 
 
 class SeriesV1(Series[NativeSeriesT_co]):
