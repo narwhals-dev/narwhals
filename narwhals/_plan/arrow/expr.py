@@ -438,7 +438,7 @@ class ArrowExpr(  # type: ignore[misc]
                 df = frame._with_columns([previous])
                 distinct_index = (
                     df._grouper.by_irs(ir.col(name), *node.partition_by)
-                    .agg_irs(expr_ir.alias(idx_name))
+                    .agg_irs(expr_ir)
                     .resolve(df)
                     .evaluate(df)
                     .get_column(idx_name)
@@ -505,7 +505,7 @@ class ArrowExpr(  # type: ignore[misc]
         df = frame._with_columns([previous]).with_row_index(idx_name)
         distinct_index = (
             df._grouper.by_irs(ir.col(name), *partition_by)
-            .agg_irs(expr_ir.alias(idx_name))
+            .agg_irs(expr_ir)
             .resolve(df)
             .evaluate(df)
             .get_column(idx_name)
