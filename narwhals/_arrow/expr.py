@@ -141,21 +141,50 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
                     )
                     raise NotImplementedError(msg)
 
-                tmp = df.group_by(partition_by, drop_null_keys=False).agg(self)
-                if any(
+                if not any(
                     ca.null_count > 0
-                    for ca in tmp.simple_select(*partition_by).native.columns
+                    for ca in df.simple_select(*partition_by).native.columns
                 ):
-                    msg = "`over` with `partition_by` which contains null values is not yet supported for PyArrow"
-                    raise NotImplementedError(msg)
-                tmp = df.simple_select(*partition_by).join(
-                    tmp,
-                    how="left",
-                    left_on=partition_by,
-                    right_on=partition_by,
-                    suffix="_right",
-                )
-                return [tmp.get_column(alias) for alias in aliases]
+                    tmp = df.group_by(partition_by, drop_null_keys=False).agg(self)
+                    tmp = df.simple_select(*partition_by).join(
+                        tmp,
+                        how="left",
+                        left_on=partition_by,
+                        right_on=partition_by,
+                        suffix="_right",
+                    )
+                    return [tmp.get_column(alias) for alias in aliases]
+                if len(partition_by) == 1:
+                    plx = self.__narwhals_namespace__()
+                    table = df.native
+                    tmp_name = generate_temporary_column_name(8, df.columns)
+                    dict_array = (
+                        table.column(partition_by[0])
+                        .dictionary_encode("encode")
+                        .combine_chunks()
+                    )
+                    indices = dict_array.indices  # type: ignore[attr-defined]
+                    indices_expr = plx._expr._from_series(
+                        plx._series.from_native(indices, context=plx)
+                    )
+                    table_encoded = df.with_columns(indices_expr.alias(tmp_name))
+                    windowed = table_encoded.group_by(
+                        [tmp_name], drop_null_keys=False
+                    ).agg(self)
+                    ret = (
+                        table_encoded.simple_select(tmp_name)
+                        .join(
+                            windowed,
+                            left_on=[tmp_name],
+                            right_on=[tmp_name],
+                            how="inner",
+                            suffix="_right",
+                        )
+                        .drop([tmp_name], strict=False)
+                    )
+                    return [ret.get_column(alias) for alias in aliases]
+                msg = "`over` with `partition_by` and multiple columns which contains null values is not yet supported for PyArrow"
+                raise NotImplementedError(msg)
 
         return self.__class__(
             func,
