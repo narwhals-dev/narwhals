@@ -411,6 +411,9 @@ class ArrowExpr(  # type: ignore[misc]
             .agg_irs(node.expr.alias(name))
             .resolve(frame)
         )
+        if resolved.requires_projection():
+            msg = f"TODO: Support non-selecting expressions in `over(*partition_by)`, got: {node.partition_by!r}\n\n{node!r}"
+            raise NotImplementedError(msg)
         by_names = resolved.key_names
         windowed = resolved.evaluate(frame if reordered is None else reordered)
         return self.from_series(

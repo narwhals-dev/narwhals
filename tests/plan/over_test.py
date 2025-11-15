@@ -498,3 +498,19 @@ def test_over_partition_by_order_by_asc_desc_nulls_first_last() -> None:
         "desc_nulls_last": [5, 5, 6],
     }
     assert_equal_data(result, expected)
+
+
+# NOTE: This can be possible, but missed coverage for it
+@pytest.mark.xfail(
+    reason="TODO: Support non-selecting expressions in `over(*partition_by)`",
+    raises=NotImplementedError,
+)
+def test_over_partition_by_projection() -> None:
+    data = {"a": [1, 1, 2], "b": [4, 5, 6], "d": [10, -1, -9]}
+    expected = {"a": [1, 1, 2], "b": [4, 5, 6], "d": [10, -1, -9], "c": [4.0, 5.5, 5.5]}
+    result = (
+        dataframe(data)
+        .with_columns(nwp.col("b").mean().alias("c").over(nwp.col("b") - nwp.col("a")))
+        .sort("b")
+    )
+    assert_equal_data(result, expected)  # pragma: no cover
