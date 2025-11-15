@@ -6,6 +6,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._arrow.series import ArrowSeries
+from narwhals._arrow.utils import create_composite_key_column
 from narwhals._compliant import EagerExpr
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._utils import (
@@ -141,20 +142,41 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
                     )
                     raise NotImplementedError(msg)
 
-                tmp = df.group_by(partition_by, drop_null_keys=False).agg(self)
                 if any(
                     ca.null_count > 0
-                    for ca in tmp.simple_select(*partition_by).native.columns
+                    for ca in df.simple_select(*partition_by).native.columns
                 ):
-                    msg = "`over` with `partition_by` which contains null values is not yet supported for PyArrow"
-                    raise NotImplementedError(msg)
-                tmp = df.simple_select(*partition_by).join(
-                    tmp,
-                    how="left",
-                    left_on=partition_by,
-                    right_on=partition_by,
-                    suffix="_right",
-                )
+                    from narwhals._arrow.dataframe import ArrowDataFrame
+
+                    col_token = generate_temporary_column_name(
+                        n_bytes=8, columns=df.columns
+                    )
+                    table, _ = create_composite_key_column(
+                        table=df.native,
+                        composite_columns=partition_by,
+                        col_token=col_token,
+                    )
+                    tmp = ArrowDataFrame.from_native(table, context=self)
+                    tmp = (
+                        tmp.simple_select(col_token, *partition_by)
+                        .join(
+                            tmp.group_by([col_token], drop_null_keys=False).agg(self),
+                            how="left",
+                            left_on=col_token,
+                            right_on=col_token,
+                            suffix="_right",
+                        )
+                        .drop([col_token], strict=False)
+                    )
+                else:
+                    tmp = df.group_by(partition_by, drop_null_keys=False).agg(self)
+                    tmp = df.simple_select(*partition_by).join(
+                        tmp,
+                        how="left",
+                        left_on=partition_by,
+                        right_on=partition_by,
+                        suffix="_right",
+                    )
                 return [tmp.get_column(alias) for alias in aliases]
 
         return self.__class__(

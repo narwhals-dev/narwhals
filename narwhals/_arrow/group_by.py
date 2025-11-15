@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 import pyarrow as pa
 import pyarrow.compute as pc
 
-from narwhals._arrow.utils import cast_to_comparable_string_types, extract_py_scalar
+from narwhals._arrow.utils import create_composite_key_column, extract_py_scalar
 from narwhals._compliant import EagerGroupBy
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._utils import generate_temporary_column_name, requires
@@ -19,7 +19,6 @@ if TYPE_CHECKING:
     from narwhals._arrow.typing import (  # type: ignore[attr-defined]
         AggregateOptions,
         Aggregation,
-        Incomplete,
     )
     from narwhals._compliant.typing import NarwhalsAggregation
     from narwhals.typing import UniqueKeepStrategy
@@ -180,19 +179,9 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
         col_token = generate_temporary_column_name(
             n_bytes=8, columns=self.compliant.columns
         )
-        null_token: str = "__null_token_value__"  # noqa: S105
-
-        table = self.compliant.native
-        it, separator_scalar = cast_to_comparable_string_types(
-            *(table[key] for key in self._keys), separator=""
+        table, key_values = create_composite_key_column(
+            table=self.compliant.native, composite_columns=self._keys, col_token=col_token
         )
-        # NOTE: stubs indicate `separator` must also be a `ChunkedArray`
-        # Reality: `str` is fine
-        concat_str: Incomplete = pc.binary_join_element_wise
-        key_values = concat_str(
-            *it, separator_scalar, null_handling="replace", null_replacement=null_token
-        )
-        table = table.add_column(i=0, field_=col_token, column=key_values)
 
         for v in pc.unique(key_values):
             t = self.compliant._with_native(
