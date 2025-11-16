@@ -9,7 +9,7 @@ from narwhals._plan.arrow import functions as fn, options
 from narwhals._plan.arrow.common import ArrowFrameSeries as FrameSeries
 from narwhals._plan.compliant.series import CompliantSeries
 from narwhals._plan.compliant.typing import namespace
-from narwhals._utils import Version
+from narwhals._utils import Version, generate_repr
 from narwhals.dependencies import is_numpy_array_1d
 
 if TYPE_CHECKING:
@@ -26,6 +26,9 @@ if TYPE_CHECKING:
 
 class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayAny"]):
     _name: str
+
+    def __repr__(self) -> str:
+        return generate_repr(f"nw.{type(self).__name__}", self.native.__repr__())
 
     def _with_native(self, native: ChunkedArrayAny) -> Self:
         return self.from_native(native, self.name, version=self.version)

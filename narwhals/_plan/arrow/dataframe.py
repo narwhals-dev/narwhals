@@ -17,7 +17,7 @@ from narwhals._plan.arrow.series import ArrowSeries as Series
 from narwhals._plan.compliant.dataframe import EagerDataFrame
 from narwhals._plan.compliant.typing import namespace
 from narwhals._plan.expressions import NamedIR
-from narwhals._utils import Version
+from narwhals._utils import Version, generate_repr
 from narwhals.schema import Schema
 
 if TYPE_CHECKING:
@@ -37,6 +37,9 @@ if TYPE_CHECKING:
 class ArrowDataFrame(
     FrameSeries["pa.Table"], EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]
 ):
+    def __repr__(self) -> str:
+        return generate_repr(f"nw.{type(self).__name__}", self.native.__repr__())
+
     def _with_native(self, native: pa.Table) -> Self:
         return self.from_native(native, self.version)
 
