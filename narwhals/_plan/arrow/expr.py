@@ -10,7 +10,12 @@ from narwhals._plan import expressions as ir
 from narwhals._plan._guards import is_function_expr
 from narwhals._plan.arrow import functions as fn, options as pa_options
 from narwhals._plan.arrow.series import ArrowSeries as Series
-from narwhals._plan.arrow.typing import ChunkedOrScalarAny, NativeScalar, StoresNativeT_co
+from narwhals._plan.arrow.typing import (
+    ChunkedOrScalarAny,
+    NativeScalar,
+    SizedMultiIndexSelector,
+    StoresNativeT_co,
+)
 from narwhals._plan.common import temp
 from narwhals._plan.compliant.column import ExprDispatch
 from narwhals._plan.compliant.expr import EagerExpr
@@ -88,6 +93,15 @@ BACKEND_VERSION = Implementation.PYARROW._backend_version()
 
 def is_seq_column(exprs: Seq[ir.ExprIR]) -> TypeIs[Seq[ir.Column]]:
     return all(isinstance(e, ir.Column) for e in exprs)
+
+
+# confusing name
+def _is_first_last_distinct(
+    expr: ir.ExprIR,
+) -> TypeIs[FExpr[IsFirstDistinct | IsLastDistinct]]:
+    return is_function_expr(expr) and isinstance(
+        expr.function, (IsFirstDistinct, IsLastDistinct)
+    )
 
 
 class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], Protocol):
@@ -403,15 +417,12 @@ class ArrowExpr(  # type: ignore[misc]
         frame: Frame,
         name: str,
         *,
-        reordered: Frame | None = None,
+        sort_indices: SizedMultiIndexSelector | None = None,
     ) -> Self:
-        if is_function_expr(node.expr) and isinstance(
-            node.expr.function, (IsFirstDistinct, IsLastDistinct)
-        ):
+        if _is_first_last_distinct(node.expr):
             return self._is_first_last_distinct_partition_by(
                 node.expr, frame, name, node.partition_by
             )
-        # TODO @dangotbanned: Can the alias in `agg_irs` be avoided?
         resolved = (
             frame._grouper.by_irs(*node.partition_by)
             .agg_irs(node.expr.alias(name))
@@ -424,13 +435,16 @@ class ArrowExpr(  # type: ignore[misc]
         # 2. And then support extending on the pyarrow side to handle the null join
         #  - Also need to be able to pass temp column names down to `GroupByResolver.from_grouper`
         #  - This would remove the need for reusing the original frame, to elide them from `prepare_projection`
-        evaluate_frame = frame if reordered is None else reordered
         if resolved.requires_projection():
-            group_by = evaluate_frame.group_by_resolver(resolved)
-            return self.from_series(group_by.agg_over(resolved.aggs).get_column(name))
-        # NOTE: ordering doesn't work yet for projected partitions
+            group_by = frame.group_by_resolver(resolved)
+            window_aggregated = group_by.agg_over(resolved.aggs, sort_indices)
+            return self.from_series(window_aggregated.get_column(name))
+
         by_names = resolved.key_names
-        windowed = resolved.evaluate(evaluate_frame)
+        if sort_indices is not None:
+            windowed = resolved.evaluate(frame.gather(sort_indices))
+        else:
+            windowed = resolved.evaluate(frame)
         return self.from_series(
             frame.select_names(*by_names)
             .join(windowed, how="left", left_on=by_names)
@@ -444,10 +458,8 @@ class ArrowExpr(  # type: ignore[misc]
         descending = node.sort_options.descending
         nulls_last = node.sort_options.nulls_last
         if partition_by := node.partition_by:
-            idx_name = temp.column_name(frame)
-            if is_function_expr(node.expr) and isinstance(
-                node.expr.function, (IsFirstDistinct, IsLastDistinct)
-            ):
+            if _is_first_last_distinct(node.expr):
+                idx_name = temp.column_name(frame)
                 frame = frame.with_row_index_by(
                     idx_name, order_by, descending=descending, nulls_last=nulls_last
                 )
@@ -457,11 +469,11 @@ class ArrowExpr(  # type: ignore[misc]
                 agg = fn.IS_FIRST_LAST_DISTINCT[type(node.expr.function)](idx_name)
                 distinct_index = df.group_by_agg_irs(by, agg).get_column(idx_name)
                 return self.from_series(df.to_series().alias(name).is_in(distinct_index))
-            frame_indexed = frame.with_row_index_by(
-                idx_name, order_by, nulls_last=nulls_last
+            opts = pa_options.sort(
+                *order_by, descending=descending, nulls_last=nulls_last
             )
-            reordered = frame_indexed.sort((idx_name,), descending=descending)
-            return self.over(node, frame, name, reordered=reordered)
+            indices = pc.sort_indices(frame.native, options=opts)
+            return self.over(node, frame, name, sort_indices=indices)
         opts = pa_options.sort(*order_by, descending=descending, nulls_last=nulls_last)
         indices = pc.sort_indices(frame.native, options=opts)
         evaluated = node.expr.dispatch(self, frame.gather(indices), name)

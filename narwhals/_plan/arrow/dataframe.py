@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._plan.arrow.typing import ChunkedArrayAny
+    from narwhals._plan.compliant.group_by import GroupByResolver
     from narwhals._plan.expressions import ExprIR, NamedIR
     from narwhals._plan.options import SortMultipleOptions
     from narwhals._plan.typing import NonCrossJoinStrategy
@@ -46,6 +47,13 @@ class ArrowDataFrame(
     @property
     def _group_by(self) -> type[GroupBy]:
         return GroupBy
+
+    # TODO @dangotbanned: Avoid this hack that fixes typing
+    def group_by_resolver(self, resolver: GroupByResolver, /) -> GroupBy:
+        result = self._group_by.from_resolver(self, resolver)
+        if not isinstance(result, GroupBy):
+            raise NotImplementedError(type(result))
+        return result
 
     @property
     def columns(self) -> list[str]:

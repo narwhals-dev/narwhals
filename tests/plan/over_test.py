@@ -503,9 +503,6 @@ def test_over_partition_by_order_by_asc_desc_nulls_first_24989() -> None:
             .alias("f"),
             {"a": [1, 1, 2], "b": [4, 5, 6], "d": [10, -1, -9], "f": [4, 5, 5]},
             id="ordered",
-            marks=pytest.mark.xfail(
-                reason="TODO: Investigate why `[5, 5, 4]`", raises=AssertionError
-            ),
         ),
         pytest.param(
             nwp.col("a")
@@ -517,9 +514,6 @@ def test_over_partition_by_order_by_asc_desc_nulls_first_24989() -> None:
             )
             .alias("e"),
             {"a": [1, 1, 2], "b": [4, 5, 6], "d": [10, -1, -9], "e": [2, 1, 2]},
-            marks=pytest.mark.xfail(
-                reason="TODO: Investigate why `[2, 1, 1]`", raises=AssertionError
-            ),
             id="ordered-agg-ordered-partition",
         ),
     ],
