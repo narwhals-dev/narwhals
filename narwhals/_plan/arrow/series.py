@@ -91,3 +91,6 @@ class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayA
 
     def is_in(self, other: Self) -> Self:
         return self._with_native(fn.is_in(self.native, other.native))
+
+    def has_nulls(self) -> bool:
+        return bool(self.native.null_count)

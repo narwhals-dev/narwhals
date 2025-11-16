@@ -120,6 +120,9 @@ class Series(Generic[NativeSeriesT_co]):
         rows = indices._compliant if isinstance(indices, Series) else indices
         return type(self)(self._compliant.gather(rows))
 
+    def has_nulls(self) -> bool:  # pragma: no cover
+        return self._compliant.has_nulls()
+
     def slice(self, offset: int, length: int | None = None) -> Self:  # pragma: no cover
         return type(self)(self._compliant.slice(offset=offset, length=length))
 

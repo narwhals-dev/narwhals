@@ -79,6 +79,7 @@ class CompliantSeries(HasVersion, Protocol[NativeSeriesT]):
         self,
         indices: SizedMultiIndexSelector[NativeSeriesT] | _StoresNative[NativeSeriesT],
     ) -> Self: ...
+    def has_nulls(self) -> bool: ...
     def is_empty(self) -> bool:
         return len(self) == 0
 
