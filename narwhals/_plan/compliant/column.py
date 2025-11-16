@@ -62,7 +62,7 @@ class SupportsBroadcast(Protocol[SeriesT, LengthT]):
     def broadcast(self, length: LengthT, /) -> SeriesT:
         """Repeat a `Scalar`, or unwrap an `Expr` into a `Series`.
 
-        For `Scalar`, this is always safe, but will be less efficient than if we can operate on (`Scalar`,` Series`).
+        For `Scalar`, this is always safe, but will be less efficient than if we can operate on (`Scalar`, `Series`).
 
         For `Expr`, mismatched `length` will raise, but the operation is otherwise free.
         """
