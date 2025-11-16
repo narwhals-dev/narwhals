@@ -145,10 +145,6 @@ class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
     _key_names: Seq[str]
     _key_names_original: Seq[str]
 
-    @property
-    def compliant(self) -> Frame:
-        return self._df
-
     def __iter__(self) -> Iterator[tuple[Any, Frame]]:
         by = self.key_names
         from_native = self.compliant._with_native
@@ -168,6 +164,18 @@ class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
         if original := self._key_names_original:
             return result.rename(dict(zip(key_names, original)))
         return result
+
+    def agg_over(self, irs: Seq[NamedIR]) -> Frame:
+        compliant = self.compliant
+        native = compliant.native
+        key_names = self.key_names
+        specs = (AggSpec.from_named_ir(e) for e in irs)
+        windowed = compliant._with_native(acero.group_by_table(native, key_names, specs))
+        return (
+            compliant.select_names(*key_names)
+            .join(windowed, how="left", left_on=key_names)
+            .drop(key_names)
+        )
 
 
 def _composite_key(native: pa.Table, *, separator: str = "") -> ChunkedArray:

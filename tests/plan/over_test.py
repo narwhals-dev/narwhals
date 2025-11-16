@@ -500,17 +500,43 @@ def test_over_partition_by_order_by_asc_desc_nulls_first_last() -> None:
     assert_equal_data(result, expected)
 
 
-# NOTE: This can be possible, but missed coverage for it
-@pytest.mark.xfail(
-    reason="TODO: Support non-selecting expressions in `over(*partition_by)`",
-    raises=NotImplementedError,
+@pytest.mark.parametrize(
+    ("expr", "expected"),
+    [
+        pytest.param(
+            nwp.col("b").mean().alias("c").over(nwp.col("b") - nwp.col("a")),
+            {"a": [1, 1, 2], "b": [4, 5, 6], "d": [10, -1, -9], "c": [4.0, 5.5, 5.5]},
+            id="unordered",
+        ),
+        pytest.param(
+            nwp.col("b")
+            .last()
+            .over(nwp.col("b") - nwp.col("a"), order_by="d")
+            .alias("f"),
+            {"a": [1, 1, 2], "b": [4, 5, 6], "d": [10, -1, -9], "f": [4, 5, 5]},
+            id="ordered",
+            marks=pytest.mark.xfail(
+                reason="TODO: Investigate why `[5, 5, 4]`", raises=AssertionError
+            ),
+        ),
+        pytest.param(
+            nwp.col("a")
+            .first()
+            .over(
+                nwp.when(d=10).then(nwp.col("d").last()).otherwise("d"),
+                order_by="b",
+                descending=True,
+            )
+            .alias("e"),
+            {"a": [1, 1, 2], "b": [4, 5, 6], "d": [10, -1, -9], "e": [2, 1, 2]},
+            marks=pytest.mark.xfail(
+                reason="TODO: Investigate why `[2, 1, 1]`", raises=AssertionError
+            ),
+            id="ordered-agg-ordered-partition",
+        ),
+    ],
 )
-def test_over_partition_by_projection() -> None:
+def test_over_partition_by_projection(expr: nwp.Expr, expected: Data) -> None:
     data = {"a": [1, 1, 2], "b": [4, 5, 6], "d": [10, -1, -9]}
-    expected = {"a": [1, 1, 2], "b": [4, 5, 6], "d": [10, -1, -9], "c": [4.0, 5.5, 5.5]}
-    result = (
-        dataframe(data)
-        .with_columns(nwp.col("b").mean().alias("c").over(nwp.col("b") - nwp.col("a")))
-        .sort("b")
-    )
-    assert_equal_data(result, expected)  # pragma: no cover
+    result = dataframe(data).with_columns(expr).sort("b")
+    assert_equal_data(result, expected)

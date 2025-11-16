@@ -60,6 +60,17 @@ class EagerDataFrameGroupBy(DataFrameGroupBy[EagerDataFrameT], Protocol[EagerDat
     _key_names_original: Seq[str]
     _column_names_original: Seq[str]
 
+    @property
+    def compliant(self) -> EagerDataFrameT:
+        return self._df
+
+    def agg_over(self, irs: Seq[NamedIR[Any]]) -> EagerDataFrameT:
+        """Perform a windowed aggregation.
+
+        Returns the re-joined aggregation results.
+        """
+        ...
+
     @classmethod
     def by_names(cls, df: EagerDataFrameT, names: Seq[str], /) -> Self:
         obj = cls.__new__(cls)

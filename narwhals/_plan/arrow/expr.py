@@ -417,11 +417,20 @@ class ArrowExpr(  # type: ignore[misc]
             .agg_irs(node.expr.alias(name))
             .resolve(frame)
         )
+        # I want to pattern some of this stuff up
+        # 1. Variation of `GroupByResolver.evaluate`
+        #  i. Between the resolver + agg calls, grab `EagerDataFrameGroupBy.frame`
+        #  ii. that is used for the select and contains the special partitions
+        # 2. And then support extending on the pyarrow side to handle the null join
+        #  - Also need to be able to pass temp column names down to `GroupByResolver.from_grouper`
+        #  - This would remove the need for reusing the original frame, to elide them from `prepare_projection`
+        evaluate_frame = frame if reordered is None else reordered
         if resolved.requires_projection():
-            msg = f"TODO: Support non-selecting expressions in `over(*partition_by)`, got: {node.partition_by!r}\n\n{node!r}"
-            raise NotImplementedError(msg)
+            group_by = evaluate_frame.group_by_resolver(resolved)
+            return self.from_series(group_by.agg_over(resolved.aggs).get_column(name))
+        # NOTE: ordering doesn't work yet for projected partitions
         by_names = resolved.key_names
-        windowed = resolved.evaluate(frame if reordered is None else reordered)
+        windowed = resolved.evaluate(evaluate_frame)
         return self.from_series(
             frame.select_names(*by_names)
             .join(windowed, how="left", left_on=by_names)
