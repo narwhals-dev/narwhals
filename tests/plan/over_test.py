@@ -465,37 +465,25 @@ def test_over_order_by_sort_by_asc_desc_nulls_first_last(
     assert_equal_data(result, expected)
 
 
-def test_over_partition_by_order_by_asc_desc_nulls_first_last() -> None:
-    # https://github.com/pola-rs/polars/issues/24989
-    data = {"a": [1, 1, 2], "b": [4, 5, 6], "c": [None, 7, 8], "i": [1, None, 2]}
+def test_over_partition_by_order_by_asc_desc_nulls_first_24989() -> None:
+    # Adapted from https://github.com/pola-rs/polars/issues/24989
+    data = {"a": [1, 1, 2, 2], "b": [4, 5, 6, 7], "i": [1, None, 2, 3]}
     b_first = nwp.col("b").first()
-    result = (
-        dataframe(data)
-        .with_columns(
-            asc_nulls_first=b_first.over(
-                "a", order_by="i", descending=False, nulls_last=False
-            ),
-            asc_nulls_last=b_first.over(
-                "a", order_by="i", descending=False, nulls_last=True
-            ),
-            desc_nulls_first=b_first.over(
-                "a", order_by="i", descending=True, nulls_last=False
-            ),
-            desc_nulls_last=b_first.over(
-                "a", order_by="i", descending=True, nulls_last=True
-            ),
-        )
-        .sort("i")
-    )
+    df = dataframe(data)
+    result = df.with_columns(
+        asc_nulls_first=b_first.over("a", order_by="i"),
+        asc_nulls_last=b_first.over("a", order_by="i", nulls_last=True),
+        desc_nulls_first=b_first.over("a", order_by="i", descending=True),
+        desc_nulls_last=b_first.over("a", order_by="i", descending=True, nulls_last=True),
+    ).sort("b")
     expected = {
-        "a": [1, 1, 2],
-        "b": [5, 4, 6],
-        "c": [7.0, None, 8.0],
-        "i": [None, 1, 2],
-        "asc_nulls_first": [5, 5, 6],
-        "asc_nulls_last": [4, 4, 6],
-        "desc_nulls_first": [4, 4, 6],
-        "desc_nulls_last": [5, 5, 6],
+        "a": [1, 1, 2, 2],
+        "b": [4, 5, 6, 7],
+        "i": [1, None, 2, 3],
+        "asc_nulls_first": [5, 5, 6, 6],
+        "asc_nulls_last": [4, 4, 6, 6],
+        "desc_nulls_first": [5, 5, 7, 7],
+        "desc_nulls_last": [4, 4, 7, 7],
     }
     assert_equal_data(result, expected)
 
