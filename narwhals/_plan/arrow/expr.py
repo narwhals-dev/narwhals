@@ -433,8 +433,6 @@ class ArrowExpr(  # type: ignore[misc]
         #  i. Between the resolver + agg calls, grab `EagerDataFrameGroupBy.frame`
         #  ii. that is used for the select and contains the special partitions
         # 2. And then support extending on the pyarrow side to handle the null join
-        #  - Also need to be able to pass temp column names down to `GroupByResolver.from_grouper`
-        #  - This would remove the need for reusing the original frame, to elide them from `prepare_projection`
         if resolved.requires_projection():
             group_by = frame.group_by_resolver(resolved)
             window_aggregated = group_by.agg_over(resolved.aggs, sort_indices)
