@@ -2028,6 +2028,9 @@ class Series(Generic[IntoSeriesT]):
             >>> nw.from_native(pl.Series("a", [9, 8, 7]), series_only=True).item(-1)
             7
         """
+        if index is not None and index >= len(self):
+            msg = f"index {index} out of range for series of length {len(self)}"
+            raise IndexError(msg)
         return self._compliant_series.item(index=index)
 
     def head(self, n: int = 10) -> Self:

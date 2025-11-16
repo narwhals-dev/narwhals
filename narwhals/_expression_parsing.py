@@ -168,6 +168,14 @@ class ExprKind(Enum):
             ExprKind.WHEN_THEN,
         }
 
+    @property
+    def is_scalar_like(self) -> bool:
+        return self in {
+            ExprKind.AGGREGATION,
+            ExprKind.LITERAL,
+            ExprKind.ORDERABLE_AGGREGATION,
+        }
+
 
 def is_scalar_like(obj: CompliantExprAny) -> bool:
     return obj._metadata.is_scalar_like
@@ -889,3 +897,12 @@ def evaluate_node(
     ret = cast("CompliantExprAny", func(*compliant_expr_args, **node.kwargs))
     ret._opt_metadata = md
     return ret
+
+
+def evaluate_nodes(
+    nodes: Sequence[ExprNode], ns: CompliantNamespaceAny
+) -> CompliantExprAny:
+    ce = evaluate_root_node(nodes[0], ns)
+    for node in nodes[1:]:
+        ce = evaluate_node(ce, node, ns)
+    return ce
