@@ -7,7 +7,7 @@ build-backend = "hatchling.build"
 name = "narwhals"
 version = "2.11.0"
 dependencies = []
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 authors = [
   { name = "Marco Gorelli", email = "hello_narwhals@proton.me" },
 ]
@@ -130,7 +130,7 @@ include = [
 [tool.ruff]
 line-length = 90
 fix = true
-target-version = "py39"
+target-version = "py310"
 extend-exclude = ["**/this.py"]
 
 [tool.ruff.lint]
@@ -361,7 +361,7 @@ warn_return_any = false
 [tool.pyright]
 pythonPlatform = "All"
 # NOTE (`pyarrow-stubs` do unsafe `TypeAlias` and `TypeVar` imports)
-# pythonVersion = "3.9"
+# pythonVersion = "3.10"
 reportMissingTypeArgument = "error"
 reportIncompatibleMethodOverride = "error"
 reportMissingImports = "none"
