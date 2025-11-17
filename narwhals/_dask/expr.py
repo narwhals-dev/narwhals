@@ -11,6 +11,7 @@ from narwhals._dask.expr_str import DaskExprStringNamespace
 from narwhals._dask.utils import (
     add_row_index,
     align_series_full_broadcast,
+    make_group_by_kwargs,
     narwhals_to_native_dtype,
 )
 from narwhals._expression_parsing import evaluate_nodes, evaluate_output_names_and_aliases
@@ -477,7 +478,10 @@ class DaskExpr(
                 n_bytes=8, columns=[_name], prefix="row_index_"
             )
             frame = add_row_index(expr.to_frame(), col_token)
-            first_distinct_index = frame.groupby(_name).agg({col_token: "min"})[col_token]
+            group_by_kwargs = make_group_by_kwargs(drop_null_keys=False)
+            first_distinct_index = frame.groupby(_name, **group_by_kwargs).agg(
+                {col_token: "min"}
+            )[col_token]
             return frame[col_token].isin(first_distinct_index)
 
         return self._with_callable(func)
@@ -489,7 +493,10 @@ class DaskExpr(
                 n_bytes=8, columns=[_name], prefix="row_index_"
             )
             frame = add_row_index(expr.to_frame(), col_token)
-            last_distinct_index = frame.groupby(_name).agg({col_token: "max"})[col_token]
+            group_by_kwargs = make_group_by_kwargs(drop_null_keys=False)
+            last_distinct_index = frame.groupby(_name, **group_by_kwargs).agg(
+                {col_token: "max"}
+            )[col_token]
             return frame[col_token].isin(last_distinct_index)
 
         return self._with_callable(func)
@@ -497,9 +504,10 @@ class DaskExpr(
     def is_unique(self) -> Self:
         def func(expr: dx.Series) -> dx.Series:
             _name = expr.name
+            group_by_kwargs = make_group_by_kwargs(drop_null_keys=False)
             return (
                 expr.to_frame()
-                .groupby(_name, dropna=False)
+                .groupby(_name, **group_by_kwargs)
                 .transform("size", meta=(_name, int))
                 == 1
             )
@@ -550,7 +558,6 @@ class DaskExpr(
                 "https://narwhals-dev.github.io/narwhals/concepts/improve_group_by_operation/"
             )
             raise NotImplementedError(msg)
-        nodes = list(reversed(list(self._metadata.iter_nodes_reversed())))
 
         if order_by:
             # Wrong results https://github.com/dask/dask/issues/11806.
@@ -582,7 +589,8 @@ class DaskExpr(
                 warnings.filterwarnings(
                     "ignore", message=".*`meta` is not specified", category=UserWarning
                 )
-                grouped = df.native.groupby(partition_by)
+                group_by_kwargs = make_group_by_kwargs(drop_null_keys=False)
+                grouped = df.native.groupby(partition_by, **group_by_kwargs)
                 if dask_function_name == "size":
                     if len(aliases) != 1:  # pragma: no cover
                         msg = "Safety check failed, please report a bug."

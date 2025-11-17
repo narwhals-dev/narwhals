@@ -7,6 +7,7 @@ from narwhals._compliant import EagerExpr
 from narwhals._expression_parsing import evaluate_nodes, evaluate_output_names_and_aliases
 from narwhals._pandas_like.group_by import _REMAP_ORDERED_INDEX, PandasLikeGroupBy
 from narwhals._pandas_like.series import PandasLikeSeries
+from narwhals._pandas_like.utils import make_group_by_kwargs
 from narwhals._utils import generate_temporary_column_name
 
 if TYPE_CHECKING:
@@ -315,7 +316,8 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
             elif reverse:
                 columns = list(set(partition_by).union(aliases))
                 df = df.simple_select(*columns)._gather_slice(slice(None, None, -1))
-            grouped = df._native_frame.groupby(partition_by)
+            group_by_kwargs = make_group_by_kwargs(drop_null_keys=False)
+            grouped = df._native_frame.groupby(partition_by, **group_by_kwargs)
             if function_name.startswith("rolling"):
                 rolling = grouped[list(aliases)].rolling(**pandas_kwargs)
                 if pandas_function_name in {"std", "var"}:
