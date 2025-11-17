@@ -2845,7 +2845,16 @@ class Series(Generic[IntoSeriesT]):
         return cast("Self", result)
 
     def any_value(self, seed: int | None = None) -> PythonLiteral:
-        """TODO"""
+        """Get _a_ (random) value from the series.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> s_native = pa.chunked_array([[1, 2, None]])
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.any_value(seed=12)
+            2
+        """
         return self._compliant_series.any_value(seed=seed)
 
     @property

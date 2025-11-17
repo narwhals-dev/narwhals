@@ -2369,7 +2369,36 @@ class Expr:
         return result
 
     def any_value(self, seed: int | None = None) -> Self:
-        """TODO"""
+        """Get _a_ (random) value from the column.
+
+        Warning:
+            The `seed` argument has no effect for:
+            - pyarrow group by context
+            - duckdb, ibis, spark-like backends
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> data = {"a": [1, 1, 2, 2], "b": ["foo", None, None, "baz"]}
+            >>> df_native = pd.DataFrame(data)
+            >>> df = nw.from_native(df_native)
+            >>> df.select(nw.all().any_value(seed=1))
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |       a     b    |
+            |    0  1  None    |
+            └──────────────────┘
+
+            >>> df.group_by("a").agg(nw.col("b").any_value(seed=3))
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |       a     b    |
+            |    0  1  None    |
+            |    1  2   baz    |
+            └──────────────────┘
+        """
         return self._append_node(ExprNode(ExprKind.AGGREGATION, "any_value", seed=seed))
 
     @property
