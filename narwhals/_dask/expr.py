@@ -540,7 +540,9 @@ class DaskExpr(
         # We first evaluate `prev` as-is, and then evaluate `leaf().over(...)`` by using `transform`
         # or other DataFrameGroupBy methods.
         meta = self._metadata
-        if partition_by and (meta.prev is not None and not meta.prev.is_elementwise):
+        if partition_by and (
+            meta.prev is not None and not meta.prev.is_elementwise
+        ):  # pragma: no cover
             msg = (
                 "Only elementary expressions are supported for `.over` in dask backend "
                 "when `partition_by` is specified.\n\n"
