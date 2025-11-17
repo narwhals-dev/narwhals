@@ -373,8 +373,6 @@ class ExprMetadata:
     ) -> None:
         if is_literal:
             assert is_scalar_like  # noqa: S101  # debug assertion
-        if is_elementwise:
-            assert preserves_length  # noqa: S101  # debug assertion
         self.expansion_kind: ExpansionKind = expansion_kind
         self.has_windows: bool = has_windows
         self.n_orderable_ops: int = n_orderable_ops
@@ -442,7 +440,7 @@ class ExprMetadata:
     def from_literal(cls, node: ExprNode) -> ExprMetadata:
         return cls(
             ExpansionKind.SINGLE,
-            is_elementwise=False,
+            is_elementwise=True,
             preserves_length=False,
             is_literal=True,
             is_scalar_like=True,
