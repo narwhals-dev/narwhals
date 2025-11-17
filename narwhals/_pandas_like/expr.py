@@ -328,14 +328,6 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                 else:
                     res_native = getattr(rolling, pandas_function_name)()
             elif function_name.startswith("ewm"):
-                if self._implementation.is_pandas() and (
-                    self._implementation._backend_version()
-                ) < (1, 2):  # pragma: no cover
-                    msg = (
-                        "Exponentially weighted calculation is not available in over "
-                        f"context for pandas versions older than 1.2.0, found {self._implementation._backend_version()}."
-                    )
-                    raise NotImplementedError(msg)
                 ewm = grouped[list(aliases)].ewm(**pandas_kwargs)
                 assert pandas_function_name is not None  # help mypy  # noqa: S101
                 res_native = getattr(ewm, pandas_function_name)()

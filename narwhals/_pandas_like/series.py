@@ -292,7 +292,6 @@ class PandasLikeSeries(EagerSeries[Any]):
     def _scatter_in_place(self, indices: Self, values: Self) -> None:
         # Scatter, modifying original Series. Use with care!
         implementation = self._implementation
-        backend_version = self._backend_version
         values_native = set_index(
             values.native,
             self.native.index[indices.native],
@@ -300,11 +299,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         )
         if implementation is Implementation.PANDAS and parse_version(np) < (2,):
             values_native = values_native.copy()  # pragma: no cover
-        min_pd_version = (1, 2)
-        if implementation is Implementation.PANDAS and backend_version < min_pd_version:
-            self.native.iloc[indices.native.values] = values_native  # noqa: PD011
-        else:
-            self.native.iloc[indices.native] = values_native
+        self.native.iloc[indices.native] = values_native
 
     def cast(self, dtype: IntoDType) -> Self:
         if self.dtype == dtype and self.native.dtype != "object":
