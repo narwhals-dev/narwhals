@@ -478,7 +478,7 @@ jobs:
   validoopsie:
     strategy:
       matrix:
-        python-version: ["3.9", "3.12"] # 3.9 and 3.12 are enough to cover all the tests
+        python-version: ["3.10", "3.12"] # 3.10 and 3.12 are enough to cover all the tests
         os: ["ubuntu-latest"]
     runs-on: ${{ matrix.os }}
     steps:
