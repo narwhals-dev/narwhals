@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, Any, Literal, Protocol, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Literal, Protocol, TypeVar
 
 from narwhals._compliant import CompliantDataFrame, CompliantLazyFrame, CompliantSeries
 from narwhals._native import (
@@ -108,7 +108,7 @@ _NumpyScalar: TypeAlias = "np.generic[Any]"
 Into1DArray: TypeAlias = "_1DArray | _NumpyScalar"
 """A 1-dimensional `numpy.ndarray` or scalar that can be converted into one."""
 
-IntoExpr: TypeAlias = Union["Expr", str, "Series[Any]", _1DArray]
+IntoExpr: TypeAlias = "Expr | str | Series[Any] | _1DArray"
 """Anything which can be converted to an expression.
 
 Use this to mean "either a Narwhals expression, or something which can be converted
@@ -117,7 +117,7 @@ as it can either accept a `nw.Expr` (e.g. `df.select(nw.col('a'))`) or a string
 which will be interpreted as a `nw.Expr`, e.g. `df.select('a')`.
 """
 
-Frame: TypeAlias = Union["DataFrame[Any]", "LazyFrame[Any]"]
+Frame: TypeAlias = "DataFrame[Any] | LazyFrame[Any]"
 """Narwhals DataFrame or Narwhals LazyFrame.
 
 Use this if your function can work with either and your function doesn't care

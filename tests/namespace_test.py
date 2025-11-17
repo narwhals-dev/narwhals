@@ -14,7 +14,7 @@ from narwhals._utils import Version
 if TYPE_CHECKING:
     from typing import TypeAlias
 
-    from typing_extensions import assert_type
+    from typing_extensions import Never, assert_type  # noqa: F401
 
     from narwhals._arrow.namespace import ArrowNamespace  # noqa: F401
     from narwhals._compliant import CompliantNamespace

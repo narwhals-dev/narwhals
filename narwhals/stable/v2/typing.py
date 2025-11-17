@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, TypeVar, Union
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from narwhals._native import (
     IntoDataFrame,
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from narwhals.stable.v2 import DataFrame, Expr, LazyFrame, Series
 
 
-IntoExpr: TypeAlias = Union["Expr", str, "Series[Any]"]
+IntoExpr: TypeAlias = "Expr | str | Series[Any]"
 """Anything which can be converted to an expression.
 
 Use this to mean "either a Narwhals expression, or something
@@ -29,7 +29,7 @@ typed to accept `IntoExpr`, as it can either accept a `nw.Expr`
 `nw.Expr`, e.g. `df.select('a')`.
 """
 
-Frame: TypeAlias = Union["DataFrame[Any]", "LazyFrame[Any]"]
+Frame: TypeAlias = "DataFrame[Any] | LazyFrame[Any]"
 """Narwhals DataFrame or Narwhals LazyFrame.
 
 Use this if your function can work with either and your function doesn't care

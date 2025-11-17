@@ -38,7 +38,7 @@ Note:
 
 **But**, occasionally, there'll be an edge-case which we can spell like:
 
-    IntoThing: TypeAlias = Union[<type that does not fit the protocol>, NativeThing]
+    IntoThing: TypeAlias = "<type that does not fit the protocol> | NativeThing"
 
 Tip:
     Reach for these when there **isn't a need to preserve** the original native type.
