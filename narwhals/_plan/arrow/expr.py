@@ -12,8 +12,8 @@ from narwhals._plan.arrow import functions as fn, options as pa_options
 from narwhals._plan.arrow.series import ArrowSeries as Series
 from narwhals._plan.arrow.typing import (
     ChunkedOrScalarAny,
+    Indices,
     NativeScalar,
-    SizedMultiIndexSelector,
     StoresNativeT_co,
 )
 from narwhals._plan.common import temp
@@ -417,7 +417,7 @@ class ArrowExpr(  # type: ignore[misc]
         frame: Frame,
         name: str,
         *,
-        sort_indices: SizedMultiIndexSelector | None = None,
+        sort_indices: Indices | None = None,
     ) -> Self:
         if _is_first_last_distinct(node.expr):
             return self._is_first_last_distinct_partition_by(

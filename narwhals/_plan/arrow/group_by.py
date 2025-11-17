@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
 
     from narwhals._plan.arrow.dataframe import ArrowDataFrame as Frame
-    from narwhals._plan.arrow.typing import ChunkedArray, SizedMultiIndexSelector
+    from narwhals._plan.arrow.typing import ChunkedArray, Indices
     from narwhals._plan.expressions import NamedIR
     from narwhals._plan.typing import Seq
 
@@ -165,9 +165,7 @@ class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
             return result.rename(dict(zip(key_names, original)))
         return result
 
-    def agg_over(
-        self, irs: Seq[NamedIR], sort_indices: SizedMultiIndexSelector | None = None
-    ) -> Frame:
+    def agg_over(self, irs: Seq[NamedIR], sort_indices: Indices | None = None) -> Frame:
         compliant = self.compliant
         key_names = self.key_names
         specs = (AggSpec.from_named_ir(e) for e in irs)

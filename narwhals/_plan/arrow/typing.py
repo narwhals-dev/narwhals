@@ -143,10 +143,7 @@ ChunkedArrayAny: TypeAlias = "ChunkedArray[Any]"
 ChunkedOrScalarAny: TypeAlias = "ChunkedOrScalar[ScalarAny]"
 ChunkedOrArrayAny: TypeAlias = "ChunkedOrArray[ScalarAny]"
 ChunkedOrArrayT = TypeVar("ChunkedOrArrayT", ChunkedArrayAny, ArrayAny)
-ChunkedOrArrayInt: TypeAlias = "ChunkedOrArray[pc.IntegerScalar]"
-"""Narrowed to the native types supported in `Indices`."""
-
-SizedMultiIndexSelector: TypeAlias = "_SizedMultiIndexSelector[ChunkedOrArrayInt]"
+Indices: TypeAlias = "_SizedMultiIndexSelector[ChunkedOrArray[pc.IntegerScalar]]"
 
 Arrow: TypeAlias = "ChunkedOrScalar[ScalarT_co] | Array[ScalarT_co]"
 ArrowAny: TypeAlias = "ChunkedOrScalarAny | ArrayAny"

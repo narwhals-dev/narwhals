@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self, TypeIs
 
     from narwhals._plan.arrow.namespace import ArrowNamespace
-    from narwhals._plan.arrow.typing import ChunkedArrayAny, SizedMultiIndexSelector
+    from narwhals._plan.arrow.typing import ChunkedArrayAny, Indices
 
 
 def is_series(obj: Any) -> TypeIs[_StoresNative[ChunkedArrayAny]]:
@@ -45,17 +45,15 @@ class ArrowFrameSeries(Generic[NativeT]):
 
     if BACKEND_VERSION >= (18,):
 
-        def _gather(self, indices: SizedMultiIndexSelector) -> NativeT:
+        def _gather(self, indices: Indices) -> NativeT:
             return self.native.take(indices)
     else:
 
-        def _gather(self, indices: SizedMultiIndexSelector) -> NativeT:
+        def _gather(self, indices: Indices) -> NativeT:
             rows = list(indices) if isinstance(indices, tuple) else indices
             return self.native.take(rows)
 
-    def gather(
-        self, indices: SizedMultiIndexSelector | _StoresNative[ChunkedArrayAny]
-    ) -> Self:
+    def gather(self, indices: Indices | _StoresNative[ChunkedArrayAny]) -> Self:
         ca = self._gather(indices.native if is_series(indices) else indices)
         return self._with_native(ca)
 
