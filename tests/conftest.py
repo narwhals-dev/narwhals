@@ -199,7 +199,9 @@ def pyspark_lazy_constructor() -> Callable[[Data], NativePySpark]:  # pragma: no
             index_col_name = generate_temporary_column_name(n_bytes=8, columns=list(_obj))
             _obj[index_col_name] = list(range(len(_obj[next(iter(_obj))])))
             result = (
-                session.createDataFrame([*zip(*_obj.values())], schema=[*_obj.keys()])
+                session.createDataFrame(
+                    [*zip(*_obj.values(), strict=False)], schema=[*_obj.keys()]
+                )
                 .repartition(2)
                 .orderBy(index_col_name)
                 .drop(index_col_name)
@@ -213,7 +215,9 @@ def sqlframe_pyspark_lazy_constructor(obj: Data) -> NativeSQLFrame:  # pragma: n
     pytest.importorskip("sqlframe")
     pytest.importorskip("duckdb")
     session = sqlframe_session()
-    return session.createDataFrame([*zip(*obj.values())], schema=[*obj.keys()])
+    return session.createDataFrame(
+        [*zip(*obj.values(), strict=False)], schema=[*obj.keys()]
+    )
 
 
 @lru_cache(maxsize=1)
@@ -311,7 +315,7 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     elif "constructor_pandas_like" in metafunc.fixturenames:
         pandas_like_constructors = []
         pandas_like_constructors_ids = []
-        for fn, name in zip(eager_constructors, eager_constructors_ids):
+        for fn, name in zip(eager_constructors, eager_constructors_ids, strict=False):
             if name in ID_PANDAS_LIKE:
                 pandas_like_constructors.append(fn)
                 pandas_like_constructors_ids.append(name)

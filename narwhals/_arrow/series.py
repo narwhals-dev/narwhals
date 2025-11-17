@@ -203,7 +203,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def _align_full_broadcast(cls, *series: Self) -> Sequence[Self]:
         lengths = [len(s) for s in series]
         target_length = max(
-            length for length, s in zip(lengths, series) if not s._broadcast
+            length for length, s in zip(lengths, series, strict=False) if not s._broadcast
         )
         fast_path = all(_len == target_length for _len in lengths)
         if fast_path:

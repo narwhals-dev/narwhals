@@ -205,7 +205,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         Series = series[0].__native_namespace__().Series
         lengths = [len(s) for s in series]
         target_length = max(
-            length for length, s in zip(lengths, series) if not s._broadcast
+            length for length, s in zip(lengths, series, strict=False) if not s._broadcast
         )
         idx = series[lengths.index(target_length)].native.index
         reindexed = []

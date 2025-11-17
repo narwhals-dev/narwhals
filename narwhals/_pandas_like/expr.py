@@ -349,7 +349,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                         pandas_function_name, **pandas_kwargs
                     )
                 result_frame = df._with_native(res_native).rename(
-                    dict(zip(output_names, aliases))
+                    dict(zip(output_names, aliases, strict=False))
                 )
                 results = [result_frame.get_column(name) for name in aliases]
                 if order_by:

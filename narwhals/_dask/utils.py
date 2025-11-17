@@ -31,7 +31,7 @@ def evaluate_exprs(df: DaskLazyFrame, /, *exprs: DaskExpr) -> list[tuple[str, dx
         if len(aliases) != len(native_series_list):  # pragma: no cover
             msg = f"Internal error: got aliases {aliases}, but only got {len(native_series_list)} results"
             raise AssertionError(msg)
-        native_results.extend(zip(aliases, native_series_list))
+        native_results.extend(zip(aliases, native_series_list, strict=False))
     return native_results
 
 

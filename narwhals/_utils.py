@@ -1600,7 +1600,7 @@ def _remap_full_join_keys(
     right_keys_suffixed = (
         f"{key}{suffix}" if key in left_on else key for key in right_on
     )
-    return dict(zip(right_on, right_keys_suffixed))
+    return dict(zip(right_on, right_keys_suffixed, strict=False))
 
 
 def _into_arrow_table(data: IntoArrowTable, context: _LimitedContext, /) -> pa.Table:

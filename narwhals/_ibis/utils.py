@@ -118,7 +118,7 @@ def evaluate_exprs(df: IbisLazyFrame, /, *exprs: IbisExpr) -> list[tuple[str, ir
         if len(output_names) != len(native_series_list):  # pragma: no cover
             msg = f"Internal error: got output names {output_names}, but only got {len(native_series_list)} results"
             raise AssertionError(msg)
-        native_results.extend(zip(output_names, native_series_list))
+        native_results.extend(zip(output_names, native_series_list, strict=False))
     return native_results
 
 

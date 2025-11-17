@@ -573,7 +573,9 @@ class DaskExpr(
                             dask_function_name, **dask_kwargs
                         )
                 result_frame = df._with_native(
-                    res_native.rename(columns=dict(zip(output_names, aliases)))
+                    res_native.rename(
+                        columns=dict(zip(output_names, aliases, strict=False))
+                    )
                 ).native
                 return [result_frame[name] for name in aliases]
 
@@ -634,7 +636,7 @@ class DaskExpr(
             msg = "`replace_strict` requires an explicit value for `default` for dask backend."
             raise ValueError(msg)
 
-        mapping = dict(zip(old, new))
+        mapping = dict(zip(old, new, strict=True))
         old_ = list(old)
 
         def func(df: DaskLazyFrame) -> list[dx.Series]:

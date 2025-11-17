@@ -299,7 +299,7 @@ class PandasLikeGroupBy(
         return (
             self.compliant._with_native(df, validate_column_names=False)
             .simple_select(*self._keys, *new_names)
-            .rename(dict(zip(self._keys, self._output_key_names)))
+            .rename(dict(zip(self._keys, self._output_key_names, strict=False)))
         )
 
     def _getitem_aggs(

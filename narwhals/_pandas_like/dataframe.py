@@ -184,7 +184,7 @@ class PandasLikeDataFrame(
                     implementation=context._implementation,
                     version=context._version,
                 )
-                for ((key, dtype), backend) in zip(schema.items(), backends)
+                for ((key, dtype), backend) in zip(schema.items(), backends, strict=False)
                 if dtype is not None
             }
             native = native.astype(native_schema)
@@ -219,7 +219,7 @@ class PandasLikeDataFrame(
                     implementation=context._implementation,
                     version=context._version,
                 )
-                for ((key, dtype), backend) in zip(schema.items(), backends)
+                for ((key, dtype), backend) in zip(schema.items(), backends, strict=False)
                 if dtype is not None
             }
             native = native.astype(native_schema)
@@ -413,7 +413,7 @@ class PandasLikeDataFrame(
         else:
             col_names = self.native.columns
             for row in self.native.itertuples(index=False):
-                yield dict(zip(col_names, row))
+                yield dict(zip(col_names, row, strict=False))
 
     @property
     def schema(self) -> dict[str, DType]:
@@ -675,7 +675,7 @@ class PandasLikeDataFrame(
         other_native = self._join_filter_rename(
             other=other,
             columns_to_select=list(right_on),
-            columns_mapping=dict(zip(right_on, left_on)),
+            columns_mapping=dict(zip(right_on, left_on, strict=True)),
         )
         return self.native.merge(
             other_native, how="inner", left_on=left_on, right_on=left_on
@@ -698,7 +698,7 @@ class PandasLikeDataFrame(
         other_native = self._join_filter_rename(
             other=other,
             columns_to_select=list(right_on),
-            columns_mapping=dict(zip(right_on, left_on)),
+            columns_mapping=dict(zip(right_on, left_on, strict=True)),
         )
         result_native = self.native.merge(
             other_native,
