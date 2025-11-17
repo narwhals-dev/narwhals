@@ -18,6 +18,7 @@ from narwhals._plan.compliant.scalar import EagerScalar
 from narwhals._plan.compliant.typing import namespace
 from narwhals._plan.expressions.boolean import (
     IsFirstDistinct,
+    IsInExpr,
     IsInSeq,
     IsInSeries,
     IsLastDistinct,
@@ -161,6 +162,16 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
     ) -> StoresNativeT_co:
         return self._unary_function(fn.is_finite)(node, frame, name)
 
+    def is_in_expr(
+        self, node: FExpr[IsInExpr], frame: Frame, name: str
+    ) -> StoresNativeT_co:
+        expr, other = node.function.unwrap_input(node)
+        right = other.dispatch(self, frame, name).native
+        if isinstance(right, pa.Scalar):
+            right = fn.array(right)
+        result = fn.is_in(expr.dispatch(self, frame, name).native, right)
+        return self._with_native(result, name)
+
     def is_in_series(
         self, node: FExpr[IsInSeries[ChunkedArrayAny]], frame: Frame, name: str
     ) -> StoresNativeT_co:
@@ -205,7 +216,6 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
     clip = not_implemented()  # type: ignore[misc]
     drop_nulls = not_implemented()  # type: ignore[misc]
     replace_strict = not_implemented()  # type: ignore[misc]
-    is_in_expr = not_implemented()  # type: ignore[misc]
 
 
 class ArrowExpr(  # type: ignore[misc]

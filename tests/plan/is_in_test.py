@@ -5,8 +5,10 @@ from typing import TYPE_CHECKING, Any, Literal
 
 import pytest
 
+import narwhals as nw
 import narwhals._plan as nwp
 from narwhals._plan import selectors as ncs
+from narwhals.exceptions import MultiOutputExpressionError
 from tests.plan.utils import assert_equal_data, assert_equal_series, dataframe, series
 
 if TYPE_CHECKING:
@@ -47,22 +49,43 @@ def test_expr_is_in(data: Data, expr: nwp.Expr, expected: Data) -> None:
     assert_equal_data(result, expected)
 
 
-@pytest.mark.xfail(reason="TODO: Support `Expr.is_in(Expr)`", raises=NotImplementedError)
 @pytest.mark.parametrize(
     ("expr", "expected"),
     [
         (nwp.col("a").is_in(nwp.col("b")), {"a": [True, False, True, False]}),
         (nwp.col("a").is_in(nwp.nth(1)), {"a": [True, False, True, False]}),
-        (nwp.col("b").is_in(nwp.col("a") - 5), {"b": [False, False, False, True]}),
+        (nwp.col("b").is_in(nwp.col("a") - 5), {"b": [False, True, False, True]}),
         (
             (nwp.col("b").max() + nwp.col("a")).is_in(nwp.int_range(5, 10)),
             {"b": [False, True, False, True]},
+        ),
+        (nwp.col("a").last().is_in(ncs.first()), {"a": [True]}),
+        (
+            (nwp.col("a").last() - nwp.col("b").first()).is_in(
+                ncs.integer() - ncs.first()
+            ),
+            {"a": [False]},
+        ),
+        (
+            (ncs.integer() + 4).is_in(nwp.nth(0).filter(nwp.col("b") < 2)),
+            {"a": [True, False, False, False], "b": [True, True, False, True]},
+        ),
+        (
+            ncs.string().is_in(nwp.lit(None, nw.String)),
+            {"c": [True, False, False, False]},
         ),
     ],
 )
 def test_expr_is_in_expr(data: Data, expr: nwp.Expr, expected: Data) -> None:
     df = dataframe(data)
     assert_equal_data(df.select(expr), expected)
+
+
+def test_expr_is_in_expr_invalid(data: Data) -> None:
+    df = dataframe(data)
+    expr = nwp.col("a").is_in(ncs.integer())
+    with pytest.raises(MultiOutputExpressionError):
+        df.select(expr)
 
 
 @pytest.mark.parametrize(

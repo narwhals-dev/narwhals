@@ -79,5 +79,11 @@ class IsInSeries(BooleanFunction, t.Generic[NativeSeriesT]):
 
 
 class IsInExpr(BooleanFunction):
+    """N-ary (expr, other)."""
+
+    def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR]:
+        expr, other = node.input
+        return expr, other
+
     def __repr__(self) -> str:
         return "is_in"
