@@ -9,7 +9,7 @@ import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._arrow.utils import native_to_narwhals_dtype
-from narwhals._plan.arrow import acero, functions as fn, options as pa_options
+from narwhals._plan.arrow import acero, functions as fn
 from narwhals._plan.arrow.common import ArrowFrameSeries as FrameSeries
 from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
 from narwhals._plan.arrow.group_by import ArrowGroupBy as GroupBy, partition_by
@@ -105,20 +105,8 @@ class ArrowDataFrame(
         from_named_ir = ns._expr.from_named_ir
         yield from ns._expr.align(from_named_ir(e, self) for e in nodes)
 
-    def sort(
-        self,
-        by: Sequence[str],
-        options: SortMultipleOptions | None = None,
-        *,
-        descending: bool = False,
-        nulls_last: bool = False,
-    ) -> Self:
-        opts = (
-            options.to_arrow(by)
-            if options
-            else pa_options.sort(*by, descending=descending, nulls_last=nulls_last)
-        )
-        return self.gather(pc.sort_indices(self.native.select(list(by)), options=opts))
+    def sort(self, by: Sequence[str], options: SortMultipleOptions | None = None) -> Self:
+        return self.gather(fn.sort_indices(self.native, *by, options=options))
 
     def with_row_index(self, name: str) -> Self:
         return self._with_native(self.native.add_column(0, name, fn.int_range(len(self))))

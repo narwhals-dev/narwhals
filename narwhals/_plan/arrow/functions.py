@@ -15,7 +15,7 @@ from narwhals._arrow.utils import (
     floordiv_compat as floordiv,
 )
 from narwhals._plan import expressions as ir
-from narwhals._plan.arrow import options
+from narwhals._plan.arrow import options as pa_options
 from narwhals._plan.expressions import functions as F, operators as ops
 from narwhals._utils import Implementation
 
@@ -56,7 +56,7 @@ if TYPE_CHECKING:
         StringType,
         UnaryFunction,
     )
-    from narwhals._plan.options import RankOptions
+    from narwhals._plan.options import RankOptions, SortMultipleOptions
     from narwhals.typing import ClosedInterval, IntoArrowSchema, PythonLiteral
 
 BACKEND_VERSION = Implementation.PYARROW._backend_version()
@@ -298,7 +298,7 @@ def rank(native: ChunkedArrayAny, rank_options: RankOptions) -> ChunkedArrayAny:
     arr = native if RANK_ACCEPTS_CHUNKED else array(native)
     if rank_options.method == "average":
         # Adapted from https://github.com/pandas-dev/pandas/blob/f4851e500a43125d505db64e548af0355227714b/pandas/core/arrays/arrow/array.py#L2290-L2316
-        order = options.ORDER[rank_options.descending]
+        order = pa_options.ORDER[rank_options.descending]
         min = preserve_nulls(arr, pc.rank(arr, order, tiebreaker="min").cast(F64))
         max = pc.rank(arr, order, tiebreaker="max").cast(F64)
         ranked = pc.divide(pc.add(min, max), lit(2, F64))
@@ -366,7 +366,7 @@ def concat_str(
     dtype = string_type(obj.type for obj in arrays)
     it = (obj.cast(dtype) for obj in arrays)
     concat: Incomplete = pc.binary_join_element_wise
-    join = options.join(ignore_nulls=ignore_nulls)
+    join = pa_options.join(ignore_nulls=ignore_nulls)
     return concat(*it, lit(separator, dtype), options=join)  # type: ignore[no-any-return]
 
 
@@ -375,9 +375,14 @@ def sort_indices(
     *order_by: str,
     descending: bool | Sequence[bool] = False,
     nulls_last: bool = False,
+    options: SortMultipleOptions | None = None,
 ) -> pa.UInt64Array:
     """Return the indices that would sort an array or table."""
-    opts = options.sort(*order_by, nulls_last=nulls_last, descending=descending)
+    opts = (
+        options.to_arrow(order_by)
+        if options
+        else pa_options.sort(*order_by, descending=descending, nulls_last=nulls_last)
+    )
     return pc.sort_indices(native, options=opts)
 
 

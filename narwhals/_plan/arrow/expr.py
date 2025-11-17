@@ -299,7 +299,7 @@ class ArrowExpr(  # type: ignore[misc]
             by = (self._dispatch_expr(e, frame, nm) for e, nm in zip(node.by, it_names))
             df = namespace(self)._concat_horizontal(by)
             keys = df.columns
-        indices = pc.sort_indices(df.native, options=node.options.to_arrow(keys))
+        indices = fn.sort_indices(df.native, *keys, options=node.options)
         series = self._dispatch_expr(node.expr, frame, name)
         return self.from_series(series.gather(indices))
 
