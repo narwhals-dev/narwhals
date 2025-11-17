@@ -47,23 +47,21 @@ def test_expr_is_in(data: Data, expr: nwp.Expr, expected: Data) -> None:
     assert_equal_data(result, expected)
 
 
-# NOTE: Move these back into `parametrize` after removing the early error
 @pytest.mark.xfail(reason="TODO: Support `Expr.is_in(Expr)`", raises=NotImplementedError)
-def test_expr_is_in_expr(data: Data) -> None:  # pragma: no cover
+@pytest.mark.parametrize(
+    ("expr", "expected"),
+    [
+        (nwp.col("a").is_in(nwp.col("b")), {"a": [True, False, True, False]}),
+        (nwp.col("a").is_in(nwp.nth(1)), {"a": [True, False, True, False]}),
+        (nwp.col("b").is_in(nwp.col("a") - 5), {"b": [False, False, False, True]}),
+        (
+            (nwp.col("b").max() + nwp.col("a")).is_in(nwp.int_range(5, 10)),
+            {"b": [False, True, False, True]},
+        ),
+    ],
+)
+def test_expr_is_in_expr(data: Data, expr: nwp.Expr, expected: Data) -> None:
     df = dataframe(data)
-    expr, expected = (nwp.col("a").is_in(nwp.col("b")), {"a": [True, False, True, False]})  # type: ignore[arg-type]
-    assert_equal_data(df.select(expr), expected)
-    expr, expected = (nwp.col("a").is_in(nwp.nth(1)), {"a": [True, False, True, False]})  # type: ignore[arg-type]
-    assert_equal_data(df.select(expr), expected)
-    expr, expected = (
-        nwp.col("b").is_in(nwp.col("a") - 5),  # type: ignore[arg-type]
-        {"b": [False, False, False, True]},
-    )
-    assert_equal_data(df.select(expr), expected)
-    expr, expected = (
-        (nwp.col("b").max() + nwp.col("a")).is_in(nwp.int_range(5, 10)),  # type: ignore[arg-type]
-        {"b": [False, True, False, True]},
-    )
     assert_equal_data(df.select(expr), expected)
 
 

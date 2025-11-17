@@ -422,14 +422,16 @@ class Expr:
             ir.boolean.IsBetween(closed=closed).to_function_expr(self._ir, *it)
         )
 
-    def is_in(self, other: Iterable[Any]) -> Self:
+    def is_in(self, other: Iterable[Any] | Expr) -> Self:
         if is_series(other):
             return self._with_unary(ir.boolean.IsInSeries.from_series(other))
         if isinstance(other, Iterable):
             return self._with_unary(ir.boolean.IsInSeq.from_iterable(other))
         if is_expr(other):
-            return self._with_unary(ir.boolean.IsInExpr(other=other._ir))
-        msg = f"`is_in` only supports iterables, got: {type(other).__name__}"
+            return self._from_ir(
+                ir.boolean.IsInExpr().to_function_expr(self._ir, other._ir)
+            )
+        msg = f"`is_in` only supports iterables or Expr, got: {type(other).__name__}"
         raise TypeError(msg)
 
     def pipe(
