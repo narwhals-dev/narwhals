@@ -55,7 +55,9 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
         ("first", "last")
     )
     _OPTION_VARIANCE: ClassVar[frozenset[NarwhalsAggregation]] = frozenset(("std", "var"))
-    _OPTION_SCALAR: ClassVar[frozenset[NarwhalsAggregation]] = frozenset(("any", "all"))
+    _OPTION_SCALAR: ClassVar[frozenset[NarwhalsAggregation]] = frozenset(
+        ("any", "all", "sum")
+    )
 
     def __init__(
         self,

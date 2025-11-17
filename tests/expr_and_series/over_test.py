@@ -403,7 +403,7 @@ def test_unsupported_over() -> None:
     with pytest.raises(NotImplementedError, match="elementary"):
         nw.from_native(df).select(nw.col("a").shift(1).cum_sum().over("b"))
     tbl = pa.table(data)  # type: ignore[arg-type]
-    with pytest.raises(NotImplementedError, match="aggregation or literal"):
+    with pytest.raises(NotImplementedError, match="aggregations"):
         nw.from_native(tbl).select(nw.col("a").shift(1).cum_sum().over("b"))
 
 
@@ -510,4 +510,37 @@ def test_over_ewm_mean(
         "ewm_over_b": [0.0, 2 / 3, 2.0, 5.0, 6 + 1 / 3, 7.0],
         "ewm_global": [0.0, 2 / 3, 2.0, 3.6, 5.354838709677419, 6.444444444444445],
     }
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("expr", "expected_c"),
+    [
+        (
+            nw.when(~nw.col("a").is_null()).then(nw.col("b")).sum().over("g"),
+            [4, 4, 0, 11, 11],
+        ),
+        (
+            nw.when(~nw.col("a").is_null()).then(nw.col("b")).alias("d").sum().over("g"),
+            [4, 4, 0, 11, 11],
+        ),
+        (
+            nw.when(~nw.col("a").is_null()).then(nw.col("b")).sum().alias("d").over("g"),
+            [4, 4, 0, 11, 11],
+        ),
+    ],
+)
+def test_over_when_then_aggregation_partition_by(
+    constructor: Constructor, expr: nw.Expr, expected_c: list[float]
+) -> None:
+    # responsible for downstream failure in tubular
+    # tests/imputers/test_ModeImputer.py::TestFit::test_learnt_values_tied_weighted[input_col1-weight_col1-b-False-pandas]
+    # tubular commit: b2ca639aa26e620271b87d43de826006765b1f48
+    # https://github.com/narwhals-dev/narwhals/issues/3300
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
+    data = {"a": [1, 1, None, 3, 3], "b": [1, 3, 4, 5, 6], "g": [1, 1, 2, 3, 3]}
+    df = nw.from_native(constructor(data))
+    result = df.select("a", "b", c=expr).sort("b")
+    expected = {"a": [1, 1, None, 3, 3], "b": [1, 3, 4, 5, 6], "c": expected_c}
     assert_equal_data(result, expected)
