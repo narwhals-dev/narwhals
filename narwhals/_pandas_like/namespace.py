@@ -17,7 +17,6 @@ from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.typing import NativeDataFrameT, NativeSeriesT
 from narwhals._pandas_like.utils import is_non_nullable_boolean
-from narwhals._utils import zip_strict
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -308,7 +307,7 @@ class PandasLikeNamespace(
                 # error: Cannot determine type of "values"  [has-type]
                 values: list[PandasLikeSeries]
                 init_value, *values = (
-                    s.zip_with(~nm, "") for s, nm in zip_strict(series, null_mask)
+                    s.zip_with(~nm, "") for s, nm in zip(series, null_mask, strict=True)
                 )
                 sep_array = init_value._with_native(
                     init_value.__native_namespace__().Series(
@@ -321,7 +320,7 @@ class PandasLikeNamespace(
                 separators = (sep_array.zip_with(~nm, "") for nm in null_mask[:-1])
                 result = reduce(
                     operator.add,
-                    (s + v for s, v in zip_strict(separators, values)),
+                    (s + v for s, v in zip(separators, values, strict=True)),
                     init_value,
                 )
 

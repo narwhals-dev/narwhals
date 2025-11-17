@@ -12,7 +12,6 @@ from narwhals._utils import (
     dtype_matches_time_unit_and_time_zone,
     get_column_names,
     is_compliant_dataframe,
-    zip_strict,
 )
 
 if TYPE_CHECKING:
@@ -76,7 +75,7 @@ class CompliantSelectorNamespace(Protocol[FrameT, SeriesOrExprT]):
         self, df: FrameT, /
     ) -> Iterator[tuple[SeriesOrExprT, DType]]: ...
     def _iter_columns_names(self, df: FrameT, /) -> Iterator[tuple[SeriesOrExprT, str]]:
-        yield from zip_strict(self._iter_columns(df), df.columns)
+        yield from zip(self._iter_columns(df), df.columns, strict=True)
 
     def _is_dtype(
         self: CompliantSelectorNamespace[FrameT, SeriesOrExprT], dtype: type[DType], /
@@ -192,7 +191,7 @@ class LazySelectorNamespace(
         yield from df._iter_columns()
 
     def _iter_columns_dtypes(self, df: LazyFrameT, /) -> Iterator[tuple[ExprT, DType]]:
-        yield from zip_strict(self._iter_columns(df), df.schema.values())
+        yield from zip(self._iter_columns(df), df.schema.values(), strict=True)
 
 
 class CompliantSelector(
@@ -245,7 +244,7 @@ class CompliantSelector(
                 lhs_names, rhs_names = _eval_lhs_rhs(df, self, other)
                 return [
                     x
-                    for x, name in zip_strict(self(df), lhs_names)
+                    for x, name in zip(self(df), lhs_names, strict=True)
                     if name not in rhs_names
                 ]
 
@@ -272,7 +271,7 @@ class CompliantSelector(
                 return [
                     *(
                         x
-                        for x, name in zip_strict(self(df), lhs_names)
+                        for x, name in zip(self(df), lhs_names, strict=True)
                         if name not in rhs_names
                     ),
                     *other(df),
@@ -299,7 +298,9 @@ class CompliantSelector(
             def series(df: FrameT) -> Sequence[SeriesOrExprT]:
                 lhs_names, rhs_names = _eval_lhs_rhs(df, self, other)
                 return [
-                    x for x, name in zip_strict(self(df), lhs_names) if name in rhs_names
+                    x
+                    for x, name in zip(self(df), lhs_names, strict=True)
+                    if name in rhs_names
                 ]
 
             def names(df: FrameT) -> Sequence[str]:

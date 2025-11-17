@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 import narwhals as nw
-from narwhals._utils import zip_strict
 from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 if TYPE_CHECKING:
@@ -80,7 +79,11 @@ def test_expr_floordiv_by_zero(
 @pytest.mark.parametrize(
     ("numerator", "expected"),
     list(
-        zip_strict([*data["int"], *data["float"]], [*expected_truediv, *expected_truediv])
+        zip(
+            [*data["int"], *data["float"]],
+            [*expected_truediv, *expected_truediv],
+            strict=True,
+        )
     ),
 )
 def test_series_rtruediv_by_zero(
@@ -94,7 +97,11 @@ def test_series_rtruediv_by_zero(
 @pytest.mark.parametrize(
     ("numerator", "expected"),
     list(
-        zip_strict([*data["int"], *data["float"]], [*expected_truediv, *expected_truediv])
+        zip(
+            [*data["int"], *data["float"]],
+            [*expected_truediv, *expected_truediv],
+            strict=True,
+        )
     ),
 )
 def test_expr_rtruediv_by_zero(

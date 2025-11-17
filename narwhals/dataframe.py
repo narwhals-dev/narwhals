@@ -42,7 +42,6 @@ from narwhals._utils import (
     predicates_contains_list_of_bool,
     qualified_type_name,
     supports_arrow_c_stream,
-    zip_strict,
 )
 from narwhals.dependencies import is_numpy_array_2d, is_pyarrow_table
 from narwhals.exceptions import (
@@ -1796,7 +1795,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         _keys = [
             k if is_expr else col(k)
-            for k, is_expr in zip_strict(flat_keys, key_is_expr_or_series)
+            for k, is_expr in zip(flat_keys, key_is_expr_or_series, strict=True)
         ]
         expr_flat_keys = self._flatten_and_extract(*_keys)
         check_expressions_preserve_length(
@@ -3021,7 +3020,8 @@ class LazyFrame(BaseFrame[LazyFrameT]):
             raise NotImplementedError(msg)
 
         _keys = [
-            k if is_expr else col(k) for k, is_expr in zip_strict(flat_keys, key_is_expr)
+            k if is_expr else col(k)
+            for k, is_expr in zip(flat_keys, key_is_expr, strict=True)
         ]
         expr_flat_keys = self._flatten_and_extract(*_keys)
         check_expressions_preserve_length(

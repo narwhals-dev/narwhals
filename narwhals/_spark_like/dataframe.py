@@ -24,7 +24,6 @@ from narwhals._utils import (
     not_implemented,
     parse_columns_to_drop,
     to_pyarrow_table,
-    zip_strict,
 )
 from narwhals.exceptions import InvalidOperationError
 
@@ -339,7 +338,7 @@ class SparkLikeLazyFrame(
                 for d in descending
             )
 
-        sort_cols = [sort_f(col) for col, sort_f in zip_strict(by, sort_funcs)]
+        sort_cols = [sort_f(col) for col, sort_f in zip(by, sort_funcs, strict=True)]
         return self._with_native(self.native.sort(*sort_cols))
 
     def top_k(self, k: int, *, by: Iterable[str], reverse: bool | Sequence[bool]) -> Self:
@@ -348,7 +347,7 @@ class SparkLikeLazyFrame(
         sort_funcs = (
             self._F.desc_nulls_last if not d else self._F.asc_nulls_last for d in reverse
         )
-        sort_cols = [sort_f(col) for col, sort_f in zip_strict(by, sort_funcs)]
+        sort_cols = [sort_f(col) for col, sort_f in zip(by, sort_funcs, strict=True)]
         return self._with_native(self.native.sort(*sort_cols).limit(k))
 
     def drop_nulls(self, subset: Sequence[str] | None) -> Self:
@@ -449,7 +448,9 @@ class SparkLikeLazyFrame(
                 and_,
                 (
                     getattr(self.native, left_key) == getattr(other_native, right_key)
-                    for left_key, right_key in zip_strict(left_on_, right_on_remapped)
+                    for left_key, right_key in zip(
+                        left_on_, right_on_remapped, strict=True
+                    )
                 ),
             )
             if how == "full"

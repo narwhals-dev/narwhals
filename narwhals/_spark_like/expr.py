@@ -21,7 +21,6 @@ from narwhals._utils import (
     extend_bool,
     no_default,
     not_implemented,
-    zip_strict,
 )
 
 if TYPE_CHECKING:
@@ -158,7 +157,7 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         }
         yield from (
             mapping[(_desc, _nulls_last)](col)
-            for col, _desc, _nulls_last in zip_strict(cols, descending, nulls_last)
+            for col, _desc, _nulls_last in zip(cols, descending, nulls_last, strict=True)
         )
 
     def partition_by(self, *cols: Column | str) -> WindowSpec:

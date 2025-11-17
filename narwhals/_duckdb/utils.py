@@ -12,7 +12,7 @@ except ModuleNotFoundError:
     # DuckDB pre 1.3
     import duckdb.typing as duckdb_dtypes
 
-from narwhals._utils import Version, extend_bool, isinstance_or_issubclass, zip_strict
+from narwhals._utils import Version, extend_bool, isinstance_or_issubclass
 from narwhals.exceptions import ColumnNotFoundError
 
 if TYPE_CHECKING:
@@ -327,7 +327,9 @@ def generate_order_by_sql(
         return ""
     by_sql = ",".join(
         f"{parse_into_expression(x)} {DESCENDING_TO_ORDER[_descending]} {NULLS_LAST_TO_NULLS_POS[_nulls_last]}"
-        for x, _descending, _nulls_last in zip_strict(order_by, descending, nulls_last)
+        for x, _descending, _nulls_last in zip(
+            order_by, descending, nulls_last, strict=True
+        )
     )
     return f"order by {by_sql}"
 

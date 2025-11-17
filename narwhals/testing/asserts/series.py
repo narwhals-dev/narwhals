@@ -3,7 +3,7 @@ from __future__ import annotations
 from functools import partial
 from typing import TYPE_CHECKING, Any
 
-from narwhals._utils import qualified_type_name, zip_strict
+from narwhals._utils import qualified_type_name
 from narwhals.dependencies import is_narwhals_series
 from narwhals.dtypes import Array, Boolean, Categorical, List, String, Struct
 from narwhals.functions import new_series
@@ -243,7 +243,7 @@ def _check_list_like(
     # `check_order` value at the top level.
     impl = left_vals.implementation
     try:
-        for left_val, right_val in zip_strict(left_vals, right_vals):
+        for left_val, right_val in zip(left_vals, right_vals, strict=True):
             check_fn(
                 new_series("", values=left_val, dtype=left_dtype.inner, backend=impl),
                 new_series("", values=right_val, dtype=right_dtype.inner, backend=impl),
@@ -265,7 +265,9 @@ def _check_struct(
     #   * dtype differs, regardless of `check_dtypes=False`
     #   * order applies only at top level
     try:
-        for left_field, right_field in zip_strict(left_dtype.fields, right_dtype.fields):
+        for left_field, right_field in zip(
+            left_dtype.fields, right_dtype.fields, strict=True
+        ):
             check_fn(
                 left_vals.struct.field(left_field.name),
                 right_vals.struct.field(right_field.name),

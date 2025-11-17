@@ -13,7 +13,7 @@ from collections.abc import (
 )
 from datetime import timezone
 from enum import Enum, auto
-from functools import cache, lru_cache, partial, wraps
+from functools import cache, lru_cache, wraps
 from importlib.util import find_spec
 from inspect import getattr_static, getdoc
 from operator import attrgetter
@@ -1019,9 +1019,6 @@ def maybe_reset_index(obj: FrameOrSeriesT) -> FrameOrSeriesT:
             obj_any._compliant_series._with_native(native_obj.reset_index(drop=True))
         )
     return obj_any
-
-
-zip_strict = partial(zip, strict=True)
 
 
 def _is_range_index(obj: Any, native_namespace: Any) -> TypeIs[pd.RangeIndex]:

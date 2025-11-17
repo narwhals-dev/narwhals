@@ -25,7 +25,6 @@ from narwhals._utils import (
     parse_columns_to_drop,
     scale_bytes,
     supports_arrow_c_stream,
-    zip_strict,
 )
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import ShapeError
@@ -254,7 +253,7 @@ class ArrowDataFrame(
         return self.native.to_pylist()
 
     def iter_columns(self) -> Iterator[ArrowSeries]:
-        for name, series in zip_strict(self.columns, self.native.itercolumns()):
+        for name, series in zip(self.columns, self.native.itercolumns(), strict=True):
             yield ArrowSeries.from_native(series, context=self, name=name)
 
     _iter_columns = iter_columns
@@ -268,7 +267,7 @@ class ArrowDataFrame(
         if not named:
             for i in range(0, num_rows, buffer_size):
                 rows = df[i : i + buffer_size].to_pydict().values()
-                yield from zip_strict(*rows)
+                yield from zip(*rows, strict=True)
         else:
             for i in range(0, num_rows, buffer_size):
                 yield from df[i : i + buffer_size].to_pylist()
@@ -480,7 +479,7 @@ class ArrowDataFrame(
         else:
             sorting = [
                 (key, "descending" if is_descending else "ascending")
-                for key, is_descending in zip_strict(by, descending)
+                for key, is_descending in zip(by, descending, strict=True)
             ]
 
         null_placement = "at_end" if nulls_last else "at_start"
@@ -497,7 +496,7 @@ class ArrowDataFrame(
         else:
             sorting = [
                 (key, "ascending" if is_ascending else "descending")
-                for key, is_ascending in zip_strict(by, reverse)
+                for key, is_ascending in zip(by, reverse, strict=True)
             ]
         return self._with_native(
             self.native.take(pc.select_k_unstable(self.native, k, sorting)),  # type: ignore[call-overload]

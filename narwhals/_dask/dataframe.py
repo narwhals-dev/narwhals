@@ -16,7 +16,6 @@ from narwhals._utils import (
     generate_temporary_column_name,
     not_implemented,
     parse_columns_to_drop,
-    zip_strict,
 )
 from narwhals.exceptions import MultiOutputExpressionError
 from narwhals.typing import CompliantLazyFrame
@@ -320,7 +319,7 @@ class DaskLazyFrame(
         )
         extra = [
             right_key if right_key not in self.columns else f"{right_key}{suffix}"
-            for left_key, right_key in zip_strict(left_on, right_on)
+            for left_key, right_key in zip(left_on, right_on, strict=True)
             if right_key != left_key
         ]
         return result_native.drop(columns=extra)

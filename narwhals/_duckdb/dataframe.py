@@ -27,7 +27,6 @@ from narwhals._utils import (
     generate_temporary_column_name,
     parse_columns_to_drop,
     requires,
-    zip_strict,
 )
 from narwhals.dependencies import get_duckdb
 from narwhals.exceptions import InvalidOperationError
@@ -235,15 +234,17 @@ class DuckDBLazyFrame(
         if self._cached_native_schema is None:
             # Note: prefer `self._cached_native_schema` over `functools.cached_property`
             # due to Python3.13 failures.
-            self._cached_native_schema = dict(zip(self.columns, self.native.types))
+            self._cached_native_schema = dict(
+                zip(self.columns, self.native.types, strict=False)
+            )
 
         deferred_time_zone = DeferredTimeZone(self.native)
         return {
             column_name: native_to_narwhals_dtype(
                 duckdb_dtype, self._version, deferred_time_zone
             )
-            for column_name, duckdb_dtype in zip_strict(
-                self.native.columns, self.native.types
+            for column_name, duckdb_dtype in zip(
+                self.native.columns, self.native.types, strict=True
             )
         }
 
@@ -308,7 +309,7 @@ class DuckDBLazyFrame(
             assert right_on is not None  # noqa: S101
             it = (
                 col(f'lhs."{left}"') == col(f'rhs."{right}"')
-                for left, right in zip_strict(left_on, right_on)
+                for left, right in zip(left_on, right_on, strict=True)
             )
             condition: Expression = reduce(and_, it)
             rel = self.native.set_alias("lhs").join(
@@ -353,7 +354,7 @@ class DuckDBLazyFrame(
         if by_left is not None and by_right is not None:
             conditions.extend(
                 col(f'lhs."{left}"') == col(f'rhs."{right}"')
-                for left, right in zip_strict(by_left, by_right)
+                for left, right in zip(by_left, by_right, strict=True)
             )
         else:
             by_left = by_right = []
@@ -425,12 +426,12 @@ class DuckDBLazyFrame(
         if nulls_last:
             it = (
                 col(name).nulls_last() if not desc else col(name).desc().nulls_last()
-                for name, desc in zip_strict(by, descending)
+                for name, desc in zip(by, descending, strict=True)
             )
         else:
             it = (
                 col(name).nulls_first() if not desc else col(name).desc().nulls_first()
-                for name, desc in zip_strict(by, descending)
+                for name, desc in zip(by, descending, strict=True)
             )
         return self._with_native(self.native.sort(*it))
 

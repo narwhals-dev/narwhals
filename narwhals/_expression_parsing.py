@@ -7,7 +7,6 @@ from __future__ import annotations
 from enum import Enum, auto
 from typing import TYPE_CHECKING, Any, Literal, cast
 
-from narwhals._utils import zip_strict
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import (
     InvalidIntoExprError,
@@ -80,12 +79,13 @@ def evaluate_output_names_and_aliases(
         else expr._alias_output_names(output_names)
     )
     if exclude and expr._metadata.expansion_kind.is_multi_unnamed():
-        output_names, aliases = zip_strict(
+        output_names, aliases = zip(
             *[
                 (x, alias)
-                for x, alias in zip_strict(output_names, aliases)
+                for x, alias in zip(output_names, aliases, strict=True)
                 if x not in exclude
-            ]
+            ],
+            strict=True,
         )
     return output_names, aliases
 

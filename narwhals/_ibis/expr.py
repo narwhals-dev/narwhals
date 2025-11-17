@@ -26,7 +26,6 @@ from narwhals._utils import (
     extend_bool,
     no_default,
     not_implemented,
-    zip_strict,
 )
 
 if TYPE_CHECKING:
@@ -151,7 +150,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
             (True, False): desc_nulls_first,
             (True, True): desc_nulls_last,
         }
-        for col, _desc, _nulls_last in zip_strict(cols, descending, nulls_last):
+        for col, _desc, _nulls_last in zip(cols, descending, nulls_last, strict=True):
             yield mapping[(_desc, _nulls_last)](col)
 
     @classmethod
