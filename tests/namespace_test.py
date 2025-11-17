@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import re
 from collections import deque
-from collections.abc import Iterable, Sequence
-from typing import TYPE_CHECKING, Any, Callable, TypeVar, cast
+from collections.abc import Callable, Iterable, Sequence
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 import pytest
 
@@ -12,7 +12,9 @@ from narwhals._namespace import Namespace
 from narwhals._utils import Version
 
 if TYPE_CHECKING:
-    from typing_extensions import Never, TypeAlias, assert_type  # noqa: F401
+    from typing import TypeAlias
+
+    from typing_extensions import assert_type
 
     from narwhals._arrow.namespace import ArrowNamespace  # noqa: F401
     from narwhals._compliant import CompliantNamespace

@@ -23,8 +23,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
     from pathlib import Path
     from types import ModuleType
-
-    from typing_extensions import TypeAlias
+    from typing import TypeAlias
 
     from narwhals._typing import EagerAllowed, _LazyOnly, _SparkLike
     from narwhals.typing import FileSource

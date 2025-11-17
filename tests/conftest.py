@@ -5,7 +5,7 @@ import uuid
 from copy import deepcopy
 from functools import lru_cache
 from importlib.util import find_spec
-from typing import TYPE_CHECKING, Any, Callable, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 
@@ -14,14 +14,14 @@ from narwhals._utils import Implementation, generate_temporary_column_name
 from tests.utils import ID_PANDAS_LIKE, PANDAS_VERSION, pyspark_session, sqlframe_session
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
+    from typing import TypeAlias
 
     import ibis
     import pandas as pd
     import polars as pl
     import pyarrow as pa
     from ibis.backends.duckdb import Backend as IbisDuckDBBackend
-    from typing_extensions import TypeAlias
 
     from narwhals._native import NativeDask, NativeDuckDB, NativePySpark, NativeSQLFrame
     from narwhals._typing import EagerAllowed

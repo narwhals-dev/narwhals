@@ -4,9 +4,10 @@ import math
 import os
 import sys
 import warnings
+from collections.abc import Callable
 from datetime import date, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import narwhals as nw
 from narwhals._utils import Implementation, parse_version, zip_strict
@@ -15,12 +16,12 @@ from narwhals.translate import from_native
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
+    from typing import TypeAlias
 
     import pandas as pd
     import pytest
     from pyspark.sql import SparkSession
     from sqlframe.duckdb import DuckDBSession
-    from typing_extensions import TypeAlias
 
     from narwhals._native import NativeLazyFrame
     from narwhals.typing import Frame, IntoDataFrame, TimeUnit

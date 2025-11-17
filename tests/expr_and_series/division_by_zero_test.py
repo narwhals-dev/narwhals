@@ -1,12 +1,15 @@
 from __future__ import annotations
 
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 import narwhals as nw
 from narwhals._utils import zip_strict
 from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 data: dict[str, list[float]] = {
     "int": [-2, 0, 2],
