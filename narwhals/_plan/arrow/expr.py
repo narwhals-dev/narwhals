@@ -90,15 +90,6 @@ def is_seq_column(exprs: Seq[ir.ExprIR]) -> TypeIs[Seq[ir.Column]]:
     return all(isinstance(e, ir.Column) for e in exprs)
 
 
-# confusing name
-def _is_first_last_distinct(
-    expr: ir.ExprIR,
-) -> TypeIs[FExpr[IsFirstDistinct | IsLastDistinct]]:
-    return is_function_expr(expr) and isinstance(
-        expr.function, (IsFirstDistinct, IsLastDistinct)
-    )
-
-
 class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], Protocol):
     """Common to `Expr`, `Scalar` + their dependencies."""
 
