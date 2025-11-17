@@ -7,7 +7,6 @@ import pytest
 import narwhals as nw
 from tests.utils import (
     DUCKDB_VERSION,
-    PANDAS_VERSION,
     POLARS_VERSION,
     Constructor,
     ConstructorEager,

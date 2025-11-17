@@ -10,7 +10,6 @@ from hypothesis import HealthCheck, given, settings
 import narwhals as nw
 from tests.utils import (
     DUCKDB_VERSION,
-    PANDAS_VERSION,
     POLARS_VERSION,
     Constructor,
     ConstructorEager,
@@ -264,9 +263,8 @@ def test_rolling_var_expr_lazy_grouped(
     center: bool,
     ddof: int,
 ) -> None:
-    if (
-        ("polars" in str(constructor) and POLARS_VERSION < (1, 10))
-        or ("duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3))
+    if ("polars" in str(constructor) and POLARS_VERSION < (1, 10)) or (
+        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
     ):
         pytest.skip()
     if any(x in str(constructor) for x in ("dask", "pyarrow_table")):

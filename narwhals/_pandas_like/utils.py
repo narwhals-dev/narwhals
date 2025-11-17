@@ -387,7 +387,6 @@ def is_dtype_numpy_nullable(dtype: Any) -> TypeIs[BaseMaskedDtype]:
     )
 
 
-
 def get_dtype_backend(dtype: Any, implementation: Implementation) -> DTypeBackend:
     """Get dtype backend for pandas type.
 
