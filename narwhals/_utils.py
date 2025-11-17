@@ -588,8 +588,8 @@ class Implementation(NoAutoEnum):
 
 
 MIN_VERSIONS: Mapping[Implementation, tuple[int, ...]] = {
-    Implementation.PANDAS: (1, 1, 3),
-    Implementation.MODIN: (0, 8, 2),
+    Implementation.PANDAS: (1, 3, 4),
+    Implementation.MODIN: (0, 22, 0),
     Implementation.CUDF: (24, 10),
     Implementation.PYARROW: (13,),
     Implementation.PYSPARK: (3, 5),

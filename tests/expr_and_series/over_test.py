@@ -494,8 +494,6 @@ def test_over_ewm_mean(
     if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin", "cudf")):
         # not implemented
         request.applymarker(pytest.mark.xfail)
-    if "pandas" in str(constructor_eager) and PANDAS_VERSION < (1, 2):
-        request.applymarker(pytest.mark.xfail(reason="too old, not implemented"))
 
     data = {"a": [0.0, 1.0, 3.0, 5.0, 7.0, 7.5], "b": [1, 1, 1, 2, 2, 2]}
 

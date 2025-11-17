@@ -267,7 +267,6 @@ def test_rolling_var_expr_lazy_grouped(
     if (
         ("polars" in str(constructor) and POLARS_VERSION < (1, 10))
         or ("duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3))
-        or ("pandas" in str(constructor) and PANDAS_VERSION < (1, 2))
     ):
         pytest.skip()
     if any(x in str(constructor) for x in ("dask", "pyarrow_table")):
