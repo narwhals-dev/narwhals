@@ -47,6 +47,26 @@ def test_expr_is_in(data: Data, expr: nwp.Expr, expected: Data) -> None:
     assert_equal_data(result, expected)
 
 
+# NOTE: Move these back into `parametrize` after removing the early error
+@pytest.mark.xfail(reason="TODO: Support `Expr.is_in(Expr)`", raises=NotImplementedError)
+def test_expr_is_in_expr(data: Data) -> None:  # pragma: no cover
+    df = dataframe(data)
+    expr, expected = (nwp.col("a").is_in(nwp.col("b")), {"a": [True, False, True, False]})  # type: ignore[arg-type]
+    assert_equal_data(df.select(expr), expected)
+    expr, expected = (nwp.col("a").is_in(nwp.nth(1)), {"a": [True, False, True, False]})  # type: ignore[arg-type]
+    assert_equal_data(df.select(expr), expected)
+    expr, expected = (
+        nwp.col("b").is_in(nwp.col("a") - 5),  # type: ignore[arg-type]
+        {"b": [False, False, False, True]},
+    )
+    assert_equal_data(df.select(expr), expected)
+    expr, expected = (
+        (nwp.col("b").max() + nwp.col("a")).is_in(nwp.int_range(5, 10)),  # type: ignore[arg-type]
+        {"b": [False, True, False, True]},
+    )
+    assert_equal_data(df.select(expr), expected)
+
+
 @pytest.mark.parametrize(
     ("column", "other", "expected"),
     [
