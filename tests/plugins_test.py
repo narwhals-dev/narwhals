@@ -1,8 +1,13 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
 
 import narwhals as nw
+
+if TYPE_CHECKING:
+    from narwhals.plugins import Plugin
 
 
 def test_plugin() -> None:
@@ -21,3 +26,10 @@ def test_not_implemented() -> None:
         NotImplementedError, match="is not implemented for: 'DictLazyFrame'"
     ):
         lf.select(nw.col("a").ewm_mean())
+
+
+def test_typing() -> None:
+    pytest.importorskip("test_plugin")
+    import test_plugin
+
+    _plugin: Plugin = test_plugin
