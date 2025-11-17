@@ -68,8 +68,10 @@ from typing import TYPE_CHECKING, Any, Protocol
 from narwhals._typing_compat import TypeVar
 
 if TYPE_CHECKING:
+    from typing import TypeAlias
+
     import pyarrow as pa
-    from typing_extensions import Self, TypeAlias, TypeIs
+    from typing_extensions import Self, TypeIs
 
 
 class ArrowStreamExportable(Protocol):

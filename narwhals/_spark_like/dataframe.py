@@ -33,12 +33,13 @@ if TYPE_CHECKING:
     from io import BytesIO
     from pathlib import Path
     from types import ModuleType
+    from typing import TypeAlias
 
     import pyarrow as pa
     from sqlframe.base.column import Column
     from sqlframe.base.dataframe import BaseDataFrame
     from sqlframe.base.window import Window
-    from typing_extensions import Self, TypeAlias, TypeIs
+    from typing_extensions import Self, TypeIs
 
     from narwhals._compliant.typing import CompliantDataFrameAny
     from narwhals._spark_like.expr import SparkLikeExpr

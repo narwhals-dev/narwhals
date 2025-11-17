@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import operator
 import re
-from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Literal, TypeVar, cast
 
 import pandas as pd
 
@@ -28,12 +28,13 @@ from narwhals._utils import (
 from narwhals.exceptions import ShapeError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Mapping
+    from collections.abc import Callable, Iterable, Iterator, Mapping
     from types import ModuleType
+    from typing import TypeAlias
 
     from pandas._typing import Dtype as PandasDtype
     from pandas.core.dtypes.dtypes import BaseMaskedDtype
-    from typing_extensions import TypeAlias, TypeIs
+    from typing_extensions import TypeIs
 
     from narwhals._duration import IntervalUnit
     from narwhals._pandas_like.expr import PandasLikeExpr

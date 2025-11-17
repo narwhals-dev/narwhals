@@ -6,7 +6,6 @@ from itertools import chain
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     ClassVar,
     Generic,
     Literal,
@@ -57,15 +56,16 @@ from narwhals.series import Series
 from narwhals.translate import to_native
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Mapping, Sequence
+    from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
     from io import BytesIO
     from pathlib import Path
     from types import ModuleType
+    from typing import Concatenate, TypeAlias
 
     import pandas as pd
     import polars as pl
     import pyarrow as pa
-    from typing_extensions import Concatenate, ParamSpec, Self, TypeAlias
+    from typing_extensions import ParamSpec, Self
 
     from narwhals._compliant import CompliantDataFrame, CompliantLazyFrame
     from narwhals._compliant.typing import CompliantExprAny

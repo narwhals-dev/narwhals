@@ -22,12 +22,12 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
     from decimal import Decimal
     from types import ModuleType
+    from typing import TypeAlias
 
     import numpy as np
     import pandas as pd
     import polars as pl
     import pyarrow as pa
-    from typing_extensions import TypeAlias
 
     from narwhals import dtypes
     from narwhals.dataframe import DataFrame, LazyFrame

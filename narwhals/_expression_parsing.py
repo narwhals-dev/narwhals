@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from enum import Enum, auto
-from typing import TYPE_CHECKING, Any, Callable, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 from narwhals._utils import zip_strict
 from narwhals.dependencies import is_numpy_array_1d
@@ -16,7 +16,7 @@ from narwhals.exceptions import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Sequence
+    from collections.abc import Callable, Iterator, Sequence
 
     from typing_extensions import Never, TypeIs
 

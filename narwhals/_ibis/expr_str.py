@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from ibis.expr.datatypes import Timestamp
 
@@ -8,8 +8,10 @@ from narwhals._sql.expr_str import SQLExprStringNamespace
 from narwhals._utils import _is_naive_format, not_implemented
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+    from typing import TypeAlias
+
     import ibis.expr.types as ir
-    from typing_extensions import TypeAlias
 
     from narwhals._ibis.expr import IbisExpr
 

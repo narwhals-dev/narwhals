@@ -18,8 +18,9 @@ from narwhals._utils import (
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable, Iterator, Sequence
     from datetime import timezone
+    from typing import TypeAlias
 
-    from typing_extensions import Self, TypeAlias, TypeIs
+    from typing_extensions import Self, TypeIs
 
     from narwhals._compliant.expr import NativeExpr
     from narwhals._compliant.typing import (

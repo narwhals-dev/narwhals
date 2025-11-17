@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator, Mapping, Sequence
+from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from itertools import chain, product
-from typing import TYPE_CHECKING, Any, Callable, Literal, cast, overload
+from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import numpy as np
 
@@ -40,10 +40,11 @@ if TYPE_CHECKING:
     from io import BytesIO
     from pathlib import Path
     from types import ModuleType
+    from typing import TypeAlias
 
     import pandas as pd
     import polars as pl
-    from typing_extensions import Self, TypeAlias, TypeIs
+    from typing_extensions import Self, TypeIs
 
     from narwhals._compliant.typing import CompliantDataFrameAny, CompliantLazyFrameAny
     from narwhals._pandas_like.expr import PandasLikeExpr

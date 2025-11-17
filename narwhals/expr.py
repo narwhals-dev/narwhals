@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import math
-from collections.abc import Iterable, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Callable
+from collections.abc import Callable, Iterable, Mapping, Sequence
+from typing import TYPE_CHECKING, Any
 
 from narwhals._expression_parsing import (
     ExprKind,
@@ -22,9 +22,9 @@ from narwhals.expr_struct import ExprStructNamespace
 from narwhals.translate import to_native
 
 if TYPE_CHECKING:
-    from typing import NoReturn, TypeVar
+    from typing import Concatenate, NoReturn, TypeVar
 
-    from typing_extensions import Concatenate, ParamSpec, Self
+    from typing_extensions import ParamSpec, Self
 
     from narwhals._compliant import CompliantExpr, CompliantNamespace
     from narwhals._typing import NoDefault

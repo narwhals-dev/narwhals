@@ -11,8 +11,9 @@ from narwhals._utils import Implementation, Version, isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping
+    from typing import TypeAlias
 
-    from typing_extensions import TypeAlias, TypeIs
+    from typing_extensions import TypeIs
 
     from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import (

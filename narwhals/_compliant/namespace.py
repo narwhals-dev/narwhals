@@ -24,8 +24,9 @@ from narwhals.dependencies import is_numpy_array_2d
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
+    from typing import TypeAlias
 
-    from typing_extensions import TypeAlias, TypeIs
+    from typing_extensions import TypeIs
 
     from narwhals._compliant.selectors import CompliantSelectorNamespace
     from narwhals._utils import Implementation, Version

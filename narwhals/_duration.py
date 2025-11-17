@@ -8,8 +8,7 @@ from typing import TYPE_CHECKING, Literal, cast, get_args
 
 if TYPE_CHECKING:
     from collections.abc import Container, Mapping
-
-    from typing_extensions import TypeAlias
+    from typing import TypeAlias
 
 __all__ = ["IntervalUnit"]
 

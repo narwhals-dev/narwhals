@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, cast
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 import polars as pl
 
@@ -19,7 +19,7 @@ from narwhals._polars.utils import (
 from narwhals._utils import Implementation, no_default, requires
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
 
     from typing_extensions import Self
 

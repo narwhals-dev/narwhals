@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from types import ModuleType
-from typing import TYPE_CHECKING, Literal, Union
+from typing import TYPE_CHECKING, Literal
 
 from narwhals._typing_compat import TypeVar
 from narwhals._utils import Implementation, _NoDefault
 
 if TYPE_CHECKING:
-    from typing_extensions import TypeAlias
+    from typing import TypeAlias
 
 # `str` aliases
 _Polars: TypeAlias = Literal["polars"]
@@ -92,7 +92,7 @@ backend (either eager or lazy).
 """
 
 BackendT = TypeVar("BackendT", bound=Backend)
-IntoBackend: TypeAlias = Union[BackendT, ModuleType]
+IntoBackend: TypeAlias = BackendT | ModuleType
 """Anything that can be converted into a [`narwhals.Implementation`][].
 
 `backend` can be specified in three ways.

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import operator
 import warnings
-from typing import TYPE_CHECKING, Any, Callable, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import numpy as np
 
@@ -29,13 +29,14 @@ from narwhals.dependencies import is_numpy_array_1d, is_pandas_like_series
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
-    from collections.abc import Hashable, Iterable, Iterator, Sequence
+    from collections.abc import Callable, Hashable, Iterable, Iterator, Sequence
     from types import ModuleType
+    from typing import TypeAlias
 
     import pandas as pd
     import polars as pl
     import pyarrow as pa
-    from typing_extensions import Self, TypeAlias, TypeIs
+    from typing_extensions import Self, TypeIs
 
     from narwhals._arrow.typing import ChunkedArrayAny
     from narwhals._compliant.series import HistData

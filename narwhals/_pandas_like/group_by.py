@@ -14,10 +14,11 @@ from narwhals.dependencies import is_pandas_like_dataframe
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
+    from typing import TypeAlias
 
     import pandas as pd
     from pandas.api.typing import DataFrameGroupBy as _NativeGroupBy
-    from typing_extensions import TypeAlias, Unpack
+    from typing_extensions import Unpack
 
     from narwhals._compliant.typing import NarwhalsAggregation, ScalarKwargs
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame

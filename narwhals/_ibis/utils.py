@@ -11,11 +11,12 @@ from narwhals._utils import Version, isinstance_or_issubclass
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
     from datetime import timedelta
+    from typing import TypeAlias
 
     import ibis.expr.types as ir
     from ibis.common.temporal import TimestampUnit
     from ibis.expr.datatypes import DataType as IbisDataType
-    from typing_extensions import TypeAlias, TypeIs
+    from typing_extensions import TypeIs
 
     from narwhals._duration import IntervalUnit
     from narwhals._ibis.dataframe import IbisLazyFrame

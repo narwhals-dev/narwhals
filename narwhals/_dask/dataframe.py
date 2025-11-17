@@ -26,9 +26,10 @@ if TYPE_CHECKING:
     from io import BytesIO
     from pathlib import Path
     from types import ModuleType
+    from typing import TypeAlias
 
     import dask.dataframe.dask_expr as dx
-    from typing_extensions import Self, TypeAlias, TypeIs
+    from typing_extensions import Self, TypeIs
 
     from narwhals._compliant.typing import CompliantDataFrameAny
     from narwhals._dask.expr import DaskExpr

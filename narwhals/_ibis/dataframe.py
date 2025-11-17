@@ -26,11 +26,12 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
     from pathlib import Path
     from types import ModuleType
+    from typing import TypeAlias
 
     import pandas as pd
     import pyarrow as pa
     from ibis.expr.operations import Binary
-    from typing_extensions import Self, TypeAlias, TypeIs
+    from typing_extensions import Self, TypeIs
 
     from narwhals._compliant.typing import CompliantDataFrameAny
     from narwhals._ibis.group_by import IbisGroupBy

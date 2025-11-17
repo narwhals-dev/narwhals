@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, Protocol, TypeVar, Union
 from narwhals._native import IntoSeries, IntoSeriesT
 
 if TYPE_CHECKING:
-    from typing_extensions import TypeAlias
+    from typing import TypeAlias
 
     from narwhals._native import NativeDataFrame, NativeLazyFrame
     from narwhals.stable.v1 import DataFrame, Expr, LazyFrame, Series

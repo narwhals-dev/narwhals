@@ -35,10 +35,11 @@ if TYPE_CHECKING:
     from io import BytesIO
     from pathlib import Path
     from types import ModuleType
+    from typing import TypeAlias
 
     import pandas as pd
     import polars as pl
-    from typing_extensions import Self, TypeAlias, TypeIs
+    from typing_extensions import Self, TypeIs
 
     from narwhals._arrow.expr import ArrowExpr
     from narwhals._arrow.group_by import ArrowGroupBy

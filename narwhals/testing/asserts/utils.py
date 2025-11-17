@@ -5,7 +5,9 @@ from typing import TYPE_CHECKING, Any, Literal
 from narwhals.dependencies import is_narwhals_series
 
 if TYPE_CHECKING:
-    from typing_extensions import Never, TypeAlias
+    from typing import TypeAlias
+
+    from typing_extensions import Never
 
 # NOTE: This alias is created to facilitate autocomplete. Feel free to extend it as
 # you please when adding a new feature.

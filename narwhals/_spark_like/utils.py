@@ -13,11 +13,11 @@ from narwhals.exceptions import ColumnNotFoundError, UnsupportedDTypeError
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
+    from typing import TypeAlias
 
     import sqlframe.base.types as sqlframe_types
     from sqlframe.base.column import Column
     from sqlframe.base.session import _BaseSession as Session
-    from typing_extensions import TypeAlias
 
     from narwhals._compliant.typing import CompliantLazyFrameAny
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame

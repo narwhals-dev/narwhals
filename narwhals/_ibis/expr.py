@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import operator
-from typing import TYPE_CHECKING, Any, Callable, TypeVar, cast
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 import ibis
 
@@ -30,7 +30,7 @@ from narwhals._utils import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Sequence
+    from collections.abc import Callable, Iterator, Sequence
 
     import ibis.expr.types as ir
     from typing_extensions import Self

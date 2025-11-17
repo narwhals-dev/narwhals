@@ -21,8 +21,7 @@ from narwhals._utils import zip_strict
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
-
-    from typing_extensions import TypeAlias
+    from typing import TypeAlias
 
     from narwhals._utils import Implementation, Version
     from narwhals.typing import IntoDType, NonNestedLiteral

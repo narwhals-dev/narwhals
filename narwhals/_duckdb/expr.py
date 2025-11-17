@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import operator
-from typing import TYPE_CHECKING, Any, Callable, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from duckdb import CoalesceOperator, StarExpression
 
@@ -24,7 +24,7 @@ from narwhals._sql.expr import SQLExpr
 from narwhals._utils import Implementation, Version, extend_bool, no_default
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
 
     from duckdb import Expression
     from typing_extensions import Self

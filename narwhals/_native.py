@@ -105,7 +105,7 @@ They differ by checking **all** native types/protocols in a single-call and usin
 from __future__ import annotations
 
 from collections.abc import Callable, Collection, Iterable, Sized
-from typing import TYPE_CHECKING, Any, Protocol, TypeVar, Union, cast
+from typing import TYPE_CHECKING, Any, Protocol, TypeVar, cast
 
 from narwhals.dependencies import (
     get_cudf,
@@ -122,12 +122,14 @@ from narwhals.dependencies import (
 )
 
 if TYPE_CHECKING:
+    from typing import TypeAlias
+
     import duckdb
     import pandas as pd
     import polars as pl
     import pyarrow as pa
     from sqlframe.base.dataframe import BaseDataFrame as _BaseDataFrame
-    from typing_extensions import Self, TypeAlias, TypeIs
+    from typing_extensions import Self, TypeIs
 
     SQLFrameDataFrame = _BaseDataFrame[Any, Any, Any, Any, Any]
     T = TypeVar("T")
@@ -289,8 +291,8 @@ Examples:
     ...     return df.shape
 """
 
-IntoLazyFrame: TypeAlias = Union[NativeLazyFrame, NativeIbis]
-IntoFrame: TypeAlias = Union[IntoDataFrame, IntoLazyFrame]
+IntoLazyFrame: TypeAlias = NativeLazyFrame | NativeIbis
+IntoFrame: TypeAlias = IntoDataFrame | IntoLazyFrame
 """Anything which can be converted to a Narwhals DataFrame or LazyFrame.
 
 Use this if your function can accept an object which can be converted to either

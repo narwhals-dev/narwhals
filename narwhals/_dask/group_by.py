@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import partial
-from typing import TYPE_CHECKING, Any, Callable, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import dask.dataframe as dd
 
@@ -10,12 +10,12 @@ from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._utils import zip_strict
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Callable, Mapping, Sequence
+    from typing import TypeAlias
 
     import pandas as pd
     from dask.dataframe.api import GroupBy as _DaskGroupBy
     from pandas.core.groupby import SeriesGroupBy as _PandasSeriesGroupBy
-    from typing_extensions import TypeAlias
 
     from narwhals._compliant.typing import NarwhalsAggregation
     from narwhals._dask.dataframe import DaskLazyFrame

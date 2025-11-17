@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from functools import partial
 from operator import methodcaller
-from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, Protocol
+from typing import TYPE_CHECKING, Any, Generic, Literal, Protocol
 
 from narwhals._compliant.any_namespace import (
     CatNamespace,
@@ -37,7 +37,7 @@ from narwhals.dependencies import is_numpy_array, is_numpy_scalar
 from narwhals.exceptions import MultiOutputExpressionError
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
 
     from typing_extensions import Self, TypeIs
 

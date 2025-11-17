@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import partial
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from narwhals._utils import qualified_type_name, zip_strict
 from narwhals.dependencies import is_narwhals_series
@@ -10,7 +10,8 @@ from narwhals.functions import new_series
 from narwhals.testing.asserts.utils import raise_series_assertion_error
 
 if TYPE_CHECKING:
-    from typing_extensions import TypeAlias
+    from collections.abc import Callable
+    from typing import TypeAlias
 
     from narwhals.series import Series
     from narwhals.typing import IntoSeriesT, SeriesT

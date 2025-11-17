@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import operator
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Literal, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, cast
 
 from narwhals._spark_like.expr_dt import SparkLikeExprDateTimeNamespace
 from narwhals._spark_like.expr_list import SparkLikeExprListNamespace
@@ -25,11 +25,12 @@ from narwhals._utils import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Mapping, Sequence
+    from collections.abc import Callable, Iterator, Mapping, Sequence
+    from typing import TypeAlias
 
     from sqlframe.base.column import Column
     from sqlframe.base.window import Window, WindowSpec
-    from typing_extensions import Self, TypeAlias
+    from typing_extensions import Self
 
     from narwhals._compliant import WindowInputs
     from narwhals._compliant.typing import (

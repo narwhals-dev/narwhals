@@ -14,8 +14,9 @@ from narwhals.exceptions import MultiOutputExpressionError
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    from typing import TypeAlias
 
-    from typing_extensions import Self, TypeAlias
+    from typing_extensions import Self
 
     from narwhals._compliant.window import WindowInputs
     from narwhals._sql.expr import SQLExpr
