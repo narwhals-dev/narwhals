@@ -188,6 +188,7 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
     def _count_star(self) -> NativeExprT: ...
     def _first(self, expr: NativeExprT, *order_by: str) -> NativeExprT: ...
     def _last(self, expr: NativeExprT, *order_by: str) -> NativeExprT: ...
+    def _any_value(self, expr: NativeExprT, seed: int | None) -> NativeExprT: ...
 
     def _when(
         self,
@@ -758,6 +759,20 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
             ]
 
         return self._with_window_function(func)
+
+    def any_value(self, seed: int | None) -> Self:
+        def f(expr: NativeExprT) -> NativeExprT:
+            return self._any_value(expr, seed)
+
+        def window_f(
+            df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
+        ) -> Sequence[NativeExprT]:
+            return [
+                self._window_expression(self._any_value(expr, seed), inputs.partition_by)
+                for expr in self(df)
+            ]
+
+        return self._with_callable(f, window_f)
 
     def rank(self, method: RankMethod, *, descending: bool) -> Self:
         if method in {"min", "max", "average"}:

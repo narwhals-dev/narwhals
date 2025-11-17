@@ -127,6 +127,11 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
             order_by=self._sort(*order_by), include_null=True
         )
 
+    def _any_value(self, expr: ir.Value, seed: int | None) -> ir.Value:
+        # !NOTE: ibis arbitrary returns a random non-null value
+        # See: https://ibis-project.org/reference/expression-generic.html#ibis.expr.types.generic.Column.arbitrary
+        return cast("ir.Column", expr).first(include_null=True)
+
     def __narwhals_namespace__(self) -> IbisNamespace:  # pragma: no cover
         from narwhals._ibis.namespace import IbisNamespace
 
