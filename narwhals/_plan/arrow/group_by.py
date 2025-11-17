@@ -16,7 +16,7 @@ from narwhals._utils import Implementation
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Mapping, Sequence
+    from collections.abc import Collection, Iterator, Mapping, Sequence
 
     from typing_extensions import Self, TypeAlias
 
@@ -139,6 +139,15 @@ def group_by_error(
     return InvalidOperationError(msg)
 
 
+def multiple_null_partitions_error(column_names: Collection[str]) -> NotImplementedError:
+    backend = Implementation.PYARROW
+    msg = (
+        f"`over(*partition_by)` where multiple columns contain null values is not yet supported for {backend!r}\n"
+        f"Got: {list(column_names)!r}"
+    )
+    return NotImplementedError(msg)
+
+
 class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
     _df: Frame
     _keys: Seq[NamedIR]
@@ -165,14 +174,24 @@ class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
             return result.rename(dict(zip(key_names, original)))
         return result
 
-    # TODO @dangotbanned: Handle joining nulls in partitions
     def agg_over(self, irs: Seq[NamedIR], sort_indices: Indices | None = None) -> Frame:
-        compliant = self.compliant
         key_names = self.key_names
+        compliant = self.compliant
+        native = compliant.native
+        if len(key_names) > 1 and any(
+            s.null_count for s in native.select(list(key_names)).columns
+        ):
+            raise multiple_null_partitions_error(key_names)
+        if len(key_names) == 1:
+            by_series = compliant.get_column(key_names[0])
+            if by_series.has_nulls():
+                da: Incomplete = fn.array(by_series.native.dictionary_encode("encode"))
+                temp_name = temp.column_name(compliant)
+                key_names = (temp_name,)
+                native = native.append_column(temp_name, da.indices)
+                compliant = compliant._with_native(native)
+        native = native if sort_indices is None else compliant._gather(sort_indices)
         specs = (AggSpec.from_named_ir(e) for e in irs)
-        native = (
-            compliant.native if sort_indices is None else compliant._gather(sort_indices)
-        )
         windowed = compliant._with_native(acero.group_by_table(native, key_names, specs))
         return (
             compliant.select_names(*key_names)

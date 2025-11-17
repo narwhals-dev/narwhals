@@ -280,30 +280,26 @@ def data_groups() -> Data:
         "a": ["a", "b", "d", "d", "b", "c"],
         "b": [1, 2, 1, 5, 3, 3],
         "c": [5, 4, 3, 6, 2, 1],
-        #     ^        ^  ^  ^ = Only value in group `"c"`
-        #     |        |  2 = Last (first -> descending) value in group `"b"`
-        #     |        6 = Last (first -> descending) value in group `None`/"d"
-        #     5 = Only value in group `"a"`
-        # NOTE: Joining back is an issue for `None` group
         "i": [0, 1, 2, 3, 4, 5],
     }
 
 
-@pytest.fixture
-def data_groups_nulls(data_groups: Data) -> Data:
-    a_d_nulls = [el if el != "d" else None for el in data_groups["a"]]
-    return data_groups | {"a": a_d_nulls}
+def test_over_partition_by_nulls_order_by() -> None:
+    data = {
+        "a": ["a", "b", None, None, "b", "c"],
+        "b": [1, 2, 1, None, None, None],
+        "c": [5, 4, 3, 6, 2, 1],
+        "i": [0, 1, 2, 3, 4, 5],
+    }
 
-
-@pytest.mark.xfail(
-    reason="https://github.com/narwhals-dev/narwhals/issues/3300", raises=AssertionError
-)
-def test_over_partition_by_nulls_order_by(data_groups_nulls: Data) -> None:
-    expected = data_groups_nulls | {"result": [5, 2, 6, 6, 2, 1]}
-    df = dataframe(data_groups_nulls)
-    expr = nwp.col("c").first().over("a", order_by="i", descending=True)
-    result = df.with_columns(result=expr).sort("i")
+    expected = data | {"result": [5, 2, 6, 6, 2, 1]}
+    df = dataframe(data)
+    by_single_null = nwp.col("c").first().over("a", order_by="i", descending=True)
+    result = df.with_columns(result=by_single_null).sort("i")
     assert_equal_data(result, expected)
+    by_multiple_null = nwp.col("c").first().over("a", "b", order_by="i", descending=True)
+    with pytest.raises(NotImplementedError):
+        df.with_columns(by_multiple_null)
 
 
 @pytest.mark.parametrize(
