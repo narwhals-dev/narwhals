@@ -299,6 +299,9 @@ class PolarsExpr:
         result = self.native.mode()
         return self._with_native(result.first() if keep == "any" else result)
 
+    def any_value(self, seed: int | None) -> Self:
+        return self._with_native(self.native.sample(n=1, seed=seed).first())
+
     @property
     def dt(self) -> PolarsExprDateTimeNamespace:
         return PolarsExprDateTimeNamespace(self)

@@ -41,6 +41,7 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
         "any": "any",
         "first": "first",
         "last": "last",
+        "any_value": "one",
     }
     _REMAP_UNIQUE: ClassVar[Mapping[UniqueKeepStrategy, Aggregation]] = {
         "any": "min",

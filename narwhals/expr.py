@@ -2368,6 +2368,10 @@ class Expr:
 
         return result
 
+    def any_value(self, seed: int | None = None) -> Self:
+        """TODO"""
+        return self._append_node(ExprNode(ExprKind.AGGREGATION, "any_value", seed=seed))
+
     @property
     def str(self) -> ExprStringNamespace[Self]:
         return ExprStringNamespace(self)

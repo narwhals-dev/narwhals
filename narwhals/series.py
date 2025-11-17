@@ -2844,6 +2844,10 @@ class Series(Generic[IntoSeriesT]):
         result = result.rename(orig_name) if name_is_none else result
         return cast("Self", result)
 
+    def any_value(self, seed: int | None = None) -> PythonLiteral:
+        """TODO"""
+        return self._compliant_series.any_value(seed=seed)
+
     @property
     def str(self) -> SeriesStringNamespace[Self]:
         return SeriesStringNamespace(self)

@@ -1152,6 +1152,13 @@ class PandasLikeSeries(EagerSeries[Any]):
     def sqrt(self) -> Self:
         return self._with_native(self.native.pow(0.5))
 
+    def any_value(self, seed: int | None) -> PythonLiteral:
+        from random import Random
+
+        rng = Random(seed)  # noqa: S311
+        idx = rng.randint(0, len(self) - 1)
+        return self.item(idx)
+
     @property
     def str(self) -> PandasLikeSeriesStringNamespace:
         return PandasLikeSeriesStringNamespace(self)
