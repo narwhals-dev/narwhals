@@ -24,7 +24,6 @@ def data() -> Data:
     return {"a": [1, 4, 2, 5], "b": [1, 0, 2, 0], "c": [None, "hi", "hello", "howdy"]}
 
 
-@pytest.mark.xfail(reason="Not implemented `is_in_seq`", raises=NotImplementedError)
 @pytest.mark.parametrize(
     ("expr", "expected"),
     [
@@ -36,11 +35,14 @@ def data() -> Data:
             ncs.integer().is_in([5, 6, 0]),
             {"a": [False, False, False, True], "b": [False, True, False, True]},
         ),
+        (ncs.string().last().is_in(iter(["howdy"])), {"c": [True]}),
+        (
+            (nwp.col("b").max() + nwp.col("a")).is_in(range(5, 10)),
+            {"b": [False, True, False, True]},
+        ),
     ],
 )
-def test_expr_is_in(
-    data: Data, expr: nwp.Expr, expected: Data
-) -> None:  # pragma: no cover
+def test_expr_is_in(data: Data, expr: nwp.Expr, expected: Data) -> None:
     result = dataframe(data).select(expr)
     assert_equal_data(result, expected)
 

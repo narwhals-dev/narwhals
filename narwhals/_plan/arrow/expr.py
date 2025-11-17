@@ -16,7 +16,12 @@ from narwhals._plan.compliant.column import ExprDispatch
 from narwhals._plan.compliant.expr import EagerExpr
 from narwhals._plan.compliant.scalar import EagerScalar
 from narwhals._plan.compliant.typing import namespace
-from narwhals._plan.expressions.boolean import IsFirstDistinct, IsInSeries, IsLastDistinct
+from narwhals._plan.expressions.boolean import (
+    IsFirstDistinct,
+    IsInSeq,
+    IsInSeries,
+    IsLastDistinct,
+)
 from narwhals._plan.expressions.functions import NullCount
 from narwhals._utils import Implementation, Version, _StoresNative, not_implemented
 from narwhals.exceptions import InvalidOperationError, ShapeError
@@ -163,6 +168,13 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
         other = node.function.other.unwrap().to_native()
         return self._with_native(fn.is_in(native, other), name)
 
+    def is_in_seq(
+        self, node: FExpr[IsInSeq], frame: Frame, name: str
+    ) -> StoresNativeT_co:
+        native = node.input[0].dispatch(self, frame, name).native
+        other = fn.array(node.function.other)
+        return self._with_native(fn.is_in(native, other), name)
+
     def is_nan(self, node: FExpr[IsNan], frame: Frame, name: str) -> StoresNativeT_co:
         return self._unary_function(fn.is_nan)(node, frame, name)
 
@@ -193,7 +205,6 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
     clip = not_implemented()  # type: ignore[misc]
     drop_nulls = not_implemented()  # type: ignore[misc]
     replace_strict = not_implemented()  # type: ignore[misc]
-    is_in_seq = not_implemented()  # type: ignore[misc]
     is_in_expr = not_implemented()  # type: ignore[misc]
 
 
