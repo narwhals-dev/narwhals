@@ -131,17 +131,11 @@ class ArrowDataFrame(
         descending: bool = False,
         nulls_last: bool = False,
     ) -> Self:
-        native = self.native
-        options = pa_options.sort(*order_by, nulls_last=nulls_last, descending=descending)
-        indices = pc.sort_indices(native, options=options)
-        int_range = fn.int_range(len(self))
-        if fn.HAS_SCATTER:
-            column = pc.scatter(int_range, indices.cast(pa.int64()))  # type: ignore[attr-defined]
-        else:
-            # NOTE: Some version in the range (`15<...<=22`)
-            # started returning the correct result via `indices.sort()`
-            column = int_range.take(pc.sort_indices(indices))
-        return self._with_native(native.add_column(0, name, column))
+        indices = fn.sort_indices(
+            self.native, *order_by, nulls_last=nulls_last, descending=descending
+        )
+        column = fn.unsort_indices(indices)
+        return self._with_native(self.native.add_column(0, name, column))
 
     def get_column(self, name: str) -> Series:
         chunked = self.native.column(name)

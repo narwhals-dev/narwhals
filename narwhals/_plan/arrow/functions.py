@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import typing as t
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from typing import TYPE_CHECKING, Any, Final, Literal, overload
 
 import pyarrow as pa  # ignore-banned-import
@@ -69,6 +69,10 @@ HAS_SCATTER: Final = BACKEND_VERSION >= (20,)
 
 HAS_ARANGE: Final = BACKEND_VERSION >= (21,)
 """`pyarrow.arange` added in https://github.com/apache/arrow/pull/46778"""
+
+
+I64: Final = pa.int64()
+F64: Final = pa.float64()
 
 IntoColumnAgg: TypeAlias = Callable[[str], ir.AggExpr]
 """Helper constructor for single-column aggregations."""
@@ -295,10 +299,9 @@ def rank(native: ChunkedArrayAny, rank_options: RankOptions) -> ChunkedArrayAny:
     if rank_options.method == "average":
         # Adapted from https://github.com/pandas-dev/pandas/blob/f4851e500a43125d505db64e548af0355227714b/pandas/core/arrays/arrow/array.py#L2290-L2316
         order = options.ORDER[rank_options.descending]
-        f64 = pa.float64()
-        min = preserve_nulls(arr, pc.rank(arr, order, tiebreaker="min").cast(f64))
-        max = pc.rank(arr, order, tiebreaker="max").cast(f64)
-        ranked = pc.divide(pc.add(min, max), lit(2, f64))
+        min = preserve_nulls(arr, pc.rank(arr, order, tiebreaker="min").cast(F64))
+        max = pc.rank(arr, order, tiebreaker="max").cast(F64)
+        ranked = pc.divide(pc.add(min, max), lit(2, F64))
     else:
         ranked = preserve_nulls(native, pc.rank(arr, options=rank_options.to_arrow()))
     return chunked_array(ranked)
@@ -367,7 +370,49 @@ def concat_str(
     return concat(*it, lit(separator, dtype), options=join)  # type: ignore[no-any-return]
 
 
-_i64 = pa.int64()
+def sort_indices(
+    native: ChunkedOrArrayAny | pa.Table,
+    *order_by: str,
+    descending: bool | Sequence[bool] = False,
+    nulls_last: bool = False,
+) -> pa.UInt64Array:
+    """Return the indices that would sort an array or table."""
+    opts = options.sort(*order_by, nulls_last=nulls_last, descending=descending)
+    return pc.sort_indices(native, options=opts)
+
+
+def unsort_indices(indices: pa.UInt64Array, /) -> pa.Int64Array:
+    """Return the inverse permutation of the given indices.
+
+    Arguments:
+        indices: The output of `sort_indices`.
+
+    Examples:
+        We can use this pair of functions to recreate a windowed `pl.row_index`
+
+        >>> import polars as pl
+        >>> data = {"by": [5, 2, 5, None]}
+        >>> df = pl.DataFrame(data)
+        >>> df.select(
+        ...     pl.row_index().over(order_by="by", descending=True, nulls_last=False)
+        ... ).to_series().to_list()
+        [1, 3, 2, 0]
+
+        Now in `pyarrow`
+
+        >>> import pyarrow as pa
+        >>> from narwhals._plan.arrow.functions import sort_indices, unsort_indices
+        >>> df = pa.Table.from_pydict(data)
+        >>> unsort_indices(
+        ...     sort_indices(df, "by", descending=True, nulls_last=False)
+        ... ).to_pylist()
+        [1, 3, 2, 0]
+    """
+    return (
+        pc.inverse_permutation(indices.cast(pa.int64()))  # type: ignore[attr-defined]
+        if HAS_SCATTER
+        else int_range(len(indices), chunked=False).take(pc.sort_indices(indices))
+    )
 
 
 @overload
@@ -387,6 +432,15 @@ def int_range(
     step: int = ...,
     /,
     *,
+    chunked: Literal[False],
+) -> pa.Int64Array: ...
+@overload
+def int_range(
+    start: int = ...,
+    end: int | None = ...,
+    step: int = ...,
+    /,
+    *,
     dtype: IntegerType = ...,
     chunked: Literal[False],
 ) -> Array[IntegerScalar]: ...
@@ -396,7 +450,7 @@ def int_range(
     step: int = 1,
     /,
     *,
-    dtype: IntegerType = _i64,
+    dtype: IntegerType = I64,
     chunked: bool = True,
 ) -> ChunkedOrArray[IntegerScalar]:
     if end is None:

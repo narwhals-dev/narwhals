@@ -8,14 +8,9 @@ import pyarrow.compute as pc  # ignore-banned-import
 from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._plan import expressions as ir
 from narwhals._plan._guards import is_function_expr
-from narwhals._plan.arrow import functions as fn, options as pa_options
+from narwhals._plan.arrow import functions as fn
 from narwhals._plan.arrow.series import ArrowSeries as Series
-from narwhals._plan.arrow.typing import (
-    ChunkedOrScalarAny,
-    Indices,
-    NativeScalar,
-    StoresNativeT_co,
-)
+from narwhals._plan.arrow.typing import ChunkedOrScalarAny, NativeScalar, StoresNativeT_co
 from narwhals._plan.common import temp
 from narwhals._plan.compliant.column import ExprDispatch
 from narwhals._plan.compliant.expr import EagerExpr
@@ -70,7 +65,6 @@ if TYPE_CHECKING:
         Rank,
         Shift,
     )
-    from narwhals._plan.options import SortOptions
     from narwhals._plan.typing import Seq
     from narwhals._typing_compat import TypeVar
     from narwhals.typing import Into1DArray, IntoDType, PythonLiteral
@@ -418,60 +412,43 @@ class ArrowExpr(  # type: ignore[misc]
         frame: Frame,
         name: str,
         *,
-        sort_indices: Indices | None = None,
+        sort_indices: pa.UInt64Array | None = None,
     ) -> Self:
-        if _is_first_last_distinct(node.expr):
-            return self._is_first_last_distinct(node.expr, frame, name, node.partition_by)
-        resolved = (
-            frame._grouper.by_irs(*node.partition_by)
-            .agg_irs(node.expr.alias(name))
-            .resolve(frame)
-        )
+        expr = node.expr
+        by = node.partition_by
+        indices = sort_indices
+        if is_function_expr(expr) and isinstance(
+            expr.function, (IsFirstDistinct, IsLastDistinct)
+        ):
+            return self._is_first_last_distinct(
+                expr, frame, name, by, sort_indices=indices
+            )
+        resolved = frame._grouper.by_irs(*by).agg_irs(expr.alias(name)).resolve(frame)
         # I want to pattern some of this stuff up
         # 1. Variation of `GroupByResolver.evaluate`
         #  i. Between the resolver + agg calls, grab `EagerDataFrameGroupBy.frame`
         #  ii. that is used for the select and contains the special partitions
         # 2. And then support extending on the pyarrow side to handle the null join
         if resolved.requires_projection():
-            group_by = frame.group_by_resolver(resolved)
-            window_aggregated = group_by.agg_over(resolved.aggs, sort_indices)
-            return self.from_series(window_aggregated.get_column(name))
-
-        by_names = resolved.key_names
-        if sort_indices is not None:
-            windowed = resolved.evaluate(frame.gather(sort_indices))
+            results = frame.group_by_resolver(resolved).agg_over(resolved.aggs, indices)
         else:
-            windowed = resolved.evaluate(frame)
-        return self.from_series(
-            frame.select_names(*by_names)
-            .join(windowed, how="left", left_on=by_names)
-            .get_column(name)
-        )
+            target = frame if indices is None else frame.gather(indices)
+            results = frame.select_names(*resolved.key_names).join(
+                resolved.evaluate(target), how="left", left_on=resolved.key_names
+            )
+        return self.from_series(results.get_column(name))
 
     def over_ordered(
         self, node: ir.OrderedWindowExpr, frame: Frame, name: str
     ) -> Self | Scalar:
-        order_by = tuple(node.order_by_names())
+        by = tuple(node.order_by_names())
         descending = node.sort_options.descending
         nulls_last = node.sort_options.nulls_last
-        if (
-            partition_by := node.partition_by
-        ):  # TODO @dangotbanned: Finish aligning this to work as a call to `over(...,sort_indices=indices)`
-            if _is_first_last_distinct(node.expr):
-                return self._is_first_last_distinct(
-                    node.expr,
-                    frame,
-                    name,
-                    partition_by,
-                    order=(order_by, node.sort_options),
-                )
-            opts = pa_options.sort(
-                *order_by, descending=descending, nulls_last=nulls_last
-            )
-            indices = pc.sort_indices(frame.native, options=opts)
+        indices = fn.sort_indices(
+            frame.native, *by, descending=descending, nulls_last=nulls_last
+        )
+        if node.partition_by:
             return self.over(node, frame, name, sort_indices=indices)
-        opts = pa_options.sort(*order_by, descending=descending, nulls_last=nulls_last)
-        indices = pc.sort_indices(frame.native, options=opts)
         evaluated = node.expr.dispatch(self, frame.gather(indices), name)
         if isinstance(evaluated, ArrowScalar):
             return evaluated
@@ -484,19 +461,17 @@ class ArrowExpr(  # type: ignore[misc]
         name: str,
         partition_by: Seq[ir.ExprIR] = (),
         *,
-        order: tuple[Seq[str], SortOptions] | tuple[()] = (),
+        sort_indices: pa.UInt64Array | None = None,
     ) -> Self:
         idx_name = temp.column_name(frame)
         df = frame._with_columns([node.input[0].dispatch(self, frame, name)])
-        if order:
-            order_by, opts = order
-            df = df.with_row_index_by(
-                idx_name, order_by, descending=opts.descending, nulls_last=opts.nulls_last
-            )
+        if sort_indices is not None:
+            column = fn.unsort_indices(sort_indices)
+            df = df._with_native(df.native.add_column(0, idx_name, column))
         else:
             df = df.with_row_index(idx_name)
         agg = fn.IS_FIRST_LAST_DISTINCT[type(node.function)](idx_name)
-        if not (partition_by or order):
+        if not (partition_by or sort_indices is not None):
             distinct = df.group_by_names((name,)).agg((ir.named_ir(idx_name, agg),))
         else:
             distinct = df.group_by_agg_irs((ir.col(name), *partition_by), agg)
