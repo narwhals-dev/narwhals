@@ -48,12 +48,8 @@ class ArrowDataFrame(
     def _group_by(self) -> type[GroupBy]:
         return GroupBy
 
-    # TODO @dangotbanned: Avoid this hack that fixes typing
     def group_by_resolver(self, resolver: GroupByResolver, /) -> GroupBy:
-        result = self._group_by.from_resolver(self, resolver)
-        if not isinstance(result, GroupBy):
-            raise NotImplementedError(type(result))
-        return result
+        return self._group_by.from_resolver(self, resolver)
 
     @property
     def columns(self) -> list[str]:

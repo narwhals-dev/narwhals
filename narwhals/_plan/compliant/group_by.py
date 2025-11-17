@@ -82,9 +82,7 @@ class EagerDataFrameGroupBy(DataFrameGroupBy[EagerDataFrameT], Protocol[EagerDat
         return obj
 
     @classmethod
-    def from_resolver(
-        cls, df: EagerDataFrameT, resolver: GroupByResolver, /
-    ) -> EagerDataFrameGroupBy[EagerDataFrameT]:
+    def from_resolver(cls, df: EagerDataFrameT, resolver: GroupByResolver, /) -> Self:
         key_names = resolver.key_names
         if not resolver.requires_projection():
             df = df.drop_nulls(key_names) if resolver._drop_null_keys else df

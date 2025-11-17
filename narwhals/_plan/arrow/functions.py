@@ -56,7 +56,7 @@ if TYPE_CHECKING:
         StringType,
         UnaryFunction,
     )
-    from narwhals._plan.options import RankOptions, SortMultipleOptions
+    from narwhals._plan.options import RankOptions, SortMultipleOptions, SortOptions
     from narwhals.typing import ClosedInterval, IntoArrowSchema, PythonLiteral
 
 BACKEND_VERSION = Implementation.PYARROW._backend_version()
@@ -375,7 +375,7 @@ def sort_indices(
     *order_by: str,
     descending: bool | Sequence[bool] = False,
     nulls_last: bool = False,
-    options: SortMultipleOptions | None = None,
+    options: SortOptions | SortMultipleOptions | None = None,
 ) -> pa.UInt64Array:
     """Return the indices that would sort an array or table."""
     opts = (

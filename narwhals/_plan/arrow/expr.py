@@ -428,37 +428,21 @@ class ArrowExpr(  # type: ignore[misc]
     ) -> Self:
         expr = node.expr
         by = node.partition_by
-        indices = sort_indices
         if is_function_expr(expr) and isinstance(
             expr.function, (IsFirstDistinct, IsLastDistinct)
         ):
             return self._is_first_last_distinct(
-                expr, frame, name, by, sort_indices=indices
+                expr, frame, name, by, sort_indices=sort_indices
             )
         resolved = frame._grouper.by_irs(*by).agg_irs(expr.alias(name)).resolve(frame)
-        # I want to pattern some of this stuff up
-        # 1. Variation of `GroupByResolver.evaluate`
-        #  i. Between the resolver + agg calls, grab `EagerDataFrameGroupBy.frame`
-        #  ii. that is used for the select and contains the special partitions
-        # 2. And then support extending on the pyarrow side to handle the null join
-        if resolved.requires_projection():
-            results = frame.group_by_resolver(resolved).agg_over(resolved.aggs, indices)
-        else:
-            target = frame if indices is None else frame.gather(indices)
-            results = frame.select_names(*resolved.key_names).join(
-                resolved.evaluate(target), how="left", left_on=resolved.key_names
-            )
+        results = frame.group_by_resolver(resolved).agg_over(resolved.aggs, sort_indices)
         return self.from_series(results.get_column(name))
 
     def over_ordered(
         self, node: ir.OrderedWindowExpr, frame: Frame, name: str
     ) -> Self | Scalar:
-        by = tuple(node.order_by_names())
-        descending = node.sort_options.descending
-        nulls_last = node.sort_options.nulls_last
-        indices = fn.sort_indices(
-            frame.native, *by, descending=descending, nulls_last=nulls_last
-        )
+        by = node.order_by_names()
+        indices = fn.sort_indices(frame.native, *by, options=node.sort_options)
         if node.partition_by:
             return self.over(node, frame, name, sort_indices=indices)
         evaluated = node.expr.dispatch(self, frame.gather(indices), name)

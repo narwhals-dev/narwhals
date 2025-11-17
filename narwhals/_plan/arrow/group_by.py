@@ -165,6 +165,7 @@ class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
             return result.rename(dict(zip(key_names, original)))
         return result
 
+    # TODO @dangotbanned: Handle joining nulls in partitions
     def agg_over(self, irs: Seq[NamedIR], sort_indices: Indices | None = None) -> Frame:
         compliant = self.compliant
         key_names = self.key_names
