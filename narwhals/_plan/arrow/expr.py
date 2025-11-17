@@ -70,6 +70,7 @@ if TYPE_CHECKING:
         Rank,
         Shift,
     )
+    from narwhals._plan.options import SortOptions
     from narwhals._plan.typing import Seq
     from narwhals._typing_compat import TypeVar
     from narwhals.typing import Into1DArray, IntoDType, PythonLiteral
@@ -420,9 +421,7 @@ class ArrowExpr(  # type: ignore[misc]
         sort_indices: Indices | None = None,
     ) -> Self:
         if _is_first_last_distinct(node.expr):
-            return self._is_first_last_distinct_partition_by(
-                node.expr, frame, name, node.partition_by
-            )
+            return self._is_first_last_distinct(node.expr, frame, name, node.partition_by)
         resolved = (
             frame._grouper.by_irs(*node.partition_by)
             .agg_irs(node.expr.alias(name))
@@ -455,18 +454,17 @@ class ArrowExpr(  # type: ignore[misc]
         order_by = tuple(node.order_by_names())
         descending = node.sort_options.descending
         nulls_last = node.sort_options.nulls_last
-        if partition_by := node.partition_by:
+        if (
+            partition_by := node.partition_by
+        ):  # TODO @dangotbanned: Finish aligning this to work as a call to `over(...,sort_indices=indices)`
             if _is_first_last_distinct(node.expr):
-                idx_name = temp.column_name(frame)
-                frame = frame.with_row_index_by(
-                    idx_name, order_by, descending=descending, nulls_last=nulls_last
+                return self._is_first_last_distinct(
+                    node.expr,
+                    frame,
+                    name,
+                    partition_by,
+                    order=(order_by, node.sort_options),
                 )
-                previous = node.expr.input[0].dispatch(self, frame, name)
-                df = frame._with_columns([previous])
-                by = (ir.col(name), *partition_by)
-                agg = fn.IS_FIRST_LAST_DISTINCT[type(node.expr.function)](idx_name)
-                distinct_index = df.group_by_agg_irs(by, agg).get_column(idx_name)
-                return self.from_series(df.to_series().alias(name).is_in(distinct_index))
             opts = pa_options.sort(
                 *order_by, descending=descending, nulls_last=nulls_last
             )
@@ -478,6 +476,32 @@ class ArrowExpr(  # type: ignore[misc]
         if isinstance(evaluated, ArrowScalar):
             return evaluated
         return self.from_series(evaluated.broadcast(len(frame)).gather(indices))
+
+    def _is_first_last_distinct(
+        self,
+        node: FExpr[IsFirstDistinct | IsLastDistinct],
+        frame: Frame,
+        name: str,
+        partition_by: Seq[ir.ExprIR] = (),
+        *,
+        order: tuple[Seq[str], SortOptions] | tuple[()] = (),
+    ) -> Self:
+        idx_name = temp.column_name(frame)
+        df = frame._with_columns([node.input[0].dispatch(self, frame, name)])
+        if order:
+            order_by, opts = order
+            df = df.with_row_index_by(
+                idx_name, order_by, descending=opts.descending, nulls_last=opts.nulls_last
+            )
+        else:
+            df = df.with_row_index(idx_name)
+        agg = fn.IS_FIRST_LAST_DISTINCT[type(node.function)](idx_name)
+        if not (partition_by or order):
+            distinct = df.group_by_names((name,)).agg((ir.named_ir(idx_name, agg),))
+        else:
+            distinct = df.group_by_agg_irs((ir.col(name), *partition_by), agg)
+        index = df.to_series().alias(name)
+        return self.from_series(index.is_in(distinct.get_column(idx_name)))
 
     # NOTE: Can't implement in `EagerExpr`, since it doesn't derive `ExprDispatch`
     def map_batches(self, node: ir.AnonymousExpr, frame: Frame, name: str) -> Self:
@@ -511,42 +535,6 @@ class ArrowExpr(  # type: ignore[misc]
     cum_max = _cumulative
     cum_prod = _cumulative
     cum_sum = _cumulative
-
-    def _is_first_last_distinct_partition_by(
-        self,
-        node: FExpr[IsFirstDistinct | IsLastDistinct],
-        frame: Frame,
-        name: str,
-        partition_by: Seq[ir.ExprIR],
-    ) -> Self:
-        idx_name = temp.column_name([name])
-        previous = node.input[0].dispatch(self, frame, name)
-        df = frame._with_columns([previous]).with_row_index(idx_name)
-        by = (ir.col(name), *partition_by)
-        agg = fn.IS_FIRST_LAST_DISTINCT[type(node.function)](idx_name)
-        distinct_index = df.group_by_agg_irs(by, agg).get_column(idx_name)
-        return self.from_series(df.to_series().alias(name).is_in(distinct_index))
-
-    # NOTE: Ideas on how to shrink
-    # - [x] Add `Series.is_in`
-    #   - the last parts move into native on both sides, then rewrap from native into expr
-    # - (nope) Change the shape of `fn.IS_FIRST_LAST_DISTINCT` to handle more
-    # - [x] Also might not need the aliasing for branches outside of this one?
-    # - [x] Can any of the resolve/evaluate be simplified?
-    #   - Above, I know that `by` and `aggs` are disjoint , since `aggs has a freshly generated unique name
-    def _is_first_last_distinct(
-        self, node: FExpr[IsFirstDistinct | IsLastDistinct], frame: Frame, name: str
-    ) -> Self:
-        idx_name = temp.column_name([name])
-        expr_ir = fn.IS_FIRST_LAST_DISTINCT[type(node.function)](idx_name)
-        series = self._dispatch_expr(node.input[0], frame, name)
-        df = series.to_frame().with_row_index(idx_name)
-        distinct_index = (
-            df.group_by_names((name,))
-            .agg((ir.named_ir(idx_name, expr_ir),))
-            .get_column(idx_name)
-        )
-        return self.from_series(df.to_series().alias(name).is_in(distinct_index))
 
     is_first_distinct = _is_first_last_distinct
     is_last_distinct = _is_first_last_distinct
