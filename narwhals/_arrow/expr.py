@@ -179,8 +179,8 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
                 raise NotImplementedError(msg)
 
             partition_tbl = df.simple_select(*partition_by)
-            null_counts = [ca.null_count > 0 for ca in partition_tbl.native.columns]
-            if not any(null_counts):
+            has_nulls = [ca.null_count > 0 for ca in partition_tbl.native.columns]
+            if not any(has_nulls):
                 tmp = df.group_by(partition_by, drop_null_keys=False).agg(leaf_ce)
                 tmp = partition_tbl.join(
                     tmp,
@@ -193,49 +193,44 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
 
             tbl = df.native
             plx = self.__narwhals_namespace__()
-            cols_to_encode = [
-                name
-                for name, null_count in zip(partition_tbl.columns, null_counts)
-                if null_count
-            ]
-            original_cols = df.columns
 
+            group_keys: list[str] = []
             encoded_cols: list[ArrowExpr] = []
-            tmp_names: list[str] = []
-            for col_to_encode in cols_to_encode:
-                tmp_names.append(
-                    generate_temporary_column_name(8, [*original_cols, *tmp_names])
-                )
-                indices = (
-                    tbl.column(col_to_encode)
-                    .dictionary_encode("encode")
-                    .combine_chunks()
-                    .indices  # type: ignore[attr-defined]
-                )
+            _cols = df.columns
 
-                encoded_cols.append(
-                    plx._expr._from_series(plx._series.from_native(indices, context=plx))
-                )
+            for col_name, has_null in zip(partition_tbl.columns, has_nulls):
+                if not has_null:
+                    group_keys.append(col_name)
+                else:
+                    tmp_name = generate_temporary_column_name(8, _cols)
 
-            table_encoded = df.with_columns(
-                *[
-                    encoded.alias(tmp_name)
-                    for encoded, tmp_name in zip(encoded_cols, tmp_names)
-                ]
-            )
-            windowed = table_encoded.group_by(tmp_names, drop_null_keys=False).agg(
+                    group_keys.append(tmp_name)
+                    _cols.append(tmp_name)
+
+                    indices = (
+                        tbl.column(col_name)
+                        .dictionary_encode("encode")
+                        .combine_chunks()
+                        .indices  # type: ignore[attr-defined]
+                    )
+
+                    encoded_cols.append(
+                        plx._expr._from_series(
+                            plx._series.from_native(indices, context=plx, name=tmp_name)
+                        )
+                    )
+
+            table_encoded = df.with_columns(*encoded_cols)
+
+            windowed = table_encoded.group_by(group_keys, drop_null_keys=False).agg(
                 leaf_ce
             )
-            ret = (
-                table_encoded.simple_select(*tmp_names)
-                .join(
-                    windowed,
-                    left_on=tmp_names,
-                    right_on=tmp_names,
-                    how="inner",
-                    suffix="_right",
-                )
-                .drop(tmp_names, strict=False)
+            ret = table_encoded.simple_select(*group_keys).join(
+                windowed,
+                left_on=group_keys,
+                right_on=group_keys,
+                how="inner",
+                suffix="_right",
             )
             return [ret.get_column(alias) for alias in aliases]
 
