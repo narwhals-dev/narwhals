@@ -90,10 +90,12 @@ class Series(Generic[NativeSeriesT_co]):
 
         raise NotImplementedError(type(native))
 
-    # NOTE: Missing placeholder for `DataFrameV1`
+    # NOTE: `Incomplete` until `CompliantSeries` can avoid a cyclic dependency back to `CompliantDataFrame`
+    # Currently an issue on `main` and leads to a lot of intermittent warnings
     def to_frame(self) -> DataFrame[Incomplete, NativeSeriesT_co]:
         import narwhals._plan.dataframe as _df
 
+        # NOTE: Missing placeholder for `DataFrameV1`
         return _df.DataFrame(self._compliant.to_frame())
 
     def to_native(self) -> NativeSeriesT_co:
