@@ -76,7 +76,7 @@ def is_selector(obj: Any) -> TypeIs[Selector]:
     return isinstance(obj, _selectors().Selector)
 
 
-def is_column(obj: Any) -> TypeIs[Expr]:
+def is_expr_column(obj: Any) -> TypeIs[Expr]:
     """Indicate if the given object is a basic/unaliased column."""
     return is_expr(obj) and obj.meta.is_column()
 
@@ -136,8 +136,19 @@ def is_literal(obj: Any) -> TypeIs[ir.Literal[Any]]:
 # TODO @dangotbanned: Coverage
 # Used in `ArrowNamespace._vertical`, but only horizontal is covered
 def is_tuple_of(obj: Any, tp: type[T]) -> TypeIs[Seq[T]]:  # pragma: no cover
+    """Return True if the **first** element of the tuple `obj` is an instance of `tp`."""
     return bool(isinstance(obj, tuple) and obj and isinstance(obj[0], tp))
 
 
 def is_re_pattern(obj: Any) -> TypeIs[re.Pattern[str]]:
     return isinstance(obj, re.Pattern)
+
+
+def is_seq_column(exprs: Seq[ir.ExprIR], /) -> TypeIs[Seq[ir.Column]]:
+    """Return True if **every** element is a `Column`.
+
+    Use this for detecting fastpaths in sub-expressions, that can rely on
+    every element in `exprs` having a resolved `name` attribute.
+    """
+    Column = _ir().Column  # noqa: N806
+    return all(isinstance(e, Column) for e in exprs)

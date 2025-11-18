@@ -7,7 +7,7 @@ import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._plan import expressions as ir
-from narwhals._plan._guards import is_function_expr
+from narwhals._plan._guards import is_function_expr, is_seq_column
 from narwhals._plan.arrow import functions as fn
 from narwhals._plan.arrow.series import ArrowSeries as Series
 from narwhals._plan.arrow.typing import ChunkedOrScalarAny, NativeScalar, StoresNativeT_co
@@ -30,7 +30,7 @@ from narwhals.exceptions import InvalidOperationError, ShapeError
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
-    from typing_extensions import ParamSpec, Self, TypeAlias, TypeIs
+    from typing_extensions import ParamSpec, Self, TypeAlias
 
     from narwhals._arrow.typing import ChunkedArrayAny, Incomplete
     from narwhals._plan.arrow.dataframe import ArrowDataFrame as Frame
@@ -90,10 +90,6 @@ if TYPE_CHECKING:
 
 
 BACKEND_VERSION = Implementation.PYARROW._backend_version()
-
-
-def is_seq_column(exprs: Seq[ir.ExprIR]) -> TypeIs[Seq[ir.Column]]:
-    return all(isinstance(e, ir.Column) for e in exprs)
 
 
 class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], Protocol):
