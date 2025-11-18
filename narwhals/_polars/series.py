@@ -665,7 +665,7 @@ class PolarsSeries:
         return self.native.last()  # type: ignore[return-value]
 
     def any_value(self, seed: int | None) -> PythonLiteral:
-        return self.native.sample(n=1, seed=seed).item()
+        return self.native.sample(n=1, seed=seed).item()  # type: ignore[no-any-return]
 
     @property
     def dt(self) -> PolarsSeriesDateTimeNamespace:

@@ -357,17 +357,16 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     msg = "Safety check failed, please report a bug."
                     raise AssertionError(msg)
                 res_native = grouped.transform("size").to_frame(aliases[0])
-            elif function_name in {"first", "last"}:
+            elif function_name in {"first", "last", "any_value"}:
                 with warnings.catch_warnings():
                     # Ignore settingwithcopy warnings/errors, they're false-positives here.
                     warnings.filterwarnings("ignore", message="\n.*copy of a slice")
-                    _nth = getattr(
+                    _agg = getattr(
                         grouped[[*partition_by, *aliases]], pandas_function_name
                     )(**pandas_kwargs)
-                _nth.reset_index(drop=True, inplace=True)
-                res_native = df.native[list(partition_by)].merge(
-                    _nth, on=list(partition_by)
-                )[list(aliases)]
+                _agg.reset_index(drop=True, inplace=True)
+                keys = list(partition_by)
+                res_native = df.native[keys].merge(_agg, on=keys)[list(aliases)]
             else:
                 res_native = grouped[list(aliases)].transform(
                     pandas_function_name, **pandas_kwargs
