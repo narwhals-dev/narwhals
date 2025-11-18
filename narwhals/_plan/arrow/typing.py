@@ -23,7 +23,7 @@ if TYPE_CHECKING:
         Uint32Type,
         Uint64Type,
     )
-    from typing_extensions import TypeAlias
+    from typing_extensions import ParamSpec, TypeAlias
 
     from narwhals._native import NativeDataFrame, NativeSeries
     from narwhals.typing import SizedMultiIndexSelector as _SizedMultiIndexSelector
@@ -41,6 +41,13 @@ if TYPE_CHECKING:
         def column(self, *args: Any, **kwds: Any) -> NativeArrowSeries: ...
         @property
         def columns(self) -> Sequence[NativeArrowSeries]: ...
+
+    P = ParamSpec("P")
+
+    class VectorFunction(Protocol[P]):
+        def __call__(
+            self, native: ChunkedArrayAny, *args: P.args, **kwds: P.kwargs
+        ) -> ChunkedArrayAny: ...
 
 
 ScalarT = TypeVar("ScalarT", bound="pa.Scalar[Any]", default="pa.Scalar[Any]")

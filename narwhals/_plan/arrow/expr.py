@@ -30,11 +30,12 @@ from narwhals.exceptions import InvalidOperationError, ShapeError
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
-    from typing_extensions import ParamSpec, Self, TypeAlias
+    from typing_extensions import Self, TypeAlias
 
-    from narwhals._arrow.typing import ChunkedArrayAny, Incomplete
+    from narwhals._arrow.typing import Incomplete
     from narwhals._plan.arrow.dataframe import ArrowDataFrame as Frame
     from narwhals._plan.arrow.namespace import ArrowNamespace
+    from narwhals._plan.arrow.typing import ChunkedArrayAny, P, VectorFunction
     from narwhals._plan.expressions.aggregation import (
         ArgMax,
         ArgMin,
@@ -72,21 +73,10 @@ if TYPE_CHECKING:
         Shift,
     )
     from narwhals._plan.typing import Seq
-    from narwhals._typing_compat import TypeVar
     from narwhals.typing import Into1DArray, IntoDType, PythonLiteral
 
     Expr: TypeAlias = "ArrowExpr"
     Scalar: TypeAlias = "ArrowScalar"
-
-    P = ParamSpec("P")
-    R_co = TypeVar(
-        "R_co", bound="ChunkedOrScalarAny", covariant=True, default="ChunkedArrayAny"
-    )
-
-    class _FnNative(Protocol[P, R_co]):
-        def __call__(
-            self, native: ChunkedArrayAny, *args: P.args, **kwds: P.kwargs
-        ) -> R_co: ...
 
 
 BACKEND_VERSION = Implementation.PYARROW._backend_version()
@@ -263,25 +253,14 @@ class ArrowExpr(  # type: ignore[misc]
         """
         return node.dispatch(self, frame, name).to_series()
 
-    @overload
-    def _function_expr(
-        self, fn_native: _FnNative[P, ChunkedArrayAny], *args: P.args, **kwds: P.kwargs
-    ) -> Callable[[FExpr[Any], Frame, str], Self]: ...
-    @overload
-    def _function_expr(
-        self, fn_native: _FnNative[P, NativeScalar], *args: P.args, **kwds: P.kwargs
-    ) -> Callable[[FExpr[Any], Frame, str], Scalar]: ...
-
-    def _function_expr(
-        self, fn_native: _FnNative[P, R_co], *args: P.args, **kwds: P.kwargs
-    ) -> Callable[[FExpr[Any], Frame, str], Scalar | Self]:
-        """Generalized `FunctionExpr` dispatcher."""
-
-        def func(node: FExpr[Any], frame: Frame, name: str, /) -> Scalar | Self:
+    def _vector_function(
+        self, fn_native: VectorFunction[P], *args: P.args, **kwds: P.kwargs
+    ) -> Callable[[FExpr[Any], Frame, str], Self]:
+        def func(node: FExpr[Any], frame: Frame, name: str, /) -> Self:  # type: ignore[type-var, misc]
             native = self._dispatch_expr(node.input[0], frame, name).native
             return self._with_native(fn_native(native, *args, **kwds), name)
 
-        return func  # type: ignore[return-value]
+        return func
 
     @property
     def native(self) -> ChunkedArrayAny:
@@ -402,6 +381,10 @@ class ArrowExpr(  # type: ignore[misc]
         result: NativeScalar = fn.min_(self._dispatch_expr(node.expr, frame, name).native)
         return self._with_native(result, name)
 
+    def null_count(self, node: FExpr[NullCount], frame: Frame, name: str) -> Scalar:
+        native = self._dispatch_expr(node.input[0], frame, name).native
+        return self._with_native(fn.null_count(native), name)
+
     # TODO @dangotbanned: top-level, complex-ish nodes
     # - [ ] Over
     #   - [x] `over_ordered`
@@ -489,28 +472,30 @@ class ArrowExpr(  # type: ignore[misc]
         raise NotImplementedError
 
     def shift(self, node: FExpr[Shift], frame: Frame, name: str) -> Self:
-        return self._function_expr(fn.shift, node.function.n)(node, frame, name)
+        return self._vector_function(fn.shift, node.function.n)(node, frame, name)
 
     def diff(self, node: FExpr[Diff], frame: Frame, name: str) -> Self:
-        return self._function_expr(fn.diff)(node, frame, name)
+        return self._vector_function(fn.diff)(node, frame, name)
+
+    def rank(self, node: FExpr[Rank], frame: Frame, name: str) -> Self:
+        return self._vector_function(fn.rank, node.function.options)(node, frame, name)
 
     def _cumulative(self, node: FExpr[CumAgg], frame: Frame, name: str) -> Self:
-        return self._function_expr(fn.cumulative, node.function)(node, frame, name)
+        native = self._dispatch_expr(node.input[0], frame, name).native
+        func = fn.CUMULATIVE[type(node.function)]
+        if not node.function.reverse:
+            result = func(native)
+        else:
+            result = fn.reverse(func(fn.reverse(native)))
+        return self._with_native(result, name)
 
     cum_count = _cumulative
     cum_min = _cumulative
     cum_max = _cumulative
     cum_prod = _cumulative
     cum_sum = _cumulative
-
     is_first_distinct = _is_first_last_distinct
     is_last_distinct = _is_first_last_distinct
-
-    def null_count(self, node: FExpr[NullCount], frame: Frame, name: str) -> Scalar:
-        return self._function_expr(fn.null_count)(node, frame, name)
-
-    def rank(self, node: FExpr[Rank], frame: Frame, name: str) -> Self:
-        return self._function_expr(fn.rank, node.function.options)(node, frame, name)
 
     # ewm_mean = not_implemented()  # noqa: ERA001
     hist_bins = not_implemented()
