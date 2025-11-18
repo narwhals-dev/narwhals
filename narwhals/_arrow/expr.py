@@ -191,41 +191,36 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
                 )
                 return [tmp.get_column(alias) for alias in aliases]
 
-            tbl = df.native
+            tbl_native, current_cols = df.native, df.columns
             plx = self.__narwhals_namespace__()
 
             group_keys: list[str] = []
             encoded_cols: list[ArrowExpr] = []
-            _cols = df.columns
-
             for col_name, has_null in zip(partition_tbl.columns, has_nulls):
                 if not has_null:
                     group_keys.append(col_name)
                 else:
-                    tmp_name = generate_temporary_column_name(8, _cols)
+                    tmp_name = generate_temporary_column_name(8, current_cols)
 
                     group_keys.append(tmp_name)
-                    _cols.append(tmp_name)
+                    current_cols.append(tmp_name)
 
-                    indices = (
-                        tbl.column(col_name)
-                        .dictionary_encode("encode")
-                        .combine_chunks()
-                        .indices  # type: ignore[attr-defined]
+                    indices = plx._series.from_native(
+                        (
+                            tbl_native.column(col_name)
+                            .dictionary_encode("encode")
+                            .combine_chunks()
+                            .indices  # type: ignore[attr-defined]
+                        ),
+                        context=plx,
+                        name=tmp_name,
                     )
 
-                    encoded_cols.append(
-                        plx._expr._from_series(
-                            plx._series.from_native(indices, context=plx, name=tmp_name)
-                        )
-                    )
+                    encoded_cols.append(plx._expr._from_series(indices))
 
-            table_encoded = df.with_columns(*encoded_cols)
-
-            windowed = table_encoded.group_by(group_keys, drop_null_keys=False).agg(
-                leaf_ce
-            )
-            ret = table_encoded.simple_select(*group_keys).join(
+            tbl_encoded = df.with_columns(*encoded_cols)
+            windowed = tbl_encoded.group_by(group_keys, drop_null_keys=False).agg(leaf_ce)
+            ret = tbl_encoded.simple_select(*group_keys).join(
                 windowed,
                 left_on=group_keys,
                 right_on=group_keys,
