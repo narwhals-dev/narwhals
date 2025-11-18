@@ -79,7 +79,14 @@ class IsInSeries(BooleanFunction, t.Generic[NativeSeriesT]):
 
 
 class IsInExpr(BooleanFunction):
-    """N-ary (expr, other)."""
+    """N-ary (expr, other).
+
+    Note:
+        If we get to a stage where `narwhals` has wide support for `list`, and
+        accepts them in `lit(...)` - *consider* [restricting to non-equal types].
+
+    [restricting to non-equal types]: https://github.com/pola-rs/polars/pull/22178
+    """
 
     def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR]:
         expr, other = node.input
