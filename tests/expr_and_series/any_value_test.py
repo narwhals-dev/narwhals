@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals as nw
-from tests.utils import assert_equal_data
+from tests.utils import DUCKDB_VERSION, assert_equal_data
 
 if TYPE_CHECKING:
     from tests.utils import Constructor, ConstructorEager
@@ -23,6 +23,10 @@ def test_any_value_expr(constructor: Constructor, request: pytest.FixtureRequest
     # Aggregation
     result = df.select(nw.col("a", "b").any_value()).lazy().collect()
     assert result.shape == (1, 2)
+
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        reason = "broadcast requires `over`, which requires DuckDB 1.3.0"
+        pytest.skip(reason=reason)
 
     # Aggregation + broadcast
     result = df.select(nw.col("a"), nw.col("b").any_value()).lazy().collect()
@@ -59,6 +63,10 @@ def test_any_value_over(constructor: Constructor, request: pytest.FixtureRequest
     if "dask" in str(constructor):
         reason = "sample does not allow n, use frac instead"
         request.applymarker(pytest.mark.xfail(reason=reason))
+
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        reason = "`over` requires DuckDB 1.3.0"
+        pytest.skip(reason=reason)
 
     df = nw.from_native(constructor(data))
 
