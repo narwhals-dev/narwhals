@@ -728,6 +728,19 @@ def test_expand_binary_expr_combination_invalid(df_1: Frame) -> None:
         df_1.project(ten_to_nine)
 
 
+def test_expand_function_expr_multi_invalid(df_1: Frame) -> None:
+    first_column = re.escape("col('a')")
+    last_selected_column = re.escape("col('h')")
+    found = rf".+{first_column}.+{last_selected_column}\Z"
+    pattern = re_compile(
+        rf"not supported.+context.+{first_column}\.is_in.+ncs\.integer.+ncs\.integer.+expanded into 8 outputs{found}"
+    )
+    with pytest.raises(MultiOutputExpressionError, match=pattern):
+        df_1.project(nwp.col("a").is_in(ncs.integer()))
+    with pytest.raises(MultiOutputExpressionError, match=r"expanded into 20 outputs"):
+        df_1.project(nwp.col("d").is_in(nwp.all()))
+
+
 def test_over_order_by_names() -> None:
     expr = nwp.col("a").first().over(order_by=ncs.string())
     e_ir = expr._ir

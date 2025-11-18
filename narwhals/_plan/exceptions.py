@@ -235,6 +235,12 @@ def group_by_no_keys_error() -> ComputeError:  # pragma: no cover
     return ComputeError(msg)
 
 
+def format_expressions(*exprs: ir.ExprIR, indent: int = 2) -> str:
+    """Return an indented list of `exprs` reprs."""
+    indent_str = " " * indent
+    return "\n".join(f"{indent_str}{e!r}" for e in exprs)
+
+
 def selectors_not_found_error(
     selectors: Collection[ir.SelectorIR], schema: IntoSchema | FrozenSchema
 ) -> ColumnNotFoundError:
@@ -242,9 +248,18 @@ def selectors_not_found_error(
     if len(selectors) == 1:
         msg = f"{msg} {next(iter(selectors))!r}"
     else:
-        indent = " " * 2
-        reprs = "\n".join(f"{indent}{el!r}" for el in selectors)
-        msg = f"{msg}\n{reprs}"
+        msg = f"{msg}\n{format_expressions(*selectors)}"
     items = dict(schema)
     msg = f"{msg}\n\nHint: Did you mean one of these columns: {items!r}?"
     return ColumnNotFoundError(msg)
+
+
+def expand_multi_output_error(
+    origin: ir.ExprIR, child: ir.ExprIR, *expanded: ir.ExprIR
+) -> MultiOutputExpressionError:
+    msg = (
+        "Multi-output expressions are not supported in this context.\n"
+        f"Got `{origin!r}`, but `{child!r}` expanded into {len(expanded)} outputs:\n"
+        f"{format_expressions(*expanded)}"
+    )
+    return MultiOutputExpressionError(msg)

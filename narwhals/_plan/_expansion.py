@@ -45,6 +45,7 @@ from narwhals._plan.exceptions import (
     binary_expr_multi_output_error,
     column_not_found_error,
     duplicate_error,
+    expand_multi_output_error,
     selectors_not_found_error,
 )
 from narwhals._plan.expressions import (
@@ -58,7 +59,6 @@ from narwhals._plan.expressions import (
 from narwhals._plan.schema import FrozenSchema, IntoFrozenSchema, freeze_schema
 from narwhals._typing_compat import assert_never
 from narwhals._utils import check_column_names_are_unique, zip_strict
-from narwhals.exceptions import MultiOutputExpressionError
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable, Iterator, Sequence
@@ -255,15 +255,14 @@ class Expander:
         for child in children:
             yield from self._expand_recursive(child)
 
-    def _expand_only(self, child: ExprIR, /) -> ExprIR:
+    def _expand_only(self, origin: ExprIR, child: ExprIR, /) -> ExprIR:
         # used by
         # - `_expand_combination` (ExprIR fields)
         # - `_expand_function_expr` (all others that have len(inputs)>=2, call on non-root)
         iterable = self._expand_recursive(child)
         first = next(iterable)
         if second := next(iterable, None):
-            msg = f"Multi-output expressions are not supported in this context, got: `{second!r}`"  # pragma: no cover
-            raise MultiOutputExpressionError(msg)  # pragma: no cover
+            raise expand_multi_output_error(origin, child, first, second, *iterable)
         return first
 
     # TODO @dangotbanned: It works, but all this class-specific branching belongs in the classes themselves
@@ -278,16 +277,16 @@ class Expander:
             elif isinstance(origin, ir.SortBy):
                 changes["by"] = tuple(self._expand_inner(origin.by))
             else:
-                changes["by"] = self._expand_only(origin.by)
+                changes["by"] = self._expand_only(origin, origin.by)
             replaced = common.replace(origin, **changes)
             for root in self._expand_recursive(replaced.expr):
                 yield common.replace(replaced, expr=root)
         elif isinstance(origin, ir.BinaryExpr):
             yield from self._expand_binary_expr(origin)
         elif isinstance(origin, ir.TernaryExpr):
-            changes["truthy"] = self._expand_only(origin.truthy)
-            changes["predicate"] = self._expand_only(origin.predicate)
-            changes["falsy"] = self._expand_only(origin.falsy)
+            changes["truthy"] = self._expand_only(origin, origin.truthy)
+            changes["predicate"] = self._expand_only(origin, origin.predicate)
+            changes["falsy"] = self._expand_only(origin, origin.falsy)
             yield origin.__replace__(**changes)
         else:
             assert_never(origin)
@@ -326,7 +325,7 @@ class Expander:
             yield origin.__replace__(input=reduced)
         else:
             if non_root := origin.input[1:]:
-                children = tuple(self._expand_only(child) for child in non_root)
+                children = tuple(self._expand_only(origin, child) for child in non_root)
             else:
                 children = ()
             for root in self._expand_recursive(origin.input[0]):

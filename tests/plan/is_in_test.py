@@ -8,7 +8,6 @@ import pytest
 import narwhals as nw
 import narwhals._plan as nwp
 from narwhals._plan import selectors as ncs
-from narwhals.exceptions import MultiOutputExpressionError
 from tests.plan.utils import assert_equal_data, assert_equal_series, dataframe, series
 
 if TYPE_CHECKING:
@@ -79,13 +78,6 @@ def test_expr_is_in(data: Data, expr: nwp.Expr, expected: Data) -> None:
 def test_expr_is_in_expr(data: Data, expr: nwp.Expr, expected: Data) -> None:
     df = dataframe(data)
     assert_equal_data(df.select(expr), expected)
-
-
-def test_expr_is_in_expr_invalid(data: Data) -> None:
-    df = dataframe(data)
-    expr = nwp.col("a").is_in(ncs.integer())
-    with pytest.raises(MultiOutputExpressionError):
-        df.select(expr)
 
 
 @pytest.mark.parametrize(
