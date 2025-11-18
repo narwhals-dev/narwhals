@@ -154,7 +154,7 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
 
         nodes = list(reversed(list(self._metadata.iter_nodes_reversed())))
 
-        def func(df: ArrowDataFrame) -> Sequence[ArrowSeries]:
+        def func(df: ArrowDataFrame) -> Sequence[ArrowSeries]:  # noqa: PLR0914
             plx = self.__narwhals_namespace__()
             if meta.prev is not None:
                 df = df.with_columns(cast("ArrowExpr", evaluate_nodes(nodes[:-1], plx)))
@@ -178,11 +178,11 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
                 )
                 raise NotImplementedError(msg)
 
-            if not any(
-                ca.null_count > 0 for ca in df.simple_select(*partition_by).native.columns
-            ):
+            partition_tbl = df.simple_select(*partition_by)
+            has_nulls = [ca.null_count > 0 for ca in partition_tbl.native.columns]
+            if not any(has_nulls):
                 tmp = df.group_by(partition_by, drop_null_keys=False).agg(leaf_ce)
-                tmp = df.simple_select(*partition_by).join(
+                tmp = partition_tbl.join(
                     tmp,
                     how="left",
                     left_on=partition_by,
@@ -190,36 +190,44 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
                     suffix="_right",
                 )
                 return [tmp.get_column(alias) for alias in aliases]
-            if len(partition_by) == 1:
-                plx = self.__narwhals_namespace__()
-                tmp_name = generate_temporary_column_name(8, df.columns)
-                dict_array = (
-                    df.native.column(partition_by[0])
-                    .dictionary_encode("encode")
-                    .combine_chunks()
-                )
-                indices = dict_array.indices  # type: ignore[attr-defined]
-                indices_expr = plx._expr._from_series(
-                    plx._series.from_native(indices, context=plx)
-                )
-                table_encoded = df.with_columns(indices_expr.alias(tmp_name))
-                windowed = table_encoded.group_by([tmp_name], drop_null_keys=False).agg(
-                    leaf_ce
-                )
-                ret = (
-                    table_encoded.simple_select(tmp_name)
-                    .join(
-                        windowed,
-                        left_on=[tmp_name],
-                        right_on=[tmp_name],
-                        how="inner",
-                        suffix="_right",
+
+            tbl_native, current_cols = df.native, df.columns
+            plx = self.__narwhals_namespace__()
+
+            group_keys: list[str] = []
+            encoded_cols: list[ArrowExpr] = []
+            for col_name, has_null in zip(partition_tbl.columns, has_nulls):
+                if not has_null:
+                    group_keys.append(col_name)
+                else:
+                    tmp_name = generate_temporary_column_name(8, current_cols)
+
+                    group_keys.append(tmp_name)
+                    current_cols.append(tmp_name)
+
+                    indices = plx._series.from_native(
+                        (
+                            tbl_native.column(col_name)
+                            .dictionary_encode("encode")
+                            .combine_chunks()
+                            .indices  # type: ignore[attr-defined]
+                        ),
+                        context=plx,
+                        name=tmp_name,
                     )
-                    .drop([tmp_name], strict=False)
-                )
-                return [ret.get_column(alias) for alias in aliases]
-            msg = "`over` with `partition_by` and multiple columns which contains null values is not yet supported for PyArrow"
-            raise NotImplementedError(msg)
+
+                    encoded_cols.append(plx._expr._from_series(indices))
+
+            tbl_encoded = df.with_columns(*encoded_cols)
+            windowed = tbl_encoded.group_by(group_keys, drop_null_keys=False).agg(leaf_ce)
+            ret = tbl_encoded.simple_select(*group_keys).join(
+                windowed,
+                left_on=group_keys,
+                right_on=group_keys,
+                how="inner",
+                suffix="_right",
+            )
+            return [ret.get_column(alias) for alias in aliases]
 
         return self.__class__(
             func,
