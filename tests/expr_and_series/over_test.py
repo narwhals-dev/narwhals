@@ -529,21 +529,15 @@ def test_over_with_nulls_in_partition(
     # https://github.com/narwhals-dev/narwhals/issues/3300
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
-    context = (
-        pytest.raises(NotImplementedError, match="`over` with `partition_by`")
-        if "pyarrow_table" in str(constructor) and len(partition) > 1
-        else does_not_raise()
-    )
     data = {"a": [1, 1, None, 3, 3], "b": [1, 3, 4, 5, 6], "c": [1, 1, None, 3, 4]}
     df = nw.from_native(constructor(data))
     expected = {"b": [1, 3, 4, 5, 6], "bmin": expected_min, "bmax": expected_max}
-    with context:
-        result = df.select(
-            "b",
-            bmin=nw.col("b").min().over(partition),
-            bmax=nw.col("b").max().over(partition),
-        ).sort("b")
-        assert_equal_data(result, expected)
+    result = df.select(
+        "b",
+        bmin=nw.col("b").min().over(partition),
+        bmax=nw.col("b").max().over(partition),
+    ).sort("b")
+    assert_equal_data(result, expected)
 
 
 @pytest.mark.parametrize(

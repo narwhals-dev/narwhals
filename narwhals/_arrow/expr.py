@@ -154,7 +154,7 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
 
         nodes = list(reversed(list(self._metadata.iter_nodes_reversed())))
 
-        def func(df: ArrowDataFrame) -> Sequence[ArrowSeries]:
+        def func(df: ArrowDataFrame) -> Sequence[ArrowSeries]:  # noqa: PLR0914
             plx = self.__narwhals_namespace__()
             if meta.prev is not None:
                 df = df.with_columns(cast("ArrowExpr", evaluate_nodes(nodes[:-1], plx)))
@@ -178,11 +178,11 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
                 )
                 raise NotImplementedError(msg)
 
-            if not any(
-                ca.null_count > 0 for ca in df.simple_select(*partition_by).native.columns
-            ):
+            partition_tbl = df.simple_select(*partition_by)
+            null_counts = [ca.null_count > 0 for ca in partition_tbl.native.columns]
+            if not any(null_counts):
                 tmp = df.group_by(partition_by, drop_null_keys=False).agg(leaf_ce)
-                tmp = df.simple_select(*partition_by).join(
+                tmp = partition_tbl.join(
                     tmp,
                     how="left",
                     left_on=partition_by,
@@ -190,36 +190,54 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
                     suffix="_right",
                 )
                 return [tmp.get_column(alias) for alias in aliases]
-            if len(partition_by) == 1:
-                plx = self.__narwhals_namespace__()
-                tmp_name = generate_temporary_column_name(8, df.columns)
-                dict_array = (
-                    df.native.column(partition_by[0])
+
+            tbl = df.native
+            plx = self.__narwhals_namespace__()
+            cols_to_encode = [
+                name
+                for name, null_count in zip(partition_tbl.columns, null_counts)
+                if null_count
+            ]
+            original_cols = df.columns
+
+            encoded_cols: list[ArrowExpr] = []
+            tmp_names: list[str] = []
+            for col_to_encode in cols_to_encode:
+                tmp_names.append(
+                    generate_temporary_column_name(8, [*original_cols, *tmp_names])
+                )
+                indices = (
+                    tbl.column(col_to_encode)
                     .dictionary_encode("encode")
                     .combine_chunks()
+                    .indices  # type: ignore[attr-defined]
                 )
-                indices = dict_array.indices  # type: ignore[attr-defined]
-                indices_expr = plx._expr._from_series(
-                    plx._series.from_native(indices, context=plx)
+
+                encoded_cols.append(
+                    plx._expr._from_series(plx._series.from_native(indices, context=plx))
                 )
-                table_encoded = df.with_columns(indices_expr.alias(tmp_name))
-                windowed = table_encoded.group_by([tmp_name], drop_null_keys=False).agg(
-                    leaf_ce
+
+            table_encoded = df.with_columns(
+                *[
+                    encoded.alias(tmp_name)
+                    for encoded, tmp_name in zip(encoded_cols, tmp_names)
+                ]
+            )
+            windowed = table_encoded.group_by(tmp_names, drop_null_keys=False).agg(
+                leaf_ce
+            )
+            ret = (
+                table_encoded.simple_select(*tmp_names)
+                .join(
+                    windowed,
+                    left_on=tmp_names,
+                    right_on=tmp_names,
+                    how="inner",
+                    suffix="_right",
                 )
-                ret = (
-                    table_encoded.simple_select(tmp_name)
-                    .join(
-                        windowed,
-                        left_on=[tmp_name],
-                        right_on=[tmp_name],
-                        how="inner",
-                        suffix="_right",
-                    )
-                    .drop([tmp_name], strict=False)
-                )
-                return [ret.get_column(alias) for alias in aliases]
-            msg = "`over` with `partition_by` and multiple columns which contains null values is not yet supported for PyArrow"
-            raise NotImplementedError(msg)
+                .drop(tmp_names, strict=False)
+            )
+            return [ret.get_column(alias) for alias in aliases]
 
         return self.__class__(
             func,
