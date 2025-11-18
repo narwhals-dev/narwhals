@@ -1163,6 +1163,10 @@ def concat_str(
     )
 
 
+def struct(exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr) -> Expr:
+    return _stableify(nw.struct(exprs, *more_exprs))
+
+
 def format(f_string: str, *args: IntoExpr) -> Expr:
     """Format expressions as a string."""
     return _stableify(nw.format(f_string, *args))
@@ -1440,6 +1444,7 @@ __all__ = [
     "scan_parquet",
     "selectors",
     "show_versions",
+    "struct",
     "sum",
     "sum_horizontal",
     "to_native",
