@@ -494,8 +494,14 @@ class ArrowExpr(  # type: ignore[misc]
             result = fn.reverse(func(fn.reverse(native)))
         return self._with_native(result, name)
 
-    def unique(self, node: ir.FunctionExpr[F.Unique], frame: Frame, name: str) -> Self:
+    def unique(self, node: FExpr[F.Unique], frame: Frame, name: str) -> Self:
         result = self._dispatch_expr(node.input[0], frame, name).native.unique()
+        return self._with_native(result, name)
+
+    # TODO @dangotbanned: Only implement in `ArrowSeries` and reuse
+    def gather_every(self, node: FExpr[F.GatherEvery], frame: Frame, name: str) -> Self:
+        native = self._dispatch_expr(node.input[0], frame, name).native
+        result = native[node.function.offset :: node.function.n]
         return self._with_native(result, name)
 
     cum_count = _cumulative
@@ -515,7 +521,7 @@ class ArrowExpr(  # type: ignore[misc]
     # wanna try adding a `pyarrow>=20` version
     kurtosis = not_implemented()
     skew = not_implemented()
-    gather_every = not_implemented()
+
     is_duplicated = not_implemented()
     is_unique = not_implemented()
 
