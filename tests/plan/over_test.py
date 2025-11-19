@@ -289,24 +289,14 @@ p1 = nwp.col("p1")
 p2 = nwp.col("p2")
 p3 = nwp.col("p3")
 
-XFAIL_NOT_IMPL = pytest.mark.xfail(
-    reason="TODO: Multiple null partitions", raises=NotImplementedError
-)
-
 
 @pytest.mark.parametrize(
     ("expr", "result_values"),
     [
         (v.first().over(p1, order_by="i", descending=True), [5, 2, 6, 6, 2, 1]),
-        pytest.param(
-            v.last().over(p1, p2, order_by="i", descending=True),
-            [5, 4, 3, 6, 2, 1],
-            marks=XFAIL_NOT_IMPL,
-        ),
-        pytest.param(
-            v.first().over(p3, p2, order_by="i"), [5, 4, 3, 6, 6, 1], marks=XFAIL_NOT_IMPL
-        ),
-        pytest.param(
+        (v.last().over(p1, p2, order_by="i", descending=True), [5, 4, 3, 6, 2, 1]),
+        (v.first().over(p3, p2, order_by="i"), [5, 4, 3, 6, 6, 1]),
+        (
             (
                 v.first().over(
                     nwp.when(p2.is_null()).then(2).when(p2 == 1).then(p2),
@@ -316,7 +306,6 @@ XFAIL_NOT_IMPL = pytest.mark.xfail(
                 )
             ),
             [5, 4, 3, 2, 2, 1],
-            marks=XFAIL_NOT_IMPL,
         ),
     ],
 )

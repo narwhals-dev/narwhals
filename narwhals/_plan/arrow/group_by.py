@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal
+from itertools import chain
+from typing import TYPE_CHECKING, Any, Literal, overload
 
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
@@ -21,7 +22,12 @@ if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
 
     from narwhals._plan.arrow.dataframe import ArrowDataFrame as Frame
-    from narwhals._plan.arrow.typing import ChunkedArray, Indices
+    from narwhals._plan.arrow.typing import (
+        ArrayAny,
+        ChunkedArray,
+        ChunkedArrayAny,
+        Indices,
+    )
     from narwhals._plan.expressions import NamedIR
     from narwhals._plan.typing import Seq
 
@@ -175,29 +181,63 @@ class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
         return result
 
     def agg_over(self, irs: Seq[NamedIR], sort_indices: Indices | None = None) -> Frame:
-        key_names = self.key_names
+        key_names = list(self.key_names)
         compliant = self.compliant
         native = compliant.native
-        if len(key_names) > 1 and any(
-            s.null_count for s in native.select(list(key_names)).columns
-        ):
-            raise multiple_null_partitions_error(key_names)
+        column_names = native.column_names
+        agg_names = (e.name for e in irs)
+        from_native = compliant._with_native
+
+        # Handle null values in partitions, trying to avoid any work if possible
         if len(key_names) == 1:
-            by_series = compliant.get_column(key_names[0])
-            if by_series.has_nulls():
-                da: Incomplete = fn.array(by_series.native.dictionary_encode("encode"))
-                temp_name = temp.column_name(compliant)
-                key_names = (temp_name,)
-                native = native.append_column(temp_name, da.indices)
-                compliant = compliant._with_native(native)
-        native = native if sort_indices is None else compliant._gather(sort_indices)
+            by = native.column(key_names[0])
+            if by.null_count:
+                temp_name = temp.column_name({*column_names, *agg_names})
+                key_names = [temp_name]
+                native = native.append_column(temp_name, dictionary_encode(by))
+                compliant = from_native(native)
+        else:
+            partitions = native.select(key_names)
+            it_temp_names = temp.column_names(chain(column_names, agg_names))
+            by_names: list[str] = []
+            for orig_name, by in zip(key_names, partitions.columns):
+                if by.null_count:
+                    by_name = next(it_temp_names)
+                    native = native.append_column(by_name, dictionary_encode(by))
+                else:
+                    by_name = orig_name
+                by_names.append(by_name)
+            if by_names != key_names:
+                key_names = by_names
+                compliant = from_native(native)
+
+        # If `order_by` was used, we can now apply the new order to the aggregation only
+        ordered = native if sort_indices is None else compliant._gather(sort_indices)
         specs = (AggSpec.from_named_ir(e) for e in irs)
-        windowed = compliant._with_native(acero.group_by_table(native, key_names, specs))
+        windowed = from_native(acero.group_by_table(ordered, key_names, specs))
         return (
             compliant.select_names(*key_names)
-            .join(windowed, how="left", left_on=key_names)
+            .join_inner(windowed, key_names)
             .drop(key_names)
         )
+
+
+@overload
+def dictionary_encode(native: ChunkedArrayAny, /) -> pa.Int32Array: ...
+@overload
+def dictionary_encode(
+    native: ChunkedArrayAny, /, *, include_values: Literal[True]
+) -> tuple[ArrayAny, pa.Int32Array]: ...
+def dictionary_encode(
+    native: ChunkedArrayAny, /, *, include_values: bool = False
+) -> tuple[ArrayAny, pa.Int32Array] | pa.Int32Array:
+    """Extra typing for `pc.dictionary_encode`."""
+    da: Incomplete = native.dictionary_encode("encode").combine_chunks()
+    indices: pa.Int32Array = da.indices
+    if not include_values:
+        return indices
+    values: ArrayAny = da.dictionary
+    return values, indices
 
 
 def _composite_key(native: pa.Table, *, separator: str = "") -> ChunkedArray:
@@ -222,11 +262,10 @@ def _partition_by_one(
     native: pa.Table, by: str, *, include_key: bool = True
 ) -> Iterator[pa.Table]:
     """Optimized path for single-column partition."""
-    arr_dict: Incomplete = fn.array(native.column(by).dictionary_encode("encode"))
-    indices: pa.Int32Array = arr_dict.indices
+    values, indices = dictionary_encode(native.column(by), include_values=True)
     if not include_key:
         native = native.remove_column(native.schema.get_field_index(by))
-    for idx in range(len(arr_dict.dictionary)):
+    for idx in range(len(values)):
         # NOTE: Acero filter doesn't support `null_selection_behavior="emit_null"`
         # Is there any reasonable way to do this in Acero?
         yield native.filter(pc.equal(pa.scalar(idx), indices))

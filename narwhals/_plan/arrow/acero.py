@@ -377,6 +377,38 @@ def join_tables(
     return collect(_hashjoin(left, right, opts), ensure_unique_column_names=True)
 
 
+# TODO @dangotbanned: Adapt this into a `Declaration` that handles more of `ArrowGroupBy.agg_over`
+def join_inner_tables(left: pa.Table, right: pa.Table, on: list[str]) -> pa.Table:
+    """Fast path for use with `over`.
+
+    Has almost zero branching and the bodys of helper functions are inlined.
+
+    Eventually want to adapt this into:
+
+        goal = declare(
+            join_inner(
+                declare(table_source(compliant.native), select_names(key_names)),
+                declare(table_source(ordered), group_by(key_names, specs)),
+            ),
+            select_names(agg_names),
+        )
+    """
+    tp: Incomplete = pac.HashJoinNodeOptions
+    opts = tp(
+        "inner",
+        left_keys=on,
+        right_keys=on,
+        left_output=left.schema.names,
+        right_output=(name for name in right.schema.names if name not in on),
+        output_suffix_for_right="_right",
+    )
+    lhs, rhs = pac.TableSourceNodeOptions(left), pac.TableSourceNodeOptions(right)
+    decl = Decl("hashjoin", opts, [Decl("table_source", lhs), Decl("table_source", rhs)])
+    result = decl.to_table()
+    check_column_names_are_unique(result.column_names)
+    return result
+
+
 def join_cross_tables(
     left: pa.Table, right: pa.Table, suffix: str = "_right", *, coalesce_keys: bool = True
 ) -> pa.Table:

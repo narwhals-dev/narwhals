@@ -225,6 +225,10 @@ class temp:  # noqa: N801
             source: Source of columns to check for uniqueness.
             prefix: Prepend the name with this string.
             n_chars: Total number of characters used by the name (including `prefix`).
+
+        Notes:
+            When an `source` is an `Iterator`, it will only be consumed *iff* the result of
+            `temp.column_names` advances at least once.
         """
         columns = cls._into_columns(source)
         prefix, n_bytes = cls._parse_prefix_n_bytes(prefix, n_chars)

@@ -183,6 +183,10 @@ class ArrowDataFrame(
         result = acero.join_cross_tables(self.native, other.native, suffix=suffix)
         return self._with_native(result)
 
+    def join_inner(self, other: Self, on: list[str], /) -> Self:
+        """Less flexible, but more direct equivalent to join(how="inner", left_on=...)`."""
+        return self._with_native(acero.join_inner_tables(self.native, other.native, on))
+
     def filter(self, predicate: NamedIR) -> Self:
         mask: pc.Expression | ChunkedArrayAny
         resolved = Expr.from_named_ir(predicate, self)
