@@ -198,7 +198,7 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
 
     def log(self, node: FExpr[F.Log], frame: Frame, name: str) -> StoresNativeT_co:
         native = node.input[0].dispatch(self, frame, name).native
-        return self._with_native(pc.logb(native, fn.lit(node.function.base)), name)
+        return self._with_native(fn.log(native, node.function.base), name)
 
     def exp(self, node: FExpr[F.Exp], frame: Frame, name: str) -> StoresNativeT_co:
         return self._unary_function(pc.exp)(node, frame, name)
@@ -211,7 +211,6 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
         return self._with_native(fn.round(native, node.function.decimals), name)
 
     clip = not_implemented()  # type: ignore[misc]
-    drop_nulls = not_implemented()  # type: ignore[misc]
     replace_strict = not_implemented()  # type: ignore[misc]
 
 
@@ -504,6 +503,9 @@ class ArrowExpr(  # type: ignore[misc]
         result = native[node.function.offset :: node.function.n]
         return self._with_native(result, name)
 
+    def drop_nulls(self, node: FExpr[F.DropNulls], frame: Frame, name: str) -> Self:
+        return self._vector_function(fn.drop_nulls)(node, frame, name)
+
     cum_count = _cumulative
     cum_min = _cumulative
     cum_max = _cumulative
@@ -610,6 +612,15 @@ class ArrowScalar(
     def null_count(self, node: FExpr[NullCount], frame: Frame, name: str) -> Self:
         native = node.input[0].dispatch(self, frame, name).native
         return self._with_native(pa.scalar(0 if native.is_valid else 1), name)
+
+    def drop_nulls(  # type: ignore[override]
+        self, node: FExpr[F.DropNulls], frame: Frame, name: str
+    ) -> Scalar | Expr:
+        previous = node.input[0].dispatch(self, frame, name)
+        if previous.native.is_valid:
+            return previous
+        chunked = fn.chunked_array([[]], previous.native.type)
+        return ArrowExpr.from_native(chunked, name, version=self.version)
 
     filter = not_implemented()
     over = not_implemented()

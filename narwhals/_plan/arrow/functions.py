@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import typing as t
 from collections.abc import Callable, Sequence
 from typing import TYPE_CHECKING, Any, Final, Literal, overload
@@ -55,6 +56,7 @@ if TYPE_CHECKING:
         StringScalar,
         StringType,
         UnaryFunction,
+        VectorFunction,
     )
     from narwhals._plan.options import RankOptions, SortMultipleOptions, SortOptions
     from narwhals.typing import ClosedInterval, IntoArrowSchema, PythonLiteral
@@ -234,6 +236,10 @@ def round(native: ChunkedOrScalarAny, decimals: int = 0) -> ChunkedOrScalarAny:
     return pc.round(native, decimals, round_mode="half_towards_infinity")
 
 
+def log(native: ChunkedOrScalarAny, base: float = math.e) -> ChunkedOrScalarAny:
+    return t.cast("ChunkedOrScalarAny", pc.logb(native, lit(base)))
+
+
 def reverse(native: ChunkedOrArrayT) -> ChunkedOrArrayT:
     """Unlike other slicing ops, `[::-1]` creates a full-copy.
 
@@ -318,6 +324,9 @@ def preserve_nulls(
     if has_nulls(before):
         after = pc.if_else(before.is_null(), lit(None, after.type), after)
     return after
+
+
+drop_nulls = t.cast("VectorFunction[...]", pc.drop_null)
 
 
 def is_between(

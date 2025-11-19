@@ -10,7 +10,11 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._plan import expressions as ir
-    from narwhals._plan.expressions import FunctionExpr, aggregation as agg
+    from narwhals._plan.expressions import (
+        FunctionExpr,
+        aggregation as agg,
+        functions as F,
+    )
     from narwhals._plan.expressions.functions import EwmMean, NullCount, Shift
     from narwhals._utils import Version
     from narwhals.typing import IntoDType, PythonLiteral
@@ -101,6 +105,12 @@ class CompliantScalar(
         if node.function.n == 0:
             return self._with_evaluated(self._evaluated, name)
         return self.from_python(None, name, dtype=None, version=self.version)
+
+    def drop_nulls(  # type: ignore[override]
+        self, node: FunctionExpr[F.DropNulls], frame: FrameT_contra, name: str
+    ) -> Self | CompliantExpr[FrameT_contra, SeriesT_co]:
+        """Returns a 0-length Series if null, else noop."""
+        ...
 
     arg_max = _always_zero  # type: ignore[misc]
     arg_min = _always_zero  # type: ignore[misc]
