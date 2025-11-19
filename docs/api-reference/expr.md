@@ -8,6 +8,7 @@
         - alias
         - all
         - any
+        - any_value
         - cast
         - ceil
         - clip
