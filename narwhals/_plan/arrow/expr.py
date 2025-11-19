@@ -36,6 +36,7 @@ if TYPE_CHECKING:
     from narwhals._plan.arrow.dataframe import ArrowDataFrame as Frame
     from narwhals._plan.arrow.namespace import ArrowNamespace
     from narwhals._plan.arrow.typing import ChunkedArrayAny, P, VectorFunction
+    from narwhals._plan.expressions import functions as F
     from narwhals._plan.expressions.aggregation import (
         ArgMax,
         ArgMin,
@@ -195,10 +196,20 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
         result = pc.if_else(when.native, then.native, otherwise.native)
         return self._with_native(result, name)
 
-    exp = not_implemented()  # type: ignore[misc]
-    log = not_implemented()  # type: ignore[misc]
-    sqrt = not_implemented()  # type: ignore[misc]
-    round = not_implemented()  # type: ignore[misc]
+    def log(self, node: FExpr[F.Log], frame: Frame, name: str) -> StoresNativeT_co:
+        native = node.input[0].dispatch(self, frame, name).native
+        return self._with_native(pc.logb(native, fn.lit(node.function.base)), name)
+
+    def exp(self, node: FExpr[F.Exp], frame: Frame, name: str) -> StoresNativeT_co:
+        return self._unary_function(pc.exp)(node, frame, name)
+
+    def sqrt(self, node: FExpr[F.Sqrt], frame: Frame, name: str) -> StoresNativeT_co:
+        return self._unary_function(pc.sqrt)(node, frame, name)
+
+    def round(self, node: FExpr[F.Round], frame: Frame, name: str) -> StoresNativeT_co:
+        native = node.input[0].dispatch(self, frame, name).native
+        return self._with_native(fn.round(native, node.function.decimals), name)
+
     clip = not_implemented()  # type: ignore[misc]
     drop_nulls = not_implemented()  # type: ignore[misc]
     replace_strict = not_implemented()  # type: ignore[misc]
@@ -381,21 +392,9 @@ class ArrowExpr(  # type: ignore[misc]
         result: NativeScalar = fn.min_(self._dispatch_expr(node.expr, frame, name).native)
         return self._with_native(result, name)
 
-    def null_count(self, node: FExpr[NullCount], frame: Frame, name: str) -> Scalar:
+    def null_count(self, node: FExpr[F.NullCount], frame: Frame, name: str) -> Scalar:
         native = self._dispatch_expr(node.input[0], frame, name).native
         return self._with_native(fn.null_count(native), name)
-
-    # TODO @dangotbanned: top-level, complex-ish nodes
-    # - [ ] Over
-    #   - [x] `over_ordered`
-    #   - [x] `group_by`, `join`
-    #   - [x] `over` (with partitions)
-    #   - [x] `over_ordered` (with partitions)
-    #   - [ ] fix: join on nulls after https://github.com/narwhals-dev/narwhals/issues/3300
-    # - [ ] `map_batches`
-    #   - [x] elementwise
-    #   - [ ] scalar
-    # - [ ] `rolling_expr` has 4 variants
 
     def over(
         self,
@@ -453,6 +452,12 @@ class ArrowExpr(  # type: ignore[misc]
         index = df.to_series().alias(name)
         return self.from_series(index.is_in(distinct.get_column(idx_name)))
 
+    # TODO @dangotbanned: top-level, complex-ish nodes
+    # - [ ] `map_batches`
+    #   - [x] elementwise
+    #   - [ ] scalar
+    # - [ ] `rolling_expr` has 4 variants
+
     # NOTE: Can't implement in `EagerExpr`, since it doesn't derive `ExprDispatch`
     def map_batches(self, node: ir.AnonymousExpr, frame: Frame, name: str) -> Self:
         if node.is_scalar:
@@ -489,6 +494,10 @@ class ArrowExpr(  # type: ignore[misc]
             result = fn.reverse(func(fn.reverse(native)))
         return self._with_native(result, name)
 
+    def unique(self, node: ir.FunctionExpr[F.Unique], frame: Frame, name: str) -> Self:
+        result = self._dispatch_expr(node.input[0], frame, name).native.unique()
+        return self._with_native(result, name)
+
     cum_count = _cumulative
     cum_min = _cumulative
     cum_max = _cumulative
@@ -501,8 +510,9 @@ class ArrowExpr(  # type: ignore[misc]
     hist_bins = not_implemented()
     hist_bin_count = not_implemented()
     mode = not_implemented()
-    unique = not_implemented()
     fill_null_with_strategy = not_implemented()
+    # NOTE: `kurtosis` and `skew` will need tests
+    # wanna try adding a `pyarrow>=20` version
     kurtosis = not_implemented()
     skew = not_implemented()
     gather_every = not_implemented()

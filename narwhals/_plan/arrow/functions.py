@@ -230,6 +230,10 @@ def n_unique(native: Any) -> pa.Int64Scalar:
     return count(native, mode="all")
 
 
+def round(native: ChunkedOrScalarAny, decimals: int = 0) -> ChunkedOrScalarAny:
+    return pc.round(native, decimals, round_mode="half_towards_infinity")
+
+
 def reverse(native: ChunkedOrArrayT) -> ChunkedOrArrayT:
     """Unlike other slicing ops, `[::-1]` creates a full-copy.
 
