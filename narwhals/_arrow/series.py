@@ -1105,13 +1105,9 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return self._with_native(pc.sqrt(self.native))
 
     def any_value(
-        self, seed: int | None, *, _return_py_scalar: bool = True
+        self, *, ignore_nulls: bool, _return_py_scalar: bool = True
     ) -> PythonLiteral:
-        from random import Random
-
-        rng = Random(seed)  # noqa: S311
-        idx = rng.randint(0, len(self) - 1)
-        return self.item(idx)
+        return self.drop_nulls().first() if ignore_nulls else self.first()
 
     @property
     def dt(self) -> ArrowSeriesDateTimeNamespace:

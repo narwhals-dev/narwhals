@@ -664,8 +664,8 @@ class PolarsSeries:
             return self.native.item(-1) if len(self) else None
         return self.native.last()  # type: ignore[return-value]
 
-    def any_value(self, seed: int | None) -> PythonLiteral:
-        return self.native.sample(n=1, seed=seed).item()  # type: ignore[no-any-return]
+    def any_value(self, *, ignore_nulls: bool) -> PythonLiteral:
+        return self.drop_nulls().first() if ignore_nulls else self.first()
 
     @property
     def dt(self) -> PolarsSeriesDateTimeNamespace:

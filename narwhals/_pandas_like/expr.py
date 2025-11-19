@@ -109,9 +109,10 @@ def window_kwargs_to_pandas_equivalent(  # noqa: C901
             "min_periods": kwargs["min_samples"],
             "ignore_na": kwargs["ignore_nulls"],
         }
-    elif function_name in {"first", "last"}:
+    elif function_name in {"first", "last", "any_value"}:
         pandas_kwargs = {
-            "n": _REMAP_ORDERED_INDEX[cast("NarwhalsAggregation", function_name)]
+            "n": _REMAP_ORDERED_INDEX[cast("NarwhalsAggregation", function_name)],
+            "dropna": kwargs.get("ignore_nulls", False),
         }
     else:  # sum, len, ...
         pandas_kwargs = {}

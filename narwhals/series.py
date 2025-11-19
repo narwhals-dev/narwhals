@@ -2844,18 +2844,22 @@ class Series(Generic[IntoSeriesT]):
         result = result.rename(orig_name) if name_is_none else result
         return cast("Self", result)
 
-    def any_value(self, seed: int | None = None) -> PythonLiteral:
-        """Get _a_ (random) value from the series.
+    def any_value(self, *, ignore_nulls: bool = False) -> PythonLiteral:
+        """Get a random value from the column.
+
+        Arguments:
+            ignore_nulls: Whether to ignore null values or not.
+                If `True` and there are no not-null elements, then `None` is returned.
 
         Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> s_native = pa.chunked_array([[1, 2, None]])
             >>> s = nw.from_native(s_native, series_only=True)
-            >>> s.any_value(seed=12)
-            2
+            >>> s.any_value(ignore_nulls=True)
+            1
         """
-        return self._compliant_series.any_value(seed=seed)
+        return self._compliant_series.any_value(ignore_nulls=ignore_nulls)
 
     @property
     def str(self) -> SeriesStringNamespace[Self]:

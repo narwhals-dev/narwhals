@@ -112,8 +112,8 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         msg = "`last` is not supported for PySpark."
         raise NotImplementedError(msg)
 
-    def _any_value(self, expr: Column, seed: int | None) -> Column:
-        return self._F.any_value(expr, ignoreNulls=False)
+    def _any_value(self, expr: Column, *, ignore_nulls: bool) -> Column:
+        return self._F.any_value(expr, ignoreNulls=ignore_nulls)
 
     def broadcast(self) -> Self:
         return self.over([self._F.lit(1)], [])

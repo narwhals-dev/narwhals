@@ -43,7 +43,6 @@ NativeAggregation: TypeAlias = Literal[
     "nunique",
     "prod",
     "quantile",
-    "sample",
     "sem",
     "size",
     "std",
@@ -63,6 +62,7 @@ NonStrHashable: TypeAlias = Any
 _REMAP_ORDERED_INDEX: Mapping[NarwhalsAggregation, Literal[0, -1]] = {
     "first": 0,
     "last": -1,
+    "any_value": 0,
 }
 
 
@@ -195,10 +195,10 @@ class AggExpr:
         native_name = PandasLikeGroupBy._remap_expr_name(self.leaf_name)
         last_node = next(self.expr._metadata.op_nodes_reversed())
         if self.leaf_name in _REMAP_ORDERED_INDEX:
-            return methodcaller("nth", n=_REMAP_ORDERED_INDEX[self.leaf_name])
-        if self.leaf_name == "any_value":
-            seed = last_node.kwargs["seed"]
-            return methodcaller("sample", n=1, random_state=seed)
+            dropna = last_node.kwargs.get("ignore_nulls", False)
+            return methodcaller(
+                "nth", n=_REMAP_ORDERED_INDEX[self.leaf_name], dropna=dropna
+            )
         return _native_agg(native_name, **last_node.kwargs)
 
 
@@ -222,7 +222,7 @@ class PandasLikeGroupBy(
         "any": "any",
         "first": "nth",
         "last": "nth",
-        "any_value": "sample",
+        "any_value": "nth",
     }
     _original_columns: tuple[str, ...]
     """Column names *prior* to any aliasing in `ParseKeysGroupBy`."""

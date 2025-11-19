@@ -2368,21 +2368,20 @@ class Expr:
 
         return result
 
-    def any_value(self, seed: int | None = None) -> Self:
-        """Get _a_ (random) value from the column.
+    def any_value(self, *, ignore_nulls: bool = False) -> Self:
+        """Get a random value from the column.
 
-        Warning:
-            The `seed` argument has no effect for:
-            - pyarrow group by context
-            - duckdb, ibis, spark-like backends
+        Arguments:
+            ignore_nulls: Whether to ignore null values or not.
+                If `True` and there are no not-null elements, then `None` is returned.
 
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> data = {"a": [1, 1, 2, 2], "b": ["foo", None, None, "baz"]}
+            >>> data = {"a": [1, 1, 2, 2], "b": [None, "foo", "baz", None]}
             >>> df_native = pd.DataFrame(data)
             >>> df = nw.from_native(df_native)
-            >>> df.select(nw.all().any_value(seed=1))
+            >>> df.select(nw.all().any_value(ignore_nulls=False))
             ┌──────────────────┐
             |Narwhals DataFrame|
             |------------------|
@@ -2390,16 +2389,18 @@ class Expr:
             |    0  1  None    |
             └──────────────────┘
 
-            >>> df.group_by("a").agg(nw.col("b").any_value(seed=3))
+            >>> df.group_by("a").agg(nw.col("b").any_value(ignore_nulls=True))
             ┌──────────────────┐
             |Narwhals DataFrame|
             |------------------|
             |       a     b    |
-            |    0  1  None    |
+            |    0  1   foo    |
             |    1  2   baz    |
             └──────────────────┘
         """
-        return self._append_node(ExprNode(ExprKind.AGGREGATION, "any_value", seed=seed))
+        return self._append_node(
+            ExprNode(ExprKind.AGGREGATION, "any_value", ignore_nulls=ignore_nulls)
+        )
 
     @property
     def str(self) -> ExprStringNamespace[Self]:
