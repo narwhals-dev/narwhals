@@ -284,22 +284,55 @@ def data_groups() -> Data:
     }
 
 
-def test_over_partition_by_nulls_order_by() -> None:
+v = nwp.col("v")
+p1 = nwp.col("p1")
+p2 = nwp.col("p2")
+p3 = nwp.col("p3")
+
+XFAIL_NOT_IMPL = pytest.mark.xfail(
+    reason="TODO: Multiple null partitions", raises=NotImplementedError
+)
+
+
+@pytest.mark.parametrize(
+    ("expr", "result_values"),
+    [
+        (v.first().over(p1, order_by="i", descending=True), [5, 2, 6, 6, 2, 1]),
+        pytest.param(
+            v.last().over(p1, p2, order_by="i", descending=True),
+            [5, 4, 3, 6, 2, 1],
+            marks=XFAIL_NOT_IMPL,
+        ),
+        pytest.param(
+            v.first().over(p3, p2, order_by="i"), [5, 4, 3, 6, 6, 1], marks=XFAIL_NOT_IMPL
+        ),
+        pytest.param(
+            (
+                v.first().over(
+                    nwp.when(p2.is_null()).then(2).when(p2 == 1).then(p2),
+                    p3,
+                    order_by="i",
+                    descending=True,
+                )
+            ),
+            [5, 4, 3, 2, 2, 1],
+            marks=XFAIL_NOT_IMPL,
+        ),
+    ],
+)
+def test_over_partition_by_nulls_order_by(
+    expr: nwp.Expr, result_values: list[Any]
+) -> None:
     data = {
-        "a": ["a", "b", None, None, "b", "c"],
-        "b": [1, 2, 1, None, None, None],
-        "c": [5, 4, 3, 6, 2, 1],
+        "p1": ["a", "b", None, None, "b", "c"],
+        "p2": [1, 2, 1, None, None, None],
+        "p3": [None, 1, 1, 2, 2, None],
+        "v": [5, 4, 3, 6, 2, 1],
         "i": [0, 1, 2, 3, 4, 5],
     }
-
-    expected = data | {"result": [5, 2, 6, 6, 2, 1]}
-    df = dataframe(data)
-    by_single_null = nwp.col("c").first().over("a", order_by="i", descending=True)
-    result = df.with_columns(result=by_single_null).sort("i")
+    expected = data | {"result": result_values}
+    result = dataframe(data).with_columns(result=expr).sort("i")
     assert_equal_data(result, expected)
-    by_multiple_null = nwp.col("c").first().over("a", "b", order_by="i", descending=True)
-    with pytest.raises(NotImplementedError):
-        df.with_columns(by_multiple_null)
 
 
 @pytest.mark.parametrize(
