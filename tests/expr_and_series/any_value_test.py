@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals as nw
-from tests.utils import DUCKDB_VERSION, assert_equal_data
+from tests.utils import DUCKDB_VERSION, PYARROW_VERSION, assert_equal_data
 
 if TYPE_CHECKING:
     from tests.utils import Constructor, ConstructorEager
@@ -89,6 +89,9 @@ def test_any_value_group_by(
     if "dask" in str(constructor):
         reason = "sample does not allow n, use frac instead"
         request.applymarker(pytest.mark.xfail(reason=reason))
+    if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (14, 0):
+        reason = "too old"
+        pytest.skip(reason)
 
     df = nw.from_native(constructor(data))
 
@@ -126,6 +129,10 @@ def test_any_value_over(
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         reason = "`over` requires DuckDB 1.3.0"
         pytest.skip(reason=reason)
+
+    if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (14, 0):
+        reason = "too old"
+        pytest.skip(reason)
 
     df = nw.from_native(constructor(data))
 
