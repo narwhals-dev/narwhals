@@ -76,6 +76,14 @@ HAS_ARANGE: Final = BACKEND_VERSION >= (21,)
 I64: Final = pa.int64()
 F64: Final = pa.float64()
 
+
+class MinMax(ir.AggExpr):
+    """Returns a `Struct({'min': ..., 'max': ...})`.
+
+    https://arrow.apache.org/docs/python/generated/pyarrow.compute.min_max.html#pyarrow.compute.min_max
+    """
+
+
 IntoColumnAgg: TypeAlias = Callable[[str], ir.AggExpr]
 """Helper constructor for single-column aggregations."""
 
@@ -139,10 +147,28 @@ _IS_BETWEEN: Mapping[ClosedInterval, tuple[BinaryComp, BinaryComp]] = {
     "none": (gt, lt),
     "both": (gt_eq, lt_eq),
 }
-IS_FIRST_LAST_DISTINCT: Mapping[type[ir.boolean.BooleanFunction], IntoColumnAgg] = {
+
+
+def ir_min_max(name: str, /) -> MinMax:
+    return MinMax(expr=ir.col(name))
+
+
+BOOLEAN_GLUE_FUNCTIONS: Mapping[type[ir.boolean.BooleanFunction], IntoColumnAgg] = {
     ir.boolean.IsFirstDistinct: ir.min,
     ir.boolean.IsLastDistinct: ir.max,
+    ir.boolean.IsUnique: ir_min_max,
+    ir.boolean.IsDuplicated: ir_min_max,
 }
+"""Planning to pattern up `_is_first_last_distinct` to work for some other cases.
+
+The final two lines will need some tweaking, but the same concept is going on:
+
+    index = df.to_series().alias(name)
+    return self.from_series(index.is_in(distinct.get_column(idx_name)))
+
+
+Will mean at least 2 more functions with `over(*partition_by, order_by=...)` support 😄
+"""
 
 
 @t.overload

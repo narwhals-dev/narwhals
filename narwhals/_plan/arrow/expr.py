@@ -443,7 +443,7 @@ class ArrowExpr(  # type: ignore[misc]
             df = df._with_native(df.native.add_column(0, idx_name, column))
         else:
             df = df.with_row_index(idx_name)
-        agg = fn.IS_FIRST_LAST_DISTINCT[type(node.function)](idx_name)
+        agg = fn.BOOLEAN_GLUE_FUNCTIONS[type(node.function)](idx_name)
         if not (partition_by or sort_indices is not None):
             distinct = df.group_by_names((name,)).agg((ir.named_ir(idx_name, agg),))
         else:
@@ -524,6 +524,7 @@ class ArrowExpr(  # type: ignore[misc]
     kurtosis = not_implemented()
     skew = not_implemented()
 
+    # I think they might both be possible in a similar way to `_is_first_last_distinct`
     is_duplicated = not_implemented()
     is_unique = not_implemented()
 

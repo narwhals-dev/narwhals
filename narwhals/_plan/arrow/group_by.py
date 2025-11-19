@@ -49,6 +49,7 @@ SUPPORTED_AGG: Mapping[type[agg.AggExpr], acero.Aggregation] = {
     agg.NUnique: "hash_count_distinct",
     agg.First: "hash_first",
     agg.Last: "hash_last",
+    fn.MinMax: "hash_min_max",
 }
 SUPPORTED_IR: Mapping[type[ir.ExprIR], acero.Aggregation] = {
     ir.Len: "hash_count_all",
