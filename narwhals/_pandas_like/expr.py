@@ -110,9 +110,14 @@ def window_kwargs_to_pandas_equivalent(  # noqa: C901
             "ignore_na": kwargs["ignore_nulls"],
         }
     elif function_name in {"first", "last", "any_value"}:
+        if kwargs.get("ignore_nulls"):
+            msg = (
+                "`Expr.any_value(ignore_nulls=True)` is not supported in a `over` "
+                "context for pandas-like backend."
+            )
+            raise NotImplementedError(msg)
         pandas_kwargs = {
-            "n": _REMAP_ORDERED_INDEX[cast("NarwhalsAggregation", function_name)],
-            "dropna": kwargs.get("ignore_nulls", False),
+            "n": _REMAP_ORDERED_INDEX[cast("NarwhalsAggregation", function_name)]
         }
     else:  # sum, len, ...
         pandas_kwargs = {}

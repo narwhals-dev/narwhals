@@ -195,10 +195,13 @@ class AggExpr:
         native_name = PandasLikeGroupBy._remap_expr_name(self.leaf_name)
         last_node = next(self.expr._metadata.op_nodes_reversed())
         if self.leaf_name in _REMAP_ORDERED_INDEX:
-            dropna = last_node.kwargs.get("ignore_nulls", False)
-            return methodcaller(
-                "nth", n=_REMAP_ORDERED_INDEX[self.leaf_name], dropna=dropna
-            )
+            if last_node.kwargs.get("ignore_nulls"):
+                msg = (
+                    "`Expr.any_value(ignore_nulls=True)` is not supported in a `group_by` "
+                    "context for pandas-like backend"
+                )
+                raise NotImplementedError(msg)
+            return methodcaller("nth", n=_REMAP_ORDERED_INDEX[self.leaf_name])
         return _native_agg(native_name, **last_node.kwargs)
 
 
