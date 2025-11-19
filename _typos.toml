@@ -5,6 +5,7 @@ ba = "ba"  # Used as column name in docstring examples (way too much?)
 iy = "iy"  # Used as column name (once in a test)
 pn = "pn"  # Used in docs: pn = PandasLikeNamespace(...)
 TYP = "TYP"  # Used in flake8 rule
+arange = "arange" # Used in numpy, polars, pyarrow
 
 [files]
 extend-exclude = ["tests/data/*"]

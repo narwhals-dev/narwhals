@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import typing as t
-from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, overload
+from collections.abc import Callable, Sequence
+from typing import TYPE_CHECKING, Any, Final, Literal, overload
 
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
@@ -15,7 +15,7 @@ from narwhals._arrow.utils import (
     floordiv_compat as floordiv,
 )
 from narwhals._plan import expressions as ir
-from narwhals._plan.arrow import options
+from narwhals._plan.arrow import options as pa_options
 from narwhals._plan.expressions import functions as F, operators as ops
 from narwhals._utils import Implementation
 
@@ -26,7 +26,6 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias, TypeIs
 
     from narwhals._arrow.typing import Incomplete, PromoteOptions
-    from narwhals._plan.arrow.series import ArrowSeries
     from narwhals._plan.arrow.typing import (
         Array,
         ArrayAny,
@@ -37,6 +36,7 @@ if TYPE_CHECKING:
         BinOp,
         ChunkedArray,
         ChunkedArrayAny,
+        ChunkedOrArray,
         ChunkedOrArrayAny,
         ChunkedOrArrayT,
         ChunkedOrScalar,
@@ -56,9 +56,23 @@ if TYPE_CHECKING:
         StringType,
         UnaryFunction,
     )
+    from narwhals._plan.options import RankOptions, SortMultipleOptions, SortOptions
     from narwhals.typing import ClosedInterval, IntoArrowSchema, PythonLiteral
 
 BACKEND_VERSION = Implementation.PYARROW._backend_version()
+"""Static backend version for `pyarrow`."""
+
+RANK_ACCEPTS_CHUNKED: Final = BACKEND_VERSION >= (14,)
+
+HAS_SCATTER: Final = BACKEND_VERSION >= (20,)
+"""`pyarrow.compute.scatter` added in https://github.com/apache/arrow/pull/44394"""
+
+HAS_ARANGE: Final = BACKEND_VERSION >= (21,)
+"""`pyarrow.arange` added in https://github.com/apache/arrow/pull/46778"""
+
+
+I64: Final = pa.int64()
+F64: Final = pa.float64()
 
 IntoColumnAgg: TypeAlias = Callable[[str], ir.AggExpr]
 """Helper constructor for single-column aggregations."""
@@ -216,19 +230,12 @@ def n_unique(native: Any) -> pa.Int64Scalar:
     return count(native, mode="all")
 
 
-def _reverse(native: ChunkedOrArrayT) -> ChunkedOrArrayT:
+def reverse(native: ChunkedOrArrayT) -> ChunkedOrArrayT:
     """Unlike other slicing ops, `[::-1]` creates a full-copy.
 
     https://github.com/apache/arrow/issues/19103#issuecomment-1377671886
     """
     return native[::-1]
-
-
-def cumulative(native: ChunkedArrayAny, cum_agg: F.CumAgg, /) -> ChunkedArrayAny:
-    func = _CUMULATIVE[type(cum_agg)]
-    if not cum_agg.reverse:
-        return func(native)
-    return _reverse(func(_reverse(native)))
 
 
 def cum_sum(native: ChunkedOrArrayT) -> ChunkedOrArrayT:
@@ -251,7 +258,7 @@ def cum_count(native: ChunkedArrayAny) -> ChunkedArrayAny:
     return cum_sum(is_not_null(native).cast(pa.uint32()))
 
 
-_CUMULATIVE: Mapping[type[F.CumAgg], Callable[[ChunkedArrayAny], ChunkedArrayAny]] = {
+CUMULATIVE: Mapping[type[F.CumAgg], Callable[[ChunkedArrayAny], ChunkedArrayAny]] = {
     F.CumSum: cum_sum,
     F.CumCount: cum_count,
     F.CumMin: cum_min,
@@ -278,6 +285,35 @@ def shift(native: ChunkedArrayAny, n: int) -> ChunkedArrayAny:
     else:
         arrays = [*arr.slice(offset=-n).chunks, nulls_like(-n, arr)]
     return pa.chunked_array(arrays)
+
+
+def rank(native: ChunkedArrayAny, rank_options: RankOptions) -> ChunkedArrayAny:
+    arr = native if RANK_ACCEPTS_CHUNKED else array(native)
+    if rank_options.method == "average":
+        # Adapted from https://github.com/pandas-dev/pandas/blob/f4851e500a43125d505db64e548af0355227714b/pandas/core/arrays/arrow/array.py#L2290-L2316
+        order = pa_options.ORDER[rank_options.descending]
+        min = preserve_nulls(arr, pc.rank(arr, order, tiebreaker="min").cast(F64))
+        max = pc.rank(arr, order, tiebreaker="max").cast(F64)
+        ranked = pc.divide(pc.add(min, max), lit(2, F64))
+    else:
+        ranked = preserve_nulls(native, pc.rank(arr, options=rank_options.to_arrow()))
+    return chunked_array(ranked)
+
+
+def null_count(native: ChunkedOrArrayAny) -> pa.Int64Scalar:
+    return pc.count(native, mode="only_null")
+
+
+def has_nulls(native: ChunkedOrArrayAny) -> bool:
+    return bool(native.null_count)
+
+
+def preserve_nulls(
+    before: ChunkedOrArrayAny, after: ChunkedOrArrayT, /
+) -> ChunkedOrArrayT:
+    if has_nulls(before):
+        after = pc.if_else(before.is_null(), lit(None, after.type), after)
+    return after
 
 
 def is_between(
@@ -323,29 +359,109 @@ def concat_str(
     dtype = string_type(obj.type for obj in arrays)
     it = (obj.cast(dtype) for obj in arrays)
     concat: Incomplete = pc.binary_join_element_wise
-    join = options.join(ignore_nulls=ignore_nulls)
+    join = pa_options.join(ignore_nulls=ignore_nulls)
     return concat(*it, lit(separator, dtype), options=join)  # type: ignore[no-any-return]
 
 
+def sort_indices(
+    native: ChunkedOrArrayAny | pa.Table,
+    *order_by: str,
+    descending: bool | Sequence[bool] = False,
+    nulls_last: bool = False,
+    options: SortOptions | SortMultipleOptions | None = None,
+) -> pa.UInt64Array:
+    """Return the indices that would sort an array or table."""
+    opts = (
+        options.to_arrow(order_by)
+        if options
+        else pa_options.sort(*order_by, descending=descending, nulls_last=nulls_last)
+    )
+    return pc.sort_indices(native, options=opts)
+
+
+def unsort_indices(indices: pa.UInt64Array, /) -> pa.Int64Array:
+    """Return the inverse permutation of the given indices.
+
+    Arguments:
+        indices: The output of `sort_indices`.
+
+    Examples:
+        We can use this pair of functions to recreate a windowed `pl.row_index`
+
+        >>> import polars as pl
+        >>> data = {"by": [5, 2, 5, None]}
+        >>> df = pl.DataFrame(data)
+        >>> df.select(
+        ...     pl.row_index().over(order_by="by", descending=True, nulls_last=False)
+        ... ).to_series().to_list()
+        [1, 3, 2, 0]
+
+        Now in `pyarrow`
+
+        >>> import pyarrow as pa
+        >>> from narwhals._plan.arrow.functions import sort_indices, unsort_indices
+        >>> df = pa.Table.from_pydict(data)
+        >>> unsort_indices(
+        ...     sort_indices(df, "by", descending=True, nulls_last=False)
+        ... ).to_pylist()
+        [1, 3, 2, 0]
+    """
+    return (
+        pc.inverse_permutation(indices.cast(pa.int64()))  # type: ignore[attr-defined]
+        if HAS_SCATTER
+        else int_range(len(indices), chunked=False).take(pc.sort_indices(indices))
+    )
+
+
+@overload
+def int_range(
+    start: int = ...,
+    end: int | None = ...,
+    step: int = ...,
+    /,
+    *,
+    dtype: IntegerType = ...,
+    chunked: Literal[True] = ...,
+) -> ChunkedArray[IntegerScalar]: ...
+@overload
+def int_range(
+    start: int = ...,
+    end: int | None = ...,
+    step: int = ...,
+    /,
+    *,
+    chunked: Literal[False],
+) -> pa.Int64Array: ...
+@overload
+def int_range(
+    start: int = ...,
+    end: int | None = ...,
+    step: int = ...,
+    /,
+    *,
+    dtype: IntegerType = ...,
+    chunked: Literal[False],
+) -> Array[IntegerScalar]: ...
 def int_range(
     start: int = 0,
     end: int | None = None,
     step: int = 1,
     /,
     *,
-    dtype: IntegerType = pa.int64(),  # noqa: B008
-) -> ChunkedArray[IntegerScalar]:
+    dtype: IntegerType = I64,
+    chunked: bool = True,
+) -> ChunkedOrArray[IntegerScalar]:
     if end is None:
         end = start
         start = 0
-    if BACKEND_VERSION < (21, 0, 0):  # pragma: no cover
+    if not HAS_ARANGE:  # pragma: no cover
         import numpy as np  # ignore-banned-import
 
         arr = pa.array(np.arange(start=start, stop=end, step=step), type=dtype)
     else:
-        int_range_: Incomplete = t.cast("Incomplete", pa.arange)  # type: ignore[attr-defined]
+        int_range_: Incomplete = pa.arange  # type: ignore[attr-defined]
         arr = t.cast("ArrayAny", int_range_(start=start, stop=end, step=step)).cast(dtype)
-    return pa.chunked_array([arr])
+    return arr if not chunked else pa.chunked_array([arr])
 
 
 def date_range(
@@ -431,12 +547,6 @@ else:
 
     def concat_diagonal(tables: Iterable[pa.Table]) -> pa.Table:
         return pa.concat_tables(tables, promote=True)
-
-
-def is_series(obj: t.Any) -> TypeIs[ArrowSeries]:
-    from narwhals._plan.arrow.series import ArrowSeries
-
-    return isinstance(obj, ArrowSeries)
 
 
 def _is_into_pyarrow_schema(obj: Mapping[Any, Any]) -> TypeIs[Mapping[str, DataType]]:

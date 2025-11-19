@@ -25,8 +25,7 @@ import pyarrow.acero as pac
 import pyarrow.compute as pc  # ignore-banned-import
 from pyarrow.acero import Declaration as Decl
 
-from narwhals._plan.common import ensure_list_str, flatten_hash_safe, temp
-from narwhals._plan.options import SortMultipleOptions
+from narwhals._plan.common import ensure_list_str, temp
 from narwhals._plan.typing import NonCrossJoinStrategy, OneOrSeq
 from narwhals._utils import check_column_names_are_unique
 from narwhals.typing import JoinStrategy, SingleColSelector
@@ -48,13 +47,8 @@ if TYPE_CHECKING:
         Aggregation as _Aggregation,
     )
     from narwhals._plan.arrow.group_by import AggSpec
-    from narwhals._plan.arrow.typing import (
-        ArrowAny,
-        JoinTypeSubset,
-        NullPlacement,
-        ScalarAny,
-    )
-    from narwhals._plan.typing import OneOrIterable, Order, Seq
+    from narwhals._plan.arrow.typing import ArrowAny, JoinTypeSubset, ScalarAny
+    from narwhals._plan.typing import OneOrIterable, Seq
     from narwhals.typing import NonNestedLiteral
 
 Incomplete: TypeAlias = Any
@@ -238,29 +232,6 @@ def prepend_column(native: pa.Table, name: str, values: IntoExpr) -> Decl:
     return _add_column(native, 0, name, values)
 
 
-def _order_by(
-    sort_keys: Iterable[tuple[str, Order]] = (),
-    *,
-    null_placement: NullPlacement = "at_end",
-) -> Decl:
-    # NOTE: There's no runtime type checking of `sort_keys` wrt shape
-    # Just need to be `Iterable`and unpack like a 2-tuple
-    # https://github.com/apache/arrow/blob/9b96bdbc733d62f0375a2b1b9806132abc19cd3f/python/pyarrow/_compute.pyx#L77-L88
-    keys: Incomplete = sort_keys
-    return Decl("order_by", pac.OrderByNodeOptions(keys, null_placement=null_placement))
-
-
-def sort_by(
-    by: OneOrIterable[str],
-    *more_by: str,
-    descending: OneOrIterable[bool] = False,
-    nulls_last: bool = False,
-) -> Decl:
-    return SortMultipleOptions.parse(
-        descending=descending, nulls_last=nulls_last
-    ).to_arrow_acero(tuple(flatten_hash_safe((by, more_by))))
-
-
 def _join_options(
     how: NonCrossJoinStrategy,
     left_on: OneOrIterable[str],
@@ -404,6 +375,38 @@ def join_tables(
         coalesce_keys=coalesce_keys,
     )
     return collect(_hashjoin(left, right, opts), ensure_unique_column_names=True)
+
+
+# TODO @dangotbanned: Adapt this into a `Declaration` that handles more of `ArrowGroupBy.agg_over`
+def join_inner_tables(left: pa.Table, right: pa.Table, on: list[str]) -> pa.Table:
+    """Fast path for use with `over`.
+
+    Has almost zero branching and the bodys of helper functions are inlined.
+
+    Eventually want to adapt this into:
+
+        goal = declare(
+            join_inner(
+                declare(table_source(compliant.native), select_names(key_names)),
+                declare(table_source(ordered), group_by(key_names, specs)),
+            ),
+            select_names(agg_names),
+        )
+    """
+    tp: Incomplete = pac.HashJoinNodeOptions
+    opts = tp(
+        "inner",
+        left_keys=on,
+        right_keys=on,
+        left_output=left.schema.names,
+        right_output=(name for name in right.schema.names if name not in on),
+        output_suffix_for_right="_right",
+    )
+    lhs, rhs = pac.TableSourceNodeOptions(left), pac.TableSourceNodeOptions(right)
+    decl = Decl("hashjoin", opts, [Decl("table_source", lhs), Decl("table_source", rhs)])
+    result = decl.to_table()
+    check_column_names_are_unique(result.column_names)
+    return result
 
 
 def join_cross_tables(

@@ -6,7 +6,7 @@ from functools import reduce
 from typing import TYPE_CHECKING, Any, ClassVar, overload
 
 from narwhals._plan import expressions as ir
-from narwhals._plan._guards import is_column, is_re_pattern
+from narwhals._plan._guards import is_expr_column, is_re_pattern
 from narwhals._plan.common import flatten_hash_safe
 from narwhals._plan.expr import Expr, ExprV1
 from narwhals._plan.expressions import operators as ops, selectors as s_ir
@@ -87,7 +87,7 @@ class Selector(Expr):
     @overload
     def __and__(self, other: Any) -> Expr: ...
     def __and__(self, other: Any) -> Self | Expr:
-        if is_column(other):  # @polars>=2.0: remove
+        if is_expr_column(other):  # @polars>=2.0: remove
             other = by_name(other.meta.output_name())
         if isinstance(other, type(self)):
             op = ops.And()
@@ -102,7 +102,7 @@ class Selector(Expr):
     @overload
     def __or__(self, other: Any) -> Expr: ...
     def __or__(self, other: Any) -> Self | Expr:
-        if is_column(other):  # @polars>=2.0: remove
+        if is_expr_column(other):  # @polars>=2.0: remove
             other = by_name(other.meta.output_name())
         if isinstance(other, type(self)):
             op = ops.Or()
@@ -110,7 +110,7 @@ class Selector(Expr):
         return self.as_expr().__or__(other)
 
     def __ror__(self, other: Any) -> Expr:  # type: ignore[override]
-        if is_column(other):
+        if is_expr_column(other):
             other = by_name(other.meta.output_name())
         return self.as_expr().__ror__(other)
 
@@ -133,7 +133,7 @@ class Selector(Expr):
     @overload
     def __xor__(self, other: Any) -> Expr: ...
     def __xor__(self, other: Any) -> Self | Expr:
-        if is_column(other):  # @polars>=2.0: remove
+        if is_expr_column(other):  # @polars>=2.0: remove
             other = by_name(other.meta.output_name())
         if isinstance(other, type(self)):
             op = ops.ExclusiveOr()
@@ -141,7 +141,7 @@ class Selector(Expr):
         return self.as_expr().__xor__(other)
 
     def __rxor__(self, other: Any) -> Expr:  # type: ignore[override]
-        if is_column(other):  # @polars>=2.0: remove
+        if is_expr_column(other):  # @polars>=2.0: remove
             other = by_name(other.meta.output_name())
         return self.as_expr().__rxor__(other)
 

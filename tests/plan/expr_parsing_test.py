@@ -407,12 +407,6 @@ def test_is_in_series() -> None:
         ("words", pytest.raises(TypeError, match=r"str \| bytes.+str")),
         (b"words", pytest.raises(TypeError, match=r"str \| bytes.+bytes")),
         (
-            nwp.col("b"),
-            pytest.raises(
-                NotImplementedError, match=re.compile(r"iterable instead", re.IGNORECASE)
-            ),
-        ),
-        (
             999,
             pytest.raises(
                 TypeError, match=re.compile(r"only.+iterable.+int", re.IGNORECASE)

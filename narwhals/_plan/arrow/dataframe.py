@@ -10,13 +10,14 @@ import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._plan.arrow import acero, functions as fn
+from narwhals._plan.arrow.common import ArrowFrameSeries as FrameSeries
 from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
 from narwhals._plan.arrow.group_by import ArrowGroupBy as GroupBy, partition_by
 from narwhals._plan.arrow.series import ArrowSeries as Series
 from narwhals._plan.compliant.dataframe import EagerDataFrame
 from narwhals._plan.compliant.typing import namespace
 from narwhals._plan.expressions import NamedIR
-from narwhals._utils import Implementation, Version
+from narwhals._utils import Version, generate_repr
 from narwhals.schema import Schema
 
 if TYPE_CHECKING:
@@ -25,8 +26,8 @@ if TYPE_CHECKING:
     import polars as pl
     from typing_extensions import Self
 
-    from narwhals._arrow.typing import ChunkedArrayAny
-    from narwhals._plan.arrow.namespace import ArrowNamespace
+    from narwhals._plan.arrow.typing import ChunkedArrayAny
+    from narwhals._plan.compliant.group_by import GroupByResolver
     from narwhals._plan.expressions import ExprIR, NamedIR
     from narwhals._plan.options import SortMultipleOptions
     from narwhals._plan.typing import NonCrossJoinStrategy
@@ -34,19 +35,21 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoSchema
 
 
-class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
-    implementation = Implementation.PYARROW
-    _native: pa.Table
-    _version: Version
+class ArrowDataFrame(
+    FrameSeries["pa.Table"], EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]
+):
+    def __repr__(self) -> str:
+        return generate_repr(f"nw.{type(self).__name__}", self.native.__repr__())
 
-    def __narwhals_namespace__(self) -> ArrowNamespace:
-        from narwhals._plan.arrow.namespace import ArrowNamespace
-
-        return ArrowNamespace(self._version)
+    def _with_native(self, native: pa.Table) -> Self:
+        return self.from_native(native, self.version)
 
     @property
     def _group_by(self) -> type[GroupBy]:
         return GroupBy
+
+    def group_by_resolver(self, resolver: GroupByResolver, /) -> GroupBy:
+        return self._group_by.from_resolver(self, resolver)
 
     @property
     def columns(self) -> list[str]:
@@ -98,13 +101,25 @@ class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
         from_named_ir = ns._expr.from_named_ir
         yield from ns._expr.align(from_named_ir(e, self) for e in nodes)
 
-    def sort(self, by: Sequence[str], options: SortMultipleOptions) -> Self:
-        native = self.native
-        indices = pc.sort_indices(native.select(list(by)), options=options.to_arrow(by))
-        return self._with_native(native.take(indices))
+    def sort(self, by: Sequence[str], options: SortMultipleOptions | None = None) -> Self:
+        return self.gather(fn.sort_indices(self.native, *by, options=options))
 
     def with_row_index(self, name: str) -> Self:
         return self._with_native(self.native.add_column(0, name, fn.int_range(len(self))))
+
+    def with_row_index_by(
+        self,
+        name: str,
+        order_by: Sequence[str],
+        *,
+        descending: bool = False,
+        nulls_last: bool = False,
+    ) -> Self:
+        indices = fn.sort_indices(
+            self.native, *order_by, nulls_last=nulls_last, descending=descending
+        )
+        column = fn.unsort_indices(indices)
+        return self._with_native(self.native.add_column(0, name, column))
 
     def get_column(self, name: str) -> Series:
         chunked = self.native.column(name)
@@ -167,6 +182,10 @@ class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
     def join_cross(self, other: Self, *, suffix: str = "_right") -> Self:
         result = acero.join_cross_tables(self.native, other.native, suffix=suffix)
         return self._with_native(result)
+
+    def join_inner(self, other: Self, on: list[str], /) -> Self:
+        """Less flexible, but more direct equivalent to join(how="inner", left_on=...)`."""
+        return self._with_native(acero.join_inner_tables(self.native, other.native, on))
 
     def filter(self, predicate: NamedIR) -> Self:
         mask: pc.Expression | ChunkedArrayAny

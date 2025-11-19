@@ -4,13 +4,13 @@ from typing import TYPE_CHECKING, Any, Protocol
 
 from narwhals._plan.compliant.expr import CompliantExpr, EagerExpr, LazyExpr
 from narwhals._plan.compliant.typing import FrameT_contra, LengthT, SeriesT, SeriesT_co
+from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._plan import expressions as ir
     from narwhals._plan.expressions import FunctionExpr, aggregation as agg
-    from narwhals._plan.expressions.boolean import IsFirstDistinct, IsLastDistinct
     from narwhals._plan.expressions.functions import EwmMean, NullCount, Shift
     from narwhals._utils import Version
     from narwhals.typing import IntoDType, PythonLiteral
@@ -35,6 +35,29 @@ class CompliantScalar(
         obj._version = self.version
         return obj
 
+    # NOTE: Constant behaviors with scalars observed in `polars`
+
+    def _always_nan(self, node: ir.ExprIR, frame: Any, name: str) -> Self:
+        return self.from_python(float("nan"), name, dtype=None, version=self.version)
+
+    def _always_noop(self, node: ir.ExprIR, frame: Any, name: str) -> Self:
+        return self._with_evaluated(self._evaluated, name)
+
+    def _always_true(self, node: ir.ExprIR, frame: Any, name: str) -> Self:
+        return self.from_python(True, name, dtype=None, version=self.version)
+
+    def _always_false(self, node: ir.ExprIR, frame: Any, name: str) -> Self:
+        return self.from_python(False, name, dtype=None, version=self.version)
+
+    def _always_null(self, node: ir.ExprIR, frame: Any, name: str) -> Self:
+        return self.from_python(None, name, dtype=None, version=self.version)
+
+    def _always_zero(self, node: ir.ExprIR, frame: Any, name: str) -> Self:
+        return self.from_python(0, name, dtype=None, version=self.version)
+
+    def _always_one(self, node: ir.ExprIR, frame: Any, name: str) -> Self:
+        return self.from_python(1, name, dtype=None, version=self.version)
+
     @property
     def name(self) -> str:
         return self._name
@@ -49,11 +72,6 @@ class CompliantScalar(
         dtype: IntoDType | None,
         version: Version,
     ) -> Self: ...
-    def arg_max(self, node: agg.ArgMax, frame: FrameT_contra, name: str) -> Self:
-        return self.from_python(0, name, dtype=None, version=self.version)
-
-    def arg_min(self, node: agg.ArgMin, frame: FrameT_contra, name: str) -> Self:
-        return self.from_python(0, name, dtype=None, version=self.version)
 
     def count(self, node: agg.Count, frame: FrameT_contra, name: str) -> Self:
         """Returns 0 if null, else 1."""
@@ -64,39 +82,11 @@ class CompliantScalar(
     ) -> Self:
         return self._cast_float(node.input[0], frame, name)
 
-    def first(self, node: agg.First, frame: FrameT_contra, name: str) -> Self:
-        return self._with_evaluated(self._evaluated, name)
-
-    def is_first_distinct(
-        self, node: FunctionExpr[IsFirstDistinct], frame: FrameT_contra, name: str
-    ) -> Self:
-        return self.from_python(True, name, dtype=None, version=self.version)
-
-    def is_last_distinct(
-        self, node: FunctionExpr[IsLastDistinct], frame: FrameT_contra, name: str
-    ) -> Self:
-        return self.from_python(True, name, dtype=None, version=self.version)
-
-    def last(self, node: agg.Last, frame: FrameT_contra, name: str) -> Self:
-        return self._with_evaluated(self._evaluated, name)
-
-    def len(self, node: agg.Len, frame: FrameT_contra, name: str) -> Self:
-        return self.from_python(1, name, dtype=None, version=self.version)
-
-    def max(self, node: agg.Max, frame: FrameT_contra, name: str) -> Self:
-        return self._with_evaluated(self._evaluated, name)
-
     def mean(self, node: agg.Mean, frame: FrameT_contra, name: str) -> Self:
         return self._cast_float(node.expr, frame, name)
 
     def median(self, node: agg.Median, frame: FrameT_contra, name: str) -> Self:
         return self._cast_float(node.expr, frame, name)
-
-    def min(self, node: agg.Min, frame: FrameT_contra, name: str) -> Self:
-        return self._with_evaluated(self._evaluated, name)
-
-    def n_unique(self, node: agg.NUnique, frame: FrameT_contra, name: str) -> Self:
-        return self.from_python(1, name, dtype=None, version=self.version)
 
     def null_count(
         self, node: FunctionExpr[NullCount], frame: FrameT_contra, name: str
@@ -112,22 +102,30 @@ class CompliantScalar(
             return self._with_evaluated(self._evaluated, name)
         return self.from_python(None, name, dtype=None, version=self.version)
 
-    def sort(self, node: ir.Sort, frame: FrameT_contra, name: str) -> Self:
-        return self._with_evaluated(self._evaluated, name)
-
-    def sort_by(self, node: ir.SortBy, frame: FrameT_contra, name: str) -> Self:
-        return self._with_evaluated(self._evaluated, name)
-
-    def std(self, node: agg.Std, frame: FrameT_contra, name: str) -> Self:
-        return self.from_python(None, name, dtype=None, version=self.version)
-
-    def sum(self, node: agg.Sum, frame: FrameT_contra, name: str) -> Self:
-        return self._with_evaluated(self._evaluated, name)
-
-    def var(self, node: agg.Var, frame: FrameT_contra, name: str) -> Self:
-        return self.from_python(None, name, dtype=None, version=self.version)
-
-    # NOTE: `Filter` behaves the same, (maybe) no need to override
+    arg_max = _always_zero  # type: ignore[misc]
+    arg_min = _always_zero  # type: ignore[misc]
+    is_first_distinct = _always_true  # type: ignore[misc]
+    is_last_distinct = _always_true  # type: ignore[misc]
+    is_unique = _always_true  # type: ignore[misc]
+    is_duplicated = _always_false  # type: ignore[misc]
+    n_unique = _always_one  # type: ignore[misc]
+    std = _always_null  # type: ignore[misc]
+    var = _always_null  # type: ignore[misc]
+    first = _always_noop  # type: ignore[misc]
+    max = _always_noop  # type: ignore[misc]
+    min = _always_noop  # type: ignore[misc]
+    last = _always_noop  # type: ignore[misc]
+    sort = _always_noop  # type: ignore[misc]
+    sort_by = _always_noop  # type: ignore[misc]
+    sum = _always_noop  # type: ignore[misc]
+    mode = _always_noop  # type: ignore[misc]
+    unique = _always_noop  # type: ignore[misc]
+    kurtosis = _always_nan  # type: ignore[misc]
+    skew = _always_nan  # type: ignore[misc]
+    fill_null_with_strategy = not_implemented()  # type: ignore[misc]
+    hist_bins = not_implemented()  # type: ignore[misc]
+    hist_bin_count = not_implemented()  # type: ignore[misc]
+    len = _always_one  # type: ignore[misc]
 
 
 class EagerScalar(
@@ -139,6 +137,8 @@ class EagerScalar(
         return 1
 
     def to_python(self) -> PythonLiteral: ...
+
+    gather_every = not_implemented()  # type: ignore[misc]
 
 
 class LazyScalar(

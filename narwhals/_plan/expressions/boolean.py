@@ -7,15 +7,16 @@ from typing import TYPE_CHECKING
 
 from narwhals._plan._function import Function, HorizontalFunction
 from narwhals._plan.options import FEOptions, FunctionOptions
+from narwhals._plan.typing import NativeSeriesT
 from narwhals._typing_compat import TypeVar
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._plan._expr_ir import ExprIR
-    from narwhals._plan.expressions.expr import FunctionExpr, Literal  # noqa: F401
+    from narwhals._plan.expressions.expr import FunctionExpr, Literal
     from narwhals._plan.series import Series
-    from narwhals._plan.typing import NativeSeriesT, Seq  # noqa: F401
+    from narwhals._plan.typing import Seq
     from narwhals.typing import ClosedInterval
 
 OtherT = TypeVar("OtherT")
@@ -48,15 +49,13 @@ class IsBetween(BooleanFunction):
         return expr, lower_bound, upper_bound
 
 
-class IsIn(BooleanFunction, t.Generic[OtherT]):
+class IsInSeq(BooleanFunction):
     __slots__ = ("other",)
-    other: OtherT
+    other: Seq[t.Any]
 
     def __repr__(self) -> str:
         return "is_in"
 
-
-class IsInSeq(IsIn["Seq[t.Any]"]):
     @classmethod
     def from_iterable(cls, other: t.Iterable[t.Any], /) -> IsInSeq:
         if not isinstance(other, (str, bytes)):
@@ -65,8 +64,13 @@ class IsInSeq(IsIn["Seq[t.Any]"]):
         raise TypeError(msg)
 
 
-# NOTE: Shouldn't be allowed for lazy backends (maybe besides `polars`)
-class IsInSeries(IsIn["Literal[Series[NativeSeriesT]]"]):
+class IsInSeries(BooleanFunction, t.Generic[NativeSeriesT]):
+    __slots__ = ("other",)
+    other: Literal[Series[NativeSeriesT]]
+
+    def __repr__(self) -> str:
+        return "is_in"
+
     @classmethod
     def from_series(cls, other: Series[NativeSeriesT], /) -> IsInSeries[NativeSeriesT]:
         from narwhals._plan.expressions.literal import SeriesLiteral
@@ -74,11 +78,19 @@ class IsInSeries(IsIn["Literal[Series[NativeSeriesT]]"]):
         return IsInSeries(other=SeriesLiteral(value=other).to_literal())
 
 
-# NOTE: Placeholder for allowing `Expr` iff it passes `.meta.is_column()`
-class IsInExpr(IsIn[ExprT], t.Generic[ExprT]):
-    def __init__(self, *, other: ExprT) -> None:
-        msg = (
-            "`is_in` doesn't accept expressions as an argument, as opposed to Polars. "
-            "You should provide an iterable instead."
-        )
-        raise NotImplementedError(msg)
+class IsInExpr(BooleanFunction):
+    """N-ary (expr, other).
+
+    Note:
+        If we get to a stage where `narwhals` has wide support for `list`, and
+        accepts them in `lit(...)` - *consider* [restricting to non-equal types].
+
+    [restricting to non-equal types]: https://github.com/pola-rs/polars/pull/22178
+    """
+
+    def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR]:
+        expr, other = node.input
+        return expr, other
+
+    def __repr__(self) -> str:
+        return "is_in"

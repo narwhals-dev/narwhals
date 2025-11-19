@@ -60,6 +60,17 @@ class EagerDataFrameGroupBy(DataFrameGroupBy[EagerDataFrameT], Protocol[EagerDat
     _key_names_original: Seq[str]
     _column_names_original: Seq[str]
 
+    @property
+    def compliant(self) -> EagerDataFrameT:
+        return self._df
+
+    def agg_over(self, irs: Seq[NamedIR[Any]]) -> EagerDataFrameT:
+        """Perform a windowed aggregation.
+
+        Returns the re-joined aggregation results.
+        """
+        ...
+
     @classmethod
     def by_names(cls, df: EagerDataFrameT, names: Seq[str], /) -> Self:
         obj = cls.__new__(cls)
@@ -71,9 +82,7 @@ class EagerDataFrameGroupBy(DataFrameGroupBy[EagerDataFrameT], Protocol[EagerDat
         return obj
 
     @classmethod
-    def from_resolver(
-        cls, df: EagerDataFrameT, resolver: GroupByResolver, /
-    ) -> EagerDataFrameGroupBy[EagerDataFrameT]:
+    def from_resolver(cls, df: EagerDataFrameT, resolver: GroupByResolver, /) -> Self:
         key_names = resolver.key_names
         if not resolver.requires_projection():
             df = df.drop_nulls(key_names) if resolver._drop_null_keys else df

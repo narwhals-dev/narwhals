@@ -13,7 +13,7 @@ from narwhals._plan.compliant.typing import (
 from narwhals._utils import Version
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
+    from typing_extensions import Self, TypeAlias
 
     from narwhals._plan import expressions as ir
     from narwhals._plan.compliant.scalar import CompliantScalar
@@ -33,6 +33,8 @@ if TYPE_CHECKING:
         IsNull,
         Not,
     )
+
+Incomplete: TypeAlias = Any
 
 
 class CompliantExpr(HasVersion, Protocol[FrameT_contra, SeriesT_co]):
@@ -120,6 +122,9 @@ class CompliantExpr(HasVersion, Protocol[FrameT_contra, SeriesT_co]):
     def cum_sum(
         self, node: FunctionExpr[F.CumSum], frame: FrameT_contra, name: str
     ) -> Self: ...
+    def rank(
+        self, node: FunctionExpr[F.Rank], frame: FrameT_contra, name: str
+    ) -> Self: ...
     # series -> scalar
     def all(
         self, node: FunctionExpr[boolean.All], frame: FrameT_contra, name: str
@@ -175,13 +180,74 @@ class CompliantExpr(HasVersion, Protocol[FrameT_contra, SeriesT_co]):
     def var(
         self, node: agg.Var, frame: FrameT_contra, name: str
     ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
+    def kurtosis(
+        self, node: FunctionExpr[F.Kurtosis], frame: FrameT_contra, name: str
+    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
+    def skew(
+        self, node: FunctionExpr[F.Skew], frame: FrameT_contra, name: str
+    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
+
+    # mixed/todo
+    def clip(
+        self, node: FunctionExpr[F.Clip], frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def drop_nulls(
+        self, node: FunctionExpr[F.DropNulls], frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def exp(self, node: FunctionExpr[F.Exp], frame: FrameT_contra, name: str) -> Self: ...
+    def fill_null_with_strategy(
+        self, node: FunctionExpr[F.FillNullWithStrategy], frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def hist_bins(
+        self, node: FunctionExpr[F.HistBins], frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def hist_bin_count(
+        self, node: FunctionExpr[F.HistBinCount], frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def is_duplicated(
+        self, node: FunctionExpr[boolean.IsDuplicated], frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def is_in_expr(
+        self, node: FunctionExpr[boolean.IsInExpr], frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def is_in_seq(
+        self, node: FunctionExpr[boolean.IsInSeq], frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def is_unique(
+        self, node: FunctionExpr[boolean.IsUnique], frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def log(self, node: FunctionExpr[F.Log], frame: FrameT_contra, name: str) -> Self: ...
+    def mode(
+        self, node: FunctionExpr[F.Mode], frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def replace_strict(
+        self, node: FunctionExpr[F.ReplaceStrict], frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def round(
+        self, node: FunctionExpr[F.Round], frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def sqrt(
+        self, node: FunctionExpr[F.Sqrt], frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def unique(
+        self, node: FunctionExpr[F.Unique], frame: FrameT_contra, name: str
+    ) -> Self: ...
 
 
 class EagerExpr(
     EagerBroadcast[SeriesT],
     CompliantExpr[FrameT_contra, SeriesT],
     Protocol[FrameT_contra, SeriesT],
-): ...
+):
+    def gather_every(
+        self, node: FunctionExpr[F.GatherEvery], frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def is_in_series(
+        self,
+        node: FunctionExpr[boolean.IsInSeries[Incomplete]],
+        frame: FrameT_contra,
+        name: str,
+    ) -> Self: ...
 
 
 class LazyExpr(
