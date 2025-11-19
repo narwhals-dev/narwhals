@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from narwhals._pandas_like.utils import select_columns_by_name
+from narwhals._pandas_like.utils import (
+    make_group_by_kwargs as pd_make_group_by_kwargs,
+    select_columns_by_name,
+)
 from narwhals._utils import Implementation, Version, isinstance_or_issubclass
 from narwhals.dependencies import get_pyarrow
 
@@ -127,3 +130,9 @@ def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> Any:
         raise NotImplementedError(msg)
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
+
+
+def make_group_by_kwargs(*, drop_null_keys: bool) -> dict[str, bool]:
+    kwargs = pd_make_group_by_kwargs(drop_null_keys=drop_null_keys)
+    kwargs.pop("as_index")  # not supported in dask
+    return kwargs

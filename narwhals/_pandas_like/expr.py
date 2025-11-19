@@ -4,9 +4,10 @@ import warnings
 from typing import TYPE_CHECKING, Any, cast
 
 from narwhals._compliant import EagerExpr
-from narwhals._expression_parsing import evaluate_output_names_and_aliases
+from narwhals._expression_parsing import evaluate_nodes, evaluate_output_names_and_aliases
 from narwhals._pandas_like.group_by import _REMAP_ORDERED_INDEX, PandasLikeGroupBy
 from narwhals._pandas_like.series import PandasLikeSeries
+from narwhals._pandas_like.utils import make_group_by_kwargs
 from narwhals._utils import generate_temporary_column_name
 
 if TYPE_CHECKING:
@@ -208,160 +209,181 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
             ignore_nulls=ignore_nulls,
         )
 
+    def _over_without_partition_by(self, order_by: Sequence[str]) -> Self:
+        # e.g. `nw.col('a').cum_sum().order_by(key)`
+        # We can always easily support this as it doesn't require grouping.
+
+        def func(df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:
+            token = generate_temporary_column_name(8, df.columns)
+            df = df.with_row_index(token, order_by=None).sort(
+                *order_by, descending=False, nulls_last=False
+            )
+            results = self(df.drop([token], strict=True))
+            meta = self._metadata
+            if meta is not None and meta.is_scalar_like:
+                # We need to broadcast the result to the original size, since
+                # `over` is a length-preserving operation.
+                index = df.native.index
+                ns = self._implementation.to_native_namespace()
+                return [
+                    s._with_native(ns.Series(s.item(), index=index, name=s.name))
+                    for s in results
+                ]
+
+            sorting_indices = df.get_column(token)
+            for s in results:
+                s._scatter_in_place(sorting_indices, s)
+            return results
+
+        return self.__class__(
+            func,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            implementation=self._implementation,
+            version=self._version,
+        )
+
     def over(  # noqa: C901, PLR0915
         self, partition_by: Sequence[str], order_by: Sequence[str]
     ) -> Self:
-        op_nodes_reversed = list(self._metadata.op_nodes_reversed())
         if not partition_by:
-            # e.g. `nw.col('a').cum_sum().order_by(key)`
-            # We can always easily support this as it doesn't require grouping.
             assert order_by  # noqa: S101
+            return self._over_without_partition_by(order_by)
 
-            def func(df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:
-                token = generate_temporary_column_name(8, df.columns)
-                df = df.with_row_index(token, order_by=None).sort(
-                    *order_by, descending=False, nulls_last=False
-                )
-                results = self(df.drop([token], strict=True))
-                meta = self._metadata
-                if meta is not None and meta.is_scalar_like:
-                    # We need to broadcast the result to the original size, since
-                    # `over` is a length-preserving operation.
-                    index = df.native.index
-                    ns = self._implementation.to_native_namespace()
-                    return [
-                        s._with_native(ns.Series(s.item(), index=index, name=s.name))
-                        for s in results
-                    ]
-
-                sorting_indices = df.get_column(token)
-                for s in results:
-                    s._scatter_in_place(sorting_indices, s)
-                return results
-        elif len(op_nodes_reversed) > 2:
+        # We have something like prev.leaf().over(...) (e.g. `nw.col('a').sum().over('b')`), where:
+        # - `prev` must be elementwise (in the example: `nw.col('a')`)
+        # - `leaf` must be a "simple" function, i.e. one that pandas supports in `transform`
+        #   (in the example: `sum`)
+        #
+        # We first evaluate `prev` as-is, and then evaluate `leaf().over(...)`` by using `transform`
+        # or other DataFrameGroupBy methods.
+        meta = self._metadata
+        if partition_by and (meta.prev is not None and not meta.prev.is_elementwise):
             msg = (
-                "Only elementary expressions are supported for `.over` in pandas-like backends.\n\n"
+                "Only elementary expressions are supported for `.over` in pandas-like backends "
+                "when `partition_by` is specified.\n\n"
                 "Please see: "
                 "https://narwhals-dev.github.io/narwhals/concepts/improve_group_by_operation/"
             )
             raise NotImplementedError(msg)
-        else:
-            assert op_nodes_reversed  # noqa: S101
-            leaf_node = op_nodes_reversed[0]
-            function_name = leaf_node.name
-            pandas_agg = PandasLikeGroupBy._REMAP_AGGS.get(
-                cast("NarwhalsAggregation", function_name)
-            )
-            pandas_function_name = WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT.get(
-                function_name, pandas_agg
-            )
-            if pandas_function_name is None:
-                msg = (
-                    f"Unsupported function: {function_name} in `over` context.\n\n"
-                    f"Supported functions are {', '.join(WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT)}\n"
-                    f"and {', '.join(PandasLikeGroupBy._REMAP_AGGS)}."
-                )
-                raise NotImplementedError(msg)
-            scalar_kwargs = leaf_node.kwargs
-            pandas_kwargs = window_kwargs_to_pandas_equivalent(
-                function_name, scalar_kwargs
-            )
+        nodes = list(reversed(list(self._metadata.iter_nodes_reversed())))
 
-            def func(df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:  # noqa: C901, PLR0912, PLR0914, PLR0915
+        leaf_node = nodes[-1]
+        function_name = leaf_node.name
+        pandas_agg = PandasLikeGroupBy._REMAP_AGGS.get(
+            cast("NarwhalsAggregation", function_name)
+        )
+        pandas_function_name = WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT.get(
+            function_name, pandas_agg
+        )
+        if pandas_function_name is None:
+            msg = (
+                f"Unsupported function: {function_name} in `over` context.\n\n"
+                f"Supported functions are {', '.join(WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT)}\n"
+                f"and {', '.join(PandasLikeGroupBy._REMAP_AGGS)}."
+            )
+            raise NotImplementedError(msg)
+        scalar_kwargs = leaf_node.kwargs
+        pandas_kwargs = window_kwargs_to_pandas_equivalent(function_name, scalar_kwargs)
+
+        def func(df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:  # noqa: C901, PLR0912, PLR0914, PLR0915
+            assert pandas_function_name is not None  # help mypy  # noqa: S101
+            plx = self.__narwhals_namespace__()
+            if meta.prev is not None:
+                df = df.with_columns(
+                    cast("PandasLikeExpr", evaluate_nodes(nodes[:-1], plx))
+                )
+            _, aliases = evaluate_output_names_and_aliases(self, df, [])
+            if function_name == "cum_count":
+                df = df.with_columns(~plx.col(*aliases).is_null())
+
+            if function_name.startswith("cum_"):
+                assert "reverse" in scalar_kwargs  # noqa: S101
+                reverse = scalar_kwargs["reverse"]
+            else:
+                assert "reverse" not in scalar_kwargs  # noqa: S101
+                reverse = False
+
+            if order_by:
+                columns = list(set(partition_by).union(aliases).union(order_by))
+                token = generate_temporary_column_name(8, columns)
+                df = (
+                    df.simple_select(*columns)
+                    .with_row_index(token, order_by=None)
+                    .sort(*order_by, descending=reverse, nulls_last=reverse)
+                )
+                sorting_indices = df.get_column(token)
+            elif reverse:
+                columns = list(set(partition_by).union(aliases))
+                df = df.simple_select(*columns)._gather_slice(slice(None, None, -1))
+            group_by_kwargs = make_group_by_kwargs(drop_null_keys=False)
+            grouped = df._native_frame.groupby(partition_by, **group_by_kwargs)
+            if function_name.startswith("rolling"):
+                rolling = grouped[list(aliases)].rolling(**pandas_kwargs)
+                if pandas_function_name in {"std", "var"}:
+                    assert "ddof" in scalar_kwargs  # noqa: S101
+                    res_native = getattr(rolling, pandas_function_name)(
+                        ddof=scalar_kwargs["ddof"]
+                    )
+                else:
+                    res_native = getattr(rolling, pandas_function_name)()
+            elif function_name.startswith("ewm"):
+                if self._implementation.is_pandas() and (
+                    self._implementation._backend_version()
+                ) < (1, 2):  # pragma: no cover
+                    msg = (
+                        "Exponentially weighted calculation is not available in over "
+                        f"context for pandas versions older than 1.2.0, found {self._implementation._backend_version()}."
+                    )
+                    raise NotImplementedError(msg)
+                ewm = grouped[list(aliases)].ewm(**pandas_kwargs)
                 assert pandas_function_name is not None  # help mypy  # noqa: S101
-                output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
-                if function_name == "cum_count":
-                    plx = self.__narwhals_namespace__()
-                    df = df.with_columns(~plx.col(*output_names).is_null())
-
-                if function_name.startswith("cum_"):
-                    assert "reverse" in scalar_kwargs  # noqa: S101
-                    reverse = scalar_kwargs["reverse"]
-                else:
-                    assert "reverse" not in scalar_kwargs  # noqa: S101
-                    reverse = False
-
-                if order_by:
-                    columns = list(set(partition_by).union(output_names).union(order_by))
-                    token = generate_temporary_column_name(8, columns)
-                    df = (
-                        df.simple_select(*columns)
-                        .with_row_index(token, order_by=None)
-                        .sort(*order_by, descending=reverse, nulls_last=reverse)
-                    )
-                    sorting_indices = df.get_column(token)
-                elif reverse:
-                    columns = list(set(partition_by).union(output_names))
-                    df = df.simple_select(*columns)._gather_slice(slice(None, None, -1))
-                grouped = df._native_frame.groupby(partition_by)
-                if function_name.startswith("rolling"):
-                    rolling = grouped[list(output_names)].rolling(**pandas_kwargs)
-                    if pandas_function_name in {"std", "var"}:
-                        assert "ddof" in scalar_kwargs  # noqa: S101
-                        res_native = getattr(rolling, pandas_function_name)(
-                            ddof=scalar_kwargs["ddof"]
-                        )
-                    else:
-                        res_native = getattr(rolling, pandas_function_name)()
-                elif function_name.startswith("ewm"):
-                    if self._implementation.is_pandas() and (
-                        self._implementation._backend_version()
-                    ) < (1, 2):  # pragma: no cover
-                        msg = (
-                            "Exponentially weighted calculation is not available in over "
-                            f"context for pandas versions older than 1.2.0, found {self._implementation._backend_version()}."
-                        )
-                        raise NotImplementedError(msg)
-                    ewm = grouped[list(output_names)].ewm(**pandas_kwargs)
-                    assert pandas_function_name is not None  # help mypy  # noqa: S101
-                    res_native = getattr(ewm, pandas_function_name)()
-                elif function_name == "fill_null":
-                    assert "strategy" in scalar_kwargs  # noqa: S101
-                    assert "limit" in scalar_kwargs  # noqa: S101
-                    df_grouped = grouped[list(output_names)]
-                    if scalar_kwargs["strategy"] == "forward":
-                        res_native = df_grouped.ffill(limit=scalar_kwargs["limit"])
-                    elif scalar_kwargs["strategy"] == "backward":
-                        res_native = df_grouped.bfill(limit=scalar_kwargs["limit"])
-                    else:  # pragma: no cover
-                        # This is deprecated in pandas. Indeed, `nw.col('a').fill_null(3).over('b')`
-                        # does not seem very useful, and DuckDB doesn't support it either.
-                        msg = "`fill_null` with `over` without `strategy` specified is not supported."
-                        raise NotImplementedError(msg)
-                elif function_name == "len":
-                    if len(output_names) != 1:  # pragma: no cover
-                        msg = "Safety check failed, please report a bug."
-                        raise AssertionError(msg)
-                    res_native = grouped.transform("size").to_frame(aliases[0])
-                elif function_name in {"first", "last"}:
-                    with warnings.catch_warnings():
-                        # Ignore settingwithcopy warnings/errors, they're false-positives here.
-                        warnings.filterwarnings("ignore", message="\n.*copy of a slice")
-                        _nth = getattr(
-                            grouped[[*partition_by, *output_names]], pandas_function_name
-                        )(**pandas_kwargs)
-                    _nth.reset_index(drop=True, inplace=True)
-                    res_native = df.native[list(partition_by)].merge(
-                        _nth, on=list(partition_by)
-                    )[list(output_names)]
-                else:
-                    res_native = grouped[list(output_names)].transform(
-                        pandas_function_name, **pandas_kwargs
-                    )
-                result_frame = df._with_native(res_native).rename(
-                    dict(zip(output_names, aliases))
+                res_native = getattr(ewm, pandas_function_name)()
+            elif function_name == "fill_null":
+                assert "strategy" in scalar_kwargs  # noqa: S101
+                assert "limit" in scalar_kwargs  # noqa: S101
+                df_grouped = grouped[list(aliases)]
+                if scalar_kwargs["strategy"] == "forward":
+                    res_native = df_grouped.ffill(limit=scalar_kwargs["limit"])
+                elif scalar_kwargs["strategy"] == "backward":
+                    res_native = df_grouped.bfill(limit=scalar_kwargs["limit"])
+                else:  # pragma: no cover
+                    # This is deprecated in pandas. Indeed, `nw.col('a').fill_null(3).over('b')`
+                    # does not seem very useful, and DuckDB doesn't support it either.
+                    msg = "`fill_null` with `over` without `strategy` specified is not supported."
+                    raise NotImplementedError(msg)
+            elif function_name == "len":
+                if len(aliases) != 1:  # pragma: no cover
+                    msg = "Safety check failed, please report a bug."
+                    raise AssertionError(msg)
+                res_native = grouped.transform("size").to_frame(aliases[0])
+            elif function_name in {"first", "last"}:
+                with warnings.catch_warnings():
+                    # Ignore settingwithcopy warnings/errors, they're false-positives here.
+                    warnings.filterwarnings("ignore", message="\n.*copy of a slice")
+                    _nth = getattr(
+                        grouped[[*partition_by, *aliases]], pandas_function_name
+                    )(**pandas_kwargs)
+                _nth.reset_index(drop=True, inplace=True)
+                res_native = df.native[list(partition_by)].merge(
+                    _nth, on=list(partition_by)
+                )[list(aliases)]
+            else:
+                res_native = grouped[list(aliases)].transform(
+                    pandas_function_name, **pandas_kwargs
                 )
-                results = [result_frame.get_column(name) for name in aliases]
-                if order_by:
-                    with warnings.catch_warnings():
-                        # Ignore settingwithcopy warnings/errors, they're false-positives here.
-                        warnings.filterwarnings("ignore", message="\n.*copy of a slice")
-                        for s in results:
-                            s._scatter_in_place(sorting_indices, s)
-                        return results
-                if reverse:
-                    return [s._gather_slice(slice(None, None, -1)) for s in results]
-                return results
+            result_frame = df._with_native(res_native)
+            results = [result_frame.get_column(name) for name in aliases]
+            if order_by:
+                with warnings.catch_warnings():
+                    # Ignore settingwithcopy warnings/errors, they're false-positives here.
+                    warnings.filterwarnings("ignore", message="\n.*copy of a slice")
+                    for s in results:
+                        s._scatter_in_place(sorting_indices, s)
+                    return results
+            if reverse:
+                return [s._gather_slice(slice(None, None, -1)) for s in results]
+            return results
 
         return self.__class__(
             func,

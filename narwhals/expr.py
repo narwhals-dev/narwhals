@@ -4,12 +4,7 @@ import math
 from collections.abc import Iterable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Callable
 
-from narwhals._expression_parsing import (
-    ExprKind,
-    ExprNode,
-    evaluate_node,
-    evaluate_root_node,
-)
+from narwhals._expression_parsing import ExprKind, ExprNode, evaluate_nodes
 from narwhals._utils import _validate_rolling_arguments, ensure_type, flatten, no_default
 from narwhals.dtypes import _validate_dtype
 from narwhals.exceptions import ComputeError, InvalidOperationError
@@ -54,11 +49,7 @@ class Expr:
     def _to_compliant_expr(
         self, ns: CompliantNamespace[Any, Any]
     ) -> CompliantExpr[Any, Any]:
-        nodes = self._nodes
-        ce = evaluate_root_node(nodes[0], ns)
-        for node in nodes[1:]:
-            ce = evaluate_node(ce, node, ns)
-        return ce
+        return evaluate_nodes(self._nodes, ns)
 
     def _append_node(self, node: ExprNode) -> Self:
         return self.__class__(*self._nodes, node)

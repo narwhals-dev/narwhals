@@ -54,7 +54,8 @@ class PluginNamespace(CompliantNamespace[FrameT, Any], Protocol[FrameT, FromNati
 
 
 class Plugin(Protocol[FrameT, FromNativeR_co]):
-    NATIVE_PACKAGE: LiteralString
+    @property
+    def NATIVE_PACKAGE(self) -> LiteralString: ...  # noqa: N802
 
     def __narwhals_namespace__(
         self, version: Version

@@ -1,18 +1,19 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._arrow.series import ArrowSeries
 from narwhals._compliant import EagerExpr
-from narwhals._expression_parsing import evaluate_output_names_and_aliases
+from narwhals._expression_parsing import evaluate_nodes, evaluate_output_names_and_aliases
 from narwhals._utils import (
     Implementation,
     generate_temporary_column_name,
     not_implemented,
 )
+from narwhals.functions import col as nw_col
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -97,52 +98,91 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
     ) -> dict[str, Any]:
         return {"_return_py_scalar": False} if returns_scalar else {}
 
-    def over(self, partition_by: Sequence[str], order_by: Sequence[str]) -> Self:
+    def _over_without_partition_by(self, order_by: Sequence[str]) -> Self:
+        # e.g. `nw.col('a').cum_sum().order_by(key)`
+        # which we can always easily support, as it doesn't require grouping.
+        assert order_by  # noqa: S101
         meta = self._metadata
-        if partition_by and not meta.is_scalar_like:
-            msg = "Only aggregation or literal operations are supported in grouped `over` context for PyArrow."
+
+        def func(df: ArrowDataFrame) -> Sequence[ArrowSeries]:
+            token = generate_temporary_column_name(8, df.columns)
+            df = df.with_row_index(token, order_by=None).sort(
+                *order_by, descending=False, nulls_last=False
+            )
+            results = self(df.drop([token], strict=True))
+            if meta is not None and meta.is_scalar_like:
+                # We need to broadcast the results to the original size, since
+                # `over` is a length-preserving operation.
+                size = len(df)
+                return [s._with_native(pa.repeat(s.item(), size)) for s in results]
+
+            # TODO(marco): is there a way to do this efficiently without
+            # doing 2 sorts? Here we're sorting the dataframe and then
+            # again calling `sort_indices`. `ArrowSeries.scatter` would also sort.
+            sorting_indices = pc.sort_indices(df.get_column(token).native)
+            return [s._with_native(s.native.take(sorting_indices)) for s in results]
+
+        return self.__class__(
+            func,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
+        )
+
+    def over(self, partition_by: Sequence[str], order_by: Sequence[str]) -> Self:
+        if not partition_by:
+            assert order_by  # noqa: S101
+            return self._over_without_partition_by(order_by)
+
+        # We have something like prev.leaf().over(...) (e.g. `nw.col('a').sum().over('b')`), where:
+        # - `prev` must be elementwise (in the example: `nw.col('a')`)
+        # - `leaf` must be an aggregation (in the example: `sum`)
+        #
+        # We first evaluate `prev` as-is, and then evaluate `leaf().over(...)`` by doing a `group_by`.
+        meta = self._metadata
+        if partition_by and (
+            not meta.current_node.kind.is_scalar_like
+            or (meta.prev is not None and not meta.prev.is_elementwise)
+        ):
+            msg = (
+                "Only elementary aggregations are supported for `.over` in PyArrow backend "
+                "when `partition_by` is specified.\n\n"
+                "Please see: "
+                "https://narwhals-dev.github.io/narwhals/concepts/improve_group_by_operation/"
+            )
             raise NotImplementedError(msg)
 
-        if not partition_by:
-            # e.g. `nw.col('a').cum_sum().order_by(key)`
-            # which we can always easily support, as it doesn't require grouping.
-            assert order_by  # noqa: S101
+        nodes = list(reversed(list(self._metadata.iter_nodes_reversed())))
 
-            def func(df: ArrowDataFrame) -> Sequence[ArrowSeries]:
-                token = generate_temporary_column_name(8, df.columns)
-                df = df.with_row_index(token, order_by=None).sort(
-                    *order_by, descending=False, nulls_last=False
+        def func(df: ArrowDataFrame) -> Sequence[ArrowSeries]:  # noqa: PLR0914
+            plx = self.__narwhals_namespace__()
+            if meta.prev is not None:
+                df = df.with_columns(cast("ArrowExpr", evaluate_nodes(nodes[:-1], plx)))
+                _, aliases = evaluate_output_names_and_aliases(self, df, [])
+                leaf_ce = cast(
+                    "ArrowExpr",
+                    nw_col(*aliases)._append_node(nodes[-1])._to_compliant_expr(plx),
                 )
-                results = self(df.drop([token], strict=True))
-                if meta is not None and meta.is_scalar_like:
-                    # We need to broadcast the results to the original size, since
-                    # `over` is a length-preserving operation.
-                    size = len(df)
-                    return [s._with_native(pa.repeat(s.item(), size)) for s in results]
+            else:
+                _, aliases = evaluate_output_names_and_aliases(self, df, [])
+                leaf_ce = self
+            if order_by:
+                df = df.sort(*order_by, descending=False, nulls_last=False)
 
-                # TODO(marco): is there a way to do this efficiently without
-                # doing 2 sorts? Here we're sorting the dataframe and then
-                # again calling `sort_indices`. `ArrowSeries.scatter` would also sort.
-                sorting_indices = pc.sort_indices(df.get_column(token).native)
-                return [s._with_native(s.native.take(sorting_indices)) for s in results]
-        else:
+            if overlap := set(aliases).intersection(partition_by):
+                # E.g. `df.select(nw.all().sum().over('a'))`. This is well-defined,
+                # we just don't support it yet.
+                msg = (
+                    f"Column names {overlap} appear in both expression output names and in `over` keys.\n"
+                    "This is not yet supported."
+                )
+                raise NotImplementedError(msg)
 
-            def func(df: ArrowDataFrame) -> Sequence[ArrowSeries]:
-                if order_by:
-                    df = df.sort(*order_by, descending=False, nulls_last=False)
-
-                output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
-                if overlap := set(output_names).intersection(partition_by):
-                    # E.g. `df.select(nw.all().sum().over('a'))`. This is well-defined,
-                    # we just don't support it yet.
-                    msg = (
-                        f"Column names {overlap} appear in both expression output names and in `over` keys.\n"
-                        "This is not yet supported."
-                    )
-                    raise NotImplementedError(msg)
-
-                tmp = df.group_by(partition_by, drop_null_keys=False).agg(self)
-                tmp = df.simple_select(*partition_by).join(
+            partition_tbl = df.simple_select(*partition_by)
+            has_nulls = [ca.null_count > 0 for ca in partition_tbl.native.columns]
+            if not any(has_nulls):
+                tmp = df.group_by(partition_by, drop_null_keys=False).agg(leaf_ce)
+                tmp = partition_tbl.join(
                     tmp,
                     how="left",
                     left_on=partition_by,
@@ -150,6 +190,44 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
                     suffix="_right",
                 )
                 return [tmp.get_column(alias) for alias in aliases]
+
+            tbl_native, current_cols = df.native, df.columns
+            plx = self.__narwhals_namespace__()
+
+            group_keys: list[str] = []
+            encoded_cols: list[ArrowExpr] = []
+            for col_name, has_null in zip(partition_tbl.columns, has_nulls):
+                if not has_null:
+                    group_keys.append(col_name)
+                else:
+                    tmp_name = generate_temporary_column_name(8, current_cols)
+
+                    group_keys.append(tmp_name)
+                    current_cols.append(tmp_name)
+
+                    indices = plx._series.from_native(
+                        (
+                            tbl_native.column(col_name)
+                            .dictionary_encode("encode")
+                            .combine_chunks()
+                            .indices  # type: ignore[attr-defined]
+                        ),
+                        context=plx,
+                        name=tmp_name,
+                    )
+
+                    encoded_cols.append(plx._expr._from_series(indices))
+
+            tbl_encoded = df.with_columns(*encoded_cols)
+            windowed = tbl_encoded.group_by(group_keys, drop_null_keys=False).agg(leaf_ce)
+            ret = tbl_encoded.simple_select(*group_keys).join(
+                windowed,
+                left_on=group_keys,
+                right_on=group_keys,
+                how="inner",
+                suffix="_right",
+            )
+            return [ret.get_column(alias) for alias in aliases]
 
         return self.__class__(
             func,

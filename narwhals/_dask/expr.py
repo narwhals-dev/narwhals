@@ -11,9 +11,10 @@ from narwhals._dask.expr_str import DaskExprStringNamespace
 from narwhals._dask.utils import (
     add_row_index,
     align_series_full_broadcast,
+    make_group_by_kwargs,
     narwhals_to_native_dtype,
 )
-from narwhals._expression_parsing import evaluate_output_names_and_aliases
+from narwhals._expression_parsing import evaluate_nodes, evaluate_output_names_and_aliases
 from narwhals._pandas_like.expr import window_kwargs_to_pandas_equivalent
 from narwhals._pandas_like.utils import get_dtype_backend, native_to_narwhals_dtype
 from narwhals._utils import (
@@ -477,7 +478,10 @@ class DaskExpr(
                 n_bytes=8, columns=[_name], prefix="row_index_"
             )
             frame = add_row_index(expr.to_frame(), col_token)
-            first_distinct_index = frame.groupby(_name).agg({col_token: "min"})[col_token]
+            group_by_kwargs = make_group_by_kwargs(drop_null_keys=False)
+            first_distinct_index = frame.groupby(_name, **group_by_kwargs).agg(
+                {col_token: "min"}
+            )[col_token]
             return frame[col_token].isin(first_distinct_index)
 
         return self._with_callable(func)
@@ -489,7 +493,10 @@ class DaskExpr(
                 n_bytes=8, columns=[_name], prefix="row_index_"
             )
             frame = add_row_index(expr.to_frame(), col_token)
-            last_distinct_index = frame.groupby(_name).agg({col_token: "max"})[col_token]
+            group_by_kwargs = make_group_by_kwargs(drop_null_keys=False)
+            last_distinct_index = frame.groupby(_name, **group_by_kwargs).agg(
+                {col_token: "max"}
+            )[col_token]
             return frame[col_token].isin(last_distinct_index)
 
         return self._with_callable(func)
@@ -497,9 +504,10 @@ class DaskExpr(
     def is_unique(self) -> Self:
         def func(expr: dx.Series) -> dx.Series:
             _name = expr.name
+            group_by_kwargs = make_group_by_kwargs(drop_null_keys=False)
             return (
                 expr.to_frame()
-                .groupby(_name, dropna=False)
+                .groupby(_name, **group_by_kwargs)
                 .transform("size", meta=(_name, int))
                 == 1
             )
@@ -512,70 +520,90 @@ class DaskExpr(
     def null_count(self) -> Self:
         return self._with_callable(lambda expr: expr.isna().sum().to_series())
 
+    def _over_without_partition_by(self, order_by: Sequence[str]) -> Self:
+        # This is something like `nw.col('a').cum_sum().order_by(key)`
+        # which we can always easily support, as it doesn't require grouping.
+        def func(df: DaskLazyFrame) -> Sequence[dx.Series]:
+            return self(df.sort(*order_by, descending=False, nulls_last=False))
+
+        return self.__class__(
+            func,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
+        )
+
     def over(self, partition_by: Sequence[str], order_by: Sequence[str]) -> Self:
+        if not partition_by:
+            assert order_by  # noqa: S101
+            return self._over_without_partition_by(order_by)
         # pandas is a required dependency of dask so it's safe to import this
         from narwhals._pandas_like.group_by import PandasLikeGroupBy
 
-        if not partition_by:
-            assert order_by  # noqa: S101
-
-            # This is something like `nw.col('a').cum_sum().order_by(key)`
-            # which we can always easily support, as it doesn't require grouping.
-            def func(df: DaskLazyFrame) -> Sequence[dx.Series]:
-                return self(df.sort(*order_by, descending=False, nulls_last=False))
-        elif not self._is_elementary():  # pragma: no cover
+        # We have something like prev.leaf().over(...) (e.g. `nw.col('a').sum().over('b')`), where:
+        # - `prev` must be elementwise (in the example: `nw.col('a')`)
+        # - `leaf` must be a "simple" function, i.e. one that pandas supports in `transform`
+        #   (in the example: `sum`)
+        #
+        # We first evaluate `prev` as-is, and then evaluate `leaf().over(...)`` by using `transform`
+        # or other DataFrameGroupBy methods.
+        meta = self._metadata
+        if partition_by and (
+            meta.prev is not None and not meta.prev.is_elementwise
+        ):  # pragma: no cover
             msg = (
-                "Only elementary expressions are supported for `.over` in dask.\n\n"
+                "Only elementary expressions are supported for `.over` in dask backend "
+                "when `partition_by` is specified.\n\n"
                 "Please see: "
                 "https://narwhals-dev.github.io/narwhals/concepts/improve_group_by_operation/"
             )
             raise NotImplementedError(msg)
-        elif order_by:
+
+        if order_by:
             # Wrong results https://github.com/dask/dask/issues/11806.
             msg = "`over` with `order_by` is not yet supported in Dask."
             raise NotImplementedError(msg)
-        else:
-            leaf_node = next(self._metadata.op_nodes_reversed())
-            function_name = cast("NarwhalsAggregation", leaf_node.name)
-            try:
-                dask_function_name = PandasLikeGroupBy._REMAP_AGGS[function_name]
-            except KeyError:
-                # window functions are unsupported: https://github.com/dask/dask/issues/11806
-                msg = (
-                    f"Unsupported function: {function_name} in `over` context.\n\n"
-                    f"Supported functions are {', '.join(PandasLikeGroupBy._REMAP_AGGS)}\n"
-                )
-                raise NotImplementedError(msg) from None
-            dask_kwargs = window_kwargs_to_pandas_equivalent(
-                function_name, leaf_node.kwargs
+
+        nodes = list(reversed(list(self._metadata.iter_nodes_reversed())))
+        leaf_node = nodes[-1]
+        function_name = cast("NarwhalsAggregation", leaf_node.name)
+        try:
+            dask_function_name = PandasLikeGroupBy._REMAP_AGGS[function_name]
+        except KeyError:
+            # window functions are unsupported: https://github.com/dask/dask/issues/11806
+            msg = (
+                f"Unsupported function: {function_name} in `over` context.\n\n"
+                f"Supported functions are {', '.join(PandasLikeGroupBy._REMAP_AGGS)}\n"
             )
+            raise NotImplementedError(msg) from None
+        dask_kwargs = window_kwargs_to_pandas_equivalent(function_name, leaf_node.kwargs)
 
-            def func(df: DaskLazyFrame) -> Sequence[dx.Series]:
-                output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
+        def func(df: DaskLazyFrame) -> Sequence[dx.Series]:
+            plx = self.__narwhals_namespace__()
+            if meta.prev is not None:
+                df = df.with_columns(cast("DaskExpr", evaluate_nodes(nodes[:-1], plx)))
+            _, aliases = evaluate_output_names_and_aliases(self, df, [])
 
-                with warnings.catch_warnings():
-                    # https://github.com/dask/dask/issues/11804
-                    warnings.filterwarnings(
-                        "ignore",
-                        message=".*`meta` is not specified",
-                        category=UserWarning,
+            with warnings.catch_warnings():
+                # https://github.com/dask/dask/issues/11804
+                warnings.filterwarnings(
+                    "ignore", message=".*`meta` is not specified", category=UserWarning
+                )
+                group_by_kwargs = make_group_by_kwargs(drop_null_keys=False)
+                grouped = df.native.groupby(partition_by, **group_by_kwargs)
+                if dask_function_name == "size":
+                    if len(aliases) != 1:  # pragma: no cover
+                        msg = "Safety check failed, please report a bug."
+                        raise AssertionError(msg)
+                    res_native = grouped.transform(
+                        dask_function_name, **dask_kwargs
+                    ).to_frame(aliases[0])
+                else:
+                    res_native = grouped[list(aliases)].transform(
+                        dask_function_name, **dask_kwargs
                     )
-                    grouped = df.native.groupby(partition_by)
-                    if dask_function_name == "size":
-                        if len(output_names) != 1:  # pragma: no cover
-                            msg = "Safety check failed, please report a bug."
-                            raise AssertionError(msg)
-                        res_native = grouped.transform(
-                            dask_function_name, **dask_kwargs
-                        ).to_frame(output_names[0])
-                    else:
-                        res_native = grouped[list(output_names)].transform(
-                            dask_function_name, **dask_kwargs
-                        )
-                result_frame = df._with_native(
-                    res_native.rename(columns=dict(zip(output_names, aliases)))
-                ).native
-                return [result_frame[name] for name in aliases]
+            result_frame = df._with_native(res_native).native
+            return [result_frame[name] for name in aliases]
 
         return self.__class__(
             func,

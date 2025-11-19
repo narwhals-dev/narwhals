@@ -168,6 +168,14 @@ class ExprKind(Enum):
             ExprKind.WHEN_THEN,
         }
 
+    @property
+    def is_scalar_like(self) -> bool:
+        return self in {
+            ExprKind.AGGREGATION,
+            ExprKind.LITERAL,
+            ExprKind.ORDERABLE_AGGREGATION,
+        }
+
 
 def is_scalar_like(obj: CompliantExprAny) -> bool:
     return obj._metadata.is_scalar_like
@@ -365,8 +373,6 @@ class ExprMetadata:
     ) -> None:
         if is_literal:
             assert is_scalar_like  # noqa: S101  # debug assertion
-        if is_elementwise:
-            assert preserves_length  # noqa: S101  # debug assertion
         self.expansion_kind: ExpansionKind = expansion_kind
         self.has_windows: bool = has_windows
         self.n_orderable_ops: int = n_orderable_ops
@@ -434,7 +440,7 @@ class ExprMetadata:
     def from_literal(cls, node: ExprNode) -> ExprMetadata:
         return cls(
             ExpansionKind.SINGLE,
-            is_elementwise=False,
+            is_elementwise=True,
             preserves_length=False,
             is_literal=True,
             is_scalar_like=True,
@@ -889,3 +895,12 @@ def evaluate_node(
     ret = cast("CompliantExprAny", func(*compliant_expr_args, **node.kwargs))
     ret._opt_metadata = md
     return ret
+
+
+def evaluate_nodes(
+    nodes: Sequence[ExprNode], ns: CompliantNamespaceAny
+) -> CompliantExprAny:
+    ce = evaluate_root_node(nodes[0], ns)
+    for node in nodes[1:]:
+        ce = evaluate_node(ce, node, ns)
+    return ce
