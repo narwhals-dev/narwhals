@@ -17,7 +17,7 @@ class DaskSelectorNamespace(LazySelectorNamespace["DaskLazyFrame", "dx.Series"])
         return DaskSelector
 
 
-class DaskSelector(CompliantSelector["DaskLazyFrame", "dx.Series"], DaskExpr):  # type: ignore[misc]
+class DaskSelector(CompliantSelector["DaskLazyFrame", "dx.Series"], DaskExpr):  # pyright: ignore[reportInvalidTypeArguments]
     def _to_expr(self) -> DaskExpr:
         return DaskExpr(
             self._call,

@@ -262,8 +262,10 @@ We can't currently test in CI against cuDF, but you can test it manually in Kagg
 We run both `mypy` and `pyright` in CI. Both of these tools are included when installing Narwhals with the local-dev dependency group.
 
 Run them with:
-- `mypy narwhals tests`
-- `pyright narwhals tests`
+
+```console
+make typing
+```
 
 to verify type completeness / correctness.
 

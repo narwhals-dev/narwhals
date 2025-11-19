@@ -54,7 +54,8 @@ class PluginNamespace(CompliantNamespace[FrameT, Any], Protocol[FrameT, FromNati
 
 
 class Plugin(Protocol[FrameT, FromNativeR_co]):
-    NATIVE_PACKAGE: LiteralString
+    @property
+    def NATIVE_PACKAGE(self) -> LiteralString: ...  # noqa: N802
 
     def __narwhals_namespace__(
         self, version: Version
@@ -108,3 +109,12 @@ def from_native(native_object: Any, version: Version) -> CompliantAny | None:
         In all other cases, `None` is returned instead.
     """
     return next(_iter_from_native(native_object, version), None)
+
+
+def _show_suggestions(native_object_type: type) -> str | None:
+    if _might_be(native_object_type, "daft"):  # pragma: no cover
+        return (
+            "Hint: it looks like you passed a `daft.DataFrame` but don't have `narwhals-daft` installed.\n"
+            "Please refer to https://github.com/narwhals-dev/narwhals-daft for installation instructions."
+        )
+    return None

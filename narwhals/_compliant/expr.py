@@ -157,6 +157,14 @@ class CompliantExpr(
         *,
         returns_scalar: bool,
     ) -> Self: ...
+    def replace_strict(
+        self,
+        default: Self | NoDefault,
+        old: Sequence[Any],
+        new: Sequence[Any],
+        *,
+        return_dtype: IntoDType | None,
+    ) -> Self: ...
     @property
     def name(self) -> NameNamespace[Self]: ...
 
@@ -597,7 +605,7 @@ class EagerExpr(
 
     def replace_strict(
         self,
-        default: Any | NoDefault,
+        default: Self | NoDefault,
         old: Sequence[Any],
         new: Sequence[Any],
         *,
@@ -861,8 +869,6 @@ class LazyExpr(  # type: ignore[misc]
 
     ewm_mean = not_implemented()  # type: ignore[misc]
     map_batches = not_implemented()  # type: ignore[misc]
-    replace_strict = not_implemented()  # type: ignore[misc]
-
     cat: not_implemented = not_implemented()  # type: ignore[assignment]
 
 

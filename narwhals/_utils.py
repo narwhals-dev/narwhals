@@ -1762,7 +1762,11 @@ class not_implemented:  # noqa: N801
             return self
         # NOTE: Prefer not exposing the actual class we're defining in
         # `_implementation` may not be available everywhere
-        who = getattr(instance, "_implementation", self._name_owner)
+        implementation = getattr(instance, "_implementation", Implementation.UNKNOWN)
+        if implementation is not Implementation.UNKNOWN:
+            who = repr(implementation)
+        else:
+            who = self._name_owner
         _raise_not_implemented_error(self._name, who)
         return None  # pragma: no cover
 

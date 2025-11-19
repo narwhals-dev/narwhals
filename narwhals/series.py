@@ -1529,7 +1529,7 @@ class Series(Generic[IntoSeriesT]):
         Arguments:
             lower_bound: Lower bound value.
             upper_bound: Upper bound value.
-            closed: Define which sides of the interval are closed (inclusive).
+            closed: Define which sides of the interval are closed (inclusive). Options are {"left", "right", "none", "both"}.
 
         Notes:
             If the value of the `lower_bound` is greater than that of the `upper_bound`,
@@ -2028,6 +2028,9 @@ class Series(Generic[IntoSeriesT]):
             >>> nw.from_native(pl.Series("a", [9, 8, 7]), series_only=True).item(-1)
             7
         """
+        if index is not None and index >= len(self):
+            msg = f"index {index} out of range for series of length {len(self)}"
+            raise IndexError(msg)
         return self._compliant_series.item(index=index)
 
     def head(self, n: int = 10) -> Self:
