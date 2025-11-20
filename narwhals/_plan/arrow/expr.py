@@ -422,6 +422,15 @@ class ArrowExpr(  # type: ignore[misc]
         native = self._dispatch_expr(node.input[0], frame, name).native
         return self._with_native(fn.null_count(native), name)
 
+    # NOTE: `kurtosis` and `skew` will need tests for checking `pyarrow>=20` behaves the same
+    def kurtosis(self, node: FExpr[F.Kurtosis], frame: Frame, name: str) -> Scalar:
+        native = self._dispatch_expr(node.input[0], frame, name).native
+        return self._with_native(fn.kurtosis(native), name)
+
+    def skew(self, node: FExpr[F.Skew], frame: Frame, name: str) -> Scalar:
+        native = self._dispatch_expr(node.input[0], frame, name).native
+        return self._with_native(fn.skew(native), name)
+
     def over(
         self,
         node: ir.WindowExpr,
@@ -546,10 +555,6 @@ class ArrowExpr(  # type: ignore[misc]
     hist_bin_count = not_implemented()
     mode = not_implemented()
     fill_null_with_strategy = not_implemented()
-    # NOTE: `kurtosis` and `skew` will need tests
-    # wanna try adding a `pyarrow>=20` version
-    kurtosis = not_implemented()
-    skew = not_implemented()
 
     # I think they might both be possible in a similar way to `_is_first_last_distinct`
     is_duplicated = not_implemented()

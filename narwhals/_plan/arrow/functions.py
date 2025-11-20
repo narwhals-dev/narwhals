@@ -256,6 +256,39 @@ var = pc.variance
 quantile = pc.quantile
 
 
+# TODO @dangotbanned: Add `pyarrow>=20` paths
+# Share code with `skew`
+def kurtosis(native: ChunkedOrArrayAny) -> NativeScalar:
+    non_null = native.drop_null()
+    if len(non_null) == 0:
+        result = lit(None, F64)
+    elif len(non_null) == 1:
+        result = lit(float("nan"))
+    else:
+        m = sub(non_null, mean(non_null))
+        m2 = mean(pc.power(m, lit(2)))
+        m4 = mean(pc.power(m, lit(4)))
+        result = sub(pc.divide(m4, pc.power(m2, lit(2))), lit(3))
+    return result
+
+
+# TODO @dangotbanned: Add `pyarrow>=20` paths
+def skew(native: ChunkedOrArrayAny) -> NativeScalar:
+    non_null = native.drop_null()
+    if len(non_null) == 0:
+        result = lit(None, F64)
+    elif len(non_null) == 1:
+        result = lit(float("nan"))
+    elif len(non_null) == 2:
+        result = lit(0.0, F64)
+    else:
+        m = sub(non_null, mean(non_null))
+        m2 = mean(pc.power(m, lit(2)))
+        m3 = mean(pc.power(m, lit(3)))
+        result = pc.divide(m3, pc.power(m2, lit(1.5)))
+    return result
+
+
 def clip_lower(
     native: ChunkedOrScalarAny, lower: ChunkedOrScalarAny
 ) -> ChunkedOrScalarAny:
