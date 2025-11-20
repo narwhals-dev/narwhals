@@ -243,6 +243,8 @@ def sum_(native: Any) -> NativeScalar:
 
 
 min_ = pc.min
+# TODO @dangotbanned: Wrap horizontal functions with correct typing
+# Should only return scalar if all elements are as well
 min_horizontal = pc.min_element_wise
 max_ = pc.max
 max_horizontal = pc.max_element_wise
@@ -252,6 +254,24 @@ median = pc.approximate_median
 std = pc.stddev
 var = pc.variance
 quantile = pc.quantile
+
+
+def clip_lower(
+    native: ChunkedOrScalarAny, lower: ChunkedOrScalarAny
+) -> ChunkedOrScalarAny:
+    return max_horizontal(native, lower)
+
+
+def clip_upper(
+    native: ChunkedOrScalarAny, upper: ChunkedOrScalarAny
+) -> ChunkedOrScalarAny:
+    return min_horizontal(native, upper)
+
+
+def clip(
+    native: ChunkedOrScalarAny, lower: ChunkedOrScalarAny, upper: ChunkedOrScalarAny
+) -> ChunkedOrScalarAny:
+    return clip_lower(clip_upper(native, upper), lower)
 
 
 def n_unique(native: Any) -> pa.Int64Scalar:

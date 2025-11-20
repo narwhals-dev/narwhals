@@ -209,7 +209,35 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
         native = node.input[0].dispatch(self, frame, name).native
         return self._with_native(fn.round(native, node.function.decimals), name)
 
-    clip = not_implemented()  # type: ignore[misc]
+    def clip(self, node: FExpr[F.Clip], frame: Frame, name: str) -> StoresNativeT_co:
+        expr, lower, upper = node.function.unwrap_input(node)
+        result = fn.clip(
+            expr.dispatch(self, frame, name).native,
+            lower.dispatch(self, frame, name).native,
+            upper.dispatch(self, frame, name).native,
+        )
+        return self._with_native(result, name)
+
+    def clip_lower(
+        self, node: FExpr[F.ClipLower], frame: Frame, name: str
+    ) -> StoresNativeT_co:
+        expr, other = node.function.unwrap_input(node)
+        result = fn.clip_lower(
+            expr.dispatch(self, frame, name).native,
+            other.dispatch(self, frame, name).native,
+        )
+        return self._with_native(result, name)
+
+    def clip_upper(
+        self, node: FExpr[F.ClipUpper], frame: Frame, name: str
+    ) -> StoresNativeT_co:
+        expr, other = node.function.unwrap_input(node)
+        result = fn.clip_upper(
+            expr.dispatch(self, frame, name).native,
+            other.dispatch(self, frame, name).native,
+        )
+        return self._with_native(result, name)
+
     replace_strict = not_implemented()  # type: ignore[misc]
 
 

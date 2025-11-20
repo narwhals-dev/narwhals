@@ -253,8 +253,15 @@ class Expr:
         lower_bound: IntoExprColumn | NumericLiteral | TemporalLiteral | None = None,
         upper_bound: IntoExprColumn | NumericLiteral | TemporalLiteral | None = None,
     ) -> Self:
-        it = parse_into_seq_of_expr_ir(lower_bound, upper_bound)
-        return self._from_ir(F.Clip().to_function_expr(self._ir, *it))
+        f: ir.FunctionExpr
+        if upper_bound is None:
+            f = F.ClipLower().to_function_expr(self._ir, parse_into_expr_ir(lower_bound))
+        elif lower_bound is None:
+            f = F.ClipUpper().to_function_expr(self._ir, parse_into_expr_ir(upper_bound))
+        else:
+            it = parse_into_seq_of_expr_ir(lower_bound, upper_bound)
+            f = F.Clip().to_function_expr(self._ir, *it)
+        return self._from_ir(f)
 
     def cum_count(self, *, reverse: bool = False) -> Self:  # pragma: no cover
         return self._with_unary(F.CumCount(reverse=reverse))
