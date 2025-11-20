@@ -10,12 +10,13 @@ from tests.plan.utils import assert_equal_data, dataframe
     ("data", "expected_kurtosis", "expected_skew"),
     [
         ([], None, None),
+        ([None], None, None),
         ([1], None, None),
         ([1, 2], -2, 0.0),
         ([0.0, 0.0, 0.0], None, None),
         ([1, 2, 3, 2, 1], -1.153061, 0.343622),
+        ([None, 1.4, 1.3, 5.9, None, 2.9], -1.014744, 0.801638),
     ],
-    ids=range(5),
 )
 def test_kurtosis_skew_expr(
     data: list[float], expected_kurtosis: float | None, expected_skew: float | None

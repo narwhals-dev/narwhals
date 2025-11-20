@@ -69,6 +69,9 @@ RANK_ACCEPTS_CHUNKED: Final = BACKEND_VERSION >= (14,)
 HAS_SCATTER: Final = BACKEND_VERSION >= (20,)
 """`pyarrow.compute.scatter` added in https://github.com/apache/arrow/pull/44394"""
 
+HAS_KURTOSIS_SKEW = BACKEND_VERSION >= (20,)
+"""`pyarrow.compute.{kurtosis,skew}` added in https://github.com/apache/arrow/pull/45677"""
+
 HAS_ARANGE: Final = BACKEND_VERSION >= (21,)
 """`pyarrow.arange` added in https://github.com/apache/arrow/pull/46778"""
 
@@ -256,9 +259,13 @@ var = pc.variance
 quantile = pc.quantile
 
 
-# TODO @dangotbanned: Add `pyarrow>=20` paths
-# Share code with `skew`
+# TODO @dangotbanned: Add `pyarrow>=20` support for `group_by`
+# TODO @dangotbanned:  Share code with `skew`
 def kurtosis(native: ChunkedOrArrayAny) -> NativeScalar:
+    if HAS_KURTOSIS_SKEW:
+        if pa.types.is_null(native.type):
+            native = native.cast(F64)
+        return pc.kurtosis(native)  # type: ignore[attr-defined]
     non_null = native.drop_null()
     if len(non_null) == 0:
         result = lit(None, F64)
@@ -272,8 +279,12 @@ def kurtosis(native: ChunkedOrArrayAny) -> NativeScalar:
     return result
 
 
-# TODO @dangotbanned: Add `pyarrow>=20` paths
+# TODO @dangotbanned: See `kurtosis`
 def skew(native: ChunkedOrArrayAny) -> NativeScalar:
+    if HAS_KURTOSIS_SKEW:
+        if pa.types.is_null(native.type):
+            native = native.cast(F64)
+        return pc.skew(native)  # type: ignore[attr-defined]
     non_null = native.drop_null()
     if len(non_null) == 0:
         result = lit(None, F64)
