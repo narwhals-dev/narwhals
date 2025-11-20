@@ -55,19 +55,22 @@ SUPPORTED_IR: Mapping[type[ir.ExprIR], acero.Aggregation] = {
     ir.Len: "hash_count_all",
     ir.Column: "hash_list",  # `hash_aggregate` only
 }
+
+_version_dependent: dict[Any, acero.Aggregation] = {}
+if fn.HAS_KURTOSIS_SKEW:
+    _version_dependent.update(
+        {ir.functions.Kurtosis: "hash_kurtosis", ir.functions.Skew: "hash_skew"}
+    )
+
 SUPPORTED_FUNCTION: Mapping[type[ir.Function], acero.Aggregation] = {
     ir.boolean.All: "hash_all",
     ir.boolean.Any: "hash_any",
     ir.functions.Unique: "hash_distinct",  # `hash_aggregate` only
     ir.functions.NullCount: "hash_count",
+    **_version_dependent,
 }
 
-REQUIRES_PYARROW_20: tuple[Literal["kurtosis"], Literal["skew"]] = ("kurtosis", "skew")
-"""They don't show in [our version of the stubs], but are possible in [`pyarrow>=20`].
-
-[our version of the stubs]: https://github.com/narwhals-dev/narwhals/issues/2124#issuecomment-3191374210
-[`pyarrow>=20`]: https://arrow.apache.org/docs/20.0/python/compute.html#grouped-aggregations
-"""
+del _version_dependent
 
 
 class AggSpec:

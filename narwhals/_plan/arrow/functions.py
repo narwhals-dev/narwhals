@@ -259,7 +259,6 @@ var = pc.variance
 quantile = pc.quantile
 
 
-# TODO @dangotbanned: Add `pyarrow>=20` support for `group_by`
 # TODO @dangotbanned:  Share code with `skew`
 def kurtosis(native: ChunkedOrArrayAny) -> NativeScalar:
     result: NativeScalar
