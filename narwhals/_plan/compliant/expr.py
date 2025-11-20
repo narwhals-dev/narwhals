@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Any, Literal, Protocol
 
 from narwhals._plan.compliant.column import EagerBroadcast, SupportsBroadcast
 from narwhals._plan.compliant.typing import (
@@ -254,6 +254,9 @@ class EagerExpr(
         frame: FrameT_contra,
         name: str,
     ) -> Self: ...
+    def __bool__(self) -> Literal[True]:
+        # NOTE: Avoids falling back to `__len__` when truth-testing on dispatch
+        return True
 
 
 class LazyExpr(

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Any, Literal, Protocol
 
 from narwhals._plan.compliant.expr import CompliantExpr, EagerExpr, LazyExpr
 from narwhals._plan.compliant.typing import FrameT_contra, LengthT, SeriesT, SeriesT_co
@@ -145,6 +145,10 @@ class EagerScalar(
 ):
     def __len__(self) -> int:
         return 1
+
+    def __bool__(self) -> Literal[True]:
+        # NOTE: Avoids falling back to `__len__` when truth-testing on dispatch
+        return True
 
     def to_python(self) -> PythonLiteral: ...
 
