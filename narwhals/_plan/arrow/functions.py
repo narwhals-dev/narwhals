@@ -259,47 +259,31 @@ var = pc.variance
 quantile = pc.quantile
 
 
-# TODO @dangotbanned:  Share code with `skew`
-def kurtosis(native: ChunkedOrArrayAny) -> NativeScalar:
+def kurtosis_skew(
+    native: ChunkedOrArrayAny, function: Literal["kurtosis", "skew"], /
+) -> NativeScalar:
     result: NativeScalar
     if HAS_KURTOSIS_SKEW:
         if pa.types.is_null(native.type):
             native = native.cast(F64)
-        result = pc.kurtosis(native)  # type: ignore[attr-defined]
+        result = getattr(pc, function)(native)
     else:
         non_null = native.drop_null()
         if len(non_null) == 0:
             result = lit(None, F64)
         elif len(non_null) == 1:
             result = lit(float("nan"))
-        else:
-            m = sub(non_null, mean(non_null))
-            m2 = mean(pc.power(m, lit(2)))
-            m4 = mean(pc.power(m, lit(4)))
-            result = sub(pc.divide(m4, pc.power(m2, lit(2))), lit(3))
-    return result
-
-
-# TODO @dangotbanned: See `kurtosis`
-def skew(native: ChunkedOrArrayAny) -> NativeScalar:
-    result: NativeScalar
-    if HAS_KURTOSIS_SKEW:
-        if pa.types.is_null(native.type):
-            native = native.cast(F64)
-        result = pc.skew(native)  # type: ignore[attr-defined]
-    else:
-        non_null = native.drop_null()
-        if len(non_null) == 0:
-            result = lit(None, F64)
-        elif len(non_null) == 1:
-            result = lit(float("nan"))
-        elif len(non_null) == 2:
+        elif function == "skew" and len(non_null) == 2:
             result = lit(0.0, F64)
         else:
             m = sub(non_null, mean(non_null))
             m2 = mean(pc.power(m, lit(2)))
-            m3 = mean(pc.power(m, lit(3)))
-            result = pc.divide(m3, pc.power(m2, lit(1.5)))
+            if function == "kurtosis":
+                m4 = mean(pc.power(m, lit(4)))
+                result = sub(pc.divide(m4, pc.power(m2, lit(2))), lit(3))
+            else:
+                m3 = mean(pc.power(m, lit(3)))
+                result = pc.divide(m3, pc.power(m2, lit(1.5)))
     return result
 
 

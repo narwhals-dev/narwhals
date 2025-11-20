@@ -422,14 +422,13 @@ class ArrowExpr(  # type: ignore[misc]
         native = self._dispatch_expr(node.input[0], frame, name).native
         return self._with_native(fn.null_count(native), name)
 
-    # NOTE: `kurtosis` and `skew` will need tests for checking `pyarrow>=20` behaves the same
     def kurtosis(self, node: FExpr[F.Kurtosis], frame: Frame, name: str) -> Scalar:
         native = self._dispatch_expr(node.input[0], frame, name).native
-        return self._with_native(fn.kurtosis(native), name)
+        return self._with_native(fn.kurtosis_skew(native, "kurtosis"), name)
 
     def skew(self, node: FExpr[F.Skew], frame: Frame, name: str) -> Scalar:
         native = self._dispatch_expr(node.input[0], frame, name).native
-        return self._with_native(fn.skew(native), name)
+        return self._with_native(fn.kurtosis_skew(native, "skew"), name)
 
     def over(
         self,
