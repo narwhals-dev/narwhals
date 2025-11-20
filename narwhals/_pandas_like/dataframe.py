@@ -603,7 +603,7 @@ class PandasLikeDataFrame(
     def _join_inner(
         self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
     ) -> pd.DataFrame:
-        return self.native.merge(
+        return self.native.dropna(subset=left_on, how="any").merge(
             other.native,
             left_on=left_on,
             right_on=right_on,
@@ -615,7 +615,7 @@ class PandasLikeDataFrame(
         self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
     ) -> pd.DataFrame:
         result_native = self.native.merge(
-            other.native,
+            other.native.dropna(subset=right_on, how="any"),
             how="left",
             left_on=left_on,
             right_on=right_on,
@@ -635,16 +635,32 @@ class PandasLikeDataFrame(
         self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
     ) -> pd.DataFrame:
         # Pandas coalesces keys in full joins unless there's no collision
+        ns = self.__narwhals_namespace__()
+        self_native = self.native
         right_on_mapper = _remap_full_join_keys(left_on, right_on, suffix)
         other_native = other.native.rename(columns=right_on_mapper)
         check_column_names_are_unique(other_native.columns)
         right_suffixed = list(right_on_mapper.values())
-        return self.native.merge(
-            other_native,
+
+        left_null_mask = self_native[list(left_on)].isna().any(axis=1)
+        right_null_mask = other_native[right_suffixed].isna().any(axis=1)
+
+        # We need to add suffix to `other` columns overlapping in `self` if not in keys
+        to_rename = set(other.columns).intersection(self.columns).difference(right_on)
+        right_null_rows = other_native[right_null_mask].rename(
+            columns={col: f"{col}{suffix}" for col in to_rename}
+        )
+
+        join_result = self_native[~left_null_mask].merge(
+            other_native[~right_null_mask],
             left_on=left_on,
             right_on=right_suffixed,
             how="outer",
             suffixes=("", suffix),
+        )
+
+        return ns._concat_diagonal(
+            [join_result, self_native[left_null_mask], right_null_rows]
         )
 
     def _join_cross(self, other: Self, *, suffix: str) -> pd.DataFrame:
@@ -677,7 +693,7 @@ class PandasLikeDataFrame(
             columns_to_select=list(right_on),
             columns_mapping=dict(zip(right_on, left_on)),
         )
-        return self.native.merge(
+        return self.native.dropna(subset=left_on, how="any").merge(
             other_native, how="inner", left_on=left_on, right_on=left_on
         )
 
@@ -688,7 +704,10 @@ class PandasLikeDataFrame(
 
         if implementation.is_cudf():
             return self.native.merge(
-                other.native, how="leftanti", left_on=left_on, right_on=right_on
+                other.native.dropna(subset=left_on, how="any"),
+                how="leftanti",
+                left_on=left_on,
+                right_on=right_on,
             )
 
         indicator_token = generate_temporary_column_name(
@@ -701,7 +720,7 @@ class PandasLikeDataFrame(
             columns_mapping=dict(zip(right_on, left_on)),
         )
         result_native = self.native.merge(
-            other_native,
+            other_native.dropna(subset=left_on, how="any"),
             # TODO(FBruzzesi): See https://github.com/modin-project/modin/issues/7384
             how="left" if implementation.is_pandas() else "outer",
             indicator=indicator_token,
