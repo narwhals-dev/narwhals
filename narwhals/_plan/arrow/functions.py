@@ -268,7 +268,10 @@ quantile = pc.quantile
 
 
 def mode_all(native: ChunkedArrayAny) -> ChunkedArrayAny:
-    return pa.chunked_array([pc.mode(native, n=len(native)).field("mode")])
+    struct = pc.mode(native, n=len(native))
+    indices: pa.Int32Array = struct.field("count").dictionary_encode().indices  # type: ignore[attr-defined]
+    index_true_modes = lit(0)
+    return chunked_array(struct.field("mode").filter(pc.equal(indices, index_true_modes)))
 
 
 def mode_any(native: ChunkedArrayAny) -> NativeScalar:
