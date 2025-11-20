@@ -693,3 +693,10 @@ def test_replace_strict_invalid() -> None:
         match="`new` argument cannot be used if `old` argument is a Mapping type",
     ):
         nwp.col("a").replace_strict(old={1: 2, 3: 4}, new=[5, 6, 7])
+
+
+def test_mode_invalid() -> None:
+    with pytest.raises(
+        TypeError, match=r"keep.+must be one of.+all.+any.+but got 'first'"
+    ):
+        nwp.col("a").mode(keep="first")  # type: ignore[arg-type]

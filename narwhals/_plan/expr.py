@@ -46,6 +46,7 @@ if TYPE_CHECKING:
         ClosedInterval,
         FillNullStrategy,
         IntoDType,
+        ModeKeepStrategy,
         NumericLiteral,
         RankMethod,
         RollingInterpolationMethod,
@@ -238,8 +239,11 @@ class Expr:
     def drop_nulls(self) -> Self:
         return self._with_unary(F.DropNulls())
 
-    def mode(self) -> Self:
-        return self._with_unary(F.Mode())
+    def mode(self, *, keep: ModeKeepStrategy = "all") -> Self:
+        if func := {"all": F.ModeAll, "any": F.ModeAny}.get(keep):
+            return self._with_unary(func())
+        msg = f"`keep` must be one of ('all', 'any'), but got {keep!r}"
+        raise TypeError(msg)
 
     def skew(self) -> Self:
         return self._with_unary(F.Skew())

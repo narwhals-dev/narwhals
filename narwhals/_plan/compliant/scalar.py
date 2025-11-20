@@ -130,6 +130,8 @@ class CompliantScalar(
     sum = _always_noop  # type: ignore[misc]
     mode = _always_noop  # type: ignore[misc]
     unique = _always_noop  # type: ignore[misc]
+    mode_all = not_implemented()  # type: ignore[misc]
+    mode_any = _always_noop  # type: ignore[misc]
     kurtosis = _always_nan  # type: ignore[misc]
     skew = _always_nan  # type: ignore[misc]
     fill_null_with_strategy = not_implemented()  # type: ignore[misc]

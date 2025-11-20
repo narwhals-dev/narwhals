@@ -245,6 +245,14 @@ def sum_(native: Any) -> NativeScalar:
     return pc.sum(native, min_count=0)
 
 
+def first(native: ChunkedOrArrayAny) -> NativeScalar:
+    return pc.first(native, options=pa_options.scalar_aggregate())
+
+
+def last(native: ChunkedOrArrayAny) -> NativeScalar:
+    return pc.last(native, options=pa_options.scalar_aggregate())
+
+
 min_ = pc.min
 # TODO @dangotbanned: Wrap horizontal functions with correct typing
 # Should only return scalar if all elements are as well
@@ -257,6 +265,14 @@ median = pc.approximate_median
 std = pc.stddev
 var = pc.variance
 quantile = pc.quantile
+
+
+def mode_all(native: ChunkedArrayAny) -> ChunkedArrayAny:
+    return pa.chunked_array([pc.mode(native, n=len(native)).field("mode")])
+
+
+def mode_any(native: ChunkedArrayAny) -> NativeScalar:
+    return first(pc.mode(native, n=1).field("mode"))
 
 
 def kurtosis_skew(

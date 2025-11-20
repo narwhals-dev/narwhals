@@ -538,6 +538,13 @@ class ArrowExpr(  # type: ignore[misc]
     def drop_nulls(self, node: FExpr[F.DropNulls], frame: Frame, name: str) -> Self:
         return self._vector_function(fn.drop_nulls)(node, frame, name)
 
+    def mode_all(self, node: FExpr[F.ModeAll], frame: Frame, name: str) -> Self:
+        return self._vector_function(fn.mode_all)(node, frame, name)
+
+    def mode_any(self, node: FExpr[F.ModeAny], frame: Frame, name: str) -> Scalar:
+        native = self._dispatch_expr(node.input[0], frame, name).native
+        return self._with_native(fn.mode_any(native), name)
+
     cum_count = _cumulative
     cum_min = _cumulative
     cum_max = _cumulative
@@ -552,7 +559,6 @@ class ArrowExpr(  # type: ignore[misc]
     # ewm_mean = not_implemented()  # noqa: ERA001
     hist_bins = not_implemented()
     hist_bin_count = not_implemented()
-    mode = not_implemented()
     fill_null_with_strategy = not_implemented()
 
     # I think they might both be possible in a similar way to `_is_first_last_distinct`
