@@ -508,9 +508,6 @@ class ArrowExpr(  # type: ignore[misc]
             result = result.cast(dtype)
         return self.from_series(result)
 
-    def rolling_expr(self, node: ir.RollingExpr, frame: Frame, name: str) -> Self:
-        raise NotImplementedError
-
     def shift(self, node: FExpr[Shift], frame: Frame, name: str) -> Self:
         return self._vector_function(fn.shift, node.function.n)(node, frame, name)
 
@@ -549,6 +546,9 @@ class ArrowExpr(  # type: ignore[misc]
     cum_sum = _cumulative
     is_first_distinct = _is_first_last_distinct
     is_last_distinct = _is_first_last_distinct
+
+    # TODO @dangotbanned: Plan composing with `functions.cum_*`
+    rolling_expr = not_implemented()
 
     # ewm_mean = not_implemented()  # noqa: ERA001
     hist_bins = not_implemented()
