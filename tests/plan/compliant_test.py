@@ -522,6 +522,26 @@ def test_with_columns(
 
 
 @pytest.mark.parametrize(
+    ("expr", "expected"),
+    [
+        (nwp.all().first(), {"a": 8, "b": 58, "c": 2.5, "d": 2, "idx": 0}),
+        (ncs.numeric().null_count(), {"a": 1, "b": 0, "c": 0, "d": 0, "idx": 0}),
+        (
+            ncs.by_index(range(5)).cast(nw.Boolean).fill_null(False).all(),
+            {"a": False, "b": True, "c": True, "d": True, "idx": False},
+        ),
+    ],
+)
+def test_with_columns_all_aggregates(
+    data_indexed: dict[str, Any], expr: nwp.Expr, expected: dict[str, PythonLiteral]
+) -> None:
+    height = len(next(iter(data_indexed.values())))
+    expected_full = {k: height * [v] for k, v in expected.items()}
+    result = dataframe(data_indexed).with_columns(expr)
+    assert_equal_data(result, expected_full)
+
+
+@pytest.mark.parametrize(
     ("agg", "expected"),
     [
         (first("a"), 8),

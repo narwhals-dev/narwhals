@@ -96,10 +96,12 @@ class ArrowDataFrame(
 
         return pl.DataFrame(self.native)
 
-    def _evaluate_irs(self, nodes: Iterable[NamedIR[ExprIR]], /) -> Iterator[Series]:
-        ns = namespace(self)
-        from_named_ir = ns._expr.from_named_ir
-        yield from ns._expr.align(from_named_ir(e, self) for e in nodes)
+    def _evaluate_irs(
+        self, nodes: Iterable[NamedIR[ExprIR]], /, *, length: int | None = None
+    ) -> Iterator[Series]:
+        expr = namespace(self)._expr
+        from_named_ir = expr.from_named_ir
+        yield from expr.align((from_named_ir(e, self) for e in nodes), default=length)
 
     def sort(self, by: Sequence[str], options: SortMultipleOptions | None = None) -> Self:
         return self.gather(fn.sort_indices(self.native, *by, options=options))

@@ -178,6 +178,9 @@ class EagerDataFrame(
     def __narwhals_namespace__(self) -> EagerNamespace[Self, SeriesT, Any, Any]: ...
     @property
     def _group_by(self) -> type[EagerDataFrameGroupBy[Self]]: ...
+    def _evaluate_irs(
+        self, nodes: Iterable[NamedIR[ir.ExprIR]], /, *, length: int | None = None
+    ) -> Iterator[SeriesT]: ...
 
     def group_by_resolver(
         self, resolver: GroupByResolver, /
@@ -188,7 +191,9 @@ class EagerDataFrame(
         return self.__narwhals_namespace__()._concat_horizontal(self._evaluate_irs(irs))
 
     def with_columns(self, irs: Seq[NamedIR]) -> Self:
-        return self.__narwhals_namespace__()._concat_horizontal(self._evaluate_irs(irs))
+        return self.__narwhals_namespace__()._concat_horizontal(
+            self._evaluate_irs(irs, length=len(self))
+        )
 
     def to_series(self, index: int = 0) -> SeriesT:
         return self.get_column(self.columns[index])
