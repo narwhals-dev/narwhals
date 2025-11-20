@@ -826,3 +826,144 @@ def test_join_same_laziness(constructor: Constructor) -> None:
     other = nw.from_native(frame_pl)
     with pytest.raises(TypeError, match=msg):
         frame.join(other, on="id")  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    ("how", "expected"),
+    [
+        ("inner", {"a": [1], "b": [1], "x": [1], "y": [1.2]}),
+        (
+            "left",
+            {
+                "a": [1, 1, None, None],
+                "b": [1, None, 5, None],
+                "x": [1, 2, 3, 4],
+                "y": [1.2, None, None, None],
+            },
+        ),
+        (
+            "full",
+            {
+                "a": [1, 1, None, None, None, None, None],
+                "b": [1, None, 5, None, None, None, None],
+                "x": [1, 2, 3, 4, None, None, None],
+                "a_right": [1, None, None, None, 1, None, None],
+                "b_right": [1, None, None, None, None, 5, None],
+                "y": [1.2, None, None, None, 3.4, 5.6, 7.8],
+            },
+        ),
+        (
+            "cross",
+            {
+                "a": [
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                ],
+                "b": [
+                    1,
+                    1,
+                    1,
+                    1,
+                    None,
+                    None,
+                    None,
+                    None,
+                    5,
+                    5,
+                    5,
+                    5,
+                    None,
+                    None,
+                    None,
+                    None,
+                ],
+                "x": [1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4],
+                "a_right": [
+                    1,
+                    1,
+                    None,
+                    None,
+                    1,
+                    1,
+                    None,
+                    None,
+                    1,
+                    1,
+                    None,
+                    None,
+                    1,
+                    1,
+                    None,
+                    None,
+                ],
+                "b_right": [
+                    1,
+                    None,
+                    5,
+                    None,
+                    1,
+                    None,
+                    5,
+                    None,
+                    1,
+                    None,
+                    5,
+                    None,
+                    1,
+                    None,
+                    5,
+                    None,
+                ],
+                "y": [
+                    1.2,
+                    3.4,
+                    5.6,
+                    7.8,
+                    1.2,
+                    3.4,
+                    5.6,
+                    7.8,
+                    1.2,
+                    3.4,
+                    5.6,
+                    7.8,
+                    1.2,
+                    3.4,
+                    5.6,
+                    7.8,
+                ],
+            },
+        ),
+        ("semi", {"a": [1], "b": [1], "x": [1]}),
+        ("anti", {"a": [1, None, None], "b": [None, 5, None], "x": [2, 3, 4]}),
+    ],
+)
+def test_join_on_null_values(
+    constructor: Constructor, how: JoinStrategy, expected: dict[str, list[Any]]
+) -> None:
+    # See https://github.com/narwhals-dev/narwhals/issues/3307
+    keys = {"a": [1, 1, None, None], "b": [1, None, 5, None]}
+    data_left = {**keys, "x": [1, 2, 3, 4]}
+    data_right = {**keys, "y": [1.2, 3.4, 5.6, 7.8]}
+
+    df_left = from_native_lazy(constructor(data_left))
+    df_right = from_native_lazy(constructor(data_right))
+
+    on = None if how == "cross" else list(keys)
+    sort_by = ["a", "x", "y"] if how in {"cross", "full"} else ["a", "x"]
+    result = df_left.join(df_right, on=on, how=how).sort(sort_by, nulls_last=True)
+    assert_equal_data(result, expected)
