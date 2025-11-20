@@ -262,41 +262,45 @@ quantile = pc.quantile
 # TODO @dangotbanned: Add `pyarrow>=20` support for `group_by`
 # TODO @dangotbanned:  Share code with `skew`
 def kurtosis(native: ChunkedOrArrayAny) -> NativeScalar:
+    result: NativeScalar
     if HAS_KURTOSIS_SKEW:
         if pa.types.is_null(native.type):
             native = native.cast(F64)
-        return pc.kurtosis(native)  # type: ignore[attr-defined]
-    non_null = native.drop_null()
-    if len(non_null) == 0:
-        result = lit(None, F64)
-    elif len(non_null) == 1:
-        result = lit(float("nan"))
+        result = pc.kurtosis(native)  # type: ignore[attr-defined]
     else:
-        m = sub(non_null, mean(non_null))
-        m2 = mean(pc.power(m, lit(2)))
-        m4 = mean(pc.power(m, lit(4)))
-        result = sub(pc.divide(m4, pc.power(m2, lit(2))), lit(3))
+        non_null = native.drop_null()
+        if len(non_null) == 0:
+            result = lit(None, F64)
+        elif len(non_null) == 1:
+            result = lit(float("nan"))
+        else:
+            m = sub(non_null, mean(non_null))
+            m2 = mean(pc.power(m, lit(2)))
+            m4 = mean(pc.power(m, lit(4)))
+            result = sub(pc.divide(m4, pc.power(m2, lit(2))), lit(3))
     return result
 
 
 # TODO @dangotbanned: See `kurtosis`
 def skew(native: ChunkedOrArrayAny) -> NativeScalar:
+    result: NativeScalar
     if HAS_KURTOSIS_SKEW:
         if pa.types.is_null(native.type):
             native = native.cast(F64)
-        return pc.skew(native)  # type: ignore[attr-defined]
-    non_null = native.drop_null()
-    if len(non_null) == 0:
-        result = lit(None, F64)
-    elif len(non_null) == 1:
-        result = lit(float("nan"))
-    elif len(non_null) == 2:
-        result = lit(0.0, F64)
+        result = pc.skew(native)  # type: ignore[attr-defined]
     else:
-        m = sub(non_null, mean(non_null))
-        m2 = mean(pc.power(m, lit(2)))
-        m3 = mean(pc.power(m, lit(3)))
-        result = pc.divide(m3, pc.power(m2, lit(1.5)))
+        non_null = native.drop_null()
+        if len(non_null) == 0:
+            result = lit(None, F64)
+        elif len(non_null) == 1:
+            result = lit(float("nan"))
+        elif len(non_null) == 2:
+            result = lit(0.0, F64)
+        else:
+            m = sub(non_null, mean(non_null))
+            m2 = mean(pc.power(m, lit(2)))
+            m3 = mean(pc.power(m, lit(3)))
+            result = pc.divide(m3, pc.power(m2, lit(1.5)))
     return result
 
 
