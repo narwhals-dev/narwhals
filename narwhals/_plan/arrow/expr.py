@@ -154,9 +154,8 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
     ) -> StoresNativeT_co:
         expr, other = node.function.unwrap_input(node)
         right = other.dispatch(self, frame, name).native
-        if isinstance(right, pa.Scalar):
-            right = fn.array(right)
-        result = fn.is_in(expr.dispatch(self, frame, name).native, right)
+        arr = fn.array(right) if isinstance(right, pa.Scalar) else right
+        result = fn.is_in(expr.dispatch(self, frame, name).native, arr)
         return self._with_native(result, name)
 
     def is_in_series(

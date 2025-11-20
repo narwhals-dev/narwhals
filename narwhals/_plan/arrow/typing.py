@@ -156,7 +156,9 @@ Arrow: TypeAlias = "ChunkedOrScalar[ScalarT_co] | Array[ScalarT_co]"
 ArrowAny: TypeAlias = "ChunkedOrScalarAny | ArrayAny"
 NativeScalar: TypeAlias = ScalarAny
 BinOp: TypeAlias = Callable[..., ChunkedOrScalarAny]
-StoresNativeT_co = TypeVar("StoresNativeT_co", bound=StoresNative[Any], covariant=True)
+StoresNativeT_co = TypeVar(
+    "StoresNativeT_co", bound=StoresNative[ChunkedOrScalarAny], covariant=True
+)
 DataTypeRemap: TypeAlias = Mapping[DataType, DataType]
 NullPlacement: TypeAlias = Literal["at_start", "at_end"]
 
