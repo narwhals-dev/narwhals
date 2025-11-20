@@ -646,12 +646,7 @@ class PandasLikeDataFrame(
         right_null_mask = other_native[right_suffixed].isna().any(axis=1)
 
         # We need to add suffix to `other` columns overlapping in `self` if not in keys
-        to_rename = (
-            set(other.columns)
-            .intersection(self.columns)
-            .difference(left_on)
-            .difference(right_on)
-        )
+        to_rename = set(other.columns).intersection(self.columns).difference(right_on)
         right_null_rows = other_native[right_null_mask].rename(
             columns={col: f"{col}{suffix}" for col in to_rename}
         )

@@ -872,6 +872,8 @@ def test_join_same_laziness(constructor: Constructor) -> None:
 def test_join_on_null_values(
     constructor: Constructor, how: JoinStrategy, expected: dict[str, list[Any]]
 ) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 1, 4) and how=="cross":
+        pytest.skip()
     # See https://github.com/narwhals-dev/narwhals/issues/3307
     keys = {"a": [1, 1, None, None], "b": [1, None, 5, None]}
     data_left = {**keys, "x": [1, 2, 3, 4]}
@@ -885,3 +887,39 @@ def test_join_on_null_values(
     result = df_left.join(df_right, on=on, how=how).sort(sort_by, nulls_last=True)
     assert_equal_data(result, expected)
 # fmt: on
+
+
+@pytest.mark.filterwarnings(
+    "ignore:.*Merging dataframes with merge column data type mismatches:UserWarning:dask"
+)
+def test_full_join_with_overlapping_non_key_columns_and_nulls(
+    constructor: Constructor,
+) -> None:
+    data_left = {
+        "id": [1, 2, 3],
+        "shared_col": ["a", "b", "c"],  # Overlapping, not a join key
+        "left_only": [10, 20, 30],
+    }
+    data_right = {
+        "id": [2, 3, None],  # Has null in join key
+        "shared_col": ["x", "y", "z"],  # Overlapping, not a join key
+        "right_only": [100, 200, 300],
+    }
+
+    df_left = from_native_lazy(constructor(data_left))
+    df_right = from_native_lazy(constructor(data_right))
+
+    result = df_left.join(df_right, on="id", how="full", suffix="_r").sort(
+        "id", nulls_last=True
+    )
+
+    expected = {
+        "id": [1, 2, 3, None],
+        "shared_col": ["a", "b", "c", None],
+        "left_only": [10, 20, 30, None],
+        "id_r": [None, 2, 3, None],
+        "shared_col_r": [None, "x", "y", "z"],
+        "right_only": [None, 100, 200, 300],
+    }
+
+    assert_equal_data(result, expected)
