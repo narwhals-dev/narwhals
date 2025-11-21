@@ -276,9 +276,8 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
         if order_by is None:
             result = frame.with_row_index(name)
         else:
-            end = pl.count() if self._backend_version < (0, 20, 5) else pl.len()
             result = frame.select(
-                pl.int_range(start=0, end=end).sort_by(order_by).alias(name), pl.all()
+                pl.int_range(pl.len()).over(order_by=order_by).alias(name), pl.all()
             )
 
         return self._with_native(result)

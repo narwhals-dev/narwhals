@@ -144,7 +144,7 @@ def is_pandas_or_modin(implementation: Implementation) -> bool:
 
 def align_and_extract_native(
     lhs: PandasLikeSeries, rhs: PandasLikeSeries | object
-) -> tuple[pd.Series[Any] | object, pd.Series[Any] | object]:
+) -> tuple[pd.Series[Any], pd.Series[Any] | object]:
     """Validate RHS of binary operation.
 
     If the comparison isn't supported, return `NotImplemented` so that the
@@ -700,3 +700,7 @@ def import_array_module(implementation: Implementation, /) -> ModuleType:
 
 
 class PandasLikeSeriesNamespace(EagerSeriesNamespace["PandasLikeSeries", Any]): ...
+
+
+def make_group_by_kwargs(*, drop_null_keys: bool) -> dict[str, bool]:
+    return {"sort": False, "as_index": True, "dropna": drop_null_keys, "observed": True}

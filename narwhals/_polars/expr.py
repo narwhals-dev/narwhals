@@ -16,10 +16,10 @@ from narwhals._polars.utils import (
     extract_native,
     narwhals_to_native_dtype,
 )
-from narwhals._utils import Implementation, requires
+from narwhals._utils import Implementation, no_default, requires
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Sequence
 
     from typing_extensions import Self
 
@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from narwhals._polars.dataframe import Method
     from narwhals._polars.namespace import PolarsNamespace
     from narwhals._polars.series import PolarsSeries
+    from narwhals._typing import NoDefault
     from narwhals._utils import Version
     from narwhals.typing import IntoDType, ModeKeepStrategy
 
@@ -144,6 +145,13 @@ class PolarsExpr:
             native = pl.when(self.native.is_not_null()).then(self.native.is_nan())
         return self._with_native(native)
 
+    def is_finite(self) -> Self:
+        if self._backend_version >= (1, 18):
+            native = self.native.is_finite()
+        else:  # pragma: no cover
+            native = pl.when(self.native.is_not_null()).then(self.native.is_finite())
+        return self._with_native(native)
+
     def over(self, partition_by: Sequence[str], order_by: Sequence[str]) -> Self:
         # Use `pl.repeat(1, pl.len())` instead of `pl.lit(1)` to avoid issues for
         # non-numeric types: https://github.com/pola-rs/polars/issues/24756.
@@ -209,7 +217,8 @@ class PolarsExpr:
     @requires.backend_version((1,))
     def replace_strict(
         self,
-        old: Sequence[Any] | Mapping[Any, Any],
+        default: PolarsExpr | NoDefault,
+        old: Sequence[Any],
         new: Sequence[Any],
         *,
         return_dtype: IntoDType | None,
@@ -219,7 +228,12 @@ class PolarsExpr:
             if return_dtype
             else None
         )
-        native = self.native.replace_strict(old, new, return_dtype=return_dtype_pl)
+        extra_kwargs = (
+            {} if default is no_default else {"default": extract_native(default)}
+        )
+        native = self.native.replace_strict(
+            old, new, return_dtype=return_dtype_pl, **extra_kwargs
+        )
         return self._with_native(native)
 
     def __eq__(self, other: PolarsExpr) -> Self:  # type: ignore[override]
@@ -335,7 +349,6 @@ class PolarsExpr:
     head: Method[Self]
     is_between: Method[Self]
     is_duplicated: Method[Self]
-    is_finite: Method[Self]
     is_first_distinct: Method[Self]
     is_in: Method[Self]
     is_last_distinct: Method[Self]

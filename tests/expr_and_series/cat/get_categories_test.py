@@ -9,9 +9,14 @@ from tests.utils import PYARROW_VERSION, ConstructorEager, assert_equal_data
 data = {"a": ["one", "two", "two"]}
 
 
-def test_get_categories_eager(constructor_eager: ConstructorEager) -> None:
+def test_get_categories_eager(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
     if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (15, 0, 0):
         pytest.skip()
+    if "polars" in str(constructor_eager):
+        reason = "https://github.com/narwhals-dev/narwhals/issues/3097"
+        request.applymarker(pytest.mark.xfail(reason=reason, strict=False))
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
     df = df.select(nw.col("a").cast(nw.Categorical))
@@ -24,9 +29,15 @@ def test_get_categories_eager(constructor_eager: ConstructorEager) -> None:
     assert_equal_data({"a": result_series}, expected)
 
 
-def test_get_categories_lazy(constructor_eager: ConstructorEager) -> None:
+def test_get_categories_lazy(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
     if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (15, 0, 0):
         pytest.skip()
+
+    if "polars" in str(constructor_eager):
+        reason = "https://github.com/narwhals-dev/narwhals/issues/3097"
+        request.applymarker(pytest.mark.xfail(reason=reason, strict=False))
 
     df = nw.from_native(constructor_eager(data)).lazy()
     expr = nw.col("a").cast(nw.Categorical).cat.get_categories()

@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "2.10.1"
+version = "2.12.0"
 dependencies = []
 requires-python = ">=3.9"
 authors = [
@@ -291,6 +291,7 @@ plugins = ["covdefaults"]
 fail_under = 80  # This is just for local development, in CI we set it to 100
 omit = [
   'narwhals/typing.py',
+  'narwhals/compliant.py',
   'narwhals/stable/v1/typing.py',
   'narwhals/stable/v2/typing.py',
   'narwhals/this.py',
@@ -323,7 +324,7 @@ exclude_also = [
 ]
 
 [tool.mypy]
-files = ["narwhals", "tests"]
+files = ["narwhals", "tests", "test-plugin"]
 pretty = true
 strict = true
 
@@ -369,7 +370,7 @@ reportMissingModuleSource = "none"
 reportPrivateImportUsage = "none"
 reportUnusedExpression = "none"    # handled by (https://docs.astral.sh/ruff/rules/unused-variable/)
 typeCheckingMode = "basic"
-include = ["narwhals", "tests"]
+include = ["narwhals", "tests", "test-plugin"]
 ignore = [
   "../.venv/",
   "../../../**/Lib",      # stdlib

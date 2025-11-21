@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Protocol
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Sequence
 
     from typing_extensions import Self
 
@@ -15,6 +15,7 @@ if TYPE_CHECKING:
         StructNamespace,
     )
     from narwhals._compliant.namespace import CompliantNamespace
+    from narwhals._typing import NoDefault
     from narwhals._utils import Version
     from narwhals.typing import (
         ClosedInterval,
@@ -112,7 +113,8 @@ class CompliantColumn(Protocol):
     def rank(self, method: RankMethod, *, descending: bool) -> Self: ...
     def replace_strict(
         self,
-        old: Sequence[Any] | Mapping[Any, Any],
+        default: Self | NoDefault,
+        old: Sequence[Any],
         new: Sequence[Any],
         *,
         return_dtype: IntoDType | None,

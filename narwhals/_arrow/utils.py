@@ -249,7 +249,7 @@ def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> pa.DataType:
 
 def extract_native(
     lhs: ArrowSeries, rhs: ArrowSeries | PythonLiteral | ScalarAny
-) -> tuple[ChunkedArrayAny | ScalarAny, ChunkedArrayAny | ScalarAny]:
+) -> tuple[ChunkedArrayAny, ChunkedArrayAny | ScalarAny]:
     """Extract native objects in binary  operation.
 
     If the comparison isn't supported, return `NotImplemented` so that the
@@ -485,3 +485,12 @@ def concat_tables(
 
 
 class ArrowSeriesNamespace(EagerSeriesNamespace["ArrowSeries", "ChunkedArrayAny"]): ...
+
+
+def arange(start: int, end: int, step: int) -> ArrayAny:
+    if BACKEND_VERSION < (21,):
+        import numpy as np  # ignore-banned-import
+
+        return pa.array(np.arange(start, end, step))
+    # NOTE: Added in https://github.com/apache/arrow/pull/46778
+    return pa.arange(start, end, step)  # type: ignore[attr-defined]
