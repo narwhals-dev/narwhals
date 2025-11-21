@@ -6,21 +6,10 @@ import pytest
 
 from narwhals import _plan as nwp
 from narwhals._plan import selectors as ncs
-from narwhals.exceptions import InvalidOperationError
 from tests.plan.utils import assert_equal_data, dataframe
 
 if TYPE_CHECKING:
     from tests.conftest import Data
-
-
-XFAIL_NOT_IMPL = pytest.mark.xfail(
-    reason="TODO: `ArrowExpr.is_{duplicated,unique}`", raises=NotImplementedError
-)
-
-XFAIL_NOT_GROUP_BY = pytest.mark.xfail(
-    reason="TODO: `ArrowExpr.is_{duplicated,unique}.over(*partition_by)`",
-    raises=InvalidOperationError,
-)
 
 
 @pytest.fixture
@@ -33,7 +22,6 @@ def data() -> Data:
     }
 
 
-@XFAIL_NOT_IMPL
 def test_is_duplicated_unique(data: Data) -> None:
     expected = {
         "v1_is_unique": [True, True, False, True, False],
@@ -47,12 +35,10 @@ def test_is_duplicated_unique(data: Data) -> None:
         vals.is_duplicated().name.suffix("_is_duplicated"),
     )
     result = dataframe(data).select("i", *exprs).sort("i").drop("i")
-    assert_equal_data(result, expected)  # pragma: no cover
+    assert_equal_data(result, expected)
 
 
 # NOTE: Not supported on `main`
-# Planning to adapt `is_{first,last}_distinct` idea here
-@XFAIL_NOT_GROUP_BY
 def test_is_duplicated_unique_partitioned(data: Data) -> None:
     expected = {
         "v1_is_unique": [True, True, True, True, True],
@@ -66,4 +52,4 @@ def test_is_duplicated_unique_partitioned(data: Data) -> None:
         vals.is_duplicated().name.suffix("_is_duplicated").over("p1"),
     )
     result = dataframe(data).select("i", *exprs).sort("i").drop("i")
-    assert_equal_data(result, expected)  # pragma: no cover
+    assert_equal_data(result, expected)

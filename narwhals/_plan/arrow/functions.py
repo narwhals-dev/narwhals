@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias, TypeIs
 
     from narwhals._arrow.typing import Incomplete, PromoteOptions
+    from narwhals._plan.arrow.acero import Field
     from narwhals._plan.arrow.typing import (
         Array,
         ArrayAny,
@@ -35,6 +36,7 @@ if TYPE_CHECKING:
         BinaryLogical,
         BinaryNumericTemporal,
         BinOp,
+        BooleanLengthPreserving,
         ChunkedArray,
         ChunkedArrayAny,
         ChunkedOrArray,
@@ -42,6 +44,7 @@ if TYPE_CHECKING:
         ChunkedOrArrayT,
         ChunkedOrScalar,
         ChunkedOrScalarAny,
+        ChunkedStruct,
         DataType,
         DataTypeRemap,
         DataTypeT,
@@ -55,10 +58,12 @@ if TYPE_CHECKING:
         ScalarT,
         StringScalar,
         StringType,
+        StructArray,
         UnaryFunction,
         VectorFunction,
     )
     from narwhals._plan.options import RankOptions, SortMultipleOptions, SortOptions
+    from narwhals._plan.typing import OneOrSeq, Seq
     from narwhals.typing import ClosedInterval, IntoArrowSchema, PythonLiteral
 
 BACKEND_VERSION = Implementation.PYARROW._backend_version()
@@ -152,28 +157,6 @@ _IS_BETWEEN: Mapping[ClosedInterval, tuple[BinaryComp, BinaryComp]] = {
 }
 
 
-def ir_min_max(name: str, /) -> MinMax:
-    return MinMax(expr=ir.col(name))
-
-
-BOOLEAN_GLUE_FUNCTIONS: Mapping[type[ir.boolean.BooleanFunction], IntoColumnAgg] = {
-    ir.boolean.IsFirstDistinct: ir.min,
-    ir.boolean.IsLastDistinct: ir.max,
-    ir.boolean.IsUnique: ir_min_max,
-    ir.boolean.IsDuplicated: ir_min_max,
-}
-"""Planning to pattern up `_is_first_last_distinct` to work for some other cases.
-
-The final two lines will need some tweaking, but the same concept is going on:
-
-    index = df.to_series().alias(name)
-    return self.from_series(index.is_in(distinct.get_column(idx_name)))
-
-
-Will mean at least 2 more functions with `over(*partition_by, order_by=...)` support 😄
-"""
-
-
 @t.overload
 def cast(
     native: Scalar[Any], target_type: DataTypeT, *, safe: bool | None = ...
@@ -231,6 +214,26 @@ def string_type(data_types: Iterable[DataType] = (), /) -> StringType | LargeStr
     [apache/arrow#45717]: https://github.com/apache/arrow/issues/45717
     """
     return pa.large_string() if has_large_string(data_types) else pa.string()
+
+
+@t.overload
+def struct_field(native: ChunkedStruct, field: Field, /) -> ChunkedArrayAny: ...
+@t.overload
+def struct_field(
+    native: ChunkedStruct, field: Field, *fields: Field
+) -> Seq[ChunkedArrayAny]: ...
+@t.overload
+def struct_field(native: StructArray, field: Field, /) -> ArrayAny: ...
+@t.overload
+def struct_field(native: StructArray, field: Field, *fields: Field) -> Seq[ArrayAny]: ...
+def struct_field(
+    native: ChunkedOrArrayAny, field: Field, *fields: Field
+) -> OneOrSeq[ChunkedOrArrayAny]:
+    """Retrieve one or multiple `Struct` field(s) as `(Chunked)Array`(s)."""
+    func = t.cast("Callable[[Any,Any], ChunkedOrArrayAny]", pc.struct_field)
+    if not fields:
+        return func(native, field)
+    return tuple(func(native, name) for name in (field, *fields))
 
 
 def any_(native: Any) -> pa.BooleanScalar:
@@ -454,6 +457,33 @@ def is_in(values: ArrowAny, /, other: ChunkedOrArrayAny) -> ArrowAny:
     # NOTE: Replaced ambiguous parameter name (`value_set`)
     is_in_: Incomplete = pc.is_in
     return is_in_(values, other)  # type: ignore[no-any-return]
+
+
+def ir_min_max(name: str, /) -> MinMax:
+    return MinMax(expr=ir.col(name))
+
+
+def _boolean_is_unique(
+    indices: ChunkedArrayAny, aggregated: ChunkedStruct, /
+) -> ChunkedArrayAny:
+    min, max = struct_field(aggregated, "min", "max")
+    return and_(is_in(indices, min), is_in(indices, max))
+
+
+def _boolean_is_duplicated(
+    indices: ChunkedArrayAny, aggregated: ChunkedStruct, /
+) -> ChunkedArrayAny:
+    return pc.invert(_boolean_is_unique(indices, aggregated))
+
+
+BOOLEAN_LENGTH_PRESERVING: Mapping[
+    type[ir.boolean.BooleanFunction], tuple[IntoColumnAgg, BooleanLengthPreserving]
+] = {
+    ir.boolean.IsFirstDistinct: (ir.min, is_in),
+    ir.boolean.IsLastDistinct: (ir.max, is_in),
+    ir.boolean.IsUnique: (ir_min_max, _boolean_is_unique),
+    ir.boolean.IsDuplicated: (ir_min_max, _boolean_is_duplicated),
+}
 
 
 def binary(

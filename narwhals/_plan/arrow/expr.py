@@ -17,11 +17,13 @@ from narwhals._plan.compliant.expr import EagerExpr
 from narwhals._plan.compliant.scalar import EagerScalar
 from narwhals._plan.compliant.typing import namespace
 from narwhals._plan.expressions.boolean import (
+    IsDuplicated,
     IsFirstDistinct,
     IsInExpr,
     IsInSeq,
     IsInSeries,
     IsLastDistinct,
+    IsUnique,
 )
 from narwhals._plan.expressions.functions import NullCount
 from narwhals._utils import Implementation, Version, _StoresNative, not_implemented
@@ -441,9 +443,9 @@ class ArrowExpr(  # type: ignore[misc]
         expr = node.expr
         by = node.partition_by
         if is_function_expr(expr) and isinstance(
-            expr.function, (IsFirstDistinct, IsLastDistinct)
+            expr.function, (IsFirstDistinct, IsLastDistinct, IsUnique, IsDuplicated)
         ):
-            return self._is_first_last_distinct(
+            return self._boolean_length_preserving(
                 expr, frame, name, by, sort_indices=sort_indices
             )
         resolved = frame._grouper.by_irs(*by).agg_irs(expr.alias(name)).resolve(frame)
@@ -462,15 +464,17 @@ class ArrowExpr(  # type: ignore[misc]
             return evaluated
         return self.from_series(evaluated.broadcast(len(frame)).gather(indices))
 
-    def _is_first_last_distinct(
+    def _boolean_length_preserving(
         self,
-        node: FExpr[IsFirstDistinct | IsLastDistinct],
+        node: FExpr[IsFirstDistinct | IsLastDistinct | IsUnique | IsDuplicated],
         frame: Frame,
         name: str,
         partition_by: Seq[ir.ExprIR] = (),
         *,
         sort_indices: pa.UInt64Array | None = None,
     ) -> Self:
+        # NOTE: This subset of functions can be expressed as a mask applied to indices
+        into_column_agg, mask = fn.BOOLEAN_LENGTH_PRESERVING[type(node.function)]
         idx_name = temp.column_name(frame)
         df = frame._with_columns([node.input[0].dispatch(self, frame, name)])
         if sort_indices is not None:
@@ -478,13 +482,16 @@ class ArrowExpr(  # type: ignore[misc]
             df = df._with_native(df.native.add_column(0, idx_name, column))
         else:
             df = df.with_row_index(idx_name)
-        agg = fn.BOOLEAN_GLUE_FUNCTIONS[type(node.function)](idx_name)
+        agg_node = into_column_agg(idx_name)
         if not (partition_by or sort_indices is not None):
-            distinct = df.group_by_names((name,)).agg((ir.named_ir(idx_name, agg),))
+            aggregated = df.group_by_names((name,)).agg(
+                (ir.named_ir(idx_name, agg_node),)
+            )
         else:
-            distinct = df.group_by_agg_irs((ir.col(name), *partition_by), agg)
+            aggregated = df.group_by_agg_irs((ir.col(name), *partition_by), agg_node)
         index = df.to_series().alias(name)
-        return self.from_series(index.is_in(distinct.get_column(idx_name)))
+        final_result = mask(index.native, aggregated.get_column(idx_name).native)
+        return self.from_series(index._with_native(final_result))
 
     # TODO @dangotbanned: top-level, complex-ish nodes
     # - [ ] `map_batches`
@@ -550,20 +557,22 @@ class ArrowExpr(  # type: ignore[misc]
     cum_max = _cumulative
     cum_prod = _cumulative
     cum_sum = _cumulative
-    is_first_distinct = _is_first_last_distinct
-    is_last_distinct = _is_first_last_distinct
+    is_first_distinct = _boolean_length_preserving
+    is_last_distinct = _boolean_length_preserving
+    is_duplicated = _boolean_length_preserving
+    is_unique = _boolean_length_preserving
 
     # TODO @dangotbanned: Plan composing with `functions.cum_*`
     rolling_expr = not_implemented()
 
-    # ewm_mean = not_implemented()  # noqa: ERA001
+    # - https://github.com/narwhals-dev/narwhals/blob/84ce86c618c0103cb08bc63d68a709c424da2106/narwhals/_compliant/series.py#L349-L415
+    # - https://github.com/narwhals-dev/narwhals/blob/84ce86c618c0103cb08bc63d68a709c424da2106/narwhals/_arrow/series.py#L1060-L1076
+    # - https://github.com/narwhals-dev/narwhals/blob/84ce86c618c0103cb08bc63d68a709c424da2106/narwhals/_arrow/series.py#L1130-L1215
     hist_bins = not_implemented()
     hist_bin_count = not_implemented()
     fill_null_with_strategy = not_implemented()
 
-    # I think they might both be possible in a similar way to `_is_first_last_distinct`
-    is_duplicated = not_implemented()
-    is_unique = not_implemented()
+    # ewm_mean = not_implemented()  # noqa: ERA001
 
 
 class ArrowScalar(

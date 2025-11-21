@@ -49,6 +49,11 @@ if TYPE_CHECKING:
             self, native: ChunkedArrayAny, *args: P.args, **kwds: P.kwargs
         ) -> ChunkedArrayAny: ...
 
+    class BooleanLengthPreserving(Protocol):
+        def __call__(
+            self, indices: ChunkedArrayAny, aggregated: ChunkedArrayAny, /
+        ) -> ChunkedArrayAny: ...
+
 
 ScalarT = TypeVar("ScalarT", bound="pa.Scalar[Any]", default="pa.Scalar[Any]")
 ScalarPT_contra = TypeVar(
@@ -151,6 +156,9 @@ ChunkedOrScalarAny: TypeAlias = "ChunkedOrScalar[ScalarAny]"
 ChunkedOrArrayAny: TypeAlias = "ChunkedOrArray[ScalarAny]"
 ChunkedOrArrayT = TypeVar("ChunkedOrArrayT", ChunkedArrayAny, ArrayAny)
 Indices: TypeAlias = "_SizedMultiIndexSelector[ChunkedOrArray[pc.IntegerScalar]]"
+
+ChunkedStruct: TypeAlias = "ChunkedArray[pa.StructScalar]"
+StructArray: TypeAlias = "pa.StructArray | Array[pa.StructScalar]"
 
 Arrow: TypeAlias = "ChunkedOrScalar[ScalarT_co] | Array[ScalarT_co]"
 ArrowAny: TypeAlias = "ChunkedOrScalarAny | ArrayAny"
