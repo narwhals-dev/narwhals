@@ -10,7 +10,7 @@ body:
 - type: markdown 
   attributes:
     value: >
-       ### Before submitting a request, please check if it has already been discused in the  
+       ### Before submitting a request, please check if it has already been discussed in the  
        [list of issues](https://github.com/narwhals-dev/narwhals/issues?q=is%3Aissue+is%3Aclosed%2Bopen+).
 - type: textarea
   attributes:

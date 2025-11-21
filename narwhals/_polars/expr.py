@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Literal
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, cast
 
 import polars as pl
 
@@ -16,19 +16,21 @@ from narwhals._polars.utils import (
     extract_native,
     narwhals_to_native_dtype,
 )
-from narwhals._utils import Implementation, requires
+from narwhals._utils import Implementation, no_default, requires
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Sequence
 
     from typing_extensions import Self
 
     from narwhals._compliant.typing import Accessor
-    from narwhals._expression_parsing import ExprKind, ExprMetadata
+    from narwhals._expression_parsing import ExprMetadata
     from narwhals._polars.dataframe import Method
     from narwhals._polars.namespace import PolarsNamespace
+    from narwhals._polars.series import PolarsSeries
+    from narwhals._typing import NoDefault
     from narwhals._utils import Version
-    from narwhals.typing import IntoDType, ModeKeepStrategy, NumericLiteral
+    from narwhals.typing import IntoDType, ModeKeepStrategy
 
 
 class PolarsExpr:
@@ -36,10 +38,13 @@ class PolarsExpr:
     _implementation: Implementation = Implementation.POLARS
     _version: Version
     _native_expr: pl.Expr
-    _metadata: ExprMetadata | None = None
     _evaluate_output_names: Any
     _alias_output_names: Any
     __call__: Any
+
+    @classmethod
+    def _from_series(cls, series: PolarsSeries) -> Self:
+        return cls(series.native, version=series._version)  # type: ignore[arg-type]
 
     # CompliantExpr + builtin descriptor
     # TODO @dangotbanned: Remove in #2713
@@ -77,9 +82,14 @@ class PolarsExpr:
     def _with_native(self, expr: pl.Expr) -> Self:
         return self.__class__(expr, self._version)
 
-    def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
+    def broadcast(self) -> Self:
         # Let Polars do its thing.
         return self
+
+    @property
+    def _metadata(self) -> ExprMetadata:
+        assert self._opt_metadata is not None  # noqa: S101
+        return cast("ExprMetadata", self._opt_metadata)
 
     def __getattr__(self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
@@ -95,6 +105,14 @@ class PolarsExpr:
     def cast(self, dtype: IntoDType) -> Self:
         dtype_pl = narwhals_to_native_dtype(dtype, self._version)
         return self._with_native(self.native.cast(dtype_pl))
+
+    def clip_lower(self, lower_bound: PolarsExpr) -> Self:
+        lower_native = extract_native(lower_bound)
+        return self._with_native(self.native.clip(lower_native))
+
+    def clip_upper(self, upper_bound: PolarsExpr) -> Self:
+        upper_native = extract_native(upper_bound)
+        return self._with_native(self.native.clip(None, upper_native))
 
     def ewm_mean(
         self,
@@ -125,6 +143,13 @@ class PolarsExpr:
             native = self.native.is_nan()
         else:  # pragma: no cover
             native = pl.when(self.native.is_not_null()).then(self.native.is_nan())
+        return self._with_native(native)
+
+    def is_finite(self) -> Self:
+        if self._backend_version >= (1, 18):
+            native = self.native.is_finite()
+        else:  # pragma: no cover
+            native = pl.when(self.native.is_not_null()).then(self.native.is_finite())
         return self._with_native(native)
 
     def over(self, partition_by: Sequence[str], order_by: Sequence[str]) -> Self:
@@ -192,7 +217,8 @@ class PolarsExpr:
     @requires.backend_version((1,))
     def replace_strict(
         self,
-        old: Sequence[Any] | Mapping[Any, Any],
+        default: PolarsExpr | NoDefault,
+        old: Sequence[Any],
         new: Sequence[Any],
         *,
         return_dtype: IntoDType | None,
@@ -202,14 +228,19 @@ class PolarsExpr:
             if return_dtype
             else None
         )
-        native = self.native.replace_strict(old, new, return_dtype=return_dtype_pl)
+        extra_kwargs = (
+            {} if default is no_default else {"default": extract_native(default)}
+        )
+        native = self.native.replace_strict(
+            old, new, return_dtype=return_dtype_pl, **extra_kwargs
+        )
         return self._with_native(native)
 
-    def __eq__(self, other: object) -> Self:  # type: ignore[override]
-        return self._with_native(self.native.__eq__(extract_native(other)))  # type: ignore[operator]
+    def __eq__(self, other: PolarsExpr) -> Self:  # type: ignore[override]
+        return self._with_native(self.native.__eq__(extract_native(other)))
 
-    def __ne__(self, other: object) -> Self:  # type: ignore[override]
-        return self._with_native(self.native.__ne__(extract_native(other)))  # type: ignore[operator]
+    def __ne__(self, other: PolarsExpr) -> Self:  # type: ignore[override]
+        return self._with_native(self.native.__ne__(extract_native(other)))
 
     def __ge__(self, other: Any) -> Self:
         return self._with_native(self.native.__ge__(extract_native(other)))
@@ -223,11 +254,11 @@ class PolarsExpr:
     def __lt__(self, other: Any) -> Self:
         return self._with_native(self.native.__lt__(extract_native(other)))
 
-    def __and__(self, other: PolarsExpr | bool | Any) -> Self:
-        return self._with_native(self.native.__and__(extract_native(other)))  # type: ignore[operator]
+    def __and__(self, other: PolarsExpr) -> Self:
+        return self._with_native(self.native.__and__(extract_native(other)))
 
-    def __or__(self, other: PolarsExpr | bool | Any) -> Self:
-        return self._with_native(self.native.__or__(extract_native(other)))  # type: ignore[operator]
+    def __or__(self, other: PolarsExpr) -> Self:
+        return self._with_native(self.native.__or__(extract_native(other)))
 
     def __add__(self, other: Any) -> Self:
         return self._with_native(self.native.__add__(extract_native(other)))
@@ -263,46 +294,6 @@ class PolarsExpr:
 
     def cum_count(self, *, reverse: bool) -> Self:
         return self._with_native(self.native.cum_count(reverse=reverse))
-
-    def is_close(
-        self,
-        other: Self | NumericLiteral,
-        *,
-        abs_tol: float,
-        rel_tol: float,
-        nans_equal: bool,
-    ) -> Self:
-        left = self.native
-        right = other.native if isinstance(other, PolarsExpr) else pl.lit(other)
-
-        if self._backend_version < (1, 32, 0):
-            lower_bound = right.abs()
-            tolerance = (left.abs().clip(lower_bound) * rel_tol).clip(abs_tol)
-
-            # Values are close if abs_diff <= tolerance, and both finite
-            abs_diff = (left - right).abs()
-            all_ = pl.all_horizontal
-            is_close = all_((abs_diff <= tolerance), left.is_finite(), right.is_finite())
-
-            # Handle infinity cases: infinities are "close" only if they have the same sign
-            is_same_inf = all_(
-                left.is_infinite(), right.is_infinite(), (left.sign() == right.sign())
-            )
-
-            # Handle nan cases:
-            #   * nans_equals = True => if both values are NaN, then True
-            #   * nans_equals = False => if any value is NaN, then False
-            left_is_nan, right_is_nan = left.is_nan(), right.is_nan()
-            either_nan = left_is_nan | right_is_nan
-            result = (is_close | is_same_inf) & either_nan.not_()
-
-            if nans_equal:
-                result = result | (left_is_nan & right_is_nan)
-        else:
-            result = left.is_close(
-                right, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal
-            )
-        return self._with_native(result)
 
     def mode(self, *, keep: ModeKeepStrategy) -> Self:
         result = self.native.mode()
@@ -341,7 +332,6 @@ class PolarsExpr:
     arg_min: Method[Self]
     arg_true: Method[Self]
     ceil: Method[Self]
-    clip: Method[Self]
     count: Method[Self]
     cum_max: Method[Self]
     cum_min: Method[Self]
@@ -359,7 +349,6 @@ class PolarsExpr:
     head: Method[Self]
     is_between: Method[Self]
     is_duplicated: Method[Self]
-    is_finite: Method[Self]
     is_first_distinct: Method[Self]
     is_in: Method[Self]
     is_last_distinct: Method[Self]
@@ -417,14 +406,14 @@ class PolarsExprStringNamespace(
     def to_titlecase(self) -> PolarsExpr:
         native_expr = self.native
 
-        if BACKEND_VERSION < (1, 5):
+        if BACKEND_VERSION < (1, 35):
             native_result = (
                 native_expr.str.to_lowercase()
-                .str.extract_all(r"[a-z0-9]*[^a-z0-9]*")
+                .str.extract_all(r"[a-z]*[^a-z]*")
                 .list.eval(pl.element().str.to_titlecase())
                 .list.join("")
             )
-        else:
+        else:  # pragma: no cover
             native_result = native_expr.str.to_titlecase()
 
         return self.compliant._with_native(native_result)
@@ -450,6 +439,22 @@ class PolarsExprStringNamespace(
             )
 
         return self.compliant._with_native(native_result)
+
+    def replace(
+        self, value: PolarsExpr, pattern: str, *, literal: bool, n: int
+    ) -> PolarsExpr:
+        value_native = extract_native(value)
+        return self.compliant._with_native(
+            self.native.str.replace(pattern, value_native, literal=literal, n=n)
+        )
+
+    def replace_all(
+        self, value: PolarsExpr, pattern: str, *, literal: bool
+    ) -> PolarsExpr:
+        value_native = extract_native(value)
+        return self.compliant._with_native(
+            self.native.str.replace_all(pattern, value_native, literal=literal)
+        )
 
 
 class PolarsExprCatNamespace(

@@ -57,7 +57,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
         """
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.replace(
-                pattern, self._extract_compliant(value), literal=literal, n=n
+                self._extract_compliant(value), pattern=pattern, literal=literal, n=n
             )
         )
 
@@ -83,7 +83,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
         """
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.replace_all(
-                pattern, self._extract_compliant(value), literal=literal
+                self._extract_compliant(value), pattern, literal=literal
             )
         )
 
@@ -399,17 +399,8 @@ class SeriesStringNamespace(Generic[SeriesT]):
             This is a form of case transform where the first letter of each word is
             capitalized, with the rest of the word in lowercase.
 
-        Warning:
-            Different backends might follow different rules to determine what a "word" is:
-
-            - polars uses **non-alphanumeric** characters to define the word boundaries.
-            - pandas-like and pyarrow use **non-alphabetic** characters to define
-                the word boundaries, matching the behavior of
-                [`str.title`](https://docs.python.org/3/library/stdtypes.html#str.title).
-
-            As an example of such difference, in the former case the string `"with123numbers"`
-            is mapped to `"With123numbers"` (notice lowercase **n** after the digits), while
-            in the latter to `"With123Numbers"` (notice uppercase **N** after the digits).
+            Word boundaries are defined by non-**alphabetic** characters, matching the
+            behavior of [`str.title`](https://docs.python.org/3/library/stdtypes.html#str.title)
 
         Examples:
             >>> import pyarrow as pa

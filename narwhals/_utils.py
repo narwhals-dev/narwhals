@@ -66,14 +66,7 @@ if TYPE_CHECKING:
         TypeIs,
     )
 
-    from narwhals._compliant import (
-        CompliantExpr,
-        CompliantExprT,
-        CompliantFrameT,
-        CompliantSeriesOrNativeExprT_co,
-        CompliantSeriesT,
-        NativeSeriesT_co,
-    )
+    from narwhals._compliant import CompliantExprT, CompliantSeriesT, NativeSeriesT_co
     from narwhals._compliant.any_namespace import NamespaceAccessor
     from narwhals._compliant.typing import (
         Accessor,
@@ -1583,12 +1576,6 @@ def is_compliant_series_int(
     return is_compliant_series(obj) and obj.dtype.is_integer()
 
 
-def is_compliant_expr(
-    obj: CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co] | Any,
-) -> TypeIs[CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co]]:
-    return hasattr(obj, "__narwhals_expr__")
-
-
 def _is_namespace_accessor(obj: _IntoContext) -> TypeIs[NamespaceAccessor[_FullContext]]:
     # NOTE: Only `compliant` has false positives **internally**
     # - https://github.com/narwhals-dev/narwhals/blob/cc69bac35eb8c81a1106969c49bfba9fd569b856/narwhals/_compliant/group_by.py#L44-L49
@@ -1775,7 +1762,11 @@ class not_implemented:  # noqa: N801
             return self
         # NOTE: Prefer not exposing the actual class we're defining in
         # `_implementation` may not be available everywhere
-        who = getattr(instance, "_implementation", self._name_owner)
+        implementation = getattr(instance, "_implementation", Implementation.UNKNOWN)
+        if implementation is not Implementation.UNKNOWN:
+            who = repr(implementation)
+        else:
+            who = self._name_owner
         _raise_not_implemented_error(self._name, who)
         return None  # pragma: no cover
 
@@ -1785,7 +1776,7 @@ class not_implemented:  # noqa: N801
         return self.__get__("raise")
 
     @classmethod
-    def deprecated(cls, message: LiteralString, /) -> Self:
+    def deprecated(cls, message: LiteralString, /) -> Self:  # pragma: no cover
         """Alt constructor, wraps with `@deprecated`.
 
         Arguments:
@@ -2120,3 +2111,17 @@ def extend_bool(
     Stolen from https://github.com/pola-rs/polars/blob/b8bfb07a4a37a8d449d6d1841e345817431142df/py-polars/polars/_utils/various.py#L580-L594
     """
     return (value,) * n_match if isinstance(value, bool) else tuple(value)
+
+
+class _NoDefault(Enum):
+    # "borrowed" from
+    # https://github.com/pandas-dev/pandas/blob/e7859983a814b1823cf26e3b491ae2fa3be47c53/pandas/_libs/lib.pyx#L2736-L2748
+    no_default = "NO_DEFAULT"
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return "<no_default>"
+
+
+# the "no_default" sentinel should typically be used when one of the valid parameter
+# values is None, as otherwise we cannot determine if the caller has set that value.
+no_default = _NoDefault.no_default

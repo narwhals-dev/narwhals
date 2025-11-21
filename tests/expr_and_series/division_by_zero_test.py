@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from typing import Any, Callable
 
 import pytest
@@ -110,9 +109,7 @@ def test_series_rfloordiv_by_zero(
 ) -> None:
     if "polars" in str(constructor_eager) and POLARS_VERSION < (0, 20, 7):
         pytest.skip(reason="bug")
-    if any(
-        x in str(constructor_eager) for x in ("pandas_pyarrow", "modin_pyarrow", "cudf")
-    ) or (
+    if any(x in str(constructor_eager) for x in ("pandas_pyarrow", "modin_pyarrow")) or (
         any(
             x in str(constructor_eager)
             for x in ("pandas_nullable", "pandas_constructor", "modin_constructor")
@@ -133,13 +130,7 @@ def test_expr_rfloordiv_by_zero(
     if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 7):
         pytest.skip(reason="bug")
 
-    if "polars_lazy" in str(constructor) and os.environ.get("NARWHALS_POLARS_GPU"):
-        request.applymarker(
-            pytest.mark.xfail(reason="https://github.com/pola-rs/polars/issues/23365")
-        )
-    if any(
-        x in str(constructor) for x in ("pandas_pyarrow", "modin_pyarrow", "cudf")
-    ) or (
+    if any(x in str(constructor) for x in ("pandas_pyarrow", "modin_pyarrow")) or (
         any(
             x in str(constructor)
             for x in ("pandas_nullable", "pandas_constructor", "modin_constructor")

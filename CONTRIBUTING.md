@@ -185,9 +185,16 @@ If you add code that should be tested, please add tests.
   - Never assume that your data is ordered in any pre-defined way.
   - Never materialise your data (only exception: `collect`).
   - Avoid calling the schema / column names unnecessarily.
-  - For DuckDB, use the Python API as much as possible, only falling
+
+- DuckDB:
+
+  In addition to the above:
+
+  - Use the Python API as much as possible, only falling
     back to SQL as the last resort for operations not yet supported
     in their Python API (e.g. `over`).
+  - Use standard SQL constructs where possible instead of non-standard
+    ones such as `GROUP BY ALL` or `EXCLUDE`.
 
 ### Test Failure Patterns
 
@@ -255,8 +262,10 @@ We can't currently test in CI against cuDF, but you can test it manually in Kagg
 We run both `mypy` and `pyright` in CI. Both of these tools are included when installing Narwhals with the local-dev dependency group.
 
 Run them with:
-- `mypy narwhals tests`
-- `pyright narwhals tests`
+
+```console
+make typing
+```
 
 to verify type completeness / correctness.
 

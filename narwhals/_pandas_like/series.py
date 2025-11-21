@@ -24,12 +24,12 @@ from narwhals._pandas_like.utils import (
     set_index,
 )
 from narwhals._typing_compat import assert_never
-from narwhals._utils import Implementation, is_list_of, parse_version
+from narwhals._utils import Implementation, is_list_of, no_default, parse_version
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_like_series
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
-    from collections.abc import Hashable, Iterable, Iterator, Mapping, Sequence
+    from collections.abc import Hashable, Iterable, Iterator, Sequence
     from types import ModuleType
 
     import pandas as pd
@@ -41,6 +41,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.series import HistData
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
+    from narwhals._typing import NoDefault
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.typing import (
@@ -50,12 +51,10 @@ if TYPE_CHECKING:
         IntoDType,
         ModeKeepStrategy,
         NonNestedLiteral,
-        NumericLiteral,
         PythonLiteral,
         RankMethod,
         RollingInterpolationMethod,
         SizedMultiIndexSelector,
-        TemporalLiteral,
         _1DArray,
         _SliceIndex,
     )
@@ -204,8 +203,10 @@ class PandasLikeSeries(EagerSeries[Any]):
     def _align_full_broadcast(cls, *series: Self) -> Sequence[Self]:
         Series = series[0].__native_namespace__().Series
         lengths = [len(s) for s in series]
-        max_length = max(lengths)
-        idx = series[lengths.index(max_length)].native.index
+        target_length = max(
+            length for length, s in zip(lengths, series) if not s._broadcast
+        )
+        idx = series[lengths.index(target_length)].native.index
         reindexed = []
         for s in series:
             if s._broadcast:
@@ -644,34 +645,58 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     def replace_strict(
         self,
-        old: Sequence[Any] | Mapping[Any, Any],
+        default: PandasLikeSeries | NoDefault,
+        old: Sequence[Any],
         new: Sequence[Any],
         *,
         return_dtype: IntoDType | None,
     ) -> PandasLikeSeries:
-        tmp_name = f"{self.name}_tmp"
-        dtype_backend = get_dtype_backend(self.native.dtype, self._implementation)
+        namespace = self.__native_namespace__()
+        array_funcs = self._array_funcs
+        native = self.native
+        impl = self._implementation
+
+        dtype_backend = get_dtype_backend(native.dtype, impl)
         dtype = (
-            narwhals_to_native_dtype(
-                return_dtype, dtype_backend, self._implementation, self._version
-            )
+            narwhals_to_native_dtype(return_dtype, dtype_backend, impl, self._version)
             if return_dtype
             else None
         )
-        namespace = self.__native_namespace__()
-        other = namespace.DataFrame(
-            {self.name: old, tmp_name: namespace.Series(new, dtype=dtype)}
-        )
-        result = self._with_native(
-            self.native.to_frame().merge(other, on=self.name, how="left")[tmp_name]
-        ).alias(self.name)
-        if result.is_null().sum() != self.is_null().sum():
-            msg = (
-                "replace_strict did not replace all non-null values.\n\n"
-                f"The following did not get replaced: {self.filter(~self.is_null() & result.is_null()).unique(maintain_order=False).to_list()}"
-            )
-            raise ValueError(msg)
-        return result
+
+        # Use pandas Index.get_indexer to find positions of values in old
+        idxs = namespace.Index(old).get_indexer(native)
+        was_matched = idxs >= 0
+
+        new_series = namespace.Series(new, dtype=dtype, name=self.name)
+        if return_dtype is None and dtype_backend is not None:
+            new_series = new_series.convert_dtypes(dtype_backend=dtype_backend)
+
+        # Take values from new_series, using index or 0 (will be masked for unmatched)
+        native_result = new_series.iloc[array_funcs.where(was_matched, idxs, 0)]
+        native_result.index = native.index
+
+        if default is no_default:
+            # Check that all non-null input values were matched
+            unmatched_mask = native.notna() & (~was_matched)
+            if unmatched_mask.any():
+                unmatched_values = (
+                    self._with_native(native[unmatched_mask])
+                    .unique(maintain_order=False)
+                    .to_list()
+                )
+                msg = (
+                    "replace_strict did not replace all non-null values.\n\n"
+                    f"The following did not get replaced: {unmatched_values}"
+                )
+                raise InvalidOperationError(msg)
+            # For unmatched values (nulls in original), set to null
+            native_result = native_result.where(was_matched, None)
+        else:
+            # For unmatched values, use default
+            _, default_native = align_and_extract_native(self, default)
+            native_result = native_result.where(was_matched, default_native)
+
+        return self._with_native(native_result)
 
     def sort(self, *, descending: bool, nulls_last: bool) -> PandasLikeSeries:
         na_position = "last" if nulls_last else "first"
@@ -876,21 +901,9 @@ class PandasLikeSeries(EagerSeries[Any]):
     def gather_every(self, n: int, offset: int) -> Self:
         return self._with_native(self.native.iloc[offset::n])
 
-    def clip(
-        self,
-        lower_bound: Self | NumericLiteral | TemporalLiteral | None,
-        upper_bound: Self | NumericLiteral | TemporalLiteral | None,
-    ) -> Self:
-        _, lower = (
-            align_and_extract_native(self, lower_bound)
-            if lower_bound is not None
-            else (None, None)
-        )
-        _, upper = (
-            align_and_extract_native(self, upper_bound)
-            if upper_bound is not None
-            else (None, None)
-        )
+    def clip(self, lower_bound: Self, upper_bound: Self) -> Self:
+        _, lower = align_and_extract_native(self, lower_bound)
+        _, upper = align_and_extract_native(self, upper_bound)
         impl = self._implementation
         kwargs: dict[str, Any] = {"axis": 0} if impl.is_modin() else {}
         result = self.native
@@ -907,6 +920,36 @@ class PandasLikeSeries(EagerSeries[Any]):
                 upper = None
 
         return self._with_native(result.clip(lower, upper, **kwargs))
+
+    def clip_lower(self, lower_bound: Self) -> Self:
+        _, lower = align_and_extract_native(self, lower_bound)
+        impl = self._implementation
+        kwargs: dict[str, Any] = {"axis": 0} if impl.is_modin() else {}
+        result = self.native
+
+        if not impl.is_pandas() and self._is_native(lower):  # pragma: no cover
+            # Workaround for both cudf and modin when clipping with a series
+            #   * cudf: https://github.com/rapidsai/cudf/issues/17682
+            #   * modin: https://github.com/modin-project/modin/issues/7415
+            result = result.where(result >= lower, lower)
+            lower = None
+
+        return self._with_native(result.clip(lower, **kwargs))
+
+    def clip_upper(self, upper_bound: Self) -> Self:
+        _, upper = align_and_extract_native(self, upper_bound)
+        impl = self._implementation
+        kwargs: dict[str, Any] = {"axis": 0} if impl.is_modin() else {}
+        result = self.native
+
+        if not impl.is_pandas() and self._is_native(upper):  # pragma: no cover
+            # Workaround for both cudf and modin when clipping with a series
+            #   * cudf: https://github.com/rapidsai/cudf/issues/17682
+            #   * modin: https://github.com/modin-project/modin/issues/7415
+            result = result.where(result <= upper, upper)
+            upper = None
+
+        return self._with_native(result.clip(upper=upper, **kwargs))
 
     def to_arrow(self) -> pa.Array[Any]:
         if self._implementation is Implementation.CUDF:

@@ -11,6 +11,7 @@ from narwhals._polars.utils import (
     FROM_DICTS_ACCEPTS_MAPPINGS,
     catch_polars_exception,
     extract_args_kwargs,
+    narwhals_to_native_dtype,
     native_to_narwhals_dtype,
 )
 from narwhals._utils import (
@@ -275,9 +276,8 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
         if order_by is None:
             result = frame.with_row_index(name)
         else:
-            end = pl.count() if self._backend_version < (0, 20, 5) else pl.len()
             result = frame.select(
-                pl.int_range(start=0, end=end).sort_by(order_by).alias(name), pl.all()
+                pl.int_range(pl.len()).over(order_by=order_by).alias(name), pl.all()
             )
 
         return self._with_native(result)
@@ -316,11 +316,18 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | None,
+        schema: IntoSchema | Mapping[str, DType | None] | None,
     ) -> Self:
-        from narwhals.schema import Schema
-
-        pl_schema = Schema(schema).to_polars() if schema is not None else schema
+        pl_schema = (
+            {
+                key: narwhals_to_native_dtype(dtype, context._version)
+                if dtype is not None
+                else None
+                for (key, dtype) in schema.items()
+            }
+            if schema
+            else None
+        )
         return cls.from_native(pl.from_dict(data, pl_schema), context=context)
 
     @classmethod
@@ -330,11 +337,18 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | None,
+        schema: IntoSchema | Mapping[str, DType | None] | None,
     ) -> Self:
-        from narwhals.schema import Schema
-
-        pl_schema = Schema(schema).to_polars() if schema is not None else schema
+        pl_schema = (
+            {
+                key: narwhals_to_native_dtype(dtype, context._version)
+                if dtype is not None
+                else None
+                for (key, dtype) in schema.items()
+            }
+            if schema
+            else None
+        )
         if not data:
             native = pl.DataFrame(schema=pl_schema)
         elif FROM_DICTS_ACCEPTS_MAPPINGS or isinstance(data[0], dict):
