@@ -125,9 +125,6 @@ def test_empty_scalar_reduction_with_columns(
 
 
 def test_empty_scalar_reduction_series(constructor_eager: ConstructorEager) -> None:
-    if "bodo" in str(constructor_eager):
-        # BODO fail
-        pytest.skip()
     data = {
         "str": [*"abcde"],
         "int": [0, 1, 2, 3, 4],
