@@ -64,7 +64,12 @@ if TYPE_CHECKING:
     )
     from narwhals._plan.options import RankOptions, SortMultipleOptions, SortOptions
     from narwhals._plan.typing import OneOrSeq, Seq
-    from narwhals.typing import ClosedInterval, IntoArrowSchema, PythonLiteral
+    from narwhals.typing import (
+        ClosedInterval,
+        FillNullStrategy,
+        IntoArrowSchema,
+        PythonLiteral,
+    )
 
 BACKEND_VERSION = Implementation.PYARROW._backend_version()
 """Static backend version for `pyarrow`."""
@@ -426,6 +431,36 @@ def preserve_nulls(
 
 
 drop_nulls = t.cast("VectorFunction[...]", pc.drop_null)
+
+_FILL_NULL_STRATEGY: Mapping[FillNullStrategy, UnaryFunction] = {
+    "forward": pc.fill_null_forward,
+    "backward": pc.fill_null_backward,
+}
+
+
+def fill_null_with_strategy(
+    native: ChunkedArrayAny, strategy: FillNullStrategy, limit: int | None = None
+) -> ChunkedArrayAny:
+    if limit is None:
+        return _FILL_NULL_STRATEGY[strategy](native)
+    import numpy as np  # ignore-banned-import
+
+    arr = native
+    valid_mask = pc.is_valid(arr)
+    indices = pa.array(np.arange(len(arr)), type=pa.int64())
+    if strategy == "forward":
+        valid_index = np.maximum.accumulate(np.where(valid_mask, indices, -1))
+        distance = indices - valid_index
+    else:
+        valid_index = np.minimum.accumulate(
+            np.where(valid_mask[::-1], indices[::-1], len(arr))
+        )[::-1]
+        distance = valid_index - indices
+    return pc.if_else(  # type: ignore[no-any-return]
+        pc.and_(pc.is_null(arr), pc.less_equal(distance, lit(limit))),  # pyright: ignore[reportArgumentType, reportCallIssue]
+        arr.take(valid_index),
+        arr,
+    )
 
 
 def is_between(

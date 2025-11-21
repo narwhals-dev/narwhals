@@ -570,7 +570,14 @@ class ArrowExpr(  # type: ignore[misc]
     # - https://github.com/narwhals-dev/narwhals/blob/84ce86c618c0103cb08bc63d68a709c424da2106/narwhals/_arrow/series.py#L1130-L1215
     hist_bins = not_implemented()
     hist_bin_count = not_implemented()
-    fill_null_with_strategy = not_implemented()
+
+    def fill_null_with_strategy(
+        self, node: FExpr[F.FillNullWithStrategy], frame: Frame, name: str
+    ) -> Self:
+        native = self._dispatch_expr(node.input[0], frame, name).native
+        strategy, limit = node.function.strategy, node.function.limit
+        func = fn.fill_null_with_strategy
+        return self._with_native(func(native, strategy, limit), name)
 
     # ewm_mean = not_implemented()  # noqa: ERA001
 

@@ -75,28 +75,30 @@ NumericOrTemporalScalarT = TypeVar(
 
 class UnaryFunction(Protocol[ScalarPT_contra, ScalarRT_co]):
     @overload
-    def __call__(self, data: ScalarPT_contra, *args: Any, **kwds: Any) -> ScalarRT_co: ...
+    def __call__(
+        self, data: ScalarPT_contra, /, *args: Any, **kwds: Any
+    ) -> ScalarRT_co: ...
 
     @overload
     def __call__(
-        self, data: ChunkedArray[ScalarPT_contra], *args: Any, **kwds: Any
+        self, data: ChunkedArray[ScalarPT_contra], /, *args: Any, **kwds: Any
     ) -> ChunkedArray[ScalarRT_co]: ...
 
     @overload
     def __call__(
-        self, data: ChunkedOrScalar[ScalarPT_contra], *args: Any, **kwds: Any
+        self, data: ChunkedOrScalar[ScalarPT_contra], /, *args: Any, **kwds: Any
     ) -> ChunkedOrScalar[ScalarRT_co]: ...
     @overload
     def __call__(
-        self, data: Array[ScalarPT_contra], *args: Any, **kwds: Any
+        self, data: Array[ScalarPT_contra], /, *args: Any, **kwds: Any
     ) -> Array[ScalarRT_co]: ...
     @overload
     def __call__(
-        self, data: ChunkedOrArray[ScalarPT_contra], *args: Any, **kwds: Any
+        self, data: ChunkedOrArray[ScalarPT_contra], /, *args: Any, **kwds: Any
     ) -> ChunkedOrArray[ScalarRT_co]: ...
 
     def __call__(
-        self, data: Arrow[ScalarPT_contra], *args: Any, **kwds: Any
+        self, data: Arrow[ScalarPT_contra], /, *args: Any, **kwds: Any
     ) -> Arrow[ScalarRT_co]: ...
 
 
