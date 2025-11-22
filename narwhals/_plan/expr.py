@@ -24,7 +24,7 @@ from narwhals._plan.options import (
     SortOptions,
     rolling_options,
 )
-from narwhals._utils import Version
+from narwhals._utils import Version, no_default
 from narwhals.exceptions import ComputeError
 
 if TYPE_CHECKING:
@@ -42,6 +42,7 @@ if TYPE_CHECKING:
     from narwhals._plan.expressions.temporal import ExprDateTimeNamespace
     from narwhals._plan.meta import MetaNamespace
     from narwhals._plan.typing import IntoExpr, IntoExprColumn, OneOrIterable, Seq, Udf
+    from narwhals._typing import NoDefault
     from narwhals.typing import (
         ClosedInterval,
         FillNullStrategy,
@@ -347,16 +348,18 @@ class Expr:
         )
         return self._with_unary(F.EwmMean(options=options))
 
+    # TODO @dangotbanned: Update to support `default`
     def replace_strict(
         self,
         old: Sequence[Any] | Mapping[Any, Any],
-        new: Sequence[Any] | None = None,
+        new: Sequence[Any] | NoDefault = no_default,
         *,
+        default: IntoExpr | NoDefault = no_default,
         return_dtype: IntoDType | None = None,
     ) -> Self:
         before: Seq[Any]
         after: Seq[Any]
-        if new is None:
+        if new is no_default:
             if not isinstance(old, Mapping):
                 msg = "`new` argument is required if `old` argument is not a Mapping type"
                 raise TypeError(msg)
@@ -370,6 +373,14 @@ class Expr:
             after = tuple(new)
         if return_dtype is not None:
             return_dtype = common.into_dtype(return_dtype)
+
+        if default is no_default:
+            ...
+        else:
+            default_ir = parse_into_expr_ir(default, str_as_lit=True)
+            msg = f"replace_strict(default={default_ir!r})"
+            raise NotImplementedError(msg)
+
         function = F.ReplaceStrict(old=before, new=after, return_dtype=return_dtype)
         return self._with_unary(function)
 
