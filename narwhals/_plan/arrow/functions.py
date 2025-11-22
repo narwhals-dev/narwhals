@@ -464,19 +464,20 @@ def _fill_null_forward_limit(native: ChunkedArrayAny, limit: int) -> ChunkedArra
     # > this algorithm first finds the indices of the valid values to fill all the null value positions
     # > then it calculates the distance of each new index and the original index
     # > if the distance is equal to or less than the limit and the original value is null, it is replaced
-    valid_mask = native.is_valid()
-    length = len(native)
+    SENTINEL = lit(-1)  # noqa: N806
+    is_not_null = native.is_valid()
     # TODO @dangotbanned: Can we do this *without* generating a range?
-    indices = int_range(length, chunked=False)
-    valid_index_or_sentinel = when_then(valid_mask, indices, -1)
+    index = int_range(len(native), chunked=False)
     # TODO @dangotbanned: Can we do this *without* using a cumulative function?
-    almost_valid_index = cum_max(valid_index_or_sentinel)
+    index_not_null_almost = cum_max(when_then(is_not_null, index, SENTINEL))
     # NOTE: The correction here is for nulls at either end of the array
     # They should be preserved when the fill direction would need an extra element
-    valid_index = when_then(not_eq(almost_valid_index, lit(-1)), almost_valid_index)
-    distance = sub(indices, valid_index)
-    preserve = or_(valid_mask, gt(distance, lit(limit)))
-    return when_then(preserve, native, native.take(valid_index))
+    index_not_null = when_then(
+        not_eq(index_not_null_almost, SENTINEL), index_not_null_almost
+    )
+    distance = sub(index, index_not_null)
+    preserve = or_(is_not_null, gt(distance, lit(limit)))
+    return when_then(preserve, native, native.take(index_not_null))
 
 
 def fill_null_with_strategy(
