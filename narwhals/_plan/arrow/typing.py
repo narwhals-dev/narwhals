@@ -67,9 +67,7 @@ ScalarRT_co = TypeVar(
 )
 NumericOrTemporalScalar: TypeAlias = "pc.NumericOrTemporalScalar"
 NumericOrTemporalScalarT = TypeVar(
-    "NumericOrTemporalScalarT",
-    bound=NumericOrTemporalScalar,
-    default=NumericOrTemporalScalar,
+    "NumericOrTemporalScalarT", bound=NumericOrTemporalScalar, default="pc.NumericScalar"
 )
 
 
@@ -104,31 +102,52 @@ class UnaryFunction(Protocol[ScalarPT_contra, ScalarRT_co]):
 
 class BinaryFunction(Protocol[ScalarPT_contra, ScalarRT_co]):
     @overload
-    def __call__(self, x: ScalarPT_contra, y: ScalarPT_contra, /) -> ScalarRT_co: ...
-
-    @overload
     def __call__(
         self, x: ChunkedArray[ScalarPT_contra], y: ChunkedArray[ScalarPT_contra], /
     ) -> ChunkedArray[ScalarRT_co]: ...
-
     @overload
     def __call__(
-        self, x: ScalarPT_contra, y: ChunkedArray[ScalarPT_contra], /
-    ) -> ChunkedArray[ScalarRT_co]: ...
-
+        self, x: Array[ScalarPT_contra], y: Array[ScalarPT_contra], /
+    ) -> Array[ScalarRT_co]: ...
+    @overload
+    def __call__(self, x: ScalarPT_contra, y: ScalarPT_contra, /) -> ScalarRT_co: ...
     @overload
     def __call__(
         self, x: ChunkedArray[ScalarPT_contra], y: ScalarPT_contra, /
     ) -> ChunkedArray[ScalarRT_co]: ...
-
+    @overload
+    def __call__(
+        self, x: Array[ScalarPT_contra], y: ScalarPT_contra, /
+    ) -> Array[ScalarRT_co]: ...
+    @overload
+    def __call__(
+        self, x: ScalarPT_contra, y: ChunkedArray[ScalarPT_contra], /
+    ) -> ChunkedArray[ScalarRT_co]: ...
+    @overload
+    def __call__(
+        self, x: ScalarPT_contra, y: Array[ScalarPT_contra], /
+    ) -> Array[ScalarRT_co]: ...
+    @overload
+    def __call__(
+        self, x: ChunkedArray[ScalarPT_contra], y: Array[ScalarPT_contra], /
+    ) -> ChunkedArray[ScalarRT_co]: ...
+    @overload
+    def __call__(
+        self, x: Array[ScalarPT_contra], y: ChunkedArray[ScalarPT_contra], /
+    ) -> ChunkedArray[ScalarRT_co]: ...
     @overload
     def __call__(
         self, x: ChunkedOrScalar[ScalarPT_contra], y: ChunkedOrScalar[ScalarPT_contra], /
     ) -> ChunkedOrScalar[ScalarRT_co]: ...
 
+    @overload
     def __call__(
-        self, x: ChunkedOrScalar[ScalarPT_contra], y: ChunkedOrScalar[ScalarPT_contra], /
-    ) -> ChunkedOrScalar[ScalarRT_co]: ...
+        self, x: Arrow[ScalarPT_contra], y: Arrow[ScalarPT_contra], /
+    ) -> Arrow[ScalarRT_co]: ...
+
+    def __call__(
+        self, x: Arrow[ScalarPT_contra], y: Arrow[ScalarPT_contra], /
+    ) -> Arrow[ScalarRT_co]: ...
 
 
 class BinaryComp(
@@ -164,6 +183,11 @@ StructArray: TypeAlias = "pa.StructArray | Array[pa.StructScalar]"
 
 Arrow: TypeAlias = "ChunkedOrScalar[ScalarT_co] | Array[ScalarT_co]"
 ArrowAny: TypeAlias = "ChunkedOrScalarAny | ArrayAny"
+SameArrowT = TypeVar("SameArrowT", ChunkedArrayAny, ArrayAny, ScalarAny)
+ArrowT = TypeVar("ArrowT", bound=ArrowAny)
+Predicate: TypeAlias = "Arrow[pa.BooleanScalar]"
+"""Any `pyarrow` container that wraps boolean."""
+
 NativeScalar: TypeAlias = ScalarAny
 BinOp: TypeAlias = Callable[..., ChunkedOrScalarAny]
 StoresNativeT_co = TypeVar(

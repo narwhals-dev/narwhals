@@ -16,6 +16,7 @@ from narwhals._arrow.utils import (
     floordiv_compat as floordiv,
 )
 from narwhals._plan import expressions as ir
+from narwhals._plan._guards import is_non_nested_literal
 from narwhals._plan.arrow import options as pa_options
 from narwhals._plan.expressions import functions as F, operators as ops
 from narwhals._utils import Implementation
@@ -32,7 +33,9 @@ if TYPE_CHECKING:
         Array,
         ArrayAny,
         ArrowAny,
+        ArrowT,
         BinaryComp,
+        BinaryFunction,
         BinaryLogical,
         BinaryNumericTemporal,
         BinOp,
@@ -53,6 +56,8 @@ if TYPE_CHECKING:
         IntegerType,
         LargeStringType,
         NativeScalar,
+        Predicate,
+        SameArrowT,
         Scalar,
         ScalarAny,
         ScalarT,
@@ -68,6 +73,7 @@ if TYPE_CHECKING:
         ClosedInterval,
         FillNullStrategy,
         IntoArrowSchema,
+        NonNestedLiteral,
         PythonLiteral,
     )
 
@@ -118,8 +124,9 @@ lt = t.cast("BinaryComp", pc.less)
 
 
 add = t.cast("BinaryNumericTemporal", pc.add)
-sub = pc.subtract
+sub = t.cast("BinaryNumericTemporal", pc.subtract)
 multiply = pc.multiply
+power = t.cast("BinaryFunction[pc.NumericScalar, pc.NumericScalar]", pc.power)
 
 
 def truediv(lhs: Any, rhs: Any) -> Any:
@@ -241,6 +248,26 @@ def struct_field(
     return tuple(func(native, name) for name in (field, *fields))
 
 
+@t.overload
+def when_then(
+    predicate: Predicate, then: SameArrowT, otherwise: SameArrowT
+) -> SameArrowT: ...
+@t.overload
+def when_then(
+    predicate: Predicate, then: ArrowT, otherwise: NonNestedLiteral = ...
+) -> ArrowT: ...
+@t.overload
+def when_then(
+    predicate: Predicate, then: ArrowAny, otherwise: ArrowAny | NonNestedLiteral = None
+) -> Incomplete: ...
+def when_then(
+    predicate: Predicate, then: ArrowAny, otherwise: ArrowAny | NonNestedLiteral = None
+) -> Incomplete:
+    if is_non_nested_literal(otherwise):
+        otherwise = lit(otherwise, then.type)
+    return pc.if_else(predicate, then, otherwise)
+
+
 def any_(native: Any) -> pa.BooleanScalar:
     return pc.any(native, min_count=0)
 
@@ -267,7 +294,7 @@ min_ = pc.min
 min_horizontal = pc.min_element_wise
 max_ = pc.max
 max_horizontal = pc.max_element_wise
-mean = pc.mean
+mean = t.cast("Callable[[ChunkedOrArray[pc.NumericScalar]], pa.DoubleScalar]", pc.mean)
 count = pc.count
 median = pc.approximate_median
 std = pc.stddev
@@ -287,7 +314,7 @@ def mode_any(native: ChunkedArrayAny) -> NativeScalar:
 
 
 def kurtosis_skew(
-    native: ChunkedOrArrayAny, function: Literal["kurtosis", "skew"], /
+    native: ChunkedArray[pc.NumericScalar], function: Literal["kurtosis", "skew"], /
 ) -> NativeScalar:
     result: NativeScalar
     if HAS_KURTOSIS_SKEW:
@@ -304,13 +331,13 @@ def kurtosis_skew(
             result = lit(0.0, F64)
         else:
             m = sub(non_null, mean(non_null))
-            m2 = mean(pc.power(m, lit(2)))
+            m2 = mean(power(m, lit(2)))
             if function == "kurtosis":
-                m4 = mean(pc.power(m, lit(4)))
-                result = sub(pc.divide(m4, pc.power(m2, lit(2))), lit(3))
+                m4 = mean(power(m, lit(4)))
+                result = sub(pc.divide(m4, power(m2, lit(2))), lit(3))
             else:
-                m3 = mean(pc.power(m, lit(3)))
-                result = pc.divide(m3, pc.power(m2, lit(1.5)))
+                m3 = mean(power(m, lit(3)))
+                result = pc.divide(m3, power(m2, lit(1.5)))
     return result
 
 
@@ -418,16 +445,10 @@ def null_count(native: ChunkedOrArrayAny) -> pa.Int64Scalar:
     return pc.count(native, mode="only_null")
 
 
-def has_nulls(native: ChunkedOrArrayAny) -> bool:
-    return bool(native.null_count)
-
-
 def preserve_nulls(
     before: ChunkedOrArrayAny, after: ChunkedOrArrayT, /
 ) -> ChunkedOrArrayT:
-    if has_nulls(before):
-        after = pc.if_else(before.is_null(), lit(None, after.type), after)
-    return after
+    return when_then(is_not_null(before), after) if before.null_count else after
 
 
 drop_nulls = t.cast("VectorFunction[...]", pc.drop_null)
@@ -443,23 +464,34 @@ def fill_null_with_strategy(
 ) -> ChunkedArrayAny:
     if limit is None:
         return _FILL_NULL_STRATEGY[strategy](native)
-    import numpy as np  # ignore-banned-import
+    # NOTE: Original impl comment by @IsaiasGutierrezCruz
+    # > this algorithm first finds the indices of the valid values to fill all the null value positions
+    # > then it calculates the distance of each new index and the original index
+    # > if the distance is equal to or less than the limit and the original value is null, it is replaced
 
-    arr = native
-    valid_mask = pc.is_valid(arr)
-    indices = pa.array(np.arange(len(arr)), type=pa.int64())
+    # TODO @dangotbanned: Return early if we don't have nulls
+    # TODO @dangotbanned: Fastpaths for length 1 (and 0 if not covered by above)
+    # TODO @dangotbanned: Can we do this *without* generating a range?
+    # TODO @dangotbanned: Can we do this *without* using a cumulative function?
+    valid_mask = native.is_valid()
+    length = len(native)
+    indices = int_range(length, chunked=False)
     if strategy == "forward":
-        valid_index = np.maximum.accumulate(np.where(valid_mask, indices, -1))
-        distance = indices - valid_index
+        valid_index_or_sentinel = when_then(valid_mask, indices, -1)
+        valid_index = cum_max(valid_index_or_sentinel)
+        distance = sub(indices, valid_index)
     else:
-        valid_index = np.minimum.accumulate(
-            np.where(valid_mask[::-1], indices[::-1], len(arr))
-        )[::-1]
-        distance = valid_index - indices
-    return pc.if_else(  # type: ignore[no-any-return]
-        pc.and_(pc.is_null(arr), pc.less_equal(distance, lit(limit))),  # pyright: ignore[reportArgumentType, reportCallIssue]
-        arr.take(valid_index),
-        arr,
+        # TODO @dangotbanned: Every reverse is a full-copy, try to avoid it
+        # - Does this really need 3x `reverse`?
+        # - Can we generate any of these in the desired to start with?
+        valid_index_or_sentinel = when_then(reverse(valid_mask), reverse(indices), length)  # type: ignore[assignment]
+        valid_index = reverse(cum_min(valid_index_or_sentinel))
+        distance = sub(valid_index, indices)
+    # TODO @dangotbanned: Rewrite this to reuse the `is_valid` we have already as the predicate
+    return when_then(
+        and_(native.is_null(), lt_eq(distance, lit(limit))),
+        native.take(valid_index),
+        native,
     )
 
 
@@ -470,7 +502,7 @@ def is_between(
     closed: ClosedInterval,
 ) -> ChunkedOrScalar[pa.BooleanScalar]:
     fn_lhs, fn_rhs = _IS_BETWEEN[closed]
-    return and_(fn_lhs(native, lower), fn_rhs(native, upper))
+    return and_(fn_lhs(native, lower), fn_rhs(native, upper))  # type: ignore[no-any-return]
 
 
 @t.overload
