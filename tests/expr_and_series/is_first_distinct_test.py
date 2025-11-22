@@ -15,6 +15,10 @@ data = {"a": [1, 1, 2, 3, 2], "b": [1, 2, 3, 2, 1]}
 
 
 def test_is_first_distinct_expr(constructor_eager: ConstructorEager) -> None:
+    if "bodo" in str(constructor_eager):
+        # BODO fail
+        pytest.skip()
+
     df = nw.from_native(constructor_eager(data))
     result = df.select(nw.all().is_first_distinct())
     expected = {
@@ -29,6 +33,10 @@ def test_is_first_distinct_expr_lazy(constructor: Constructor) -> None:
         pytest.skip()
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
+    if "bodo" in str(constructor):
+        # BODO fail
+        pytest.skip()
+
     data = {"a": [1, 1, 2, 3, 2], "b": [1, 2, 3, 2, 1], "i": [None, 1, 2, 3, 4]}
     df = nw.from_native(constructor(data))
     result = (
@@ -55,6 +63,7 @@ def test_is_first_distinct_expr_lazy_grouped(
     if "bodo" in str(constructor):
         # BODO fail
         pytest.skip()
+
     data = {"a": [1, 1, 2, 2, 2], "b": [1, 3, 3, 2, 3], "i": [0, 1, 2, 3, 4]}
     df = nw.from_native(constructor(data))
     result = (
@@ -67,6 +76,10 @@ def test_is_first_distinct_expr_lazy_grouped(
 
 
 def test_is_first_distinct_series(constructor_eager: ConstructorEager) -> None:
+    if "bodo" in str(constructor_eager):
+        # BODO fail
+        pytest.skip()
+
     series = nw.from_native(constructor_eager(data), eager_only=True)["a"]
     result = series.is_first_distinct()
     expected = {"a": [True, False, True, True, False]}

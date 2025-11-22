@@ -75,7 +75,7 @@ def test_categorical(request: pytest.FixtureRequest, constructor: Constructor) -
         request.applymarker(pytest.mark.xfail)
     if "bodo" in str(constructor):
         # BODO fail
-        pytest.skip()
+        pytest.skip()  # causes test in coalesce to hang
 
     expected = {"b": ["a", "b", "c"]}
 

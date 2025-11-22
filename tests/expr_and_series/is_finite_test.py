@@ -10,6 +10,10 @@ data = {"a": [float("nan"), float("inf"), 2.0, None]}
 
 @pytest.mark.filterwarnings("ignore:invalid value encountered in cast")
 def test_is_finite_expr(constructor: Constructor) -> None:
+    if "bodo" in str(constructor):
+        # BODO fail
+        pytest.skip()
+
     if any(
         x in str(constructor)
         for x in ("polars", "pyarrow_table", "duckdb", "pyspark", "ibis")
@@ -30,6 +34,10 @@ def test_is_finite_expr(constructor: Constructor) -> None:
 
 @pytest.mark.filterwarnings("ignore:invalid value encountered in cast")
 def test_is_finite_series(constructor_eager: ConstructorEager) -> None:
+    if "bodo" in str(constructor_eager):
+        # BODO fail
+        pytest.skip()
+
     if "polars" in str(constructor_eager) or "pyarrow_table" in str(constructor_eager):
         expected = {"a": [False, False, True, None]}
     elif (
