@@ -459,42 +459,36 @@ _FILL_NULL_STRATEGY: Mapping[FillNullStrategy, UnaryFunction] = {
 }
 
 
-def fill_null_with_strategy(
-    native: ChunkedArrayAny, strategy: FillNullStrategy, limit: int | None = None
-) -> ChunkedArrayAny:
-    if limit is None:
-        return _FILL_NULL_STRATEGY[strategy](native)
+def _fill_null_forward_limit(native: ChunkedArrayAny, limit: int) -> ChunkedArrayAny:
     # NOTE: Original impl comment by @IsaiasGutierrezCruz
     # > this algorithm first finds the indices of the valid values to fill all the null value positions
     # > then it calculates the distance of each new index and the original index
     # > if the distance is equal to or less than the limit and the original value is null, it is replaced
-
-    # TODO @dangotbanned: Return early if we don't have nulls
-    # TODO @dangotbanned: Fastpaths for length 1 (and 0 if not covered by above)
-    # TODO @dangotbanned: Can we do this *without* generating a range?
-    # TODO @dangotbanned: Can we do this *without* using a cumulative function?
     valid_mask = native.is_valid()
     length = len(native)
+    # TODO @dangotbanned: Can we do this *without* generating a range?
     indices = int_range(length, chunked=False)
-    if strategy == "forward":
-        valid_index_or_sentinel = when_then(valid_mask, indices, -1)
-        almost_valid_index = cum_max(valid_index_or_sentinel)
-        # NOTE: The correction here is for nulls at either end of the array
-        # They should be preserved when the fill direction would need an extra element
-        valid_index = when_then(not_eq(almost_valid_index, lit(-1)), almost_valid_index)
-        distance = sub(indices, valid_index)
-    else:
-        # TODO @dangotbanned: Every reverse is a full-copy, try to avoid it
-        # - Does this really need 3x `reverse`?
-        # - Can we generate any of these in the desired to start with?
-        valid_index_or_sentinel = when_then(reverse(valid_mask), reverse(indices), length)  # type: ignore[assignment]
-        almost_valid_index = reverse(cum_min(valid_index_or_sentinel))
-        valid_index = when_then(
-            not_eq(almost_valid_index, lit(length)), almost_valid_index
-        )
-        distance = sub(valid_index, indices)
+    valid_index_or_sentinel = when_then(valid_mask, indices, -1)
+    # TODO @dangotbanned: Can we do this *without* using a cumulative function?
+    almost_valid_index = cum_max(valid_index_or_sentinel)
+    # NOTE: The correction here is for nulls at either end of the array
+    # They should be preserved when the fill direction would need an extra element
+    valid_index = when_then(not_eq(almost_valid_index, lit(-1)), almost_valid_index)
+    distance = sub(indices, valid_index)
     preserve = or_(valid_mask, gt(distance, lit(limit)))
     return when_then(preserve, native, native.take(valid_index))
+
+
+def fill_null_with_strategy(
+    native: ChunkedArrayAny, strategy: FillNullStrategy, limit: int | None = None
+) -> ChunkedArrayAny:
+    # TODO @dangotbanned: Return early if we don't have nulls
+    # TODO @dangotbanned: Fastpaths for length 1 (and 0 if not covered by above)
+    if limit is None:
+        return _FILL_NULL_STRATEGY[strategy](native)
+    if strategy == "forward":
+        return _fill_null_forward_limit(native, limit)
+    return reverse(_fill_null_forward_limit(reverse(native), limit))
 
 
 def is_between(
