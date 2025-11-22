@@ -493,12 +493,8 @@ def fill_null_with_strategy(
             not_eq(almost_valid_index, lit(length)), almost_valid_index
         )
         distance = sub(valid_index, indices)
-    # TODO @dangotbanned: Rewrite this to reuse the `is_valid` we have already as the predicate
-    return when_then(
-        and_(native.is_null(), lt_eq(distance, lit(limit))),
-        native.take(valid_index),
-        native,
-    )
+    preserve = or_(valid_mask, gt(distance, lit(limit)))
+    return when_then(preserve, native, native.take(valid_index))
 
 
 def is_between(
