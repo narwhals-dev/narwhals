@@ -478,14 +478,20 @@ def fill_null_with_strategy(
     indices = int_range(length, chunked=False)
     if strategy == "forward":
         valid_index_or_sentinel = when_then(valid_mask, indices, -1)
-        valid_index = cum_max(valid_index_or_sentinel)
+        almost_valid_index = cum_max(valid_index_or_sentinel)
+        # NOTE: The correction here is for nulls at either end of the array
+        # They should be preserved when the fill direction would need an extra element
+        valid_index = when_then(not_eq(almost_valid_index, lit(-1)), almost_valid_index)
         distance = sub(indices, valid_index)
     else:
         # TODO @dangotbanned: Every reverse is a full-copy, try to avoid it
         # - Does this really need 3x `reverse`?
         # - Can we generate any of these in the desired to start with?
         valid_index_or_sentinel = when_then(reverse(valid_mask), reverse(indices), length)  # type: ignore[assignment]
-        valid_index = reverse(cum_min(valid_index_or_sentinel))
+        almost_valid_index = reverse(cum_min(valid_index_or_sentinel))
+        valid_index = when_then(
+            not_eq(almost_valid_index, lit(length)), almost_valid_index
+        )
         distance = sub(valid_index, indices)
     # TODO @dangotbanned: Rewrite this to reuse the `is_valid` we have already as the predicate
     return when_then(
