@@ -482,8 +482,9 @@ def _fill_null_forward_limit(native: ChunkedArrayAny, limit: int) -> ChunkedArra
 def fill_null_with_strategy(
     native: ChunkedArrayAny, strategy: FillNullStrategy, limit: int | None = None
 ) -> ChunkedArrayAny:
-    # TODO @dangotbanned: Return early if we don't have nulls
-    # TODO @dangotbanned: Fastpaths for length 1 (and 0 if not covered by above)
+    null_count = native.null_count
+    if null_count == 0 or (null_count == len(native)):
+        return native
     if limit is None:
         return _FILL_NULL_STRATEGY[strategy](native)
     if strategy == "forward":

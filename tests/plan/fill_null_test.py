@@ -108,3 +108,20 @@ DATA_LIMITS = {
 def test_fill_null(data: Data, exprs: OneOrIterable[nwp.Expr], expected: Data) -> None:
     df = dataframe(data)
     assert_equal_data(df.select(exprs), expected)
+
+
+@pytest.mark.parametrize(
+    "expr",
+    [
+        (~ncs.last()).fill_null(strategy="forward"),
+        (~ncs.last()).fill_null(strategy="backward"),
+        (~ncs.last()).fill_null(strategy="forward", limit=100),
+        (~ncs.last()).fill_null(strategy="backward", limit=20),
+    ],
+)
+def test_fill_null_strategy_noop(expr: nwp.Expr) -> None:
+    data = {"a": [1, 2, 3], "b": [None, None, None], "i": [0, 1, 2]}
+    expected = {"a": [1, 2, 3], "b": [None, None, None]}
+    df = dataframe(data)
+    assert_equal_data(df.select(expr), expected)
+    assert_equal_data(df.select(expr.over(order_by=ncs.last())), expected)
