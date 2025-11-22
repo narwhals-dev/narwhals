@@ -222,7 +222,7 @@ Please contact [hello_narwhals@proton.me](hello_narwhals@proton.me) if you like 
 
 - Receive professional support.
 - Have any Narwhals fixes / features prioritised.
-- Commision any Narwhals plugins for new backends.
+- Commission any Narwhals plugins for new backends.
 
 ## Appears on
 
