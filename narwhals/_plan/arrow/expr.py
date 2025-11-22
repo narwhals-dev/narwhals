@@ -240,7 +240,35 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
         )
         return self._with_native(result, name)
 
-    replace_strict = not_implemented()  # type: ignore[misc]
+    # https://github.com/narwhals-dev/narwhals/blob/84ce86c618c0103cb08bc63d68a709c424da2106/narwhals/_arrow/series.py#L772-L812
+    # TODO @dangotbanned: Handle `Scalar`
+    # TODO @dangotbanned: Update `F.ReplaceStrict` to have `default` + handle it
+    def replace_strict(
+        self, node: FExpr[F.ReplaceStrict], frame: Frame, name: str
+    ) -> StoresNativeT_co:
+        compliant = node.input[0].dispatch(self, frame, name)
+        native = compliant.native
+        old, new = node.function.old, node.function.new
+        if isinstance(native, pa.Scalar):
+            msg = "TODO: `scalar.replace_strict`"
+            raise NotImplementedError(msg)
+        idxs = pc.index_in(native, pa.array(old))
+        result = pa.array(new).take(idxs)
+        if dtype := node.function.return_dtype:
+            result = result.cast(narwhals_to_native_dtype(dtype, self.version))
+        if result.null_count != native.null_count:
+            replace_failed = (
+                native.filter(fn.and_(fn.is_not_null(native), result.is_null()))
+                .unique()
+                .to_pylist()
+            )
+            msg = (
+                "replace_strict did not replace all non-null values.\n\n"
+                "The following did not get replaced: "
+                f"{replace_failed}"
+            )
+            raise ValueError(msg)
+        return self._with_native(fn.chunked_array(result), name)
 
 
 class ArrowExpr(  # type: ignore[misc]
