@@ -285,7 +285,7 @@ class Expr:
 
     def rolling_sum(
         self, window_size: int, *, min_samples: int | None = None, center: bool = False
-    ) -> Self:  # pragma: no cover
+    ) -> Self:
         options = rolling_options(window_size, min_samples, center=center)
         return self._with_unary(F.RollingSum(options=options))
 
@@ -348,7 +348,6 @@ class Expr:
         )
         return self._with_unary(F.EwmMean(options=options))
 
-    # TODO @dangotbanned: Update to support `default`
     def replace_strict(
         self,
         old: Sequence[Any] | Mapping[Any, Any],
