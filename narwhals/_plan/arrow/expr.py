@@ -596,7 +596,7 @@ class ArrowExpr(  # type: ignore[misc]
         self, node: ir.RollingExpr[F.RollingWindow], frame: Frame, name: str
     ) -> Self:
         function = node.function
-        if not isinstance(function, F.RollingSum):
+        if not isinstance(function, (F.RollingSum, F.RollingMean)):
             msg = f"TODO: {node!r}"
             raise NotImplementedError(msg)
         roll_options = function.options
@@ -633,6 +633,9 @@ class ArrowExpr(  # type: ignore[misc]
         result_native = fn.when_then(
             fn.gt_eq(count_in_window, fn.lit(roll_options.min_samples)), rolling_sum
         )
+        # NOTE: `rolling_mean` just adds has this extra linevs `rolling_sum`
+        if isinstance(function, F.RollingMean):
+            result_native = fn.truediv(result_native, count_in_window)
         result = compliant._with_native(result_native)
         if offset:
             result = result.slice(offset)
