@@ -244,47 +244,22 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
     def replace_strict(
         self, node: FExpr[F.ReplaceStrict], frame: Frame, name: str
     ) -> StoresNativeT_co:
-        compliant = node.input[0].dispatch(self, frame, name)
-        native = compliant.native
-        old, new = node.function.old, node.function.new
-        if isinstance(native, pa.Scalar):
-            msg = "TODO: `scalar.replace_strict`"
-            raise NotImplementedError(msg)
-        idxs = pc.index_in(native, pa.array(old))
-        result = pa.array(new).take(idxs)
-        if dtype := node.function.return_dtype:
-            result = result.cast(narwhals_to_native_dtype(dtype, self.version))
-        if result.null_count != native.null_count:
-            replace_failed = (
-                native.filter(fn.and_(fn.is_not_null(native), result.is_null()))
-                .unique()
-                .to_pylist()
-            )
-            msg = (
-                "replace_strict did not replace all non-null values.\n\n"
-                "The following did not get replaced: "
-                f"{replace_failed}"
-            )
-            raise ValueError(msg)
-        return self._with_native(fn.chunked_array(result), name)
+        func = node.function
+        native = node.input[0].dispatch(self, frame, name).native
+        dtype = fn.dtype_native(func.return_dtype, self.version)
+        result = fn.replace_strict(native, func.old, func.new, dtype)
+        return self._with_native(result, name)
 
-    # TODO @dangotbanned: Move everything to `functions`, share most things with `replace_strict`
     def replace_strict_default(
         self, node: FExpr[F.ReplaceStrictDefault], frame: Frame, name: str
     ) -> StoresNativeT_co:
-        expr, default_ = node.function.unwrap_input(node)
+        func = node.function
+        expr, default_ = func.unwrap_input(node)
         native = expr.dispatch(self, frame, name).native
         default = default_.dispatch(self, frame, name).native
-        old, new = node.function.old, node.function.new
-        if isinstance(native, pa.Scalar):
-            msg = "TODO: `scalar.replace_strict`"
-            raise NotImplementedError(msg)
-        idxs = pc.index_in(native, pa.array(old))
-        result = pa.array(new).take(idxs)
-        if dtype := node.function.return_dtype:
-            result = result.cast(narwhals_to_native_dtype(dtype, self.version))
-        result = fn.when_then(idxs.is_valid(), result, default)
-        return self._with_native(fn.chunked_array(result), name)
+        dtype = fn.dtype_native(func.return_dtype, self.version)
+        result = fn.replace_strict_default(native, func.old, func.new, default, dtype)
+        return self._with_native(result, name)
 
 
 class ArrowExpr(  # type: ignore[misc]

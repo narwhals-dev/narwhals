@@ -14,12 +14,13 @@ from narwhals._arrow.utils import (
     cast_for_truediv,
     chunked_array as _chunked_array,
     floordiv_compat as floordiv,
+    narwhals_to_native_dtype as _dtype_native,
 )
 from narwhals._plan import expressions as ir
 from narwhals._plan._guards import is_non_nested_literal
 from narwhals._plan.arrow import options as pa_options
 from narwhals._plan.expressions import functions as F, operators as ops
-from narwhals._utils import Implementation
+from narwhals._utils import Implementation, Version
 
 if TYPE_CHECKING:
     import datetime as dt
@@ -73,6 +74,7 @@ if TYPE_CHECKING:
         ClosedInterval,
         FillNullStrategy,
         IntoArrowSchema,
+        IntoDType,
         NonNestedLiteral,
         PythonLiteral,
     )
@@ -167,6 +169,16 @@ _IS_BETWEEN: Mapping[ClosedInterval, tuple[BinaryComp, BinaryComp]] = {
     "none": (gt, lt),
     "both": (gt_eq, lt_eq),
 }
+
+
+@t.overload
+def dtype_native(dtype: IntoDType, version: Version) -> pa.DataType: ...
+@t.overload
+def dtype_native(dtype: None, version: Version) -> None: ...
+@t.overload
+def dtype_native(dtype: IntoDType | None, version: Version) -> pa.DataType | None: ...
+def dtype_native(dtype: IntoDType | None, version: Version) -> pa.DataType | None:
+    return dtype if dtype is None else _dtype_native(dtype, version)
 
 
 @t.overload
@@ -483,6 +495,58 @@ def fill_null_with_strategy(
     if strategy == "forward":
         return _fill_null_forward_limit(native, limit)
     return reverse(_fill_null_forward_limit(reverse(native), limit))
+
+
+def _replace_strict(
+    native: ChunkedOrScalarAny,
+    old: Seq[Any],
+    new: Seq[Any],
+    dtype: pa.DataType | None = None,
+) -> Incomplete:
+    if isinstance(native, pa.Scalar):
+        msg = "TODO: `scalar.replace_strict`"
+        raise NotImplementedError(msg)
+    idxs = pc.index_in(native, pa.array(old))
+    result = pa.array(new).take(idxs)
+    if dtype:
+        result = result.cast(dtype)
+    return result, idxs
+
+
+def replace_strict(
+    native: ChunkedOrScalarAny,
+    old: Seq[Any],
+    new: Seq[Any],
+    dtype: pa.DataType | None = None,
+) -> ChunkedOrScalarAny:
+    result, _ = _replace_strict(native, old, new, dtype)
+    if isinstance(native, pa.Scalar):
+        msg = "TODO: `scalar.replace_strict`"
+        raise NotImplementedError(msg)
+    if result.null_count == native.null_count:
+        return chunked_array(result)
+
+    replace_failed = (
+        native.filter(and_(is_not_null(native), result.is_null())).unique().to_pylist()
+    )
+    msg = (
+        "replace_strict did not replace all non-null values.\n\n"
+        "The following did not get replaced: "
+        f"{replace_failed}"
+    )
+    raise ValueError(msg)
+
+
+def replace_strict_default(
+    native: ChunkedOrScalarAny,
+    old: Seq[Any],
+    new: Seq[Any],
+    default: Incomplete,
+    dtype: pa.DataType | None = None,
+) -> ChunkedOrScalarAny:
+    result, idxs = _replace_strict(native, old, new, dtype)
+    result = when_then(idxs.is_valid(), result, default)
+    return chunked_array(result)
 
 
 def is_between(
