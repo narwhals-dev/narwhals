@@ -240,9 +240,7 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
         )
         return self._with_native(result, name)
 
-    # https://github.com/narwhals-dev/narwhals/blob/84ce86c618c0103cb08bc63d68a709c424da2106/narwhals/_arrow/series.py#L772-L812
     # TODO @dangotbanned: Handle `Scalar`
-    # TODO @dangotbanned: Update `F.ReplaceStrict` to have `default` + handle it
     def replace_strict(
         self, node: FExpr[F.ReplaceStrict], frame: Frame, name: str
     ) -> StoresNativeT_co:
@@ -268,6 +266,24 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
                 f"{replace_failed}"
             )
             raise ValueError(msg)
+        return self._with_native(fn.chunked_array(result), name)
+
+    # TODO @dangotbanned: Move everything to `functions`, share most things with `replace_strict`
+    def replace_strict_default(
+        self, node: FExpr[F.ReplaceStrictDefault], frame: Frame, name: str
+    ) -> StoresNativeT_co:
+        expr, default_ = node.function.unwrap_input(node)
+        native = expr.dispatch(self, frame, name).native
+        default = default_.dispatch(self, frame, name).native
+        old, new = node.function.old, node.function.new
+        if isinstance(native, pa.Scalar):
+            msg = "TODO: `scalar.replace_strict`"
+            raise NotImplementedError(msg)
+        idxs = pc.index_in(native, pa.array(old))
+        result = pa.array(new).take(idxs)
+        if dtype := node.function.return_dtype:
+            result = result.cast(narwhals_to_native_dtype(dtype, self.version))
+        result = fn.when_then(idxs.is_valid(), result, default)
         return self._with_native(fn.chunked_array(result), name)
 
 

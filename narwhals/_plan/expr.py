@@ -375,14 +375,13 @@ class Expr:
             return_dtype = common.into_dtype(return_dtype)
 
         if default is no_default:
-            ...
-        else:
-            default_ir = parse_into_expr_ir(default, str_as_lit=True)
-            msg = f"replace_strict(default={default_ir!r})"
-            raise NotImplementedError(msg)
-
-        function = F.ReplaceStrict(old=before, new=after, return_dtype=return_dtype)
-        return self._with_unary(function)
+            function = F.ReplaceStrict(old=before, new=after, return_dtype=return_dtype)
+            return self._with_unary(function)
+        function = F.ReplaceStrictDefault(
+            old=before, new=after, return_dtype=return_dtype
+        )
+        default_ir = parse_into_expr_ir(default, str_as_lit=True)
+        return self._from_ir(function.to_function_expr(self._ir, default_ir))
 
     def gather_every(self, n: int, offset: int = 0) -> Self:
         return self._with_unary(F.GatherEvery(n=n, offset=offset))

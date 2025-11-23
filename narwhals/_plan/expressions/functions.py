@@ -175,6 +175,12 @@ class ReplaceStrict(Function, options=FunctionOptions.elementwise):
     return_dtype: DType | None
 
 
+class ReplaceStrictDefault(ReplaceStrict):
+    def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR]:
+        expr, default = node.input
+        return expr, default
+
+
 class GatherEvery(Function):
     __slots__ = ("n", "offset")
     n: int

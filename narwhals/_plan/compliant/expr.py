@@ -232,6 +232,9 @@ class CompliantExpr(HasVersion, Protocol[FrameT_contra, SeriesT_co]):
     def replace_strict(
         self, node: FunctionExpr[F.ReplaceStrict], frame: FrameT_contra, name: str
     ) -> Self: ...
+    def replace_strict_default(
+        self, node: FunctionExpr[F.ReplaceStrictDefault], frame: FrameT_contra, name: str
+    ) -> Self: ...
     def round(
         self, node: FunctionExpr[F.Round], frame: FrameT_contra, name: str
     ) -> Self: ...

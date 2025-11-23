@@ -96,11 +96,6 @@ def test_replace_strict_expr_non_full(data: Data, expr: nwp.Expr) -> None:
         dataframe(data).select(expr)
 
 
-XFAIL_DEFAULT = pytest.mark.xfail(
-    reason="Not Implemented `replace_strict(default=...)` yet", raises=ValueError
-)
-
-
 # TODO @dangotbanned: Share more of the case generation logic from `basic_cases`
 @pytest.mark.parametrize(
     ("expr", "expected"),
@@ -111,13 +106,11 @@ XFAIL_DEFAULT = pytest.mark.xfail(
                 [1, 2], ["one", "two"], default=nwp.lit("other"), return_dtype=nw.String
             ),
             {"int": ["one", "two", "other", "other"]},
-            marks=XFAIL_DEFAULT,
             id="non-null-1",
         ),
         pytest.param(
             nwp.col("int").replace_strict([1, 2], ["one", "two"], default="other"),
             {"int": ["one", "two", "other", "other"]},
-            marks=XFAIL_DEFAULT,
             id="non-null-2",
         ),
         # test_replace_strict_with_default_and_nulls
@@ -126,13 +119,11 @@ XFAIL_DEFAULT = pytest.mark.xfail(
                 [1, 2], [10, 20], default=99, return_dtype=nw.Int64
             ),
             {"int-null": [10, 20, 99, 99]},
-            marks=XFAIL_DEFAULT,
             id="null-1",
         ),
         pytest.param(
             nwp.col("int-null").replace_strict([1, 2], [10, 20], default=99),
             {"int-null": [10, 20, 99, 99]},
-            marks=XFAIL_DEFAULT,
             id="null-2",
         ),
         # test_replace_strict_with_default_mapping
@@ -141,7 +132,6 @@ XFAIL_DEFAULT = pytest.mark.xfail(
                 {1: "one", 2: "two", 3: None}, default="other", return_dtype=nw.String()
             ),
             {"int": ["one", "two", None, "other"]},
-            marks=XFAIL_DEFAULT,
             # shouldn't be an independent case, the mapping isn't the default
             id="replace_strict_with_default_mapping",
         ),
@@ -151,7 +141,6 @@ XFAIL_DEFAULT = pytest.mark.xfail(
                 {1: "one", 2: "two"}, default=nwp.col("str-alt"), return_dtype=nw.String
             ),
             {"int": ["one", "two", "orca", "vaquita"]},
-            marks=XFAIL_DEFAULT,
             id="column",
         ),
         # test_mapping_key_not_in_expr
