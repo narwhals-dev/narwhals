@@ -484,6 +484,13 @@ def _fill_null_forward_limit(native: ChunkedArrayAny, limit: int) -> ChunkedArra
     return when_then(or_(is_not_null, beyond_limit), native, native.take(index_not_null))
 
 
+def fill_null(
+    native: ChunkedOrArrayT, value: ScalarAny | NonNestedLiteral
+) -> ChunkedOrArrayT:
+    fill_value: Incomplete = value
+    return pc.fill_null(native, fill_value)
+
+
 def fill_null_with_strategy(
     native: ChunkedArrayAny, strategy: FillNullStrategy, limit: int | None = None
 ) -> ChunkedArrayAny:
@@ -777,7 +784,7 @@ def chunked_array(
 
 
 def concat_vertical_chunked(
-    arrays: Iterable[ChunkedArrayAny], dtype: DataType | None = None, /
+    arrays: Iterable[ChunkedOrArrayAny], dtype: DataType | None = None, /
 ) -> ChunkedArrayAny:
     v_concat: Incomplete = pa.chunked_array
     return v_concat(arrays, dtype)  # type: ignore[no-any-return]

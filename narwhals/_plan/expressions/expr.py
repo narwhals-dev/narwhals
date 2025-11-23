@@ -273,7 +273,11 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT_co], child=("input",)):
         return self.function.__expr_ir_dispatch__(self, ctx, frame, name)
 
 
-class RollingExpr(FunctionExpr[RollingT_co]): ...
+class RollingExpr(FunctionExpr[RollingT_co]):
+    def dispatch(
+        self: Self, ctx: Ctx[FrameT_contra, R_co], frame: FrameT_contra, name: str
+    ) -> R_co:
+        return self.__expr_ir_dispatch__(self, ctx, frame, name)
 
 
 class AnonymousExpr(

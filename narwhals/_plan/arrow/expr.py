@@ -16,6 +16,7 @@ from narwhals._plan.compliant.column import ExprDispatch
 from narwhals._plan.compliant.expr import EagerExpr
 from narwhals._plan.compliant.scalar import EagerScalar
 from narwhals._plan.compliant.typing import namespace
+from narwhals._plan.expressions import functions as F
 from narwhals._plan.expressions.boolean import (
     IsDuplicated,
     IsFirstDistinct,
@@ -38,7 +39,6 @@ if TYPE_CHECKING:
     from narwhals._plan.arrow.dataframe import ArrowDataFrame as Frame
     from narwhals._plan.arrow.namespace import ArrowNamespace
     from narwhals._plan.arrow.typing import ChunkedArrayAny, P, VectorFunction
-    from narwhals._plan.expressions import functions as F
     from narwhals._plan.expressions.aggregation import (
         ArgMax,
         ArgMin,
@@ -589,7 +589,54 @@ class ArrowExpr(  # type: ignore[misc]
     is_unique = _boolean_length_preserving
 
     # TODO @dangotbanned: Plan composing with `functions.cum_*`
-    rolling_expr = not_implemented()
+    # Waaaaaay more of this needs to be shared
+    # https://github.com/narwhals-dev/narwhals/blob/84ce86c618c0103cb08bc63d68a709c424da2106/narwhals/_arrow/series.py#L930-L1034
+
+    def rolling_expr(  # noqa: PLR0914
+        self, node: ir.RollingExpr[F.RollingWindow], frame: Frame, name: str
+    ) -> Self:
+        function = node.function
+        if not isinstance(function, F.RollingSum):
+            msg = f"TODO: {node!r}"
+            raise NotImplementedError(msg)
+        roll_options = function.options
+        window_size = roll_options.window_size
+        compliant = self._dispatch_expr(node.input[0], frame, name)
+        native = compliant.native
+
+        if roll_options.center:
+            offset_left = window_size // 2
+            # subtract one if window_size is even
+            offset_right = offset_left - (window_size % 2 == 0)
+            chunks = native.chunks
+            arrays = (
+                fn.nulls_like(offset_left, native),
+                *chunks,
+                fn.nulls_like(offset_right, native),
+            )
+            native = fn.concat_vertical_chunked(arrays)
+            offset = offset_left + offset_right
+        else:
+            offset = 0
+        # NOTE: Implementing `rolling_sum` first, then will see what the others look like
+        # this'll be easier to read as `ArrowSeries` methods
+        cum_sum = fn.fill_null_with_strategy(fn.cum_sum(native), "forward")
+        if window_size != 0:
+            rolling_sum = fn.sub(cum_sum, fn.fill_null(fn.shift(cum_sum, window_size), 0))
+        else:
+            rolling_sum = cum_sum
+
+        valid_count = fn.cum_count(native)
+        count_in_window = fn.sub(
+            valid_count, fn.fill_null(fn.shift(valid_count, window_size), 0)
+        )
+        result_native = fn.when_then(
+            fn.gt_eq(count_in_window, fn.lit(roll_options.min_samples)), rolling_sum
+        )
+        result = compliant._with_native(result_native)
+        if offset:
+            result = result.slice(offset)
+        return self.from_series(result)
 
     # - https://github.com/narwhals-dev/narwhals/blob/84ce86c618c0103cb08bc63d68a709c424da2106/narwhals/_compliant/series.py#L349-L415
     # - https://github.com/narwhals-dev/narwhals/blob/84ce86c618c0103cb08bc63d68a709c424da2106/narwhals/_arrow/series.py#L1060-L1076
