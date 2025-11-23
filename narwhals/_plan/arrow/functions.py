@@ -491,6 +491,10 @@ def fill_null(
     return pc.fill_null(native, fill_value)
 
 
+def fill_null_forward(native: ChunkedArrayAny) -> ChunkedArrayAny:
+    return fill_null_with_strategy(native, "forward")
+
+
 def fill_null_with_strategy(
     native: ChunkedArrayAny, strategy: FillNullStrategy, limit: int | None = None
 ) -> ChunkedArrayAny:
