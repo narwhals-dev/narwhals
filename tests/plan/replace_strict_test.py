@@ -156,3 +156,23 @@ def test_replace_strict_expr_non_full(data: Data, expr: nwp.Expr) -> None:
 def test_replace_strict_expr_default(data: Data, expr: nwp.Expr, expected: Data) -> None:
     result = dataframe(data).select(expr)
     assert_equal_data(result, expected)
+
+
+@pytest.mark.xfail(reason="TODO: `scalar.replace_strict`", raises=NotImplementedError)
+def test_replace_strict_scalar(data: Data) -> None:  # pragma: no cover
+    df = dataframe(data)
+    expr = (
+        nwp.col("str-null")
+        .first()
+        .replace_strict({"one": 1, "two": 2, "three": 3, "four": 4})
+    )
+    assert_equal_data(df.select(expr), {"str-null": [1]})
+
+    int_null = nwp.col("int-null")
+    repl_ints = {1: 10, 2: 20, 4: 40}
+
+    expr = int_null.last().replace_strict(repl_ints, default=999)
+    assert_equal_data(df.select(expr), {"int-null": [40]})
+
+    expr = int_null.sort(nulls_last=True).last().replace_strict(repl_ints, default=999)
+    assert_equal_data(df.select(expr), {"int-null": [999]})
