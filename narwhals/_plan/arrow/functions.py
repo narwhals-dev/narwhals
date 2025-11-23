@@ -429,14 +429,18 @@ def diff(native: ChunkedOrArrayT) -> ChunkedOrArrayT:
     )
 
 
-def shift(native: ChunkedArrayAny, n: int) -> ChunkedArrayAny:
+def shift(
+    native: ChunkedArrayAny, n: int, *, fill_value: NonNestedLiteral = None
+) -> ChunkedArrayAny:
     if n == 0:
         return native
     arr = native
     if n > 0:
-        arrays = [nulls_like(n, arr), *arr.slice(length=arr.length() - n).chunks]
+        filled = repeat_like(fill_value, n, arr)
+        arrays = [filled, *arr.slice(length=arr.length() - n).chunks]
     else:
-        arrays = [*arr.slice(offset=-n).chunks, nulls_like(-n, arr)]
+        filled = repeat_like(fill_value, -n, arr)
+        arrays = [*arr.slice(offset=-n).chunks, filled]
     return pa.chunked_array(arrays)
 
 
@@ -746,12 +750,24 @@ def date_range(
     return ca.cast(pa.date32())
 
 
+def repeat(value: ScalarAny | NonNestedLiteral, n: int) -> ArrayAny:
+    repeat_: Incomplete = pa.repeat
+    value = value if isinstance(value, pa.Scalar) else lit(value)
+    result: ArrayAny = repeat_(value, n)
+    return result
+
+
+def repeat_like(value: NonNestedLiteral, n: int, native: ArrowAny) -> ArrayAny:
+    return repeat(lit(value, native.type), n)
+
+
 def nulls_like(n: int, native: ArrowAny) -> ArrayAny:
     """Create a strongly-typed Array instance with all elements null.
 
     Uses the type of `native`.
     """
-    return pa.nulls(n, native.type)  # type: ignore[no-any-return]
+    result: ArrayAny = pa.nulls(n, native.type)
+    return result
 
 
 def lit(value: Any, dtype: DataType | None = None) -> NativeScalar:

@@ -618,15 +618,15 @@ class ArrowExpr(  # type: ignore[misc]
         else:
             offset = 0
         # NOTE: this'll be easier to read as `ArrowSeries` methods
-        cum_sum = fn.fill_null_forward(fn.cum_sum(native))
+        cum_sum = fn.fill_null_forward(fn.cum_sum(native)).fill_null(fn.lit(0))
         if window_size != 0:
-            rolling_sum = fn.sub(cum_sum, fn.fill_null(fn.shift(cum_sum, window_size), 0))
+            rolling_sum = fn.sub(cum_sum, fn.shift(cum_sum, window_size, fill_value=0))
         else:
             rolling_sum = cum_sum
 
         valid_count = fn.cum_count(native)
         count_in_window = fn.sub(
-            valid_count, fn.fill_null(fn.shift(valid_count, window_size), 0)
+            valid_count, fn.shift(valid_count, window_size, fill_value=0)
         )
         predicate = fn.gt_eq(count_in_window, fn.lit(roll_options.min_samples))
         if isinstance(function, (F.RollingVar, F.RollingStd)):
@@ -635,10 +635,11 @@ class ArrowExpr(  # type: ignore[misc]
             else:
                 msg = f"Expected `ddof` for {function!r}"
                 raise TypeError(msg)
+            # NOTE: Once this has coverage, probably need to add the `fill_null(0)` for the ends
             cum_sum_sq = fn.fill_null_forward(fn.cum_sum(fn.power(native, fn.lit(2))))
             if window_size != 0:
                 rolling_sum_sq = fn.sub(
-                    cum_sum_sq, fn.fill_null(fn.shift(cum_sum_sq, window_size), 0)
+                    cum_sum_sq, fn.shift(cum_sum_sq, window_size, fill_value=0)
                 )
             else:
                 rolling_sum_sq = cum_sum_sq
