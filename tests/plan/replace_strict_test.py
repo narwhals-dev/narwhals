@@ -158,8 +158,7 @@ def test_replace_strict_expr_default(data: Data, expr: nwp.Expr, expected: Data)
     assert_equal_data(result, expected)
 
 
-@pytest.mark.xfail(reason="TODO: `scalar.replace_strict`", raises=NotImplementedError)
-def test_replace_strict_scalar(data: Data) -> None:  # pragma: no cover
+def test_replace_strict_scalar(data: Data) -> None:
     df = dataframe(data)
     expr = (
         nwp.col("str-null")

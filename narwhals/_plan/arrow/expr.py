@@ -240,7 +240,6 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
         )
         return self._with_native(result, name)
 
-    # TODO @dangotbanned: Handle `Scalar`
     def replace_strict(
         self, node: FExpr[F.ReplaceStrict], frame: Frame, name: str
     ) -> StoresNativeT_co:

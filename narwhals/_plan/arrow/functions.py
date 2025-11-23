@@ -497,20 +497,16 @@ def fill_null_with_strategy(
     return reverse(_fill_null_forward_limit(reverse(native), limit))
 
 
-def _replace_strict(
-    native: ChunkedOrScalarAny,
-    old: Seq[Any],
-    new: Seq[Any],
-    dtype: pa.DataType | None = None,
-) -> Incomplete:
-    if isinstance(native, pa.Scalar):
-        msg = "TODO: `scalar.replace_strict`"
-        raise NotImplementedError(msg)
-    idxs = pc.index_in(native, pa.array(old))
-    result = pa.array(new).take(idxs)
-    if dtype:
-        result = result.cast(dtype)
-    return result, idxs
+def _ensure_all_replaced(
+    native: ChunkedOrScalarAny, unmatched: ArrowAny
+) -> ValueError | None:
+    if not any_(unmatched).as_py():
+        return None
+    msg = (
+        "replace_strict did not replace all non-null values.\n\n"
+        f"The following did not get replaced: {chunked_array(native).filter(array(unmatched)).unique().to_pylist()}"
+    )
+    return ValueError(msg)
 
 
 def replace_strict(
@@ -519,34 +515,28 @@ def replace_strict(
     new: Seq[Any],
     dtype: pa.DataType | None = None,
 ) -> ChunkedOrScalarAny:
-    result, _ = _replace_strict(native, old, new, dtype)
     if isinstance(native, pa.Scalar):
-        msg = "TODO: `scalar.replace_strict`"
-        raise NotImplementedError(msg)
-    if result.null_count == native.null_count:
-        return chunked_array(result)
-
-    replace_failed = (
-        native.filter(and_(is_not_null(native), result.is_null())).unique().to_pylist()
-    )
-    msg = (
-        "replace_strict did not replace all non-null values.\n\n"
-        "The following did not get replaced: "
-        f"{replace_failed}"
-    )
-    raise ValueError(msg)
+        idxs: ArrayAny = array(pc.index_in(native, pa.array(old)))
+        result: ChunkedOrScalarAny = pa.array(new).take(idxs)[0]
+    else:
+        idxs = pc.index_in(native, pa.array(old))
+        result = chunked_array(pa.array(new).take(idxs))
+    if err := _ensure_all_replaced(native, and_(is_not_null(native), is_null(idxs))):
+        raise err
+    return result.cast(dtype) if dtype else result
 
 
 def replace_strict_default(
     native: ChunkedOrScalarAny,
     old: Seq[Any],
     new: Seq[Any],
-    default: Incomplete,
+    default: ChunkedOrScalarAny,
     dtype: pa.DataType | None = None,
 ) -> ChunkedOrScalarAny:
-    result, idxs = _replace_strict(native, old, new, dtype)
-    result = when_then(idxs.is_valid(), result, default)
-    return chunked_array(result)
+    idxs = pc.index_in(native, pa.array(old))
+    result = pa.array(new).take(array(idxs))
+    result = when_then(is_null(idxs), default, result.cast(dtype) if dtype else result)
+    return chunked_array(result) if isinstance(native, pa.ChunkedArray) else result[0]
 
 
 def is_between(
