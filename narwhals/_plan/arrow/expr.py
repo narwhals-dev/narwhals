@@ -521,6 +521,7 @@ class ArrowExpr(  # type: ignore[misc]
     def map_batches(self, node: ir.AnonymousExpr, frame: Frame, name: str) -> Self:
         if node.is_scalar:
             # NOTE: Just trying to avoid redoing the whole API for `Series`
+            # https://github.com/narwhals-dev/narwhals/blob/84ce86c618c0103cb08bc63d68a709c424da2106/narwhals/_compliant/expr.py#L738-L755
             msg = "Only elementwise is currently supported"
             raise NotImplementedError(msg)
         series = self._dispatch_expr(node.input[0], frame, name)
@@ -596,34 +597,21 @@ class ArrowExpr(  # type: ignore[misc]
         roll_options = function.options
         window_size = roll_options.window_size
         compliant = self._dispatch_expr(node.input[0], frame, name)
-        native = compliant.native
 
+        # Read up on polars impl to get some names for what this is
         if roll_options.center:
-            offset_left = window_size // 2
-            # subtract one if window_size is even
-            offset_right = offset_left - (window_size % 2 == 0)
-            chunks = native.chunks
-            arrays = (
-                fn.nulls_like(offset_left, native),
-                *chunks,
-                fn.nulls_like(offset_right, native),
-            )
-            native = fn.concat_vertical_chunked(arrays)
-            offset = offset_left + offset_right
+            compliant, offset = compliant._rolling_center(window_size)
         else:
             offset = 0
-        # NOTE: this'll be easier to read as `ArrowSeries` methods
-        cum_sum = fn.fill_null_forward(fn.cum_sum(native)).fill_null(fn.lit(0))
+        cum_sum = compliant.cum_sum().fill_null_with_strategy("forward")
         if window_size != 0:
-            rolling_sum = fn.sub(cum_sum, fn.shift(cum_sum, window_size, fill_value=0))
+            rolling_sum = cum_sum - cum_sum.shift(window_size).fill_null(0)
         else:
             rolling_sum = cum_sum
 
-        valid_count = fn.cum_count(native)
-        count_in_window = fn.sub(
-            valid_count, fn.shift(valid_count, window_size, fill_value=0)
-        )
-        predicate = fn.gt_eq(count_in_window, fn.lit(roll_options.min_samples))
+        valid_count = compliant.cum_count()
+        count_in_window = valid_count - valid_count.shift(window_size).fill_null(0)
+        predicate = count_in_window >= roll_options.min_samples
         if isinstance(function, (F.RollingVar, F.RollingStd)):
             if fn_params := roll_options.fn_params:
                 ddof = fn_params.ddof
@@ -631,29 +619,26 @@ class ArrowExpr(  # type: ignore[misc]
                 msg = f"Expected `ddof` for {function!r}"
                 raise TypeError(msg)
             # NOTE: Once this has coverage, probably need to add the `fill_null(0)` for the ends
-            cum_sum_sq = fn.fill_null_forward(fn.cum_sum(fn.power(native, fn.lit(2))))
+            cum_sum_sq = compliant.pow(2).cum_sum().fill_null_with_strategy("forward")
             if window_size != 0:
-                rolling_sum_sq = fn.sub(
-                    cum_sum_sq, fn.shift(cum_sum_sq, window_size, fill_value=0)
-                )
+                rolling_sum_sq = cum_sum_sq - cum_sum_sq.shift(window_size).fill_null(0)
             else:
                 rolling_sum_sq = cum_sum_sq
-            rolling_something = fn.sub(
-                rolling_sum_sq,
-                fn.truediv(fn.power(rolling_sum, fn.lit(2)), count_in_window),
-            )
-            i_dunno_man = fn.when_then(predicate, rolling_something)
-            denom = fn.max_horizontal(fn.sub(count_in_window, fn.lit(ddof)), fn.lit(0))
-            result_native = fn.truediv(i_dunno_man, denom)
-            if isinstance(function, (F.RollingStd)):
-                result_native = fn.power(result_native, fn.lit(0.5))
+
+            rolling_something = rolling_sum_sq - (rolling_sum**2 / count_in_window)
+            i_dunno_man = fn.when_then(predicate.native, rolling_something.native)
+            denominator = fn.max_horizontal((count_in_window - ddof).native, 0)
+            result = compliant._with_native(fn.truediv(i_dunno_man, denominator))
         else:
-            result_native = fn.when_then(predicate, rolling_sum)
+            result = compliant._with_native(
+                fn.when_then(predicate.native, rolling_sum.native)
+            )
             if isinstance(function, F.RollingMean):
-                result_native = fn.truediv(result_native, count_in_window)
-        result = compliant._with_native(result_native)
+                result = result / count_in_window
         if offset:
             result = result.slice(offset)
+        if isinstance(function, (F.RollingStd)):
+            result = result**0.5
         return self.from_series(result)
 
     # - https://github.com/narwhals-dev/narwhals/blob/84ce86c618c0103cb08bc63d68a709c424da2106/narwhals/_compliant/series.py#L349-L415

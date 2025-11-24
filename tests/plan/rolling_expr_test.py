@@ -20,8 +20,37 @@ def data() -> Data:
         "a": [None, 1, 2, None, 4, 6, 11],
         "b": [1, None, 2, None, 4, 6, 11],
         "c": [1, None, 2, 3, 4, 5, 6],
+        "d": [1.0, 2.0, 1.0, 3.0, 1.0, 4.0, 1.0],
         "i": list(range(7)),
     }
+
+
+# TODO @dangotbanned: Just reuse `rolling_options` for the tests?
+@pytest.mark.parametrize(
+    ("window_size", "min_samples", "center", "ddof", "expected"),
+    [
+        (3, None, False, 1, [None, None, 1 / 3, 1, 4 / 3, 7 / 3, 3]),
+        (3, 1, False, 1, [None, 0.5, 1 / 3, 1.0, 4 / 3, 7 / 3, 3]),
+        (2, 1, False, 1, [None, 0.5, 0.5, 2.0, 2.0, 4.5, 4.5]),
+        (5, 1, True, 1, [1 / 3, 11 / 12, 4 / 5, 17 / 10, 2.0, 2.25, 3]),
+        (4, 1, True, 1, [0.5, 1 / 3, 11 / 12, 11 / 12, 2.25, 2.25, 3]),
+        (3, None, False, 2, [None, None, 2 / 3, 2.0, 8 / 3, 14 / 3, 6.0]),
+    ],
+)
+def test_rolling_var(
+    data: Data,
+    window_size: int,
+    *,
+    min_samples: int | None,
+    center: bool,
+    ddof: int,
+    expected: list[NonNestedLiteral],
+) -> None:
+    expr = nwp.col("d").rolling_var(
+        window_size, min_samples=min_samples, center=center, ddof=ddof
+    )
+    result = dataframe(data).select(expr)
+    assert_equal_data(result, {"d": expected})
 
 
 @pytest.mark.parametrize(

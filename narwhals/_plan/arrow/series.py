@@ -168,3 +168,22 @@ class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayA
 
     def shift(self, n: int, *, fill_value: NonNestedLiteral = None) -> Self:
         return self._with_native(fn.shift(self.native, n, fill_value=fill_value))
+
+    def _rolling_center(self, window_size: int) -> tuple[Self, int]:
+        """Think this is similar to [`polars_core::chunked_array::ops::rolling_window::inner_mod::window_edges`].
+
+        On `main`, this is `narwhals._arrow.utils.pad_series`.
+
+        [`polars_core::chunked_array::ops::rolling_window::inner_mod::window_edges`]: https://github.com/pola-rs/polars/blob/e1d6f294218a36497255e2d872c223e19a47e2ec/crates/polars-core/src/chunked_array/ops/rolling_window.rs#L64-L77
+        """
+        offset_left = window_size // 2
+        # subtract one if window_size is even
+        offset_right = offset_left - (window_size % 2 == 0)
+        native = self.native
+        arrays = (
+            fn.nulls_like(offset_left, native),
+            *native.chunks,
+            fn.nulls_like(offset_right, native),
+        )
+        offset = offset_left + offset_right
+        return self._with_native(fn.concat_vertical_chunked(arrays)), offset
