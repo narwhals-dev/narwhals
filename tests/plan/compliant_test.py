@@ -427,10 +427,6 @@ XFAIL_KLEENE_ALL_NULL = pytest.mark.xfail(
             .map_batches(lambda s: (s.to_numpy().max()), returns_scalar=True),
             {"j": [15], "k": [42]},
             id="map_batches-return_scalar",
-            marks=pytest.mark.xfail(
-                reason="not implemented `map_batches(returns_scalar=True)` for `pyarrow`",
-                raises=NotImplementedError,
-            ),
         ),
         pytest.param(
             [nwp.col("g").len(), nwp.col("m").last(), nwp.col("h").count()],

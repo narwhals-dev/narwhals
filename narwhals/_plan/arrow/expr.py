@@ -7,7 +7,7 @@ import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._plan import expressions as ir
-from narwhals._plan._guards import is_function_expr, is_seq_column
+from narwhals._plan._guards import is_function_expr, is_python_literal, is_seq_column
 from narwhals._plan.arrow import functions as fn
 from narwhals._plan.arrow.series import ArrowSeries as Series
 from narwhals._plan.arrow.typing import ChunkedOrScalarAny, NativeScalar, StoresNativeT_co
@@ -511,21 +511,18 @@ class ArrowExpr(  # type: ignore[misc]
         final_result = mask(index.native, aggregated.get_column(idx_name).native)
         return self.from_series(index._with_native(final_result))
 
-    # TODO @dangotbanned: top-level, complex-ish nodes
-    # - [ ] `map_batches`
-    #   - [x] elementwise
-    #   - [ ] scalar
-
-    # NOTE: Can't implement in `EagerExpr`, since it doesn't derive `ExprDispatch`
-    def map_batches(self, node: ir.AnonymousExpr, frame: Frame, name: str) -> Self:
-        if node.is_scalar:
-            # NOTE: Just trying to avoid redoing the whole API for `Series`
-            # https://github.com/narwhals-dev/narwhals/blob/84ce86c618c0103cb08bc63d68a709c424da2106/narwhals/_compliant/expr.py#L738-L755
-            msg = "Only elementwise is currently supported"
-            raise NotImplementedError(msg)
+    # NOTE: Can't implement in `EagerExpr` (like on `main`)
+    # The version here is missing `__narwhals_namespace__`
+    def map_batches(
+        self, node: ir.AnonymousExpr, frame: Frame, name: str
+    ) -> Self | Scalar:
         series = self._dispatch_expr(node.input[0], frame, name)
         udf = node.function.function
         result: Series | Into1DArray = udf(series)
+        if node.is_scalar:
+            return ArrowScalar.from_unknown(
+                result, name, dtype=node.function.return_dtype, version=self.version
+            )
         if not isinstance(result, Series):
             result = Series.from_numpy(result, name, version=self.version)
         if dtype := node.function.return_dtype:
@@ -663,6 +660,23 @@ class ArrowScalar(
             )
         msg = f"Too long {len(series)!r}"
         raise InvalidOperationError(msg)
+
+    @classmethod
+    def from_unknown(
+        cls,
+        value: Any,
+        name: str = "literal",
+        /,
+        *,
+        dtype: IntoDType | None = None,
+        version: Version = Version.MAIN,
+    ) -> Self:
+        if isinstance(value, pa.Scalar):
+            return cls.from_native(value, name, version)
+        if is_python_literal(value):
+            return cls.from_python(value, name, dtype=dtype, version=version)
+        native = fn.lit(value, fn.dtype_native(dtype, version))
+        return cls.from_native(native, name, version)
 
     def _dispatch_expr(self, node: ir.ExprIR, frame: Frame, name: str) -> Series:
         msg = f"Expected unreachable, but hit at: {node!r}"
