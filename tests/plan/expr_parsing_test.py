@@ -700,3 +700,39 @@ def test_mode_invalid() -> None:
         TypeError, match=r"keep.+must be one of.+all.+any.+but got 'first'"
     ):
         nwp.col("a").mode(keep="first")  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    ("window_size", "min_samples", "context"),
+    [
+        (-1, None, pytest.raises(ValueError, match=r"window_size.+>= 1")),
+        (2, -1, pytest.raises(ValueError, match=r"min_samples.+>= 1")),
+        (
+            1,
+            2,
+            pytest.raises(InvalidOperationError, match=r"min_samples.+<=.+window_size"),
+        ),
+        (
+            4.2,
+            None,
+            pytest.raises(TypeError, match=r"Expected.+int.+got.+float.+\s+window_size="),
+        ),
+        (
+            2,
+            4.2,
+            pytest.raises(TypeError, match=r"Expected.+int.+got.+float.+\s+min_samples="),
+        ),
+    ],
+)
+def test_rolling_expr_invalid(
+    window_size: int, min_samples: int | None, context: pytest.RaisesExc[Any]
+) -> None:
+    a = nwp.col("a")
+    with context:
+        a.rolling_sum(window_size, min_samples=min_samples)
+    with context:
+        a.rolling_mean(window_size, min_samples=min_samples)
+    with context:
+        a.rolling_var(window_size, min_samples=min_samples)
+    with context:
+        a.rolling_std(window_size, min_samples=min_samples)

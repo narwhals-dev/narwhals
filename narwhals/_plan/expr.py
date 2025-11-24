@@ -302,7 +302,7 @@ class Expr:
         min_samples: int | None = None,
         center: bool = False,
         ddof: int = 1,
-    ) -> Self:  # pragma: no cover
+    ) -> Self:
         options = rolling_options(window_size, min_samples, center=center, ddof=ddof)
         return self._with_unary(F.RollingVar(options=options))
 
@@ -313,7 +313,7 @@ class Expr:
         min_samples: int | None = None,
         center: bool = False,
         ddof: int = 1,
-    ) -> Self:  # pragma: no cover
+    ) -> Self:
         options = rolling_options(window_size, min_samples, center=center, ddof=ddof)
         return self._with_unary(F.RollingStd(options=options))
 

@@ -4,7 +4,7 @@ import enum
 from typing import TYPE_CHECKING
 
 from narwhals._plan._immutable import Immutable
-from narwhals._utils import Implementation
+from narwhals._utils import Implementation, ensure_type
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
@@ -254,16 +254,18 @@ class RollingOptionsFixedWindow(Immutable):
 def rolling_options(
     window_size: int, min_samples: int | None, /, *, center: bool, ddof: int | None = None
 ) -> RollingOptionsFixedWindow:
+    ensure_type(window_size, int, param_name="window_size")
+    ensure_type(min_samples, int, type(None), param_name="min_samples")
     if window_size < 1:
-        msg = "window_size must be greater or equal than 1"
-        raise ValueError(msg)
+        msg = "`window_size` must be >= 1"
+        raise InvalidOperationError(msg)
     if min_samples is None:
         min_samples = window_size
     elif min_samples < 1:
-        msg = "min_samples must be greater or equal than 1"
-        raise ValueError(msg)
+        msg = "`min_samples` must be >= 1"
+        raise InvalidOperationError(msg)
     elif min_samples > window_size:
-        msg = "`min_samples` must be less or equal than `window_size`"
+        msg = "`min_samples` must be <= `window_size`"
         raise InvalidOperationError(msg)
     return RollingOptionsFixedWindow(
         window_size=window_size,
