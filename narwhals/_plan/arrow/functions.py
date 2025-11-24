@@ -68,6 +68,7 @@ if TYPE_CHECKING:
         UnaryFunction,
         VectorFunction,
     )
+    from narwhals._plan.compliant.typing import SeriesT
     from narwhals._plan.options import RankOptions, SortMultipleOptions, SortOptions
     from narwhals._plan.typing import OneOrSeq, Seq
     from narwhals.typing import (
@@ -162,6 +163,28 @@ _DISPATCH_BINARY: Mapping[type[ops.Operator], BinOp] = {
     ops.Or: or_,
     ops.ExclusiveOr: xor,
 }
+
+
+def bin_op(
+    function: Callable[[Any, Any], Any], /, *, reflect: bool = False
+) -> Callable[[SeriesT, Any], SeriesT]:
+    """Attach a binary operator to `ArrowSeries`."""
+
+    def f(self: SeriesT, other: SeriesT | Any, /) -> SeriesT:
+        right = other.native if isinstance(other, type(self)) else lit(other)
+        return self._with_native(function(self.native, right))
+
+    def f_reflect(self: SeriesT, other: SeriesT | Any, /) -> SeriesT:
+        if isinstance(other, type(self)):
+            name = other.name
+            right: ArrowAny = other.native
+        else:
+            name = "literal"
+            right = lit(other)
+        return self.from_native(function(right, self.native), name, version=self.version)
+
+    return f_reflect if reflect else f
+
 
 _IS_BETWEEN: Mapping[ClosedInterval, tuple[BinaryComp, BinaryComp]] = {
     "left": (gt_eq, lt),

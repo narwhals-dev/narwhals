@@ -21,7 +21,15 @@ if TYPE_CHECKING:
     from narwhals._plan.arrow.dataframe import ArrowDataFrame as DataFrame
     from narwhals._plan.arrow.typing import ChunkedArrayAny
     from narwhals.dtypes import DType
-    from narwhals.typing import Into1DArray, IntoDType, _1DArray
+    from narwhals.typing import (
+        FillNullStrategy,
+        Into1DArray,
+        IntoDType,
+        NonNestedLiteral,
+        NumericLiteral,
+        TemporalLiteral,
+        _1DArray,
+    )
 
 
 class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayAny"]):
@@ -94,3 +102,98 @@ class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayA
 
     def has_nulls(self) -> bool:
         return bool(self.native.null_count)
+
+    __add__ = fn.bin_op(fn.add)
+    __and__ = fn.bin_op(fn.and_)
+
+    def __eq__(self, other: NumericLiteral | TemporalLiteral | Self) -> Self:  # type: ignore[override]
+        raise NotImplementedError
+
+    def __floordiv__(self, other: NumericLiteral | TemporalLiteral | Self) -> Self:
+        raise NotImplementedError
+
+    def __ge__(self, other: NonNestedLiteral | Self) -> Self:
+        raise NotImplementedError
+
+    def __gt__(self, other: NonNestedLiteral | Self) -> Self:
+        raise NotImplementedError
+
+    def __invert__(self) -> Self:
+        raise NotImplementedError
+
+    def __le__(self, other: NonNestedLiteral | Self) -> Self:
+        raise NotImplementedError
+
+    def __lt__(self, other: NonNestedLiteral | Self) -> Self:
+        raise NotImplementedError
+
+    def __mod__(self, other: NumericLiteral | TemporalLiteral | Self) -> Self:
+        raise NotImplementedError
+
+    def __mul__(self, other: NumericLiteral | TemporalLiteral | Self) -> Self:
+        raise NotImplementedError
+
+    def __ne__(self, other: NumericLiteral | TemporalLiteral | Self) -> Self:  # type: ignore[override]
+        raise NotImplementedError
+
+    def __or__(self, other: bool | Self) -> Self:
+        raise NotImplementedError
+
+    def __pow__(self, other: float | Self) -> Self:
+        raise NotImplementedError
+
+    def __rfloordiv__(self, other: NumericLiteral | TemporalLiteral | Self) -> Self:
+        raise NotImplementedError
+
+    def __radd__(self, other: NumericLiteral | TemporalLiteral | Self) -> Self:
+        raise NotImplementedError
+
+    def __rand__(self, other: bool | Self) -> Self:
+        raise NotImplementedError
+
+    def __rmod__(self, other: NumericLiteral | TemporalLiteral | Self) -> Self:
+        raise NotImplementedError
+
+    def __rmul__(self, other: NumericLiteral | TemporalLiteral | Self) -> Self:
+        raise NotImplementedError
+
+    def __ror__(self, other: bool | Self) -> Self:
+        raise NotImplementedError
+
+    def __rpow__(self, other: float | Self) -> Self:
+        raise NotImplementedError
+
+    def __rsub__(self, other: NumericLiteral | TemporalLiteral | Self) -> Self:
+        raise NotImplementedError
+
+    def __rtruediv__(self, other: NumericLiteral | TemporalLiteral | Self) -> Self:
+        raise NotImplementedError
+
+    def __rxor__(self, other: bool | Self) -> Self:
+        raise NotImplementedError
+
+    def __sub__(self, other: NumericLiteral | TemporalLiteral | Self) -> Self:
+        raise NotImplementedError
+
+    def __truediv__(self, other: NumericLiteral | TemporalLiteral | Self) -> Self:
+        raise NotImplementedError
+
+    def __xor__(self, other: bool | Self) -> Self:
+        raise NotImplementedError
+
+    def cum_sum(self, *, reverse: bool = False) -> Self:
+        raise NotImplementedError
+
+    def cum_count(self, *, reverse: bool = False) -> Self:
+        raise NotImplementedError
+
+    def fill_null(self, value: NonNestedLiteral | Self) -> Self:
+        raise NotImplementedError
+
+    def fill_null_with_strategy(
+        self, strategy: FillNullStrategy, limit: int | None = None
+    ) -> Self:
+        raise NotImplementedError
+
+    def shift(self, n: int, *, fill_value: NonNestedLiteral = None) -> Self:
+        raise NotImplementedError
