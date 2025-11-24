@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from typing import TYPE_CHECKING
 
 import pytest
@@ -14,13 +15,17 @@ if TYPE_CHECKING:
 pytest.importorskip("pyarrow")
 
 
+def sqrt_or_null(*values: float | None) -> list[float | None]:
+    return [el if el is None else math.sqrt(el) for el in values]
+
+
 @pytest.fixture(scope="module")
 def data() -> Data:
     return {
         "a": [None, 1, 2, None, 4, 6, 11],
         "b": [1, None, 2, None, 4, 6, 11],
         "c": [1, None, 2, 3, 4, 5, 6],
-        "d": [1.0, 2.0, 1.0, 3.0, 1.0, 4.0, 1.0],
+        "var_std": [1.0, 2.0, 1.0, 3.0, 1.0, 4.0, 1.0],
         "i": list(range(7)),
     }
 
@@ -46,11 +51,39 @@ def test_rolling_var(
     ddof: int,
     expected: list[NonNestedLiteral],
 ) -> None:
-    expr = nwp.col("d").rolling_var(
+    expr = nwp.col("var_std").rolling_var(
         window_size, min_samples=min_samples, center=center, ddof=ddof
     )
     result = dataframe(data).select(expr)
-    assert_equal_data(result, {"d": expected})
+    assert_equal_data(result, {"var_std": expected})
+
+
+# TODO @dangotbanned: Just reuse `rolling_options` for the tests?
+@pytest.mark.parametrize(
+    ("window_size", "min_samples", "center", "ddof", "expected"),
+    [
+        (3, None, False, 1, sqrt_or_null(None, None, 1 / 3, 1, 4 / 3, 7 / 3, 3)),
+        (3, 1, False, 1, sqrt_or_null(None, 0.5, 1 / 3, 1.0, 4 / 3, 7 / 3, 3)),
+        (2, 1, False, 1, sqrt_or_null(None, 0.5, 0.5, 2.0, 2.0, 4.5, 4.5)),
+        (5, 1, True, 1, sqrt_or_null(1 / 3, 11 / 12, 4 / 5, 17 / 10, 2.0, 2.25, 3)),
+        (4, 1, True, 1, sqrt_or_null(0.5, 1 / 3, 11 / 12, 11 / 12, 2.25, 2.25, 3)),
+        (3, None, False, 2, sqrt_or_null(None, None, 2 / 3, 2.0, 8 / 3, 14 / 3, 6.0)),
+    ],
+)
+def test_rolling_std(
+    data: Data,
+    window_size: int,
+    *,
+    min_samples: int | None,
+    center: bool,
+    ddof: int,
+    expected: list[NonNestedLiteral],
+) -> None:
+    expr = nwp.col("var_std").rolling_std(
+        window_size, min_samples=min_samples, center=center, ddof=ddof
+    )
+    result = dataframe(data).select(expr)
+    assert_equal_data(result, {"var_std": expected})
 
 
 @pytest.mark.parametrize(
