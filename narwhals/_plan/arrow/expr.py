@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Protocol, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol, overload
 
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
@@ -31,7 +31,7 @@ from narwhals._utils import Implementation, Version, _StoresNative, not_implemen
 from narwhals.exceptions import InvalidOperationError, ShapeError
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Sequence
+    from collections.abc import Callable, Mapping, Sequence
 
     from typing_extensions import Self, TypeAlias
 
@@ -584,53 +584,27 @@ class ArrowExpr(  # type: ignore[misc]
     is_duplicated = _boolean_length_preserving
     is_unique = _boolean_length_preserving
 
-    # TODO @dangotbanned: Plan composing with `functions.cum_*`
-    # Waaaaaay more of this needs to be shared
-    # https://github.com/narwhals-dev/narwhals/blob/84ce86c618c0103cb08bc63d68a709c424da2106/narwhals/_arrow/series.py#L930-L1034
+    _ROLLING: ClassVar[Mapping[type[F.RollingWindow], Callable[..., Series]]] = {
+        F.RollingSum: Series.rolling_sum,
+        F.RollingMean: Series.rolling_mean,
+        F.RollingVar: Series.rolling_var,
+        F.RollingStd: Series.rolling_std,
+    }
 
-    # yes ruff, i know this is too complicated!
-    # but we need to start somewhere
-    def rolling_expr(  # noqa: PLR0914
+    def rolling_expr(
         self, node: ir.RollingExpr[F.RollingWindow], frame: Frame, name: str
     ) -> Self:
-        function = node.function
-        roll_options = function.options
-        window_size = roll_options.window_size
-        compliant = self._dispatch_expr(node.input[0], frame, name)
-
-        # Read up on polars impl to get some names for what this is
-        if roll_options.center:
-            compliant, offset = compliant._rolling_center(window_size)
-        else:
-            offset = 0
-
-        valid_count = compliant.cum_count()
-        count_in_window = valid_count - valid_count.shift(window_size, fill_value=0)
-        predicate = count_in_window >= roll_options.min_samples
-        cum_sum = compliant.cum_sum().fill_null_with_strategy("forward")
-        rolling_sum = cum_sum - cum_sum.shift(window_size, fill_value=0).fill_null(0)
-
-        if isinstance(function, (F.RollingVar, F.RollingStd)):
-            ddof = roll_options.ddof
-            cum_sum_sq = compliant.pow(2).cum_sum().fill_null_with_strategy("forward")
-            rolling_sum_sq = cum_sum_sq - cum_sum_sq.shift(
-                window_size, fill_value=0
-            ).fill_null(0)
-            # TODO @dangotbanned: Better name?
-            rolling_something = rolling_sum_sq - (rolling_sum.pow(2) / count_in_window)
-            # TODO @dangotbanned: Better name?
-            denominator = compliant._with_native(
-                fn.max_horizontal((count_in_window - ddof).native, 0)
-            )
-            result = rolling_something.zip_with(predicate, None) / denominator
-        else:
-            result = rolling_sum.zip_with(predicate, None)
-            if isinstance(function, F.RollingMean):
-                result = result / count_in_window
-        if offset:
-            result = result.slice(offset)
-        if isinstance(function, (F.RollingStd)):
-            result = result.pow(0.5)
+        s = self._dispatch_expr(node.input[0], frame, name)
+        roll_options = node.function.options
+        size = roll_options.window_size
+        samples = roll_options.min_samples
+        center = roll_options.center
+        op = type(node.function)
+        method = self._ROLLING[op]
+        if op in {F.RollingSum, F.RollingMean}:
+            return self.from_series(method(s, size, min_samples=samples, center=center))
+        ddof = roll_options.ddof
+        result = method(s, size, min_samples=samples, center=center, ddof=ddof)
         return self.from_series(result)
 
     # - https://github.com/narwhals-dev/narwhals/blob/84ce86c618c0103cb08bc63d68a709c424da2106/narwhals/_compliant/series.py#L349-L415

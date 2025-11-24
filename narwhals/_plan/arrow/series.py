@@ -188,6 +188,62 @@ class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayA
         offset = offset_left + offset_right
         return self._with_native(fn.concat_vertical_chunked(arrays)), offset
 
+    def _rolling_sum(self, window_size: int, /) -> Self:
+        cum_sum = self.cum_sum().fill_null_with_strategy("forward")
+        return cum_sum - cum_sum.shift(window_size, fill_value=0).fill_null(0)
+
+    def _rolling_count(self, window_size: int, /) -> Self:
+        cum_count = self.cum_count()
+        return cum_count - cum_count.shift(window_size, fill_value=0)
+
+    def rolling_sum(
+        self, window_size: int, *, min_samples: int, center: bool = False
+    ) -> Self:
+        s, offset = self, 0
+        if center:
+            s, offset = self._rolling_center(window_size)
+        rolling_count = s._rolling_count(window_size)
+        keep = rolling_count >= min_samples
+        result = s._rolling_sum(window_size).zip_with(keep, None)
+        return result.slice(offset) if offset else result
+
+    def rolling_mean(
+        self, window_size: int, *, min_samples: int, center: bool = False
+    ) -> Self:
+        s, offset = self, 0
+        if center:
+            s, offset = self._rolling_center(window_size)
+        rolling_count = s._rolling_count(window_size)
+        keep = rolling_count >= min_samples
+        result = (s._rolling_sum(window_size).zip_with(keep, None)) / rolling_count
+        return result.slice(offset) if offset else result
+
+    def rolling_var(
+        self, window_size: int, *, min_samples: int, center: bool = False, ddof: int = 1
+    ) -> Self:
+        s, offset = self, 0
+        if center:
+            s, offset = self._rolling_center(window_size)
+        rolling_count = s._rolling_count(window_size)
+        keep = rolling_count >= min_samples
+
+        # NOTE: Yes, these two are different
+        sq_rolling_sum = s.pow(2)._rolling_sum(window_size)
+        rolling_sum_sq = s._rolling_sum(window_size).pow(2)
+
+        # NOTE: Please somebody rename these two to *something else*!
+        rolling_something = sq_rolling_sum - (rolling_sum_sq / rolling_count)
+        denominator = s._with_native(fn.max_horizontal((rolling_count - ddof).native, 0))
+        result = rolling_something.zip_with(keep, None) / denominator
+        return result.slice(offset) if offset else result
+
+    def rolling_std(
+        self, window_size: int, *, min_samples: int, center: bool = False, ddof: int = 1
+    ) -> Self:
+        return self.rolling_var(
+            window_size, min_samples=min_samples, center=center, ddof=ddof
+        ).pow(0.5)
+
     def zip_with(self, mask: Self, other: Self | None) -> Self:
         predicate = mask.native.combine_chunks()
         right = other.native if other is not None else other
