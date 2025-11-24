@@ -617,7 +617,7 @@ class ArrowExpr(  # type: ignore[misc]
                 window_size, fill_value=0
             ).fill_null(0)
             # TODO @dangotbanned: Better name?
-            rolling_something = rolling_sum_sq - (rolling_sum**2 / count_in_window)
+            rolling_something = rolling_sum_sq - (rolling_sum.pow(2) / count_in_window)
             # TODO @dangotbanned: Better name?
             denominator = compliant._with_native(
                 fn.max_horizontal((count_in_window - ddof).native, 0)
@@ -630,7 +630,7 @@ class ArrowExpr(  # type: ignore[misc]
         if offset:
             result = result.slice(offset)
         if isinstance(function, (F.RollingStd)):
-            result = result**0.5
+            result = result.pow(0.5)
         return self.from_series(result)
 
     # - https://github.com/narwhals-dev/narwhals/blob/84ce86c618c0103cb08bc63d68a709c424da2106/narwhals/_compliant/series.py#L349-L415
