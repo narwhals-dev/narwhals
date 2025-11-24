@@ -254,9 +254,20 @@ class RollingOptionsFixedWindow(Immutable):
 def rolling_options(
     window_size: int, min_samples: int | None, /, *, center: bool, ddof: int | None = None
 ) -> RollingOptionsFixedWindow:
+    if window_size < 1:
+        msg = "window_size must be greater or equal than 1"
+        raise ValueError(msg)
+    if min_samples is None:
+        min_samples = window_size
+    elif min_samples < 1:
+        msg = "min_samples must be greater or equal than 1"
+        raise ValueError(msg)
+    elif min_samples > window_size:
+        msg = "`min_samples` must be less or equal than `window_size`"
+        raise InvalidOperationError(msg)
     return RollingOptionsFixedWindow(
         window_size=window_size,
-        min_samples=window_size if min_samples is None else min_samples,
+        min_samples=min_samples,
         center=center,
         fn_params=ddof if ddof is None else RollingVarParams(ddof=ddof),
     )

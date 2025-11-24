@@ -603,24 +603,19 @@ class ArrowExpr(  # type: ignore[misc]
             compliant, offset = compliant._rolling_center(window_size)
         else:
             offset = 0
-        cum_sum = compliant.cum_sum().fill_null_with_strategy("forward")
-        if window_size != 0:
-            rolling_sum = cum_sum - cum_sum.shift(window_size, fill_value=0).fill_null(0)
-        else:
-            rolling_sum = cum_sum
 
         valid_count = compliant.cum_count()
         count_in_window = valid_count - valid_count.shift(window_size, fill_value=0)
         predicate = count_in_window >= roll_options.min_samples
+        cum_sum = compliant.cum_sum().fill_null_with_strategy("forward")
+        rolling_sum = cum_sum - cum_sum.shift(window_size, fill_value=0).fill_null(0)
+
         if isinstance(function, (F.RollingVar, F.RollingStd)):
             ddof = roll_options.ddof
             cum_sum_sq = compliant.pow(2).cum_sum().fill_null_with_strategy("forward")
-            if window_size != 0:
-                rolling_sum_sq = cum_sum_sq - cum_sum_sq.shift(
-                    window_size, fill_value=0
-                ).fill_null(0)
-            else:
-                rolling_sum_sq = cum_sum_sq
+            rolling_sum_sq = cum_sum_sq - cum_sum_sq.shift(
+                window_size, fill_value=0
+            ).fill_null(0)
             # TODO @dangotbanned: Better name?
             rolling_something = rolling_sum_sq - (rolling_sum**2 / count_in_window)
             # TODO @dangotbanned: Better name?
