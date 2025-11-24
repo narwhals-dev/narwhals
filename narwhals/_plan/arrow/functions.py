@@ -13,7 +13,7 @@ import pyarrow.compute as pc  # ignore-banned-import
 from narwhals._arrow.utils import (
     cast_for_truediv,
     chunked_array as _chunked_array,
-    floordiv_compat as floordiv,
+    floordiv_compat as _floordiv,
     narwhals_to_native_dtype as _dtype_native,
 )
 from narwhals._plan import expressions as ir
@@ -130,6 +130,7 @@ add = t.cast("BinaryNumericTemporal", pc.add)
 sub = t.cast("BinaryNumericTemporal", pc.subtract)
 multiply = pc.multiply
 power = t.cast("BinaryFunction[pc.NumericScalar, pc.NumericScalar]", pc.power)
+floordiv = _floordiv
 
 
 def truediv(lhs: Any, rhs: Any) -> Any:

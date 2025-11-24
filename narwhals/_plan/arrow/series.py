@@ -26,8 +26,6 @@ if TYPE_CHECKING:
         Into1DArray,
         IntoDType,
         NonNestedLiteral,
-        NumericLiteral,
-        TemporalLiteral,
         _1DArray,
     )
 
@@ -105,81 +103,33 @@ class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayA
 
     __add__ = fn.bin_op(fn.add)
     __and__ = fn.bin_op(fn.and_)
-
-    def __eq__(self, other: NumericLiteral | TemporalLiteral | Self) -> Self:  # type: ignore[override]
-        raise NotImplementedError
-
-    def __floordiv__(self, other: NumericLiteral | TemporalLiteral | Self) -> Self:
-        raise NotImplementedError
-
-    def __ge__(self, other: NonNestedLiteral | Self) -> Self:
-        raise NotImplementedError
-
-    def __gt__(self, other: NonNestedLiteral | Self) -> Self:
-        raise NotImplementedError
+    __eq__ = fn.bin_op(fn.eq)
+    __floordiv__ = fn.bin_op(fn.floordiv)
+    __ge__ = fn.bin_op(fn.gt_eq)
+    __gt__ = fn.bin_op(fn.gt)
+    __le__ = fn.bin_op(fn.lt_eq)
+    __lt__ = fn.bin_op(fn.lt)
+    __mod__ = fn.bin_op(fn.modulus)
+    __mul__ = fn.bin_op(fn.multiply)
+    __ne__ = fn.bin_op(fn.not_eq)
+    __or__ = fn.bin_op(fn.or_)
+    __pow__ = fn.bin_op(fn.power)
+    __rfloordiv__ = fn.bin_op(fn.floordiv, reflect=True)
+    __radd__ = fn.bin_op(fn.add, reflect=True)
+    __rand__ = fn.bin_op(fn.and_, reflect=True)
+    __rmod__ = fn.bin_op(fn.modulus, reflect=True)
+    __rmul__ = fn.bin_op(fn.multiply, reflect=True)
+    __ror__ = fn.bin_op(fn.or_, reflect=True)
+    __rpow__ = fn.bin_op(fn.power, reflect=True)
+    __rsub__ = fn.bin_op(fn.sub, reflect=True)
+    __rtruediv__ = fn.bin_op(fn.truediv, reflect=True)
+    __rxor__ = fn.bin_op(fn.xor, reflect=True)
+    __sub__ = fn.bin_op(fn.sub)
+    __truediv__ = fn.bin_op(fn.truediv)
+    __xor__ = fn.bin_op(fn.xor)
 
     def __invert__(self) -> Self:
-        raise NotImplementedError
-
-    def __le__(self, other: NonNestedLiteral | Self) -> Self:
-        raise NotImplementedError
-
-    def __lt__(self, other: NonNestedLiteral | Self) -> Self:
-        raise NotImplementedError
-
-    def __mod__(self, other: NumericLiteral | TemporalLiteral | Self) -> Self:
-        raise NotImplementedError
-
-    def __mul__(self, other: NumericLiteral | TemporalLiteral | Self) -> Self:
-        raise NotImplementedError
-
-    def __ne__(self, other: NumericLiteral | TemporalLiteral | Self) -> Self:  # type: ignore[override]
-        raise NotImplementedError
-
-    def __or__(self, other: bool | Self) -> Self:
-        raise NotImplementedError
-
-    def __pow__(self, other: float | Self) -> Self:
-        raise NotImplementedError
-
-    def __rfloordiv__(self, other: NumericLiteral | TemporalLiteral | Self) -> Self:
-        raise NotImplementedError
-
-    def __radd__(self, other: NumericLiteral | TemporalLiteral | Self) -> Self:
-        raise NotImplementedError
-
-    def __rand__(self, other: bool | Self) -> Self:
-        raise NotImplementedError
-
-    def __rmod__(self, other: NumericLiteral | TemporalLiteral | Self) -> Self:
-        raise NotImplementedError
-
-    def __rmul__(self, other: NumericLiteral | TemporalLiteral | Self) -> Self:
-        raise NotImplementedError
-
-    def __ror__(self, other: bool | Self) -> Self:
-        raise NotImplementedError
-
-    def __rpow__(self, other: float | Self) -> Self:
-        raise NotImplementedError
-
-    def __rsub__(self, other: NumericLiteral | TemporalLiteral | Self) -> Self:
-        raise NotImplementedError
-
-    def __rtruediv__(self, other: NumericLiteral | TemporalLiteral | Self) -> Self:
-        raise NotImplementedError
-
-    def __rxor__(self, other: bool | Self) -> Self:
-        raise NotImplementedError
-
-    def __sub__(self, other: NumericLiteral | TemporalLiteral | Self) -> Self:
-        raise NotImplementedError
-
-    def __truediv__(self, other: NumericLiteral | TemporalLiteral | Self) -> Self:
-        raise NotImplementedError
-
-    def __xor__(self, other: bool | Self) -> Self:
-        raise NotImplementedError
+        return self._with_native(pc.invert(self.native))
 
     def cum_sum(self, *, reverse: bool = False) -> Self:
         raise NotImplementedError
