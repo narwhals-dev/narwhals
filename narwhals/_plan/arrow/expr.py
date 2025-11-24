@@ -590,7 +590,7 @@ class ArrowExpr(  # type: ignore[misc]
 
     # yes ruff, i know this is too complicated!
     # but we need to start somewhere
-    def rolling_expr(  # noqa: PLR0912, PLR0914
+    def rolling_expr(  # noqa: PLR0914
         self, node: ir.RollingExpr[F.RollingWindow], frame: Frame, name: str
     ) -> Self:
         function = node.function
@@ -613,11 +613,7 @@ class ArrowExpr(  # type: ignore[misc]
         count_in_window = valid_count - valid_count.shift(window_size).fill_null(0)
         predicate = count_in_window >= roll_options.min_samples
         if isinstance(function, (F.RollingVar, F.RollingStd)):
-            if fn_params := roll_options.fn_params:
-                ddof = fn_params.ddof
-            else:
-                msg = f"Expected `ddof` for {function!r}"
-                raise TypeError(msg)
+            ddof = roll_options.ddof
             # NOTE: Once this has coverage, probably need to add the `fill_null(0)` for the ends
             cum_sum_sq = compliant.pow(2).cum_sum().fill_null_with_strategy("forward")
             if window_size != 0:

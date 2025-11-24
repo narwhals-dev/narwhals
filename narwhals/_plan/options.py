@@ -246,6 +246,10 @@ class RollingOptionsFixedWindow(Immutable):
     center: bool
     fn_params: RollingVarParams | None
 
+    @property
+    def ddof(self) -> int:
+        return 1 if self.fn_params is None else self.fn_params.ddof
+
 
 def rolling_options(
     window_size: int, min_samples: int | None, /, *, center: bool, ddof: int | None = None
