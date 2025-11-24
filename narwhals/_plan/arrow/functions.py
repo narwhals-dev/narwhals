@@ -435,13 +435,18 @@ def cum_count(native: ChunkedArrayAny) -> ChunkedArrayAny:
     return cum_sum(is_not_null(native).cast(pa.uint32()))
 
 
-CUMULATIVE: Mapping[type[F.CumAgg], Callable[[ChunkedArrayAny], ChunkedArrayAny]] = {
+_CUMULATIVE: Mapping[type[F.CumAgg], Callable[[ChunkedArrayAny], ChunkedArrayAny]] = {
     F.CumSum: cum_sum,
     F.CumCount: cum_count,
     F.CumMin: cum_min,
     F.CumMax: cum_max,
     F.CumProd: cum_prod,
 }
+
+
+def cumulative(native: ChunkedArrayAny, f: F.CumAgg, /) -> ChunkedArrayAny:
+    func = _CUMULATIVE[type(f)]
+    return func(native) if not f.reverse else reverse(func(reverse(native)))
 
 
 def diff(native: ChunkedOrArrayT) -> ChunkedOrArrayT:
@@ -513,7 +518,7 @@ def _fill_null_forward_limit(native: ChunkedArrayAny, limit: int) -> ChunkedArra
 
 
 def fill_null(
-    native: ChunkedOrArrayT, value: ScalarAny | NonNestedLiteral
+    native: ChunkedOrArrayT, value: ScalarAny | NonNestedLiteral | ChunkedOrArrayT
 ) -> ChunkedOrArrayT:
     fill_value: Incomplete = value
     return pc.fill_null(native, fill_value)

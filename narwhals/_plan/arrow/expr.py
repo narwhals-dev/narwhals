@@ -543,12 +543,7 @@ class ArrowExpr(  # type: ignore[misc]
 
     def _cumulative(self, node: FExpr[CumAgg], frame: Frame, name: str) -> Self:
         native = self._dispatch_expr(node.input[0], frame, name).native
-        func = fn.CUMULATIVE[type(node.function)]
-        if not node.function.reverse:
-            result = func(native)
-        else:
-            result = fn.reverse(func(fn.reverse(native)))
-        return self._with_native(result, name)
+        return self._with_native(fn.cumulative(native, node.function), name)
 
     def unique(self, node: FExpr[F.Unique], frame: Frame, name: str) -> Self:
         result = self._dispatch_expr(node.input[0], frame, name).native.unique()

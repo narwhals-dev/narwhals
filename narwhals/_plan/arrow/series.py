@@ -9,6 +9,7 @@ from narwhals._plan.arrow import functions as fn, options
 from narwhals._plan.arrow.common import ArrowFrameSeries as FrameSeries
 from narwhals._plan.compliant.series import CompliantSeries
 from narwhals._plan.compliant.typing import namespace
+from narwhals._plan.expressions import functions as F
 from narwhals._utils import Version, generate_repr
 from narwhals.dependencies import is_numpy_array_1d
 
@@ -132,18 +133,38 @@ class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayA
         return self._with_native(pc.invert(self.native))
 
     def cum_sum(self, *, reverse: bool = False) -> Self:
-        raise NotImplementedError
+        if not reverse:
+            return self._with_native(fn.cum_sum(self.native))
+        return self._with_native(fn.cumulative(self.native, F.CumSum(reverse=reverse)))
 
     def cum_count(self, *, reverse: bool = False) -> Self:
-        raise NotImplementedError
+        if not reverse:
+            return self._with_native(fn.cum_count(self.native))
+        return self._with_native(fn.cumulative(self.native, F.CumCount(reverse=reverse)))
+
+    def cum_max(self, *, reverse: bool = False) -> Self:
+        if not reverse:
+            return self._with_native(fn.cum_max(self.native))
+        return self._with_native(fn.cumulative(self.native, F.CumMax(reverse=reverse)))
+
+    def cum_min(self, *, reverse: bool = False) -> Self:
+        if not reverse:
+            return self._with_native(fn.cum_min(self.native))
+        return self._with_native(fn.cumulative(self.native, F.CumMin(reverse=reverse)))
+
+    def cum_prod(self, *, reverse: bool = False) -> Self:
+        if not reverse:
+            return self._with_native(fn.cum_prod(self.native))
+        return self._with_native(fn.cumulative(self.native, F.CumProd(reverse=reverse)))
 
     def fill_null(self, value: NonNestedLiteral | Self) -> Self:
-        raise NotImplementedError
+        fill_value = value.native if isinstance(value, ArrowSeries) else value
+        return self._with_native(fn.fill_null(self.native, fill_value))
 
     def fill_null_with_strategy(
         self, strategy: FillNullStrategy, limit: int | None = None
     ) -> Self:
-        raise NotImplementedError
+        return self._with_native(fn.fill_null_with_strategy(self.native, strategy, limit))
 
     def shift(self, n: int, *, fill_value: NonNestedLiteral = None) -> Self:
-        raise NotImplementedError
+        return self._with_native(fn.shift(self.native, n, fill_value=fill_value))
