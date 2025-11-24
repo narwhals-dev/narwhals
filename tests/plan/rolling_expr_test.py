@@ -188,3 +188,147 @@ def test_rolling_mean_order_by(
     )
     result = dataframe(data).with_columns(expr).select("b", "i").sort("i").drop("i")
     assert_equal_data(result, {"b": expected})
+
+
+@pytest.mark.parametrize(
+    ("window_size", "min_samples", "center", "ddof", "expected"),
+    [
+        (2, None, False, 0, [None, None, 0.25, None, None, 1, 6.25]),
+        (2, 2, False, 1, [None, None, 0.5, None, None, 2, 12.5]),
+        (3, 2, False, 1, [None, None, 0.5, 0.5, 2, 2, 13]),
+        (3, 1, False, 0, [0, None, 0.25, 0.25, 1, 1, 8.666666666666666]),
+        (3, 1, True, 1, [0.5, None, 0.5, 2, 2, 13, 12.5]),
+        (4, 1, True, 1, [0.5, None, 0.5, 2.333333333333333, 4, 13, 13]),
+        (
+            5,
+            1,
+            True,
+            0,
+            [
+                0.25,
+                0.25,
+                1.5555555555555554,
+                3.6874999999999996,
+                11.1875,
+                8.666666666666666,
+                8.666666666666666,
+            ],
+        ),
+    ],
+)
+def test_rolling_var_order_by(
+    data: Data,
+    window_size: int,
+    *,
+    min_samples: int | None,
+    center: bool,
+    ddof: int,
+    expected: list[NonNestedLiteral],
+) -> None:
+    expr = (
+        nwp.col("b")
+        .rolling_var(window_size, min_samples=min_samples, center=center, ddof=ddof)
+        .over(order_by="c")
+    )
+    result = dataframe(data).with_columns(expr).select("b", "i").sort("i").drop("i")
+    assert_equal_data(result, {"b": expected})
+
+
+@pytest.mark.parametrize(
+    ("window_size", "min_samples", "center", "ddof", "expected"),
+    [
+        (2, None, False, 0, [None, None, 0.5, None, None, 1, 2.5]),
+        (
+            2,
+            2,
+            False,
+            1,
+            [
+                None,
+                None,
+                0.7071067811865476,
+                None,
+                None,
+                1.4142135623730951,
+                3.5355339059327378,
+            ],
+        ),
+        (
+            3,
+            2,
+            False,
+            1,
+            [
+                None,
+                None,
+                0.7071067811865476,
+                0.7071067811865476,
+                1.4142135623730951,
+                1.4142135623730951,
+                3.605551275463989,
+            ],
+        ),
+        (3, 1, False, 0, [0.0, None, 0.5, 0.5, 1.0, 1.0, 2.943920288775949]),
+        (
+            3,
+            1,
+            True,
+            1,
+            [
+                0.7071067811865476,
+                None,
+                0.7071067811865476,
+                1.4142135623730951,
+                1.4142135623730951,
+                3.605551275463989,
+                3.5355339059327378,
+            ],
+        ),
+        (
+            4,
+            1,
+            True,
+            1,
+            [
+                0.7071067811865476,
+                None,
+                0.7071067811865476,
+                1.5275252316519465,
+                2.0,
+                3.605551275463989,
+                3.605551275463989,
+            ],
+        ),
+        (
+            5,
+            1,
+            True,
+            0,
+            [
+                0.5,
+                0.5,
+                1.247219128924647,
+                1.920286436967152,
+                3.344772040064913,
+                2.943920288775949,
+                2.943920288775949,
+            ],
+        ),
+    ],
+)
+def test_rolling_std_order_by(
+    data: Data,
+    window_size: int,
+    *,
+    min_samples: int | None,
+    center: bool,
+    ddof: int,
+    expected: list[NonNestedLiteral],
+) -> None:
+    expr = (
+        nwp.col("b")
+        .rolling_std(window_size, min_samples=min_samples, center=center, ddof=ddof)
+        .over(order_by="c")
+    )
+    result = dataframe(data).with_columns(expr).select("b", "i").sort("i").drop("i")
+    assert_equal_data(result, {"b": expected})
