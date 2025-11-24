@@ -187,3 +187,8 @@ class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayA
         )
         offset = offset_left + offset_right
         return self._with_native(fn.concat_vertical_chunked(arrays)), offset
+
+    def zip_with(self, mask: Self, other: Self | None) -> Self:
+        predicate = mask.native.combine_chunks()
+        right = other.native if other is not None else other
+        return self._with_native(fn.when_then(predicate, self.native, right))

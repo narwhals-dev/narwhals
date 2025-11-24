@@ -624,15 +624,15 @@ class ArrowExpr(  # type: ignore[misc]
                 rolling_sum_sq = cum_sum_sq - cum_sum_sq.shift(window_size).fill_null(0)
             else:
                 rolling_sum_sq = cum_sum_sq
-
+            # TODO @dangotbanned: Better name?
             rolling_something = rolling_sum_sq - (rolling_sum**2 / count_in_window)
-            i_dunno_man = fn.when_then(predicate.native, rolling_something.native)
-            denominator = fn.max_horizontal((count_in_window - ddof).native, 0)
-            result = compliant._with_native(fn.truediv(i_dunno_man, denominator))
-        else:
-            result = compliant._with_native(
-                fn.when_then(predicate.native, rolling_sum.native)
+            # TODO @dangotbanned: Better name?
+            denominator = compliant._with_native(
+                fn.max_horizontal((count_in_window - ddof).native, 0)
             )
+            result = rolling_something.zip_with(predicate, None) / denominator
+        else:
+            result = rolling_sum.zip_with(predicate, None)
             if isinstance(function, F.RollingMean):
                 result = result / count_in_window
         if offset:
