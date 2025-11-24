@@ -515,7 +515,6 @@ class ArrowExpr(  # type: ignore[misc]
     # - [ ] `map_batches`
     #   - [x] elementwise
     #   - [ ] scalar
-    # - [ ] `rolling_expr` has 4 variants
 
     # NOTE: Can't implement in `EagerExpr`, since it doesn't derive `ExprDispatch`
     def map_batches(self, node: ir.AnonymousExpr, frame: Frame, name: str) -> Self:
