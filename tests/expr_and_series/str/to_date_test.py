@@ -66,10 +66,6 @@ def test_to_date_with_fmt_expr(
         reason = "not implemented"
         request.applymarker(pytest.mark.xfail(reason=reason))
 
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
-
     result = nw.from_native(constructor(data)).select(
         a=nw.col("a").str.to_date(format="%Y-%m-%d")
     )
