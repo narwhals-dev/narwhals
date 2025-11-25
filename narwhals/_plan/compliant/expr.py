@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
 
     from narwhals._plan import expressions as ir
-    from narwhals._plan.compliant.scalar import CompliantScalar
+    from narwhals._plan.compliant.scalar import CompliantScalar, EagerScalar
     from narwhals._plan.expressions import (
         BinaryExpr,
         FunctionExpr,
@@ -80,10 +80,6 @@ class CompliantExpr(HasVersion, Protocol[FrameT_contra, SeriesT_co]):
     def is_null(
         self, node: FunctionExpr[IsNull], frame: FrameT_contra, name: str
     ) -> Self: ...
-    # NOTE: `Scalar` when using `returns_scalar=True`
-    def map_batches(
-        self, node: ir.AnonymousExpr, frame: FrameT_contra, name: str
-    ) -> Self | CompliantScalar[FrameT_contra, SeriesT_co]: ...
     def not_(self, node: FunctionExpr[Not], frame: FrameT_contra, name: str) -> Self: ...
     def over(self, node: ir.WindowExpr, frame: FrameT_contra, name: str) -> Self: ...
     # NOTE: `Scalar` is returned **only** for un-partitioned `OrderableAggExpr`
@@ -188,7 +184,7 @@ class CompliantExpr(HasVersion, Protocol[FrameT_contra, SeriesT_co]):
         self, node: FunctionExpr[F.Skew], frame: FrameT_contra, name: str
     ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
 
-    # mixed/todo
+    # TODO @dangotbanned: Reorder these
     def clip(
         self, node: FunctionExpr[F.Clip], frame: FrameT_contra, name: str
     ) -> Self: ...
@@ -261,6 +257,10 @@ class EagerExpr(
         frame: FrameT_contra,
         name: str,
     ) -> Self: ...
+    # NOTE: `Scalar` when using `returns_scalar=True`
+    def map_batches(
+        self, node: ir.AnonymousExpr, frame: FrameT_contra, name: str
+    ) -> Self | EagerScalar[FrameT_contra, SeriesT]: ...
     def __bool__(self) -> Literal[True]:
         # NOTE: Avoids falling back to `__len__` when truth-testing on dispatch
         return True
