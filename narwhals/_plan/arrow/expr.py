@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any, ClassVar, Protocol, overload
 
 import pyarrow as pa  # ignore-banned-import
@@ -7,7 +8,12 @@ import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._plan import expressions as ir
-from narwhals._plan._guards import is_function_expr, is_python_literal, is_seq_column
+from narwhals._plan._guards import (
+    is_function_expr,
+    is_iterable_reject,
+    is_python_literal,
+    is_seq_column,
+)
 from narwhals._plan.arrow import functions as fn
 from narwhals._plan.arrow.series import ArrowSeries as Series
 from narwhals._plan.arrow.typing import ChunkedOrScalarAny, NativeScalar, StoresNativeT_co
@@ -27,7 +33,13 @@ from narwhals._plan.expressions.boolean import (
     IsUnique,
 )
 from narwhals._plan.expressions.functions import NullCount
-from narwhals._utils import Implementation, Version, _StoresNative, not_implemented
+from narwhals._utils import (
+    Implementation,
+    Version,
+    _StoresNative,
+    not_implemented,
+    qualified_type_name,
+)
 from narwhals.exceptions import InvalidOperationError, ShapeError
 
 if TYPE_CHECKING:
@@ -76,7 +88,7 @@ if TYPE_CHECKING:
         Shift,
     )
     from narwhals._plan.typing import Seq
-    from narwhals.typing import Into1DArray, IntoDType, PythonLiteral
+    from narwhals.typing import IntoDType, PythonLiteral
 
     Expr: TypeAlias = "ArrowExpr"
     Scalar: TypeAlias = "ArrowScalar"
@@ -518,13 +530,22 @@ class ArrowExpr(  # type: ignore[misc]
     ) -> Self | Scalar:
         series = self._dispatch_expr(node.input[0], frame, name)
         udf = node.function.function
-        result: Series | Into1DArray = udf(series)
+        udf_result: Series | Iterable[Any] | Any = udf(series)
         if node.is_scalar:
             return ArrowScalar.from_unknown(
-                result, name, dtype=node.function.return_dtype, version=self.version
+                udf_result, name, dtype=node.function.return_dtype, version=self.version
             )
-        if not isinstance(result, Series):
-            result = Series.from_numpy(result, name, version=self.version)
+        if isinstance(udf_result, Series):
+            result = udf_result
+        elif isinstance(udf_result, Iterable) and not is_iterable_reject(udf_result):
+            result = Series.from_iterable(udf_result, name=name, version=self.version)
+        else:
+            msg = (
+                "`map_batches` with `returns_scalar=False` must return a Series; "
+                f"found '{qualified_type_name(udf_result)}'.\n\nIf `returns_scalar` "
+                "is set to `True`, a returned value can be a scalar value."
+            )
+            raise TypeError(msg)
         if dtype := node.function.return_dtype:
             result = result.cast(dtype)
         return self.from_series(result)

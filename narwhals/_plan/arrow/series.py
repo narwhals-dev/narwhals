@@ -79,7 +79,7 @@ class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayA
         name: str = "",
         dtype: IntoDType | None = None,
     ) -> Self:
-        dtype_pa = narwhals_to_native_dtype(dtype, version) if dtype else None
+        dtype_pa = fn.dtype_native(dtype, version)
         return cls.from_native(fn.chunked_array([data], dtype_pa), name, version=version)
 
     def cast(self, dtype: IntoDType) -> Self:

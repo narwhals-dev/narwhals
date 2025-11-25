@@ -1,16 +1,18 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 import narwhals as nw
 import narwhals._plan as nwp
 from narwhals._plan import selectors as ncs
-from tests.plan.utils import assert_equal_data, dataframe
+from tests.plan.utils import assert_equal_data, dataframe, re_compile
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
+
+    import pyarrow as pa
 
     from narwhals._plan.compliant.typing import (
         SeriesAny as CompliantSeriesAny,
@@ -19,7 +21,7 @@ if TYPE_CHECKING:
     from narwhals.typing import _1DArray, _NumpyScalar
     from tests.conftest import Data
 
-pytest.importorskip("pyarrow")
+
 pytest.importorskip("numpy")
 import numpy as np
 
@@ -60,6 +62,14 @@ def groupwise_1d_array(s: CompliantSeriesAny, /) -> _1DArray:
 
 def aggregation_np_scalar(s: CompliantSeriesAny, /) -> _NumpyScalar:
     result: _NumpyScalar = s.to_numpy().max()
+    return result
+
+
+def aggregation_pa_scalar(s: CompliantSeriesAny) -> pa.Scalar[Any]:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    result: pa.Scalar[Any] = pa.array(s.to_list())[0]
     return result
 
 
@@ -119,17 +129,21 @@ def test_map_batches(
     assert_equal_data(result, expected)
 
 
-@pytest.mark.xfail(
-    reason="TODO: Need to raise when `returns_scalar=False` does not return a Series"
+@pytest.mark.parametrize(
+    ("udf", "result_type_name"),
+    [
+        (aggregation_np_scalar, "'numpy.int64'"),
+        (aggregation_pa_scalar, ".+pyarrow.+scalar.+"),
+        (len, "'int'"),
+        (str, "'str'"),
+    ],
 )
-def test_map_batches_invalid(data: Data) -> None:
-    df = dataframe(data)
-    expr = nwp.col("a", "b", "z").map_batches(aggregation_np_scalar)
-
-    msg = (
-        r"`map(?:_batches)?` with `returns_scalar=False` must return a Series; found "
-        "'numpy.int64'.\n\nIf `returns_scalar` is set to `True`, a returned value can be "
-        "a scalar value."
+def test_map_batches_invalid(
+    data: Data, udf: Callable[[Any], Any], result_type_name: str
+) -> None:
+    expr = nwp.col("a", "b", "z").map_batches(udf)
+    pattern = re_compile(
+        rf"map.+ with `returns_scalar=False` must return a Series.+{result_type_name}"
     )
-    with pytest.raises(TypeError, match=msg):
-        df.select(expr)
+    with pytest.raises(TypeError, match=pattern):
+        dataframe(data).select(expr)
