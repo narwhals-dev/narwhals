@@ -120,6 +120,18 @@ def aggregation_pa_scalar(s: CompliantSeriesAny) -> pa.Scalar[Any]:
             {"j": [15], "k": [42]},
             id="returns_scalar-np-scalar",
         ),
+        pytest.param(
+            [
+                nwp.col("a").map_batches(
+                    lambda _: [1, 2],
+                    returns_scalar=True,
+                    return_dtype=nw.List(nw.Int64()),
+                ),
+                nwp.col("b").last(),
+            ],
+            {"a": [[1, 2]], "b": [6]},
+            id="returns_scalar-list",
+        ),
     ],
 )
 def test_map_batches(
