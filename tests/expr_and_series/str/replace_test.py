@@ -190,12 +190,9 @@ def test_str_replace_series_multivalue(
     expected: dict[str, list[str]],
     request: pytest.FixtureRequest,
 ) -> None:
-    if "bodo" in str(constructor_eager):
-        # BODO fail
-        pytest.skip()
     df = nw.from_native(constructor_eager(data), eager_only=True)
     if any(
-        x in str(constructor_eager) for x in ["pyarrow_table", "pandas", "modin", "cudf"]
+        x in str(constructor_eager) for x in ["bodo", "pyarrow_table", "pandas", "modin", "cudf"]
     ):
         request.applymarker(
             pytest.mark.xfail(
