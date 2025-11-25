@@ -17,7 +17,7 @@ from narwhals._utils import Implementation
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
-    from collections.abc import Collection, Iterator, Mapping, Sequence
+    from collections.abc import Iterator, Mapping, Sequence
 
     from typing_extensions import Self, TypeAlias
 
@@ -147,15 +147,6 @@ def group_by_error(
         msg = f"`{get_dispatch_name(expr)}()`"
     msg = f"{msg} is not supported in a `group_by` context for {backend!r}:\n{column_name}={expr!r}"
     return InvalidOperationError(msg)
-
-
-def multiple_null_partitions_error(column_names: Collection[str]) -> NotImplementedError:
-    backend = Implementation.PYARROW
-    msg = (
-        f"`over(*partition_by)` where multiple columns contain null values is not yet supported for {backend!r}\n"
-        f"Got: {list(column_names)!r}"
-    )
-    return NotImplementedError(msg)
 
 
 class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
