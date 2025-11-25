@@ -113,9 +113,6 @@ def test_is_close_series_with_series(
     nans_equal: bool,
     expected: list[float],
 ) -> None:
-    if "bodo" in str(constructor_eager):
-        # BODO fail
-        pytest.skip()
     df = nw.from_native(constructor_eager(data), eager_only=True)
     x, y = df["x"], df["y"]
     nulls = nw.new_series(
@@ -140,9 +137,6 @@ def test_is_close_series_with_scalar(
     nans_equal: bool,
     expected: list[float],
 ) -> None:
-    if "bodo" in str(constructor_eager):
-        # BODO fail
-        pytest.skip()
     df = nw.from_native(constructor_eager(data), eager_only=True)
     y = df["y"]
     nulls = nw.new_series(
@@ -173,9 +167,6 @@ def test_is_close_expr_with_expr(
             "duckdb.duckdb.ParserException: Parser Error: syntax error at or near '='"
         )
         request.applymarker(pytest.mark.xfail(reason=reason))
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
 
     x, y = nw.col("x"), nw.col("y")
     result = (
