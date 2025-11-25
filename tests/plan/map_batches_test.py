@@ -115,3 +115,19 @@ def test_map_batches(
 ) -> None:
     result = dataframe(data).select(expr)
     assert_equal_data(result, expected)
+
+
+@pytest.mark.xfail(
+    reason="TODO: Need to raise when `returns_scalar=False` does not return a Series"
+)
+def test_map_batches_invalid(data: Data) -> None:
+    df = dataframe(data)
+    expr = nwp.col("a", "b", "z").map_batches(aggregation_np_scalar)
+
+    msg = (
+        r"`map(?:_batches)?` with `returns_scalar=False` must return a Series; found "
+        "'numpy.int64'.\n\nIf `returns_scalar` is set to `True`, a returned value can be "
+        "a scalar value."
+    )
+    with pytest.raises(TypeError, match=msg):
+        df.select(expr)
