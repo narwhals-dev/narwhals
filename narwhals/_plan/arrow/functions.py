@@ -449,12 +449,12 @@ def cumulative(native: ChunkedArrayAny, f: F.CumAgg, /) -> ChunkedArrayAny:
     return func(native) if not f.reverse else reverse(func(reverse(native)))
 
 
-def diff(native: ChunkedOrArrayT) -> ChunkedOrArrayT:
+def diff(native: ChunkedOrArrayT, n: int = 1) -> ChunkedOrArrayT:
     # pyarrow.lib.ArrowInvalid: Vector kernel cannot execute chunkwise and no chunked exec function was defined
     return (
-        pc.pairwise_diff(native)
+        pc.pairwise_diff(native, n)
         if isinstance(native, pa.Array)
-        else chunked_array(pc.pairwise_diff(native.combine_chunks()))
+        else chunked_array(pc.pairwise_diff(native.combine_chunks(), n))
     )
 
 

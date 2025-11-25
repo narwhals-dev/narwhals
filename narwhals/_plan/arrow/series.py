@@ -166,6 +166,9 @@ class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayA
     ) -> Self:
         return self._with_native(fn.fill_null_with_strategy(self.native, strategy, limit))
 
+    def diff(self, n: int = 1) -> Self:
+        return self._with_native(fn.diff(self.native, n))
+
     def shift(self, n: int, *, fill_value: NonNestedLiteral = None) -> Self:
         return self._with_native(fn.shift(self.native, n, fill_value=fill_value))
 
@@ -188,13 +191,14 @@ class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayA
         offset = offset_left + offset_right
         return self._with_native(fn.concat_vertical_chunked(arrays)), offset
 
+    # TODO @dangotbanned: Try rewriting with `diff(window_size)`?
     def _rolling_sum(self, window_size: int, /) -> Self:
         cum_sum = self.cum_sum().fill_null_with_strategy("forward")
         return cum_sum - cum_sum.shift(window_size, fill_value=0).fill_null(0)
 
     def _rolling_count(self, window_size: int, /) -> Self:
         cum_count = self.cum_count()
-        return cum_count - cum_count.shift(window_size, fill_value=0)
+        return cum_count.diff(window_size).fill_null(cum_count)
 
     def rolling_sum(
         self, window_size: int, *, min_samples: int, center: bool = False
