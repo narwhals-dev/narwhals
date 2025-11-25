@@ -216,9 +216,6 @@ def test_is_close_expr_with_scalar(
             "duckdb.duckdb.ParserException: Parser Error: syntax error at or near '='"
         )
         request.applymarker(pytest.mark.xfail(reason=reason))
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
 
     y = nw.col("y")
     result = (
