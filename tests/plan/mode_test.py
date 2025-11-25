@@ -26,7 +26,7 @@ def data() -> Data:
         (nwp.col("b").filter(nwp.col("b") != 3).mode(), {"b": [1, 2, 4]}),
         (nwp.col("a").mode().sum(), {"a": [3]}),
     ],
-    ids=["single", "multiple-1", "multiple-2", "mutliple-agg"],
+    ids=["single", "multiple-1", "multiple-2", "multiple-agg"],
 )
 def test_mode_expr_keep_all(data: Data, expr: nwp.Expr, expected: Data) -> None:
     result = dataframe(data).select(expr).sort(ncs.first())
