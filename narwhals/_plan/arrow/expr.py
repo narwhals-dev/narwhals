@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any, ClassVar, Protocol, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol, TypeVar, overload
 
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
@@ -21,6 +21,7 @@ from narwhals._plan.common import temp
 from narwhals._plan.compliant.column import ExprDispatch
 from narwhals._plan.compliant.expr import EagerExpr
 from narwhals._plan.compliant.scalar import EagerScalar
+from narwhals._plan.compliant.struct import ExprStructNamespace
 from narwhals._plan.compliant.typing import namespace
 from narwhals._plan.expressions import functions as F
 from narwhals._plan.expressions.boolean import (
@@ -86,6 +87,7 @@ if TYPE_CHECKING:
         Rank,
         Shift,
     )
+    from narwhals._plan.expressions.struct import FieldByName
     from narwhals._plan.typing import Seq
     from narwhals.typing import IntoDType, PythonLiteral
 
@@ -631,6 +633,10 @@ class ArrowExpr(  # type: ignore[misc]
 
     # ewm_mean = not_implemented()  # noqa: ERA001
 
+    @property
+    def struct(self) -> ArrowStructNamespace[Expr]:
+        return ArrowStructNamespace(self)
+
 
 class ArrowScalar(
     _ArrowDispatch["ArrowScalar"],
@@ -741,6 +747,10 @@ class ArrowScalar(
         chunked = fn.chunked_array([[]], previous.native.type)
         return ArrowExpr.from_native(chunked, name, version=self.version)
 
+    @property
+    def struct(self) -> ArrowStructNamespace[Scalar]:
+        return ArrowStructNamespace(self)
+
     filter = not_implemented()
     over = not_implemented()
     over_ordered = not_implemented()
@@ -754,3 +764,28 @@ class ArrowScalar(
     cum_min = not_implemented()
     cum_max = not_implemented()
     cum_prod = not_implemented()
+
+
+ExprOrScalarT = TypeVar("ExprOrScalarT", ArrowExpr, ArrowScalar)
+
+
+class ArrowStructNamespace(ExprStructNamespace["Frame", ExprOrScalarT]):
+    def __narwhals_namespace__(self) -> ArrowNamespace:
+        return namespace(self._compliant)
+
+    @property
+    def version(self) -> Version:
+        return self._compliant.version
+
+    def __init__(self, compliant: ExprOrScalarT, /) -> None:
+        self._compliant: ExprOrScalarT = compliant
+
+    def with_native(self, native: Any, name: str, /) -> ExprOrScalarT:
+        return self._compliant.from_native(native, name, self.version)
+
+    def field(
+        self, node: ir.FunctionExpr[FieldByName], frame: Frame, name: str
+    ) -> ExprOrScalarT:
+        native = node.input[0].dispatch(self._compliant, frame, name).native
+        field_name = node.function.name
+        return self.with_native(fn.struct_field(native, field_name), field_name)

@@ -70,7 +70,7 @@ if TYPE_CHECKING:
     )
     from narwhals._plan.compliant.typing import SeriesT
     from narwhals._plan.options import RankOptions, SortMultipleOptions, SortOptions
-    from narwhals._plan.typing import OneOrSeq, Seq
+    from narwhals._plan.typing import Seq
     from narwhals.typing import (
         ClosedInterval,
         FillNullStrategy,
@@ -267,21 +267,29 @@ def string_type(data_types: Iterable[DataType] = (), /) -> StringType | LargeStr
 @t.overload
 def struct_field(native: ChunkedStruct, field: Field, /) -> ChunkedArrayAny: ...
 @t.overload
-def struct_field(
-    native: ChunkedStruct, field: Field, *fields: Field
-) -> Seq[ChunkedArrayAny]: ...
-@t.overload
 def struct_field(native: StructArray, field: Field, /) -> ArrayAny: ...
 @t.overload
-def struct_field(native: StructArray, field: Field, *fields: Field) -> Seq[ArrayAny]: ...
-def struct_field(
-    native: ChunkedOrArrayAny, field: Field, *fields: Field
-) -> OneOrSeq[ChunkedOrArrayAny]:
-    """Retrieve one or multiple `Struct` field(s) as `(Chunked)Array`(s)."""
-    func = t.cast("Callable[[Any,Any], ChunkedOrArrayAny]", pc.struct_field)
-    if not fields:
-        return func(native, field)
-    return tuple(func(native, name) for name in (field, *fields))
+def struct_field(native: pa.StructScalar, field: Field, /) -> ScalarAny: ...
+@t.overload
+def struct_field(native: SameArrowT, field: Field, /) -> SameArrowT: ...
+def struct_field(native: ArrowAny, field: Field, /) -> ArrowAny:
+    """Retrieve one `Struct` field."""
+    func = t.cast("Callable[[Any,Any], ArrowAny]", pc.struct_field)
+    return func(native, field)
+
+
+@t.overload
+def struct_fields(native: ChunkedStruct, *fields: Field) -> Seq[ChunkedArrayAny]: ...
+@t.overload
+def struct_fields(native: StructArray, *fields: Field) -> Seq[ArrayAny]: ...
+@t.overload
+def struct_fields(native: pa.StructScalar, *fields: Field) -> Seq[ScalarAny]: ...
+@t.overload
+def struct_fields(native: SameArrowT, *fields: Field) -> Seq[SameArrowT]: ...
+def struct_fields(native: ArrowAny, *fields: Field) -> Seq[ArrowAny]:
+    """Retrieve  multiple `Struct` fields."""
+    func = t.cast("Callable[[Any,Any], ArrowAny]", pc.struct_field)
+    return tuple(func(native, name) for name in fields)
 
 
 @t.overload
@@ -621,7 +629,7 @@ def ir_min_max(name: str, /) -> MinMax:
 def _boolean_is_unique(
     indices: ChunkedArrayAny, aggregated: ChunkedStruct, /
 ) -> ChunkedArrayAny:
-    min, max = struct_field(aggregated, "min", "max")
+    min, max = struct_fields(aggregated, "min", "max")
     return and_(is_in(indices, min), is_in(indices, max))
 
 

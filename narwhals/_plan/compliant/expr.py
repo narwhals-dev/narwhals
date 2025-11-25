@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 
     from narwhals._plan import expressions as ir
     from narwhals._plan.compliant.scalar import CompliantScalar, EagerScalar
+    from narwhals._plan.compliant.struct import ExprStructNamespace
     from narwhals._plan.expressions import (
         BinaryExpr,
         FunctionExpr,
@@ -241,6 +242,9 @@ class CompliantExpr(HasVersion, Protocol[FrameT_contra, SeriesT_co]):
     def unique(
         self, node: FunctionExpr[F.Unique], frame: FrameT_contra, name: str
     ) -> Self: ...
+
+    @property
+    def struct(self) -> ExprStructNamespace[FrameT_contra, Self]: ...
 
 
 class EagerExpr(
