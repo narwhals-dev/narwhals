@@ -780,14 +780,18 @@ def date_range(
 
 
 def repeat(value: ScalarAny | NonNestedLiteral, n: int) -> ArrayAny:
-    repeat_: Incomplete = pa.repeat
     value = value if isinstance(value, pa.Scalar) else lit(value)
+    return repeat_unchecked(value, n)
+
+
+def repeat_unchecked(value: ScalarAny, /, n: int) -> ArrayAny:
+    repeat_: Incomplete = pa.repeat
     result: ArrayAny = repeat_(value, n)
     return result
 
 
 def repeat_like(value: NonNestedLiteral, n: int, native: ArrowAny) -> ArrayAny:
-    return repeat(lit(value, native.type), n)
+    return repeat_unchecked(lit(value, native.type), n)
 
 
 def nulls_like(n: int, native: ArrowAny) -> ArrayAny:

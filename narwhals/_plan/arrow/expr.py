@@ -47,7 +47,6 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self, TypeAlias
 
-    from narwhals._arrow.typing import Incomplete
     from narwhals._plan.arrow.dataframe import ArrowDataFrame as Frame
     from narwhals._plan.arrow.namespace import ArrowNamespace
     from narwhals._plan.arrow.typing import ChunkedArrayAny, P, VectorFunction
@@ -714,17 +713,15 @@ class ArrowScalar(
         return self.broadcast(1)
 
     def to_python(self) -> PythonLiteral:
-        return self.native.as_py()  # type: ignore[no-any-return]
+        result: PythonLiteral = self.native.as_py()
+        return result
 
     def broadcast(self, length: int) -> Series:
         scalar = self.native
         if length == 1:
             chunked = fn.chunked_array(scalar)
         else:
-            # NOTE: Same issue as `pa.scalar` overlapping overloads
-            # https://github.com/zen-xu/pyarrow-stubs/pull/209
-            pa_repeat: Incomplete = pa.repeat
-            chunked = fn.chunked_array(pa_repeat(scalar, length))
+            chunked = fn.chunked_array(fn.repeat_unchecked(scalar, length))
         return Series.from_native(chunked, self.name, version=self.version)
 
     def count(self, node: Count, frame: Frame, name: str) -> Scalar:
