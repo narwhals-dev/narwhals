@@ -54,11 +54,13 @@ def to_numpy(s: CompliantSeriesAny, /) -> _1DArray:
 
 
 def groupwise_1d_array(s: CompliantSeriesAny, /) -> _1DArray:
-    return np.append(s.to_numpy(), [10, 2])
+    result: _1DArray = np.append(s.to_numpy(), [10, 2])
+    return result
 
 
 def aggregation_np_scalar(s: CompliantSeriesAny, /) -> _NumpyScalar:
-    return s.to_numpy().max()
+    result: _NumpyScalar = s.to_numpy().max()
+    return result
 
 
 @pytest.mark.parametrize(
