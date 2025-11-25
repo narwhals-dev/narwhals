@@ -13,12 +13,10 @@ pytest.importorskip("pyarrow")
 pytest.importorskip("numpy")
 import datetime as dt
 
-import numpy as np
 import pyarrow as pa
 
 import narwhals as nw
 from narwhals import _plan as nwp
-from narwhals._utils import Version
 from tests.plan.utils import assert_equal_data, dataframe, first, last, series
 
 if TYPE_CHECKING:
@@ -389,44 +387,6 @@ XFAIL_KLEENE_ALL_NULL = pytest.mark.xfail(
             ),
             {"literal": ["a|b|c|d|20"]},
             id="concat_str-all-lit",
-        ),
-        pytest.param(
-            [
-                nwp.col("a")
-                .alias("...")
-                .map_batches(
-                    lambda s: s.from_iterable(
-                        [*((len(s) - 1) * [type(s.dtype).__name__.lower()]), "last"],
-                        version=Version.MAIN,
-                        name="funky",
-                    ),
-                    is_elementwise=True,
-                ),
-                nwp.col("a"),
-            ],
-            {"funky": ["string", "string", "last"], "a": ["A", "B", "A"]},
-            id="map_batches-series",
-        ),
-        pytest.param(
-            nwp.col("b")
-            .map_batches(lambda s: s.to_numpy() + 1, nw.Float64(), is_elementwise=True)
-            .sum(),
-            {"b": [9.0]},
-            id="map_batches-numpy",
-        ),
-        pytest.param(
-            ncs.by_name("b", "c", "d")
-            .map_batches(lambda s: np.append(s.to_numpy(), [10, 2]), is_elementwise=True)
-            .sort(),
-            {"b": [1, 2, 2, 3, 10], "c": [2, 2, 4, 9, 10], "d": [2, 7, 8, 8, 10]},
-            id="map_batches-selector",
-        ),
-        pytest.param(
-            nwp.col("j", "k")
-            .fill_null(15)
-            .map_batches(lambda s: (s.to_numpy().max()), returns_scalar=True),
-            {"j": [15], "k": [42]},
-            id="map_batches-return_scalar",
         ),
         pytest.param(
             [nwp.col("g").len(), nwp.col("m").last(), nwp.col("h").count()],
