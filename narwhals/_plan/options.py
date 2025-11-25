@@ -76,6 +76,9 @@ class FunctionFlags(enum.Flag):
         return name.replace("|", " | ")
 
 
+_INVALID = FunctionFlags.RETURNS_SCALAR | FunctionFlags.LENGTH_PRESERVING
+
+
 class FunctionOptions(Immutable):
     """https://github.com/pola-rs/polars/blob/3fd7ecc5f9de95f62b70ea718e7e5dbf951b6d1c/crates/polars-plan/src/plans/options.rs"""  # noqa: D415
 
@@ -101,11 +104,12 @@ class FunctionOptions(Immutable):
         return self.flags.is_input_wildcard_expansion()
 
     def with_flags(self, flags: FunctionFlags, /) -> FunctionOptions:
-        if (FunctionFlags.RETURNS_SCALAR | FunctionFlags.LENGTH_PRESERVING) in flags:
-            msg = "A function cannot both return a scalar and preserve length, they are mutually exclusive."  # pragma: no cover
-            raise TypeError(msg)  # pragma: no cover
+        new_flags = self.flags | flags
+        if _INVALID in new_flags:
+            msg = "A function cannot both return a scalar and preserve length, they are mutually exclusive."
+            raise TypeError(msg)
         obj = FunctionOptions.__new__(FunctionOptions)
-        object.__setattr__(obj, "flags", self.flags | flags)
+        object.__setattr__(obj, "flags", new_flags)
         return obj
 
     def with_elementwise(self) -> FunctionOptions:

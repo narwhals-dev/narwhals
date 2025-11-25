@@ -377,6 +377,14 @@ def test_binary_expr_shape_invalid() -> None:
         a.fill_null(1) // b.rolling_mean(5)
 
 
+def test_map_batches_invalid() -> None:
+    with pytest.raises(
+        TypeError,
+        match=r"A function cannot both return a scalar and preserve length, they are mutually exclusive",
+    ):
+        nwp.col("a").map_batches(lambda x: x, is_elementwise=True, returns_scalar=True)
+
+
 @pytest.mark.parametrize("into_iter", [list, tuple, deque, iter, dict.fromkeys, set])
 def test_is_in_seq(into_iter: IntoIterable) -> None:
     expected = 1, 2, 3
