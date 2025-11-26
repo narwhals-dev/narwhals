@@ -62,4 +62,4 @@ handle plugins. For this integration to work, any plugin architecture must conta
   
 ## Can I see an example?
 
-Yes! For a reference plugin, please check out [narwhals-daft](https://github.com/narwhals-daft/narwhals-daft).
+Yes! For a reference plugin, please check out [narwhals-daft](https://github.com/narwhals-dev/narwhals-daft).
