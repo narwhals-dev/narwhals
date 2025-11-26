@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     from narwhals._plan.expressions.functions import RollingWindow
     from narwhals._plan.expressions.namespace import IRNamespace
     from narwhals._plan.expressions.ranges import RangeFunction
+    from narwhals._plan.expressions.struct import StructFunction
     from narwhals._plan.selectors import Selector
     from narwhals._plan.series import Series
     from narwhals.typing import NonNestedDType, NonNestedLiteral
@@ -60,6 +61,9 @@ RollingT_co = TypeVar(
 )
 RangeT_co = TypeVar(
     "RangeT_co", bound="RangeFunction", default="RangeFunction", covariant=True
+)
+StructT_co = TypeVar(
+    "StructT_co", bound="StructFunction", default="StructFunction", covariant=True
 )
 LeftT = TypeVar("LeftT", bound="ExprIR", default="ExprIR")
 OperatorT = TypeVar("OperatorT", bound="ops.Operator", default="ops.Operator")

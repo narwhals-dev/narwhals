@@ -325,11 +325,6 @@ def test_literal_output_name() -> None:
     assert e.meta.output_name() == ""
 
 
-# NOTE: Very low-priority
-@pytest.mark.xfail(
-    reason="TODO: `Expr.struct.field` influences `meta.output_name`.",
-    raises=AssertionError,
-)
 def test_struct_field_output_name_24003() -> None:
     assert nwp.col("ball").struct.field("radius").meta.output_name() == "radius"
 

@@ -27,6 +27,7 @@ from narwhals._plan.typing import (
     SelectorOperatorT,
     SelectorT,
     Seq,
+    StructT_co,
 )
 from narwhals.exceptions import InvalidOperationError
 
@@ -60,6 +61,7 @@ __all__ = [
     "SelectorIR",
     "Sort",
     "SortBy",
+    "StructExpr",
     "TernaryExpr",
     "WindowExpr",
     "col",
@@ -318,6 +320,20 @@ class RangeExpr(FunctionExpr[RangeT_co]):
 
     def __repr__(self) -> str:
         return f"{self.function!r}({list(self.input)!r})"
+
+
+class StructExpr(FunctionExpr[StructT_co]):
+    """E.g. `col("a").struct.field(...)`.
+
+    Requires special handling during expression expansion.
+    """
+
+    def needs_expansion(self) -> bool:
+        return self.function.needs_expansion or super().needs_expansion()
+
+    def iter_output_name(self) -> t.Iterator[ExprIR]:
+        yield self
+        yield from super().iter_output_name()  # pragma: no cover
 
 
 class Filter(ExprIR, child=("expr", "by")):
