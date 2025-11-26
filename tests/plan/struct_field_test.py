@@ -29,10 +29,6 @@ pytest.importorskip("pyarrow")
         pytest.param(
             nwp.col("user").struct.field("id").name.keep(),
             {"user": ["0", "1"]},
-            marks=pytest.mark.xfail(
-                raises=KeyError,
-                reason="TODO: Handle `FieldByName` correctly in `ArrowExpr`?",
-            ),
             id="field-single-keep-root",
         ),
     ],

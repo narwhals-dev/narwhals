@@ -787,5 +787,4 @@ class ArrowStructNamespace(ExprStructNamespace["Frame", ExprOrScalarT]):
         self, node: ir.FunctionExpr[FieldByName], frame: Frame, name: str
     ) -> ExprOrScalarT:
         native = node.input[0].dispatch(self._compliant, frame, name).native
-        field_name = node.function.name
-        return self.with_native(fn.struct_field(native, field_name), field_name)
+        return self.with_native(fn.struct_field(native, node.function.name), name)
