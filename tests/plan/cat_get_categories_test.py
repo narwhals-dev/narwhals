@@ -28,7 +28,5 @@ def test_get_categories(
             reason="Unsupported cast from string to dictionary using function cast_dictionary",
         )
     )
-    df = dataframe(data)
-    df = dataframe(data).select(ncs.first().cast(nw.Categorical))
-    result = df.select(ncs.first().cat.get_categories())
+    result = df.select(ncs.first().cast(nw.Categorical).cat.get_categories())
     assert_equal_data(result, {"a": expected})
