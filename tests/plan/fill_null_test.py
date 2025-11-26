@@ -31,10 +31,6 @@ DATA_LIMITS = {
 }
 
 
-# TODO @dangotbanned: Address index out-of-bounds error
-# - [x] Fix this in the new version
-# - [ ] Open an issue demonstrating the bug
-#  - Same problem impacts `main` for `fill_null(limit=...)`
 @pytest.mark.parametrize(
     ("data", "exprs", "expected"),
     [
