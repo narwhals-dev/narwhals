@@ -20,20 +20,25 @@ pytest.importorskip("pyarrow")
     ("exprs", "expected"),
     [
         pytest.param(
+            nwp.col("user").struct.field("id"), {"id": ["0", "1"]}, id="field-single"
+        ),
+        pytest.param(
             [nwp.col("user").struct.field("id"), nwp.col("user").struct.field("name")],
             {"id": ["0", "1"], "name": ["john", "jane"]},
             marks=pytest.mark.xfail(
                 raises=DuplicateError,
                 reason="TODO: Handle `FieldByName` correctly during `Expr` expansion",
             ),
+            id="multiple-fields-same-root",
         ),
         pytest.param(
             nwp.col("user").struct.field("id").name.keep(),
             {"user": ["0", "1"]},
             marks=pytest.mark.xfail(
-                raises=NotImplementedError,
-                reason="BUG: Attempting to call `ArrowExpr.field` instead of `ArrowExpr.struct.field`",
+                raises=KeyError,
+                reason="TODO: Handle `FieldByName` correctly during `Expr` expansion",
             ),
+            id="field-single-keep-root",
         ),
     ],
 )

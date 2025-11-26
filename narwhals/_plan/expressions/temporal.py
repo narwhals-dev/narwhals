@@ -169,7 +169,7 @@ class ExprDateTimeNamespace(ExprNamespace[IRDateTimeNamespace]):
     def to_string(self, format: str) -> Expr:  # pragma: no cover
         return self._with_unary(self._ir.to_string(format=format))
 
-    def replace_time_zone(self, time_zone: str | None) -> Expr:  # pragma: no cover
+    def replace_time_zone(self, time_zone: str | None) -> Expr:
         return self._with_unary(self._ir.replace_time_zone(time_zone=time_zone))
 
     def convert_time_zone(self, time_zone: str) -> Expr:  # pragma: no cover

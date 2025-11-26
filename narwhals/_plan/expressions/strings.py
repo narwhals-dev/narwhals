@@ -100,13 +100,13 @@ class IRStringNamespace(IRNamespace):
     def contains(self, pattern: str, *, literal: bool = False) -> Contains:
         return Contains(pattern=pattern, literal=literal)
 
-    def slice(self, offset: int, length: int | None = None) -> Slice:  # pragma: no cover
+    def slice(self, offset: int, length: int | None = None) -> Slice:
         return Slice(offset=offset, length=length)
 
-    def head(self, n: int = 5) -> Slice:  # pragma: no cover
+    def head(self, n: int = 5) -> Slice:
         return self.slice(0, n)
 
-    def tail(self, n: int = 5) -> Slice:  # pragma: no cover
+    def tail(self, n: int = 5) -> Slice:
         return self.slice(-n)
 
     def to_datetime(self, format: str | None = None) -> ToDatetime:  # pragma: no cover
@@ -134,7 +134,7 @@ class ExprStringNamespace(ExprNamespace[IRStringNamespace]):
     def strip_chars(self, characters: str | None = None) -> Expr:  # pragma: no cover
         return self._with_unary(self._ir.strip_chars(characters))
 
-    def starts_with(self, prefix: str) -> Expr:  # pragma: no cover
+    def starts_with(self, prefix: str) -> Expr:
         return self._with_unary(self._ir.starts_with(prefix=prefix))
 
     def ends_with(self, suffix: str) -> Expr:  # pragma: no cover
@@ -143,13 +143,13 @@ class ExprStringNamespace(ExprNamespace[IRStringNamespace]):
     def contains(self, pattern: str, *, literal: bool = False) -> Expr:
         return self._with_unary(self._ir.contains(pattern, literal=literal))
 
-    def slice(self, offset: int, length: int | None = None) -> Expr:  # pragma: no cover
+    def slice(self, offset: int, length: int | None = None) -> Expr:
         return self._with_unary(self._ir.slice(offset, length))
 
-    def head(self, n: int = 5) -> Expr:  # pragma: no cover
+    def head(self, n: int = 5) -> Expr:
         return self._with_unary(self._ir.head(n))
 
-    def tail(self, n: int = 5) -> Expr:  # pragma: no cover
+    def tail(self, n: int = 5) -> Expr:
         return self._with_unary(self._ir.tail(n))
 
     def split(self, by: str) -> Expr:  # pragma: no cover

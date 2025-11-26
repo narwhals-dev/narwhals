@@ -21,7 +21,7 @@ class IRListNamespace(IRNamespace):
 class ExprListNamespace(ExprNamespace[IRListNamespace]):
     @property
     def _ir_namespace(self) -> type[IRListNamespace]:
-        return IRListNamespace  # pragma: no cover
+        return IRListNamespace
 
     def len(self) -> Expr:
-        return self._with_unary(self._ir.len())  # pragma: no cover
+        return self._with_unary(self._ir.len())

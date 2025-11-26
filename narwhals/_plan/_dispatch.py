@@ -182,7 +182,20 @@ def _method_name(tp: type[ExprIRT | FunctionT]) -> str:
 
 
 def get_dispatch_name(expr: ExprIR | type[Function], /) -> str:
-    """Return the synthesized method name for `expr`."""
-    return (
-        repr(expr.function) if is_function_expr(expr) else expr.__expr_ir_dispatch__.name
-    )
+    """Return the synthesized method name for `expr`.
+
+    Note:
+        Refers to the `Compliant*` method name, which may be *either* more general
+        or more specialized than what the user called.
+    """
+    dispatch: Dispatcher[Any]
+    if is_function_expr(expr):
+        from narwhals._plan import expressions as ir
+
+        if isinstance(expr, (ir.RollingExpr, ir.AnonymousExpr)):
+            dispatch = expr.__expr_ir_dispatch__
+        else:
+            dispatch = expr.function.__expr_ir_dispatch__
+    else:
+        dispatch = expr.__expr_ir_dispatch__
+    return dispatch.name
