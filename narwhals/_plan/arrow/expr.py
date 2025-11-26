@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any, ClassVar, Protocol, TypeVar, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, Protocol, TypeVar, overload
 
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
@@ -18,10 +18,10 @@ from narwhals._plan.arrow import functions as fn
 from narwhals._plan.arrow.series import ArrowSeries as Series
 from narwhals._plan.arrow.typing import ChunkedOrScalarAny, NativeScalar, StoresNativeT_co
 from narwhals._plan.common import temp
+from narwhals._plan.compliant.accessors import ExprCatNamespace, ExprStructNamespace
 from narwhals._plan.compliant.column import ExprDispatch
 from narwhals._plan.compliant.expr import EagerExpr
 from narwhals._plan.compliant.scalar import EagerScalar
-from narwhals._plan.compliant.struct import ExprStructNamespace
 from narwhals._plan.compliant.typing import namespace
 from narwhals._plan.expressions import functions as F
 from narwhals._plan.expressions.boolean import (
@@ -76,6 +76,7 @@ if TYPE_CHECKING:
         IsNull,
         Not,
     )
+    from narwhals._plan.expressions.categorical import GetCategories
     from narwhals._plan.expressions.expr import BinaryExpr, FunctionExpr as FExpr
     from narwhals._plan.expressions.functions import (
         Abs,
@@ -632,6 +633,9 @@ class ArrowExpr(  # type: ignore[misc]
     hist_bin_count = not_implemented()
 
     # ewm_mean = not_implemented()  # noqa: ERA001
+    @property
+    def cat(self) -> ArrowCatNamespace[Expr]:
+        return ArrowCatNamespace(self)
 
     @property
     def struct(self) -> ArrowStructNamespace[Expr]:
@@ -748,6 +752,10 @@ class ArrowScalar(
         return ArrowExpr.from_native(chunked, name, version=self.version)
 
     @property
+    def cat(self) -> ArrowCatNamespace[Scalar]:
+        return ArrowCatNamespace(self)
+
+    @property
     def struct(self) -> ArrowStructNamespace[Scalar]:
         return ArrowStructNamespace(self)
 
@@ -769,20 +777,36 @@ class ArrowScalar(
 ExprOrScalarT = TypeVar("ExprOrScalarT", ArrowExpr, ArrowScalar)
 
 
-class ArrowStructNamespace(ExprStructNamespace["Frame", ExprOrScalarT]):
-    def __narwhals_namespace__(self) -> ArrowNamespace:
-        return namespace(self._compliant)
-
-    @property
-    def version(self) -> Version:
-        return self._compliant.version
-
+class ArrowAccessor(Generic[ExprOrScalarT]):
     def __init__(self, compliant: ExprOrScalarT, /) -> None:
         self._compliant: ExprOrScalarT = compliant
 
-    def with_native(self, native: Any, name: str, /) -> ExprOrScalarT:
-        return self._compliant.from_native(native, name, self.version)
+    @property
+    def compliant(self) -> ExprOrScalarT:
+        return self._compliant
 
+    def __narwhals_namespace__(self) -> ArrowNamespace:
+        return namespace(self.compliant)
+
+    @property
+    def version(self) -> Version:
+        return self.compliant.version
+
+    def with_native(self, native: Any, name: str, /) -> ExprOrScalarT:
+        return self.compliant.from_native(native, name, self.version)
+
+
+class ArrowCatNamespace(ExprCatNamespace["Frame", "Expr"], ArrowAccessor[ExprOrScalarT]):
+    def get_categories(
+        self, node: ir.FunctionExpr[GetCategories], frame: Frame, name: str
+    ) -> Expr:
+        native = node.input[0].dispatch(self._compliant, frame, name).native
+        return ArrowExpr.from_native(fn.get_categories(native), name, self.version)
+
+
+class ArrowStructNamespace(
+    ExprStructNamespace["Frame", ExprOrScalarT], ArrowAccessor[ExprOrScalarT]
+):
     def field(
         self, node: ir.FunctionExpr[FieldByName], frame: Frame, name: str
     ) -> ExprOrScalarT:

@@ -16,8 +16,8 @@ if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
 
     from narwhals._plan import expressions as ir
+    from narwhals._plan.compliant.accessors import ExprCatNamespace, ExprStructNamespace
     from narwhals._plan.compliant.scalar import CompliantScalar, EagerScalar
-    from narwhals._plan.compliant.struct import ExprStructNamespace
     from narwhals._plan.expressions import (
         BinaryExpr,
         FunctionExpr,
@@ -243,6 +243,10 @@ class CompliantExpr(HasVersion, Protocol[FrameT_contra, SeriesT_co]):
         self, node: FunctionExpr[F.Unique], frame: FrameT_contra, name: str
     ) -> Self: ...
 
+    @property
+    def cat(
+        self,
+    ) -> ExprCatNamespace[FrameT_contra, CompliantExpr[FrameT_contra, SeriesT_co]]: ...
     @property
     def struct(self) -> ExprStructNamespace[FrameT_contra, Self]: ...
 

@@ -292,6 +292,15 @@ def struct_fields(native: ArrowAny, *fields: Field) -> Seq[ArrowAny]:
     return tuple(func(native, name) for name in fields)
 
 
+def get_categories(native: ArrowAny) -> ChunkedArrayAny:
+    da: Incomplete
+    if isinstance(native, pa.ChunkedArray):
+        da = native.unify_dictionaries().chunk(0)
+    else:
+        da = native
+    return chunked_array(da.dictionary)
+
+
 @t.overload
 def when_then(
     predicate: Predicate, then: SameArrowT, otherwise: SameArrowT
