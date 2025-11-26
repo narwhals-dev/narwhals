@@ -12,10 +12,9 @@ from narwhals.exceptions import InvalidOperationError
 from tests.plan.utils import assert_equal_data, dataframe
 
 if TYPE_CHECKING:
-    from collections.abc import Collection, Iterable, Iterator, Mapping, Sequence
+    from collections.abc import Collection, Iterable, Iterator, Mapping
 
     from _pytest.mark import ParameterSet
-    from typing_extensions import TypeAlias
 
     from narwhals._plan.typing import IntoExpr
     from narwhals._typing import NoDefault
@@ -23,10 +22,6 @@ if TYPE_CHECKING:
     from tests.conftest import Data
 
 pytest.importorskip("pyarrow")
-
-
-Old: TypeAlias = "Sequence[Any] | Mapping[Any, Any]"
-New: TypeAlias = "Sequence[Any] | NoDefault"
 
 
 @pytest.fixture(scope="module")
