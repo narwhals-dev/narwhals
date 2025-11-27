@@ -217,6 +217,9 @@ class DataFrame(
     def to_polars(self) -> pl.DataFrame:
         return self._compliant.to_polars()
 
+    def gather_every(self, n: int, offset: int = 0) -> Self:
+        return self._with_compliant(self._compliant.gather_every(n, offset))
+
     def get_column(self, name: str) -> Series[NativeSeriesT]:  # pragma: no cover
         return self._series(self._compliant.get_column(name))
 

@@ -573,11 +573,10 @@ class ArrowExpr(  # type: ignore[misc]
         result = self._dispatch_expr(node.input[0], frame, name).native.unique()
         return self._with_native(result, name)
 
-    # TODO @dangotbanned: Only implement in `ArrowSeries` and reuse
     def gather_every(self, node: FExpr[F.GatherEvery], frame: Frame, name: str) -> Self:
-        native = self._dispatch_expr(node.input[0], frame, name).native
-        result = native[node.function.offset :: node.function.n]
-        return self._with_native(result, name)
+        series = self._dispatch_expr(node.input[0], frame, name)
+        n, offset = node.function.n, node.function.offset
+        return self.from_series(series.gather_every(n=n, offset=offset))
 
     def drop_nulls(self, node: FExpr[F.DropNulls], frame: Frame, name: str) -> Self:
         return self._vector_function(fn.drop_nulls)(node, frame, name)

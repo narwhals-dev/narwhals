@@ -122,6 +122,9 @@ class Series(Generic[NativeSeriesT_co]):
         rows = indices._compliant if isinstance(indices, Series) else indices
         return type(self)(self._compliant.gather(rows))
 
+    def gather_every(self, n: int, offset: int = 0) -> Self:
+        return type(self)(self._compliant.gather_every(n, offset))
+
     def has_nulls(self) -> bool:  # pragma: no cover
         return self._compliant.has_nulls()
 

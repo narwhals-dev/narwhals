@@ -57,5 +57,8 @@ class ArrowFrameSeries(Generic[NativeT]):
         ca = self._gather(indices.native if is_series(indices) else indices)
         return self._with_native(ca)
 
+    def gather_every(self, n: int, offset: int = 0) -> Self:
+        return self._with_native(self.native[offset::n])
+
     def slice(self, offset: int, length: int | None = None) -> Self:
         return self._with_native(self.native.slice(offset=offset, length=length))
