@@ -47,6 +47,7 @@ class Sqrt(Function, options=FunctionOptions.elementwise): ...
 class DropNulls(Function, options=FunctionOptions.row_separable): ...
 class ModeAll(Function): ...
 class ModeAny(Function, options=FunctionOptions.aggregation): ...
+class Kurtosis(Function, options=FunctionOptions.aggregation): ...
 class Skew(Function, options=FunctionOptions.aggregation): ...
 class Clip(Function, options=FunctionOptions.elementwise):
     def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR, ExprIR]:
@@ -126,12 +127,6 @@ class Pow(Function, options=FunctionOptions.elementwise):
     def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR]:
         base, exponent = node.input
         return base, exponent
-
-
-class Kurtosis(Function, options=FunctionOptions.aggregation):
-    __slots__ = ("bias", "fisher")
-    fisher: bool
-    bias: bool
 
 
 class FillNull(Function, options=FunctionOptions.elementwise):

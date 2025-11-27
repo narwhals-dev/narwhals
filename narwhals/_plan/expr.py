@@ -217,8 +217,8 @@ class Expr:
     def sqrt(self) -> Self:
         return self._with_unary(F.Sqrt())
 
-    def kurtosis(self, *, fisher: bool = True, bias: bool = True) -> Self:
-        return self._with_unary(F.Kurtosis(fisher=fisher, bias=bias))
+    def kurtosis(self) -> Self:
+        return self._with_unary(F.Kurtosis())
 
     def null_count(self) -> Self:
         return self._with_unary(F.NullCount())
