@@ -18,7 +18,11 @@ from narwhals._plan.arrow import functions as fn
 from narwhals._plan.arrow.series import ArrowSeries as Series
 from narwhals._plan.arrow.typing import ChunkedOrScalarAny, NativeScalar, StoresNativeT_co
 from narwhals._plan.common import temp
-from narwhals._plan.compliant.accessors import ExprCatNamespace, ExprStructNamespace
+from narwhals._plan.compliant.accessors import (
+    ExprCatNamespace,
+    ExprListNamespace,
+    ExprStructNamespace,
+)
 from narwhals._plan.compliant.column import ExprDispatch
 from narwhals._plan.compliant.expr import EagerExpr
 from narwhals._plan.compliant.scalar import EagerScalar
@@ -51,6 +55,7 @@ if TYPE_CHECKING:
     from narwhals._plan.arrow.dataframe import ArrowDataFrame as Frame
     from narwhals._plan.arrow.namespace import ArrowNamespace
     from narwhals._plan.arrow.typing import ChunkedArrayAny, P, VectorFunction
+    from narwhals._plan.expressions import BinaryExpr, FunctionExpr as FExpr, lists
     from narwhals._plan.expressions.aggregation import (
         ArgMax,
         ArgMin,
@@ -77,7 +82,6 @@ if TYPE_CHECKING:
         Not,
     )
     from narwhals._plan.expressions.categorical import GetCategories
-    from narwhals._plan.expressions.expr import BinaryExpr, FunctionExpr as FExpr
     from narwhals._plan.expressions.functions import (
         Abs,
         CumAgg,
@@ -638,6 +642,10 @@ class ArrowExpr(  # type: ignore[misc]
         return ArrowCatNamespace(self)
 
     @property
+    def list(self) -> ArrowListNamespace[Expr]:
+        return ArrowListNamespace(self)
+
+    @property
     def struct(self) -> ArrowStructNamespace[Expr]:
         return ArrowStructNamespace(self)
 
@@ -756,6 +764,10 @@ class ArrowScalar(
         return ArrowCatNamespace(self)
 
     @property
+    def list(self) -> ArrowListNamespace[Scalar]:
+        return ArrowListNamespace(self)
+
+    @property
     def struct(self) -> ArrowStructNamespace[Scalar]:
         return ArrowStructNamespace(self)
 
@@ -792,23 +804,27 @@ class ArrowAccessor(Generic[ExprOrScalarT]):
     def version(self) -> Version:
         return self.compliant.version
 
-    def with_native(self, native: Any, name: str, /) -> ExprOrScalarT:
-        return self.compliant.from_native(native, name, self.version)
+    def with_native(self, native: ChunkedOrScalarAny, name: str, /) -> Expr | Scalar:
+        return self.compliant._with_native(native, name)
 
 
 class ArrowCatNamespace(ExprCatNamespace["Frame", "Expr"], ArrowAccessor[ExprOrScalarT]):
-    def get_categories(
-        self, node: ir.FunctionExpr[GetCategories], frame: Frame, name: str
-    ) -> Expr:
-        native = node.input[0].dispatch(self._compliant, frame, name).native
+    def get_categories(self, node: FExpr[GetCategories], frame: Frame, name: str) -> Expr:
+        native = node.input[0].dispatch(self.compliant, frame, name).native
         return ArrowExpr.from_native(fn.get_categories(native), name, self.version)
 
 
-class ArrowStructNamespace(
-    ExprStructNamespace["Frame", ExprOrScalarT], ArrowAccessor[ExprOrScalarT]
+class ArrowListNamespace(
+    ExprListNamespace["Frame", "Expr | Scalar"], ArrowAccessor[ExprOrScalarT]
 ):
-    def field(
-        self, node: ir.FunctionExpr[FieldByName], frame: Frame, name: str
-    ) -> ExprOrScalarT:
-        native = node.input[0].dispatch(self._compliant, frame, name).native
+    def len(self, node: FExpr[lists.Len], frame: Frame, name: str) -> Expr | Scalar:
+        native = node.input[0].dispatch(self.compliant, frame, name).native
+        return self.with_native(fn.list_len(native), name)
+
+
+class ArrowStructNamespace(
+    ExprStructNamespace["Frame", "Expr | Scalar"], ArrowAccessor[ExprOrScalarT]
+):
+    def field(self, node: FExpr[FieldByName], frame: Frame, name: str) -> Expr | Scalar:
+        native = node.input[0].dispatch(self.compliant, frame, name).native
         return self.with_native(fn.struct_field(native, node.function.name), name)

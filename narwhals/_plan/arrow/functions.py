@@ -43,6 +43,7 @@ if TYPE_CHECKING:
         BooleanLengthPreserving,
         ChunkedArray,
         ChunkedArrayAny,
+        ChunkedList,
         ChunkedOrArray,
         ChunkedOrArrayAny,
         ChunkedOrArrayT,
@@ -56,6 +57,8 @@ if TYPE_CHECKING:
         IntegerScalar,
         IntegerType,
         LargeStringType,
+        ListArray,
+        ListScalar,
         NativeScalar,
         Predicate,
         SameArrowT,
@@ -299,6 +302,20 @@ def get_categories(native: ArrowAny) -> ChunkedArrayAny:
     else:
         da = native
     return chunked_array(da.dictionary)
+
+
+@t.overload
+def list_len(native: ChunkedList) -> ChunkedArray[pa.UInt32Scalar]: ...
+@t.overload
+def list_len(native: ListArray) -> pa.UInt32Array: ...
+@t.overload
+def list_len(native: ListScalar) -> pa.UInt32Scalar: ...
+@t.overload
+def list_len(native: SameArrowT) -> SameArrowT: ...
+def list_len(native: ArrowAny) -> ArrowAny:
+    length: Incomplete = pc.list_value_length
+    result: ArrowAny = length(native).cast(pa.uint32())
+    return result
 
 
 @t.overload

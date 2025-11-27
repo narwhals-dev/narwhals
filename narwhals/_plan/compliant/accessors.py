@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Protocol
 from narwhals._plan.compliant.typing import ExprT_co, FrameT_contra
 
 if TYPE_CHECKING:
-    from narwhals._plan.expressions import FunctionExpr as FExpr
+    from narwhals._plan.expressions import FunctionExpr as FExpr, lists
     from narwhals._plan.expressions.categorical import GetCategories
     from narwhals._plan.expressions.struct import FieldByName
 
@@ -13,6 +13,12 @@ if TYPE_CHECKING:
 class ExprCatNamespace(Protocol[FrameT_contra, ExprT_co]):
     def get_categories(
         self, node: FExpr[GetCategories], frame: FrameT_contra, name: str
+    ) -> ExprT_co: ...
+
+
+class ExprListNamespace(Protocol[FrameT_contra, ExprT_co]):
+    def len(
+        self, node: FExpr[lists.Len], frame: FrameT_contra, name: str
     ) -> ExprT_co: ...
 
 
