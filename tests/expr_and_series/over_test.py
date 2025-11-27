@@ -372,8 +372,13 @@ def test_over_cum_reverse(
 ) -> None:
     if "pyarrow_table" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
-    if "pandas_nullable" in str(constructor_eager) and attr in {"cum_max", "cum_min"}:
-        # https://github.com/pandas-dev/pandas/issues/61031
+    if (
+        "pandas_nullable" in str(constructor_eager)
+        and attr in {"cum_max", "cum_min"}
+        and PANDAS_VERSION < (3, 0)
+    ):
+        # TODO(FBruzzesi): convert to pytest.skip() if the fix does not make it into
+        # `pandas=2.3.4`. Otherwise update version boundary
         request.applymarker(pytest.mark.xfail)
     if "cudf" in str(constructor_eager):
         # https://github.com/rapidsai/cudf/issues/18159
