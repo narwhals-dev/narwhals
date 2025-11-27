@@ -413,7 +413,7 @@ def is_numpy_array_1d_bool(arr: Any) -> TypeIs[_1DArrayInt]:
     return (
         (np := get_numpy())
         and is_numpy_array_1d(arr)
-        and np.issubdtype(arr.dtype, np.bool)
+        and np.issubdtype(arr.dtype, np.bool_)
     )
 
 
