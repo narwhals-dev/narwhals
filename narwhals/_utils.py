@@ -1295,7 +1295,7 @@ def is_sized_multi_index_selector(
     return (
         (
             is_sequence_but_not_str(obj)
-            and ((len(obj) > 0 and isinstance(obj[0], int)) or (len(obj) == 0))
+            and ((len(obj) > 0 and is_single_index_selector(obj[0])) or (len(obj) == 0))
         )
         or is_numpy_array_1d_int(obj)
         or is_narwhals_series_int(obj)

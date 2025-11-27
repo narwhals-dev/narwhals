@@ -1140,6 +1140,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             "- Use `df[indices, :]` to select rows positionally.\n"
             "- Use `df.filter(mask)` to filter rows based on a boolean mask."
         )
+
         if isinstance(item, tuple):
             if len(item) > 2:
                 tuple_msg = (
