@@ -203,7 +203,7 @@ XFAIL_KLEENE_ALL_NULL = pytest.mark.xfail(
         ),
         (nwp.col("e", "d").is_null().any(), {"e": [True], "d": [False]}),
         (
-            [(~nwp.col("e", "d").is_null()).all(), "b"],
+            [(nwp.col("e", "d").is_not_null()).all(), "b"],
             {"e": [False, False, False], "d": [True, True, True], "b": [1, 2, 3]},
         ),
         pytest.param(

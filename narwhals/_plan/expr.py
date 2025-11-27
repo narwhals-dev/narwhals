@@ -223,6 +223,15 @@ class Expr:
     def null_count(self) -> Self:
         return self._with_unary(F.NullCount())
 
+    def fill_nan(self, value: float | Self | None) -> Self:
+        fill_value = parse_into_expr_ir(value, str_as_lit=True)
+        root = self._ir
+        if any(e.meta.has_multiple_outputs() for e in (root, fill_value)):
+            return self._from_ir(F.FillNan().to_function_expr(root, fill_value))
+        # https://github.com/pola-rs/polars/blob/e1d6f294218a36497255e2d872c223e19a47e2ec/crates/polars-plan/src/dsl/mod.rs#L894-L902
+        predicate = self.is_not_nan() | self.is_null()
+        return self._from_ir(ir.ternary_expr(predicate._ir, root, fill_value))
+
     def fill_null(
         self,
         value: IntoExpr = None,
@@ -421,6 +430,12 @@ class Expr:
 
     def is_null(self) -> Self:
         return self._with_unary(ir.boolean.IsNull())
+
+    def is_not_nan(self) -> Self:
+        return self._with_unary(ir.boolean.IsNotNan())
+
+    def is_not_null(self) -> Self:
+        return self._with_unary(ir.boolean.IsNotNull())
 
     def is_first_distinct(self) -> Self:
         return self._with_unary(ir.boolean.IsFirstDistinct())

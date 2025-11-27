@@ -35,6 +35,8 @@ if TYPE_CHECKING:
         IsFirstDistinct,
         IsLastDistinct,
         IsNan,
+        IsNotNan,
+        IsNotNull,
         IsNull,
         Not,
     )
@@ -67,6 +69,9 @@ class CompliantExpr(HasVersion, Protocol[FrameT_contra, SeriesT_co]):
     def fill_null(
         self, node: FunctionExpr[F.FillNull], frame: FrameT_contra, name: str
     ) -> Self: ...
+    def fill_nan(
+        self, node: FunctionExpr[F.FillNan], frame: FrameT_contra, name: str
+    ) -> Self: ...
     def is_between(
         self, node: FunctionExpr[IsBetween], frame: FrameT_contra, name: str
     ) -> Self: ...
@@ -84,6 +89,12 @@ class CompliantExpr(HasVersion, Protocol[FrameT_contra, SeriesT_co]):
     ) -> Self: ...
     def is_null(
         self, node: FunctionExpr[IsNull], frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def is_not_nan(
+        self, node: FunctionExpr[IsNotNan], frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def is_not_null(
+        self, node: FunctionExpr[IsNotNull], frame: FrameT_contra, name: str
     ) -> Self: ...
     def not_(self, node: FunctionExpr[Not], frame: FrameT_contra, name: str) -> Self: ...
     def over(self, node: ir.WindowExpr, frame: FrameT_contra, name: str) -> Self: ...

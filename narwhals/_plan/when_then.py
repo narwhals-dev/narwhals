@@ -8,10 +8,11 @@ from narwhals._plan._parse import (
     parse_predicates_constraints_into_expr_ir,
 )
 from narwhals._plan.expr import Expr
+from narwhals._plan.expressions import ternary_expr
 from narwhals.exceptions import MultiOutputExpressionError
 
 if TYPE_CHECKING:
-    from narwhals._plan.expressions import ExprIR, TernaryExpr
+    from narwhals._plan.expressions import ExprIR
     from narwhals._plan.typing import IntoExpr, IntoExprColumn, OneOrIterable, Seq
 
 
@@ -114,9 +115,3 @@ class ChainedThen(Immutable, Expr):
 
     def __eq__(self, other: IntoExpr) -> Expr:  # type: ignore[override]
         return Expr.__eq__(self, other)
-
-
-def ternary_expr(predicate: ExprIR, truthy: ExprIR, falsy: ExprIR, /) -> TernaryExpr:
-    from narwhals._plan.expressions.expr import TernaryExpr
-
-    return TernaryExpr(predicate=predicate, truthy=truthy, falsy=falsy)

@@ -137,6 +137,14 @@ class FillNull(Function, options=FunctionOptions.elementwise):
         return expr, value
 
 
+class FillNan(Function, options=FunctionOptions.elementwise):
+    """N-ary (expr, value)."""
+
+    def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR]:
+        expr, value = node.input
+        return expr, value
+
+
 class FillNullWithStrategy(Function):
     __slots__ = ("limit", "strategy")
     strategy: FillNullStrategy

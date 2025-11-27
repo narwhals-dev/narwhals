@@ -176,6 +176,13 @@ class Series(Generic[NativeSeriesT_co]):
     def is_in(self, other: Iterable[Any]) -> Self:
         return type(self)(self._compliant.is_in(self._parse_into_compliant(other)))
 
+    def null_count(self) -> int:
+        return self._compliant.null_count()
+
+    def fill_nan(self, value: float | Self | None) -> Self:
+        other = self._unwrap_compliant(value) if is_series(value) else value
+        return type(self)(self._compliant.fill_nan(other))
+
 
 class SeriesV1(Series[NativeSeriesT_co]):
     _version: ClassVar[Version] = Version.V1

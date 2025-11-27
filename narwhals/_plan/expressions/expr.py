@@ -65,6 +65,7 @@ __all__ = [
     "TernaryExpr",
     "WindowExpr",
     "col",
+    "ternary_expr",
 ]
 
 
@@ -544,3 +545,7 @@ class InvertSelector(SelectorIR, t.Generic[SelectorT]):
 
     def to_dtype_selector(self) -> Self:
         return replace(self, selector=self.selector.to_dtype_selector())
+
+
+def ternary_expr(predicate: ExprIR, truthy: ExprIR, falsy: ExprIR, /) -> TernaryExpr:
+    return TernaryExpr(predicate=predicate, truthy=truthy, falsy=falsy)

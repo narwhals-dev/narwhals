@@ -33,6 +33,7 @@ if TYPE_CHECKING:
     from narwhals._plan.arrow.typing import (
         Array,
         ArrayAny,
+        Arrow,
         ArrowAny,
         ArrowT,
         BinaryComp,
@@ -49,6 +50,7 @@ if TYPE_CHECKING:
         ChunkedOrArrayT,
         ChunkedOrScalar,
         ChunkedOrScalarAny,
+        ChunkedOrScalarT,
         ChunkedStruct,
         DataType,
         DataTypeRemap,
@@ -114,8 +116,14 @@ IntoColumnAgg: TypeAlias = Callable[[str], ir.AggExpr]
 
 is_null = pc.is_null
 is_not_null = t.cast("UnaryFunction[ScalarAny,pa.BooleanScalar]", pc.is_valid)
-is_nan = pc.is_nan
-is_finite = pc.is_finite
+is_nan = t.cast("UnaryFunction[ScalarAny, pa.BooleanScalar]", pc.is_nan)
+is_finite = t.cast("UnaryFunction[ScalarAny, pa.BooleanScalar]", pc.is_finite)
+not_ = t.cast("UnaryFunction[pa.BooleanScalar ,pa.BooleanScalar]", pc.invert)
+
+
+def is_not_nan(native: Arrow[ScalarAny]) -> Arrow[pa.BooleanScalar]:
+    return not_(is_nan(native))
+
 
 and_ = t.cast("BinaryLogical", pc.and_kleene)
 or_ = t.cast("BinaryLogical", pc.or_kleene)
@@ -558,6 +566,16 @@ def fill_null(
     return pc.fill_null(native, fill_value)
 
 
+@t.overload
+def fill_nan(
+    native: ChunkedOrScalarT, value: NonNestedLiteral | ArrowAny
+) -> ChunkedOrScalarT: ...
+@t.overload
+def fill_nan(native: SameArrowT, value: NonNestedLiteral | ArrowAny) -> SameArrowT: ...
+def fill_nan(native: ArrowAny, value: NonNestedLiteral | ArrowAny) -> Incomplete:
+    return when_then(is_not_nan(native), native, value)
+
+
 def fill_null_forward(native: ChunkedArrayAny) -> ChunkedArrayAny:
     return fill_null_with_strategy(native, "forward")
 
@@ -662,7 +680,7 @@ def _boolean_is_unique(
 def _boolean_is_duplicated(
     indices: ChunkedArrayAny, aggregated: ChunkedStruct, /
 ) -> ChunkedArrayAny:
-    return pc.invert(_boolean_is_unique(indices, aggregated))
+    return not_(_boolean_is_unique(indices, aggregated))
 
 
 BOOLEAN_LENGTH_PRESERVING: Mapping[

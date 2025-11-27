@@ -42,6 +42,7 @@ from narwhals._plan.expressions.expr import (
     TernaryExpr,
     WindowExpr,
     col,
+    ternary_expr,
 )
 from narwhals._plan.expressions.name import KeepName, RenameAlias
 from narwhals._plan.expressions.window import over, over_ordered
@@ -91,4 +92,5 @@ __all__ = [
     "strings",
     "struct",
     "temporal",
+    "ternary_expr",
 ]

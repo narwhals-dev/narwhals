@@ -35,6 +35,8 @@ from narwhals._plan.expressions.boolean import (
     IsInSeq,
     IsInSeries,
     IsLastDistinct,
+    IsNotNan,
+    IsNotNull,
     IsUnique,
 )
 from narwhals._plan.expressions.functions import NullCount
@@ -86,6 +88,7 @@ if TYPE_CHECKING:
         Abs,
         CumAgg,
         Diff,
+        FillNan,
         FillNull,
         NullCount,
         Pow,
@@ -131,6 +134,12 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
         value_ = value.dispatch(self, frame, "value").native
         return self._with_native(pc.fill_null(native, value_), name)
 
+    def fill_nan(self, node: FExpr[FillNan], frame: Frame, name: str) -> StoresNativeT_co:
+        expr, value = node.function.unwrap_input(node)
+        native = expr.dispatch(self, frame, name).native
+        value_ = value.dispatch(self, frame, "value").native
+        return self._with_native(fn.fill_nan(native, value_), name)
+
     def is_between(
         self, node: FExpr[IsBetween], frame: Frame, name: str
     ) -> StoresNativeT_co:
@@ -154,7 +163,7 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
         return self._unary_function(pc.abs)(node, frame, name)
 
     def not_(self, node: FExpr[Not], frame: Frame, name: str) -> StoresNativeT_co:
-        return self._unary_function(pc.invert)(node, frame, name)
+        return self._unary_function(fn.not_)(node, frame, name)
 
     def all(self, node: FExpr[All], frame: Frame, name: str) -> StoresNativeT_co:
         return self._unary_function(fn.all_)(node, frame, name)
@@ -197,6 +206,16 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
 
     def is_null(self, node: FExpr[IsNull], frame: Frame, name: str) -> StoresNativeT_co:
         return self._unary_function(fn.is_null)(node, frame, name)
+
+    def is_not_nan(
+        self, node: FExpr[IsNotNan], frame: Frame, name: str
+    ) -> StoresNativeT_co:
+        return self._unary_function(fn.is_not_nan)(node, frame, name)
+
+    def is_not_null(
+        self, node: FExpr[IsNotNull], frame: Frame, name: str
+    ) -> StoresNativeT_co:
+        return self._unary_function(fn.is_not_null)(node, frame, name)
 
     def binary_expr(self, node: BinaryExpr, frame: Frame, name: str) -> StoresNativeT_co:
         lhs, rhs = (

@@ -102,6 +102,9 @@ class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayA
     def has_nulls(self) -> bool:
         return bool(self.native.null_count)
 
+    def null_count(self) -> int:
+        return self.native.null_count
+
     __add__ = fn.bin_op(fn.add)
     __and__ = fn.bin_op(fn.and_)
     __eq__ = fn.bin_op(fn.eq)
@@ -156,6 +159,10 @@ class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayA
         if not reverse:
             return self._with_native(fn.cum_prod(self.native))
         return self._with_native(fn.cumulative(self.native, F.CumProd(reverse=reverse)))
+
+    def fill_nan(self, value: float | Self | None) -> Self:
+        fill_value = value.native if isinstance(value, ArrowSeries) else value
+        return self._with_native(fn.fill_nan(self.native, fill_value))
 
     def fill_null(self, value: NonNestedLiteral | Self) -> Self:
         fill_value = value.native if isinstance(value, ArrowSeries) else value

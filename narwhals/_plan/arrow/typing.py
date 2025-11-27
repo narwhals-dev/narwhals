@@ -177,6 +177,7 @@ ChunkedArrayAny: TypeAlias = "ChunkedArray[Any]"
 ChunkedOrScalarAny: TypeAlias = "ChunkedOrScalar[ScalarAny]"
 ChunkedOrArrayAny: TypeAlias = "ChunkedOrArray[ScalarAny]"
 ChunkedOrArrayT = TypeVar("ChunkedOrArrayT", ChunkedArrayAny, ArrayAny)
+ChunkedOrScalarT = TypeVar("ChunkedOrScalarT", ChunkedArrayAny, ScalarAny)
 Indices: TypeAlias = "_SizedMultiIndexSelector[ChunkedOrArray[pc.IntegerScalar]]"
 
 ChunkedStruct: TypeAlias = "ChunkedArray[pa.StructScalar]"
