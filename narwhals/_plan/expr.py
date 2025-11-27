@@ -575,7 +575,7 @@ class Expr:
         return ExprNameNamespace(_expr=self)
 
     @property
-    def cat(self) -> ExprCatNamespace:  # pragma: no cover
+    def cat(self) -> ExprCatNamespace:
         from narwhals._plan.expressions.categorical import ExprCatNamespace
 
         return ExprCatNamespace(_expr=self)
@@ -593,7 +593,7 @@ class Expr:
         return ExprDateTimeNamespace(_expr=self)
 
     @property
-    def list(self) -> ExprListNamespace:  # pragma: no cover
+    def list(self) -> ExprListNamespace:
         from narwhals._plan.expressions.lists import ExprListNamespace
 
         return ExprListNamespace(_expr=self)
