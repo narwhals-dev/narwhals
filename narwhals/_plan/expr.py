@@ -24,7 +24,7 @@ from narwhals._plan.options import (
     SortOptions,
     rolling_options,
 )
-from narwhals._utils import Version, no_default
+from narwhals._utils import Version, no_default, not_implemented
 from narwhals.exceptions import ComputeError
 
 if TYPE_CHECKING:
@@ -618,6 +618,13 @@ class Expr:
         from narwhals._plan.expressions.strings import ExprStringNamespace
 
         return ExprStringNamespace(_expr=self)
+
+    is_close = not_implemented()
+    sample = not_implemented()
+    head = not_implemented()
+    tail = not_implemented()
+    ceil = not_implemented()
+    floor = not_implemented()
 
 
 class ExprV1(Expr):

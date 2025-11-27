@@ -53,6 +53,16 @@ if TYPE_CHECKING:
     ]
 
 
+def format() -> Expr:
+    msg = "nwp.format"
+    raise NotImplementedError(msg)
+
+
+def coalesce() -> Expr:
+    msg = "nwp.coalesce"
+    raise NotImplementedError(msg)
+
+
 def col(*names: str | t.Iterable[str]) -> Expr:
     flat = tuple(flatten(names))
     return (
@@ -113,11 +123,13 @@ def sum(*columns: str) -> Expr:
     return col(columns).sum()
 
 
+# TODO @dangotbanned: Support `ignore_nulls=...`
 def all_horizontal(*exprs: IntoExpr | t.Iterable[IntoExpr]) -> Expr:
     it = _parse.parse_into_seq_of_expr_ir(*exprs)
     return ir.boolean.AllHorizontal().to_function_expr(*it).to_narwhals()
 
 
+# TODO @dangotbanned: Support `ignore_nulls=...`
 def any_horizontal(*exprs: IntoExpr | t.Iterable[IntoExpr]) -> Expr:
     it = _parse.parse_into_seq_of_expr_ir(*exprs)
     return ir.boolean.AnyHorizontal().to_function_expr(*it).to_narwhals()

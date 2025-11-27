@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, ClassVar
 from narwhals._plan._function import Function, HorizontalFunction
 from narwhals._plan.expressions.namespace import ExprNamespace, IRNamespace
 from narwhals._plan.options import FunctionOptions
+from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
     from narwhals._plan.expr import Expr
@@ -121,11 +122,13 @@ class ExprStringNamespace(ExprNamespace[IRStringNamespace]):
     def len_chars(self) -> Expr:
         return self._with_unary(self._ir.len_chars())
 
+    # TODO @dangotbanned: Support `value: IntoExpr`
     def replace(
         self, pattern: str, value: str, *, literal: bool = False, n: int = 1
     ) -> Expr:  # pragma: no cover
         return self._with_unary(self._ir.replace(pattern, value, literal=literal, n=n))
 
+    # TODO @dangotbanned: Support `value: IntoExpr`
     def replace_all(
         self, pattern: str, value: str, *, literal: bool = False
     ) -> Expr:  # pragma: no cover
@@ -163,3 +166,7 @@ class ExprStringNamespace(ExprNamespace[IRStringNamespace]):
 
     def to_uppercase(self) -> Expr:  # pragma: no cover
         return self._with_unary(self._ir.to_uppercase())
+
+    to_date = not_implemented()
+    to_titlecase = not_implemented()
+    zfill = not_implemented()

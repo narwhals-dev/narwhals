@@ -6,6 +6,7 @@ from narwhals._duration import Interval
 from narwhals._plan._function import Function
 from narwhals._plan.expressions.namespace import ExprNamespace, IRNamespace
 from narwhals._plan.options import FunctionOptions
+from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias, TypeIs
@@ -180,3 +181,5 @@ class ExprDateTimeNamespace(ExprNamespace[IRDateTimeNamespace]):
 
     def truncate(self, every: str) -> Expr:
         return self._with_unary(self._ir.truncate(every))
+
+    offset_by = not_implemented()

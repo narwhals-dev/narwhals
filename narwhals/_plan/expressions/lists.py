@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, ClassVar
 from narwhals._plan._function import Function
 from narwhals._plan.expressions.namespace import ExprNamespace, IRNamespace
 from narwhals._plan.options import FunctionOptions
+from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
     from narwhals._plan.expr import Expr
@@ -25,3 +26,7 @@ class ExprListNamespace(ExprNamespace[IRListNamespace]):
 
     def len(self) -> Expr:
         return self._with_unary(self._ir.len())
+
+    get = not_implemented()
+    contains = not_implemented()
+    unique = not_implemented()
