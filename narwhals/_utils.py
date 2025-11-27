@@ -42,8 +42,10 @@ from narwhals.dependencies import (
     get_pyspark_sql,
     get_sqlframe,
     is_narwhals_series,
+    is_narwhals_series_bool,
     is_narwhals_series_int,
     is_numpy_array_1d,
+    is_numpy_array_1d_bool,
     is_numpy_array_1d_int,
     is_pandas_like_dataframe,
     is_pandas_like_series,
@@ -121,6 +123,7 @@ if TYPE_CHECKING:
         IntoSeriesT,
         MultiIndexSelector,
         SingleIndexSelector,
+        SizedMultiBoolSelector,
         SizedMultiIndexSelector,
         SizeUnit,
         SupportsNativeNamespace,
@@ -1337,6 +1340,17 @@ def is_index_selector(
     )
 
 
+def is_boolean_selector(
+    obj: Any,
+) -> TypeIs[SizedMultiBoolSelector[Series[Any] | CompliantSeries[Any]]]:
+    return (
+        (is_sequence_but_not_str(obj) and (len(obj) > 0 and isinstance(obj[0], bool)))
+        or is_numpy_array_1d_bool(obj)
+        or is_narwhals_series_bool(obj)
+        or is_compliant_series_bool(obj)
+    )
+
+
 def is_list_of(obj: Any, tp: type[_T]) -> TypeIs[list[_T]]:
     # Check if an object is a list of `tp`, only sniffing the first element.
     return bool(isinstance(obj, list) and obj and isinstance(obj[0], tp))
@@ -1574,6 +1588,12 @@ def is_compliant_series_int(
     obj: CompliantSeries[NativeSeriesT_co] | Any,
 ) -> TypeIs[CompliantSeries[NativeSeriesT_co]]:
     return is_compliant_series(obj) and obj.dtype.is_integer()
+
+
+def is_compliant_series_bool(
+    obj: CompliantSeries[NativeSeriesT_co] | Any,
+) -> TypeIs[CompliantSeries[NativeSeriesT_co]]:
+    return is_compliant_series(obj) and obj.dtype.is_boolean()
 
 
 def _is_namespace_accessor(obj: _IntoContext) -> TypeIs[NamespaceAccessor[_FullContext]]:

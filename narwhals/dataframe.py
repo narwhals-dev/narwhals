@@ -1101,6 +1101,8 @@ class DataFrame(BaseFrame[DataFrameT]):
                   `DataFrame`.
                 - `df[:, ['a', 'c']]` extracts all rows and columns `'a'` and `'c'` and returns a
                   `DataFrame`.
+                - `df[:, [True, False, True]]` extracts all rows and columns in positions 0 and 2
+                  and returns a `DataFrame`.
                 - `df[['a', 'c']]` extracts all rows and columns `'a'` and `'c'` and returns a
                   `DataFrame`.
                 - `df[0: 2, ['a', 'c']]` extracts the first two rows and columns `'a'` and `'c'` and
@@ -1138,7 +1140,6 @@ class DataFrame(BaseFrame[DataFrameT]):
             "- Use `df[indices, :]` to select rows positionally.\n"
             "- Use `df.filter(mask)` to filter rows based on a boolean mask."
         )
-
         if isinstance(item, tuple):
             if len(item) > 2:
                 tuple_msg = (
@@ -1164,6 +1165,8 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         compliant = self._compliant_frame
 
+        if isinstance(columns, bool):
+            raise TypeError(msg)
         if isinstance(columns, (int, str)):
             if isinstance(rows, int):
                 return self.item(rows, columns)

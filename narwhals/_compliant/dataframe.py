@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator, Mapping, Sequence, Sized
-from itertools import chain
+from itertools import chain, compress
 from typing import TYPE_CHECKING, Any, Literal, Protocol, TypeVar, overload
 
 from narwhals._compliant.typing import (
@@ -30,6 +30,7 @@ from narwhals._utils import (
     Version,
     _StoresNative,
     check_columns_exist,
+    is_boolean_selector,
     is_compliant_series,
     is_index_selector,
     is_range,
@@ -416,6 +417,9 @@ class EagerDataFrame(
         if not is_slice_none(columns):
             if isinstance(columns, Sized) and len(columns) == 0:
                 return compliant.select()
+            if is_boolean_selector(columns):
+                # Transform into index selector
+                columns = list(compress(range(len(columns)), columns))
             if is_index_selector(columns):
                 if is_slice_index(columns) or is_range(columns):
                     compliant = compliant._select_slice_index(columns)
