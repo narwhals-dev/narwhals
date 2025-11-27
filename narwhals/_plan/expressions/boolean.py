@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING
 from narwhals._plan._function import Function, HorizontalFunction
 from narwhals._plan.options import FEOptions, FunctionOptions
 from narwhals._plan.typing import NativeSeriesT
-from narwhals._typing_compat import TypeVar
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -18,9 +17,6 @@ if TYPE_CHECKING:
     from narwhals._plan.series import Series
     from narwhals._plan.typing import Seq
     from narwhals.typing import ClosedInterval
-
-OtherT = TypeVar("OtherT")
-ExprT = TypeVar("ExprT", bound="ExprIR", default="ExprIR")
 
 
 # fmt: off

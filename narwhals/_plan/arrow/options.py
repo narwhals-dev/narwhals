@@ -109,21 +109,16 @@ def _sort_keys_every(
     return tuple((key, order) for key in by)
 
 
-def _sort_keys(
-    by: tuple[str, ...], *, descending: bool | Sequence[bool]
-) -> Seq[tuple[str, Order]]:
-    if not isinstance(descending, bool) and len(descending) == 1:
-        descending = descending[0]
-    if isinstance(descending, bool):
-        return _sort_keys_every(by, descending=descending)
-    it = zip_strict(by, descending)
-    return tuple(_sort_key(key, descending=desc) for (key, desc) in it)
-
-
 def sort(
     *by: str, descending: bool | Sequence[bool] = False, nulls_last: bool = False
 ) -> pc.SortOptions:
-    keys = _sort_keys(by, descending=descending)
+    if not isinstance(descending, bool) and len(descending) == 1:
+        descending = descending[0]
+    if isinstance(descending, bool):
+        keys = _sort_keys_every(by, descending=descending)
+    else:
+        it = zip_strict(by, descending)
+        keys = tuple(_sort_key(key, descending=desc) for (key, desc) in it)
     return pc.SortOptions(sort_keys=keys, null_placement=NULL_PLACEMENT[nulls_last])
 
 

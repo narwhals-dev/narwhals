@@ -96,7 +96,6 @@ NativeSeriesAnyT = TypeVar("NativeSeriesAnyT", bound="NativeSeries", default="t.
 NativeSeriesT_co = TypeVar(
     "NativeSeriesT_co", bound="NativeSeries", covariant=True, default="NativeSeries"
 )
-NativeFrameT = TypeVar("NativeFrameT", bound="NativeFrame", default="NativeFrame")
 NativeFrameT_co = TypeVar(
     "NativeFrameT_co", bound="NativeFrame", covariant=True, default="NativeFrame"
 )
@@ -127,7 +126,7 @@ Udf: TypeAlias = "Callable[[t.Any], t.Any]"
 IntoExprColumn: TypeAlias = "Expr | Series[t.Any] | str"
 IntoExpr: TypeAlias = "NonNestedLiteral | IntoExprColumn"
 ColumnNameOrSelector: TypeAlias = "str | Selector"
-OneOrIterable: TypeAlias = "T | t.Iterable[T]"
+OneOrIterable: TypeAlias = "T | Iterable[T]"
 OneOrSeq: TypeAlias = t.Union[T, Seq[T]]
 DataFrameT = TypeVar("DataFrameT", bound="DataFrame[t.Any, t.Any]")
 Order: TypeAlias = t.Literal["ascending", "descending"]
