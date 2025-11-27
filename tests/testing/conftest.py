@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, date, datetime, time, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from typing import TYPE_CHECKING
 
 import pytest
@@ -22,7 +22,7 @@ def testing_schema() -> IntoSchema:
         "enum": nw.Enum(["beluga", "narwhal", "orca"]),
         "bool": nw.Boolean(),
         "datetime": nw.Datetime(),
-        "datetime_tz": nw.Datetime(time_zone=UTC),
+        "datetime_tz": nw.Datetime(time_zone="UTC"),
         "date": nw.Date(),
         "time": nw.Time(),
         "duration": nw.Duration(),
