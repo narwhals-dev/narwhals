@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals as nw
+from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
     from tests.utils import Constructor, ConstructorEager
@@ -15,6 +16,10 @@ data = {"a": [[3, 2, 2, 4, None], [-1]]}
 def test_min_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if any(backend in str(constructor) for backend in ("dask", "modin", "cudf")):
         request.applymarker(pytest.mark.xfail)
+    if "pandas" in str(constructor):
+        if PANDAS_VERSION < (2, 2):
+            pytest.skip()
+        pytest.importorskip("pyarrow")
     result = (
         nw.from_native(constructor(data))
         .select(nw.col("a").cast(nw.List(nw.Int32())).list.min())
@@ -31,6 +36,10 @@ def test_min_series(
 ) -> None:
     if any(backend in str(constructor_eager) for backend in ("modin", "cudf")):
         request.applymarker(pytest.mark.xfail)
+    if "pandas" in str(constructor_eager):
+        if PANDAS_VERSION < (2, 2):
+            pytest.skip()
+        pytest.importorskip("pyarrow")
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df["a"].cast(nw.List(nw.Int32())).list.min().to_list()
     assert result[0] == 2
