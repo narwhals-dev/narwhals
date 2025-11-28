@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Iterator, Mapping, Sequence, Sized
-from itertools import compress
 from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar, cast, overload
 
 import polars as pl
@@ -478,9 +477,10 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
                 if isinstance(columns, Sized) and len(columns) == 0:
                     return self.select()
                 if is_boolean_selector(columns):
-                    # Transform into index selector
-                    columns = list(compress(range(len(columns)), columns))
-                if is_index_selector(columns):
+                    native = native.select(
+                        *(col for col, select in zip(native.columns, columns) if select)
+                    )
+                elif is_index_selector(columns):
                     if is_slice_index(columns) or is_range(columns):
                         native = native.select(
                             self.columns[slice(columns.start, columns.stop, columns.step)]
