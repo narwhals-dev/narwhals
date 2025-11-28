@@ -257,7 +257,12 @@ class CompliantExpr(HasVersion, Protocol[FrameT_contra, SeriesT_co]):
     def unique(
         self, node: FunctionExpr[F.Unique], frame: FrameT_contra, name: str
     ) -> Self: ...
-
+    def ceil(
+        self, node: FunctionExpr[F.Ceil], frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def floor(
+        self, node: FunctionExpr[F.Floor], frame: FrameT_contra, name: str
+    ) -> Self: ...
     @property
     def cat(
         self,

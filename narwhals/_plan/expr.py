@@ -335,6 +335,12 @@ class Expr:
     def round(self, decimals: int = 0) -> Self:
         return self._with_unary(F.Round(decimals=decimals))
 
+    def ceil(self) -> Self:
+        return self._with_unary(F.Ceil())
+
+    def floor(self) -> Self:
+        return self._with_unary(F.Floor())
+
     def ewm_mean(
         self,
         *,
@@ -623,8 +629,6 @@ class Expr:
     sample = not_implemented()
     head = not_implemented()
     tail = not_implemented()
-    ceil = not_implemented()
-    floor = not_implemented()
 
 
 class ExprV1(Expr):

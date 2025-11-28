@@ -248,6 +248,12 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
         native = node.input[0].dispatch(self, frame, name).native
         return self._with_native(fn.round(native, node.function.decimals), name)
 
+    def ceil(self, node: FExpr[F.Ceil], frame: Frame, name: str) -> StoresNativeT_co:
+        return self._unary_function(pc.ceil)(node, frame, name)
+
+    def floor(self, node: FExpr[F.Floor], frame: Frame, name: str) -> StoresNativeT_co:
+        return self._unary_function(pc.floor)(node, frame, name)
+
     def clip(self, node: FExpr[F.Clip], frame: Frame, name: str) -> StoresNativeT_co:
         expr, lower, upper = node.function.unwrap_input(node)
         result = fn.clip(
