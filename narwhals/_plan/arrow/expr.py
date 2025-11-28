@@ -55,7 +55,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self, TypeAlias
 
-    from narwhals._plan.arrow.dataframe import ArrowDataFrame, ArrowDataFrame as Frame
+    from narwhals._plan.arrow.dataframe import ArrowDataFrame as Frame
     from narwhals._plan.arrow.namespace import ArrowNamespace
     from narwhals._plan.arrow.typing import ChunkedArrayAny, P, VectorFunction
     from narwhals._plan.expressions import (
@@ -870,9 +870,7 @@ class ArrowListNamespace(
 class ArrowStringNamespace(
     ExprStringNamespace["Frame", "Expr | Scalar"], ArrowAccessor[ExprOrScalarT]
 ):
-    def zfill(
-        self, node: FExpr[strings.ZFill], frame: ArrowDataFrame, name: str
-    ) -> ArrowExpr | ArrowScalar:
+    def zfill(self, node: FExpr[strings.ZFill], frame: Frame, name: str) -> Expr | Scalar:
         native = node.input[0].dispatch(self.compliant, frame, name).native
         return self.with_native(fn.str_zfill(native, node.function.length), name)
 
