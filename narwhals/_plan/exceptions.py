@@ -55,6 +55,11 @@ def function_arg_non_scalar_error(
     return InvalidOperationError(msg)
 
 
+def list_literal_error(value: Any) -> TypeError:
+    msg = f"{type(value).__name__!r} is not supported in `nw.lit`, got: {value!r}."
+    return TypeError(msg)
+
+
 # TODO @dangotbanned: Use arguments in error message
 def hist_bins_monotonic_error(bins: Seq[float]) -> ComputeError:  # noqa: ARG001
     msg = "bins must increase monotonically"

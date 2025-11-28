@@ -15,7 +15,7 @@ from narwhals import _plan as nwp
 from narwhals._plan import expressions as ir
 from narwhals._plan._parse import parse_into_seq_of_expr_ir
 from narwhals._plan.expressions import functions as F, operators as ops
-from narwhals._plan.expressions.literal import SeriesLiteral
+from narwhals._plan.expressions.literal import ScalarLiteral, SeriesLiteral
 from narwhals._plan.expressions.ranges import IntRange
 from narwhals._utils import Implementation
 from narwhals.exceptions import (
@@ -744,3 +744,36 @@ def test_rolling_expr_invalid(
         a.rolling_var(window_size, min_samples=min_samples)
     with context:
         a.rolling_std(window_size, min_samples=min_samples)
+
+
+def test_list_contains_invalid() -> None:
+    a = nwp.col("a")
+
+    ok = a.list.contains("a")
+    assert_expr_ir_equal(
+        ok,
+        ir.FunctionExpr(
+            input=(
+                ir.col("a"),
+                ir.Literal(value=ScalarLiteral(value="a", dtype=nw.String())),
+            ),
+            function=ir.lists.Contains(),
+            options=ir.lists.Contains().function_options,
+        ),
+    )
+    assert a.list.contains(a.first())
+    assert a.list.contains(1)
+    assert a.list.contains(nwp.lit(1))
+    assert a.list.contains(dt.datetime(2000, 2, 1, 9, 26, 5))
+    assert a.list.contains(a.abs().fill_null(5).mode(keep="any"))
+
+    with pytest.raises(
+        InvalidOperationError, match=r"list.contains.+non-scalar.+`col\('a'\)"
+    ):
+        a.list.contains(a)
+
+    with pytest.raises(InvalidOperationError, match=r"list.contains.+non-scalar.+abs"):
+        a.list.contains(a.abs())
+
+    with pytest.raises(TypeError, match=r"list.+not.+supported.+nw.lit.+1.+2.+3"):
+        a.list.contains([1, 2, 3])  # type: ignore[arg-type]

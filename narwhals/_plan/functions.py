@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 from narwhals._duration import Interval
 from narwhals._plan import _guards, _parse, common, expressions as ir, selectors as cs
 from narwhals._plan._dispatch import get_dispatch_name
+from narwhals._plan.exceptions import list_literal_error
 from narwhals._plan.expressions import functions as F
 from narwhals._plan.expressions.literal import ScalarLiteral, SeriesLiteral
 from narwhals._plan.expressions.ranges import DateRange, IntRange, RangeFunction
@@ -82,8 +83,7 @@ def lit(
     if _guards.is_series(value):
         return SeriesLiteral(value=value).to_literal().to_narwhals()
     if not _guards.is_non_nested_literal(value):
-        msg = f"{type(value).__name__!r} is not supported in `nw.lit`, got: {value!r}."
-        raise TypeError(msg)
+        raise list_literal_error(value)
     if dtype is None:
         dtype = common.py_to_narwhals_dtype(value, Version.MAIN)
     else:

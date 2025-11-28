@@ -18,7 +18,11 @@ from narwhals._plan._guards import (
     is_selector,
 )
 from narwhals._plan.common import flatten_hash_safe
-from narwhals._plan.exceptions import invalid_into_expr_error, is_iterable_error
+from narwhals._plan.exceptions import (
+    invalid_into_expr_error,
+    is_iterable_error,
+    list_literal_error,
+)
 from narwhals._utils import qualified_type_name
 from narwhals.dependencies import get_polars
 from narwhals.exceptions import InvalidOperationError
@@ -127,7 +131,7 @@ def parse_into_expr_ir(
         expr = col(input)
     elif isinstance(input, list):
         if list_as_series is None:
-            raise TypeError(input)  # pragma: no cover
+            raise list_literal_error(input)
         expr = lit(list_as_series(input))
     else:
         expr = lit(input, dtype=dtype)
