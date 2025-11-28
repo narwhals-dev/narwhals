@@ -152,6 +152,7 @@ def _generate_function() -> Mapping[type[ir.Function], acero.AggregateOptions]:
         boolean.All: scalar_aggregate(ignore_nulls=True),
         boolean.Any: scalar_aggregate(ignore_nulls=True),
         functions.NullCount: count("only_null"),
+        functions.Unique: count("all"),
     }
 
 

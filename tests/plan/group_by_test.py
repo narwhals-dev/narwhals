@@ -588,8 +588,13 @@ def test_group_by_agg_last(
                 "b_first": [3, 1, 3, 2, 1],
             },
         ),
+        (
+            ["d"],
+            [nwp.col("e", "b").unique()],
+            {"d": ["one", "three"], "e": [[1, 2], [None, 1]], "b": [[1, 3], [1, 2, 3]]},
+        ),
     ],
-    ids=["Unique-Single", "Unique-Multi", "Unique-Selector-Fancy"],
+    ids=["Unique-Single", "Unique-Multi", "Unique-Selector-Fancy", "Unique-Nulls"],
 )
 def test_group_by_agg_unique(
     keys: Sequence[str], aggs: Sequence[IntoExpr], expected: Mapping[str, Any]
@@ -599,6 +604,7 @@ def test_group_by_agg_unique(
         "b": [1, 2, 1, 3, 3],
         "c": [5, 4, 3, 2, 1],
         "d": ["three", "three", "one", "three", "one"],
+        "e": [None, 1, 1, None, 2],
     }
     df = dataframe(data)
     result = df.group_by(keys).agg(aggs).sort(keys)
