@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 from narwhals._compliant import LazyExprNamespace
 from narwhals._compliant.any_namespace import ListNamespace
+from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
     from sqlframe.base.column import Column
@@ -33,3 +34,21 @@ class SparkLikeExprListNamespace(
             return expr.getItem(index)
 
         return self.compliant._with_elementwise(_get)
+
+    def min(self) -> SparkLikeExpr:
+        def func(expr: Column) -> Column:
+            F = self.compliant._F
+            return F.array_min(expr)
+
+        return self.compliant._with_elementwise(func)
+
+    def max(self) -> SparkLikeExpr:
+        def func(expr: Column) -> Column:
+            F = self.compliant._F
+            return F.array_max(F.array_compact(expr))
+
+        return self.compliant._with_elementwise(func)
+
+    mean = not_implemented()
+    median = not_implemented()
+    sum = not_implemented()

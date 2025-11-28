@@ -993,6 +993,21 @@ class EagerExprListNamespace(
     def get(self, index: int) -> EagerExprT:
         return self.compliant._reuse_series_namespace("list", "get", index=index)
 
+    def min(self) -> EagerExprT:
+        return self.compliant._reuse_series_namespace("list", "min")
+
+    def max(self) -> EagerExprT:
+        return self.compliant._reuse_series_namespace("list", "max")
+
+    def mean(self) -> EagerExprT:
+        return self.compliant._reuse_series_namespace("list", "mean")
+
+    def median(self) -> EagerExprT:
+        return self.compliant._reuse_series_namespace("list", "median")
+
+    def sum(self) -> EagerExprT:
+        return self.compliant._reuse_series_namespace("list", "sum")
+
 
 class CompliantExprNameNamespace(  # type: ignore[misc]
     _ExprNamespace[CompliantExprT_co],

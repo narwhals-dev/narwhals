@@ -11,6 +11,7 @@ from narwhals._utils import Implementation, Version, isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping
+    from typing import Literal
 
     from typing_extensions import TypeAlias, TypeIs
 
@@ -494,3 +495,18 @@ def arange(start: int, end: int, step: int) -> ArrayAny:
         return pa.array(np.arange(start, end, step))
     # NOTE: Added in https://github.com/apache/arrow/pull/46778
     return pa.arange(start, end, step)  # type: ignore[attr-defined]
+
+
+def list_agg(
+    array: ChunkedArrayAny,
+    func: Literal["min", "max", "mean", "approximate_median", "sum"],
+) -> ChunkedArrayAny:
+    return (
+        pa.Table.from_arrays(
+            [pc.list_flatten(array), pc.list_parent_indices(array)],
+            names=["values", "offsets"],
+        )
+        .group_by("offsets")
+        .aggregate([("values", func)])
+        .column(f"values_{func}")
+    )

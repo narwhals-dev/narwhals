@@ -40,3 +40,18 @@ class DuckDBExprListNamespace(
         return self.compliant._with_elementwise(
             lambda expr: F("list_extract", expr, lit(index + 1))
         )
+
+    def min(self) -> DuckDBExpr:
+        return self.compliant._with_elementwise(lambda expr: F("list_min", expr))
+
+    def max(self) -> DuckDBExpr:
+        return self.compliant._with_elementwise(lambda expr: F("list_max", expr))
+
+    def mean(self) -> DuckDBExpr:
+        return self.compliant._with_elementwise(lambda expr: F("list_avg", expr))
+
+    def median(self) -> DuckDBExpr:
+        return self.compliant._with_elementwise(lambda expr: F("list_median", expr))
+
+    def sum(self) -> DuckDBExpr:
+        return self.compliant._with_elementwise(lambda expr: F("list_sum", expr))
