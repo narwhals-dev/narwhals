@@ -15,10 +15,9 @@ data = {"a": [[3, 2, 2, 4, None], [-1]]}
 
 def test_median_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if any(
-        backend in str(constructor)
-        for backend in ("dask", "cudf", "sqlframe", "ibis", "pyspark")
+        backend in str(constructor) for backend in ("dask", "cudf", "sqlframe", "ibis")
     ) or ("polars" in str(constructor) and POLARS_VERSION < (0, 20, 7)):
-        # PySpark issue: https://issues.apache.org/jira/browse/SPARK-54382
+        # sqlframe issue: https://github.com/eakmanrq/sqlframe/issues/548
         # ibis issue: https://github.com/ibis-project/ibis/issues/11788
         request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor):

@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+import operator
 from typing import TYPE_CHECKING
 
 from narwhals._compliant import LazyExprNamespace
 from narwhals._compliant.any_namespace import ListNamespace
-from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
     from sqlframe.base.column import Column
@@ -49,6 +49,30 @@ class SparkLikeExprListNamespace(
 
         return self.compliant._with_elementwise(func)
 
-    mean = not_implemented()
-    median = not_implemented()
-    sum = not_implemented()
+    def sum(self) -> SparkLikeExpr:
+        def func(expr: Column) -> Column:
+            F = self.compliant._F
+            return F.aggregate(F.array_compact(expr), F.lit(0.0), operator.add)
+
+        return self.compliant._with_elementwise(func)
+
+    def mean(self) -> SparkLikeExpr:
+        def func(expr: Column) -> Column:
+            F = self.compliant._F
+            return F.aggregate(
+                F.array_compact(expr), F.lit(0.0), operator.add
+            ) / F.array_size(F.array_compact(expr))
+
+        return self.compliant._with_elementwise(func)
+
+    def median(self) -> SparkLikeExpr:
+        def func(expr: Column) -> Column:
+            F = self.compliant._F
+            sorted_expr = F.array_compact(F.sort_array(expr))
+            size = F.array_size(sorted_expr)
+            mid_index = (size / 2).cast("int")
+            odd_case = sorted_expr[mid_index]
+            even_case = (sorted_expr[mid_index] - 1 + sorted_expr[mid_index]) / 2
+            return F.when(size % 2 == 1, odd_case).otherwise(even_case)
+
+        return self.compliant._with_elementwise(func)
