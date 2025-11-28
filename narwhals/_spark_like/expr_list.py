@@ -66,7 +66,8 @@ class SparkLikeExprListNamespace(
         return self.compliant._with_elementwise(func)
 
     def median(self) -> SparkLikeExpr:
-        def func(expr: Column) -> Column:
+        def func(expr: Column) -> Column:  # pragma: no cover
+            # sqlframe issue: https://github.com/eakmanrq/sqlframe/issues/548
             F = self.compliant._F
             sorted_expr = F.array_compact(F.sort_array(expr))
             size = F.array_size(sorted_expr)
