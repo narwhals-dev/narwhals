@@ -49,7 +49,7 @@ class PandasLikeSeriesListNamespace(
         dtype_backend = get_dtype_backend(
             self.native.dtype, self.compliant._implementation
         )
-        if dtype_backend != "pyarrow":
+        if dtype_backend != "pyarrow":  # pragma: no cover
             msg = "Only pyarrow backend is currently supported."
             raise NotImplementedError(msg)
 
