@@ -236,7 +236,7 @@ class ArrowDataFrame(
         return len(self.native)
 
     def row(self, index: int) -> tuple[Any, ...]:
-        return tuple(col[index] for col in self.native.itercolumns())
+        return tuple(self.native.take([index]).to_pylist()[0].values())
 
     @overload
     def rows(self, *, named: Literal[True]) -> list[dict[str, Any]]: ...
