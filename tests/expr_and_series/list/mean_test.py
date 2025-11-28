@@ -15,8 +15,7 @@ data = {"a": [[3, 2, 2, 4, None], [-1]]}
 
 def test_mean_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if any(
-        backend in str(constructor)
-        for backend in ("dask", "modin", "cudf", "sqlframe", "pyspark")
+        backend in str(constructor) for backend in ("dask", "cudf", "sqlframe", "pyspark")
     ):
         request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor):
@@ -37,7 +36,7 @@ def test_mean_expr(request: pytest.FixtureRequest, constructor: Constructor) -> 
 def test_mean_series(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
-    if any(backend in str(constructor_eager) for backend in ("modin", "cudf")):
+    if any(backend in str(constructor_eager) for backend in ("cudf",)):
         request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor_eager):
         if PANDAS_VERSION < (2, 2):

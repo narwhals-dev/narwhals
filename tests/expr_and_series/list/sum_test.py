@@ -15,8 +15,7 @@ data = {"a": [[3, 2, 2, 4, None], [-1]]}
 
 def test_sum_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if any(
-        backend in str(constructor)
-        for backend in ("dask", "modin", "cudf", "sqlframe", "pyspark")
+        backend in str(constructor) for backend in ("dask", "cudf", "sqlframe", "pyspark")
     ):
         # sqlframe issue: https://github.com/eakmanrq/sqlframe/issues/548
         request.applymarker(pytest.mark.xfail)
@@ -38,7 +37,7 @@ def test_sum_expr(request: pytest.FixtureRequest, constructor: Constructor) -> N
 def test_sum_series(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
-    if any(backend in str(constructor_eager) for backend in ("modin", "cudf")):
+    if any(backend in str(constructor_eager) for backend in ("cudf",)):
         request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor_eager):
         if PANDAS_VERSION < (2, 2):
