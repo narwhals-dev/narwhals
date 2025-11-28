@@ -21,6 +21,7 @@ from narwhals._plan.common import temp
 from narwhals._plan.compliant.accessors import (
     ExprCatNamespace,
     ExprListNamespace,
+    ExprStringNamespace,
     ExprStructNamespace,
 )
 from narwhals._plan.compliant.column import ExprDispatch
@@ -54,10 +55,15 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self, TypeAlias
 
-    from narwhals._plan.arrow.dataframe import ArrowDataFrame as Frame
+    from narwhals._plan.arrow.dataframe import ArrowDataFrame, ArrowDataFrame as Frame
     from narwhals._plan.arrow.namespace import ArrowNamespace
     from narwhals._plan.arrow.typing import ChunkedArrayAny, P, VectorFunction
-    from narwhals._plan.expressions import BinaryExpr, FunctionExpr as FExpr, lists
+    from narwhals._plan.expressions import (
+        BinaryExpr,
+        FunctionExpr as FExpr,
+        lists,
+        strings,
+    )
     from narwhals._plan.expressions.aggregation import (
         ArgMax,
         ArgMin,
@@ -670,6 +676,10 @@ class ArrowExpr(  # type: ignore[misc]
         return ArrowListNamespace(self)
 
     @property
+    def str(self) -> ArrowStringNamespace[Expr]:
+        return ArrowStringNamespace(self)
+
+    @property
     def struct(self) -> ArrowStructNamespace[Expr]:
         return ArrowStructNamespace(self)
 
@@ -792,6 +802,10 @@ class ArrowScalar(
         return ArrowListNamespace(self)
 
     @property
+    def str(self) -> ArrowStringNamespace[Scalar]:
+        return ArrowStringNamespace(self)
+
+    @property
     def struct(self) -> ArrowStructNamespace[Scalar]:
         return ArrowStructNamespace(self)
 
@@ -851,6 +865,16 @@ class ArrowListNamespace(
 
     unique = not_implemented()
     contains = not_implemented()
+
+
+class ArrowStringNamespace(
+    ExprStringNamespace["Frame", "Expr | Scalar"], ArrowAccessor[ExprOrScalarT]
+):
+    def zfill(
+        self, node: FExpr[strings.ZFill], frame: ArrowDataFrame, name: str
+    ) -> ArrowExpr | ArrowScalar:
+        native = node.input[0].dispatch(self.compliant, frame, name).native
+        return self.with_native(fn.str_zfill(native, node.function.length), name)
 
 
 class ArrowStructNamespace(

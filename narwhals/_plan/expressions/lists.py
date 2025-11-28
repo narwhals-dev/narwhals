@@ -40,9 +40,7 @@ class IRListNamespace(IRNamespace):
     len: ClassVar = Len
     unique: ClassVar = Unique  # pragma: no cover
     contains: ClassVar = Contains
-
-    def get(self, index: int) -> Get:
-        return Get(index=index)
+    get: ClassVar = Get
 
 
 class ExprListNamespace(ExprNamespace[IRListNamespace]):
@@ -61,7 +59,7 @@ class ExprListNamespace(ExprNamespace[IRListNamespace]):
         if index < 0:
             msg = f"`index` is out of bounds; must be >= 0, got {index}"
             raise InvalidOperationError(msg)
-        return self._with_unary(self._ir.get(index))
+        return self._with_unary(self._ir.get(index=index))
 
     def contains(self, item: IntoExpr) -> Expr:
         item_ir = parse_into_expr_ir(item, str_as_lit=True)

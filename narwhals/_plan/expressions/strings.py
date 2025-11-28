@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, ClassVar
 
 from narwhals._plan._function import Function, HorizontalFunction
 from narwhals._plan.expressions.namespace import ExprNamespace, IRNamespace
-from narwhals._plan.options import FunctionOptions
+from narwhals._plan.options import FEOptions, FunctionOptions
 from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
@@ -75,6 +75,11 @@ class ToDatetime(StringFunction):
     format: str | None
 
 
+class ZFill(StringFunction, config=FEOptions.renamed("zfill")):
+    __slots__ = ("length",)
+    length: int
+
+
 class IRStringNamespace(IRNamespace):
     len_chars: ClassVar = LenChars
     to_lowercase: ClassVar = ToUppercase
@@ -82,6 +87,7 @@ class IRStringNamespace(IRNamespace):
     split: ClassVar = Split
     starts_with: ClassVar = StartsWith
     ends_with: ClassVar = EndsWith
+    zfill: ClassVar = ZFill
 
     def replace(
         self, pattern: str, value: str, *, literal: bool = False, n: int = 1
@@ -167,6 +173,8 @@ class ExprStringNamespace(ExprNamespace[IRStringNamespace]):
     def to_uppercase(self) -> Expr:  # pragma: no cover
         return self._with_unary(self._ir.to_uppercase())
 
+    def zfill(self, length: int) -> Expr:
+        return self._with_unary(self._ir.zfill(length=length))
+
     to_date = not_implemented()
     to_titlecase = not_implemented()
-    zfill = not_implemented()

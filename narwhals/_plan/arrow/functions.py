@@ -99,6 +99,9 @@ HAS_KURTOSIS_SKEW = BACKEND_VERSION >= (20,)
 HAS_ARANGE: Final = BACKEND_VERSION >= (21,)
 """`pyarrow.arange` added in https://github.com/apache/arrow/pull/46778"""
 
+HAS_ZFILL: Final = BACKEND_VERSION >= (21,)
+"""`pyarrow.compute.utf8_zero_fill` added in https://github.com/apache/arrow/pull/46815"""
+
 
 I64: Final = pa.int64()
 F64: Final = pa.float64()
@@ -340,6 +343,15 @@ def list_get(native: ArrowAny, index: int) -> ArrowAny:
     list_get_: Incomplete = pc.list_element
     result: ArrowAny = list_get_(native, index)
     return result
+
+
+def str_zfill(native: ChunkedOrScalarAny, length: int) -> ChunkedOrScalarAny:
+    if HAS_ZFILL:
+        zfill: Incomplete = pc.utf8_zero_fill  # type:ignore[attr-defined]
+        result: ChunkedOrScalarAny = zfill(native, length)
+        return result
+    msg = "TODO: Port hand-rolled `str.zfill` from `main`"
+    raise NotImplementedError(msg)
 
 
 @t.overload

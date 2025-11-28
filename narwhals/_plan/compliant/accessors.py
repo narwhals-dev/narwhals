@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Protocol
 from narwhals._plan.compliant.typing import ExprT_co, FrameT_contra
 
 if TYPE_CHECKING:
-    from narwhals._plan.expressions import FunctionExpr as FExpr, lists
+    from narwhals._plan.expressions import FunctionExpr as FExpr, lists, strings
     from narwhals._plan.expressions.categorical import GetCategories
     from narwhals._plan.expressions.struct import FieldByName
 
@@ -28,6 +28,12 @@ class ExprListNamespace(Protocol[FrameT_contra, ExprT_co]):
     ) -> ExprT_co: ...
     def unique(
         self, node: FExpr[lists.Unique], frame: FrameT_contra, name: str
+    ) -> ExprT_co: ...
+
+
+class ExprStringNamespace(Protocol[FrameT_contra, ExprT_co]):
+    def zfill(
+        self, node: FExpr[strings.ZFill], frame: FrameT_contra, name: str
     ) -> ExprT_co: ...
 
 

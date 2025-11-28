@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from narwhals._plan.compliant.accessors import (
         ExprCatNamespace,
         ExprListNamespace,
+        ExprStringNamespace,
         ExprStructNamespace,
     )
     from narwhals._plan.compliant.scalar import CompliantScalar, EagerScalar
@@ -271,6 +272,10 @@ class CompliantExpr(HasVersion, Protocol[FrameT_contra, SeriesT_co]):
     def list(
         self,
     ) -> ExprListNamespace[FrameT_contra, CompliantExpr[FrameT_contra, SeriesT_co]]: ...
+    @property
+    def str(
+        self,
+    ) -> ExprStringNamespace[FrameT_contra, CompliantExpr[FrameT_contra, SeriesT_co]]: ...
     @property
     def struct(
         self,
