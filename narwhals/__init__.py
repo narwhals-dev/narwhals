@@ -189,3 +189,5 @@ if not _t.TYPE_CHECKING:
             return __version__
         msg = f"module {__name__!r} has no attribute {name!r}"
         raise AttributeError(msg)
+else:  # pragma: no cover
+    ...
