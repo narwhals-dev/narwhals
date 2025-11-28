@@ -327,6 +327,22 @@ def list_len(native: ArrowAny) -> ArrowAny:
 
 
 @t.overload
+def list_get(
+    native: ChunkedList[DataTypeT], index: int
+) -> ChunkedArray[Scalar[DataTypeT]]: ...
+@t.overload
+def list_get(native: ListArray[DataTypeT], index: int) -> Array[Scalar[DataTypeT]]: ...
+@t.overload
+def list_get(native: ListScalar[DataTypeT], index: int) -> Scalar[DataTypeT]: ...
+@t.overload
+def list_get(native: SameArrowT, index: int) -> SameArrowT: ...
+def list_get(native: ArrowAny, index: int) -> ArrowAny:
+    list_get_: Incomplete = pc.list_element
+    result: ArrowAny = list_get_(native, index)
+    return result
+
+
+@t.overload
 def when_then(
     predicate: Predicate, then: SameArrowT, otherwise: SameArrowT
 ) -> SameArrowT: ...

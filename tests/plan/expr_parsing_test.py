@@ -779,11 +779,12 @@ def test_list_contains_invalid() -> None:
         a.list.contains([1, 2, 3])  # type: ignore[arg-type]
 
 
-@pytest.mark.xfail(reason="Not implemented `index` validation yet")
-def test_list_get_invalid() -> None:  # pragma: no cover
+def test_list_get_invalid() -> None:
     a = nwp.col("a")
     assert a.list.get(0)
-    with pytest.raises(TypeError, match=re_compile(r"must be.+int.+got.+str")):
+    pattern = re_compile(r"expected.+int.+got.+str.+'not an index'")
+    with pytest.raises(TypeError, match=pattern):
         a.list.get("not an index")  # type: ignore[arg-type]
-    with pytest.raises(ValueError, match=re_compile(r"-1.+out of bounds.+0")):
+    pattern = re_compile(r"index.+out of bounds.+>= 0.+got -1")
+    with pytest.raises(InvalidOperationError, match=pattern):
         a.list.get(-1)

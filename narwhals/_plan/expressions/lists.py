@@ -7,6 +7,8 @@ from narwhals._plan._parse import parse_into_expr_ir
 from narwhals._plan.exceptions import function_arg_non_scalar_error
 from narwhals._plan.expressions.namespace import ExprNamespace, IRNamespace
 from narwhals._plan.options import FunctionOptions
+from narwhals._utils import ensure_type
+from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -54,8 +56,11 @@ class ExprListNamespace(ExprNamespace[IRListNamespace]):
     def unique(self) -> Expr:  # pragma: no cover
         return self._with_unary(self._ir.unique())
 
-    # TODO @dangotbanned: Needs a full impl
     def get(self, index: int) -> Expr:
+        ensure_type(index, int, param_name="index")
+        if index < 0:
+            msg = f"`index` is out of bounds; must be >= 0, got {index}"
+            raise InvalidOperationError(msg)
         return self._with_unary(self._ir.get(index))
 
     def contains(self, item: IntoExpr) -> Expr:

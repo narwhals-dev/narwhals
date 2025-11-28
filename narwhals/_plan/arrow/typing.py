@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     IntegerType: TypeAlias = "Int8Type | Int16Type | Int32Type | Int64Type | Uint8Type | Uint16Type | Uint32Type | Uint64Type"
     IntegerScalar: TypeAlias = "Scalar[IntegerType]"
     DateScalar: TypeAlias = "Scalar[Date32Type]"
-    ListScalar: TypeAlias = "Scalar[pa.ListType[Any]]"
+    ListScalar: TypeAlias = "Scalar[pa.ListType[DataTypeT_co]]"
 
     class NativeArrowSeries(NativeSeries, Protocol):
         @property
@@ -182,8 +182,8 @@ Indices: TypeAlias = "_SizedMultiIndexSelector[ChunkedOrArray[pc.IntegerScalar]]
 
 ChunkedStruct: TypeAlias = "ChunkedArray[pa.StructScalar]"
 StructArray: TypeAlias = "pa.StructArray | Array[pa.StructScalar]"
-ChunkedList: TypeAlias = "ChunkedArray[ListScalar]"
-ListArray: TypeAlias = "Array[ListScalar]"
+ChunkedList: TypeAlias = "ChunkedArray[ListScalar[DataTypeT_co]]"
+ListArray: TypeAlias = "Array[ListScalar[DataTypeT_co]]"
 
 Arrow: TypeAlias = "ChunkedOrScalar[ScalarT_co] | Array[ScalarT_co]"
 ArrowAny: TypeAlias = "ChunkedOrScalarAny | ArrayAny"

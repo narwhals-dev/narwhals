@@ -25,7 +25,6 @@ a = nwp.nth(0)
 b = nwp.col("b")
 
 
-@pytest.mark.xfail(reason="TODO: `ArrowExpr.list.get`", raises=NotImplementedError)
 @pytest.mark.parametrize(
     ("exprs", "expected"),
     [
@@ -33,9 +32,7 @@ b = nwp.col("b")
         (b.list.get(1), {"b": ["o", None, "oops", None]}),
     ],
 )
-def test_list_get(
-    data: Data, exprs: OneOrIterable[nwp.Expr], expected: Data
-) -> None:  # pragma: no cover
+def test_list_get(data: Data, exprs: OneOrIterable[nwp.Expr], expected: Data) -> None:
     df = dataframe(data).with_columns(
         a.cast(nw.List(nw.Int32())), b.cast(nw.List(nw.String))
     )
