@@ -17,8 +17,17 @@ class ExprCatNamespace(Protocol[FrameT_contra, ExprT_co]):
 
 
 class ExprListNamespace(Protocol[FrameT_contra, ExprT_co]):
+    def contains(
+        self, node: FExpr[lists.Contains], frame: FrameT_contra, name: str
+    ) -> ExprT_co: ...
+    def get(
+        self, node: FExpr[lists.Get], frame: FrameT_contra, name: str
+    ) -> ExprT_co: ...
     def len(
         self, node: FExpr[lists.Len], frame: FrameT_contra, name: str
+    ) -> ExprT_co: ...
+    def unique(
+        self, node: FExpr[lists.Unique], frame: FrameT_contra, name: str
     ) -> ExprT_co: ...
 
 

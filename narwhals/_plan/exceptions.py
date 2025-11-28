@@ -48,6 +48,13 @@ def function_expr_invalid_operation_error(
     return InvalidOperationError(msg)
 
 
+def function_arg_non_scalar_error(
+    function: Function, arg_name: str, arg_value: Any
+) -> InvalidOperationError:
+    msg = f"`{function!r}({arg_name}=...)` does not support non-scalar expression `{arg_value!r}`."
+    return InvalidOperationError(msg)
+
+
 # TODO @dangotbanned: Use arguments in error message
 def hist_bins_monotonic_error(bins: Seq[float]) -> ComputeError:  # noqa: ARG001
     msg = "bins must increase monotonically"

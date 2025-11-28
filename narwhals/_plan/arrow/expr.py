@@ -845,6 +845,13 @@ class ArrowListNamespace(
         native = node.input[0].dispatch(self.compliant, frame, name).native
         return self.with_native(fn.list_len(native), name)
 
+    def get(self, node: FExpr[lists.Get], frame: Frame, name: str) -> Expr | Scalar:
+        msg = "TODO: `ArrowExpr.list.get`"
+        raise NotImplementedError(msg)
+
+    unique = not_implemented()
+    contains = not_implemented()
+
 
 class ArrowStructNamespace(
     ExprStructNamespace["Frame", "Expr | Scalar"], ArrowAccessor[ExprOrScalarT]
