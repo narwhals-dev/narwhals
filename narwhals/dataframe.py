@@ -1236,7 +1236,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> import narwhals as nw
             >>> df_native = pa.table({"a": [1, 2], "b": [4, 5]})
             >>> nw.from_native(df_native).row(1)
-            (<pyarrow.Int64Scalar: 2>, <pyarrow.Int64Scalar: 5>)
+            (2, 5)
         """
         return self._compliant_frame.row(index)
 
