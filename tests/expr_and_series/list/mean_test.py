@@ -17,6 +17,7 @@ def test_mean_expr(request: pytest.FixtureRequest, constructor: Constructor) -> 
     if any(
         backend in str(constructor) for backend in ("dask", "cudf", "sqlframe", "pyspark")
     ):
+        # PySpark issue: https://issues.apache.org/jira/browse/SPARK-54382
         request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor):
         if PANDAS_VERSION < (2, 2):

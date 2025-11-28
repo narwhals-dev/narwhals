@@ -18,6 +18,8 @@ def test_median_expr(request: pytest.FixtureRequest, constructor: Constructor) -
         backend in str(constructor)
         for backend in ("dask", "cudf", "sqlframe", "ibis", "pyspark")
     ) or ("polars" in str(constructor) and POLARS_VERSION < (0, 20, 7)):
+        # PySpark issue: https://issues.apache.org/jira/browse/SPARK-54382
+        # ibis issue: https://github.com/ibis-project/ibis/issues/11788
         request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor):
         if PANDAS_VERSION < (2, 2):
