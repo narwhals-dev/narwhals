@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION
+from tests.utils import PANDAS_VERSION, POLARS_VERSION
 
 if TYPE_CHECKING:
     from tests.utils import Constructor, ConstructorEager
@@ -16,8 +16,8 @@ data = {"a": [[3, 2, 2, 4, None], [-1]]}
 def test_median_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if any(
         backend in str(constructor)
-        for backend in ("dask", "modin", "cudf", "sqlframe", "ibis")
-    ):
+        for backend in ("dask", "modin", "cudf", "sqlframe", "ibis", "pyspark")
+    ) or ("polars" in str(constructor) and POLARS_VERSION < (0, 20, 7)):
         request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor):
         if PANDAS_VERSION < (2, 2):
@@ -37,7 +37,9 @@ def test_median_expr(request: pytest.FixtureRequest, constructor: Constructor) -
 def test_median_series(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
-    if any(backend in str(constructor_eager) for backend in ("modin", "cudf")):
+    if any(backend in str(constructor_eager) for backend in ("modin", "cudf")) or (
+        "polars" in str(constructor_eager) and POLARS_VERSION < (0, 20, 7)
+    ):
         request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor_eager):
         if PANDAS_VERSION < (2, 2):

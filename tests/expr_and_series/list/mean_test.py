@@ -15,7 +15,8 @@ data = {"a": [[3, 2, 2, 4, None], [-1]]}
 
 def test_mean_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if any(
-        backend in str(constructor) for backend in ("dask", "modin", "cudf", "sqlframe")
+        backend in str(constructor)
+        for backend in ("dask", "modin", "cudf", "sqlframe", "pyspark")
     ):
         request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor):
