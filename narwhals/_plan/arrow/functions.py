@@ -1210,6 +1210,48 @@ def date_range(
     return ca.cast(pa.date32())
 
 
+def linear_space(
+    start: int, end: int, num_samples: int, *, closed: ClosedInterval = "both"
+) -> ChunkedArray[pc.NumericScalar]:
+    """Based on [`np.linspace`].
+
+    Use when implementing `hist`.
+
+    [`np.linspace`]: https://github.com/numpy/numpy/blob/v2.3.0/numpy/_core/function_base.py#L26-L187
+    """
+    if num_samples < 0:
+        msg = f"Number of samples, {num_samples}, must be non-negative."
+        raise ValueError(msg)
+    if num_samples == 1:
+        msg = f"num_samples {num_samples} is not >= 2"
+        raise NotImplementedError(msg)
+    if closed == "both":
+        range_end = num_samples
+        div = num_samples - 1
+    elif closed == "left":
+        range_end = num_samples
+        div = num_samples
+    elif closed == "right":
+        range_end = num_samples + 1
+        div = num_samples
+    elif closed == "none":
+        range_end = num_samples + 1
+        div = num_samples + 1
+    ca: ChunkedArray[pc.NumericScalar] = int_range(0, range_end).cast(F64)
+    delta = float(end - start)
+    step = delta / div
+    if step == 0:
+        ca = truediv(ca, lit(div))
+        ca = multiply(ca, lit(delta))
+    else:
+        ca = multiply(ca, lit(step))
+    if start != 0:
+        ca = add(ca, lit(start, F64))
+    if closed in {"right", "none"}:
+        return ca.slice(1)
+    return ca
+
+
 def repeat(value: ScalarAny | NonNestedLiteral, n: int) -> ArrayAny:
     value = value if isinstance(value, pa.Scalar) else lit(value)
     return repeat_unchecked(value, n)
