@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
 
 
-@pytest.mark.rize(
+@pytest.mark.parametrize(
     ("dtype", "expected_lit"),
     [(None, [2, 2, 2]), (nw.String, ["2", "2", "2"]), (nw.Float32, [2.0, 2.0, 2.0])],
 )
