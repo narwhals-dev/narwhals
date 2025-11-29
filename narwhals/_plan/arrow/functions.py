@@ -364,6 +364,41 @@ def str_pad_start(
     return pc.utf8_lpad(native, length, fill_char)
 
 
+_StringFunction: TypeAlias = "Callable[[ChunkedOrScalarAny,str], ChunkedOrScalarAny]"
+str_starts_with = t.cast("_StringFunction", pc.starts_with)
+str_ends_with = t.cast("_StringFunction", pc.ends_with)
+str_split = t.cast("_StringFunction", pc.split_pattern)
+str_to_uppercase = pc.utf8_upper
+str_to_lowercase = pc.utf8_lower
+str_to_titlecase = pc.utf8_title
+
+
+def str_contains(
+    native: Incomplete, pattern: str, *, literal: bool = False
+) -> Incomplete:
+    func = pc.match_substring if literal else pc.match_substring_regex
+    return func(native, pattern)
+
+
+def str_strip_chars(native: Incomplete, characters: str | None) -> Incomplete:
+    if characters:
+        return pc.utf8_trim(native, characters)
+    return pc.utf8_trim_whitespace(native)
+
+
+def str_replace(
+    native: Incomplete, pattern: str, value: str, *, literal: bool = False, n: int = 1
+) -> Incomplete:
+    fn = pc.replace_substring if literal else pc.replace_substring_regex
+    return fn(native, pattern, replacement=value, max_replacements=n)
+
+
+def str_replace_all(
+    native: Incomplete, pattern: str, value: str, *, literal: bool = False
+) -> Incomplete:
+    return str_replace(native, pattern, value, literal=literal, n=-1)
+
+
 def str_zfill(native: ChunkedOrScalarAny, length: int) -> ChunkedOrScalarAny:
     if HAS_ZFILL:
         zfill: Incomplete = pc.utf8_zero_fill  # type: ignore[attr-defined]

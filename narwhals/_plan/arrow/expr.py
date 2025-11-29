@@ -28,7 +28,7 @@ from narwhals._plan.compliant.column import ExprDispatch
 from narwhals._plan.compliant.expr import EagerExpr
 from narwhals._plan.compliant.scalar import EagerScalar
 from narwhals._plan.compliant.typing import namespace
-from narwhals._plan.expressions import functions as F
+from narwhals._plan.expressions import FunctionExpr as FExpr, functions as F
 from narwhals._plan.expressions.boolean import (
     IsDuplicated,
     IsFirstDistinct,
@@ -856,8 +856,7 @@ class ArrowListNamespace(
     ExprListNamespace["Frame", "Expr | Scalar"], ArrowAccessor[ExprOrScalarT]
 ):
     def len(self, node: FExpr[lists.Len], frame: Frame, name: str) -> Expr | Scalar:
-        native = node.input[0].dispatch(self.compliant, frame, name).native
-        return self.with_native(fn.list_len(native), name)
+        return self.compliant._unary_function(fn.list_len)(node, frame, name)
 
     def get(self, node: FExpr[lists.Get], frame: Frame, name: str) -> Expr | Scalar:
         native = node.input[0].dispatch(self.compliant, frame, name).native
@@ -867,14 +866,14 @@ class ArrowListNamespace(
     contains = not_implemented()
 
 
+# TODO @dangotbanned: Add tests for these, especially those using a different native function
 class ArrowStringNamespace(
     ExprStringNamespace["Frame", "Expr | Scalar"], ArrowAccessor[ExprOrScalarT]
 ):
     def len_chars(
         self, node: FExpr[strings.LenChars], frame: Frame, name: str
     ) -> Expr | Scalar:
-        native = node.input[0].dispatch(self.compliant, frame, name).native
-        return self.with_native(fn.str_len_chars(native), name)
+        return self.compliant._unary_function(fn.str_len_chars)(node, frame, name)
 
     def slice(self, node: FExpr[strings.Slice], frame: Frame, name: str) -> Expr | Scalar:
         native = node.input[0].dispatch(self.compliant, frame, name).native
@@ -884,6 +883,73 @@ class ArrowStringNamespace(
     def zfill(self, node: FExpr[strings.ZFill], frame: Frame, name: str) -> Expr | Scalar:
         native = node.input[0].dispatch(self.compliant, frame, name).native
         return self.with_native(fn.str_zfill(native, node.function.length), name)
+
+    def contains(
+        self, node: FExpr[strings.Contains], frame: Frame, name: str
+    ) -> Expr | Scalar:
+        native = node.input[0].dispatch(self.compliant, frame, name).native
+        func = node.function
+        result = fn.str_contains(native, func.pattern, literal=func.literal)
+        return self.with_native(result, name)
+
+    def ends_with(
+        self, node: FExpr[strings.EndsWith], frame: Frame, name: str
+    ) -> Expr | Scalar:
+        native = node.input[0].dispatch(self.compliant, frame, name).native
+        return self.with_native(fn.str_ends_with(native, node.function.suffix), name)
+
+    def replace(
+        self, node: FExpr[strings.Replace], frame: Frame, name: str
+    ) -> Expr | Scalar:
+        native = node.input[0].dispatch(self.compliant, frame, name).native
+        func = node.function
+        pattern, value, literal, n = func.pattern, func.value, func.literal, func.n
+        result = fn.str_replace(native, pattern, value, literal=literal, n=n)
+        return self.with_native(result, name)
+
+    def replace_all(
+        self, node: FExpr[strings.ReplaceAll], frame: Frame, name: str
+    ) -> Expr | Scalar:
+        native = node.input[0].dispatch(self.compliant, frame, name).native
+        func = node.function
+        pattern, value, literal = func.pattern, func.value, func.literal
+        result = fn.str_replace_all(native, pattern, value, literal=literal)
+        return self.with_native(result, name)
+
+    def split(self, node: FExpr[strings.Split], frame: Frame, name: str) -> Expr | Scalar:
+        native = node.input[0].dispatch(self.compliant, frame, name).native
+        return self.with_native(fn.str_split(native, node.function.by), name)
+
+    def starts_with(
+        self, node: FExpr[strings.StartsWith], frame: Frame, name: str
+    ) -> Expr | Scalar:
+        native = node.input[0].dispatch(self.compliant, frame, name).native
+        return self.with_native(fn.str_starts_with(native, node.function.prefix), name)
+
+    def strip_chars(
+        self, node: FExpr[strings.StripChars], frame: Frame, name: str
+    ) -> Expr | Scalar:
+        native = node.input[0].dispatch(self.compliant, frame, name).native
+        characters = node.function.characters
+        return self.with_native(fn.str_strip_chars(native, characters), name)
+
+    def to_uppercase(
+        self, node: FExpr[strings.ToUppercase], frame: Frame, name: str
+    ) -> Expr | Scalar:
+        return self.compliant._unary_function(fn.str_to_uppercase)(node, frame, name)
+
+    def to_lowercase(
+        self, node: FExpr[strings.ToLowercase], frame: Frame, name: str
+    ) -> Expr | Scalar:
+        return self.compliant._unary_function(fn.str_to_lowercase)(node, frame, name)
+
+    def to_titlecase(
+        self, node: FExpr[strings.ToTitlecase], frame: Frame, name: str
+    ) -> Expr | Scalar:
+        return self.compliant._unary_function(fn.str_to_titlecase)(node, frame, name)
+
+    to_date = not_implemented()
+    to_datetime = not_implemented()
 
 
 class ArrowStructNamespace(

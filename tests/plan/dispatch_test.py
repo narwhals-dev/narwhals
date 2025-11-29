@@ -47,11 +47,11 @@ def test_dispatch(df: DataFrame[pa.Table, pa.ChunkedArray[Any]]) -> None:
         df.select(nwp.col("c").ewm_mean())
 
     missing_protocol = re_compile(
-        r"str\.contains.+has not been implemented.+compliant.+"
-        r"Hint.+try adding.+CompliantExpr\.str\.contains\(\)"
+        r"dt\.offset_by.+has not been implemented.+compliant.+"
+        r"Hint.+try adding.+CompliantExpr\.dt\.offset_by\(\)"
     )
     with pytest.raises(NotImplementedError, match=missing_protocol):
-        df.select(nwp.col("d").str.contains("a"))
+        df.select(nwp.col("d").dt.offset_by("1d"))
 
     with pytest.raises(
         TypeError,

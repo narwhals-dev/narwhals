@@ -32,11 +32,47 @@ class ExprListNamespace(Protocol[FrameT_contra, ExprT_co]):
 
 
 class ExprStringNamespace(Protocol[FrameT_contra, ExprT_co]):
+    def contains(
+        self, node: FExpr[strings.Contains], frame: FrameT_contra, name: str
+    ) -> ExprT_co: ...
+    def ends_with(
+        self, node: FExpr[strings.EndsWith], frame: FrameT_contra, name: str
+    ) -> ExprT_co: ...
     def len_chars(
         self, node: FExpr[strings.LenChars], frame: FrameT_contra, name: str
     ) -> ExprT_co: ...
+    def replace(
+        self, node: FExpr[strings.Replace], frame: FrameT_contra, name: str
+    ) -> ExprT_co: ...
+    def replace_all(
+        self, node: FExpr[strings.ReplaceAll], frame: FrameT_contra, name: str
+    ) -> ExprT_co: ...
     def slice(
         self, node: FExpr[strings.Slice], frame: FrameT_contra, name: str
+    ) -> ExprT_co: ...
+    def split(
+        self, node: FExpr[strings.Split], frame: FrameT_contra, name: str
+    ) -> ExprT_co: ...
+    def starts_with(
+        self, node: FExpr[strings.StartsWith], frame: FrameT_contra, name: str
+    ) -> ExprT_co: ...
+    def strip_chars(
+        self, node: FExpr[strings.StripChars], frame: FrameT_contra, name: str
+    ) -> ExprT_co: ...
+    def to_uppercase(
+        self, node: FExpr[strings.ToUppercase], frame: FrameT_contra, name: str
+    ) -> ExprT_co: ...
+    def to_lowercase(
+        self, node: FExpr[strings.ToLowercase], frame: FrameT_contra, name: str
+    ) -> ExprT_co: ...
+    def to_titlecase(
+        self, node: FExpr[strings.ToTitlecase], frame: FrameT_contra, name: str
+    ) -> ExprT_co: ...
+    def to_date(
+        self, node: FExpr[strings.ToDate], frame: FrameT_contra, name: str
+    ) -> ExprT_co: ...
+    def to_datetime(
+        self, node: FExpr[strings.ToDatetime], frame: FrameT_contra, name: str
     ) -> ExprT_co: ...
     def zfill(
         self, node: FExpr[strings.ZFill], frame: FrameT_contra, name: str
