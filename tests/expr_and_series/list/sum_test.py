@@ -10,10 +10,15 @@ from tests.utils import PANDAS_VERSION
 if TYPE_CHECKING:
     from tests.utils import Constructor, ConstructorEager
 
-data = {"a": [[3, 2, 2, 4, None], [-1]]}
+data = {"a": [[3, None, 2, 2, 4, None], [], [-1], [None, None, None], []]}
 
 
-def test_sum_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
+@pytest.mark.parametrize(
+    ("index", "expected"), [(0, 11), (1, 0), (2, -1), (3, 0), (4, 0)]
+)
+def test_sum_expr(
+    request: pytest.FixtureRequest, constructor: Constructor, index: int, expected: int
+) -> None:
     if any(backend in str(constructor) for backend in ("dask", "cudf", "sqlframe")):
         # sqlframe issue: https://github.com/eakmanrq/sqlframe/issues/548
         request.applymarker(pytest.mark.xfail)
@@ -28,12 +33,17 @@ def test_sum_expr(request: pytest.FixtureRequest, constructor: Constructor) -> N
         .collect()["a"]
         .to_list()
     )
-    assert result[0] == 11
-    assert result[1] == -1
+    assert result[index] == expected
 
 
+@pytest.mark.parametrize(
+    ("index", "expected"), [(0, 11), (1, 0), (2, -1), (3, 0), (4, 0)]
+)
 def test_sum_series(
-    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
+    request: pytest.FixtureRequest,
+    constructor_eager: ConstructorEager,
+    index: int,
+    expected: int,
 ) -> None:
     if any(backend in str(constructor_eager) for backend in ("cudf",)):
         request.applymarker(pytest.mark.xfail)
@@ -43,5 +53,4 @@ def test_sum_series(
         pytest.importorskip("pyarrow")
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df["a"].cast(nw.List(nw.Int32())).list.sum().to_list()
-    assert result[0] == 11
-    assert result[1] == -1
+    assert result[index] == expected
