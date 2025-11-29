@@ -177,13 +177,17 @@ __all__ = [
 ]
 
 
-def __getattr__(name: _t.Literal["__version__"]) -> str:  # type: ignore[misc]
-    if name == "__version__":
-        global __version__  # noqa: PLW0603
+if not _t.TYPE_CHECKING:
 
-        from importlib import metadata
+    def __getattr__(name: str) -> _t.Any:
+        if name == "__version__":
+            global __version__  # noqa: PLW0603
 
-        __version__ = metadata.version(__name__)
-        return __version__
-    msg = f"module {__name__!r} has no attribute {name!r}"
-    raise AttributeError(msg)
+            from importlib import metadata
+
+            __version__ = metadata.version(__name__)
+            return __version__
+        msg = f"module {__name__!r} has no attribute {name!r}"
+        raise AttributeError(msg)
+else:  # pragma: no cover
+    ...
