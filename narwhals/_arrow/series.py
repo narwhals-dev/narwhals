@@ -681,16 +681,28 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             valid_mask = pc.is_valid(arr)
             indices = pa.array(np.arange(len(arr)), type=pa.int64())
             if direction == "forward":
-                valid_index = np.maximum.accumulate(np.where(valid_mask, indices, -1))
-                distance = indices - valid_index
+                valid_index_np = np.maximum.accumulate(np.where(valid_mask, indices, -1))
+                distance_np = indices - valid_index_np
+                # Create mask for positions that should be filled
+                should_fill = pa.array((valid_index_np >= 0) & (distance_np <= limit))
+                # Clamp valid_index to valid range to avoid out-of-bounds errors
+                # These clamped values won't be used where should_fill is False
+                valid_index = pa.array(np.maximum(valid_index_np, 0))
             else:
-                valid_index = np.minimum.accumulate(
+                valid_index_np = np.minimum.accumulate(
                     np.where(valid_mask[::-1], indices[::-1], len(arr))
                 )[::-1]
-                distance = valid_index - indices
+                distance_np = valid_index_np - indices
+                # Create mask for positions that should be filled
+                should_fill = pa.array(
+                    (valid_index_np < len(arr)) & (distance_np <= limit)
+                )
+                # Clamp valid_index to valid range to avoid out-of-bounds errors
+                # These clamped values won't be used where should_fill is False
+                valid_index = pa.array(np.minimum(valid_index_np, len(arr) - 1))
             return pc.if_else(
-                pc.and_(pc.is_null(arr), pc.less_equal(distance, lit(limit))),  # pyright: ignore[reportArgumentType, reportCallIssue]
-                arr.take(valid_index),
+                pc.and_(pc.is_null(arr), should_fill),
+                arr.take(valid_index),  # pyright: ignore[reportArgumentType, reportCallIssue]
                 arr,
             )
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from contextlib import nullcontext as does_not_raise
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -15,6 +15,9 @@ from tests.utils import (
     ConstructorEager,
     assert_equal_data,
 )
+
+if TYPE_CHECKING:
+    from narwhals.typing import FillNullStrategy
 
 
 def test_fill_null(constructor: Constructor) -> None:
@@ -426,3 +429,31 @@ def test_fill_null_strategies_with_partition_by(
         "idx": list(range(9)),
     }
     assert_equal_data(result_backward, expected_backward)
+
+
+@pytest.mark.parametrize(
+    ("values", "strategy", "limit", "expected"),
+    [
+        ([None, None, 1, None, None, 2], "forward", 2, [None, None, 1, 1, 1, 2]),
+        ([1, None, None, 2, None, None], "backward", 2, [1, 2, 2, 2, None, None]),
+        ([None, None, None, None], "forward", 2, [None, None, None, None]),
+        ([None, None, None, None], "backward", 2, [None, None, None, None]),
+        ([1, None, None, None, None], "forward", 2, [1, 1, 1, None, None]),
+        ([None, None, None, None, 5], "backward", 2, [None, None, 5, 5, 5]),
+        ([None, None, 3, None, None], "forward", 1, [None, None, 3, 3, None]),
+        ([None, None, 3, None, None], "backward", 1, [None, 3, 3, None, None]),
+        ([1, None, None, 2, None, None, 3], "forward", 1, [1, 1, None, 2, 2, None, 3]),
+        ([1, None, None, 2, None, None, 3], "backward", 1, [1, None, 2, 2, None, 3, 3]),
+    ],
+)
+def test_issue_3327(
+    constructor_eager: ConstructorEager,
+    values: list[int | None],
+    strategy: FillNullStrategy,
+    limit: int,
+    expected: list[int | None],
+) -> None:
+    data = {"a": values}
+    df = nw.from_native(constructor_eager(data))
+    result = df.with_columns(nw.col("a").fill_null(strategy=strategy, limit=limit))
+    assert_equal_data(result, {"a": expected})
