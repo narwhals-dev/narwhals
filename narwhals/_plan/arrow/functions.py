@@ -345,13 +345,66 @@ def list_get(native: ArrowAny, index: int) -> ArrowAny:
     return result
 
 
+def str_len_chars(native: ChunkedOrScalarAny) -> ChunkedOrScalarAny:  # pragma: no cover
+    len_chars: Incomplete = pc.utf8_length
+    result: ChunkedOrScalarAny = len_chars(native)
+    return result
+
+
+def str_slice(
+    native: ChunkedOrScalarAny, offset: int, length: int | None = None
+) -> ChunkedOrScalarAny:  # pragma: no cover
+    stop = length if length is None else offset + length
+    return pc.utf8_slice_codeunits(native, offset, stop=stop)
+
+
+def str_pad_start(
+    native: ChunkedOrScalarAny, length: int, fill_char: str = " "
+) -> ChunkedOrScalarAny:  # pragma: no cover
+    return pc.utf8_lpad(native, length, fill_char)
+
+
 def str_zfill(native: ChunkedOrScalarAny, length: int) -> ChunkedOrScalarAny:
     if HAS_ZFILL:
-        zfill: Incomplete = pc.utf8_zero_fill  # type:ignore[attr-defined]
+        zfill: Incomplete = pc.utf8_zero_fill  # type: ignore[attr-defined]
         result: ChunkedOrScalarAny = zfill(native, length)
-        return result
-    msg = "TODO: Port hand-rolled `str.zfill` from `main`"
-    raise NotImplementedError(msg)
+    else:
+        result = _str_zfill_compat(native, length)
+    return result
+
+
+# TODO @dangotbanned: Finish tidying this up
+def _str_zfill_compat(
+    native: ChunkedOrScalarAny, length: int
+) -> Incomplete:  # pragma: no cover
+    dtype = string_type([native.type])
+    hyphen, plus = lit("-", dtype), lit("+", dtype)
+
+    padded_remaining = str_pad_start(str_slice(native, 1), length - 1, "0")
+    padded_lt_length = str_pad_start(native, length, "0")
+
+    binary_join: Incomplete = pc.binary_join_element_wise
+    if isinstance(native, pa.Scalar):
+        case_1: ArrowAny = hyphen  # starts with hyphen and less than length
+        case_2: ArrowAny = plus  # starts with plus and less than length
+    else:
+        arr_len = len(native)
+        case_1 = repeat_unchecked(hyphen, arr_len)
+        case_2 = repeat_unchecked(plus, arr_len)
+
+    first_char = str_slice(native, 0, 1)
+    lt_length = lt(str_len_chars(native), lit(length))
+    first_hyphen_lt_length = and_(eq(first_char, hyphen), lt_length)
+    first_plus_lt_length = and_(eq(first_char, plus), lt_length)
+    return when_then(
+        first_hyphen_lt_length,
+        binary_join(case_1, padded_remaining, ""),
+        when_then(
+            first_plus_lt_length,
+            binary_join(case_2, padded_remaining, ""),
+            when_then(lt_length, padded_lt_length, native),
+        ),
+    )
 
 
 @t.overload
