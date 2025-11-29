@@ -678,28 +678,34 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             # this algorithm first finds the indices of the valid values to fill all the null value positions
             # then it calculates the distance of each new index and the original index
             # if the distance is equal to or less than the limit and the original value is null, it is replaced
-            valid_mask = pc.is_valid(arr)
-            indices = pa.array(np.arange(len(arr)), type=pa.int64())
+            size = len(arr)
+            valid_mask_np = np.array(pc.is_valid(arr))
+            indices_np = np.arange(size, dtype=np.int64)
             if direction == "forward":
-                valid_index_np = np.maximum.accumulate(np.where(valid_mask, indices, -1))
-                distance_np = indices - valid_index_np
-                # Create mask for positions that should be filled
-                should_fill = pa.array((valid_index_np >= 0) & (distance_np <= limit))
-                # Clamp valid_index to valid range to avoid out-of-bounds errors
-                # These clamped values won't be used where should_fill is False
-                valid_index = pa.array(np.maximum(valid_index_np, 0))
-            else:
-                valid_index_np = np.minimum.accumulate(
-                    np.where(valid_mask[::-1], indices[::-1], len(arr))
-                )[::-1]
-                distance_np = valid_index_np - indices
-                # Create mask for positions that should be filled
-                should_fill = pa.array(
-                    (valid_index_np < len(arr)) & (distance_np <= limit)
+                # Find index of last valid value for each position
+                valid_index_np = np.maximum.accumulate(
+                    np.where(valid_mask_np, indices_np, -1)
                 )
-                # Clamp valid_index to valid range to avoid out-of-bounds errors
-                # These clamped values won't be used where should_fill is False
-                valid_index = pa.array(np.minimum(valid_index_np, len(arr) - 1))
+                distance_np = indices_np - valid_index_np
+                # Create combined mask: has valid source AND within limit
+                should_fill_np = (valid_index_np >= 0) & (distance_np <= limit)
+                # Clamp to avoid out-of-bounds (won't be used where should_fill is False)
+                valid_index_np = np.maximum(valid_index_np, 0)
+            else:
+                # Find index of next valid value for each position (backward)
+                valid_index_np = np.minimum.accumulate(
+                    np.where(valid_mask_np[::-1], indices_np[::-1], size)
+                )[::-1]
+                distance_np = valid_index_np - indices_np
+                # Create combined mask: has valid source AND within limit
+                should_fill_np = (valid_index_np < size) & (distance_np <= limit)
+                # Clamp to avoid out-of-bounds (won't be used where should_fill is False)
+                valid_index_np = np.minimum(valid_index_np, size - 1)
+
+            # Convert back to PyArrow for final operations
+            should_fill = pa.array(should_fill_np)
+            valid_index = pa.array(valid_index_np)
+
             return pc.if_else(
                 pc.and_(pc.is_null(arr), should_fill),
                 arr.take(valid_index),  # pyright: ignore[reportArgumentType, reportCallIssue]

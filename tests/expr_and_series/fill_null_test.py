@@ -453,6 +453,9 @@ def test_issue_3327(
     limit: int,
     expected: list[int | None],
 ) -> None:
+    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 10):
+        pytest.skip()
+
     data = {"a": values}
     df = nw.from_native(constructor_eager(data))
     result = df.with_columns(nw.col("a").fill_null(strategy=strategy, limit=limit))
