@@ -6,10 +6,9 @@ from narwhals._duration import Interval
 from narwhals._plan._function import Function
 from narwhals._plan.expressions.namespace import ExprNamespace, IRNamespace
 from narwhals._plan.options import FunctionOptions
-from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
-    from typing_extensions import TypeAlias, TypeIs
+    from typing_extensions import Self, TypeAlias, TypeIs
 
     from narwhals._duration import IntervalUnit
     from narwhals._plan.expr import Expr
@@ -72,18 +71,24 @@ class Timestamp(TemporalFunction):
         return f"{super().__repr__()}[{self.time_unit!r}]"
 
 
-class Truncate(TemporalFunction):
+class _IntervalFunction(TemporalFunction):
     __slots__ = ("multiple", "unit")
     multiple: int
     unit: IntervalUnit
 
-    @staticmethod
-    def from_string(every: str, /) -> Truncate:
-        return Truncate.from_interval(Interval.parse(every))
+    @classmethod
+    def from_string(cls, interval: str, /) -> Self:
+        return cls.from_interval(Interval.parse(interval))
 
-    @staticmethod
-    def from_interval(every: Interval, /) -> Truncate:
-        return Truncate(multiple=every.multiple, unit=every.unit)
+    @classmethod
+    def from_interval(cls, interval: Interval, /) -> Self:
+        return cls(multiple=interval.multiple, unit=interval.unit)
+
+
+# fmt: off
+class Truncate(_IntervalFunction): ...
+class OffsetBy(_IntervalFunction): ...
+# fmt: on
 
 
 class IRDateTimeNamespace(IRNamespace):
@@ -107,6 +112,7 @@ class IRDateTimeNamespace(IRNamespace):
     to_string: ClassVar = ToString
     replace_time_zone: ClassVar = ReplaceTimeZone
     convert_time_zone: ClassVar = ConvertTimeZone
+    offset_by: ClassVar = staticmethod(OffsetBy.from_string)
     truncate: ClassVar = staticmethod(Truncate.from_string)
     timestamp: ClassVar = staticmethod(Timestamp.from_time_unit)
 
@@ -182,4 +188,5 @@ class ExprDateTimeNamespace(ExprNamespace[IRDateTimeNamespace]):
     def truncate(self, every: str) -> Expr:
         return self._with_unary(self._ir.truncate(every))
 
-    offset_by = not_implemented()
+    def offset_by(self, by: str) -> Expr:  # pragma: no cover
+        return self._with_unary(self._ir.offset_by(by))

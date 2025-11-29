@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, ClassVar
 from narwhals._plan._function import Function, HorizontalFunction
 from narwhals._plan.expressions.namespace import ExprNamespace, IRNamespace
 from narwhals._plan.options import FEOptions, FunctionOptions
-from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
     from narwhals._plan.expr import Expr
@@ -16,6 +15,7 @@ class StringFunction(Function, accessor="str", options=FunctionOptions.elementwi
 class LenChars(StringFunction): ...
 class ToLowercase(StringFunction): ...
 class ToUppercase(StringFunction): ...
+class ToTitlecase(StringFunction): ...
 # fmt: on
 class ConcatStr(HorizontalFunction, StringFunction):
     __slots__ = ("ignore_nulls", "separator")
@@ -70,6 +70,11 @@ class StripChars(StringFunction):
     characters: str | None
 
 
+class ToDate(StringFunction):
+    __slots__ = ("format",)
+    format: str | None
+
+
 class ToDatetime(StringFunction):
     __slots__ = ("format",)
     format: str | None
@@ -84,6 +89,7 @@ class IRStringNamespace(IRNamespace):
     len_chars: ClassVar = LenChars
     to_lowercase: ClassVar = ToUppercase
     to_uppercase: ClassVar = ToLowercase
+    to_titlecase: ClassVar = ToTitlecase
     split: ClassVar = Split
     starts_with: ClassVar = StartsWith
     ends_with: ClassVar = EndsWith
@@ -115,6 +121,9 @@ class IRStringNamespace(IRNamespace):
 
     def tail(self, n: int = 5) -> Slice:
         return self.slice(-n)
+
+    def to_date(self, format: str | None = None) -> ToDate:  # pragma: no cover
+        return ToDate(format=format)
 
     def to_datetime(self, format: str | None = None) -> ToDatetime:  # pragma: no cover
         return ToDatetime(format=format)
@@ -164,6 +173,9 @@ class ExprStringNamespace(ExprNamespace[IRStringNamespace]):
     def split(self, by: str) -> Expr:  # pragma: no cover
         return self._with_unary(self._ir.split(by=by))
 
+    def to_date(self, format: str | None = None) -> Expr:  # pragma: no cover
+        return self._with_unary(self._ir.to_date(format))
+
     def to_datetime(self, format: str | None = None) -> Expr:  # pragma: no cover
         return self._with_unary(self._ir.to_datetime(format))
 
@@ -173,8 +185,8 @@ class ExprStringNamespace(ExprNamespace[IRStringNamespace]):
     def to_uppercase(self) -> Expr:  # pragma: no cover
         return self._with_unary(self._ir.to_uppercase())
 
+    def to_titlecase(self) -> Expr:  # pragma: no cover
+        return self._with_unary(self._ir.to_titlecase())
+
     def zfill(self, length: int) -> Expr:
         return self._with_unary(self._ir.zfill(length=length))
-
-    to_date = not_implemented()
-    to_titlecase = not_implemented()
