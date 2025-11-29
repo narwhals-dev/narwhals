@@ -511,4 +511,7 @@ def list_agg(
         .column(f"values_{func}")
     )
     non_empty_mask = pa.array(pc.not_equal(pc.list_value_length(array), 0))  # type: ignore[type-var]
-    return pa.chunked_array([pc.replace_with_mask([0] * len(array), non_empty_mask, agg)])
+    base_array = [None if x else 0 for x in non_empty_mask.is_null()]
+    return pa.chunked_array(
+        [pc.replace_with_mask(base_array, non_empty_mask.fill_null(False), agg)]
+    )

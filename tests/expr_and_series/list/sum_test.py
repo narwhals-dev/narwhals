@@ -10,11 +10,11 @@ from tests.utils import PANDAS_VERSION
 if TYPE_CHECKING:
     from tests.utils import Constructor, ConstructorEager
 
-data = {"a": [[3, None, 2, 2, 4, None], [], [-1], [None, None, None], []]}
+data = {"a": [[3, None, 2, 2, 4, None], [], [-1], None, [None, None, None], []]}
 
 
 @pytest.mark.parametrize(
-    ("index", "expected"), [(0, 11), (1, 0), (2, -1), (3, 0), (4, 0)]
+    ("index", "expected"), [(0, 11), (1, 0), (2, -1), (3, None), (4, 0), (5, 0)]
 )
 def test_sum_expr(
     request: pytest.FixtureRequest, constructor: Constructor, index: int, expected: int
@@ -37,7 +37,7 @@ def test_sum_expr(
 
 
 @pytest.mark.parametrize(
-    ("index", "expected"), [(0, 11), (1, 0), (2, -1), (3, 0), (4, 0)]
+    ("index", "expected"), [(0, 11), (1, 0), (2, -1), (3, None), (4, 0), (5, 0)]
 )
 def test_sum_series(
     request: pytest.FixtureRequest,
