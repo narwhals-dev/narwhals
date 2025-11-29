@@ -680,7 +680,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             # if the distance is equal to or less than the limit and the original value is null, it is replaced
             size = len(arr)
             valid_mask_np = np.array(pc.is_valid(arr))
-            indices_np = np.arange(size, dtype=np.int64)
+            indices_np: np.ndarray = np.arange(size, dtype=np.int64)
             if direction == "forward":
                 # Find index of last valid value for each position
                 valid_index_np = np.maximum.accumulate(
