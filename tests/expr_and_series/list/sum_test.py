@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION
+from tests.utils import PANDAS_VERSION, assert_equal_data
 
 if TYPE_CHECKING:
     from tests.utils import Constructor, ConstructorEager
@@ -33,7 +33,7 @@ def test_sum_expr(
         .collect()["a"]
         .to_list()
     )
-    assert result[index] == expected
+    assert_equal_data({"a": [result[index]]}, {"a": [expected]})
 
 
 @pytest.mark.parametrize(
@@ -53,4 +53,4 @@ def test_sum_series(
         pytest.importorskip("pyarrow")
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df["a"].cast(nw.List(nw.Int32())).list.sum().to_list()
-    assert result[index] == expected
+    assert_equal_data({"a": [result[index]]}, {"a": [expected]})

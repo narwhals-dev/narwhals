@@ -507,11 +507,14 @@ def list_agg(
             names=["values", "offsets"],
         )
         .group_by("offsets")
-        .aggregate([("values", func, pc.CountOptions("all"))])
+        .aggregate([("values", func)])
+        .sort_by("offsets")
         .column(f"values_{func}")
     )
+    if func == "sum":
+        agg = agg.fill_null(lit(0))  # type: ignore[type-var]
     non_empty_mask = pa.array(pc.not_equal(pc.list_value_length(array), 0))  # type: ignore[type-var]
-    base_array = [None if x else 0 for x in non_empty_mask.is_null()]
+    base_array = pc.if_else(non_empty_mask.is_null(), None, 0)
     return pa.chunked_array(
         [pc.replace_with_mask(base_array, non_empty_mask.fill_null(False), agg)]
     )
