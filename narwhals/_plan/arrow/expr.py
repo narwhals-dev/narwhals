@@ -870,6 +870,17 @@ class ArrowListNamespace(
 class ArrowStringNamespace(
     ExprStringNamespace["Frame", "Expr | Scalar"], ArrowAccessor[ExprOrScalarT]
 ):
+    def len_chars(
+        self, node: FExpr[strings.LenChars], frame: Frame, name: str
+    ) -> Expr | Scalar:
+        native = node.input[0].dispatch(self.compliant, frame, name).native
+        return self.with_native(fn.str_len_chars(native), name)
+
+    def slice(self, node: FExpr[strings.Slice], frame: Frame, name: str) -> Expr | Scalar:
+        native = node.input[0].dispatch(self.compliant, frame, name).native
+        func = node.function
+        return self.with_native(fn.str_slice(native, func.offset, func.length), name)
+
     def zfill(self, node: FExpr[strings.ZFill], frame: Frame, name: str) -> Expr | Scalar:
         native = node.input[0].dispatch(self.compliant, frame, name).native
         return self.with_native(fn.str_zfill(native, node.function.length), name)

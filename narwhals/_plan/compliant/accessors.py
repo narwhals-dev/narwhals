@@ -32,6 +32,12 @@ class ExprListNamespace(Protocol[FrameT_contra, ExprT_co]):
 
 
 class ExprStringNamespace(Protocol[FrameT_contra, ExprT_co]):
+    def len_chars(
+        self, node: FExpr[strings.LenChars], frame: FrameT_contra, name: str
+    ) -> ExprT_co: ...
+    def slice(
+        self, node: FExpr[strings.Slice], frame: FrameT_contra, name: str
+    ) -> ExprT_co: ...
     def zfill(
         self, node: FExpr[strings.ZFill], frame: FrameT_contra, name: str
     ) -> ExprT_co: ...

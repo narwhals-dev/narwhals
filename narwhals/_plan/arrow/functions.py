@@ -345,7 +345,7 @@ def list_get(native: ArrowAny, index: int) -> ArrowAny:
     return result
 
 
-def str_len_chars(native: ChunkedOrScalarAny) -> ChunkedOrScalarAny:  # pragma: no cover
+def str_len_chars(native: ChunkedOrScalarAny) -> ChunkedOrScalarAny:
     len_chars: Incomplete = pc.utf8_length
     result: ChunkedOrScalarAny = len_chars(native)
     return result
@@ -353,7 +353,7 @@ def str_len_chars(native: ChunkedOrScalarAny) -> ChunkedOrScalarAny:  # pragma: 
 
 def str_slice(
     native: ChunkedOrScalarAny, offset: int, length: int | None = None
-) -> ChunkedOrScalarAny:  # pragma: no cover
+) -> ChunkedOrScalarAny:
     stop = length if length is None else offset + length
     return pc.utf8_slice_codeunits(native, offset, stop=stop)
 
