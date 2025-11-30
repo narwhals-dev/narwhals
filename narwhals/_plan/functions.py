@@ -116,15 +116,29 @@ def sum(*columns: str) -> Expr:
 
 
 # TODO @dangotbanned: Support `ignore_nulls=...`
-def all_horizontal(*exprs: IntoExpr | t.Iterable[IntoExpr]) -> Expr:
+# NOTE: `polars` doesn't support yet
+# Current behavior is equivalent to `ignore_nulls=False`
+def all_horizontal(
+    *exprs: IntoExpr | t.Iterable[IntoExpr], ignore_nulls: bool = False
+) -> Expr:
     it = _parse.parse_into_seq_of_expr_ir(*exprs)
-    return ir.boolean.AllHorizontal().to_function_expr(*it).to_narwhals()
+    return (
+        ir.boolean.AllHorizontal(ignore_nulls=ignore_nulls)
+        .to_function_expr(*it)
+        .to_narwhals()
+    )
 
 
 # TODO @dangotbanned: Support `ignore_nulls=...`
-def any_horizontal(*exprs: IntoExpr | t.Iterable[IntoExpr]) -> Expr:
+def any_horizontal(
+    *exprs: IntoExpr | t.Iterable[IntoExpr], ignore_nulls: bool = False
+) -> Expr:
     it = _parse.parse_into_seq_of_expr_ir(*exprs)
-    return ir.boolean.AnyHorizontal().to_function_expr(*it).to_narwhals()
+    return (
+        ir.boolean.AnyHorizontal(ignore_nulls=ignore_nulls)
+        .to_function_expr(*it)
+        .to_narwhals()
+    )
 
 
 def sum_horizontal(*exprs: IntoExpr | t.Iterable[IntoExpr]) -> Expr:

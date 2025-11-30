@@ -335,7 +335,7 @@ def _combine_predicates(predicates: Iterator[ExprIR], /) -> ExprIR:
         inputs = (first,)
     else:
         return first
-    return AllHorizontal().to_function_expr(*inputs)
+    return AllHorizontal(ignore_nulls=False).to_function_expr(*inputs)
 
 
 def _is_iterable(obj: Iterable[T] | Any) -> TypeIs[Iterable[T]]:
