@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from narwhals._compliant import LazyExprNamespace
 from narwhals._compliant.any_namespace import ListNamespace
-from narwhals._duckdb.utils import F, lit, when
+from narwhals._duckdb.utils import F, col, lambda_expr, lit, when
 from narwhals._utils import requires
 
 if TYPE_CHECKING:
@@ -54,4 +54,12 @@ class DuckDBExprListNamespace(
         return self.compliant._with_elementwise(lambda expr: F("list_median", expr))
 
     def sum(self) -> DuckDBExpr:
-        return self.compliant._with_elementwise(lambda expr: F("list_sum", expr))
+        def func(expr: Expression) -> Expression:
+            elem = col("_")
+            expr_no_nulls = F("list_filter", expr, lambda_expr(elem, elem.isnotnull()))
+            expr_sum = F("list_sum", expr_no_nulls)
+            return when(F("array_length", expr_no_nulls) == lit(0), lit(0)).otherwise(
+                expr_sum
+            )
+
+        return self.compliant._with_callable(func)
