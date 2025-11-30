@@ -100,15 +100,13 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
             nw_ser.to_native(), name or node.name, nw_ser.version
         )
 
-    # NOTE: Update with `ignore_nulls`/`fill_null` behavior once added to each `Function`
-    # https://github.com/narwhals-dev/narwhals/pull/2719
     def _horizontal_function(
         self, fn_native: Callable[[Any, Any], Any], /, fill: NonNestedLiteral = None
     ) -> Callable[[FunctionExpr[Any], Frame, str], Expr | Scalar]:
         def func(node: FunctionExpr[Any], frame: Frame, name: str) -> Expr | Scalar:
             it = (self._expr.from_ir(e, frame, name).native for e in node.input)
             if fill is not None:
-                it = (pc.fill_null(native, fn.lit(fill)) for native in it)
+                it = (fn.fill_null(native, fill) for native in it)
             result = reduce(fn_native, it)
             if isinstance(result, pa.Scalar):
                 return self._scalar.from_native(result, name, self.version)
@@ -128,12 +126,14 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
     def any_horizontal(
         self, node: FunctionExpr[AnyHorizontal], frame: Frame, name: str
     ) -> Expr | Scalar:
-        return self._horizontal_function(fn.or_)(node, frame, name)
+        fill = False if node.function.ignore_nulls else None
+        return self._horizontal_function(fn.or_, fill)(node, frame, name)
 
     def all_horizontal(
         self, node: FunctionExpr[AllHorizontal], frame: Frame, name: str
     ) -> Expr | Scalar:
-        return self._horizontal_function(fn.and_)(node, frame, name)
+        fill = True if node.function.ignore_nulls else None
+        return self._horizontal_function(fn.and_, fill)(node, frame, name)
 
     def sum_horizontal(
         self, node: FunctionExpr[F.SumHorizontal], frame: Frame, name: str

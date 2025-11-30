@@ -16,19 +16,12 @@ if TYPE_CHECKING:
 @pytest.fixture(scope="module")
 def data() -> Data:
     return {
-        # test_allh, test_allh_series, test_allh_all, test_allh_nth, test_horizontal_expressions_empty
         "a": [False, False, True],
         "b": [False, True, True],
-        # test_all_ignore_nulls, test_allh_kleene, test_anyh_dask,
         "c": [True, True, False],
         "d": [True, None, None],
         "e": [None, True, False],
     }
-
-
-XFAIL_NOT_IMPL = pytest.mark.xfail(
-    reason="TODO: `{all,any}_horizontal(ignore_nulls=True)`", raises=AssertionError
-)
 
 
 @pytest.mark.parametrize(
@@ -42,7 +35,6 @@ XFAIL_NOT_IMPL = pytest.mark.xfail(
             nwp.all_horizontal("c", "d", ignore_nulls=True),
             {"c": [True, True, False]},
             id="ignore_nulls-1",
-            marks=XFAIL_NOT_IMPL,
         ),
         (nwp.all_horizontal("c", "d", ignore_nulls=False), {"c": [True, None, False]}),
         (
@@ -64,7 +56,6 @@ XFAIL_NOT_IMPL = pytest.mark.xfail(
             nwp.all_horizontal(ncs.all() - ncs.by_index(0, 1), ignore_nulls=True),
             {"c": [True, True, False]},
             id="ignore_nulls-2",
-            marks=XFAIL_NOT_IMPL,
         ),
     ],
 )
@@ -85,7 +76,6 @@ def test_all_horizontal(data: Data, expr: nwp.Expr, expected: Data) -> None:
             nwp.any_horizontal("c", "d", ignore_nulls=True),
             {"c": [True, True, False]},
             id="ignore_nulls-1",
-            marks=XFAIL_NOT_IMPL,
         ),
         (
             nwp.any_horizontal(nwp.nth(0, 1), ignore_nulls=False),
@@ -106,7 +96,6 @@ def test_all_horizontal(data: Data, expr: nwp.Expr, expected: Data) -> None:
             nwp.any_horizontal(ncs.all() - ncs.by_index(0, 1), ignore_nulls=True),
             {"c": [True, True, False]},
             id="ignore_nulls-2",
-            marks=XFAIL_NOT_IMPL,
         ),
     ],
 )

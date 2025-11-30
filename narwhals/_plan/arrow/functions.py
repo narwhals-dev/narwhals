@@ -698,11 +698,22 @@ def _fill_null_forward_limit(native: ChunkedArrayAny, limit: int) -> ChunkedArra
     return when_then(or_(is_not_null, beyond_limit), native, native.take(index_not_null))
 
 
+@t.overload
+def fill_null(
+    native: ChunkedOrScalarT, value: NonNestedLiteral | ArrowAny
+) -> ChunkedOrScalarT: ...
+@t.overload
 def fill_null(
     native: ChunkedOrArrayT, value: ScalarAny | NonNestedLiteral | ChunkedOrArrayT
-) -> ChunkedOrArrayT:
+) -> ChunkedOrArrayT: ...
+@t.overload
+def fill_null(
+    native: ChunkedOrScalarAny, value: ChunkedOrScalarAny | NonNestedLiteral
+) -> ChunkedOrScalarAny: ...
+def fill_null(native: ArrowAny, value: ArrowAny | NonNestedLiteral) -> ArrowAny:
     fill_value: Incomplete = value
-    return pc.fill_null(native, fill_value)
+    result: ArrowAny = pc.fill_null(native, fill_value)
+    return result
 
 
 @t.overload
