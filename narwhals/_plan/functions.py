@@ -3,7 +3,7 @@ from __future__ import annotations
 import builtins
 import datetime as dt
 import typing as t
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 from narwhals._duration import Interval
 from narwhals._plan import _guards, _parse, common, expressions as ir, selectors as cs
@@ -53,10 +53,7 @@ if TYPE_CHECKING:
         t.Any, CompliantSeries[NativeSeriesT], t.Any, t.Any
     ]
 
-
-def format() -> Expr:
-    msg = "nwp.format"
-    raise NotImplementedError(msg)
+_dtypes: Final = Version.MAIN.dtypes
 
 
 def col(*names: str | t.Iterable[str]) -> Expr:
@@ -167,6 +164,28 @@ def concat_str(
 def coalesce(exprs: IntoExpr | t.Iterable[IntoExpr], *more_exprs: IntoExpr) -> Expr:
     it = _parse.parse_into_seq_of_expr_ir(exprs, *more_exprs)
     return F.Coalesce().to_function_expr(*it).to_narwhals()
+
+
+def format(f_string: str, *args: IntoExpr) -> Expr:
+    """Format expressions as a string.
+
+    Arguments:
+        f_string: A string that with placeholders.
+        args: Expression(s) that fill the placeholders.
+    """
+    if (n_placeholders := f_string.count("{}")) != builtins.len(args):
+        msg = f"number of placeholders should equal the number of arguments. Expected {n_placeholders} arguments, got {builtins.len(args)}."
+        raise ValueError(msg)
+    string = _dtypes.String()
+    exprs: list[ir.ExprIR] = []
+    it = iter(args)
+    for i, s in enumerate(f_string.split("{}")):
+        if i > 0:
+            exprs.append(_parse.parse_into_expr_ir(next(it)))
+        if s:
+            exprs.append(lit(s, string)._ir)
+    f = ConcatStr(separator="", ignore_nulls=False)
+    return f.to_function_expr(*exprs).to_narwhals()
 
 
 def when(
