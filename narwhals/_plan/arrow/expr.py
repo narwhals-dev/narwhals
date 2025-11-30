@@ -57,7 +57,12 @@ if TYPE_CHECKING:
 
     from narwhals._plan.arrow.dataframe import ArrowDataFrame as Frame
     from narwhals._plan.arrow.namespace import ArrowNamespace
-    from narwhals._plan.arrow.typing import ChunkedArrayAny, P, VectorFunction
+    from narwhals._plan.arrow.typing import (
+        ChunkedArrayAny,
+        P,
+        UnaryFunctionP,
+        VectorFunction,
+    )
     from narwhals._plan.expressions import (
         BinaryExpr,
         FunctionExpr as FExpr,
@@ -130,7 +135,7 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
         base, exponent = node.function.unwrap_input(node)
         base_ = base.dispatch(self, frame, "base").native
         exponent_ = exponent.dispatch(self, frame, "exponent").native
-        return self._with_native(pc.power(base_, exponent_), name)
+        return self._with_native(fn.power(base_, exponent_), name)
 
     def fill_null(
         self, node: FExpr[FillNull], frame: Frame, name: str
@@ -156,17 +161,46 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
         result = fn.is_between(native, lower, upper, node.function.closed)
         return self._with_native(result, name)
 
+    @overload
     def _unary_function(
-        self, fn_native: Callable[[Any], Any], /
+        self, fn_native: UnaryFunctionP[P], /, *args: P.args, **kwds: P.kwargs
+    ) -> Callable[[FExpr[Any], Frame, str], StoresNativeT_co]: ...
+    @overload
+    def _unary_function(
+        self, fn_native: Callable[[ChunkedOrScalarAny], ChunkedOrScalarAny], /
+    ) -> Callable[[FExpr[Any], Frame, str], StoresNativeT_co]: ...
+    def _unary_function(
+        self, fn_native: UnaryFunctionP[P], /, *args: P.args, **kwds: P.kwargs
     ) -> Callable[[FExpr[Any], Frame, str], StoresNativeT_co]:
-        def func(node: FExpr[Any], frame: Frame, name: str) -> StoresNativeT_co:
+        """Return a function with the signature `(node, frame, name)`.
+
+        Handles dispatching prior expressions, and rewrapping the result of this one.
+
+        Arity refers to the number of expression inputs to a function (after expanding).
+
+        So a **unary** function will look like:
+
+            col("a").round(2)
+
+        Which unravels to:
+
+            FunctionExpr(
+                input=(Column(name="a"),),
+                #                      ^ length-1 tuple
+                function=Round(decimals=2),
+                #                       ^ non-expression argument
+                options=...,
+            )
+        """
+
+        def func(node: FExpr[Any], frame: Frame, name: str, /) -> StoresNativeT_co:
             native = node.input[0].dispatch(self, frame, name).native
-            return self._with_native(fn_native(native), name)
+            return self._with_native(fn_native(native, *args, **kwds), name)
 
         return func
 
     def abs(self, node: FExpr[Abs], frame: Frame, name: str) -> StoresNativeT_co:
-        return self._unary_function(pc.abs)(node, frame, name)
+        return self._unary_function(fn.abs_)(node, frame, name)
 
     def not_(self, node: FExpr[Not], frame: Frame, name: str) -> StoresNativeT_co:
         return self._unary_function(fn.not_)(node, frame, name)
@@ -196,16 +230,14 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
     def is_in_series(
         self, node: FExpr[IsInSeries[ChunkedArrayAny]], frame: Frame, name: str
     ) -> StoresNativeT_co:
-        native = node.input[0].dispatch(self, frame, name).native
         other = node.function.other.unwrap().to_native()
-        return self._with_native(fn.is_in(native, other), name)
+        return self._unary_function(fn.is_in, other)(node, frame, name)
 
     def is_in_seq(
         self, node: FExpr[IsInSeq], frame: Frame, name: str
     ) -> StoresNativeT_co:
-        native = node.input[0].dispatch(self, frame, name).native
         other = fn.array(node.function.other)
-        return self._with_native(fn.is_in(native, other), name)
+        return self._unary_function(fn.is_in, other)(node, frame, name)
 
     def is_nan(self, node: FExpr[IsNan], frame: Frame, name: str) -> StoresNativeT_co:
         return self._unary_function(fn.is_nan)(node, frame, name)
@@ -241,24 +273,22 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
         return self._with_native(result, name)
 
     def log(self, node: FExpr[F.Log], frame: Frame, name: str) -> StoresNativeT_co:
-        native = node.input[0].dispatch(self, frame, name).native
-        return self._with_native(fn.log(native, node.function.base), name)
+        return self._unary_function(fn.log, node.function.base)(node, frame, name)
 
     def exp(self, node: FExpr[F.Exp], frame: Frame, name: str) -> StoresNativeT_co:
-        return self._unary_function(pc.exp)(node, frame, name)
+        return self._unary_function(fn.exp)(node, frame, name)
 
     def sqrt(self, node: FExpr[F.Sqrt], frame: Frame, name: str) -> StoresNativeT_co:
-        return self._unary_function(pc.sqrt)(node, frame, name)
+        return self._unary_function(fn.sqrt)(node, frame, name)
 
     def round(self, node: FExpr[F.Round], frame: Frame, name: str) -> StoresNativeT_co:
-        native = node.input[0].dispatch(self, frame, name).native
-        return self._with_native(fn.round(native, node.function.decimals), name)
+        return self._unary_function(fn.round, node.function.decimals)(node, frame, name)
 
     def ceil(self, node: FExpr[F.Ceil], frame: Frame, name: str) -> StoresNativeT_co:
-        return self._unary_function(pc.ceil)(node, frame, name)
+        return self._unary_function(fn.ceil)(node, frame, name)
 
     def floor(self, node: FExpr[F.Floor], frame: Frame, name: str) -> StoresNativeT_co:
-        return self._unary_function(pc.floor)(node, frame, name)
+        return self._unary_function(fn.floor)(node, frame, name)
 
     def clip(self, node: FExpr[F.Clip], frame: Frame, name: str) -> StoresNativeT_co:
         expr, lower, upper = node.function.unwrap_input(node)
@@ -292,11 +322,9 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
     def replace_strict(
         self, node: FExpr[F.ReplaceStrict], frame: Frame, name: str
     ) -> StoresNativeT_co:
-        func = node.function
-        native = node.input[0].dispatch(self, frame, name).native
-        dtype = fn.dtype_native(func.return_dtype, self.version)
-        result = fn.replace_strict(native, func.old, func.new, dtype)
-        return self._with_native(result, name)
+        old, new = node.function.old, node.function.new
+        dtype = fn.dtype_native(node.function.return_dtype, self.version)
+        return self._unary_function(fn.replace_strict, old, new, dtype)(node, frame, name)
 
     def replace_strict_default(
         self, node: FExpr[F.ReplaceStrictDefault], frame: Frame, name: str
@@ -845,6 +873,19 @@ class ArrowAccessor(Generic[ExprOrScalarT]):
     def with_native(self, native: ChunkedOrScalarAny, name: str, /) -> Expr | Scalar:
         return self.compliant._with_native(native, name)
 
+    @overload
+    def unary(
+        self, fn_native: UnaryFunctionP[P], /, *args: P.args, **kwds: P.kwargs
+    ) -> Callable[[FExpr[Any], Frame, str], Expr | Scalar]: ...
+    @overload
+    def unary(
+        self, fn_native: Callable[[ChunkedOrScalarAny], ChunkedOrScalarAny], /
+    ) -> Callable[[FExpr[Any], Frame, str], Expr | Scalar]: ...
+    def unary(
+        self, fn_native: UnaryFunctionP[P], /, *args: P.args, **kwds: P.kwargs
+    ) -> Callable[[FExpr[Any], Frame, str], Expr | Scalar]:
+        return self.compliant._unary_function(fn_native, *args, **kwds)
+
 
 class ArrowCatNamespace(ExprCatNamespace["Frame", "Expr"], ArrowAccessor[ExprOrScalarT]):
     def get_categories(self, node: FExpr[GetCategories], frame: Frame, name: str) -> Expr:
@@ -856,11 +897,10 @@ class ArrowListNamespace(
     ExprListNamespace["Frame", "Expr | Scalar"], ArrowAccessor[ExprOrScalarT]
 ):
     def len(self, node: FExpr[lists.Len], frame: Frame, name: str) -> Expr | Scalar:
-        return self.compliant._unary_function(fn.list_len)(node, frame, name)
+        return self.unary(fn.list_len)(node, frame, name)
 
     def get(self, node: FExpr[lists.Get], frame: Frame, name: str) -> Expr | Scalar:
-        native = node.input[0].dispatch(self.compliant, frame, name).native
-        return self.with_native(fn.list_get(native, node.function.index), name)
+        return self.unary(fn.list_get, node.function.index)(node, frame, name)
 
     unique = not_implemented()
     contains = not_implemented()
@@ -873,80 +913,71 @@ class ArrowStringNamespace(
     def len_chars(
         self, node: FExpr[strings.LenChars], frame: Frame, name: str
     ) -> Expr | Scalar:
-        return self.compliant._unary_function(fn.str_len_chars)(node, frame, name)
+        return self.unary(fn.str_len_chars)(node, frame, name)
 
     def slice(self, node: FExpr[strings.Slice], frame: Frame, name: str) -> Expr | Scalar:
-        native = node.input[0].dispatch(self.compliant, frame, name).native
-        func = node.function
-        return self.with_native(fn.str_slice(native, func.offset, func.length), name)
+        offset, length = node.function.offset, node.function.length
+        return self.unary(fn.str_slice, offset, length)(node, frame, name)
 
     def zfill(self, node: FExpr[strings.ZFill], frame: Frame, name: str) -> Expr | Scalar:
-        native = node.input[0].dispatch(self.compliant, frame, name).native
-        return self.with_native(fn.str_zfill(native, node.function.length), name)
+        return self.unary(fn.str_zfill, node.function.length)(node, frame, name)
 
     def contains(
         self, node: FExpr[strings.Contains], frame: Frame, name: str
     ) -> Expr | Scalar:
-        native = node.input[0].dispatch(self.compliant, frame, name).native
-        func = node.function
-        result = fn.str_contains(native, func.pattern, literal=func.literal)
-        return self.with_native(result, name)
+        pattern, literal = node.function.pattern, node.function.literal
+        return self.unary(fn.str_contains, pattern, literal=literal)(node, frame, name)
 
     def ends_with(
         self, node: FExpr[strings.EndsWith], frame: Frame, name: str
     ) -> Expr | Scalar:
-        native = node.input[0].dispatch(self.compliant, frame, name).native
-        return self.with_native(fn.str_ends_with(native, node.function.suffix), name)
+        return self.unary(fn.str_ends_with, node.function.suffix)(node, frame, name)
 
     def replace(
         self, node: FExpr[strings.Replace], frame: Frame, name: str
     ) -> Expr | Scalar:
-        native = node.input[0].dispatch(self.compliant, frame, name).native
         func = node.function
-        pattern, value, literal, n = func.pattern, func.value, func.literal, func.n
-        result = fn.str_replace(native, pattern, value, literal=literal, n=n)
-        return self.with_native(result, name)
+        pattern, value, literal, n = (func.pattern, func.value, func.literal, func.n)
+        replace = fn.str_replace
+        return self.unary(replace, pattern, value, literal=literal, n=n)(
+            node, frame, name
+        )
 
     def replace_all(
         self, node: FExpr[strings.ReplaceAll], frame: Frame, name: str
     ) -> Expr | Scalar:
-        native = node.input[0].dispatch(self.compliant, frame, name).native
         func = node.function
-        pattern, value, literal = func.pattern, func.value, func.literal
-        result = fn.str_replace_all(native, pattern, value, literal=literal)
-        return self.with_native(result, name)
+        pattern, value, literal = (func.pattern, func.value, func.literal)
+        replace = fn.str_replace_all
+        return self.unary(replace, pattern, value, literal=literal)(node, frame, name)
 
     def split(self, node: FExpr[strings.Split], frame: Frame, name: str) -> Expr | Scalar:
-        native = node.input[0].dispatch(self.compliant, frame, name).native
-        return self.with_native(fn.str_split(native, node.function.by), name)
+        return self.unary(fn.str_split, node.function.by)(node, frame, name)
 
     def starts_with(
         self, node: FExpr[strings.StartsWith], frame: Frame, name: str
     ) -> Expr | Scalar:
-        native = node.input[0].dispatch(self.compliant, frame, name).native
-        return self.with_native(fn.str_starts_with(native, node.function.prefix), name)
+        return self.unary(fn.str_starts_with, node.function.prefix)(node, frame, name)
 
     def strip_chars(
         self, node: FExpr[strings.StripChars], frame: Frame, name: str
     ) -> Expr | Scalar:
-        native = node.input[0].dispatch(self.compliant, frame, name).native
-        characters = node.function.characters
-        return self.with_native(fn.str_strip_chars(native, characters), name)
+        return self.unary(fn.str_strip_chars, node.function.characters)(node, frame, name)
 
     def to_uppercase(
         self, node: FExpr[strings.ToUppercase], frame: Frame, name: str
     ) -> Expr | Scalar:
-        return self.compliant._unary_function(fn.str_to_uppercase)(node, frame, name)
+        return self.unary(fn.str_to_uppercase)(node, frame, name)
 
     def to_lowercase(
         self, node: FExpr[strings.ToLowercase], frame: Frame, name: str
     ) -> Expr | Scalar:
-        return self.compliant._unary_function(fn.str_to_lowercase)(node, frame, name)
+        return self.unary(fn.str_to_lowercase)(node, frame, name)
 
     def to_titlecase(
         self, node: FExpr[strings.ToTitlecase], frame: Frame, name: str
     ) -> Expr | Scalar:
-        return self.compliant._unary_function(fn.str_to_titlecase)(node, frame, name)
+        return self.unary(fn.str_to_titlecase)(node, frame, name)
 
     to_date = not_implemented()
     to_datetime = not_implemented()
@@ -956,5 +987,4 @@ class ArrowStructNamespace(
     ExprStructNamespace["Frame", "Expr | Scalar"], ArrowAccessor[ExprOrScalarT]
 ):
     def field(self, node: FExpr[FieldByName], frame: Frame, name: str) -> Expr | Scalar:
-        native = node.input[0].dispatch(self.compliant, frame, name).native
-        return self.with_native(fn.struct_field(native, node.function.name), name)
+        return self.unary(fn.struct_field, node.function.name)(node, frame, name)

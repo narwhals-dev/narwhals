@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     import pyarrow as pa
     import pyarrow.compute as pc
     from pyarrow.lib import (
+        BoolType,
         Date32Type,
         Int8Type,
         Int16Type,
@@ -33,6 +34,8 @@ if TYPE_CHECKING:
     IntegerScalar: TypeAlias = "Scalar[IntegerType]"
     DateScalar: TypeAlias = "Scalar[Date32Type]"
     ListScalar: TypeAlias = "Scalar[pa.ListType[DataTypeT_co]]"
+    BooleanScalar: TypeAlias = "Scalar[BoolType]"
+    NumericScalar: TypeAlias = "pc.NumericScalar"
 
     class NativeArrowSeries(NativeSeries, Protocol):
         @property
@@ -45,9 +48,16 @@ if TYPE_CHECKING:
 
     P = ParamSpec("P")
 
+    class UnaryFunctionP(Protocol[P]):
+        """A function wrapping at-most 1 `Expr` input."""
+
+        def __call__(
+            self, native: ChunkedOrScalarAny, /, *args: P.args, **kwds: P.kwargs
+        ) -> ChunkedOrScalarAny: ...
+
     class VectorFunction(Protocol[P]):
         def __call__(
-            self, native: ChunkedArrayAny, *args: P.args, **kwds: P.kwargs
+            self, native: ChunkedArrayAny, /, *args: P.args, **kwds: P.kwargs
         ) -> ChunkedArrayAny: ...
 
     class BooleanLengthPreserving(Protocol):
@@ -68,7 +78,7 @@ ScalarRT_co = TypeVar(
 )
 NumericOrTemporalScalar: TypeAlias = "pc.NumericOrTemporalScalar"
 NumericOrTemporalScalarT = TypeVar(
-    "NumericOrTemporalScalarT", bound=NumericOrTemporalScalar, default="pc.NumericScalar"
+    "NumericOrTemporalScalarT", bound=NumericOrTemporalScalar, default="NumericScalar"
 )
 
 
@@ -152,16 +162,17 @@ class BinaryFunction(Protocol[ScalarPT_contra, ScalarRT_co]):
 
 
 class BinaryComp(
-    BinaryFunction[ScalarPT_contra, "pa.BooleanScalar"], Protocol[ScalarPT_contra]
+    BinaryFunction[ScalarPT_contra, "BooleanScalar"], Protocol[ScalarPT_contra]
 ): ...
 
 
-class BinaryLogical(BinaryFunction["pa.BooleanScalar", "pa.BooleanScalar"], Protocol): ...
+class BinaryLogical(BinaryFunction["BooleanScalar", "BooleanScalar"], Protocol): ...
 
 
 BinaryNumericTemporal: TypeAlias = BinaryFunction[
     NumericOrTemporalScalarT, NumericOrTemporalScalarT
 ]
+UnaryNumeric: TypeAlias = UnaryFunction["NumericScalar", "NumericScalar"]
 DataType: TypeAlias = "pa.DataType"
 DataTypeT = TypeVar("DataTypeT", bound=DataType, default=Any)
 DataTypeT_co = TypeVar("DataTypeT_co", bound=DataType, covariant=True, default=Any)
@@ -189,7 +200,7 @@ Arrow: TypeAlias = "ChunkedOrScalar[ScalarT_co] | Array[ScalarT_co]"
 ArrowAny: TypeAlias = "ChunkedOrScalarAny | ArrayAny"
 SameArrowT = TypeVar("SameArrowT", ChunkedArrayAny, ArrayAny, ScalarAny)
 ArrowT = TypeVar("ArrowT", bound=ArrowAny)
-Predicate: TypeAlias = "Arrow[pa.BooleanScalar]"
+Predicate: TypeAlias = "Arrow[BooleanScalar]"
 """Any `pyarrow` container that wraps boolean."""
 
 NativeScalar: TypeAlias = ScalarAny

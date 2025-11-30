@@ -42,6 +42,7 @@ if TYPE_CHECKING:
         BinaryNumericTemporal,
         BinOp,
         BooleanLengthPreserving,
+        BooleanScalar,
         ChunkedArray,
         ChunkedArrayAny,
         ChunkedList,
@@ -62,6 +63,7 @@ if TYPE_CHECKING:
         ListArray,
         ListScalar,
         NativeScalar,
+        NumericScalar,
         Predicate,
         SameArrowT,
         Scalar,
@@ -71,6 +73,7 @@ if TYPE_CHECKING:
         StringType,
         StructArray,
         UnaryFunction,
+        UnaryNumeric,
         VectorFunction,
     )
     from narwhals._plan.compliant.typing import SeriesT
@@ -117,14 +120,22 @@ class MinMax(ir.AggExpr):
 IntoColumnAgg: TypeAlias = Callable[[str], ir.AggExpr]
 """Helper constructor for single-column aggregations."""
 
-is_null = pc.is_null
-is_not_null = t.cast("UnaryFunction[ScalarAny,pa.BooleanScalar]", pc.is_valid)
-is_nan = t.cast("UnaryFunction[ScalarAny, pa.BooleanScalar]", pc.is_nan)
-is_finite = t.cast("UnaryFunction[ScalarAny, pa.BooleanScalar]", pc.is_finite)
-not_ = t.cast("UnaryFunction[pa.BooleanScalar ,pa.BooleanScalar]", pc.invert)
+is_null = t.cast("UnaryFunction[ScalarAny, BooleanScalar]", pc.is_null)
+is_not_null = t.cast("UnaryFunction[ScalarAny,BooleanScalar]", pc.is_valid)
+is_nan = t.cast("UnaryFunction[ScalarAny, BooleanScalar]", pc.is_nan)
+is_finite = t.cast("UnaryFunction[ScalarAny, BooleanScalar]", pc.is_finite)
+not_ = t.cast("UnaryFunction[ScalarAny, BooleanScalar]", pc.invert)
 
 
-def is_not_nan(native: Arrow[ScalarAny]) -> Arrow[pa.BooleanScalar]:
+@overload
+def is_not_nan(native: ChunkedArrayAny) -> ChunkedArray[BooleanScalar]: ...
+@overload
+def is_not_nan(native: ScalarAny) -> BooleanScalar: ...
+@overload
+def is_not_nan(native: ChunkedOrScalarAny) -> ChunkedOrScalar[BooleanScalar]: ...
+@overload
+def is_not_nan(native: Arrow[ScalarAny]) -> Arrow[BooleanScalar]: ...
+def is_not_nan(native: Arrow[ScalarAny]) -> Arrow[BooleanScalar]:
     return not_(is_nan(native))
 
 
@@ -143,15 +154,20 @@ lt = t.cast("BinaryComp", pc.less)
 add = t.cast("BinaryNumericTemporal", pc.add)
 sub = t.cast("BinaryNumericTemporal", pc.subtract)
 multiply = pc.multiply
-power = t.cast("BinaryFunction[pc.NumericScalar, pc.NumericScalar]", pc.power)
+power = t.cast("BinaryFunction[NumericScalar, NumericScalar]", pc.power)
 floordiv = _floordiv
+abs_ = t.cast("UnaryNumeric", pc.abs)
+exp = t.cast("UnaryNumeric", pc.exp)
+sqrt = t.cast("UnaryNumeric", pc.sqrt)
+ceil = t.cast("UnaryNumeric", pc.ceil)
+floor = t.cast("UnaryNumeric", pc.floor)
 
 
-def truediv(lhs: Any, rhs: Any) -> Any:
+def truediv(lhs: Incomplete, rhs: Incomplete) -> Incomplete:
     return pc.divide(*cast_for_truediv(lhs, rhs))
 
 
-def modulus(lhs: Any, rhs: Any) -> Any:
+def modulus(lhs: Incomplete, rhs: Incomplete) -> Incomplete:
     floor_div = floordiv(lhs, rhs)
     return sub(lhs, multiply(floor_div, rhs))
 
@@ -286,6 +302,8 @@ def struct_field(native: StructArray, field: Field, /) -> ArrayAny: ...
 def struct_field(native: pa.StructScalar, field: Field, /) -> ScalarAny: ...
 @t.overload
 def struct_field(native: SameArrowT, field: Field, /) -> SameArrowT: ...
+@t.overload
+def struct_field(native: ChunkedOrScalarAny, field: Field, /) -> ChunkedOrScalarAny: ...
 def struct_field(native: ArrowAny, field: Field, /) -> ArrowAny:
     """Retrieve one `Struct` field."""
     func = t.cast("Callable[[Any,Any], ArrowAny]", pc.struct_field)
@@ -323,6 +341,8 @@ def list_len(native: ListArray) -> pa.UInt32Array: ...
 def list_len(native: ListScalar) -> pa.UInt32Scalar: ...
 @t.overload
 def list_len(native: SameArrowT) -> SameArrowT: ...
+@t.overload
+def list_len(native: ChunkedOrScalar[ListScalar]) -> ChunkedOrScalar[pa.UInt32Scalar]: ...
 def list_len(native: ArrowAny) -> ArrowAny:
     length: Incomplete = pc.list_value_length
     result: ArrowAny = length(native).cast(pa.uint32())
@@ -339,6 +359,8 @@ def list_get(native: ListArray[DataTypeT], index: int) -> Array[Scalar[DataTypeT
 def list_get(native: ListScalar[DataTypeT], index: int) -> Scalar[DataTypeT]: ...
 @t.overload
 def list_get(native: SameArrowT, index: int) -> SameArrowT: ...
+@t.overload
+def list_get(native: ChunkedOrScalarAny, index: int) -> ChunkedOrScalarAny: ...
 def list_get(native: ArrowAny, index: int) -> ArrowAny:
     list_get_: Incomplete = pc.list_element
     result: ArrowAny = list_get_(native, index)
@@ -364,13 +386,14 @@ def str_pad_start(
     return pc.utf8_lpad(native, length, fill_char)
 
 
-_StringFunction: TypeAlias = "Callable[[ChunkedOrScalarAny,str], ChunkedOrScalarAny]"
-str_starts_with = t.cast("_StringFunction", pc.starts_with)
-str_ends_with = t.cast("_StringFunction", pc.ends_with)
-str_split = t.cast("_StringFunction", pc.split_pattern)
-str_to_uppercase = pc.utf8_upper
-str_to_lowercase = pc.utf8_lower
-str_to_titlecase = pc.utf8_title
+_StringFunction0: TypeAlias = "Callable[[ChunkedOrScalarAny], ChunkedOrScalarAny]"
+_StringFunction1: TypeAlias = "Callable[[ChunkedOrScalarAny, str], ChunkedOrScalarAny]"
+str_starts_with = t.cast("_StringFunction1", pc.starts_with)
+str_ends_with = t.cast("_StringFunction1", pc.ends_with)
+str_split = t.cast("_StringFunction1", pc.split_pattern)
+str_to_uppercase = t.cast("_StringFunction0", pc.utf8_upper)
+str_to_lowercase = t.cast("_StringFunction0", pc.utf8_lower)
+str_to_titlecase = t.cast("_StringFunction0", pc.utf8_title)
 
 
 def str_contains(
@@ -462,15 +485,15 @@ def when_then(
     return pc.if_else(predicate, then, otherwise)
 
 
-def any_(native: Any) -> pa.BooleanScalar:
+def any_(native: Incomplete) -> pa.BooleanScalar:
     return pc.any(native, min_count=0)
 
 
-def all_(native: Any) -> pa.BooleanScalar:
+def all_(native: Incomplete) -> pa.BooleanScalar:
     return pc.all(native, min_count=0)
 
 
-def sum_(native: Any) -> NativeScalar:
+def sum_(native: Incomplete) -> NativeScalar:
     return pc.sum(native, min_count=0)
 
 
@@ -769,6 +792,10 @@ def is_in(
 def is_in(values: ArrayAny, /, other: ChunkedOrArrayAny) -> Array[pa.BooleanScalar]: ...
 @t.overload
 def is_in(values: ScalarAny, /, other: ChunkedOrArrayAny) -> pa.BooleanScalar: ...
+@t.overload
+def is_in(
+    values: ChunkedOrScalarAny, /, other: ChunkedOrArrayAny
+) -> ChunkedOrScalarAny: ...
 def is_in(values: ArrowAny, /, other: ChunkedOrArrayAny) -> ArrowAny:
     """Check if elements of `values` are present in `other`.
 
