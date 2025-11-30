@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from narwhals._plan.arrow.typing import ChunkedArray, IntegerScalar
     from narwhals._plan.expressions import expr, functions as F
     from narwhals._plan.expressions.boolean import AllHorizontal, AnyHorizontal
-    from narwhals._plan.expressions.expr import FunctionExpr, RangeExpr
+    from narwhals._plan.expressions.expr import FunctionExpr as FExpr, RangeExpr
     from narwhals._plan.expressions.ranges import DateRange, IntRange
     from narwhals._plan.expressions.strings import ConcatStr
     from narwhals._plan.series import Series as NwSeries
@@ -102,8 +102,8 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
 
     def _horizontal_function(
         self, fn_native: Callable[[Any, Any], Any], /, fill: NonNestedLiteral = None
-    ) -> Callable[[FunctionExpr[Any], Frame, str], Expr | Scalar]:
-        def func(node: FunctionExpr[Any], frame: Frame, name: str) -> Expr | Scalar:
+    ) -> Callable[[FExpr[Any], Frame, str], Expr | Scalar]:
+        def func(node: FExpr[Any], frame: Frame, name: str) -> Expr | Scalar:
             it = (self._expr.from_ir(e, frame, name).native for e in node.input)
             if fill is not None:
                 it = (fn.fill_null(native, fill) for native in it)
@@ -114,9 +114,7 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
 
         return func
 
-    def coalesce(
-        self, node: FunctionExpr[F.Coalesce], frame: Frame, name: str
-    ) -> Expr | Scalar:
+    def coalesce(self, node: FExpr[F.Coalesce], frame: Frame, name: str) -> Expr | Scalar:
         it = (self._expr.from_ir(e, frame, name).native for e in node.input)
         result = pc.coalesce(*it)
         if isinstance(result, pa.Scalar):
@@ -124,38 +122,38 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
         return self._expr.from_native(result, name, self.version)
 
     def any_horizontal(
-        self, node: FunctionExpr[AnyHorizontal], frame: Frame, name: str
+        self, node: FExpr[AnyHorizontal], frame: Frame, name: str
     ) -> Expr | Scalar:
         fill = False if node.function.ignore_nulls else None
         return self._horizontal_function(fn.or_, fill)(node, frame, name)
 
     def all_horizontal(
-        self, node: FunctionExpr[AllHorizontal], frame: Frame, name: str
+        self, node: FExpr[AllHorizontal], frame: Frame, name: str
     ) -> Expr | Scalar:
         fill = True if node.function.ignore_nulls else None
         return self._horizontal_function(fn.and_, fill)(node, frame, name)
 
     def sum_horizontal(
-        self, node: FunctionExpr[F.SumHorizontal], frame: Frame, name: str
+        self, node: FExpr[F.SumHorizontal], frame: Frame, name: str
     ) -> Expr | Scalar:
         return self._horizontal_function(fn.add, fill=0)(node, frame, name)
 
     def min_horizontal(
-        self, node: FunctionExpr[F.MinHorizontal], frame: Frame, name: str
+        self, node: FExpr[F.MinHorizontal], frame: Frame, name: str
     ) -> Expr | Scalar:
         return self._horizontal_function(fn.min_horizontal)(node, frame, name)
 
     def max_horizontal(
-        self, node: FunctionExpr[F.MaxHorizontal], frame: Frame, name: str
+        self, node: FExpr[F.MaxHorizontal], frame: Frame, name: str
     ) -> Expr | Scalar:
         return self._horizontal_function(fn.max_horizontal)(node, frame, name)
 
     def mean_horizontal(
-        self, node: FunctionExpr[F.MeanHorizontal], frame: Frame, name: str
+        self, node: FExpr[F.MeanHorizontal], frame: Frame, name: str
     ) -> Expr | Scalar:
         int64 = pa.int64()
         inputs = [self._expr.from_ir(e, frame, name).native for e in node.input]
-        filled = (pc.fill_null(native, fn.lit(0)) for native in inputs)
+        filled = (fn.fill_null(native, 0) for native in inputs)
         # NOTE: `mypy` doesn't like that `add` is overloaded
         sum_not_null = reduce(
             fn.add,  # type: ignore[arg-type]
@@ -167,7 +165,7 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
         return self._expr.from_native(result, name, self.version)
 
     def concat_str(
-        self, node: FunctionExpr[ConcatStr], frame: Frame, name: str
+        self, node: FExpr[ConcatStr], frame: Frame, name: str
     ) -> Expr | Scalar:
         exprs = (self._expr.from_ir(e, frame, name) for e in node.input)
         aligned = (ser.native for ser in self._expr.align(exprs))
