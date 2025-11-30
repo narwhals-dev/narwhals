@@ -11,6 +11,7 @@ from narwhals._arrow.series_list import ArrowSeriesListNamespace
 from narwhals._arrow.series_str import ArrowSeriesStringNamespace
 from narwhals._arrow.series_struct import ArrowSeriesStructNamespace
 from narwhals._arrow.utils import (
+    arange,
     cast_for_truediv,
     chunked_array,
     extract_native,
@@ -670,47 +671,30 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         strategy: FillNullStrategy | None,
         limit: int | None,
     ) -> Self:
-        import numpy as np  # ignore-banned-import
-
         def fill_aux(
             arr: ChunkedArrayAny, limit: int, direction: FillNullStrategy | None
         ) -> ArrayAny:
             # this algorithm first finds the indices of the valid values to fill all the null value positions
             # then it calculates the distance of each new index and the original index
             # if the distance is equal to or less than the limit and the original value is null, it is replaced
-            size = len(arr)
-            valid_mask_np = np.array(pc.is_valid(arr))
-            indices_np: np.ndarray = np.arange(size, dtype=np.int64)
+            sentinel = lit(-1)
+            is_not_null = pc.is_valid(arr)
+            index = arange(0, len(arr), 1)
             if direction == "forward":
-                # Find index of last valid value for each position
-                valid_index_np = np.maximum.accumulate(
-                    np.where(valid_mask_np, indices_np, -1)
+                index_not_null = pc.cumulative_max(
+                    pc.if_else(is_not_null, index, sentinel)
                 )
-                distance_np = indices_np - valid_index_np
-                # Create combined mask: has valid source AND within limit
-                should_fill_np = (valid_index_np >= 0) & (distance_np <= limit)
-                # Clamp to avoid out-of-bounds (won't be used where should_fill is False)
-                valid_index_np = np.maximum(valid_index_np, 0)
-            else:
-                # Find index of next valid value for each position (backward)
-                valid_index_np = np.minimum.accumulate(
-                    np.where(valid_mask_np[::-1], indices_np[::-1], size)
-                )[::-1]
-                distance_np = valid_index_np - indices_np
-                # Create combined mask: has valid source AND within limit
-                should_fill_np = (valid_index_np < size) & (distance_np <= limit)
-                # Clamp to avoid out-of-bounds (won't be used where should_fill is False)
-                valid_index_np = np.minimum(valid_index_np, size - 1)
+                # NOTE: The correction here is for nulls at either end of the array
+                # They should be preserved when the `strategy` would need an out-of-bounds index
+                not_oob = pc.not_equal(index_not_null, sentinel)
+                index_not_null = pc.if_else(not_oob, index_not_null, None)
+                beyond_limit = pc.greater(pc.subtract(index, index_not_null), lit(limit))
+                return pc.if_else(
+                    pc.or_(is_not_null, beyond_limit), arr, arr.take(index_not_null)
+                )
 
-            # Convert back to PyArrow for final operations
-            should_fill = pa.array(should_fill_np)
-            valid_index = pa.array(valid_index_np)
-
-            return pc.if_else(
-                pc.and_(pc.is_null(arr), should_fill),
-                arr.take(valid_index),  # pyright: ignore[reportArgumentType, reportCallIssue]
-                arr,
-            )
+            # Backward case, reverse array, then reverse the result
+            return fill_aux(arr[::-1], limit=limit, direction="forward")[::-1]
 
         if value is not None:
             _, native_value = extract_native(self, value)
