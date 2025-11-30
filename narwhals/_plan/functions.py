@@ -59,11 +59,6 @@ def format() -> Expr:
     raise NotImplementedError(msg)
 
 
-def coalesce() -> Expr:
-    msg = "nwp.coalesce"
-    raise NotImplementedError(msg)
-
-
 def col(*names: str | t.Iterable[str]) -> Expr:
     flat = tuple(flatten(names))
     return (
@@ -167,6 +162,11 @@ def concat_str(
         .to_function_expr(*it)
         .to_narwhals()
     )
+
+
+def coalesce(exprs: IntoExpr | t.Iterable[IntoExpr], *more_exprs: IntoExpr) -> Expr:
+    it = _parse.parse_into_seq_of_expr_ir(exprs, *more_exprs)
+    return F.Coalesce().to_function_expr(*it).to_narwhals()
 
 
 def when(

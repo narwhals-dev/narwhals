@@ -116,6 +116,15 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
 
         return func
 
+    def coalesce(
+        self, node: FunctionExpr[F.Coalesce], frame: Frame, name: str
+    ) -> Expr | Scalar:
+        it = (self._expr.from_ir(e, frame, name).native for e in node.input)
+        result = pc.coalesce(*it)
+        if isinstance(result, pa.Scalar):
+            return self._scalar.from_native(result, name, self.version)
+        return self._expr.from_native(result, name, self.version)
+
     def any_horizontal(
         self, node: FunctionExpr[AnyHorizontal], frame: Frame, name: str
     ) -> Expr | Scalar:

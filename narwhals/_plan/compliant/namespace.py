@@ -54,6 +54,9 @@ class CompliantNamespace(HasVersion, Protocol[FrameT, ExprT_co, ScalarT_co]):
     def concat_str(
         self, node: FunctionExpr[ConcatStr], frame: FrameT, name: str
     ) -> ExprT_co | ScalarT_co: ...
+    def coalesce(
+        self, node: FunctionExpr[F.Coalesce], frame: FrameT, name: str
+    ) -> ExprT_co | ScalarT_co: ...
     def date_range(
         self, node: ir.RangeExpr[DateRange], frame: FrameT, name: str
     ) -> ExprT_co: ...
