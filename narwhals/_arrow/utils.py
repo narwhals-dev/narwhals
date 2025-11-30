@@ -513,7 +513,7 @@ def list_agg(
     )
     non_empty_mask = pa.array(pc.not_equal(pc.list_value_length(array), lit(0)))
     if func == "sum":
-        agg = agg.fill_null(lit(0))  # type: ignore[type-var]
+        agg = agg.fill_null(lit(0))  # pyright:ignore[reportArgumentType]
         base_array = pc.if_else(non_empty_mask.is_null(), None, 0)
     else:
         base_array = pc.if_else(non_empty_mask, 0, None)
@@ -521,7 +521,7 @@ def list_agg(
         [
             pc.replace_with_mask(
                 base_array.cast(agg.type),
-                non_empty_mask.fill_null(False),  # pyright:ignore[reportArgumentType]
+                non_empty_mask.fill_null(False),  # type: ignore[arg-type]
                 agg,
             )
         ]
