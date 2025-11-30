@@ -511,7 +511,7 @@ def list_agg(
         .sort_by("offsets")
         .column(f"values_{func}")
     )
-    non_empty_mask = pa.array(pc.not_equal(pc.list_value_length(array), 0))  # type: ignore[type-var]
+    non_empty_mask = pa.array(pc.not_equal(pc.list_value_length(array), lit(0)))
     if func == "sum":
         agg = agg.fill_null(lit(0))  # type: ignore[type-var]
         base_array = pc.if_else(non_empty_mask.is_null(), None, 0)
@@ -520,7 +520,9 @@ def list_agg(
     return pa.chunked_array(
         [
             pc.replace_with_mask(
-                base_array.cast(agg.type), non_empty_mask.fill_null(False), agg
+                base_array.cast(agg.type),
+                non_empty_mask.fill_null(False),  # pyright:ignore[reportArgumentType]
+                agg,
             )
         ]
     )
