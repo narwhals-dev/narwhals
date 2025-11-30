@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION, assert_equal_data
+from tests.utils import DUCKDB_VERSION, PANDAS_VERSION, assert_equal_data
 
 if TYPE_CHECKING:
     from tests.utils import Constructor, ConstructorEager
@@ -26,6 +26,9 @@ def test_sum_expr(
         if PANDAS_VERSION < (2, 2):
             pytest.skip()
         pytest.importorskip("pyarrow")
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 2):
+        reason = "version too old, duckdb 1.2 required for LambdaExpression."
+        pytest.skip(reason=reason)
     result = (
         nw.from_native(constructor(data))
         .select(nw.col("a").cast(nw.List(nw.Int32())).list.sum())
