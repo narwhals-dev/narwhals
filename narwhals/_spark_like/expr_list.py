@@ -59,9 +59,10 @@ class SparkLikeExprListNamespace(
     def mean(self) -> SparkLikeExpr:
         def func(expr: Column) -> Column:
             F = self.compliant._F
-            return F.aggregate(
-                F.array_compact(expr), F.lit(0.0), operator.add
-            ) / F.array_size(F.array_compact(expr))
+            return F.try_divide(
+                F.aggregate(F.array_compact(expr), F.lit(0.0), operator.add),
+                F.array_size(F.array_compact(expr)),
+            )
 
         return self.compliant._with_elementwise(func)
 

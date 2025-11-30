@@ -53,6 +53,7 @@ class DuckDBExprListNamespace(
     def median(self) -> DuckDBExpr:
         return self.compliant._with_elementwise(lambda expr: F("list_median", expr))
 
+    @requires.backend_version((1, 2))
     def sum(self) -> DuckDBExpr:
         def func(expr: Expression) -> Expression:
             elem = col("_")
