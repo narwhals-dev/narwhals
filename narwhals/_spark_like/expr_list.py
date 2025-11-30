@@ -75,6 +75,10 @@ class SparkLikeExprListNamespace(
             mid_index = (size / 2).cast("int")
             odd_case = sorted_expr[mid_index]
             even_case = (sorted_expr[mid_index] - 1 + sorted_expr[mid_index]) / 2
-            return F.when(size % 2 == 1, odd_case).otherwise(even_case)
+            return (
+                F.when((size.isNull()) | (size == 0), F.lit(None))
+                .when(size % 2 == 1, odd_case)
+                .otherwise(even_case)
+            )
 
         return self.compliant._with_elementwise(func)
