@@ -24,7 +24,13 @@ if TYPE_CHECKING:
     from narwhals._plan.dataframe import DataFrame
     from narwhals._typing import EagerAllowed, IntoBackend, _EagerAllowedImpl
     from narwhals.dtypes import DType
-    from narwhals.typing import IntoDType, NonNestedLiteral, SizedMultiIndexSelector
+    from narwhals.typing import (
+        IntoDType,
+        NonNestedLiteral,
+        NumericLiteral,
+        SizedMultiIndexSelector,
+        TemporalLiteral,
+    )
 
 Incomplete: TypeAlias = Any
 
@@ -48,6 +54,10 @@ class Series(Generic[NativeSeriesT_co]):
     @property
     def implementation(self) -> _EagerAllowedImpl:
         return self._compliant.implementation
+
+    @property
+    def shape(self) -> tuple[int]:
+        return (self._compliant.len(),)
 
     def __init__(self, compliant: CompliantSeries[NativeSeriesT_co], /) -> None:
         self._compliant = compliant
@@ -182,6 +192,36 @@ class Series(Generic[NativeSeriesT_co]):
     def fill_nan(self, value: float | Self | None) -> Self:
         other = self._unwrap_compliant(value) if is_series(value) else value
         return type(self)(self._compliant.fill_nan(other))
+
+    def sample(
+        self,
+        n: int | None = None,
+        *,
+        fraction: float | None = None,
+        with_replacement: bool = False,
+        seed: int | None = None,
+    ) -> Self:
+        if n is not None and fraction is not None:
+            msg = "cannot specify both `n` and `fraction`"
+            raise ValueError(msg)
+        s = self._compliant
+        if fraction is not None:
+            result = s.sample_frac(fraction, with_replacement=with_replacement, seed=seed)
+        elif n is None:
+            result = s.sample_n(with_replacement=with_replacement, seed=seed)
+        else:
+            result = s.sample_n(n, with_replacement=with_replacement, seed=seed)
+        return type(self)(result)
+
+    def __eq__(self, other: NumericLiteral | TemporalLiteral | Self) -> Self:  # type: ignore[override]
+        other_ = self._unwrap_compliant(other) if is_series(other) else other
+        return type(self)(self._compliant.__eq__(other_))
+
+    def all(self) -> bool:
+        return self._compliant.all()
+
+    def any(self) -> bool:  # pragma: no cover
+        return self._compliant.any()
 
 
 class SeriesV1(Series[NativeSeriesT_co]):

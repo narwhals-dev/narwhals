@@ -258,3 +258,9 @@ class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayA
         predicate = mask.native.combine_chunks()
         right = other.native if other is not None else other
         return self._with_native(fn.when_then(predicate, self.native, right))
+
+    def all(self) -> bool:
+        return fn.all_(self.native).as_py()
+
+    def any(self) -> bool:
+        return fn.any_(self.native).as_py()

@@ -580,7 +580,11 @@ def n_unique(native: Any) -> pa.Int64Scalar:
     return count(native, mode="all")
 
 
-def round(native: ChunkedOrScalarAny, decimals: int = 0) -> ChunkedOrScalarAny:
+@t.overload
+def round(native: ChunkedOrScalarAny, decimals: int = ...) -> ChunkedOrScalarAny: ...
+@t.overload
+def round(native: ChunkedOrArrayT, decimals: int = ...) -> ChunkedOrArrayT: ...
+def round(native: ArrowAny, decimals: int = 0) -> ArrowAny:
     return pc.round(native, decimals, round_mode="half_towards_infinity")
 
 
@@ -861,6 +865,21 @@ def concat_str(
     concat: Incomplete = pc.binary_join_element_wise
     join = pa_options.join(ignore_nulls=ignore_nulls)
     return concat(*it, lit(separator, dtype), options=join)  # type: ignore[no-any-return]
+
+
+def random_indices(
+    end: int, /, n: int, *, with_replacement: bool = False, seed: int | None = None
+) -> ArrayAny:
+    """Generate `n` random indices within the range `[0, end)`."""
+    # NOTE: Review this path if anything changes upstream
+    # https://github.com/apache/arrow/issues/47288#issuecomment-3597653670
+    if with_replacement:
+        rand_values = pc.random(n, initializer="system" if seed is None else seed)
+        return round(multiply(rand_values, lit(end - 1))).cast(I64)
+
+    import numpy as np  # ignore-banned-import
+
+    return array(np.random.default_rng(seed).choice(np.arange(end), n, replace=False))
 
 
 def sort_indices(

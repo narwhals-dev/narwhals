@@ -48,6 +48,10 @@ class ArrowDataFrame(
     def _group_by(self) -> type[GroupBy]:
         return GroupBy
 
+    @property
+    def shape(self) -> tuple[int, int]:
+        return self.native.shape
+
     def group_by_resolver(self, resolver: GroupByResolver, /) -> GroupBy:
         return self._group_by.from_resolver(self, resolver)
 

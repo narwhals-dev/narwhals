@@ -151,6 +151,10 @@ class DataFrame(
     def implementation(self) -> _EagerAllowedImpl:
         return self._compliant.implementation
 
+    @property
+    def shape(self) -> tuple[int, int]:
+        return self._compliant.shape
+
     def __len__(self) -> int:  # pragma: no cover
         return len(self._compliant)
 
@@ -309,6 +313,28 @@ class DataFrame(
 
     def slice(self, offset: int, length: int | None = None) -> Self:  # pragma: no cover
         return type(self)(self._compliant.slice(offset=offset, length=length))
+
+    def sample(
+        self,
+        n: int | None = None,
+        *,
+        fraction: float | None = None,
+        with_replacement: bool = False,
+        seed: int | None = None,
+    ) -> Self:
+        if n is not None and fraction is not None:
+            msg = "cannot specify both `n` and `fraction`"
+            raise ValueError(msg)
+        df = self._compliant
+        if fraction is not None:
+            result = df.sample_frac(
+                fraction, with_replacement=with_replacement, seed=seed
+            )
+        elif n is None:
+            result = df.sample_n(with_replacement=with_replacement, seed=seed)
+        else:
+            result = df.sample_n(n, with_replacement=with_replacement, seed=seed)
+        return type(self)(result)
 
 
 def _is_join_strategy(obj: Any) -> TypeIs[JoinStrategy]:

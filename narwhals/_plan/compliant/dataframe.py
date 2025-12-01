@@ -80,6 +80,8 @@ class CompliantDataFrame(
     implementation: ClassVar[_EagerAllowedImpl]
     _native: NativeDataFrameT
 
+    @property
+    def shape(self) -> tuple[int, int]: ...
     def __len__(self) -> int: ...
     @property
     def _group_by(self) -> type[DataFrameGroupBy[Self]]: ...
@@ -170,6 +172,15 @@ class CompliantDataFrame(
     def to_polars(self) -> pl.DataFrame: ...
     def with_row_index(self, name: str) -> Self: ...
     def slice(self, offset: int, length: int | None = None) -> Self: ...
+    def sample_frac(
+        self, fraction: float, *, with_replacement: bool = False, seed: int | None = None
+    ) -> Self:
+        n = int(len(self) * fraction)
+        return self.sample_n(n, with_replacement=with_replacement, seed=seed)
+
+    def sample_n(
+        self, n: int = 1, *, with_replacement: bool = False, seed: int | None = None
+    ) -> Self: ...
 
 
 class EagerDataFrame(

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar, Generic
 
-from narwhals._plan.arrow.functions import BACKEND_VERSION
+from narwhals._plan.arrow.functions import BACKEND_VERSION, random_indices
 from narwhals._typing_compat import TypeVar
 from narwhals._utils import Implementation, Version, _StoresNative
 
@@ -43,6 +43,10 @@ class ArrowFrameSeries(Generic[NativeT]):
         msg = f"{type(self).__name__}._with_native"
         raise NotImplementedError(msg)
 
+    def __len__(self) -> int:
+        msg = f"{type(self).__name__}.__len__"
+        raise NotImplementedError(msg)
+
     if BACKEND_VERSION >= (18,):
 
         def _gather(self, indices: Indices) -> NativeT:
@@ -62,3 +66,9 @@ class ArrowFrameSeries(Generic[NativeT]):
 
     def slice(self, offset: int, length: int | None = None) -> Self:
         return self._with_native(self.native.slice(offset=offset, length=length))
+
+    def sample_n(
+        self, n: int = 1, *, with_replacement: bool = False, seed: int | None = None
+    ) -> Self:
+        mask = random_indices(len(self), n, with_replacement=with_replacement, seed=seed)
+        return self.gather(mask)

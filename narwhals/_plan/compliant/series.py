@@ -116,6 +116,8 @@ class CompliantSeries(HasVersion, Protocol[NativeSeriesT]):
     def native(self) -> NativeSeriesT:
         return self._native
 
+    def all(self) -> bool: ...
+    def any(self) -> bool: ...
     def alias(self, name: str) -> Self:
         return self.from_native(self.native, name, version=self.version)
 
@@ -154,6 +156,15 @@ class CompliantSeries(HasVersion, Protocol[NativeSeriesT]):
     ) -> Self: ...
     def rolling_var(
         self, window_size: int, *, min_samples: int, center: bool = False, ddof: int = 1
+    ) -> Self: ...
+    def sample_frac(
+        self, fraction: float, *, with_replacement: bool = False, seed: int | None = None
+    ) -> Self:
+        n = int(len(self) * fraction)
+        return self.sample_n(n, with_replacement=with_replacement, seed=seed)
+
+    def sample_n(
+        self, n: int = 1, *, with_replacement: bool = False, seed: int | None = None
     ) -> Self: ...
     def scatter(self, indices: Self, values: Self) -> Self: ...
     def slice(self, offset: int, length: int | None = None) -> Self: ...
