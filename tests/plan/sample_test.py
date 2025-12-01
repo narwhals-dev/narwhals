@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from narwhals.exceptions import ShapeError
 from tests.plan.utils import dataframe, series
 
 if TYPE_CHECKING:
@@ -67,25 +68,30 @@ def test_sample_with_seed_dataframe(data_big: Data, n: int) -> None:
     assert not r1.equals(r3)
 
 
-# NOTE: `with_replacement=True` has no tests on `main`?
-@pytest.mark.xfail
-def test_sample_with_replacement_series() -> None:
-    msg = "TODO: add tests"
-    raise NotImplementedError(msg)
+@pytest.mark.parametrize("n", [39, 42, 20, 99])
+def test_sample_with_replacement_series(data: Data, n: int) -> None:
+    result = series(data["a"]).slice(0, 10).sample(n, with_replacement=True)
+    assert len(result) == n
 
 
-# NOTE: `with_replacement=True` has no tests on `main`?
-@pytest.mark.xfail
-def test_sample_with_replacement_dataframe() -> None:
-    msg = "TODO: add tests"
-    raise NotImplementedError(msg)
+@pytest.mark.parametrize("n", [10, 15, 28, 100])
+def test_sample_with_replacement_dataframe(data: Data, n: int) -> None:
+    result = dataframe(data).slice(0, 5).sample(n, with_replacement=True)
+    assert len(result) == n
 
 
 def test_sample_invalid(data: Data) -> None:
     df = dataframe(data)
     ser = df.to_series()
 
-    with pytest.raises(ValueError, match=r"cannot specify both `n` and `fraction`"):
+    both_n_fraction = r"cannot specify both `n` and `fraction`"
+    too_high_n = r"cannot take a larger sample than the total population when `with_replacement=false`"
+
+    with pytest.raises(ValueError, match=both_n_fraction):
         df.sample(n=1, fraction=0.5)
-    with pytest.raises(ValueError, match=r"cannot specify both `n` and `fraction`"):
+    with pytest.raises(ValueError, match=both_n_fraction):
         ser.sample(n=567, fraction=0.1)
+    with pytest.raises(ShapeError, match=too_high_n):
+        df.sample(n=1_000)
+    with pytest.raises(ShapeError, match=too_high_n):
+        ser.sample(n=2_000)

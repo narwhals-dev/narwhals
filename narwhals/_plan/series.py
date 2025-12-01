@@ -13,6 +13,7 @@ from narwhals._utils import (
     qualified_type_name,
 )
 from narwhals.dependencies import is_pyarrow_chunked_array
+from narwhals.exceptions import ShapeError
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -138,7 +139,7 @@ class Series(Generic[NativeSeriesT_co]):
     def has_nulls(self) -> bool:  # pragma: no cover
         return self._compliant.has_nulls()
 
-    def slice(self, offset: int, length: int | None = None) -> Self:  # pragma: no cover
+    def slice(self, offset: int, length: int | None = None) -> Self:
         return type(self)(self._compliant.slice(offset=offset, length=length))
 
     def sort(
@@ -209,6 +210,9 @@ class Series(Generic[NativeSeriesT_co]):
             result = s.sample_frac(fraction, with_replacement=with_replacement, seed=seed)
         elif n is None:
             result = s.sample_n(with_replacement=with_replacement, seed=seed)
+        elif not with_replacement and n > len(self):
+            msg = "cannot take a larger sample than the total population when `with_replacement=false`"
+            raise ShapeError(msg)
         else:
             result = s.sample_n(n, with_replacement=with_replacement, seed=seed)
         return type(self)(result)

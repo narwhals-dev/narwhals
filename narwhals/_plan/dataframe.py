@@ -23,6 +23,7 @@ from narwhals._plan.typing import (
 )
 from narwhals._utils import Implementation, Version, generate_repr
 from narwhals.dependencies import is_pyarrow_table
+from narwhals.exceptions import ShapeError
 from narwhals.schema import Schema
 from narwhals.typing import IntoDType, JoinStrategy
 
@@ -155,7 +156,7 @@ class DataFrame(
     def shape(self) -> tuple[int, int]:
         return self._compliant.shape
 
-    def __len__(self) -> int:  # pragma: no cover
+    def __len__(self) -> int:
         return len(self._compliant)
 
     @property
@@ -215,7 +216,7 @@ class DataFrame(
             }
         return self._compliant.to_dict(as_series=as_series)
 
-    def to_series(self, index: int = 0) -> Series[NativeSeriesT]:  # pragma: no cover
+    def to_series(self, index: int = 0) -> Series[NativeSeriesT]:
         return self._series(self._compliant.to_series(index))
 
     def to_polars(self) -> pl.DataFrame:
@@ -224,7 +225,7 @@ class DataFrame(
     def gather_every(self, n: int, offset: int = 0) -> Self:
         return self._with_compliant(self._compliant.gather_every(n, offset))
 
-    def get_column(self, name: str) -> Series[NativeSeriesT]:  # pragma: no cover
+    def get_column(self, name: str) -> Series[NativeSeriesT]:
         return self._series(self._compliant.get_column(name))
 
     @overload
@@ -311,7 +312,7 @@ class DataFrame(
             return self._with_compliant(self._compliant.with_row_index(name))
         return super().with_row_index(name, order_by=order_by)
 
-    def slice(self, offset: int, length: int | None = None) -> Self:  # pragma: no cover
+    def slice(self, offset: int, length: int | None = None) -> Self:
         return type(self)(self._compliant.slice(offset=offset, length=length))
 
     def sample(
@@ -332,6 +333,9 @@ class DataFrame(
             )
         elif n is None:
             result = df.sample_n(with_replacement=with_replacement, seed=seed)
+        elif not with_replacement and n > len(self):
+            msg = "cannot take a larger sample than the total population when `with_replacement=false`"
+            raise ShapeError(msg)
         else:
             result = df.sample_n(n, with_replacement=with_replacement, seed=seed)
         return type(self)(result)
