@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any, cast
 
@@ -501,6 +502,9 @@ def list_agg(
     array: ChunkedArrayAny,
     func: Literal["min", "max", "mean", "approximate_median", "sum"],
 ) -> ChunkedArrayAny:
+    if func == "approximate_median" and sys.version_info < (3, 10):
+        msg = f"The minimum supported Python version for {func}"
+        raise NotImplementedError(msg)
     agg = pa.array(
         pa.Table.from_arrays(
             [pc.list_flatten(array), pc.list_parent_indices(array)],
@@ -516,7 +520,9 @@ def list_agg(
         agg = agg.fill_null(lit(0))  # pyright:ignore[reportArgumentType]
         base_array = pc.if_else(non_empty_mask.is_null(), None, 0)
     else:
-        base_array = pc.if_else(non_empty_mask, 0, None)
+        base_array = pc.if_else(
+            non_empty_mask, 0, None
+        )  # zero is just a placeholder which is replaced below
     return pa.chunked_array(
         [
             pc.replace_with_mask(

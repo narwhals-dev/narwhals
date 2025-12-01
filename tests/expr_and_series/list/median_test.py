@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from typing import TYPE_CHECKING
 
 import pytest
@@ -26,12 +27,18 @@ def test_median_expr(
         # sqlframe issue: https://github.com/eakmanrq/sqlframe/issues/548
         # ibis issue: https://github.com/ibis-project/ibis/issues/11788
         request.applymarker(pytest.mark.xfail)
+    if any(
+        backend in str(constructor)
+        for backend in ("pandas", "pyarrow", "pandas[pyarrow]")
+    ) and (sys.version_info < (3, 10)):
+        request.applymarker(pytest.mark.xfail)
     if os.environ.get("SPARK_CONNECT", None) and "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor):
         if PANDAS_VERSION < (2, 2):
             pytest.skip()
         pytest.importorskip("pyarrow")
+
     result = (
         nw.from_native(constructor(data))
         .select(nw.col("a").cast(nw.List(nw.Int32())).list.median())
@@ -61,6 +68,11 @@ def test_median_series(
     if any(backend in str(constructor_eager) for backend in ("cudf",)) or (
         "polars" in str(constructor_eager) and POLARS_VERSION < (0, 20, 7)
     ):
+        request.applymarker(pytest.mark.xfail)
+    if any(
+        backend in str(constructor_eager)
+        for backend in ("pandas", "pyarrow", "pandas[pyarrow]")
+    ) and (sys.version_info < (3, 10)):
         request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor_eager):
         if PANDAS_VERSION < (2, 2):
