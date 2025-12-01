@@ -30,6 +30,7 @@ from narwhals._utils import (
     Version,
     _StoresNative,
     check_columns_exist,
+    is_boolean_selector,
     is_compliant_series,
     is_index_selector,
     is_range,
@@ -416,7 +417,11 @@ class EagerDataFrame(
         if not is_slice_none(columns):
             if isinstance(columns, Sized) and len(columns) == 0:
                 return compliant.select()
-            if is_index_selector(columns):
+            if is_boolean_selector(columns):
+                compliant = compliant.simple_select(
+                    *(col for col, select in zip(compliant.columns, columns) if select)
+                )
+            elif is_index_selector(columns):
                 if is_slice_index(columns) or is_range(columns):
                     compliant = compliant._select_slice_index(columns)
                 elif is_compliant_series(columns):

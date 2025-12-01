@@ -19,6 +19,7 @@ from narwhals._utils import (
     _into_arrow_table,
     convert_str_slice_to_int_slice,
     generate_temporary_column_name,
+    is_boolean_selector,
     is_compliant_series,
     is_index_selector,
     is_range,
@@ -475,7 +476,11 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
             if not is_slice_none(columns):
                 if isinstance(columns, Sized) and len(columns) == 0:
                     return self.select()
-                if is_index_selector(columns):
+                if is_boolean_selector(columns):
+                    native = native.select(
+                        *(col for col, select in zip(native.columns, columns) if select)
+                    )
+                elif is_index_selector(columns):
                     if is_slice_index(columns) or is_range(columns):
                         native = native.select(
                             self.columns[slice(columns.start, columns.stop, columns.step)]
