@@ -142,16 +142,17 @@ class SeriesListNamespace(Generic[SeriesT]):
         """Compute the max value of the lists in the array.
 
         Examples:
-            >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> s_native = pl.Series([[1], [3, 4, None]])
+            >>> s_native = pa.chunked_array([[[1], [3, 4, None]]])
             >>> s = nw.from_native(s_native, series_only=True)
-            >>> s.list.max().to_native()  # doctest: +NORMALIZE_WHITESPACE
-            shape: (2,)
-            Series: '' [i64]
+            >>> s.list.max().to_native()  # doctest: +ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
             [
-                    1
-                    4
+              [
+                1,
+                4
+              ]
             ]
         """
         return self._narwhals_series._with_compliant(
@@ -182,16 +183,17 @@ class SeriesListNamespace(Generic[SeriesT]):
         """Compute the median value of the lists in the array.
 
         Examples:
-            >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> s_native = pl.Series([[1], [3, 4, None]])
+            >>> s_native = pa.chunked_array([[[1], [3, 4, None]]])
             >>> s = nw.from_native(s_native, series_only=True)
-            >>> s.list.median().to_native()  # doctest: +NORMALIZE_WHITESPACE
-            shape: (2,)
-            Series: '' [f64]
+            >>> s.list.median().to_native()  # doctest: +ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
             [
-                    1.0
-                    3.5
+              [
+                1,
+                3
+              ]
             ]
         """
         return self._narwhals_series._with_compliant(

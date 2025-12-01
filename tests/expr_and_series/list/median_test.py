@@ -11,11 +11,11 @@ from tests.utils import PANDAS_VERSION, POLARS_VERSION, assert_equal_data
 if TYPE_CHECKING:
     from tests.utils import Constructor, ConstructorEager
 
-data = {"a": [[3, None, 2, 2, 4, None], [-1], None, [None, None, None], []]}
+data = {"a": [[3, None, 2, 2, 4, None], [-1], None, [None, None, None], [], [3, 4, None]]}
 
 
 @pytest.mark.parametrize(
-    ("index", "expected"), [(0, 2.5), (1, -1), (2, None), (3, None), (4, None)]
+    ("index", "expected"), [(0, 2.5), (1, -1), (2, None), (3, None), (4, None), (5, 3.5)]
 )
 def test_median_expr(
     request: pytest.FixtureRequest, constructor: Constructor, index: int, expected: float
@@ -39,11 +39,18 @@ def test_median_expr(
         .collect()["a"]
         .to_list()
     )
-    assert_equal_data({"a": [result[index]]}, {"a": [expected]})
+    if any(
+        backend in str(constructor)
+        for backend in ("pandas", "pyarrow", "pandas[pyarrow]")
+    ) and (index == 5):
+        # there is a mismatch as pyarrow uses an approximate median
+        assert_equal_data({"a": [result[index]]}, {"a": [3]})
+    else:
+        assert_equal_data({"a": [result[index]]}, {"a": [expected]})
 
 
 @pytest.mark.parametrize(
-    ("index", "expected"), [(0, 2.5), (1, -1), (2, None), (3, None), (4, None)]
+    ("index", "expected"), [(0, 2.5), (1, -1), (2, None), (3, None), (4, None), (5, 3.5)]
 )
 def test_median_series(
     request: pytest.FixtureRequest,
@@ -61,4 +68,11 @@ def test_median_series(
         pytest.importorskip("pyarrow")
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df["a"].cast(nw.List(nw.Int32())).list.median().to_list()
-    assert_equal_data({"a": [result[index]]}, {"a": [expected]})
+    if any(
+        backend in str(constructor_eager)
+        for backend in ("pandas", "pyarrow", "pandas[pyarrow]")
+    ) and (index == 5):
+        # there is a mismatch as pyarrow uses an approximate median
+        assert_equal_data({"a": [result[index]]}, {"a": [3]})
+    else:
+        assert_equal_data({"a": [result[index]]}, {"a": [expected]})
