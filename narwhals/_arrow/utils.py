@@ -502,7 +502,7 @@ def list_agg(
     array: ChunkedArrayAny,
     func: Literal["min", "max", "mean", "approximate_median", "sum"],
 ) -> ChunkedArrayAny:
-    if func == "approximate_median" and sys.version_info < (3, 10):
+    if func == "approximate_median" and sys.version_info < (3, 10):  # pragma: no cover
         msg = f"The minimum supported Python version for {func}"
         raise NotImplementedError(msg)
     agg = pa.array(
