@@ -227,6 +227,9 @@ class Series(Generic[NativeSeriesT_co]):
     def any(self) -> bool:  # pragma: no cover
         return self._compliant.any()
 
+    def unique(self, *, maintain_order: bool = False) -> Self:  # pragma: no cover
+        return type(self)(self._compliant.unique(maintain_order=maintain_order))
+
 
 class SeriesV1(Series[NativeSeriesT_co]):
     _version: ClassVar[Version] = Version.V1

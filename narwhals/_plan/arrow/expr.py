@@ -629,8 +629,7 @@ class ArrowExpr(  # type: ignore[misc]
         return self._with_native(fn.cumulative(native, node.function), name)
 
     def unique(self, node: FExpr[F.Unique], frame: Frame, name: str) -> Self:
-        result = self._dispatch_expr(node.input[0], frame, name).native.unique()
-        return self._with_native(result, name)
+        return self.from_series(self._dispatch_expr(node.input[0], frame, name).unique())
 
     def gather_every(self, node: FExpr[F.GatherEvery], frame: Frame, name: str) -> Self:
         series = self._dispatch_expr(node.input[0], frame, name)

@@ -264,3 +264,6 @@ class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayA
 
     def any(self) -> bool:
         return fn.any_(self.native).as_py()
+
+    def unique(self, *, maintain_order: bool = False) -> Self:
+        return self._with_native(self.native.unique())
