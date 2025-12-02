@@ -671,41 +671,39 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         strategy: FillNullStrategy | None,
         limit: int | None,
     ) -> Self:
-        def fill_aux(
-            arr: ChunkedArrayAny, limit: int, direction: FillNullStrategy | None
-        ) -> ArrayAny:
+        def fill_null_forward_limit(arr: ChunkedArrayAny, limit: int) -> ArrayAny:
             # this algorithm first finds the indices of the valid values to fill all the null value positions
             # then it calculates the distance of each new index and the original index
             # if the distance is equal to or less than the limit and the original value is null, it is replaced
             sentinel = lit(-1)
             is_not_null = pc.is_valid(arr)
             index = arange(0, len(arr), 1)
-            if direction == "forward":
-                index_not_null = pc.cumulative_max(
-                    pc.if_else(is_not_null, index, sentinel)
-                )
-                # NOTE: The correction here is for nulls at either end of the array
-                # They should be preserved when the `strategy` would need an out-of-bounds index
-                not_oob = pc.not_equal(index_not_null, sentinel)
-                index_not_null = pc.if_else(not_oob, index_not_null, None)
-                beyond_limit = pc.greater(pc.subtract(index, index_not_null), lit(limit))
-                return pc.if_else(
-                    pc.or_(is_not_null, beyond_limit), arr, arr.take(index_not_null)
-                )
+            index_not_null = pc.cumulative_max(pc.if_else(is_not_null, index, sentinel))
+            # NOTE: The correction here is for nulls at either end of the array
+            # They should be preserved when the `strategy` would need an out-of-bounds index
+            not_oob = pc.not_equal(index_not_null, sentinel)
+            index_not_null = pc.if_else(not_oob, index_not_null, None)
+            beyond_limit = pc.greater(pc.subtract(index, index_not_null), lit(limit))
+            return pc.if_else(
+                pc.or_(is_not_null, beyond_limit), arr, arr.take(index_not_null)
+            )
 
-            # Backward case, reverse array, then reverse the result
-            return fill_aux(arr[::-1], limit=limit, direction="forward")[::-1]
-
+        native = self.native
         if value is not None:
             _, native_value = extract_native(self, value)
-            series: ArrayOrScalar = pc.fill_null(self.native, native_value)
+            series: ArrayOrScalar = pc.fill_null(native, native_value)
         elif limit is None:
-            fill_func = (
-                pc.fill_null_forward if strategy == "forward" else pc.fill_null_backward
+            series = (
+                pc.fill_null_forward(native)
+                if strategy == "forward"
+                else pc.fill_null_backward(native)
             )
-            series = fill_func(self.native)
         else:
-            series = fill_aux(self.native, limit, strategy)
+            series = (
+                fill_null_forward_limit(native, limit)
+                if strategy == "forward"
+                else fill_null_forward_limit(native[::-1], limit)[::-1]
+            )
         return self._with_native(series, preserve_broadcast=True)
 
     def to_frame(self) -> ArrowDataFrame:
