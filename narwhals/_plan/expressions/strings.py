@@ -97,12 +97,12 @@ class IRStringNamespace(IRNamespace):
 
     def replace(
         self, pattern: str, value: str, *, literal: bool = False, n: int = 1
-    ) -> Replace:  # pragma: no cover
+    ) -> Replace:
         return Replace(pattern=pattern, value=value, literal=literal, n=n)
 
     def replace_all(
         self, pattern: str, value: str, *, literal: bool = False
-    ) -> ReplaceAll:  # pragma: no cover
+    ) -> ReplaceAll:
         return ReplaceAll(pattern=pattern, value=value, literal=literal)
 
     def strip_chars(
@@ -140,13 +140,11 @@ class ExprStringNamespace(ExprNamespace[IRStringNamespace]):
     # TODO @dangotbanned: Support `value: IntoExpr`
     def replace(
         self, pattern: str, value: str, *, literal: bool = False, n: int = 1
-    ) -> Expr:  # pragma: no cover
+    ) -> Expr:
         return self._with_unary(self._ir.replace(pattern, value, literal=literal, n=n))
 
     # TODO @dangotbanned: Support `value: IntoExpr`
-    def replace_all(
-        self, pattern: str, value: str, *, literal: bool = False
-    ) -> Expr:  # pragma: no cover
+    def replace_all(self, pattern: str, value: str, *, literal: bool = False) -> Expr:
         return self._with_unary(self._ir.replace_all(pattern, value, literal=literal))
 
     def strip_chars(self, characters: str | None = None) -> Expr:  # pragma: no cover
