@@ -24,9 +24,6 @@ def test_to_date_with_fmt_series(
     ):
         reason = "Date type is not supported"
         request.applymarker(pytest.mark.xfail(reason=reason))
-    if "bodo" in str(constructor_eager):
-        # BODO fail
-        pytest.skip()
 
     result = nw.from_native(constructor_eager(data), eager_only=True)["a"].str.to_date(
         format="%Y-%m-%d"
@@ -44,9 +41,6 @@ def test_to_date_infer_fmt_series(
     ):
         reason = "Date type is not supported"
         request.applymarker(pytest.mark.xfail(reason=reason))
-    if "bodo" in str(constructor_eager):
-        # BODO fail
-        pytest.skip()
 
     result = nw.from_native(constructor_eager(data), eager_only=True)["a"].str.to_date()
     assert isinstance(result.dtype, nw.Date)
@@ -65,10 +59,6 @@ def test_to_date_with_fmt_expr(
     if "dask" in str(constructor):
         reason = "not implemented"
         request.applymarker(pytest.mark.xfail(reason=reason))
-
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
 
     result = nw.from_native(constructor(data)).select(
         a=nw.col("a").str.to_date(format="%Y-%m-%d")
