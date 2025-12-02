@@ -1,13 +1,19 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import sys
+from contextlib import AbstractContextManager, nullcontext
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
+import narwhals._plan as nwp
+import narwhals._plan.selectors as ncs
 from narwhals.exceptions import ShapeError
 from tests.plan.utils import dataframe, series
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from tests.conftest import Data
 
 
@@ -19,6 +25,14 @@ def data() -> Data:
 @pytest.fixture(scope="module")
 def data_big() -> Data:
     return {"a": list(range(100))}
+
+
+if sys.version_info >= (3, 13):
+    # NOTE: (#2705) Would've added the handling for `category`
+    # The default triggers a warning, but only on `>=3.13`
+    deprecated_call: Callable[..., AbstractContextManager[Any]] = pytest.deprecated_call
+else:  # pragma: no cover
+    deprecated_call = nullcontext
 
 
 @pytest.mark.parametrize("n", [None, 1, 7, 29])
@@ -80,6 +94,25 @@ def test_sample_with_replacement_dataframe(data: Data, n: int) -> None:
     assert len(result) == n
 
 
+@pytest.mark.parametrize(
+    ("base", "kwds", "expected"),
+    [
+        (nwp.col("a"), {"n": 2}, (2, 1)),
+        (nwp.all(), {"n": 1}, (1, 2)),
+        (nwp.nth(1, 0), {}, (1, 2)),
+        (~ncs.string(), {"fraction": 0.5}, (15, 2)),
+        (ncs.last(), {"n": 75, "with_replacement": True, "seed": 99}, (75, 1)),
+    ],
+)
+def test_sample_expr(
+    data: Data, base: nwp.Expr, kwds: dict[str, Any], expected: tuple[int, int]
+) -> None:
+    with deprecated_call():
+        expr = base.sample(**kwds)
+    result = dataframe(data).select(expr).shape
+    assert result == expected
+
+
 def test_sample_invalid(data: Data) -> None:
     df = dataframe(data)
     ser = df.to_series()
@@ -91,7 +124,11 @@ def test_sample_invalid(data: Data) -> None:
         df.sample(n=1, fraction=0.5)
     with pytest.raises(ValueError, match=both_n_fraction):
         ser.sample(n=567, fraction=0.1)
+    with pytest.raises(ValueError, match=both_n_fraction), deprecated_call():
+        nwp.col("a").sample(n=30, fraction=0.3)
     with pytest.raises(ShapeError, match=too_high_n):
         df.sample(n=1_000)
     with pytest.raises(ShapeError, match=too_high_n):
         ser.sample(n=2_000)
+    with pytest.raises(ShapeError), deprecated_call():
+        df.with_columns(nwp.col("b").sample(123, with_replacement=True))

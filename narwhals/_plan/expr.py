@@ -24,6 +24,7 @@ from narwhals._plan.options import (
     SortOptions,
     rolling_options,
 )
+from narwhals._typing_compat import deprecated
 from narwhals._utils import Version, no_default, not_implemented
 from narwhals.exceptions import ComputeError
 
@@ -419,6 +420,19 @@ class Expr:
             )
         )
 
+    # TODO @dangotbanned: Come back to this when *properly* building out `Version` support
+    @deprecated("Use `v1.Expr.sample` or `{DataFrame,Series}.sample` instead")
+    def sample(
+        self,
+        n: int | None = None,
+        *,
+        fraction: float | None = None,
+        with_replacement: bool = False,
+        seed: int | None = None,
+    ) -> Self:
+        f = F.sample(n, fraction=fraction, with_replacement=with_replacement, seed=seed)
+        return self._with_unary(f)
+
     def any(self) -> Self:
         return self._with_unary(ir.boolean.Any())
 
@@ -626,7 +640,6 @@ class Expr:
         return ExprStringNamespace(_expr=self)
 
     is_close = not_implemented()
-    sample = not_implemented()
     head = not_implemented()
     tail = not_implemented()
 

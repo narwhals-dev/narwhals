@@ -155,6 +155,10 @@ class EagerScalar(
     def to_python(self) -> PythonLiteral: ...
 
     gather_every = not_implemented()  # type: ignore[misc]
+    # NOTE: `n=1` and `fraction=1.0` *could* be special-cased here
+    # but seems low-priority for a deprecated method
+    sample_n = not_implemented()  # type: ignore[misc]
+    sample_frac = not_implemented()  # type: ignore[misc]
 
 
 class LazyScalar(

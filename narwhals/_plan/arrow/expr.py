@@ -636,6 +636,20 @@ class ArrowExpr(  # type: ignore[misc]
         n, offset = node.function.n, node.function.offset
         return self.from_series(series.gather_every(n=n, offset=offset))
 
+    def sample_n(self, node: FExpr[F.SampleN], frame: Frame, name: str) -> Self:
+        series = self._dispatch_expr(node.input[0], frame, name)
+        func = node.function
+        n, replace, seed = func.n, func.with_replacement, func.seed
+        result = series.sample_n(n, with_replacement=replace, seed=seed)
+        return self.from_series(result)
+
+    def sample_frac(self, node: FExpr[F.SampleFrac], frame: Frame, name: str) -> Self:
+        series = self._dispatch_expr(node.input[0], frame, name)
+        func = node.function
+        fraction, replace, seed = func.fraction, func.with_replacement, func.seed
+        result = series.sample_frac(fraction, with_replacement=replace, seed=seed)
+        return self.from_series(result)
+
     def drop_nulls(self, node: FExpr[F.DropNulls], frame: Frame, name: str) -> Self:
         return self._vector_function(fn.drop_nulls)(node, frame, name)
 

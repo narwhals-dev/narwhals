@@ -300,6 +300,14 @@ class EagerExpr(
     def map_batches(
         self, node: ir.AnonymousExpr, frame: FrameT_contra, name: str
     ) -> Self | EagerScalar[FrameT_contra, SeriesT]: ...
+    # NOTE: `n=1` can behave similar to an aggregation in `select(...)`, but requires `.first()`
+    # to trigger broadcasting in `with_columns(...)`
+    def sample_n(
+        self, node: FunctionExpr[F.SampleN], frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def sample_frac(
+        self, node: FunctionExpr[F.SampleFrac], frame: FrameT_contra, name: str
+    ) -> Self: ...
     def __bool__(self) -> Literal[True]:
         # NOTE: Avoids falling back to `__len__` when truth-testing on dispatch
         return True

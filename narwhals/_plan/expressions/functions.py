@@ -214,3 +214,32 @@ class MapBatches(Function):
 
         options = self.function_options
         return AnonymousExpr(input=inputs, function=self, options=options)
+
+
+class SampleN(Function):
+    __slots__ = ("n", "seed", "with_replacement")
+    n: int
+    with_replacement: bool
+    seed: int | None
+
+
+class SampleFrac(Function):
+    __slots__ = ("fraction", "seed", "with_replacement")
+    fraction: float
+    with_replacement: bool
+    seed: int | None
+
+
+def sample(
+    n: int | None = None,
+    *,
+    fraction: float | None = None,
+    with_replacement: bool = False,
+    seed: int | None = None,
+) -> SampleFrac | SampleN:
+    if n is not None and fraction is not None:
+        msg = "cannot specify both `n` and `fraction`"
+        raise ValueError(msg)
+    if fraction is not None:
+        return SampleFrac(fraction=fraction, with_replacement=with_replacement, seed=seed)
+    return SampleN(n=1 if n is None else n, with_replacement=with_replacement, seed=seed)
