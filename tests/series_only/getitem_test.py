@@ -38,9 +38,9 @@ def test_by_slice(constructor_eager: ConstructorEager) -> None:
     result = {"b": df[[], 1]}
     expected = {"b": []}
     assert_equal_data(result, expected)
-    result = df[:, 0][slice(None)]
-    expected = [1, 2, 3]
-    assert_equal_series(result, expected, name="a")
+    result_ser = df[:, 0][slice(None)]
+    expected_ser = [1, 2, 3]
+    assert_equal_series(result_ser, expected_ser, name="a")
 
 
 def test_getitem_arrow_scalar() -> None:
