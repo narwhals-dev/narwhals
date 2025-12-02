@@ -956,6 +956,28 @@ class ArrowStringNamespace(
             node, frame, name
         )
 
+    def replace_expr(
+        self, node: FExpr[strings.ReplaceExpr], frame: Frame, name: str
+    ) -> Expr | Scalar:
+        func = node.function
+        pattern, literal, n = (func.pattern, func.literal, func.n)
+        expr, other = func.unwrap_input(node)
+        prev = expr.dispatch(self.compliant, frame, name)
+        value = other.dispatch(self.compliant, frame, name)
+        if isinstance(value, ArrowScalar):
+            result = fn.str_replace(
+                prev.native, pattern, value.native.as_py(), literal=literal, n=n
+            )
+        elif isinstance(prev, ArrowExpr):
+            result = fn.str_replace_vector(
+                prev.native, pattern, value.native, literal=literal, n=n
+            )
+        else:
+            # not sure this even makes sense
+            msg = "TODO: `ArrowScalar.str.replace(value: ArrowExpr)`"
+            raise NotImplementedError(msg)
+        return self.with_native(result, name)
+
     def replace_all(
         self, node: FExpr[strings.ReplaceAll], frame: Frame, name: str
     ) -> Expr | Scalar:
@@ -994,6 +1016,7 @@ class ArrowStringNamespace(
 
     to_date = not_implemented()
     to_datetime = not_implemented()
+    replace_all_expr = not_implemented()
 
 
 class ArrowStructNamespace(

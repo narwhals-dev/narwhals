@@ -416,6 +416,48 @@ def str_replace(
     return fn(native, pattern, replacement=value, max_replacements=n)
 
 
+# NOTE: Starting with the "easiest" cases first
+def str_replace_vector(
+    native: ChunkedArrayAny,
+    pattern: str,
+    replacements: ChunkedArrayAny,
+    *,
+    literal: bool = False,
+    n: int = 1,
+) -> ChunkedArrayAny:
+    if n == 1:
+        return _str_replace_vector_n_1(native, pattern, replacements, literal=literal)
+    msg = f"`pyarrow` currently only supports `str.replace(value: Expr, n=1)`, got {n=} "
+    raise NotImplementedError(msg)
+
+
+# TODO @dangotbanned: Super in need of a tidy
+def _str_replace_vector_n_1(
+    native: ChunkedArrayAny,
+    pattern: str,
+    replacements: ChunkedArrayAny,
+    *,
+    literal: bool = False,
+) -> ChunkedArrayAny:
+    # NOTE: `-1` equals no match
+    fn_find = pc.find_substring if literal else pc.find_substring_regex
+    first_idx_match = fn_find(native, pattern=pattern)
+    failed = lit(-1)
+    has_match = not_eq(first_idx_match, failed)
+    if not any_(has_match).as_py():
+        # fastpath, no work to do
+        return native
+    fn_split = pc.split_pattern if literal else pc.split_pattern_regex
+    table = pa.Table.from_arrays([native, replacements], ["0", "1"]).filter(has_match)  # pyright: ignore[reportArgumentType]
+    list_todo = fn_split(table.column(0).combine_chunks(), pattern, max_splits=1).values
+    mask_replace = eq(list_todo, lit("", list_todo.type))
+    replaced_wrong_shape = replace_with_mask(list_todo, mask_replace, table.column(1))
+    fully_replaced = concat_str(replaced_wrong_shape[0::2], replaced_wrong_shape[1::2])
+    if all_(has_match).as_py():
+        return chunked_array(fully_replaced)
+    return replace_with_mask(native, has_match, fully_replaced)
+
+
 def str_replace_all(
     native: Incomplete, pattern: str, value: str, *, literal: bool = False
 ) -> Incomplete:
@@ -789,6 +831,17 @@ def replace_strict_default(
     return chunked_array(result) if isinstance(native, pa.ChunkedArray) else result[0]
 
 
+def replace_with_mask(
+    native: ChunkedOrArrayT, mask: Predicate, replacements: ChunkedOrArrayAny
+) -> ChunkedOrArrayT:
+    if not isinstance(mask, pa.BooleanArray):
+        mask = t.cast("pa.BooleanArray", array(mask))
+    if not isinstance(replacements, pa.Array):
+        replacements = array(replacements)
+    result: ChunkedOrArrayT = pc.replace_with_mask(native, mask, replacements)
+    return result
+
+
 def is_between(
     native: ChunkedOrScalar[ScalarT],
     lower: ChunkedOrScalar[ScalarT],
@@ -857,9 +910,21 @@ def binary(
     return _DISPATCH_BINARY[op](lhs, rhs)
 
 
+@t.overload
 def concat_str(
-    *arrays: ChunkedArrayAny, separator: str = "", ignore_nulls: bool = False
-) -> ChunkedArray[StringScalar]:
+    *arrays: ChunkedArrayAny, separator: str = ..., ignore_nulls: bool = ...
+) -> ChunkedArray[StringScalar]: ...
+@t.overload
+def concat_str(
+    *arrays: ArrayAny, separator: str = ..., ignore_nulls: bool = ...
+) -> Array[StringScalar]: ...
+@t.overload
+def concat_str(
+    *arrays: ScalarAny, separator: str = ..., ignore_nulls: bool = ...
+) -> StringScalar: ...
+def concat_str(
+    *arrays: ArrowAny, separator: str = "", ignore_nulls: bool = False
+) -> Arrow[StringScalar]:
     dtype = string_type(obj.type for obj in arrays)
     it = (obj.cast(dtype) for obj in arrays)
     concat: Incomplete = pc.binary_join_element_wise

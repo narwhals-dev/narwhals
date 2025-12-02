@@ -3,11 +3,15 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, ClassVar
 
 from narwhals._plan._function import Function, HorizontalFunction
+from narwhals._plan._parse import parse_into_expr_ir
 from narwhals._plan.expressions.namespace import ExprNamespace, IRNamespace
 from narwhals._plan.options import FEOptions, FunctionOptions
 
 if TYPE_CHECKING:
+    from typing_extensions import Self
+
     from narwhals._plan.expr import Expr
+    from narwhals._plan.expressions import ExprIR, FunctionExpr as FExpr
 
 
 # fmt: off
@@ -42,10 +46,39 @@ class Replace(StringFunction):
     n: int
 
 
+# NOTE: Alternatively, do something like `list.contains` (always wrapping)
+# There's a much bigger divide between backend-support though, so opting out is easier this way
+class ReplaceExpr(StringFunction):
+    """N-ary (expr, value)."""
+
+    def unwrap_input(self, node: FExpr[Self], /) -> tuple[ExprIR, ExprIR]:
+        expr, value = node.input
+        return expr, value
+
+    __slots__ = ("literal", "n", "pattern")
+    pattern: str
+    literal: bool
+    n: int
+
+
 class ReplaceAll(StringFunction):
     __slots__ = ("literal", "pattern", "value")
     pattern: str
     value: str
+    literal: bool
+
+
+class ReplaceAllExpr(StringFunction):
+    """N-ary (expr, value)."""
+
+    def unwrap_input(
+        self, node: FExpr[Self], /
+    ) -> tuple[ExprIR, ExprIR]:  # pragma: no cover
+        expr, value = node.input
+        return expr, value
+
+    __slots__ = ("literal", "pattern")
+    pattern: str
     literal: bool
 
 
@@ -87,8 +120,8 @@ class ZFill(StringFunction, config=FEOptions.renamed("zfill")):
 
 class IRStringNamespace(IRNamespace):
     len_chars: ClassVar = LenChars
-    to_lowercase: ClassVar = ToUppercase
-    to_uppercase: ClassVar = ToLowercase
+    to_lowercase: ClassVar = ToLowercase
+    to_uppercase: ClassVar = ToUppercase
     to_titlecase: ClassVar = ToTitlecase
     split: ClassVar = Split
     starts_with: ClassVar = StartsWith
@@ -139,13 +172,25 @@ class ExprStringNamespace(ExprNamespace[IRStringNamespace]):
 
     # TODO @dangotbanned: Support `value: IntoExpr`
     def replace(
-        self, pattern: str, value: str, *, literal: bool = False, n: int = 1
+        self, pattern: str, value: str | Expr, *, literal: bool = False, n: int = 1
     ) -> Expr:
-        return self._with_unary(self._ir.replace(pattern, value, literal=literal, n=n))
+        if isinstance(value, str):
+            return self._with_unary(
+                self._ir.replace(pattern, value, literal=literal, n=n)
+            )
+        other = parse_into_expr_ir(value, str_as_lit=True)
+        replace = ReplaceExpr(pattern=pattern, literal=literal, n=n)
+        return self._expr._from_ir(replace.to_function_expr(self._expr._ir, other))
 
     # TODO @dangotbanned: Support `value: IntoExpr`
-    def replace_all(self, pattern: str, value: str, *, literal: bool = False) -> Expr:
-        return self._with_unary(self._ir.replace_all(pattern, value, literal=literal))
+    def replace_all(
+        self, pattern: str, value: str | Expr, *, literal: bool = False
+    ) -> Expr:
+        if isinstance(value, str):
+            return self._with_unary(self._ir.replace_all(pattern, value, literal=literal))
+        other = parse_into_expr_ir(value, str_as_lit=True)
+        replace = ReplaceAllExpr(pattern=pattern, literal=literal)
+        return self._expr._from_ir(replace.to_function_expr(self._expr._ir, other))
 
     def strip_chars(self, characters: str | None = None) -> Expr:  # pragma: no cover
         return self._with_unary(self._ir.strip_chars(characters))
@@ -180,7 +225,7 @@ class ExprStringNamespace(ExprNamespace[IRStringNamespace]):
     def to_lowercase(self) -> Expr:  # pragma: no cover
         return self._with_unary(self._ir.to_lowercase())
 
-    def to_uppercase(self) -> Expr:  # pragma: no cover
+    def to_uppercase(self) -> Expr:
         return self._with_unary(self._ir.to_uppercase())
 
     def to_titlecase(self) -> Expr:  # pragma: no cover
