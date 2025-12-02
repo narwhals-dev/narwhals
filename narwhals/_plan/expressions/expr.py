@@ -397,8 +397,9 @@ class OrderedWindowExpr(
             args = f"partition_by={list(self.partition_by)!r}, order_by={list(order)!r}"
         return f"{self.expr!r}.over({args})"
 
+    # TODO @dangotbanned: Update to align with https://github.com/pola-rs/polars/pull/25117/files#diff-45d1f22172e291bd4a5ce36d1fb8233698394f9590bcf11382b9c99b5449fff5
     def iter_root_names(self) -> t.Iterator[ExprIR]:
-        # NOTE: `order_by` is never considered in `polars`
+        # NOTE: `order_by` ~~is~~ was never considered in `polars`
         # To match that behavior for `root_names` - but still expand in all other cases
         # - this little escape hatch exists
         # https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/plans/iterator.rs#L76-L86
