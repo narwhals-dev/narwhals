@@ -31,10 +31,6 @@ def test_map_batches_expr_compliant(constructor_eager: ConstructorEager) -> None
 def test_map_batches_expr_scalar(
     constructor_eager: ConstructorEager, value: Any, dtype: DType
 ) -> None:
-    if "bodo" in str(constructor_eager):
-        # BODO fail
-        pytest.skip()
-
     df = nw.from_native(constructor_eager(data))
     if (
         dtype.is_nested()

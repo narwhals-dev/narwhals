@@ -190,12 +190,9 @@ def test_str_replace_series_multivalue(
     expected: dict[str, list[str]],
     request: pytest.FixtureRequest,
 ) -> None:
-    if "bodo" in str(constructor_eager):
-        # BODO fail
-        pytest.skip()
     df = nw.from_native(constructor_eager(data), eager_only=True)
     if any(
-        x in str(constructor_eager) for x in ["pyarrow_table", "pandas", "modin", "cudf"]
+        x in str(constructor_eager) for x in ["bodo", "pyarrow_table", "pandas", "modin", "cudf"]
     ):
         request.applymarker(
             pytest.mark.xfail(
@@ -223,7 +220,7 @@ def test_str_replace_all_series_multivalue(
     request: pytest.FixtureRequest,
 ) -> None:
     if any(
-        x in str(constructor_eager) for x in ["pyarrow_table", "pandas", "modin", "cudf"]
+        x in str(constructor_eager) for x in ["bodo", "pyarrow_table", "pandas", "modin", "cudf"]
     ):
         request.applymarker(
             pytest.mark.xfail(
@@ -231,9 +228,6 @@ def test_str_replace_all_series_multivalue(
                 raises=TypeError,
             )
         )
-    if "bodo" in str(constructor_eager):
-        # BODO fail
-        pytest.skip()
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result_series = df["a"].str.replace_all(
@@ -264,7 +258,7 @@ def test_str_replace_expr_multivalue(
         )
     elif any(
         x in str(constructor)
-        for x in ["pyarrow_table", "dask", "pandas", "modin", "cudf"]
+        for x in ["bodo", "pyarrow_table", "dask", "pandas", "modin", "cudf"]
     ):
         request.applymarker(
             pytest.mark.xfail(
@@ -272,9 +266,6 @@ def test_str_replace_expr_multivalue(
                 raises=TypeError,
             )
         )
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
 
     df = nw.from_native(constructor(data))
     result_df = df.select(
@@ -299,7 +290,7 @@ def test_str_replace_all_expr_multivalue(
 ) -> None:
     if any(
         x in str(constructor)
-        for x in ["pyarrow_table", "dask", "pandas", "modin", "cudf"]
+        for x in ["bodo", "pyarrow_table", "dask", "pandas", "modin", "cudf"]
     ):
         request.applymarker(
             pytest.mark.xfail(
@@ -307,9 +298,6 @@ def test_str_replace_all_expr_multivalue(
                 raises=TypeError,
             )
         )
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
 
     df = nw.from_native(constructor(data))
     result = df.select(
@@ -319,9 +307,6 @@ def test_str_replace_all_expr_multivalue(
 
 
 def test_str_replace_errors_series(constructor_eager: ConstructorEager) -> None:
-    if "bodo" in str(constructor_eager):
-        # BODO fail
-        pytest.skip()
     context: Any
     only_str_supported = pytest.raises(
         TypeError, match=r"only supports str replacement values"
@@ -337,7 +322,7 @@ def test_str_replace_errors_series(constructor_eager: ConstructorEager) -> None:
 
     # pyarrow & pandas does not support multivalue replacement
     context = nullcontext()
-    if any(x in str(constructor_eager) for x in ["pyarrow_table", "pandas", "modin"]):
+    if any(x in str(constructor_eager) for x in ["bodo", "pyarrow_table", "pandas", "modin"]):
         context = only_str_supported
     with context:
         df["a"].str.replace("ab", df["a"])
@@ -355,7 +340,7 @@ def test_str_replace_errors_series(constructor_eager: ConstructorEager) -> None:
     # pyarrow, pandas, modin do not support multivalue replacement
     context = (
         only_str_supported
-        if any(x in str(constructor_eager) for x in ["pyarrow_table", "pandas", "modin"])
+        if any(x in str(constructor_eager) for x in ["bodo", "pyarrow_table", "pandas", "modin"])
         else nullcontext()
     )
     with context:
@@ -363,9 +348,6 @@ def test_str_replace_errors_series(constructor_eager: ConstructorEager) -> None:
 
 
 def test_str_replace_errors_expr(constructor: Constructor) -> None:
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
     context: Any
     not_implemented = pytest.raises(NotImplementedError)
     only_str_supported = pytest.raises(
@@ -387,7 +369,7 @@ def test_str_replace_errors_expr(constructor: Constructor) -> None:
     context = nullcontext()
     if any(x in str(constructor) for x in ["duckdb", "ibis", "pyspark"]):
         context = not_implemented
-    elif any(x in str(constructor) for x in ["dask", "pyarrow_table", "pandas", "modin"]):
+    elif any(x in str(constructor) for x in ["bodo", "dask", "pyarrow_table", "pandas", "modin"]):
         context = only_str_supported
 
     with context:
@@ -400,7 +382,7 @@ def test_str_replace_errors_expr(constructor: Constructor) -> None:
     context = (
         only_str_supported
         if any(
-            x in str(constructor) for x in ["pyarrow_table", "dask", "pandas", "modin"]
+            x in str(constructor) for x in ["bodo", "pyarrow_table", "dask", "pandas", "modin"]
         )
         else nullcontext()
     )

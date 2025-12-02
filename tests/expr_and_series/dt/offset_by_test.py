@@ -188,7 +188,7 @@ def test_offset_by_tz(
         request.applymarker(pytest.mark.xfail())
     if by.endswith("d") and any(x in str(constructor) for x in ("dask",)):
         request.applymarker(pytest.mark.xfail())
-    if "bodo" in str(constructor):
+    if "bodo" in str(constructor) and by in ('5mo', '7q', '5y'):
         # BODO fail
         pytest.skip()
     df = nw.from_native(constructor(data_tz))
@@ -228,7 +228,7 @@ def test_offset_by_dst(
         request.applymarker(pytest.mark.xfail())
     if by.endswith("d") and any(x in str(constructor) for x in ("dask",)):
         request.applymarker(pytest.mark.xfail())
-    if "bodo" in str(constructor):
+    if "bodo" in str(constructor) and by in ('5mo', '1q'):
         # BODO fail
         pytest.skip()
     df = nw.from_native(constructor(data_dst))

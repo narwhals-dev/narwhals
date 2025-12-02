@@ -18,7 +18,7 @@ data = {
 )
 @pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
 def test_dt_to_string_series(constructor_eager: ConstructorEager, fmt: str) -> None:
-    if "bodo" in str(constructor_eager):
+    if "bodo" in str(constructor_eager) and "%H" in fmt:
         # BODO fail
         pytest.skip()
     input_frame = nw.from_native(constructor_eager(data), eager_only=True)
@@ -43,7 +43,7 @@ def test_dt_to_string_series(constructor_eager: ConstructorEager, fmt: str) -> N
 )
 @pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
 def test_dt_to_string_expr(constructor: Constructor, fmt: str) -> None:
-    if "bodo" in str(constructor):
+    if "bodo" in str(constructor) and "%H" in fmt:
         # BODO fail
         pytest.skip()
     input_frame = nw.from_native(constructor(data))

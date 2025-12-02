@@ -134,7 +134,7 @@ def test_lazy_cum_sum_ungrouped(
         "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
     ):
         pytest.skip(reason="too old version")
-    if "bodo" in str(constructor):
+    if "bodo" in str(constructor) and reverse==True:
         # BODO fail
         pytest.skip()
 

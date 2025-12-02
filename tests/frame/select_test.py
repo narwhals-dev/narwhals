@@ -162,9 +162,6 @@ def test_select_duplicates(constructor: Constructor) -> None:
     if "cudf" in str(constructor):
         # cudf already raises its own error
         pytest.skip()
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
 
     df = nw.from_native(constructor({"a": [1, 2]})).lazy()
     with pytest.raises(

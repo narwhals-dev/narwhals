@@ -69,9 +69,6 @@ def test_cast(constructor: Constructor) -> None:
         15,
     ):  # pragma: no cover
         pytest.skip()
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
 
     if "pyspark" in str(constructor):
         incompatible_columns = SPARK_LIKE_INCOMPATIBLE_COLUMNS  # pragma: no cover
@@ -130,9 +127,6 @@ def test_cast_series(
         15,
     ):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)
-    if "bodo" in str(constructor_eager):
-        # BODO fail
-        pytest.skip()
 
     df = (
         nw.from_native(constructor_eager(DATA))
@@ -186,9 +180,6 @@ def test_cast_raises_for_unknown_dtype(
     if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (15,):
         # Unsupported cast from string to dictionary using function cast_dictionary
         request.applymarker(pytest.mark.xfail)
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
 
     if "pyspark" in str(constructor):
         incompatible_columns = SPARK_LIKE_INCOMPATIBLE_COLUMNS  # pragma: no cover

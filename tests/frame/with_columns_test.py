@@ -71,9 +71,6 @@ def test_with_columns_dtypes_single_row(
         or "ibis" in str(constructor)
     ):
         request.applymarker(pytest.mark.xfail)
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
 
     data = {"a": ["foo"]}
     df = nw.from_native(constructor(data)).with_columns(nw.col("a").cast(nw.Categorical))
