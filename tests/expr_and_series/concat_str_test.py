@@ -28,9 +28,6 @@ def test_concat_str(
     if "polars" in str(constructor) and POLARS_VERSION < (1, 0, 0):
         # nth only available after 1.0
         request.applymarker(pytest.mark.xfail)
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
     df = nw.from_native(constructor(data))
     result = (
         df.select(
@@ -63,9 +60,6 @@ def test_concat_str(
 
 
 def test_concat_str_with_lit(constructor: Constructor) -> None:
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
     df = nw.from_native(constructor({"a": ["cat", "dog", "pig"]}))
     result = df.with_columns(b=nw.concat_str("a", nw.lit("ab")))
     expected = {"a": ["cat", "dog", "pig"], "b": ["catab", "dogab", "pigab"]}

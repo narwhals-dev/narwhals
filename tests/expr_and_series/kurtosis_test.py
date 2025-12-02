@@ -51,9 +51,5 @@ def test_kurtosis_expr(
         # Can not infer schema from empty dataset.
         pytest.skip()
 
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
-
     result = nw.from_native(constructor({"a": data})).select(nw.col("a").kurtosis())
     assert_equal_data(result, {"a": [expected]})

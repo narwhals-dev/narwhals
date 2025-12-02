@@ -12,9 +12,6 @@ data = [1, 3, 2]
 
 @pytest.mark.parametrize(("index", "expected"), [(0, 1), (1, 3)])
 def test_item(constructor_eager: ConstructorEager, index: int, expected: int) -> None:
-    if "bodo" in str(constructor_eager):
-        # BODO fail
-        pytest.skip()
     series = nw.from_native(constructor_eager({"a": data}), eager_only=True)["a"]
     result = series.item(index)
     assert_equal_data({"a": [result]}, {"a": [expected]})

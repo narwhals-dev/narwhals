@@ -125,7 +125,7 @@ def test_pivot(
     if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 0):
         # not implemented
         request.applymarker(pytest.mark.xfail)
-    if "bodo" in str(constructor_eager):
+    if "bodo" in str(constructor_eager) and agg_func=="len":
         # BODO fail
         pytest.skip()  # causes failure in test_sample_with_seed
 

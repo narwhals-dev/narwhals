@@ -118,9 +118,6 @@ def test_cast_to_enum_vmain(
         for backend in ("pyarrow_table", "sqlframe", "pyspark", "ibis")
     ):
         request.applymarker(pytest.mark.xfail)
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
 
     df_nw = nw.from_native(constructor({"a": ["a", "b"]}))
     col_a = nw.col("a")

@@ -49,7 +49,7 @@ def test_datetime_attributes(
         request.applymarker(pytest.mark.xfail)
     if attribute == "nanosecond" and "ibis" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    if "bodo" in str(constructor):
+    if "bodo" in str(constructor) and attribute in ('millisecond', 'microsecond', 'nanosecond'):
         # BODO fail
         pytest.skip()
 
@@ -89,7 +89,7 @@ def test_datetime_attributes_series(
         request.applymarker(pytest.mark.xfail)
     if attribute == "date" and "cudf" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
-    if "bodo" in str(constructor_eager):
+    if "bodo" in str(constructor_eager) and attribute in ('millisecond', 'microsecond', 'nanosecond'):
         # BODO fail
         pytest.skip()
 
