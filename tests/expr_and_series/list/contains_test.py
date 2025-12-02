@@ -17,12 +17,9 @@ expected = {"a": [True, None, False]}
 def test_contains_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if any(
         backend in str(constructor)
-        for backend in ("dask", "modin", "cudf", "pyarrow", "pandas")
+        for backend in ("dask", "modin", "cudf", "pyarrow", "pandas", "bodo")
     ):
         request.applymarker(pytest.mark.xfail)
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
     result = nw.from_native(constructor(data)).select(
         nw.col("a").cast(nw.List(nw.Int32())).list.contains(2)
     )
@@ -34,12 +31,9 @@ def test_contains_series(
 ) -> None:
     if any(
         backend in str(constructor_eager)
-        for backend in ("modin", "cudf", "pyarrow", "pandas")
+        for backend in ("modin", "cudf", "pyarrow", "pandas", "bodo")
     ):
         request.applymarker(pytest.mark.xfail)
-    if "bodo" in str(constructor_eager):
-        # BODO fail
-        pytest.skip()
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df["a"].cast(nw.List(nw.Int32())).list.contains(2)
     assert_equal_data({"a": result}, expected)

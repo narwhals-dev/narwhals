@@ -14,8 +14,8 @@ from joblib import Parallel, delayed
 
 def test_parallelisability(constructor_eager: ConstructorEager) -> None:
     if "bodo" in str(constructor_eager):
-        # BODO fail
-        pytest.skip()
+        # Expected not to work.
+        request.applymarker(pytest.mark.xfail)
     # https://github.com/narwhals-dev/narwhals/issues/2450
     def do_something(df: nw.DataFrame[Any]) -> nw.DataFrame[Any]:  # pragma: no cover
         return df.with_columns(nw.col("col1") * 2)
@@ -34,8 +34,8 @@ def test_parallelisability_series(
     if "modin" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
     if "bodo" in str(constructor_eager):
-        # BODO fail
-        pytest.skip()
+        # Expected not to work.
+        request.applymarker(pytest.mark.xfail)
 
     def do_something(s: nw.Series[Any]) -> nw.Series[Any]:  # pragma: no cover
         return s * 2
