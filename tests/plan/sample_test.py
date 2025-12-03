@@ -27,7 +27,7 @@ def data_big() -> Data:
     return {"a": list(range(100))}
 
 
-if sys.version_info >= (3, 13):
+if sys.version_info >= (3, 13):  # pragma: no cover
     # NOTE: (#2705) Would've added the handling for `category`
     # The default triggers a warning, but only on `>=3.13`
     deprecated_call: Callable[..., AbstractContextManager[Any]] = pytest.deprecated_call
