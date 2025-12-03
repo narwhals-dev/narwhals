@@ -120,9 +120,7 @@ class IRStringNamespace(IRNamespace):
     def replace_all(self, pattern: str, *, literal: bool = False) -> ReplaceAll:
         return ReplaceAll(pattern=pattern, literal=literal)
 
-    def strip_chars(
-        self, characters: str | None = None
-    ) -> StripChars:  # pragma: no cover
+    def strip_chars(self, characters: str | None = None) -> StripChars:
         return StripChars(characters=characters)
 
     def contains(self, pattern: str, *, literal: bool = False) -> Contains:
@@ -166,7 +164,7 @@ class ExprStringNamespace(ExprNamespace[IRStringNamespace]):
         replace = self._ir.replace_all(pattern, literal=literal)
         return self._expr._from_ir(replace.to_function_expr(self._expr._ir, other))
 
-    def strip_chars(self, characters: str | None = None) -> Expr:  # pragma: no cover
+    def strip_chars(self, characters: str | None = None) -> Expr:
         return self._with_unary(self._ir.strip_chars(characters))
 
     def starts_with(self, prefix: str) -> Expr:
@@ -196,7 +194,7 @@ class ExprStringNamespace(ExprNamespace[IRStringNamespace]):
     def to_datetime(self, format: str | None = None) -> Expr:  # pragma: no cover
         return self._with_unary(self._ir.to_datetime(format))
 
-    def to_lowercase(self) -> Expr:  # pragma: no cover
+    def to_lowercase(self) -> Expr:
         return self._with_unary(self._ir.to_lowercase())
 
     def to_uppercase(self) -> Expr:

@@ -85,13 +85,32 @@ replace_all_scalar = pytest.mark.parametrize(
     ],
 )
 
-# TODO @dangotbanned: Cover more than these cases, it's just a repeat of `-1`
+
 replace_all_vector = pytest.mark.parametrize(
     ("data", "pattern", "value", "literal", "expected"),
     [
-        (A1, r"abc", "b", False, ["123ghi", "jkl456"]),
-        (A2, r"abc", "b", False, ["ghi ghi", "jkl456"]),
-        (A4, r"$", "b", True, ["Dollar ghiign", "literal"]),
+        pytest.param(A1, r"abc", nwp.col("b"), False, ["123ghi", "jkl456"], id="single"),
+        pytest.param(A2, r"abc", nwp.col("b"), False, ["ghi ghi", "jkl456"], id="mixed"),
+        pytest.param(
+            A4, r"$", nwp.col("b"), True, ["Dollar ghiign", "literal"], id="literal"
+        ),
+        pytest.param(A5, r"o", nwp.col("b"), False, [None, "jkljklp"], id="null-input"),
+        pytest.param(
+            A3,
+            r"\d",
+            nwp.col("b").first(),
+            False,
+            ["abc abc abc", "ghighighiabc"],
+            id="agg-replacement",
+        ),
+        pytest.param(
+            A3,
+            r" ?abc$",
+            nwp.lit(" HELLO").str.to_lowercase().str.strip_chars(),
+            False,
+            ["abc abchello", "456hello"],
+            id="transformed-replacement",
+        ),
     ],
 )
 
@@ -137,10 +156,13 @@ def test_str_replace_all_scalar(
 
 @replace_all_vector
 def test_str_replace_all_vector(
-    data: list[str], pattern: str, value: str, *, literal: bool, expected: list[str]
+    data: Sequence[str | None],
+    pattern: str,
+    value: nwp.Expr,
+    *,
+    literal: bool,
+    expected: Sequence[str | None],
 ) -> None:
     df = dataframe({"a": data, "b": B})
-    result = df.select(
-        nwp.col("a").str.replace_all(pattern, nwp.col(value), literal=literal)
-    )
+    result = df.select(nwp.col("a").str.replace_all(pattern, value, literal=literal))
     assert_equal_data(result, {"a": expected})
