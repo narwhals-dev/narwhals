@@ -386,21 +386,118 @@ def str_pad_start(
     return pc.utf8_lpad(native, length, fill_char)
 
 
+@t.overload
+def str_find(
+    native: ChunkedArrayAny,
+    pattern: str,
+    *,
+    literal: bool = ...,
+    not_found: int | None = ...,
+) -> ChunkedArray[IntegerScalar]: ...
+@t.overload
+def str_find(
+    native: Array, pattern: str, *, literal: bool = ..., not_found: int | None = ...
+) -> Array[IntegerScalar]: ...
+@t.overload
+def str_find(
+    native: ScalarAny, pattern: str, *, literal: bool = ..., not_found: int | None = ...
+) -> IntegerScalar: ...
+def str_find(
+    native: Arrow[StringScalar],
+    pattern: str,
+    *,
+    literal: bool = False,
+    not_found: int | None = -1,
+) -> Arrow[IntegerScalar]:
+    """Return the bytes offset of the first substring matching a pattern.
+
+    To match `pl.Expr.str.find` behavior, pass `not_found=None`.
+
+    Note:
+        `pyarrow` distinguishes null *inputs* with `None` and failed matches with `-1`.
+    """
+    # NOTE: `pyarrow-stubs` uses concrete types here
+    fn_name = "find_substring" if literal else "find_substring_regex"
+    result: Arrow[IntegerScalar] = pc.call_function(
+        fn_name, [native], pa_options.match_substring(pattern)
+    )
+    if not_found == -1:
+        return result
+    return when_then(eq(result, lit(-1)), lit(not_found, result.type), result)
+
+
 _StringFunction0: TypeAlias = "Callable[[ChunkedOrScalarAny], ChunkedOrScalarAny]"
 _StringFunction1: TypeAlias = "Callable[[ChunkedOrScalarAny, str], ChunkedOrScalarAny]"
 str_starts_with = t.cast("_StringFunction1", pc.starts_with)
 str_ends_with = t.cast("_StringFunction1", pc.ends_with)
-str_split = t.cast("_StringFunction1", pc.split_pattern)
 str_to_uppercase = t.cast("_StringFunction0", pc.utf8_upper)
 str_to_lowercase = t.cast("_StringFunction0", pc.utf8_lower)
 str_to_titlecase = t.cast("_StringFunction0", pc.utf8_title)
 
 
+def _str_split(
+    native: ArrowAny, by: str, n: int | None = None, *, literal: bool = True
+) -> Arrow[ListScalar]:
+    name = "split_pattern" if literal else "split_pattern_regex"
+    result: Arrow[ListScalar] = pc.call_function(
+        name, [native], pa_options.split_pattern(by, n)
+    )
+    return result
+
+
+@t.overload
+def str_split(
+    native: ChunkedOrScalarAny, by: str, *, literal: bool = ...
+) -> ChunkedOrScalar[ListScalar]: ...
+@t.overload
+def str_split(native: ArrayAny, by: str, *, literal: bool = ...) -> pa.ListArray[Any]: ...
+@t.overload
+def str_split(native: ArrowAny, by: str, *, literal: bool = ...) -> Arrow[ListScalar]: ...
+def str_split(native: ArrowAny, by: str, *, literal: bool = True) -> Arrow[ListScalar]:
+    return _str_split(native, by, literal=literal)
+
+
+@t.overload
+def str_splitn(
+    native: ArrayAny, by: str, n: int, *, literal: bool = ..., as_struct: bool = ...
+) -> pa.ListArray[Any]: ...
+@t.overload
+def str_splitn(
+    native: ArrowAny, by: str, n: int, *, literal: bool = ..., as_struct: bool = ...
+) -> Arrow[ListScalar]: ...
+def str_splitn(
+    native: ArrowAny, by: str, n: int, *, literal: bool = True, as_struct: bool = False
+) -> Arrow[ListScalar]:
+    """Split the string by a substring, restricted to returning at most `n` items."""
+    result = _str_split(native, by, n, literal=literal)
+    if as_struct:
+        # NOTE: `polars` would return a struct w/ field names (`'field_0`, ..., 'field_n-1`)
+        msg = "TODO: `ArrowExpr.str.splitn`"
+        raise NotImplementedError(msg)
+    return result
+
+
+@t.overload
 def str_contains(
-    native: Incomplete, pattern: str, *, literal: bool = False
-) -> Incomplete:
-    func = pc.match_substring if literal else pc.match_substring_regex
-    return func(native, pattern)
+    native: ChunkedArrayAny, pattern: str, *, literal: bool = ...
+) -> ChunkedArray[pa.BooleanScalar]: ...
+@t.overload
+def str_contains(
+    native: ChunkedOrScalarAny, pattern: str, *, literal: bool = ...
+) -> ChunkedOrScalar[pa.BooleanScalar]: ...
+@t.overload
+def str_contains(
+    native: ArrowAny, pattern: str, *, literal: bool = ...
+) -> Arrow[pa.BooleanScalar]: ...
+def str_contains(
+    native: ArrowAny, pattern: str, *, literal: bool = False
+) -> Arrow[pa.BooleanScalar]:
+    """Check if the string contains a substring that matches a pattern."""
+    name = "match_substring" if literal else "match_substring_regex"
+    result: Arrow[pa.BooleanScalar] = pc.call_function(
+        name, [native], pa_options.match_substring(pattern)
+    )
+    return result
 
 
 def str_strip_chars(native: Incomplete, characters: str | None) -> Incomplete:
@@ -439,21 +536,18 @@ def _str_replace_vector_n_1(
     *,
     literal: bool = False,
 ) -> ChunkedArrayAny:
-    # NOTE: `-1` equals no match
-    fn_find = pc.find_substring if literal else pc.find_substring_regex
-    first_idx_match = fn_find(native, pattern=pattern)
-    failed = lit(-1)
-    has_match = not_eq(first_idx_match, failed)
+    has_match = str_contains(native, pattern, literal=literal)
     if not any_(has_match).as_py():
         # fastpath, no work to do
         return native
-    fn_split = pc.split_pattern if literal else pc.split_pattern_regex
-    table = pa.Table.from_arrays([native, replacements], ["0", "1"]).filter(has_match)  # pyright: ignore[reportArgumentType]
-    list_todo = fn_split(table.column(0).combine_chunks(), pattern, max_splits=1).values
+    table = pa.Table.from_arrays([native, replacements], ["0", "1"]).filter(has_match)
+    # Needs better name
+    list_todo = str_splitn(array(table.column(0)), pattern, n=2, literal=literal).values
     mask_replace = eq(list_todo, lit("", list_todo.type))
+    # Needs better name
     replaced_wrong_shape = replace_with_mask(list_todo, mask_replace, table.column(1))
     fully_replaced = concat_str(replaced_wrong_shape[0::2], replaced_wrong_shape[1::2])
-    if all_(has_match).as_py():
+    if all_(has_match, ignore_nulls=False).as_py():
         return chunked_array(fully_replaced)
     return replace_with_mask(native, has_match, fully_replaced)
 
@@ -509,11 +603,13 @@ def _str_zfill_compat(
 
 @t.overload
 def when_then(
-    predicate: Predicate, then: SameArrowT, otherwise: SameArrowT
+    predicate: Predicate, then: SameArrowT, otherwise: SameArrowT | None
 ) -> SameArrowT: ...
 @t.overload
+def when_then(predicate: Predicate, then: ScalarAny, otherwise: ArrowT) -> ArrowT: ...
+@t.overload
 def when_then(
-    predicate: Predicate, then: ArrowT, otherwise: NonNestedLiteral = ...
+    predicate: Predicate, then: ArrowT, otherwise: ScalarAny | NonNestedLiteral = ...
 ) -> ArrowT: ...
 @t.overload
 def when_then(
@@ -527,12 +623,12 @@ def when_then(
     return pc.if_else(predicate, then, otherwise)
 
 
-def any_(native: Incomplete) -> pa.BooleanScalar:
-    return pc.any(native, min_count=0)
+def any_(native: Incomplete, *, ignore_nulls: bool = True) -> pa.BooleanScalar:
+    return pc.any(native, min_count=0, skip_nulls=ignore_nulls)
 
 
-def all_(native: Incomplete) -> pa.BooleanScalar:
-    return pc.all(native, min_count=0)
+def all_(native: Incomplete, *, ignore_nulls: bool = True) -> pa.BooleanScalar:
+    return pc.all(native, min_count=0, skip_nulls=ignore_nulls)
 
 
 def sum_(native: Incomplete) -> NativeScalar:

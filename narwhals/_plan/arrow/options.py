@@ -133,6 +133,20 @@ def rank(
     )
 
 
+def match_substring(pattern: str) -> pc.MatchSubstringOptions:
+    return pc.MatchSubstringOptions(pattern)
+
+
+def split_pattern(by: str, n: int | None = None) -> pc.SplitPatternOptions:
+    """Similar to `str.splitn`.
+
+    Some glue for `max_splits=n - 1`
+    """
+    if n is not None:
+        return pc.SplitPatternOptions(by, max_splits=n - 1)
+    return pc.SplitPatternOptions(by)
+
+
 def _generate_agg() -> Mapping[type[agg.AggExpr], acero.AggregateOptions]:
     from narwhals._plan.expressions import aggregation as agg
 

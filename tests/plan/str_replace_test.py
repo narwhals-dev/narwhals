@@ -1,16 +1,20 @@
 from __future__ import annotations
 
-from typing import Final
+from typing import TYPE_CHECKING, Final
 
 import pytest
 
 import narwhals._plan as nwp
 from tests.plan.utils import assert_equal_data, dataframe
 
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
 A1: Final = ["123abc", "abc456"]
 A2: Final = ["abc abc", "abc456"]
 A3: Final = ["abc abc abc", "456abc"]
 A4: Final = ["Dollar $ign", "literal"]
+A5: Final = [None, "oop"]
 B: Final = ["ghi", "jkl"]
 XFAIL_STR_REPLACE_EXPR = pytest.mark.xfail(
     reason="`replace(value:Expr, n>1)` is not yet supported for `pyarrow`",
@@ -33,8 +37,12 @@ replace_scalar = pytest.mark.parametrize(
 replace_vector = pytest.mark.parametrize(
     ("data", "pattern", "value", "n", "literal", "expected"),
     [
-        (A1, r"abc", nwp.col("b"), 1, False, ["123ghi", "jkl456"]),
-        (A2, r"abc", nwp.col("b"), 1, False, ["ghi abc", "jkl456"]),
+        pytest.param(
+            A1, r"abc", nwp.col("b"), 1, False, ["123ghi", "jkl456"], id="n-1-single"
+        ),
+        pytest.param(
+            A2, r"abc", nwp.col("b"), 1, False, ["ghi abc", "jkl456"], id="n-1-mixed"
+        ),
         pytest.param(
             A3,
             r"abc",
@@ -43,6 +51,7 @@ replace_vector = pytest.mark.parametrize(
             False,
             ["ghi ghi ghi", "456jkl"],
             marks=XFAIL_STR_REPLACE_EXPR,
+            id="replace_all",
         ),
         pytest.param(
             A4,
@@ -52,23 +61,27 @@ replace_vector = pytest.mark.parametrize(
             True,
             ["Dollar ghiign", "literal"],
             marks=XFAIL_STR_REPLACE_EXPR,
+            id="literal-replace_all",
         ),
-        (
+        pytest.param(
             ["dogcatdogcat", "dog dog"],
             "cat",
             nwp.col("b").last(),
             1,
             True,
             ["dogjkldogcat", "dog dog"],
+            id="agg-replacement",
         ),
-        (
+        pytest.param(
             A3,
             r"^abc",
             nwp.col("b").str.to_uppercase(),
             1,
             False,
             ["GHI abc abc", "456abc"],
+            id="transformed-replacement",
         ),
+        pytest.param(A5, r"o", nwp.col("b"), 1, False, [None, "jklop"], id="null-input"),
     ],
 )
 replace_all_scalar = pytest.mark.parametrize(
@@ -107,13 +120,13 @@ def test_str_replace_scalar(
 
 @replace_vector
 def test_str_replace_vector(
-    data: list[str],
+    data: Sequence[str | None],
     pattern: str,
     value: nwp.Expr,
     n: int,
     *,
     literal: bool,
-    expected: list[str],
+    expected: Sequence[str | None],
 ) -> None:
     df = dataframe({"a": data, "b": B})
     result = df.select(nwp.col("a").str.replace(pattern, value, n=n, literal=literal))
