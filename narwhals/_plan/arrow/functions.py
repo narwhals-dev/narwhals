@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     import datetime as dt
     from collections.abc import Iterable, Mapping
 
-    from typing_extensions import TypeAlias, TypeIs
+    from typing_extensions import TypeAlias, TypeIs, TypeVarTuple, Unpack
 
     from narwhals._arrow.typing import Incomplete, PromoteOptions
     from narwhals._plan.arrow.acero import Field
@@ -87,6 +87,8 @@ if TYPE_CHECKING:
         NonNestedLiteral,
         PythonLiteral,
     )
+
+    Ts = TypeVarTuple("Ts")
 
 BACKEND_VERSION = Implementation.PYARROW._backend_version()
 """Static backend version for `pyarrow`."""
@@ -509,6 +511,15 @@ def str_split(native: ArrowAny, by: str, *, literal: bool = True) -> Arrow[ListS
 
 @t.overload
 def str_splitn(
+    native: ChunkedOrScalarAny,
+    by: str,
+    n: int,
+    *,
+    literal: bool = ...,
+    as_struct: bool = ...,
+) -> ChunkedOrScalar[ListScalar]: ...
+@t.overload
+def str_splitn(
     native: ArrayAny, by: str, n: int, *, literal: bool = ..., as_struct: bool = ...
 ) -> pa.ListArray[Any]: ...
 @t.overload
@@ -581,15 +592,11 @@ def str_replace_vector(
     if not any_(has_match).as_py():
         # fastpath, no work to do
         return native
-    tbl_matches = pa.Table.from_arrays([native, replacements], ["0", "1"]).filter(
-        has_match
-    )
-    matches = tbl_matches.column(0)
-    match_replacements = tbl_matches.column(1)
+    match, match_replacements = filter_arrays(has_match, native, replacements)
     if n is None or n == -1:
-        list_split_by = str_split(matches, pattern, literal=literal)
+        list_split_by = str_split(match, pattern, literal=literal)
     else:
-        list_split_by = str_splitn(matches, pattern, n + 1, literal=literal)
+        list_split_by = str_splitn(match, pattern, n + 1, literal=literal)
     replaced = list_join(list_split_by, match_replacements)
     if all_(has_match, ignore_nulls=False).as_py():
         return chunked_array(replaced)
@@ -1289,3 +1296,19 @@ def _is_into_pyarrow_schema(obj: Mapping[Any, Any]) -> TypeIs[Mapping[str, DataT
         and isinstance(first[0], str)
         and isinstance(first[1], pa.DataType)
     )
+
+
+def filter_arrays(
+    predicate: ChunkedOrArray[BooleanScalar] | pc.Expression,
+    *arrays: Unpack[Ts],
+    ignore_nulls: bool = True,
+) -> tuple[Unpack[Ts]]:
+    """Apply the same filter to multiple arrays, returning them independently.
+
+    Note:
+        The typing here is a minefield. You'll get an `*arrays`-length `tuple[ChunkedArray, ...]`.
+    """
+    table: Incomplete = pa.Table.from_arrays
+    tmp = [str(i) for i in range(len(arrays))]
+    result = table(arrays, tmp).filter(predicate, "drop" if ignore_nulls else "emit_null")
+    return t.cast("tuple[Unpack[Ts]]", tuple(result.columns))
