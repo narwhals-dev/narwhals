@@ -577,19 +577,23 @@ def str_replace_vector(
     literal: bool = False,
     n: int = 1,
 ) -> ChunkedArrayAny:
-    if n == 1:
-        return _str_replace_vector_n_1(native, pattern, replacements, literal=literal)
+    n_: Literal[1] | None
     if n == -1:
-        return _str_replace_all_vector(native, pattern, replacements, literal=literal)
-    msg = f"`pyarrow` currently only supports `str.replace(value: Expr, n=1)`, got {n=} "
-    raise NotImplementedError(msg)
+        n_ = None
+    elif n == 1:
+        n_ = 1
+    else:
+        msg = f"`pyarrow` currently only supports `str.replace(value: Expr, n=1)`, got {n=} "
+        raise NotImplementedError(msg)
+    return _str_replace_vector(native, pattern, replacements, n_, literal=literal)
 
 
-# TODO @dangotbanned: Is this worth keeping, now that `replace_all` is simpler?
-def _str_replace_vector_n_1(
+def _str_replace_vector(
     native: ChunkedArrayAny,
     pattern: str,
     replacements: ChunkedArrayAny,
+    # TODO @dangotbanned: Might be simple to do `n>1` now?
+    n: Literal[1] | None = None,
     *,
     literal: bool = False,
 ) -> ChunkedArrayAny:
@@ -600,42 +604,16 @@ def _str_replace_vector_n_1(
     tbl_matches = pa.Table.from_arrays([native, replacements], ["0", "1"]).filter(
         has_match
     )
-    list_split_by = str_splitn(
-        array(tbl_matches.column(0)), pattern, n=2, literal=literal
-    )
-    list_flat = list_split_by.values
-    needs_replacing = eq(list_flat, lit("", list_flat.type))
-    # Needs better name
-    replaced_wrong_shape = replace_with_mask(
-        list_flat, needs_replacing, tbl_matches.column(1)
-    )
-    fully_replaced = concat_str(replaced_wrong_shape[0::2], replaced_wrong_shape[1::2])
+    matches = tbl_matches.column(0)
+    match_replacements = tbl_matches.column(1)
+    if n is None:
+        list_split_by = str_split(matches, pattern, literal=literal)
+    else:
+        list_split_by = str_splitn(matches, pattern, n + 1, literal=literal)
+    replaced = list_join(list_split_by, match_replacements)
     if all_(has_match, ignore_nulls=False).as_py():
-        return chunked_array(fully_replaced)
-    return replace_with_mask(native, has_match, fully_replaced)
-
-
-# TODO @dangotbanned: Share more with `n=1`
-def _str_replace_all_vector(
-    native: ChunkedArrayAny,
-    pattern: str,
-    replacements: ChunkedArrayAny,
-    *,
-    literal: bool = False,
-) -> ChunkedArrayAny:
-    has_match = str_contains(native, pattern, literal=literal)
-    if not any_(has_match).as_py():
-        # fastpath, no work to do
-        return native
-    tbl_matches = pa.Table.from_arrays([native, replacements], ["0", "1"]).filter(
-        has_match
-    )
-    # here we can have unequal-length lists
-    list_split_by = str_split(array(tbl_matches.column(0)), pattern, literal=literal)
-    fully_replaced = list_join(list_split_by, tbl_matches.column(1))
-    if all_(has_match, ignore_nulls=False).as_py():
-        return chunked_array(fully_replaced)
-    return replace_with_mask(native, has_match, fully_replaced)
+        return chunked_array(replaced)
+    return replace_with_mask(native, has_match, array(replaced))
 
 
 def str_zfill(native: ChunkedOrScalarAny, length: int) -> ChunkedOrScalarAny:
