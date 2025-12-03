@@ -17,10 +17,6 @@ A4: Final = ["Dollar $ign", "literal"]
 A5: Final = [None, "oop"]
 B: Final = ["ghi", "jkl"]
 
-XFAIL_STR_REPLACE_ALL_EXPR = pytest.mark.xfail(
-    reason="`replace_all(value:Expr)` is not yet supported for `pyarrow`",
-    raises=NotImplementedError,
-)
 
 replace_scalar = pytest.mark.parametrize(
     ("data", "pattern", "value", "n", "literal", "expected"),
@@ -88,6 +84,8 @@ replace_all_scalar = pytest.mark.parametrize(
         (A4, r"$", "S", True, ["Dollar Sign", "literal"]),
     ],
 )
+
+# TODO @dangotbanned: Cover more than these cases, it's just a repeat of `-1`
 replace_all_vector = pytest.mark.parametrize(
     ("data", "pattern", "value", "literal", "expected"),
     [
@@ -137,11 +135,10 @@ def test_str_replace_all_scalar(
     assert_equal_data(result, {"a": expected})
 
 
-@XFAIL_STR_REPLACE_ALL_EXPR
 @replace_all_vector
 def test_str_replace_all_vector(
     data: list[str], pattern: str, value: str, *, literal: bool, expected: list[str]
-) -> None:  # pragma: no cover
+) -> None:
     df = dataframe({"a": data, "b": B})
     result = df.select(
         nwp.col("a").str.replace_all(pattern, nwp.col(value), literal=literal)

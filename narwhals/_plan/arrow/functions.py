@@ -544,7 +544,12 @@ def str_replace(
     return fn(native, pattern, replacement=value, max_replacements=n)
 
 
-# NOTE: Starting with the "easiest" cases first
+def str_replace_all(
+    native: Incomplete, pattern: str, value: str, *, literal: bool = False
+) -> Incomplete:
+    return str_replace(native, pattern, value, literal=literal, n=-1)
+
+
 def str_replace_vector(
     native: ChunkedArrayAny,
     pattern: str,
@@ -591,7 +596,6 @@ def _str_replace_vector_n_1(
     return replace_with_mask(native, has_match, fully_replaced)
 
 
-# TODO @dangotbanned: Link `str.replace_all` up to this
 # TODO @dangotbanned: Share more with `n=1`
 def _str_replace_all_vector(
     native: ChunkedArrayAny,
@@ -613,12 +617,6 @@ def _str_replace_all_vector(
     if all_(has_match, ignore_nulls=False).as_py():
         return chunked_array(fully_replaced)
     return replace_with_mask(native, has_match, fully_replaced)
-
-
-def str_replace_all(
-    native: Incomplete, pattern: str, value: str, *, literal: bool = False
-) -> Incomplete:
-    return str_replace(native, pattern, value, literal=literal, n=-1)
 
 
 def str_zfill(native: ChunkedOrScalarAny, length: int) -> ChunkedOrScalarAny:

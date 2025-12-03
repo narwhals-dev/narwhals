@@ -7,7 +7,7 @@ import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._arrow.utils import narwhals_to_native_dtype
-from narwhals._plan import expressions as ir
+from narwhals._plan import common, expressions as ir
 from narwhals._plan._guards import (
     is_function_expr,
     is_iterable_reject,
@@ -971,10 +971,10 @@ class ArrowStringNamespace(
     def replace_all(
         self, node: FExpr[strings.ReplaceAll], frame: Frame, name: str
     ) -> Expr | Scalar:
-        func = node.function
-        pattern, value, literal = (func.pattern, func.value, func.literal)
-        replace = fn.str_replace_all
-        return self.unary(replace, pattern, value, literal=literal)(node, frame, name)
+        rewrite: FExpr[Any] = common.replace(
+            node, function=node.function.to_replace_n(-1)
+        )
+        return self.replace(rewrite, frame, name)
 
     def split(self, node: FExpr[strings.Split], frame: Frame, name: str) -> Expr | Scalar:
         return self.unary(fn.str_split, node.function.by)(node, frame, name)
@@ -1006,7 +1006,6 @@ class ArrowStringNamespace(
 
     to_date = not_implemented()
     to_datetime = not_implemented()
-    replace_all_expr = not_implemented()
 
 
 class ArrowStructNamespace(

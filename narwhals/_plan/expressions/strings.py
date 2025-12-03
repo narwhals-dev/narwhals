@@ -52,14 +52,6 @@ class Replace(StringFunction):
 
 
 class ReplaceAll(StringFunction):
-    __slots__ = ("literal", "pattern", "value")
-    pattern: str
-    value: str
-    literal: bool
-
-
-# TODO @dangotbanned: Undo the (`Expr`) split and just have `ReplaceAll`
-class ReplaceAllExpr(StringFunction):
     """N-ary (expr, value)."""
 
     def unwrap_input(
@@ -67,6 +59,9 @@ class ReplaceAllExpr(StringFunction):
     ) -> tuple[ExprIR, ExprIR]:  # pragma: no cover
         expr, value = node.input
         return expr, value
+
+    def to_replace_n(self, n: int) -> Replace:
+        return Replace(pattern=self.pattern, literal=self.literal, n=n)
 
     __slots__ = ("literal", "pattern")
     pattern: str
@@ -122,10 +117,8 @@ class IRStringNamespace(IRNamespace):
     def replace(self, pattern: str, *, literal: bool = False, n: int = 1) -> Replace:
         return Replace(pattern=pattern, literal=literal, n=n)
 
-    def replace_all(
-        self, pattern: str, value: str, *, literal: bool = False
-    ) -> ReplaceAll:
-        return ReplaceAll(pattern=pattern, value=value, literal=literal)
+    def replace_all(self, pattern: str, *, literal: bool = False) -> ReplaceAll:
+        return ReplaceAll(pattern=pattern, literal=literal)
 
     def strip_chars(
         self, characters: str | None = None
@@ -166,14 +159,11 @@ class ExprStringNamespace(ExprNamespace[IRStringNamespace]):
         replace = self._ir.replace(pattern, literal=literal, n=n)
         return self._expr._from_ir(replace.to_function_expr(self._expr._ir, other))
 
-    # TODO @dangotbanned: Support `value: IntoExpr`
     def replace_all(
         self, pattern: str, value: str | Expr, *, literal: bool = False
     ) -> Expr:
-        if isinstance(value, str):
-            return self._with_unary(self._ir.replace_all(pattern, value, literal=literal))
         other = parse_into_expr_ir(value, str_as_lit=True)
-        replace = ReplaceAllExpr(pattern=pattern, literal=literal)
+        replace = self._ir.replace_all(pattern, literal=literal)
         return self._expr._from_ir(replace.to_function_expr(self._expr._ir, other))
 
     def strip_chars(self, characters: str | None = None) -> Expr:  # pragma: no cover
