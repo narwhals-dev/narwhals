@@ -369,30 +369,49 @@ def list_get(native: ArrowAny, index: int) -> ArrowAny:
 
 @t.overload
 def list_join(
-    native: ChunkedList[StringType], separator: Arrow[StringScalar] | str
+    native: ChunkedList[StringType],
+    separator: Arrow[StringScalar] | str,
+    *,
+    ignore_nulls: bool = ...,
 ) -> ChunkedArray[StringScalar]: ...
 @t.overload
 def list_join(
-    native: ListArray[StringType], separator: Arrow[StringScalar] | str
+    native: ListArray[StringType],
+    separator: Arrow[StringScalar] | str,
+    *,
+    ignore_nulls: bool = ...,
 ) -> pa.StringArray: ...
 @t.overload
 def list_join(
-    native: ListScalar[StringType], separator: Arrow[StringScalar] | str
+    native: ListScalar[StringType],
+    separator: Arrow[StringScalar] | str,
+    *,
+    ignore_nulls: bool = ...,
 ) -> pa.StringScalar: ...
-def list_join(native: ArrowAny, separator: Arrow[StringScalar] | str) -> ArrowAny:
+def list_join(
+    native: ArrowAny, separator: Arrow[StringScalar] | str, *, ignore_nulls: bool = False
+) -> ArrowAny:
     """Join all string items in a sublist and place a separator between them.
 
     Each list of values in the first input is joined using each second input as separator.
     If any input list is null or contains a null, the corresponding output will be null.
     """
+    if ignore_nulls:
+        # NOTE: `polars` default is `True`, will need to handle that if this becomes api
+        msg = "TODO: `ArrowExpr.list.join(ignore_nulls=True)`"
+        raise NotImplementedError(msg)
     return pc.binary_join(native, separator)
 
 
-def str_join(native: Arrow[StringScalar], separator: str) -> StringScalar:
+def str_join(
+    native: Arrow[StringScalar], separator: str, *, ignore_nulls: bool = True
+) -> StringScalar:
     """Vertically concatenate the string values in the column to a single string value."""
     if isinstance(native, pa.Scalar):
         # already joined
         return native
+    if ignore_nulls and native.null_count:
+        native = native.drop_null()
     offsets = [0, len(native)]
     scalar = pa.ListArray.from_arrays(offsets, array(native))[0]
     return list_join(scalar, separator)
