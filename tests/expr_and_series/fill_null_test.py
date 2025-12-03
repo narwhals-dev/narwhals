@@ -452,9 +452,14 @@ def test_fill_null_expr_limits(
     strategy: FillNullStrategy,
     limit: int,
     expected: list[int | None],
+    request: pytest.FixtureRequest,
 ) -> None:
     if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 10):
         pytest.skip()
+
+    if "cudf" in str(constructor_eager):
+        reason = "The limit keyword is not supported"
+        request.applymarker(pytest.mark.xfail(reason=reason))
 
     data = {"a": values}
     df = nw.from_native(constructor_eager(data))
