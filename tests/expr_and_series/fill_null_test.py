@@ -446,7 +446,7 @@ def test_fill_null_strategies_with_partition_by(
         ([1, None, None, 2, None, None, 3], "backward", 1, [1, None, 2, 2, None, 3, 3]),
     ],
 )
-def test_issue_3327(
+def test_fill_null_expr_limits(
     constructor_eager: ConstructorEager,
     values: list[int | None],
     strategy: FillNullStrategy,
