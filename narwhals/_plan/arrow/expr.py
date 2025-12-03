@@ -950,16 +950,6 @@ class ArrowStringNamespace(
         self, node: FExpr[strings.Replace], frame: Frame, name: str
     ) -> Expr | Scalar:
         func = node.function
-        pattern, value, literal, n = (func.pattern, func.value, func.literal, func.n)
-        replace = fn.str_replace
-        return self.unary(replace, pattern, value, literal=literal, n=n)(
-            node, frame, name
-        )
-
-    def replace_expr(
-        self, node: FExpr[strings.ReplaceExpr], frame: Frame, name: str
-    ) -> Expr | Scalar:
-        func = node.function
         pattern, literal, n = (func.pattern, func.literal, func.n)
         expr, other = func.unwrap_input(node)
         prev = expr.dispatch(self.compliant, frame, name)

@@ -47,9 +47,6 @@ class ExprStringNamespace(Protocol[FrameT_contra, ExprT_co]):
     def replace_all(
         self, node: FExpr[strings.ReplaceAll], frame: FrameT_contra, name: str
     ) -> ExprT_co: ...
-    def replace_expr(
-        self, node: FExpr[strings.ReplaceExpr], frame: FrameT_contra, name: str
-    ) -> ExprT_co: ...
     def replace_all_expr(
         self, node: FExpr[strings.ReplaceAllExpr], frame: FrameT_contra, name: str
     ) -> ExprT_co: ...

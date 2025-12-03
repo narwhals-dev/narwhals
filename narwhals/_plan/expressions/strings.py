@@ -39,16 +39,6 @@ class EndsWith(StringFunction):
 
 
 class Replace(StringFunction):
-    __slots__ = ("literal", "n", "pattern", "value")
-    pattern: str
-    value: str
-    literal: bool
-    n: int
-
-
-# TODO @dangotbanned: Undo the (`Expr`) split and just have `Replace`
-# This needs to handle scalars *anyway*, so no point in separating
-class ReplaceExpr(StringFunction):
     """N-ary (expr, value)."""
 
     def unwrap_input(self, node: FExpr[Self], /) -> tuple[ExprIR, ExprIR]:
@@ -129,10 +119,8 @@ class IRStringNamespace(IRNamespace):
     ends_with: ClassVar = EndsWith
     zfill: ClassVar = ZFill
 
-    def replace(
-        self, pattern: str, value: str, *, literal: bool = False, n: int = 1
-    ) -> Replace:
-        return Replace(pattern=pattern, value=value, literal=literal, n=n)
+    def replace(self, pattern: str, *, literal: bool = False, n: int = 1) -> Replace:
+        return Replace(pattern=pattern, literal=literal, n=n)
 
     def replace_all(
         self, pattern: str, value: str, *, literal: bool = False
@@ -171,16 +159,11 @@ class ExprStringNamespace(ExprNamespace[IRStringNamespace]):
     def len_chars(self) -> Expr:
         return self._with_unary(self._ir.len_chars())
 
-    # TODO @dangotbanned: Support `value: IntoExpr`
     def replace(
         self, pattern: str, value: str | Expr, *, literal: bool = False, n: int = 1
     ) -> Expr:
-        if isinstance(value, str):
-            return self._with_unary(
-                self._ir.replace(pattern, value, literal=literal, n=n)
-            )
         other = parse_into_expr_ir(value, str_as_lit=True)
-        replace = ReplaceExpr(pattern=pattern, literal=literal, n=n)
+        replace = self._ir.replace(pattern, literal=literal, n=n)
         return self._expr._from_ir(replace.to_function_expr(self._expr._ir, other))
 
     # TODO @dangotbanned: Support `value: IntoExpr`
