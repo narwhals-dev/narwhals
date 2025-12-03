@@ -575,27 +575,7 @@ def str_replace_vector(
     replacements: ChunkedArrayAny,
     *,
     literal: bool = False,
-    n: int = 1,
-) -> ChunkedArrayAny:
-    n_: Literal[1] | None
-    if n == -1:
-        n_ = None
-    elif n == 1:
-        n_ = 1
-    else:
-        msg = f"`pyarrow` currently only supports `str.replace(value: Expr, n=1)`, got {n=} "
-        raise NotImplementedError(msg)
-    return _str_replace_vector(native, pattern, replacements, n_, literal=literal)
-
-
-def _str_replace_vector(
-    native: ChunkedArrayAny,
-    pattern: str,
-    replacements: ChunkedArrayAny,
-    # TODO @dangotbanned: Might be simple to do `n>1` now?
-    n: Literal[1] | None = None,
-    *,
-    literal: bool = False,
+    n: int | None = 1,
 ) -> ChunkedArrayAny:
     has_match = str_contains(native, pattern, literal=literal)
     if not any_(has_match).as_py():
@@ -606,7 +586,7 @@ def _str_replace_vector(
     )
     matches = tbl_matches.column(0)
     match_replacements = tbl_matches.column(1)
-    if n is None:
+    if n is None or n == -1:
         list_split_by = str_split(matches, pattern, literal=literal)
     else:
         list_split_by = str_splitn(matches, pattern, n + 1, literal=literal)

@@ -44,9 +44,6 @@ replace_vector = pytest.mark.parametrize(
             False,
             ["ghibc ghibc abc", "456jklbc"],
             id="n-2-mixed",
-            marks=pytest.mark.xfail(
-                reason="TODO: str.replace(value: Expr, n>1)", raises=NotImplementedError
-            ),
         ),
         pytest.param(
             A3,
