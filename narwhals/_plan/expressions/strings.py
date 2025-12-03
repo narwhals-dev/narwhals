@@ -46,8 +46,8 @@ class Replace(StringFunction):
     n: int
 
 
-# NOTE: Alternatively, do something like `list.contains` (always wrapping)
-# There's a much bigger divide between backend-support though, so opting out is easier this way
+# TODO @dangotbanned: Undo the (`Expr`) split and just have `Replace`
+# This needs to handle scalars *anyway*, so no point in separating
 class ReplaceExpr(StringFunction):
     """N-ary (expr, value)."""
 
@@ -68,6 +68,7 @@ class ReplaceAll(StringFunction):
     literal: bool
 
 
+# TODO @dangotbanned: Undo the (`Expr`) split and just have `ReplaceAll`
 class ReplaceAllExpr(StringFunction):
     """N-ary (expr, value)."""
 

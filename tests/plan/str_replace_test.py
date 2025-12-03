@@ -16,10 +16,7 @@ A3: Final = ["abc abc abc", "456abc"]
 A4: Final = ["Dollar $ign", "literal"]
 A5: Final = [None, "oop"]
 B: Final = ["ghi", "jkl"]
-XFAIL_STR_REPLACE_EXPR = pytest.mark.xfail(
-    reason="`replace(value:Expr, n>1)` is not yet supported for `pyarrow`",
-    raises=NotImplementedError,
-)
+
 XFAIL_STR_REPLACE_ALL_EXPR = pytest.mark.xfail(
     reason="`replace_all(value:Expr)` is not yet supported for `pyarrow`",
     raises=NotImplementedError,
@@ -50,7 +47,6 @@ replace_vector = pytest.mark.parametrize(
             -1,
             False,
             ["ghi ghi ghi", "456jkl"],
-            marks=XFAIL_STR_REPLACE_EXPR,
             id="replace_all",
         ),
         pytest.param(
@@ -60,7 +56,6 @@ replace_vector = pytest.mark.parametrize(
             -1,
             True,
             ["Dollar ghiign", "literal"],
-            marks=XFAIL_STR_REPLACE_EXPR,
             id="literal-replace_all",
         ),
         pytest.param(

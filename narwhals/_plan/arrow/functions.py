@@ -367,6 +367,37 @@ def list_get(native: ArrowAny, index: int) -> ArrowAny:
     return result
 
 
+@t.overload
+def list_join(
+    native: ChunkedList[StringType], separator: Arrow[StringScalar] | str
+) -> ChunkedArray[StringScalar]: ...
+@t.overload
+def list_join(
+    native: ListArray[StringType], separator: Arrow[StringScalar] | str
+) -> pa.StringArray: ...
+@t.overload
+def list_join(
+    native: ListScalar[StringType], separator: Arrow[StringScalar] | str
+) -> pa.StringScalar: ...
+def list_join(native: ArrowAny, separator: Arrow[StringScalar] | str) -> ArrowAny:
+    """Join all string items in a sublist and place a separator between them.
+
+    Each list of values in the first input is joined using each second input as separator.
+    If any input list is null or contains a null, the corresponding output will be null.
+    """
+    return pc.binary_join(native, separator)
+
+
+def str_join(native: Arrow[StringScalar], separator: str) -> StringScalar:
+    """Vertically concatenate the string values in the column to a single string value."""
+    if isinstance(native, pa.Scalar):
+        # already joined
+        return native
+    offsets = [0, len(native)]
+    scalar = pa.ListArray.from_arrays(offsets, array(native))[0]
+    return list_join(scalar, separator)
+
+
 def str_len_chars(native: ChunkedOrScalarAny) -> ChunkedOrScalarAny:
     len_chars: Incomplete = pc.utf8_length
     result: ChunkedOrScalarAny = len_chars(native)
@@ -524,11 +555,13 @@ def str_replace_vector(
 ) -> ChunkedArrayAny:
     if n == 1:
         return _str_replace_vector_n_1(native, pattern, replacements, literal=literal)
+    if n == -1:
+        return _str_replace_all_vector(native, pattern, replacements, literal=literal)
     msg = f"`pyarrow` currently only supports `str.replace(value: Expr, n=1)`, got {n=} "
     raise NotImplementedError(msg)
 
 
-# TODO @dangotbanned: Super in need of a tidy
+# TODO @dangotbanned: Is this worth keeping, now that `replace_all` is simpler?
 def _str_replace_vector_n_1(
     native: ChunkedArrayAny,
     pattern: str,
@@ -540,13 +573,43 @@ def _str_replace_vector_n_1(
     if not any_(has_match).as_py():
         # fastpath, no work to do
         return native
-    table = pa.Table.from_arrays([native, replacements], ["0", "1"]).filter(has_match)
+    tbl_matches = pa.Table.from_arrays([native, replacements], ["0", "1"]).filter(
+        has_match
+    )
+    list_split_by = str_splitn(
+        array(tbl_matches.column(0)), pattern, n=2, literal=literal
+    )
+    list_flat = list_split_by.values
+    needs_replacing = eq(list_flat, lit("", list_flat.type))
     # Needs better name
-    list_todo = str_splitn(array(table.column(0)), pattern, n=2, literal=literal).values
-    mask_replace = eq(list_todo, lit("", list_todo.type))
-    # Needs better name
-    replaced_wrong_shape = replace_with_mask(list_todo, mask_replace, table.column(1))
+    replaced_wrong_shape = replace_with_mask(
+        list_flat, needs_replacing, tbl_matches.column(1)
+    )
     fully_replaced = concat_str(replaced_wrong_shape[0::2], replaced_wrong_shape[1::2])
+    if all_(has_match, ignore_nulls=False).as_py():
+        return chunked_array(fully_replaced)
+    return replace_with_mask(native, has_match, fully_replaced)
+
+
+# TODO @dangotbanned: Link `str.replace_all` up to this
+# TODO @dangotbanned: Share more with `n=1`
+def _str_replace_all_vector(
+    native: ChunkedArrayAny,
+    pattern: str,
+    replacements: ChunkedArrayAny,
+    *,
+    literal: bool = False,
+) -> ChunkedArrayAny:
+    has_match = str_contains(native, pattern, literal=literal)
+    if not any_(has_match).as_py():
+        # fastpath, no work to do
+        return native
+    tbl_matches = pa.Table.from_arrays([native, replacements], ["0", "1"]).filter(
+        has_match
+    )
+    # here we can have unequal-length lists
+    list_split_by = str_split(array(tbl_matches.column(0)), pattern, literal=literal)
+    fully_replaced = list_join(list_split_by, tbl_matches.column(1))
     if all_(has_match, ignore_nulls=False).as_py():
         return chunked_array(fully_replaced)
     return replace_with_mask(native, has_match, fully_replaced)
