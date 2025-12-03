@@ -6,7 +6,7 @@ from typing import Any
 import pytest
 
 import narwhals as nw
-from tests.utils import POLARS_VERSION, ConstructorEager, assert_equal_data
+from tests.utils import ConstructorEager, assert_equal_data
 
 
 @pytest.mark.parametrize(("row", "column", "expected"), [(0, 2, 7), (1, "z", 8)])
@@ -30,9 +30,7 @@ def test_item(
         (
             None,
             None,
-            "can only call `.item()` if the dataframe is of shape (1, 1)"
-            if POLARS_VERSION < (1, 36)
-            else 'can only call `.item()` without "row" or "column" values if the DataFrame has a single element; shape=(3, 3)',
+            'can only call `.item()` without "row" or "column" values if the DataFrame has a single element; shape=(3, 3)',
         ),
     ],
 )
