@@ -19,7 +19,8 @@ for each attempted `@overload` match.
 
 from __future__ import annotations
 
-# mypy: disallow-any-generics=false
+# Using pyright's assert type instead
+# mypy: disallow-any-generics=false, disable-error-code="assert-type"
 from contextlib import nullcontext as does_not_raise
 from importlib.util import find_spec
 from itertools import chain
@@ -343,6 +344,20 @@ def test_dataframe_recursive() -> None:
         assert_type(nw_frame_depth_2, nw.DataFrame[Any])
         assert_type(nw_frame_early_return, nw.DataFrame[pl.DataFrame])
 
+        # NOTE: Invalid parameter combinations
+        # Review runtime in https://github.com/narwhals-dev/narwhals/issues/3226
+        nw.from_native(nw_frame, series_only=True)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, eager_only=True, series_only=True)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, eager_only=True, series_only=True, allow_series=False)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, eager_only=True, series_only=True, allow_series=None)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, eager_only=True, series_only=True, allow_series=True)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, eager_only=False, series_only=True, allow_series=False)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, eager_only=False, series_only=True, allow_series=None)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, eager_only=False, series_only=True, allow_series=True)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, series_only=True, allow_series=False)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, series_only=True, allow_series=None)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, series_only=True, allow_series=True)  # type: ignore[call-overload]
+
 
 def test_lazyframe_recursive() -> None:
     pytest.importorskip("polars")
@@ -363,6 +378,25 @@ def test_lazyframe_recursive() -> None:
         # NOTE: Checking that the type is `LazyFrame[Unknown]`
         assert_type(nw_frame_depth_2, nw.LazyFrame[Any])
         assert_type(nw_frame_early_return, nw.LazyFrame[pl.LazyFrame])
+
+        # NOTE: Invalid parameter combinations
+        # Review runtime in https://github.com/narwhals-dev/narwhals/issues/3226
+        nw.from_native(nw_frame, eager_only=True)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, series_only=True)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, eager_only=True, series_only=True)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, eager_only=True, series_only=False)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, eager_only=True, series_only=True, allow_series=False)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, eager_only=True, series_only=True, allow_series=None)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, eager_only=True, series_only=True, allow_series=True)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, eager_only=True, series_only=False, allow_series=False)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, eager_only=True, series_only=False, allow_series=None)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, eager_only=True, series_only=False, allow_series=True)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, eager_only=False, series_only=True, allow_series=False)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, eager_only=False, series_only=True, allow_series=None)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, eager_only=False, series_only=True, allow_series=True)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, series_only=True, allow_series=False)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, series_only=True, allow_series=None)  # type: ignore[call-overload]
+        nw.from_native(nw_frame, series_only=True, allow_series=True)  # type: ignore[call-overload]
 
 
 def test_series_recursive() -> None:
@@ -385,6 +419,26 @@ def test_series_recursive() -> None:
         # NOTE: Checking that the type is `Series[Unknown]`
         assert_type(nw_series_depth_2, nw.Series[Any])
         assert_type(nw_series_early_return, nw.Series[pl.Series])
+
+        # NOTE: Invalid parameter combinations
+        # Review runtime in https://github.com/narwhals-dev/narwhals/issues/3226
+        nw.from_native(nw_series, eager_only=True)  # type: ignore[call-overload]
+        nw.from_native(nw_series, eager_only=False)  # type: ignore[call-overload]
+        nw.from_native(nw_series, series_only=False)  # type: ignore[call-overload]
+        nw.from_native(nw_series, allow_series=False)  # type: ignore[call-overload]
+        nw.from_native(nw_series, allow_series=None)  # type: ignore[call-overload]
+        nw.from_native(nw_series, eager_only=True, series_only=False)  # type: ignore[call-overload]
+        nw.from_native(nw_series, eager_only=True, allow_series=False)  # type: ignore[call-overload]
+        nw.from_native(nw_series, eager_only=True, allow_series=None)  # type: ignore[call-overload]
+        nw.from_native(nw_series, eager_only=False, series_only=False)  # type: ignore[call-overload]
+        nw.from_native(nw_series, eager_only=False, allow_series=False)  # type: ignore[call-overload]
+        nw.from_native(nw_series, eager_only=False, allow_series=None)  # type: ignore[call-overload]
+        nw.from_native(nw_series, series_only=False, allow_series=False)  # type: ignore[call-overload]
+        nw.from_native(nw_series, series_only=False, allow_series=None)  # type: ignore[call-overload]
+        nw.from_native(nw_series, eager_only=True, series_only=False, allow_series=False)  # type: ignore[call-overload]
+        nw.from_native(nw_series, eager_only=True, series_only=False, allow_series=None)  # type: ignore[call-overload]
+        nw.from_native(nw_series, eager_only=False, series_only=False, allow_series=False)  # type: ignore[call-overload]
+        nw.from_native(nw_series, eager_only=False, series_only=False, allow_series=None)  # type: ignore[call-overload]
 
 
 def test_from_native_invalid_keywords() -> None:
@@ -436,26 +490,288 @@ def test_pyspark_connect_deps_2517(constructor: Constructor) -> None:  # pragma:
     nw.from_native(spark.createDataFrame([(1,)], ["a"]))
 
 
-@pytest.mark.parametrize(
-    ("eager_only", "pass_through", "context"),
-    [
-        (False, False, does_not_raise()),
-        (False, True, does_not_raise()),
-        (True, True, does_not_raise()),
-        (True, False, pytest.raises(TypeError, match="Cannot only use")),
-    ],
-)
-def test_eager_only_pass_through_main(
-    constructor: Constructor, *, eager_only: bool, pass_through: bool, context: Any
-) -> None:
+def test_eager_only_pass_through_main(constructor: Constructor) -> None:
     if not any(s in str(constructor) for s in ("pyspark", "dask", "ibis", "duckdb")):
         pytest.skip(reason="Non lazy or polars")
 
     df = constructor(data)
 
-    with context:
-        res = nw.from_native(df, eager_only=eager_only, pass_through=pass_through)  # type: ignore[call-overload]
-        if eager_only and pass_through:
-            assert not isinstance(res, nw.LazyFrame)
-        else:
-            assert isinstance(res, nw.LazyFrame)
+    r1 = nw.from_native(df, eager_only=False, pass_through=False)
+    r2 = nw.from_native(df, eager_only=False, pass_through=True)
+    r3 = nw.from_native(df, eager_only=True, pass_through=True)
+
+    assert isinstance(r1, nw.LazyFrame)
+    assert isinstance(r2, nw.LazyFrame)
+    assert not isinstance(r3, nw.LazyFrame)
+
+    with pytest.raises(TypeError, match=r"Cannot.+use.+eager_only"):
+        nw.from_native(df, eager_only=True, pass_through=False)  # type: ignore[type-var]
+
+
+def test_from_native_lazyframe_exhaustive() -> None:  # noqa: PLR0914, PLR0915
+    pytest.importorskip("polars")
+    pytest.importorskip("typing_extensions")
+
+    import polars as pl
+    from typing_extensions import assert_type
+
+    pl_ldf = pl.LazyFrame(data)
+
+    pl_1 = nw.from_native(pl_ldf)
+    pl_2 = nw.from_native(pl_ldf, pass_through=False)
+    pl_3 = nw.from_native(pl_ldf, pass_through=True)
+    pl_4 = nw.from_native(pl_ldf, eager_only=False)
+    pl_5 = nw.from_native(pl_ldf, series_only=False)
+    pl_6 = nw.from_native(pl_ldf, allow_series=False)
+    pl_7 = nw.from_native(pl_ldf, allow_series=None)
+    pl_8 = nw.from_native(pl_ldf, allow_series=True)
+    pl_9 = nw.from_native(pl_ldf, pass_through=False, eager_only=False)
+    pl_10 = nw.from_native(pl_ldf, pass_through=True, eager_only=False)
+    pl_11 = nw.from_native(
+        pl_ldf, pass_through=False, eager_only=False, series_only=False
+    )
+    pl_12 = nw.from_native(pl_ldf, pass_through=True, eager_only=False, series_only=False)
+    pl_13 = nw.from_native(
+        pl_ldf, pass_through=False, eager_only=False, allow_series=False
+    )
+    pl_14 = nw.from_native(
+        pl_ldf, pass_through=True, eager_only=False, allow_series=False
+    )
+    pl_15 = nw.from_native(
+        pl_ldf,
+        pass_through=False,
+        eager_only=False,
+        series_only=False,
+        allow_series=False,
+    )
+    pl_16 = nw.from_native(
+        pl_ldf, pass_through=True, eager_only=False, series_only=False, allow_series=False
+    )
+    pl_17 = nw.from_native(
+        pl_ldf, pass_through=False, eager_only=False, allow_series=None
+    )
+    pl_18 = nw.from_native(pl_ldf, pass_through=True, eager_only=False, allow_series=None)
+    pl_19 = nw.from_native(
+        pl_ldf, pass_through=False, eager_only=False, series_only=False, allow_series=None
+    )
+    pl_20 = nw.from_native(
+        pl_ldf, pass_through=True, eager_only=False, series_only=False, allow_series=None
+    )
+    pl_21 = nw.from_native(
+        pl_ldf, pass_through=False, eager_only=False, allow_series=True
+    )
+    pl_21 = nw.from_native(pl_ldf, pass_through=True, eager_only=False, allow_series=True)
+    pl_21 = nw.from_native(
+        pl_ldf, pass_through=False, eager_only=False, series_only=False, allow_series=True
+    )
+    pl_22 = nw.from_native(
+        pl_ldf, pass_through=True, eager_only=False, series_only=False, allow_series=True
+    )
+    pl_23 = nw.from_native(pl_ldf, eager_only=False, series_only=False)
+    pl_24 = nw.from_native(pl_ldf, eager_only=False, allow_series=False)
+    pl_25 = nw.from_native(
+        pl_ldf, eager_only=False, series_only=False, allow_series=False
+    )
+    pl_26 = nw.from_native(pl_ldf, eager_only=False, allow_series=None)
+    pl_27 = nw.from_native(pl_ldf, eager_only=False, series_only=False, allow_series=None)
+    pl_28 = nw.from_native(pl_ldf, eager_only=False, allow_series=True)
+    pl_29 = nw.from_native(pl_ldf, eager_only=False, series_only=False, allow_series=True)
+    pl_30 = nw.from_native(
+        pl_ldf, pass_through=False, series_only=False, allow_series=None
+    )
+    pl_31 = nw.from_native(
+        pl_ldf, pass_through=False, series_only=False, allow_series=False
+    )
+    pl_32 = nw.from_native(
+        pl_ldf, pass_through=False, series_only=False, allow_series=True
+    )
+    pl_33 = nw.from_native(
+        pl_ldf, pass_through=True, series_only=False, allow_series=None
+    )
+    pl_34 = nw.from_native(
+        pl_ldf, pass_through=True, series_only=False, allow_series=False
+    )
+    pl_35 = nw.from_native(
+        pl_ldf, pass_through=True, series_only=False, allow_series=True
+    )
+    pls = (
+        pl_1,
+        pl_2,
+        pl_3,
+        pl_4,
+        pl_5,
+        pl_6,
+        pl_7,
+        pl_8,
+        pl_9,
+        pl_10,
+        pl_11,
+        pl_12,
+        pl_13,
+        pl_14,
+        pl_15,
+        pl_16,
+        pl_17,
+        pl_18,
+        pl_19,
+        pl_20,
+        pl_21,
+        pl_22,
+        pl_23,
+        pl_24,
+        pl_25,
+        pl_26,
+        pl_27,
+        pl_28,
+        pl_29,
+        pl_30,
+        pl_31,
+        pl_32,
+        pl_33,
+        pl_34,
+        pl_35,
+    )
+
+    assert_type(pl_1, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_2, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_3, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_4, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_5, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_6, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_7, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_8, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_9, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_10, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_11, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_12, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_13, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_14, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_15, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_16, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_17, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_18, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_19, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_20, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_21, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_22, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_23, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_24, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_25, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_26, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_27, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_28, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_29, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_30, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_31, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_32, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_33, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_34, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_35, nw.LazyFrame[pl.LazyFrame])
+
+    for ldf in pls:
+        assert isinstance(ldf, nw.LazyFrame)
+
+
+def test_from_native_series_exhaustive() -> None:  # noqa: PLR0914, PLR0915
+    pytest.importorskip("polars")
+    pytest.importorskip("pandas")
+    pytest.importorskip("pyarrow")
+    pytest.importorskip("typing_extensions")
+    import pandas as pd
+    import polars as pl
+    import pyarrow as pa
+    from typing_extensions import assert_type
+
+    pl_ser = pl.Series([1, 2, 3])
+    pd_ser = cast("pd.Series[Any]", pd.Series([1, 2, 3]))
+    pa_ser = cast("pa.ChunkedArray[Any]", pa.chunked_array([pa.array([1])]))  # type: ignore[redundant-cast]
+
+    pl_1 = nw.from_native(pl_ser, series_only=True)
+    pl_2 = nw.from_native(pl_ser, allow_series=True)
+    pl_3 = nw.from_native(pl_ser, eager_only=True, series_only=True)
+    pl_4 = nw.from_native(pl_ser, eager_only=True, series_only=True, allow_series=True)
+    pl_5 = nw.from_native(pl_ser, eager_only=True, allow_series=True)
+    pl_6 = nw.from_native(pl_ser, series_only=True, allow_series=True)
+    pl_7 = nw.from_native(pl_ser, series_only=True, pass_through=True)
+    pl_8 = nw.from_native(pl_ser, allow_series=True, pass_through=True)
+    pl_9 = nw.from_native(pl_ser, eager_only=True, series_only=True, pass_through=True)
+    pl_10 = nw.from_native(
+        pl_ser, eager_only=True, series_only=True, allow_series=True, pass_through=True
+    )
+    pl_11 = nw.from_native(pl_ser, eager_only=True, allow_series=True, pass_through=True)
+    pl_12 = nw.from_native(pl_ser, series_only=True, allow_series=True, pass_through=True)
+    pls = pl_1, pl_2, pl_3, pl_4, pl_5, pl_6, pl_7, pl_8, pl_9, pl_10, pl_11, pl_12
+
+    assert_type(pl_1, nw.Series[pl.Series])
+    assert_type(pl_2, nw.Series[pl.Series])
+    assert_type(pl_3, nw.Series[pl.Series])
+    assert_type(pl_4, nw.Series[pl.Series])
+    assert_type(pl_5, nw.Series[pl.Series])
+    assert_type(pl_6, nw.Series[pl.Series])
+    assert_type(pl_7, nw.Series[pl.Series])
+    assert_type(pl_8, nw.Series[pl.Series])
+    assert_type(pl_9, nw.Series[pl.Series])
+    assert_type(pl_10, nw.Series[pl.Series])
+    assert_type(pl_11, nw.Series[pl.Series])
+    assert_type(pl_12, nw.Series[pl.Series])
+
+    pd_1 = nw.from_native(pd_ser, series_only=True)
+    pd_2 = nw.from_native(pd_ser, allow_series=True)
+    pd_3 = nw.from_native(pd_ser, eager_only=True, series_only=True)
+    pd_4 = nw.from_native(pd_ser, eager_only=True, series_only=True, allow_series=True)
+    pd_5 = nw.from_native(pd_ser, eager_only=True, allow_series=True)
+    pd_6 = nw.from_native(pd_ser, series_only=True, allow_series=True)
+    pd_7 = nw.from_native(pd_ser, series_only=True, pass_through=True)
+    pd_8 = nw.from_native(pd_ser, allow_series=True, pass_through=True)
+    pd_9 = nw.from_native(pd_ser, eager_only=True, series_only=True, pass_through=True)
+    pd_10 = nw.from_native(
+        pd_ser, eager_only=True, series_only=True, allow_series=True, pass_through=True
+    )
+    pd_11 = nw.from_native(pd_ser, eager_only=True, allow_series=True, pass_through=True)
+    pd_12 = nw.from_native(pd_ser, series_only=True, allow_series=True, pass_through=True)
+    pds = pd_1, pd_2, pd_3, pd_4, pd_5, pd_6, pd_7, pd_8, pd_9, pd_10, pd_11, pd_12
+
+    assert_type(pd_1, nw.Series["pd.Series[Any]"])
+    assert_type(pd_2, nw.Series["pd.Series[Any]"])
+    assert_type(pd_3, nw.Series["pd.Series[Any]"])
+    assert_type(pd_4, nw.Series["pd.Series[Any]"])
+    assert_type(pd_5, nw.Series["pd.Series[Any]"])
+    assert_type(pd_6, nw.Series["pd.Series[Any]"])
+    assert_type(pd_7, nw.Series["pd.Series[Any]"])
+    assert_type(pd_8, nw.Series["pd.Series[Any]"])
+    assert_type(pd_9, nw.Series["pd.Series[Any]"])
+    assert_type(pd_10, nw.Series["pd.Series[Any]"])
+    assert_type(pd_11, nw.Series["pd.Series[Any]"])
+    assert_type(pd_12, nw.Series["pd.Series[Any]"])
+
+    pa_1 = nw.from_native(pa_ser, series_only=True)
+    pa_2 = nw.from_native(pa_ser, allow_series=True)
+    pa_3 = nw.from_native(pa_ser, eager_only=True, series_only=True)
+    pa_4 = nw.from_native(pa_ser, eager_only=True, series_only=True, allow_series=True)
+    pa_5 = nw.from_native(pa_ser, eager_only=True, allow_series=True)
+    pa_6 = nw.from_native(pa_ser, series_only=True, allow_series=True)
+    pa_7 = nw.from_native(pa_ser, series_only=True, pass_through=True)
+    pa_8 = nw.from_native(pa_ser, allow_series=True, pass_through=True)
+    pa_9 = nw.from_native(pa_ser, eager_only=True, series_only=True, pass_through=True)
+    pa_10 = nw.from_native(
+        pa_ser, eager_only=True, series_only=True, allow_series=True, pass_through=True
+    )
+    pa_11 = nw.from_native(pa_ser, eager_only=True, allow_series=True, pass_through=True)
+    pa_12 = nw.from_native(pa_ser, series_only=True, allow_series=True, pass_through=True)
+    pas = pa_1, pa_2, pa_3, pa_4, pa_5, pa_6, pa_7, pa_8, pa_9, pa_10, pa_11, pa_12
+
+    assert_type(pa_1, nw.Series["pa.ChunkedArray[Any]"])
+    assert_type(pa_2, nw.Series["pa.ChunkedArray[Any]"])
+    assert_type(pa_3, nw.Series["pa.ChunkedArray[Any]"])
+    assert_type(pa_4, nw.Series["pa.ChunkedArray[Any]"])
+    assert_type(pa_5, nw.Series["pa.ChunkedArray[Any]"])
+    assert_type(pa_6, nw.Series["pa.ChunkedArray[Any]"])
+    assert_type(pa_7, nw.Series["pa.ChunkedArray[Any]"])
+    assert_type(pa_8, nw.Series["pa.ChunkedArray[Any]"])
+    assert_type(pa_9, nw.Series["pa.ChunkedArray[Any]"])
+    assert_type(pa_10, nw.Series["pa.ChunkedArray[Any]"])
+    assert_type(pa_11, nw.Series["pa.ChunkedArray[Any]"])
+    assert_type(pa_12, nw.Series["pa.ChunkedArray[Any]"])
+
+    for series in chain(pls, pds, pas):
+        assert isinstance(series, nw.Series)

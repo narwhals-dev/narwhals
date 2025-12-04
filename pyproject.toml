@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "2.12.0"
+version = "2.13.0"
 dependencies = []
 requires-python = ">=3.9"
 authors = [
@@ -274,7 +274,8 @@ filterwarnings = [
   # Warning raised when calling PandasLikeNamespace.from_arrow with old pyarrow
   "ignore:.*is_sparse is deprecated and will be removed in a future version.*:DeprecationWarning:pyarrow",
 
-  'ignore:.*invalid value encountered in cast:RuntimeWarning:pandas',
+  "ignore:.*invalid value encountered in cast:RuntimeWarning:pandas",
+  "ignore:.*The behavior of DataFrame concatenation with empty or all-NA entries is deprecated:FutureWarning",
 ]
 xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
