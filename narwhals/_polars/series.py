@@ -82,6 +82,7 @@ INHERITED_METHODS = frozenset(
         "arg_min",
         "arg_true",
         "ceil",
+        "clear",
         "clip",
         "count",
         "cum_max",
@@ -705,6 +706,7 @@ class PolarsSeries:
     arg_min: Method[int]
     arg_true: Method[Self]
     ceil: Method[Self]
+    clear: Method[Self]
     count: Method[int]
     cum_max: Method[Self]
     cum_min: Method[Self]

@@ -16,6 +16,7 @@
         - arg_true
         - cast
         - ceil
+        - clear
         - clip
         - count
         - cum_count
