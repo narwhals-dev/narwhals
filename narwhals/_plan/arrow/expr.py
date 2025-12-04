@@ -701,11 +701,27 @@ class ArrowExpr(  # type: ignore[misc]
         result = method(s, size, min_samples=samples, center=center, ddof=ddof)
         return self.from_series(result)
 
-    # - https://github.com/narwhals-dev/narwhals/blob/84ce86c618c0103cb08bc63d68a709c424da2106/narwhals/_compliant/series.py#L349-L415
-    # - https://github.com/narwhals-dev/narwhals/blob/84ce86c618c0103cb08bc63d68a709c424da2106/narwhals/_arrow/series.py#L1060-L1076
-    # - https://github.com/narwhals-dev/narwhals/blob/84ce86c618c0103cb08bc63d68a709c424da2106/narwhals/_arrow/series.py#L1130-L1215
-    hist_bins = not_implemented()
-    hist_bin_count = not_implemented()
+    def hist_bins(self, node: FExpr[F.HistBins], frame: Frame, name: str) -> Self:
+        s = self._dispatch_expr(node.input[0], frame, name)
+        func = node.function
+        struct_data = fn.hist_with_bins(
+            s.native, list(func.bins), include_breakpoint=func.include_breakpoint
+        )
+        return self.from_series(
+            namespace(self)._dataframe.from_dict(struct_data).to_struct(name)
+        )
+
+    def hist_bin_count(
+        self, node: FExpr[F.HistBinCount], frame: Frame, name: str
+    ) -> Self:
+        s = self._dispatch_expr(node.input[0], frame, name)
+        func = node.function
+        struct_data = fn.hist_with_bin_count(
+            s.native, func.bin_count, include_breakpoint=func.include_breakpoint
+        )
+        return self.from_series(
+            namespace(self)._dataframe.from_dict(struct_data).to_struct(name)
+        )
 
     # ewm_mean = not_implemented()  # noqa: ERA001
     @property

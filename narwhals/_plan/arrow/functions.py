@@ -1308,6 +1308,105 @@ def nulls_like(n: int, native: ArrowAny) -> ArrayAny:
     return result
 
 
+def zeros(n: int, /) -> pa.Int64Array:
+    return pa.repeat(0, n)
+
+
+def _hist_is_empty_series(native: ChunkedArrayAny) -> bool:
+    is_null = native.is_null(nan_is_null=True)
+    arr = t.cast("pa.BooleanArray", is_null.combine_chunks())
+    return arr.false_count == 0
+
+
+def _hist_calculate_breakpoint(
+    arg: int | list[float], /
+) -> list[float] | ChunkedArray[NumericScalar]:
+    bins = linear_space(0, 1, arg + 1).slice(1) if isinstance(arg, int) else arg
+    return bins[1:]
+
+
+def _hist_data_empty(*, include_breakpoint: bool) -> Mapping[str, list[Any]]:
+    return {"breakpoint": [], "count": []} if include_breakpoint else {"count": []}
+
+
+def _hist_series_empty(
+    arg: int | list[float], *, include_breakpoint: bool
+) -> dict[str, ChunkedOrArrayAny | list[float]]:
+    count = zeros(arg) if isinstance(arg, int) else zeros(len(arg) - 1)
+    if include_breakpoint:
+        return {"breakpoint": _hist_calculate_breakpoint(arg), "count": count}
+    return {"count": count}
+
+
+# TODO @dangotbanned: ughhhhh
+# figure out whatever this is supposed to be called
+def _hist_calculate_bins(
+    native: ChunkedArrayAny, bin_count: int
+) -> ChunkedArray[NumericScalar]:
+    d = pc.min_max(native)
+    lower, upper = d["min"].as_py(), d["max"].as_py()
+    if lower == upper:
+        lower -= 0.5
+        upper += 0.5
+    return linear_space(lower, upper, bin_count + 1)
+
+
+def _hist_calculate_hist(
+    native: ChunkedArrayAny,
+    bins: list[float] | ChunkedArray[NumericScalar],
+    *,
+    include_breakpoint: bool,
+) -> Mapping[str, Iterable[Any]]:
+    if len(bins) == 2:
+        is_between_bins = and_(gt_eq(native, lit(bins[0])), lt_eq(native, lit(bins[1])))
+        count = sum_(is_between_bins.cast(pa.uint8()))
+        if include_breakpoint:
+            return {"breakpoint": [bins[-1]], "count": [count]}
+        return {"count": [count]}
+    # TODO @dangotbanned: replacing `np.searchsorted`
+    # TODO @dangotbanned: replacing `np.isin` x2 assign weirdness
+    # Handle multiple bins
+    import numpy as np  # ignore-banned-import
+
+    bin_indices = np.searchsorted(bins, native, side="left")
+    # lowest bin is inclusive
+    bin_indices = pc.if_else(pc.equal(native, lit(bins[0])), 1, bin_indices)
+
+    # Align unique categories and counts appropriately
+    obs_cats, obs_counts = np.unique(bin_indices, return_counts=True)
+    obj_cats = np.arange(1, len(bins))
+    counts = np.zeros_like(obj_cats)
+    counts[np.isin(obj_cats, obs_cats)] = obs_counts[np.isin(obs_cats, obj_cats)]
+
+    if include_breakpoint:
+        return {"breakpoint": bins[1:], "count": counts}
+    return {"count": counts}
+
+
+def hist_with_bins(
+    native: ChunkedArrayAny, bins: list[float], *, include_breakpoint: bool
+) -> Mapping[str, Iterable[Any]]:
+    if len(bins) <= 1:
+        return _hist_data_empty(include_breakpoint=include_breakpoint)
+    if _hist_is_empty_series(native):
+        return _hist_series_empty(bins, include_breakpoint=include_breakpoint)
+    return _hist_calculate_hist(native, bins, include_breakpoint=include_breakpoint)
+
+
+def hist_with_bin_count(
+    native: ChunkedArrayAny, bin_count: int, *, include_breakpoint: bool
+) -> Mapping[str, Iterable[Any]]:
+    if bin_count == 0:
+        return _hist_data_empty(include_breakpoint=include_breakpoint)
+    if _hist_is_empty_series(native):
+        return _hist_series_empty(bin_count, include_breakpoint=include_breakpoint)
+    return _hist_calculate_hist(
+        native,
+        _hist_calculate_bins(native, bin_count),
+        include_breakpoint=include_breakpoint,
+    )
+
+
 def lit(value: Any, dtype: DataType | None = None) -> NativeScalar:
     return pa.scalar(value) if dtype is None else pa.scalar(value, dtype)
 
