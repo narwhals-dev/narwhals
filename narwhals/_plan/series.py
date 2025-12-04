@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from typing import TYPE_CHECKING, Any, ClassVar, Generic
 
 from narwhals._plan._guards import is_series
@@ -187,6 +187,18 @@ class Series(Generic[NativeSeriesT_co]):
     def is_in(self, other: Iterable[Any]) -> Self:
         return type(self)(self._compliant.is_in(self._parse_into_compliant(other)))
 
+    def is_nan(self) -> Self:
+        return type(self)(self._compliant.is_nan())
+
+    def is_null(self) -> Self:
+        return type(self)(self._compliant.is_null())
+
+    def is_not_nan(self) -> Self:  # pragma: no cover
+        return type(self)(self._compliant.is_not_nan())
+
+    def is_not_null(self) -> Self:  # pragma: no cover
+        return type(self)(self._compliant.is_not_null())
+
     def null_count(self) -> int:
         return self._compliant.null_count()
 
@@ -221,14 +233,60 @@ class Series(Generic[NativeSeriesT_co]):
         other_ = self._unwrap_compliant(other) if is_series(other) else other
         return type(self)(self._compliant.__eq__(other_))
 
+    def __or__(self, other: bool | Self, /) -> Self:
+        other_ = self._unwrap_compliant(other) if is_series(other) else other
+        return type(self)(self._compliant.__or__(other_))
+
+    def __invert__(self) -> Self:
+        return type(self)(self._compliant.__invert__())
+
+    def __add__(self, other: NumericLiteral | TemporalLiteral | Self, /) -> Self:
+        other_ = self._unwrap_compliant(other) if is_series(other) else other
+        return type(self)(self._compliant.__add__(other_))
+
     def all(self) -> bool:
         return self._compliant.all()
 
     def any(self) -> bool:  # pragma: no cover
         return self._compliant.any()
 
+    def sum(self) -> float:
+        return self._compliant.sum()
+
+    def count(self) -> int:
+        return self._compliant.count()
+
     def unique(self, *, maintain_order: bool = False) -> Self:  # pragma: no cover
         return type(self)(self._compliant.unique(maintain_order=maintain_order))
+
+    def hist(
+        self,
+        bins: Sequence[float] | None = None,
+        *,
+        bin_count: int | None = None,
+        # NOTE: `pl.Series.hist` defaults are the opposite of `pl.Expr.hist`
+        include_breakpoint: bool = True,
+        include_category: bool = False,  # NOTE: `pl.Series.hist` default is `True`, but that would be breaking (ish) for narwhals
+    ) -> DataFrame[Incomplete, NativeSeriesT_co]:
+        from narwhals._plan import functions as F
+
+        result = (
+            self.to_frame()
+            .select(
+                F.col(self.name).hist(
+                    bins,
+                    bin_count=bin_count,
+                    include_breakpoint=include_breakpoint,
+                    include_category=include_category,
+                )
+            )
+            .to_series()
+        )
+        if not include_breakpoint and not include_category:
+            return result.to_frame()
+        msg = f"`Series.hist({include_breakpoint=}, {include_category=})` requires `Series.struct.unnest`"
+        raise NotImplementedError(msg)
+        return result.struct.unnest()
 
 
 class SeriesV1(Series[NativeSeriesT_co]):

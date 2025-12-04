@@ -138,6 +138,7 @@ class CompliantDataFrame(
         return self._group_by.from_resolver(self, resolver)
 
     def filter(self, predicate: NamedIR, /) -> Self: ...
+    def iter_columns(self) -> Iterator[SeriesT]: ...
     def join(
         self,
         other: Self,

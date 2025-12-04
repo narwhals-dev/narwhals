@@ -25,18 +25,31 @@ from narwhals._utils import Implementation, Version, generate_repr
 from narwhals.dependencies import is_pyarrow_table
 from narwhals.exceptions import ShapeError
 from narwhals.schema import Schema
-from narwhals.typing import IntoDType, JoinStrategy
+from narwhals.typing import EagerAllowed, IntoBackend, IntoDType, IntoSchema, JoinStrategy
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping, Sequence
+    from collections.abc import Iterable, Iterator, Mapping, Sequence
 
     import polars as pl
     import pyarrow as pa
     from typing_extensions import Self, TypeAlias, TypeIs
 
     from narwhals._plan.arrow.typing import NativeArrowDataFrame
-    from narwhals._plan.compliant.dataframe import CompliantDataFrame, CompliantFrame
-    from narwhals._typing import _EagerAllowedImpl
+    from narwhals._plan.compliant.dataframe import (
+        CompliantDataFrame,
+        CompliantFrame,
+        EagerDataFrame,
+    )
+    from narwhals._plan.compliant.namespace import EagerNamespace
+    from narwhals._plan.compliant.series import CompliantSeries
+    from narwhals._typing import Arrow, _EagerAllowedImpl
+
+    EagerNs: TypeAlias = EagerNamespace[
+        EagerDataFrame[Any, NativeDataFrameT, Any],
+        CompliantSeries[NativeSeriesT],
+        Any,
+        Any,
+    ]
 
 
 Incomplete: TypeAlias = Any
@@ -143,6 +156,15 @@ class BaseFrame(Generic[NativeFrameT_co]):
         return self._with_compliant(self._compliant.with_row_index_by(name, by_names))
 
 
+def _dataframe_from_dict(
+    data: Mapping[str, Any],
+    schema: IntoSchema | None,
+    ns: EagerNs[NativeDataFrameT, NativeSeriesT],
+    /,
+) -> DataFrame[NativeDataFrameT, NativeSeriesT]:
+    return ns._dataframe.from_dict(data, schema=schema).to_narwhals()
+
+
 class DataFrame(
     BaseFrame[NativeDataFrameT_co], Generic[NativeDataFrameT_co, NativeSeriesT]
 ):
@@ -195,6 +217,41 @@ class DataFrame(
             return cls(_arrow.DataFrame.from_native(native, cls._version))
 
         raise NotImplementedError(type(native))
+
+    @overload
+    @classmethod
+    def from_dict(
+        cls: type[DataFrame[Any, Any]],
+        data: Mapping[str, Any],
+        schema: IntoSchema | None = ...,
+        *,
+        backend: Arrow,
+    ) -> DataFrame[pa.Table, pa.ChunkedArray[Any]]: ...
+    @overload
+    @classmethod
+    def from_dict(
+        cls: type[DataFrame[Any, Any]],
+        data: Mapping[str, Any],
+        schema: IntoSchema | None = None,
+        *,
+        backend: IntoBackend[EagerAllowed] | None = ...,
+    ) -> DataFrame[Any, Any]: ...
+    @classmethod
+    def from_dict(
+        cls: type[DataFrame[Any, Any]],
+        data: Mapping[str, Any],
+        schema: IntoSchema | None = None,
+        *,
+        backend: IntoBackend[EagerAllowed] | None = None,
+    ) -> DataFrame[Any, Any]:
+        from narwhals._plan import functions as F
+
+        if backend is None:
+            msg = f"`from_dict({backend=})`"
+            raise NotImplementedError(msg)
+
+        ns = F._eager_namespace(backend)
+        return _dataframe_from_dict(data, schema, ns)
 
     @overload
     def to_dict(
@@ -253,6 +310,10 @@ class DataFrame(
 
     def row(self, index: int) -> tuple[Any, ...]:
         return self._compliant.row(index)
+
+    def iter_columns(self) -> Iterator[Series[NativeSeriesT]]:
+        for series in self._compliant.iter_columns():
+            yield self._series(series)
 
     def join(
         self,

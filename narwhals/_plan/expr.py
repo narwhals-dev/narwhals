@@ -195,8 +195,12 @@ class Expr:
         bins: Sequence[float] | None = None,
         *,
         bin_count: int | None = None,
-        include_breakpoint: bool = True,
+        include_breakpoint: bool = True,  # NOTE: `pl.Expr.hist` default is `False`
+        include_category: bool = False,
     ) -> Self:
+        if include_category:
+            msg = f"`Expr.hist({include_category=})` is not yet implemented"
+            raise NotImplementedError(msg)
         node: F.Hist
         if bins is not None:
             if bin_count is not None:

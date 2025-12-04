@@ -99,6 +99,18 @@ class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayA
     def is_in(self, other: Self) -> Self:
         return self._with_native(fn.is_in(self.native, other.native))
 
+    def is_nan(self) -> Self:
+        return self._with_native(fn.is_nan(self.native))
+
+    def is_null(self) -> Self:
+        return self._with_native(fn.is_null(self.native))
+
+    def is_not_nan(self) -> Self:
+        return self._with_native(fn.is_not_nan(self.native))
+
+    def is_not_null(self) -> Self:
+        return self._with_native(fn.is_not_null(self.native))
+
     def has_nulls(self) -> bool:
         return bool(self.native.null_count)
 
@@ -264,6 +276,12 @@ class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayA
 
     def any(self) -> bool:
         return fn.any_(self.native).as_py()
+
+    def sum(self) -> float:
+        return fn.sum_(self.native).as_py()  # type: ignore[no-any-return]
+
+    def count(self) -> int:
+        return fn.count(self.native).as_py()
 
     def unique(self, *, maintain_order: bool = False) -> Self:
         return self._with_native(self.native.unique())
