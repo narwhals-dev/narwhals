@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
 
     import polars as pl
-    from typing_extensions import Self
+    from typing_extensions import Self, TypeAlias
 
     from narwhals._plan.arrow.typing import ChunkedArrayAny
     from narwhals._plan.compliant.group_by import GroupByResolver
@@ -33,6 +33,8 @@ if TYPE_CHECKING:
     from narwhals._plan.typing import NonCrossJoinStrategy
     from narwhals.dtypes import DType
     from narwhals.typing import IntoSchema
+
+Incomplete: TypeAlias = Any
 
 
 class ArrowDataFrame(
@@ -126,6 +128,15 @@ class ArrowDataFrame(
         )
         column = fn.unsort_indices(indices)
         return self._with_native(self.native.add_column(0, name, column))
+
+    def to_struct(self, name: str = "") -> Series:
+        native = self.native
+        struct = (
+            native.to_struct_array()
+            if fn.BACKEND_VERSION >= (15, 0)
+            else fn.struct(self.columns, values=native.columns)
+        )
+        return Series.from_native(struct, name, version=self.version)
 
     def get_column(self, name: str) -> Series:
         chunked = self.native.column(name)

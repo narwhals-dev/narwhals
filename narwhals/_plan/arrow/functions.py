@@ -297,6 +297,24 @@ def string_type(data_types: Iterable[DataType] = (), /) -> StringType | LargeStr
 
 
 @t.overload
+def struct(names: Sequence[str], values: Iterable[ScalarAny]) -> pa.StructScalar: ...
+@t.overload
+def struct(
+    names: Sequence[str], values: Iterable[ChunkedOrScalarAny]
+) -> ChunkedStruct: ...
+@t.overload
+def struct(
+    names: Sequence[str], values: Iterable[ArrayAny | ScalarAny]
+) -> pa.StructArray: ...
+def struct(names: Sequence[str], values: Iterable[Any]) -> Any:
+    """Convert `values` into a struct.
+
+    The output shape will be scalar if all inputs are scalar, otherwise any scalars will be broadcast to arrays.
+    """
+    return pc.make_struct(*values, options=pc.MakeStructOptions(field_names=names))
+
+
+@t.overload
 def struct_field(native: ChunkedStruct, field: Field, /) -> ChunkedArrayAny: ...
 @t.overload
 def struct_field(native: StructArray, field: Field, /) -> ArrayAny: ...
