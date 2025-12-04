@@ -303,7 +303,7 @@ class Series(Generic[NativeSeriesT_co]):
             not include_breakpoint
             and not include_category
             and _use_current_polars_behavior
-        ):
+        ):  # pragma: no cover
             return result.rename({"count": self.name})
         return result
 

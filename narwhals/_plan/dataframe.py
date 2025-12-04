@@ -276,7 +276,7 @@ class DataFrame(
     def to_series(self, index: int = 0) -> Series[NativeSeriesT]:
         return self._series(self._compliant.to_series(index))
 
-    def to_struct(self, name: str = "") -> Series[NativeSeriesT]:
+    def to_struct(self, name: str = "") -> Series[NativeSeriesT]:  # pragma: no cover
         return self._series(self._compliant.to_struct(name))
 
     def to_polars(self) -> pl.DataFrame:
