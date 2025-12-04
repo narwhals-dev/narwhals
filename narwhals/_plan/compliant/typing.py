@@ -49,6 +49,7 @@ FrameT = TypeVar("FrameT", bound=FrameAny)
 FrameT_co = TypeVar("FrameT_co", bound=FrameAny, covariant=True)
 FrameT_contra = TypeVar("FrameT_contra", bound=FrameAny, contravariant=True)
 DataFrameT = TypeVar("DataFrameT", bound=DataFrameAny)
+DataFrameT_co = TypeVar("DataFrameT_co", bound=DataFrameAny, covariant=True)
 NamespaceT_co = TypeVar("NamespaceT_co", bound="NamespaceAny", covariant=True)
 
 EagerExprT_co = TypeVar("EagerExprT_co", bound=EagerExprAny, covariant=True)

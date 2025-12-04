@@ -2,7 +2,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Protocol
 
-from narwhals._plan.compliant.typing import ExprT_co, FrameT_contra
+from narwhals._plan.compliant.typing import (
+    DataFrameT_co,
+    ExprT_co,
+    FrameT_contra,
+    SeriesT_co,
+)
 
 if TYPE_CHECKING:
     from narwhals._plan.expressions import FunctionExpr as FExpr, lists, strings
@@ -83,3 +88,8 @@ class ExprStructNamespace(Protocol[FrameT_contra, ExprT_co]):
     def field(
         self, node: FExpr[FieldByName], frame: FrameT_contra, name: str
     ) -> ExprT_co: ...
+
+
+class SeriesStructNamespace(Protocol[SeriesT_co, DataFrameT_co]):
+    def field(self, name: str) -> SeriesT_co: ...
+    def unnest(self) -> DataFrameT_co: ...

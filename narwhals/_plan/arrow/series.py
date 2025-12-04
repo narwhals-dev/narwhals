@@ -1,12 +1,14 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
+import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._arrow.utils import narwhals_to_native_dtype, native_to_narwhals_dtype
 from narwhals._plan.arrow import functions as fn, options
 from narwhals._plan.arrow.common import ArrowFrameSeries as FrameSeries
+from narwhals._plan.compliant.accessors import SeriesStructNamespace as StructNamespace
 from narwhals._plan.compliant.series import CompliantSeries
 from narwhals._plan.compliant.typing import namespace
 from narwhals._plan.expressions import functions as F
@@ -20,6 +22,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._plan.arrow.dataframe import ArrowDataFrame as DataFrame
+    from narwhals._plan.arrow.namespace import ArrowNamespace as Namespace
     from narwhals._plan.arrow.typing import ChunkedArrayAny
     from narwhals.dtypes import DType
     from narwhals.typing import (
@@ -53,7 +56,7 @@ class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayA
         import polars as pl  # ignore-banned-import
         # NOTE: Recommended in https://github.com/pola-rs/polars/issues/22921#issuecomment-2908506022
 
-        return pl.Series(self.native)
+        return pl.Series(self.name, self.native)
 
     def __len__(self) -> int:
         return self.native.length()
@@ -285,3 +288,45 @@ class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayA
 
     def unique(self, *, maintain_order: bool = False) -> Self:
         return self._with_native(self.native.unique())
+
+    @property
+    def struct(self) -> SeriesStructNamespace:
+        return SeriesStructNamespace(self)
+
+
+class SeriesStructNamespace(StructNamespace[ArrowSeries, "DataFrame"]):
+    def __init__(self, compliant: ArrowSeries, /) -> None:
+        self._compliant: ArrowSeries = compliant
+
+    @property
+    def compliant(self) -> ArrowSeries:
+        return self._compliant
+
+    @property
+    def native(self) -> ChunkedArrayAny:
+        return self.compliant.native
+
+    def __narwhals_namespace__(self) -> Namespace:
+        return namespace(self.compliant)
+
+    @property
+    def version(self) -> Version:
+        return self.compliant.version
+
+    def with_native(self, native: ChunkedArrayAny, name: str, /) -> ArrowSeries:
+        return self.compliant.from_native(native, name, version=self.version)
+
+    def unnest(self) -> DataFrame:
+        if len(self.native):
+            table = pa.Table.from_struct_array(self.native)
+        else:
+            # TODO @dangotbanned: Report empty bug upstream, no option to pass a schema to resolve the error
+            # `ValueError: Must pass schema, or at least one RecordBatch`
+            # https://github.com/apache/arrow/blob/b2e8f2505ba3eafe65a78ece6ae87fa7d0c1c133/python/pyarrow/table.pxi#L4943-L4949
+            tp_struct = cast("pa.StructType", self.native.type)
+            table = pa.schema(tp_struct.fields).empty_table()
+        return namespace(self)._dataframe.from_native(table, self.version)
+
+    # name overriding *may* be wrong
+    def field(self, name: str) -> ArrowSeries:
+        return self.with_native(fn.struct_field(self.native, name), name)

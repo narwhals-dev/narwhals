@@ -4,13 +4,14 @@ from collections.abc import Iterable, Sequence
 from typing import TYPE_CHECKING, Any, ClassVar, Generic
 
 from narwhals._plan._guards import is_series
-from narwhals._plan.typing import NativeSeriesT, NativeSeriesT_co, OneOrIterable
+from narwhals._plan.typing import NativeSeriesT, NativeSeriesT_co, OneOrIterable, SeriesT
 from narwhals._utils import (
     Implementation,
     Version,
     generate_repr,
     is_eager_allowed,
     qualified_type_name,
+    unstable,
 )
 from narwhals.dependencies import is_pyarrow_chunked_array
 from narwhals.exceptions import ShapeError
@@ -259,6 +260,7 @@ class Series(Generic[NativeSeriesT_co]):
     def unique(self, *, maintain_order: bool = False) -> Self:  # pragma: no cover
         return type(self)(self._compliant.unique(maintain_order=maintain_order))
 
+    @unstable
     def hist(
         self,
         bins: Sequence[float] | None = None,
@@ -267,7 +269,20 @@ class Series(Generic[NativeSeriesT_co]):
         # NOTE: `pl.Series.hist` defaults are the opposite of `pl.Expr.hist`
         include_breakpoint: bool = True,
         include_category: bool = False,  # NOTE: `pl.Series.hist` default is `True`, but that would be breaking (ish) for narwhals
+        _use_current_polars_behavior: bool = False,
     ) -> DataFrame[Incomplete, NativeSeriesT_co]:
+        """Well ...
+
+        `_use_current_polars_behavior` would preserve the series name, in line with current `polars`:
+
+            import polars as pl
+            ser = pl.Series("original_name", [0, 1, 2, 3, 4, 5, 6])
+            hist = ser.hist(bin_count=4, include_breakpoint=False, include_category=False)
+            hist_to_dict(as_series=False)
+            {'original_name': [2, 2, 1, 2]}
+
+        But all of our tests expect `"count"` as the name 🤔
+        """
         from narwhals._plan import functions as F
 
         result = (
@@ -281,12 +296,32 @@ class Series(Generic[NativeSeriesT_co]):
                 )
             )
             .to_series()
+            .struct.unnest()
         )
-        if not include_breakpoint and not include_category:
-            return result.to_frame()
-        msg = f"`Series.hist({include_breakpoint=}, {include_category=})` requires `Series.struct.unnest`"
-        raise NotImplementedError(msg)
-        return result.struct.unnest()
+
+        if (
+            not include_breakpoint
+            and not include_category
+            and _use_current_polars_behavior
+        ):
+            return result.rename({"count": self.name})
+        return result
+
+    @property
+    def struct(self) -> SeriesStructNamespace[Self]:
+        return SeriesStructNamespace(self)
+
+
+class SeriesStructNamespace(Generic[SeriesT]):
+    def __init__(self, series: SeriesT) -> None:
+        self._series: SeriesT = series
+
+    def unnest(self) -> DataFrame[Any, Any]:
+        """Convert this struct Series to a DataFrame with a separate column for each field."""
+        result: DataFrame[Any, Any] = (
+            self._series._compliant.struct.unnest().to_narwhals()
+        )
+        return result
 
 
 class SeriesV1(Series[NativeSeriesT_co]):

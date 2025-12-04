@@ -129,6 +129,7 @@ ColumnNameOrSelector: TypeAlias = "str | Selector"
 OneOrIterable: TypeAlias = "T | Iterable[T]"
 OneOrSeq: TypeAlias = t.Union[T, Seq[T]]
 DataFrameT = TypeVar("DataFrameT", bound="DataFrame[t.Any, t.Any]")
+SeriesT = TypeVar("SeriesT", bound="Series[t.Any]")
 Order: TypeAlias = t.Literal["ascending", "descending"]
 NonCrossJoinStrategy: TypeAlias = t.Literal["inner", "left", "full", "semi", "anti"]
 PartialSeries: TypeAlias = "Callable[[Iterable[t.Any]], Series[NativeSeriesAnyT]]"

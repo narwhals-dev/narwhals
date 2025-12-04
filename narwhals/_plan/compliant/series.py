@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     import polars as pl
     from typing_extensions import Self, TypeAlias
 
+    from narwhals._plan.compliant.accessors import SeriesStructNamespace
     from narwhals._plan.series import Series
     from narwhals._typing import _EagerAllowedImpl
     from narwhals.dtypes import DType
@@ -190,3 +191,6 @@ class CompliantSeries(HasVersion, Protocol[NativeSeriesT]):
     def to_polars(self) -> pl.Series: ...
     def unique(self, *, maintain_order: bool = False) -> Self: ...
     def zip_with(self, mask: Self, other: Self) -> Self: ...
+
+    @property
+    def struct(self) -> SeriesStructNamespace[Self, Incomplete]: ...
