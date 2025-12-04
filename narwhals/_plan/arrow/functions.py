@@ -98,6 +98,9 @@ RANK_ACCEPTS_CHUNKED: Final = BACKEND_VERSION >= (14,)
 HAS_FROM_TO_STRUCT_ARRAY: Final = BACKEND_VERSION >= (15,)
 """`pyarrow.Table.{from,to}_struct_array` added in https://github.com/apache/arrow/pull/38520"""
 
+HAS_STRUCT_TYPE_FIELDS: Final = BACKEND_VERSION >= (18,)
+"""`pyarrow.StructType.fields` added in https://github.com/apache/arrow/pull/43481"""
+
 HAS_SCATTER: Final = BACKEND_VERSION >= (20,)
 """`pyarrow.compute.scatter` added in https://github.com/apache/arrow/pull/44394"""
 
@@ -329,6 +332,13 @@ def struct(names: Iterable[str], columns: Iterable[Incomplete]) -> Incomplete:
     return pc.make_struct(
         *columns, options=pc.MakeStructOptions(common.ensure_seq_str(names))
     )
+
+
+def struct_schema(native: Arrow[pa.StructScalar] | pa.StructType) -> pa.Schema:
+    """Get the struct definition as a schema."""
+    tp = native.type if _is_arrow(native) else native
+    fields = tp.fields if HAS_STRUCT_TYPE_FIELDS else list(tp)
+    return pa.schema(fields)
 
 
 @t.overload
@@ -1471,6 +1481,10 @@ def _is_into_pyarrow_schema(obj: Mapping[Any, Any]) -> TypeIs[Mapping[str, DataT
         and isinstance(first[0], str)
         and isinstance(first[1], pa.DataType)
     )
+
+
+def _is_arrow(obj: Arrow[ScalarT] | Any) -> TypeIs[Arrow[ScalarT]]:
+    return isinstance(obj, (pa.Scalar, pa.Array, pa.ChunkedArray))
 
 
 def filter_arrays(

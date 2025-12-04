@@ -321,18 +321,18 @@ class SeriesStructNamespace(StructNamespace[ArrowSeries, "DataFrame"]):
     def unnest(self) -> DataFrame:
         native = cast("pa.ChunkedArray[pa.StructScalar]", self.native)
         if fn.HAS_FROM_TO_STRUCT_ARRAY:
-            if len(self.native):
+            if len(native):
                 table = pa.Table.from_struct_array(native)
             else:
                 # TODO @dangotbanned: Report empty bug upstream, no option to pass a schema to resolve the error
                 # `ValueError: Must pass schema, or at least one RecordBatch`
                 # https://github.com/apache/arrow/blob/b2e8f2505ba3eafe65a78ece6ae87fa7d0c1c133/python/pyarrow/table.pxi#L4943-L4949
-                table = pa.schema(native.type.fields).empty_table()
+                table = fn.struct_schema(native).empty_table()
         else:  # pragma: no cover
             # NOTE: Too strict, doesn't allow `Array[StructScalar]`
             rec_batch: Incomplete = pa.RecordBatch.from_struct_array
             batches = (rec_batch(chunk) for chunk in native.chunks)
-            table = pa.Table.from_batches(batches, pa.schema(native.type.fields))
+            table = pa.Table.from_batches(batches, fn.struct_schema(native))
         return namespace(self)._dataframe.from_native(table, self.version)
 
     # name overriding *may* be wrong
