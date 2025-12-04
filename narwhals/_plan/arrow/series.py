@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
     import polars as pl
-    from typing_extensions import Self
+    from typing_extensions import Self, TypeAlias
 
     from narwhals._plan.arrow.dataframe import ArrowDataFrame as DataFrame
     from narwhals._plan.arrow.namespace import ArrowNamespace as Namespace
@@ -32,6 +32,8 @@ if TYPE_CHECKING:
         NonNestedLiteral,
         _1DArray,
     )
+
+Incomplete: TypeAlias = Any
 
 
 class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayAny"]):
@@ -317,14 +319,20 @@ class SeriesStructNamespace(StructNamespace[ArrowSeries, "DataFrame"]):
         return self.compliant.from_native(native, name, version=self.version)
 
     def unnest(self) -> DataFrame:
-        if len(self.native):
-            table = pa.Table.from_struct_array(self.native)
-        else:
-            # TODO @dangotbanned: Report empty bug upstream, no option to pass a schema to resolve the error
-            # `ValueError: Must pass schema, or at least one RecordBatch`
-            # https://github.com/apache/arrow/blob/b2e8f2505ba3eafe65a78ece6ae87fa7d0c1c133/python/pyarrow/table.pxi#L4943-L4949
-            tp_struct = cast("pa.StructType", self.native.type)
-            table = pa.schema(tp_struct.fields).empty_table()
+        native = cast("pa.ChunkedArray[pa.StructScalar]", self.native)
+        if fn.HAS_FROM_TO_STRUCT_ARRAY:
+            if len(self.native):
+                table = pa.Table.from_struct_array(native)
+            else:
+                # TODO @dangotbanned: Report empty bug upstream, no option to pass a schema to resolve the error
+                # `ValueError: Must pass schema, or at least one RecordBatch`
+                # https://github.com/apache/arrow/blob/b2e8f2505ba3eafe65a78ece6ae87fa7d0c1c133/python/pyarrow/table.pxi#L4943-L4949
+                table = pa.schema(native.type.fields).empty_table()
+        else:  # pragma: no cover
+            # NOTE: Too strict, doesn't allow `Array[StructScalar]`
+            rec_batch: Incomplete = pa.RecordBatch.from_struct_array
+            batches = (rec_batch(chunk) for chunk in native.chunks)
+            table = pa.Table.from_batches(batches, pa.schema(native.type.fields))
         return namespace(self)._dataframe.from_native(table, self.version)
 
     # name overriding *may* be wrong

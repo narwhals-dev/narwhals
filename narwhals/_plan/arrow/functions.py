@@ -95,6 +95,9 @@ BACKEND_VERSION = Implementation.PYARROW._backend_version()
 
 RANK_ACCEPTS_CHUNKED: Final = BACKEND_VERSION >= (14,)
 
+HAS_FROM_TO_STRUCT_ARRAY: Final = BACKEND_VERSION >= (15,)
+"""`pyarrow.Table.{from,to}_struct_array` added in https://github.com/apache/arrow/pull/38520"""
+
 HAS_SCATTER: Final = BACKEND_VERSION >= (20,)
 """`pyarrow.compute.scatter` added in https://github.com/apache/arrow/pull/44394"""
 

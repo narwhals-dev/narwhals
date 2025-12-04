@@ -133,7 +133,7 @@ class ArrowDataFrame(
         native = self.native
         struct = (
             native.to_struct_array()
-            if fn.BACKEND_VERSION >= (15, 0)
+            if fn.HAS_FROM_TO_STRUCT_ARRAY
             else fn.struct(native.column_names, native.columns)
         )
         return Series.from_native(struct, name, version=self.version)
