@@ -1,5 +1,3 @@
-# TODO(unassigned): cudf has too many spurious failures. Report and revisit?
-# Modin is too slow so is excluded.
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
@@ -16,10 +14,8 @@ if TYPE_CHECKING:
     from narwhals.typing import EagerAllowed
     from tests.conftest import Data
 
-
-XFAIL_HIST_NOT_IMPLEMENTED = pytest.mark.xfail(
-    reason="`ArrowExpr.hist_*` is not yet implemented"
-)
+pytest.importorskip("pyarrow")
+import pyarrow as pa
 
 
 @pytest.fixture(scope="module")
@@ -51,28 +47,11 @@ def include_breakpoint(request: pytest.FixtureRequest) -> bool:
     return result
 
 
-counts_and_expected = [
-    {
-        "bin_count": 4,
-        "expected_bins": [0, 1.5, 3.0, 4.5, 6.0],
-        "expected_count": [2, 2, 1, 2],
-    },
-    {
-        "bin_count": 12,
-        "expected_bins": [0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0],
-        "expected_count": [1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
-    },
-    {"bin_count": 1, "expected_bins": [0, 6], "expected_count": [7]},
-    {"bin_count": 0, "expected_bins": [], "expected_count": []},
-]
-
-
 SHIFT_BINS_BY = 10
 """shift bins property"""
 
 
 # TODO @dangotbanned: Try to avoid all this looping (3x `iter_columns` in a single test?)
-@XFAIL_HIST_NOT_IMPLEMENTED
 @pytest.mark.parametrize(
     ("bins", "expected"),
     [
@@ -131,11 +110,43 @@ def test_hist_bin(
         assert_equal_data(result, expected_full)
 
 
+params_params = pytest.mark.parametrize(
+    "params",
+    [
+        {
+            "bin_count": 4,
+            "expected_bins": [0, 1.5, 3.0, 4.5, 6.0],
+            "expected_count": [2, 2, 1, 2],
+        },
+        {
+            "bin_count": 12,
+            "expected_bins": [
+                0,
+                0.5,
+                1.0,
+                1.5,
+                2.0,
+                2.5,
+                3.0,
+                3.5,
+                4.0,
+                4.5,
+                5.0,
+                5.5,
+                6.0,
+            ],
+            "expected_count": [1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
+        },
+        {"bin_count": 1, "expected_bins": [0, 6], "expected_count": [7]},
+        {"bin_count": 0, "expected_bins": [], "expected_count": []},
+    ],
+)
+
+
 # TODO @dangotbanned: Avoid using `del`
 # TODO @dangotbanned: Split up `params`
 # TODO @dangotbanned: Try to avoid all this looping
-@XFAIL_HIST_NOT_IMPLEMENTED
-@pytest.mark.parametrize("params", counts_and_expected)
+@params_params
 def test_hist_count(
     data: Data,
     data_missing: Data,
@@ -148,11 +159,9 @@ def test_hist_count(
         float=nwp.col("int").cast(nw.Float64)
     )
     bin_count = params["bin_count"]
-
-    expected_bins = params["expected_bins"]
-    expected = {"breakpoint": expected_bins[1:], "count": params["expected_count"]}
-    if not include_breakpoint:
-        del expected["breakpoint"]
+    expected = {"count": params["expected_count"]}
+    if include_breakpoint:
+        expected = {"breakpoint": params["expected_bins"][1:], **expected}
 
     # smoke tests
     for col in df.columns:
@@ -188,7 +197,6 @@ def test_hist_count(
 
 
 # TODO @dangotbanned: parametrize into 3 cases
-@XFAIL_HIST_NOT_IMPLEMENTED
 def test_hist_count_no_spread(backend: EagerAllowed) -> None:
     data_ = {"all_zero": [0, 0, 0], "all_non_zero": [5, 5, 5]}
     df = nwp.DataFrame.from_dict(data_, backend=backend)
@@ -206,9 +214,18 @@ def test_hist_count_no_spread(backend: EagerAllowed) -> None:
     assert_equal_data(result, expected)
 
 
+# TODO @dangotbanned: Fix length?
 # TODO @dangotbanned: parametrize into 2 cases?
-@XFAIL_HIST_NOT_IMPLEMENTED
-def test_hist_no_data(backend: EagerAllowed, *, include_breakpoint: bool) -> None:
+def test_hist_no_data(
+    backend: EagerAllowed, *, include_breakpoint: bool, request: pytest.FixtureRequest
+) -> None:
+    request.applymarker(
+        pytest.mark.xfail(
+            include_breakpoint,
+            reason="TODO: Investigate `Column 1 named count expected length 0 but got length 1`",
+            raises=pa.ArrowInvalid,
+        )
+    )
     data_: Data = {"values": []}
     df = nwp.DataFrame.from_dict(data_, {"values": nw.Float64()}, backend=backend)
     s = df.to_series()
@@ -228,7 +245,6 @@ def test_hist_no_data(backend: EagerAllowed, *, include_breakpoint: bool) -> Non
     assert result.get_column("count").sum() == 0
 
 
-@XFAIL_HIST_NOT_IMPLEMENTED
 def test_hist_small_bins(backend: EagerAllowed) -> None:
     s = nwp.Series.from_iterable([1, 2, 3], name="values", backend=backend)
     result = s.hist(bins=None, bin_count=None)
