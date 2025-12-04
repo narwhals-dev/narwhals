@@ -38,7 +38,13 @@ def test_is_ordered_categorical_polars() -> None:
     else:
         # Post 1.32 there's no physical ordering for categoricals anymore.
         assert not nw.is_ordered_categorical(nw.from_native(s, series_only=True))
-    s = pl.Series(["a", "b"], dtype=pl.Categorical(ordering="lexical"))
+
+    cat_dtype = (
+        pl.Categorical(ordering="lexical")
+        if POLARS_VERSION < (1, 32)
+        else pl.Categorical()
+    )
+    s = pl.Series(["a", "b"], dtype=cat_dtype)
     assert not nw.is_ordered_categorical(nw.from_native(s, series_only=True))
     s = pl.Series(["a", "b"], dtype=pl.Enum(["a", "b"]))
     assert nw.is_ordered_categorical(nw.from_native(s, series_only=True))
