@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals as nw
-from tests.utils import assert_equal_data
+from tests.utils import assert_equal_data, assert_equal_series
 
 if TYPE_CHECKING:
     from tests.utils import ConstructorEager
@@ -38,6 +38,9 @@ def test_by_slice(constructor_eager: ConstructorEager) -> None:
     result = {"b": df[[], 1]}
     expected = {"b": []}
     assert_equal_data(result, expected)
+    result_ser = df[:, 0][slice(None)]
+    expected_ser = [1, 2, 3]
+    assert_equal_series(result_ser, expected_ser, name="a")
 
 
 def test_getitem_arrow_scalar() -> None:

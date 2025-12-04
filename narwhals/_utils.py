@@ -1318,7 +1318,11 @@ def is_slice_index(obj: Any) -> TypeIs[_SliceIndex]:
     return isinstance(obj, slice) and (
         isinstance(obj.start, int)
         or isinstance(obj.stop, int)
-        or (isinstance(obj.step, int) and obj.start is None and obj.stop is None)
+        or (
+            isinstance(obj.step, (int, NoneType))
+            and obj.start is None
+            and obj.stop is None
+        )
     )
 
 
@@ -2145,3 +2149,6 @@ class _NoDefault(Enum):
 # the "no_default" sentinel should typically be used when one of the valid parameter
 # values is None, as otherwise we cannot determine if the caller has set that value.
 no_default = _NoDefault.no_default
+
+# Can be imported from types in Python 3.10
+NoneType = type(None)
