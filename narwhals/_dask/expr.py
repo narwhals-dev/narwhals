@@ -693,6 +693,7 @@ class DaskExpr(
     def dt(self) -> DaskExprDateTimeNamespace:
         return DaskExprDateTimeNamespace(self)
 
+    any_value = not_implemented()
     filter = not_implemented()
     first = not_implemented()
     rank = not_implemented()
