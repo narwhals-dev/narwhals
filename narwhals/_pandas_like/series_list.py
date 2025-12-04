@@ -11,6 +11,8 @@ from narwhals._pandas_like.utils import (
 from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
+    from typing import Literal
+
     from narwhals._pandas_like.series import PandasLikeSeries
 
 
@@ -40,3 +42,41 @@ class PandasLikeSeriesListNamespace(
         result = self.native.list[index]
         result.name = self.native.name
         return self.with_native(result)
+
+    def _agg(
+        self, func: Literal["min", "max", "mean", "approximate_median", "sum"]
+    ) -> PandasLikeSeries:
+        dtype_backend = get_dtype_backend(
+            self.native.dtype, self.compliant._implementation
+        )
+        if dtype_backend != "pyarrow":  # pragma: no cover
+            msg = "Only pyarrow backend is currently supported."
+            raise NotImplementedError(msg)
+
+        from narwhals._arrow.utils import list_agg, native_to_narwhals_dtype
+
+        ca = self.native.array._pa_array
+        result_arr = list_agg(ca, func)
+        nw_dtype = native_to_narwhals_dtype(result_arr.type, self.version)
+        out_dtype = narwhals_to_native_dtype(
+            nw_dtype, "pyarrow", self.implementation, self.version
+        )
+        result_native = type(self.native)(
+            result_arr, dtype=out_dtype, index=self.native.index, name=self.native.name
+        )
+        return self.with_native(result_native)
+
+    def min(self) -> PandasLikeSeries:
+        return self._agg("min")
+
+    def max(self) -> PandasLikeSeries:
+        return self._agg("max")
+
+    def mean(self) -> PandasLikeSeries:
+        return self._agg("mean")
+
+    def median(self) -> PandasLikeSeries:
+        return self._agg("approximate_median")
+
+    def sum(self) -> PandasLikeSeries:
+        return self._agg("sum")

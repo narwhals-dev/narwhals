@@ -143,3 +143,122 @@ class ExprListNamespace(Generic[ExprT]):
         return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "list.get", index=index)
         )
+
+    def min(self) -> ExprT:
+        """Compute the min value of the lists in the array.
+
+        Examples:
+            >>> import duckdb
+            >>> import narwhals as nw
+            >>> df_native = duckdb.sql("SELECT * FROM VALUES ([1]), ([3, 4, NULL]) df(a)")
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(a_min=nw.col("a").list.min())
+            ┌────────────────────────┐
+            |   Narwhals LazyFrame   |
+            |------------------------|
+            |┌──────────────┬───────┐|
+            |│      a       │ a_min │|
+            |│   int32[]    │ int32 │|
+            |├──────────────┼───────┤|
+            |│ [1]          │     1 │|
+            |│ [3, 4, NULL] │     3 │|
+            |└──────────────┴───────┘|
+            └────────────────────────┘
+        """
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "list.min"))
+
+    def max(self) -> ExprT:
+        """Compute the max value of the lists in the array.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"a": [[1], [3, 4, None]]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(a_max=nw.col("a").list.max())
+            ┌────────────────────────┐
+            |   Narwhals DataFrame   |
+            |------------------------|
+            |shape: (2, 2)           |
+            |┌──────────────┬───────┐|
+            |│ a            ┆ a_max │|
+            |│ ---          ┆ ---   │|
+            |│ list[i64]    ┆ i64   │|
+            |╞══════════════╪═══════╡|
+            |│ [1]          ┆ 1     │|
+            |│ [3, 4, null] ┆ 4     │|
+            |└──────────────┴───────┘|
+            └────────────────────────┘
+        """
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "list.max"))
+
+    def mean(self) -> ExprT:
+        """Compute the mean value of the lists in the array.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> df_native = pa.table({"a": [[1], [3, 4, None]]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(a_mean=nw.col("a").list.mean())
+            ┌──────────────────────┐
+            |  Narwhals DataFrame  |
+            |----------------------|
+            |pyarrow.Table         |
+            |a: list<item: int64>  |
+            |  child 0, item: int64|
+            |a_mean: double        |
+            |----                  |
+            |a: [[[1],[3,4,null]]] |
+            |a_mean: [[1,3.5]]     |
+            └──────────────────────┘
+        """
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "list.mean"))
+
+    def median(self) -> ExprT:
+        """Compute the median value of the lists in the array.
+
+        Examples:
+            >>> import duckdb
+            >>> import narwhals as nw
+            >>> df_native = duckdb.sql("SELECT * FROM VALUES ([1]), ([3, 4, NULL]) df(a)")
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(a_median=nw.col("a").list.median())
+            ┌───────────────────────────┐
+            |    Narwhals LazyFrame     |
+            |---------------------------|
+            |┌──────────────┬──────────┐|
+            |│      a       │ a_median │|
+            |│   int32[]    │  double  │|
+            |├──────────────┼──────────┤|
+            |│ [1]          │      1.0 │|
+            |│ [3, 4, NULL] │      3.5 │|
+            |└──────────────┴──────────┘|
+            └───────────────────────────┘
+        """
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "list.median"))
+
+    def sum(self) -> ExprT:
+        """Compute the sum value of the lists in the array.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"a": [[1], [3, 4, None]]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(a_sum=nw.col("a").list.sum())
+            ┌────────────────────────┐
+            |   Narwhals DataFrame   |
+            |------------------------|
+            |shape: (2, 2)           |
+            |┌──────────────┬───────┐|
+            |│ a            ┆ a_sum │|
+            |│ ---          ┆ ---   │|
+            |│ list[i64]    ┆ i64   │|
+            |╞══════════════╪═══════╡|
+            |│ [1]          ┆ 1     │|
+            |│ [3, 4, null] ┆ 7     │|
+            |└──────────────┴───────┘|
+            └────────────────────────┘
+        """
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "list.sum"))

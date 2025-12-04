@@ -7,6 +7,11 @@
         - contains
         - get
         - len
+        - max
+        - mean
+        - median
+        - min
+        - sum
         - unique
       show_source: false
       show_bases: false

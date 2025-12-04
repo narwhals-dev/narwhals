@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any, cast
 
@@ -11,6 +12,7 @@ from narwhals._utils import Implementation, Version, isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping
+    from typing import Literal
 
     from typing_extensions import TypeAlias, TypeIs
 
@@ -494,3 +496,43 @@ def arange(start: int, end: int, step: int) -> ArrayAny:
         return pa.array(np.arange(start, end, step))
     # NOTE: Added in https://github.com/apache/arrow/pull/46778
     return pa.arange(start, end, step)  # type: ignore[attr-defined]
+
+
+def list_agg(
+    array: ChunkedArrayAny,
+    func: Literal["min", "max", "mean", "approximate_median", "sum"],
+) -> ChunkedArrayAny:
+    version = sys.version_info
+    if func == "approximate_median" and version < (3, 10):  # pragma: no cover
+        msg = (
+            f"The minimum supported Python version for {func} is 3.10."
+            f"\nGot: {version.major}.{version.minor}.{version.micro}."
+        )
+        raise NotImplementedError(msg)
+    agg = pa.array(
+        pa.Table.from_arrays(
+            [pc.list_flatten(array), pc.list_parent_indices(array)],
+            names=["values", "offsets"],
+        )
+        .group_by("offsets")
+        .aggregate([("values", func)])
+        .sort_by("offsets")
+        .column(f"values_{func}")
+    )
+    non_empty_mask = pa.array(pc.not_equal(pc.list_value_length(array), lit(0)))
+    if func == "sum":
+        agg = agg.fill_null(lit(0))  # pyright:ignore[reportArgumentType]
+        base_array = pc.if_else(non_empty_mask.is_null(), None, 0)
+    else:
+        base_array = pc.if_else(
+            non_empty_mask, 0, None
+        )  # zero is just a placeholder which is replaced below
+    return pa.chunked_array(
+        [
+            pc.replace_with_mask(
+                base_array.cast(agg.type),
+                non_empty_mask.fill_null(False),  # type: ignore[arg-type]
+                agg,
+            )
+        ]
+    )
