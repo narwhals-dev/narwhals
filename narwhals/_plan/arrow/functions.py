@@ -1324,8 +1324,7 @@ def _hist_is_empty_series(native: ChunkedArrayAny) -> bool:
 def _hist_calculate_breakpoint(
     arg: int | list[float], /
 ) -> list[float] | ChunkedArray[NumericScalar]:
-    bins = linear_space(0, 1, arg + 1).slice(1) if isinstance(arg, int) else arg
-    return bins[1:]
+    return linear_space(0, 1, arg + 1).slice(1) if isinstance(arg, int) else arg[1:]
 
 
 def _hist_data_empty(*, include_breakpoint: bool) -> Mapping[str, list[Any]]:

@@ -15,7 +15,6 @@ if TYPE_CHECKING:
     from tests.conftest import Data
 
 pytest.importorskip("pyarrow")
-import pyarrow as pa
 
 
 @pytest.fixture(scope="module")
@@ -214,18 +213,8 @@ def test_hist_count_no_spread(backend: EagerAllowed) -> None:
     assert_equal_data(result, expected)
 
 
-# TODO @dangotbanned: Fix length?
 # TODO @dangotbanned: parametrize into 2 cases?
-def test_hist_no_data(
-    backend: EagerAllowed, *, include_breakpoint: bool, request: pytest.FixtureRequest
-) -> None:
-    request.applymarker(
-        pytest.mark.xfail(
-            include_breakpoint,
-            reason="TODO: Investigate `Column 1 named count expected length 0 but got length 1`",
-            raises=pa.ArrowInvalid,
-        )
-    )
+def test_hist_no_data(backend: EagerAllowed, *, include_breakpoint: bool) -> None:
     data_: Data = {"values": []}
     df = nwp.DataFrame.from_dict(data_, {"values": nw.Float64()}, backend=backend)
     s = df.to_series()
