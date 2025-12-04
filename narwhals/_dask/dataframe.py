@@ -299,7 +299,7 @@ class DaskLazyFrame(
     def _join_inner(
         self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
     ) -> dd.DataFrame:
-        return self.native.merge(
+        return self.native.dropna(subset=left_on, how="any").merge(
             other.native,
             left_on=left_on,
             right_on=right_on,
@@ -311,7 +311,7 @@ class DaskLazyFrame(
         self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
     ) -> dd.DataFrame:
         result_native = self.native.merge(
-            other.native,
+            other.native.dropna(subset=right_on, how="any"),
             how="left",
             left_on=left_on,
             right_on=right_on,
@@ -329,17 +329,32 @@ class DaskLazyFrame(
     ) -> dd.DataFrame:
         # dask does not retain keys post-join
         # we must append the suffix to each key before-hand
-
+        self_native = self.native
         right_on_mapper = _remap_full_join_keys(left_on, right_on, suffix)
         other_native = other.native.rename(columns=right_on_mapper)
         check_column_names_are_unique(other_native.columns)
         right_suffixed = list(right_on_mapper.values())
-        return self.native.merge(
-            other_native,
+
+        left_null_mask = self_native[list(left_on)].isna().any(axis=1)
+        right_null_mask = other_native[right_suffixed].isna().any(axis=1)
+
+        # We need to add suffix to `other` columns overlapping in `self` if not in keys
+        to_rename = set(other.columns).intersection(self.columns).difference(right_on)
+        right_null_rows = other_native[right_null_mask].rename(
+            columns={col: f"{col}{suffix}" for col in to_rename}
+        )
+
+        join_result = self_native[~left_null_mask].merge(
+            other_native[~right_null_mask],
             left_on=left_on,
             right_on=right_suffixed,
             how="outer",
             suffixes=("", suffix),
+        )
+        return dd.concat(
+            [join_result, self_native[left_null_mask], right_null_rows],
+            axis=0,
+            join="outer",
         )
 
     def _join_cross(self, other: Self, *, suffix: str) -> dd.DataFrame:
@@ -366,7 +381,7 @@ class DaskLazyFrame(
             columns_to_select=list(right_on),
             columns_mapping=dict(zip(right_on, left_on)),
         )
-        return self.native.merge(
+        return self.native.dropna(subset=left_on, how="any").merge(
             other_native, how="inner", left_on=left_on, right_on=left_on
         )
 
@@ -382,7 +397,7 @@ class DaskLazyFrame(
             columns_mapping=dict(zip(right_on, left_on)),
         )
         df = self.native.merge(
-            other_native,
+            other_native.dropna(subset=left_on, how="any"),
             how="left",
             indicator=indicator_token,  # pyright: ignore[reportArgumentType]
             left_on=left_on,
