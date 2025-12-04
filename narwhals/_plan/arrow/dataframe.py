@@ -131,11 +131,15 @@ class ArrowDataFrame(
 
     def to_struct(self, name: str = "") -> Series:
         native = self.native
-        struct = (
-            native.to_struct_array()
-            if fn.HAS_FROM_TO_STRUCT_ARRAY
-            else fn.struct(native.column_names, native.columns)
-        )
+        if fn.TO_STRUCT_ARRAY_ACCEPTS_EMPTY:
+            struct = native.to_struct_array()
+        elif fn.HAS_FROM_TO_STRUCT_ARRAY:
+            if len(native):
+                struct = native.to_struct_array()
+            else:
+                struct = fn.chunked_array([], pa.struct(native.schema))
+        else:
+            struct = fn.struct(native.column_names, native.columns)
         return Series.from_native(struct, name, version=self.version)
 
     def get_column(self, name: str) -> Series:

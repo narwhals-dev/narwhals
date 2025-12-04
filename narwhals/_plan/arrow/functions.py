@@ -110,6 +110,9 @@ HAS_KURTOSIS_SKEW = BACKEND_VERSION >= (20,)
 HAS_ARANGE: Final = BACKEND_VERSION >= (21,)
 """`pyarrow.arange` added in https://github.com/apache/arrow/pull/46778"""
 
+TO_STRUCT_ARRAY_ACCEPTS_EMPTY: Final = BACKEND_VERSION >= (21,)
+"""`pyarrow.Table.to_struct_array` fixed in https://github.com/apache/arrow/pull/46357"""
+
 HAS_ZFILL: Final = BACKEND_VERSION >= (21,)
 """`pyarrow.compute.utf8_zero_fill` added in https://github.com/apache/arrow/pull/46815"""
 
