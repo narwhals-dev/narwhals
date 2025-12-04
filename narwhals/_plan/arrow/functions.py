@@ -1257,9 +1257,6 @@ def linear_space(
     if num_samples < 0:
         msg = f"Number of samples, {num_samples}, must be non-negative."
         raise ValueError(msg)
-    if num_samples == 1:
-        msg = f"num_samples {num_samples} is not >= 2"
-        raise NotImplementedError(msg)
     if closed == "both":
         range_end = num_samples
         div = num_samples - 1
@@ -1274,12 +1271,15 @@ def linear_space(
         div = num_samples + 1
     ca: ChunkedArray[pc.NumericScalar] = int_range(0, range_end).cast(F64)
     delta = float(end - start)
-    step = delta / div
-    if step == 0:
-        ca = truediv(ca, lit(div))
-        ca = multiply(ca, lit(delta))
+    if div > 0:
+        step = delta / div
+        if step == 0:
+            ca = truediv(ca, lit(div))
+            ca = multiply(ca, lit(delta))
+        else:
+            ca = multiply(ca, lit(step))
     else:
-        ca = multiply(ca, lit(step))
+        ca = multiply(ca, lit(delta))
     if start != 0:
         ca = add(ca, lit(start, F64))
     if closed in {"right", "none"}:
@@ -1324,7 +1324,7 @@ def _hist_is_empty_series(native: ChunkedArrayAny) -> bool:
 def _hist_calculate_breakpoint(
     arg: int | list[float], /
 ) -> list[float] | ChunkedArray[NumericScalar]:
-    return linear_space(0, 1, arg + 1).slice(1) if isinstance(arg, int) else arg[1:]
+    return linear_space(0, 1, arg, closed="right") if isinstance(arg, int) else arg[1:]
 
 
 def _hist_data_empty(*, include_breakpoint: bool) -> Mapping[str, list[Any]]:
