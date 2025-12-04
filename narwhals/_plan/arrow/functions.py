@@ -16,7 +16,7 @@ from narwhals._arrow.utils import (
     floordiv_compat as _floordiv,
     narwhals_to_native_dtype as _dtype_native,
 )
-from narwhals._plan import expressions as ir
+from narwhals._plan import common, expressions as ir
 from narwhals._plan._guards import is_non_nested_literal
 from narwhals._plan.arrow import options as pa_options
 from narwhals._plan.expressions import functions as F, operators as ops
@@ -296,22 +296,36 @@ def string_type(data_types: Iterable[DataType] = (), /) -> StringType | LargeStr
     return pa.large_string() if has_large_string(data_types) else pa.string()
 
 
+# NOTE: `mypy` isn't happy, but this broadcasting behavior is worth documenting
 @t.overload
-def struct(names: Sequence[str], values: Iterable[ScalarAny]) -> pa.StructScalar: ...
+def struct(names: Iterable[str], columns: Iterable[ChunkedArrayAny]) -> ChunkedStruct: ...
 @t.overload
-def struct(
-    names: Sequence[str], values: Iterable[ChunkedOrScalarAny]
+def struct(names: Iterable[str], columns: Iterable[ArrayAny]) -> pa.StructArray: ...
+@t.overload
+def struct(  # type: ignore[overload-overlap]
+    names: Iterable[str], columns: Iterable[ScalarAny] | Iterable[NonNestedLiteral]
+) -> pa.StructScalar: ...
+@t.overload
+def struct(  # type: ignore[overload-overlap]
+    names: Iterable[str], columns: Iterable[ChunkedArrayAny | NonNestedLiteral]
 ) -> ChunkedStruct: ...
 @t.overload
 def struct(
-    names: Sequence[str], values: Iterable[ArrayAny | ScalarAny]
+    names: Iterable[str], columns: Iterable[ArrayAny | NonNestedLiteral]
 ) -> pa.StructArray: ...
-def struct(names: Sequence[str], values: Iterable[Any]) -> Any:
-    """Convert `values` into a struct.
+@t.overload
+def struct(names: Iterable[str], columns: Iterable[ArrowAny]) -> Incomplete: ...
+def struct(names: Iterable[str], columns: Iterable[Incomplete]) -> Incomplete:
+    """Collect columns into a struct.
 
-    The output shape will be scalar if all inputs are scalar, otherwise any scalars will be broadcast to arrays.
+    Arguments:
+        names: Names of the struct fields to create.
+        columns: Value(s) to collect into a struct. Scalars will will be broadcast unless all
+            inputs are scalar.
     """
-    return pc.make_struct(*values, options=pc.MakeStructOptions(field_names=names))
+    return pc.make_struct(
+        *columns, options=pc.MakeStructOptions(common.ensure_seq_str(names))
+    )
 
 
 @t.overload
