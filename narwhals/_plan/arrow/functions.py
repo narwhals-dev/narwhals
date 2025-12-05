@@ -1351,23 +1351,19 @@ def _hist_is_empty_series(native: ChunkedArrayAny) -> bool:
     return array(native.is_null(nan_is_null=True), BOOL).false_count == 0
 
 
-def _hist_calculate_breakpoint(
-    arg: int | list[float], /
-) -> list[float] | ChunkedArray[NumericScalar]:
-    return linear_space(0, 1, arg, closed="right") if isinstance(arg, int) else arg[1:]
-
-
+# TODO @dangotbanned: Really need to reduce repeating this breakpoint/results stuff
 def _hist_data_empty(*, include_breakpoint: bool) -> Mapping[str, list[Any]]:
     return {"breakpoint": [], "count": []} if include_breakpoint else {"count": []}
 
 
 def _hist_series_empty(
     arg: int | list[float], *, include_breakpoint: bool
-) -> dict[str, ChunkedOrArrayAny | list[float]]:
-    count = zeros(arg) if isinstance(arg, int) else zeros(len(arg) - 1)
-    if include_breakpoint:
-        return {"breakpoint": _hist_calculate_breakpoint(arg), "count": count}
-    return {"count": count}
+) -> dict[str, Iterable[Any]]:
+    n = arg if isinstance(arg, int) else len(arg) - 1
+    if not include_breakpoint:
+        return {"count": zeros(n)}
+    bp = linear_space(0, 1, arg, closed="right") if isinstance(arg, int) else arg[1:]
+    return {"breakpoint": bp, "count": zeros(n)}
 
 
 # TODO @dangotbanned: ughhhhh
@@ -1426,11 +1422,10 @@ def _hist_calculate_hist(
     include_breakpoint: bool,
 ) -> Mapping[str, Iterable[Any]]:
     if len(bins) == 2:
-        count = array(
-            is_between(native, bins[0], bins[1], closed="both"), BOOL
-        ).true_count
+        upper = bins[1]
+        count = array(is_between(native, bins[0], upper, closed="both"), BOOL).true_count
         if include_breakpoint:
-            return {"breakpoint": [bins[-1]], "count": [count]}
+            return {"breakpoint": [upper], "count": [count]}
         return {"count": [count]}
 
     # lowest bin is inclusive
