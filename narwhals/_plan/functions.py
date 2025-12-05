@@ -115,9 +115,6 @@ def sum(*columns: str) -> Expr:
     return col(columns).sum()
 
 
-# TODO @dangotbanned: Support `ignore_nulls=...`
-# NOTE: `polars` doesn't support yet
-# Current behavior is equivalent to `ignore_nulls=False`
 def all_horizontal(
     *exprs: IntoExpr | t.Iterable[IntoExpr], ignore_nulls: bool = False
 ) -> Expr:
@@ -129,7 +126,6 @@ def all_horizontal(
     )
 
 
-# TODO @dangotbanned: Support `ignore_nulls=...`
 def any_horizontal(
     *exprs: IntoExpr | t.Iterable[IntoExpr], ignore_nulls: bool = False
 ) -> Expr:
