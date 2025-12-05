@@ -198,46 +198,55 @@ def test_hist_bin_count_missing(
         assert result.get_column("count").sum() == ser.drop_nans().count()
 
 
-# TODO @dangotbanned: parametrize into 3 cases
-def test_hist_count_no_spread(backend: EagerAllowed) -> None:
-    data_ = {"all_zero": [0, 0, 0], "all_non_zero": [5, 5, 5]}
-    df = nwp.DataFrame.from_dict(data_, backend=backend)
-
-    result = df.get_column("all_zero").hist(bin_count=4, include_breakpoint=True)
-    expected = {"breakpoint": [-0.25, 0.0, 0.25, 0.5], "count": [0, 3, 0, 0]}
+@pytest.mark.parametrize(
+    ("column", "bin_count", "expected_breakpoint", "expected_count"),
+    [
+        ("all_zero", 4, [-0.25, 0.0, 0.25, 0.5], [0, 3, 0, 0]),
+        ("all_non_zero", 4, [4.75, 5.0, 5.25, 5.5], [0, 3, 0, 0]),
+        ("all_zero", 1, [0.5], [3]),
+    ],
+)
+def test_hist_bin_count_no_spread(
+    backend: EagerAllowed,
+    column: str,
+    bin_count: int,
+    expected_breakpoint: list[float],
+    expected_count: list[int],
+) -> None:
+    data = {"all_zero": [0, 0, 0], "all_non_zero": [5, 5, 5]}
+    ser = nwp.DataFrame.from_dict(data, backend=backend).get_column(column)
+    result = ser.hist(bin_count=bin_count, include_breakpoint=True)
+    expected = {"breakpoint": expected_breakpoint, "count": expected_count}
     assert_equal_data(result, expected)
 
-    result = df.get_column("all_non_zero").hist(bin_count=4, include_breakpoint=True)
-    expected = {"breakpoint": [4.75, 5.0, 5.25, 5.5], "count": [0, 3, 0, 0]}
-    assert_equal_data(result, expected)
 
-    result = df.get_column("all_zero").hist(bin_count=1, include_breakpoint=True)
-    expected = {"breakpoint": [0.5], "count": [3]}
-    assert_equal_data(result, expected)
-
-
-# TODO @dangotbanned: parametrize into 2 cases?
-def test_hist_no_data(backend: EagerAllowed, *, include_breakpoint: bool) -> None:
-    data_: Data = {"values": []}
-    df = nwp.DataFrame.from_dict(data_, {"values": nw.Float64()}, backend=backend)
-    s = df.to_series()
-    for bin_count in [1, 10]:
-        result = s.hist(bin_count=bin_count, include_breakpoint=include_breakpoint)
-        assert len(result) == bin_count
-        assert result.get_column("count").sum() == 0
-
-        if include_breakpoint:
-            bps = result.get_column("breakpoint").to_list()
-            assert bps[0] == (1 / bin_count)
-            if bin_count > 1:
-                assert bps[-1] == 1
-
-    result = s.hist(bins=[1, 5, 10], include_breakpoint=include_breakpoint)
+@pytest.mark.parametrize("bins", [[1, 5, 10]])
+def test_hist_bins_no_data(
+    backend: EagerAllowed, bins: list[int], *, include_breakpoint: bool
+) -> None:
+    s = nwp.Series.from_iterable([], dtype=nw.Float64(), backend=backend)
+    result = s.hist(bins, include_breakpoint=include_breakpoint)
     assert len(result) == 2
     assert result.get_column("count").sum() == 0
 
 
-def test_hist_small_bins(backend: EagerAllowed) -> None:
-    s = nwp.Series.from_iterable([1, 2, 3], name="values", backend=backend)
+@pytest.mark.parametrize("bin_count", [1, 10])
+def test_hist_bin_count_no_data(
+    backend: EagerAllowed, bin_count: int, *, include_breakpoint: bool
+) -> None:
+    s = nwp.Series.from_iterable([], dtype=nw.Float64(), backend=backend)
+    result = s.hist(bin_count=bin_count, include_breakpoint=include_breakpoint)
+    assert len(result) == bin_count
+    assert result.get_column("count").sum() == 0
+
+    if include_breakpoint:
+        bps = result.get_column("breakpoint").to_list()
+        assert bps[0] == (1 / bin_count)
+        if bin_count > 1:
+            assert bps[-1] == 1
+
+
+def test_hist_bins_none(backend: EagerAllowed) -> None:
+    s = nwp.Series.from_iterable([1, 2, 3], backend=backend)
     result = s.hist(bins=None, bin_count=None)
     assert len(result) == 10
