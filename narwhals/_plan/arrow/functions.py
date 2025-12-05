@@ -917,6 +917,12 @@ def preserve_nulls(
 
 drop_nulls = t.cast("VectorFunction[...]", pc.drop_null)
 
+
+def is_only_nulls(native: ChunkedOrArrayAny, *, nan_is_null: bool = False) -> bool:
+    """Return True if `native` has no non-null values (and optionally include NaN)."""
+    return array(native.is_null(nan_is_null=nan_is_null), BOOL).false_count == 0
+
+
 _FILL_NULL_STRATEGY: Mapping[FillNullStrategy, UnaryFunction] = {
     "forward": pc.fill_null_forward,
     "backward": pc.fill_null_backward,
@@ -1380,10 +1386,6 @@ def search_sorted(
     return array(indices)
 
 
-def _hist_is_empty_series(native: ChunkedArrayAny) -> bool:
-    return array(native.is_null(nan_is_null=True), BOOL).false_count == 0
-
-
 # TODO @dangotbanned: Really need to reduce repeating this breakpoint/results stuff
 def _hist_data_empty(*, include_breakpoint: bool) -> Mapping[str, list[Any]]:
     return {"breakpoint": [], "count": []} if include_breakpoint else {"count": []}
@@ -1437,7 +1439,7 @@ def hist_with_bins(
 ) -> Mapping[str, Iterable[Any]]:
     if len(bins) <= 1:
         return _hist_data_empty(include_breakpoint=include_breakpoint)
-    if _hist_is_empty_series(native):
+    if is_only_nulls(native, nan_is_null=True):
         return _hist_series_empty(bins, include_breakpoint=include_breakpoint)
     return _hist_calculate_hist(native, bins, include_breakpoint=include_breakpoint)
 
@@ -1447,7 +1449,7 @@ def hist_with_bin_count(
 ) -> Mapping[str, Iterable[Any]]:
     if bin_count == 0:
         return _hist_data_empty(include_breakpoint=include_breakpoint)
-    if _hist_is_empty_series(native):
+    if is_only_nulls(native, nan_is_null=True):
         return _hist_series_empty(bin_count, include_breakpoint=include_breakpoint)
 
     # TODO @dangotbanned: Can this be done in a more ergomomic way?
