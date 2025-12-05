@@ -191,10 +191,10 @@ class Series(Generic[NativeSeriesT_co]):
     def is_in(self, other: Iterable[Any]) -> Self:
         return type(self)(self._compliant.is_in(self._parse_into_compliant(other)))
 
-    def is_nan(self) -> Self:
+    def is_nan(self) -> Self:  # pragma: no cover
         return type(self)(self._compliant.is_nan())
 
-    def is_null(self) -> Self:
+    def is_null(self) -> Self:  # pragma: no cover
         return type(self)(self._compliant.is_null())
 
     def is_not_nan(self) -> Self:  # pragma: no cover
@@ -237,11 +237,11 @@ class Series(Generic[NativeSeriesT_co]):
         other_ = self._unwrap_compliant(other) if is_series(other) else other
         return type(self)(self._compliant.__eq__(other_))
 
-    def __or__(self, other: bool | Self, /) -> Self:
+    def __or__(self, other: bool | Self, /) -> Self:  # pragma: no cover
         other_ = self._unwrap_compliant(other) if is_series(other) else other
         return type(self)(self._compliant.__or__(other_))
 
-    def __invert__(self) -> Self:
+    def __invert__(self) -> Self:  # pragma: no cover
         return type(self)(self._compliant.__invert__())
 
     def __add__(self, other: NumericLiteral | TemporalLiteral | Self, /) -> Self:

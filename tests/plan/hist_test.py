@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -28,8 +28,25 @@ def data() -> Data:
 
 
 @pytest.fixture(scope="module")
+def schema_data() -> nw.Schema:
+    return nw.Schema(
+        {
+            "int": nw.Int64(),
+            "float": nw.Float64(),
+            "int_shuffled": nw.Int64(),
+            "float_shuffled": nw.Float64(),
+        }
+    )
+
+
+@pytest.fixture(scope="module")
 def data_missing(data: Data) -> Data:
     return {"has_nan": [float("nan"), *data["int"]], "has_null": [None, *data["int"]]}
+
+
+@pytest.fixture(scope="module")
+def schema_data_missing() -> nw.Schema:
+    return nw.Schema({"has_nan": nw.Float64(), "has_null": nw.Int64()})
 
 
 @pytest.fixture(scope="module", params=["pyarrow"])
@@ -65,7 +82,7 @@ SHIFT_BINS_BY = 10
         pytest.param([0, 10], [7], id="2_bins-2"),
     ],
 )
-def test_hist_bin(
+def test_hist_bins(
     data: Data,
     data_missing: Data,
     backend: EagerAllowed,
@@ -111,100 +128,74 @@ def test_hist_bin(
 
 
 params_params = pytest.mark.parametrize(
-    "params",
+    ("bin_count", "expected_bins", "expected_count"),
     [
-        pytest.param(
-            {
-                "bin_count": 4,
-                "expected_bins": [0, 1.5, 3.0, 4.5, 6.0],
-                "expected_count": [2, 2, 1, 2],
-            },
-            id="bin_count-4",
+        (4, [1.5, 3.0, 4.5, 6.0], [2, 2, 1, 2]),
+        (
+            12,
+            [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0],
+            [1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
         ),
-        pytest.param(
-            {
-                "bin_count": 12,
-                "expected_bins": [
-                    0,
-                    0.5,
-                    1.0,
-                    1.5,
-                    2.0,
-                    2.5,
-                    3.0,
-                    3.5,
-                    4.0,
-                    4.5,
-                    5.0,
-                    5.5,
-                    6.0,
-                ],
-                "expected_count": [1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
-            },
-            id="bin_count-12",
-        ),
-        pytest.param(
-            {"bin_count": 1, "expected_bins": [0, 6], "expected_count": [7]},
-            id="bin_count-1",
-        ),
-        pytest.param(
-            {"bin_count": 0, "expected_bins": [], "expected_count": []}, id="bin_count-0"
-        ),
+        (1, [6], [7]),
+        (0, [], []),
     ],
 )
 
 
-# TODO @dangotbanned: Avoid using `del`
-# TODO @dangotbanned: Split up `params`
-# TODO @dangotbanned: Try to avoid all this looping
+@pytest.mark.parametrize("column", ["int", "float", "int_shuffled", "float_shuffled"])
 @params_params
-def test_hist_count(
+def test_hist_bin_count(
     data: Data,
-    data_missing: Data,
+    schema_data: nw.Schema,
     backend: EagerAllowed,
+    column: str,
+    bin_count: int,
+    expected_bins: list[float],
+    expected_count: list[int],
     *,
-    params: dict[str, Any],
     include_breakpoint: bool,
 ) -> None:
-    df = nwp.DataFrame.from_dict(data, backend=backend).with_columns(
-        float=nwp.col("int").cast(nw.Float64)
-    )
-    bin_count = params["bin_count"]
-    expected = {"count": params["expected_count"]}
+    values, dtype = data[column], schema_data[column]
+    ser = nwp.Series.from_iterable(values, name=column, dtype=dtype, backend=backend)
     if include_breakpoint:
-        expected = {"breakpoint": params["expected_bins"][1:], **expected}
+        expected = {"breakpoint": expected_bins, "count": expected_count}
+    else:
+        expected = {"count": expected_count}
 
-    # smoke tests
-    for col in df.columns:
-        result = df.get_column(col).hist(
-            bin_count=bin_count, include_breakpoint=include_breakpoint
-        )
-        assert_equal_data(result, expected)
+    result = ser.hist(bin_count=bin_count, include_breakpoint=include_breakpoint)
 
-        # result size property
+    assert_equal_data(result, expected)
+    assert len(result) == bin_count
+    if bin_count > 0:
+        assert result.get_column("count").sum() == ser.drop_nans().count()
 
-        assert len(result) == bin_count
-        if bin_count > 0:
-            assert result.get_column("count").sum() == df.get_column(col).count()
 
-    # missing/nan results
-    df = nwp.DataFrame.from_dict(data_missing, backend=backend)
+@pytest.mark.parametrize("column", ["has_nan", "has_null"])
+@params_params
+def test_hist_bin_count_missing(
+    data_missing: Data,
+    schema_data_missing: nw.Schema,
+    backend: EagerAllowed,
+    column: str,
+    bin_count: int,
+    expected_bins: list[float],
+    expected_count: list[int],
+    *,
+    include_breakpoint: bool,
+) -> None:
+    values, dtype = data_missing[column], schema_data_missing[column]
+    ser = nwp.Series.from_iterable(values, name=column, dtype=dtype, backend=backend)
+    if include_breakpoint:
+        expected = {"breakpoint": expected_bins, "count": expected_count}
+    else:
+        expected = {"count": expected_count}
 
-    for col in df.columns:
-        result = df.get_column(col).hist(
-            bin_count=bin_count, include_breakpoint=include_breakpoint
-        )
-        assert_equal_data(result, expected)
+    result = ser.hist(bin_count=bin_count, include_breakpoint=include_breakpoint)
 
-        # result size property
-        assert len(result) == bin_count
-        ser = df.get_column(col)
-        if bin_count > 0:
-            # NOTE: Could this just be a filter?
-            assert (
-                result.get_column("count").sum()
-                == (~(ser.is_nan() | ser.is_null())).sum()
-            )
+    assert_equal_data(result, expected)
+    assert len(result) == bin_count
+    if bin_count > 0:
+        assert result.get_column("count").sum() == ser.drop_nans().count()
 
 
 # TODO @dangotbanned: parametrize into 3 cases
