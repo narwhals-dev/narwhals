@@ -43,6 +43,7 @@ if TYPE_CHECKING:
         BinOp,
         BooleanLengthPreserving,
         BooleanScalar,
+        BoolType,
         ChunkedArray,
         ChunkedArrayAny,
         ChunkedList,
@@ -117,9 +118,10 @@ TO_STRUCT_ARRAY_ACCEPTS_EMPTY: Final = BACKEND_VERSION >= (21,)
 HAS_ZFILL: Final = BACKEND_VERSION >= (21,)
 """`pyarrow.compute.utf8_zero_fill` added in https://github.com/apache/arrow/pull/46815"""
 
-
+# NOTE: Common data type instances to share
 I64: Final = pa.int64()
 F64: Final = pa.float64()
+BOOL: Final = pa.bool_()
 
 
 class MinMax(ir.AggExpr):
@@ -1032,6 +1034,20 @@ def replace_with_mask(
     return result
 
 
+@t.overload
+def is_between(
+    native: ChunkedArray[ScalarT],
+    lower: ChunkedOrScalar[ScalarT] | NumericLiteral,
+    upper: ChunkedOrScalar[ScalarT] | NumericLiteral,
+    closed: ClosedInterval,
+) -> ChunkedArray[BooleanScalar]: ...
+@t.overload
+def is_between(
+    native: ChunkedOrScalar[ScalarT],
+    lower: ChunkedOrScalar[ScalarT] | NumericLiteral,
+    upper: ChunkedOrScalar[ScalarT] | NumericLiteral,
+    closed: ClosedInterval,
+) -> ChunkedOrScalar[BooleanScalar]: ...
 def is_between(
     native: ChunkedOrScalar[ScalarT],
     lower: ChunkedOrScalar[ScalarT] | NumericLiteral,
@@ -1332,9 +1348,7 @@ def zeros(n: int, /) -> pa.Int64Array:
 
 
 def _hist_is_empty_series(native: ChunkedArrayAny) -> bool:
-    is_null = native.is_null(nan_is_null=True)
-    arr = t.cast("pa.BooleanArray", is_null.combine_chunks())
-    return arr.false_count == 0
+    return array(native.is_null(nan_is_null=True), BOOL).false_count == 0
 
 
 def _hist_calculate_breakpoint(
@@ -1412,9 +1426,9 @@ def _hist_calculate_hist(
     include_breakpoint: bool,
 ) -> Mapping[str, Iterable[Any]]:
     if len(bins) == 2:
-        # NOTE: I still don't like this summing a mask to get a count
-        # TODO @dangotbanned: Isn't there a compute function for this?
-        count = sum_(is_between(native, bins[0], bins[1], closed="both").cast(pa.uint8()))
+        count = array(
+            is_between(native, bins[0], bins[1], closed="both"), BOOL
+        ).true_count
         if include_breakpoint:
             return {"breakpoint": [bins[-1]], "count": [count]}
         return {"count": [count]}
@@ -1470,6 +1484,8 @@ def lit(value: Any, dtype: DataType | None = None) -> NativeScalar:
 @overload
 def array(data: ArrowAny, /) -> ArrayAny: ...
 @overload
+def array(data: Arrow[BooleanScalar], dtype: BoolType, /) -> pa.BooleanArray: ...
+@overload
 def array(
     data: Iterable[PythonLiteral], dtype: DataType | None = None, /
 ) -> ArrayAny: ...
@@ -1479,7 +1495,9 @@ def array(
     """Convert `data` into an Array instance.
 
     Note:
-        `dtype` is not used for existing `pyarrow` data, use `cast` instead.
+        `dtype` is **not used** for existing `pyarrow` data, but it can be used to signal
+        the concrete `Array` subclass that is returned.
+        To actually changed the type, use `cast` instead.
     """
     if isinstance(data, pa.ChunkedArray):
         return data.combine_chunks()

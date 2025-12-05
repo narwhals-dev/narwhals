@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     import pyarrow as pa
     import pyarrow.compute as pc
     from pyarrow.lib import (
-        BoolType,
+        BoolType as BoolType,
         Date32Type,
         Int8Type,
         Int16Type,
