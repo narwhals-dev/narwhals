@@ -702,14 +702,17 @@ class ArrowExpr(  # type: ignore[misc]
         return self.from_series(result)
 
     def hist_bins(self, node: FExpr[F.HistBins], frame: Frame, name: str) -> Self:
-        s = self._dispatch_expr(node.input[0], frame, name)
-        func = node.function
-        struct_data = fn.hist_with_bins(
-            s.native, list(func.bins), include_breakpoint=func.include_breakpoint
-        )
-        return self.from_series(
-            namespace(self)._dataframe.from_dict(struct_data).to_struct(name)
-        )
+        native = self._dispatch_expr(node.input[0], frame, name).native
+        bins = list(node.function.bins)
+        include = node.function.include_breakpoint
+        if len(bins) <= 1:
+            data = fn._hist_data_empty(include_breakpoint=include)
+        elif fn.is_only_nulls(native, nan_is_null=True):
+            data = fn._hist_series_empty(bins, include_breakpoint=include)
+        else:
+            data = fn._hist_calculate_hist(native, bins, include_breakpoint=include)
+        ns = namespace(self)
+        return self.from_series(ns._dataframe.from_dict(data).to_struct(name))
 
     def hist_bin_count(
         self, node: FExpr[F.HistBinCount], frame: Frame, name: str

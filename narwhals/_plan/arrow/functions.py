@@ -1387,13 +1387,13 @@ def search_sorted(
 
 
 # TODO @dangotbanned: Really need to reduce repeating this breakpoint/results stuff
-def _hist_data_empty(*, include_breakpoint: bool) -> Mapping[str, list[Any]]:
+def _hist_data_empty(*, include_breakpoint: bool) -> Mapping[str, Iterable[Any]]:
     return {"breakpoint": [], "count": []} if include_breakpoint else {"count": []}
 
 
 def _hist_series_empty(
     arg: int | list[float], *, include_breakpoint: bool
-) -> dict[str, Iterable[Any]]:
+) -> Mapping[str, Iterable[Any]]:
     n = arg if isinstance(arg, int) else len(arg) - 1
     if not include_breakpoint:
         return {"count": zeros(n)}
@@ -1432,16 +1432,6 @@ def _hist_calculate_hist(
     if include_breakpoint:
         return {"breakpoint": bins[1:], "count": counts}
     return {"count": counts}
-
-
-def hist_with_bins(
-    native: ChunkedArrayAny, bins: list[float], *, include_breakpoint: bool
-) -> Mapping[str, Iterable[Any]]:
-    if len(bins) <= 1:
-        return _hist_data_empty(include_breakpoint=include_breakpoint)
-    if is_only_nulls(native, nan_is_null=True):
-        return _hist_series_empty(bins, include_breakpoint=include_breakpoint)
-    return _hist_calculate_hist(native, bins, include_breakpoint=include_breakpoint)
 
 
 def hist_with_bin_count(
