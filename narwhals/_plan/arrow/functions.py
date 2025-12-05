@@ -1366,19 +1366,6 @@ def _hist_series_empty(
     return {"breakpoint": bp, "count": zeros(n)}
 
 
-# TODO @dangotbanned: ughhhhh
-# figure out whatever this is supposed to be called
-def _hist_calculate_bins(
-    native: ChunkedArrayAny, bin_count: int
-) -> ChunkedArray[NumericScalar]:
-    d = pc.min_max(native)
-    lower, upper = d["min"].as_py(), d["max"].as_py()
-    if lower == upper:
-        lower -= 0.5
-        upper += 0.5
-    return linear_space(lower, upper, bin_count + 1)
-
-
 SearchSortedSide: TypeAlias = Literal["left", "right"]
 
 
@@ -1465,11 +1452,15 @@ def hist_with_bin_count(
         return _hist_data_empty(include_breakpoint=include_breakpoint)
     if _hist_is_empty_series(native):
         return _hist_series_empty(bin_count, include_breakpoint=include_breakpoint)
-    return _hist_calculate_hist(
-        native,
-        _hist_calculate_bins(native, bin_count),
-        include_breakpoint=include_breakpoint,
-    )
+
+    # TODO @dangotbanned: Can this be done in a more ergomomic way?
+    d = pc.min_max(native)
+    lower, upper = d["min"].as_py(), d["max"].as_py()
+    if lower == upper:
+        lower -= 0.5  # TODO @dangotbanned: What is adjustment this called?
+        upper += 0.5
+    bins = linear_space(lower, upper, bin_count + 1)
+    return _hist_calculate_hist(native, bins, include_breakpoint=include_breakpoint)
 
 
 def lit(value: Any, dtype: DataType | None = None) -> NativeScalar:
