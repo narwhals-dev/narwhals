@@ -1347,6 +1347,39 @@ def zeros(n: int, /) -> pa.Int64Array:
     return pa.repeat(0, n)
 
 
+SearchSortedSide: TypeAlias = Literal["left", "right"]
+
+
+# TODO @dangotbanned: replacing `np.searchsorted`?
+@t.overload
+def search_sorted(
+    native: ChunkedOrArrayT,
+    element: ChunkedOrArray[NumericScalar] | Sequence[float],
+    *,
+    side: SearchSortedSide = ...,
+) -> ChunkedOrArrayT: ...
+# NOTE: scalar case may work with only `partition_nth_indices`?
+@t.overload
+def search_sorted(
+    native: ChunkedOrArrayT, element: float, *, side: SearchSortedSide = ...
+) -> ScalarAny: ...
+def search_sorted(
+    native: ChunkedOrArrayT,
+    element: ChunkedOrArray[NumericScalar] | Sequence[float] | float,
+    *,
+    side: SearchSortedSide = "left",
+) -> ChunkedOrArrayT | ScalarAny:
+    """Find indices where elements should be inserted to maintain order."""
+    import numpy as np  # ignore-banned-import
+
+    indices = np.searchsorted(element, native, side=side)
+    if isinstance(indices, np.generic):
+        return lit(indices)
+    if isinstance(native, pa.ChunkedArray):
+        return chunked_array([indices])
+    return array(indices)
+
+
 def _hist_is_empty_series(native: ChunkedArrayAny) -> bool:
     return array(native.is_null(nan_is_null=True), BOOL).false_count == 0
 
@@ -1364,42 +1397,6 @@ def _hist_series_empty(
         return {"count": zeros(n)}
     bp = linear_space(0, 1, arg, closed="right") if isinstance(arg, int) else arg[1:]
     return {"breakpoint": bp, "count": zeros(n)}
-
-
-SearchSortedSide: TypeAlias = Literal["left", "right"]
-
-
-# TODO @dangotbanned: replacing `np.searchsorted`?
-@t.overload
-def search_sorted(
-    native: ChunkedOrArrayT,
-    element: ChunkedOrArray[NumericScalar] | Sequence[float],
-    *,
-    side: SearchSortedSide = ...,
-) -> ChunkedOrArrayT: ...
-
-
-# NOTE: scalar case may work with only `partition_nth_indices`?
-@t.overload
-def search_sorted(
-    native: ChunkedOrArrayT, element: float, *, side: SearchSortedSide = ...
-) -> ScalarAny: ...
-
-
-def search_sorted(
-    native: ChunkedOrArrayT,
-    element: ChunkedOrArray[NumericScalar] | Sequence[float] | float,
-    *,
-    side: SearchSortedSide = "left",
-) -> ChunkedOrArrayT | ScalarAny:
-    import numpy as np  # ignore-banned-import
-
-    indices = np.searchsorted(element, native, side=side)
-    if isinstance(indices, np.generic):
-        return lit(indices)
-    if isinstance(native, pa.ChunkedArray):
-        return chunked_array([indices])
-    return array(indices)
 
 
 def _hist_calculate_hist(
