@@ -119,9 +119,7 @@ def test_full_join(
 def test_full_join_duplicate(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
+
     if "ibis" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
@@ -137,6 +135,9 @@ def test_full_join_duplicate(
         exceptions.append(AnalysisException)
     elif "cudf" in str(constructor):
         # cudf throw their own exception earlier in the stack
+        exceptions.append(ValueError)
+    elif "bodo" in str(constructor):
+        # bodo throws an exception earlier
         exceptions.append(ValueError)
 
     with pytest.raises(tuple(exceptions)):
