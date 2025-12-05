@@ -1369,6 +1369,42 @@ def _hist_calculate_bins(
     return linear_space(lower, upper, bin_count + 1)
 
 
+SearchSortedSide: TypeAlias = Literal["left", "right"]
+
+
+# TODO @dangotbanned: replacing `np.searchsorted`?
+@t.overload
+def search_sorted(
+    native: ChunkedOrArrayT,
+    element: ChunkedOrArray[NumericScalar] | Sequence[float],
+    *,
+    side: SearchSortedSide = ...,
+) -> ChunkedOrArrayT: ...
+
+
+# NOTE: scalar case may work with only `partition_nth_indices`?
+@t.overload
+def search_sorted(
+    native: ChunkedOrArrayT, element: float, *, side: SearchSortedSide = ...
+) -> ScalarAny: ...
+
+
+def search_sorted(
+    native: ChunkedOrArrayT,
+    element: ChunkedOrArray[NumericScalar] | Sequence[float] | float,
+    *,
+    side: SearchSortedSide = "left",
+) -> ChunkedOrArrayT | ScalarAny:
+    import numpy as np  # ignore-banned-import
+
+    indices = np.searchsorted(element, native, side=side)
+    if isinstance(indices, np.generic):
+        return lit(indices)
+    if isinstance(native, pa.ChunkedArray):
+        return chunked_array([indices])
+    return array(indices)
+
+
 def _hist_calculate_hist(
     native: ChunkedArrayAny,
     bins: list[float] | ChunkedArray[NumericScalar],
@@ -1382,20 +1418,21 @@ def _hist_calculate_hist(
         if include_breakpoint:
             return {"breakpoint": [bins[-1]], "count": [count]}
         return {"count": [count]}
-    # TODO @dangotbanned: replacing `np.searchsorted`
-    # TODO @dangotbanned: replacing `np.isin` x2 assign weirdness
-    # Handle multiple bins
-    import numpy as np  # ignore-banned-import
 
-    bin_indices = np.searchsorted(bins, native, side="left")
     # lowest bin is inclusive
-    bin_indices = pc.if_else(pc.equal(native, lit(bins[0])), 1, bin_indices)
-
-    # Align unique categories and counts appropriately
-    obs_cats, obs_counts = np.unique(bin_indices, return_counts=True)
-    obj_cats = np.arange(1, len(bins))
-    counts = np.zeros_like(obj_cats)
-    counts[np.isin(obj_cats, obs_cats)] = obs_counts[np.isin(obs_cats, obj_cats)]
+    # NOTE: `np.unique` behavior sorts first
+    value_counts = (
+        when_then(not_eq(native, lit(bins[0])), search_sorted(native, bins), 1)
+        .sort()
+        .value_counts()
+    )
+    values, counts = struct_fields(value_counts, "values", "counts")
+    bin_count = len(bins)
+    # TODO @dangotbanned: I'd still like to do this in less steps, but it is *more* native
+    int_range_ = int_range(1, bin_count, chunked=False)
+    mask = is_in(int_range_, values)
+    replacements = counts.filter(is_in(values, int_range_))
+    counts = replace_with_mask(zeros(bin_count - 1), mask, replacements)
 
     if include_breakpoint:
         return {"breakpoint": bins[1:], "count": counts}

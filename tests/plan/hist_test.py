@@ -54,15 +54,16 @@ SHIFT_BINS_BY = 10
 @pytest.mark.parametrize(
     ("bins", "expected"),
     [
-        ([-float("inf"), 2.5, 5.5, float("inf")], [3, 3, 1]),
-        ([1.0, 2.5, 5.5, float("inf")], [2, 3, 1]),
-        ([1.0, 2.5, 5.5], [2, 3]),
-        ([-10.0, -1.0, 2.5, 5.5], [0, 3, 3]),
-        ([1.0, 2.0625], [2]),
-        ([1], []),
-        ([0, 10], [7]),
+        pytest.param(
+            [-float("inf"), 2.5, 5.5, float("inf")], [3, 3, 1], id="4_bins-neg-inf-inf"
+        ),
+        pytest.param([1.0, 2.5, 5.5, float("inf")], [2, 3, 1], id="4_bins-inf"),
+        pytest.param([1.0, 2.5, 5.5], [2, 3], id="3_bins"),
+        pytest.param([-10.0, -1.0, 2.5, 5.5], [0, 3, 3], id="4_bins"),
+        pytest.param([1.0, 2.0625], [2], id="2_bins-1"),
+        pytest.param([1], [], id="1_bins"),
+        pytest.param([0, 10], [7], id="2_bins-2"),
     ],
-    ids=str,
 )
 def test_hist_bin(
     data: Data,
@@ -112,32 +113,43 @@ def test_hist_bin(
 params_params = pytest.mark.parametrize(
     "params",
     [
-        {
-            "bin_count": 4,
-            "expected_bins": [0, 1.5, 3.0, 4.5, 6.0],
-            "expected_count": [2, 2, 1, 2],
-        },
-        {
-            "bin_count": 12,
-            "expected_bins": [
-                0,
-                0.5,
-                1.0,
-                1.5,
-                2.0,
-                2.5,
-                3.0,
-                3.5,
-                4.0,
-                4.5,
-                5.0,
-                5.5,
-                6.0,
-            ],
-            "expected_count": [1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
-        },
-        {"bin_count": 1, "expected_bins": [0, 6], "expected_count": [7]},
-        {"bin_count": 0, "expected_bins": [], "expected_count": []},
+        pytest.param(
+            {
+                "bin_count": 4,
+                "expected_bins": [0, 1.5, 3.0, 4.5, 6.0],
+                "expected_count": [2, 2, 1, 2],
+            },
+            id="bin_count-4",
+        ),
+        pytest.param(
+            {
+                "bin_count": 12,
+                "expected_bins": [
+                    0,
+                    0.5,
+                    1.0,
+                    1.5,
+                    2.0,
+                    2.5,
+                    3.0,
+                    3.5,
+                    4.0,
+                    4.5,
+                    5.0,
+                    5.5,
+                    6.0,
+                ],
+                "expected_count": [1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
+            },
+            id="bin_count-12",
+        ),
+        pytest.param(
+            {"bin_count": 1, "expected_bins": [0, 6], "expected_count": [7]},
+            id="bin_count-1",
+        ),
+        pytest.param(
+            {"bin_count": 0, "expected_bins": [], "expected_count": []}, id="bin_count-0"
+        ),
     ],
 )
 
