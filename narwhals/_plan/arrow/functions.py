@@ -85,6 +85,7 @@ if TYPE_CHECKING:
         IntoArrowSchema,
         IntoDType,
         NonNestedLiteral,
+        NumericLiteral,
         PythonLiteral,
     )
 
@@ -1033,12 +1034,14 @@ def replace_with_mask(
 
 def is_between(
     native: ChunkedOrScalar[ScalarT],
-    lower: ChunkedOrScalar[ScalarT],
-    upper: ChunkedOrScalar[ScalarT],
+    lower: ChunkedOrScalar[ScalarT] | NumericLiteral,
+    upper: ChunkedOrScalar[ScalarT] | NumericLiteral,
     closed: ClosedInterval,
-) -> ChunkedOrScalar[pa.BooleanScalar]:
+) -> ChunkedOrScalar[BooleanScalar]:
     fn_lhs, fn_rhs = _IS_BETWEEN[closed]
-    return and_(fn_lhs(native, lower), fn_rhs(native, upper))  # type: ignore[no-any-return]
+    low, high = (el if _is_arrow(el) else lit(el) for el in (lower, upper))
+    out: ChunkedOrScalar[BooleanScalar] = and_(fn_lhs(native, low), fn_rhs(native, high))
+    return out
 
 
 @t.overload
@@ -1373,8 +1376,9 @@ def _hist_calculate_hist(
     include_breakpoint: bool,
 ) -> Mapping[str, Iterable[Any]]:
     if len(bins) == 2:
-        is_between_bins = and_(gt_eq(native, lit(bins[0])), lt_eq(native, lit(bins[1])))
-        count = sum_(is_between_bins.cast(pa.uint8()))
+        # NOTE: I still don't like this summing a mask to get a count
+        # TODO @dangotbanned: Isn't there a compute function for this?
+        count = sum_(is_between(native, bins[0], bins[1], closed="both").cast(pa.uint8()))
         if include_breakpoint:
             return {"breakpoint": [bins[-1]], "count": [count]}
         return {"count": [count]}
