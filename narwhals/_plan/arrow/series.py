@@ -283,13 +283,21 @@ class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayA
         return fn.any_(self.native).as_py()
 
     def sum(self) -> float:
-        return fn.sum_(self.native).as_py()  # type: ignore[no-any-return]
+        result: float = fn.sum_(self.native).as_py()
+        return result
 
     def count(self) -> int:
         return fn.count(self.native).as_py()
 
     def unique(self, *, maintain_order: bool = False) -> Self:
         return self._with_native(self.native.unique())
+
+    def drop_nulls(self) -> Self:
+        return self._with_native(self.native.drop_null())
+
+    def drop_nans(self) -> Self:
+        predicate: Incomplete = fn.is_not_nan(self.native)
+        return self._with_native(self.native.filter(predicate, "emit_null"))
 
     @property
     def struct(self) -> SeriesStructNamespace:

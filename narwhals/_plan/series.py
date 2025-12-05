@@ -125,6 +125,9 @@ class Series(Generic[NativeSeriesT_co]):
     def alias(self, name: str) -> Self:
         return type(self)(self._compliant.alias(name))
 
+    def cast(self, dtype: IntoDType) -> Self:  # pragma: no cover
+        return type(self)(self._compliant.cast(dtype))
+
     def __len__(self) -> int:
         return len(self._compliant)
 
@@ -259,6 +262,12 @@ class Series(Generic[NativeSeriesT_co]):
 
     def unique(self, *, maintain_order: bool = False) -> Self:  # pragma: no cover
         return type(self)(self._compliant.unique(maintain_order=maintain_order))
+
+    def drop_nulls(self) -> Self:  # pragma: no cover
+        return type(self)(self._compliant.drop_nulls())
+
+    def drop_nans(self) -> Self:
+        return type(self)(self._compliant.drop_nans())
 
     @unstable
     def hist(
