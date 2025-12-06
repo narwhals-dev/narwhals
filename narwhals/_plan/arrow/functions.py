@@ -1356,7 +1356,7 @@ def zeros(n: int, /) -> pa.Int64Array:
 SearchSortedSide: TypeAlias = Literal["left", "right"]
 
 
-# TODO @dangotbanned: replacing `np.searchsorted`?
+# NOTE @dangotbanned: (wish) replacing `np.searchsorted`?
 @t.overload
 def search_sorted(
     native: ChunkedOrArrayT,
@@ -1417,7 +1417,6 @@ def hist_bins(
     )
     values, counts = struct_fields(value_counts, "values", "counts")
     bin_count = len(bins)
-    # TODO @dangotbanned: I'd still like to do this in less steps, but it is *more* native
     int_range_ = int_range(1, bin_count, chunked=False)
     mask = is_in(int_range_, values)
     replacements = counts.filter(is_in(values, int_range_))
