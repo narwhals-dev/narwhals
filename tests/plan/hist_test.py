@@ -91,9 +91,7 @@ def _expected(
 SHIFT_BINS_BY = 10
 """shift bins property"""
 
-
-# TODO @dangotbanned: Try to avoid all this looping (3x `iter_columns` in a single test?)
-@pytest.mark.parametrize(
+bins_cases = pytest.mark.parametrize(
     ("bins", "expected_count"),
     [
         pytest.param(
@@ -107,45 +105,61 @@ SHIFT_BINS_BY = 10
         pytest.param([0, 10], [7], id="2_bins-2"),
     ],
 )
+
+
+@bins_cases
 def test_hist_bins(
     data: Data,
-    data_missing: Data,
+    schema_data: nw.Schema,
     backend: EagerAllowed,
+    column_data: str,
     bins: Sequence[float],
     expected_count: Sequence[int],
     *,
     include_breakpoint: bool,
 ) -> None:
-    df = nwp.DataFrame.from_dict(data, backend=backend).with_columns(
-        float=nwp.col("int").cast(nw.Float64)
-    )
+    ser = _series(column_data, data, schema_data, backend)
     expected = _expected(bins, expected_count, include_breakpoint=include_breakpoint)
+    result = ser.hist(bins, include_breakpoint=include_breakpoint)
+    assert_equal_data(result, expected)
+    assert len(result) == max(len(bins) - 1, 0)
 
-    # smoke tests
-    for series in df.iter_columns():
-        result = series.hist(bins=bins, include_breakpoint=include_breakpoint)
-        assert_equal_data(result, expected)
 
-        # result size property
-        assert len(result) == max(len(bins) - 1, 0)
-
-    # shift bins property
+@bins_cases
+def test_hist_bins_shifted(
+    data: Data,
+    schema_data: nw.Schema,
+    backend: EagerAllowed,
+    column_data: str,
+    bins: Sequence[float],
+    expected_count: Sequence[int],
+    *,
+    include_breakpoint: bool,
+) -> None:
     shifted_bins = [b + SHIFT_BINS_BY for b in bins]
     expected = _expected(
         shifted_bins, expected_count, include_breakpoint=include_breakpoint
     )
-    for series in df.iter_columns():
-        result = (series + SHIFT_BINS_BY).hist(
-            shifted_bins, include_breakpoint=include_breakpoint
-        )
-        assert_equal_data(result, expected)
+    ser = _series(column_data, data, schema_data, backend) + SHIFT_BINS_BY
+    result = ser.hist(shifted_bins, include_breakpoint=include_breakpoint)
+    assert_equal_data(result, expected)
 
-    # missing/nan results
-    df = nwp.DataFrame.from_dict(data_missing, backend=backend)
+
+@bins_cases
+def test_hist_bins_missing(
+    data_missing: Data,
+    schema_data_missing: nw.Schema,
+    backend: EagerAllowed,
+    column_data_missing: str,
+    bins: Sequence[float],
+    expected_count: Sequence[int],
+    *,
+    include_breakpoint: bool,
+) -> None:
+    ser = _series(column_data_missing, data_missing, schema_data_missing, backend)
     expected = _expected(bins, expected_count, include_breakpoint=include_breakpoint)
-    for series in df.iter_columns():
-        result = series.hist(bins, include_breakpoint=include_breakpoint)
-        assert_equal_data(result, expected)
+    result = ser.hist(bins, include_breakpoint=include_breakpoint)
+    assert_equal_data(result, expected)
 
 
 bin_count_cases = pytest.mark.parametrize(
