@@ -1386,27 +1386,21 @@ def search_sorted(
     return array(indices)
 
 
-# TODO @dangotbanned: Really need to reduce repeating this breakpoint/results stuff
-def _hist_data_empty(*, include_breakpoint: bool) -> Mapping[str, Iterable[Any]]:
-    return {"breakpoint": [], "count": []} if include_breakpoint else {"count": []}
-
-
-def _hist_series_empty(
-    arg: int | list[float], *, include_breakpoint: bool
-) -> Mapping[str, Iterable[Any]]:
-    n = arg if isinstance(arg, int) else len(arg) - 1
-    if not include_breakpoint:
-        return {"count": zeros(n)}
-    bp = linear_space(0, 1, arg, closed="right") if isinstance(arg, int) else arg[1:]
-    return {"breakpoint": bp, "count": zeros(n)}
-
-
-def _hist_calculate_hist(
+def hist_bins(
     native: ChunkedArrayAny,
-    bins: list[float] | ChunkedArray[NumericScalar],
+    bins: Sequence[float] | ChunkedArray[NumericScalar],
     *,
     include_breakpoint: bool,
 ) -> Mapping[str, Iterable[Any]]:
+    """Bin values into buckets and count their occurrences.
+
+    Notes:
+        Assumes that the following edge cases have been handled:
+        - `len(bins) >= 2`
+        - `bins` increase monotonically
+        - `bin[0] != bin[-1]`
+        - `native` contains values that are non-null (including NaN)
+    """
     if len(bins) == 2:
         upper = bins[1]
         count = array(is_between(native, bins[0], upper, closed="both"), BOOL).true_count
@@ -1434,23 +1428,15 @@ def _hist_calculate_hist(
     return {"count": counts}
 
 
-# NOTE: `Decimal` is not supported, but excluding it from the typing is surprisingly complicated
-# https://docs.rs/polars-core/0.52.0/polars_core/datatypes/enum.DataType.html#method.is_primitive_numeric
-def hist_with_bin_count(
-    native: ChunkedArray[NumericScalar], bin_count: int, *, include_breakpoint: bool
+def hist_zeroed_data(
+    arg: int | Sequence[float], *, include_breakpoint: bool
 ) -> Mapping[str, Iterable[Any]]:
-    if bin_count == 0:
-        return _hist_data_empty(include_breakpoint=include_breakpoint)
-    if is_only_nulls(native, nan_is_null=True):
-        return _hist_series_empty(bin_count, include_breakpoint=include_breakpoint)
-    lower: ScalarAny = min_(native)
-    upper: ScalarAny = max_(native)
-    if lower.equals(upper):
-        # All data points are identical - use unit interval
-        rhs = lit(0.5)
-        lower, upper = sub(lower, rhs), add(upper, rhs)
-    bins = linear_space(lower.as_py(), upper.as_py(), bin_count + 1)
-    return _hist_calculate_hist(native, bins, include_breakpoint=include_breakpoint)
+    # NOTE: If adding `linear_space` and `zeros` to `CompliantNamespace`, consider moving this.
+    n = arg if isinstance(arg, int) else len(arg) - 1
+    if not include_breakpoint:
+        return {"count": zeros(n)}
+    bp = linear_space(0, 1, arg, closed="right") if isinstance(arg, int) else arg[1:]
+    return {"breakpoint": bp, "count": zeros(n)}
 
 
 def lit(value: Any, dtype: DataType | None = None) -> NativeScalar:

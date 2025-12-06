@@ -703,28 +703,42 @@ class ArrowExpr(  # type: ignore[misc]
 
     def hist_bins(self, node: FExpr[F.HistBins], frame: Frame, name: str) -> Self:
         native = self._dispatch_expr(node.input[0], frame, name).native
-        bins = list(node.function.bins)
-        include = node.function.include_breakpoint
+        func = node.function
+        bins = func.bins
+        include = func.include_breakpoint
         if len(bins) <= 1:
-            data = fn._hist_data_empty(include_breakpoint=include)
+            data = func.empty_data
         elif fn.is_only_nulls(native, nan_is_null=True):
-            data = fn._hist_series_empty(bins, include_breakpoint=include)
+            data = fn.hist_zeroed_data(bins, include_breakpoint=include)
         else:
-            data = fn._hist_calculate_hist(native, bins, include_breakpoint=include)
+            data = fn.hist_bins(native, bins, include_breakpoint=include)
         ns = namespace(self)
         return self.from_series(ns._dataframe.from_dict(data).to_struct(name))
 
     def hist_bin_count(
         self, node: FExpr[F.HistBinCount], frame: Frame, name: str
     ) -> Self:
-        s = self._dispatch_expr(node.input[0], frame, name)
+        native = self._dispatch_expr(node.input[0], frame, name).native
         func = node.function
-        struct_data = fn.hist_with_bin_count(
-            s.native, func.bin_count, include_breakpoint=func.include_breakpoint
-        )
-        return self.from_series(
-            namespace(self)._dataframe.from_dict(struct_data).to_struct(name)
-        )
+        bin_count = func.bin_count
+        include = func.include_breakpoint
+        if bin_count == 0:
+            data = func.empty_data
+        elif fn.is_only_nulls(native, nan_is_null=True):
+            data = fn.hist_zeroed_data(bin_count, include_breakpoint=include)
+        else:
+            # NOTE: `Decimal` is not supported, but excluding it from the typing is surprisingly complicated
+            # https://docs.rs/polars-core/0.52.0/polars_core/datatypes/enum.DataType.html#method.is_primitive_numeric
+            lower: NativeScalar = fn.min_(native)
+            upper: NativeScalar = fn.max_(native)
+            if lower.equals(upper):
+                # All data points are identical - use unit interval
+                rhs = fn.lit(0.5)
+                lower, upper = fn.sub(lower, rhs), fn.add(upper, rhs)
+            bins = fn.linear_space(lower.as_py(), upper.as_py(), bin_count + 1)
+            data = fn.hist_bins(native, bins, include_breakpoint=include)
+        ns = namespace(self)
+        return self.from_series(ns._dataframe.from_dict(data).to_struct(name))
 
     # ewm_mean = not_implemented()  # noqa: ERA001
     @property

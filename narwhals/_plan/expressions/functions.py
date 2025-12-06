@@ -9,7 +9,7 @@ from narwhals._plan.exceptions import hist_bins_monotonic_error
 from narwhals._plan.options import FunctionFlags, FunctionOptions
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Mapping
     from typing import Any
 
     from _typeshed import ConvertibleToInt
@@ -107,6 +107,13 @@ class Hist(Function):
         count: ConvertibleToInt = 10, /, *, include_breakpoint: bool = True
     ) -> HistBinCount:
         return HistBinCount(bin_count=int(count), include_breakpoint=include_breakpoint)
+
+    @property
+    def empty_data(self) -> Mapping[str, Iterable[Any]]:
+        # NOTE: May need to adapt for `include_category`?
+        return (
+            {"breakpoint": [], "count": []} if self.include_breakpoint else {"count": []}
+        )
 
 
 class HistBins(Hist):
