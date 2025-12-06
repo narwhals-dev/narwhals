@@ -17,7 +17,14 @@ import pyarrow as pa
 
 import narwhals as nw
 from narwhals import _plan as nwp
-from tests.plan.utils import assert_equal_data, dataframe, first, last, series
+from tests.plan.utils import (
+    assert_equal_data,
+    assert_equal_series,
+    dataframe,
+    first,
+    last,
+    series,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -668,6 +675,66 @@ def test_series_to_polars(values: Sequence[PythonLiteral]) -> None:
     expected = pl.Series(values)
     result = series(values).to_polars()
     pl_assert_series_equal(result, expected)
+
+
+def test_dataframe_iter_columns(data_small: Data) -> None:
+    df = dataframe(data_small)
+    result = df.from_dict({s.name: s for s in df.iter_columns()}).to_dict(as_series=False)
+    assert_equal_data(df, result)
+
+
+def test_dataframe_from_dict_misc(data_small: Data) -> None:
+    pytest.importorskip("pyarrow")
+    items = iter(data_small.items())
+    name, values = next(items)
+    mapping: dict[str, Any] = {
+        name: nwp.Series.from_iterable(values, name=name, backend="pyarrow")
+    }
+    mapping.update(items)
+    result = nwp.DataFrame.from_dict(mapping)
+    assert_equal_data(result, data_small)
+
+    with pytest.raises(TypeError, match=r"from_dict.+without.+backend"):
+        nwp.DataFrame.from_dict(data_small)  # type: ignore[arg-type]
+
+
+# TODO @dangotbanned: Split this up
+def test_series_misc() -> None:
+    pytest.importorskip("pyarrow")
+
+    values = [1.0, None, 7.1, float("nan"), 4.9, 12.0, 1.1, float("nan"), 0.2, None]
+    name = "ser"
+    ser = nwp.Series.from_iterable(values, name=name, dtype=nw.Float64, backend="pyarrow")
+    assert ser.is_empty() is False
+    assert ser.has_nulls()
+    assert ser.null_count() == 2
+
+    is_null = ser.is_null()
+    is_nan = ser.is_nan()
+    is_not_null = ser.is_not_null()
+    is_not_nan = ser.is_not_nan()
+    is_useful = ~(is_null | is_nan)
+
+    assert is_useful.any()
+
+    assert_equal_series(is_null, ~is_not_null)
+    assert_equal_series(~is_null, is_not_null)
+    assert_equal_series(is_nan, ~is_not_nan)
+    assert_equal_series(~is_nan, is_not_nan)
+
+    expected = [False, None, False, False, False, False, False, False, False, None]
+    assert_equal_series(is_null & is_nan, expected, name)
+    expected = [False, True, False, False, False, False, False, False, False, True]
+    assert_equal_series(is_null, expected, name)
+    expected = [True, False, True, False, True, True, True, False, True, False]
+    assert_equal_series(is_not_nan & is_not_null, expected, name)
+
+    assert ser.unique().drop_nans().drop_nulls().count() == 6
+
+    assert_equal_series(ser.gather([0, 2, 4]).sort(), [1.0, 4.9, 7.1], name)
+    assert ser.gather([]).to_list() == []
+
+    assert len(list(ser)) == len(values)
 
 
 if TYPE_CHECKING:

@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, get_args, ove
 
 from narwhals._plan import _parse
 from narwhals._plan._expansion import expand_selector_irs_names, prepare_projection
+from narwhals._plan._guards import is_series
 from narwhals._plan.common import ensure_seq_str, temp
 from narwhals._plan.group_by import GroupBy, Grouped
 from narwhals._plan.options import SortMultipleOptions
@@ -16,6 +17,7 @@ from narwhals._plan.typing import (
     NativeDataFrameT_co,
     NativeFrameT_co,
     NativeSeriesT,
+    NativeSeriesT2,
     NonCrossJoinStrategy,
     OneOrIterable,
     PartialSeries,
@@ -34,6 +36,7 @@ if TYPE_CHECKING:
     import pyarrow as pa
     from typing_extensions import Self, TypeAlias, TypeIs
 
+    from narwhals._native import NativeSeries
     from narwhals._plan.arrow.typing import NativeArrowDataFrame
     from narwhals._plan.compliant.dataframe import (
         CompliantDataFrame,
@@ -84,7 +87,7 @@ class BaseFrame(Generic[NativeFrameT_co]):
     def _with_compliant(self, compliant: CompliantFrame[Any, Incomplete], /) -> Self:
         return type(self)(compliant)
 
-    def to_native(self) -> NativeFrameT_co:  # pragma: no cover
+    def to_native(self) -> NativeFrameT_co:
         return self._compliant.native
 
     def filter(
@@ -232,10 +235,17 @@ class DataFrame(
     def from_dict(
         cls: type[DataFrame[Any, Any]],
         data: Mapping[str, Any],
-        schema: IntoSchema | None = None,
+        schema: IntoSchema | None = ...,
         *,
-        backend: IntoBackend[EagerAllowed] | None = ...,
+        backend: IntoBackend[EagerAllowed],
     ) -> DataFrame[Any, Any]: ...
+    @overload
+    @classmethod
+    def from_dict(
+        cls: type[DataFrame[Any, Any]],
+        data: Mapping[str, Series[NativeSeriesT2]],
+        schema: IntoSchema | None = ...,
+    ) -> DataFrame[Any, NativeSeriesT2]: ...
     @classmethod
     def from_dict(
         cls: type[DataFrame[Any, Any]],
@@ -247,8 +257,23 @@ class DataFrame(
         from narwhals._plan import functions as F
 
         if backend is None:
-            msg = f"`from_dict({backend=})`"
-            raise NotImplementedError(msg)
+            unwrapped: dict[str, NativeSeries | Any] = {}
+            impl: _EagerAllowedImpl | None = backend
+            for k, v in data.items():
+                if is_series(v):
+                    current = v.implementation
+                    if impl is None:
+                        impl = current
+                    elif current is not impl:
+                        msg = f"All `Series` must share the same backend, but got:\n  -{impl!r}\n  -{current!r}"
+                        raise NotImplementedError(msg)
+                    unwrapped[k] = v.to_native()
+                else:
+                    unwrapped[k] = v
+            if impl is None:
+                msg = "Calling `from_dict` without `backend` is only supported if all input values are already Narwhals Series"
+                raise TypeError(msg)
+            return _dataframe_from_dict(unwrapped, schema, F._eager_namespace(impl))
 
         ns = F._eager_namespace(backend)
         return _dataframe_from_dict(data, schema, ns)

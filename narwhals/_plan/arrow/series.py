@@ -297,7 +297,9 @@ class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayA
 
     def drop_nans(self) -> Self:
         predicate: Incomplete = fn.is_not_nan(self.native)
-        return self._with_native(self.native.filter(predicate, "emit_null"))
+        return self._with_native(
+            self.native.filter(predicate, null_selection_behavior="emit_null")
+        )
 
     @property
     def struct(self) -> SeriesStructNamespace:

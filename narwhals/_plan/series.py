@@ -119,7 +119,8 @@ class Series(Generic[NativeSeriesT_co]):
     def to_polars(self) -> pl.Series:
         return self._compliant.to_polars()
 
-    def __iter__(self) -> Iterator[Any]:  # pragma: no cover
+    # TODO @dangotbanned: Figure out if this should be yielding `pa.Scalar`
+    def __iter__(self) -> Iterator[Any]:
         yield from self.to_native()
 
     def alias(self, name: str) -> Self:
@@ -131,7 +132,7 @@ class Series(Generic[NativeSeriesT_co]):
     def __len__(self) -> int:
         return len(self._compliant)
 
-    def gather(self, indices: SizedMultiIndexSelector[Self]) -> Self:  # pragma: no cover
+    def gather(self, indices: SizedMultiIndexSelector[Self]) -> Self:
         if len(indices) == 0:
             return self.slice(0, 0)
         rows = indices._compliant if isinstance(indices, Series) else indices
@@ -140,19 +141,17 @@ class Series(Generic[NativeSeriesT_co]):
     def gather_every(self, n: int, offset: int = 0) -> Self:
         return type(self)(self._compliant.gather_every(n, offset))
 
-    def has_nulls(self) -> bool:  # pragma: no cover
+    def has_nulls(self) -> bool:
         return self._compliant.has_nulls()
 
     def slice(self, offset: int, length: int | None = None) -> Self:
         return type(self)(self._compliant.slice(offset=offset, length=length))
 
-    def sort(
-        self, *, descending: bool = False, nulls_last: bool = False
-    ) -> Self:  # pragma: no cover
+    def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
         result = self._compliant.sort(descending=descending, nulls_last=nulls_last)
         return type(self)(result)
 
-    def is_empty(self) -> bool:  # pragma: no cover
+    def is_empty(self) -> bool:
         return self._compliant.is_empty()
 
     def _unwrap_compliant(
@@ -191,16 +190,16 @@ class Series(Generic[NativeSeriesT_co]):
     def is_in(self, other: Iterable[Any]) -> Self:
         return type(self)(self._compliant.is_in(self._parse_into_compliant(other)))
 
-    def is_nan(self) -> Self:  # pragma: no cover
+    def is_nan(self) -> Self:
         return type(self)(self._compliant.is_nan())
 
-    def is_null(self) -> Self:  # pragma: no cover
+    def is_null(self) -> Self:
         return type(self)(self._compliant.is_null())
 
-    def is_not_nan(self) -> Self:  # pragma: no cover
+    def is_not_nan(self) -> Self:
         return type(self)(self._compliant.is_not_nan())
 
-    def is_not_null(self) -> Self:  # pragma: no cover
+    def is_not_null(self) -> Self:
         return type(self)(self._compliant.is_not_null())
 
     def null_count(self) -> int:
@@ -237,11 +236,15 @@ class Series(Generic[NativeSeriesT_co]):
         other_ = self._unwrap_compliant(other) if is_series(other) else other
         return type(self)(self._compliant.__eq__(other_))
 
-    def __or__(self, other: bool | Self, /) -> Self:  # pragma: no cover
+    def __and__(self, other: bool | Self, /) -> Self:
+        other_ = self._unwrap_compliant(other) if is_series(other) else other
+        return type(self)(self._compliant.__and__(other_))
+
+    def __or__(self, other: bool | Self, /) -> Self:
         other_ = self._unwrap_compliant(other) if is_series(other) else other
         return type(self)(self._compliant.__or__(other_))
 
-    def __invert__(self) -> Self:  # pragma: no cover
+    def __invert__(self) -> Self:
         return type(self)(self._compliant.__invert__())
 
     def __add__(self, other: NumericLiteral | TemporalLiteral | Self, /) -> Self:
@@ -251,7 +254,7 @@ class Series(Generic[NativeSeriesT_co]):
     def all(self) -> bool:
         return self._compliant.all()
 
-    def any(self) -> bool:  # pragma: no cover
+    def any(self) -> bool:
         return self._compliant.any()
 
     def sum(self) -> float:
@@ -260,10 +263,10 @@ class Series(Generic[NativeSeriesT_co]):
     def count(self) -> int:
         return self._compliant.count()
 
-    def unique(self, *, maintain_order: bool = False) -> Self:  # pragma: no cover
+    def unique(self, *, maintain_order: bool = False) -> Self:
         return type(self)(self._compliant.unique(maintain_order=maintain_order))
 
-    def drop_nulls(self) -> Self:  # pragma: no cover
+    def drop_nulls(self) -> Self:
         return type(self)(self._compliant.drop_nulls())
 
     def drop_nans(self) -> Self:
