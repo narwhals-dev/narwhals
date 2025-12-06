@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
 
     import polars as pl
-    from typing_extensions import Self
+    from typing_extensions import Self, TypeAlias
 
     from narwhals._plan.arrow.typing import ChunkedArrayAny
     from narwhals._plan.compliant.group_by import GroupByResolver
@@ -33,6 +33,8 @@ if TYPE_CHECKING:
     from narwhals._plan.typing import NonCrossJoinStrategy
     from narwhals.dtypes import DType
     from narwhals.typing import IntoSchema
+
+Incomplete: TypeAlias = Any
 
 
 class ArrowDataFrame(
@@ -47,6 +49,10 @@ class ArrowDataFrame(
     @property
     def _group_by(self) -> type[GroupBy]:
         return GroupBy
+
+    @property
+    def shape(self) -> tuple[int, int]:
+        return self.native.shape
 
     def group_by_resolver(self, resolver: GroupByResolver, /) -> GroupBy:
         return self._group_by.from_resolver(self, resolver)
@@ -96,10 +102,12 @@ class ArrowDataFrame(
 
         return pl.DataFrame(self.native)
 
-    def _evaluate_irs(self, nodes: Iterable[NamedIR[ExprIR]], /) -> Iterator[Series]:
-        ns = namespace(self)
-        from_named_ir = ns._expr.from_named_ir
-        yield from ns._expr.align(from_named_ir(e, self) for e in nodes)
+    def _evaluate_irs(
+        self, nodes: Iterable[NamedIR[ExprIR]], /, *, length: int | None = None
+    ) -> Iterator[Series]:
+        expr = namespace(self)._expr
+        from_named_ir = expr.from_named_ir
+        yield from expr.align((from_named_ir(e, self) for e in nodes), default=length)
 
     def sort(self, by: Sequence[str], options: SortMultipleOptions | None = None) -> Self:
         return self.gather(fn.sort_indices(self.native, *by, options=options))
@@ -120,6 +128,19 @@ class ArrowDataFrame(
         )
         column = fn.unsort_indices(indices)
         return self._with_native(self.native.add_column(0, name, column))
+
+    def to_struct(self, name: str = "") -> Series:
+        native = self.native
+        if fn.TO_STRUCT_ARRAY_ACCEPTS_EMPTY:
+            struct = native.to_struct_array()
+        elif fn.HAS_FROM_TO_STRUCT_ARRAY:
+            if len(native):
+                struct = native.to_struct_array()
+            else:
+                struct = fn.chunked_array([], pa.struct(native.schema))
+        else:
+            struct = fn.struct(native.column_names, native.columns)
+        return Series.from_native(struct, name, version=self.version)
 
     def get_column(self, name: str) -> Series:
         chunked = self.native.column(name)

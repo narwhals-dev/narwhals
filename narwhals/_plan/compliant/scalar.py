@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Any, Literal, Protocol
 
 from narwhals._plan.compliant.expr import CompliantExpr, EagerExpr, LazyExpr
 from narwhals._plan.compliant.typing import FrameT_contra, LengthT, SeriesT, SeriesT_co
@@ -10,7 +10,11 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._plan import expressions as ir
-    from narwhals._plan.expressions import FunctionExpr, aggregation as agg
+    from narwhals._plan.expressions import (
+        FunctionExpr,
+        aggregation as agg,
+        functions as F,
+    )
     from narwhals._plan.expressions.functions import EwmMean, NullCount, Shift
     from narwhals._utils import Version
     from narwhals.typing import IntoDType, PythonLiteral
@@ -102,6 +106,12 @@ class CompliantScalar(
             return self._with_evaluated(self._evaluated, name)
         return self.from_python(None, name, dtype=None, version=self.version)
 
+    def drop_nulls(  # type: ignore[override]
+        self, node: FunctionExpr[F.DropNulls], frame: FrameT_contra, name: str
+    ) -> Self | CompliantExpr[FrameT_contra, SeriesT_co]:
+        """Returns a 0-length Series if null, else noop."""
+        ...
+
     arg_max = _always_zero  # type: ignore[misc]
     arg_min = _always_zero  # type: ignore[misc]
     is_first_distinct = _always_true  # type: ignore[misc]
@@ -120,6 +130,8 @@ class CompliantScalar(
     sum = _always_noop  # type: ignore[misc]
     mode = _always_noop  # type: ignore[misc]
     unique = _always_noop  # type: ignore[misc]
+    mode_all = not_implemented()  # type: ignore[misc]
+    mode_any = _always_noop  # type: ignore[misc]
     kurtosis = _always_nan  # type: ignore[misc]
     skew = _always_nan  # type: ignore[misc]
     fill_null_with_strategy = not_implemented()  # type: ignore[misc]
@@ -136,9 +148,17 @@ class EagerScalar(
     def __len__(self) -> int:
         return 1
 
+    def __bool__(self) -> Literal[True]:
+        # NOTE: Avoids falling back to `__len__` when truth-testing on dispatch
+        return True
+
     def to_python(self) -> PythonLiteral: ...
 
     gather_every = not_implemented()  # type: ignore[misc]
+    # NOTE: `n=1` and `fraction=1.0` *could* be special-cased here
+    # but seems low-priority for a deprecated method
+    sample_n = not_implemented()  # type: ignore[misc]
+    sample_frac = not_implemented()  # type: ignore[misc]
 
 
 class LazyScalar(

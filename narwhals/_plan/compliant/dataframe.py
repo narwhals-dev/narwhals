@@ -80,6 +80,8 @@ class CompliantDataFrame(
     implementation: ClassVar[_EagerAllowedImpl]
     _native: NativeDataFrameT
 
+    @property
+    def shape(self) -> tuple[int, int]: ...
     def __len__(self) -> int: ...
     @property
     def _group_by(self) -> type[DataFrameGroupBy[Self]]: ...
@@ -105,6 +107,7 @@ class CompliantDataFrame(
     def from_dict(
         cls, data: Mapping[str, Any], /, *, schema: IntoSchema | None = None
     ) -> Self: ...
+    def gather_every(self, n: int, offset: int = 0) -> Self: ...
     def get_column(self, name: str) -> SeriesT: ...
     def group_by_agg(
         self, by: OneOrIterable[IntoExpr], aggs: OneOrIterable[IntoExpr], /
@@ -135,6 +138,7 @@ class CompliantDataFrame(
         return self._group_by.from_resolver(self, resolver)
 
     def filter(self, predicate: NamedIR, /) -> Self: ...
+    def iter_columns(self) -> Iterator[SeriesT]: ...
     def join(
         self,
         other: Self,
@@ -166,9 +170,19 @@ class CompliantDataFrame(
         return DataFrame[NativeDataFrameT, NativeSeriesT](self)
 
     def to_series(self, index: int = 0) -> SeriesT: ...
+    def to_struct(self, name: str = "") -> SeriesT: ...
     def to_polars(self) -> pl.DataFrame: ...
     def with_row_index(self, name: str) -> Self: ...
     def slice(self, offset: int, length: int | None = None) -> Self: ...
+    def sample_frac(
+        self, fraction: float, *, with_replacement: bool = False, seed: int | None = None
+    ) -> Self:
+        n = int(len(self) * fraction)
+        return self.sample_n(n, with_replacement=with_replacement, seed=seed)
+
+    def sample_n(
+        self, n: int = 1, *, with_replacement: bool = False, seed: int | None = None
+    ) -> Self: ...
 
 
 class EagerDataFrame(
@@ -178,6 +192,9 @@ class EagerDataFrame(
     def __narwhals_namespace__(self) -> EagerNamespace[Self, SeriesT, Any, Any]: ...
     @property
     def _group_by(self) -> type[EagerDataFrameGroupBy[Self]]: ...
+    def _evaluate_irs(
+        self, nodes: Iterable[NamedIR[ir.ExprIR]], /, *, length: int | None = None
+    ) -> Iterator[SeriesT]: ...
 
     def group_by_resolver(
         self, resolver: GroupByResolver, /
@@ -188,7 +205,9 @@ class EagerDataFrame(
         return self.__narwhals_namespace__()._concat_horizontal(self._evaluate_irs(irs))
 
     def with_columns(self, irs: Seq[NamedIR]) -> Self:
-        return self.__narwhals_namespace__()._concat_horizontal(self._evaluate_irs(irs))
+        return self.__narwhals_namespace__()._concat_horizontal(
+            self._evaluate_irs(irs, length=len(self))
+        )
 
     def to_series(self, index: int = 0) -> SeriesT:
         return self.get_column(self.columns[index])

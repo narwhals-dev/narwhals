@@ -42,16 +42,25 @@ class SupportsBroadcast(Protocol[SeriesT, LengthT]):
 
     @classmethod
     def _length_required(
-        cls, exprs: Sequence[SupportsBroadcast[SeriesT, LengthT]], /
+        cls,
+        exprs: Sequence[SupportsBroadcast[SeriesT, LengthT]],
+        /,
+        default: LengthT | None = None,
     ) -> LengthT | None:
         """Return the broadcast length, if all lengths do not equal the maximum."""
 
     @classmethod
     def align(
-        cls, *exprs: OneOrIterable[SupportsBroadcast[SeriesT, LengthT]]
+        cls,
+        *exprs: OneOrIterable[SupportsBroadcast[SeriesT, LengthT]],
+        default: LengthT | None = None,
     ) -> Iterator[SeriesT]:
+        """Yield broadcasted `Scalar`s and unwrapped `Expr`s from `exprs`.
+
+        `default` must be provided when operating in a `with_columns` context.
+        """
         exprs = tuple[SupportsBroadcast[SeriesT, LengthT], ...](flatten_hash_safe(exprs))
-        length = cls._length_required(exprs)
+        length = cls._length_required(exprs, default)
         if length is None:
             for e in exprs:
                 yield e.to_series()
@@ -85,12 +94,15 @@ class EagerBroadcast(Sized, SupportsBroadcast[SeriesT, int], Protocol[SeriesT]):
 
     @classmethod
     def _length_required(
-        cls, exprs: Sequence[SupportsBroadcast[SeriesT, int]], /
+        cls,
+        exprs: Sequence[SupportsBroadcast[SeriesT, int]],
+        /,
+        default: int | None = None,
     ) -> int | None:
         lengths = cls._length_all(exprs)
         max_length = cls._length_max(lengths)
         required = any(len_ != max_length for len_ in lengths)
-        return max_length if required else None
+        return max_length if required else default
 
 
 class ExprDispatch(HasVersion, Protocol[FrameT_contra, R_co, NamespaceT_co]):

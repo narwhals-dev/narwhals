@@ -3,11 +3,12 @@ from __future__ import annotations
 import builtins
 import datetime as dt
 import typing as t
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 from narwhals._duration import Interval
 from narwhals._plan import _guards, _parse, common, expressions as ir, selectors as cs
 from narwhals._plan._dispatch import get_dispatch_name
+from narwhals._plan.exceptions import list_literal_error
 from narwhals._plan.expressions import functions as F
 from narwhals._plan.expressions.literal import ScalarLiteral, SeriesLiteral
 from narwhals._plan.expressions.ranges import DateRange, IntRange, RangeFunction
@@ -52,6 +53,8 @@ if TYPE_CHECKING:
         t.Any, CompliantSeries[NativeSeriesT], t.Any, t.Any
     ]
 
+_dtypes: Final = Version.MAIN.dtypes
+
 
 def col(*names: str | t.Iterable[str]) -> Expr:
     flat = tuple(flatten(names))
@@ -72,8 +75,7 @@ def lit(
     if _guards.is_series(value):
         return SeriesLiteral(value=value).to_literal().to_narwhals()
     if not _guards.is_non_nested_literal(value):
-        msg = f"{type(value).__name__!r} is not supported in `nw.lit`, got: {value!r}."
-        raise TypeError(msg)
+        raise list_literal_error(value)
     if dtype is None:
         dtype = common.py_to_narwhals_dtype(value, Version.MAIN)
     else:
@@ -113,14 +115,26 @@ def sum(*columns: str) -> Expr:
     return col(columns).sum()
 
 
-def all_horizontal(*exprs: IntoExpr | t.Iterable[IntoExpr]) -> Expr:
+def all_horizontal(
+    *exprs: IntoExpr | t.Iterable[IntoExpr], ignore_nulls: bool = False
+) -> Expr:
     it = _parse.parse_into_seq_of_expr_ir(*exprs)
-    return ir.boolean.AllHorizontal().to_function_expr(*it).to_narwhals()
+    return (
+        ir.boolean.AllHorizontal(ignore_nulls=ignore_nulls)
+        .to_function_expr(*it)
+        .to_narwhals()
+    )
 
 
-def any_horizontal(*exprs: IntoExpr | t.Iterable[IntoExpr]) -> Expr:
+def any_horizontal(
+    *exprs: IntoExpr | t.Iterable[IntoExpr], ignore_nulls: bool = False
+) -> Expr:
     it = _parse.parse_into_seq_of_expr_ir(*exprs)
-    return ir.boolean.AnyHorizontal().to_function_expr(*it).to_narwhals()
+    return (
+        ir.boolean.AnyHorizontal(ignore_nulls=ignore_nulls)
+        .to_function_expr(*it)
+        .to_narwhals()
+    )
 
 
 def sum_horizontal(*exprs: IntoExpr | t.Iterable[IntoExpr]) -> Expr:
@@ -155,6 +169,33 @@ def concat_str(
         .to_function_expr(*it)
         .to_narwhals()
     )
+
+
+def coalesce(exprs: IntoExpr | t.Iterable[IntoExpr], *more_exprs: IntoExpr) -> Expr:
+    it = _parse.parse_into_seq_of_expr_ir(exprs, *more_exprs)
+    return F.Coalesce().to_function_expr(*it).to_narwhals()
+
+
+def format(f_string: str, *args: IntoExpr) -> Expr:
+    """Format expressions as a string.
+
+    Arguments:
+        f_string: A string that with placeholders.
+        args: Expression(s) that fill the placeholders.
+    """
+    if (n_placeholders := f_string.count("{}")) != builtins.len(args):
+        msg = f"number of placeholders should equal the number of arguments. Expected {n_placeholders} arguments, got {builtins.len(args)}."
+        raise ValueError(msg)
+    string = _dtypes.String()
+    exprs: list[ir.ExprIR] = []
+    it = iter(args)
+    for i, s in enumerate(f_string.split("{}")):
+        if i > 0:
+            exprs.append(_parse.parse_into_expr_ir(next(it)))
+        if s:
+            exprs.append(lit(s, string)._ir)
+    f = ConcatStr(separator="", ignore_nulls=False)
+    return f.to_function_expr(*exprs).to_narwhals()
 
 
 def when(

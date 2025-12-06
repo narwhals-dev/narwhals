@@ -18,7 +18,7 @@ from narwhals import _plan as nwp
 from narwhals._plan import Selector, selectors as ncs
 from narwhals._plan._guards import is_expr, is_selector
 from narwhals._utils import zip_strict
-from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError
+from narwhals.exceptions import ColumnNotFoundError, DuplicateError, InvalidOperationError
 from tests.plan.utils import (
     Frame,
     assert_expr_ir_equal,
@@ -749,3 +749,14 @@ def test_when_then_keep_map_13858() -> None:
     )
     df.assert_selects(aliased, "b_other")
     df.assert_selects(when_keep_chain, "b_other")
+
+
+def test_keep_name_struct_field_23669() -> None:
+    df = Frame.from_mapping(
+        {"foo": nw.Struct({"x": nw.Int64}), "bar": nw.Struct({"x": nw.Int64})}
+    )
+
+    with pytest.raises(DuplicateError):
+        df.project(nwp.all().struct.field("x"))
+
+    df.assert_selects(nwp.all().struct.field("x").name.keep(), "foo", "bar")

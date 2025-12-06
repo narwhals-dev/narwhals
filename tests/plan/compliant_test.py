@@ -13,13 +13,18 @@ pytest.importorskip("pyarrow")
 pytest.importorskip("numpy")
 import datetime as dt
 
-import numpy as np
 import pyarrow as pa
 
 import narwhals as nw
 from narwhals import _plan as nwp
-from narwhals._utils import Version
-from tests.plan.utils import assert_equal_data, dataframe, first, last, series
+from tests.plan.utils import (
+    assert_equal_data,
+    assert_equal_series,
+    dataframe,
+    first,
+    last,
+    series,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -205,7 +210,7 @@ XFAIL_KLEENE_ALL_NULL = pytest.mark.xfail(
         ),
         (nwp.col("e", "d").is_null().any(), {"e": [True], "d": [False]}),
         (
-            [(~nwp.col("e", "d").is_null()).all(), "b"],
+            [(nwp.col("e", "d").is_not_null()).all(), "b"],
             {"e": [False, False, False], "d": [True, True, True], "b": [1, 2, 3]},
         ),
         pytest.param(
@@ -391,48 +396,6 @@ XFAIL_KLEENE_ALL_NULL = pytest.mark.xfail(
             id="concat_str-all-lit",
         ),
         pytest.param(
-            [
-                nwp.col("a")
-                .alias("...")
-                .map_batches(
-                    lambda s: s.from_iterable(
-                        [*((len(s) - 1) * [type(s.dtype).__name__.lower()]), "last"],
-                        version=Version.MAIN,
-                        name="funky",
-                    ),
-                    is_elementwise=True,
-                ),
-                nwp.col("a"),
-            ],
-            {"funky": ["string", "string", "last"], "a": ["A", "B", "A"]},
-            id="map_batches-series",
-        ),
-        pytest.param(
-            nwp.col("b")
-            .map_batches(lambda s: s.to_numpy() + 1, nw.Float64(), is_elementwise=True)
-            .sum(),
-            {"b": [9.0]},
-            id="map_batches-numpy",
-        ),
-        pytest.param(
-            ncs.by_name("b", "c", "d")
-            .map_batches(lambda s: np.append(s.to_numpy(), [10, 2]), is_elementwise=True)
-            .sort(),
-            {"b": [1, 2, 2, 3, 10], "c": [2, 2, 4, 9, 10], "d": [2, 7, 8, 8, 10]},
-            id="map_batches-selector",
-        ),
-        pytest.param(
-            nwp.col("j", "k")
-            .fill_null(15)
-            .map_batches(lambda s: (s.to_numpy().max()), returns_scalar=True),
-            {"j": [15], "k": [42]},
-            id="map_batches-return_scalar",
-            marks=pytest.mark.xfail(
-                reason="not implemented `map_batches(returns_scalar=True)` for `pyarrow`",
-                raises=NotImplementedError,
-            ),
-        ),
-        pytest.param(
             [nwp.col("g").len(), nwp.col("m").last(), nwp.col("h").count()],
             {"g": [3], "m": [2], "h": [1]},
             id="len-count-with-nulls",
@@ -519,6 +482,26 @@ def test_with_columns(
 ) -> None:
     result = dataframe(data_small_af).with_columns(expr)
     assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("expr", "expected"),
+    [
+        (nwp.all().first(), {"a": 8, "b": 58, "c": 2.5, "d": 2, "idx": 0}),
+        (ncs.numeric().null_count(), {"a": 1, "b": 0, "c": 0, "d": 0, "idx": 0}),
+        (
+            ncs.by_index(range(5)).cast(nw.Boolean).fill_null(False).all(),
+            {"a": False, "b": True, "c": True, "d": True, "idx": False},
+        ),
+    ],
+)
+def test_with_columns_all_aggregates(
+    data_indexed: dict[str, Any], expr: nwp.Expr, expected: dict[str, PythonLiteral]
+) -> None:
+    height = len(next(iter(data_indexed.values())))
+    expected_full = {k: height * [v] for k, v in expected.items()}
+    result = dataframe(data_indexed).with_columns(expr)
+    assert_equal_data(result, expected_full)
 
 
 @pytest.mark.parametrize(
@@ -692,6 +675,66 @@ def test_series_to_polars(values: Sequence[PythonLiteral]) -> None:
     expected = pl.Series(values)
     result = series(values).to_polars()
     pl_assert_series_equal(result, expected)
+
+
+def test_dataframe_iter_columns(data_small: Data) -> None:
+    df = dataframe(data_small)
+    result = df.from_dict({s.name: s for s in df.iter_columns()}).to_dict(as_series=False)
+    assert_equal_data(df, result)
+
+
+def test_dataframe_from_dict_misc(data_small: Data) -> None:
+    pytest.importorskip("pyarrow")
+    items = iter(data_small.items())
+    name, values = next(items)
+    mapping: dict[str, Any] = {
+        name: nwp.Series.from_iterable(values, name=name, backend="pyarrow")
+    }
+    mapping.update(items)
+    result = nwp.DataFrame.from_dict(mapping)
+    assert_equal_data(result, data_small)
+
+    with pytest.raises(TypeError, match=r"from_dict.+without.+backend"):
+        nwp.DataFrame.from_dict(data_small)  # type: ignore[arg-type]
+
+
+# TODO @dangotbanned: Split this up
+def test_series_misc() -> None:
+    pytest.importorskip("pyarrow")
+
+    values = [1.0, None, 7.1, float("nan"), 4.9, 12.0, 1.1, float("nan"), 0.2, None]
+    name = "ser"
+    ser = nwp.Series.from_iterable(values, name=name, dtype=nw.Float64, backend="pyarrow")
+    assert ser.is_empty() is False
+    assert ser.has_nulls()
+    assert ser.null_count() == 2
+
+    is_null = ser.is_null()
+    is_nan = ser.is_nan()
+    is_not_null = ser.is_not_null()
+    is_not_nan = ser.is_not_nan()
+    is_useful = ~(is_null | is_nan)
+
+    assert is_useful.any()
+
+    assert_equal_series(is_null, ~is_not_null)
+    assert_equal_series(~is_null, is_not_null)
+    assert_equal_series(is_nan, ~is_not_nan)
+    assert_equal_series(~is_nan, is_not_nan)
+
+    expected = [False, None, False, False, False, False, False, False, False, None]
+    assert_equal_series(is_null & is_nan, expected, name)
+    expected = [False, True, False, False, False, False, False, False, False, True]
+    assert_equal_series(is_null, expected, name)
+    expected = [True, False, True, False, True, True, True, False, True, False]
+    assert_equal_series(is_not_nan & is_not_null, expected, name)
+
+    assert ser.unique().drop_nans().drop_nulls().count() == 6
+
+    assert_equal_series(ser.gather([0, 2, 4]).sort(), [1.0, 4.9, 7.1], name)
+    assert ser.gather([]).to_list() == []
+
+    assert len(list(ser)) == len(values)
 
 
 if TYPE_CHECKING:

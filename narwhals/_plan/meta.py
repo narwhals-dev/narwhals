@@ -14,6 +14,7 @@ from narwhals._plan._guards import is_literal
 from narwhals._plan.expressions import selectors as cs
 from narwhals._plan.expressions.literal import is_literal_scalar
 from narwhals._plan.expressions.namespace import IRNamespace
+from narwhals._plan.expressions.struct import FieldByName
 from narwhals.exceptions import ComputeError, InvalidOperationError
 from narwhals.utils import Version
 
@@ -113,6 +114,8 @@ def _expr_output_name(expr: ir.ExprIR, /) -> str | ComputeError:
             isinstance(e.selector, cs.ByName) and len(e.selector.names) == 1
         ):
             return e.selector.names[0]
+        if isinstance(e, ir.StructExpr) and isinstance(e.function, FieldByName):
+            return e.function.name
     msg = (
         f"unable to find root column name for expr '{expr!r}' when calling 'output_name'"
     )

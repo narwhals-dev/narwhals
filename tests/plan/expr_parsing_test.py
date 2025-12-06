@@ -15,7 +15,7 @@ from narwhals import _plan as nwp
 from narwhals._plan import expressions as ir
 from narwhals._plan._parse import parse_into_seq_of_expr_ir
 from narwhals._plan.expressions import functions as F, operators as ops
-from narwhals._plan.expressions.literal import SeriesLiteral
+from narwhals._plan.expressions.literal import ScalarLiteral, SeriesLiteral
 from narwhals._plan.expressions.ranges import IntRange
 from narwhals._utils import Implementation
 from narwhals.exceptions import (
@@ -377,6 +377,14 @@ def test_binary_expr_shape_invalid() -> None:
         a.fill_null(1) // b.rolling_mean(5)
 
 
+def test_map_batches_invalid() -> None:
+    with pytest.raises(
+        TypeError,
+        match=r"A function cannot both return a scalar and preserve length, they are mutually exclusive",
+    ):
+        nwp.col("a").map_batches(lambda x: x, is_elementwise=True, returns_scalar=True)
+
+
 @pytest.mark.parametrize("into_iter", [list, tuple, deque, iter, dict.fromkeys, set])
 def test_is_in_seq(into_iter: IntoIterable) -> None:
     expected = 1, 2, 3
@@ -693,3 +701,90 @@ def test_replace_strict_invalid() -> None:
         match="`new` argument cannot be used if `old` argument is a Mapping type",
     ):
         nwp.col("a").replace_strict(old={1: 2, 3: 4}, new=[5, 6, 7])
+
+
+def test_mode_invalid() -> None:
+    with pytest.raises(
+        TypeError, match=r"keep.+must be one of.+all.+any.+but got 'first'"
+    ):
+        nwp.col("a").mode(keep="first")  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    ("window_size", "min_samples", "context"),
+    [
+        (-1, None, pytest.raises(ValueError, match=r"window_size.+>= 1")),
+        (2, -1, pytest.raises(ValueError, match=r"min_samples.+>= 1")),
+        (
+            1,
+            2,
+            pytest.raises(InvalidOperationError, match=r"min_samples.+<=.+window_size"),
+        ),
+        (
+            4.2,
+            None,
+            pytest.raises(TypeError, match=r"Expected.+int.+got.+float.+\s+window_size="),
+        ),
+        (
+            2,
+            4.2,
+            pytest.raises(TypeError, match=r"Expected.+int.+got.+float.+\s+min_samples="),
+        ),
+    ],
+)
+def test_rolling_expr_invalid(
+    window_size: int, min_samples: int | None, context: pytest.RaisesExc[Any]
+) -> None:
+    a = nwp.col("a")
+    with context:
+        a.rolling_sum(window_size, min_samples=min_samples)
+    with context:
+        a.rolling_mean(window_size, min_samples=min_samples)
+    with context:
+        a.rolling_var(window_size, min_samples=min_samples)
+    with context:
+        a.rolling_std(window_size, min_samples=min_samples)
+
+
+def test_list_contains_invalid() -> None:
+    a = nwp.col("a")
+
+    ok = a.list.contains("a")
+    assert_expr_ir_equal(
+        ok,
+        ir.FunctionExpr(
+            input=(
+                ir.col("a"),
+                ir.Literal(value=ScalarLiteral(value="a", dtype=nw.String())),
+            ),
+            function=ir.lists.Contains(),
+            options=ir.lists.Contains().function_options,
+        ),
+    )
+    assert a.list.contains(a.first())
+    assert a.list.contains(1)
+    assert a.list.contains(nwp.lit(1))
+    assert a.list.contains(dt.datetime(2000, 2, 1, 9, 26, 5))
+    assert a.list.contains(a.abs().fill_null(5).mode(keep="any"))
+
+    with pytest.raises(
+        InvalidOperationError, match=r"list.contains.+non-scalar.+`col\('a'\)"
+    ):
+        a.list.contains(a)
+
+    with pytest.raises(InvalidOperationError, match=r"list.contains.+non-scalar.+abs"):
+        a.list.contains(a.abs())
+
+    with pytest.raises(TypeError, match=r"list.+not.+supported.+nw.lit.+1.+2.+3"):
+        a.list.contains([1, 2, 3])  # type: ignore[arg-type]
+
+
+def test_list_get_invalid() -> None:
+    a = nwp.col("a")
+    assert a.list.get(0)
+    pattern = re_compile(r"expected.+int.+got.+str.+'not an index'")
+    with pytest.raises(TypeError, match=pattern):
+        a.list.get("not an index")  # type: ignore[arg-type]
+    pattern = re_compile(r"index.+out of bounds.+>= 0.+got -1")
+    with pytest.raises(InvalidOperationError, match=pattern):
+        a.list.get(-1)
