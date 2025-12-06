@@ -74,11 +74,16 @@ class ArrowDataFrame(
 
     @classmethod
     def from_dict(
-        cls, data: Mapping[str, Any], /, *, schema: IntoSchema | None = None
+        cls,
+        data: Mapping[str, Any],
+        /,
+        *,
+        schema: IntoSchema | None = None,
+        version: Version = Version.MAIN,
     ) -> Self:
         pa_schema = Schema(schema).to_arrow() if schema is not None else schema
         native = pa.Table.from_pydict(data, schema=pa_schema)
-        return cls.from_native(native, version=Version.MAIN)
+        return cls.from_native(native, version=version)
 
     def iter_columns(self) -> Iterator[Series]:
         for name, series in zip(self.columns, self.native.itercolumns()):

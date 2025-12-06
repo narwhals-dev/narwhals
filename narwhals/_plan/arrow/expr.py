@@ -701,6 +701,17 @@ class ArrowExpr(  # type: ignore[misc]
         result = method(s, size, min_samples=samples, center=center, ddof=ddof)
         return self.from_series(result)
 
+    # NOTE: Should not be returning a struct when all `include_*` are false
+    # https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/crates/polars-ops/src/chunked_array/hist.rs#L223-L223
+    def _hist_finish(self, data: Mapping[str, Any], name: str) -> Self:
+        ns = namespace(self)
+        if len(data) == 1:
+            count = next(iter(data.values()))
+            series = ns._series.from_iterable(count, version=self.version, name=name)
+        else:
+            series = ns._dataframe.from_dict(data, version=self.version).to_struct(name)
+        return self.from_series(series)
+
     def hist_bins(self, node: FExpr[F.HistBins], frame: Frame, name: str) -> Self:
         native = self._dispatch_expr(node.input[0], frame, name).native
         func = node.function
@@ -712,8 +723,7 @@ class ArrowExpr(  # type: ignore[misc]
             data = fn.hist_zeroed_data(bins, include_breakpoint=include)
         else:
             data = fn.hist_bins(native, bins, include_breakpoint=include)
-        ns = namespace(self)
-        return self.from_series(ns._dataframe.from_dict(data).to_struct(name))
+        return self._hist_finish(data, name)
 
     def hist_bin_count(
         self, node: FExpr[F.HistBinCount], frame: Frame, name: str
@@ -737,8 +747,7 @@ class ArrowExpr(  # type: ignore[misc]
                 lower, upper = fn.sub(lower, rhs), fn.add(upper, rhs)
             bins = fn.linear_space(lower.as_py(), upper.as_py(), bin_count + 1)
             data = fn.hist_bins(native, bins, include_breakpoint=include)
-        ns = namespace(self)
-        return self.from_series(ns._dataframe.from_dict(data).to_struct(name))
+        return self._hist_finish(data, name)
 
     # ewm_mean = not_implemented()  # noqa: ERA001
     @property

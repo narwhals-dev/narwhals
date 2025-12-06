@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
-from typing import TYPE_CHECKING, Any, ClassVar, Generic
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal
 
 from narwhals._plan._guards import is_series
 from narwhals._plan.typing import NativeSeriesT, NativeSeriesT_co, OneOrIterable, SeriesT
@@ -278,46 +278,25 @@ class Series(Generic[NativeSeriesT_co]):
         bins: Sequence[float] | None = None,
         *,
         bin_count: int | None = None,
-        # NOTE: `pl.Series.hist` defaults are the opposite of `pl.Expr.hist`
         include_breakpoint: bool = True,
-        include_category: bool = False,  # NOTE: `pl.Series.hist` default is `True`, but that would be breaking (ish) for narwhals
-        _use_current_polars_behavior: bool = False,
+        include_category: bool = False,
+        _compatibility_behavior: Literal["narwhals", "polars"] = "narwhals",
     ) -> DataFrame[Incomplete, NativeSeriesT_co]:
-        """Well ...
-
-        `_use_current_polars_behavior` would preserve the series name, in line with current `polars`:
-
-            import polars as pl
-            ser = pl.Series("original_name", [0, 1, 2, 3, 4, 5, 6])
-            hist = ser.hist(bin_count=4, include_breakpoint=False, include_category=False)
-            hist_to_dict(as_series=False)
-            {'original_name': [2, 2, 1, 2]}
-
-        But all of our tests expect `"count"` as the name 🤔
-        """
         from narwhals._plan import functions as F
 
-        result = (
-            self.to_frame()
-            .select(
-                F.col(self.name).hist(
-                    bins,
-                    bin_count=bin_count,
-                    include_breakpoint=include_breakpoint,
-                    include_category=include_category,
-                )
+        result = self.to_frame().select(
+            F.col(self.name).hist(
+                bins,
+                bin_count=bin_count,
+                include_breakpoint=include_breakpoint,
+                include_category=include_category,
             )
-            .to_series()
-            .struct.unnest()
         )
-
-        if (
-            not include_breakpoint
-            and not include_category
-            and _use_current_polars_behavior
-        ):  # pragma: no cover
-            return result.rename({"count": self.name})
-        return result
+        if not include_breakpoint and not include_category:
+            if _compatibility_behavior == "narwhals":
+                result = result.rename({self.name: "count"})
+            return result
+        return result.to_series().struct.unnest()
 
     @property
     def struct(self) -> SeriesStructNamespace[Self]:

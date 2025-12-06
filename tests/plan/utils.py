@@ -237,8 +237,8 @@ def assert_equal_series(
     if isinstance(expected, nwp.Series):
         name = expected.name
         expected = expected.to_list()
-    elif not isinstance(expected, Sequence):
-        expected = tuple(expected)
+    else:
+        expected = expected if isinstance(expected, Sequence) else tuple(expected)
     assert_equal_data(result.to_frame(), {name: expected})
 
 

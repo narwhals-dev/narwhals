@@ -275,3 +275,30 @@ def test_hist_bins_none(backend: EagerAllowed) -> None:
     s = nwp.Series.from_iterable([1, 2, 3], backend=backend)
     result = s.hist(bins=None, bin_count=None)
     assert len(result) == 10
+
+
+def test_hist_series_compat_flag(backend: EagerAllowed) -> None:
+    # NOTE: Mainly for verifying `Expr.hist` has handled naming/collecting as struct
+    # The flag itself is not desirable
+    values = [1, 3, 8, 8, 2, 1, 3]
+    s = nwp.Series.from_iterable(values, name="original", backend=backend)
+
+    result = s.hist(
+        bin_count=4,
+        include_breakpoint=False,
+        include_category=False,
+        _compatibility_behavior="narwhals",
+    )
+    assert_equal_data(result, {"count": [3, 2, 0, 2]})
+
+    result = s.hist(
+        bin_count=4,
+        include_breakpoint=False,
+        include_category=False,
+        _compatibility_behavior="polars",
+    )
+    assert_equal_data(result, {"original": [3, 2, 0, 2]})
+
+    result = s.hist(bin_count=4, include_breakpoint=True, include_category=False)
+    expected = {"breakpoint": [2.75, 4.5, 6.25, 8.0], "count": [3, 2, 0, 2]}
+    assert_equal_data(result, expected)
