@@ -11,7 +11,7 @@ from tests.plan.utils import assert_equal_data
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from narwhals.typing import EagerAllowed
+    from narwhals.typing import EagerAllowed, IntoDType
     from tests.conftest import Data
 
 pytest.importorskip("pyarrow")
@@ -198,6 +198,116 @@ def test_hist_bin_count(
     assert len(result) == bin_count
     if bin_count > 0:
         assert result.get_column("count").sum() == ser.drop_nans().count()
+
+
+@pytest.mark.parametrize(
+    ("expr", "expected"),
+    [
+        (
+            nwp.all().hist(bin_count=5),
+            {
+                "int": [2, 1, 1, 1, 2],
+                "float": [2, 1, 1, 1, 2],
+                "int_shuffled": [2, 1, 1, 1, 2],
+                "float_shuffled": [2, 1, 1, 1, 2],
+            },
+        ),
+        (
+            (99 + nwp.all()).hist(bin_count=2).name.keep(),
+            {
+                "int": [4, 3],
+                "float": [4, 3],
+                "int_shuffled": [4, 3],
+                "float_shuffled": [4, 3],
+            },
+        ),
+        (
+            nwp.all().hist([-3, -2, 3, 6]).name.to_uppercase(),
+            {
+                "INT": [0, 4, 3],
+                "FLOAT": [0, 4, 3],
+                "INT_SHUFFLED": [0, 4, 3],
+                "FLOAT_SHUFFLED": [0, 4, 3],
+            },
+        ),
+        (
+            nwp.all().clip(upper_bound=4).hist([2, 3, 4, 5, 6]),
+            {
+                "int": [2, 3, 0, 0],
+                "float": [2, 3, 0, 0],
+                "int_shuffled": [2, 3, 0, 0],
+                "float_shuffled": [2, 3, 0, 0],
+            },
+        ),
+        (
+            (nwp.all() * 2.7).hist([1.3, 5.1, 8.98, 11.3]),
+            {
+                "int": [1, 2, 1],
+                "float": [1, 2, 1],
+                "int_shuffled": [1, 2, 1],
+                "float_shuffled": [1, 2, 1],
+            },
+        ),
+    ],
+)
+def test_hist_expr_counts_only(
+    data: Data,
+    schema_data: nw.Schema,
+    backend: EagerAllowed,
+    expr: nwp.Expr,
+    expected: dict[str, Any],
+) -> None:
+    df = nwp.DataFrame.from_dict(data, schema_data, backend=backend)
+    result = df.select(expr)
+    assert_equal_data(result, expected)
+
+
+def test_hist_expr_breakpoint(
+    data: Data, schema_data: nw.Schema, backend: EagerAllowed
+) -> None:
+    df = nwp.DataFrame.from_dict(data, schema_data, backend=backend)
+    expr = nwp.all().hist(bin_count=3, include_breakpoint=True)
+    result = df.select(expr)
+    result_schema = result.collect_schema()
+
+    dtype_breakpoint: IntoDType = nw.Float64
+    # NOTE: To match polars it would be this, but maybe i64 is okay?
+    dtype_count: IntoDType = nw.UInt32
+    dtype_count = nw.Int64
+
+    dtype_struct = nw.Struct({"breakpoint": dtype_breakpoint, "count": dtype_count})
+    expected_schema = nw.Schema(
+        [
+            ("int", dtype_struct),
+            ("float", dtype_struct),
+            ("int_shuffled", dtype_struct),
+            ("float_shuffled", dtype_struct),
+        ]
+    )
+    expected_data = {
+        "int": [
+            {"breakpoint": 2.0, "count": 3},
+            {"breakpoint": 4.0, "count": 2},
+            {"breakpoint": 6.0, "count": 2},
+        ],
+        "float": [
+            {"breakpoint": 2.0, "count": 3},
+            {"breakpoint": 4.0, "count": 2},
+            {"breakpoint": 6.0, "count": 2},
+        ],
+        "int_shuffled": [
+            {"breakpoint": 2.0, "count": 3},
+            {"breakpoint": 4.0, "count": 2},
+            {"breakpoint": 6.0, "count": 2},
+        ],
+        "float_shuffled": [
+            {"breakpoint": 2.0, "count": 3},
+            {"breakpoint": 4.0, "count": 2},
+            {"breakpoint": 6.0, "count": 2},
+        ],
+    }
+    assert result_schema == expected_schema
+    assert_equal_data(result, expected_data)
 
 
 @bin_count_cases
