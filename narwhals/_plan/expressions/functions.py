@@ -81,8 +81,6 @@ class MeanHorizontal(HorizontalFunction): ...
 class Coalesce(HorizontalFunction): ...
 # fmt: on
 class Hist(Function):
-    """Only supported for `Series` so far."""
-
     __slots__ = ("include_breakpoint",)
     include_breakpoint: bool
 
@@ -94,7 +92,7 @@ class Hist(Function):
     # They're also more widely defined to what will work at runtime
     @staticmethod
     def from_bins(
-        bins: Iterable[float], /, *, include_breakpoint: bool = True
+        bins: Iterable[float], /, *, include_breakpoint: bool = False
     ) -> HistBins:
         bins = tuple(bins)
         for i in range(1, len(bins)):
@@ -104,7 +102,7 @@ class Hist(Function):
 
     @staticmethod
     def from_bin_count(
-        count: ConvertibleToInt = 10, /, *, include_breakpoint: bool = True
+        count: ConvertibleToInt = 10, /, *, include_breakpoint: bool = False
     ) -> HistBinCount:
         return HistBinCount(bin_count=int(count), include_breakpoint=include_breakpoint)
 

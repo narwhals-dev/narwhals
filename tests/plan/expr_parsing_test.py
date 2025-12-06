@@ -584,14 +584,14 @@ def test_hist_bins() -> None:
 
 def test_hist_bin_count() -> None:
     bin_count_default = 10
-    include_breakpoint_default = True
+    include_breakpoint_default = False
     a = nwp.col("a")
     hist_1 = a.hist(
         bin_count=bin_count_default, include_breakpoint=include_breakpoint_default
     )
     hist_2 = a.hist()
     hist_3 = a.hist(bin_count=5)
-    hist_4 = a.hist(include_breakpoint=False)
+    hist_4 = a.hist(include_breakpoint=True)
 
     ir_1 = hist_1._ir
     ir_2 = hist_2._ir

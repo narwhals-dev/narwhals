@@ -190,13 +190,12 @@ class Expr:
     def abs(self) -> Self:
         return self._with_unary(F.Abs())
 
-    # TODO @dangotbanned: Change the default to `False`, and update tests
     def hist(
         self,
         bins: Sequence[float] | None = None,
         *,
         bin_count: int | None = None,
-        include_breakpoint: bool = True,  # NOTE: `pl.Expr.hist` default is `False`
+        include_breakpoint: bool = False,
         include_category: bool = False,
     ) -> Self:
         if include_category:
