@@ -1284,7 +1284,7 @@ def date_range(
 
 
 def linear_space(
-    start: int, end: int, num_samples: int, *, closed: ClosedInterval = "both"
+    start: float, end: float, num_samples: int, *, closed: ClosedInterval = "both"
 ) -> ChunkedArray[pc.NumericScalar]:
     """Based on [`np.linspace`].
 
@@ -1434,21 +1434,22 @@ def _hist_calculate_hist(
     return {"count": counts}
 
 
+# NOTE: `Decimal` is not supported, but excluding it from the typing is surprisingly complicated
+# https://docs.rs/polars-core/0.52.0/polars_core/datatypes/enum.DataType.html#method.is_primitive_numeric
 def hist_with_bin_count(
-    native: ChunkedArrayAny, bin_count: int, *, include_breakpoint: bool
+    native: ChunkedArray[NumericScalar], bin_count: int, *, include_breakpoint: bool
 ) -> Mapping[str, Iterable[Any]]:
     if bin_count == 0:
         return _hist_data_empty(include_breakpoint=include_breakpoint)
     if is_only_nulls(native, nan_is_null=True):
         return _hist_series_empty(bin_count, include_breakpoint=include_breakpoint)
-
-    # TODO @dangotbanned: Can this be done in a more ergomomic way?
-    d = pc.min_max(native)
-    lower, upper = d["min"].as_py(), d["max"].as_py()
-    if lower == upper:
-        lower -= 0.5  # TODO @dangotbanned: What is adjustment this called?
-        upper += 0.5
-    bins = linear_space(lower, upper, bin_count + 1)
+    lower: ScalarAny = min_(native)
+    upper: ScalarAny = max_(native)
+    if lower.equals(upper):
+        # All data points are identical - use unit interval
+        rhs = lit(0.5)
+        lower, upper = sub(lower, rhs), add(upper, rhs)
+    bins = linear_space(lower.as_py(), upper.as_py(), bin_count + 1)
     return _hist_calculate_hist(native, bins, include_breakpoint=include_breakpoint)
 
 
