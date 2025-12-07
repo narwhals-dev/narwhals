@@ -301,6 +301,12 @@ class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayA
             self.native.filter(predicate, null_selection_behavior="emit_null")
         )
 
+    def explode(self, *, empty_as_null: bool = True, keep_nulls: bool = True) -> Self:
+        if empty_as_null and keep_nulls:
+            return self._with_native(fn.list_explode(self.native))
+        msg = f"TODO: `ArrowSeries.explode({empty_as_null=}, {keep_nulls=})"
+        raise NotImplementedError(msg)
+
     @property
     def struct(self) -> SeriesStructNamespace:
         return SeriesStructNamespace(self)
