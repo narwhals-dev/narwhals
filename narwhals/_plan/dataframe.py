@@ -158,6 +158,15 @@ class BaseFrame(Generic[NativeFrameT_co]):
         by_names = expand_selector_irs_names(by_selectors, schema=self, require_any=True)
         return self._with_compliant(self._compliant.with_row_index_by(name, by_names))
 
+    def explode(
+        self,
+        columns: OneOrIterable[ColumnNameOrSelector],
+        *more_columns: ColumnNameOrSelector,
+    ) -> Self:
+        s_ir = _parse.parse_into_combined_selector_ir(columns, *more_columns)
+        subset = expand_selector_irs_names((s_ir,), schema=self, require_any=True)
+        return self._with_compliant(self._compliant.explode(subset))
+
 
 def _dataframe_from_dict(
     data: Mapping[str, Any],

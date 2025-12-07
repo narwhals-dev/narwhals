@@ -162,6 +162,10 @@ class ArrowDataFrame(
             native = self.native.filter(~to_drop)
         return self._with_native(native)
 
+    def explode(self, subset: Sequence[str]) -> Self:
+        msg = "ArrowDataFrame.explode"
+        raise NotImplementedError(msg)
+
     def rename(self, mapping: Mapping[str, str]) -> Self:
         names: dict[str, str] | list[str]
         if fn.BACKEND_VERSION >= (17,):
