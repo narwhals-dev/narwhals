@@ -6,6 +6,7 @@ import pytest
 
 import narwhals as nw
 import narwhals._plan as nwp
+import narwhals._plan.selectors as ncs
 from narwhals.exceptions import InvalidOperationError, ShapeError
 from tests.plan.utils import assert_equal_data, dataframe, re_compile
 
@@ -25,6 +26,7 @@ def data() -> Data:
         "l2": [[3, None], None, [42], []],
         "l3": [[1, 2], [3], [None], [1]],
         "l4": [[1, 2], [3], [123], [456]],
+        "l5": [[None, None], [None], [99], [83]],
     }
 
 
@@ -85,13 +87,46 @@ def test_explode_multiple_cols(
     assert_equal_data(result, expected)
 
 
+@pytest.mark.parametrize(
+    ("expr", "expected"),
+    [
+        (
+            ncs.by_index(-1, -2, -3),
+            {
+                "a": ["w", "x", "x", "y", "z"],
+                "l5": [83, None, None, None, 99],
+                "l4": [456, 1, 2, 3, 123],
+                "l3": [1, 1, 2, 3, None],
+            },
+        ),
+        (
+            ncs.matches(r"l[3|5]"),
+            {
+                "a": ["w", "x", "x", "y", "z"],
+                "l3": [1, 1, 2, 3, None],
+                "l5": [83, None, None, None, 99],
+            },
+        ),
+    ],
+)
+def test_explode_selectors(expr: nwp.Selector, expected: Data, data: Data) -> None:
+    result = (
+        dataframe(data)
+        .with_columns(expr.cast(nw.List(nw.Int32())))
+        .explode(expr)
+        .select("a", expr)
+        .sort("a", expr, nulls_last=True)
+    )
+    assert_equal_data(result, expected)
+
+
 def test_explode_shape_error(data: Data) -> None:
     with pytest.raises(
         ShapeError, match=r".*exploded columns (must )?have matching element counts"
     ):
         dataframe(data).with_columns(
             nwp.col("l1", "l2", "l3").cast(nw.List(nw.Int32()))
-        ).explode("l1", "l3")
+        ).explode(ncs.list())
 
 
 def test_explode_invalid_operation_error(data: Data) -> None:
