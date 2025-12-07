@@ -7,7 +7,7 @@ import pytest
 import narwhals as nw
 import narwhals._plan as nwp
 from narwhals.exceptions import InvalidOperationError, ShapeError
-from tests.plan.utils import assert_equal_data, dataframe
+from tests.plan.utils import assert_equal_data, dataframe, re_compile
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -104,12 +104,9 @@ def test_explode_shape_error(data: Data) -> None:  # pragma: no cover
         ).explode("l1", "l3")
 
 
-@pytest.mark.xfail(
-    reason="TODO:` DataFrame.explode` (validate dtype)",
-    raises=(AssertionError, NotImplementedError),
-)
-def test_explode_invalid_operation_error(data: Data) -> None:  # pragma: no cover
+def test_explode_invalid_operation_error(data: Data) -> None:
     with pytest.raises(
-        InvalidOperationError, match="`explode` operation not supported for dtype"
+        InvalidOperationError,
+        match=re_compile(r"explode.+not supported for.+string.+expected.+list"),
     ):
         dataframe(data).explode("a")

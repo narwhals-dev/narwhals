@@ -25,7 +25,7 @@ from narwhals._plan.typing import (
 )
 from narwhals._utils import Implementation, Version, generate_repr
 from narwhals.dependencies import is_pyarrow_table
-from narwhals.exceptions import ShapeError
+from narwhals.exceptions import InvalidOperationError, ShapeError
 from narwhals.schema import Schema
 from narwhals.typing import EagerAllowed, IntoBackend, IntoDType, IntoSchema, JoinStrategy
 
@@ -164,7 +164,15 @@ class BaseFrame(Generic[NativeFrameT_co]):
         *more_columns: ColumnNameOrSelector,
     ) -> Self:
         s_ir = _parse.parse_into_combined_selector_ir(columns, *more_columns)
-        subset = expand_selector_irs_names((s_ir,), schema=self, require_any=True)
+        schema = self.collect_schema()
+        subset = expand_selector_irs_names((s_ir,), schema=schema, require_any=True)
+        dtypes = self.version.dtypes
+        tp_list = dtypes.List
+        for col_to_explode in subset:
+            dtype = schema[col_to_explode]
+            if dtype != tp_list:
+                msg = f"`explode` operation is not supported for dtype `{dtype}`, expected List type"
+                raise InvalidOperationError(msg)
         return self._with_compliant(self._compliant.explode(subset))
 
 
