@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 import typing as t
+from collections import deque
 from collections.abc import Callable, Sequence
 from typing import TYPE_CHECKING, Any, Final, Literal, overload
 
@@ -421,7 +422,7 @@ def list_explode(
     return result
 
 
-def table_explode_1(
+def table_explode_array(
     native: ChunkedList[DataTypeT],
 ) -> tuple[ChunkedArray[Scalar[DataTypeT]], ChunkedI64]:
     """Variant of `list_explode`, providing indices for `DataFrame.explode([column])`."""
@@ -432,35 +433,22 @@ def table_explode_1(
     return result, _list_parent_indices(to_explode)
 
 
-# TODO @dangotbanned: generalize to `*arrays`
-# temp, while I figure out a clean loop/reduce version
-def _table_explode_2(
-    left: ChunkedList, right: ChunkedList
-) -> tuple[Sequence[ChunkedArrayAny], ChunkedI64]:
-    left_len, right_len = list_len(left), list_len(right)
-    if not left_len.equals(right_len):
-        msg = "exploded columns must have matching element counts"
-        raise ShapeError(msg)
-    zero = lit(0)
-    needs_replacing = or_(is_null(left_len), eq(left_len, zero))
-    to_explode_l = when_then(needs_replacing, lit([None], left.type), left)
-    to_explode_r = when_then(needs_replacing, lit([None], right.type), right)
-    result_l, result_r = (
-        _list_explode_unchecked(to_explode_l),
-        _list_explode_unchecked(to_explode_r),
-    )
-    indices = _list_parent_indices(to_explode_l)
-    results: Sequence[ChunkedArrayAny] = result_l, result_r
-    return results, indices
-
-
-def table_explode_multi(
+def table_explode_arrays(
     *arrays: ChunkedList,
 ) -> tuple[Sequence[ChunkedArrayAny], ChunkedI64]:
-    if len(arrays) == 2:
-        return _table_explode_2(arrays[0], arrays[1])
-    msg = "TODO: `ArrowDataFrame.explode((arr,arr, *arrays))`"
-    raise NotImplementedError(msg)
+    """Variant of `table_explode_array`, with shape checking against the first array."""
+    explode = _list_explode_unchecked
+    first = arrays[0]
+    first_len = list_len(first)
+    needs_replacing = or_(is_null(first_len), eq(first_len, lit(0)))
+    first_to_explode = when_then(needs_replacing, lit([None], first.type), first)
+    results = deque["ChunkedArrayAny"]([explode(first_to_explode)])
+    for arr in arrays[1:]:
+        if not first_len.equals(list_len(arr)):
+            msg = "exploded columns must have matching element counts"
+            raise ShapeError(msg)
+        results.append(explode(when_then(needs_replacing, lit([None], arr.type), arr)))
+    return results, _list_parent_indices(first_to_explode)
 
 
 def _list_explode_unchecked(native: Incomplete) -> Incomplete:
