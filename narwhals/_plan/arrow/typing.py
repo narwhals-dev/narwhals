@@ -195,6 +195,7 @@ ChunkedStruct: TypeAlias = "ChunkedArray[pa.StructScalar]"
 StructArray: TypeAlias = "pa.StructArray | Array[pa.StructScalar]"
 ChunkedList: TypeAlias = "ChunkedArray[ListScalar[DataTypeT_co]]"
 ListArray: TypeAlias = "Array[ListScalar[DataTypeT_co]]"
+ChunkedI64: TypeAlias = "ChunkedArray[pa.Int64Scalar]"
 
 Arrow: TypeAlias = "ChunkedOrScalar[ScalarT_co] | Array[ScalarT_co]"
 ArrowAny: TypeAlias = "ChunkedOrScalarAny | ArrayAny"

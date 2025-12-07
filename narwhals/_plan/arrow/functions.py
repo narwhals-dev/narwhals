@@ -46,6 +46,7 @@ if TYPE_CHECKING:
         BoolType,
         ChunkedArray,
         ChunkedArrayAny,
+        ChunkedI64,
         ChunkedList,
         ChunkedOrArray,
         ChunkedOrArrayAny,
@@ -384,6 +385,68 @@ def get_categories(native: ArrowAny) -> ChunkedArrayAny:
     else:
         da = native
     return chunked_array(da.dictionary)
+
+
+@t.overload
+def list_explode(
+    native: ChunkedList[DataTypeT] | ListScalar[DataTypeT],
+) -> ChunkedArray[Scalar[DataTypeT]]: ...
+@t.overload
+def list_explode(native: ListArray[DataTypeT]) -> Array[Scalar[DataTypeT]]: ...
+@t.overload
+def list_explode(
+    native: Arrow[ListScalar[DataTypeT]],
+) -> ChunkedOrArray[Scalar[DataTypeT]]: ...
+def list_explode(
+    native: ArrowAny,
+    *,
+    empty_as_null: bool = True,  # noqa: ARG001
+    keep_nulls: bool = True,  # noqa: ARG001
+) -> ChunkedOrArray[Scalar[DataTypeT]]:
+    """Explode list elements, expanding one-level into a new array.
+
+    Equivalent to `polars.Expr.(list.)explode`.
+
+    Unused arguments are related to ([#1644 (comment)](https://github.com/narwhals-dev/narwhals/pull/1644#issuecomment-3622051763))
+    """
+    lengths = list_len(native)
+    needs_replacing = or_(is_null(lengths), eq(lengths, lit(0)))
+    to_explode = when_then(needs_replacing, lit([None], native.type), native)
+    # NOTE: Maybe reconsider scalar re-wrap for multiple levels of nesting?
+    # For the single case, it matches polars
+    if isinstance(native, pa.Scalar):
+        return chunked_array(_list_explode_unchecked(to_explode))
+    result: ChunkedOrArray[Scalar[DataTypeT]] = _list_explode_unchecked(to_explode)
+    return result
+
+
+def table_explode_1(
+    native: ChunkedList[DataTypeT],
+) -> tuple[ChunkedArray[Scalar[DataTypeT]], ChunkedI64]:
+    """Variant of `list_explode`, providing indices for `DataFrame.explode([column])`."""
+    lengths = list_len(native)
+    needs_replacing = or_(is_null(lengths), eq(lengths, lit(0)))
+    to_explode = when_then(needs_replacing, lit([None], native.type), native)
+    result: ChunkedArray[Scalar[DataTypeT]] = _list_explode_unchecked(to_explode)
+    return result, _list_parent_indices(to_explode)
+
+
+def _list_explode_unchecked(native: Incomplete) -> Incomplete:
+    return pc.call_function("list_flatten", [native])
+
+
+@t.overload
+def _list_parent_indices(native: ChunkedList) -> ChunkedI64: ...
+@t.overload
+def _list_parent_indices(native: ListArray) -> pa.Int64Array: ...
+def _list_parent_indices(
+    native: ChunkedOrArray[ListScalar],
+) -> ChunkedOrArray[pa.Int64Scalar]:
+    """Don't use this withut handling nulls!"""
+    result: ChunkedOrArray[pa.Int64Scalar] = pc.call_function(
+        "list_parent_indices", [native]
+    )
+    return result
 
 
 @t.overload

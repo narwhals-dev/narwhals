@@ -16,6 +16,7 @@ from narwhals._plan.arrow.group_by import ArrowGroupBy as GroupBy, partition_by
 from narwhals._plan.arrow.series import ArrowSeries as Series
 from narwhals._plan.compliant.dataframe import EagerDataFrame
 from narwhals._plan.compliant.typing import namespace
+from narwhals._plan.exceptions import shape_error
 from narwhals._plan.expressions import NamedIR
 from narwhals._utils import Version, generate_repr
 from narwhals.schema import Schema
@@ -26,7 +27,7 @@ if TYPE_CHECKING:
     import polars as pl
     from typing_extensions import Self, TypeAlias
 
-    from narwhals._plan.arrow.typing import ChunkedArrayAny
+    from narwhals._plan.arrow.typing import ChunkedArrayAny, ChunkedOrArrayAny
     from narwhals._plan.compliant.group_by import GroupByResolver
     from narwhals._plan.expressions import ExprIR, NamedIR
     from narwhals._plan.options import SortMultipleOptions
@@ -163,7 +164,14 @@ class ArrowDataFrame(
         return self._with_native(native)
 
     def explode(self, subset: Sequence[str]) -> Self:
-        msg = "ArrowDataFrame.explode"
+        if len(subset) == 1:
+            name = subset[0]
+            exploded, indices = fn.table_explode_1(self.native.column(name))
+            # TODO @dangotbanned: Might be more efficient to null-out the column, before `gather`?
+            df = self.gather(indices) if len(indices) != len(self) else self
+            ser = Series.from_native(exploded, name, version=self.version)
+            return df.with_series(ser)
+        msg = "TODO: `ArrowDataFrame.explode((..., ...))`"
         raise NotImplementedError(msg)
 
     def rename(self, mapping: Mapping[str, str]) -> Self:
@@ -173,6 +181,22 @@ class ArrowDataFrame(
         else:  # pragma: no cover
             names = [mapping.get(c, c) for c in self.columns]
         return self._with_native(self.native.rename_columns(names))
+
+    def with_series(self, series: Series) -> Self:
+        """Add a new column or replace an existing one.
+
+        Uses similar semantics as `with_columns`, but:
+        - for a single named `Series`
+        - no broadcasting (use `Scalar.broadcast` instead)
+        - no length checking (use `with_series_checked` instead)
+        """
+        return self._with_native(with_array(self.native, series.name, series.native))
+
+    def with_series_checked(self, series: Series) -> Self:
+        expected, actual = len(self), len(series)
+        if len(series) != len(self):
+            raise shape_error(expected, actual)
+        return self.with_series(series)
 
     # NOTE: Use instead of `with_columns` for trivial cases
     def _with_columns(self, exprs: Iterable[Expr | Scalar], /) -> Self:
@@ -230,3 +254,10 @@ class ArrowDataFrame(
         from_native = self._with_native
         partitions = partition_by(self.native, by, include_key=include_key)
         return [from_native(df) for df in partitions]
+
+
+def with_array(table: pa.Table, name: str, column: ChunkedOrArrayAny) -> pa.Table:
+    columns = table.column_names
+    if name in columns:
+        return table.set_column(columns.index(name), name, column)
+    return table.append_column(name, column)

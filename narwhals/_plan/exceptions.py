@@ -66,6 +66,11 @@ def hist_bins_monotonic_error(bins: Seq[float]) -> ComputeError:  # noqa: ARG001
     return ComputeError(msg)
 
 
+def shape_error(expected_length: int, actual_length: int) -> ShapeError:
+    msg = f"Expected object of length {expected_length}, got {actual_length}."
+    return ShapeError(msg)
+
+
 def _binary_underline(
     left: ir.ExprIR,
     operator: Operator,

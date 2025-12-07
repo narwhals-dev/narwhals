@@ -28,16 +28,13 @@ def data() -> Data:
     }
 
 
-@pytest.mark.xfail(
-    reason="TODO:` DataFrame.explode` (single column)", raises=NotImplementedError
-)
 @pytest.mark.parametrize(
     ("column", "expected_values"),
     [("l2", [None, 3, None, None, 42]), ("l3", [1, 1, 2, 3, None])],
 )
 def test_explode_single_col(
     column: str, expected_values: list[int | None], data: Data
-) -> None:  # pragma: no cover
+) -> None:
     result = (
         dataframe(data)
         .with_columns(nwp.col(column).cast(nw.List(nw.Int32())))
