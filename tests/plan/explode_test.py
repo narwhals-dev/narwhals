@@ -46,9 +46,6 @@ def test_explode_single_col(
     assert_equal_data(result, expected)
 
 
-@pytest.mark.xfail(
-    reason="TODO:` DataFrame.explode` (multi column)", raises=NotImplementedError
-)
 @pytest.mark.parametrize(
     ("column", "more_columns", "expected"),
     [
@@ -77,7 +74,7 @@ def test_explode_multiple_cols(
     more_columns: Sequence[str],
     expected: dict[str, list[str | int | None]],
     data: Data,
-) -> None:  # pragma: no cover
+) -> None:
     result = (
         dataframe(data)
         .with_columns(nwp.col(column, *more_columns).cast(nw.List(nw.Int32())))
@@ -88,11 +85,7 @@ def test_explode_multiple_cols(
     assert_equal_data(result, expected)
 
 
-@pytest.mark.xfail(
-    reason="TODO:` DataFrame.explode` (validate shape)",
-    raises=(AssertionError, NotImplementedError),
-)
-def test_explode_shape_error(data: Data) -> None:  # pragma: no cover
+def test_explode_shape_error(data: Data) -> None:
     with pytest.raises(
         ShapeError, match=r".*exploded columns (must )?have matching element counts"
     ):

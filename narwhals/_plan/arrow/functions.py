@@ -21,6 +21,7 @@ from narwhals._plan._guards import is_non_nested_literal
 from narwhals._plan.arrow import options as pa_options
 from narwhals._plan.expressions import functions as F, operators as ops
 from narwhals._utils import Implementation, Version
+from narwhals.exceptions import ShapeError
 
 if TYPE_CHECKING:
     import datetime as dt
@@ -429,6 +430,37 @@ def table_explode_1(
     to_explode = when_then(needs_replacing, lit([None], native.type), native)
     result: ChunkedArray[Scalar[DataTypeT]] = _list_explode_unchecked(to_explode)
     return result, _list_parent_indices(to_explode)
+
+
+# TODO @dangotbanned: generalize to `*arrays`
+# temp, while I figure out a clean loop/reduce version
+def _table_explode_2(
+    left: ChunkedList, right: ChunkedList
+) -> tuple[Sequence[ChunkedArrayAny], ChunkedI64]:
+    left_len, right_len = list_len(left), list_len(right)
+    if not left_len.equals(right_len):
+        msg = "exploded columns must have matching element counts"
+        raise ShapeError(msg)
+    zero = lit(0)
+    needs_replacing = or_(is_null(left_len), eq(left_len, zero))
+    to_explode_l = when_then(needs_replacing, lit([None], left.type), left)
+    to_explode_r = when_then(needs_replacing, lit([None], right.type), right)
+    result_l, result_r = (
+        _list_explode_unchecked(to_explode_l),
+        _list_explode_unchecked(to_explode_r),
+    )
+    indices = _list_parent_indices(to_explode_l)
+    results: Sequence[ChunkedArrayAny] = result_l, result_r
+    return results, indices
+
+
+def table_explode_multi(
+    *arrays: ChunkedList,
+) -> tuple[Sequence[ChunkedArrayAny], ChunkedI64]:
+    if len(arrays) == 2:
+        return _table_explode_2(arrays[0], arrays[1])
+    msg = "TODO: `ArrowDataFrame.explode((arr,arr, *arrays))`"
+    raise NotImplementedError(msg)
 
 
 def _list_explode_unchecked(native: Incomplete) -> Incomplete:

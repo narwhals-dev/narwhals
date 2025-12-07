@@ -18,7 +18,7 @@ from narwhals._plan.compliant.dataframe import EagerDataFrame
 from narwhals._plan.compliant.typing import namespace
 from narwhals._plan.exceptions import shape_error
 from narwhals._plan.expressions import NamedIR
-from narwhals._utils import Version, generate_repr
+from narwhals._utils import Version, generate_repr, zip_strict
 from narwhals.schema import Schema
 
 if TYPE_CHECKING:
@@ -164,15 +164,18 @@ class ArrowDataFrame(
         return self._with_native(native)
 
     def explode(self, subset: Sequence[str]) -> Self:
+        native = self.native
         if len(subset) == 1:
             name = subset[0]
-            exploded, indices = fn.table_explode_1(self.native.column(name))
+            exploded, indices = fn.table_explode_1(native.column(name))
             # TODO @dangotbanned: Might be more efficient to null-out the column, before `gather`?
             df = self.gather(indices) if len(indices) != len(self) else self
             ser = Series.from_native(exploded, name, version=self.version)
             return df.with_series(ser)
-        msg = "TODO: `ArrowDataFrame.explode((..., ...))`"
-        raise NotImplementedError(msg)
+        explodeds, indices = fn.table_explode_multi(*native.select(list(subset)).columns)
+        df = self.gather(indices) if len(indices) != len(self) else self
+        names_and_columns = zip_strict(subset, explodeds)
+        return self._with_native(with_arrays(df.native, names_and_columns))
 
     def rename(self, mapping: Mapping[str, str]) -> Self:
         names: dict[str, str] | list[str]
@@ -198,20 +201,10 @@ class ArrowDataFrame(
             raise shape_error(expected, actual)
         return self.with_series(series)
 
-    # NOTE: Use instead of `with_columns` for trivial cases
     def _with_columns(self, exprs: Iterable[Expr | Scalar], /) -> Self:
-        native = self.native
-        columns = self.columns
         height = len(self)
-        for into_series in exprs:
-            name = into_series.name
-            chunked = into_series.broadcast(height).native
-            if name in columns:
-                i = columns.index(name)
-                native = native.set_column(i, name, chunked)
-            else:
-                native = native.append_column(name, chunked)
-        return self._with_native(native)
+        names_and_columns = ((e.name, e.broadcast(height).native) for e in exprs)
+        return self._with_native(with_arrays(self.native, names_and_columns))
 
     def select_names(self, *column_names: str) -> Self:
         return self._with_native(self.native.select(list(column_names)))
@@ -257,7 +250,19 @@ class ArrowDataFrame(
 
 
 def with_array(table: pa.Table, name: str, column: ChunkedOrArrayAny) -> pa.Table:
-    columns = table.column_names
-    if name in columns:
-        return table.set_column(columns.index(name), name, column)
+    column_names = table.column_names
+    if name in column_names:
+        return table.set_column(column_names.index(name), name, column)
     return table.append_column(name, column)
+
+
+def with_arrays(
+    table: pa.Table, names_and_columns: Iterable[tuple[str, ChunkedOrArrayAny]], /
+) -> pa.Table:
+    column_names = table.column_names
+    for name, column in names_and_columns:
+        if name in column_names:
+            table = table.set_column(column_names.index(name), name, column)
+        else:
+            table = table.append_column(name, column)
+    return table
