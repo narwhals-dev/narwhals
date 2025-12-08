@@ -168,12 +168,7 @@ class ArrowDataFrame(
         native = self.native
         builder = fn.ExplodeBuilder.from_options(options)
         if len(subset) == 1:
-            name = subset[0]
-            exploded, indices = builder.explode_into(native.column(name))
-            # TODO @dangotbanned: Might be more efficient to null-out the column, before `gather`?
-            df = self.gather(indices) if len(indices) != len(self) else self
-            ser = Series.from_native(exploded, name, version=self.version)
-            return df.with_series(ser)
+            return self._with_native(builder.explode_column(native, subset[0]))
         explodeds, indices = builder.explode_arrays_into(
             *native.select(list(subset)).columns
         )

@@ -438,6 +438,7 @@ class ExplodeBuilder:
     def explode(
         self, native: Arrow[ListScalar[DataTypeT]]
     ) -> ChunkedOrArray[Scalar[DataTypeT]]:
+        """Explode list elements, expanding one-level into a new array."""
         explode = _list_explode_unchecked
         if self.options.any():
             lengths = list_len(native)
@@ -450,23 +451,27 @@ class ExplodeBuilder:
         )
         return result
 
-    # TODO @dangotbanned: likely want to be passing in the native table *somewhere*
-    # - Rather than returning a tuple that represents a half-done job
-    def explode_into(
-        self, native: ChunkedList[DataTypeT]
-    ) -> tuple[ChunkedArray[Scalar[DataTypeT]], ChunkedI64]:
-        """Variant of `explode`, providing indices for `DataFrame.explode([column])`."""
-        result: ChunkedArray[Scalar[DataTypeT]]
+    def explode_column(self, native: pa.Table, column_name: str, /) -> pa.Table:
+        """Explode a list-typed column in the context of `native`."""
+        ca = native.column(column_name)
         if self.options.any():
-            lengths = list_len(native)
-            needs_replacing = self._predicate(lengths)
-            safe = self._replace_mask(native, needs_replacing)
+            safe = self._replace_mask(ca, self._predicate(list_len(ca)))
         else:
-            safe = native
-        result = _list_explode_unchecked(safe)
-        return result, _list_parent_indices(safe)
+            safe = ca
+        exploded = _list_explode_unchecked(safe)
+        indices = _list_parent_indices(safe)
+        col_idx = native.schema.get_field_index(column_name)
+        if len(indices) == len(native):
+            return native.set_column(col_idx, column_name, exploded)
+        return (
+            native.remove_column(col_idx)
+            .take(indices)
+            .add_column(col_idx, column_name, exploded)
+        )
 
     # TODO @dangotbanned: De-duplicate
+    # TODO @dangotbanned: likely want to be passing in the native table *somewhere*
+    # - Rather than returning a tuple that represents a half-done job
     def explode_arrays_into(
         self, *arrays: ChunkedList
     ) -> tuple[Sequence[ChunkedArrayAny], ChunkedI64]:
