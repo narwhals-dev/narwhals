@@ -10,6 +10,7 @@ from narwhals._utils import _StoresNative as StoresNative
 if TYPE_CHECKING:
     import pyarrow as pa
     import pyarrow.compute as pc
+    from pyarrow import lib, types
     from pyarrow.lib import (
         BoolType as BoolType,
         Date32Type,
@@ -36,6 +37,17 @@ if TYPE_CHECKING:
     ListScalar: TypeAlias = "Scalar[pa.ListType[DataTypeT_co]]"
     BooleanScalar: TypeAlias = "Scalar[BoolType]"
     NumericScalar: TypeAlias = "pc.NumericScalar"
+
+    PrimitiveNumericType: TypeAlias = "types._Integer | types._Floating"
+    NumericType: TypeAlias = "PrimitiveNumericType | types._Decimal"
+    NumericOrTemporalType: TypeAlias = "NumericType | types._Temporal"
+    StringOrBinaryType: TypeAlias = "StringType | LargeStringType | lib.StringViewType | lib.BinaryType | lib.LargeBinaryType | lib.BinaryViewType"
+    BasicType: TypeAlias = (
+        "NumericOrTemporalType | StringOrBinaryType | BoolType | lib.NullType"
+    )
+    NonListNestedType: TypeAlias = "pa.StructType | pa.DictionaryType[Any, Any] | pa.MapType[Any, Any] | pa.UnionType"
+    NonListType: TypeAlias = "BasicType | NonListNestedType"
+    NestedType: TypeAlias = "NonListNestedType | pa.ListType[Any]"
 
     class NativeArrowSeries(NativeSeries, Protocol):
         @property

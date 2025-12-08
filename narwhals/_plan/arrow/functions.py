@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 import typing as t
-from collections.abc import Callable, Iterator, Sequence
+from collections.abc import Callable, Collection, Iterator, Sequence
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar, overload
 
@@ -68,6 +68,7 @@ if TYPE_CHECKING:
         ListArray,
         ListScalar,
         NativeScalar,
+        NonListType,
         NumericScalar,
         Predicate,
         SameArrowT,
@@ -421,6 +422,8 @@ def list_explode(
 
 
 _ArrowListT = TypeVar("_ArrowListT", bound="Arrow[ListScalar[Any]]")
+_NonListT = TypeVar("_NonListT", bound="NonListType")
+_ListT = TypeVar("_ListT", bound="pa.ListType[Any]")
 
 
 class ExplodeBuilder:
@@ -439,15 +442,13 @@ class ExplodeBuilder:
         self, native: Arrow[ListScalar[DataTypeT]]
     ) -> ChunkedOrArray[Scalar[DataTypeT]]:
         """Explode list elements, expanding one-level into a new array."""
-        explode = _list_explode_unchecked
         if self.options.any():
             safe = self._replace_mask(native, self._predicate(list_len(native)))
         else:
             safe = native
-        result: ChunkedOrArray[Scalar[DataTypeT]] = (
-            chunked_array(explode(safe)) if isinstance(safe, pa.Scalar) else explode(safe)
-        )
-        return result
+        if not isinstance(safe, pa.Scalar):
+            return _list_explode(safe)
+        return chunked_array(_list_explode(safe))
 
     def explode_column(self, native: pa.Table, column_name: str, /) -> pa.Table:
         """Explode a list-typed column in the context of `native`."""
@@ -456,7 +457,7 @@ class ExplodeBuilder:
             safe = self._replace_mask(ca, self._predicate(list_len(ca)))
         else:
             safe = ca
-        exploded = _list_explode_unchecked(safe)
+        exploded = _list_explode(safe)
         col_idx = native.schema.get_field_index(column_name)
         if len(exploded) == len(native):
             return native.set_column(col_idx, column_name, exploded)
@@ -466,25 +467,26 @@ class ExplodeBuilder:
             .add_column(col_idx, column_name, exploded)
         )
 
-    def explode_columns(self, native: pa.Table, subset: Sequence[str], /) -> pa.Table:
+    def explode_columns(self, native: pa.Table, subset: Collection[str], /) -> pa.Table:
         """Explode multiple list-typed columns in the context of `native`."""
         arrays = native.select(list(subset)).columns
-        explode = _list_explode_unchecked
         first = arrays[0]
         first_len = list_len(first)
         if self.options.any():
             mask = self._predicate(first_len)
             first_safe = self._replace_mask(first, mask)
             it = (
-                explode(self._replace_mask(arr, mask))
+                _list_explode(self._replace_mask(arr, mask))
                 for arr in self._iter_ensure_shape(first_len, arrays[1:])
             )
         else:
             first_safe = first
-            it = (explode(arr) for arr in self._iter_ensure_shape(first_len, arrays[1:]))
-        first_result = explode(first_safe)
-
-        # NOTE: Not great ...
+            it = (
+                _list_explode(arr)
+                for arr in self._iter_ensure_shape(first_len, arrays[1:])
+            )
+        first_result = _list_explode(first_safe)
+        # NOTE: Not too happy about this import
         from narwhals._plan.arrow.dataframe import with_arrays
 
         if len(first_result) != len(native):
@@ -497,10 +499,10 @@ class ExplodeBuilder:
     def _iter_ensure_shape(
         self,
         first_len: ChunkedArray[pa.UInt32Scalar],
-        other_arrays: Iterable[ChunkedArrayAny],
+        arrays: Iterable[ChunkedArrayAny],
         /,
     ) -> Iterator[ChunkedArrayAny]:
-        for arr in other_arrays:
+        for arr in arrays:
             if not first_len.equals(list_len(arr)):
                 msg = "exploded columns must have matching element counts"
                 raise ShapeError(msg)
@@ -520,7 +522,17 @@ class ExplodeBuilder:
         return when_then(mask, lit([None], native.type), native)  # type: ignore[no-any-return]
 
 
-def _list_explode_unchecked(native: Incomplete) -> Incomplete:
+@t.overload
+def _list_explode(native: ChunkedList[DataTypeT]) -> ChunkedArray[Scalar[DataTypeT]]: ...
+@t.overload
+def _list_explode(
+    native: ListArray[_NonListT] | ListScalar[_NonListT],
+) -> Array[Scalar[_NonListT]]: ...
+@t.overload
+def _list_explode(native: ListArray[DataTypeT]) -> Array[Scalar[DataTypeT]]: ...
+@t.overload
+def _list_explode(native: ListScalar[_ListT]) -> ListArray[_ListT]: ...
+def _list_explode(native: Incomplete) -> Incomplete:
     return pc.call_function("list_flatten", [native])
 
 
