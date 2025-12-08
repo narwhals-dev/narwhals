@@ -391,36 +391,6 @@ def get_categories(native: ArrowAny) -> ChunkedArrayAny:
     return chunked_array(da.dictionary)
 
 
-@t.overload
-def list_explode(
-    native: ChunkedList[DataTypeT] | ListScalar[DataTypeT],
-    *,
-    empty_as_null: bool = ...,
-    keep_nulls: bool = ...,
-) -> ChunkedArray[Scalar[DataTypeT]]: ...
-@t.overload
-def list_explode(
-    native: ListArray[DataTypeT], *, empty_as_null: bool = ..., keep_nulls: bool = ...
-) -> Array[Scalar[DataTypeT]]: ...
-@t.overload
-def list_explode(
-    native: Arrow[ListScalar[DataTypeT]],
-    *,
-    empty_as_null: bool = ...,
-    keep_nulls: bool = ...,
-) -> ChunkedOrArray[Scalar[DataTypeT]]: ...
-def list_explode(
-    native: ArrowAny, *, empty_as_null: bool = True, keep_nulls: bool = True
-) -> ChunkedOrArray[Scalar[DataTypeT]]:
-    """Explode list elements, expanding one-level into a new array.
-
-    Equivalent to `polars.{Expr,Series}.explode`.
-    """
-    return ExplodeBuilder(empty_as_null=empty_as_null, keep_nulls=keep_nulls).explode(
-        native
-    )
-
-
 _ArrowListT = TypeVar("_ArrowListT", bound="Arrow[ListScalar[Any]]")
 _NonListT = TypeVar("_NonListT", bound="NonListType")
 _ListT = TypeVar("_ListT", bound="pa.ListType[Any]")
@@ -438,10 +408,23 @@ class ExplodeBuilder:
         obj.options = options
         return obj
 
+    @t.overload
+    def explode(
+        self, native: ChunkedList[DataTypeT] | ListScalar[DataTypeT]
+    ) -> ChunkedArray[Scalar[DataTypeT]]: ...
+    @t.overload
+    def explode(self, native: ListArray[DataTypeT]) -> Array[Scalar[DataTypeT]]: ...
+    @t.overload
+    def explode(
+        self, native: Arrow[ListScalar[DataTypeT]]
+    ) -> ChunkedOrArray[Scalar[DataTypeT]]: ...
     def explode(
         self, native: Arrow[ListScalar[DataTypeT]]
     ) -> ChunkedOrArray[Scalar[DataTypeT]]:
-        """Explode list elements, expanding one-level into a new array."""
+        """Explode list elements, expanding one-level into a new array.
+
+        Equivalent to `polars.{Expr,Series}.explode`.
+        """
         if self.options.any():
             safe = self._replace_mask(native, self._predicate(list_len(native)))
         else:

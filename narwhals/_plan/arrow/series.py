@@ -302,9 +302,8 @@ class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayA
         )
 
     def explode(self, *, empty_as_null: bool = True, keep_nulls: bool = True) -> Self:
-        ca = self.native
-        result = fn.list_explode(ca, empty_as_null=empty_as_null, keep_nulls=keep_nulls)
-        return self._with_native(result)
+        exploder = fn.ExplodeBuilder(empty_as_null=empty_as_null, keep_nulls=keep_nulls)
+        return self._with_native(exploder.explode(self.native))
 
     @property
     def struct(self) -> SeriesStructNamespace:
