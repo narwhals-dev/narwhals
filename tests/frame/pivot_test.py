@@ -255,8 +255,8 @@ def test_pivot_no_index(
         # not implemented
         request.applymarker(pytest.mark.xfail)
     if "bodo" in str(constructor_eager):
-        # BODO fail
-        pytest.skip()
+        # MultiIndex column names not supported yet
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor_eager(data_no_dups), eager_only=True)
     with pytest.warns(UserWarning, match="has no effect"):
         result = df.pivot(on="col", values="foo", maintain_order=True).sort("ix", "bar")
