@@ -185,23 +185,24 @@ DROP_EMPTY: Final = {"empty_as_null": False}
 DROP_NULLS: Final = {"keep_nulls": False}
 DROP_BOTH: Final = {"empty_as_null": False, "keep_nulls": False}
 
-
-@pytest.mark.xfail(
-    reason="TODO: Implement non-default `Series.explode(...)", raises=NotImplementedError
+XFAIL_EXPLODE_KWDS = pytest.mark.xfail(
+    reason="TODO: Implement non-default `Series.explode(...)"
 )
+
+
 @pytest.mark.parametrize(
     ("values", "kwds", "expected"),
     [
         ([[1, 2, 3]], DROP_BOTH, [1, 2, 3]),
-        ([[1, 2, 3], None], DROP_NULLS, [1, 2, 3]),
+        pytest.param([[1, 2, 3], None], DROP_NULLS, [1, 2, 3], marks=XFAIL_EXPLODE_KWDS),
         ([[1, 2, 3], [None]], DROP_NULLS, [1, 2, 3, None]),
-        ([[1, 2, 3], []], DROP_EMPTY, [1, 2, 3]),
+        pytest.param([[1, 2, 3], []], DROP_EMPTY, [1, 2, 3], marks=XFAIL_EXPLODE_KWDS),
         ([[1, 2, 3], [None]], DROP_EMPTY, [1, 2, 3, None]),
     ],
 )
 def test_explode_series_options(
     values: list[Any], kwds: dict[str, Any], expected: list[Any]
-) -> None:  # pragma: no cover
+) -> None:
     # Based on `test_explode_basic` in https://github.com/pola-rs/polars/issues/25289
     # https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/py-polars/tests/unit/operations/test_explode.py#L465-L505
     result = series(values).explode(**kwds)

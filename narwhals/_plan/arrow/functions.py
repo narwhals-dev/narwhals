@@ -392,12 +392,20 @@ def get_categories(native: ArrowAny) -> ChunkedArrayAny:
 @t.overload
 def list_explode(
     native: ChunkedList[DataTypeT] | ListScalar[DataTypeT],
+    *,
+    empty_as_null: bool = ...,
+    keep_nulls: bool = ...,
 ) -> ChunkedArray[Scalar[DataTypeT]]: ...
 @t.overload
-def list_explode(native: ListArray[DataTypeT]) -> Array[Scalar[DataTypeT]]: ...
+def list_explode(
+    native: ListArray[DataTypeT], *, empty_as_null: bool = ..., keep_nulls: bool = ...
+) -> Array[Scalar[DataTypeT]]: ...
 @t.overload
 def list_explode(
     native: Arrow[ListScalar[DataTypeT]],
+    *,
+    empty_as_null: bool = ...,
+    keep_nulls: bool = ...,
 ) -> ChunkedOrArray[Scalar[DataTypeT]]: ...
 def list_explode(
     native: ArrowAny,
