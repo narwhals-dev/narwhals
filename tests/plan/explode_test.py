@@ -152,15 +152,11 @@ def test_explode_frame_invalid_operation_error(data: Data) -> None:
     ],
 )
 def test_explode_series_default(values: list[Any], expected: list[Any]) -> None:
-    # Based on `test_explode_basic` in https://github.com/pola-rs/polars/issues/25289
-    # https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/py-polars/tests/unit/operations/test_explode.py#L465-L505
+    # Based on https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/py-polars/tests/unit/operations/test_explode.py#L465-L470
     result = series(values).explode()
     assert_equal_series(result, expected, "")
 
 
-@pytest.mark.xfail(
-    reason="TODO: 'ArrowExpr' object has no attribute '_evaluated'", raises=AttributeError
-)
 @pytest.mark.parametrize(
     ("values", "expected"),
     [
@@ -168,9 +164,8 @@ def test_explode_series_default(values: list[Any], expected: list[Any]) -> None:
         ([[1, 2, 3], [], [1, 2]], [1, 2, 3, None, 1, 2]),
     ],
 )
-def test_explode_series_default_masked(
-    values: list[Any], expected: list[Any]
-) -> None:  # pragma: no cover
+def test_explode_series_default_masked(values: list[Any], expected: list[Any]) -> None:
+    # Based on https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/py-polars/tests/unit/operations/test_explode.py#L471-484
     result = (
         series(values)
         .to_frame()
@@ -199,7 +194,6 @@ DROP_BOTH: Final = {"empty_as_null": False, "keep_nulls": False}
 def test_explode_series_options(
     values: list[Any], kwds: dict[str, Any], expected: list[Any]
 ) -> None:
-    # Based on `test_explode_basic` in https://github.com/pola-rs/polars/issues/25289
-    # https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/py-polars/tests/unit/operations/test_explode.py#L465-L505
+    # Based on https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/py-polars/tests/unit/operations/test_explode.py#L486-L505
     result = series(values).explode(**kwds)
     assert_equal_series(result, expected, "")

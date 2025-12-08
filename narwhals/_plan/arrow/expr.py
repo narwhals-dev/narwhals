@@ -373,7 +373,7 @@ class ArrowExpr(  # type: ignore[misc]
     def _with_native(self, result: ChunkedOrScalarAny, name: str, /) -> Scalar | Self:
         if isinstance(result, pa.Scalar):
             return ArrowScalar.from_native(result, name, version=self.version)
-        return self.from_native(result, name or self.name, self.version)
+        return self.from_native(result, name, self.version)
 
     # NOTE: I'm not sure what I meant by
     # > "isn't natively supported on `ChunkedArray`"
