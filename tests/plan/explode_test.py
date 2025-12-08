@@ -185,18 +185,14 @@ DROP_EMPTY: Final = {"empty_as_null": False}
 DROP_NULLS: Final = {"keep_nulls": False}
 DROP_BOTH: Final = {"empty_as_null": False, "keep_nulls": False}
 
-XFAIL_EXPLODE_KWDS = pytest.mark.xfail(
-    reason="TODO: Implement non-default `Series.explode(...)"
-)
-
 
 @pytest.mark.parametrize(
     ("values", "kwds", "expected"),
     [
         ([[1, 2, 3]], DROP_BOTH, [1, 2, 3]),
-        pytest.param([[1, 2, 3], None], DROP_NULLS, [1, 2, 3], marks=XFAIL_EXPLODE_KWDS),
+        ([[1, 2, 3], None], DROP_NULLS, [1, 2, 3]),
         ([[1, 2, 3], [None]], DROP_NULLS, [1, 2, 3, None]),
-        pytest.param([[1, 2, 3], []], DROP_EMPTY, [1, 2, 3], marks=XFAIL_EXPLODE_KWDS),
+        ([[1, 2, 3], []], DROP_EMPTY, [1, 2, 3]),
         ([[1, 2, 3], [None]], DROP_EMPTY, [1, 2, 3, None]),
     ],
 )

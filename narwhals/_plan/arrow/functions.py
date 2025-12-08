@@ -408,20 +408,23 @@ def list_explode(
     keep_nulls: bool = ...,
 ) -> ChunkedOrArray[Scalar[DataTypeT]]: ...
 def list_explode(
-    native: ArrowAny,
-    *,
-    empty_as_null: bool = True,  # noqa: ARG001
-    keep_nulls: bool = True,  # noqa: ARG001
+    native: ArrowAny, *, empty_as_null: bool = True, keep_nulls: bool = True
 ) -> ChunkedOrArray[Scalar[DataTypeT]]:
     """Explode list elements, expanding one-level into a new array.
 
-    Equivalent to `polars.Expr.(list.)explode`.
-
-    Unused arguments are related to ([#1644 (comment)](https://github.com/narwhals-dev/narwhals/pull/1644#issuecomment-3622051763))
+    Equivalent to `polars.{Expr,Series}.explode`.
     """
-    lengths = list_len(native)
-    needs_replacing = or_(is_null(lengths), eq(lengths, lit(0)))
-    to_explode = when_then(needs_replacing, lit([None], native.type), native)
+    if empty_as_null or keep_nulls:
+        lengths = list_len(native)
+        if empty_as_null and keep_nulls:
+            needs_replacing = or_(is_null(lengths), eq(lengths, lit(0)))
+        elif empty_as_null:
+            needs_replacing = eq(lengths, lit(0))
+        else:
+            needs_replacing = is_null(lengths)
+        to_explode = when_then(needs_replacing, lit([None], native.type), native)
+    else:
+        to_explode = native
     # NOTE: Maybe reconsider scalar re-wrap for multiple levels of nesting?
     # For the single case, it matches polars
     if isinstance(native, pa.Scalar):
