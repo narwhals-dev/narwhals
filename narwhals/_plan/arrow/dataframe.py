@@ -18,7 +18,7 @@ from narwhals._plan.compliant.dataframe import EagerDataFrame
 from narwhals._plan.compliant.typing import namespace
 from narwhals._plan.exceptions import shape_error
 from narwhals._plan.expressions import NamedIR
-from narwhals._utils import Version, generate_repr, zip_strict
+from narwhals._utils import Version, generate_repr
 from narwhals.schema import Schema
 
 if TYPE_CHECKING:
@@ -163,18 +163,11 @@ class ArrowDataFrame(
             native = self.native.filter(~to_drop)
         return self._with_native(native)
 
-    # TODO @dangotbanned: Move move of this into `ExplodeBuilder`
     def explode(self, subset: Sequence[str], options: ExplodeOptions) -> Self:
-        native = self.native
         builder = fn.ExplodeBuilder.from_options(options)
         if len(subset) == 1:
-            return self._with_native(builder.explode_column(native, subset[0]))
-        explodeds, indices = builder.explode_arrays_into(
-            *native.select(list(subset)).columns
-        )
-        df = self.gather(indices) if len(indices) != len(self) else self
-        names_and_columns = zip_strict(subset, explodeds)
-        return self._with_native(with_arrays(df.native, names_and_columns))
+            return self._with_native(builder.explode_column(self.native, subset[0]))
+        return self._with_native(builder.explode_columns(self.native, subset))
 
     def rename(self, mapping: Mapping[str, str]) -> Self:
         names: dict[str, str] | list[str]

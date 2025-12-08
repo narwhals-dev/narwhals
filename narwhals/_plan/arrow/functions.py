@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import math
 import typing as t
-from collections import deque
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterator, Sequence
+from itertools import chain
 from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar, overload
 
 import pyarrow as pa  # ignore-banned-import
@@ -441,9 +441,7 @@ class ExplodeBuilder:
         """Explode list elements, expanding one-level into a new array."""
         explode = _list_explode_unchecked
         if self.options.any():
-            lengths = list_len(native)
-            needs_replacing = self._predicate(lengths)
-            safe = self._replace_mask(native, needs_replacing)
+            safe = self._replace_mask(native, self._predicate(list_len(native)))
         else:
             safe = native
         result: ChunkedOrArray[Scalar[DataTypeT]] = (
@@ -459,45 +457,54 @@ class ExplodeBuilder:
         else:
             safe = ca
         exploded = _list_explode_unchecked(safe)
-        indices = _list_parent_indices(safe)
         col_idx = native.schema.get_field_index(column_name)
-        if len(indices) == len(native):
+        if len(exploded) == len(native):
             return native.set_column(col_idx, column_name, exploded)
         return (
             native.remove_column(col_idx)
-            .take(indices)
+            .take(_list_parent_indices(safe))
             .add_column(col_idx, column_name, exploded)
         )
 
-    # TODO @dangotbanned: De-duplicate
-    # TODO @dangotbanned: likely want to be passing in the native table *somewhere*
-    # - Rather than returning a tuple that represents a half-done job
-    def explode_arrays_into(
-        self, *arrays: ChunkedList
-    ) -> tuple[Sequence[ChunkedArrayAny], ChunkedI64]:
-        """Variant of `explode_into`, with shape checking against the first array."""
+    def explode_columns(self, native: pa.Table, subset: Sequence[str], /) -> pa.Table:
+        """Explode multiple list-typed columns in the context of `native`."""
+        arrays = native.select(list(subset)).columns
         explode = _list_explode_unchecked
         first = arrays[0]
         first_len = list_len(first)
-        results = deque["ChunkedArrayAny"]()
         if self.options.any():
-            needs_replacing = self._predicate(first_len)
-            first_safe = self._replace_mask(first, needs_replacing)
-            results.append(explode(first_safe))
-            for arr in arrays[1:]:
-                if not first_len.equals(list_len(arr)):
-                    msg = "exploded columns must have matching element counts"
-                    raise ShapeError(msg)
-                results.append(explode(self._replace_mask(arr, needs_replacing)))
+            mask = self._predicate(first_len)
+            first_safe = self._replace_mask(first, mask)
+            it = (
+                explode(self._replace_mask(arr, mask))
+                for arr in self._iter_ensure_shape(first_len, arrays[1:])
+            )
         else:
             first_safe = first
-            results.append(explode(first_safe))
-            for arr in arrays[1:]:
-                if not first_len.equals(list_len(arr)):
-                    msg = "exploded columns must have matching element counts"
-                    raise ShapeError(msg)
-                results.append(explode(arr))
-        return results, _list_parent_indices(first_safe)
+            it = (explode(arr) for arr in self._iter_ensure_shape(first_len, arrays[1:]))
+        first_result = explode(first_safe)
+
+        # NOTE: Not great ...
+        from narwhals._plan.arrow.dataframe import with_arrays
+
+        if len(first_result) != len(native):
+            # TODO @dangotbanned: Try to avoid repeating the lists in take
+            # Complicated by needing the columns in the same position
+            native = native.take(_list_parent_indices(first_safe))
+
+        return with_arrays(native, zip(subset, chain([first_result], it)))
+
+    def _iter_ensure_shape(
+        self,
+        first_len: ChunkedArray[pa.UInt32Scalar],
+        other_arrays: Iterable[ChunkedArrayAny],
+        /,
+    ) -> Iterator[ChunkedArrayAny]:
+        for arr in other_arrays:
+            if not first_len.equals(list_len(arr)):
+                msg = "exploded columns must have matching element counts"
+                raise ShapeError(msg)
+            yield arr
 
     def _predicate(self, lengths: ArrowAny) -> Arrow[BooleanScalar]:
         empty_as_null, keep_nulls = self.options.empty_as_null, self.options.keep_nulls

@@ -267,3 +267,16 @@ def test_explode_frame_options(
         .explode(columns, **kwds)
     )
     assert_equal_data(result, expected)
+
+
+def test_explode_frame_single_elements() -> None:
+    data = {"a": [[1], [2], [3]], "b": [[4], [5], [6]], "i": [0, 10, 20]}
+    df = dataframe(data).with_columns(nwp.col("a", "b").cast(nw.List(nw.Int32())))
+
+    result = df.explode("a")
+    expected = {"a": [1, 2, 3], "b": [[4], [5], [6]], "i": [0, 10, 20]}
+    assert_equal_data(result, expected)
+
+    result = df.explode("b", "a")
+    expected = {"a": [1, 2, 3], "b": [4, 5, 6], "i": [0, 10, 20]}
+    assert_equal_data(result, expected)
