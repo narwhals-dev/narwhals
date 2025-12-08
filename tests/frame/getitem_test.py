@@ -310,9 +310,7 @@ def test_triple_tuple(constructor_eager: ConstructorEager) -> None:
 def test_slice_with_series(
     constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
-    if "bodo" in str(constructor_eager):
-        # BODO fail
-        pytest.skip()
+
     request.applymarker(
         pytest.mark.xfail(
             "pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (3,),
