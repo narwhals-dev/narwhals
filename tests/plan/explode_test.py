@@ -19,6 +19,7 @@ from tests.plan.utils import (
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    from narwhals._plan.typing import ColumnNameOrSelector
     from tests.conftest import Data
 
 
@@ -199,32 +200,70 @@ def test_explode_series_options(
     assert_equal_series(result, expected, "")
 
 
-XFAIL_NOT_IMPL = pytest.mark.xfail(reason="TODO: `DataFrame.explode(..., **kwds)`")
+A = ("a",)
+BA = "b", "a"
 
 
 @pytest.mark.parametrize(
-    ("kwds", "expected"),
+    ("columns", "kwds", "expected"),
     [
-        ({}, {"a": [1, 2, 3, None, 4, 5, 6, None], "b": [1, 1, 1, 2, 3, 3, 3, 4]}),
-        pytest.param(
+        (A, {}, {"a": [1, 2, 3, None, 4, 5, 6, None], "i": [1, 1, 1, 2, 3, 3, 3, 4]}),
+        (A, DROP_EMPTY, {"a": [1, 2, 3, None, 4, 5, 6], "i": [1, 1, 1, 2, 3, 3, 3]}),
+        (A, DROP_NULLS, {"a": [1, 2, 3, 4, 5, 6, None], "i": [1, 1, 1, 3, 3, 3, 4]}),
+        (A, DROP_BOTH, {"a": [1, 2, 3, 4, 5, 6], "i": [1, 1, 1, 3, 3, 3]}),
+        (
+            BA,
+            {},
+            {
+                "b": [None, "dog", "cat", None, "narwhal", None, "orca", None],
+                "a": [1, 2, 3, None, 4, 5, 6, None],
+                "i": [1, 1, 1, 2, 3, 3, 3, 4],
+            },
+        ),
+        (
+            BA,
             DROP_EMPTY,
-            {"a": [1, 2, 3, None, 4, 5, 6], "b": [1, 1, 1, 2, 3, 3, 3]},
-            marks=XFAIL_NOT_IMPL,
+            {
+                "b": [None, "dog", "cat", None, "narwhal", None, "orca"],
+                "a": [1, 2, 3, None, 4, 5, 6],
+                "i": [1, 1, 1, 2, 3, 3, 3],
+            },
         ),
-        pytest.param(
+        (
+            BA,
             DROP_NULLS,
-            {"a": [1, 2, 3, 4, 5, 6, None], "b": [1, 1, 1, 3, 3, 3, 4]},
-            marks=XFAIL_NOT_IMPL,
+            {
+                "b": [None, "dog", "cat", "narwhal", None, "orca", None],
+                "a": [1, 2, 3, 4, 5, 6, None],
+                "i": [1, 1, 1, 3, 3, 3, 4],
+            },
         ),
-        pytest.param(
+        (
+            BA,
             DROP_BOTH,
-            {"a": [1, 2, 3, 4, 5, 6], "b": [1, 1, 1, 3, 3, 3]},
-            marks=XFAIL_NOT_IMPL,
+            {
+                "b": [None, "dog", "cat", "narwhal", None, "orca"],
+                "a": [1, 2, 3, 4, 5, 6],
+                "i": [1, 1, 1, 3, 3, 3],
+            },
         ),
     ],
 )
-def test_explode_frame_options(kwds: dict[str, Any], expected: Data) -> None:
-    data = {"a": [[1, 2, 3], None, [4, 5, 6], []], "b": [1, 2, 3, 4]}
+def test_explode_frame_options(
+    columns: Sequence[ColumnNameOrSelector], kwds: dict[str, Any], expected: Data
+) -> None:
     # Based on https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/py-polars/tests/unit/operations/test_explode.py#L596-L616
-    result = dataframe(data).explode("a", **kwds)
+    data = {
+        "a": [[1, 2, 3], None, [4, 5, 6], []],
+        "b": [[None, "dog", "cat"], None, ["narwhal", None, "orca"], []],
+        "i": [1, 2, 3, 4],
+    }
+    result = (
+        dataframe(data)
+        .with_columns(
+            nwp.col("a").cast(nw.List(nw.Int32())), nwp.col("b").cast(nw.List(nw.String))
+        )
+        .select(*columns, "i")
+        .explode(columns, **kwds)
+    )
     assert_equal_data(result, expected)

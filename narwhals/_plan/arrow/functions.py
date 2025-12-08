@@ -6,7 +6,7 @@ import math
 import typing as t
 from collections import deque
 from collections.abc import Callable, Sequence
-from typing import TYPE_CHECKING, Any, Final, Literal, overload
+from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar, overload
 
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
@@ -21,6 +21,7 @@ from narwhals._plan import common, expressions as ir
 from narwhals._plan._guards import is_non_nested_literal
 from narwhals._plan.arrow import options as pa_options
 from narwhals._plan.expressions import functions as F, operators as ops
+from narwhals._plan.options import ExplodeOptions
 from narwhals._utils import Implementation, Version
 from narwhals.exceptions import ShapeError
 
@@ -28,7 +29,7 @@ if TYPE_CHECKING:
     import datetime as dt
     from collections.abc import Iterable, Mapping
 
-    from typing_extensions import TypeAlias, TypeIs, TypeVarTuple, Unpack
+    from typing_extensions import Self, TypeAlias, TypeIs, TypeVarTuple, Unpack
 
     from narwhals._arrow.typing import Incomplete, PromoteOptions
     from narwhals._plan.arrow.acero import Field
@@ -414,52 +415,97 @@ def list_explode(
 
     Equivalent to `polars.{Expr,Series}.explode`.
     """
-    if empty_as_null or keep_nulls:
-        lengths = list_len(native)
-        if empty_as_null and keep_nulls:
-            needs_replacing = or_(is_null(lengths), eq(lengths, lit(0)))
-        elif empty_as_null:
-            needs_replacing = eq(lengths, lit(0))
+    return ExplodeBuilder(empty_as_null=empty_as_null, keep_nulls=keep_nulls).explode(
+        native
+    )
+
+
+_ArrowListT = TypeVar("_ArrowListT", bound="Arrow[ListScalar[Any]]")
+
+
+class ExplodeBuilder:
+    options: ExplodeOptions
+
+    def __init__(self, *, empty_as_null: bool = True, keep_nulls: bool = True) -> None:
+        self.options = ExplodeOptions(empty_as_null=empty_as_null, keep_nulls=keep_nulls)
+
+    @classmethod
+    def from_options(cls, options: ExplodeOptions, /) -> Self:
+        obj = cls.__new__(cls)
+        obj.options = options
+        return obj
+
+    def explode(
+        self, native: Arrow[ListScalar[DataTypeT]]
+    ) -> ChunkedOrArray[Scalar[DataTypeT]]:
+        explode = _list_explode_unchecked
+        if self.options.any():
+            lengths = list_len(native)
+            needs_replacing = self._predicate(lengths)
+            safe = self._replace_mask(native, needs_replacing)
         else:
-            needs_replacing = is_null(lengths)
-        to_explode = when_then(needs_replacing, lit([None], native.type), native)
-    else:
-        to_explode = native
-    # NOTE: Maybe reconsider scalar re-wrap for multiple levels of nesting?
-    # For the single case, it matches polars
-    if isinstance(native, pa.Scalar):
-        return chunked_array(_list_explode_unchecked(to_explode))
-    result: ChunkedOrArray[Scalar[DataTypeT]] = _list_explode_unchecked(to_explode)
-    return result
+            safe = native
+        result: ChunkedOrArray[Scalar[DataTypeT]] = (
+            chunked_array(explode(safe)) if isinstance(safe, pa.Scalar) else explode(safe)
+        )
+        return result
 
+    # TODO @dangotbanned: likely want to be passing in the native table *somewhere*
+    # - Rather than returning a tuple that represents a half-done job
+    def explode_into(
+        self, native: ChunkedList[DataTypeT]
+    ) -> tuple[ChunkedArray[Scalar[DataTypeT]], ChunkedI64]:
+        """Variant of `explode`, providing indices for `DataFrame.explode([column])`."""
+        result: ChunkedArray[Scalar[DataTypeT]]
+        if self.options.any():
+            lengths = list_len(native)
+            needs_replacing = self._predicate(lengths)
+            safe = self._replace_mask(native, needs_replacing)
+        else:
+            safe = native
+        result = _list_explode_unchecked(safe)
+        return result, _list_parent_indices(safe)
 
-def table_explode_array(
-    native: ChunkedList[DataTypeT],
-) -> tuple[ChunkedArray[Scalar[DataTypeT]], ChunkedI64]:
-    """Variant of `list_explode`, providing indices for `DataFrame.explode([column])`."""
-    lengths = list_len(native)
-    needs_replacing = or_(is_null(lengths), eq(lengths, lit(0)))
-    to_explode = when_then(needs_replacing, lit([None], native.type), native)
-    result: ChunkedArray[Scalar[DataTypeT]] = _list_explode_unchecked(to_explode)
-    return result, _list_parent_indices(to_explode)
+    # TODO @dangotbanned: De-duplicate
+    def explode_arrays_into(
+        self, *arrays: ChunkedList
+    ) -> tuple[Sequence[ChunkedArrayAny], ChunkedI64]:
+        """Variant of `explode_into`, with shape checking against the first array."""
+        explode = _list_explode_unchecked
+        first = arrays[0]
+        first_len = list_len(first)
+        results = deque["ChunkedArrayAny"]()
+        if self.options.any():
+            needs_replacing = self._predicate(first_len)
+            first_safe = self._replace_mask(first, needs_replacing)
+            results.append(explode(first_safe))
+            for arr in arrays[1:]:
+                if not first_len.equals(list_len(arr)):
+                    msg = "exploded columns must have matching element counts"
+                    raise ShapeError(msg)
+                results.append(explode(self._replace_mask(arr, needs_replacing)))
+        else:
+            first_safe = first
+            results.append(explode(first_safe))
+            for arr in arrays[1:]:
+                if not first_len.equals(list_len(arr)):
+                    msg = "exploded columns must have matching element counts"
+                    raise ShapeError(msg)
+                results.append(explode(arr))
+        return results, _list_parent_indices(first_safe)
 
+    def _predicate(self, lengths: ArrowAny) -> Arrow[BooleanScalar]:
+        empty_as_null, keep_nulls = self.options.empty_as_null, self.options.keep_nulls
+        if empty_as_null and keep_nulls:
+            return or_(is_null(lengths), eq(lengths, lit(0)))
+        if empty_as_null:
+            return eq(lengths, lit(0))
+        return is_null(lengths)
 
-def table_explode_arrays(
-    *arrays: ChunkedList,
-) -> tuple[Sequence[ChunkedArrayAny], ChunkedI64]:
-    """Variant of `table_explode_array`, with shape checking against the first array."""
-    explode = _list_explode_unchecked
-    first = arrays[0]
-    first_len = list_len(first)
-    needs_replacing = or_(is_null(first_len), eq(first_len, lit(0)))
-    first_to_explode = when_then(needs_replacing, lit([None], first.type), first)
-    results = deque["ChunkedArrayAny"]([explode(first_to_explode)])
-    for arr in arrays[1:]:
-        if not first_len.equals(list_len(arr)):
-            msg = "exploded columns must have matching element counts"
-            raise ShapeError(msg)
-        results.append(explode(when_then(needs_replacing, lit([None], arr.type), arr)))
-    return results, _list_parent_indices(first_to_explode)
+    def _replace_mask(
+        self, native: _ArrowListT, mask: Arrow[BooleanScalar]
+    ) -> _ArrowListT:
+        return when_then(mask, lit([None], native.type), native)  # type: ignore[no-any-return]
 
 
 def _list_explode_unchecked(native: Incomplete) -> Incomplete:

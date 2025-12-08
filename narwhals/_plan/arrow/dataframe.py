@@ -163,16 +163,20 @@ class ArrowDataFrame(
             native = self.native.filter(~to_drop)
         return self._with_native(native)
 
+    # TODO @dangotbanned: Move move of this into `ExplodeBuilder`
     def explode(self, subset: Sequence[str], options: ExplodeOptions) -> Self:
         native = self.native
+        builder = fn.ExplodeBuilder.from_options(options)
         if len(subset) == 1:
             name = subset[0]
-            exploded, indices = fn.table_explode_array(native.column(name))
+            exploded, indices = builder.explode_into(native.column(name))
             # TODO @dangotbanned: Might be more efficient to null-out the column, before `gather`?
             df = self.gather(indices) if len(indices) != len(self) else self
             ser = Series.from_native(exploded, name, version=self.version)
             return df.with_series(ser)
-        explodeds, indices = fn.table_explode_arrays(*native.select(list(subset)).columns)
+        explodeds, indices = builder.explode_arrays_into(
+            *native.select(list(subset)).columns
+        )
         df = self.gather(indices) if len(indices) != len(self) else self
         names_and_columns = zip_strict(subset, explodeds)
         return self._with_native(with_arrays(df.native, names_and_columns))
