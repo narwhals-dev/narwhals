@@ -197,3 +197,34 @@ def test_explode_series_options(
     # Based on https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/py-polars/tests/unit/operations/test_explode.py#L486-L505
     result = series(values).explode(**kwds)
     assert_equal_series(result, expected, "")
+
+
+XFAIL_NOT_IMPL = pytest.mark.xfail(reason="TODO: `DataFrame.explode(..., **kwds)`")
+
+
+@pytest.mark.parametrize(
+    ("kwds", "expected"),
+    [
+        ({}, {"a": [1, 2, 3, None, 4, 5, 6, None], "b": [1, 1, 1, 2, 3, 3, 3, 4]}),
+        pytest.param(
+            DROP_EMPTY,
+            {"a": [1, 2, 3, None, 4, 5, 6], "b": [1, 1, 1, 2, 3, 3, 3]},
+            marks=XFAIL_NOT_IMPL,
+        ),
+        pytest.param(
+            DROP_NULLS,
+            {"a": [1, 2, 3, 4, 5, 6, None], "b": [1, 1, 1, 3, 3, 3, 4]},
+            marks=XFAIL_NOT_IMPL,
+        ),
+        pytest.param(
+            DROP_BOTH,
+            {"a": [1, 2, 3, 4, 5, 6], "b": [1, 1, 1, 3, 3, 3]},
+            marks=XFAIL_NOT_IMPL,
+        ),
+    ],
+)
+def test_explode_frame_options(kwds: dict[str, Any], expected: Data) -> None:
+    data = {"a": [[1, 2, 3], None, [4, 5, 6], []], "b": [1, 2, 3, 4]}
+    # Based on https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/py-polars/tests/unit/operations/test_explode.py#L596-L616
+    result = dataframe(data).explode("a", **kwds)
+    assert_equal_data(result, expected)

@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from narwhals._plan.arrow.typing import ChunkedArrayAny, ChunkedOrArrayAny
     from narwhals._plan.compliant.group_by import GroupByResolver
     from narwhals._plan.expressions import ExprIR, NamedIR
-    from narwhals._plan.options import SortMultipleOptions
+    from narwhals._plan.options import ExplodeOptions, SortMultipleOptions
     from narwhals._plan.typing import NonCrossJoinStrategy
     from narwhals.dtypes import DType
     from narwhals.typing import IntoSchema
@@ -163,7 +163,7 @@ class ArrowDataFrame(
             native = self.native.filter(~to_drop)
         return self._with_native(native)
 
-    def explode(self, subset: Sequence[str]) -> Self:
+    def explode(self, subset: Sequence[str], options: ExplodeOptions) -> Self:
         native = self.native
         if len(subset) == 1:
             name = subset[0]

@@ -328,3 +328,15 @@ class FunctionExprOptions(_BaseIROptions):
 
 
 FEOptions = FunctionExprOptions
+
+
+class ExplodeOptions(Immutable):
+    __slots__ = ("empty_as_null", "keep_nulls")
+    empty_as_null: bool
+    """Explode an empty list into a `null`."""
+    keep_nulls: bool
+    """Explode a `null` into a `null`."""
+
+    def any(self) -> bool:
+        """Return True if we need to handle empty lists and/or nulls."""
+        return self.empty_as_null or self.keep_nulls
