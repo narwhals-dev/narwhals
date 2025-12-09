@@ -141,3 +141,13 @@ Ignored: TypeAlias = Container[str]
 
 [^1]: `ByName`, `ByIndex` will never be ignored.
 """
+
+
+IncompleteCyclic: TypeAlias = "t.Any"
+"""Placeholder for typing that introduces a cyclic dependency.
+
+Mainly for spelling `(Compliant)DataFrame` from within `(Compliant)Series`.
+
+On `main`, this works fine when running a type checker from the CLI - but causes
+intermittent warnings when running in a language server.
+"""

@@ -3,14 +3,14 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol
 
 from narwhals._plan.compliant.typing import HasVersion
-from narwhals._plan.typing import NativeSeriesT
+from narwhals._plan.typing import IncompleteCyclic, NativeSeriesT
 from narwhals._utils import Version, _StoresNative, unstable
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
 
     import polars as pl
-    from typing_extensions import Self, TypeAlias
+    from typing_extensions import Self
 
     from narwhals._plan.compliant.accessors import SeriesStructNamespace
     from narwhals._plan.compliant.dataframe import CompliantDataFrame
@@ -28,8 +28,6 @@ if TYPE_CHECKING:
         TemporalLiteral,
         _1DArray,
     )
-
-Incomplete: TypeAlias = Any
 
 
 class CompliantSeries(HasVersion, Protocol[NativeSeriesT]):
@@ -79,7 +77,7 @@ class CompliantSeries(HasVersion, Protocol[NativeSeriesT]):
     def pow(self, exponent: float | Self) -> Self:
         return self.__pow__(exponent)
 
-    def __narwhals_namespace__(self) -> Incomplete: ...
+    def __narwhals_namespace__(self) -> IncompleteCyclic: ...
     def __narwhals_series__(self) -> Self:
         return self
 
@@ -185,7 +183,7 @@ class CompliantSeries(HasVersion, Protocol[NativeSeriesT]):
     def scatter(self, indices: Self, values: Self) -> Self: ...
     def slice(self, offset: int, length: int | None = None) -> Self: ...
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self: ...
-    def to_frame(self) -> Incomplete: ...
+    def to_frame(self) -> IncompleteCyclic: ...
     def to_list(self) -> list[Any]: ...
     def to_narwhals(self) -> Series[NativeSeriesT]:
         from narwhals._plan.series import Series
@@ -205,7 +203,7 @@ class CompliantSeries(HasVersion, Protocol[NativeSeriesT]):
         include_breakpoint: bool = True,
         include_category: bool = False,
         _compatibility_behavior: Literal["narwhals", "polars"] = "narwhals",
-    ) -> CompliantDataFrame[Self, Incomplete, NativeSeriesT]:
+    ) -> CompliantDataFrame[Self, IncompleteCyclic, NativeSeriesT]:
         from narwhals._plan.expressions import col as ir_col
 
         expr = (
@@ -218,7 +216,7 @@ class CompliantSeries(HasVersion, Protocol[NativeSeriesT]):
                 include_category=include_category,
             )
         )
-        df: DataFrame[Incomplete, NativeSeriesT] = (
+        df: DataFrame[IncompleteCyclic, NativeSeriesT] = (
             self.to_narwhals().to_frame().select(expr)
         )
         if not include_breakpoint and not include_category:
@@ -229,4 +227,4 @@ class CompliantSeries(HasVersion, Protocol[NativeSeriesT]):
         return df._compliant
 
     @property
-    def struct(self) -> SeriesStructNamespace[Incomplete, Self]: ...
+    def struct(self) -> SeriesStructNamespace[IncompleteCyclic, Self]: ...

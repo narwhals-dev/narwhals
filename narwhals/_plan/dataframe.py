@@ -11,6 +11,7 @@ from narwhals._plan.options import ExplodeOptions, SortMultipleOptions
 from narwhals._plan.series import Series
 from narwhals._plan.typing import (
     ColumnNameOrSelector,
+    IncompleteCyclic,
     IntoExpr,
     IntoExprColumn,
     NativeDataFrameT,
@@ -191,7 +192,7 @@ def _dataframe_from_dict(
 class DataFrame(
     BaseFrame[NativeDataFrameT_co], Generic[NativeDataFrameT_co, NativeSeriesT]
 ):
-    _compliant: CompliantDataFrame[Any, NativeDataFrameT_co, NativeSeriesT]
+    _compliant: CompliantDataFrame[IncompleteCyclic, NativeDataFrameT_co, NativeSeriesT]
 
     @property
     def implementation(self) -> _EagerAllowedImpl:

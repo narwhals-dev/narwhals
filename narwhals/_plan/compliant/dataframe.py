@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, overload
 from narwhals._plan.compliant.group_by import Grouped
 from narwhals._plan.compliant.typing import ColumnT_co, HasVersion, SeriesT
 from narwhals._plan.typing import (
+    IncompleteCyclic,
     IntoExpr,
     NativeDataFrameT,
     NativeFrameT_co,
@@ -43,7 +44,7 @@ Incomplete: TypeAlias = Any
 class CompliantFrame(HasVersion, Protocol[ColumnT_co, NativeFrameT_co]):
     implementation: ClassVar[Implementation]
 
-    def __narwhals_namespace__(self) -> Any: ...
+    def __narwhals_namespace__(self) -> IncompleteCyclic: ...
     def _evaluate_irs(
         self, nodes: Iterable[NamedIR[ir.ExprIR]], /
     ) -> Iterator[ColumnT_co]: ...

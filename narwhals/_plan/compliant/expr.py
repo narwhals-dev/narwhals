@@ -13,7 +13,7 @@ from narwhals._plan.compliant.typing import (
 from narwhals._utils import Version
 
 if TYPE_CHECKING:
-    from typing_extensions import Self, TypeAlias
+    from typing_extensions import Self
 
     from narwhals._plan import expressions as ir
     from narwhals._plan.compliant.accessors import (
@@ -41,8 +41,7 @@ if TYPE_CHECKING:
         IsNull,
         Not,
     )
-
-Incomplete: TypeAlias = Any
+    from narwhals._plan.typing import IncompleteCyclic
 
 
 class CompliantExpr(HasVersion, Protocol[FrameT_contra, SeriesT_co]):
@@ -292,7 +291,7 @@ class EagerExpr(
     ) -> Self: ...
     def is_in_series(
         self,
-        node: FunctionExpr[boolean.IsInSeries[Incomplete]],
+        node: FunctionExpr[boolean.IsInSeries[IncompleteCyclic]],
         frame: FrameT_contra,
         name: str,
     ) -> Self: ...

@@ -4,7 +4,13 @@ from collections.abc import Iterable, Sequence
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal
 
 from narwhals._plan._guards import is_series
-from narwhals._plan.typing import NativeSeriesT, NativeSeriesT_co, OneOrIterable, SeriesT
+from narwhals._plan.typing import (
+    IncompleteCyclic,
+    NativeSeriesT,
+    NativeSeriesT_co,
+    OneOrIterable,
+    SeriesT,
+)
 from narwhals._utils import (
     Implementation,
     Version,
@@ -20,7 +26,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
     import polars as pl
-    from typing_extensions import Self, TypeAlias
+    from typing_extensions import Self
 
     from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._plan.dataframe import DataFrame
@@ -33,8 +39,6 @@ if TYPE_CHECKING:
         SizedMultiIndexSelector,
         TemporalLiteral,
     )
-
-Incomplete: TypeAlias = Any
 
 
 class Series(Generic[NativeSeriesT_co]):
@@ -102,9 +106,7 @@ class Series(Generic[NativeSeriesT_co]):
 
         raise NotImplementedError(type(native))
 
-    # NOTE: `Incomplete` until `CompliantSeries` can avoid a cyclic dependency back to `CompliantDataFrame`
-    # Currently an issue on `main` and leads to a lot of intermittent warnings
-    def to_frame(self) -> DataFrame[Incomplete, NativeSeriesT_co]:
+    def to_frame(self) -> DataFrame[IncompleteCyclic, NativeSeriesT_co]:
         import narwhals._plan.dataframe as _df
 
         # NOTE: Missing placeholder for `DataFrameV1`
@@ -281,7 +283,7 @@ class Series(Generic[NativeSeriesT_co]):
         include_breakpoint: bool = True,
         include_category: bool = False,
         _compatibility_behavior: Literal["narwhals", "polars"] = "narwhals",
-    ) -> DataFrame[Incomplete, NativeSeriesT_co]:
+    ) -> DataFrame[IncompleteCyclic, NativeSeriesT_co]:
         return self._compliant.hist(
             bins,
             bin_count=bin_count,
