@@ -180,6 +180,7 @@ def test_explode_series_default_masked(values: list[Any], expected: list[Any]) -
 DROP_EMPTY: Final = {"empty_as_null": False}
 DROP_NULLS: Final = {"keep_nulls": False}
 DROP_BOTH: Final = {"empty_as_null": False, "keep_nulls": False}
+DEFAULT: Final[Data] = {}
 
 
 @pytest.mark.parametrize(
@@ -203,50 +204,31 @@ def test_explode_series_options(
 A = ("a",)
 BA = "b", "a"
 
+DEFAULT_A: Final = [1, 2, 3, None, 4, 5, 6, None]
+DEFAULT_I: Final = [1, 1, 1, 2, 3, 3, 3, 4]
+DEFAULT_B: Final = [None, "dog", "cat", None, "narwhal", None, "orca", None]
+EMPTY_A: Final = [1, 2, 3, None, 4, 5, 6]
+EMPTY_I: Final = [1, 1, 1, 2, 3, 3, 3]
+EMPTY_B: Final = [None, "dog", "cat", None, "narwhal", None, "orca"]
+NULLS_A: Final = [1, 2, 3, 4, 5, 6, None]
+NULLS_I: Final = [1, 1, 1, 3, 3, 3, 4]
+NULLS_B: Final = [None, "dog", "cat", "narwhal", None, "orca", None]
+BOTH_A: Final = [1, 2, 3, 4, 5, 6]
+BOTH_I: Final = [1, 1, 1, 3, 3, 3]
+BOTH_B: Final = [None, "dog", "cat", "narwhal", None, "orca"]
+
 
 @pytest.mark.parametrize(
     ("columns", "kwds", "expected"),
     [
-        (A, {}, {"a": [1, 2, 3, None, 4, 5, 6, None], "i": [1, 1, 1, 2, 3, 3, 3, 4]}),
-        (A, DROP_EMPTY, {"a": [1, 2, 3, None, 4, 5, 6], "i": [1, 1, 1, 2, 3, 3, 3]}),
-        (A, DROP_NULLS, {"a": [1, 2, 3, 4, 5, 6, None], "i": [1, 1, 1, 3, 3, 3, 4]}),
-        (A, DROP_BOTH, {"a": [1, 2, 3, 4, 5, 6], "i": [1, 1, 1, 3, 3, 3]}),
-        (
-            BA,
-            {},
-            {
-                "b": [None, "dog", "cat", None, "narwhal", None, "orca", None],
-                "a": [1, 2, 3, None, 4, 5, 6, None],
-                "i": [1, 1, 1, 2, 3, 3, 3, 4],
-            },
-        ),
-        (
-            BA,
-            DROP_EMPTY,
-            {
-                "b": [None, "dog", "cat", None, "narwhal", None, "orca"],
-                "a": [1, 2, 3, None, 4, 5, 6],
-                "i": [1, 1, 1, 2, 3, 3, 3],
-            },
-        ),
-        (
-            BA,
-            DROP_NULLS,
-            {
-                "b": [None, "dog", "cat", "narwhal", None, "orca", None],
-                "a": [1, 2, 3, 4, 5, 6, None],
-                "i": [1, 1, 1, 3, 3, 3, 4],
-            },
-        ),
-        (
-            BA,
-            DROP_BOTH,
-            {
-                "b": [None, "dog", "cat", "narwhal", None, "orca"],
-                "a": [1, 2, 3, 4, 5, 6],
-                "i": [1, 1, 1, 3, 3, 3],
-            },
-        ),
+        (A, DEFAULT, {"a": DEFAULT_A, "i": DEFAULT_I}),
+        (A, DROP_EMPTY, {"a": EMPTY_A, "i": EMPTY_I}),
+        (A, DROP_NULLS, {"a": NULLS_A, "i": NULLS_I}),
+        (A, DROP_BOTH, {"a": BOTH_A, "i": BOTH_I}),
+        (BA, DEFAULT, {"b": DEFAULT_B, "a": DEFAULT_A, "i": DEFAULT_I}),
+        (BA, DROP_EMPTY, {"b": EMPTY_B, "a": EMPTY_A, "i": EMPTY_I}),
+        (BA, DROP_NULLS, {"b": NULLS_B, "a": NULLS_A, "i": NULLS_I}),
+        (BA, DROP_BOTH, {"b": BOTH_B, "a": BOTH_A, "i": BOTH_I}),
     ],
 )
 def test_explode_frame_options(
