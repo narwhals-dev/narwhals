@@ -30,7 +30,6 @@ def data() -> Data:
     }
 
 
-# TODO @dangotbanned: Just reuse `rolling_options` for the tests?
 @pytest.mark.parametrize(
     ("window_size", "min_samples", "center", "ddof", "expected"),
     [
@@ -58,7 +57,6 @@ def test_rolling_var(
     assert_equal_data(result, {"var_std": expected})
 
 
-# TODO @dangotbanned: Just reuse `rolling_options` for the tests?
 @pytest.mark.parametrize(
     ("window_size", "min_samples", "center", "ddof", "expected"),
     [

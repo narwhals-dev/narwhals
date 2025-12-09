@@ -12,7 +12,6 @@ if TYPE_CHECKING:
     from tests.conftest import Data
 
 
-# test_allh_iterator has a different length
 @pytest.fixture(scope="module")
 def data() -> Data:
     return {
