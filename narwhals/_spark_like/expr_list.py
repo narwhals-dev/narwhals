@@ -74,7 +74,7 @@ class SparkLikeExprListNamespace(
             size = F.array_size(sorted_expr)
             mid_index = (size / 2).cast("int")
             odd_case = sorted_expr[mid_index]
-            even_case = (sorted_expr[mid_index] - 1 + sorted_expr[mid_index]) / 2
+            even_case = (sorted_expr[mid_index - 1] + sorted_expr[mid_index]) / 2
             return (
                 F.when((size.isNull()) | (size == 0), F.lit(None))
                 .when(size % 2 == 1, odd_case)
