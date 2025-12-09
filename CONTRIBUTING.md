@@ -134,7 +134,7 @@ The pre-commit tool is installed as part of the local-dev dependency group. This
 
 Static typing is run separately from `pre-commit`, as it's quite slow. Assuming you followed all the instructions above, you can run it with `make typing`.
 
-Finally, if you've had to update the install of Narwhals after changes, it can happen that a part of the testing functionality is no longer available, and you will see `pytest` errors around the `test_plugin`. This can be fixed by separately re-installing by running `uv pip install -e ./test-plugin`. 
+Finally, if you've had to update the install of Narwhals after changes, it can happen that a part of the testing functionality is no longer available, and you will see `pytest` errors around the `test_plugin`. This can be fixed by separately re-installing the functionality by running `uv pip install -e ./test-plugin`. 
 
 #### Option 2: use python3-venv
 
