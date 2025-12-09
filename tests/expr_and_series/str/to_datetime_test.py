@@ -228,9 +228,6 @@ def test_to_datetime_tz_aware(
     ):
         # NOTE: For `sqlframe` see https://github.com/narwhals-dev/narwhals/pull/2263#discussion_r2009101659
         pytest.skip()
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
     if "cudf" in str(constructor):
         # cuDF does not yet support timezone-aware datetimes
         request.applymarker(pytest.mark.xfail)

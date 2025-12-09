@@ -69,9 +69,11 @@ def test_concat_diagonal(
 ) -> None:
     if "ibis" in str(constructor):
         request.applymarker(pytest.mark.xfail)
+
     if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
+        # Bodo doesn't match output order in parallel
+        request.applymarker(pytest.mark.xfail)
+
     data_1 = {"a": [1, 3], "b": [4, 6]}
     data_2 = {"a": [100, 200], "z": ["x", "y"]}
     expected = {
