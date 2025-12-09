@@ -310,7 +310,7 @@ class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayA
         return SeriesStructNamespace(self)
 
 
-class SeriesStructNamespace(StructNamespace[ArrowSeries, "DataFrame"]):
+class SeriesStructNamespace(StructNamespace["DataFrame", ArrowSeries]):
     def __init__(self, compliant: ArrowSeries, /) -> None:
         self._compliant: ArrowSeries = compliant
 
