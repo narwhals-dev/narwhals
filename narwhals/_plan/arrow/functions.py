@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import math
 import typing as t
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Collection, Iterator, Sequence
+from itertools import chain
 from typing import TYPE_CHECKING, Any, Final, Literal, overload
 
 import pyarrow as pa  # ignore-banned-import
@@ -20,13 +21,15 @@ from narwhals._plan import common, expressions as ir
 from narwhals._plan._guards import is_non_nested_literal
 from narwhals._plan.arrow import options as pa_options
 from narwhals._plan.expressions import functions as F, operators as ops
-from narwhals._utils import Implementation, Version
+from narwhals._plan.options import ExplodeOptions
+from narwhals._utils import Implementation, Version, no_default
+from narwhals.exceptions import ShapeError
 
 if TYPE_CHECKING:
     import datetime as dt
     from collections.abc import Iterable, Mapping
 
-    from typing_extensions import TypeAlias, TypeIs, TypeVarTuple, Unpack
+    from typing_extensions import Self, TypeAlias, TypeIs, TypeVarTuple, Unpack
 
     from narwhals._arrow.typing import Incomplete, PromoteOptions
     from narwhals._plan.arrow.acero import Field
@@ -35,6 +38,7 @@ if TYPE_CHECKING:
         ArrayAny,
         Arrow,
         ArrowAny,
+        ArrowListT,
         ArrowT,
         BinaryComp,
         BinaryFunction,
@@ -63,7 +67,9 @@ if TYPE_CHECKING:
         LargeStringType,
         ListArray,
         ListScalar,
+        ListTypeT,
         NativeScalar,
+        NonListTypeT,
         NumericScalar,
         Predicate,
         SameArrowT,
@@ -80,6 +86,7 @@ if TYPE_CHECKING:
     from narwhals._plan.compliant.typing import SeriesT
     from narwhals._plan.options import RankOptions, SortMultipleOptions, SortOptions
     from narwhals._plan.typing import Seq
+    from narwhals._typing import NoDefault
     from narwhals.typing import (
         ClosedInterval,
         FillNullStrategy,
@@ -386,6 +393,148 @@ def get_categories(native: ArrowAny) -> ChunkedArrayAny:
     return chunked_array(da.dictionary)
 
 
+class ExplodeBuilder:
+    options: ExplodeOptions
+
+    def __init__(self, *, empty_as_null: bool = True, keep_nulls: bool = True) -> None:
+        self.options = ExplodeOptions(empty_as_null=empty_as_null, keep_nulls=keep_nulls)
+
+    @classmethod
+    def from_options(cls, options: ExplodeOptions, /) -> Self:
+        obj = cls.__new__(cls)
+        obj.options = options
+        return obj
+
+    @t.overload
+    def explode(
+        self, native: ChunkedList[DataTypeT] | ListScalar[DataTypeT]
+    ) -> ChunkedArray[Scalar[DataTypeT]]: ...
+    @t.overload
+    def explode(self, native: ListArray[DataTypeT]) -> Array[Scalar[DataTypeT]]: ...
+    @t.overload
+    def explode(
+        self, native: Arrow[ListScalar[DataTypeT]]
+    ) -> ChunkedOrArray[Scalar[DataTypeT]]: ...
+    def explode(
+        self, native: Arrow[ListScalar[DataTypeT]]
+    ) -> ChunkedOrArray[Scalar[DataTypeT]]:
+        """Explode list elements, expanding one-level into a new array.
+
+        Equivalent to `polars.{Expr,Series}.explode`.
+        """
+        safe = self._fill_with_null(native) if self.options.any() else native
+        if not isinstance(safe, pa.Scalar):
+            return _list_explode(safe)
+        return chunked_array(_list_explode(safe))
+
+    def explode_column(self, native: pa.Table, column_name: str, /) -> pa.Table:
+        """Explode a list-typed column in the context of `native`."""
+        ca = native.column(column_name)
+        safe = self._fill_with_null(ca) if self.options.any() else ca
+        exploded = _list_explode(safe)
+        col_idx = native.schema.get_field_index(column_name)
+        if len(exploded) == len(native):
+            return native.set_column(col_idx, column_name, exploded)
+        return (
+            native.remove_column(col_idx)
+            .take(_list_parent_indices(safe))
+            .add_column(col_idx, column_name, exploded)
+        )
+
+    def explode_columns(self, native: pa.Table, subset: Collection[str], /) -> pa.Table:
+        """Explode multiple list-typed columns in the context of `native`."""
+        subset = list(subset)
+        arrays = native.select(subset).columns
+        first = arrays[0]
+        first_len = list_len(first)
+        if self.options.any():
+            mask = self._predicate(first_len)
+            first_safe = self._fill_with_null(first, mask)
+            it = (
+                _list_explode(self._fill_with_null(arr, mask))
+                for arr in self._iter_ensure_shape(first_len, arrays[1:])
+            )
+        else:
+            first_safe = first
+            it = (
+                _list_explode(arr)
+                for arr in self._iter_ensure_shape(first_len, arrays[1:])
+            )
+        first_result = _list_explode(first_safe)
+        if len(first_result) != len(native):
+            gathered = native.drop_columns(subset).take(_list_parent_indices(first_safe))
+            for name, arr in zip(subset, chain([first_result], it)):
+                gathered = gathered.append_column(name, arr)
+            return gathered.select(native.column_names)
+        # NOTE: Not too happy about this import
+        from narwhals._plan.arrow.dataframe import with_arrays
+
+        return with_arrays(native, zip(subset, chain([first_result], it)))
+
+    def _iter_ensure_shape(
+        self,
+        first_len: ChunkedArray[pa.UInt32Scalar],
+        arrays: Iterable[ChunkedArrayAny],
+        /,
+    ) -> Iterator[ChunkedArrayAny]:
+        for arr in arrays:
+            if not first_len.equals(list_len(arr)):
+                msg = "exploded columns must have matching element counts"
+                raise ShapeError(msg)
+            yield arr
+
+    def _predicate(self, lengths: ArrowAny, /) -> Arrow[BooleanScalar]:
+        """Return True for each sublist length that indicates the original sublist should be replaced with `[None]`."""
+        empty_as_null, keep_nulls = self.options.empty_as_null, self.options.keep_nulls
+        if empty_as_null and keep_nulls:
+            return or_(is_null(lengths), eq(lengths, lit(0)))
+        if empty_as_null:
+            return eq(lengths, lit(0))
+        return is_null(lengths)
+
+    def _fill_with_null(
+        self, native: ArrowListT, mask: Arrow[BooleanScalar] | NoDefault = no_default
+    ) -> ArrowListT:
+        """Replace each sublist in `native` with `[None]`, according to `self.options`.
+
+        Arguments:
+            native: List-typed arrow data.
+            mask: An optional, pre-computed replacement mask. By default, this is generated from `native`.
+        """
+        predicate = self._predicate(list_len(native)) if mask is no_default else mask
+        result: ArrowListT = when_then(predicate, lit([None], native.type), native)
+        return result
+
+
+@t.overload
+def _list_explode(native: ChunkedList[DataTypeT]) -> ChunkedArray[Scalar[DataTypeT]]: ...
+@t.overload
+def _list_explode(
+    native: ListArray[NonListTypeT] | ListScalar[NonListTypeT],
+) -> Array[Scalar[NonListTypeT]]: ...
+@t.overload
+def _list_explode(native: ListArray[DataTypeT]) -> Array[Scalar[DataTypeT]]: ...
+@t.overload
+def _list_explode(native: ListScalar[ListTypeT]) -> ListArray[ListTypeT]: ...
+def _list_explode(native: Arrow[ListScalar]) -> ChunkedOrArrayAny:
+    result: ChunkedOrArrayAny = pc.call_function("list_flatten", [native])
+    return result
+
+
+@t.overload
+def _list_parent_indices(native: ChunkedList) -> ChunkedArray[pa.Int64Scalar]: ...
+@t.overload
+def _list_parent_indices(native: ListArray) -> pa.Int64Array: ...
+def _list_parent_indices(
+    native: ChunkedOrArray[ListScalar],
+) -> ChunkedOrArray[pa.Int64Scalar]:
+    """Don't use this withut handling nulls!"""
+    result: ChunkedOrArray[pa.Int64Scalar] = pc.call_function(
+        "list_parent_indices", [native]
+    )
+    return result
+
+
 @t.overload
 def list_len(native: ChunkedList) -> ChunkedArray[pa.UInt32Scalar]: ...
 @t.overload
@@ -393,9 +542,9 @@ def list_len(native: ListArray) -> pa.UInt32Array: ...
 @t.overload
 def list_len(native: ListScalar) -> pa.UInt32Scalar: ...
 @t.overload
-def list_len(native: SameArrowT) -> SameArrowT: ...
-@t.overload
 def list_len(native: ChunkedOrScalar[ListScalar]) -> ChunkedOrScalar[pa.UInt32Scalar]: ...
+@t.overload
+def list_len(native: Arrow[ListScalar[Any]]) -> Arrow[pa.UInt32Scalar]: ...
 def list_len(native: ArrowAny) -> ArrowAny:
     length: Incomplete = pc.list_value_length
     result: ArrowAny = length(native).cast(pa.uint32())

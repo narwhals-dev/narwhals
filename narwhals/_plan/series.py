@@ -298,6 +298,11 @@ class Series(Generic[NativeSeriesT_co]):
             return result
         return result.to_series().struct.unnest()
 
+    def explode(self, *, empty_as_null: bool = True, keep_nulls: bool = True) -> Self:
+        return type(self)(
+            self._compliant.explode(empty_as_null=empty_as_null, keep_nulls=keep_nulls)
+        )
+
     @property
     def struct(self) -> SeriesStructNamespace[Self]:
         return SeriesStructNamespace(self)

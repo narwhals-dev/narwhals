@@ -28,6 +28,7 @@ from narwhals._plan.compliant.column import ExprDispatch
 from narwhals._plan.compliant.expr import EagerExpr
 from narwhals._plan.compliant.scalar import EagerScalar
 from narwhals._plan.compliant.typing import namespace
+from narwhals._plan.exceptions import shape_error
 from narwhals._plan.expressions import FunctionExpr as FExpr, functions as F
 from narwhals._plan.expressions.boolean import (
     IsDuplicated,
@@ -48,7 +49,7 @@ from narwhals._utils import (
     not_implemented,
     qualified_type_name,
 )
-from narwhals.exceptions import InvalidOperationError, ShapeError
+from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, Sequence
@@ -372,7 +373,7 @@ class ArrowExpr(  # type: ignore[misc]
     def _with_native(self, result: ChunkedOrScalarAny, name: str, /) -> Scalar | Self:
         if isinstance(result, pa.Scalar):
             return ArrowScalar.from_native(result, name, version=self.version)
-        return self.from_native(result, name or self.name, self.version)
+        return self.from_native(result, name, self.version)
 
     # NOTE: I'm not sure what I meant by
     # > "isn't natively supported on `ChunkedArray`"
@@ -405,8 +406,7 @@ class ArrowExpr(  # type: ignore[misc]
 
     def broadcast(self, length: int, /) -> Series:
         if (actual_len := len(self)) != length:
-            msg = f"Expected object of length {length}, got {actual_len}."
-            raise ShapeError(msg)
+            raise shape_error(length, actual_len)
         return self._evaluated
 
     def __len__(self) -> int:

@@ -16,6 +16,7 @@ from narwhals._plan.arrow.group_by import ArrowGroupBy as GroupBy, partition_by
 from narwhals._plan.arrow.series import ArrowSeries as Series
 from narwhals._plan.compliant.dataframe import EagerDataFrame
 from narwhals._plan.compliant.typing import namespace
+from narwhals._plan.exceptions import shape_error
 from narwhals._plan.expressions import NamedIR
 from narwhals._utils import Version, generate_repr
 from narwhals.schema import Schema
@@ -26,10 +27,10 @@ if TYPE_CHECKING:
     import polars as pl
     from typing_extensions import Self, TypeAlias
 
-    from narwhals._plan.arrow.typing import ChunkedArrayAny
+    from narwhals._plan.arrow.typing import ChunkedArrayAny, ChunkedOrArrayAny
     from narwhals._plan.compliant.group_by import GroupByResolver
     from narwhals._plan.expressions import ExprIR, NamedIR
-    from narwhals._plan.options import SortMultipleOptions
+    from narwhals._plan.options import ExplodeOptions, SortMultipleOptions
     from narwhals._plan.typing import NonCrossJoinStrategy
     from narwhals.dtypes import DType
     from narwhals.typing import IntoSchema
@@ -162,6 +163,12 @@ class ArrowDataFrame(
             native = self.native.filter(~to_drop)
         return self._with_native(native)
 
+    def explode(self, subset: Sequence[str], options: ExplodeOptions) -> Self:
+        builder = fn.ExplodeBuilder.from_options(options)
+        if len(subset) == 1:
+            return self._with_native(builder.explode_column(self.native, subset[0]))
+        return self._with_native(builder.explode_columns(self.native, subset))
+
     def rename(self, mapping: Mapping[str, str]) -> Self:
         names: dict[str, str] | list[str]
         if fn.BACKEND_VERSION >= (17,):
@@ -170,20 +177,26 @@ class ArrowDataFrame(
             names = [mapping.get(c, c) for c in self.columns]
         return self._with_native(self.native.rename_columns(names))
 
-    # NOTE: Use instead of `with_columns` for trivial cases
+    def with_series(self, series: Series) -> Self:
+        """Add a new column or replace an existing one.
+
+        Uses similar semantics as `with_columns`, but:
+        - for a single named `Series`
+        - no broadcasting (use `Scalar.broadcast` instead)
+        - no length checking (use `with_series_checked` instead)
+        """
+        return self._with_native(with_array(self.native, series.name, series.native))
+
+    def with_series_checked(self, series: Series) -> Self:
+        expected, actual = len(self), len(series)
+        if len(series) != len(self):
+            raise shape_error(expected, actual)
+        return self.with_series(series)
+
     def _with_columns(self, exprs: Iterable[Expr | Scalar], /) -> Self:
-        native = self.native
-        columns = self.columns
         height = len(self)
-        for into_series in exprs:
-            name = into_series.name
-            chunked = into_series.broadcast(height).native
-            if name in columns:
-                i = columns.index(name)
-                native = native.set_column(i, name, chunked)
-            else:
-                native = native.append_column(name, chunked)
-        return self._with_native(native)
+        names_and_columns = ((e.name, e.broadcast(height).native) for e in exprs)
+        return self._with_native(with_arrays(self.native, names_and_columns))
 
     def select_names(self, *column_names: str) -> Self:
         return self._with_native(self.native.select(list(column_names)))
@@ -226,3 +239,22 @@ class ArrowDataFrame(
         from_native = self._with_native
         partitions = partition_by(self.native, by, include_key=include_key)
         return [from_native(df) for df in partitions]
+
+
+def with_array(table: pa.Table, name: str, column: ChunkedOrArrayAny) -> pa.Table:
+    column_names = table.column_names
+    if name in column_names:
+        return table.set_column(column_names.index(name), name, column)
+    return table.append_column(name, column)
+
+
+def with_arrays(
+    table: pa.Table, names_and_columns: Iterable[tuple[str, ChunkedOrArrayAny]], /
+) -> pa.Table:
+    column_names = table.column_names
+    for name, column in names_and_columns:
+        if name in column_names:
+            table = table.set_column(column_names.index(name), name, column)
+        else:
+            table = table.append_column(name, column)
+    return table

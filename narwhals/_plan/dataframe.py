@@ -7,7 +7,7 @@ from narwhals._plan._expansion import expand_selector_irs_names, prepare_project
 from narwhals._plan._guards import is_series
 from narwhals._plan.common import ensure_seq_str, temp
 from narwhals._plan.group_by import GroupBy, Grouped
-from narwhals._plan.options import SortMultipleOptions
+from narwhals._plan.options import ExplodeOptions, SortMultipleOptions
 from narwhals._plan.series import Series
 from narwhals._plan.typing import (
     ColumnNameOrSelector,
@@ -25,7 +25,7 @@ from narwhals._plan.typing import (
 )
 from narwhals._utils import Implementation, Version, generate_repr
 from narwhals.dependencies import is_pyarrow_table
-from narwhals.exceptions import ShapeError
+from narwhals.exceptions import InvalidOperationError, ShapeError
 from narwhals.schema import Schema
 from narwhals.typing import EagerAllowed, IntoBackend, IntoDType, IntoSchema, JoinStrategy
 
@@ -157,6 +157,26 @@ class BaseFrame(Generic[NativeFrameT_co]):
         by_selectors = _parse.parse_into_seq_of_selector_ir(order_by)
         by_names = expand_selector_irs_names(by_selectors, schema=self, require_any=True)
         return self._with_compliant(self._compliant.with_row_index_by(name, by_names))
+
+    def explode(
+        self,
+        columns: OneOrIterable[ColumnNameOrSelector],
+        *more_columns: ColumnNameOrSelector,
+        empty_as_null: bool = True,
+        keep_nulls: bool = True,
+    ) -> Self:
+        s_ir = _parse.parse_into_combined_selector_ir(columns, *more_columns)
+        schema = self.collect_schema()
+        subset = expand_selector_irs_names((s_ir,), schema=schema, require_any=True)
+        dtypes = self.version.dtypes
+        tp_list = dtypes.List
+        for col_to_explode in subset:
+            dtype = schema[col_to_explode]
+            if dtype != tp_list:
+                msg = f"`explode` operation is not supported for dtype `{dtype}`, expected List type"
+                raise InvalidOperationError(msg)
+        options = ExplodeOptions(empty_as_null=empty_as_null, keep_nulls=keep_nulls)
+        return self._with_compliant(self._compliant.explode(subset, options))
 
 
 def _dataframe_from_dict(
