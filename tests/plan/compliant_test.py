@@ -759,11 +759,17 @@ def test_series_misc() -> None:
     assert_equal_series(is_not_nan & is_not_null, expected, name)
 
     assert ser.unique().drop_nans().drop_nulls().count() == 6
-
-    assert_equal_series(ser.gather([0, 2, 4]).sort(), [1.0, 4.9, 7.1], name)
-    assert ser.gather([]).to_list() == []
-
     assert len(list(ser)) == len(values)
+
+
+def test_series_sort() -> None:
+    ser = series([1.0, 7.1, None, 4.9])
+    assert_equal_series(ser.sort(), [None, 1.0, 4.9, 7.1], "")
+    assert_equal_series(ser.sort(nulls_last=True), [1.0, 4.9, 7.1, None], "")
+    assert_equal_series(ser.sort(descending=True), [None, 7.1, 4.9, 1.0], "")
+    assert_equal_series(
+        ser.sort(descending=True, nulls_last=True), [7.1, 4.9, 1.0, None], ""
+    )
 
 
 def test_series_cast() -> None:

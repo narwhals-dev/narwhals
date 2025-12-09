@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import partial
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -29,6 +29,32 @@ def test_gather_every_series(data: Data, n: int, offset: int, column: str) -> No
     ser = series(data[column]).alias(column)
     result = ser.gather_every(n, offset)
     expected = data[column][offset::n]
+    assert_equal_series(result, expected, column)
+
+
+@pytest.mark.parametrize(
+    ("column", "indices", "expected"),
+    [
+        ("idx", [], []),
+        ("name", [], []),
+        ("idx", [0, 4, 2], [0, 4, 2]),
+        ("name", [1, 5, 5], ["b", "f", "f"]),
+        pytest.param(
+            "idx",
+            [-1],
+            [9],
+            marks=pytest.mark.xfail(
+                reason="TODO: Handle negative indices", raises=IndexError
+            ),
+        ),
+        ("name", range(5, 7), ["f", "g"]),
+    ],
+)
+def test_gather_series(
+    data: Data, column: str, indices: Any, expected: list[Any]
+) -> None:
+    ser = series(data[column]).alias(column)
+    result = ser.gather(indices)
     assert_equal_series(result, expected, column)
 
 

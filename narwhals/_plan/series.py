@@ -137,8 +137,7 @@ class Series(Generic[NativeSeriesT_co]):
     def gather(self, indices: SizedMultiIndexSelector[Self]) -> Self:
         if len(indices) == 0:
             return self.slice(0, 0)
-        rows = indices._compliant if isinstance(indices, Series) else indices
-        return type(self)(self._compliant.gather(rows))
+        return type(self)(self._compliant.gather(self._parse_into_compliant(indices)))
 
     def gather_every(self, n: int, offset: int = 0) -> Self:
         return type(self)(self._compliant.gather_every(n, offset))
