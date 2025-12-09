@@ -48,6 +48,8 @@ if TYPE_CHECKING:
     NonListNestedType: TypeAlias = "pa.StructType | pa.DictionaryType[Any, Any] | pa.MapType[Any, Any] | pa.UnionType"
     NonListType: TypeAlias = "BasicType | NonListNestedType"
     NestedType: TypeAlias = "NonListNestedType | pa.ListType[Any]"
+    NonListTypeT = TypeVar("NonListTypeT", bound="NonListType")
+    ListTypeT = TypeVar("ListTypeT", bound="pa.ListType[Any]")
 
     class NativeArrowSeries(NativeSeries, Protocol):
         @property
@@ -207,12 +209,12 @@ ChunkedStruct: TypeAlias = "ChunkedArray[pa.StructScalar]"
 StructArray: TypeAlias = "pa.StructArray | Array[pa.StructScalar]"
 ChunkedList: TypeAlias = "ChunkedArray[ListScalar[DataTypeT_co]]"
 ListArray: TypeAlias = "Array[ListScalar[DataTypeT_co]]"
-ChunkedI64: TypeAlias = "ChunkedArray[pa.Int64Scalar]"
 
 Arrow: TypeAlias = "ChunkedOrScalar[ScalarT_co] | Array[ScalarT_co]"
 ArrowAny: TypeAlias = "ChunkedOrScalarAny | ArrayAny"
 SameArrowT = TypeVar("SameArrowT", ChunkedArrayAny, ArrayAny, ScalarAny)
 ArrowT = TypeVar("ArrowT", bound=ArrowAny)
+ArrowListT = TypeVar("ArrowListT", bound="Arrow[ListScalar[Any]]")
 Predicate: TypeAlias = "Arrow[BooleanScalar]"
 """Any `pyarrow` container that wraps boolean."""
 

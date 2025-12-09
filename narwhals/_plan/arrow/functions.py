@@ -6,7 +6,7 @@ import math
 import typing as t
 from collections.abc import Callable, Collection, Iterator, Sequence
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Final, Literal, overload
 
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
@@ -38,6 +38,7 @@ if TYPE_CHECKING:
         ArrayAny,
         Arrow,
         ArrowAny,
+        ArrowListT,
         ArrowT,
         BinaryComp,
         BinaryFunction,
@@ -49,7 +50,6 @@ if TYPE_CHECKING:
         BoolType,
         ChunkedArray,
         ChunkedArrayAny,
-        ChunkedI64,
         ChunkedList,
         ChunkedOrArray,
         ChunkedOrArrayAny,
@@ -67,8 +67,9 @@ if TYPE_CHECKING:
         LargeStringType,
         ListArray,
         ListScalar,
+        ListTypeT,
         NativeScalar,
-        NonListType,
+        NonListTypeT,
         NumericScalar,
         Predicate,
         SameArrowT,
@@ -391,11 +392,6 @@ def get_categories(native: ArrowAny) -> ChunkedArrayAny:
     return chunked_array(da.dictionary)
 
 
-_ArrowListT = TypeVar("_ArrowListT", bound="Arrow[ListScalar[Any]]")
-_NonListT = TypeVar("_NonListT", bound="NonListType")
-_ListT = TypeVar("_ListT", bound="pa.ListType[Any]")
-
-
 class ExplodeBuilder:
     options: ExplodeOptions
 
@@ -500,28 +496,28 @@ class ExplodeBuilder:
             return eq(lengths, lit(0))
         return is_null(lengths)
 
-    def _replace_mask(
-        self, native: _ArrowListT, mask: Arrow[BooleanScalar]
-    ) -> _ArrowListT:
-        return when_then(mask, lit([None], native.type), native)  # type: ignore[no-any-return]
+    def _replace_mask(self, native: ArrowListT, mask: Arrow[BooleanScalar]) -> ArrowListT:
+        result: ArrowListT = when_then(mask, lit([None], native.type), native)
+        return result
 
 
 @t.overload
 def _list_explode(native: ChunkedList[DataTypeT]) -> ChunkedArray[Scalar[DataTypeT]]: ...
 @t.overload
 def _list_explode(
-    native: ListArray[_NonListT] | ListScalar[_NonListT],
-) -> Array[Scalar[_NonListT]]: ...
+    native: ListArray[NonListTypeT] | ListScalar[NonListTypeT],
+) -> Array[Scalar[NonListTypeT]]: ...
 @t.overload
 def _list_explode(native: ListArray[DataTypeT]) -> Array[Scalar[DataTypeT]]: ...
 @t.overload
-def _list_explode(native: ListScalar[_ListT]) -> ListArray[_ListT]: ...
-def _list_explode(native: Incomplete) -> Incomplete:
-    return pc.call_function("list_flatten", [native])
+def _list_explode(native: ListScalar[ListTypeT]) -> ListArray[ListTypeT]: ...
+def _list_explode(native: Arrow[ListScalar]) -> ChunkedOrArrayAny:
+    result: ChunkedOrArrayAny = pc.call_function("list_flatten", [native])
+    return result
 
 
 @t.overload
-def _list_parent_indices(native: ChunkedList) -> ChunkedI64: ...
+def _list_parent_indices(native: ChunkedList) -> ChunkedArray[pa.Int64Scalar]: ...
 @t.overload
 def _list_parent_indices(native: ListArray) -> pa.Int64Array: ...
 def _list_parent_indices(
