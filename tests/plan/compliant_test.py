@@ -698,6 +698,35 @@ def test_dataframe_from_dict_misc(data_small: Data) -> None:
         nwp.DataFrame.from_dict(data_small)  # type: ignore[arg-type]
 
 
+def test_dataframe_to_struct(data_small_af: Data) -> None:
+    pytest.importorskip("pyarrow")
+
+    schema = {
+        "a": nw.String(),
+        "b": nw.Int64(),
+        "c": nw.Int64(),
+        "d": nw.Int64(),
+        "e": nw.Int64(),
+        "f": nw.Boolean(),
+    }
+
+    df = dataframe(data_small_af).with_columns(
+        nwp.col(name).cast(dtype) for name, dtype in schema.items()
+    )
+    result = df.to_struct("struct_series")
+    result_dtype = result.dtype
+    assert isinstance(result_dtype, nw.Struct)
+    result_schema = dict(result_dtype.to_schema())
+    assert result_schema == schema
+
+    expected = [
+        {"a": "A", "b": 1, "c": 9, "d": 8, "e": None, "f": True},
+        {"a": "B", "b": 2, "c": 2, "d": 7, "e": 9, "f": False},
+        {"a": "A", "b": 3, "c": 4, "d": 8, "e": 7, "f": None},
+    ]
+    assert_equal_series(result, expected, "struct_series")
+
+
 # TODO @dangotbanned: Split this up
 def test_series_misc() -> None:
     pytest.importorskip("pyarrow")
