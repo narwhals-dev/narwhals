@@ -452,7 +452,8 @@ class ExplodeBuilder:
 
     def explode_columns(self, native: pa.Table, subset: Collection[str], /) -> pa.Table:
         """Explode multiple list-typed columns in the context of `native`."""
-        arrays = native.select(list(subset)).columns
+        subset = list(subset)
+        arrays = native.select(subset).columns
         first = arrays[0]
         first_len = list_len(first)
         if self.options.any():
@@ -469,13 +470,13 @@ class ExplodeBuilder:
                 for arr in self._iter_ensure_shape(first_len, arrays[1:])
             )
         first_result = _list_explode(first_safe)
+        if len(first_result) != len(native):
+            gathered = native.drop_columns(subset).take(_list_parent_indices(first_safe))
+            for name, arr in zip(subset, chain([first_result], it)):
+                gathered = gathered.append_column(name, arr)
+            return gathered.select(native.column_names)
         # NOTE: Not too happy about this import
         from narwhals._plan.arrow.dataframe import with_arrays
-
-        if len(first_result) != len(native):
-            # TODO @dangotbanned: Try to avoid repeating the lists in take
-            # Complicated by needing the columns in the same position
-            native = native.take(_list_parent_indices(first_safe))
 
         return with_arrays(native, zip(subset, chain([first_result], it)))
 
