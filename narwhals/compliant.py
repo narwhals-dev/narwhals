@@ -18,12 +18,7 @@ from narwhals._compliant.any_namespace import (
     StructNamespace,
 )
 from narwhals._compliant.expr import CompliantExprNameNamespace
-from narwhals._compliant.selectors import (
-    CompliantSelector,
-    CompliantSelectorNamespace,
-    EagerSelectorNamespace,
-    LazySelectorNamespace,
-)
+from narwhals._compliant.selectors import CompliantSelector, CompliantSelectorNamespace
 
 __all__ = [
     "CatNamespace",
@@ -37,8 +32,6 @@ __all__ = [
     "CompliantSelectorNamespace",
     "CompliantSeries",
     "DateTimeNamespace",
-    "EagerSelectorNamespace",
-    "LazySelectorNamespace",
     "ListNamespace",
     "StringNamespace",
     "StructNamespace",
