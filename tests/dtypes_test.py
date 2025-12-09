@@ -149,9 +149,6 @@ def test_struct_hashes() -> None:
 
 
 def test_2d_array(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
     version_conditions = [
         (PANDAS_VERSION < (2, 2), "Requires pandas 2.2+ for 2D array support"),
         (
@@ -163,7 +160,7 @@ def test_2d_array(constructor: Constructor, request: pytest.FixtureRequest) -> N
         if condition:
             pytest.skip(reason)
 
-    if any(x in str(constructor) for x in ("dask", "cudf", "pyspark")):
+    if any(x in str(constructor) for x in ("bodo", "dask", "cudf", "pyspark")):
         request.applymarker(
             pytest.mark.xfail(
                 reason="2D array operations not supported in these backends"
