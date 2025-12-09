@@ -128,7 +128,7 @@ class Series(Generic[NativeSeriesT_co]):
     def alias(self, name: str) -> Self:
         return type(self)(self._compliant.alias(name))
 
-    def cast(self, dtype: IntoDType) -> Self:  # pragma: no cover
+    def cast(self, dtype: IntoDType) -> Self:
         return type(self)(self._compliant.cast(dtype))
 
     def __len__(self) -> int:

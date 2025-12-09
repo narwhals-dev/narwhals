@@ -766,6 +766,18 @@ def test_series_misc() -> None:
     assert len(list(ser)) == len(values)
 
 
+def test_series_cast() -> None:
+    pytest.importorskip("pyarrow")
+    ser = nwp.int_range(10, step=2, eager="pyarrow", dtype=nw.Int64)
+    assert ser.dtype == nw.Int64
+    ser_float = ser.cast(nw.Float64)
+    assert ser_float.dtype == nw.Float64
+    assert ser.dtype == nw.Int64
+    result = ser_float + 0.5
+    expected = [0.5, 2.5, 4.5, 6.5, 8.5]
+    assert_equal_series(result, expected, "literal")
+
+
 if TYPE_CHECKING:
     from typing_extensions import assert_type
 
