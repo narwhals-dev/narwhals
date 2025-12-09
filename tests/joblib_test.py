@@ -12,7 +12,7 @@ pytest.importorskip("joblib")
 from joblib import Parallel, delayed
 
 
-def test_parallelisability(constructor_eager: ConstructorEager) -> None:
+def test_parallelisability(constructor_eager: ConstructorEager, request: pytest.FixtureRequest) -> None:
     if "bodo" in str(constructor_eager):
         # Expected not to work.
         request.applymarker(pytest.mark.xfail)

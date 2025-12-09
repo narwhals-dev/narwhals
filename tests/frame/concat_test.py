@@ -33,7 +33,7 @@ def test_concat_horizontal(constructor_eager: ConstructorEager) -> None:
         nw.concat([df_left.lazy()], how="horizontal")
 
 
-def test_concat_vertical(constructor: Constructor) -> None:
+def test_concat_vertical(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if "bodo" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
