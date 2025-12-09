@@ -1,18 +1,20 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, Protocol
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol
 
 from narwhals._plan.compliant.typing import HasVersion
 from narwhals._plan.typing import NativeSeriesT
-from narwhals._utils import Version, _StoresNative
+from narwhals._utils import Version, _StoresNative, unstable
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Sequence
 
     import polars as pl
     from typing_extensions import Self, TypeAlias
 
     from narwhals._plan.compliant.accessors import SeriesStructNamespace
+    from narwhals._plan.compliant.dataframe import CompliantDataFrame
+    from narwhals._plan.dataframe import DataFrame
     from narwhals._plan.series import Series
     from narwhals._typing import _EagerAllowedImpl
     from narwhals.dtypes import DType
@@ -194,6 +196,37 @@ class CompliantSeries(HasVersion, Protocol[NativeSeriesT]):
     def to_polars(self) -> pl.Series: ...
     def unique(self, *, maintain_order: bool = False) -> Self: ...
     def zip_with(self, mask: Self, other: Self) -> Self: ...
+    @unstable
+    def hist(
+        self,
+        bins: Sequence[float] | None = None,
+        *,
+        bin_count: int | None = None,
+        include_breakpoint: bool = True,
+        include_category: bool = False,
+        _compatibility_behavior: Literal["narwhals", "polars"] = "narwhals",
+    ) -> CompliantDataFrame[Self, Incomplete, NativeSeriesT]:
+        from narwhals._plan.expressions import col as ir_col
+
+        expr = (
+            ir_col(self.name)
+            .to_narwhals(self.version)
+            .hist(
+                bins,
+                bin_count=bin_count,
+                include_breakpoint=include_breakpoint,
+                include_category=include_category,
+            )
+        )
+        df: DataFrame[Incomplete, NativeSeriesT] = (
+            self.to_narwhals().to_frame().select(expr)
+        )
+        if not include_breakpoint and not include_category:
+            if _compatibility_behavior == "narwhals":
+                df = df.rename({self.name: "count"})
+        else:
+            df = df.to_series().struct.unnest()
+        return df._compliant
 
     @property
     def struct(self) -> SeriesStructNamespace[Self, Incomplete]: ...

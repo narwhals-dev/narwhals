@@ -282,21 +282,13 @@ class Series(Generic[NativeSeriesT_co]):
         include_category: bool = False,
         _compatibility_behavior: Literal["narwhals", "polars"] = "narwhals",
     ) -> DataFrame[Incomplete, NativeSeriesT_co]:
-        from narwhals._plan import functions as F
-
-        result = self.to_frame().select(
-            F.col(self.name).hist(
-                bins,
-                bin_count=bin_count,
-                include_breakpoint=include_breakpoint,
-                include_category=include_category,
-            )
-        )
-        if not include_breakpoint and not include_category:
-            if _compatibility_behavior == "narwhals":
-                result = result.rename({self.name: "count"})
-            return result
-        return result.to_series().struct.unnest()
+        return self._compliant.hist(
+            bins,
+            bin_count=bin_count,
+            include_breakpoint=include_breakpoint,
+            include_category=include_category,
+            _compatibility_behavior=_compatibility_behavior,
+        ).to_narwhals()
 
     def explode(self, *, empty_as_null: bool = True, keep_nulls: bool = True) -> Self:
         return type(self)(
