@@ -35,8 +35,7 @@ def test_concat_horizontal(constructor_eager: ConstructorEager) -> None:
 
 def test_concat_vertical(constructor: Constructor) -> None:
     if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
+        request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df_left = (
