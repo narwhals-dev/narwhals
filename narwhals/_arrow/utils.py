@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import sys
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any, cast
 
@@ -502,13 +501,6 @@ def list_agg(
     array: ChunkedArrayAny,
     func: Literal["min", "max", "mean", "approximate_median", "sum"],
 ) -> ChunkedArrayAny:
-    version = sys.version_info
-    if func == "approximate_median" and version < (3, 10):  # pragma: no cover
-        msg = (
-            f"The minimum supported Python version for {func} is 3.10."
-            f"\nGot: {version.major}.{version.minor}.{version.micro}."
-        )
-        raise NotImplementedError(msg)
     agg = pa.array(
         pa.Table.from_arrays(
             [pc.list_flatten(array), pc.list_parent_indices(array)],
