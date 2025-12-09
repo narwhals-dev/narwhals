@@ -5,7 +5,13 @@ from collections.abc import Iterable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Callable
 
 from narwhals._expression_parsing import ExprKind, ExprNode, evaluate_nodes
-from narwhals._utils import _validate_rolling_arguments, ensure_type, flatten, no_default
+from narwhals._utils import (
+    _validate_rolling_arguments,
+    ensure_type,
+    flatten,
+    no_default,
+    unstable,
+)
 from narwhals.dtypes import _validate_dtype
 from narwhals.exceptions import ComputeError, InvalidOperationError
 from narwhals.expr_cat import ExprCatNamespace
@@ -2368,8 +2374,13 @@ class Expr:
 
         return result
 
+    @unstable
     def any_value(self, *, ignore_nulls: bool = False) -> Self:
         """Get a random value from the column.
+
+        Warning:
+            This functionality is considered **unstable** as it diverges from the polars API.
+            It may be changed at any point without it being considered a breaking change.
 
         Arguments:
             ignore_nulls: Whether to ignore null values or not.

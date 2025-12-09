@@ -113,9 +113,7 @@ def test_any_value_group_by(
         values = result_collected["c"].to_list()
         assert values[0] == 1  # group a=1: [None, None, 1] -> 1
         assert values[1] == 2  # group a=2: [None, 2] -> 2
-        assert (
-            values[2] is None
-        )  # group a=3: [None] -> None regrdless of ignore_nulls flag
+        assert values[2] is None  # group a=3: [None] -> None regardless of ignore_nulls
 
 
 @pytest.mark.parametrize("ignore_nulls", [False, True])
