@@ -22,7 +22,7 @@ from narwhals._plan._guards import is_non_nested_literal
 from narwhals._plan.arrow import options as pa_options
 from narwhals._plan.expressions import functions as F, operators as ops
 from narwhals._plan.options import ExplodeOptions
-from narwhals._utils import Implementation, Version
+from narwhals._utils import Implementation, Version, no_default
 from narwhals.exceptions import ShapeError
 
 if TYPE_CHECKING:
@@ -86,6 +86,7 @@ if TYPE_CHECKING:
     from narwhals._plan.compliant.typing import SeriesT
     from narwhals._plan.options import RankOptions, SortMultipleOptions, SortOptions
     from narwhals._plan.typing import Seq
+    from narwhals._typing import NoDefault
     from narwhals.typing import (
         ClosedInterval,
         FillNullStrategy,
@@ -421,10 +422,7 @@ class ExplodeBuilder:
 
         Equivalent to `polars.{Expr,Series}.explode`.
         """
-        if self.options.any():
-            safe = self._replace_mask(native, self._predicate(list_len(native)))
-        else:
-            safe = native
+        safe = self._fill_with_null(native) if self.options.any() else native
         if not isinstance(safe, pa.Scalar):
             return _list_explode(safe)
         return chunked_array(_list_explode(safe))
@@ -432,10 +430,7 @@ class ExplodeBuilder:
     def explode_column(self, native: pa.Table, column_name: str, /) -> pa.Table:
         """Explode a list-typed column in the context of `native`."""
         ca = native.column(column_name)
-        if self.options.any():
-            safe = self._replace_mask(ca, self._predicate(list_len(ca)))
-        else:
-            safe = ca
+        safe = self._fill_with_null(ca) if self.options.any() else ca
         exploded = _list_explode(safe)
         col_idx = native.schema.get_field_index(column_name)
         if len(exploded) == len(native):
@@ -454,9 +449,9 @@ class ExplodeBuilder:
         first_len = list_len(first)
         if self.options.any():
             mask = self._predicate(first_len)
-            first_safe = self._replace_mask(first, mask)
+            first_safe = self._fill_with_null(first, mask)
             it = (
-                _list_explode(self._replace_mask(arr, mask))
+                _list_explode(self._fill_with_null(arr, mask))
                 for arr in self._iter_ensure_shape(first_len, arrays[1:])
             )
         else:
@@ -488,7 +483,8 @@ class ExplodeBuilder:
                 raise ShapeError(msg)
             yield arr
 
-    def _predicate(self, lengths: ArrowAny) -> Arrow[BooleanScalar]:
+    def _predicate(self, lengths: ArrowAny, /) -> Arrow[BooleanScalar]:
+        """Return True for each sublist length that indicates the original sublist should be replaced with `[None]`."""
         empty_as_null, keep_nulls = self.options.empty_as_null, self.options.keep_nulls
         if empty_as_null and keep_nulls:
             return or_(is_null(lengths), eq(lengths, lit(0)))
@@ -496,8 +492,17 @@ class ExplodeBuilder:
             return eq(lengths, lit(0))
         return is_null(lengths)
 
-    def _replace_mask(self, native: ArrowListT, mask: Arrow[BooleanScalar]) -> ArrowListT:
-        result: ArrowListT = when_then(mask, lit([None], native.type), native)
+    def _fill_with_null(
+        self, native: ArrowListT, mask: Arrow[BooleanScalar] | NoDefault = no_default
+    ) -> ArrowListT:
+        """Replace each sublist in `native` with `[None]`, according to `self.options`.
+
+        Arguments:
+            native: List-typed arrow data.
+            mask: An optional, pre-computed replacement mask. By default, this is generated from `native`.
+        """
+        predicate = self._predicate(list_len(native)) if mask is no_default else mask
+        result: ArrowListT = when_then(predicate, lit([None], native.type), native)
         return result
 
 
@@ -537,9 +542,9 @@ def list_len(native: ListArray) -> pa.UInt32Array: ...
 @t.overload
 def list_len(native: ListScalar) -> pa.UInt32Scalar: ...
 @t.overload
-def list_len(native: SameArrowT) -> SameArrowT: ...
-@t.overload
 def list_len(native: ChunkedOrScalar[ListScalar]) -> ChunkedOrScalar[pa.UInt32Scalar]: ...
+@t.overload
+def list_len(native: Arrow[ListScalar[Any]]) -> Arrow[pa.UInt32Scalar]: ...
 def list_len(native: ArrowAny) -> ArrowAny:
     length: Incomplete = pc.list_value_length
     result: ArrowAny = length(native).cast(pa.uint32())
