@@ -17,6 +17,8 @@ If you've got experience with open source contributions, the following instructi
 - To run all linting checks: `pre-commit run --all-files`
 - To run static typing checks: `make typing`
 
+(Note that following re-install, it may be necessary to additionally re-install a part of the testing functionality using `uv pip install -e ./test-plugin`)
+
 For more detailed and beginner-friendly instructions, see below!
 
 ## Local development vs Codespaces
