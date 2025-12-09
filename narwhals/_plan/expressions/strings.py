@@ -170,7 +170,7 @@ class ExprStringNamespace(ExprNamespace[IRStringNamespace]):
     def starts_with(self, prefix: str) -> Expr:
         return self._with_unary(self._ir.starts_with(prefix=prefix))
 
-    def ends_with(self, suffix: str) -> Expr:  # pragma: no cover
+    def ends_with(self, suffix: str) -> Expr:
         return self._with_unary(self._ir.ends_with(suffix=suffix))
 
     def contains(self, pattern: str, *, literal: bool = False) -> Expr:
@@ -185,7 +185,7 @@ class ExprStringNamespace(ExprNamespace[IRStringNamespace]):
     def tail(self, n: int = 5) -> Expr:
         return self._with_unary(self._ir.tail(n))
 
-    def split(self, by: str) -> Expr:  # pragma: no cover
+    def split(self, by: str) -> Expr:
         return self._with_unary(self._ir.split(by=by))
 
     def to_date(self, format: str | None = None) -> Expr:  # pragma: no cover
@@ -200,7 +200,7 @@ class ExprStringNamespace(ExprNamespace[IRStringNamespace]):
     def to_uppercase(self) -> Expr:
         return self._with_unary(self._ir.to_uppercase())
 
-    def to_titlecase(self) -> Expr:  # pragma: no cover
+    def to_titlecase(self) -> Expr:
         return self._with_unary(self._ir.to_titlecase())
 
     def zfill(self, length: int) -> Expr:

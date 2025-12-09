@@ -961,7 +961,6 @@ class ArrowListNamespace(
     contains = not_implemented()
 
 
-# TODO @dangotbanned: Add tests for these, especially those using a different native function
 class ArrowStringNamespace(
     ExprStringNamespace["Frame", "Expr | Scalar"], ArrowAccessor[ExprOrScalarT]
 ):
