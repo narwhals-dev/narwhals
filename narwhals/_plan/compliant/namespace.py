@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
     from narwhals._plan import expressions as ir
     from narwhals._plan.expressions import FunctionExpr, boolean, functions as F
-    from narwhals._plan.expressions.ranges import DateRange, IntRange
+    from narwhals._plan.expressions.ranges import DateRange, IntRange, LinearSpace
     from narwhals._plan.expressions.strings import ConcatStr
     from narwhals._plan.series import Series
     from narwhals.dtypes import IntegerType
@@ -62,6 +62,9 @@ class CompliantNamespace(HasVersion, Protocol[FrameT, ExprT_co, ScalarT_co]):
     ) -> ExprT_co: ...
     def int_range(
         self, node: ir.RangeExpr[IntRange], frame: FrameT, name: str
+    ) -> ExprT_co: ...
+    def linear_space(
+        self, node: ir.RangeExpr[LinearSpace], frame: FrameT, name: str
     ) -> ExprT_co: ...
     def len(self, node: ir.Len, frame: FrameT, name: str) -> ScalarT_co: ...
     def lit(
@@ -157,6 +160,15 @@ class EagerNamespace(
         step: int = 1,
         *,
         dtype: IntegerType = Int64,
+        name: str = "literal",
+    ) -> SeriesT: ...
+    def linear_space_eager(
+        self,
+        start: float,
+        end: float,
+        num_samples: int,
+        *,
+        closed: ClosedInterval = "both",
         name: str = "literal",
     ) -> SeriesT: ...
 

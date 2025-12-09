@@ -11,12 +11,18 @@ from narwhals._plan._dispatch import get_dispatch_name
 from narwhals._plan.exceptions import list_literal_error
 from narwhals._plan.expressions import functions as F
 from narwhals._plan.expressions.literal import ScalarLiteral, SeriesLiteral
-from narwhals._plan.expressions.ranges import DateRange, IntRange, RangeFunction
+from narwhals._plan.expressions.ranges import (
+    DateRange,
+    IntRange,
+    LinearSpace,
+    RangeFunction,
+)
 from narwhals._plan.expressions.strings import ConcatStr
 from narwhals._plan.when_then import When
 from narwhals._utils import (
     Implementation,
     Version,
+    ensure_type,
     flatten,
     is_eager_allowed,
     qualified_type_name,
@@ -315,6 +321,54 @@ def date_range(
 
 
 @t.overload
+def linear_space(
+    start: float | IntoExprColumn,
+    end: float | IntoExprColumn,
+    num_samples: int,
+    *,
+    closed: ClosedInterval = ...,
+    eager: t.Literal[False] = ...,
+) -> Expr: ...
+@t.overload
+def linear_space(
+    start: float,
+    end: float,
+    num_samples: int,
+    *,
+    closed: ClosedInterval = ...,
+    eager: Arrow,
+) -> Series[pa.ChunkedArray[t.Any]]: ...
+@t.overload
+def linear_space(
+    start: float,
+    end: float,
+    num_samples: int,
+    *,
+    closed: ClosedInterval = ...,
+    eager: IntoBackend[EagerAllowed],
+) -> Series: ...
+def linear_space(
+    start: float | IntoExprColumn,
+    end: float | IntoExprColumn,
+    num_samples: int,
+    *,
+    closed: ClosedInterval = "both",
+    eager: IntoBackend[EagerAllowed] | t.Literal[False] = False,
+) -> Expr | Series:
+    ensure_type(num_samples, int, param_name="num_samples")
+    closed = _ensure_closed_interval(closed)
+    if eager:
+        ns = _eager_namespace(eager)
+        start, end = _ensure_range_scalar(start, end, (float, int), LinearSpace, eager)
+        return _linear_space_eager(start, end, num_samples, closed, ns)
+    return (
+        LinearSpace(num_samples=num_samples, closed=closed)
+        .to_function_expr(*_parse.parse_into_seq_of_expr_ir(start, end))
+        .to_narwhals()
+    )
+
+
+@t.overload
 def _eager_namespace(backend: Arrow, /) -> _arrow.Namespace: ...
 @t.overload
 def _eager_namespace(backend: IntoBackend[EagerAllowed], /) -> EagerNs[t.Any]: ...
@@ -336,7 +390,7 @@ def _eager_namespace(
 def _ensure_range_scalar(
     start: t.Any,
     end: t.Any,
-    valid_type: type[NonNestedLiteralT],
+    valid_type: type[NonNestedLiteralT] | tuple[type[NonNestedLiteralT], ...],
     function: type[RangeFunction],
     eager: IntoBackend[EagerAllowed],
 ) -> tuple[NonNestedLiteralT, NonNestedLiteralT]:
@@ -344,8 +398,10 @@ def _ensure_range_scalar(
         return start, end
     tp_start = qualified_type_name(start)
     tp_end = qualified_type_name(end)
+    valid_types = (valid_type,) if not isinstance(valid_type, tuple) else valid_type
+    tp_names = " | ".join(tp.__name__ for tp in valid_types)
     msg = (
-        f"Expected `start` and `end` to be {valid_type.__name__} values since `eager={eager}`, but got: ({tp_start}, {tp_end})\n\n"
+        f"Expected `start` and `end` to be {tp_names} values since `eager={eager}`, but got: ({tp_start}, {tp_end})\n\n"
         f"Hint: Calling `nw.{get_dispatch_name(function)}` with expressions requires:\n"
         "  - `eager=False`\n"
         "  - a context such as `select` or `with_columns`"
@@ -372,6 +428,17 @@ def _int_range_eager(
     start: int, end: int, step: int, dtype: IntegerType, ns: EagerNs[NativeSeriesT], /
 ) -> Series[NativeSeriesT]:
     return ns.int_range_eager(start, end, step, dtype=dtype).to_narwhals()
+
+
+def _linear_space_eager(
+    start: float,
+    end: float,
+    num_samples: int,
+    closed: ClosedInterval,
+    ns: EagerNs[NativeSeriesT],
+    /,
+) -> Series[NativeSeriesT]:
+    return ns.linear_space_eager(start, end, num_samples, closed=closed).to_narwhals()
 
 
 def _ensure_closed_interval(closed: ClosedInterval, /) -> ClosedInterval:

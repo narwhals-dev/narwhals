@@ -1437,8 +1437,6 @@ def linear_space(
 ) -> ChunkedArray[pc.NumericScalar]:
     """Based on [`np.linspace`].
 
-    Use when implementing `hist`.
-
     [`np.linspace`]: https://github.com/numpy/numpy/blob/v2.3.0/numpy/_core/function_base.py#L26-L187
     """
     if num_samples < 0:
