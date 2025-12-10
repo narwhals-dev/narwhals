@@ -355,6 +355,47 @@ def linear_space(
     closed: ClosedInterval = "both",
     eager: IntoBackend[EagerAllowed] | t.Literal[False] = False,
 ) -> Expr | Series:
+    """Create sequence of evenly-spaced points.
+
+    Arguments:
+        start: Lower bound of the range.
+        end: Upper bound of the range.
+        num_samples: Number of samples in the output sequence.
+        closed: Define which sides of the interval are closed (inclusive).
+        eager: If set to `False` (default), then an expression is returned.
+            If set to an (eager) implementation ("pandas", "polars" or "pyarrow"), then
+            a `Series` is returned.
+
+    Notes:
+        Unlike `pl.linear_space`, *currently* only numeric dtypes (and not temporal) are supported.
+
+    Examples:
+        >>> import narwhals._plan as nwp
+        >>> nwp.linear_space(start=0, end=1, num_samples=3, eager="pyarrow").to_list()
+        [0.0, 0.5, 1.0]
+
+        >>> nwp.linear_space(0, 1, 3, closed="left", eager="pyarrow").to_list()
+        [0.0, 0.3333333333333333, 0.6666666666666666]
+
+        >>> nwp.linear_space(0, 1, 3, closed="right", eager="pyarrow").to_list()
+        [0.3333333333333333, 0.6666666666666666, 1.0]
+
+        >>> nwp.linear_space(0, 1, 3, closed="none", eager="pyarrow").to_list()
+        [0.25, 0.5, 0.75]
+
+        >>> df = nwp.DataFrame.from_dict({"a": [1, 2, 3, 4, 5]}, backend="pyarrow")
+        >>> df.with_columns(nwp.linear_space(0, 10, 5).alias("ls"))
+        ┌──────────────────────┐
+        |     nw.DataFrame     |
+        |----------------------|
+        |pyarrow.Table         |
+        |a: int64              |
+        |ls: double            |
+        |----                  |
+        |a: [[1,2,3,4,5]]      |
+        |ls: [[0,2.5,5,7.5,10]]|
+        └──────────────────────┘
+    """
     ensure_type(num_samples, int, param_name="num_samples")
     closed = _ensure_closed_interval(closed)
     if eager:
