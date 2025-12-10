@@ -605,6 +605,35 @@ def list_join(
     return pc.binary_join(native, separator)
 
 
+# TODO @dangotbanned: Multiple cleanup jobs
+# - Use Acero directly to avoid renaming columns
+# - Maybe handle the filter in acero too?
+def list_unique(native: ChunkedArrayAny) -> ChunkedArrayAny:
+    lengths = list_len(native)
+    is_not_valid = or_(is_null(lengths), eq(lengths, lit(0)))
+    is_valid = not_(is_not_valid)
+
+    i, v = "index", "values"
+
+    indexed = concat_horizontal_arrays(
+        [int_range(len(native), chunked=False), native], [i, v]
+    )
+    return (
+        concat_vertical_table(
+            [
+                ExplodeBuilder(empty_as_null=False, keep_nulls=False)
+                .explode_column(indexed.filter(is_valid), v)  # pyright: ignore[reportArgumentType]
+                .group_by(i)
+                .aggregate([(v, "hash_distinct", pa_options.count("all"))])
+                .rename_columns([i, v]),
+                indexed.filter(is_not_valid),  # pyright: ignore[reportArgumentType]
+            ]
+        )
+        .sort_by(i)
+        .column(v)
+    )
+
+
 def str_join(
     native: Arrow[StringScalar], separator: str, *, ignore_nulls: bool = True
 ) -> StringScalar:
@@ -1617,6 +1646,14 @@ def chunked_array(
     data: ArrowAny | list[Iterable[Any]], dtype: DataType | None = None, /
 ) -> ChunkedArrayAny:
     return _chunked_array(array(data) if isinstance(data, pa.Scalar) else data, dtype)
+
+
+def concat_horizontal_arrays(
+    arrays: Collection[ChunkedOrArrayAny], names: Collection[str]
+) -> pa.Table:
+    table: Incomplete = pa.Table.from_arrays
+    result: pa.Table = table(arrays, names)
+    return result
 
 
 def concat_vertical_chunked(

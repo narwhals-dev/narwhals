@@ -957,7 +957,10 @@ class ArrowListNamespace(
     def get(self, node: FExpr[lists.Get], frame: Frame, name: str) -> Expr | Scalar:
         return self.unary(fn.list_get, node.function.index)(node, frame, name)
 
-    unique = not_implemented()
+    # TODO @dangotbanned: Add tests for scalar
+    def unique(self, node: FExpr[lists.Unique], frame: Frame, name: str) -> Expr | Scalar:
+        return self.unary(fn.list_unique)(node, frame, name)  # type: ignore[arg-type]
+
     contains = not_implemented()
 
 
