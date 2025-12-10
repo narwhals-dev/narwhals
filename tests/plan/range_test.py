@@ -249,7 +249,8 @@ def test_linear_space_expr() -> None:
     assert_equal_data(result, expected)
 
 
-# TODO @dangotbanned: Ensure explicit matching dtype on (start, end) is kept
+# NOTE: More general "supertyping" behavior would need `pyarrow.unify_schemas`
+# (https://arrow.apache.org/docs/14.0/python/generated/pyarrow.unify_schemas.html)
 @pytest.mark.parametrize(
     ("dtype_start", "dtype_end", "dtype_expected"),
     [

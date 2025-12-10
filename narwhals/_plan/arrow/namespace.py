@@ -177,6 +177,8 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
             return self._scalar.from_native(result, name, self.version)
         return self._expr.from_native(result, name, self.version)
 
+    # TODO @dangotbanned: Refactor alongside `nwp.functions._ensure_range_scalar`
+    # Consider returning the supertype of inputs
     def _range_function_inputs(
         self,
         node: RangeExpr,

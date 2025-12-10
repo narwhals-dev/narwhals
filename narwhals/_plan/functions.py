@@ -386,7 +386,8 @@ def _eager_namespace(
     raise ValueError(msg)
 
 
-# NOTE: If anything beyond `{date,int}_range` are added, move to `RangeFunction`
+# TODO @dangotbanned: Handle this in `RangeFunction` or `RangeExpr`
+# NOTE: `ArrowNamespace._range_function_inputs` has some duplicated logic too
 def _ensure_range_scalar(
     start: t.Any,
     end: t.Any,
