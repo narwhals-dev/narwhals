@@ -209,13 +209,7 @@ def test_date_range_invalid() -> None:
         nwp.date_range(start, end, interval="3y")
 
 
-def test_int_range_eager() -> None:
-    series = nwp.int_range(50, eager="pyarrow")
-    assert isinstance(series, nwp.Series)
-    assert series.to_list() == list(range(50))
-    series = nwp.int_range(50, eager=Implementation.PYARROW)
-    assert series.to_list() == list(range(50))
-
+def test_int_range_eager_invalid() -> None:
     with pytest.raises(InvalidOperationError):
         nwp.int_range(nwp.len(), eager="pyarrow")  # type: ignore[call-overload]
     with pytest.raises(InvalidOperationError):
@@ -224,49 +218,6 @@ def test_int_range_eager() -> None:
         nwp.int_range(10, eager="pandas")
     with pytest.raises(ValueError, match=r"lazy-only"):
         nwp.int_range(10, eager="duckdb")  # type: ignore[call-overload]
-
-
-def test_date_range_eager() -> None:
-    leap_year = 2024
-    series_leap = nwp.date_range(
-        dt.date(leap_year, 2, 25), dt.date(leap_year, 3, 25), eager="pyarrow"
-    )
-    series_regular = nwp.date_range(
-        dt.date(leap_year + 1, 2, 25),
-        dt.date(leap_year + 1, 3, 25),
-        interval=dt.timedelta(days=1),
-        eager="pyarrow",
-    )
-    assert len(series_regular) == 29
-    assert len(series_leap) == 30
-
-    expected = [
-        dt.date(2000, 1, 1),
-        dt.date(2002, 9, 14),
-        dt.date(2005, 5, 28),
-        dt.date(2008, 2, 9),
-        dt.date(2010, 10, 23),
-        dt.date(2013, 7, 6),
-        dt.date(2016, 3, 19),
-        dt.date(2018, 12, 1),
-        dt.date(2021, 8, 14),
-    ]
-
-    series = nwp.date_range(
-        dt.date(2000, 1, 1), dt.date(2023, 8, 31), interval="987d", eager="pyarrow"
-    )
-    result = series.to_list()
-    assert result == expected
-
-    expected = [dt.date(2006, 10, 14), dt.date(2013, 7, 27), dt.date(2020, 5, 9)]
-    result = nwp.date_range(
-        dt.date(2000, 1, 1),
-        dt.date(2023, 8, 31),
-        interval="354w",
-        closed="right",
-        eager="pyarrow",
-    ).to_list()
-    assert result == expected
 
 
 def test_date_range_eager_invalid() -> None:
