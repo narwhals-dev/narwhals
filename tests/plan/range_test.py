@@ -1,16 +1,19 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any, Final, Literal
 
 import pytest
 
-pytest.importorskip("numpy")
+from tests.utils import PYARROW_VERSION
+
+if PYARROW_VERSION < (21,):
+    pytest.importorskip("numpy")
 import datetime as dt
 
 import narwhals as nw
 from narwhals import _plan as nwp
 from tests.conftest import TEST_EAGER_BACKENDS
-from tests.plan.utils import assert_equal_data, dataframe
+from tests.plan.utils import assert_equal_data, assert_equal_series, dataframe
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -39,12 +42,26 @@ _HAS_IMPLEMENTATION = frozenset((nw.Implementation.PYARROW, "pyarrow"))
 For now, this lets some tests be written in a backend agnostic way.
 """
 
+_HAS_IMPLEMENTATION_IMPL = frozenset(
+    el for el in _HAS_IMPLEMENTATION if isinstance(el, nw.Implementation)
+)
+"""Filtered for heavily parametric tests."""
+
 
 @pytest.fixture(
     scope="module", params=_HAS_IMPLEMENTATION.intersection(TEST_EAGER_BACKENDS)
 )
 def eager(request: pytest.FixtureRequest) -> EagerAllowed:
     result: EagerAllowed = request.param
+    return result
+
+
+@pytest.fixture(
+    scope="module",
+    params=_HAS_IMPLEMENTATION_IMPL.intersection(TEST_EAGER_BACKENDS).union([False]),
+)
+def backend(request: pytest.FixtureRequest) -> EagerAllowed | Literal[False]:
+    result: EagerAllowed | Literal[False] = request.param
     return result
 
 
@@ -171,3 +188,41 @@ def test_int_range_eager(eager: EagerAllowed) -> None:
     ser = nwp.int_range(50, eager=eager)
     assert isinstance(ser, nwp.Series)
     assert ser.to_list() == list(range(50))
+
+
+@pytest.mark.parametrize(("start", "end"), [(0, 0), (0, 1), (-1, 0), (-2.1, 3.4)])
+@pytest.mark.parametrize("num_samples", [0, 1, 2, 5, 1_000])
+@pytest.mark.parametrize("interval", ["both", "left", "right", "none"])
+def test_linear_space_values(
+    start: float,
+    end: float,
+    num_samples: int,
+    interval: ClosedInterval,
+    *,
+    backend: EagerAllowed | Literal[False],
+) -> None:
+    # NOTE: Adapted from https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/py-polars/tests/unit/functions/range/test_linear_space.py#L19-L56
+    if backend:
+        result = nwp.linear_space(
+            start, end, num_samples, closed=interval, eager=backend
+        ).rename("ls")
+    else:
+        result = (
+            dataframe({})
+            .select(ls=nwp.linear_space(start, end, num_samples, closed=interval))
+            .to_series()
+        )
+
+    pytest.importorskip("numpy")
+    import numpy as np
+
+    if interval == "both":
+        expected = np.linspace(start, end, num_samples)
+    elif interval == "left":
+        expected = np.linspace(start, end, num_samples, endpoint=False)
+    elif interval == "right":
+        expected = np.linspace(start, end, num_samples + 1)[1:]
+    elif interval == "none":
+        expected = np.linspace(start, end, num_samples + 2)[1:-1]
+
+    assert_equal_series(result, expected, "ls")
