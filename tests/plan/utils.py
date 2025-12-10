@@ -220,8 +220,10 @@ def series(values: Iterable[Any], /) -> nwp.Series[pa.ChunkedArray[Any]]:
 
 
 def assert_equal_data(
-    result: nwp.DataFrame[Any, Any], expected: Mapping[str, Any]
+    result: nwp.DataFrame[Any, Any], expected: Mapping[str, Any] | nwp.DataFrame[Any, Any]
 ) -> None:
+    if isinstance(expected, nwp.DataFrame):
+        expected = expected.to_dict(as_series=False)
     _assert_equal_data(result.to_dict(as_series=False), expected)
 
 

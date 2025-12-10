@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Any, Final, Literal
 
 import pytest
 
+from narwhals.exceptions import ShapeError
 from tests.utils import PYARROW_VERSION
 
 if PYARROW_VERSION < (21,):
@@ -18,7 +19,7 @@ from tests.plan.utils import assert_equal_data, assert_equal_series, dataframe
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from narwhals.typing import ClosedInterval, EagerAllowed
+    from narwhals.typing import ClosedInterval, EagerAllowed, IntoDType
 
 
 @pytest.fixture(scope="module")
@@ -226,3 +227,70 @@ def test_linear_space_values(
         expected = np.linspace(start, end, num_samples + 2)[1:-1]
 
     assert_equal_series(result, expected, "ls")
+
+
+def test_linear_space_expr() -> None:
+    # NOTE: Adapted from https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/py-polars/tests/unit/functions/range/test_linear_space.py#L59-L68
+    pytest.importorskip("pyarrow")
+    df = dataframe({"a": [1, 2, 3, 4, 5]})
+
+    result = df.select(nwp.linear_space(0, nwp.col("a").len(), 3))
+    expected = df.select(
+        literal=nwp.Series.from_iterable(
+            [0.0, 2.5, 5.0], dtype=nw.Float64, backend="pyarrow"
+        )
+    )
+    assert_equal_data(result, expected)
+
+    result = df.select(nwp.linear_space(nwp.col("a").len(), 0, 3))
+    expected = df.select(
+        a=nwp.Series.from_iterable([5.0, 2.5, 0.0], dtype=nw.Float64, backend="pyarrow")
+    )
+    assert_equal_data(result, expected)
+
+
+# TODO @dangotbanned: Ensure explicit matching dtype on (start, end) is kept
+@pytest.mark.parametrize(
+    ("dtype_start", "dtype_end", "dtype_expected"),
+    [
+        pytest.param(
+            nw.Float32,
+            nw.Float32,
+            nw.Float32,
+            marks=pytest.mark.xfail(
+                reason="Didn't preserve `Float32` dtype, promoted to `Float64`",
+                raises=AssertionError,
+            ),
+        ),
+        (nw.Float32, nw.Float64, nw.Float64),
+        (nw.Float64, nw.Float32, nw.Float64),
+        (nw.Float64, nw.Float64, nw.Float64),
+        (nw.UInt8, nw.UInt32, nw.Float64),
+        (nw.Int16, nw.Int128, nw.Float64),
+        (nw.Int8, nw.Float64, nw.Float64),
+    ],
+)
+def test_linear_space_expr_numeric_dtype(
+    dtype_start: IntoDType, dtype_end: IntoDType, dtype_expected: IntoDType
+) -> None:
+    # NOTE: Adapted from https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/py-polars/tests/unit/functions/range/test_linear_space.py#L71-L95
+    pytest.importorskip("pyarrow")
+    df = dataframe({})
+    result = df.select(
+        ls=nwp.linear_space(nwp.lit(0, dtype=dtype_start), nwp.lit(1, dtype=dtype_end), 6)
+    )
+    expected = df.select(
+        ls=nwp.Series.from_iterable(
+            [0.0, 0.2, 0.4, 0.6, 0.8, 1.0], dtype=dtype_expected, backend="pyarrow"
+        )
+    )
+    assert result.get_column("ls").dtype == dtype_expected
+    assert_equal_data(result, expected)
+
+
+def test_linear_space_expr_wrong_length() -> None:
+    # NOTE: Adapted from https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/py-polars/tests/unit/functions/range/test_linear_space.py#L194-L199
+    pytest.importorskip("pyarrow")
+    df = dataframe({"a": [1, 2, 3, 4, 5]})
+    with pytest.raises(ShapeError, match="Expected object of length 6, got 5"):
+        df.with_columns(nwp.linear_space(0, 1, 6))
