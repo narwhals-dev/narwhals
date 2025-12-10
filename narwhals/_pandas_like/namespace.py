@@ -210,15 +210,12 @@ class PandasLikeNamespace(
 
     def mean_horizontal(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            print("todd start", type(self), type(self._series))
             expr_results = [s for _expr in exprs for s in _expr(df)]
             align = self._series._align_full_broadcast
             series = align(
                 *(s.fill_null(0, strategy=None, limit=None) for s in expr_results)
             )
             non_na = align(*(1 - s.is_null() for s in expr_results))
-            print("todd end")
-            return []
             return [reduce(operator.add, series) / reduce(operator.add, non_na)]
 
         return self._expr._from_callable(
