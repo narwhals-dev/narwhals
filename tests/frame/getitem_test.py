@@ -128,9 +128,6 @@ def test_slice_both_tuple(
     if "cudf" in str(constructor_eager):
         # https://github.com/rapidsai/cudf/issues/18556
         request.applymarker(pytest.mark.xfail)
-    if "bodo" in str(constructor_eager):
-        # BODO fail
-        pytest.skip()
     data = {"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, 8, 9]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df[(0, 1), ("a", "c")]
