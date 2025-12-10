@@ -11,6 +11,7 @@ from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._plan._guards import is_tuple_of
 from narwhals._plan.arrow import functions as fn
 from narwhals._plan.compliant.namespace import EagerNamespace
+from narwhals._plan.expressions.expr import RangeExpr
 from narwhals._plan.expressions.literal import is_literal_scalar
 from narwhals._utils import Implementation, Version
 from narwhals.exceptions import InvalidOperationError
@@ -26,7 +27,7 @@ if TYPE_CHECKING:
     from narwhals._plan.expressions import expr, functions as F
     from narwhals._plan.expressions.boolean import AllHorizontal, AnyHorizontal
     from narwhals._plan.expressions.expr import FunctionExpr as FExpr, RangeExpr
-    from narwhals._plan.expressions.ranges import DateRange, IntRange
+    from narwhals._plan.expressions.ranges import DateRange, IntRange, LinearSpace
     from narwhals._plan.expressions.strings import ConcatStr
     from narwhals._plan.series import Series as NwSeries
     from narwhals._plan.typing import NonNestedLiteralT
@@ -176,8 +177,13 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
             return self._scalar.from_native(result, name, self.version)
         return self._expr.from_native(result, name, self.version)
 
+    # TODO @dangotbanned: Refactor alongside `nwp.functions._ensure_range_scalar`
+    # Consider returning the supertype of inputs
     def _range_function_inputs(
-        self, node: RangeExpr, frame: Frame, valid_type: type[NonNestedLiteralT]
+        self,
+        node: RangeExpr,
+        frame: Frame,
+        valid_type: type[NonNestedLiteralT] | tuple[type[NonNestedLiteralT], ...],
     ) -> tuple[NonNestedLiteralT, NonNestedLiteralT]:
         start_: PythonLiteral
         end_: PythonLiteral
@@ -198,8 +204,10 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
                 )
                 raise InvalidOperationError(msg)
         if isinstance(start_, valid_type) and isinstance(end_, valid_type):
-            return start_, end_
-        msg = f"All inputs for `{node.function}()` must resolve to {valid_type.__name__}, but got \n{start_!r}\n{end_!r}"
+            return start_, end_  # type: ignore[return-value]
+        valid_types = (valid_type,) if not isinstance(valid_type, tuple) else valid_type
+        tp_names = " | ".join(tp.__name__ for tp in valid_types)
+        msg = f"All inputs for `{node.function}()` must resolve to {tp_names}, but got \n{start_!r}\n{end_!r}"
         raise InvalidOperationError(msg)
 
     def _int_range(
@@ -245,6 +253,24 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
         name: str = "literal",
     ) -> Series:
         native = fn.date_range(start, end, interval, closed=closed)
+        return self._series.from_native(native, name, version=self.version)
+
+    def linear_space(self, node: RangeExpr[LinearSpace], frame: Frame, name: str) -> Expr:
+        start, end = self._range_function_inputs(node, frame, (int, float))
+        func = node.function
+        native = fn.linear_space(start, end, func.num_samples, closed=func.closed)
+        return self._expr.from_native(native, name, self.version)
+
+    def linear_space_eager(
+        self,
+        start: float,
+        end: float,
+        num_samples: int,
+        *,
+        closed: ClosedInterval = "both",
+        name: str = "literal",
+    ) -> Series:
+        native = fn.linear_space(start, end, num_samples, closed=closed)
         return self._series.from_native(native, name, version=self.version)
 
     @overload

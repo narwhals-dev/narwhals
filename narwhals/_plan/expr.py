@@ -607,7 +607,7 @@ class Expr:
             >>>
             >>> renamed = nw.col("a", "b").name.suffix("_changed")
             >>> str(renamed._ir)
-            "RenameAlias(expr=RootSelector(selector=ByName(names=[a, b], require_all=True)), function=Suffix(suffix='_changed'))"
+            "RenameAlias(expr=RootSelector(selector=ByName(names=['a', 'b'], require_all=True)), function=Suffix(suffix='_changed'))"
         """
         from narwhals._plan.expressions.name import ExprNameNamespace
 

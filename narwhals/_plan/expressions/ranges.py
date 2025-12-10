@@ -38,3 +38,11 @@ class DateRange(RangeFunction, options=FunctionOptions.row_separable):
     __slots__ = ("interval", "closed")  # noqa: RUF023
     interval: int
     closed: ClosedInterval
+
+
+class LinearSpace(RangeFunction, options=FunctionOptions.row_separable):
+    """N-ary (start, end)."""
+
+    __slots__ = ("num_samples", "closed")  # noqa: RUF023
+    num_samples: int
+    closed: ClosedInterval
