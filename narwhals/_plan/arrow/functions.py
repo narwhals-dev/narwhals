@@ -141,22 +141,22 @@ class MinMax(ir.AggExpr):
 IntoColumnAgg: TypeAlias = Callable[[str], ir.AggExpr]
 """Helper constructor for single-column aggregations."""
 
-is_null = t.cast("UnaryFunction[ScalarAny, BooleanScalar]", pc.is_null)
-is_not_null = t.cast("UnaryFunction[ScalarAny,BooleanScalar]", pc.is_valid)
-is_nan = t.cast("UnaryFunction[ScalarAny, BooleanScalar]", pc.is_nan)
-is_finite = t.cast("UnaryFunction[ScalarAny, BooleanScalar]", pc.is_finite)
-not_ = t.cast("UnaryFunction[ScalarAny, BooleanScalar]", pc.invert)
+is_null = t.cast("UnaryFunction[ScalarAny, pa.BooleanScalar]", pc.is_null)
+is_not_null = t.cast("UnaryFunction[ScalarAny, pa.BooleanScalar]", pc.is_valid)
+is_nan = t.cast("UnaryFunction[ScalarAny, pa.BooleanScalar]", pc.is_nan)
+is_finite = t.cast("UnaryFunction[ScalarAny, pa.BooleanScalar]", pc.is_finite)
+not_ = t.cast("UnaryFunction[ScalarAny, pa.BooleanScalar]", pc.invert)
 
 
 @overload
-def is_not_nan(native: ChunkedArrayAny) -> ChunkedArray[BooleanScalar]: ...
+def is_not_nan(native: ChunkedArrayAny) -> ChunkedArray[pa.BooleanScalar]: ...
 @overload
-def is_not_nan(native: ScalarAny) -> BooleanScalar: ...
+def is_not_nan(native: ScalarAny) -> pa.BooleanScalar: ...
 @overload
-def is_not_nan(native: ChunkedOrScalarAny) -> ChunkedOrScalar[BooleanScalar]: ...
+def is_not_nan(native: ChunkedOrScalarAny) -> ChunkedOrScalar[pa.BooleanScalar]: ...
 @overload
-def is_not_nan(native: Arrow[ScalarAny]) -> Arrow[BooleanScalar]: ...
-def is_not_nan(native: Arrow[ScalarAny]) -> Arrow[BooleanScalar]:
+def is_not_nan(native: Arrow[ScalarAny]) -> Arrow[pa.BooleanScalar]: ...
+def is_not_nan(native: Arrow[ScalarAny]) -> Arrow[pa.BooleanScalar]:
     return not_(is_nan(native))
 
 
@@ -483,7 +483,7 @@ class ExplodeBuilder:
                 raise ShapeError(msg)
             yield arr
 
-    def _predicate(self, lengths: ArrowAny, /) -> Arrow[BooleanScalar]:
+    def _predicate(self, lengths: ArrowAny, /) -> Arrow[pa.BooleanScalar]:
         """Return True for each sublist length that indicates the original sublist should be replaced with `[None]`."""
         empty_as_null, keep_nulls = self.options.empty_as_null, self.options.keep_nulls
         if empty_as_null and keep_nulls:
@@ -622,11 +622,11 @@ def list_unique(native: ChunkedArrayAny) -> ChunkedArrayAny:
         concat_vertical_table(
             [
                 ExplodeBuilder(empty_as_null=False, keep_nulls=False)
-                .explode_column(indexed.filter(is_valid), v)  # pyright: ignore[reportArgumentType]
+                .explode_column(indexed.filter(is_valid), v)
                 .group_by(i)
                 .aggregate([(v, "hash_distinct", pa_options.count("all"))])
                 .rename_columns([i, v]),
-                indexed.filter(is_not_valid),  # pyright: ignore[reportArgumentType]
+                indexed.filter(is_not_valid),
             ]
         )
         .sort_by(i)
@@ -1224,23 +1224,25 @@ def is_between(
     lower: ChunkedOrScalar[ScalarT] | NumericLiteral,
     upper: ChunkedOrScalar[ScalarT] | NumericLiteral,
     closed: ClosedInterval,
-) -> ChunkedArray[BooleanScalar]: ...
+) -> ChunkedArray[pa.BooleanScalar]: ...
 @t.overload
 def is_between(
     native: ChunkedOrScalar[ScalarT],
     lower: ChunkedOrScalar[ScalarT] | NumericLiteral,
     upper: ChunkedOrScalar[ScalarT] | NumericLiteral,
     closed: ClosedInterval,
-) -> ChunkedOrScalar[BooleanScalar]: ...
+) -> ChunkedOrScalar[pa.BooleanScalar]: ...
 def is_between(
     native: ChunkedOrScalar[ScalarT],
     lower: ChunkedOrScalar[ScalarT] | NumericLiteral,
     upper: ChunkedOrScalar[ScalarT] | NumericLiteral,
     closed: ClosedInterval,
-) -> ChunkedOrScalar[BooleanScalar]:
+) -> ChunkedOrScalar[pa.BooleanScalar]:
     fn_lhs, fn_rhs = _IS_BETWEEN[closed]
     low, high = (el if _is_arrow(el) else lit(el) for el in (lower, upper))
-    out: ChunkedOrScalar[BooleanScalar] = and_(fn_lhs(native, low), fn_rhs(native, high))
+    out: ChunkedOrScalar[pa.BooleanScalar] = and_(
+        fn_lhs(native, low), fn_rhs(native, high)
+    )
     return out
 
 

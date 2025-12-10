@@ -36,6 +36,7 @@ if TYPE_CHECKING:
     DateScalar: TypeAlias = "Scalar[Date32Type]"
     ListScalar: TypeAlias = "Scalar[pa.ListType[DataTypeT_co]]"
     BooleanScalar: TypeAlias = "Scalar[BoolType]"
+    """Only use this for a parameter type, not as a return type!"""
     NumericScalar: TypeAlias = "pc.NumericScalar"
 
     PrimitiveNumericType: TypeAlias = "types._Integer | types._Floating"
@@ -176,11 +177,11 @@ class BinaryFunction(Protocol[ScalarPT_contra, ScalarRT_co]):
 
 
 class BinaryComp(
-    BinaryFunction[ScalarPT_contra, "BooleanScalar"], Protocol[ScalarPT_contra]
+    BinaryFunction[ScalarPT_contra, "pa.BooleanScalar"], Protocol[ScalarPT_contra]
 ): ...
 
 
-class BinaryLogical(BinaryFunction["BooleanScalar", "BooleanScalar"], Protocol): ...
+class BinaryLogical(BinaryFunction["BooleanScalar", "pa.BooleanScalar"], Protocol): ...
 
 
 BinaryNumericTemporal: TypeAlias = BinaryFunction[
