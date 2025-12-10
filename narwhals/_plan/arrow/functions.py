@@ -1435,41 +1435,38 @@ def date_range(
 def linear_space(
     start: float, end: float, num_samples: int, *, closed: ClosedInterval = "both"
 ) -> ChunkedArray[pc.NumericScalar]:
-    """Based on [`np.linspace`].
+    """Based on [`new_linear_space_f64`].
 
-    [`np.linspace`]: https://github.com/numpy/numpy/blob/v2.3.0/numpy/_core/function_base.py#L26-L187
+    [`new_linear_space_f64`]: https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/crates/polars-ops/src/series/ops/linear_space.rs#L62-L94
     """
     if num_samples < 0:
         msg = f"Number of samples, {num_samples}, must be non-negative."
         raise ValueError(msg)
-    if closed == "both":
-        range_end = num_samples
-        div = num_samples - 1
-    elif closed == "left":
-        range_end = num_samples
-        div = num_samples
-    elif closed == "right":
-        range_end = num_samples + 1
-        div = num_samples
-    elif closed == "none":
-        range_end = num_samples + 1
-        div = num_samples + 1
-    ca: ChunkedArray[pc.NumericScalar] = int_range(0, range_end).cast(F64)
-    delta = float(end - start)
-    if div > 0:
-        step = delta / div
-        if step == 0:
-            ca = truediv(ca, lit(div))
-            ca = multiply(ca, lit(delta))
+    if num_samples == 0:
+        return chunked_array([[]], F64)
+    if num_samples == 1:
+        if closed == "none":
+            value = (end + start) * 0.5
+        elif closed in {"left", "both"}:
+            value = float(start)
         else:
-            ca = multiply(ca, lit(step))
+            value = float(end)
+        return chunked_array([[value]], F64)
+    n = num_samples
+    span = float(end - start)
+    if closed == "none":
+        d = span / (n + 1)
+        start = start + d
+    elif closed == "left":
+        d = span / n
+    elif closed == "right":
+        start = start + span / n
+        d = span / n
     else:
-        ca = multiply(ca, lit(delta))
-    if start != 0:
-        ca = add(ca, lit(start, F64))
-    if closed in {"right", "none"}:
-        return ca.slice(1)
-    return ca
+        d = span / (n - 1)
+    ca: ChunkedArray[pc.NumericScalar] = multiply(int_range(0, n).cast(F64), lit(d))
+    ca = add(ca, lit(start, F64))
+    return ca  # noqa: RET504
 
 
 def repeat(value: ScalarAny | NonNestedLiteral, n: int) -> ArrayAny:
