@@ -213,7 +213,7 @@ class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayA
             fn.nulls_like(offset_right, native),
         )
         offset = offset_left + offset_right
-        return self._with_native(fn.concat_vertical_chunked(arrays)), offset
+        return self._with_native(fn.concat_vertical(arrays)), offset
 
     def _rolling_sum(self, window_size: int, /) -> Self:
         cum_sum = self.cum_sum().fill_null_with_strategy("forward")

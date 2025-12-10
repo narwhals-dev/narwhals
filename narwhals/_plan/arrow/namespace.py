@@ -293,7 +293,7 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
 
     def _concat_diagonal(self, items: Iterable[Frame]) -> Frame:
         return self._dataframe.from_native(
-            fn.concat_vertical_table(df.native for df in items), self.version
+            fn.concat_tables((df.native for df in items), "default"), self.version
         )
 
     def _concat_horizontal(self, items: Iterable[Frame | Series]) -> Frame:
@@ -305,14 +305,14 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
                     yield from zip(item.native.itercolumns(), item.columns)
 
         arrays, names = zip(*gen(items))
-        native = pa.Table.from_arrays(arrays, list(names))
+        native = fn.concat_horizontal(arrays, names)
         return self._dataframe.from_native(native, self.version)
 
     def _concat_vertical(self, items: Iterable[Frame | Series]) -> Frame | Series:
         collected = items if isinstance(items, tuple) else tuple(items)
         if is_tuple_of(collected, self._series):
             sers = collected
-            chunked = fn.concat_vertical_chunked(ser.native for ser in sers)
+            chunked = fn.concat_vertical(ser.native for ser in sers)
             return sers[0]._with_native(chunked)
         if is_tuple_of(collected, self._dataframe):
             dfs = collected
@@ -326,5 +326,5 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
                         f"   - dataframe {i}: {cols_current}\n"
                     )
                     raise TypeError(msg)
-            return df._with_native(fn.concat_vertical_table(df.native for df in dfs))
+            return df._with_native(fn.concat_tables(df.native for df in dfs))
         raise TypeError(items)

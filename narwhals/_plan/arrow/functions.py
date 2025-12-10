@@ -14,6 +14,7 @@ import pyarrow.compute as pc  # ignore-banned-import
 from narwhals._arrow.utils import (
     cast_for_truediv,
     chunked_array as _chunked_array,
+    concat_tables as concat_tables,  # noqa: PLC0414
     floordiv_compat as _floordiv,
     narwhals_to_native_dtype as _dtype_native,
 )
@@ -31,7 +32,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self, TypeAlias, TypeIs, TypeVarTuple, Unpack
 
-    from narwhals._arrow.typing import Incomplete, PromoteOptions
+    from narwhals._arrow.typing import Incomplete
     from narwhals._plan.arrow.acero import Field
     from narwhals._plan.arrow.typing import (
         Array,
@@ -615,11 +616,9 @@ def list_unique(native: ChunkedArrayAny) -> ChunkedArrayAny:
 
     i, v = "index", "values"
 
-    indexed = concat_horizontal_arrays(
-        [int_range(len(native), chunked=False), native], [i, v]
-    )
+    indexed = concat_horizontal([int_range(len(native), chunked=False), native], [i, v])
     return (
-        concat_vertical_table(
+        concat_tables(
             [
                 ExplodeBuilder(empty_as_null=False, keep_nulls=False)
                 .explode_column(indexed.filter(is_valid), v)
@@ -1650,35 +1649,22 @@ def chunked_array(
     return _chunked_array(array(data) if isinstance(data, pa.Scalar) else data, dtype)
 
 
-def concat_horizontal_arrays(
+def concat_horizontal(
     arrays: Collection[ChunkedOrArrayAny], names: Collection[str]
 ) -> pa.Table:
+    """Concatenate `arrays` as columns in a new table."""
     table: Incomplete = pa.Table.from_arrays
     result: pa.Table = table(arrays, names)
     return result
 
 
-def concat_vertical_chunked(
+def concat_vertical(
     arrays: Iterable[ChunkedOrArrayAny], dtype: DataType | None = None, /
 ) -> ChunkedArrayAny:
+    """Concatenate `arrays` into a new array."""
     v_concat: Incomplete = pa.chunked_array
-    return v_concat(arrays, dtype)  # type: ignore[no-any-return]
-
-
-def concat_vertical_table(
-    tables: Iterable[pa.Table], /, promote_options: PromoteOptions = "none"
-) -> pa.Table:
-    return pa.concat_tables(tables, promote_options=promote_options)
-
-
-if BACKEND_VERSION >= (14,):
-
-    def concat_diagonal(tables: Iterable[pa.Table]) -> pa.Table:
-        return pa.concat_tables(tables, promote_options="default")
-else:
-
-    def concat_diagonal(tables: Iterable[pa.Table]) -> pa.Table:
-        return pa.concat_tables(tables, promote=True)
+    result: ChunkedArrayAny = v_concat(arrays, dtype)
+    return result
 
 
 def _is_into_pyarrow_schema(obj: Mapping[Any, Any]) -> TypeIs[Mapping[str, DataType]]:
