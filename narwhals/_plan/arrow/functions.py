@@ -472,6 +472,13 @@ class ExplodeBuilder:
 
         return with_arrays(native, zip(subset, chain([first_result], it)))
 
+    @classmethod
+    def explode_column_fast(cls, native: pa.Table, column_name: str, /) -> pa.Table:
+        """Explode a list-typed column in the context of `native`, ignoring empty and nulls."""
+        return cls(empty_as_null=False, keep_nulls=False).explode_column(
+            native, column_name
+        )
+
     def _iter_ensure_shape(
         self,
         first_len: ChunkedArray[pa.UInt32Scalar],
@@ -610,24 +617,19 @@ def list_join(
 # - Use Acero directly to avoid renaming columns
 # - Maybe handle the filter in acero too?
 def list_unique(native: ChunkedArrayAny) -> ChunkedArrayAny:
+    from narwhals._plan.arrow.acero import group_by_table
+    from narwhals._plan.arrow.group_by import AggSpec
+
     lengths = list_len(native)
     is_not_valid = or_(is_null(lengths), eq(lengths, lit(0)))
     is_valid = not_(is_not_valid)
 
     i, v = "index", "values"
-
     indexed = concat_horizontal([int_range(len(native), chunked=False), native], [i, v])
+    table = ExplodeBuilder.explode_column_fast(indexed.filter(is_valid), v)
+    agg = AggSpec.from_function_expr(ir_unique(v), v)
     return (
-        concat_tables(
-            [
-                ExplodeBuilder(empty_as_null=False, keep_nulls=False)
-                .explode_column(indexed.filter(is_valid), v)
-                .group_by(i)
-                .aggregate([(v, "hash_distinct", pa_options.count("all"))])
-                .rename_columns([i, v]),
-                indexed.filter(is_not_valid),
-            ]
-        )
+        concat_tables([group_by_table(table, [i], [agg]), indexed.filter(is_not_valid)])
         .sort_by(i)
         .column(v)
     )
@@ -1272,6 +1274,10 @@ def is_in(values: ArrowAny, /, other: ChunkedOrArrayAny) -> ArrowAny:
 
 def ir_min_max(name: str, /) -> MinMax:
     return MinMax(expr=ir.col(name))
+
+
+def ir_unique(name: str, /) -> ir.FunctionExpr[F.Unique]:
+    return F.Unique().to_function_expr(ir.col(name))
 
 
 def _boolean_is_unique(
