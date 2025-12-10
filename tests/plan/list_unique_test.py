@@ -29,3 +29,27 @@ def test_list_unique(data: Data) -> None:
     assert len(result[3]) == 1
 
     assert_equal_series(ser.explode(), [2, 3, None, None, None, None], "a")
+
+
+@pytest.mark.parametrize(
+    ("row", "expected"),
+    [
+        ([None, "A", "B", "A", "A", "B"], [None, "A", "B"]),
+        pytest.param(
+            None,
+            None,
+            marks=pytest.mark.xfail(
+                reason="TODO: `object of type 'NoneType' has no len()`", raises=TypeError
+            ),
+        ),
+        ([], []),
+        ([None], [None]),
+    ],
+)
+def test_list_unique_scalar(
+    row: list[str | None] | None, expected: list[str | None] | None
+) -> None:
+    data = {"a": [row]}
+    df = dataframe(data).select(nwp.col("a").cast(nw.List(nw.String)).first())
+    result = df.select(nwp.col("a").list.unique()).to_series()
+    assert_equal_series(result, [expected], "a")
