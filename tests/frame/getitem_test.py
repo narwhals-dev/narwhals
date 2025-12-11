@@ -99,9 +99,6 @@ def test_gather_pandas_index() -> None:
 
 
 def test_gather_rows_cols(constructor_eager: ConstructorEager) -> None:
-    if "bodo" in str(constructor_eager):
-        # BODO fail
-        pytest.skip()
     native_df = constructor_eager(data)
     df = nw.from_native(native_df, eager_only=True)
 
