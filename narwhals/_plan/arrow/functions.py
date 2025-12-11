@@ -621,8 +621,6 @@ def list_join(
     return pc.binary_join(native, separator)
 
 
-# TODO @dangotbanned: Docs, explain why some of the intermediate steps are needed
-# hint: why not `replace_with_mask`?
 @overload
 def list_unique(native: ChunkedList) -> ChunkedList: ...
 @overload
@@ -630,7 +628,26 @@ def list_unique(native: ListScalar) -> ListScalar: ...
 @overload
 def list_unique(native: ChunkedOrScalar[ListScalar]) -> ChunkedOrScalar[ListScalar]: ...
 def list_unique(native: ChunkedOrScalar[ListScalar]) -> ChunkedOrScalar[ListScalar]:
-    """Get the unique/distinct values in the list."""
+    """Get the unique/distinct values in the list.
+
+    There's lots of tricky stuff going on in here, but for good reasons!
+
+    Whenever possible, we want to avoid having to deal with these pesky guys:
+
+        [["okay", None, "still fine"], None, []]
+        #                              ^^^^  ^^
+
+    - Those kinds of list elements are ignored natively
+    - `unique` is length-changing operation
+    - We can't use [`pc.replace_with_mask`] on a list
+    - We can't join when a table contains list columns [apache/arrow#43716]
+
+    **But** - if we're lucky, and we got a non-awful list (or only one element) - then
+    most issues vanish.
+
+    [`pc.replace_with_mask`]: https://arrow.apache.org/docs/python/generated/pyarrow.compute.replace_with_mask.html
+    [apache/arrow#43716]: https://github.com/apache/arrow/issues/43716
+    """
     from narwhals._plan.arrow.acero import group_by_table
     from narwhals._plan.arrow.group_by import AggSpec
 
@@ -648,11 +665,16 @@ def list_unique(native: ChunkedOrScalar[ListScalar]) -> ChunkedOrScalar[ListScal
         arrays = [_list_parent_indices(native), _list_explode(native)]
         result = group_by_table(concat_horizontal(arrays, names), [idx], aggs)
     else:
+        # Oh no - we caught a bad one!
+        # We need to split things into good/bad - and only work on the good stuff.
+        # `int_range` is acting like `parent_indices`, but doesn't give up when it see's `None` or `[]`
         indexed = concat_horizontal([int_range(len(native)), native], names)
         valid = indexed.filter(len_not_eq_0)
         invalid = indexed.filter(or_(native.is_null(), not_(len_not_eq_0)))
+        # To keep track of where we started, our index needs to be exploded with the list elements
         explode_with_index = ExplodeBuilder.explode_column_fast(valid, v)
         valid_unique = group_by_table(explode_with_index, [idx], aggs)
+        # And now, because we can't join - we do a poor man's version of one 😉
         result = concat_tables([valid_unique, invalid]).sort_by(idx)
     return result.column(v)
 
