@@ -8,6 +8,9 @@ import narwhals as nw
 import narwhals._plan as nwp
 from tests.plan.utils import assert_equal_series, dataframe
 
+pytest.importorskip("pyarrow")
+import pyarrow as pa
+
 if TYPE_CHECKING:
     from tests.conftest import Data
 
@@ -20,9 +23,13 @@ def data() -> Data:
     }
 
 
+a = nwp.col("a")
+b = nwp.col("b")
+
+
 def test_list_unique(data: Data) -> None:
-    df = dataframe(data).select(nwp.col("a").cast(nw.List(nw.Int32)))
-    ser = df.select(nwp.col("a").list.unique()).to_series()
+    df = dataframe(data).select(a.cast(nw.List(nw.Int32)))
+    ser = df.select(a.list.unique()).to_series()
     result = ser.to_list()
     assert len(result) == 4
     assert len(result[0]) == 3
@@ -40,24 +47,52 @@ def test_list_unique(data: Data) -> None:
 @pytest.mark.parametrize(
     ("row", "expected"),
     [
-        ([None, "A", "B", "A", "A", "B"], [None, "A", "B"]),
-        (None, None),
-        ([], []),
-        ([None], [None]),
+        pytest.param(
+            [None, "A", "B", "A", "A", "B"],
+            [None, "A", "B"],
+            marks=pytest.mark.xfail(
+                reason="Unsupported input type for function 'list_parent_indices': Scalar(list<item: string>[null, A, B, A, A, B])",
+                raises=pa.ArrowNotImplementedError,
+            ),
+        ),
+        pytest.param(
+            None,
+            None,
+            marks=pytest.mark.xfail(
+                reason="object of type 'NoneType' has no len()", raises=TypeError
+            ),
+        ),
+        pytest.param(
+            [],
+            [],
+            marks=pytest.mark.xfail(
+                reason="Filter should be array-like", raises=pa.ArrowTypeError
+            ),
+        ),
+        pytest.param(
+            [None],
+            [None],
+            marks=pytest.mark.xfail(
+                reason="Unsupported input type for function 'list_parent_indices': Scalar(list<item: string>[null])",
+                raises=pa.ArrowNotImplementedError,
+            ),
+        ),
     ],
 )
 def test_list_unique_scalar(
     row: list[str | None] | None, expected: list[str | None] | None
 ) -> None:
     data = {"a": [row]}
-    df = dataframe(data).select(nwp.col("a").cast(nw.List(nw.String)).first())
-    result = df.select(nwp.col("a").list.unique()).to_series()
+    df = dataframe(data).select(a.cast(nw.List(nw.String)))
+    # NOTE: Don't separate `first().list.unique()`
+    # The chain is required to force the transition from `Expr` -> `Scalar`
+    result = df.select(a.first().list.unique()).to_series()
     assert_equal_series(result, [expected], "a")
 
 
 def test_list_unique_all_valid(data: Data) -> None:
-    df = dataframe(data).select(nwp.col("b").cast(nw.List(nw.Int32)))
-    ser = df.select(nwp.col("b").list.unique()).to_series()
+    df = dataframe(data).select(b.cast(nw.List(nw.Int32)))
+    ser = df.select(b.list.unique()).to_series()
     result = ser.to_list()
     assert set(result[0]) == {1, 2}
     assert set(result[1]) == {3, 4}
