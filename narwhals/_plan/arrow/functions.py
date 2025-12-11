@@ -436,6 +436,11 @@ class ExplodeBuilder:
             return _list_explode(safe)
         return chunked_array(_list_explode(safe))
 
+    def explode_with_indices(self, native: ChunkedList) -> pa.Table:
+        safe = self._fill_with_null(native) if self.options.any() else native
+        arrays = [_list_parent_indices(safe), _list_explode(safe)]
+        return concat_horizontal(arrays, ["idx", "values"])
+
     def explode_column(self, native: pa.Table, column_name: str, /) -> pa.Table:
         """Explode a list-typed column in the context of `native`."""
         ca = native.column(column_name)
@@ -679,6 +684,36 @@ def list_unique(native: ChunkedOrScalar[ListScalar]) -> ChunkedOrScalar[ListScal
         # And now, because we can't join - we do a poor man's version of one 😉
         result = concat_tables([valid_unique, invalid]).sort_by(idx)
     return result.column(v)
+
+
+# TODO @dangotbanned: Clean up
+# TODO @dangotbanned: Support `native: ListScalar`
+# NOTE: Both of these weren't able to support `[None]`, where, 2 in [None] should be False
+# https://github.com/apache/arrow/issues/33295
+# https://github.com/apache/arrow/issues/47118#issuecomment-3075893244
+def list_contains(
+    native: ChunkedList, item: NonNestedLiteral | ScalarAny
+) -> ChunkedArray[pa.BooleanScalar]:
+    # empty should always be False
+    # None should always be None
+    # `None` in `[None]` should be True
+    # Anything else in `[None]` should be false
+    ca = native
+    table = ExplodeBuilder(empty_as_null=False, keep_nulls=False).explode_with_indices(ca)
+    values = is_in(table.column(1), array(lit(item)))
+    name = table.field(1).name
+    contains = (
+        table.set_column(1, name, values)
+        .group_by("idx")
+        .aggregate([(name, "hash_any", pa_options.scalar_aggregate(ignore_nulls=True))])
+        .column(1)
+    )
+    # Here's the really key part: this mask has the same result we want to return
+    # So by filling the `True`, we can flip those to `False` if needed
+    # But if we were already `None` or `False` - then that's sticky
+    propagate_invalid = not_eq(list_len(ca), lit(0))
+    results = replace_with_mask(array(propagate_invalid), propagate_invalid, contains)
+    return chunked_array(results)
 
 
 def implode(native: Arrow[Scalar[DataTypeT]]) -> ListScalar[DataTypeT]:

@@ -26,7 +26,6 @@ a = nwp.col("a")
 b = nwp.col("b")
 
 
-@pytest.mark.xfail(reason="TODO: `ArrowExpr.list.contains`", raises=NotImplementedError)
 @pytest.mark.parametrize(
     ("item", "expected"),
     [
@@ -36,9 +35,7 @@ b = nwp.col("b")
         (nwp.lit(None, nw.Int32), [True, None, False, True]),
     ],
 )
-def test_list_contains(
-    data: Data, item: IntoExpr, expected: list[bool | None]
-) -> None:  # pragma: no cover
+def test_list_contains(data: Data, item: IntoExpr, expected: list[bool | None]) -> None:
     df = dataframe(data).with_columns(a.cast(nw.List(nw.Int32)))
     result = df.select(a.list.contains(item))
     assert_equal_data(result, {"a": expected})

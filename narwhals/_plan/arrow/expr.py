@@ -960,7 +960,21 @@ class ArrowListNamespace(
     def unique(self, node: FExpr[lists.Unique], frame: Frame, name: str) -> Expr | Scalar:
         return self.unary(fn.list_unique)(node, frame, name)
 
-    contains = not_implemented()
+    def contains(
+        self, node: FExpr[lists.Contains], frame: Frame, name: str
+    ) -> Expr | Scalar:
+        func = node.function
+        expr, other = func.unwrap_input(node)
+        prev = expr.dispatch(self.compliant, frame, name)
+        item = other.dispatch(self.compliant, frame, name)
+        if isinstance(prev, ArrowScalar):
+            msg = "TODO: `ArrowScalar.list.contains`"
+            raise NotImplementedError(msg)
+        if isinstance(item, ArrowExpr):
+            # Maybe one day, not now
+            raise NotImplementedError
+        result = fn.list_contains(prev.native, item.native)
+        return self.with_native(result, name)
 
 
 class ArrowStringNamespace(
