@@ -395,6 +395,15 @@ def get_categories(native: ArrowAny) -> ChunkedArrayAny:
 
 
 class ExplodeBuilder:
+    """Tools for exploding lists.
+
+    The complexity of these operations increases with:
+    - Needing to preserve null/empty elements
+      - All variants are cheaper if this can be skipped
+    - Exploding in the context of a table
+      - Where a single column is much simpler than multiple
+    """
+
     options: ExplodeOptions
 
     def __init__(self, *, empty_as_null: bool = True, keep_nulls: bool = True) -> None:
@@ -613,26 +622,23 @@ def list_join(
     return pc.binary_join(native, separator)
 
 
-# TODO @dangotbanned: Multiple cleanup jobs
-# - Use Acero directly to avoid renaming columns
-# - Maybe handle the filter in acero too?
+# TODO @dangotbanned: Docs, explain why some of the intermediate steps are needed
+# hint: why not `replace_with_mask`?
 def list_unique(native: ChunkedArrayAny) -> ChunkedArrayAny:
     from narwhals._plan.arrow.acero import group_by_table
     from narwhals._plan.arrow.group_by import AggSpec
 
-    lengths = list_len(native)
-    is_not_valid = or_(is_null(lengths), eq(lengths, lit(0)))
-    is_valid = not_(is_not_valid)
-
-    i, v = "index", "values"
-    indexed = concat_horizontal([int_range(len(native), chunked=False), native], [i, v])
-    table = ExplodeBuilder.explode_column_fast(indexed.filter(is_valid), v)
-    agg = AggSpec.from_function_expr(ir_unique(v), v)
-    return (
-        concat_tables([group_by_table(table, [i], [agg]), indexed.filter(is_not_valid)])
-        .sort_by(i)
-        .column(v)
+    idx, v = "index", "values"
+    indexed = concat_horizontal([int_range(len(native), chunked=False), native], [idx, v])
+    len_eq_0 = eq(list_len(native), lit(0))
+    valid = indexed.filter(not_(len_eq_0))
+    invalid = indexed.filter(or_(native.is_null(), len_eq_0))
+    valid_unique = group_by_table(
+        ExplodeBuilder.explode_column_fast(valid, v),
+        [idx],
+        [AggSpec.from_expr_ir(ir_unique(v), v)],
     )
+    return concat_tables([valid_unique, invalid]).sort_by(idx).column(v)
 
 
 def str_join(
