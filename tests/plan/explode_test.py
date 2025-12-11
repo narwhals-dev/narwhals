@@ -23,7 +23,6 @@ if TYPE_CHECKING:
     from tests.conftest import Data
 
 pytest.importorskip("pyarrow")
-import pyarrow as pa
 
 
 @pytest.fixture(scope="module")
@@ -58,10 +57,6 @@ def test_explode_frame_single_col(
     assert_equal_data(result, expected)
 
 
-@pytest.mark.xfail(
-    reason="TODO: `Added column's length must match table's length. Expected length 0 but got length ...`",
-    raises=pa.ArrowInvalid,
-)
 @pytest.mark.parametrize(
     ("column", "expected_values"),
     [
@@ -73,7 +68,7 @@ def test_explode_frame_single_col(
 )
 def test_explode_frame_only_column(
     column: str, expected_values: list[int | None], data: Data
-) -> None:  # pragma: no cover
+) -> None:
     result = (
         dataframe(data)
         .select(nwp.col(column).cast(nw.List(nw.Int32())))

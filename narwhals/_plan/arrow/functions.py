@@ -439,6 +439,8 @@ class ExplodeBuilder:
     def explode_column(self, native: pa.Table, column_name: str, /) -> pa.Table:
         """Explode a list-typed column in the context of `native`."""
         ca = native.column(column_name)
+        if native.num_columns == 1:
+            return native.from_arrays([self.explode(ca)], [column_name])
         safe = self._fill_with_null(ca) if self.options.any() else ca
         exploded = _list_explode(safe)
         col_idx = native.schema.get_field_index(column_name)
