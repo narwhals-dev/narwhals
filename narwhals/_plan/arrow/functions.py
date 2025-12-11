@@ -628,27 +628,29 @@ def list_unique(native: ChunkedList) -> ChunkedList: ...
 @overload
 def list_unique(native: ListScalar) -> ListScalar: ...
 @overload
-def list_unique(native: ChunkedOrScalarAny) -> ChunkedOrScalarAny: ...
-def list_unique(native: ChunkedOrScalarAny) -> ChunkedOrScalarAny:
+def list_unique(native: ChunkedOrScalar[ListScalar]) -> ChunkedOrScalar[ListScalar]: ...
+def list_unique(native: ChunkedOrScalar[ListScalar]) -> ChunkedOrScalar[ListScalar]:
     """Get the unique/distinct values in the list."""
     from narwhals._plan.arrow.acero import group_by_table
     from narwhals._plan.arrow.group_by import AggSpec
 
+    if isinstance(native, pa.Scalar):
+        scalar = t.cast("pa.ListScalar[Any]", native)
+        if scalar.is_valid and (len(scalar) > 1):
+            return implode(_list_explode(native).unique())
+        return scalar
     idx, v = "index", "values"
     names = idx, v
     len_not_eq_0 = not_eq(list_len(native), lit(0))
     aggs = [AggSpec.from_expr_ir(ir_unique(v), v)]
     can_fastpath = all_(len_not_eq_0, ignore_nulls=False).as_py()
     if can_fastpath:
-        if isinstance(native, pa.Scalar):
-            return implode(_list_explode(native).unique())
         arrays = [_list_parent_indices(native), _list_explode(native)]
         result = group_by_table(concat_horizontal(arrays, names), [idx], aggs)
     else:
-        # TODO @dangotbanned: Fix these, they're legit
-        indexed = concat_horizontal([int_range(len(native)), native], names)  # type: ignore[arg-type, list-item]
-        valid = indexed.filter(len_not_eq_0)  # pyright: ignore[reportArgumentType]
-        invalid = indexed.filter(or_(native.is_null(), not_(len_not_eq_0)))  # type: ignore[union-attr]
+        indexed = concat_horizontal([int_range(len(native)), native], names)
+        valid = indexed.filter(len_not_eq_0)
+        invalid = indexed.filter(or_(native.is_null(), not_(len_not_eq_0)))
         explode_with_index = ExplodeBuilder.explode_column_fast(valid, v)
         valid_unique = group_by_table(explode_with_index, [idx], aggs)
         result = concat_tables([valid_unique, invalid]).sort_by(idx)

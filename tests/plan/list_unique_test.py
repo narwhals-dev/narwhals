@@ -8,9 +8,6 @@ import narwhals as nw
 import narwhals._plan as nwp
 from tests.plan.utils import assert_equal_series, dataframe
 
-pytest.importorskip("pyarrow")
-import pyarrow as pa
-
 if TYPE_CHECKING:
     from tests.conftest import Data
 
@@ -47,22 +44,10 @@ def test_list_unique(data: Data) -> None:
 @pytest.mark.parametrize(
     ("row", "expected"),
     [
-        pytest.param([None, "A", "B", "A", "A", "B"], [None, "A", "B"]),
-        pytest.param(
-            None,
-            None,
-            marks=pytest.mark.xfail(
-                reason="object of type 'NoneType' has no len()", raises=TypeError
-            ),
-        ),
-        pytest.param(
-            [],
-            [],
-            marks=pytest.mark.xfail(
-                reason="Filter should be array-like", raises=pa.ArrowTypeError
-            ),
-        ),
-        pytest.param([None], [None]),
+        ([None, "A", "B", "A", "A", "B"], [None, "A", "B"]),
+        (None, None),
+        ([], []),
+        ([None], [None]),
     ],
 )
 def test_list_unique_scalar(
