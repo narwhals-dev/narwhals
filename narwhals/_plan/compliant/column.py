@@ -60,7 +60,7 @@ class SupportsBroadcast(Protocol[SeriesT, LengthT]):
         `default` must be provided when operating in a `with_columns` context.
         """
         exprs = tuple[SupportsBroadcast[SeriesT, LengthT], ...](flatten_hash_safe(exprs))
-        length = cls._length_required(exprs, default)
+        length = default if len(exprs) == 1 else cls._length_required(exprs, default)
         if length is None:
             for e in exprs:
                 yield e.to_series()
