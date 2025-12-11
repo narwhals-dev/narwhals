@@ -18,8 +18,8 @@ if TYPE_CHECKING:
         Int16Type,
         Int32Type,
         Int64Type,
-        LargeStringType as LargeStringType,
-        StringType as StringType,
+        LargeStringType as _LargeStringType,
+        StringType as _StringType,
         Uint8Type,
         Uint16Type,
         Uint32Type,
@@ -30,8 +30,9 @@ if TYPE_CHECKING:
     from narwhals._native import NativeDataFrame, NativeSeries
     from narwhals.typing import SizedMultiIndexSelector as _SizedMultiIndexSelector
 
-    StringScalar: TypeAlias = "Scalar[StringType | LargeStringType]"
+    StringType: TypeAlias = "_StringType | _LargeStringType"
     IntegerType: TypeAlias = "Int8Type | Int16Type | Int32Type | Int64Type | Uint8Type | Uint16Type | Uint32Type | Uint64Type"
+    StringScalar: TypeAlias = "Scalar[StringType]"
     IntegerScalar: TypeAlias = "Scalar[IntegerType]"
     DateScalar: TypeAlias = "Scalar[Date32Type]"
     ListScalar: TypeAlias = "Scalar[pa.ListType[DataTypeT_co]]"
@@ -42,7 +43,7 @@ if TYPE_CHECKING:
     PrimitiveNumericType: TypeAlias = "types._Integer | types._Floating"
     NumericType: TypeAlias = "PrimitiveNumericType | types._Decimal"
     NumericOrTemporalType: TypeAlias = "NumericType | types._Temporal"
-    StringOrBinaryType: TypeAlias = "StringType | LargeStringType | lib.StringViewType | lib.BinaryType | lib.LargeBinaryType | lib.BinaryViewType"
+    StringOrBinaryType: TypeAlias = "StringType | lib.StringViewType | lib.BinaryType | lib.LargeBinaryType | lib.BinaryViewType"
     BasicType: TypeAlias = (
         "NumericOrTemporalType | StringOrBinaryType | BoolType | lib.NullType"
     )

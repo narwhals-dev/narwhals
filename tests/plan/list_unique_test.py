@@ -47,14 +47,7 @@ def test_list_unique(data: Data) -> None:
 @pytest.mark.parametrize(
     ("row", "expected"),
     [
-        pytest.param(
-            [None, "A", "B", "A", "A", "B"],
-            [None, "A", "B"],
-            marks=pytest.mark.xfail(
-                reason="Unsupported input type for function 'list_parent_indices': Scalar(list<item: string>[null, A, B, A, A, B])",
-                raises=pa.ArrowNotImplementedError,
-            ),
-        ),
+        pytest.param([None, "A", "B", "A", "A", "B"], [None, "A", "B"]),
         pytest.param(
             None,
             None,
@@ -69,14 +62,7 @@ def test_list_unique(data: Data) -> None:
                 reason="Filter should be array-like", raises=pa.ArrowTypeError
             ),
         ),
-        pytest.param(
-            [None],
-            [None],
-            marks=pytest.mark.xfail(
-                reason="Unsupported input type for function 'list_parent_indices': Scalar(list<item: string>[null])",
-                raises=pa.ArrowNotImplementedError,
-            ),
-        ),
+        pytest.param([None], [None]),
     ],
 )
 def test_list_unique_scalar(
