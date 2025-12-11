@@ -66,9 +66,7 @@ def test_timestamp_datetimes(
         2,
     ):  # pragma: no cover
         pytest.skip("Requires pandas >= 2.2 for reliable pyarrow-backed timestamps")
-    if "bodo" in str(constructor) and ((original_time_unit=="ns" and time_unit=="us") or (original_time_unit=="ns" and time_unit=="ms")):
-        # BODO fail
-        pytest.skip()
+
     datetimes = {"a": [datetime(2001, 1, 1), None, datetime(2001, 1, 3)]}
     df = nw.from_native(constructor(datetimes))
     dtype = nw.Datetime(time_unit_compat(original_time_unit, request))
