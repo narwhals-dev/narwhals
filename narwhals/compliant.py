@@ -17,11 +17,13 @@ from narwhals._compliant.any_namespace import (
     StringNamespace,
     StructNamespace,
 )
+from narwhals._compliant.expr import CompliantExprNameNamespace
 
 __all__ = [
     "CatNamespace",
     "CompliantDataFrame",
     "CompliantExpr",
+    "CompliantExprNameNamespace",
     "CompliantGroupBy",
     "CompliantLazyFrame",
     "CompliantNamespace",
