@@ -31,17 +31,14 @@ def test_list_unique(data: Data) -> None:
     assert_equal_series(ser.explode(), [2, 3, None, None, None, None], "a")
 
 
+# TODO @dangotbanned: Report `ListScalar.values` bug upstream
+# - Returning `None` breaks: `__len__`,` __getitem__`, `__iter__`
+# - Which breaks `pa.array([<pyarrow.ListScalar: None>], pa.list_(pa.int64()))`
 @pytest.mark.parametrize(
     ("row", "expected"),
     [
         ([None, "A", "B", "A", "A", "B"], [None, "A", "B"]),
-        pytest.param(
-            None,
-            None,
-            marks=pytest.mark.xfail(
-                reason="TODO: `object of type 'NoneType' has no len()`", raises=TypeError
-            ),
-        ),
+        (None, None),
         ([], []),
         ([None], [None]),
     ],

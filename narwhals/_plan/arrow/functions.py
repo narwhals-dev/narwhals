@@ -1628,6 +1628,8 @@ def lit(value: Any, dtype: DataType | None = None) -> NativeScalar:
     return pa.scalar(value) if dtype is None else pa.scalar(value, dtype)
 
 
+# TODO @dangotbanned: Report `ListScalar.values` bug upstream
+# See `tests/plan/list_unique_test.py::test_list_unique_scalar[None-None]`
 @overload
 def array(data: ArrowAny, /) -> ArrayAny: ...
 @overload
@@ -1651,6 +1653,8 @@ def array(
     if isinstance(data, pa.Array):
         return data
     if isinstance(data, pa.Scalar):
+        if isinstance(data, pa.ListScalar) and data.is_valid is False:
+            return pa.array([None], data.type)
         return pa.array([data], data.type)
     return pa.array(data, dtype)
 
