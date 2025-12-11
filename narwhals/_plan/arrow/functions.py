@@ -629,16 +629,21 @@ def list_unique(native: ChunkedArrayAny) -> ChunkedArrayAny:
     from narwhals._plan.arrow.group_by import AggSpec
 
     idx, v = "index", "values"
-    indexed = concat_horizontal([int_range(len(native), chunked=False), native], [idx, v])
-    len_eq_0 = eq(list_len(native), lit(0))
-    valid = indexed.filter(not_(len_eq_0))
-    invalid = indexed.filter(or_(native.is_null(), len_eq_0))
-    valid_unique = group_by_table(
-        ExplodeBuilder.explode_column_fast(valid, v),
-        [idx],
-        [AggSpec.from_expr_ir(ir_unique(v), v)],
-    )
-    return concat_tables([valid_unique, invalid]).sort_by(idx).column(v)
+    names = idx, v
+    len_not_eq_0 = not_eq(list_len(native), lit(0))
+    aggs = [AggSpec.from_expr_ir(ir_unique(v), v)]
+    can_fastpath = all_(len_not_eq_0, ignore_nulls=False).as_py()
+    if can_fastpath:
+        arrays = [_list_parent_indices(native), _list_explode(native)]
+        result = group_by_table(concat_horizontal(arrays, names), [idx], aggs)
+    else:
+        indexed = concat_horizontal([int_range(len(native)), native], names)
+        valid = indexed.filter(len_not_eq_0)
+        invalid = indexed.filter(or_(native.is_null(), not_(len_not_eq_0)))
+        explode_with_index = ExplodeBuilder.explode_column_fast(valid, v)
+        valid_unique = group_by_table(explode_with_index, [idx], aggs)
+        result = concat_tables([valid_unique, invalid]).sort_by(idx)
+    return result.column(v)
 
 
 def str_join(

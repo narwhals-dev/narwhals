@@ -14,12 +14,15 @@ if TYPE_CHECKING:
 
 @pytest.fixture(scope="module")
 def data() -> Data:
-    return {"a": [[2, 2, 3, None, None], None, [], [None]]}
+    return {
+        "a": [[2, 2, 3, None, None], None, [], [None]],
+        "b": [[1, 2, 2], [3, 4], [5, 5, 5, 6], [7]],
+    }
 
 
 def test_list_unique(data: Data) -> None:
-    df = dataframe(data).with_columns(nwp.col("a"))
-    ser = df.select(nwp.col("a").cast(nw.List(nw.Int32)).list.unique()).to_series()
+    df = dataframe(data).select(nwp.col("a").cast(nw.List(nw.Int32)))
+    ser = df.select(nwp.col("a").list.unique()).to_series()
     result = ser.to_list()
     assert len(result) == 4
     assert len(result[0]) == 3
@@ -50,3 +53,13 @@ def test_list_unique_scalar(
     df = dataframe(data).select(nwp.col("a").cast(nw.List(nw.String)).first())
     result = df.select(nwp.col("a").list.unique()).to_series()
     assert_equal_series(result, [expected], "a")
+
+
+def test_list_unique_all_valid(data: Data) -> None:
+    df = dataframe(data).select(nwp.col("b").cast(nw.List(nw.Int32)))
+    ser = df.select(nwp.col("b").list.unique()).to_series()
+    result = ser.to_list()
+    assert set(result[0]) == {1, 2}
+    assert set(result[1]) == {3, 4}
+    assert set(result[2]) == {5, 6}
+    assert set(result[3]) == {7}
