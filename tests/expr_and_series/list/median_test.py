@@ -37,7 +37,7 @@ def test_median_expr(
         any(backend in str(constructor) for backend in ("pandas", "pyarrow"))
         and sys.version_info < (3, 10)
         and is_windows
-    ):
+    ):  # pragma: no cover
         reason = "The issue only affects old Python versions on Windows."
         pytest.skip(reason=reason)
     result = (
@@ -78,7 +78,7 @@ def test_median_series(
         any(backend in str(constructor_eager) for backend in ("pandas", "pyarrow"))
         and sys.version_info < (3, 10)
         and is_windows
-    ):
+    ):  # pragma: no cover
         reason = "The issue only affects old Python versions on Windows."
         pytest.skip(reason=reason)
     df = nw.from_native(constructor_eager(data), eager_only=True)
