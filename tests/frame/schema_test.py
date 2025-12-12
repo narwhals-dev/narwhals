@@ -80,11 +80,9 @@ def test_string_disguised_as_object() -> None:
 def test_actual_object(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
-    if any(x in str(constructor_eager) for x in ("pyarrow_table", "cudf")):
+    # TODO(ehsan): support Python object types in Bodo
+    if any(x in str(constructor_eager) for x in ("pyarrow_table", "cudf", "bodo")):
         request.applymarker(pytest.mark.xfail)
-    if "bodo" in str(constructor_eager):
-        # BODO fail
-        pytest.skip()
 
     class Foo: ...
 
@@ -564,7 +562,7 @@ def origin_pandas_like_pyarrow(
 ) -> IntoPandasSchema:
     if PANDAS_VERSION < (1, 5):
         pytest.skip(reason="pandas too old for `pyarrow`")
-    name_pandas_like = {"pandas_pyarrow_constructor", "modin_pyarrow_constructor", "bodo_pyarrow_constructor"}
+    name_pandas_like = {"pandas_pyarrow_constructor", "modin_pyarrow_constructor", "bodo_pyarrow_constructor", "bodo_constructor"}
     if constructor_pandas_like.__name__ not in name_pandas_like:
         pytest.skip(f"{constructor_pandas_like.__name__!r} is not pandas_like_pyarrow")
     data = {
