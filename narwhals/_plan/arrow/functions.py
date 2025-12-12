@@ -436,7 +436,7 @@ class ExplodeBuilder:
             return _list_explode(safe)
         return chunked_array(_list_explode(safe))
 
-    def explode_with_indices(self, native: ChunkedList) -> pa.Table:
+    def explode_with_indices(self, native: ChunkedList | ListArray) -> pa.Table:
         safe = self._fill_with_null(native) if self.options.any() else native
         arrays = [_list_parent_indices(safe), _list_explode(safe)]
         return concat_horizontal(arrays, ["idx", "values"])
@@ -620,12 +620,79 @@ def list_join(
 
     Each list of values in the first input is joined using each second input as separator.
     If any input list is null or contains a null, the corresponding output will be null.
+
+    Edge cases:
+
+        >>> import polars as pl
+        >>> data = {
+        ...     "s": [
+        ...         ["a", "b", "c"],
+        ...         ["x", "y"],
+        ...         ["1", None, "3"],
+        ...         [None],
+        ...         None,
+        ...         [],
+        ...         [None, None],  # <-- everything works except this, for now
+        ...     ]
+        ... }
+        >>> s = pl.col("s")
+        >>> result = pl.DataFrame(data).select(
+        ...     s,
+        ...     ignore_nulls=s.list.join("-", ignore_nulls=True),
+        ...     propagate_nulls=s.list.join("-", ignore_nulls=False),
+        ... )
+        >>> result
+        shape: (7, 3)
+        ┌──────────────────┬──────────────┬─────────────────┐
+        │ s                ┆ ignore_nulls ┆ propagate_nulls │
+        │ ---              ┆ ---          ┆ ---             │
+        │ list[str]        ┆ str          ┆ str             │
+        ╞══════════════════╪══════════════╪═════════════════╡
+        │ ["a", "b", "c"]  ┆ a-b-c        ┆ a-b-c           │
+        │ ["x", "y"]       ┆ x-y          ┆ x-y             │
+        │ ["1", null, "3"] ┆ 1-3          ┆ null            │
+        │ [null]           ┆              ┆ null            │
+        │ null             ┆ null         ┆ null            │
+        │ []               ┆              ┆                 │
+        │ [null, null]     ┆              ┆ null            │
+        └──────────────────┴──────────────┴─────────────────┘
     """
-    if ignore_nulls:
-        # NOTE: `polars` default is `True`, will need to handle that if this becomes api
-        msg = "TODO: `ArrowExpr.list.join(ignore_nulls=True)`"
+    join = t.cast(
+        "Callable[[Any, Any], ChunkedArray[StringScalar] | pa.StringArray]",
+        pc.binary_join,
+    )
+    if not ignore_nulls:
+        return pc.binary_join(native, separator)
+    # NOTE: `polars` default is `True`
+    if isinstance(native, pa.Scalar):
+        to_join = (
+            implode(_list_explode(native).drop_null()) if native.is_valid else native
+        )
+        return pc.binary_join(to_join, separator)
+    result = join(native, separator)
+    if not result.null_count:
+        # if we got here and there were no nulls, then we're done
+        return result
+    todo_mask = pc.and_not(result.is_null(), native.is_null())
+    todo_lists = native.filter(todo_mask)
+    list_len_1: ChunkedOrArrayAny = eq(list_len(todo_lists), lit(1))  # pyright: ignore[reportAssignmentType]
+    only_single_null = any_(list_len_1).as_py()
+    if only_single_null:
+        todo_lists = when_then(list_len_1, lit([""], todo_lists.type), todo_lists)
+    builder = ExplodeBuilder(empty_as_null=False, keep_nulls=False)
+    replacements = join(
+        builder.explode_with_indices(todo_lists)
+        .drop_null()
+        .group_by("idx")
+        .aggregate([("values", "hash_list")])
+        .column(1),
+        separator,
+    )
+    if len(replacements) != len(list_len_1):
+        # probably do-able, but the edge cases here are getting hairy
+        msg = f"TODO: `ArrowExpr.list.join` w/ `[None, None , ...]` element\n{native!r}"
         raise NotImplementedError(msg)
-    return pc.binary_join(native, separator)
+    return replace_with_mask(result, todo_mask, replacements)
 
 
 @overload
@@ -1287,9 +1354,17 @@ def replace_strict_default(
     return chunked_array(result) if isinstance(native, pa.ChunkedArray) else result[0]
 
 
+@overload
 def replace_with_mask(
     native: ChunkedOrArrayT, mask: Predicate, replacements: ChunkedOrArrayAny
-) -> ChunkedOrArrayT:
+) -> ChunkedOrArrayT: ...
+@overload
+def replace_with_mask(
+    native: ChunkedOrArrayAny, mask: Predicate, replacements: ChunkedOrArrayAny
+) -> ChunkedOrArrayAny: ...
+def replace_with_mask(
+    native: ChunkedOrArrayAny, mask: Predicate, replacements: ChunkedOrArrayAny
+) -> ChunkedOrArrayAny:
     """Replace elements of `native`, at positions defined by `mask`.
 
     The length of `replacements` must equal the number of `True` values in `mask`.
@@ -1298,7 +1373,7 @@ def replace_with_mask(
         args = [array(p) for p in (native, mask, replacements)]
         return chunked_array(pc.call_function("replace_with_mask", args))
     args = [native, array(mask), array(replacements)]
-    result: ChunkedOrArrayT = pc.call_function("replace_with_mask", args)
+    result: ChunkedOrArrayAny = pc.call_function("replace_with_mask", args)
     return result
 
 
