@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING, Any, Callable, Final, Literal, cast, overload
 
 import narwhals as nw
 from narwhals import exceptions, functions as nw_f
+from narwhals._exceptions import issue_warning
+from narwhals._expression_parsing import ExprKind, ExprNode
 from narwhals._typing_compat import TypeVar, assert_never
 from narwhals._utils import (
     Implementation,
@@ -50,6 +52,7 @@ from narwhals.dtypes import (
     UInt128,
     Unknown,
 )
+from narwhals.exceptions import NarwhalsUnstableWarning
 from narwhals.expr import Expr as NwExpr
 from narwhals.functions import _new_series_impl, concat, show_versions
 from narwhals.schema import Schema as NwSchema
@@ -97,6 +100,7 @@ if TYPE_CHECKING:
         IntoExpr,
         IntoSchema,
         NonNestedLiteral,
+        PythonLiteral,
         SingleColSelector,
         SingleIndexSelector,
         _1DArray,
@@ -313,8 +317,25 @@ class Series(NwSeries[IntoSeriesT]):
     # Too unstable to consider including here.
     hist: Any = not_implemented()
 
+    def any_value(self, *, ignore_nulls: bool = False) -> PythonLiteral:
+        msg = (
+            "`Series.any_value` is being called from the stable API although considered "
+            "an unstable feature."
+        )
+        issue_warning(msg, NarwhalsUnstableWarning)
+        return super().any_value(ignore_nulls=ignore_nulls)
 
-class Expr(NwExpr): ...
+
+class Expr(NwExpr):
+    def any_value(self, *, ignore_nulls: bool = False) -> Self:
+        msg = (
+            "`Expr.any_value` is being called from the stable API although considered "
+            "an unstable feature."
+        )
+        issue_warning(msg, NarwhalsUnstableWarning)
+        return self._append_node(
+            ExprNode(ExprKind.AGGREGATION, "any_value", ignore_nulls=ignore_nulls)
+        )
 
 
 class Schema(NwSchema):

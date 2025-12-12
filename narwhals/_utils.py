@@ -1167,20 +1167,16 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
         >>> import pandas as pd
         >>> import polars as pl
         >>> data = ["x", "y"]
-        >>> s_pd = pd.Series(data, dtype=pd.CategoricalDtype(ordered=True))
-        >>> s_pl = pl.Series(data, dtype=pl.Categorical(ordering="lexical"))
-
-        Let's define a library-agnostic function:
-
-        >>> @nw.narwhalify
-        ... def func(s):
-        ...     return nw.is_ordered_categorical(s)
-
-        Then, we can pass any supported library to `func`:
-
-        >>> func(s_pd)
+        >>>
+        >>> s_pd = nw.from_native(
+        ...     pd.Series(data, dtype=pd.CategoricalDtype(ordered=True)), series_only=True
+        ... )
+        >>> nw.is_ordered_categorical(s_pd)
         True
-        >>> func(s_pl)
+        >>> s_pl = nw.from_native(
+        ...     pl.Series(data, dtype=pl.Categorical()), series_only=True
+        ... )
+        >>> nw.is_ordered_categorical(s_pl)
         False
     """
     from narwhals._interchange.series import InterchangeSeries
@@ -1318,7 +1314,11 @@ def is_slice_index(obj: Any) -> TypeIs[_SliceIndex]:
     return isinstance(obj, slice) and (
         isinstance(obj.start, int)
         or isinstance(obj.stop, int)
-        or (isinstance(obj.step, int) and obj.start is None and obj.stop is None)
+        or (
+            isinstance(obj.step, (int, NoneType))
+            and obj.start is None
+            and obj.stop is None
+        )
     )
 
 
@@ -2145,3 +2145,6 @@ class _NoDefault(Enum):
 # the "no_default" sentinel should typically be used when one of the valid parameter
 # values is None, as otherwise we cannot determine if the caller has set that value.
 no_default = _NoDefault.no_default
+
+# Can be imported from types in Python 3.10
+NoneType = type(None)
