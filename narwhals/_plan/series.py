@@ -32,6 +32,7 @@ if TYPE_CHECKING:
     from narwhals._plan.dataframe import DataFrame
     from narwhals._typing import EagerAllowed, IntoBackend, _EagerAllowedImpl
     from narwhals.dtypes import DType
+    from narwhals.schema import Schema
     from narwhals.typing import (
         IntoDType,
         NonNestedLiteral,
@@ -320,6 +321,13 @@ class SeriesStructNamespace(Generic[SeriesT]):
             self._series._compliant.struct.unnest().to_narwhals()
         )
         return result
+
+    def field(self, name: str) -> SeriesT:  # pragma: no cover
+        return type(self._series)(self._series._compliant.struct.field(name))
+
+    @property
+    def schema(self) -> Schema:
+        return self._series._compliant.struct.schema
 
 
 class SeriesV1(Series[NativeSeriesT_co]):

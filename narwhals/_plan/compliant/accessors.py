@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from narwhals._plan.expressions import FunctionExpr as FExpr, lists, strings
     from narwhals._plan.expressions.categorical import GetCategories
     from narwhals._plan.expressions.struct import FieldByName
+    from narwhals.schema import Schema
 
 
 class ExprCatNamespace(Protocol[FrameT_contra, ExprT_co]):
@@ -93,3 +94,5 @@ class ExprStructNamespace(Protocol[FrameT_contra, ExprT_co]):
 class SeriesStructNamespace(Protocol[DataFrameT_co, SeriesT_co]):
     def field(self, name: str) -> SeriesT_co: ...
     def unnest(self) -> DataFrameT_co: ...
+    @property
+    def schema(self) -> Schema: ...

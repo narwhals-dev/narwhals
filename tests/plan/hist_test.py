@@ -276,6 +276,7 @@ def test_hist_expr_breakpoint(
     dtype_count = nw.Int64
 
     dtype_struct = nw.Struct({"breakpoint": dtype_breakpoint, "count": dtype_count})
+    schema_struct = nw.Schema({"breakpoint": nw.Float64(), "count": nw.Int64()})
     expected_schema = nw.Schema(
         [
             ("int", dtype_struct),
@@ -308,6 +309,8 @@ def test_hist_expr_breakpoint(
     }
     assert result_schema == expected_schema
     assert_equal_data(result, expected_data)
+    for ser in result.iter_columns():
+        assert ser.struct.schema == schema_struct
 
 
 @bin_count_cases

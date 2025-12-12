@@ -14,6 +14,7 @@ from narwhals._plan.compliant.typing import namespace
 from narwhals._plan.expressions import functions as F
 from narwhals._utils import Version, generate_repr
 from narwhals.dependencies import is_numpy_array_1d
+from narwhals.schema import Schema
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -360,3 +361,7 @@ class SeriesStructNamespace(StructNamespace["DataFrame", ArrowSeries]):
     # name overriding *may* be wrong
     def field(self, name: str) -> ArrowSeries:
         return self.with_native(fn.struct_field(self.native, name), name)
+
+    @property
+    def schema(self) -> Schema:
+        return Schema.from_arrow(fn.struct_schema(self.native))
