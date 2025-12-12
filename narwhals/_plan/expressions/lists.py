@@ -29,16 +29,14 @@ class Get(ListFunction):
 class Contains(ListFunction):
     """N-ary (expr, item)."""
 
-    def unwrap_input(
-        self, node: FExpr[Self], /
-    ) -> tuple[ExprIR, ExprIR]:  # pragma: no cover
+    def unwrap_input(self, node: FExpr[Self], /) -> tuple[ExprIR, ExprIR]:
         expr, item = node.input
         return expr, item
 
 
 class IRListNamespace(IRNamespace):
     len: ClassVar = Len
-    unique: ClassVar = Unique  # pragma: no cover
+    unique: ClassVar = Unique
     contains: ClassVar = Contains
     get: ClassVar = Get
 
@@ -51,7 +49,7 @@ class ExprListNamespace(ExprNamespace[IRListNamespace]):
     def len(self) -> Expr:
         return self._with_unary(self._ir.len())
 
-    def unique(self) -> Expr:  # pragma: no cover
+    def unique(self) -> Expr:
         return self._with_unary(self._ir.unique())
 
     def get(self, index: int) -> Expr:
