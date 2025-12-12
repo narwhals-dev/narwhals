@@ -16,7 +16,7 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
@@ -53,7 +53,7 @@ jobs:
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
@@ -91,7 +91,7 @@ jobs:
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
@@ -128,7 +128,7 @@ jobs:
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
@@ -169,7 +169,7 @@ jobs:
       - name: Assert nightlies dependencies
         run: |
           DEPS=$(uv pip freeze)
-          echo "$DEPS" | grep 'pandas.*dev'
+          echo "$DEPS" | grep -E 'pandas.*(dev|rc)'
           echo "$DEPS" | grep 'pyarrow.*dev'
           echo "$DEPS" | grep 'numpy.*dev'
           echo "$DEPS" | grep 'dask.*@'

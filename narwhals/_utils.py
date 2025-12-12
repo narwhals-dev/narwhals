@@ -1167,20 +1167,16 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
         >>> import pandas as pd
         >>> import polars as pl
         >>> data = ["x", "y"]
-        >>> s_pd = pd.Series(data, dtype=pd.CategoricalDtype(ordered=True))
-        >>> s_pl = pl.Series(data, dtype=pl.Categorical(ordering="lexical"))
-
-        Let's define a library-agnostic function:
-
-        >>> @nw.narwhalify
-        ... def func(s):
-        ...     return nw.is_ordered_categorical(s)
-
-        Then, we can pass any supported library to `func`:
-
-        >>> func(s_pd)
+        >>>
+        >>> s_pd = nw.from_native(
+        ...     pd.Series(data, dtype=pd.CategoricalDtype(ordered=True)), series_only=True
+        ... )
+        >>> nw.is_ordered_categorical(s_pd)
         True
-        >>> func(s_pl)
+        >>> s_pl = nw.from_native(
+        ...     pl.Series(data, dtype=pl.Categorical()), series_only=True
+        ... )
+        >>> nw.is_ordered_categorical(s_pl)
         False
     """
     from narwhals._interchange.series import InterchangeSeries
