@@ -100,8 +100,8 @@ class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayA
 
     def scatter(self, indices: Self, values: Self) -> Self:
         mask = fn.is_in(fn.int_range(len(self), chunked=False), indices.native)
-        replacements = fn.array(values._gather(pc.sort_indices(indices.native)))
-        return self._with_native(pc.replace_with_mask(self.native, mask, replacements))
+        replacements = values._gather(pc.sort_indices(indices.native))
+        return self._with_native(fn.replace_with_mask(self.native, mask, replacements))
 
     def is_in(self, other: Self) -> Self:
         return self._with_native(fn.is_in(self.native, other.native))

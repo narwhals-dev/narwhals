@@ -655,7 +655,6 @@ def list_unique(native: ChunkedOrScalar[ListScalar]) -> ChunkedOrScalar[ListScal
     [`pc.replace_with_mask`]: https://arrow.apache.org/docs/python/generated/pyarrow.compute.replace_with_mask.html
     [apache/arrow#43716]: https://github.com/apache/arrow/issues/43716
     """
-    from narwhals._plan.arrow.acero import group_by_table
     from narwhals._plan.arrow.group_by import AggSpec
 
     if isinstance(native, pa.Scalar):
@@ -666,61 +665,46 @@ def list_unique(native: ChunkedOrScalar[ListScalar]) -> ChunkedOrScalar[ListScal
     idx, v = "index", "values"
     names = idx, v
     len_not_eq_0 = not_eq(list_len(native), lit(0))
-    aggs = [AggSpec.from_expr_ir(ir_unique(v), v)]
     can_fastpath = all_(len_not_eq_0, ignore_nulls=False).as_py()
     if can_fastpath:
         arrays = [_list_parent_indices(native), _list_explode(native)]
-        result = group_by_table(concat_horizontal(arrays, names), [idx], aggs)
-    else:
-        # Oh no - we caught a bad one!
-        # We need to split things into good/bad - and only work on the good stuff.
-        # `int_range` is acting like `parent_indices`, but doesn't give up when it see's `None` or `[]`
-        indexed = concat_horizontal([int_range(len(native)), native], names)
-        valid = indexed.filter(len_not_eq_0)
-        invalid = indexed.filter(or_(native.is_null(), not_(len_not_eq_0)))
-        # To keep track of where we started, our index needs to be exploded with the list elements
-        explode_with_index = ExplodeBuilder.explode_column_fast(valid, v)
-        valid_unique = group_by_table(explode_with_index, [idx], aggs)
-        # And now, because we can't join - we do a poor man's version of one 😉
-        result = concat_tables([valid_unique, invalid]).sort_by(idx)
-    return result.column(v)
+        return AggSpec.unique(v).over_index(concat_horizontal(arrays, names), idx)
+    # Oh no - we caught a bad one!
+    # We need to split things into good/bad - and only work on the good stuff.
+    # `int_range` is acting like `parent_indices`, but doesn't give up when it see's `None` or `[]`
+    indexed = concat_horizontal([int_range(len(native)), native], names)
+    valid = indexed.filter(len_not_eq_0)
+    invalid = indexed.filter(or_(native.is_null(), not_(len_not_eq_0)))
+    # To keep track of where we started, our index needs to be exploded with the list elements
+    explode_with_index = ExplodeBuilder.explode_column_fast(valid, v)
+    valid_unique = AggSpec.unique(v).over(explode_with_index, [idx])
+    # And now, because we can't join - we do a poor man's version of one 😉
+    return concat_tables([valid_unique, invalid]).sort_by(idx).column(v)
 
 
-# TODO @dangotbanned: Clean up
-# NOTE: Both of these weren't able to support `[None]`, where, 2 in [None] should be False
-# https://github.com/apache/arrow/issues/33295
-# https://github.com/apache/arrow/issues/47118#issuecomment-3075893244
 def list_contains(
     native: ChunkedOrScalar[ListScalar], item: NonNestedLiteral | ScalarAny
 ) -> ChunkedOrScalar[pa.BooleanScalar]:
-    # empty should always be False
-    # None should always be None
-    # `None` in `[None]` should be True
-    # Anything else in `[None]` should be false
+    from narwhals._plan.arrow.group_by import AggSpec
+
     if isinstance(native, pa.Scalar):
         scalar = t.cast("pa.ListScalar[Any]", native)
         if scalar.is_valid:
             if len(scalar):
-                other = array(lit(item).cast(scalar.type.value_type))
-                return any_(is_in(_list_explode(scalar), other))
+                value_type = scalar.type.value_type
+                return any_(eq_missing(_list_explode(scalar), lit(item).cast(value_type)))
             return lit(False, BOOL)
         return lit(None, BOOL)
-    ca = native
-    table = ExplodeBuilder(empty_as_null=False, keep_nulls=False).explode_with_indices(ca)
-    values = is_in(table.column(1), array(lit(item)))
-    name = table.field(1).name
-    contains = (
-        table.set_column(1, name, values)
-        .group_by("idx")
-        .aggregate([(name, "hash_any", pa_options.scalar_aggregate(ignore_nulls=True))])
-        .column(1)
-    )
+    builder = ExplodeBuilder(empty_as_null=False, keep_nulls=False)
+    tbl = builder.explode_with_indices(native)
+    idx, name = tbl.column_names
+    contains = eq_missing(tbl.column(name), item)
+    l_contains = AggSpec.any(name).over_index(tbl.set_column(1, name, contains), idx)
     # Here's the really key part: this mask has the same result we want to return
     # So by filling the `True`, we can flip those to `False` if needed
     # But if we were already `None` or `False` - then that's sticky
-    propagate_invalid = not_eq(list_len(ca), lit(0))
-    results = replace_with_mask(array(propagate_invalid), propagate_invalid, contains)
-    return chunked_array(results)
+    propagate_invalid: ChunkedArray[pa.BooleanScalar] = not_eq(list_len(native), lit(0))
+    return replace_with_mask(propagate_invalid, propagate_invalid, l_contains)
 
 
 def implode(native: Arrow[Scalar[DataTypeT]]) -> ListScalar[DataTypeT]:
@@ -1306,11 +1290,15 @@ def replace_strict_default(
 def replace_with_mask(
     native: ChunkedOrArrayT, mask: Predicate, replacements: ChunkedOrArrayAny
 ) -> ChunkedOrArrayT:
-    if not isinstance(mask, pa.BooleanArray):
-        mask = t.cast("pa.BooleanArray", array(mask))
-    if not isinstance(replacements, pa.Array):
-        replacements = array(replacements)
-    result: ChunkedOrArrayT = pc.replace_with_mask(native, mask, replacements)
+    """Replace elements of `native`, at positions defined by `mask`.
+
+    The length of `replacements` must equal the number of `True` values in `mask`.
+    """
+    if isinstance(native, pa.ChunkedArray):
+        args = [array(p) for p in (native, mask, replacements)]
+        return chunked_array(pc.call_function("replace_with_mask", args))
+    args = [native, array(mask), array(replacements)]
+    result: ChunkedOrArrayT = pc.call_function("replace_with_mask", args)
     return result
 
 
@@ -1367,12 +1355,38 @@ def is_in(values: ArrowAny, /, other: ChunkedOrArrayAny) -> ArrowAny:
     return is_in_(values, other)  # type: ignore[no-any-return]
 
 
+@t.overload
+def eq_missing(
+    native: ChunkedArrayAny, other: NonNestedLiteral | ArrowAny
+) -> ChunkedArray[pa.BooleanScalar]: ...
+@t.overload
+def eq_missing(
+    native: ArrayAny, other: NonNestedLiteral | ArrowAny
+) -> Array[pa.BooleanScalar]: ...
+@t.overload
+def eq_missing(
+    native: ScalarAny, other: NonNestedLiteral | ArrowAny
+) -> pa.BooleanScalar: ...
+@t.overload
+def eq_missing(
+    native: ChunkedOrScalarAny, other: NonNestedLiteral | ArrowAny
+) -> ChunkedOrScalarAny: ...
+def eq_missing(native: ArrowAny, other: NonNestedLiteral | ArrowAny) -> ArrowAny:
+    """Equivalent to `native == other` where `None == None`.
+
+    This differs from default `eq` where null values are propagated.
+
+    Note:
+        Unique to `pyarrow`, this wrapper will ensure `None` uses `native.type`.
+    """
+    if isinstance(other, (pa.Array, pa.ChunkedArray)):
+        return is_in(native, other)
+    item = array(other if isinstance(other, pa.Scalar) else lit(other, native.type))
+    return is_in(native, item)
+
+
 def ir_min_max(name: str, /) -> MinMax:
     return MinMax(expr=ir.col(name))
-
-
-def ir_unique(name: str, /) -> ir.FunctionExpr[F.Unique]:
-    return F.Unique().to_function_expr(ir.col(name))
 
 
 def _boolean_is_unique(

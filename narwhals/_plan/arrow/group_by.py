@@ -17,7 +17,7 @@ from narwhals._utils import Implementation
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Mapping, Sequence
+    from collections.abc import Iterable, Iterator, Mapping, Sequence
 
     from typing_extensions import Self, TypeAlias
 
@@ -135,6 +135,33 @@ class AggSpec:
             raise group_by_error(name, expr)
         fn_name = SUPPORTED_IR[type(expr)]
         return cls(expr.name if isinstance(expr, ir.Column) else (), fn_name, name=name)
+
+    # NOTE: Fast-paths for single column rewrites
+    @classmethod
+    def _from_function(cls, tp: type[ir.Function], name: str) -> Self:
+        return cls(name, SUPPORTED_FUNCTION[tp], options.FUNCTION.get(tp), name)
+
+    @classmethod
+    def any(cls, name: str) -> Self:
+        return cls._from_function(ir.boolean.Any, name)
+
+    @classmethod
+    def unique(cls, name: str) -> Self:
+        return cls._from_function(ir.functions.Unique, name)
+
+    def over(self, native: pa.Table, keys: Iterable[acero.Field]) -> pa.Table:
+        """Sugar for `native.group_by(keys).aggregate([self])`.
+
+        Returns a table with columns named: `[*keys, self.name]`
+        """
+        return acero.group_by_table(native, keys, [self])
+
+    def over_index(self, native: pa.Table, index_column: str) -> ChunkedArrayAny:
+        """Execute this aggregation over `index_column`.
+
+        Returns a single, (unnamed) array, representing the aggregation results.
+        """
+        return acero.group_by_table(native, [index_column], [self]).column(self.name)
 
 
 def group_by_error(
