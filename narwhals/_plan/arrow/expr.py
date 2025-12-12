@@ -452,13 +452,15 @@ class ArrowExpr(  # type: ignore[misc]
     def first(self, node: First, frame: Frame, name: str) -> Scalar:
         prev = self._dispatch_expr(node.expr, frame, name)
         native = prev.native
-        result = native[0] if len(prev) else fn.lit(None, native.type)
+        result: NativeScalar = native[0] if len(prev) else fn.lit(None, native.type)
         return self._with_native(result, name)
 
     def last(self, node: Last, frame: Frame, name: str) -> Scalar:
         prev = self._dispatch_expr(node.expr, frame, name)
         native = prev.native
-        result = native[len_ - 1] if (len_ := len(prev)) else fn.lit(None, native.type)
+        result: NativeScalar = (
+            native[len_ - 1] if (len_ := len(prev)) else fn.lit(None, native.type)
+        )
         return self._with_native(result, name)
 
     def arg_min(self, node: ArgMin, frame: Frame, name: str) -> Scalar:
@@ -975,14 +977,10 @@ class ArrowListNamespace(
         expr, other = func.unwrap_input(node)
         prev = expr.dispatch(self.compliant, frame, name)
         item = other.dispatch(self.compliant, frame, name)
-        if isinstance(prev, ArrowScalar):
-            msg = "TODO: `ArrowScalar.list.contains`"
-            raise NotImplementedError(msg)
         if isinstance(item, ArrowExpr):
             # Maybe one day, not now
             raise NotImplementedError
-        result = fn.list_contains(prev.native, item.native)
-        return self.with_native(result, name)
+        return self.with_native(fn.list_contains(prev.native, item.native), name)
 
 
 class ArrowStringNamespace(

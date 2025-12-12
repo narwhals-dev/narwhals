@@ -48,9 +48,6 @@ R3: Final[list[Any]] = []
 R4: Final = [None]
 
 
-@pytest.mark.xfail(
-    reason=" TODO: `ArrowScalar.list.contains`", raises=NotImplementedError
-)
 @pytest.mark.parametrize(
     ("row", "item", "expected"),
     [
@@ -69,11 +66,9 @@ R4: Final = [None]
     ],
 )
 def test_list_contains_scalar(
-    row: list[str | None] | None,
-    item: IntoExpr,
-    expected: bool | None,  # noqa: FBT001
-) -> None:  # pragma: no cover
+    row: list[str | None] | None, item: IntoExpr, *, expected: bool | None
+) -> None:
     data = {"a": [row]}
     df = dataframe(data).select(a.cast(nw.List(nw.String)))
     result = df.select(a.first().list.contains(item))
-    assert_equal_data(result, {"a": expected})
+    assert_equal_data(result, {"a": [expected]})

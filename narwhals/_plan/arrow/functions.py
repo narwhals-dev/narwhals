@@ -687,17 +687,24 @@ def list_unique(native: ChunkedOrScalar[ListScalar]) -> ChunkedOrScalar[ListScal
 
 
 # TODO @dangotbanned: Clean up
-# TODO @dangotbanned: Support `native: ListScalar`
 # NOTE: Both of these weren't able to support `[None]`, where, 2 in [None] should be False
 # https://github.com/apache/arrow/issues/33295
 # https://github.com/apache/arrow/issues/47118#issuecomment-3075893244
 def list_contains(
-    native: ChunkedList, item: NonNestedLiteral | ScalarAny
-) -> ChunkedArray[pa.BooleanScalar]:
+    native: ChunkedOrScalar[ListScalar], item: NonNestedLiteral | ScalarAny
+) -> ChunkedOrScalar[pa.BooleanScalar]:
     # empty should always be False
     # None should always be None
     # `None` in `[None]` should be True
     # Anything else in `[None]` should be false
+    if isinstance(native, pa.Scalar):
+        scalar = t.cast("pa.ListScalar[Any]", native)
+        if scalar.is_valid:
+            if len(scalar):
+                other = array(lit(item).cast(scalar.type.value_type))
+                return any_(is_in(_list_explode(scalar), other))
+            return lit(False, BOOL)
+        return lit(None, BOOL)
     ca = native
     table = ExplodeBuilder(empty_as_null=False, keep_nulls=False).explode_with_indices(ca)
     values = is_in(table.column(1), array(lit(item)))
@@ -1706,6 +1713,12 @@ def hist_zeroed_data(
     return {"breakpoint": bp, "count": zeros(n)}
 
 
+@overload
+def lit(value: Any) -> NativeScalar: ...
+@overload
+def lit(value: Any, dtype: BoolType) -> pa.BooleanScalar: ...
+@overload
+def lit(value: Any, dtype: DataType | None = ...) -> NativeScalar: ...
 def lit(value: Any, dtype: DataType | None = None) -> NativeScalar:
     return pa.scalar(value) if dtype is None else pa.scalar(value, dtype)
 
