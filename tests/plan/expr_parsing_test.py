@@ -26,7 +26,7 @@ from narwhals.exceptions import (
     MultiOutputExpressionError,
     ShapeError,
 )
-from tests.plan.utils import assert_expr_ir_equal, re_compile
+from tests.plan.utils import assert_equal_data, assert_expr_ir_equal, re_compile
 
 if TYPE_CHECKING:
     from contextlib import AbstractContextManager
@@ -659,6 +659,29 @@ def test_mode_invalid() -> None:
         TypeError, match=r"keep.+must be one of.+all.+any.+but got 'first'"
     ):
         nwp.col("a").mode(keep="first")  # type: ignore[arg-type]
+
+
+def test_broadcast_len_1_series_invalid() -> None:
+    pytest.importorskip("pyarrow")
+    data = {"a": [1, 2, 3]}
+    values = [4]
+    df = nwp.DataFrame.from_dict(data, backend="pyarrow")
+    ser = nwp.Series.from_iterable(values, name="bad", backend="pyarrow")
+    with pytest.raises(
+        ShapeError,
+        match=re_compile(
+            r"series.+bad.+length.+1.+match.+DataFrame.+height.+3.+broadcasted.+\.first\(\)"
+        ),
+    ):
+        df.with_columns(ser)
+
+    expected_series = {"a": [1, 2, 3], "literal": [4, 4, 4]}
+    # we can only preserve `Series.name` if we got a `lit(Series).first()`, not `lit(Series.first())`
+    expected_series_literal = {"a": [1, 2, 3], "bad": [4, 4, 4]}
+
+    assert_equal_data(df.with_columns(ser.first()), expected_series)
+    assert_equal_data(df.with_columns(ser.last()), expected_series)
+    assert_equal_data(df.with_columns(nwp.lit(ser).first()), expected_series_literal)
 
 
 @pytest.mark.parametrize(

@@ -24,6 +24,7 @@ if TYPE_CHECKING:
         IntoDType,
         NonNestedLiteral,
         NumericLiteral,
+        PythonLiteral,
         SizedMultiIndexSelector,
         TemporalLiteral,
         _1DArray,
@@ -139,6 +140,7 @@ class CompliantSeries(HasVersion, Protocol[NativeSeriesT]):
     def fill_null_with_strategy(
         self, strategy: FillNullStrategy, limit: int | None = None
     ) -> Self: ...
+    def first(self) -> PythonLiteral: ...
     def shift(self, n: int, *, fill_value: NonNestedLiteral = None) -> Self: ...
     def gather(
         self,
@@ -159,6 +161,7 @@ class CompliantSeries(HasVersion, Protocol[NativeSeriesT]):
     def is_not_null(self) -> Self:
         return self.is_null().__invert__()
 
+    def last(self) -> PythonLiteral: ...
     def rolling_mean(
         self, window_size: int, *, min_samples: int, center: bool = False
     ) -> Self: ...

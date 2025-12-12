@@ -49,7 +49,7 @@ from narwhals._utils import (
     not_implemented,
     qualified_type_name,
 )
-from narwhals.exceptions import InvalidOperationError
+from narwhals.exceptions import InvalidOperationError, ShapeError
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, Sequence
@@ -404,8 +404,16 @@ class ArrowExpr(  # type: ignore[misc]
     def to_series(self) -> Series:
         return self._evaluated
 
+    # TODO @dangotbanned: Handle this `Series([...])` edge case higher up
+    # Can occur from a len(1) series passed to `with_columns`, which becomes a literal
     def broadcast(self, length: int, /) -> Series:
         if (actual_len := len(self)) != length:
+            if actual_len == 1:
+                msg = (
+                    f"Series {self.name}, length {actual_len} doesn't match the DataFrame height of {length}.\n\n"
+                    "If you want an expression to be broadcasted, ensure it is a scalar (for instance by adding '.first()')."
+                )
+                raise ShapeError(msg)
             raise shape_error(length, actual_len)
         return self._evaluated
 

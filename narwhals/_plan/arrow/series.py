@@ -30,6 +30,7 @@ if TYPE_CHECKING:
         Into1DArray,
         IntoDType,
         NonNestedLiteral,
+        PythonLiteral,
         _1DArray,
     )
 
@@ -304,6 +305,13 @@ class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayA
     def explode(self, *, empty_as_null: bool = True, keep_nulls: bool = True) -> Self:
         exploder = fn.ExplodeBuilder(empty_as_null=empty_as_null, keep_nulls=keep_nulls)
         return self._with_native(exploder.explode(self.native))
+
+    def first(self) -> PythonLiteral:
+        return self.native[0].as_py() if len(self) else None
+
+    def last(self) -> PythonLiteral:
+        ca = self.native
+        return ca[height - 1].as_py() if (height := len(ca)) else None
 
     @property
     def struct(self) -> SeriesStructNamespace:

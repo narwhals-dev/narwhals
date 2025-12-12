@@ -36,6 +36,7 @@ if TYPE_CHECKING:
         IntoDType,
         NonNestedLiteral,
         NumericLiteral,
+        PythonLiteral,
         SizedMultiIndexSelector,
         TemporalLiteral,
     )
@@ -265,6 +266,12 @@ class Series(Generic[NativeSeriesT_co]):
 
     def count(self) -> int:
         return self._compliant.count()
+
+    def first(self) -> PythonLiteral:
+        return self._compliant.first()
+
+    def last(self) -> PythonLiteral:
+        return self._compliant.last()
 
     def unique(self, *, maintain_order: bool = False) -> Self:
         return type(self)(self._compliant.unique(maintain_order=maintain_order))
