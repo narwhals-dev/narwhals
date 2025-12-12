@@ -280,6 +280,11 @@ class CompliantExpr(HasVersion, Protocol[FrameT_contra, SeriesT_co]):
         self,
     ) -> ExprStructNamespace[FrameT_contra, CompliantExpr[FrameT_contra, SeriesT_co]]: ...
 
+    # NOTE: This test has a case for detecting `Expr` impl, but missing `CompliantExpr` member
+    # `tests/plan/dispatch_test.py::test_dispatch`
+    # TODO @dangotbanned: Update that logic when `dt` namespace is actually implemented
+    # dt: not_implemented = not_implemented()`
+
 
 class EagerExpr(
     EagerBroadcast[SeriesT],
