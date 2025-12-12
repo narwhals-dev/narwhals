@@ -12,12 +12,10 @@ If you've got experience with open source contributions, the following instructi
 - `git remote add origin <your fork goes here>`
 - `uv venv -p 3.12`
 - `. .venv/bin/activate`
-- `uv pip install -U -e . --group local-dev`
+- `uv pip install -U -e . --group local-dev -e test-plugin`
 - To run tests: `pytest`
 - To run all linting checks: `pre-commit run --all-files`
 - To run static typing checks: `make typing`
-
-(Note that following re-install, it may be necessary to additionally re-install a part of the testing functionality using `uv pip install -e ./test-plugin`)
 
 For more detailed and beginner-friendly instructions, see below!
 
@@ -126,15 +124,13 @@ If you want to run PySpark-related tests, you'll need to have Java installed. Re
 
    4. Activate it. On Linux, this is `. .venv/bin/activate`, on Windows `.\.venv\Scripts\activate`.
 
-2. Install Narwhals: `uv pip install -e . --group local-dev`. This will include fast-ish core libraries and dev dependencies.
+2. Install Narwhals: `uv pip install -e . --group local-dev -e test-plugin`. This will include fast-ish core libraries and dev dependencies.
    If you also want to test other libraries like Dask , PySpark, and Modin, you can install them too with
    `uv pip install -e ".[dask, pyspark, modin]" --group local-dev`.
 
 The pre-commit tool is installed as part of the local-dev dependency group. This will automatically format and lint your code before each commit, and it will block the commit if any issues are found.
 
 Static typing is run separately from `pre-commit`, as it's quite slow. Assuming you followed all the instructions above, you can run it with `make typing`.
-
-Finally, if you've had to update the install of Narwhals after changes, it can happen that a part of the testing functionality is no longer available, and you will see `pytest` errors around the `test_plugin`. This can be fixed by separately re-installing the functionality by running `uv pip install -e ./test-plugin`. 
 
 #### Option 2: use python3-venv
 
