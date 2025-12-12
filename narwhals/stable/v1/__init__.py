@@ -23,7 +23,7 @@ from narwhals._utils import (
     validate_strict_and_pass_though,
 )
 from narwhals.dataframe import DataFrame as NwDataFrame, LazyFrame as NwLazyFrame
-from narwhals.exceptions import InvalidIntoExprError
+from narwhals.exceptions import InvalidIntoExprError, NarwhalsUnstableWarning
 from narwhals.expr import Expr as NwExpr
 from narwhals.functions import _new_series_impl, concat, show_versions
 from narwhals.schema import Schema as NwSchema
@@ -112,6 +112,7 @@ if TYPE_CHECKING:
         IntoExpr,
         IntoSchema,
         NonNestedLiteral,
+        PythonLiteral,
         SingleColSelector,
         SingleIndexSelector,
         _1DArray,
@@ -371,8 +372,6 @@ class Series(NwSeries[IntoSeriesT]):
         bin_count: int | None = None,
         include_breakpoint: bool = True,
     ) -> DataFrame[Any]:
-        from narwhals.exceptions import NarwhalsUnstableWarning
-
         msg = (
             "`Series.hist` is being called from the stable API although considered "
             "an unstable feature."
@@ -383,6 +382,14 @@ class Series(NwSeries[IntoSeriesT]):
                 bins=bins, bin_count=bin_count, include_breakpoint=include_breakpoint
             )
         )
+
+    def any_value(self, *, ignore_nulls: bool = False) -> PythonLiteral:
+        msg = (
+            "`Series.any_value` is being called from the stable API although considered "
+            "an unstable feature."
+        )
+        issue_warning(msg, NarwhalsUnstableWarning)
+        return super().any_value(ignore_nulls=ignore_nulls)
 
 
 class Expr(NwExpr):
@@ -464,6 +471,16 @@ class Expr(NwExpr):
                 with_replacement=with_replacement,
                 seed=seed,
             )
+        )
+
+    def any_value(self, *, ignore_nulls: bool = False) -> Self:
+        msg = (
+            "`Expr.any_value` is being called from the stable API although considered "
+            "an unstable feature."
+        )
+        issue_warning(msg, NarwhalsUnstableWarning)
+        return self._append_node(
+            ExprNode(ExprKind.AGGREGATION, "any_value", ignore_nulls=ignore_nulls)
         )
 
 

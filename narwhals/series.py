@@ -27,6 +27,7 @@ from narwhals._utils import (
     no_default,
     qualified_type_name,
     supports_arrow_c_stream,
+    unstable,
 )
 from narwhals.dependencies import is_numpy_array, is_numpy_array_1d, is_numpy_scalar
 from narwhals.dtypes import _validate_dtype, _validate_into_dtype
@@ -2843,6 +2844,28 @@ class Series(Generic[IntoSeriesT]):
         result = series.to_frame().select(expr).get_column(tmp_name)
         result = result.rename(orig_name) if name_is_none else result
         return cast("Self", result)
+
+    @unstable
+    def any_value(self, *, ignore_nulls: bool = False) -> PythonLiteral:
+        """Get a random value from the column.
+
+        Warning:
+            This functionality is considered **unstable** as it diverges from the polars API.
+            It may be changed at any point without it being considered a breaking change.
+
+        Arguments:
+            ignore_nulls: Whether to ignore null values or not.
+                If `True` and there are no not-null elements, then `None` is returned.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> s_native = pa.chunked_array([[1, 2, None]])
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.any_value(ignore_nulls=True)
+            1
+        """
+        return self._compliant_series.any_value(ignore_nulls=ignore_nulls)
 
     @property
     def str(self) -> SeriesStringNamespace[Self]:
