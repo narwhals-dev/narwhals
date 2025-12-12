@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import os
+import sys
 from typing import TYPE_CHECKING
 
 import pytest
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION, POLARS_VERSION, assert_equal_data
+from tests.utils import PANDAS_VERSION, POLARS_VERSION, assert_equal_data, is_windows
 
 if TYPE_CHECKING:
     from tests.utils import Constructor, ConstructorEager
@@ -32,7 +33,13 @@ def test_median_expr(
         if PANDAS_VERSION < (2, 2):
             pytest.skip()
         pytest.importorskip("pyarrow")
-
+    if (
+        any(backend in str(constructor) for backend in ("pandas", "pyarrow"))
+        and sys.version_info < (3, 10)
+        and is_windows
+    ):
+        reason = "The issue only affects old Python versions on Windows."
+        pytest.skip(reason=reason)
     result = (
         nw.from_native(constructor(data))
         .select(nw.col("a").cast(nw.List(nw.Int32())).list.median())
@@ -67,6 +74,13 @@ def test_median_series(
         if PANDAS_VERSION < (2, 2):
             pytest.skip()
         pytest.importorskip("pyarrow")
+    if (
+        any(backend in str(constructor_eager) for backend in ("pandas", "pyarrow"))
+        and sys.version_info < (3, 10)
+        and is_windows
+    ):
+        reason = "The issue only affects old Python versions on Windows."
+        pytest.skip(reason=reason)
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df["a"].cast(nw.List(nw.Int32())).list.median().to_list()
     if any(
