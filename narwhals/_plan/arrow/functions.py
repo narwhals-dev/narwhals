@@ -79,6 +79,7 @@ if TYPE_CHECKING:
         StringScalar,
         StringType,
         StructArray,
+        UInt32Type,
         UnaryFunction,
         UnaryNumeric,
         VectorFunction,
@@ -126,6 +127,7 @@ HAS_ZFILL: Final = BACKEND_VERSION >= (21,)
 """`pyarrow.compute.utf8_zero_fill` added in https://github.com/apache/arrow/pull/46815"""
 
 # NOTE: Common data type instances to share
+UI32: Final = pa.uint32()
 I64: Final = pa.int64()
 F64: Final = pa.float64()
 BOOL: Final = pa.bool_()
@@ -595,11 +597,15 @@ def list_get(native: ArrowAny, index: int) -> ArrowAny:
     return result
 
 
+_list_join = t.cast(
+    "Callable[[ChunkedOrArrayAny, Arrow[StringScalar] | str], ChunkedArray[StringScalar] | pa.StringArray]",
+    pc.binary_join,
+)
+
+
 # TODO @dangotbanned: Raise a feature request for `pc.binary_join(strings, separator, *, options: JoinOptions)`
 # - Default for `binary_join_element_wise` is the only behavior available (here) currently
 # - Working around it is a **slog**
-# TODO @dangotbanned: Major de-uglyify
-# Everything is functional, need to simplifying
 @t.overload
 def list_join(
     native: ChunkedList[StringType],
@@ -634,39 +640,45 @@ def list_join(
     """
     from narwhals._plan.arrow.group_by import AggSpec
 
-    join = t.cast(
-        "Callable[[Any, Any], ChunkedArray[StringScalar] | pa.StringArray]",
-        pc.binary_join,
-    )
-    result = join(native, separator)
+    # (1): Try to return *as-is* from `pc.binary_join`
+    result = _list_join(native, separator)
     if not ignore_nulls or not result.null_count:
-        # nice, no work for us then
         return result
     is_null_sensitive = pc.and_not(result.is_null(), native.is_null())
+    if array(is_null_sensitive, BOOL).true_count == 0:
+        return result
+
+    # (2): Deal with only the bad kids
     lists = native.filter(is_null_sensitive)
-    list_len_1: ChunkedOrArrayAny = eq(list_len(lists), lit(1))  # pyright: ignore[reportAssignmentType]
-    only_single_null = any_(list_len_1).as_py()
-    if only_single_null:
-        # `[None]`
-        lists = when_then(list_len_1, lit([EMPTY], lists.type), lists)
+
+    # (2.1): We know that `[None]` should join as `""`, and that is the only length-1 list we could have after the filter
+    list_len_eq_1 = eq(list_len(lists), lit(1, UI32))
+    has_a_len_1_null = any_(list_len_eq_1).as_py()
+    if has_a_len_1_null:
+        lists = when_then(list_len_eq_1, lit([EMPTY], lists.type), lists)
+
+    # (2.2): Everything left falls into one of these boxes:
+    # - (2.1): `[""]`
+    # - (2.2): `["something", (str | None)*, None]`  <--- We fix this here and hope for the best
+    # - (2.3): `[None, (None)*, None]`
     idx, v = "idx", "values"
     builder = ExplodeBuilder(empty_as_null=False, keep_nulls=False)
     explode_w_idx = builder.explode_with_indices(lists)
     implode_by_idx = AggSpec.implode(v).over(explode_w_idx.drop_null(), [idx])
-    replacements = join(implode_by_idx.column(v), separator)
-    if len(replacements) != len(list_len_1):
-        # `[None, ..., None]`
-        # This is a very unlucky case to hit, because
-        # - we can detect the issue earlier
-        # - but we can't join a table with a list in it
-        # So this is after-the-fact and messy
-        empty = lit(EMPTY, lists.type.value_type)
+    replacements = _list_join(implode_by_idx.column(v), separator)
+
+    # (2.3): The cursed box 😨
+    if len(replacements) != len(lists):
+        # This is a very unlucky case to hit, because we *can* detect the issue earlier
+        # but we *can't* join a table with a list in it. So we deal with the fallout now ...
+        # The end result is identical to (2.1)
+        indices_all = to_table(explode_w_idx.column(idx).unique(), idx)
+        indices_repaired = implode_by_idx.set_column(1, v, replacements)
         replacements = (
-            to_table(explode_w_idx.column(idx).unique(), idx)
-            .join(implode_by_idx.set_column(1, v, replacements), idx)
+            indices_all.join(indices_repaired, idx)
             .sort_by(idx)
             .column(v)
-            .fill_null(empty)
+            .fill_null(lit(EMPTY, lists.type.value_type))
         )
     return replace_with_mask(result, is_null_sensitive, replacements)
 
@@ -1812,6 +1824,8 @@ def hist_zeroed_data(
 def lit(value: Any) -> NativeScalar: ...
 @overload
 def lit(value: Any, dtype: BoolType) -> pa.BooleanScalar: ...
+@overload
+def lit(value: Any, dtype: UInt32Type) -> pa.UInt32Scalar: ...
 @overload
 def lit(value: Any, dtype: DataType | None = ...) -> NativeScalar: ...
 def lit(value: Any, dtype: DataType | None = None) -> NativeScalar:

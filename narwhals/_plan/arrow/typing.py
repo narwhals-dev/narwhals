@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from narwhals._native import NativeDataFrame, NativeSeries
     from narwhals.typing import SizedMultiIndexSelector as _SizedMultiIndexSelector
 
+    UInt32Type: TypeAlias = "Uint32Type"
     StringType: TypeAlias = "_StringType | _LargeStringType"
     IntegerType: TypeAlias = "Int8Type | Int16Type | Int32Type | Int64Type | Uint8Type | Uint16Type | Uint32Type | Uint64Type"
     StringScalar: TypeAlias = "Scalar[StringType]"

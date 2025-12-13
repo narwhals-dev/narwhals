@@ -132,7 +132,7 @@ def test_list_join_scalar(row: SubListStr, separator: str, *, ignore_nulls: bool
                 [None],
                 None,
                 [None],
-                [None, "can", "be", "cheap"],
+                [None, "can", "be", None, "cheap"],
                 [],
                 None,
                 [None],
@@ -141,7 +141,7 @@ def test_list_join_scalar(row: SubListStr, separator: str, *, ignore_nulls: bool
         ),
     ],
     ids=[
-        "full",
+        "all-good",
         "no-nulls-inside",
         "only-empty-lists",
         "full-null",
