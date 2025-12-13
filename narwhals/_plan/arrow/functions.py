@@ -592,6 +592,11 @@ def list_get(native: ArrowAny, index: int) -> ArrowAny:
     return result
 
 
+# TODO @dangotbanned: Raise a feature request for `pc.binary_join(strings, separator, *, options: JoinOptions)`
+# - Default for `binary_join_element_wise` is the only behavior available (here) currently
+# - Working around it is a **slog**
+# TODO @dangotbanned: Major de-uglyify
+# Everything is functional, need to add tests before simplifying
 @t.overload
 def list_join(
     native: ChunkedList[StringType],
@@ -632,7 +637,7 @@ def list_join(
         ...         [None],
         ...         None,
         ...         [],
-        ...         [None, None],  # <-- everything works except this, for now
+        ...         [None, None],
         ...     ]
         ... }
         >>> s = pl.col("s")
@@ -678,20 +683,32 @@ def list_join(
     list_len_1: ChunkedOrArrayAny = eq(list_len(todo_lists), lit(1))  # pyright: ignore[reportAssignmentType]
     only_single_null = any_(list_len_1).as_py()
     if only_single_null:
+        # `[None]`
         todo_lists = when_then(list_len_1, lit([""], todo_lists.type), todo_lists)
     builder = ExplodeBuilder(empty_as_null=False, keep_nulls=False)
-    replacements = join(
-        builder.explode_with_indices(todo_lists)
-        .drop_null()
-        .group_by("idx")
-        .aggregate([("values", "hash_list")])
-        .column(1),
-        separator,
+    pre_drop_null = builder.explode_with_indices(todo_lists)
+    implode_by_idx = (
+        pre_drop_null.drop_null().group_by("idx").aggregate([("values", "hash_list")])
     )
+    replacements = join(implode_by_idx.column(1), separator)
     if len(replacements) != len(list_len_1):
-        # probably do-able, but the edge cases here are getting hairy
-        msg = f"TODO: `ArrowExpr.list.join` w/ `[None, None , ...]` element\n{native!r}"
-        raise NotImplementedError(msg)
+        # `[None, ..., None]`
+        # This is a very unlucky case to hit, because
+        # - we can detect the issue earlier
+        # - but we can't join a table with a list in it
+        # So this is after-the-fact and messy
+        empty = lit("", todo_lists.type.value_type)
+        replacements = (
+            implode_by_idx.select(["idx"])
+            .append_column("values", replacements)
+            .join(
+                to_table(pre_drop_null.column("idx").unique(), "idx"),
+                "idx",
+                join_type="full outer",
+            )
+            .column("values")
+            .fill_null(empty)
+        )
     return replace_with_mask(result, todo_mask, replacements)
 
 
@@ -1865,6 +1882,11 @@ def concat_vertical(
     v_concat: Incomplete = pa.chunked_array
     result: ChunkedArrayAny = v_concat(arrays, dtype)
     return result
+
+
+def to_table(array: ChunkedOrArrayAny, name: str = "") -> pa.Table:
+    """Equivalent to `Series.to_frame`, but with an option to insert a name for the column."""
+    return concat_horizontal((array,), (name,))
 
 
 def _is_into_pyarrow_schema(obj: Mapping[Any, Any]) -> TypeIs[Mapping[str, DataType]]:
