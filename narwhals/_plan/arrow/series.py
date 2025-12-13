@@ -347,9 +347,6 @@ class SeriesStructNamespace(StructNamespace["DataFrame", ArrowSeries]):
             if len(native):
                 table = pa.Table.from_struct_array(native)
             else:
-                # TODO @dangotbanned: Report empty bug upstream, no option to pass a schema to resolve the error
-                # `ValueError: Must pass schema, or at least one RecordBatch`
-                # https://github.com/apache/arrow/blob/b2e8f2505ba3eafe65a78ece6ae87fa7d0c1c133/python/pyarrow/table.pxi#L4943-L4949
                 table = fn.struct_schema(native).empty_table()
         else:  # pragma: no cover
             # NOTE: Too strict, doesn't allow `Array[StructScalar]`
