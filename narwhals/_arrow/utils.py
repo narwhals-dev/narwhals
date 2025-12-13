@@ -503,7 +503,7 @@ def list_agg(
 ) -> ChunkedArrayAny:
     lit_: Incomplete = lit
     aggregation = (
-        ("values", "sum", pc.ScalarAggregateOptions(min_count=0))
+        ("values", func, pc.ScalarAggregateOptions(min_count=0))
         if func == "sum"
         else ("values", func)
     )
