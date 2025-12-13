@@ -7,7 +7,7 @@ import pytest
 from narwhals.exceptions import ShapeError
 from tests.utils import PYARROW_VERSION
 
-if PYARROW_VERSION < (21,):
+if PYARROW_VERSION < (21,):  # pragma: no cover
     pytest.importorskip("numpy")
 import datetime as dt
 
@@ -223,7 +223,7 @@ def test_linear_space_values(
         expected = np.linspace(start, end, num_samples, endpoint=False)
     elif interval == "right":
         expected = np.linspace(start, end, num_samples + 1)[1:]
-    elif interval == "none":
+    else:
         expected = np.linspace(start, end, num_samples + 2)[1:-1]
 
     assert_equal_series(result, expected, "ls")

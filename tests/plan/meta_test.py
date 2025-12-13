@@ -30,7 +30,7 @@ if POLARS_VERSION >= (1, 0):  # https://github.com/pola-rs/polars/pull/16743
                 raises=AssertionError,
             ),
         )
-    else:
+    else:  # pragma: no cover
         marks = ()
     OVER_CASE = pytest.param(
         nwp.col("a").last().over("b", order_by="c"),
