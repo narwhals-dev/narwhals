@@ -42,8 +42,10 @@ from narwhals.dependencies import (
     get_pyspark_sql,
     get_sqlframe,
     is_narwhals_series,
+    is_narwhals_series_bool,
     is_narwhals_series_int,
     is_numpy_array_1d,
+    is_numpy_array_1d_bool,
     is_numpy_array_1d_int,
     is_pandas_like_dataframe,
     is_pandas_like_series,
@@ -121,6 +123,7 @@ if TYPE_CHECKING:
         IntoSeriesT,
         MultiIndexSelector,
         SingleIndexSelector,
+        SizedMultiBoolSelector,
         SizedMultiIndexSelector,
         SizeUnit,
         SupportsNativeNamespace,
@@ -1164,20 +1167,16 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
         >>> import pandas as pd
         >>> import polars as pl
         >>> data = ["x", "y"]
-        >>> s_pd = pd.Series(data, dtype=pd.CategoricalDtype(ordered=True))
-        >>> s_pl = pl.Series(data, dtype=pl.Categorical(ordering="lexical"))
-
-        Let's define a library-agnostic function:
-
-        >>> @nw.narwhalify
-        ... def func(s):
-        ...     return nw.is_ordered_categorical(s)
-
-        Then, we can pass any supported library to `func`:
-
-        >>> func(s_pd)
+        >>>
+        >>> s_pd = nw.from_native(
+        ...     pd.Series(data, dtype=pd.CategoricalDtype(ordered=True)), series_only=True
+        ... )
+        >>> nw.is_ordered_categorical(s_pd)
         True
-        >>> func(s_pl)
+        >>> s_pl = nw.from_native(
+        ...     pl.Series(data, dtype=pl.Categorical()), series_only=True
+        ... )
+        >>> nw.is_ordered_categorical(s_pl)
         False
     """
     from narwhals._interchange.series import InterchangeSeries
@@ -1292,7 +1291,7 @@ def is_sized_multi_index_selector(
     return (
         (
             is_sequence_but_not_str(obj)
-            and ((len(obj) > 0 and isinstance(obj[0], int)) or (len(obj) == 0))
+            and ((len(obj) > 0 and is_single_index_selector(obj[0])) or (len(obj) == 0))
         )
         or is_numpy_array_1d_int(obj)
         or is_narwhals_series_int(obj)
@@ -1315,7 +1314,11 @@ def is_slice_index(obj: Any) -> TypeIs[_SliceIndex]:
     return isinstance(obj, slice) and (
         isinstance(obj.start, int)
         or isinstance(obj.stop, int)
-        or (isinstance(obj.step, int) and obj.start is None and obj.stop is None)
+        or (
+            isinstance(obj.step, (int, NoneType))
+            and obj.start is None
+            and obj.stop is None
+        )
     )
 
 
@@ -1334,6 +1337,17 @@ def is_index_selector(
         is_single_index_selector(obj)
         or is_sized_multi_index_selector(obj)
         or is_slice_index(obj)
+    )
+
+
+def is_boolean_selector(
+    obj: Any,
+) -> TypeIs[SizedMultiBoolSelector[Series[Any] | CompliantSeries[Any]]]:
+    return (
+        (is_sequence_but_not_str(obj) and (len(obj) > 0 and isinstance(obj[0], bool)))
+        or is_numpy_array_1d_bool(obj)
+        or is_narwhals_series_bool(obj)
+        or is_compliant_series_bool(obj)
     )
 
 
@@ -1574,6 +1588,12 @@ def is_compliant_series_int(
     obj: CompliantSeries[NativeSeriesT_co] | Any,
 ) -> TypeIs[CompliantSeries[NativeSeriesT_co]]:
     return is_compliant_series(obj) and obj.dtype.is_integer()
+
+
+def is_compliant_series_bool(
+    obj: CompliantSeries[NativeSeriesT_co] | Any,
+) -> TypeIs[CompliantSeries[NativeSeriesT_co]]:
+    return is_compliant_series(obj) and obj.dtype.is_boolean()
 
 
 def _is_namespace_accessor(obj: _IntoContext) -> TypeIs[NamespaceAccessor[_FullContext]]:
@@ -2125,3 +2145,6 @@ class _NoDefault(Enum):
 # the "no_default" sentinel should typically be used when one of the valid parameter
 # values is None, as otherwise we cannot determine if the caller has set that value.
 no_default = _NoDefault.no_default
+
+# Can be imported from types in Python 3.10
+NoneType = type(None)

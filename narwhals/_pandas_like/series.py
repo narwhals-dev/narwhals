@@ -1152,6 +1152,9 @@ class PandasLikeSeries(EagerSeries[Any]):
     def sqrt(self) -> Self:
         return self._with_native(self.native.pow(0.5))
 
+    def any_value(self, *, ignore_nulls: bool) -> PythonLiteral:
+        return self.drop_nulls().first() if ignore_nulls else self.first()
+
     @property
     def str(self) -> PandasLikeSeriesStringNamespace:
         return PandasLikeSeriesStringNamespace(self)
