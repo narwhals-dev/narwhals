@@ -984,9 +984,15 @@ class ArrowListNamespace(
 
     def join(self, node: FExpr[lists.Join], frame: Frame, name: str) -> Expr | Scalar:
         separator, ignore_nulls = node.function.separator, node.function.ignore_nulls
-        return self.unary(fn.list_join, separator, ignore_nulls=ignore_nulls)(
-            node, frame, name
-        )
+        previous = node.input[0].dispatch(self.compliant, frame, name)
+        result: ChunkedOrScalarAny
+        if isinstance(previous, ArrowExpr):
+            result = fn.list_join(previous.native, separator, ignore_nulls=ignore_nulls)
+        else:
+            result = fn.list_join_scalar(
+                previous.native, separator, ignore_nulls=ignore_nulls
+            )
+        return self.with_native(result, name)
 
 
 class ArrowStringNamespace(

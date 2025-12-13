@@ -616,21 +616,17 @@ def list_join(
 ) -> pa.StringArray: ...
 @t.overload
 def list_join(
-    native: ListScalar[StringType],
-    separator: Arrow[StringScalar] | str,
-    *,
-    ignore_nulls: bool = ...,
-) -> pa.StringScalar: ...
-@t.overload
-def list_join(
-    native: ChunkedOrScalar[ListScalar[StringType]],
+    native: ChunkedOrArray[ListScalar[StringType]],
     separator: str,
     *,
     ignore_nulls: bool = ...,
-) -> ChunkedOrScalar[StringScalar]: ...
+) -> ChunkedOrArray[StringScalar]: ...
 def list_join(
-    native: ArrowAny, separator: Arrow[StringScalar] | str, *, ignore_nulls: bool = False
-) -> ArrowAny:
+    native: ChunkedOrArrayAny,
+    separator: Arrow[StringScalar] | str,
+    *,
+    ignore_nulls: bool = True,
+) -> ChunkedOrArrayAny:
     """Join all string items in a sublist and place a separator between them.
 
     Each list of values in the first input is joined using each second input as separator.
@@ -642,17 +638,9 @@ def list_join(
         "Callable[[Any, Any], ChunkedArray[StringScalar] | pa.StringArray]",
         pc.binary_join,
     )
-    if not ignore_nulls:
-        return pc.binary_join(native, separator)
-    # NOTE: `polars` default is `True`
-    if isinstance(native, pa.Scalar):
-        to_join = (
-            implode(_list_explode(native).drop_null()) if native.is_valid else native
-        )
-        return pc.binary_join(to_join, separator)
     result = join(native, separator)
-    if not result.null_count:
-        # if we got here and there were no nulls, then we're done
+    if not ignore_nulls or not result.null_count:
+        # nice, no work for us then
         return result
     is_null_sensitive = pc.and_not(result.is_null(), native.is_null())
     lists = native.filter(is_null_sensitive)
@@ -681,6 +669,23 @@ def list_join(
             .fill_null(empty)
         )
     return replace_with_mask(result, is_null_sensitive, replacements)
+
+
+def list_join_scalar(
+    native: ListScalar[StringType],
+    separator: StringScalar | str,
+    *,
+    ignore_nulls: bool = True,
+) -> StringScalar:
+    """Join all string items in a `ListScalar` and place a separator between them.
+
+    Note:
+        Consider using `list_join` or `str_join` if you don't already have `native` in this shape.
+    """
+    if ignore_nulls and native.is_valid:
+        native = implode(_list_explode(native).drop_null())
+    result: StringScalar = pc.call_function("binary_join", [native, separator])
+    return result
 
 
 @overload
@@ -780,7 +785,7 @@ def str_join(
         return native
     if ignore_nulls and native.null_count:
         native = native.drop_null()
-    return list_join(implode(native), separator)
+    return list_join_scalar(implode(native), separator, ignore_nulls=False)
 
 
 def str_len_chars(native: ChunkedOrScalarAny) -> ChunkedOrScalarAny:
@@ -863,6 +868,10 @@ def _str_split(
 
 @t.overload
 def str_split(
+    native: ChunkedArrayAny, by: str, *, literal: bool = ...
+) -> ChunkedArray[ListScalar]: ...
+@t.overload
+def str_split(
     native: ChunkedOrScalarAny, by: str, *, literal: bool = ...
 ) -> ChunkedOrScalar[ListScalar]: ...
 @t.overload
@@ -873,6 +882,15 @@ def str_split(native: ArrowAny, by: str, *, literal: bool = True) -> Arrow[ListS
     return _str_split(native, by, literal=literal)
 
 
+@t.overload
+def str_splitn(
+    native: ChunkedArrayAny,
+    by: str,
+    n: int,
+    *,
+    literal: bool = ...,
+    as_struct: bool = ...,
+) -> ChunkedArray[ListScalar]: ...
 @t.overload
 def str_splitn(
     native: ChunkedOrScalarAny,
@@ -961,7 +979,7 @@ def str_replace_vector(
         list_split_by = str_split(match, pattern, literal=literal)
     else:
         list_split_by = str_splitn(match, pattern, n + 1, literal=literal)
-    replaced = list_join(list_split_by, match_replacements)
+    replaced = list_join(list_split_by, match_replacements, ignore_nulls=False)
     if all_(has_match, ignore_nulls=False).as_py():
         return chunked_array(replaced)
     return replace_with_mask(native, has_match, array(replaced))
