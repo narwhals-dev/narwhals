@@ -130,6 +130,9 @@ I64: Final = pa.int64()
 F64: Final = pa.float64()
 BOOL: Final = pa.bool_()
 
+EMPTY: Final = ""
+"""The empty string."""
+
 
 class MinMax(ir.AggExpr):
     """Returns a `Struct({'min': ..., 'max': ...})`.
@@ -657,7 +660,7 @@ def list_join(
     only_single_null = any_(list_len_1).as_py()
     if only_single_null:
         # `[None]`
-        lists = when_then(list_len_1, lit([""], lists.type), lists)
+        lists = when_then(list_len_1, lit([EMPTY], lists.type), lists)
     idx, v = "idx", "values"
     builder = ExplodeBuilder(empty_as_null=False, keep_nulls=False)
     explode_w_idx = builder.explode_with_indices(lists)
@@ -669,10 +672,9 @@ def list_join(
         # - we can detect the issue earlier
         # - but we can't join a table with a list in it
         # So this is after-the-fact and messy
-        empty = lit("", lists.type.value_type)
+        empty = lit(EMPTY, lists.type.value_type)
         replacements = (
-            implode_by_idx.select([idx])
-            .append_column(v, replacements)
+            implode_by_idx.set_column(1, v, replacements)
             .join(
                 to_table(explode_w_idx.column(idx).unique(), idx),
                 idx,
