@@ -2,8 +2,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from ibis import cases, literal
+
 from narwhals._compliant import LazyExprNamespace
 from narwhals._compliant.any_namespace import ListNamespace
+from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
     import ibis.expr.types as ir
@@ -27,3 +30,26 @@ class IbisExprListNamespace(LazyExprNamespace["IbisExpr"], ListNamespace["IbisEx
             return expr[index]
 
         return self.compliant._with_callable(_get)
+
+    def min(self) -> IbisExpr:
+        return self.compliant._with_callable(lambda expr: expr.mins())
+
+    def max(self) -> IbisExpr:
+        return self.compliant._with_callable(lambda expr: expr.maxs())
+
+    def mean(self) -> IbisExpr:
+        return self.compliant._with_callable(lambda expr: expr.means())
+
+    def sum(self) -> IbisExpr:
+        def func(expr: ir.ArrayColumn) -> ir.Value:
+            expr_no_nulls = expr.filter(lambda x: x.notnull())
+            len = expr_no_nulls.length()
+            return cases(
+                (len.isnull(), literal(None)),
+                (len == literal(0), literal(0)),
+                else_=expr.sums(),
+            )
+
+        return self.compliant._with_callable(func)
+
+    median = not_implemented()
