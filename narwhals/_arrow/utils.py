@@ -501,28 +501,32 @@ def list_agg(
     array: ChunkedArrayAny,
     func: Literal["min", "max", "mean", "approximate_median", "sum"],
 ) -> ChunkedArrayAny:
+    lit_: Incomplete = lit
+    aggregation = (
+        ("values", "sum", pc.ScalarAggregateOptions(min_count=0))
+        if func == "sum"
+        else ("values", func)
+    )
     agg = pa.array(
         pa.Table.from_arrays(
             [pc.list_flatten(array), pc.list_parent_indices(array)],
             names=["values", "offsets"],
         )
         .group_by("offsets")
-        .aggregate([("values", func)])
+        .aggregate([aggregation])
         .sort_by("offsets")
         .column(f"values_{func}")
     )
     non_empty_mask = pa.array(pc.not_equal(pc.list_value_length(array), lit(0)))
     if func == "sum":
-        agg = agg.fill_null(lit(0))  # pyright:ignore[reportArgumentType]
+        # Make sure sum of empty list is 0.
         base_array = pc.if_else(non_empty_mask.is_null(), None, 0)
     else:
-        base_array = pc.if_else(
-            non_empty_mask, 0, None
-        )  # zero is just a placeholder which is replaced below
+        base_array = pa.repeat(lit_(None, type=agg.type), len(array))
     return pa.chunked_array(
         [
             pc.replace_with_mask(
-                base_array.cast(agg.type),
+                base_array,
                 non_empty_mask.fill_null(False),  # type: ignore[arg-type]
                 agg,
             )
