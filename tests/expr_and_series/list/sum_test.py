@@ -11,14 +11,10 @@ if TYPE_CHECKING:
     from tests.utils import Constructor, ConstructorEager
 
 data = {"a": [[3, None, 2, 2, 4, None], [-1], None, [None, None, None], []]}
+expected = [11, -1, None, 0, 0]
 
 
-@pytest.mark.parametrize(
-    ("index", "expected"), [(0, 11), (1, -1), (2, None), (3, 0), (4, 0)]
-)
-def test_sum_expr(
-    request: pytest.FixtureRequest, constructor: Constructor, index: int, expected: int
-) -> None:
+def test_sum_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if any(backend in str(constructor) for backend in ("dask", "cudf", "sqlframe")):
         # sqlframe issue: https://github.com/eakmanrq/sqlframe/issues/548
         request.applymarker(pytest.mark.xfail)
@@ -29,24 +25,14 @@ def test_sum_expr(
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 2):
         reason = "version too old, duckdb 1.2 required for LambdaExpression."
         pytest.skip(reason=reason)
-    result = (
-        nw.from_native(constructor(data))
-        .select(nw.col("a").cast(nw.List(nw.Int32())).list.sum())
-        .lazy()
-        .collect()["a"]
-        .to_list()
+    result = nw.from_native(constructor(data)).select(
+        nw.col("a").cast(nw.List(nw.Int32())).list.sum()
     )
-    assert_equal_data({"a": [result[index]]}, {"a": [expected]})
+    assert_equal_data(result, {"a": expected})
 
 
-@pytest.mark.parametrize(
-    ("index", "expected"), [(0, 11), (1, -1), (2, None), (3, 0), (4, 0)]
-)
 def test_sum_series(
-    request: pytest.FixtureRequest,
-    constructor_eager: ConstructorEager,
-    index: int,
-    expected: int,
+    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
     if any(backend in str(constructor_eager) for backend in ("cudf",)):
         request.applymarker(pytest.mark.xfail)
@@ -55,5 +41,5 @@ def test_sum_series(
             pytest.skip()
         pytest.importorskip("pyarrow")
     df = nw.from_native(constructor_eager(data), eager_only=True)
-    result = df["a"].cast(nw.List(nw.Int32())).list.sum().to_list()
-    assert_equal_data({"a": [result[index]]}, {"a": [expected]})
+    result = df["a"].cast(nw.List(nw.Int32())).list.sum()
+    assert_equal_data({"a": result}, {"a": expected})
