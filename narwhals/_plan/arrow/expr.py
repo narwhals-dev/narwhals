@@ -982,6 +982,8 @@ class ArrowListNamespace(
             raise NotImplementedError
         return self.with_native(fn.list_contains(prev.native, item.native), name)
 
+    join = not_implemented()
+
 
 class ArrowStringNamespace(
     ExprStringNamespace["Frame", "Expr | Scalar"], ArrowAccessor[ExprOrScalarT]

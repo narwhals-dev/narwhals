@@ -25,6 +25,12 @@ class Unique(ListFunction): ...
 class Get(ListFunction):
     __slots__ = ("index",)
     index: int
+class Join(ListFunction):
+    """Join all string items in a sublist and place a separator between them."""
+
+    __slots__ = ("ignore_nulls", "separator")
+    separator: str
+    ignore_nulls: bool
 # fmt: on
 class Contains(ListFunction):
     """N-ary (expr, item)."""
@@ -39,6 +45,7 @@ class IRListNamespace(IRNamespace):
     unique: ClassVar = Unique
     contains: ClassVar = Contains
     get: ClassVar = Get
+    join: ClassVar = Join
 
 
 class ExprListNamespace(ExprNamespace[IRListNamespace]):
@@ -65,3 +72,9 @@ class ExprListNamespace(ExprNamespace[IRListNamespace]):
         if not item_ir.is_scalar:
             raise function_arg_non_scalar_error(contains, "item", item_ir)
         return self._expr._from_ir(contains.to_function_expr(self._expr._ir, item_ir))
+
+    def join(self, separator: str, *, ignore_nulls: bool = True) -> Expr:
+        ensure_type(separator, str, param_name="separator")
+        return self._with_unary(
+            self._ir.join(separator=separator, ignore_nulls=ignore_nulls)
+        )

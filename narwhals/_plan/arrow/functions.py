@@ -596,7 +596,7 @@ def list_get(native: ArrowAny, index: int) -> ArrowAny:
 # - Default for `binary_join_element_wise` is the only behavior available (here) currently
 # - Working around it is a **slog**
 # TODO @dangotbanned: Major de-uglyify
-# Everything is functional, need to add tests before simplifying
+# Everything is functional, need to finish adding tests before simplifying
 @t.overload
 def list_join(
     native: ChunkedList[StringType],
@@ -625,42 +625,6 @@ def list_join(
 
     Each list of values in the first input is joined using each second input as separator.
     If any input list is null or contains a null, the corresponding output will be null.
-
-    Edge cases:
-
-        >>> import polars as pl
-        >>> data = {
-        ...     "s": [
-        ...         ["a", "b", "c"],
-        ...         ["x", "y"],
-        ...         ["1", None, "3"],
-        ...         [None],
-        ...         None,
-        ...         [],
-        ...         [None, None],
-        ...     ]
-        ... }
-        >>> s = pl.col("s")
-        >>> result = pl.DataFrame(data).select(
-        ...     s,
-        ...     ignore_nulls=s.list.join("-", ignore_nulls=True),
-        ...     propagate_nulls=s.list.join("-", ignore_nulls=False),
-        ... )
-        >>> result
-        shape: (7, 3)
-        ┌──────────────────┬──────────────┬─────────────────┐
-        │ s                ┆ ignore_nulls ┆ propagate_nulls │
-        │ ---              ┆ ---          ┆ ---             │
-        │ list[str]        ┆ str          ┆ str             │
-        ╞══════════════════╪══════════════╪═════════════════╡
-        │ ["a", "b", "c"]  ┆ a-b-c        ┆ a-b-c           │
-        │ ["x", "y"]       ┆ x-y          ┆ x-y             │
-        │ ["1", null, "3"] ┆ 1-3          ┆ null            │
-        │ [null]           ┆              ┆ null            │
-        │ null             ┆ null         ┆ null            │
-        │ []               ┆              ┆                 │
-        │ [null, null]     ┆              ┆ null            │
-        └──────────────────┴──────────────┴─────────────────┘
     """
     join = t.cast(
         "Callable[[Any, Any], ChunkedArray[StringScalar] | pa.StringArray]",

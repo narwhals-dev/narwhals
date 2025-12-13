@@ -35,6 +35,9 @@ class ExprListNamespace(Protocol[FrameT_contra, ExprT_co]):
     def unique(
         self, node: FExpr[lists.Unique], frame: FrameT_contra, name: str
     ) -> ExprT_co: ...
+    def join(
+        self, node: FExpr[lists.Join], frame: FrameT_contra, name: str
+    ) -> ExprT_co: ...
 
 
 class ExprStringNamespace(Protocol[FrameT_contra, ExprT_co]):
