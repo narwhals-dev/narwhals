@@ -28,6 +28,7 @@ nav:
   - Resources: resources.md
   - API Completeness:
     - api-completeness/index.md
+    - Supported Top-level functions: api-completeness/functions.md
     - Supported DataFrame methods: api-completeness/dataframe.md
     - Supported LazyFrame methods: api-completeness/lazyframe.md
     - Supported Expr methods: api-completeness/expr.md
@@ -147,8 +148,10 @@ markdown_extensions:
 extra_javascript:
   - javascripts/katex.js
   - javascripts/extra.js
+  - javascripts/table.js
   - https://unpkg.com/katex@0/dist/katex.min.js
   - https://unpkg.com/katex@0/dist/contrib/auto-render.min.js
+  - https://unpkg.com/tablesort@5.3.0/dist/tablesort.min.js
 
 
 extra_css:
