@@ -31,29 +31,14 @@ def data() -> Data:
 
 a = nwp.col("a")
 
-# TODO @dangotbanned: Ensure the final branch works when replacements are mixed
-XFAIL_INCORRECT_RESULTS = pytest.mark.xfail(
-    reason="Returned out-of-order post-join", raises=AssertionError
-)
-
 
 @pytest.mark.parametrize(
     ("separator", "ignore_nulls", "expected"),
     [
         ("-", False, ["a-b-c", None, None, "x-y", None, None, None, "", None]),
-        pytest.param(
-            "-",
-            True,
-            ["a-b-c", "", "1-2-3", "x-y", "1-3", "", None, "", ""],
-            marks=XFAIL_INCORRECT_RESULTS,
-        ),
+        ("-", True, ["a-b-c", "", "1-2-3", "x-y", "1-3", "", None, "", ""]),
         ("", False, ["abc", None, None, "xy", None, None, None, "", None]),
-        pytest.param(
-            "",
-            True,
-            ["abc", "", "123", "xy", "13", "", None, "", ""],
-            marks=XFAIL_INCORRECT_RESULTS,
-        ),
+        ("", True, ["abc", "", "123", "xy", "13", "", None, "", ""]),
     ],
     ids=[
         "hyphen-propagate-nulls",

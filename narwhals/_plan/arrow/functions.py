@@ -677,6 +677,7 @@ def list_join(
                 "idx",
                 join_type="full outer",
             )
+            .sort_by("idx")
             .column("values")
             .fill_null(empty)
         )
