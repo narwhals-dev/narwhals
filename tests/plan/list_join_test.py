@@ -9,6 +9,7 @@ import narwhals._plan as nwp
 from tests.plan.utils import assert_equal_data, dataframe
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
     from typing import Final, TypeVar
 
     from typing_extensions import TypeAlias
@@ -91,3 +92,71 @@ def test_list_join_scalar(row: SubListStr, separator: str, *, ignore_nulls: bool
         expected = separator.join(el for el in row if el is not None)
 
     assert_equal_data(result, {"a": [expected]})
+
+
+@pytest.mark.parametrize(
+    ("rows", "expected"),
+    [
+        ([R1, R4, ["all", "okay"]], ["a b c", "x y", "all okay"]),
+        (
+            [
+                None,
+                ["no", "nulls", "inside"],
+                None,
+                None,
+                ["only", "on", "validity"],
+                None,
+            ],
+            [None, "no nulls inside", None, None, "only on validity", None],
+        ),
+        (
+            [["just", "empty", "lists"], [], [], ["nothing", "fancy"], []],
+            ["just empty lists", "", "", "nothing fancy", ""],
+        ),
+        ([None, None, None], [None, None, None]),
+        (
+            [
+                ["every", None, "null"],
+                None,
+                [None, "is", "lonely"],
+                ["not", "even"],
+                ["a", "single", None, "friend"],
+                [None],
+            ],
+            ["every null", None, "is lonely", "not even", "a single friend", ""],
+        ),
+        (
+            [
+                ["even", None, "this"],
+                [],
+                [None],
+                None,
+                [None],
+                [None, "can", "be", "cheap"],
+                [],
+                None,
+                [None],
+            ],
+            ["even this", "", "", None, "", "can be cheap", "", None, ""],
+        ),
+    ],
+    ids=[
+        "full",
+        "no-nulls-inside",
+        "only-empty-lists",
+        "full-null",
+        "max-1-null",
+        "mixed-bag",
+    ],
+)
+def test_list_join_ignore_nulls_fastpaths(
+    rows: Sequence[SubListStr], expected: list[str | None]
+) -> None:
+    # When we don't need to handle *every* edge case at the same time ...
+    # ... things can be simpler
+    separator = " "
+    data = {"a": list(rows)}
+    df = dataframe(data).with_columns(a.cast(nw.List(nw.String)))
+    expr = a.list.join(separator)
+    result = df.select(expr)
+    assert_equal_data(result, {"a": expected})
