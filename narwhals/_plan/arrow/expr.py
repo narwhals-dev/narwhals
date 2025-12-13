@@ -982,7 +982,11 @@ class ArrowListNamespace(
             raise NotImplementedError
         return self.with_native(fn.list_contains(prev.native, item.native), name)
 
-    join = not_implemented()
+    def join(self, node: FExpr[lists.Join], frame: Frame, name: str) -> Expr | Scalar:
+        separator, ignore_nulls = node.function.separator, node.function.ignore_nulls
+        return self.unary(fn.list_join, separator, ignore_nulls=ignore_nulls)(
+            node, frame, name
+        )
 
 
 class ArrowStringNamespace(

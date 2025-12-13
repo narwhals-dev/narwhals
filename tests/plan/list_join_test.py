@@ -31,18 +31,29 @@ def data() -> Data:
 
 a = nwp.col("a")
 
-
-@pytest.mark.xfail(
-    reason="TODO: `list.join` is not yet implemented for 'ArrowExpr'",
-    raises=NotImplementedError,
+# TODO @dangotbanned: Ensure the final branch works when replacements are mixed
+XFAIL_INCORRECT_RESULTS = pytest.mark.xfail(
+    reason="Returned out-of-order post-join", raises=AssertionError
 )
+
+
 @pytest.mark.parametrize(
     ("separator", "ignore_nulls", "expected"),
     [
         ("-", False, ["a-b-c", None, None, "x-y", None, None, None, "", None]),
-        ("-", True, ["a-b-c", "", "1-2-3", "x-y", "1-3", "", None, "", ""]),
+        pytest.param(
+            "-",
+            True,
+            ["a-b-c", "", "1-2-3", "x-y", "1-3", "", None, "", ""],
+            marks=XFAIL_INCORRECT_RESULTS,
+        ),
         ("", False, ["abc", None, None, "xy", None, None, None, "", None]),
-        ("", True, ["abc", "", "123", "xy", "13", "", None, "", ""]),
+        pytest.param(
+            "",
+            True,
+            ["abc", "", "123", "xy", "13", "", None, "", ""],
+            marks=XFAIL_INCORRECT_RESULTS,
+        ),
     ],
     ids=[
         "hyphen-propagate-nulls",
@@ -53,7 +64,7 @@ a = nwp.col("a")
 )
 def test_list_join(
     data: Data, separator: str, *, ignore_nulls: bool, expected: list[str | None]
-) -> None:  # pragma: no cover
+) -> None:
     df = dataframe(data).with_columns(a.cast(nw.List(nw.String)))
     expr = a.list.join(separator, ignore_nulls=ignore_nulls)
     result = df.select(expr)

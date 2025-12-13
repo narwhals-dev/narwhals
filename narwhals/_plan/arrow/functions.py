@@ -618,6 +618,13 @@ def list_join(
     *,
     ignore_nulls: bool = ...,
 ) -> pa.StringScalar: ...
+@t.overload
+def list_join(
+    native: ChunkedOrScalar[ListScalar[StringType]],
+    separator: str,
+    *,
+    ignore_nulls: bool = ...,
+) -> ChunkedOrScalar[StringScalar]: ...
 def list_join(
     native: ArrowAny, separator: Arrow[StringScalar] | str, *, ignore_nulls: bool = False
 ) -> ArrowAny:
