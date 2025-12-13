@@ -596,7 +596,7 @@ def list_get(native: ArrowAny, index: int) -> ArrowAny:
 # - Default for `binary_join_element_wise` is the only behavior available (here) currently
 # - Working around it is a **slog**
 # TODO @dangotbanned: Major de-uglyify
-# Everything is functional, need to finish adding tests before simplifying
+# Everything is functional, need to simplifying
 @t.overload
 def list_join(
     native: ChunkedList[StringType],
@@ -633,6 +633,8 @@ def list_join(
     Each list of values in the first input is joined using each second input as separator.
     If any input list is null or contains a null, the corresponding output will be null.
     """
+    from narwhals._plan.arrow.group_by import AggSpec
+
     join = t.cast(
         "Callable[[Any, Any], ChunkedArray[StringScalar] | pa.StringArray]",
         pc.binary_join,
@@ -649,39 +651,38 @@ def list_join(
     if not result.null_count:
         # if we got here and there were no nulls, then we're done
         return result
-    todo_mask = pc.and_not(result.is_null(), native.is_null())
-    todo_lists = native.filter(todo_mask)
-    list_len_1: ChunkedOrArrayAny = eq(list_len(todo_lists), lit(1))  # pyright: ignore[reportAssignmentType]
+    is_null_sensitive = pc.and_not(result.is_null(), native.is_null())
+    lists = native.filter(is_null_sensitive)
+    list_len_1: ChunkedOrArrayAny = eq(list_len(lists), lit(1))  # pyright: ignore[reportAssignmentType]
     only_single_null = any_(list_len_1).as_py()
     if only_single_null:
         # `[None]`
-        todo_lists = when_then(list_len_1, lit([""], todo_lists.type), todo_lists)
+        lists = when_then(list_len_1, lit([""], lists.type), lists)
+    idx, v = "idx", "values"
     builder = ExplodeBuilder(empty_as_null=False, keep_nulls=False)
-    pre_drop_null = builder.explode_with_indices(todo_lists)
-    implode_by_idx = (
-        pre_drop_null.drop_null().group_by("idx").aggregate([("values", "hash_list")])
-    )
-    replacements = join(implode_by_idx.column(1), separator)
+    explode_w_idx = builder.explode_with_indices(lists)
+    implode_by_idx = AggSpec.implode(v).over(explode_w_idx.drop_null(), [idx])
+    replacements = join(implode_by_idx.column(v), separator)
     if len(replacements) != len(list_len_1):
         # `[None, ..., None]`
         # This is a very unlucky case to hit, because
         # - we can detect the issue earlier
         # - but we can't join a table with a list in it
         # So this is after-the-fact and messy
-        empty = lit("", todo_lists.type.value_type)
+        empty = lit("", lists.type.value_type)
         replacements = (
-            implode_by_idx.select(["idx"])
-            .append_column("values", replacements)
+            implode_by_idx.select([idx])
+            .append_column(v, replacements)
             .join(
-                to_table(pre_drop_null.column("idx").unique(), "idx"),
-                "idx",
+                to_table(explode_w_idx.column(idx).unique(), idx),
+                idx,
                 join_type="full outer",
             )
-            .sort_by("idx")
-            .column("values")
+            .sort_by(idx)
+            .column(v)
             .fill_null(empty)
         )
-    return replace_with_mask(result, todo_mask, replacements)
+    return replace_with_mask(result, is_null_sensitive, replacements)
 
 
 @overload

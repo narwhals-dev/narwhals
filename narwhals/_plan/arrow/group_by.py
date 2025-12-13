@@ -149,6 +149,12 @@ class AggSpec:
     def unique(cls, name: str) -> Self:
         return cls._from_function(ir.functions.Unique, name)
 
+    @classmethod
+    def implode(cls, name: str) -> Self:
+        # TODO @dangotbanned: Replace with `agg.Implode` (via `_from_agg`) once both have been dded
+        # https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/crates/polars-plan/src/dsl/expr/mod.rs#L44
+        return cls(name, SUPPORTED_IR[ir.Column], None, name)
+
     def over(self, native: pa.Table, keys: Iterable[acero.Field]) -> pa.Table:
         """Sugar for `native.group_by(keys).aggregate([self])`.
 
