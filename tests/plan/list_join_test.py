@@ -9,24 +9,31 @@ import narwhals._plan as nwp
 from tests.plan.utils import assert_equal_data, dataframe
 
 if TYPE_CHECKING:
+    from typing import Final, TypeVar
+
+    from typing_extensions import TypeAlias
+
     from tests.conftest import Data
+
+    T = TypeVar("T")
+    SubList: TypeAlias = list[T] | list[T | None] | list[None] | None
+    SubListStr: TypeAlias = SubList[str]
+
+
+R1: Final[SubListStr] = ["a", "b", "c"]
+R2: Final[SubListStr] = [None, None, None]
+R3: Final[SubListStr] = [None, None, "1", "2", None, "3", None]
+R4: Final[SubListStr] = ["x", "y"]
+R5: Final[SubListStr] = ["1", None, "3"]
+R6: Final[SubListStr] = [None]
+R7: Final[SubListStr] = None
+R8: Final[SubListStr] = []
+R9: Final[SubListStr] = [None, None]
 
 
 @pytest.fixture(scope="module")
 def data() -> Data:
-    return {
-        "a": [
-            ["a", "b", "c"],
-            [None, None, None],
-            [None, None, "1", "2", None, "3", None],
-            ["x", "y"],
-            ["1", None, "3"],
-            [None],
-            None,
-            [],
-            [None, None],
-        ]
-    }
+    return {"a": [R1, R2, R3, R4, R5, R6, R7, R8, R9]}
 
 
 a = nwp.col("a")
@@ -41,10 +48,10 @@ a = nwp.col("a")
         ("", True, ["abc", "", "123", "xy", "13", "", None, "", ""]),
     ],
     ids=[
-        "hyphen-propagate-nulls",
-        "hyphen-ignore-nulls",
-        "empty-propagate-nulls",
-        "empty-ignore-nulls",
+        "hyphen-propagate_nulls",
+        "hyphen-ignore_nulls",
+        "empty-propagate_nulls",
+        "empty-ignore_nulls",
     ],
 )
 def test_list_join(
@@ -56,7 +63,31 @@ def test_list_join(
     assert_equal_data(result, {"a": expected})
 
 
-@pytest.mark.xfail
-def test_list_join_scalar() -> None:  # pragma: no cover
-    msg = "TODO: Add non-duplicated tests for this"
-    raise NotImplementedError(msg)
+@pytest.mark.parametrize(
+    "ignore_nulls", [True, False], ids=["ignore_nulls", "propagate_nulls"]
+)
+@pytest.mark.parametrize("separator", ["?", "", " "], ids=["question", "empty", "space"])
+@pytest.mark.parametrize(
+    "row", [R1, R2, R3, R4, R5, R6, R7, R8, R9], ids=[f"row-{i}" for i in range(1, 10)]
+)
+def test_list_join_scalar(row: SubListStr, separator: str, *, ignore_nulls: bool) -> None:
+    data = {"a": [row]}
+    df = dataframe(data).select(a.cast(nw.List(nw.String)))
+    expr = a.first().list.join(separator, ignore_nulls=ignore_nulls)
+    result = df.select(expr)
+    expected: str | None
+    if row is None:
+        expected = None
+    elif row == []:
+        expected = ""
+    elif any(el is None for el in row):
+        if not ignore_nulls:
+            expected = None
+        elif all(el is None for el in row):
+            expected = ""
+        else:
+            expected = separator.join(el for el in row if el is not None)
+    else:
+        expected = separator.join(el for el in row if el is not None)
+
+    assert_equal_data(result, {"a": [expected]})
