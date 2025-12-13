@@ -198,6 +198,10 @@ class PolarsNamespace:
             version=self._version,
         )
 
+    def concat_list(self, *exprs: PolarsExpr) -> PolarsExpr:
+        pl_exprs = [expr._native_expr for expr in exprs]
+        return self._expr(pl.concat_list(pl_exprs), version=self._version)
+
     def when_then(
         self, when: PolarsExpr, then: PolarsExpr, otherwise: PolarsExpr | None = None
     ) -> PolarsExpr:
