@@ -1,41 +1,75 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Protocol, overload
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, Protocol, TypeVar, overload
 
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._arrow.utils import narwhals_to_native_dtype
-from narwhals._plan import expressions as ir
-from narwhals._plan._guards import is_function_expr, is_seq_column
+from narwhals._plan import common, expressions as ir
+from narwhals._plan._guards import (
+    is_function_expr,
+    is_iterable_reject,
+    is_python_literal,
+    is_seq_column,
+)
 from narwhals._plan.arrow import functions as fn
 from narwhals._plan.arrow.series import ArrowSeries as Series
 from narwhals._plan.arrow.typing import ChunkedOrScalarAny, NativeScalar, StoresNativeT_co
 from narwhals._plan.common import temp
+from narwhals._plan.compliant.accessors import (
+    ExprCatNamespace,
+    ExprListNamespace,
+    ExprStringNamespace,
+    ExprStructNamespace,
+)
 from narwhals._plan.compliant.column import ExprDispatch
 from narwhals._plan.compliant.expr import EagerExpr
 from narwhals._plan.compliant.scalar import EagerScalar
 from narwhals._plan.compliant.typing import namespace
+from narwhals._plan.exceptions import shape_error
+from narwhals._plan.expressions import FunctionExpr as FExpr, functions as F
 from narwhals._plan.expressions.boolean import (
+    IsDuplicated,
     IsFirstDistinct,
     IsInExpr,
     IsInSeq,
     IsInSeries,
     IsLastDistinct,
+    IsNotNan,
+    IsNotNull,
+    IsUnique,
 )
 from narwhals._plan.expressions.functions import NullCount
-from narwhals._utils import Implementation, Version, _StoresNative, not_implemented
+from narwhals._utils import (
+    Implementation,
+    Version,
+    _StoresNative,
+    not_implemented,
+    qualified_type_name,
+)
 from narwhals.exceptions import InvalidOperationError, ShapeError
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Sequence
+    from collections.abc import Callable, Mapping, Sequence
 
     from typing_extensions import Self, TypeAlias
 
-    from narwhals._arrow.typing import Incomplete
     from narwhals._plan.arrow.dataframe import ArrowDataFrame as Frame
     from narwhals._plan.arrow.namespace import ArrowNamespace
-    from narwhals._plan.arrow.typing import ChunkedArrayAny, P, VectorFunction
+    from narwhals._plan.arrow.typing import (
+        ChunkedArrayAny,
+        P,
+        UnaryFunctionP,
+        VectorFunction,
+    )
+    from narwhals._plan.expressions import (
+        BinaryExpr,
+        FunctionExpr as FExpr,
+        lists,
+        strings,
+    )
     from narwhals._plan.expressions.aggregation import (
         ArgMax,
         ArgMin,
@@ -61,19 +95,21 @@ if TYPE_CHECKING:
         IsNull,
         Not,
     )
-    from narwhals._plan.expressions.expr import BinaryExpr, FunctionExpr as FExpr
+    from narwhals._plan.expressions.categorical import GetCategories
     from narwhals._plan.expressions.functions import (
         Abs,
         CumAgg,
         Diff,
+        FillNan,
         FillNull,
         NullCount,
         Pow,
         Rank,
         Shift,
     )
+    from narwhals._plan.expressions.struct import FieldByName
     from narwhals._plan.typing import Seq
-    from narwhals.typing import Into1DArray, IntoDType, PythonLiteral
+    from narwhals.typing import IntoDType, PythonLiteral
 
     Expr: TypeAlias = "ArrowExpr"
     Scalar: TypeAlias = "ArrowScalar"
@@ -100,7 +136,7 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
         base, exponent = node.function.unwrap_input(node)
         base_ = base.dispatch(self, frame, "base").native
         exponent_ = exponent.dispatch(self, frame, "exponent").native
-        return self._with_native(pc.power(base_, exponent_), name)
+        return self._with_native(fn.power(base_, exponent_), name)
 
     def fill_null(
         self, node: FExpr[FillNull], frame: Frame, name: str
@@ -109,6 +145,12 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
         native = expr.dispatch(self, frame, name).native
         value_ = value.dispatch(self, frame, "value").native
         return self._with_native(pc.fill_null(native, value_), name)
+
+    def fill_nan(self, node: FExpr[FillNan], frame: Frame, name: str) -> StoresNativeT_co:
+        expr, value = node.function.unwrap_input(node)
+        native = expr.dispatch(self, frame, name).native
+        value_ = value.dispatch(self, frame, "value").native
+        return self._with_native(fn.fill_nan(native, value_), name)
 
     def is_between(
         self, node: FExpr[IsBetween], frame: Frame, name: str
@@ -120,20 +162,49 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
         result = fn.is_between(native, lower, upper, node.function.closed)
         return self._with_native(result, name)
 
+    @overload
     def _unary_function(
-        self, fn_native: Callable[[Any], Any], /
+        self, fn_native: UnaryFunctionP[P], /, *args: P.args, **kwds: P.kwargs
+    ) -> Callable[[FExpr[Any], Frame, str], StoresNativeT_co]: ...
+    @overload
+    def _unary_function(
+        self, fn_native: Callable[[ChunkedOrScalarAny], ChunkedOrScalarAny], /
+    ) -> Callable[[FExpr[Any], Frame, str], StoresNativeT_co]: ...
+    def _unary_function(
+        self, fn_native: UnaryFunctionP[P], /, *args: P.args, **kwds: P.kwargs
     ) -> Callable[[FExpr[Any], Frame, str], StoresNativeT_co]:
-        def func(node: FExpr[Any], frame: Frame, name: str) -> StoresNativeT_co:
+        """Return a function with the signature `(node, frame, name)`.
+
+        Handles dispatching prior expressions, and rewrapping the result of this one.
+
+        Arity refers to the number of expression inputs to a function (after expanding).
+
+        So a **unary** function will look like:
+
+            col("a").round(2)
+
+        Which unravels to:
+
+            FunctionExpr(
+                input=(Column(name="a"),),
+                #                      ^ length-1 tuple
+                function=Round(decimals=2),
+                #                       ^ non-expression argument
+                options=...,
+            )
+        """
+
+        def func(node: FExpr[Any], frame: Frame, name: str, /) -> StoresNativeT_co:
             native = node.input[0].dispatch(self, frame, name).native
-            return self._with_native(fn_native(native), name)
+            return self._with_native(fn_native(native, *args, **kwds), name)
 
         return func
 
     def abs(self, node: FExpr[Abs], frame: Frame, name: str) -> StoresNativeT_co:
-        return self._unary_function(pc.abs)(node, frame, name)
+        return self._unary_function(fn.abs_)(node, frame, name)
 
     def not_(self, node: FExpr[Not], frame: Frame, name: str) -> StoresNativeT_co:
-        return self._unary_function(pc.invert)(node, frame, name)
+        return self._unary_function(fn.not_)(node, frame, name)
 
     def all(self, node: FExpr[All], frame: Frame, name: str) -> StoresNativeT_co:
         return self._unary_function(fn.all_)(node, frame, name)
@@ -153,30 +224,37 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
     ) -> StoresNativeT_co:
         expr, other = node.function.unwrap_input(node)
         right = other.dispatch(self, frame, name).native
-        if isinstance(right, pa.Scalar):
-            right = fn.array(right)
-        result = fn.is_in(expr.dispatch(self, frame, name).native, right)
+        arr = fn.array(right) if isinstance(right, pa.Scalar) else right
+        result = fn.is_in(expr.dispatch(self, frame, name).native, arr)
         return self._with_native(result, name)
 
     def is_in_series(
         self, node: FExpr[IsInSeries[ChunkedArrayAny]], frame: Frame, name: str
     ) -> StoresNativeT_co:
-        native = node.input[0].dispatch(self, frame, name).native
         other = node.function.other.unwrap().to_native()
-        return self._with_native(fn.is_in(native, other), name)
+        return self._unary_function(fn.is_in, other)(node, frame, name)
 
     def is_in_seq(
         self, node: FExpr[IsInSeq], frame: Frame, name: str
     ) -> StoresNativeT_co:
-        native = node.input[0].dispatch(self, frame, name).native
         other = fn.array(node.function.other)
-        return self._with_native(fn.is_in(native, other), name)
+        return self._unary_function(fn.is_in, other)(node, frame, name)
 
     def is_nan(self, node: FExpr[IsNan], frame: Frame, name: str) -> StoresNativeT_co:
         return self._unary_function(fn.is_nan)(node, frame, name)
 
     def is_null(self, node: FExpr[IsNull], frame: Frame, name: str) -> StoresNativeT_co:
         return self._unary_function(fn.is_null)(node, frame, name)
+
+    def is_not_nan(
+        self, node: FExpr[IsNotNan], frame: Frame, name: str
+    ) -> StoresNativeT_co:
+        return self._unary_function(fn.is_not_nan)(node, frame, name)
+
+    def is_not_null(
+        self, node: FExpr[IsNotNull], frame: Frame, name: str
+    ) -> StoresNativeT_co:
+        return self._unary_function(fn.is_not_null)(node, frame, name)
 
     def binary_expr(self, node: BinaryExpr, frame: Frame, name: str) -> StoresNativeT_co:
         lhs, rhs = (
@@ -195,13 +273,70 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
         result = pc.if_else(when.native, then.native, otherwise.native)
         return self._with_native(result, name)
 
-    exp = not_implemented()  # type: ignore[misc]
-    log = not_implemented()  # type: ignore[misc]
-    sqrt = not_implemented()  # type: ignore[misc]
-    round = not_implemented()  # type: ignore[misc]
-    clip = not_implemented()  # type: ignore[misc]
-    drop_nulls = not_implemented()  # type: ignore[misc]
-    replace_strict = not_implemented()  # type: ignore[misc]
+    def log(self, node: FExpr[F.Log], frame: Frame, name: str) -> StoresNativeT_co:
+        return self._unary_function(fn.log, node.function.base)(node, frame, name)
+
+    def exp(self, node: FExpr[F.Exp], frame: Frame, name: str) -> StoresNativeT_co:
+        return self._unary_function(fn.exp)(node, frame, name)
+
+    def sqrt(self, node: FExpr[F.Sqrt], frame: Frame, name: str) -> StoresNativeT_co:
+        return self._unary_function(fn.sqrt)(node, frame, name)
+
+    def round(self, node: FExpr[F.Round], frame: Frame, name: str) -> StoresNativeT_co:
+        return self._unary_function(fn.round, node.function.decimals)(node, frame, name)
+
+    def ceil(self, node: FExpr[F.Ceil], frame: Frame, name: str) -> StoresNativeT_co:
+        return self._unary_function(fn.ceil)(node, frame, name)
+
+    def floor(self, node: FExpr[F.Floor], frame: Frame, name: str) -> StoresNativeT_co:
+        return self._unary_function(fn.floor)(node, frame, name)
+
+    def clip(self, node: FExpr[F.Clip], frame: Frame, name: str) -> StoresNativeT_co:
+        expr, lower, upper = node.function.unwrap_input(node)
+        result = fn.clip(
+            expr.dispatch(self, frame, name).native,
+            lower.dispatch(self, frame, name).native,
+            upper.dispatch(self, frame, name).native,
+        )
+        return self._with_native(result, name)
+
+    def clip_lower(
+        self, node: FExpr[F.ClipLower], frame: Frame, name: str
+    ) -> StoresNativeT_co:
+        expr, other = node.function.unwrap_input(node)
+        result = fn.clip_lower(
+            expr.dispatch(self, frame, name).native,
+            other.dispatch(self, frame, name).native,
+        )
+        return self._with_native(result, name)
+
+    def clip_upper(
+        self, node: FExpr[F.ClipUpper], frame: Frame, name: str
+    ) -> StoresNativeT_co:
+        expr, other = node.function.unwrap_input(node)
+        result = fn.clip_upper(
+            expr.dispatch(self, frame, name).native,
+            other.dispatch(self, frame, name).native,
+        )
+        return self._with_native(result, name)
+
+    def replace_strict(
+        self, node: FExpr[F.ReplaceStrict], frame: Frame, name: str
+    ) -> StoresNativeT_co:
+        old, new = node.function.old, node.function.new
+        dtype = fn.dtype_native(node.function.return_dtype, self.version)
+        return self._unary_function(fn.replace_strict, old, new, dtype)(node, frame, name)
+
+    def replace_strict_default(
+        self, node: FExpr[F.ReplaceStrictDefault], frame: Frame, name: str
+    ) -> StoresNativeT_co:
+        func = node.function
+        expr, default_ = func.unwrap_input(node)
+        native = expr.dispatch(self, frame, name).native
+        default = default_.dispatch(self, frame, name).native
+        dtype = fn.dtype_native(func.return_dtype, self.version)
+        result = fn.replace_strict_default(native, func.old, func.new, default, dtype)
+        return self._with_native(result, name)
 
 
 class ArrowExpr(  # type: ignore[misc]
@@ -238,7 +373,7 @@ class ArrowExpr(  # type: ignore[misc]
     def _with_native(self, result: ChunkedOrScalarAny, name: str, /) -> Scalar | Self:
         if isinstance(result, pa.Scalar):
             return ArrowScalar.from_native(result, name, version=self.version)
-        return self.from_native(result, name or self.name, self.version)
+        return self.from_native(result, name, self.version)
 
     # NOTE: I'm not sure what I meant by
     # > "isn't natively supported on `ChunkedArray`"
@@ -269,10 +404,17 @@ class ArrowExpr(  # type: ignore[misc]
     def to_series(self) -> Series:
         return self._evaluated
 
+    # TODO @dangotbanned: Handle this `Series([...])` edge case higher up
+    # Can occur from a len(1) series passed to `with_columns`, which becomes a literal
     def broadcast(self, length: int, /) -> Series:
         if (actual_len := len(self)) != length:
-            msg = f"Expected object of length {length}, got {actual_len}."
-            raise ShapeError(msg)
+            if actual_len == 1:
+                msg = (
+                    f"Series {self.name}, length {actual_len} doesn't match the DataFrame height of {length}.\n\n"
+                    "If you want an expression to be broadcasted, ensure it is a scalar (for instance by adding '.first()')."
+                )
+                raise ShapeError(msg)
+            raise shape_error(length, actual_len)
         return self._evaluated
 
     def __len__(self) -> int:
@@ -310,13 +452,15 @@ class ArrowExpr(  # type: ignore[misc]
     def first(self, node: First, frame: Frame, name: str) -> Scalar:
         prev = self._dispatch_expr(node.expr, frame, name)
         native = prev.native
-        result = native[0] if len(prev) else fn.lit(None, native.type)
+        result: NativeScalar = native[0] if len(prev) else fn.lit(None, native.type)
         return self._with_native(result, name)
 
     def last(self, node: Last, frame: Frame, name: str) -> Scalar:
         prev = self._dispatch_expr(node.expr, frame, name)
         native = prev.native
-        result = native[len_ - 1] if (len_ := len(prev)) else fn.lit(None, native.type)
+        result: NativeScalar = (
+            native[len_ - 1] if (len_ := len(prev)) else fn.lit(None, native.type)
+        )
         return self._with_native(result, name)
 
     def arg_min(self, node: ArgMin, frame: Frame, name: str) -> Scalar:
@@ -381,21 +525,17 @@ class ArrowExpr(  # type: ignore[misc]
         result: NativeScalar = fn.min_(self._dispatch_expr(node.expr, frame, name).native)
         return self._with_native(result, name)
 
-    def null_count(self, node: FExpr[NullCount], frame: Frame, name: str) -> Scalar:
+    def null_count(self, node: FExpr[F.NullCount], frame: Frame, name: str) -> Scalar:
         native = self._dispatch_expr(node.input[0], frame, name).native
         return self._with_native(fn.null_count(native), name)
 
-    # TODO @dangotbanned: top-level, complex-ish nodes
-    # - [ ] Over
-    #   - [x] `over_ordered`
-    #   - [x] `group_by`, `join`
-    #   - [x] `over` (with partitions)
-    #   - [x] `over_ordered` (with partitions)
-    #   - [ ] fix: join on nulls after https://github.com/narwhals-dev/narwhals/issues/3300
-    # - [ ] `map_batches`
-    #   - [x] elementwise
-    #   - [ ] scalar
-    # - [ ] `rolling_expr` has 4 variants
+    def kurtosis(self, node: FExpr[F.Kurtosis], frame: Frame, name: str) -> Scalar:
+        native = self._dispatch_expr(node.input[0], frame, name).native
+        return self._with_native(fn.kurtosis_skew(native, "kurtosis"), name)
+
+    def skew(self, node: FExpr[F.Skew], frame: Frame, name: str) -> Scalar:
+        native = self._dispatch_expr(node.input[0], frame, name).native
+        return self._with_native(fn.kurtosis_skew(native, "skew"), name)
 
     def over(
         self,
@@ -408,9 +548,9 @@ class ArrowExpr(  # type: ignore[misc]
         expr = node.expr
         by = node.partition_by
         if is_function_expr(expr) and isinstance(
-            expr.function, (IsFirstDistinct, IsLastDistinct)
+            expr.function, (IsFirstDistinct, IsLastDistinct, IsUnique, IsDuplicated)
         ):
-            return self._is_first_last_distinct(
+            return self._boolean_length_preserving(
                 expr, frame, name, by, sort_indices=sort_indices
             )
         resolved = frame._grouper.by_irs(*by).agg_irs(expr.alias(name)).resolve(frame)
@@ -429,15 +569,17 @@ class ArrowExpr(  # type: ignore[misc]
             return evaluated
         return self.from_series(evaluated.broadcast(len(frame)).gather(indices))
 
-    def _is_first_last_distinct(
+    def _boolean_length_preserving(
         self,
-        node: FExpr[IsFirstDistinct | IsLastDistinct],
+        node: FExpr[IsFirstDistinct | IsLastDistinct | IsUnique | IsDuplicated],
         frame: Frame,
         name: str,
         partition_by: Seq[ir.ExprIR] = (),
         *,
         sort_indices: pa.UInt64Array | None = None,
     ) -> Self:
+        # NOTE: This subset of functions can be expressed as a mask applied to indices
+        into_column_agg, mask = fn.BOOLEAN_LENGTH_PRESERVING[type(node.function)]
         idx_name = temp.column_name(frame)
         df = frame._with_columns([node.input[0].dispatch(self, frame, name)])
         if sort_indices is not None:
@@ -445,31 +587,43 @@ class ArrowExpr(  # type: ignore[misc]
             df = df._with_native(df.native.add_column(0, idx_name, column))
         else:
             df = df.with_row_index(idx_name)
-        agg = fn.IS_FIRST_LAST_DISTINCT[type(node.function)](idx_name)
+        agg_node = into_column_agg(idx_name)
         if not (partition_by or sort_indices is not None):
-            distinct = df.group_by_names((name,)).agg((ir.named_ir(idx_name, agg),))
+            aggregated = df.group_by_names((name,)).agg(
+                (ir.named_ir(idx_name, agg_node),)
+            )
         else:
-            distinct = df.group_by_agg_irs((ir.col(name), *partition_by), agg)
+            aggregated = df.group_by_agg_irs((ir.col(name), *partition_by), agg_node)
         index = df.to_series().alias(name)
-        return self.from_series(index.is_in(distinct.get_column(idx_name)))
+        final_result = mask(index.native, aggregated.get_column(idx_name).native)
+        return self.from_series(index._with_native(final_result))
 
-    # NOTE: Can't implement in `EagerExpr`, since it doesn't derive `ExprDispatch`
-    def map_batches(self, node: ir.AnonymousExpr, frame: Frame, name: str) -> Self:
-        if node.is_scalar:
-            # NOTE: Just trying to avoid redoing the whole API for `Series`
-            msg = "Only elementwise is currently supported"
-            raise NotImplementedError(msg)
+    # NOTE: Can't implement in `EagerExpr` (like on `main`)
+    # The version here is missing `__narwhals_namespace__`
+    def map_batches(
+        self, node: ir.AnonymousExpr, frame: Frame, name: str
+    ) -> Self | Scalar:
         series = self._dispatch_expr(node.input[0], frame, name)
         udf = node.function.function
-        result: Series | Into1DArray = udf(series)
-        if not isinstance(result, Series):
-            result = Series.from_numpy(result, name, version=self.version)
+        udf_result: Series | Iterable[Any] | Any = udf(series)
+        if node.is_scalar:
+            return ArrowScalar.from_unknown(
+                udf_result, name, dtype=node.function.return_dtype, version=self.version
+            )
+        if isinstance(udf_result, Series):
+            result = udf_result
+        elif isinstance(udf_result, Iterable) and not is_iterable_reject(udf_result):
+            result = Series.from_iterable(udf_result, name=name, version=self.version)
+        else:
+            msg = (
+                "`map_batches` with `returns_scalar=False` must return a Series; "
+                f"found '{qualified_type_name(udf_result)}'.\n\nIf `returns_scalar` "
+                "is set to `True`, a returned value can be a scalar value."
+            )
+            raise TypeError(msg)
         if dtype := node.function.return_dtype:
             result = result.cast(dtype)
         return self.from_series(result)
-
-    def rolling_expr(self, node: ir.RollingExpr, frame: Frame, name: str) -> Self:
-        raise NotImplementedError
 
     def shift(self, node: FExpr[Shift], frame: Frame, name: str) -> Self:
         return self._vector_function(fn.shift, node.function.n)(node, frame, name)
@@ -482,32 +636,145 @@ class ArrowExpr(  # type: ignore[misc]
 
     def _cumulative(self, node: FExpr[CumAgg], frame: Frame, name: str) -> Self:
         native = self._dispatch_expr(node.input[0], frame, name).native
-        func = fn.CUMULATIVE[type(node.function)]
-        if not node.function.reverse:
-            result = func(native)
-        else:
-            result = fn.reverse(func(fn.reverse(native)))
-        return self._with_native(result, name)
+        return self._with_native(fn.cumulative(native, node.function), name)
+
+    def unique(self, node: FExpr[F.Unique], frame: Frame, name: str) -> Self:
+        return self.from_series(self._dispatch_expr(node.input[0], frame, name).unique())
+
+    def gather_every(self, node: FExpr[F.GatherEvery], frame: Frame, name: str) -> Self:
+        series = self._dispatch_expr(node.input[0], frame, name)
+        n, offset = node.function.n, node.function.offset
+        return self.from_series(series.gather_every(n=n, offset=offset))
+
+    def sample_n(self, node: FExpr[F.SampleN], frame: Frame, name: str) -> Self:
+        series = self._dispatch_expr(node.input[0], frame, name)
+        func = node.function
+        n, replace, seed = func.n, func.with_replacement, func.seed
+        result = series.sample_n(n, with_replacement=replace, seed=seed)
+        return self.from_series(result)
+
+    def sample_frac(self, node: FExpr[F.SampleFrac], frame: Frame, name: str) -> Self:
+        series = self._dispatch_expr(node.input[0], frame, name)
+        func = node.function
+        fraction, replace, seed = func.fraction, func.with_replacement, func.seed
+        result = series.sample_frac(fraction, with_replacement=replace, seed=seed)
+        return self.from_series(result)
+
+    def drop_nulls(self, node: FExpr[F.DropNulls], frame: Frame, name: str) -> Self:
+        return self._vector_function(fn.drop_nulls)(node, frame, name)
+
+    def mode_all(self, node: FExpr[F.ModeAll], frame: Frame, name: str) -> Self:
+        return self._vector_function(fn.mode_all)(node, frame, name)
+
+    def mode_any(self, node: FExpr[F.ModeAny], frame: Frame, name: str) -> Scalar:
+        native = self._dispatch_expr(node.input[0], frame, name).native
+        return self._with_native(fn.mode_any(native), name)
+
+    def fill_null_with_strategy(
+        self, node: FExpr[F.FillNullWithStrategy], frame: Frame, name: str
+    ) -> Self:
+        native = self._dispatch_expr(node.input[0], frame, name).native
+        strategy, limit = node.function.strategy, node.function.limit
+        func = fn.fill_null_with_strategy
+        return self._with_native(func(native, strategy, limit), name)
 
     cum_count = _cumulative
     cum_min = _cumulative
     cum_max = _cumulative
     cum_prod = _cumulative
     cum_sum = _cumulative
-    is_first_distinct = _is_first_last_distinct
-    is_last_distinct = _is_first_last_distinct
+    is_first_distinct = _boolean_length_preserving
+    is_last_distinct = _boolean_length_preserving
+    is_duplicated = _boolean_length_preserving
+    is_unique = _boolean_length_preserving
+
+    _ROLLING: ClassVar[Mapping[type[F.RollingWindow], Callable[..., Series]]] = {
+        F.RollingSum: Series.rolling_sum,
+        F.RollingMean: Series.rolling_mean,
+        F.RollingVar: Series.rolling_var,
+        F.RollingStd: Series.rolling_std,
+    }
+
+    def rolling_expr(
+        self, node: ir.RollingExpr[F.RollingWindow], frame: Frame, name: str
+    ) -> Self:
+        s = self._dispatch_expr(node.input[0], frame, name)
+        roll_options = node.function.options
+        size = roll_options.window_size
+        samples = roll_options.min_samples
+        center = roll_options.center
+        op = type(node.function)
+        method = self._ROLLING[op]
+        if op in {F.RollingSum, F.RollingMean}:
+            return self.from_series(method(s, size, min_samples=samples, center=center))
+        ddof = roll_options.ddof
+        result = method(s, size, min_samples=samples, center=center, ddof=ddof)
+        return self.from_series(result)
+
+    # NOTE: Should not be returning a struct when all `include_*` are false
+    # https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/crates/polars-ops/src/chunked_array/hist.rs#L223-L223
+    def _hist_finish(self, data: Mapping[str, Any], name: str) -> Self:
+        ns = namespace(self)
+        if len(data) == 1:
+            count = next(iter(data.values()))
+            series = ns._series.from_iterable(count, version=self.version, name=name)
+        else:
+            series = ns._dataframe.from_dict(data, version=self.version).to_struct(name)
+        return self.from_series(series)
+
+    def hist_bins(self, node: FExpr[F.HistBins], frame: Frame, name: str) -> Self:
+        native = self._dispatch_expr(node.input[0], frame, name).native
+        func = node.function
+        bins = func.bins
+        include = func.include_breakpoint
+        if len(bins) <= 1:
+            data = func.empty_data
+        elif fn.is_only_nulls(native, nan_is_null=True):
+            data = fn.hist_zeroed_data(bins, include_breakpoint=include)
+        else:
+            data = fn.hist_bins(native, bins, include_breakpoint=include)
+        return self._hist_finish(data, name)
+
+    def hist_bin_count(
+        self, node: FExpr[F.HistBinCount], frame: Frame, name: str
+    ) -> Self:
+        native = self._dispatch_expr(node.input[0], frame, name).native
+        func = node.function
+        bin_count = func.bin_count
+        include = func.include_breakpoint
+        if bin_count == 0:
+            data = func.empty_data
+        elif fn.is_only_nulls(native, nan_is_null=True):
+            data = fn.hist_zeroed_data(bin_count, include_breakpoint=include)
+        else:
+            # NOTE: `Decimal` is not supported, but excluding it from the typing is surprisingly complicated
+            # https://docs.rs/polars-core/0.52.0/polars_core/datatypes/enum.DataType.html#method.is_primitive_numeric
+            lower: NativeScalar = fn.min_(native)
+            upper: NativeScalar = fn.max_(native)
+            if lower.equals(upper):
+                # All data points are identical - use unit interval
+                rhs = fn.lit(0.5)
+                lower, upper = fn.sub(lower, rhs), fn.add(upper, rhs)
+            bins = fn.linear_space(lower.as_py(), upper.as_py(), bin_count + 1)
+            data = fn.hist_bins(native, bins, include_breakpoint=include)
+        return self._hist_finish(data, name)
 
     # ewm_mean = not_implemented()  # noqa: ERA001
-    hist_bins = not_implemented()
-    hist_bin_count = not_implemented()
-    mode = not_implemented()
-    unique = not_implemented()
-    fill_null_with_strategy = not_implemented()
-    kurtosis = not_implemented()
-    skew = not_implemented()
-    gather_every = not_implemented()
-    is_duplicated = not_implemented()
-    is_unique = not_implemented()
+    @property
+    def cat(self) -> ArrowCatNamespace[Expr]:
+        return ArrowCatNamespace(self)
+
+    @property
+    def list(self) -> ArrowListNamespace[Expr]:
+        return ArrowListNamespace(self)
+
+    @property
+    def str(self) -> ArrowStringNamespace[Expr]:
+        return ArrowStringNamespace(self)
+
+    @property
+    def struct(self) -> ArrowStructNamespace[Expr]:
+        return ArrowStructNamespace(self)
 
 
 class ArrowScalar(
@@ -559,6 +826,23 @@ class ArrowScalar(
         msg = f"Too long {len(series)!r}"
         raise InvalidOperationError(msg)
 
+    @classmethod
+    def from_unknown(
+        cls,
+        value: Any,
+        name: str = "literal",
+        /,
+        *,
+        dtype: IntoDType | None = None,
+        version: Version = Version.MAIN,
+    ) -> Self:
+        if isinstance(value, pa.Scalar):
+            return cls.from_native(value, name, version)
+        if is_python_literal(value):
+            return cls.from_python(value, name, dtype=dtype, version=version)
+        native = fn.lit(value, fn.dtype_native(dtype, version))
+        return cls.from_native(native, name, version)
+
     def _dispatch_expr(self, node: ir.ExprIR, frame: Frame, name: str) -> Series:
         msg = f"Expected unreachable, but hit at: {node!r}"
         raise InvalidOperationError(msg)
@@ -574,17 +858,15 @@ class ArrowScalar(
         return self.broadcast(1)
 
     def to_python(self) -> PythonLiteral:
-        return self.native.as_py()  # type: ignore[no-any-return]
+        result: PythonLiteral = self.native.as_py()
+        return result
 
     def broadcast(self, length: int) -> Series:
         scalar = self.native
         if length == 1:
             chunked = fn.chunked_array(scalar)
         else:
-            # NOTE: Same issue as `pa.scalar` overlapping overloads
-            # https://github.com/zen-xu/pyarrow-stubs/pull/209
-            pa_repeat: Incomplete = pa.repeat
-            chunked = fn.chunked_array(pa_repeat(scalar, length))
+            chunked = fn.chunked_array(fn.repeat_unchecked(scalar, length))
         return Series.from_native(chunked, self.name, version=self.version)
 
     def count(self, node: Count, frame: Frame, name: str) -> Scalar:
@@ -594,6 +876,31 @@ class ArrowScalar(
     def null_count(self, node: FExpr[NullCount], frame: Frame, name: str) -> Self:
         native = node.input[0].dispatch(self, frame, name).native
         return self._with_native(pa.scalar(0 if native.is_valid else 1), name)
+
+    def drop_nulls(  # type: ignore[override]
+        self, node: FExpr[F.DropNulls], frame: Frame, name: str
+    ) -> Scalar | Expr:
+        previous = node.input[0].dispatch(self, frame, name)
+        if previous.native.is_valid:
+            return previous
+        chunked = fn.chunked_array([[]], previous.native.type)
+        return ArrowExpr.from_native(chunked, name, version=self.version)
+
+    @property
+    def cat(self) -> ArrowCatNamespace[Scalar]:
+        return ArrowCatNamespace(self)
+
+    @property
+    def list(self) -> ArrowListNamespace[Scalar]:
+        return ArrowListNamespace(self)
+
+    @property
+    def str(self) -> ArrowStringNamespace[Scalar]:
+        return ArrowStringNamespace(self)
+
+    @property
+    def struct(self) -> ArrowStructNamespace[Scalar]:
+        return ArrowStructNamespace(self)
 
     filter = not_implemented()
     over = not_implemented()
@@ -608,3 +915,176 @@ class ArrowScalar(
     cum_min = not_implemented()
     cum_max = not_implemented()
     cum_prod = not_implemented()
+
+
+ExprOrScalarT = TypeVar("ExprOrScalarT", ArrowExpr, ArrowScalar)
+
+
+class ArrowAccessor(Generic[ExprOrScalarT]):
+    def __init__(self, compliant: ExprOrScalarT, /) -> None:
+        self._compliant: ExprOrScalarT = compliant
+
+    @property
+    def compliant(self) -> ExprOrScalarT:
+        return self._compliant
+
+    def __narwhals_namespace__(self) -> ArrowNamespace:
+        return namespace(self.compliant)
+
+    @property
+    def version(self) -> Version:
+        return self.compliant.version
+
+    def with_native(self, native: ChunkedOrScalarAny, name: str, /) -> Expr | Scalar:
+        return self.compliant._with_native(native, name)
+
+    @overload
+    def unary(
+        self, fn_native: UnaryFunctionP[P], /, *args: P.args, **kwds: P.kwargs
+    ) -> Callable[[FExpr[Any], Frame, str], Expr | Scalar]: ...
+    @overload
+    def unary(
+        self, fn_native: Callable[[ChunkedOrScalarAny], ChunkedOrScalarAny], /
+    ) -> Callable[[FExpr[Any], Frame, str], Expr | Scalar]: ...
+    def unary(
+        self, fn_native: UnaryFunctionP[P], /, *args: P.args, **kwds: P.kwargs
+    ) -> Callable[[FExpr[Any], Frame, str], Expr | Scalar]:
+        return self.compliant._unary_function(fn_native, *args, **kwds)
+
+
+class ArrowCatNamespace(ExprCatNamespace["Frame", "Expr"], ArrowAccessor[ExprOrScalarT]):
+    def get_categories(self, node: FExpr[GetCategories], frame: Frame, name: str) -> Expr:
+        native = node.input[0].dispatch(self.compliant, frame, name).native
+        return ArrowExpr.from_native(fn.get_categories(native), name, self.version)
+
+
+class ArrowListNamespace(
+    ExprListNamespace["Frame", "Expr | Scalar"], ArrowAccessor[ExprOrScalarT]
+):
+    def len(self, node: FExpr[lists.Len], frame: Frame, name: str) -> Expr | Scalar:
+        return self.unary(fn.list_len)(node, frame, name)
+
+    def get(self, node: FExpr[lists.Get], frame: Frame, name: str) -> Expr | Scalar:
+        return self.unary(fn.list_get, node.function.index)(node, frame, name)
+
+    def unique(self, node: FExpr[lists.Unique], frame: Frame, name: str) -> Expr | Scalar:
+        return self.unary(fn.list_unique)(node, frame, name)
+
+    def contains(
+        self, node: FExpr[lists.Contains], frame: Frame, name: str
+    ) -> Expr | Scalar:
+        func = node.function
+        expr, other = func.unwrap_input(node)
+        prev = expr.dispatch(self.compliant, frame, name)
+        item = other.dispatch(self.compliant, frame, name)
+        if isinstance(item, ArrowExpr):
+            # Maybe one day, not now
+            raise NotImplementedError
+        return self.with_native(fn.list_contains(prev.native, item.native), name)
+
+    def join(self, node: FExpr[lists.Join], frame: Frame, name: str) -> Expr | Scalar:
+        separator, ignore_nulls = node.function.separator, node.function.ignore_nulls
+        previous = node.input[0].dispatch(self.compliant, frame, name)
+        result: ChunkedOrScalarAny
+        if isinstance(previous, ArrowExpr):
+            result = fn.list_join(previous.native, separator, ignore_nulls=ignore_nulls)
+        else:
+            result = fn.list_join_scalar(
+                previous.native, separator, ignore_nulls=ignore_nulls
+            )
+        return self.with_native(result, name)
+
+
+class ArrowStringNamespace(
+    ExprStringNamespace["Frame", "Expr | Scalar"], ArrowAccessor[ExprOrScalarT]
+):
+    def len_chars(
+        self, node: FExpr[strings.LenChars], frame: Frame, name: str
+    ) -> Expr | Scalar:
+        return self.unary(fn.str_len_chars)(node, frame, name)
+
+    def slice(self, node: FExpr[strings.Slice], frame: Frame, name: str) -> Expr | Scalar:
+        offset, length = node.function.offset, node.function.length
+        return self.unary(fn.str_slice, offset, length)(node, frame, name)
+
+    def zfill(self, node: FExpr[strings.ZFill], frame: Frame, name: str) -> Expr | Scalar:
+        return self.unary(fn.str_zfill, node.function.length)(node, frame, name)
+
+    def contains(
+        self, node: FExpr[strings.Contains], frame: Frame, name: str
+    ) -> Expr | Scalar:
+        pattern, literal = node.function.pattern, node.function.literal
+        return self.unary(fn.str_contains, pattern, literal=literal)(node, frame, name)
+
+    def ends_with(
+        self, node: FExpr[strings.EndsWith], frame: Frame, name: str
+    ) -> Expr | Scalar:
+        return self.unary(fn.str_ends_with, node.function.suffix)(node, frame, name)
+
+    def replace(
+        self, node: FExpr[strings.Replace], frame: Frame, name: str
+    ) -> Expr | Scalar:
+        func = node.function
+        pattern, literal, n = (func.pattern, func.literal, func.n)
+        expr, other = func.unwrap_input(node)
+        prev = expr.dispatch(self.compliant, frame, name)
+        value = other.dispatch(self.compliant, frame, name)
+        if isinstance(value, ArrowScalar):
+            result = fn.str_replace(
+                prev.native, pattern, value.native.as_py(), literal=literal, n=n
+            )
+        elif isinstance(prev, ArrowExpr):
+            result = fn.str_replace_vector(
+                prev.native, pattern, value.native, literal=literal, n=n
+            )
+        else:
+            # not sure this even makes sense
+            msg = "TODO: `ArrowScalar.str.replace(value: ArrowExpr)`"
+            raise NotImplementedError(msg)
+        return self.with_native(result, name)
+
+    def replace_all(
+        self, node: FExpr[strings.ReplaceAll], frame: Frame, name: str
+    ) -> Expr | Scalar:
+        rewrite: FExpr[Any] = common.replace(
+            node, function=node.function.to_replace_n(-1)
+        )
+        return self.replace(rewrite, frame, name)
+
+    def split(self, node: FExpr[strings.Split], frame: Frame, name: str) -> Expr | Scalar:
+        return self.unary(fn.str_split, node.function.by)(node, frame, name)
+
+    def starts_with(
+        self, node: FExpr[strings.StartsWith], frame: Frame, name: str
+    ) -> Expr | Scalar:
+        return self.unary(fn.str_starts_with, node.function.prefix)(node, frame, name)
+
+    def strip_chars(
+        self, node: FExpr[strings.StripChars], frame: Frame, name: str
+    ) -> Expr | Scalar:
+        return self.unary(fn.str_strip_chars, node.function.characters)(node, frame, name)
+
+    def to_uppercase(
+        self, node: FExpr[strings.ToUppercase], frame: Frame, name: str
+    ) -> Expr | Scalar:
+        return self.unary(fn.str_to_uppercase)(node, frame, name)
+
+    def to_lowercase(
+        self, node: FExpr[strings.ToLowercase], frame: Frame, name: str
+    ) -> Expr | Scalar:
+        return self.unary(fn.str_to_lowercase)(node, frame, name)
+
+    def to_titlecase(
+        self, node: FExpr[strings.ToTitlecase], frame: Frame, name: str
+    ) -> Expr | Scalar:
+        return self.unary(fn.str_to_titlecase)(node, frame, name)
+
+    to_date = not_implemented()
+    to_datetime = not_implemented()
+
+
+class ArrowStructNamespace(
+    ExprStructNamespace["Frame", "Expr | Scalar"], ArrowAccessor[ExprOrScalarT]
+):
+    def field(self, node: FExpr[FieldByName], frame: Frame, name: str) -> Expr | Scalar:
+        return self.unary(fn.struct_field, node.function.name)(node, frame, name)

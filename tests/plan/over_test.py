@@ -5,18 +5,20 @@ from typing import TYPE_CHECKING, Any, Literal, TypeVar
 
 import pytest
 
+from tests.utils import PYARROW_VERSION
+
 pytest.importorskip("pyarrow")
 
 
 import narwhals as nw
 import narwhals._plan as nwp
 from narwhals._plan import selectors as ncs
-from narwhals._utils import zip_strict
+from narwhals._utils import Implementation, zip_strict
 from narwhals.exceptions import InvalidOperationError
 from tests.plan.utils import assert_equal_data, dataframe, re_compile
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping, Sequence
+    from collections.abc import Callable, Iterable, Mapping, Sequence
 
     from _pytest.mark import ParameterSet
     from typing_extensions import TypeAlias
@@ -271,6 +273,80 @@ def test_null_count_over() -> None:
         .null_count()
         .over(ncs.integer() - ncs.by_name("c"))
     )
+    assert_equal_data(result, expected)
+
+
+@pytest.fixture(scope="module")
+def data_kurtosis_skew() -> Data:
+    return {
+        "p1": ["a", "a", "b", "a", "b", "b"],
+        "p2": ["d", "e", "e", "e", "d", "d"],
+        "v1": [0.2, 5.0, 1.0, 0.7, 0.5, 1.0],
+        "v2": [-1.0, 0.8, 0.6, 0.0, 1.1, 19.0],
+        "v3": [None, 1.2, 2.1, 0.4, 5.0, 3.2],
+    }
+
+
+EXPECTED_SKEW = {
+    "v1_p1": [0.678654, 0.678654, -0.707107, 0.678654, -0.707107, -0.707107],
+    "v2_p1": [-0.135062, -0.135062, 0.705297, -0.135062, 0.705297, 0.705297],
+    "v3_p1": [-4.33681e-16, -4.33681e-16, 0.285361, -4.33681e-16, 0.285361, 0.285361],
+    "v1_p1_p2": [float("nan"), -2.68106e-16, float("nan"), -2.68106e-16, 0.0, 0.0],
+    "v2_p1_p2": [float("nan"), 0.0, float("nan"), 0.0, -2.37866e-16, -2.37866e-16],
+    "v3_p1_p2": [
+        None,
+        -4.33681e-16,
+        float("nan"),
+        -4.33681e-16,
+        1.44679e-15,
+        1.44679e-15,
+    ],
+}
+EXPECTED_KURTOSIS = {
+    "v1_p1": [-1.5, -1.5, -1.5, -1.5, -1.5, -1.5],
+    "v2_p1": [-1.5, -1.5, -1.5, -1.5, -1.5, -1.5],
+    "v3_p1": [-2.0, -2.0, -1.5, -2.0, -1.5, -1.5],
+    "v1_p1_p2": [float("nan"), -2.0, float("nan"), -2.0, -2.0, -2.0],
+    "v2_p1_p2": [float("nan"), -2.0, float("nan"), -2.0, -2.0, -2.0],
+    "v3_p1_p2": [None, -2.0, float("nan"), -2.0, -2.0, -2.0],
+}
+string = ncs.string()
+not_string = ~string
+
+
+@pytest.mark.parametrize(
+    ("exprs", "expected"),
+    [
+        (
+            [
+                not_string.skew().over("p1").name.suffix("_p1"),
+                not_string.skew().over(string).name.suffix("_p1_p2"),
+            ],
+            EXPECTED_SKEW,
+        ),
+        (
+            [
+                not_string.kurtosis().over("p1").name.suffix("_p1"),
+                not_string.kurtosis().over(string).name.suffix("_p1_p2"),
+            ],
+            EXPECTED_KURTOSIS,
+        ),
+    ],
+)
+def test_kurtosis_over_skew(
+    data_kurtosis_skew: Data,
+    request: pytest.FixtureRequest,
+    exprs: Iterable[nwp.Expr],
+    expected: Data,
+) -> None:
+    df = dataframe(data_kurtosis_skew)
+    request.applymarker(
+        pytest.mark.xfail(
+            (df.implementation is Implementation.PYARROW and PYARROW_VERSION < (20,)),
+            reason="too old for `pyarrow.compute.{kurtosis,skew}`",
+        )
+    )
+    result = df.select(exprs)
     assert_equal_data(result, expected)
 
 

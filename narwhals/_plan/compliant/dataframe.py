@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, overload
 from narwhals._plan.compliant.group_by import Grouped
 from narwhals._plan.compliant.typing import ColumnT_co, HasVersion, SeriesT
 from narwhals._plan.typing import (
+    IncompleteCyclic,
     IntoExpr,
     NativeDataFrameT,
     NativeFrameT_co,
@@ -30,7 +31,7 @@ if TYPE_CHECKING:
     from narwhals._plan.compliant.namespace import EagerNamespace
     from narwhals._plan.dataframe import BaseFrame, DataFrame
     from narwhals._plan.expressions import NamedIR
-    from narwhals._plan.options import SortMultipleOptions
+    from narwhals._plan.options import ExplodeOptions, SortMultipleOptions
     from narwhals._plan.typing import Seq
     from narwhals._typing import _EagerAllowedImpl
     from narwhals._utils import Implementation, Version
@@ -43,7 +44,7 @@ Incomplete: TypeAlias = Any
 class CompliantFrame(HasVersion, Protocol[ColumnT_co, NativeFrameT_co]):
     implementation: ClassVar[Implementation]
 
-    def __narwhals_namespace__(self) -> Any: ...
+    def __narwhals_namespace__(self) -> IncompleteCyclic: ...
     def _evaluate_irs(
         self, nodes: Iterable[NamedIR[ir.ExprIR]], /
     ) -> Iterator[ColumnT_co]: ...
@@ -59,6 +60,7 @@ class CompliantFrame(HasVersion, Protocol[ColumnT_co, NativeFrameT_co]):
     def columns(self) -> list[str]: ...
     def drop(self, columns: Sequence[str]) -> Self: ...
     def drop_nulls(self, subset: Sequence[str] | None) -> Self: ...
+    def explode(self, subset: Sequence[str], options: ExplodeOptions) -> Self: ...
     # Shouldn't *need* to be `NamedIR`, but current impl depends on a name being passed around
     def filter(self, predicate: NamedIR, /) -> Self: ...
     def rename(self, mapping: Mapping[str, str]) -> Self: ...
@@ -80,6 +82,8 @@ class CompliantDataFrame(
     implementation: ClassVar[_EagerAllowedImpl]
     _native: NativeDataFrameT
 
+    @property
+    def shape(self) -> tuple[int, int]: ...
     def __len__(self) -> int: ...
     @property
     def _group_by(self) -> type[DataFrameGroupBy[Self]]: ...
@@ -105,6 +109,7 @@ class CompliantDataFrame(
     def from_dict(
         cls, data: Mapping[str, Any], /, *, schema: IntoSchema | None = None
     ) -> Self: ...
+    def gather_every(self, n: int, offset: int = 0) -> Self: ...
     def get_column(self, name: str) -> SeriesT: ...
     def group_by_agg(
         self, by: OneOrIterable[IntoExpr], aggs: OneOrIterable[IntoExpr], /
@@ -135,6 +140,7 @@ class CompliantDataFrame(
         return self._group_by.from_resolver(self, resolver)
 
     def filter(self, predicate: NamedIR, /) -> Self: ...
+    def iter_columns(self) -> Iterator[SeriesT]: ...
     def join(
         self,
         other: Self,
@@ -166,9 +172,19 @@ class CompliantDataFrame(
         return DataFrame[NativeDataFrameT, NativeSeriesT](self)
 
     def to_series(self, index: int = 0) -> SeriesT: ...
+    def to_struct(self, name: str = "") -> SeriesT: ...
     def to_polars(self) -> pl.DataFrame: ...
     def with_row_index(self, name: str) -> Self: ...
     def slice(self, offset: int, length: int | None = None) -> Self: ...
+    def sample_frac(
+        self, fraction: float, *, with_replacement: bool = False, seed: int | None = None
+    ) -> Self:
+        n = int(len(self) * fraction)
+        return self.sample_n(n, with_replacement=with_replacement, seed=seed)
+
+    def sample_n(
+        self, n: int = 1, *, with_replacement: bool = False, seed: int | None = None
+    ) -> Self: ...
 
 
 class EagerDataFrame(
@@ -178,6 +194,9 @@ class EagerDataFrame(
     def __narwhals_namespace__(self) -> EagerNamespace[Self, SeriesT, Any, Any]: ...
     @property
     def _group_by(self) -> type[EagerDataFrameGroupBy[Self]]: ...
+    def _evaluate_irs(
+        self, nodes: Iterable[NamedIR[ir.ExprIR]], /, *, length: int | None = None
+    ) -> Iterator[SeriesT]: ...
 
     def group_by_resolver(
         self, resolver: GroupByResolver, /
@@ -188,7 +207,9 @@ class EagerDataFrame(
         return self.__narwhals_namespace__()._concat_horizontal(self._evaluate_irs(irs))
 
     def with_columns(self, irs: Seq[NamedIR]) -> Self:
-        return self.__narwhals_namespace__()._concat_horizontal(self._evaluate_irs(irs))
+        return self.__narwhals_namespace__()._concat_horizontal(
+            self._evaluate_irs(irs, length=len(self))
+        )
 
     def to_series(self, index: int = 0) -> SeriesT:
         return self.get_column(self.columns[index])

@@ -18,7 +18,7 @@ import functools
 import operator
 from functools import reduce
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Final, Union, cast
+from typing import TYPE_CHECKING, Any, Final, Literal, Union, cast
 
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.acero as pac
@@ -61,7 +61,9 @@ Field: TypeAlias = Union[Expr, SingleColSelector]
 """
 
 Target: TypeAlias = OneOrSeq[Field]
-Aggregation: TypeAlias = "_Aggregation"
+Aggregation: TypeAlias = Union[
+    "_Aggregation", Literal["hash_kurtosis", "hash_skew", "kurtosis", "skew"]
+]
 AggregateOptions: TypeAlias = "_AggregateOptions"
 Opts: TypeAlias = "AggregateOptions | None"
 OutputName: TypeAlias = str

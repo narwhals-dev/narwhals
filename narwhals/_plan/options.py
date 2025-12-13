@@ -4,7 +4,7 @@ import enum
 from typing import TYPE_CHECKING
 
 from narwhals._plan._immutable import Immutable
-from narwhals._utils import Implementation
+from narwhals._utils import Implementation, ensure_type
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
@@ -76,6 +76,9 @@ class FunctionFlags(enum.Flag):
         return name.replace("|", " | ")
 
 
+_INVALID = FunctionFlags.RETURNS_SCALAR | FunctionFlags.LENGTH_PRESERVING
+
+
 class FunctionOptions(Immutable):
     """https://github.com/pola-rs/polars/blob/3fd7ecc5f9de95f62b70ea718e7e5dbf951b6d1c/crates/polars-plan/src/plans/options.rs"""  # noqa: D415
 
@@ -101,11 +104,12 @@ class FunctionOptions(Immutable):
         return self.flags.is_input_wildcard_expansion()
 
     def with_flags(self, flags: FunctionFlags, /) -> FunctionOptions:
-        if (FunctionFlags.RETURNS_SCALAR | FunctionFlags.LENGTH_PRESERVING) in flags:
-            msg = "A function cannot both return a scalar and preserve length, they are mutually exclusive."  # pragma: no cover
-            raise TypeError(msg)  # pragma: no cover
+        new_flags = self.flags | flags
+        if _INVALID in new_flags:
+            msg = "A function cannot both return a scalar and preserve length, they are mutually exclusive."
+            raise TypeError(msg)
         obj = FunctionOptions.__new__(FunctionOptions)
-        object.__setattr__(obj, "flags", self.flags | flags)
+        object.__setattr__(obj, "flags", new_flags)
         return obj
 
     def with_elementwise(self) -> FunctionOptions:
@@ -246,13 +250,30 @@ class RollingOptionsFixedWindow(Immutable):
     center: bool
     fn_params: RollingVarParams | None
 
+    @property
+    def ddof(self) -> int:
+        return 1 if self.fn_params is None else self.fn_params.ddof
+
 
 def rolling_options(
     window_size: int, min_samples: int | None, /, *, center: bool, ddof: int | None = None
 ) -> RollingOptionsFixedWindow:
+    ensure_type(window_size, int, param_name="window_size")
+    ensure_type(min_samples, int, type(None), param_name="min_samples")
+    if window_size < 1:
+        msg = "`window_size` must be >= 1"
+        raise InvalidOperationError(msg)
+    if min_samples is None:
+        min_samples = window_size
+    elif min_samples < 1:
+        msg = "`min_samples` must be >= 1"
+        raise InvalidOperationError(msg)
+    elif min_samples > window_size:
+        msg = "`min_samples` must be <= `window_size`"
+        raise InvalidOperationError(msg)
     return RollingOptionsFixedWindow(
         window_size=window_size,
-        min_samples=window_size if min_samples is None else min_samples,
+        min_samples=min_samples,
         center=center,
         fn_params=ddof if ddof is None else RollingVarParams(ddof=ddof),
     )
@@ -307,3 +328,15 @@ class FunctionExprOptions(_BaseIROptions):
 
 
 FEOptions = FunctionExprOptions
+
+
+class ExplodeOptions(Immutable):
+    __slots__ = ("empty_as_null", "keep_nulls")
+    empty_as_null: bool
+    """Explode an empty list into a `null`."""
+    keep_nulls: bool
+    """Explode a `null` into a `null`."""
+
+    def any(self) -> bool:
+        """Return True if we need to handle empty lists and/or nulls."""
+        return self.empty_as_null or self.keep_nulls

@@ -66,14 +66,14 @@ def test_temp_column_names_sources(source: _StoresColumns | Iterable[str]) -> No
 
 @given(n_chars=st.integers(6, 106))
 @pytest.mark.slow
-def test_temp_column_name_n_chars(n_chars: int) -> None:
+def test_temp_column_name_n_chars(n_chars: int) -> None:  # pragma: no cover
     name = temp.column_name(_COLUMNS, n_chars=n_chars)
     assert name not in _COLUMNS
 
 
 @given(n_new_names=st.integers(10_000, 100_000))
 @pytest.mark.slow
-def test_temp_column_names_always_new_names(n_new_names: int) -> None:
+def test_temp_column_names_always_new_names(n_new_names: int) -> None:  # pragma: no cover
     it = temp.column_names(_COLUMNS)
     new_names = set(islice(it, n_new_names))
     assert len(new_names) == n_new_names

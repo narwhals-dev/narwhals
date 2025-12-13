@@ -7,6 +7,8 @@ from narwhals._plan._immutable import Immutable
 from narwhals._plan.typing import LiteralT, NativeSeriesT, NonNestedLiteralT
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from typing_extensions import TypeIs
 
     from narwhals._plan.expressions.expr import Literal
@@ -73,6 +75,11 @@ class SeriesLiteral(LiteralValue["Series[NativeSeriesT]"]):
 
     def unwrap(self) -> Series[NativeSeriesT]:
         return self.value
+
+    @property
+    def __immutable_values__(self) -> Iterator[Any]:
+        # NOTE: Adding `Series.__eq__` means this needed a manual override
+        yield from (self.name, self.dtype, id(self.value))
 
 
 def is_literal_scalar(

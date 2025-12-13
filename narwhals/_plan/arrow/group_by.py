@@ -17,7 +17,7 @@ from narwhals._utils import Implementation
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
-    from collections.abc import Collection, Iterator, Mapping, Sequence
+    from collections.abc import Iterable, Iterator, Mapping, Sequence
 
     from typing_extensions import Self, TypeAlias
 
@@ -49,24 +49,28 @@ SUPPORTED_AGG: Mapping[type[agg.AggExpr], acero.Aggregation] = {
     agg.NUnique: "hash_count_distinct",
     agg.First: "hash_first",
     agg.Last: "hash_last",
+    fn.MinMax: "hash_min_max",
 }
 SUPPORTED_IR: Mapping[type[ir.ExprIR], acero.Aggregation] = {
     ir.Len: "hash_count_all",
     ir.Column: "hash_list",  # `hash_aggregate` only
 }
+
+_version_dependent: dict[Any, acero.Aggregation] = {}
+if fn.HAS_KURTOSIS_SKEW:
+    _version_dependent.update(
+        {ir.functions.Kurtosis: "hash_kurtosis", ir.functions.Skew: "hash_skew"}
+    )
+
 SUPPORTED_FUNCTION: Mapping[type[ir.Function], acero.Aggregation] = {
     ir.boolean.All: "hash_all",
     ir.boolean.Any: "hash_any",
     ir.functions.Unique: "hash_distinct",  # `hash_aggregate` only
     ir.functions.NullCount: "hash_count",
+    **_version_dependent,
 }
 
-REQUIRES_PYARROW_20: tuple[Literal["kurtosis"], Literal["skew"]] = ("kurtosis", "skew")
-"""They don't show in [our version of the stubs], but are possible in [`pyarrow>=20`].
-
-[our version of the stubs]: https://github.com/narwhals-dev/narwhals/issues/2124#issuecomment-3191374210
-[`pyarrow>=20`]: https://arrow.apache.org/docs/20.0/python/compute.html#grouped-aggregations
-"""
+del _version_dependent
 
 
 class AggSpec:
@@ -132,6 +136,39 @@ class AggSpec:
         fn_name = SUPPORTED_IR[type(expr)]
         return cls(expr.name if isinstance(expr, ir.Column) else (), fn_name, name=name)
 
+    # NOTE: Fast-paths for single column rewrites
+    @classmethod
+    def _from_function(cls, tp: type[ir.Function], name: str) -> Self:
+        return cls(name, SUPPORTED_FUNCTION[tp], options.FUNCTION.get(tp), name)
+
+    @classmethod
+    def any(cls, name: str) -> Self:
+        return cls._from_function(ir.boolean.Any, name)
+
+    @classmethod
+    def unique(cls, name: str) -> Self:
+        return cls._from_function(ir.functions.Unique, name)
+
+    @classmethod
+    def implode(cls, name: str) -> Self:
+        # TODO @dangotbanned: Replace with `agg.Implode` (via `_from_agg`) once both have been dded
+        # https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/crates/polars-plan/src/dsl/expr/mod.rs#L44
+        return cls(name, SUPPORTED_IR[ir.Column], None, name)
+
+    def over(self, native: pa.Table, keys: Iterable[acero.Field]) -> pa.Table:
+        """Sugar for `native.group_by(keys).aggregate([self])`.
+
+        Returns a table with columns named: `[*keys, self.name]`
+        """
+        return acero.group_by_table(native, keys, [self])
+
+    def over_index(self, native: pa.Table, index_column: str) -> ChunkedArrayAny:
+        """Execute this aggregation over `index_column`.
+
+        Returns a single, (unnamed) array, representing the aggregation results.
+        """
+        return acero.group_by_table(native, [index_column], [self]).column(self.name)
+
 
 def group_by_error(
     column_name: str, expr: ir.ExprIR, reason: Literal["too complex"] | None = None
@@ -143,15 +180,6 @@ def group_by_error(
         msg = f"`{get_dispatch_name(expr)}()`"
     msg = f"{msg} is not supported in a `group_by` context for {backend!r}:\n{column_name}={expr!r}"
     return InvalidOperationError(msg)
-
-
-def multiple_null_partitions_error(column_names: Collection[str]) -> NotImplementedError:
-    backend = Implementation.PYARROW
-    msg = (
-        f"`over(*partition_by)` where multiple columns contain null values is not yet supported for {backend!r}\n"
-        f"Got: {list(column_names)!r}"
-    )
-    return NotImplementedError(msg)
 
 
 class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
