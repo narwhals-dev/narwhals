@@ -674,12 +674,8 @@ def list_join(
         # So this is after-the-fact and messy
         empty = lit(EMPTY, lists.type.value_type)
         replacements = (
-            implode_by_idx.set_column(1, v, replacements)
-            .join(
-                to_table(explode_w_idx.column(idx).unique(), idx),
-                idx,
-                join_type="full outer",
-            )
+            to_table(explode_w_idx.column(idx).unique(), idx)
+            .join(implode_by_idx.set_column(1, v, replacements), idx)
             .sort_by(idx)
             .column(v)
             .fill_null(empty)
