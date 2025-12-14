@@ -1008,16 +1008,12 @@ class ArrowListNamespace(
         lists = native
         # TODO @dangotbanned: Experiment with explode step
         # These options are to mirror `main`, but setting them to `True` may simplify everything after?
-        builder = fn.ExplodeBuilder()
-        explode_w_idx = builder.explode_with_indices(lists)
+        explode_w_idx = fn.ExplodeBuilder().explode_with_indices(lists)
         idx, v = "idx", "values"
         agg_result = (
-            AggSpec._from_list_agg(type(func), v)
-            .over(explode_w_idx, [idx])
-            .sort_by(idx)  # <--- won't be needed now that exploding keeps all indices
-            .column(v)
+            AggSpec._from_list_agg(type(func), v).over(explode_w_idx, [idx]).column(v)
         )
-        if isinstance(func, ir.lists.Sum):
+        if not isinstance(func, ir.lists.Median):
             return self.with_native(fn.when_then(fn.is_not_null(lists), agg_result), name)
         dtype: pa.DataType = agg_result.type
         non_empty_mask = fn.not_eq(fn.list_len(lists), fn.lit(0))
