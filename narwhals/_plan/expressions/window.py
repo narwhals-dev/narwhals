@@ -14,6 +14,7 @@ from narwhals._plan.options import SortOptions
 if TYPE_CHECKING:
     from narwhals._plan.expressions import ExprIR
     from narwhals._plan.typing import Seq
+    from narwhals.exceptions import InvalidOperationError
 
 
 def _validate_over(
@@ -22,7 +23,7 @@ def _validate_over(
     order_by: Seq[ExprIR] = (),
     sort_options: SortOptions | None = None,
     /,
-) -> ValueError | None:
+) -> InvalidOperationError | None:
     if is_over(expr):
         return nested_error(expr, partition_by, order_by, sort_options)
     if is_function_expr(expr):
