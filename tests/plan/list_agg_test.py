@@ -35,13 +35,7 @@ cast_a = a.cast(nw.List(nw.Int32))
         (a.list.max(), {"a": [4, -1, None, None, None]}),
         (a.list.mean(), {"a": [2.75, -1, None, None, None]}),
         (a.list.min(), {"a": [2, -1, None, None, None]}),
-        pytest.param(
-            a.list.sum(),
-            {"a": [11, -1, None, 0, 0]},
-            marks=pytest.mark.xfail(
-                reason="Mismatch at index 3, key a: None != 0", raises=AssertionError
-            ),
-        ),
+        (a.list.sum(), {"a": [11, -1, None, 0, 0]}),
     ],
     ids=["max", "mean", "min", "sum"],
 )

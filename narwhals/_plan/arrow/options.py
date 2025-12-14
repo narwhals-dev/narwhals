@@ -39,6 +39,7 @@ __all__ = [
 
 AGG: Mapping[type[agg.AggExpr], acero.AggregateOptions]
 FUNCTION: Mapping[type[ir.Function], acero.AggregateOptions]
+LIST_AGG: Mapping[type[ir.lists.Aggregation], acero.AggregateOptions]
 
 _NULLS_LAST = True
 _NULLS_FIRST = False
@@ -159,6 +160,12 @@ def _generate_agg() -> Mapping[type[agg.AggExpr], acero.AggregateOptions]:
     }
 
 
+def _generate_list_agg() -> Mapping[type[ir.lists.Aggregation], acero.AggregateOptions]:
+    from narwhals._plan.expressions import lists
+
+    return {lists.Sum: scalar_aggregate(ignore_nulls=True)}
+
+
 def _generate_function() -> Mapping[type[ir.Function], acero.AggregateOptions]:
     from narwhals._plan.expressions import boolean, functions
 
@@ -183,5 +190,9 @@ if not TYPE_CHECKING:
             global FUNCTION
             FUNCTION = _generate_function()
             return FUNCTION
+        if name == "LIST_AGG":
+            global LIST_AGG
+            LIST_AGG = _generate_list_agg()
+            return LIST_AGG
         msg = f"module {__name__!r} has no attribute {name!r}"
         raise AttributeError(msg)

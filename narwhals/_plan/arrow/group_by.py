@@ -104,6 +104,9 @@ class AggSpec:
         """Let's us duck-type as a 4-tuple."""
         yield from (self.target, self.agg, self.option, self.name)
 
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}({self.target!r}, {self.agg!r}, {self.option!r}, {self.name!r})"
+
     @classmethod
     def from_named_ir(cls, named_ir: NamedIR) -> Self:
         return cls.from_expr_ir(named_ir.expr, named_ir.name)
@@ -149,12 +152,12 @@ class AggSpec:
         return cls(name, SUPPORTED_FUNCTION[tp], options.FUNCTION.get(tp), name)
 
     @classmethod
-    def _from_agg(cls, tp: type[ir.lists.Aggregation | agg.AggExpr], name: str) -> Self:
-        tp_agg = SUPPORTED_LIST_AGG[tp] if issubclass(tp, ir.lists.ListFunction) else tp
+    def _from_list_agg(cls, tp: type[ir.lists.Aggregation], name: str) -> Self:
+        tp_agg = SUPPORTED_LIST_AGG[tp]
         if tp_agg in {agg.Std, agg.Var}:
             msg = f"TODO: {qualified_type_name(agg)!r} needs access to `ddof`, so can't be passed in without an instance"
             raise NotImplementedError(msg)
-        return cls(name, SUPPORTED_AGG[tp_agg], options.AGG.get(tp_agg), name)
+        return cls(name, SUPPORTED_AGG[tp_agg], options.LIST_AGG.get(tp), name)
 
     @classmethod
     def any(cls, name: str) -> Self:

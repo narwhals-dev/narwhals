@@ -1017,7 +1017,7 @@ class ArrowListNamespace(
         explode_w_idx = builder.explode_with_indices(lists)
         idx, v = "idx", "values"
         agg_result = (
-            AggSpec._from_agg(type(func), v)
+            AggSpec._from_list_agg(type(func), v)
             .over(explode_w_idx, [idx])
             .sort_by(idx)
             .column(v)
