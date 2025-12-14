@@ -22,7 +22,10 @@ def data() -> Data:
 
 @pytest.fixture(scope="module")
 def data_median(data: Data) -> Data:
-    return {"a": [*data["a"], [3, 4, None]]}
+    # NOTE: `pyarrow` needs at least 3 (non-null) values to calculate `median` correctly
+    # Otherwise it picks the lowest non-null
+    # https://github.com/narwhals-dev/narwhals/pull/3332#discussion_r2617508167
+    return {"a": [*data["a"], [3, 4, None, 4, None, 3]]}
 
 
 a = nwp.col("a")
@@ -51,9 +54,4 @@ def test_list_agg(data: Data, exprs: OneOrIterable[nwp.Expr], expected: Data) ->
 def test_list_median(data_median: Data) -> None:
     df = dataframe(data_median).with_columns(cast_a)
     result = df.select(a.list.median())
-
-    # TODO @dangotbanned: Is this fixable with `FunctionOptions`?
-    expected = [2.5, -1, None, None, None, 3.5]
-    expected_pyarrow = [2.5, -1, None, None, None, 3]
-    expected = expected_pyarrow
-    assert_equal_data(result, {"a": expected})
+    assert_equal_data(result, {"a": [2.5, -1, None, None, None, 3.5]})
