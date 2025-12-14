@@ -481,16 +481,20 @@ class ExplodeBuilder:
                 _list_explode(arr)
                 for arr in self._iter_ensure_shape(first_len, arrays[1:])
             )
+        column_names = native.column_names
+        result = native
         first_result = _list_explode(first_safe)
-        if len(first_result) != len(native):
-            gathered = native.drop_columns(subset).take(_list_parent_indices(first_safe))
+        if len(first_result) == len(native):
+            # fastpath for all length-1 lists
+            # if only the first is length-1, then the others raise during iteration on either branch
             for name, arr in zip(subset, chain([first_result], it)):
-                gathered = gathered.append_column(name, arr)
-            return gathered.select(native.column_names)
-        # NOTE: Not too happy about this import
-        from narwhals._plan.arrow.dataframe import with_arrays
-
-        return with_arrays(native, zip(subset, chain([first_result], it)))
+                result = result.set_column(column_names.index(name), name, arr)
+        else:
+            result = result.drop_columns(subset).take(_list_parent_indices(first_safe))
+            for name, arr in zip(subset, chain([first_result], it)):
+                result = result.append_column(name, arr)
+            result = result.select(column_names)
+        return result
 
     @classmethod
     def explode_column_fast(cls, native: pa.Table, column_name: str, /) -> pa.Table:
