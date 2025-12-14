@@ -10,14 +10,13 @@ from tests.plan.utils import assert_equal_data, dataframe
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-    from typing import Final, TypeVar
+    from typing import Final
 
     from typing_extensions import TypeAlias
 
     from tests.conftest import Data
+    from tests.plan.utils import SubList
 
-    T = TypeVar("T")
-    SubList: TypeAlias = list[T] | list[T | None] | list[None] | None
     SubListStr: TypeAlias = SubList[str]
 
 

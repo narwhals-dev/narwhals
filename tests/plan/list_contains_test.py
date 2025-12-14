@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Final
 
 import pytest
 
@@ -11,6 +11,7 @@ from tests.plan.utils import assert_equal_data, dataframe
 if TYPE_CHECKING:
     from narwhals._plan.typing import IntoExpr
     from tests.conftest import Data
+    from tests.plan.utils import SubList
 
 
 @pytest.fixture(scope="module")
@@ -42,10 +43,10 @@ def test_list_contains(data: Data, item: IntoExpr, expected: list[bool | None]) 
     assert_equal_data(result, {"a": expected})
 
 
-R1: Final[list[Any]] = [None, "A", "B", "A", "A", "B"]
-R2: Final = None
-R3: Final[list[Any]] = []
-R4: Final = [None]
+R1: Final[SubList[str]] = [None, "A", "B", "A", "A", "B"]
+R2: Final[SubList[str]] = None
+R3: Final[SubList[str]] = []
+R4: Final[SubList[str]] = [None]
 
 
 @pytest.mark.parametrize(
@@ -66,7 +67,7 @@ R4: Final = [None]
     ],
 )
 def test_list_contains_scalar(
-    row: list[str | None] | None, item: IntoExpr, *, expected: bool | None
+    row: SubList[str], item: IntoExpr, *, expected: bool | None
 ) -> None:
     data = {"a": [row]}
     df = dataframe(data).select(a.cast(nw.List(nw.String)))
