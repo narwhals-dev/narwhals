@@ -603,9 +603,7 @@ _list_join = t.cast(
 )
 
 
-# TODO @dangotbanned: Raise a feature request for `pc.binary_join(strings, separator, *, options: JoinOptions)`
-# - Default for `binary_join_element_wise` is the only behavior available (here) currently
-# - Working around it is a **slog**
+# NOTE: Raised for native null-handling (https://github.com/apache/arrow/issues/48477)
 @t.overload
 def list_join(
     native: ChunkedList[StringType],
