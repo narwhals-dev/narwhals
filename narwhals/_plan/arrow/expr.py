@@ -999,30 +999,14 @@ class ArrowListNamespace(
         self, node: FExpr[lists.Aggregation], frame: Frame, name: str
     ) -> Expr | Scalar:
         previous = node.input[0].dispatch(self.compliant, frame, name)
-        func = node.function
         if isinstance(previous, ArrowScalar):
-            msg = f"TODO: ArrowScalar.{func!r}"
+            msg = f"TODO: ArrowScalar.{node.function!r}"
             raise NotImplementedError(msg)
 
         native = previous.native
-        lists = native
-        # TODO @dangotbanned: Experiment with explode step
-        # These options are to mirror `main`, but setting them to `True` may simplify everything after?
-        explode_w_idx = fn.ExplodeBuilder().explode_with_indices(lists)
-        idx, v = "idx", "values"
-        agg_result = (
-            AggSpec._from_list_agg(type(func), v).over(explode_w_idx, [idx]).column(v)
-        )
-        if not isinstance(func, ir.lists.Median):
-            return self.with_native(fn.when_then(fn.is_not_null(lists), agg_result), name)
-        dtype: pa.DataType = agg_result.type
-        non_empty_mask = fn.not_eq(fn.list_len(lists), fn.lit(0))
-        base_array = fn.repeat_unchecked(fn.lit(None, dtype), len(lists))
-        replaced = fn.replace_with_mask(
-            base_array, fn.fill_null(non_empty_mask, False), agg_result
-        )
-        result = fn.chunked_array(replaced)
-        return self.with_native(result, name)
+        agg = AggSpec._from_list_agg(type(node.function), "values")
+        result = agg.over_index(fn.ExplodeBuilder().explode_with_indices(native), "idx")
+        return self.with_native(fn.when_then(native.is_valid(), result), name)
 
     min = aggregate
     max = aggregate

@@ -45,8 +45,6 @@ def test_list_agg(data: Data, exprs: OneOrIterable[nwp.Expr], expected: Data) ->
     assert_equal_data(result, expected)
 
 
-# TODO @dangotbanned: Fix after simplifying `list.{max,mean,min}`
-@pytest.mark.xfail(reason="Mismatch at index 5, key a: None != 3", raises=AssertionError)
 @pytest.mark.xfail(
     is_windows() and sys.version_info < (3, 10), reason="Old pyarrow windows bad?"
 )
