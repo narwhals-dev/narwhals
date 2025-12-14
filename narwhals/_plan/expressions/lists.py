@@ -20,6 +20,11 @@ if TYPE_CHECKING:
 
 # fmt: off
 class ListFunction(Function, accessor="list", options=FunctionOptions.elementwise): ...
+class Min(ListFunction): ...
+class Max(ListFunction): ...
+class Mean(ListFunction): ...
+class Median(ListFunction): ...
+class Sum(ListFunction): ...
 class Len(ListFunction): ...
 class Unique(ListFunction): ...
 class Get(ListFunction):
@@ -46,12 +51,32 @@ class IRListNamespace(IRNamespace):
     contains: ClassVar = Contains
     get: ClassVar = Get
     join: ClassVar = Join
+    min: ClassVar = Min
+    max: ClassVar = Max
+    mean: ClassVar = Mean
+    median: ClassVar = Median
+    sum: ClassVar = Sum
 
 
 class ExprListNamespace(ExprNamespace[IRListNamespace]):
     @property
     def _ir_namespace(self) -> type[IRListNamespace]:
         return IRListNamespace
+
+    def min(self) -> Expr:
+        return self._with_unary(self._ir.min())
+
+    def max(self) -> Expr:
+        return self._with_unary(self._ir.max())
+
+    def mean(self) -> Expr:
+        return self._with_unary(self._ir.mean())
+
+    def median(self) -> Expr:
+        return self._with_unary(self._ir.median())
+
+    def sum(self) -> Expr:
+        return self._with_unary(self._ir.sum())
 
     def len(self) -> Expr:
         return self._with_unary(self._ir.len())
