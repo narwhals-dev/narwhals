@@ -27,6 +27,7 @@ from narwhals._plan.typing import (
     SelectorOperatorT,
     SelectorT,
     Seq,
+    StructT_co,
 )
 from narwhals.exceptions import InvalidOperationError
 
@@ -60,9 +61,11 @@ __all__ = [
     "SelectorIR",
     "Sort",
     "SortBy",
+    "StructExpr",
     "TernaryExpr",
     "WindowExpr",
     "col",
+    "ternary_expr",
 ]
 
 
@@ -273,7 +276,11 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT_co], child=("input",)):
         return self.function.__expr_ir_dispatch__(self, ctx, frame, name)
 
 
-class RollingExpr(FunctionExpr[RollingT_co]): ...
+class RollingExpr(FunctionExpr[RollingT_co]):
+    def dispatch(
+        self: Self, ctx: Ctx[FrameT_contra, R_co], frame: FrameT_contra, name: str
+    ) -> R_co:
+        return self.__expr_ir_dispatch__(self, ctx, frame, name)
 
 
 class AnonymousExpr(
@@ -314,6 +321,20 @@ class RangeExpr(FunctionExpr[RangeT_co]):
 
     def __repr__(self) -> str:
         return f"{self.function!r}({list(self.input)!r})"
+
+
+class StructExpr(FunctionExpr[StructT_co]):
+    """E.g. `col("a").struct.field(...)`.
+
+    Requires special handling during expression expansion.
+    """
+
+    def needs_expansion(self) -> bool:
+        return self.function.needs_expansion or super().needs_expansion()
+
+    def iter_output_name(self) -> t.Iterator[ExprIR]:
+        yield self
+        yield from super().iter_output_name()  # pragma: no cover
 
 
 class Filter(ExprIR, child=("expr", "by")):
@@ -376,8 +397,9 @@ class OrderedWindowExpr(
             args = f"partition_by={list(self.partition_by)!r}, order_by={list(order)!r}"
         return f"{self.expr!r}.over({args})"
 
+    # TODO @dangotbanned: Update to align with https://github.com/pola-rs/polars/pull/25117/files#diff-45d1f22172e291bd4a5ce36d1fb8233698394f9590bcf11382b9c99b5449fff5
     def iter_root_names(self) -> t.Iterator[ExprIR]:
-        # NOTE: `order_by` is never considered in `polars`
+        # NOTE: `order_by` ~~is~~ was never considered in `polars`
         # To match that behavior for `root_names` - but still expand in all other cases
         # - this little escape hatch exists
         # https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/plans/iterator.rs#L76-L86
@@ -524,3 +546,7 @@ class InvertSelector(SelectorIR, t.Generic[SelectorT]):
 
     def to_dtype_selector(self) -> Self:
         return replace(self, selector=self.selector.to_dtype_selector())
+
+
+def ternary_expr(predicate: ExprIR, truthy: ExprIR, falsy: ExprIR, /) -> TernaryExpr:
+    return TernaryExpr(predicate=predicate, truthy=truthy, falsy=falsy)

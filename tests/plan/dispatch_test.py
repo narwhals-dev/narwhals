@@ -47,11 +47,11 @@ def test_dispatch(df: DataFrame[pa.Table, pa.ChunkedArray[Any]]) -> None:
         df.select(nwp.col("c").ewm_mean())
 
     missing_protocol = re_compile(
-        r"str\.contains.+has not been implemented.+compliant.+"
-        r"Hint.+try adding.+CompliantExpr\.str\.contains\(\)"
+        r"dt\.offset_by.+has not been implemented.+compliant.+"
+        r"Hint.+try adding.+CompliantExpr\.dt\.offset_by\(\)"
     )
     with pytest.raises(NotImplementedError, match=missing_protocol):
-        df.select(nwp.col("d").str.contains("a"))
+        df.select(nwp.col("d").dt.offset_by("1d"))
 
     with pytest.raises(
         TypeError,
@@ -78,11 +78,23 @@ def test_dispatch(df: DataFrame[pa.Table, pa.ChunkedArray[Any]]) -> None:
         (nwp.int_range(10), "int_range"),
         (nwp.col("a") + nwp.col("b") + 10, "binary_expr"),
         (nwp.when(nwp.col("c")).then(5).when(nwp.col("d")).then(20), "ternary_expr"),
+        (nwp.col("a").rolling_sum(2), "rolling_expr"),
+        (nwp.col("a").cum_sum(), "cum_sum"),
+        (nwp.col("a").cat.get_categories(), "cat.get_categories"),
+        (nwp.col("a").dt.timestamp(), "dt.timestamp"),
+        (nwp.col("a").dt.replace_time_zone(None), "dt.replace_time_zone"),
+        (nwp.col("a").list.len(), "list.len"),
         (nwp.col("a").cast(nw.String).str.starts_with("something"), ("str.starts_with")),
+        (nwp.col("a").str.slice(1), ("str.slice")),
+        (nwp.col("a").str.head(), ("str.slice")),
+        (nwp.col("a").str.tail(), ("str.slice")),
+        (nwp.col("a").struct.field("b"), "struct.field"),
         (nwp.mean("a"), "mean"),
         (nwp.nth(1).first(), "first"),
         (nwp.col("a").sum(), "sum"),
+        (~nwp.col("a"), "not_"),
         (nwp.col("a").drop_nulls().arg_min(), "arg_min"),
+        (nwp.col("a").map_batches(lambda x: x), "map_batches"),
         pytest.param(nwp.col("a").alias("b"), "Alias", id="no_dispatch-Alias"),
         pytest.param(ncs.string(), "RootSelector", id="no_dispatch-RootSelector"),
     ],

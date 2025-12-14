@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     from narwhals._plan.expressions.functions import RollingWindow
     from narwhals._plan.expressions.namespace import IRNamespace
     from narwhals._plan.expressions.ranges import RangeFunction
+    from narwhals._plan.expressions.struct import StructFunction
     from narwhals._plan.selectors import Selector
     from narwhals._plan.series import Series
     from narwhals.typing import NonNestedDType, NonNestedLiteral
@@ -61,6 +62,9 @@ RollingT_co = TypeVar(
 RangeT_co = TypeVar(
     "RangeT_co", bound="RangeFunction", default="RangeFunction", covariant=True
 )
+StructT_co = TypeVar(
+    "StructT_co", bound="StructFunction", default="StructFunction", covariant=True
+)
 LeftT = TypeVar("LeftT", bound="ExprIR", default="ExprIR")
 OperatorT = TypeVar("OperatorT", bound="ops.Operator", default="ops.Operator")
 RightT = TypeVar("RightT", bound="ExprIR", default="ExprIR")
@@ -88,11 +92,11 @@ NonNestedLiteralT = TypeVar(
     "NonNestedLiteralT", bound="NonNestedLiteral", default="NonNestedLiteral"
 )
 NativeSeriesT = TypeVar("NativeSeriesT", bound="NativeSeries", default="NativeSeries")
+NativeSeriesT2 = TypeVar("NativeSeriesT2", bound="NativeSeries", default="NativeSeries")
 NativeSeriesAnyT = TypeVar("NativeSeriesAnyT", bound="NativeSeries", default="t.Any")
 NativeSeriesT_co = TypeVar(
     "NativeSeriesT_co", bound="NativeSeries", covariant=True, default="NativeSeries"
 )
-NativeFrameT = TypeVar("NativeFrameT", bound="NativeFrame", default="NativeFrame")
 NativeFrameT_co = TypeVar(
     "NativeFrameT_co", bound="NativeFrame", covariant=True, default="NativeFrame"
 )
@@ -123,9 +127,10 @@ Udf: TypeAlias = "Callable[[t.Any], t.Any]"
 IntoExprColumn: TypeAlias = "Expr | Series[t.Any] | str"
 IntoExpr: TypeAlias = "NonNestedLiteral | IntoExprColumn"
 ColumnNameOrSelector: TypeAlias = "str | Selector"
-OneOrIterable: TypeAlias = "T | t.Iterable[T]"
+OneOrIterable: TypeAlias = "T | Iterable[T]"
 OneOrSeq: TypeAlias = t.Union[T, Seq[T]]
 DataFrameT = TypeVar("DataFrameT", bound="DataFrame[t.Any, t.Any]")
+SeriesT = TypeVar("SeriesT", bound="Series[t.Any]")
 Order: TypeAlias = t.Literal["ascending", "descending"]
 NonCrossJoinStrategy: TypeAlias = t.Literal["inner", "left", "full", "semi", "anti"]
 PartialSeries: TypeAlias = "Callable[[Iterable[t.Any]], Series[NativeSeriesAnyT]]"
@@ -135,4 +140,14 @@ Ignored: TypeAlias = Container[str]
 """Names of `group_by` columns, which are excluded[^1] when expanding a `Selector`.
 
 [^1]: `ByName`, `ByIndex` will never be ignored.
+"""
+
+
+IncompleteCyclic: TypeAlias = "t.Any"
+"""Placeholder for typing that introduces a cyclic dependency.
+
+Mainly for spelling `(Compliant)DataFrame` from within `(Compliant)Series`.
+
+On `main`, this works fine when running a type checker from the CLI - but causes
+intermittent warnings when running in a language server.
 """

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, overload
 
 import pytest
 
@@ -13,11 +13,13 @@ from tests.utils import assert_equal_data as _assert_equal_data
 
 pytest.importorskip("pyarrow")
 
+from collections.abc import Sequence
+
 import pyarrow as pa
 
 if TYPE_CHECKING:
     import sys
-    from collections.abc import Iterable, Mapping, Sequence
+    from collections.abc import Iterable, Mapping
 
     from typing_extensions import LiteralString, TypeAlias
 
@@ -218,14 +220,27 @@ def series(values: Iterable[Any], /) -> nwp.Series[pa.ChunkedArray[Any]]:
 
 
 def assert_equal_data(
-    result: nwp.DataFrame[Any, Any], expected: Mapping[str, Any]
+    result: nwp.DataFrame[Any, Any], expected: Mapping[str, Any] | nwp.DataFrame[Any, Any]
 ) -> None:
+    if isinstance(expected, nwp.DataFrame):
+        expected = expected.to_dict(as_series=False)
     _assert_equal_data(result.to_dict(as_series=False), expected)
 
 
+@overload
+def assert_equal_series(result: nwp.Series[Any], expected: nwp.Series[Any]) -> None: ...
+@overload
 def assert_equal_series(
-    result: nwp.Series[Any], expected: Sequence[Any], name: str
+    result: nwp.Series[Any], expected: Iterable[Any], name: str
+) -> None: ...
+def assert_equal_series(
+    result: nwp.Series[Any], expected: Iterable[Any], name: str = ""
 ) -> None:
+    if isinstance(expected, nwp.Series):
+        name = expected.name
+        expected = expected.to_list()
+    else:
+        expected = expected if isinstance(expected, Sequence) else tuple(expected)
     assert_equal_data(result.to_frame(), {name: expected})
 
 

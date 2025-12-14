@@ -24,7 +24,8 @@ from narwhals._plan.options import (
     SortOptions,
     rolling_options,
 )
-from narwhals._utils import Version
+from narwhals._typing_compat import deprecated
+from narwhals._utils import Version, no_default, not_implemented
 from narwhals.exceptions import ComputeError
 
 if TYPE_CHECKING:
@@ -42,10 +43,12 @@ if TYPE_CHECKING:
     from narwhals._plan.expressions.temporal import ExprDateTimeNamespace
     from narwhals._plan.meta import MetaNamespace
     from narwhals._plan.typing import IntoExpr, IntoExprColumn, OneOrIterable, Seq, Udf
+    from narwhals._typing import NoDefault
     from narwhals.typing import (
         ClosedInterval,
         FillNullStrategy,
         IntoDType,
+        ModeKeepStrategy,
         NumericLiteral,
         RankMethod,
         RollingInterpolationMethod,
@@ -192,8 +195,12 @@ class Expr:
         bins: Sequence[float] | None = None,
         *,
         bin_count: int | None = None,
-        include_breakpoint: bool = True,
+        include_breakpoint: bool = False,
+        include_category: bool = False,
     ) -> Self:
+        if include_category:
+            msg = f"`Expr.hist({include_category=})` is not yet implemented"
+            raise NotImplementedError(msg)
         node: F.Hist
         if bins is not None:
             if bin_count is not None:
@@ -215,11 +222,20 @@ class Expr:
     def sqrt(self) -> Self:
         return self._with_unary(F.Sqrt())
 
-    def kurtosis(self, *, fisher: bool = True, bias: bool = True) -> Self:
-        return self._with_unary(F.Kurtosis(fisher=fisher, bias=bias))
+    def kurtosis(self) -> Self:
+        return self._with_unary(F.Kurtosis())
 
     def null_count(self) -> Self:
         return self._with_unary(F.NullCount())
+
+    def fill_nan(self, value: float | Self | None) -> Self:
+        fill_value = parse_into_expr_ir(value, str_as_lit=True)
+        root = self._ir
+        if any(e.meta.has_multiple_outputs() for e in (root, fill_value)):
+            return self._from_ir(F.FillNan().to_function_expr(root, fill_value))
+        # https://github.com/pola-rs/polars/blob/e1d6f294218a36497255e2d872c223e19a47e2ec/crates/polars-plan/src/dsl/mod.rs#L894-L902
+        predicate = self.is_not_nan() | self.is_null()
+        return self._from_ir(ir.ternary_expr(predicate._ir, root, fill_value))
 
     def fill_null(
         self,
@@ -238,8 +254,11 @@ class Expr:
     def drop_nulls(self) -> Self:
         return self._with_unary(F.DropNulls())
 
-    def mode(self) -> Self:
-        return self._with_unary(F.Mode())
+    def mode(self, *, keep: ModeKeepStrategy = "all") -> Self:
+        if func := {"all": F.ModeAll, "any": F.ModeAny}.get(keep):
+            return self._with_unary(func())
+        msg = f"`keep` must be one of ('all', 'any'), but got {keep!r}"
+        raise TypeError(msg)
 
     def skew(self) -> Self:
         return self._with_unary(F.Skew())
@@ -253,8 +272,15 @@ class Expr:
         lower_bound: IntoExprColumn | NumericLiteral | TemporalLiteral | None = None,
         upper_bound: IntoExprColumn | NumericLiteral | TemporalLiteral | None = None,
     ) -> Self:
-        it = parse_into_seq_of_expr_ir(lower_bound, upper_bound)
-        return self._from_ir(F.Clip().to_function_expr(self._ir, *it))
+        f: ir.FunctionExpr
+        if upper_bound is None:
+            f = F.ClipLower().to_function_expr(self._ir, parse_into_expr_ir(lower_bound))
+        elif lower_bound is None:
+            f = F.ClipUpper().to_function_expr(self._ir, parse_into_expr_ir(upper_bound))
+        else:
+            it = parse_into_seq_of_expr_ir(lower_bound, upper_bound)
+            f = F.Clip().to_function_expr(self._ir, *it)
+        return self._from_ir(f)
 
     def cum_count(self, *, reverse: bool = False) -> Self:  # pragma: no cover
         return self._with_unary(F.CumCount(reverse=reverse))
@@ -273,7 +299,7 @@ class Expr:
 
     def rolling_sum(
         self, window_size: int, *, min_samples: int | None = None, center: bool = False
-    ) -> Self:  # pragma: no cover
+    ) -> Self:
         options = rolling_options(window_size, min_samples, center=center)
         return self._with_unary(F.RollingSum(options=options))
 
@@ -290,7 +316,7 @@ class Expr:
         min_samples: int | None = None,
         center: bool = False,
         ddof: int = 1,
-    ) -> Self:  # pragma: no cover
+    ) -> Self:
         options = rolling_options(window_size, min_samples, center=center, ddof=ddof)
         return self._with_unary(F.RollingVar(options=options))
 
@@ -301,7 +327,7 @@ class Expr:
         min_samples: int | None = None,
         center: bool = False,
         ddof: int = 1,
-    ) -> Self:  # pragma: no cover
+    ) -> Self:
         options = rolling_options(window_size, min_samples, center=center, ddof=ddof)
         return self._with_unary(F.RollingStd(options=options))
 
@@ -313,6 +339,12 @@ class Expr:
 
     def round(self, decimals: int = 0) -> Self:
         return self._with_unary(F.Round(decimals=decimals))
+
+    def ceil(self) -> Self:
+        return self._with_unary(F.Ceil())
+
+    def floor(self) -> Self:
+        return self._with_unary(F.Floor())
 
     def ewm_mean(
         self,
@@ -339,13 +371,14 @@ class Expr:
     def replace_strict(
         self,
         old: Sequence[Any] | Mapping[Any, Any],
-        new: Sequence[Any] | None = None,
+        new: Sequence[Any] | NoDefault = no_default,
         *,
+        default: IntoExpr | NoDefault = no_default,
         return_dtype: IntoDType | None = None,
     ) -> Self:
         before: Seq[Any]
         after: Seq[Any]
-        if new is None:
+        if new is no_default:
             if not isinstance(old, Mapping):
                 msg = "`new` argument is required if `old` argument is not a Mapping type"
                 raise TypeError(msg)
@@ -359,8 +392,15 @@ class Expr:
             after = tuple(new)
         if return_dtype is not None:
             return_dtype = common.into_dtype(return_dtype)
-        function = F.ReplaceStrict(old=before, new=after, return_dtype=return_dtype)
-        return self._with_unary(function)
+
+        if default is no_default:
+            function = F.ReplaceStrict(old=before, new=after, return_dtype=return_dtype)
+            return self._with_unary(function)
+        function = F.ReplaceStrictDefault(
+            old=before, new=after, return_dtype=return_dtype
+        )
+        default_ir = parse_into_expr_ir(default, str_as_lit=True)
+        return self._from_ir(function.to_function_expr(self._ir, default_ir))
 
     def gather_every(self, n: int, offset: int = 0) -> Self:
         return self._with_unary(F.GatherEvery(n=n, offset=offset))
@@ -384,6 +424,19 @@ class Expr:
             )
         )
 
+    # TODO @dangotbanned: Come back to this when *properly* building out `Version` support
+    @deprecated("Use `v1.Expr.sample` or `{DataFrame,Series}.sample` instead")
+    def sample(
+        self,
+        n: int | None = None,
+        *,
+        fraction: float | None = None,
+        with_replacement: bool = False,
+        seed: int | None = None,
+    ) -> Self:
+        f = F.sample(n, fraction=fraction, with_replacement=with_replacement, seed=seed)
+        return self._with_unary(f)
+
     def any(self) -> Self:
         return self._with_unary(ir.boolean.Any())
 
@@ -401,6 +454,12 @@ class Expr:
 
     def is_null(self) -> Self:
         return self._with_unary(ir.boolean.IsNull())
+
+    def is_not_nan(self) -> Self:
+        return self._with_unary(ir.boolean.IsNotNan())
+
+    def is_not_null(self) -> Self:
+        return self._with_unary(ir.boolean.IsNotNull())
 
     def is_first_distinct(self) -> Self:
         return self._with_unary(ir.boolean.IsFirstDistinct())
@@ -548,14 +607,14 @@ class Expr:
             >>>
             >>> renamed = nw.col("a", "b").name.suffix("_changed")
             >>> str(renamed._ir)
-            "RenameAlias(expr=RootSelector(selector=ByName(names=[a, b], require_all=True)), function=Suffix(suffix='_changed'))"
+            "RenameAlias(expr=RootSelector(selector=ByName(names=['a', 'b'], require_all=True)), function=Suffix(suffix='_changed'))"
         """
         from narwhals._plan.expressions.name import ExprNameNamespace
 
         return ExprNameNamespace(_expr=self)
 
     @property
-    def cat(self) -> ExprCatNamespace:  # pragma: no cover
+    def cat(self) -> ExprCatNamespace:
         from narwhals._plan.expressions.categorical import ExprCatNamespace
 
         return ExprCatNamespace(_expr=self)
@@ -573,7 +632,7 @@ class Expr:
         return ExprDateTimeNamespace(_expr=self)
 
     @property
-    def list(self) -> ExprListNamespace:  # pragma: no cover
+    def list(self) -> ExprListNamespace:
         from narwhals._plan.expressions.lists import ExprListNamespace
 
         return ExprListNamespace(_expr=self)
@@ -583,6 +642,10 @@ class Expr:
         from narwhals._plan.expressions.strings import ExprStringNamespace
 
         return ExprStringNamespace(_expr=self)
+
+    is_close = not_implemented()
+    head = not_implemented()
+    tail = not_implemented()
 
 
 class ExprV1(Expr):

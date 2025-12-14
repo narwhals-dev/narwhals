@@ -48,10 +48,27 @@ def function_expr_invalid_operation_error(
     return InvalidOperationError(msg)
 
 
+def function_arg_non_scalar_error(
+    function: Function, arg_name: str, arg_value: Any
+) -> InvalidOperationError:
+    msg = f"`{function!r}({arg_name}=...)` does not support non-scalar expression `{arg_value!r}`."
+    return InvalidOperationError(msg)
+
+
+def list_literal_error(value: Any) -> TypeError:
+    msg = f"{type(value).__name__!r} is not supported in `nw.lit`, got: {value!r}."
+    return TypeError(msg)
+
+
 # TODO @dangotbanned: Use arguments in error message
 def hist_bins_monotonic_error(bins: Seq[float]) -> ComputeError:  # noqa: ARG001
     msg = "bins must increase monotonically"
     return ComputeError(msg)
+
+
+def shape_error(expected_length: int, actual_length: int) -> ShapeError:
+    msg = f"Expected object of length {expected_length}, got {actual_length}."
+    return ShapeError(msg)
 
 
 def _binary_underline(

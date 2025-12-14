@@ -109,21 +109,16 @@ def _sort_keys_every(
     return tuple((key, order) for key in by)
 
 
-def _sort_keys(
-    by: tuple[str, ...], *, descending: bool | Sequence[bool]
-) -> Seq[tuple[str, Order]]:
-    if not isinstance(descending, bool) and len(descending) == 1:
-        descending = descending[0]
-    if isinstance(descending, bool):
-        return _sort_keys_every(by, descending=descending)
-    it = zip_strict(by, descending)
-    return tuple(_sort_key(key, descending=desc) for (key, desc) in it)
-
-
 def sort(
     *by: str, descending: bool | Sequence[bool] = False, nulls_last: bool = False
 ) -> pc.SortOptions:
-    keys = _sort_keys(by, descending=descending)
+    if not isinstance(descending, bool) and len(descending) == 1:
+        descending = descending[0]
+    if isinstance(descending, bool):
+        keys = _sort_keys_every(by, descending=descending)
+    else:
+        it = zip_strict(by, descending)
+        keys = tuple(_sort_key(key, descending=desc) for (key, desc) in it)
     return pc.SortOptions(sort_keys=keys, null_placement=NULL_PLACEMENT[nulls_last])
 
 
@@ -136,6 +131,20 @@ def rank(
         null_placement=NULL_PLACEMENT[nulls_last],
         tiebreaker=("first" if method == "ordinal" else method),
     )
+
+
+def match_substring(pattern: str) -> pc.MatchSubstringOptions:
+    return pc.MatchSubstringOptions(pattern)
+
+
+def split_pattern(by: str, n: int | None = None) -> pc.SplitPatternOptions:
+    """Similar to `str.splitn`.
+
+    Some glue for `max_splits=n - 1`
+    """
+    if n is not None:
+        return pc.SplitPatternOptions(by, max_splits=n - 1)
+    return pc.SplitPatternOptions(by)
 
 
 def _generate_agg() -> Mapping[type[agg.AggExpr], acero.AggregateOptions]:
@@ -157,6 +166,7 @@ def _generate_function() -> Mapping[type[ir.Function], acero.AggregateOptions]:
         boolean.All: scalar_aggregate(ignore_nulls=True),
         boolean.Any: scalar_aggregate(ignore_nulls=True),
         functions.NullCount: count("only_null"),
+        functions.Unique: count("all"),
     }
 
 

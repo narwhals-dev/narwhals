@@ -15,7 +15,7 @@ from narwhals import _plan as nwp
 from narwhals._plan import expressions as ir
 from narwhals._plan._parse import parse_into_seq_of_expr_ir
 from narwhals._plan.expressions import functions as F, operators as ops
-from narwhals._plan.expressions.literal import SeriesLiteral
+from narwhals._plan.expressions.literal import ScalarLiteral, SeriesLiteral
 from narwhals._plan.expressions.ranges import IntRange
 from narwhals._utils import Implementation
 from narwhals.exceptions import (
@@ -26,7 +26,7 @@ from narwhals.exceptions import (
     MultiOutputExpressionError,
     ShapeError,
 )
-from tests.plan.utils import assert_expr_ir_equal, re_compile
+from tests.plan.utils import assert_equal_data, assert_expr_ir_equal, re_compile
 
 if TYPE_CHECKING:
     from contextlib import AbstractContextManager
@@ -209,13 +209,7 @@ def test_date_range_invalid() -> None:
         nwp.date_range(start, end, interval="3y")
 
 
-def test_int_range_eager() -> None:
-    series = nwp.int_range(50, eager="pyarrow")
-    assert isinstance(series, nwp.Series)
-    assert series.to_list() == list(range(50))
-    series = nwp.int_range(50, eager=Implementation.PYARROW)
-    assert series.to_list() == list(range(50))
-
+def test_int_range_eager_invalid() -> None:
     with pytest.raises(InvalidOperationError):
         nwp.int_range(nwp.len(), eager="pyarrow")  # type: ignore[call-overload]
     with pytest.raises(InvalidOperationError):
@@ -224,49 +218,6 @@ def test_int_range_eager() -> None:
         nwp.int_range(10, eager="pandas")
     with pytest.raises(ValueError, match=r"lazy-only"):
         nwp.int_range(10, eager="duckdb")  # type: ignore[call-overload]
-
-
-def test_date_range_eager() -> None:
-    leap_year = 2024
-    series_leap = nwp.date_range(
-        dt.date(leap_year, 2, 25), dt.date(leap_year, 3, 25), eager="pyarrow"
-    )
-    series_regular = nwp.date_range(
-        dt.date(leap_year + 1, 2, 25),
-        dt.date(leap_year + 1, 3, 25),
-        interval=dt.timedelta(days=1),
-        eager="pyarrow",
-    )
-    assert len(series_regular) == 29
-    assert len(series_leap) == 30
-
-    expected = [
-        dt.date(2000, 1, 1),
-        dt.date(2002, 9, 14),
-        dt.date(2005, 5, 28),
-        dt.date(2008, 2, 9),
-        dt.date(2010, 10, 23),
-        dt.date(2013, 7, 6),
-        dt.date(2016, 3, 19),
-        dt.date(2018, 12, 1),
-        dt.date(2021, 8, 14),
-    ]
-
-    series = nwp.date_range(
-        dt.date(2000, 1, 1), dt.date(2023, 8, 31), interval="987d", eager="pyarrow"
-    )
-    result = series.to_list()
-    assert result == expected
-
-    expected = [dt.date(2006, 10, 14), dt.date(2013, 7, 27), dt.date(2020, 5, 9)]
-    result = nwp.date_range(
-        dt.date(2000, 1, 1),
-        dt.date(2023, 8, 31),
-        interval="354w",
-        closed="right",
-        eager="pyarrow",
-    ).to_list()
-    assert result == expected
 
 
 def test_date_range_eager_invalid() -> None:
@@ -375,6 +326,14 @@ def test_binary_expr_shape_invalid() -> None:
         a / b.drop_nulls()
     with pytest.raises(ShapeError, match=pattern):
         a.fill_null(1) // b.rolling_mean(5)
+
+
+def test_map_batches_invalid() -> None:
+    with pytest.raises(
+        TypeError,
+        match=r"A function cannot both return a scalar and preserve length, they are mutually exclusive",
+    ):
+        nwp.col("a").map_batches(lambda x: x, is_elementwise=True, returns_scalar=True)
 
 
 @pytest.mark.parametrize("into_iter", [list, tuple, deque, iter, dict.fromkeys, set])
@@ -576,14 +535,14 @@ def test_hist_bins() -> None:
 
 def test_hist_bin_count() -> None:
     bin_count_default = 10
-    include_breakpoint_default = True
+    include_breakpoint_default = False
     a = nwp.col("a")
     hist_1 = a.hist(
         bin_count=bin_count_default, include_breakpoint=include_breakpoint_default
     )
     hist_2 = a.hist()
     hist_3 = a.hist(bin_count=5)
-    hist_4 = a.hist(include_breakpoint=False)
+    hist_4 = a.hist(include_breakpoint=True)
 
     ir_1 = hist_1._ir
     ir_2 = hist_2._ir
@@ -693,3 +652,113 @@ def test_replace_strict_invalid() -> None:
         match="`new` argument cannot be used if `old` argument is a Mapping type",
     ):
         nwp.col("a").replace_strict(old={1: 2, 3: 4}, new=[5, 6, 7])
+
+
+def test_mode_invalid() -> None:
+    with pytest.raises(
+        TypeError, match=r"keep.+must be one of.+all.+any.+but got 'first'"
+    ):
+        nwp.col("a").mode(keep="first")  # type: ignore[arg-type]
+
+
+def test_broadcast_len_1_series_invalid() -> None:
+    pytest.importorskip("pyarrow")
+    data = {"a": [1, 2, 3]}
+    values = [4]
+    df = nwp.DataFrame.from_dict(data, backend="pyarrow")
+    ser = nwp.Series.from_iterable(values, name="bad", backend="pyarrow")
+    with pytest.raises(
+        ShapeError,
+        match=re_compile(
+            r"series.+bad.+length.+1.+match.+DataFrame.+height.+3.+broadcasted.+\.first\(\)"
+        ),
+    ):
+        df.with_columns(ser)
+
+    expected_series = {"a": [1, 2, 3], "literal": [4, 4, 4]}
+    # we can only preserve `Series.name` if we got a `lit(Series).first()`, not `lit(Series.first())`
+    expected_series_literal = {"a": [1, 2, 3], "bad": [4, 4, 4]}
+
+    assert_equal_data(df.with_columns(ser.first()), expected_series)
+    assert_equal_data(df.with_columns(ser.last()), expected_series)
+    assert_equal_data(df.with_columns(nwp.lit(ser).first()), expected_series_literal)
+
+
+@pytest.mark.parametrize(
+    ("window_size", "min_samples", "context"),
+    [
+        (-1, None, pytest.raises(ValueError, match=r"window_size.+>= 1")),
+        (2, -1, pytest.raises(ValueError, match=r"min_samples.+>= 1")),
+        (
+            1,
+            2,
+            pytest.raises(InvalidOperationError, match=r"min_samples.+<=.+window_size"),
+        ),
+        (
+            4.2,
+            None,
+            pytest.raises(TypeError, match=r"Expected.+int.+got.+float.+\s+window_size="),
+        ),
+        (
+            2,
+            4.2,
+            pytest.raises(TypeError, match=r"Expected.+int.+got.+float.+\s+min_samples="),
+        ),
+    ],
+)
+def test_rolling_expr_invalid(
+    window_size: int, min_samples: int | None, context: pytest.RaisesExc[Any]
+) -> None:
+    a = nwp.col("a")
+    with context:
+        a.rolling_sum(window_size, min_samples=min_samples)
+    with context:
+        a.rolling_mean(window_size, min_samples=min_samples)
+    with context:
+        a.rolling_var(window_size, min_samples=min_samples)
+    with context:
+        a.rolling_std(window_size, min_samples=min_samples)
+
+
+def test_list_contains_invalid() -> None:
+    a = nwp.col("a")
+
+    ok = a.list.contains("a")
+    assert_expr_ir_equal(
+        ok,
+        ir.FunctionExpr(
+            input=(
+                ir.col("a"),
+                ir.Literal(value=ScalarLiteral(value="a", dtype=nw.String())),
+            ),
+            function=ir.lists.Contains(),
+            options=ir.lists.Contains().function_options,
+        ),
+    )
+    assert a.list.contains(a.first())
+    assert a.list.contains(1)
+    assert a.list.contains(nwp.lit(1))
+    assert a.list.contains(dt.datetime(2000, 2, 1, 9, 26, 5))
+    assert a.list.contains(a.abs().fill_null(5).mode(keep="any"))
+
+    with pytest.raises(
+        InvalidOperationError, match=r"list.contains.+non-scalar.+`col\('a'\)"
+    ):
+        a.list.contains(a)
+
+    with pytest.raises(InvalidOperationError, match=r"list.contains.+non-scalar.+abs"):
+        a.list.contains(a.abs())
+
+    with pytest.raises(TypeError, match=r"list.+not.+supported.+nw.lit.+1.+2.+3"):
+        a.list.contains([1, 2, 3])  # type: ignore[arg-type]
+
+
+def test_list_get_invalid() -> None:
+    a = nwp.col("a")
+    assert a.list.get(0)
+    pattern = re_compile(r"expected.+int.+got.+str.+'not an index'")
+    with pytest.raises(TypeError, match=pattern):
+        a.list.get("not an index")  # type: ignore[arg-type]
+    pattern = re_compile(r"index.+out of bounds.+>= 0.+got -1")
+    with pytest.raises(InvalidOperationError, match=pattern):
+        a.list.get(-1)

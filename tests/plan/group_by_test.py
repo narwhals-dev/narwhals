@@ -8,6 +8,7 @@ import pytest
 import narwhals as nw
 from narwhals import _plan as nwp
 from narwhals._plan import selectors as ncs
+from narwhals._utils import Implementation
 from narwhals.exceptions import InvalidOperationError
 from tests.plan.utils import assert_equal_data, dataframe
 from tests.utils import PYARROW_VERSION, assert_equal_data as _assert_equal_data
@@ -587,8 +588,13 @@ def test_group_by_agg_last(
                 "b_first": [3, 1, 3, 2, 1],
             },
         ),
+        (
+            ["d"],
+            [nwp.col("e", "b").unique()],
+            {"d": ["one", "three"], "e": [[1, 2], [None, 1]], "b": [[1, 3], [1, 2, 3]]},
+        ),
     ],
-    ids=["Unique-Single", "Unique-Multi", "Unique-Selector-Fancy"],
+    ids=["Unique-Single", "Unique-Multi", "Unique-Selector-Fancy", "Unique-Nulls"],
 )
 def test_group_by_agg_unique(
     keys: Sequence[str], aggs: Sequence[IntoExpr], expected: Mapping[str, Any]
@@ -598,8 +604,42 @@ def test_group_by_agg_unique(
         "b": [1, 2, 1, 3, 3],
         "c": [5, 4, 3, 2, 1],
         "d": ["three", "three", "one", "three", "one"],
+        "e": [None, 1, 1, None, 2],
     }
     df = dataframe(data)
+    result = df.group_by(keys).agg(aggs).sort(keys)
+    assert_equal_data(result, expected)
+
+
+def test_group_by_agg_kurtosis_skew(request: pytest.FixtureRequest) -> None:
+    data = {
+        "p1": ["a", "b", None, None, "b", "b"],
+        "p2": [1, 2, 1, None, None, None],
+        "p3": [None, 1, 1, 2, 2, None],
+        "a": [1, 2, 3, 4, 2, 1],
+        "b": [None, 9.9, 1.5, None, 1.0, 2.1],
+    }
+    expected = {
+        "p1": [None, "a", "b"],
+        "a_skew": [0.0, float("nan"), -0.707107],
+        "b_skew": [float("nan"), None, 0.666442],
+        "b_kurtosis": [float("nan"), None, -1.4999999999999996],
+        "a_kurtosis": [-2.0, float("nan"), -1.4999999999999998],
+    }
+    df = dataframe(data)
+
+    request.applymarker(
+        pytest.mark.xfail(
+            (df.implementation is Implementation.PYARROW and PYARROW_VERSION < (20,)),
+            reason="too old for `pyarrow.compute.{kurtosis,skew}`",
+        )
+    )
+
+    keys = ("p1",)
+    aggs = (
+        nwp.col("a", "b").skew().name.suffix("_skew"),
+        nwp.nth(-1, -2).kurtosis().name.suffix("_kurtosis"),
+    )
     result = df.group_by(keys).agg(aggs).sort(keys)
     assert_equal_data(result, expected)
 

@@ -9,7 +9,7 @@ from narwhals._plan.exceptions import hist_bins_monotonic_error
 from narwhals._plan.options import FunctionFlags, FunctionOptions
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Mapping
     from typing import Any
 
     from _typeshed import ConvertibleToInt
@@ -44,10 +44,25 @@ class Abs(Function, options=FunctionOptions.elementwise): ...
 class NullCount(Function, options=FunctionOptions.aggregation): ...
 class Exp(Function, options=FunctionOptions.elementwise): ...
 class Sqrt(Function, options=FunctionOptions.elementwise): ...
+class Ceil(Function, options=FunctionOptions.elementwise): ...
+class Floor(Function, options=FunctionOptions.elementwise): ...
 class DropNulls(Function, options=FunctionOptions.row_separable): ...
-class Mode(Function): ...
+class ModeAll(Function): ...
+class ModeAny(Function, options=FunctionOptions.aggregation): ...
+class Kurtosis(Function, options=FunctionOptions.aggregation): ...
 class Skew(Function, options=FunctionOptions.aggregation): ...
-class Clip(Function, options=FunctionOptions.elementwise): ...
+class Clip(Function, options=FunctionOptions.elementwise):
+    def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR, ExprIR]:
+        expr, lower_bound, upper_bound = node.input
+        return expr, lower_bound, upper_bound
+class ClipLower(Function, options=FunctionOptions.elementwise):
+    def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR]:
+        expr, lower_bound = node.input
+        return expr, lower_bound
+class ClipUpper(Function, options=FunctionOptions.elementwise):
+    def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR]:
+        expr, upper_bound = node.input
+        return expr, upper_bound
 class CumCount(CumAgg): ...
 class CumMin(CumAgg): ...
 class CumMax(CumAgg): ...
@@ -63,10 +78,9 @@ class SumHorizontal(HorizontalFunction): ...
 class MinHorizontal(HorizontalFunction): ...
 class MaxHorizontal(HorizontalFunction): ...
 class MeanHorizontal(HorizontalFunction): ...
+class Coalesce(HorizontalFunction): ...
 # fmt: on
 class Hist(Function):
-    """Only supported for `Series` so far."""
-
     __slots__ = ("include_breakpoint",)
     include_breakpoint: bool
 
@@ -78,7 +92,7 @@ class Hist(Function):
     # They're also more widely defined to what will work at runtime
     @staticmethod
     def from_bins(
-        bins: Iterable[float], /, *, include_breakpoint: bool = True
+        bins: Iterable[float], /, *, include_breakpoint: bool = False
     ) -> HistBins:
         bins = tuple(bins)
         for i in range(1, len(bins)):
@@ -88,9 +102,16 @@ class Hist(Function):
 
     @staticmethod
     def from_bin_count(
-        count: ConvertibleToInt = 10, /, *, include_breakpoint: bool = True
+        count: ConvertibleToInt = 10, /, *, include_breakpoint: bool = False
     ) -> HistBinCount:
         return HistBinCount(bin_count=int(count), include_breakpoint=include_breakpoint)
+
+    @property
+    def empty_data(self) -> Mapping[str, Iterable[Any]]:
+        # NOTE: May need to adapt for `include_category`?
+        return (
+            {"breakpoint": [], "count": []} if self.include_breakpoint else {"count": []}
+        )
 
 
 class HistBins(Hist):
@@ -116,13 +137,15 @@ class Pow(Function, options=FunctionOptions.elementwise):
         return base, exponent
 
 
-class Kurtosis(Function, options=FunctionOptions.aggregation):
-    __slots__ = ("bias", "fisher")
-    fisher: bool
-    bias: bool
-
-
 class FillNull(Function, options=FunctionOptions.elementwise):
+    """N-ary (expr, value)."""
+
+    def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR]:
+        expr, value = node.input
+        return expr, value
+
+
+class FillNan(Function, options=FunctionOptions.elementwise):
     """N-ary (expr, value)."""
 
     def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR]:
@@ -163,6 +186,12 @@ class ReplaceStrict(Function, options=FunctionOptions.elementwise):
     return_dtype: DType | None
 
 
+class ReplaceStrictDefault(ReplaceStrict):
+    def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR]:
+        expr, default = node.input
+        return expr, default
+
+
 class GatherEvery(Function):
     __slots__ = ("n", "offset")
     n: int
@@ -190,3 +219,32 @@ class MapBatches(Function):
 
         options = self.function_options
         return AnonymousExpr(input=inputs, function=self, options=options)
+
+
+class SampleN(Function):
+    __slots__ = ("n", "seed", "with_replacement")
+    n: int
+    with_replacement: bool
+    seed: int | None
+
+
+class SampleFrac(Function):
+    __slots__ = ("fraction", "seed", "with_replacement")
+    fraction: float
+    with_replacement: bool
+    seed: int | None
+
+
+def sample(
+    n: int | None = None,
+    *,
+    fraction: float | None = None,
+    with_replacement: bool = False,
+    seed: int | None = None,
+) -> SampleFrac | SampleN:
+    if n is not None and fraction is not None:
+        msg = "cannot specify both `n` and `fraction`"
+        raise ValueError(msg)
+    if fraction is not None:
+        return SampleFrac(fraction=fraction, with_replacement=with_replacement, seed=seed)
+    return SampleN(n=1 if n is None else n, with_replacement=with_replacement, seed=seed)

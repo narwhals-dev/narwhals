@@ -24,7 +24,7 @@ if TYPE_CHECKING:
         NativeSeriesT,
         Seq,
     )
-    from narwhals.typing import NonNestedLiteral
+    from narwhals.typing import NonNestedLiteral, PythonLiteral
 
     T = TypeVar("T")
 
@@ -38,6 +38,7 @@ _NON_NESTED_LITERAL_TPS = (
     bytes,
     Decimal,
 )
+_PYTHON_LITERAL_TPS = (*_NON_NESTED_LITERAL_TPS, list, tuple, type(None))
 
 
 def _ir(*_: Any):  # type: ignore[no-untyped-def]  # noqa: ANN202
@@ -66,6 +67,10 @@ def _series(*_: Any):  # type: ignore[no-untyped-def]  # noqa: ANN202
 
 def is_non_nested_literal(obj: Any) -> TypeIs[NonNestedLiteral]:
     return obj is None or isinstance(obj, _NON_NESTED_LITERAL_TPS)
+
+
+def is_python_literal(obj: Any) -> TypeIs[PythonLiteral]:
+    return isinstance(obj, _PYTHON_LITERAL_TPS)
 
 
 def is_expr(obj: Any) -> TypeIs[Expr]:

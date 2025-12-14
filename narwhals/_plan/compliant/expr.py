@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Any, Literal, Protocol
 
 from narwhals._plan.compliant.column import EagerBroadcast, SupportsBroadcast
 from narwhals._plan.compliant.typing import (
@@ -13,10 +13,16 @@ from narwhals._plan.compliant.typing import (
 from narwhals._utils import Version
 
 if TYPE_CHECKING:
-    from typing_extensions import Self, TypeAlias
+    from typing_extensions import Self
 
     from narwhals._plan import expressions as ir
-    from narwhals._plan.compliant.scalar import CompliantScalar
+    from narwhals._plan.compliant.accessors import (
+        ExprCatNamespace,
+        ExprListNamespace,
+        ExprStringNamespace,
+        ExprStructNamespace,
+    )
+    from narwhals._plan.compliant.scalar import CompliantScalar, EagerScalar
     from narwhals._plan.expressions import (
         BinaryExpr,
         FunctionExpr,
@@ -30,11 +36,12 @@ if TYPE_CHECKING:
         IsFirstDistinct,
         IsLastDistinct,
         IsNan,
+        IsNotNan,
+        IsNotNull,
         IsNull,
         Not,
     )
-
-Incomplete: TypeAlias = Any
+    from narwhals._plan.typing import IncompleteCyclic
 
 
 class CompliantExpr(HasVersion, Protocol[FrameT_contra, SeriesT_co]):
@@ -62,6 +69,9 @@ class CompliantExpr(HasVersion, Protocol[FrameT_contra, SeriesT_co]):
     def fill_null(
         self, node: FunctionExpr[F.FillNull], frame: FrameT_contra, name: str
     ) -> Self: ...
+    def fill_nan(
+        self, node: FunctionExpr[F.FillNan], frame: FrameT_contra, name: str
+    ) -> Self: ...
     def is_between(
         self, node: FunctionExpr[IsBetween], frame: FrameT_contra, name: str
     ) -> Self: ...
@@ -80,8 +90,11 @@ class CompliantExpr(HasVersion, Protocol[FrameT_contra, SeriesT_co]):
     def is_null(
         self, node: FunctionExpr[IsNull], frame: FrameT_contra, name: str
     ) -> Self: ...
-    def map_batches(
-        self, node: ir.AnonymousExpr, frame: FrameT_contra, name: str
+    def is_not_nan(
+        self, node: FunctionExpr[IsNotNan], frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def is_not_null(
+        self, node: FunctionExpr[IsNotNull], frame: FrameT_contra, name: str
     ) -> Self: ...
     def not_(self, node: FunctionExpr[Not], frame: FrameT_contra, name: str) -> Self: ...
     def over(self, node: ir.WindowExpr, frame: FrameT_contra, name: str) -> Self: ...
@@ -187,9 +200,15 @@ class CompliantExpr(HasVersion, Protocol[FrameT_contra, SeriesT_co]):
         self, node: FunctionExpr[F.Skew], frame: FrameT_contra, name: str
     ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
 
-    # mixed/todo
+    # TODO @dangotbanned: Reorder these
     def clip(
         self, node: FunctionExpr[F.Clip], frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def clip_lower(
+        self, node: FunctionExpr[F.ClipLower], frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def clip_upper(
+        self, node: FunctionExpr[F.ClipUpper], frame: FrameT_contra, name: str
     ) -> Self: ...
     def drop_nulls(
         self, node: FunctionExpr[F.DropNulls], frame: FrameT_contra, name: str
@@ -217,11 +236,17 @@ class CompliantExpr(HasVersion, Protocol[FrameT_contra, SeriesT_co]):
         self, node: FunctionExpr[boolean.IsUnique], frame: FrameT_contra, name: str
     ) -> Self: ...
     def log(self, node: FunctionExpr[F.Log], frame: FrameT_contra, name: str) -> Self: ...
-    def mode(
-        self, node: FunctionExpr[F.Mode], frame: FrameT_contra, name: str
+    def mode_all(
+        self, node: FunctionExpr[F.ModeAll], frame: FrameT_contra, name: str
     ) -> Self: ...
+    def mode_any(
+        self, node: FunctionExpr[F.ModeAny], frame: FrameT_contra, name: str
+    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
     def replace_strict(
         self, node: FunctionExpr[F.ReplaceStrict], frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def replace_strict_default(
+        self, node: FunctionExpr[F.ReplaceStrictDefault], frame: FrameT_contra, name: str
     ) -> Self: ...
     def round(
         self, node: FunctionExpr[F.Round], frame: FrameT_contra, name: str
@@ -232,6 +257,33 @@ class CompliantExpr(HasVersion, Protocol[FrameT_contra, SeriesT_co]):
     def unique(
         self, node: FunctionExpr[F.Unique], frame: FrameT_contra, name: str
     ) -> Self: ...
+    def ceil(
+        self, node: FunctionExpr[F.Ceil], frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def floor(
+        self, node: FunctionExpr[F.Floor], frame: FrameT_contra, name: str
+    ) -> Self: ...
+    @property
+    def cat(
+        self,
+    ) -> ExprCatNamespace[FrameT_contra, CompliantExpr[FrameT_contra, SeriesT_co]]: ...
+    @property
+    def list(
+        self,
+    ) -> ExprListNamespace[FrameT_contra, CompliantExpr[FrameT_contra, SeriesT_co]]: ...
+    @property
+    def str(
+        self,
+    ) -> ExprStringNamespace[FrameT_contra, CompliantExpr[FrameT_contra, SeriesT_co]]: ...
+    @property
+    def struct(
+        self,
+    ) -> ExprStructNamespace[FrameT_contra, CompliantExpr[FrameT_contra, SeriesT_co]]: ...
+
+    # NOTE: This test has a case for detecting `Expr` impl, but missing `CompliantExpr` member
+    # `tests/plan/dispatch_test.py::test_dispatch`
+    # TODO @dangotbanned: Update that logic when `dt` namespace is actually implemented
+    # dt: not_implemented = not_implemented()`
 
 
 class EagerExpr(
@@ -244,10 +296,25 @@ class EagerExpr(
     ) -> Self: ...
     def is_in_series(
         self,
-        node: FunctionExpr[boolean.IsInSeries[Incomplete]],
+        node: FunctionExpr[boolean.IsInSeries[IncompleteCyclic]],
         frame: FrameT_contra,
         name: str,
     ) -> Self: ...
+    # NOTE: `Scalar` when using `returns_scalar=True`
+    def map_batches(
+        self, node: ir.AnonymousExpr, frame: FrameT_contra, name: str
+    ) -> Self | EagerScalar[FrameT_contra, SeriesT]: ...
+    # NOTE: `n=1` can behave similar to an aggregation in `select(...)`, but requires `.first()`
+    # to trigger broadcasting in `with_columns(...)`
+    def sample_n(
+        self, node: FunctionExpr[F.SampleN], frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def sample_frac(
+        self, node: FunctionExpr[F.SampleFrac], frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def __bool__(self) -> Literal[True]:
+        # NOTE: Avoids falling back to `__len__` when truth-testing on dispatch
+        return True
 
 
 class LazyExpr(

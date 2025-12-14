@@ -11,6 +11,7 @@ from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._plan._guards import is_tuple_of
 from narwhals._plan.arrow import functions as fn
 from narwhals._plan.compliant.namespace import EagerNamespace
+from narwhals._plan.expressions.expr import RangeExpr
 from narwhals._plan.expressions.literal import is_literal_scalar
 from narwhals._utils import Implementation, Version
 from narwhals.exceptions import InvalidOperationError
@@ -25,8 +26,8 @@ if TYPE_CHECKING:
     from narwhals._plan.arrow.typing import ChunkedArray, IntegerScalar
     from narwhals._plan.expressions import expr, functions as F
     from narwhals._plan.expressions.boolean import AllHorizontal, AnyHorizontal
-    from narwhals._plan.expressions.expr import FunctionExpr, RangeExpr
-    from narwhals._plan.expressions.ranges import DateRange, IntRange
+    from narwhals._plan.expressions.expr import FunctionExpr as FExpr, RangeExpr
+    from narwhals._plan.expressions.ranges import DateRange, IntRange, LinearSpace
     from narwhals._plan.expressions.strings import ConcatStr
     from narwhals._plan.series import Series as NwSeries
     from narwhals._plan.typing import NonNestedLiteralT
@@ -100,15 +101,13 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
             nw_ser.to_native(), name or node.name, nw_ser.version
         )
 
-    # NOTE: Update with `ignore_nulls`/`fill_null` behavior once added to each `Function`
-    # https://github.com/narwhals-dev/narwhals/pull/2719
     def _horizontal_function(
         self, fn_native: Callable[[Any, Any], Any], /, fill: NonNestedLiteral = None
-    ) -> Callable[[FunctionExpr[Any], Frame, str], Expr | Scalar]:
-        def func(node: FunctionExpr[Any], frame: Frame, name: str) -> Expr | Scalar:
+    ) -> Callable[[FExpr[Any], Frame, str], Expr | Scalar]:
+        def func(node: FExpr[Any], frame: Frame, name: str) -> Expr | Scalar:
             it = (self._expr.from_ir(e, frame, name).native for e in node.input)
             if fill is not None:
-                it = (pc.fill_null(native, fn.lit(fill)) for native in it)
+                it = (fn.fill_null(native, fill) for native in it)
             result = reduce(fn_native, it)
             if isinstance(result, pa.Scalar):
                 return self._scalar.from_native(result, name, self.version)
@@ -116,37 +115,46 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
 
         return func
 
+    def coalesce(self, node: FExpr[F.Coalesce], frame: Frame, name: str) -> Expr | Scalar:
+        it = (self._expr.from_ir(e, frame, name).native for e in node.input)
+        result = pc.coalesce(*it)
+        if isinstance(result, pa.Scalar):
+            return self._scalar.from_native(result, name, self.version)
+        return self._expr.from_native(result, name, self.version)
+
     def any_horizontal(
-        self, node: FunctionExpr[AnyHorizontal], frame: Frame, name: str
+        self, node: FExpr[AnyHorizontal], frame: Frame, name: str
     ) -> Expr | Scalar:
-        return self._horizontal_function(fn.or_)(node, frame, name)
+        fill = False if node.function.ignore_nulls else None
+        return self._horizontal_function(fn.or_, fill)(node, frame, name)
 
     def all_horizontal(
-        self, node: FunctionExpr[AllHorizontal], frame: Frame, name: str
+        self, node: FExpr[AllHorizontal], frame: Frame, name: str
     ) -> Expr | Scalar:
-        return self._horizontal_function(fn.and_)(node, frame, name)
+        fill = True if node.function.ignore_nulls else None
+        return self._horizontal_function(fn.and_, fill)(node, frame, name)
 
     def sum_horizontal(
-        self, node: FunctionExpr[F.SumHorizontal], frame: Frame, name: str
+        self, node: FExpr[F.SumHorizontal], frame: Frame, name: str
     ) -> Expr | Scalar:
         return self._horizontal_function(fn.add, fill=0)(node, frame, name)
 
     def min_horizontal(
-        self, node: FunctionExpr[F.MinHorizontal], frame: Frame, name: str
+        self, node: FExpr[F.MinHorizontal], frame: Frame, name: str
     ) -> Expr | Scalar:
         return self._horizontal_function(fn.min_horizontal)(node, frame, name)
 
     def max_horizontal(
-        self, node: FunctionExpr[F.MaxHorizontal], frame: Frame, name: str
+        self, node: FExpr[F.MaxHorizontal], frame: Frame, name: str
     ) -> Expr | Scalar:
         return self._horizontal_function(fn.max_horizontal)(node, frame, name)
 
     def mean_horizontal(
-        self, node: FunctionExpr[F.MeanHorizontal], frame: Frame, name: str
+        self, node: FExpr[F.MeanHorizontal], frame: Frame, name: str
     ) -> Expr | Scalar:
         int64 = pa.int64()
         inputs = [self._expr.from_ir(e, frame, name).native for e in node.input]
-        filled = (pc.fill_null(native, fn.lit(0)) for native in inputs)
+        filled = (fn.fill_null(native, 0) for native in inputs)
         # NOTE: `mypy` doesn't like that `add` is overloaded
         sum_not_null = reduce(
             fn.add,  # type: ignore[arg-type]
@@ -158,7 +166,7 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
         return self._expr.from_native(result, name, self.version)
 
     def concat_str(
-        self, node: FunctionExpr[ConcatStr], frame: Frame, name: str
+        self, node: FExpr[ConcatStr], frame: Frame, name: str
     ) -> Expr | Scalar:
         exprs = (self._expr.from_ir(e, frame, name) for e in node.input)
         aligned = (ser.native for ser in self._expr.align(exprs))
@@ -169,8 +177,13 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
             return self._scalar.from_native(result, name, self.version)
         return self._expr.from_native(result, name, self.version)
 
+    # TODO @dangotbanned: Refactor alongside `nwp.functions._ensure_range_scalar`
+    # Consider returning the supertype of inputs
     def _range_function_inputs(
-        self, node: RangeExpr, frame: Frame, valid_type: type[NonNestedLiteralT]
+        self,
+        node: RangeExpr,
+        frame: Frame,
+        valid_type: type[NonNestedLiteralT] | tuple[type[NonNestedLiteralT], ...],
     ) -> tuple[NonNestedLiteralT, NonNestedLiteralT]:
         start_: PythonLiteral
         end_: PythonLiteral
@@ -191,8 +204,10 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
                 )
                 raise InvalidOperationError(msg)
         if isinstance(start_, valid_type) and isinstance(end_, valid_type):
-            return start_, end_
-        msg = f"All inputs for `{node.function}()` must resolve to {valid_type.__name__}, but got \n{start_!r}\n{end_!r}"
+            return start_, end_  # type: ignore[return-value]
+        valid_types = (valid_type,) if not isinstance(valid_type, tuple) else valid_type
+        tp_names = " | ".join(tp.__name__ for tp in valid_types)
+        msg = f"All inputs for `{node.function}()` must resolve to {tp_names}, but got \n{start_!r}\n{end_!r}"
         raise InvalidOperationError(msg)
 
     def _int_range(
@@ -240,6 +255,24 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
         native = fn.date_range(start, end, interval, closed=closed)
         return self._series.from_native(native, name, version=self.version)
 
+    def linear_space(self, node: RangeExpr[LinearSpace], frame: Frame, name: str) -> Expr:
+        start, end = self._range_function_inputs(node, frame, (int, float))
+        func = node.function
+        native = fn.linear_space(start, end, func.num_samples, closed=func.closed)
+        return self._expr.from_native(native, name, self.version)
+
+    def linear_space_eager(
+        self,
+        start: float,
+        end: float,
+        num_samples: int,
+        *,
+        closed: ClosedInterval = "both",
+        name: str = "literal",
+    ) -> Series:
+        native = fn.linear_space(start, end, num_samples, closed=closed)
+        return self._series.from_native(native, name, version=self.version)
+
     @overload
     def concat(self, items: Iterable[Frame], *, how: ConcatMethod) -> Frame: ...
     @overload
@@ -260,7 +293,7 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
 
     def _concat_diagonal(self, items: Iterable[Frame]) -> Frame:
         return self._dataframe.from_native(
-            fn.concat_vertical_table(df.native for df in items), self.version
+            fn.concat_tables((df.native for df in items), "default"), self.version
         )
 
     def _concat_horizontal(self, items: Iterable[Frame | Series]) -> Frame:
@@ -272,14 +305,14 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
                     yield from zip(item.native.itercolumns(), item.columns)
 
         arrays, names = zip(*gen(items))
-        native = pa.Table.from_arrays(arrays, list(names))
+        native = fn.concat_horizontal(arrays, names)
         return self._dataframe.from_native(native, self.version)
 
     def _concat_vertical(self, items: Iterable[Frame | Series]) -> Frame | Series:
         collected = items if isinstance(items, tuple) else tuple(items)
         if is_tuple_of(collected, self._series):
             sers = collected
-            chunked = fn.concat_vertical_chunked(ser.native for ser in sers)
+            chunked = fn.concat_vertical(ser.native for ser in sers)
             return sers[0]._with_native(chunked)
         if is_tuple_of(collected, self._dataframe):
             dfs = collected
@@ -293,5 +326,5 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
                         f"   - dataframe {i}: {cols_current}\n"
                     )
                     raise TypeError(msg)
-            return df._with_native(fn.concat_vertical_table(df.native for df in dfs))
+            return df._with_native(fn.concat_tables(df.native for df in dfs))
         raise TypeError(items)

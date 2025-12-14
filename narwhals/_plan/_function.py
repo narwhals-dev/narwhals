@@ -52,8 +52,8 @@ class Function(Immutable):
         **kwds: Any,
     ) -> None:
         super().__init_subclass__(*args, **kwds)
-        if accessor:
-            config = replace(config or FEOptions.default(), accessor_name=accessor)
+        if accessor_name := accessor or cls.__expr_ir_config__.accessor_name:
+            config = replace(config or FEOptions.default(), accessor_name=accessor_name)
         if options:
             cls._function_options = staticmethod(options)
         if config:
