@@ -9,7 +9,7 @@ from narwhals._plan._guards import (
     is_aggregation,
     is_binary_expr,
     is_function_expr,
-    is_window_expr,
+    is_over,
 )
 from narwhals._plan._parse import parse_into_seq_of_expr_ir
 from narwhals._plan.common import replace
@@ -49,7 +49,7 @@ def rewrite_elementwise_over(window: ExprIR, /) -> ExprIR:
     [discord-0]: https://discord.com/channels/1235257048170762310/1383078215303696544/1384807793512677398
     """
     if (
-        is_window_expr(window)
+        is_over(window)
         and is_function_expr(window.expr)
         and window.expr.options.is_elementwise()
     ):
@@ -75,7 +75,7 @@ def rewrite_binary_agg_over(window: ExprIR, /) -> ExprIR:
     [discord-2]: https://discord.com/channels/1235257048170762310/1383078215303696544/1384869107203047588
     """
     if (
-        is_window_expr(window)
+        is_over(window)
         and is_binary_expr(window.expr)
         and (is_aggregation(window.expr.right))
     ):

@@ -113,8 +113,8 @@ def is_iterable_reject(obj: Any) -> TypeIs[str | bytes | Series | CompliantSerie
     )
 
 
-def is_window_expr(obj: Any) -> TypeIs[ir.WindowExpr]:
-    return isinstance(obj, _ir().WindowExpr)
+def is_over(obj: Any) -> TypeIs[ir.Over]:
+    return isinstance(obj, _ir().Over)
 
 
 def is_function_expr(obj: Any) -> TypeIs[ir.FunctionExpr[Any]]:

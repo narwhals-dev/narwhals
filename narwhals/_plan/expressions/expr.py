@@ -55,6 +55,7 @@ __all__ = [
     "FunctionExpr",
     "Len",
     "Literal",
+    "Over",
     "RollingExpr",
     "RootSelector",
     "SelectorIR",
@@ -62,7 +63,6 @@ __all__ = [
     "SortBy",
     "StructExpr",
     "TernaryExpr",
-    "WindowExpr",
     "col",
     "ternary_expr",
 ]
@@ -352,9 +352,7 @@ class Filter(ExprIR, child=("expr", "by")):
         yield from self.expr.iter_output_name()
 
 
-class WindowExpr(
-    ExprIR, child=("expr", "partition_by"), config=ExprIROptions.renamed("over")
-):
+class Over(ExprIR, child=("expr", "partition_by")):
     """A fully specified `.over()`, that occurred after another expression.
 
     Related:
@@ -375,11 +373,7 @@ class WindowExpr(
         yield from self.expr.iter_output_name()
 
 
-class OrderedWindowExpr(
-    WindowExpr,
-    child=("expr", "partition_by", "order_by"),
-    config=ExprIROptions.renamed("over_ordered"),
-):
+class OverOrdered(Over, child=("expr", "partition_by", "order_by")):
     __slots__ = ("order_by", "sort_options")
     expr: ExprIR
     partition_by: Seq[ExprIR]

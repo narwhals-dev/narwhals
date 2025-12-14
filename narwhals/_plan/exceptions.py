@@ -127,7 +127,7 @@ def binary_expr_length_changing_error(
 
 # TODO @dangotbanned: Use arguments in error message
 def over_nested_error(
-    expr: ir.WindowExpr,  # noqa: ARG001
+    expr: ir.Over,  # noqa: ARG001
     partition_by: Seq[ir.ExprIR],  # noqa: ARG001
     order_by: Seq[ir.ExprIR] = (),  # noqa: ARG001
     sort_options: SortOptions | None = None,  # noqa: ARG001
@@ -159,7 +159,7 @@ def over_row_separable_error(
 
 
 def over_order_by_names_error(
-    expr: ir.OrderedWindowExpr, by: ir.ExprIR
+    expr: ir.OverOrdered, by: ir.ExprIR
 ) -> InvalidOperationError:
     if by.meta.is_column_selection(allow_aliasing=True):
         # narwhals dev error
