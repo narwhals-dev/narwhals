@@ -12,7 +12,6 @@ from narwhals._plan._rewrites import (
     rewrite_binary_agg_over,
     rewrite_elementwise_over,
 )
-from narwhals._plan.expressions.window import Over
 from narwhals.exceptions import InvalidOperationError
 from tests.plan.utils import assert_expr_ir_equal, named_ir
 
@@ -42,7 +41,6 @@ def _to_window_expr(into_expr: IntoExpr, *partition_by: IntoExpr) -> ir.WindowEx
     return ir.WindowExpr(
         expr=_parse.parse_into_expr_ir(into_expr),
         partition_by=_parse.parse_into_seq_of_expr_ir(*partition_by),
-        options=Over(),
     )
 
 

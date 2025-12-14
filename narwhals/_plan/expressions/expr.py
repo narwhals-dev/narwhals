@@ -39,7 +39,6 @@ if TYPE_CHECKING:
     from narwhals._plan.compliant.typing import Ctx, FrameT_contra, R_co
     from narwhals._plan.expressions.functions import MapBatches  # noqa: F401
     from narwhals._plan.expressions.literal import LiteralValue
-    from narwhals._plan.expressions.window import Window
     from narwhals._plan.options import FunctionOptions, SortMultipleOptions, SortOptions
     from narwhals._plan.schema import FrozenSchema
     from narwhals.dtypes import DType
@@ -364,11 +363,10 @@ class WindowExpr(
     - https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/mod.rs#L840-L876
     """
 
-    __slots__ = ("expr", "partition_by", "options")  # noqa: RUF023
+    __slots__ = ("expr", "partition_by")
     expr: ExprIR
     """For lazy backends, this should be the only place we allow `rolling_*`, `cum_*`."""
     partition_by: Seq[ExprIR]
-    options: Window
 
     def __repr__(self) -> str:
         return f"{self.expr!r}.over({list(self.partition_by)!r})"
@@ -387,7 +385,6 @@ class OrderedWindowExpr(
     partition_by: Seq[ExprIR]
     order_by: Seq[ExprIR]
     sort_options: SortOptions
-    options: Window
 
     def __repr__(self) -> str:
         order = self.order_by
