@@ -17,12 +17,7 @@ from narwhals._plan._guards import (
 from narwhals._plan.arrow import functions as fn
 from narwhals._plan.arrow.group_by import AggSpec
 from narwhals._plan.arrow.series import ArrowSeries as Series
-from narwhals._plan.arrow.typing import (
-    ChunkedOrArrayAny,
-    ChunkedOrScalarAny,
-    NativeScalar,
-    StoresNativeT_co,
-)
+from narwhals._plan.arrow.typing import ChunkedOrScalarAny, NativeScalar, StoresNativeT_co
 from narwhals._plan.common import temp
 from narwhals._plan.compliant.accessors import (
     ExprCatNamespace,
@@ -1013,23 +1008,20 @@ class ArrowListNamespace(
         lists = native
         # TODO @dangotbanned: Experiment with explode step
         # These options are to mirror `main`, but setting them to `True` may simplify everything after?
-        builder = fn.ExplodeBuilder(empty_as_null=False, keep_nulls=False)
+        builder = fn.ExplodeBuilder()
         explode_w_idx = builder.explode_with_indices(lists)
         idx, v = "idx", "values"
         agg_result = (
             AggSpec._from_list_agg(type(func), v)
             .over(explode_w_idx, [idx])
-            .sort_by(idx)
+            .sort_by(idx)  # <--- won't be needed now that exploding keeps all indices
             .column(v)
         )
+        if isinstance(func, ir.lists.Sum):
+            return self.with_native(fn.when_then(fn.is_not_null(lists), agg_result), name)
         dtype: pa.DataType = agg_result.type
         non_empty_mask = fn.not_eq(fn.list_len(lists), fn.lit(0))
-        base_array: ChunkedOrArrayAny
-        if isinstance(func, ir.lists.Sum):
-            # Make sure sum of empty list is 0.
-            base_array = fn.when_then(fn.is_not_null(non_empty_mask), fn.lit(0, dtype))
-        else:
-            base_array = fn.repeat_unchecked(fn.lit(None, dtype), len(lists))
+        base_array = fn.repeat_unchecked(fn.lit(None, dtype), len(lists))
         replaced = fn.replace_with_mask(
             base_array, fn.fill_null(non_empty_mask, False), agg_result
         )
