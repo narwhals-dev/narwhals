@@ -14,15 +14,15 @@ if TYPE_CHECKING:
     from tests.plan.utils import SubList
 
 
-R1: Final[SubList[float]] = [3, None, 2, 2, 4, None]
-R2: Final[SubList[float]] = [-1]
+R1: Final[SubList[int]] = [3, None, 2, 2, 4, None]
+R2: Final[SubList[int]] = [-1]
 R3: Final[SubList[float]] = None
 R4: Final[SubList[float]] = [None, None, None]
 R5: Final[SubList[float]] = []
 # NOTE: `pyarrow` needs at least 3 (non-null) values to calculate `median` correctly
 # Otherwise it picks the lowest non-null
 # https://github.com/narwhals-dev/narwhals/pull/3332#discussion_r2617508167
-R6: Final[SubList[float]] = [3, 4, None, 4, None, 3]
+R6: Final[SubList[int]] = [3, 4, None, 4, None, 3]
 
 
 @pytest.fixture(scope="module")
