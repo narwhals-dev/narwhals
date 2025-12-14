@@ -155,14 +155,6 @@ class ExprIR(Immutable):
                 for node in reversed(child):  # pragma: no cover
                     yield from node.iter_right()
 
-    def iter_root_names(self) -> Iterator[ExprIR]:
-        """Override for different iteration behavior in `ExprIR.meta.root_names`.
-
-        Note:
-            Identical to `iter_left` by default.
-        """
-        yield from self.iter_left()
-
     def iter_output_name(self) -> Iterator[ExprIR]:
         """Override for different iteration behavior in `ExprIR.meta.output_name`.
 

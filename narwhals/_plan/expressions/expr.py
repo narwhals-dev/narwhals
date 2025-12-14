@@ -39,7 +39,6 @@ if TYPE_CHECKING:
     from narwhals._plan.compliant.typing import Ctx, FrameT_contra, R_co
     from narwhals._plan.expressions.functions import MapBatches  # noqa: F401
     from narwhals._plan.expressions.literal import LiteralValue
-    from narwhals._plan.expressions.window import Window
     from narwhals._plan.options import FunctionOptions, SortMultipleOptions, SortOptions
     from narwhals._plan.schema import FrozenSchema
     from narwhals.dtypes import DType
@@ -56,6 +55,7 @@ __all__ = [
     "FunctionExpr",
     "Len",
     "Literal",
+    "Over",
     "RollingExpr",
     "RootSelector",
     "SelectorIR",
@@ -63,7 +63,6 @@ __all__ = [
     "SortBy",
     "StructExpr",
     "TernaryExpr",
-    "WindowExpr",
     "col",
     "ternary_expr",
 ]
@@ -353,9 +352,7 @@ class Filter(ExprIR, child=("expr", "by")):
         yield from self.expr.iter_output_name()
 
 
-class WindowExpr(
-    ExprIR, child=("expr", "partition_by"), config=ExprIROptions.renamed("over")
-):
+class Over(ExprIR, child=("expr", "partition_by")):
     """A fully specified `.over()`, that occurred after another expression.
 
     Related:
@@ -364,11 +361,10 @@ class WindowExpr(
     - https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/mod.rs#L840-L876
     """
 
-    __slots__ = ("expr", "partition_by", "options")  # noqa: RUF023
+    __slots__ = ("expr", "partition_by")
     expr: ExprIR
     """For lazy backends, this should be the only place we allow `rolling_*`, `cum_*`."""
     partition_by: Seq[ExprIR]
-    options: Window
 
     def __repr__(self) -> str:
         return f"{self.expr!r}.over({list(self.partition_by)!r})"
@@ -377,17 +373,12 @@ class WindowExpr(
         yield from self.expr.iter_output_name()
 
 
-class OrderedWindowExpr(
-    WindowExpr,
-    child=("expr", "partition_by", "order_by"),
-    config=ExprIROptions.renamed("over_ordered"),
-):
+class OverOrdered(Over, child=("expr", "partition_by", "order_by")):
     __slots__ = ("order_by", "sort_options")
     expr: ExprIR
     partition_by: Seq[ExprIR]
     order_by: Seq[ExprIR]
     sort_options: SortOptions
-    options: Window
 
     def __repr__(self) -> str:
         order = self.order_by
@@ -396,17 +387,6 @@ class OrderedWindowExpr(
         else:
             args = f"partition_by={list(self.partition_by)!r}, order_by={list(order)!r}"
         return f"{self.expr!r}.over({args})"
-
-    # TODO @dangotbanned: Update to align with https://github.com/pola-rs/polars/pull/25117/files#diff-45d1f22172e291bd4a5ce36d1fb8233698394f9590bcf11382b9c99b5449fff5
-    def iter_root_names(self) -> t.Iterator[ExprIR]:
-        # NOTE: `order_by` ~~is~~ was never considered in `polars`
-        # To match that behavior for `root_names` - but still expand in all other cases
-        # - this little escape hatch exists
-        # https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/plans/iterator.rs#L76-L86
-        yield from self.expr.iter_left()
-        for e in self.partition_by:
-            yield from e.iter_left()
-        yield self
 
     def order_by_names(self) -> Iterator[str]:
         """Yield the names resolved from expanding `order_by`.

@@ -89,7 +89,7 @@ class MetaNamespace(IRNamespace):
 
 
 def iter_root_names(expr: ir.ExprIR, /) -> Iterator[str]:
-    yield from (e.name for e in expr.iter_root_names() if isinstance(e, ir.Column))
+    yield from (e.name for e in expr.iter_left() if isinstance(e, ir.Column))
 
 
 def root_name_first(expr: ir.ExprIR, /) -> str:

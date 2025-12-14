@@ -744,7 +744,7 @@ def test_expand_function_expr_multi_invalid(df_1: Frame) -> None:
 def test_over_order_by_names() -> None:
     expr = nwp.col("a").first().over(order_by=ncs.string())
     e_ir = expr._ir
-    assert isinstance(e_ir, ir.OrderedWindowExpr)
+    assert isinstance(e_ir, ir.OverOrdered)
     with pytest.raises(
         InvalidOperationError,
         match=re_compile(

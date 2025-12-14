@@ -73,12 +73,7 @@ OutputNames: TypeAlias = "Seq[str]"
 
 
 Combination: TypeAlias = Union[
-    ir.SortBy,
-    ir.BinaryExpr,
-    ir.TernaryExpr,
-    ir.Filter,
-    ir.OrderedWindowExpr,
-    ir.WindowExpr,
+    ir.SortBy, ir.BinaryExpr, ir.TernaryExpr, ir.Filter, ir.OverOrdered, ir.Over
 ]
 
 
@@ -268,11 +263,11 @@ class Expander:
     # TODO @dangotbanned: It works, but all this class-specific branching belongs in the classes themselves
     def _expand_combination(self, origin: Combination, /) -> Iterator[Combination]:
         changes: dict[str, Any] = {}
-        if isinstance(origin, (ir.WindowExpr, ir.Filter, ir.SortBy)):
-            if isinstance(origin, ir.WindowExpr):
+        if isinstance(origin, (ir.Over, ir.Filter, ir.SortBy)):
+            if isinstance(origin, ir.Over):
                 if partition_by := origin.partition_by:
                     changes["partition_by"] = tuple(self._expand_inner(partition_by))
-                if isinstance(origin, ir.OrderedWindowExpr):
+                if isinstance(origin, ir.OverOrdered):
                     changes["order_by"] = tuple(self._expand_inner(origin.order_by))
             elif isinstance(origin, ir.SortBy):
                 changes["by"] = tuple(self._expand_inner(origin.by))
@@ -355,7 +350,7 @@ _EXPAND_COMBINATION = (
     ir.BinaryExpr,
     ir.TernaryExpr,
     ir.Filter,
-    ir.OrderedWindowExpr,
-    ir.WindowExpr,
+    ir.OverOrdered,
+    ir.Over,
 )
 """more than one (direct) child and those can be nested."""

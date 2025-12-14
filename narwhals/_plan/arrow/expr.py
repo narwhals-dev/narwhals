@@ -539,7 +539,7 @@ class ArrowExpr(  # type: ignore[misc]
 
     def over(
         self,
-        node: ir.WindowExpr,
+        node: ir.Over,
         frame: Frame,
         name: str,
         *,
@@ -558,7 +558,7 @@ class ArrowExpr(  # type: ignore[misc]
         return self.from_series(results.get_column(name))
 
     def over_ordered(
-        self, node: ir.OrderedWindowExpr, frame: Frame, name: str
+        self, node: ir.OverOrdered, frame: Frame, name: str
     ) -> Self | Scalar:
         by = node.order_by_names()
         indices = fn.sort_indices(frame.native, *by, options=node.sort_options)

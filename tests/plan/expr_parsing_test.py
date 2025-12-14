@@ -244,7 +244,7 @@ def test_over_invalid() -> None:
 
     # NOTE: This version isn't elementwise
     expr_ir = nwp.col("a").fill_null(strategy="backward").over("b")._ir
-    assert isinstance(expr_ir, ir.WindowExpr)
+    assert isinstance(expr_ir, ir.Over)
     assert isinstance(expr_ir.expr, ir.FunctionExpr)
     assert isinstance(expr_ir.expr.function, F.FillNullWithStrategy)
 

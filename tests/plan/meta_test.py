@@ -19,23 +19,21 @@ import polars as pl
 
 if POLARS_VERSION >= (1, 0):  # https://github.com/pola-rs/polars/pull/16743
     if POLARS_VERSION >= (1, 36):  # pragma: no cover
-        # TODO @dangotbanned: Update special-casing in `OrderedWindowExpr`
-        # https://github.com/pola-rs/polars/pull/25117/files#diff-45d1f22172e291bd4a5ce36d1fb8233698394f9590bcf11382b9c99b5449fff5
-        marks: tuple[pytest.MarkDecorator, ...] = (
+        marks: tuple[pytest.MarkDecorator, ...] = ()
+    else:  # pragma: no cover
+        marks = (
             pytest.mark.xfail(
                 reason=(
-                    "`polars==1.36.0b1` now considers `order_by` in `root_names`\n"
+                    "`polars>=1.36.0b1` now considers `order_by` in `root_names`\n"
                     r"https://github.com/pola-rs/polars/pull/25117"
                 ),
                 raises=AssertionError,
             ),
         )
-    else:  # pragma: no cover
-        marks = ()
     OVER_CASE = pytest.param(
         nwp.col("a").last().over("b", order_by="c"),
         pl.col("a").last().over("b", order_by="c"),
-        ["a", "b"],
+        ["a", "b", "c"],
         marks=marks,
     )
 else:  # pragma: no cover
