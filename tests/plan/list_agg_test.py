@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import sys
 from typing import TYPE_CHECKING
 
 import pytest
@@ -8,7 +7,6 @@ import pytest
 import narwhals as nw
 import narwhals._plan as nwp
 from tests.plan.utils import assert_equal_data, dataframe
-from tests.utils import is_windows
 
 if TYPE_CHECKING:
     from narwhals._plan.typing import OneOrIterable
@@ -48,9 +46,6 @@ def test_list_agg(data: Data, exprs: OneOrIterable[nwp.Expr], expected: Data) ->
     assert_equal_data(result, expected)
 
 
-@pytest.mark.xfail(
-    is_windows() and sys.version_info < (3, 10), reason="Old pyarrow windows bad?"
-)
 def test_list_median(data_median: Data) -> None:
     df = dataframe(data_median).with_columns(cast_a)
     result = df.select(a.list.median())
