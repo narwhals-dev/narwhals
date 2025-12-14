@@ -994,6 +994,12 @@ class ArrowListNamespace(
             )
         return self.with_native(result, name)
 
+    min = not_implemented()
+    max = not_implemented()
+    mean = not_implemented()
+    median = not_implemented()
+    sum = not_implemented()
+
 
 class ArrowStringNamespace(
     ExprStringNamespace["Frame", "Expr | Scalar"], ArrowAccessor[ExprOrScalarT]

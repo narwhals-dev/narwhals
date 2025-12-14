@@ -38,6 +38,21 @@ class ExprListNamespace(Protocol[FrameT_contra, ExprT_co]):
     def join(
         self, node: FExpr[lists.Join], frame: FrameT_contra, name: str
     ) -> ExprT_co: ...
+    def min(
+        self, node: FExpr[lists.Min], frame: FrameT_contra, name: str
+    ) -> ExprT_co: ...
+    def max(
+        self, node: FExpr[lists.Max], frame: FrameT_contra, name: str
+    ) -> ExprT_co: ...
+    def mean(
+        self, node: FExpr[lists.Mean], frame: FrameT_contra, name: str
+    ) -> ExprT_co: ...
+    def median(
+        self, node: FExpr[lists.Median], frame: FrameT_contra, name: str
+    ) -> ExprT_co: ...
+    def sum(
+        self, node: FExpr[lists.Sum], frame: FrameT_contra, name: str
+    ) -> ExprT_co: ...
 
 
 class ExprStringNamespace(Protocol[FrameT_contra, ExprT_co]):
