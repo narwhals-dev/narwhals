@@ -51,3 +51,56 @@ def test_list_agg(
     df = dataframe(data).with_columns(cast_a)
     result = df.select(exprs)
     assert_equal_data(result, {"a": expected})
+
+
+first = a.first()
+first_list_max = first.list.max()
+first_list_mean = first.list.mean()
+first_list_min = first.list.min()
+first_list_sum = first.list.sum()
+first_list_median = first.list.median()
+
+
+@pytest.mark.xfail(reason="TODO: ArrowScalar.list.<agg>", raises=NotImplementedError)
+@pytest.mark.parametrize(
+    ("row", "expr", "expected"),
+    [
+        (R1, first_list_max, 4),
+        (R2, first_list_max, -1),
+        (R3, first_list_max, None),
+        (R4, first_list_max, None),
+        (R5, first_list_max, None),
+        (R6, first_list_max, 4),
+        (R1, first_list_mean, 2.75),
+        (R2, first_list_mean, -1),
+        (R3, first_list_mean, None),
+        (R4, first_list_mean, None),
+        (R5, first_list_mean, None),
+        (R6, first_list_mean, 3.5),
+        (R1, first_list_min, 2),
+        (R2, first_list_min, -1),
+        (R3, first_list_min, None),
+        (R4, first_list_min, None),
+        (R5, first_list_min, None),
+        (R6, first_list_min, 3),
+        (R1, first_list_sum, 11),
+        (R2, first_list_sum, -1),
+        (R3, first_list_sum, None),
+        (R4, first_list_sum, 0),
+        (R5, first_list_sum, 0),
+        (R6, first_list_sum, 14),
+        (R1, first_list_median, 2.5),
+        (R2, first_list_median, -1),
+        (R3, first_list_median, None),
+        (R4, first_list_median, None),
+        (R5, first_list_median, None),
+        (R6, first_list_median, 3.5),
+    ],
+)
+def test_list_agg_scalar(
+    row: SubList[float], expr: nwp.Expr, expected: float | None
+) -> None:  # pragma: no cover
+    data = {"a": [row]}
+    df = dataframe(data).select(cast_a)
+    result = df.select(expr)
+    assert_equal_data(result, {"a": [expected]})
