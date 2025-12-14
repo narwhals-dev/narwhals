@@ -13,7 +13,7 @@ from narwhals._plan.arrow import acero, functions as fn, options
 from narwhals._plan.common import temp
 from narwhals._plan.compliant.group_by import EagerDataFrameGroupBy
 from narwhals._plan.expressions import aggregation as agg
-from narwhals._utils import Implementation
+from narwhals._utils import Implementation, qualified_type_name
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
@@ -50,6 +50,13 @@ SUPPORTED_AGG: Mapping[type[agg.AggExpr], acero.Aggregation] = {
     agg.First: "hash_first",
     agg.Last: "hash_last",
     fn.MinMax: "hash_min_max",
+}
+SUPPORTED_LIST_AGG: Mapping[type[ir.lists.Aggregation], type[agg.AggExpr]] = {
+    ir.lists.Mean: agg.Mean,
+    ir.lists.Median: agg.Median,
+    ir.lists.Max: agg.Max,
+    ir.lists.Min: agg.Min,
+    ir.lists.Sum: agg.Sum,
 }
 SUPPORTED_IR: Mapping[type[ir.ExprIR], acero.Aggregation] = {
     ir.Len: "hash_count_all",
@@ -140,6 +147,14 @@ class AggSpec:
     @classmethod
     def _from_function(cls, tp: type[ir.Function], name: str) -> Self:
         return cls(name, SUPPORTED_FUNCTION[tp], options.FUNCTION.get(tp), name)
+
+    @classmethod
+    def _from_agg(cls, tp: type[ir.lists.Aggregation | agg.AggExpr], name: str) -> Self:
+        tp_agg = SUPPORTED_LIST_AGG[tp] if issubclass(tp, ir.lists.ListFunction) else tp
+        if tp_agg in {agg.Std, agg.Var}:
+            msg = f"TODO: {qualified_type_name(agg)!r} needs access to `ddof`, so can't be passed in without an instance"
+            raise NotImplementedError(msg)
+        return cls(name, SUPPORTED_AGG[tp_agg], options.AGG.get(tp_agg), name)
 
     @classmethod
     def any(cls, name: str) -> Self:

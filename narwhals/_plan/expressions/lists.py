@@ -11,7 +11,7 @@ from narwhals._utils import ensure_type
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
+    from typing_extensions import Self, TypeAlias
 
     from narwhals._plan.expr import Expr
     from narwhals._plan.expressions import ExprIR, FunctionExpr as FExpr
@@ -43,6 +43,9 @@ class Contains(ListFunction):
     def unwrap_input(self, node: FExpr[Self], /) -> tuple[ExprIR, ExprIR]:
         expr, item = node.input
         return expr, item
+
+
+Aggregation: TypeAlias = "Min | Max | Mean | Median | Sum"
 
 
 class IRListNamespace(IRNamespace):

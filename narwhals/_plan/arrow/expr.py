@@ -15,8 +15,14 @@ from narwhals._plan._guards import (
     is_seq_column,
 )
 from narwhals._plan.arrow import functions as fn
+from narwhals._plan.arrow.group_by import AggSpec
 from narwhals._plan.arrow.series import ArrowSeries as Series
-from narwhals._plan.arrow.typing import ChunkedOrScalarAny, NativeScalar, StoresNativeT_co
+from narwhals._plan.arrow.typing import (
+    ChunkedOrArrayAny,
+    ChunkedOrScalarAny,
+    NativeScalar,
+    StoresNativeT_co,
+)
 from narwhals._plan.common import temp
 from narwhals._plan.compliant.accessors import (
     ExprCatNamespace,
@@ -994,11 +1000,47 @@ class ArrowListNamespace(
             )
         return self.with_native(result, name)
 
-    min = not_implemented()
-    max = not_implemented()
-    mean = not_implemented()
-    median = not_implemented()
-    sum = not_implemented()
+    def aggregate(
+        self, node: FExpr[lists.Aggregation], frame: Frame, name: str
+    ) -> Expr | Scalar:
+        previous = node.input[0].dispatch(self.compliant, frame, name)
+        func = node.function
+        if isinstance(previous, ArrowScalar):
+            msg = f"TODO: ArrowScalar.{func!r}"
+            raise NotImplementedError(msg)
+
+        native = previous.native
+        lists = native
+        # TODO @dangotbanned: Experiment with explode step
+        # These options are to mirror `main`, but setting them to `True` may simplify everything after?
+        builder = fn.ExplodeBuilder(empty_as_null=False, keep_nulls=False)
+        explode_w_idx = builder.explode_with_indices(lists)
+        idx, v = "idx", "values"
+        agg_result = (
+            AggSpec._from_agg(type(func), v)
+            .over(explode_w_idx, [idx])
+            .sort_by(idx)
+            .column(v)
+        )
+        dtype: pa.DataType = agg_result.type
+        non_empty_mask = fn.not_eq(fn.list_len(lists), fn.lit(0))
+        base_array: ChunkedOrArrayAny
+        if isinstance(func, ir.lists.Sum):
+            # Make sure sum of empty list is 0.
+            base_array = fn.when_then(fn.is_not_null(non_empty_mask), fn.lit(0, dtype))
+        else:
+            base_array = fn.repeat_unchecked(fn.lit(None, dtype), len(lists))
+        replaced = fn.replace_with_mask(
+            base_array, fn.fill_null(non_empty_mask, False), agg_result
+        )
+        result = fn.chunked_array(replaced)
+        return self.with_native(result, name)
+
+    min = aggregate
+    max = aggregate
+    mean = aggregate
+    median = aggregate
+    sum = aggregate
 
 
 class ArrowStringNamespace(
