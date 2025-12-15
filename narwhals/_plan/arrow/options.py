@@ -169,6 +169,7 @@ def _generate_list_agg() -> Mapping[type[ir.lists.Aggregation], acero.AggregateO
         lists.Any: scalar_aggregate(ignore_nulls=True),
         lists.First: scalar_aggregate(),
         lists.Last: scalar_aggregate(),
+        lists.NUnique: count("all"),
     }
 
 

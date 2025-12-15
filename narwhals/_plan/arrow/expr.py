@@ -1011,6 +1011,7 @@ class ArrowListNamespace(
     all = aggregate
     first = aggregate
     last = aggregate
+    n_unique = aggregate
 
 
 class ArrowStringNamespace(

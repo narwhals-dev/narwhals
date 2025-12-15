@@ -60,6 +60,7 @@ SUPPORTED_LIST_AGG: Mapping[type[ir.lists.Aggregation], type[agg.AggExpr]] = {
     ir.lists.Sum: agg.Sum,
     ir.lists.First: agg.First,
     ir.lists.Last: agg.Last,
+    ir.lists.NUnique: agg.NUnique,
 }
 SUPPORTED_IR: Mapping[type[ir.ExprIR], acero.Aggregation] = {
     ir.Len: "hash_count_all",
@@ -225,11 +226,14 @@ class AggSpec:
             if not scalar.is_valid:
                 return fn.lit(None, SCALAR_OUTPUT_TYPE.get(func, scalar.type.value_type))
             result = pc.call_function(func, [scalar.values], self._option)
-        else:
-            result = self.over_index(
-                fn.ExplodeBuilder().explode_with_indices(native), "idx"
-            )
-            result = fn.when_then(native.is_valid(), result)
+            return result
+        result = self.over_index(fn.ExplodeBuilder().explode_with_indices(native), "idx")
+        result = fn.when_then(native.is_valid(), result)
+        if self._is_n_unique():
+            # NOTE: Exploding `[]` becomes `[None]` - so we need to adjust the unique count *iff* we were unlucky
+            len_not_eq_0 = fn.not_eq(fn.list_len(native), fn.lit(0))
+            if not fn.all_(len_not_eq_0, ignore_nulls=False).as_py():
+                result = fn.when_then(fn.not_(len_not_eq_0), fn.lit(0), result)
         return result
 
     def over(self, native: pa.Table, keys: Iterable[acero.Field]) -> pa.Table:
@@ -245,6 +249,9 @@ class AggSpec:
         Returns a single, (unnamed) array, representing the aggregation results.
         """
         return acero.group_by_table(native, [index_column], [self]).column(self._name)
+
+    def _is_n_unique(self) -> bool:
+        return self._function == SUPPORTED_AGG[agg.NUnique]
 
 
 def group_by_error(

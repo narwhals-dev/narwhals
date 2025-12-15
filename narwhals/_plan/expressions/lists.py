@@ -28,6 +28,7 @@ class Min(ListFunction): ...
 class Max(ListFunction): ...
 class Mean(ListFunction): ...
 class Median(ListFunction): ...
+class NUnique(ListFunction): ...
 class Sum(ListFunction): ...
 class Len(ListFunction): ...
 class Unique(ListFunction): ...
@@ -49,7 +50,9 @@ class Contains(ListFunction):
         return expr, item
 
 
-Aggregation: TypeAlias = "Any | All | First | Last | Min | Max | Mean | Median | Sum"
+Aggregation: TypeAlias = (
+    "Any | All | First | Last | Min | Max | Mean | Median | NUnique | Sum"
+)
 
 
 class IRListNamespace(IRNamespace):
@@ -67,6 +70,7 @@ class IRListNamespace(IRNamespace):
     all: ClassVar = All
     first: ClassVar = First
     last: ClassVar = Last
+    n_unique: ClassVar = NUnique
 
 
 class ExprListNamespace(ExprNamespace[IRListNamespace]):
@@ -126,3 +130,6 @@ class ExprListNamespace(ExprNamespace[IRListNamespace]):
 
     def last(self) -> Expr:
         return self._with_unary(self._ir.last())
+
+    def n_unique(self) -> Expr:
+        return self._with_unary(self._ir.n_unique())

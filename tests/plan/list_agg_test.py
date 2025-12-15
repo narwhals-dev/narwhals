@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from tests.plan.utils import SubList
 
 
-ROWS_N: Final[tuple[SubList[int] | SubList[float], ...]] = (
+ROWS_A: Final[tuple[SubList[int] | SubList[float], ...]] = (
     [3, None, 2, 2, 4, None],
     [-1],
     None,
@@ -42,6 +42,14 @@ ROWS_B: Final[tuple[SubList[bool], ...]] = (
     [],
     None,
 )
+ROWS_C: Final[tuple[SubList[float], ...]] = (
+    [1.0, None, None, 3.0],
+    [1.0, None, 4.0, 5.0, 1.1, 4.0, None, 1.0],
+    [1.0, None, None, 1.0, 2.0, 2.0, 2.0, None, 3.0],
+    [],
+    [None, None, None],
+    None,
+)
 
 EXPECTED_MAX = [4, -1, None, None, None, 4]
 EXPECTED_MEAN = [2.75, -1, None, None, None, 3.5]
@@ -52,17 +60,20 @@ EXPECTED_ALL = [True, False, False, True, True, None]
 EXPECTED_ANY = [True, True, False, False, False, None]
 EXPECTED_FIRST = [3, -1, None, None, None, 3]
 EXPECTED_LAST = [None, -1, None, None, None, 3]
+EXPECTED_N_UNIQUE = [3, 5, 4, 0, 1, None]
 
 
 @pytest.fixture(scope="module")
 def data() -> Data:
-    return {"a": [*ROWS_N], "b": [*ROWS_B]}
+    return {"a": [*ROWS_A], "b": [*ROWS_B], "c": [*ROWS_C]}
 
 
 a = nwp.col("a")
 b = nwp.col("b")
+c = nwp.col("c")
 cast_a = a.cast(nw.List(nw.Int32))
 cast_b = b.cast(nw.List(nw.Boolean))
+cast_c = b.cast(nw.List(nw.Float64))
 
 
 @pytest.mark.parametrize(
@@ -77,8 +88,20 @@ cast_b = b.cast(nw.List(nw.Boolean))
         (b.list.any(), EXPECTED_ANY),
         (a.list.first(), EXPECTED_FIRST),
         (a.list.last(), EXPECTED_LAST),
+        (c.list.n_unique(), EXPECTED_N_UNIQUE),
     ],
-    ids=["max", "mean", "min", "sum", "median", "all", "any", "first", "last"],
+    ids=[
+        "max",
+        "mean",
+        "min",
+        "sum",
+        "median",
+        "all",
+        "any",
+        "first",
+        "last",
+        "n_unique",
+    ],
 )
 def test_list_agg(data: Data, expr: nwp.Expr, expected: list[NonNestedLiteral]) -> None:
     df = dataframe(data).with_columns(cast_a, cast_b)
@@ -97,22 +120,24 @@ def cases_scalar(
         yield pytest.param(expr, row, out, id=f"{name}-R{idx}")
 
 
-first_n = nwp.nth(0).cast(nw.List(nw.Int32)).first()
+first_a = nwp.nth(0).cast(nw.List(nw.Int32)).first()
 first_b = nwp.nth(0).cast(nw.List(nw.Boolean)).first()
+first_c = nwp.nth(0).cast(nw.List(nw.Float64)).first()
 
 
 @pytest.mark.parametrize(
     ("expr", "row", "expected"),
     chain(
-        cases_scalar(first_n.list.max(), ROWS_N, EXPECTED_MAX),
-        cases_scalar(first_n.list.mean(), ROWS_N, EXPECTED_MEAN),
-        cases_scalar(first_n.list.min(), ROWS_N, EXPECTED_MIN),
-        cases_scalar(first_n.list.sum(), ROWS_N, EXPECTED_SUM),
-        cases_scalar(first_n.list.median(), ROWS_N, EXPECTED_MEDIAN),
+        cases_scalar(first_a.list.max(), ROWS_A, EXPECTED_MAX),
+        cases_scalar(first_a.list.mean(), ROWS_A, EXPECTED_MEAN),
+        cases_scalar(first_a.list.min(), ROWS_A, EXPECTED_MIN),
+        cases_scalar(first_a.list.sum(), ROWS_A, EXPECTED_SUM),
+        cases_scalar(first_a.list.median(), ROWS_A, EXPECTED_MEDIAN),
         cases_scalar(first_b.list.all(), ROWS_B, EXPECTED_ALL),
         cases_scalar(first_b.list.any(), ROWS_B, EXPECTED_ANY),
-        cases_scalar(first_n.list.first(), ROWS_N, EXPECTED_FIRST),
-        cases_scalar(first_n.list.last(), ROWS_N, EXPECTED_LAST),
+        cases_scalar(first_a.list.first(), ROWS_A, EXPECTED_FIRST),
+        cases_scalar(first_a.list.last(), ROWS_A, EXPECTED_LAST),
+        cases_scalar(first_c.list.n_unique(), ROWS_C, EXPECTED_N_UNIQUE),
     ),
 )
 def test_list_agg_scalar(
