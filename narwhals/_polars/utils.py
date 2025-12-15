@@ -370,6 +370,8 @@ class PolarsListNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
 
     min: Method[CompliantT]
 
+    sort: Method[CompliantT]
+
     sum: Method[CompliantT]
 
 
