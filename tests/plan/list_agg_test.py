@@ -61,7 +61,7 @@ first_list_sum = first.list.sum()
 first_list_median = first.list.median()
 
 
-@pytest.mark.xfail(reason="TODO: ArrowScalar.list.<agg>", raises=NotImplementedError)
+# TODO @dangotbanned: Shrink this
 @pytest.mark.parametrize(
     ("row", "expr", "expected"),
     [
@@ -99,7 +99,7 @@ first_list_median = first.list.median()
 )
 def test_list_agg_scalar(
     row: SubList[float], expr: nwp.Expr, expected: float | None
-) -> None:  # pragma: no cover
+) -> None:
     data = {"a": [row]}
     df = dataframe(data).select(cast_a)
     result = df.select(expr)

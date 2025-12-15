@@ -1,7 +1,16 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any, ClassVar, Generic, Protocol, TypeVar, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    ClassVar,
+    Generic,
+    Protocol,
+    TypeVar,
+    cast,
+    overload,
+)
 
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
@@ -1000,8 +1009,16 @@ class ArrowListNamespace(
     ) -> Expr | Scalar:
         previous = node.input[0].dispatch(self.compliant, frame, name)
         if isinstance(previous, ArrowScalar):
-            msg = f"TODO: ArrowScalar.{node.function!r}"
-            raise NotImplementedError(msg)
+            scalar = cast("pa.ListScalar[Any]", previous.native)
+            if not scalar.is_valid:
+                return self.with_native(scalar, name)
+
+            # TODO @dangotbanned: Do this in a less hacky way
+            agg = AggSpec._from_list_agg(type(node.function), "values")
+            func_name = agg.agg.removeprefix("hash_")
+            exploded = scalar.values
+            s_result: NativeScalar = pc.call_function(func_name, [exploded], agg.option)
+            return self.with_native(s_result, name)
 
         native = previous.native
         agg = AggSpec._from_list_agg(type(node.function), "values")
