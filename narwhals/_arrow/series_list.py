@@ -37,3 +37,4 @@ class ArrowSeriesListNamespace(ArrowSeriesNamespace, ListNamespace["ArrowSeries"
 
     unique = not_implemented()
     contains = not_implemented()
+    sort = not_implemented()
