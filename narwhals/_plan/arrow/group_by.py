@@ -58,6 +58,8 @@ SUPPORTED_LIST_AGG: Mapping[type[ir.lists.Aggregation], type[agg.AggExpr]] = {
     ir.lists.Max: agg.Max,
     ir.lists.Min: agg.Min,
     ir.lists.Sum: agg.Sum,
+    ir.lists.First: agg.First,
+    ir.lists.Last: agg.Last,
 }
 SUPPORTED_IR: Mapping[type[ir.ExprIR], acero.Aggregation] = {
     ir.Len: "hash_count_all",

@@ -167,6 +167,8 @@ def _generate_list_agg() -> Mapping[type[ir.lists.Aggregation], acero.AggregateO
         lists.Sum: scalar_aggregate(ignore_nulls=True),
         lists.All: scalar_aggregate(ignore_nulls=True),
         lists.Any: scalar_aggregate(ignore_nulls=True),
+        lists.First: scalar_aggregate(),
+        lists.Last: scalar_aggregate(),
     }
 
 

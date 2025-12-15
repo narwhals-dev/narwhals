@@ -59,6 +59,12 @@ class ExprListNamespace(Protocol[FrameT_contra, ExprT_co]):
     def all(
         self, node: FExpr[lists.All], frame: FrameT_contra, name: str
     ) -> ExprT_co: ...
+    def first(
+        self, node: FExpr[lists.First], frame: FrameT_contra, name: str
+    ) -> ExprT_co: ...
+    def last(
+        self, node: FExpr[lists.Last], frame: FrameT_contra, name: str
+    ) -> ExprT_co: ...
 
 
 class ExprStringNamespace(Protocol[FrameT_contra, ExprT_co]):

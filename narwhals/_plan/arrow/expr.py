@@ -1009,6 +1009,8 @@ class ArrowListNamespace(
     sum = aggregate
     any = aggregate
     all = aggregate
+    first = aggregate
+    last = aggregate
 
 
 class ArrowStringNamespace(

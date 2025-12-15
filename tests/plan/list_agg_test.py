@@ -50,6 +50,8 @@ EXPECTED_SUM = [11, -1, None, 0, 0, 14]
 EXPECTED_MEDIAN = [2.5, -1, None, None, None, 3.5]
 EXPECTED_ALL = [True, False, False, True, True, None]
 EXPECTED_ANY = [True, True, False, False, False, None]
+EXPECTED_FIRST = [3, -1, None, None, None, 3]
+EXPECTED_LAST = [None, -1, None, None, None, 3]
 
 
 @pytest.fixture(scope="module")
@@ -73,8 +75,10 @@ cast_b = b.cast(nw.List(nw.Boolean))
         (a.list.median(), EXPECTED_MEDIAN),
         (b.list.all(), EXPECTED_ALL),
         (b.list.any(), EXPECTED_ANY),
+        (a.list.first(), EXPECTED_FIRST),
+        (a.list.last(), EXPECTED_LAST),
     ],
-    ids=["max", "mean", "min", "sum", "median", "all", "any"],
+    ids=["max", "mean", "min", "sum", "median", "all", "any", "first", "last"],
 )
 def test_list_agg(data: Data, expr: nwp.Expr, expected: list[NonNestedLiteral]) -> None:
     df = dataframe(data).with_columns(cast_a, cast_b)
@@ -107,6 +111,8 @@ first_b = nwp.nth(0).cast(nw.List(nw.Boolean)).first()
         cases_scalar(first_n.list.median(), ROWS_N, EXPECTED_MEDIAN),
         cases_scalar(first_b.list.all(), ROWS_B, EXPECTED_ALL),
         cases_scalar(first_b.list.any(), ROWS_B, EXPECTED_ANY),
+        cases_scalar(first_n.list.first(), ROWS_N, EXPECTED_FIRST),
+        cases_scalar(first_n.list.last(), ROWS_N, EXPECTED_LAST),
     ),
 )
 def test_list_agg_scalar(
