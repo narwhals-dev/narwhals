@@ -1007,6 +1007,8 @@ class ArrowListNamespace(
     mean = aggregate
     median = aggregate
     sum = aggregate
+    any = aggregate
+    all = aggregate
 
 
 class ArrowStringNamespace(

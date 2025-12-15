@@ -20,6 +20,8 @@ if TYPE_CHECKING:
 
 # fmt: off
 class ListFunction(Function, accessor="list", options=FunctionOptions.elementwise): ...
+class Any(ListFunction): ...
+class All(ListFunction): ...
 class Min(ListFunction): ...
 class Max(ListFunction): ...
 class Mean(ListFunction): ...
@@ -45,7 +47,7 @@ class Contains(ListFunction):
         return expr, item
 
 
-Aggregation: TypeAlias = "Min | Max | Mean | Median | Sum"
+Aggregation: TypeAlias = "Any | All | Min | Max | Mean | Median | Sum"
 
 
 class IRListNamespace(IRNamespace):
@@ -59,6 +61,8 @@ class IRListNamespace(IRNamespace):
     mean: ClassVar = Mean
     median: ClassVar = Median
     sum: ClassVar = Sum
+    any: ClassVar = Any
+    all: ClassVar = All
 
 
 class ExprListNamespace(ExprNamespace[IRListNamespace]):
@@ -106,3 +110,9 @@ class ExprListNamespace(ExprNamespace[IRListNamespace]):
         return self._with_unary(
             self._ir.join(separator=separator, ignore_nulls=ignore_nulls)
         )
+
+    def any(self) -> Expr:
+        return self._with_unary(self._ir.any())
+
+    def all(self) -> Expr:
+        return self._with_unary(self._ir.all())

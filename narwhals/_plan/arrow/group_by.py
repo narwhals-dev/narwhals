@@ -80,6 +80,12 @@ SUPPORTED_FUNCTION: Mapping[type[ir.Function], acero.Aggregation] = {
 
 del _version_dependent
 
+
+SUPPORTED_LIST_FUNCTION: Mapping[type[ir.lists.Aggregation], type[ir.Function]] = {
+    ir.lists.Any: ir.boolean.Any,
+    ir.lists.All: ir.boolean.All,
+}
+
 SCALAR_OUTPUT_TYPE: Mapping[acero.Aggregation, pa.DataType] = {
     "all": fn.BOOL,
     "any": fn.BOOL,
@@ -175,15 +181,20 @@ class AggSpec:
     @classmethod
     def _from_list_agg(cls, list_agg: ir.lists.Aggregation, /, name: str) -> Self:
         tp = type(list_agg)
-        tp_agg = SUPPORTED_LIST_AGG[tp]
-        if tp_agg in {agg.Std, agg.Var}:
-            msg = (
-                f"TODO: {qualified_type_name(list_agg)!r} needs access to `ddof`.\n"
-                "Add some sugar around mapping `ListFunction.<parameter>` -> `AggExpr.<parameter>`\n"
-                "or  using `Immutable.__immutable_keys__`"
-            )
-            raise NotImplementedError(msg)
-        return cls(name, SUPPORTED_AGG[tp_agg], options.LIST_AGG.get(tp), name)
+        if tp_agg := SUPPORTED_LIST_AGG.get(tp):
+            if tp_agg in {agg.Std, agg.Var}:
+                msg = (
+                    f"TODO: {qualified_type_name(list_agg)!r} needs access to `ddof`.\n"
+                    "Add some sugar around mapping `ListFunction.<parameter>` -> `AggExpr.<parameter>`\n"
+                    "or  using `Immutable.__immutable_keys__`"
+                )
+                raise NotImplementedError(msg)
+            fn_name = SUPPORTED_AGG[tp_agg]
+        elif tp_func := SUPPORTED_LIST_FUNCTION.get(tp):
+            fn_name = SUPPORTED_FUNCTION[tp_func]
+        else:
+            raise NotImplementedError(tp)
+        return cls(name, fn_name, options.LIST_AGG.get(tp), name)
 
     @classmethod
     def any(cls, name: str) -> Self:

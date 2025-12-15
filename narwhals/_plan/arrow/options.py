@@ -163,7 +163,11 @@ def _generate_agg() -> Mapping[type[agg.AggExpr], acero.AggregateOptions]:
 def _generate_list_agg() -> Mapping[type[ir.lists.Aggregation], acero.AggregateOptions]:
     from narwhals._plan.expressions import lists
 
-    return {lists.Sum: scalar_aggregate(ignore_nulls=True)}
+    return {
+        lists.Sum: scalar_aggregate(ignore_nulls=True),
+        lists.All: scalar_aggregate(ignore_nulls=True),
+        lists.Any: scalar_aggregate(ignore_nulls=True),
+    }
 
 
 def _generate_function() -> Mapping[type[ir.Function], acero.AggregateOptions]:
