@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals as nw
-from tests.utils import assert_equal_data
+from tests.utils import POLARS_VERSION, assert_equal_data
 
 if TYPE_CHECKING:
     from typing import Any
@@ -88,6 +88,8 @@ def test_sort_expr_args(
         # https://github.com/eakmanrq/sqlframe/issues/559
         # https://github.com/eakmanrq/sqlframe/issues/560
         request.applymarker(pytest.mark.xfail)
+    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 5):
+        pytest.skip()
     result = nw.from_native(constructor(data)).select(
         nw.col("a")
         .cast(nw.List(nw.Int32()))
@@ -132,6 +134,8 @@ def test_sort_series_args(
     ):
         # PyArrow issue: https://github.com/apache/arrow/issues/48060#issuecomment-3510993921
         request.applymarker(pytest.mark.xfail)
+    if "polars" in str(constructor_eager) and POLARS_VERSION < (0, 20, 5):
+        pytest.skip()
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = (
         df["a"]
