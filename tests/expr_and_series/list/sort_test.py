@@ -54,6 +54,8 @@ def test_sort_expr(request: pytest.FixtureRequest, constructor: Constructor) -> 
         # https://github.com/eakmanrq/sqlframe/issues/559
         # https://github.com/eakmanrq/sqlframe/issues/560
         request.applymarker(pytest.mark.xfail)
+    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 5):
+        pytest.skip()
     result = nw.from_native(constructor(data)).select(
         nw.col("a").cast(nw.List(nw.Int32())).list.sort()
     )
@@ -107,6 +109,8 @@ def test_sort_series(
     ):
         # PyArrow issue: https://github.com/apache/arrow/issues/48060#issuecomment-3510993921
         request.applymarker(pytest.mark.xfail)
+    if "polars" in str(constructor_eager) and POLARS_VERSION < (0, 20, 5):
+        pytest.skip()
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df["a"].cast(nw.List(nw.Int32())).list.sort()
     assert_equal_data({"a": result}, {"a": expected_asc_nulls_first})
