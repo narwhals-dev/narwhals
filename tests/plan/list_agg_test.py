@@ -103,4 +103,7 @@ def test_list_agg_scalar(
     data = {"a": [row]}
     df = dataframe(data).select(cast_a)
     result = df.select(expr)
+    # NOTE: Doing a pure noop on `<pyarrow.ListScalar: None>` will pass `assert_equal_data`,
+    # but will have the wrong dtype when compared with a non-null agg
+    assert result.collect_schema()["a"] != nw.List
     assert_equal_data(result, {"a": [expected]})
