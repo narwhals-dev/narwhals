@@ -792,6 +792,35 @@ def list_contains(
     return replace_with_mask(propagate_invalid, propagate_invalid, l_contains)
 
 
+def _list_offsets(native: ChunkedOrArray[ListScalar]) -> pa.Int32Array:
+    arr: Incomplete = array(native)
+    result: pa.Int32Array = arr.offsets
+    return result
+
+
+# TODO @dangotbanned: Needs more tidying
+def list_sort_messy(
+    native: ChunkedList, *, descending: bool = False, nulls_last: bool = False
+) -> ChunkedList:
+    """Pretty similar to `list_unique`, split things up and put back together."""
+    idx, v = "idx", "values"
+    names = idx, v
+    # null, 0-length, AND 1-length are **all** already sorted
+    len_gt_1 = gt(list_len(native), lit(1))
+    indexed = concat_horizontal([int_range(len(native)), native], names)
+    valid = indexed.filter(len_gt_1)
+    invalid = indexed.filter(or_(native.is_null(), not_(len_gt_1)))
+    exploded = ExplodeBuilder.explode_column_fast(valid, v)
+    # `idx` should always be ascending
+    desc = False, descending
+    indices = sort_indices(exploded, idx, v, descending=desc, nulls_last=nulls_last)
+    sorted_imploded = implode_by_offsets(
+        exploded.column(v).take(indices), _list_offsets(valid.column(v))
+    )
+    valid_finished = concat_horizontal([valid.column(idx), sorted_imploded], names)
+    return concat_tables([valid_finished, invalid]).sort_by(idx).column(v)
+
+
 def implode(native: Arrow[Scalar[DataTypeT]]) -> ListScalar[DataTypeT]:
     """Aggregate values into a list.
 
@@ -799,6 +828,15 @@ def implode(native: Arrow[Scalar[DataTypeT]]) -> ListScalar[DataTypeT]:
     """
     arr = array(native)
     return pa.ListArray.from_arrays([0, len(arr)], arr)[0]
+
+
+def implode_by_offsets(
+    native: ChunkedOrArray[ScalarT],
+    offsets: Array[pa.Int32Scalar | pa.Int64Scalar] | list[int],
+) -> pa.ListArray[ScalarT]:
+    from_arrays: Incomplete = pa.ListArray.from_arrays
+    result: pa.ListArray[ScalarT] = from_arrays(offsets, array(native))
+    return result
 
 
 def str_join(
