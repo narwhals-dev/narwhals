@@ -33,10 +33,10 @@ def test_median_expr(request: pytest.FixtureRequest, constructor: Constructor) -
     if (
         any(backend in str(constructor) for backend in ("pandas", "pyarrow"))
         and sys.version_info < (3, 10)
-        and is_windows
+        and is_windows()
     ):  # pragma: no cover
         reason = "The issue only affects old Python versions on Windows."
-        pytest.skip(reason=reason)
+        request.applymarker(pytest.mark.xfail(reason=reason))
     result = nw.from_native(constructor(data)).select(
         nw.col("a").cast(nw.List(nw.Int32())).list.median()
     )
@@ -64,10 +64,10 @@ def test_median_series(
     if (
         any(backend in str(constructor_eager) for backend in ("pandas", "pyarrow"))
         and sys.version_info < (3, 10)
-        and is_windows
+        and is_windows()
     ):  # pragma: no cover
         reason = "The issue only affects old Python versions on Windows."
-        pytest.skip(reason=reason)
+        request.applymarker(pytest.mark.xfail(reason=reason))
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df["a"].cast(nw.List(nw.Int32())).list.median()
     if any(
