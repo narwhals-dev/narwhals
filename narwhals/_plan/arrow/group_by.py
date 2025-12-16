@@ -231,9 +231,9 @@ class AggSpec:
         result = fn.when_then(native.is_valid(), result)
         if self._is_n_unique():
             # NOTE: Exploding `[]` becomes `[None]` - so we need to adjust the unique count *iff* we were unlucky
-            len_eq_0 = fn.eq(fn.list_len(native), fn.lit(0))
-            if fn.any_(len_eq_0).as_py():
-                result = fn.when_then(len_eq_0, fn.lit(0), result)
+            is_sublist_empty = fn.eq(fn.list_len(native), fn.lit(0))
+            if fn.any_(is_sublist_empty).as_py():
+                result = fn.when_then(is_sublist_empty, fn.lit(0), result)
         return result
 
     def over(self, native: pa.Table, keys: Iterable[acero.Field]) -> pa.Table:
