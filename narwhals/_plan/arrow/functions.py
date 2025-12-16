@@ -451,7 +451,7 @@ class ExplodeBuilder:
             >>> arr = fn.array([[1, 2, 3], None, [4, 5, 6], []])
             >>> fn.ExplodeBuilder().explode_with_indices(arr).to_pydict()
             {'idx': [0, 0, 0, 1, 2, 2, 2, 3], 'values': [1, 2, 3, None, 4, 5, 6, None]}
-            # ^ Which sublist values come from   ^ The exploded values themselves
+            # ^ Which sublist values come from ^ The exploded values themselves
         """
         safe = self._fill_with_null(native) if self.options.any() else native
         arrays = [_list_parent_indices(safe), _list_explode(safe)]
