@@ -106,7 +106,7 @@ SCALAR_OUTPUT_TYPE: Mapping[acero.Aggregation, pa.DataType] = {
 
 For use in list aggregates, where the input was null.
 
-*Except `"mean"` can be `Decimal`.
+*Except `"mean"` will preserve `Decimal`, if that's where we started.
 """
 
 

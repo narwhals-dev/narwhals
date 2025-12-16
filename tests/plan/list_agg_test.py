@@ -114,9 +114,9 @@ def cases_scalar(
     rows: Iterable[Sequence[NonNestedLiteral] | None],
     expected: Sequence[NonNestedLiteral],
 ) -> Iterator[ParameterSet]:
+    name = get_dispatch_name(expr._ir).removeprefix("list.")
     for idx, row_expected in enumerate(zip_strict(rows, expected), start=1):
         row, out = row_expected
-        name = get_dispatch_name(expr._ir).removeprefix("list.")
         yield pytest.param(expr, row, out, id=f"{name}-R{idx}")
 
 
