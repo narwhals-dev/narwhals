@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 import pytest
 
@@ -9,51 +9,10 @@ import narwhals._plan as nwp
 from tests.plan.utils import assert_equal_data, dataframe
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from tests.conftest import Data
     from tests.plan.utils import SubList
-
-ASC = False
-DESC = True
-NULLS_FIRST = False
-NULLS_LAST = True
-
-
-expected_desc_nulls_last = [
-    [4, 3, 2, 2, -10, None, None, None],
-    [-1],
-    None,
-    [None, None, None],
-    [],
-    [10, 0, 0, 0, -5, None, None, None, None],
-    [None],
-]
-expected_desc_nulls_first = [
-    [None, None, None, 4, 3, 2, 2, -10],
-    [-1],
-    None,
-    [None, None, None],
-    [],
-    [None, None, None, None, 10, 0, 0, 0, -5],
-    [None],
-]
-expected_asc_nulls_last = [
-    [-10, 2, 2, 3, 4, None, None, None],
-    [-1],
-    None,
-    [None, None, None],
-    [],
-    [-5, 0, 0, 0, 10, None, None, None, None],
-    [None],
-]
-expected_asc_nulls_first = [
-    [None, None, None, -10, 2, 2, 3, 4],
-    [-1],
-    None,
-    [None, None, None],
-    [],
-    [None, None, None, None, -5, 0, 0, 0, 10],
-    [None],
-]
 
 
 @pytest.fixture(scope="module")
@@ -71,41 +30,79 @@ def data() -> Data:
     }
 
 
-a = nwp.col("a")
+ASC = False
+DESC = True
+NULLS_FIRST = False
+NULLS_LAST = True
 
 
-@pytest.mark.parametrize(
-    ("descending", "nulls_last", "expected"),
-    [
-        (DESC, NULLS_LAST, expected_desc_nulls_last),
-        (DESC, NULLS_FIRST, expected_desc_nulls_first),
-        (ASC, NULLS_LAST, expected_asc_nulls_last),
-        (ASC, NULLS_FIRST, expected_asc_nulls_first),
+EXPECTED: Final[Mapping[tuple[bool, bool], list[SubList[int]]]] = {
+    (DESC, NULLS_LAST): [
+        [4, 3, 2, 2, -10, None, None, None],
+        [-1],
+        None,
+        [None, None, None],
+        [],
+        [10, 0, 0, 0, -5, None, None, None, None],
+        [None],
     ],
+    (DESC, NULLS_FIRST): [
+        [None, None, None, 4, 3, 2, 2, -10],
+        [-1],
+        None,
+        [None, None, None],
+        [],
+        [None, None, None, None, 10, 0, 0, 0, -5],
+        [None],
+    ],
+    (ASC, NULLS_LAST): [
+        [-10, 2, 2, 3, 4, None, None, None],
+        [-1],
+        None,
+        [None, None, None],
+        [],
+        [-5, 0, 0, 0, 10, None, None, None, None],
+        [None],
+    ],
+    (ASC, NULLS_FIRST): [
+        [None, None, None, -10, 2, 2, 3, 4],
+        [-1],
+        None,
+        [None, None, None],
+        [],
+        [None, None, None, None, -5, 0, 0, 0, 10],
+        [None],
+    ],
+}
+
+
+a = nwp.col("a")
+cast_a = a.cast(nw.List(nw.Int32))
+
+sort_options = pytest.mark.parametrize(
+    ("descending", "nulls_last"),
+    [(DESC, NULLS_LAST), (DESC, NULLS_FIRST), (ASC, NULLS_LAST), (ASC, NULLS_FIRST)],
+    ids=["desc-nulls-last", "desc-nulls-first", "asc-nulls-last", "asc-nulls-first"],
 )
-def test_list_sort(
-    data: Data, *, descending: bool, nulls_last: bool, expected: list[SubList[int]]
-) -> None:
-    df = dataframe(data).with_columns(a.cast(nw.List(nw.Int32)))
+
+
+@sort_options
+def test_list_sort(data: Data, *, descending: bool, nulls_last: bool) -> None:
+    df = dataframe(data).with_columns(cast_a)
     expr = a.list.sort(descending=descending, nulls_last=nulls_last)
     result = df.select(expr)
-    assert_equal_data(result, {"a": expected})
+    expected = {"a": EXPECTED[(descending, nulls_last)]}
+    assert_equal_data(result, expected)
 
 
-# TODO @dangotbanned: Test against all sublists (see `test_list_agg.cases_scalar`)
-@pytest.mark.parametrize(
-    ("descending", "nulls_last", "expected"),
-    [
-        (DESC, NULLS_LAST, expected_desc_nulls_last[0]),
-        (DESC, NULLS_FIRST, expected_desc_nulls_first[0]),
-        (ASC, NULLS_LAST, expected_asc_nulls_last[0]),
-        (ASC, NULLS_FIRST, expected_asc_nulls_first[0]),
-    ],
-)
+@pytest.mark.parametrize("row_index", range(7))
+@sort_options
 def test_list_sort_scalar(
-    data: Data, *, descending: bool, nulls_last: bool, expected: SubList[int]
+    data: Data, row_index: int, *, descending: bool, nulls_last: bool
 ) -> None:
-    df = dataframe(data).with_columns(a.cast(nw.List(nw.Int32)))
+    row = data["a"][row_index]
+    df = dataframe({"a": [row]}).with_columns(cast_a)
     expr = a.first().list.sort(descending=descending, nulls_last=nulls_last)
     result = df.select(expr)
-    assert_equal_data(result, {"a": [expected]})
+    expected = {"a": [EXPECTED[(descending, nulls_last)][row_index]]}
+    assert_equal_data(result, expected)
