@@ -19,39 +19,56 @@ NULLS_LAST = True
 
 
 expected_desc_nulls_last = [
-    [4, 3, 2, 2, -10, None, None],
+    [4, 3, 2, 2, -10, None, None, None],
     [-1],
     None,
     [None, None, None],
     [],
+    [10, 0, 0, 0, -5, None, None, None, None],
+    [None],
 ]
 expected_desc_nulls_first = [
-    [None, None, 4, 3, 2, 2, -10],
+    [None, None, None, 4, 3, 2, 2, -10],
     [-1],
     None,
     [None, None, None],
     [],
+    [None, None, None, None, 10, 0, 0, 0, -5],
+    [None],
 ]
 expected_asc_nulls_last = [
-    [-10, 2, 2, 3, 4, None, None],
+    [-10, 2, 2, 3, 4, None, None, None],
     [-1],
     None,
     [None, None, None],
     [],
+    [-5, 0, 0, 0, 10, None, None, None, None],
+    [None],
 ]
 expected_asc_nulls_first = [
-    [None, None, -10, 2, 2, 3, 4],
+    [None, None, None, -10, 2, 2, 3, 4],
     [-1],
     None,
     [None, None, None],
     [],
+    [None, None, None, None, -5, 0, 0, 0, 10],
+    [None],
 ]
 
 
-# TODO @dangotbanned: Add some more and/or longer sublists
 @pytest.fixture(scope="module")
 def data() -> Data:
-    return {"a": [[3, 2, 2, 4, -10, None, None], [-1], None, [None, None, None], []]}
+    return {
+        "a": [
+            [3, 2, 2, None, 4, -10, None, None],
+            [-1],
+            None,
+            [None, None, None],
+            [],
+            [None, 0, 0, None, -5, 10, None, 0, None],
+            [None],
+        ]
+    }
 
 
 a = nwp.col("a")
