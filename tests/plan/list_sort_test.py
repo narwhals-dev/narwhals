@@ -48,6 +48,7 @@ expected_asc_nulls_first = [
 ]
 
 
+# TODO @dangotbanned: Add some more and/or longer sublists
 @pytest.fixture(scope="module")
 def data() -> Data:
     return {"a": [[3, 2, 2, 4, -10, None, None], [-1], None, [None, None, None], []]}
@@ -70,5 +71,24 @@ def test_list_sort(
 ) -> None:
     df = dataframe(data).with_columns(a.cast(nw.List(nw.Int32)))
     expr = a.list.sort(descending=descending, nulls_last=nulls_last)
+    result = df.select(expr)
+    assert_equal_data(result, {"a": expected})
+
+
+@pytest.mark.xfail(reason="TODO: `ArrowScalar.list.sort`", raises=NotImplementedError)
+@pytest.mark.parametrize(
+    ("descending", "nulls_last", "expected"),
+    [
+        (DESC, NULLS_LAST, expected_desc_nulls_last[0]),
+        (DESC, NULLS_FIRST, expected_desc_nulls_first[0]),
+        (ASC, NULLS_LAST, expected_asc_nulls_last[0]),
+        (ASC, NULLS_FIRST, expected_asc_nulls_first[0]),
+    ],
+)
+def test_list_sort_scalar(
+    data: Data, *, descending: bool, nulls_last: bool, expected: SubList[int]
+) -> None:  # pragma: no cover
+    df = dataframe(data).with_columns(a.cast(nw.List(nw.Int32)))
+    expr = a.first().list.sort(descending=descending, nulls_last=nulls_last)
     result = df.select(expr)
     assert_equal_data(result, {"a": expected})
