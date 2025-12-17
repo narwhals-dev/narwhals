@@ -549,16 +549,18 @@ class ExplodeBuilder:
         return result
 
 
+# TODO @dangotbanned: Fix these overloads
+# Trying to preserve the concrete container, to allow accessing the attributes
 @t.overload
 def _list_explode(native: ChunkedList[DataTypeT]) -> ChunkedArray[Scalar[DataTypeT]]: ...
 @t.overload
-def _list_explode(
+def _list_explode(  # type: ignore[overload-overlap]
     native: ListArray[NonListTypeT] | ListScalar[NonListTypeT],
 ) -> Array[Scalar[NonListTypeT]]: ...
 @t.overload
 def _list_explode(native: ListArray[DataTypeT]) -> Array[Scalar[DataTypeT]]: ...
 @t.overload
-def _list_explode(
+def _list_explode(  # type: ignore[overload-overlap]
     native: pa.ListScalar[DataTypeT],
 ) -> pa.ListArray[Scalar[DataTypeT]]: ...
 @t.overload
