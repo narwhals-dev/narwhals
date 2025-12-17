@@ -442,6 +442,17 @@ class ExplodeBuilder:
         return chunked_array(_list_explode(safe))
 
     def explode_with_indices(self, native: ChunkedList | ListArray) -> pa.Table:
+        """Explode list elements, expanding one-level into a table indexing the origin.
+
+        Returns a 2-column table, with names `"idx"` and `"values"`:
+
+            >>> from narwhals._plan.arrow import functions as fn
+            >>>
+            >>> arr = fn.array([[1, 2, 3], None, [4, 5, 6], []])
+            >>> fn.ExplodeBuilder().explode_with_indices(arr).to_pydict()
+            {'idx': [0, 0, 0, 1, 2, 2, 2, 3], 'values': [1, 2, 3, None, 4, 5, 6, None]}
+            # ^ Which sublist values come from ^ The exploded values themselves
+        """
         safe = self._fill_with_null(native) if self.options.any() else native
         arrays = [_list_parent_indices(safe), _list_explode(safe)]
         return concat_horizontal(arrays, ["idx", "values"])
@@ -1044,6 +1055,12 @@ def _str_zfill_compat(
 
 @t.overload
 def when_then(
+    predicate: ChunkedArray[BooleanScalar], then: ScalarAny
+) -> ChunkedArrayAny: ...
+@t.overload
+def when_then(predicate: Array[BooleanScalar], then: ScalarAny) -> ArrayAny: ...
+@t.overload
+def when_then(
     predicate: Predicate, then: SameArrowT, otherwise: SameArrowT | None
 ) -> SameArrowT: ...
 @t.overload
@@ -1059,6 +1076,11 @@ def when_then(
 def when_then(
     predicate: Predicate, then: ArrowAny, otherwise: ArrowAny | NonNestedLiteral = None
 ) -> Incomplete:
+    """Thin wrapper around `pyarrow.compute.if_else`.
+
+    - Supports a 2-arg form, like `pl.when(...).then(...)`
+    - Accepts python literals, but only in the `otherwise` position
+    """
     if is_non_nested_literal(otherwise):
         otherwise = lit(otherwise, then.type)
     return pc.if_else(predicate, then, otherwise)

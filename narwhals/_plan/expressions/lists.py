@@ -11,7 +11,7 @@ from narwhals._utils import ensure_type
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
+    from typing_extensions import Self, TypeAlias
 
     from narwhals._plan.expr import Expr
     from narwhals._plan.expressions import ExprIR, FunctionExpr as FExpr
@@ -20,6 +20,16 @@ if TYPE_CHECKING:
 
 # fmt: off
 class ListFunction(Function, accessor="list", options=FunctionOptions.elementwise): ...
+class Any(ListFunction): ...
+class All(ListFunction): ...
+class First(ListFunction): ...
+class Last(ListFunction): ...
+class Min(ListFunction): ...
+class Max(ListFunction): ...
+class Mean(ListFunction): ...
+class Median(ListFunction): ...
+class NUnique(ListFunction): ...
+class Sum(ListFunction): ...
 class Len(ListFunction): ...
 class Unique(ListFunction): ...
 class Get(ListFunction):
@@ -40,18 +50,48 @@ class Contains(ListFunction):
         return expr, item
 
 
+Aggregation: TypeAlias = (
+    "Any | All | First | Last | Min | Max | Mean | Median | NUnique | Sum"
+)
+
+
 class IRListNamespace(IRNamespace):
     len: ClassVar = Len
     unique: ClassVar = Unique
     contains: ClassVar = Contains
     get: ClassVar = Get
     join: ClassVar = Join
+    min: ClassVar = Min
+    max: ClassVar = Max
+    mean: ClassVar = Mean
+    median: ClassVar = Median
+    sum: ClassVar = Sum
+    any: ClassVar = Any
+    all: ClassVar = All
+    first: ClassVar = First
+    last: ClassVar = Last
+    n_unique: ClassVar = NUnique
 
 
 class ExprListNamespace(ExprNamespace[IRListNamespace]):
     @property
     def _ir_namespace(self) -> type[IRListNamespace]:
         return IRListNamespace
+
+    def min(self) -> Expr:
+        return self._with_unary(self._ir.min())
+
+    def max(self) -> Expr:
+        return self._with_unary(self._ir.max())
+
+    def mean(self) -> Expr:
+        return self._with_unary(self._ir.mean())
+
+    def median(self) -> Expr:
+        return self._with_unary(self._ir.median())
+
+    def sum(self) -> Expr:
+        return self._with_unary(self._ir.sum())
 
     def len(self) -> Expr:
         return self._with_unary(self._ir.len())
@@ -78,3 +118,18 @@ class ExprListNamespace(ExprNamespace[IRListNamespace]):
         return self._with_unary(
             self._ir.join(separator=separator, ignore_nulls=ignore_nulls)
         )
+
+    def any(self) -> Expr:
+        return self._with_unary(self._ir.any())
+
+    def all(self) -> Expr:
+        return self._with_unary(self._ir.all())
+
+    def first(self) -> Expr:
+        return self._with_unary(self._ir.first())
+
+    def last(self) -> Expr:
+        return self._with_unary(self._ir.last())
+
+    def n_unique(self) -> Expr:
+        return self._with_unary(self._ir.n_unique())

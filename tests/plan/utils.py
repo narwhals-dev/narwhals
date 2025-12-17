@@ -20,6 +20,7 @@ import pyarrow as pa
 if TYPE_CHECKING:
     import sys
     from collections.abc import Iterable, Mapping
+    from typing import TypeVar
 
     from typing_extensions import LiteralString, TypeAlias
 
@@ -30,6 +31,9 @@ if TYPE_CHECKING:
         _Flags: TypeAlias = "int | re.RegexFlag"
     else:
         _Flags: TypeAlias = int
+
+    T = TypeVar("T")
+    SubList: TypeAlias = list[T] | list[T | None] | list[None] | None
 
 
 def first(*names: str | Sequence[str]) -> nwp.Expr:

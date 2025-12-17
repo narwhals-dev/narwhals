@@ -1,20 +1,25 @@
-"""Cached `pyarrow.compute` options classes, using `polars` defaults.
+"""Cached [`pyarrow.compute` options], using `polars` defaults and naming conventions.
 
-Important:
-    `AGG` and `FUNCTION` mappings are constructed on first `__getattr__` access.
+See `LazyOptions` for [`__getattr__`] usage.
+
+[`pyarrow.compute` options]: https://arrow.apache.org/docs/dev/python/api/compute.html#compute-options
+[`__getattr__`]: https://docs.python.org/3/reference/datamodel.html#module.__getattr__
 """
 
 from __future__ import annotations
 
 import functools
-from typing import TYPE_CHECKING, Any, Literal
+from collections.abc import Mapping
+from typing import TYPE_CHECKING, Any, Literal, TypeVar
 
 import pyarrow.compute as pc
 
 from narwhals._utils import zip_strict
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Sequence
+
+    from typing_extensions import TypeAlias
 
     from narwhals._plan import expressions as ir
     from narwhals._plan.arrow import acero
@@ -26,19 +31,57 @@ if TYPE_CHECKING:
 __all__ = [
     "AGG",
     "FUNCTION",
+    "LIST_AGG",
     "array_sort",
     "count",
     "join",
     "join_replace_nulls",
+    "match_substring",
     "rank",
     "scalar_aggregate",
     "sort",
+    "split_pattern",
     "variance",
 ]
 
 
-AGG: Mapping[type[agg.AggExpr], acero.AggregateOptions]
-FUNCTION: Mapping[type[ir.Function], acero.AggregateOptions]
+_T = TypeVar("_T", bound="type[ir.ExprIR | ir.Function]")
+
+LazyOptions: TypeAlias = Mapping[_T, "acero.AggregateOptions"]
+"""Lazily constructed mapping to `pyarrow.compute.FunctionOptions` instances.
+
+Examples:
+    >>> from narwhals import _plan as nwp
+    >>> from narwhals._plan import expressions as ir
+    >>> from narwhals._plan.arrow import options
+    >>>
+    >>> expr = nwp.col("a").first()
+    >>> expr_ir = expr._ir
+    >>> expr_ir
+    col('a').first()
+    >>> if isinstance(expr_ir, ir.AggExpr):
+    >>>     print(options.AGG.get(type(expr_ir)))
+    ScalarAggregateOptions(skip_nulls=false, min_count=0)
+
+    The first access to `AGG` generated the mapping
+
+    >>> lazy = {"AGG", "FUNCTION", "LIST_AGG"}
+    >>> [key for key in options.__dict__ if key in lazy]
+    ['AGG']
+
+    We *didn't* generate `FUNCTION`, but it'll be there *when* we need it
+
+    >>> options.FUNCTION.get(ir.functions.NullCount)
+    CountOptions(mode=NULLS)
+
+    >>> [key for key in options.__dict__ if key in lazy]
+    ['AGG', 'FUNCTION']
+"""
+
+AGG: LazyOptions[type[agg.AggExpr]]
+FUNCTION: LazyOptions[type[ir.Function]]
+LIST_AGG: LazyOptions[type[ir.lists.Aggregation]]
+
 
 _NULLS_LAST = True
 _NULLS_FIRST = False
@@ -159,6 +202,19 @@ def _generate_agg() -> Mapping[type[agg.AggExpr], acero.AggregateOptions]:
     }
 
 
+def _generate_list_agg() -> Mapping[type[ir.lists.Aggregation], acero.AggregateOptions]:
+    from narwhals._plan.expressions import lists
+
+    return {
+        lists.Sum: scalar_aggregate(ignore_nulls=True),
+        lists.All: scalar_aggregate(ignore_nulls=True),
+        lists.Any: scalar_aggregate(ignore_nulls=True),
+        lists.First: scalar_aggregate(),
+        lists.Last: scalar_aggregate(),
+        lists.NUnique: count("all"),
+    }
+
+
 def _generate_function() -> Mapping[type[ir.Function], acero.AggregateOptions]:
     from narwhals._plan.expressions import boolean, functions
 
@@ -171,7 +227,6 @@ def _generate_function() -> Mapping[type[ir.Function], acero.AggregateOptions]:
 
 
 # ruff: noqa: PLW0603
-# NOTE: Using globals for lazy-loading cache
 if not TYPE_CHECKING:
 
     def __getattr__(name: str) -> Any:
@@ -183,5 +238,9 @@ if not TYPE_CHECKING:
             global FUNCTION
             FUNCTION = _generate_function()
             return FUNCTION
+        if name == "LIST_AGG":
+            global LIST_AGG
+            LIST_AGG = _generate_list_agg()
+            return LIST_AGG
         msg = f"module {__name__!r} has no attribute {name!r}"
         raise AttributeError(msg)

@@ -10,6 +10,7 @@ from tests.plan.utils import assert_equal_series, dataframe
 
 if TYPE_CHECKING:
     from tests.conftest import Data
+    from tests.plan.utils import SubList
 
 
 @pytest.fixture(scope="module")
@@ -50,9 +51,7 @@ def test_list_unique(data: Data) -> None:
         ([None], [None]),
     ],
 )
-def test_list_unique_scalar(
-    row: list[str | None] | None, expected: list[str | None] | None
-) -> None:
+def test_list_unique_scalar(row: SubList[str], expected: SubList[str]) -> None:
     data = {"a": [row]}
     df = dataframe(data).select(a.cast(nw.List(nw.String)))
     # NOTE: Don't separate `first().list.unique()`

@@ -15,6 +15,7 @@ from narwhals._plan._guards import (
     is_seq_column,
 )
 from narwhals._plan.arrow import functions as fn
+from narwhals._plan.arrow.group_by import AggSpec
 from narwhals._plan.arrow.series import ArrowSeries as Series
 from narwhals._plan.arrow.typing import ChunkedOrScalarAny, NativeScalar, StoresNativeT_co
 from narwhals._plan.common import temp
@@ -993,6 +994,24 @@ class ArrowListNamespace(
                 previous.native, separator, ignore_nulls=ignore_nulls
             )
         return self.with_native(result, name)
+
+    def aggregate(
+        self, node: FExpr[lists.Aggregation], frame: Frame, name: str
+    ) -> Expr | Scalar:
+        previous = node.input[0].dispatch(self.compliant, frame, name)
+        agg = AggSpec._from_list_agg(node.function, "values")
+        return self.with_native(agg.agg_list(previous.native), name)
+
+    min = aggregate
+    max = aggregate
+    mean = aggregate
+    median = aggregate
+    sum = aggregate
+    any = aggregate
+    all = aggregate
+    first = aggregate
+    last = aggregate
+    n_unique = aggregate
 
 
 class ArrowStringNamespace(
