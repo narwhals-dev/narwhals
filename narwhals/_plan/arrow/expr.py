@@ -1002,6 +1002,10 @@ class ArrowListNamespace(
         agg = AggSpec._from_list_agg(node.function, "values")
         return self.with_native(agg.agg_list(previous.native), name)
 
+    def sort(self, node: FExpr[lists.Sort], frame: Frame, name: str) -> Expr | Scalar:
+        msg = "TODO: `ArrowExpr.list.sort`"
+        raise NotImplementedError(msg)
+
     min = aggregate
     max = aggregate
     mean = aggregate

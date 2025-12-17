@@ -6,7 +6,7 @@ from narwhals._plan._function import Function
 from narwhals._plan._parse import parse_into_expr_ir
 from narwhals._plan.exceptions import function_arg_non_scalar_error
 from narwhals._plan.expressions.namespace import ExprNamespace, IRNamespace
-from narwhals._plan.options import FunctionOptions
+from narwhals._plan.options import FunctionOptions, SortOptions
 from narwhals._utils import ensure_type
 from narwhals.exceptions import InvalidOperationError
 
@@ -35,6 +35,9 @@ class Unique(ListFunction): ...
 class Get(ListFunction):
     __slots__ = ("index",)
     index: int
+class Sort(ListFunction):
+    __slots__ = ("options",)
+    options: SortOptions
 class Join(ListFunction):
     """Join all string items in a sublist and place a separator between them."""
 
@@ -71,6 +74,7 @@ class IRListNamespace(IRNamespace):
     first: ClassVar = First
     last: ClassVar = Last
     n_unique: ClassVar = NUnique
+    sort: ClassVar = Sort
 
 
 class ExprListNamespace(ExprNamespace[IRListNamespace]):
@@ -133,3 +137,7 @@ class ExprListNamespace(ExprNamespace[IRListNamespace]):
 
     def n_unique(self) -> Expr:
         return self._with_unary(self._ir.n_unique())
+
+    def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Expr:
+        options = SortOptions(descending=descending, nulls_last=nulls_last)
+        return self._with_unary(self._ir.sort(options=options))
