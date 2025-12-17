@@ -798,33 +798,29 @@ def list_contains(
     return replace_with_mask(propagate_invalid, propagate_invalid, l_contains)
 
 
-def _list_offsets(native: ChunkedOrArray[ListScalar]) -> pa.Int32Array:
-    arr: Incomplete = array(native)
-    result: pa.Int32Array = arr.offsets
-    return result
-
-
-# TODO @dangotbanned: Needs more tidying
-def list_sort_messy(
+def list_sort(
     native: ChunkedList, *, descending: bool = False, nulls_last: bool = False
 ) -> ChunkedList:
-    """Pretty similar to `list_unique`, split things up and put back together."""
+    """Sort the sublists in this column.
+
+    Works in a similar way to `list_unique` and `list_join`.
+
+    1. Select only sublists that require sorting (`None`, 0-length, and 1-length lists are noops)
+    2. Explode -> Sort -> Implode -> Concat
+    """
+    from narwhals._plan.arrow.group_by import AggSpec
+
     idx, v = "idx", "values"
-    names = idx, v
-    # null, 0-length, AND 1-length are **all** already sorted
-    len_gt_1 = gt(list_len(native), lit(1))
-    indexed = concat_horizontal([int_range(len(native)), native], names)
-    valid = indexed.filter(len_gt_1)
-    invalid = indexed.filter(or_(native.is_null(), not_(len_gt_1)))
-    exploded = ExplodeBuilder.explode_column_fast(valid, v)
-    # `idx` should always be ascending
-    desc = False, descending
-    indices = sort_indices(exploded, idx, v, descending=desc, nulls_last=nulls_last)
-    sorted_imploded = implode_by_offsets(
-        exploded.column(v).take(indices), _list_offsets(valid.column(v))
+    is_not_sorted = gt(list_len(native), lit(1))
+    indexed = concat_horizontal([int_range(len(native)), native], [idx, v])
+    exploded = ExplodeBuilder.explode_column_fast(indexed.filter(is_not_sorted), v)
+    indices = sort_indices(
+        exploded, idx, v, descending=[False, descending], nulls_last=nulls_last
     )
-    valid_finished = concat_horizontal([valid.column(idx), sorted_imploded], names)
-    return concat_tables([valid_finished, invalid]).sort_by(idx).column(v)
+    exploded_sorted = exploded.take(indices)
+    implode_by_idx = AggSpec.implode(v).over(exploded_sorted, [idx])
+    passthrough = indexed.filter(fill_null(not_(is_not_sorted), True))
+    return concat_tables([implode_by_idx, passthrough]).sort_by(idx).column(v)
 
 
 def list_sort_scalar(
@@ -844,15 +840,6 @@ def implode(native: Arrow[Scalar[DataTypeT]]) -> pa.ListScalar[DataTypeT]:
     """
     arr = array(native)
     return pa.ListArray.from_arrays([0, len(arr)], arr)[0]
-
-
-def implode_by_offsets(
-    native: ChunkedOrArray[ScalarT],
-    offsets: Array[pa.Int32Scalar | pa.Int64Scalar] | list[int],
-) -> pa.ListArray[ScalarT]:
-    from_arrays: Incomplete = pa.ListArray.from_arrays
-    result: pa.ListArray[ScalarT] = from_arrays(offsets, array(native))
-    return result
 
 
 def str_join(

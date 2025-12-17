@@ -1011,7 +1011,7 @@ class ArrowListNamespace(
             # TODO @dangotbanned: Maybe keep options together?
             descending = node.function.options.descending
             nulls_last = node.function.options.nulls_last
-            result = fn.list_sort_messy(
+            result = fn.list_sort(
                 previous.native, descending=descending, nulls_last=nulls_last
             )
         return self.with_native(result, name)
