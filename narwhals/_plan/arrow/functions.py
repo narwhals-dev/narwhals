@@ -1629,7 +1629,8 @@ def random_indices(
 @overload
 def sort_indices(
     native: ChunkedOrArrayAny | pa.Table,
-    *order_by: str,
+    # At least 1 `order_by` (blame `mypy`)
+    *order_by: Unpack[tuple[str, Unpack[tuple[str, ...]]]],
     descending: bool | Sequence[bool] = ...,
     nulls_last: bool = ...,
 ) -> pa.UInt64Array: ...
@@ -1640,7 +1641,8 @@ def sort_indices(
 @overload
 def sort_indices(
     native: ChunkedOrArrayAny | pa.Table,
-    *order_by: str,
+    # At least 1 `order_by` (blame `mypy`)
+    *order_by: Unpack[tuple[str, Unpack[tuple[str, ...]]]],
     options: SortOptions | SortMultipleOptions | None,
 ) -> pa.UInt64Array: ...
 @overload
