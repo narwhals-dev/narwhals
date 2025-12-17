@@ -828,14 +828,12 @@ def list_sort_messy(
 
 
 def list_sort_scalar(
-    native: ListScalar[DataTypeT], *, descending: bool = False, nulls_last: bool = False
+    native: ListScalar[DataTypeT], options: SortOptions | None = None
 ) -> pa.ListScalar[DataTypeT]:
     native = t.cast("pa.ListScalar[DataTypeT]", native)
     if native.is_valid and len(native) > 1:
         arr = _list_explode(native)
-        return implode(
-            arr.take(sort_indices(arr, descending=descending, nulls_last=nulls_last))
-        )
+        return implode(arr.take(sort_indices(arr, options=options)))
     return native
 
 
