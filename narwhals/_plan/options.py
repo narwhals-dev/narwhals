@@ -164,6 +164,9 @@ class SortOptions(Immutable):
 
         return sort(*by, descending=self.descending, nulls_last=self.nulls_last)
 
+    def _ensure_single_nulls_last(self, backend: Backend, /) -> bool:
+        return self.nulls_last
+
 
 class SortMultipleOptions(Immutable):
     __slots__ = ("descending", "nulls_last")

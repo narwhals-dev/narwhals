@@ -22,7 +22,7 @@ from narwhals._plan import common, expressions as ir
 from narwhals._plan._guards import is_non_nested_literal
 from narwhals._plan.arrow import options as pa_options
 from narwhals._plan.expressions import functions as F, operators as ops
-from narwhals._plan.options import ExplodeOptions
+from narwhals._plan.options import ExplodeOptions, SortOptions
 from narwhals._utils import Implementation, Version, no_default
 from narwhals.exceptions import ShapeError
 
@@ -85,7 +85,7 @@ if TYPE_CHECKING:
         VectorFunction,
     )
     from narwhals._plan.compliant.typing import SeriesT
-    from narwhals._plan.options import RankOptions, SortMultipleOptions, SortOptions
+    from narwhals._plan.options import RankOptions, SortMultipleOptions
     from narwhals._plan.typing import Seq
     from narwhals._typing import NoDefault
     from narwhals.typing import (
@@ -558,6 +558,10 @@ def _list_explode(
 @t.overload
 def _list_explode(native: ListArray[DataTypeT]) -> Array[Scalar[DataTypeT]]: ...
 @t.overload
+def _list_explode(
+    native: pa.ListScalar[DataTypeT],
+) -> pa.ListArray[Scalar[DataTypeT]]: ...
+@t.overload
 def _list_explode(native: ListScalar[ListTypeT]) -> ListArray[ListTypeT]: ...
 def _list_explode(native: Arrow[ListScalar]) -> ChunkedOrArrayAny:
     result: ChunkedOrArrayAny = pc.call_function("list_flatten", [native])
@@ -821,7 +825,19 @@ def list_sort_messy(
     return concat_tables([valid_finished, invalid]).sort_by(idx).column(v)
 
 
-def implode(native: Arrow[Scalar[DataTypeT]]) -> ListScalar[DataTypeT]:
+def list_sort_scalar(
+    native: ListScalar[DataTypeT], *, descending: bool = False, nulls_last: bool = False
+) -> pa.ListScalar[DataTypeT]:
+    native = t.cast("pa.ListScalar[DataTypeT]", native)
+    if native.is_valid and len(native) > 1:
+        arr = _list_explode(native)
+        return implode(
+            arr.take(sort_indices(arr, descending=descending, nulls_last=nulls_last))
+        )
+    return native
+
+
+def implode(native: Arrow[Scalar[DataTypeT]]) -> pa.ListScalar[DataTypeT]:
     """Aggregate values into a list.
 
     The returned list itself is a scalar value of `list` dtype.
@@ -1610,6 +1626,27 @@ def random_indices(
     return array(np.random.default_rng(seed).choice(np.arange(end), n, replace=False))
 
 
+@overload
+def sort_indices(
+    native: ChunkedOrArrayAny | pa.Table,
+    *order_by: str,
+    descending: bool | Sequence[bool] = ...,
+    nulls_last: bool = ...,
+) -> pa.UInt64Array: ...
+@overload
+def sort_indices(
+    native: ChunkedOrArrayAny, *, descending: bool = ..., nulls_last: bool = ...
+) -> pa.UInt64Array: ...
+@overload
+def sort_indices(
+    native: ChunkedOrArrayAny | pa.Table,
+    *order_by: str,
+    options: SortOptions | SortMultipleOptions | None,
+) -> pa.UInt64Array: ...
+@overload
+def sort_indices(
+    native: ChunkedOrArrayAny, *, options: SortOptions | None
+) -> pa.UInt64Array: ...
 def sort_indices(
     native: ChunkedOrArrayAny | pa.Table,
     *order_by: str,
@@ -1618,6 +1655,12 @@ def sort_indices(
     options: SortOptions | SortMultipleOptions | None = None,
 ) -> pa.UInt64Array:
     """Return the indices that would sort an array or table."""
+    if not order_by and not isinstance(native, pa.Table):
+        if options:
+            descending = options.descending
+            nulls_last = options._ensure_single_nulls_last("pyarrow")
+        a_opts = pa_options.array_sort(descending=descending, nulls_last=nulls_last)
+        return pc.array_sort_indices(native, options=a_opts)
     opts = (
         options.to_arrow(order_by)
         if options

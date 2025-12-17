@@ -92,7 +92,7 @@ def test_list_sort(
     assert_equal_data(result, {"a": expected})
 
 
-@pytest.mark.xfail(reason="TODO: `ArrowScalar.list.sort`", raises=NotImplementedError)
+# TODO @dangotbanned: Test against all sublists (see `test_list_agg.cases_scalar`)
 @pytest.mark.parametrize(
     ("descending", "nulls_last", "expected"),
     [
@@ -104,8 +104,8 @@ def test_list_sort(
 )
 def test_list_sort_scalar(
     data: Data, *, descending: bool, nulls_last: bool, expected: SubList[int]
-) -> None:  # pragma: no cover
+) -> None:
     df = dataframe(data).with_columns(a.cast(nw.List(nw.Int32)))
     expr = a.first().list.sort(descending=descending, nulls_last=nulls_last)
     result = df.select(expr)
-    assert_equal_data(result, {"a": expected})
+    assert_equal_data(result, {"a": [expected]})

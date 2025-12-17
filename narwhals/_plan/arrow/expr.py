@@ -1007,12 +1007,15 @@ class ArrowListNamespace(
         # TODO @dangotbanned: Maybe keep options together?
         descending = node.function.options.descending
         nulls_last = node.function.options.nulls_last
+        result: ChunkedOrScalarAny
         if isinstance(previous, ArrowScalar):
-            msg = "TODO: `ArrowScalar.list.sort`"
-            raise NotImplementedError(msg)
-        result = fn.list_sort_messy(
-            previous.native, descending=descending, nulls_last=nulls_last
-        )
+            result = fn.list_sort_scalar(
+                previous.native, descending=descending, nulls_last=nulls_last
+            )
+        else:
+            result = fn.list_sort_messy(
+                previous.native, descending=descending, nulls_last=nulls_last
+            )
         return self.with_native(result, name)
 
     min = aggregate
