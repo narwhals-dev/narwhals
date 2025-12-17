@@ -56,7 +56,6 @@ def data() -> Data:
 a = nwp.col("a")
 
 
-@pytest.mark.xfail(reason="TODO: `ArrowExpr.list.sort`", raises=NotImplementedError)
 @pytest.mark.parametrize(
     ("descending", "nulls_last", "expected"),
     [
@@ -68,7 +67,7 @@ a = nwp.col("a")
 )
 def test_list_sort(
     data: Data, *, descending: bool, nulls_last: bool, expected: list[SubList[int]]
-) -> None:  # pragma: no cover
+) -> None:
     df = dataframe(data).with_columns(a.cast(nw.List(nw.Int32)))
     expr = a.list.sort(descending=descending, nulls_last=nulls_last)
     result = df.select(expr)
