@@ -77,6 +77,26 @@ class PandasLikeSeriesListNamespace(
     def sum(self) -> PandasLikeSeries:
         return self._agg("sum")
 
+    def sort(self, *, descending: bool, nulls_last: bool) -> PandasLikeSeries:
+        dtype_backend = get_dtype_backend(
+            self.native.dtype, self.compliant._implementation
+        )
+        if dtype_backend != "pyarrow":  # pragma: no cover
+            msg = "Only pyarrow backend is currently supported."
+            raise NotImplementedError(msg)
+
+        from narwhals._arrow.utils import list_sort, native_to_narwhals_dtype
+
+        ca = self.native.array._pa_array
+        result_arr = list_sort(ca, descending=descending, nulls_last=nulls_last)
+        nw_dtype = native_to_narwhals_dtype(result_arr.type, self.version)
+        out_dtype = narwhals_to_native_dtype(
+            nw_dtype, "pyarrow", self.implementation, self.version
+        )
+        result_native = type(self.native)(
+            result_arr, dtype=out_dtype, index=self.native.index, name=self.native.name
+        )
+        return self.with_native(result_native)
+
     unique = not_implemented()
     contains = not_implemented()
-    sort = not_implemented()

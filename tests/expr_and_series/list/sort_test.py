@@ -45,10 +45,7 @@ expected_asc_nulls_first = [
 
 
 def test_sort_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if any(
-        backend in str(constructor) for backend in ("dask", "cudf", "pandas", "pyarrow")
-    ):
-        # PyArrow issue: https://github.com/apache/arrow/issues/48060
+    if any(backend in str(constructor) for backend in ("dask", "cudf")):
         request.applymarker(pytest.mark.xfail)
     if "sqlframe" in str(constructor):
         # https://github.com/eakmanrq/sqlframe/issues/559
@@ -78,10 +75,7 @@ def test_sort_expr_args(
     nulls_last: bool,  # noqa: FBT001
     expected: list[Any],
 ) -> None:
-    if any(
-        backend in str(constructor) for backend in ("dask", "cudf", "pandas", "pyarrow")
-    ):
-        # PyArrow issue: https://github.com/apache/arrow/issues/48060
+    if any(backend in str(constructor) for backend in ("dask", "cudf")):
         request.applymarker(pytest.mark.xfail)
     if "ibis" in str(constructor) and descending:
         # https://github.com/ibis-project/ibis/issues/11735
@@ -103,11 +97,7 @@ def test_sort_expr_args(
 def test_sort_series(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
-    if any(
-        backend in str(constructor_eager)
-        for backend in ("dask", "cudf", "pandas", "pyarrow")
-    ):
-        # PyArrow issue: https://github.com/apache/arrow/issues/48060
+    if any(backend in str(constructor_eager) for backend in ("dask", "cudf")):
         request.applymarker(pytest.mark.xfail)
     if "polars" in str(constructor_eager) and POLARS_VERSION < (0, 20, 5):
         pytest.skip()
@@ -132,11 +122,7 @@ def test_sort_series_args(
     nulls_last: bool,  # noqa: FBT001
     expected: list[Any],
 ) -> None:
-    if any(
-        backend in str(constructor_eager)
-        for backend in ("dask", "cudf", "pandas", "pyarrow")
-    ):
-        # PyArrow issue: https://github.com/apache/arrow/issues/48060
+    if any(backend in str(constructor_eager) for backend in ("dask", "cudf")):
         request.applymarker(pytest.mark.xfail)
     if "polars" in str(constructor_eager) and POLARS_VERSION < (0, 20, 5):
         pytest.skip()
