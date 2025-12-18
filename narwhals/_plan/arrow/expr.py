@@ -1002,6 +1002,19 @@ class ArrowListNamespace(
         agg = AggSpec._from_list_agg(node.function, "values")
         return self.with_native(agg.agg_list(previous.native), name)
 
+    def sort(self, node: FExpr[lists.Sort], frame: Frame, name: str) -> Expr | Scalar:
+        previous = node.input[0].dispatch(self.compliant, frame, name)
+        result: ChunkedOrScalarAny
+        if isinstance(previous, ArrowScalar):
+            result = fn.list_sort_scalar(previous.native, node.function.options)
+        else:
+            descending = node.function.options.descending
+            nulls_last = node.function.options.nulls_last
+            result = fn.list_sort(
+                previous.native, descending=descending, nulls_last=nulls_last
+            )
+        return self.with_native(result, name)
+
     min = aggregate
     max = aggregate
     mean = aggregate

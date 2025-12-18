@@ -68,6 +68,9 @@ class ExprListNamespace(Protocol[FrameT_contra, ExprT_co]):
     def n_unique(
         self, node: FExpr[lists.NUnique], frame: FrameT_contra, name: str
     ) -> ExprT_co: ...
+    def sort(
+        self, node: FExpr[lists.Sort], frame: FrameT_contra, name: str
+    ) -> ExprT_co: ...
 
 
 class ExprStringNamespace(Protocol[FrameT_contra, ExprT_co]):
