@@ -1609,11 +1609,7 @@ def random_indices(
 
 @overload
 def sort_indices(
-    native: ChunkedOrArrayAny | pa.Table,
-    # At least 1 `order_by` (blame `mypy`)
-    *order_by: Unpack[tuple[str, Unpack[tuple[str, ...]]]],
-    descending: bool | Sequence[bool] = ...,
-    nulls_last: bool = ...,
+    native: ChunkedOrArrayAny, *, options: SortOptions | None
 ) -> pa.UInt64Array: ...
 @overload
 def sort_indices(
@@ -1621,33 +1617,48 @@ def sort_indices(
 ) -> pa.UInt64Array: ...
 @overload
 def sort_indices(
-    native: ChunkedOrArrayAny | pa.Table,
-    # At least 1 `order_by` (blame `mypy`)
-    *order_by: Unpack[tuple[str, Unpack[tuple[str, ...]]]],
+    native: pa.Table,
+    *by: Unpack[tuple[str, Unpack[tuple[str, ...]]]],
     options: SortOptions | SortMultipleOptions | None,
 ) -> pa.UInt64Array: ...
 @overload
 def sort_indices(
-    native: ChunkedOrArrayAny, *, options: SortOptions | None
+    native: pa.Table,
+    *by: Unpack[tuple[str, Unpack[tuple[str, ...]]]],
+    descending: bool | Sequence[bool] = ...,
+    nulls_last: bool = ...,
 ) -> pa.UInt64Array: ...
 def sort_indices(
     native: ChunkedOrArrayAny | pa.Table,
-    *order_by: str,
+    *by: str,
+    options: SortOptions | SortMultipleOptions | None = None,
     descending: bool | Sequence[bool] = False,
     nulls_last: bool = False,
-    options: SortOptions | SortMultipleOptions | None = None,
 ) -> pa.UInt64Array:
-    """Return the indices that would sort an array or table."""
-    if not order_by and not isinstance(native, pa.Table):
+    """Return the indices that would sort an array or table.
+
+    Arguments:
+        native: Any non-scalar arrow data.
+        *by: Column(s) to sort by. Only applicable to `Table` and must use at least one name.
+        options: An *already-parsed* options instance.
+            **Has higher precedence** than `descending` and `nulls_last`.
+        descending: Sort in descending order. When sorting by multiple columns,
+            can be specified per column by passing a sequence of booleans.
+        nulls_last: Place null values last.
+
+    Notes:
+        Most commonly used as input for `take`, which forms a `sort_by` operation.
+    """
+    if not isinstance(native, pa.Table):
         if options:
             descending = options.descending
             nulls_last = options._ensure_single_nulls_last("pyarrow")
         a_opts = pa_options.array_sort(descending=descending, nulls_last=nulls_last)
         return pc.array_sort_indices(native, options=a_opts)
     opts = (
-        options.to_arrow(order_by)
+        options.to_arrow(by)
         if options
-        else pa_options.sort(*order_by, descending=descending, nulls_last=nulls_last)
+        else pa_options.sort(*by, descending=descending, nulls_last=nulls_last)
     )
     return pc.sort_indices(native, options=opts)
 
