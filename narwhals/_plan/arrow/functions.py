@@ -549,20 +549,23 @@ class ExplodeBuilder:
         return result
 
 
-# TODO @dangotbanned: Fix these overloads
-# Trying to preserve the concrete container, to allow accessing the attributes
+def implode(native: Arrow[Scalar[DataTypeT]]) -> pa.ListScalar[DataTypeT]:
+    """Aggregate values into a list.
+
+    The returned list itself is a scalar value of `list` dtype.
+    """
+    arr = array(native)
+    return pa.ListArray.from_arrays([0, len(arr)], arr)[0]
+
+
 @t.overload
 def _list_explode(native: ChunkedList[DataTypeT]) -> ChunkedArray[Scalar[DataTypeT]]: ...
 @t.overload
-def _list_explode(  # type: ignore[overload-overlap]
+def _list_explode(
     native: ListArray[NonListTypeT] | ListScalar[NonListTypeT],
 ) -> Array[Scalar[NonListTypeT]]: ...
 @t.overload
 def _list_explode(native: ListArray[DataTypeT]) -> Array[Scalar[DataTypeT]]: ...
-@t.overload
-def _list_explode(  # type: ignore[overload-overlap]
-    native: pa.ListScalar[DataTypeT],
-) -> pa.ListArray[Scalar[DataTypeT]]: ...
 @t.overload
 def _list_explode(native: ListScalar[ListTypeT]) -> ListArray[ListTypeT]: ...
 def _list_explode(native: Arrow[ListScalar]) -> ChunkedOrArrayAny:
@@ -824,22 +827,13 @@ def list_sort(
 
 
 def list_sort_scalar(
-    native: ListScalar[DataTypeT], options: SortOptions | None = None
-) -> pa.ListScalar[DataTypeT]:
-    native = t.cast("pa.ListScalar[DataTypeT]", native)
+    native: ListScalar[NonListTypeT], options: SortOptions | None = None
+) -> pa.ListScalar[NonListTypeT]:
+    native = t.cast("pa.ListScalar[NonListTypeT]", native)
     if native.is_valid and len(native) > 1:
         arr = _list_explode(native)
         return implode(arr.take(sort_indices(arr, options=options)))
     return native
-
-
-def implode(native: Arrow[Scalar[DataTypeT]]) -> pa.ListScalar[DataTypeT]:
-    """Aggregate values into a list.
-
-    The returned list itself is a scalar value of `list` dtype.
-    """
-    arr = array(native)
-    return pa.ListArray.from_arrays([0, len(arr)], arr)[0]
 
 
 def str_join(
