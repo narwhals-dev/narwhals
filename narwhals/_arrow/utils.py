@@ -543,8 +543,9 @@ def list_sort(
     nulls_position: Literal["at_start", "at_end"] = "at_end" if nulls_last else "at_start"
     idx, v = "idx", "values"
     len_gt_0 = pc.greater(pc.list_value_length(array), lit(0))
-    arange = pa.arange(0, len(array))  # type: ignore[attr-defined]
-    indexed = pa.Table.from_arrays([arange, array], names=[idx, v])
+    indexed = pa.Table.from_arrays(
+        [arange(start=0, end=len(array), step=1), array], names=[idx, v]
+    )
     valid = indexed.filter(len_gt_0)
     invalid = indexed.filter(pc.or_kleene(array.is_null(), pc.invert(len_gt_0)))
     agg = pa.Table.from_arrays(
