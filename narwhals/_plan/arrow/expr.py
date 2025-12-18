@@ -1008,7 +1008,6 @@ class ArrowListNamespace(
         if isinstance(previous, ArrowScalar):
             result = fn.list_sort_scalar(previous.native, node.function.options)
         else:
-            # TODO @dangotbanned: Maybe keep options together?
             descending = node.function.options.descending
             nulls_last = node.function.options.nulls_last
             result = fn.list_sort(
