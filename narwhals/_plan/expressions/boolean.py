@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._plan._expr_ir import ExprIR
-    from narwhals._plan.expressions.expr import FunctionExpr, Literal
+    from narwhals._plan.expressions.expr import FunctionExpr as FExpr, Literal
     from narwhals._plan.series import Series
     from narwhals._plan.typing import Seq
     from narwhals.typing import ClosedInterval
@@ -46,7 +46,7 @@ class IsBetween(BooleanFunction):
     __slots__ = ("closed",)
     closed: ClosedInterval
 
-    def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR, ExprIR]:
+    def unwrap_input(self, node: FExpr[Self], /) -> tuple[ExprIR, ExprIR, ExprIR]:
         expr, lower_bound, upper_bound = node.input
         return expr, lower_bound, upper_bound
 
@@ -90,9 +90,13 @@ class IsInExpr(BooleanFunction):
     [restricting to non-equal types]: https://github.com/pola-rs/polars/pull/22178
     """
 
-    def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR]:
+    def unwrap_input(self, node: FExpr[Self], /) -> tuple[ExprIR, ExprIR]:
         expr, other = node.input
         return expr, other
 
     def __repr__(self) -> str:
         return "is_in"
+
+
+def all_horizontal(*exprs: ExprIR, ignore_nulls: bool = False) -> FExpr[AllHorizontal]:
+    return AllHorizontal(ignore_nulls=ignore_nulls).to_function_expr(*exprs)

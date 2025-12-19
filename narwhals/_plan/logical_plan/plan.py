@@ -3,6 +3,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Protocol
 
 from narwhals._plan._immutable import Immutable
+from narwhals._plan.expressions import selectors as s_ir
+from narwhals._plan.expressions.boolean import all_horizontal
 from narwhals._utils import zip_strict
 
 if TYPE_CHECKING:
@@ -170,39 +172,87 @@ class JoinOptions(Immutable):
     suffix: str
 
 
-# NOTE: Using a `Protocol` to allow empty body(s)
-# Just trying to scope things out
+# NOTE: Using a `Protocol` to allow empty body(s), just trying to scope things out
+# `DslBuilder`
 class LpBuilder(Protocol):
-    def project(self, exprs: Seq[ExprIR], options: Incomplete) -> Self: ...
-    def with_columns(self, exprs: Seq[ExprIR], options: Incomplete) -> Self: ...
-    def filter(self, predicate: ExprIR) -> Self: ...
-    def group_by(self, keys: Seq[ExprIR], aggs: Seq[ExprIR]) -> Self: ...
-    def sort(self, by: Seq[SelectorIR], options: SortMultipleOptions) -> Self: ...
+    _plan: LogicalPlan
+
+    # TODO @dangotbanned: Decide on if `ProjectionOptions` should be added
+    # Either replace `Incomplete` or remove `options` (and the placeholder in `fill_null`)
+    def project(self, exprs: Seq[ExprIR], options: Incomplete = None) -> Self:
+        return self.with_plan(Select(input=self._plan, exprs=exprs))
+
+    def with_columns(self, exprs: Seq[ExprIR], options: Incomplete = None) -> Self:
+        return self.with_plan(WithColumns(input=self._plan, exprs=exprs))
+
+    def filter(self, predicate: ExprIR) -> Self:
+        return self.with_plan(Filter(input=self._plan, predicate=predicate))
+
+    def group_by(self, keys: Seq[ExprIR], aggs: Seq[ExprIR]) -> Self:
+        return self.with_plan(GroupBy(input=self._plan, keys=keys, aggs=aggs))
+
+    def sort(self, by: Seq[SelectorIR], options: SortMultipleOptions) -> Self:
+        return self.with_plan(Sort(input=self._plan, by=by, options=options))
+
     def join(
         self,
         other: LogicalPlan,
         left_on: Seq[str],
         right_on: Seq[str],
         options: JoinOptions,
-    ) -> Self: ...
-    def slice(self, offset: int, length: int | None = None) -> Self: ...
-    def unique(self, subset: Seq[SelectorIR] | None, options: UniqueOptions) -> Self: ...
+    ) -> Self:
+        return self.with_plan(
+            Join(
+                input_left=self._plan,
+                input_right=other,
+                left_on=left_on,
+                right_on=right_on,
+                options=options,
+            )
+        )
+
+    def slice(self, offset: int, length: int | None = None) -> Self:
+        return self.with_plan(Slice(input=self._plan, offset=offset, length=length))
+
+    def unique(self, subset: Seq[SelectorIR] | None, options: UniqueOptions) -> Self:
+        return self.with_plan(Unique(input=self._plan, subset=subset, options=options))
 
     # Sugar
-    def drop(self, columns: SelectorIR) -> Self: ...
-    def fill_null(
-        self, fill_value: ExprIR
-    ) -> Self: ...  # ProjectionOptions {duplicate_check: false}
-    # This has a pretty cool impl https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/crates/polars-plan/src/dsl/builder_dsl.rs#L172-L175
-    def drop_nulls(self, subset: SelectorIR | None) -> Self: ...
-    def with_column(self, expr: ExprIR) -> Self: ...
+    def drop(self, columns: SelectorIR) -> Self:
+        return self.project(((~columns.to_narwhals())._ir,))
+
+    def fill_null(self, fill_value: ExprIR) -> Self:
+        return self.project(
+            (s_ir.all().to_narwhals().fill_null(fill_value.to_narwhals())._ir,),
+            options={"duplicate_check": False},  # ProjectionOptions
+        )
+
+    # https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/crates/polars-plan/src/dsl/builder_dsl.rs#L172-L175
+    def drop_nulls(self, subset: SelectorIR | None) -> Self:
+        predicate = all_horizontal((subset or s_ir.all()).to_narwhals().is_not_null()._ir)
+        return self.filter(predicate)
+
+    def with_column(self, expr: ExprIR) -> Self:
+        return self.with_columns((expr,))
+
+    # `DslBuilder.map_private`
+    def map(self, function: LpFunction) -> Self:
+        return self.with_plan(MapFunction(input=self._plan, function=function))
 
     # `MapFunction`
-    def explode(self, columns: SelectorIR, options: ExplodeOptions) -> Self: ...
-    def unnest(self, columns: SelectorIR) -> Self: ...
-    def rename(self, mapping: Mapping[str, str]) -> Self: ...
-    def with_row_index(self, name: str = "index") -> Self: ...
+    def explode(self, columns: SelectorIR, options: ExplodeOptions) -> Self:
+        return self.map(Explode(columns=columns, options=options))
 
+    def unnest(self, columns: SelectorIR) -> Self:
+        return self.map(Unnest(columns=columns))
+
+    def rename(self, mapping: Mapping[str, str]) -> Self:
+        return self.map(Rename(old=tuple(mapping), new=tuple(mapping.values())))
+
+    def with_row_index(self, name: str = "index") -> Self:
+        return self.map(RowIndex(name=name))
+
+    # TODO @dangotbanned: Implement these and make `LpBuilder` a class
     @classmethod
     def from_plan(cls, plan: LogicalPlan, /) -> Self: ...
     def to_plan(self) -> LogicalPlan: ...
