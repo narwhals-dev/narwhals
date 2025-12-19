@@ -3,10 +3,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from narwhals._plan._immutable import Immutable
+from narwhals._utils import zip_strict
 
 if TYPE_CHECKING:
-    from narwhals._plan.expressions import ExprIR
-    from narwhals._plan.options import SortMultipleOptions
+    from narwhals._plan.expressions import ExprIR, SelectorIR
+    from narwhals._plan.options import ExplodeOptions, SortMultipleOptions
     from narwhals._plan.typing import Seq
     from narwhals.typing import JoinStrategy
 
@@ -89,13 +90,28 @@ class HConcat(LogicalPlan):
 class LpFunction(Immutable): ...
 
 
-class RowIndex(LpFunction): ...
+class Explode(LpFunction):
+    __slots__ = ("columns", "options")
+    columns: SelectorIR
+    options: ExplodeOptions
 
 
-class Explode(LpFunction): ...
+class Unnest(LpFunction):
+    __slots__ = ("columns",)
+    columns: SelectorIR
 
 
-class Unnest(LpFunction): ...
+class RowIndex(LpFunction):
+    __slots__ = ("name",)
+    name: str
 
 
-class Rename(LpFunction): ...
+class Rename(LpFunction):
+    __slots__ = ("new", "old")
+    old: Seq[str]
+    new: Seq[str]
+
+    @property
+    def mapping(self) -> dict[str, str]:
+        # Trying to avoid adding mutable fields
+        return dict(zip_strict(self.old, self.new))
