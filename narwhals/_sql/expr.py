@@ -739,17 +739,21 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
 
         return self._with_window_function(func)
 
-    def first(self, order_by: Sequence[str] | None = None) -> Self:
-        def f(
-            expr: NativeExprT
-        ) -> NativeExprT:
+    def first(self, order_by: Sequence[str] = ()) -> Self:
+        def f(expr: NativeExprT) -> NativeExprT:
+            if not order_by:
+                msg = "Expected `order_by` to be specified"
+                raise ValueError(msg)
             return self._first(expr, *order_by)
 
         def window_f(
             df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
         ) -> Sequence[NativeExprT]:
-            if order_by is not None and inputs.order_by is not None:
+            if order_by and inputs.order_by:
                 msg = "Can't specify both `order_by` in `over` and `first`."
+                raise ValueError(msg)
+            if not order_by and not inputs.order_by:
+                msg = "Must specify `order_by` either in `over` or `first`."
                 raise ValueError(msg)
             return [
                 self._window_expression(

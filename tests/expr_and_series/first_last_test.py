@@ -176,3 +176,21 @@ def test_first_expr_over_order_by_partition_by(
         "c_last": [None, None, 8.0],
     }
     assert_equal_data(result, expected)
+
+
+def test_first_expr_in_group_by(constructor: Constructor) -> None:
+    data = {
+        "grp": [1, 1, 2],
+        "a": [None, 4, 3],
+        "b": [9, 7, 8],
+        "c": [9, None, 8],
+        "idx": [9, None, 7],
+    }
+    df = nw.from_native(constructor(data))
+    result = (
+        df.group_by("grp")
+        .agg(nw.col("a", "b", "c").first(order_by=["idx"]).name.suffix("_first"))
+        .sort("grp")
+    )
+    expected = {"grp": [1, 2], "a_first": [4, 3], "b_first": [7, 8], "c_first": [None, 8]}
+    assert_equal_data(result, expected)
