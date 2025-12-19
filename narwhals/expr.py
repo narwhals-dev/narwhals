@@ -5,7 +5,13 @@ from collections.abc import Iterable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Callable
 
 from narwhals._expression_parsing import ExprKind, ExprNode, evaluate_nodes
-from narwhals._utils import _validate_rolling_arguments, ensure_type, flatten, no_default
+from narwhals._utils import (
+    _validate_rolling_arguments,
+    ensure_type,
+    flatten,
+    no_default,
+    unstable,
+)
 from narwhals.dtypes import _validate_dtype
 from narwhals.exceptions import ComputeError, InvalidOperationError
 from narwhals.expr_cat import ExprCatNamespace
@@ -2367,6 +2373,53 @@ class Expr:
             result = result | both_nan
 
         return result
+
+    @unstable
+    def any_value(self, *, ignore_nulls: bool = False) -> Self:
+        """Get a random value from the column.
+
+        Warning:
+            This functionality is considered **unstable** as it diverges from the polars API.
+            It may be changed at any point without it being considered a breaking change.
+
+        Arguments:
+            ignore_nulls: Whether to ignore null values or not.
+                If `True` and there are no not-null elements, then `None` is returned.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> data = {"a": [1, 1, 2, 2], "b": [None, "foo", "baz", None]}
+            >>> df_native = pa.table(data)
+            >>> df = nw.from_native(df_native)
+            >>> df.select(nw.all().any_value(ignore_nulls=False))
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |  pyarrow.Table   |
+            |  a: int64        |
+            |  b: null         |
+            |  ----            |
+            |  a: [[1]]        |
+            |  b: [1 nulls]    |
+            └──────────────────┘
+
+            >>> df.group_by("a").agg(nw.col("b").any_value(ignore_nulls=True))
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |pyarrow.Table     |
+            |a: int64          |
+            |b: string         |
+            |----              |
+            |a: [[1,2]]        |
+            |b: [["foo","baz"]]|
+            └──────────────────┘
+
+        """
+        return self._append_node(
+            ExprNode(ExprKind.AGGREGATION, "any_value", ignore_nulls=ignore_nulls)
+        )
 
     @property
     def str(self) -> ExprStringNamespace[Self]:
