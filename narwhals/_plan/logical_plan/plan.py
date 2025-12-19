@@ -37,6 +37,7 @@ class HStack(SingleInput):
 
 
 class Filter(SingleInput):
+    __slots__ = ("predicate",)
     predicate: ExprIR
 
 
@@ -78,14 +79,14 @@ class Join(LogicalPlan):
 # NOTE: Probably rename to `VConcat`
 class Union(LogicalPlan):
     # `concat(how= "vertical" | "diagonal")`
-    __slots__ = ("inputs",)
+    __slots__ = ("inputs", "options")
     inputs: Seq[LogicalPlan]
     options: UnionOptions
 
 
 class HConcat(LogicalPlan):
     # `concat(how="horizontal")`
-    __slots__ = ("inputs",)
+    __slots__ = ("inputs", "strict")
     inputs: Seq[LogicalPlan]
     strict: bool
     """Require all DataFrames to be the same height, raising an error if not, default False"""
