@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals as nw
+from narwhals.exceptions import InvalidOperationError
 from tests.utils import (
     DUCKDB_VERSION,
     POLARS_VERSION,
@@ -178,7 +179,12 @@ def test_first_expr_over_order_by_partition_by(
     assert_equal_data(result, expected)
 
 
-def test_first_expr_in_group_by(constructor: Constructor) -> None:
+def test_first_expr_in_group_by(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if any(x in str(constructor) for x in ("ibis", "spark")):
+        # ibis: https://github.com/ibis-project/ibis/issues/11656
+        request.applymarker(pytest.mark.xfail)
     data = {
         "grp": [1, 1, 1, 2],
         "a": [None, 4, 9, 3],
@@ -204,7 +210,13 @@ def test_first_expr_in_group_by(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_first_expr_broadcasting(constructor: Constructor) -> None:
+def test_first_expr_broadcasting(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if any(x in str(constructor) for x in ("ibis", "spark")):
+        # ibis: https://github.com/ibis-project/ibis/issues/11656
+        request.applymarker(pytest.mark.xfail)
+
     data = {
         "grp": [1, 1, 1, 2],
         "a": [None, 4, 9, 3],
@@ -238,3 +250,17 @@ def test_first_expr_broadcasting(constructor: Constructor) -> None:
         "c_first": [10, 10, 10, 10],
     }
     assert_equal_data(result, expected)
+
+
+def test_first_expr_invalid(constructor: Constructor) -> None:
+    data = {
+        "grp": [1, 1, 1, 2],
+        "a": [None, 4, 9, 3],
+        "b": [9, 7, 10, 8],
+        "c": [9, None, 10, 8],
+        "idx": [9, None, None, 7],
+        "idx2": [9, 8, 7, 7],
+    }
+    df = nw.from_native(constructor(data))
+    with pytest.raises(InvalidOperationError):
+        df.select("idx", "idx2", nw.col("a").first(order_by="idx").over(order_by="idx2"))

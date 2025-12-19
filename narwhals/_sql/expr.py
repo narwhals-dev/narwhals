@@ -18,6 +18,7 @@ from narwhals._expression_parsing import (
 )
 from narwhals._sql.typing import SQLLazyFrameT
 from narwhals._utils import Implementation, Version, extend_bool, not_implemented
+from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -741,20 +742,20 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
 
     def first(self, order_by: Sequence[str] = ()) -> Self:
         def f(expr: NativeExprT) -> NativeExprT:
-            if not order_by:
+            if not order_by:  # pragma: no cover
                 msg = "Expected `order_by` to be specified"
-                raise ValueError(msg)
+                raise InvalidOperationError(msg)
             return self._first(expr, *order_by)
 
         def window_f(
             df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
         ) -> Sequence[NativeExprT]:
-            if order_by and inputs.order_by:
+            if order_by and inputs.order_by:  # pragma: no cover
                 msg = "Can't specify both `order_by` in `over` and `first`."
-                raise ValueError(msg)
-            if not order_by and not inputs.order_by:
+                raise InvalidOperationError(msg)
+            if not order_by and not inputs.order_by:  # pragma: no cover
                 msg = "Must specify `order_by` either in `over` or `first`."
-                raise ValueError(msg)
+                raise InvalidOperationError(msg)
             return [
                 self._window_expression(
                     self._first(expr, *(inputs.order_by or order_by)), inputs.partition_by
