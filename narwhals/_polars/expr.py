@@ -185,6 +185,12 @@ class PolarsExpr:
         )
         return self._with_native(native)
 
+    def first(self, order_by: Sequence[str] = ()) -> Self:
+        if order_by:
+            # TODO(unassigned): use `min_by` if/when available: https://github.com/pola-rs/polars/issues/18347
+            return self._with_native(self.native.sort_by(*order_by).first())
+        return self._with_native(self.native.first())
+
     def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
         kwds = self._renamed_min_periods(min_samples)
         native = self.native.rolling_sum(window_size=window_size, center=center, **kwds)
@@ -346,7 +352,6 @@ class PolarsExpr:
     exp: Method[Self]
     fill_null: Method[Self]
     fill_nan: Method[Self]
-    first: Method[Self]
     floor: Method[Self]
     last: Method[Self]
     gather_every: Method[Self]
