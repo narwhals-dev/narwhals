@@ -816,18 +816,13 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     def floor(self) -> Self:
         native = self.native
-
         if self.is_native_dtype_pyarrow(native.dtype):
             import pyarrow.compute as pc
 
-            result_native = self._apply_pyarrow_compute_func(
-                native=native, pc_func=pc.floor
-            )
+            result_native = self._apply_pyarrow_compute_func(native, pc.floor)
         else:
-            result_native = self._apply_array_func(
-                native=native, array_func=self._array_funcs.floor
-            )
-
+            array_func = self._array_funcs.floor
+            result_native = self._apply_array_func(native, array_func)
         return self._with_native(result_native)
 
     def ceil(self) -> Self:
@@ -835,13 +830,10 @@ class PandasLikeSeries(EagerSeries[Any]):
         if self.is_native_dtype_pyarrow(native.dtype):
             import pyarrow.compute as pc
 
-            result_native = self._apply_pyarrow_compute_func(
-                native=native, pc_func=pc.ceil
-            )
+            result_native = self._apply_pyarrow_compute_func(native, pc.ceil)
         else:
-            result_native = self._apply_array_func(
-                native=native, array_func=self._array_funcs.ceil
-            )
+            array_func = self._array_funcs.ceil
+            result_native = self._apply_array_func(native, array_func)
         return self._with_native(result_native)
 
     def to_dummies(self, *, separator: str, drop_first: bool) -> PandasLikeDataFrame:
@@ -1067,40 +1059,31 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     def log(self, base: float) -> Self:
         native = self.native
-
         if self.is_native_dtype_pyarrow(native.dtype):
             import pyarrow.compute as pc
 
             def pc_log(ca: ChunkedArrayAny) -> ChunkedArrayAny:
                 return pc.logb(ca, base)  # type: ignore[return-value]
 
-            result_native = self._apply_pyarrow_compute_func(
-                native=native, pc_func=pc_log
-            )
-
+            result_native = self._apply_pyarrow_compute_func(native, pc_log)
         else:
             log_func = self._array_funcs.log
 
             def array_log(arr: NativeSeriesT) -> NativeSeriesT:
                 return log_func(arr) / log_func(base)  # pyright: ignore[reportArgumentType, reportCallIssue]
 
-            result_native = self._apply_array_func(native=native, array_func=array_log)
-
+            result_native = self._apply_array_func(native, array_log)
         return self._with_native(result_native)
 
     def exp(self) -> Self:
         native = self.native
-
         if self.is_native_dtype_pyarrow(native.dtype):
             import pyarrow.compute as pc
 
-            result_native = self._apply_pyarrow_compute_func(
-                native=native, pc_func=pc.exp
-            )
+            result_native = self._apply_pyarrow_compute_func(native, pc.exp)
         else:
-            result_native = self._apply_array_func(
-                native=native, array_func=self._array_funcs.exp
-            )
+            array_func = self._array_funcs.exp
+            result_native = self._apply_array_func(native, array_func)
 
         return self._with_native(result_native)
 
@@ -1117,8 +1100,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         from narwhals._arrow.utils import native_to_narwhals_dtype
 
         native_cls = type(native)
-        ca = native.array._pa_array  # type: ignore[attr-defined]
-        result_arr = pc_func(ca)
+        result_arr = pc_func(native.array._pa_array)  # type: ignore[attr-defined]
         nw_dtype = native_to_narwhals_dtype(result_arr.type, self._version)
         out_dtype = narwhals_to_native_dtype(
             nw_dtype, "pyarrow", self._implementation, self._version
