@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from narwhals._plan.expressions import ExprIR, SelectorIR
     from narwhals._plan.options import ExplodeOptions, SortMultipleOptions
     from narwhals._plan.typing import Seq
-    from narwhals.typing import JoinStrategy
+    from narwhals.typing import JoinStrategy, UniqueKeepStrategy
 
 
 # `DslPlan`
@@ -24,7 +24,16 @@ class SingleInput(LogicalPlan):
 class Select(SingleInput):
     __slots__ = ("exprs",)
     exprs: Seq[ExprIR]
-    # options: ProjectionOptions  # noqa: ERA001 (contains a `should_broadcast` flag)
+    # NOTE: Contains a `should_broadcast` flag, but AFAICT
+    # is only replaced with `False` during optimization (not when building the plan)
+    # `options: ProjectionOptions`
+
+
+# NOTE: Probably rename to `WithColumns`
+class HStack(SingleInput):
+    __slots__ = ("exprs",)
+    exprs: Seq[ExprIR]
+    # NOTE: Same `ProjectionOptions` comment as `Select`
 
 
 class Filter(SingleInput):
@@ -37,16 +46,10 @@ class GroupBy(SingleInput):
     aggs: Seq[ExprIR]
 
 
-class HStack(SingleInput):
-    __slots__ = ("exprs",)
-    # `with_columns`
-    exprs: Seq[ExprIR]
-
-
+# NOTE: Probably rename to `Unique`
 class Distinct(SingleInput):
-    # `unique`
-    # options: DistinctOptions  # noqa: ERA001 (subset, keep, maintain_order)
-    ...
+    __slots__ = ("options",)
+    options: DistinctOptions
 
 
 class Sort(SingleInput):
@@ -72,21 +75,23 @@ class Join(LogicalPlan):
     suffix: str
 
 
+# NOTE: Probably rename to `VConcat`
 class Union(LogicalPlan):
-    __slots__ = ("inputs",)
     # `concat(how= "vertical" | "diagonal")`
+    __slots__ = ("inputs",)
     inputs: Seq[LogicalPlan]
-    # args: UnionArgs  # noqa: ERA001
+    options: UnionOptions
 
 
 class HConcat(LogicalPlan):
-    __slots__ = ("inputs",)
     # `concat(how="horizontal")`
+    __slots__ = ("inputs",)
     inputs: Seq[LogicalPlan]
-    # options: HConcatOptions  # noqa: ERA001
+    strict: bool
+    """Require all DataFrames to be the same height, raising an error if not, default False"""
 
 
-# `DslFunction`
+# NOTE: `DslFunction`
 class LpFunction(Immutable): ...
 
 
@@ -115,3 +120,34 @@ class Rename(LpFunction):
     def mapping(self) -> dict[str, str]:
         # Trying to avoid adding mutable fields
         return dict(zip_strict(self.old, self.new))
+
+
+# NOTE: Options classes (eventually move to `_plan.options`)
+
+
+# NOTE: Roughly mirroring `polars`, but don't like this
+# - `subset` will be (`SelectorIR` or `Seq[SelectorIR]`) | None
+# - I would've had this as `Distinct.subset`, not `Distinct.options.subset`
+class DistinctOptions(Immutable):
+    __slots__ = ("keep", "maintain_order", "subset")
+    subset: Seq[ExprIR] | None
+    keep: UniqueKeepStrategy
+    maintain_order: bool
+
+
+class UnionOptions(Immutable):
+    __slots__ = ("diagonal", "maintain_order", "to_supertypes")
+    diagonal: bool
+    """True for `how="diagonal"`"""
+
+    to_supertypes: bool
+    """True for [`"*_relaxed"` variants]
+
+    [`"*_relaxed"` variants]: https://github.com/narwhals-dev/narwhals/pull/3191#issuecomment-3389117044
+    """
+
+    maintain_order: bool
+    """True when using `concat`, False when using [`union`].
+
+    [`union`]: https://github.com/pola-rs/polars/pull/24298
+    """

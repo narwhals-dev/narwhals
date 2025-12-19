@@ -315,6 +315,7 @@ omit = [
   'narwhals/_plan/arrow/*',
   'narwhals/_plan/compliant/*',
   'narwhals/_plan/**/typing.py',
+  'narwhals/_plan/logical_plan/**/*.py'
 ]
 exclude_also = [
   "if sys.version_info() <",
