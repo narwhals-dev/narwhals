@@ -547,7 +547,7 @@ def list_sort(
         [arange(start=0, end=len(array), step=1), array], names=[idx, v]
     )
     not_sorted_part = indexed.filter(is_not_sorted)
-    pass_through = indexed.filter(pc.fill_null(pc.invert(is_not_sorted), True))  # pyright: ignore[reportArgumentType]
+    pass_through = indexed.filter(pc.fill_null(pc.invert(is_not_sorted), lit(True)))  # pyright: ignore[reportArgumentType]
     exploded = pa.Table.from_arrays(
         [pc.list_flatten(array), pc.list_parent_indices(array)], names=[v, idx]
     )
