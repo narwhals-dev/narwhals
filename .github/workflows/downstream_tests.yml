@@ -367,7 +367,7 @@ jobs:
       - name: install-deps
         run: |
           cd hierarchicalforecast
-          uv pip install --system ".[dev,polars]"
+          uv pip install . --group dev --group polars --system
       - name: install-narwhals-dev
         run: |
           uv pip uninstall narwhals --system
