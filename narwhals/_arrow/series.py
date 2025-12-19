@@ -11,6 +11,7 @@ from narwhals._arrow.series_list import ArrowSeriesListNamespace
 from narwhals._arrow.series_str import ArrowSeriesStringNamespace
 from narwhals._arrow.series_struct import ArrowSeriesStructNamespace
 from narwhals._arrow.utils import (
+    arange,
     cast_for_truediv,
     chunked_array,
     extract_native,
@@ -24,19 +25,19 @@ from narwhals._arrow.utils import (
     zeros,
 )
 from narwhals._compliant import EagerSeries, EagerSeriesHist
-from narwhals._expression_parsing import ExprKind
 from narwhals._typing_compat import assert_never
 from narwhals._utils import (
     Implementation,
     generate_temporary_column_name,
     is_list_of,
+    no_default,
     not_implemented,
 )
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import InvalidOperationError, ShapeError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Mapping, Sequence
+    from collections.abc import Iterable, Iterator, Sequence
     from types import ModuleType
 
     import pandas as pd
@@ -59,6 +60,7 @@ if TYPE_CHECKING:
         _BasicDataType,
     )
     from narwhals._compliant.series import HistData
+    from narwhals._typing import NoDefault
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.typing import (
@@ -68,12 +70,10 @@ if TYPE_CHECKING:
         IntoDType,
         ModeKeepStrategy,
         NonNestedLiteral,
-        NumericLiteral,
         PythonLiteral,
         RankMethod,
         RollingInterpolationMethod,
         SizedMultiIndexSelector,
-        TemporalLiteral,
         _1DArray,
         _2DArray,
         _SliceIndex,
@@ -202,16 +202,18 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     @classmethod
     def _align_full_broadcast(cls, *series: Self) -> Sequence[Self]:
         lengths = [len(s) for s in series]
-        max_length = max(lengths)
-        fast_path = all(_len == max_length for _len in lengths)
+        target_length = max(
+            length for length, s in zip(lengths, series) if not s._broadcast
+        )
+        fast_path = all(_len == target_length for _len in lengths)
         if fast_path:
             return series
         reshaped = []
         for s in series:
             if s._broadcast:
-                compliant = s._with_native(pa.repeat(s.native[0], max_length))
-            elif (actual_len := len(s)) != max_length:
-                msg = f"Expected object of length {max_length}, got {actual_len}."
+                compliant = s._with_native(pa.repeat(s.native[0], target_length))
+            elif (actual_len := len(s)) != target_length:
+                msg = f"Expected object of length {target_length}, got {actual_len}."
                 raise ShapeError(msg)
             else:
                 compliant = s
@@ -491,9 +493,9 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return self.native.to_numpy()
 
     def alias(self, name: str) -> Self:
-        result = self.__class__(self.native, name=name, version=self._version)
-        result._broadcast = self._broadcast
-        return result
+        ret = self.__class__(self.native, name=name, version=self._version)
+        ret._broadcast = self._broadcast
+        return ret
 
     @property
     def dtype(self) -> DType:
@@ -669,40 +671,39 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         strategy: FillNullStrategy | None,
         limit: int | None,
     ) -> Self:
-        import numpy as np  # ignore-banned-import
-
-        def fill_aux(
-            arr: ChunkedArrayAny, limit: int, direction: FillNullStrategy | None
-        ) -> ArrayAny:
+        def fill_null_forward_limit(arr: ChunkedArrayAny, limit: int) -> ArrayAny:
             # this algorithm first finds the indices of the valid values to fill all the null value positions
             # then it calculates the distance of each new index and the original index
             # if the distance is equal to or less than the limit and the original value is null, it is replaced
-            valid_mask = pc.is_valid(arr)
-            indices = pa.array(np.arange(len(arr)), type=pa.int64())
-            if direction == "forward":
-                valid_index = np.maximum.accumulate(np.where(valid_mask, indices, -1))
-                distance = indices - valid_index
-            else:
-                valid_index = np.minimum.accumulate(
-                    np.where(valid_mask[::-1], indices[::-1], len(arr))
-                )[::-1]
-                distance = valid_index - indices
+            sentinel = lit(-1)
+            is_not_null = pc.is_valid(arr)
+            index = arange(0, len(arr), 1)
+            index_not_null = pc.cumulative_max(pc.if_else(is_not_null, index, sentinel))
+            # NOTE: The correction here is for nulls at either end of the array
+            # They should be preserved when the `strategy` would need an out-of-bounds index
+            not_oob = pc.not_equal(index_not_null, sentinel)
+            index_not_null = pc.if_else(not_oob, index_not_null, None)
+            beyond_limit = pc.greater(pc.subtract(index, index_not_null), lit(limit))
             return pc.if_else(
-                pc.and_(pc.is_null(arr), pc.less_equal(distance, lit(limit))),  # pyright: ignore[reportArgumentType, reportCallIssue]
-                arr.take(valid_index),
-                arr,
+                pc.or_(is_not_null, beyond_limit), arr, arr.take(index_not_null)
             )
 
+        native = self.native
         if value is not None:
             _, native_value = extract_native(self, value)
-            series: ArrayOrScalar = pc.fill_null(self.native, native_value)
+            series: ArrayOrScalar = pc.fill_null(native, native_value)
         elif limit is None:
-            fill_func = (
-                pc.fill_null_forward if strategy == "forward" else pc.fill_null_backward
+            series = (
+                pc.fill_null_forward(native)
+                if strategy == "forward"
+                else pc.fill_null_backward(native)
             )
-            series = fill_func(self.native)
         else:
-            series = fill_aux(self.native, limit, strategy)
+            series = (
+                fill_null_forward_limit(native, limit)
+                if strategy == "forward"
+                else fill_null_forward_limit(native[::-1], limit)[::-1]
+            )
         return self._with_native(series, preserve_broadcast=True)
 
     def to_frame(self) -> ArrowDataFrame:
@@ -770,24 +771,44 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
 
     def replace_strict(
         self,
-        old: Sequence[Any] | Mapping[Any, Any],
+        default: Any | NoDefault,
+        old: Sequence[Any],
         new: Sequence[Any],
         *,
         return_dtype: IntoDType | None,
     ) -> Self:
         # https://stackoverflow.com/a/79111029/4451315
         idxs = pc.index_in(self.native, pa.array(old))
+        # Tracks which values were found in the mapping (even if mapped to None)
+        was_matched = pc.is_valid(idxs)
         result_native = pc.take(pa.array(new), idxs)
         if return_dtype is not None:
-            result_native.cast(narwhals_to_native_dtype(return_dtype, self._version))
-        result = self._with_native(result_native)
-        if result.is_null().sum() != self.is_null().sum():
-            msg = (
-                "replace_strict did not replace all non-null values.\n\n"
-                "The following did not get replaced: "
-                f"{self.filter(~self.is_null() & result.is_null()).unique(maintain_order=False).to_list()}"
+            result_native = result_native.cast(
+                narwhals_to_native_dtype(return_dtype, self._version)
             )
-            raise ValueError(msg)
+        result = self._with_native(result_native)
+        if default is no_default:
+            # Check that all non-null input values were matched
+            # (result may have more nulls if mapping contains {value: None})
+            unmatched_mask = pc.and_(pc.is_valid(self.native), pc.invert(was_matched))
+            if maybe_extract_py_scalar(
+                pc.any(unmatched_mask, min_count=0), return_py_scalar=True
+            ):
+                unmatched_values = (
+                    self.filter(self._with_native(unmatched_mask))
+                    .unique(maintain_order=False)
+                    .to_list()
+                )
+                msg = (
+                    "replace_strict did not replace all non-null values.\n\n"
+                    f"The following did not get replaced: {unmatched_values}"
+                )
+                raise InvalidOperationError(msg)
+        else:
+            result_native, default = extract_native(result, default)
+            # Only fill with default where the value wasn't matched (not where result is null due to mapping)
+            # If was_matched, keep result.native; otherwise use default
+            result = self._with_native(pc.if_else(was_matched, result.native, default))
         return result
 
     def sort(self, *, descending: bool, nulls_last: bool) -> Self:
@@ -846,25 +867,20 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def gather_every(self, n: int, offset: int = 0) -> Self:
         return self._with_native(self.native[offset::n])
 
-    def clip(
-        self,
-        lower_bound: Self | NumericLiteral | TemporalLiteral | None,
-        upper_bound: Self | NumericLiteral | TemporalLiteral | None,
-    ) -> Self:
-        _, lower = (
-            extract_native(self, lower_bound) if lower_bound is not None else (None, None)
-        )
-        _, upper = (
-            extract_native(self, upper_bound) if upper_bound is not None else (None, None)
-        )
-
-        if lower is None:
-            return self._with_native(pc.min_element_wise(self.native, upper))
-        if upper is None:
-            return self._with_native(pc.max_element_wise(self.native, lower))
+    def clip(self, lower_bound: Self, upper_bound: Self) -> Self:
+        _, lower = extract_native(self, lower_bound)
+        _, upper = extract_native(self, upper_bound)
         return self._with_native(
             pc.max_element_wise(pc.min_element_wise(self.native, upper), lower)
         )
+
+    def clip_lower(self, lower_bound: Self) -> Self:
+        _, lower = extract_native(self, lower_bound)
+        return self._with_native(pc.max_element_wise(self.native, lower))
+
+    def clip_upper(self, upper_bound: Self) -> Self:
+        _, upper = extract_native(self, upper_bound)
+        return self._with_native(pc.min_element_wise(self.native, upper))
 
     def to_arrow(self) -> ArrayAny:
         return self.native.combine_chunks()
@@ -876,8 +892,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             name=col_token, normalize=False, sort=False, parallel=False
         )
         result = counts.filter(
-            plx.col(col_token)
-            == plx.col(col_token).max().broadcast(kind=ExprKind.AGGREGATION)
+            plx.col(col_token) == plx.col(col_token).max().broadcast()
         ).get_column(self.name)
         return result.head(1) if keep == "any" else result
 
@@ -1088,6 +1103,11 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
 
     def sqrt(self) -> Self:
         return self._with_native(pc.sqrt(self.native))
+
+    def any_value(
+        self, *, ignore_nulls: bool, _return_py_scalar: bool = True
+    ) -> PythonLiteral:
+        return self.drop_nulls().first() if ignore_nulls else self.first()
 
     @property
     def dt(self) -> ArrowSeriesDateTimeNamespace:

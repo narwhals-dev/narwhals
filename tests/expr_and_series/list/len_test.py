@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import pandas as pd
 import pytest
 
 import narwhals as nw
@@ -14,8 +13,10 @@ def test_len_expr(request: pytest.FixtureRequest, constructor: Constructor) -> N
     if any(backend in str(constructor) for backend in ("dask", "cudf")):
         request.applymarker(pytest.mark.xfail)
 
-    if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
-        pytest.skip()
+    if "pandas" in str(constructor):
+        if PANDAS_VERSION < (2, 2):
+            pytest.skip()
+        pytest.importorskip("pyarrow")
 
     result = nw.from_native(constructor(data)).select(
         nw.col("a").cast(nw.List(nw.Int32())).list.len()
@@ -30,8 +31,10 @@ def test_len_series(
     if "cudf" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
 
-    if "pandas" in str(constructor_eager) and PANDAS_VERSION < (2, 2):
-        pytest.skip()
+    if "pandas" in str(constructor_eager):
+        if PANDAS_VERSION < (2, 2):
+            pytest.skip()
+        pytest.importorskip("pyarrow")
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
 
@@ -40,6 +43,10 @@ def test_len_series(
 
 
 def test_pandas_preserve_index(request: pytest.FixtureRequest) -> None:
+    pytest.importorskip("pandas")
+    pytest.importorskip("pyarrow")
+    import pandas as pd
+
     if PANDAS_VERSION < (2, 2):
         request.applymarker(pytest.mark.xfail)
 
@@ -52,9 +59,8 @@ def test_pandas_preserve_index(request: pytest.FixtureRequest) -> None:
 
 
 def test_pandas_object_series() -> None:
+    pytest.importorskip("pandas")
     import pandas as pd
-
-    import narwhals as nw
 
     s_native = pd.Series(data=data["a"])
     s = nw.from_native(s_native, series_only=True)

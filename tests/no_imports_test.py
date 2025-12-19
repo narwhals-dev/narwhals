@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import sys
 
-import pandas as pd
 import pytest
 
 import narwhals as nw
@@ -12,8 +11,8 @@ def test_polars(monkeypatch: pytest.MonkeyPatch) -> None:
     pytest.importorskip("polars")
     import polars as pl
 
-    monkeypatch.delitem(sys.modules, "pandas")
-    monkeypatch.delitem(sys.modules, "numpy")
+    monkeypatch.delitem(sys.modules, "pandas", raising=False)
+    monkeypatch.delitem(sys.modules, "numpy", raising=False)
     monkeypatch.delitem(sys.modules, "pyarrow", raising=False)
     monkeypatch.delitem(sys.modules, "typing_extensions", raising=False)
     monkeypatch.delitem(sys.modules, "duckdb", raising=False)
@@ -36,6 +35,9 @@ def test_polars(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_pandas(monkeypatch: pytest.MonkeyPatch) -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     monkeypatch.delitem(sys.modules, "polars", raising=False)
     monkeypatch.delitem(sys.modules, "pyarrow", raising=False)
     monkeypatch.delitem(sys.modules, "duckdb", raising=False)
@@ -59,6 +61,7 @@ def test_pandas(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_dask(monkeypatch: pytest.MonkeyPatch) -> None:
     pytest.importorskip("dask")
     import dask.dataframe as dd
+    import pandas as pd
 
     monkeypatch.delitem(sys.modules, "polars", raising=False)
     monkeypatch.delitem(sys.modules, "pyarrow", raising=False)
@@ -79,7 +82,7 @@ def test_pyarrow(monkeypatch: pytest.MonkeyPatch) -> None:
     import pyarrow as pa
 
     monkeypatch.delitem(sys.modules, "polars", raising=False)
-    monkeypatch.delitem(sys.modules, "pandas")
+    monkeypatch.delitem(sys.modules, "pandas", raising=False)
     monkeypatch.delitem(sys.modules, "duckdb", raising=False)
     monkeypatch.delitem(sys.modules, "dask", raising=False)
     monkeypatch.delitem(sys.modules, "ibis", raising=False)
@@ -88,7 +91,6 @@ def test_pyarrow(monkeypatch: pytest.MonkeyPatch) -> None:
     nw.from_native(df).group_by("a").agg(nw.col("b").mean()).filter(nw.col("a") > 1)
     assert "polars" not in sys.modules
     assert "pandas" not in sys.modules
-    assert "numpy" in sys.modules
     assert "pyarrow" in sys.modules
     assert "dask" not in sys.modules
     assert "ibis" not in sys.modules

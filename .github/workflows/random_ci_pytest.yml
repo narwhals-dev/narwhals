@@ -16,19 +16,19 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: "true"
           cache-suffix: pytest-random-ci-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: generate-random-versions
         run: python utils/generate_random_versions.py
-      - name: install-random-verions
+      - name: install-random-versions
         run: uv pip install -r random-requirements.txt --system
       - name: install-narwhals
         run: uv pip install -e . --group tests --system

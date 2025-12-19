@@ -31,11 +31,13 @@ expected = {
 
 
 def test_split_list_get(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if any(backend in str(constructor) for backend in ("dask", "cudf")):
+    if any(backend in str(constructor) for backend in ("dask",)):
         request.applymarker(pytest.mark.xfail)
 
-    if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
-        pytest.skip()
+    if "pandas" in str(constructor):
+        if PANDAS_VERSION < (2, 2):
+            pytest.skip()
+        pytest.importorskip("pyarrow")
     if (
         constructor.__name__.startswith("pandas")
         and "pyarrow" not in constructor.__name__

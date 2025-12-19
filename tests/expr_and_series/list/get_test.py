@@ -18,8 +18,10 @@ def test_get_expr(
     if any(backend in str(constructor) for backend in ("dask", "cudf")):
         request.applymarker(pytest.mark.xfail)
 
-    if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
-        pytest.skip()
+    if "pandas" in str(constructor):
+        if PANDAS_VERSION < (2, 2):
+            pytest.skip()
+        pytest.importorskip("pyarrow")
 
     result = nw.from_native(constructor(data)).select(
         nw.col("a").cast(nw.List(nw.Int32())).list.get(index)
@@ -38,8 +40,10 @@ def test_get_series(
     if "cudf" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
 
-    if "pandas" in str(constructor_eager) and PANDAS_VERSION < (2, 2):
-        pytest.skip()
+    if "pandas" in str(constructor_eager):
+        if PANDAS_VERSION < (2, 2):
+            pytest.skip()
+        pytest.importorskip("pyarrow")
 
     if (
         constructor_eager.__name__.startswith("pandas")
@@ -57,16 +61,14 @@ def test_get_series(
     assert_equal_data({"a": result}, expected)
 
 
-def test_get_expr_negative_index(
-    request: pytest.FixtureRequest, constructor: Constructor
-) -> None:
+def test_get_expr_negative_index(constructor: Constructor) -> None:
     data = {"a": [[1, 2], [None, 3], [None], None]}
     index = -1
 
-    if any(backend in str(constructor) for backend in ("cudf",)):
-        request.applymarker(pytest.mark.xfail)
-    if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
-        pytest.skip()
+    if "pandas" in str(constructor):
+        if PANDAS_VERSION < (2, 2):
+            pytest.skip()
+        pytest.importorskip("pyarrow")
 
     df = nw.from_native(constructor(data))
     msg = re.escape(
@@ -76,17 +78,14 @@ def test_get_expr_negative_index(
         df.select(nw.col("a").cast(nw.List(nw.Int32())).list.get(index))
 
 
-def test_get_series_negative_index(
-    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
-) -> None:
+def test_get_series_negative_index(constructor_eager: ConstructorEager) -> None:
     data = {"a": [[1, 2], [None, 3], [None], None]}
     index = -1
 
-    if "cudf" in str(constructor_eager):
-        request.applymarker(pytest.mark.xfail)
-
-    if "pandas" in str(constructor_eager) and PANDAS_VERSION < (2, 2):
-        pytest.skip()
+    if "pandas" in str(constructor_eager):
+        if PANDAS_VERSION < (2, 2):
+            pytest.skip()
+        pytest.importorskip("pyarrow")
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
     msg = re.escape(
@@ -96,16 +95,14 @@ def test_get_series_negative_index(
         df["a"].list.get(index)
 
 
-def test_get_expr_non_int_index(
-    request: pytest.FixtureRequest, constructor: Constructor
-) -> None:
+def test_get_expr_non_int_index(constructor: Constructor) -> None:
     data = {"a": [[1, 2], [None, 3], [None], None], "index": [0, 1, 0, 0]}
     index = "index"
 
-    if any(backend in str(constructor) for backend in ("cudf",)):
-        request.applymarker(pytest.mark.xfail)
-    if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
-        pytest.skip()
+    if "pandas" in str(constructor):
+        if PANDAS_VERSION < (2, 2):
+            pytest.skip()
+        pytest.importorskip("pyarrow")
 
     df = nw.from_native(constructor(data))
     msg = re.escape(
@@ -115,17 +112,14 @@ def test_get_expr_non_int_index(
         df.select(nw.col("a").cast(nw.List(nw.Int32())).list.get(index))  # type: ignore[arg-type]
 
 
-def test_get_series_non_int_index(
-    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
-) -> None:
+def test_get_series_non_int_index(constructor_eager: ConstructorEager) -> None:
     data = {"a": [[1, 2], [None, 3], [None], None], "index": [0, 1, 0, 0]}
     index = "index"
 
-    if "cudf" in str(constructor_eager):
-        request.applymarker(pytest.mark.xfail)
-
-    if "pandas" in str(constructor_eager) and PANDAS_VERSION < (2, 2):
-        pytest.skip()
+    if "pandas" in str(constructor_eager):
+        if PANDAS_VERSION < (2, 2):
+            pytest.skip()
+        pytest.importorskip("pyarrow")
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
     msg = re.escape(

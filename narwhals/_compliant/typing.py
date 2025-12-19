@@ -23,13 +23,11 @@ if TYPE_CHECKING:
     from narwhals._compliant.namespace import CompliantNamespace, EagerNamespace
     from narwhals._compliant.series import CompliantSeries, EagerSeries
     from narwhals._compliant.window import WindowInputs
+    from narwhals._native import NativeDataFrame, NativeFrame, NativeSeries
     from narwhals.typing import (
         FillNullStrategy,
         IntoLazyFrame,
         ModeKeepStrategy,
-        NativeDataFrame,
-        NativeFrame,
-        NativeSeries,
         RankMethod,
         RollingInterpolationMethod,
     )
@@ -196,11 +194,11 @@ NarwhalsAggregation: TypeAlias = Literal[
     "any",
     "first",
     "last",
+    "any_value",
 ]
 """`Expr` methods we aim to support in `DepthTrackingGroupBy`.
 
 Be sure to update me if you're working on one of these:
-- https://github.com/narwhals-dev/narwhals/issues/981
 - https://github.com/narwhals-dev/narwhals/issues/2385
 - https://github.com/narwhals-dev/narwhals/issues/2484
 - https://github.com/narwhals-dev/narwhals/issues/2526

@@ -4,12 +4,22 @@ from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any, Literal, Protocol, TypeVar, Union
 
 from narwhals._compliant import CompliantDataFrame, CompliantLazyFrame, CompliantSeries
+from narwhals._native import (
+    IntoDataFrame,
+    IntoDataFrameT,
+    IntoFrame,
+    IntoFrameT,
+    IntoLazyFrame,
+    IntoLazyFrameT,
+    IntoSeries,
+    IntoSeriesT,
+)
 from narwhals._typing import Backend, EagerAllowed, IntoBackend, LazyAllowed
 
 if TYPE_CHECKING:
     import datetime as dt
     import os
-    from collections.abc import Iterable, Sequence, Sized
+    from collections.abc import Sequence
     from decimal import Decimal
     from types import ModuleType
 
@@ -20,28 +30,10 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals import dtypes
-    from narwhals._namespace import _NativeIbis
     from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.expr import Expr
     from narwhals.schema import Schema
     from narwhals.series import Series
-
-    # All dataframes supported by Narwhals have a
-    # `columns` property. Their similarities don't extend
-    # _that_ much further unfortunately...
-    class NativeFrame(Protocol):
-        @property
-        def columns(self) -> Any: ...
-
-        def join(self, *args: Any, **kwargs: Any) -> Any: ...
-
-    class NativeDataFrame(Sized, NativeFrame, Protocol): ...
-
-    class NativeLazyFrame(NativeFrame, Protocol):
-        def explain(self, *args: Any, **kwargs: Any) -> Any: ...
-
-    class NativeSeries(Sized, Iterable[Any], Protocol):
-        def filter(self, *args: Any, **kwargs: Any) -> Any: ...
 
     class SupportsNativeNamespace(Protocol):
         def __native_namespace__(self) -> ModuleType: ...
@@ -106,42 +98,24 @@ if TYPE_CHECKING:
         def Binary(self) -> type[dtypes.Binary]: ...
 
 
-IntoExpr: TypeAlias = Union["Expr", str, "Series[Any]"]
+_ShapeT = TypeVar("_ShapeT", bound="tuple[int, ...]")
+_NDArray: TypeAlias = "np.ndarray[_ShapeT, Any]"
+_1DArray: TypeAlias = "_NDArray[tuple[int]]"
+_1DArrayBool: TypeAlias = "np.ndarray[tuple[bool], np.dtype[np.bool_]]"
+_1DArrayInt: TypeAlias = "np.ndarray[tuple[int], np.dtype[np.integer[Any]]]"
+_2DArray: TypeAlias = "_NDArray[tuple[int, int]]"  # noqa: PYI047
+_AnyDArray: TypeAlias = "_NDArray[tuple[int, ...]]"  # noqa: PYI047
+_NumpyScalar: TypeAlias = "np.generic[Any]"
+Into1DArray: TypeAlias = "_1DArray | _NumpyScalar"
+"""A 1-dimensional `numpy.ndarray` or scalar that can be converted into one."""
+
+IntoExpr: TypeAlias = Union["Expr", str, "Series[Any]", _1DArray]
 """Anything which can be converted to an expression.
 
 Use this to mean "either a Narwhals expression, or something which can be converted
 into one". For example, `exprs` in `DataFrame.select` is typed to accept `IntoExpr`,
 as it can either accept a `nw.Expr` (e.g. `df.select(nw.col('a'))`) or a string
 which will be interpreted as a `nw.Expr`, e.g. `df.select('a')`.
-"""
-
-IntoDataFrame: TypeAlias = "NativeDataFrame"
-"""Anything which can be converted to a Narwhals DataFrame.
-
-Use this if your function accepts a narwhalifiable object but doesn't care about its backend.
-
-Examples:
-    >>> import narwhals as nw
-    >>> from narwhals.typing import IntoDataFrame
-    >>> def agnostic_shape(df_native: IntoDataFrame) -> tuple[int, int]:
-    ...     df = nw.from_native(df_native, eager_only=True)
-    ...     return df.shape
-"""
-
-IntoLazyFrame: TypeAlias = Union["NativeLazyFrame", "_NativeIbis"]
-
-IntoFrame: TypeAlias = Union["IntoDataFrame", "IntoLazyFrame"]
-"""Anything which can be converted to a Narwhals DataFrame or LazyFrame.
-
-Use this if your function can accept an object which can be converted to either
-`nw.DataFrame` or `nw.LazyFrame` and it doesn't care about its backend.
-
-Examples:
-    >>> import narwhals as nw
-    >>> from narwhals.typing import IntoFrame
-    >>> def agnostic_columns(df_native: IntoFrame) -> list[str]:
-    ...     df = nw.from_native(df_native)
-    ...     return df.collect_schema().names()
 """
 
 Frame: TypeAlias = Union["DataFrame[Any]", "LazyFrame[Any]"]
@@ -157,51 +131,6 @@ Examples:
     ... def agnostic_columns(df: Frame) -> list[str]:
     ...     return df.columns
 """
-
-IntoSeries: TypeAlias = "NativeSeries"
-"""Anything which can be converted to a Narwhals Series.
-
-Use this if your function can accept an object which can be converted to `nw.Series`
-and it doesn't care about its backend.
-
-Examples:
-    >>> from typing import Any
-    >>> import narwhals as nw
-    >>> from narwhals.typing import IntoSeries
-    >>> def agnostic_to_list(s_native: IntoSeries) -> list[Any]:
-    ...     s = nw.from_native(s_native)
-    ...     return s.to_list()
-"""
-
-IntoFrameT = TypeVar("IntoFrameT", bound="IntoFrame")
-"""TypeVar bound to object convertible to Narwhals DataFrame or Narwhals LazyFrame.
-
-Use this if your function accepts an object which is convertible to `nw.DataFrame`
-or `nw.LazyFrame` and returns an object of the same type.
-
-Examples:
-    >>> import narwhals as nw
-    >>> from narwhals.typing import IntoFrameT
-    >>> def agnostic_func(df_native: IntoFrameT) -> IntoFrameT:
-    ...     df = nw.from_native(df_native)
-    ...     return df.with_columns(c=nw.col("a") + 1).to_native()
-"""
-
-IntoDataFrameT = TypeVar("IntoDataFrameT", bound="IntoDataFrame")
-"""TypeVar bound to object convertible to Narwhals DataFrame.
-
-Use this if your function accepts an object which can be converted to `nw.DataFrame`
-and returns an object of the same class.
-
-Examples:
-    >>> import narwhals as nw
-    >>> from narwhals.typing import IntoDataFrameT
-    >>> def agnostic_func(df_native: IntoDataFrameT) -> IntoDataFrameT:
-    ...     df = nw.from_native(df_native, eager_only=True)
-    ...     return df.with_columns(c=df["a"] + 1).to_native()
-"""
-
-IntoLazyFrameT = TypeVar("IntoLazyFrameT", bound="IntoLazyFrame")
 
 FrameT = TypeVar("FrameT", "DataFrame[Any]", "LazyFrame[Any]")
 """TypeVar bound to Narwhals DataFrame or Narwhals LazyFrame.
@@ -233,21 +162,6 @@ Examples:
 
 LazyFrameT = TypeVar("LazyFrameT", bound="LazyFrame[Any]")
 SeriesT = TypeVar("SeriesT", bound="Series[Any]")
-
-IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries")
-"""TypeVar bound to object convertible to Narwhals Series.
-
-Use this if your function accepts an object which can be converted to `nw.Series`
-and returns an object of the same class.
-
-Examples:
-    >>> import narwhals as nw
-    >>> from narwhals.typing import IntoSeriesT
-    >>> def agnostic_abs(s_native: IntoSeriesT) -> IntoSeriesT:
-    ...     s = nw.from_native(s_native, series_only=True)
-    ...     return s.abs().to_native()
-"""
-
 DTypeBackend: TypeAlias = 'Literal["pyarrow", "numpy_nullable"] | None'
 SizeUnit: TypeAlias = Literal[
     "b",
@@ -347,15 +261,6 @@ ModeKeepStrategy: TypeAlias = Literal["any", "all"]
 - *"all"*: Keeps all the mode's.
 """
 
-_ShapeT = TypeVar("_ShapeT", bound="tuple[int, ...]")
-_NDArray: TypeAlias = "np.ndarray[_ShapeT, Any]"
-_1DArray: TypeAlias = "_NDArray[tuple[int]]"
-_1DArrayInt: TypeAlias = "np.ndarray[tuple[int], np.dtype[np.integer[Any]]]"
-_2DArray: TypeAlias = "_NDArray[tuple[int, int]]"  # noqa: PYI047
-_AnyDArray: TypeAlias = "_NDArray[tuple[int, ...]]"  # noqa: PYI047
-_NumpyScalar: TypeAlias = "np.generic[Any]"
-Into1DArray: TypeAlias = "_1DArray | _NumpyScalar"
-"""A 1-dimensional `numpy.ndarray` or scalar that can be converted into one."""
 
 PandasLikeDType: TypeAlias = "pd.api.extensions.ExtensionDtype | np.dtype[Any]"
 
@@ -447,6 +352,8 @@ Either a string or an object that implements [`__fspath__`], such as [`pathlib.P
 _T = TypeVar("_T")
 _Slice: TypeAlias = "slice[_T, Any, Any] | slice[Any, _T, Any] | slice[None, None, _T]"
 _SliceNone: TypeAlias = "slice[None, None, None]"
+# Boolean positions
+SizedMultiBoolSelector: TypeAlias = "Sequence[bool] | _T | _1DArrayBool"
 # Index/column positions
 SingleIndexSelector: TypeAlias = int
 _SliceIndex: TypeAlias = "_Slice[int] | _SliceNone"
@@ -460,7 +367,9 @@ SizedMultiNameSelector: TypeAlias = "Sequence[str] | _T | _1DArray"
 MultiNameSelector: TypeAlias = "_SliceName | SizedMultiNameSelector[_T]"
 # Mixed selectors
 SingleColSelector: TypeAlias = "SingleIndexSelector | SingleNameSelector"
-MultiColSelector: TypeAlias = "MultiIndexSelector[_T] | MultiNameSelector[_T]"
+MultiColSelector: TypeAlias = (
+    "MultiIndexSelector[_T] | MultiNameSelector[_T] | SizedMultiBoolSelector[_T]"
+)
 
 
 __all__ = [
@@ -478,6 +387,8 @@ __all__ = [
     "IntoExpr",
     "IntoFrame",
     "IntoFrameT",
+    "IntoLazyFrame",
+    "IntoLazyFrameT",
     "IntoSeries",
     "IntoSeriesT",
     "LazyAllowed",

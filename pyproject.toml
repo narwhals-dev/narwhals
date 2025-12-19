@@ -5,19 +5,28 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "2.8.0"
+version = "2.14.0"
 dependencies = []
 requires-python = ">=3.9"
 authors = [
   { name = "Marco Gorelli", email = "hello_narwhals@proton.me" },
 ]
+license = {file = "LICENSE.md"}
 description = "Extremely lightweight compatibility layer between dataframe libraries"
 readme = "README.md"
 keywords = ["dataframes", "interoperability", "pandas", "polars", "pyarrow", "dask", "modin", "cudf"]
 classifiers = [
+  "Development Status :: 5 - Production/Stable",
   "License :: OSI Approved :: MIT License",
-  "Programming Language :: Python",
   "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: Free Threading :: 2 - Beta",
   "Typing :: Typed",
 ]
 
@@ -243,27 +252,39 @@ norecursedirs =  ['*.egg', '.*', '_darcs', 'build', 'CVS', 'dist', 'node_modules
 testpaths = ["tests"]
 filterwarnings = [
   "error",
-  'ignore:.*defaulting to pandas implementation',
-  'ignore:.*implementation has mismatches with pandas',
+  'ignore:.*defaulting to pandas implementation:Warning:modin',
+  'ignore:.*implementation has mismatches with pandas:Warning:modin',
   'ignore:.*You are using pyarrow version',
+
+  # https://discuss.python.org/t/types-uniontype-was-merged-with-wrong-class-not-even-a-class/102275/31
+  "ignore:.*'_UnionGenericAlias' is deprecated:DeprecationWarning",
+
   # This warning was temporarily raised by pandas but then reverted.
   'ignore:.*Passing a BlockManager to DataFrame:DeprecationWarning',
+
   # This warning was temporarily raised by Polars but then reverted.
   'ignore:.*The default coalesce behavior of left join will change:DeprecationWarning',
+
   'ignore: unclosed <socket.socket',
   'ignore:.*The distutils package is deprecated and slated for removal in Python 3.12:DeprecationWarning:pyspark',
-  'ignore:.*distutils Version classes are deprecated. Use packaging.version instead.*:DeprecationWarning:pyspark',
+  'ignore:.*distutils Version classes are deprecated. Use packaging.version instead.*:DeprecationWarning',
   'ignore:.*is_datetime64tz_dtype is deprecated and will be removed in a future version.*:DeprecationWarning:pyspark',
+
   # Warning raised by PyArrow nightly just by importing pandas
   'ignore:.*Python binding for RankQuantileOptions not exposed:RuntimeWarning:pyarrow',
+
   'ignore:.*pandas only supports SQLAlchemy:UserWarning:sqlframe',
   'ignore:.*numpy.core is deprecated and has been renamed to numpy._core.*:DeprecationWarning:sqlframe',
   "ignore:.*__array__ implementation doesn't accept a copy keyword, so passing copy=False failed:DeprecationWarning:modin",
+
   # raised internally by pandas
   "ignore:.*np.find_common_type is deprecated:DeprecationWarning:pandas",
+
   # Warning raised when calling PandasLikeNamespace.from_arrow with old pyarrow
   "ignore:.*is_sparse is deprecated and will be removed in a future version.*:DeprecationWarning:pyarrow",
-  'ignore:.*invalid value encountered in cast:RuntimeWarning:pandas',
+
+  "ignore:.*invalid value encountered in cast:RuntimeWarning:pandas",
+  "ignore:.*The behavior of DataFrame concatenation with empty or all-NA entries is deprecated:FutureWarning",
 ]
 xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
@@ -280,6 +301,7 @@ plugins = ["covdefaults"]
 fail_under = 80  # This is just for local development, in CI we set it to 100
 omit = [
   'narwhals/typing.py',
+  'narwhals/compliant.py',
   'narwhals/stable/v1/typing.py',
   'narwhals/stable/v2/typing.py',
   'narwhals/this.py',
@@ -312,7 +334,7 @@ exclude_also = [
 ]
 
 [tool.mypy]
-files = ["narwhals", "tests"]
+files = ["narwhals", "tests", "test-plugin"]
 pretty = true
 strict = true
 
@@ -358,7 +380,7 @@ reportMissingModuleSource = "none"
 reportPrivateImportUsage = "none"
 reportUnusedExpression = "none"    # handled by (https://docs.astral.sh/ruff/rules/unused-variable/)
 typeCheckingMode = "basic"
-include = ["narwhals", "tests"]
+include = ["narwhals", "tests", "test-plugin"]
 ignore = [
   "../.venv/",
   "../../../**/Lib",      # stdlib

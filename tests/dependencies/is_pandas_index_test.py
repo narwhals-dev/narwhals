@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import pytest
+
+pytest.importorskip("pandas")
 import pandas as pd
 
 from narwhals.stable.v1.dependencies import is_pandas_index

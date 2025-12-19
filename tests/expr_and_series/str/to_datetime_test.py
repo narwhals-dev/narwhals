@@ -5,12 +5,9 @@ from contextlib import AbstractContextManager, nullcontext as does_not_raise
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Literal
 
-import pyarrow as pa
 import pytest
 
 import narwhals as nw
-from narwhals._arrow.utils import parse_datetime_format
-from narwhals._pandas_like.utils import get_dtype_backend
 from narwhals.exceptions import ComputeError
 from tests.utils import (
     PANDAS_VERSION,
@@ -171,6 +168,11 @@ def test_to_datetime_infer_fmt_from_date(
 
 
 def test_pyarrow_infer_datetime_raise_invalid() -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    from narwhals._arrow.utils import parse_datetime_format
+
     msg = re.escape("Unable to infer datetime format, provided format is not supported.")
     with pytest.raises(NotImplementedError, match=msg):
         parse_datetime_format(pa.chunked_array([["2024-01-01", "abc"]]))
@@ -186,6 +188,11 @@ def test_pyarrow_infer_datetime_raise_invalid() -> None:
 def test_pyarrow_infer_datetime_raise_not_unique(
     data: list[str | None], duplicate: str
 ) -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    from narwhals._arrow.utils import parse_datetime_format
+
     with pytest.raises(
         ValueError,
         match=f"Found multiple {duplicate} values while inferring datetime format.",
@@ -197,6 +204,11 @@ def test_pyarrow_infer_datetime_raise_not_unique(
 def test_pyarrow_infer_datetime_raise_inconsistent_date_fmt(
     data: list[str | None],
 ) -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    from narwhals._arrow.utils import parse_datetime_format
+
     with pytest.raises(ValueError, match=re.escape("Unable to infer datetime format. ")):
         parse_datetime_format(pa.chunked_array([data]))
 
@@ -242,6 +254,8 @@ def test_to_datetime_pd_preserves_pyarrow_backend_dtype() -> None:
     pytest.importorskip("pandas")
     pytest.importorskip("pyarrow")
     import pandas as pd
+
+    from narwhals._pandas_like.utils import get_dtype_backend
 
     dtype_backend: Literal["pyarrow", "numpy_nullable"] = "pyarrow"
 

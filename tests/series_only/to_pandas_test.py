@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import pandas as pd
 import pytest
+
+pytest.importorskip("pandas")
+import pandas as pd
 from pandas.testing import assert_series_equal
 
 import narwhals as nw
@@ -19,6 +21,8 @@ data = [1, 3, 2]
 def test_convert(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
+    pytest.importorskip("pyarrow")
+
     if any(
         cname in str(constructor_eager)
         for cname in ("pandas_nullable", "pandas_pyarrow", "modin_pyarrow")

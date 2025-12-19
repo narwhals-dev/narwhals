@@ -5,14 +5,22 @@ from decimal import Decimal
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, overload
 
+from narwhals import plugins
 from narwhals._constants import EPOCH, MS_PER_SECOND
-from narwhals._namespace import (
+from narwhals._native import (
     is_native_arrow,
     is_native_pandas_like,
     is_native_polars,
     is_native_spark_like,
 )
-from narwhals._utils import Implementation, Version, has_native_namespace
+from narwhals._utils import (
+    Implementation,
+    Version,
+    has_native_namespace,
+    is_compliant_dataframe,
+    is_compliant_lazyframe,
+    is_compliant_series,
+)
 from narwhals.dependencies import (
     get_dask_expr,
     get_numpy,
@@ -30,6 +38,16 @@ from narwhals.dependencies import (
 )
 
 if TYPE_CHECKING:
+    from typing_extensions import Unpack
+
+    from narwhals._translate import (
+        AllowAny,
+        AllowLazy,
+        AllowSeries,
+        ExcludeSeries,
+        OnlySeries,
+        PassThroughUnknown,
+    )
     from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.series import Series
     from narwhals.typing import (
@@ -100,149 +118,42 @@ def to_native(
 
 
 @overload
-def from_native(native_object: SeriesT, **kwds: Any) -> SeriesT: ...
-
-
+def from_native(native_object: SeriesT, **kwds: Unpack[OnlySeries]) -> SeriesT: ...
 @overload
-def from_native(native_object: DataFrameT, **kwds: Any) -> DataFrameT: ...
-
-
-@overload
-def from_native(native_object: LazyFrameT, **kwds: Any) -> LazyFrameT: ...
-
-
+def from_native(native_object: SeriesT, **kwds: Unpack[AllowSeries]) -> SeriesT: ...
 @overload
 def from_native(
-    native_object: IntoDataFrameT | IntoSeriesT,
-    *,
-    pass_through: Literal[True],
-    eager_only: Literal[True],
-    series_only: Literal[False] = ...,
-    allow_series: Literal[True],
-) -> DataFrame[IntoDataFrameT] | Series[IntoSeriesT]: ...
-
-
+    native_object: DataFrameT, **kwds: Unpack[ExcludeSeries]
+) -> DataFrameT: ...
+# Closer to *intended* than https://github.com/narwhals-dev/narwhals/issues/3226
+@overload
+def from_native(native_object: LazyFrameT, **kwds: Unpack[AllowLazy]) -> LazyFrameT: ...
 @overload
 def from_native(
-    native_object: IntoDataFrameT,
-    *,
-    pass_through: Literal[True],
-    eager_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
+    native_object: IntoDataFrameT, **kwds: Unpack[ExcludeSeries]
 ) -> DataFrame[IntoDataFrameT]: ...
-
-
 @overload
 def from_native(
-    native_object: T,
-    *,
-    pass_through: Literal[True],
-    eager_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> T: ...
-
-
-@overload
-def from_native(
-    native_object: IntoDataFrameT,
-    *,
-    pass_through: Literal[True],
-    eager_only: Literal[True],
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT]: ...
-
-
-@overload
-def from_native(
-    native_object: T,
-    *,
-    pass_through: Literal[True],
-    eager_only: Literal[True],
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> T: ...
-
-
-@overload
-def from_native(
-    native_object: IntoDataFrameT | IntoLazyFrameT | IntoSeriesT,
-    *,
-    pass_through: Literal[True],
-    eager_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: Literal[True],
-) -> DataFrame[IntoDataFrameT] | LazyFrame[IntoLazyFrameT] | Series[IntoSeriesT]: ...
-
-
-@overload
-def from_native(
-    native_object: IntoSeriesT,
-    *,
-    pass_through: Literal[True],
-    eager_only: Literal[False] = ...,
-    series_only: Literal[True],
-    allow_series: None = ...,
+    native_object: IntoSeriesT, **kwds: Unpack[OnlySeries]
 ) -> Series[IntoSeriesT]: ...
-
-
 @overload
 def from_native(
-    native_object: IntoLazyFrameT,
-    *,
-    pass_through: Literal[False] = ...,
-    eager_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
+    native_object: IntoSeriesT, **kwds: Unpack[AllowSeries]
+) -> Series[IntoSeriesT]: ...
+@overload
+def from_native(
+    native_object: IntoLazyFrameT, **kwds: Unpack[AllowLazy]
 ) -> LazyFrame[IntoLazyFrameT]: ...
-
-
 @overload
 def from_native(
-    native_object: IntoDataFrameT,
-    *,
-    pass_through: Literal[False] = ...,
-    eager_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT]: ...
-
-
+    native_object: IntoDataFrameT | IntoSeriesT, **kwds: Unpack[AllowSeries]
+) -> DataFrame[IntoDataFrameT] | Series[IntoSeriesT]: ...
 @overload
 def from_native(
-    native_object: IntoDataFrameT,
-    *,
-    pass_through: Literal[False] = ...,
-    eager_only: Literal[True],
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT]: ...
-
-
+    native_object: IntoDataFrameT | IntoLazyFrameT | IntoSeriesT, **kwds: Unpack[AllowAny]
+) -> DataFrame[IntoDataFrameT] | LazyFrame[IntoLazyFrameT] | Series[IntoSeriesT]: ...
 @overload
-def from_native(
-    native_object: IntoFrame | IntoSeries,
-    *,
-    pass_through: Literal[False] = ...,
-    eager_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: Literal[True],
-) -> DataFrame[Any] | LazyFrame[Any] | Series[Any]: ...
-
-
-@overload
-def from_native(
-    native_object: IntoSeriesT,
-    *,
-    pass_through: Literal[False] = ...,
-    eager_only: Literal[False] = ...,
-    series_only: Literal[True],
-    allow_series: None = ...,
-) -> Series[IntoSeriesT]: ...
-
-
+def from_native(native_object: T, **kwds: Unpack[PassThroughUnknown]) -> T: ...
 # All params passed in as variables
 @overload
 def from_native(
@@ -253,9 +164,7 @@ def from_native(
     series_only: bool,
     allow_series: bool | None,
 ) -> Any: ...
-
-
-def from_native(  # noqa: D417
+def from_native(
     native_object: IntoLazyFrameT
     | IntoDataFrameT
     | IntoSeriesT
@@ -267,7 +176,6 @@ def from_native(  # noqa: D417
     eager_only: bool = False,
     series_only: bool = False,
     allow_series: bool | None = None,
-    **kwds: Any,
 ) -> LazyFrame[IntoLazyFrameT] | DataFrame[IntoDataFrameT] | Series[IntoSeriesT] | T:
     """Convert `native_object` to Narwhals Dataframe, Lazyframe, or Series.
 
@@ -299,10 +207,6 @@ def from_native(  # noqa: D417
         DataFrame, LazyFrame, Series, or original object, depending
             on which combination of parameters was passed.
     """
-    if kwds:
-        msg = f"from_native() got an unexpected keyword argument {next(iter(kwds))!r}"
-        raise TypeError(msg)
-
     return _from_native_impl(  # type: ignore[no-any-return]
         native_object,
         pass_through=pass_through,
@@ -314,23 +218,65 @@ def from_native(  # noqa: D417
     )
 
 
+def _translate_if_compliant(  # noqa: C901,PLR0911
+    compliant_object: Any,
+    *,
+    pass_through: bool = False,
+    eager_only: bool = False,
+    # Interchange-level was removed after v1
+    eager_or_interchange_only: bool,
+    series_only: bool,
+    allow_series: bool | None,
+    version: Version,
+) -> Any:
+    if is_compliant_dataframe(compliant_object):
+        if series_only:
+            if not pass_through:
+                msg = "Cannot only use `series_only` with dataframe"
+                raise TypeError(msg)
+            return compliant_object
+        return version.dataframe(
+            compliant_object.__narwhals_dataframe__()._with_version(version), level="full"
+        )
+    if is_compliant_lazyframe(compliant_object):
+        if series_only:
+            if not pass_through:
+                msg = "Cannot only use `series_only` with lazyframe"
+                raise TypeError(msg)
+            return compliant_object
+        if eager_only or eager_or_interchange_only:
+            if not pass_through:
+                msg = "Cannot only use `eager_only` or `eager_or_interchange_only` with lazyframe"
+                raise TypeError(msg)
+            return compliant_object
+        return version.lazyframe(
+            compliant_object.__narwhals_lazyframe__()._with_version(version), level="full"
+        )
+    if is_compliant_series(compliant_object):
+        if not allow_series:
+            if not pass_through:
+                msg = "Please set `allow_series=True` or `series_only=True`"
+                raise TypeError(msg)
+            return compliant_object
+        return version.series(
+            compliant_object.__narwhals_series__()._with_version(version), level="full"
+        )
+    # Object wasn't compliant, can't translate here.
+    return None
+
+
 def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
     native_object: Any,
     *,
     pass_through: bool = False,
     eager_only: bool = False,
     # Interchange-level was removed after v1
-    eager_or_interchange_only: bool = False,
-    series_only: bool = False,
-    allow_series: bool | None = None,
+    eager_or_interchange_only: bool,
+    series_only: bool,
+    allow_series: bool | None,
     version: Version,
 ) -> Any:
     from narwhals._interchange.dataframe import supports_dataframe_interchange
-    from narwhals._utils import (
-        is_compliant_dataframe,
-        is_compliant_lazyframe,
-        is_compliant_series,
-    )
     from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.series import Series
 
@@ -350,38 +296,18 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
         raise ValueError(msg)
 
     # Extensions
-    if is_compliant_dataframe(native_object):
-        if series_only:
-            if not pass_through:
-                msg = "Cannot only use `series_only` with dataframe"
-                raise TypeError(msg)
-            return native_object
-        return version.dataframe(
-            native_object.__narwhals_dataframe__()._with_version(version), level="full"
+    if (
+        translated := _translate_if_compliant(
+            native_object,
+            pass_through=pass_through,
+            eager_only=eager_only,
+            eager_or_interchange_only=eager_or_interchange_only,
+            series_only=series_only,
+            allow_series=allow_series,
+            version=version,
         )
-    if is_compliant_lazyframe(native_object):
-        if series_only:
-            if not pass_through:
-                msg = "Cannot only use `series_only` with lazyframe"
-                raise TypeError(msg)
-            return native_object
-        if eager_only or eager_or_interchange_only:
-            if not pass_through:
-                msg = "Cannot only use `eager_only` or `eager_or_interchange_only` with lazyframe"
-                raise TypeError(msg)
-            return native_object
-        return version.lazyframe(
-            native_object.__narwhals_lazyframe__()._with_version(version), level="full"
-        )
-    if is_compliant_series(native_object):
-        if not allow_series:
-            if not pass_through:
-                msg = "Please set `allow_series=True` or `series_only=True`"
-                raise TypeError(msg)
-            return native_object
-        return version.series(
-            native_object.__narwhals_series__()._with_version(version), level="full"
-        )
+    ) is not None:
+        return translated
 
     # Polars
     if is_native_polars(native_object):
@@ -534,8 +460,22 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
             raise TypeError(msg)
         return Version.V1.dataframe(InterchangeFrame(native_object), level="interchange")
 
+    compliant_object = plugins.from_native(native_object, version)
+    if compliant_object is not None:
+        return _translate_if_compliant(
+            compliant_object,
+            pass_through=pass_through,
+            eager_only=eager_only,
+            eager_or_interchange_only=eager_or_interchange_only,
+            series_only=series_only,
+            allow_series=allow_series,
+            version=version,
+        )
+
     if not pass_through:
-        msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(native_object)}"
+        msg = f"Unsupported dataframe type, got: {type(native_object)}"
+        if hint := plugins._show_suggestions(type(native_object)):  # pragma: no cover
+            msg += "\n\n" + hint
         raise TypeError(msg)
     return native_object
 

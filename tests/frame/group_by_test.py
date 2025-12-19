@@ -6,8 +6,6 @@ import re
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
-import pandas as pd
-import pyarrow as pa
 import pytest
 
 import narwhals as nw
@@ -30,15 +28,18 @@ if TYPE_CHECKING:
 
 data: Mapping[str, Any] = {"a": [1, 1, 3], "b": [4, 4, 6], "c": [7.0, 8.0, 9.0]}
 
-df_pandas = pd.DataFrame(data)
-
 POLARS_COLLECT_STREAMING_ENGINE = os.environ.get("NARWHALS_POLARS_NEW_STREAMING", None)
 
 
 def test_group_by_complex() -> None:
+    pytest.importorskip("pandas")
+    pytest.importorskip("pyarrow")
+    import pandas as pd
+    import pyarrow as pa
+
     expected = {"a": [1, 3], "b": [-3.5, -3.0]}
 
-    df = nw.from_native(df_pandas)
+    df = nw.from_native(pd.DataFrame(data))
     with pytest.warns(UserWarning, match="complex group-by"):
         result_pd = nw.to_native(
             df.group_by("a").agg((nw.col("b") - nw.col("c").mean()).mean()).sort("a")
@@ -66,7 +67,7 @@ def test_invalid_group_by_dask() -> None:
     pytest.importorskip("dask")
     import dask.dataframe as dd
 
-    df_dask = dd.from_pandas(df_pandas)
+    df_dask = dd.from_dict(data, npartitions=1)
 
     with pytest.raises(ValueError, match=r"Non-trivial complex aggregation found"):
         nw.from_native(df_dask).group_by("a").agg(nw.col("b").abs().min())
@@ -95,6 +96,9 @@ def test_group_by_iter(constructor_eager: ConstructorEager) -> None:
 
 
 def test_group_by_iter_non_str_pandas() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     expected = {"a": {0: [1], 1: ["a"]}, "b": {0: [2], 1: ["b"]}}
     df = nw.from_native(pd.DataFrame({0: [1, 2], 1: ["a", "b"]}))
     groups: dict[Any, Any] = {keys[0]: df for keys, df in df.group_by(1)}  # type: ignore[call-overload]
@@ -232,6 +236,9 @@ def test_group_by_n_unique_w_missing(constructor: Constructor) -> None:
 
 
 def test_group_by_same_name_twice() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df = pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
     pattern = re.compile(
         "expected unique.+names.+'b'.+2 times", re.IGNORECASE | re.DOTALL
@@ -241,6 +248,9 @@ def test_group_by_same_name_twice() -> None:
 
 
 def test_group_by_empty_result_pandas() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df_any = pd.DataFrame({"a": [1, 2, 3], "b": [4, 3, 2]})
     df = nw.from_native(df_any, eager_only=True)
     with pytest.raises(ValueError, match="No results"):
@@ -369,7 +379,7 @@ def test_group_by_shift_raises(constructor: Constructor) -> None:
     df_native = {"a": [1, 2, 3], "b": [1, 1, 2]}
     df = nw.from_native(constructor(df_native))
     with pytest.raises(InvalidOperationError, match="does not aggregate"):
-        df.group_by("b").agg(nw.col("a").shift(1))
+        df.group_by("b").agg(nw.col("a").abs())
 
 
 def test_double_same_aggregation(
@@ -428,6 +438,9 @@ def test_all_kind_of_aggs(
 
 
 def test_pandas_group_by_index_and_column_overlap() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df = pd.DataFrame(
         {"a": [1, 1, 2], "b": [4, 5, 6]}, index=pd.Index([0, 1, 2], name="a")
     )
@@ -532,7 +545,7 @@ def test_group_by_raise_if_not_preserves_length(
 ) -> None:
     data = {"a": [1, 2, 2, None], "b": [0, 1, 2, 3], "x": [1, 2, 3, 4]}
     df = nw.from_native(constructor(data))
-    with pytest.raises(InvalidOperationError):
+    with pytest.raises((InvalidOperationError, NotImplementedError)):
         df.group_by(keys).agg(nw.col("x").max())
 
 
@@ -769,4 +782,32 @@ def test_group_by_agg_last(
     if pre_sort:
         df = df.sort(aggs, **pre_sort)
     result = df.group_by(keys).agg(nw.col(aggs).last()).sort(keys)
+    assert_equal_data(result, expected)
+
+
+def test_multi_column_expansion(constructor: Constructor) -> None:
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 32):
+        pytest.skip(reason="https://github.com/pola-rs/polars/issues/21773")
+    if "modin" in str(constructor):
+        pytest.skip(reason="Internal error")
+    df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
+    result = (
+        df.group_by("a")
+        .agg(nw.all().sum().name.suffix("_aggregated"))
+        .sort("a", descending=True)
+    )
+    expected = {"a": [2, 1], "b_aggregated": [6, 9]}
+    assert_equal_data(result, expected)
+    result = (
+        df.group_by("a")
+        .agg(nw.col("a", "b").sum().name.suffix("_aggregated"))
+        .sort("a", descending=True)
+    )
+    expected = {"a": [2, 1], "a_aggregated": [2, 2], "b_aggregated": [6, 9]}
+    assert_equal_data(result, expected)
+    result = (
+        df.group_by("a")
+        .agg(nw.nth(0, 1).sum().name.suffix("_aggregated"))
+        .sort("a", descending=True)
+    )
     assert_equal_data(result, expected)

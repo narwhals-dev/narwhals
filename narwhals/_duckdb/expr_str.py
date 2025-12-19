@@ -35,7 +35,7 @@ class DuckDBExprStringNamespace(SQLExprStringNamespace["DuckDBExpr"]):
 
         def _to_titlecase(expr: Expression) -> Expression:
             extract_expr = F(
-                "regexp_extract_all", F("lower", expr), lit(r"[a-z0-9]*[^a-z0-9]*")
+                "regexp_extract_all", F("lower", expr), lit(r"[a-z]*[^a-z]*")
             )
             elem = col("_")
             capitalize = lambda_expr(

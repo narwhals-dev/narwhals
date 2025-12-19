@@ -3,7 +3,6 @@ from __future__ import annotations
 from datetime import datetime, time, timedelta, timezone
 from typing import TYPE_CHECKING, cast
 
-import pandas as pd
 import pytest
 
 import narwhals as nw
@@ -18,7 +17,10 @@ from tests.utils import (
 )
 
 if TYPE_CHECKING:
-    from narwhals.typing import NativeLazyFrame
+    from collections.abc import Mapping
+
+    from narwhals._native import NativeSQLFrame
+    from narwhals.typing import NonNestedDType
 
 DATA = {
     "a": [1],
@@ -38,7 +40,7 @@ DATA = {
     "o": ["a"],
     "p": [1],
 }
-SCHEMA = {
+SCHEMA: Mapping[str, type[NonNestedDType]] = {
     "a": nw.Int64,
     "b": nw.Int32,
     "c": nw.Int16,
@@ -86,7 +88,7 @@ def test_cast(constructor: Constructor) -> None:
         nw.col(col_).cast(dtype) for col_, dtype in schema.items()
     )
 
-    cast_map = {
+    cast_map: Mapping[str, type[NonNestedDType]] = {
         "a": nw.Int32,
         "b": nw.Int16,
         "c": nw.Int8,
@@ -134,7 +136,7 @@ def test_cast_series(
         .lazy()
         .collect()
     )
-    cast_map = {
+    cast_map: Mapping[str, type[NonNestedDType]] = {
         "a": nw.Int32,
         "b": nw.Int16,
         "c": nw.Int8,
@@ -165,6 +167,9 @@ def test_cast_series(
 
 
 def test_cast_string() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     s_pd = pd.Series([1, 2]).convert_dtypes()
     s = nw.from_native(s_pd, series_only=True)
     s = s.cast(nw.String)
@@ -268,8 +273,10 @@ def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -
     if any(backend in str(constructor) for backend in ("dask", "cudf", "sqlframe")):
         request.applymarker(pytest.mark.xfail)
 
-    if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
-        pytest.skip()
+    if "pandas" in str(constructor):
+        if PANDAS_VERSION < (2, 2):
+            pytest.skip()
+        pytest.importorskip("pyarrow")
 
     data = {
         "a": [{"movie ": "Cars", "rating": 4.5}, {"movie ": "Toy Story", "rating": 4.9}]
@@ -281,12 +288,12 @@ def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -
     if "spark" in str(constructor):  # pragma: no cover
         # Special handling for pyspark as it natively maps the input to
         # a column of type MAP<STRING, STRING>
-        native_ldf = cast("NativeLazyFrame", native_df)
+        native_ldf = cast("NativeSQLFrame", native_df)
         _tmp_nw_compliant_frame = nw.from_native(native_ldf)._compliant_frame
         F = _tmp_nw_compliant_frame._F  # type: ignore[attr-defined]
         T = _tmp_nw_compliant_frame._native_dtypes  # type: ignore[attr-defined] # noqa: N806
 
-        native_ldf = native_ldf.withColumn(  # type: ignore[attr-defined]
+        native_ldf = native_ldf.withColumn(
             "a",
             F.struct(
                 F.col("a.movie ").cast(T.StringType()).alias("movie "),
@@ -318,8 +325,10 @@ def test_raise_if_polars_dtype(constructor: Constructor) -> None:
 
 
 def test_cast_time(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
-        pytest.skip()
+    if "pandas" in str(constructor):
+        if PANDAS_VERSION < (2, 2):
+            pytest.skip()
+        pytest.importorskip("pyarrow")
 
     if any(backend in str(constructor) for backend in ("dask", "pyspark", "cudf")):
         request.applymarker(pytest.mark.xfail)
@@ -331,8 +340,10 @@ def test_cast_time(request: pytest.FixtureRequest, constructor: Constructor) -> 
 
 
 def test_cast_binary(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
-        pytest.skip()
+    if "pandas" in str(constructor):
+        if PANDAS_VERSION < (2, 2):
+            pytest.skip()
+        pytest.importorskip("pyarrow")
 
     if any(backend in str(constructor) for backend in ("cudf", "dask")):
         request.applymarker(pytest.mark.xfail)
@@ -402,6 +413,10 @@ def test_cast_typing_invalid() -> None:
 
 @pytest.mark.skipif(PANDAS_VERSION < (2,), reason="too old for pyarrow")
 def test_pandas_pyarrow_dtypes() -> None:
+    pytest.importorskip("pandas")
+    pytest.importorskip("pyarrow")
+    import pandas as pd
+
     s = nw.from_native(
         pd.Series([123, None]).convert_dtypes(dtype_backend="pyarrow"), series_only=True
     ).cast(nw.String)
@@ -421,6 +436,9 @@ def test_pandas_pyarrow_dtypes() -> None:
 
 
 def test_cast_object_pandas() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     s = nw.from_native(pd.DataFrame({"a": [2, 3, None]}, dtype=object))["a"]
     assert s[0] == 2
     assert s.cast(nw.String)[0] == "2"

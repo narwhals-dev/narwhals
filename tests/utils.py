@@ -8,22 +8,22 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, cast
 
-import pandas as pd
-import pyarrow as pa
-
 import narwhals as nw
 from narwhals._utils import Implementation, parse_version, zip_strict
+from narwhals.dependencies import get_pandas
 from narwhals.translate import from_native
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
+    import pandas as pd
     import pytest
     from pyspark.sql import SparkSession
     from sqlframe.duckdb import DuckDBSession
     from typing_extensions import TypeAlias
 
-    from narwhals.typing import Frame, NativeDataFrame, NativeLazyFrame, TimeUnit
+    from narwhals._native import NativeLazyFrame
+    from narwhals.typing import Frame, IntoDataFrame, TimeUnit
 
 
 def get_module_version_as_tuple(module_name: str) -> tuple[int, ...]:
@@ -43,8 +43,8 @@ PYARROW_VERSION: tuple[int, ...] = get_module_version_as_tuple("pyarrow")
 PYSPARK_VERSION: tuple[int, ...] = get_module_version_as_tuple("pyspark")
 CUDF_VERSION: tuple[int, ...] = get_module_version_as_tuple("cudf")
 
-Constructor: TypeAlias = Callable[[Any], "NativeLazyFrame | NativeDataFrame"]
-ConstructorEager: TypeAlias = Callable[[Any], "NativeDataFrame"]
+Constructor: TypeAlias = Callable[[Any], "NativeLazyFrame | IntoDataFrame"]
+ConstructorEager: TypeAlias = Callable[[Any], "IntoDataFrame"]
 ConstructorLazy: TypeAlias = Callable[[Any], "NativeLazyFrame"]
 ConstructorPandasLike: TypeAlias = Callable[[Any], "pd.DataFrame"]
 
@@ -61,12 +61,13 @@ _CONSTRUCTOR_FIXTURE_NAMES = frozenset[str](
 
 
 def _to_comparable_list(column_values: Any) -> Any:
-    if isinstance(column_values, nw.Series) and isinstance(
-        column_values.to_native(), pa.Array
-    ):  # pragma: no cover
-        # Narwhals Series for PyArrow should be backed by ChunkedArray, not Array.
-        msg = "Did not expect to see Arrow Array here"
-        raise TypeError(msg)
+    if isinstance(column_values, nw.Series) and column_values.implementation.is_pyarrow():
+        import pyarrow as pa
+
+        if isinstance(column_values.to_native(), pa.Array):  # pragma: no cover
+            # Narwhals Series for PyArrow should be backed by ChunkedArray, not Array.
+            msg = "Did not expect to see Arrow Array here"
+            raise TypeError(msg)
     if (
         hasattr(column_values, "_compliant_series")
         and column_values._compliant_series._implementation is Implementation.CUDF
@@ -75,6 +76,10 @@ def _to_comparable_list(column_values: Any) -> Any:
     if hasattr(column_values, "to_list"):
         return column_values.to_list()
     return list(column_values)
+
+
+def is_pd_na(value: Any) -> bool:
+    return (pd := get_pandas()) is not None and pd.isna(value)
 
 
 def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
@@ -124,15 +129,15 @@ def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
             elif isinstance(lhs, float) and math.isnan(lhs):
                 are_equivalent_values = rhs is None or math.isnan(rhs)
             elif isinstance(rhs, float) and math.isnan(rhs):
-                are_equivalent_values = lhs is None or pd.isna(lhs) or math.isnan(lhs)
+                are_equivalent_values = lhs is None or is_pd_na(lhs) or math.isnan(lhs)
             elif lhs is None:
                 are_equivalent_values = rhs is None
             elif isinstance(lhs, list) and isinstance(rhs, list):
                 are_equivalent_values = all(
                     left_side == right_side for left_side, right_side in zip(lhs, rhs)
                 )
-            elif pd.isna(lhs):
-                are_equivalent_values = pd.isna(rhs)
+            elif is_pd_na(lhs):
+                are_equivalent_values = is_pd_na(rhs)
             elif type(lhs) is date and type(rhs) is datetime:
                 are_equivalent_values = datetime(lhs.year, lhs.month, lhs.day) == rhs
             elif (

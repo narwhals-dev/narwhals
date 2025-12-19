@@ -5,9 +5,6 @@ from contextlib import AbstractContextManager, nullcontext as does_not_warn
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any, Literal
 
-import numpy as np
-import pandas as pd
-import pyarrow as pa
 import pytest
 
 import narwhals as nw
@@ -66,7 +63,7 @@ def test_list_valid() -> None:
     assert dtype == nw.List
     assert dtype != nw.List(nw.Float32)
     assert dtype != nw.Duration
-    assert repr(dtype) == "List(<class 'narwhals.dtypes.Int64'>)"
+    assert repr(dtype) == "List(Int64)"
     dtype = nw.List(nw.List(nw.Int64))
     assert dtype == nw.List(nw.List(nw.Int64))
     assert dtype == nw.List
@@ -81,7 +78,7 @@ def test_array_valid() -> None:
     assert dtype != nw.Array(nw.Int64, 3)
     assert dtype != nw.Array(nw.Float32, 2)
     assert dtype != nw.Duration
-    assert repr(dtype) == "Array(<class 'narwhals.dtypes.Int64'>, shape=(2,))"
+    assert repr(dtype) == "Array(Int64, shape=(2,))"
     dtype = nw.Array(nw.Array(nw.Int64, 2), 2)
     assert dtype == nw.Array(nw.Array(nw.Int64, 2), 2)
     assert dtype == nw.Array
@@ -101,7 +98,7 @@ def test_struct_valid() -> None:
     assert dtype == nw.Struct
     assert dtype != nw.Struct([nw.Field("a", nw.Float32)])
     assert dtype != nw.Duration
-    assert repr(dtype) == "Struct({'a': <class 'narwhals.dtypes.Int64'>})"
+    assert repr(dtype) == "Struct({'a': Int64})"
 
     dtype = nw.Struct({"a": nw.Int64, "b": nw.String})
     assert dtype == nw.Struct({"a": nw.Int64, "b": nw.String})
@@ -120,7 +117,7 @@ def test_struct_reverse() -> None:
 
 def test_field_repr() -> None:
     dtype = nw.Field("a", nw.Int32)
-    assert repr(dtype) == "Field('a', <class 'narwhals.dtypes.Int32'>)"
+    assert repr(dtype) == "Field('a', Int32)"
 
 
 def test_field_eq() -> None:
@@ -159,6 +156,8 @@ def test_2d_array(constructor: Constructor, request: pytest.FixtureRequest) -> N
     for condition, reason in version_conditions:
         if condition:
             pytest.skip(reason)
+    if "pandas" in str(constructor):
+        pytest.importorskip("pyarrow")
 
     if any(x in str(constructor) for x in ("dask", "cudf", "pyspark")):
         request.applymarker(
@@ -176,6 +175,12 @@ def test_2d_array(constructor: Constructor, request: pytest.FixtureRequest) -> N
 
 
 def test_second_time_unit() -> None:
+    pytest.importorskip("pandas")
+    pytest.importorskip("pyarrow")
+    import numpy as np
+    import pandas as pd
+    import pyarrow as pa
+
     s: IntoSeries = pd.Series(np.array([np.datetime64("2020-01-01", "s")]))
     result = nw.from_native(s, series_only=True)
     expected_unit: Literal["ns", "us", "ms", "s"] = (
@@ -208,6 +213,9 @@ def test_second_time_unit() -> None:
 )
 @pytest.mark.filterwarnings("ignore:Setting an item of incompatible")
 def test_pandas_inplace_modification_1267() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     s = pd.Series([1, 2, 3])
     snw = nw.from_native(s, series_only=True)
     assert snw.dtype == nw.Int64
@@ -216,6 +224,10 @@ def test_pandas_inplace_modification_1267() -> None:
 
 
 def test_pandas_fixed_offset_1302() -> None:
+    pytest.importorskip("pyarrow")
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     result = nw.from_native(
         pd.Series(pd.to_datetime(["2020-01-01T00:00:00.000000000+01:00"])),
         series_only=True,
@@ -397,10 +409,14 @@ def test_huge_int_to_native() -> None:
 
 def test_cast_decimal_to_native() -> None:
     pytest.importorskip("duckdb")
+    pytest.importorskip("pandas")
     pytest.importorskip("polars")
+    pytest.importorskip("pyarrow")
 
     import duckdb
+    import pandas as pd
     import polars as pl
+    import pyarrow as pa
 
     data = {"a": [1, 2, 3]}
 
@@ -426,10 +442,19 @@ def test_cast_decimal_to_native() -> None:
 
 
 @pytest.mark.parametrize(
-    "categories",
-    [["a", "b"], [np.str_("a"), np.str_("b")], enum.Enum("Test", "a b"), [1, 2, 3]],
+    "categories", [["a", "b"], enum.Enum("Test", "a b"), [1, 2, 3], []]
 )
 def test_enum_valid(categories: Iterable[Any] | type[enum.Enum]) -> None:
+    dtype = nw.Enum(categories)
+    assert dtype == nw.Enum
+    assert len(dtype.categories) == len([*categories])
+
+
+def test_enum_valid_numpy() -> None:
+    pytest.importorskip("numpy")
+    import numpy as np
+
+    categories = [np.str_("a"), np.str_("b")]
     dtype = nw.Enum(categories)
     assert dtype == nw.Enum
     assert len(dtype.categories) == len([*categories])
@@ -455,6 +480,9 @@ def test_enum_categories_immutable() -> None:
 
 
 def test_enum_repr_pd() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df = nw.from_native(
         pd.DataFrame(
             {"a": ["broccoli", "cabbage"]}, dtype=pd.CategoricalDtype(ordered=True)
@@ -491,6 +519,20 @@ def test_enum_repr() -> None:
 def test_enum_hash() -> None:
     assert nw.Enum(["a", "b"]) in {nw.Enum(["a", "b"])}
     assert nw.Enum(["a", "b"]) not in {nw.Enum(["a", "b", "c"])}
+
+
+@pytest.mark.xfail(
+    reason="https://github.com/narwhals-dev/narwhals/pull/3213#discussion_r2437271987"
+)
+@pytest.mark.parametrize("dtype_name", ["Datetime", "Duration", "Enum"])
+def test_dtype_repr_versioned(dtype_name: str) -> None:
+    from narwhals.stable import v1 as nw_v1
+
+    dtype_class_main = getattr(nw, dtype_name)
+    dtype_class_v1 = getattr(nw_v1, dtype_name)
+
+    assert dtype_class_main is not dtype_class_v1
+    assert repr(dtype_class_main) != repr(dtype_class_v1)
 
 
 def test_datetime_w_tz_duckdb() -> None:

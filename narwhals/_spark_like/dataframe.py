@@ -5,7 +5,7 @@ from operator import and_
 from typing import TYPE_CHECKING, Any
 
 from narwhals._exceptions import issue_warning
-from narwhals._namespace import is_native_spark_like
+from narwhals._native import is_native_spark_like
 from narwhals._spark_like.utils import (
     catch_pyspark_connect_exception,
     catch_pyspark_sql_exception,
@@ -604,10 +604,4 @@ class SparkLikeLazyFrame(
             validate_backend_version=True,
         )
 
-    gather_every = not_implemented.deprecated(
-        "`LazyFrame.gather_every` is deprecated and will be removed in a future version."
-    )
     join_asof = not_implemented()
-    tail = not_implemented.deprecated(
-        "`LazyFrame.tail` is deprecated and will be removed in a future version."
-    )

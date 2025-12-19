@@ -4,7 +4,6 @@ import re
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Literal
 
-import pandas as pd
 import pytest
 
 import narwhals as nw
@@ -17,11 +16,11 @@ from tests.utils import (
 )
 
 if TYPE_CHECKING:
-    from narwhals.typing import IntoLazyFrameT, JoinStrategy, NativeDataFrame
+    from narwhals.typing import IntoDataFrame, IntoLazyFrameT, JoinStrategy
 
 
 def from_native_lazy(
-    native: IntoLazyFrameT | NativeDataFrame,
+    native: IntoLazyFrameT | IntoDataFrame,
 ) -> nw.LazyFrame[IntoLazyFrameT] | nw.LazyFrame[Any]:
     """Every join test [needs to use `.lazy()` for typing]*.
 
@@ -251,8 +250,8 @@ def test_cross_join_suffix(constructor: Constructor, suffix: str) -> None:
 
 def test_cross_join_non_pandas() -> None:
     _ = pytest.importorskip("modin")
-
     import modin.pandas as mpd
+    import pandas as pd
 
     data = {"antananarivo": [1, 3, 2]}
     df1 = nw.from_native(mpd.DataFrame(pd.DataFrame(data)), eager_only=True)
@@ -777,6 +776,8 @@ def test_join_duplicate_column_names(
         # need to investigate.
     ):
         request.applymarker(pytest.mark.xfail)
+    data = {"a": [1, 2, 3, 4, 5], "b": [6, 6, 6, 6, 6]}
+    df = nw.from_native(constructor(data))
     if any(
         x in str(constructor)
         for x in ("pandas", "pandas[pyarrow]", "pandas[nullable]", "dask")
@@ -799,8 +800,6 @@ def test_join_duplicate_column_names(
         request.applymarker(pytest.mark.xfail)
     else:
         exception = nw.exceptions.DuplicateError
-    data = {"a": [1, 2, 3, 4, 5], "b": [6, 6, 6, 6, 6]}
-    df = nw.from_native(constructor(data))
     if isinstance(df, nw.LazyFrame):
         with pytest.raises(exception):
             df.join(df, on=["a"]).join(df, on=["a"]).collect()
@@ -827,3 +826,100 @@ def test_join_same_laziness(constructor: Constructor) -> None:
     other = nw.from_native(frame_pl)
     with pytest.raises(TypeError, match=msg):
         frame.join(other, on="id")  # type: ignore[arg-type]
+
+
+# fmt: off
+@pytest.mark.parametrize(
+    ("how", "expected"),
+    [
+        ("inner", {"a": [1], "b": [1], "x": [1], "y": [1.2]}),
+        (
+            "left",
+            {
+                "a": [1, 1, None, None],
+                "b": [1, None, 5, None],
+                "x": [1, 2, 3, 4],
+                "y": [1.2, None, None, None],
+            },
+        ),
+        (
+            "full",
+            {
+                "a": [1, 1, None, None, None, None, None],
+                "b": [1, None, 5, None, None, None, None],
+                "x": [1, 2, 3, 4, None, None, None],
+                "a_right": [1, None, None, None, 1, None, None],
+                "b_right": [1, None, None, None, None, 5, None],
+                "y": [1.2, None, None, None, 3.4, 5.6, 7.8],
+            },
+        ),
+        (
+            "cross",
+            {
+                "a": [1, 1, 1, 1, 1, 1, 1, 1, None, None, None, None, None, None, None, None],
+                "b": [ 1, 1, 1, 1, None, None, None, None, 5, 5, 5, 5, None, None, None, None],
+                "x": [1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4],
+                "a_right": [ 1, 1, None, None, 1, 1, None, None, 1, 1, None, None, 1, 1, None, None],
+                "b_right": [ 1, None, 5, None, 1, None, 5, None, 1, None, 5, None, 1, None, 5, None],
+                "y": [ 1.2, 3.4, 5.6, 7.8, 1.2, 3.4, 5.6, 7.8, 1.2, 3.4, 5.6, 7.8, 1.2, 3.4, 5.6, 7.8],
+            },
+
+        ),
+        ("semi", {"a": [1], "b": [1], "x": [1]}),
+        ("anti", {"a": [1, None, None], "b": [None, 5, None], "x": [2, 3, 4]}),
+    ],
+)
+def test_join_on_null_values(
+    constructor: Constructor, how: JoinStrategy, expected: dict[str, list[Any]]
+) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 1, 4) and how=="cross":
+        pytest.skip()
+    # See https://github.com/narwhals-dev/narwhals/issues/3307
+    keys = {"a": [1, 1, None, None], "b": [1, None, 5, None]}
+    data_left = {**keys, "x": [1, 2, 3, 4]}
+    data_right = {**keys, "y": [1.2, 3.4, 5.6, 7.8]}
+
+    df_left = from_native_lazy(constructor(data_left))
+    df_right = from_native_lazy(constructor(data_right))
+
+    on = None if how == "cross" else list(keys)
+    sort_by = ["a", "x", "y"] if how in {"cross", "full"} else ["a", "x"]
+    result = df_left.join(df_right, on=on, how=how).sort(sort_by, nulls_last=True)
+    assert_equal_data(result, expected)
+# fmt: on
+
+
+@pytest.mark.filterwarnings(
+    "ignore:.*Merging dataframes with merge column data type mismatches:UserWarning:dask"
+)
+def test_full_join_with_overlapping_non_key_columns_and_nulls(
+    constructor: Constructor,
+) -> None:
+    data_left = {
+        "id": [1, 2, 3],
+        "shared_col": ["a", "b", "c"],  # Overlapping, not a join key
+        "left_only": [10, 20, 30],
+    }
+    data_right = {
+        "id": [2, 3, None],  # Has null in join key
+        "shared_col": ["x", "y", "z"],  # Overlapping, not a join key
+        "right_only": [100, 200, 300],
+    }
+
+    df_left = from_native_lazy(constructor(data_left))
+    df_right = from_native_lazy(constructor(data_right))
+
+    result = df_left.join(df_right, on="id", how="full", suffix="_r").sort(
+        "id", nulls_last=True
+    )
+
+    expected = {
+        "id": [1, 2, 3, None],
+        "shared_col": ["a", "b", "c", None],
+        "left_only": [10, 20, 30, None],
+        "id_r": [None, 2, 3, None],
+        "shared_col_r": [None, "x", "y", "z"],
+        "right_only": [None, 100, 200, 300],
+    }
+
+    assert_equal_data(result, expected)
