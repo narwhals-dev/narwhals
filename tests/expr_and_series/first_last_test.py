@@ -180,17 +180,61 @@ def test_first_expr_over_order_by_partition_by(
 
 def test_first_expr_in_group_by(constructor: Constructor) -> None:
     data = {
-        "grp": [1, 1, 2],
-        "a": [None, 4, 3],
-        "b": [9, 7, 8],
-        "c": [9, None, 8],
-        "idx": [9, None, 7],
+        "grp": [1, 1, 1, 2],
+        "a": [None, 4, 9, 3],
+        "b": [9, 7, 10, 8],
+        "c": [9, None, 10, 8],
+        "idx": [9, None, None, 7],
+        "idx2": [9, 8, 7, 7],
     }
     df = nw.from_native(constructor(data))
     result = (
         df.group_by("grp")
-        .agg(nw.col("a", "b", "c").first(order_by=["idx"]).name.suffix("_first"))
+        .agg(nw.col("a", "b", "c").first(order_by="idx").name.suffix("_first"))
         .sort("grp")
     )
     expected = {"grp": [1, 2], "a_first": [4, 3], "b_first": [7, 8], "c_first": [None, 8]}
+    assert_equal_data(result, expected)
+    result = (
+        df.group_by("grp")
+        .agg(nw.col("a", "b", "c").first(order_by=["idx", "idx2"]).name.suffix("_first"))
+        .sort("grp")
+    )
+    expected = {"grp": [1, 2], "a_first": [9, 3], "b_first": [10, 8], "c_first": [10, 8]}
+    assert_equal_data(result, expected)
+
+
+def test_first_expr_broadcasting(constructor: Constructor) -> None:
+    data = {
+        "grp": [1, 1, 1, 2],
+        "a": [None, 4, 9, 3],
+        "b": [9, 7, 10, 8],
+        "c": [9, None, 10, 8],
+        "idx": [9, None, None, 7],
+        "idx2": [9, 8, 7, 7],
+    }
+    df = nw.from_native(constructor(data))
+    result = df.select(
+        "idx", "idx2", nw.col("a", "b", "c").first(order_by="idx").name.suffix("_first")
+    ).sort("idx", "idx2")
+    expected = {
+        "idx": [None, None, 7, 9],
+        "idx2": [7, 8, 7, 9],
+        "a_first": [4, 4, 4, 4],
+        "b_first": [7, 7, 7, 7],
+        "c_first": [None, None, None, None],
+    }
+    assert_equal_data(result, expected)
+    result = df.select(
+        "idx",
+        "idx2",
+        nw.col("a", "b", "c").first(order_by=["idx", "idx2"]).name.suffix("_first"),
+    ).sort("idx", "idx2")
+    expected = {
+        "idx": [None, None, 7, 9],
+        "idx2": [7, 8, 7, 9],
+        "a_first": [9, 9, 9, 9],
+        "b_first": [10, 10, 10, 10],
+        "c_first": [10, 10, 10, 10],
+    }
     assert_equal_data(result, expected)
