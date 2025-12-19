@@ -542,25 +542,25 @@ def list_sort(
     )
     nulls_position: Literal["at_start", "at_end"] = "at_end" if nulls_last else "at_start"
     idx, v = "idx", "values"
-    len_gt_0 = pc.greater(pc.list_value_length(array), lit(0))
+    is_not_sorted = pc.greater(pc.list_value_length(array), lit(0))
     indexed = pa.Table.from_arrays(
         [arange(start=0, end=len(array), step=1), array], names=[idx, v]
     )
-    valid = indexed.filter(len_gt_0)
-    invalid = indexed.filter(pc.or_kleene(array.is_null(), pc.invert(len_gt_0)))
-    agg = pa.Table.from_arrays(
+    not_sorted_part = indexed.filter(is_not_sorted)
+    pass_through = indexed.filter(pc.fill_null(pc.invert(is_not_sorted), True))  # pyright: ignore[reportArgumentType]
+    exploded = pa.Table.from_arrays(
         [pc.list_flatten(array), pc.list_parent_indices(array)], names=[v, idx]
     )
     sorted_indices = pc.sort_indices(
-        agg,
+        exploded,
         sort_keys=[(idx, "ascending"), (v, sort_direction)],
         null_placement=nulls_position,
     )
-    offsets = valid.column(v).combine_chunks().offsets  # type: ignore[attr-defined]
+    offsets = not_sorted_part.column(v).combine_chunks().offsets  # type: ignore[attr-defined]
     sorted_imploded = pa.ListArray.from_arrays(
-        offsets, pa.array(agg.take(sorted_indices).column(v))
+        offsets, pa.array(exploded.take(sorted_indices).column(v))
     )
-    valid_finished = pa.Table.from_arrays(
-        [valid.column(idx), sorted_imploded], names=[idx, v]
+    imploded_by_idx = pa.Table.from_arrays(
+        [not_sorted_part.column(idx), sorted_imploded], names=[idx, v]
     )
-    return pa.concat_tables([valid_finished, invalid]).sort_by(idx).column(v)
+    return pa.concat_tables([imploded_by_idx, pass_through]).sort_by(idx).column(v)
