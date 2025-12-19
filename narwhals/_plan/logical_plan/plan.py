@@ -29,8 +29,8 @@ class Select(SingleInput):
     # `options: ProjectionOptions`
 
 
-# NOTE: Probably rename to `WithColumns`
-class HStack(SingleInput):
+# `DslPlan::HStack`
+class WithColumns(SingleInput):
     __slots__ = ("exprs",)
     exprs: Seq[ExprIR]
     # NOTE: Same `ProjectionOptions` comment as `Select`
@@ -47,15 +47,16 @@ class GroupBy(SingleInput):
     aggs: Seq[ExprIR]
 
 
-# NOTE: Probably rename to `Unique`
-class Distinct(SingleInput):
-    __slots__ = ("options",)
-    options: DistinctOptions
+# `DslPlan::Distinct`
+class Unique(SingleInput):
+    __slots__ = ("options", "subset")
+    subset: Seq[SelectorIR] | None
+    options: UniqueOptions
 
 
 class Sort(SingleInput):
     __slots__ = ("by", "options")
-    by: Seq[ExprIR]
+    by: Seq[SelectorIR]
     options: SortMultipleOptions
 
 
@@ -76,20 +77,22 @@ class Join(LogicalPlan):
     suffix: str
 
 
-# NOTE: Probably rename to `VConcat`
-class Union(LogicalPlan):
-    # `concat(how= "vertical" | "diagonal")`
+# `DslPlan::Union`
+class VConcat(LogicalPlan):
+    """`concat(how= "vertical" | "diagonal")`."""
+
     __slots__ = ("inputs", "options")
     inputs: Seq[LogicalPlan]
-    options: UnionOptions
+    options: VConcatOptions
 
 
 class HConcat(LogicalPlan):
-    # `concat(how="horizontal")`
+    """`concat(how="horizontal")`."""
+
     __slots__ = ("inputs", "strict")
     inputs: Seq[LogicalPlan]
     strict: bool
-    """Require all DataFrames to be the same height, raising an error if not, default False"""
+    """Require all `inputs` to be the same height, raising an error if not, default False"""
 
 
 # NOTE: `DslFunction`
@@ -126,17 +129,13 @@ class Rename(LpFunction):
 # NOTE: Options classes (eventually move to `_plan.options`)
 
 
-# NOTE: Roughly mirroring `polars`, but don't like this
-# - `subset` will be (`SelectorIR` or `Seq[SelectorIR]`) | None
-# - I would've had this as `Distinct.subset`, not `Distinct.options.subset`
-class DistinctOptions(Immutable):
-    __slots__ = ("keep", "maintain_order", "subset")
-    subset: Seq[ExprIR] | None
+class UniqueOptions(Immutable):
+    __slots__ = ("keep", "maintain_order")
     keep: UniqueKeepStrategy
     maintain_order: bool
 
 
-class UnionOptions(Immutable):
+class VConcatOptions(Immutable):
     __slots__ = ("diagonal", "maintain_order", "to_supertypes")
     diagonal: bool
     """True for `how="diagonal"`"""
