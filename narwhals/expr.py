@@ -1617,7 +1617,7 @@ class Expr:
             ExprNode(ExprKind.ELEMENTWISE, "clip", lower_bound, upper_bound)
         )
 
-    def first(self) -> Self:
+    def first(self, order_by: Sequence[str] | None = None) -> Self:
         """Get the first value.
 
         Notes:
@@ -1647,7 +1647,9 @@ class Expr:
             |    1  2  None    |
             └──────────────────┘
         """
-        return self._append_node(ExprNode(ExprKind.ORDERABLE_AGGREGATION, "first"))
+        if order_by is None:
+            return self._append_node(ExprNode(ExprKind.ORDERABLE_AGGREGATION, "first"))
+        return self._append_node(ExprNode(ExprKind.AGGREGATION, "first", order_by=order_by))
 
     def last(self) -> Self:
         """Get the last value.
