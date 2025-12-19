@@ -1,15 +1,21 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Protocol
 
 from narwhals._plan._immutable import Immutable
 from narwhals._utils import zip_strict
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
+    from typing_extensions import Self, TypeAlias
+
     from narwhals._plan.expressions import ExprIR, SelectorIR
     from narwhals._plan.options import ExplodeOptions, SortMultipleOptions
     from narwhals._plan.typing import Seq
     from narwhals.typing import JoinStrategy, UniqueKeepStrategy
+
+Incomplete: TypeAlias = Any
 
 
 # `DslPlan`
@@ -73,8 +79,13 @@ class Join(LogicalPlan):
     input_right: LogicalPlan
     left_on: Seq[str]
     right_on: Seq[str]
-    how: JoinStrategy
-    suffix: str
+    options: JoinOptions
+
+
+class MapFunction(SingleInput):
+    # `polars` says this is for UDFs, but uses it for: `Rename`, `RowIndex`, `Unnest`, `Explode`
+    __slots__ = ("function",)
+    function: LpFunction
 
 
 # `DslPlan::Union`
@@ -151,3 +162,42 @@ class VConcatOptions(Immutable):
 
     [`union`]: https://github.com/pola-rs/polars/pull/24298
     """
+
+
+class JoinOptions(Immutable):
+    __slots__ = ("how", "suffix")
+    how: JoinStrategy
+    suffix: str
+
+
+# NOTE: Using a `Protocol` to allow empty body(s)
+# Just trying to scope things out
+class LpBuilder(Protocol):
+    def project(self, exprs: Seq[ExprIR], options: Incomplete) -> Self: ...
+    def with_columns(self, exprs: Seq[ExprIR], options: Incomplete) -> Self: ...
+    def filter(self, predicate: ExprIR) -> Self: ...
+    def group_by(self, keys: Seq[ExprIR], aggs: Seq[ExprIR]) -> Self: ...
+    def sort(self, by: Seq[SelectorIR], options: SortMultipleOptions) -> Self: ...
+    def join(
+        self,
+        other: LogicalPlan,
+        left_on: Seq[str],
+        right_on: Seq[str],
+        options: JoinOptions,
+    ) -> Self: ...
+    def slice(self, offset: int, length: int | None = None) -> Self: ...
+    def unique(self, subset: Seq[SelectorIR] | None, options: UniqueOptions) -> Self: ...
+
+    # Sugar
+    def drop(self, columns: SelectorIR) -> Self: ...
+    def fill_null(
+        self, fill_value: ExprIR
+    ) -> Self: ...  # ProjectionOptions {duplicate_check: false}
+    # This has a pretty cool impl https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/crates/polars-plan/src/dsl/builder_dsl.rs#L172-L175
+    def drop_nulls(self, subset: SelectorIR | None) -> Self: ...
+
+    # `MapFunction`
+    def explode(self, columns: SelectorIR, options: ExplodeOptions) -> Self: ...
+    def unnest(self, columns: SelectorIR) -> Self: ...
+    def rename(self, mapping: Mapping[str, str]) -> Self: ...
+    def with_row_index(self, name: str = "index") -> Self: ...
