@@ -628,7 +628,7 @@ jobs:
         run: |
           cd fairlearn
           # TODO(FBruzzesi): Align with fairlearn team to get a minimal requirement to test narwhals features
-          uv pip install -e . -r requirements.txt matplotlib polars pyarrow pytest typing-extensions --system
+          uv pip install -e . -r requirements.txt lightgbm matplotlib polars pyarrow pytest typing-extensions --system
       - name: install-narwhals-dev
         run: |
           cd fairlearn
