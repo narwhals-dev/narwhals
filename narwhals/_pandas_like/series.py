@@ -821,10 +821,12 @@ class PandasLikeSeries(EagerSeries[Any]):
             import pyarrow.compute as pc
 
             result_native = self._apply_pyarrow_compute_func(
-                native=native, pc_op=pc.floor
+                native=native, pc_func=pc.floor
             )
         else:
-            result_native = self._apply_array_func(native, self._array_funcs.floor)
+            result_native = self._apply_array_func(
+                native=native, array_func=self._array_funcs.floor
+            )
 
         return self._with_native(result_native)
 
@@ -833,9 +835,13 @@ class PandasLikeSeries(EagerSeries[Any]):
         if self.is_native_dtype_pyarrow(native.dtype):
             import pyarrow.compute as pc
 
-            result_native = self._apply_pyarrow_compute_func(native=native, pc_op=pc.ceil)
+            result_native = self._apply_pyarrow_compute_func(
+                native=native, pc_func=pc.ceil
+            )
         else:
-            result_native = self._apply_array_func(native, self._array_funcs.ceil)
+            result_native = self._apply_array_func(
+                native=native, array_func=self._array_funcs.ceil
+            )
         return self._with_native(result_native)
 
     def to_dummies(self, *, separator: str, drop_first: bool) -> PandasLikeDataFrame:
@@ -1068,15 +1074,17 @@ class PandasLikeSeries(EagerSeries[Any]):
             def pc_log(ca: ChunkedArrayAny) -> ChunkedArrayAny:
                 return pc.logb(ca, base)  # type: ignore[return-value]
 
-            result_native = self._apply_pyarrow_compute_func(native=native, pc_op=pc_log)
+            result_native = self._apply_pyarrow_compute_func(
+                native=native, pc_func=pc_log
+            )
 
         else:
             log_func = self._array_funcs.log
 
             def array_log(arr: NativeSeriesT) -> NativeSeriesT:
-                return log_func(arr) / log_func(base)
+                return log_func(arr) / log_func(base)  # pyright: ignore[reportArgumentType, reportCallIssue]
 
-            result_native = self._apply_array_func(native, array_log)
+            result_native = self._apply_array_func(native=native, array_func=array_log)
 
         return self._with_native(result_native)
 
@@ -1086,9 +1094,13 @@ class PandasLikeSeries(EagerSeries[Any]):
         if self.is_native_dtype_pyarrow(native.dtype):
             import pyarrow.compute as pc
 
-            result_native = self._apply_pyarrow_compute_func(native=native, pc_op=pc.exp)
+            result_native = self._apply_pyarrow_compute_func(
+                native=native, pc_func=pc.exp
+            )
         else:
-            result_native = self._apply_array_func(native, self._array_funcs.exp)
+            result_native = self._apply_array_func(
+                native=native, array_func=self._array_funcs.exp
+            )
 
         return self._with_native(result_native)
 
@@ -1100,13 +1112,13 @@ class PandasLikeSeries(EagerSeries[Any]):
         return get_dtype_backend(native_dtype, implementation=impl) == "pyarrow"
 
     def _apply_pyarrow_compute_func(
-        self, native: pd.Series[Any], pc_op: Callable[[ChunkedArrayAny], ChunkedArrayAny]
-    ) -> pd.Series[Any]:
+        self, native: NativeSeriesT, pc_func: Callable[[ChunkedArrayAny], ChunkedArrayAny]
+    ) -> NativeSeriesT:
         from narwhals._arrow.utils import native_to_narwhals_dtype
 
         native_cls = type(native)
         ca = native.array._pa_array  # type: ignore[attr-defined]
-        result_arr = pc_op(ca)
+        result_arr = pc_func(ca)
         nw_dtype = native_to_narwhals_dtype(result_arr.type, self._version)
         out_dtype = narwhals_to_native_dtype(
             nw_dtype, "pyarrow", self._implementation, self._version
@@ -1116,9 +1128,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         )
 
     def _apply_array_func(
-        self,
-        native: NativeSeriesT,
-        array_func: Callable[[NativeSeriesT], NativeSeriesT | _1DArray],
+        self, native: NativeSeriesT, array_func: Callable[[NativeSeriesT], NativeSeriesT]
     ) -> NativeSeriesT:
         native_cls = type(native)
         result_arr = array_func(native)

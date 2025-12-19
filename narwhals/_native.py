@@ -228,6 +228,15 @@ class _BasePandasLikeFrame(NativeDataFrame, _BasePandasLike, Protocol): ...
 
 
 class _BasePandasLikeSeries(NativeSeries, _BasePandasLike, Protocol):
+    name: Any | None
+
+    def __init__(
+        self,
+        data: Iterable[Any] | None = None,
+        index: Iterable[Any] | None = None,
+        dtype: Any | None = None,
+        name: Any | None = None,
+    ) -> None: ...
     def where(self, cond: Any, other: Any = ..., /) -> Self | Incomplete: ...
 
 
