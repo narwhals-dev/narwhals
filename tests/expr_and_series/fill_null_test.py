@@ -2,18 +2,22 @@ from __future__ import annotations
 
 import warnings
 from contextlib import nullcontext as does_not_raise
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 import narwhals as nw
 from tests.utils import (
+    DASK_VERSION,
     DUCKDB_VERSION,
     POLARS_VERSION,
     Constructor,
     ConstructorEager,
     assert_equal_data,
 )
+
+if TYPE_CHECKING:
+    from narwhals.typing import FillNullStrategy
 
 
 def test_fill_null(constructor: Constructor) -> None:
@@ -34,6 +38,9 @@ def test_fill_null(constructor: Constructor) -> None:
 
 
 def test_fill_null_w_aggregate(constructor: Constructor) -> None:
+    if "dask" in str(constructor) and DASK_VERSION < (2024, 12):
+        # Bug in old version of Dask.
+        pytest.skip()
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
     data = {"a": [0.5, None, 2.0, 3.0, 4.5], "b": ["xx", "yy", "zz", None, "yy"]}
@@ -422,3 +429,39 @@ def test_fill_null_strategies_with_partition_by(
         "idx": list(range(9)),
     }
     assert_equal_data(result_backward, expected_backward)
+
+
+@pytest.mark.parametrize(
+    ("values", "strategy", "limit", "expected"),
+    [
+        ([None, None, 1, None, None, 2], "forward", 2, [None, None, 1, 1, 1, 2]),
+        ([1, None, None, 2, None, None], "backward", 2, [1, 2, 2, 2, None, None]),
+        ([None, None, None, None], "forward", 2, [None, None, None, None]),
+        ([None, None, None, None], "backward", 2, [None, None, None, None]),
+        ([1, None, None, None, None], "forward", 2, [1, 1, 1, None, None]),
+        ([None, None, None, None, 5], "backward", 2, [None, None, 5, 5, 5]),
+        ([None, None, 3, None, None], "forward", 1, [None, None, 3, 3, None]),
+        ([None, None, 3, None, None], "backward", 1, [None, 3, 3, None, None]),
+        ([1, None, None, 2, None, None, 3], "forward", 1, [1, 1, None, 2, 2, None, 3]),
+        ([1, None, None, 2, None, None, 3], "backward", 1, [1, None, 2, 2, None, 3, 3]),
+    ],
+)
+def test_fill_null_expr_limits(
+    constructor_eager: ConstructorEager,
+    values: list[int | None],
+    strategy: FillNullStrategy,
+    limit: int,
+    expected: list[int | None],
+    request: pytest.FixtureRequest,
+) -> None:
+    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 10):
+        pytest.skip()
+
+    if "cudf" in str(constructor_eager):
+        reason = "The limit keyword is not supported"
+        request.applymarker(pytest.mark.xfail(reason=reason))
+
+    data = {"a": values}
+    df = nw.from_native(constructor_eager(data))
+    result = df.with_columns(nw.col("a").fill_null(strategy=strategy, limit=limit))
+    assert_equal_data(result, {"a": expected})

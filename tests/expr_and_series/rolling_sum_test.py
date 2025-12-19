@@ -4,7 +4,6 @@ import random
 from typing import Any
 
 import hypothesis.strategies as st
-import pandas as pd
 import pytest
 from hypothesis import given
 
@@ -277,7 +276,9 @@ def test_rolling_sum_series_invalid_params(
 @pytest.mark.filterwarnings("ignore:.*is_sparse is deprecated:DeprecationWarning")
 @pytest.mark.slow
 def test_rolling_sum_hypothesis(center: bool, values: list[float]) -> None:  # noqa: FBT001
+    pytest.importorskip("pandas")
     pytest.importorskip("pyarrow")
+    import pandas as pd
     import pyarrow as pa
 
     s = pd.Series(values)

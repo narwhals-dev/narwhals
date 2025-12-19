@@ -190,7 +190,8 @@ class NativeFrame(Protocol):
     def join(self, *args: Any, **kwargs: Any) -> Any: ...
 
 
-class NativeDataFrame(Sized, NativeFrame, Protocol): ...
+class NativeDataFrame(Sized, NativeFrame, Protocol):
+    def drop(self, *args: Any, **kwargs: Any) -> Any: ...
 
 
 class NativeLazyFrame(NativeFrame, Protocol):
@@ -199,6 +200,8 @@ class NativeLazyFrame(NativeFrame, Protocol):
 
 class NativeSeries(Sized, Iterable[Any], Protocol):
     def filter(self, *args: Any, **kwargs: Any) -> Any: ...
+    def value_counts(self, *args: Any, **kwargs: Any) -> Any: ...
+    def unique(self, *args: Any, **kwargs: Any) -> Any: ...
 
 
 class _BasePandasLike(Sized, Protocol):
@@ -225,6 +228,17 @@ class _BasePandasLikeFrame(NativeDataFrame, _BasePandasLike, Protocol): ...
 
 
 class _BasePandasLikeSeries(NativeSeries, _BasePandasLike, Protocol):
+    name: Any | None
+
+    def __init__(
+        self,
+        data: Iterable[Any] | None = None,
+        index: Iterable[Any] | None = None,
+        dtype: Any | None = None,
+        name: Any | None = None,
+        *args: Any,
+        **kwargs: Any,
+    ) -> None: ...
     def where(self, cond: Any, other: Any = ..., /) -> Self | Incomplete: ...
 
 

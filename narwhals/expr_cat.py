@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Generic, TypeVar
 
+from narwhals._expression_parsing import ExprKind, ExprNode
+
 if TYPE_CHECKING:
     from narwhals.expr import Expr
 
@@ -34,6 +36,6 @@ class ExprCatNamespace(Generic[ExprT]):
             │ mango  │
             └────────┘
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).cat.get_categories()
+        return self._expr._append_node(
+            ExprNode(ExprKind.FILTRATION, "cat.get_categories")
         )

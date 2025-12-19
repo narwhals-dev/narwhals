@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import operator
-from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Callable, TypeVar, cast
 
 import ibis
 
@@ -24,6 +24,7 @@ from narwhals._utils import (
     Implementation,
     Version,
     extend_bool,
+    no_default,
     not_implemented,
     zip_strict,
 )
@@ -41,9 +42,9 @@ if TYPE_CHECKING:
         EvalSeries,
         WindowFunction,
     )
-    from narwhals._expression_parsing import ExprKind, ExprMetadata
     from narwhals._ibis.dataframe import IbisLazyFrame
     from narwhals._ibis.namespace import IbisNamespace
+    from narwhals._typing import NoDefault
     from narwhals._utils import _LimitedContext
     from narwhals.typing import IntoDType, RankMethod, RollingInterpolationMethod
 
@@ -69,7 +70,6 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         self._evaluate_output_names = evaluate_output_names
         self._alias_output_names = alias_output_names
         self._version = version
-        self._metadata: ExprMetadata | None = None
         self._window_function: IbisWindowFunction | None = window_function
 
     @property
@@ -127,12 +127,18 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
             order_by=self._sort(*order_by), include_null=True
         )
 
+    def _any_value(self, expr: ir.Value, *, ignore_nulls: bool) -> ir.Value:
+        # !NOTE: ibis arbitrary returns a random non-null value
+        # See: https://ibis-project.org/reference/expression-generic.html#ibis.expr.types.generic.Column.arbitrary
+        expr = cast("ir.Column", expr)
+        return expr.arbitrary() if ignore_nulls else expr.first(include_null=True)
+
     def __narwhals_namespace__(self) -> IbisNamespace:  # pragma: no cover
         from narwhals._ibis.namespace import IbisNamespace
 
         return IbisNamespace(version=self._version)
 
-    def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
+    def broadcast(self) -> Self:
         # Ibis does its own broadcasting.
         return self
 
@@ -184,11 +190,11 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
             version=context._version,
         )
 
-    def _with_binary(self, op: Callable[..., ir.Value], other: Self | Any) -> Self:
+    def _with_binary(self, op: Callable[..., ir.Value], other: Self) -> Self:
         return self._with_callable(op, other=other)
 
     def _with_elementwise(
-        self, op: Callable[..., ir.Value], /, **expressifiable_args: Self | Any
+        self, op: Callable[..., ir.Value], /, **expressifiable_args: Self
     ) -> Self:
         return self._with_callable(op, **expressifiable_args)
 
@@ -207,18 +213,6 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
             msg = "Only linear interpolation methods are supported for Ibis quantile."
             raise NotImplementedError(msg)
         return self._with_callable(lambda expr: expr.quantile(quantile))
-
-    def clip(self, lower_bound: Any, upper_bound: Any) -> Self:
-        def _clip(
-            expr: ir.NumericValue, lower: Any | None = None, upper: Any | None = None
-        ) -> ir.NumericValue:
-            return expr.clip(lower=lower, upper=upper)
-
-        if lower_bound is None:
-            return self._with_callable(_clip, upper=upper_bound)
-        if upper_bound is None:
-            return self._with_callable(_clip, lower=lower_bound)
-        return self._with_callable(_clip, lower=lower_bound, upper=upper_bound)
 
     def n_unique(self) -> Self:
         return self._with_callable(
@@ -240,19 +234,25 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         return self._with_callable(lambda expr: expr.isnull().sum())
 
     def is_nan(self) -> Self:
-        def func(expr: ir.FloatingValue | Any) -> ir.Value:
+        def func(expr: ir.FloatingValue) -> ir.Value:
             otherwise = expr.isnan() if is_floating(expr.type()) else False
             return ibis.ifelse(expr.isnull(), None, otherwise)
 
         return self._with_callable(func)
 
     def is_finite(self) -> Self:
-        return self._with_callable(lambda expr: ~(expr.isinf() | expr.isnan()))
+        def func(expr: ir.IntegerValue | ir.FloatingValue) -> ir.Value:
+            if is_floating(expr.type()):
+                expr = cast("ir.FloatingValue", expr)
+                return ~(expr.isinf() | expr.isnan())
+            return ibis.ifelse(expr.isnull(), None, lit(True))
+
+        return self._with_callable(func)
 
     def is_in(self, other: Sequence[Any]) -> Self:
         return self._with_callable(lambda expr: expr.isin(other))
 
-    def fill_null(self, value: Self | Any, strategy: Any, limit: int | None) -> Self:
+    def fill_null(self, value: Self | None, strategy: Any, limit: int | None) -> Self:
         # Ibis doesn't yet allow ignoring nulls in first/last with window functions, which makes forward/backward
         # strategies inconsistent when there are nulls present: https://github.com/ibis-project/ibis/issues/9539
         if strategy is not None:
@@ -265,6 +265,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         def _fill_null(expr: ir.Value, value: ir.Scalar) -> ir.Value:
             return expr.fill_null(value)
 
+        assert value is not None  # noqa: S101
         return self._with_callable(_fill_null, value=value)
 
     def cast(self, dtype: IntoDType) -> Self:
@@ -321,6 +322,44 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
             ]
 
         return self._with_callable(_rank, window_f)
+
+    def replace_strict(
+        self,
+        default: IbisExpr | NoDefault,
+        old: Sequence[Any],
+        new: Sequence[Any],
+        *,
+        return_dtype: IntoDType | None,
+    ) -> Self:
+        if default is no_default:
+            msg = "`replace_strict` requires an explicit value for `default` for ibis backend."
+            raise ValueError(msg)
+        ns = self.__narwhals_namespace__()
+
+        keys = list(old)
+        values = list(new)
+        mapping_expr = ibis.map(keys, values)
+
+        def func(df: IbisLazyFrame) -> list[ir.Value]:
+            default_col = df._evaluate_single_output_expr(default)
+
+            results = [
+                ns._when(expr.isin(keys), mapping_expr[expr], default_col)
+                for expr in self(df)
+            ]
+
+            if return_dtype:
+                native_dtype = narwhals_to_native_dtype(return_dtype, self._version)
+                return [res.cast(native_dtype) for res in results]  # pyright: ignore[reportArgumentType, reportCallIssue]
+            return results
+
+        return self.__class__(
+            func,
+            None,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
+        )
 
     @property
     def str(self) -> IbisExprStringNamespace:

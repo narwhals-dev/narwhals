@@ -2,8 +2,18 @@ from __future__ import annotations
 
 import math
 from collections.abc import Iterable, Iterator, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Generic, Literal, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    ClassVar,
+    Generic,
+    Literal,
+    cast,
+    overload,
+)
 
+from narwhals._expression_parsing import ExprKind, ExprNode
 from narwhals._utils import (
     Implementation,
     Version,
@@ -14,12 +24,16 @@ from narwhals._utils import (
     is_compliant_series,
     is_eager_allowed,
     is_index_selector,
+    no_default,
     qualified_type_name,
     supports_arrow_c_stream,
+    unstable,
 )
 from narwhals.dependencies import is_numpy_array, is_numpy_array_1d, is_numpy_scalar
 from narwhals.dtypes import _validate_dtype, _validate_into_dtype
 from narwhals.exceptions import ComputeError, InvalidOperationError
+from narwhals.expr import Expr
+from narwhals.functions import col
 from narwhals.series_cat import SeriesCatNamespace
 from narwhals.series_dt import SeriesDateTimeNamespace
 from narwhals.series_list import SeriesListNamespace
@@ -38,7 +52,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._compliant import CompliantSeries
-    from narwhals._typing import EagerAllowed, IntoBackend
+    from narwhals._typing import EagerAllowed, IntoBackend, NoDefault
     from narwhals.dataframe import DataFrame, MultiIndexSelector
     from narwhals.dtypes import DType
     from narwhals.typing import (
@@ -89,6 +103,11 @@ class Series(Generic[IntoSeriesT]):
         from narwhals.dataframe import DataFrame
 
         return DataFrame
+
+    def _to_expr(self) -> Expr:
+        return Expr(
+            ExprNode(ExprKind.SERIES, "_expr._from_series", series=self._compliant)
+        )
 
     def __init__(
         self, series: Any, *, level: Literal["full", "lazy", "interchange"]
@@ -881,6 +900,18 @@ class Series(Generic[IntoSeriesT]):
             5    3
             dtype: int64
         """
+        if lower_bound is None:
+            return self._with_compliant(
+                self._compliant_series.clip_upper(
+                    upper_bound=self._extract_native(upper_bound)
+                )
+            )
+        if upper_bound is None:
+            return self._with_compliant(
+                self._compliant_series.clip_lower(
+                    lower_bound=self._extract_native(lower_bound)
+                )
+            )
         return self._with_compliant(
             self._compliant_series.clip(
                 lower_bound=self._extract_native(lower_bound),
@@ -1258,20 +1289,26 @@ class Series(Generic[IntoSeriesT]):
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any] | None = None,
         *,
+        default: Any | NoDefault = no_default,
         return_dtype: IntoDType | None = None,
     ) -> Self:
         """Replace all values by different values.
-
-        This function must replace all non-null input values (else it raises an error).
 
         Arguments:
             old: Sequence of values to replace. It also accepts a mapping of values to
                 their replacement as syntactic sugar for
                 `replace_strict(old=list(mapping.keys()), new=list(mapping.values()))`.
             new: Sequence of values to replace by. Length must match the length of `old`.
+            default: Set values that were not replaced to this value. If no default is
+                specified, (default), an error is raised if any values were not replaced.
+                Accepts expression input. Non-expression inputs are parsed as literals.
             return_dtype: The data type of the resulting expression. If set to `None`
                 (default), the data type is determined automatically based on the other
                 inputs.
+
+        Raises:
+            InvalidOperationError: If any non-null values in the original column were not
+                replaced, and no default was specified.
 
         Examples:
             >>> import pandas as pd
@@ -1286,6 +1323,21 @@ class Series(Generic[IntoSeriesT]):
             2      one
             3      two
             Name: a, dtype: object
+
+            Replace values and set a default for values not in the mapping:
+
+            >>> s_native = pd.Series([1, 2, 3, 4], name="a")
+            >>> s_default = pd.Series(["beluga", "narwhal", "orca", "vaquita"])
+            >>> nw.from_native(s_native, series_only=True).replace_strict(
+            ...     {1: "one", 2: "two"},
+            ...     default=nw.from_native(s_default, series_only=True),
+            ...     return_dtype=nw.String,
+            ... ).to_native()
+            0        one
+            1        two
+            2       orca
+            3    vaquita
+            Name: a, dtype: object
         """
         if new is None:
             if not isinstance(old, Mapping):
@@ -1295,8 +1347,16 @@ class Series(Generic[IntoSeriesT]):
             new = list(old.values())
             old = list(old.keys())
 
+        assert isinstance(new, Sequence)  # noqa: S101, help mypy
+        assert isinstance(old, Sequence)  # noqa: S101, help mypy
+
         return self._with_compliant(
-            self._compliant_series.replace_strict(old, new, return_dtype=return_dtype)
+            self._compliant_series.replace_strict(
+                old=old,
+                new=new,
+                default=self._extract_native(default),
+                return_dtype=return_dtype,
+            )
         )
 
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
@@ -1470,7 +1530,7 @@ class Series(Generic[IntoSeriesT]):
         Arguments:
             lower_bound: Lower bound value.
             upper_bound: Upper bound value.
-            closed: Define which sides of the interval are closed (inclusive).
+            closed: Define which sides of the interval are closed (inclusive). Options are {"left", "right", "none", "both"}.
 
         Notes:
             If the value of the `lower_bound` is greater than that of the `upper_bound`,
@@ -1969,6 +2029,9 @@ class Series(Generic[IntoSeriesT]):
             >>> nw.from_native(pl.Series("a", [9, 8, 7]), series_only=True).item(-1)
             7
         """
+        if index is not None and index >= len(self):
+            msg = f"index {index} out of range for series of length {len(self)}"
+            raise IndexError(msg)
         return self._compliant_series.item(index=index)
 
     def head(self, n: int = 10) -> Self:
@@ -2765,27 +2828,44 @@ class Series(Generic[IntoSeriesT]):
         """
         if not self.dtype.is_numeric():
             msg = (
-                f"is_close operation not supported for dtype `{self.dtype}`\n\n"
+                f"`is_close` operation not supported for dtype `{self.dtype}`\n\n"
                 "Hint: `is_close` is only supported for numeric types"
             )
             raise InvalidOperationError(msg)
-
-        if abs_tol < 0:
-            msg = f"`abs_tol` must be non-negative but got {abs_tol}"
-            raise ComputeError(msg)
-
-        if not (0 <= rel_tol < 1):
-            msg = f"`rel_tol` must be in the range [0, 1) but got {rel_tol}"
-            raise ComputeError(msg)
-
-        return self._with_compliant(
-            self._compliant_series.is_close(
-                self._extract_native(other),
-                abs_tol=abs_tol,
-                rel_tol=rel_tol,
-                nans_equal=nans_equal,
-            )
+        # Creating a temporary name if series is unnamed (possible in pandas-like scenario)
+        # as `select`-ing a column named `None` would break otherwise
+        orig_name = self.name
+        name_is_none = orig_name is None
+        tmp_name = "__nw_is_close__" if name_is_none else orig_name
+        expr = col(tmp_name).is_close(
+            other, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal
         )
+        series = self.rename(tmp_name) if name_is_none else self
+        result = series.to_frame().select(expr).get_column(tmp_name)
+        result = result.rename(orig_name) if name_is_none else result
+        return cast("Self", result)
+
+    @unstable
+    def any_value(self, *, ignore_nulls: bool = False) -> PythonLiteral:
+        """Get a random value from the column.
+
+        Warning:
+            This functionality is considered **unstable** as it diverges from the polars API.
+            It may be changed at any point without it being considered a breaking change.
+
+        Arguments:
+            ignore_nulls: Whether to ignore null values or not.
+                If `True` and there are no not-null elements, then `None` is returned.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> s_native = pa.chunked_array([[1, 2, None]])
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.any_value(ignore_nulls=True)
+            1
+        """
+        return self._compliant_series.any_value(ignore_nulls=ignore_nulls)
 
     @property
     def str(self) -> SeriesStringNamespace[Self]:

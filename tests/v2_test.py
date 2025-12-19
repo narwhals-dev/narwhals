@@ -7,14 +7,12 @@ from collections import deque
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, cast
 
-import numpy as np
-import pandas as pd
 import pytest
 
 import narwhals as nw
 import narwhals.stable.v2 as nw_v2
 from narwhals._utils import Implementation
-from narwhals.exceptions import ShapeError
+from narwhals.exceptions import NarwhalsUnstableWarning, ShapeError
 from narwhals.utils import Version
 from tests.utils import (
     PANDAS_VERSION,
@@ -97,7 +95,11 @@ def test_when_then() -> None:
 
 
 def test_constructors() -> None:
+    pytest.importorskip("pandas")
     pytest.importorskip("pyarrow")
+    import numpy as np
+    import pandas as pd
+
     if PANDAS_VERSION < (2, 2):
         pytest.skip()
     assert nw_v2.new_series("a", [1, 2, 3], backend="pandas").to_list() == [1, 2, 3]
@@ -409,6 +411,9 @@ def test_dataframe_from_arrow(eager_backend: EagerAllowed) -> None:
 
 
 def test_dataframe_from_numpy(eager_backend: EagerAllowed) -> None:
+    pytest.importorskip("numpy")
+    import numpy as np
+
     arr: _2DArray = cast("_2DArray", np.array([[5, 2, 0, 1], [1, 4, 7, 8], [1, 2, 3, 9]]))
     schema = {
         "c": nw_v2.Int16(),
@@ -445,6 +450,9 @@ def test_dataframe_from_numpy(eager_backend: EagerAllowed) -> None:
 def test_series_from_numpy(
     eager_backend: EagerAllowed, dtype: IntoDType | None, expected: Sequence[Any]
 ) -> None:
+    pytest.importorskip("numpy")
+    import numpy as np
+
     arr: _1DArray = cast("_1DArray", np.array([5, 2, 0, 1]))
     name = "abc"
     result = nw_v2.Series.from_numpy(name, arr, backend=eager_backend, dtype=dtype)
@@ -501,3 +509,27 @@ def test_mode_different_lengths(constructor_eager: ConstructorEager) -> None:
     df = nw_v2.from_native(constructor_eager({"a": [1, 1, 2], "b": [4, 5, 6]}))
     with pytest.raises(ShapeError):
         df.select(nw_v2.col("a", "b").mode())
+
+
+def test_any_value_expr(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if "dask" in str(constructor):
+        reason = "sample does not allow n, use frac instead"
+        request.applymarker(pytest.mark.xfail(reason=reason))
+
+    data = {
+        "a": [1, 1, 1, 2, 2, 3],
+        "b": [1, 2, 3, 4, 5, 6],
+        "c": [None, None, 1, None, 2, None],
+    }
+    df = nw_v2.from_native(constructor(data))
+
+    with pytest.warns(NarwhalsUnstableWarning):
+        df.select(nw_v2.col("a", "b").any_value())
+
+
+def test_any_value_series(constructor_eager: ConstructorEager) -> None:
+    data = {"a": [1, 1, 1, 2, 2, 3]}
+    df = nw_v2.from_native(constructor_eager(data))
+
+    with pytest.warns(NarwhalsUnstableWarning):
+        df["a"].any_value()

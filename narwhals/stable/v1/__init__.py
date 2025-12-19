@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, Callable, Final, Literal, cast, overload
 import narwhals as nw
 from narwhals import exceptions, functions as nw_f
 from narwhals._exceptions import issue_warning
+from narwhals._expression_parsing import ExprKind, ExprNode, is_expr
 from narwhals._typing_compat import TypeVar, assert_never
 from narwhals._utils import (
     Implementation,
@@ -22,7 +23,7 @@ from narwhals._utils import (
     validate_strict_and_pass_though,
 )
 from narwhals.dataframe import DataFrame as NwDataFrame, LazyFrame as NwLazyFrame
-from narwhals.exceptions import InvalidIntoExprError
+from narwhals.exceptions import InvalidIntoExprError, NarwhalsUnstableWarning
 from narwhals.expr import Expr as NwExpr
 from narwhals.functions import _new_series_impl, concat, show_versions
 from narwhals.schema import Schema as NwSchema
@@ -58,16 +59,42 @@ from narwhals.stable.v1.dtypes import (
     UInt128,
     Unknown,
 )
-from narwhals.stable.v1.typing import IntoDataFrameT, IntoLazyFrameT
+from narwhals.stable.v1.typing import (
+    DataFrameT,
+    IntoDataFrameT,
+    IntoFrame,
+    IntoLazyFrameT,
+    IntoSeries,
+    IntoSeriesT,
+    LazyFrameT,
+    SeriesT,
+)
 from narwhals.translate import _from_native_impl, get_native_namespace, to_py_scalar
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping, Sequence
     from types import ModuleType
 
-    from typing_extensions import ParamSpec, Self
+    from typing_extensions import ParamSpec, Self, Unpack
 
-    from narwhals._translate import IntoArrowTable
+    from narwhals._expression_parsing import ExprMetadata
+    from narwhals._translate import (
+        AllowAnyStrictV1 as AllowAnyStrict,
+        AllowAnyV1 as AllowAny,
+        AllowLazyStrictV1 as AllowLazyStrict,
+        AllowLazyV1 as AllowLazy,
+        AllowSeriesStrictV1 as AllowSeriesStrict,
+        AllowSeriesV1 as AllowSeries,
+        ExcludeSeriesStrictV1 as ExcludeSeriesStrict,
+        ExcludeSeriesV1 as ExcludeSeries,
+        IntoArrowTable,
+        OnlyEagerOrInterchange,
+        OnlyEagerOrInterchangeStrict,
+        OnlySeriesStrictV1 as OnlySeriesStrict,
+        OnlySeriesV1 as OnlySeries,
+        PassThroughUnknownV1 as PassThroughUnknown,
+        StrictUnknownV1 as StrictUnknown,
+    )
     from narwhals._typing import (
         Arrow,
         Backend,
@@ -83,24 +110,18 @@ if TYPE_CHECKING:
         FileSource,
         IntoDType,
         IntoExpr,
-        IntoFrame,
         IntoSchema,
-        IntoSeries,
         NonNestedLiteral,
+        PythonLiteral,
         SingleColSelector,
         SingleIndexSelector,
         _1DArray,
         _2DArray,
     )
 
-    DataFrameT = TypeVar("DataFrameT", bound="DataFrame[Any]")
-    LazyFrameT = TypeVar("LazyFrameT", bound="LazyFrame[Any]")
-    SeriesT = TypeVar("SeriesT", bound="Series[Any]")
     T = TypeVar("T", default=Any)
     P = ParamSpec("P")
     R = TypeVar("R")
-
-IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries", default=Any)
 
 
 # NOTE legit
@@ -126,7 +147,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):  # type: ignore[type-var]
     def from_dict(
         cls,
         data: Mapping[str, Any],
-        schema: Mapping[str, DType] | Schema | None = None,
+        schema: IntoSchema | Mapping[str, DType | None] | None = None,
         *,
         backend: IntoBackend[EagerAllowed] | None = None,
     ) -> DataFrame[Any]:
@@ -137,7 +158,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):  # type: ignore[type-var]
     def from_dicts(
         cls,
         data: Sequence[Any],
-        schema: IntoSchema | None = None,
+        schema: IntoSchema | Mapping[str, DType | None] | None = None,
         *,
         backend: IntoBackend[EagerAllowed],
     ) -> DataFrame[Any]:
@@ -246,18 +267,9 @@ class LazyFrame(NwLazyFrame[IntoLazyFrameT]):
     def _dataframe(self) -> type[DataFrame[Any]]:
         return DataFrame
 
-    def _extract_compliant(self, arg: Any) -> Any:
-        # After v1, we raise when passing order-dependent, length-changing,
-        # or filtration expressions to LazyFrame
-        from narwhals.expr import Expr
-        from narwhals.series import Series
-
-        if isinstance(arg, Series):  # pragma: no cover
-            msg = "Mixing Series with LazyFrame is not supported."
-            raise TypeError(msg)
-        if isinstance(arg, (Expr, str)):
-            return self.__narwhals_namespace__().parse_into_expr(arg, str_as_lit=False)
-        raise InvalidIntoExprError.from_invalid_type(type(arg))
+    def _validate_metadata(self, metadata: ExprMetadata) -> None:
+        # After v1, we raise for order-dependent operations.
+        pass
 
     def collect(
         self, backend: IntoBackend[Polars | Pandas | Arrow] | None = None, **kwargs: Any
@@ -360,8 +372,6 @@ class Series(NwSeries[IntoSeriesT]):
         bin_count: int | None = None,
         include_breakpoint: bool = True,
     ) -> DataFrame[Any]:
-        from narwhals.exceptions import NarwhalsUnstableWarning
-
         msg = (
             "`Series.hist` is being called from the stable API although considered "
             "an unstable feature."
@@ -373,6 +383,14 @@ class Series(NwSeries[IntoSeriesT]):
             )
         )
 
+    def any_value(self, *, ignore_nulls: bool = False) -> PythonLiteral:
+        msg = (
+            "`Series.any_value` is being called from the stable API although considered "
+            "an unstable feature."
+        )
+        issue_warning(msg, NarwhalsUnstableWarning)
+        return super().any_value(ignore_nulls=ignore_nulls)
+
 
 class Expr(NwExpr):
     def _l1_norm(self) -> Self:
@@ -380,15 +398,11 @@ class Expr(NwExpr):
 
     def head(self, n: int = 10) -> Self:
         r"""Get the first `n` rows."""
-        return self._with_orderable_filtration(
-            lambda plx: self._to_compliant_expr(plx).head(n)  # type: ignore[attr-defined]
-        )
+        return self._append_node(ExprNode(ExprKind.ORDERABLE_FILTRATION, "head", n=n))
 
     def tail(self, n: int = 10) -> Self:
         r"""Get the last `n` rows."""
-        return self._with_orderable_filtration(
-            lambda plx: self._to_compliant_expr(plx).tail(n)  # type: ignore[attr-defined]
-        )
+        return self._append_node(ExprNode(ExprKind.ORDERABLE_FILTRATION, "tail", n=n))
 
     def gather_every(self, n: int, offset: int = 0) -> Self:
         r"""Take every nth value in the Series and return as new Series.
@@ -397,8 +411,8 @@ class Expr(NwExpr):
             n: Gather every *n*-th row.
             offset: Starting index.
         """
-        return self._with_orderable_filtration(
-            lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset)  # type: ignore[attr-defined]
+        return self._append_node(
+            ExprNode(ExprKind.ORDERABLE_FILTRATION, "gather_every", n=n, offset=offset)
         )
 
     def unique(self, *, maintain_order: bool | None = None) -> Self:
@@ -409,33 +423,27 @@ class Expr(NwExpr):
                 "You can safely remove this argument."
             )
             issue_warning(msg, UserWarning)
-        return self._with_filtration(lambda plx: self._to_compliant_expr(plx).unique())
+        return self._append_node(ExprNode(ExprKind.FILTRATION, "unique"))
 
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
         """Sort this column. Place null values first."""
-        return self._with_window(
-            lambda plx: self._to_compliant_expr(plx).sort(  # type: ignore[attr-defined]
-                descending=descending, nulls_last=nulls_last
+        return self._append_node(
+            ExprNode(
+                ExprKind.WINDOW, "sort", descending=descending, nulls_last=nulls_last
             )
         )
 
     def arg_max(self) -> Self:
         """Returns the index of the maximum value."""
-        return self._with_orderable_aggregation(
-            lambda plx: self._to_compliant_expr(plx).arg_max()  # type: ignore[attr-defined]
-        )
+        return self._append_node(ExprNode(ExprKind.ORDERABLE_AGGREGATION, "arg_max"))
 
     def arg_min(self) -> Self:
         """Returns the index of the minimum value."""
-        return self._with_orderable_aggregation(
-            lambda plx: self._to_compliant_expr(plx).arg_min()  # type: ignore[attr-defined]
-        )
+        return self._append_node(ExprNode(ExprKind.ORDERABLE_AGGREGATION, "arg_min"))
 
     def arg_true(self) -> Self:
         """Find elements where boolean expression is True."""
-        return self._with_orderable_filtration(
-            lambda plx: self._to_compliant_expr(plx).arg_true()  # type: ignore[attr-defined]
-        )
+        return self._append_node(ExprNode(ExprKind.ORDERABLE_FILTRATION, "arg_true"))
 
     def sample(
         self,
@@ -454,10 +462,25 @@ class Expr(NwExpr):
             seed: Seed for the random number generator. If set to None (default), a random
                 seed is generated for each sample operation.
         """
-        return self._with_filtration(
-            lambda plx: self._to_compliant_expr(plx).sample(  # type: ignore[attr-defined]
-                n, fraction=fraction, with_replacement=with_replacement, seed=seed
+        return self._append_node(
+            ExprNode(
+                ExprKind.FILTRATION,
+                "sample",
+                n=n,
+                fraction=fraction,
+                with_replacement=with_replacement,
+                seed=seed,
             )
+        )
+
+    def any_value(self, *, ignore_nulls: bool = False) -> Self:
+        msg = (
+            "`Expr.any_value` is being called from the stable API although considered "
+            "an unstable feature."
+        )
+        issue_warning(msg, NarwhalsUnstableWarning)
+        return self._append_node(
+            ExprNode(ExprKind.AGGREGATION, "any_value", ignore_nulls=ignore_nulls)
         )
 
 
@@ -494,422 +517,85 @@ def _stableify(
     if isinstance(obj, NwSeries):
         return Series(obj._compliant_series._with_version(Version.V1), level=obj._level)
     if isinstance(obj, NwExpr):
-        return Expr(obj._to_compliant_expr, obj._metadata)
+        return Expr(*obj._nodes)
     assert_never(obj)
 
 
 @overload
-def from_native(native_object: SeriesT, **kwds: Any) -> SeriesT: ...
-
-
+def from_native(native_object: SeriesT, **kwds: Unpack[OnlySeries]) -> SeriesT: ...
 @overload
-def from_native(native_object: DataFrameT, **kwds: Any) -> DataFrameT: ...
-
-
+def from_native(native_object: SeriesT, **kwds: Unpack[OnlySeriesStrict]) -> SeriesT: ...
 @overload
-def from_native(native_object: LazyFrameT, **kwds: Any) -> LazyFrameT: ...
-
-
+def from_native(native_object: SeriesT, **kwds: Unpack[AllowSeries]) -> SeriesT: ...
+@overload
+def from_native(native_object: SeriesT, **kwds: Unpack[AllowSeriesStrict]) -> SeriesT: ...
 @overload
 def from_native(
-    native_object: DataFrameT | LazyFrameT, **kwds: Any
-) -> DataFrameT | LazyFrameT: ...
-
-
+    native_object: DataFrameT, **kwds: Unpack[ExcludeSeries]
+) -> DataFrameT: ...
 @overload
 def from_native(
-    native_object: IntoDataFrameT | IntoSeriesT,
-    *,
-    strict: Literal[False],
-    eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[True],
-    series_only: Literal[False] = ...,
-    allow_series: Literal[True],
-) -> DataFrame[IntoDataFrameT] | Series[IntoSeriesT]: ...
-
-
+    native_object: DataFrameT, **kwds: Unpack[ExcludeSeriesStrict]
+) -> DataFrameT: ...
+@overload
+def from_native(native_object: LazyFrameT, **kwds: Unpack[AllowLazy]) -> LazyFrameT: ...
 @overload
 def from_native(
-    native_object: IntoDataFrameT | IntoSeriesT,
-    *,
-    strict: Literal[False],
-    eager_only: Literal[True],
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: Literal[True],
-) -> DataFrame[IntoDataFrameT] | Series[IntoSeriesT]: ...
-
-
+    native_object: LazyFrameT, **kwds: Unpack[AllowLazyStrict]
+) -> LazyFrameT: ...
 @overload
 def from_native(
-    native_object: IntoDataFrameT,
-    *,
-    strict: Literal[False],
-    eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[True],
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
+    native_object: IntoDataFrameT, **kwds: Unpack[OnlyEagerOrInterchange]
 ) -> DataFrame[IntoDataFrameT]: ...
-
-
 @overload
 def from_native(
-    native_object: T,
-    *,
-    strict: Literal[False],
-    eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[True],
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> T: ...
-
-
-@overload
-def from_native(
-    native_object: IntoDataFrameT,
-    *,
-    strict: Literal[False],
-    eager_only: Literal[True],
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
+    native_object: IntoDataFrameT, **kwds: Unpack[OnlyEagerOrInterchangeStrict]
 ) -> DataFrame[IntoDataFrameT]: ...
-
-
 @overload
 def from_native(
-    native_object: T,
-    *,
-    strict: Literal[False],
-    eager_only: Literal[True],
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> T: ...
-
-
+    native_object: IntoDataFrameT, **kwds: Unpack[ExcludeSeries]
+) -> DataFrame[IntoDataFrameT]: ...
+@overload
+def from_native(
+    native_object: IntoDataFrameT, **kwds: Unpack[ExcludeSeriesStrict]
+) -> DataFrame[IntoDataFrameT]: ...
+@overload
+def from_native(
+    native_object: IntoSeriesT, **kwds: Unpack[OnlySeries]
+) -> Series[IntoSeriesT]: ...
+@overload
+def from_native(
+    native_object: IntoSeriesT, **kwds: Unpack[OnlySeriesStrict]
+) -> Series[IntoSeriesT]: ...
+@overload
+def from_native(
+    native_object: IntoDataFrameT | IntoSeriesT, **kwds: Unpack[AllowSeries]
+) -> DataFrame[IntoDataFrameT] | Series[IntoSeriesT]: ...
+@overload
+def from_native(
+    native_object: IntoDataFrameT | IntoSeriesT, **kwds: Unpack[AllowSeriesStrict]
+) -> DataFrame[IntoDataFrameT] | Series[IntoSeriesT]: ...
+@overload
+def from_native(
+    native_object: IntoLazyFrameT, **kwds: Unpack[AllowLazy]
+) -> LazyFrame[IntoLazyFrameT]: ...
+@overload
+def from_native(
+    native_object: IntoLazyFrameT, **kwds: Unpack[AllowLazyStrict]
+) -> LazyFrame[IntoLazyFrameT]: ...
+@overload
+def from_native(
+    native_object: IntoDataFrameT | IntoLazyFrameT | IntoSeriesT, **kwds: Unpack[AllowAny]
+) -> DataFrame[IntoDataFrameT] | LazyFrame[IntoLazyFrameT] | Series[IntoSeriesT]: ...
 @overload
 def from_native(
     native_object: IntoDataFrameT | IntoLazyFrameT | IntoSeriesT,
-    *,
-    strict: Literal[False],
-    eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: Literal[True],
+    **kwds: Unpack[AllowAnyStrict],
 ) -> DataFrame[IntoDataFrameT] | LazyFrame[IntoLazyFrameT] | Series[IntoSeriesT]: ...
-
-
 @overload
-def from_native(
-    native_object: IntoSeriesT,
-    *,
-    strict: Literal[False],
-    eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[True],
-    allow_series: None = ...,
-) -> Series[IntoSeriesT]: ...
-
-
+def from_native(native_object: T, **kwds: Unpack[PassThroughUnknown]) -> T: ...
 @overload
-def from_native(
-    native_object: IntoDataFrameT,
-    *,
-    strict: Literal[False],
-    eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT]: ...
-
-
-@overload
-def from_native(
-    native_object: IntoLazyFrameT,
-    *,
-    strict: Literal[False],
-    eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> LazyFrame[IntoLazyFrameT]: ...
-
-
-@overload
-def from_native(
-    native_object: T,
-    *,
-    strict: Literal[False],
-    eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> T: ...
-
-
-@overload
-def from_native(
-    native_object: IntoDataFrameT,
-    *,
-    strict: Literal[True] | None = ...,
-    eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[True],
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT]: ...
-
-
-@overload
-def from_native(
-    native_object: IntoLazyFrameT,
-    *,
-    strict: Literal[True] | None = ...,
-    eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> LazyFrame[IntoLazyFrameT]: ...
-
-
-@overload
-def from_native(
-    native_object: IntoDataFrameT,
-    *,
-    strict: Literal[True] | None = ...,
-    eager_only: Literal[True],
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT]: ...
-
-
-@overload
-def from_native(
-    native_object: IntoFrame | IntoSeries,
-    *,
-    strict: Literal[True] | None = ...,
-    eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: Literal[True],
-) -> DataFrame[Any] | LazyFrame[Any] | Series[Any]: ...
-
-
-@overload
-def from_native(
-    native_object: IntoSeriesT,
-    *,
-    strict: Literal[True] | None = ...,
-    eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[True],
-    allow_series: None = ...,
-) -> Series[IntoSeriesT]: ...
-
-
-@overload
-def from_native(
-    native_object: IntoDataFrameT,
-    *,
-    strict: Literal[True] | None = ...,
-    eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT]: ...
-
-
-@overload
-def from_native(
-    native_object: IntoDataFrameT | IntoSeries,
-    *,
-    pass_through: Literal[True],
-    eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[True],
-    series_only: Literal[False] = ...,
-    allow_series: Literal[True],
-) -> DataFrame[IntoDataFrameT]: ...
-
-
-@overload
-def from_native(
-    native_object: IntoDataFrameT | IntoSeriesT,
-    *,
-    pass_through: Literal[True],
-    eager_only: Literal[True],
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: Literal[True],
-) -> DataFrame[IntoDataFrameT] | Series[IntoSeriesT]: ...
-
-
-@overload
-def from_native(
-    native_object: IntoDataFrameT,
-    *,
-    pass_through: Literal[True],
-    eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[True],
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT]: ...
-
-
-@overload
-def from_native(
-    native_object: T,
-    *,
-    pass_through: Literal[True],
-    eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[True],
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> T: ...
-
-
-@overload
-def from_native(
-    native_object: IntoDataFrameT,
-    *,
-    pass_through: Literal[True],
-    eager_only: Literal[True],
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT]: ...
-
-
-@overload
-def from_native(
-    native_object: T,
-    *,
-    pass_through: Literal[True],
-    eager_only: Literal[True],
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> T: ...
-
-
-@overload
-def from_native(
-    native_object: IntoDataFrameT | IntoLazyFrameT | IntoSeriesT,
-    *,
-    pass_through: Literal[True],
-    eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: Literal[True],
-) -> DataFrame[IntoDataFrameT] | LazyFrame[IntoLazyFrameT] | Series[IntoSeriesT]: ...
-
-
-@overload
-def from_native(
-    native_object: IntoSeriesT,
-    *,
-    pass_through: Literal[True],
-    eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[True],
-    allow_series: None = ...,
-) -> Series[IntoSeriesT]: ...
-
-
-@overload
-def from_native(
-    native_object: IntoDataFrameT | IntoLazyFrameT,
-    *,
-    pass_through: Literal[True],
-    eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT] | LazyFrame[IntoLazyFrameT]: ...
-
-
-@overload
-def from_native(
-    native_object: T,
-    *,
-    pass_through: Literal[True],
-    eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> T: ...
-
-
-@overload
-def from_native(
-    native_object: IntoDataFrameT,
-    *,
-    pass_through: Literal[False] = ...,
-    eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[True],
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT]: ...
-
-
-@overload
-def from_native(
-    native_object: IntoDataFrameT,
-    *,
-    pass_through: Literal[False] = ...,
-    eager_only: Literal[True],
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT]: ...
-
-
-@overload
-def from_native(
-    native_object: IntoFrame | IntoSeries,
-    *,
-    pass_through: Literal[False] = ...,
-    eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: Literal[True],
-) -> DataFrame[Any] | LazyFrame[Any] | Series[Any]: ...
-
-
-@overload
-def from_native(
-    native_object: IntoSeriesT,
-    *,
-    pass_through: Literal[False] = ...,
-    eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[True],
-    allow_series: None = ...,
-) -> Series[IntoSeriesT]: ...
-
-
-@overload
-def from_native(
-    native_object: IntoDataFrameT,
-    *,
-    pass_through: Literal[False] = ...,
-    eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT]: ...
-
-
-@overload
-def from_native(
-    native_object: IntoLazyFrameT,
-    *,
-    pass_through: Literal[False] = ...,
-    eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> LazyFrame[IntoLazyFrameT]: ...
+def from_native(native_object: T, **kwds: Unpack[StrictUnknown]) -> T: ...
 
 
 # All params passed in as variables
@@ -1215,7 +901,7 @@ class When(nw_f.When):
 class Then(nw_f.Then, Expr):
     @classmethod
     def from_then(cls, then: nw_f.Then) -> Then:
-        return cls(then._to_compliant_expr, then._metadata)
+        return cls(*then._nodes)
 
     def otherwise(self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Expr:
         return _stableify(super().otherwise(value))
@@ -1392,6 +1078,7 @@ __all__ = [
     "Int32",
     "Int64",
     "Int128",
+    "InvalidIntoExprError",
     "LazyFrame",
     "List",
     "Object",
@@ -1426,6 +1113,7 @@ __all__ = [
     "generate_temporary_column_name",
     "get_level",
     "get_native_namespace",
+    "is_expr",
     "is_ordered_categorical",
     "len",
     "lit",

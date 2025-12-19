@@ -4,14 +4,16 @@ from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from typing import Any
 
-import numpy as np
-import pandas as pd
 import pytest
 
 import narwhals as nw
 from narwhals.stable.v1.dependencies import get_cudf
 
 pytest.importorskip("pyarrow")
+pytest.importorskip("pandas")
+
+import numpy as np
+import pandas as pd
 import pyarrow as pa
 
 

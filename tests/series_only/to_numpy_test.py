@@ -3,8 +3,10 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-import numpy as np
 import pytest
+
+pytest.importorskip("numpy")
+import numpy as np
 from numpy.testing import assert_array_equal
 
 import narwhals as nw
@@ -17,10 +19,8 @@ if TYPE_CHECKING:
 def test_to_numpy(
     constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
-    if (
-        "pandas_constructor" in str(constructor_eager)
-        or "modin_constructor" in str(constructor_eager)
-        or "cudf_constructor" in str(constructor_eager)
+    if "pandas_constructor" in str(constructor_eager) or "modin_constructor" in str(
+        constructor_eager
     ):
         request.applymarker(pytest.mark.xfail)
 

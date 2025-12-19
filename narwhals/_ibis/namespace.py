@@ -17,8 +17,7 @@ from narwhals._ibis.expr import IbisExpr
 from narwhals._ibis.selectors import IbisSelectorNamespace
 from narwhals._ibis.utils import function, lit, narwhals_to_native_dtype
 from narwhals._sql.namespace import SQLNamespace
-from narwhals._sql.when_then import SQLThen, SQLWhen
-from narwhals._utils import Implementation, requires
+from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -83,12 +82,14 @@ class IbisNamespace(SQLNamespace[IbisLazyFrame, IbisExpr, "ir.Table", "ir.Value"
             cols = chain.from_iterable(expr(df) for expr in exprs)
             cols_casted = [s.cast("string") for s in cols]
 
-            if not ignore_nulls:
-                result = cols_casted[0]
-                for col in cols_casted[1:]:
-                    result = result + separator + col
-            else:
+            if ignore_nulls:
                 result = lit(separator).join(cols_casted)
+            else:
+                result = reduce(
+                    lambda acc, col: acc.concat(separator, col),
+                    cols_casted[1:],
+                    cols_casted[0],
+                )
 
             return [result]
 
@@ -107,10 +108,6 @@ class IbisNamespace(SQLNamespace[IbisLazyFrame, IbisExpr, "ir.Table", "ir.Value"
             )
 
         return self._expr._from_elementwise_horizontal_op(func, *exprs)
-
-    @requires.backend_version((10, 0))
-    def when(self, predicate: IbisExpr) -> IbisWhen:
-        return IbisWhen.from_expr(predicate, context=self)
 
     def lit(self, value: Any, dtype: IntoDType | None) -> IbisExpr:
         def func(_df: IbisLazyFrame) -> Sequence[ir.Value]:
@@ -134,27 +131,3 @@ class IbisNamespace(SQLNamespace[IbisLazyFrame, IbisExpr, "ir.Table", "ir.Value"
             alias_output_names=None,
             version=self._version,
         )
-
-
-class IbisWhen(SQLWhen["IbisLazyFrame", "ir.Value", IbisExpr]):
-    lit = lit
-
-    @property
-    def _then(self) -> type[IbisThen]:
-        return IbisThen
-
-    def __call__(self, df: IbisLazyFrame) -> Sequence[ir.Value]:
-        is_expr = self._condition._is_expr
-        condition = df._evaluate_expr(self._condition)
-        then_ = self._then_value
-        then = df._evaluate_expr(then_) if is_expr(then_) else lit(then_)
-        other_ = self._otherwise_value
-        if other_ is None:
-            result = ibis.cases((condition, then))
-        else:
-            otherwise = df._evaluate_expr(other_) if is_expr(other_) else lit(other_)
-            result = ibis.cases((condition, then), else_=otherwise)
-        return [result]
-
-
-class IbisThen(SQLThen["IbisLazyFrame", "ir.Value", IbisExpr], IbisExpr): ...

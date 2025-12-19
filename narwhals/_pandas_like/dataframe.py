@@ -13,6 +13,7 @@ from narwhals._pandas_like.utils import (
     get_dtype_backend,
     import_array_module,
     iter_dtype_backends,
+    narwhals_to_native_dtype,
     native_to_narwhals_dtype,
     object_native_to_narwhals_dtype,
     rename,
@@ -33,6 +34,7 @@ from narwhals._utils import (
 )
 from narwhals.dependencies import is_pandas_like_dataframe
 from narwhals.exceptions import InvalidOperationError, ShapeError
+from narwhals.functions import col as nw_col
 
 if TYPE_CHECKING:
     from io import BytesIO
@@ -147,14 +149,12 @@ class PandasLikeDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | None,
+        schema: IntoSchema | Mapping[str, DType | None] | None,
     ) -> Self:
-        from narwhals.schema import Schema
-
         implementation = context._implementation
-        ns = implementation.to_native_namespace()
-        Series = cast("type[pd.Series[Any]]", ns.Series)
-        DataFrame = cast("type[pd.DataFrame]", ns.DataFrame)
+        pdx = implementation.to_native_namespace()
+        Series = cast("type[pd.Series[Any]]", pdx.Series)
+        DataFrame = cast("type[pd.DataFrame]", pdx.DataFrame)
         aligned_data: dict[str, pd.Series[Any] | Any] = {}
         left_most: PandasLikeSeries | None = None
         for name, series in data.items():
@@ -172,10 +172,22 @@ class PandasLikeDataFrame(
         else:
             native = DataFrame.from_dict({col: [] for col in schema})
         if schema:
-            backend: Iterable[DTypeBackend] | None = None
+            backends: Iterable[DTypeBackend]
             if aligned_data:
-                backend = iter_dtype_backends(native.dtypes, implementation)
-            native = native.astype(Schema(schema).to_pandas(backend))
+                backends = iter_dtype_backends(native.dtypes, implementation)
+            else:
+                backends = (None for _ in range(len(schema)))
+            native_schema = {
+                key: narwhals_to_native_dtype(
+                    dtype,
+                    backend,
+                    implementation=context._implementation,
+                    version=context._version,
+                )
+                for ((key, dtype), backend) in zip(schema.items(), backends)
+                if dtype is not None
+            }
+            native = native.astype(native_schema)
         return cls.from_native(native, context=context)
 
     @classmethod
@@ -185,10 +197,8 @@ class PandasLikeDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | None,
+        schema: IntoSchema | Mapping[str, DType | None] | None,
     ) -> Self:
-        from narwhals.schema import Schema
-
         implementation = context._implementation
         ns = implementation.to_native_namespace()
         DataFrame = cast("type[pd.DataFrame]", ns.DataFrame)
@@ -197,10 +207,22 @@ class PandasLikeDataFrame(
         else:
             native = DataFrame.from_dict({col: [] for col in schema})
         if schema:
-            backend: Iterable[DTypeBackend] | None = None
+            backends: Iterable[DTypeBackend]
             if data:
-                backend = iter_dtype_backends(native.dtypes, implementation)
-            native = native.astype(Schema(schema).to_pandas(backend))
+                backends = iter_dtype_backends(native.dtypes, implementation)
+            else:
+                backends = (None for _ in range(len(schema)))
+            native_schema = {
+                key: narwhals_to_native_dtype(
+                    dtype,
+                    backend,
+                    implementation=context._implementation,
+                    version=context._version,
+                )
+                for ((key, dtype), backend) in zip(schema.items(), backends)
+                if dtype is not None
+            }
+            native = native.astype(native_schema)
         return cls.from_native(native, context=context)
 
     @staticmethod
@@ -418,7 +440,7 @@ class PandasLikeDataFrame(
         )
 
     def select(self, *exprs: PandasLikeExpr) -> Self:
-        new_series = self._evaluate_into_exprs(*exprs)
+        new_series = self._evaluate_exprs(*exprs)
         if not new_series:
             # return empty dataframe, like Polars does
             return self._with_native(type(self.native)(), validate_column_names=False)
@@ -445,32 +467,35 @@ class PandasLikeDataFrame(
     def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self:
         plx = self.__narwhals_namespace__()
         if order_by is None:
-            size = len(self)
-            data = self._array_funcs.arange(size)
-
+            data = self._array_funcs.arange(len(self))
             row_index = plx._expr._from_series(
                 plx._series.from_iterable(
                     data, context=self, index=self.native.index, name=name
                 )
             )
         else:
-            rank = plx.col(order_by[0]).rank(method="ordinal", descending=False)
-            row_index = (rank.over(partition_by=[], order_by=order_by) - 1).alias(name)
+            rank = cast(
+                "PandasLikeExpr",
+                nw_col(order_by[0]).rank(method="ordinal")._to_compliant_expr(plx),
+            )
+            row_index = (
+                rank.over(partition_by=[], order_by=order_by)
+                - plx.lit(1, None).broadcast()
+            ).alias(name)
         return self.select(row_index, plx.all())
 
     def row(self, index: int) -> tuple[Any, ...]:
         return tuple(x for x in self.native.iloc[index])
 
     def filter(self, predicate: PandasLikeExpr) -> Self:
-        # `[0]` is safe as the predicate's expression only returns a single column
-        mask = self._evaluate_into_exprs(predicate)[0]
+        mask = self._evaluate_single_output_expr(predicate)
         mask_native = self._extract_comparand(mask)
         return self._with_native(
             self.native.loc[mask_native], validate_column_names=False
         )
 
     def with_columns(self, *exprs: PandasLikeExpr) -> Self:
-        columns = self._evaluate_into_exprs(*exprs)
+        columns = self._evaluate_exprs(*exprs)
         if not columns and len(self) == 0:
             return self
         name_columns: dict[str, PandasLikeSeries] = {s.name: s for s in columns}
@@ -578,7 +603,7 @@ class PandasLikeDataFrame(
     def _join_inner(
         self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
     ) -> pd.DataFrame:
-        return self.native.merge(
+        return self.native.dropna(subset=left_on, how="any").merge(
             other.native,
             left_on=left_on,
             right_on=right_on,
@@ -590,7 +615,7 @@ class PandasLikeDataFrame(
         self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
     ) -> pd.DataFrame:
         result_native = self.native.merge(
-            other.native,
+            other.native.dropna(subset=right_on, how="any"),
             how="left",
             left_on=left_on,
             right_on=right_on,
@@ -610,16 +635,32 @@ class PandasLikeDataFrame(
         self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
     ) -> pd.DataFrame:
         # Pandas coalesces keys in full joins unless there's no collision
+        ns = self.__narwhals_namespace__()
+        self_native = self.native
         right_on_mapper = _remap_full_join_keys(left_on, right_on, suffix)
         other_native = other.native.rename(columns=right_on_mapper)
         check_column_names_are_unique(other_native.columns)
         right_suffixed = list(right_on_mapper.values())
-        return self.native.merge(
-            other_native,
+
+        left_null_mask = self_native[list(left_on)].isna().any(axis=1)
+        right_null_mask = other_native[right_suffixed].isna().any(axis=1)
+
+        # We need to add suffix to `other` columns overlapping in `self` if not in keys
+        to_rename = set(other.columns).intersection(self.columns).difference(right_on)
+        right_null_rows = other_native[right_null_mask].rename(
+            columns={col: f"{col}{suffix}" for col in to_rename}
+        )
+
+        join_result = self_native[~left_null_mask].merge(
+            other_native[~right_null_mask],
             left_on=left_on,
             right_on=right_suffixed,
             how="outer",
             suffixes=("", suffix),
+        )
+
+        return ns._concat_diagonal(
+            [join_result, self_native[left_null_mask], right_null_rows]
         )
 
     def _join_cross(self, other: Self, *, suffix: str) -> pd.DataFrame:
@@ -652,7 +693,7 @@ class PandasLikeDataFrame(
             columns_to_select=list(right_on),
             columns_mapping=dict(zip(right_on, left_on)),
         )
-        return self.native.merge(
+        return self.native.dropna(subset=left_on, how="any").merge(
             other_native, how="inner", left_on=left_on, right_on=left_on
         )
 
@@ -663,7 +704,10 @@ class PandasLikeDataFrame(
 
         if implementation.is_cudf():
             return self.native.merge(
-                other.native, how="leftanti", left_on=left_on, right_on=right_on
+                other.native.dropna(subset=left_on, how="any"),
+                how="leftanti",
+                left_on=left_on,
+                right_on=right_on,
             )
 
         indicator_token = generate_temporary_column_name(
@@ -676,7 +720,7 @@ class PandasLikeDataFrame(
             columns_mapping=dict(zip(right_on, left_on)),
         )
         result_native = self.native.merge(
-            other_native,
+            other_native.dropna(subset=left_on, how="any"),
             # TODO(FBruzzesi): See https://github.com/modin-project/modin/issues/7384
             how="left" if implementation.is_pandas() else "outer",
             indicator=indicator_token,
@@ -968,11 +1012,10 @@ class PandasLikeDataFrame(
 
     def item(self, row: int | None, column: int | str | None) -> Any:
         if row is None and column is None:
-            if self.shape != (1, 1):
+            if (shape := self.shape) != (1, 1):
                 msg = (
-                    "can only call `.item()` if the dataframe is of shape (1, 1),"
-                    " or if explicit row/col values are provided;"
-                    f" frame has shape {self.shape!r}"
+                    'can only call `.item()` without "row" or "column" values if the '
+                    f"DataFrame has a single element; shape={shape!r}"
                 )
                 raise ValueError(msg)
             return self.native.iloc[0, 0]

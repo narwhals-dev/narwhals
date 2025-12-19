@@ -12,7 +12,7 @@ If you've got experience with open source contributions, the following instructi
 - `git remote add origin <your fork goes here>`
 - `uv venv -p 3.12`
 - `. .venv/bin/activate`
-- `uv pip install -U -e . --group local-dev`
+- `uv pip install -U -e . --group local-dev -e test-plugin`
 - To run tests: `pytest`
 - To run all linting checks: `pre-commit run --all-files`
 - To run static typing checks: `make typing`
@@ -124,7 +124,7 @@ If you want to run PySpark-related tests, you'll need to have Java installed. Re
 
    4. Activate it. On Linux, this is `. .venv/bin/activate`, on Windows `.\.venv\Scripts\activate`.
 
-2. Install Narwhals: `uv pip install -e . --group local-dev`. This will include fast-ish core libraries and dev dependencies.
+2. Install Narwhals: `uv pip install -e . --group local-dev -e test-plugin`. This will include fast-ish core libraries and dev dependencies.
    If you also want to test other libraries like Dask , PySpark, and Modin, you can install them too with
    `uv pip install -e ".[dask, pyspark, modin]" --group local-dev`.
 
@@ -185,9 +185,16 @@ If you add code that should be tested, please add tests.
   - Never assume that your data is ordered in any pre-defined way.
   - Never materialise your data (only exception: `collect`).
   - Avoid calling the schema / column names unnecessarily.
-  - For DuckDB, use the Python API as much as possible, only falling
+
+- DuckDB:
+
+  In addition to the above:
+
+  - Use the Python API as much as possible, only falling
     back to SQL as the last resort for operations not yet supported
     in their Python API (e.g. `over`).
+  - Use standard SQL constructs where possible instead of non-standard
+    ones such as `GROUP BY ALL` or `EXCLUDE`.
 
 ### Test Failure Patterns
 
@@ -255,8 +262,10 @@ We can't currently test in CI against cuDF, but you can test it manually in Kagg
 We run both `mypy` and `pyright` in CI. Both of these tools are included when installing Narwhals with the local-dev dependency group.
 
 Run them with:
-- `mypy narwhals tests`
-- `pyright narwhals tests`
+
+```console
+make typing
+```
 
 to verify type completeness / correctness.
 

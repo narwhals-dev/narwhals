@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import os
 from datetime import datetime
+from pathlib import Path
 from typing import TYPE_CHECKING
 from unittest import mock
 
-import pandas as pd
 import pytest
 
 import narwhals as nw
@@ -13,6 +13,8 @@ from tests.utils import DASK_VERSION, PANDAS_VERSION, assert_equal_data
 
 if TYPE_CHECKING:
     from narwhals.typing import IntoFrame
+
+PATH = Path(__file__).parent / "data/lineitem.csv"
 
 
 @pytest.mark.parametrize("library", ["pandas", "polars", "pyarrow", "dask"])
@@ -23,24 +25,25 @@ def test_q1(library: str) -> None:
     if library == "pandas" and PANDAS_VERSION < (1, 5):
         pytest.skip()
     elif library == "pandas":
-        df_raw: IntoFrame = pd.read_csv("tests/data/lineitem.csv")
+        import pandas as pd
+
+        df_raw: IntoFrame = pd.read_csv(PATH)
     elif library == "polars":
         pytest.importorskip("polars")
         import polars as pl
 
-        df_raw = pl.scan_csv("tests/data/lineitem.csv")
+        df_raw = pl.scan_csv(PATH)
     elif library == "dask":
         pytest.importorskip("dask")
         import dask.dataframe as dd
+        import pandas as pd
 
-        df_raw = dd.from_pandas(
-            pd.read_csv("tests/data/lineitem.csv", dtype_backend="pyarrow")
-        )
+        df_raw = dd.from_pandas(pd.read_csv(PATH))
     else:
         pytest.importorskip("pyarrow.csv")
         import pyarrow.csv as pa_csv
 
-        df_raw = pa_csv.read_csv("tests/data/lineitem.csv")
+        df_raw = pa_csv.read_csv(PATH)
     var_1 = datetime(1998, 9, 2)
     df = nw.from_native(df_raw).lazy()
     schema = df.collect_schema()
@@ -105,12 +108,14 @@ def test_q1_w_generic_funcs(library: str) -> None:
     if library == "pandas" and PANDAS_VERSION < (1, 5):
         pytest.skip()
     elif library == "pandas":
-        df_raw: pd.DataFrame | pl.DataFrame = pd.read_csv("tests/data/lineitem.csv")
+        import pandas as pd
+
+        df_raw: pd.DataFrame | pl.DataFrame = pd.read_csv(PATH)
     else:
         pytest.importorskip("polars")
         import polars as pl
 
-        df_raw = pl.read_csv("tests/data/lineitem.csv")
+        df_raw = pl.read_csv(PATH)
     var_1 = datetime(1998, 9, 2)
     df = nw.from_native(df_raw, eager_only=True)
     df = df.with_columns(nw.col("l_shipdate").str.to_datetime())
@@ -167,7 +172,10 @@ def test_q1_w_generic_funcs(library: str) -> None:
 @mock.patch.dict(os.environ, {"NARWHALS_FORCE_GENERIC": "1"})
 @pytest.mark.filterwarnings("ignore:.*Passing a BlockManager.*:DeprecationWarning")
 def test_q1_w_pandas_agg_generic_path() -> None:
-    df_raw = pd.read_csv("tests/data/lineitem.csv")
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    df_raw = pd.read_csv(PATH)
     df_raw["l_shipdate"] = pd.to_datetime(df_raw["l_shipdate"])
     var_1 = datetime(1998, 9, 2)
     df = nw.from_native(df_raw).lazy()
