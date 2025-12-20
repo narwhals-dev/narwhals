@@ -5,15 +5,18 @@ from typing import TYPE_CHECKING, Any, Protocol
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.expressions import selectors as s_ir
 from narwhals._plan.expressions.boolean import all_horizontal
+from narwhals._plan.schema import freeze_schema
 from narwhals._utils import zip_strict
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Iterator, Mapping
 
     from typing_extensions import Self, TypeAlias
 
+    from narwhals._plan.dataframe import DataFrame
     from narwhals._plan.expressions import ExprIR, SelectorIR
     from narwhals._plan.options import ExplodeOptions, SortMultipleOptions
+    from narwhals._plan.schema import FrozenSchema
     from narwhals._plan.typing import Seq
     from narwhals.typing import JoinStrategy, UniqueKeepStrategy
 
@@ -21,7 +24,32 @@ Incomplete: TypeAlias = Any
 
 
 # `DslPlan`
+# TODO @dangotbanned: Add `LogicalPlan`s for ops in `nw.*Frame`, that aren't yet in `nwp.*Frame`
 class LogicalPlan(Immutable): ...
+
+
+# TODO @dangotbanned: Careful think about how (non-scan) source nodes should work
+# - Schema only?
+# - Different for eager vs lazy?
+class DataFrameScan(LogicalPlan):
+    __slots__ = ("df", "schema")
+    df: DataFrame
+    schema: FrozenSchema
+
+    # NOTE: Probably want a `staticmethod`, change if nothing is needed from `cls`
+    @classmethod
+    def from_narwhals(cls, df: DataFrame) -> DataFrameScan:
+        obj = cls.__new__(cls)
+        object.__setattr__(obj, "df", df.clone())
+        object.__setattr__(obj, "schema", freeze_schema(df.schema))
+        return obj
+
+    @property
+    def __immutable_values__(self) -> Iterator[Any]:
+        # NOTE: Deferring how to handle the hash *for now*
+        # Currently, every `DataFrameSource` will have a unique psuedo-hash
+        # Caching a native table seems like a non-starter, once `pandas` enters the party
+        yield from (id(self.df), self.schema)
 
 
 class SingleInput(LogicalPlan):
