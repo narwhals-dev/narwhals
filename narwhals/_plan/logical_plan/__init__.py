@@ -29,3 +29,13 @@ Blindly copying from `polars` for this is likely to pull in things that aren't h
 [`ibis`]: https://github.com/ibis-project/ibis/blob/9126733b38e1c92f6e787f92dc9954e88ab6400d/ibis/expr/operations/relations.py
 [`cudf_polars`]: https://github.com/rapidsai/cudf/blob/e3b3ac371aa67d91a812dec4645c972279de866b/python/cudf_polars/cudf_polars/dsl/ir.py
 """
+
+from __future__ import annotations
+
+from narwhals._plan.logical_plan.plan import (
+    JoinOptions as JoinOptions,
+    LpBuilder as LpBuilder,
+    UniqueOptions as UniqueOptions,
+)
+
+__all__ = ["JoinOptions", "LpBuilder", "UniqueOptions"]
