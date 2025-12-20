@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.expressions import selectors as s_ir
@@ -200,27 +200,46 @@ class JoinOptions(Immutable):
     suffix: str
 
 
-# NOTE: Using a `Protocol` to allow empty body(s), just trying to scope things out
 # `DslBuilder`
-class LpBuilder(Protocol):
+class LpBuilder:
+    __slots__ = ("_plan",)
     _plan: LogicalPlan
+
+    __hash__: ClassVar[None] = None  # type: ignore[assignment]
+    """This class is a helper for building `LogicalPlan`s, which *are* hashable.
+
+    Compare and operate on plans, **not the sugar around them**.
+    """
+
+    @classmethod
+    def from_df(cls, df: DataFrame, /) -> Self:
+        return cls.from_plan(DataFrameScan.from_narwhals(df))
+
+    @classmethod
+    def from_plan(cls, plan: LogicalPlan, /) -> Self:
+        obj = cls.__new__(cls)
+        obj._plan = plan
+        return obj
+
+    def to_plan(self) -> LogicalPlan:
+        return self._plan
 
     # TODO @dangotbanned: Decide on if `ProjectionOptions` should be added
     # Either replace `Incomplete` or remove `options` (and the placeholder in `fill_null`)
     def project(self, exprs: Seq[ExprIR], options: Incomplete = None) -> Self:
-        return self.with_plan(Select(input=self._plan, exprs=exprs))
+        return self.from_plan(Select(input=self._plan, exprs=exprs))
 
     def with_columns(self, exprs: Seq[ExprIR], options: Incomplete = None) -> Self:
-        return self.with_plan(WithColumns(input=self._plan, exprs=exprs))
+        return self.from_plan(WithColumns(input=self._plan, exprs=exprs))
 
     def filter(self, predicate: ExprIR) -> Self:
-        return self.with_plan(Filter(input=self._plan, predicate=predicate))
+        return self.from_plan(Filter(input=self._plan, predicate=predicate))
 
     def group_by(self, keys: Seq[ExprIR], aggs: Seq[ExprIR]) -> Self:
-        return self.with_plan(GroupBy(input=self._plan, keys=keys, aggs=aggs))
+        return self.from_plan(GroupBy(input=self._plan, keys=keys, aggs=aggs))
 
     def sort(self, by: Seq[SelectorIR], options: SortMultipleOptions) -> Self:
-        return self.with_plan(Sort(input=self._plan, by=by, options=options))
+        return self.from_plan(Sort(input=self._plan, by=by, options=options))
 
     def join(
         self,
@@ -229,7 +248,7 @@ class LpBuilder(Protocol):
         right_on: Seq[str],
         options: JoinOptions,
     ) -> Self:
-        return self.with_plan(
+        return self.from_plan(
             Join(
                 input_left=self._plan,
                 input_right=other,
@@ -240,10 +259,10 @@ class LpBuilder(Protocol):
         )
 
     def slice(self, offset: int, length: int | None = None) -> Self:
-        return self.with_plan(Slice(input=self._plan, offset=offset, length=length))
+        return self.from_plan(Slice(input=self._plan, offset=offset, length=length))
 
     def unique(self, subset: Seq[SelectorIR] | None, options: UniqueOptions) -> Self:
-        return self.with_plan(Unique(input=self._plan, subset=subset, options=options))
+        return self.from_plan(Unique(input=self._plan, subset=subset, options=options))
 
     # Sugar
     def drop(self, columns: SelectorIR) -> Self:
@@ -265,7 +284,7 @@ class LpBuilder(Protocol):
 
     # `DslBuilder.map_private`
     def map(self, function: LpFunction) -> Self:
-        return self.with_plan(MapFunction(input=self._plan, function=function))
+        return self.from_plan(MapFunction(input=self._plan, function=function))
 
     # `MapFunction`
     def explode(self, columns: SelectorIR, options: ExplodeOptions) -> Self:
@@ -279,9 +298,3 @@ class LpBuilder(Protocol):
 
     def with_row_index(self, name: str = "index") -> Self:
         return self.map(RowIndex(name=name))
-
-    # TODO @dangotbanned: Implement these and make `LpBuilder` a class
-    @classmethod
-    def from_plan(cls, plan: LogicalPlan, /) -> Self: ...
-    def to_plan(self) -> LogicalPlan: ...
-    def with_plan(self, plan: LogicalPlan, /) -> Self: ...
