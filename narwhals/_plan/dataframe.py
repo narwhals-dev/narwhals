@@ -288,6 +288,23 @@ class BaseFrame(Generic[NativeFrameT_co]):
         options = ExplodeOptions(empty_as_null=empty_as_null, keep_nulls=keep_nulls)
         return self._with_compliant(self._compliant.explode(subset, options))
 
+    def unnest(
+        self,
+        columns: OneOrIterable[ColumnNameOrSelector],
+        *more_columns: ColumnNameOrSelector,
+    ) -> Self:
+        s_ir = _parse.parse_into_combined_selector_ir(columns, *more_columns)
+        schema = self.collect_schema()
+        subset = expand_selector_irs_names((s_ir,), schema=schema, require_any=True)
+        dtypes = self.version.dtypes
+        tp_struct = dtypes.Struct
+        for col_to_unnest in subset:
+            dtype = schema[col_to_unnest]
+            if dtype != tp_struct:
+                msg = f"`unnest` operation is not supported for dtype `{dtype}`, expected Struct type"
+                raise InvalidOperationError(msg)
+        return self._with_compliant(self._compliant.unnest(subset))
+
 
 def _dataframe_from_dict(
     data: Mapping[str, Any],
