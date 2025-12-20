@@ -450,6 +450,10 @@ class DataFrame(
             result = df.sample_n(n, with_replacement=with_replacement, seed=seed)
         return type(self)(result)
 
+    def clone(self) -> Self:
+        """Create a copy of this DataFrame."""
+        return type(self)(self._compliant.clone())
+
 
 def _is_join_strategy(obj: Any) -> TypeIs[JoinStrategy]:
     return obj in {"inner", "left", "full", "cross", "anti", "semi"}

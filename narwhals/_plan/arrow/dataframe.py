@@ -240,6 +240,9 @@ class ArrowDataFrame(
         partitions = partition_by(self.native, by, include_key=include_key)
         return [from_native(df) for df in partitions]
 
+    def clone(self) -> Self:
+        return self._with_native(self.native)
+
 
 def with_array(table: pa.Table, name: str, column: ChunkedOrArrayAny) -> pa.Table:
     column_names = table.column_names
