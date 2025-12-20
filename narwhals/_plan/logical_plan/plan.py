@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any
 
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.schema import freeze_schema
-from narwhals._utils import zip_strict
+from narwhals._utils import qualified_type_name, zip_strict
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -49,6 +49,25 @@ class DataFrameScan(LogicalPlan):
         # Currently, every `DataFrameSource` will have a unique psuedo-hash
         # Caching a native table seems like a non-starter, once `pandas` enters the party
         yield from (id(self.df), self.schema)
+
+    def __repr__(self) -> str:
+        names = self.schema.names
+        n_columns = len(names)
+        if n_columns > 4:
+            it = (f'"{name}"' for name in names[:4])
+            s = ", ".join((*it, "..."))
+        elif n_columns == 0:
+            s = ""
+        else:
+            s = ", ".join(f'"{name}"' for name in names)
+        return f"DF [{s}]; {n_columns} COLUMNS"
+
+    def __str__(self) -> str:
+        return (
+            f"{type(self).__name__}("
+            f"df=nw.DataFrame[{qualified_type_name(self.df.to_native())}](...), "
+            f"schema={self.schema!s})"
+        )
 
 
 class SingleInput(LogicalPlan):
