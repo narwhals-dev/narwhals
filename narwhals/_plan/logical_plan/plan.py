@@ -24,7 +24,21 @@ if TYPE_CHECKING:
 
 # `DslPlan`
 # TODO @dangotbanned: Add `LogicalPlan`s for ops in `nw.*Frame`, that aren't yet in `nwp.*Frame`
-class LogicalPlan(Immutable): ...
+class LogicalPlan(Immutable):
+    """Misc notes.
+
+    - `LazyFrame.collect` -> `LazyFrame.collect_with_engine` -> `DslPlan::Sink(self.logical_plan, SinkType::Memory)`
+      - Adding the collect to the plan so far
+      - https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/crates/polars-lazy/src/frame/mod.rs#L631-L637
+    - `LazyFrame.to_alp_optimized`
+      - https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/crates/polars-lazy/src/frame/mod.rs#L666
+    - Here's the big boi, single function, handling `plan::DslPlan` -> `ir::IR`
+      - `polars_plan::plans::conversion::dsl_to_ir::to_alp_impl`
+      - https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/crates/polars-plan/src/plans/conversion/dsl_to_ir/mod.rs#L102-L1375
+      - Recurses, calling on each input in a plan
+      - Expansion is happening at this stage
+      - `resolve_group_by` as well
+    """
 
 
 # TODO @dangotbanned: Careful think about how (non-scan) source nodes should work
