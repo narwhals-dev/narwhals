@@ -148,6 +148,19 @@ class ArrowDataFrame(
             struct = fn.struct(native.column_names, native.columns)
         return Series.from_native(struct, name, version=self.version)
 
+    def unnest(self, subset: Sequence[str]) -> Self:
+        if len(subset) == 1:
+            name = subset[0]
+            index = self.columns.index(name)
+            df_new_columns = self.get_column(name).struct.unnest()
+            if len(df_new_columns.columns) == 1:
+                s = df_new_columns.to_series()
+                return self._with_native(self.native.set_column(index, s.name, s.native))
+            msg = "TODO: ArrowDataFrame.unnest(Struct({...:..., ...:...})"
+            raise NotImplementedError(msg)
+        msg = "TODO: ArrowDataFrame.unnest(subset=[...,...])"
+        raise NotImplementedError(msg)
+
     def get_column(self, name: str) -> Series:
         chunked = self.native.column(name)
         return Series.from_native(chunked, name, version=self.version)
