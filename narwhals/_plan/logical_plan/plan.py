@@ -15,10 +15,15 @@ if TYPE_CHECKING:
 
     from narwhals._plan.dataframe import DataFrame
     from narwhals._plan.expressions import ExprIR, SelectorIR
-    from narwhals._plan.options import ExplodeOptions, SortMultipleOptions
+    from narwhals._plan.options import (
+        ExplodeOptions,
+        JoinOptions,
+        SortMultipleOptions,
+        UniqueOptions,
+        VConcatOptions,
+    )
     from narwhals._plan.schema import FrozenSchema
     from narwhals._plan.typing import Seq
-    from narwhals.typing import JoinStrategy, UniqueKeepStrategy
 
 Incomplete: TypeAlias = Any
 
@@ -133,7 +138,7 @@ class HConcat(LogicalPlan):
     __slots__ = ("inputs", "strict")
     inputs: Seq[LogicalPlan]
     strict: bool
-    """Require all `inputs` to be the same height, raising an error if not, default False"""
+    """Require all `inputs` to be the same height, raising an error if not, default False."""
 
 
 # NOTE: `DslFunction`
@@ -165,39 +170,6 @@ class Rename(LpFunction):
     def mapping(self) -> dict[str, str]:
         # Trying to avoid adding mutable fields
         return dict(zip_strict(self.old, self.new))
-
-
-# NOTE: Options classes (eventually move to `_plan.options`)
-
-
-class UniqueOptions(Immutable):
-    __slots__ = ("keep", "maintain_order")
-    keep: UniqueKeepStrategy
-    maintain_order: bool
-
-
-class VConcatOptions(Immutable):
-    __slots__ = ("diagonal", "maintain_order", "to_supertypes")
-    diagonal: bool
-    """True for `how="diagonal"`"""
-
-    to_supertypes: bool
-    """True for [`"*_relaxed"` variants]
-
-    [`"*_relaxed"` variants]: https://github.com/narwhals-dev/narwhals/pull/3191#issuecomment-3389117044
-    """
-
-    maintain_order: bool
-    """True when using `concat`, False when using [`union`].
-
-    [`union`]: https://github.com/pola-rs/polars/pull/24298
-    """
-
-
-class JoinOptions(Immutable):
-    __slots__ = ("how", "suffix")
-    how: JoinStrategy
-    suffix: str
 
 
 # `DslBuilder`

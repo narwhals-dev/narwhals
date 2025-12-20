@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
     from narwhals._plan.typing import Accessor, OneOrIterable, Seq
     from narwhals._typing import Backend
-    from narwhals.typing import RankMethod
+    from narwhals.typing import JoinStrategy, RankMethod, UniqueKeepStrategy
 
 
 class FunctionFlags(enum.Flag):
@@ -343,3 +343,33 @@ class ExplodeOptions(Immutable):
     def any(self) -> bool:
         """Return True if we need to handle empty lists and/or nulls."""
         return self.empty_as_null or self.keep_nulls
+
+
+class UniqueOptions(Immutable):
+    __slots__ = ("keep", "maintain_order")
+    keep: UniqueKeepStrategy
+    maintain_order: bool
+
+
+class VConcatOptions(Immutable):
+    __slots__ = ("diagonal", "maintain_order", "to_supertypes")
+    diagonal: bool
+    """True for `how="diagonal"`"""
+
+    to_supertypes: bool
+    """True for [`"*_relaxed"` variants]
+
+    [`"*_relaxed"` variants]: https://github.com/narwhals-dev/narwhals/pull/3191#issuecomment-3389117044
+    """
+
+    maintain_order: bool
+    """True when using `concat`, False when using [`union`].
+
+    [`union`]: https://github.com/pola-rs/polars/pull/24298
+    """
+
+
+class JoinOptions(Immutable):
+    __slots__ = ("how", "suffix")
+    how: JoinStrategy
+    suffix: str

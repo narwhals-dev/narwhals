@@ -32,10 +32,6 @@ Blindly copying from `polars` for this is likely to pull in things that aren't h
 
 from __future__ import annotations
 
-from narwhals._plan.logical_plan.plan import (
-    JoinOptions as JoinOptions,
-    LpBuilder as LpBuilder,
-    UniqueOptions as UniqueOptions,
-)
+from narwhals._plan.logical_plan.plan import LpBuilder as LpBuilder
 
-__all__ = ["JoinOptions", "LpBuilder", "UniqueOptions"]
+__all__ = ["LpBuilder"]
