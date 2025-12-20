@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING, Any, ClassVar
 from narwhals._plan.expressions import selectors as s_ir
 from narwhals._plan.expressions.boolean import all_horizontal
 from narwhals._plan.logical_plan import plan as lp
+from narwhals._utils import normalize_path
+from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -21,6 +23,7 @@ if TYPE_CHECKING:
         UniqueOptions,
     )
     from narwhals._plan.typing import Seq
+    from narwhals.typing import FileSource
 
 
 __all__ = ["LpBuilder"]
@@ -91,6 +94,19 @@ class LpBuilder:
 
     def unique(self, subset: Seq[SelectorIR] | None, options: UniqueOptions) -> Self:
         return self.from_plan(lp.Unique(input=self._plan, subset=subset, options=options))
+
+    # Terminal
+    def sink(self, sink: lp.Sink) -> Self:
+        if isinstance(self._plan, lp.Sink):
+            msg = "cannot create a sink on top of another sink"
+            raise InvalidOperationError(msg)
+        return self.from_plan(sink)
+
+    def collect(self) -> Self:
+        return self.sink(lp.Collect(input=self._plan))
+
+    def sink_parquet(self, target: FileSource) -> Self:
+        return self.sink(lp.SinkParquet(input=self._plan, target=normalize_path(target)))
 
     # Sugar
     def drop(self, columns: SelectorIR) -> Self:

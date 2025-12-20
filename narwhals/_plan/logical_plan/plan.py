@@ -89,6 +89,22 @@ class SingleInput(LogicalPlan):
     input: LogicalPlan
 
 
+class Sink(SingleInput):
+    """Terminal nodes."""
+
+
+class Collect(Sink): ...
+
+
+class SinkParquet(Sink):
+    __slots__ = ("target",)
+    target: str
+    """`file: str | Path | BytesIO` on main.
+
+    Not sure `BytesIO` makes sense here.
+    """
+
+
 class Select(SingleInput):
     __slots__ = ("exprs",)
     exprs: Seq[ExprIR]
