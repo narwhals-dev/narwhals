@@ -7,6 +7,7 @@ from narwhals._plan._expansion import expand_selector_irs_names, prepare_project
 from narwhals._plan._guards import is_series
 from narwhals._plan.common import ensure_seq_str, temp
 from narwhals._plan.group_by import GroupBy, Grouped
+from narwhals._plan.logical_plan import LpBuilder
 from narwhals._plan.options import ExplodeOptions, SortMultipleOptions
 from narwhals._plan.series import Series
 from narwhals._plan.typing import (
@@ -453,6 +454,12 @@ class DataFrame(
     def clone(self) -> Self:
         """Create a copy of this DataFrame."""
         return type(self)(self._compliant.clone())
+
+    # NOTE: Using for testing
+    # Actually integrating will mean rewriting the current `DataFrame`, `BaseFrame` impls
+    # Everything is one-way, you can build a `LogicalPlan` but nothing useful beyond that
+    def _to_lp_builder(self) -> LpBuilder:
+        return LpBuilder.from_df(self)
 
 
 def _is_join_strategy(obj: Any) -> TypeIs[JoinStrategy]:

@@ -32,12 +32,12 @@ class LogicalPlan(Immutable): ...
 # - Different for eager vs lazy?
 class DataFrameScan(LogicalPlan):
     __slots__ = ("df", "schema")
-    df: DataFrame
+    df: DataFrame[Any, Any]
     schema: FrozenSchema
 
     # NOTE: Probably want a `staticmethod`, change if nothing is needed from `cls`
     @classmethod
-    def from_narwhals(cls, df: DataFrame) -> DataFrameScan:
+    def from_narwhals(cls, df: DataFrame[Any, Any]) -> DataFrameScan:
         obj = cls.__new__(cls)
         object.__setattr__(obj, "df", df.clone())
         object.__setattr__(obj, "schema", freeze_schema(df.schema))
