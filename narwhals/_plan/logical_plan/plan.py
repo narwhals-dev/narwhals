@@ -226,7 +226,7 @@ class LpBuilder:
 
     # TODO @dangotbanned: Decide on if `ProjectionOptions` should be added
     # Either replace `Incomplete` or remove `options` (and the placeholder in `fill_null`)
-    def project(self, exprs: Seq[ExprIR], options: Incomplete = None) -> Self:
+    def select(self, exprs: Seq[ExprIR], options: Incomplete = None) -> Self:
         return self.from_plan(Select(input=self._plan, exprs=exprs))
 
     def with_columns(self, exprs: Seq[ExprIR], options: Incomplete = None) -> Self:
@@ -266,10 +266,10 @@ class LpBuilder:
 
     # Sugar
     def drop(self, columns: SelectorIR) -> Self:
-        return self.project(((~columns.to_narwhals())._ir,))
+        return self.select(((~columns.to_narwhals())._ir,))
 
     def fill_null(self, fill_value: ExprIR) -> Self:
-        return self.project(
+        return self.select(
             (s_ir.all().to_narwhals().fill_null(fill_value.to_narwhals())._ir,),
             options={"duplicate_check": False},  # ProjectionOptions
         )
