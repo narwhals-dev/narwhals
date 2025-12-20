@@ -750,6 +750,10 @@ class DataFrame(
             result = df.sample_n(n, with_replacement=with_replacement, seed=seed)
         return type(self)(result)
 
+    def clone(self) -> Self:
+        """Create a copy of this DataFrame."""
+        return type(self)(self._compliant.clone())
+
 
 def _is_sort_by_one(
     by: OneOrIterable[ColumnNameOrSelector], frame_columns: list[str]

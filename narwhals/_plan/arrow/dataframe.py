@@ -406,6 +406,9 @@ class ArrowDataFrame(
         )
         return self._with_native(result)
 
+    def clone(self) -> Self:
+        return self._with_native(self.native)
+
 
 def with_array(table: pa.Table, name: str, column: ChunkedOrArrayAny) -> pa.Table:
     column_names = table.column_names

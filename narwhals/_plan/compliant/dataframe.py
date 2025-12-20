@@ -199,6 +199,7 @@ class CompliantDataFrame(
     def native(self) -> NativeDataFrameT:
         return self._native
 
+    def clone(self) -> Self: ...
     @classmethod
     def from_dict(
         cls, data: Mapping[str, Any], /, *, schema: IntoSchema | None = None
