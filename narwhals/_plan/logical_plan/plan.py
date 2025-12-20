@@ -78,9 +78,12 @@ class SingleInput(LogicalPlan):
 class Select(SingleInput):
     __slots__ = ("exprs",)
     exprs: Seq[ExprIR]
+
     # NOTE: Contains a `should_broadcast` flag, but AFAICT
     # is only replaced with `False` during optimization (not when building the plan)
     # `options: ProjectionOptions`
+    def __repr__(self) -> str:
+        return f"SELECT {list(self.exprs)!r}"
 
 
 # `DslPlan::HStack`
@@ -89,16 +92,27 @@ class WithColumns(SingleInput):
     exprs: Seq[ExprIR]
     # NOTE: Same `ProjectionOptions` comment as `Select`
 
+    def __repr__(self) -> str:
+        return f"WITH_COLUMNS:\n{list(self.exprs)!r}"
+
 
 class Filter(SingleInput):
     __slots__ = ("predicate",)
     predicate: ExprIR
 
+    def __repr__(self) -> str:
+        return f"FILTER {self.predicate!r}\nFROM"
 
+
+# TODO @dangotbanned: Add repr
 class GroupBy(SingleInput):
     __slots__ = ("aggs", "keys")
     keys: Seq[ExprIR]
     aggs: Seq[ExprIR]
+
+    def __repr__(self) -> str:
+        msg = f"TODO: `{type(self).__name__}.__repr__`"
+        raise NotImplementedError(msg)
 
 
 # `DslPlan::Distinct`
@@ -107,17 +121,29 @@ class Unique(SingleInput):
     subset: Seq[SelectorIR] | None
     options: UniqueOptions
 
+    def __repr__(self) -> str:
+        opts = self.options
+        return f"UNIQUE[maintain_order: {opts.maintain_order}, keep: {opts.keep}] BY {self.subset!r}"
 
+
+# TODO @dangotbanned: Add repr
 class Sort(SingleInput):
     __slots__ = ("by", "options")
     by: Seq[SelectorIR]
     options: SortMultipleOptions
+
+    def __repr__(self) -> str:
+        msg = f"TODO: `{type(self).__name__}.__repr__`"
+        raise NotImplementedError(msg)
 
 
 class Slice(SingleInput):
     __slots__ = ("length", "offset")
     offset: int
     length: int | None
+
+    def __repr__(self) -> str:
+        return f"SLICE[offset: {self.offset}, len: {self.length}]"
 
 
 class Join(LogicalPlan):
@@ -129,11 +155,20 @@ class Join(LogicalPlan):
     right_on: Seq[str]
     options: JoinOptions
 
+    def __repr__(self) -> str:
+        how = self.options.how.upper()
+        if how == "CROSS":
+            return f"{how} JOIN"
+        return f"{how} JOIN:\nLEFT PLAN ON: {list(self.left_on)!r}\nRIGHT PLAN ON: {list(self.right_on)!r}"
+
 
 class MapFunction(SingleInput):
     # `polars` says this is for UDFs, but uses it for: `Rename`, `RowIndex`, `Unnest`, `Explode`
     __slots__ = ("function",)
     function: LpFunction
+
+    def __repr__(self) -> str:
+        return f"{self.function!r}"
 
 
 # `DslPlan::Union`
@@ -144,6 +179,9 @@ class VConcat(LogicalPlan):
     inputs: Seq[LogicalPlan]
     options: VConcatOptions
 
+    def __repr__(self) -> str:
+        return "UNION"
+
 
 class HConcat(LogicalPlan):
     """`concat(how="horizontal")`."""
@@ -152,6 +190,9 @@ class HConcat(LogicalPlan):
     inputs: Seq[LogicalPlan]
     strict: bool
     """Require all `inputs` to be the same height, raising an error if not, default False."""
+
+    def __repr__(self) -> str:
+        return "HCONCAT"
 
 
 # NOTE: `DslFunction`
@@ -163,15 +204,30 @@ class Explode(LpFunction):
     columns: SelectorIR
     options: ExplodeOptions
 
+    def __repr__(self) -> str:
+        opts = self.options
+        s = f"EXPLODE {self.columns!r}"
+        if not opts.empty_as_null:
+            s += ", empty_as_null: False"
+        if not opts.keep_nulls:
+            s += ", keep_nulls: False"
+        return s
+
 
 class Unnest(LpFunction):
     __slots__ = ("columns",)
     columns: SelectorIR
 
+    def __repr__(self) -> str:
+        return f"UNNEST by: {self.columns!r}"
+
 
 class RowIndex(LpFunction):
     __slots__ = ("name",)
     name: str
+
+    def __repr__(self) -> str:
+        return f"ROW INDEX name: {self.name}"
 
 
 class Rename(LpFunction):
@@ -183,3 +239,6 @@ class Rename(LpFunction):
     def mapping(self) -> dict[str, str]:
         # Trying to avoid adding mutable fields
         return dict(zip_strict(self.old, self.new))
+
+    def __repr__(self) -> str:
+        return f"RENAME {self.mapping!r}"
