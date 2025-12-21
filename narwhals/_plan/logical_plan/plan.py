@@ -22,30 +22,63 @@ if TYPE_CHECKING:
     from narwhals._plan.typing import Seq
 
 
-# `DslPlan`
 # TODO @dangotbanned: Add `LogicalPlan`s for ops in `nw.*Frame`, that aren't yet in `nwp.*Frame`
 class LogicalPlan(Immutable):
-    """Misc notes.
+    """Representation of `LazyFrame` operations, based on [`polars_plan::dsl::plan::DslPlan`].
 
-    - `LazyFrame.collect` -> `LazyFrame.collect_with_engine` -> `DslPlan::Sink(self.logical_plan, SinkType::Memory)`
-      - Adding the collect to the plan so far
-      - https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/crates/polars-lazy/src/frame/mod.rs#L631-L637
-    - `LazyFrame.to_alp_optimized`
-      - https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/crates/polars-lazy/src/frame/mod.rs#L666
-    - Here's the big boi, single function, handling `plan::DslPlan` -> `ir::IR`
-      - `polars_plan::plans::conversion::dsl_to_ir::to_alp_impl`
-      - https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/crates/polars-plan/src/plans/conversion/dsl_to_ir/mod.rs#L102-L1375
-      - Recurses, calling on each input in a plan
-      - Expansion is happening at this stage
-      - `resolve_group_by` as well
-    - Notable dependencies
-      - https://github.com/pola-rs/polars/blob/00d7f7e1c3b24a54a13f235e69584614959f8837/crates/polars-plan/src/utils.rs#L217-L244
-      - https://github.com/pola-rs/polars/blob/00d7f7e1c3b24a54a13f235e69584614959f8837/crates/polars-plan/src/dsl/expr/mod.rs#L436-L455
-      - https://github.com/pola-rs/polars/blob/00d7f7e1c3b24a54a13f235e69584614959f8837/crates/polars-plan/src/plans/conversion/dsl_to_ir/expr_to_ir.rs#L6-L9
-        - polars
-          - `Expr`   -> `ExprIR`
-        - here
-          - `ExprIR` -> `NamedIR` (+ `output_dtype`)
+    ## Notes
+
+    ### Collection
+    Calling [`LazyFrame.collect`] takes us through [`LazyFrame.collect_with_engine`]
+    where the plan ends with [`DslPlan::Sink(self.logical_plan, SinkType::Memory)`].
+
+    ### Conversion/lowering
+    The first pass, starts at [`LazyFrame.to_alp_optimized`] and leads over to [`polars_plan::plans::conversion::dsl_to_ir::to_alp_impl`].
+
+    This is a big boi, recursive function handling the conversion of [`polars_plan::dsl::plan::DslPlan`] -> [`polars_plan::plans::ir::IR`].
+
+    *Some elements* of the work done here are already part of `narwhals._plan`, like [`_plan._expansion.py`] and [`GroupByResolver`].
+
+    ### Schema
+    Part of the conversion uses some high-*er* level APIs for propagating `Schema` transformations between each plan:
+    - [`expressions_to_schema`]
+    - [`Expr.to_field_amortized`]
+    - [`to_expr_ir`]
+
+    This is currently *not* part of `narwhals` or `_plan`.
+
+    Here the approximation of expressions is *richer* than `main`, but has not dived into the `DType` can-o-worms:
+
+        # Real polars
+        def lower_rust(expr: Expr) -> ExprIR: ...
+        #                    ^^^^     ^^^^^^
+        #                    |        |
+        #                    |        Expanded, resolved name
+        #                    |        Stores an index referring to an `AExpr` (another concept not here)
+        #                    |        Has a write-once `output_dtype: DType`
+        #                    Builder
+
+        # Over here
+        def lower_py(expr: ExprIR) -> NamedIR[ExprIR]: ...
+        #                  ^^^^^^     ^^^^^^^ ^^^^^^
+        #                  |          |       |
+        #                  |          |       Stores the expanded version, using the same type
+        #                  |          Expanded, resolved name
+        #                  |          No concept of `DType`
+        #                  Builder
+
+    [`polars_plan::dsl::plan::DslPlan`]: https://github.com/pola-rs/polars/blob/00d7f7e1c3b24a54a13f235e69584614959f8837/crates/polars-plan/src/dsl/plan.rs#L28-L179
+    [`LazyFrame.collect`]: https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/crates/polars-lazy/src/frame/mod.rs#L805-L824
+    [`LazyFrame.collect_with_engine`]: https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/crates/polars-lazy/src/frame/mod.rs#L624-L628
+    [`DslPlan::Sink(self.logical_plan, SinkType::Memory)`]: https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/crates/polars-lazy/src/frame/mod.rs#L631-L637
+    [`LazyFrame.to_alp_optimized`]: https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/crates/polars-lazy/src/frame/mod.rs#L666
+    [`polars_plan::plans::conversion::dsl_to_ir::to_alp_impl`]: https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/crates/polars-plan/src/plans/conversion/dsl_to_ir/mod.rs#L102-L1375
+    [`polars_plan::plans::ir::IR`]: https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/crates/polars-plan/src/plans/ir/mod.rs#L38-L168
+    [`_plan._expansion.py`]: https://github.com/narwhals-dev/narwhals/blob/9b9122b4ab38a6aebe2f09c29ad0f6191952a7a7/narwhals/_plan/_expansion.py
+    [`GroupByResolver`]: https://github.com/narwhals-dev/narwhals/blob/9b9122b4ab38a6aebe2f09c29ad0f6191952a7a7/narwhals/_plan/compliant/group_by.py#L131-L194
+    [`expressions_to_schema`]: https://github.com/pola-rs/polars/blob/00d7f7e1c3b24a54a13f235e69584614959f8837/crates/polars-plan/src/utils.rs#L217-L244
+    [`Expr.to_field_amortized`]: https://github.com/pola-rs/polars/blob/00d7f7e1c3b24a54a13f235e69584614959f8837/crates/polars-plan/src/dsl/expr/mod.rs#L436-L455
+    [`to_expr_ir`]: https://github.com/pola-rs/polars/blob/00d7f7e1c3b24a54a13f235e69584614959f8837/crates/polars-plan/src/plans/conversion/dsl_to_ir/expr_to_ir.rs#L6-L9
     """
 
 
@@ -68,7 +101,7 @@ class DataFrameScan(LogicalPlan):
     @property
     def __immutable_values__(self) -> Iterator[Any]:
         # NOTE: Deferring how to handle the hash *for now*
-        # Currently, every `DataFrameSource` will have a unique psuedo-hash
+        # Currently, every `DataFrameSource` will have a unique pseudo-hash
         # Caching a native table seems like a non-starter, once `pandas` enters the party
         yield from (id(self.df), self.schema)
 
