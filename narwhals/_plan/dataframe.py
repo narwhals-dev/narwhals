@@ -431,9 +431,9 @@ class DataFrame(
         schema = self.schema
         subset_names: Sequence[str] | None = None
         if subset is not None:
-            subset_selectors = _parse.parse_into_seq_of_selector_ir(subset)
-            subset_names = (
-                expand_selector_irs_names(subset_selectors, schema=schema) or None
+            s_irs = _parse.parse_into_seq_of_selector_ir(subset)
+            subset_names = expand_selector_irs_names(
+                s_irs, schema=schema, require_any=True
             )
         if order_by is None:
             return self._with_compliant(
@@ -441,11 +441,8 @@ class DataFrame(
                     subset_names, keep=keep, maintain_order=maintain_order
                 )
             )
-        by_names = expand_selector_irs_names(
-            _parse.parse_into_seq_of_selector_ir(order_by),
-            schema=schema,
-            require_any=True,
-        )
+        s_irs = _parse.parse_into_seq_of_selector_ir(order_by)
+        by_names = expand_selector_irs_names(s_irs, schema=schema, require_any=True)
         return self._with_compliant(
             self._compliant.unique_by(
                 subset_names, keep=keep, maintain_order=maintain_order, order_by=by_names
