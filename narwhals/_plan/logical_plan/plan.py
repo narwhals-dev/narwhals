@@ -81,6 +81,16 @@ class LogicalPlan(Immutable):
     [`to_expr_ir`]: https://github.com/pola-rs/polars/blob/00d7f7e1c3b24a54a13f235e69584614959f8837/crates/polars-plan/src/plans/conversion/dsl_to_ir/expr_to_ir.rs#L6-L9
     """
 
+    def iter_left(self) -> Iterator[LogicalPlan]:
+        """Yield nodes root->leaf."""
+        msg = f"TODO: `{type(self).__name__}.iter_left`"
+        raise NotImplementedError(msg)
+
+    def iter_right(self) -> Iterator[LogicalPlan]:
+        """Yield nodes leaf->root."""
+        msg = f"TODO: `{type(self).__name__}.iter_right`"
+        raise NotImplementedError(msg)
+
 
 # TODO @dangotbanned: Careful think about how (non-scan) source nodes should work
 # - Schema only?
@@ -97,6 +107,12 @@ class DataFrameScan(LogicalPlan):
         object.__setattr__(obj, "df", df.clone())
         object.__setattr__(obj, "schema", freeze_schema(df.schema))
         return obj
+
+    def iter_left(self) -> Iterator[LogicalPlan]:
+        yield self
+
+    def iter_right(self) -> Iterator[LogicalPlan]:
+        yield self
 
     @property
     def __immutable_values__(self) -> Iterator[Any]:
@@ -128,6 +144,14 @@ class DataFrameScan(LogicalPlan):
 class SingleInput(LogicalPlan):
     __slots__ = ("input",)
     input: LogicalPlan
+
+    def iter_left(self) -> Iterator[LogicalPlan]:
+        yield from self.input.iter_left()
+        yield self
+
+    def iter_right(self) -> Iterator[LogicalPlan]:
+        yield self
+        yield from self.input.iter_right()
 
 
 class Sink(SingleInput):
@@ -226,6 +250,16 @@ class Join(LogicalPlan):
     right_on: Seq[str]
     options: JoinOptions
 
+    def iter_left(self) -> Iterator[LogicalPlan]:
+        yield from self.input_left.iter_left()
+        yield from self.input_right.iter_left()
+        yield self
+
+    def iter_right(self) -> Iterator[LogicalPlan]:
+        yield self
+        yield from self.input_right.iter_right()
+        yield from self.input_left.iter_right()
+
     def __repr__(self) -> str:
         how = self.options.how.upper()
         if how == "CROSS":
@@ -253,6 +287,16 @@ class VConcat(LogicalPlan):
     def __repr__(self) -> str:
         return "UNION"
 
+    def iter_left(self) -> Iterator[LogicalPlan]:
+        for input in self.inputs:
+            yield from input.iter_left()
+        yield self
+
+    def iter_right(self) -> Iterator[LogicalPlan]:
+        yield self
+        for input in reversed(self.inputs):
+            yield from input.iter_right()
+
 
 class HConcat(LogicalPlan):
     """`concat(how="horizontal")`."""
@@ -264,6 +308,16 @@ class HConcat(LogicalPlan):
 
     def __repr__(self) -> str:
         return "HCONCAT"
+
+    def iter_left(self) -> Iterator[LogicalPlan]:
+        for input in self.inputs:
+            yield from input.iter_left()
+        yield self
+
+    def iter_right(self) -> Iterator[LogicalPlan]:
+        yield self
+        for input in reversed(self.inputs):
+            yield from input.iter_right()
 
 
 # NOTE: `DslFunction`
