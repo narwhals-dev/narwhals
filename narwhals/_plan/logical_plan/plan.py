@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Generic
 
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.schema import freeze_schema
+from narwhals._plan.typing import Seq
+from narwhals._typing_compat import TypeVar
 from narwhals._utils import qualified_type_name, zip_strict
 
 if TYPE_CHECKING:
@@ -19,7 +21,8 @@ if TYPE_CHECKING:
         VConcatOptions,
     )
     from narwhals._plan.schema import FrozenSchema
-    from narwhals._plan.typing import Seq
+
+_InputsT = TypeVar("_InputsT", bound="Seq[LogicalPlan]")
 
 
 # TODO @dangotbanned: Add `LogicalPlan`s for ops in `nw.*Frame`, that aren't yet in `nwp.*Frame`
@@ -154,6 +157,21 @@ class SingleInput(LogicalPlan):
         yield from self.input.iter_right()
 
 
+class MultipleInputs(LogicalPlan, Generic[_InputsT]):
+    __slots__ = ("inputs",)
+    inputs: _InputsT
+
+    def iter_left(self) -> Iterator[LogicalPlan]:
+        for input in self.inputs:
+            yield from input.iter_left()
+        yield self
+
+    def iter_right(self) -> Iterator[LogicalPlan]:
+        yield self
+        for input in reversed(self.inputs):
+            yield from input.iter_right()
+
+
 class Sink(SingleInput):
     """Terminal nodes."""
 
@@ -241,32 +259,6 @@ class Slice(SingleInput):
         return f"SLICE[offset: {self.offset}, len: {self.length}]"
 
 
-class Join(LogicalPlan):
-    __slots__ = ("how", "input_left", "input_right", "left_on", "right_on", "suffix")
-    # NOTE: Might be nicer to have `inputs: tuple[LogicalPlan, LogicalPlan]`
-    input_left: LogicalPlan
-    input_right: LogicalPlan
-    left_on: Seq[str]
-    right_on: Seq[str]
-    options: JoinOptions
-
-    def iter_left(self) -> Iterator[LogicalPlan]:
-        yield from self.input_left.iter_left()
-        yield from self.input_right.iter_left()
-        yield self
-
-    def iter_right(self) -> Iterator[LogicalPlan]:
-        yield self
-        yield from self.input_right.iter_right()
-        yield from self.input_left.iter_right()
-
-    def __repr__(self) -> str:
-        how = self.options.how.upper()
-        if how == "CROSS":
-            return f"{how} JOIN"
-        return f"{how} JOIN:\nLEFT PLAN ON: {list(self.left_on)!r}\nRIGHT PLAN ON: {list(self.right_on)!r}"
-
-
 class MapFunction(SingleInput):
     # `polars` says this is for UDFs, but uses it for: `Rename`, `RowIndex`, `Unnest`, `Explode`
     __slots__ = ("function",)
@@ -276,48 +268,49 @@ class MapFunction(SingleInput):
         return f"{self.function!r}"
 
 
+class Join(MultipleInputs[tuple[LogicalPlan, LogicalPlan]]):
+    """Join two tables in an SQL-like fashion."""
+
+    __slots__ = ("how", "left_on", "right_on", "suffix")
+    left_on: Seq[str]
+    right_on: Seq[str]
+    options: JoinOptions
+
+    @property
+    def input_left(self) -> LogicalPlan:
+        return self.inputs[0]
+
+    @property
+    def input_right(self) -> LogicalPlan:
+        return self.inputs[1]
+
+    def __repr__(self) -> str:
+        how = self.options.how.upper()
+        if how == "CROSS":
+            return f"{how} JOIN"
+        return f"{how} JOIN:\nLEFT PLAN ON: {list(self.left_on)!r}\nRIGHT PLAN ON: {list(self.right_on)!r}"
+
+
 # `DslPlan::Union`
-class VConcat(LogicalPlan):
+class VConcat(MultipleInputs[Seq[LogicalPlan]]):
     """`concat(how= "vertical" | "diagonal")`."""
 
-    __slots__ = ("inputs", "options")
-    inputs: Seq[LogicalPlan]
+    __slots__ = ("options",)
     options: VConcatOptions
 
     def __repr__(self) -> str:
         return "UNION"
 
-    def iter_left(self) -> Iterator[LogicalPlan]:
-        for input in self.inputs:
-            yield from input.iter_left()
-        yield self
 
-    def iter_right(self) -> Iterator[LogicalPlan]:
-        yield self
-        for input in reversed(self.inputs):
-            yield from input.iter_right()
-
-
-class HConcat(LogicalPlan):
+class HConcat(MultipleInputs[Seq[LogicalPlan]]):
     """`concat(how="horizontal")`."""
 
-    __slots__ = ("inputs", "strict")
-    inputs: Seq[LogicalPlan]
+    __slots__ = ("strict",)
     strict: bool
     """Require all `inputs` to be the same height, raising an error if not, default False."""
 
     def __repr__(self) -> str:
         return "HCONCAT"
-
-    def iter_left(self) -> Iterator[LogicalPlan]:
-        for input in self.inputs:
-            yield from input.iter_left()
-        yield self
-
-    def iter_right(self) -> Iterator[LogicalPlan]:
-        yield self
-        for input in reversed(self.inputs):
-            yield from input.iter_right()
 
 
 # NOTE: `DslFunction`

@@ -81,8 +81,7 @@ class LpBuilder:
     ) -> Self:
         return self.from_plan(
             lp.Join(
-                input_left=self._plan,
-                input_right=other,
+                inputs=(self._plan, other),
                 left_on=left_on,
                 right_on=right_on,
                 options=options,
