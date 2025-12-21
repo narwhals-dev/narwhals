@@ -28,7 +28,14 @@ from narwhals._utils import Implementation, Version, generate_repr
 from narwhals.dependencies import is_pyarrow_table
 from narwhals.exceptions import InvalidOperationError, ShapeError
 from narwhals.schema import Schema
-from narwhals.typing import EagerAllowed, IntoBackend, IntoDType, IntoSchema, JoinStrategy
+from narwhals.typing import (
+    EagerAllowed,
+    IntoBackend,
+    IntoDType,
+    IntoSchema,
+    JoinStrategy,
+    UniqueKeepStrategy,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
@@ -412,6 +419,39 @@ class DataFrame(
         partitions = self._compliant.partition_by(names, include_key=include_key)
         return [self._with_compliant(p) for p in partitions]
 
+    def unique(
+        self,
+        subset: OneOrIterable[ColumnNameOrSelector] | None = None,
+        *,
+        keep: UniqueKeepStrategy = "any",
+        maintain_order: bool = False,
+        order_by: OneOrIterable[ColumnNameOrSelector] | None = None,
+    ) -> Self:
+        keep = _validate_unique_keep_strategy(keep)
+        schema = self.schema
+        subset_names: Sequence[str] | None = None
+        if subset is not None:
+            subset_selectors = _parse.parse_into_seq_of_selector_ir(subset)
+            subset_names = (
+                expand_selector_irs_names(subset_selectors, schema=schema) or None
+            )
+        if order_by is None:
+            return self._with_compliant(
+                self._compliant.unique(
+                    subset_names, keep=keep, maintain_order=maintain_order
+                )
+            )
+        by_names = expand_selector_irs_names(
+            _parse.parse_into_seq_of_selector_ir(order_by),
+            schema=schema,
+            require_any=True,
+        )
+        return self._with_compliant(
+            self._compliant.unique_by(
+                subset_names, keep=keep, maintain_order=maintain_order, order_by=by_names
+            )
+        )
+
     def with_row_index(
         self,
         name: str = "index",
@@ -455,10 +495,21 @@ def _is_join_strategy(obj: Any) -> TypeIs[JoinStrategy]:
     return obj in {"inner", "left", "full", "cross", "anti", "semi"}
 
 
+def _is_unique_keep_strategy(obj: Any) -> TypeIs[UniqueKeepStrategy]:
+    return obj in {"any", "first", "last", "none"}
+
+
 def _validate_join_strategy(how: str, /) -> JoinStrategy:
     if _is_join_strategy(how):
         return how
     msg = f"Only the following join strategies are supported: {get_args(JoinStrategy)}; found '{how}'."
+    raise NotImplementedError(msg)
+
+
+def _validate_unique_keep_strategy(keep: str, /) -> UniqueKeepStrategy:
+    if _is_unique_keep_strategy(keep):
+        return keep
+    msg = f"Only the following keep strategies are supported: {get_args(UniqueKeepStrategy)}; found '{keep}'."
     raise NotImplementedError(msg)
 
 

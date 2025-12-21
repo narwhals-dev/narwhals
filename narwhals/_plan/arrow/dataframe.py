@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from narwhals._plan.options import ExplodeOptions, SortMultipleOptions
     from narwhals._plan.typing import NonCrossJoinStrategy
     from narwhals.dtypes import DType
-    from narwhals.typing import IntoSchema
+    from narwhals.typing import IntoSchema, UniqueKeepStrategy
 
 Incomplete: TypeAlias = Any
 
@@ -117,6 +117,27 @@ class ArrowDataFrame(
 
     def sort(self, by: Sequence[str], options: SortMultipleOptions | None = None) -> Self:
         return self.gather(fn.sort_indices(self.native, *by, options=options))
+
+    def unique(
+        self,
+        subset: Sequence[str] | None = None,
+        *,
+        keep: UniqueKeepStrategy = "any",
+        maintain_order: bool = False,
+    ) -> Self:
+        msg = "TODO: ArrowDataFrame.unique"
+        raise NotImplementedError(msg)
+
+    def unique_by(
+        self,
+        subset: Sequence[str] | None = None,
+        *,
+        order_by: Sequence[str],
+        keep: UniqueKeepStrategy = "any",
+        maintain_order: bool = False,
+    ) -> Self:
+        msg = "TODO: ArrowDataFrame.unique_by"
+        raise NotImplementedError(msg)
 
     def with_row_index(self, name: str) -> Self:
         return self._with_native(self.native.add_column(0, name, fn.int_range(len(self))))

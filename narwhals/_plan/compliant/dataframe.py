@@ -36,7 +36,7 @@ if TYPE_CHECKING:
     from narwhals._typing import _EagerAllowedImpl
     from narwhals._utils import Implementation, Version
     from narwhals.dtypes import DType
-    from narwhals.typing import IntoSchema
+    from narwhals.typing import IntoSchema, UniqueKeepStrategy
 
 Incomplete: TypeAlias = Any
 
@@ -69,6 +69,16 @@ class CompliantFrame(HasVersion, Protocol[ColumnT_co, NativeFrameT_co]):
     def select(self, irs: Seq[NamedIR]) -> Self: ...
     def select_names(self, *column_names: str) -> Self: ...
     def sort(self, by: Sequence[str], options: SortMultipleOptions) -> Self: ...
+    def unique(
+        self, subset: Sequence[str] | None = None, *, keep: UniqueKeepStrategy = "any"
+    ) -> Self: ...
+    def unique_by(
+        self,
+        subset: Sequence[str] | None = None,
+        *,
+        order_by: Sequence[str],
+        keep: UniqueKeepStrategy = "any",
+    ) -> Self: ...
     def with_columns(self, irs: Seq[NamedIR]) -> Self: ...
     def with_row_index_by(
         self, name: str, order_by: Sequence[str], *, nulls_last: bool = False
@@ -174,6 +184,21 @@ class CompliantDataFrame(
     def to_series(self, index: int = 0) -> SeriesT: ...
     def to_struct(self, name: str = "") -> SeriesT: ...
     def to_polars(self) -> pl.DataFrame: ...
+    def unique(
+        self,
+        subset: Sequence[str] | None = None,
+        *,
+        keep: UniqueKeepStrategy = "any",
+        maintain_order: bool = False,
+    ) -> Self: ...
+    def unique_by(
+        self,
+        subset: Sequence[str] | None = None,
+        *,
+        order_by: Sequence[str],
+        keep: UniqueKeepStrategy = "any",
+        maintain_order: bool = False,
+    ) -> Self: ...
     def with_row_index(self, name: str) -> Self: ...
     def slice(self, offset: int, length: int | None = None) -> Self: ...
     def sample_frac(
