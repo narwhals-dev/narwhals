@@ -95,10 +95,22 @@ class LogicalPlan(Immutable):
         raise NotImplementedError(msg)
 
 
+# TODO @dangotbanned: Add `ScanCsv`, `ScanParquet` (after adding them in #2572)
+# TODO @dangotbanned: Maybe rename this to `Scan` for consistency with polars
+class Source(LogicalPlan):
+    """Root node of a `LogicalPlan`."""
+
+    def iter_left(self) -> Iterator[LogicalPlan]:
+        yield self
+
+    def iter_right(self) -> Iterator[LogicalPlan]:
+        yield self
+
+
 # TODO @dangotbanned: Careful think about how (non-scan) source nodes should work
 # - Schema only?
 # - Different for eager vs lazy?
-class DataFrameScan(LogicalPlan):
+class DataFrameScan(Source):
     __slots__ = ("df", "schema")
     df: DataFrame[Any, Any]
     schema: FrozenSchema
@@ -110,12 +122,6 @@ class DataFrameScan(LogicalPlan):
         object.__setattr__(obj, "df", df.clone())
         object.__setattr__(obj, "schema", freeze_schema(df.schema))
         return obj
-
-    def iter_left(self) -> Iterator[LogicalPlan]:
-        yield self
-
-    def iter_right(self) -> Iterator[LogicalPlan]:
-        yield self
 
     @property
     def __immutable_values__(self) -> Iterator[Any]:
@@ -173,7 +179,7 @@ class MultipleInputs(LogicalPlan, Generic[_InputsT]):
 
 
 class Sink(SingleInput):
-    """Terminal nodes."""
+    """Terminal node of a `LogicalPlan`."""
 
 
 class Collect(Sink): ...
