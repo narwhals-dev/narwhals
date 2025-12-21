@@ -38,6 +38,14 @@ class LogicalPlan(Immutable):
       - Recurses, calling on each input in a plan
       - Expansion is happening at this stage
       - `resolve_group_by` as well
+    - Notable dependencies
+      - https://github.com/pola-rs/polars/blob/00d7f7e1c3b24a54a13f235e69584614959f8837/crates/polars-plan/src/utils.rs#L217-L244
+      - https://github.com/pola-rs/polars/blob/00d7f7e1c3b24a54a13f235e69584614959f8837/crates/polars-plan/src/dsl/expr/mod.rs#L436-L455
+      - https://github.com/pola-rs/polars/blob/00d7f7e1c3b24a54a13f235e69584614959f8837/crates/polars-plan/src/plans/conversion/dsl_to_ir/expr_to_ir.rs#L6-L9
+        - polars
+          - `Expr`   -> `ExprIR`
+        - here
+          - `ExprIR` -> `NamedIR` (+ `output_dtype`)
     """
 
 
