@@ -12,6 +12,7 @@
         - cast
         - ceil
         - clip
+        - cos
         - count
         - cum_count
         - cum_max

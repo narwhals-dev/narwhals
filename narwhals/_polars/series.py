@@ -710,6 +710,7 @@ class PolarsSeries:
     arg_true: Method[Self]
     ceil: Method[Self]
     count: Method[int]
+    cos: Method[Self]
     cum_max: Method[Self]
     cum_min: Method[Self]
     cum_prod: Method[Self]

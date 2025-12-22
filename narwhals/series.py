@@ -2778,6 +2778,27 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._with_compliant(self._compliant_series.sin())
 
+    def cos(self) -> Self:
+        r"""Compute the cos.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> from math import pi
+            >>> s_native = pd.Series([0, pi / 2, 3 * pi / 2], name="a")
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.cos()
+            ┌───────────────────────┐
+            |    Narwhals Series    |
+            |-----------------------|
+            |0    0.0               |
+            |1    1.0               |
+            |2   -1.0               |
+            |Name: a, dtype: float64|
+            └───────────────────────┘
+        """
+        return self._with_compliant(self._compliant_series.cos())
+
     def sqrt(self) -> Self:
         r"""Compute the square root.
 
