@@ -1756,10 +1756,10 @@ def int_range(
     if not HAS_ARANGE:  # pragma: no cover
         import numpy as np  # ignore-banned-import
 
-        arr = pa.array(np.arange(start=start, stop=end, step=step), type=dtype)
+        arr = pa.array(np.arange(start, end, step), type=dtype)
     else:
         int_range_: Incomplete = pa.arange  # type: ignore[attr-defined]
-        arr = t.cast("ArrayAny", int_range_(start=start, stop=end, step=step)).cast(dtype)
+        arr = t.cast("ArrayAny", int_range_(start, end, step)).cast(dtype)
     return arr if not chunked else pa.chunked_array([arr])
 
 
