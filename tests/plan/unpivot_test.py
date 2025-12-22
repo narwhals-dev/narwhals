@@ -90,7 +90,7 @@ def test_unpivot_default_var_value_names() -> None:  # pragma: no cover
 
 
 @XFAIL_NOT_IMPL
-@pytest.mark.xfail(PYARROW_VERSION < (14, 0, 0))
+@pytest.mark.xfail(PYARROW_VERSION < (14, 0, 0), reason="pyarrow<14")
 @pytest.mark.parametrize(
     ("data", "expected_dtypes"),
     [
