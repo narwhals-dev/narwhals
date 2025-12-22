@@ -10,17 +10,17 @@ from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError
 from tests.plan.utils import assert_equal_data, dataframe, re_compile
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from typing_extensions import TypeAlias
 
+    from narwhals._plan.typing import ColumnNameOrSelector, OneOrIterable
     from tests.conftest import Data
 
     OrderedStrategy: TypeAlias = Literal["first", "last"]
     UnorderedStrategy: TypeAlias = Literal["any", "none"]
 
 
-# TODO @dangotbanned: Either, define a more complete `data` which every test uses
-# or define multiple but reuse them
-# Currently 4 inline `data`s + the fixture
 @pytest.fixture(scope="module")
 def data() -> Data:
     return {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
@@ -80,6 +80,7 @@ def test_unique_eager(
     assert_equal_data(result, expected)
 
 
+@pytest.mark.parametrize("order_by", ["i", ncs.first()])
 @pytest.mark.parametrize(
     ("keep", "expected"),
     [
@@ -88,14 +89,18 @@ def test_unique_eager(
     ],
 )
 def test_unique_first_last(
-    keep: OrderedStrategy, expected: Data, *, maintain_order: bool
+    keep: OrderedStrategy,
+    order_by: ColumnNameOrSelector | Sequence[ColumnNameOrSelector],
+    expected: Data,
+    *,
+    maintain_order: bool,
 ) -> None:
     data = {"i": [0, 1, None, 2], "a": [1, 3, 2, 1], "b": [4, 4, 4, 6]}
     result = dataframe(data).unique(
-        "b", keep=keep, order_by="i", maintain_order=maintain_order
+        "b", keep=keep, order_by=order_by, maintain_order=maintain_order
     )
     if not maintain_order:
-        result = result.sort("i")
+        result = result.sort(order_by)
     assert_equal_data(result, expected)
 
 
@@ -118,6 +123,7 @@ def test_unique_first_last_no_subset(
     assert_equal_data(result, expected)
 
 
+@pytest.mark.parametrize("subset", [("b",), ~ncs.by_index(0, 2)])
 @pytest.mark.parametrize(
     ("keep", "expected"),
     [
@@ -125,18 +131,25 @@ def test_unique_first_last_no_subset(
         ("none", {"a": [2], "b": [6], "z": [9]}),
     ],
 )
-def test_unique(data: Data, keep: UnorderedStrategy, expected: Data) -> None:
-    result = dataframe(data).unique(["b"], keep=keep).sort("z")
+def test_unique(
+    data: Data,
+    subset: OneOrIterable[ColumnNameOrSelector] | None,
+    keep: UnorderedStrategy,
+    expected: Data,
+) -> None:
+    result = dataframe(data).unique(subset, keep=keep).sort("z")
     assert_equal_data(result, expected)
 
 
-@pytest.mark.parametrize("subset", [None, ["a", "b"]])
+@pytest.mark.parametrize("subset", [None, ["a", "b"], ncs.all()])
 @pytest.mark.parametrize(
     ("keep", "expected"),
     [("any", {"a": [1, 1, 2], "b": [3, 4, 4]}), ("none", {"a": [1, 2], "b": [4, 4]})],
 )
 def test_unique_full_subset(
-    subset: list[str] | None, keep: UnorderedStrategy, expected: Data
+    subset: OneOrIterable[ColumnNameOrSelector] | None,
+    keep: UnorderedStrategy,
+    expected: Data,
 ) -> None:
     data = {"a": [1, 1, 1, 2], "b": [3, 3, 4, 4]}
     result = dataframe(data).unique(subset, keep=keep).sort("a", "b")
