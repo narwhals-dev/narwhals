@@ -301,9 +301,9 @@ def get_backend_methods(
 
     methods = set(ALWAYS_IMPLEMENTED)
     if compliant_class is not None:
-        methods = get_implemented_methods_from_class(compliant_class)
+        methods.update(get_implemented_methods_from_class(compliant_class))
 
-    if backend.name not in SERIES_REUSING_BACKENDS or not module_name.startswith("expr"):
+    if backend.name in SERIES_REUSING_BACKENDS and module_name.startswith("expr"):
         methods = _add_series_reusing_methods(
             methods, module_name, backend, target_class_name
         )
