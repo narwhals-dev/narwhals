@@ -7,7 +7,7 @@ import pytest
 import narwhals as nw
 from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
-data = {"a": [-pi, -pi / 2, 0, pi / 2, pi]}
+data = {"a": [-pi, -pi / 2, 0.0, pi / 2, pi]}
 
 expected = [-1, 0, 1, 0, -1]
 
