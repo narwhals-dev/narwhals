@@ -119,36 +119,17 @@ class ArrowDataFrame(
     def sort(self, by: Sequence[str], options: SortMultipleOptions | None = None) -> Self:
         return self.gather(fn.sort_indices(self.native, *by, options=options))
 
-    def unique(
+    def _unique(
         self,
         subset: Sequence[str] | None = None,
         *,
+        order_by: Sequence[str] = (),
         keep: UniqueKeepStrategy = "any",
-        maintain_order: bool = False,
+        **_: Any,
     ) -> Self:
-        subset = tuple(subset or self.columns)
-        into_column_agg, mask = fn.unique_keep_boolean_length_preserving(keep)
-        idx_name = temp.column_name(self.columns)
-        df = self.select_names(*subset).with_row_index(idx_name)
-        idx = df.to_series().native
-        idx_agg = (
-            df.group_by_names(subset)
-            .agg((named_ir(idx_name, into_column_agg(idx_name)),))
-            .get_column(idx_name)
-            .native
-        )
-        return self._filter(mask(idx, idx_agg))
+        """Drop duplicate rows from this DataFrame.
 
-    def unique_by(
-        self,
-        subset: Sequence[str] | None = None,
-        *,
-        order_by: Sequence[str],
-        keep: UniqueKeepStrategy = "any",
-        maintain_order: bool = False,
-    ) -> Self:
-        """Always maintains order, via `with_row_index_by`.
-
+        Always maintains order, via `with_row_index(_by)`.
         See [`unsort_indices`] for an example.
 
         [`unsort_indices`]: https://github.com/narwhals-dev/narwhals/blob/9b9122b4ab38a6aebe2f09c29ad0f6191952a7a7/narwhals/_plan/arrow/functions.py#L1666-L1697
@@ -156,17 +137,21 @@ class ArrowDataFrame(
         subset = tuple(subset or self.columns)
         into_column_agg, mask = fn.unique_keep_boolean_length_preserving(keep)
         idx_name = temp.column_name(self.columns)
-        df = self.select_names(*set(subset).union(order_by)).with_row_index_by(
-            idx_name, order_by
-        )
-        idx = df.to_series().native
+        df = self.select_names(*set(subset).union(order_by))
+        if order_by:
+            df = df.with_row_index_by(idx_name, order_by)
+        else:
+            df = df.with_row_index(idx_name)
         idx_agg = (
             df.group_by_names(subset)
             .agg((named_ir(idx_name, into_column_agg(idx_name)),))
             .get_column(idx_name)
             .native
         )
-        return self._filter(mask(idx, idx_agg))
+        return self._filter(mask(df.get_column(idx_name).native, idx_agg))
+
+    unique = _unique
+    unique_by = _unique
 
     def with_row_index(self, name: str) -> Self:
         return self._with_native(self.native.add_column(0, name, fn.int_range(len(self))))
