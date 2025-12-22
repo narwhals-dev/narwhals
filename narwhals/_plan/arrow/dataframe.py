@@ -14,7 +14,7 @@ from narwhals._plan.arrow.common import ArrowFrameSeries as FrameSeries
 from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
 from narwhals._plan.arrow.group_by import ArrowGroupBy as GroupBy, partition_by
 from narwhals._plan.arrow.series import ArrowSeries as Series
-from narwhals._plan.common import temp, todo
+from narwhals._plan.common import temp
 from narwhals._plan.compliant.dataframe import EagerDataFrame
 from narwhals._plan.compliant.typing import namespace
 from narwhals._plan.exceptions import shape_error
@@ -139,7 +139,34 @@ class ArrowDataFrame(
         )
         return self._filter(mask(idx, idx_agg))
 
-    unique_by = todo()
+    def unique_by(
+        self,
+        subset: Sequence[str] | None = None,
+        *,
+        order_by: Sequence[str],
+        keep: UniqueKeepStrategy = "any",
+        maintain_order: bool = False,
+    ) -> Self:
+        """Always maintains order, via `with_row_index_by`.
+
+        See [`unsort_indices`] for an example.
+
+        [`unsort_indices`]: https://github.com/narwhals-dev/narwhals/blob/9b9122b4ab38a6aebe2f09c29ad0f6191952a7a7/narwhals/_plan/arrow/functions.py#L1666-L1697
+        """
+        subset = tuple(subset or self.columns)
+        into_column_agg, mask = fn.unique_keep_boolean_length_preserving(keep)
+        idx_name = temp.column_name(self.columns)
+        df = self.select_names(*set(subset).union(order_by)).with_row_index_by(
+            idx_name, order_by
+        )
+        idx = df.to_series().native
+        idx_agg = (
+            df.group_by_names(subset)
+            .agg((named_ir(idx_name, into_column_agg(idx_name)),))
+            .get_column(idx_name)
+            .native
+        )
+        return self._filter(mask(idx, idx_agg))
 
     def with_row_index(self, name: str) -> Self:
         return self._with_native(self.native.add_column(0, name, fn.int_range(len(self))))

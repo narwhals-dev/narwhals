@@ -17,10 +17,6 @@ if TYPE_CHECKING:
     OrderedStrategy: TypeAlias = Literal["first", "last"]
     UnorderedStrategy: TypeAlias = Literal["any", "none"]
 
-XFAIL_UNIQUE_BY = pytest.mark.xfail(
-    reason="TODO: `ArrowDataFrame.unique_by`", raises=NotImplementedError
-)
-
 
 # TODO @dangotbanned: Either, define a more complete `data` which every test uses
 # or define multiple but reuse them
@@ -82,7 +78,6 @@ def test_unique_eager(
 # TODO @dangotbanned: Handle these cases more cleanly
 # (all) `unique(...).sort()` vs
 # (eager only) `unique(..., maintain_order=True)`
-@XFAIL_UNIQUE_BY
 @pytest.mark.parametrize(
     ("keep", "expected"),
     [
@@ -101,7 +96,6 @@ def test_unique_first_last(
     assert_equal_data(result, expected)
 
 
-@XFAIL_UNIQUE_BY
 @pytest.mark.parametrize(
     ("keep", "expected"),
     [
