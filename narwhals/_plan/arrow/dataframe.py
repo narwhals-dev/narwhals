@@ -14,7 +14,7 @@ from narwhals._plan.arrow.common import ArrowFrameSeries as FrameSeries
 from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
 from narwhals._plan.arrow.group_by import ArrowGroupBy as GroupBy, partition_by
 from narwhals._plan.arrow.series import ArrowSeries as Series
-from narwhals._plan.common import temp, todo
+from narwhals._plan.common import temp
 from narwhals._plan.compliant.dataframe import EagerDataFrame
 from narwhals._plan.compliant.typing import namespace
 from narwhals._plan.exceptions import shape_error
@@ -153,7 +153,26 @@ class ArrowDataFrame(
     unique = _unique
     unique_by = _unique
 
-    unpivot = todo()
+    def unpivot(
+        self,
+        on: Sequence[str] | None,
+        index: Sequence[str] | None,
+        *,
+        variable_name: str = "variable",
+        value_name: str = "value",
+    ) -> Self:
+        n = len(self)
+        index = [] if index is None else list(index)
+        on_ = (c for c in self.columns if c not in index) if on is None else iter(on)
+        index_cols = self.native.select(index)
+        column = self.native.column
+        tables = (
+            index_cols.append_column(variable_name, fn.repeat(name, n)).append_column(
+                value_name, column(name)
+            )
+            for name in on_
+        )
+        return self._with_native(fn.concat_tables(tables, "permissive"))
 
     def with_row_index(self, name: str) -> Self:
         return self._with_native(self.native.add_column(0, name, fn.int_range(len(self))))
