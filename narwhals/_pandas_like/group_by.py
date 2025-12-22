@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal
 from narwhals._compliant import EagerGroupBy
 from narwhals._exceptions import issue_warning
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
+from narwhals._pandas_like.utils import make_group_by_kwargs
 from narwhals._utils import zip_strict
 from narwhals.dependencies import is_pandas_like_dataframe
 
@@ -61,6 +62,7 @@ NonStrHashable: TypeAlias = Any
 _REMAP_ORDERED_INDEX: Mapping[NarwhalsAggregation, Literal[0, -1]] = {
     "first": 0,
     "last": -1,
+    "any_value": 0,
 }
 
 
@@ -150,7 +152,7 @@ class AggExpr:
                     for col in cols
                 ]
             )
-        elif self.is_last() or self.is_first():
+        elif self.is_last() or self.is_first() or self.is_any_value():
             result = self.native_agg()(group_by._grouped[[*group_by._keys, *names]])
             result.set_index(group_by._keys, inplace=True)  # noqa: PD002
         else:
@@ -174,6 +176,9 @@ class AggExpr:
     def is_mode(self) -> bool:
         return self.leaf_name == "mode"
 
+    def is_any_value(self) -> bool:
+        return self.leaf_name == "any_value"
+
     def is_top_level_function(self) -> bool:
         # e.g. `nw.len()`.
         return len(list(self.expr._metadata.op_nodes_reversed())) == 1
@@ -190,6 +195,12 @@ class AggExpr:
         native_name = PandasLikeGroupBy._remap_expr_name(self.leaf_name)
         last_node = next(self.expr._metadata.op_nodes_reversed())
         if self.leaf_name in _REMAP_ORDERED_INDEX:
+            if last_node.kwargs.get("ignore_nulls"):
+                msg = (
+                    "`Expr.any_value(ignore_nulls=True)` is not supported in a `group_by` "
+                    "context for pandas-like backend"
+                )
+                raise NotImplementedError(msg)
             return methodcaller("nth", n=_REMAP_ORDERED_INDEX[self.leaf_name])
         return _native_agg(native_name, **last_node.kwargs)
 
@@ -214,6 +225,7 @@ class PandasLikeGroupBy(
         "any": "any",
         "first": "nth",
         "last": "nth",
+        "any_value": "nth",
     }
     _original_columns: tuple[str, ...]
     """Column names *prior* to any aliasing in `ParseKeysGroupBy`."""
@@ -252,12 +264,7 @@ class PandasLikeGroupBy(
         if set(native.index.names).intersection(self.compliant.columns):
             native = native.reset_index(drop=True)
 
-        self._group_by_kwargs = {
-            "sort": False,
-            "as_index": True,
-            "dropna": drop_null_keys,
-            "observed": True,
-        }
+        self._group_by_kwargs = make_group_by_kwargs(drop_null_keys=drop_null_keys)
         self._grouped: NativeGroupBy = native.groupby(
             self._keys.copy(), **self._group_by_kwargs
         )

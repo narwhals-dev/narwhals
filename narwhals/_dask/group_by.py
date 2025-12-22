@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, Callable, ClassVar
 import dask.dataframe as dd
 
 from narwhals._compliant import DepthTrackingGroupBy
+from narwhals._dask.utils import make_group_by_kwargs
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._utils import zip_strict
 
@@ -101,9 +102,8 @@ class DaskLazyGroupBy(DepthTrackingGroupBy["DaskLazyFrame", "DaskExpr", Aggregat
         self._compliant_frame, self._keys, self._output_key_names = self._parse_keys(
             df, keys=keys
         )
-        self._grouped = self.compliant.native.groupby(
-            self._keys, dropna=drop_null_keys, observed=True
-        )
+        group_by_kwargs = make_group_by_kwargs(drop_null_keys=drop_null_keys)
+        self._grouped = self.compliant.native.groupby(self._keys, **group_by_kwargs)
 
     def agg(self, *exprs: DaskExpr) -> DaskLazyFrame:
         from narwhals._dask.dataframe import DaskLazyFrame

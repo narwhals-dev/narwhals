@@ -5,19 +5,28 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "2.10.2"
+version = "2.14.0"
 dependencies = []
 requires-python = ">=3.9"
 authors = [
   { name = "Marco Gorelli", email = "hello_narwhals@proton.me" },
 ]
+license = {file = "LICENSE.md"}
 description = "Extremely lightweight compatibility layer between dataframe libraries"
 readme = "README.md"
 keywords = ["dataframes", "interoperability", "pandas", "polars", "pyarrow", "dask", "modin", "cudf"]
 classifiers = [
+  "Development Status :: 5 - Production/Stable",
   "License :: OSI Approved :: MIT License",
-  "Programming Language :: Python",
   "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: Free Threading :: 2 - Beta",
   "Typing :: Typed",
 ]
 
@@ -274,7 +283,8 @@ filterwarnings = [
   # Warning raised when calling PandasLikeNamespace.from_arrow with old pyarrow
   "ignore:.*is_sparse is deprecated and will be removed in a future version.*:DeprecationWarning:pyarrow",
 
-  'ignore:.*invalid value encountered in cast:RuntimeWarning:pandas',
+  "ignore:.*invalid value encountered in cast:RuntimeWarning:pandas",
+  "ignore:.*The behavior of DataFrame concatenation with empty or all-NA entries is deprecated:FutureWarning",
 ]
 xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
@@ -291,6 +301,7 @@ plugins = ["covdefaults"]
 fail_under = 80  # This is just for local development, in CI we set it to 100
 omit = [
   'narwhals/typing.py',
+  'narwhals/compliant.py',
   'narwhals/stable/v1/typing.py',
   'narwhals/stable/v2/typing.py',
   'narwhals/this.py',
@@ -323,7 +334,7 @@ exclude_also = [
 ]
 
 [tool.mypy]
-files = ["narwhals", "tests"]
+files = ["narwhals", "tests", "test-plugin"]
 pretty = true
 strict = true
 
@@ -369,7 +380,7 @@ reportMissingModuleSource = "none"
 reportPrivateImportUsage = "none"
 reportUnusedExpression = "none"    # handled by (https://docs.astral.sh/ruff/rules/unused-variable/)
 typeCheckingMode = "basic"
-include = ["narwhals", "tests"]
+include = ["narwhals", "tests", "test-plugin"]
 ignore = [
   "../.venv/",
   "../../../**/Lib",      # stdlib

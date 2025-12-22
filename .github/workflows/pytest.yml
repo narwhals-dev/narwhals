@@ -2,8 +2,6 @@ name: PyTest
 
 on:
   pull_request:
-  push:
-    branches: [main]
 
 env:
   PY_COLORS: 1
@@ -17,7 +15,7 @@ jobs:
         os: [windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
@@ -34,7 +32,7 @@ jobs:
       - name: Run pytest
         run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=75 --constructors=pandas,pyarrow,polars[eager],polars[lazy]
       - name: install-test-plugin
-        run: uv pip install -e tests/test_plugin --system  
+        run: uv pip install -e test-plugin/. --system  
 
   pytest-windows:
     strategy:
@@ -43,7 +41,7 @@ jobs:
         os: [windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
@@ -57,7 +55,7 @@ jobs:
         # we are not testing pyspark, modin, or dask on Windows here because nobody got time for that
         run: uv pip install -e ".[ibis]" --group core-tests --group extra --system
       - name: install-test-plugin
-        run: uv pip install -e tests/test_plugin --system
+        run: uv pip install -e test-plugin/. --system
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
@@ -76,7 +74,7 @@ jobs:
     env:
       NARWHALS_POLARS_NEW_STREAMING: ${{ matrix.polars_streaming == true }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
@@ -89,7 +87,7 @@ jobs:
       - name: install-reqs
         run: uv pip install -e ".[dask, modin, ibis]" --group core-tests --group extra --system
       - name: install-test-plugin
-        run: uv pip install -e tests/test_plugin --system
+        run: uv pip install -e test-plugin/. --system
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
@@ -107,7 +105,7 @@ jobs:
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
@@ -144,7 +142,7 @@ jobs:
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
@@ -171,7 +169,7 @@ jobs:
     env:
         PYTHON_GIL: 0
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}

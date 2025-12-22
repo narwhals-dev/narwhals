@@ -41,6 +41,7 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
         "any": "any",
         "first": "first",
         "last": "last",
+        "any_value": "first",
     }
     _REMAP_UNIQUE: ClassVar[Mapping[UniqueKeepStrategy, Aggregation]] = {
         "any": "min",
@@ -52,10 +53,12 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
     )
     _OPTION_COUNT_VALID: ClassVar[frozenset[NarwhalsAggregation]] = frozenset(("count",))
     _OPTION_ORDERED: ClassVar[frozenset[NarwhalsAggregation]] = frozenset(
-        ("first", "last")
+        ("first", "last", "any_value")
     )
     _OPTION_VARIANCE: ClassVar[frozenset[NarwhalsAggregation]] = frozenset(("std", "var"))
-    _OPTION_SCALAR: ClassVar[frozenset[NarwhalsAggregation]] = frozenset(("any", "all"))
+    _OPTION_SCALAR: ClassVar[frozenset[NarwhalsAggregation]] = frozenset(
+        ("any", "all", "sum")
+    )
 
     def __init__(
         self,
@@ -87,11 +90,19 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
         elif function_name in self._OPTION_SCALAR:
             option = pc.ScalarAggregateOptions(min_count=0)
         elif function_name in self._OPTION_ORDERED:
-            grouped, option = self._ordered_agg(grouped, function_name)
+            ignore_nulls = kwargs.get("ignore_nulls", False)
+            grouped, option = self._ordered_agg(
+                grouped, function_name, ignore_nulls=ignore_nulls
+            )
         return grouped, self._remap_expr_name(function_name), option
 
     def _ordered_agg(
-        self, grouped: pa.TableGroupBy, name: NarwhalsAggregation, /
+        self,
+        grouped: pa.TableGroupBy,
+        name: NarwhalsAggregation,
+        /,
+        *,
+        ignore_nulls: bool,
     ) -> tuple[pa.TableGroupBy, AggregateOptions]:
         """The default behavior of `pyarrow` raises when `first` or `last` are used.
 
@@ -115,7 +126,7 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
                 f"See https://github.com/apache/arrow/issues/36709"
             )
             raise NotImplementedError(msg)
-        return grouped, pc.ScalarAggregateOptions(skip_nulls=False)
+        return grouped, pc.ScalarAggregateOptions(skip_nulls=ignore_nulls)
 
     def agg(self, *exprs: ArrowExpr) -> ArrowDataFrame:
         self._ensure_all_simple(exprs)

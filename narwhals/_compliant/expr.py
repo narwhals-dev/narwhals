@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
 from functools import partial
 from operator import methodcaller
 from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, Protocol
@@ -38,7 +37,7 @@ from narwhals.dependencies import is_numpy_array, is_numpy_scalar
 from narwhals.exceptions import MultiOutputExpressionError
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Sequence
 
     from typing_extensions import Self, TypeIs
 
@@ -46,6 +45,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.series import CompliantSeries
     from narwhals._compliant.typing import AliasNames, EvalNames, EvalSeries
     from narwhals._expression_parsing import ExprMetadata
+    from narwhals._typing import NoDefault
     from narwhals._utils import Implementation, Version, _LimitedContext
     from narwhals.typing import (
         ClosedInterval,
@@ -131,6 +131,7 @@ class CompliantExpr(
     def alias(self, name: str) -> Self: ...
     def all(self) -> Self: ...
     def any(self) -> Self: ...
+    def any_value(self, *, ignore_nulls: bool) -> Self: ...
     def count(self) -> Self: ...
     def min(self) -> Self: ...
     def max(self) -> Self: ...
@@ -156,6 +157,14 @@ class CompliantExpr(
         return_dtype: IntoDType | None,
         *,
         returns_scalar: bool,
+    ) -> Self: ...
+    def replace_strict(
+        self,
+        default: Self | NoDefault,
+        old: Sequence[Any],
+        new: Sequence[Any],
+        *,
+        return_dtype: IntoDType | None,
     ) -> Self: ...
     @property
     def name(self) -> NameNamespace[Self]: ...
@@ -349,12 +358,10 @@ class EagerExpr(
         **kwargs: Any,
     ) -> Sequence[EagerSeriesT]:
         kwargs = {
-            **{
-                name: df._evaluate_single_output_expr(value)
-                if self._is_expr(value)
-                else value
-                for name, value in kwargs.items()
-            }
+            name: df._evaluate_single_output_expr(value)
+            if self._is_expr(value)
+            else value
+            for name, value in kwargs.items()
         }
         method = methodcaller(
             method_name,
@@ -599,13 +606,14 @@ class EagerExpr(
 
     def replace_strict(
         self,
-        old: Sequence[Any] | Mapping[Any, Any],
+        default: Self | NoDefault,
+        old: Sequence[Any],
         new: Sequence[Any],
         *,
         return_dtype: IntoDType | None,
     ) -> Self:
         return self._reuse_series(
-            "replace_strict", old=old, new=new, return_dtype=return_dtype
+            "replace_strict", old=old, new=new, default=default, return_dtype=return_dtype
         )
 
     def sort(self, *, descending: bool, nulls_last: bool) -> Self:
@@ -820,6 +828,11 @@ class EagerExpr(
     def last(self) -> Self:
         return self._reuse_series("last", returns_scalar=True)
 
+    def any_value(self, *, ignore_nulls: bool) -> Self:
+        return self._reuse_series(
+            "any_value", returns_scalar=True, ignore_nulls=ignore_nulls
+        )
+
     @property
     def cat(self) -> EagerExprCatNamespace[Self]:
         return EagerExprCatNamespace(self)
@@ -865,8 +878,6 @@ class LazyExpr(  # type: ignore[misc]
 
     ewm_mean = not_implemented()  # type: ignore[misc]
     map_batches = not_implemented()  # type: ignore[misc]
-    replace_strict = not_implemented()  # type: ignore[misc]
-
     cat: not_implemented = not_implemented()  # type: ignore[assignment]
 
 
@@ -990,6 +1001,21 @@ class EagerExprListNamespace(
 
     def get(self, index: int) -> EagerExprT:
         return self.compliant._reuse_series_namespace("list", "get", index=index)
+
+    def min(self) -> EagerExprT:
+        return self.compliant._reuse_series_namespace("list", "min")
+
+    def max(self) -> EagerExprT:
+        return self.compliant._reuse_series_namespace("list", "max")
+
+    def mean(self) -> EagerExprT:
+        return self.compliant._reuse_series_namespace("list", "mean")
+
+    def median(self) -> EagerExprT:
+        return self.compliant._reuse_series_namespace("list", "median")
+
+    def sum(self) -> EagerExprT:
+        return self.compliant._reuse_series_namespace("list", "sum")
 
 
 class CompliantExprNameNamespace(  # type: ignore[misc]

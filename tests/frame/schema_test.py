@@ -408,6 +408,7 @@ def test_schema_to_pandas(
     ) and PANDAS_VERSION < (1, 5):
         pytest.skip()
     pytest.importorskip("pyarrow")
+    pytest.importorskip("pandas")
     schema = nw.Schema(
         {
             "a": nw.Int64(),
