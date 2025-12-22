@@ -153,6 +153,27 @@ class ArrowDataFrame(
     unique = _unique
     unique_by = _unique
 
+    def unpivot(
+        self,
+        on: Sequence[str] | None,
+        index: Sequence[str] | None,
+        *,
+        variable_name: str = "variable",
+        value_name: str = "value",
+    ) -> Self:
+        n = len(self)
+        index = [] if index is None else list(index)
+        on_ = (c for c in self.columns if c not in index) if on is None else iter(on)
+        index_cols = self.native.select(index)
+        column = self.native.column
+        tables = (
+            index_cols.append_column(variable_name, fn.repeat(name, n)).append_column(
+                value_name, column(name)
+            )
+            for name in on_
+        )
+        return self._with_native(fn.concat_tables(tables, "permissive"))
+
     def with_row_index(self, name: str) -> Self:
         return self._with_native(self.native.add_column(0, name, fn.int_range(len(self))))
 

@@ -159,6 +159,29 @@ class BaseFrame(Generic[NativeFrameT_co]):
     def collect_schema(self) -> Schema:
         return self.schema
 
+    def unpivot(
+        self,
+        on: OneOrIterable[ColumnNameOrSelector] | None = None,
+        *,
+        index: OneOrIterable[ColumnNameOrSelector] | None = None,
+        variable_name: str = "variable",
+        value_name: str = "value",
+    ) -> Self:
+        on_: Seq[str] | None = None
+        index_: Seq[str] | None = None
+        schema = self.schema
+        if on is not None:
+            s_irs = _parse.parse_into_seq_of_selector_ir(on)
+            on_ = expand_selector_irs_names(s_irs, schema=schema, require_any=True)
+        if index is not None:
+            s_irs = _parse.parse_into_seq_of_selector_ir(index)
+            index_ = expand_selector_irs_names(s_irs, schema=schema, require_any=True)
+        return self._with_compliant(
+            self._compliant.unpivot(
+                on_, index_, variable_name=variable_name, value_name=value_name
+            )
+        )
+
     def with_row_index(
         self, name: str = "index", *, order_by: OneOrIterable[ColumnNameOrSelector]
     ) -> Self:
