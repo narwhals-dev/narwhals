@@ -84,6 +84,7 @@ typing = [  # keep some of these pinned and bump periodically so there's fewer s
   "polars>=1.36.0",
   "uv",
   "narwhals[ibis]",
+  "numpy>=2.4.0", # https://numpy.org/doc/stable/release/2.4.0-notes.html#compatibility-notes
 ]
 typing-ci = [
   "narwhals[dask,modin]",

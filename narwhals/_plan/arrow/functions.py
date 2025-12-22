@@ -96,6 +96,7 @@ if TYPE_CHECKING:
         NonNestedLiteral,
         NumericLiteral,
         PythonLiteral,
+        UniqueKeepStrategy,
     )
 
     Ts = TypeVarTuple("Ts")
@@ -1562,6 +1563,20 @@ BOOLEAN_LENGTH_PRESERVING: Mapping[
     ir.boolean.IsUnique: (ir_min_max, _boolean_is_unique),
     ir.boolean.IsDuplicated: (ir_min_max, _boolean_is_duplicated),
 }
+_UNIQUE_KEEP_BOOLEAN_LENGTH_PRESERVING: Mapping[
+    UniqueKeepStrategy, type[ir.boolean.BooleanFunction]
+] = {
+    "any": ir.boolean.IsFirstDistinct,
+    "first": ir.boolean.IsFirstDistinct,
+    "last": ir.boolean.IsLastDistinct,
+    "none": ir.boolean.IsUnique,
+}
+
+
+def unique_keep_boolean_length_preserving(
+    keep: UniqueKeepStrategy,
+) -> tuple[IntoColumnAgg, BooleanLengthPreserving]:
+    return BOOLEAN_LENGTH_PRESERVING[_UNIQUE_KEEP_BOOLEAN_LENGTH_PRESERVING[keep]]
 
 
 def binary(
@@ -1741,10 +1756,10 @@ def int_range(
     if not HAS_ARANGE:  # pragma: no cover
         import numpy as np  # ignore-banned-import
 
-        arr = pa.array(np.arange(start=start, stop=end, step=step), type=dtype)
+        arr = pa.array(np.arange(start, end, step), type=dtype)
     else:
         int_range_: Incomplete = pa.arange  # type: ignore[attr-defined]
-        arr = t.cast("ArrayAny", int_range_(start=start, stop=end, step=step)).cast(dtype)
+        arr = t.cast("ArrayAny", int_range_(start, end, step)).cast(dtype)
     return arr if not chunked else pa.chunked_array([arr])
 
 

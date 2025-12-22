@@ -14,10 +14,11 @@ from narwhals._plan.arrow.common import ArrowFrameSeries as FrameSeries
 from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
 from narwhals._plan.arrow.group_by import ArrowGroupBy as GroupBy, partition_by
 from narwhals._plan.arrow.series import ArrowSeries as Series
+from narwhals._plan.common import temp
 from narwhals._plan.compliant.dataframe import EagerDataFrame
 from narwhals._plan.compliant.typing import namespace
 from narwhals._plan.exceptions import shape_error
-from narwhals._plan.expressions import NamedIR
+from narwhals._plan.expressions import NamedIR, named_ir
 from narwhals._utils import Version, generate_repr
 from narwhals.schema import Schema
 
@@ -27,13 +28,13 @@ if TYPE_CHECKING:
     import polars as pl
     from typing_extensions import Self, TypeAlias
 
-    from narwhals._plan.arrow.typing import ChunkedArrayAny, ChunkedOrArrayAny
+    from narwhals._plan.arrow.typing import ChunkedArrayAny, ChunkedOrArrayAny, Predicate
     from narwhals._plan.compliant.group_by import GroupByResolver
     from narwhals._plan.expressions import ExprIR, NamedIR
     from narwhals._plan.options import ExplodeOptions, SortMultipleOptions
     from narwhals._plan.typing import NonCrossJoinStrategy
     from narwhals.dtypes import DType
-    from narwhals.typing import IntoSchema
+    from narwhals.typing import IntoSchema, UniqueKeepStrategy
 
 Incomplete: TypeAlias = Any
 
@@ -117,6 +118,40 @@ class ArrowDataFrame(
 
     def sort(self, by: Sequence[str], options: SortMultipleOptions | None = None) -> Self:
         return self.gather(fn.sort_indices(self.native, *by, options=options))
+
+    def _unique(
+        self,
+        subset: Sequence[str] | None = None,
+        *,
+        order_by: Sequence[str] = (),
+        keep: UniqueKeepStrategy = "any",
+        **_: Any,
+    ) -> Self:
+        """Drop duplicate rows from this DataFrame.
+
+        Always maintains order, via `with_row_index(_by)`.
+        See [`unsort_indices`] for an example.
+
+        [`unsort_indices`]: https://github.com/narwhals-dev/narwhals/blob/9b9122b4ab38a6aebe2f09c29ad0f6191952a7a7/narwhals/_plan/arrow/functions.py#L1666-L1697
+        """
+        subset = tuple(subset or self.columns)
+        into_column_agg, mask = fn.unique_keep_boolean_length_preserving(keep)
+        idx_name = temp.column_name(self.columns)
+        df = self.select_names(*set(subset).union(order_by))
+        if order_by:
+            df = df.with_row_index_by(idx_name, order_by)
+        else:
+            df = df.with_row_index(idx_name)
+        idx_agg = (
+            df.group_by_names(subset)
+            .agg((named_ir(idx_name, into_column_agg(idx_name)),))
+            .get_column(idx_name)
+            .native
+        )
+        return self._filter(mask(df.get_column(idx_name).native, idx_agg))
+
+    unique = _unique
+    unique_by = _unique
 
     def with_row_index(self, name: str) -> Self:
         return self._with_native(self.native.add_column(0, name, fn.int_range(len(self))))
@@ -226,6 +261,10 @@ class ArrowDataFrame(
         """Less flexible, but more direct equivalent to join(how="inner", left_on=...)`."""
         return self._with_native(acero.join_inner_tables(self.native, other.native, on))
 
+    def _filter(self, predicate: Predicate | acero.Expr) -> Self:
+        mask: Incomplete = predicate
+        return self._with_native(self.native.filter(mask))
+
     def filter(self, predicate: NamedIR) -> Self:
         mask: pc.Expression | ChunkedArrayAny
         resolved = Expr.from_named_ir(predicate, self)
@@ -233,7 +272,7 @@ class ArrowDataFrame(
             mask = resolved.broadcast(len(self)).native
         else:
             mask = acero.lit(resolved.native)
-        return self._with_native(self.native.filter(mask))
+        return self._filter(mask)
 
     def partition_by(self, by: Sequence[str], *, include_key: bool = True) -> list[Self]:
         from_native = self._with_native
