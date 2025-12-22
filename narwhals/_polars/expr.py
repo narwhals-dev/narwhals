@@ -355,6 +355,7 @@ class PolarsExpr:
     round: Method[Self]
     sample: Method[Self]
     shift: Method[Self]
+    sin: Method[Self]
     skew: Method[Self]
     sqrt: Method[Self]
     std: Method[Self]

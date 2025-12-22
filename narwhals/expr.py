@@ -2193,6 +2193,30 @@ class Expr:
         """
         return self._append_node(ExprNode(ExprKind.ELEMENTWISE, "exp"))
 
+    def sin(self) -> Self:
+        r"""Compute the sin.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from math import pi
+            >>> df_native = pa.table({"values": [0, pi / 2, 3 * pi / 2]})
+            >>> df = nw.from_native(df_native)
+            >>> result = df.with_columns(sin=nw.col("values").sin())
+            >>> result
+            ┌─────────────────────────────────────────────────┐
+            |               Narwhals DataFrame                |
+            |-------------------------------------------------|
+            |pyarrow.Table                                    |
+            |values: double                                   |
+            |sin: double                                      |
+            |----                                             |
+            |values: [[0,1.5707963267948966,4.71238898038469]]|
+            |sin: [[0,1,-1]]                                  |
+            └─────────────────────────────────────────────────┘
+        """
+        return self._append_node(ExprNode(ExprKind.ELEMENTWISE, "sin"))
+
     def sqrt(self) -> Self:
         r"""Compute the square root.
 

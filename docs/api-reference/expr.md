@@ -59,6 +59,7 @@
         - rolling_var
         - round
         - shift
+        - sin
         - skew
         - sqrt
         - std

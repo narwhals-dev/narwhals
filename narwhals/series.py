@@ -2723,6 +2723,27 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._with_compliant(self._compliant_series.exp())
 
+    def sin(self) -> Self:
+        r"""Compute the sin.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> from math import pi
+            >>> s_native = pd.Series([0, pi / 2, 3 * pi / 2], name="a")
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.sin()
+            ┌───────────────────────┐
+            |    Narwhals Series    |
+            |-----------------------|
+            |0    0.0               |
+            |1    1.0               |
+            |2   -1.0               |
+            |Name: a, dtype: float64|
+            └───────────────────────┘
+        """
+        return self._with_compliant(self._compliant_series.sin())
+
     def sqrt(self) -> Self:
         r"""Compute the square root.
 

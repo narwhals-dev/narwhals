@@ -78,6 +78,7 @@
         - scatter
         - shape
         - shift
+        - sin
         - skew
         - sort
         - sqrt

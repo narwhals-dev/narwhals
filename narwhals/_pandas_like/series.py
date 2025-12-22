@@ -1130,6 +1130,35 @@ class PandasLikeSeries(EagerSeries[Any]):
     def sqrt(self) -> Self:
         return self._with_native(self.native.pow(0.5))
 
+    def sin(self) -> Self:
+        native = self.native
+        native_cls = type(native)
+        implementation = self._implementation
+
+        if get_dtype_backend(native.dtype, implementation=implementation) == "pyarrow":
+            import pyarrow.compute as pc
+
+            from narwhals._arrow.utils import native_to_narwhals_dtype
+
+            ca = native.array._pa_array
+            result_arr = cast("ChunkedArrayAny", pc.sin(ca))
+            nw_dtype = native_to_narwhals_dtype(result_arr.type, self._version)
+            out_dtype = narwhals_to_native_dtype(
+                nw_dtype, "pyarrow", self._implementation, self._version
+            )
+            result_native = native_cls(
+                result_arr, dtype=out_dtype, index=native.index, name=native.name
+            )
+        else:
+            result_arr = self._array_funcs.sin(native)
+            result_native = (
+                native_cls(result_arr, index=native.index, name=native.name)
+                if implementation.is_cudf()
+                else result_arr
+            )
+
+        return self._with_native(result_native)
+
     @property
     def str(self) -> PandasLikeSeriesStringNamespace:
         return PandasLikeSeriesStringNamespace(self)
