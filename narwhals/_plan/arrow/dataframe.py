@@ -14,10 +14,11 @@ from narwhals._plan.arrow.common import ArrowFrameSeries as FrameSeries
 from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
 from narwhals._plan.arrow.group_by import ArrowGroupBy as GroupBy, partition_by
 from narwhals._plan.arrow.series import ArrowSeries as Series
+from narwhals._plan.common import temp, todo
 from narwhals._plan.compliant.dataframe import EagerDataFrame
 from narwhals._plan.compliant.typing import namespace
 from narwhals._plan.exceptions import shape_error
-from narwhals._plan.expressions import NamedIR
+from narwhals._plan.expressions import NamedIR, named_ir
 from narwhals._utils import Version, generate_repr
 from narwhals.schema import Schema
 
@@ -27,7 +28,7 @@ if TYPE_CHECKING:
     import polars as pl
     from typing_extensions import Self, TypeAlias
 
-    from narwhals._plan.arrow.typing import ChunkedArrayAny, ChunkedOrArrayAny
+    from narwhals._plan.arrow.typing import ChunkedArrayAny, ChunkedOrArrayAny, Predicate
     from narwhals._plan.compliant.group_by import GroupByResolver
     from narwhals._plan.expressions import ExprIR, NamedIR
     from narwhals._plan.options import ExplodeOptions, SortMultipleOptions
@@ -125,19 +126,23 @@ class ArrowDataFrame(
         keep: UniqueKeepStrategy = "any",
         maintain_order: bool = False,
     ) -> Self:
-        msg = "TODO: ArrowDataFrame.unique"
+        subset = tuple(subset or self.columns)
+        if keep == "none":
+            idx_name = temp.column_name(self.columns)
+            df = self.select_names(*subset).with_row_index(idx_name)
+            idx = df.to_series().native
+            agg_node = fn.ir_min_max(idx_name)
+            idx_agg = (
+                df.group_by_names(subset)
+                .agg((named_ir(idx_name, agg_node),))
+                .get_column(idx_name)
+                .native
+            )
+            return self._filter(fn._boolean_is_unique(idx, idx_agg))
+        msg = "TODO: `ArrowDataFrame.unique(keep: Literal['any', 'first', 'last'])`"
         raise NotImplementedError(msg)
 
-    def unique_by(
-        self,
-        subset: Sequence[str] | None = None,
-        *,
-        order_by: Sequence[str],
-        keep: UniqueKeepStrategy = "any",
-        maintain_order: bool = False,
-    ) -> Self:
-        msg = "TODO: ArrowDataFrame.unique_by"
-        raise NotImplementedError(msg)
+    unique_by = todo()
 
     def with_row_index(self, name: str) -> Self:
         return self._with_native(self.native.add_column(0, name, fn.int_range(len(self))))
@@ -247,6 +252,10 @@ class ArrowDataFrame(
         """Less flexible, but more direct equivalent to join(how="inner", left_on=...)`."""
         return self._with_native(acero.join_inner_tables(self.native, other.native, on))
 
+    def _filter(self, predicate: Predicate | acero.Expr) -> Self:
+        mask: Incomplete = predicate
+        return self._with_native(self.native.filter(mask))
+
     def filter(self, predicate: NamedIR) -> Self:
         mask: pc.Expression | ChunkedArrayAny
         resolved = Expr.from_named_ir(predicate, self)
@@ -254,7 +263,7 @@ class ArrowDataFrame(
             mask = resolved.broadcast(len(self)).native
         else:
             mask = acero.lit(resolved.native)
-        return self._with_native(self.native.filter(mask))
+        return self._filter(mask)
 
     def partition_by(self, by: Sequence[str], *, include_key: bool = True) -> list[Self]:
         from_native = self._with_native

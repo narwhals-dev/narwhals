@@ -285,3 +285,21 @@ class temp:  # noqa: N801
             f"that was not present in existing ({len(current)}) columns:\n{truncated}"
         )
         return NarwhalsError(msg)
+
+
+class todo:  # pragma: no cover  # noqa: N801
+    """A variation of `not_implemented`, for shorter-lived placeholders."""
+
+    def __set_name__(self, owner: type[Any], name: str) -> None:
+        self._name_owner: str = owner.__name__
+        self.__name__: str = name
+
+    def __get__(self, instance: object | None, owner: type[Any] | None, /) -> Any:
+        if instance is None:
+            return self
+        msg = f"TODO: `{self._name_owner}.{self.__name__}(...)`"
+        raise NotImplementedError(msg)
+
+    def __call__(self, *args: Any, **kwds: Any) -> Any:
+        msg = "Stop being clever!"
+        raise NotImplementedError(msg)
