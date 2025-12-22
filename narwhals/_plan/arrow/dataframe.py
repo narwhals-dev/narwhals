@@ -127,20 +127,17 @@ class ArrowDataFrame(
         maintain_order: bool = False,
     ) -> Self:
         subset = tuple(subset or self.columns)
-        if keep == "none":
-            idx_name = temp.column_name(self.columns)
-            df = self.select_names(*subset).with_row_index(idx_name)
-            idx = df.to_series().native
-            agg_node = fn.ir_min_max(idx_name)
-            idx_agg = (
-                df.group_by_names(subset)
-                .agg((named_ir(idx_name, agg_node),))
-                .get_column(idx_name)
-                .native
-            )
-            return self._filter(fn._boolean_is_unique(idx, idx_agg))
-        msg = "TODO: `ArrowDataFrame.unique(keep: Literal['any', 'first', 'last'])`"
-        raise NotImplementedError(msg)
+        into_column_agg, mask = fn.unique_keep_boolean_length_preserving(keep)
+        idx_name = temp.column_name(self.columns)
+        df = self.select_names(*subset).with_row_index(idx_name)
+        idx = df.to_series().native
+        idx_agg = (
+            df.group_by_names(subset)
+            .agg((named_ir(idx_name, into_column_agg(idx_name)),))
+            .get_column(idx_name)
+            .native
+        )
+        return self._filter(mask(idx, idx_agg))
 
     unique_by = todo()
 
