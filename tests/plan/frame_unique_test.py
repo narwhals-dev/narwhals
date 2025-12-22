@@ -57,6 +57,14 @@ def test_unique_invalid_subset(data: Data, subset: Any, err: type[Exception]) ->
         df.unique(subset)
 
 
+@pytest.fixture(
+    scope="module", params=[True, False], ids=["maintain-ordered", "allow-unordered"]
+)
+def maintain_order(request: pytest.FixtureRequest) -> bool:
+    result: bool = request.param
+    return result
+
+
 @pytest.mark.parametrize("subset", ["b", ["b"]])
 @pytest.mark.parametrize(
     ("keep", "expected"),
@@ -66,18 +74,12 @@ def test_unique_invalid_subset(data: Data, subset: Any, err: type[Exception]) ->
     ],
 )
 def test_unique_eager(
-    data: Data,
-    subset: str | list[str] | None,
-    keep: OrderedStrategy,
-    expected: dict[str, list[float]],
+    data: Data, subset: str | list[str] | None, keep: OrderedStrategy, expected: Data
 ) -> None:
     result = dataframe(data).unique(subset, keep=keep).sort("z")
     assert_equal_data(result, expected)
 
 
-# TODO @dangotbanned: Handle these cases more cleanly
-# (all) `unique(...).sort()` vs
-# (eager only) `unique(..., maintain_order=True)`
 @pytest.mark.parametrize(
     ("keep", "expected"),
     [
@@ -86,13 +88,14 @@ def test_unique_eager(
     ],
 )
 def test_unique_first_last(
-    keep: OrderedStrategy, expected: dict[str, list[float]]
+    keep: OrderedStrategy, expected: Data, *, maintain_order: bool
 ) -> None:
     data = {"i": [0, 1, None, 2], "a": [1, 3, 2, 1], "b": [4, 4, 4, 6]}
-    df = dataframe(data)
-    result = df.unique("b", keep=keep, order_by="i").sort("i")
-    assert_equal_data(result, expected)
-    result = df.unique("b", keep=keep, order_by="i", maintain_order=True)
+    result = dataframe(data).unique(
+        "b", keep=keep, order_by="i", maintain_order=maintain_order
+    )
+    if not maintain_order:
+        result = result.sort("i")
     assert_equal_data(result, expected)
 
 
@@ -104,13 +107,14 @@ def test_unique_first_last(
     ],
 )
 def test_unique_first_last_no_subset(
-    keep: OrderedStrategy, expected: dict[str, list[float]]
+    keep: OrderedStrategy, expected: Data, *, maintain_order: bool
 ) -> None:
     data = {"i": [0, 1, 1, 2], "b": [4, 4, 4, 6]}
-    df = dataframe(data)
-    result = df.unique(keep=keep, order_by="i").sort("i")
-    assert_equal_data(result, expected)
-    result = df.unique(keep=keep, order_by="i", maintain_order=True)
+    result = dataframe(data).unique(
+        keep=keep, order_by="i", maintain_order=maintain_order
+    )
+    if not maintain_order:
+        result = result.sort("i")
     assert_equal_data(result, expected)
 
 
@@ -121,9 +125,7 @@ def test_unique_first_last_no_subset(
         ("none", {"a": [2], "b": [6], "z": [9]}),
     ],
 )
-def test_unique(
-    data: Data, keep: UnorderedStrategy, expected: dict[str, list[float]]
-) -> None:
+def test_unique(data: Data, keep: UnorderedStrategy, expected: Data) -> None:
     result = dataframe(data).unique(["b"], keep=keep).sort("z")
     assert_equal_data(result, expected)
 
@@ -134,18 +136,17 @@ def test_unique(
     [("any", {"a": [1, 1, 2], "b": [3, 4, 4]}), ("none", {"a": [1, 2], "b": [4, 4]})],
 )
 def test_unique_full_subset(
-    subset: list[str] | None, keep: UnorderedStrategy, expected: dict[str, list[float]]
+    subset: list[str] | None, keep: UnorderedStrategy, expected: Data
 ) -> None:
     data = {"a": [1, 1, 1, 2], "b": [3, 3, 4, 4]}
     result = dataframe(data).unique(subset, keep=keep).sort("a", "b")
     assert_equal_data(result, expected)
 
 
-def test_unique_none(data: Data) -> None:
-    df = dataframe(data)
-    result = df.unique().sort("z")
-    assert_equal_data(result, data)
-    result = df.unique(maintain_order=True)
+def test_unique_none(data: Data, *, maintain_order: bool) -> None:
+    result = dataframe(data).unique(maintain_order=maintain_order)
+    if not maintain_order:
+        result = result.sort("z")
     assert_equal_data(result, data)
 
 
