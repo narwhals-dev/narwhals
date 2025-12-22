@@ -14,7 +14,7 @@ from narwhals._plan.arrow.common import ArrowFrameSeries as FrameSeries
 from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
 from narwhals._plan.arrow.group_by import ArrowGroupBy as GroupBy, partition_by
 from narwhals._plan.arrow.series import ArrowSeries as Series
-from narwhals._plan.common import temp
+from narwhals._plan.common import temp, todo
 from narwhals._plan.compliant.dataframe import EagerDataFrame
 from narwhals._plan.compliant.typing import namespace
 from narwhals._plan.exceptions import shape_error
@@ -152,6 +152,8 @@ class ArrowDataFrame(
 
     unique = _unique
     unique_by = _unique
+
+    unpivot = todo()
 
     def with_row_index(self, name: str) -> Self:
         return self._with_native(self.native.add_column(0, name, fn.int_range(len(self))))

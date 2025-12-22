@@ -79,6 +79,14 @@ class CompliantFrame(HasVersion, Protocol[ColumnT_co, NativeFrameT_co]):
         order_by: Sequence[str],
         keep: UniqueKeepStrategy = "any",
     ) -> Self: ...
+    def unpivot(
+        self,
+        on: Sequence[str] | None,
+        index: Sequence[str] | None,
+        *,
+        variable_name: str = "variable",
+        value_name: str = "value",
+    ) -> Self: ...
     def with_columns(self, irs: Seq[NamedIR]) -> Self: ...
     def with_row_index_by(
         self, name: str, order_by: Sequence[str], *, nulls_last: bool = False
