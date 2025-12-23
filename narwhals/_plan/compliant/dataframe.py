@@ -17,6 +17,7 @@ from narwhals._plan.typing import (
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping, Sequence
+    from io import BytesIO
 
     import polars as pl
     from typing_extensions import Self, TypeAlias
@@ -36,7 +37,7 @@ if TYPE_CHECKING:
     from narwhals._typing import _EagerAllowedImpl
     from narwhals._utils import Implementation, Version
     from narwhals.dtypes import DType
-    from narwhals.typing import IntoSchema, UniqueKeepStrategy
+    from narwhals.typing import FileSource, IntoSchema, UniqueKeepStrategy
 
 Incomplete: TypeAlias = Any
 
@@ -208,6 +209,12 @@ class CompliantDataFrame(
         maintain_order: bool = False,
     ) -> Self: ...
     def with_row_index(self, name: str) -> Self: ...
+    @overload
+    def write_csv(self, file: None) -> str: ...
+    @overload
+    def write_csv(self, file: FileSource | BytesIO) -> None: ...
+    def write_csv(self, file: FileSource | BytesIO | None) -> str | None: ...
+    def write_parquet(self, file: FileSource | BytesIO) -> None: ...
     def slice(self, offset: int, length: int | None = None) -> Self: ...
     def sample_frac(
         self, fraction: float, *, with_replacement: bool = False, seed: int | None = None
@@ -246,3 +253,6 @@ class EagerDataFrame(
 
     def to_series(self, index: int = 0) -> SeriesT:
         return self.get_column(self.columns[index])
+
+    # TODO @dangotbanned: Move to `CompliantLazyFrame` once that's added
+    def sink_parquet(self, file: FileSource | BytesIO) -> None: ...

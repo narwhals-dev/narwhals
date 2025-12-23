@@ -30,6 +30,7 @@ from narwhals.exceptions import InvalidOperationError, ShapeError
 from narwhals.schema import Schema
 from narwhals.typing import (
     EagerAllowed,
+    FileSource,
     IntoBackend,
     IntoDType,
     IntoSchema,
@@ -39,6 +40,7 @@ from narwhals.typing import (
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
+    from io import BytesIO
 
     import polars as pl
     import pyarrow as pa
@@ -481,6 +483,16 @@ class DataFrame(
         if order_by is None:
             return self._with_compliant(self._compliant.with_row_index(name))
         return super().with_row_index(name, order_by=order_by)
+
+    @overload
+    def write_csv(self, file: None = None) -> str: ...
+    @overload
+    def write_csv(self, file: FileSource | BytesIO) -> None: ...
+    def write_csv(self, file: FileSource | BytesIO | None = None) -> str | None:
+        return self._compliant.write_csv(file)
+
+    def write_parquet(self, file: FileSource | BytesIO) -> None:
+        return self._compliant.write_parquet(file)
 
     def slice(self, offset: int, length: int | None = None) -> Self:
         return type(self)(self._compliant.slice(offset=offset, length=length))
