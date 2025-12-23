@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, overload
 
+from narwhals._plan.compliant import io
 from narwhals._plan.compliant.typing import (
     ConcatT1,
     ConcatT2,
@@ -112,6 +113,8 @@ class EagerConcat(Concat[ConcatT1, ConcatT2], Protocol[ConcatT1, ConcatT2]):  # 
 
 
 class EagerNamespace(
+    io.LazyInput[Incomplete],
+    io.EagerInput[EagerDataFrameT],
     EagerConcat[EagerDataFrameT, SeriesT],
     CompliantNamespace[EagerDataFrameT, EagerExprT_co, EagerScalarT_co],
     Protocol[EagerDataFrameT, SeriesT, EagerExprT_co, EagerScalarT_co],
@@ -173,13 +176,10 @@ class EagerNamespace(
         closed: ClosedInterval = "both",
         name: str = "literal",
     ) -> SeriesT: ...
-    def read_csv(self, source: str, **kwds: Any) -> EagerDataFrameT: ...
-    def read_parquet(self, source: str, **kwds: Any) -> EagerDataFrameT: ...
-    def scan_csv(self, source: str, **kwds: Any) -> Incomplete: ...
-    def scan_parquet(self, source: str, **kwds: Any) -> Incomplete: ...
 
 
 class LazyNamespace(
+    io.LazyInput[LazyFrameT],
     Concat[LazyFrameT, LazyFrameT],
     CompliantNamespace[LazyFrameT, LazyExprT_co, LazyScalarT_co],
     Protocol[LazyFrameT, LazyExprT_co, LazyScalarT_co],
@@ -189,6 +189,3 @@ class LazyNamespace(
     @property
     def _frame(self) -> type[LazyFrameT]:
         return self._lazyframe
-
-    def scan_csv(self, source: str, **kwds: Any) -> LazyFrameT: ...
-    def scan_parquet(self, source: str, **kwds: Any) -> LazyFrameT: ...

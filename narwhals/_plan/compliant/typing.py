@@ -53,6 +53,7 @@ FrameT_contra = TypeVar("FrameT_contra", bound=FrameAny, contravariant=True)
 DataFrameT = TypeVar("DataFrameT", bound=DataFrameAny)
 DataFrameT_co = TypeVar("DataFrameT_co", bound=DataFrameAny, covariant=True)
 LazyFrameT = TypeVar("LazyFrameT", bound=LazyFrameAny)
+LazyFrameT_co = TypeVar("LazyFrameT_co", bound=LazyFrameAny, covariant=True)
 LazyFrameT_contra = TypeVar("LazyFrameT_contra", bound=LazyFrameAny, contravariant=True)
 NamespaceT_co = TypeVar("NamespaceT_co", bound="NamespaceAny", covariant=True)
 
