@@ -13,7 +13,6 @@ import datetime as dt
 
 import narwhals as nw
 from narwhals import _plan as nwp
-from tests.conftest import TEST_EAGER_BACKENDS
 from tests.plan.utils import assert_equal_data, assert_equal_series, dataframe
 
 if TYPE_CHECKING:
@@ -35,35 +34,6 @@ def data() -> dict[str, Any]:
         "l": [4, 5, 6],
         "m": [0, 1, 2],
     }
-
-
-_HAS_IMPLEMENTATION = frozenset((nw.Implementation.PYARROW, "pyarrow"))
-"""Using to filter *the source* of `eager_backend` - which includes `polars` and `pandas` when available.
-
-For now, this lets some tests be written in a backend agnostic way.
-"""
-
-_HAS_IMPLEMENTATION_IMPL = frozenset(
-    el for el in _HAS_IMPLEMENTATION if isinstance(el, nw.Implementation)
-)
-"""Filtered for heavily parametric tests."""
-
-
-@pytest.fixture(
-    scope="module", params=_HAS_IMPLEMENTATION.intersection(TEST_EAGER_BACKENDS)
-)
-def eager(request: pytest.FixtureRequest) -> EagerAllowed:
-    result: EagerAllowed = request.param
-    return result
-
-
-@pytest.fixture(
-    scope="module",
-    params=_HAS_IMPLEMENTATION_IMPL.intersection(TEST_EAGER_BACKENDS).union([False]),
-)
-def backend(request: pytest.FixtureRequest) -> EagerAllowed | Literal[False]:
-    result: EagerAllowed | Literal[False] = request.param
-    return result
 
 
 @pytest.fixture(scope="module", params=[2024, 2400])
@@ -200,12 +170,12 @@ def test_linear_space_values(
     num_samples: int,
     interval: ClosedInterval,
     *,
-    backend: EagerAllowed | Literal[False],
+    eager_or_false: EagerAllowed | Literal[False],
 ) -> None:
     # NOTE: Adapted from https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/py-polars/tests/unit/functions/range/test_linear_space.py#L19-L56
-    if backend:
+    if eager_or_false:
         result = nwp.linear_space(
-            start, end, num_samples, closed=interval, eager=backend
+            start, end, num_samples, closed=interval, eager=eager_or_false
         ).rename("ls")
     else:
         result = (
