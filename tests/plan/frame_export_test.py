@@ -63,13 +63,7 @@ def data() -> Data:
     return {"a": [1, 2, 3]}
 
 
-XFAIL_DATAFRAME_EXPORT = pytest.mark.xfail(
-    reason="TODO: `DataFrame.write_{csv,parquet}`()", raises=NotImplementedError
-)
-
-
-@XFAIL_DATAFRAME_EXPORT
-def test_write_csv(data: Data, csv_path: FileSource) -> None:  # pragma: no cover
+def test_write_csv(data: Data, csv_path: FileSource) -> None:
     df = dataframe(data)
     result_none = df.write_csv(csv_path)
     assert Path(csv_path).exists()
@@ -83,8 +77,7 @@ def test_write_csv(data: Data, csv_path: FileSource) -> None:  # pragma: no cove
         assert result == "a\n1\n2\n3\n"
 
 
-@XFAIL_DATAFRAME_EXPORT
-def test_write_parquet(data: Data, parquet_path: FileSource) -> None:  # pragma: no cover
+def test_write_parquet(data: Data, parquet_path: FileSource) -> None:
     dataframe(data).write_parquet(parquet_path)
     assert Path(parquet_path).exists()
 

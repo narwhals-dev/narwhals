@@ -14,7 +14,7 @@ from narwhals._plan.arrow.common import ArrowFrameSeries as FrameSeries
 from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
 from narwhals._plan.arrow.group_by import ArrowGroupBy as GroupBy, partition_by
 from narwhals._plan.arrow.series import ArrowSeries as Series
-from narwhals._plan.common import temp, todo
+from narwhals._plan.common import temp
 from narwhals._plan.compliant.dataframe import EagerDataFrame
 from narwhals._plan.compliant.typing import namespace
 from narwhals._plan.exceptions import shape_error
@@ -24,6 +24,7 @@ from narwhals.schema import Schema
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
+    from io import BytesIO
 
     import polars as pl
     from typing_extensions import Self, TypeAlias
@@ -34,7 +35,7 @@ if TYPE_CHECKING:
     from narwhals._plan.options import ExplodeOptions, SortMultipleOptions
     from narwhals._plan.typing import NonCrossJoinStrategy
     from narwhals.dtypes import DType
-    from narwhals.typing import IntoSchema, UniqueKeepStrategy
+    from narwhals.typing import FileSource, IntoSchema, UniqueKeepStrategy
 
 Incomplete: TypeAlias = Any
 
@@ -191,9 +192,27 @@ class ArrowDataFrame(
         column = fn.unsort_indices(indices)
         return self._with_native(self.native.add_column(0, name, column))
 
-    write_csv = todo()
-    write_parquet = todo()
-    sink_parquet = todo()
+    @overload
+    def write_csv(self, file: None) -> str: ...
+    @overload
+    def write_csv(self, file: FileSource | BytesIO) -> None: ...
+    def write_csv(self, file: FileSource | BytesIO | None) -> str | None:
+        import pyarrow.csv as pa_csv
+
+        if file is None:
+            csv_buffer = pa.BufferOutputStream()
+            pa_csv.write_csv(self.native, csv_buffer)
+            return csv_buffer.getvalue().to_pybytes().decode()
+        pa_csv.write_csv(self.native, file)
+        return None
+
+    def write_parquet(self, file: FileSource | BytesIO) -> None:
+        import pyarrow.parquet as pp
+
+        # NOTE: `pyarrow` supports `__fspath__`
+        # https://github.com/apache/arrow/blob/8040f2a22544876395529e02eb29d7a857dc7ffd/python/pyarrow/util.py#L134-L151
+        target: Incomplete = file
+        pp.write_table(self.native, target)
 
     def to_struct(self, name: str = "") -> Series:
         native = self.native

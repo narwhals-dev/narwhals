@@ -255,4 +255,5 @@ class EagerDataFrame(
         return self.get_column(self.columns[index])
 
     # TODO @dangotbanned: Move to `CompliantLazyFrame` once that's added
-    def sink_parquet(self, file: FileSource | BytesIO) -> None: ...
+    def sink_parquet(self, file: FileSource | BytesIO) -> None:
+        self.write_parquet(file)
