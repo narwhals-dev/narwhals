@@ -12,6 +12,7 @@ from narwhals._plan.compliant.typing import (
     FrameT,
     HasVersion,
     LazyExprT_co,
+    LazyFrameT,
     LazyScalarT_co,
     ScalarT_co,
     SeriesT,
@@ -179,15 +180,15 @@ class EagerNamespace(
 
 
 class LazyNamespace(
-    Concat[FrameT, FrameT],
-    CompliantNamespace[FrameT, LazyExprT_co, LazyScalarT_co],
-    Protocol[FrameT, LazyExprT_co, LazyScalarT_co],
+    Concat[LazyFrameT, LazyFrameT],
+    CompliantNamespace[LazyFrameT, LazyExprT_co, LazyScalarT_co],
+    Protocol[LazyFrameT, LazyExprT_co, LazyScalarT_co],
 ):
     @property
-    def _lazyframe(self) -> type[FrameT]: ...
+    def _lazyframe(self) -> type[LazyFrameT]: ...
     @property
-    def _frame(self) -> type[FrameT]:
+    def _frame(self) -> type[LazyFrameT]:
         return self._lazyframe
 
-    def scan_csv(self, source: str, **kwds: Any) -> FrameT: ...
-    def scan_parquet(self, source: str, **kwds: Any) -> FrameT: ...
+    def scan_csv(self, source: str, **kwds: Any) -> LazyFrameT: ...
+    def scan_parquet(self, source: str, **kwds: Any) -> LazyFrameT: ...

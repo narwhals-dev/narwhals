@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from narwhals._plan.compliant.dataframe import (
         CompliantDataFrame,
         CompliantFrame,
+        CompliantLazyFrame,
         EagerDataFrame,
     )
     from narwhals._plan.compliant.expr import CompliantExpr, EagerExpr, LazyExpr
@@ -32,6 +33,7 @@ ScalarAny: TypeAlias = "CompliantScalar[Any, Any]"
 SeriesAny: TypeAlias = "CompliantSeries[Any]"
 FrameAny: TypeAlias = "CompliantFrame[Any, Any]"
 DataFrameAny: TypeAlias = "CompliantDataFrame[Any, Any, Any]"
+LazyFrameAny: TypeAlias = "CompliantLazyFrame[Any, Any]"
 NamespaceAny: TypeAlias = "CompliantNamespace[Any, Any, Any]"
 
 EagerExprAny: TypeAlias = "EagerExpr[Any, Any]"
@@ -50,6 +52,8 @@ FrameT_co = TypeVar("FrameT_co", bound=FrameAny, covariant=True)
 FrameT_contra = TypeVar("FrameT_contra", bound=FrameAny, contravariant=True)
 DataFrameT = TypeVar("DataFrameT", bound=DataFrameAny)
 DataFrameT_co = TypeVar("DataFrameT_co", bound=DataFrameAny, covariant=True)
+LazyFrameT = TypeVar("LazyFrameT", bound=LazyFrameAny)
+LazyFrameT_contra = TypeVar("LazyFrameT_contra", bound=LazyFrameAny, contravariant=True)
 NamespaceT_co = TypeVar("NamespaceT_co", bound="NamespaceAny", covariant=True)
 
 EagerExprT_co = TypeVar("EagerExprT_co", bound=EagerExprAny, covariant=True)

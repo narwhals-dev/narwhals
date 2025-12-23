@@ -4,12 +4,19 @@ from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, overload
 
 from narwhals._plan.compliant.group_by import Grouped
-from narwhals._plan.compliant.typing import ColumnT_co, HasVersion, SeriesT
+from narwhals._plan.compliant.typing import (
+    ColumnT_co,
+    DataFrameAny,
+    HasVersion,
+    LazyFrameAny,
+    SeriesT,
+)
 from narwhals._plan.typing import (
     IncompleteCyclic,
     IntoExpr,
     NativeDataFrameT,
     NativeFrameT_co,
+    NativeLazyFrameT,
     NativeSeriesT,
     NonCrossJoinStrategy,
     OneOrIterable,
@@ -34,7 +41,7 @@ if TYPE_CHECKING:
     from narwhals._plan.expressions import NamedIR
     from narwhals._plan.options import ExplodeOptions, SortMultipleOptions
     from narwhals._plan.typing import Seq
-    from narwhals._typing import _EagerAllowedImpl
+    from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
     from narwhals._utils import Implementation, Version
     from narwhals.dtypes import DType
     from narwhals.typing import IntoSchema, UniqueKeepStrategy
@@ -94,6 +101,41 @@ class CompliantFrame(HasVersion, Protocol[ColumnT_co, NativeFrameT_co]):
     ) -> Self: ...
 
 
+class CompliantLazyFrame(
+    CompliantFrame[ColumnT_co, NativeLazyFrameT], Protocol[ColumnT_co, NativeLazyFrameT]
+):
+    """Very incomplete!
+
+    Using mostly as a placeholder for typing lazy I/O.
+    """
+
+    _native: NativeLazyFrameT
+
+    def __narwhals_lazyframe__(self) -> Self:
+        return self
+
+    def _with_native(self, native: NativeLazyFrameT) -> Self:
+        return self.from_native(native, self.version)
+
+    @classmethod
+    def from_native(cls, native: NativeLazyFrameT, /, version: Version) -> Self:
+        obj = cls.__new__(cls)
+        obj._native = native
+        obj._version = version
+        return obj
+
+    def to_narwhals(self) -> Incomplete:
+        msg = f"{type(self).__name__}.to_narwhals"
+        raise NotImplementedError(msg)
+
+    @property
+    def native(self) -> NativeLazyFrameT:
+        return self._native
+
+    def sink_parquet(self, file: str | BytesIO) -> None: ...
+    def collect(self, backend: _EagerAllowedImpl | None, **kwds: Any) -> DataFrameAny: ...
+
+
 class CompliantDataFrame(
     CompliantFrame[SeriesT, NativeDataFrameT],
     Protocol[SeriesT, NativeDataFrameT, NativeSeriesT],
@@ -101,6 +143,10 @@ class CompliantDataFrame(
     implementation: ClassVar[_EagerAllowedImpl]
     _native: NativeDataFrameT
 
+    def __narwhals_dataframe__(self) -> Self:
+        return self
+
+    def lazy(self, backend: _LazyAllowedImpl | None, **kwds: Any) -> LazyFrameAny: ...
     @property
     def shape(self) -> tuple[int, int]: ...
     def __len__(self) -> int: ...
@@ -254,6 +300,5 @@ class EagerDataFrame(
     def to_series(self, index: int = 0) -> SeriesT:
         return self.get_column(self.columns[index])
 
-    # TODO @dangotbanned: Move to `CompliantLazyFrame` once that's added
     def sink_parquet(self, file: str | BytesIO) -> None:
         self.write_parquet(file)
