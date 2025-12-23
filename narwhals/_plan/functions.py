@@ -25,6 +25,7 @@ from narwhals._utils import (
     ensure_type,
     flatten,
     is_eager_allowed,
+    normalize_path,
     qualified_type_name,
 )
 from narwhals.exceptions import ComputeError, InvalidOperationError
@@ -36,6 +37,7 @@ if TYPE_CHECKING:
     from narwhals._plan import arrow as _arrow
     from narwhals._plan.compliant.namespace import EagerNamespace
     from narwhals._plan.compliant.series import CompliantSeries
+    from narwhals._plan.dataframe import DataFrame
     from narwhals._plan.expr import Expr
     from narwhals._plan.series import Series
     from narwhals._plan.typing import (
@@ -47,8 +49,10 @@ if TYPE_CHECKING:
     from narwhals._typing import Arrow
     from narwhals.dtypes import IntegerType
     from narwhals.typing import (
+        Backend,
         ClosedInterval,
         EagerAllowed,
+        FileSource,
         IntoBackend,
         IntoDType,
         NonNestedLiteral,
@@ -58,7 +62,7 @@ if TYPE_CHECKING:
     EagerNs: TypeAlias = EagerNamespace[
         t.Any, CompliantSeries[NativeSeriesT], t.Any, t.Any
     ]
-
+Incomplete: TypeAlias = t.Any
 _dtypes: Final = Version.MAIN.dtypes
 
 
@@ -407,6 +411,38 @@ def linear_space(
         .to_function_expr(*_parse.parse_into_seq_of_expr_ir(start, end))
         .to_narwhals()
     )
+
+
+# TODO @dangotbanned: Add overloads to fix `[no-any-return]`
+def read_csv(
+    source: FileSource, *, backend: IntoBackend[EagerAllowed], **kwds: t.Any
+) -> DataFrame[t.Any, t.Any]:
+    source = normalize_path(source)
+    ns = _eager_namespace(backend)
+    return ns.read_csv(source, **kwds).to_narwhals()  # type: ignore[no-any-return]
+
+
+# TODO @dangotbanned: Add overloads to fix `[no-any-return]`
+def read_parquet(
+    source: FileSource, *, backend: IntoBackend[EagerAllowed], **kwds: t.Any
+) -> DataFrame[t.Any, t.Any]:
+    source = normalize_path(source)
+    ns = _eager_namespace(backend)
+    return ns.read_parquet(source, **kwds).to_narwhals()  # type: ignore[no-any-return]
+
+
+# TODO @dangotbanned: Handle after eager is finished
+def scan_csv(
+    source: FileSource, *, backend: IntoBackend[Backend], **kwds: t.Any
+) -> Incomplete:
+    raise NotImplementedError
+
+
+# TODO @dangotbanned: Handle after eager is finished
+def scan_parquet(
+    source: FileSource, *, backend: IntoBackend[Backend], **kwds: t.Any
+) -> Incomplete:
+    raise NotImplementedError
 
 
 @t.overload

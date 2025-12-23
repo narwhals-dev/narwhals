@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     import datetime as dt
     from collections.abc import Iterable
 
-    from typing_extensions import TypeIs
+    from typing_extensions import TypeAlias, TypeIs
 
     from narwhals._plan import expressions as ir
     from narwhals._plan.expressions import FunctionExpr, boolean, functions as F
@@ -32,6 +32,7 @@ if TYPE_CHECKING:
     from narwhals.dtypes import IntegerType
     from narwhals.typing import ClosedInterval, ConcatMethod, NonNestedLiteral
 
+Incomplete: TypeAlias = Any
 Int64 = Version.MAIN.dtypes.Int64()
 
 
@@ -171,6 +172,10 @@ class EagerNamespace(
         closed: ClosedInterval = "both",
         name: str = "literal",
     ) -> SeriesT: ...
+    def read_csv(self, source: str, **kwds: Any) -> EagerDataFrameT: ...
+    def read_parquet(self, source: str, **kwds: Any) -> EagerDataFrameT: ...
+    def scan_csv(self, source: str, **kwds: Any) -> Incomplete: ...
+    def scan_parquet(self, source: str, **kwds: Any) -> Incomplete: ...
 
 
 class LazyNamespace(
@@ -183,3 +188,6 @@ class LazyNamespace(
     @property
     def _frame(self) -> type[FrameT]:
         return self._lazyframe
+
+    def scan_csv(self, source: str, **kwds: Any) -> FrameT: ...
+    def scan_parquet(self, source: str, **kwds: Any) -> FrameT: ...
