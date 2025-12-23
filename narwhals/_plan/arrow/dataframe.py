@@ -24,6 +24,7 @@ from narwhals.schema import Schema
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
+    from io import BytesIO
 
     import polars as pl
     from typing_extensions import Self, TypeAlias
@@ -190,6 +191,25 @@ class ArrowDataFrame(
         )
         column = fn.unsort_indices(indices)
         return self._with_native(self.native.add_column(0, name, column))
+
+    @overload
+    def write_csv(self, file: None) -> str: ...
+    @overload
+    def write_csv(self, file: str | BytesIO) -> None: ...
+    def write_csv(self, file: str | BytesIO | None) -> str | None:
+        import pyarrow.csv as pa_csv
+
+        if file is None:
+            csv_buffer = pa.BufferOutputStream()
+            pa_csv.write_csv(self.native, csv_buffer)
+            return csv_buffer.getvalue().to_pybytes().decode()
+        pa_csv.write_csv(self.native, file)
+        return None
+
+    def write_parquet(self, file: str | BytesIO) -> None:
+        import pyarrow.parquet as pp
+
+        pp.write_table(self.native, file)
 
     def to_struct(self, name: str = "") -> Series:
         native = self.native
