@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, get_args, ove
 from narwhals._plan import _parse
 from narwhals._plan._expansion import expand_selector_irs_names, prepare_projection
 from narwhals._plan._guards import is_series
-from narwhals._plan.common import ensure_seq_str, temp
+from narwhals._plan.common import ensure_seq_str, normalize_target_file, temp
 from narwhals._plan.group_by import GroupBy, Grouped
 from narwhals._plan.options import ExplodeOptions, SortMultipleOptions
 from narwhals._plan.series import Series
@@ -489,10 +489,10 @@ class DataFrame(
     @overload
     def write_csv(self, file: FileSource | BytesIO) -> None: ...
     def write_csv(self, file: FileSource | BytesIO | None = None) -> str | None:
-        return self._compliant.write_csv(file)
+        return self._compliant.write_csv(normalize_target_file(file))
 
     def write_parquet(self, file: FileSource | BytesIO) -> None:
-        return self._compliant.write_parquet(file)
+        return self._compliant.write_parquet(normalize_target_file(file))
 
     def slice(self, offset: int, length: int | None = None) -> Self:
         return type(self)(self._compliant.slice(offset=offset, length=length))

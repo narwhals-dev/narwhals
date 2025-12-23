@@ -35,7 +35,7 @@ if TYPE_CHECKING:
     from narwhals._plan.options import ExplodeOptions, SortMultipleOptions
     from narwhals._plan.typing import NonCrossJoinStrategy
     from narwhals.dtypes import DType
-    from narwhals.typing import FileSource, IntoSchema, UniqueKeepStrategy
+    from narwhals.typing import IntoSchema, UniqueKeepStrategy
 
 Incomplete: TypeAlias = Any
 
@@ -195,8 +195,8 @@ class ArrowDataFrame(
     @overload
     def write_csv(self, file: None) -> str: ...
     @overload
-    def write_csv(self, file: FileSource | BytesIO) -> None: ...
-    def write_csv(self, file: FileSource | BytesIO | None) -> str | None:
+    def write_csv(self, file: str | BytesIO) -> None: ...
+    def write_csv(self, file: str | BytesIO | None) -> str | None:
         import pyarrow.csv as pa_csv
 
         if file is None:
@@ -206,13 +206,10 @@ class ArrowDataFrame(
         pa_csv.write_csv(self.native, file)
         return None
 
-    def write_parquet(self, file: FileSource | BytesIO) -> None:
+    def write_parquet(self, file: str | BytesIO) -> None:
         import pyarrow.parquet as pp
 
-        # NOTE: `pyarrow` supports `__fspath__`
-        # https://github.com/apache/arrow/blob/8040f2a22544876395529e02eb29d7a857dc7ffd/python/pyarrow/util.py#L134-L151
-        target: Incomplete = file
-        pp.write_table(self.native, target)
+        pp.write_table(self.native, file)
 
     def to_struct(self, name: str = "") -> Series:
         native = self.native

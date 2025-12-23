@@ -37,7 +37,7 @@ if TYPE_CHECKING:
     from narwhals._typing import _EagerAllowedImpl
     from narwhals._utils import Implementation, Version
     from narwhals.dtypes import DType
-    from narwhals.typing import FileSource, IntoSchema, UniqueKeepStrategy
+    from narwhals.typing import IntoSchema, UniqueKeepStrategy
 
 Incomplete: TypeAlias = Any
 
@@ -212,9 +212,9 @@ class CompliantDataFrame(
     @overload
     def write_csv(self, file: None) -> str: ...
     @overload
-    def write_csv(self, file: FileSource | BytesIO) -> None: ...
-    def write_csv(self, file: FileSource | BytesIO | None) -> str | None: ...
-    def write_parquet(self, file: FileSource | BytesIO) -> None: ...
+    def write_csv(self, file: str | BytesIO) -> None: ...
+    def write_csv(self, file: str | BytesIO | None) -> str | None: ...
+    def write_parquet(self, file: str | BytesIO) -> None: ...
     def slice(self, offset: int, length: int | None = None) -> Self: ...
     def sample_frac(
         self, fraction: float, *, with_replacement: bool = False, seed: int | None = None
@@ -255,5 +255,5 @@ class EagerDataFrame(
         return self.get_column(self.columns[index])
 
     # TODO @dangotbanned: Move to `CompliantLazyFrame` once that's added
-    def sink_parquet(self, file: FileSource | BytesIO) -> None:
+    def sink_parquet(self, file: str | BytesIO) -> None:
         self.write_parquet(file)

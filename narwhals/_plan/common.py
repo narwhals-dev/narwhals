@@ -4,6 +4,7 @@ import datetime as dt
 import sys
 from collections.abc import Iterable
 from decimal import Decimal
+from io import BytesIO
 from secrets import token_hex
 from typing import TYPE_CHECKING, cast, overload
 
@@ -30,7 +31,7 @@ if TYPE_CHECKING:
         Seq,
     )
     from narwhals._utils import _StoresColumns
-    from narwhals.typing import NonNestedDType, NonNestedLiteral
+    from narwhals.typing import FileSource, NonNestedDType, NonNestedLiteral
 
     T = TypeVar("T")
 
@@ -140,6 +141,22 @@ def _reprlib_repr_backport() -> reprlib.Repr:
         obj = reprlib.Repr()
         obj.maxlist = 10
         return obj
+
+
+@overload
+def normalize_target_file(target: FileSource) -> str: ...
+@overload
+def normalize_target_file(target: None) -> None: ...
+@overload
+def normalize_target_file(target: BytesIO) -> BytesIO: ...
+@overload
+def normalize_target_file(target: FileSource | BytesIO) -> str | BytesIO: ...
+def normalize_target_file(target: FileSource | BytesIO | None) -> str | BytesIO | None:
+    if target is None or isinstance(target, (str, BytesIO)):
+        return target
+    from pathlib import Path
+
+    return str(Path(target))
 
 
 class temp:  # noqa: N801
