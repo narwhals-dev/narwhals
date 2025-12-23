@@ -1113,6 +1113,11 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         )
         return self._with_native(native_result)
 
+    def any_value(
+        self, *, ignore_nulls: bool, _return_py_scalar: bool = True
+    ) -> PythonLiteral:
+        return self.drop_nulls().first() if ignore_nulls else self.first()
+
     @property
     def dt(self) -> ArrowSeriesDateTimeNamespace:
         return ArrowSeriesDateTimeNamespace(self)

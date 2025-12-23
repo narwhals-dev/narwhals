@@ -131,6 +131,7 @@ class CompliantExpr(
     def alias(self, name: str) -> Self: ...
     def all(self) -> Self: ...
     def any(self) -> Self: ...
+    def any_value(self, *, ignore_nulls: bool) -> Self: ...
     def count(self) -> Self: ...
     def min(self) -> Self: ...
     def max(self) -> Self: ...
@@ -824,6 +825,11 @@ class EagerExpr(
     def last(self) -> Self:
         return self._reuse_series("last", returns_scalar=True)
 
+    def any_value(self, *, ignore_nulls: bool) -> Self:
+        return self._reuse_series(
+            "any_value", returns_scalar=True, ignore_nulls=ignore_nulls
+        )
+
     @property
     def cat(self) -> EagerExprCatNamespace[Self]:
         return EagerExprCatNamespace(self)
@@ -992,6 +998,21 @@ class EagerExprListNamespace(
 
     def get(self, index: int) -> EagerExprT:
         return self.compliant._reuse_series_namespace("list", "get", index=index)
+
+    def min(self) -> EagerExprT:
+        return self.compliant._reuse_series_namespace("list", "min")
+
+    def max(self) -> EagerExprT:
+        return self.compliant._reuse_series_namespace("list", "max")
+
+    def mean(self) -> EagerExprT:
+        return self.compliant._reuse_series_namespace("list", "mean")
+
+    def median(self) -> EagerExprT:
+        return self.compliant._reuse_series_namespace("list", "median")
+
+    def sum(self) -> EagerExprT:
+        return self.compliant._reuse_series_namespace("list", "sum")
 
 
 class CompliantExprNameNamespace(  # type: ignore[misc]
