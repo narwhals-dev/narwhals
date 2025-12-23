@@ -330,7 +330,17 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
             return df._with_native(fn.concat_tables(df.native for df in dfs))
         raise TypeError(items)
 
-    read_csv = todo()
-    read_parquet = todo()
+    def read_csv(self, source: str, **kwds: Any) -> Frame:
+        from pyarrow import csv
+
+        native = csv.read_csv(source, **kwds)
+        return self._dataframe.from_native(native, version=self.version)
+
+    def read_parquet(self, source: str, **kwds: Any) -> Frame:
+        import pyarrow.parquet as pq
+
+        native = pq.read_table(source, **kwds)
+        return self._dataframe.from_native(native, version=self.version)
+
     scan_csv = todo()
     scan_parquet = todo()
