@@ -331,9 +331,9 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
         raise TypeError(items)
 
     def read_csv(self, source: str, **kwds: Any) -> Frame:
-        from pyarrow import csv
+        import pyarrow.csv as pcsv
 
-        native = csv.read_csv(source, **kwds)
+        native = pcsv.read_csv(source, **kwds)
         return self._dataframe.from_native(native, version=self.version)
 
     def read_parquet(self, source: str, **kwds: Any) -> Frame:
