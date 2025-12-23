@@ -1,13 +1,42 @@
-"""Minimal protocols for importing/exporting `*Frame`s from/to files."""
+"""Minimal protocols for importing/exporting `*Frame`s from/to files and guards to test for them."""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Protocol, overload
 
-from narwhals._plan.compliant.typing import DataFrameT_co, LazyFrameT_co
+from narwhals._plan.compliant.typing import (
+    DataFrameT,
+    DataFrameT_co,
+    LazyFrameT,
+    LazyFrameT_co,
+)
+from narwhals._utils import _hasattr_static
 
 if TYPE_CHECKING:
     from io import BytesIO
+
+    from typing_extensions import TypeIs
+
+__all__ = [
+    "EagerInput",
+    "EagerOutput",
+    "LazyInput",
+    "LazyOutput",
+    "ReadCsv",
+    "ReadParquet",
+    "ScanCsv",
+    "ScanParquet",
+    "SinkParquet",
+    "WriteCsv",
+    "WriteParquet",
+    "can_read_csv",
+    "can_read_parquet",
+    "can_scan_csv",
+    "can_scan_parquet",
+    "can_sink_parquet",
+    "can_write_csv",
+    "can_write_parquet",
+]
 
 
 class ScanCsv(Protocol[LazyFrameT_co]):
@@ -60,3 +89,35 @@ class LazyOutput(SinkParquet, Protocol):
 
 class EagerOutput(WriteCsv, WriteParquet, Protocol):
     """Supports all `write_*` methods, for eagerly writing to files."""
+
+
+def can_read_csv(obj: ReadCsv[DataFrameT] | Any) -> TypeIs[ReadCsv[DataFrameT]]:
+    return _hasattr_static(obj, "read_csv")
+
+
+def can_read_parquet(
+    obj: ReadParquet[DataFrameT] | Any,
+) -> TypeIs[ReadParquet[DataFrameT]]:
+    return _hasattr_static(obj, "read_parquet")
+
+
+def can_scan_csv(obj: ScanCsv[LazyFrameT] | Any) -> TypeIs[ScanCsv[LazyFrameT]]:
+    return _hasattr_static(obj, "scan_csv")
+
+
+def can_scan_parquet(
+    obj: ScanParquet[LazyFrameT] | Any,
+) -> TypeIs[ScanParquet[LazyFrameT]]:
+    return _hasattr_static(obj, "scan_parquet")
+
+
+def can_write_csv(obj: Any) -> TypeIs[WriteCsv]:
+    return _hasattr_static(obj, "write_csv")
+
+
+def can_write_parquet(obj: Any) -> TypeIs[WriteParquet]:
+    return _hasattr_static(obj, "write_parquet")
+
+
+def can_sink_parquet(obj: Any) -> TypeIs[SinkParquet]:
+    return _hasattr_static(obj, "sink_parquet")
