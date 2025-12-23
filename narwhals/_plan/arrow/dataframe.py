@@ -198,23 +198,23 @@ class ArrowDataFrame(
         return self._with_native(self.native.add_column(0, name, column))
 
     @overload
-    def write_csv(self, file: None) -> str: ...
+    def write_csv(self, target: None, /) -> str: ...
     @overload
-    def write_csv(self, file: str | BytesIO) -> None: ...
-    def write_csv(self, file: str | BytesIO | None) -> str | None:
+    def write_csv(self, target: str | BytesIO, /) -> None: ...
+    def write_csv(self, target: str | BytesIO | None, /) -> str | None:
         import pyarrow.csv as pa_csv
 
-        if file is None:
+        if target is None:
             csv_buffer = pa.BufferOutputStream()
             pa_csv.write_csv(self.native, csv_buffer)
             return csv_buffer.getvalue().to_pybytes().decode()
-        pa_csv.write_csv(self.native, file)
+        pa_csv.write_csv(self.native, target)
         return None
 
-    def write_parquet(self, file: str | BytesIO) -> None:
+    def write_parquet(self, target: str | BytesIO, /) -> None:
         import pyarrow.parquet as pp
 
-        pp.write_table(self.native, file)
+        pp.write_table(self.native, target)
 
     def to_struct(self, name: str = "") -> Series:
         native = self.native

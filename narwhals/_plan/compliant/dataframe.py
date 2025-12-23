@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, overload
 
+from narwhals._plan.compliant import io
 from narwhals._plan.compliant.group_by import Grouped
 from narwhals._plan.compliant.typing import (
     ColumnT_co,
@@ -102,7 +103,9 @@ class CompliantFrame(HasVersion, Protocol[ColumnT_co, NativeFrameT_co]):
 
 
 class CompliantLazyFrame(
-    CompliantFrame[ColumnT_co, NativeLazyFrameT], Protocol[ColumnT_co, NativeLazyFrameT]
+    io.LazyOutput,
+    CompliantFrame[ColumnT_co, NativeLazyFrameT],
+    Protocol[ColumnT_co, NativeLazyFrameT],
 ):
     """Very incomplete!
 
@@ -132,11 +135,11 @@ class CompliantLazyFrame(
     def native(self) -> NativeLazyFrameT:
         return self._native
 
-    def sink_parquet(self, file: str | BytesIO) -> None: ...
     def collect(self, backend: _EagerAllowedImpl | None, **kwds: Any) -> DataFrameAny: ...
 
 
 class CompliantDataFrame(
+    io.EagerOutput,
     CompliantFrame[SeriesT, NativeDataFrameT],
     Protocol[SeriesT, NativeDataFrameT, NativeSeriesT],
 ):
@@ -255,12 +258,6 @@ class CompliantDataFrame(
         maintain_order: bool = False,
     ) -> Self: ...
     def with_row_index(self, name: str) -> Self: ...
-    @overload
-    def write_csv(self, file: None) -> str: ...
-    @overload
-    def write_csv(self, file: str | BytesIO) -> None: ...
-    def write_csv(self, file: str | BytesIO | None) -> str | None: ...
-    def write_parquet(self, file: str | BytesIO) -> None: ...
     def slice(self, offset: int, length: int | None = None) -> Self: ...
     def sample_frac(
         self, fraction: float, *, with_replacement: bool = False, seed: int | None = None
@@ -274,6 +271,7 @@ class CompliantDataFrame(
 
 
 class EagerDataFrame(
+    io.LazyOutput,
     CompliantDataFrame[SeriesT, NativeDataFrameT, NativeSeriesT],
     Protocol[SeriesT, NativeDataFrameT, NativeSeriesT],
 ):
@@ -300,5 +298,5 @@ class EagerDataFrame(
     def to_series(self, index: int = 0) -> SeriesT:
         return self.get_column(self.columns[index])
 
-    def sink_parquet(self, file: str | BytesIO) -> None:
-        self.write_parquet(file)
+    def sink_parquet(self, target: str | BytesIO, /) -> None:
+        self.write_parquet(target)
