@@ -20,10 +20,10 @@ from narwhals._arrow.utils import (
 )
 from narwhals._plan import common, expressions as ir
 from narwhals._plan._guards import is_non_nested_literal
-from narwhals._plan.arrow import options as pa_options
+from narwhals._plan.arrow import compat, options as pa_options
 from narwhals._plan.expressions import functions as F, operators as ops
 from narwhals._plan.options import ExplodeOptions, SortOptions
-from narwhals._utils import Implementation, Version, no_default
+from narwhals._utils import Version, no_default
 from narwhals.exceptions import ShapeError
 
 if TYPE_CHECKING:
@@ -100,32 +100,6 @@ if TYPE_CHECKING:
     )
 
     Ts = TypeVarTuple("Ts")
-
-BACKEND_VERSION = Implementation.PYARROW._backend_version()
-"""Static backend version for `pyarrow`."""
-
-RANK_ACCEPTS_CHUNKED: Final = BACKEND_VERSION >= (14,)
-
-HAS_FROM_TO_STRUCT_ARRAY: Final = BACKEND_VERSION >= (15,)
-"""`pyarrow.Table.{from,to}_struct_array` added in https://github.com/apache/arrow/pull/38520"""
-
-HAS_STRUCT_TYPE_FIELDS: Final = BACKEND_VERSION >= (18,)
-"""`pyarrow.StructType.fields` added in https://github.com/apache/arrow/pull/43481"""
-
-HAS_SCATTER: Final = BACKEND_VERSION >= (20,)
-"""`pyarrow.compute.scatter` added in https://github.com/apache/arrow/pull/44394"""
-
-HAS_KURTOSIS_SKEW = BACKEND_VERSION >= (20,)
-"""`pyarrow.compute.{kurtosis,skew}` added in https://github.com/apache/arrow/pull/45677"""
-
-HAS_ARANGE: Final = BACKEND_VERSION >= (21,)
-"""`pyarrow.arange` added in https://github.com/apache/arrow/pull/46778"""
-
-TO_STRUCT_ARRAY_ACCEPTS_EMPTY: Final = BACKEND_VERSION >= (21,)
-"""`pyarrow.Table.to_struct_array` fixed in https://github.com/apache/arrow/pull/46357"""
-
-HAS_ZFILL: Final = BACKEND_VERSION >= (21,)
-"""`pyarrow.compute.utf8_zero_fill` added in https://github.com/apache/arrow/pull/46815"""
 
 # NOTE: Common data type instances to share
 UI32: Final = pa.uint32()
@@ -356,7 +330,7 @@ def struct(names: Iterable[str], columns: Iterable[Incomplete]) -> Incomplete:
 def struct_schema(native: Arrow[pa.StructScalar] | pa.StructType) -> pa.Schema:
     """Get the struct definition as a schema."""
     tp = native.type if _is_arrow(native) else native
-    fields = tp.fields if HAS_STRUCT_TYPE_FIELDS else list(tp)
+    fields = tp.fields if compat.HAS_STRUCT_TYPE_FIELDS else list(tp)
     return pa.schema(fields)
 
 
@@ -1047,7 +1021,7 @@ def str_replace_vector(
 
 
 def str_zfill(native: ChunkedOrScalarAny, length: int) -> ChunkedOrScalarAny:
-    if HAS_ZFILL:
+    if compat.HAS_ZFILL:
         zfill: Incomplete = pc.utf8_zero_fill  # type: ignore[attr-defined]
         result: ChunkedOrScalarAny = zfill(native, length)
     else:
@@ -1171,7 +1145,7 @@ def kurtosis_skew(
     native: ChunkedArray[pc.NumericScalar], function: Literal["kurtosis", "skew"], /
 ) -> NativeScalar:
     result: NativeScalar
-    if HAS_KURTOSIS_SKEW:
+    if compat.HAS_KURTOSIS_SKEW:
         if pa.types.is_null(native.type):
             native = native.cast(F64)
         result = getattr(pc, function)(native)
@@ -1296,7 +1270,7 @@ def shift(
 
 
 def rank(native: ChunkedArrayAny, rank_options: RankOptions) -> ChunkedArrayAny:
-    arr = native if RANK_ACCEPTS_CHUNKED else array(native)
+    arr = native if compat.RANK_ACCEPTS_CHUNKED else array(native)
     if rank_options.method == "average":
         # Adapted from https://github.com/pandas-dev/pandas/blob/f4851e500a43125d505db64e548af0355227714b/pandas/core/arrays/arrow/array.py#L2290-L2316
         order = pa_options.ORDER[rank_options.descending]
@@ -1707,7 +1681,7 @@ def unsort_indices(indices: pa.UInt64Array, /) -> pa.Int64Array:
     """
     return (
         pc.inverse_permutation(indices.cast(pa.int64()))  # type: ignore[attr-defined]
-        if HAS_SCATTER
+        if compat.HAS_SCATTER
         else int_range(len(indices), chunked=False).take(pc.sort_indices(indices))
     )
 
@@ -1753,7 +1727,7 @@ def int_range(
     if end is None:
         end = start
         start = 0
-    if not HAS_ARANGE:  # pragma: no cover
+    if not compat.HAS_ARANGE:  # pragma: no cover
         import numpy as np  # ignore-banned-import
 
         arr = pa.array(np.arange(start, end, step), type=dtype)

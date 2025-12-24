@@ -9,7 +9,7 @@ import pyarrow.compute as pc  # ignore-banned-import
 from narwhals._plan import expressions as ir
 from narwhals._plan._dispatch import get_dispatch_name
 from narwhals._plan._guards import is_agg_expr, is_function_expr
-from narwhals._plan.arrow import acero, functions as fn, options
+from narwhals._plan.arrow import acero, compat, functions as fn, options
 from narwhals._plan.common import temp
 from narwhals._plan.compliant.group_by import EagerDataFrameGroupBy
 from narwhals._plan.expressions import aggregation as agg
@@ -68,7 +68,7 @@ SUPPORTED_IR: Mapping[type[ir.ExprIR], acero.Aggregation] = {
 }
 
 _version_dependent: dict[Any, acero.Aggregation] = {}
-if fn.HAS_KURTOSIS_SKEW:
+if compat.HAS_KURTOSIS_SKEW:
     _version_dependent.update(
         {ir.functions.Kurtosis: "hash_kurtosis", ir.functions.Skew: "hash_skew"}
     )

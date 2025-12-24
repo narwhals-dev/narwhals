@@ -6,7 +6,7 @@ import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc
 
 from narwhals._arrow.utils import narwhals_to_native_dtype, native_to_narwhals_dtype
-from narwhals._plan.arrow import functions as fn, options
+from narwhals._plan.arrow import compat, functions as fn, options
 from narwhals._plan.arrow.common import ArrowFrameSeries as FrameSeries
 from narwhals._plan.compliant.accessors import SeriesStructNamespace as StructNamespace
 from narwhals._plan.compliant.series import CompliantSeries
@@ -343,7 +343,7 @@ class SeriesStructNamespace(StructNamespace["DataFrame", ArrowSeries]):
 
     def unnest(self) -> DataFrame:
         native = cast("pa.ChunkedArray[pa.StructScalar]", self.native)
-        if fn.HAS_FROM_TO_STRUCT_ARRAY:
+        if compat.HAS_FROM_TO_STRUCT_ARRAY:
             if len(native):
                 table = pa.Table.from_struct_array(native)
             else:

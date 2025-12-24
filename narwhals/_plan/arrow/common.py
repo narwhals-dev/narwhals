@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar, Generic
 
-from narwhals._plan.arrow.functions import BACKEND_VERSION, random_indices
+from narwhals._plan.arrow import compat
+from narwhals._plan.arrow.functions import random_indices
 from narwhals._typing_compat import TypeVar
 from narwhals._utils import Implementation, Version, _StoresNative
 
@@ -47,7 +48,7 @@ class ArrowFrameSeries(Generic[NativeT]):
         msg = f"{type(self).__name__}.__len__"
         raise NotImplementedError(msg)
 
-    if BACKEND_VERSION >= (18,):
+    if compat.TAKE_ACCEPTS_TUPLE:
 
         def _gather(self, indices: Indices) -> NativeT:
             return self.native.take(indices)

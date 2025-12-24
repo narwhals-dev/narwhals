@@ -9,7 +9,7 @@ import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._arrow.utils import native_to_narwhals_dtype
-from narwhals._plan.arrow import acero, functions as fn
+from narwhals._plan.arrow import acero, compat, functions as fn
 from narwhals._plan.arrow.common import ArrowFrameSeries as FrameSeries
 from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
 from narwhals._plan.arrow.group_by import ArrowGroupBy as GroupBy, partition_by
@@ -218,9 +218,9 @@ class ArrowDataFrame(
 
     def to_struct(self, name: str = "") -> Series:
         native = self.native
-        if fn.TO_STRUCT_ARRAY_ACCEPTS_EMPTY:
+        if compat.TO_STRUCT_ARRAY_ACCEPTS_EMPTY:
             struct = native.to_struct_array()
-        elif fn.HAS_FROM_TO_STRUCT_ARRAY:
+        elif compat.HAS_FROM_TO_STRUCT_ARRAY:
             if len(native):
                 struct = native.to_struct_array()
             else:
@@ -252,7 +252,7 @@ class ArrowDataFrame(
 
     def rename(self, mapping: Mapping[str, str]) -> Self:
         names: dict[str, str] | list[str]
-        if fn.BACKEND_VERSION >= (17,):
+        if compat.TABLE_RENAME_ACCEPTS_DICT:
             names = cast("dict[str, str]", mapping)
         else:  # pragma: no cover
             names = [mapping.get(c, c) for c in self.columns]
