@@ -9,6 +9,7 @@ from narwhals._duration import Interval
 from narwhals._plan import _guards, _parse, common, expressions as ir, selectors as cs
 from narwhals._plan._dispatch import get_dispatch_name
 from narwhals._plan.compliant import io as _io
+from narwhals._plan.compliant.typing import namespace
 from narwhals._plan.exceptions import (
     list_literal_error,
     unsupported_backend_operation_error,
@@ -35,6 +36,8 @@ from narwhals._utils import (
 from narwhals.exceptions import ComputeError, InvalidOperationError
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     import pyarrow as pa
     from typing_extensions import TypeAlias
 
@@ -50,6 +53,7 @@ if TYPE_CHECKING:
     from narwhals._plan.expr import Expr
     from narwhals._plan.series import Series
     from narwhals._plan.typing import (
+        DataFrameT,
         IntoExpr,
         IntoExprColumn,
         NativeDataFrameT,
@@ -61,6 +65,7 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         Backend,
         ClosedInterval,
+        ConcatMethod,
         EagerAllowed,
         FileSource,
         IntoBackend,
@@ -78,6 +83,9 @@ if TYPE_CHECKING:
         t.Any,
     ]
     CompliantDF: TypeAlias = CompliantDataFrame[t.Any, NativeDataFrameT, NativeSeriesT]
+
+    T = t.TypeVar("T")
+
 Incomplete: TypeAlias = t.Any
 _dtypes: Final = Version.MAIN.dtypes
 
@@ -427,6 +435,27 @@ def linear_space(
         .to_function_expr(*_parse.parse_into_seq_of_expr_ir(start, end))
         .to_narwhals()
     )
+
+
+def _ensure_same_frame(items: list[T], /) -> list[T]:
+    item_0_tp = type(items[0])
+    if builtins.all(isinstance(item, item_0_tp) for item in items):
+        return items
+    msg = f"The items to concatenate should either all be eager, or all lazy, got: {[type(item) for item in items]}"
+    raise TypeError(msg)
+
+
+def concat(items: Iterable[DataFrameT], *, how: ConcatMethod = "vertical") -> DataFrameT:
+    elems = list(items)
+    if not elems:
+        msg = "Cannot concat empty list"
+        raise ValueError(msg)
+    if how not in {"horizontal", "vertical", "diagonal"}:  # pragma: no cover
+        msg = "Only vertical, horizontal and diagonal concatenations are supported."
+        raise NotImplementedError(msg)
+    elems = _ensure_same_frame(elems)
+    compliant = namespace(elems[0]).concat((df._compliant for df in elems), how=how)
+    return elems[0]._with_compliant(compliant)
 
 
 @t.overload
