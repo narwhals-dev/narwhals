@@ -325,7 +325,29 @@ class ArrowDataFrame(
         partitions = partition_by(self.native, by, include_key=include_key)
         return [from_native(df) for df in partitions]
 
-    pivot = todo()
+    def pivot(
+        self,
+        on: str,  # needs to support multiple (todo)
+        on_columns: Sequence[str],
+        *,
+        index: Sequence[str],
+        values: Sequence[str],
+        sort_columns: bool = False,
+        separator: str = "_",
+    ) -> Self:
+        if sort_columns:
+            msg = f"TODO: `ArrowDataFrame.pivot({sort_columns=})`"
+            raise NotImplementedError(msg)
+        if separator != "_":
+            msg = f"TODO: `ArrowDataFrame.pivot({separator=})`"
+            raise NotImplementedError(msg)
+        if len(values) != 1:
+            msg = "TODO: `ArrowDataFrame.pivot(values=(..., ...))`"
+            raise NotImplementedError(msg)
+        return self._with_native(
+            pivot(self.native, on, on_columns, index=index, values=values[0])
+        )
+
     pivot_agg = todo()
 
 
@@ -354,19 +376,17 @@ def with_arrays(
 def pivot(
     native: pa.Table,
     on: str,
-    on_columns: Sequence[Any] | None = None,
+    on_columns: Sequence[str],
     *,
-    index: str | Sequence[str],
+    index: Sequence[str],
     values: str,
 ) -> pa.Table:
-    if on_columns is None:
-        on_columns = native.column(on).cast(pa.string()).unique().to_pylist()
     # The column names of `pivot_keys``, `pivot_values`
     args = [on, values]
     agg_name: Any = "hash_pivot_wider"
     options = pa_options.pivot_wider(on_columns)
     spec = args, agg_name, options
-    index = index if isinstance(index, str) else list(index)
+    index = index if isinstance(index, list) else list(index)
     result = native.group_by(index).aggregate([spec])
 
     # NOTE: This is the most backwards-compatible version of `Series.struct.unnest`

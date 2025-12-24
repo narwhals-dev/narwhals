@@ -491,9 +491,6 @@ class DataFrame(
             on_cols = on_columns.cast(self.version.dtypes.String()).to_list()
         else:
             on_cols = list(on_columns)
-        if not isinstance(values, str):
-            msg = f"TODO: DataFrame.pivot(values: {type(values).__name__})"
-            raise NotImplementedError(msg)
         if aggregate_function is None:
             result = self._compliant.pivot(
                 on,
