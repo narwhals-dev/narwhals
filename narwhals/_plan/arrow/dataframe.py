@@ -16,7 +16,7 @@ from narwhals._plan.arrow.group_by import ArrowGroupBy as GroupBy, partition_by
 from narwhals._plan.arrow.series import ArrowSeries as Series
 from narwhals._plan.common import temp
 from narwhals._plan.compliant.dataframe import EagerDataFrame
-from narwhals._plan.compliant.typing import namespace
+from narwhals._plan.compliant.typing import LazyFrameAny, namespace
 from narwhals._plan.exceptions import shape_error
 from narwhals._plan.expressions import NamedIR, named_ir
 from narwhals._utils import Version, generate_repr
@@ -34,6 +34,7 @@ if TYPE_CHECKING:
     from narwhals._plan.expressions import ExprIR, NamedIR
     from narwhals._plan.options import ExplodeOptions, SortMultipleOptions
     from narwhals._plan.typing import NonCrossJoinStrategy
+    from narwhals._typing import _LazyAllowedImpl
     from narwhals.dtypes import DType
     from narwhals.typing import IntoSchema, UniqueKeepStrategy
 
@@ -56,6 +57,10 @@ class ArrowDataFrame(
     @property
     def shape(self) -> tuple[int, int]:
         return self.native.shape
+
+    def lazy(self, backend: _LazyAllowedImpl | None, **kwds: Any) -> LazyFrameAny:
+        msg = "ArrowDataFrame.lazy"
+        raise NotImplementedError(msg)
 
     def group_by_resolver(self, resolver: GroupByResolver, /) -> GroupBy:
         return self._group_by.from_resolver(self, resolver)
@@ -193,23 +198,23 @@ class ArrowDataFrame(
         return self._with_native(self.native.add_column(0, name, column))
 
     @overload
-    def write_csv(self, file: None) -> str: ...
+    def write_csv(self, target: None, /) -> str: ...
     @overload
-    def write_csv(self, file: str | BytesIO) -> None: ...
-    def write_csv(self, file: str | BytesIO | None) -> str | None:
+    def write_csv(self, target: str | BytesIO, /) -> None: ...
+    def write_csv(self, target: str | BytesIO | None, /) -> str | None:
         import pyarrow.csv as pa_csv
 
-        if file is None:
+        if target is None:
             csv_buffer = pa.BufferOutputStream()
             pa_csv.write_csv(self.native, csv_buffer)
             return csv_buffer.getvalue().to_pybytes().decode()
-        pa_csv.write_csv(self.native, file)
+        pa_csv.write_csv(self.native, target)
         return None
 
-    def write_parquet(self, file: str | BytesIO) -> None:
+    def write_parquet(self, target: str | BytesIO, /) -> None:
         import pyarrow.parquet as pp
 
-        pp.write_table(self.native, file)
+        pp.write_table(self.native, target)
 
     def to_struct(self, name: str = "") -> Series:
         native = self.native

@@ -10,6 +10,7 @@ import pyarrow.compute as pc  # ignore-banned-import
 from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._plan._guards import is_tuple_of
 from narwhals._plan.arrow import functions as fn
+from narwhals._plan.common import todo
 from narwhals._plan.compliant.namespace import EagerNamespace
 from narwhals._plan.expressions.expr import RangeExpr
 from narwhals._plan.expressions.literal import is_literal_scalar
@@ -328,3 +329,18 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
                     raise TypeError(msg)
             return df._with_native(fn.concat_tables(df.native for df in dfs))
         raise TypeError(items)
+
+    def read_csv(self, source: str, /, **kwds: Any) -> Frame:
+        import pyarrow.csv as pcsv
+
+        native = pcsv.read_csv(source, **kwds)
+        return self._dataframe.from_native(native, version=self.version)
+
+    def read_parquet(self, source: str, /, **kwds: Any) -> Frame:
+        import pyarrow.parquet as pq
+
+        native = pq.read_table(source, **kwds)
+        return self._dataframe.from_native(native, version=self.version)
+
+    scan_csv = todo()
+    scan_parquet = todo()

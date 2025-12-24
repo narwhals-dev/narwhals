@@ -8,7 +8,11 @@ from typing import TYPE_CHECKING, Final
 from narwhals._duration import Interval
 from narwhals._plan import _guards, _parse, common, expressions as ir, selectors as cs
 from narwhals._plan._dispatch import get_dispatch_name
-from narwhals._plan.exceptions import list_literal_error
+from narwhals._plan.compliant import io as _io
+from narwhals._plan.exceptions import (
+    list_literal_error,
+    unsupported_backend_operation_error,
+)
 from narwhals._plan.expressions import functions as F
 from narwhals._plan.expressions.literal import ScalarLiteral, SeriesLiteral
 from narwhals._plan.expressions.ranges import (
@@ -25,6 +29,7 @@ from narwhals._utils import (
     ensure_type,
     flatten,
     is_eager_allowed,
+    normalize_path,
     qualified_type_name,
 )
 from narwhals.exceptions import ComputeError, InvalidOperationError
@@ -34,31 +39,46 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals._plan import arrow as _arrow
+    from narwhals._plan.compliant.dataframe import (
+        CompliantDataFrame,
+        CompliantLazyFrame,
+        EagerDataFrame,
+    )
     from narwhals._plan.compliant.namespace import EagerNamespace
     from narwhals._plan.compliant.series import CompliantSeries
+    from narwhals._plan.dataframe import DataFrame
     from narwhals._plan.expr import Expr
     from narwhals._plan.series import Series
     from narwhals._plan.typing import (
         IntoExpr,
         IntoExprColumn,
+        NativeDataFrameT,
         NativeSeriesT,
         NonNestedLiteralT,
     )
     from narwhals._typing import Arrow
     from narwhals.dtypes import IntegerType
     from narwhals.typing import (
+        Backend,
         ClosedInterval,
         EagerAllowed,
+        FileSource,
         IntoBackend,
         IntoDType,
         NonNestedLiteral,
     )
 
-    # NOTE: Use when you have a function that calls a namespace method, and eventually returns `Series[NativeSeriesT]`
+    # NOTE: Use when you have a function that calls a namespace method, and eventually returns:
+    # - `DataFrame[NativeDataFrameT]`, or
+    # - `Series[NativeSeriesT]`
     EagerNs: TypeAlias = EagerNamespace[
-        t.Any, CompliantSeries[NativeSeriesT], t.Any, t.Any
+        EagerDataFrame[t.Any, NativeDataFrameT, t.Any],
+        CompliantSeries[NativeSeriesT],
+        t.Any,
+        t.Any,
     ]
-
+    CompliantDF: TypeAlias = CompliantDataFrame[t.Any, NativeDataFrameT, NativeSeriesT]
+Incomplete: TypeAlias = t.Any
 _dtypes: Final = Version.MAIN.dtypes
 
 
@@ -410,12 +430,100 @@ def linear_space(
 
 
 @t.overload
+def read_csv(
+    source: FileSource, *, backend: Arrow, **kwds: t.Any
+) -> DataFrame[pa.Table, pa.ChunkedArray[t.Any]]: ...
+@t.overload
+def read_csv(
+    source: FileSource, *, backend: IntoBackend[EagerAllowed], **kwds: t.Any
+) -> DataFrame: ...
+def read_csv(
+    source: FileSource, *, backend: IntoBackend[EagerAllowed], **kwds: t.Any
+) -> DataFrame[t.Any, t.Any]:
+    source = normalize_path(source)
+    ns = _eager_namespace(backend)
+    if _io.can_read_csv(ns):
+        return _read_csv(source, kwds, ns)
+    raise unsupported_backend_operation_error(backend, "read_csv")  # pragma: no cover
+
+
+@t.overload
+def read_parquet(
+    source: FileSource, *, backend: Arrow, **kwds: t.Any
+) -> DataFrame[pa.Table, pa.ChunkedArray[t.Any]]: ...
+@t.overload
+def read_parquet(
+    source: FileSource, *, backend: IntoBackend[EagerAllowed], **kwds: t.Any
+) -> DataFrame: ...
+def read_parquet(
+    source: FileSource, *, backend: IntoBackend[EagerAllowed], **kwds: t.Any
+) -> DataFrame[t.Any, t.Any]:
+    source = normalize_path(source)
+    ns = _eager_namespace(backend)
+    if _io.can_read_parquet(ns):
+        return _read_parquet(source, kwds, ns)
+    raise unsupported_backend_operation_error(backend, "read_parquet")  # pragma: no cover
+
+
+# TODO @dangotbanned: Come back to after `nwp.LazyFrame` exists
+def scan_csv(
+    source: FileSource, *, backend: IntoBackend[Backend], **kwds: t.Any
+) -> Incomplete:
+    msg = "scan_csv"
+    raise NotImplementedError(msg)
+
+
+# TODO @dangotbanned: Come back to after `nwp.LazyFrame` exists
+def scan_parquet(
+    source: FileSource, *, backend: IntoBackend[Backend], **kwds: t.Any
+) -> Incomplete:
+    msg = "scan_parquet"
+    raise NotImplementedError(msg)
+
+
+def _read_csv(
+    source: str,
+    kwds: dict[str, t.Any],
+    ns: _io.ReadCsv[CompliantDF[NativeDataFrameT, NativeSeriesT]],
+    /,
+) -> DataFrame[NativeDataFrameT, NativeSeriesT]:
+    return ns.read_csv(source, **kwds).to_narwhals()
+
+
+def _read_parquet(
+    source: str,
+    kwds: dict[str, t.Any],
+    ns: _io.ReadParquet[CompliantDF[NativeDataFrameT, NativeSeriesT]],
+    /,
+) -> DataFrame[NativeDataFrameT, NativeSeriesT]:
+    return ns.read_parquet(source, **kwds).to_narwhals()
+
+
+def _scan_csv(
+    source: str,
+    kwds: dict[str, t.Any],
+    ns: _io.ScanCsv[CompliantLazyFrame[Incomplete]],
+    /,
+) -> Incomplete:  # pragma: no cover
+    return ns.scan_csv(source, **kwds).to_narwhals()
+
+
+def _scan_parquet(
+    source: str,
+    kwds: dict[str, t.Any],
+    ns: _io.ScanParquet[CompliantLazyFrame[Incomplete]],
+    /,
+) -> Incomplete:  # pragma: no cover
+    return ns.scan_parquet(source, **kwds).to_narwhals()
+
+
+@t.overload
 def _eager_namespace(backend: Arrow, /) -> _arrow.Namespace: ...
 @t.overload
-def _eager_namespace(backend: IntoBackend[EagerAllowed], /) -> EagerNs[t.Any]: ...
+def _eager_namespace(backend: IntoBackend[EagerAllowed], /) -> EagerNs[t.Any, t.Any]: ...
 def _eager_namespace(
     backend: IntoBackend[EagerAllowed], /
-) -> EagerNs[t.Any] | _arrow.Namespace:
+) -> EagerNs[t.Any, t.Any] | _arrow.Namespace:
     impl = Implementation.from_backend(backend)
     if is_eager_allowed(impl):
         if impl is Implementation.PYARROW:
@@ -459,7 +567,7 @@ def _date_range_eager(
     end: dt.date,
     interval: int,
     closed: ClosedInterval,
-    ns: EagerNs[NativeSeriesT],
+    ns: EagerNs[t.Any, NativeSeriesT],
     /,
 ) -> Series[NativeSeriesT]:
     return ns.date_range_eager(start, end, interval, closed=closed).to_narwhals()
@@ -467,7 +575,12 @@ def _date_range_eager(
 
 # NOTE: See `_date_range_eager`
 def _int_range_eager(
-    start: int, end: int, step: int, dtype: IntegerType, ns: EagerNs[NativeSeriesT], /
+    start: int,
+    end: int,
+    step: int,
+    dtype: IntegerType,
+    ns: EagerNs[t.Any, NativeSeriesT],
+    /,
 ) -> Series[NativeSeriesT]:
     return ns.int_range_eager(start, end, step, dtype=dtype).to_narwhals()
 
@@ -477,7 +590,7 @@ def _linear_space_eager(
     end: float,
     num_samples: int,
     closed: ClosedInterval,
-    ns: EagerNs[NativeSeriesT],
+    ns: EagerNs[t.Any, NativeSeriesT],
     /,
 ) -> Series[NativeSeriesT]:
     return ns.linear_space_eager(start, end, num_samples, closed=closed).to_narwhals()

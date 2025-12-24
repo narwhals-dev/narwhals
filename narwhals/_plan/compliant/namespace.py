@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, overload
 
+from narwhals._plan.compliant import io
 from narwhals._plan.compliant.typing import (
     ConcatT1,
     ConcatT2,
@@ -12,6 +13,7 @@ from narwhals._plan.compliant.typing import (
     FrameT,
     HasVersion,
     LazyExprT_co,
+    LazyFrameT,
     LazyScalarT_co,
     ScalarT_co,
     SeriesT,
@@ -22,7 +24,7 @@ if TYPE_CHECKING:
     import datetime as dt
     from collections.abc import Iterable
 
-    from typing_extensions import TypeIs
+    from typing_extensions import TypeAlias, TypeIs
 
     from narwhals._plan import expressions as ir
     from narwhals._plan.expressions import FunctionExpr, boolean, functions as F
@@ -32,6 +34,7 @@ if TYPE_CHECKING:
     from narwhals.dtypes import IntegerType
     from narwhals.typing import ClosedInterval, ConcatMethod, NonNestedLiteral
 
+Incomplete: TypeAlias = Any
 Int64 = Version.MAIN.dtypes.Int64()
 
 
@@ -110,6 +113,8 @@ class EagerConcat(Concat[ConcatT1, ConcatT2], Protocol[ConcatT1, ConcatT2]):  # 
 
 
 class EagerNamespace(
+    io.LazyInput[Incomplete],
+    io.EagerInput[EagerDataFrameT],
     EagerConcat[EagerDataFrameT, SeriesT],
     CompliantNamespace[EagerDataFrameT, EagerExprT_co, EagerScalarT_co],
     Protocol[EagerDataFrameT, SeriesT, EagerExprT_co, EagerScalarT_co],
@@ -174,12 +179,13 @@ class EagerNamespace(
 
 
 class LazyNamespace(
-    Concat[FrameT, FrameT],
-    CompliantNamespace[FrameT, LazyExprT_co, LazyScalarT_co],
-    Protocol[FrameT, LazyExprT_co, LazyScalarT_co],
+    io.LazyInput[LazyFrameT],
+    Concat[LazyFrameT, LazyFrameT],
+    CompliantNamespace[LazyFrameT, LazyExprT_co, LazyScalarT_co],
+    Protocol[LazyFrameT, LazyExprT_co, LazyScalarT_co],
 ):
     @property
-    def _lazyframe(self) -> type[FrameT]: ...
+    def _lazyframe(self) -> type[LazyFrameT]: ...
     @property
-    def _frame(self) -> type[FrameT]:
+    def _frame(self) -> type[LazyFrameT]:
         return self._lazyframe

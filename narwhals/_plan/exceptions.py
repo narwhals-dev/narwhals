@@ -6,7 +6,7 @@ from collections import Counter
 from itertools import groupby
 from typing import TYPE_CHECKING
 
-from narwhals._utils import qualified_type_name
+from narwhals._utils import Implementation, qualified_type_name
 from narwhals.exceptions import (
     ColumnNotFoundError,
     ComputeError,
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from narwhals._plan.options import SortOptions
     from narwhals._plan.schema import FrozenSchema
     from narwhals._plan.typing import IntoExpr, Seq
-    from narwhals.typing import IntoSchema
+    from narwhals.typing import Backend, IntoBackend, IntoSchema
 
 
 # NOTE: Using verbose names to start with
@@ -280,3 +280,16 @@ def expand_multi_output_error(
         f"{format_expressions(*expanded)}"
     )
     return MultiOutputExpressionError(msg)
+
+
+def unsupported_backend_operation_error(
+    backend: IntoBackend[Backend], method_name: str, /
+) -> NotImplementedError:  # pragma: no cover
+    """Currently only needed for typing purposes.
+
+    For `{read,scan}_*` we have to get from `IntoBackend[Backend]` to
+    a method that returns a `{Data,Lazy}Frame`.
+    """
+    backend_name = Implementation.from_backend(backend).value
+    msg = f"`{method_name}`() is not yet supported for {backend_name!r}"
+    return NotImplementedError(msg)
