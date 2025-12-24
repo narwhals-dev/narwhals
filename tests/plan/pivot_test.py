@@ -1,12 +1,27 @@
 from __future__ import annotations
 
 from contextlib import nullcontext as does_not_raise
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 from narwhals.exceptions import NarwhalsError
 from tests.plan.utils import assert_equal_data, dataframe, re_compile
+
+if TYPE_CHECKING:
+    from tests.conftest import Data
+
+
+@pytest.fixture(scope="module")
+def scores() -> Data:
+    """Ripped from `pl.DataFrame.pivot` docstring."""
+    return {
+        "name": ["Cady", "Cady", "Karen", "Karen"],
+        "subject": ["maths", "physics", "maths", "physics"],
+        "test_1": [98, 99, 61, 58],
+        "test_2": [100, 100, 60, 60],
+    }
+
 
 data = {
     "ix": [1, 2, 1, 1, 2, 2],
@@ -64,4 +79,15 @@ def test_pivot_no_index() -> None:  # pragma: no cover
         "a": [1.0, None, None, 3.0],
         "b": [None, 2.0, 4.0, None],
     }
+    assert_equal_data(result, expected)
+
+
+def test_pivot_test_scores(scores: Data) -> None:
+    df = dataframe(scores)
+    expected = {"name": ["Cady", "Karen"], "maths": [98, 61], "physics": [99, 58]}
+    result = df.pivot("subject", index="name", values="test_1")
+    assert_equal_data(result, expected)
+    result = df.pivot(
+        "subject", on_columns=["maths", "physics"], index="name", values="test_1"
+    )
     assert_equal_data(result, expected)
