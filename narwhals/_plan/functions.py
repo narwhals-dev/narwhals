@@ -3,12 +3,13 @@ from __future__ import annotations
 import builtins
 import datetime as dt
 import typing as t
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Any, Final, get_args
 
 from narwhals._duration import Interval
 from narwhals._plan import _guards, _parse, common, expressions as ir, selectors as cs
 from narwhals._plan._dispatch import get_dispatch_name
 from narwhals._plan.compliant import io as _io
+from narwhals._plan.compliant.typing import namespace
 from narwhals._plan.exceptions import (
     list_literal_error,
     unsupported_backend_operation_error,
@@ -33,10 +34,13 @@ from narwhals._utils import (
     qualified_type_name,
 )
 from narwhals.exceptions import ComputeError, InvalidOperationError
+from narwhals.typing import ConcatMethod
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     import pyarrow as pa
-    from typing_extensions import TypeAlias
+    from typing_extensions import TypeAlias, TypeIs
 
     from narwhals._plan import arrow as _arrow
     from narwhals._plan.compliant.dataframe import (
@@ -50,6 +54,7 @@ if TYPE_CHECKING:
     from narwhals._plan.expr import Expr
     from narwhals._plan.series import Series
     from narwhals._plan.typing import (
+        DataFrameT,
         IntoExpr,
         IntoExprColumn,
         NativeDataFrameT,
@@ -78,6 +83,9 @@ if TYPE_CHECKING:
         t.Any,
     ]
     CompliantDF: TypeAlias = CompliantDataFrame[t.Any, NativeDataFrameT, NativeSeriesT]
+
+    T = t.TypeVar("T")
+
 Incomplete: TypeAlias = t.Any
 _dtypes: Final = Version.MAIN.dtypes
 
@@ -427,6 +435,37 @@ def linear_space(
         .to_function_expr(*_parse.parse_into_seq_of_expr_ir(start, end))
         .to_narwhals()
     )
+
+
+def _ensure_same_frame(items: list[T], /) -> list[T]:
+    item_0_tp = type(items[0])
+    if builtins.all(isinstance(item, item_0_tp) for item in items):
+        return items
+    msg = f"The items to concatenate should either all be eager, or all lazy, got: {[type(item) for item in items]}"  # pragma: no cover
+    raise TypeError(msg)  # pragma: no cover
+
+
+def _is_concat_method(obj: Any) -> TypeIs[ConcatMethod]:
+    return obj in {"horizontal", "vertical", "diagonal"}
+
+
+def _validate_concat_method(how: str, /) -> ConcatMethod:
+    if _is_concat_method(how):
+        return how
+    msg = f"Only the following concatenation methods are supported: {get_args(ConcatMethod)}; found '{how}'."
+    raise NotImplementedError(msg)
+
+
+# TODO @dangotbanned: Update this when `LazyFrame` exists
+def concat(items: Iterable[DataFrameT], *, how: ConcatMethod = "vertical") -> DataFrameT:
+    elems = list(items)
+    if not elems:
+        msg = "Cannot concatenate an empty iterable."
+        raise ValueError(msg)
+    how = _validate_concat_method(how)
+    elems = _ensure_same_frame(elems)
+    compliant = namespace(elems[0]).concat((df._compliant for df in elems), how=how)
+    return elems[0]._with_compliant(compliant)
 
 
 @t.overload

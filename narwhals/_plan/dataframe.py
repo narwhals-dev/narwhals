@@ -6,6 +6,8 @@ from narwhals._plan import _parse
 from narwhals._plan._expansion import expand_selector_irs_names, prepare_projection
 from narwhals._plan._guards import is_series
 from narwhals._plan.common import ensure_seq_str, normalize_target_file, temp
+from narwhals._plan.compliant.dataframe import EagerDataFrame
+from narwhals._plan.compliant.namespace import EagerNamespace
 from narwhals._plan.group_by import GroupBy, Grouped
 from narwhals._plan.options import ExplodeOptions, SortMultipleOptions
 from narwhals._plan.series import Series
@@ -48,11 +50,7 @@ if TYPE_CHECKING:
 
     from narwhals._native import NativeSeries
     from narwhals._plan.arrow.typing import NativeArrowDataFrame
-    from narwhals._plan.compliant.dataframe import (
-        CompliantDataFrame,
-        CompliantFrame,
-        EagerDataFrame,
-    )
+    from narwhals._plan.compliant.dataframe import CompliantFrame, EagerDataFrame
     from narwhals._plan.compliant.namespace import EagerNamespace
     from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._typing import Arrow, _EagerAllowedImpl
@@ -224,7 +222,17 @@ def _dataframe_from_dict(
 class DataFrame(
     BaseFrame[NativeDataFrameT_co], Generic[NativeDataFrameT_co, NativeSeriesT]
 ):
-    _compliant: CompliantDataFrame[IncompleteCyclic, NativeDataFrameT_co, NativeSeriesT]
+    _compliant: EagerDataFrame[IncompleteCyclic, NativeDataFrameT_co, NativeSeriesT]
+
+    def __narwhals_namespace__(
+        self,
+    ) -> EagerNamespace[
+        EagerDataFrame[Any, NativeDataFrameT_co, NativeSeriesT],
+        CompliantSeries[NativeSeriesT],
+        Any,
+        Any,
+    ]:
+        return self._compliant.__narwhals_namespace__()
 
     @property
     def implementation(self) -> _EagerAllowedImpl:
