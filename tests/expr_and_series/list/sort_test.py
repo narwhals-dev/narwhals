@@ -44,25 +44,6 @@ expected_asc_nulls_first = [
 ]
 
 
-def test_sort_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if any(backend in str(constructor) for backend in ("dask", "cudf")):
-        request.applymarker(pytest.mark.xfail)
-    if "sqlframe" in str(constructor):
-        # https://github.com/eakmanrq/sqlframe/issues/559
-        # https://github.com/eakmanrq/sqlframe/issues/560
-        request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 5):
-        pytest.skip()
-    if "pandas" in str(constructor):
-        if PANDAS_VERSION < (2, 2):
-            pytest.skip()
-        pytest.importorskip("pyarrow")
-    result = nw.from_native(constructor(data)).select(
-        nw.col("a").cast(nw.List(nw.Int32())).list.sort()
-    )
-    assert_equal_data(result, {"a": expected_asc_nulls_first})
-
-
 @pytest.mark.parametrize(
     ("descending", "nulls_last", "expected"),
     [
@@ -100,22 +81,6 @@ def test_sort_expr_args(
         .list.sort(descending=descending, nulls_last=nulls_last)
     )
     assert_equal_data(result, {"a": expected})
-
-
-def test_sort_series(
-    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
-) -> None:
-    if any(backend in str(constructor_eager) for backend in ("dask", "cudf")):
-        request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (0, 20, 5):
-        pytest.skip()
-    if "pandas" in str(constructor_eager):
-        if PANDAS_VERSION < (2, 2):
-            pytest.skip()
-        pytest.importorskip("pyarrow")
-    df = nw.from_native(constructor_eager(data), eager_only=True)
-    result = df["a"].cast(nw.List(nw.Int32())).list.sort()
-    assert_equal_data({"a": result}, {"a": expected_asc_nulls_first})
 
 
 @pytest.mark.parametrize(
