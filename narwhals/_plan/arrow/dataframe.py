@@ -345,8 +345,8 @@ def with_arrays(
     return table
 
 
-# TODO @dangotbanned: Unnest output struct
 # TODO @dangotbanned: Derive multiple specs from same index
+# - e.g. `values: list[str]`
 # TODO @dangotbanned: Is pre/post-aggregating even possible?
 def pivot(
     native: pa.Table,
@@ -364,4 +364,15 @@ def pivot(
     options = pa_options.pivot_wider(on_columns)
     spec = args, agg_name, options
     index = index if isinstance(index, str) else list(index)
-    return native.group_by(index).aggregate([spec])
+    result = native.group_by(index).aggregate([spec])
+
+    # NOTE: This is the most backwards-compatible version of `Series.struct.unnest`
+    # Will need to tweak it for multiple `values` columns
+    rec_batch: Incomplete = pa.RecordBatch.from_struct_array
+    struct = result.column(1)
+    batches = (rec_batch(chunk) for chunk in struct.chunks)
+    schema = fn.struct_schema(struct)
+    unnest = pa.Table.from_batches(batches)
+    return fn.concat_horizontal(
+        [result.column(0), *unnest.columns], [result.column_names[0], *schema.names]
+    )
