@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Any, Literal, TypeVar
 
 import pyarrow.compute as pc
 
+from narwhals._plan.arrow import compat
 from narwhals._utils import zip_strict
 
 if TYPE_CHECKING:
@@ -188,6 +189,27 @@ def split_pattern(by: str, n: int | None = None) -> pc.SplitPatternOptions:
     if n is not None:
         return pc.SplitPatternOptions(by, max_splits=n - 1)
     return pc.SplitPatternOptions(by)
+
+
+def pivot_wider(
+    on_columns: Sequence[Any],
+    /,
+    unexpected_key_behavior: Literal["ignore", "raise"] = "ignore",
+) -> pc.FunctionOptions:
+    """Tries to wrap [`pc.PivotWiderOptions`], and raises if we're on an old `pyarrow`.
+
+    `key_names` appears to be the same as `on_columns`, but here it is required.
+
+    [`pc.PivotWiderOptions`]: https://arrow.apache.org/docs/python/generated/pyarrow.compute.PivotWiderOptions.html
+    """
+    if not compat.HAS_PIVOT_WIDER:
+        msg = f"`pivot` requires `pyarrow>=20`, got {compat.BACKEND_VERSION!r}"
+        raise NotImplementedError(msg)
+    opts_cls: Any = pc.PivotWiderOptions  # type: ignore[attr-defined]
+    options: pc.FunctionOptions = opts_cls(
+        on_columns, unexpected_key_behavior=unexpected_key_behavior
+    )
+    return options
 
 
 def _generate_agg() -> Mapping[type[agg.AggExpr], acero.AggregateOptions]:

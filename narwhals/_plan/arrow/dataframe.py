@@ -9,7 +9,7 @@ import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._arrow.utils import native_to_narwhals_dtype
-from narwhals._plan.arrow import acero, compat, functions as fn
+from narwhals._plan.arrow import acero, compat, functions as fn, options as pa_options
 from narwhals._plan.arrow.common import ArrowFrameSeries as FrameSeries
 from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
 from narwhals._plan.arrow.group_by import ArrowGroupBy as GroupBy, partition_by
@@ -343,3 +343,25 @@ def with_arrays(
         else:
             table = table.append_column(name, column)
     return table
+
+
+# TODO @dangotbanned: Unnest output struct
+# TODO @dangotbanned: Derive multiple specs from same index
+# TODO @dangotbanned: Is pre/post-aggregating even possible?
+def pivot(
+    native: pa.Table,
+    on: str,
+    on_columns: Sequence[Any] | None = None,
+    *,
+    index: str | Sequence[str],
+    values: str,
+) -> pa.Table:
+    if on_columns is None:
+        on_columns = native.column(on).cast(pa.string()).unique().to_pylist()
+    # The column names of `pivot_keys``, `pivot_values`
+    args = [on, values]
+    agg_name: Any = "hash_pivot_wider"
+    options = pa_options.pivot_wider(on_columns)
+    spec = args, agg_name, options
+    index = index if isinstance(index, str) else list(index)
+    return native.group_by(index).aggregate([spec])
