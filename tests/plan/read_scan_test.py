@@ -117,7 +117,7 @@ def test_read_csv_kwargs(
 def test_read_csv_raise_with_lazy(backend: _LazyOnly) -> None:
     pytest.importorskip(backend)
     with pytest.raises(ValueError, match="support in Narwhals is lazy-only"):
-        nwp.read_csv("unused.csv", backend=backend)  # type: ignore[arg-type]
+        nwp.read_csv("unused.csv", backend=backend)  # type: ignore[call-overload]
 
 
 def test_read_parquet(data: Data, parquet_path: FileSource, eager: EagerAllowed) -> None:
@@ -142,4 +142,4 @@ def test_read_parquet_kwargs(
 def test_read_parquet_raise_with_lazy(backend: _LazyOnly) -> None:
     pytest.importorskip(backend)
     with pytest.raises(ValueError, match="support in Narwhals is lazy-only"):
-        nwp.read_parquet("unused.parquet", backend=backend)  # type: ignore[arg-type]
+        nwp.read_parquet("unused.parquet", backend=backend)  # type: ignore[call-overload]
