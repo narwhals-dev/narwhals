@@ -32,16 +32,14 @@ def data() -> Data:
     return {"a": [1, 2, 3], "b": [4.5, 6.7, 8.9], "z": ["x", "y", "w"]}
 
 
-skipif_pandas_lt_1_5 = pytest.mark.skipif(
-    PANDAS_VERSION < (1, 5), reason="too old for pyarrow"
-)
-XFAIL_NOT_IMPL_PANDAS = pytest.mark.xfail(
-    reason="Not implemented pandas", raises=NotImplementedError
-)
 lazy_core_backend = pytest.mark.parametrize("backend", ["duckdb", "ibis", "sqlframe"])
-
 param_pandas_import = pytest.param(
-    "pandas", {"engine": "pyarrow"}, marks=[XFAIL_NOT_IMPL_PANDAS, skipif_pandas_lt_1_5]
+    "pandas",
+    {"engine": "pyarrow"},
+    marks=[
+        pytest.mark.xfail(reason="Not implemented pandas", raises=NotImplementedError),
+        pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow"),
+    ],
 )
 
 
