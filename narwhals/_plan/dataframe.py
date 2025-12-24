@@ -37,6 +37,7 @@ from narwhals.typing import (
     IntoDType,
     IntoSchema,
     JoinStrategy,
+    PivotAgg,
     UniqueKeepStrategy,
 )
 
@@ -451,6 +452,68 @@ class DataFrame(
         names = expand_selector_irs_names(by_selectors, schema=self, require_any=True)
         partitions = self._compliant.partition_by(names, include_key=include_key)
         return [self._with_compliant(p) for p in partitions]
+
+    def pivot(
+        self,
+        on: str | list[str],
+        on_columns: Sequence[Any] | Series | None = None,
+        *,
+        index: str | list[str] | None = None,
+        values: str | list[str] | None = None,
+        aggregate_function: PivotAgg | None = None,
+        sort_columns: bool = False,
+        separator: str = "_",
+    ) -> Self:
+        columns = self.columns
+        on_ = ensure_seq_str(on)
+        if index is None:
+            if values is None:
+                msg = "At least one of `values` and `index` must be passed"
+                raise ValueError(msg)
+            values_ = ensure_seq_str(values)
+            index_ = tuple(
+                nm for nm in columns if nm in set(columns).difference(on_, values_)
+            )
+        elif values is None:
+            index_ = ensure_seq_str(index)
+            values_ = tuple(
+                nm for nm in columns if nm in set(columns).difference(on_, index_)
+            )
+        else:
+            index_ = ensure_seq_str(index)
+            values_ = ensure_seq_str(values)
+        if not isinstance(on, str):
+            msg = "TODO: `DataFrame.pivot(on: list[str])`"
+            raise NotImplementedError(msg)
+        if on_columns is None:
+            on_columns = self.get_column(on).unique(maintain_order=True)
+        if is_series(on_columns):
+            on_cols = on_columns.cast(self.version.dtypes.String()).to_list()
+        else:
+            on_cols = list(on_columns)
+        if not isinstance(values, str):
+            msg = f"TODO: DataFrame.pivot(values: {type(values).__name__})"
+            raise NotImplementedError(msg)
+        if aggregate_function is None:
+            result = self._compliant.pivot(
+                on,
+                on_cols,
+                index=index_,
+                values=values_,
+                sort_columns=sort_columns,
+                separator=separator,
+            )
+        else:
+            result = self._compliant.pivot_agg(
+                on,
+                on_cols,
+                index=index_,
+                values=values_,
+                aggregate_function=aggregate_function,
+                sort_columns=sort_columns,
+                separator=separator,
+            )
+        return self._with_compliant(result)
 
     def unique(
         self,
