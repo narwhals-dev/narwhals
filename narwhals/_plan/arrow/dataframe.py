@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import operator
+from collections import deque
 from functools import reduce
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Literal, cast, overload
@@ -23,13 +24,25 @@ from narwhals._utils import Version, generate_repr
 from narwhals.schema import Schema
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Mapping, Sequence
+    from collections.abc import (
+        Callable,
+        Collection,
+        Iterable,
+        Iterator,
+        Mapping,
+        Sequence,
+    )
     from io import BytesIO
 
     import polars as pl
     from typing_extensions import Self, TypeAlias
 
-    from narwhals._plan.arrow.typing import ChunkedArrayAny, ChunkedOrArrayAny, Predicate
+    from narwhals._plan.arrow.typing import (
+        ChunkedArrayAny,
+        ChunkedOrArrayAny,
+        ChunkedStruct,
+        Predicate,
+    )
     from narwhals._plan.compliant.group_by import GroupByResolver
     from narwhals._plan.expressions import ExprIR, NamedIR
     from narwhals._plan.options import ExplodeOptions, SortMultipleOptions
@@ -381,21 +394,38 @@ def pivot(
     index: Sequence[str],
     values: str,
 ) -> pa.Table:
-    # The column names of `pivot_keys``, `pivot_values`
-    args = [on, values]
+    # stubs don't include it yet
     agg_name: Any = "hash_pivot_wider"
     options = pa_options.pivot_wider(on_columns)
-    spec = args, agg_name, options
-    index = index if isinstance(index, list) else list(index)
-    result = native.group_by(index).aggregate([spec])
+    result = native.group_by(list(index)).aggregate([([on, values], agg_name, options)])
 
     # NOTE: This is the most backwards-compatible version of `Series.struct.unnest`
     # Will need to tweak it for multiple `values` columns
-    rec_batch: Incomplete = pa.RecordBatch.from_struct_array
-    struct = result.column(1)
-    batches = (rec_batch(chunk) for chunk in struct.chunks)
-    schema = fn.struct_schema(struct)
-    unnest = pa.Table.from_batches(batches)
-    return fn.concat_horizontal(
-        [result.column(0), *unnest.columns], [result.column_names[0], *schema.names]
-    )
+    split_index = result.schema.get_field_index(index[-1]) + 1
+    result_columns = result.columns
+    unnesting, names = _iter_unnest_with_names(result_columns[split_index:])
+    arrays = (*result_columns[:split_index], *unnesting)
+    names = (*index, *names)
+    return fn.concat_horizontal(arrays, names)
+
+
+def _iter_unnest_with_names(
+    arrays: Iterable[ChunkedStruct],
+) -> tuple[Iterator[ChunkedArrayAny], Collection[str]]:
+    """Probably the least reusable function ever written.
+
+    The idea is the chunked arrays need to be unpacked in `pivot`,
+    so here they are flattened as references to iterators.
+    """
+    names = deque[str]()
+    columns: deque[Iterator[ChunkedArrayAny]] = deque()
+    for arr in arrays:
+        table = _unnest(arr)
+        names.extend(table.column_names)
+        columns.append(table.itercolumns())
+    return chain.from_iterable(columns), names
+
+
+def _unnest(ca: ChunkedStruct, /) -> pa.Table:
+    batch = cast("Callable[[Any], pa.RecordBatch]", pa.RecordBatch.from_struct_array)
+    return pa.Table.from_batches((batch(c) for c in ca.chunks), fn.struct_schema(ca))

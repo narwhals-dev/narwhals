@@ -66,13 +66,10 @@ def test_pivot_no_index_no_values() -> None:
         df.pivot(on="col")
 
 
-@pytest.mark.xfail(
-    reason="BUG: 'pyarrow.lib.DataType' object has no attribute 'fields'. Did you mean: 'field'?",
-    raises=AttributeError,
-)
-def test_pivot_no_index() -> None:  # pragma: no cover
+def test_pivot_implicit_index() -> None:
+    inferred_index_names = "ix", "bar"
     df = dataframe(data_no_dups)
-    result = df.pivot(on="col", values="foo").sort("ix", "bar")
+    result = df.pivot(on="col", values="foo").sort(inferred_index_names)
     expected = {
         "ix": [1, 1, 2, 2],
         "bar": ["x", "y", "w", "z"],
