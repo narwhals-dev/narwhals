@@ -54,6 +54,14 @@ data_no_dups = {
     "bar": ["x", "y", "z", "w"],
 }
 
+data_no_dups_unordered = {
+    "ix": [1, 1, 2, 2],
+    "col": ["b", "a", "b", "a"],
+    "foo": [1, 2, 3, 4],
+    "bar": ["x", "y", "z", "w"],
+}
+"""Variant to give the same order as `data["col"]`, but without needing an aggregate."""
+
 
 # NOTE: `tests::frame::pivot_test.py::test_pivot`
 @XFAIL_NOT_IMPL_AGG
@@ -159,8 +167,6 @@ def test_pivot_agg(
     assert_equal_data(result, expected)
 
 
-# TODO @dangotbanned: Make a version of this that doesn't use `aggregate_function`
-@XFAIL_NOT_IMPL_AGG
 @pytest.mark.parametrize(
     ("sort_columns", "expected"),
     [
@@ -172,16 +178,10 @@ def test_pivot_agg(
         (False, ["ix", "foo_b", "foo_a", "bar_b", "bar_a"]),
     ],
 )
-def test_pivot_sort_columns(
-    sort_columns: bool, expected: list[str]
-) -> None:  # pragma: no cover
-    df = dataframe(data)
+def test_pivot_sort_columns(sort_columns: bool, expected: list[str]) -> None:
+    df = dataframe(data_no_dups_unordered)
     result = df.pivot(
-        on="col",
-        index="ix",
-        values=["foo", "bar"],
-        aggregate_function="sum",
-        sort_columns=sort_columns,
+        on="col", index="ix", values=["foo", "bar"], sort_columns=sort_columns
     )
     assert result.columns == expected
 
