@@ -186,9 +186,8 @@ def test_pivot_sort_columns(
     data_no_dups_unordered: Data, sort_columns: bool, expected: list[str]
 ) -> None:
     df = dataframe(data_no_dups_unordered)
-    result = df.pivot(
-        "on_lower", index="idx_1", values=["foo", "bar"], sort_columns=sort_columns
-    )
+    values = ["foo", "bar"]
+    result = df.pivot("on_lower", index="idx_1", values=values, sort_columns=sort_columns)
     assert result.columns == expected
 
 
@@ -221,9 +220,8 @@ def test_pivot_sort_columns(
 def test_pivot_on_multiple_names(
     data_no_dups_unordered: Data, on: list[str], values: list[str], expected: list[str]
 ) -> None:  # pragma: no cover
-    df = dataframe(data_no_dups_unordered)
-    result = df.pivot(on, values=values, index="idx_1").columns
-    assert result == expected
+    result = dataframe(data_no_dups_unordered).pivot(on, values=values, index="idx_1")
+    assert result.columns == expected
 
 
 @XFAIL_NOT_IMPL_AGG
@@ -257,8 +255,8 @@ def test_pivot_on_multiple_names_agg(
     data: Data, on: list[str], values: list[str], expected: list[str]
 ) -> None:  # pragma: no cover
     df = dataframe(data)
-    result = df.pivot(on, values=values, aggregate_function="min", index="idx_1").columns
-    assert result == expected
+    result = df.pivot(on, values=values, aggregate_function="min", index="idx_1")
+    assert result.columns == expected
 
 
 def test_pivot_no_agg_duplicated(data: Data) -> None:
