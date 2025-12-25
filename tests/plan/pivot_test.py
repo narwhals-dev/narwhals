@@ -35,10 +35,10 @@ def scores() -> Data:
 @pytest.fixture(scope="module")
 def data() -> Data:
     return {
-        "ix": [1, 2, 1, 1, 2, 2],
-        "iy": [1, 2, 2, 1, 2, 1],
-        "col": ["b", "b", "a", "a", "a", "a"],
-        "col_b": ["x", "y", "x", "y", "x", "y"],
+        "idx_1": [1, 2, 1, 1, 2, 2],
+        "idx_2": [1, 2, 2, 1, 2, 1],
+        "on_lower": ["b", "b", "a", "a", "a", "a"],
+        "on_upper": ["X", "Y", "Y", "Y", "X", "Y"],
         "foo": [7, 1, 0, 1, 2, 2],
         "bar": [9, 4, 0, 2, 0, 0],
     }
@@ -47,8 +47,8 @@ def data() -> Data:
 @pytest.fixture(scope="module")
 def data_no_dups() -> Data:
     return {
-        "ix": [1, 1, 2, 2],
-        "col": ["a", "b", "a", "b"],
+        "idx_1": [1, 1, 2, 2],
+        "on_lower": ["a", "b", "a", "b"],
         "foo": [1, 2, 3, 4],
         "bar": ["x", "y", "z", "w"],
     }
@@ -58,10 +58,13 @@ def data_no_dups() -> Data:
 def data_no_dups_unordered(data_no_dups: Data) -> Data:
     """Variant of `data_no_dups` to support tests without needing `aggregate_function`.
 
-    - `"col"` has an order to test `sort_columns=True`
-    - `"col_b"` is added for `on: list[str]` name generation
+    - `"on_lower"` has an order to test `sort_columns=True`
+    - `"on_upper"` is added for `on: list[str]` name generation
     """
-    return data_no_dups | {"col": ["b", "a", "b", "a"], "col_b": ["x", "x", "y", "y"]}
+    return data_no_dups | {
+        "on_lower": ["b", "a", "b", "a"],
+        "on_upper": ["X", "X", "Y", "Y"],
+    }
 
 
 @XFAIL_NOT_IMPL_AGG
@@ -71,7 +74,7 @@ def data_no_dups_unordered(data_no_dups: Data) -> Data:
         (
             "min",
             {
-                "ix": [1, 2],
+                "idx_1": [1, 2],
                 "foo_a": [0, 2],
                 "foo_b": [7, 1],
                 "bar_a": [0, 0],
@@ -81,7 +84,7 @@ def data_no_dups_unordered(data_no_dups: Data) -> Data:
         (
             "max",
             {
-                "ix": [1, 2],
+                "idx_1": [1, 2],
                 "foo_a": [1, 2],
                 "foo_b": [7, 1],
                 "bar_a": [2, 0],
@@ -91,7 +94,7 @@ def data_no_dups_unordered(data_no_dups: Data) -> Data:
         (
             "first",
             {
-                "ix": [1, 2],
+                "idx_1": [1, 2],
                 "foo_a": [0, 2],
                 "foo_b": [7, 1],
                 "bar_a": [0, 0],
@@ -101,7 +104,7 @@ def data_no_dups_unordered(data_no_dups: Data) -> Data:
         (
             "last",
             {
-                "ix": [1, 2],
+                "idx_1": [1, 2],
                 "foo_a": [1, 2],
                 "foo_b": [7, 1],
                 "bar_a": [2, 0],
@@ -111,7 +114,7 @@ def data_no_dups_unordered(data_no_dups: Data) -> Data:
         (
             "sum",
             {
-                "ix": [1, 2],
+                "idx_1": [1, 2],
                 "foo_a": [1, 4],
                 "foo_b": [7, 1],
                 "bar_a": [2, 0],
@@ -121,7 +124,7 @@ def data_no_dups_unordered(data_no_dups: Data) -> Data:
         (
             "mean",
             {
-                "ix": [1, 2],
+                "idx_1": [1, 2],
                 "foo_a": [0.5, 2.0],
                 "foo_b": [7.0, 1.0],
                 "bar_a": [1.0, 0.0],
@@ -131,7 +134,7 @@ def data_no_dups_unordered(data_no_dups: Data) -> Data:
         (
             "median",
             {
-                "ix": [1, 2],
+                "idx_1": [1, 2],
                 "foo_a": [0.5, 2.0],
                 "foo_b": [7.0, 1.0],
                 "bar_a": [1.0, 0.0],
@@ -141,7 +144,7 @@ def data_no_dups_unordered(data_no_dups: Data) -> Data:
         (
             "len",
             {
-                "ix": [1, 2],
+                "idx_1": [1, 2],
                 "foo_a": [2, 2],
                 "foo_b": [1, 1],
                 "bar_a": [2, 2],
@@ -150,7 +153,9 @@ def data_no_dups_unordered(data_no_dups: Data) -> Data:
         ),
     ],
 )
-@pytest.mark.parametrize(("on", "index"), [("col", "ix"), (["col"], ["ix"])])
+@pytest.mark.parametrize(
+    ("on", "index"), [("on_lower", "idx_1"), (["on_lower"], ["idx_1"])]
+)
 def test_pivot_agg(
     data: Data,
     on: str | list[str],
@@ -160,7 +165,7 @@ def test_pivot_agg(
 ) -> None:
     df = dataframe(data)
     result = df.pivot(
-        on=on,
+        on,
         index=index,
         values=["foo", "bar"],
         aggregate_function=agg_func,
@@ -173,8 +178,8 @@ def test_pivot_agg(
 @pytest.mark.parametrize(
     ("sort_columns", "expected"),
     [
-        (True, ["ix", "foo_a", "foo_b", "bar_a", "bar_b"]),
-        (False, ["ix", "foo_b", "foo_a", "bar_b", "bar_a"]),
+        (True, ["idx_1", "foo_a", "foo_b", "bar_a", "bar_b"]),
+        (False, ["idx_1", "foo_b", "foo_a", "bar_b", "bar_a"]),
     ],
 )
 def test_pivot_sort_columns(
@@ -182,7 +187,7 @@ def test_pivot_sort_columns(
 ) -> None:
     df = dataframe(data_no_dups_unordered)
     result = df.pivot(
-        on="col", index="ix", values=["foo", "bar"], sort_columns=sort_columns
+        "on_lower", index="idx_1", values=["foo", "bar"], sort_columns=sort_columns
     )
     assert result.columns == expected
 
@@ -192,23 +197,23 @@ def test_pivot_sort_columns(
     ("on", "values", "expected"),
     [
         (
-            ["col", "col_b"],
+            ["on_lower", "on_upper"],
             ["foo"],
-            ["ix", '{"b","x"}', '{"a","x"}', '{"b","y"}', '{"a","y"}'],
+            ["idx_1", '{"b","X"}', '{"a","X"}', '{"b","Y"}', '{"a","Y"}'],
         ),
         (
-            ["col", "col_b"],
+            ["on_lower", "on_upper"],
             ["foo", "bar"],
             [
-                "ix",
-                'foo_{"b","x"}',
-                'foo_{"a","x"}',
-                'foo_{"b","y"}',
-                'foo_{"a","y"}',
-                'bar_{"b","x"}',
-                'bar_{"a","x"}',
-                'bar_{"b","y"}',
-                'bar_{"a","y"}',
+                "idx_1",
+                'foo_{"b","X"}',
+                'foo_{"a","Y"}',
+                'foo_{"b","Y"}',
+                'foo_{"a","Y"}',
+                'bar_{"b","X"}',
+                'bar_{"a","X"}',
+                'bar_{"b","Y"}',
+                'bar_{"a","Y"}',
             ],
         ),
     ],
@@ -217,7 +222,7 @@ def test_pivot_on_multiple_names(
     data_no_dups_unordered: Data, on: list[str], values: list[str], expected: list[str]
 ) -> None:  # pragma: no cover
     df = dataframe(data_no_dups_unordered)
-    result = df.pivot(on=on, values=values, index="ix").columns
+    result = df.pivot(on, values=values, index="idx_1").columns
     assert result == expected
 
 
@@ -227,23 +232,23 @@ def test_pivot_on_multiple_names(
     ("on", "values", "expected"),
     [
         (
-            ["col", "col_b"],
+            ["on_lower", "on_upper"],
             ["foo"],
-            ["ix", '{"b","x"}', '{"b","y"}', '{"a","x"}', '{"a","y"}'],
+            ["idx_1", '{"b","X"}', '{"b","Y"}', '{"a","X"}', '{"a","Y"}'],
         ),
         (
-            ["col", "col_b"],
+            ["on_lower", "on_upper"],
             ["foo", "bar"],
             [
-                "ix",
-                'foo_{"b","x"}',
-                'foo_{"b","y"}',
-                'foo_{"a","x"}',
-                'foo_{"a","y"}',
-                'bar_{"b","x"}',
-                'bar_{"b","y"}',
-                'bar_{"a","x"}',
-                'bar_{"a","y"}',
+                "idx_1",
+                'foo_{"b","X"}',
+                'foo_{"b","Y"}',
+                'foo_{"a","X"}',
+                'foo_{"a","Y"}',
+                'bar_{"b","X"}',
+                'bar_{"b","Y"}',
+                'bar_{"a","X"}',
+                'bar_{"a","Y"}',
             ],
         ),
     ],
@@ -252,21 +257,21 @@ def test_pivot_on_multiple_names_agg(
     data: Data, on: list[str], values: list[str], expected: list[str]
 ) -> None:  # pragma: no cover
     df = dataframe(data)
-    result = df.pivot(on=on, values=values, aggregate_function="min", index="ix").columns
+    result = df.pivot(on, values=values, aggregate_function="min", index="idx_1").columns
     assert result == expected
 
 
 def test_pivot_no_agg_duplicated(data: Data) -> None:
     df = dataframe(data)
     with pytest.raises((ValueError, NarwhalsError)):
-        df.pivot("col", index="ix")
+        df.pivot("on_lower", index="idx_1")
 
 
 def test_pivot_no_agg_no_duplicates(data_no_dups: Data) -> None:
     df = dataframe(data_no_dups)
-    result = df.pivot("col", index="ix")
+    result = df.pivot("on_lower", index="idx_1")
     expected = {
-        "ix": [1, 2],
+        "idx_1": [1, 2],
         "foo_a": [1, 3],
         "foo_b": [2, 4],
         "bar_a": ["x", "z"],
@@ -280,15 +285,15 @@ def test_pivot_no_index_no_values(data_no_dups: Data) -> None:
     with pytest.raises(
         ValueError, match=re_compile(r"at least one of.+values.+index.+must")
     ):
-        df.pivot(on="col")
+        df.pivot(on="on_lower")
 
 
 def test_pivot_implicit_index(data_no_dups: Data) -> None:
-    inferred_index_names = "ix", "bar"
+    inferred_index_names = "idx_1", "bar"
     df = dataframe(data_no_dups)
-    result = df.pivot(on="col", values="foo").sort(inferred_index_names)
+    result = df.pivot("on_lower", values="foo").sort(inferred_index_names)
     expected = {
-        "ix": [1, 1, 2, 2],
+        "idx_1": [1, 1, 2, 2],
         "bar": ["x", "y", "w", "z"],
         "a": [1.0, None, None, 3.0],
         "b": [None, 2.0, 4.0, None],
