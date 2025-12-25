@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+import narwhals._plan.selectors as ncs
 from narwhals.exceptions import NarwhalsError
 from tests.plan.utils import assert_equal_data, dataframe, re_compile
 
@@ -266,8 +267,7 @@ def test_pivot_no_agg_duplicated(data: Data) -> None:
 
 
 def test_pivot_no_agg_no_duplicates(data_no_dups: Data) -> None:
-    df = dataframe(data_no_dups)
-    result = df.pivot("on_lower", index="idx_1")
+    result = dataframe(data_no_dups).pivot("on_lower", index="idx_1")
     expected = {
         "idx_1": [1, 2],
         "foo_a": [1, 3],
@@ -283,19 +283,19 @@ def test_pivot_no_index_no_values(data_no_dups: Data) -> None:
     with pytest.raises(
         ValueError, match=re_compile(r"at least one of.+values.+index.+must")
     ):
-        df.pivot(on="on_lower")
+        df.pivot("on_lower")
 
 
 def test_pivot_implicit_index(data_no_dups: Data) -> None:
-    inferred_index_names = "idx_1", "bar"
-    df = dataframe(data_no_dups)
-    result = df.pivot("on_lower", values="foo").sort(inferred_index_names)
     expected = {
         "idx_1": [1, 1, 2, 2],
         "bar": ["x", "y", "w", "z"],
         "a": [1.0, None, None, 3.0],
         "b": [None, 2.0, 4.0, None],
     }
+    result = (
+        dataframe(data_no_dups).pivot("on_lower", values="foo").sort(ncs.by_index(0, 1))
+    )
     assert_equal_data(result, expected)
 
 
