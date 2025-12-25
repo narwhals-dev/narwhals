@@ -91,8 +91,9 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
             option = pc.ScalarAggregateOptions(min_count=0)
         elif function_name in self._OPTION_ORDERED:
             ignore_nulls = kwargs.get("ignore_nulls", False)
+            order_by = kwargs.get("order_by", ())
             grouped, option = self._ordered_agg(
-                grouped, function_name, ignore_nulls=ignore_nulls
+                grouped, function_name, order_by, ignore_nulls=ignore_nulls
             )
         return grouped, self._remap_expr_name(function_name), option
 
@@ -100,6 +101,7 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
         self,
         grouped: pa.TableGroupBy,
         name: NarwhalsAggregation,
+        order_by: Sequence[str],
         /,
         *,
         ignore_nulls: bool,
@@ -118,6 +120,10 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
         backend_version = self.compliant._backend_version
         if backend_version >= (14, 0) and grouped._use_threads:
             native = self.compliant.native
+            if order_by:
+                native = native.sort_by(
+                    [(x, "ascending") for x in order_by], null_placement="at_start"
+                )
             grouped = pa.TableGroupBy(native, grouped.keys, use_threads=False)
         elif backend_version < (14, 0):  # pragma: no cover
             msg = (
