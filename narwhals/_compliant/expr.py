@@ -138,7 +138,7 @@ class CompliantExpr(
     def mean(self) -> Self: ...
     def sum(self) -> Self: ...
     def median(self) -> Self: ...
-    def first(self) -> Self: ...
+    def first(self, order_by: Sequence[str] = ()) -> Self: ...
     def last(self) -> Self: ...
     def skew(self) -> Self: ...
     def kurtosis(self) -> Self: ...
@@ -825,8 +825,20 @@ class EagerExpr(
             "is_between", lower_bound=lower_bound, upper_bound=upper_bound, closed=closed
         )
 
-    def first(self) -> Self:
-        return self._reuse_series("first", returns_scalar=True)
+    def first(self, order_by: Sequence[str] = ()) -> Self:
+        if not order_by:
+            return self._reuse_series("first", returns_scalar=True)
+
+        def func(df: EagerDataFrameT) -> Sequence[Any]:
+            df = df.sort(*order_by, descending=False, nulls_last=False)
+            return self.first()(df)
+
+        return self._from_callable(
+            func,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            context=self,
+        )
 
     def last(self) -> Self:
         return self._reuse_series("last", returns_scalar=True)
