@@ -56,11 +56,14 @@ def data_no_dups() -> Data:
 
 @pytest.fixture(scope="module")
 def data_no_dups_unordered(data_no_dups: Data) -> Data:
-    """Variant to give the same order as `data["col"]`, but without needing an aggregate."""
-    return data_no_dups | {"col": ["b", "a", "b", "a"]}
+    """Variant of `data_no_dups` to support tests without needing `aggregate_function`.
+
+    - `"col"` has an order to test `sort_columns=True`
+    - `"col_b"` is added for `on: list[str]` name generation
+    """
+    return data_no_dups | {"col": ["b", "a", "b", "a"], "col_b": ["x", "x", "y", "y"]}
 
 
-# NOTE: `tests::frame::pivot_test.py::test_pivot`
 @XFAIL_NOT_IMPL_AGG
 @pytest.mark.parametrize(
     ("agg_func", "expected"),
@@ -184,24 +187,51 @@ def test_pivot_sort_columns(
     assert result.columns == expected
 
 
-# TODO @dangotbanned: Break this up into 2 tests & Remove the single `on` cases (they're covered elsewhere)
-# - 1.
-#   - No aggregate, use `data_no_dups(_unorderd)`
-# - 2.
-#   - aggregate, use `data` (basically what is here already)
-@XFAIL_NOT_IMPL_AGG
+@XFAIL_NOT_IMPL_ON_MULTIPLE
 @pytest.mark.parametrize(
     ("on", "values", "expected"),
     [
-        (["col"], ["foo"], ["ix", "b", "a"]),
-        (["col"], ["foo", "bar"], ["ix", "foo_b", "foo_a", "bar_b", "bar_a"]),
-        pytest.param(
+        (
+            ["col", "col_b"],
+            ["foo"],
+            ["ix", '{"b","x"}', '{"a","x"}', '{"b","y"}', '{"a","y"}'],
+        ),
+        (
+            ["col", "col_b"],
+            ["foo", "bar"],
+            [
+                "ix",
+                'foo_{"b","x"}',
+                'foo_{"a","x"}',
+                'foo_{"b","y"}',
+                'foo_{"a","y"}',
+                'bar_{"b","x"}',
+                'bar_{"a","x"}',
+                'bar_{"b","y"}',
+                'bar_{"a","y"}',
+            ],
+        ),
+    ],
+)
+def test_pivot_on_multiple_names(
+    data_no_dups_unordered: Data, on: list[str], values: list[str], expected: list[str]
+) -> None:  # pragma: no cover
+    df = dataframe(data_no_dups_unordered)
+    result = df.pivot(on=on, values=values, index="ix").columns
+    assert result == expected
+
+
+@XFAIL_NOT_IMPL_AGG
+@XFAIL_NOT_IMPL_ON_MULTIPLE
+@pytest.mark.parametrize(
+    ("on", "values", "expected"),
+    [
+        (
             ["col", "col_b"],
             ["foo"],
             ["ix", '{"b","x"}', '{"b","y"}', '{"a","x"}', '{"a","y"}'],
-            marks=XFAIL_NOT_IMPL_ON_MULTIPLE,
         ),
-        pytest.param(
+        (
             ["col", "col_b"],
             ["foo", "bar"],
             [
@@ -215,11 +245,10 @@ def test_pivot_sort_columns(
                 'bar_{"a","x"}',
                 'bar_{"a","y"}',
             ],
-            marks=XFAIL_NOT_IMPL_ON_MULTIPLE,
         ),
     ],
 )
-def test_pivot_on_multiple_names_out(
+def test_pivot_on_multiple_names_agg(
     data: Data, on: list[str], values: list[str], expected: list[str]
 ) -> None:  # pragma: no cover
     df = dataframe(data)
@@ -254,7 +283,6 @@ def test_pivot_no_index_no_values(data_no_dups: Data) -> None:
         df.pivot(on="col")
 
 
-# NOTE: `tests::frame::pivot_test.py::test_pivot_no_index`
 def test_pivot_implicit_index(data_no_dups: Data) -> None:
     inferred_index_names = "ix", "bar"
     df = dataframe(data_no_dups)
