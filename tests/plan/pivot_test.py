@@ -21,11 +21,6 @@ XFAIL_NOT_IMPL_ON_MULTIPLE = pytest.mark.xfail(
     reason="TODO: `ArrowDataFrame.pivot(on: list[str])`", raises=NotImplementedError
 )
 
-# NOTE: Need to remove from compliant level
-XFAIL_NOT_IMPL_SORT_COLUMNS = pytest.mark.xfail(
-    reason="TODO: `DataFrame.pivot(sort_columns=True)`", raises=NotImplementedError
-)
-
 
 @pytest.fixture(scope="module")
 def scores() -> Data:
@@ -65,7 +60,6 @@ data_no_dups_unordered = {
 
 # NOTE: `tests::frame::pivot_test.py::test_pivot`
 @XFAIL_NOT_IMPL_AGG
-@XFAIL_NOT_IMPL_SORT_COLUMNS
 @pytest.mark.parametrize(
     ("agg_func", "expected"),
     [
@@ -170,11 +164,7 @@ def test_pivot_agg(
 @pytest.mark.parametrize(
     ("sort_columns", "expected"),
     [
-        pytest.param(
-            True,
-            ["ix", "foo_a", "foo_b", "bar_a", "bar_b"],
-            marks=XFAIL_NOT_IMPL_SORT_COLUMNS,
-        ),
+        (True, ["ix", "foo_a", "foo_b", "bar_a", "bar_b"]),
         (False, ["ix", "foo_b", "foo_a", "bar_b", "bar_a"]),
     ],
 )

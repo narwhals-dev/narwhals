@@ -456,7 +456,7 @@ class DataFrame(
     def pivot(
         self,
         on: str | list[str],
-        on_columns: Sequence[Any] | Series | None = None,
+        on_columns: Sequence[str] | Series | None = None,
         *,
         index: str | list[str] | None = None,
         values: str | list[str] | None = None,
@@ -488,17 +488,16 @@ class DataFrame(
         if on_columns is None:
             on_columns = self.get_column(on).unique(maintain_order=True)
         if is_series(on_columns):
-            on_cols = on_columns.cast(self.version.dtypes.String()).to_list()
+            on_columns = on_columns.cast(self.version.dtypes.String())
+            if sort_columns:
+                # NOTE: Slightly different from polars, since that accepts a `DataFrame`
+                on_columns = on_columns.sort()
+            on_cols = on_columns.to_list()
         else:
             on_cols = list(on_columns)
         if aggregate_function is None:
             result = self._compliant.pivot(
-                on,
-                on_cols,
-                index=index_,
-                values=values_,
-                sort_columns=sort_columns,
-                separator=separator,
+                on, on_cols, index=index_, values=values_, separator=separator
             )
         else:
             result = self._compliant.pivot_agg(
@@ -507,7 +506,6 @@ class DataFrame(
                 index=index_,
                 values=values_,
                 aggregate_function=aggregate_function,
-                sort_columns=sort_columns,
                 separator=separator,
             )
         return self._with_compliant(result)

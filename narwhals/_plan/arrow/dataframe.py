@@ -345,12 +345,8 @@ class ArrowDataFrame(
         *,
         index: Sequence[str],
         values: Sequence[str],
-        sort_columns: bool = False,  # this is supposed to be resolved at narwhals level!
         separator: str = "_",
     ) -> Self:
-        if sort_columns:
-            msg = f"TODO: `ArrowDataFrame.pivot({sort_columns=})`"
-            raise NotImplementedError(msg)
         return self._with_native(
             pivot(
                 self.native,

@@ -229,7 +229,6 @@ class CompliantDataFrame(
         *,
         index: Sequence[str],
         values: Sequence[str],
-        sort_columns: bool = False,
         separator: str = "_",
     ) -> Self: ...
     def pivot_agg(
@@ -240,7 +239,6 @@ class CompliantDataFrame(
         index: Sequence[str],
         values: Sequence[str],
         aggregate_function: PivotAgg,  # not sure if possible for pyarrow yet
-        sort_columns: bool = False,
         separator: str = "_",
     ) -> Self: ...
     def row(self, index: int) -> tuple[Any, ...]: ...
