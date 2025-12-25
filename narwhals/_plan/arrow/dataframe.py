@@ -351,9 +351,6 @@ class ArrowDataFrame(
         if sort_columns:
             msg = f"TODO: `ArrowDataFrame.pivot({sort_columns=})`"
             raise NotImplementedError(msg)
-        if separator != "_":
-            msg = f"TODO: `ArrowDataFrame.pivot({separator=})`"
-            raise NotImplementedError(msg)
         return self._with_native(
             pivot(
                 self.native,
