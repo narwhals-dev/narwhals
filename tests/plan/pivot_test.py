@@ -10,14 +10,20 @@ from narwhals.exceptions import NarwhalsError
 from tests.plan.utils import assert_equal_data, dataframe, re_compile
 
 if TYPE_CHECKING:
+    from narwhals.typing import PivotAgg
     from tests.conftest import Data
 
 
-XFAIL_NOT_IMPL_PIVOT_AGG = pytest.mark.xfail(
+XFAIL_NOT_IMPL_AGG = pytest.mark.xfail(
     reason="TODO: `ArrowDataFrame.pivot_agg`", raises=NotImplementedError
 )
-XFAIL_NOT_IMPL_PIVOT_ON_MULTIPLE = pytest.mark.xfail(
+XFAIL_NOT_IMPL_ON_MULTIPLE = pytest.mark.xfail(
     reason="TODO: `ArrowDataFrame.pivot(on: list[str])`", raises=NotImplementedError
+)
+
+# NOTE: Need to remove from compliant level
+XFAIL_NOT_IMPL_SORT_COLUMNS = pytest.mark.xfail(
+    reason="TODO: `DataFrame.pivot(sort_columns=True)`", raises=NotImplementedError
 )
 
 
@@ -50,18 +56,119 @@ data_no_dups = {
 
 
 # NOTE: `tests::frame::pivot_test.py::test_pivot`
-@XFAIL_NOT_IMPL_PIVOT_AGG
-@XFAIL_NOT_IMPL_PIVOT_ON_MULTIPLE
-def test_pivot_agg() -> None:
-    raise NotImplementedError
+@XFAIL_NOT_IMPL_AGG
+@XFAIL_NOT_IMPL_SORT_COLUMNS
+@pytest.mark.parametrize(
+    ("agg_func", "expected"),
+    [
+        (
+            "min",
+            {
+                "ix": [1, 2],
+                "foo_a": [0, 2],
+                "foo_b": [7, 1],
+                "bar_a": [0, 0],
+                "bar_b": [9, 4],
+            },
+        ),
+        (
+            "max",
+            {
+                "ix": [1, 2],
+                "foo_a": [1, 2],
+                "foo_b": [7, 1],
+                "bar_a": [2, 0],
+                "bar_b": [9, 4],
+            },
+        ),
+        (
+            "first",
+            {
+                "ix": [1, 2],
+                "foo_a": [0, 2],
+                "foo_b": [7, 1],
+                "bar_a": [0, 0],
+                "bar_b": [9, 4],
+            },
+        ),
+        (
+            "last",
+            {
+                "ix": [1, 2],
+                "foo_a": [1, 2],
+                "foo_b": [7, 1],
+                "bar_a": [2, 0],
+                "bar_b": [9, 4],
+            },
+        ),
+        (
+            "sum",
+            {
+                "ix": [1, 2],
+                "foo_a": [1, 4],
+                "foo_b": [7, 1],
+                "bar_a": [2, 0],
+                "bar_b": [9, 4],
+            },
+        ),
+        (
+            "mean",
+            {
+                "ix": [1, 2],
+                "foo_a": [0.5, 2.0],
+                "foo_b": [7.0, 1.0],
+                "bar_a": [1.0, 0.0],
+                "bar_b": [9.0, 4.0],
+            },
+        ),
+        (
+            "median",
+            {
+                "ix": [1, 2],
+                "foo_a": [0.5, 2.0],
+                "foo_b": [7.0, 1.0],
+                "bar_a": [1.0, 0.0],
+                "bar_b": [9.0, 4.0],
+            },
+        ),
+        (
+            "len",
+            {
+                "ix": [1, 2],
+                "foo_a": [2, 2],
+                "foo_b": [1, 1],
+                "bar_a": [2, 2],
+                "bar_b": [1, 1],
+            },
+        ),
+    ],
+)
+@pytest.mark.parametrize(("on", "index"), [("col", "ix"), (["col"], ["ix"])])
+def test_pivot_agg(
+    on: str | list[str], index: str | list[str], agg_func: PivotAgg, expected: Data
+) -> None:
+    df = dataframe(data)
+    result = df.pivot(
+        on=on,
+        index=index,
+        values=["foo", "bar"],
+        aggregate_function=agg_func,
+        sort_columns=True,
+    )
+
+    assert_equal_data(result, expected)
 
 
 # TODO @dangotbanned: Make a version of this that doesn't use `aggregate_function`
-@XFAIL_NOT_IMPL_PIVOT_AGG
+@XFAIL_NOT_IMPL_AGG
 @pytest.mark.parametrize(
     ("sort_columns", "expected"),
     [
-        (True, ["ix", "foo_a", "foo_b", "bar_a", "bar_b"]),
+        pytest.param(
+            True,
+            ["ix", "foo_a", "foo_b", "bar_a", "bar_b"],
+            marks=XFAIL_NOT_IMPL_SORT_COLUMNS,
+        ),
         (False, ["ix", "foo_b", "foo_a", "bar_b", "bar_a"]),
     ],
 )
@@ -79,7 +186,7 @@ def test_pivot_sort_columns(
     assert result.columns == expected
 
 
-@XFAIL_NOT_IMPL_PIVOT_AGG
+@XFAIL_NOT_IMPL_AGG
 @pytest.mark.parametrize(
     ("on", "values", "expected"),
     [
@@ -89,7 +196,7 @@ def test_pivot_sort_columns(
             ["col", "col_b"],
             ["foo"],
             ["ix", '{"b","x"}', '{"b","y"}', '{"a","x"}', '{"a","y"}'],
-            marks=XFAIL_NOT_IMPL_PIVOT_ON_MULTIPLE,
+            marks=XFAIL_NOT_IMPL_ON_MULTIPLE,
         ),
         pytest.param(
             ["col", "col_b"],
@@ -105,7 +212,7 @@ def test_pivot_sort_columns(
                 'bar_{"a","x"}',
                 'bar_{"a","y"}',
             ],
-            marks=XFAIL_NOT_IMPL_PIVOT_ON_MULTIPLE,
+            marks=XFAIL_NOT_IMPL_ON_MULTIPLE,
         ),
     ],
 )
