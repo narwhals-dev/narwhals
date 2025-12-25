@@ -72,7 +72,6 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
         self._df = df
         frame, self._keys, self._output_key_names = self._parse_keys(df, keys=keys)
         self._compliant_frame = frame.drop_nulls(self._keys) if drop_null_keys else frame
-        self._grouped = pa.TableGroupBy(self.compliant.native, self._keys)
         self._drop_null_keys = drop_null_keys
 
     def _configure_agg(
