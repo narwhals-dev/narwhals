@@ -10,7 +10,6 @@ from narwhals._arrow.utils import cast_to_comparable_string_types, extract_py_sc
 from narwhals._compliant import EagerGroupBy
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._utils import generate_temporary_column_name
-from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping, Sequence
@@ -97,12 +96,12 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
     def _configure_grouped(self, *exprs: ArrowExpr) -> pa.TableGroupBy:
         order_by = ()
         use_threads = True
-        for x in exprs:
-            md = next(x._metadata.op_nodes_reversed())
+        for expr in exprs:
+            md = next(expr._metadata.op_nodes_reversed())
             if _order_by := md.kwargs.get("order_by", ()):
                 if order_by and _order_by != order_by:
                     msg = f"Only one `order_by` can be specified in `group_by`. Found both {order_by} and {_order_by}."
-                    raise InvalidOperationError(msg)
+                    raise NotImplementedError(msg)
                 order_by = _order_by
             if md.name in self._OPTION_ORDERED:
                 # [pyarrow-36709]: https://github.com/apache/arrow/issues/36709
