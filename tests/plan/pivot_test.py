@@ -39,23 +39,27 @@ data_no_dups = {
     "bar": ["x", "y", "z", "w"],
 }
 
-XFAIL_VALUES_MULTIPLE = pytest.mark.xfail(
-    reason="TODO: `ArrowDataFrame.pivot(values=(..., ...))`", raises=NotImplementedError
-)
 
-
-@XFAIL_VALUES_MULTIPLE
 @pytest.mark.parametrize(
     ("data_", "context"),
     [
         (data_no_dups, does_not_raise()),
         (data, pytest.raises((ValueError, NarwhalsError))),
     ],
+    ids=["no-duplicates", "duplicated"],
 )
 def test_pivot_no_agg(data_: Any, context: Any) -> None:
+    expected_no_dups = {
+        "ix": [1, 2],
+        "foo_a": [1, 3],
+        "foo_b": [2, 4],
+        "bar_a": ["x", "z"],
+        "bar_b": ["y", "w"],
+    }
     df = dataframe(data_)
     with context:
-        df.pivot("col", index="ix")
+        result = df.pivot("col", index="ix")
+        assert_equal_data(result, expected_no_dups)
 
 
 def test_pivot_no_index_no_values() -> None:

@@ -3,7 +3,7 @@ from __future__ import annotations
 import operator
 from collections import deque
 from functools import reduce
-from itertools import chain
+from itertools import chain, product
 from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import pyarrow as pa  # ignore-banned-import
@@ -345,7 +345,7 @@ class ArrowDataFrame(
         *,
         index: Sequence[str],
         values: Sequence[str],
-        sort_columns: bool = False,
+        sort_columns: bool = False,  # this is supposed to be resolved at narwhals level!
         separator: str = "_",
     ) -> Self:
         if sort_columns:
@@ -354,11 +354,15 @@ class ArrowDataFrame(
         if separator != "_":
             msg = f"TODO: `ArrowDataFrame.pivot({separator=})`"
             raise NotImplementedError(msg)
-        if len(values) != 1:
-            msg = "TODO: `ArrowDataFrame.pivot(values=(..., ...))`"
-            raise NotImplementedError(msg)
         return self._with_native(
-            pivot(self.native, on, on_columns, index=index, values=values[0])
+            pivot(
+                self.native,
+                on,
+                on_columns,
+                index=index,
+                values=values,
+                separator=separator,
+            )
         )
 
     pivot_agg = todo()
@@ -383,8 +387,6 @@ def with_arrays(
     return table
 
 
-# TODO @dangotbanned: Derive multiple specs from same index
-# - e.g. `values: list[str]`
 # TODO @dangotbanned: Is pre/post-aggregating even possible?
 def pivot(
     native: pa.Table,
@@ -392,23 +394,36 @@ def pivot(
     on_columns: Sequence[str],
     *,
     index: Sequence[str],
-    values: str,
+    values: Sequence[str],
+    separator: str = "_",
 ) -> pa.Table:
-    # stubs don't include it yet
+    # pyarrow-stubs doesn't include pivot yet
     agg_name: Any = "hash_pivot_wider"
     options = pa_options.pivot_wider(on_columns)
-    result = native.group_by(list(index)).aggregate([([on, values], agg_name, options)])
+    specs = [([on, value], agg_name, options) for value in values]
+    result = native.group_by(list(index)).aggregate(specs)
 
-    # NOTE: This is the most backwards-compatible version of `Series.struct.unnest`
-    # Will need to tweak it for multiple `values` columns
     split_index = result.schema.get_field_index(index[-1]) + 1
     result_columns = result.columns
     unnesting, names = _iter_unnest_with_names(result_columns[split_index:])
     arrays = (*result_columns[:split_index], *unnesting)
-    names = (*index, *names)
+    if (n := len(values)) > 1:
+        # NOTE: May need to approach differently for `on: list[str]`
+        # `names` would be cycled `n` times, so we drop everything outside the first cycle
+        it_renames = (
+            f"{value}{separator}{name}"
+            for value, name in product(values, deque(names, maxlen=n))
+        )
+        names = (*index, *it_renames)
+    else:
+        names = (*index, *names)
     return fn.concat_horizontal(arrays, names)
 
 
+# TODO @dangotbanned: Give `values` for context on how to store `names`
+# - `deque` only really makes sense in the `values: str` case
+# - if you flatten out each `column_names`, the iterator can splat into `dict.fromkeys`,
+#   to handle deduplicating in order
 def _iter_unnest_with_names(
     arrays: Iterable[ChunkedStruct],
 ) -> tuple[Iterator[ChunkedArrayAny], Collection[str]]:
@@ -427,5 +442,47 @@ def _iter_unnest_with_names(
 
 
 def _unnest(ca: ChunkedStruct, /) -> pa.Table:
+    # NOTE: This is the most backwards-compatible version of `Series.struct.unnest`
     batch = cast("Callable[[Any], pa.RecordBatch]", pa.RecordBatch.from_struct_array)
     return pa.Table.from_batches((batch(c) for c in ca.chunks), fn.struct_schema(ca))
+
+
+def _various_notes() -> None:
+    """Pivot values according to a pivot key column.
+
+    Output is a struct with as many fields as `key_names`.
+    All output struct fields have the same type as `pivot_values`.
+
+    Each pivot key decides in which output field the corresponding pivot value
+    is emitted. If a pivot key doesn't appear, null is emitted.
+    If more than one non-null value is encountered for a given pivot key,
+    Invalid is raised.
+
+    Important:
+        Docs here are for the (scalar) [`"pivot_wider"`] function.
+        Apparently need to use [`"hash_pivot_wider"`], but doesn't have the same level of docs
+
+    Arguments:
+        pivot_keys: Array-like argument to compute function.
+        pivot_values: Array-like argument to compute function.
+        key_names: The pivot key names expected in the `pivot_keys` column.
+            For each entry in `key_names`, a column with the same name is emitted in the struct output.
+        unexpected_key_behavior: The behavior when pivot keys not in `key_names` are encountered.
+            If “ignore”, unexpected keys are silently ignored.
+            If “raise”, unexpected keys raise a KeyError.
+
+    Note:
+        Extra stuff for `"hash_pivot_wider"`
+        > (7) The first input contains the pivot key, while the second input contains the values to be pivoted.
+        > The output is a Struct with one field for each key in `PivotOptions::key_names`.
+
+    Note:
+        [discussion_r1974825436]
+        > So the pandas's `pivot` is more like our `hash` version of `pivot_wider`?
+        > Yes
+
+    [`"pivot_wider"`]: https://arrow.apache.org/docs/dev/python/generated/pyarrow.compute.pivot_wider.html
+    [discussion_r1974825436]: https://github.com/apache/arrow/pull/45562#discussion_r1974825436
+    [`"hash_pivot_wider"`]: https://arrow.apache.org/docs/dev/cpp/compute.html#grouped-aggregations-group-by
+    """
+    raise NotImplementedError
