@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 # ruff: noqa: FBT001
-from contextlib import nullcontext as does_not_raise
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -33,29 +32,32 @@ def scores() -> Data:
     }
 
 
-data = {
-    "ix": [1, 2, 1, 1, 2, 2],
-    "iy": [1, 2, 2, 1, 2, 1],
-    "col": ["b", "b", "a", "a", "a", "a"],
-    "col_b": ["x", "y", "x", "y", "x", "y"],
-    "foo": [7, 1, 0, 1, 2, 2],
-    "bar": [9, 4, 0, 2, 0, 0],
-}
+@pytest.fixture(scope="module")
+def data() -> Data:
+    return {
+        "ix": [1, 2, 1, 1, 2, 2],
+        "iy": [1, 2, 2, 1, 2, 1],
+        "col": ["b", "b", "a", "a", "a", "a"],
+        "col_b": ["x", "y", "x", "y", "x", "y"],
+        "foo": [7, 1, 0, 1, 2, 2],
+        "bar": [9, 4, 0, 2, 0, 0],
+    }
 
-data_no_dups = {
-    "ix": [1, 1, 2, 2],
-    "col": ["a", "b", "a", "b"],
-    "foo": [1, 2, 3, 4],
-    "bar": ["x", "y", "z", "w"],
-}
 
-data_no_dups_unordered = {
-    "ix": [1, 1, 2, 2],
-    "col": ["b", "a", "b", "a"],
-    "foo": [1, 2, 3, 4],
-    "bar": ["x", "y", "z", "w"],
-}
-"""Variant to give the same order as `data["col"]`, but without needing an aggregate."""
+@pytest.fixture(scope="module")
+def data_no_dups() -> Data:
+    return {
+        "ix": [1, 1, 2, 2],
+        "col": ["a", "b", "a", "b"],
+        "foo": [1, 2, 3, 4],
+        "bar": ["x", "y", "z", "w"],
+    }
+
+
+@pytest.fixture(scope="module")
+def data_no_dups_unordered(data_no_dups: Data) -> Data:
+    """Variant to give the same order as `data["col"]`, but without needing an aggregate."""
+    return data_no_dups | {"col": ["b", "a", "b", "a"]}
 
 
 # NOTE: `tests::frame::pivot_test.py::test_pivot`
@@ -147,7 +149,11 @@ data_no_dups_unordered = {
 )
 @pytest.mark.parametrize(("on", "index"), [("col", "ix"), (["col"], ["ix"])])
 def test_pivot_agg(
-    on: str | list[str], index: str | list[str], agg_func: PivotAgg, expected: Data
+    data: Data,
+    on: str | list[str],
+    index: str | list[str],
+    agg_func: PivotAgg,
+    expected: Data,
 ) -> None:
     df = dataframe(data)
     result = df.pivot(
@@ -168,7 +174,9 @@ def test_pivot_agg(
         (False, ["ix", "foo_b", "foo_a", "bar_b", "bar_a"]),
     ],
 )
-def test_pivot_sort_columns(sort_columns: bool, expected: list[str]) -> None:
+def test_pivot_sort_columns(
+    data_no_dups_unordered: Data, sort_columns: bool, expected: list[str]
+) -> None:
     df = dataframe(data_no_dups_unordered)
     result = df.pivot(
         on="col", index="ix", values=["foo", "bar"], sort_columns=sort_columns
@@ -176,6 +184,11 @@ def test_pivot_sort_columns(sort_columns: bool, expected: list[str]) -> None:
     assert result.columns == expected
 
 
+# TODO @dangotbanned: Break this up into 2 tests & Remove the single `on` cases (they're covered elsewhere)
+# - 1.
+#   - No aggregate, use `data_no_dups(_unorderd)`
+# - 2.
+#   - aggregate, use `data` (basically what is here already)
 @XFAIL_NOT_IMPL_AGG
 @pytest.mark.parametrize(
     ("on", "values", "expected"),
@@ -206,37 +219,34 @@ def test_pivot_sort_columns(sort_columns: bool, expected: list[str]) -> None:
         ),
     ],
 )
-def test_pivot_names_out(
-    on: list[str], values: list[str], expected: list[str]
+def test_pivot_on_multiple_names_out(
+    data: Data, on: list[str], values: list[str], expected: list[str]
 ) -> None:  # pragma: no cover
     df = dataframe(data)
     result = df.pivot(on=on, values=values, aggregate_function="min", index="ix").columns
     assert result == expected
 
 
-@pytest.mark.parametrize(
-    ("data_", "context"),
-    [
-        (data_no_dups, does_not_raise()),
-        (data, pytest.raises((ValueError, NarwhalsError))),
-    ],
-    ids=["no-duplicates", "duplicated"],
-)
-def test_pivot_no_agg(data_: Data, context: Any) -> None:
-    expected_no_dups = {
+def test_pivot_no_agg_duplicated(data: Data) -> None:
+    df = dataframe(data)
+    with pytest.raises((ValueError, NarwhalsError)):
+        df.pivot("col", index="ix")
+
+
+def test_pivot_no_agg_no_duplicates(data_no_dups: Data) -> None:
+    df = dataframe(data_no_dups)
+    result = df.pivot("col", index="ix")
+    expected = {
         "ix": [1, 2],
         "foo_a": [1, 3],
         "foo_b": [2, 4],
         "bar_a": ["x", "z"],
         "bar_b": ["y", "w"],
     }
-    df = dataframe(data_)
-    with context:
-        result = df.pivot("col", index="ix")
-        assert_equal_data(result, expected_no_dups)
+    assert_equal_data(result, expected)
 
 
-def test_pivot_no_index_no_values() -> None:
+def test_pivot_no_index_no_values(data_no_dups: Data) -> None:
     df = dataframe(data_no_dups)
     with pytest.raises(
         ValueError, match=re_compile(r"at least one of.+values.+index.+must")
@@ -245,7 +255,7 @@ def test_pivot_no_index_no_values() -> None:
 
 
 # NOTE: `tests::frame::pivot_test.py::test_pivot_no_index`
-def test_pivot_implicit_index() -> None:
+def test_pivot_implicit_index(data_no_dups: Data) -> None:
     inferred_index_names = "ix", "bar"
     df = dataframe(data_no_dups)
     result = df.pivot(on="col", values="foo").sort(inferred_index_names)
