@@ -118,8 +118,8 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
                 self._keys,
                 use_threads=use_threads,
             )
-        if use_threads:
-            return pa.TableGroupBy(self.compliant.native, self._keys, use_threads=True)
+        if not use_threads:
+            return pa.TableGroupBy(self.compliant.native, self._keys, use_threads=False)
         # TODO(unassigned): combine with `return` above once PyArrow 15 is the minimum.
         return pa.TableGroupBy(self.compliant.native, self._keys)
 
