@@ -416,6 +416,7 @@ def pivot_on_multiple(
         .aggregate([(value, "hash_list", None) for value in values])
         .rename_columns([*index, *on, *values])
     )
+    # NOTE: The actual `pivot(on)` we pass to `pyarrow` is an index into the groups produced by `on: list[str]`
     column_index = fn.int_range(len(mid_pivot))
     temp_name = temp.column_name(native.column_names)
     mid_pivot_w_idx = mid_pivot.add_column(0, temp_name, column_index)
