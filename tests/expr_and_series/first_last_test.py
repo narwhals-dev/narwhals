@@ -182,7 +182,7 @@ def test_first_expr_over_order_by_partition_by(
 def test_first_expr_in_group_by(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if any(x in str(constructor) for x in ("ibis", "spark")):
+    if any(x in str(constructor) for x in ("spark", "dask")):
         # ibis: https://github.com/ibis-project/ibis/issues/11656
         request.applymarker(pytest.mark.xfail)
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
@@ -215,7 +215,7 @@ def test_first_expr_in_group_by(
 def test_first_expr_broadcasting(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if any(x in str(constructor) for x in ("ibis", "spark")):
+    if any(x in str(constructor) for x in ("ibis", "spark", "dask")):
         # ibis: https://github.com/ibis-project/ibis/issues/11656
         request.applymarker(pytest.mark.xfail)
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
@@ -256,7 +256,12 @@ def test_first_expr_broadcasting(
     assert_equal_data(result, expected)
 
 
-def test_first_expr_invalid(constructor: Constructor) -> None:
+def test_first_expr_invalid(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if any(x in str(constructor) for x in ("spark", "dask")):
+        # ibis: https://github.com/ibis-project/ibis/issues/11656
+        request.applymarker(pytest.mark.xfail)
     data = {
         "grp": [1, 1, 1, 2],
         "a": [None, 4, 9, 3],

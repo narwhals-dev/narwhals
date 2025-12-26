@@ -9,7 +9,7 @@ import pyarrow.compute as pc
 from narwhals._arrow.utils import cast_to_comparable_string_types, extract_py_scalar
 from narwhals._compliant import EagerGroupBy
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
-from narwhals._utils import generate_temporary_column_name
+from narwhals._utils import generate_temporary_column_name, requires
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping, Sequence
@@ -106,13 +106,22 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
             if md.name in self._OPTION_ORDERED:
                 # [pyarrow-36709]: https://github.com/apache/arrow/issues/36709
                 use_threads = False
+        if use_threads and self.compliant._backend_version < (14, 0):
+            msg = (
+                f"Using `first/last` in a `group_by().agg(...)` context is only available in 'pyarrow>=14.0.0', "
+                f"found version {requires._unparse_version(self._compliant.backend_version)!r}.\n\n"
+                f"See https://github.com/apache/arrow/issues/36709"
+            )
         if order_by:
             return pa.TableGroupBy(
                 self.compliant.sort(*order_by, descending=False, nulls_last=False).native,
                 self._keys,
                 use_threads=use_threads,
             )
-        return pa.TableGroupBy(self.compliant.native, self._keys, use_threads=use_threads)
+        if use_threads:
+            return pa.TableGroupBy(self.compliant.native, self._keys, use_threads=True)
+        # TODO(unassigned): combine with `return` above once PyArrow 15 is the minimum.
+        return pa.TableGroupBy(self.compliant.native, self._keys)
 
     def agg(self, *exprs: ArrowExpr) -> ArrowDataFrame:
         self._ensure_all_simple(exprs)
