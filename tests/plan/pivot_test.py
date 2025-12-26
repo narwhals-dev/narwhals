@@ -17,10 +17,6 @@ if TYPE_CHECKING:
 XFAIL_NOT_IMPL_AGG = pytest.mark.xfail(
     reason="TODO: `ArrowDataFrame.pivot_agg`", raises=NotImplementedError
 )
-XFAIL_NOT_IMPL_ON_MULTIPLE_VALUES_MULTIPLE = pytest.mark.xfail(
-    reason="TODO: `ArrowDataFrame.pivot(on: list[str], values: list[str])`",
-    raises=NotImplementedError,
-)
 
 
 @pytest.fixture(scope="module")
@@ -201,13 +197,13 @@ def test_pivot_sort_columns(
             ["foo"],
             ["idx_1", '{"b","X"}', '{"a","X"}', '{"b","Y"}', '{"a","Y"}'],
         ),
-        pytest.param(
+        (
             ["on_lower", "on_upper"],
             ["foo", "bar"],
             [
                 "idx_1",
                 'foo_{"b","X"}',
-                'foo_{"a","Y"}',
+                'foo_{"a","X"}',
                 'foo_{"b","Y"}',
                 'foo_{"a","Y"}',
                 'bar_{"b","X"}',
@@ -215,15 +211,23 @@ def test_pivot_sort_columns(
                 'bar_{"b","Y"}',
                 'bar_{"a","Y"}',
             ],
-            marks=XFAIL_NOT_IMPL_ON_MULTIPLE_VALUES_MULTIPLE,
         ),
     ],
+    ids=["single-values", "multiple-values"],
 )
 def test_pivot_on_multiple_names(
     data_no_dups_unordered: Data, on: list[str], values: list[str], expected: list[str]
 ) -> None:
     result = dataframe(data_no_dups_unordered).pivot(on, values=values, index="idx_1")
     assert result.columns == expected
+
+    pytest.importorskip("polars")
+    import polars as pl
+
+    pl_result = pl.DataFrame(data_no_dups_unordered).pivot(
+        on, values=values, index="idx_1"
+    )
+    assert result.columns == pl_result.columns
 
 
 @XFAIL_NOT_IMPL_AGG
@@ -235,7 +239,7 @@ def test_pivot_on_multiple_names(
             ["foo"],
             ["idx_1", '{"b","X"}', '{"b","Y"}', '{"a","X"}', '{"a","Y"}'],
         ),
-        pytest.param(
+        (
             ["on_lower", "on_upper"],
             ["foo", "bar"],
             [
@@ -249,7 +253,6 @@ def test_pivot_on_multiple_names(
                 'bar_{"a","X"}',
                 'bar_{"a","Y"}',
             ],
-            marks=XFAIL_NOT_IMPL_ON_MULTIPLE_VALUES_MULTIPLE,
         ),
     ],
 )

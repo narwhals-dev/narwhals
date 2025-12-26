@@ -407,17 +407,16 @@ def pivot_on_multiple(
     *,
     index: Sequence[str],
     values: Sequence[str],
-    separator: str = "_",  # separator would be used if multiple `values` were handled (todo)  # noqa: ARG001
+    separator: str = "_",
 ) -> pa.Table:
-    on_columns_names = _on_columns_multiple_names(on_columns, values)
-    # bad name
     index = list(index)
-    mid_pivot = (
+    # bad name
+    mid_pivot = (  # implode every `values` column, within the pivot groups
         native.group_by([*index, *on])
         .aggregate([(value, "hash_list", None) for value in values])
         .rename_columns([*index, *on, *values])
     )
-    column_index = fn.int_range(len(mid_pivot) * len(values))
+    column_index = fn.int_range(len(mid_pivot))
     temp_name = temp.column_name(native.column_names)
     mid_pivot_w_idx = mid_pivot.add_column(0, temp_name, column_index)
 
@@ -434,7 +433,10 @@ def pivot_on_multiple(
 
     unnested = chain.from_iterable(structs_to_arrays(*structs))
     arrays_final = (*result.select(index).columns, *unnested)
-    names_final = (*index, *on_columns_names)
+    names_final = (
+        *index,
+        *_on_columns_multiple_names(on_columns, values, separator=separator),
+    )
     return fn.concat_horizontal(arrays_final, names_final)
 
 
@@ -517,7 +519,9 @@ def _unnest(ca: ChunkedStruct, /) -> pa.Table:
     return pa.Table.from_batches((batch(c) for c in ca.chunks), fn.struct_schema(ca))
 
 
-def _on_columns_multiple_names(on_columns: pa.Table, values: Sequence[str]) -> list[str]:
+def _on_columns_multiple_names(
+    on_columns: pa.Table, values: Sequence[str], *, separator: str = "_"
+) -> Iterable[str]:
     """Alignment to polars naming style when `pivot(on: list[str])`.
 
     If we started with:
@@ -531,15 +535,13 @@ def _on_columns_multiple_names(on_columns: pa.Table, values: Sequence[str]) -> l
     if on_columns.num_columns < 2:
         msg = "This operation is not required for `pivot(on: str)`"
         raise ValueError(msg)
+
+    result = cast(
+        "list[str]",
+        fn.concat_str(
+            '{"', fn.concat_str(*on_columns.columns, separator='","'), '"}'
+        ).to_pylist(),
+    )
     if len(values) != 1:
-        # NOTE: Total new columns produced: `len(on_columns) * len(values)`
-        #                                    ^ unique rows
-        msg = (
-            "`TODO: pivot(on: list[str], values: list[str])\n"
-            '`{"b","X"}` -> `foo_{"b","X"}`, `bar_{"b","X"}`'
-        )
-        raise NotImplementedError(msg)
-    result = fn.concat_str(
-        '{"', fn.concat_str(*on_columns.columns, separator='","'), '"}'
-    ).to_pylist()
-    return cast("list[str]", result)
+        return (f"{value}{separator}{name}" for value, name in product(values, result))
+    return result
