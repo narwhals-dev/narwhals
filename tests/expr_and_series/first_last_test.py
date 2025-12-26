@@ -185,6 +185,8 @@ def test_first_expr_in_group_by(
     if any(x in str(constructor) for x in ("ibis", "spark")):
         # ibis: https://github.com/ibis-project/ibis/issues/11656
         request.applymarker(pytest.mark.xfail)
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
     data = {
         "grp": [1, 1, 1, 2],
         "a": [None, 4, 9, 3],
@@ -216,6 +218,8 @@ def test_first_expr_broadcasting(
     if any(x in str(constructor) for x in ("ibis", "spark")):
         # ibis: https://github.com/ibis-project/ibis/issues/11656
         request.applymarker(pytest.mark.xfail)
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
 
     data = {
         "grp": [1, 1, 1, 2],
