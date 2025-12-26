@@ -617,7 +617,9 @@ def _is_sort_by_one(
 ) -> bool:
     """Return True if requested to sort a single-column DataFrame - without consuming iterators."""
     columns = frame_columns
-    return (len(columns) == 1 and (isinstance(by, str) and by in columns)) or (
+    if len(columns) != 1:
+        return False
+    return (isinstance(by, str) and by in columns) or (
         isinstance(by, Sequence) and len(by) == 1 and by[0] in columns
     )
 
