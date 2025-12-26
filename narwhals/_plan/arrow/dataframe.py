@@ -400,6 +400,8 @@ def with_arrays(
     return table
 
 
+# TODO @dangotbanned: Try to reduce total number of operations
+# TODO @dangotbanned: Try to share more with `pivot`
 def pivot_on_multiple(
     native: pa.Table,
     on: Sequence[str],
