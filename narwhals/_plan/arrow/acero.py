@@ -25,6 +25,7 @@ import pyarrow.acero as pac
 import pyarrow.compute as pc  # ignore-banned-import
 from pyarrow.acero import Declaration as Decl
 
+from narwhals._plan.arrow import options as pa_options
 from narwhals._plan.common import ensure_list_str, temp
 from narwhals._plan.typing import NonCrossJoinStrategy, OneOrSeq
 from narwhals._utils import check_column_names_are_unique
@@ -47,7 +48,12 @@ if TYPE_CHECKING:
         Aggregation as _Aggregation,
     )
     from narwhals._plan.arrow.group_by import AggSpec
-    from narwhals._plan.arrow.typing import ArrowAny, JoinTypeSubset, ScalarAny
+    from narwhals._plan.arrow.typing import (
+        ArrowAny,
+        ChunkedOrArrayAny,
+        JoinTypeSubset,
+        ScalarAny,
+    )
     from narwhals._plan.typing import OneOrIterable, Seq
     from narwhals.typing import NonNestedLiteral
 
@@ -326,6 +332,22 @@ def group_by_table(
     aggs = tuple(aggs)
     use_threads = all(spec.use_threads for spec in aggs)
     return collect(table_source(native), group_by(keys, aggs), use_threads=use_threads)
+
+
+def pivot_table(
+    native: pa.Table,
+    on: str,
+    on_columns: ChunkedOrArrayAny | Sequence[Any],
+    /,
+    index: Sequence[str],
+    values: Sequence[str],
+) -> pa.Table:
+    """Partial `pivot` implementation."""
+    from narwhals._plan.arrow.group_by import AggSpec
+
+    options = pa_options.pivot_wider(on_columns)
+    specs = (AggSpec((on, name), "hash_pivot_wider", options, name) for name in values)
+    return group_by_table(native, index, specs)
 
 
 def filter_table(native: pa.Table, *predicates: Expr, **constraints: Any) -> pa.Table:

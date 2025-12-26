@@ -368,7 +368,7 @@ class ArrowDataFrame(
             )
         if len(on) == 1:
             return self._with_native(
-                pivot(
+                pivot_on_single(
                     self.native,
                     on[0],
                     on_columns,
@@ -440,30 +440,22 @@ def pivot_on_multiple(
     separator: str = "_",
 ) -> pa.Table:
     index = list(index)
-    # bad name
-    mid_pivot = (  # implode every `values` column, within the pivot groups
-        native.group_by([*index, *on])
-        .aggregate([(value, "hash_list", None) for value in values])
-        .rename_columns([*index, *on, *values])
-    )
+    # implode every `values` column, within the pivot groups
+    specs = (group_by.AggSpec(value, "hash_list") for value in values)
+    pre_agg = acero.group_by_table(native, [*index, *on], specs)
     # NOTE: The actual `pivot(on)` we pass to `pyarrow` is an index into the groups produced by `on: list[str]`
-    column_index = fn.int_range(len(mid_pivot))
+    column_index = fn.int_range(len(pre_agg))
     temp_name = temp.column_name(native.column_names)
-    mid_pivot_w_idx = mid_pivot.add_column(0, temp_name, column_index)
+    pre_agg_w_idx = pre_agg.add_column(0, temp_name, column_index)
 
-    agg_name: Any = "hash_pivot_wider"
-    options = pa_options.pivot_wider(column_index)
-    specs = [([temp_name, value], agg_name, options) for value in values]
-    # NOTE: not sure if needed, but helping explore what should happen
     post_explode = fn.ExplodeBuilder().explode_columns(
-        mid_pivot_w_idx.select([temp_name, *index, *values]), values
+        pre_agg_w_idx.select([temp_name, *index, *values]), values
     )
-
-    result = post_explode.group_by(index).aggregate(specs)
-    structs = result.columns[len(index) :]
+    pivot = acero.pivot_table(post_explode, temp_name, column_index, index, values)
+    structs = pivot.columns[len(index) :]
 
     unnested = chain.from_iterable(structs_to_arrays(*structs))
-    arrays_final = (*result.select(index).columns, *unnested)
+    arrays_final = (*pivot.select(index).columns, *unnested)
     names_final = (
         *index,
         *_on_columns_multiple_names(on_columns, values, separator=separator),
@@ -471,7 +463,7 @@ def pivot_on_multiple(
     return fn.concat_horizontal(arrays_final, names_final)
 
 
-def pivot(
+def pivot_on_single(
     native: pa.Table,
     on: str,
     on_columns: Sequence[str],
@@ -480,16 +472,11 @@ def pivot(
     values: Sequence[str],
     separator: str = "_",
 ) -> pa.Table:
-    # pyarrow-stubs doesn't include pivot yet
-    agg_name: Any = "hash_pivot_wider"
-    options = pa_options.pivot_wider(on_columns)
-    specs = [([on, value], agg_name, options) for value in values]
-    result = native.group_by(list(index)).aggregate(specs)
-
-    split_index = result.schema.get_field_index(index[-1]) + 1
-    result_columns = result.columns
-    unnesting, names = _iter_unnest_with_names(result_columns[split_index:])
-    arrays = (*result_columns[:split_index], *unnesting)
+    pivot = acero.pivot_table(native, on, on_columns, index, values)
+    split_index = pivot.schema.get_field_index(index[-1]) + 1
+    pivot_columns = pivot.columns
+    unnesting, names = _iter_unnest_with_names(pivot_columns[split_index:])
+    arrays = (*pivot_columns[:split_index], *unnesting)
     if (n := len(values)) > 1:
         # NOTE: May need to approach differently for `on: list[str]`
         # `names` would be cycled `n` times, so we drop everything outside the first cycle
