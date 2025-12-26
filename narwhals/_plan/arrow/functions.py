@@ -1561,19 +1561,36 @@ def binary(
 
 @t.overload
 def concat_str(
-    *arrays: ChunkedArrayAny | str, separator: str = ..., ignore_nulls: bool = ...
+    *arrays: ChunkedArrayAny, separator: str = ..., ignore_nulls: bool = ...
 ) -> ChunkedArray[StringScalar]: ...
 @t.overload
 def concat_str(
-    *arrays: ArrayAny | str, separator: str = ..., ignore_nulls: bool = ...
+    *arrays: Unpack[
+        tuple[str | ChunkedArrayAny, Unpack[tuple[ChunkedArrayAny | str, ...]]]
+    ],
+    separator: str = ...,
+    ignore_nulls: bool = ...,
+) -> ChunkedArray[StringScalar]: ...
+@t.overload
+def concat_str(
+    *arrays: ArrayAny, separator: str = ..., ignore_nulls: bool = ...
 ) -> Array[StringScalar]: ...
 @t.overload
 def concat_str(
-    *arrays: ScalarAny | str, separator: str = ..., ignore_nulls: bool = ...
+    *arrays: ScalarAny, separator: str = ..., ignore_nulls: bool = ...
 ) -> StringScalar: ...
 def concat_str(
     *arrays: ArrowAny | str, separator: str = "", ignore_nulls: bool = False
 ) -> Arrow[StringScalar]:
+    """Horizontally arrow data* into a single string column.
+
+    Arguments:
+        *arrays: (Large)String-typed arrow data, but may also include `str` literals.
+        separator: String that will be used to separate the values of each column.
+        ignore_nulls: Ignore null values (default is ``False``).
+            If set to ``False``, null values will be propagated.
+            if the row contains any null values, the output is null.
+    """
     arrays_ = [lit(into) if isinstance(into, str) else into for into in arrays]
     dtype = string_type(obj.type for obj in arrays_)
     it = (obj.cast(dtype) for obj in arrays_)
