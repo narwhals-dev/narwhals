@@ -484,7 +484,7 @@ class DataFrame(
             on_cols = on_cols_df._compliant
             if len(on_) == 1:
                 on_cols = on_cols.to_series().to_list()
-        elif is_series(on_columns):
+        elif is_series(on_columns):  # pragma: no cover
             on_columns = on_columns.cast(dtype_string)
             if sort_columns:
                 on_columns = on_columns.sort()
