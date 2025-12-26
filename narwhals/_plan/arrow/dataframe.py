@@ -21,6 +21,7 @@ from narwhals._plan.compliant.typing import LazyFrameAny, namespace
 from narwhals._plan.exceptions import shape_error
 from narwhals._plan.expressions import NamedIR, named_ir
 from narwhals._utils import Version, generate_repr
+from narwhals.exceptions import InvalidOperationError
 from narwhals.schema import Schema
 
 if TYPE_CHECKING:
@@ -42,6 +43,7 @@ if TYPE_CHECKING:
         ChunkedOrArrayAny,
         ChunkedStruct,
         Predicate,
+        StructArray,
     )
     from narwhals._plan.compliant.group_by import GroupByResolver
     from narwhals._plan.expressions import ExprIR, NamedIR
@@ -340,23 +342,41 @@ class ArrowDataFrame(
 
     def pivot(
         self,
-        on: str,  # needs to support multiple (todo)
-        on_columns: Sequence[str],
+        on: Sequence[str],
+        on_columns: Sequence[str] | Self,
         *,
         index: Sequence[str],
         values: Sequence[str],
         separator: str = "_",
     ) -> Self:
-        return self._with_native(
-            pivot(
-                self.native,
-                on,
-                on_columns,
-                index=index,
-                values=values,
-                separator=separator,
+        if isinstance(on_columns, ArrowDataFrame):
+            return self._with_native(
+                pivot_on_multiple(
+                    self.native,
+                    on,
+                    on_columns.native,
+                    index=index,
+                    values=values,
+                    separator=separator,
+                )
             )
+        if len(on) == 1:
+            return self._with_native(
+                pivot(
+                    self.native,
+                    on[0],
+                    on_columns,
+                    index=index,
+                    values=values,
+                    separator=separator,
+                )
+            )
+        # TODO @dangotbanned: Handle this more gracefully at the `narwhals`-level
+        msg = (
+            f"Invalid argument combination:\n    `pivot({on=}, {on_columns=})`\n\n"
+            "`on_columns` cannot currently be used with multiple `on` names."
         )
+        raise InvalidOperationError(msg)
 
     pivot_agg = todo()
 
@@ -378,6 +398,44 @@ def with_arrays(
         else:
             table = table.append_column(name, column)
     return table
+
+
+def pivot_on_multiple(
+    native: pa.Table,
+    on: Sequence[str],
+    on_columns: pa.Table,
+    *,
+    index: Sequence[str],
+    values: Sequence[str],
+    separator: str = "_",  # separator would be used if multiple `values` were handled (todo)  # noqa: ARG001
+) -> pa.Table:
+    on_columns_names = _on_columns_multiple_names(on_columns, values)
+    # bad name
+    index = list(index)
+    mid_pivot = (
+        native.group_by([*index, *on])
+        .aggregate([(value, "hash_list", None) for value in values])
+        .rename_columns([*index, *on, *values])
+    )
+    column_index = fn.int_range(len(mid_pivot) * len(values))
+    temp_name = temp.column_name(native.column_names)
+    mid_pivot_w_idx = mid_pivot.add_column(0, temp_name, column_index)
+
+    agg_name: Any = "hash_pivot_wider"
+    options = pa_options.pivot_wider(column_index.cast(pa.string()).to_pylist())
+    specs = [([temp_name, value], agg_name, options) for value in values]
+    # NOTE: not sure if needed, but helping explore what should happen
+    post_explode = fn.ExplodeBuilder().explode_columns(
+        mid_pivot_w_idx.select([temp_name, *index, *values]), values
+    )
+
+    result = post_explode.group_by(index).aggregate(specs)
+    structs = result.columns[len(index) :]
+
+    unnested = chain.from_iterable(structs_to_arrays(*structs))
+    arrays_final = (*result.select(index).columns, *unnested)
+    names_final = (*index, *on_columns_names)
+    return fn.concat_horizontal(arrays_final, names_final)
 
 
 # TODO @dangotbanned: Is pre/post-aggregating even possible?
@@ -413,7 +471,7 @@ def pivot(
     return fn.concat_horizontal(arrays, names)
 
 
-# TODO @dangotbanned: Give `values` for context on how to store `names`
+# TODO @dangotbanned: Pass `values` for context on how to store `names`
 # - `deque` only really makes sense in the `values: str` case
 # - if you flatten out each `column_names`, the iterator can splat into `dict.fromkeys`,
 #   to handle deduplicating in order
@@ -434,10 +492,57 @@ def _iter_unnest_with_names(
     return chain.from_iterable(columns), names
 
 
+def struct_to_arrays(native: ChunkedStruct | StructArray) -> Sequence[ChunkedOrArrayAny]:
+    """Unnest the fields of a struct into one array per-struct-field.
+
+    Cheaper than `unnest`-ing into a `Table`, and very helpful if the names are going to be replaced.
+    """
+    return cast("ChunkedStruct | pa.StructArray", native).flatten()
+
+
+def structs_to_arrays(
+    *structs: ChunkedStruct | pa.StructArray,
+) -> Iterator[Sequence[ChunkedOrArrayAny]]:
+    """Unnest the fields of every struct into one array per-struct-field.
+
+    Probably want to choose between returning `[...]` or `[[...],[...]]`
+    """
+    for struct in structs:
+        yield struct_to_arrays(struct)
+
+
 def _unnest(ca: ChunkedStruct, /) -> pa.Table:
     # NOTE: This is the most backwards-compatible version of `Series.struct.unnest`
     batch = cast("Callable[[Any], pa.RecordBatch]", pa.RecordBatch.from_struct_array)
     return pa.Table.from_batches((batch(c) for c in ca.chunks), fn.struct_schema(ca))
+
+
+def _on_columns_multiple_names(on_columns: pa.Table, values: Sequence[str]) -> list[str]:
+    """Alignment to polars naming style when `pivot(on: list[str])`.
+
+    If we started with:
+
+        {'on_lower': ['b', 'a', 'b', 'a'], 'on_upper': ['X', 'X', 'Y', 'Y']}
+
+    Then this operation will return:
+
+        ['{"b","X"}', '{"a","X"}', '{"b","Y"}', '{"a","Y"}']
+    """
+    if on_columns.num_columns < 2:
+        msg = "This operation is not required for `pivot(on: str)`"
+        raise ValueError(msg)
+    if len(values) != 1:
+        # NOTE: Total new columns produced: `len(on_columns) * len(values)`
+        #                                    ^ unique rows
+        msg = (
+            "`TODO: pivot(on: list[str], values: list[str])\n"
+            '`{"b","X"}` -> `foo_{"b","X"}`, `bar_{"b","X"}`'
+        )
+        raise NotImplementedError(msg)
+    result = fn.concat_str(
+        '{"', fn.concat_str(*on_columns.columns, separator='","'), '"}'
+    ).to_pylist()
+    return cast("list[str]", result)
 
 
 def _various_notes() -> None:
