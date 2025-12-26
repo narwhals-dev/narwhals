@@ -34,6 +34,7 @@ if TYPE_CHECKING:
     )
     from narwhals._plan.expressions import NamedIR
     from narwhals._plan.typing import Seq
+    from narwhals.typing import PivotAgg
 
 Incomplete: TypeAlias = Any
 
@@ -107,6 +108,23 @@ SCALAR_OUTPUT_TYPE: Mapping[acero.Aggregation, pa.DataType] = {
 For use in list aggregates, where the input was null.
 
 *Except `"mean"` will preserve `Decimal`, if that's where we started.
+"""
+
+SUPPORTED_PIVOT_AGG: Mapping[PivotAgg, type[agg.AggExpr]] = {
+    "min": agg.Min,
+    "max": agg.Max,
+    "first": agg.First,
+    "last": agg.Last,
+    "sum": agg.Sum,
+    "mean": agg.Mean,
+    "median": agg.Median,
+    "len": agg.Len,
+}
+"""Needs to work a bit differently to the others.
+
+- Starting with a string
+- Have all of the `values` names resolved and will use the same agg
+- `{"first","last"}` disable threading
 """
 
 

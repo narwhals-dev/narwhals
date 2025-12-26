@@ -62,7 +62,15 @@ Field: TypeAlias = Union[Expr, SingleColSelector]
 
 Target: TypeAlias = OneOrSeq[Field]
 Aggregation: TypeAlias = Union[
-    "_Aggregation", Literal["hash_kurtosis", "hash_skew", "kurtosis", "skew"]
+    "_Aggregation",
+    Literal[
+        "hash_kurtosis",
+        "hash_skew",
+        "hash_pivot_wider",
+        "kurtosis",
+        "skew",
+        "pivot_wider",
+    ],
 ]
 AggregateOptions: TypeAlias = "_AggregateOptions"
 Opts: TypeAlias = "AggregateOptions | None"

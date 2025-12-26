@@ -14,8 +14,12 @@ if TYPE_CHECKING:
     from tests.conftest import Data
 
 
-XFAIL_NOT_IMPL_AGG = pytest.mark.xfail(
-    reason="TODO: `ArrowDataFrame.pivot_agg`", raises=NotImplementedError
+XFAIL_NOT_IMPL_AGG_ON_MULTIPLE = pytest.mark.xfail(
+    reason="TODO: `ArrowDataFrame.pivot_agg(on=len(2))`", raises=NotImplementedError
+)
+XFAIL_PYARROW_MEDIAN = pytest.mark.xfail(
+    reason="Tried to use `'approximate_median'` but groups are too small",
+    raises=AssertionError,
 )
 
 
@@ -65,7 +69,6 @@ def data_no_dups_unordered(data_no_dups: Data) -> Data:
     }
 
 
-@XFAIL_NOT_IMPL_AGG
 @pytest.mark.parametrize(
     ("agg_func", "expected"),
     [
@@ -129,7 +132,7 @@ def data_no_dups_unordered(data_no_dups: Data) -> Data:
                 "bar_b": [9.0, 4.0],
             },
         ),
-        (
+        pytest.param(
             "median",
             {
                 "idx_1": [1, 2],
@@ -138,6 +141,7 @@ def data_no_dups_unordered(data_no_dups: Data) -> Data:
                 "bar_a": [1.0, 0.0],
                 "bar_b": [9.0, 4.0],
             },
+            marks=XFAIL_PYARROW_MEDIAN,
         ),
         (
             "len",
@@ -230,7 +234,7 @@ def test_pivot_on_multiple_names(
     assert result.columns == pl_result.columns
 
 
-@XFAIL_NOT_IMPL_AGG
+@XFAIL_NOT_IMPL_AGG_ON_MULTIPLE
 @pytest.mark.parametrize(
     ("on", "values", "expected"),
     [

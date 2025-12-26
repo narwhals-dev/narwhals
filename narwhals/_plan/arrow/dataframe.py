@@ -10,12 +10,18 @@ import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._arrow.utils import native_to_narwhals_dtype
-from narwhals._plan.arrow import acero, compat, functions as fn, options as pa_options
+from narwhals._plan.arrow import (
+    acero,
+    compat,
+    functions as fn,
+    group_by,
+    options as pa_options,
+)
 from narwhals._plan.arrow.common import ArrowFrameSeries as FrameSeries
 from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
 from narwhals._plan.arrow.group_by import ArrowGroupBy as GroupBy, partition_by
 from narwhals._plan.arrow.series import ArrowSeries as Series
-from narwhals._plan.common import temp, todo
+from narwhals._plan.common import temp
 from narwhals._plan.compliant.dataframe import EagerDataFrame
 from narwhals._plan.compliant.typing import LazyFrameAny, namespace
 from narwhals._plan.exceptions import shape_error
@@ -51,7 +57,7 @@ if TYPE_CHECKING:
     from narwhals._plan.typing import NonCrossJoinStrategy
     from narwhals._typing import _LazyAllowedImpl
     from narwhals.dtypes import DType
-    from narwhals.typing import IntoSchema, UniqueKeepStrategy
+    from narwhals.typing import IntoSchema, PivotAgg, UniqueKeepStrategy
 
 Incomplete: TypeAlias = Any
 
@@ -378,7 +384,29 @@ class ArrowDataFrame(
         )
         raise InvalidOperationError(msg)
 
-    pivot_agg = todo()
+    # TODO @dangotbanned: Adapt the `pivot_on_multiple` stuff for using here
+    def pivot_agg(
+        self,
+        on: Sequence[str],
+        on_columns: Sequence[str] | Self,
+        *,
+        index: Sequence[str],
+        values: Sequence[str],
+        aggregate_function: PivotAgg,
+        separator: str = "_",
+    ) -> Self:
+        if isinstance(on_columns, ArrowDataFrame):
+            msg = f"TODO: `ArrowDataFrame.pivot_agg(on=len({len(on)}))`"
+            raise NotImplementedError(msg)
+        native = self.native
+        tp_agg = group_by.SUPPORTED_PIVOT_AGG[aggregate_function]
+        agg_func = group_by.SUPPORTED_AGG[tp_agg]
+        option = pa_options.AGG.get(tp_agg)
+        specs = (group_by.AggSpec(value, agg_func, option) for value in values)
+        pre_agg = acero.group_by_table(native, [*index, *on], specs)
+        return self._with_native(pre_agg).pivot(
+            on, on_columns, index=index, values=values, separator=separator
+        )
 
 
 def with_array(table: pa.Table, name: str, column: ChunkedOrArrayAny) -> pa.Table:
@@ -443,7 +471,6 @@ def pivot_on_multiple(
     return fn.concat_horizontal(arrays_final, names_final)
 
 
-# TODO @dangotbanned: Is pre/post-aggregating even possible?
 def pivot(
     native: pa.Table,
     on: str,
