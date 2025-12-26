@@ -422,7 +422,7 @@ def pivot_on_multiple(
     mid_pivot_w_idx = mid_pivot.add_column(0, temp_name, column_index)
 
     agg_name: Any = "hash_pivot_wider"
-    options = pa_options.pivot_wider(column_index.cast(pa.string()).to_pylist())
+    options = pa_options.pivot_wider(column_index)
     specs = [([temp_name, value], agg_name, options) for value in values]
     # NOTE: not sure if needed, but helping explore what should happen
     post_explode = fn.ExplodeBuilder().explode_columns(

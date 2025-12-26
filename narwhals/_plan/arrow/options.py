@@ -12,6 +12,7 @@ import functools
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any, Literal, TypeVar
 
+import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._plan.arrow import compat
@@ -24,7 +25,11 @@ if TYPE_CHECKING:
 
     from narwhals._plan import expressions as ir
     from narwhals._plan.arrow import acero
-    from narwhals._plan.arrow.typing import NullPlacement, RankMethodSingle
+    from narwhals._plan.arrow.typing import (
+        ChunkedOrArrayAny,
+        NullPlacement,
+        RankMethodSingle,
+    )
     from narwhals._plan.expressions import aggregation as agg
     from narwhals._plan.typing import Order, Seq
 
@@ -192,7 +197,7 @@ def split_pattern(by: str, n: int | None = None) -> pc.SplitPatternOptions:
 
 
 def pivot_wider(
-    on_columns: Sequence[Any],
+    on_columns: Sequence[Any] | ChunkedOrArrayAny,
     /,
     unexpected_key_behavior: Literal["ignore", "raise"] = "ignore",
 ) -> pc.FunctionOptions:
@@ -206,8 +211,13 @@ def pivot_wider(
         msg = f"`pivot` requires `pyarrow>=20`, got {compat.BACKEND_VERSION!r}"
         raise NotImplementedError(msg)
     opts_cls: Any = pc.PivotWiderOptions  # type: ignore[attr-defined]
+    on_cols: Sequence[Any]
+    if isinstance(on_columns, (pa.Array, pa.ChunkedArray)):
+        on_cols = on_columns.cast(pa.string()).to_pylist()
+    else:
+        on_cols = on_columns
     options: pc.FunctionOptions = opts_cls(
-        on_columns, unexpected_key_behavior=unexpected_key_behavior
+        on_cols, unexpected_key_behavior=unexpected_key_behavior
     )
     return options
 
