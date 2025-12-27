@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 # ruff: noqa: FBT001
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
+import narwhals._plan as nwp
 import narwhals._plan.selectors as ncs
+from narwhals._utils import Implementation
 from narwhals.exceptions import NarwhalsError
 from tests.plan.utils import assert_equal_data, dataframe, re_compile
+from tests.utils import PYARROW_VERSION
 
 if TYPE_CHECKING:
     from narwhals.typing import PivotAgg
@@ -96,6 +99,18 @@ def assert_names_match_polars(
         on=on, values=values, index=index, aggregate_function=aggregate_function
     )
     assert result_columns == pl_result.columns
+
+
+def require_pyarrow_20(
+    df: nwp.DataFrame[Any, Any], request: pytest.FixtureRequest
+) -> None:
+    request.applymarker(
+        pytest.mark.xfail(
+            (df.implementation is Implementation.PYARROW and PYARROW_VERSION < (20,)),
+            reason="pyarrow too old for `pivot` support",
+            raises=NotImplementedError,
+        )
+    )
 
 
 @pytest.mark.parametrize(
@@ -193,8 +208,10 @@ def test_pivot_agg(
     index: str | list[str],
     agg_func: PivotAgg,
     expected: Data,
+    request: pytest.FixtureRequest,
 ) -> None:
     df = dataframe(data)
+    require_pyarrow_20(df, request)
     result = df.pivot(
         on,
         index=index,
@@ -214,9 +231,13 @@ def test_pivot_agg(
     ],
 )
 def test_pivot_sort_columns(
-    data_no_dups_unordered: Data, sort_columns: bool, expected: list[str]
+    data_no_dups_unordered: Data,
+    sort_columns: bool,
+    expected: list[str],
+    request: pytest.FixtureRequest,
 ) -> None:
     df = dataframe(data_no_dups_unordered)
+    require_pyarrow_20(df, request)
     values = ["foo", "bar"]
     result = df.pivot("on_lower", index="idx_1", values=values, sort_columns=sort_columns)
     assert result.columns == expected
@@ -249,11 +270,17 @@ def test_pivot_sort_columns(
     ids=["single-values", "multiple-values"],
 )
 def test_pivot_on_multiple_names(
-    data_no_dups_unordered: Data, on: list[str], values: list[str], expected: list[str]
+    data_no_dups_unordered: Data,
+    on: list[str],
+    values: list[str],
+    expected: list[str],
+    request: pytest.FixtureRequest,
 ) -> None:
     index = "idx_1"
     data_ = data_no_dups_unordered
-    result = dataframe(data_).pivot(on, values=values, index=index)
+    df = dataframe(data_)
+    require_pyarrow_20(df, request)
+    result = df.pivot(on, values=values, index=index)
     assert result.columns == expected
     assert_names_match_polars(data_, on, index, values, result_columns=result.columns)
 
@@ -285,10 +312,15 @@ def test_pivot_on_multiple_names(
     ids=["single-values", "multiple-values"],
 )
 def test_pivot_on_multiple_names_agg(
-    data: Data, on: list[str], values: list[str], expected: list[str]
+    data: Data,
+    on: list[str],
+    values: list[str],
+    expected: list[str],
+    request: pytest.FixtureRequest,
 ) -> None:
     index = "idx_1"
     df = dataframe(data)
+    require_pyarrow_20(df, request)
     result = df.pivot(on, values=values, aggregate_function="min", index=index)
     assert result.columns == expected
     assert_names_match_polars(
@@ -296,14 +328,19 @@ def test_pivot_on_multiple_names_agg(
     )
 
 
-def test_pivot_no_agg_duplicated(data: Data) -> None:
+def test_pivot_no_agg_duplicated(data: Data, request: pytest.FixtureRequest) -> None:
     df = dataframe(data)
+    require_pyarrow_20(df, request)
     with pytest.raises((ValueError, NarwhalsError)):
         df.pivot("on_lower", index="idx_1")
 
 
-def test_pivot_no_agg_no_duplicates(data_no_dups: Data) -> None:
-    result = dataframe(data_no_dups).pivot("on_lower", index="idx_1")
+def test_pivot_no_agg_no_duplicates(
+    data_no_dups: Data, request: pytest.FixtureRequest
+) -> None:
+    df = dataframe(data_no_dups)
+    require_pyarrow_20(df, request)
+    result = df.pivot("on_lower", index="idx_1")
     expected = {
         "idx_1": [1, 2],
         "foo_a": [1, 3],
@@ -322,21 +359,22 @@ def test_pivot_no_index_no_values(data_no_dups: Data) -> None:
         df.pivot("on_lower")
 
 
-def test_pivot_implicit_index(data_no_dups: Data) -> None:
+def test_pivot_implicit_index(data_no_dups: Data, request: pytest.FixtureRequest) -> None:
+    df = dataframe(data_no_dups)
+    require_pyarrow_20(df, request)
     expected = {
         "idx_1": [1, 1, 2, 2],
         "bar": ["x", "y", "w", "z"],
         "a": [1.0, None, None, 3.0],
         "b": [None, 2.0, 4.0, None],
     }
-    result = (
-        dataframe(data_no_dups).pivot("on_lower", values="foo").sort(ncs.by_index(0, 1))
-    )
+    result = df.pivot("on_lower", values="foo").sort(ncs.by_index(0, 1))
     assert_equal_data(result, expected)
 
 
-def test_pivot_test_scores_1(scores: Data) -> None:
+def test_pivot_test_scores_1(scores: Data, request: pytest.FixtureRequest) -> None:
     df = dataframe(scores)
+    require_pyarrow_20(df, request)
     expected = {"name": ["Cady", "Karen"], "maths": [98, 61], "physics": [99, 58]}
     result = df.pivot("subject", index="name", values="test_1")
     assert_equal_data(result, expected)
@@ -346,8 +384,9 @@ def test_pivot_test_scores_1(scores: Data) -> None:
     assert_equal_data(result, expected)
 
 
-def test_pivot_test_scores_2(scores: Data) -> None:
+def test_pivot_test_scores_2(scores: Data, request: pytest.FixtureRequest) -> None:
     df = dataframe(scores)
+    require_pyarrow_20(df, request)
     expected = {
         "name": ["Cady", "Karen"],
         "test_1_maths": [98, 61],
@@ -377,11 +416,15 @@ def test_pivot_test_scores_2(scores: Data) -> None:
     ids=["first-null", "sum-zero"],
 )
 def test_pivot_test_tanh_mean(
-    tanh_mean: Data, aggregate_function: PivotAgg, expected: Data
+    tanh_mean: Data,
+    aggregate_function: PivotAgg,
+    expected: Data,
+    request: pytest.FixtureRequest,
 ) -> None:
     # NOTE: Docstring example uses `pl.element().tanh().mean()`
     # Here though, we're just reusing the dataset as it exposes an edge case
     df = dataframe(tanh_mean)
+    require_pyarrow_20(df, request)
     expected = {"col1": ["a", "b"], **expected}
     result = df.pivot(
         "col2", index="col1", values="col3", aggregate_function=aggregate_function
