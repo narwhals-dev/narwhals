@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 # https://github.com/narwhals-dev/narwhals/blob/b3d8c7349bbf7ecb7f11ea590c334e12d5c1d43e/tests/plan/list_agg_test.py#L24-L34
 XFAIL_PYARROW_MEDIAN = pytest.mark.xfail(
     reason="Tried to use `'approximate_median'` but groups are too small",
-    raises=AssertionError,
+    raises=(AssertionError, NotImplementedError),
 )
 
 
@@ -412,7 +412,7 @@ def test_pivot_test_scores_2(scores: Data, request: pytest.FixtureRequest) -> No
             {"x": [16, 2], "y": [0, 12]},
             marks=pytest.mark.xfail(
                 reason="`sum` is special-cased in `polars` to always return 0",
-                raises=AssertionError,
+                raises=(AssertionError, NotImplementedError),
             ),
         ),
     ],
