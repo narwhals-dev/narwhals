@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import operator
-from collections import deque
 from functools import reduce
 from itertools import chain, product
 from typing import TYPE_CHECKING, Any, Literal, cast, overload
@@ -30,14 +29,7 @@ from narwhals._utils import Version, generate_repr
 from narwhals.schema import Schema
 
 if TYPE_CHECKING:
-    from collections.abc import (
-        Callable,
-        Collection,
-        Iterable,
-        Iterator,
-        Mapping,
-        Sequence,
-    )
+    from collections.abc import Iterable, Iterator, Mapping, Sequence
     from io import BytesIO
 
     import polars as pl
@@ -410,7 +402,7 @@ class ArrowDataFrame(
         unnested = structs_to_arrays(*pivot_columns[n_index:], flatten=True)
         names_final = (
             *index,
-            *_on_columns_multiple_names(on_columns.native, values, separator=separator),
+            *_on_columns_names(on_columns.native, values, separator=separator),
         )
         return self._with_native(
             fn.concat_horizontal((*pivot_columns[:n_index], *unnested), names_final)
@@ -464,14 +456,10 @@ def pivot_on_multiple(
     pivot_columns = pivot.columns
     n_index = len(index)
     unnested = structs_to_arrays(*pivot_columns[n_index:], flatten=True)
-    names_final = (
-        *index,
-        *_on_columns_multiple_names(on_columns, values, separator=separator),
-    )
+    names_final = (*index, *_on_columns_names(on_columns, values, separator=separator))
     return fn.concat_horizontal((*pivot_columns[:n_index], *unnested), names_final)
 
 
-# TODO @dangotbanned: Replace the unnesting/naming here with how the others work
 def pivot_on_single(
     native: pa.Table,
     on: str,
@@ -482,42 +470,11 @@ def pivot_on_single(
     separator: str = "_",
 ) -> pa.Table:
     pivot = acero.pivot_table(native, on, on_columns.column(0), index, values)
-    split_index = pivot.schema.get_field_index(index[-1]) + 1
     pivot_columns = pivot.columns
-    unnesting, names = _iter_unnest_with_names(pivot_columns[split_index:])
-    arrays = (*pivot_columns[:split_index], *unnesting)
-    if (n := len(values)) > 1:
-        # NOTE: May need to approach differently for `on: list[str]`
-        # `names` would be cycled `n` times, so we drop everything outside the first cycle
-        it_renames = (
-            f"{value}{separator}{name}"
-            for value, name in product(values, deque(names, maxlen=n))
-        )
-        names = (*index, *it_renames)
-    else:
-        names = (*index, *names)
-    return fn.concat_horizontal(arrays, names)
-
-
-# TODO @dangotbanned: Pass `values` for context on how to store `names`
-# - `deque` only really makes sense in the `values: str` case
-# - if you flatten out each `column_names`, the iterator can splat into `dict.fromkeys`,
-#   to handle deduplicating in order
-def _iter_unnest_with_names(
-    arrays: Iterable[ChunkedStruct],
-) -> tuple[Iterator[ChunkedArrayAny], Collection[str]]:
-    """Probably the least reusable function ever written.
-
-    The idea is the chunked arrays need to be unpacked in `pivot`,
-    so here they are flattened as references to iterators.
-    """
-    names = deque[str]()
-    columns: deque[Iterator[ChunkedArrayAny]] = deque()
-    for arr in arrays:
-        table = _unnest(arr)
-        names.extend(table.column_names)
-        columns.append(table.itercolumns())
-    return chain.from_iterable(columns), names
+    n_index = len(index)
+    unnested = structs_to_arrays(*pivot_columns[n_index:], flatten=True)
+    names_final = (*index, *_on_columns_names(on_columns, values, separator=separator))
+    return fn.concat_horizontal((*pivot_columns[:n_index], *unnested), names_final)
 
 
 def struct_to_arrays(native: ChunkedStruct | StructArray) -> Sequence[ChunkedOrArrayAny]:
@@ -555,16 +512,10 @@ def structs_to_arrays(
             yield struct_to_arrays(struct)
 
 
-def _unnest(ca: ChunkedStruct, /) -> pa.Table:
-    # NOTE: This is the most backwards-compatible version of `Series.struct.unnest`
-    batch = cast("Callable[[Any], pa.RecordBatch]", pa.RecordBatch.from_struct_array)
-    return pa.Table.from_batches((batch(c) for c in ca.chunks), fn.struct_schema(ca))
-
-
-def _on_columns_multiple_names(
+def _on_columns_names(
     on_columns: pa.Table, values: Sequence[str], *, separator: str = "_"
 ) -> Iterable[str]:
-    """Alignment to polars naming style when `pivot(on: list[str])`.
+    """Alignment to polars pivot column naming conventions.
 
     If we started with:
 
@@ -574,16 +525,23 @@ def _on_columns_multiple_names(
 
         ['{"b","X"}', '{"a","X"}', '{"b","Y"}', '{"a","Y"}']
     """
-    if on_columns.num_columns < 2:
-        msg = "This operation is not required for `pivot(on: str)`"
-        raise ValueError(msg)
-
-    result = cast(
-        "list[str]",
-        fn.concat_str(
+    result: Iterable[Any]
+    if on_columns.num_columns == 1:
+        on_column = on_columns.column(0)
+        if len(values) == 1:
+            result = on_column.to_pylist()
+        else:
+            t_left = fn.to_table(fn.array(values))
+            # NOTE: still don't know why pyarrow outputs the cross join in reverse
+            t_right = fn.to_table(on_column[::-1])
+            cross_joined = acero.join_cross_tables(t_left, t_right)
+            result = fn.concat_str(*cross_joined.columns, separator=separator).to_pylist()
+    else:
+        result = fn.concat_str(
             '{"', fn.concat_str(*on_columns.columns, separator='","'), '"}'
-        ).to_pylist(),
-    )
-    if len(values) != 1:
-        return (f"{value}{separator}{name}" for value, name in product(values, result))
-    return result
+        ).to_pylist()
+        if len(values) != 1:
+            return (
+                f"{value}{separator}{name}" for value, name in product(values, result)
+            )
+    return cast("list[str]", result)
