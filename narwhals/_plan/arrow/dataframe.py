@@ -397,16 +397,10 @@ class ArrowDataFrame(
         pre_agg = acero.group_by_table(single_on, [*index, temp_name], specs)
 
         pivot = acero.pivot_table(pre_agg, temp_name, on_columns_encoded, index, values)
-        pivot_columns = pivot.columns
-        n_index = len(index)
-        unnested = structs_to_arrays(*pivot_columns[n_index:], flatten=True)
-        names_final = (
-            *index,
-            *_on_columns_names(on_columns.native, values, separator=separator),
+        result = _temp_post_pivot_table(
+            pivot, on_columns.native, index, values, separator
         )
-        return self._with_native(
-            fn.concat_horizontal((*pivot_columns[:n_index], *unnested), names_final)
-        )
+        return self._with_native(result)
 
 
 def with_array(table: pa.Table, name: str, column: ChunkedOrArrayAny) -> pa.Table:
@@ -426,6 +420,21 @@ def with_arrays(
         else:
             table = table.append_column(name, column)
     return table
+
+
+def _temp_post_pivot_table(
+    pivot: pa.Table,
+    on_columns: pa.Table,
+    index: Sequence[str],
+    values: Sequence[str],
+    separator: str = "_",
+) -> pa.Table:
+    """Everything here should be moved to `acero.pivot_table`."""
+    pivot_columns = pivot.columns
+    n_index = len(index)
+    unnested = structs_to_arrays(*pivot_columns[n_index:], flatten=True)
+    names_final = (*index, *_on_columns_names(on_columns, values, separator=separator))
+    return fn.concat_horizontal((*pivot_columns[:n_index], *unnested), names_final)
 
 
 # TODO @dangotbanned: Try to reduce total number of operations
@@ -451,13 +460,8 @@ def pivot_on_multiple(
     post_explode = fn.ExplodeBuilder().explode_columns(
         pre_agg_w_idx.select([temp_name, *index, *values]), values
     )
-
     pivot = acero.pivot_table(post_explode, temp_name, column_index, index, values)
-    pivot_columns = pivot.columns
-    n_index = len(index)
-    unnested = structs_to_arrays(*pivot_columns[n_index:], flatten=True)
-    names_final = (*index, *_on_columns_names(on_columns, values, separator=separator))
-    return fn.concat_horizontal((*pivot_columns[:n_index], *unnested), names_final)
+    return _temp_post_pivot_table(pivot, on_columns, index, values, separator)
 
 
 def pivot_on_single(
@@ -470,11 +474,7 @@ def pivot_on_single(
     separator: str = "_",
 ) -> pa.Table:
     pivot = acero.pivot_table(native, on, on_columns.column(0), index, values)
-    pivot_columns = pivot.columns
-    n_index = len(index)
-    unnested = structs_to_arrays(*pivot_columns[n_index:], flatten=True)
-    names_final = (*index, *_on_columns_names(on_columns, values, separator=separator))
-    return fn.concat_horizontal((*pivot_columns[:n_index], *unnested), names_final)
+    return _temp_post_pivot_table(pivot, on_columns, index, values, separator)
 
 
 def struct_to_arrays(native: ChunkedStruct | StructArray) -> Sequence[ChunkedOrArrayAny]:
