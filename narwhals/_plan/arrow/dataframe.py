@@ -359,8 +359,7 @@ class ArrowDataFrame(
             pivot = acero.pivot_table(
                 single_on, temp_name, on_columns_encoded, index, values
             )
-        result = _temp_post_pivot_table(pivot, on_columns_, index, values, separator)
-        return self._with_native(result)
+        return self._finish_pivot(pivot, on_columns_, index, values, separator)
 
     # TODO @dangotbanned: Align each of the impls more, then de-duplicate
     def pivot_agg(
@@ -384,6 +383,7 @@ class ArrowDataFrame(
             return self._with_native(pre_agg).pivot(
                 on, on_columns, index=index, values=values, separator=separator
             )
+        on_columns_ = on_columns.native
         temp_name = temp.column_name(native.column_names)
         on_columns_w_idx = on_columns.with_row_index(temp_name)
         on_columns_encoded = on_columns_w_idx.get_column(temp_name).native
@@ -392,9 +392,22 @@ class ArrowDataFrame(
         pre_agg = acero.group_by_table(single_on, [*index, temp_name], specs)
         # this part is the tricky one, since the pivot and the renaming use different reprs for `on_columns`
         pivot = acero.pivot_table(pre_agg, temp_name, on_columns_encoded, index, values)
-        result = _temp_post_pivot_table(
-            pivot, on_columns.native, index, values, separator
-        )
+        return self._finish_pivot(pivot, on_columns_, index, values, separator)
+
+    def _finish_pivot(
+        self,
+        pivot: pa.Table,
+        on_columns: pa.Table,
+        index: Sequence[str],
+        values: Sequence[str],
+        separator: str = "_",
+    ) -> Self:
+        # Everything here should be moved to `acero.pivot_table` if possible
+        pivot_columns = pivot.columns
+        n_index = len(index)
+        unnested = structs_to_arrays(*pivot_columns[n_index:], flatten=True)
+        names = (*index, *_on_columns_names(on_columns, values, separator=separator))
+        result = fn.concat_horizontal((*pivot_columns[:n_index], *unnested), names)
         return self._with_native(result)
 
 
@@ -485,19 +498,3 @@ def _on_columns_names(
                 f"{value}{separator}{name}" for value, name in product(values, result)
             )
     return cast("list[str]", result)
-
-
-# TODO @dangotbanned: Remember, temporary!
-def _temp_post_pivot_table(
-    pivot: pa.Table,
-    on_columns: pa.Table,
-    index: Sequence[str],
-    values: Sequence[str],
-    separator: str = "_",
-) -> pa.Table:
-    """Everything here should be moved to `acero.pivot_table`."""
-    pivot_columns = pivot.columns
-    n_index = len(index)
-    unnested = structs_to_arrays(*pivot_columns[n_index:], flatten=True)
-    names_final = (*index, *_on_columns_names(on_columns, values, separator=separator))
-    return fn.concat_horizontal((*pivot_columns[:n_index], *unnested), names_final)
