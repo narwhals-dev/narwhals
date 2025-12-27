@@ -106,7 +106,10 @@ def require_pyarrow_20(
 ) -> None:
     request.applymarker(
         pytest.mark.xfail(
-            (df.implementation is Implementation.PYARROW and PYARROW_VERSION < (20,)),
+            (
+                df.implementation is Implementation.PYARROW
+                and PYARROW_VERSION < (20, 0, 0)
+            ),
             reason="pyarrow too old for `pivot` support",
             raises=NotImplementedError,
         )
