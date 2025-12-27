@@ -351,21 +351,13 @@ class ArrowDataFrame(
         if len(on) == 1:
             pivot = acero.pivot_table(native, on[0], on_columns_.column(0), index, values)
         else:
-            # implode every `values` column, within the pivot groups
-            specs = (group_by.AggSpec(value, "hash_list") for value in values)
-            pre_agg = acero.group_by_table(native, [*index, *on], specs)
-            # NOTE: The actual `pivot(on)` we pass to `pyarrow` is an index into the groups produced by `on: list[str]`
-            on_columns_encoded = fn.int_range(len(pre_agg))
             temp_name = temp.column_name(native.column_names)
-            pre_agg_w_idx = pre_agg.add_column(0, temp_name, on_columns_encoded)
-
-            post_explode = fn.ExplodeBuilder().explode_columns(
-                pre_agg_w_idx.select([temp_name, *index, *values]), values
-            )
-
-            # this also does a similar thing to `pivot_agg`, for `on_columns`
+            on_columns_w_idx = on_columns.with_row_index(temp_name)
+            on_columns_encoded = on_columns_w_idx.get_column(temp_name).native
+            single_on = self.join_inner(on_columns_w_idx, list(on)).drop(on).native
+            # NOTE: Almost identical to `pivot_agg` now!
             pivot = acero.pivot_table(
-                post_explode, temp_name, on_columns_encoded, index, values
+                single_on, temp_name, on_columns_encoded, index, values
             )
         result = _temp_post_pivot_table(pivot, on_columns_, index, values, separator)
         return self._with_native(result)
@@ -396,8 +388,8 @@ class ArrowDataFrame(
         on_columns_w_idx = on_columns.with_row_index(temp_name)
         on_columns_encoded = on_columns_w_idx.get_column(temp_name).native
         single_on = self.join_inner(on_columns_w_idx, list(on)).drop(on).native
-        pre_agg = acero.group_by_table(single_on, [*index, temp_name], specs)
 
+        pre_agg = acero.group_by_table(single_on, [*index, temp_name], specs)
         # this part is the tricky one, since the pivot and the renaming use different reprs for `on_columns`
         pivot = acero.pivot_table(pre_agg, temp_name, on_columns_encoded, index, values)
         result = _temp_post_pivot_table(
