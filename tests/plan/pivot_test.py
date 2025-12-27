@@ -67,6 +67,27 @@ def data_no_dups_unordered(data_no_dups: Data) -> Data:
     }
 
 
+def assert_names_match_polars(
+    input_data: Data,
+    on: list[str],
+    index: str | list[str],
+    values: list[str],
+    aggregate_function: PivotAgg | None = None,
+    *,
+    result_columns: list[str],
+) -> None:
+    """Ensure the complex renaming cases match upstream."""
+    pytest.importorskip("polars")
+    import polars as pl
+
+    df = pl.DataFrame(input_data)
+
+    pl_result = df.pivot(
+        on=on, values=values, index=index, aggregate_function=aggregate_function
+    )
+    assert result_columns == pl_result.columns
+
+
 @pytest.mark.parametrize(
     ("agg_func", "expected"),
     [
@@ -220,16 +241,11 @@ def test_pivot_sort_columns(
 def test_pivot_on_multiple_names(
     data_no_dups_unordered: Data, on: list[str], values: list[str], expected: list[str]
 ) -> None:
-    result = dataframe(data_no_dups_unordered).pivot(on, values=values, index="idx_1")
+    index = "idx_1"
+    data_ = data_no_dups_unordered
+    result = dataframe(data_).pivot(on, values=values, index=index)
     assert result.columns == expected
-
-    pytest.importorskip("polars")
-    import polars as pl
-
-    pl_result = pl.DataFrame(data_no_dups_unordered).pivot(
-        on, values=values, index="idx_1"
-    )
-    assert result.columns == pl_result.columns
+    assert_names_match_polars(data_, on, index, values, result_columns=result.columns)
 
 
 @pytest.mark.parametrize(
@@ -261,17 +277,13 @@ def test_pivot_on_multiple_names(
 def test_pivot_on_multiple_names_agg(
     data: Data, on: list[str], values: list[str], expected: list[str]
 ) -> None:
+    index = "idx_1"
     df = dataframe(data)
-    result = df.pivot(on, values=values, aggregate_function="min", index="idx_1")
+    result = df.pivot(on, values=values, aggregate_function="min", index=index)
     assert result.columns == expected
-
-    pytest.importorskip("polars")
-    import polars as pl
-
-    pl_result = pl.DataFrame(data).pivot(
-        on, values=values, aggregate_function="min", index="idx_1"
+    assert_names_match_polars(
+        data, on, index, values, "min", result_columns=result.columns
     )
-    assert result.columns == pl_result.columns
 
 
 def test_pivot_no_agg_duplicated(data: Data) -> None:
