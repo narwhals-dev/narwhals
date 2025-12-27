@@ -27,7 +27,6 @@ from narwhals._plan.compliant.typing import LazyFrameAny, namespace
 from narwhals._plan.exceptions import shape_error
 from narwhals._plan.expressions import NamedIR, named_ir
 from narwhals._utils import Version, generate_repr
-from narwhals.exceptions import InvalidOperationError
 from narwhals.schema import Schema
 
 if TYPE_CHECKING:
@@ -349,13 +348,13 @@ class ArrowDataFrame(
     def pivot(
         self,
         on: Sequence[str],
-        on_columns: Sequence[str] | Self,
+        on_columns: Self,
         *,
         index: Sequence[str],
         values: Sequence[str],
         separator: str = "_",
     ) -> Self:
-        if isinstance(on_columns, ArrowDataFrame):
+        if len(on) != 1:
             return self._with_native(
                 pivot_on_multiple(
                     self.native,
@@ -366,29 +365,22 @@ class ArrowDataFrame(
                     separator=separator,
                 )
             )
-        if len(on) == 1:
-            return self._with_native(
-                pivot_on_single(
-                    self.native,
-                    on[0],
-                    on_columns,
-                    index=index,
-                    values=values,
-                    separator=separator,
-                )
+        return self._with_native(
+            pivot_on_single(
+                self.native,
+                on[0],
+                on_columns.native,
+                index=index,
+                values=values,
+                separator=separator,
             )
-        # TODO @dangotbanned: Handle this more gracefully at the `narwhals`-level
-        msg = (
-            f"Invalid argument combination:\n    `pivot({on=}, {on_columns=})`\n\n"
-            "`on_columns` cannot currently be used with multiple `on` names."
         )
-        raise InvalidOperationError(msg)
 
     # TODO @dangotbanned: Align each of the impls more, then de-duplicate
     def pivot_agg(
         self,
         on: Sequence[str],
-        on_columns: Sequence[str] | Self,
+        on_columns: Self,
         *,
         index: Sequence[str],
         values: Sequence[str],
@@ -400,7 +392,8 @@ class ArrowDataFrame(
         agg_func = group_by.SUPPORTED_AGG[tp_agg]
         option = pa_options.AGG.get(tp_agg)
         specs = (group_by.AggSpec(value, agg_func, option) for value in values)
-        if not isinstance(on_columns, type(self)):
+
+        if len(on) == 1:
             pre_agg = acero.group_by_table(native, [*index, *on], specs)
             return self._with_native(pre_agg).pivot(
                 on, on_columns, index=index, values=values, separator=separator
@@ -482,13 +475,13 @@ def pivot_on_multiple(
 def pivot_on_single(
     native: pa.Table,
     on: str,
-    on_columns: Sequence[str],
+    on_columns: pa.Table,
     *,
     index: Sequence[str],
     values: Sequence[str],
     separator: str = "_",
 ) -> pa.Table:
-    pivot = acero.pivot_table(native, on, on_columns, index, values)
+    pivot = acero.pivot_table(native, on, on_columns.column(0), index, values)
     split_index = pivot.schema.get_field_index(index[-1]) + 1
     pivot_columns = pivot.columns
     unnesting, names = _iter_unnest_with_names(pivot_columns[split_index:])

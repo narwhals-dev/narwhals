@@ -225,7 +225,7 @@ class CompliantDataFrame(
     def pivot(
         self,
         on: Sequence[str],
-        on_columns: Sequence[str] | Self,
+        on_columns: Self,
         *,
         index: Sequence[str],
         values: Sequence[str],
@@ -234,7 +234,7 @@ class CompliantDataFrame(
     def pivot_agg(
         self,
         on: Sequence[str],
-        on_columns: Sequence[str] | Self,
+        on_columns: Self,
         *,
         index: Sequence[str],
         values: Sequence[str],

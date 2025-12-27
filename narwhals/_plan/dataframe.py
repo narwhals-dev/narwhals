@@ -27,7 +27,7 @@ from narwhals._plan.typing import (
     PartialSeries,
     Seq,
 )
-from narwhals._utils import Implementation, Version, generate_repr
+from narwhals._utils import Implementation, Version, generate_repr, qualified_type_name
 from narwhals.dependencies import is_pyarrow_table
 from narwhals.exceptions import InvalidOperationError, ShapeError
 from narwhals.schema import Schema
@@ -263,6 +263,25 @@ class DataFrame(
 
         return fn
 
+    # NOTE: Most of this is for the edge-case of a 0-column dataframe
+    # otherwise, we can reuse the method on an existing `Series` instance
+    def _parse_into_compliant_series(
+        self, other: Series[Any] | Iterable[Any], /, name: str = ""
+    ) -> CompliantSeries[NativeSeriesT]:  # pragma: no cover
+        if columns := self.columns:
+            compliant = self.get_column(columns[0])._parse_into_compliant(other)
+            return compliant if not name else compliant.alias(name)
+        tp_series = self.__narwhals_namespace__()._series
+        if not is_series(other):
+            return tp_series.from_iterable(other, version=self.version, name=name)
+        s = other._compliant
+        if isinstance(s, tp_series):
+            return s
+        msg = (
+            f"Expected {qualified_type_name(tp_series)!r}, got {qualified_type_name(s)!r}"
+        )
+        raise NotImplementedError(msg)
+
     @overload
     @classmethod
     def from_native(
@@ -454,9 +473,6 @@ class DataFrame(
         partitions = self._compliant.partition_by(names, include_key=include_key)
         return [self._with_compliant(p) for p in partitions]
 
-    # TODO @dangotbanned: Handle coercing all `on_columns`, so we always pass down `CompliantDataFrame.pivot(on_columns: Self)`
-    # - Even in the simpler cases, it gives us the output names
-    # - which is nicer to work with than `pivot_on_single` solution
     def pivot(
         self,
         on: str | list[str],
@@ -473,27 +489,28 @@ class DataFrame(
         on_, index_, values_ = normalize_pivot_args(
             on, index=index, values=values, frame_columns=self.columns
         )
-        dtype_string = self.version.dtypes.String()
-
-        # TODO @dangotbanned: Somehow, type `Incomplete` as `Self@EagerDataFrame`
-        on_cols: Sequence[str] | Incomplete
+        dtype_str = self.version.dtypes.String()
+        on_cols: EagerDataFrame[IncompleteCyclic, NativeDataFrameT_co, NativeSeriesT]
 
         if on_columns is None:
-            on_cols_df = self.select(
-                F.col(name).cast(dtype_string) for name in on_
-            ).unique(on_, maintain_order=True)
+            nw_on_cols = self.select(F.col(name).cast(dtype_str) for name in on_).unique(
+                on_, maintain_order=True
+            )
             if sort_columns:
-                on_cols_df = on_cols_df.sort(on_)
-            on_cols = on_cols_df._compliant
-            if len(on_) == 1:
-                on_cols = on_cols.to_series().to_list()
-        elif is_series(on_columns):  # pragma: no cover
-            on_columns = on_columns.cast(dtype_string)
-            if sort_columns:
-                on_columns = on_columns.sort()
-            on_cols = on_columns.to_list()
+                nw_on_cols = nw_on_cols.sort(on_)
+            on_cols = nw_on_cols._compliant
+        elif len(on_) != 1:  # pragma: no cover
+            msg = (
+                f"`on_columns: {qualified_type_name(on_columns)}` is not compatible with multiple `on` values, got:\n"
+                f"`on={on!r}`\n`on_columns={on_columns!r}`"
+            )
+            raise InvalidOperationError(msg)
         else:
-            on_cols = list(on_columns)
+            on_cols = (
+                self._parse_into_compliant_series(on_columns, on_[0])
+                .cast(dtype_str)
+                .to_frame()
+            )
         if aggregate_function is None:
             result = self._compliant.pivot(
                 on_, on_cols, index=index_, values=values_, separator=separator
