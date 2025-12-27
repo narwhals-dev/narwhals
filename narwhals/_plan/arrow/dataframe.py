@@ -346,27 +346,22 @@ class ArrowDataFrame(
         values: Sequence[str],
         separator: str = "_",
     ) -> Self:
+        native = self.native
+        on_columns_ = on_columns.native
         if len(on) != 1:
             return self._with_native(
                 pivot_on_multiple(
-                    self.native,
+                    native,
                     on,
-                    on_columns.native,
+                    on_columns_,
                     index=index,
                     values=values,
                     separator=separator,
                 )
             )
-        return self._with_native(
-            pivot_on_single(
-                self.native,
-                on[0],
-                on_columns.native,
-                index=index,
-                values=values,
-                separator=separator,
-            )
-        )
+        pivot = acero.pivot_table(native, on[0], on_columns_.column(0), index, values)
+        result = _temp_post_pivot_table(pivot, on_columns_, index, values, separator)
+        return self._with_native(result)
 
     # TODO @dangotbanned: Align each of the impls more, then de-duplicate
     def pivot_agg(
@@ -461,19 +456,6 @@ def pivot_on_multiple(
         pre_agg_w_idx.select([temp_name, *index, *values]), values
     )
     pivot = acero.pivot_table(post_explode, temp_name, column_index, index, values)
-    return _temp_post_pivot_table(pivot, on_columns, index, values, separator)
-
-
-def pivot_on_single(
-    native: pa.Table,
-    on: str,
-    on_columns: pa.Table,
-    *,
-    index: Sequence[str],
-    values: Sequence[str],
-    separator: str = "_",
-) -> pa.Table:
-    pivot = acero.pivot_table(native, on, on_columns.column(0), index, values)
     return _temp_post_pivot_table(pivot, on_columns, index, values, separator)
 
 
