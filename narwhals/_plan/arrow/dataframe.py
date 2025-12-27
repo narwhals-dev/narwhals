@@ -410,15 +410,18 @@ class ArrowDataFrame(
         on_columns_encoded = on_columns_w_idx.get_column(temp_name).native
         single_on = self.join_inner(on_columns_w_idx, list(on)).drop(on).native
         pre_agg = acero.group_by_table(single_on, [*index, temp_name], specs)
+
         pivot = acero.pivot_table(pre_agg, temp_name, on_columns_encoded, index, values)
-        structs = pivot.columns[len(index) :]
-        unnested = chain.from_iterable(structs_to_arrays(*structs))
-        arrays_final = (*pivot.select(list(index)).columns, *unnested)
+        pivot_columns = pivot.columns
+        n_index = len(index)
+        unnested = structs_to_arrays(*pivot_columns[n_index:], flatten=True)
         names_final = (
             *index,
             *_on_columns_multiple_names(on_columns.native, values, separator=separator),
         )
-        return self._with_native(fn.concat_horizontal(arrays_final, names_final))
+        return self._with_native(
+            fn.concat_horizontal((*pivot_columns[:n_index], *unnested), names_final)
+        )
 
 
 def with_array(table: pa.Table, name: str, column: ChunkedOrArrayAny) -> pa.Table:
@@ -463,16 +466,16 @@ def pivot_on_multiple(
     post_explode = fn.ExplodeBuilder().explode_columns(
         pre_agg_w_idx.select([temp_name, *index, *values]), values
     )
-    pivot = acero.pivot_table(post_explode, temp_name, column_index, index, values)
-    structs = pivot.columns[len(index) :]
 
-    unnested = chain.from_iterable(structs_to_arrays(*structs))
-    arrays_final = (*pivot.select(index).columns, *unnested)
+    pivot = acero.pivot_table(post_explode, temp_name, column_index, index, values)
+    pivot_columns = pivot.columns
+    n_index = len(index)
+    unnested = structs_to_arrays(*pivot_columns[n_index:], flatten=True)
     names_final = (
         *index,
         *_on_columns_multiple_names(on_columns, values, separator=separator),
     )
-    return fn.concat_horizontal(arrays_final, names_final)
+    return fn.concat_horizontal((*pivot_columns[:n_index], *unnested), names_final)
 
 
 # TODO @dangotbanned: Replace the unnesting/naming here with how the others work
@@ -532,15 +535,31 @@ def struct_to_arrays(native: ChunkedStruct | StructArray) -> Sequence[ChunkedOrA
     return cast("ChunkedStruct | pa.StructArray", native).flatten()
 
 
+@overload
 def structs_to_arrays(
-    *structs: ChunkedStruct | pa.StructArray,
-) -> Iterator[Sequence[ChunkedOrArrayAny]]:
+    *structs: ChunkedStruct | StructArray,
+) -> Iterator[Sequence[ChunkedOrArrayAny]]: ...
+@overload
+def structs_to_arrays(
+    *structs: ChunkedStruct | StructArray, flatten: Literal[True]
+) -> Iterator[ChunkedOrArrayAny]: ...
+def structs_to_arrays(
+    *structs: ChunkedStruct | StructArray, flatten: bool = False
+) -> Iterator[Sequence[ChunkedOrArrayAny] | ChunkedOrArrayAny]:
     """Unnest the fields of every struct into one array per-struct-field.
 
-    Probably want to choose between returning `[...]` or `[[...],[...]]`
+    By default, yields the arrays of each struct *as a group*, configurable via `flatten`.
+
+    Arguments:
+        *structs: One or more Struct-typed arrow arrays.
+        flatten: Yield each array from each struct *without grouping*.
     """
-    for struct in structs:
-        yield struct_to_arrays(struct)
+    if flatten:
+        for struct in structs:
+            yield from struct_to_arrays(struct)
+    else:
+        for struct in structs:
+            yield struct_to_arrays(struct)
 
 
 def _unnest(ca: ChunkedStruct, /) -> pa.Table:
