@@ -23,12 +23,22 @@ XFAIL_PYARROW_MEDIAN = pytest.mark.xfail(
 
 @pytest.fixture(scope="module")
 def scores() -> Data:
-    """Ripped from `pl.DataFrame.pivot` docstring."""
+    """Dataset 1 `pl.DataFrame.pivot` docstring."""
     return {
         "name": ["Cady", "Cady", "Karen", "Karen"],
         "subject": ["maths", "physics", "maths", "physics"],
         "test_1": [98, 99, 61, 58],
         "test_2": [100, 100, 60, 60],
+    }
+
+
+@pytest.fixture(scope="module")
+def tanh_mean() -> Data:
+    """Dataset 3 `pl.DataFrame.pivot` docstring."""
+    return {
+        "col1": ["a", "a", "a", "b", "b", "b"],
+        "col2": ["x", "x", "x", "x", "y", "y"],
+        "col3": [6, 7, 3, 2, 5, 7],
     }
 
 
@@ -325,12 +335,55 @@ def test_pivot_implicit_index(data_no_dups: Data) -> None:
     assert_equal_data(result, expected)
 
 
-def test_pivot_test_scores(scores: Data) -> None:
+def test_pivot_test_scores_1(scores: Data) -> None:
     df = dataframe(scores)
     expected = {"name": ["Cady", "Karen"], "maths": [98, 61], "physics": [99, 58]}
     result = df.pivot("subject", index="name", values="test_1")
     assert_equal_data(result, expected)
     result = df.pivot(
         "subject", on_columns=["maths", "physics"], index="name", values="test_1"
+    )
+    assert_equal_data(result, expected)
+
+
+def test_pivot_test_scores_2(scores: Data) -> None:
+    df = dataframe(scores)
+    expected = {
+        "name": ["Cady", "Karen"],
+        "test_1_maths": [98, 61],
+        "test_1_physics": [99, 58],
+        "test_2_maths": [100, 60],
+        "test_2_physics": [100, 60],
+    }
+    result = df.pivot("subject", values=["test_1", "test_2"])
+    assert_equal_data(result, expected)
+
+
+# TODO @dangotbanned: Consider fixing this?
+# The `pandas` impl on `main` has the same issue
+@pytest.mark.parametrize(
+    ("aggregate_function", "expected"),
+    [
+        ("first", {"x": [6, 2], "y": [None, 5]}),
+        pytest.param(
+            "sum",
+            {"x": [16, 2], "y": [0, 12]},
+            marks=pytest.mark.xfail(
+                reason="`sum` is special-cased in `polars` to always return 0",
+                raises=AssertionError,
+            ),
+        ),
+    ],
+    ids=["first-null", "sum-zero"],
+)
+def test_pivot_test_tanh_mean(
+    tanh_mean: Data, aggregate_function: PivotAgg, expected: Data
+) -> None:
+    # NOTE: Docstring example uses `pl.element().tanh().mean()`
+    # Here though, we're just reusing the dataset as it exposes an edge case
+    df = dataframe(tanh_mean)
+    expected = {"col1": ["a", "b"], **expected}
+    result = df.pivot(
+        "col2", index="col1", values="col3", aggregate_function=aggregate_function
     )
     assert_equal_data(result, expected)
