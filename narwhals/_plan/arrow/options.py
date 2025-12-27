@@ -199,7 +199,7 @@ def split_pattern(by: str, n: int | None = None) -> pc.SplitPatternOptions:
 def pivot_wider(
     on_columns: Sequence[Any] | ChunkedOrArrayAny,
     /,
-    unexpected_key_behavior: Literal["ignore", "raise"] = "ignore",
+    unexpected_key_behavior: Literal["ignore", "raise"] = "raise",
 ) -> pc.FunctionOptions:
     """Tries to wrap [`pc.PivotWiderOptions`], and raises if we're on an old `pyarrow`.
 
