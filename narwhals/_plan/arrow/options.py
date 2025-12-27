@@ -12,7 +12,7 @@ import functools
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any, Literal, TypeVar
 
-import pyarrow as pa
+import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc
 
 from narwhals._plan.arrow import compat
