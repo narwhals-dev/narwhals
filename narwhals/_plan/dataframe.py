@@ -454,6 +454,9 @@ class DataFrame(
         partitions = self._compliant.partition_by(names, include_key=include_key)
         return [self._with_compliant(p) for p in partitions]
 
+    # TODO @dangotbanned: Handle coercing all `on_columns`, so we always pass down `CompliantDataFrame.pivot(on_columns: Self)`
+    # - Even in the simpler cases, it gives us the output names
+    # - which is nicer to work with than `pivot_on_single` solution
     def pivot(
         self,
         on: str | list[str],

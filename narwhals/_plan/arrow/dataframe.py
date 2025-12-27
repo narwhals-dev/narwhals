@@ -384,7 +384,7 @@ class ArrowDataFrame(
         )
         raise InvalidOperationError(msg)
 
-    # TODO @dangotbanned: Adapt the `pivot_on_multiple` stuff for using here
+    # TODO @dangotbanned: Align each of the impls more, then de-duplicate
     def pivot_agg(
         self,
         on: Sequence[str],
@@ -395,18 +395,30 @@ class ArrowDataFrame(
         aggregate_function: PivotAgg,
         separator: str = "_",
     ) -> Self:
-        if isinstance(on_columns, ArrowDataFrame):
-            msg = f"TODO: `ArrowDataFrame.pivot_agg(on=len({len(on)}))`"
-            raise NotImplementedError(msg)
         native = self.native
         tp_agg = group_by.SUPPORTED_PIVOT_AGG[aggregate_function]
         agg_func = group_by.SUPPORTED_AGG[tp_agg]
         option = pa_options.AGG.get(tp_agg)
         specs = (group_by.AggSpec(value, agg_func, option) for value in values)
-        pre_agg = acero.group_by_table(native, [*index, *on], specs)
-        return self._with_native(pre_agg).pivot(
-            on, on_columns, index=index, values=values, separator=separator
+        if not isinstance(on_columns, type(self)):
+            pre_agg = acero.group_by_table(native, [*index, *on], specs)
+            return self._with_native(pre_agg).pivot(
+                on, on_columns, index=index, values=values, separator=separator
+            )
+        temp_name = temp.column_name(native.column_names)
+        on_columns_w_idx = on_columns.with_row_index(temp_name)
+        on_columns_encoded = on_columns_w_idx.get_column(temp_name).native
+        single_on = self.join_inner(on_columns_w_idx, list(on)).drop(on).native
+        pre_agg = acero.group_by_table(single_on, [*index, temp_name], specs)
+        pivot = acero.pivot_table(pre_agg, temp_name, on_columns_encoded, index, values)
+        structs = pivot.columns[len(index) :]
+        unnested = chain.from_iterable(structs_to_arrays(*structs))
+        arrays_final = (*pivot.select(list(index)).columns, *unnested)
+        names_final = (
+            *index,
+            *_on_columns_multiple_names(on_columns.native, values, separator=separator),
         )
+        return self._with_native(fn.concat_horizontal(arrays_final, names_final))
 
 
 def with_array(table: pa.Table, name: str, column: ChunkedOrArrayAny) -> pa.Table:
@@ -463,6 +475,7 @@ def pivot_on_multiple(
     return fn.concat_horizontal(arrays_final, names_final)
 
 
+# TODO @dangotbanned: Replace the unnesting/naming here with how the others work
 def pivot_on_single(
     native: pa.Table,
     on: str,

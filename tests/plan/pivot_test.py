@@ -13,10 +13,8 @@ if TYPE_CHECKING:
     from narwhals.typing import PivotAgg
     from tests.conftest import Data
 
-
-XFAIL_NOT_IMPL_AGG_ON_MULTIPLE = pytest.mark.xfail(
-    reason="TODO: `ArrowDataFrame.pivot_agg(on=len(2))`", raises=NotImplementedError
-)
+# TODO @dangotbanned: Add more values for `median`, like in
+# https://github.com/narwhals-dev/narwhals/blob/b3d8c7349bbf7ecb7f11ea590c334e12d5c1d43e/tests/plan/list_agg_test.py#L24-L34
 XFAIL_PYARROW_MEDIAN = pytest.mark.xfail(
     reason="Tried to use `'approximate_median'` but groups are too small",
     raises=AssertionError,
@@ -234,14 +232,13 @@ def test_pivot_on_multiple_names(
     assert result.columns == pl_result.columns
 
 
-@XFAIL_NOT_IMPL_AGG_ON_MULTIPLE
 @pytest.mark.parametrize(
     ("on", "values", "expected"),
     [
         (
             ["on_lower", "on_upper"],
             ["foo"],
-            ["idx_1", '{"b","X"}', '{"b","Y"}', '{"a","X"}', '{"a","Y"}'],
+            ["idx_1", '{"b","X"}', '{"b","Y"}', '{"a","Y"}', '{"a","X"}'],
         ),
         (
             ["on_lower", "on_upper"],
@@ -250,22 +247,31 @@ def test_pivot_on_multiple_names(
                 "idx_1",
                 'foo_{"b","X"}',
                 'foo_{"b","Y"}',
-                'foo_{"a","X"}',
                 'foo_{"a","Y"}',
+                'foo_{"a","X"}',
                 'bar_{"b","X"}',
                 'bar_{"b","Y"}',
-                'bar_{"a","X"}',
                 'bar_{"a","Y"}',
+                'bar_{"a","X"}',
             ],
         ),
     ],
+    ids=["single-values", "multiple-values"],
 )
 def test_pivot_on_multiple_names_agg(
     data: Data, on: list[str], values: list[str], expected: list[str]
-) -> None:  # pragma: no cover
+) -> None:
     df = dataframe(data)
     result = df.pivot(on, values=values, aggregate_function="min", index="idx_1")
     assert result.columns == expected
+
+    pytest.importorskip("polars")
+    import polars as pl
+
+    pl_result = pl.DataFrame(data).pivot(
+        on, values=values, aggregate_function="min", index="idx_1"
+    )
+    assert result.columns == pl_result.columns
 
 
 def test_pivot_no_agg_duplicated(data: Data) -> None:
