@@ -3,8 +3,6 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, Any
 
-import pyarrow as pa  # ignore-banned-import
-
 from narwhals._plan.arrow import acero, functions as fn, group_by, options as pa_options
 from narwhals._plan.arrow.group_by import AggSpec
 from narwhals._plan.common import temp
@@ -12,6 +10,8 @@ from narwhals._plan.expressions import aggregation as agg
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
+
+    import pyarrow as pa
 
     from narwhals.typing import PivotAgg
 
@@ -60,12 +60,12 @@ def pivot_table(
 
 
 def _replace_flatten_names(
-    flattened: pa.Table,
+    column_names: list[str],
     /,
     on_columns_names: Sequence[str],
     values: Sequence[str],
     separator: str,
-) -> pa.Table:
+) -> list[str]:
     """Replace the separator used in unnested struct columns.
 
     [`pa.Table.flatten`] *unconditionally* uses the separator `"."`, so we *likely* need to fix that here.
@@ -73,13 +73,12 @@ def _replace_flatten_names(
     [`pa.Table.flatten`]: https://arrow.apache.org/docs/python/generated/pyarrow.Table.html#pyarrow.Table.flatten
     """
     if separator == ".":
-        return flattened
+        return column_names
     p_on_columns = "|".join(re.escape(name) for name in on_columns_names)
     p_values = "|".join(re.escape(name) for name in values)
     pattern = re.compile(rf"^(?P<on_column>{p_on_columns})\.(?P<value>{p_values})\Z")
     repl = rf"\g<on_column>{separator}\g<value>"
-    names = flattened.column_names
-    return flattened.rename_columns([pattern.sub(repl, s) for s in names])
+    return [pattern.sub(repl, s) for s in column_names]
 
 
 def _pivot(
@@ -97,12 +96,10 @@ def _pivot(
     pivot = acero.group_by_table(native, index, specs)
     flat = pivot.flatten()
     if len(values) == 1:
-        tp = pivot.field(values[0]).type
-        if not pa.types.is_struct(tp):
-            msg = f"Expected only struct types but got {tp!r}"
-            raise NotImplementedError(msg)
-        return flat.rename_columns([*index, *(f.name for f in tp)])
-    return _replace_flatten_names(flat, values, on_columns, separator)
+        names = [*index, *fn.struct_field_names(pivot.column(values[0]))]
+    else:
+        names = _replace_flatten_names(flat.column_names, values, on_columns, separator)
+    return flat.rename_columns(names)
 
 
 def _aggregate(
