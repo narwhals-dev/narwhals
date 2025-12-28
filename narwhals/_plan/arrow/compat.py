@@ -20,7 +20,7 @@ TABLE_RENAME_ACCEPTS_DICT: Final = BACKEND_VERSION >= (17,)
 TAKE_ACCEPTS_TUPLE: Final = BACKEND_VERSION >= (18,)
 
 HAS_STRUCT_TYPE_FIELDS: Final = BACKEND_VERSION >= (18,)
-"""`pyarrow.StructType.fields` added in https://github.com/apache/arrow/pull/43481"""
+"""`pyarrow.StructType.{fields,names}` added in https://github.com/apache/arrow/pull/43481"""
 
 HAS_SCATTER: Final = BACKEND_VERSION >= (20,)
 """`pyarrow.compute.scatter` added in https://github.com/apache/arrow/pull/44394"""

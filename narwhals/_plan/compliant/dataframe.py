@@ -229,16 +229,7 @@ class CompliantDataFrame(
         *,
         index: Sequence[str],
         values: Sequence[str],
-        separator: str = "_",
-    ) -> Self: ...
-    def pivot_agg(
-        self,
-        on: Sequence[str],
-        on_columns: Self,
-        *,
-        index: Sequence[str],
-        values: Sequence[str],
-        aggregate_function: PivotAgg,
+        aggregate_function: PivotAgg | None = None,
         separator: str = "_",
     ) -> Self: ...
     def row(self, index: int) -> tuple[Any, ...]: ...

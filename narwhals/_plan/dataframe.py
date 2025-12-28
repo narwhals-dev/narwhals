@@ -511,12 +511,8 @@ class DataFrame(
                 .cast(dtype_str)
                 .to_frame()
             )
-        if aggregate_function is None:
-            result = self._compliant.pivot(
-                on_, on_cols, index=index_, values=values_, separator=separator
-            )
-        else:
-            result = self._compliant.pivot_agg(
+        return self._with_compliant(
+            self._compliant.pivot(
                 on_,
                 on_cols,
                 index=index_,
@@ -524,7 +520,7 @@ class DataFrame(
                 aggregate_function=aggregate_function,
                 separator=separator,
             )
-        return self._with_compliant(result)
+        )
 
     def sort(
         self,

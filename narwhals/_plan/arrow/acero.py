@@ -29,7 +29,7 @@ from narwhals._plan.arrow import options as pa_options
 from narwhals._plan.common import ensure_list_str, temp
 from narwhals._plan.typing import NonCrossJoinStrategy, OneOrSeq
 from narwhals._utils import check_column_names_are_unique
-from narwhals.typing import JoinStrategy, SingleColSelector
+from narwhals.typing import JoinStrategy, PivotAgg, SingleColSelector
 
 if TYPE_CHECKING:
     from collections.abc import (
@@ -334,7 +334,7 @@ def group_by_table(
     return collect(table_source(native), group_by(keys, aggs), use_threads=use_threads)
 
 
-def pivot_table(
+def _pivot_table(
     native: pa.Table,
     on: str,
     on_columns: ChunkedOrArrayAny | Sequence[Any],
@@ -348,6 +348,75 @@ def pivot_table(
     options = pa_options.pivot_wider(on_columns)
     specs = (AggSpec((on, name), "hash_pivot_wider", options, name) for name in values)
     return group_by_table(native, index, specs)
+
+
+# TODO @dangotbanned: Split things out, but keep the new shared flow
+# TODO @dangotbanned: Optimize `len(values) > 1`
+def pivot_table(  # noqa: PLR0914
+    native: pa.Table,
+    on: Sequence[str],
+    on_columns: pa.Table,
+    /,
+    index: Sequence[str],
+    values: Sequence[str],
+    aggregate_function: PivotAgg | None,
+    separator: str,
+) -> pa.Table:
+    from narwhals._plan.arrow import functions as fn, group_by
+
+    pivot_on_columns: ChunkedOrArrayAny | Sequence[Any]
+
+    if len(on) != 1:
+        on_concat = fn.concat_str(
+            '{"', fn.concat_str(*on_columns.columns, separator='","'), '"}'
+        )
+        pivot_on = temp.column_name(native.column_names)
+        on_list = list(on)
+        pivot_target = join_inner_tables(
+            native, on_columns.append_column(pivot_on, on_concat), on_list
+        ).drop(on_list)
+        pivot_on_columns = on_concat.to_pylist()
+    else:
+        pivot_target = native
+        pivot_on = on[0]
+        pivot_on_columns = on_columns.column(0)
+    if aggregate_function:
+        tp_agg = group_by.SUPPORTED_PIVOT_AGG[aggregate_function]
+        agg_func = group_by.SUPPORTED_AGG[tp_agg]
+        option = pa_options.AGG.get(tp_agg)
+        specs = (group_by.AggSpec(value, agg_func, option) for value in values)
+        pivot_target = group_by_table(pivot_target, [*index, pivot_on], specs)
+    pivot = _pivot_table(pivot_target, pivot_on, pivot_on_columns, index, values)
+    pivot_columns = pivot.columns
+    n_index = len(index)
+    index_columns = pivot_columns[:n_index]
+    if len(values) == 1:
+        struct = pivot_columns[-1]
+        unnest_names = fn.struct_field_names(struct)
+        unnest_columns = struct.flatten()
+    else:
+        # TODO @dangotbanned: Swap out with using `Table.flatten` and using a regex replace to fix the generated names
+        # NOTE: Slow version for poc only!
+        # https://arrow.apache.org/docs/python/generated/pyarrow.Table.html#pyarrow.Table.flatten
+        # `pyarrow.Table`
+        # `a.animals: string`
+        # `a.n_legs: int64`
+        # `a.year: int64`
+        # `month: int64`
+        values_list = list(values)
+        structs_table = pivot.select(values_list)
+        unnest_names = []
+        unnest_columns = []
+        # NOTE: **Don't** replace this with `pivot_columns[n_index:]`!!
+        # I Want this to be slow to force a regex rewrite that skips the nested loops
+        for name, struct in zip(values, structs_table.itercolumns()):
+            unnest_columns.extend(struct.flatten())
+            unnest_names.extend(
+                [f"{name}{separator}{f_name}" for f_name in fn.struct_field_names(struct)]
+            )
+    return fn.concat_horizontal(
+        (*index_columns, *unnest_columns), (*index, *unnest_names)
+    )
 
 
 def filter_table(native: pa.Table, *predicates: Expr, **constraints: Any) -> pa.Table:

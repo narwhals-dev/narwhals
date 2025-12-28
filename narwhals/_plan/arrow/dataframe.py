@@ -2,20 +2,14 @@ from __future__ import annotations
 
 import operator
 from functools import reduce
-from itertools import chain, product
+from itertools import chain
 from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._arrow.utils import native_to_narwhals_dtype
-from narwhals._plan.arrow import (
-    acero,
-    compat,
-    functions as fn,
-    group_by,
-    options as pa_options,
-)
+from narwhals._plan.arrow import acero, compat, functions as fn
 from narwhals._plan.arrow.common import ArrowFrameSeries as FrameSeries
 from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
 from narwhals._plan.arrow.group_by import ArrowGroupBy as GroupBy, partition_by
@@ -35,13 +29,7 @@ if TYPE_CHECKING:
     import polars as pl
     from typing_extensions import Self, TypeAlias
 
-    from narwhals._plan.arrow.typing import (
-        ChunkedArrayAny,
-        ChunkedOrArrayAny,
-        ChunkedStruct,
-        Predicate,
-        StructArray,
-    )
+    from narwhals._plan.arrow.typing import ChunkedArrayAny, ChunkedOrArrayAny, Predicate
     from narwhals._plan.compliant.group_by import GroupByResolver
     from narwhals._plan.expressions import ExprIR, NamedIR
     from narwhals._plan.options import ExplodeOptions, SortMultipleOptions
@@ -344,70 +332,18 @@ class ArrowDataFrame(
         *,
         index: Sequence[str],
         values: Sequence[str],
+        aggregate_function: PivotAgg | None = None,
         separator: str = "_",
     ) -> Self:
-        native = self.native
-        on_columns_ = on_columns.native
-        if len(on) == 1:
-            pivot = acero.pivot_table(native, on[0], on_columns_.column(0), index, values)
-        else:
-            temp_name = temp.column_name(native.column_names)
-            on_columns_w_idx = on_columns.with_row_index(temp_name)
-            on_columns_encoded = on_columns_w_idx.get_column(temp_name).native
-            single_on = self.join_inner(on_columns_w_idx, list(on)).drop(on).native
-            # NOTE: Almost identical to `pivot_agg` now!
-            pivot = acero.pivot_table(
-                single_on, temp_name, on_columns_encoded, index, values
-            )
-        return self._finish_pivot(pivot, on_columns_, index, values, separator)
-
-    # TODO @dangotbanned: Align each of the impls more, then de-duplicate
-    def pivot_agg(
-        self,
-        on: Sequence[str],
-        on_columns: Self,
-        *,
-        index: Sequence[str],
-        values: Sequence[str],
-        aggregate_function: PivotAgg,
-        separator: str = "_",
-    ) -> Self:
-        native = self.native
-        tp_agg = group_by.SUPPORTED_PIVOT_AGG[aggregate_function]
-        agg_func = group_by.SUPPORTED_AGG[tp_agg]
-        option = pa_options.AGG.get(tp_agg)
-        specs = (group_by.AggSpec(value, agg_func, option) for value in values)
-
-        if len(on) == 1:
-            pre_agg = acero.group_by_table(native, [*index, *on], specs)
-            return self._with_native(pre_agg).pivot(
-                on, on_columns, index=index, values=values, separator=separator
-            )
-        on_columns_ = on_columns.native
-        temp_name = temp.column_name(native.column_names)
-        on_columns_w_idx = on_columns.with_row_index(temp_name)
-        on_columns_encoded = on_columns_w_idx.get_column(temp_name).native
-        single_on = self.join_inner(on_columns_w_idx, list(on)).drop(on).native
-
-        pre_agg = acero.group_by_table(single_on, [*index, temp_name], specs)
-        # this part is the tricky one, since the pivot and the renaming use different reprs for `on_columns`
-        pivot = acero.pivot_table(pre_agg, temp_name, on_columns_encoded, index, values)
-        return self._finish_pivot(pivot, on_columns_, index, values, separator)
-
-    def _finish_pivot(
-        self,
-        pivot: pa.Table,
-        on_columns: pa.Table,
-        index: Sequence[str],
-        values: Sequence[str],
-        separator: str = "_",
-    ) -> Self:
-        # Everything here should be moved to `acero.pivot_table` if possible
-        pivot_columns = pivot.columns
-        n_index = len(index)
-        unnested = structs_to_arrays(*pivot_columns[n_index:], flatten=True)
-        names = (*index, *_on_columns_names(on_columns, values, separator=separator))
-        result = fn.concat_horizontal((*pivot_columns[:n_index], *unnested), names)
+        result = acero.pivot_table(
+            self.native,
+            on,
+            on_columns.native,
+            index,
+            values,
+            aggregate_function,
+            separator,
+        )
         return self._with_native(result)
 
 
@@ -428,73 +364,3 @@ def with_arrays(
         else:
             table = table.append_column(name, column)
     return table
-
-
-def struct_to_arrays(native: ChunkedStruct | StructArray) -> Sequence[ChunkedOrArrayAny]:
-    """Unnest the fields of a struct into one array per-struct-field.
-
-    Cheaper than `unnest`-ing into a `Table`, and very helpful if the names are going to be replaced.
-    """
-    return cast("ChunkedStruct | pa.StructArray", native).flatten()
-
-
-@overload
-def structs_to_arrays(
-    *structs: ChunkedStruct | StructArray,
-) -> Iterator[Sequence[ChunkedOrArrayAny]]: ...
-@overload
-def structs_to_arrays(
-    *structs: ChunkedStruct | StructArray, flatten: Literal[True]
-) -> Iterator[ChunkedOrArrayAny]: ...
-def structs_to_arrays(
-    *structs: ChunkedStruct | StructArray, flatten: bool = False
-) -> Iterator[Sequence[ChunkedOrArrayAny] | ChunkedOrArrayAny]:
-    """Unnest the fields of every struct into one array per-struct-field.
-
-    By default, yields the arrays of each struct *as a group*, configurable via `flatten`.
-
-    Arguments:
-        *structs: One or more Struct-typed arrow arrays.
-        flatten: Yield each array from each struct *without grouping*.
-    """
-    if flatten:
-        for struct in structs:
-            yield from struct_to_arrays(struct)
-    else:
-        for struct in structs:
-            yield struct_to_arrays(struct)
-
-
-def _on_columns_names(
-    on_columns: pa.Table, values: Sequence[str], *, separator: str = "_"
-) -> Iterable[str]:
-    """Alignment to polars pivot column naming conventions.
-
-    If we started with:
-
-        {'on_lower': ['b', 'a', 'b', 'a'], 'on_upper': ['X', 'X', 'Y', 'Y']}
-
-    Then this operation will return:
-
-        ['{"b","X"}', '{"a","X"}', '{"b","Y"}', '{"a","Y"}']
-    """
-    result: Iterable[Any]
-    if on_columns.num_columns == 1:
-        on_column = on_columns.column(0)
-        if len(values) == 1:
-            result = on_column.to_pylist()
-        else:
-            t_left = fn.to_table(fn.array(values))
-            # NOTE: still don't know why pyarrow outputs the cross join in reverse
-            t_right = fn.to_table(fn.reverse(on_column))
-            cross_joined = acero.join_cross_tables(t_left, t_right)
-            result = fn.concat_str(*cross_joined.columns, separator=separator).to_pylist()
-    else:
-        result = fn.concat_str(
-            '{"', fn.concat_str(*on_columns.columns, separator='","'), '"}'
-        ).to_pylist()
-        if len(values) != 1:
-            return (
-                f"{value}{separator}{name}" for value, name in product(values, result)
-            )
-    return cast("list[str]", result)
