@@ -476,7 +476,7 @@ class DataFrame(
     def pivot(
         self,
         on: str | list[str],
-        on_columns: Sequence[str] | Series | None = None,
+        on_columns: Sequence[str] | Series | Self | None = None,
         *,
         index: str | list[str] | None = None,
         values: str | list[str] | None = None,
@@ -499,6 +499,10 @@ class DataFrame(
             if sort_columns:
                 nw_on_cols = nw_on_cols.sort(on_)
             on_cols = nw_on_cols._compliant
+        # TODO @dangotbanned: need to cover, can't find any polars tests for it though
+        # https://github.com/pola-rs/polars/pull/25016
+        elif isinstance(on_columns, DataFrame):
+            on_cols = on_columns._compliant
         elif len(on_) != 1:  # pragma: no cover
             msg = (
                 f"`on_columns: {qualified_type_name(on_columns)}` is not compatible with multiple `on` values, got:\n"
@@ -511,6 +515,14 @@ class DataFrame(
                 .cast(dtype_str)
                 .to_frame()
             )
+
+        if len(on_) != on_cols.width:
+            msg = "`pivot` expected `on` and `on_columns` to have the same amount of columns."
+            raise InvalidOperationError(msg)
+        if on_ != tuple(on_cols.columns):
+            msg = "`pivot` has mismatching column names between `on` and `on_columns`."
+            raise InvalidOperationError(msg)
+
         return self._with_compliant(
             self._compliant.pivot(
                 on_,
@@ -705,6 +717,9 @@ def normalize_pivot_args(
     """
     columns = frame_columns
     on_ = ensure_seq_str(on)
+    if not on_:
+        msg = "`pivot` called without `on` columns."
+        raise InvalidOperationError(msg)
     if index is None:
         if values is None:
             msg = "At least one of `values` and `index` must be passed"
