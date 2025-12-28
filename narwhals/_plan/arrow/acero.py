@@ -337,7 +337,7 @@ def _pivot_replace_flatten_names(
     values: Sequence[str],
     separator: str,
 ) -> pa.Table:
-    """Replace the separator used in unnested pivot struct columns.
+    """Replace the separator used in unnested `pivot` struct columns.
 
     [`pa.Table.flatten`] *unconditionally* uses the separator `"."`, so we *likely* need to fix that here.
 
@@ -389,9 +389,11 @@ def pivot_table(
     aggregate_function: PivotAgg | None,
     separator: str,
 ) -> pa.Table:
-    from narwhals._plan.arrow import functions as fn, group_by
+    """Create a spreadsheet-style `pivot` table.
 
-    pivot_on_columns: list[Any]
+    Supports  multiple-`on` and aggregations.
+    """
+    from narwhals._plan.arrow import functions as fn, group_by
 
     if len(on) != 1:
         on_concat = fn.concat_str(
@@ -402,11 +404,13 @@ def pivot_table(
         pivot_target = join_inner_tables(
             native, on_columns.append_column(pivot_on, on_concat), on_list
         ).drop(on_list)
-        pivot_on_columns = on_concat.to_pylist()
+        pivot_on_columns: list[Any] = on_concat.to_pylist()
     else:
-        pivot_target = native
         pivot_on = on[0]
+        pivot_target = native
         pivot_on_columns = on_columns.column(0).to_pylist()
+    # TODO @dangotbanned: Avoid the circular `acero` <-> `group_by` dependency
+    # Or, at least isolate things so we only depend on one member in this direction
     if aggregate_function:
         tp_agg = group_by.SUPPORTED_PIVOT_AGG[aggregate_function]
         agg_func = group_by.SUPPORTED_AGG[tp_agg]
