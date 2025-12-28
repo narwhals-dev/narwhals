@@ -486,7 +486,7 @@ def _on_columns_names(
         else:
             t_left = fn.to_table(fn.array(values))
             # NOTE: still don't know why pyarrow outputs the cross join in reverse
-            t_right = fn.to_table(on_column[::-1])
+            t_right = fn.to_table(fn.reverse(on_column))
             cross_joined = acero.join_cross_tables(t_left, t_right)
             result = fn.concat_str(*cross_joined.columns, separator=separator).to_pylist()
     else:
