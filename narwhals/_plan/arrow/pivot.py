@@ -1,15 +1,23 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
-from narwhals._plan.arrow import acero, functions as fn, group_by, options as pa_options
+import pyarrow.compute as pc
+
+from narwhals._plan.arrow import (
+    acero,
+    compat,
+    functions as fn,
+    group_by,
+    options as pa_options,
+)
 from narwhals._plan.arrow.group_by import AggSpec
 from narwhals._plan.common import temp
 from narwhals._plan.expressions import aggregation as agg
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Callable, Mapping, Sequence
 
     import pyarrow as pa
 
@@ -91,7 +99,7 @@ def _pivot(
     separator: str,
 ) -> pa.Table:
     """Perform a single-`on`, non-aggregating `pivot`."""
-    options = pa_options.pivot_wider(on_columns)
+    options = _pivot_wider_options(on_columns)
     specs = (AggSpec((on, name), "hash_pivot_wider", options, name) for name in values)
     pivot = acero.group_by_table(native, index, specs)
     flat = pivot.flatten()
@@ -115,3 +123,15 @@ def _aggregate(
     option = pa_options.AGG.get(tp_agg)
     specs = (AggSpec(value, agg_func, option) for value in values)
     return acero.group_by_table(native, [*index, on], specs)
+
+
+def _pivot_wider_options(on_columns: Sequence[Any]) -> pc.FunctionOptions:
+    """Tries to wrap [`pc.PivotWiderOptions`], and raises if we're on an old `pyarrow`.
+
+    [`pc.PivotWiderOptions`]: https://arrow.apache.org/docs/python/generated/pyarrow.compute.PivotWiderOptions.html
+    """
+    if compat.HAS_PIVOT_WIDER and (tp := getattr(pc, "PivotWiderOptions")):  # noqa: B009
+        tp_options = cast("Callable[..., pc.FunctionOptions]", tp)
+        return tp_options(on_columns, unexpected_key_behavior="raise")
+    msg = f"`pivot` requires `pyarrow>=20`, got {compat.BACKEND_VERSION!r}"
+    raise NotImplementedError(msg)
