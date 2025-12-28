@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import functools
 import operator
+import re
 from functools import reduce
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Final, Literal, Union, cast
@@ -48,12 +49,7 @@ if TYPE_CHECKING:
         Aggregation as _Aggregation,
     )
     from narwhals._plan.arrow.group_by import AggSpec
-    from narwhals._plan.arrow.typing import (
-        ArrowAny,
-        ChunkedOrArrayAny,
-        JoinTypeSubset,
-        ScalarAny,
-    )
+    from narwhals._plan.arrow.typing import ArrowAny, JoinTypeSubset, ScalarAny
     from narwhals._plan.typing import OneOrIterable, Seq
     from narwhals.typing import NonNestedLiteral
 
@@ -334,25 +330,56 @@ def group_by_table(
     return collect(table_source(native), group_by(keys, aggs), use_threads=use_threads)
 
 
+def _pivot_replace_flatten_names(
+    flattened: pa.Table,
+    /,
+    on_columns_names: Sequence[str],
+    values: Sequence[str],
+    separator: str,
+) -> pa.Table:
+    """Replace the separator used in unnested pivot struct columns.
+
+    [`pa.Table.flatten`] *unconditionally* uses the separator `"."`, so we *likely* need to fix that here.
+
+    [`pa.Table.flatten`]: https://arrow.apache.org/docs/python/generated/pyarrow.Table.html#pyarrow.Table.flatten
+    """
+    if separator == ".":
+        return flattened
+    p_on_columns = "|".join(re.escape(name) for name in on_columns_names)
+    p_values = "|".join(re.escape(name) for name in values)
+    pattern = re.compile(rf"^(?P<on_column>{p_on_columns})\.(?P<value>{p_values})\Z")
+    repl = rf"\g<on_column>{separator}\g<value>"
+    names = flattened.column_names
+    return flattened.rename_columns([pattern.sub(repl, s) for s in names])
+
+
 def _pivot_table(
     native: pa.Table,
     on: str,
-    on_columns: ChunkedOrArrayAny | Sequence[Any],
+    on_columns: Sequence[Any],
     /,
     index: Sequence[str],
     values: Sequence[str],
+    separator: str,
 ) -> pa.Table:
-    """Partial `pivot` implementation."""
+    """Perform a single-`on`, non-aggregating `pivot`."""
     from narwhals._plan.arrow.group_by import AggSpec
 
     options = pa_options.pivot_wider(on_columns)
     specs = (AggSpec((on, name), "hash_pivot_wider", options, name) for name in values)
-    return group_by_table(native, index, specs)
+    pivot = group_by_table(native, index, specs)
+    flat = pivot.flatten()
+    if len(values) == 1:
+        tp = pivot.field(values[0]).type
+        if not pa.types.is_struct(tp):
+            msg = f"Expected only struct types but got {tp!r}"
+            raise NotImplementedError(msg)
+        return flat.rename_columns([*index, *(f.name for f in tp)])
+    return _pivot_replace_flatten_names(flat, values, on_columns, separator)
 
 
 # TODO @dangotbanned: Split things out, but keep the new shared flow
-# TODO @dangotbanned: Optimize `len(values) > 1`
-def pivot_table(  # noqa: PLR0914
+def pivot_table(
     native: pa.Table,
     on: Sequence[str],
     on_columns: pa.Table,
@@ -364,7 +391,7 @@ def pivot_table(  # noqa: PLR0914
 ) -> pa.Table:
     from narwhals._plan.arrow import functions as fn, group_by
 
-    pivot_on_columns: ChunkedOrArrayAny | Sequence[Any]
+    pivot_on_columns: list[Any]
 
     if len(on) != 1:
         on_concat = fn.concat_str(
@@ -379,43 +406,15 @@ def pivot_table(  # noqa: PLR0914
     else:
         pivot_target = native
         pivot_on = on[0]
-        pivot_on_columns = on_columns.column(0)
+        pivot_on_columns = on_columns.column(0).to_pylist()
     if aggregate_function:
         tp_agg = group_by.SUPPORTED_PIVOT_AGG[aggregate_function]
         agg_func = group_by.SUPPORTED_AGG[tp_agg]
         option = pa_options.AGG.get(tp_agg)
         specs = (group_by.AggSpec(value, agg_func, option) for value in values)
         pivot_target = group_by_table(pivot_target, [*index, pivot_on], specs)
-    pivot = _pivot_table(pivot_target, pivot_on, pivot_on_columns, index, values)
-    pivot_columns = pivot.columns
-    n_index = len(index)
-    index_columns = pivot_columns[:n_index]
-    if len(values) == 1:
-        struct = pivot_columns[-1]
-        unnest_names = fn.struct_field_names(struct)
-        unnest_columns = struct.flatten()
-    else:
-        # TODO @dangotbanned: Swap out with using `Table.flatten` and using a regex replace to fix the generated names
-        # NOTE: Slow version for poc only!
-        # https://arrow.apache.org/docs/python/generated/pyarrow.Table.html#pyarrow.Table.flatten
-        # `pyarrow.Table`
-        # `a.animals: string`
-        # `a.n_legs: int64`
-        # `a.year: int64`
-        # `month: int64`
-        values_list = list(values)
-        structs_table = pivot.select(values_list)
-        unnest_names = []
-        unnest_columns = []
-        # NOTE: **Don't** replace this with `pivot_columns[n_index:]`!!
-        # I Want this to be slow to force a regex rewrite that skips the nested loops
-        for name, struct in zip(values, structs_table.itercolumns()):
-            unnest_columns.extend(struct.flatten())
-            unnest_names.extend(
-                [f"{name}{separator}{f_name}" for f_name in fn.struct_field_names(struct)]
-            )
-    return fn.concat_horizontal(
-        (*index_columns, *unnest_columns), (*index, *unnest_names)
+    return _pivot_table(
+        pivot_target, pivot_on, pivot_on_columns, index, values, separator
     )
 
 
