@@ -351,6 +351,38 @@ def test_pivot_no_agg_no_duplicates(
     assert_equal_data(result, expected)
 
 
+def test_pivot_no_values(request: pytest.FixtureRequest) -> None:
+    # https://github.com/pola-rs/polars/blob/473951bcf8c49fc23bee5ee7b8853b5dd063cb9d/py-polars/tests/unit/operations/test_pivot.py#L39-L65
+    data = {
+        "foo": ["A", "A", "B", "B", "C"],
+        "bar": ["k", "l", "m", "n", "o"],
+        "N1": [1, 2, 2, 4, 2],
+        "N2": [1, 2, 2, 4, 2],
+    }
+    df = dataframe(data)
+    require_pyarrow_20(df, request)
+    result = df.pivot(on="bar", index="foo")
+    expected = {
+        "foo": ["A", "B", "C"],
+        "N1_k": [1, None, None],
+        "N1_l": [2, None, None],
+        "N1_m": [None, 2, None],
+        "N1_n": [None, 4, None],  # < these 2 are flipped for pyarrow?
+        "N1_o": [None, None, 2],  # <
+        "N2_k": [1, None, None],
+        "N2_l": [2, None, None],
+        "N2_m": [None, 2, None],
+        "N2_n": [None, 4, None],  # < and down here as well
+        "N2_o": [None, None, 2],  # <
+    }
+    request.applymarker(
+        pytest.mark.xfail(
+            reason="BUG: Figure out why result in wrong column", raises=AssertionError
+        )
+    )
+    assert_equal_data(result, expected)
+
+
 def test_pivot_no_index_no_values(data_no_dups: Data) -> None:
     df = dataframe(data_no_dups)
     with pytest.raises(
