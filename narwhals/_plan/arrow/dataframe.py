@@ -13,6 +13,7 @@ from narwhals._plan.arrow import acero, compat, functions as fn
 from narwhals._plan.arrow.common import ArrowFrameSeries as FrameSeries
 from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
 from narwhals._plan.arrow.group_by import ArrowGroupBy as GroupBy, partition_by
+from narwhals._plan.arrow.pivot import pivot_table
 from narwhals._plan.arrow.series import ArrowSeries as Series
 from narwhals._plan.common import temp
 from narwhals._plan.compliant.dataframe import EagerDataFrame
@@ -335,9 +336,9 @@ class ArrowDataFrame(
         aggregate_function: PivotAgg | None = None,
         separator: str = "_",
     ) -> Self:
-        result = acero.pivot_table(
+        result = pivot_table(
             self.native,
-            on,
+            list(on),
             on_columns.native,
             index,
             values,

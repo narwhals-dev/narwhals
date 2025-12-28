@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import functools
 import operator
-import re
 from functools import reduce
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Final, Literal, Union, cast
@@ -26,11 +25,10 @@ import pyarrow.acero as pac
 import pyarrow.compute as pc  # ignore-banned-import
 from pyarrow.acero import Declaration as Decl
 
-from narwhals._plan.arrow import options as pa_options
 from narwhals._plan.common import ensure_list_str, temp
 from narwhals._plan.typing import NonCrossJoinStrategy, OneOrSeq
 from narwhals._utils import check_column_names_are_unique
-from narwhals.typing import JoinStrategy, PivotAgg, SingleColSelector
+from narwhals.typing import JoinStrategy, SingleColSelector
 
 if TYPE_CHECKING:
     from collections.abc import (
@@ -328,98 +326,6 @@ def group_by_table(
     aggs = tuple(aggs)
     use_threads = all(spec.use_threads for spec in aggs)
     return collect(table_source(native), group_by(keys, aggs), use_threads=use_threads)
-
-
-def _pivot_replace_flatten_names(
-    flattened: pa.Table,
-    /,
-    on_columns_names: Sequence[str],
-    values: Sequence[str],
-    separator: str,
-) -> pa.Table:
-    """Replace the separator used in unnested `pivot` struct columns.
-
-    [`pa.Table.flatten`] *unconditionally* uses the separator `"."`, so we *likely* need to fix that here.
-
-    [`pa.Table.flatten`]: https://arrow.apache.org/docs/python/generated/pyarrow.Table.html#pyarrow.Table.flatten
-    """
-    if separator == ".":
-        return flattened
-    p_on_columns = "|".join(re.escape(name) for name in on_columns_names)
-    p_values = "|".join(re.escape(name) for name in values)
-    pattern = re.compile(rf"^(?P<on_column>{p_on_columns})\.(?P<value>{p_values})\Z")
-    repl = rf"\g<on_column>{separator}\g<value>"
-    names = flattened.column_names
-    return flattened.rename_columns([pattern.sub(repl, s) for s in names])
-
-
-def _pivot_table(
-    native: pa.Table,
-    on: str,
-    on_columns: Sequence[Any],
-    /,
-    index: Sequence[str],
-    values: Sequence[str],
-    separator: str,
-) -> pa.Table:
-    """Perform a single-`on`, non-aggregating `pivot`."""
-    from narwhals._plan.arrow.group_by import AggSpec
-
-    options = pa_options.pivot_wider(on_columns)
-    specs = (AggSpec((on, name), "hash_pivot_wider", options, name) for name in values)
-    pivot = group_by_table(native, index, specs)
-    flat = pivot.flatten()
-    if len(values) == 1:
-        tp = pivot.field(values[0]).type
-        if not pa.types.is_struct(tp):
-            msg = f"Expected only struct types but got {tp!r}"
-            raise NotImplementedError(msg)
-        return flat.rename_columns([*index, *(f.name for f in tp)])
-    return _pivot_replace_flatten_names(flat, values, on_columns, separator)
-
-
-# TODO @dangotbanned: Split things out, but keep the new shared flow
-def pivot_table(
-    native: pa.Table,
-    on: Sequence[str],
-    on_columns: pa.Table,
-    /,
-    index: Sequence[str],
-    values: Sequence[str],
-    aggregate_function: PivotAgg | None,
-    separator: str,
-) -> pa.Table:
-    """Create a spreadsheet-style `pivot` table.
-
-    Supports  multiple-`on` and aggregations.
-    """
-    from narwhals._plan.arrow import functions as fn, group_by
-
-    if len(on) != 1:
-        on_concat = fn.concat_str(
-            '{"', fn.concat_str(*on_columns.columns, separator='","'), '"}'
-        )
-        pivot_on = temp.column_name(native.column_names)
-        on_list = list(on)
-        pivot_target = join_inner_tables(
-            native, on_columns.append_column(pivot_on, on_concat), on_list
-        ).drop(on_list)
-        pivot_on_columns: list[Any] = on_concat.to_pylist()
-    else:
-        pivot_on = on[0]
-        pivot_target = native
-        pivot_on_columns = on_columns.column(0).to_pylist()
-    # TODO @dangotbanned: Avoid the circular `acero` <-> `group_by` dependency
-    # Or, at least isolate things so we only depend on one member in this direction
-    if aggregate_function:
-        tp_agg = group_by.SUPPORTED_PIVOT_AGG[aggregate_function]
-        agg_func = group_by.SUPPORTED_AGG[tp_agg]
-        option = pa_options.AGG.get(tp_agg)
-        specs = (group_by.AggSpec(value, agg_func, option) for value in values)
-        pivot_target = group_by_table(pivot_target, [*index, pivot_on], specs)
-    return _pivot_table(
-        pivot_target, pivot_on, pivot_on_columns, index, values, separator
-    )
 
 
 def filter_table(native: pa.Table, *predicates: Expr, **constraints: Any) -> pa.Table:
