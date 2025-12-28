@@ -23,6 +23,13 @@ XFAIL_PYARROW_MEDIAN = pytest.mark.xfail(
     raises=(AssertionError, NotImplementedError),
 )
 
+# TODO @dangotbanned: Consider fixing this?
+# The `pandas` impl on `main` has the same issue
+XFAIL_ALWAYS_ZERO_AGG = pytest.mark.xfail(
+    reason="`sum` & `len` are special-cased in `polars` to always return 0 instead on `None`",
+    raises=(AssertionError, NotImplementedError),
+)
+
 
 @pytest.fixture(scope="module")
 def scores() -> Data:
@@ -32,16 +39,6 @@ def scores() -> Data:
         "subject": ["maths", "physics", "maths", "physics"],
         "test_1": [98, 99, 61, 58],
         "test_2": [100, 100, 60, 60],
-    }
-
-
-@pytest.fixture(scope="module")
-def tanh_mean() -> Data:
-    """Dataset 3 `pl.DataFrame.pivot` docstring."""
-    return {
-        "col1": ["a", "a", "a", "b", "b", "b"],
-        "col2": ["x", "x", "x", "x", "y", "y"],
-        "col3": [6, 7, 3, 2, 5, 7],
     }
 
 
@@ -401,35 +398,31 @@ def test_pivot_test_scores_2(scores: Data, request: pytest.FixtureRequest) -> No
     assert_equal_data(result, expected)
 
 
-# TODO @dangotbanned: Consider fixing this?
-# The `pandas` impl on `main` has the same issue
 @pytest.mark.parametrize(
-    ("aggregate_function", "expected"),
+    ("agg_fn", "expected_rows"),
     [
-        ("first", {"x": [6, 2], "y": [None, 5]}),
         pytest.param(
-            "sum",
-            {"x": [16, 2], "y": [0, 12]},
-            marks=pytest.mark.xfail(
-                reason="`sum` is special-cased in `polars` to always return 0",
-                raises=(AssertionError, NotImplementedError),
-            ),
+            "sum", [("a", 6, 0, 0), ("b", 0, 8, 10)], marks=XFAIL_ALWAYS_ZERO_AGG
         ),
+        pytest.param(
+            "len", [("a", 2, 0, 0), ("b", 0, 2, 1)], marks=XFAIL_ALWAYS_ZERO_AGG
+        ),
+        ("first", [("a", 2, None, None), ("b", None, None, 10)]),
+        ("min", [("a", 2, None, None), ("b", None, 8, 10)]),
+        ("max", [("a", 4, None, None), ("b", None, 8, 10)]),
+        ("mean", [("a", 3.0, None, None), ("b", None, 8.0, 10.0)]),
     ],
-    ids=["first-null", "sum-zero"],
 )
-def test_pivot_test_tanh_mean(
-    tanh_mean: Data,
-    aggregate_function: PivotAgg,
-    expected: Data,
-    request: pytest.FixtureRequest,
+def test_pivot_aggregate(
+    agg_fn: PivotAgg, expected_rows: list[tuple[Any, ...]], request: pytest.FixtureRequest
 ) -> None:
-    # NOTE: Docstring example uses `pl.element().tanh().mean()`
-    # Here though, we're just reusing the dataset as it exposes an edge case
-    df = dataframe(tanh_mean)
-    require_pyarrow_20(df, request)
-    expected = {"col1": ["a", "b"], **expected}
-    result = df.pivot(
-        "col2", index="col1", values="col3", aggregate_function=aggregate_function
+    # https://github.com/pola-rs/polars/blob/473951bcf8c49fc23bee5ee7b8853b5dd063cb9d/py-polars/tests/unit/operations/test_pivot.py#L89-L112
+    df = dataframe(
+        {"a": [1, 1, 2, 2, 3], "b": ["a", "a", "b", "b", "b"], "c": [2, 4, None, 8, 10]}
     )
-    assert_equal_data(result, expected)
+    require_pyarrow_20(df, request)
+    result = df.pivot(
+        "a", index="b", values="c", aggregate_function=agg_fn, sort_columns=True
+    )
+    result_rows = [*zip(*result.to_dict(as_series=False).values())]
+    assert result_rows == expected_rows
