@@ -351,7 +351,12 @@ def test_pivot_no_agg_no_duplicates(
     assert_equal_data(result, expected)
 
 
-def test_pivot_no_values(request: pytest.FixtureRequest) -> None:
+# TODO @dangotbanned: Report upstream https://github.com/apache/arrow/issues/new?template=bug_report.yaml
+@pytest.mark.xfail(
+    reason="BUG: Incorrect results, `pyarrow` not consistent with `polars` and `pandas`",
+    raises=(AssertionError, NotImplementedError),
+)
+def test_pivot_no_values() -> None:
     # https://github.com/pola-rs/polars/blob/473951bcf8c49fc23bee5ee7b8853b5dd063cb9d/py-polars/tests/unit/operations/test_pivot.py#L39-L65
     data = {
         "foo": ["A", "A", "B", "B", "C"],
@@ -360,7 +365,6 @@ def test_pivot_no_values(request: pytest.FixtureRequest) -> None:
         "N2": [1, 2, 2, 4, 2],
     }
     df = dataframe(data)
-    require_pyarrow_20(df, request)
     result = df.pivot(on="bar", index="foo")
     expected = {
         "foo": ["A", "B", "C"],
@@ -375,11 +379,6 @@ def test_pivot_no_values(request: pytest.FixtureRequest) -> None:
         "N2_n": [None, 4, None],  # < and down here as well
         "N2_o": [None, None, 2],  # <
     }
-    request.applymarker(
-        pytest.mark.xfail(
-            reason="BUG: Figure out why result in wrong column", raises=AssertionError
-        )
-    )
     assert_equal_data(result, expected)
 
 
