@@ -68,10 +68,21 @@ def pivot_table(
 
 
 def _format_on_columns_titles(on_columns: pa.Table, /) -> ChunkedArray[StringScalar]:
-    separators = ('","',) * on_columns.num_columns
-    it = chain.from_iterable(zip(separators, on_columns.columns))
-    next(it)  # skip the first one, we don't need it
-    return fn.concat_str('{"', *it, '"}')
+    dtype = fn.string_type(on_columns.schema.types)
+    on_columns = fn.cast_table(on_columns, dtype)
+    parts = '{"', '"}', "", '","'
+    LB, RB, EMPTY, SEP = (fn.lit(s, dtype) for s in parts)  # noqa: N806
+
+    # NOTE: Variation of https://more-itertools.readthedocs.io/en/stable/api.html#more_itertools.intersperse
+    seps = (SEP,) * on_columns.num_columns
+    interspersed = chain.from_iterable(zip(seps, on_columns.itercolumns()))
+    # skip the first separator, we just need the zip-terminating iterable to be the columns
+    next(interspersed)
+    func = "binary_join_element_wise"
+    args = [LB, *interspersed, RB, EMPTY]
+    opts = pa_options.join(ignore_nulls=False)
+    result: ChunkedArray[StringScalar] = pc.call_function(func, args, opts)
+    return result
 
 
 def _replace_flatten_names(
