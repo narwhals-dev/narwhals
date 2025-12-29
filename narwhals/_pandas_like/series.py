@@ -1097,7 +1097,7 @@ class PandasLikeSeries(EagerSeries[Any]):
 
             result_native = self._apply_pyarrow_compute_func(
                 native,
-                pc.sin,  # type: ignore[reportArgumentType]
+                pc.sin,  # type: ignore[arg-type]
             )
         else:
             array_func = self._array_funcs.sin
