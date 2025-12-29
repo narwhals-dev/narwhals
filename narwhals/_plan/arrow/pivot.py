@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from itertools import chain
 from typing import TYPE_CHECKING, Any, cast
 
 import pyarrow.compute as pc
@@ -21,6 +22,7 @@ if TYPE_CHECKING:
 
     import pyarrow as pa
 
+    from narwhals._plan.arrow.typing import ChunkedArray, StringScalar
     from narwhals.typing import PivotAgg
 
 
@@ -55,9 +57,7 @@ def pivot_table(
         on_one = on[0]
         target = native
     else:
-        on_column = fn.concat_str(
-            '{"', fn.concat_str(*on_columns.columns, separator='","'), '"}'
-        )
+        on_column = _format_on_columns_titles(on_columns)
         on_one = temp.column_name(native.column_names)
         target = acero.join_inner_tables(
             native, on_columns.append_column(on_one, on_column), on
@@ -65,6 +65,13 @@ def pivot_table(
     if aggregate_function:
         target = _aggregate(target, on_one, index, values, aggregate_function)
     return _pivot(target, on_one, on_column.to_pylist(), index, values, separator)
+
+
+def _format_on_columns_titles(on_columns: pa.Table, /) -> ChunkedArray[StringScalar]:
+    separators = ('","',) * on_columns.num_columns
+    it = chain.from_iterable(zip(separators, on_columns.columns))
+    next(it)  # skip the first one, we don't need it
+    return fn.concat_str('{"', *it, '"}')
 
 
 def _replace_flatten_names(
