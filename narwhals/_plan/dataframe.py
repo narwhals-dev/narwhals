@@ -267,20 +267,19 @@ class DataFrame(
     # otherwise, we can reuse the method on an existing `Series` instance
     def _parse_into_compliant_series(
         self, other: Series[Any] | Iterable[Any], /, name: str = ""
-    ) -> CompliantSeries[NativeSeriesT]:  # pragma: no cover
+    ) -> CompliantSeries[NativeSeriesT]:
         if columns := self.columns:
             compliant = self.get_column(columns[0])._parse_into_compliant(other)
-            return compliant if not name else compliant.alias(name)
-        tp_series = self.__narwhals_namespace__()._series
-        if not is_series(other):
-            return tp_series.from_iterable(other, version=self.version, name=name)
-        s = other._compliant
-        if isinstance(s, tp_series):
-            return s
-        msg = (
-            f"Expected {qualified_type_name(tp_series)!r}, got {qualified_type_name(s)!r}"
-        )
-        raise NotImplementedError(msg)
+            return compliant if not name or compliant.name else compliant.alias(name)
+        else:  # pragma: no cover # noqa: RET505
+            tp_series = self.__narwhals_namespace__()._series
+            if not is_series(other):
+                return tp_series.from_iterable(other, version=self.version, name=name)
+            s = other._compliant
+            if isinstance(s, tp_series):
+                return s
+            msg = f"Expected {qualified_type_name(tp_series)!r}, got {qualified_type_name(s)!r}"
+            raise NotImplementedError(msg)
 
     @overload
     @classmethod
@@ -499,16 +498,8 @@ class DataFrame(
             if sort_columns:
                 nw_on_cols = nw_on_cols.sort(on_)
             on_cols = nw_on_cols._compliant
-        # TODO @dangotbanned: need to cover, can't find any polars tests for it though
-        # https://github.com/pola-rs/polars/pull/25016
         elif isinstance(on_columns, DataFrame):
             on_cols = on_columns._compliant
-        elif len(on_) != 1:  # pragma: no cover
-            msg = (
-                f"`on_columns: {qualified_type_name(on_columns)}` is not compatible with multiple `on` values, got:\n"
-                f"`on={on!r}`\n`on_columns={on_columns!r}`"
-            )
-            raise InvalidOperationError(msg)
         else:
             on_cols = (
                 self._parse_into_compliant_series(on_columns, on_[0])

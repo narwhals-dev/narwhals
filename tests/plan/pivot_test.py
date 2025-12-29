@@ -8,7 +8,7 @@ import pytest
 import narwhals._plan as nwp
 import narwhals._plan.selectors as ncs
 from narwhals._utils import Implementation
-from narwhals.exceptions import NarwhalsError
+from narwhals.exceptions import InvalidOperationError, NarwhalsError
 from tests.plan.utils import assert_equal_data, dataframe, re_compile
 from tests.utils import PYARROW_VERSION
 
@@ -389,6 +389,38 @@ def test_pivot_no_index_no_values(data_no_dups: Data) -> None:
         ValueError, match=re_compile(r"at least one of.+values.+index.+must")
     ):
         df.pivot("on_lower")
+
+
+def test_pivot_on_invalid(data: Data) -> None:
+    df = dataframe(data)
+    with pytest.raises(InvalidOperationError, match=r"`pivot` called without `on`"):
+        df.pivot([], index="idx_1", values="foo")
+
+
+def test_pivot_on_columns_invalid(data: Data) -> None:
+    df = dataframe(data)
+    on_1 = "on_lower"
+    on_2 = ["on_lower", "on_upper"]
+    index = "idx_1"
+
+    df_1 = df.select(on_1)
+    df_2 = df.select(on_2)
+    df_2_mismatch = df_2.rename(dict(zip(on_2, reversed(on_2))))
+    ser = df.get_column(on_1)
+
+    same_n_cols = r"expected `on`.+`on_columns`.+same amount of columns"
+    mismatch_names = r"mismatching column names between `on` and `on_columns`"
+
+    with pytest.raises(InvalidOperationError, match=same_n_cols):
+        df.pivot(on_1, df_2, index=index)
+    with pytest.raises(InvalidOperationError, match=same_n_cols):
+        df.pivot(on_2, df_1, index=index)
+    with pytest.raises(InvalidOperationError, match=same_n_cols):
+        df.pivot(on_2, ser, index=index)
+    with pytest.raises(InvalidOperationError, match=mismatch_names):
+        df.pivot(on_2, df_2_mismatch, index=index)
+    with pytest.raises(InvalidOperationError, match=mismatch_names):
+        df.pivot([on_1], ser.alias("bad"), index=index)
 
 
 def test_pivot_implicit_index(data_no_dups: Data, request: pytest.FixtureRequest) -> None:
