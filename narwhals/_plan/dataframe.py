@@ -263,8 +263,6 @@ class DataFrame(
 
         return fn
 
-    # NOTE: Most of this is for the edge-case of a 0-column dataframe
-    # otherwise, we can reuse the method on an existing `Series` instance
     def _parse_into_compliant_series(
         self, other: Series[Any] | Iterable[Any], /, name: str = ""
     ) -> CompliantSeries[NativeSeriesT]:
