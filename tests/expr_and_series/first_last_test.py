@@ -260,10 +260,7 @@ def test_first_expr_broadcasting(
 def test_first_expr_invalid(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if any(x in str(constructor) for x in ("spark", "dask")) and "sqlframe" not in str(
-        constructor
-    ):
-        # ibis: https://github.com/ibis-project/ibis/issues/11656
+    if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     data = {
         "grp": [1, 1, 1, 2],
