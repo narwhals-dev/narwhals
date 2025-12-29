@@ -112,6 +112,7 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
                 f"found version {requires._unparse_version(self._df._backend_version)!r}.\n\n"
                 f"See https://github.com/apache/arrow/issues/36709"
             )
+            raise NotImplementedError(msg)
         if order_by:
             return pa.TableGroupBy(
                 self.compliant.sort(*order_by, descending=False, nulls_last=False).native,
