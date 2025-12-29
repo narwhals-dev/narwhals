@@ -106,7 +106,7 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
             if md.name in self._OPTION_ORDERED:
                 # [pyarrow-36709]: https://github.com/apache/arrow/issues/36709
                 use_threads = False
-        if use_threads and self.compliant._backend_version < (14, 0):
+        if not use_threads and self.compliant._backend_version < (14, 0):
             msg = (
                 f"Using `first/last` in a `group_by().agg(...)` context is only available in 'pyarrow>=14.0.0', "
                 f"found version {requires._unparse_version(self._df._backend_version)!r}.\n\n"
