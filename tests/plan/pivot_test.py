@@ -355,9 +355,11 @@ def test_pivot_no_agg_no_duplicates(
     assert_equal_data(result, expected)
 
 
-# TODO @dangotbanned: Report upstream https://github.com/apache/arrow/issues/new?template=bug_report.yaml
 @pytest.mark.xfail(
-    reason="BUG: Incorrect results, `pyarrow` not consistent with `polars` and `pandas`",
+    reason=(
+        "BUG: Incorrect results, `pyarrow` not consistent with `polars` and `pandas`.\n"
+        "https://github.com/apache/arrow/issues/48679"
+    ),
     raises=(AssertionError, NotImplementedError),
 )
 def test_pivot_no_values() -> None:
