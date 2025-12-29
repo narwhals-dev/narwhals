@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections import deque
+
 # ruff: noqa: FBT001
 from typing import TYPE_CHECKING, Any
 
@@ -13,6 +15,7 @@ from tests.plan.utils import assert_equal_data, dataframe, re_compile
 from tests.utils import PYARROW_VERSION
 
 if TYPE_CHECKING:
+    from narwhals._plan.typing import OneOrIterable
     from narwhals.typing import PivotAgg
     from tests.conftest import Data
 
@@ -200,12 +203,13 @@ def require_pyarrow_20(
     ],
 )
 @pytest.mark.parametrize(
-    ("on", "index"), [("on_lower", "idx_1"), (["on_lower"], ["idx_1"])]
+    ("on", "index"),
+    [("on_lower", "idx_1"), (deque(["on_lower"]), dict.fromkeys(["idx_1"]).keys())],
 )
 def test_pivot_agg(
     data: Data,
-    on: str | list[str],
-    index: str | list[str],
+    on: OneOrIterable[str],
+    index: OneOrIterable[str],
     agg_func: PivotAgg,
     expected: Data,
     request: pytest.FixtureRequest,
@@ -420,6 +424,24 @@ def test_pivot_on_columns_invalid(data: Data) -> None:
         df.pivot(on_2, df_2_mismatch, index=index)
     with pytest.raises(InvalidOperationError, match=mismatch_names):
         df.pivot([on_1], ser.alias("bad"), index=index)
+
+
+def test_pivot_non_iterable_invalid() -> None:
+    small = {"a": [1], "b": [2], "c": [3]}
+    df = dataframe(small)
+    match = re_compile(r"expected one or.+iterable.+string.+got.+int")
+    with pytest.raises(TypeError, match=match):
+        df.pivot(1, index="b", values="c")  # type: ignore[arg-type]
+    with pytest.raises(TypeError, match=match):
+        df.pivot("a", index=2, values="c")  # type: ignore[arg-type]
+    with pytest.raises(TypeError, match=match):
+        df.pivot("a", index="b", values=3)  # type: ignore[arg-type]
+    with pytest.raises(TypeError, match=match):
+        df.pivot(1, index=2, values="c")  # type: ignore[arg-type]
+    with pytest.raises(TypeError, match=match):
+        df.pivot("a", index=2, values=3)  # type: ignore[arg-type]
+    with pytest.raises(TypeError, match=match):
+        df.pivot(1, index="b", values=3)  # type: ignore[arg-type]
 
 
 def test_pivot_implicit_index(data_no_dups: Data, request: pytest.FixtureRequest) -> None:

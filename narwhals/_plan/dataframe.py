@@ -470,13 +470,14 @@ class DataFrame(
         partitions = self._compliant.partition_by(names, include_key=include_key)
         return [self._with_compliant(p) for p in partitions]
 
+    # TODO @dangotbanned: (Follow-up) Accept selectors in `on`, `index`, `values`
     def pivot(
         self,
-        on: str | list[str],
+        on: OneOrIterable[str],
         on_columns: Sequence[str] | Series | Self | None = None,
         *,
-        index: str | list[str] | None = None,
-        values: str | list[str] | None = None,
+        index: OneOrIterable[str] | None = None,
+        values: OneOrIterable[str] | None = None,
         aggregate_function: PivotAgg | None = None,
         sort_columns: bool = False,
         separator: str = "_",
