@@ -94,11 +94,8 @@ def is_into_expr_column(obj: Any) -> TypeIs[IntoExprColumn]:
     return isinstance(obj, (str, _expr().Expr, _series().Series))
 
 
-def is_column_name_or_selector(
-    obj: Any, *, allow_expr: bool = False
-) -> TypeIs[ColumnNameOrSelector]:
-    tps = (str, _selectors().Selector) if not allow_expr else (str, _expr().Expr)
-    return isinstance(obj, tps)
+def is_column_name_or_selector(obj: Any) -> TypeIs[ColumnNameOrSelector]:
+    return isinstance(obj, (str, _selectors().Selector))
 
 
 def is_compliant_series(

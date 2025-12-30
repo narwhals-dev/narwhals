@@ -39,16 +39,7 @@ def test_unique_invalid_keep(data: Data) -> None:
         (nwp.nth(5).meta.as_selector(), ColumnNotFoundError),
         (["a", "b", "A"], ColumnNotFoundError),
         (nwp.col("a").first(), InvalidOperationError),
-        pytest.param(
-            ncs.first().last(),
-            InvalidOperationError,
-            # TODO @dangotbanned: Fix this in another PR
-            # Need to be stricter on the Selector check
-            marks=pytest.mark.xfail(
-                reason="narwhals/_plan/_expansion.py:160: 'Last' object has no attribute 'iter_expand_names'",
-                raises=AttributeError,
-            ),
-        ),
+        (ncs.first().last(), InvalidOperationError),
     ],
 )
 def test_unique_invalid_subset(data: Data, subset: Any, err: type[Exception]) -> None:
