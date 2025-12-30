@@ -223,7 +223,10 @@ def _assert_dataframe_equal(
             )
         except AssertionError:
             raise_frame_assertion_error(
-                f'value mismatch for column "{col_name}"', _series_left, _series_right
+                detail="value mismatch for column",
+                left=_series_left,
+                right=_series_right,
+                detail_suffix=f' "{col_name}"',
             )
 
 
@@ -245,11 +248,17 @@ def _check_schema_equal(
 
     if left_not_in_right := sorted(lset.difference(rset)):
         raise_frame_assertion_error(
-            detail=f"{left_not_in_right} in left, but not in right", left=lset, right=rset
+            detail="in left, but not in right",
+            left=lset,
+            right=rset,
+            detail_prefix=f"{left_not_in_right} ",
         )
     if right_not_in_left := sorted(rset.difference(lset)):
         raise_frame_assertion_error(
-            detail=f"{right_not_in_left} in right, but not in left", left=lset, right=rset
+            detail="in right, but not in left",
+            left=lset,
+            right=rset,
+            detail_prefix=f"{right_not_in_left} ",
         )
 
     if check_column_order and lnames != rnames:

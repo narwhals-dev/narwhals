@@ -26,6 +26,9 @@ if TYPE_CHECKING:
         "dtypes do not match",
         "height (row count) mismatch",
         "implementation mismatch",
+        "in left, but not in right",
+        "in right, but not in left",
+        "value mismatch for column",
     ]
 
 
@@ -58,14 +61,14 @@ def raise_series_assertion_error(
 
 
 def raise_frame_assertion_error(
-    detail: DataFramesDetail | str,
+    detail: DataFramesDetail,
     left: Any,
     right: Any,
     *,
+    detail_prefix: str = "",
+    detail_suffix: str = "",
     cause: Exception | None = None,
 ) -> Never:
-    # NOTE: `DataFramesDetail | str` makes the literal (`DataFramesDetail`) redundant.
-    # However, the suggestions still show up as autocompletion in the editor when typing.
-    # The reason to have `str` is due to the fact that some details are dynamic
-    # and depend upon which columns lead to the assertion error.
-    raise_assertion_error("DataFrames", detail, left, right, cause=cause)
+    raise_assertion_error(
+        "DataFrames", f"{detail_prefix}{detail}{detail_suffix}", left, right, cause=cause
+    )
