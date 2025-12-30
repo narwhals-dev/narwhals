@@ -7,8 +7,10 @@ from typing import TYPE_CHECKING, Any, Literal, TypedDict
 import pytest
 
 import narwhals._plan as nwp
+from narwhals._utils import Implementation
 from narwhals.exceptions import DuplicateError
 from tests.plan.utils import assert_equal_data, dataframe, re_compile
+from tests.utils import PYARROW_VERSION
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -327,12 +329,35 @@ def test_join_not_implemented(data_a_only: Data) -> None:
 # - Maybe move to a different file later
 # - `strategy='nearest'` will not be supported
 
-XFAIL_NOT_IMPL_JOIN_ASOF = pytest.mark.xfail(
-    reason="TODO: `ArrowDataFrame.join_asof`", raises=NotImplementedError
-)
+
+def is_pyarrow(df: nwp.DataFrame[Any, Any]) -> bool:
+    return df.implementation is Implementation.PYARROW
 
 
-@XFAIL_NOT_IMPL_JOIN_ASOF
+def require_pyarrow_16(
+    df: nwp.DataFrame[Any, Any], request: pytest.FixtureRequest
+) -> None:
+    request.applymarker(
+        pytest.mark.xfail(
+            (is_pyarrow(df) and PYARROW_VERSION < (16, 0, 0)),
+            reason="pyarrow too old for `join_asof` support",
+        )
+    )
+
+
+def xfail_nearest(
+    df: nwp.DataFrame[Any, Any],
+    strategy: AsofJoinStrategy,
+    request: pytest.FixtureRequest,
+) -> None:
+    request.applymarker(
+        pytest.mark.xfail(
+            (is_pyarrow(df) and strategy == "nearest"),
+            reason="Only 'backward' and 'forward' strategies are currently supported for `pyarrow`",
+        )
+    )
+
+
 @pytest.mark.parametrize(
     ("strategy", "expected"),
     [
@@ -355,11 +380,13 @@ XFAIL_NOT_IMPL_JOIN_ASOF = pytest.mark.xfail(
     ],
 )
 def test_join_asof_numeric(
-    strategy: AsofJoinStrategy, expected: Data
-) -> None:  # pragma: no cover
+    strategy: AsofJoinStrategy, expected: Data, request: pytest.FixtureRequest
+) -> None:
     df = dataframe({"antananarivo": [1, 5, 10], "val": ["a", "b", "c"]}).sort(
         "antananarivo"
     )
+    require_pyarrow_16(df, request)
+    xfail_nearest(df, strategy, request)
     df_right = dataframe({"antananarivo": [1, 2, 3, 6, 7], "val": [1, 2, 3, 6, 7]}).sort(
         "antananarivo"
     )
@@ -371,7 +398,6 @@ def test_join_asof_numeric(
     assert_equal_data(result_on.sort(by="antananarivo"), expected)
 
 
-@XFAIL_NOT_IMPL_JOIN_ASOF
 @pytest.mark.parametrize(
     ("strategy", "expected"),
     [
@@ -414,8 +440,8 @@ def test_join_asof_numeric(
     ],
 )
 def test_join_asof_time(
-    strategy: AsofJoinStrategy, expected: Data
-) -> None:  # pragma: no cover
+    strategy: AsofJoinStrategy, expected: Data, request: pytest.FixtureRequest
+) -> None:
     df = dataframe(
         {
             "datetime": [
@@ -426,6 +452,8 @@ def test_join_asof_time(
             "population": [82.19, 82.66, 83.12],
         }
     ).sort("datetime")
+    require_pyarrow_16(df, request)
+    xfail_nearest(df, strategy, request)
     df_right = dataframe(
         {
             "datetime": [
@@ -446,11 +474,11 @@ def test_join_asof_time(
     assert_equal_data(result_on.sort(by="datetime"), expected)
 
 
-@XFAIL_NOT_IMPL_JOIN_ASOF
-def test_join_asof_by() -> None:  # pragma: no cover
+def test_join_asof_by(request: pytest.FixtureRequest) -> None:
     df = dataframe(
         {"antananarivo": [1, 5, 7, 10], "bob": ["D", "D", "C", "A"], "c": [9, 2, 1, 1]}
     ).sort("antananarivo")
+    require_pyarrow_16(df, request)
     df_right = dataframe(
         {"antananarivo": [1, 4, 5, 8], "bob": ["D", "D", "A", "F"], "d": [1, 3, 4, 1]}
     ).sort("antananarivo")
@@ -466,10 +494,17 @@ def test_join_asof_by() -> None:  # pragma: no cover
     assert_equal_data(result_by.sort(by="antananarivo"), expected)
 
 
-@XFAIL_NOT_IMPL_JOIN_ASOF
-def test_join_asof_suffix() -> None:  # pragma: no cover
+def test_join_asof_suffix(request: pytest.FixtureRequest) -> None:
     df = dataframe({"antananarivo": [1, 5, 10], "val": ["a", "b", "c"]}).sort(
         "antananarivo"
+    )
+    require_pyarrow_16(df, request)
+    request.applymarker(
+        pytest.mark.xfail(
+            (is_pyarrow(df)),
+            reason="pyarrow does not support `suffix`",
+            raises=NotImplementedError,
+        )
     )
     df_right = dataframe({"antananarivo": [1, 2, 3, 6, 7], "val": [1, 2, 3, 6, 7]}).sort(
         "antananarivo"

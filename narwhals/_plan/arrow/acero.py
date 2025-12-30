@@ -28,7 +28,7 @@ from pyarrow.acero import Declaration as Decl
 from narwhals._plan.common import ensure_list_str, temp
 from narwhals._plan.typing import NonCrossJoinStrategy, OneOrSeq
 from narwhals._utils import check_column_names_are_unique
-from narwhals.typing import JoinStrategy, SingleColSelector
+from narwhals.typing import AsofJoinStrategy, JoinStrategy, SingleColSelector
 
 if TYPE_CHECKING:
     from collections.abc import (
@@ -276,6 +276,65 @@ def _hashjoin(
     left: IntoDecl, right: IntoDecl, /, options: pac.HashJoinNodeOptions
 ) -> Decl:
     return Decl("hashjoin", options, [_into_decl(left), _into_decl(right)])
+
+
+def _asofjoin(
+    left: pa.Table, right: pa.Table, /, options: pac.AsofJoinNodeOptions
+) -> Decl:
+    return Decl("asofjoin", options, [table_source(left), table_source(right)])
+
+
+def _join_asof_ensure_no_collisions(
+    left: pa.Table,
+    right: pa.Table,
+    right_on: str,
+    right_by: Sequence[str] = (),
+    suffix: str = "_right",
+) -> None:
+    if suffix != "_right":
+        msg = f"`pyarrow` does not support `join_asof({suffix=})`"
+        raise NotImplementedError(msg)
+    # AsofJoin does not return on or by columns for right_operand.
+    excluding = {right_on, *right_by}
+    right_columns = {col for col in right.schema.names if col not in excluding}
+    if columns_collisions := set(left.schema.names) & right_columns:
+        msg = (
+            f"Columns {columns_collisions} present in both tables. "
+            "AsofJoin does not support column collisions."
+        )
+        raise ValueError(msg)
+
+
+# TODO @dangotbanned: Figure out what the tolerance should be
+def _join_asof_tolerance(
+    left: pa.Table, right: pa.Table, strategy: AsofJoinStrategy
+) -> int:
+    if strategy == "nearest":
+        msg = "Only 'backward' and 'forward' strategies are currently supported for `pyarrow`"
+        raise NotImplementedError(msg)
+    msg = f"TODO: Derive `join_asof(tolerance=...)` from:\n{left.num_rows=}, {right.num_rows=}, {strategy=}"
+    raise NotImplementedError(msg)
+
+
+def join_asof_tables(
+    left: pa.Table,
+    right: pa.Table,
+    left_on: str,
+    right_on: str,
+    *,
+    left_by: Sequence[str] = (),
+    right_by: Sequence[str] = (),
+    strategy: AsofJoinStrategy = "backward",
+    suffix: str = "_right",
+) -> pa.Table:
+    _join_asof_ensure_no_collisions(left, right, right_on, right_by, suffix=suffix)
+    tolerance = _join_asof_tolerance(left, right, strategy)
+    lb: list[Any] = [] if not left_by else list(left_by)
+    rb: list[Any] = [] if not right_by else list(right_by)
+    join_opts = pac.AsofJoinNodeOptions(
+        left_on=left_on, right_on=right_on, left_by=lb, right_by=rb, tolerance=tolerance
+    )
+    return _asofjoin(left, right, join_opts).to_table()
 
 
 def declare(*declarations: Decl) -> Decl:

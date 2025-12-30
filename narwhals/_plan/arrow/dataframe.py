@@ -15,7 +15,7 @@ from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
 from narwhals._plan.arrow.group_by import ArrowGroupBy as GroupBy, partition_by
 from narwhals._plan.arrow.pivot import pivot_table
 from narwhals._plan.arrow.series import ArrowSeries as Series
-from narwhals._plan.common import temp, todo
+from narwhals._plan.common import temp
 from narwhals._plan.compliant.dataframe import EagerDataFrame
 from narwhals._plan.compliant.typing import LazyFrameAny, namespace
 from narwhals._plan.exceptions import shape_error
@@ -37,7 +37,7 @@ if TYPE_CHECKING:
     from narwhals._plan.typing import NonCrossJoinStrategy
     from narwhals._typing import _LazyAllowedImpl
     from narwhals.dtypes import DType
-    from narwhals.typing import IntoSchema, PivotAgg, UniqueKeepStrategy
+    from narwhals.typing import AsofJoinStrategy, IntoSchema, PivotAgg, UniqueKeepStrategy
 
 Incomplete: TypeAlias = Any
 
@@ -308,8 +308,31 @@ class ArrowDataFrame(
         """Less flexible, but more direct equivalent to join(how="inner", left_on=...)`."""
         return self._with_native(acero.join_inner_tables(self.native, other.native, on))
 
-    join_asof = todo()
-    join_asof_by = todo()
+    def join_asof(
+        self,
+        other: Self,
+        *,
+        left_on: str,
+        right_on: str,
+        strategy: AsofJoinStrategy,
+        suffix: str,
+        left_by: Sequence[str] = (),
+        right_by: Sequence[str] = (),
+    ) -> Self:
+        return self._with_native(
+            acero.join_asof_tables(
+                self.native,
+                other.native,
+                left_on,
+                right_on,
+                left_by=left_by,
+                right_by=right_by,
+                strategy=strategy,
+                suffix=suffix,
+            )
+        )
+
+    join_asof_by = join_asof
 
     def _filter(self, predicate: Predicate | acero.Expr) -> Self:
         mask: Incomplete = predicate
