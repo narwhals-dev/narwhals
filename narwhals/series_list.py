@@ -219,3 +219,29 @@ class SeriesListNamespace(Generic[SeriesT]):
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.list.sum()
         )
+
+    def sort(self, *, descending: bool = False, nulls_last: bool = False) -> SeriesT:
+        """Sort the lists of the series.
+
+        Arguments:
+            descending: Sort in descending order.
+            nulls_last: Place null values last.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s_native = pl.Series([[2, -1, 1], [3, -4, None]])
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.list.sort().to_native()  # doctest: +NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: '' [list[i64]]
+            [
+                    [-1, 1, 2]
+                    [null, -4, 3]
+            ]
+        """
+        return self._narwhals_series._with_compliant(
+            self._narwhals_series._compliant_series.list.sort(
+                descending=descending, nulls_last=nulls_last
+            )
+        )

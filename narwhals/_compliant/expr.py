@@ -1014,6 +1014,11 @@ class EagerExprListNamespace(
     def sum(self) -> EagerExprT:
         return self.compliant._reuse_series_namespace("list", "sum")
 
+    def sort(self, *, descending: bool, nulls_last: bool) -> EagerExprT:
+        return self.compliant._reuse_series_namespace(
+            "list", "sort", descending=descending, nulls_last=nulls_last
+        )
+
 
 class CompliantExprNameNamespace(  # type: ignore[misc]
     _ExprNamespace[CompliantExprT_co],

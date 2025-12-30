@@ -1,4 +1,10 @@
 document$.subscribe(function() {
+  // Only run on api-completeness pages
+  var currentPath = window.location.pathname
+  if (!currentPath.includes('/api-completeness/')) {
+    return
+  }
+  
   var tables = document.querySelectorAll("article table:not([class])")
   tables.forEach(function(table) {
     new Tablesort(table)
