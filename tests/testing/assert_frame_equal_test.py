@@ -236,11 +236,6 @@ def test_check_row_order_nested_only(
         assert_frame_equal(left, left, check_row_order=False)
 
 
-# TODO(FBruzzesi): Do we even this? What should we check?
-# The best way could be to migrate away from `assert_equal_data` in the test suite
-def test_values_mismatch(constructor: Constructor) -> None: ...
-
-
 def test_self_equal(constructor: Constructor, testing_data: Data) -> None:
     """Test that a dataframe is equal to itself, including nested dtypes with nulls.
 
@@ -255,3 +250,6 @@ def test_self_equal(constructor: Constructor, testing_data: Data) -> None:
     _data = {k: v for k, v in testing_data.items() if k not in cols_to_drop}
     df = nw.from_native(constructor(_data))
     assert_frame_equal(df, df)
+
+    # Keep to cover early return when no rows present but same schema
+    assert_frame_equal(df.head(0), df.head(0))

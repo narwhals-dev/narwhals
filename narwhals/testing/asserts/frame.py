@@ -12,6 +12,7 @@ from narwhals.testing.asserts.utils import (
 )
 
 if TYPE_CHECKING:
+    from narwhals._typing import Arrow, IntoBackend, Pandas, Polars
     from narwhals.typing import DataFrameT, LazyFrameT
 
 GUARANTEES_ROW_ORDER = {
@@ -35,31 +36,39 @@ def assert_frame_equal(
     rel_tol: float = 1e-5,
     abs_tol: float = 1e-8,
     categorical_as_str: bool = False,
+    backend: IntoBackend[Polars | Pandas | Arrow] | None = None,
 ) -> None:
     """Assert that the left and right frames are equal.
 
     Raises a detailed `AssertionError` if the frames differ.
     This function is intended for use in unit tests.
 
-    Notes:
-        In the case of backends that do not guarantee the row order, such as DuckDB, Ibis,
-        PySpark, and SQLFrame, `check_row_order` argument is ignored and the comparands
-        are sorted by all the columns regardless.
+    Warning:
+        1. In the case of backends that do not guarantee the row order, such as DuckDB,
+            Ibis, PySpark, and SQLFrame, `check_row_order` argument is ignored and the
+            comparands are sorted by all the columns regardless.
+        2. In the case of lazy backends a [`.collect()`][narwhals.LazyFrame.collect]
+            operation is triggered.
 
     Arguments:
         left: The first DataFrame or LazyFrame to compare.
         right: The second DataFrame or LazyFrame to compare.
-        check_row_order: Requires row order to match. This flag is ignored for backends
-            that do not guarantee row order such as DuckDB, Ibis, PySpark, SQLFrame.
+        check_row_order: Requires row order to match.
+
+            This flag is ignored for backends that do not guarantee row order such as
+            DuckDB, Ibis, PySpark, SQLFrame.
         check_column_order: Requires column order to match.
         check_dtypes: Requires data types to match.
         check_exact: Requires float values to match exactly. If set to `False`, values are
             considered equal when within tolerance of each other (see `rel_tol` and `abs_tol`).
+
             Only affects columns with a Float data type.
         rel_tol: Relative tolerance for inexact checking. Fraction of values in `right`.
         abs_tol: Absolute tolerance for inexact checking.
         categorical_as_str: Cast categorical columns to string before comparing.
             Enabling this helps compare columns that do not share the same string cache.
+        backend: Allows to specify which eager backend to collect to.
+            Check out [`narwhals.LazyFrame.collect`][] for more information.
 
     Examples:
         >>> import polars as pl
@@ -118,7 +127,7 @@ def assert_frame_equal(
     if left_impl != right_impl:
         raise_frame_assertion_error("implementation mismatch", left_impl, right_impl)
 
-    left_eager, right_eager = _check_correct_input_type(left, right)
+    left_eager, right_eager = _check_correct_input_type(left, right, backend=backend)
 
     _assert_dataframe_equal(
         left=left_eager,
@@ -135,14 +144,16 @@ def assert_frame_equal(
 
 
 def _check_correct_input_type(  # noqa: RET503
-    left: DataFrameT | LazyFrameT, right: DataFrameT | LazyFrameT
+    left: DataFrameT | LazyFrameT,
+    right: DataFrameT | LazyFrameT,
+    backend: IntoBackend[Polars | Pandas | Arrow] | None,
 ) -> tuple[DataFrame[Any], DataFrame[Any]]:
     # Adapted from https://github.com/pola-rs/polars/blob/afdbf3056d1228cf493901e45f536b0905cec8ea/py-polars/src/polars/testing/asserts/frame.py#L15-L17
     if isinstance(left, DataFrame) and isinstance(right, DataFrame):
         return left, right
 
     if isinstance(left, LazyFrame) and isinstance(right, LazyFrame):
-        return left.collect(), right.collect()
+        return left.collect(backend), right.collect(backend)
 
     raise_assertion_error(
         "inputs",
@@ -175,14 +186,16 @@ def _assert_dataframe_equal(
     left_len, right_len = len(left), len(right)
     if left_len != right_len:
         raise_frame_assertion_error("height (row count) mismatch", left_len, right_len)
-    # TODO(FBruzzesi): Should we return early if row count is zero?
+
+    if left_len == 0:  # Return early due to same schema but no values
+        return
 
     left_schema = left.schema
     if (not check_row_order) or (impl not in GUARANTEES_ROW_ORDER):
-        # NOTE: Sort by all the non-nested dtypes columns.
+        # !NOTE: Sort by all the non-nested dtypes columns.
         # See: https://github.com/narwhals-dev/narwhals/issues/2939
-        # ! This might lead to wrong results if there are duplicate values in the sorting
-        # columns as the final order might still be non fully deterministic.
+        # !WARNING: This might lead to wrong results if there are duplicate values in the
+        # sorting columns as the final order might still be non fully deterministic.
         sort_by = [name for name, dtype in left_schema.items() if not dtype.is_nested()]
 
         if not sort_by:
@@ -230,21 +243,14 @@ def _check_schema_equal(
     lnames, rnames = lschema.names(), rschema.names()
     lset, rset = set(lnames), set(rnames)
 
-    if lset != rset:
-        if left_not_in_right := sorted(lset.difference(rset)):
-            raise_frame_assertion_error(
-                detail=f"{left_not_in_right} in left, but not in right",
-                left=lset,
-                right=rset,
-            )
-        if right_not_in_left := sorted(rset.difference(lset)):  # pragma: no cover
-            # NOTE: the `pragma: no cover` flag is due to a false negative.
-            # The last test in `test_check_schema_mismatch` does cover this case.
-            raise_frame_assertion_error(
-                detail=f"{right_not_in_left} in right, but not in left",
-                left=lset,
-                right=rset,
-            )
+    if left_not_in_right := sorted(lset.difference(rset)):
+        raise_frame_assertion_error(
+            detail=f"{left_not_in_right} in left, but not in right", left=lset, right=rset
+        )
+    if right_not_in_left := sorted(rset.difference(lset)):
+        raise_frame_assertion_error(
+            detail=f"{right_not_in_left} in right, but not in left", left=lset, right=rset
+        )
 
     if check_column_order and lnames != rnames:
         raise_frame_assertion_error(
