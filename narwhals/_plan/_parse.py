@@ -254,14 +254,14 @@ def _parse_into_iter_selector_ir(
 
     if not _is_empty_sequence(first_input):
         if _is_iterable(first_input) and not isinstance(first_input, str):
-            if more_inputs:  # pragma: no cover
+            if more_inputs:
                 raise invalid_into_expr_error(first_input, more_inputs, {})
             else:
                 for into in first_input:  # type: ignore[var-annotated]
                     yield parse_into_selector_ir(into)
         else:
             yield parse_into_selector_ir(first_input)
-    for into in more_inputs:  # pragma: no cover
+    for into in more_inputs:
         yield parse_into_selector_ir(into)
 
 

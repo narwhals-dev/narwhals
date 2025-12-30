@@ -7,7 +7,11 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 from narwhals._plan import selectors as ncs
-from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError
+from narwhals.exceptions import (
+    ColumnNotFoundError,
+    InvalidIntoExprError,
+    InvalidOperationError,
+)
 
 pytest.importorskip("pyarrow")
 pytest.importorskip("numpy")
@@ -22,6 +26,7 @@ from tests.plan.utils import (
     dataframe,
     first,
     last,
+    re_compile,
     series,
 )
 
@@ -549,6 +554,12 @@ def test_drop_strict() -> None:
     assert df.drop(ncs.last(), "z", strict=False).collect_schema().names() == ["a"]
 
 
+def test_drop_invalid(data_small_dh: Data) -> None:
+    df = dataframe(data_small_dh)
+    with pytest.raises(InvalidOperationError):
+        df.drop(ncs.first().first())
+
+
 def test_drop_nulls(data_small_dh: Data) -> None:
     df = dataframe(data_small_dh)
     expected: Data = {"d": [], "e": [], "f": [], "g": [], "h": []}
@@ -573,6 +584,36 @@ def test_drop_nulls_invalid(data_small_dh: Data) -> None:
 
     with pytest.raises(ColumnNotFoundError):
         df.drop_nulls(ncs.by_index(-999))
+
+
+def test_sort() -> None:
+    data_sort = {
+        "a": [8, 8, 1, None, 1, 1],
+        "b": [None, 0.9, 3.0, 0.9, None, None],
+        "c": [1, 1, 1, 2, 1, 2],
+        "idx": [0, 1, 2, 3, 4, 5],
+    }
+    result = dataframe(data_sort).sort(
+        ncs.first(), "c", ncs.float(), descending=[True, False, False], nulls_last=True
+    )
+    expected = {
+        "a": [8, 8, 1, 1, 1, None],
+        "b": [0.9, None, 3.0, None, None, 0.9],
+        "c": [1, 1, 1, 1, 2, 2],
+        "idx": [1, 0, 2, 4, 5, 3],
+    }
+    assert_equal_data(result, expected)
+
+
+def test_sort_invalid(data_small_dh: Data) -> None:
+    df = dataframe(data_small_dh)
+    with pytest.raises(ColumnNotFoundError):
+        df.sort(())
+    with pytest.raises(
+        InvalidIntoExprError,
+        match=re_compile(r"passing both iterable and positional inputs is not supported"),
+    ):
+        df.sort(["d"], ["e", "f"])  # type: ignore[arg-type]
 
 
 DROP_ROW_1: Data = {
