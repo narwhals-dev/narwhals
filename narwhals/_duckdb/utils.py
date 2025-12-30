@@ -302,7 +302,7 @@ def narwhals_to_native_dtype(  # noqa: PLR0912, C901
         duckdb_shape_fmt = "".join(f"[{item}]" for item in dtype.shape)
         return duckdb_dtypes.DuckDBPyType(f"{duckdb_inner}{duckdb_shape_fmt}")
     if isinstance(dtype, dtypes.Decimal):
-        return duckdb_dtypes.DuckDBPyType(f"DECIMAL({dtype.precision, dtype.scale})")
+        return duckdb_dtypes.DuckDBPyType(f"DECIMAL({dtype.precision}, {dtype.scale})")
     if issubclass(base_type, UNSUPPORTED_DTYPES):
         msg = f"Converting to {base_type.__name__} dtype is not supported for DuckDB."
         raise NotImplementedError(msg)

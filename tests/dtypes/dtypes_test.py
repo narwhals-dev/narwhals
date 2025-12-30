@@ -407,38 +407,27 @@ def test_huge_int_to_native() -> None:
     assert type_a_unit == "UHUGEINT"
 
 
-def test_cast_decimal_to_native() -> None:
-    pytest.importorskip("duckdb")
-    pytest.importorskip("pandas")
-    pytest.importorskip("polars")
-    pytest.importorskip("pyarrow")
+@pytest.mark.parametrize(
+    ("precision", "scale"), [(None, 1), (None, 20), (2, 1), (10, 1), (10, 8)]
+)
+def test_cast_decimal_to_native(
+    request: pytest.FixtureRequest,
+    constructor: Constructor,
+    precision: int | None,
+    scale: int,
+) -> None:
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail(reason="Unsupported dtype"))
 
-    import duckdb
-    import pandas as pd
-    import polars as pl
-    import pyarrow as pa
+    data = {"a": [1.1, 2.2, 3.3]}
 
-    data = {"a": [1, 2, 3]}
+    df = nw.from_native(constructor(data))
+    native_result = df.with_columns(
+        a=nw.col("a").cast(nw.Decimal(precision=precision, scale=scale))
+    ).to_native()
 
-    df = pl.DataFrame(data)
-    library_obj_to_test = [
-        df,
-        duckdb.sql("""
-            select cast(a as INT1) as a
-            from df
-                         """),
-        pd.DataFrame(data),
-        pa.Table.from_arrays(
-            [pa.array(data["a"])], schema=pa.schema([("a", pa.int64())])
-        ),
-    ]
-    for obj in library_obj_to_test:
-        with pytest.raises(NotImplementedError, match=r"to.+Decimal.+not supported."):
-            (
-                nw.from_native(obj)  # type: ignore[call-overload]
-                .with_columns(a=nw.col("a").cast(nw.Decimal()))
-                .to_native()
-            )
+    schema = nw.from_native(native_result).collect_schema()
+    assert schema["a"] == nw.Decimal(precision, scale)
 
 
 @pytest.mark.parametrize(

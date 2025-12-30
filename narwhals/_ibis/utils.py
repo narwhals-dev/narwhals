@@ -253,7 +253,6 @@ def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> IbisDataType
         return ibis_dtypes.Array(value_type=inner, length=dtype.size)
     if isinstance_or_issubclass(dtype, dtypes.Decimal):
         return ibis_dtypes.Decimal(dtype.precision, dtype.scale)
-
     if issubclass(base_type, UNSUPPORTED_DTYPES):
         msg = f"Converting to {base_type.__name__} dtype is not supported for Ibis."
         raise NotImplementedError(msg)

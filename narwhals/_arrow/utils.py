@@ -187,8 +187,8 @@ def native_non_extension_to_narwhals_dtype(dtype: pa.DataType, version: Version)
         return dtypes.Array(
             native_to_narwhals_dtype(dtype.value_type, version), dtype.list_size
         )
-    if pa.types.is_decimal(dtype):
-        return dtypes.Decimal(dtype.precision, dtype.scale)
+    if pa.types.is_decimal128(dtype):
+        return dtypes.Decimal(precision=dtype.precision, scale=dtype.scale)
     if pa.types.is_time32(dtype) or pa.types.is_time64(dtype):
         return dtypes.Time()
     if pa.types.is_binary(dtype):
@@ -242,7 +242,7 @@ def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> pa.DataType:
         list_size = dtype.size
         return pa.list_(inner, list_size=list_size)
     if isinstance_or_issubclass(dtype, dtypes.Decimal):
-        return pa.decimal128(dtype.precision, dtype.scale)
+        return pa.decimal128(precision=dtype.precision, scale=dtype.scale)
     if issubclass(base_type, UNSUPPORTED_DTYPES):
         msg = f"Converting to {base_type.__name__} dtype is not supported for PyArrow."
         raise NotImplementedError(msg)

@@ -220,6 +220,8 @@ class Decimal(NumericType):
         Decimal
     """
 
+    __slots__ = ("precision", "scale")
+
     precision: int
     scale: int
 
