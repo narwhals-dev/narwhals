@@ -797,21 +797,19 @@ def normalize_join_on(
     return on, on
 
 
-# TODO @dangotbanned: Fix type narrowing
 def normalize_join_asof_on(
     left_on: str | None, right_on: str | None, on: str | None
 ) -> tuple[str, str]:
     """Reduce the 3 potential `join_asof` (`*on`) arguments to 2."""
-    if (on is None) and (left_on is None or right_on is None):
-        msg = "Either (`left_on` and `right_on`) or `on` keys should be specified."
-        raise ValueError(msg)
-    if (on is not None) and (left_on is not None or right_on is not None):
+    if on is None:
+        if left_on is None or right_on is None:
+            msg = "Either (`left_on` and `right_on`) or `on` keys should be specified."
+            raise ValueError(msg)
+        return left_on, right_on
+    if left_on is not None or right_on is not None:
         msg = "If `on` is specified, `left_on` and `right_on` should be None."
         raise ValueError(msg)
-    if on is not None:
-        left_on = right_on = on
-
-    return left_on, right_on  # type: ignore[return-value]
+    return on, on
 
 
 # TODO @dangotbanned: Fix type narrowing
