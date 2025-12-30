@@ -15,7 +15,7 @@ from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
 from narwhals._plan.arrow.group_by import ArrowGroupBy as GroupBy, partition_by
 from narwhals._plan.arrow.pivot import pivot_table
 from narwhals._plan.arrow.series import ArrowSeries as Series
-from narwhals._plan.common import temp
+from narwhals._plan.common import temp, todo
 from narwhals._plan.compliant.dataframe import EagerDataFrame
 from narwhals._plan.compliant.typing import LazyFrameAny, namespace
 from narwhals._plan.exceptions import shape_error
@@ -307,6 +307,9 @@ class ArrowDataFrame(
     def join_inner(self, other: Self, on: list[str], /) -> Self:
         """Less flexible, but more direct equivalent to join(how="inner", left_on=...)`."""
         return self._with_native(acero.join_inner_tables(self.native, other.native, on))
+
+    join_asof = todo()
+    join_asof_by = todo()
 
     def _filter(self, predicate: Predicate | acero.Expr) -> Self:
         mask: Incomplete = predicate

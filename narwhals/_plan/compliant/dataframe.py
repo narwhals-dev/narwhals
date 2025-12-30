@@ -45,7 +45,7 @@ if TYPE_CHECKING:
     from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
     from narwhals._utils import Implementation, Version
     from narwhals.dtypes import DType
-    from narwhals.typing import IntoSchema, PivotAgg, UniqueKeepStrategy
+    from narwhals.typing import AsofJoinStrategy, IntoSchema, PivotAgg, UniqueKeepStrategy
 
 Incomplete: TypeAlias = Any
 
@@ -82,6 +82,26 @@ class CompliantFrame(HasVersion, Protocol[ColumnT_co, NativeFrameT_co]):
         suffix: str = "_right",
     ) -> Self: ...
     def join_cross(self, other: Self, *, suffix: str = "_right") -> Self: ...
+    def join_asof(
+        self,
+        other: Self,
+        *,
+        left_on: str,
+        right_on: str,
+        strategy: AsofJoinStrategy,
+        suffix: str,
+    ) -> Self: ...
+    def join_asof_by(
+        self,
+        other: Self,
+        *,
+        left_on: str,
+        right_on: str,
+        left_by: Sequence[str],  # https://github.com/pola-rs/polars/issues/18496
+        right_by: Sequence[str],
+        strategy: AsofJoinStrategy,
+        suffix: str,
+    ) -> Self: ...
     def rename(self, mapping: Mapping[str, str]) -> Self: ...
     @property
     def schema(self) -> Mapping[str, DType]: ...

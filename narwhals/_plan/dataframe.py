@@ -32,6 +32,7 @@ from narwhals.dependencies import is_pyarrow_table
 from narwhals.exceptions import InvalidOperationError, ShapeError
 from narwhals.schema import Schema
 from narwhals.typing import (
+    AsofJoinStrategy,
     EagerAllowed,
     FileSource,
     IntoBackend,
@@ -228,6 +229,22 @@ class BaseFrame(Generic[NativeFrameT_co]):
         return self._with_compliant(
             left.join(right, how=how, left_on=left_on, right_on=right_on, suffix=suffix)
         )
+
+    def join_asof(
+        self,
+        other: Incomplete,
+        *,
+        left_on: str | None = None,
+        right_on: str | None = None,
+        on: str | None = None,
+        by_left: str | Sequence[str] | None = None,
+        by_right: str | Sequence[str] | None = None,
+        by: str | Sequence[str] | None = None,
+        strategy: AsofJoinStrategy = "backward",
+        suffix: str = "_right",
+    ) -> Self:
+        msg = "TODO: `BaseFrame.join_asof`"
+        raise NotImplementedError(msg)
 
     def explode(
         self,
@@ -472,6 +489,31 @@ class DataFrame(
     ) -> Self:
         return super().join(
             other, how=how, left_on=left_on, right_on=right_on, on=on, suffix=suffix
+        )
+
+    def join_asof(
+        self,
+        other: Self,
+        *,
+        left_on: str | None = None,
+        right_on: str | None = None,
+        on: str | None = None,
+        by_left: str | Sequence[str] | None = None,
+        by_right: str | Sequence[str] | None = None,
+        by: str | Sequence[str] | None = None,
+        strategy: AsofJoinStrategy = "backward",
+        suffix: str = "_right",
+    ) -> Self:  # pragma: no cover
+        return super().join_asof(
+            other,
+            left_on=left_on,
+            right_on=right_on,
+            on=on,
+            by_left=by_left,
+            by_right=by_right,
+            by=by,
+            strategy=strategy,
+            suffix=suffix,
         )
 
     def filter(
