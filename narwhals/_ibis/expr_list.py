@@ -52,4 +52,18 @@ class IbisExprListNamespace(LazyExprNamespace["IbisExpr"], ListNamespace["IbisEx
 
         return self.compliant._with_callable(func)
 
+    def sort(self, *, descending: bool, nulls_last: bool) -> IbisExpr:
+        if descending:
+            msg = "Descending sort is not currently supported for Ibis."
+            raise NotImplementedError(msg)
+
+        def func(expr: ir.ArrayColumn) -> ir.ArrayValue:
+            if nulls_last:
+                return expr.sort()
+            expr_no_nulls = expr.filter(lambda x: x.notnull())
+            expr_nulls = expr.filter(lambda x: x.isnull())
+            return expr_nulls.concat(expr_no_nulls.sort())
+
+        return self.compliant._with_callable(func)
+
     median = not_implemented()

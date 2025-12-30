@@ -262,3 +262,39 @@ class ExprListNamespace(Generic[ExprT]):
             └────────────────────────┘
         """
         return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "list.sum"))
+
+    def sort(self, *, descending: bool = False, nulls_last: bool = False) -> ExprT:
+        """Sort the lists of the expression.
+
+        Arguments:
+            descending: Sort in descending order.
+            nulls_last: Place null values last.
+
+        Examples:
+            >>> import duckdb
+            >>> import narwhals as nw
+            >>> df_native = duckdb.sql(
+            ...     "SELECT * FROM VALUES ([2, -1, 1]), ([3, -4, NULL]) df(a)"
+            ... )
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(a_sorted=nw.col("a").list.sort())
+            ┌─────────────────────────────────┐
+            |       Narwhals LazyFrame        |
+            |---------------------------------|
+            |┌───────────────┬───────────────┐|
+            |│       a       │   a_sorted    │|
+            |│    int32[]    │    int32[]    │|
+            |├───────────────┼───────────────┤|
+            |│ [2, -1, 1]    │ [-1, 1, 2]    │|
+            |│ [3, -4, NULL] │ [NULL, -4, 3] │|
+            |└───────────────┴───────────────┘|
+            └─────────────────────────────────┘
+        """
+        return self._expr._append_node(
+            ExprNode(
+                ExprKind.ELEMENTWISE,
+                "list.sort",
+                descending=descending,
+                nulls_last=nulls_last,
+            )
+        )
