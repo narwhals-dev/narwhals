@@ -94,6 +94,21 @@ class BaseFrame(Generic[NativeFrameT_co]):
     def __init__(self, compliant: CompliantFrame[Any, NativeFrameT_co], /) -> None:
         self._compliant = compliant
 
+    def _unwrap_compliant(self, other: Self | Any, /) -> Incomplete:
+        """Return the `CompliantFrame` that backs `other` if it matches self.
+
+        - Rejects (`DataFrame`, `LazyFrame`) and (`LazyFrame`, `DataFrame`)
+        - Rejects mixed backends like (`DataFrame[pa.Table]`, `DataFrame[pd.DataFrame]`)
+        """
+        if isinstance(other, type(self)):
+            compliant = other._compliant
+            if isinstance(compliant, type(self._compliant)):
+                return compliant
+            msg = f"Expected {qualified_type_name(self._compliant)!r}, got {qualified_type_name(compliant)!r}"
+            raise NotImplementedError(msg)
+        msg = f"Expected `other` to be a {qualified_type_name(self)!r}, got: {qualified_type_name(other)!r}"  # pragma: no cover
+        raise TypeError(msg)  # pragma: no cover
+
     def _with_compliant(self, compliant: CompliantFrame[Any, Incomplete], /) -> Self:
         return type(self)(compliant)
 
@@ -190,6 +205,29 @@ class BaseFrame(Generic[NativeFrameT_co]):
         by_selectors = _parse.parse_into_seq_of_selector_ir(order_by)
         by_names = expand_selector_irs_names(by_selectors, schema=self, require_any=True)
         return self._with_compliant(self._compliant.with_row_index_by(name, by_names))
+
+    def join(
+        self,
+        other: Incomplete,
+        on: str | Sequence[str] | None = None,
+        how: JoinStrategy = "inner",
+        *,
+        left_on: str | Sequence[str] | None = None,
+        right_on: str | Sequence[str] | None = None,
+        suffix: str = "_right",
+    ) -> Self:
+        left = self._compliant
+        right: CompliantFrame[Any, NativeFrameT_co] = self._unwrap_compliant(other)
+        how = _validate_join_strategy(how)
+        if how == "cross":
+            if left_on is not None or right_on is not None or on is not None:
+                msg = "Can not pass `left_on`, `right_on` or `on` keys for cross join"
+                raise ValueError(msg)
+            return self._with_compliant(left.join_cross(right, suffix=suffix))
+        left_on, right_on = normalize_join_on(on, how, left_on, right_on)
+        return self._with_compliant(
+            left.join(right, how=how, left_on=left_on, right_on=right_on, suffix=suffix)
+        )
 
     def explode(
         self,
@@ -432,16 +470,8 @@ class DataFrame(
         right_on: str | Sequence[str] | None = None,
         suffix: str = "_right",
     ) -> Self:
-        left, right = self._compliant, other._compliant
-        how = _validate_join_strategy(how)
-        if how == "cross":
-            if left_on is not None or right_on is not None or on is not None:
-                msg = "Can not pass `left_on`, `right_on` or `on` keys for cross join"
-                raise ValueError(msg)
-            return self._with_compliant(left.join_cross(right, suffix=suffix))
-        left_on, right_on = normalize_join_on(on, how, left_on, right_on)
-        return self._with_compliant(
-            left.join(right, how=how, left_on=left_on, right_on=right_on, suffix=suffix)
+        return super().join(
+            other, how=how, left_on=left_on, right_on=right_on, on=on, suffix=suffix
         )
 
     def filter(
