@@ -15,7 +15,6 @@ from narwhals._plan._guards import (
     is_expr,
     is_into_expr_column,
     is_iterable_reject,
-    is_selector,
 )
 from narwhals._plan.common import flatten_hash_safe
 from narwhals._plan.exceptions import (
@@ -147,14 +146,12 @@ def parse_into_selector_ir(
 def _parse_into_selector(
     input: ColumnNameOrSelector | Expr, /, *, require_all: bool = True
 ) -> Selector:
-    if is_selector(input):
-        selector = input
+    if is_expr(input):
+        selector = input.meta.as_selector()
     elif isinstance(input, str):
         import narwhals._plan.selectors as cs
 
         selector = cs.by_name(input, require_all=require_all)
-    elif is_expr(input):
-        selector = input.meta.as_selector()
     else:
         msg = f"cannot turn {qualified_type_name(input)!r} into a selector"
         raise TypeError(msg)
@@ -257,14 +254,14 @@ def _parse_into_iter_selector_ir(
 
     if not _is_empty_sequence(first_input):
         if _is_iterable(first_input) and not isinstance(first_input, str):
-            if more_inputs:  # pragma: no cover
+            if more_inputs:
                 raise invalid_into_expr_error(first_input, more_inputs, {})
             else:
                 for into in first_input:  # type: ignore[var-annotated]
                     yield parse_into_selector_ir(into)
         else:
             yield parse_into_selector_ir(first_input)
-    for into in more_inputs:  # pragma: no cover
+    for into in more_inputs:
         yield parse_into_selector_ir(into)
 
 
