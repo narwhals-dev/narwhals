@@ -422,6 +422,12 @@ def test_cast_decimal_to_native(
     data = {"a": [1.1, 2.2, 3.3]}
 
     df = nw.from_native(constructor(data))
+
+    if df.implementation.is_pandas_like() and (
+        PYARROW_VERSION == (0, 0, 0) or PANDAS_VERSION < (1, 5)
+    ):
+        pytest.skip(reason="pyarrow is required to convert to decimal dtype")
+
     native_result = df.with_columns(
         a=nw.col("a").cast(nw.Decimal(precision=precision, scale=scale))
     ).to_native()

@@ -217,7 +217,7 @@ class Decimal(NumericType):
         >>> import narwhals as nw
         >>> s = pl.Series(["1.5"], dtype=pl.Decimal)
         >>> nw.from_native(s, series_only=True).dtype
-        Decimal
+        Decimal(precision=2, scale=1)
     """
 
     __slots__ = ("precision", "scale")
