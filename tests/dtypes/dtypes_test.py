@@ -424,7 +424,7 @@ def test_cast_decimal_to_native(
     df = nw.from_native(constructor(data))
 
     if df.implementation.is_pandas_like() and (
-        PYARROW_VERSION == (0, 0, 0) or PANDAS_VERSION < (1, 5)
+        PYARROW_VERSION == (0, 0, 0) or PANDAS_VERSION < (2, 2)
     ):
         pytest.skip(reason="pyarrow is required to convert to decimal dtype")
 
