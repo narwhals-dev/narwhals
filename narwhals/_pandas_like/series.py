@@ -37,7 +37,6 @@ if TYPE_CHECKING:
     import pyarrow as pa
     from typing_extensions import Self, TypeAlias, TypeIs
 
-    from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import ChunkedArrayAny
     from narwhals._compliant.series import HistData
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
@@ -1091,20 +1090,14 @@ class PandasLikeSeries(EagerSeries[Any]):
     def sqrt(self) -> Self:
         return self._with_native(self.native.pow(0.5))
 
-    def to_arrow_series(self) -> ArrowSeries:
-        pa_array: ChunkedArrayAny = self.native.array._pa_array
-        ns = self._version.namespace.from_backend("pyarrow").compliant
-        return ns.from_native(pa_array)
-
     def sin(self) -> Self:
         native = self.native
         if self.is_native_dtype_pyarrow(native.dtype):
-            result = self.to_arrow_series().sin()
-            out_dtype = narwhals_to_native_dtype(
-                result.dtype, "pyarrow", self._implementation, self._version
-            )
-            result_native = type(native)(
-                result.native, dtype=out_dtype, index=native.index, name=self.name
+            import pyarrow.compute as pc
+
+            result_native = self._apply_pyarrow_compute_func(
+                native,
+                pc.sin,  # type: ignore[arg-type]
             )
         else:
             array_func = self._array_funcs.sin
