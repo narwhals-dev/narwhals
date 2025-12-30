@@ -812,36 +812,27 @@ def normalize_join_asof_on(
     return on, on
 
 
-# TODO @dangotbanned: Fix type narrowing
-# TODO @dangotbanned: Return `Seq[str]`s instead of `list[str]`s
 def normalize_join_asof_by(
     by_left: str | Sequence[str] | None,
     by_right: str | Sequence[str] | None,
     by: str | Sequence[str] | None,
 ) -> tuple[Seq[str], Seq[str]]:
     """Reduce the 3 potential `join_asof` (`by*`) arguments to 2."""
-    if (by is None) and (
-        (by_left is None and by_right is not None)
-        or (by_left is not None and by_right is None)
-    ):
+    if by is None:
+        if by_left and by_right:
+            left_by = ensure_seq_str(by_left)
+            right_by = ensure_seq_str(by_right)
+            if len(left_by) != len(right_by):
+                msg = "`by_left` and `by_right` must have the same length."
+                raise ValueError(msg)
+            return left_by, right_by
         msg = "Can not specify only `by_left` or `by_right`, you need to specify both."
         raise ValueError(msg)
-    if (by is not None) and (by_left is not None or by_right is not None):
+    if by_left or by_right:
         msg = "If `by` is specified, `by_left` and `by_right` should be None."
         raise ValueError(msg)
-    if by is not None:  # pragma: no cover
-        by_left = by_right = by
-
-    by_left = [by_left] if isinstance(by_left, str) else by_left
-    by_right = [by_right] if isinstance(by_right, str) else by_right
-
-    if (isinstance(by_left, list) and isinstance(by_right, list)) and (
-        len(by_left) != len(by_right)
-    ):
-        msg = "`by_left` and `by_right` must have the same length."
-        raise ValueError(msg)
-
-    return by_left, by_right  # type: ignore[return-value]
+    by_ = ensure_seq_str(by)  # pragma: no cover
+    return by_, by_  # pragma: no cover
 
 
 def normalize_pivot_args(
