@@ -1,0 +1,515 @@
+from __future__ import annotations
+
+from collections import deque
+
+# ruff: noqa: FBT001
+from typing import TYPE_CHECKING, Any
+
+import pytest
+
+import narwhals._plan as nwp
+import narwhals._plan.selectors as ncs
+from narwhals._utils import Implementation
+from narwhals.exceptions import InvalidOperationError, NarwhalsError
+from tests.plan.utils import assert_equal_data, dataframe, re_compile
+from tests.utils import PYARROW_VERSION
+
+if TYPE_CHECKING:
+    from narwhals._plan.typing import OneOrIterable
+    from narwhals.typing import PivotAgg
+    from tests.conftest import Data
+
+# TODO @dangotbanned: Add more values for `median`, like in
+# https://github.com/narwhals-dev/narwhals/blob/b3d8c7349bbf7ecb7f11ea590c334e12d5c1d43e/tests/plan/list_agg_test.py#L24-L34
+XFAIL_PYARROW_MEDIAN = pytest.mark.xfail(
+    reason="Tried to use `'approximate_median'` but groups are too small",
+    raises=(AssertionError, NotImplementedError),
+)
+
+# TODO @dangotbanned: Consider fixing this?
+# The `pandas` impl on `main` has the same issue
+XFAIL_ALWAYS_ZERO_AGG = pytest.mark.xfail(
+    reason="`sum` & `len` are special-cased in `polars` to always return 0 instead on `None`",
+    raises=(AssertionError, NotImplementedError),
+)
+
+
+@pytest.fixture(scope="module")
+def scores() -> Data:
+    """Dataset 1 `pl.DataFrame.pivot` docstring."""
+    return {
+        "name": ["Cady", "Cady", "Karen", "Karen"],
+        "subject": ["maths", "physics", "maths", "physics"],
+        "test_1": [98, 99, 61, 58],
+        "test_2": [100, 100, 60, 60],
+    }
+
+
+@pytest.fixture(scope="module")
+def data() -> Data:
+    return {
+        "idx_1": [1, 2, 1, 1, 2, 2],
+        "idx_2": [1, 2, 2, 1, 2, 1],
+        "on_lower": ["b", "b", "a", "a", "a", "a"],
+        "on_upper": ["X", "Y", "Y", "Y", "X", "Y"],
+        "foo": [7, 1, 0, 1, 2, 2],
+        "bar": [9, 4, 0, 2, 0, 0],
+    }
+
+
+@pytest.fixture(scope="module")
+def data_no_dups() -> Data:
+    return {
+        "idx_1": [1, 1, 2, 2],
+        "on_lower": ["a", "b", "a", "b"],
+        "foo": [1, 2, 3, 4],
+        "bar": ["x", "y", "z", "w"],
+    }
+
+
+@pytest.fixture(scope="module")
+def data_no_dups_unordered(data_no_dups: Data) -> Data:
+    """Variant of `data_no_dups` to support tests without needing `aggregate_function`.
+
+    - `"on_lower"` has an order to test `sort_columns=True`
+    - `"on_upper"` is added for `on: list[str]` name generation
+    """
+    return data_no_dups | {
+        "on_lower": ["b", "a", "b", "a"],
+        "on_upper": ["X", "X", "Y", "Y"],
+    }
+
+
+def assert_names_match_polars(
+    input_data: Data,
+    on: list[str],
+    index: str | list[str],
+    values: list[str],
+    aggregate_function: PivotAgg | None = None,
+    *,
+    result_columns: list[str],
+) -> None:
+    """Ensure the complex renaming cases match upstream."""
+    pytest.importorskip("polars")
+    import polars as pl
+
+    df = pl.DataFrame(input_data)
+
+    pl_result = df.pivot(
+        on=on, values=values, index=index, aggregate_function=aggregate_function
+    )
+    assert result_columns == pl_result.columns
+
+
+def require_pyarrow_20(
+    df: nwp.DataFrame[Any, Any], request: pytest.FixtureRequest
+) -> None:
+    request.applymarker(
+        pytest.mark.xfail(
+            (
+                df.implementation is Implementation.PYARROW
+                and PYARROW_VERSION < (20, 0, 0)
+            ),
+            reason="pyarrow too old for `pivot` support",
+            raises=NotImplementedError,
+        )
+    )
+
+
+@pytest.mark.parametrize(
+    ("agg_func", "expected"),
+    [
+        (
+            "min",
+            {
+                "idx_1": [1, 2],
+                "foo_a": [0, 2],
+                "foo_b": [7, 1],
+                "bar_a": [0, 0],
+                "bar_b": [9, 4],
+            },
+        ),
+        (
+            "max",
+            {
+                "idx_1": [1, 2],
+                "foo_a": [1, 2],
+                "foo_b": [7, 1],
+                "bar_a": [2, 0],
+                "bar_b": [9, 4],
+            },
+        ),
+        (
+            "first",
+            {
+                "idx_1": [1, 2],
+                "foo_a": [0, 2],
+                "foo_b": [7, 1],
+                "bar_a": [0, 0],
+                "bar_b": [9, 4],
+            },
+        ),
+        (
+            "last",
+            {
+                "idx_1": [1, 2],
+                "foo_a": [1, 2],
+                "foo_b": [7, 1],
+                "bar_a": [2, 0],
+                "bar_b": [9, 4],
+            },
+        ),
+        (
+            "sum",
+            {
+                "idx_1": [1, 2],
+                "foo_a": [1, 4],
+                "foo_b": [7, 1],
+                "bar_a": [2, 0],
+                "bar_b": [9, 4],
+            },
+        ),
+        (
+            "mean",
+            {
+                "idx_1": [1, 2],
+                "foo_a": [0.5, 2.0],
+                "foo_b": [7.0, 1.0],
+                "bar_a": [1.0, 0.0],
+                "bar_b": [9.0, 4.0],
+            },
+        ),
+        pytest.param(
+            "median",
+            {
+                "idx_1": [1, 2],
+                "foo_a": [0.5, 2.0],
+                "foo_b": [7.0, 1.0],
+                "bar_a": [1.0, 0.0],
+                "bar_b": [9.0, 4.0],
+            },
+            marks=XFAIL_PYARROW_MEDIAN,
+        ),
+        (
+            "len",
+            {
+                "idx_1": [1, 2],
+                "foo_a": [2, 2],
+                "foo_b": [1, 1],
+                "bar_a": [2, 2],
+                "bar_b": [1, 1],
+            },
+        ),
+    ],
+)
+@pytest.mark.parametrize(
+    ("on", "index"),
+    [("on_lower", "idx_1"), (deque(["on_lower"]), dict.fromkeys(["idx_1"]).keys())],
+)
+def test_pivot_agg(
+    data: Data,
+    on: OneOrIterable[str],
+    index: OneOrIterable[str],
+    agg_func: PivotAgg,
+    expected: Data,
+    request: pytest.FixtureRequest,
+) -> None:
+    df = dataframe(data)
+    require_pyarrow_20(df, request)
+    result = df.pivot(
+        on,
+        index=index,
+        values=["foo", "bar"],
+        aggregate_function=agg_func,
+        sort_columns=True,
+    )
+
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("sort_columns", "expected"),
+    [
+        (True, ["idx_1", "foo_a", "foo_b", "bar_a", "bar_b"]),
+        (False, ["idx_1", "foo_b", "foo_a", "bar_b", "bar_a"]),
+    ],
+)
+def test_pivot_sort_columns(
+    data_no_dups_unordered: Data,
+    sort_columns: bool,
+    expected: list[str],
+    request: pytest.FixtureRequest,
+) -> None:
+    df = dataframe(data_no_dups_unordered)
+    require_pyarrow_20(df, request)
+    values = ["foo", "bar"]
+    result = df.pivot("on_lower", index="idx_1", values=values, sort_columns=sort_columns)
+    assert result.columns == expected
+
+
+@pytest.mark.parametrize(
+    ("on", "values", "expected"),
+    [
+        (
+            ["on_lower", "on_upper"],
+            ["foo"],
+            ["idx_1", '{"b","X"}', '{"a","X"}', '{"b","Y"}', '{"a","Y"}'],
+        ),
+        (
+            ["on_lower", "on_upper"],
+            ["foo", "bar"],
+            [
+                "idx_1",
+                'foo_{"b","X"}',
+                'foo_{"a","X"}',
+                'foo_{"b","Y"}',
+                'foo_{"a","Y"}',
+                'bar_{"b","X"}',
+                'bar_{"a","X"}',
+                'bar_{"b","Y"}',
+                'bar_{"a","Y"}',
+            ],
+        ),
+    ],
+    ids=["single-values", "multiple-values"],
+)
+def test_pivot_on_multiple_names(
+    data_no_dups_unordered: Data,
+    on: list[str],
+    values: list[str],
+    expected: list[str],
+    request: pytest.FixtureRequest,
+) -> None:
+    index = "idx_1"
+    data_ = data_no_dups_unordered
+    df = dataframe(data_)
+    require_pyarrow_20(df, request)
+    result = df.pivot(on, values=values, index=index)
+    assert result.columns == expected
+    assert_names_match_polars(data_, on, index, values, result_columns=result.columns)
+
+
+@pytest.mark.parametrize(
+    ("on", "values", "expected"),
+    [
+        (
+            ["on_lower", "on_upper"],
+            ["foo"],
+            ["idx_1", '{"b","X"}', '{"b","Y"}', '{"a","Y"}', '{"a","X"}'],
+        ),
+        (
+            ["on_lower", "on_upper"],
+            ["foo", "bar"],
+            [
+                "idx_1",
+                'foo_{"b","X"}',
+                'foo_{"b","Y"}',
+                'foo_{"a","Y"}',
+                'foo_{"a","X"}',
+                'bar_{"b","X"}',
+                'bar_{"b","Y"}',
+                'bar_{"a","Y"}',
+                'bar_{"a","X"}',
+            ],
+        ),
+    ],
+    ids=["single-values", "multiple-values"],
+)
+def test_pivot_on_multiple_names_agg(
+    data: Data,
+    on: list[str],
+    values: list[str],
+    expected: list[str],
+    request: pytest.FixtureRequest,
+) -> None:
+    index = "idx_1"
+    df = dataframe(data)
+    require_pyarrow_20(df, request)
+    result = df.pivot(on, values=values, aggregate_function="min", index=index)
+    assert result.columns == expected
+    assert_names_match_polars(
+        data, on, index, values, "min", result_columns=result.columns
+    )
+
+
+def test_pivot_no_agg_duplicated(data: Data, request: pytest.FixtureRequest) -> None:
+    df = dataframe(data)
+    require_pyarrow_20(df, request)
+    with pytest.raises((ValueError, NarwhalsError)):
+        df.pivot("on_lower", index="idx_1")
+
+
+def test_pivot_no_agg_no_duplicates(
+    data_no_dups: Data, request: pytest.FixtureRequest
+) -> None:
+    df = dataframe(data_no_dups)
+    require_pyarrow_20(df, request)
+    result = df.pivot("on_lower", index="idx_1")
+    expected = {
+        "idx_1": [1, 2],
+        "foo_a": [1, 3],
+        "foo_b": [2, 4],
+        "bar_a": ["x", "z"],
+        "bar_b": ["y", "w"],
+    }
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.xfail(
+    reason=(
+        "BUG: Incorrect results, `pyarrow` not consistent with `polars` and `pandas`.\n"
+        "https://github.com/apache/arrow/issues/48679"
+    ),
+    raises=(AssertionError, NotImplementedError),
+)
+def test_pivot_no_values() -> None:
+    # https://github.com/pola-rs/polars/blob/473951bcf8c49fc23bee5ee7b8853b5dd063cb9d/py-polars/tests/unit/operations/test_pivot.py#L39-L65
+    data = {
+        "foo": ["A", "A", "B", "B", "C"],
+        "bar": ["k", "l", "m", "n", "o"],
+        "N1": [1, 2, 2, 4, 2],
+        "N2": [1, 2, 2, 4, 2],
+    }
+    df = dataframe(data)
+    result = df.pivot(on="bar", index="foo")
+    expected = {
+        "foo": ["A", "B", "C"],
+        "N1_k": [1, None, None],
+        "N1_l": [2, None, None],
+        "N1_m": [None, 2, None],
+        "N1_n": [None, 4, None],  # < these 2 are flipped for pyarrow?
+        "N1_o": [None, None, 2],  # <
+        "N2_k": [1, None, None],
+        "N2_l": [2, None, None],
+        "N2_m": [None, 2, None],
+        "N2_n": [None, 4, None],  # < and down here as well
+        "N2_o": [None, None, 2],  # <
+    }
+    assert_equal_data(result, expected)
+
+
+def test_pivot_no_index_no_values(data_no_dups: Data) -> None:
+    df = dataframe(data_no_dups)
+    with pytest.raises(
+        ValueError, match=re_compile(r"at least one of.+values.+index.+must")
+    ):
+        df.pivot("on_lower")
+
+
+def test_pivot_on_invalid(data: Data) -> None:
+    df = dataframe(data)
+    with pytest.raises(InvalidOperationError, match=r"`pivot` called without `on`"):
+        df.pivot([], index="idx_1", values="foo")
+
+
+def test_pivot_on_columns_invalid(data: Data) -> None:
+    df = dataframe(data)
+    on_1 = "on_lower"
+    on_2 = ["on_lower", "on_upper"]
+    index = "idx_1"
+
+    df_1 = df.select(on_1)
+    df_2 = df.select(on_2)
+    df_2_mismatch = df_2.rename(dict(zip(on_2, reversed(on_2))))
+    ser = df.get_column(on_1)
+
+    same_n_cols = r"expected `on`.+`on_columns`.+same amount of columns"
+    mismatch_names = r"mismatching column names between `on` and `on_columns`"
+
+    with pytest.raises(InvalidOperationError, match=same_n_cols):
+        df.pivot(on_1, df_2, index=index)
+    with pytest.raises(InvalidOperationError, match=same_n_cols):
+        df.pivot(on_2, df_1, index=index)
+    with pytest.raises(InvalidOperationError, match=same_n_cols):
+        df.pivot(on_2, ser, index=index)
+    with pytest.raises(InvalidOperationError, match=mismatch_names):
+        df.pivot(on_2, df_2_mismatch, index=index)
+    with pytest.raises(InvalidOperationError, match=mismatch_names):
+        df.pivot([on_1], ser.alias("bad"), index=index)
+
+
+def test_pivot_non_iterable_invalid() -> None:
+    small = {"a": [1], "b": [2], "c": [3]}
+    df = dataframe(small)
+    match = re_compile(r"expected one or.+iterable.+string.+got.+int")
+    with pytest.raises(TypeError, match=match):
+        df.pivot(1, index="b", values="c")  # type: ignore[arg-type]
+    with pytest.raises(TypeError, match=match):
+        df.pivot("a", index=2, values="c")  # type: ignore[arg-type]
+    with pytest.raises(TypeError, match=match):
+        df.pivot("a", index="b", values=3)  # type: ignore[arg-type]
+    with pytest.raises(TypeError, match=match):
+        df.pivot(1, index=2, values="c")  # type: ignore[arg-type]
+    with pytest.raises(TypeError, match=match):
+        df.pivot("a", index=2, values=3)  # type: ignore[arg-type]
+    with pytest.raises(TypeError, match=match):
+        df.pivot(1, index="b", values=3)  # type: ignore[arg-type]
+
+
+def test_pivot_implicit_index(data_no_dups: Data, request: pytest.FixtureRequest) -> None:
+    df = dataframe(data_no_dups)
+    require_pyarrow_20(df, request)
+    expected = {
+        "idx_1": [1, 1, 2, 2],
+        "bar": ["x", "y", "w", "z"],
+        "a": [1.0, None, None, 3.0],
+        "b": [None, 2.0, 4.0, None],
+    }
+    result = df.pivot("on_lower", values="foo").sort(ncs.by_index(0, 1))
+    assert_equal_data(result, expected)
+
+
+def test_pivot_test_scores_1(scores: Data, request: pytest.FixtureRequest) -> None:
+    df = dataframe(scores)
+    require_pyarrow_20(df, request)
+    expected = {"name": ["Cady", "Karen"], "maths": [98, 61], "physics": [99, 58]}
+    result = df.pivot("subject", index="name", values="test_1")
+    assert_equal_data(result, expected)
+    result = df.pivot(
+        "subject", on_columns=["maths", "physics"], index="name", values="test_1"
+    )
+    assert_equal_data(result, expected)
+
+
+def test_pivot_test_scores_2(scores: Data, request: pytest.FixtureRequest) -> None:
+    df = dataframe(scores)
+    require_pyarrow_20(df, request)
+    expected = {
+        "name": ["Cady", "Karen"],
+        "test_1_maths": [98, 61],
+        "test_1_physics": [99, 58],
+        "test_2_maths": [100, 60],
+        "test_2_physics": [100, 60],
+    }
+    result = df.pivot("subject", values=["test_1", "test_2"])
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("agg_fn", "expected_rows"),
+    [
+        pytest.param(
+            "sum", [("a", 6, 0, 0), ("b", 0, 8, 10)], marks=XFAIL_ALWAYS_ZERO_AGG
+        ),
+        pytest.param(
+            "len", [("a", 2, 0, 0), ("b", 0, 2, 1)], marks=XFAIL_ALWAYS_ZERO_AGG
+        ),
+        ("first", [("a", 2, None, None), ("b", None, None, 10)]),
+        ("min", [("a", 2, None, None), ("b", None, 8, 10)]),
+        ("max", [("a", 4, None, None), ("b", None, 8, 10)]),
+        ("mean", [("a", 3.0, None, None), ("b", None, 8.0, 10.0)]),
+    ],
+)
+def test_pivot_aggregate(
+    agg_fn: PivotAgg, expected_rows: list[tuple[Any, ...]], request: pytest.FixtureRequest
+) -> None:
+    # https://github.com/pola-rs/polars/blob/473951bcf8c49fc23bee5ee7b8853b5dd063cb9d/py-polars/tests/unit/operations/test_pivot.py#L89-L112
+    df = dataframe(
+        {"a": [1, 1, 2, 2, 3], "b": ["a", "a", "b", "b", "b"], "c": [2, 4, None, 8, 10]}
+    )
+    require_pyarrow_20(df, request)
+    result = df.pivot(
+        "a", index="b", values="c", aggregate_function=agg_fn, sort_columns=True
+    )
+    result_rows = [*zip(*result.to_dict(as_series=False).values())]
+    assert result_rows == expected_rows

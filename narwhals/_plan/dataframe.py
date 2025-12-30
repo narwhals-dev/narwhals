@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, get_args, overload
 
 from narwhals._plan import _parse
@@ -26,7 +27,7 @@ from narwhals._plan.typing import (
     PartialSeries,
     Seq,
 )
-from narwhals._utils import Implementation, Version, generate_repr
+from narwhals._utils import Implementation, Version, generate_repr, qualified_type_name
 from narwhals.dependencies import is_pyarrow_table
 from narwhals.exceptions import InvalidOperationError, ShapeError
 from narwhals.schema import Schema
@@ -37,11 +38,12 @@ from narwhals.typing import (
     IntoDType,
     IntoSchema,
     JoinStrategy,
+    PivotAgg,
     UniqueKeepStrategy,
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Mapping, Sequence
+    from collections.abc import Iterable, Iterator, Mapping
     from io import BytesIO
 
     import polars as pl
@@ -261,6 +263,22 @@ class DataFrame(
 
         return fn
 
+    def _parse_into_compliant_series(
+        self, other: Series[Any] | Iterable[Any], /, name: str = ""
+    ) -> CompliantSeries[NativeSeriesT]:
+        if columns := self.columns:
+            compliant = self.get_column(columns[0])._parse_into_compliant(other)
+            return compliant if not name or compliant.name else compliant.alias(name)
+        else:  # pragma: no cover # noqa: RET505
+            tp_series = self.__narwhals_namespace__()._series
+            if not is_series(other):
+                return tp_series.from_iterable(other, version=self.version, name=name)
+            s = other._compliant
+            if isinstance(s, tp_series):
+                return s
+            msg = f"Expected {qualified_type_name(tp_series)!r}, got {qualified_type_name(s)!r}"
+            raise NotImplementedError(msg)
+
     @overload
     @classmethod
     def from_native(
@@ -452,6 +470,80 @@ class DataFrame(
         partitions = self._compliant.partition_by(names, include_key=include_key)
         return [self._with_compliant(p) for p in partitions]
 
+    # TODO @dangotbanned: (Follow-up) Accept selectors in `on`, `index`, `values`
+    def pivot(
+        self,
+        on: OneOrIterable[str],
+        on_columns: Sequence[str] | Series | Self | None = None,
+        *,
+        index: OneOrIterable[str] | None = None,
+        values: OneOrIterable[str] | None = None,
+        aggregate_function: PivotAgg | None = None,
+        sort_columns: bool = False,
+        separator: str = "_",
+    ) -> Self:
+        from narwhals._plan import functions as F
+
+        on_, index_, values_ = normalize_pivot_args(
+            on, index=index, values=values, frame_columns=self.columns
+        )
+        dtype_str = self.version.dtypes.String()
+        on_cols: EagerDataFrame[IncompleteCyclic, NativeDataFrameT_co, NativeSeriesT]
+
+        if on_columns is None:
+            nw_on_cols = self.select(F.col(name).cast(dtype_str) for name in on_).unique(
+                on_, maintain_order=True
+            )
+            if sort_columns:
+                nw_on_cols = nw_on_cols.sort(on_)
+            on_cols = nw_on_cols._compliant
+        elif isinstance(on_columns, DataFrame):
+            on_cols = on_columns._compliant
+        else:
+            on_cols = (
+                self._parse_into_compliant_series(on_columns, on_[0])
+                .cast(dtype_str)
+                .to_frame()
+            )
+
+        if len(on_) != on_cols.width:
+            msg = "`pivot` expected `on` and `on_columns` to have the same amount of columns."
+            raise InvalidOperationError(msg)
+        if on_ != tuple(on_cols.columns):
+            msg = "`pivot` has mismatching column names between `on` and `on_columns`."
+            raise InvalidOperationError(msg)
+
+        return self._with_compliant(
+            self._compliant.pivot(
+                on_,
+                on_cols,
+                index=index_,
+                values=values_,
+                aggregate_function=aggregate_function,
+                separator=separator,
+            )
+        )
+
+    def sort(
+        self,
+        by: OneOrIterable[ColumnNameOrSelector],
+        *more_by: ColumnNameOrSelector,
+        descending: OneOrIterable[bool] = False,
+        nulls_last: OneOrIterable[bool] = False,
+    ) -> Self:
+        if (
+            not more_by
+            and _is_sort_by_one(by, self.columns)
+            and isinstance(descending, bool)
+            and isinstance(nulls_last, bool)
+        ):
+            return self._with_compliant(
+                self.to_series()
+                ._compliant.sort(descending=descending, nulls_last=nulls_last)
+                .to_frame()
+            )
+        return super().sort(by, *more_by, descending=descending, nulls_last=nulls_last)
+
     def unique(
         self,
         subset: OneOrIterable[ColumnNameOrSelector] | None = None,
@@ -469,11 +561,18 @@ class DataFrame(
                 s_irs, schema=schema, require_any=True
             )
         if order_by is None:
-            return self._with_compliant(
-                self._compliant.unique(
+            if len(schema) == 1 and keep in {"any", "first"}:
+                # NOTE: Fastpath for single-column frame
+                result = (
+                    self.to_series()
+                    ._compliant.unique(maintain_order=maintain_order)
+                    .to_frame()
+                )
+            else:
+                result = self._compliant.unique(
                     subset_names, keep=keep, maintain_order=maintain_order
                 )
-            )
+            return self._with_compliant(result)
         s_irs = _parse.parse_into_seq_of_selector_ir(order_by)
         by_names = expand_selector_irs_names(s_irs, schema=schema, require_any=True)
         return self._with_compliant(
@@ -531,6 +630,18 @@ class DataFrame(
         return type(self)(result)
 
 
+def _is_sort_by_one(
+    by: OneOrIterable[ColumnNameOrSelector], frame_columns: list[str]
+) -> bool:
+    """Return True if requested to sort a single-column DataFrame - without consuming iterators."""
+    columns = frame_columns
+    if len(columns) != 1:
+        return False
+    return (isinstance(by, str) and by in columns) or (
+        isinstance(by, Sequence) and len(by) == 1 and by[0] in columns
+    )
+
+
 def _is_join_strategy(obj: Any) -> TypeIs[JoinStrategy]:
     return obj in {"inner", "left", "full", "cross", "anti", "semi"}
 
@@ -579,3 +690,40 @@ def normalize_join_on(
         raise ValueError(msg)
     on = ensure_seq_str(on)
     return on, on
+
+
+def normalize_pivot_args(
+    on: OneOrIterable[str],
+    *,
+    index: OneOrIterable[str] | None,
+    values: OneOrIterable[str] | None,
+    frame_columns: list[str],
+) -> tuple[Seq[str], Seq[str], Seq[str]]:
+    """Derive a pivot specification from optional arguments.
+
+    Returns in the order:
+
+        (on, index, values)
+    """
+    columns = frame_columns
+    on_ = ensure_seq_str(on)
+    if not on_:
+        msg = "`pivot` called without `on` columns."
+        raise InvalidOperationError(msg)
+    if index is None:
+        if values is None:
+            msg = "At least one of `values` and `index` must be passed"
+            raise ValueError(msg)
+        values_ = ensure_seq_str(values)
+        index_ = tuple(
+            nm for nm in columns if nm in set(columns).difference(on_, values_)
+        )
+    elif values is None:
+        index_ = ensure_seq_str(index)
+        values_ = tuple(
+            nm for nm in columns if nm in set(columns).difference(on_, index_)
+        )
+    else:
+        index_ = ensure_seq_str(index)
+        values_ = ensure_seq_str(values)
+    return on_, index_, values_

@@ -45,7 +45,7 @@ if TYPE_CHECKING:
     from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
     from narwhals._utils import Implementation, Version
     from narwhals.dtypes import DType
-    from narwhals.typing import IntoSchema, UniqueKeepStrategy
+    from narwhals.typing import IntoSchema, PivotAgg, UniqueKeepStrategy
 
 Incomplete: TypeAlias = Any
 
@@ -152,6 +152,10 @@ class CompliantDataFrame(
     def lazy(self, backend: _LazyAllowedImpl | None, **kwds: Any) -> LazyFrameAny: ...
     @property
     def shape(self) -> tuple[int, int]: ...
+    @property
+    def width(self) -> int:
+        return self.shape[-1]
+
     def __len__(self) -> int: ...
     @property
     def _group_by(self) -> type[DataFrameGroupBy[Self]]: ...
@@ -222,6 +226,16 @@ class CompliantDataFrame(
     def partition_by(
         self, by: Sequence[str], *, include_key: bool = True
     ) -> list[Self]: ...
+    def pivot(
+        self,
+        on: Sequence[str],
+        on_columns: Self,
+        *,
+        index: Sequence[str],
+        values: Sequence[str],
+        aggregate_function: PivotAgg | None = None,
+        separator: str = "_",
+    ) -> Self: ...
     def row(self, index: int) -> tuple[Any, ...]: ...
     @overload
     def to_dict(self, *, as_series: Literal[True]) -> dict[str, SeriesT]: ...

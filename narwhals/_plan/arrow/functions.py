@@ -334,6 +334,12 @@ def struct_schema(native: Arrow[pa.StructScalar] | pa.StructType) -> pa.Schema:
     return pa.schema(fields)
 
 
+def struct_field_names(native: Arrow[pa.StructScalar] | pa.StructType) -> list[str]:
+    """Get the names of all struct fields."""
+    tp = native.type if _is_arrow(native) else native
+    return tp.names if compat.HAS_STRUCT_TYPE_FIELDS else [f.name for f in tp]
+
+
 @t.overload
 def struct_field(native: ChunkedStruct, field: Field, /) -> ChunkedArrayAny: ...
 @t.overload
@@ -1574,6 +1580,7 @@ def concat_str(
 def concat_str(
     *arrays: ArrowAny, separator: str = "", ignore_nulls: bool = False
 ) -> Arrow[StringScalar]:
+    """Horizontally arrow data into a single string column."""
     dtype = string_type(obj.type for obj in arrays)
     it = (obj.cast(dtype) for obj in arrays)
     concat: Incomplete = pc.binary_join_element_wise

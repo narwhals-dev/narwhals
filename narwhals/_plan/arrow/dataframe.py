@@ -13,6 +13,7 @@ from narwhals._plan.arrow import acero, compat, functions as fn
 from narwhals._plan.arrow.common import ArrowFrameSeries as FrameSeries
 from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
 from narwhals._plan.arrow.group_by import ArrowGroupBy as GroupBy, partition_by
+from narwhals._plan.arrow.pivot import pivot_table
 from narwhals._plan.arrow.series import ArrowSeries as Series
 from narwhals._plan.common import temp
 from narwhals._plan.compliant.dataframe import EagerDataFrame
@@ -36,7 +37,7 @@ if TYPE_CHECKING:
     from narwhals._plan.typing import NonCrossJoinStrategy
     from narwhals._typing import _LazyAllowedImpl
     from narwhals.dtypes import DType
-    from narwhals.typing import IntoSchema, UniqueKeepStrategy
+    from narwhals.typing import IntoSchema, PivotAgg, UniqueKeepStrategy
 
 Incomplete: TypeAlias = Any
 
@@ -324,6 +325,27 @@ class ArrowDataFrame(
         from_native = self._with_native
         partitions = partition_by(self.native, by, include_key=include_key)
         return [from_native(df) for df in partitions]
+
+    def pivot(
+        self,
+        on: Sequence[str],
+        on_columns: Self,
+        *,
+        index: Sequence[str],
+        values: Sequence[str],
+        aggregate_function: PivotAgg | None = None,
+        separator: str = "_",
+    ) -> Self:
+        result = pivot_table(
+            self.native,
+            list(on),
+            on_columns.native,
+            index,
+            values,
+            aggregate_function,
+            separator,
+        )
+        return self._with_native(result)
 
 
 def with_array(table: pa.Table, name: str, column: ChunkedOrArrayAny) -> pa.Table:

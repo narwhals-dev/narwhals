@@ -109,14 +109,14 @@ def flatten_hash_safe(iterable: Iterable[OneOrIterable[Any]], /) -> Iterator[Any
             yield element
 
 
-def _not_one_or_iterable_str_error(obj: Any, /) -> TypeError:  # pragma: no cover
+def _not_one_or_iterable_str_error(obj: Any, /) -> TypeError:
     msg = f"Expected one or an iterable of strings, but got: {qualified_type_name(obj)!r}\n{obj!r}"
     return TypeError(msg)
 
 
 def ensure_seq_str(obj: OneOrIterable[str], /) -> Seq[str]:
     if not isinstance(obj, Iterable):
-        raise _not_one_or_iterable_str_error(obj)  # pragma: no cover
+        raise _not_one_or_iterable_str_error(obj)
     return (obj,) if isinstance(obj, str) else tuple(obj)
 
 
