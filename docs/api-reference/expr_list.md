@@ -11,6 +11,7 @@
         - mean
         - median
         - min
+        - sort
         - sum
         - unique
       show_source: false

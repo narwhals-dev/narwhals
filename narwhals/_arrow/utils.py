@@ -532,3 +532,35 @@ def list_agg(
             )
         ]
     )
+
+
+def list_sort(
+    array: ChunkedArrayAny, *, descending: bool, nulls_last: bool
+) -> ChunkedArrayAny:
+    sort_direction: Literal["ascending", "descending"] = (
+        "descending" if descending else "ascending"
+    )
+    nulls_position: Literal["at_start", "at_end"] = "at_end" if nulls_last else "at_start"
+    idx, v = "idx", "values"
+    is_not_sorted = pc.greater(pc.list_value_length(array), lit(0))
+    indexed = pa.Table.from_arrays(
+        [arange(start=0, end=len(array), step=1), array], names=[idx, v]
+    )
+    not_sorted_part = indexed.filter(is_not_sorted)
+    pass_through = indexed.filter(pc.fill_null(pc.invert(is_not_sorted), lit(True)))  # pyright: ignore[reportArgumentType]
+    exploded = pa.Table.from_arrays(
+        [pc.list_flatten(array), pc.list_parent_indices(array)], names=[v, idx]
+    )
+    sorted_indices = pc.sort_indices(
+        exploded,
+        sort_keys=[(idx, "ascending"), (v, sort_direction)],
+        null_placement=nulls_position,
+    )
+    offsets = not_sorted_part.column(v).combine_chunks().offsets  # type: ignore[attr-defined]
+    sorted_imploded = pa.ListArray.from_arrays(
+        offsets, pa.array(exploded.take(sorted_indices).column(v))
+    )
+    imploded_by_idx = pa.Table.from_arrays(
+        [not_sorted_part.column(idx), sorted_imploded], names=[idx, v]
+    )
+    return pa.concat_tables([imploded_by_idx, pass_through]).sort_by(idx).column(v)
