@@ -503,7 +503,7 @@ class DataFrame(
         by: str | Sequence[str] | None = None,
         strategy: AsofJoinStrategy = "backward",
         suffix: str = "_right",
-    ) -> Self:  # pragma: no cover
+    ) -> Self:
         return super().join_asof(
             other,
             left_on=left_on,

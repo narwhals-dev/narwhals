@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import datetime as dt
+import re
 from typing import TYPE_CHECKING, Any, Literal, TypedDict
 
 import pytest
@@ -13,7 +15,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import TypeAlias
 
-    from narwhals.typing import JoinStrategy
+    from narwhals.typing import AsofJoinStrategy, JoinStrategy
     from tests.conftest import Data
 
     On: TypeAlias = "str | Sequence[str] | None"
@@ -319,3 +321,254 @@ def test_join_not_implemented(data_a_only: Data) -> None:
     )
     with pytest.raises(NotImplementedError, match=(pattern)):
         df.join(df, left_on="a", right_on="a", how="right")  # type: ignore[arg-type]
+
+
+# NOTE: `join_asof`
+# - Maybe move to a different file later
+# - `strategy='nearest'` will not be supported
+
+XFAIL_NOT_IMPL_JOIN_ASOF = pytest.mark.xfail(
+    reason="TODO: `BaseFrame.join_asof`", raises=NotImplementedError
+)
+
+
+@XFAIL_NOT_IMPL_JOIN_ASOF
+@pytest.mark.parametrize(
+    ("strategy", "expected"),
+    [
+        (
+            "backward",
+            {"antananarivo": [1, 5, 10], "val": ["a", "b", "c"], "val_right": [1, 3, 7]},
+        ),
+        (
+            "forward",
+            {
+                "antananarivo": [1, 5, 10],
+                "val": ["a", "b", "c"],
+                "val_right": [1, 6, None],
+            },
+        ),
+        (
+            "nearest",
+            {"antananarivo": [1, 5, 10], "val": ["a", "b", "c"], "val_right": [1, 6, 7]},
+        ),
+    ],
+)
+def test_join_asof_numeric(
+    strategy: AsofJoinStrategy, expected: Data
+) -> None:  # pragma: no cover
+    df = dataframe({"antananarivo": [1, 5, 10], "val": ["a", "b", "c"]}).sort(
+        "antananarivo"
+    )
+    df_right = dataframe({"antananarivo": [1, 2, 3, 6, 7], "val": [1, 2, 3, 6, 7]}).sort(
+        "antananarivo"
+    )
+    result = df.join_asof(
+        df_right, left_on="antananarivo", right_on="antananarivo", strategy=strategy
+    )
+    result_on = df.join_asof(df_right, on="antananarivo", strategy=strategy)
+    assert_equal_data(result.sort(by="antananarivo"), expected)
+    assert_equal_data(result_on.sort(by="antananarivo"), expected)
+
+
+@XFAIL_NOT_IMPL_JOIN_ASOF
+@pytest.mark.parametrize(
+    ("strategy", "expected"),
+    [
+        (
+            "backward",
+            {
+                "datetime": [
+                    dt.datetime(2016, 3, 1),
+                    dt.datetime(2018, 8, 1),
+                    dt.datetime(2019, 1, 1),
+                ],
+                "population": [82.19, 82.66, 83.12],
+                "gdp": [4164, 4566, 4696],
+            },
+        ),
+        (
+            "forward",
+            {
+                "datetime": [
+                    dt.datetime(2016, 3, 1),
+                    dt.datetime(2018, 8, 1),
+                    dt.datetime(2019, 1, 1),
+                ],
+                "population": [82.19, 82.66, 83.12],
+                "gdp": [4411, 4696, 4696],
+            },
+        ),
+        (
+            "nearest",
+            {
+                "datetime": [
+                    dt.datetime(2016, 3, 1),
+                    dt.datetime(2018, 8, 1),
+                    dt.datetime(2019, 1, 1),
+                ],
+                "population": [82.19, 82.66, 83.12],
+                "gdp": [4164, 4696, 4696],
+            },
+        ),
+    ],
+)
+def test_join_asof_time(
+    strategy: AsofJoinStrategy, expected: Data
+) -> None:  # pragma: no cover
+    df = dataframe(
+        {
+            "datetime": [
+                dt.datetime(2016, 3, 1),
+                dt.datetime(2018, 8, 1),
+                dt.datetime(2019, 1, 1),
+            ],
+            "population": [82.19, 82.66, 83.12],
+        }
+    ).sort("datetime")
+    df_right = dataframe(
+        {
+            "datetime": [
+                dt.datetime(2016, 1, 1),
+                dt.datetime(2017, 1, 1),
+                dt.datetime(2018, 1, 1),
+                dt.datetime(2019, 1, 1),
+                dt.datetime(2020, 1, 1),
+            ],
+            "gdp": [4164, 4411, 4566, 4696, 4827],
+        }
+    ).sort("datetime")
+    result = df.join_asof(
+        df_right, left_on="datetime", right_on="datetime", strategy=strategy
+    )
+    result_on = df.join_asof(df_right, on="datetime", strategy=strategy)
+    assert_equal_data(result.sort(by="datetime"), expected)
+    assert_equal_data(result_on.sort(by="datetime"), expected)
+
+
+@XFAIL_NOT_IMPL_JOIN_ASOF
+def test_join_asof_by() -> None:  # pragma: no cover
+    df = dataframe(
+        {"antananarivo": [1, 5, 7, 10], "bob": ["D", "D", "C", "A"], "c": [9, 2, 1, 1]}
+    ).sort("antananarivo")
+    df_right = dataframe(
+        {"antananarivo": [1, 4, 5, 8], "bob": ["D", "D", "A", "F"], "d": [1, 3, 4, 1]}
+    ).sort("antananarivo")
+    result = df.join_asof(df_right, on="antananarivo", by_left="bob", by_right="bob")
+    result_by = df.join_asof(df_right, on="antananarivo", by="bob")
+    expected = {
+        "antananarivo": [1, 5, 7, 10],
+        "bob": ["D", "D", "C", "A"],
+        "c": [9, 2, 1, 1],
+        "d": [1, 3, None, 4],
+    }
+    assert_equal_data(result.sort(by="antananarivo"), expected)
+    assert_equal_data(result_by.sort(by="antananarivo"), expected)
+
+
+@XFAIL_NOT_IMPL_JOIN_ASOF
+def test_join_asof_suffix() -> None:  # pragma: no cover
+    df = dataframe({"antananarivo": [1, 5, 10], "val": ["a", "b", "c"]}).sort(
+        "antananarivo"
+    )
+    df_right = dataframe({"antananarivo": [1, 2, 3, 6, 7], "val": [1, 2, 3, 6, 7]}).sort(
+        "antananarivo"
+    )
+    result = df.join_asof(
+        df_right, left_on="antananarivo", right_on="antananarivo", suffix="_y"
+    )
+    expected = {"antananarivo": [1, 5, 10], "val": ["a", "b", "c"], "val_y": [1, 3, 7]}
+    assert_equal_data(result.sort(by="antananarivo"), expected)
+
+
+@pytest.mark.skip
+@XFAIL_NOT_IMPL_JOIN_ASOF
+@pytest.mark.parametrize("strategy", ["back", "furthest"])
+def test_join_asof_not_implemented(strategy: str) -> None:  # pragma: no cover
+    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
+    df = dataframe(data)
+
+    with pytest.raises(
+        NotImplementedError,
+        match=rf"Only the following strategies are supported: \('backward', 'forward', 'nearest'\); found '{strategy}'.",
+    ):
+        df.join_asof(
+            df,
+            left_on="antananarivo",
+            right_on="antananarivo",
+            strategy=strategy,  # type: ignore[arg-type]
+        )
+
+
+@XFAIL_NOT_IMPL_JOIN_ASOF
+def test_join_asof_keys_exceptions() -> None:  # pragma: no cover
+    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
+    df = dataframe(data)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "Either (`left_on` and `right_on`) or `on` keys should be specified."
+        ),
+    ):
+        df.join_asof(df, left_on="antananarivo")
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "Either (`left_on` and `right_on`) or `on` keys should be specified."
+        ),
+    ):
+        df.join_asof(df, right_on="antananarivo")
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "Either (`left_on` and `right_on`) or `on` keys should be specified."
+        ),
+    ):
+        df.join_asof(df)
+    with pytest.raises(
+        ValueError,
+        match=re.escape("If `on` is specified, `left_on` and `right_on` should be None."),
+    ):
+        df.join_asof(
+            df, left_on="antananarivo", right_on="antananarivo", on="antananarivo"
+        )
+    with pytest.raises(
+        ValueError,
+        match=re.escape("If `on` is specified, `left_on` and `right_on` should be None."),
+    ):
+        df.join_asof(df, left_on="antananarivo", on="antananarivo")
+    with pytest.raises(
+        ValueError,
+        match=re.escape("If `on` is specified, `left_on` and `right_on` should be None."),
+    ):
+        df.join_asof(df, right_on="antananarivo", on="antananarivo")
+
+
+ON = "antananarivo"
+BY = "bob"
+
+
+@XFAIL_NOT_IMPL_JOIN_ASOF
+@pytest.mark.parametrize(
+    ("on", "by_left", "by_right", "by", "message"),
+    [
+        (ON, BY, BY, BY, r"If.+by.+by_left.+by_right.+should be None"),
+        (ON, BY, None, None, r"not.+by_left.+or.+by_right.+need.+both"),
+        (ON, None, BY, None, r"not.+by_left.+or.+by_right.+need.+both"),
+        (ON, BY, None, BY, r"If.+by.+by_left.+by_right.+should be None"),
+        (ON, None, BY, BY, r"If.+by.+by_left.+by_right.+should be None"),
+        (ON, [ON, BY], [ON], None, r"by_left.+by_right.+same.+length"),
+    ],
+)
+def test_join_asof_by_exceptions(
+    on: str | None,
+    by_left: str | list[str] | None,
+    by_right: str | list[str] | None,
+    by: str | list[str] | None,
+    message: str,
+) -> None:  # pragma: no cover
+    data = {ON: [1, 3, 2], BY: [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
+    df = dataframe(data)
+    with pytest.raises(ValueError, match=message):
+        df.join_asof(df, on=on, by_left=by_left, by_right=by_right, by=by)
