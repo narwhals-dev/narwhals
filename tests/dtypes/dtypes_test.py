@@ -419,6 +419,9 @@ def test_cast_decimal_to_native(
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail(reason="Unsupported dtype"))
 
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 0, 0):
+        pytest.skip(reason="too old to convert to decimal")
+
     data = {"a": [1.1, 2.2, 3.3]}
 
     df = nw.from_native(constructor(data))
