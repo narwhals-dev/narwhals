@@ -188,7 +188,7 @@ def native_non_extension_to_narwhals_dtype(dtype: pa.DataType, version: Version)
             native_to_narwhals_dtype(dtype.value_type, version), dtype.list_size
         )
     if pa.types.is_decimal(dtype):
-        return dtypes.Decimal()
+        return dtypes.Decimal(dtype.precision, dtype.scale)
     if pa.types.is_time32(dtype) or pa.types.is_time64(dtype):
         return dtypes.Time()
     if pa.types.is_binary(dtype):
@@ -215,7 +215,7 @@ NW_TO_PA_DTYPES: Mapping[type[DType], pa.DataType] = {
     dtypes.UInt32: pa.uint32(),
     dtypes.UInt64: pa.uint64(),
 }
-UNSUPPORTED_DTYPES = (dtypes.Decimal, dtypes.Object)
+UNSUPPORTED_DTYPES = (dtypes.Object,)
 
 
 def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> pa.DataType:
@@ -237,10 +237,12 @@ def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> pa.DataType:
                 for field in dtype.fields
             ]
         )
-    if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover
+    if isinstance_or_issubclass(dtype, dtypes.Array):
         inner = narwhals_to_native_dtype(dtype.inner, version=version)
         list_size = dtype.size
         return pa.list_(inner, list_size=list_size)
+    if isinstance_or_issubclass(dtype, dtypes.Decimal):
+        return pa.decimal128(dtype.precision, dtype.scale)
     if issubclass(base_type, UNSUPPORTED_DTYPES):
         msg = f"Converting to {base_type.__name__} dtype is not supported for PyArrow."
         raise NotImplementedError(msg)

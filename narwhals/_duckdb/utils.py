@@ -139,7 +139,7 @@ def native_to_narwhals_dtype(
     version: Version,
     deferred_time_zone: DeferredTimeZone,
 ) -> DType:
-    duckdb_dtype_id = duckdb_dtype.id
+    duckdb_dtype_id: str = duckdb_dtype.id
     dtypes = version.dtypes
 
     # Handle nested data types first
@@ -180,6 +180,10 @@ def native_to_narwhals_dtype(
     if duckdb_dtype_id == "timestamp with time zone":
         return dtypes.Datetime(time_zone=deferred_time_zone.time_zone)
 
+    if duckdb_dtype_id == "decimal":
+        (_, precision), (_, scale) = duckdb_dtype.children
+        return dtypes.Decimal(precision=precision, scale=scale)
+
     return _non_nested_native_to_narwhals_dtype(duckdb_dtype_id, version)
 
 
@@ -215,7 +219,6 @@ def _non_nested_native_to_narwhals_dtype(duckdb_dtype_id: str, version: Version)
         "timestamp_ns": dtypes.Datetime("ns"),
         "boolean": dtypes.Boolean(),
         "interval": dtypes.Duration(),
-        "decimal": dtypes.Decimal(),
         "time": dtypes.Time(),
         "blob": dtypes.Binary(),
     }.get(duckdb_dtype_id, dtypes.Unknown())
@@ -247,7 +250,7 @@ TIME_UNIT_TO_TIMESTAMP: Mapping[TimeUnit, duckdb_dtypes.DuckDBPyType] = {
     "us": duckdb_dtypes.TIMESTAMP,
     "ns": duckdb_dtypes.TIMESTAMP_NS,
 }
-UNSUPPORTED_DTYPES = (dtypes.Decimal, dtypes.Categorical)
+UNSUPPORTED_DTYPES = dtypes.Categorical
 
 
 def narwhals_to_native_dtype(  # noqa: PLR0912, C901
@@ -298,6 +301,8 @@ def narwhals_to_native_dtype(  # noqa: PLR0912, C901
         duckdb_inner = narwhals_to_native_dtype(nw_inner, version, deferred_time_zone)
         duckdb_shape_fmt = "".join(f"[{item}]" for item in dtype.shape)
         return duckdb_dtypes.DuckDBPyType(f"{duckdb_inner}{duckdb_shape_fmt}")
+    if isinstance(dtype, dtypes.Decimal):
+        return duckdb_dtypes.DuckDBPyType(f"DECIMAL({dtype.precision, dtype.scale})")
     if issubclass(base_type, UNSUPPORTED_DTYPES):
         msg = f"Converting to {base_type.__name__} dtype is not supported for DuckDB."
         raise NotImplementedError(msg)
