@@ -243,8 +243,30 @@ class BaseFrame(Generic[NativeFrameT_co]):
         strategy: AsofJoinStrategy = "backward",
         suffix: str = "_right",
     ) -> Self:
-        msg = "TODO: `BaseFrame.join_asof`"
-        raise NotImplementedError(msg)
+        left = self._compliant
+        right: CompliantFrame[Any, NativeFrameT_co] = self._unwrap_compliant(other)
+        strategy = _validate_join_asof_strategy(strategy)
+        left_on_, right_on_ = normalize_join_asof_on(left_on, right_on, on)
+        if by_left or by_right or by:
+            left_by, right_by = normalize_join_asof_by(by_left, by_right, by)
+            result = left.join_asof_by(
+                right,
+                left_on=left_on_,
+                right_on=right_on_,
+                left_by=left_by,
+                right_by=right_by,
+                strategy=strategy,
+                suffix=suffix,
+            )
+        else:
+            result = left.join_asof(
+                right,
+                left_on=left_on_,
+                right_on=right_on_,
+                strategy=strategy,
+                suffix=suffix,
+            )
+        return self._with_compliant(result)  # pragma: no cover
 
     def explode(
         self,
@@ -722,10 +744,21 @@ def _is_unique_keep_strategy(obj: Any) -> TypeIs[UniqueKeepStrategy]:
     return obj in {"any", "first", "last", "none"}
 
 
+def _is_join_asof_strategy(obj: Any) -> TypeIs[AsofJoinStrategy]:
+    return obj in {"backward", "forward", "nearest"}
+
+
 def _validate_join_strategy(how: str, /) -> JoinStrategy:
     if _is_join_strategy(how):
         return how
     msg = f"Only the following join strategies are supported: {get_args(JoinStrategy)}; found '{how}'."
+    raise NotImplementedError(msg)
+
+
+def _validate_join_asof_strategy(strategy: str, /) -> AsofJoinStrategy:
+    if _is_join_asof_strategy(strategy):
+        return strategy
+    msg = f"Only the following join strategies are supported: {get_args(AsofJoinStrategy)}; found '{strategy}'."
     raise NotImplementedError(msg)
 
 
@@ -743,7 +776,7 @@ def normalize_join_on(
     right_on: OneOrIterable[str] | None,
     /,
 ) -> tuple[Seq[str], Seq[str]]:
-    """Reduce the 3 potential key (`on*`) arguments to 2.
+    """Reduce the 3 potential key (`*on`) arguments to 2.
 
     Ensures the keys spelling is compatible with the join strategy.
     """
@@ -762,6 +795,55 @@ def normalize_join_on(
         raise ValueError(msg)
     on = ensure_seq_str(on)
     return on, on
+
+
+# TODO @dangotbanned: Fix type narrowing
+def normalize_join_asof_on(
+    left_on: str | None, right_on: str | None, on: str | None
+) -> tuple[str, str]:
+    """Reduce the 3 potential `join_asof` (`*on`) arguments to 2."""
+    if (on is None) and (left_on is None or right_on is None):
+        msg = "Either (`left_on` and `right_on`) or `on` keys should be specified."
+        raise ValueError(msg)
+    if (on is not None) and (left_on is not None or right_on is not None):
+        msg = "If `on` is specified, `left_on` and `right_on` should be None."
+        raise ValueError(msg)
+    if on is not None:
+        left_on = right_on = on
+
+    return left_on, right_on  # type: ignore[return-value]
+
+
+# TODO @dangotbanned: Fix type narrowing
+# TODO @dangotbanned: Return `Seq[str]`s instead of `list[str]`s
+def normalize_join_asof_by(
+    by_left: str | Sequence[str] | None,
+    by_right: str | Sequence[str] | None,
+    by: str | Sequence[str] | None,
+) -> tuple[Seq[str], Seq[str]]:
+    """Reduce the 3 potential `join_asof` (`by*`) arguments to 2."""
+    if (by is None) and (
+        (by_left is None and by_right is not None)
+        or (by_left is not None and by_right is None)
+    ):
+        msg = "Can not specify only `by_left` or `by_right`, you need to specify both."
+        raise ValueError(msg)
+    if (by is not None) and (by_left is not None or by_right is not None):
+        msg = "If `by` is specified, `by_left` and `by_right` should be None."
+        raise ValueError(msg)
+    if by is not None:  # pragma: no cover
+        by_left = by_right = by
+
+    by_left = [by_left] if isinstance(by_left, str) else by_left
+    by_right = [by_right] if isinstance(by_right, str) else by_right
+
+    if (isinstance(by_left, list) and isinstance(by_right, list)) and (
+        len(by_left) != len(by_right)
+    ):
+        msg = "`by_left` and `by_right` must have the same length."
+        raise ValueError(msg)
+
+    return by_left, by_right  # type: ignore[return-value]
 
 
 def normalize_pivot_args(

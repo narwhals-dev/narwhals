@@ -8,7 +8,7 @@ import pytest
 
 import narwhals._plan as nwp
 from narwhals.exceptions import DuplicateError
-from tests.plan.utils import assert_equal_data, dataframe
+from tests.plan.utils import assert_equal_data, dataframe, re_compile
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -328,7 +328,7 @@ def test_join_not_implemented(data_a_only: Data) -> None:
 # - `strategy='nearest'` will not be supported
 
 XFAIL_NOT_IMPL_JOIN_ASOF = pytest.mark.xfail(
-    reason="TODO: `BaseFrame.join_asof`", raises=NotImplementedError
+    reason="TODO: `ArrowDataFrame.join_asof`", raises=NotImplementedError
 )
 
 
@@ -481,27 +481,17 @@ def test_join_asof_suffix() -> None:  # pragma: no cover
     assert_equal_data(result.sort(by="antananarivo"), expected)
 
 
-@pytest.mark.skip
-@XFAIL_NOT_IMPL_JOIN_ASOF
 @pytest.mark.parametrize("strategy", ["back", "furthest"])
-def test_join_asof_not_implemented(strategy: str) -> None:  # pragma: no cover
-    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
-    df = dataframe(data)
-
-    with pytest.raises(
-        NotImplementedError,
-        match=rf"Only the following strategies are supported: \('backward', 'forward', 'nearest'\); found '{strategy}'.",
-    ):
-        df.join_asof(
-            df,
-            left_on="antananarivo",
-            right_on="antananarivo",
-            strategy=strategy,  # type: ignore[arg-type]
-        )
+def test_join_asof_not_implemented(strategy: str) -> None:
+    df = dataframe({"a": [1, 3, 2], "b": [4, 4, 6]})
+    pattern = re_compile(
+        rf"supported.+'backward', 'forward', 'nearest'.+ found '{strategy}'"
+    )
+    with pytest.raises(NotImplementedError, match=pattern):
+        df.join_asof(df, left_on="a", right_on="a", strategy=strategy)  # type: ignore[arg-type]
 
 
-@XFAIL_NOT_IMPL_JOIN_ASOF
-def test_join_asof_keys_exceptions() -> None:  # pragma: no cover
+def test_join_asof_keys_exceptions() -> None:
     data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
     df = dataframe(data)
 
@@ -549,7 +539,6 @@ ON = "antananarivo"
 BY = "bob"
 
 
-@XFAIL_NOT_IMPL_JOIN_ASOF
 @pytest.mark.parametrize(
     ("on", "by_left", "by_right", "by", "message"),
     [
@@ -567,7 +556,7 @@ def test_join_asof_by_exceptions(
     by_right: str | list[str] | None,
     by: str | list[str] | None,
     message: str,
-) -> None:  # pragma: no cover
+) -> None:
     data = {ON: [1, 3, 2], BY: [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
     df = dataframe(data)
     with pytest.raises(ValueError, match=message):
