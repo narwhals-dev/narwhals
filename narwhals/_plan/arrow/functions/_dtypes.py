@@ -26,9 +26,11 @@ if TYPE_CHECKING:
 
 # NOTE: Common data type instances to share
 UI32: Final = pa.uint32()
+I32: Final = pa.int32()
 I64: Final = pa.int64()
 F64: Final = pa.float64()
 BOOL: Final = pa.bool_()
+DATE32: Final = pa.date32()
 
 
 @overload
