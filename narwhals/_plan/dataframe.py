@@ -249,7 +249,7 @@ class BaseFrame(Generic[NativeFrameT_co]):
         left_on_, right_on_ = normalize_join_asof_on(left_on, right_on, on)
         if by_left or by_right or by:
             left_by, right_by = normalize_join_asof_by(by_left, by_right, by)
-            result = left.join_asof_by(
+            result = left.join_asof(
                 right,
                 left_on=left_on_,
                 right_on=right_on_,
@@ -266,7 +266,7 @@ class BaseFrame(Generic[NativeFrameT_co]):
                 strategy=strategy,
                 suffix=suffix,
             )
-        return self._with_compliant(result)  # pragma: no cover
+        return self._with_compliant(result)
 
     def explode(
         self,

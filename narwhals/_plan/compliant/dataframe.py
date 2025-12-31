@@ -88,19 +88,10 @@ class CompliantFrame(HasVersion, Protocol[ColumnT_co, NativeFrameT_co]):
         *,
         left_on: str,
         right_on: str,
-        strategy: AsofJoinStrategy,
-        suffix: str,
-    ) -> Self: ...
-    def join_asof_by(
-        self,
-        other: Self,
-        *,
-        left_on: str,
-        right_on: str,
-        left_by: Sequence[str],  # https://github.com/pola-rs/polars/issues/18496
-        right_by: Sequence[str],
-        strategy: AsofJoinStrategy,
-        suffix: str,
+        left_by: Sequence[str] = (),  # https://github.com/pola-rs/polars/issues/18496
+        right_by: Sequence[str] = (),
+        strategy: AsofJoinStrategy = "backward",
+        suffix: str = "_right",
     ) -> Self: ...
     def rename(self, mapping: Mapping[str, str]) -> Self: ...
     @property

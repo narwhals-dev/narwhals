@@ -315,10 +315,10 @@ class ArrowDataFrame(
         *,
         left_on: str,
         right_on: str,
-        strategy: AsofJoinStrategy,
-        suffix: str,
         left_by: Sequence[str] = (),
         right_by: Sequence[str] = (),
+        strategy: AsofJoinStrategy = "backward",
+        suffix: str = "_right",
     ) -> Self:
         return self._with_native(
             acero.join_asof_tables(
@@ -332,8 +332,6 @@ class ArrowDataFrame(
                 suffix=suffix,
             )
         )
-
-    join_asof_by = join_asof  # pyright: ignore[reportAssignmentType]
 
     def _filter(self, predicate: Predicate | acero.Expr) -> Self:
         mask: Incomplete = predicate
