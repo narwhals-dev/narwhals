@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import datetime as dt
-from typing import TYPE_CHECKING, Any, Generic, Literal, TypedDict, TypeVar
+from typing import TYPE_CHECKING, Any, Literal, TypedDict
 
 import pytest
 
@@ -21,30 +21,26 @@ if TYPE_CHECKING:
 By: TypeAlias = "str | Sequence[str] | None"
 """The type of `{by,by_left,by_right}`."""
 
-OnT = TypeVar("OnT")
-"""The type of `{on,left_on,right_on}`."""
 
-
-class BaseKeywords(TypedDict, Generic[OnT], total=False):
-    """Common arguments for `DataFrame.{join,join_asof}`."""
-
-    on: OnT
-    left_on: OnT
-    right_on: OnT
-    suffix: str
-
-
-class AsofKwds(BaseKeywords["str | None"], total=False):
+class AsofKwds(TypedDict, total=False):
     """Arguments for `DataFrame.asof`."""
 
+    on: str | None
+    left_on: str | None
+    right_on: str | None
+    suffix: str
     by_left: By
     by_right: By
     by: By
 
 
-class JoinKwds(BaseKeywords["str | Sequence[str] | None"], total=False):
+class JoinKwds(TypedDict, total=False):
     """Arguments for `DataFrame.join`."""
 
+    on: str | Sequence[str] | None
+    left_on: str | Sequence[str] | None
+    right_on: str | Sequence[str] | None
+    suffix: str
     how: JoinStrategy
 
 
