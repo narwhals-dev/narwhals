@@ -364,14 +364,7 @@ XFAIL_NEAREST = pytest.mark.xfail(
     raises=NotImplementedError,
 )
 
-XFAIL_SUFFIX = pytest.mark.xfail(
-    (PYARROW_HAS_JOIN_ASOF),
-    reason="`pyarrow.acero.AsofJoinNodeOptions` does not support column collisions.",
-    raises=ValueError,
-)
 
-
-@XFAIL_SUFFIX
 @pytest.mark.parametrize(
     ("strategy", "expected_values"),
     [
@@ -457,7 +450,6 @@ def test_join_asof_by(request: pytest.FixtureRequest, kwds: AsofKwds) -> None:
     assert_equal_data(result, expected)
 
 
-@XFAIL_SUFFIX
 @pytest.mark.parametrize("kwds", [AsofKwds(left_on="a", right_on="a", suffix="_y")])
 def test_join_asof_suffix(request: pytest.FixtureRequest, kwds: AsofKwds) -> None:
     left = {"a": [1, 5, 10], "val": ["a", "b", "c"]}

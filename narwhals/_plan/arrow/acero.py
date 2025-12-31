@@ -289,8 +289,7 @@ def _asofjoin(
     return Decl("asofjoin", options, [table_source(left), table_source(right)])
 
 
-# TODO @dangotbanned: Can we do anything funky to work around this?
-# Current code is lifted straight from upstream
+# NOTE: Adapted from upstream to add support instead of raising
 # https://github.com/apache/arrow/blob/9b03118e834dfdaa0cf9e03595477b499252a9cb/python/pyarrow/acero.py#L306-L316
 def _join_asof_ensure_no_collisions(
     left: pa.Table,
@@ -298,18 +297,17 @@ def _join_asof_ensure_no_collisions(
     right_on: str,
     right_by: Sequence[str] = (),
     suffix: str = "_right",
-) -> None:
-    # AsofJoin does not return on or by columns for right_operand.
+) -> pa.Table:
+    # TODO @dangotbanned: Do this in fewer steps
     excluding = {right_on, *right_by}
-    right_columns = {col for col in right.schema.names if col not in excluding}
-    if columns_collisions := set(left.schema.names) & right_columns:
-        msg = (
-            f"Columns {columns_collisions} present in both tables. "
-            "AsofJoin does not support column collisions."
-        )
-        if suffix != "_right":
-            msg = f"{msg}\n\n`pyarrow` does not support `join_asof({suffix=})`"
-        raise ValueError(msg)
+    right_names = right.schema.names
+    right_columns = {col for col in right_names if col not in excluding}
+    if collisions := set(left.schema.names) & right_columns:
+        renamed = [
+            name if name not in collisions else f"{name}{suffix}" for name in right_names
+        ]
+        return right.rename_columns(renamed)
+    return right
 
 
 def _join_asof_strategy_to_tolerance(
@@ -355,7 +353,9 @@ def join_asof_tables(
     strategy: AsofJoinStrategy = "backward",
     suffix: str = "_right",
 ) -> pa.Table:
-    _join_asof_ensure_no_collisions(left, right, right_on, right_by, suffix=suffix)
+    right = _join_asof_ensure_no_collisions(
+        left, right, right_on, right_by, suffix=suffix
+    )
     tolerance = _join_asof_strategy_to_tolerance(
         left.column(left_on), right.column(right_on), strategy
     )
