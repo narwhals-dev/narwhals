@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Any, Literal, TypedDict
 import pytest
 
 import narwhals._plan as nwp
-from narwhals._utils import Implementation
 from narwhals.exceptions import DuplicateError
 from tests.plan.utils import assert_equal_data, dataframe, re_compile
 from tests.utils import PYARROW_VERSION
@@ -325,13 +324,10 @@ def test_join_not_implemented(data_a_only: Data) -> None:
         df.join(df, left_on="a", right_on="a", how="right")  # type: ignore[arg-type]
 
 
-# NOTE: `join_asof`
-# - Maybe move to a different file later
-# - `strategy='nearest'` will not be supported
+# NOTE: move `join_asof` to a different file later
 
 
-def is_pyarrow(df: nwp.DataFrame[Any, Any]) -> bool:
-    return df.implementation is Implementation.PYARROW
+PYARROW_HAS_JOIN_ASOF = PYARROW_VERSION >= (16, 0, 0)
 
 
 def require_pyarrow_16(
@@ -339,28 +335,41 @@ def require_pyarrow_16(
 ) -> None:
     request.applymarker(
         pytest.mark.xfail(
-            (is_pyarrow(df) and PYARROW_VERSION < (16, 0, 0)),
+            (df.implementation.is_pyarrow() and not PYARROW_HAS_JOIN_ASOF),
             reason="pyarrow too old for `join_asof` support",
+            raises=NotImplementedError,
         )
     )
 
 
-def xfail_nearest(
-    df: nwp.DataFrame[Any, Any],
-    strategy: AsofJoinStrategy,
-    request: pytest.FixtureRequest,
-) -> None:
-    request.applymarker(
-        pytest.mark.xfail(
-            (is_pyarrow(df) and strategy == "nearest"),
-            reason="Only 'backward' and 'forward' strategies are currently supported for `pyarrow`",
-        )
-    )
+XFAIL_NEAREST = pytest.mark.xfail(
+    PYARROW_HAS_JOIN_ASOF,
+    reason="Only 'backward' and 'forward' strategies are currently supported for `pyarrow`",
+    raises=NotImplementedError,
+)
+
+XFAIL_SUFFIX = pytest.mark.xfail(
+    (PYARROW_HAS_JOIN_ASOF),
+    reason="`pyarrow.acero.AsofJoinNodeOptions` does not support column collisions.",
+    raises=ValueError,
+)
+
+# TODO @dangotbanned: Why is `left_by=[], right_by=[]` giving no matches?
+# https://github.com/apache/arrow/blob/9b03118e834dfdaa0cf9e03595477b499252a9cb/python/pyarrow/tests/test_table.py#L3238-L3255
+XFAIL_EMPTY_BY = pytest.mark.xfail(
+    PYARROW_HAS_JOIN_ASOF, reason="Empty `by` fails to match?", raises=AssertionError
+)
 
 
+@XFAIL_SUFFIX
 @pytest.mark.parametrize(
     ("strategy", "expected_values"),
-    [("backward", [1, 3, 7]), ("forward", [1, 6, None]), ("nearest", [1, 6, 7])],
+    [
+        ("backward", [1, 3, 7]),
+        ("forward", [1, 6, None]),
+        pytest.param("nearest", [1, 6, 7], marks=XFAIL_NEAREST),
+    ],
+    ids=str,
 )
 def test_join_asof_numeric(
     strategy: AsofJoinStrategy, expected_values: list[Any], request: pytest.FixtureRequest
@@ -371,7 +380,7 @@ def test_join_asof_numeric(
 
     df = dataframe(left).sort("a")
     require_pyarrow_16(df, request)
-    xfail_nearest(df, strategy, request)
+
     df_right = dataframe(right).sort("a")
     result = df.join_asof(df_right, left_on="a", right_on="a", strategy=strategy)
     result_on = df.join_asof(df_right, on="a", strategy=strategy)
@@ -384,8 +393,9 @@ def test_join_asof_numeric(
     [
         ("backward", [4164, 4566, 4696]),
         ("forward", [4411, 4696, 4696]),
-        ("nearest", [4164, 4696, 4696]),
+        pytest.param("nearest", [4164, 4696, 4696], marks=XFAIL_NEAREST),
     ],
+    ids=str,
 )
 def test_join_asof_time(
     strategy: AsofJoinStrategy,
@@ -410,10 +420,12 @@ def test_join_asof_time(
 
     df = dataframe(left).sort("ts")
     require_pyarrow_16(df, request)
-    xfail_nearest(df, strategy, request)
+
     df_right = dataframe(right).sort("ts")
     result = df.join_asof(df_right, left_on="ts", right_on="ts", strategy=strategy)
     result_on = df.join_asof(df_right, on="ts", strategy=strategy)
+
+    request.applymarker(XFAIL_EMPTY_BY)
     assert_equal_data(result.sort("ts"), expected)
     assert_equal_data(result_on.sort("ts"), expected)
 
@@ -438,6 +450,7 @@ def test_join_asof_by(request: pytest.FixtureRequest) -> None:
     assert_equal_data(result_by.sort("a"), expected)
 
 
+@XFAIL_SUFFIX
 def test_join_asof_suffix(request: pytest.FixtureRequest) -> None:
     left = {"a": [1, 5, 10], "val": ["a", "b", "c"]}
     right = {"a": [1, 2, 3, 6, 7], "val": [1, 2, 3, 6, 7]}
@@ -445,13 +458,6 @@ def test_join_asof_suffix(request: pytest.FixtureRequest) -> None:
 
     df = dataframe(left).sort("a")
     require_pyarrow_16(df, request)
-    request.applymarker(
-        pytest.mark.xfail(
-            (is_pyarrow(df)),
-            reason="pyarrow does not support `suffix`",
-            raises=NotImplementedError,
-        )
-    )
     df_right = dataframe(right).sort("a")
     result = df.join_asof(df_right, left_on="a", right_on="a", suffix="_y")
 

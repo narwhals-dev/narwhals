@@ -291,9 +291,6 @@ def _join_asof_ensure_no_collisions(
     right_by: Sequence[str] = (),
     suffix: str = "_right",
 ) -> None:
-    if suffix != "_right":
-        msg = f"`pyarrow` does not support `join_asof({suffix=})`"
-        raise NotImplementedError(msg)
     # AsofJoin does not return on or by columns for right_operand.
     excluding = {right_on, *right_by}
     right_columns = {col for col in right.schema.names if col not in excluding}
@@ -302,18 +299,35 @@ def _join_asof_ensure_no_collisions(
             f"Columns {columns_collisions} present in both tables. "
             "AsofJoin does not support column collisions."
         )
+        if suffix != "_right":
+            msg = f"{msg}\n\n`pyarrow` does not support `join_asof({suffix=})`"
         raise ValueError(msg)
+
+
+TODO_TOLERANCE_CALCULATION = 10_000
+"""Thinking something like `pc.max(right.column(on)) - pc.min(left.column(on))`.
+
+- Need to stay within data type bounds
+- `pc.subtract` can work directly on the column values
+  - Then `.cast(pa.int64()).as_py()`
+- May need to flip operands and/or compute function for backward/forward
+"""
 
 
 # TODO @dangotbanned: Figure out what the tolerance should be
 def _join_asof_tolerance(
-    left: pa.Table, right: pa.Table, strategy: AsofJoinStrategy
+    left: pa.Table,  # noqa: ARG001
+    right: pa.Table,  # noqa: ARG001
+    strategy: AsofJoinStrategy,
 ) -> int:
     if strategy == "nearest":
         msg = "Only 'backward' and 'forward' strategies are currently supported for `pyarrow`"
         raise NotImplementedError(msg)
-    msg = f"TODO: Derive `join_asof(tolerance=...)` from:\n{left.num_rows=}, {right.num_rows=}, {strategy=}"
-    raise NotImplementedError(msg)
+    return (
+        -TODO_TOLERANCE_CALCULATION
+        if strategy == "backward"
+        else TODO_TOLERANCE_CALCULATION
+    )
 
 
 def join_asof_tables(
