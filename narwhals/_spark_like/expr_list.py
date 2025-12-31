@@ -82,3 +82,15 @@ class SparkLikeExprListNamespace(
             )
 
         return self.compliant._with_elementwise(func)
+
+    def sort(self, *, descending: bool, nulls_last: bool) -> SparkLikeExpr:
+        def func(expr: Column) -> Column:
+            F = self.compliant._F
+            if not descending and nulls_last:
+                return F.array_sort(expr)
+            if descending and not nulls_last:  # pragma: no cover
+                # https://github.com/eakmanrq/sqlframe/issues/559
+                return F.reverse(F.array_sort(expr))
+            return F.sort_array(expr, asc=not descending)
+
+        return self.compliant._with_elementwise(func)
