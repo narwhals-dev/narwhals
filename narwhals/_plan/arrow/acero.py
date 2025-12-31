@@ -47,7 +47,12 @@ if TYPE_CHECKING:
         Aggregation as _Aggregation,
     )
     from narwhals._plan.arrow.group_by import AggSpec
-    from narwhals._plan.arrow.typing import ArrowAny, JoinTypeSubset, ScalarAny
+    from narwhals._plan.arrow.typing import (
+        ArrowAny,
+        ChunkedArrayAny,
+        JoinTypeSubset,
+        ScalarAny,
+    )
     from narwhals._plan.typing import OneOrIterable, Seq
     from narwhals.typing import NonNestedLiteral
 
@@ -284,6 +289,9 @@ def _asofjoin(
     return Decl("asofjoin", options, [table_source(left), table_source(right)])
 
 
+# TODO @dangotbanned: Can we do anything funky to work around this?
+# Current code is lifted straight from upstream
+# https://github.com/apache/arrow/blob/9b03118e834dfdaa0cf9e03595477b499252a9cb/python/pyarrow/acero.py#L306-L316
 def _join_asof_ensure_no_collisions(
     left: pa.Table,
     right: pa.Table,
@@ -304,30 +312,36 @@ def _join_asof_ensure_no_collisions(
         raise ValueError(msg)
 
 
-TODO_TOLERANCE_CALCULATION = 10_000
-"""Thinking something like `pc.max(right.column(on)) - pc.min(left.column(on))`.
-
-- Need to stay within data type bounds
-- `pc.subtract` can work directly on the column values
-  - Then `.cast(pa.int64()).as_py()`
-- May need to flip operands and/or compute function for backward/forward
-"""
-
-
-# TODO @dangotbanned: Figure out what the tolerance should be
-def _join_asof_tolerance(
-    left: pa.Table,  # noqa: ARG001
-    right: pa.Table,  # noqa: ARG001
-    strategy: AsofJoinStrategy,
+def _join_asof_strategy_to_tolerance(
+    left_on: ChunkedArrayAny, right_on: ChunkedArrayAny, /, strategy: AsofJoinStrategy
 ) -> int:
+    """Calculate the **required** `tolerance` argument, from `*on` values and strategy.
+
+    For both `polars` and `pandas` this is optional and in `narwhals` it isn't supported (yet).
+
+    So we need to get the lowest/highest value for a match and use that for a similar default.
+
+    `"backward"`:
+
+        tolerance <= right_on - left_on <= 0
+
+    `"forward"`:
+
+        0 <= right_on - left_on <= tolerance
+
+    Note:
+        `tolerance` is interpreted in the same units as the `on` keys.
+    """
+    import narwhals._plan.arrow.functions as fn
+
     if strategy == "nearest":
         msg = "Only 'backward' and 'forward' strategies are currently supported for `pyarrow`"
         raise NotImplementedError(msg)
-    return (
-        -TODO_TOLERANCE_CALCULATION
-        if strategy == "backward"
-        else TODO_TOLERANCE_CALCULATION
-    )
+    lower = fn.min_horizontal(fn.min_(left_on), fn.min_(right_on))
+    upper = fn.max_horizontal(fn.max_(left_on), fn.max_(right_on))
+    scalar = fn.sub(lower, upper) if strategy == "backward" else fn.sub(upper, lower)
+    tolerance: int = fn.cast(scalar, fn.I64).as_py()
+    return tolerance
 
 
 def join_asof_tables(
@@ -342,7 +356,9 @@ def join_asof_tables(
     suffix: str = "_right",
 ) -> pa.Table:
     _join_asof_ensure_no_collisions(left, right, right_on, right_by, suffix=suffix)
-    tolerance = _join_asof_tolerance(left, right, strategy)
+    tolerance = _join_asof_strategy_to_tolerance(
+        left.column(left_on), right.column(right_on), strategy
+    )
     lb: list[Any] = [] if not left_by else list(left_by)
     rb: list[Any] = [] if not right_by else list(right_by)
     join_opts = pac.AsofJoinNodeOptions(

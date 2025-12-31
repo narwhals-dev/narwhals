@@ -370,12 +370,6 @@ XFAIL_SUFFIX = pytest.mark.xfail(
     raises=ValueError,
 )
 
-# TODO @dangotbanned: Why is `left_by=[], right_by=[]` giving no matches?
-# https://github.com/apache/arrow/blob/9b03118e834dfdaa0cf9e03595477b499252a9cb/python/pyarrow/tests/test_table.py#L3238-L3255
-XFAIL_EMPTY_BY = pytest.mark.xfail(
-    PYARROW_HAS_JOIN_ASOF, reason="Empty `by` fails to match?", raises=AssertionError
-)
-
 
 @XFAIL_SUFFIX
 @pytest.mark.parametrize(
@@ -441,7 +435,6 @@ def test_join_asof_time(
     require_pyarrow_16(df, request)
     df_right = dataframe(right).sort("ts")
     result = df.join_asof(df_right, **kwds, strategy=strategy).sort("ts")
-    request.applymarker(XFAIL_EMPTY_BY)
     assert_equal_data(result, expected)
 
 
