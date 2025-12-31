@@ -361,41 +361,22 @@ def xfail_nearest(
 @pytest.mark.parametrize(
     ("strategy", "expected"),
     [
-        (
-            "backward",
-            {"antananarivo": [1, 5, 10], "val": ["a", "b", "c"], "val_right": [1, 3, 7]},
-        ),
-        (
-            "forward",
-            {
-                "antananarivo": [1, 5, 10],
-                "val": ["a", "b", "c"],
-                "val_right": [1, 6, None],
-            },
-        ),
-        (
-            "nearest",
-            {"antananarivo": [1, 5, 10], "val": ["a", "b", "c"], "val_right": [1, 6, 7]},
-        ),
+        ("backward", {"a": [1, 5, 10], "val": ["a", "b", "c"], "val_right": [1, 3, 7]}),
+        ("forward", {"a": [1, 5, 10], "val": ["a", "b", "c"], "val_right": [1, 6, None]}),
+        ("nearest", {"a": [1, 5, 10], "val": ["a", "b", "c"], "val_right": [1, 6, 7]}),
     ],
 )
 def test_join_asof_numeric(
     strategy: AsofJoinStrategy, expected: Data, request: pytest.FixtureRequest
 ) -> None:
-    df = dataframe({"antananarivo": [1, 5, 10], "val": ["a", "b", "c"]}).sort(
-        "antananarivo"
-    )
+    df = dataframe({"a": [1, 5, 10], "val": ["a", "b", "c"]}).sort("a")
     require_pyarrow_16(df, request)
     xfail_nearest(df, strategy, request)
-    df_right = dataframe({"antananarivo": [1, 2, 3, 6, 7], "val": [1, 2, 3, 6, 7]}).sort(
-        "antananarivo"
-    )
-    result = df.join_asof(
-        df_right, left_on="antananarivo", right_on="antananarivo", strategy=strategy
-    )
-    result_on = df.join_asof(df_right, on="antananarivo", strategy=strategy)
-    assert_equal_data(result.sort(by="antananarivo"), expected)
-    assert_equal_data(result_on.sort(by="antananarivo"), expected)
+    df_right = dataframe({"a": [1, 2, 3, 6, 7], "val": [1, 2, 3, 6, 7]}).sort("a")
+    result = df.join_asof(df_right, left_on="a", right_on="a", strategy=strategy)
+    result_on = df.join_asof(df_right, on="a", strategy=strategy)
+    assert_equal_data(result.sort("a"), expected)
+    assert_equal_data(result_on.sort("a"), expected)
 
 
 @pytest.mark.parametrize(
@@ -404,36 +385,36 @@ def test_join_asof_numeric(
         (
             "backward",
             {
-                "datetime": [
+                "ts": [
                     dt.datetime(2016, 3, 1),
                     dt.datetime(2018, 8, 1),
                     dt.datetime(2019, 1, 1),
                 ],
-                "population": [82.19, 82.66, 83.12],
+                "pop": [82.19, 82.66, 83.12],
                 "gdp": [4164, 4566, 4696],
             },
         ),
         (
             "forward",
             {
-                "datetime": [
+                "ts": [
                     dt.datetime(2016, 3, 1),
                     dt.datetime(2018, 8, 1),
                     dt.datetime(2019, 1, 1),
                 ],
-                "population": [82.19, 82.66, 83.12],
+                "pop": [82.19, 82.66, 83.12],
                 "gdp": [4411, 4696, 4696],
             },
         ),
         (
             "nearest",
             {
-                "datetime": [
+                "ts": [
                     dt.datetime(2016, 3, 1),
                     dt.datetime(2018, 8, 1),
                     dt.datetime(2019, 1, 1),
                 ],
-                "population": [82.19, 82.66, 83.12],
+                "pop": [82.19, 82.66, 83.12],
                 "gdp": [4164, 4696, 4696],
             },
         ),
@@ -444,19 +425,19 @@ def test_join_asof_time(
 ) -> None:
     df = dataframe(
         {
-            "datetime": [
+            "ts": [
                 dt.datetime(2016, 3, 1),
                 dt.datetime(2018, 8, 1),
                 dt.datetime(2019, 1, 1),
             ],
-            "population": [82.19, 82.66, 83.12],
+            "pop": [82.19, 82.66, 83.12],
         }
-    ).sort("datetime")
+    ).sort("ts")
     require_pyarrow_16(df, request)
     xfail_nearest(df, strategy, request)
     df_right = dataframe(
         {
-            "datetime": [
+            "ts": [
                 dt.datetime(2016, 1, 1),
                 dt.datetime(2017, 1, 1),
                 dt.datetime(2018, 1, 1),
@@ -465,39 +446,35 @@ def test_join_asof_time(
             ],
             "gdp": [4164, 4411, 4566, 4696, 4827],
         }
-    ).sort("datetime")
-    result = df.join_asof(
-        df_right, left_on="datetime", right_on="datetime", strategy=strategy
-    )
-    result_on = df.join_asof(df_right, on="datetime", strategy=strategy)
-    assert_equal_data(result.sort(by="datetime"), expected)
-    assert_equal_data(result_on.sort(by="datetime"), expected)
+    ).sort("ts")
+    result = df.join_asof(df_right, left_on="ts", right_on="ts", strategy=strategy)
+    result_on = df.join_asof(df_right, on="ts", strategy=strategy)
+    assert_equal_data(result.sort("ts"), expected)
+    assert_equal_data(result_on.sort("ts"), expected)
 
 
 def test_join_asof_by(request: pytest.FixtureRequest) -> None:
     df = dataframe(
-        {"antananarivo": [1, 5, 7, 10], "bob": ["D", "D", "C", "A"], "c": [9, 2, 1, 1]}
-    ).sort("antananarivo")
+        {"a": [1, 5, 7, 10], "b": ["D", "D", "C", "A"], "c": [9, 2, 1, 1]}
+    ).sort("a")
     require_pyarrow_16(df, request)
     df_right = dataframe(
-        {"antananarivo": [1, 4, 5, 8], "bob": ["D", "D", "A", "F"], "d": [1, 3, 4, 1]}
-    ).sort("antananarivo")
-    result = df.join_asof(df_right, on="antananarivo", by_left="bob", by_right="bob")
-    result_by = df.join_asof(df_right, on="antananarivo", by="bob")
+        {"a": [1, 4, 5, 8], "b": ["D", "D", "A", "F"], "d": [1, 3, 4, 1]}
+    ).sort("a")
+    result = df.join_asof(df_right, on="a", by_left="b", by_right="b")
+    result_by = df.join_asof(df_right, on="a", by="b")
     expected = {
-        "antananarivo": [1, 5, 7, 10],
-        "bob": ["D", "D", "C", "A"],
+        "a": [1, 5, 7, 10],
+        "b": ["D", "D", "C", "A"],
         "c": [9, 2, 1, 1],
         "d": [1, 3, None, 4],
     }
-    assert_equal_data(result.sort(by="antananarivo"), expected)
-    assert_equal_data(result_by.sort(by="antananarivo"), expected)
+    assert_equal_data(result.sort("a"), expected)
+    assert_equal_data(result_by.sort("a"), expected)
 
 
 def test_join_asof_suffix(request: pytest.FixtureRequest) -> None:
-    df = dataframe({"antananarivo": [1, 5, 10], "val": ["a", "b", "c"]}).sort(
-        "antananarivo"
-    )
+    df = dataframe({"a": [1, 5, 10], "val": ["a", "b", "c"]}).sort("a")
     require_pyarrow_16(df, request)
     request.applymarker(
         pytest.mark.xfail(
@@ -506,14 +483,10 @@ def test_join_asof_suffix(request: pytest.FixtureRequest) -> None:
             raises=NotImplementedError,
         )
     )
-    df_right = dataframe({"antananarivo": [1, 2, 3, 6, 7], "val": [1, 2, 3, 6, 7]}).sort(
-        "antananarivo"
-    )
-    result = df.join_asof(
-        df_right, left_on="antananarivo", right_on="antananarivo", suffix="_y"
-    )
-    expected = {"antananarivo": [1, 5, 10], "val": ["a", "b", "c"], "val_y": [1, 3, 7]}
-    assert_equal_data(result.sort(by="antananarivo"), expected)
+    df_right = dataframe({"a": [1, 2, 3, 6, 7], "val": [1, 2, 3, 6, 7]}).sort("a")
+    result = df.join_asof(df_right, left_on="a", right_on="a", suffix="_y")
+    expected = {"a": [1, 5, 10], "val": ["a", "b", "c"], "val_y": [1, 3, 7]}
+    assert_equal_data(result.sort("a"), expected)
 
 
 @pytest.mark.parametrize("strategy", ["back", "furthest"])
@@ -527,7 +500,7 @@ def test_join_asof_not_implemented(strategy: str) -> None:
 
 
 def test_join_asof_keys_exceptions() -> None:
-    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
     df = dataframe(data)
 
     with pytest.raises(
@@ -536,14 +509,14 @@ def test_join_asof_keys_exceptions() -> None:
             "Either (`left_on` and `right_on`) or `on` keys should be specified."
         ),
     ):
-        df.join_asof(df, left_on="antananarivo")
+        df.join_asof(df, left_on="a")
     with pytest.raises(
         ValueError,
         match=re.escape(
             "Either (`left_on` and `right_on`) or `on` keys should be specified."
         ),
     ):
-        df.join_asof(df, right_on="antananarivo")
+        df.join_asof(df, right_on="a")
     with pytest.raises(
         ValueError,
         match=re.escape(
@@ -555,23 +528,21 @@ def test_join_asof_keys_exceptions() -> None:
         ValueError,
         match=re.escape("If `on` is specified, `left_on` and `right_on` should be None."),
     ):
-        df.join_asof(
-            df, left_on="antananarivo", right_on="antananarivo", on="antananarivo"
-        )
+        df.join_asof(df, left_on="a", right_on="a", on="a")
     with pytest.raises(
         ValueError,
         match=re.escape("If `on` is specified, `left_on` and `right_on` should be None."),
     ):
-        df.join_asof(df, left_on="antananarivo", on="antananarivo")
+        df.join_asof(df, left_on="a", on="a")
     with pytest.raises(
         ValueError,
         match=re.escape("If `on` is specified, `left_on` and `right_on` should be None."),
     ):
-        df.join_asof(df, right_on="antananarivo", on="antananarivo")
+        df.join_asof(df, right_on="a", on="a")
 
 
-ON = "antananarivo"
-BY = "bob"
+ON = "a"
+BY = "b"
 
 
 @pytest.mark.parametrize(
