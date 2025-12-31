@@ -289,8 +289,6 @@ def _asofjoin(
     return Decl("asofjoin", options, [table_source(left), table_source(right)])
 
 
-# NOTE: Adapted from upstream to add support instead of raising
-# https://github.com/apache/arrow/blob/9b03118e834dfdaa0cf9e03595477b499252a9cb/python/pyarrow/acero.py#L306-L316
 def _join_asof_ensure_no_collisions(
     left: pa.Table,
     right: pa.Table,
@@ -298,14 +296,14 @@ def _join_asof_ensure_no_collisions(
     right_by: Sequence[str] = (),
     suffix: str = "_right",
 ) -> pa.Table:
-    # TODO @dangotbanned: Do this in fewer steps
-    excluding = {right_on, *right_by}
+    """Adapted from [upstream] to avoid raising early.
+
+    [upstream]: https://github.com/apache/arrow/blob/9b03118e834dfdaa0cf9e03595477b499252a9cb/python/pyarrow/acero.py#L306-L316
+    """
     right_names = right.schema.names
-    right_columns = {col for col in right_names if col not in excluding}
-    if collisions := set(left.schema.names) & right_columns:
-        renamed = [
-            name if name not in collisions else f"{name}{suffix}" for name in right_names
-        ]
+    allowed = {right_on, *right_by}
+    if collisions := set(right_names).difference(allowed).intersection(left.schema.names):
+        renamed = [f"{nm}{suffix}" if nm in collisions else nm for nm in right_names]
         return right.rename_columns(renamed)
     return right
 
