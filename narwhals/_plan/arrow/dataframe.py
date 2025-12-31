@@ -20,7 +20,7 @@ from narwhals._plan.compliant.dataframe import EagerDataFrame
 from narwhals._plan.compliant.typing import LazyFrameAny, namespace
 from narwhals._plan.exceptions import shape_error
 from narwhals._plan.expressions import NamedIR, named_ir
-from narwhals._utils import Version, generate_repr
+from narwhals._utils import Version, generate_repr, requires
 from narwhals.schema import Schema
 
 if TYPE_CHECKING:
@@ -308,6 +308,7 @@ class ArrowDataFrame(
         """Less flexible, but more direct equivalent to join(how="inner", left_on=...)`."""
         return self._with_native(acero.join_inner_tables(self.native, other.native, on))
 
+    @requires.backend_version((16,))
     def join_asof(
         self,
         other: Self,
@@ -332,7 +333,7 @@ class ArrowDataFrame(
             )
         )
 
-    join_asof_by = join_asof
+    join_asof_by = join_asof  # pyright: ignore[reportAssignmentType]
 
     def _filter(self, predicate: Predicate | acero.Expr) -> Self:
         mask: Incomplete = predicate
