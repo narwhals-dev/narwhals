@@ -14,7 +14,7 @@ import pyarrow.compute as pc  # ignore-banned-import
 from narwhals._arrow.utils import (
     cast_for_truediv,
     chunked_array as _chunked_array,
-    concat_tables as concat_tables,  # noqa: PLC0414
+    concat_tables as concat_tables,
     floordiv_compat as _floordiv,
     narwhals_to_native_dtype as _dtype_native,
 )
