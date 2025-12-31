@@ -283,12 +283,6 @@ def _hashjoin(
     return Decl("hashjoin", options, [_into_decl(left), _into_decl(right)])
 
 
-def _asofjoin(
-    left: pa.Table, right: pa.Table, /, options: pac.AsofJoinNodeOptions
-) -> Decl:
-    return Decl("asofjoin", options, [table_source(left), table_source(right)])
-
-
 def _join_asof_ensure_no_collisions(
     left: pa.Table,
     right: pa.Table,
@@ -362,7 +356,8 @@ def join_asof_tables(
     join_opts = pac.AsofJoinNodeOptions(
         left_on=left_on, right_on=right_on, left_by=lb, right_by=rb, tolerance=tolerance
     )
-    return _asofjoin(left, right, join_opts).to_table()
+    inputs = [table_source(left), table_source(right)]
+    return Decl("asofjoin", join_opts, inputs).to_table()
 
 
 def declare(*declarations: Decl) -> Decl:
