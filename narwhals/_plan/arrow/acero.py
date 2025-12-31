@@ -28,7 +28,7 @@ from pyarrow.acero import Declaration as Decl
 from narwhals._plan.common import ensure_list_str, temp
 from narwhals._plan.typing import NonCrossJoinStrategy, OneOrSeq
 from narwhals._utils import check_column_names_are_unique
-from narwhals.typing import JoinStrategy, SingleColSelector
+from narwhals.typing import AsofJoinStrategy, JoinStrategy, SingleColSelector
 
 if TYPE_CHECKING:
     from collections.abc import (
@@ -47,7 +47,12 @@ if TYPE_CHECKING:
         Aggregation as _Aggregation,
     )
     from narwhals._plan.arrow.group_by import AggSpec
-    from narwhals._plan.arrow.typing import ArrowAny, JoinTypeSubset, ScalarAny
+    from narwhals._plan.arrow.typing import (
+        ArrowAny,
+        ChunkedArrayAny,
+        JoinTypeSubset,
+        ScalarAny,
+    )
     from narwhals._plan.typing import OneOrIterable, Seq
     from narwhals.typing import NonNestedLiteral
 
@@ -278,6 +283,53 @@ def _hashjoin(
     return Decl("hashjoin", options, [_into_decl(left), _into_decl(right)])
 
 
+def _join_asof_suffix_collisions(
+    left: pa.Table, right: pa.Table, right_on: str, right_by: Sequence[str], suffix: str
+) -> pa.Table:
+    """Adapted from [upstream] to avoid raising early.
+
+    [upstream]: https://github.com/apache/arrow/blob/9b03118e834dfdaa0cf9e03595477b499252a9cb/python/pyarrow/acero.py#L306-L316
+    """
+    right_names = right.schema.names
+    allowed = {right_on, *right_by}
+    if collisions := set(right_names).difference(allowed).intersection(left.schema.names):
+        renamed = [f"{nm}{suffix}" if nm in collisions else nm for nm in right_names]
+        return right.rename_columns(renamed)
+    return right
+
+
+def _join_asof_strategy_to_tolerance(
+    left_on: ChunkedArrayAny, right_on: ChunkedArrayAny, /, strategy: AsofJoinStrategy
+) -> int:
+    """Calculate the **required** `tolerance` argument, from `*on` values and strategy.
+
+    For both `polars` and `pandas` this is optional and in `narwhals` it isn't supported (yet).
+
+    So we need to get the lowest/highest value for a match and use that for a similar default.
+
+    `"backward"`:
+
+        tolerance <= right_on - left_on <= 0
+
+    `"forward"`:
+
+        0 <= right_on - left_on <= tolerance
+
+    Note:
+        `tolerance` is interpreted in the same units as the `on` keys.
+    """
+    import narwhals._plan.arrow.functions as fn
+
+    if strategy == "nearest":
+        msg = "Only 'backward' and 'forward' strategies are currently supported for `pyarrow`"
+        raise NotImplementedError(msg)
+    lower = fn.min_horizontal(fn.min_(left_on), fn.min_(right_on))
+    upper = fn.max_horizontal(fn.max_(left_on), fn.max_(right_on))
+    scalar = fn.sub(lower, upper) if strategy == "backward" else fn.sub(upper, lower)
+    tolerance: int = fn.cast(scalar, fn.I64).as_py()
+    return tolerance
+
+
 def declare(*declarations: Decl) -> Decl:
     """Compose one or more `Declaration` nodes for execution as a pipeline."""
     if len(declarations) == 1:
@@ -437,6 +489,31 @@ def join_cross_tables(
     left_, right_ = prepend_column(left, on, 0), prepend_column(right, on, 0)
     decl = _hashjoin(left_, right_, opts)
     return collect(decl, ensure_unique_column_names=True).remove_column(0)
+
+
+def join_asof_tables(
+    left: pa.Table,
+    right: pa.Table,
+    left_on: str,
+    right_on: str,
+    *,
+    left_by: Sequence[str] = (),
+    right_by: Sequence[str] = (),
+    strategy: AsofJoinStrategy = "backward",
+    suffix: str = "_right",
+) -> pa.Table:
+    """Perform an inexact join between two tables, using the nearest key."""
+    right = _join_asof_suffix_collisions(left, right, right_on, right_by, suffix=suffix)
+    tolerance = _join_asof_strategy_to_tolerance(
+        left.column(left_on), right.column(right_on), strategy
+    )
+    lb: list[Any] = [] if not left_by else list(left_by)
+    rb: list[Any] = [] if not right_by else list(right_by)
+    join_opts = pac.AsofJoinNodeOptions(
+        left_on=left_on, right_on=right_on, left_by=lb, right_by=rb, tolerance=tolerance
+    )
+    inputs = [table_source(left), table_source(right)]
+    return Decl("asofjoin", join_opts, inputs).to_table()
 
 
 def _add_column_table(

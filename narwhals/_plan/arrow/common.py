@@ -31,6 +31,10 @@ class ArrowFrameSeries(Generic[NativeT]):
     _native: NativeT
     _version: Version
 
+    # NOTE: Aliases to integrate with `@requires.backend_version`
+    _backend_version = compat.BACKEND_VERSION
+    _implementation = implementation
+
     @property
     def native(self) -> NativeT:
         return self._native

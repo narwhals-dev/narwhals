@@ -32,6 +32,7 @@ from narwhals.dependencies import is_pyarrow_table
 from narwhals.exceptions import InvalidOperationError, ShapeError
 from narwhals.schema import Schema
 from narwhals.typing import (
+    AsofJoinStrategy,
     EagerAllowed,
     FileSource,
     IntoBackend,
@@ -93,6 +94,21 @@ class BaseFrame(Generic[NativeFrameT_co]):
 
     def __init__(self, compliant: CompliantFrame[Any, NativeFrameT_co], /) -> None:
         self._compliant = compliant
+
+    def _unwrap_compliant(self, other: Self | Any, /) -> Incomplete:
+        """Return the `CompliantFrame` that backs `other` if it matches self.
+
+        - Rejects (`DataFrame`, `LazyFrame`) and (`LazyFrame`, `DataFrame`)
+        - Rejects mixed backends like (`DataFrame[pa.Table]`, `DataFrame[pd.DataFrame]`)
+        """
+        if isinstance(other, type(self)):
+            compliant = other._compliant
+            if isinstance(compliant, type(self._compliant)):
+                return compliant
+            msg = f"Expected {qualified_type_name(self._compliant)!r}, got {qualified_type_name(compliant)!r}"
+            raise NotImplementedError(msg)
+        msg = f"Expected `other` to be a {qualified_type_name(self)!r}, got: {qualified_type_name(other)!r}"  # pragma: no cover
+        raise TypeError(msg)  # pragma: no cover
 
     def _with_compliant(self, compliant: CompliantFrame[Any, Incomplete], /) -> Self:
         return type(self)(compliant)
@@ -190,6 +206,67 @@ class BaseFrame(Generic[NativeFrameT_co]):
         by_selectors = _parse.parse_into_seq_of_selector_ir(order_by)
         by_names = expand_selector_irs_names(by_selectors, schema=self, require_any=True)
         return self._with_compliant(self._compliant.with_row_index_by(name, by_names))
+
+    def join(
+        self,
+        other: Incomplete,
+        on: str | Sequence[str] | None = None,
+        how: JoinStrategy = "inner",
+        *,
+        left_on: str | Sequence[str] | None = None,
+        right_on: str | Sequence[str] | None = None,
+        suffix: str = "_right",
+    ) -> Self:
+        left = self._compliant
+        right: CompliantFrame[Any, NativeFrameT_co] = self._unwrap_compliant(other)
+        how = _validate_join_strategy(how)
+        if how == "cross":
+            if left_on is not None or right_on is not None or on is not None:
+                msg = "Can not pass `left_on`, `right_on` or `on` keys for cross join"
+                raise ValueError(msg)
+            return self._with_compliant(left.join_cross(right, suffix=suffix))
+        left_on, right_on = normalize_join_on(on, how, left_on, right_on)
+        return self._with_compliant(
+            left.join(right, how=how, left_on=left_on, right_on=right_on, suffix=suffix)
+        )
+
+    def join_asof(
+        self,
+        other: Incomplete,
+        *,
+        left_on: str | None = None,
+        right_on: str | None = None,
+        on: str | None = None,
+        by_left: str | Sequence[str] | None = None,
+        by_right: str | Sequence[str] | None = None,
+        by: str | Sequence[str] | None = None,
+        strategy: AsofJoinStrategy = "backward",
+        suffix: str = "_right",
+    ) -> Self:
+        left = self._compliant
+        right: CompliantFrame[Any, NativeFrameT_co] = self._unwrap_compliant(other)
+        strategy = _validate_join_asof_strategy(strategy)
+        left_on_, right_on_ = normalize_join_asof_on(left_on, right_on, on)
+        if by_left or by_right or by:
+            left_by, right_by = normalize_join_asof_by(by_left, by_right, by)
+            result = left.join_asof(
+                right,
+                left_on=left_on_,
+                right_on=right_on_,
+                left_by=left_by,
+                right_by=right_by,
+                strategy=strategy,
+                suffix=suffix,
+            )
+        else:
+            result = left.join_asof(
+                right,
+                left_on=left_on_,
+                right_on=right_on_,
+                strategy=strategy,
+                suffix=suffix,
+            )
+        return self._with_compliant(result)
 
     def explode(
         self,
@@ -432,16 +509,33 @@ class DataFrame(
         right_on: str | Sequence[str] | None = None,
         suffix: str = "_right",
     ) -> Self:
-        left, right = self._compliant, other._compliant
-        how = _validate_join_strategy(how)
-        if how == "cross":
-            if left_on is not None or right_on is not None or on is not None:
-                msg = "Can not pass `left_on`, `right_on` or `on` keys for cross join"
-                raise ValueError(msg)
-            return self._with_compliant(left.join_cross(right, suffix=suffix))
-        left_on, right_on = normalize_join_on(on, how, left_on, right_on)
-        return self._with_compliant(
-            left.join(right, how=how, left_on=left_on, right_on=right_on, suffix=suffix)
+        return super().join(
+            other, how=how, left_on=left_on, right_on=right_on, on=on, suffix=suffix
+        )
+
+    def join_asof(
+        self,
+        other: Self,
+        *,
+        left_on: str | None = None,
+        right_on: str | None = None,
+        on: str | None = None,
+        by_left: str | Sequence[str] | None = None,
+        by_right: str | Sequence[str] | None = None,
+        by: str | Sequence[str] | None = None,
+        strategy: AsofJoinStrategy = "backward",
+        suffix: str = "_right",
+    ) -> Self:
+        return super().join_asof(
+            other,
+            left_on=left_on,
+            right_on=right_on,
+            on=on,
+            by_left=by_left,
+            by_right=by_right,
+            by=by,
+            strategy=strategy,
+            suffix=suffix,
         )
 
     def filter(
@@ -650,10 +744,21 @@ def _is_unique_keep_strategy(obj: Any) -> TypeIs[UniqueKeepStrategy]:
     return obj in {"any", "first", "last", "none"}
 
 
+def _is_join_asof_strategy(obj: Any) -> TypeIs[AsofJoinStrategy]:
+    return obj in {"backward", "forward", "nearest"}
+
+
 def _validate_join_strategy(how: str, /) -> JoinStrategy:
     if _is_join_strategy(how):
         return how
     msg = f"Only the following join strategies are supported: {get_args(JoinStrategy)}; found '{how}'."
+    raise NotImplementedError(msg)
+
+
+def _validate_join_asof_strategy(strategy: str, /) -> AsofJoinStrategy:
+    if _is_join_asof_strategy(strategy):
+        return strategy
+    msg = f"Only the following join strategies are supported: {get_args(AsofJoinStrategy)}; found '{strategy}'."
     raise NotImplementedError(msg)
 
 
@@ -671,7 +776,7 @@ def normalize_join_on(
     right_on: OneOrIterable[str] | None,
     /,
 ) -> tuple[Seq[str], Seq[str]]:
-    """Reduce the 3 potential key (`on*`) arguments to 2.
+    """Reduce the 3 potential key (`*on`) arguments to 2.
 
     Ensures the keys spelling is compatible with the join strategy.
     """
@@ -690,6 +795,44 @@ def normalize_join_on(
         raise ValueError(msg)
     on = ensure_seq_str(on)
     return on, on
+
+
+def normalize_join_asof_on(
+    left_on: str | None, right_on: str | None, on: str | None
+) -> tuple[str, str]:
+    """Reduce the 3 potential `join_asof` (`*on`) arguments to 2."""
+    if on is None:
+        if left_on is None or right_on is None:
+            msg = "Either (`left_on` and `right_on`) or `on` keys should be specified."
+            raise ValueError(msg)
+        return left_on, right_on
+    if left_on is not None or right_on is not None:
+        msg = "If `on` is specified, `left_on` and `right_on` should be None."
+        raise ValueError(msg)
+    return on, on
+
+
+def normalize_join_asof_by(
+    by_left: str | Sequence[str] | None,
+    by_right: str | Sequence[str] | None,
+    by: str | Sequence[str] | None,
+) -> tuple[Seq[str], Seq[str]]:
+    """Reduce the 3 potential `join_asof` (`by*`) arguments to 2."""
+    if by is None:
+        if by_left and by_right:
+            left_by = ensure_seq_str(by_left)
+            right_by = ensure_seq_str(by_right)
+            if len(left_by) != len(right_by):
+                msg = "`by_left` and `by_right` must have the same length."
+                raise ValueError(msg)
+            return left_by, right_by
+        msg = "Can not specify only `by_left` or `by_right`, you need to specify both."
+        raise ValueError(msg)
+    if by_left or by_right:
+        msg = "If `by` is specified, `by_left` and `by_right` should be None."
+        raise ValueError(msg)
+    by_ = ensure_seq_str(by)  # pragma: no cover
+    return by_, by_  # pragma: no cover
 
 
 def normalize_pivot_args(

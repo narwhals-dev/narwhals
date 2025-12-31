@@ -45,7 +45,7 @@ if TYPE_CHECKING:
     from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
     from narwhals._utils import Implementation, Version
     from narwhals.dtypes import DType
-    from narwhals.typing import IntoSchema, PivotAgg, UniqueKeepStrategy
+    from narwhals.typing import AsofJoinStrategy, IntoSchema, PivotAgg, UniqueKeepStrategy
 
 Incomplete: TypeAlias = Any
 
@@ -72,6 +72,27 @@ class CompliantFrame(HasVersion, Protocol[ColumnT_co, NativeFrameT_co]):
     def explode(self, subset: Sequence[str], options: ExplodeOptions) -> Self: ...
     # Shouldn't *need* to be `NamedIR`, but current impl depends on a name being passed around
     def filter(self, predicate: NamedIR, /) -> Self: ...
+    def join(
+        self,
+        other: Self,
+        *,
+        how: NonCrossJoinStrategy,
+        left_on: Sequence[str],
+        right_on: Sequence[str],
+        suffix: str = "_right",
+    ) -> Self: ...
+    def join_cross(self, other: Self, *, suffix: str = "_right") -> Self: ...
+    def join_asof(
+        self,
+        other: Self,
+        *,
+        left_on: str,
+        right_on: str,
+        left_by: Sequence[str] = (),  # https://github.com/pola-rs/polars/issues/18496
+        right_by: Sequence[str] = (),
+        strategy: AsofJoinStrategy = "backward",
+        suffix: str = "_right",
+    ) -> Self: ...
     def rename(self, mapping: Mapping[str, str]) -> Self: ...
     @property
     def schema(self) -> Mapping[str, DType]: ...
@@ -213,16 +234,6 @@ class CompliantDataFrame(
 
     def filter(self, predicate: NamedIR, /) -> Self: ...
     def iter_columns(self) -> Iterator[SeriesT]: ...
-    def join(
-        self,
-        other: Self,
-        *,
-        how: NonCrossJoinStrategy,
-        left_on: Sequence[str],
-        right_on: Sequence[str],
-        suffix: str = "_right",
-    ) -> Self: ...
-    def join_cross(self, other: Self, *, suffix: str = "_right") -> Self: ...
     def partition_by(
         self, by: Sequence[str], *, include_key: bool = True
     ) -> list[Self]: ...
