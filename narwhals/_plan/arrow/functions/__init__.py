@@ -16,14 +16,23 @@ from narwhals._arrow.utils import (
     chunked_array as _chunked_array,
     concat_tables as concat_tables,
     floordiv_compat as _floordiv,
-    narwhals_to_native_dtype as _dtype_native,
 )
 from narwhals._plan import common, expressions as ir
 from narwhals._plan._guards import is_non_nested_literal
 from narwhals._plan.arrow import compat, options as pa_options
+from narwhals._plan.arrow.functions._dtypes import (
+    BOOL as BOOL,
+    F64 as F64,
+    I64 as I64,
+    UI32 as UI32,
+    cast as cast,
+    cast_table as cast_table,
+    dtype_native as dtype_native,
+    string_type as string_type,
+)
 from narwhals._plan.expressions import functions as F, operators as ops
 from narwhals._plan.options import ExplodeOptions, SortOptions
-from narwhals._utils import Version, no_default
+from narwhals._utils import no_default
 from narwhals.exceptions import ShapeError
 
 if TYPE_CHECKING:
@@ -60,7 +69,6 @@ if TYPE_CHECKING:
         ChunkedOrScalarT,
         ChunkedStruct,
         DataType,
-        DataTypeRemap,
         DataTypeT,
         DateScalar,
         IntegerScalar,
@@ -91,8 +99,6 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         ClosedInterval,
         FillNullStrategy,
-        IntoArrowSchema,
-        IntoDType,
         NonNestedLiteral,
         NumericLiteral,
         PythonLiteral,
@@ -101,11 +107,6 @@ if TYPE_CHECKING:
 
     Ts = TypeVarTuple("Ts")
 
-# NOTE: Common data type instances to share
-UI32: Final = pa.uint32()
-I64: Final = pa.int64()
-F64: Final = pa.float64()
-BOOL: Final = pa.bool_()
 
 EMPTY: Final = ""
 """The empty string."""
@@ -224,75 +225,6 @@ _IS_BETWEEN: Mapping[ClosedInterval, tuple[BinaryComp, BinaryComp]] = {
     "none": (gt, lt),
     "both": (gt_eq, lt_eq),
 }
-
-
-@t.overload
-def dtype_native(dtype: IntoDType, version: Version) -> pa.DataType: ...
-@t.overload
-def dtype_native(dtype: None, version: Version) -> None: ...
-@t.overload
-def dtype_native(dtype: IntoDType | None, version: Version) -> pa.DataType | None: ...
-def dtype_native(dtype: IntoDType | None, version: Version) -> pa.DataType | None:
-    return dtype if dtype is None else _dtype_native(dtype, version)
-
-
-@t.overload
-def cast(
-    native: Scalar[Any], target_type: DataTypeT, *, safe: bool | None = ...
-) -> Scalar[DataTypeT]: ...
-@t.overload
-def cast(
-    native: ChunkedArray[Any], target_type: DataTypeT, *, safe: bool | None = ...
-) -> ChunkedArray[Scalar[DataTypeT]]: ...
-@t.overload
-def cast(
-    native: ChunkedOrScalar[Scalar[Any]],
-    target_type: DataTypeT,
-    *,
-    safe: bool | None = ...,
-) -> ChunkedArray[Scalar[DataTypeT]] | Scalar[DataTypeT]: ...
-def cast(
-    native: ChunkedOrScalar[Scalar[Any]],
-    target_type: DataTypeT,
-    *,
-    safe: bool | None = None,
-) -> ChunkedArray[Scalar[DataTypeT]] | Scalar[DataTypeT]:
-    return pc.cast(native, target_type, safe=safe)
-
-
-def cast_schema(
-    native: pa.Schema, target_types: DataType | Mapping[str, DataType] | DataTypeRemap
-) -> pa.Schema:
-    if isinstance(target_types, pa.DataType):
-        return pa.schema((name, target_types) for name in native.names)
-    if _is_into_pyarrow_schema(target_types):
-        new_schema = native
-        for name, dtype in target_types.items():
-            index = native.get_field_index(name)
-            new_schema.set(index, native.field(index).with_type(dtype))
-        return new_schema
-    return pa.schema((fld.name, target_types.get(fld.type, fld.type)) for fld in native)
-
-
-def cast_table(
-    native: pa.Table, target: DataType | IntoArrowSchema | DataTypeRemap
-) -> pa.Table:
-    s = target if isinstance(target, pa.Schema) else cast_schema(native.schema, target)
-    return native.cast(s)
-
-
-def has_large_string(data_types: Iterable[DataType], /) -> bool:
-    return any(pa.types.is_large_string(tp) for tp in data_types)
-
-
-def string_type(data_types: Iterable[DataType] = (), /) -> StringType:
-    """Return a native string type, compatible with `data_types`.
-
-    Until [apache/arrow#45717] is resolved, we need to upcast `string` to `large_string` when joining.
-
-    [apache/arrow#45717]: https://github.com/apache/arrow/issues/45717
-    """
-    return pa.large_string() if has_large_string(data_types) else pa.string()
 
 
 # NOTE: `mypy` isn't happy, but this broadcasting behavior is worth documenting
@@ -1985,14 +1917,6 @@ def concat_vertical(
 def to_table(array: ChunkedOrArrayAny, name: str = "") -> pa.Table:
     """Equivalent to `Series.to_frame`, but with an option to insert a name for the column."""
     return concat_horizontal((array,), (name,))
-
-
-def _is_into_pyarrow_schema(obj: Mapping[Any, Any]) -> TypeIs[Mapping[str, DataType]]:
-    return (
-        (first := next(iter(obj.items())), None)
-        and isinstance(first[0], str)
-        and isinstance(first[1], pa.DataType)
-    )
 
 
 def _is_arrow(obj: Arrow[ScalarT] | Any) -> TypeIs[Arrow[ScalarT]]:
