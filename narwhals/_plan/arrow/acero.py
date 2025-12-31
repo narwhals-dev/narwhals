@@ -283,12 +283,8 @@ def _hashjoin(
     return Decl("hashjoin", options, [_into_decl(left), _into_decl(right)])
 
 
-def _join_asof_ensure_no_collisions(
-    left: pa.Table,
-    right: pa.Table,
-    right_on: str,
-    right_by: Sequence[str] = (),
-    suffix: str = "_right",
+def _join_asof_suffix_collisions(
+    left: pa.Table, right: pa.Table, right_on: str, right_by: Sequence[str], suffix: str
 ) -> pa.Table:
     """Adapted from [upstream] to avoid raising early.
 
@@ -332,32 +328,6 @@ def _join_asof_strategy_to_tolerance(
     scalar = fn.sub(lower, upper) if strategy == "backward" else fn.sub(upper, lower)
     tolerance: int = fn.cast(scalar, fn.I64).as_py()
     return tolerance
-
-
-def join_asof_tables(
-    left: pa.Table,
-    right: pa.Table,
-    left_on: str,
-    right_on: str,
-    *,
-    left_by: Sequence[str] = (),
-    right_by: Sequence[str] = (),
-    strategy: AsofJoinStrategy = "backward",
-    suffix: str = "_right",
-) -> pa.Table:
-    right = _join_asof_ensure_no_collisions(
-        left, right, right_on, right_by, suffix=suffix
-    )
-    tolerance = _join_asof_strategy_to_tolerance(
-        left.column(left_on), right.column(right_on), strategy
-    )
-    lb: list[Any] = [] if not left_by else list(left_by)
-    rb: list[Any] = [] if not right_by else list(right_by)
-    join_opts = pac.AsofJoinNodeOptions(
-        left_on=left_on, right_on=right_on, left_by=lb, right_by=rb, tolerance=tolerance
-    )
-    inputs = [table_source(left), table_source(right)]
-    return Decl("asofjoin", join_opts, inputs).to_table()
 
 
 def declare(*declarations: Decl) -> Decl:
@@ -519,6 +489,31 @@ def join_cross_tables(
     left_, right_ = prepend_column(left, on, 0), prepend_column(right, on, 0)
     decl = _hashjoin(left_, right_, opts)
     return collect(decl, ensure_unique_column_names=True).remove_column(0)
+
+
+def join_asof_tables(
+    left: pa.Table,
+    right: pa.Table,
+    left_on: str,
+    right_on: str,
+    *,
+    left_by: Sequence[str] = (),
+    right_by: Sequence[str] = (),
+    strategy: AsofJoinStrategy = "backward",
+    suffix: str = "_right",
+) -> pa.Table:
+    """Perform an inexact join between two tables, using the nearest key."""
+    right = _join_asof_suffix_collisions(left, right, right_on, right_by, suffix=suffix)
+    tolerance = _join_asof_strategy_to_tolerance(
+        left.column(left_on), right.column(right_on), strategy
+    )
+    lb: list[Any] = [] if not left_by else list(left_by)
+    rb: list[Any] = [] if not right_by else list(right_by)
+    join_opts = pac.AsofJoinNodeOptions(
+        left_on=left_on, right_on=right_on, left_by=lb, right_by=rb, tolerance=tolerance
+    )
+    inputs = [table_source(left), table_source(right)]
+    return Decl("asofjoin", join_opts, inputs).to_table()
 
 
 def _add_column_table(
