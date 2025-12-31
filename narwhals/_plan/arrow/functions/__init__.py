@@ -20,6 +20,7 @@ from narwhals._arrow.utils import (
 from narwhals._plan import common, expressions as ir
 from narwhals._plan._guards import is_non_nested_literal
 from narwhals._plan.arrow import compat, options as pa_options
+from narwhals._plan.arrow.functions import _categorical as cat  # noqa: F401
 from narwhals._plan.arrow.functions._dtypes import (
     BOOL as BOOL,
     F64 as F64,
@@ -300,15 +301,6 @@ def struct_fields(native: ArrowAny, *fields: Field) -> Seq[ArrowAny]:
     """Retrieve  multiple `Struct` fields."""
     func = t.cast("Callable[[Any,Any], ArrowAny]", pc.struct_field)
     return tuple(func(native, name) for name in fields)
-
-
-def get_categories(native: ArrowAny) -> ChunkedArrayAny:
-    da: Incomplete
-    if isinstance(native, pa.ChunkedArray):
-        da = native.unify_dictionaries().chunk(0)
-    else:
-        da = native
-    return chunked_array(da.dictionary)
 
 
 class ExplodeBuilder:

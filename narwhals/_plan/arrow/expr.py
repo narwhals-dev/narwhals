@@ -956,7 +956,7 @@ class ArrowAccessor(Generic[ExprOrScalarT]):
 class ArrowCatNamespace(ExprCatNamespace["Frame", "Expr"], ArrowAccessor[ExprOrScalarT]):
     def get_categories(self, node: FExpr[GetCategories], frame: Frame, name: str) -> Expr:
         native = node.input[0].dispatch(self.compliant, frame, name).native
-        return ArrowExpr.from_native(fn.get_categories(native), name, self.version)
+        return ArrowExpr.from_native(fn.cat.get_categories(native), name, self.version)
 
 
 class ArrowListNamespace(
