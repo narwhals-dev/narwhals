@@ -359,20 +359,20 @@ def xfail_nearest(
 
 
 @pytest.mark.parametrize(
-    ("strategy", "expected"),
-    [
-        ("backward", {"a": [1, 5, 10], "val": ["a", "b", "c"], "val_right": [1, 3, 7]}),
-        ("forward", {"a": [1, 5, 10], "val": ["a", "b", "c"], "val_right": [1, 6, None]}),
-        ("nearest", {"a": [1, 5, 10], "val": ["a", "b", "c"], "val_right": [1, 6, 7]}),
-    ],
+    ("strategy", "expected_values"),
+    [("backward", [1, 3, 7]), ("forward", [1, 6, None]), ("nearest", [1, 6, 7])],
 )
 def test_join_asof_numeric(
-    strategy: AsofJoinStrategy, expected: Data, request: pytest.FixtureRequest
+    strategy: AsofJoinStrategy, expected_values: list[Any], request: pytest.FixtureRequest
 ) -> None:
-    df = dataframe({"a": [1, 5, 10], "val": ["a", "b", "c"]}).sort("a")
+    left = {"a": [1, 5, 10], "val": ["a", "b", "c"]}
+    right = {"a": [1, 2, 3, 6, 7], "val": [1, 2, 3, 6, 7]}
+    expected = left | {"val_right": expected_values}
+
+    df = dataframe(left).sort("a")
     require_pyarrow_16(df, request)
     xfail_nearest(df, strategy, request)
-    df_right = dataframe({"a": [1, 2, 3, 6, 7], "val": [1, 2, 3, 6, 7]}).sort("a")
+    df_right = dataframe(right).sort("a")
     result = df.join_asof(df_right, left_on="a", right_on="a", strategy=strategy)
     result_on = df.join_asof(df_right, on="a", strategy=strategy)
     assert_equal_data(result.sort("a"), expected)
@@ -380,73 +380,38 @@ def test_join_asof_numeric(
 
 
 @pytest.mark.parametrize(
-    ("strategy", "expected"),
+    ("strategy", "expected_values"),
     [
-        (
-            "backward",
-            {
-                "ts": [
-                    dt.datetime(2016, 3, 1),
-                    dt.datetime(2018, 8, 1),
-                    dt.datetime(2019, 1, 1),
-                ],
-                "pop": [82.19, 82.66, 83.12],
-                "gdp": [4164, 4566, 4696],
-            },
-        ),
-        (
-            "forward",
-            {
-                "ts": [
-                    dt.datetime(2016, 3, 1),
-                    dt.datetime(2018, 8, 1),
-                    dt.datetime(2019, 1, 1),
-                ],
-                "pop": [82.19, 82.66, 83.12],
-                "gdp": [4411, 4696, 4696],
-            },
-        ),
-        (
-            "nearest",
-            {
-                "ts": [
-                    dt.datetime(2016, 3, 1),
-                    dt.datetime(2018, 8, 1),
-                    dt.datetime(2019, 1, 1),
-                ],
-                "pop": [82.19, 82.66, 83.12],
-                "gdp": [4164, 4696, 4696],
-            },
-        ),
+        ("backward", [4164, 4566, 4696]),
+        ("forward", [4411, 4696, 4696]),
+        ("nearest", [4164, 4696, 4696]),
     ],
 )
 def test_join_asof_time(
-    strategy: AsofJoinStrategy, expected: Data, request: pytest.FixtureRequest
+    strategy: AsofJoinStrategy,
+    expected_values: list[float],
+    request: pytest.FixtureRequest,
 ) -> None:
-    df = dataframe(
-        {
-            "ts": [
-                dt.datetime(2016, 3, 1),
-                dt.datetime(2018, 8, 1),
-                dt.datetime(2019, 1, 1),
-            ],
-            "pop": [82.19, 82.66, 83.12],
-        }
-    ).sort("ts")
+    left = {
+        "ts": [dt.datetime(2016, 3, 1), dt.datetime(2018, 8, 1), dt.datetime(2019, 1, 1)],
+        "pop": [82.19, 82.66, 83.12],
+    }
+    right = {
+        "ts": [
+            dt.datetime(2016, 1, 1),
+            dt.datetime(2017, 1, 1),
+            dt.datetime(2018, 1, 1),
+            dt.datetime(2019, 1, 1),
+            dt.datetime(2020, 1, 1),
+        ],
+        "gdp": [4164, 4411, 4566, 4696, 4827],
+    }
+    expected = left | {"gdp": expected_values}
+
+    df = dataframe(left).sort("ts")
     require_pyarrow_16(df, request)
     xfail_nearest(df, strategy, request)
-    df_right = dataframe(
-        {
-            "ts": [
-                dt.datetime(2016, 1, 1),
-                dt.datetime(2017, 1, 1),
-                dt.datetime(2018, 1, 1),
-                dt.datetime(2019, 1, 1),
-                dt.datetime(2020, 1, 1),
-            ],
-            "gdp": [4164, 4411, 4566, 4696, 4827],
-        }
-    ).sort("ts")
+    df_right = dataframe(right).sort("ts")
     result = df.join_asof(df_right, left_on="ts", right_on="ts", strategy=strategy)
     result_on = df.join_asof(df_right, on="ts", strategy=strategy)
     assert_equal_data(result.sort("ts"), expected)
@@ -454,27 +419,31 @@ def test_join_asof_time(
 
 
 def test_join_asof_by(request: pytest.FixtureRequest) -> None:
-    df = dataframe(
-        {"a": [1, 5, 7, 10], "b": ["D", "D", "C", "A"], "c": [9, 2, 1, 1]}
-    ).sort("a")
-    require_pyarrow_16(df, request)
-    df_right = dataframe(
-        {"a": [1, 4, 5, 8], "b": ["D", "D", "A", "F"], "d": [1, 3, 4, 1]}
-    ).sort("a")
-    result = df.join_asof(df_right, on="a", by_left="b", by_right="b")
-    result_by = df.join_asof(df_right, on="a", by="b")
+    left = {"a": [1, 5, 7, 10], "b": ["D", "D", "C", "A"], "c": [9, 2, 1, 1]}
+    right = {"a": [1, 4, 5, 8], "b": ["D", "D", "A", "F"], "d": [1, 3, 4, 1]}
     expected = {
         "a": [1, 5, 7, 10],
         "b": ["D", "D", "C", "A"],
         "c": [9, 2, 1, 1],
         "d": [1, 3, None, 4],
     }
+
+    df = dataframe(left).sort("a")
+    require_pyarrow_16(df, request)
+    df_right = dataframe(right).sort("a")
+    result = df.join_asof(df_right, on="a", by_left="b", by_right="b")
+    result_by = df.join_asof(df_right, on="a", by="b")
+
     assert_equal_data(result.sort("a"), expected)
     assert_equal_data(result_by.sort("a"), expected)
 
 
 def test_join_asof_suffix(request: pytest.FixtureRequest) -> None:
-    df = dataframe({"a": [1, 5, 10], "val": ["a", "b", "c"]}).sort("a")
+    left = {"a": [1, 5, 10], "val": ["a", "b", "c"]}
+    right = {"a": [1, 2, 3, 6, 7], "val": [1, 2, 3, 6, 7]}
+    expected = {"a": [1, 5, 10], "val": ["a", "b", "c"], "val_y": [1, 3, 7]}
+
+    df = dataframe(left).sort("a")
     require_pyarrow_16(df, request)
     request.applymarker(
         pytest.mark.xfail(
@@ -483,9 +452,9 @@ def test_join_asof_suffix(request: pytest.FixtureRequest) -> None:
             raises=NotImplementedError,
         )
     )
-    df_right = dataframe({"a": [1, 2, 3, 6, 7], "val": [1, 2, 3, 6, 7]}).sort("a")
+    df_right = dataframe(right).sort("a")
     result = df.join_asof(df_right, left_on="a", right_on="a", suffix="_y")
-    expected = {"a": [1, 5, 10], "val": ["a", "b", "c"], "val_y": [1, 3, 7]}
+
     assert_equal_data(result.sort("a"), expected)
 
 
@@ -502,7 +471,6 @@ def test_join_asof_not_implemented(strategy: str) -> None:
 def test_join_asof_keys_exceptions() -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
     df = dataframe(data)
-
     with pytest.raises(
         ValueError,
         match=re.escape(
