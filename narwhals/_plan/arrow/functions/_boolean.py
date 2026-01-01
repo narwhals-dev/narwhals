@@ -191,13 +191,10 @@ def _ir_min_max(name: str, /) -> MinMax:
     return MinMax(expr=ir.col(name))
 
 
-# TODO @dangotbanned: Replace inline import with `functions._struct` when available
 def _boolean_is_unique(
     indices: ChunkedArrayAny, aggregated: ChunkedStruct, /
 ) -> ChunkedArrayAny:
-    from narwhals._plan.arrow.functions import struct_fields
-
-    min, max = struct_fields(aggregated, "min", "max")
+    min, max = aggregated.flatten()
     return and_(is_in(indices, min), is_in(indices, max))
 
 
