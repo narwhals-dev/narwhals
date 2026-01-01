@@ -94,7 +94,7 @@ def is_not_nan(native: Arrow[ScalarAny]) -> Arrow[pa.BooleanScalar]:
 
 
 def is_only_nulls(native: ChunkedOrArrayAny, *, nan_is_null: bool = False) -> bool:
-    """Return True if `native` has no non-null values (and optionally include NaN)."""
+    """Return True if `native` has 0 non-null values (and optionally include NaN)."""
     return array(native.is_null(nan_is_null=nan_is_null), BOOL).false_count == 0
 
 
