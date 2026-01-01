@@ -963,13 +963,13 @@ class ArrowListNamespace(
     ExprListNamespace["Frame", "Expr | Scalar"], ArrowAccessor[ExprOrScalarT]
 ):
     def len(self, node: FExpr[lists.Len], frame: Frame, name: str) -> Expr | Scalar:
-        return self.unary(fn.list_len)(node, frame, name)
+        return self.unary(fn.list_.len)(node, frame, name)
 
     def get(self, node: FExpr[lists.Get], frame: Frame, name: str) -> Expr | Scalar:
-        return self.unary(fn.list_get, node.function.index)(node, frame, name)
+        return self.unary(fn.list_.get, node.function.index)(node, frame, name)
 
     def unique(self, node: FExpr[lists.Unique], frame: Frame, name: str) -> Expr | Scalar:
-        return self.unary(fn.list_unique)(node, frame, name)
+        return self.unary(fn.list_.unique)(node, frame, name)
 
     def contains(
         self, node: FExpr[lists.Contains], frame: Frame, name: str
@@ -981,16 +981,16 @@ class ArrowListNamespace(
         if isinstance(item, ArrowExpr):
             # Maybe one day, not now
             raise NotImplementedError
-        return self.with_native(fn.list_contains(prev.native, item.native), name)
+        return self.with_native(fn.list_.contains(prev.native, item.native), name)
 
     def join(self, node: FExpr[lists.Join], frame: Frame, name: str) -> Expr | Scalar:
         separator, ignore_nulls = node.function.separator, node.function.ignore_nulls
         previous = node.input[0].dispatch(self.compliant, frame, name)
         result: ChunkedOrScalarAny
         if isinstance(previous, ArrowExpr):
-            result = fn.list_join(previous.native, separator, ignore_nulls=ignore_nulls)
+            result = fn.list_.join(previous.native, separator, ignore_nulls=ignore_nulls)
         else:
-            result = fn.list_join_scalar(
+            result = fn.list_.join_scalar(
                 previous.native, separator, ignore_nulls=ignore_nulls
             )
         return self.with_native(result, name)
@@ -1006,11 +1006,11 @@ class ArrowListNamespace(
         previous = node.input[0].dispatch(self.compliant, frame, name)
         result: ChunkedOrScalarAny
         if isinstance(previous, ArrowScalar):
-            result = fn.list_sort_scalar(previous.native, node.function.options)
+            result = fn.list_.sort_scalar(previous.native, node.function.options)
         else:
             descending = node.function.options.descending
             nulls_last = node.function.options.nulls_last
-            result = fn.list_sort(
+            result = fn.list_.sort(
                 previous.native, descending=descending, nulls_last=nulls_last
             )
         return self.with_native(result, name)

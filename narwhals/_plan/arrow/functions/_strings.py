@@ -9,6 +9,7 @@ import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._plan.arrow import compat, options as pa_options
+from narwhals._plan.arrow.functions import _lists as list_
 from narwhals._plan.arrow.functions._bin_op import and_, eq, lt
 from narwhals._plan.arrow.functions._boolean import all_, any_
 from narwhals._plan.arrow.functions._construction import (
@@ -46,9 +47,6 @@ if TYPE_CHECKING:
     _StringFunction1: TypeAlias = (
         "Callable[[ChunkedOrScalarAny, str], ChunkedOrScalarAny]"
     )
-
-# TODO @dangotbanned: Avoid inline dependencies:
-# - list <- implode, list_join, list_join_scalar
 
 
 __all__ = [
@@ -117,14 +115,12 @@ def join(
     native: Arrow[StringScalar], separator: str, *, ignore_nulls: bool = True
 ) -> StringScalar:
     """Vertically concatenate the string values in the column to a single string value."""
-    from narwhals._plan.arrow.functions import implode, list_join_scalar
-
     if isinstance(native, pa.Scalar):
         # already joined
         return native
     if ignore_nulls and native.null_count:
         native = native.drop_null()
-    return list_join_scalar(implode(native), separator, ignore_nulls=False)
+    return list_.join_scalar(list_.implode(native), separator, ignore_nulls=False)
 
 
 def len_chars(native: ChunkedOrScalarAny) -> ChunkedOrScalarAny:
@@ -309,8 +305,6 @@ def replace_vector(
     n: int | None = 1,
 ) -> ChunkedArrayAny:
     """Replace the first matching regex/literal substring with the adjacent string in `replacements`."""
-    from narwhals._plan.arrow.functions import list_join
-
     has_match = contains(native, pattern, literal=literal)
     if not any_(has_match).as_py():
         # fastpath, no work to do
@@ -322,7 +316,7 @@ def replace_vector(
         list_split_by = split(match, pattern, literal=literal)
     else:
         list_split_by = splitn(match, pattern, n + 1, literal=literal)
-    replaced = list_join(list_split_by, match_replacements, ignore_nulls=False)
+    replaced = list_.join(list_split_by, match_replacements, ignore_nulls=False)
     if all_(has_match, ignore_nulls=False).as_py():
         return chunked_array(replaced)
     return replace_with_mask(native, has_match, array(replaced))

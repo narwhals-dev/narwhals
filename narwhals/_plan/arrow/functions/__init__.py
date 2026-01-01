@@ -1,6 +1,7 @@
 """Native functions, aliased and/or with behavior aligned to `polars`.
 
 - [ ] _aggregation
+  - [ ] Move `list.implode` here too
 - [x] _bin_op
 - [x] _boolean
 - [x] _categorical -> `cat`
@@ -8,18 +9,20 @@
 - [x] _construction
 - [x] _cumulative
 - [x] _dtypes
-- [ ] _lists -> `list`
+- [ ] _lists
+  - [x] -> `list_` (until `functions.__init__` is cleaner)
+  - [ ] -> `list`
 - [ ] _multiplex
   - [x] move everything
   - [ ] decide on name
 - [x] _ranges
 - [x] _repeat
+- [x] _sort
 - [ ] _strings
   - [x] -> `str_` (until `functions.__init__` is cleaner)
   - [ ] -> `str`
 - [x] _struct -> `struct`
 - [ ] (Others)
-  - Sorting/indices
   - Vector
   - [Arithmetic](https://arrow.apache.org/docs/python/api/compute.html#arithmetic-functions)
     - some need to be upstream from `_binop`
@@ -30,8 +33,7 @@ from __future__ import annotations
 
 import math
 import typing as t
-from itertools import chain
-from typing import TYPE_CHECKING, Any, Final, Literal, overload
+from typing import TYPE_CHECKING, Any, Literal
 
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
@@ -39,6 +41,7 @@ import pyarrow.compute as pc  # ignore-banned-import
 from narwhals._plan.arrow import compat, options as pa_options
 from narwhals._plan.arrow.functions import (  # noqa: F401
     _categorical as cat,
+    _lists as list_,
     _strings as str_,
     _struct as struct,
 )
@@ -107,6 +110,7 @@ from narwhals._plan.arrow.functions._dtypes import (
     dtype_native as dtype_native,
     string_type as string_type,
 )
+from narwhals._plan.arrow.functions._lists import ExplodeBuilder as ExplodeBuilder
 from narwhals._plan.arrow.functions._multiplex import (
     drop_nulls as drop_nulls,
     fill_nan as fill_nan,
@@ -135,58 +139,27 @@ from narwhals._plan.arrow.functions._sort import (
     sort_indices as sort_indices,
     unsort_indices as unsort_indices,
 )
-from narwhals._plan.options import ExplodeOptions, SortOptions
-from narwhals._utils import no_default
-from narwhals.exceptions import ShapeError
 
 if TYPE_CHECKING:
-    from collections.abc import (
-        Callable,
-        Collection,
-        Iterable,
-        Iterator,
-        Mapping,
-        Sequence,
-    )
+    from collections.abc import Callable, Iterable, Mapping, Sequence
 
-    from typing_extensions import Self, TypeAlias
+    from typing_extensions import TypeAlias
 
     from narwhals._arrow.typing import Incomplete
     from narwhals._plan.arrow.typing import (
-        Array,
-        Arrow,
-        ArrowAny,
-        ArrowListT,
-        BooleanScalar,
         ChunkedArray,
         ChunkedArrayAny,
-        ChunkedList,
         ChunkedOrArray,
         ChunkedOrArrayAny,
         ChunkedOrArrayT,
-        ChunkedOrScalar,
         ChunkedOrScalarAny,
-        DataTypeT,
-        ListArray,
-        ListScalar,
-        ListTypeT,
         NativeScalar,
-        NonListTypeT,
         NumericScalar,
-        SameArrowT,
-        Scalar,
         ScalarAny,
-        StringScalar,
-        StringType,
         UnaryNumeric,
     )
     from narwhals._plan.options import RankOptions
-    from narwhals._typing import NoDefault
     from narwhals.typing import NonNestedLiteral
-
-
-EMPTY: Final = ""
-"""The empty string."""
 
 
 abs_ = t.cast("UnaryNumeric", pc.abs)
@@ -194,444 +167,6 @@ exp = t.cast("UnaryNumeric", pc.exp)
 sqrt = t.cast("UnaryNumeric", pc.sqrt)
 ceil = t.cast("UnaryNumeric", pc.ceil)
 floor = t.cast("UnaryNumeric", pc.floor)
-
-
-class ExplodeBuilder:
-    """Tools for exploding lists.
-
-    The complexity of these operations increases with:
-    - Needing to preserve null/empty elements
-      - All variants are cheaper if this can be skipped
-    - Exploding in the context of a table
-      - Where a single column is much simpler than multiple
-    """
-
-    options: ExplodeOptions
-
-    def __init__(self, *, empty_as_null: bool = True, keep_nulls: bool = True) -> None:
-        self.options = ExplodeOptions(empty_as_null=empty_as_null, keep_nulls=keep_nulls)
-
-    @classmethod
-    def from_options(cls, options: ExplodeOptions, /) -> Self:
-        obj = cls.__new__(cls)
-        obj.options = options
-        return obj
-
-    @t.overload
-    def explode(
-        self, native: ChunkedList[DataTypeT] | ListScalar[DataTypeT]
-    ) -> ChunkedArray[Scalar[DataTypeT]]: ...
-    @t.overload
-    def explode(self, native: ListArray[DataTypeT]) -> Array[Scalar[DataTypeT]]: ...
-    @t.overload
-    def explode(
-        self, native: Arrow[ListScalar[DataTypeT]]
-    ) -> ChunkedOrArray[Scalar[DataTypeT]]: ...
-    def explode(
-        self, native: Arrow[ListScalar[DataTypeT]]
-    ) -> ChunkedOrArray[Scalar[DataTypeT]]:
-        """Explode list elements, expanding one-level into a new array.
-
-        Equivalent to `polars.{Expr,Series}.explode`.
-        """
-        safe = self._fill_with_null(native) if self.options.any() else native
-        if not isinstance(safe, pa.Scalar):
-            return _list_explode(safe)
-        return chunked_array(_list_explode(safe))
-
-    def explode_with_indices(self, native: ChunkedList | ListArray) -> pa.Table:
-        """Explode list elements, expanding one-level into a table indexing the origin.
-
-        Returns a 2-column table, with names `"idx"` and `"values"`:
-
-            >>> from narwhals._plan.arrow import functions as fn
-            >>>
-            >>> arr = fn.array([[1, 2, 3], None, [4, 5, 6], []])
-            >>> fn.ExplodeBuilder().explode_with_indices(arr).to_pydict()
-            {'idx': [0, 0, 0, 1, 2, 2, 2, 3], 'values': [1, 2, 3, None, 4, 5, 6, None]}
-            # ^ Which sublist values come from ^ The exploded values themselves
-        """
-        safe = self._fill_with_null(native) if self.options.any() else native
-        arrays = [_list_parent_indices(safe), _list_explode(safe)]
-        return concat_horizontal(arrays, ["idx", "values"])
-
-    def explode_column(self, native: pa.Table, column_name: str, /) -> pa.Table:
-        """Explode a list-typed column in the context of `native`."""
-        ca = native.column(column_name)
-        if native.num_columns == 1:
-            return native.from_arrays([self.explode(ca)], [column_name])
-        safe = self._fill_with_null(ca) if self.options.any() else ca
-        exploded = _list_explode(safe)
-        col_idx = native.schema.get_field_index(column_name)
-        if len(exploded) == len(native):
-            return native.set_column(col_idx, column_name, exploded)
-        return (
-            native.remove_column(col_idx)
-            .take(_list_parent_indices(safe))
-            .add_column(col_idx, column_name, exploded)
-        )
-
-    def explode_columns(self, native: pa.Table, subset: Collection[str], /) -> pa.Table:
-        """Explode multiple list-typed columns in the context of `native`."""
-        subset = list(subset)
-        arrays = native.select(subset).columns
-        first = arrays[0]
-        first_len = list_len(first)
-        if self.options.any():
-            mask = self._predicate(first_len)
-            first_safe = self._fill_with_null(first, mask)
-            it = (
-                _list_explode(self._fill_with_null(arr, mask))
-                for arr in self._iter_ensure_shape(first_len, arrays[1:])
-            )
-        else:
-            first_safe = first
-            it = (
-                _list_explode(arr)
-                for arr in self._iter_ensure_shape(first_len, arrays[1:])
-            )
-        column_names = native.column_names
-        result = native
-        first_result = _list_explode(first_safe)
-        if len(first_result) == len(native):
-            # fastpath for all length-1 lists
-            # if only the first is length-1, then the others raise during iteration on either branch
-            for name, arr in zip(subset, chain([first_result], it)):
-                result = result.set_column(column_names.index(name), name, arr)
-        else:
-            result = result.drop_columns(subset).take(_list_parent_indices(first_safe))
-            for name, arr in zip(subset, chain([first_result], it)):
-                result = result.append_column(name, arr)
-            result = result.select(column_names)
-        return result
-
-    @classmethod
-    def explode_column_fast(cls, native: pa.Table, column_name: str, /) -> pa.Table:
-        """Explode a list-typed column in the context of `native`, ignoring empty and nulls."""
-        return cls(empty_as_null=False, keep_nulls=False).explode_column(
-            native, column_name
-        )
-
-    def _iter_ensure_shape(
-        self,
-        first_len: ChunkedArray[pa.UInt32Scalar],
-        arrays: Iterable[ChunkedArrayAny],
-        /,
-    ) -> Iterator[ChunkedArrayAny]:
-        for arr in arrays:
-            if not first_len.equals(list_len(arr)):
-                msg = "exploded columns must have matching element counts"
-                raise ShapeError(msg)
-            yield arr
-
-    def _predicate(self, lengths: ArrowAny, /) -> Arrow[pa.BooleanScalar]:
-        """Return True for each sublist length that indicates the original sublist should be replaced with `[None]`."""
-        empty_as_null, keep_nulls = self.options.empty_as_null, self.options.keep_nulls
-        if empty_as_null and keep_nulls:
-            return or_(is_null(lengths), eq(lengths, lit(0)))
-        if empty_as_null:
-            return eq(lengths, lit(0))
-        return is_null(lengths)
-
-    def _fill_with_null(
-        self, native: ArrowListT, mask: Arrow[BooleanScalar] | NoDefault = no_default
-    ) -> ArrowListT:
-        """Replace each sublist in `native` with `[None]`, according to `self.options`.
-
-        Arguments:
-            native: List-typed arrow data.
-            mask: An optional, pre-computed replacement mask. By default, this is generated from `native`.
-        """
-        predicate = self._predicate(list_len(native)) if mask is no_default else mask
-        result: ArrowListT = when_then(predicate, lit([None], native.type), native)
-        return result
-
-
-def implode(native: Arrow[Scalar[DataTypeT]]) -> pa.ListScalar[DataTypeT]:
-    """Aggregate values into a list.
-
-    The returned list itself is a scalar value of `list` dtype.
-    """
-    arr = array(native)
-    return pa.ListArray.from_arrays([0, len(arr)], arr)[0]
-
-
-@t.overload
-def _list_explode(native: ChunkedList[DataTypeT]) -> ChunkedArray[Scalar[DataTypeT]]: ...
-@t.overload
-def _list_explode(
-    native: ListArray[NonListTypeT] | ListScalar[NonListTypeT],
-) -> Array[Scalar[NonListTypeT]]: ...
-@t.overload
-def _list_explode(native: ListArray[DataTypeT]) -> Array[Scalar[DataTypeT]]: ...
-@t.overload
-def _list_explode(native: ListScalar[ListTypeT]) -> ListArray[ListTypeT]: ...
-def _list_explode(native: Arrow[ListScalar]) -> ChunkedOrArrayAny:
-    result: ChunkedOrArrayAny = pc.call_function("list_flatten", [native])
-    return result
-
-
-@t.overload
-def _list_parent_indices(native: ChunkedList) -> ChunkedArray[pa.Int64Scalar]: ...
-@t.overload
-def _list_parent_indices(native: ListArray) -> pa.Int64Array: ...
-def _list_parent_indices(
-    native: ChunkedOrArray[ListScalar],
-) -> ChunkedOrArray[pa.Int64Scalar]:
-    """Don't use this withut handling nulls!"""
-    result: ChunkedOrArray[pa.Int64Scalar] = pc.call_function(
-        "list_parent_indices", [native]
-    )
-    return result
-
-
-@t.overload
-def list_len(native: ChunkedList) -> ChunkedArray[pa.UInt32Scalar]: ...
-@t.overload
-def list_len(native: ListArray) -> pa.UInt32Array: ...
-@t.overload
-def list_len(native: ListScalar) -> pa.UInt32Scalar: ...
-@t.overload
-def list_len(native: ChunkedOrScalar[ListScalar]) -> ChunkedOrScalar[pa.UInt32Scalar]: ...
-@t.overload
-def list_len(native: Arrow[ListScalar[Any]]) -> Arrow[pa.UInt32Scalar]: ...
-def list_len(native: ArrowAny) -> ArrowAny:
-    length: Incomplete = pc.list_value_length
-    result: ArrowAny = length(native).cast(pa.uint32())
-    return result
-
-
-@t.overload
-def list_get(
-    native: ChunkedList[DataTypeT], index: int
-) -> ChunkedArray[Scalar[DataTypeT]]: ...
-@t.overload
-def list_get(native: ListArray[DataTypeT], index: int) -> Array[Scalar[DataTypeT]]: ...
-@t.overload
-def list_get(native: ListScalar[DataTypeT], index: int) -> Scalar[DataTypeT]: ...
-@t.overload
-def list_get(native: SameArrowT, index: int) -> SameArrowT: ...
-@t.overload
-def list_get(native: ChunkedOrScalarAny, index: int) -> ChunkedOrScalarAny: ...
-def list_get(native: ArrowAny, index: int) -> ArrowAny:
-    list_get_: Incomplete = pc.list_element
-    result: ArrowAny = list_get_(native, index)
-    return result
-
-
-_list_join = t.cast(
-    "Callable[[ChunkedOrArrayAny, Arrow[StringScalar] | str], ChunkedArray[StringScalar] | pa.StringArray]",
-    pc.binary_join,
-)
-
-
-# NOTE: Raised for native null-handling (https://github.com/apache/arrow/issues/48477)
-@t.overload
-def list_join(
-    native: ChunkedList[StringType],
-    separator: Arrow[StringScalar] | str,
-    *,
-    ignore_nulls: bool = ...,
-) -> ChunkedArray[StringScalar]: ...
-@t.overload
-def list_join(
-    native: ListArray[StringType],
-    separator: Arrow[StringScalar] | str,
-    *,
-    ignore_nulls: bool = ...,
-) -> pa.StringArray: ...
-@t.overload
-def list_join(
-    native: ChunkedOrArray[ListScalar[StringType]],
-    separator: str,
-    *,
-    ignore_nulls: bool = ...,
-) -> ChunkedOrArray[StringScalar]: ...
-def list_join(
-    native: ChunkedOrArrayAny,
-    separator: Arrow[StringScalar] | str,
-    *,
-    ignore_nulls: bool = True,
-) -> ChunkedOrArrayAny:
-    """Join all string items in a sublist and place a separator between them.
-
-    Each list of values in the first input is joined using each second input as separator.
-    If any input list is null or contains a null, the corresponding output will be null.
-    """
-    from narwhals._plan.arrow.group_by import AggSpec
-
-    # (1): Try to return *as-is* from `pc.binary_join`
-    result = _list_join(native, separator)
-    if not ignore_nulls or not result.null_count:
-        return result
-    is_null_sensitive = pc.and_not(result.is_null(), native.is_null())
-    if array(is_null_sensitive, BOOL).true_count == 0:
-        return result
-
-    # (2): Deal with only the bad kids
-    lists = native.filter(is_null_sensitive)
-
-    # (2.1): We know that `[None]` should join as `""`, and that is the only length-1 list we could have after the filter
-    list_len_eq_1 = eq(list_len(lists), lit(1, U32))
-    has_a_len_1_null = any_(list_len_eq_1).as_py()
-    if has_a_len_1_null:
-        lists = when_then(list_len_eq_1, lit([EMPTY], lists.type), lists)
-
-    # (2.2): Everything left falls into one of these boxes:
-    # - (2.1): `[""]`
-    # - (2.2): `["something", (str | None)*, None]`  <--- We fix this here and hope for the best
-    # - (2.3): `[None, (None)*, None]`
-    idx, v = "idx", "values"
-    builder = ExplodeBuilder(empty_as_null=False, keep_nulls=False)
-    explode_w_idx = builder.explode_with_indices(lists)
-    implode_by_idx = AggSpec.implode(v).over(explode_w_idx.drop_null(), [idx])
-    replacements = _list_join(implode_by_idx.column(v), separator)
-
-    # (2.3): The cursed box 😨
-    if len(replacements) != len(lists):
-        # This is a very unlucky case to hit, because we *can* detect the issue earlier
-        # but we *can't* join a table with a list in it. So we deal with the fallout now ...
-        # The end result is identical to (2.1)
-        indices_all = to_table(explode_w_idx.column(idx).unique(), idx)
-        indices_repaired = implode_by_idx.set_column(1, v, replacements)
-        replacements = (
-            indices_all.join(indices_repaired, idx)
-            .sort_by(idx)
-            .column(v)
-            .fill_null(lit(EMPTY, lists.type.value_type))
-        )
-    return replace_with_mask(result, is_null_sensitive, replacements)
-
-
-def list_join_scalar(
-    native: ListScalar[StringType],
-    separator: StringScalar | str,
-    *,
-    ignore_nulls: bool = True,
-) -> StringScalar:
-    """Join all string items in a `ListScalar` and place a separator between them.
-
-    Note:
-        Consider using `list_join` or `str_join` if you don't already have `native` in this shape.
-    """
-    if ignore_nulls and native.is_valid:
-        native = implode(_list_explode(native).drop_null())
-    result: StringScalar = pc.call_function("binary_join", [native, separator])
-    return result
-
-
-@overload
-def list_unique(native: ChunkedList) -> ChunkedList: ...
-@overload
-def list_unique(native: ListScalar) -> ListScalar: ...
-@overload
-def list_unique(native: ChunkedOrScalar[ListScalar]) -> ChunkedOrScalar[ListScalar]: ...
-def list_unique(native: ChunkedOrScalar[ListScalar]) -> ChunkedOrScalar[ListScalar]:
-    """Get the unique/distinct values in the list.
-
-    There's lots of tricky stuff going on in here, but for good reasons!
-
-    Whenever possible, we want to avoid having to deal with these pesky guys:
-
-        [["okay", None, "still fine"], None, []]
-        #                              ^^^^  ^^
-
-    - Those kinds of list elements are ignored natively
-    - `unique` is length-changing operation
-    - We can't use [`pc.replace_with_mask`] on a list
-    - We can't join when a table contains list columns [apache/arrow#43716]
-
-    **But** - if we're lucky, and we got a non-awful list (or only one element) - then
-    most issues vanish.
-
-    [`pc.replace_with_mask`]: https://arrow.apache.org/docs/python/generated/pyarrow.compute.replace_with_mask.html
-    [apache/arrow#43716]: https://github.com/apache/arrow/issues/43716
-    """
-    from narwhals._plan.arrow.group_by import AggSpec
-
-    if isinstance(native, pa.Scalar):
-        scalar = t.cast("pa.ListScalar[Any]", native)
-        if scalar.is_valid and (len(scalar) > 1):
-            return implode(_list_explode(native).unique())
-        return scalar
-    idx, v = "index", "values"
-    names = idx, v
-    len_not_eq_0 = not_eq(list_len(native), lit(0))
-    can_fastpath = all_(len_not_eq_0, ignore_nulls=False).as_py()
-    if can_fastpath:
-        arrays = [_list_parent_indices(native), _list_explode(native)]
-        return AggSpec.unique(v).over_index(concat_horizontal(arrays, names), idx)
-    # Oh no - we caught a bad one!
-    # We need to split things into good/bad - and only work on the good stuff.
-    # `int_range` is acting like `parent_indices`, but doesn't give up when it see's `None` or `[]`
-    indexed = concat_horizontal([int_range(len(native)), native], names)
-    valid = indexed.filter(len_not_eq_0)
-    invalid = indexed.filter(or_(native.is_null(), not_(len_not_eq_0)))
-    # To keep track of where we started, our index needs to be exploded with the list elements
-    explode_with_index = ExplodeBuilder.explode_column_fast(valid, v)
-    valid_unique = AggSpec.unique(v).over(explode_with_index, [idx])
-    # And now, because we can't join - we do a poor man's version of one 😉
-    return concat_tables([valid_unique, invalid]).sort_by(idx).column(v)
-
-
-def list_contains(
-    native: ChunkedOrScalar[ListScalar], item: NonNestedLiteral | ScalarAny
-) -> ChunkedOrScalar[pa.BooleanScalar]:
-    from narwhals._plan.arrow.group_by import AggSpec
-
-    if isinstance(native, pa.Scalar):
-        scalar = t.cast("pa.ListScalar[Any]", native)
-        if scalar.is_valid:
-            if len(scalar):
-                value_type = scalar.type.value_type
-                return any_(eq_missing(_list_explode(scalar), lit(item).cast(value_type)))
-            return lit(False, BOOL)
-        return lit(None, BOOL)
-    builder = ExplodeBuilder(empty_as_null=False, keep_nulls=False)
-    tbl = builder.explode_with_indices(native)
-    idx, name = tbl.column_names
-    contains = eq_missing(tbl.column(name), item)
-    l_contains = AggSpec.any(name).over_index(tbl.set_column(1, name, contains), idx)
-    # Here's the really key part: this mask has the same result we want to return
-    # So by filling the `True`, we can flip those to `False` if needed
-    # But if we were already `None` or `False` - then that's sticky
-    propagate_invalid: ChunkedArray[pa.BooleanScalar] = not_eq(list_len(native), lit(0))
-    return replace_with_mask(propagate_invalid, propagate_invalid, l_contains)
-
-
-def list_sort(
-    native: ChunkedList, *, descending: bool = False, nulls_last: bool = False
-) -> ChunkedList:
-    """Sort the sublists in this column.
-
-    Works in a similar way to `list_unique` and `list_join`.
-
-    1. Select only sublists that require sorting (`None`, 0-length, and 1-length lists are noops)
-    2. Explode -> Sort -> Implode -> Concat
-    """
-    from narwhals._plan.arrow.group_by import AggSpec
-
-    idx, v = "idx", "values"
-    is_not_sorted = gt(list_len(native), lit(1))
-    indexed = concat_horizontal([int_range(len(native)), native], [idx, v])
-    exploded = ExplodeBuilder.explode_column_fast(indexed.filter(is_not_sorted), v)
-    indices = sort_indices(
-        exploded, idx, v, descending=[False, descending], nulls_last=nulls_last
-    )
-    exploded_sorted = exploded.take(indices)
-    implode_by_idx = AggSpec.implode(v).over(exploded_sorted, [idx])
-    passthrough = indexed.filter(fill_null(not_(is_not_sorted), True))
-    return concat_tables([implode_by_idx, passthrough]).sort_by(idx).column(v)
-
-
-def list_sort_scalar(
-    native: ListScalar[NonListTypeT], options: SortOptions | None = None
-) -> pa.ListScalar[NonListTypeT]:
-    native = t.cast("pa.ListScalar[NonListTypeT]", native)
-    if native.is_valid and len(native) > 1:
-        arr = _list_explode(native)
-        return implode(arr.take(sort_indices(arr, options=options)))
-    return native
 
 
 def sum_(native: Incomplete) -> NativeScalar:
