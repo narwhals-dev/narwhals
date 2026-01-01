@@ -1,4 +1,4 @@
-"""Creating Arrow data and coverting between representation."""
+"""Creating Arrow data and converting between representation."""
 
 from __future__ import annotations
 
