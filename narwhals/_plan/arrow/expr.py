@@ -466,16 +466,16 @@ class ArrowExpr(  # type: ignore[misc]
 
     def arg_min(self, node: ArgMin, frame: Frame, name: str) -> Scalar:
         native = self._dispatch_expr(node.expr, frame, name).native
-        result = pc.index(native, fn.min_(native))
+        result = pc.index(native, fn.min(native))
         return self._with_native(result, name)
 
     def arg_max(self, node: ArgMax, frame: Frame, name: str) -> Scalar:
         native = self._dispatch_expr(node.expr, frame, name).native
-        result: NativeScalar = pc.index(native, fn.max_(native))
+        result: NativeScalar = pc.index(native, fn.max(native))
         return self._with_native(result, name)
 
     def sum(self, node: Sum, frame: Frame, name: str) -> Scalar:
-        result = fn.sum_(self._dispatch_expr(node.expr, frame, name).native)
+        result = fn.sum(self._dispatch_expr(node.expr, frame, name).native)
         return self._with_native(result, name)
 
     def n_unique(self, node: NUnique, frame: Frame, name: str) -> Scalar:
@@ -511,7 +511,7 @@ class ArrowExpr(  # type: ignore[misc]
         return self._with_native(result, name)
 
     def max(self, node: Max, frame: Frame, name: str) -> Scalar:
-        result: NativeScalar = fn.max_(self._dispatch_expr(node.expr, frame, name).native)
+        result: NativeScalar = fn.max(self._dispatch_expr(node.expr, frame, name).native)
         return self._with_native(result, name)
 
     def mean(self, node: Mean, frame: Frame, name: str) -> Scalar:
@@ -523,7 +523,7 @@ class ArrowExpr(  # type: ignore[misc]
         return self._with_native(result, name)
 
     def min(self, node: Min, frame: Frame, name: str) -> Scalar:
-        result: NativeScalar = fn.min_(self._dispatch_expr(node.expr, frame, name).native)
+        result: NativeScalar = fn.min(self._dispatch_expr(node.expr, frame, name).native)
         return self._with_native(result, name)
 
     def null_count(self, node: FExpr[F.NullCount], frame: Frame, name: str) -> Scalar:
@@ -750,8 +750,8 @@ class ArrowExpr(  # type: ignore[misc]
         else:
             # NOTE: `Decimal` is not supported, but excluding it from the typing is surprisingly complicated
             # https://docs.rs/polars-core/0.52.0/polars_core/datatypes/enum.DataType.html#method.is_primitive_numeric
-            lower: NativeScalar = fn.min_(native)
-            upper: NativeScalar = fn.max_(native)
+            lower: NativeScalar = fn.min(native)
+            upper: NativeScalar = fn.max(native)
             if lower.equals(upper):
                 # All data points are identical - use unit interval
                 rhs = fn.lit(0.5)

@@ -1,7 +1,6 @@
 """Native functions, aliased and/or with behavior aligned to `polars`.
 
-- [ ] _aggregation
-  - [ ] Move `list.implode` here too
+- [x] _aggregation
 - [x] _bin_op
 - [x] _boolean
 - [x] _categorical -> `cat`
@@ -44,6 +43,23 @@ from narwhals._plan.arrow.functions import (  # noqa: F401
     _lists as list_,
     _strings as str_,
     _struct as struct,
+)
+from narwhals._plan.arrow.functions._aggregation import (
+    count as count,
+    first as first,
+    kurtosis_skew as kurtosis_skew,
+    last as last,
+    max as max,
+    mean as mean,
+    median as median,
+    min as min,
+    mode_any as mode_any,
+    n_unique as n_unique,
+    null_count as null_count,
+    quantile as quantile,
+    std as std,
+    sum as sum,
+    var as var,
 )
 from narwhals._plan.arrow.functions._bin_op import (
     add as add,
@@ -141,19 +157,16 @@ from narwhals._plan.arrow.functions._sort import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Mapping, Sequence
+    from collections.abc import Iterable, Mapping, Sequence
 
     from typing_extensions import TypeAlias
 
-    from narwhals._arrow.typing import Incomplete
     from narwhals._plan.arrow.typing import (
         ChunkedArray,
         ChunkedArrayAny,
         ChunkedOrArray,
-        ChunkedOrArrayAny,
         ChunkedOrArrayT,
         ChunkedOrScalarAny,
-        NativeScalar,
         NumericScalar,
         ScalarAny,
         UnaryNumeric,
@@ -169,30 +182,10 @@ ceil = t.cast("UnaryNumeric", pc.ceil)
 floor = t.cast("UnaryNumeric", pc.floor)
 
 
-def sum_(native: Incomplete) -> NativeScalar:
-    return pc.sum(native, min_count=0)
-
-
-def first(native: ChunkedOrArrayAny) -> NativeScalar:
-    return pc.first(native, options=pa_options.scalar_aggregate())
-
-
-def last(native: ChunkedOrArrayAny) -> NativeScalar:
-    return pc.last(native, options=pa_options.scalar_aggregate())
-
-
-min_ = pc.min
 # TODO @dangotbanned: Wrap horizontal functions with correct typing
 # Should only return scalar if all elements are as well
-min_horizontal = pc.min_element_wise
-max_ = pc.max
-max_horizontal = pc.max_element_wise
-mean = t.cast("Callable[[ChunkedOrArray[pc.NumericScalar]], pa.DoubleScalar]", pc.mean)
-count = pc.count
-median = pc.approximate_median
-std = pc.stddev
-var = pc.variance
-quantile = pc.quantile
+min_horizontal = pc.min_element_wise  # <-- Not aggregations
+max_horizontal = pc.max_element_wise  # <-------------------
 
 
 def mode_all(native: ChunkedArrayAny) -> ChunkedArrayAny:
@@ -200,38 +193,6 @@ def mode_all(native: ChunkedArrayAny) -> ChunkedArrayAny:
     indices: pa.Int32Array = struct.field("count").dictionary_encode().indices  # type: ignore[attr-defined]
     index_true_modes = lit(0)
     return chunked_array(struct.field("mode").filter(pc.equal(indices, index_true_modes)))
-
-
-def mode_any(native: ChunkedArrayAny) -> NativeScalar:
-    return first(pc.mode(native, n=1).field("mode"))
-
-
-def kurtosis_skew(
-    native: ChunkedArray[pc.NumericScalar], function: Literal["kurtosis", "skew"], /
-) -> NativeScalar:
-    result: NativeScalar
-    if compat.HAS_KURTOSIS_SKEW:
-        if pa.types.is_null(native.type):
-            native = native.cast(F64)
-        result = getattr(pc, function)(native)
-    else:
-        non_null = native.drop_null()
-        if len(non_null) == 0:
-            result = lit(None, F64)
-        elif len(non_null) == 1:
-            result = lit(float("nan"))
-        elif function == "skew" and len(non_null) == 2:
-            result = lit(0.0, F64)
-        else:
-            m = sub(non_null, mean(non_null))
-            m2 = mean(power(m, lit(2)))
-            if function == "kurtosis":
-                m4 = mean(power(m, lit(4)))
-                result = sub(pc.divide(m4, power(m2, lit(2))), lit(3))
-            else:
-                m3 = mean(power(m, lit(3)))
-                result = pc.divide(m3, power(m2, lit(1.5)))
-    return result
 
 
 def clip_lower(
@@ -250,10 +211,6 @@ def clip(
     native: ChunkedOrScalarAny, lower: ChunkedOrScalarAny, upper: ChunkedOrScalarAny
 ) -> ChunkedOrScalarAny:
     return clip_lower(clip_upper(native, upper), lower)
-
-
-def n_unique(native: Any) -> pa.Int64Scalar:
-    return count(native, mode="all")
 
 
 def log(native: ChunkedOrScalarAny, base: float = math.e) -> ChunkedOrScalarAny:
@@ -295,10 +252,6 @@ def rank(native: ChunkedArrayAny, rank_options: RankOptions) -> ChunkedArrayAny:
     else:
         ranked = preserve_nulls(native, pc.rank(arr, options=rank_options.to_arrow()))
     return chunked_array(ranked)
-
-
-def null_count(native: ChunkedOrArrayAny) -> pa.Int64Scalar:
-    return pc.count(native, mode="only_null")
 
 
 SearchSortedSide: TypeAlias = Literal["left", "right"]

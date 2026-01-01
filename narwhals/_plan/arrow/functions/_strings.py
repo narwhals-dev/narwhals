@@ -10,6 +10,7 @@ import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._plan.arrow import compat, options as pa_options
 from narwhals._plan.arrow.functions import _lists as list_
+from narwhals._plan.arrow.functions._aggregation import implode
 from narwhals._plan.arrow.functions._bin_op import and_, eq, lt
 from narwhals._plan.arrow.functions._boolean import all_, any_
 from narwhals._plan.arrow.functions._construction import (
@@ -120,7 +121,7 @@ def join(
         return native
     if ignore_nulls and native.null_count:
         native = native.drop_null()
-    return list_.join_scalar(list_.implode(native), separator, ignore_nulls=False)
+    return list_.join_scalar(implode(native), separator, ignore_nulls=False)
 
 
 def len_chars(native: ChunkedOrScalarAny) -> ChunkedOrScalarAny:

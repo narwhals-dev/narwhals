@@ -307,7 +307,7 @@ class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayA
         return fn.any_(self.native).as_py()
 
     def sum(self) -> float:
-        result: float = fn.sum_(self.native).as_py()
+        result: float = fn.sum(self.native).as_py()
         return result
 
     def count(self) -> int:

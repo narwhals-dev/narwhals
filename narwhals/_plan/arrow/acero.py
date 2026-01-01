@@ -323,8 +323,8 @@ def _join_asof_strategy_to_tolerance(
     if strategy == "nearest":
         msg = "Only 'backward' and 'forward' strategies are currently supported for `pyarrow`"
         raise NotImplementedError(msg)
-    lower = fn.min_horizontal(fn.min_(left_on), fn.min_(right_on))
-    upper = fn.max_horizontal(fn.max_(left_on), fn.max_(right_on))
+    lower = fn.min_horizontal(fn.min(left_on), fn.min(right_on))
+    upper = fn.max_horizontal(fn.max(left_on), fn.max(right_on))
     scalar = fn.sub(lower, upper) if strategy == "backward" else fn.sub(upper, lower)
     tolerance: int = fn.cast(scalar, fn.I64).as_py()
     return tolerance
