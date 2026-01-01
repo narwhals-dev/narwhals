@@ -18,6 +18,7 @@ from narwhals._plan.arrow.functions._construction import (
     lit,
 )
 from narwhals._plan.arrow.functions._dtypes import string_type
+from narwhals._plan.arrow.functions._multiplex import replace_with_mask, when_then
 from narwhals._plan.arrow.functions._repeat import repeat_unchecked
 
 if TYPE_CHECKING:
@@ -48,7 +49,6 @@ if TYPE_CHECKING:
 
 # TODO @dangotbanned: Avoid inline dependencies:
 # - list <- implode, list_join, list_join_scalar
-# - common <- when_then, replace_with_mask
 
 
 __all__ = [
@@ -179,8 +179,6 @@ def find(
     Note:
         `pyarrow` distinguishes null *inputs* with `None` and failed matches with `-1`.
     """
-    from narwhals._plan.arrow.functions import when_then
-
     # NOTE: `pyarrow-stubs` uses concrete types here
     fn_name = "find_substring" if literal else "find_substring_regex"
     result: Arrow[IntegerScalar] = pc.call_function(
@@ -311,7 +309,7 @@ def replace_vector(
     n: int | None = 1,
 ) -> ChunkedArrayAny:
     """Replace the first matching regex/literal substring with the adjacent string in `replacements`."""
-    from narwhals._plan.arrow.functions import list_join, replace_with_mask
+    from narwhals._plan.arrow.functions import list_join
 
     has_match = contains(native, pattern, literal=literal)
     if not any_(has_match).as_py():
@@ -344,8 +342,6 @@ def zfill(native: ChunkedOrScalarAny, length: int) -> ChunkedOrScalarAny:
 def _zfill_compat(
     native: ChunkedOrScalarAny, length: int
 ) -> Incomplete:  # pragma: no cover
-    from narwhals._plan.arrow.functions import when_then
-
     dtype = string_type([native.type])
     hyphen, plus = lit("-", dtype), lit("+", dtype)
 
