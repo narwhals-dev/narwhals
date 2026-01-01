@@ -8,7 +8,7 @@ import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._plan.arrow.functions._boolean import is_not_null
 from narwhals._plan.arrow.functions._common import reverse
-from narwhals._plan.arrow.functions._dtypes import UI32
+from narwhals._plan.arrow.functions._dtypes import U32
 from narwhals._plan.expressions import functions as F
 
 if TYPE_CHECKING:
@@ -42,7 +42,7 @@ def cum_prod(native: ChunkedOrArrayT) -> ChunkedOrArrayT:
 
 def cum_count(native: ChunkedArrayAny) -> ChunkedArrayAny:
     """Return the cumulative count of the non-null values in the array."""
-    return cum_sum(is_not_null(native).cast(UI32))
+    return cum_sum(is_not_null(native).cast(U32))
 
 
 def cumulative(native: ChunkedArrayAny, f: F.CumAgg, /) -> ChunkedArrayAny:

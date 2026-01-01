@@ -11,7 +11,7 @@ import pyarrow.compute as pc  # ignore-banned-import
 from narwhals._plan.arrow import compat
 from narwhals._plan.arrow.functions._bin_op import add, multiply
 from narwhals._plan.arrow.functions._construction import chunked_array, lit
-from narwhals._plan.arrow.functions._dtypes import DATE32, F64, I32, I64
+from narwhals._plan.arrow.functions._dtypes import DATE, F64, I32, I64
 
 if TYPE_CHECKING:
     import datetime as dt
@@ -96,14 +96,14 @@ def date_range(
     end_i = pa.scalar(end).cast(I32).as_py()
     ca = int_range(start_i, end_i + 1, interval, dtype=I32)
     if closed == "both":
-        return ca.cast(DATE32)
+        return ca.cast(DATE)
     if closed == "left":
         ca = ca.slice(length=ca.length() - 1)
     elif closed == "none":
         ca = ca.slice(1, length=ca.length() - 1)
     else:
         ca = ca.slice(1)
-    return ca.cast(DATE32)
+    return ca.cast(DATE)
 
 
 def linear_space(

@@ -97,11 +97,11 @@ from narwhals._plan.arrow.functions._cumulative import (
 )
 from narwhals._plan.arrow.functions._dtypes import (
     BOOL as BOOL,
-    DATE32 as DATE32,
+    DATE as DATE,
     F64 as F64,
     I32 as I32,
     I64 as I64,
-    UI32 as UI32,
+    U32 as U32,
     cast as cast,
     cast_table as cast_table,
     dtype_native as dtype_native,
@@ -468,7 +468,7 @@ def list_join(
     lists = native.filter(is_null_sensitive)
 
     # (2.1): We know that `[None]` should join as `""`, and that is the only length-1 list we could have after the filter
-    list_len_eq_1 = eq(list_len(lists), lit(1, UI32))
+    list_len_eq_1 = eq(list_len(lists), lit(1, U32))
     has_a_len_1_null = any_(list_len_eq_1).as_py()
     if has_a_len_1_null:
         lists = when_then(list_len_eq_1, lit([EMPTY], lists.type), lists)

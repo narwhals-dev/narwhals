@@ -26,24 +26,26 @@ if TYPE_CHECKING:
 
 __all__ = [
     "BOOL",
-    "DATE32",
+    "DATE",
     "F64",
     "I32",
     "I64",
-    "UI32",
+    "U32",
     "cast",
     "cast_table",
     "dtype_native",
     "string_type",
 ]
 
-# NOTE: Common data type instances to share
-UI32: Final = pa.uint32()
+# NOTE: Common data type instances to share.
+# Names use an uppercase equivalent to [short repr codes]
+# (https://github.com/pola-rs/polars/blob/5deaf7e9074fdc8f7f0082974cc956acf645af62/crates/polars-core/src/datatypes/dtype.rs#L1127-L1187)
+U32: Final = pa.uint32()
 I32: Final = pa.int32()
 I64: Final = pa.int64()
 F64: Final = pa.float64()
 BOOL: Final = pa.bool_()
-DATE32: Final = pa.date32()
+DATE: Final = pa.date32()
 
 
 @overload
