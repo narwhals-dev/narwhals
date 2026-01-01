@@ -1,19 +1,29 @@
 """Native functions, aliased and/or with behavior aligned to `polars`.
 
+- [ ] _aggregation
+- [x] _bin_op
+- [x] _boolean
 - [x] _categorical -> `cat`
+- [ ] _common (temp)
 - [x] _construction
+- [x] _cumulative
 - [x] _dtypes
+- [ ] _lists -> `list`
+- [ ] _multiplex
+  - [x] move everything
+  - [ ] decide on name
 - [x] _ranges
 - [x] _repeat
 - [ ] _strings
   - [x] -> `str_` (until `functions.__init__` is cleaner)
   - [ ] -> `str`
-- [ ] _lists -> `list`
 - [x] _struct -> `struct`
-- [x] _bin_op
-- [x] _boolean
-- [ ] _aggregation
-- [ ] ...
+- [ ] (Others)
+  - Sorting/indices
+  - Vector
+  - [Arithmetic](https://arrow.apache.org/docs/python/api/compute.html#arithmetic-functions)
+    - some need to be upstream from `_binop`
+  - [Rounding](https://arrow.apache.org/docs/python/api/compute.html#rounding-functions)
 """
 
 from __future__ import annotations
