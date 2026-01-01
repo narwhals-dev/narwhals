@@ -7,7 +7,7 @@
 - [x] _repeat
 - [ ] _strings -> `str`
 - [ ] _lists -> `list`
-- [ ] _struct -> `struct`
+- [x] _struct -> `struct`
 - [x] _bin_op
 - [x] _boolean
 - [ ] _aggregation
@@ -25,10 +25,12 @@ import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._arrow.utils import concat_tables as concat_tables
-from narwhals._plan import common
 from narwhals._plan._guards import is_non_nested_literal
 from narwhals._plan.arrow import compat, options as pa_options
-from narwhals._plan.arrow.functions import _categorical as cat  # noqa: F401
+from narwhals._plan.arrow.functions import (  # noqa: F401
+    _categorical as cat,
+    _struct as struct,
+)
 from narwhals._plan.arrow.functions._bin_op import (
     add as add,
     and_ as and_,
@@ -64,7 +66,6 @@ from narwhals._plan.arrow.functions._boolean import (
     not_ as not_,
     unique_keep_boolean_length_preserving as unique_keep_boolean_length_preserving,
 )
-from narwhals._plan.arrow.functions._common import is_arrow
 from narwhals._plan.arrow.functions._construction import (
     array as array,
     chunked_array as chunked_array,
@@ -115,7 +116,6 @@ if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias, TypeVarTuple, Unpack
 
     from narwhals._arrow.typing import Incomplete
-    from narwhals._plan.arrow.acero import Field
     from narwhals._plan.arrow.typing import (
         Array,
         ArrayAny,
@@ -133,7 +133,6 @@ if TYPE_CHECKING:
         ChunkedOrScalar,
         ChunkedOrScalarAny,
         ChunkedOrScalarT,
-        ChunkedStruct,
         DataTypeT,
         IntegerScalar,
         ListArray,
@@ -148,7 +147,6 @@ if TYPE_CHECKING:
         ScalarAny,
         StringScalar,
         StringType,
-        StructArray,
         UnaryFunction,
         UnaryNumeric,
         VectorFunction,
@@ -170,81 +168,6 @@ exp = t.cast("UnaryNumeric", pc.exp)
 sqrt = t.cast("UnaryNumeric", pc.sqrt)
 ceil = t.cast("UnaryNumeric", pc.ceil)
 floor = t.cast("UnaryNumeric", pc.floor)
-
-
-# NOTE: `mypy` isn't happy, but this broadcasting behavior is worth documenting
-@t.overload
-def struct(names: Iterable[str], columns: Iterable[ChunkedArrayAny]) -> ChunkedStruct: ...
-@t.overload
-def struct(names: Iterable[str], columns: Iterable[ArrayAny]) -> pa.StructArray: ...
-@t.overload
-def struct(  # type: ignore[overload-overlap]
-    names: Iterable[str], columns: Iterable[ScalarAny] | Iterable[NonNestedLiteral]
-) -> pa.StructScalar: ...
-@t.overload
-def struct(  # type: ignore[overload-overlap]
-    names: Iterable[str], columns: Iterable[ChunkedArrayAny | NonNestedLiteral]
-) -> ChunkedStruct: ...
-@t.overload
-def struct(
-    names: Iterable[str], columns: Iterable[ArrayAny | NonNestedLiteral]
-) -> pa.StructArray: ...
-@t.overload
-def struct(names: Iterable[str], columns: Iterable[ArrowAny]) -> Incomplete: ...
-def struct(names: Iterable[str], columns: Iterable[Incomplete]) -> Incomplete:
-    """Collect columns into a struct.
-
-    Arguments:
-        names: Names of the struct fields to create.
-        columns: Value(s) to collect into a struct. Scalars will will be broadcast unless all
-            inputs are scalar.
-    """
-    return pc.make_struct(
-        *columns, options=pc.MakeStructOptions(common.ensure_seq_str(names))
-    )
-
-
-def struct_schema(native: Arrow[pa.StructScalar] | pa.StructType) -> pa.Schema:
-    """Get the struct definition as a schema."""
-    tp = native.type if is_arrow(native) else native
-    fields = tp.fields if compat.HAS_STRUCT_TYPE_FIELDS else list(tp)
-    return pa.schema(fields)
-
-
-def struct_field_names(native: Arrow[pa.StructScalar] | pa.StructType) -> list[str]:
-    """Get the names of all struct fields."""
-    tp = native.type if is_arrow(native) else native
-    return tp.names if compat.HAS_STRUCT_TYPE_FIELDS else [f.name for f in tp]
-
-
-@t.overload
-def struct_field(native: ChunkedStruct, field: Field, /) -> ChunkedArrayAny: ...
-@t.overload
-def struct_field(native: StructArray, field: Field, /) -> ArrayAny: ...
-@t.overload
-def struct_field(native: pa.StructScalar, field: Field, /) -> ScalarAny: ...
-@t.overload
-def struct_field(native: SameArrowT, field: Field, /) -> SameArrowT: ...
-@t.overload
-def struct_field(native: ChunkedOrScalarAny, field: Field, /) -> ChunkedOrScalarAny: ...
-def struct_field(native: ArrowAny, field: Field, /) -> ArrowAny:
-    """Retrieve one `Struct` field."""
-    func = t.cast("Callable[[Any,Any], ArrowAny]", pc.struct_field)
-    return func(native, field)
-
-
-@t.overload
-def struct_fields(native: ChunkedStruct, *fields: Field) -> Seq[ChunkedArrayAny]: ...
-@t.overload
-def struct_fields(native: StructArray, *fields: Field) -> Seq[ArrayAny]: ...
-@t.overload
-def struct_fields(native: pa.StructScalar, *fields: Field) -> Seq[ScalarAny]: ...
-@t.overload
-def struct_fields(native: SameArrowT, *fields: Field) -> Seq[SameArrowT]: ...
-def struct_fields(native: ArrowAny, *fields: Field) -> Seq[ArrowAny]:
-    """Retrieve  multiple `Struct` fields."""
-    func = t.cast("Callable[[Any,Any], ArrowAny]", pc.struct_field)
-    return tuple(func(native, name) for name in fields)
 
 
 class ExplodeBuilder:
@@ -791,6 +714,8 @@ def str_split(native: ArrowAny, by: str, *, literal: bool = True) -> Arrow[ListS
     return _str_split(native, by, literal=literal)
 
 
+# TODO @dangotbanned: Support and default to `as_struct=True`
+# `polars` would return a struct w/ field names (`'field_0', ..., 'field_n-1'`)
 @t.overload
 def str_splitn(
     native: ChunkedArrayAny,
@@ -823,7 +748,6 @@ def str_splitn(
     """Split the string by a substring, restricted to returning at most `n` items."""
     result = _str_split(native, by, n, literal=literal)
     if as_struct:
-        # NOTE: `polars` would return a struct w/ field names (`'field_0`, ..., 'field_n-1`)
         msg = "TODO: `ArrowExpr.str.splitn`"
         raise NotImplementedError(msg)
     return result
@@ -1480,7 +1404,7 @@ def hist_bins(
         .sort()
         .value_counts()
     )
-    values, counts = struct_fields(value_counts, "values", "counts")
+    values, counts = struct.fields(value_counts, "values", "counts")
     bin_count = len(bins)
     int_range_ = int_range(1, bin_count, chunked=False)
     mask = is_in(int_range_, values)

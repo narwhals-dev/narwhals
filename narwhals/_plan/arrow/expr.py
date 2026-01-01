@@ -1119,4 +1119,4 @@ class ArrowStructNamespace(
     ExprStructNamespace["Frame", "Expr | Scalar"], ArrowAccessor[ExprOrScalarT]
 ):
     def field(self, node: FExpr[FieldByName], frame: Frame, name: str) -> Expr | Scalar:
-        return self.unary(fn.struct_field, node.function.name)(node, frame, name)
+        return self.unary(fn.struct.field, node.function.name)(node, frame, name)

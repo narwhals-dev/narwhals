@@ -122,7 +122,7 @@ def _pivot(
     pivot = acero.group_by_table(native, index, specs)
     flat = pivot.flatten()
     if len(values) == 1:
-        names = [*index, *fn.struct_field_names(pivot.column(values[0]))]
+        names = [*index, *fn.struct.field_names(pivot.column(values[0]))]
     else:
         names = _replace_flatten_names(flat.column_names, values, on_columns, separator)
     return flat.rename_columns(names)

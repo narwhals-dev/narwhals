@@ -369,18 +369,18 @@ class SeriesStructNamespace(StructNamespace["DataFrame", ArrowSeries]):
             if len(native):
                 table = pa.Table.from_struct_array(native)
             else:
-                table = fn.struct_schema(native).empty_table()
+                table = fn.struct.schema(native).empty_table()
         else:  # pragma: no cover
             # NOTE: Too strict, doesn't allow `Array[StructScalar]`
             rec_batch: Incomplete = pa.RecordBatch.from_struct_array
             batches = (rec_batch(chunk) for chunk in native.chunks)
-            table = pa.Table.from_batches(batches, fn.struct_schema(native))
+            table = pa.Table.from_batches(batches, fn.struct.schema(native))
         return namespace(self)._dataframe.from_native(table, self.version)
 
     # name overriding *may* be wrong
     def field(self, name: str) -> ArrowSeries:
-        return self.with_native(fn.struct_field(self.native, name), name)
+        return self.with_native(fn.struct.field(self.native, name), name)
 
     @property
     def schema(self) -> Schema:
-        return Schema.from_arrow(fn.struct_schema(self.native))
+        return Schema.from_arrow(fn.struct.schema(self.native))
