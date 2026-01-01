@@ -10,6 +10,7 @@ from narwhals._plan import expressions as ir
 from narwhals._plan._dispatch import get_dispatch_name
 from narwhals._plan._guards import is_agg_expr, is_function_expr
 from narwhals._plan.arrow import acero, compat, functions as fn, options
+from narwhals._plan.arrow.functions._common import MinMax
 from narwhals._plan.common import temp
 from narwhals._plan.compliant.group_by import EagerDataFrameGroupBy
 from narwhals._plan.expressions import aggregation as agg
@@ -50,7 +51,7 @@ SUPPORTED_AGG: Mapping[type[agg.AggExpr], acero.Aggregation] = {
     agg.NUnique: "hash_count_distinct",
     agg.First: "hash_first",
     agg.Last: "hash_last",
-    fn.MinMax: "hash_min_max",
+    MinMax: "hash_min_max",
 }
 SUPPORTED_LIST_AGG: Mapping[type[ir.lists.Aggregation], type[agg.AggExpr]] = {
     ir.lists.Mean: agg.Mean,
