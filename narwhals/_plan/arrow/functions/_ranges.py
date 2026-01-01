@@ -5,10 +5,11 @@ from __future__ import annotations
 import typing as t
 from typing import TYPE_CHECKING, Any, Literal, overload
 
-import pyarrow as pa
+import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._plan.arrow import compat
+from narwhals._plan.arrow.functions._bin_op import add, multiply
 from narwhals._plan.arrow.functions._construction import chunked_array, lit
 from narwhals._plan.arrow.functions._dtypes import DATE32, F64, I32, I64
 
@@ -103,7 +104,6 @@ def date_range(
     return ca.cast(DATE32)
 
 
-# TODO @dangotbanned: Define `multiply`, `add`, etc somewhere else
 def linear_space(
     start: float, end: float, num_samples: int, *, closed: ClosedInterval = "both"
 ) -> ChunkedArray[pc.NumericScalar]:
@@ -111,8 +111,6 @@ def linear_space(
 
     [`new_linear_space_f64`]: https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/crates/polars-ops/src/series/ops/linear_space.rs#L62-L94
     """
-    from narwhals._plan.arrow.functions import add, multiply
-
     if num_samples < 0:
         msg = f"Number of samples, {num_samples}, must be non-negative."
         raise ValueError(msg)

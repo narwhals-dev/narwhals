@@ -1,4 +1,20 @@
-"""Native functions, aliased and/or with behavior aligned to `polars`."""
+"""Native functions, aliased and/or with behavior aligned to `polars`.
+
+- [x] _categorical -> `cat`
+- [x] _construction
+- [x] _dtypes
+- [x] _ranges
+- [x] _repeat
+- [ ] _strings -> `str`
+- [ ] _lists -> `list`
+- [ ] _struct -> `struct`
+- [x] _bin_op
+- [ ] _boolean
+  - [x] main wrappers
+  - [ ] length preserving extras
+- [ ] _aggregation
+- [ ] ...
+"""
 
 from __future__ import annotations
 
@@ -11,15 +27,45 @@ from typing import TYPE_CHECKING, Any, Final, Literal, overload
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
-from narwhals._arrow.utils import (
-    cast_for_truediv,
-    concat_tables as concat_tables,
-    floordiv_compat as _floordiv,
-)
+from narwhals._arrow.utils import concat_tables as concat_tables
 from narwhals._plan import common, expressions as ir
 from narwhals._plan._guards import is_non_nested_literal
 from narwhals._plan.arrow import compat, options as pa_options
 from narwhals._plan.arrow.functions import _categorical as cat  # noqa: F401
+from narwhals._plan.arrow.functions._bin_op import (
+    add as add,
+    and_ as and_,
+    binary as binary,
+    eq as eq,
+    floordiv as floordiv,
+    gt as gt,
+    gt_eq as gt_eq,
+    lt as lt,
+    lt_eq as lt_eq,
+    modulus as modulus,
+    multiply as multiply,
+    not_eq as not_eq,
+    or_ as or_,
+    power as power,
+    sub as sub,
+    truediv as truediv,
+    xor as xor,
+)
+from narwhals._plan.arrow.functions._boolean import (
+    all_ as all_,  # TODO @dangotbanned: Import as `all` when namespace is cleaner
+    any_ as any_,  # TODO @dangotbanned: Import as `any` when namespace is cleaner
+    eq_missing as eq_missing,
+    is_between as is_between,
+    is_finite as is_finite,
+    is_in as is_in,
+    is_nan as is_nan,
+    is_not_nan as is_not_nan,
+    is_not_null as is_not_null,
+    is_null as is_null,
+    is_only_nulls as is_only_nulls,
+    not_ as not_,
+)
+from narwhals._plan.arrow.functions._common import is_arrow
 from narwhals._plan.arrow.functions._construction import (
     array as array,
     chunked_array as chunked_array,
@@ -52,7 +98,7 @@ from narwhals._plan.arrow.functions._repeat import (
     repeat_unchecked as repeat_unchecked,
     zeros as zeros,
 )
-from narwhals._plan.expressions import functions as F, operators as ops
+from narwhals._plan.expressions import functions as F
 from narwhals._plan.options import ExplodeOptions, SortOptions
 from narwhals._utils import no_default
 from narwhals.exceptions import ShapeError
@@ -60,7 +106,7 @@ from narwhals.exceptions import ShapeError
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
 
-    from typing_extensions import Self, TypeAlias, TypeIs, TypeVarTuple, Unpack
+    from typing_extensions import Self, TypeAlias, TypeVarTuple, Unpack
 
     from narwhals._arrow.typing import Incomplete
     from narwhals._plan.arrow.acero import Field
@@ -71,11 +117,6 @@ if TYPE_CHECKING:
         ArrowAny,
         ArrowListT,
         ArrowT,
-        BinaryComp,
-        BinaryFunction,
-        BinaryLogical,
-        BinaryNumericTemporal,
-        BinOp,
         BooleanLengthPreserving,
         BooleanScalar,
         ChunkedArray,
@@ -100,7 +141,6 @@ if TYPE_CHECKING:
         SameArrowT,
         Scalar,
         ScalarAny,
-        ScalarT,
         StringScalar,
         StringType,
         StructArray,
@@ -108,17 +148,10 @@ if TYPE_CHECKING:
         UnaryNumeric,
         VectorFunction,
     )
-    from narwhals._plan.compliant.typing import SeriesT
     from narwhals._plan.options import RankOptions, SortMultipleOptions
     from narwhals._plan.typing import Seq
     from narwhals._typing import NoDefault
-    from narwhals.typing import (
-        ClosedInterval,
-        FillNullStrategy,
-        NonNestedLiteral,
-        NumericLiteral,
-        UniqueKeepStrategy,
-    )
+    from narwhals.typing import FillNullStrategy, NonNestedLiteral, UniqueKeepStrategy
 
     Ts = TypeVarTuple("Ts")
 
@@ -137,109 +170,11 @@ class MinMax(ir.AggExpr):
 IntoColumnAgg: TypeAlias = Callable[[str], ir.AggExpr]
 """Helper constructor for single-column aggregations."""
 
-is_null = t.cast("UnaryFunction[ScalarAny, pa.BooleanScalar]", pc.is_null)
-is_not_null = t.cast("UnaryFunction[ScalarAny, pa.BooleanScalar]", pc.is_valid)
-is_nan = t.cast("UnaryFunction[ScalarAny, pa.BooleanScalar]", pc.is_nan)
-is_finite = t.cast("UnaryFunction[ScalarAny, pa.BooleanScalar]", pc.is_finite)
-not_ = t.cast("UnaryFunction[ScalarAny, pa.BooleanScalar]", pc.invert)
-
-
-@overload
-def is_not_nan(native: ChunkedArrayAny) -> ChunkedArray[pa.BooleanScalar]: ...
-@overload
-def is_not_nan(native: ScalarAny) -> pa.BooleanScalar: ...
-@overload
-def is_not_nan(native: ChunkedOrScalarAny) -> ChunkedOrScalar[pa.BooleanScalar]: ...
-@overload
-def is_not_nan(native: Arrow[ScalarAny]) -> Arrow[pa.BooleanScalar]: ...
-def is_not_nan(native: Arrow[ScalarAny]) -> Arrow[pa.BooleanScalar]:
-    return not_(is_nan(native))
-
-
-and_ = t.cast("BinaryLogical", pc.and_kleene)
-or_ = t.cast("BinaryLogical", pc.or_kleene)
-xor = t.cast("BinaryLogical", pc.xor)
-
-eq = t.cast("BinaryComp", pc.equal)
-not_eq = t.cast("BinaryComp", pc.not_equal)
-gt_eq = t.cast("BinaryComp", pc.greater_equal)
-gt = t.cast("BinaryComp", pc.greater)
-lt_eq = t.cast("BinaryComp", pc.less_equal)
-lt = t.cast("BinaryComp", pc.less)
-
-
-add = t.cast("BinaryNumericTemporal", pc.add)
-sub = t.cast("BinaryNumericTemporal", pc.subtract)
-multiply = pc.multiply
-power = t.cast("BinaryFunction[NumericScalar, NumericScalar]", pc.power)
-floordiv = _floordiv
 abs_ = t.cast("UnaryNumeric", pc.abs)
 exp = t.cast("UnaryNumeric", pc.exp)
 sqrt = t.cast("UnaryNumeric", pc.sqrt)
 ceil = t.cast("UnaryNumeric", pc.ceil)
 floor = t.cast("UnaryNumeric", pc.floor)
-
-
-def truediv(lhs: Incomplete, rhs: Incomplete) -> Incomplete:
-    return pc.divide(*cast_for_truediv(lhs, rhs))
-
-
-def modulus(lhs: Incomplete, rhs: Incomplete) -> Incomplete:
-    floor_div = floordiv(lhs, rhs)
-    return sub(lhs, multiply(floor_div, rhs))
-
-
-# TODO @dangotbanned: Somehow fix the typing on this
-# - `_ArrowDispatch` is relying on the gradual typing
-_DISPATCH_BINARY: Mapping[type[ops.Operator], BinOp] = {
-    # BinaryComp
-    ops.Eq: eq,
-    ops.NotEq: not_eq,
-    ops.Lt: lt,
-    ops.LtEq: lt_eq,
-    ops.Gt: gt,
-    ops.GtEq: gt_eq,
-    # BinaryFunction (well it should be)
-    ops.Add: add,  # BinaryNumericTemporal
-    ops.Sub: sub,  # pyarrow-stubs
-    ops.Multiply: multiply,  # pyarrow-stubs
-    ops.TrueDivide: truediv,  # [[Any, Any], Any]
-    ops.FloorDivide: floordiv,  # [[ArrayOrScalar, ArrayOrScalar], Any]
-    ops.Modulus: modulus,  # [[Any, Any], Any]
-    # BinaryLogical
-    ops.And: and_,
-    ops.Or: or_,
-    ops.ExclusiveOr: xor,
-}
-
-
-def bin_op(
-    function: Callable[[Any, Any], Any], /, *, reflect: bool = False
-) -> Callable[[SeriesT, Any], SeriesT]:
-    """Attach a binary operator to `ArrowSeries`."""
-
-    def f(self: SeriesT, other: SeriesT | Any, /) -> SeriesT:
-        right = other.native if isinstance(other, type(self)) else lit(other)
-        return self._with_native(function(self.native, right))
-
-    def f_reflect(self: SeriesT, other: SeriesT | Any, /) -> SeriesT:
-        if isinstance(other, type(self)):
-            name = other.name
-            right: ArrowAny = other.native
-        else:
-            name = "literal"
-            right = lit(other)
-        return self.from_native(function(right, self.native), name, version=self.version)
-
-    return f_reflect if reflect else f
-
-
-_IS_BETWEEN: Mapping[ClosedInterval, tuple[BinaryComp, BinaryComp]] = {
-    "left": (gt_eq, lt),
-    "right": (gt, lt_eq),
-    "none": (gt, lt),
-    "both": (gt_eq, lt_eq),
-}
 
 
 # NOTE: `mypy` isn't happy, but this broadcasting behavior is worth documenting
@@ -276,14 +211,14 @@ def struct(names: Iterable[str], columns: Iterable[Incomplete]) -> Incomplete:
 
 def struct_schema(native: Arrow[pa.StructScalar] | pa.StructType) -> pa.Schema:
     """Get the struct definition as a schema."""
-    tp = native.type if _is_arrow(native) else native
+    tp = native.type if is_arrow(native) else native
     fields = tp.fields if compat.HAS_STRUCT_TYPE_FIELDS else list(tp)
     return pa.schema(fields)
 
 
 def struct_field_names(native: Arrow[pa.StructScalar] | pa.StructType) -> list[str]:
     """Get the names of all struct fields."""
-    tp = native.type if _is_arrow(native) else native
+    tp = native.type if is_arrow(native) else native
     return tp.names if compat.HAS_STRUCT_TYPE_FIELDS else [f.name for f in tp]
 
 
@@ -1040,14 +975,6 @@ def when_then(
     return pc.if_else(predicate, then, otherwise)
 
 
-def any_(native: Incomplete, *, ignore_nulls: bool = True) -> pa.BooleanScalar:
-    return pc.any(native, min_count=0, skip_nulls=ignore_nulls)
-
-
-def all_(native: Incomplete, *, ignore_nulls: bool = True) -> pa.BooleanScalar:
-    return pc.all(native, min_count=0, skip_nulls=ignore_nulls)
-
-
 def sum_(native: Incomplete) -> NativeScalar:
     return pc.sum(native, min_count=0)
 
@@ -1239,11 +1166,6 @@ def preserve_nulls(
 drop_nulls = t.cast("VectorFunction[...]", pc.drop_null)
 
 
-def is_only_nulls(native: ChunkedOrArrayAny, *, nan_is_null: bool = False) -> bool:
-    """Return True if `native` has no non-null values (and optionally include NaN)."""
-    return array(native.is_null(nan_is_null=nan_is_null), BOOL).false_count == 0
-
-
 _FILL_NULL_STRATEGY: Mapping[FillNullStrategy, UnaryFunction] = {
     "forward": pc.fill_null_forward,
     "backward": pc.fill_null_backward,
@@ -1373,89 +1295,6 @@ def replace_with_mask(
     return result
 
 
-@t.overload
-def is_between(
-    native: ChunkedArray[ScalarT],
-    lower: ChunkedOrScalar[ScalarT] | NumericLiteral,
-    upper: ChunkedOrScalar[ScalarT] | NumericLiteral,
-    closed: ClosedInterval,
-) -> ChunkedArray[pa.BooleanScalar]: ...
-@t.overload
-def is_between(
-    native: ChunkedOrScalar[ScalarT],
-    lower: ChunkedOrScalar[ScalarT] | NumericLiteral,
-    upper: ChunkedOrScalar[ScalarT] | NumericLiteral,
-    closed: ClosedInterval,
-) -> ChunkedOrScalar[pa.BooleanScalar]: ...
-def is_between(
-    native: ChunkedOrScalar[ScalarT],
-    lower: ChunkedOrScalar[ScalarT] | NumericLiteral,
-    upper: ChunkedOrScalar[ScalarT] | NumericLiteral,
-    closed: ClosedInterval,
-) -> ChunkedOrScalar[pa.BooleanScalar]:
-    fn_lhs, fn_rhs = _IS_BETWEEN[closed]
-    low, high = (el if _is_arrow(el) else lit(el) for el in (lower, upper))
-    out: ChunkedOrScalar[pa.BooleanScalar] = and_(
-        fn_lhs(native, low), fn_rhs(native, high)
-    )
-    return out
-
-
-@t.overload
-def is_in(
-    values: ChunkedArrayAny, /, other: ChunkedOrArrayAny
-) -> ChunkedArray[pa.BooleanScalar]: ...
-@t.overload
-def is_in(values: ArrayAny, /, other: ChunkedOrArrayAny) -> Array[pa.BooleanScalar]: ...
-@t.overload
-def is_in(values: ScalarAny, /, other: ChunkedOrArrayAny) -> pa.BooleanScalar: ...
-@t.overload
-def is_in(
-    values: ChunkedOrScalarAny, /, other: ChunkedOrArrayAny
-) -> ChunkedOrScalarAny: ...
-def is_in(values: ArrowAny, /, other: ChunkedOrArrayAny) -> ArrowAny:
-    """Check if elements of `values` are present in `other`.
-
-    Roughly equivalent to [`polars.Expr.is_in`](https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.is_in.html)
-
-    Returns a mask with `len(values)` elements.
-    """
-    # NOTE: Stubs don't include a `ChunkedArray` return
-    # NOTE: Replaced ambiguous parameter name (`value_set`)
-    is_in_: Incomplete = pc.is_in
-    return is_in_(values, other)  # type: ignore[no-any-return]
-
-
-@t.overload
-def eq_missing(
-    native: ChunkedArrayAny, other: NonNestedLiteral | ArrowAny
-) -> ChunkedArray[pa.BooleanScalar]: ...
-@t.overload
-def eq_missing(
-    native: ArrayAny, other: NonNestedLiteral | ArrowAny
-) -> Array[pa.BooleanScalar]: ...
-@t.overload
-def eq_missing(
-    native: ScalarAny, other: NonNestedLiteral | ArrowAny
-) -> pa.BooleanScalar: ...
-@t.overload
-def eq_missing(
-    native: ChunkedOrScalarAny, other: NonNestedLiteral | ArrowAny
-) -> ChunkedOrScalarAny: ...
-def eq_missing(native: ArrowAny, other: NonNestedLiteral | ArrowAny) -> ArrowAny:
-    """Equivalent to `native == other` where `None == None`.
-
-    This differs from default `eq` where null values are propagated.
-
-    Note:
-        Unique to `pyarrow`, this wrapper will ensure `None` uses `native.type`.
-    """
-    if isinstance(other, (pa.Array, pa.ChunkedArray)):
-        return is_in(native, other)
-    item = array(other if isinstance(other, pa.Scalar) else lit(other, native.type))
-    return is_in(native, item)
-
-
 def ir_min_max(name: str, /) -> MinMax:
     return MinMax(expr=ir.col(name))
 
@@ -1495,12 +1334,6 @@ def unique_keep_boolean_length_preserving(
     keep: UniqueKeepStrategy,
 ) -> tuple[IntoColumnAgg, BooleanLengthPreserving]:
     return BOOLEAN_LENGTH_PRESERVING[_UNIQUE_KEEP_BOOLEAN_LENGTH_PRESERVING[keep]]
-
-
-def binary(
-    lhs: ChunkedOrScalarAny, op: type[ops.Operator], rhs: ChunkedOrScalarAny
-) -> ChunkedOrScalarAny:
-    return _DISPATCH_BINARY[op](lhs, rhs)
 
 
 @t.overload
@@ -1714,10 +1547,6 @@ def hist_zeroed_data(
         return {"count": zeros(n)}
     bp = linear_space(0, 1, arg, closed="right") if isinstance(arg, int) else arg[1:]
     return {"breakpoint": bp, "count": zeros(n)}
-
-
-def _is_arrow(obj: Arrow[ScalarT] | Any) -> TypeIs[Arrow[ScalarT]]:
-    return isinstance(obj, (pa.Scalar, pa.Array, pa.ChunkedArray))
 
 
 def filter_arrays(

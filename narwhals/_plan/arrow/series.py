@@ -17,14 +17,15 @@ from narwhals.dependencies import is_numpy_array_1d
 from narwhals.schema import Schema
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Callable, Iterable
 
     import polars as pl
     from typing_extensions import Self, TypeAlias
 
     from narwhals._plan.arrow.dataframe import ArrowDataFrame as DataFrame
     from narwhals._plan.arrow.namespace import ArrowNamespace as Namespace
-    from narwhals._plan.arrow.typing import ChunkedArrayAny
+    from narwhals._plan.arrow.typing import ArrowAny, ChunkedArrayAny
+    from narwhals._plan.compliant.typing import SeriesT
     from narwhals.dtypes import DType
     from narwhals.typing import (
         FillNullStrategy,
@@ -36,6 +37,27 @@ if TYPE_CHECKING:
     )
 
 Incomplete: TypeAlias = Any
+
+
+def bin_op(
+    function: Callable[[Any, Any], Any], /, *, reflect: bool = False
+) -> Callable[[SeriesT, Any], SeriesT]:
+    """Attach a binary operator to `ArrowSeries`."""
+
+    def f(self: SeriesT, other: SeriesT | Any, /) -> SeriesT:
+        right = other.native if isinstance(other, type(self)) else fn.lit(other)
+        return self._with_native(function(self.native, right))
+
+    def f_reflect(self: SeriesT, other: SeriesT | Any, /) -> SeriesT:
+        if isinstance(other, type(self)):
+            name = other.name
+            right: ArrowAny = other.native
+        else:
+            name = "literal"
+            right = fn.lit(other)
+        return self.from_native(function(right, self.native), name, version=self.version)
+
+    return f_reflect if reflect else f
 
 
 class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayAny"]):
@@ -124,32 +146,32 @@ class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayA
     def null_count(self) -> int:
         return self.native.null_count
 
-    __add__ = fn.bin_op(fn.add)
-    __and__ = fn.bin_op(fn.and_)
-    __eq__ = fn.bin_op(fn.eq)
-    __floordiv__ = fn.bin_op(fn.floordiv)
-    __ge__ = fn.bin_op(fn.gt_eq)
-    __gt__ = fn.bin_op(fn.gt)
-    __le__ = fn.bin_op(fn.lt_eq)
-    __lt__ = fn.bin_op(fn.lt)
-    __mod__ = fn.bin_op(fn.modulus)
-    __mul__ = fn.bin_op(fn.multiply)
-    __ne__ = fn.bin_op(fn.not_eq)
-    __or__ = fn.bin_op(fn.or_)
-    __pow__ = fn.bin_op(fn.power)
-    __rfloordiv__ = fn.bin_op(fn.floordiv, reflect=True)
-    __radd__ = fn.bin_op(fn.add, reflect=True)
-    __rand__ = fn.bin_op(fn.and_, reflect=True)
-    __rmod__ = fn.bin_op(fn.modulus, reflect=True)
-    __rmul__ = fn.bin_op(fn.multiply, reflect=True)
-    __ror__ = fn.bin_op(fn.or_, reflect=True)
-    __rpow__ = fn.bin_op(fn.power, reflect=True)
-    __rsub__ = fn.bin_op(fn.sub, reflect=True)
-    __rtruediv__ = fn.bin_op(fn.truediv, reflect=True)
-    __rxor__ = fn.bin_op(fn.xor, reflect=True)
-    __sub__ = fn.bin_op(fn.sub)
-    __truediv__ = fn.bin_op(fn.truediv)
-    __xor__ = fn.bin_op(fn.xor)
+    __add__ = bin_op(fn.add)
+    __and__ = bin_op(fn.and_)
+    __eq__ = bin_op(fn.eq)
+    __floordiv__ = bin_op(fn.floordiv)
+    __ge__ = bin_op(fn.gt_eq)
+    __gt__ = bin_op(fn.gt)
+    __le__ = bin_op(fn.lt_eq)
+    __lt__ = bin_op(fn.lt)
+    __mod__ = bin_op(fn.modulus)
+    __mul__ = bin_op(fn.multiply)
+    __ne__ = bin_op(fn.not_eq)
+    __or__ = bin_op(fn.or_)
+    __pow__ = bin_op(fn.power)
+    __rfloordiv__ = bin_op(fn.floordiv, reflect=True)
+    __radd__ = bin_op(fn.add, reflect=True)
+    __rand__ = bin_op(fn.and_, reflect=True)
+    __rmod__ = bin_op(fn.modulus, reflect=True)
+    __rmul__ = bin_op(fn.multiply, reflect=True)
+    __ror__ = bin_op(fn.or_, reflect=True)
+    __rpow__ = bin_op(fn.power, reflect=True)
+    __rsub__ = bin_op(fn.sub, reflect=True)
+    __rtruediv__ = bin_op(fn.truediv, reflect=True)
+    __rxor__ = bin_op(fn.xor, reflect=True)
+    __sub__ = bin_op(fn.sub)
+    __truediv__ = bin_op(fn.truediv)
+    __xor__ = bin_op(fn.xor)
 
     def __invert__(self) -> Self:
         return self._with_native(pc.invert(self.native))
