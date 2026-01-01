@@ -77,7 +77,7 @@ from narwhals._plan.arrow.functions._boolean import (
     not_ as not_,
     unique_keep_boolean_length_preserving as unique_keep_boolean_length_preserving,
 )
-from narwhals._plan.arrow.functions._common import reverse as reverse
+from narwhals._plan.arrow.functions._common import reverse as reverse, round as round
 from narwhals._plan.arrow.functions._construction import (
     array as array,
     chunked_array as chunked_array,
@@ -130,6 +130,11 @@ from narwhals._plan.arrow.functions._repeat import (
     repeat_unchecked as repeat_unchecked,
     zeros as zeros,
 )
+from narwhals._plan.arrow.functions._sort import (
+    random_indices as random_indices,
+    sort_indices as sort_indices,
+    unsort_indices as unsort_indices,
+)
 from narwhals._plan.options import ExplodeOptions, SortOptions
 from narwhals._utils import no_default
 from narwhals.exceptions import ShapeError
@@ -144,12 +149,11 @@ if TYPE_CHECKING:
         Sequence,
     )
 
-    from typing_extensions import Self, TypeAlias, Unpack
+    from typing_extensions import Self, TypeAlias
 
     from narwhals._arrow.typing import Incomplete
     from narwhals._plan.arrow.typing import (
         Array,
-        ArrayAny,
         Arrow,
         ArrowAny,
         ArrowListT,
@@ -176,7 +180,7 @@ if TYPE_CHECKING:
         StringType,
         UnaryNumeric,
     )
-    from narwhals._plan.options import RankOptions, SortMultipleOptions
+    from narwhals._plan.options import RankOptions
     from narwhals._typing import NoDefault
     from narwhals.typing import NonNestedLiteral
 
@@ -717,14 +721,6 @@ def n_unique(native: Any) -> pa.Int64Scalar:
     return count(native, mode="all")
 
 
-@t.overload
-def round(native: ChunkedOrScalarAny, decimals: int = ...) -> ChunkedOrScalarAny: ...
-@t.overload
-def round(native: ChunkedOrArrayT, decimals: int = ...) -> ChunkedOrArrayT: ...
-def round(native: ArrowAny, decimals: int = 0) -> ArrowAny:
-    return pc.round(native, decimals, round_mode="half_towards_infinity")
-
-
 def log(native: ChunkedOrScalarAny, base: float = math.e) -> ChunkedOrScalarAny:
     return t.cast("ChunkedOrScalarAny", pc.logb(native, lit(base)))
 
@@ -768,111 +764,6 @@ def rank(native: ChunkedArrayAny, rank_options: RankOptions) -> ChunkedArrayAny:
 
 def null_count(native: ChunkedOrArrayAny) -> pa.Int64Scalar:
     return pc.count(native, mode="only_null")
-
-
-def random_indices(
-    end: int, /, n: int, *, with_replacement: bool = False, seed: int | None = None
-) -> ArrayAny:
-    """Generate `n` random indices within the range `[0, end)`."""
-    # NOTE: Review this path if anything changes upstream
-    # https://github.com/apache/arrow/issues/47288#issuecomment-3597653670
-    if with_replacement:
-        rand_values = pc.random(n, initializer="system" if seed is None else seed)
-        return round(multiply(rand_values, lit(end - 1))).cast(I64)
-
-    import numpy as np  # ignore-banned-import
-
-    return array(np.random.default_rng(seed).choice(np.arange(end), n, replace=False))
-
-
-@overload
-def sort_indices(
-    native: ChunkedOrArrayAny, *, options: SortOptions | None
-) -> pa.UInt64Array: ...
-@overload
-def sort_indices(
-    native: ChunkedOrArrayAny, *, descending: bool = ..., nulls_last: bool = ...
-) -> pa.UInt64Array: ...
-@overload
-def sort_indices(
-    native: pa.Table,
-    *by: Unpack[tuple[str, Unpack[tuple[str, ...]]]],
-    options: SortOptions | SortMultipleOptions | None,
-) -> pa.UInt64Array: ...
-@overload
-def sort_indices(
-    native: pa.Table,
-    *by: Unpack[tuple[str, Unpack[tuple[str, ...]]]],
-    descending: bool | Sequence[bool] = ...,
-    nulls_last: bool = ...,
-) -> pa.UInt64Array: ...
-def sort_indices(
-    native: ChunkedOrArrayAny | pa.Table,
-    *by: str,
-    options: SortOptions | SortMultipleOptions | None = None,
-    descending: bool | Sequence[bool] = False,
-    nulls_last: bool = False,
-) -> pa.UInt64Array:
-    """Return the indices that would sort an array or table.
-
-    Arguments:
-        native: Any non-scalar arrow data.
-        *by: Column(s) to sort by. Only applicable to `Table` and must use at least one name.
-        options: An *already-parsed* options instance.
-            **Has higher precedence** than `descending` and `nulls_last`.
-        descending: Sort in descending order. When sorting by multiple columns,
-            can be specified per column by passing a sequence of booleans.
-        nulls_last: Place null values last.
-
-    Notes:
-        Most commonly used as input for `take`, which forms a `sort_by` operation.
-    """
-    if not isinstance(native, pa.Table):
-        if options:
-            descending = options.descending
-            nulls_last = options._ensure_single_nulls_last("pyarrow")
-        a_opts = pa_options.array_sort(descending=descending, nulls_last=nulls_last)
-        return pc.array_sort_indices(native, options=a_opts)
-    opts = (
-        options.to_arrow(by)
-        if options
-        else pa_options.sort(*by, descending=descending, nulls_last=nulls_last)
-    )
-    return pc.sort_indices(native, options=opts)
-
-
-def unsort_indices(indices: pa.UInt64Array, /) -> pa.Int64Array:
-    """Return the inverse permutation of the given indices.
-
-    Arguments:
-        indices: The output of `sort_indices`.
-
-    Examples:
-        We can use this pair of functions to recreate a windowed `pl.row_index`
-
-        >>> import polars as pl
-        >>> data = {"by": [5, 2, 5, None]}
-        >>> df = pl.DataFrame(data)
-        >>> df.select(
-        ...     pl.row_index().over(order_by="by", descending=True, nulls_last=False)
-        ... ).to_series().to_list()
-        [1, 3, 2, 0]
-
-        Now in `pyarrow`
-
-        >>> import pyarrow as pa
-        >>> from narwhals._plan.arrow.functions import sort_indices, unsort_indices
-        >>> df = pa.Table.from_pydict(data)
-        >>> unsort_indices(
-        ...     sort_indices(df, "by", descending=True, nulls_last=False)
-        ... ).to_pylist()
-        [1, 3, 2, 0]
-    """
-    return (
-        pc.inverse_permutation(indices.cast(pa.int64()))  # type: ignore[attr-defined]
-        if compat.HAS_SCATTER
-        else int_range(len(indices), chunked=False).take(pc.sort_indices(indices))
-    )
 
 
 SearchSortedSide: TypeAlias = Literal["left", "right"]
