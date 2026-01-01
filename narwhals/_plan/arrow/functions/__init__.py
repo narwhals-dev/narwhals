@@ -68,6 +68,7 @@ from narwhals._plan.arrow.functions._boolean import (
     not_ as not_,
     unique_keep_boolean_length_preserving as unique_keep_boolean_length_preserving,
 )
+from narwhals._plan.arrow.functions._common import reverse as reverse
 from narwhals._plan.arrow.functions._construction import (
     array as array,
     chunked_array as chunked_array,
@@ -76,6 +77,14 @@ from narwhals._plan.arrow.functions._construction import (
     concat_vertical as concat_vertical,
     lit as lit,
     to_table as to_table,
+)
+from narwhals._plan.arrow.functions._cumulative import (
+    cum_count as cum_count,
+    cum_max as cum_max,
+    cum_min as cum_min,
+    cum_prod as cum_prod,
+    cum_sum as cum_sum,
+    cumulative as cumulative,
 )
 from narwhals._plan.arrow.functions._dtypes import (
     BOOL as BOOL,
@@ -101,7 +110,6 @@ from narwhals._plan.arrow.functions._repeat import (
     repeat_unchecked as repeat_unchecked,
     zeros as zeros,
 )
-from narwhals._plan.expressions import functions as F
 from narwhals._plan.options import ExplodeOptions, SortOptions
 from narwhals._utils import no_default
 from narwhals.exceptions import ShapeError
@@ -738,48 +746,6 @@ def round(native: ArrowAny, decimals: int = 0) -> ArrowAny:
 
 def log(native: ChunkedOrScalarAny, base: float = math.e) -> ChunkedOrScalarAny:
     return t.cast("ChunkedOrScalarAny", pc.logb(native, lit(base)))
-
-
-def reverse(native: ChunkedOrArrayT) -> ChunkedOrArrayT:
-    """Unlike other slicing ops, `[::-1]` creates a full-copy.
-
-    https://github.com/apache/arrow/issues/19103#issuecomment-1377671886
-    """
-    return native[::-1]
-
-
-def cum_sum(native: ChunkedOrArrayT) -> ChunkedOrArrayT:
-    return pc.cumulative_sum(native, skip_nulls=True)
-
-
-def cum_min(native: ChunkedOrArrayT) -> ChunkedOrArrayT:
-    return pc.cumulative_min(native, skip_nulls=True)
-
-
-def cum_max(native: ChunkedOrArrayT) -> ChunkedOrArrayT:
-    return pc.cumulative_max(native, skip_nulls=True)
-
-
-def cum_prod(native: ChunkedOrArrayT) -> ChunkedOrArrayT:
-    return pc.cumulative_prod(native, skip_nulls=True)
-
-
-def cum_count(native: ChunkedArrayAny) -> ChunkedArrayAny:
-    return cum_sum(is_not_null(native).cast(pa.uint32()))
-
-
-_CUMULATIVE: Mapping[type[F.CumAgg], Callable[[ChunkedArrayAny], ChunkedArrayAny]] = {
-    F.CumSum: cum_sum,
-    F.CumCount: cum_count,
-    F.CumMin: cum_min,
-    F.CumMax: cum_max,
-    F.CumProd: cum_prod,
-}
-
-
-def cumulative(native: ChunkedArrayAny, f: F.CumAgg, /) -> ChunkedArrayAny:
-    func = _CUMULATIVE[type(f)]
-    return func(native) if not f.reverse else reverse(func(reverse(native)))
 
 
 def diff(native: ChunkedOrArrayT, n: int = 1) -> ChunkedOrArrayT:
