@@ -24,6 +24,19 @@ if TYPE_CHECKING:
     from narwhals._utils import Version
     from narwhals.typing import IntoArrowSchema, IntoDType
 
+__all__ = [
+    "BOOL",
+    "DATE32",
+    "F64",
+    "I32",
+    "I64",
+    "UI32",
+    "cast",
+    "cast_table",
+    "dtype_native",
+    "string_type",
+]
+
 # NOTE: Common data type instances to share
 UI32: Final = pa.uint32()
 I32: Final = pa.int32()
