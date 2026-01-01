@@ -7,7 +7,7 @@ import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._plan.arrow import compat, options as pa_options
-from narwhals._plan.arrow.functions._bin_op import power, sub
+from narwhals._plan.arrow.functions._arithmetic import power, sub
 from narwhals._plan.arrow.functions._construction import array, lit
 from narwhals._plan.arrow.functions._dtypes import F64
 
@@ -26,7 +26,26 @@ if TYPE_CHECKING:
         ScalarAny,
     )
 
-# TODO @dangotbanned: Add exports
+__all__ = [
+    "count",
+    "first",
+    "implode",
+    "kurtosis_skew",
+    "last",
+    "max",
+    "mean",
+    "median",
+    "min",
+    "mode_any",
+    "n_unique",
+    "null_count",
+    "quantile",
+    "std",
+    "sum",
+    "var",
+]
+
+
 # TODO @dangotbanned: *At-least* one line docstring for exports
 
 min = pc.min

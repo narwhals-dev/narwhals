@@ -5,42 +5,20 @@ from typing import TYPE_CHECKING
 
 import pyarrow.compute as pc  # ignore-banned-import
 
-from narwhals._arrow.utils import cast_for_truediv, floordiv_compat as _floordiv
+from narwhals._plan.arrow.functions import _arithmetic as arith
 from narwhals._plan.expressions import operators as ops
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from narwhals._arrow.typing import Incomplete
     from narwhals._plan.arrow.typing import (
         BinaryComp,
-        BinaryFunction,
         BinaryLogical,
-        BinaryNumericTemporal,
         BinOp,
         ChunkedOrScalarAny,
-        NumericScalar,
     )
 
-__all__ = [
-    "add",
-    "and_",
-    "binary",
-    "eq",
-    "floordiv",
-    "gt",
-    "gt_eq",
-    "lt",
-    "lt_eq",
-    "modulus",
-    "multiply",
-    "not_eq",
-    "or_",
-    "power",
-    "sub",
-    "truediv",
-    "xor",
-]
+__all__ = ["and_", "binary", "eq", "gt", "gt_eq", "lt", "lt_eq", "not_eq", "or_", "xor"]
 
 and_ = t.cast("BinaryLogical", pc.and_kleene)
 or_ = t.cast("BinaryLogical", pc.or_kleene)
@@ -52,21 +30,6 @@ gt_eq = t.cast("BinaryComp", pc.greater_equal)
 gt = t.cast("BinaryComp", pc.greater)
 lt_eq = t.cast("BinaryComp", pc.less_equal)
 lt = t.cast("BinaryComp", pc.less)
-
-add = t.cast("BinaryNumericTemporal", pc.add)
-sub = t.cast("BinaryNumericTemporal", pc.subtract)
-multiply = pc.multiply
-floordiv = _floordiv
-power = t.cast("BinaryFunction[NumericScalar, NumericScalar]", pc.power)
-
-
-def truediv(lhs: Incomplete, rhs: Incomplete) -> Incomplete:
-    return pc.divide(*cast_for_truediv(lhs, rhs))
-
-
-def modulus(lhs: Incomplete, rhs: Incomplete) -> Incomplete:
-    floor_div = floordiv(lhs, rhs)
-    return sub(lhs, multiply(floor_div, rhs))
 
 
 def binary(
@@ -86,12 +49,12 @@ _DISPATCH_BINARY: Mapping[type[ops.Operator], BinOp] = {
     ops.Gt: gt,
     ops.GtEq: gt_eq,
     # BinaryFunction (well it should be)
-    ops.Add: add,  # BinaryNumericTemporal
-    ops.Sub: sub,  # pyarrow-stubs
-    ops.Multiply: multiply,  # pyarrow-stubs
-    ops.TrueDivide: truediv,  # [[Any, Any], Any]
-    ops.FloorDivide: floordiv,  # [[ArrayOrScalar, ArrayOrScalar], Any]
-    ops.Modulus: modulus,  # [[Any, Any], Any]
+    ops.Add: arith.add,  # BinaryNumericTemporal
+    ops.Sub: arith.sub,  # pyarrow-stubs
+    ops.Multiply: arith.multiply,  # pyarrow-stubs
+    ops.TrueDivide: arith.truediv,  # [[Any, Any], Any]
+    ops.FloorDivide: arith.floordiv,  # [[ArrayOrScalar, ArrayOrScalar], Any]
+    ops.Modulus: arith.modulus,  # [[Any, Any], Any]
     # BinaryLogical
     ops.And: and_,
     ops.Or: or_,

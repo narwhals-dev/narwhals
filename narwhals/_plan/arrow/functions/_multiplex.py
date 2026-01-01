@@ -17,7 +17,8 @@ import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._plan._guards import is_non_nested_literal
-from narwhals._plan.arrow.functions._bin_op import and_, gt, not_eq, or_, sub
+from narwhals._plan.arrow.functions._arithmetic import sub
+from narwhals._plan.arrow.functions._bin_op import and_, gt, not_eq, or_
 from narwhals._plan.arrow.functions._boolean import any_, is_not_nan, is_not_null, is_null
 from narwhals._plan.arrow.functions._common import reverse
 from narwhals._plan.arrow.functions._construction import array, chunked_array, lit

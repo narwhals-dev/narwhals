@@ -9,7 +9,7 @@ import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._plan.arrow import compat
-from narwhals._plan.arrow.functions._bin_op import add, multiply
+from narwhals._plan.arrow.functions._arithmetic import add, multiply
 from narwhals._plan.arrow.functions._construction import chunked_array, lit
 from narwhals._plan.arrow.functions._dtypes import DATE, F64, I32, I64
 

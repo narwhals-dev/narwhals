@@ -1,6 +1,7 @@
 """Native functions, aliased and/or with behavior aligned to `polars`.
 
 - [x] _aggregation
+- [x] _arithmetic
 - [x] _bin_op
 - [x] _boolean
 - [x] _categorical -> `cat`
@@ -8,6 +9,7 @@
 - [x] _construction
 - [x] _cumulative
 - [x] _dtypes
+- [x] _horizontal
 - [ ] _lists
   - [x] -> `list_` (until `functions.__init__` is cleaner)
   - [ ] -> `list`
@@ -16,16 +18,14 @@
   - [ ] decide on name
 - [x] _ranges
 - [x] _repeat
+- [x] _round
 - [x] _sort
 - [ ] _strings
   - [x] -> `str_` (until `functions.__init__` is cleaner)
   - [ ] -> `str`
 - [x] _struct -> `struct`
+- [ ] _vector
 - [ ] (Others)
-  - Vector
-  - [Arithmetic](https://arrow.apache.org/docs/python/api/compute.html#arithmetic-functions)
-    - some need to be upstream from `_binop`
-  - [Rounding](https://arrow.apache.org/docs/python/api/compute.html#rounding-functions)
 """
 
 from __future__ import annotations
@@ -61,23 +61,26 @@ from narwhals._plan.arrow.functions._aggregation import (
     sum as sum,
     var as var,
 )
-from narwhals._plan.arrow.functions._bin_op import (
+from narwhals._plan.arrow.functions._arithmetic import (
     add as add,
+    floordiv as floordiv,
+    modulus as modulus,
+    multiply as multiply,
+    power as power,
+    sqrt as sqrt,
+    sub as sub,
+    truediv as truediv,
+)
+from narwhals._plan.arrow.functions._bin_op import (
     and_ as and_,
     binary as binary,
     eq as eq,
-    floordiv as floordiv,
     gt as gt,
     gt_eq as gt_eq,
     lt as lt,
     lt_eq as lt_eq,
-    modulus as modulus,
-    multiply as multiply,
     not_eq as not_eq,
     or_ as or_,
-    power as power,
-    sub as sub,
-    truediv as truediv,
     xor as xor,
 )
 from narwhals._plan.arrow.functions._boolean import (
@@ -96,7 +99,7 @@ from narwhals._plan.arrow.functions._boolean import (
     not_ as not_,
     unique_keep_boolean_length_preserving as unique_keep_boolean_length_preserving,
 )
-from narwhals._plan.arrow.functions._common import reverse as reverse, round as round
+from narwhals._plan.arrow.functions._common import reverse as reverse
 from narwhals._plan.arrow.functions._construction import (
     array as array,
     chunked_array as chunked_array,
@@ -126,6 +129,10 @@ from narwhals._plan.arrow.functions._dtypes import (
     dtype_native as dtype_native,
     string_type as string_type,
 )
+from narwhals._plan.arrow.functions._horizontal import (
+    max_horizontal as max_horizontal,
+    min_horizontal as min_horizontal,
+)
 from narwhals._plan.arrow.functions._lists import ExplodeBuilder as ExplodeBuilder
 from narwhals._plan.arrow.functions._multiplex import (
     drop_nulls as drop_nulls,
@@ -149,6 +156,14 @@ from narwhals._plan.arrow.functions._repeat import (
     repeat_like as repeat_like,
     repeat_unchecked as repeat_unchecked,
     zeros as zeros,
+)
+from narwhals._plan.arrow.functions._round import (
+    ceil as ceil,
+    clip as clip,
+    clip_lower as clip_lower,
+    clip_upper as clip_upper,
+    floor as floor,
+    round as round,
 )
 from narwhals._plan.arrow.functions._sort import (
     random_indices as random_indices,
@@ -177,15 +192,6 @@ if TYPE_CHECKING:
 
 abs_ = t.cast("UnaryNumeric", pc.abs)
 exp = t.cast("UnaryNumeric", pc.exp)
-sqrt = t.cast("UnaryNumeric", pc.sqrt)
-ceil = t.cast("UnaryNumeric", pc.ceil)
-floor = t.cast("UnaryNumeric", pc.floor)
-
-
-# TODO @dangotbanned: Wrap horizontal functions with correct typing
-# Should only return scalar if all elements are as well
-min_horizontal = pc.min_element_wise  # <-- Not aggregations
-max_horizontal = pc.max_element_wise  # <-------------------
 
 
 def mode_all(native: ChunkedArrayAny) -> ChunkedArrayAny:
@@ -193,24 +199,6 @@ def mode_all(native: ChunkedArrayAny) -> ChunkedArrayAny:
     indices: pa.Int32Array = struct.field("count").dictionary_encode().indices  # type: ignore[attr-defined]
     index_true_modes = lit(0)
     return chunked_array(struct.field("mode").filter(pc.equal(indices, index_true_modes)))
-
-
-def clip_lower(
-    native: ChunkedOrScalarAny, lower: ChunkedOrScalarAny
-) -> ChunkedOrScalarAny:
-    return max_horizontal(native, lower)
-
-
-def clip_upper(
-    native: ChunkedOrScalarAny, upper: ChunkedOrScalarAny
-) -> ChunkedOrScalarAny:
-    return min_horizontal(native, upper)
-
-
-def clip(
-    native: ChunkedOrScalarAny, lower: ChunkedOrScalarAny, upper: ChunkedOrScalarAny
-) -> ChunkedOrScalarAny:
-    return clip_lower(clip_upper(native, upper), lower)
 
 
 def log(native: ChunkedOrScalarAny, base: float = math.e) -> ChunkedOrScalarAny:
