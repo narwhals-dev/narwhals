@@ -26,7 +26,6 @@ from typing import TYPE_CHECKING, Any, Final, Literal, overload
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
-from narwhals._arrow.utils import concat_tables as concat_tables
 from narwhals._plan._guards import is_non_nested_literal
 from narwhals._plan.arrow import compat, options as pa_options
 from narwhals._plan.arrow.functions import (  # noqa: F401
@@ -73,6 +72,7 @@ from narwhals._plan.arrow.functions._construction import (
     array as array,
     chunked_array as chunked_array,
     concat_horizontal as concat_horizontal,
+    concat_tables as concat_tables,
     concat_vertical as concat_vertical,
     lit as lit,
     to_table as to_table,

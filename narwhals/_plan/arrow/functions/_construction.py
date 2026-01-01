@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING, Any, overload
 
 import pyarrow as pa  # ignore-banned-import
 
+from narwhals._arrow.utils import concat_tables
+
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable
 
@@ -31,6 +33,7 @@ __all__ = [
     "array",
     "chunked_array",
     "concat_horizontal",
+    "concat_tables",
     "concat_vertical",
     "lit",
     "to_table",
