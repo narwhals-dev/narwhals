@@ -26,12 +26,7 @@ from narwhals._plan.arrow.functions._construction import (
     concat_horizontal as concat_horizontal,
     concat_vertical as concat_vertical,
     lit as lit,
-    nulls_like as nulls_like,
-    repeat as repeat,
-    repeat_like as repeat_like,
-    repeat_unchecked as repeat_unchecked,
     to_table as to_table,
-    zeros as zeros,
 )
 from narwhals._plan.arrow.functions._dtypes import (
     BOOL as BOOL,
@@ -49,6 +44,13 @@ from narwhals._plan.arrow.functions._ranges import (
     date_range as date_range,
     int_range as int_range,
     linear_space as linear_space,
+)
+from narwhals._plan.arrow.functions._repeat import (
+    nulls_like as nulls_like,
+    repeat as repeat,
+    repeat_like as repeat_like,
+    repeat_unchecked as repeat_unchecked,
+    zeros as zeros,
 )
 from narwhals._plan.expressions import functions as F, operators as ops
 from narwhals._plan.options import ExplodeOptions, SortOptions

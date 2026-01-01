@@ -23,9 +23,18 @@ if TYPE_CHECKING:
         ScalarAny,
         UInt32Type,
     )
-    from narwhals.typing import NonNestedLiteral, PythonLiteral
+    from narwhals.typing import PythonLiteral
 
 Incomplete: TypeAlias = Any
+
+__all__ = [
+    "array",
+    "chunked_array",
+    "concat_horizontal",
+    "concat_vertical",
+    "lit",
+    "to_table",
+]
 
 
 @overload
@@ -102,31 +111,3 @@ def concat_vertical(
 def to_table(array: ChunkedOrArrayAny, name: str = "") -> pa.Table:
     """Equivalent to `Series.to_frame`, but with an option to insert a name for the column."""
     return concat_horizontal((array,), (name,))
-
-
-def repeat(value: ScalarAny | NonNestedLiteral, n: int) -> ArrayAny:
-    value = value if isinstance(value, pa.Scalar) else lit(value)
-    return repeat_unchecked(value, n)
-
-
-def repeat_unchecked(value: ScalarAny, /, n: int) -> ArrayAny:
-    repeat_: Incomplete = pa.repeat
-    result: ArrayAny = repeat_(value, n)
-    return result
-
-
-def repeat_like(value: NonNestedLiteral, n: int, native: ArrowAny) -> ArrayAny:
-    return repeat_unchecked(lit(value, native.type), n)
-
-
-def nulls_like(n: int, native: ArrowAny) -> ArrayAny:
-    """Create a strongly-typed Array instance with all elements null.
-
-    Uses the type of `native`.
-    """
-    result: ArrayAny = pa.nulls(n, native.type)
-    return result
-
-
-def zeros(n: int, /) -> pa.Int64Array:
-    return pa.repeat(0, n)
