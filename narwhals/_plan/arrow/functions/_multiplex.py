@@ -19,7 +19,7 @@ import pyarrow.compute as pc  # ignore-banned-import
 from narwhals._plan._guards import is_non_nested_literal
 from narwhals._plan.arrow.functions._arithmetic import sub
 from narwhals._plan.arrow.functions._bin_op import and_, gt, not_eq, or_
-from narwhals._plan.arrow.functions._boolean import any_, is_not_nan, is_not_null, is_null
+from narwhals._plan.arrow.functions._boolean import any, is_not_nan, is_not_null, is_null
 from narwhals._plan.arrow.functions._construction import array, chunked_array, lit
 from narwhals._plan.arrow.functions._cumulative import cum_max
 from narwhals._plan.arrow.functions._ranges import int_range
@@ -221,7 +221,7 @@ def fill_null_with_strategy(
 def _ensure_all_replaced(
     native: ChunkedOrScalarAny, unmatched: ArrowAny
 ) -> ValueError | None:
-    if not any_(unmatched).as_py():
+    if not any(unmatched).as_py():
         return None
     msg = (
         "replace_strict did not replace all non-null values.\n\n"

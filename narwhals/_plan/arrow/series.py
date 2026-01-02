@@ -301,10 +301,10 @@ class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayA
         return self._with_native(fn.when_then(predicate, self.native, right))
 
     def all(self) -> bool:
-        return fn.all_(self.native).as_py()
+        return fn.all(self.native).as_py()
 
     def any(self) -> bool:
-        return fn.any_(self.native).as_py()
+        return fn.any(self.native).as_py()
 
     def sum(self) -> float:
         result: float = fn.sum(self.native).as_py()

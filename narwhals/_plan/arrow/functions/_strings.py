@@ -12,7 +12,7 @@ from narwhals._plan.arrow import compat, options as pa_options
 from narwhals._plan.arrow.functions import _lists as list_
 from narwhals._plan.arrow.functions._aggregation import implode
 from narwhals._plan.arrow.functions._bin_op import and_, eq, lt
-from narwhals._plan.arrow.functions._boolean import all_, any_
+from narwhals._plan.arrow.functions._boolean import all, any
 from narwhals._plan.arrow.functions._construction import (
     array,
     chunked_array,
@@ -307,7 +307,7 @@ def replace_vector(
 ) -> ChunkedArrayAny:
     """Replace the first matching regex/literal substring with the adjacent string in `replacements`."""
     has_match = contains(native, pattern, literal=literal)
-    if not any_(has_match).as_py():
+    if not any(has_match).as_py():
         # fastpath, no work to do
         return native
     match, match_replacements = (
@@ -318,7 +318,7 @@ def replace_vector(
     else:
         list_split_by = splitn(match, pattern, n + 1, literal=literal)
     replaced = list_.join(list_split_by, match_replacements, ignore_nulls=False)
-    if all_(has_match, ignore_nulls=False).as_py():
+    if all(has_match, ignore_nulls=False).as_py():
         return chunked_array(replaced)
     return replace_with_mask(native, has_match, array(replaced))
 

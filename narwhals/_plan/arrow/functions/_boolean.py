@@ -26,6 +26,7 @@ if TYPE_CHECKING:
         ArrowAny,
         BinaryComp,
         BooleanLengthPreserving,
+        BooleanScalar,
         ChunkedArray,
         ChunkedArrayAny,
         ChunkedOrArrayAny,
@@ -50,8 +51,8 @@ IntoColumnAgg: TypeAlias = Callable[[str], ir.AggExpr]
 
 __all__ = [
     "BOOLEAN_LENGTH_PRESERVING",
-    "all_",
-    "any_",
+    "all",
+    "any",
     "eq_missing",
     "is_between",
     "is_finite",
@@ -66,12 +67,40 @@ __all__ = [
 ]
 
 
-def any_(native: Incomplete, *, ignore_nulls: bool = True) -> pa.BooleanScalar:
-    return pc.any(native, min_count=0, skip_nulls=ignore_nulls)
+def any(native: Arrow[BooleanScalar], *, ignore_nulls: bool = True) -> pa.BooleanScalar:
+    """Return whether any values in `native` are True.
+
+    Arguments:
+        native: Boolean-typed arrow data.
+        ignore_nulls: If set to `True` (default), null values are ignored.
+            If there are no non-null values, the output is `False`.
+
+            If set to `False`, [Kleene logic] is used to deal with nulls;
+            if the column contains any null values and no `True` values,
+            the output is null.
+
+    [Kleene logic]: https://en.wikipedia.org/wiki/Three-valued_logic
+    """
+    ca = t.cast("ChunkedArray[pa.BooleanScalar]", native)
+    return pc.any(ca, min_count=0, skip_nulls=ignore_nulls)
 
 
-def all_(native: Incomplete, *, ignore_nulls: bool = True) -> pa.BooleanScalar:
-    return pc.all(native, min_count=0, skip_nulls=ignore_nulls)
+def all(native: Arrow[BooleanScalar], *, ignore_nulls: bool = True) -> pa.BooleanScalar:
+    """Return whether all values in `native` are True.
+
+    Arguments:
+        native: Boolean-typed arrow data.
+        ignore_nulls: If set to `True` (default), null values are ignored.
+            If there are no non-null values, the output is `True`.
+
+            If set to `False`, [Kleene logic] is used to deal with nulls;
+            if the column contains any null values and no `False` values,
+            the output is null.
+
+    [Kleene logic]: https://en.wikipedia.org/wiki/Three-valued_logic
+    """
+    ca = t.cast("ChunkedArray[pa.BooleanScalar]", native)
+    return pc.all(ca, min_count=0, skip_nulls=ignore_nulls)
 
 
 is_null = t.cast("UnaryFunction[ScalarAny, pa.BooleanScalar]", pc.is_null)

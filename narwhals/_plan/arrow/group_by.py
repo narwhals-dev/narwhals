@@ -233,7 +233,7 @@ class AggSpec:
         if self._is_n_unique():
             # NOTE: Exploding `[]` becomes `[None]` - so we need to adjust the unique count *iff* we were unlucky
             is_sublist_empty = fn.eq(fn.list.len(native), fn.lit(0))
-            if fn.any_(is_sublist_empty).as_py():
+            if fn.any(is_sublist_empty).as_py():
                 result = fn.when_then(is_sublist_empty, fn.lit(0), result)
         return result
 

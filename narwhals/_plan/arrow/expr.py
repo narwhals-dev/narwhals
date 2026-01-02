@@ -208,12 +208,12 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
         return self._unary_function(fn.not_)(node, frame, name)
 
     def all(self, node: FExpr[All], frame: Frame, name: str) -> StoresNativeT_co:
-        return self._unary_function(fn.all_)(node, frame, name)
+        return self._unary_function(fn.all)(node, frame, name)
 
     def any(
         self, node: FExpr[ir.boolean.Any], frame: Frame, name: str
     ) -> StoresNativeT_co:
-        return self._unary_function(fn.any_)(node, frame, name)
+        return self._unary_function(fn.any)(node, frame, name)
 
     def is_finite(
         self, node: FExpr[IsFinite], frame: Frame, name: str

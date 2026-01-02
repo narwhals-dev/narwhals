@@ -72,9 +72,9 @@ from narwhals._plan.arrow.functions._bin_op import (
     xor,
 )
 from narwhals._plan.arrow.functions._boolean import (
-    BOOLEAN_LENGTH_PRESERVING as BOOLEAN_LENGTH_PRESERVING,
-    all_ as all_,  # TODO @dangotbanned: Import as `all` when namespace is cleaner
-    any_ as any_,  # TODO @dangotbanned: Import as `any` when namespace is cleaner
+    BOOLEAN_LENGTH_PRESERVING,
+    all,
+    any,
     eq_missing,
     is_between,
     is_finite,
@@ -170,6 +170,7 @@ from narwhals._plan.arrow.functions._vector import (
 
 __all__ = [
     "BOOL",
+    "BOOLEAN_LENGTH_PRESERVING",
     "DATE",
     "F64",
     "I32",
@@ -179,7 +180,9 @@ __all__ = [
     "MinMax",
     "abs",
     "add",
+    "all",
     "and_",
+    "any",
     "array",
     "binary",
     "cast",

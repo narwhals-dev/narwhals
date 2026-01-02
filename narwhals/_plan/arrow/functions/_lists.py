@@ -12,7 +12,7 @@ import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._plan.arrow.functions._aggregation import implode
 from narwhals._plan.arrow.functions._bin_op import eq, gt, not_eq, or_
-from narwhals._plan.arrow.functions._boolean import all_, any_, eq_missing, is_null, not_
+from narwhals._plan.arrow.functions._boolean import all, any, eq_missing, is_null, not_
 from narwhals._plan.arrow.functions._construction import (
     array,
     chunked_array,
@@ -332,7 +332,7 @@ def join(
 
     # (2.1): We know that `[None]` should join as `""`, and that is the only length-1 list we could have after the filter
     list_len_eq_1 = eq(len(lists), lit(1, U32))
-    has_a_len_1_null = any_(list_len_eq_1).as_py()
+    has_a_len_1_null = any(list_len_eq_1).as_py()
     if has_a_len_1_null:
         lists = when_then(list_len_eq_1, lit([EMPTY], lists.type), lists)
 
@@ -419,7 +419,7 @@ def unique(native: ChunkedOrScalar[ListScalar]) -> ChunkedOrScalar[ListScalar]:
     idx, v = "index", "values"
     names = idx, v
     len_not_eq_0 = not_eq(len(native), lit(0))
-    can_fastpath = all_(len_not_eq_0, ignore_nulls=False).as_py()
+    can_fastpath = all(len_not_eq_0, ignore_nulls=False).as_py()
     if can_fastpath:
         arrays = [_list_parent_indices(native), _explode(native)]
         return AggSpec.unique(v).over_index(concat_horizontal(arrays, names), idx)
@@ -452,7 +452,7 @@ def contains(
         if scalar.is_valid:
             if builtins.len(scalar):
                 value_type = scalar.type.value_type
-                return any_(eq_missing(_explode(scalar), lit(item).cast(value_type)))
+                return any(eq_missing(_explode(scalar), lit(item).cast(value_type)))
             return lit(False, BOOL)
         return lit(None, BOOL)
     builder = ExplodeBuilder(empty_as_null=False, keep_nulls=False)
