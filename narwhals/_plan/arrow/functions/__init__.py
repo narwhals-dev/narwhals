@@ -24,18 +24,11 @@
   - [x] -> `str_` (until `functions.__init__` is cleaner)
   - [ ] -> `str`
 - [x] _struct -> `struct`
-- [ ] _vector
-- [ ] (Others)
+- [x] _vector
+- [ ] (Others?)
 """
 
 from __future__ import annotations
-
-import math
-import typing as t
-from typing import TYPE_CHECKING
-
-import pyarrow as pa  # ignore-banned-import
-import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._plan.arrow import compat as compat
 from narwhals._plan.arrow.functions import (  # noqa: F401
@@ -99,7 +92,14 @@ from narwhals._plan.arrow.functions._boolean import (
     not_ as not_,
     unique_keep_boolean_length_preserving as unique_keep_boolean_length_preserving,
 )
-from narwhals._plan.arrow.functions._common import reverse as reverse
+from narwhals._plan.arrow.functions._common import (
+    MinMax as MinMax,
+    abs as abs,
+    exp as exp,
+    is_arrow as is_arrow,
+    log as log,
+    mode_all as mode_all,
+)
 from narwhals._plan.arrow.functions._construction import (
     array as array,
     chunked_array as chunked_array,
@@ -167,6 +167,7 @@ from narwhals._plan.arrow.functions._round import (
 )
 from narwhals._plan.arrow.functions._sort import (
     random_indices as random_indices,
+    reverse as reverse,
     sort_indices as sort_indices,
     unsort_indices as unsort_indices,
 )
@@ -178,25 +179,3 @@ from narwhals._plan.arrow.functions._vector import (
     search_sorted as search_sorted,
     shift as shift,
 )
-
-if TYPE_CHECKING:
-    from narwhals._plan.arrow.typing import (
-        ChunkedArrayAny,
-        ChunkedOrScalarAny,
-        UnaryNumeric,
-    )
-
-
-abs_ = t.cast("UnaryNumeric", pc.abs)
-exp = t.cast("UnaryNumeric", pc.exp)
-
-
-def mode_all(native: ChunkedArrayAny) -> ChunkedArrayAny:
-    struct_arr = pc.mode(native, n=len(native))
-    indices: pa.Int32Array = struct_arr.field("count").dictionary_encode().indices  # type: ignore[attr-defined]
-    index_true_modes = lit(0)
-    return chunked_array(struct_arr.field("mode").filter(eq(indices, index_true_modes)))
-
-
-def log(native: ChunkedOrScalarAny, base: float = math.e) -> ChunkedOrScalarAny:
-    return t.cast("ChunkedOrScalarAny", pc.logb(native, lit(base)))

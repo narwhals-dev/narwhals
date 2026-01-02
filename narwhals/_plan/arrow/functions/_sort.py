@@ -17,13 +17,12 @@ if TYPE_CHECKING:
 
     from typing_extensions import Unpack
 
-    from narwhals._plan.arrow.typing import ArrayAny, ChunkedOrArrayAny
+    from narwhals._plan.arrow.typing import ArrayAny, ChunkedOrArrayAny, ChunkedOrArrayT
     from narwhals._plan.options import SortMultipleOptions, SortOptions
 
 # TODO @dangotbanned: Module description
-# TODO @dangotbanned: Can any others go here?
 
-__all__ = ["random_indices", "sort_indices", "unsort_indices"]
+__all__ = ["random_indices", "reverse", "sort_indices", "unsort_indices"]
 
 
 @overload
@@ -129,3 +128,14 @@ def random_indices(
     import numpy as np  # ignore-banned-import
 
     return array(np.random.default_rng(seed).choice(np.arange(end), n, replace=False))
+
+
+def reverse(native: ChunkedOrArrayT) -> ChunkedOrArrayT:
+    """Return the array in reverse order.
+
+    Important:
+        Unlike other slicing operations, this [triggers a full-copy].
+
+    [triggers a full-copy]: https://github.com/apache/arrow/issues/19103#issuecomment-1377671886
+    """
+    return native[::-1]

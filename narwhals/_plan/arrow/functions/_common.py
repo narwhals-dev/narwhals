@@ -2,31 +2,48 @@
 
 from __future__ import annotations
 
+import math
+import typing as t
 from typing import TYPE_CHECKING, Any
 
 import pyarrow as pa  # ignore-banned-import
+import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._plan import expressions as ir
+from narwhals._plan.arrow.functions._construction import chunked_array, lit
 
 if TYPE_CHECKING:
     from typing_extensions import TypeIs
 
-    from narwhals._plan.arrow.typing import Arrow, ChunkedOrArrayT, ScalarT
+    from narwhals._plan.arrow.typing import (
+        Arrow,
+        ChunkedArrayAny,
+        ChunkedOrScalarAny,
+        ScalarT,
+        UnaryNumeric,
+    )
+
+__all__ = ["MinMax", "abs", "exp", "is_arrow", "log", "mode_all"]
+
+abs = t.cast("UnaryNumeric", pc.abs)
+exp = t.cast("UnaryNumeric", pc.exp)
+
+
+def mode_all(native: ChunkedArrayAny) -> ChunkedArrayAny:
+    struct_arr = pc.mode(native, n=len(native))
+    indices: pa.Int32Array = struct_arr.field("count").dictionary_encode().indices  # type: ignore[attr-defined]
+    index_true_modes = lit(0)
+    return chunked_array(
+        struct_arr.field("mode").filter(pc.equal(indices, index_true_modes))
+    )
+
+
+def log(native: ChunkedOrScalarAny, base: float = math.e) -> ChunkedOrScalarAny:
+    return t.cast("ChunkedOrScalarAny", pc.logb(native, lit(base)))
 
 
 def is_arrow(obj: Arrow[ScalarT] | Any) -> TypeIs[Arrow[ScalarT]]:
     return isinstance(obj, (pa.Scalar, pa.Array, pa.ChunkedArray))
-
-
-def reverse(native: ChunkedOrArrayT) -> ChunkedOrArrayT:
-    """Return the array in reverse order.
-
-    Important:
-        Unlike other slicing operations, this [triggers a full-copy].
-
-    [triggers a full-copy]: https://github.com/apache/arrow/issues/19103#issuecomment-1377671886
-    """
-    return native[::-1]
 
 
 class MinMax(ir.AggExpr):

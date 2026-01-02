@@ -202,7 +202,7 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
         return func
 
     def abs(self, node: FExpr[Abs], frame: Frame, name: str) -> StoresNativeT_co:
-        return self._unary_function(fn.abs_)(node, frame, name)
+        return self._unary_function(fn.abs)(node, frame, name)
 
     def not_(self, node: FExpr[Not], frame: Frame, name: str) -> StoresNativeT_co:
         return self._unary_function(fn.not_)(node, frame, name)

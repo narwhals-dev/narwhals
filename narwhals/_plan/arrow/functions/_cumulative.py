@@ -7,8 +7,8 @@ from typing import TYPE_CHECKING
 import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._plan.arrow.functions._boolean import is_not_null
-from narwhals._plan.arrow.functions._common import reverse
 from narwhals._plan.arrow.functions._dtypes import U32
+from narwhals._plan.arrow.functions._sort import reverse
 from narwhals._plan.expressions import functions as F
 
 if TYPE_CHECKING:
