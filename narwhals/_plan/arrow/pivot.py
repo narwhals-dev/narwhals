@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
     import pyarrow as pa
 
-    from narwhals._plan.arrow.typing import ChunkedArray, StringScalar
+    from narwhals._plan.arrow.typing import ChunkedArray, ChunkedOrScalarAny, StringScalar
     from narwhals.typing import PivotAgg
 
 
@@ -75,13 +75,15 @@ def _format_on_columns_titles(on_columns: pa.Table, /) -> ChunkedArray[StringSca
 
     # NOTE: Variation of https://more-itertools.readthedocs.io/en/stable/api.html#more_itertools.intersperse
     seps = (SEP,) * on_columns.num_columns
-    interspersed = chain.from_iterable(zip(seps, on_columns.itercolumns()))
+    interspersed: chain[ChunkedOrScalarAny] = chain.from_iterable(
+        zip(seps, on_columns.itercolumns())
+    )
     # skip the first separator, we just need the zip-terminating iterable to be the columns
     next(interspersed)
-    func = "binary_join_element_wise"
-    args = [LB, *interspersed, RB, EMPTY]
     opts = pa_options.join(ignore_nulls=False)
-    result: ChunkedArray[StringScalar] = pc.call_function(func, args, opts)
+    result: ChunkedArray[StringScalar] = fn.meta.call(
+        "binary_join_element_wise", LB, *interspersed, RB, EMPTY, options=opts
+    )
     return result
 
 

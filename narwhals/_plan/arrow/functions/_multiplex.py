@@ -24,6 +24,7 @@ from narwhals._plan.arrow.functions._construction import array, chunked_array, l
 from narwhals._plan.arrow.functions._cumulative import cum_max
 from narwhals._plan.arrow.functions._ranges import int_range
 from narwhals._plan.arrow.functions._sort import reverse
+from narwhals._plan.arrow.functions.meta import call
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -121,11 +122,10 @@ def replace_with_mask(
 
     The length of `replacements` must equal the number of `True` values in `mask`.
     """
+    args = (array(p) for p in (native, mask, replacements))
+    result: ChunkedOrArrayAny = call("replace_with_mask", *args)
     if isinstance(native, pa.ChunkedArray):
-        args = [array(p) for p in (native, mask, replacements)]
-        return chunked_array(pc.call_function("replace_with_mask", args))
-    args = [native, array(mask), array(replacements)]
-    result: ChunkedOrArrayAny = pc.call_function("replace_with_mask", args)
+        return chunked_array(result)
     return result
 
 

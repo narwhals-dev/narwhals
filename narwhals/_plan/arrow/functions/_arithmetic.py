@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._arrow.utils import cast_for_truediv, floordiv_compat as floordiv
+from narwhals._plan.arrow.functions.meta import call
 
 if TYPE_CHECKING:
     from narwhals._arrow.typing import Incomplete
@@ -51,5 +52,5 @@ def modulus(lhs: Incomplete, rhs: Incomplete) -> Incomplete:
 
 
 def log(native: ChunkedOrScalarAny, base: float = math.e) -> ChunkedOrScalarAny:
-    result: ChunkedOrScalarAny = pc.call_function("logb", [native, base])
+    result: ChunkedOrScalarAny = call("logb", native, base)
     return result

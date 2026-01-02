@@ -26,7 +26,7 @@ def round(native: ChunkedOrScalarAny, decimals: int = ...) -> ChunkedOrScalarAny
 @overload
 def round(native: ChunkedOrArrayT, decimals: int = ...) -> ChunkedOrArrayT: ...
 def round(native: ArrowAny, decimals: int = 0) -> ArrowAny:
-    """Round underlying floating point data by `decimals` digits."""
+    """Round underlying floating point **Arrow** data by `decimals` digits."""
     return pc.round(native, decimals, round_mode="half_towards_infinity")
 
 

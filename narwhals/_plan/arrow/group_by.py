@@ -237,7 +237,7 @@ class AggSpec:
             func = HASH_TO_SCALAR_NAME[self._function]
             if not scalar.is_valid:
                 return fn.lit(None, SCALAR_OUTPUT_TYPE.get(func, scalar.type.value_type))
-            result = pc.call_function(func, [scalar.values], self._option)
+            result = fn.meta.call(func, scalar.values, options=self._option)
             return result
         result = self.over_index(fn.ExplodeBuilder().explode_with_indices(native), "idx")
         result = fn.when_then(native.is_valid(), result)

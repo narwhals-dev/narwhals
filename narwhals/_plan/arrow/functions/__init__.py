@@ -1,27 +1,4 @@
-"""Native functions, aliased and/or with behavior aligned to `polars`.
-
-- [x] _aggregation
-- [x] _arithmetic
-- [x] _bin_op
-- [x] _boolean
-- [x] _categorical -> `cat`
-- [x] _construction
-- [x] _cumulative
-- [x] _dtypes
-- [x] _horizontal
-- [x] _lists -> `list`
-- [ ] _multiplex
-  - [x] move everything
-  - [ ] decide on name
-- [x] _ranges
-- [x] _repeat
-- [x] _round
-- [x] _sort
-- [x] _strings -> `str`
-- [x] _struct -> `struct`
-- [x] _vector
-- [ ] (Others?)
-"""
+"""Native functions, aliased and/or with behavior aligned to `polars`."""
 
 from __future__ import annotations
 
@@ -30,6 +7,7 @@ from narwhals._plan.arrow.functions import (
     _lists as list,
     _strings as str,
     _struct as struct,
+    meta,
 )
 from narwhals._plan.arrow.functions._aggregation import (
     count,
@@ -232,6 +210,7 @@ __all__ = [
     "max_horizontal",
     "mean",
     "median",
+    "meta",
     "min",
     "min_horizontal",
     "mode_all",

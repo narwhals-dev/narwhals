@@ -11,6 +11,7 @@ from narwhals._plan.arrow.functions._construction import array, lit
 from narwhals._plan.arrow.functions._dtypes import I64
 from narwhals._plan.arrow.functions._ranges import int_range
 from narwhals._plan.arrow.functions._round import round
+from narwhals._plan.arrow.functions.meta import call
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -109,7 +110,7 @@ def unsort_indices(indices: pa.UInt64Array, /) -> pa.Int64Array:
         [1, 3, 2, 0]
     """
     return (
-        pc.inverse_permutation(indices.cast(I64))  # type: ignore[attr-defined]
+        call("inverse_permutation", indices.cast(I64))
         if compat.HAS_SCATTER
         else int_range(len(indices), chunked=False).take(pc.sort_indices(indices))
     )

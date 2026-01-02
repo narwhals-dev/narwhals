@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import typing as t
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Literal
 
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
@@ -11,11 +11,11 @@ from narwhals._plan.arrow.functions import _categorical as cat
 from narwhals._plan.arrow.functions._arithmetic import power, sub
 from narwhals._plan.arrow.functions._construction import array, chunked_array, lit
 from narwhals._plan.arrow.functions._dtypes import F64
+from narwhals._plan.arrow.functions.meta import call
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from narwhals._arrow.typing import Incomplete
     from narwhals._plan.arrow.typing import (
         Arrow,
         ChunkedArray,
@@ -60,8 +60,10 @@ var = pc.variance
 quantile = pc.quantile
 
 
-def sum(native: Incomplete) -> ScalarAny:
-    return pc.sum(native, min_count=0)
+def sum(native: ChunkedOrArrayAny) -> ScalarAny:
+    opts = pa_options.scalar_aggregate(ignore_nulls=True)
+    result: ScalarAny = call("sum", native, options=opts)
+    return result
 
 
 def first(native: ChunkedOrArrayAny) -> ScalarAny:
@@ -91,7 +93,7 @@ def kurtosis_skew(
     if compat.HAS_KURTOSIS_SKEW:
         if pa.types.is_null(native.type):
             native = native.cast(F64)
-        result = getattr(pc, function)(native)
+        result = call(function, native)
     else:
         non_null = native.drop_null()
         if len(non_null) == 0:
@@ -112,19 +114,19 @@ def kurtosis_skew(
     return result
 
 
-def n_unique(native: Any) -> pa.Int64Scalar:
-    return count(native, mode="all")
+def n_unique(native: ChunkedOrArrayAny) -> pa.Int64Scalar:
+    return pc.count_distinct(native, mode="all")
 
 
 def null_count(native: ChunkedOrArrayAny) -> pa.Int64Scalar:
     return pc.count(native, mode="only_null")
 
 
-def mode_any(native: ChunkedArrayAny) -> ScalarAny:
+def mode_any(native: ChunkedOrArrayAny) -> ScalarAny:
     return first(pc.mode(native, n=1).field("mode"))
 
 
-def mode_all(native: ChunkedArrayAny) -> ChunkedArrayAny:
+def mode_all(native: ChunkedOrArrayAny) -> ChunkedArrayAny:
     struct_arr = pc.mode(native, n=len(native))
     indices = cat.encode(struct_arr.field("count"))
     index_true_modes = lit(0)

@@ -29,6 +29,7 @@ from narwhals._plan.arrow.functions._multiplex import (
 )
 from narwhals._plan.arrow.functions._ranges import int_range
 from narwhals._plan.arrow.functions._sort import sort_indices
+from narwhals._plan.arrow.functions.meta import call
 from narwhals._plan.options import ExplodeOptions, SortOptions
 from narwhals._utils import no_default
 from narwhals.exceptions import ShapeError
@@ -250,7 +251,7 @@ def len(native: ArrowAny) -> ArrowAny:
 
     [`builtins.len`]: https://docs.python.org/3/library/functions.html#len
     """
-    result: ArrowAny = pc.call_function("list_value_length", [native]).cast(U32)
+    result: ArrowAny = call("list_value_length", native).cast(U32)
     return result
 
 
@@ -273,7 +274,7 @@ def get(native: ArrowAny, index: int) -> ArrowAny:
         native: List-typed arrow data.
         index: Index to return per sublist.
     """
-    result: ArrowAny = pc.call_function("list_element", [native, index])
+    result: ArrowAny = call("list_element", native, index)
     return result
 
 
@@ -375,7 +376,7 @@ def join_scalar(
     """
     if ignore_nulls and native.is_valid:
         native = implode(_explode(native).drop_null())
-    result: StringScalar = pc.call_function("binary_join", [native, separator])
+    result: StringScalar = call("binary_join", native, separator)
     return result
 
 
@@ -531,7 +532,7 @@ def _explode(native: ListArray[DataTypeT]) -> Array[Scalar[DataTypeT]]: ...
 @overload
 def _explode(native: ListScalar[ListTypeT]) -> ListArray[ListTypeT]: ...
 def _explode(native: Arrow[ListScalar]) -> ChunkedOrArrayAny:
-    result: ChunkedOrArrayAny = pc.call_function("list_flatten", [native])
+    result: ChunkedOrArrayAny = call("list_flatten", native)
     return result
 
 
@@ -542,7 +543,5 @@ def _list_parent_indices(native: ListArray) -> pa.Int64Array: ...
 def _list_parent_indices(
     native: ChunkedOrArray[ListScalar],
 ) -> ChunkedOrArray[pa.Int64Scalar]:
-    result: ChunkedOrArray[pa.Int64Scalar] = pc.call_function(
-        "list_parent_indices", [native]
-    )
+    result: ChunkedOrArray[pa.Int64Scalar] = call("list_parent_indices", native)
     return result

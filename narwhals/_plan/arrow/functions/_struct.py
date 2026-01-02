@@ -2,18 +2,18 @@
 
 from __future__ import annotations
 
-import typing as t
-from typing import TYPE_CHECKING, Any, overload
+from typing import TYPE_CHECKING, overload
 
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._plan import common
 from narwhals._plan.arrow import compat
+from narwhals._plan.arrow.functions.meta import call
 from narwhals._plan.arrow.guards import is_arrow
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable
+    from collections.abc import Iterable
 
     from narwhals._arrow.typing import Incomplete
     from narwhals._plan.arrow.acero import Field
@@ -68,9 +68,7 @@ def into_struct(names: Iterable[str], columns: Iterable[Incomplete]) -> Incomple
 
     [`polars.struct`]: https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.struct.html
     """
-    return pc.make_struct(
-        *columns, options=pc.MakeStructOptions(common.ensure_seq_str(names))
-    )
+    return pc.make_struct(*columns, options=_make_names(common.ensure_seq_str(names)))
 
 
 def schema(native: Arrow[pa.StructScalar] | pa.StructType, /) -> pa.Schema:
@@ -111,8 +109,8 @@ def field(native: ArrowAny, name: Field, /) -> ArrowAny:
         native: Struct-typed arrow data.
         name: Name of the struct field to retrieve.
     """
-    func = t.cast("Callable[[Any,Any], ArrowAny]", pc.struct_field)
-    return func(native, name)
+    result: ArrowAny = call("struct_field", native, options=_get_name(name))
+    return result
 
 
 @overload
@@ -130,5 +128,9 @@ def fields(native: ArrowAny, *names: Field) -> Seq[ArrowAny]:
         native: Struct-typed arrow data.
         names: Names of the struct fields to retrieve.
     """
-    func = t.cast("Callable[[Any,Any], ArrowAny]", pc.struct_field)
-    return tuple(func(native, name) for name in names)
+    f = pc.get_function("struct_field")
+    return tuple["ArrowAny", ...](f.call([native], _get_name(nm)) for nm in names)
+
+
+_make_names = pc.MakeStructOptions
+_get_name = pc.StructFieldOptions

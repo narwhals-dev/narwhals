@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import typing as t
-from typing import TYPE_CHECKING, Any, overload
+from typing import TYPE_CHECKING, Any, Final, overload
 
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
@@ -22,6 +22,7 @@ from narwhals._plan.arrow.functions._construction import (
 from narwhals._plan.arrow.functions._dtypes import string_type
 from narwhals._plan.arrow.functions._multiplex import replace_with_mask, when_then
 from narwhals._plan.arrow.functions._repeat import repeat_unchecked
+from narwhals._plan.arrow.functions.meta import call
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -106,9 +107,9 @@ def concat_str(
     """Horizontally concatenate arrow data into a single string column."""
     dtype = string_type(obj.type for obj in arrays)
     it = (obj.cast(dtype) for obj in arrays)
-    concat: Incomplete = pc.binary_join_element_wise
+    sep = lit(separator, dtype)
     join = pa_options.join(ignore_nulls=ignore_nulls)
-    result: Arrow[StringScalar] = concat(*it, lit(separator, dtype), options=join)
+    result: Arrow[StringScalar] = call("binary_join_element_wise", *it, sep, options=join)
     return result
 
 
@@ -126,8 +127,7 @@ def join(
 
 def len_chars(native: ChunkedOrScalarAny) -> ChunkedOrScalarAny:
     """Return the length of each string as the number of characters."""
-    len_chars: Incomplete = pc.utf8_length
-    result: ChunkedOrScalarAny = len_chars(native)
+    result: ChunkedOrScalarAny = call("utf8_length", native)
     return result
 
 
@@ -177,9 +177,9 @@ def find(
         `pyarrow` distinguishes null *inputs* with `None` and failed matches with `-1`.
     """
     # NOTE: `pyarrow-stubs` uses concrete types here
-    fn_name = "find_substring" if literal else "find_substring_regex"
-    result: Arrow[IntegerScalar] = pc.call_function(
-        fn_name, [native], pa_options.match_substring(pattern)
+    name = "find_substring" if literal else "find_substring_regex"
+    result: Arrow[IntegerScalar] = call(
+        name, native, options=pa_options.match_substring(pattern)
     )
     if not_found == -1:
         return result
@@ -190,8 +190,8 @@ def _split(
     native: ArrowAny, by: str, n: int | None = None, *, literal: bool = True
 ) -> Arrow[ListScalar]:
     name = "split_pattern" if literal else "split_pattern_regex"
-    result: Arrow[ListScalar] = pc.call_function(
-        name, [native], pa_options.split_pattern(by, n)
+    result: Arrow[ListScalar] = call(
+        name, native, options=pa_options.split_pattern(by, n)
     )
     return result
 
@@ -269,8 +269,8 @@ def contains(
 ) -> Arrow[pa.BooleanScalar]:
     """Check if the string contains a substring that matches a pattern."""
     name = "match_substring" if literal else "match_substring_regex"
-    result: Arrow[pa.BooleanScalar] = pc.call_function(
-        name, [native], pa_options.match_substring(pattern)
+    result: Arrow[pa.BooleanScalar] = call(
+        name, native, options=pa_options.match_substring(pattern)
     )
     return result
 
@@ -343,7 +343,6 @@ def _zfill_compat(
     padded_remaining = pad_start(slice(native, 1), length - 1, "0")
     padded_lt_length = pad_start(native, length, "0")
 
-    binary_join: Incomplete = pc.binary_join_element_wise
     if isinstance(native, pa.Scalar):
         case_1: ArrowAny = hyphen  # starts with hyphen and less than length
         case_2: ArrowAny = plus  # starts with plus and less than length
@@ -356,12 +355,13 @@ def _zfill_compat(
     lt_length = lt(len_chars(native), lit(length))
     first_hyphen_lt_length = and_(eq(first_char, hyphen), lt_length)
     first_plus_lt_length = and_(eq(first_char, plus), lt_length)
+    join_: Final = "binary_join_element_wise"
     return when_then(
         first_hyphen_lt_length,
-        binary_join(case_1, padded_remaining, ""),
+        call(join_, case_1, padded_remaining, ""),
         when_then(
             first_plus_lt_length,
-            binary_join(case_2, padded_remaining, ""),
+            call(join_, case_2, padded_remaining, ""),
             when_then(lt_length, padded_lt_length, native),
         ),
     )
