@@ -91,6 +91,7 @@ is_not_null = t.cast("UnaryFunction[ScalarAny, pa.BooleanScalar]", pc.is_valid)
 is_nan = t.cast("UnaryFunction[ScalarAny, pa.BooleanScalar]", pc.is_nan)
 is_finite = t.cast("UnaryFunction[ScalarAny, pa.BooleanScalar]", pc.is_finite)
 not_ = t.cast("UnaryFunction[ScalarAny, pa.BooleanScalar]", pc.invert)
+"""Invert Boolean-typed arrow data."""
 
 
 @overload
@@ -115,21 +116,25 @@ def is_between(
     native: ChunkedArray[ScalarT],
     lower: ChunkedOrScalar[ScalarT] | NumericLiteral,
     upper: ChunkedOrScalar[ScalarT] | NumericLiteral,
-    closed: ClosedInterval,
+    *,
+    closed: ClosedInterval = "both",
 ) -> ChunkedArray[pa.BooleanScalar]: ...
 @overload
 def is_between(
     native: ChunkedOrScalar[ScalarT],
     lower: ChunkedOrScalar[ScalarT] | NumericLiteral,
     upper: ChunkedOrScalar[ScalarT] | NumericLiteral,
-    closed: ClosedInterval,
+    *,
+    closed: ClosedInterval = "both",
 ) -> ChunkedOrScalar[pa.BooleanScalar]: ...
 def is_between(
     native: ChunkedOrScalar[ScalarT],
     lower: ChunkedOrScalar[ScalarT] | NumericLiteral,
     upper: ChunkedOrScalar[ScalarT] | NumericLiteral,
-    closed: ClosedInterval,
+    *,
+    closed: ClosedInterval = "both",
 ) -> ChunkedOrScalar[pa.BooleanScalar]:
+    """Check if `native` is between the given `lower` and `upper` bounds."""
     fn_lhs, fn_rhs = _IS_BETWEEN[closed]
     low, high = (el if is_arrow(el) else lit(el) for el in (lower, upper))
     out: ChunkedOrScalar[pa.BooleanScalar] = and_(

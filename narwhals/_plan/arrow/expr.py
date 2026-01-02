@@ -159,7 +159,7 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
         native = expr.dispatch(self, frame, name).native
         lower = lower_bound.dispatch(self, frame, "lower").native
         upper = upper_bound.dispatch(self, frame, "upper").native
-        result = fn.is_between(native, lower, upper, node.function.closed)
+        result = fn.is_between(native, lower, upper, closed=node.function.closed)
         return self._with_native(result, name)
 
     @overload
