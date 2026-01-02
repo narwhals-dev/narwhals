@@ -21,20 +21,30 @@ if TYPE_CHECKING:
 __all__ = ["and_", "binary", "eq", "gt", "gt_eq", "lt", "lt_eq", "not_eq", "or_", "xor"]
 
 and_ = t.cast("BinaryLogical", pc.and_kleene)
+"""Equivalent to `lhs & rhs`."""
 or_ = t.cast("BinaryLogical", pc.or_kleene)
+"""Equivalent to `lhs | rhs`."""
 xor = t.cast("BinaryLogical", pc.xor)
+"""Equivalent to `lhs ^ rhs`."""
 
 eq = t.cast("BinaryComp", pc.equal)
+"""Equivalent to `lhs == rhs`."""
 not_eq = t.cast("BinaryComp", pc.not_equal)
+"""Equivalent to `lhs != rhs`."""
 gt_eq = t.cast("BinaryComp", pc.greater_equal)
+"""Equivalent to `lhs >= rhs`."""
 gt = t.cast("BinaryComp", pc.greater)
+"""Equivalent to `lhs > rhs`."""
 lt_eq = t.cast("BinaryComp", pc.less_equal)
+"""Equivalent to `lhs <= rhs`."""
 lt = t.cast("BinaryComp", pc.less)
+"""Equivalent to `lhs < rhs`."""
 
 
 def binary(
     lhs: ChunkedOrScalarAny, op: type[ops.Operator], rhs: ChunkedOrScalarAny
 ) -> ChunkedOrScalarAny:
+    """Dispatch a binary operator type to a native function, providing `lhs` and `rhs` as operands."""
     return _DISPATCH_BINARY[op](lhs, rhs)
 
 

@@ -140,50 +140,53 @@ class UnaryFunction(Protocol[ScalarPT_contra, ScalarRT_co]):
 class BinaryFunction(Protocol[ScalarPT_contra, ScalarRT_co]):
     @overload
     def __call__(
-        self, x: ChunkedArray[ScalarPT_contra], y: ChunkedArray[ScalarPT_contra], /
+        self, lhs: ChunkedArray[ScalarPT_contra], rhs: ChunkedArray[ScalarPT_contra], /
     ) -> ChunkedArray[ScalarRT_co]: ...
     @overload
     def __call__(
-        self, x: Array[ScalarPT_contra], y: Array[ScalarPT_contra], /
+        self, lhs: Array[ScalarPT_contra], rhs: Array[ScalarPT_contra], /
     ) -> Array[ScalarRT_co]: ...
     @overload
-    def __call__(self, x: ScalarPT_contra, y: ScalarPT_contra, /) -> ScalarRT_co: ...
+    def __call__(self, lhs: ScalarPT_contra, rhs: ScalarPT_contra, /) -> ScalarRT_co: ...
     @overload
     def __call__(
-        self, x: ChunkedArray[ScalarPT_contra], y: ScalarPT_contra, /
+        self, lhs: ChunkedArray[ScalarPT_contra], rhs: ScalarPT_contra, /
     ) -> ChunkedArray[ScalarRT_co]: ...
     @overload
     def __call__(
-        self, x: Array[ScalarPT_contra], y: ScalarPT_contra, /
-    ) -> Array[ScalarRT_co]: ...
-    @overload
-    def __call__(
-        self, x: ScalarPT_contra, y: ChunkedArray[ScalarPT_contra], /
-    ) -> ChunkedArray[ScalarRT_co]: ...
-    @overload
-    def __call__(
-        self, x: ScalarPT_contra, y: Array[ScalarPT_contra], /
+        self, lhs: Array[ScalarPT_contra], rhs: ScalarPT_contra, /
     ) -> Array[ScalarRT_co]: ...
     @overload
     def __call__(
-        self, x: ChunkedArray[ScalarPT_contra], y: Array[ScalarPT_contra], /
+        self, lhs: ScalarPT_contra, rhs: ChunkedArray[ScalarPT_contra], /
     ) -> ChunkedArray[ScalarRT_co]: ...
     @overload
     def __call__(
-        self, x: Array[ScalarPT_contra], y: ChunkedArray[ScalarPT_contra], /
+        self, lhs: ScalarPT_contra, rhs: Array[ScalarPT_contra], /
+    ) -> Array[ScalarRT_co]: ...
+    @overload
+    def __call__(
+        self, lhs: ChunkedArray[ScalarPT_contra], rhs: Array[ScalarPT_contra], /
     ) -> ChunkedArray[ScalarRT_co]: ...
     @overload
     def __call__(
-        self, x: ChunkedOrScalar[ScalarPT_contra], y: ChunkedOrScalar[ScalarPT_contra], /
+        self, lhs: Array[ScalarPT_contra], rhs: ChunkedArray[ScalarPT_contra], /
+    ) -> ChunkedArray[ScalarRT_co]: ...
+    @overload
+    def __call__(
+        self,
+        lhs: ChunkedOrScalar[ScalarPT_contra],
+        rhs: ChunkedOrScalar[ScalarPT_contra],
+        /,
     ) -> ChunkedOrScalar[ScalarRT_co]: ...
 
     @overload
     def __call__(
-        self, x: Arrow[ScalarPT_contra], y: Arrow[ScalarPT_contra], /
+        self, lhs: Arrow[ScalarPT_contra], rhs: Arrow[ScalarPT_contra], /
     ) -> Arrow[ScalarRT_co]: ...
 
     def __call__(
-        self, x: Arrow[ScalarPT_contra], y: Arrow[ScalarPT_contra], /
+        self, lhs: Arrow[ScalarPT_contra], rhs: Arrow[ScalarPT_contra], /
     ) -> Arrow[ScalarRT_co]: ...
 
 
