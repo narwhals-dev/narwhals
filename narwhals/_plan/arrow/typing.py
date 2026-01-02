@@ -61,6 +61,8 @@ if TYPE_CHECKING:
         @property
         def columns(self) -> Sequence[NativeArrowSeries]: ...
 
+    # TODO @dangotbanned: Move out of `TYPE_CHECKING` for docs after (3, 10) minimum
+    # https://github.com/narwhals-dev/narwhals/issues/3204
     P = ParamSpec("P")
 
     class UnaryFunctionP(Protocol[P]):
