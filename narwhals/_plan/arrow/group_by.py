@@ -306,7 +306,7 @@ class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
             if by.null_count:
                 temp_name = temp.column_name({*column_names, *agg_names})
                 key_names = [temp_name]
-                native = native.append_column(temp_name, fn.cat.dictionary_encode(by))
+                native = native.append_column(temp_name, fn.cat.encode(by))
                 compliant = from_native(native)
         else:
             partitions = native.select(key_names)
@@ -315,7 +315,7 @@ class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
             for orig_name, by in zip(key_names, partitions.columns):
                 if by.null_count:
                     by_name = next(it_temp_names)
-                    native = native.append_column(by_name, fn.cat.dictionary_encode(by))
+                    native = native.append_column(by_name, fn.cat.encode(by))
                 else:
                     by_name = orig_name
                 by_names.append(by_name)
@@ -356,7 +356,7 @@ def _partition_by_one(
     native: pa.Table, by: str, *, include_key: bool = True
 ) -> Iterator[pa.Table]:
     """Optimized path for single-column partition."""
-    values, indices = fn.cat.dictionary_encode(native.column(by), include_categories=True)
+    values, indices = fn.cat.encode(native.column(by), include_categories=True)
     if not include_key:
         native = native.remove_column(native.schema.get_field_index(by))
     for idx in range(len(values)):
