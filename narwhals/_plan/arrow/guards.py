@@ -1,4 +1,4 @@
-"""Backend-specfic type guards."""
+"""Backend-specific type guards."""
 
 from __future__ import annotations
 
