@@ -21,7 +21,7 @@ def test_median_expr(request: pytest.FixtureRequest, constructor: Constructor) -
     if any(
         backend in str(constructor) for backend in ("dask", "cudf", "sqlframe", "ibis")
     ) or ("polars" in str(constructor) and POLARS_VERSION < (0, 20, 7)):
-        # sqlframe issue: https://github.com/eakmanrq/sqlframe/issues/548
+        # sqlframe issue: https://github.com/eakmanrq/sqlframe/issues/568
         # ibis issue: https://github.com/ibis-project/ibis/issues/11788
         request.applymarker(pytest.mark.xfail)
     if os.environ.get("SPARK_CONNECT", None) and "pyspark" in str(constructor):
