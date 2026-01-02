@@ -25,6 +25,11 @@ __all__ = ["dictionary_encode", "get_categories"]
 
 
 def get_categories(native: ArrowAny, /) -> ChunkedArrayAny:
+    """Get the categories stored in the data type.
+
+    Arguments:
+        native: Dictionary-typed arrow data.
+    """
     da: Incomplete
     if isinstance(native, pa.ChunkedArray):
         da = native.unify_dictionaries().chunk(0)
