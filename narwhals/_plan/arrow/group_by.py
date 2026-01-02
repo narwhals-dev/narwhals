@@ -24,7 +24,6 @@ if TYPE_CHECKING:
 
     from narwhals._plan.arrow.dataframe import ArrowDataFrame as Frame
     from narwhals._plan.arrow.typing import (
-        ArrayAny,
         ChunkedArray,
         ChunkedArrayAny,
         ChunkedList,
@@ -307,7 +306,7 @@ class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
             if by.null_count:
                 temp_name = temp.column_name({*column_names, *agg_names})
                 key_names = [temp_name]
-                native = native.append_column(temp_name, dictionary_encode(by))
+                native = native.append_column(temp_name, fn.cat.dictionary_encode(by))
                 compliant = from_native(native)
         else:
             partitions = native.select(key_names)
@@ -316,7 +315,7 @@ class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
             for orig_name, by in zip(key_names, partitions.columns):
                 if by.null_count:
                     by_name = next(it_temp_names)
-                    native = native.append_column(by_name, dictionary_encode(by))
+                    native = native.append_column(by_name, fn.cat.dictionary_encode(by))
                 else:
                     by_name = orig_name
                 by_names.append(by_name)
@@ -333,24 +332,6 @@ class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
             .join_inner(windowed, key_names)
             .drop(key_names)
         )
-
-
-@overload
-def dictionary_encode(native: ChunkedArrayAny, /) -> pa.Int32Array: ...
-@overload
-def dictionary_encode(
-    native: ChunkedArrayAny, /, *, include_values: Literal[True]
-) -> tuple[ArrayAny, pa.Int32Array]: ...
-def dictionary_encode(
-    native: ChunkedArrayAny, /, *, include_values: bool = False
-) -> tuple[ArrayAny, pa.Int32Array] | pa.Int32Array:
-    """Extra typing for `pc.dictionary_encode`."""
-    da: Incomplete = native.dictionary_encode("encode").combine_chunks()
-    indices: pa.Int32Array = da.indices
-    if not include_values:
-        return indices
-    values: ArrayAny = da.dictionary
-    return values, indices
 
 
 def _composite_key(native: pa.Table, *, separator: str = "") -> ChunkedArray:
@@ -375,7 +356,7 @@ def _partition_by_one(
     native: pa.Table, by: str, *, include_key: bool = True
 ) -> Iterator[pa.Table]:
     """Optimized path for single-column partition."""
-    values, indices = dictionary_encode(native.column(by), include_values=True)
+    values, indices = fn.cat.dictionary_encode(native.column(by), include_categories=True)
     if not include_key:
         native = native.remove_column(native.schema.get_field_index(by))
     for idx in range(len(values)):

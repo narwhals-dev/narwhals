@@ -10,6 +10,7 @@ import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._plan import expressions as ir
+from narwhals._plan.arrow.functions._categorical import dictionary_encode
 from narwhals._plan.arrow.functions._construction import chunked_array, lit
 
 if TYPE_CHECKING:
@@ -31,7 +32,7 @@ exp = t.cast("UnaryNumeric", pc.exp)
 
 def mode_all(native: ChunkedArrayAny) -> ChunkedArrayAny:
     struct_arr = pc.mode(native, n=len(native))
-    indices: pa.Int32Array = struct_arr.field("count").dictionary_encode().indices  # type: ignore[attr-defined]
+    indices = dictionary_encode(struct_arr.field("count"))
     index_true_modes = lit(0)
     return chunked_array(
         struct_arr.field("mode").filter(pc.equal(indices, index_true_modes))
