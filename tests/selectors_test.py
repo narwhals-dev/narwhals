@@ -87,6 +87,8 @@ def test_categorical(request: pytest.FixtureRequest, constructor: Constructor) -
 def test_datetime(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if (
         "pyspark" in str(constructor)
+        # Bodo JIT, which may be imported in other tests, doesn't support non-ns datetimes
+        or "bodo" in str(constructor)
         or "duckdb" in str(constructor)
         or "dask" in str(constructor)
         or ("pyarrow" in str(constructor) and is_windows())
