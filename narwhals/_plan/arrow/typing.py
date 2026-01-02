@@ -239,3 +239,5 @@ RankMethodSingle: TypeAlias = Literal["min", "max", "dense", "ordinal"]
 
 `"average"` requires calculating both `"min"` and `"max"`.
 """
+
+SearchSortedSide: TypeAlias = Literal["left", "right"]

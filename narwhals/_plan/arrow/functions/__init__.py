@@ -32,12 +32,12 @@ from __future__ import annotations
 
 import math
 import typing as t
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING
 
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
-from narwhals._plan.arrow import compat, options as pa_options
+from narwhals._plan.arrow import compat as compat
 from narwhals._plan.arrow.functions import (  # noqa: F401
     _categorical as cat,
     _lists as list_,
@@ -170,24 +170,21 @@ from narwhals._plan.arrow.functions._sort import (
     sort_indices as sort_indices,
     unsort_indices as unsort_indices,
 )
+from narwhals._plan.arrow.functions._vector import (
+    diff as diff,
+    hist_bins as hist_bins,
+    hist_zeroed_data as hist_zeroed_data,
+    rank as rank,
+    search_sorted as search_sorted,
+    shift as shift,
+)
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping, Sequence
-
-    from typing_extensions import TypeAlias
-
     from narwhals._plan.arrow.typing import (
-        ChunkedArray,
         ChunkedArrayAny,
-        ChunkedOrArray,
-        ChunkedOrArrayT,
         ChunkedOrScalarAny,
-        NumericScalar,
-        ScalarAny,
         UnaryNumeric,
     )
-    from narwhals._plan.options import RankOptions
-    from narwhals.typing import NonNestedLiteral
 
 
 abs_ = t.cast("UnaryNumeric", pc.abs)
@@ -195,133 +192,11 @@ exp = t.cast("UnaryNumeric", pc.exp)
 
 
 def mode_all(native: ChunkedArrayAny) -> ChunkedArrayAny:
-    struct = pc.mode(native, n=len(native))
-    indices: pa.Int32Array = struct.field("count").dictionary_encode().indices  # type: ignore[attr-defined]
+    struct_arr = pc.mode(native, n=len(native))
+    indices: pa.Int32Array = struct_arr.field("count").dictionary_encode().indices  # type: ignore[attr-defined]
     index_true_modes = lit(0)
-    return chunked_array(struct.field("mode").filter(pc.equal(indices, index_true_modes)))
+    return chunked_array(struct_arr.field("mode").filter(eq(indices, index_true_modes)))
 
 
 def log(native: ChunkedOrScalarAny, base: float = math.e) -> ChunkedOrScalarAny:
     return t.cast("ChunkedOrScalarAny", pc.logb(native, lit(base)))
-
-
-def diff(native: ChunkedOrArrayT, n: int = 1) -> ChunkedOrArrayT:
-    # pyarrow.lib.ArrowInvalid: Vector kernel cannot execute chunkwise and no chunked exec function was defined
-    return (
-        pc.pairwise_diff(native, n)
-        if isinstance(native, pa.Array)
-        else chunked_array(pc.pairwise_diff(native.combine_chunks(), n))
-    )
-
-
-def shift(
-    native: ChunkedArrayAny, n: int, *, fill_value: NonNestedLiteral = None
-) -> ChunkedArrayAny:
-    if n == 0:
-        return native
-    arr = native
-    if n > 0:
-        filled = repeat_like(fill_value, n, arr)
-        arrays = [filled, *arr.slice(length=arr.length() - n).chunks]
-    else:
-        filled = repeat_like(fill_value, -n, arr)
-        arrays = [*arr.slice(offset=-n).chunks, filled]
-    return pa.chunked_array(arrays)
-
-
-def rank(native: ChunkedArrayAny, rank_options: RankOptions) -> ChunkedArrayAny:
-    arr = native if compat.RANK_ACCEPTS_CHUNKED else array(native)
-    if rank_options.method == "average":
-        # Adapted from https://github.com/pandas-dev/pandas/blob/f4851e500a43125d505db64e548af0355227714b/pandas/core/arrays/arrow/array.py#L2290-L2316
-        order = pa_options.ORDER[rank_options.descending]
-        min = preserve_nulls(arr, pc.rank(arr, order, tiebreaker="min").cast(F64))
-        max = pc.rank(arr, order, tiebreaker="max").cast(F64)
-        ranked = pc.divide(pc.add(min, max), lit(2, F64))
-    else:
-        ranked = preserve_nulls(native, pc.rank(arr, options=rank_options.to_arrow()))
-    return chunked_array(ranked)
-
-
-SearchSortedSide: TypeAlias = Literal["left", "right"]
-
-
-# NOTE @dangotbanned: (wish) replacing `np.searchsorted`?
-@t.overload
-def search_sorted(
-    native: ChunkedOrArrayT,
-    element: ChunkedOrArray[NumericScalar] | Sequence[float],
-    *,
-    side: SearchSortedSide = ...,
-) -> ChunkedOrArrayT: ...
-# NOTE: scalar case may work with only `partition_nth_indices`?
-@t.overload
-def search_sorted(
-    native: ChunkedOrArrayT, element: float, *, side: SearchSortedSide = ...
-) -> ScalarAny: ...
-def search_sorted(
-    native: ChunkedOrArrayT,
-    element: ChunkedOrArray[NumericScalar] | Sequence[float] | float,
-    *,
-    side: SearchSortedSide = "left",
-) -> ChunkedOrArrayT | ScalarAny:
-    """Find indices where elements should be inserted to maintain order."""
-    import numpy as np  # ignore-banned-import
-
-    indices = np.searchsorted(element, native, side=side)
-    if isinstance(indices, np.generic):
-        return lit(indices)
-    if isinstance(native, pa.ChunkedArray):
-        return chunked_array([indices])
-    return array(indices)
-
-
-def hist_bins(
-    native: ChunkedArrayAny,
-    bins: Sequence[float] | ChunkedArray[NumericScalar],
-    *,
-    include_breakpoint: bool,
-) -> Mapping[str, Iterable[Any]]:
-    """Bin values into buckets and count their occurrences.
-
-    Notes:
-        Assumes that the following edge cases have been handled:
-        - `len(bins) >= 2`
-        - `bins` increase monotonically
-        - `bin[0] != bin[-1]`
-        - `native` contains values that are non-null (including NaN)
-    """
-    if len(bins) == 2:
-        upper = bins[1]
-        count = array(is_between(native, bins[0], upper, closed="both"), BOOL).true_count
-        if include_breakpoint:
-            return {"breakpoint": [upper], "count": [count]}
-        return {"count": [count]}
-
-    # lowest bin is inclusive
-    # NOTE: `np.unique` behavior sorts first
-    value_counts = (
-        when_then(not_eq(native, lit(bins[0])), search_sorted(native, bins), 1)
-        .sort()
-        .value_counts()
-    )
-    values, counts = struct.fields(value_counts, "values", "counts")
-    bin_count = len(bins)
-    int_range_ = int_range(1, bin_count, chunked=False)
-    mask = is_in(int_range_, values)
-    replacements = counts.filter(is_in(values, int_range_))
-    counts = replace_with_mask(zeros(bin_count - 1), mask, replacements)
-
-    if include_breakpoint:
-        return {"breakpoint": bins[1:], "count": counts}
-    return {"count": counts}
-
-
-def hist_zeroed_data(
-    arg: int | Sequence[float], *, include_breakpoint: bool
-) -> Mapping[str, Iterable[Any]]:
-    # NOTE: If adding `linear_space` and `zeros` to `CompliantNamespace`, consider moving this.
-    n = arg if isinstance(arg, int) else len(arg) - 1
-    if not include_breakpoint:
-        return {"count": zeros(n)}
-    bp = linear_space(0, 1, arg, closed="right") if isinstance(arg, int) else arg[1:]
-    return {"breakpoint": bp, "count": zeros(n)}
