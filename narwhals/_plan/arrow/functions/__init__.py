@@ -10,9 +10,7 @@
 - [x] _cumulative
 - [x] _dtypes
 - [x] _horizontal
-- [ ] _lists
-  - [x] -> `list_` (until `functions.__init__` is cleaner)
-  - [ ] -> `list`
+- [x] _lists -> `list`
 - [ ] _multiplex
   - [x] move everything
   - [ ] decide on name
@@ -20,9 +18,7 @@
 - [x] _repeat
 - [x] _round
 - [x] _sort
-- [ ] _strings
-  - [x] -> `str_` (until `functions.__init__` is cleaner)
-  - [ ] -> `str`
+- [x] _strings -> `str`
 - [x] _struct -> `struct`
 - [x] _vector
 - [ ] (Others?)
@@ -30,11 +26,10 @@
 
 from __future__ import annotations
 
-from narwhals._plan.arrow import compat as compat
 from narwhals._plan.arrow.functions import (  # noqa: F401
     _categorical as cat,
-    _lists as list_,
-    _strings as str_,
+    _lists as list,
+    _strings as str,
     _struct as struct,
 )
 from narwhals._plan.arrow.functions._aggregation import (

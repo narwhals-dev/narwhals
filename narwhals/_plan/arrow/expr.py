@@ -963,13 +963,13 @@ class ArrowListNamespace(
     ExprListNamespace["Frame", "Expr | Scalar"], ArrowAccessor[ExprOrScalarT]
 ):
     def len(self, node: FExpr[lists.Len], frame: Frame, name: str) -> Expr | Scalar:
-        return self.unary(fn.list_.len)(node, frame, name)
+        return self.unary(fn.list.len)(node, frame, name)
 
     def get(self, node: FExpr[lists.Get], frame: Frame, name: str) -> Expr | Scalar:
-        return self.unary(fn.list_.get, node.function.index)(node, frame, name)
+        return self.unary(fn.list.get, node.function.index)(node, frame, name)
 
     def unique(self, node: FExpr[lists.Unique], frame: Frame, name: str) -> Expr | Scalar:
-        return self.unary(fn.list_.unique)(node, frame, name)
+        return self.unary(fn.list.unique)(node, frame, name)
 
     def contains(
         self, node: FExpr[lists.Contains], frame: Frame, name: str
@@ -981,16 +981,16 @@ class ArrowListNamespace(
         if isinstance(item, ArrowExpr):
             # Maybe one day, not now
             raise NotImplementedError
-        return self.with_native(fn.list_.contains(prev.native, item.native), name)
+        return self.with_native(fn.list.contains(prev.native, item.native), name)
 
     def join(self, node: FExpr[lists.Join], frame: Frame, name: str) -> Expr | Scalar:
         separator, ignore_nulls = node.function.separator, node.function.ignore_nulls
         previous = node.input[0].dispatch(self.compliant, frame, name)
         result: ChunkedOrScalarAny
         if isinstance(previous, ArrowExpr):
-            result = fn.list_.join(previous.native, separator, ignore_nulls=ignore_nulls)
+            result = fn.list.join(previous.native, separator, ignore_nulls=ignore_nulls)
         else:
-            result = fn.list_.join_scalar(
+            result = fn.list.join_scalar(
                 previous.native, separator, ignore_nulls=ignore_nulls
             )
         return self.with_native(result, name)
@@ -1006,11 +1006,11 @@ class ArrowListNamespace(
         previous = node.input[0].dispatch(self.compliant, frame, name)
         result: ChunkedOrScalarAny
         if isinstance(previous, ArrowScalar):
-            result = fn.list_.sort_scalar(previous.native, node.function.options)
+            result = fn.list.sort_scalar(previous.native, node.function.options)
         else:
             descending = node.function.options.descending
             nulls_last = node.function.options.nulls_last
-            result = fn.list_.sort(
+            result = fn.list.sort(
                 previous.native, descending=descending, nulls_last=nulls_last
             )
         return self.with_native(result, name)
@@ -1033,25 +1033,25 @@ class ArrowStringNamespace(
     def len_chars(
         self, node: FExpr[strings.LenChars], frame: Frame, name: str
     ) -> Expr | Scalar:
-        return self.unary(fn.str_.len_chars)(node, frame, name)
+        return self.unary(fn.str.len_chars)(node, frame, name)
 
     def slice(self, node: FExpr[strings.Slice], frame: Frame, name: str) -> Expr | Scalar:
         offset, length = node.function.offset, node.function.length
-        return self.unary(fn.str_.slice, offset, length)(node, frame, name)
+        return self.unary(fn.str.slice, offset, length)(node, frame, name)
 
     def zfill(self, node: FExpr[strings.ZFill], frame: Frame, name: str) -> Expr | Scalar:
-        return self.unary(fn.str_.zfill, node.function.length)(node, frame, name)
+        return self.unary(fn.str.zfill, node.function.length)(node, frame, name)
 
     def contains(
         self, node: FExpr[strings.Contains], frame: Frame, name: str
     ) -> Expr | Scalar:
         pattern, literal = node.function.pattern, node.function.literal
-        return self.unary(fn.str_.contains, pattern, literal=literal)(node, frame, name)
+        return self.unary(fn.str.contains, pattern, literal=literal)(node, frame, name)
 
     def ends_with(
         self, node: FExpr[strings.EndsWith], frame: Frame, name: str
     ) -> Expr | Scalar:
-        return self.unary(fn.str_.ends_with, node.function.suffix)(node, frame, name)
+        return self.unary(fn.str.ends_with, node.function.suffix)(node, frame, name)
 
     def replace(
         self, node: FExpr[strings.Replace], frame: Frame, name: str
@@ -1062,11 +1062,11 @@ class ArrowStringNamespace(
         prev = expr.dispatch(self.compliant, frame, name)
         value = other.dispatch(self.compliant, frame, name)
         if isinstance(value, ArrowScalar):
-            result = fn.str_.replace(
+            result = fn.str.replace(
                 prev.native, pattern, value.native.as_py(), literal=literal, n=n
             )
         elif isinstance(prev, ArrowExpr):
-            result = fn.str_.replace_vector(
+            result = fn.str.replace_vector(
                 prev.native, pattern, value.native, literal=literal, n=n
             )
         else:
@@ -1084,34 +1084,32 @@ class ArrowStringNamespace(
         return self.replace(rewrite, frame, name)
 
     def split(self, node: FExpr[strings.Split], frame: Frame, name: str) -> Expr | Scalar:
-        return self.unary(fn.str_.split, node.function.by)(node, frame, name)
+        return self.unary(fn.str.split, node.function.by)(node, frame, name)
 
     def starts_with(
         self, node: FExpr[strings.StartsWith], frame: Frame, name: str
     ) -> Expr | Scalar:
-        return self.unary(fn.str_.starts_with, node.function.prefix)(node, frame, name)
+        return self.unary(fn.str.starts_with, node.function.prefix)(node, frame, name)
 
     def strip_chars(
         self, node: FExpr[strings.StripChars], frame: Frame, name: str
     ) -> Expr | Scalar:
-        return self.unary(fn.str_.strip_chars, node.function.characters)(
-            node, frame, name
-        )
+        return self.unary(fn.str.strip_chars, node.function.characters)(node, frame, name)
 
     def to_uppercase(
         self, node: FExpr[strings.ToUppercase], frame: Frame, name: str
     ) -> Expr | Scalar:
-        return self.unary(fn.str_.to_uppercase)(node, frame, name)
+        return self.unary(fn.str.to_uppercase)(node, frame, name)
 
     def to_lowercase(
         self, node: FExpr[strings.ToLowercase], frame: Frame, name: str
     ) -> Expr | Scalar:
-        return self.unary(fn.str_.to_lowercase)(node, frame, name)
+        return self.unary(fn.str.to_lowercase)(node, frame, name)
 
     def to_titlecase(
         self, node: FExpr[strings.ToTitlecase], frame: Frame, name: str
     ) -> Expr | Scalar:
-        return self.unary(fn.str_.to_titlecase)(node, frame, name)
+        return self.unary(fn.str.to_titlecase)(node, frame, name)
 
     to_date = not_implemented()
     to_datetime = not_implemented()
