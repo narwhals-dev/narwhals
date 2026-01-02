@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, Any, ClassVar, Generic, Protocol, TypeVar, ove
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
-from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._plan import common, expressions as ir
 from narwhals._plan._guards import (
     is_function_expr,
@@ -129,7 +128,7 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
 
     def _with_native(self, native: Any, name: str, /) -> StoresNativeT_co: ...
     def cast(self, node: ir.Cast, frame: Frame, name: str) -> StoresNativeT_co:
-        data_type = narwhals_to_native_dtype(node.dtype, frame.version)
+        data_type = fn.dtype_native(node.dtype, frame.version)
         native = node.expr.dispatch(self, frame, name).native
         return self._with_native(fn.cast(native, data_type), name)
 
@@ -811,9 +810,8 @@ class ArrowScalar(
         dtype: IntoDType | None = None,
         version: Version = Version.MAIN,
     ) -> Self:
-        dtype_pa: pa.DataType | None = None
-        if dtype and dtype != version.dtypes.Unknown:
-            dtype_pa = narwhals_to_native_dtype(dtype, version)
+        unknown = version.dtypes.Unknown
+        dtype_pa = None if dtype == unknown else fn.dtype_native(dtype, version)
         return cls.from_native(fn.lit(value, dtype_pa), name, version)
 
     @classmethod

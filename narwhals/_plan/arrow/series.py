@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, cast
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc
 
-from narwhals._arrow.utils import narwhals_to_native_dtype, native_to_narwhals_dtype
+from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._plan.arrow import compat, functions as fn, options
 from narwhals._plan.arrow.common import ArrowFrameSeries as FrameSeries
 from narwhals._plan.compliant.accessors import SeriesStructNamespace as StructNamespace
@@ -112,7 +112,7 @@ class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayA
         return cls.from_native(fn.chunked_array([data], dtype_pa), name, version=version)
 
     def cast(self, dtype: IntoDType) -> Self:
-        dtype_pa = narwhals_to_native_dtype(dtype, self.version)
+        dtype_pa = fn.dtype_native(dtype, self.version)
         return self._with_native(fn.cast(self.native, dtype_pa))
 
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:

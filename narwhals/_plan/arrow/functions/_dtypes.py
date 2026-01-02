@@ -1,3 +1,5 @@
+"""Native data types, conversion and casting."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Final, overload
@@ -49,72 +51,75 @@ DATE: Final = pa.date32()
 
 
 @overload
-def dtype_native(dtype: IntoDType, version: Version) -> DataType: ...
+def dtype_native(dtype: IntoDType, /, version: Version) -> DataType: ...
 @overload
-def dtype_native(dtype: None, version: Version) -> None: ...
+def dtype_native(dtype: None, /, version: Version) -> None: ...
 @overload
-def dtype_native(dtype: IntoDType | None, version: Version) -> DataType | None: ...
-def dtype_native(dtype: IntoDType | None, version: Version) -> DataType | None:
+def dtype_native(dtype: IntoDType | None, /, version: Version) -> DataType | None: ...
+def dtype_native(dtype: IntoDType | None, /, version: Version) -> DataType | None:
+    """Convert a Narwhals `DType` to a `pyarrow.DataType`, or passthrough `None`."""
     return dtype if dtype is None else _dtype_native(dtype, version)
 
 
 @overload
-def cast(
-    native: Scalar[Any], target_type: DataTypeT, *, safe: bool | None = ...
-) -> Scalar[DataTypeT]: ...
+def cast(native: Scalar[Any], dtype: DataTypeT, /) -> Scalar[DataTypeT]: ...
 @overload
 def cast(
-    native: ChunkedArray[Any], target_type: DataTypeT, *, safe: bool | None = ...
+    native: ChunkedArray[Any], dtype: DataTypeT, /
 ) -> ChunkedArray[Scalar[DataTypeT]]: ...
 @overload
 def cast(
-    native: ChunkedOrScalar[Scalar[Any]],
-    target_type: DataTypeT,
-    *,
-    safe: bool | None = ...,
+    native: ChunkedOrScalar[Scalar[Any]], dtype: DataTypeT, /
 ) -> ChunkedArray[Scalar[DataTypeT]] | Scalar[DataTypeT]: ...
 def cast(
-    native: ChunkedOrScalar[Scalar[Any]],
-    target_type: DataTypeT,
-    *,
-    safe: bool | None = None,
+    native: ChunkedOrScalar[Scalar[Any]], dtype: DataTypeT, /
 ) -> ChunkedArray[Scalar[DataTypeT]] | Scalar[DataTypeT]:
-    return pc.cast(native, target_type, safe=safe)
+    """Cast arrow data to the specified dtype."""
+    return pc.cast(native, dtype)
 
 
 def cast_table(
-    native: pa.Table, target: DataType | IntoArrowSchema | DataTypeRemap
+    native: pa.Table, dtypes: DataType | IntoArrowSchema | DataTypeRemap, /
 ) -> pa.Table:
-    s = target if isinstance(target, pa.Schema) else _cast_schema(native.schema, target)
+    """Cast Table column(s) to the specified dtype(s).
+
+    Similar to [`pl.DataFrame.cast`].
+
+    Arguments:
+        native: An arrow table.
+        dtypes: Mapping of column names (or dtypes) to dtypes, or a single dtype
+            to which all columns will be cast.
+
+    [`pl.DataFrame.cast`]: https://docs.pola.rs/api/python/stable/reference/dataframe/api/polars.DataFrame.cast.html#polars.DataFrame.cast
+    """
+    s = dtypes if isinstance(dtypes, pa.Schema) else _cast_schema(native.schema, dtypes)
     return native.cast(s)
 
 
-def string_type(data_types: Iterable[DataType] = (), /) -> StringType:
-    """Return a native string type, compatible with `data_types`.
+def string_type(dtypes: Iterable[DataType] = (), /) -> StringType:
+    """Return a native string type, compatible with `dtypes`.
 
     Until [apache/arrow#45717] is resolved, we need to upcast `string` to `large_string` when joining.
 
     [apache/arrow#45717]: https://github.com/apache/arrow/issues/45717
     """
     return (
-        pa.large_string()
-        if any(pa.types.is_large_string(tp) for tp in data_types)
-        else pa.string()
+        pa.large_string() if any(_is_large_string(tp) for tp in dtypes) else pa.string()
     )
 
 
 def _cast_schema(
-    native: pa.Schema, target_types: DataType | Mapping[str, DataType] | DataTypeRemap
+    native: pa.Schema, dtypes: DataType | Mapping[str, DataType] | DataTypeRemap
 ) -> pa.Schema:
-    if isinstance(target_types, pa.DataType):
-        return pa.schema((name, target_types) for name in native.names)
-    if _is_into_pyarrow_schema(target_types):
+    if isinstance(dtypes, pa.DataType):
+        return pa.schema((name, dtypes) for name in native.names)
+    if _is_into_pyarrow_schema(dtypes):
         new_schema = native
-        for name, dtype in target_types.items():
+        for name, dtype in dtypes.items():
             index = native.get_field_index(name)
             new_schema.set(index, native.field(index).with_type(dtype))
         return new_schema
-    return pa.schema((fld.name, target_types.get(fld.type, fld.type)) for fld in native)
+    return pa.schema((fld.name, dtypes.get(fld.type, fld.type)) for fld in native)
 
 
 def _is_into_pyarrow_schema(obj: Mapping[Any, Any]) -> TypeIs[Mapping[str, DataType]]:
@@ -123,3 +128,6 @@ def _is_into_pyarrow_schema(obj: Mapping[Any, Any]) -> TypeIs[Mapping[str, DataT
         and isinstance(first[0], str)
         and isinstance(first[1], pa.DataType)
     )
+
+
+_is_large_string = pa.types.is_large_string
