@@ -47,7 +47,8 @@ def assert_frame_equal(
         1. In the case of backends that do not guarantee the row order, such as DuckDB,
             Ibis, PySpark, and SQLFrame, `check_row_order` argument is ignored and the
             comparands are sorted by all the columns regardless.
-        2. In the case of lazy backends a `collect(...)` operation is triggered.
+        2. In the case of lazy backends a [`collect(...)`](lazyframe.md#narwhals.dataframe.LazyFrame.collect)
+            operation is triggered.
 
     Arguments:
         left: The first DataFrame or LazyFrame to compare.
@@ -67,7 +68,8 @@ def assert_frame_equal(
         categorical_as_str: Cast categorical columns to string before comparing.
             Enabling this helps compare columns that do not share the same string cache.
         backend: Allows to specify which eager backend to collect to.
-            Check out [`narwhals.LazyFrame.collect`][] for more information.
+            Check out [`narwhals.LazyFrame.collect`](lazyframe.md#narwhals.dataframe.LazyFrame.collect)
+            for more information.
 
     Examples:
         >>> import polars as pl
