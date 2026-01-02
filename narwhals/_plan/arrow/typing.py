@@ -37,8 +37,6 @@ if TYPE_CHECKING:
     IntegerScalar: TypeAlias = "Scalar[IntegerType]"
     DateScalar: TypeAlias = "Scalar[Date32Type]"
     ListScalar: TypeAlias = "Scalar[pa.ListType[DataTypeT_co]]"
-    BooleanScalar: TypeAlias = "Scalar[BoolType]"
-    """Only use this for a parameter type, not as a return type!"""
     NumericScalar: TypeAlias = "pc.NumericScalar"
 
     PrimitiveNumericType: TypeAlias = "types._Integer | types._Floating"
@@ -48,8 +46,8 @@ if TYPE_CHECKING:
     BasicType: TypeAlias = (
         "NumericOrTemporalType | StringOrBinaryType | BoolType | lib.NullType"
     )
-    NonListNestedType: TypeAlias = "pa.StructType | pa.DictionaryType[Any, Any] | pa.MapType[Any, Any] | pa.UnionType"
-    NonListType: TypeAlias = "BasicType | NonListNestedType"
+    NonListNestedType: TypeAlias = "pa.StructType | pa.DictionaryType[Any, Any, Any] | pa.MapType[Any, Any, Any] | pa.UnionType"
+    NonListType: TypeAlias = "IntoHashableType | NonListNestedType"
     NestedType: TypeAlias = "NonListNestedType | pa.ListType[Any]"
     NonListTypeT = TypeVar("NonListTypeT", bound="NonListType")
     ListTypeT = TypeVar("ListTypeT", bound="pa.ListType[Any]")
@@ -82,6 +80,15 @@ if TYPE_CHECKING:
             self, indices: ChunkedArrayAny, aggregated: ChunkedArrayAny, /
         ) -> ChunkedArrayAny: ...
 
+
+BooleanScalar: TypeAlias = "Scalar[BoolType]"
+"""Only use this for a parameter type, not as a return type!"""
+
+IntoHashableType: TypeAlias = "BasicType | pa.DictionaryType[Any, Any, Any]"
+"""Types that can be encoded into a dictionary."""
+
+IntoHashableScalar: TypeAlias = "Scalar[IntoHashableType]"
+"""Values that can be encoded into a dictionary."""
 
 ScalarT = TypeVar("ScalarT", bound="pa.Scalar[Any]", default="pa.Scalar[Any]")
 ScalarPT_contra = TypeVar(
@@ -208,10 +215,19 @@ ChunkedOrArrayT = TypeVar("ChunkedOrArrayT", ChunkedArrayAny, ArrayAny)
 ChunkedOrScalarT = TypeVar("ChunkedOrScalarT", ChunkedArrayAny, ScalarAny)
 Indices: TypeAlias = "_SizedMultiIndexSelector[ChunkedOrArray[pc.IntegerScalar]]"
 
+# Common spellings for complicated types
 ChunkedStruct: TypeAlias = "ChunkedArray[pa.StructScalar]"
 StructArray: TypeAlias = "pa.StructArray | Array[pa.StructScalar]"
 ChunkedList: TypeAlias = "ChunkedArray[ListScalar[DataTypeT_co]]"
 ListArray: TypeAlias = "Array[ListScalar[DataTypeT_co]]"
+ChunkedOrArrayHashable: TypeAlias = "ChunkedOrArray[IntoHashableScalar]"
+"""Arrow arrays that can be [dictionary-encoded].
+
+Boolean, Null, Numeric, Temporal, Binary or String-typed, + Dictionary ([no-op]).
+
+[dictionary-encoded]: https://arrow.apache.org/cookbook/py/create.html#store-categorical-data
+[no-op]: https://arrow.apache.org/docs/cpp/compute.html#associative-transforms
+"""
 
 Arrow: TypeAlias = "ChunkedOrScalar[ScalarT_co] | Array[ScalarT_co]"
 ArrowAny: TypeAlias = "ChunkedOrScalarAny | ArrayAny"

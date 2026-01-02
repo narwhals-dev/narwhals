@@ -15,7 +15,7 @@ if TYPE_CHECKING:
         ArrayAny,
         ArrowAny,
         ChunkedArrayAny,
-        ChunkedOrArrayAny,
+        ChunkedOrArrayHashable,
     )
 
     Incomplete: TypeAlias = Any
@@ -39,13 +39,13 @@ def get_categories(native: ArrowAny, /) -> ChunkedArrayAny:
 
 
 @overload
-def dictionary_encode(native: ChunkedOrArrayAny, /) -> pa.Int32Array: ...
+def dictionary_encode(native: ChunkedOrArrayHashable, /) -> pa.Int32Array: ...
 @overload
 def dictionary_encode(
-    native: ChunkedOrArrayAny, /, *, include_categories: Literal[True]
+    native: ChunkedOrArrayHashable, /, *, include_categories: Literal[True]
 ) -> tuple[ArrayAny, pa.Int32Array]: ...
 def dictionary_encode(
-    native: ChunkedOrArrayAny, /, *, include_categories: bool = False
+    native: ChunkedOrArrayHashable, /, *, include_categories: bool = False
 ) -> tuple[ArrayAny, pa.Int32Array] | pa.Int32Array:
     """Return a [dictionary-encoded version] of the input array.
 
