@@ -47,8 +47,7 @@ def assert_frame_equal(
         1. In the case of backends that do not guarantee the row order, such as DuckDB,
             Ibis, PySpark, and SQLFrame, `check_row_order` argument is ignored and the
             comparands are sorted by all the columns regardless.
-        2. In the case of lazy backends a [`.collect()`][narwhals.LazyFrame.collect]
-            operation is triggered.
+        2. In the case of lazy backends a `collect(...)` operation is triggered.
 
     Arguments:
         left: The first DataFrame or LazyFrame to compare.
