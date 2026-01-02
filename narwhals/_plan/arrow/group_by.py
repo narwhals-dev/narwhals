@@ -10,7 +10,6 @@ from narwhals._plan import expressions as ir
 from narwhals._plan._dispatch import get_dispatch_name
 from narwhals._plan._guards import is_agg_expr, is_function_expr
 from narwhals._plan.arrow import acero, compat, functions as fn, options
-from narwhals._plan.arrow.functions._common import MinMax
 from narwhals._plan.common import temp
 from narwhals._plan.compliant.group_by import EagerDataFrameGroupBy
 from narwhals._plan.expressions import aggregation as agg
@@ -18,24 +17,37 @@ from narwhals._utils import Implementation, qualified_type_name
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Mapping, Sequence
+    from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 
     from typing_extensions import Self, TypeAlias
 
     from narwhals._plan.arrow.dataframe import ArrowDataFrame as Frame
     from narwhals._plan.arrow.typing import (
+        BooleanLengthPreserving,
         ChunkedArray,
         ChunkedArrayAny,
         ChunkedList,
         ChunkedOrScalarAny,
+        ChunkedStruct,
         Indices,
         ListScalar,
         ScalarAny,
     )
     from narwhals._plan.expressions import NamedIR
     from narwhals._plan.typing import Seq
+    from narwhals.typing import UniqueKeepStrategy
 
 Incomplete: TypeAlias = Any
+IntoColumnAgg: TypeAlias = "Callable[[str], ir.AggExpr]"
+"""Helper constructor for single-column aggregations."""
+
+
+class MinMax(ir.AggExpr):
+    """Returns a `Struct({'min': ..., 'max': ...})`.
+
+    https://arrow.apache.org/docs/python/generated/pyarrow.compute.min_max.html#pyarrow.compute.min_max
+    """
+
 
 SUPPORTED_AGG: Mapping[type[agg.AggExpr], acero.Aggregation] = {
     agg.Sum: "hash_sum",
@@ -416,3 +428,47 @@ Dynamically built for use in `ListScalar` aggregations, accounting for version a
 [Hash aggregate]: https://arrow.apache.org/docs/dev/cpp/compute.html#grouped-aggregations-group-by
 [Scalar aggregate]: https://arrow.apache.org/docs/dev/cpp/compute.html#aggregations
 """
+
+
+def _ir_min_max(name: str, /) -> MinMax:
+    return MinMax(expr=ir.col(name))
+
+
+def _boolean_is_unique(
+    indices: ChunkedArrayAny, aggregated: ChunkedStruct, /
+) -> ChunkedArrayAny:
+    min, max = aggregated.flatten()
+    return fn.and_(fn.is_in(indices, min), fn.is_in(indices, max))
+
+
+def _boolean_is_duplicated(
+    indices: ChunkedArrayAny, aggregated: ChunkedStruct, /
+) -> ChunkedArrayAny:
+    return fn.not_(_boolean_is_unique(indices, aggregated))
+
+
+# TODO @dangotbanned: Replace with a function for export?
+BOOLEAN_LENGTH_PRESERVING: Mapping[
+    type[ir.boolean.BooleanFunction], tuple[IntoColumnAgg, BooleanLengthPreserving]
+] = {
+    ir.boolean.IsFirstDistinct: (ir.min, fn.is_in),
+    ir.boolean.IsLastDistinct: (ir.max, fn.is_in),
+    ir.boolean.IsUnique: (_ir_min_max, _boolean_is_unique),
+    ir.boolean.IsDuplicated: (_ir_min_max, _boolean_is_duplicated),
+}
+
+
+def unique_keep_boolean_length_preserving(
+    keep: UniqueKeepStrategy,
+) -> tuple[IntoColumnAgg, BooleanLengthPreserving]:
+    return BOOLEAN_LENGTH_PRESERVING[_UNIQUE_KEEP_BOOLEAN_LENGTH_PRESERVING[keep]]
+
+
+_UNIQUE_KEEP_BOOLEAN_LENGTH_PRESERVING: Mapping[
+    UniqueKeepStrategy, type[ir.boolean.BooleanFunction]
+] = {
+    "any": ir.boolean.IsFirstDistinct,
+    "first": ir.boolean.IsFirstDistinct,
+    "last": ir.boolean.IsLastDistinct,
+    "none": ir.boolean.IsUnique,
+}

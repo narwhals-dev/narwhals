@@ -1,22 +1,18 @@
 from __future__ import annotations
 
 import typing as t
-from collections.abc import Callable
 from typing import TYPE_CHECKING, overload
 
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
-from narwhals._plan import expressions as ir
 from narwhals._plan.arrow.functions._bin_op import and_, gt, gt_eq, lt, lt_eq
-from narwhals._plan.arrow.functions._common import MinMax, is_arrow
 from narwhals._plan.arrow.functions._construction import array, lit
 from narwhals._plan.arrow.functions._dtypes import BOOL
+from narwhals._plan.arrow.guards import is_arrow
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
-
-    from typing_extensions import TypeAlias
 
     from narwhals._arrow.typing import Incomplete
     from narwhals._plan.arrow.typing import (
@@ -25,32 +21,20 @@ if TYPE_CHECKING:
         Arrow,
         ArrowAny,
         BinaryComp,
-        BooleanLengthPreserving,
         BooleanScalar,
         ChunkedArray,
         ChunkedArrayAny,
         ChunkedOrArrayAny,
         ChunkedOrScalar,
         ChunkedOrScalarAny,
-        ChunkedStruct,
         ScalarAny,
         ScalarT,
         UnaryFunction,
     )
-    from narwhals.typing import (
-        ClosedInterval,
-        NonNestedLiteral,
-        NumericLiteral,
-        UniqueKeepStrategy,
-    )
-
-
-IntoColumnAgg: TypeAlias = Callable[[str], ir.AggExpr]
-"""Helper constructor for single-column aggregations."""
+    from narwhals.typing import ClosedInterval, NonNestedLiteral, NumericLiteral
 
 
 __all__ = [
-    "BOOLEAN_LENGTH_PRESERVING",
     "all",
     "any",
     "eq_missing",
@@ -63,7 +47,6 @@ __all__ = [
     "is_null",
     "is_only_nulls",
     "not_",
-    "unique_keep_boolean_length_preserving",
 ]
 
 
@@ -209,48 +192,6 @@ def eq_missing(native: ArrowAny, other: NonNestedLiteral | ArrowAny) -> ArrowAny
     item = array(other if isinstance(other, pa.Scalar) else lit(other, native.type))
     return is_in(native, item)
 
-
-def unique_keep_boolean_length_preserving(
-    keep: UniqueKeepStrategy,
-) -> tuple[IntoColumnAgg, BooleanLengthPreserving]:
-    return BOOLEAN_LENGTH_PRESERVING[_UNIQUE_KEEP_BOOLEAN_LENGTH_PRESERVING[keep]]
-
-
-def _ir_min_max(name: str, /) -> MinMax:
-    return MinMax(expr=ir.col(name))
-
-
-def _boolean_is_unique(
-    indices: ChunkedArrayAny, aggregated: ChunkedStruct, /
-) -> ChunkedArrayAny:
-    min, max = aggregated.flatten()
-    return and_(is_in(indices, min), is_in(indices, max))
-
-
-def _boolean_is_duplicated(
-    indices: ChunkedArrayAny, aggregated: ChunkedStruct, /
-) -> ChunkedArrayAny:
-    return not_(_boolean_is_unique(indices, aggregated))
-
-
-# TODO @dangotbanned: Replace with a function for export?
-BOOLEAN_LENGTH_PRESERVING: Mapping[
-    type[ir.boolean.BooleanFunction], tuple[IntoColumnAgg, BooleanLengthPreserving]
-] = {
-    ir.boolean.IsFirstDistinct: (ir.min, is_in),
-    ir.boolean.IsLastDistinct: (ir.max, is_in),
-    ir.boolean.IsUnique: (_ir_min_max, _boolean_is_unique),
-    ir.boolean.IsDuplicated: (_ir_min_max, _boolean_is_duplicated),
-}
-
-_UNIQUE_KEEP_BOOLEAN_LENGTH_PRESERVING: Mapping[
-    UniqueKeepStrategy, type[ir.boolean.BooleanFunction]
-] = {
-    "any": ir.boolean.IsFirstDistinct,
-    "first": ir.boolean.IsFirstDistinct,
-    "last": ir.boolean.IsLastDistinct,
-    "none": ir.boolean.IsUnique,
-}
 
 _IS_BETWEEN: Mapping[ClosedInterval, tuple[BinaryComp, BinaryComp]] = {
     "left": (gt_eq, lt),

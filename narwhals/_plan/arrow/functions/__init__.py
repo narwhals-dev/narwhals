@@ -5,7 +5,6 @@
 - [x] _bin_op
 - [x] _boolean
 - [x] _categorical -> `cat`
-- [ ] _common (temp)
 - [x] _construction
 - [x] _cumulative
 - [x] _dtypes
@@ -41,6 +40,7 @@ from narwhals._plan.arrow.functions._aggregation import (
     mean,
     median,
     min,
+    mode_all,
     mode_any,
     n_unique,
     null_count,
@@ -50,8 +50,11 @@ from narwhals._plan.arrow.functions._aggregation import (
     var,
 )
 from narwhals._plan.arrow.functions._arithmetic import (
+    abs,
     add,
+    exp,
     floordiv,
+    log,
     modulus,
     multiply,
     power,
@@ -72,7 +75,6 @@ from narwhals._plan.arrow.functions._bin_op import (
     xor,
 )
 from narwhals._plan.arrow.functions._boolean import (
-    BOOLEAN_LENGTH_PRESERVING,
     all,
     any,
     eq_missing,
@@ -85,15 +87,6 @@ from narwhals._plan.arrow.functions._boolean import (
     is_null,
     is_only_nulls,
     not_,
-    unique_keep_boolean_length_preserving,
-)
-from narwhals._plan.arrow.functions._common import (
-    MinMax,
-    abs,
-    exp,
-    is_arrow,
-    log,
-    mode_all,
 )
 from narwhals._plan.arrow.functions._construction import (
     array,
@@ -170,14 +163,12 @@ from narwhals._plan.arrow.functions._vector import (
 
 __all__ = [
     "BOOL",
-    "BOOLEAN_LENGTH_PRESERVING",
     "DATE",
     "F64",
     "I32",
     "I64",
     "U32",
     "ExplodeBuilder",
-    "MinMax",
     "abs",
     "add",
     "all",
@@ -221,7 +212,6 @@ __all__ = [
     "hist_bins",
     "hist_zeroed_data",
     "int_range",
-    "is_arrow",
     "is_between",
     "is_finite",
     "is_in",
@@ -279,7 +269,6 @@ __all__ = [
     "sum",
     "to_table",
     "truediv",
-    "unique_keep_boolean_length_preserving",
     "unsort_indices",
     "var",
     "when_then",

@@ -10,7 +10,7 @@ import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._plan import common
 from narwhals._plan.arrow import compat
-from narwhals._plan.arrow.functions._common import is_arrow
+from narwhals._plan.arrow.guards import is_arrow
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable

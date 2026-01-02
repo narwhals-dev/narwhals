@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import typing as t
 from typing import TYPE_CHECKING
 
@@ -12,17 +13,32 @@ if TYPE_CHECKING:
     from narwhals._plan.arrow.typing import (
         BinaryFunction,
         BinaryNumericTemporal,
+        ChunkedOrScalarAny,
         NumericScalar,
         UnaryNumeric,
     )
 
-__all__ = ["add", "floordiv", "modulus", "multiply", "power", "sqrt", "sub", "truediv"]
+__all__ = [
+    "abs",
+    "add",
+    "exp",
+    "floordiv",
+    "log",
+    "modulus",
+    "multiply",
+    "power",
+    "sqrt",
+    "sub",
+    "truediv",
+]
 
 add = t.cast("BinaryNumericTemporal", pc.add)
 sub = t.cast("BinaryNumericTemporal", pc.subtract)
 multiply = pc.multiply
 power = t.cast("BinaryFunction[NumericScalar, NumericScalar]", pc.power)
 sqrt = t.cast("UnaryNumeric", pc.sqrt)
+abs = t.cast("UnaryNumeric", pc.abs)
+exp = t.cast("UnaryNumeric", pc.exp)
 
 
 def truediv(lhs: Incomplete, rhs: Incomplete) -> Incomplete:
@@ -32,3 +48,8 @@ def truediv(lhs: Incomplete, rhs: Incomplete) -> Incomplete:
 def modulus(lhs: Incomplete, rhs: Incomplete) -> Incomplete:
     floor_div = floordiv(lhs, rhs)
     return sub(lhs, multiply(floor_div, rhs))
+
+
+def log(native: ChunkedOrScalarAny, base: float = math.e) -> ChunkedOrScalarAny:
+    result: ChunkedOrScalarAny = pc.call_function("logb", [native, base])
+    return result

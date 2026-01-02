@@ -12,7 +12,11 @@ from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._plan.arrow import acero, compat, functions as fn
 from narwhals._plan.arrow.common import ArrowFrameSeries as FrameSeries
 from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
-from narwhals._plan.arrow.group_by import ArrowGroupBy as GroupBy, partition_by
+from narwhals._plan.arrow.group_by import (
+    ArrowGroupBy as GroupBy,
+    partition_by,
+    unique_keep_boolean_length_preserving,
+)
 from narwhals._plan.arrow.pivot import pivot_table
 from narwhals._plan.arrow.series import ArrowSeries as Series
 from narwhals._plan.common import temp
@@ -142,7 +146,7 @@ class ArrowDataFrame(
         [`unsort_indices`]: https://github.com/narwhals-dev/narwhals/blob/9b9122b4ab38a6aebe2f09c29ad0f6191952a7a7/narwhals/_plan/arrow/functions.py#L1666-L1697
         """
         subset = tuple(subset or self.columns)
-        into_column_agg, mask = fn.unique_keep_boolean_length_preserving(keep)
+        into_column_agg, mask = unique_keep_boolean_length_preserving(keep)
         idx_name = temp.column_name(self.columns)
         df = self.select_names(*set(subset).union(order_by))
         if order_by:

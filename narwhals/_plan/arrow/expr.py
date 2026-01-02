@@ -14,7 +14,7 @@ from narwhals._plan._guards import (
     is_seq_column,
 )
 from narwhals._plan.arrow import functions as fn
-from narwhals._plan.arrow.group_by import AggSpec
+from narwhals._plan.arrow.group_by import BOOLEAN_LENGTH_PRESERVING, AggSpec
 from narwhals._plan.arrow.series import ArrowSeries as Series
 from narwhals._plan.arrow.typing import ChunkedOrScalarAny, NativeScalar, StoresNativeT_co
 from narwhals._plan.common import temp
@@ -579,7 +579,7 @@ class ArrowExpr(  # type: ignore[misc]
         sort_indices: pa.UInt64Array | None = None,
     ) -> Self:
         # NOTE: This subset of functions can be expressed as a mask applied to indices
-        into_column_agg, mask = fn.BOOLEAN_LENGTH_PRESERVING[type(node.function)]
+        into_column_agg, mask = BOOLEAN_LENGTH_PRESERVING[type(node.function)]
         idx_name = temp.column_name(frame)
         df = frame._with_columns([node.input[0].dispatch(self, frame, name)])
         if sort_indices is not None:

@@ -7,8 +7,9 @@ import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._plan.arrow import compat, options as pa_options
+from narwhals._plan.arrow.functions import _categorical as cat
 from narwhals._plan.arrow.functions._arithmetic import power, sub
-from narwhals._plan.arrow.functions._construction import array, lit
+from narwhals._plan.arrow.functions._construction import array, chunked_array, lit
 from narwhals._plan.arrow.functions._dtypes import F64
 
 if TYPE_CHECKING:
@@ -36,6 +37,7 @@ __all__ = [
     "mean",
     "median",
     "min",
+    "mode_all",
     "mode_any",
     "n_unique",
     "null_count",
@@ -120,3 +122,12 @@ def null_count(native: ChunkedOrArrayAny) -> pa.Int64Scalar:
 
 def mode_any(native: ChunkedArrayAny) -> ScalarAny:
     return first(pc.mode(native, n=1).field("mode"))
+
+
+def mode_all(native: ChunkedArrayAny) -> ChunkedArrayAny:
+    struct_arr = pc.mode(native, n=len(native))
+    indices = cat.encode(struct_arr.field("count"))
+    index_true_modes = lit(0)
+    return chunked_array(
+        struct_arr.field("mode").filter(pc.equal(indices, index_true_modes))
+    )
