@@ -696,8 +696,10 @@ class DaskExpr(
     any_value = not_implemented()
     filter = not_implemented()
     first = not_implemented()
-    rank = not_implemented()
     last = not_implemented()
+    max_by = not_implemented()
+    min_by = not_implemented()
+    rank = not_implemented()
 
     # namespaces
     list: not_implemented = not_implemented()  # type: ignore[assignment]
