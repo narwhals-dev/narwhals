@@ -61,7 +61,9 @@ NonStrHashable: TypeAlias = Any
 
 _REMAP_ORDERED_INDEX: Mapping[NarwhalsAggregation, Literal[0, -1]] = {
     "first": 0,
+    "min_by": 0,
     "last": -1,
+    "max_by": -1,
     "any_value": 0,
 }
 
@@ -168,10 +170,10 @@ class AggExpr:
         return self.leaf_name == "len"
 
     def is_last(self) -> bool:
-        return self.leaf_name == "last"
+        return self.leaf_name in {"last", "max_by"}
 
     def is_first(self) -> bool:
-        return self.leaf_name == "first"
+        return self.leaf_name in {"first", "min_by"}
 
     def is_mode(self) -> bool:
         return self.leaf_name == "mode"
@@ -224,7 +226,9 @@ class PandasLikeGroupBy(
         "all": "all",
         "any": "any",
         "first": "nth",
+        "min_by": "nth",
         "last": "nth",
+        "max_by": "nth",
         "any_value": "nth",
     }
     _original_columns: tuple[str, ...]
@@ -269,21 +273,23 @@ class PandasLikeGroupBy(
     def agg(self, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:
         all_aggs_are_simple = True
         agg_exprs: list[AggExpr] = []
-        order_by = ()
+        by = ()
         for expr in exprs:
             agg_exprs.append(AggExpr(expr).with_expand_names(self))
             if not self._is_simple(expr):
                 all_aggs_are_simple = False
             md = next(expr._metadata.op_nodes_reversed())
-            if _order_by := md.kwargs.get("order_by", ()):
-                if order_by and _order_by != order_by:
-                    msg = f"Only one `order_by` can be specified in `group_by`. Found both {order_by} and {_order_by}."
+            if md.name not in _REMAP_ORDERED_INDEX:
+                continue
+            if _by := md.kwargs.get("by", ()):
+                if by and _by != by:
+                    msg = f"Only one `by` can be specified in `group_by`. Found both {by} and {_by}."
                     raise NotImplementedError(msg)
-                order_by = _order_by
+                by = _by
 
-        if order_by:
+        if by:
             grouped: NativeGroupBy = self._native.sort_values(
-                list(order_by), na_position="first"
+                list(by), na_position="first"
             ).groupby(self._keys.copy(), **self._group_by_kwargs)
         else:
             grouped = self._native.groupby(self._keys.copy(), **self._group_by_kwargs)
