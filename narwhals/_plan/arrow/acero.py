@@ -25,6 +25,7 @@ import pyarrow.acero as pac
 import pyarrow.compute as pc  # ignore-banned-import
 from pyarrow.acero import Declaration as Decl
 
+from narwhals._plan.arrow.guards import is_expression
 from narwhals._plan.common import ensure_list_str, temp
 from narwhals._plan.typing import NonCrossJoinStrategy, OneOrSeq
 from narwhals._utils import check_column_names_are_unique
@@ -40,7 +41,7 @@ if TYPE_CHECKING:
         Sequence,
     )
 
-    from typing_extensions import TypeAlias, TypeIs
+    from typing_extensions import TypeAlias
 
     from narwhals._arrow.typing import (  # type: ignore[attr-defined]
         AggregateOptions as _AggregateOptions,
@@ -117,12 +118,8 @@ def cols_iter(names: Iterable[str], /) -> Iterator[Expr]:
         yield col(name)
 
 
-def _is_expr(obj: Any) -> TypeIs[pc.Expression]:
-    return isinstance(obj, pc.Expression)
-
-
 def _parse_into_expr(into: IntoExpr, /, *, str_as_lit: bool = False) -> Expr:
-    if _is_expr(into):
+    if is_expression(into):
         return into
     if isinstance(into, str) and not str_as_lit:
         return col(into)
@@ -223,7 +220,7 @@ def project(**named_exprs: IntoExpr) -> Decl:
 
 
 def _add_column(native: pa.Table, index: int, name: str, values: IntoExpr) -> Decl:
-    column = values if _is_expr(values) else lit(values)
+    column = values if is_expression(values) else lit(values)
     schema = native.schema
     schema_names = schema.names
     if index == 0:
@@ -323,8 +320,8 @@ def _join_asof_strategy_to_tolerance(
     if strategy == "nearest":
         msg = "Only 'backward' and 'forward' strategies are currently supported for `pyarrow`"
         raise NotImplementedError(msg)
-    lower = fn.min_horizontal(fn.min_(left_on), fn.min_(right_on))
-    upper = fn.max_horizontal(fn.max_(left_on), fn.max_(right_on))
+    lower = fn.min_horizontal(fn.min(left_on), fn.min(right_on))
+    upper = fn.max_horizontal(fn.max(left_on), fn.max(right_on))
     scalar = fn.sub(lower, upper) if strategy == "backward" else fn.sub(upper, lower)
     tolerance: int = fn.cast(scalar, fn.I64).as_py()
     return tolerance

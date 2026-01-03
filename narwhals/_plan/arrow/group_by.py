@@ -17,25 +17,37 @@ from narwhals._utils import Implementation, qualified_type_name
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Mapping, Sequence
+    from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 
     from typing_extensions import Self, TypeAlias
 
     from narwhals._plan.arrow.dataframe import ArrowDataFrame as Frame
     from narwhals._plan.arrow.typing import (
-        ArrayAny,
+        BooleanLengthPreserving,
         ChunkedArray,
         ChunkedArrayAny,
         ChunkedList,
         ChunkedOrScalarAny,
+        ChunkedStruct,
         Indices,
         ListScalar,
         ScalarAny,
     )
     from narwhals._plan.expressions import NamedIR
     from narwhals._plan.typing import Seq
+    from narwhals.typing import UniqueKeepStrategy
 
 Incomplete: TypeAlias = Any
+IntoColumnAgg: TypeAlias = "Callable[[str], ir.AggExpr]"
+"""Helper constructor for single-column aggregations."""
+
+
+class MinMax(ir.AggExpr):
+    """Returns a `Struct({'min': ..., 'max': ...})`.
+
+    https://arrow.apache.org/docs/python/generated/pyarrow.compute.min_max.html#pyarrow.compute.min_max
+    """
+
 
 SUPPORTED_AGG: Mapping[type[agg.AggExpr], acero.Aggregation] = {
     agg.Sum: "hash_sum",
@@ -50,7 +62,7 @@ SUPPORTED_AGG: Mapping[type[agg.AggExpr], acero.Aggregation] = {
     agg.NUnique: "hash_count_distinct",
     agg.First: "hash_first",
     agg.Last: "hash_last",
-    fn.MinMax: "hash_min_max",
+    MinMax: "hash_min_max",
 }
 SUPPORTED_LIST_AGG: Mapping[type[ir.lists.Aggregation], type[agg.AggExpr]] = {
     ir.lists.Mean: agg.Mean,
@@ -225,14 +237,14 @@ class AggSpec:
             func = HASH_TO_SCALAR_NAME[self._function]
             if not scalar.is_valid:
                 return fn.lit(None, SCALAR_OUTPUT_TYPE.get(func, scalar.type.value_type))
-            result = pc.call_function(func, [scalar.values], self._option)
+            result = fn.meta.call(func, scalar.values, options=self._option)
             return result
         result = self.over_index(fn.ExplodeBuilder().explode_with_indices(native), "idx")
         result = fn.when_then(native.is_valid(), result)
         if self._is_n_unique():
             # NOTE: Exploding `[]` becomes `[None]` - so we need to adjust the unique count *iff* we were unlucky
-            is_sublist_empty = fn.eq(fn.list_len(native), fn.lit(0))
-            if fn.any_(is_sublist_empty).as_py():
+            is_sublist_empty = fn.eq(fn.list.len(native), fn.lit(0))
+            if fn.any(is_sublist_empty).as_py():
                 result = fn.when_then(is_sublist_empty, fn.lit(0), result)
         return result
 
@@ -306,7 +318,7 @@ class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
             if by.null_count:
                 temp_name = temp.column_name({*column_names, *agg_names})
                 key_names = [temp_name]
-                native = native.append_column(temp_name, dictionary_encode(by))
+                native = native.append_column(temp_name, fn.cat.encode(by))
                 compliant = from_native(native)
         else:
             partitions = native.select(key_names)
@@ -315,7 +327,7 @@ class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
             for orig_name, by in zip(key_names, partitions.columns):
                 if by.null_count:
                     by_name = next(it_temp_names)
-                    native = native.append_column(by_name, dictionary_encode(by))
+                    native = native.append_column(by_name, fn.cat.encode(by))
                 else:
                     by_name = orig_name
                 by_names.append(by_name)
@@ -332,24 +344,6 @@ class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
             .join_inner(windowed, key_names)
             .drop(key_names)
         )
-
-
-@overload
-def dictionary_encode(native: ChunkedArrayAny, /) -> pa.Int32Array: ...
-@overload
-def dictionary_encode(
-    native: ChunkedArrayAny, /, *, include_values: Literal[True]
-) -> tuple[ArrayAny, pa.Int32Array]: ...
-def dictionary_encode(
-    native: ChunkedArrayAny, /, *, include_values: bool = False
-) -> tuple[ArrayAny, pa.Int32Array] | pa.Int32Array:
-    """Extra typing for `pc.dictionary_encode`."""
-    da: Incomplete = native.dictionary_encode("encode").combine_chunks()
-    indices: pa.Int32Array = da.indices
-    if not include_values:
-        return indices
-    values: ArrayAny = da.dictionary
-    return values, indices
 
 
 def _composite_key(native: pa.Table, *, separator: str = "") -> ChunkedArray:
@@ -374,7 +368,7 @@ def _partition_by_one(
     native: pa.Table, by: str, *, include_key: bool = True
 ) -> Iterator[pa.Table]:
     """Optimized path for single-column partition."""
-    values, indices = dictionary_encode(native.column(by), include_values=True)
+    values, indices = fn.cat.encode(native.column(by), include_categories=True)
     if not include_key:
         native = native.remove_column(native.schema.get_field_index(by))
     for idx in range(len(values)):
@@ -434,3 +428,47 @@ Dynamically built for use in `ListScalar` aggregations, accounting for version a
 [Hash aggregate]: https://arrow.apache.org/docs/dev/cpp/compute.html#grouped-aggregations-group-by
 [Scalar aggregate]: https://arrow.apache.org/docs/dev/cpp/compute.html#aggregations
 """
+
+
+def _ir_min_max(name: str, /) -> MinMax:
+    return MinMax(expr=ir.col(name))
+
+
+def _boolean_is_unique(
+    indices: ChunkedArrayAny, aggregated: ChunkedStruct, /
+) -> ChunkedArrayAny:
+    min, max = aggregated.flatten()
+    return fn.and_(fn.is_in(indices, min), fn.is_in(indices, max))
+
+
+def _boolean_is_duplicated(
+    indices: ChunkedArrayAny, aggregated: ChunkedStruct, /
+) -> ChunkedArrayAny:
+    return fn.not_(_boolean_is_unique(indices, aggregated))
+
+
+# TODO @dangotbanned: Replace with a function for export?
+BOOLEAN_LENGTH_PRESERVING: Mapping[
+    type[ir.boolean.BooleanFunction], tuple[IntoColumnAgg, BooleanLengthPreserving]
+] = {
+    ir.boolean.IsFirstDistinct: (ir.min, fn.is_in),
+    ir.boolean.IsLastDistinct: (ir.max, fn.is_in),
+    ir.boolean.IsUnique: (_ir_min_max, _boolean_is_unique),
+    ir.boolean.IsDuplicated: (_ir_min_max, _boolean_is_duplicated),
+}
+
+
+def unique_keep_boolean_length_preserving(
+    keep: UniqueKeepStrategy,
+) -> tuple[IntoColumnAgg, BooleanLengthPreserving]:
+    return BOOLEAN_LENGTH_PRESERVING[_UNIQUE_KEEP_BOOLEAN_LENGTH_PRESERVING[keep]]
+
+
+_UNIQUE_KEEP_BOOLEAN_LENGTH_PRESERVING: Mapping[
+    UniqueKeepStrategy, type[ir.boolean.BooleanFunction]
+] = {
+    "any": ir.boolean.IsFirstDistinct,
+    "first": ir.boolean.IsFirstDistinct,
+    "last": ir.boolean.IsLastDistinct,
+    "none": ir.boolean.IsUnique,
+}

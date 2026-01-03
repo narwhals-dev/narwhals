@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 # ruff: noqa: PLC0414
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Literal, Protocol, overload
 
 from narwhals._typing_compat import TypeVar
@@ -28,7 +28,12 @@ if TYPE_CHECKING:
     from typing_extensions import ParamSpec, TypeAlias
 
     from narwhals._native import NativeDataFrame, NativeSeries
-    from narwhals.typing import SizedMultiIndexSelector as _SizedMultiIndexSelector
+    from narwhals._plan.typing import OneOrIterable
+    from narwhals._translate import ArrowStreamExportable
+    from narwhals.typing import (
+        SizedMultiIndexSelector as _SizedMultiIndexSelector,
+        _AnyDArray,
+    )
 
     UInt32Type: TypeAlias = "Uint32Type"
     StringType: TypeAlias = "_StringType | _LargeStringType"
@@ -37,8 +42,6 @@ if TYPE_CHECKING:
     IntegerScalar: TypeAlias = "Scalar[IntegerType]"
     DateScalar: TypeAlias = "Scalar[Date32Type]"
     ListScalar: TypeAlias = "Scalar[pa.ListType[DataTypeT_co]]"
-    BooleanScalar: TypeAlias = "Scalar[BoolType]"
-    """Only use this for a parameter type, not as a return type!"""
     NumericScalar: TypeAlias = "pc.NumericScalar"
 
     PrimitiveNumericType: TypeAlias = "types._Integer | types._Floating"
@@ -48,8 +51,8 @@ if TYPE_CHECKING:
     BasicType: TypeAlias = (
         "NumericOrTemporalType | StringOrBinaryType | BoolType | lib.NullType"
     )
-    NonListNestedType: TypeAlias = "pa.StructType | pa.DictionaryType[Any, Any] | pa.MapType[Any, Any] | pa.UnionType"
-    NonListType: TypeAlias = "BasicType | NonListNestedType"
+    NonListNestedType: TypeAlias = "pa.StructType | pa.DictionaryType[Any, Any, Any] | pa.MapType[Any, Any, Any] | pa.UnionType"
+    NonListType: TypeAlias = "IntoHashableType | NonListNestedType"
     NestedType: TypeAlias = "NonListNestedType | pa.ListType[Any]"
     NonListTypeT = TypeVar("NonListTypeT", bound="NonListType")
     ListTypeT = TypeVar("ListTypeT", bound="pa.ListType[Any]")
@@ -63,6 +66,11 @@ if TYPE_CHECKING:
         @property
         def columns(self) -> Sequence[NativeArrowSeries]: ...
 
+    class _NumpyArray(Protocol):
+        def __array__(self) -> _AnyDArray: ...
+
+    # TODO @dangotbanned: Move out of `TYPE_CHECKING` for docs after (3, 10) minimum
+    # https://github.com/narwhals-dev/narwhals/issues/3204
     P = ParamSpec("P")
 
     class UnaryFunctionP(Protocol[P]):
@@ -82,6 +90,15 @@ if TYPE_CHECKING:
             self, indices: ChunkedArrayAny, aggregated: ChunkedArrayAny, /
         ) -> ChunkedArrayAny: ...
 
+
+BooleanScalar: TypeAlias = "Scalar[BoolType]"
+"""Only use this for a parameter type, not as a return type!"""
+
+IntoHashableType: TypeAlias = "BasicType | pa.DictionaryType[Any, Any, Any]"
+"""Types that can be encoded into a dictionary."""
+
+IntoHashableScalar: TypeAlias = "Scalar[IntoHashableType]"
+"""Values that can be encoded into a dictionary."""
 
 ScalarT = TypeVar("ScalarT", bound="pa.Scalar[Any]", default="pa.Scalar[Any]")
 ScalarPT_contra = TypeVar(
@@ -131,50 +148,53 @@ class UnaryFunction(Protocol[ScalarPT_contra, ScalarRT_co]):
 class BinaryFunction(Protocol[ScalarPT_contra, ScalarRT_co]):
     @overload
     def __call__(
-        self, x: ChunkedArray[ScalarPT_contra], y: ChunkedArray[ScalarPT_contra], /
+        self, lhs: ChunkedArray[ScalarPT_contra], rhs: ChunkedArray[ScalarPT_contra], /
     ) -> ChunkedArray[ScalarRT_co]: ...
     @overload
     def __call__(
-        self, x: Array[ScalarPT_contra], y: Array[ScalarPT_contra], /
+        self, lhs: Array[ScalarPT_contra], rhs: Array[ScalarPT_contra], /
     ) -> Array[ScalarRT_co]: ...
     @overload
-    def __call__(self, x: ScalarPT_contra, y: ScalarPT_contra, /) -> ScalarRT_co: ...
+    def __call__(self, lhs: ScalarPT_contra, rhs: ScalarPT_contra, /) -> ScalarRT_co: ...
     @overload
     def __call__(
-        self, x: ChunkedArray[ScalarPT_contra], y: ScalarPT_contra, /
+        self, lhs: ChunkedArray[ScalarPT_contra], rhs: ScalarPT_contra, /
     ) -> ChunkedArray[ScalarRT_co]: ...
     @overload
     def __call__(
-        self, x: Array[ScalarPT_contra], y: ScalarPT_contra, /
-    ) -> Array[ScalarRT_co]: ...
-    @overload
-    def __call__(
-        self, x: ScalarPT_contra, y: ChunkedArray[ScalarPT_contra], /
-    ) -> ChunkedArray[ScalarRT_co]: ...
-    @overload
-    def __call__(
-        self, x: ScalarPT_contra, y: Array[ScalarPT_contra], /
+        self, lhs: Array[ScalarPT_contra], rhs: ScalarPT_contra, /
     ) -> Array[ScalarRT_co]: ...
     @overload
     def __call__(
-        self, x: ChunkedArray[ScalarPT_contra], y: Array[ScalarPT_contra], /
+        self, lhs: ScalarPT_contra, rhs: ChunkedArray[ScalarPT_contra], /
     ) -> ChunkedArray[ScalarRT_co]: ...
     @overload
     def __call__(
-        self, x: Array[ScalarPT_contra], y: ChunkedArray[ScalarPT_contra], /
+        self, lhs: ScalarPT_contra, rhs: Array[ScalarPT_contra], /
+    ) -> Array[ScalarRT_co]: ...
+    @overload
+    def __call__(
+        self, lhs: ChunkedArray[ScalarPT_contra], rhs: Array[ScalarPT_contra], /
     ) -> ChunkedArray[ScalarRT_co]: ...
     @overload
     def __call__(
-        self, x: ChunkedOrScalar[ScalarPT_contra], y: ChunkedOrScalar[ScalarPT_contra], /
+        self, lhs: Array[ScalarPT_contra], rhs: ChunkedArray[ScalarPT_contra], /
+    ) -> ChunkedArray[ScalarRT_co]: ...
+    @overload
+    def __call__(
+        self,
+        lhs: ChunkedOrScalar[ScalarPT_contra],
+        rhs: ChunkedOrScalar[ScalarPT_contra],
+        /,
     ) -> ChunkedOrScalar[ScalarRT_co]: ...
 
     @overload
     def __call__(
-        self, x: Arrow[ScalarPT_contra], y: Arrow[ScalarPT_contra], /
+        self, lhs: Arrow[ScalarPT_contra], rhs: Arrow[ScalarPT_contra], /
     ) -> Arrow[ScalarRT_co]: ...
 
     def __call__(
-        self, x: Arrow[ScalarPT_contra], y: Arrow[ScalarPT_contra], /
+        self, lhs: Arrow[ScalarPT_contra], rhs: Arrow[ScalarPT_contra], /
     ) -> Arrow[ScalarRT_co]: ...
 
 
@@ -208,10 +228,22 @@ ChunkedOrArrayT = TypeVar("ChunkedOrArrayT", ChunkedArrayAny, ArrayAny)
 ChunkedOrScalarT = TypeVar("ChunkedOrScalarT", ChunkedArrayAny, ScalarAny)
 Indices: TypeAlias = "_SizedMultiIndexSelector[ChunkedOrArray[pc.IntegerScalar]]"
 
+# Common spellings for complicated types
 ChunkedStruct: TypeAlias = "ChunkedArray[pa.StructScalar]"
 StructArray: TypeAlias = "pa.StructArray | Array[pa.StructScalar]"
 ChunkedList: TypeAlias = "ChunkedArray[ListScalar[DataTypeT_co]]"
+Struct: TypeAlias = "ChunkedStruct | pa.StructArray | pa.StructScalar"
+"""(Concrete) Struct-typed arrow data."""
+
 ListArray: TypeAlias = "Array[ListScalar[DataTypeT_co]]"
+ChunkedOrArrayHashable: TypeAlias = "ChunkedOrArray[IntoHashableScalar]"
+"""Arrow arrays that can be [dictionary-encoded].
+
+Boolean, Null, Numeric, Temporal, Binary or String-typed, + Dictionary ([no-op]).
+
+[dictionary-encoded]: https://arrow.apache.org/cookbook/py/create.html#store-categorical-data
+[no-op]: https://arrow.apache.org/docs/cpp/compute.html#associative-transforms
+"""
 
 Arrow: TypeAlias = "ChunkedOrScalar[ScalarT_co] | Array[ScalarT_co]"
 ArrowAny: TypeAlias = "ChunkedOrScalarAny | ArrayAny"
@@ -220,6 +252,10 @@ ArrowT = TypeVar("ArrowT", bound=ArrowAny)
 ArrowListT = TypeVar("ArrowListT", bound="Arrow[ListScalar[Any]]")
 Predicate: TypeAlias = "Arrow[BooleanScalar]"
 """Any `pyarrow` container that wraps boolean."""
+
+IntoChunkedArray: TypeAlias = (
+    "ArrowAny | list[Iterable[Any]] | OneOrIterable[ArrowStreamExportable | _NumpyArray]"
+)
 
 NativeScalar: TypeAlias = ScalarAny
 BinOp: TypeAlias = Callable[..., ChunkedOrScalarAny]
@@ -239,3 +275,5 @@ RankMethodSingle: TypeAlias = Literal["min", "max", "dense", "ordinal"]
 
 `"average"` requires calculating both `"min"` and `"max"`.
 """
+
+SearchSortedSide: TypeAlias = Literal["left", "right"]

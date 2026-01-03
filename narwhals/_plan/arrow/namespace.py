@@ -173,7 +173,9 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
         aligned = (ser.native for ser in self._expr.align(exprs))
         separator = node.function.separator
         ignore_nulls = node.function.ignore_nulls
-        result = fn.concat_str(*aligned, separator=separator, ignore_nulls=ignore_nulls)
+        result = fn.str.concat_str(
+            *aligned, separator=separator, ignore_nulls=ignore_nulls
+        )
         if isinstance(result, pa.Scalar):
             return self._scalar.from_native(result, name, self.version)
         return self._expr.from_native(result, name, self.version)
