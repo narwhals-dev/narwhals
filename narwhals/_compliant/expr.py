@@ -809,6 +809,9 @@ class EagerExpr(
     def exp(self) -> Self:
         return self._reuse_series("exp")
 
+    def sin(self) -> Self:
+        return self._reuse_series("sin")
+
     def sqrt(self) -> Self:
         return self._reuse_series("sqrt")
 
