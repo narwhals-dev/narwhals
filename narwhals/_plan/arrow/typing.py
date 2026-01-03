@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 # ruff: noqa: PLC0414
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Literal, Protocol, overload
 
 from narwhals._typing_compat import TypeVar
@@ -28,7 +28,12 @@ if TYPE_CHECKING:
     from typing_extensions import ParamSpec, TypeAlias
 
     from narwhals._native import NativeDataFrame, NativeSeries
-    from narwhals.typing import SizedMultiIndexSelector as _SizedMultiIndexSelector
+    from narwhals._plan.typing import OneOrIterable
+    from narwhals._translate import ArrowStreamExportable
+    from narwhals.typing import (
+        SizedMultiIndexSelector as _SizedMultiIndexSelector,
+        _AnyDArray,
+    )
 
     UInt32Type: TypeAlias = "Uint32Type"
     StringType: TypeAlias = "_StringType | _LargeStringType"
@@ -60,6 +65,9 @@ if TYPE_CHECKING:
         def column(self, *args: Any, **kwds: Any) -> NativeArrowSeries: ...
         @property
         def columns(self) -> Sequence[NativeArrowSeries]: ...
+
+    class _NumpyArray(Protocol):
+        def __array__(self) -> _AnyDArray: ...
 
     # TODO @dangotbanned: Move out of `TYPE_CHECKING` for docs after (3, 10) minimum
     # https://github.com/narwhals-dev/narwhals/issues/3204
@@ -241,6 +249,10 @@ ArrowT = TypeVar("ArrowT", bound=ArrowAny)
 ArrowListT = TypeVar("ArrowListT", bound="Arrow[ListScalar[Any]]")
 Predicate: TypeAlias = "Arrow[BooleanScalar]"
 """Any `pyarrow` container that wraps boolean."""
+
+IntoChunkedArray: TypeAlias = (
+    "ArrowAny | list[Iterable[Any]] | OneOrIterable[ArrowStreamExportable | _NumpyArray]"
+)
 
 NativeScalar: TypeAlias = ScalarAny
 BinOp: TypeAlias = Callable[..., ChunkedOrScalarAny]

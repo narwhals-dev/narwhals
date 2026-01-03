@@ -117,7 +117,7 @@ def linear_space(
         msg = f"Number of samples, {num_samples}, must be non-negative."
         raise ValueError(msg)
     if num_samples == 0:
-        return chunked_array([[]], F64)
+        return chunked_array([], F64)
     if num_samples == 1:
         if closed == "none":
             value = (end + start) * 0.5
@@ -125,7 +125,7 @@ def linear_space(
             value = float(start)
         else:
             value = float(end)
-        return chunked_array([[value]], F64)
+        return chunked_array(lit(value, F64))
     n = num_samples
     span = float(end - start)
     if closed == "none":

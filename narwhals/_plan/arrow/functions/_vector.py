@@ -124,7 +124,7 @@ def search_sorted(
     if isinstance(indices, np.generic):
         return lit(indices)
     if isinstance(native, pa.ChunkedArray):
-        return chunked_array([indices])
+        return chunked_array(indices)
     return array(indices)
 
 

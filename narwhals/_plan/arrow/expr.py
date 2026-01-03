@@ -882,7 +882,7 @@ class ArrowScalar(
         previous = node.input[0].dispatch(self, frame, name)
         if previous.native.is_valid:
             return previous
-        chunked = fn.chunked_array([[]], previous.native.type)
+        chunked = fn.chunked_array([], previous.native.type)
         return ArrowExpr.from_native(chunked, name, version=self.version)
 
     @property
