@@ -60,11 +60,11 @@ _DISPATCH_BINARY: Mapping[type[ops.Operator], BinOp] = {
     ops.GtEq: gt_eq,
     # BinaryFunction (well it should be)
     ops.Add: arith.add,  # BinaryNumericTemporal
-    ops.Sub: arith.sub,  # pyarrow-stubs
-    ops.Multiply: arith.multiply,  # pyarrow-stubs
-    ops.TrueDivide: arith.truediv,  # [[Any, Any], Any]
-    ops.FloorDivide: arith.floordiv,  # [[ArrayOrScalar, ArrayOrScalar], Any]
-    ops.Modulus: arith.modulus,  # [[Any, Any], Any]
+    ops.Sub: arith.sub,  # BinaryNumericTemporal
+    ops.Multiply: arith.multiply,  # BinaryNumericTemporal
+    ops.TrueDivide: arith.truediv,  # [[ChunkedOrScalarAny, ChunkedOrScalarAny], ChunkedOrScalarAny]
+    ops.FloorDivide: arith.floordiv,  # BinaryNumericTemporal
+    ops.Modulus: arith.modulus,  # [[ChunkedOrScalarAny, ChunkedOrScalarAny], ChunkedOrScalarAny]
     # BinaryLogical
     ops.And: and_,
     ops.Or: or_,

@@ -138,6 +138,6 @@ def linear_space(
         d = span / n
     else:
         d = span / (n - 1)
-    ca: ChunkedArray[pc.NumericScalar] = multiply(int_range(0, n).cast(F64), lit(d))
+    ca = multiply(int_range(0, n).cast(F64), lit(d))
     ca = add(ca, lit(start, F64))
     return ca  # noqa: RET504

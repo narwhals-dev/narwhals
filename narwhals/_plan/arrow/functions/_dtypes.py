@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from narwhals._utils import Version
     from narwhals.typing import IntoArrowSchema, IntoDType
 
-__all__ = [
+__all__ = [  # noqa: RUF022
     "BOOL",
     "DATE",
     "F64",
@@ -37,6 +37,9 @@ __all__ = [
     "cast_table",
     "dtype_native",
     "string_type",
+    # Not to be exported to `functions.__all__`
+    "is_integer",
+    "is_large_string",
 ]
 
 # NOTE: Common data type instances to share.
@@ -48,6 +51,9 @@ I64: Final = pa.int64()
 F64: Final = pa.float64()
 BOOL: Final = pa.bool_()
 DATE: Final = pa.date32()
+
+is_integer: Final = pa.types.is_integer
+is_large_string: Final = pa.types.is_large_string
 
 
 @overload
@@ -103,9 +109,7 @@ def string_type(dtypes: Iterable[DataType] = (), /) -> StringType:
 
     [apache/arrow#45717]: https://github.com/apache/arrow/issues/45717
     """
-    return (
-        pa.large_string() if any(_is_large_string(tp) for tp in dtypes) else pa.string()
-    )
+    return pa.large_string() if any(is_large_string(tp) for tp in dtypes) else pa.string()
 
 
 def _cast_schema(
@@ -128,6 +132,3 @@ def _is_into_pyarrow_schema(obj: Mapping[Any, Any]) -> TypeIs[Mapping[str, DataT
         and isinstance(first[0], str)
         and isinstance(first[1], pa.DataType)
     )
-
-
-_is_large_string = pa.types.is_large_string

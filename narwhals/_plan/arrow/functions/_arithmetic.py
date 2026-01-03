@@ -6,11 +6,11 @@ from typing import TYPE_CHECKING
 
 import pyarrow.compute as pc  # ignore-banned-import
 
-from narwhals._arrow.utils import cast_for_truediv, floordiv_compat as _floordiv
+from narwhals._arrow.utils import floordiv_compat as _floordiv
+from narwhals._plan.arrow.functions._dtypes import F64, is_integer
 from narwhals._plan.arrow.functions.meta import call
 
 if TYPE_CHECKING:
-    from narwhals._arrow.typing import Incomplete
     from narwhals._plan.arrow.typing import (
         BinaryFunction,
         BinaryNumericTemporal,
@@ -37,7 +37,7 @@ add = t.cast("BinaryNumericTemporal", pc.add)
 """Equivalent to `lhs + rhs`."""
 sub = t.cast("BinaryNumericTemporal", pc.subtract)
 """Equivalent to `lhs - rhs`."""
-multiply = pc.multiply
+multiply = t.cast("BinaryNumericTemporal", pc.multiply)
 """Equivalent to `lhs * rhs`."""
 floordiv = t.cast("BinaryNumericTemporal", _floordiv)
 """Equivalent to `lhs // rhs`."""
@@ -51,15 +51,18 @@ exp = t.cast("UnaryNumeric", pc.exp)
 """Compute the exponential, element-wise."""
 
 
-def truediv(lhs: Incomplete, rhs: Incomplete, /) -> Incomplete:
+def truediv(lhs: ChunkedOrScalarAny, rhs: ChunkedOrScalarAny, /) -> ChunkedOrScalarAny:
     """Equivalent to `lhs / rhs`."""
-    return pc.divide(*cast_for_truediv(lhs, rhs))
+    if is_integer(lhs.type) and is_integer(rhs.type):
+        lhs, rhs = lhs.cast(F64, safe=False), rhs.cast(F64, safe=False)
+    result: ChunkedOrScalarAny = call("divide", lhs, rhs)
+    return result
 
 
-def modulus(lhs: Incomplete, rhs: Incomplete, /) -> Incomplete:
+def modulus(lhs: ChunkedOrScalarAny, rhs: ChunkedOrScalarAny, /) -> ChunkedOrScalarAny:
     """Equivalent to `lhs % rhs`."""
-    floor_div = floordiv(lhs, rhs)
-    return sub(lhs, multiply(floor_div, rhs))
+    result: ChunkedOrScalarAny = sub(lhs, multiply(floordiv(lhs, rhs), rhs))
+    return result
 
 
 def log(native: ChunkedOrScalarAny, base: float = math.e) -> ChunkedOrScalarAny:
