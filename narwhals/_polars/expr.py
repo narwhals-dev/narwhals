@@ -185,6 +185,12 @@ class PolarsExpr:
         )
         return self._with_native(native)
 
+    def min_by(self, by: Sequence[str]) -> Self:
+        return self._with_native(self.native.sort_by(*by).first())
+
+    def max_by(self, by: Sequence[str]) -> Self:
+        return self._with_native(self.native.sort_by(*by, descending=True).first())
+
     def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
         kwds = self._renamed_min_periods(min_samples)
         native = self.native.rolling_sum(window_size=window_size, center=center, **kwds)

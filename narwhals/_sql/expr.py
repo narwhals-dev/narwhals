@@ -760,6 +760,34 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
 
         return self._with_window_function(func)
 
+    def min_by(self, by: Sequence[str]) -> Self:
+        def f(expr: NativeExprT) -> NativeExprT:
+            return self._first(expr, *by)
+
+        def window_f(
+            df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
+        ) -> Sequence[NativeExprT]:
+            return [
+                self._window_expression(self._first(expr, *by), inputs.partition_by)
+                for expr in self(df)
+            ]
+
+        return self._with_callable(f, window_f)
+
+    def max_by(self, by: Sequence[str]) -> Self:
+        def f(expr: NativeExprT) -> NativeExprT:
+            return self._last(expr, *by)
+
+        def window_f(
+            df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
+        ) -> Sequence[NativeExprT]:
+            return [
+                self._window_expression(self._last(expr, *by), inputs.partition_by)
+                for expr in self(df)
+            ]
+
+        return self._with_callable(f, window_f)
+
     def any_value(self, *, ignore_nulls: bool) -> Self:
         return self._with_callable(
             lambda expr: self._any_value(expr, ignore_nulls=ignore_nulls)

@@ -1688,6 +1688,62 @@ class Expr:
         """
         return self._append_node(ExprNode(ExprKind.ORDERABLE_AGGREGATION, "last"))
 
+    def min_by(self, by: str | Iterable[str]) -> Self:
+        """Return the row where the given column(s) are minimized.
+
+        Arguments:
+            by: Column(s) to minimize by.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> data = {"a": [10, 20, 30], "b": [3, 1, 2]}
+            >>> df_native = pd.DataFrame(data)
+            >>> df = nw.from_native(df_native)
+            >>> df.select(nw.col("a").min_by(by="b"))
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |        a         |
+            |     0  20        |
+            └──────────────────┘
+        """
+        return self._append_node(
+            ExprNode(
+                ExprKind.AGGREGATION,
+                "min_by",
+                order_by=[by] if isinstance(by, str) else by,
+            )
+        )
+
+    def max_by(self, by: str | Iterable[str]) -> Self:
+        """Return the row where the given column(s) are maximized.
+
+        Arguments:
+            by: Column(s) to maximize by.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> data = {"a": [10, 20, 30], "b": [3, 1, 2]}
+            >>> df_native = pd.DataFrame(data)
+            >>> df = nw.from_native(df_native)
+            >>> df.select(nw.col("a").max_by(by="b"))
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |        a         |
+            |     0  30        |
+            └──────────────────┘
+        """
+        return self._append_node(
+            ExprNode(
+                ExprKind.AGGREGATION,
+                "max_by",
+                order_by=[by] if isinstance(by, str) else by,
+            )
+        )
+
     def mode(self, *, keep: ModeKeepStrategy = "all") -> Self:
         r"""Compute the most occurring value(s).
 

@@ -140,6 +140,8 @@ class CompliantExpr(
     def median(self) -> Self: ...
     def first(self) -> Self: ...
     def last(self) -> Self: ...
+    def min_by(self, by: Sequence[str]) -> Self: ...
+    def max_by(self, by: Sequence[str]) -> Self: ...
     def skew(self) -> Self: ...
     def kurtosis(self) -> Self: ...
     def std(self, *, ddof: int) -> Self: ...
@@ -824,6 +826,30 @@ class EagerExpr(
 
     def last(self) -> Self:
         return self._reuse_series("last", returns_scalar=True)
+
+    def min_by(self, by: Sequence[str]) -> Self:
+        def func(df: EagerDataFrameT) -> Sequence[Any]:
+            df = df.sort(*by, descending=False, nulls_last=False)
+            return self.first()(df)
+
+        return self._from_callable(
+            func,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            context=self,
+        )
+
+    def max_by(self, by: Sequence[str]) -> Self:
+        def func(df: EagerDataFrameT) -> Sequence[Any]:
+            df = df.sort(*by, descending=True, nulls_last=False)
+            return self.first()(df)
+
+        return self._from_callable(
+            func,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            context=self,
+        )
 
     def any_value(self, *, ignore_nulls: bool) -> Self:
         return self._reuse_series(
