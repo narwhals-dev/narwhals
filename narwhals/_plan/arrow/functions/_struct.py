@@ -36,32 +36,32 @@ __all__ = ["field", "field_names", "fields", "into_struct", "schema"]
 
 @overload
 def into_struct(
-    names: Iterable[str], columns: Iterable[ChunkedArrayAny]
+    columns: Iterable[ChunkedArrayAny], names: Iterable[str]
 ) -> ChunkedStruct: ...
 @overload
-def into_struct(names: Iterable[str], columns: Iterable[ArrayAny]) -> pa.StructArray: ...
+def into_struct(columns: Iterable[ArrayAny], names: Iterable[str]) -> pa.StructArray: ...
 # NOTE: `mypy` isn't happy, but this broadcasting behavior is worth documenting
 @overload
 def into_struct(  # type: ignore[overload-overlap]
-    names: Iterable[str], columns: Iterable[ScalarAny] | Iterable[NonNestedLiteral]
+    columns: Iterable[ScalarAny] | Iterable[NonNestedLiteral], names: Iterable[str]
 ) -> pa.StructScalar: ...
 @overload
 def into_struct(  # type: ignore[overload-overlap]
-    names: Iterable[str], columns: Iterable[ChunkedArrayAny | NonNestedLiteral]
+    columns: Iterable[ChunkedArrayAny | NonNestedLiteral], names: Iterable[str]
 ) -> ChunkedStruct: ...
 @overload
 def into_struct(
-    names: Iterable[str], columns: Iterable[ArrayAny | NonNestedLiteral]
+    columns: Iterable[ArrayAny | NonNestedLiteral], names: Iterable[str]
 ) -> pa.StructArray: ...
 @overload
-def into_struct(names: Iterable[str], columns: Iterable[ArrowAny]) -> Incomplete: ...
-def into_struct(names: Iterable[str], columns: Iterable[Incomplete]) -> Incomplete:
+def into_struct(columns: Iterable[ArrowAny], names: Iterable[str]) -> Incomplete: ...
+def into_struct(columns: Iterable[Incomplete], names: Iterable[str]) -> Incomplete:
     """Collect columns into a struct.
 
     Arguments:
-        names: Name(s) to assign to each struct field.
         columns: Value(s) to collect into a struct. Scalars will will be broadcast unless all
             inputs are scalar.
+        names: Name(s) to assign to each struct field.
 
     Note:
         Roughly [`polars.struct`] but `names` must be resolved ahead of time.

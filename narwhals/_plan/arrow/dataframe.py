@@ -231,7 +231,7 @@ class ArrowDataFrame(
             else:
                 struct = fn.chunked_array([], pa.struct(native.schema))
         else:
-            struct = fn.struct.into_struct(native.column_names, native.columns)
+            struct = fn.struct.into_struct(native.columns, native.column_names)
         return Series.from_native(struct, name, version=self.version)
 
     def get_column(self, name: str) -> Series:
