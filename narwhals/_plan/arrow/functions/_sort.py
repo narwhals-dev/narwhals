@@ -1,3 +1,5 @@
+"""Functions for manipulating the order of arrays."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, overload
@@ -21,7 +23,6 @@ if TYPE_CHECKING:
     from narwhals._plan.arrow.typing import ArrayAny, ChunkedOrArrayAny, ChunkedOrArrayT
     from narwhals._plan.options import SortMultipleOptions, SortOptions
 
-# TODO @dangotbanned: Module description
 
 __all__ = ["random_indices", "reverse", "sort_indices", "unsort_indices"]
 
@@ -89,7 +90,7 @@ def unsort_indices(indices: pa.UInt64Array, /) -> pa.Int64Array:
         indices: The output of `sort_indices`.
 
     Examples:
-        We can use this pair of functions to recreate a windowed `pl.row_index`
+        We can use this pair of functions to recreate a windowed [`pl.row_index`]
 
         >>> import polars as pl
         >>> data = {"by": [5, 2, 5, None]}
@@ -108,6 +109,8 @@ def unsort_indices(indices: pa.UInt64Array, /) -> pa.Int64Array:
         ...     sort_indices(df, "by", descending=True, nulls_last=False)
         ... ).to_pylist()
         [1, 3, 2, 0]
+
+    [`pl.row_index`]: https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.row_index.html
     """
     return (
         call("inverse_permutation", indices.cast(I64))
@@ -119,9 +122,13 @@ def unsort_indices(indices: pa.UInt64Array, /) -> pa.Int64Array:
 def random_indices(
     end: int, /, n: int, *, with_replacement: bool = False, seed: int | None = None
 ) -> ArrayAny:
-    """Generate `n` random indices within the range `[0, end)`."""
-    # NOTE: Review this path if anything changes upstream
-    # https://github.com/apache/arrow/issues/47288#issuecomment-3597653670
+    """Generate `n` random indices within the range `[0, end)`.
+
+    Note:
+        Review this path if anything changes [upstream].
+
+    [upstream]: https://github.com/apache/arrow/issues/47288#issuecomment-3597653670
+    """
     if with_replacement:
         rand_values = pc.random(n, initializer="system" if seed is None else seed)
         return round(multiply(rand_values, lit(end - 1))).cast(I64)
@@ -135,7 +142,7 @@ def reverse(native: ChunkedOrArrayT) -> ChunkedOrArrayT:
     """Return the array in reverse order.
 
     Important:
-        Unlike other slicing operations, this [triggers a full-copy].
+        Implemented via slicing, but unlike other slicing operations, [triggers a full-copy].
 
     [triggers a full-copy]: https://github.com/apache/arrow/issues/19103#issuecomment-1377671886
     """
