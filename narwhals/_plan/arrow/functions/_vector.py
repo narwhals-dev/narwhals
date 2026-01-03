@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping, Sequence
 
     from narwhals._plan.arrow.typing import (
+        ArrayAny,
         ChunkedArray,
         ChunkedArrayAny,
         ChunkedOrArray,
@@ -58,10 +59,9 @@ def diff(native: ChunkedOrArrayT, n: int = 1) -> ChunkedOrArrayT:
     )
 
 
-# TODO @dangotbanned: Make this work for `ChunkedOrArrayT`
 def shift(
-    native: ChunkedArrayAny, n: int, *, fill_value: NonNestedLiteral = None
-) -> ChunkedArrayAny:
+    native: ChunkedOrArrayT, n: int, *, fill_value: NonNestedLiteral = None
+) -> ChunkedOrArrayT:
     """Shift values by the given number of indices.
 
     Arguments:
@@ -72,18 +72,17 @@ def shift(
     """
     if n == 0:
         return native
-    arr = native
-    if n > 0:
-        filled = repeat_like(fill_value, n, arr)
-        arrays = [filled, *arr.slice(length=arr.length() - n).chunks]
-    else:
-        filled = repeat_like(fill_value, -n, arr)
-        arrays = [*arr.slice(offset=-n).chunks, filled]
-    return pa.chunked_array(arrays)
+    n_abs = abs(n)
+    filled = repeat_like(fill_value, n_abs, native)
+    forward = n > 0
+    sliced = native.slice(length=len(native) - n) if forward else native.slice(n_abs)
+    if isinstance(sliced, pa.ChunkedArray):
+        chunks: list[ArrayAny] = sliced.chunks
+        return pa.chunked_array((filled, *chunks) if forward else (*chunks, filled))
+    return pa.concat_arrays((filled, sliced) if forward else (sliced, filled))
 
 
-# TODO @dangotbanned: Make this work for `ChunkedOrArrayT`
-def rank(native: ChunkedArrayAny, options: RankOptions) -> ChunkedArrayAny:
+def rank(native: ChunkedOrArrayT, options: RankOptions) -> ChunkedOrArrayT:
     """Assign ranks to `native`, dealing with ties according to `options`."""
     arr = native if compat.RANK_ACCEPTS_CHUNKED else array(native)
     if options.method == "average":
@@ -94,7 +93,9 @@ def rank(native: ChunkedArrayAny, options: RankOptions) -> ChunkedArrayAny:
         ranked = pc.divide(pc.add(min, max), lit(2, F64))
     else:
         ranked = preserve_nulls(native, pc.rank(arr, options=options.to_arrow()))
-    return chunked_array(ranked)
+    if isinstance(native, pa.ChunkedArray):
+        return chunked_array(ranked)
+    return ranked
 
 
 # NOTE @dangotbanned: (wish) replacing `np.searchsorted`?

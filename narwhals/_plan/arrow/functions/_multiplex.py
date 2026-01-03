@@ -167,6 +167,8 @@ def replace_strict_default(
     return chunked_array(result) if isinstance(native, pa.ChunkedArray) else result[0]
 
 
+# TODO @dangotbanned: Avoid using `TypeVar` constraints on `after`
+# Only used in `_vector.rank` and `ChunkedOrArrayT` erases `Array[...]`
 def preserve_nulls(
     before: ChunkedOrArrayAny, after: ChunkedOrArrayT, /
 ) -> ChunkedOrArrayT:
