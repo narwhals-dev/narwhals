@@ -809,6 +809,9 @@ class EagerExpr(
     def exp(self) -> Self:
         return self._reuse_series("exp")
 
+    def sin(self) -> Self:
+        return self._reuse_series("sin")
+
     def sqrt(self) -> Self:
         return self._reuse_series("sqrt")
 
@@ -1013,6 +1016,11 @@ class EagerExprListNamespace(
 
     def sum(self) -> EagerExprT:
         return self.compliant._reuse_series_namespace("list", "sum")
+
+    def sort(self, *, descending: bool, nulls_last: bool) -> EagerExprT:
+        return self.compliant._reuse_series_namespace(
+            "list", "sort", descending=descending, nulls_last=nulls_last
+        )
 
 
 class CompliantExprNameNamespace(  # type: ignore[misc]

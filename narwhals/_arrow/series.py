@@ -1113,6 +1113,9 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         )
         return self._with_native(native_result)
 
+    def sin(self) -> Self:
+        return self._with_native(pc.sin(self.native))
+
     def any_value(
         self, *, ignore_nulls: bool, _return_py_scalar: bool = True
     ) -> PythonLiteral:

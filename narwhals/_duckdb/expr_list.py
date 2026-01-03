@@ -64,3 +64,10 @@ class DuckDBExprListNamespace(
             )
 
         return self.compliant._with_callable(func)
+
+    def sort(self, *, descending: bool, nulls_last: bool) -> DuckDBExpr:
+        sort_direction = "DESC" if descending else "ASC"
+        nulls_position = "NULLS LAST" if nulls_last else "NULLS FIRST"
+        return self.compliant._with_elementwise(
+            lambda expr: F("list_sort", expr, lit(sort_direction), lit(nulls_position))
+        )

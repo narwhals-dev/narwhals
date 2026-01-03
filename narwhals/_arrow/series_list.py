@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import pyarrow as pa
 import pyarrow.compute as pc
 
-from narwhals._arrow.utils import ArrowSeriesNamespace, list_agg
+from narwhals._arrow.utils import ArrowSeriesNamespace, list_agg, list_sort
 from narwhals._compliant.any_namespace import ListNamespace
 from narwhals._utils import not_implemented
 
@@ -34,6 +34,11 @@ class ArrowSeriesListNamespace(ArrowSeriesNamespace, ListNamespace["ArrowSeries"
 
     def sum(self) -> ArrowSeries:
         return self.with_native(list_agg(self.native, "sum"))
+
+    def sort(self, *, descending: bool, nulls_last: bool) -> ArrowSeries:
+        return self.with_native(
+            list_sort(self.native, descending=descending, nulls_last=nulls_last)
+        )
 
     unique = not_implemented()
     contains = not_implemented()

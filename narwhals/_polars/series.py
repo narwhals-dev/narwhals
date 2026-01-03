@@ -124,6 +124,7 @@ INHERITED_METHODS = frozenset(
         "round",
         "sample",
         "shift",
+        "sin",
         "skew",
         "sqrt",
         "std",
@@ -747,6 +748,7 @@ class PolarsSeries:
     round: Method[Self]
     sample: Method[Self]
     shift: Method[Self]
+    sin: Method[Self]
     skew: Method[float | None]
     sqrt: Method[Self]
     std: Method[float]
