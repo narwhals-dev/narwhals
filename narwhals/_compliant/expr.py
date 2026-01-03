@@ -841,8 +841,8 @@ class EagerExpr(
 
     def max_by(self, by: Sequence[str]) -> Self:
         def func(df: EagerDataFrameT) -> Sequence[Any]:
-            df = df.sort(*by, descending=True, nulls_last=False)
-            return self.first()(df)
+            df = df.sort(*by, descending=False, nulls_last=False)
+            return self.last()(df)
 
         return self._from_callable(
             func,

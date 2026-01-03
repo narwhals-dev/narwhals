@@ -1710,9 +1710,7 @@ class Expr:
         """
         return self._append_node(
             ExprNode(
-                ExprKind.AGGREGATION,
-                "min_by",
-                order_by=[by] if isinstance(by, str) else by,
+                ExprKind.AGGREGATION, "min_by", by=[by] if isinstance(by, str) else by
             )
         )
 
@@ -1738,9 +1736,7 @@ class Expr:
         """
         return self._append_node(
             ExprNode(
-                ExprKind.AGGREGATION,
-                "max_by",
-                order_by=[by] if isinstance(by, str) else by,
+                ExprKind.AGGREGATION, "max_by", by=[by] if isinstance(by, str) else by
             )
         )
 

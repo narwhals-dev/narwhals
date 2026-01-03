@@ -40,7 +40,9 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
         "all": "all",
         "any": "any",
         "first": "first",
+        "min_by": "first",
         "last": "last",
+        "max_by": "last",
         "any_value": "first",
     }
     _REMAP_UNIQUE: ClassVar[Mapping[UniqueKeepStrategy, Aggregation]] = {
@@ -53,7 +55,7 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
     )
     _OPTION_COUNT_VALID: ClassVar[frozenset[NarwhalsAggregation]] = frozenset(("count",))
     _OPTION_ORDERED: ClassVar[frozenset[NarwhalsAggregation]] = frozenset(
-        ("first", "last", "any_value")
+        ("first", "last", "any_value", "min_by", "max_by")
     )
     _OPTION_VARIANCE: ClassVar[frozenset[NarwhalsAggregation]] = frozenset(("std", "var"))
     _OPTION_SCALAR: ClassVar[frozenset[NarwhalsAggregation]] = frozenset(
@@ -94,28 +96,29 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
         return self._remap_expr_name(function_name), option
 
     def _configure_grouped(self, *exprs: ArrowExpr) -> pa.TableGroupBy:
-        order_by = ()
+        by = ()
         use_threads = True
         for expr in exprs:
             md = next(expr._metadata.op_nodes_reversed())
-            if _order_by := md.kwargs.get("order_by", ()):
-                if order_by and _order_by != order_by:
-                    msg = f"Only one `order_by` can be specified in `group_by`. Found both {order_by} and {_order_by}."
-                    raise NotImplementedError(msg)
-                order_by = _order_by
-            if md.name in self._OPTION_ORDERED:
+            if md.name not in self._OPTION_ORDERED:
                 # [pyarrow-36709]: https://github.com/apache/arrow/issues/36709
-                use_threads = False
+                continue
+            use_threads = False
+            if _by := md.kwargs.get("by", ()):
+                if by and _by != by:
+                    msg = f"Only one `by` can be specified in `group_by`. Found both {by} and {_by}."
+                    raise NotImplementedError(msg)
+                by = _by
         if not use_threads and self.compliant._backend_version < (14, 0):
             msg = (
-                f"Using `first/last` in a `group_by().agg(...)` context is only available in 'pyarrow>=14.0.0', "
+                f"Using `first/last/min_by/max_by` in a `group_by().agg(...)` context is only available in 'pyarrow>=14.0.0', "
                 f"found version {requires._unparse_version(self._df._backend_version)!r}.\n\n"
                 f"See https://github.com/apache/arrow/issues/36709"
             )
             raise NotImplementedError(msg)
-        if order_by:
+        if by:
             return pa.TableGroupBy(
-                self.compliant.sort(*order_by, descending=False, nulls_last=False).native,
+                self.compliant.sort(*by, descending=False, nulls_last=False).native,
                 self._keys,
                 use_threads=use_threads,
             )
