@@ -48,29 +48,38 @@ __all__ = [
 ]
 
 
-# TODO @dangotbanned: *At-least* one line docstring for exports
-
 min = pc.min
+"""Get the minimal value in this array."""
 max = pc.max
+"""Get the maximum value in this array."""
 mean = t.cast("Callable[[ChunkedOrArray[pc.NumericScalar]], pa.DoubleScalar]", pc.mean)
+"""Reduce this array to the mean value."""
 count = pc.count
+"""Return the number of non-null elements in this array."""
 median = pc.approximate_median
+"""Get the median of this array."""
 std = pc.stddev
+"""Get the standard deviation of this array."""
 var = pc.variance
+"""Get the variance of this array."""
 quantile = pc.quantile
+"""Get the quantile value of this array."""
 
 
 def sum(native: ChunkedOrArrayAny) -> ScalarAny:
+    """Reduce this array to the sum value."""
     opts = pa_options.scalar_aggregate(ignore_nulls=True)
     result: ScalarAny = call("sum", native, options=opts)
     return result
 
 
 def first(native: ChunkedOrArrayAny) -> ScalarAny:
+    """Get the first element of this array."""
     return pc.first(native, options=pa_options.scalar_aggregate())
 
 
 def last(native: ChunkedOrArrayAny) -> ScalarAny:
+    """Get the last element of this array."""
     return pc.last(native, options=pa_options.scalar_aggregate())
 
 
@@ -89,6 +98,7 @@ def implode(native: Arrow[Scalar[DataTypeT]]) -> pa.ListScalar[DataTypeT]:
 def kurtosis_skew(
     native: ChunkedArray[pc.NumericScalar], function: Literal["kurtosis", "skew"], /
 ) -> ScalarAny:
+    """Compute the kurtosis or sample skewness of this array."""
     result: ScalarAny
     if compat.HAS_KURTOSIS_SKEW:
         if pa.types.is_null(native.type):
@@ -115,18 +125,22 @@ def kurtosis_skew(
 
 
 def n_unique(native: ChunkedOrArrayAny) -> pa.Int64Scalar:
+    """Return the number of unique values in this array."""
     return pc.count_distinct(native, mode="all")
 
 
 def null_count(native: ChunkedOrArrayAny) -> pa.Int64Scalar:
+    """Count the null values in this array."""
     return pc.count(native, mode="only_null")
 
 
 def mode_any(native: ChunkedOrArrayAny) -> ScalarAny:
+    """Compute the most occurring value(s) and return *any* one of them."""
     return first(pc.mode(native, n=1).field("mode"))
 
 
 def mode_all(native: ChunkedOrArrayAny) -> ChunkedArrayAny:
+    """Compute the most occurring value(s) and return *all* of them."""
     struct_arr = pc.mode(native, n=len(native))
     indices = cat.encode(struct_arr.field("count"))
     index_true_modes = lit(0)
