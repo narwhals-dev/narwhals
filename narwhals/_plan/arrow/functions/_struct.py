@@ -15,7 +15,6 @@ from narwhals._plan.arrow.guards import is_arrow
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    from narwhals._arrow.typing import Incomplete
     from narwhals._plan.arrow.acero import Field
     from narwhals._plan.arrow.typing import (
         ArrayAny,
@@ -26,6 +25,7 @@ if TYPE_CHECKING:
         ChunkedStruct,
         SameArrowT,
         ScalarAny,
+        Struct,
         StructArray,
     )
     from narwhals._plan.typing import Seq
@@ -40,22 +40,17 @@ def into_struct(
 ) -> ChunkedStruct: ...
 @overload
 def into_struct(columns: Iterable[ArrayAny], names: Iterable[str]) -> pa.StructArray: ...
-# NOTE: `mypy` isn't happy, but this broadcasting behavior is worth documenting
-@overload
-def into_struct(  # type: ignore[overload-overlap]
-    columns: Iterable[ScalarAny] | Iterable[NonNestedLiteral], names: Iterable[str]
-) -> pa.StructScalar: ...
-@overload
-def into_struct(  # type: ignore[overload-overlap]
-    columns: Iterable[ChunkedArrayAny | NonNestedLiteral], names: Iterable[str]
-) -> ChunkedStruct: ...
 @overload
 def into_struct(
-    columns: Iterable[ArrayAny | NonNestedLiteral], names: Iterable[str]
-) -> pa.StructArray: ...
+    columns: Iterable[ScalarAny], names: Iterable[str]
+) -> pa.StructScalar: ...
 @overload
-def into_struct(columns: Iterable[ArrowAny], names: Iterable[str]) -> Incomplete: ...
-def into_struct(columns: Iterable[Incomplete], names: Iterable[str]) -> Incomplete:
+def into_struct(
+    columns: Iterable[ChunkedArrayAny | NonNestedLiteral], names: Iterable[str]
+) -> ChunkedStruct: ...
+def into_struct(
+    columns: Iterable[ArrowAny | NonNestedLiteral], names: Iterable[str]
+) -> Struct:
     """Collect columns into a struct.
 
     Arguments:
@@ -68,7 +63,9 @@ def into_struct(columns: Iterable[Incomplete], names: Iterable[str]) -> Incomple
 
     [`polars.struct`]: https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.struct.html
     """
-    return pc.make_struct(*columns, options=_make_names(common.ensure_seq_str(names)))
+    options = _make_names(common.ensure_seq_str(names))
+    result: Struct = call("make_struct", *columns, options=options)
+    return result
 
 
 def schema(native: Arrow[pa.StructScalar] | pa.StructType, /) -> pa.Schema:

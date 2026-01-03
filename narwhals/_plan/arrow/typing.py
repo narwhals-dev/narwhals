@@ -232,6 +232,9 @@ Indices: TypeAlias = "_SizedMultiIndexSelector[ChunkedOrArray[pc.IntegerScalar]]
 ChunkedStruct: TypeAlias = "ChunkedArray[pa.StructScalar]"
 StructArray: TypeAlias = "pa.StructArray | Array[pa.StructScalar]"
 ChunkedList: TypeAlias = "ChunkedArray[ListScalar[DataTypeT_co]]"
+Struct: TypeAlias = "ChunkedStruct | pa.StructArray | pa.StructScalar"
+"""(Concrete) Struct-typed arrow data."""
+
 ListArray: TypeAlias = "Array[ListScalar[DataTypeT_co]]"
 ChunkedOrArrayHashable: TypeAlias = "ChunkedOrArray[IntoHashableScalar]"
 """Arrow arrays that can be [dictionary-encoded].
