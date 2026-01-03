@@ -1,11 +1,7 @@
-"""Selection, combination and replacement functions.
+"""Conditional [selection] and [fill/replacement] functions.
 
-Note:
-    Not 100% sure on the name yet
-
-- https://arrow.apache.org/docs/python/api/compute.html#selecting-multiplexing
-- https://arrow.apache.org/docs/python/api/compute.html#structural-transforms
-- https://arrow.apache.org/docs/python/api/compute.html#selections
+[selection]: https://arrow.apache.org/docs/python/api/compute.html#selecting-multiplexing
+[fill/replacement]: https://arrow.apache.org/docs/python/api/compute.html#structural-transforms
 """
 
 from __future__ import annotations
@@ -46,14 +42,12 @@ if TYPE_CHECKING:
         SameArrowT,
         ScalarAny,
         UnaryFunction,
-        VectorFunction,
     )
     from narwhals._plan.typing import Seq
     from narwhals.typing import FillNullStrategy, NonNestedLiteral
 
 
 __all__ = [
-    "drop_nulls",
     "fill_nan",
     "fill_null",
     "fill_null_with_strategy",
@@ -63,12 +57,6 @@ __all__ = [
     "replace_with_mask",
     "when_then",
 ]
-
-drop_nulls = t.cast("VectorFunction[...]", pc.drop_null)
-"""Drop all null values.
-
-The original order of the remaining elements is preserved.
-"""
 
 
 @overload

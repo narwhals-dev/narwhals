@@ -661,7 +661,8 @@ class ArrowExpr(  # type: ignore[misc]
         return self.from_series(result)
 
     def drop_nulls(self, node: FExpr[F.DropNulls], frame: Frame, name: str) -> Self:
-        return self._vector_function(fn.drop_nulls)(node, frame, name)
+        series = self._dispatch_expr(node.input[0], frame, name)
+        return self.from_series(series.drop_nulls())
 
     def mode_all(self, node: FExpr[F.ModeAll], frame: Frame, name: str) -> Self:
         return self._vector_function(fn.mode_all)(node, frame, name)

@@ -98,7 +98,6 @@ from narwhals._plan.arrow.functions._dtypes import (
 from narwhals._plan.arrow.functions._horizontal import max_horizontal, min_horizontal
 from narwhals._plan.arrow.functions._lists import ExplodeBuilder
 from narwhals._plan.arrow.functions._multiplex import (
-    drop_nulls,
     fill_nan,
     fill_null,
     fill_null_with_strategy,
@@ -174,7 +173,6 @@ __all__ = [
     "cumulative",
     "date_range",
     "diff",
-    "drop_nulls",
     "dtype_native",
     "eq",
     "eq_missing",
