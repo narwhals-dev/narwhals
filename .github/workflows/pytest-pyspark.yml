@@ -83,7 +83,7 @@ jobs:
       
       - name: Cache Spark
         id: cache-spark
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: /opt/spark
           key: spark-${{ env.SPARK_VERSION }}-bin-hadoop3
