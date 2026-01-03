@@ -29,9 +29,10 @@ if TYPE_CHECKING:
     )
     from narwhals.typing import ClosedInterval
 
-Incomplete: TypeAlias = Any
 
 __all__ = ["date_range", "int_range", "linear_space"]
+
+Incomplete: TypeAlias = Any
 
 
 @overload
@@ -72,6 +73,7 @@ def int_range(
     dtype: IntegerType = I64,
     chunked: bool = True,
 ) -> ChunkedOrArray[IntegerScalar]:
+    """Generate a range of integers."""
     if end is None:
         end = start
         start = 0
@@ -86,12 +88,13 @@ def int_range(
 
 
 def date_range(
-    start: dt.date,
-    end: dt.date,
-    interval: int,  # (* assuming the `Interval` part is solved)
-    *,
-    closed: ClosedInterval = "both",
+    start: dt.date, end: dt.date, interval: int, *, closed: ClosedInterval = "both"
 ) -> ChunkedArray[DateScalar]:
+    """Generate a range of dates.
+
+    Note:
+        `interval` is the number of full days.
+    """
     start_i = pa.scalar(start).cast(I32).as_py()
     end_i = pa.scalar(end).cast(I32).as_py()
     ca = int_range(start_i, end_i + 1, interval, dtype=I32)
@@ -109,7 +112,9 @@ def date_range(
 def linear_space(
     start: float, end: float, num_samples: int, *, closed: ClosedInterval = "both"
 ) -> ChunkedArray[pc.NumericScalar]:
-    """Based on [`new_linear_space_f64`].
+    """Generate a range of evenly-spaced floats.
+
+    Based on [`new_linear_space_f64`].
 
     [`new_linear_space_f64`]: https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/crates/polars-ops/src/series/ops/linear_space.rs#L62-L94
     """
