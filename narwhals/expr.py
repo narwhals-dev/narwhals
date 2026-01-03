@@ -1689,10 +1689,10 @@ class Expr:
         return self._append_node(ExprNode(ExprKind.ORDERABLE_AGGREGATION, "last"))
 
     def min_by(self, by: str | Iterable[str]) -> Self:
-        """Return the row where the given column(s) are minimized.
+        """Get minimum, ordered by another expression.
 
         Arguments:
-            by: Column(s) to minimize by.
+            by: Column(s) to determine largest element.
 
         Examples:
             >>> import pandas as pd
@@ -1704,8 +1704,8 @@ class Expr:
             ┌──────────────────┐
             |Narwhals DataFrame|
             |------------------|
-            |        a         |
-            |     0  20        |
+            |          a       |
+            |      0  20       |
             └──────────────────┘
         """
         return self._append_node(
@@ -1715,10 +1715,10 @@ class Expr:
         )
 
     def max_by(self, by: str | Iterable[str]) -> Self:
-        """Return the row where the given column(s) are maximized.
+        """Get maximum, ordered by another expression.
 
         Arguments:
-            by: Column(s) to maximize by.
+            by: Column(s) to determine largest element.
 
         Examples:
             >>> import pandas as pd
@@ -1730,8 +1730,8 @@ class Expr:
             ┌──────────────────┐
             |Narwhals DataFrame|
             |------------------|
-            |        a         |
-            |     0  30        |
+            |          a       |
+            |      0  10       |
             └──────────────────┘
         """
         return self._append_node(
