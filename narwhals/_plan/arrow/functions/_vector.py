@@ -1,3 +1,10 @@
+"""Non-scalar functions, which need to observe the context surrounding each element.
+
+Currently a subset of Arrow's [Array-wise ("vector") functions].
+
+[Array-wise ("vector") functions]: https://arrow.apache.org/docs/cpp/compute.html#array-wise-vector-functions
+"""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, overload
@@ -38,6 +45,12 @@ __all__ = ["diff", "hist_bins", "hist_zeroed_data", "rank", "search_sorted", "sh
 
 
 def diff(native: ChunkedOrArrayT, n: int = 1) -> ChunkedOrArrayT:
+    """Calculate the first discrete difference between shifted items.
+
+    Arguments:
+        native: An arrow array.
+        n: Number of slots to shift.
+    """
     return (
         pc.pairwise_diff(native, n)
         if isinstance(native, pa.Array)
@@ -45,9 +58,18 @@ def diff(native: ChunkedOrArrayT, n: int = 1) -> ChunkedOrArrayT:
     )
 
 
+# TODO @dangotbanned: Make this work for `ChunkedOrArrayT`
 def shift(
     native: ChunkedArrayAny, n: int, *, fill_value: NonNestedLiteral = None
 ) -> ChunkedArrayAny:
+    """Shift values by the given number of indices.
+
+    Arguments:
+        native: An arrow array.
+        n: Number of indices to shift forward. If a negative value is passed, values
+            are shifted in the opposite direction instead.
+        fill_value: Fill the resulting null values with this value.
+    """
     if n == 0:
         return native
     arr = native
@@ -60,16 +82,18 @@ def shift(
     return pa.chunked_array(arrays)
 
 
-def rank(native: ChunkedArrayAny, rank_options: RankOptions) -> ChunkedArrayAny:
+# TODO @dangotbanned: Make this work for `ChunkedOrArrayT`
+def rank(native: ChunkedArrayAny, options: RankOptions) -> ChunkedArrayAny:
+    """Assign ranks to `native`, dealing with ties according to `options`."""
     arr = native if compat.RANK_ACCEPTS_CHUNKED else array(native)
-    if rank_options.method == "average":
+    if options.method == "average":
         # Adapted from https://github.com/pandas-dev/pandas/blob/f4851e500a43125d505db64e548af0355227714b/pandas/core/arrays/arrow/array.py#L2290-L2316
-        order = pa_options.ORDER[rank_options.descending]
+        order = pa_options.ORDER[options.descending]
         min = preserve_nulls(arr, pc.rank(arr, order, tiebreaker="min").cast(F64))
         max = pc.rank(arr, order, tiebreaker="max").cast(F64)
         ranked = pc.divide(pc.add(min, max), lit(2, F64))
     else:
-        ranked = preserve_nulls(native, pc.rank(arr, options=rank_options.to_arrow()))
+        ranked = preserve_nulls(native, pc.rank(arr, options=options.to_arrow()))
     return chunked_array(ranked)
 
 
