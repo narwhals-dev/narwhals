@@ -190,7 +190,7 @@ class IntegerType(NumericType):
 
     def __init_subclass__(cls, *args: Any, bits: _Bits, **kwds: Any) -> None:
         super().__init_subclass__(*args, **kwds)
-        _bits = bits
+        cls._bits = bits
 
 
 class SignedIntegerType(IntegerType, bits=128):
