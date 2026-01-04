@@ -8,7 +8,7 @@ from functools import cache, lru_cache
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Callable, Mapping
 
     from typing_extensions import TypeIs
 
@@ -17,6 +17,9 @@ if TYPE_CHECKING:
         DType,
         Float64,
         FloatType,
+        Int16,
+        Int32,
+        Int64,
         IntegerType,
         NumericType,
         SignedIntegerType,
@@ -97,6 +100,23 @@ def _max_bits(left: _Bits, right: _Bits, /) -> _Bits:
     return max_bits
 
 
+@cache
+def _unsigned_bits_larger() -> Mapping[_Bits, Int16 | Int32 | Int64 | Float64]:
+    # Find the smallest signed integer that can hold the unsigned value
+    # Otherwise, need to go to the next larger signed type
+    # For Int64 + UInt64, Polars uses Float64 instead of Int128
+    # Fallback to Float64 if no integer type large enough
+    from narwhals import dtypes as _dtypes
+
+    return {
+        8: _dtypes.Int16(),
+        16: _dtypes.Int32(),
+        32: _dtypes.Int64(),
+        64: _dtypes.Float64(),
+        128: _dtypes.Float64(),
+    }
+
+
 def _get_integer_supertype(
     left: IntegerType, right: IntegerType
 ) -> SignedIntegerType | UnsignedIntegerType | Float64:
@@ -105,43 +125,29 @@ def _get_integer_supertype(
     Following Polars rules:
 
     - Same signedness: return the larger type
-    - Mixed signedness: promote to signed with enough bits to hold both
+    - Mixed signedness: promote to signed
+      - If signed type is strictly larger than unsigned, it can hold both
     - Int64 + UInt64 -> Float64 (following Polars)
     """
     left_bits = left._bits
     right_bits = right._bits
 
-    # Same signedness: return larger type
+    max_bits = _max_bits(left_bits, right_bits)
+    into_map: Callable[
+        [], Mapping[_Bits, SignedIntegerType | UnsignedIntegerType | Float64]
+    ]
     if is_signed_integer(left):
-        if is_signed_integer(right):
-            return _bit_size_to_signed_int()[_max_bits(left_bits, right_bits)]
-        # Mixed signedness: need signed type that can hold both
-        # The unsigned type needs to fit in a signed type with more bits
-        signed_bits, unsigned_bits = (left_bits, right_bits)
+        if is_signed_integer(right) or max_bits > right_bits:
+            into_map = _bit_size_to_signed_int
+        else:
+            into_map = _unsigned_bits_larger
+    elif is_unsigned_integer(left) and is_unsigned_integer(right):
+        into_map = _bit_size_to_unsigned_int
+    elif max_bits > left_bits:
+        into_map = _bit_size_to_signed_int
     else:
-        if is_unsigned_integer(left) and is_unsigned_integer(right):
-            return _bit_size_to_unsigned_int()[_max_bits(left_bits, right_bits)]
-        signed_bits, unsigned_bits = (right_bits, left_bits)
-
-    # If signed type is strictly larger than unsigned, it can hold both
-    if signed_bits > unsigned_bits:
-        return _bit_size_to_signed_int()[signed_bits]
-
-    from narwhals.dtypes import Float64
-
-    # Otherwise, need to go to the next larger signed type
-    # For Int64 + UInt64, Polars uses Float64 instead of Int128
-    if unsigned_bits >= 64:
-        return Float64()
-
-    # Find the smallest signed integer that can hold the unsigned value
-    required_bits = unsigned_bits * 2
-    for bits in (16, 32, 64):
-        if bits >= required_bits:
-            return _bit_size_to_signed_int()[bits]
-
-    # Fallback to Float64 if no integer type large enough
-    return Float64()
+        into_map = _unsigned_bits_larger
+    return into_map()[max_bits]
 
 
 def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:  # noqa: C901, PLR0911, PLR0912
