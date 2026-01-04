@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 from functools import cache, lru_cache
+from itertools import product
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -17,13 +18,8 @@ if TYPE_CHECKING:
         DType,
         Float64,
         FloatType,
-        Int16,
-        Int32,
-        Int64,
         IntegerType,
         NumericType,
-        SignedIntegerType,
-        UnsignedIntegerType,
         _Bits,
     )
     from narwhals.typing import DTypes, TimeUnit
@@ -43,14 +39,6 @@ def is_integer(dtype: DType) -> TypeIs[IntegerType]:
     return dtype.is_integer()
 
 
-def is_signed_integer(dtype: DType) -> TypeIs[SignedIntegerType]:
-    return dtype.is_signed_integer()
-
-
-def is_unsigned_integer(dtype: DType) -> TypeIs[UnsignedIntegerType]:
-    return dtype.is_unsigned_integer()
-
-
 def is_boolean(dtype: DType) -> TypeIs[Boolean]:
     return dtype.is_boolean()
 
@@ -67,87 +55,76 @@ def _min_time_unit(a: TimeUnit, b: TimeUnit) -> TimeUnit:
 
 
 @cache
-def _bit_size_to_signed_int() -> Mapping[_Bits, SignedIntegerType]:
-    # NOTE: If we ever make a versioned change to `Int`(s), update to pass in `DTypes`
-    from narwhals import dtypes as _dtypes
-
-    return {
-        8: _dtypes.Int8(),
-        16: _dtypes.Int16(),
-        32: _dtypes.Int32(),
-        64: _dtypes.Int64(),
-        128: _dtypes.Int128(),
-    }
-
-
-@cache
-def _bit_size_to_unsigned_int() -> Mapping[_Bits, UnsignedIntegerType]:
-    # NOTE: If we ever make a versioned change to `UInt`(s), update to pass in `DTypes`
-    from narwhals import dtypes as _dtypes
-
-    return {
-        8: _dtypes.UInt8(),
-        16: _dtypes.UInt16(),
-        32: _dtypes.UInt32(),
-        64: _dtypes.UInt64(),
-        128: _dtypes.UInt128(),
-    }
-
-
-# NOTE: Add caching if this stays a function
 def _max_bits(left: _Bits, right: _Bits, /) -> _Bits:
     max_bits: _Bits = max(left, right)
     return max_bits
 
 
 @cache
-def _unsigned_bits_larger() -> Mapping[_Bits, Int16 | Int32 | Int64 | Float64]:
-    # Find the smallest signed integer that can hold the unsigned value
-    # Otherwise, need to go to the next larger signed type
-    # For Int64 + UInt64, Polars uses Float64 instead of Int128
-    # Fallback to Float64 if no integer type large enough
-    from narwhals import dtypes as _dtypes
-
-    return {
-        8: _dtypes.Int16(),
-        16: _dtypes.Int32(),
-        32: _dtypes.Int64(),
-        64: _dtypes.Float64(),
-        128: _dtypes.Float64(),
-    }
-
-
-def _get_integer_supertype(
-    left: IntegerType, right: IntegerType
-) -> SignedIntegerType | UnsignedIntegerType | Float64:
+def _integer_supertyping() -> Callable[[IntegerType, IntegerType], IntegerType | Float64]:
     """Get supertype for two integer types.
 
+    ### @FBruzzesi
     Following Polars rules:
 
     - Same signedness: return the larger type
     - Mixed signedness: promote to signed
       - If signed type is strictly larger than unsigned, it can hold both
     - Int64 + UInt64 -> Float64 (following Polars)
-    """
-    left_bits = left._bits
-    right_bits = right._bits
+    - Fallback to Float64 if no integer type large enough
 
-    max_bits = _max_bits(left_bits, right_bits)
-    into_map: Callable[
-        [], Mapping[_Bits, SignedIntegerType | UnsignedIntegerType | Float64]
-    ]
-    if is_signed_integer(left):
-        if is_signed_integer(right) or max_bits > right_bits:
-            into_map = _bit_size_to_signed_int
-        else:
-            into_map = _unsigned_bits_larger
-    elif is_unsigned_integer(left) and is_unsigned_integer(right):
-        into_map = _bit_size_to_unsigned_int
-    elif max_bits > left_bits:
-        into_map = _bit_size_to_signed_int
-    else:
-        into_map = _unsigned_bits_larger
-    return into_map()[max_bits]
+    ### @dangotbanned
+    - Does a "big" job once
+    - Then everything after is a single `dict` lookup
+    - `frozenset` allows us to match flipped operands to the same key
+    """
+    from narwhals.dtypes import (
+        Float64,
+        IntegerType,
+        SignedIntegerType,
+        UnsignedIntegerType,
+    )
+
+    tps_int = SignedIntegerType.__subclasses__()
+    tps_uint = UnsignedIntegerType.__subclasses__()
+
+    reverse_lookup: Mapping[type[IntegerType], Mapping[_Bits, type[IntegerType]]] = {
+        SignedIntegerType: {tp._bits: tp for tp in tps_int},
+        UnsignedIntegerType: {tp._bits: tp for tp in tps_uint},
+    }
+
+    def value_same(
+        left: type[IntegerType], right: type[IntegerType], /
+    ) -> type[IntegerType]:
+        return reverse_lookup[left.__base__ or IntegerType][
+            _max_bits(left._bits, right._bits)
+        ]
+
+    def value_mixed(
+        signed: type[IntegerType], unsigned: type[IntegerType], /
+    ) -> type[IntegerType | Float64]:
+        i_bits, u_bits = signed._bits, unsigned._bits
+        lookup_signed = reverse_lookup[SignedIntegerType]
+        if i_bits > u_bits:
+            return lookup_signed[i_bits]
+        if u_bits in (8, 16, 32):  # noqa: PLR6201
+            return lookup_signed[u_bits * 2]  # type: ignore[index]
+        return Float64
+
+    lookup: Mapping[frozenset[type[IntegerType]], type[IntegerType | Float64]] = {
+        frozenset((left, right)): fn_value(left, right)
+        for iterable, fn_value in (
+            (product(tps_int, tps_int), value_same),
+            (product(tps_uint, tps_uint), value_same),
+            (product(tps_int, tps_uint), value_mixed),
+        )
+        for left, right in iterable
+    }
+
+    def promote(left: IntegerType, right: IntegerType, /) -> IntegerType | Float64:
+        return lookup[frozenset((left.base_type(), right.base_type()))]()
+
+    return promote
 
 
 def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:  # noqa: C901, PLR0911, PLR0912
@@ -238,7 +215,7 @@ def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
 
     # Both Integer
     if is_integer(left) and is_integer(right):
-        return _get_integer_supertype(left, right)
+        return _integer_supertyping()(left, right)
 
     # Both Float
     if is_float(left) and is_float(right):
