@@ -99,7 +99,7 @@ def _max_bits(left: _Bits, right: _Bits, /) -> _Bits:
 
 def _get_integer_supertype(
     left: IntegerType, right: IntegerType, *, dtypes: DTypes
-) -> IntegerType | Float64 | None:
+) -> SignedIntegerType | UnsignedIntegerType | Float64:
     """Get supertype for two integer types.
 
     Following Polars rules:
