@@ -16,6 +16,13 @@ if TYPE_CHECKING:
 XFAIL_TODO = pytest.mark.xfail(reason="TODO", raises=NotImplementedError)
 
 
+def _dtype_ids(obj: DType) -> str:
+    if obj.__slots__:
+        # non-empty slots == parameters
+        return repr(obj)
+    return obj.__class__.__name__
+
+
 @pytest.mark.parametrize(
     "dtype",
     [
@@ -52,6 +59,7 @@ XFAIL_TODO = pytest.mark.xfail(reason="TODO", raises=NotImplementedError)
         nw.UInt128(),
         nw.Unknown(),
     ],
+    ids=_dtype_ids,
 )
 def test_same_dtype(dtype: DType) -> None:
     result = get_supertype(dtype, dtype, dtypes=Version.MAIN.dtypes)
@@ -129,6 +137,7 @@ def test_same_dtype(dtype: DType) -> None:
         (nw.Float32(), nw.Boolean(), nw.Float32()),
         (nw.Float64(), nw.Boolean(), nw.Float64()),
     ],
+    ids=_dtype_ids,
 )
 def test_numeric_promotion(left: DType, right: DType, expected: DType) -> None:
     result = get_supertype(left, right, dtypes=Version.MAIN.dtypes)
