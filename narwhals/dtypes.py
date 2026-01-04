@@ -5,7 +5,7 @@ from collections import OrderedDict
 from collections.abc import Iterable, Mapping
 from datetime import timezone
 from itertools import starmap
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from narwhals._utils import (
     _DeferredIterable,
@@ -15,12 +15,14 @@ from narwhals._utils import (
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
-    from typing import Any
+    from typing import Any, Literal
 
     import _typeshed
-    from typing_extensions import Self, TypeIs
+    from typing_extensions import Self, TypeAlias, TypeIs
 
     from narwhals.typing import IntoDType, TimeUnit
+
+    _Bits: TypeAlias = Literal[8, 16, 32, 64, 128]
 
 
 def _validate_dtype(dtype: DType | type[DType]) -> None:
@@ -183,12 +185,19 @@ class NumericType(DType):
 class IntegerType(NumericType):
     """Base class for integer data types."""
 
+    # NOTE: Likely going to need an `Integer` metaclass, to be able to use `Final` or a class property
+    _bits: ClassVar[_Bits]
 
-class SignedIntegerType(IntegerType):
+    def __init_subclass__(cls, *args: Any, bits: _Bits, **kwds: Any) -> None:
+        super().__init_subclass__(*args, **kwds)
+        _bits = bits
+
+
+class SignedIntegerType(IntegerType, bits=128):
     """Base class for signed integer data types."""
 
 
-class UnsignedIntegerType(IntegerType):
+class UnsignedIntegerType(IntegerType, bits=128):
     """Base class for unsigned integer data types."""
 
 
@@ -216,7 +225,7 @@ class Decimal(NumericType):
     """
 
 
-class Int128(SignedIntegerType):
+class Int128(SignedIntegerType, bits=128):
     """128-bit signed integer type.
 
     Examples:
@@ -236,7 +245,7 @@ class Int128(SignedIntegerType):
     """
 
 
-class Int64(SignedIntegerType):
+class Int64(SignedIntegerType, bits=64):
     """64-bit signed integer type.
 
     Examples:
@@ -249,7 +258,7 @@ class Int64(SignedIntegerType):
     """
 
 
-class Int32(SignedIntegerType):
+class Int32(SignedIntegerType, bits=32):
     """32-bit signed integer type.
 
     Examples:
@@ -262,7 +271,7 @@ class Int32(SignedIntegerType):
     """
 
 
-class Int16(SignedIntegerType):
+class Int16(SignedIntegerType, bits=16):
     """16-bit signed integer type.
 
     Examples:
@@ -275,7 +284,7 @@ class Int16(SignedIntegerType):
     """
 
 
-class Int8(SignedIntegerType):
+class Int8(SignedIntegerType, bits=8):
     """8-bit signed integer type.
 
     Examples:
@@ -288,7 +297,7 @@ class Int8(SignedIntegerType):
     """
 
 
-class UInt128(UnsignedIntegerType):
+class UInt128(UnsignedIntegerType, bits=128):
     """128-bit unsigned integer type.
 
     Examples:
@@ -302,7 +311,7 @@ class UInt128(UnsignedIntegerType):
     """
 
 
-class UInt64(UnsignedIntegerType):
+class UInt64(UnsignedIntegerType, bits=64):
     """64-bit unsigned integer type.
 
     Examples:
@@ -315,7 +324,7 @@ class UInt64(UnsignedIntegerType):
     """
 
 
-class UInt32(UnsignedIntegerType):
+class UInt32(UnsignedIntegerType, bits=32):
     """32-bit unsigned integer type.
 
     Examples:
@@ -328,7 +337,7 @@ class UInt32(UnsignedIntegerType):
     """
 
 
-class UInt16(UnsignedIntegerType):
+class UInt16(UnsignedIntegerType, bits=16):
     """16-bit unsigned integer type.
 
     Examples:
@@ -341,7 +350,7 @@ class UInt16(UnsignedIntegerType):
     """
 
 
-class UInt8(UnsignedIntegerType):
+class UInt8(UnsignedIntegerType, bits=8):
     """8-bit unsigned integer type.
 
     Examples:
