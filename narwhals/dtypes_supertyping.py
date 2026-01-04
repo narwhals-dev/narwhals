@@ -98,7 +98,7 @@ def _max_bits(left: _Bits, right: _Bits, /) -> _Bits:
 
 
 def _get_integer_supertype(
-    left: IntegerType, right: IntegerType, *, dtypes: DTypes
+    left: IntegerType, right: IntegerType
 ) -> SignedIntegerType | UnsignedIntegerType | Float64:
     """Get supertype for two integer types.
 
@@ -127,10 +127,12 @@ def _get_integer_supertype(
     if signed_bits > unsigned_bits:
         return _bit_size_to_signed_int()[signed_bits]
 
+    from narwhals.dtypes import Float64
+
     # Otherwise, need to go to the next larger signed type
     # For Int64 + UInt64, Polars uses Float64 instead of Int128
     if unsigned_bits >= 64:
-        return dtypes.Float64()
+        return Float64()
 
     # Find the smallest signed integer that can hold the unsigned value
     required_bits = unsigned_bits * 2
@@ -139,7 +141,7 @@ def _get_integer_supertype(
             return _bit_size_to_signed_int()[bits]
 
     # Fallback to Float64 if no integer type large enough
-    return dtypes.Float64()
+    return Float64()
 
 
 def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:  # noqa: C901, PLR0911, PLR0912
@@ -230,7 +232,7 @@ def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
 
     # Both Integer
     if is_integer(left) and is_integer(right):
-        return _get_integer_supertype(left, right, dtypes=dtypes)
+        return _get_integer_supertype(left, right)
 
     # Both Float
     if is_float(left) and is_float(right):
