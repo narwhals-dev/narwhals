@@ -91,6 +91,12 @@ def _bit_size_to_unsigned_int() -> Mapping[_Bits, UnsignedIntegerType]:
     }
 
 
+# NOTE: Add caching if this stays a function
+def _max_bits(left: _Bits, right: _Bits, /) -> _Bits:
+    max_bits: _Bits = max(left, right)
+    return max_bits
+
+
 def _get_integer_supertype(
     left: IntegerType, right: IntegerType, *, dtypes: DTypes
 ) -> IntegerType | Float64 | None:
@@ -102,26 +108,20 @@ def _get_integer_supertype(
     - Mixed signedness: promote to signed with enough bits to hold both
     - Int64 + UInt64 -> Float64 (following Polars)
     """
-    left_signed = is_signed_integer(left)
-    right_signed = is_signed_integer(right)
-
     left_bits = left._bits
     right_bits = right._bits
 
     # Same signedness: return larger type
-    if left_signed == right_signed:
-        max_bits: _Bits = max(left_bits, right_bits)
-        return (
-            _bit_size_to_signed_int()[max_bits]
-            if left_signed
-            else _bit_size_to_unsigned_int()[max_bits]
-        )
-
-    # Mixed signedness: need signed type that can hold both
-    # The unsigned type needs to fit in a signed type with more bits
-    signed_bits, unsigned_bits = (
-        (left_bits, right_bits) if left_signed else (right_bits, left_bits)
-    )
+    if is_signed_integer(left):
+        if is_signed_integer(right):
+            return _bit_size_to_signed_int()[_max_bits(left_bits, right_bits)]
+        # Mixed signedness: need signed type that can hold both
+        # The unsigned type needs to fit in a signed type with more bits
+        signed_bits, unsigned_bits = (left_bits, right_bits)
+    else:
+        if is_unsigned_integer(left) and is_unsigned_integer(right):
+            return _bit_size_to_unsigned_int()[_max_bits(left_bits, right_bits)]
+        signed_bits, unsigned_bits = (right_bits, left_bits)
 
     # If signed type is strictly larger than unsigned, it can hold both
     if signed_bits > unsigned_bits:
