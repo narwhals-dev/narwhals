@@ -1036,13 +1036,13 @@ def _unsigned_int_to_bit_size(*, dtypes: DTypes) -> dict[DType, int]:
 @lru_cache(4)
 def _bit_size_to_signed_int(*, dtypes: DTypes) -> dict[int, DType]:
     """Mapping from bit size to signed integer type."""
-    return {v: k for k, v in _signed_int_to_bit_size(dtypes=dtypes).items()}
+    return {v: k for k, v in _signed_int_to_bit_size(dtypes=dtypes).items()}  # type: ignore[arg-type]
 
 
 @lru_cache(4)
 def _bit_size_to_unsigned_int(*, dtypes: DTypes) -> dict[int, DType]:
     """Mapping from bit size to unsigned integer type."""
-    return {v: k for k, v in _unsigned_int_to_bit_size(dtypes=dtypes).items()}
+    return {v: k for k, v in _unsigned_int_to_bit_size(dtypes=dtypes).items()}  # type: ignore[arg-type]
 
 
 def _get_integer_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
@@ -1057,8 +1057,8 @@ def _get_integer_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DTyp
     left_signed = left.is_signed_integer()
     right_signed = right.is_signed_integer()
 
-    signed_int_to_bit_size = _signed_int_to_bit_size(dtypes=dtypes)
-    unsigned_int_to_bit_size = _unsigned_int_to_bit_size(dtypes=dtypes)
+    signed_int_to_bit_size = _signed_int_to_bit_size(dtypes=dtypes)  # type: ignore[arg-type]
+    unsigned_int_to_bit_size = _unsigned_int_to_bit_size(dtypes=dtypes)  # type: ignore[arg-type]
 
     left_bits = signed_int_to_bit_size.get(left) or unsigned_int_to_bit_size.get(left)
     right_bits = signed_int_to_bit_size.get(right) or unsigned_int_to_bit_size.get(right)
@@ -1070,9 +1070,9 @@ def _get_integer_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DTyp
     if left_signed == right_signed:
         max_bits = max(left_bits, right_bits)
         return (
-            _bit_size_to_signed_int(dtypes=dtypes)[max_bits]
+            _bit_size_to_signed_int(dtypes=dtypes)[max_bits]  # type: ignore[arg-type]
             if left_signed
-            else _bit_size_to_unsigned_int(dtypes=dtypes)[max_bits]
+            else _bit_size_to_unsigned_int(dtypes=dtypes)[max_bits]  # type: ignore[arg-type]
         )
 
     # Mixed signedness: need signed type that can hold both
@@ -1083,7 +1083,7 @@ def _get_integer_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DTyp
 
     # If signed type is strictly larger than unsigned, it can hold both
     if signed_bits > unsigned_bits:
-        return _bit_size_to_signed_int(dtypes=dtypes)[signed_bits]
+        return _bit_size_to_signed_int(dtypes=dtypes)[signed_bits]  # type: ignore[arg-type]
 
     # Otherwise, need to go to the next larger signed type
     # For Int64 + UInt64, Polars uses Float64 instead of Int128
@@ -1094,7 +1094,7 @@ def _get_integer_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DTyp
     required_bits = unsigned_bits * 2
     for bits in (16, 32, 64):
         if bits >= required_bits:
-            return _bit_size_to_signed_int(dtypes=dtypes)[bits]
+            return _bit_size_to_signed_int(dtypes=dtypes)[bits]  # type: ignore[arg-type]
 
     # Fallback to Float64 if no integer type large enough
     return dtypes.Float64()
@@ -1207,9 +1207,9 @@ def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
             return dtypes.Float64()
 
         # Float32 case
-        left_bits = _signed_int_to_bit_size(dtypes=dtypes).get(
+        left_bits = _signed_int_to_bit_size(dtypes=dtypes).get(  # type: ignore[arg-type]
             left
-        ) or _unsigned_int_to_bit_size(dtypes=dtypes).get(left)
+        ) or _unsigned_int_to_bit_size(dtypes=dtypes).get(left)  # type: ignore[arg-type]
         if left_bits is not None and left_bits <= 16:
             return dtypes.Float32()
         return dtypes.Float64()
@@ -1219,9 +1219,9 @@ def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
             return dtypes.Float64()
 
         # Float32 case
-        right_bits = _signed_int_to_bit_size(dtypes=dtypes).get(
+        right_bits = _signed_int_to_bit_size(dtypes=dtypes).get(  # type: ignore[arg-type]
             right
-        ) or _unsigned_int_to_bit_size(dtypes=dtypes).get(right)
+        ) or _unsigned_int_to_bit_size(dtypes=dtypes).get(right)  # type: ignore[arg-type]
         if right_bits is not None and right_bits <= 16:
             return dtypes.Float32()
         return dtypes.Float64()

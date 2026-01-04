@@ -46,6 +46,7 @@ from narwhals.dtypes import DType, get_supertype
 )
 def test_same_dtype(dtype: DType) -> None:
     result = get_supertype(dtype, dtype, dtypes=Version.MAIN.dtypes)
+    assert result is not None
     assert result == dtype
 
 
@@ -122,7 +123,9 @@ def test_same_dtype(dtype: DType) -> None:
 )
 def test_numeric_promotion(left: DType, right: DType, expected: DType) -> None:
     result = get_supertype(left, right, dtypes=Version.MAIN.dtypes)
+    assert result is not None
     assert result == expected
 
     result = get_supertype(right, left, dtypes=Version.MAIN.dtypes)
+    assert result is not None
     assert result == expected
