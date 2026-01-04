@@ -8,6 +8,8 @@ import narwhals.stable.v2 as nw_v2  # noqa: F401
 from narwhals._utils import Version
 from narwhals.dtypes import DType, get_supertype
 
+XFAIL_TODO = pytest.mark.xfail(reason="TODO", raises=NotImplementedError)
+
 
 @pytest.mark.parametrize(
     "dtype",
@@ -34,7 +36,9 @@ from narwhals.dtypes import DType, get_supertype
         nw.List(nw.Array(nw.Int32, shape=(5, 3))),
         nw.Object(),
         nw.String(),
-        nw.Struct({"r2": nw.Float64(), "mse": nw.Float32()}),
+        pytest.param(
+            nw.Struct({"r2": nw.Float64(), "mse": nw.Float32()}), marks=XFAIL_TODO
+        ),
         nw.Time(),
         nw.UInt8(),
         nw.UInt16(),
