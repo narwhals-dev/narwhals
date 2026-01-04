@@ -1,12 +1,17 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1  # noqa: F401
 import narwhals.stable.v2 as nw_v2  # noqa: F401
 from narwhals._utils import Version
-from narwhals.dtypes import DType, get_supertype
+from narwhals.dtypes_supertyping import get_supertype
+
+if TYPE_CHECKING:
+    from narwhals.dtypes import DType
 
 XFAIL_TODO = pytest.mark.xfail(reason="TODO", raises=NotImplementedError)
 
