@@ -8,8 +8,45 @@ from functools import lru_cache
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from narwhals.dtypes import DType
+    from typing_extensions import TypeIs
+
+    from narwhals.dtypes import (
+        Boolean,
+        DType,
+        Float64,
+        FloatType,
+        IntegerType,
+        NumericType,
+        SignedIntegerType,
+        UnsignedIntegerType,
+    )
     from narwhals.typing import DTypes, TimeUnit
+
+
+# TODO @dangotbanned: Define the signatures inside `TYPE_CHECKING`,
+# but implement using `operator.attrgetter` outside
+def is_numeric(dtype: DType) -> TypeIs[NumericType]:
+    return dtype.is_numeric()
+
+
+def is_float(dtype: DType) -> TypeIs[FloatType]:
+    return dtype.is_float()
+
+
+def is_integer(dtype: DType) -> TypeIs[IntegerType]:
+    return dtype.is_integer()
+
+
+def is_signed_integer(dtype: DType) -> TypeIs[SignedIntegerType]:
+    return dtype.is_signed_integer()
+
+
+def is_unsigned_integer(dtype: DType) -> TypeIs[UnsignedIntegerType]:
+    return dtype.is_unsigned_integer()
+
+
+def is_boolean(dtype: DType) -> TypeIs[Boolean]:
+    return dtype.is_boolean()
 
 
 @lru_cache(maxsize=4)
@@ -24,7 +61,7 @@ def _min_time_unit(a: TimeUnit, b: TimeUnit) -> TimeUnit:
 
 
 @lru_cache(4)
-def _signed_int_to_bit_size(*, dtypes: DTypes) -> dict[DType, int]:
+def _signed_int_to_bit_size(*, dtypes: DTypes) -> dict[IntegerType, int]:
     """Mapping from signed integer types to their bit size."""
     return {
         dtypes.Int8(): 8,
@@ -36,7 +73,7 @@ def _signed_int_to_bit_size(*, dtypes: DTypes) -> dict[DType, int]:
 
 
 @lru_cache(4)
-def _unsigned_int_to_bit_size(*, dtypes: DTypes) -> dict[DType, int]:
+def _unsigned_int_to_bit_size(*, dtypes: DTypes) -> dict[IntegerType, int]:
     """Mapping from bit size to signed integer type."""
     return {
         dtypes.UInt8(): 8,
@@ -48,18 +85,20 @@ def _unsigned_int_to_bit_size(*, dtypes: DTypes) -> dict[DType, int]:
 
 
 @lru_cache(4)
-def _bit_size_to_signed_int(*, dtypes: DTypes) -> dict[int, DType]:
+def _bit_size_to_signed_int(*, dtypes: DTypes) -> dict[int, IntegerType]:
     """Mapping from bit size to signed integer type."""
     return {v: k for k, v in _signed_int_to_bit_size(dtypes=dtypes).items()}  # type: ignore[arg-type]
 
 
 @lru_cache(4)
-def _bit_size_to_unsigned_int(*, dtypes: DTypes) -> dict[int, DType]:
+def _bit_size_to_unsigned_int(*, dtypes: DTypes) -> dict[int, IntegerType]:
     """Mapping from bit size to unsigned integer type."""
     return {v: k for k, v in _unsigned_int_to_bit_size(dtypes=dtypes).items()}  # type: ignore[arg-type]
 
 
-def _get_integer_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
+def _get_integer_supertype(
+    left: IntegerType, right: IntegerType, *, dtypes: DTypes
+) -> IntegerType | Float64 | None:
     """Get supertype for two integer types.
 
     Following Polars rules:
@@ -68,8 +107,8 @@ def _get_integer_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DTyp
     - Mixed signedness: promote to signed with enough bits to hold both
     - Int64 + UInt64 -> Float64 (following Polars)
     """
-    left_signed = left.is_signed_integer()
-    right_signed = right.is_signed_integer()
+    left_signed = is_signed_integer(left)
+    right_signed = is_signed_integer(right)
 
     signed_int_to_bit_size = _signed_int_to_bit_size(dtypes=dtypes)  # type: ignore[arg-type]
     unsigned_int_to_bit_size = _unsigned_int_to_bit_size(dtypes=dtypes)  # type: ignore[arg-type]
@@ -195,17 +234,17 @@ def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
         return left
 
     # Numeric and Boolean -> Numeric
-    if right.is_numeric() and left.is_boolean():
+    if is_numeric(right) and is_boolean(left):
         return right
-    if left.is_numeric() and right.is_boolean():
+    if is_numeric(left) and is_boolean(right):
         return left
 
     # Both Integer
-    if left.is_integer() and right.is_integer():
+    if is_integer(left) and is_integer(right):
         return _get_integer_supertype(left, right, dtypes=dtypes)
 
     # Both Float
-    if left.is_float() and right.is_float():
+    if is_float(left) and is_float(right):
         return (
             dtypes.Float64()
             if (left == dtypes.Float64() or right == dtypes.Float64())
@@ -216,7 +255,7 @@ def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
     #  * Small integers (Int8, Int16, UInt8, UInt16) + Float32 -> Float32
     #  * Larger integers (Int32+) + Float32 -> Float64
     #  * Any integer + Float64 -> Float64
-    if left.is_integer() and right.is_float():
+    if is_integer(left) and is_float(right):
         if right == dtypes.Float64():
             return dtypes.Float64()
 
@@ -228,7 +267,7 @@ def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
             return dtypes.Float32()
         return dtypes.Float64()
 
-    if right.is_integer() and left.is_float():
+    if is_integer(right) and is_float(left):
         if left == dtypes.Float64():
             return dtypes.Float64()
 
@@ -241,8 +280,8 @@ def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
         return dtypes.Float64()
 
     # Decimal with other numeric types
-    if (isinstance(left, dtypes.Decimal) and right.is_numeric()) or (
-        isinstance(right, dtypes.Decimal) and left.is_numeric()
+    if (isinstance(left, dtypes.Decimal) and is_numeric(right)) or (
+        isinstance(right, dtypes.Decimal) and is_numeric(left)
     ):
         return dtypes.Decimal()
 
