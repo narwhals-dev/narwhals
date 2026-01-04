@@ -4,10 +4,12 @@
 
 from __future__ import annotations
 
-from functools import lru_cache
+from functools import cache, lru_cache
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from typing_extensions import TypeIs
 
     from narwhals.dtypes import (
@@ -19,6 +21,7 @@ if TYPE_CHECKING:
         NumericType,
         SignedIntegerType,
         UnsignedIntegerType,
+        _Bits,
     )
     from narwhals.typing import DTypes, TimeUnit
 
@@ -60,27 +63,31 @@ def _min_time_unit(a: TimeUnit, b: TimeUnit) -> TimeUnit:
     return a if _time_unit_to_index(a) <= _time_unit_to_index(b) else b
 
 
-@lru_cache(4)
-def _bit_size_to_signed_int(*, dtypes: DTypes) -> dict[int, SignedIntegerType]:
-    """Mapping from bit size to signed integer type."""
+@cache
+def _bit_size_to_signed_int() -> Mapping[_Bits, SignedIntegerType]:
+    # NOTE: If we ever make a versioned change to `Int`(s), update to pass in `DTypes`
+    from narwhals import dtypes as _dtypes
+
     return {
-        8: dtypes.Int8(),
-        16: dtypes.Int16(),
-        32: dtypes.Int32(),
-        64: dtypes.Int64(),
-        128: dtypes.Int128(),
+        8: _dtypes.Int8(),
+        16: _dtypes.Int16(),
+        32: _dtypes.Int32(),
+        64: _dtypes.Int64(),
+        128: _dtypes.Int128(),
     }
 
 
-@lru_cache(4)
-def _bit_size_to_unsigned_int(*, dtypes: DTypes) -> dict[int, UnsignedIntegerType]:
-    """Mapping from bit size to unsigned integer type."""
+@cache
+def _bit_size_to_unsigned_int() -> Mapping[_Bits, UnsignedIntegerType]:
+    # NOTE: If we ever make a versioned change to `UInt`(s), update to pass in `DTypes`
+    from narwhals import dtypes as _dtypes
+
     return {
-        8: dtypes.UInt8(),
-        16: dtypes.UInt16(),
-        32: dtypes.UInt32(),
-        64: dtypes.UInt64(),
-        128: dtypes.UInt128(),
+        8: _dtypes.UInt8(),
+        16: _dtypes.UInt16(),
+        32: _dtypes.UInt32(),
+        64: _dtypes.UInt64(),
+        128: _dtypes.UInt128(),
     }
 
 
@@ -103,11 +110,11 @@ def _get_integer_supertype(
 
     # Same signedness: return larger type
     if left_signed == right_signed:
-        max_bits = max(left_bits, right_bits)
+        max_bits: _Bits = max(left_bits, right_bits)
         return (
-            _bit_size_to_signed_int(dtypes=dtypes)[max_bits]  # type: ignore[arg-type]
+            _bit_size_to_signed_int()[max_bits]
             if left_signed
-            else _bit_size_to_unsigned_int(dtypes=dtypes)[max_bits]  # type: ignore[arg-type]
+            else _bit_size_to_unsigned_int()[max_bits]
         )
 
     # Mixed signedness: need signed type that can hold both
@@ -118,7 +125,7 @@ def _get_integer_supertype(
 
     # If signed type is strictly larger than unsigned, it can hold both
     if signed_bits > unsigned_bits:
-        return _bit_size_to_signed_int(dtypes=dtypes)[signed_bits]  # type: ignore[arg-type]
+        return _bit_size_to_signed_int()[signed_bits]
 
     # Otherwise, need to go to the next larger signed type
     # For Int64 + UInt64, Polars uses Float64 instead of Int128
@@ -129,7 +136,7 @@ def _get_integer_supertype(
     required_bits = unsigned_bits * 2
     for bits in (16, 32, 64):
         if bits >= required_bits:
-            return _bit_size_to_signed_int(dtypes=dtypes)[bits]  # type: ignore[arg-type]
+            return _bit_size_to_signed_int()[bits]
 
     # Fallback to Float64 if no integer type large enough
     return dtypes.Float64()
