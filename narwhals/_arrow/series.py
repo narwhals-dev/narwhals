@@ -1104,6 +1104,9 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def sqrt(self) -> Self:
         return self._with_native(pc.sqrt(self.native))
 
+    def sin(self) -> Self:
+        return self._with_native(pc.sin(self.native))
+
     def any_value(
         self, *, ignore_nulls: bool, _return_py_scalar: bool = True
     ) -> PythonLiteral:
