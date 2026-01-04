@@ -3,10 +3,9 @@ from __future__ import annotations
 import pytest
 
 import narwhals as nw
+import narwhals.stable.v1 as nw_v1  # noqa: F401
+import narwhals.stable.v2 as nw_v2  # noqa: F401
 from narwhals._utils import Version
-
-# import narwhals.stable.v1 as nw_v1
-# import narwhals.stable.v2 as nw_v2
 from narwhals.dtypes import DType, get_supertype
 
 

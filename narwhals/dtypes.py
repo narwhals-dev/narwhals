@@ -1011,7 +1011,7 @@ def _min_time_unit(a: TimeUnit, b: TimeUnit) -> TimeUnit:
 
 @lru_cache(4)
 def _signed_int_to_bit_size(*, dtypes: DTypes) -> dict[DType, int]:
-    """Mapping from signed integer types to their bit size"""
+    """Mapping from signed integer types to their bit size."""
     return {
         dtypes.Int8(): 8,
         dtypes.Int16(): 16,
@@ -1023,7 +1023,7 @@ def _signed_int_to_bit_size(*, dtypes: DTypes) -> dict[DType, int]:
 
 @lru_cache(4)
 def _unsigned_int_to_bit_size(*, dtypes: DTypes) -> dict[DType, int]:
-    """Mapping from bit size to signed integer type"""
+    """Mapping from bit size to signed integer type."""
     return {
         dtypes.UInt8(): 8,
         dtypes.UInt16(): 16,
@@ -1035,13 +1035,13 @@ def _unsigned_int_to_bit_size(*, dtypes: DTypes) -> dict[DType, int]:
 
 @lru_cache(4)
 def _bit_size_to_signed_int(*, dtypes: DTypes) -> dict[int, DType]:
-    """Mapping from bit size to signed integer type"""
+    """Mapping from bit size to signed integer type."""
     return {v: k for k, v in _signed_int_to_bit_size(dtypes=dtypes).items()}
 
 
 @lru_cache(4)
 def _bit_size_to_unsigned_int(*, dtypes: DTypes) -> dict[int, DType]:
-    """Mapping from bit size to unsigned integer type"""
+    """Mapping from bit size to unsigned integer type."""
     return {v: k for k, v in _unsigned_int_to_bit_size(dtypes=dtypes).items()}
 
 
@@ -1100,7 +1100,7 @@ def _get_integer_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DTyp
     return dtypes.Float64()
 
 
-def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
+def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:  # noqa: C901, PLR0911, PLR0912
     """Given two data types, determine the data type that both types can reasonably safely be cast to.
 
     This function follows Polars' supertype rules:
@@ -1109,6 +1109,7 @@ def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
     Arguments:
         left: First data type.
         right: Second data type.
+        dtypes: _description_
 
     Returns:
         The common supertype that both types can be safely cast to, or None if no such type exists.
@@ -1139,7 +1140,7 @@ def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
 
     # For Enum types, categories must match
     if isinstance(left, dtypes.Enum) and isinstance(right, dtypes.Enum):
-        if (left_cats := left.categories) == (right_cats := right.categories):
+        if left.categories == right.categories:
             return left
         # TODO(FBruzzesi): Should we merge the categories? return dtypes.Enum((*left_cats, *right_cat))
         return dtypes.String()
@@ -1172,7 +1173,7 @@ def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
         return Array(inner_super_type, left.size)
 
     if isinstance(left, dtypes.Struct) and isinstance(right, dtypes.Struct):
-        # left_fields, right_fields = left.fields, right.fields
+        # `left_fields, right_fields = left.fields, right.fields`
         msg = "TODO"
         raise NotImplementedError(msg)
 
