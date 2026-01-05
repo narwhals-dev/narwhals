@@ -95,14 +95,19 @@ def test_first_expr_over_order_by(
 ) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
         pytest.skip()
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
+
     if any(x in str(constructor) for x in ("pyspark", "dask")):
         # Currently unsupported.
         request.applymarker(pytest.mark.xfail)
     if "ibis" in str(constructor):
         # https://github.com/ibis-project/ibis/issues/11656
         request.applymarker(pytest.mark.xfail)
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
-        pytest.skip()
+    if "cudf" in str(constructor):
+        reason = "Need to pass dtype when passing pd.NA or None"
+        request.applymarker(pytest.mark.xfail(reason=reason))
+
     frame = nw.from_native(
         constructor(
             {
@@ -150,9 +155,6 @@ def test_first_expr_over_order_by_partition_by(
     if "ibis" in str(constructor):
         # https://github.com/ibis-project/ibis/issues/11656
         request.applymarker(pytest.mark.xfail)
-    if "cudf" in str(constructor):
-        reason = "Need to pass dtype when passing pd.NA or None"
-        request.applymarker(pytest.mark.xfail(reason=reason))
 
     frame = nw.from_native(
         constructor(

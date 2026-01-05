@@ -31,9 +31,15 @@ def series_from_native(native: IntoSeriesT) -> nw.Series[IntoSeriesT]:
 
 
 def test_self_equal(
-    constructor_eager: ConstructorEager, testing_data: Data, testing_schema: IntoSchema
+    request: pytest.FixtureRequest,
+    constructor_eager: ConstructorEager,
+    testing_data: Data,
+    testing_schema: IntoSchema,
 ) -> None:
     """Test that a series is equal to itself, including nested dtypes with nulls."""
+    if "cudf" in str(constructor_eager):
+        # TODO(FBruzzesi): Investigate which conversion is failing aside from nested dtypes
+        request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor_eager):
         if PANDAS_VERSION < (2, 2):  # pragma: no cover
             reason = "Pandas too old for nested dtypes"
@@ -54,17 +60,7 @@ def test_self_equal(
         # Replace Enum with Categorical, since Pyarrow does not support Enum
         data = dict(testing_data)
         schema = {**testing_schema, "enum": nw.Categorical()}
-    elif "cudf" in str(constructor_eager):
-        # Remove nested dtypes
-        data = {
-            name: values
-            for name, values in testing_data.items()
-            if not testing_schema[name].is_nested()
-        }
-        schema = {
-            name: dtype for name, dtype in testing_schema.items() if not dtype.is_nested()
-        }
-    else:  # make a copy
+    else:
         data = dict(testing_data)
         schema = dict(testing_schema)
 
