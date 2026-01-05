@@ -236,22 +236,11 @@ def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
     #  * Larger integers (Int32+) + Float32 -> Float64
     #  * Any integer + Float64 -> Float64
     if is_integer(left) and is_float(right):
-        if right == dtypes.Float64():
-            return dtypes.Float64()
-
-        # Float32 case
-        left_bits = left._bits
-        if left_bits is not None and left_bits <= 16:
+        if right._bits == 32 and left._bits <= 16:
             return dtypes.Float32()
         return dtypes.Float64()
-
-    if is_integer(right) and is_float(left):
-        if left == dtypes.Float64():
-            return dtypes.Float64()
-
-        # Float32 case
-        right_bits = right._bits
-        if right_bits is not None and right_bits <= 16:
+    if is_float(left) and is_integer(right):
+        if left._bits == 32 and right._bits <= 16:
             return dtypes.Float32()
         return dtypes.Float64()
 
