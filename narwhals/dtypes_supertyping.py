@@ -111,12 +111,11 @@ def _integer_supertyping() -> Callable[[IntegerType, IntegerType], IntegerType |
     def value_mixed(
         signed: type[IntegerType], unsigned: type[IntegerType], /
     ) -> type[IntegerType | Float64]:
-        i_bits, u_bits = signed._bits, unsigned._bits
-        lookup_signed = reverse_lookup[SignedIntegerType]
-        if i_bits > u_bits:
-            return lookup_signed[i_bits]
+        u_bits = unsigned._bits
+        if signed._bits > u_bits:
+            return signed
         if u_bits in (8, 16, 32):  # noqa: PLR6201
-            return lookup_signed[u_bits * 2]  # type: ignore[index]
+            return reverse_lookup[SignedIntegerType][u_bits * 2]  # type: ignore[index]
         return Float64
 
     lookup: Mapping[frozenset[type[IntegerType]], type[IntegerType | Float64]] = {
