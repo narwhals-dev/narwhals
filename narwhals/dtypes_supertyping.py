@@ -4,10 +4,9 @@
 
 from __future__ import annotations
 
-from functools import cache
 from itertools import product
 from operator import attrgetter
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, TypeVar
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
@@ -21,11 +20,27 @@ if TYPE_CHECKING:
         FloatType,
         IntegerType,
         NumericType,
+        SignedIntegerType,
+        UnsignedIntegerType,
         _Bits,
     )
     from narwhals.typing import DTypes, TimeUnit
 
     _HasBits: TypeAlias = "IntegerType | FloatType | type[IntegerType | FloatType]"
+
+    _Fn = TypeVar("_Fn", bound=Callable[..., Any])
+
+    # NOTE: Hack to make `functools.cache` *not* negatively impact typing
+    def cache(fn: _Fn, /) -> _Fn:
+        return fn
+else:
+    from functools import cache
+
+
+_SameNumericT = TypeVar(
+    "_SameNumericT", "FloatType", "SignedIntegerType", "UnsignedIntegerType"
+)
+"""If both dtypes share one of these bases - pick the one with more bits."""
 
 _TIME_UNIT_TO_INDEX: Mapping[TimeUnit, int] = {"s": 0, "ms": 1, "us": 2, "ns": 3}
 """Convert time unit to an index for comparison (larger = more precise)."""
@@ -64,7 +79,7 @@ def _max_bits(left: _Bits, right: _Bits, /) -> _Bits:
 
 
 @cache
-def _max_float(left: FloatType, right: FloatType) -> FloatType:
+def _max_same_sign(left: _SameNumericT, right: _SameNumericT, /) -> _SameNumericT:
     return max(left, right, key=_get_bits)
 
 
@@ -227,7 +242,7 @@ def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
 
     # Both Float
     if is_float(left) and is_float(right):
-        return _max_float(left, right)
+        return _max_same_sign(left, right)
 
     # Integer + Float -> Float
     #  * Small integers (Int8, Int16, UInt8, UInt16) + Float32 -> Float32
