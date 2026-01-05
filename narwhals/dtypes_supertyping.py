@@ -245,29 +245,29 @@ def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
             return dtypes.Float32()
         return dtypes.Float64()
 
+    # NOTE: These don't have versioning, safe to use main
+    from narwhals.dtypes import Decimal, NumericType, String, Unknown
+
+    base_left, base_right = left.base_type(), right.base_type()
+    base_types = frozenset((base_left, base_right))
+
     # Decimal with other numeric types
-    if (isinstance(left, dtypes.Decimal) and is_numeric(right)) or (
-        isinstance(right, dtypes.Decimal) and is_numeric(left)
-    ):
-        return dtypes.Decimal()
+    # TODO @dangotbanned: Maybe branch off earlier if there is a numeric type?
+    if Decimal in base_types and all(issubclass(tp, NumericType) for tp in base_types):
+        return Decimal()
 
     # Date + Datetime -> Datetime
-    if isinstance(left, dtypes.Date) and isinstance(right, dtypes.Datetime):
-        return right
-    if isinstance(right, dtypes.Date) and isinstance(left, dtypes.Datetime):
-        return left
+    if base_types == frozenset((dtypes.Date, dtypes.Datetime)):
+        return left if isinstance(left, dtypes.Datetime) else right
 
     # Categorical/Enum + String -> String
-    if (
-        isinstance(left, dtypes.String)
-        and (isinstance(right, (dtypes.Categorical, dtypes.Enum)))
-    ) or (
-        isinstance(right, dtypes.String)
-        and (isinstance(left, (dtypes.Categorical, dtypes.Enum)))
+    if String in base_types and not base_types.isdisjoint(
+        (dtypes.Categorical, dtypes.Enum)
     ):
-        return dtypes.String()
+        return String()
 
-    if isinstance(left, dtypes.Unknown) or isinstance(right, dtypes.Unknown):
-        return dtypes.Unknown()
+    # TODO @dangotbanned: Maybe move this to the top?
+    if Unknown in base_types:
+        return Unknown()
 
     return None
