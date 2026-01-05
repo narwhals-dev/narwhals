@@ -165,7 +165,7 @@ def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
     """
     if isinstance(left, dtypes.Datetime) and isinstance(right, dtypes.Datetime):
         if left.time_zone != right.time_zone:
-            return None
+            return None  # pragma: no cover
         return dtypes.Datetime(
             _min_time_unit(left.time_unit, right.time_unit), left.time_zone
         )
@@ -183,7 +183,7 @@ def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
 
         # > Every known type can be cast to a string except binary
         # https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-core/src/utils/supertype.rs#L380-L382
-        return dtypes.String()
+        return dtypes.String()  # pragma: no cover
 
     if isinstance(left, dtypes.List) and isinstance(right, dtypes.List):
         left_inner, right_inner = left.inner, right.inner
@@ -195,12 +195,12 @@ def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
         if (
             inner_super_type := get_supertype(left_inner, right_inner, dtypes=dtypes)
         ) is None:
-            return None
+            return None  # pragma: no cover
         return dtypes.List(inner_super_type)
 
     if isinstance(left, dtypes.Array) and isinstance(right, dtypes.Array):
         if left.shape != right.shape:
-            return None
+            return None  # pragma: no cover
         left_inner, right_inner = left.inner, right.inner
         if isinstance(left_inner, type):
             left_inner = left_inner()
@@ -209,7 +209,7 @@ def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
         if (
             inner_super_type := get_supertype(left_inner, right_inner, dtypes=dtypes)
         ) is None:
-            return None
+            return None  # pragma: no cover
         return dtypes.Array(inner_super_type, left.size)
 
     if isinstance(left, dtypes.Struct) and isinstance(right, dtypes.Struct):
@@ -247,30 +247,32 @@ def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
         if left._bits == 32 and right._bits <= 16:
             return dtypes.Float32()
         return dtypes.Float64()
+    else:  # pragma: no cover  # noqa: RET505
+        # NOTE: These don't have versioning, safe to use main
+        from narwhals.dtypes import Decimal, NumericType, String, Unknown
 
-    # NOTE: These don't have versioning, safe to use main
-    from narwhals.dtypes import Decimal, NumericType, String, Unknown
+        base_left, base_right = left.base_type(), right.base_type()
+        base_types = frozenset((base_left, base_right))
 
-    base_left, base_right = left.base_type(), right.base_type()
-    base_types = frozenset((base_left, base_right))
+        # Decimal with other numeric types
+        # TODO @dangotbanned: Maybe branch off earlier if there is a numeric type?
+        if Decimal in base_types and all(
+            issubclass(tp, NumericType) for tp in base_types
+        ):
+            return Decimal()
 
-    # Decimal with other numeric types
-    # TODO @dangotbanned: Maybe branch off earlier if there is a numeric type?
-    if Decimal in base_types and all(issubclass(tp, NumericType) for tp in base_types):
-        return Decimal()
+        # Date + Datetime -> Datetime
+        if base_types == frozenset((dtypes.Date, dtypes.Datetime)):
+            return left if isinstance(left, dtypes.Datetime) else right
 
-    # Date + Datetime -> Datetime
-    if base_types == frozenset((dtypes.Date, dtypes.Datetime)):
-        return left if isinstance(left, dtypes.Datetime) else right
+        # Categorical/Enum + String -> String
+        if String in base_types and not base_types.isdisjoint(
+            (dtypes.Categorical, dtypes.Enum)
+        ):
+            return String()
 
-    # Categorical/Enum + String -> String
-    if String in base_types and not base_types.isdisjoint(
-        (dtypes.Categorical, dtypes.Enum)
-    ):
-        return String()
+        # TODO @dangotbanned: Maybe move this to the top?
+        if Unknown in base_types:
+            return Unknown()
 
-    # TODO @dangotbanned: Maybe move this to the top?
-    if Unknown in base_types:
-        return Unknown()
-
-    return None
+        return None
