@@ -275,14 +275,14 @@ def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
     # TODO @dangotbanned: (Date, {UInt,Int,Float}{32,64}) -> {Int,Float}{32,64}
     # https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-core/src/utils/supertype.rs#L314-L328
 
+    # TODO @dangotbanned: (Time, {Int,Float}{32,64}) -> {Int,Float}64
+    # https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-core/src/utils/supertype.rs#L369-L378
+
     # TODO @dangotbanned: (Datetime, {UInt,Int,Float}{32,64}) -> {Int,Float}64
     # https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-core/src/utils/supertype.rs#L332-L345
 
     # TODO @dangotbanned: (Duration, {UInt,Int,Float}{32,64}) -> {Int,Float}64
     # https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-core/src/utils/supertype.rs#L355-L367
-
-    # TODO @dangotbanned: (Time, {Int,Float}{32,64}) -> {Int,Float}64
-    # https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-core/src/utils/supertype.rs#L369-L378
 
     if String in base_types:
         # Categorical/Enum + String -> String
