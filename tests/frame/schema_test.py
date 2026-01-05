@@ -627,8 +627,13 @@ def test_schema_from_arrow(
 
 
 def test_schema_from_pandas_like(
-    origin_pandas_like: IntoPandasSchema, target_narwhals_pandas: nw.Schema
+    origin_pandas_like: IntoPandasSchema,
+    target_narwhals_pandas: nw.Schema,
+    request: pytest.FixtureRequest,
 ) -> None:
+    if "cudf" in str(origin_pandas_like):
+        reason = "different datetime time_unit default"
+        request.applymarker(pytest.mark.xfail(reason=reason))
     from_pandas = nw.Schema.from_pandas_like(origin_pandas_like)
     from_native = nw.Schema.from_native(origin_pandas_like)
     assert from_pandas == target_narwhals_pandas

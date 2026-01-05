@@ -997,6 +997,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         return self._with_native(result)
 
     def __iter__(self) -> Iterator[Any]:
+        # CuDF Series is not directly iterable https://docs.rapids.ai/api/cudf/stable/user_guide/pandas-comparison/#iteration
         it = (
             self.native.to_cupy()
             if self._implementation.is_cudf()
