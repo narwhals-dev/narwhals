@@ -997,7 +997,12 @@ class PandasLikeSeries(EagerSeries[Any]):
         return self._with_native(result)
 
     def __iter__(self) -> Iterator[Any]:
-        yield from self.native.__iter__()
+        it = (
+            self.native.to_cupy()
+            if self._implementation.is_cudf()
+            else self.native.__iter__()
+        )
+        yield from it
 
     def __contains__(self, other: Any) -> bool:
         return self.native.isna().any() if other is None else (self.native == other).any()
