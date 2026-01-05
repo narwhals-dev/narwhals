@@ -627,13 +627,11 @@ def test_schema_from_arrow(
 
 
 def test_schema_from_pandas_like(
-    origin_pandas_like: IntoPandasSchema,
-    target_narwhals_pandas: nw.Schema,
-    request: pytest.FixtureRequest,
+    origin_pandas_like: IntoPandasSchema, target_narwhals_pandas: nw.Schema
 ) -> None:
-    if "cudf" in str(origin_pandas_like):
-        reason = "different datetime time_unit default"
-        request.applymarker(pytest.mark.xfail(reason=reason))
+    # TODO(Unassigned): This test fails for cudf due to different datetime unit
+    # Yet in the current implementation there is no direct way to tell the original
+    # from which the schema comes from?
     from_pandas = nw.Schema.from_pandas_like(origin_pandas_like)
     from_native = nw.Schema.from_native(origin_pandas_like)
     assert from_pandas == target_narwhals_pandas
