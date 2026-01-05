@@ -16,7 +16,9 @@ if TYPE_CHECKING:
 XFAIL_TODO = pytest.mark.xfail(reason="TODO", raises=NotImplementedError)
 
 
-def _dtype_ids(obj: DType) -> str:
+def _dtype_ids(obj: DType | None) -> str:
+    if obj is None:
+        return str(obj)
     if obj.__slots__:
         # non-empty slots == parameters
         return repr(obj)
@@ -37,6 +39,7 @@ def _dtype_ids(obj: DType) -> str:
         nw.Decimal(),
         nw.Duration(),
         nw.Enum(["orca", "narwhal"]),
+        nw.Enum([]),
         nw.Float32(),
         nw.Float64(),
         nw.Int8(),
@@ -61,10 +64,56 @@ def _dtype_ids(obj: DType) -> str:
     ],
     ids=_dtype_ids,
 )
-def test_same_dtype(dtype: DType) -> None:
+def test_identical_dtype(dtype: DType) -> None:
     result = get_supertype(dtype, dtype, dtypes=Version.MAIN.dtypes)
     assert result is not None
     assert result == dtype
+
+
+@pytest.mark.parametrize(
+    ("left", "right", "expected"),
+    [
+        (nw.Datetime("ns"), nw.Datetime("us"), nw.Datetime("us")),
+        (nw.Datetime("s"), nw.Datetime("us"), nw.Datetime("s")),
+        (nw.Datetime("s"), nw.Datetime("s", "Africa/Accra"), None),
+        (nw.Datetime(time_zone="Asia/Kathmandu"), nw.Datetime(), None),
+        (
+            nw.Enum(["beluga", "narwhal", "orca"]),
+            nw.Enum(["dog", "cat", "fish with legs"]),
+            nw.String(),
+        ),
+        (nw.Enum([]), nw.Enum(["fruit", "other food"]), nw.String()),
+        (nw.List(nw.Int64), nw.List(nw.Int64()), nw.List(nw.Int64())),
+        (nw.List(nw.UInt16()), nw.List(nw.Int32), nw.List(nw.Int32())),
+        (nw.List(nw.Date), nw.List(nw.Binary), None),
+        (nw.List(nw.Unknown), nw.List(nw.Float64), nw.List(nw.Unknown())),
+        (
+            nw.Array(nw.Float32, shape=2),
+            nw.Array(nw.Float64, shape=2),
+            nw.Array(nw.Float64, shape=2),
+        ),
+        (nw.Array(nw.Int64, shape=1), nw.Array(nw.Int64, shape=4), None),
+        (
+            nw.Array(nw.Decimal, shape=1),
+            nw.Array(nw.Unknown, shape=1),
+            nw.Array(nw.Unknown, shape=1),
+        ),
+        (
+            nw.Array(nw.UInt128, shape=3),
+            nw.Array(nw.Decimal, shape=3),
+            nw.Array(nw.Decimal, shape=3),
+        ),
+        (nw.Array(nw.String, shape=1), nw.Array(nw.Int64, shape=1), None),
+    ],
+    ids=_dtype_ids,
+)
+def test_same_class(left: DType, right: DType, expected: DType | None) -> None:
+    result = get_supertype(left, right, dtypes=Version.MAIN.dtypes)
+    if expected is None:
+        assert result is None
+    else:
+        assert result is not None
+        assert result == expected
 
 
 @pytest.mark.parametrize(
