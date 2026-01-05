@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from functools import cache, lru_cache
+from functools import cache
 from itertools import product
 from typing import TYPE_CHECKING
 
@@ -23,6 +23,9 @@ if TYPE_CHECKING:
         _Bits,
     )
     from narwhals.typing import DTypes, TimeUnit
+
+_TIME_UNIT_TO_INDEX: Mapping[TimeUnit, int] = {"s": 0, "ms": 1, "us": 2, "ns": 3}
+"""Convert time unit to an index for comparison (larger = more precise)."""
 
 
 # TODO @dangotbanned: Define the signatures inside `TYPE_CHECKING`,
@@ -43,15 +46,10 @@ def is_boolean(dtype: DType) -> TypeIs[Boolean]:
     return dtype.is_boolean()
 
 
-@lru_cache(maxsize=4)
-def _time_unit_to_index(time_unit: TimeUnit) -> int:
-    """Convert time unit to an index for comparison (larger = more precise)."""
-    return {"s": 0, "ms": 1, "us": 2, "ns": 3}[time_unit]
-
-
+@cache
 def _min_time_unit(a: TimeUnit, b: TimeUnit) -> TimeUnit:
     """Return the less precise time unit."""
-    return a if _time_unit_to_index(a) <= _time_unit_to_index(b) else b
+    return min(a, b, key=_TIME_UNIT_TO_INDEX.__getitem__)
 
 
 @cache
