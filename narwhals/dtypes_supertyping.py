@@ -223,7 +223,7 @@ def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
 
     if isinstance(left, dtypes.Struct) and isinstance(right, dtypes.Struct):
         # `left_fields, right_fields = left.fields, right.fields`
-        msg = "TODO"
+        msg = "TODO: (Struct, Struct)"
         raise NotImplementedError(msg)
 
     # TODO @dangotbanned: Find out why this isn't the first thing we do

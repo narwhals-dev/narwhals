@@ -13,7 +13,9 @@ from narwhals.dtypes_supertyping import get_supertype
 if TYPE_CHECKING:
     from narwhals.dtypes import DType
 
-XFAIL_TODO = pytest.mark.xfail(reason="TODO", raises=NotImplementedError)
+XFAIL_STRUCT = pytest.mark.xfail(
+    reason="TODO: (Struct, Struct)", raises=NotImplementedError
+)
 
 
 def _dtype_ids(obj: DType | None) -> str:
@@ -52,7 +54,7 @@ def _dtype_ids(obj: DType | None) -> str:
         nw.Object(),
         nw.String(),
         pytest.param(
-            nw.Struct({"r2": nw.Float64(), "mse": nw.Float32()}), marks=XFAIL_TODO
+            nw.Struct({"r2": nw.Float64(), "mse": nw.Float32()}), marks=XFAIL_STRUCT
         ),
         nw.Time(),
         nw.UInt8(),
