@@ -254,6 +254,18 @@ def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
     if Decimal in base_types and all(issubclass(tp, NumericType) for tp in base_types):
         return Decimal()
 
+    # TODO @dangotbanned: (Date, {UInt,Int,Float}{32,64}) -> {Int,Float}{32,64}
+    # https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-core/src/utils/supertype.rs#L314-L328
+
+    # TODO @dangotbanned: (Datetime, {UInt,Int,Float}{32,64}) -> {Int,Float}64
+    # https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-core/src/utils/supertype.rs#L332-L345
+
+    # TODO @dangotbanned: (Duration, {UInt,Int,Float}{32,64}) -> {Int,Float}64
+    # https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-core/src/utils/supertype.rs#L355-L367
+
+    # TODO @dangotbanned: (Time, {Int,Float}{32,64}) -> {Int,Float}64
+    # https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-core/src/utils/supertype.rs#L369-L378
+
     # Date + Datetime -> Datetime
     if base_types == frozenset((dtypes.Date, dtypes.Datetime)):
         return left if isinstance(left, dtypes.Datetime) else right
