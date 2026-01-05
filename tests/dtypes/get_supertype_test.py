@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -23,10 +23,22 @@ XFAIL_DATETIME_NUMERIC = pytest.mark.xfail(reason="TODO: (Datetime, Numeric)")
 XFAIL_DURATION_NUMERIC = pytest.mark.xfail(reason="TODO: (Duration, Numeric)")
 
 
-def _dtype_ids(obj: DType | None) -> str:
+def _dtype_ids(obj: DType | None) -> str:  # noqa: PLR0911
+    """Some tweaks to `DType.__repr__` for more readable test ids."""
     if obj is None:
         return str(obj)
     if obj.__slots__:
+        if isinstance(obj, nw.Datetime):
+            return f"Datetime[{obj.time_unit}, {obj.time_zone}]"
+        if isinstance(obj, nw.Duration):
+            return f"Duration[{obj.time_unit}]"
+        if isinstance(obj, nw.Enum):
+            return f"Enum{list(obj.categories)!r}"
+        if isinstance(obj, nw.Array):
+            dtype: Any = obj
+            for _ in obj.shape:
+                dtype = dtype.inner
+            return f"Array[{dtype!r}, {obj.shape}]"
         # non-empty slots == parameters
         return repr(obj)
     return obj.__class__.__name__
@@ -178,6 +190,7 @@ def test_same_class(left: DType, right: DType, expected: DType | None) -> None:
             nw.Duration("ms"), nw.Float64(), nw.Float64(), marks=XFAIL_DURATION_NUMERIC
         ),
     ],
+    ids=_dtype_ids,
 )
 def test_mixed_dtype(left: DType, right: DType, expected: DType | None) -> None:
     result = get_supertype(left, right, dtypes=Version.MAIN.dtypes)
