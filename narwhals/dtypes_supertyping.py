@@ -214,6 +214,7 @@ def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
         msg = "TODO"
         raise NotImplementedError(msg)
 
+    # TODO @dangotbanned: Find out why this isn't the first thing we do
     if left == right:
         return left
 
