@@ -170,6 +170,11 @@ def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
         if left.categories == right.categories:
             return left
         # TODO(FBruzzesi): Should we merge the categories? return dtypes.Enum((*left_cats, *right_cat))
+        # NOTE: (@dangotbanned): Seems like something polars doesn't want https://github.com/pola-rs/polars/issues/22001
+        # # https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-core/src/datatypes/dtype.rs#L1275-L1279
+
+        # > Every known type can be cast to a string except binary
+        # https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-core/src/utils/supertype.rs#L380-L382
         return dtypes.String()
 
     if isinstance(left, dtypes.List) and isinstance(right, dtypes.List):
