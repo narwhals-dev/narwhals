@@ -6,12 +6,13 @@ from __future__ import annotations
 
 from functools import cache
 from itertools import product
+from operator import attrgetter
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
 
-    from typing_extensions import TypeIs
+    from typing_extensions import TypeAlias, TypeIs
 
     from narwhals.dtypes import (
         Boolean,
@@ -24,8 +25,12 @@ if TYPE_CHECKING:
     )
     from narwhals.typing import DTypes, TimeUnit
 
+    _HasBits: TypeAlias = "IntegerType | FloatType | type[IntegerType | FloatType]"
+
 _TIME_UNIT_TO_INDEX: Mapping[TimeUnit, int] = {"s": 0, "ms": 1, "us": 2, "ns": 3}
 """Convert time unit to an index for comparison (larger = more precise)."""
+
+_get_bits: Callable[[_HasBits], _Bits] = attrgetter("_bits")
 
 
 # TODO @dangotbanned: Define the signatures inside `TYPE_CHECKING`,
@@ -60,7 +65,7 @@ def _max_bits(left: _Bits, right: _Bits, /) -> _Bits:
 
 @cache
 def _max_float(left: FloatType, right: FloatType) -> FloatType:
-    return left if left._bits >= right._bits else right
+    return max(left, right, key=_get_bits)
 
 
 @cache
