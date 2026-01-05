@@ -2230,7 +2230,7 @@ class Expr:
         return self._append_node(ExprNode(ExprKind.ELEMENTWISE, "exp"))
 
     def sin(self) -> Self:
-        r"""Compute the sin.
+        r"""Compute the element-wise value for the sine.
 
         Examples:
             >>> import pyarrow as pa
@@ -2278,7 +2278,7 @@ class Expr:
         return self._append_node(ExprNode(ExprKind.ELEMENTWISE, "cos"))
 
     def sqrt(self) -> Self:
-        r"""Compute the square root.
+        r"""Compute the square root of the elements.
 
         Examples:
             >>> import pyarrow as pa

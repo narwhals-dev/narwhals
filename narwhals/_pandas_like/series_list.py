@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import partial
 from typing import TYPE_CHECKING
 
 from narwhals._compliant.any_namespace import ListNamespace
@@ -34,18 +35,12 @@ class PandasLikeSeriesListNamespace(
         )
         return self.with_native(result.astype(dtype)).alias(self.native.name)
 
-    unique = not_implemented()
-
-    contains = not_implemented()
-
     def get(self, index: int) -> PandasLikeSeries:
         result = self.native.list[index]
         result.name = self.native.name
         return self.with_native(result)
 
-    def _agg(
-        self, func: Literal["min", "max", "mean", "approximate_median", "sum"]
-    ) -> PandasLikeSeries:
+    def _raise_if_not_pyarrow_backend(self) -> None:
         dtype_backend = get_dtype_backend(
             self.native.dtype, self.compliant._implementation
         )
@@ -53,16 +48,15 @@ class PandasLikeSeriesListNamespace(
             msg = "Only pyarrow backend is currently supported."
             raise NotImplementedError(msg)
 
-        from narwhals._arrow.utils import list_agg, native_to_narwhals_dtype
+    def _agg(
+        self, func: Literal["min", "max", "mean", "approximate_median", "sum"]
+    ) -> PandasLikeSeries:
+        self._raise_if_not_pyarrow_backend()
 
-        ca = self.native.array._pa_array
-        result_arr = list_agg(ca, func)
-        nw_dtype = native_to_narwhals_dtype(result_arr.type, self.version)
-        out_dtype = narwhals_to_native_dtype(
-            nw_dtype, "pyarrow", self.implementation, self.version
-        )
-        result_native = type(self.native)(
-            result_arr, dtype=out_dtype, index=self.native.index, name=self.native.name
+        from narwhals._arrow.utils import list_agg
+
+        result_native = self.compliant._apply_pyarrow_compute_func(
+            self.native, partial(list_agg, func=func)
         )
         return self.with_native(result_native)
 
@@ -80,3 +74,16 @@ class PandasLikeSeriesListNamespace(
 
     def sum(self) -> PandasLikeSeries:
         return self._agg("sum")
+
+    def sort(self, *, descending: bool, nulls_last: bool) -> PandasLikeSeries:
+        self._raise_if_not_pyarrow_backend()
+
+        from narwhals._arrow.utils import list_sort
+
+        result_native = self.compliant._apply_pyarrow_compute_func(
+            self.native, partial(list_sort, descending=descending, nulls_last=nulls_last)
+        )
+        return self.with_native(result_native)
+
+    unique = not_implemented()
+    contains = not_implemented()
