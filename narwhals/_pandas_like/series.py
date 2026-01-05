@@ -997,13 +997,14 @@ class PandasLikeSeries(EagerSeries[Any]):
         return self._with_native(result)
 
     def __iter__(self) -> Iterator[Any]:
-        # CuDF Series is not directly iterable https://docs.rapids.ai/api/cudf/stable/user_guide/pandas-comparison/#iteration
-        it = (
-            self.native.to_cupy()
-            if self._implementation.is_cudf()
-            else self.native.__iter__()
-        )
-        yield from it
+        if self._implementation.is_cudf():
+            msg = (
+                "Iterating over a cuDF Series, DataFrame or Index is not supported. "
+                "For more information see: https://docs.rapids.ai/api/cudf/stable/user_guide/pandas-comparison/#iteration"
+            )
+            raise NotImplementedError(msg)
+
+        yield from self.native.__iter__()
 
     def __contains__(self, other: Any) -> bool:
         return self.native.isna().any() if other is None else (self.native == other).any()
