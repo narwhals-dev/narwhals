@@ -263,6 +263,10 @@ def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
     base_left, base_right = left.base_type(), right.base_type()
     base_types = frozenset((base_left, base_right))
 
+    # Date + Datetime -> Datetime
+    if base_types == frozenset((dtypes.Date, dtypes.Datetime)):
+        return left if isinstance(left, dtypes.Datetime) else right
+
     # Decimal with other numeric types
     # TODO @dangotbanned: Maybe branch off earlier if there is a numeric type?
     if Decimal in base_types and all(issubclass(tp, NumericType) for tp in base_types):
@@ -279,10 +283,6 @@ def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
 
     # TODO @dangotbanned: (Time, {Int,Float}{32,64}) -> {Int,Float}64
     # https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-core/src/utils/supertype.rs#L369-L378
-
-    # Date + Datetime -> Datetime
-    if base_types == frozenset((dtypes.Date, dtypes.Datetime)):
-        return left if isinstance(left, dtypes.Datetime) else right
 
     if String in base_types:
         # Categorical/Enum + String -> String
