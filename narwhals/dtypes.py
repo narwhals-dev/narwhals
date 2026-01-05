@@ -204,6 +204,13 @@ class UnsignedIntegerType(IntegerType, bits=128):
 class FloatType(NumericType):
     """Base class for float data types."""
 
+    # NOTE: Likely going to need an `Floatr` metaclass, to be able to use `Final` or a class property
+    _bits: ClassVar[_Bits]
+
+    def __init_subclass__(cls, *args: Any, bits: _Bits, **kwds: Any) -> None:
+        super().__init_subclass__(*args, **kwds)
+        cls._bits = bits
+
 
 class TemporalType(DType):
     """Base class for temporal data types."""
@@ -363,7 +370,7 @@ class UInt8(UnsignedIntegerType, bits=8):
     """
 
 
-class Float64(FloatType):
+class Float64(FloatType, bits=64):
     """64-bit floating point type.
 
     Examples:
@@ -376,7 +383,7 @@ class Float64(FloatType):
     """
 
 
-class Float32(FloatType):
+class Float32(FloatType, bits=32):
     """32-bit floating point type.
 
     Examples:

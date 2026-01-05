@@ -61,6 +61,11 @@ def _max_bits(left: _Bits, right: _Bits, /) -> _Bits:
 
 
 @cache
+def _max_float(left: FloatType, right: FloatType) -> FloatType:
+    return left if left._bits >= right._bits else right
+
+
+@cache
 def _integer_supertyping() -> Callable[[IntegerType, IntegerType], IntegerType | Float64]:
     """Get supertype for two integer types.
 
@@ -224,11 +229,7 @@ def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
 
     # Both Float
     if is_float(left) and is_float(right):
-        return (
-            dtypes.Float64()
-            if (left == dtypes.Float64() or right == dtypes.Float64())
-            else dtypes.Float32()
-        )
+        return _max_float(left, right)
 
     # Integer + Float -> Float
     #  * Small integers (Int8, Int16, UInt8, UInt16) + Float32 -> Float32
