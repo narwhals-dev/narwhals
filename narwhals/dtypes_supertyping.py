@@ -261,6 +261,9 @@ def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
     from narwhals.dtypes import Binary, Decimal, NumericType, String, Unknown
 
     base_left, base_right = left.base_type(), right.base_type()
+
+    # TODO @dangotbanned: Investigate using `frozenset((*left.__class__.__bases__, *right.__class__.__bases__))`
+    # We can check for pairs like `combined_bases.issuperset((NumericType, TemporalType))`
     base_types = frozenset((base_left, base_right))
 
     # Date + Datetime -> Datetime
