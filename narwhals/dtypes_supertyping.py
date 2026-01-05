@@ -180,9 +180,6 @@ def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
         # TODO(FBruzzesi): Should we merge the categories? return dtypes.Enum((*left_cats, *right_cat))
         # NOTE: (@dangotbanned): Seems like something polars doesn't want https://github.com/pola-rs/polars/issues/22001
         # # https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-core/src/datatypes/dtype.rs#L1275-L1279
-
-        # > Every known type can be cast to a string except binary
-        # https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-core/src/utils/supertype.rs#L380-L382
         return dtypes.String()
 
     if isinstance(left, dtypes.List) and isinstance(right, dtypes.List):
@@ -247,7 +244,7 @@ def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
         return dtypes.Float64()
 
     # NOTE: These don't have versioning, safe to use main
-    from narwhals.dtypes import Decimal, NumericType, String, Unknown
+    from narwhals.dtypes import Binary, Decimal, NumericType, String, Unknown
 
     base_left, base_right = left.base_type(), right.base_type()
     base_types = frozenset((base_left, base_right))
@@ -259,13 +256,16 @@ def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
 
     # Date + Datetime -> Datetime
     if base_types == frozenset((dtypes.Date, dtypes.Datetime)):
-        return left if isinstance(left, dtypes.Datetime) else right  # pragma: no cover
+        return left if isinstance(left, dtypes.Datetime) else right
 
-    # Categorical/Enum + String -> String
-    if String in base_types and not base_types.isdisjoint(
-        (dtypes.Categorical, dtypes.Enum)
-    ):
-        return String()  # pragma: no cover
+    if String in base_types:
+        # Categorical/Enum + String -> String
+        if base_types.intersection((dtypes.Categorical, dtypes.Enum)):
+            return String()
+        # Every known type can be cast to a string except binary
+        # https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-core/src/utils/supertype.rs#L380-L382
+        if Binary in base_types:
+            return Binary()
 
     # TODO @dangotbanned: Maybe move this to the top?
     if Unknown in base_types:

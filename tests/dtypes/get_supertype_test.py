@@ -119,6 +119,27 @@ def test_same_class(left: DType, right: DType, expected: DType | None) -> None:
 @pytest.mark.parametrize(
     ("left", "right", "expected"),
     [
+        (nw.Datetime("ns"), nw.Date(), nw.Datetime("ns")),
+        (nw.Date(), nw.Datetime(), nw.Datetime()),
+        (nw.Datetime(), nw.Int8(), None),
+        (nw.String(), nw.Categorical(), nw.String()),
+        (nw.Enum(["hello"]), nw.Categorical(), None),
+        (nw.Enum(["hello"]), nw.String(), nw.String()),
+        (nw.Binary(), nw.String(), nw.Binary()),
+    ],
+)
+def test_mixed_dtype(left: DType, right: DType, expected: DType | None) -> None:
+    result = get_supertype(left, right, dtypes=Version.MAIN.dtypes)
+    if expected is None:
+        assert result is None
+    else:
+        assert result is not None
+        assert result == expected
+
+
+@pytest.mark.parametrize(
+    ("left", "right", "expected"),
+    [
         # NOTE: The order of the case *should not* matter (some are flipped for coverage)
         # signed + signed
         (nw.Int8(), nw.Int16(), nw.Int16()),
