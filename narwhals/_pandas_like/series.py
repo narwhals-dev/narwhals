@@ -589,6 +589,10 @@ class PandasLikeSeries(EagerSeries[Any]):
         return res_ser
 
     def fill_nan(self, value: float | None) -> Self:
+        if self._implementation.is_cudf() and (value is None):
+            # TODO(Unassigned): https://github.com/narwhals-dev/narwhals/issues/3231
+            msg = "`fill_nan(value=None)` is not support for CuDF backend"
+            raise NotImplementedError(msg)
         if not self.dtype.is_numeric():  # pragma: no cover
             msg = f"`.fill_nan` only supported for numeric dtype and not {self.dtype}, did you mean `.fill_null`?"
             raise InvalidOperationError(msg)
