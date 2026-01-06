@@ -204,7 +204,7 @@ class UnsignedIntegerType(IntegerType, bits=128):
 class FloatType(NumericType):
     """Base class for float data types."""
 
-    # NOTE: Likely going to need an `Floatr` metaclass, to be able to use `Final` or a class property
+    # NOTE: Likely going to need an `Float` metaclass, to be able to use `Final` or a class property
     _bits: ClassVar[_Bits]
 
     def __init_subclass__(cls, *args: Any, bits: _Bits, **kwds: Any) -> None:
