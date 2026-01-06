@@ -56,7 +56,7 @@ def test_cos_dtype_pandas(dtype_backend: DTypeBackend) -> None:
     pytest.importorskip("pandas")
     import pandas as pd
 
-    s = pd.Series([-pi / 2, None, pi / 2], name="a", dtype="Float32", index=[8, 7, 6])
+    s = pd.Series([-pi / 2, None, pi / 2], name="a", dtype="float32", index=[8, 7, 6])
     if dtype_backend:
         s = s.convert_dtypes(dtype_backend=dtype_backend)
     result = nw.from_native(s, series_only=True).cos().to_native()
