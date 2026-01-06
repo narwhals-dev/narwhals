@@ -2262,18 +2262,20 @@ class Expr:
             >>> from math import pi
             >>> df_native = pa.table({"values": [0, pi / 2, pi]})
             >>> df = nw.from_native(df_native)
-            >>> result = df.with_columns(cos=nw.col("values").cos())
+            >>> result = df.with_columns(cos=nw.col("values").cos()).select(
+            ...     nw.all().round(4)
+            ... )
             >>> result
-            ┌──────────────────────────────────────────────────┐
-            |                Narwhals DataFrame                |
-            |--------------------------------------------------|
-            |pyarrow.Table                                     |
-            |values: double                                    |
-            |cos: double                                       |
-            |----                                              |
-            |values: [[0,1.5707963267948966,3.141592653589793]]|
-            |cos: [[1,6.123233995736766e-17,-1]]               |
-            └──────────────────────────────────────────────────┘
+            ┌───────────────────────────┐
+            |    Narwhals DataFrame     |
+            |---------------------------|
+            |pyarrow.Table              |
+            |values: double             |
+            |cos: double                |
+            |----                       |
+            |values: [[0,1.5708,3.1416]]|
+            |cos: [[1,0,-1]]            |
+            └───────────────────────────┘
         """
         return self._append_node(ExprNode(ExprKind.ELEMENTWISE, "cos"))
 

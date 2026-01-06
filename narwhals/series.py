@@ -2787,13 +2787,13 @@ class Series(Generic[IntoSeriesT]):
             >>> from math import pi
             >>> s_native = pd.Series([0, pi / 2, 3 * pi / 2], name="a")
             >>> s = nw.from_native(s_native, series_only=True)
-            >>> s.cos()
+            >>> s.cos().round(4)
             ┌───────────────────────┐
             |    Narwhals Series    |
             |-----------------------|
-            |0    0.0               |
-            |1    1.0               |
-            |2   -1.0               |
+            |0    1.0               |
+            |1    0.0               |
+            |2   -0.0               |
             |Name: a, dtype: float64|
             └───────────────────────┘
         """
