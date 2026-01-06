@@ -85,7 +85,7 @@ def test_identical_dtype(dtype: DType) -> None:
     assert result == dtype
 
 
-# TODO @dangotbanned: Add a whole bunch of `Struct` cases
+# TODO @dangotbanned: Add more `Struct` cases
 @pytest.mark.parametrize(
     ("left", "right", "expected"),
     [
@@ -120,6 +120,47 @@ def test_identical_dtype(dtype: DType) -> None:
             nw.Array(nw.Decimal, shape=3),
         ),
         (nw.Array(nw.String, shape=1), nw.Array(nw.Int64, shape=1), None),
+        (
+            nw.Struct({"f0": nw.Duration("ms"), "f1": nw.Int64, "f2": nw.Int64}),
+            nw.Struct({"f0": nw.Duration("ms"), "f1": nw.Int64()}),
+            nw.Struct({"f0": nw.Duration("ms"), "f1": nw.Int64(), "f2": nw.Int64()}),
+        ),
+        (
+            nw.Struct({"f0": nw.Float64, "f1": nw.Date, "f2": nw.Int32}),
+            nw.Struct({"f0": nw.Float32, "f1": nw.Datetime, "f3": nw.UInt8}),
+            nw.Struct(
+                {"f0": nw.Float64, "f1": nw.Datetime(), "f2": nw.Int32, "f3": nw.UInt8}
+            ),
+        ),
+        (
+            nw.Struct({"f0": nw.Int32, "f1": nw.Boolean, "f2": nw.String}),
+            nw.Struct({"f0": nw.Unknown}),
+            nw.Struct({"f0": nw.Unknown, "f1": nw.Boolean, "f2": nw.String}),
+        ),
+        (
+            nw.Struct({"f0": nw.Object, "f1": nw.List(nw.Boolean)}),
+            nw.Struct({"f0": nw.List(nw.Boolean), "f1": nw.List(nw.Boolean)}),
+            None,
+        ),
+        (
+            nw.Struct(
+                {"f0": nw.Int64, "f1": nw.Struct({"f0": nw.String, "f1": nw.Float32})}
+            ),
+            nw.Struct(
+                {
+                    "f0": nw.UInt8,
+                    "f1": nw.Struct(
+                        {"f0": nw.Categorical, "f1": nw.Float64(), "f2": nw.Time}
+                    ),
+                }
+            ),
+            nw.Struct(
+                {
+                    "f0": nw.Int64,
+                    "f1": nw.Struct({"f0": nw.String, "f1": nw.Float64, "f2": nw.Time}),
+                }
+            ),
+        ),
     ],
     ids=_dtype_ids,
 )
