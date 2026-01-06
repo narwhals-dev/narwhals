@@ -10,7 +10,7 @@ from operator import attrgetter
 from typing import TYPE_CHECKING, Any, TypeVar
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping
+    from collections.abc import Callable, Iterable, Iterator, Mapping
 
     from typing_extensions import TypeAlias, TypeIs
 
@@ -152,13 +152,8 @@ def _integer_supertyping() -> Callable[[IntegerType, IntegerType], IntegerType |
     return promote
 
 
-# TODO @dangotbanned: `(Struct, Struct) -> Struct`
 def _struct_union_fields(
-    left: list[Field],
-    right: list[Field],
-    /,
-    *,
-    dtypes: DTypes,  # noqa: ARG001
+    left: list[Field], right: list[Field], /, *, dtypes: DTypes
 ) -> Struct | None:
     # https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-core/src/utils/supertype.rs#L559-L586
     # if equal length we also take the lhs
@@ -166,12 +161,18 @@ def _struct_union_fields(
     if len(left) >= len(right):
         longest, shortest = left, right
     else:
-        longest, shortest = right, left  # noqa: F841
-    msg = "TODO: (Struct, Struct)"
-    raise NotImplementedError(msg)
+        longest, shortest = right, left
+    longest_map = dict(_iter_init_fields(longest))
+    for name, dtype in _iter_init_fields(shortest):
+        dtype_longest = longest_map.setdefault(name, dtype)
+        if dtype != dtype_longest:
+            if supertype := get_supertype(dtype, dtype_longest, dtypes=dtypes):
+                longest_map[name] = supertype
+            else:
+                return None
+    return dtypes.Struct(longest_map)
 
 
-# TODO @dangotbanned: `(Struct, Struct) -> Struct`
 def _struct_supertype(left: Struct, right: Struct, *, dtypes: DTypes) -> Struct | None:
     # https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-core/src/utils/supertype.rs#L588-L603
     left_fields, right_fields = left.fields, right.fields
@@ -188,6 +189,20 @@ def _struct_supertype(left: Struct, right: Struct, *, dtypes: DTypes) -> Struct 
         else:
             return None
     return dtypes.Struct(new_fields)
+
+
+def _iter_init_fields(fields: Iterable[Field]) -> Iterator[tuple[str, DType]]:
+    # NOTE: This part would be easier if we did `IntoDType -> DType` **inside** `Field(...)`
+    # Another option is defining `DType.__call__`, so `IntoDType()` becomes:
+    #   - `DType(self).__call__(self) -> Self`
+    #   - `NonNestedDType.__new__(NonNestedDType) -> NonNestedDType`
+    from narwhals.dtypes import DTypeClass
+
+    for f in fields:
+        if isinstance(f.dtype, DTypeClass):
+            yield f.name, f.dtype()
+        else:
+            yield f.name, f.dtype
 
 
 def _init_nested_pair(left: IntoDType, right: IntoDType) -> tuple[DType, DType]:
@@ -271,10 +286,14 @@ def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
             return dtypes.Array(inner_super_type, left.size)
         return None
 
-    # TODO @dangotbanned: `(Struct, Struct) -> Struct`
     # https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-core/src/utils/supertype.rs#L496-L498
     if isinstance(left, dtypes.Struct) and isinstance(right, dtypes.Struct):
         return _struct_supertype(left, right, dtypes=dtypes)
+
+    # NOTE: There are some other branches for `(Struct, DataType) -> Struct`
+    # But, why?
+    # https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-core/src/utils/supertype.rs#L436-L442
+    # https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-core/src/utils/supertype.rs#L499-L507
 
     # TODO @dangotbanned: Find out why this isn't the first thing we do
     if left == right:

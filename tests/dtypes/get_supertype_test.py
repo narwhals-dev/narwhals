@@ -13,9 +13,6 @@ from narwhals.dtypes_supertyping import get_supertype
 if TYPE_CHECKING:
     from narwhals.dtypes import DType
 
-XFAIL_STRUCT = pytest.mark.xfail(
-    reason="TODO: (Struct, Struct)", raises=NotImplementedError
-)
 
 XFAIL_DATE_NUMERIC = pytest.mark.xfail(reason="TODO: (Date, Numeric)")
 XFAIL_TIME_NUMERIC = pytest.mark.xfail(reason="TODO: (Time, Numeric)")
@@ -70,9 +67,8 @@ def _dtype_ids(obj: DType | None) -> str:  # noqa: PLR0911
         nw.List(nw.Array(nw.Int32, shape=(5, 3))),
         nw.Object(),
         nw.String(),
-        pytest.param(
-            nw.Struct({"r2": nw.Float64(), "mse": nw.Float32()}), marks=XFAIL_STRUCT
-        ),
+        nw.Struct({"r2": nw.Float64(), "mse": nw.Float32()}),
+        nw.Struct({"a": nw.String, "b": nw.List(nw.Int32)}),
         nw.Time(),
         nw.UInt8(),
         nw.UInt16(),
@@ -89,6 +85,7 @@ def test_identical_dtype(dtype: DType) -> None:
     assert result == dtype
 
 
+# TODO @dangotbanned: Add a whole bunch of `Struct` cases
 @pytest.mark.parametrize(
     ("left", "right", "expected"),
     [
