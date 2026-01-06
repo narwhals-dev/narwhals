@@ -162,8 +162,8 @@ def _struct_union_fields(
         longest, shortest = left, right
     else:
         longest, shortest = right, left
-    longest_map = dict(_iter_init_fields(longest))
-    for name, dtype in _iter_init_fields(shortest):
+    longest_map = dict(_iter_fields_into_dtypes(longest))
+    for name, dtype in _iter_fields_into_dtypes(shortest):
         dtype_longest = longest_map.setdefault(name, dtype)
         if dtype != dtype_longest:
             if supertype := get_supertype(dtype, dtype_longest, dtypes=dtypes):
@@ -183,7 +183,7 @@ def _struct_supertype(left: Struct, right: Struct, *, dtypes: DTypes) -> Struct 
     for a, b in zip(left_fields, right_fields):
         if a.name != b.name:
             return _struct_union_fields(left_fields, right_fields, dtypes=dtypes)
-        a_dtype, b_dtype = _init_nested_pair(a.dtype, b.dtype)
+        a_dtype, b_dtype = _into_dtypes(a.dtype, b.dtype)
         if supertype := get_supertype(a_dtype, b_dtype, dtypes=dtypes):
             new_fields.append(tp_field(a.name, supertype))
         else:
@@ -191,7 +191,7 @@ def _struct_supertype(left: Struct, right: Struct, *, dtypes: DTypes) -> Struct 
     return dtypes.Struct(new_fields)
 
 
-def _iter_init_fields(fields: Iterable[Field]) -> Iterator[tuple[str, DType]]:
+def _iter_fields_into_dtypes(fields: Iterable[Field]) -> Iterator[tuple[str, DType]]:
     # NOTE: This part would be easier if we did `IntoDType -> DType` **inside** `Field(...)`
     # Another option is defining `DType.__call__`, so `IntoDType()` becomes:
     #   - `DType(self).__call__(self) -> Self`
@@ -205,10 +205,10 @@ def _iter_init_fields(fields: Iterable[Field]) -> Iterator[tuple[str, DType]]:
             yield f.name, f.dtype
 
 
-def _init_nested_pair(left: IntoDType, right: IntoDType) -> tuple[DType, DType]:
+def _into_dtypes(left: IntoDType, right: IntoDType) -> tuple[DType, DType]:
+    """For a binary `inner: IntoDType`, resolve both to `DType`s."""
     from narwhals.dtypes import DTypeClass
 
-    # Handle case where inner is a type vs instance
     left_: DType = left() if isinstance(left, DTypeClass) else left
     right_: DType = right() if isinstance(right, DTypeClass) else right
     return left_, right_
@@ -262,28 +262,15 @@ def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
         return dtypes.String()
 
     if isinstance(left, dtypes.List) and isinstance(right, dtypes.List):
-        left_inner, right_inner = left.inner, right.inner
-        # Handle case where inner is a type vs instance
-        if isinstance(left_inner, type):
-            left_inner = left_inner()
-        if isinstance(right_inner, type):
-            right_inner = right_inner()
-        if (
-            inner_super_type := get_supertype(left_inner, right_inner, dtypes=dtypes)
-        ) is None:
-            return None
-        return dtypes.List(inner_super_type)
+        if inner := get_supertype(*_into_dtypes(left.inner, right.inner), dtypes=dtypes):
+            return dtypes.List(inner)
+        return None
 
     if isinstance(left, dtypes.Array) and isinstance(right, dtypes.Array):
-        if left.shape != right.shape:
-            return None
-        left_inner, right_inner = left.inner, right.inner
-        if isinstance(left_inner, type):
-            left_inner = left_inner()
-        if isinstance(right_inner, type):
-            right_inner = right_inner()
-        if inner_super_type := get_supertype(left_inner, right_inner, dtypes=dtypes):
-            return dtypes.Array(inner_super_type, left.size)
+        if (left.shape == right.shape) and (
+            inner := get_supertype(*_into_dtypes(left.inner, right.inner), dtypes=dtypes)
+        ):
+            return dtypes.Array(inner, left.size)
         return None
 
     # https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-core/src/utils/supertype.rs#L496-L498
