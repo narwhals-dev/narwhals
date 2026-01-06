@@ -85,7 +85,6 @@ def test_identical_dtype(dtype: DType) -> None:
     assert result == dtype
 
 
-# TODO @dangotbanned: Add more `Struct` cases
 @pytest.mark.parametrize(
     ("left", "right", "expected"),
     [
@@ -122,7 +121,7 @@ def test_identical_dtype(dtype: DType) -> None:
         (nw.Array(nw.String, shape=1), nw.Array(nw.Int64, shape=1), None),
         (
             nw.Struct({"f0": nw.Duration("ms"), "f1": nw.Int64, "f2": nw.Int64}),
-            nw.Struct({"f0": nw.Duration("ms"), "f1": nw.Int64()}),
+            nw.Struct({"f0": nw.Duration("us"), "f1": nw.Int64()}),
             nw.Struct({"f0": nw.Duration("ms"), "f1": nw.Int64(), "f2": nw.Int64()}),
         ),
         (
@@ -143,8 +142,13 @@ def test_identical_dtype(dtype: DType) -> None:
             None,
         ),
         (
+            nw.Struct({"f0": nw.Binary()}),
+            nw.Struct({"f0": nw.Datetime("s"), "f1": nw.Date}),
+            None,
+        ),
+        (
             nw.Struct(
-                {"f0": nw.Int64, "f1": nw.Struct({"f0": nw.String, "f1": nw.Float32})}
+                {"f0": nw.Int64, "f1": nw.Struct({"f1": nw.Float32, "f0": nw.String})}
             ),
             nw.Struct(
                 {
@@ -160,6 +164,11 @@ def test_identical_dtype(dtype: DType) -> None:
                     "f1": nw.Struct({"f0": nw.String, "f1": nw.Float64, "f2": nw.Time}),
                 }
             ),
+        ),
+        (
+            nw.Struct({"F0": nw.UInt8, "f0": nw.Int16}),
+            nw.Struct({"f0": nw.Int128, "f1": nw.UInt16, " f0": nw.Int8}),
+            nw.Struct({"f0": nw.Int128, "f1": nw.UInt16, " f0": nw.Int8, "F0": nw.UInt8}),
         ),
     ],
     ids=_dtype_ids,
