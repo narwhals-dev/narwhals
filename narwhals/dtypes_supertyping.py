@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+from collections import deque
 from itertools import product
 from operator import attrgetter
 from typing import TYPE_CHECKING, Any, TypeVar
@@ -16,15 +17,17 @@ if TYPE_CHECKING:
     from narwhals.dtypes import (
         Boolean,
         DType,
+        Field,
         Float64,
         FloatType,
         IntegerType,
         NumericType,
         SignedIntegerType,
+        Struct,
         UnsignedIntegerType,
         _Bits,
     )
-    from narwhals.typing import DTypes, TimeUnit
+    from narwhals.typing import DTypes, IntoDType, TimeUnit
 
     _HasBits: TypeAlias = "IntegerType | FloatType | type[IntegerType | FloatType]"
 
@@ -149,6 +152,53 @@ def _integer_supertyping() -> Callable[[IntegerType, IntegerType], IntegerType |
     return promote
 
 
+# TODO @dangotbanned: `(Struct, Struct) -> Struct`
+def _struct_union_fields(
+    left: list[Field],
+    right: list[Field],
+    /,
+    *,
+    dtypes: DTypes,  # noqa: ARG001
+) -> Struct | None:
+    # https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-core/src/utils/supertype.rs#L559-L586
+    # if equal length we also take the lhs
+    # so that the lhs determines the order of the fields
+    if len(left) >= len(right):
+        longest, shortest = left, right
+    else:
+        longest, shortest = right, left  # noqa: F841
+    msg = "TODO: (Struct, Struct)"
+    raise NotImplementedError(msg)
+
+
+# TODO @dangotbanned: `(Struct, Struct) -> Struct`
+def _struct_supertype(left: Struct, right: Struct, *, dtypes: DTypes) -> Struct | None:
+    # https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-core/src/utils/supertype.rs#L588-L603
+    left_fields, right_fields = left.fields, right.fields
+    if len(left_fields) != len(right_fields):
+        return _struct_union_fields(left_fields, right_fields, dtypes=dtypes)
+    new_fields = deque["Field"]()
+    tp_field = dtypes.Field
+    for a, b in zip(left_fields, right_fields):
+        if a.name != b.name:
+            return _struct_union_fields(left_fields, right_fields, dtypes=dtypes)
+        a_dtype, b_dtype = _init_nested_pair(a.dtype, b.dtype)
+        if supertype := get_supertype(a_dtype, b_dtype, dtypes=dtypes):
+            new_fields.append(tp_field(a.name, supertype))
+        else:
+            return None
+    return dtypes.Struct(new_fields)
+
+
+def _init_nested_pair(left: IntoDType, right: IntoDType) -> tuple[DType, DType]:
+    from narwhals.dtypes import DTypeClass
+
+    # Handle case where inner is a type vs instance
+    left_: DType = left() if isinstance(left, DTypeClass) else left
+    right_: DType = right() if isinstance(right, DTypeClass) else right
+    return left_, right_
+
+
 def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:  # noqa: C901, PLR0911, PLR0912
     """Given two data types, determine the data type that both types can reasonably safely be cast to.
 
@@ -221,10 +271,10 @@ def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
             return dtypes.Array(inner_super_type, left.size)
         return None
 
+    # TODO @dangotbanned: `(Struct, Struct) -> Struct`
+    # https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-core/src/utils/supertype.rs#L496-L498
     if isinstance(left, dtypes.Struct) and isinstance(right, dtypes.Struct):
-        # `left_fields, right_fields = left.fields, right.fields`
-        msg = "TODO: (Struct, Struct)"
-        raise NotImplementedError(msg)
+        return _struct_supertype(left, right, dtypes=dtypes)
 
     # TODO @dangotbanned: Find out why this isn't the first thing we do
     if left == right:
