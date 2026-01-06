@@ -1110,7 +1110,10 @@ class PandasLikeSeries(EagerSeries[Any]):
         if self.is_native_dtype_pyarrow(native.dtype):
             import pyarrow.compute as pc
 
-            result_native = self._apply_pyarrow_compute_func(native, pc.cos)
+            result_native = self._apply_pyarrow_compute_func(
+                native,
+                pc.cos,  # type: ignore[arg-type]
+            )
         else:
             array_func = self._array_funcs.cos
             result_native = self._apply_array_func(native, array_func)

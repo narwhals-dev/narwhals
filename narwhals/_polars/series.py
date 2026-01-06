@@ -83,6 +83,7 @@ INHERITED_METHODS = frozenset(
         "arg_true",
         "ceil",
         "clip",
+        "cos",
         "count",
         "cum_max",
         "cum_min",

@@ -2254,7 +2254,7 @@ class Expr:
         return self._append_node(ExprNode(ExprKind.ELEMENTWISE, "sin"))
 
     def cos(self) -> Self:
-        r"""Compute the cos.
+        r"""Compute the element-wise value for the cosine.
 
         Examples:
             >>> import pyarrow as pa

@@ -2758,7 +2758,7 @@ class Series(Generic[IntoSeriesT]):
         return self._with_compliant(self._compliant_series.exp())
 
     def sin(self) -> Self:
-        r"""Compute the sin.
+        r"""Compute the element-wise value for the sine.
 
         Examples:
             >>> import pandas as pd
@@ -2779,7 +2779,7 @@ class Series(Generic[IntoSeriesT]):
         return self._with_compliant(self._compliant_series.sin())
 
     def cos(self) -> Self:
-        r"""Compute the cos.
+        r"""Compute the element-wise value for the cosine.
 
         Examples:
             >>> import pandas as pd
