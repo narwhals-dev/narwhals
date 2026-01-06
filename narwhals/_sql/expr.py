@@ -584,6 +584,9 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
     def sin(self) -> Self:
         return self._with_elementwise(lambda expr: self._function("sin", expr))
 
+    def cos(self) -> Self:
+        return self._with_elementwise(lambda expr: self._function("cos", expr))
+
     def sqrt(self) -> Self:
         def _sqrt(expr: NativeExprT) -> NativeExprT:
             return self._when(
