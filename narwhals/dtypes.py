@@ -176,6 +176,31 @@ class DType(metaclass=DTypeClass):
         return hash(self.__class__)
 
     def __call__(self) -> Self:
+        # NOTE: (Internal doc)
+        # But, why?
+        #
+        # Let's say we have a function that looks like this:
+        #
+        #     >>> import pyarrow as pa
+        #     >>> from narwhals.dtypes import DType
+        #     >>> from narwhals.typing import NonNestedDType
+        #
+        #     >>> def convert(dtype: DType | type[NonNestedDType]) -> pa.DataType: ...
+        #
+        #
+        # If we need to resolve the union to a *class*, we can use:
+        #
+        #     >>> always_class = dtype.base_type()
+        #
+        # But what if instead, we need an *instance*?:
+        #
+        #     >>> always_instance_1 = dtype if isinstance(dtype, DType) else dtype()
+        #     >>> always_instance_2 = dtype() if isinstance(dtype, type) else dtype
+        #
+        # By defining `__call__`, we can save an instance check and keep things readable:
+        #
+        #    >>> always_instance = dtype()
+        #    >>> always_class = dtype.base_type()
         return self
 
 
