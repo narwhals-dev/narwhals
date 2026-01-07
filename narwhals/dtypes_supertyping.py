@@ -10,7 +10,7 @@ from operator import attrgetter
 from typing import TYPE_CHECKING, Any, TypeVar
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Iterator, Mapping
+    from collections.abc import Callable, Mapping
 
     from typing_extensions import TypeAlias, TypeIs
 
@@ -27,7 +27,7 @@ if TYPE_CHECKING:
         UnsignedIntegerType,
         _Bits,
     )
-    from narwhals.typing import DTypes, IntoDType, TimeUnit
+    from narwhals.typing import DTypes, TimeUnit
 
     _HasBits: TypeAlias = "IntegerType | FloatType | type[IntegerType | FloatType]"
 
@@ -162,8 +162,9 @@ def _struct_union_fields(
         longest, shortest = left, right
     else:
         longest, shortest = right, left
-    longest_map = dict(_iter_fields_into_dtypes(longest))
-    for name, dtype in _iter_fields_into_dtypes(shortest):
+    longest_map = {f.name: f.dtype() for f in longest}
+    for f in shortest:
+        name, dtype = f.name, f.dtype()
         dtype_longest = longest_map.setdefault(name, dtype)
         if dtype != dtype_longest:
             if supertype := get_supertype(dtype, dtype_longest, dtypes=dtypes):
@@ -183,35 +184,11 @@ def _struct_supertype(left: Struct, right: Struct, *, dtypes: DTypes) -> Struct 
     for a, b in zip(left_fields, right_fields):
         if a.name != b.name:
             return _struct_union_fields(left_fields, right_fields, dtypes=dtypes)
-        a_dtype, b_dtype = _into_dtypes(a.dtype, b.dtype)
-        if supertype := get_supertype(a_dtype, b_dtype, dtypes=dtypes):
+        if supertype := get_supertype(a.dtype(), b.dtype(), dtypes=dtypes):
             new_fields.append(tp_field(a.name, supertype))
         else:
             return None
     return dtypes.Struct(new_fields)
-
-
-def _iter_fields_into_dtypes(fields: Iterable[Field]) -> Iterator[tuple[str, DType]]:
-    # NOTE: This part would be easier if we did `IntoDType -> DType` **inside** `Field(...)`
-    # Another option is defining `DType.__call__`, so `IntoDType()` becomes:
-    #   - `DType(self).__call__(self) -> Self`
-    #   - `NonNestedDType.__new__(NonNestedDType) -> NonNestedDType`
-    from narwhals.dtypes import DTypeClass
-
-    for f in fields:
-        if isinstance(f.dtype, DTypeClass):
-            yield f.name, f.dtype()
-        else:
-            yield f.name, f.dtype
-
-
-def _into_dtypes(left: IntoDType, right: IntoDType) -> tuple[DType, DType]:
-    """For a binary `inner: IntoDType`, resolve both to `DType`s."""
-    from narwhals.dtypes import DTypeClass
-
-    left_: DType = left() if isinstance(left, DTypeClass) else left
-    right_: DType = right() if isinstance(right, DTypeClass) else right
-    return left_, right_
 
 
 def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:  # noqa: C901, PLR0911, PLR0912
@@ -262,13 +239,13 @@ def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
         return dtypes.String()
 
     if isinstance(left, dtypes.List) and isinstance(right, dtypes.List):
-        if inner := get_supertype(*_into_dtypes(left.inner, right.inner), dtypes=dtypes):
+        if inner := get_supertype(left.inner(), right.inner(), dtypes=dtypes):
             return dtypes.List(inner)
         return None
 
     if isinstance(left, dtypes.Array) and isinstance(right, dtypes.Array):
         if (left.shape == right.shape) and (
-            inner := get_supertype(*_into_dtypes(left.inner, right.inner), dtypes=dtypes)
+            inner := get_supertype(left.inner(), right.inner(), dtypes=dtypes)
         ):
             return dtypes.Array(inner, left.size)
         return None
