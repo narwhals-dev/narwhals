@@ -175,6 +175,9 @@ class DType(metaclass=DTypeClass):
     def __hash__(self) -> int:
         return hash(self.__class__)
 
+    def __call__(self) -> Self:
+        return self
+
 
 class NumericType(DType):
     """Base class for numeric data types."""
