@@ -5,31 +5,35 @@
 from __future__ import annotations
 
 from collections import deque
-from itertools import product
+from itertools import chain, product
 from operator import attrgetter
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol, TypeVar
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping
+    from collections.abc import Callable, Iterable, Iterator, Mapping
 
-    from typing_extensions import TypeAlias, TypeIs
+    from typing_extensions import TypeIs
 
     from narwhals.dtypes import (
         Boolean,
         DType,
         Field,
         Float64,
-        FloatType,
-        IntegerType,
-        NumericType,
-        SignedIntegerType,
+        FloatType as Float,
+        IntegerType as Int,
+        NumericType as Numeric,
         Struct,
-        UnsignedIntegerType,
         _Bits,
     )
     from narwhals.typing import DTypes, TimeUnit
 
-    _HasBits: TypeAlias = "IntegerType | FloatType | type[IntegerType | FloatType]"
+    class _HasBitsInst(Protocol):
+        _bits: _Bits
+
+    class _HasBitsType(Protocol):
+        _bits: ClassVar[_Bits]
+
+    HasBitsT = TypeVar("HasBitsT", bound="_HasBitsInst | _HasBitsType")
 
     _Fn = TypeVar("_Fn", bound=Callable[..., Any])
 
@@ -40,28 +44,23 @@ else:
     from functools import cache
 
 
-_SameNumericT = TypeVar(
-    "_SameNumericT", "FloatType", "SignedIntegerType", "UnsignedIntegerType"
-)
-"""If both dtypes share one of these bases - pick the one with more bits."""
-
 _TIME_UNIT_TO_INDEX: Mapping[TimeUnit, int] = {"s": 0, "ms": 1, "us": 2, "ns": 3}
 """Convert time unit to an index for comparison (larger = more precise)."""
 
-_get_bits: Callable[[_HasBits], _Bits] = attrgetter("_bits")
+_get_bits: Callable[[_HasBitsInst | _HasBitsType], _Bits] = attrgetter("_bits")
 
 
 # TODO @dangotbanned: Define the signatures inside `TYPE_CHECKING`,
 # but implement using `operator.attrgetter` outside
-def is_numeric(dtype: DType) -> TypeIs[NumericType]:
+def is_numeric(dtype: DType) -> TypeIs[Numeric]:
     return dtype.is_numeric()
 
 
-def is_float(dtype: DType) -> TypeIs[FloatType]:
+def is_float(dtype: DType) -> TypeIs[Float]:
     return dtype.is_float()
 
 
-def is_integer(dtype: DType) -> TypeIs[IntegerType]:
+def is_integer(dtype: DType) -> TypeIs[Int]:
     return dtype.is_integer()
 
 
@@ -76,18 +75,19 @@ def _min_time_unit(a: TimeUnit, b: TimeUnit) -> TimeUnit:
 
 
 @cache
-def _max_bits(left: _Bits, right: _Bits, /) -> _Bits:
-    max_bits: _Bits = max(left, right)
-    return max_bits
-
-
-@cache
-def _max_same_sign(left: _SameNumericT, right: _SameNumericT, /) -> _SameNumericT:
+def _max_bits(left: HasBitsT, right: HasBitsT, /) -> HasBitsT:
     return max(left, right, key=_get_bits)
 
 
+def _gen_same_signed(
+    dtypes: Iterable[type[Int]],
+) -> Iterator[tuple[frozenset[type[Int]], type[Int]]]:
+    for left, right in product(dtypes, repeat=2):
+        yield frozenset((left, right)), _max_bits(left, right)
+
+
 @cache
-def _integer_supertyping() -> Callable[[IntegerType, IntegerType], IntegerType | Float64]:
+def _integer_supertyping() -> Callable[[Int, Int], Int | Float64]:
     """Get supertype for two integer types.
 
     ### @FBruzzesi
@@ -106,47 +106,28 @@ def _integer_supertyping() -> Callable[[IntegerType, IntegerType], IntegerType |
     """
     from narwhals.dtypes import (
         Float64,
-        IntegerType,
+        Int16,
+        Int32,
+        Int64,
         SignedIntegerType,
         UnsignedIntegerType,
     )
 
+    # NOTE: `Float64` is here because `mypy` refuses to respect the last overload 😭
+    # https://github.com/python/typeshed/blob/a564787bf23386e57338b750bf4733f3c978b701/stdlib/typing.pyi#L776-L781
+    ubits_int: Mapping[_Bits, type[Int | Float64]] = {8: Int16, 16: Int32, 32: Int64}
     tps_int = SignedIntegerType.__subclasses__()
     tps_uint = UnsignedIntegerType.__subclasses__()
-
-    reverse_lookup: Mapping[type[IntegerType], Mapping[_Bits, type[IntegerType]]] = {
-        SignedIntegerType: {tp._bits: tp for tp in tps_int},
-        UnsignedIntegerType: {tp._bits: tp for tp in tps_uint},
-    }
-
-    def value_same(
-        left: type[IntegerType], right: type[IntegerType], /
-    ) -> type[IntegerType]:
-        return reverse_lookup[left.__base__ or IntegerType][
-            _max_bits(left._bits, right._bits)
-        ]
-
-    def value_mixed(
-        signed: type[IntegerType], unsigned: type[IntegerType], /
-    ) -> type[IntegerType | Float64]:
-        u_bits = unsigned._bits
-        if signed._bits > u_bits:
-            return signed
-        if u_bits in (8, 16, 32):  # noqa: PLR6201
-            return reverse_lookup[SignedIntegerType][u_bits * 2]  # type: ignore[index]
-        return Float64
-
-    lookup: Mapping[frozenset[type[IntegerType]], type[IntegerType | Float64]] = {
-        frozenset((left, right)): fn_value(left, right)
-        for iterable, fn_value in (
-            (product(tps_int, tps_int), value_same),
-            (product(tps_uint, tps_uint), value_same),
-            (product(tps_int, tps_uint), value_mixed),
+    mixed = (
+        (
+            frozenset((int_, uint)),
+            int_ if int_._bits > uint._bits else ubits_int.get(uint._bits, Float64),
         )
-        for left, right in iterable
-    }
+        for int_, uint in product(tps_int, tps_uint)
+    )
+    lookup = dict(chain(_gen_same_signed(tps_int), _gen_same_signed(tps_uint), mixed))
 
-    def promote(left: IntegerType, right: IntegerType, /) -> IntegerType | Float64:
+    def promote(left: Int, right: Int, /) -> Int | Float64:
         return lookup[frozenset((left.base_type(), right.base_type()))]()
 
     return promote
@@ -275,7 +256,7 @@ def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
 
     # Both Float
     if is_float(left) and is_float(right):
-        return _max_same_sign(left, right)
+        return _max_bits(left, right)
 
     # Integer + Float -> Float
     #  * Small integers (Int8, Int16, UInt8, UInt16) + Float32 -> Float32
