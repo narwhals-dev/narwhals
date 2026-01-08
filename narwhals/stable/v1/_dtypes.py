@@ -12,7 +12,6 @@ from narwhals.dtypes import (
     Datetime as NwDatetime,
     Decimal,
     DType,
-    DTypeClass,
     Duration as NwDuration,
     Enum as NwEnum,
     Field,
@@ -41,6 +40,7 @@ from narwhals.dtypes import (
     Unknown,
     UnsignedIntegerType,
 )
+from narwhals.dtypes.classes import DTypeClass
 
 if TYPE_CHECKING:
     from datetime import timezone

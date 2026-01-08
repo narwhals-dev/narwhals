@@ -1,7 +1,3 @@
-# TODO @dangotbanned: Rename to `_supertyping`
-# TODO @dangotbanned: Make `dtypes` a package
-# TODO @dangotbanned: Move to `dtypes._supertyping`
-
 from __future__ import annotations
 
 from collections import deque
@@ -14,7 +10,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import TypeIs
 
-    from narwhals.dtypes import (
+    from narwhals.dtypes.classes import (
         Boolean,
         DType,
         Field,

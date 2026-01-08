@@ -2,62 +2,23 @@ from __future__ import annotations
 
 import enum
 from collections import OrderedDict
-from collections.abc import Iterable, Mapping
+from collections.abc import Mapping
 from datetime import timezone
 from itertools import starmap
 from typing import TYPE_CHECKING, ClassVar
 
-from narwhals._utils import (
-    _DeferredIterable,
-    isinstance_or_issubclass,
-    qualified_type_name,
-)
+from narwhals._utils import _DeferredIterable, isinstance_or_issubclass
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Sequence
+    from collections.abc import Iterable, Iterator, Sequence
     from typing import Any, Literal
 
     import _typeshed
-    from typing_extensions import Self, TypeAlias, TypeIs
+    from typing_extensions import Self, TypeAlias
 
     from narwhals.typing import IntoDType, TimeUnit
 
     _Bits: TypeAlias = Literal[8, 16, 32, 64, 128]
-
-
-def _validate_dtype(dtype: DType | type[DType]) -> None:
-    if not isinstance_or_issubclass(dtype, DType):
-        msg = (
-            f"Expected Narwhals dtype, got: {type(dtype)}.\n\n"
-            "Hint: if you were trying to cast to a type, use e.g. nw.Int64 instead of 'int64'."
-        )
-        raise TypeError(msg)
-
-
-def _is_into_dtype(obj: Any) -> TypeIs[IntoDType]:
-    return isinstance(obj, DType) or (
-        isinstance(obj, DTypeClass) and not issubclass(obj, NestedType)
-    )
-
-
-def _is_nested_type(obj: Any) -> TypeIs[type[NestedType]]:
-    return isinstance(obj, DTypeClass) and issubclass(obj, NestedType)
-
-
-def _validate_into_dtype(dtype: Any) -> None:
-    if not _is_into_dtype(dtype):
-        if _is_nested_type(dtype):
-            name = f"nw.{dtype.__name__}"
-            msg = (
-                f"{name!r} is not valid in this context.\n\n"
-                f"Hint: instead of:\n\n"
-                f"    {name}\n\n"
-                "use:\n\n"
-                f"    {name}(...)"
-            )
-        else:
-            msg = f"Expected Narwhals dtype, got: {qualified_type_name(dtype)!r}."
-        raise TypeError(msg)
 
 
 class DTypeClass(type):
