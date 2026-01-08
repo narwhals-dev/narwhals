@@ -80,7 +80,7 @@ def _dtype_ids(obj: DType | None) -> str:  # noqa: PLR0911
     ids=_dtype_ids,
 )
 def test_identical_dtype(dtype: DType) -> None:
-    result = get_supertype(dtype, dtype, dtypes=Version.MAIN.dtypes)
+    result = get_supertype(dtype, dtype, Version.MAIN)
     assert result is not None
     assert result == dtype
 
@@ -174,7 +174,7 @@ def test_identical_dtype(dtype: DType) -> None:
     ids=_dtype_ids,
 )
 def test_same_class(left: DType, right: DType, expected: DType | None) -> None:
-    result = get_supertype(left, right, dtypes=Version.MAIN.dtypes)
+    result = get_supertype(left, right, Version.MAIN)
     if expected is None:
         assert result is None
     else:
@@ -240,7 +240,7 @@ def test_same_class(left: DType, right: DType, expected: DType | None) -> None:
     ids=_dtype_ids,
 )
 def test_mixed_dtype(left: DType, right: DType, expected: DType | None) -> None:
-    result = get_supertype(left, right, dtypes=Version.MAIN.dtypes)
+    result = get_supertype(left, right, Version.MAIN)
     if expected is None:
         assert result is None
     else:
@@ -324,10 +324,10 @@ def test_mixed_dtype(left: DType, right: DType, expected: DType | None) -> None:
     ids=_dtype_ids,
 )
 def test_numeric_promotion(left: DType, right: DType, expected: DType) -> None:
-    result = get_supertype(left, right, dtypes=Version.MAIN.dtypes)
+    result = get_supertype(left, right, Version.MAIN)
     assert result is not None
     assert result == expected
 
-    result = get_supertype(right, left, dtypes=Version.MAIN.dtypes)
+    result = get_supertype(left, right, Version.MAIN)
     assert result is not None
     assert result == expected
