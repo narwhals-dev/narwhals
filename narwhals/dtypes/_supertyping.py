@@ -229,7 +229,8 @@ def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
     # https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-core/src/utils/supertype.rs#L436-L442
     # https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-core/src/utils/supertype.rs#L499-L507
 
-    # TODO @dangotbanned: Find out why this isn't the first thing we do
+    # NOTE: See for why this *isn't* the first thing we do
+    # https://github.com/narwhals-dev/narwhals/pull/3393
     if left == right:
         return left
 
