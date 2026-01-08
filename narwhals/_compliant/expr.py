@@ -829,6 +829,10 @@ class EagerExpr(
 
     def min_by(self, by: Sequence[str]) -> Self:
         def func(df: EagerDataFrameT) -> Sequence[Any]:
+            # This solution isn't as efficient as it could be, but:
+            # - pyarrow: https://arrow.apache.org/docs/21.0/python/generated/pyarrow.compute.select_k_unstable.html
+            # - pandas: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.nsmallest.html
+            # don't give us control over null values and always place them last.
             df = df.sort(*by, descending=False, nulls_last=False)
             return self.first()(df)
 
@@ -841,6 +845,10 @@ class EagerExpr(
 
     def max_by(self, by: Sequence[str]) -> Self:
         def func(df: EagerDataFrameT) -> Sequence[Any]:
+            # This solution isn't as efficient as it could be, but:
+            # - pyarrow: https://arrow.apache.org/docs/21.0/python/generated/pyarrow.compute.select_k_unstable.html
+            # - pandas: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.nlargest.html
+            # don't give us control over null values and always place them last.
             df = df.sort(*by, descending=False, nulls_last=False)
             return self.last()(df)
 
