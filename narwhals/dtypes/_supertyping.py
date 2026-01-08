@@ -6,18 +6,24 @@ from operator import attrgetter
 from typing import TYPE_CHECKING, Any, ClassVar, Protocol, TypeVar
 
 from narwhals.dtypes.classes import (  # NOTE: Should not include `DType`(s) that are versioned
+    Array,
     Binary,
     Boolean,
+    Categorical,
     Decimal,
+    Field,
+    Float32,
     Float64,
     FloatType as Float,
     Int16,
     Int32,
     Int64,
     IntegerType as Int,
+    List,
     NumericType as Numeric,
     SignedIntegerType,
     String,
+    Struct,
     Unknown,
     UnsignedIntegerType,
 )
@@ -25,7 +31,7 @@ from narwhals.dtypes.classes import (  # NOTE: Should not include `DType`(s) tha
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Mapping
 
-    from narwhals.dtypes.classes import DType, Field, Struct, _Bits
+    from narwhals.dtypes.classes import DType, _Bits
     from narwhals.typing import DTypes, TimeUnit
 
     class _HasBitsInst(Protocol):
@@ -130,7 +136,7 @@ def _struct_union_fields(
                 longest_map[name] = supertype
             else:
                 return None
-    return dtypes.Struct(longest_map)
+    return Struct(longest_map)
 
 
 def _struct_supertype(left: Struct, right: Struct, *, dtypes: DTypes) -> Struct | None:
@@ -139,23 +145,22 @@ def _struct_supertype(left: Struct, right: Struct, *, dtypes: DTypes) -> Struct 
     if len(left_fields) != len(right_fields):
         return _struct_union_fields(left_fields, right_fields, dtypes=dtypes)
     new_fields = deque["Field"]()
-    tp_field = dtypes.Field
     for a, b in zip(left_fields, right_fields):
         if a.name != b.name:
             return _struct_union_fields(left_fields, right_fields, dtypes=dtypes)
         if supertype := get_supertype(a.dtype(), b.dtype(), dtypes=dtypes):
-            new_fields.append(tp_field(a.name, supertype))
+            new_fields.append(Field(a.name, supertype))
         else:
             return None
-    return dtypes.Struct(new_fields)
+    return Struct(new_fields)
 
 
 # TODO @dangotbanned: Change `dtypes: DTypes` -> `version: Version`
 # - an `enum.Enum` is safe to cache
 # - we can split the `Version.V1` stuff into a different function
-# - everything else can just use top-level imports from <equivalent to `polars.datatypes.classes`>
+# - everything else can just use top-level imports `from nw.dtypes.classes`
 # - otherwise, only reference `version` for recursive calls
-# TODO @dangotbanned: Initialize `base_types: frozenset[type[DType]` earlier
+# TODO @dangotbanned: Initialize `base_types: frozenset[type[DType]]` earlier
 # - If we have `len(base_types) > 1`
 #   - we can skip the first **7** branches
 # - If we have `len(base_types) == 1`
@@ -203,20 +208,20 @@ def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
     if isinstance(left, dtypes.Enum) and isinstance(right, dtypes.Enum):
         return left if left.categories == right.categories else None
 
-    if isinstance(left, dtypes.List) and isinstance(right, dtypes.List):
+    if isinstance(left, List) and isinstance(right, List):
         if inner := get_supertype(left.inner(), right.inner(), dtypes=dtypes):
-            return dtypes.List(inner)
+            return List(inner)
         return None
 
-    if isinstance(left, dtypes.Array) and isinstance(right, dtypes.Array):
+    if isinstance(left, Array) and isinstance(right, Array):
         if (left.shape == right.shape) and (
             inner := get_supertype(left.inner(), right.inner(), dtypes=dtypes)
         ):
-            return dtypes.Array(inner, left.size)
+            return Array(inner, left.size)
         return None
 
     # https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-core/src/utils/supertype.rs#L496-L498
-    if isinstance(left, dtypes.Struct) and isinstance(right, dtypes.Struct):
+    if isinstance(left, Struct) and isinstance(right, Struct):
         return _struct_supertype(left, right, dtypes=dtypes)
 
     # NOTE: There are some other branches for `(Struct, DataType) -> Struct`
@@ -248,12 +253,12 @@ def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
     #  * Any integer + Float64 -> Float64
     if isinstance(left, Int) and isinstance(right, Float):
         if right._bits == 32 and left._bits <= 16:
-            return dtypes.Float32()
-        return dtypes.Float64()
+            return Float32()
+        return Float64()
     if isinstance(left, Float) and isinstance(right, Int):
         if left._bits == 32 and right._bits <= 16:
-            return dtypes.Float32()
-        return dtypes.Float64()
+            return Float32()
+        return Float64()
 
     base_left, base_right = left.base_type(), right.base_type()
 
@@ -284,7 +289,7 @@ def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
 
     if String in base_types:
         # Categorical/Enum + String -> String
-        if base_types.intersection((dtypes.Categorical, dtypes.Enum)):
+        if base_types.intersection((Categorical, dtypes.Enum)):
             return String()
         # Every known type can be cast to a string except binary
         # https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-core/src/utils/supertype.rs#L380-L382
