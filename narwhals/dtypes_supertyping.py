@@ -43,7 +43,9 @@ if TYPE_CHECKING:
 else:
     from functools import cache
 
-
+# NOTE: polars has these ordered as `["ns", "μs", "ms"]`
+# https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-core/src/datatypes/temporal/time_unit.rs#L9-L41
+# That order would align with `_max_bits` using `max`, but represent a downcast vs an upcast
 _TIME_UNIT_TO_INDEX: Mapping[TimeUnit, int] = {"s": 0, "ms": 1, "us": 2, "ns": 3}
 """Convert time unit to an index for comparison (larger = more precise)."""
 
@@ -52,6 +54,9 @@ _get_bits: Callable[[_HasBitsInst | _HasBitsType], _Bits] = attrgetter("_bits")
 
 # TODO @dangotbanned: Define the signatures inside `TYPE_CHECKING`,
 # but implement using `operator.attrgetter` outside
+# TODO @dangotbanned: (Alternative) just define these here as either:
+#   - `issubclass(dtype.base_type(), NumericType)`
+#   - `isinstance(dtype, NumericType)`
 def is_numeric(dtype: DType) -> TypeIs[Numeric]:
     return dtype.is_numeric()
 
@@ -86,6 +91,7 @@ def _gen_same_signed(
         yield frozenset((left, right)), _max_bits(left, right)
 
 
+# TODO @dangotbanned: Review inline imports
 @cache
 def _integer_supertyping() -> Callable[[Int, Int], Int | Float64]:
     """Get supertype for two integer types.
@@ -172,6 +178,17 @@ def _struct_supertype(left: Struct, right: Struct, *, dtypes: DTypes) -> Struct 
     return dtypes.Struct(new_fields)
 
 
+# TODO @dangotbanned: Change `dtypes: DTypes` -> `version: Version`
+# - an `Enum` is safe to cache
+# - we can split the `Version.V1` stuff into a different function
+# - everything else can just use top-level imports from <equivalent to `polars.datatypes.classes`>
+# - otherwise, only reference `version` for recursive calls
+# TODO @dangotbanned: Initialize `base_types: frozenset[type[DType]` earlier
+# - If we have `len(base_types) > 1`
+#   - we can skip the first **7** branches
+# - If we have `len(base_types) == 1`
+#   - we can jump directly to the check for that `DType` and bail quickly
+#   - skipping between **1-7** branches
 def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:  # noqa: C901, PLR0911, PLR0912
     """Given two data types, determine the data type that both types can reasonably safely be cast to.
 
@@ -266,6 +283,7 @@ def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
             return dtypes.Float32()
         return dtypes.Float64()
 
+    # TODO @dangotbanned: Review inline imports
     # NOTE: These don't have versioning, safe to use main
     from narwhals.dtypes import Binary, Decimal, NumericType, String, Unknown
 
