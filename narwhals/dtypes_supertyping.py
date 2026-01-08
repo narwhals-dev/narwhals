@@ -210,14 +210,9 @@ def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
     if isinstance(left, dtypes.Duration) and isinstance(right, dtypes.Duration):
         return dtypes.Duration(_min_time_unit(left.time_unit, right.time_unit))
 
-    # For Enum types, categories must match
+    # For Enum types, categories **must** match
     if isinstance(left, dtypes.Enum) and isinstance(right, dtypes.Enum):
-        if left.categories == right.categories:
-            return left
-        # TODO(FBruzzesi): Should we merge the categories? return dtypes.Enum((*left_cats, *right_cat))
-        # NOTE: (@dangotbanned): Seems like something polars doesn't want https://github.com/pola-rs/polars/issues/22001
-        # # https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-core/src/datatypes/dtype.rs#L1275-L1279
-        return dtypes.String()
+        return left if left.categories == right.categories else None
 
     if isinstance(left, dtypes.List) and isinstance(right, dtypes.List):
         if inner := get_supertype(left.inner(), right.inner(), dtypes=dtypes):

@@ -95,9 +95,9 @@ def test_identical_dtype(dtype: DType) -> None:
         (
             nw.Enum(["beluga", "narwhal", "orca"]),
             nw.Enum(["dog", "cat", "fish with legs"]),
-            nw.String(),
+            None,
         ),
-        (nw.Enum([]), nw.Enum(["fruit", "other food"]), nw.String()),
+        (nw.Enum([]), nw.Enum(["fruit", "other food"]), None),
         (nw.List(nw.Int64), nw.List(nw.Int64()), nw.List(nw.Int64())),
         (nw.List(nw.UInt16()), nw.List(nw.Int32), nw.List(nw.Int32())),
         (nw.List(nw.Date), nw.List(nw.Binary), None),
