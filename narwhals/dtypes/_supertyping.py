@@ -7,11 +7,14 @@ from typing import TYPE_CHECKING, Any, ClassVar, Protocol, TypeVar
 
 from narwhals.dtypes.classes import (  # NOTE: Should not include `DType`(s) that are versioned
     Binary,
+    Boolean,
     Decimal,
     Float64,
+    FloatType as Float,
     Int16,
     Int32,
     Int64,
+    IntegerType as Int,
     NumericType as Numeric,
     SignedIntegerType,
     String,
@@ -22,17 +25,7 @@ from narwhals.dtypes.classes import (  # NOTE: Should not include `DType`(s) tha
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Mapping
 
-    from typing_extensions import TypeIs
-
-    from narwhals.dtypes.classes import (
-        Boolean,
-        DType,
-        Field,
-        FloatType as Float,
-        IntegerType as Int,
-        Struct,
-        _Bits,
-    )
+    from narwhals.dtypes.classes import DType, Field, Struct, _Bits
     from narwhals.typing import DTypes, TimeUnit
 
     class _HasBitsInst(Protocol):
@@ -63,27 +56,6 @@ _TIME_UNIT_TO_INDEX: Mapping[TimeUnit, int] = {"s": 0, "ms": 1, "us": 2, "ns": 3
 _U_BITS_TO_INT: Mapping[_Bits, type[Int | Float64]] = {8: Int16, 16: Int32, 32: Int64}
 
 _get_bits: Callable[[_HasBitsInst | _HasBitsType], _Bits] = attrgetter("_bits")
-
-
-# TODO @dangotbanned: Define the signatures inside `TYPE_CHECKING`,
-# but implement using `operator.attrgetter` outside
-# TODO @dangotbanned: (Alternative) just define these here as either:
-#   - `issubclass(dtype.base_type(), NumericType)`
-#   - `isinstance(dtype, NumericType)`
-def is_numeric(dtype: DType) -> TypeIs[Numeric]:
-    return dtype.is_numeric()
-
-
-def is_float(dtype: DType) -> TypeIs[Float]:
-    return dtype.is_float()
-
-
-def is_integer(dtype: DType) -> TypeIs[Int]:
-    return dtype.is_integer()
-
-
-def is_boolean(dtype: DType) -> TypeIs[Boolean]:
-    return dtype.is_boolean()
 
 
 @cache
@@ -179,7 +151,7 @@ def _struct_supertype(left: Struct, right: Struct, *, dtypes: DTypes) -> Struct 
 
 
 # TODO @dangotbanned: Change `dtypes: DTypes` -> `version: Version`
-# - an `Enum` is safe to cache
+# - an `enum.Enum` is safe to cache
 # - we can split the `Version.V1` stuff into a different function
 # - everything else can just use top-level imports from <equivalent to `polars.datatypes.classes`>
 # - otherwise, only reference `version` for recursive calls
@@ -257,28 +229,28 @@ def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
         return left
 
     # Numeric and Boolean -> Numeric
-    if is_numeric(right) and is_boolean(left):
+    if isinstance(right, Numeric) and isinstance(left, Boolean):
         return right
-    if is_numeric(left) and is_boolean(right):
+    if isinstance(left, Numeric) and isinstance(right, Boolean):
         return left
 
     # Both Integer
-    if is_integer(left) and is_integer(right):
+    if isinstance(left, Int) and isinstance(right, Int):
         return _integer_supertyping()(left, right)
 
     # Both Float
-    if is_float(left) and is_float(right):
+    if isinstance(left, Float) and isinstance(right, Float):
         return _max_bits(left, right)
 
     # Integer + Float -> Float
     #  * Small integers (Int8, Int16, UInt8, UInt16) + Float32 -> Float32
     #  * Larger integers (Int32+) + Float32 -> Float64
     #  * Any integer + Float64 -> Float64
-    if is_integer(left) and is_float(right):
+    if isinstance(left, Int) and isinstance(right, Float):
         if right._bits == 32 and left._bits <= 16:
             return dtypes.Float32()
         return dtypes.Float64()
-    if is_float(left) and is_integer(right):
+    if isinstance(left, Float) and isinstance(right, Int):
         if left._bits == 32 and right._bits <= 16:
             return dtypes.Float32()
         return dtypes.Float64()
