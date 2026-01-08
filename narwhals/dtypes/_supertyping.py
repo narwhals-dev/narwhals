@@ -5,6 +5,20 @@ from itertools import chain, product
 from operator import attrgetter
 from typing import TYPE_CHECKING, Any, ClassVar, Protocol, TypeVar
 
+from narwhals.dtypes.classes import (  # NOTE: Should not include `DType`(s) that are versioned
+    Binary,
+    Decimal,
+    Float64,
+    Int16,
+    Int32,
+    Int64,
+    NumericType as Numeric,
+    SignedIntegerType,
+    String,
+    Unknown,
+    UnsignedIntegerType,
+)
+
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Mapping
 
@@ -14,10 +28,8 @@ if TYPE_CHECKING:
         Boolean,
         DType,
         Field,
-        Float64,
         FloatType as Float,
         IntegerType as Int,
-        NumericType as Numeric,
         Struct,
         _Bits,
     )
@@ -44,6 +56,11 @@ else:
 # That order would align with `_max_bits` using `max`, but represent a downcast vs an upcast
 _TIME_UNIT_TO_INDEX: Mapping[TimeUnit, int] = {"s": 0, "ms": 1, "us": 2, "ns": 3}
 """Convert time unit to an index for comparison (larger = more precise)."""
+
+
+# NOTE: `Float64` is here because `mypy` refuses to respect the last overload 😭
+# https://github.com/python/typeshed/blob/a564787bf23386e57338b750bf4733f3c978b701/stdlib/typing.pyi#L776-L781
+_U_BITS_TO_INT: Mapping[_Bits, type[Int | Float64]] = {8: Int16, 16: Int32, 32: Int64}
 
 _get_bits: Callable[[_HasBitsInst | _HasBitsType], _Bits] = attrgetter("_bits")
 
@@ -87,7 +104,6 @@ def _gen_same_signed(
         yield frozenset((left, right)), _max_bits(left, right)
 
 
-# TODO @dangotbanned: Review inline imports
 @cache
 def _integer_supertyping() -> Callable[[Int, Int], Int | Float64]:
     """Get supertype for two integer types.
@@ -106,24 +122,12 @@ def _integer_supertyping() -> Callable[[Int, Int], Int | Float64]:
     - Then everything after is a single `dict` lookup
     - `frozenset` allows us to match flipped operands to the same key
     """
-    from narwhals.dtypes import (
-        Float64,
-        Int16,
-        Int32,
-        Int64,
-        SignedIntegerType,
-        UnsignedIntegerType,
-    )
-
-    # NOTE: `Float64` is here because `mypy` refuses to respect the last overload 😭
-    # https://github.com/python/typeshed/blob/a564787bf23386e57338b750bf4733f3c978b701/stdlib/typing.pyi#L776-L781
-    ubits_int: Mapping[_Bits, type[Int | Float64]] = {8: Int16, 16: Int32, 32: Int64}
     tps_int = SignedIntegerType.__subclasses__()
     tps_uint = UnsignedIntegerType.__subclasses__()
     mixed = (
         (
             frozenset((int_, uint)),
-            int_ if int_._bits > uint._bits else ubits_int.get(uint._bits, Float64),
+            int_ if int_._bits > uint._bits else _U_BITS_TO_INT.get(uint._bits, Float64),
         )
         for int_, uint in product(tps_int, tps_uint)
     )
@@ -279,10 +283,6 @@ def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
             return dtypes.Float32()
         return dtypes.Float64()
 
-    # TODO @dangotbanned: Review inline imports
-    # NOTE: These don't have versioning, safe to use main
-    from narwhals.dtypes import Binary, Decimal, NumericType, String, Unknown
-
     base_left, base_right = left.base_type(), right.base_type()
 
     # TODO @dangotbanned: Investigate using `frozenset((*left.__class__.__bases__, *right.__class__.__bases__))`
@@ -295,7 +295,7 @@ def get_supertype(left: DType, right: DType, *, dtypes: DTypes) -> DType | None:
 
     # Decimal with other numeric types
     # TODO @dangotbanned: Maybe branch off earlier if there is a numeric type?
-    if Decimal in base_types and all(issubclass(tp, NumericType) for tp in base_types):
+    if Decimal in base_types and all(issubclass(tp, Numeric) for tp in base_types):
         return Decimal()
 
     # TODO @dangotbanned: (Date, {UInt,Int,Float}{32,64}) -> {Int,Float}{32,64}
