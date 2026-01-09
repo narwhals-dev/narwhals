@@ -84,7 +84,7 @@ class IbisExprStringNamespace(SQLExprStringNamespace["IbisExpr"]):
 
         return self.compliant._with_callable(_pad_start)
 
-    def pad_end(self, length: int, fill_char: str = " ") -> IbisExpr:
+    def pad_end(self, length: int, fill_char: str) -> IbisExpr:
         def _pad_end(expr: ir.StringColumn) -> ir.Value:
             padded = expr.rpad(length, fill_char)
             return ibis.cases((expr.notnull(), padded))
