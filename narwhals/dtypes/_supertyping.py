@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections import deque
 from itertools import chain, product
 from operator import attrgetter
-from typing import TYPE_CHECKING, Any, ClassVar, Final, Protocol, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Final, TypeVar, cast
 
 from narwhals._utils import Version
 from narwhals.dtypes.classes import (  # NOTE: Should not include `DType`(s) that are versioned
@@ -39,20 +39,12 @@ from narwhals.dtypes.classes import (  # NOTE: Should not include `DType`(s) tha
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Iterator, Mapping
+    from collections.abc import Callable, Mapping
 
     from typing_extensions import TypeAlias
 
     from narwhals.dtypes.classes import _Bits
     from narwhals.typing import TimeUnit
-
-    class _HasBitsInst(Protocol):
-        _bits: _Bits
-
-    class _HasBitsType(Protocol):
-        _bits: ClassVar[_Bits]
-
-    HasBitsT = TypeVar("HasBitsT", bound="_HasBitsInst | _HasBitsType")
 
     _Fn = TypeVar("_Fn", bound=Callable[..., Any])
 
@@ -85,12 +77,6 @@ DTypeGroup: TypeAlias = frozenset[type[DType]]
 _TIME_UNIT_TO_INDEX: Mapping[TimeUnit, int] = {"s": 0, "ms": 1, "us": 2, "ns": 3}
 """Convert time unit to an index for comparison (larger = more precise)."""
 
-
-# NOTE: `Float64` is here because `mypy` refuses to respect the last overload 😭
-# https://github.com/python/typeshed/blob/a564787bf23386e57338b750bf4733f3c978b701/stdlib/typing.pyi#L776-L781
-_U_BITS_TO_INT: Mapping[_Bits, type[Int | Float64]] = {8: Int16, 16: Int32, 32: Int64}
-
-_get_bits: Callable[[_HasBitsInst | _HasBitsType], _Bits] = attrgetter("_bits")
 
 _Datetime = Version.MAIN.dtypes.Datetime
 """Alias for `nw.dtypes.Datetime`."""
@@ -139,29 +125,29 @@ def _min_time_unit(a: TimeUnit, b: TimeUnit) -> TimeUnit:
 
 
 @cache
-def _max_bits(left: HasBitsT, right: HasBitsT, /) -> HasBitsT:
-    return max(left, right, key=_get_bits)
-
-
-def _gen_same_signed(
-    dtypes: Iterable[type[Int]],
-) -> Iterator[tuple[frozenset[type[Int]], type[Int]]]:
-    for left, right in product(dtypes, repeat=2):
-        yield frozenset((left, right)), _max_bits(left, right)
-
-
-@cache
 def _integer_supertyping() -> Mapping[FrozenDTypes, type[Int | Float64]]:
     tps_int = SignedIntegerType.__subclasses__()
     tps_uint = UnsignedIntegerType.__subclasses__()
+    get_bits: attrgetter[_Bits] = attrgetter["_Bits"]("_bits")
+    ints = (
+        (frozen_dtypes(lhs, rhs), max(lhs, rhs, key=get_bits))
+        for lhs, rhs in product(tps_int, repeat=2)
+    )
+    uints = (
+        (frozen_dtypes(lhs, rhs), max(lhs, rhs, key=get_bits))
+        for lhs, rhs in product(tps_uint, repeat=2)
+    )
+    # NOTE: `Float64` is here because `mypy` refuses to respect the last overload 😭
+    # https://github.com/python/typeshed/blob/a564787bf23386e57338b750bf4733f3c978b701/stdlib/typing.pyi#L776-L781
+    ubits_to_int: Mapping[_Bits, type[Int | Float64]] = {8: Int16, 16: Int32, 32: Int64}
     mixed = (
         (
-            frozenset((int_, uint)),
-            int_ if int_._bits > uint._bits else _U_BITS_TO_INT.get(uint._bits, Float64),
+            frozen_dtypes(int_, uint),
+            int_ if int_._bits > uint._bits else ubits_to_int.get(uint._bits, Float64),
         )
         for int_, uint in product(tps_int, tps_uint)
     )
-    return dict(chain(_gen_same_signed(tps_int), _gen_same_signed(tps_uint), mixed))
+    return dict(chain(ints, uints, mixed))
 
 
 @cache
