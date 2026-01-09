@@ -335,7 +335,6 @@ def test_numeric_promotion(left: DType, right: DType, expected: DType) -> None:
     assert result == expected
 
 
-@XFAIL_V1
 @pytest.mark.parametrize(
     ("left", "right", "expected"),
     [
@@ -370,9 +369,7 @@ def test_numeric_promotion(left: DType, right: DType, expected: DType) -> None:
         # TODO @dangotbanned: What to do when e.g `(v1.Datetime, Datetime) -> ?`
     ],
 )
-def test_v1_dtypes(
-    left: DType, right: DType, expected: DType | None
-) -> None:  # pragma: no cover
+def test_v1_dtypes(left: DType, right: DType, expected: DType | None) -> None:
     result = get_supertype(left, right, Version.V1)
     if expected is None:
         assert result is None

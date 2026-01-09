@@ -170,11 +170,6 @@ def has_v1_versioned(base_types: FrozenDTypes, /) -> bool:
     return not base_types.isdisjoint(_v1_versioned_dtypes())
 
 
-@lru_cache(maxsize=_CACHE_SIZE_TP_HIGH)
-def may_require_versioned_dtypes(base_types: FrozenDTypes, /) -> bool:
-    return has_v1_versioned(base_types) or has_nested(base_types)
-
-
 def _struct_union_fields(
     left: list[Field], right: list[Field], version: Version
 ) -> Struct | None:
@@ -304,26 +299,53 @@ def get_supertype(left: DType, right: DType, version: Version) -> DType | None:
     base_types = frozen_dtypes(base_left, base_right)
     if Unknown in base_types:
         return Unknown()
-    if version is Version.V1 and may_require_versioned_dtypes(base_types):
-        return _get_supertype_v1(left, right, version)
     has_mixed = len(base_types) != 1
     if has_nested(base_types):
         # NOTE: There are some other branches for `(Struct, DType) -> Struct`
         # But we aren't planning to use those
         return None if has_mixed else _NESTED_DISPATCH[base_left](left, right, version)
+    if version is Version.V1 and has_v1_versioned(base_types):
+        return _get_supertype_v1(left, right, base_types)
     if has_mixed:
         return _mixed_supertype(left, right, base_types)
     return _same_supertype(left, right)
 
 
-# TODO @dangotbanned: Actually implement `v1` specifics
-def _get_supertype_v1(left: DType, right: DType, version: Version) -> DType | None:
-    msg = f"TODO: {version!r}\n\n{left=}\n{right=}"
-    raise NotImplementedError(msg)
+def _get_supertype_v1(
+    left: DType, right: DType, base_types: FrozenDTypes
+) -> DType | None:
+    """A condensed version of `get_supertype` that handles the 3x `v1`-only DTypes.
+
+    `get_supertype` guarantees that:
+    - *at-least* `left` or `right` is `v1.{Datetime,Duration,Enum}`
+    - *neither* `left` or `right` are nested
+
+    This leaves us with the following valid cases, with only `v1.Enum` changing behavior:
+
+        (Date, v1.Datetime)        -> v1.Datetime
+        (String, v1.Enum)          -> String
+        (v1.Datetime, v1.Datetime) -> v1.Datetime
+        (v1.Enum, v1.Enum)         -> v1.Enum     # Skips categories
+        (v1.Duration, v1.Duration) -> v1.Duration
+    """
+    v1_dtypes = Version.V1.dtypes
+    if len(base_types) != 1:
+        if base_types == frozen_dtypes(Date, v1_dtypes.Datetime):
+            return left if isinstance(left, v1_dtypes.Datetime) else right
+        if base_types == frozen_dtypes(String, v1_dtypes.Enum):
+            return String()
+    elif isinstance(left, v1_dtypes.Enum):
+        return left
+    elif isinstance(left, v1_dtypes.Datetime) and isinstance(right, v1_dtypes.Datetime):
+        if left.time_zone == right.time_zone:
+            return v1_dtypes.Datetime(
+                _min_time_unit(left.time_unit, right.time_unit), left.time_zone
+            )
+    elif isinstance(left, v1_dtypes.Duration) and isinstance(right, v1_dtypes.Duration):
+        return v1_dtypes.Duration(_min_time_unit(left.time_unit, right.time_unit))
+    return None
 
 
-# NOTE: `v1` dtypes should be handled in an exclusively `v1` path
-# Once we're past needing to check -> call back to main loop with Version.MAIN
 @cache
 def _v1_versioned_dtypes() -> DTypeGroup:
     """A group of data types that need special handling in comparisons.
