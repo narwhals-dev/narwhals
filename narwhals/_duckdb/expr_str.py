@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals._duckdb.utils import F, col, concat_str, lit, when
+from narwhals._duckdb.utils import F, col, concat_str, lit
 from narwhals._sql.expr_str import SQLExprStringNamespace
 from narwhals._utils import not_implemented, requires
 
@@ -28,24 +28,6 @@ class DuckDBExprStringNamespace(SQLExprStringNamespace["DuckDBExpr"]):
 
         compliant_expr = self.compliant
         return compliant_expr.cast(compliant_expr._version.dtypes.Date())
-
-    def pad_start(self, length: int, fill_char: str) -> DuckDBExpr:
-        # lpad truncates strings down to length
-        return self.compliant._with_elementwise(
-            lambda expr: when(
-                F("length", expr) <= lit(length),
-                F("lpad", expr, lit(length), lit(fill_char)),
-            ).otherwise(expr)
-        )
-
-    def pad_end(self, length: int, fill_char: str) -> DuckDBExpr:
-        # rpad truncates strings down to length
-        return self.compliant._with_elementwise(
-            lambda expr: when(
-                F("length", expr) <= lit(length),
-                F("rpad", expr, lit(length), lit(fill_char)),
-            ).otherwise(expr)
-        )
 
     @requires.backend_version((1, 2))
     def to_titlecase(self) -> DuckDBExpr:

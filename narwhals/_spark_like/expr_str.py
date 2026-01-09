@@ -60,23 +60,3 @@ class SparkLikeExprStringNamespace(SQLExprStringNamespace["SparkLikeExpr"]):
             return F.array_join(capitalized_expr, delimiter="")
 
         return self.compliant._with_elementwise(_to_titlecase)
-
-    def pad_start(self, length: int, fill_char: str) -> SparkLikeExpr:
-        F = self.compliant._F
-
-        def _pad_start(expr: Column) -> Column:
-            return F.when(
-                F.char_length(expr) < length, F.lpad(expr, len=length, pad=fill_char)
-            ).otherwise(expr)
-
-        return self.compliant._with_elementwise(_pad_start)
-
-    def pad_end(self, length: int, fill_char: str) -> SparkLikeExpr:
-        F = self.compliant._F
-
-        def _pad_end(expr: Column) -> Column:
-            return F.when(
-                F.char_length(expr) < length, F.rpad(expr, len=length, pad=fill_char)
-            ).otherwise(expr)
-
-        return self.compliant._with_elementwise(_pad_end)
