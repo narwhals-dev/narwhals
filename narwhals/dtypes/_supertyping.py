@@ -111,12 +111,12 @@ TEMPORAL: DTypeGroup = frozenset((_Datetime, _Duration, Date, Time))
 STRING: DTypeGroup = frozenset((String, Binary, Categorical, _Enum))
 
 _STRING_LIKE_CONVERT: Mapping[FrozenDTypes, type[String | Binary]] = {
-    frozenset((String, Categorical)): String,
-    frozenset((String, _Enum)): String,
-    frozenset((String, Binary)): Binary,
+    frozen_dtypes(String, Categorical): String,
+    frozen_dtypes(String, _Enum): String,
+    frozen_dtypes(String, Binary): Binary,
 }
 _FLOAT_PROMOTE: Mapping[FrozenDTypes, type[Float64]] = {
-    frozenset((Float32, Float64)): Float64
+    frozen_dtypes(Float32, Float64): Float64
 }
 
 
