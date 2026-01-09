@@ -22,6 +22,7 @@ repos:
       args: [--ignore-words-list=ser]
       exclude: ^docs/api-completeness.md$
 - repo: https://github.com/adhtruong/mirrors-typos
+  # Use mirror to avoid autoupdate issue: https://github.com/crate-ci/typos/issues/390
   rev: 'v1.42.0'
   hooks:
     - id: typos
