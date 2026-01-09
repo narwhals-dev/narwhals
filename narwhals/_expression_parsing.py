@@ -247,8 +247,8 @@ class ExprNode:
             names = ", ".join(str(x) for x in self.kwargs["names"])
             return f"col({names})"
         arg_str = []
-        expr_repr = ", ".join(repr(x) for x in self.exprs)
-        kwargs_repr = ", ".join(f"{key}={value!r}" for key, value in self.kwargs.items())
+        expr_repr = ", ".join(str(x) for x in self.exprs)
+        kwargs_repr = ", ".join(f"{key}={value}" for key, value in self.kwargs.items())
         if self.exprs:
             arg_str.append(expr_repr)
         if self.kwargs:
