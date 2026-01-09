@@ -128,7 +128,7 @@ def _min_time_unit(a: TimeUnit, b: TimeUnit) -> TimeUnit:
 def _integer_supertyping() -> Mapping[FrozenDTypes, type[Int | Float64]]:
     tps_int = SignedIntegerType.__subclasses__()
     tps_uint = UnsignedIntegerType.__subclasses__()
-    get_bits: attrgetter[_Bits] = attrgetter["_Bits"]("_bits")
+    get_bits: attrgetter[_Bits] = attrgetter("_bits")
     ints = (
         (frozen_dtypes(lhs, rhs), max(lhs, rhs, key=get_bits))
         for lhs, rhs in product(tps_int, repeat=2)
