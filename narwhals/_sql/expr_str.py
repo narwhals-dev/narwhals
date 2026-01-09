@@ -143,7 +143,7 @@ class SQLExprStringNamespace(
 
         return self.compliant._with_callable(_pad_start)
 
-    def pad_end(self, length: int, fill_char: str = " ") -> SQLExprT:
+    def pad_end(self, length: int, fill_char: str) -> SQLExprT:
         def _pad_end(expr: NativeExpr) -> NativeExpr:
             return self._when(
                 self._function("length", expr) < self._lit(length),
