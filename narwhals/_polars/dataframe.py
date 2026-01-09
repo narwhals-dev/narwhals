@@ -11,6 +11,7 @@ from narwhals._polars.utils import (
     FROM_DICTS_ACCEPTS_MAPPINGS,
     catch_polars_exception,
     extract_args_kwargs,
+    narwhals_to_native_dtype,
     native_to_narwhals_dtype,
 )
 from narwhals._utils import (
@@ -18,6 +19,7 @@ from narwhals._utils import (
     _into_arrow_table,
     convert_str_slice_to_int_slice,
     generate_temporary_column_name,
+    is_boolean_selector,
     is_compliant_series,
     is_index_selector,
     is_range,
@@ -275,9 +277,8 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
         if order_by is None:
             result = frame.with_row_index(name)
         else:
-            end = pl.count() if self._backend_version < (0, 20, 5) else pl.len()
             result = frame.select(
-                pl.int_range(start=0, end=end).sort_by(order_by).alias(name), pl.all()
+                pl.int_range(pl.len()).over(order_by=order_by).alias(name), pl.all()
             )
 
         return self._with_native(result)
@@ -288,7 +289,6 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
     collect: Method[CompliantDataFrameAny]
     estimated_size: Method[int | float]
     gather_every: Method[Self]
-    item: Method[Any]
     iter_rows: Method[Iterator[tuple[Any, ...]] | Iterator[Mapping[str, Any]]]
     is_unique: Method[PolarsSeries]
     row: Method[tuple[Any, ...]]
@@ -316,11 +316,18 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | None,
+        schema: IntoSchema | Mapping[str, DType | None] | None,
     ) -> Self:
-        from narwhals.schema import Schema
-
-        pl_schema = Schema(schema).to_polars() if schema is not None else schema
+        pl_schema = (
+            {
+                key: narwhals_to_native_dtype(dtype, context._version)
+                if dtype is not None
+                else None
+                for (key, dtype) in schema.items()
+            }
+            if schema
+            else None
+        )
         return cls.from_native(pl.from_dict(data, pl_schema), context=context)
 
     @classmethod
@@ -330,11 +337,18 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | None,
+        schema: IntoSchema | Mapping[str, DType | None] | None,
     ) -> Self:
-        from narwhals.schema import Schema
-
-        pl_schema = Schema(schema).to_polars() if schema is not None else schema
+        pl_schema = (
+            {
+                key: narwhals_to_native_dtype(dtype, context._version)
+                if dtype is not None
+                else None
+                for (key, dtype) in schema.items()
+            }
+            if schema
+            else None
+        )
         if not data:
             native = pl.DataFrame(schema=pl_schema)
         elif FROM_DICTS_ACCEPTS_MAPPINGS or isinstance(data[0], dict):
@@ -461,7 +475,11 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
             if not is_slice_none(columns):
                 if isinstance(columns, Sized) and len(columns) == 0:
                     return self.select()
-                if is_index_selector(columns):
+                if is_boolean_selector(columns):
+                    native = native.select(
+                        *(col for col, select in zip(native.columns, columns) if select)
+                    )
+                elif is_index_selector(columns):
                     if is_slice_index(columns) or is_range(columns):
                         native = native.select(
                             self.columns[slice(columns.start, columns.stop, columns.step)]
@@ -639,6 +657,20 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
             return super().top_k(k=k, by=by, reverse=reverse)
         except Exception as e:  # noqa: BLE001  # pragma: no cover
             raise catch_polars_exception(e) from None
+
+    def item(self, row: int | None, column: int | str | None) -> Any:
+        if (
+            self._backend_version < (1, 36)
+            and row is None
+            and column is None
+            and (shape := self.shape) != (1, 1)
+        ):
+            msg = (
+                'can only call `.item()` without "row" or "column" values if the '
+                f"DataFrame has a single element; shape={shape!r}"
+            )
+            raise ValueError(msg)
+        return self.native.item(row=row, column=column)
 
 
 class PolarsLazyFrame(PolarsBaseFrame[pl.LazyFrame]):

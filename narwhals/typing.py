@@ -98,7 +98,18 @@ if TYPE_CHECKING:
         def Binary(self) -> type[dtypes.Binary]: ...
 
 
-IntoExpr: TypeAlias = Union["Expr", str, "Series[Any]"]
+_ShapeT = TypeVar("_ShapeT", bound="tuple[int, ...]")
+_NDArray: TypeAlias = "np.ndarray[_ShapeT, Any]"
+_1DArray: TypeAlias = "_NDArray[tuple[int]]"
+_1DArrayBool: TypeAlias = "np.ndarray[tuple[bool], np.dtype[np.bool_]]"
+_1DArrayInt: TypeAlias = "np.ndarray[tuple[int], np.dtype[np.integer[Any]]]"
+_2DArray: TypeAlias = "_NDArray[tuple[int, int]]"  # noqa: PYI047
+_AnyDArray: TypeAlias = "_NDArray[tuple[int, ...]]"  # noqa: PYI047
+_NumpyScalar: TypeAlias = "np.generic[Any]"
+Into1DArray: TypeAlias = "_1DArray | _NumpyScalar"
+"""A 1-dimensional `numpy.ndarray` or scalar that can be converted into one."""
+
+IntoExpr: TypeAlias = Union["Expr", str, "Series[Any]", _1DArray]
 """Anything which can be converted to an expression.
 
 Use this to mean "either a Narwhals expression, or something which can be converted
@@ -250,15 +261,6 @@ ModeKeepStrategy: TypeAlias = Literal["any", "all"]
 - *"all"*: Keeps all the mode's.
 """
 
-_ShapeT = TypeVar("_ShapeT", bound="tuple[int, ...]")
-_NDArray: TypeAlias = "np.ndarray[_ShapeT, Any]"
-_1DArray: TypeAlias = "_NDArray[tuple[int]]"
-_1DArrayInt: TypeAlias = "np.ndarray[tuple[int], np.dtype[np.integer[Any]]]"
-_2DArray: TypeAlias = "_NDArray[tuple[int, int]]"  # noqa: PYI047
-_AnyDArray: TypeAlias = "_NDArray[tuple[int, ...]]"  # noqa: PYI047
-_NumpyScalar: TypeAlias = "np.generic[Any]"
-Into1DArray: TypeAlias = "_1DArray | _NumpyScalar"
-"""A 1-dimensional `numpy.ndarray` or scalar that can be converted into one."""
 
 PandasLikeDType: TypeAlias = "pd.api.extensions.ExtensionDtype | np.dtype[Any]"
 
@@ -350,6 +352,8 @@ Either a string or an object that implements [`__fspath__`], such as [`pathlib.P
 _T = TypeVar("_T")
 _Slice: TypeAlias = "slice[_T, Any, Any] | slice[Any, _T, Any] | slice[None, None, _T]"
 _SliceNone: TypeAlias = "slice[None, None, None]"
+# Boolean positions
+SizedMultiBoolSelector: TypeAlias = "Sequence[bool] | _T | _1DArrayBool"
 # Index/column positions
 SingleIndexSelector: TypeAlias = int
 _SliceIndex: TypeAlias = "_Slice[int] | _SliceNone"
@@ -363,7 +367,9 @@ SizedMultiNameSelector: TypeAlias = "Sequence[str] | _T | _1DArray"
 MultiNameSelector: TypeAlias = "_SliceName | SizedMultiNameSelector[_T]"
 # Mixed selectors
 SingleColSelector: TypeAlias = "SingleIndexSelector | SingleNameSelector"
-MultiColSelector: TypeAlias = "MultiIndexSelector[_T] | MultiNameSelector[_T]"
+MultiColSelector: TypeAlias = (
+    "MultiIndexSelector[_T] | MultiNameSelector[_T] | SizedMultiBoolSelector[_T]"
+)
 
 
 __all__ = [

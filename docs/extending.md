@@ -1,35 +1,65 @@
-# Extending Narwhals
+# Extensions and Plugins
 
 !!! warning
 
     The extension mechanism in Narwhals is experimental and under development.
+    If anything is not clear, or doesn't work, please do raise an issue or
+    contact us on Discord (see the link on the README).
+  
+If you would like to make a new library Narwhals-compatible, then there are
+three ways to go about it:
 
-If you want your own library to be recognised too, you're welcome open a PR (with tests)!.
-Alternatively, if you can't do that (for example, if you library is closed-source), see
-the next section for what else you can do.
+- Open a PR to Narwhals. At this point, however, the bar for including new libraries
+  is very high, so please discuss it with us beforehand.
+- Make that library Narwhals-compliant.
+- Make a plugin for that library which makes it Narwhals-compliant.
 
-We love open source, but we're not "open source absolutists". If you're unable to open
-source you library, then this is how you can make your library compatible with Narwhals.
+## Making a library Narwhals-compliant
 
-Make sure that you also define:
+It's possible to integrate your library with Narwhals with zero code changes
+in Narwhals. To do this, you'll need to make sure that your library complies with
+the Narwhals protocols found in `narwhals/compliant.py`.
 
-  - `DataFrame.__narwhals_dataframe__`: return an object which implements methods from the
-    `CompliantDataFrame` protocol in  `narwhals/typing.py`.
-  - `DataFrame.__narwhals_namespace__`: return an object which implements methods from the
-    `CompliantNamespace` protocol in `narwhals/typing.py`.
-  - `DataFrame.__native_namespace__`: return the object's native namespace.
-  - `LazyFrame.__narwhals_lazyframe__`: return an object which implements methods from the
-    `CompliantLazyFrame` protocol in  `narwhals/typing.py`.
-  - `LazyFrame.__narwhals_namespace__`: return an object which implements methods from the
-    `CompliantNamespace` protocol in `narwhals/typing.py`.
-  - `LazyFrame.__native_namespace__`: return the object's native namespace.
-  - `Series.__narwhals_series__`: return an object which implements methods from the
-    `CompliantSeries` protocol in `narwhals/typing.py`.
+For example, you'll need:
 
-  If your library doesn't distinguish between lazy and eager, then it's OK for your dataframe
-  object to implement both `__narwhals_dataframe__` and `__narwhals_lazyframe__`. In fact,
-  that's currently what `narwhals._pandas_like.dataframe.PandasLikeDataFrame` does. So, if you're stuck,
-  take a look at the source code to see how it's done!
+- A `LazyFrame` class which implements `__narwhals_lazyframe__`.
+- A `Expr` class which implements `broadcast`.
+- A `Namespace` class which implements `is_native`.
+- ...
 
-Note that this "extension" mechanism is still experimental. If anything is not clear, or
-doesn't work, please do raise an issue or contact us on Discord (see the link on the README).
+Full details can be found by inspecting the protocols in `narwhals/compliant.py`.
+
+## Creating a Plugin
+
+If it's not possible to add extra functions like `__narwhals_namespace__` and others to a dataframe object
+itself, then another option is to write a plugin. Narwhals itself has the necessary utilities to detect and
+handle plugins. For this integration to work, any plugin architecture must contain the following:
+
+  1. an entrypoint defined in a `pyproject.toml` file:
+
+    ```
+    [project.entry-points.'narwhals.plugins']
+    narwhals-<library name> = 'narwhals_<library name>'
+    ```
+    The section name needs to be the same for all plugins; inside it, plugin creators can replace their
+    own library name, for example `narwhals-grizzlies = 'narwhals_grizzlies'`
+
+  2. a top-level `__init__.py` file containing the following:
+  
+    - `is_native` and `__narwhals_namespace__` functions.
+    - a string constant `NATIVE_PACKAGE` which holds the name of the library for which the plugin is made.
+
+    `is_native` accepts a native object and returns a boolean indicating whether the native object is 
+    a dataframe of the library the plugin was written for.
+
+    `__narwhals_namespace__` takes the Narwhals version and returns a compliant namespace for the library,
+    i.e. one that complies with the CompliantNamespace protocol. This protocol specifies a `from_native` 
+    function, whose input parameter is the Narwhals version and which returns a compliant Narwhals LazyFrame
+    which wraps the native dataframe. 
+  
+    Take a look at the `Plugin` protocol in `narwhals/plugins.py` for the
+    signatures.
+  
+## Can I see an example?
+
+Yes! For a reference plugin, please check out [narwhals-daft](https://github.com/narwhals-dev/narwhals-daft).

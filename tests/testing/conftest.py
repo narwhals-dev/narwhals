@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, time, timedelta, timezone
 from typing import TYPE_CHECKING
 
 import pytest
@@ -12,8 +12,8 @@ if TYPE_CHECKING:
     from tests.conftest import Data
 
 
-@pytest.fixture
-def schema() -> IntoSchema:
+@pytest.fixture(scope="module")
+def testing_schema() -> IntoSchema:
     return {
         "int": nw.Int32(),
         "float": nw.Float32(),
@@ -22,6 +22,7 @@ def schema() -> IntoSchema:
         "enum": nw.Enum(["beluga", "narwhal", "orca"]),
         "bool": nw.Boolean(),
         "datetime": nw.Datetime(),
+        "datetime_tz": nw.Datetime(time_zone="UTC"),
         "date": nw.Date(),
         "time": nw.Time(),
         "duration": nw.Duration(),
@@ -32,8 +33,8 @@ def schema() -> IntoSchema:
     }
 
 
-@pytest.fixture
-def data() -> Data:
+@pytest.fixture(scope="module")
+def testing_data() -> Data:
     return {
         "int": [1, 2, 3, 4],
         "float": [1.0, float("nan"), float("inf"), None],
@@ -45,6 +46,12 @@ def data() -> Data:
             datetime(2025, 1, 1, 12),
             datetime(2025, 1, 2, 12),
             datetime(2025, 1, 3, 12),
+            None,
+        ],
+        "datetime_tz": [
+            datetime(2025, 1, 1, 12, tzinfo=timezone.utc),
+            datetime(2025, 1, 2, 12, tzinfo=timezone.utc),
+            datetime(2025, 1, 3, 12, tzinfo=timezone.utc),
             None,
         ],
         "date": [date(2025, 1, 1), date(2025, 1, 2), date(2025, 1, 3), None],

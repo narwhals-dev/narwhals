@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-import numpy as np
 import pytest
 
 import narwhals as nw
-from narwhals.exceptions import InvalidOperationError, MultiOutputExpressionError
+from narwhals.exceptions import MultiOutputExpressionError
 from tests.utils import DUCKDB_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 if TYPE_CHECKING:
@@ -54,8 +53,10 @@ def test_no_arg_when_fail(constructor: Constructor) -> None:
 
 
 def test_value_numpy_array(constructor_eager: ConstructorEager) -> None:
-    df = nw.from_native(constructor_eager(data))
+    pytest.importorskip("numpy")
     import numpy as np
+
+    df = nw.from_native(constructor_eager(data))
 
     result = df.select(nw.when(nw.col("a") == 1).then(np.arange(3, 6)).alias("a_when"))
     expected = {"a_when": [3, None, None]}
@@ -80,6 +81,9 @@ def test_value_expression(constructor: Constructor) -> None:
 
 
 def test_otherwise_numpy_array(constructor_eager: ConstructorEager) -> None:
+    pytest.importorskip("numpy")
+    import numpy as np
+
     df = nw.from_native(constructor_eager(data))
 
     arr: _1DArray = np.zeros([3], np.dtype(np.int64))
@@ -115,13 +119,16 @@ def test_when_then_otherwise_into_expr(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_when_then_invalid(constructor: Constructor) -> None:
+def test_when_then_broadcasting(constructor: Constructor) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
     df = nw.from_native(constructor(data))
-    with pytest.raises(InvalidOperationError):
-        df.select(nw.when(nw.col("a").sum() > 1).then("c"))
-
-    with pytest.raises(InvalidOperationError):
-        df.select(nw.when(nw.col("a").sum() > 1).then(1).otherwise("c"))
+    result = df.select(nw.when(nw.col("a").sum() > 1).then("c"))
+    expected = {"c": [4.1, 5, 6]}
+    assert_equal_data(result, expected)
+    result = df.select(nw.when(nw.col("a").sum() > 1).then(1).otherwise("c"))
+    expected = {"literal": [1, 1, 1]}
+    assert_equal_data(result, expected)
 
 
 def test_when_then_otherwise_lit_str(constructor: Constructor) -> None:
@@ -167,10 +174,14 @@ def test_when_then_otherwise_multi_output(constructor: Constructor) -> None:
 def test_when_then_otherwise_aggregate_select(
     condition: nw.Expr,
     then: nw.Expr | int,
-    otherwise: nw.Expr | int,
+    otherwise: nw.Expr | int | None,
     expected: list[int],
     constructor: Constructor,
+    request: pytest.FixtureRequest,
 ) -> None:
+    if "cudf" in str(constructor) and otherwise is None:
+        reason = "cudf does not support mixed types"
+        request.applymarker(pytest.mark.xfail(reason=reason))
     df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
     result = df.select(a_when=nw.when(condition).then(then).otherwise(otherwise))
     assert_equal_data(result, {"a_when": expected})
@@ -194,13 +205,25 @@ def test_when_then_otherwise_aggregate_select(
 def test_when_then_otherwise_aggregate_with_columns(
     condition: nw.Expr,
     then: nw.Expr | int,
-    otherwise: nw.Expr | int,
+    otherwise: nw.Expr | int | None,
     expected: list[int],
     constructor: Constructor,
+    request: pytest.FixtureRequest,
 ) -> None:
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
+    if "cudf" in str(constructor) and otherwise is None:
+        reason = "cudf does not support mixed types"
+        request.applymarker(pytest.mark.xfail(reason=reason))
+
     df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
     expr = nw.when(condition).then(then).otherwise(otherwise)
     result = df.with_columns(a_when=expr)
     assert_equal_data(result.select(nw.col("a_when")), {"a_when": expected})
+
+
+def test_when_then_empty(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [-1]})).filter(nw.col("a") > 0)
+    result = df.with_columns(nw.when(nw.col("a") == 1).then(nw.lit(1)).alias("new_col"))
+    expected: dict[str, Any] = {"a": [], "new_col": []}
+    assert_equal_data(result, expected)

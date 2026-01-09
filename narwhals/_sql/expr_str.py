@@ -1,26 +1,32 @@
 from __future__ import annotations
 
-from typing import Any, Generic
+import operator
+from typing import TYPE_CHECKING, Any, Generic
 
 from narwhals._compliant import LazyExprNamespace
 from narwhals._compliant.any_namespace import StringNamespace
 from narwhals._sql.typing import SQLExprT
 
+if TYPE_CHECKING:
+    from narwhals._compliant.expr import NativeExpr
+
 
 class SQLExprStringNamespace(
     LazyExprNamespace[SQLExprT], StringNamespace[SQLExprT], Generic[SQLExprT]
 ):
-    def _lit(self, value: Any) -> SQLExprT:
+    def _lit(self, value: Any) -> NativeExpr:
         return self.compliant._lit(value)  # type: ignore[no-any-return]
 
-    def _function(self, name: str, *args: Any) -> SQLExprT:
+    def _function(self, name: str, *args: Any) -> NativeExpr:
         return self.compliant._function(name, *args)  # type: ignore[no-any-return]
 
-    def _when(self, condition: Any, value: Any, otherwise: Any | None = None) -> SQLExprT:
+    def _when(
+        self, condition: Any, value: Any, otherwise: Any | None = None
+    ) -> NativeExpr:
         return self.compliant._when(condition, value, otherwise)  # type: ignore[no-any-return]
 
     def contains(self, pattern: str, *, literal: bool) -> SQLExprT:
-        def func(expr: Any) -> Any:
+        def func(expr: NativeExpr) -> NativeExpr:
             if literal:
                 return self._function("contains", expr, self._lit(pattern))
             return self._function("regexp_matches", expr, self._lit(pattern))
@@ -37,22 +43,12 @@ class SQLExprStringNamespace(
             lambda expr: self._function("length", expr)
         )
 
-    def replace_all(
-        self, pattern: str, value: str | SQLExprT, *, literal: bool
-    ) -> SQLExprT:
+    def replace_all(self, value: SQLExprT, pattern: str, *, literal: bool) -> SQLExprT:
         fname: str = "replace" if literal else "regexp_replace"
 
         options: list[Any] = []
         if not literal and self.compliant._implementation.is_duckdb():
             options = [self._lit("g")]
-
-        if isinstance(value, str):
-            return self.compliant._with_elementwise(
-                lambda expr: self._function(
-                    fname, expr, self._lit(pattern), self._lit(value), *options
-                )
-            )
-
         return self.compliant._with_elementwise(
             lambda expr, value: self._function(
                 fname, expr, self._lit(pattern), value, *options
@@ -61,11 +57,11 @@ class SQLExprStringNamespace(
         )
 
     def slice(self, offset: int, length: int | None) -> SQLExprT:
-        def func(expr: SQLExprT) -> SQLExprT:
+        def func(expr: NativeExpr) -> NativeExpr:
             col_length = self._function("length", expr)
 
             _offset = (
-                col_length + self._lit(offset + 1)
+                operator.add(col_length, self._lit(offset + 1))
                 if offset < 0
                 else self._lit(offset + 1)
             )
@@ -109,7 +105,7 @@ class SQLExprStringNamespace(
         # There is no built-in zfill function, so we need to implement it manually
         # using string manipulation functions.
 
-        def func(expr: Any) -> Any:
+        def func(expr: NativeExpr) -> NativeExpr:
             less_than_width = self._function("length", expr) < self._lit(width)
             zero, hyphen, plus = self._lit("0"), self._lit("-"), self._lit("+")
 
@@ -120,10 +116,10 @@ class SQLExprStringNamespace(
                 "lpad", substring, self._lit(width - 1), zero
             )
             return self._when(
-                starts_with_minus & less_than_width,
+                operator.and_(starts_with_minus, less_than_width),
                 self._function("concat", hyphen, padded_substring),
                 self._when(
-                    starts_with_plus & less_than_width,
+                    operator.and_(starts_with_plus, less_than_width),
                     self._function("concat", plus, padded_substring),
                     self._when(
                         less_than_width,

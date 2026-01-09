@@ -41,6 +41,7 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
         "any": "any",
         "first": "first",
         "last": "last",
+        "any_value": "first",
     }
     _REMAP_UNIQUE: ClassVar[Mapping[UniqueKeepStrategy, Aggregation]] = {
         "any": "min",
@@ -52,10 +53,12 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
     )
     _OPTION_COUNT_VALID: ClassVar[frozenset[NarwhalsAggregation]] = frozenset(("count",))
     _OPTION_ORDERED: ClassVar[frozenset[NarwhalsAggregation]] = frozenset(
-        ("first", "last")
+        ("first", "last", "any_value")
     )
     _OPTION_VARIANCE: ClassVar[frozenset[NarwhalsAggregation]] = frozenset(("std", "var"))
-    _OPTION_SCALAR: ClassVar[frozenset[NarwhalsAggregation]] = frozenset(("any", "all"))
+    _OPTION_SCALAR: ClassVar[frozenset[NarwhalsAggregation]] = frozenset(
+        ("any", "all", "sum")
+    )
 
     def __init__(
         self,
@@ -76,8 +79,9 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
     ) -> tuple[pa.TableGroupBy, Aggregation, AggregateOptions | None]:
         option: AggregateOptions | None = None
         function_name = self._leaf_name(expr)
+        kwargs = self._kwargs(expr)
         if function_name in self._OPTION_VARIANCE:
-            ddof = expr._scalar_kwargs.get("ddof", 1)
+            ddof = kwargs["ddof"]
             option = pc.VarianceOptions(ddof=ddof)
         elif function_name in self._OPTION_COUNT_ALL:
             option = pc.CountOptions(mode="all")
@@ -86,11 +90,19 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
         elif function_name in self._OPTION_SCALAR:
             option = pc.ScalarAggregateOptions(min_count=0)
         elif function_name in self._OPTION_ORDERED:
-            grouped, option = self._ordered_agg(grouped, function_name)
+            ignore_nulls = kwargs.get("ignore_nulls", False)
+            grouped, option = self._ordered_agg(
+                grouped, function_name, ignore_nulls=ignore_nulls
+            )
         return grouped, self._remap_expr_name(function_name), option
 
     def _ordered_agg(
-        self, grouped: pa.TableGroupBy, name: NarwhalsAggregation, /
+        self,
+        grouped: pa.TableGroupBy,
+        name: NarwhalsAggregation,
+        /,
+        *,
+        ignore_nulls: bool,
     ) -> tuple[pa.TableGroupBy, AggregateOptions]:
         """The default behavior of `pyarrow` raises when `first` or `last` are used.
 
@@ -114,7 +126,7 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
                 f"See https://github.com/apache/arrow/issues/36709"
             )
             raise NotImplementedError(msg)
-        return grouped, pc.ScalarAggregateOptions(skip_nulls=False)
+        return grouped, pc.ScalarAggregateOptions(skip_nulls=ignore_nulls)
 
     def agg(self, *exprs: ArrowExpr) -> ArrowDataFrame:
         self._ensure_all_simple(exprs)
@@ -128,10 +140,11 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
             output_names, aliases = evaluate_output_names_and_aliases(
                 expr, self.compliant, exclude
             )
-
-            if expr._depth == 0:
+            md = expr._metadata
+            op_nodes_reversed = list(md.op_nodes_reversed())
+            if len(op_nodes_reversed) == 1:
                 # e.g. `agg(nw.len())`
-                if expr._function_name != "len":  # pragma: no cover
+                if op_nodes_reversed[0].name != "len":  # pragma: no cover
                     msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
                     raise AssertionError(msg)
 

@@ -20,7 +20,7 @@ from narwhals._polars.utils import (
     narwhals_to_native_dtype,
     native_to_narwhals_dtype,
 )
-from narwhals._utils import Implementation, requires
+from narwhals._utils import Implementation, no_default, requires
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_index
 
 if TYPE_CHECKING:
@@ -34,6 +34,7 @@ if TYPE_CHECKING:
 
     from narwhals._polars.dataframe import Method, PolarsDataFrame
     from narwhals._polars.namespace import PolarsNamespace
+    from narwhals._typing import NoDefault
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.series import Series
@@ -43,7 +44,6 @@ if TYPE_CHECKING:
         ModeKeepStrategy,
         MultiIndexSelector,
         NonNestedLiteral,
-        NumericLiteral,
         PythonLiteral,
         _1DArray,
     )
@@ -83,6 +83,7 @@ INHERITED_METHODS = frozenset(
         "arg_true",
         "ceil",
         "clip",
+        "cos",
         "count",
         "cum_max",
         "cum_min",
@@ -123,6 +124,7 @@ INHERITED_METHODS = frozenset(
         "round",
         "sample",
         "shift",
+        "sin",
         "skew",
         "sqrt",
         "std",
@@ -289,10 +291,24 @@ class PolarsSeries:
         dtype_pl = narwhals_to_native_dtype(dtype, self._version)
         return self._with_native(self.native.cast(dtype_pl))
 
+    def clip(self, lower_bound: PolarsSeries, upper_bound: PolarsSeries) -> Self:
+        return self._with_native(
+            self.native.clip(extract_native(lower_bound), extract_native(upper_bound))
+        )
+
+    def clip_lower(self, lower_bound: PolarsSeries) -> Self:
+        return self._with_native(self.native.clip(extract_native(lower_bound)))
+
+    def clip_upper(self, upper_bound: PolarsSeries) -> Self:
+        return self._with_native(
+            self.native.clip(upper_bound=extract_native(upper_bound))
+        )
+
     @requires.backend_version((1,))
     def replace_strict(
         self,
-        old: Sequence[Any] | Mapping[Any, Any],
+        default: PolarsSeries | NoDefault,
+        old: Sequence[Any],
         new: Sequence[Any],
         *,
         return_dtype: IntoDType | None,
@@ -303,7 +319,13 @@ class PolarsSeries:
             if return_dtype
             else None
         )
-        return self._with_native(ser.replace_strict(old, new, return_dtype=dtype))
+
+        extra_kwargs = (
+            {} if default is no_default else {"default": extract_native(default)}
+        )
+        return self._with_native(
+            ser.replace_strict(old, new, return_dtype=dtype, **extra_kwargs)
+        )
 
     def to_numpy(self, dtype: Any = None, *, copy: bool | None = None) -> _1DArray:
         return self.__array__(dtype, copy=copy)
@@ -348,6 +370,13 @@ class PolarsSeries:
             select = pl.when(self.native.is_not_null()).then(native_is_nan)
             return self._with_native(pl.select(select)[self.name])
         return self._with_native(native_is_nan)
+
+    def is_finite(self) -> Self:
+        native_is_finite = self.native.is_finite()
+        if self._backend_version < (1, 18):  # pragma: no cover
+            select = pl.when(self.native.is_not_null()).then(native_is_finite)
+            return self._with_native(pl.select(select)[self.name])
+        return self._with_native(native_is_finite)
 
     def median(self) -> Any:
         from narwhals.exceptions import InvalidOperationError
@@ -510,30 +539,6 @@ class PolarsSeries:
         except Exception as e:  # noqa: BLE001
             raise catch_polars_exception(e) from None
 
-    def is_close(
-        self,
-        other: Self | NumericLiteral,
-        *,
-        abs_tol: float,
-        rel_tol: float,
-        nans_equal: bool,
-    ) -> PolarsSeries:
-        if self._backend_version < (1, 32, 0):
-            name = self.name
-            ns = self.__narwhals_namespace__()
-            other_expr = (
-                ns.lit(other.native, None) if isinstance(other, PolarsSeries) else other
-            )
-            expr = ns.col(name).is_close(
-                other_expr, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal
-            )
-            return self.to_frame().select(expr).get_column(name)
-        other_series = other.native if isinstance(other, PolarsSeries) else other
-        result = self.native.is_close(
-            other_series, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal
-        )
-        return self._with_native(result)
-
     def mode(self, *, keep: ModeKeepStrategy) -> Self:
         result = self.native.mode()
         return self._with_native(result.head(1) if keep == "any" else result)
@@ -661,6 +666,9 @@ class PolarsSeries:
             return self.native.item(-1) if len(self) else None
         return self.native.last()  # type: ignore[return-value]
 
+    def any_value(self, *, ignore_nulls: bool) -> PythonLiteral:
+        return self.drop_nulls().first() if ignore_nulls else self.first()
+
     @property
     def dt(self) -> PolarsSeriesDateTimeNamespace:
         return PolarsSeriesDateTimeNamespace(self)
@@ -702,8 +710,8 @@ class PolarsSeries:
     arg_min: Method[int]
     arg_true: Method[Self]
     ceil: Method[Self]
-    clip: Method[Self]
     count: Method[int]
+    cos: Method[Self]
     cum_max: Method[Self]
     cum_min: Method[Self]
     cum_prod: Method[Self]
@@ -720,7 +728,6 @@ class PolarsSeries:
     is_between: Method[Self]
     is_duplicated: Method[Self]
     is_empty: Method[bool]
-    is_finite: Method[Self]
     is_first_distinct: Method[Self]
     is_in: Method[Self]
     is_last_distinct: Method[Self]
@@ -741,6 +748,7 @@ class PolarsSeries:
     round: Method[Self]
     sample: Method[Self]
     shift: Method[Self]
+    sin: Method[Self]
     skew: Method[float | None]
     sqrt: Method[Self]
     std: Method[float]
@@ -799,6 +807,22 @@ class PolarsSeriesStringNamespace(
         name = self.name
         ns = self.__narwhals_namespace__()
         return self.to_frame().select(ns.col(name).str.zfill(width)).get_column(name)
+
+    def replace(
+        self, value: PolarsSeries, pattern: str, *, literal: bool, n: int
+    ) -> PolarsSeries:
+        value_native = extract_native(value)
+        return self.compliant._with_native(
+            self.native.str.replace(pattern, value_native, literal=literal, n=n)  # type: ignore[arg-type]
+        )
+
+    def replace_all(
+        self, value: PolarsSeries, pattern: str, *, literal: bool
+    ) -> PolarsSeries:
+        value_native = extract_native(value)
+        return self.compliant._with_native(
+            self.native.str.replace_all(pattern, value_native, literal=literal)  # type: ignore[arg-type]
+        )
 
 
 class PolarsSeriesCatNamespace(

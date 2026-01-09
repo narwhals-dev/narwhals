@@ -4,7 +4,7 @@ from types import ModuleType
 from typing import TYPE_CHECKING, Literal, Union
 
 from narwhals._typing_compat import TypeVar
-from narwhals._utils import Implementation
+from narwhals._utils import Implementation, _NoDefault
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
@@ -154,3 +154,5 @@ Examples:
 IntoBackendAny: TypeAlias = IntoBackend[Backend]
 IntoBackendEager: TypeAlias = IntoBackend[EagerAllowed]
 IntoBackendLazy: TypeAlias = IntoBackend[LazyAllowed]
+
+NoDefault: TypeAlias = Literal[_NoDefault.no_default]

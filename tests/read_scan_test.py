@@ -3,7 +3,6 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, Any, Literal
 
-import pandas as pd
 import pytest
 
 import narwhals as nw
@@ -11,6 +10,7 @@ from tests.utils import (
     PANDAS_VERSION,
     Constructor,
     assert_equal_data,
+    is_windows,
     pyspark_session,
     sqlframe_session,
 )
@@ -106,7 +106,9 @@ def test_read_csv(
 
 @skipif_pandas_lt_1_5
 def test_read_csv_kwargs(csv_path: FileSource) -> None:
+    pytest.importorskip("pandas")
     pytest.importorskip("pyarrow")
+    import pandas as pd
     from pyarrow import csv
 
     assert_equal_eager(nw.read_csv(csv_path, backend=pd, engine="pyarrow"))
@@ -141,6 +143,10 @@ def test_scan_csv(
 
 @skipif_pandas_lt_1_5
 def test_scan_csv_kwargs(csv_path: FileSource) -> None:
+    pytest.importorskip("pandas")
+    pytest.importorskip("pyarrow")
+    import pandas as pd
+
     assert_equal_data(nw.scan_csv(csv_path, backend=pd, engine="pyarrow"), data)
 
 
@@ -151,6 +157,10 @@ def test_read_parquet(parquet_path: FileSource, eager_backend: EagerAllowed) -> 
 
 @skipif_pandas_lt_1_5
 def test_read_parquet_kwargs(parquet_path: FileSource) -> None:
+    pytest.importorskip("pandas")
+    pytest.importorskip("pyarrow")
+    import pandas as pd
+
     assert_equal_eager(nw.read_parquet(parquet_path, backend=pd, engine="pyarrow"))
 
 
@@ -164,6 +174,10 @@ def test_read_parquet_raise_with_lazy(backend: _LazyOnly) -> None:
 @skipif_pandas_lt_1_5
 def test_scan_parquet(parquet_path: FileSource, constructor: Constructor) -> None:
     kwargs: dict[str, Any]
+    if "sqlframe" in str(constructor) and is_windows():
+        reason = "_duckdb.IOException: IO Error: No files found that match the pattern"
+        pytest.skip(reason)
+
     if "sqlframe" in str(constructor):
         kwargs = {"session": sqlframe_session(), "inferSchema": True}
     elif "pyspark" in str(constructor):
@@ -176,6 +190,10 @@ def test_scan_parquet(parquet_path: FileSource, constructor: Constructor) -> Non
 
 @skipif_pandas_lt_1_5
 def test_scan_parquet_kwargs(parquet_path: FileSource) -> None:
+    pytest.importorskip("pandas")
+    pytest.importorskip("pyarrow")
+    import pandas as pd
+
     assert_equal_lazy(nw.scan_parquet(parquet_path, backend=pd, engine="pyarrow"))
 
 
