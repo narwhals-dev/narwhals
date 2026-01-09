@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 from narwhals._spark_like.utils import strptime_to_pyspark_format
 from narwhals._sql.expr_str import SQLExprStringNamespace
-from narwhals._utils import _is_naive_format, not_implemented, requires
+from narwhals._utils import _is_naive_format, requires
 
 if TYPE_CHECKING:
     from sqlframe.base.column import Column
@@ -61,4 +61,22 @@ class SparkLikeExprStringNamespace(SQLExprStringNamespace["SparkLikeExpr"]):
 
         return self.compliant._with_elementwise(_to_titlecase)
 
-    replace = not_implemented()
+    def pad_start(self, length: int, fill_char: str) -> SparkLikeExpr:
+        F = self.compliant._F
+
+        def _pad_start(expr: Column) -> Column:
+            return F.when(
+                F.char_length(expr) < length, F.lpad(expr, len=length, pad=fill_char)
+            ).otherwise(expr)
+
+        return self.compliant._with_elementwise(_pad_start)
+
+    def pad_end(self, length: int, fill_char: str) -> SparkLikeExpr:
+        F = self.compliant._F
+
+        def _pad_end(expr: Column) -> Column:
+            return F.when(
+                F.char_length(expr) < length, F.rpad(expr, len=length, pad=fill_char)
+            ).otherwise(expr)
+
+        return self.compliant._with_elementwise(_pad_end)

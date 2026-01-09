@@ -450,3 +450,17 @@ class SeriesStringNamespace(Generic[SeriesT]):
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.zfill(width)
         )
+
+    def pad_start(self, length: int, fill_char: str = " ") -> SeriesT:
+        return self._narwhals_series._with_compliant(
+            self._narwhals_series._compliant_series.str.pad_start(
+                length=length, fill_char=fill_char
+            )
+        )
+
+    def pad_end(self, length: int, fill_char: str = " ") -> SeriesT:
+        return self._narwhals_series._with_compliant(
+            self._narwhals_series._compliant_series.str.pad_end(
+                length=length, fill_char=fill_char
+            )
+        )
