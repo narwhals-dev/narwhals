@@ -363,9 +363,35 @@ def test_numeric_promotion(left: DType, right: DType, expected: DType) -> None:
             nw_v1.Datetime(time_zone="Europe/Berlin"),
             nw_v1.Datetime(time_zone="Europe/Berlin"),
         ),
-        # TODO @dangotbanned: Nested(<V1-only-types>)
-        # TODO @dangotbanned: Nested(<non-V1-types>)
-        # TODO @dangotbanned: Everything is MAIN, but called from V1
+        (
+            nw.Struct({"f0": nw_v1.Duration("ms"), "f1": nw.Int64, "f2": nw.Int64}),
+            nw.Struct({"f0": nw_v1.Duration("us"), "f1": nw.Int64()}),
+            nw.Struct({"f0": nw_v1.Duration("ms"), "f1": nw.Int64(), "f2": nw.Int64()}),
+        ),
+        (
+            nw.Struct({"f0": nw.Float64, "f1": nw.Date, "f2": nw.Int32}),
+            nw.Struct({"f0": nw.Float32, "f1": nw_v1.Datetime, "f3": nw.UInt8}),
+            nw.Struct(
+                {"f0": nw.Float64, "f1": nw_v1.Datetime(), "f2": nw.Int32, "f3": nw.UInt8}
+            ),
+        ),
+        (
+            nw.Struct({"f0": nw.Binary()}),
+            nw.Struct({"f0": nw_v1.Datetime("s"), "f1": nw.Date}),
+            None,
+        ),
+        (
+            nw.Array(nw.Date, shape=3),
+            nw.Array(nw_v1.Datetime, shape=3),
+            nw.Array(nw_v1.Datetime, shape=3),
+        ),
+        (nw.Array(nw.Date, shape=1), nw.Array(nw_v1.Datetime, shape=3), None),
+        (nw.Array(nw.Date, shape=2), nw.Array(nw_v1.Duration, shape=2), None),
+        (
+            nw.Array(nw_v1.Enum(), shape=4),
+            nw.Array(nw_v1.Enum(), shape=4),
+            nw.Array(nw_v1.Enum(), shape=4),
+        ),
         # TODO @dangotbanned: What to do when e.g `(v1.Datetime, Datetime) -> ?`
     ],
 )
