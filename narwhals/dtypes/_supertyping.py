@@ -39,7 +39,7 @@ from narwhals.dtypes.classes import (  # NOTE: Should not include `DType`(s) tha
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping
+    from collections.abc import Callable, Collection, Mapping
 
     from typing_extensions import TypeAlias
 
@@ -171,7 +171,7 @@ def has_v1_versioned(base_types: FrozenDTypes, /) -> bool:
 
 
 def _struct_union_fields(
-    left: list[Field], right: list[Field], version: Version
+    left: Collection[Field], right: Collection[Field], version: Version
 ) -> Struct | None:
     # if equal length we also take the lhs
     # so that the lhs determines the order of the fields
