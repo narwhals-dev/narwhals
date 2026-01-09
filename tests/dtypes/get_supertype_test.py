@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 import narwhals as nw
-import narwhals.stable.v1 as nw_v1  # noqa: F401
+import narwhals.stable.v1 as nw_v1
 import narwhals.stable.v2 as nw_v2  # noqa: F401
 from narwhals._utils import Version
 from narwhals.dtypes._supertyping import get_supertype
@@ -18,6 +18,8 @@ XFAIL_DATE_NUMERIC = pytest.mark.xfail(reason="TODO: (Date, Numeric)")
 XFAIL_TIME_NUMERIC = pytest.mark.xfail(reason="TODO: (Time, Numeric)")
 XFAIL_DATETIME_NUMERIC = pytest.mark.xfail(reason="TODO: (Datetime, Numeric)")
 XFAIL_DURATION_NUMERIC = pytest.mark.xfail(reason="TODO: (Duration, Numeric)")
+
+XFAIL_V1 = pytest.mark.xfail(reason="TODO: V1 supertypes", raises=NotImplementedError)
 
 
 def _dtype_ids(obj: DType | None) -> str:  # noqa: PLR0911
@@ -331,3 +333,51 @@ def test_numeric_promotion(left: DType, right: DType, expected: DType) -> None:
     result = get_supertype(left, right, Version.MAIN)
     assert result is not None
     assert result == expected
+
+
+@XFAIL_V1
+@pytest.mark.parametrize(
+    ("left", "right", "expected"),
+    [
+        (nw_v1.Datetime(), nw_v1.Datetime(), nw_v1.Datetime()),
+        (nw_v1.Datetime("ns"), nw_v1.Datetime("s"), nw_v1.Datetime("s")),
+        (
+            nw_v1.Datetime(time_zone="Europe/Berlin"),
+            nw_v1.Datetime(time_zone="Europe/Berlin"),
+            nw_v1.Datetime(time_zone="Europe/Berlin"),
+        ),
+        (
+            nw_v1.Datetime(time_zone="Europe/Berlin"),
+            nw_v1.Datetime("ms", "Europe/Berlin"),
+            nw_v1.Datetime("ms", "Europe/Berlin"),
+        ),
+        (nw_v1.Datetime(time_zone="Europe/Berlin"), nw_v1.Datetime(), None),
+        (nw_v1.Datetime("s"), nw_v1.Datetime("s", "Africa/Accra"), None),
+        (nw_v1.Duration("ns"), nw_v1.Duration("ms"), nw_v1.Duration("ms")),
+        (nw_v1.Duration(), nw_v1.Duration(), nw_v1.Duration()),
+        (nw_v1.Duration("s"), nw_v1.Duration(), nw_v1.Duration("s")),
+        (nw_v1.Duration(), nw_v1.Datetime(), None),
+        (nw_v1.Enum(), nw_v1.Enum(), nw_v1.Enum()),
+        (nw_v1.Enum(), nw_v1.String(), nw_v1.String()),
+        (
+            nw.Date(),
+            nw_v1.Datetime(time_zone="Europe/Berlin"),
+            nw_v1.Datetime(time_zone="Europe/Berlin"),
+        ),
+        # TODO @dangotbanned: Nested(<V1-only-types>)
+        # TODO @dangotbanned: Nested(<non-V1-types>)
+        # TODO @dangotbanned: Everything is MAIN, but called from V1
+        # TODO @dangotbanned: What to do when e.g `(v1.Datetime, Datetime) -> ?`
+    ],
+)
+def test_v1_dtypes(
+    left: DType, right: DType, expected: DType | None
+) -> None:  # pragma: no cover
+    result = get_supertype(left, right, Version.V1)
+    if expected is None:
+        assert result is None
+    else:
+        assert result is not None
+        assert result == expected
+        # Must also preserve v1-ness
+        assert type(result) is type(expected)
