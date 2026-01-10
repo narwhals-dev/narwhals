@@ -286,7 +286,7 @@ def test_numeric_promotion(
     assert result is not None
     assert result == expected
 
-    result = get_supertype(left, right, version)
+    result = get_supertype(right, left, version)
     assert result is not None
     assert result == expected
 
@@ -375,7 +375,7 @@ def test_v1_dtypes(left: DType, right: DType, expected: DType | None) -> None:
 
 @versions
 @pytest.mark.parametrize(
-    ("left", "right"),
+    ("dtype_v1", "dtype_main"),
     [
         (nw_v1.Duration("ms"), nw.Duration("ms")),
         (nw_v1.Duration("ns"), nw.Duration("ns")),
@@ -384,9 +384,11 @@ def test_v1_dtypes(left: DType, right: DType, expected: DType | None) -> None:
         (nw_v1.Enum(), nw.Enum([])),
     ],
 )
-def test_mixed_versions_return_none(left: DType, right: DType, version: Version) -> None:
-    result = get_supertype(left, right, version)
+def test_mixed_versions_return_none(
+    dtype_v1: DType, dtype_main: DType, version: Version
+) -> None:
+    result = get_supertype(dtype_v1, dtype_main, version)
     assert result is None
 
-    result = get_supertype(right, left, version)
+    result = get_supertype(dtype_main, dtype_v1, version)
     assert result is None
