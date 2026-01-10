@@ -205,15 +205,43 @@ class NestedType(DType):
 
 
 class Decimal(NumericType):
-    """Decimal type.
+    """Decimal 128-bit type with an optional precision and non-negative scale.
+
+    Arguments:
+        precision: Maximum number of digits in each number. If set to `None` (default),
+            the precision is set to 38 (the maximum supported by Polars).
+        scale: Number of digits to the right of the decimal point in each number.
 
     Examples:
         >>> import polars as pl
         >>> import narwhals as nw
         >>> s = pl.Series(["1.5"], dtype=pl.Decimal)
         >>> nw.from_native(s, series_only=True).dtype
-        Decimal
+        Decimal(precision=2, scale=1)
     """
+
+    __slots__ = ("precision", "scale")
+
+    precision: int
+    scale: int
+
+    def __init__(self, precision: int | None = None, scale: int = 0) -> None:
+        self.precision = 38 if precision is None else precision
+        self.scale = scale
+
+    def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
+        return (other is Decimal) or (
+            isinstance(other, self.__class__)
+            and self.precision == other.precision
+            and self.scale == other.scale
+        )
+
+    def __hash__(self) -> int:  # pragma: no cover
+        return hash((self.__class__, self.precision, self.scale))
+
+    def __repr__(self) -> str:  # pragma: no cover
+        class_name = self.__class__.__name__
+        return f"{class_name}(precision={self.precision!r}, scale={self.scale!r})"
 
 
 class Int128(SignedIntegerType):
