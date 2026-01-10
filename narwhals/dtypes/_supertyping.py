@@ -161,19 +161,19 @@ def _first_excluding(base_types: FrozenDTypes, *exclude: type[DType]) -> type[DT
     return next(iter(others))
 
 
-def _intersects(a: frozenset[Any], b: frozenset[Any], /) -> bool:
+def _has_intersection(a: frozenset[Any], b: frozenset[Any], /) -> bool:
     """Return True if sets share at least one element."""
     return not a.isdisjoint(b)
 
 
 @lru_cache(maxsize=_CACHE_SIZE_TP_MID)
 def has_nested(base_types: FrozenDTypes, /) -> bool:
-    return _intersects(base_types, NESTED)
+    return _has_intersection(base_types, NESTED)
 
 
 @lru_cache(maxsize=_CACHE_SIZE_TP_MID)
 def has_v1_versioned(base_types: FrozenDTypes, /) -> bool:
-    return _intersects(base_types, _v1_versioned_dtypes())
+    return _has_intersection(base_types, _v1_versioned_dtypes())
 
 
 def _struct_union_fields(
