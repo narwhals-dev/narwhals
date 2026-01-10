@@ -33,15 +33,14 @@ def versions(fn: _Fn, /) -> _Fn:
             Version.MAIN if v is Version.MAIN else pytest.param(v, marks=pytest.mark.slow)
             for v in Version
         ),
+        ids=[v.name for v in Version],
     )(fn)
 
 
-def _dtype_ids(obj: DType | type[DType] | Version | None) -> str:  # noqa: PLR0911
+def _dtype_ids(obj: DType | type[DType] | None) -> str:  # noqa: PLR0911
     """Some tweaks to `DType.__repr__` for more readable test ids."""
     if obj is None:
         return str(obj)
-    if isinstance(obj, Version):
-        return obj.name
     if isinstance(obj, DType):
         if hasattr(obj, "__slots__"):
             if isinstance(obj, nw.Datetime):
@@ -49,6 +48,8 @@ def _dtype_ids(obj: DType | type[DType] | Version | None) -> str:  # noqa: PLR09
             if isinstance(obj, nw.Duration):
                 return f"Duration[{obj.time_unit}]"
             if isinstance(obj, nw.Enum):
+                if isinstance(obj, nw_v1.Enum):
+                    return "v1.Enum[]"
                 return f"Enum{list(obj.categories)!r}"
             if isinstance(obj, nw.Array):
                 dtype: Any = obj
@@ -418,6 +419,7 @@ def test_numeric_and_bool_promotion(numeric_dtype: NumericType, version: Version
         ),
         # TODO @dangotbanned: What to do when e.g `(v1.Datetime, Datetime) -> ?`
     ],
+    ids=_dtype_ids,
 )
 def test_v1_dtypes(left: DType, right: DType, expected: DType | None) -> None:
     result = get_supertype(left, right, Version.V1)
