@@ -262,7 +262,7 @@ def dtype_ids(obj: DType | type[DType] | None) -> str:  # noqa: PLR0911
     if obj is None:
         return str(obj)
     if isinstance(obj, DType):
-        if hasattr(obj, "__slots__"):
+        if obj.__slots__:
             if isinstance(obj, nw.Datetime):
                 return f"Datetime[{obj.time_unit}, {obj.time_zone}]"
             if isinstance(obj, nw.Duration):
