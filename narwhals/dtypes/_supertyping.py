@@ -129,7 +129,7 @@ def _key_fn_time_unit(obj: HasTimeUnit, /) -> int:
     return _TIME_UNIT_TO_INDEX[obj.time_unit]
 
 
-@cache
+@lru_cache(maxsize=_CACHE_SIZE_TP_MID * 2)
 def downcast_time_unit(left: HasTimeUnitT, right: HasTimeUnitT) -> HasTimeUnitT:
     """Return the operand with the lowest precision time unit."""
     return min(left, right, key=_key_fn_time_unit)
