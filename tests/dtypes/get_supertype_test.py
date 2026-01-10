@@ -15,7 +15,7 @@ from narwhals.dtypes._supertyping import get_supertype
 from tests.utils import dtype_ids as _dtype_ids
 
 if TYPE_CHECKING:
-    from narwhals.dtypes.classes import DType, NumericType, TemporalType
+    from narwhals.dtypes import DType, NumericType, TemporalType
 
 _Fn = TypeVar("_Fn", bound=Callable[..., Any])
 

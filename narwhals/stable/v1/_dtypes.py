@@ -40,7 +40,7 @@ from narwhals.dtypes import (
     Unknown,
     UnsignedIntegerType,
 )
-from narwhals.dtypes.classes import DTypeClass
+from narwhals.dtypes._classes import DTypeClass
 
 if TYPE_CHECKING:
     from datetime import timezone

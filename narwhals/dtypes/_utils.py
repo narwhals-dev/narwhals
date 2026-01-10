@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from narwhals._utils import isinstance_or_issubclass, qualified_type_name
-from narwhals.dtypes.classes import DType, DTypeClass, NestedType
+from narwhals.dtypes._classes import DType, DTypeClass, NestedType
 
 if TYPE_CHECKING:
     from typing import Any

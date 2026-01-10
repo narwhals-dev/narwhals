@@ -6,7 +6,7 @@ from operator import attrgetter
 from typing import TYPE_CHECKING, Any, Final, TypeVar, cast
 
 from narwhals._utils import Version
-from narwhals.dtypes.classes import (  # NOTE: Should not include `DType`(s) that are versioned
+from narwhals.dtypes._classes import (  # NOTE: Should not include `DType`(s) that are versioned
     Array,
     Binary,
     Boolean,
@@ -43,7 +43,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import TypeAlias
 
-    from narwhals.dtypes.classes import _Bits
+    from narwhals.dtypes._classes import _Bits
     from narwhals.typing import TimeUnit
 
     _Fn = TypeVar("_Fn", bound=Callable[..., Any])
