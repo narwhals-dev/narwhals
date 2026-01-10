@@ -6,14 +6,17 @@ from operator import attrgetter
 from typing import TYPE_CHECKING, Any, Final, TypeVar, cast
 
 from narwhals._utils import Version
-from narwhals.dtypes._classes import (  # NOTE: Should not include `DType`(s) that are versioned
+from narwhals.dtypes._classes import (
     Array,
     Binary,
     Boolean,
     Categorical,
     Date,
+    Datetime,
     Decimal,
     DType,
+    Duration,
+    Enum,
     Field,
     Float32,
     Float64,
@@ -36,6 +39,11 @@ from narwhals.dtypes._classes import (  # NOTE: Should not include `DType`(s) th
     UInt128,
     Unknown,
     UnsignedIntegerType,
+)
+from narwhals.dtypes._classes_v1 import (
+    Datetime as DatetimeV1,
+    Duration as DurationV1,
+    Enum as EnumV1,
 )
 
 if TYPE_CHECKING:
@@ -77,12 +85,6 @@ DTypeGroup: TypeAlias = frozenset[type[DType]]
 _TIME_UNIT_TO_INDEX: Mapping[TimeUnit, int] = {"s": 0, "ms": 1, "us": 2, "ns": 3}
 """Convert time unit to an index for comparison (larger = more precise)."""
 
-_Datetime = Version.MAIN.dtypes.Datetime
-"""Alias for `nw.dtypes.Datetime`."""
-_Duration = Version.MAIN.dtypes.Duration
-"""Alias for `nw.dtypes.Duration`."""
-_Enum = Version.MAIN.dtypes.Enum
-"""Alias for `nw.dtypes.Enum`."""
 
 SIGNED_INTEGER: DTypeGroup = frozenset((Int8, Int16, Int32, Int64, Int128))
 UNSIGNED_INTEGER: DTypeGroup = frozenset((UInt8, UInt16, UInt32, UInt64, UInt128))
@@ -90,12 +92,13 @@ INTEGER: DTypeGroup = SIGNED_INTEGER.union(UNSIGNED_INTEGER)
 FLOAT: DTypeGroup = frozenset((Float32, Float64))
 NUMERIC: DTypeGroup = FLOAT.union(INTEGER).union((Decimal,))
 NESTED: DTypeGroup = frozenset((Struct, List, Array))
-TEMPORAL: DTypeGroup = frozenset((_Datetime, _Duration, Date, Time))
-STRING: DTypeGroup = frozenset((String, Binary, Categorical, _Enum))
+TEMPORAL: DTypeGroup = frozenset((Datetime, Duration, Date, Time))
+STRING: DTypeGroup = frozenset((String, Binary, Categorical, Enum))
+_V1_VERSIONED: DTypeGroup = frozen_dtypes(DatetimeV1, DurationV1, EnumV1)
 
 _STRING_LIKE_CONVERT: Mapping[FrozenDTypes, type[String | Binary]] = {
     frozen_dtypes(String, Categorical): String,
-    frozen_dtypes(String, _Enum): String,
+    frozen_dtypes(String, Enum): String,
     frozen_dtypes(String, Binary): Binary,
 }
 _FLOAT_PROMOTE: Mapping[FrozenDTypes, type[Float64]] = {
@@ -173,7 +176,7 @@ def has_nested(base_types: FrozenDTypes, /) -> bool:
 
 @lru_cache(maxsize=_CACHE_SIZE_TP_MID)
 def has_v1_versioned(base_types: FrozenDTypes, /) -> bool:
-    return _has_intersection(base_types, _v1_versioned_dtypes())
+    return _has_intersection(base_types, _V1_VERSIONED)
 
 
 def _struct_union_fields(
@@ -233,13 +236,13 @@ _NESTED_DISPATCH: Final[Mapping[type[DType], OpaqueDispatchFn]] = {
 
 
 def _same_supertype(left: DType, right: DType) -> DType | None:
-    if isinstance(left, _Datetime) and isinstance(right, _Datetime):
+    if isinstance(left, Datetime) and isinstance(right, Datetime):
         if left.time_zone != right.time_zone:
             return None
-        return _Datetime(_min_time_unit(left.time_unit, right.time_unit), left.time_zone)
-    if isinstance(left, _Duration) and isinstance(right, _Duration):
-        return _Duration(_min_time_unit(left.time_unit, right.time_unit))
-    if isinstance(left, _Enum) and isinstance(right, _Enum):
+        return Datetime(_min_time_unit(left.time_unit, right.time_unit), left.time_zone)
+    if isinstance(left, Duration) and isinstance(right, Duration):
+        return Duration(_min_time_unit(left.time_unit, right.time_unit))
+    if isinstance(left, Enum) and isinstance(right, Enum):
         return left if left.categories == right.categories else None
     # NOTE: See for why this *isn't* the first thing we do
     # https://github.com/narwhals-dev/narwhals/pull/3393
@@ -282,9 +285,9 @@ def _mixed_supertype(left: DType, right: DType, base_types: FrozenDTypes) -> DTy
     # (Datetime, {UInt,Int,Float}{32,64}) -> {Int,Float}64
     # (Duration, {UInt,Int,Float}{32,64}) -> {Int,Float}64
     # See https://github.com/narwhals-dev/narwhals/issues/121
-    if base_types == frozen_dtypes(Date, _Datetime):
+    if base_types == frozen_dtypes(Date, Datetime):
         # Every *other* valid mix doesn't need instance attributes, like `Datetime` does
-        return left if isinstance(left, _Datetime) else right
+        return left if isinstance(left, Datetime) else right
     if NUMERIC.isdisjoint(base_types):
         return tp() if (tp := _STRING_LIKE_CONVERT.get(base_types)) else None
     return _numeric_supertype(base_types)
@@ -338,29 +341,18 @@ def _get_supertype_v1(
         (v1.Enum, v1.Enum)         -> v1.Enum     # Skips categories
         (v1.Duration, v1.Duration) -> v1.Duration
     """
-    v1_dtypes = Version.V1.dtypes
     if len(base_types) != 1:
-        if base_types == frozen_dtypes(Date, v1_dtypes.Datetime):
-            return left if isinstance(left, v1_dtypes.Datetime) else right
-        if base_types == frozen_dtypes(String, v1_dtypes.Enum):
+        if base_types == frozen_dtypes(Date, DatetimeV1):
+            return left if isinstance(left, DatetimeV1) else right
+        if base_types == frozen_dtypes(String, EnumV1):
             return String()
-    elif isinstance(left, v1_dtypes.Enum):
+    elif isinstance(left, EnumV1):
         return left
-    elif isinstance(left, v1_dtypes.Datetime) and isinstance(right, v1_dtypes.Datetime):
+    elif isinstance(left, DatetimeV1) and isinstance(right, DatetimeV1):
         if left.time_zone == right.time_zone:
-            return v1_dtypes.Datetime(
+            return DatetimeV1(
                 _min_time_unit(left.time_unit, right.time_unit), left.time_zone
             )
-    elif isinstance(left, v1_dtypes.Duration) and isinstance(right, v1_dtypes.Duration):
-        return v1_dtypes.Duration(_min_time_unit(left.time_unit, right.time_unit))
+    elif isinstance(left, DurationV1) and isinstance(right, DurationV1):
+        return DurationV1(_min_time_unit(left.time_unit, right.time_unit))
     return None  # pragma: no cover
-
-
-@cache
-def _v1_versioned_dtypes() -> DTypeGroup:
-    """A group of data types that need special handling in comparisons.
-
-    Inlined and cached for the circular dependency this creates.
-    """
-    dtypes = Version.V1.dtypes
-    return frozenset((dtypes.Datetime, dtypes.Duration, dtypes.Enum))
