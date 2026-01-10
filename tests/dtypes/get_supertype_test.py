@@ -205,24 +205,13 @@ def test_mixed_dtype(
         assert result == expected
 
 
+# NOTE: Produces 400+ tests
+@pytest.mark.slow
 @versions
-@pytest.mark.parametrize(
-    "temporal_dtype",
-    [
-        nw.Time(),
-        nw.Date(),
-        nw.Datetime(),
-        nw.Datetime("s"),
-        nw.Datetime("ns"),
-        nw.Datetime("us"),
-        nw.Datetime("ms"),
-    ],
-    ids=_dtype_ids,
-)
 def test_mixed_integer_temporal(
-    temporal_dtype: TemporalType, numeric_dtype: NumericType, version: Version
+    naive_temporal_dtype: TemporalType, numeric_dtype: NumericType, version: Version
 ) -> None:
-    result = get_supertype(temporal_dtype, numeric_dtype, version)
+    result = get_supertype(naive_temporal_dtype, numeric_dtype, version)
     assert result is None
 
 

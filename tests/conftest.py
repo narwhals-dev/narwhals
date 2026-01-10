@@ -411,3 +411,25 @@ def nested_dtype(request: pytest.FixtureRequest) -> NestedOrEnumDType:
 def numeric_dtype(request: pytest.FixtureRequest) -> dtypes.NumericType:
     dtype: dtypes.NumericType = request.param
     return dtype
+
+
+@pytest.fixture(
+    params=[
+        nw.Time(),
+        nw.Date(),
+        nw.Datetime(),
+        nw.Datetime("s"),
+        nw.Datetime("ns"),
+        nw.Datetime("us"),
+        nw.Datetime("ms"),
+        nw.Duration("s"),
+        nw.Duration("ns"),
+        nw.Duration("us"),
+        nw.Duration("ms"),
+    ],
+    ids=dtype_ids,
+)
+def naive_temporal_dtype(request: pytest.FixtureRequest) -> dtypes.TemporalType:
+    """All `TemporalType`s in `nw.dtypes`, excluding `time_zone` info."""
+    dtype: dtypes.TemporalType = request.param
+    return dtype
