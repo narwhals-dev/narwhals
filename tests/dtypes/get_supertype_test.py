@@ -408,3 +408,18 @@ def test_v1_dtypes(left: DType, right: DType, expected: DType | None) -> None:
         assert result == expected
         # Must also preserve v1-ness
         assert type(result) is type(expected)
+
+
+@pytest.mark.parametrize(
+    ("left", "right"),
+    [
+        (nw_v1.Duration("ms"), nw.Duration("ms")),
+        (nw_v1.Duration("ns"), nw.Duration("ns")),
+        (nw_v1.Datetime(time_unit="ms"), nw.Datetime(time_unit="ms")),
+        (nw_v1.Datetime(time_zone="Europe/Rome"), nw.Datetime(time_zone="Europe/Rome")),
+        (nw_v1.Enum(), nw.Enum([])),
+    ],
+)
+def test_mixed_versions_return_none(left: DType, right: DType) -> None:
+    result = get_supertype(left, right, Version.V1)
+    assert result is None
