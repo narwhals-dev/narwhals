@@ -155,6 +155,12 @@ def _primitive_numeric_supertyping() -> Mapping[FrozenDTypes, type[Float]]:
     return dict(chain(small_int_f32, big_int_f32, int_f64))
 
 
+def _first_excluding(base_types: FrozenDTypes, *exclude: type[DType]) -> type[DType]:
+    """Return an arbitrary element from base_types excluding the given types."""
+    others = base_types.difference(exclude)
+    return next(iter(others))
+
+
 def _intersects(a: frozenset[Any], b: frozenset[Any], /) -> bool:
     """Return True if sets share at least one element."""
     return not a.isdisjoint(b)
@@ -248,7 +254,8 @@ def _numeric_supertype(base_types: FrozenDTypes) -> DType | None:
     #  * Small integers (Int8, Int16, UInt8, UInt16) + Float32 -> Float32
     #  * Larger integers (Int32+) + Float32 -> Float64
     #  * Any integer + Float64 -> Float64
-    # (Decimal, Numeric) -> Decimal
+    # (Decimal, {Integer, Decimal}) -> Decimal
+    # (Decimal, Float) -> Float64
     # (Boolean, Numeric) -> Numeric
     if NUMERIC.issuperset(base_types):
         if INTEGER.issuperset(base_types):
@@ -263,18 +270,18 @@ def _numeric_supertype(base_types: FrozenDTypes) -> DType | None:
             #  * For (Decimal, Float) -> check if integer type fits in decimal
             return Decimal()
         return _primitive_numeric_supertyping()[base_types]()
-
     if Boolean in base_types:
-        return next(iter(base_types.difference((Boolean,))))()
+        return _first_excluding(base_types, Boolean)()
     return None
 
 
 def _mixed_supertype(left: DType, right: DType, base_types: FrozenDTypes) -> DType | None:
-    # NOTE: The following rules are known, but not planned to be implemented here
+    # !NOTE: The following rules are known, but not planned to be implemented here
     # (Date, {UInt,Int,Float}{32,64}) -> {Int,Float}{32,64}
     # (Time, {Int,Float}{32,64}) -> {Int,Float}64
     # (Datetime, {UInt,Int,Float}{32,64}) -> {Int,Float}64
     # (Duration, {UInt,Int,Float}{32,64}) -> {Int,Float}64
+    # See https://github.com/narwhals-dev/narwhals/issues/121
     if base_types == frozen_dtypes(Date, _Datetime):
         # Every *other* valid mix doesn't need instance attributes, like `Datetime` does
         return left if isinstance(left, _Datetime) else right
