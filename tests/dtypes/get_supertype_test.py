@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
 import pytest
 
@@ -10,17 +10,12 @@ import narwhals.stable.v1 as nw_v1
 import narwhals.stable.v2 as nw_v2  # noqa: F401
 from narwhals._utils import Version
 from narwhals.dtypes._supertyping import get_supertype
-from narwhals.dtypes.classes import (
-    DType,
-    FloatType,
-    NumericType,
-    SignedIntegerType,
-    TemporalType,
-    UnsignedIntegerType,
-)
 
 # TODO @dangotbanned: Un-alias import once branch is less busy
 from tests.utils import dtype_ids as _dtype_ids
+
+if TYPE_CHECKING:
+    from narwhals.dtypes.classes import DType, NumericType, TemporalType
 
 _Fn = TypeVar("_Fn", bound=Callable[..., Any])
 
@@ -224,16 +219,6 @@ def test_mixed_dtype(
     ],
     ids=_dtype_ids,
 )
-@pytest.mark.parametrize(
-    "numeric_dtype",
-    [
-        nw.Decimal(),
-        *SignedIntegerType.__subclasses__(),
-        *UnsignedIntegerType.__subclasses__(),
-        *FloatType.__subclasses__(),
-    ],
-    ids=_dtype_ids,
-)
 def test_mixed_integer_temporal(
     temporal_dtype: TemporalType, numeric_dtype: NumericType, version: Version
 ) -> None:
@@ -318,16 +303,6 @@ def test_numeric_promotion(
 
 
 @versions
-@pytest.mark.parametrize(
-    "numeric_dtype",
-    [
-        nw.Decimal(),
-        *SignedIntegerType.__subclasses__(),
-        *UnsignedIntegerType.__subclasses__(),
-        *FloatType.__subclasses__(),
-    ],
-    ids=_dtype_ids,
-)
 def test_numeric_and_bool_promotion(numeric_dtype: NumericType, version: Version) -> None:
     result = get_supertype(numeric_dtype, nw.Boolean(), version)
     assert result is not None
