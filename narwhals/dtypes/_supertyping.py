@@ -315,7 +315,9 @@ def get_supertype(left: DType, right: DType, version: Version) -> DType | None:
     has_mixed = len(base_types) != 1
     if has_nested(base_types):
         # NOTE: There are some other branches for `(Struct, DType) -> Struct`
-        # But we aren't planning to use those
+        # But we aren't planning to use those.
+        # The order of these conditions means we swallow all `(Nested, Non-Nested)` here,
+        # simplifying both `_NESTED_DISPATCH` and everything that hits `has_nested(base_types) -> False`
         return None if has_mixed else _NESTED_DISPATCH[base_left](left, right, version)
     if version is Version.V1 and has_v1_versioned(base_types):
         return _get_supertype_v1(left, right, base_types)
