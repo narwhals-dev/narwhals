@@ -9,8 +9,15 @@ import narwhals as nw
 import narwhals.stable.v1 as nw_v1
 import narwhals.stable.v2 as nw_v2  # noqa: F401
 from narwhals._utils import Version
-from narwhals.dtypes import DType
 from narwhals.dtypes._supertyping import get_supertype
+from narwhals.dtypes.classes import (
+    DType,
+    FloatType,
+    NumericType,
+    SignedIntegerType,
+    TemporalType,
+    UnsignedIntegerType,
+)
 
 _Fn = TypeVar("_Fn", bound=Callable[..., Any])
 
@@ -27,14 +34,6 @@ def versions(fn: _Fn, /) -> _Fn:
             for v in Version
         ),
     )(fn)
-
-
-XFAIL_DATE_NUMERIC = pytest.mark.xfail(reason="TODO: (Date, Numeric)")
-XFAIL_TIME_NUMERIC = pytest.mark.xfail(reason="TODO: (Time, Numeric)")
-XFAIL_DATETIME_NUMERIC = pytest.mark.xfail(reason="TODO: (Datetime, Numeric)")
-XFAIL_DURATION_NUMERIC = pytest.mark.xfail(reason="TODO: (Duration, Numeric)")
-
-XFAIL_V1 = pytest.mark.xfail(reason="TODO: V1 supertypes", raises=NotImplementedError)
 
 
 def _dtype_ids(obj: DType | type[DType] | Version | None) -> str:  # noqa: PLR0911
@@ -218,50 +217,6 @@ def test_same_class(
         (nw.Enum(["hello"]), nw.Categorical(), None),
         (nw.Enum(["hello"]), nw.String(), nw.String()),
         (nw.Binary(), nw.String(), nw.Binary()),
-        pytest.param(nw.Date(), nw.UInt32(), nw.Int32(), marks=XFAIL_DATE_NUMERIC),
-        pytest.param(nw.Date(), nw.UInt64(), nw.Int64(), marks=XFAIL_DATE_NUMERIC),
-        pytest.param(nw.Date(), nw.Int32(), nw.Int32(), marks=XFAIL_DATE_NUMERIC),
-        pytest.param(nw.Date(), nw.Int64(), nw.Int64(), marks=XFAIL_DATE_NUMERIC),
-        pytest.param(nw.Date(), nw.Float32(), nw.Float32(), marks=XFAIL_DATE_NUMERIC),
-        pytest.param(nw.Date(), nw.Float64(), nw.Float64(), marks=XFAIL_DATE_NUMERIC),
-        (nw.Time(), nw.UInt32(), None),
-        (nw.Time(), nw.UInt64(), None),
-        pytest.param(nw.Time(), nw.Int32(), nw.Int64(), marks=XFAIL_TIME_NUMERIC),
-        pytest.param(nw.Time(), nw.Int64(), nw.Int64(), marks=XFAIL_TIME_NUMERIC),
-        pytest.param(nw.Time(), nw.Float32(), nw.Float64(), marks=XFAIL_TIME_NUMERIC),
-        pytest.param(nw.Time(), nw.Float64(), nw.Float64(), marks=XFAIL_TIME_NUMERIC),
-        pytest.param(
-            nw.Datetime(), nw.UInt32(), nw.Int64(), marks=XFAIL_DATETIME_NUMERIC
-        ),
-        pytest.param(
-            nw.Datetime("s"), nw.UInt64(), nw.Int64(), marks=XFAIL_DATETIME_NUMERIC
-        ),
-        pytest.param(
-            nw.Datetime("ns"), nw.Int32(), nw.Int64(), marks=XFAIL_DATETIME_NUMERIC
-        ),
-        pytest.param(nw.Datetime(), nw.Int64(), nw.Int64(), marks=XFAIL_DATETIME_NUMERIC),
-        pytest.param(
-            nw.Datetime("us"), nw.Float32(), nw.Float64(), marks=XFAIL_DATETIME_NUMERIC
-        ),
-        pytest.param(
-            nw.Datetime("ms"), nw.Float64(), nw.Float64(), marks=XFAIL_DATETIME_NUMERIC
-        ),
-        pytest.param(
-            nw.Duration(), nw.UInt32(), nw.Int64(), marks=XFAIL_DURATION_NUMERIC
-        ),
-        pytest.param(
-            nw.Duration("s"), nw.UInt64(), nw.Int64(), marks=XFAIL_DURATION_NUMERIC
-        ),
-        pytest.param(
-            nw.Duration("ns"), nw.Int32(), nw.Int64(), marks=XFAIL_DURATION_NUMERIC
-        ),
-        pytest.param(nw.Duration(), nw.Int64(), nw.Int64(), marks=XFAIL_DURATION_NUMERIC),
-        pytest.param(
-            nw.Duration("us"), nw.Float32(), nw.Float64(), marks=XFAIL_DURATION_NUMERIC
-        ),
-        pytest.param(
-            nw.Duration("ms"), nw.Float64(), nw.Float64(), marks=XFAIL_DURATION_NUMERIC
-        ),
     ],
     ids=_dtype_ids,
 )
@@ -274,6 +229,37 @@ def test_mixed_dtype(
     else:
         assert result is not None
         assert result == expected
+
+
+@versions
+@pytest.mark.parametrize(
+    "temporal_dtype",
+    [
+        nw.Time(),
+        nw.Date(),
+        nw.Datetime(),
+        nw.Datetime("s"),
+        nw.Datetime("ns"),
+        nw.Datetime("us"),
+        nw.Datetime("ms"),
+    ],
+    ids=_dtype_ids,
+)
+@pytest.mark.parametrize(
+    "numeric_dtype",
+    [
+        nw.Decimal(),
+        *SignedIntegerType.__subclasses__(),
+        *UnsignedIntegerType.__subclasses__(),
+        *FloatType.__subclasses__(),
+    ],
+    ids=_dtype_ids,
+)
+def test_mixed_integer_temporal(
+    temporal_dtype: TemporalType, numeric_dtype: NumericType, version: Version
+) -> None:
+    result = get_supertype(temporal_dtype, numeric_dtype, version)
+    assert result is None
 
 
 @versions
@@ -337,21 +323,6 @@ def test_mixed_dtype(
         # float + decimal
         (nw.Decimal(), nw.Float32(), nw.Float64()),
         (nw.Decimal(), nw.Float64(), nw.Float64()),
-        # numeric + boolean
-        (nw.Int8(), nw.Boolean(), nw.Int8()),
-        (nw.Int16(), nw.Boolean(), nw.Int16()),
-        (nw.Int32(), nw.Boolean(), nw.Int32()),
-        (nw.Boolean(), nw.Int64(), nw.Int64()),
-        (nw.Int128(), nw.Boolean(), nw.Int128()),
-        (nw.UInt8(), nw.Boolean(), nw.UInt8()),
-        (nw.UInt16(), nw.Boolean(), nw.UInt16()),
-        (nw.Boolean(), nw.UInt32(), nw.UInt32()),
-        (nw.UInt64(), nw.Boolean(), nw.UInt64()),
-        (nw.Boolean(), nw.UInt128(), nw.UInt128()),
-        (nw.Decimal(), nw.Boolean(), nw.Decimal()),
-        (nw.Boolean(), nw.Decimal(), nw.Decimal()),
-        (nw.Float32(), nw.Boolean(), nw.Float32()),
-        (nw.Boolean(), nw.Float64(), nw.Float64()),
     ],
     ids=_dtype_ids,
 )
@@ -365,6 +336,27 @@ def test_numeric_promotion(
     result = get_supertype(left, right, version)
     assert result is not None
     assert result == expected
+
+
+@versions
+@pytest.mark.parametrize(
+    "numeric_dtype",
+    [
+        nw.Decimal(),
+        *SignedIntegerType.__subclasses__(),
+        *UnsignedIntegerType.__subclasses__(),
+        *FloatType.__subclasses__(),
+    ],
+    ids=_dtype_ids,
+)
+def test_numeric_and_bool_promotion(numeric_dtype: NumericType, version: Version) -> None:
+    result = get_supertype(numeric_dtype, nw.Boolean(), version)
+    assert result is not None
+    assert result == numeric_dtype
+
+    result = get_supertype(nw.Boolean(), numeric_dtype, version)
+    assert result is not None
+    assert result == numeric_dtype
 
 
 @pytest.mark.parametrize(
