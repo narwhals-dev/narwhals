@@ -269,7 +269,7 @@ def dtype_ids(obj: DType | type[DType] | None) -> str:  # noqa: PLR0911
                 return f"Duration[{obj.time_unit}]"
             if isinstance(obj, nw.Enum):
                 if isinstance(obj, nw_v1.Enum):
-                    return "v1.Enum[]"
+                    return "v1.Enum[]"  # pragma: no cover
                 return f"Enum{list(obj.categories)!r}"
             if isinstance(obj, nw.Array):
                 dtype: Any = obj
