@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING
 
 import pytest
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
 import narwhals.stable.v2 as nw_v2  # noqa: F401
-from narwhals._utils import Version
 from narwhals.dtypes._supertyping import get_supertype
 
 # TODO @dangotbanned: Un-alias import once branch is less busy
@@ -17,25 +15,7 @@ from tests.utils import dtype_ids as _dtype_ids
 if TYPE_CHECKING:
     from narwhals.dtypes import DType, NumericType, TemporalType
 
-_Fn = TypeVar("_Fn", bound=Callable[..., Any])
 
-
-def versions(fn: _Fn, /) -> _Fn:
-    """Parametrize `version: Version`, but skip everything non-`MAIN` by default.
-
-    Use this when a test case *should* have identical behavior between versions.
-    """
-    return pytest.mark.parametrize(  # type: ignore[no-any-return]
-        "version",
-        (
-            Version.MAIN if v is Version.MAIN else pytest.param(v, marks=pytest.mark.slow)
-            for v in Version
-        ),
-        ids=[v.name for v in Version],
-    )(fn)
-
-
-@versions
 @pytest.mark.parametrize(
     "dtype",
     [
@@ -74,13 +54,12 @@ def versions(fn: _Fn, /) -> _Fn:
     ],
     ids=_dtype_ids,
 )
-def test_identical_dtype(dtype: DType, version: Version) -> None:
-    result = get_supertype(dtype, dtype, version)
+def test_identical_dtype(dtype: DType) -> None:
+    result = get_supertype(dtype, dtype)
     assert result is not None
     assert result == dtype
 
 
-@versions
 @pytest.mark.parametrize(
     ("left", "right", "expected"),
     [
@@ -169,10 +148,8 @@ def test_identical_dtype(dtype: DType, version: Version) -> None:
     ],
     ids=_dtype_ids,
 )
-def test_same_class(
-    left: DType, right: DType, expected: DType | None, version: Version
-) -> None:
-    result = get_supertype(left, right, version)
+def test_same_class(left: DType, right: DType, expected: DType | None) -> None:
+    result = get_supertype(left, right)
     if expected is None:
         assert result is None
     else:
@@ -180,7 +157,6 @@ def test_same_class(
         assert result == expected
 
 
-@versions
 @pytest.mark.parametrize(
     ("left", "right", "expected"),
     [
@@ -194,10 +170,8 @@ def test_same_class(
     ],
     ids=_dtype_ids,
 )
-def test_mixed_dtype(
-    left: DType, right: DType, expected: DType | None, version: Version
-) -> None:
-    result = get_supertype(left, right, version)
+def test_mixed_dtype(left: DType, right: DType, expected: DType | None) -> None:
+    result = get_supertype(left, right)
     if expected is None:
         assert result is None
     else:
@@ -205,17 +179,15 @@ def test_mixed_dtype(
         assert result == expected
 
 
-# NOTE: Produces 400+ tests
+# NOTE: Produces 140+ tests
 @pytest.mark.slow
-@versions
 def test_mixed_integer_temporal(
-    naive_temporal_dtype: TemporalType, numeric_dtype: NumericType, version: Version
+    naive_temporal_dtype: TemporalType, numeric_dtype: NumericType
 ) -> None:
-    result = get_supertype(naive_temporal_dtype, numeric_dtype, version)
+    result = get_supertype(naive_temporal_dtype, numeric_dtype)
     assert result is None
 
 
-@versions
 @pytest.mark.parametrize(
     ("left", "right", "expected"),
     [
@@ -279,25 +251,22 @@ def test_mixed_integer_temporal(
     ],
     ids=_dtype_ids,
 )
-def test_numeric_promotion(
-    left: DType, right: DType, expected: DType, version: Version
-) -> None:
-    result = get_supertype(left, right, version)
+def test_numeric_promotion(left: DType, right: DType, expected: DType) -> None:
+    result = get_supertype(left, right)
     assert result is not None
     assert result == expected
 
-    result = get_supertype(right, left, version)
+    result = get_supertype(right, left)
     assert result is not None
     assert result == expected
 
 
-@versions
-def test_numeric_and_bool_promotion(numeric_dtype: NumericType, version: Version) -> None:
-    result = get_supertype(numeric_dtype, nw.Boolean(), version)
+def test_numeric_and_bool_promotion(numeric_dtype: NumericType) -> None:
+    result = get_supertype(numeric_dtype, nw.Boolean())
     assert result is not None
     assert result == numeric_dtype
 
-    result = get_supertype(nw.Boolean(), numeric_dtype, version)
+    result = get_supertype(nw.Boolean(), numeric_dtype)
     assert result is not None
     assert result == numeric_dtype
 
@@ -363,7 +332,7 @@ def test_numeric_and_bool_promotion(numeric_dtype: NumericType, version: Version
     ids=_dtype_ids,
 )
 def test_v1_dtypes(left: DType, right: DType, expected: DType | None) -> None:
-    result = get_supertype(left, right, Version.V1)
+    result = get_supertype(left, right)
     if expected is None:
         assert result is None
     else:
@@ -373,7 +342,6 @@ def test_v1_dtypes(left: DType, right: DType, expected: DType | None) -> None:
         assert type(result) is type(expected)
 
 
-@versions
 @pytest.mark.parametrize(
     ("dtype_v1", "dtype_main"),
     [
@@ -384,11 +352,9 @@ def test_v1_dtypes(left: DType, right: DType, expected: DType | None) -> None:
         (nw_v1.Enum(), nw.Enum([])),
     ],
 )
-def test_mixed_versions_return_none(
-    dtype_v1: DType, dtype_main: DType, version: Version
-) -> None:
-    result = get_supertype(dtype_v1, dtype_main, version)
+def test_mixed_versions_return_none(dtype_v1: DType, dtype_main: DType) -> None:
+    result = get_supertype(dtype_v1, dtype_main)
     assert result is None
 
-    result = get_supertype(dtype_main, dtype_v1, version)
+    result = get_supertype(dtype_main, dtype_v1)
     assert result is None

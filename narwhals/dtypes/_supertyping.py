@@ -3,9 +3,8 @@ from __future__ import annotations
 from collections import deque
 from itertools import chain, product
 from operator import attrgetter
-from typing import TYPE_CHECKING, Any, Final, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Final, Protocol, TypeVar, cast
 
-from narwhals._utils import Version
 from narwhals.dtypes._classes import (
     Array,
     Binary,
@@ -54,6 +53,12 @@ if TYPE_CHECKING:
     from narwhals.dtypes._classes import _Bits
     from narwhals.typing import TimeUnit
 
+    class HasTimeUnit(Protocol):
+        time_unit: TimeUnit
+
+    HasTimeUnitT = TypeVar("HasTimeUnitT", bound=HasTimeUnit)
+    SameDatetimeT = TypeVar("SameDatetimeT", Datetime, DatetimeV1)
+
     _Fn = TypeVar("_Fn", bound=Callable[..., Any])
 
     # NOTE: Hack to make `functools.cache` *not* negatively impact typing
@@ -75,38 +80,6 @@ def frozen_dtypes(*dtypes: type[DType]) -> FrozenDTypes:
     return frozenset(dtypes)
 
 
-OpaqueDispatchFn: TypeAlias = "Callable[[DType, DType, Version], DType | None]"
-FrozenDTypes: TypeAlias = frozenset[type[DType]]
-DTypeGroup: TypeAlias = frozenset[type[DType]]
-
-# NOTE: polars has these ordered as `["ns", "μs", "ms"]`
-# https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-core/src/datatypes/temporal/time_unit.rs#L9-L41
-# That order would align with `_max_bits` using `max`, but represent a downcast vs an upcast
-_TIME_UNIT_TO_INDEX: Mapping[TimeUnit, int] = {"s": 0, "ms": 1, "us": 2, "ns": 3}
-"""Convert time unit to an index for comparison (larger = more precise)."""
-
-
-SIGNED_INTEGER: DTypeGroup = frozenset((Int8, Int16, Int32, Int64, Int128))
-UNSIGNED_INTEGER: DTypeGroup = frozenset((UInt8, UInt16, UInt32, UInt64, UInt128))
-INTEGER: DTypeGroup = SIGNED_INTEGER.union(UNSIGNED_INTEGER)
-FLOAT: DTypeGroup = frozenset((Float32, Float64))
-NUMERIC: DTypeGroup = FLOAT.union(INTEGER).union((Decimal,))
-NESTED: DTypeGroup = frozenset((Struct, List, Array))
-TEMPORAL: DTypeGroup = frozenset((Datetime, Duration, Date, Time))
-STRING: DTypeGroup = frozenset((String, Binary, Categorical, Enum))
-_V1_VERSIONED: DTypeGroup = frozen_dtypes(DatetimeV1, DurationV1, EnumV1)
-
-_STRING_LIKE_CONVERT: Mapping[FrozenDTypes, type[String | Binary]] = {
-    frozen_dtypes(String, Categorical): String,
-    frozen_dtypes(String, Enum): String,
-    frozen_dtypes(String, Binary): Binary,
-}
-_FLOAT_PROMOTE: Mapping[FrozenDTypes, type[Float64]] = {
-    frozen_dtypes(Float32, Float64): Float64,
-    frozen_dtypes(Decimal, Float64): Float64,
-    frozen_dtypes(Decimal, Float32): Float64,
-}
-
 _CACHE_SIZE_TP_MID = 32
 """Arbitrary size (currently).
 
@@ -115,11 +88,51 @@ _CACHE_SIZE_TP_MID = 32
 - Pairwise comparisons, but order (of classes) is not important
 """
 
+# TODO @dangotbanned: If this stays in, it needs docs
+OpaqueDispatchFn: TypeAlias = "Callable[[DType, DType], DType | None]"
+
+FrozenDTypes: TypeAlias = frozenset[type[DType]]
+DTypeGroup: TypeAlias = frozenset[type[DType]]
+
+
+SIGNED_INTEGER: DTypeGroup = frozenset((Int8, Int16, Int32, Int64, Int128))
+UNSIGNED_INTEGER: DTypeGroup = frozenset((UInt8, UInt16, UInt32, UInt64, UInt128))
+INTEGER: DTypeGroup = SIGNED_INTEGER.union(UNSIGNED_INTEGER)
+FLOAT: DTypeGroup = frozenset((Float32, Float64))
+NUMERIC: DTypeGroup = FLOAT.union(INTEGER).union((Decimal,))
+NESTED: DTypeGroup = frozenset((Struct, List, Array))
+DATETIME: DTypeGroup = frozen_dtypes(DatetimeV1, DurationV1)
+TEMPORAL: DTypeGroup = DATETIME.union((Date, Time, Duration, DurationV1))
+STRING: DTypeGroup = frozenset((String, Binary, Categorical, Enum, EnumV1))
+
+_STRING_LIKE_CONVERT: Mapping[FrozenDTypes, type[String | Binary]] = {
+    frozen_dtypes(String, Categorical): String,
+    frozen_dtypes(String, Enum): String,
+    frozen_dtypes(String, EnumV1): String,
+    frozen_dtypes(String, Binary): Binary,
+}
+_FLOAT_PROMOTE: Mapping[FrozenDTypes, type[Float64]] = {
+    frozen_dtypes(Float32, Float64): Float64,
+    frozen_dtypes(Decimal, Float64): Float64,
+    frozen_dtypes(Decimal, Float32): Float64,
+}
+
+
+# NOTE: polars has these ordered as `["ns", "μs", "ms"]`
+# https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-core/src/datatypes/temporal/time_unit.rs#L9-L41
+# That order would align with `_max_bits` using `max`, but represent a downcast vs an upcast
+_TIME_UNIT_TO_INDEX: Mapping[TimeUnit, int] = {"s": 0, "ms": 1, "us": 2, "ns": 3}
+"""Convert time unit to an index for comparison (larger = more precise)."""
+
+
+def _key_fn_time_unit(obj: HasTimeUnit, /) -> int:
+    return _TIME_UNIT_TO_INDEX[obj.time_unit]
+
 
 @cache
-def _min_time_unit(a: TimeUnit, b: TimeUnit) -> TimeUnit:
-    """Return the less precise time unit."""
-    return min(a, b, key=_TIME_UNIT_TO_INDEX.__getitem__)
+def downcast_time_unit(left: HasTimeUnitT, right: HasTimeUnitT) -> HasTimeUnitT:
+    """Return the operand with the lowest precision time unit."""
+    return min(left, right, key=_key_fn_time_unit)
 
 
 @cache
@@ -174,13 +187,8 @@ def has_nested(base_types: FrozenDTypes, /) -> bool:
     return _has_intersection(base_types, NESTED)
 
 
-@lru_cache(maxsize=_CACHE_SIZE_TP_MID)
-def has_v1_versioned(base_types: FrozenDTypes, /) -> bool:
-    return _has_intersection(base_types, _V1_VERSIONED)
-
-
 def _struct_union_fields(
-    left: Collection[Field], right: Collection[Field], version: Version
+    left: Collection[Field], right: Collection[Field]
 ) -> Struct | None:
     # if equal length we also take the lhs
     # so that the lhs determines the order of the fields
@@ -190,41 +198,53 @@ def _struct_union_fields(
         name, dtype = f.name, f.dtype()
         dtype_longest = longest_map.setdefault(name, dtype)
         if dtype != dtype_longest:
-            if supertype := get_supertype(dtype, dtype_longest, version):
+            if supertype := get_supertype(dtype, dtype_longest):
                 longest_map[name] = supertype
             else:
                 return None
     return Struct(longest_map)
 
 
-def _struct_supertype(left: Struct, right: Struct, version: Version) -> Struct | None:
+def _struct_supertype(left: Struct, right: Struct) -> Struct | None:
     # https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-core/src/utils/supertype.rs#L588-L603
     left_fields, right_fields = left.fields, right.fields
     if len(left_fields) != len(right_fields):
-        return _struct_union_fields(left_fields, right_fields, version)
+        return _struct_union_fields(left_fields, right_fields)
     new_fields = deque["Field"]()
     for a, b in zip(left_fields, right_fields):
         if a.name != b.name:
-            return _struct_union_fields(left_fields, right_fields, version)
-        if supertype := get_supertype(a.dtype(), b.dtype(), version):
+            return _struct_union_fields(left_fields, right_fields)
+        if supertype := get_supertype(a.dtype(), b.dtype()):
             new_fields.append(Field(a.name, supertype))
         else:
             return None
     return Struct(new_fields)
 
 
-def _array_supertype(left: Array, right: Array, version: Version) -> Array | None:
+def _array_supertype(left: Array, right: Array) -> Array | None:
     if (left.shape == right.shape) and (
-        inner := get_supertype(left.inner(), right.inner(), version=version)
+        inner := get_supertype(left.inner(), right.inner())
     ):
         return Array(inner, left.size)
     return None
 
 
-def _list_supertype(left: List, right: List, version: Version) -> List | None:
-    if inner := get_supertype(left.inner(), right.inner(), version=version):
+def _list_supertype(left: List, right: List) -> List | None:
+    if inner := get_supertype(left.inner(), right.inner()):
         return List(inner)
     return None
+
+
+def _datetime_supertype(
+    left: SameDatetimeT, right: SameDatetimeT, /
+) -> SameDatetimeT | None:
+    if left.time_zone != right.time_zone:
+        return None
+    return downcast_time_unit(left, right)
+
+
+def _enum_supertype(left: Enum, right: Enum, /) -> Enum | None:
+    return left if left.categories == right.categories else None
 
 
 # TODO @dangotbanned: Try to do this while staying in the type system
@@ -233,20 +253,15 @@ _NESTED_DISPATCH: Final[Mapping[type[DType], OpaqueDispatchFn]] = {
     List: cast("OpaqueDispatchFn", _list_supertype),
     Struct: cast("OpaqueDispatchFn", _struct_supertype),
 }
-
-
-def _same_supertype(left: DType, right: DType) -> DType | None:
-    if isinstance(left, Datetime) and isinstance(right, Datetime):
-        if left.time_zone != right.time_zone:
-            return None
-        return Datetime(_min_time_unit(left.time_unit, right.time_unit), left.time_zone)
-    if isinstance(left, Duration) and isinstance(right, Duration):
-        return Duration(_min_time_unit(left.time_unit, right.time_unit))
-    if isinstance(left, Enum) and isinstance(right, Enum):
-        return left if left.categories == right.categories else None
-    # NOTE: See for why this *isn't* the first thing we do
-    # https://github.com/narwhals-dev/narwhals/pull/3393
-    return left if left == right else None
+# TODO @dangotbanned: Try to do this while staying in the type system
+# TODO @dangotbanned: Probably merge with `_NESTED_DISPATCH`, after tweaking `get_supertype` flow
+_PARAMETRIC_DISPATCH: Final[Mapping[type[DType], OpaqueDispatchFn]] = {
+    Datetime: cast("OpaqueDispatchFn", _datetime_supertype),
+    DatetimeV1: cast("OpaqueDispatchFn", _datetime_supertype),
+    Duration: cast("OpaqueDispatchFn", downcast_time_unit),
+    DurationV1: cast("OpaqueDispatchFn", downcast_time_unit),
+    Enum: cast("OpaqueDispatchFn", _enum_supertype),
+}
 
 
 @lru_cache(maxsize=_CACHE_SIZE_TP_MID)
@@ -285,7 +300,7 @@ def _mixed_supertype(left: DType, right: DType, base_types: FrozenDTypes) -> DTy
     # (Datetime, {UInt,Int,Float}{32,64}) -> {Int,Float}64
     # (Duration, {UInt,Int,Float}{32,64}) -> {Int,Float}64
     # See https://github.com/narwhals-dev/narwhals/issues/121
-    if base_types == frozen_dtypes(Date, Datetime):
+    if Date in base_types and _has_intersection(base_types, DATETIME):
         # Every *other* valid mix doesn't need instance attributes, like `Datetime` does
         return left if isinstance(left, Datetime) else right
     if NUMERIC.isdisjoint(base_types):
@@ -293,7 +308,7 @@ def _mixed_supertype(left: DType, right: DType, base_types: FrozenDTypes) -> DTy
     return _numeric_supertype(base_types)
 
 
-def get_supertype(left: DType, right: DType, version: Version) -> DType | None:
+def get_supertype(left: DType, right: DType) -> DType | None:
     """Given two data types, determine the data type that both types can reasonably safely be cast to.
 
     Aims to follow the rules defined by [`polars_core::utils::supertype::get_supertype_with_options`].
@@ -301,7 +316,6 @@ def get_supertype(left: DType, right: DType, version: Version) -> DType | None:
     Arguments:
         left: First data type.
         right: Second data type.
-        version: Narwhals API version to derive data types from.
 
     Returns:
         The common supertype that both types can be safely cast to, or None if no such type exists.
@@ -318,43 +332,11 @@ def get_supertype(left: DType, right: DType, version: Version) -> DType | None:
         # But we aren't planning to use those.
         # The order of these conditions means we swallow all `(Nested, Non-Nested)` here,
         # simplifying both `_NESTED_DISPATCH` and everything that hits `has_nested(base_types) -> False`
-        return None if has_mixed else _NESTED_DISPATCH[base_left](left, right, version)
-    if version is Version.V1 and has_v1_versioned(base_types):
-        return _get_supertype_v1(left, right, base_types)
+        return None if has_mixed else _NESTED_DISPATCH[base_left](left, right)
     if has_mixed:
         return _mixed_supertype(left, right, base_types)
-    return _same_supertype(left, right)
-
-
-def _get_supertype_v1(
-    left: DType, right: DType, base_types: FrozenDTypes
-) -> DType | None:
-    """A condensed version of `get_supertype` that handles the 3x `v1`-only DTypes.
-
-    `get_supertype` guarantees that:
-    - *at-least* `left` or `right` is `v1.{Datetime,Duration,Enum}`
-    - *neither* `left` or `right` are nested
-
-    This leaves us with the following valid cases, with only `v1.Enum` changing behavior:
-
-        (Date, v1.Datetime)        -> v1.Datetime
-        (String, v1.Enum)          -> String
-        (v1.Datetime, v1.Datetime) -> v1.Datetime
-        (v1.Enum, v1.Enum)         -> v1.Enum     # Skips categories
-        (v1.Duration, v1.Duration) -> v1.Duration
-    """
-    if len(base_types) != 1:
-        if base_types == frozen_dtypes(Date, DatetimeV1):
-            return left if isinstance(left, DatetimeV1) else right
-        if base_types == frozen_dtypes(String, EnumV1):
-            return String()
-    elif isinstance(left, EnumV1):
-        return left
-    elif isinstance(left, DatetimeV1) and isinstance(right, DatetimeV1):
-        if left.time_zone == right.time_zone:
-            return DatetimeV1(
-                _min_time_unit(left.time_unit, right.time_unit), left.time_zone
-            )
-    elif isinstance(left, DurationV1) and isinstance(right, DurationV1):
-        return DurationV1(_min_time_unit(left.time_unit, right.time_unit))
-    return None  # pragma: no cover
+    if parametric := _PARAMETRIC_DISPATCH.get(base_left):
+        return parametric(left, right)
+    # NOTE: See for why this *isn't* the first thing we do
+    # https://github.com/narwhals-dev/narwhals/pull/3393
+    return left if left == right else None
