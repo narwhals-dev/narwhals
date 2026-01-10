@@ -20,13 +20,13 @@ def versions(fn: _Fn, /) -> _Fn:
 
     Use this when a test case *should* have identical behavior between versions.
     """
-    return pytest.mark.parametrize(
+    return pytest.mark.parametrize(  # type: ignore[no-any-return]
         "version",
         (
             Version.MAIN if v is Version.MAIN else pytest.param(v, marks=pytest.mark.slow)
             for v in Version
         ),
-    )(fn)  # type: ignore[no-any-return]
+    )(fn)
 
 
 XFAIL_DATE_NUMERIC = pytest.mark.xfail(reason="TODO: (Date, Numeric)")
