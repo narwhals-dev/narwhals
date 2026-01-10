@@ -9,8 +9,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, cast
 
 import narwhals as nw
+import narwhals.stable.v1 as nw_v1
 from narwhals._utils import Implementation, parse_version, zip_strict
 from narwhals.dependencies import get_pandas
+from narwhals.dtypes import DType
 from narwhals.translate import from_native
 
 if TYPE_CHECKING:
@@ -252,3 +254,29 @@ def time_unit_compat(time_unit: TimeUnit, request: pytest.FixtureRequest, /) -> 
     if PANDAS_VERSION < (2,) and any(name in request_id for name in pandas_like):
         return "ns"
     return time_unit
+
+
+# TODO @dangotbanned: Add a real doc with examples
+def dtype_ids(obj: DType | type[DType] | None) -> str:  # noqa: PLR0911
+    """Some tweaks to `DType.__repr__` for more readable test ids."""
+    if obj is None:
+        return str(obj)
+    if isinstance(obj, DType):
+        if hasattr(obj, "__slots__"):
+            if isinstance(obj, nw.Datetime):
+                return f"Datetime[{obj.time_unit}, {obj.time_zone}]"
+            if isinstance(obj, nw.Duration):
+                return f"Duration[{obj.time_unit}]"
+            if isinstance(obj, nw.Enum):
+                if isinstance(obj, nw_v1.Enum):
+                    return "v1.Enum[]"
+                return f"Enum{list(obj.categories)!r}"
+            if isinstance(obj, nw.Array):
+                dtype: Any = obj
+                for _ in obj.shape:
+                    dtype = dtype.inner
+                return f"Array[{dtype!r}, {obj.shape}]"
+            # non-empty slots == parameters
+            return repr(obj)
+        return obj.__class__.__name__
+    return repr(obj)

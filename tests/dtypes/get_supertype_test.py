@@ -19,6 +19,9 @@ from narwhals.dtypes.classes import (
     UnsignedIntegerType,
 )
 
+# TODO @dangotbanned: Un-alias import once branch is less busy
+from tests.utils import dtype_ids as _dtype_ids
+
 _Fn = TypeVar("_Fn", bound=Callable[..., Any])
 
 
@@ -35,31 +38,6 @@ def versions(fn: _Fn, /) -> _Fn:
         ),
         ids=[v.name for v in Version],
     )(fn)
-
-
-def _dtype_ids(obj: DType | type[DType] | None) -> str:  # noqa: PLR0911
-    """Some tweaks to `DType.__repr__` for more readable test ids."""
-    if obj is None:
-        return str(obj)
-    if isinstance(obj, DType):
-        if hasattr(obj, "__slots__"):
-            if isinstance(obj, nw.Datetime):
-                return f"Datetime[{obj.time_unit}, {obj.time_zone}]"
-            if isinstance(obj, nw.Duration):
-                return f"Duration[{obj.time_unit}]"
-            if isinstance(obj, nw.Enum):
-                if isinstance(obj, nw_v1.Enum):
-                    return "v1.Enum[]"
-                return f"Enum{list(obj.categories)!r}"
-            if isinstance(obj, nw.Array):
-                dtype: Any = obj
-                for _ in obj.shape:
-                    dtype = dtype.inner
-                return f"Array[{dtype!r}, {obj.shape}]"
-            # non-empty slots == parameters
-            return repr(obj)
-        return obj.__class__.__name__
-    return repr(obj)
 
 
 @versions
