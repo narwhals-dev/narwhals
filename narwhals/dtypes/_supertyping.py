@@ -101,7 +101,7 @@ INTEGER: DTypeGroup = SIGNED_INTEGER.union(UNSIGNED_INTEGER)
 FLOAT: DTypeGroup = frozenset((Float32, Float64))
 NUMERIC: DTypeGroup = FLOAT.union(INTEGER).union((Decimal,))
 NESTED: DTypeGroup = frozenset((Struct, List, Array))
-DATETIME: DTypeGroup = frozen_dtypes(DatetimeV1, DurationV1)
+DATETIME: DTypeGroup = frozen_dtypes(Datetime, DatetimeV1)
 TEMPORAL: DTypeGroup = DATETIME.union((Date, Time, Duration, DurationV1))
 STRING: DTypeGroup = frozenset((String, Binary, Categorical, Enum, EnumV1))
 
