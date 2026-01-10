@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from narwhals.stable.v1._dtypes import (
+from narwhals.dtypes._classes_v1 import (
     Array,
     Binary,
     Boolean,
