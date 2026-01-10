@@ -77,7 +77,6 @@ DTypeGroup: TypeAlias = frozenset[type[DType]]
 _TIME_UNIT_TO_INDEX: Mapping[TimeUnit, int] = {"s": 0, "ms": 1, "us": 2, "ns": 3}
 """Convert time unit to an index for comparison (larger = more precise)."""
 
-
 _Datetime = Version.MAIN.dtypes.Datetime
 """Alias for `nw.dtypes.Datetime`."""
 _Duration = Version.MAIN.dtypes.Duration
@@ -89,11 +88,9 @@ SIGNED_INTEGER: DTypeGroup = frozenset((Int8, Int16, Int32, Int64, Int128))
 UNSIGNED_INTEGER: DTypeGroup = frozenset((UInt8, UInt16, UInt32, UInt64, UInt128))
 INTEGER: DTypeGroup = SIGNED_INTEGER.union(UNSIGNED_INTEGER)
 FLOAT: DTypeGroup = frozenset((Float32, Float64))
-PRIMITIVE_NUMERIC: DTypeGroup = FLOAT.union(INTEGER)
-NUMERIC: DTypeGroup = PRIMITIVE_NUMERIC.union((Decimal,))
+NUMERIC: DTypeGroup = FLOAT.union(INTEGER).union((Decimal,))
 NESTED: DTypeGroup = frozenset((Struct, List, Array))
 TEMPORAL: DTypeGroup = frozenset((_Datetime, _Duration, Date, Time))
-
 STRING: DTypeGroup = frozenset((String, Binary, Categorical, _Enum))
 
 _STRING_LIKE_CONVERT: Mapping[FrozenDTypes, type[String | Binary]] = {
@@ -102,9 +99,10 @@ _STRING_LIKE_CONVERT: Mapping[FrozenDTypes, type[String | Binary]] = {
     frozen_dtypes(String, Binary): Binary,
 }
 _FLOAT_PROMOTE: Mapping[FrozenDTypes, type[Float64]] = {
-    frozen_dtypes(Float32, Float64): Float64
+    frozen_dtypes(Float32, Float64): Float64,
+    frozen_dtypes(Decimal, Float64): Float64,
+    frozen_dtypes(Decimal, Float32): Float64,
 }
-
 
 _CACHE_SIZE_TP_MID = 32
 """Arbitrary size (currently).
@@ -113,9 +111,6 @@ _CACHE_SIZE_TP_MID = 32
 - 3 (V1) subclasses
 - Pairwise comparisons, but order (of classes) is not important
 """
-
-_CACHE_SIZE_TP_HIGH = 64
-"""Higher value for compound expressions that can short circuit"""
 
 
 @cache
@@ -153,21 +148,26 @@ def _integer_supertyping() -> Mapping[FrozenDTypes, type[Int | Float64]]:
 @cache
 def _primitive_numeric_supertyping() -> Mapping[FrozenDTypes, type[Float]]:
     F32, F64 = Float32, Float64  # noqa: N806
-    small_int = Int8, Int16, UInt8, UInt16
+    small_int = (Int8, Int16, UInt8, UInt16)
     small_int_f32 = ((frozen_dtypes(tp, F32), F32) for tp in small_int)
     big_int_f32 = ((frozen_dtypes(tp, F32), F64) for tp in INTEGER.difference(small_int))
     int_f64 = ((frozen_dtypes(tp, F64), F64) for tp in INTEGER)
     return dict(chain(small_int_f32, big_int_f32, int_f64))
 
 
+def _intersects(a: frozenset[Any], b: frozenset[Any], /) -> bool:
+    """Return True if sets share at least one element."""
+    return not a.isdisjoint(b)
+
+
 @lru_cache(maxsize=_CACHE_SIZE_TP_MID)
 def has_nested(base_types: FrozenDTypes, /) -> bool:
-    return not base_types.isdisjoint(NESTED)
+    return _intersects(base_types, NESTED)
 
 
 @lru_cache(maxsize=_CACHE_SIZE_TP_MID)
 def has_v1_versioned(base_types: FrozenDTypes, /) -> bool:
-    return not base_types.isdisjoint(_v1_versioned_dtypes())
+    return _intersects(base_types, _v1_versioned_dtypes())
 
 
 def _struct_union_fields(
@@ -175,10 +175,7 @@ def _struct_union_fields(
 ) -> Struct | None:
     # if equal length we also take the lhs
     # so that the lhs determines the order of the fields
-    if len(left) >= len(right):
-        longest, shortest = left, right
-    else:
-        longest, shortest = right, left
+    longest, shortest = (left, right) if len(left) >= len(right) else (right, left)
     longest_map = {f.name: f.dtype() for f in longest}
     for f in shortest:
         name, dtype = f.name, f.dtype()
@@ -254,13 +251,19 @@ def _numeric_supertype(base_types: FrozenDTypes) -> DType | None:
     # (Decimal, Numeric) -> Decimal
     # (Boolean, Numeric) -> Numeric
     if NUMERIC.issuperset(base_types):
-        if PRIMITIVE_NUMERIC.issuperset(base_types):
-            if INTEGER.issuperset(base_types):
-                return _integer_supertyping()[base_types]()
-            if tp := _FLOAT_PROMOTE.get(base_types):
-                return tp()
-            return _primitive_numeric_supertyping()[base_types]()
-        return Decimal()
+        if INTEGER.issuperset(base_types):
+            return _integer_supertyping()[base_types]()
+        if tp := _FLOAT_PROMOTE.get(base_types):
+            return tp()
+        if Decimal in base_types:
+            # TODO(FBruzzesi): Decimal will need to be addressed separately once
+            # https://github.com/narwhals-dev/narwhals/pull/3377 is merged as we need to:
+            #  * For (Decimal, Decimal) -> combine the scale and precision
+            #  * For (Decimal, Integer) -> check if integer type fits in decimal
+            #  * For (Decimal, Float) -> check if integer type fits in decimal
+            return Decimal()
+        return _primitive_numeric_supertyping()[base_types]()
+
     if Boolean in base_types:
         return next(iter(base_types.difference((Boolean,))))()
     return None

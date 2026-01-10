@@ -334,6 +334,9 @@ def test_mixed_dtype(
         (nw.Float32(), nw.UInt64(), nw.Float64()),
         (nw.Int8(), nw.Float64(), nw.Float64()),
         (nw.Float64(), nw.Int64(), nw.Float64()),
+        # float + decimal
+        (nw.Decimal(), nw.Float32(), nw.Float64()),
+        (nw.Decimal(), nw.Float64(), nw.Float64()),
         # numeric + boolean
         (nw.Int8(), nw.Boolean(), nw.Int8()),
         (nw.Int16(), nw.Boolean(), nw.Int16()),
