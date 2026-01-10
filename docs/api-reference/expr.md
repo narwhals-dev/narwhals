@@ -44,9 +44,11 @@
         - log
         - map_batches
         - max
+        - max_by
         - mean
         - median
         - min
+        - min_by
         - mode
         - n_unique
         - null_count

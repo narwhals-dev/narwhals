@@ -140,6 +140,8 @@ class CompliantExpr(
     def median(self) -> Self: ...
     def first(self) -> Self: ...
     def last(self) -> Self: ...
+    def min_by(self, by: Sequence[str]) -> Self: ...
+    def max_by(self, by: Sequence[str]) -> Self: ...
     def skew(self) -> Self: ...
     def kurtosis(self) -> Self: ...
     def std(self, *, ddof: int) -> Self: ...
@@ -830,6 +832,38 @@ class EagerExpr(
 
     def last(self) -> Self:
         return self._reuse_series("last", returns_scalar=True)
+
+    def min_by(self, by: Sequence[str]) -> Self:
+        def func(df: EagerDataFrameT) -> Sequence[Any]:
+            # This solution isn't as efficient as it could be, but:
+            # - pyarrow: https://arrow.apache.org/docs/21.0/python/generated/pyarrow.compute.select_k_unstable.html
+            # - pandas: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.nsmallest.html
+            # don't give us control over null values and always place them last.
+            df = df.sort(*by, descending=False, nulls_last=False)
+            return self.first()(df)
+
+        return self._from_callable(
+            func,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            context=self,
+        )
+
+    def max_by(self, by: Sequence[str]) -> Self:
+        def func(df: EagerDataFrameT) -> Sequence[Any]:
+            # This solution isn't as efficient as it could be, but:
+            # - pyarrow: https://arrow.apache.org/docs/21.0/python/generated/pyarrow.compute.select_k_unstable.html
+            # - pandas: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.nlargest.html
+            # don't give us control over null values and always place them last.
+            df = df.sort(*by, descending=False, nulls_last=False)
+            return self.last()(df)
+
+        return self._from_callable(
+            func,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            context=self,
+        )
 
     def any_value(self, *, ignore_nulls: bool) -> Self:
         return self._reuse_series(

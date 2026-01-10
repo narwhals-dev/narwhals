@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from contextlib import nullcontext as does_not_raise
 from typing import TYPE_CHECKING
 
 import pytest
 
 import narwhals as nw
+from narwhals.exceptions import InvalidOperationError
 from tests.utils import (
     DUCKDB_VERSION,
     POLARS_VERSION,
@@ -176,3 +178,188 @@ def test_first_expr_over_order_by_partition_by(
         "c_last": [None, None, 8.0],
     }
     assert_equal_data(result, expected)
+
+
+def test_first_expr_in_group_by(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if any(x in str(constructor) for x in ("spark", "dask")):
+        # ibis: https://github.com/ibis-project/ibis/issues/11656
+        request.applymarker(pytest.mark.xfail)
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
+    if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (14,):
+        pytest.skip()
+    data = {
+        "grp": [1, 1, 1, 2],
+        "a": [None, 4, 9, 3],
+        "b": [9, 7, 10, 8],
+        "c": [9, None, 10, 8],
+        "idx": [9, None, None, 7],
+        "idx2": [9, 8, 7, 7],
+    }
+    df = nw.from_native(constructor(data))
+    result = (
+        df.group_by("grp")
+        .agg(
+            nw.col("a", "b", "c").min_by("idx").name.suffix("_first"),
+            nw.col("a", "b", "c").max_by("idx").name.suffix("_last"),
+        )
+        .sort("grp")
+    )
+    expected = {
+        "grp": [1, 2],
+        "a_first": [4.0, 3.0],
+        "b_first": [7, 8],
+        "c_first": [None, 8.0],
+        "a_last": [None, 3.0],
+        "b_last": [9, 8],
+        "c_last": [9.0, 8.0],
+    }
+    assert_equal_data(result, expected)
+    result = (
+        df.group_by("grp")
+        .agg(
+            nw.col("a", "b", "c").min_by(["idx", "idx2"]).name.suffix("_first"),
+            nw.col("a", "b", "c").max_by(["idx", "idx2"]).name.suffix("_last"),
+        )
+        .sort("grp")
+    )
+    expected = {
+        "grp": [1, 2],
+        "a_first": [9, 3],
+        "b_first": [10, 8],
+        "c_first": [10, 8],
+        "a_last": [None, 3],
+        "b_last": [9, 8],
+        "c_last": [9, 8],
+    }
+    assert_equal_data(result, expected)
+
+
+def test_first_expr_broadcasting(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if any(x in str(constructor) for x in ("ibis", "spark", "dask")):
+        # ibis: https://github.com/ibis-project/ibis/issues/11656
+        request.applymarker(pytest.mark.xfail)
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
+
+    data = {
+        "grp": [1, 1, 1, 2],
+        "a": [None, 4, 9, 3],
+        "b": [9, 7, 10, 8],
+        "c": [9, None, 10, 8],
+        "idx": [9, None, None, 7],
+        "idx2": [9, 8, 7, 7],
+    }
+    df = nw.from_native(constructor(data))
+    result = df.select(
+        "idx",
+        "idx2",
+        nw.col("a", "b", "c").min_by("idx").name.suffix("_first"),
+        nw.col("a", "b", "c").max_by("idx").name.suffix("_last"),
+    ).sort("idx", "idx2")
+    expected = {
+        "idx": [None, None, 7, 9],
+        "idx2": [7, 8, 7, 9],
+        "a_first": [4, 4, 4, 4],
+        "b_first": [7, 7, 7, 7],
+        "c_first": [None, None, None, None],
+        "a_last": [None, None, None, None],
+        "b_last": [9, 9, 9, 9],
+        "c_last": [9, 9, 9, 9],
+    }
+    assert_equal_data(result, expected)
+    result = df.select(
+        "idx",
+        "idx2",
+        nw.col("a", "b", "c").min_by(["idx", "idx2"]).name.suffix("_first"),
+        nw.col("a", "b", "c").max_by(["idx", "idx2"]).name.suffix("_last"),
+    ).sort("idx", "idx2")
+    expected = {
+        "idx": [None, None, 7, 9],
+        "idx2": [7, 8, 7, 9],
+        "a_first": [9, 9, 9, 9],
+        "b_first": [10, 10, 10, 10],
+        "c_first": [10, 10, 10, 10],
+        "a_last": [None, None, None, None],
+        "b_last": [9, 9, 9, 9],
+        "c_last": [9, 9, 9, 9],
+    }
+    assert_equal_data(result, expected)
+
+
+def test_first_expr_invalid(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+    data = {
+        "grp": [1, 1, 1, 2],
+        "a": [None, 4, 9, 3],
+        "b": [9, 7, 10, 8],
+        "c": [9, None, 10, 8],
+        "idx": [9, None, None, 7],
+        "idx2": [9, 8, 7, 7],
+    }
+    df = nw.from_native(constructor(data))
+    with pytest.raises(InvalidOperationError):
+        df.select("idx", "idx2", nw.col("a").min_by("idx").over(order_by="idx2"))
+    with pytest.raises(InvalidOperationError):
+        df.select("idx", "idx2", nw.col("a").max_by("idx").over(order_by="idx2"))
+
+
+def test_first_last_different_orders(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+        pytest.skip()
+    if any(x in str(constructor) for x in ("pyspark", "dask")):
+        # Currently unsupported.
+        request.applymarker(pytest.mark.xfail)
+    if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (14,):
+        pytest.skip()
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
+
+    context = (
+        pytest.raises(NotImplementedError)
+        if "pandas" in str(constructor) or "pyarrow" in str(constructor)
+        else does_not_raise()
+    )
+    frame = nw.from_native(
+        constructor(
+            {
+                "a": [1, 1, 2],
+                "b": [4, 5, 6],
+                "c": [None, 7, 8],
+                "i_0": [1, None, 2],
+                "i_1": [2, None, 1],
+            }
+        )
+    )
+    with context:
+        result = (
+            frame.group_by("a")
+            .agg(
+                nw.col("b", "c").min_by("i_0").name.suffix("_first_i_0"),
+                nw.col("b", "c").min_by("i_1").name.suffix("_first_i_1"),
+                nw.col("b", "c").max_by("i_0").name.suffix("_last_i_0"),
+                nw.col("b", "c").max_by("i_1").name.suffix("_last_i_1"),
+            )
+            .sort("a")
+        )
+        expected = {
+            "a": [1, 2],
+            "b_first_i_0": [5, 6],
+            "c_first_i_0": [7, 8],
+            "b_first_i_1": [5, 6],
+            "c_first_i_1": [7, 8],
+            "b_last_i_0": [4, 6],
+            "c_last_i_0": [None, 8],
+            "b_last_i_1": [4, 6],
+            "c_last_i_1": [None, 8],
+        }
+        assert_equal_data(result, expected)
