@@ -343,7 +343,7 @@ def _get_supertype_v1(
             )
     elif isinstance(left, v1_dtypes.Duration) and isinstance(right, v1_dtypes.Duration):
         return v1_dtypes.Duration(_min_time_unit(left.time_unit, right.time_unit))
-    return None
+    return None  # pragma: no cover
 
 
 @cache

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from collections.abc import Callable
+from typing import Any, TypeVar
 
 import pytest
 
@@ -8,23 +9,25 @@ import narwhals as nw
 import narwhals.stable.v1 as nw_v1
 import narwhals.stable.v2 as nw_v2  # noqa: F401
 from narwhals._utils import Version
+from narwhals.dtypes import DType
 from narwhals.dtypes._supertyping import get_supertype
 
-if TYPE_CHECKING:
-    from narwhals.dtypes import DType
+_Fn = TypeVar("_Fn", bound=Callable[..., Any])
 
 
-param_version = pytest.mark.parametrize(
-    "version",
-    (
-        pytest.param(v, marks=(() if v is Version.MAIN else pytest.mark.slow), id=v.name)
-        for v in Version
-    ),
-)
-"""Parametrize `version: Version`, but skip everything non-`MAIN` by default.
+def versions(fn: _Fn, /) -> _Fn:
+    """Parametrize `version: Version`, but skip everything non-`MAIN` by default.
 
-Use this when a test case *should* have identical behavior between versions.
-"""
+    Use this when a test case *should* have identical behavior between versions.
+    """
+    return pytest.mark.parametrize(
+        "version",
+        (
+            Version.MAIN if v is Version.MAIN else pytest.param(v, marks=pytest.mark.slow)
+            for v in Version
+        ),
+    )(fn)  # type: ignore[no-any-return]
+
 
 XFAIL_DATE_NUMERIC = pytest.mark.xfail(reason="TODO: (Date, Numeric)")
 XFAIL_TIME_NUMERIC = pytest.mark.xfail(reason="TODO: (Time, Numeric)")
@@ -34,28 +37,32 @@ XFAIL_DURATION_NUMERIC = pytest.mark.xfail(reason="TODO: (Duration, Numeric)")
 XFAIL_V1 = pytest.mark.xfail(reason="TODO: V1 supertypes", raises=NotImplementedError)
 
 
-def _dtype_ids(obj: DType | None) -> str:  # noqa: PLR0911
+def _dtype_ids(obj: DType | type[DType] | Version | None) -> str:  # noqa: PLR0911
     """Some tweaks to `DType.__repr__` for more readable test ids."""
     if obj is None:
         return str(obj)
-    if obj.__slots__:
-        if isinstance(obj, nw.Datetime):
-            return f"Datetime[{obj.time_unit}, {obj.time_zone}]"
-        if isinstance(obj, nw.Duration):
-            return f"Duration[{obj.time_unit}]"
-        if isinstance(obj, nw.Enum):
-            return f"Enum{list(obj.categories)!r}"
-        if isinstance(obj, nw.Array):
-            dtype: Any = obj
-            for _ in obj.shape:
-                dtype = dtype.inner
-            return f"Array[{dtype!r}, {obj.shape}]"
-        # non-empty slots == parameters
-        return repr(obj)
-    return obj.__class__.__name__
+    if isinstance(obj, Version):
+        return obj.name
+    if isinstance(obj, DType):
+        if hasattr(obj, "__slots__"):
+            if isinstance(obj, nw.Datetime):
+                return f"Datetime[{obj.time_unit}, {obj.time_zone}]"
+            if isinstance(obj, nw.Duration):
+                return f"Duration[{obj.time_unit}]"
+            if isinstance(obj, nw.Enum):
+                return f"Enum{list(obj.categories)!r}"
+            if isinstance(obj, nw.Array):
+                dtype: Any = obj
+                for _ in obj.shape:
+                    dtype = dtype.inner
+                return f"Array[{dtype!r}, {obj.shape}]"
+            # non-empty slots == parameters
+            return repr(obj)
+        return obj.__class__.__name__
+    return repr(obj)
 
 
-@param_version
+@versions
 @pytest.mark.parametrize(
     "dtype",
     [
@@ -100,7 +107,7 @@ def test_identical_dtype(dtype: DType, version: Version) -> None:
     assert result == dtype
 
 
-@param_version
+@versions
 @pytest.mark.parametrize(
     ("left", "right", "expected"),
     [
@@ -200,7 +207,7 @@ def test_same_class(
         assert result == expected
 
 
-@param_version
+@versions
 @pytest.mark.parametrize(
     ("left", "right", "expected"),
     [
@@ -269,7 +276,7 @@ def test_mixed_dtype(
         assert result == expected
 
 
-@param_version
+@versions
 @pytest.mark.parametrize(
     ("left", "right", "expected"),
     [
