@@ -395,7 +395,6 @@ def test_numeric_and_bool_promotion(numeric_dtype: NumericType, version: Version
             nw.Array(nw_v1.Enum(), shape=4),
             nw.Array(nw_v1.Enum(), shape=4),
         ),
-        # TODO @dangotbanned: What to do when e.g `(v1.Datetime, Datetime) -> ?`
     ],
     ids=_dtype_ids,
 )
@@ -410,6 +409,7 @@ def test_v1_dtypes(left: DType, right: DType, expected: DType | None) -> None:
         assert type(result) is type(expected)
 
 
+@versions
 @pytest.mark.parametrize(
     ("left", "right"),
     [
@@ -420,6 +420,9 @@ def test_v1_dtypes(left: DType, right: DType, expected: DType | None) -> None:
         (nw_v1.Enum(), nw.Enum([])),
     ],
 )
-def test_mixed_versions_return_none(left: DType, right: DType) -> None:
-    result = get_supertype(left, right, Version.V1)
+def test_mixed_versions_return_none(left: DType, right: DType, version: Version) -> None:
+    result = get_supertype(left, right, version)
+    assert result is None
+
+    result = get_supertype(right, left, version)
     assert result is None
