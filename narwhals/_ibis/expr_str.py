@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Callable
 
+import ibis
 from ibis.expr.datatypes import Timestamp
 
 from narwhals._sql.expr_str import SQLExprStringNamespace
@@ -75,6 +76,20 @@ class IbisExprStringNamespace(SQLExprStringNamespace["IbisExpr"]):
             return expr.as_date(format)
 
         return self.compliant._with_callable(fn)
+
+    def pad_start(self, length: int, fill_char: str) -> IbisExpr:
+        def _pad_start(expr: ir.StringColumn) -> ir.Value:
+            padded = expr.lpad(length, fill_char)
+            return ibis.cases((expr.notnull(), padded))
+
+        return self.compliant._with_callable(_pad_start)
+
+    def pad_end(self, length: int, fill_char: str) -> IbisExpr:
+        def _pad_end(expr: ir.StringColumn) -> ir.Value:
+            padded = expr.rpad(length, fill_char)
+            return ibis.cases((expr.notnull(), padded))
+
+        return self.compliant._with_callable(_pad_end)
 
     replace = not_implemented()
     to_titlecase = not_implemented()

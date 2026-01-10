@@ -1142,6 +1142,16 @@ class EagerExprStringNamespace(
     def to_titlecase(self) -> EagerExprT:
         return self.compliant._reuse_series_namespace("str", "to_titlecase")
 
+    def pad_start(self, length: int, fill_char: str = " ") -> EagerExprT:
+        return self.compliant._reuse_series_namespace(
+            "str", "pad_start", length=length, fill_char=fill_char
+        )
+
+    def pad_end(self, length: int, fill_char: str = " ") -> EagerExprT:
+        return self.compliant._reuse_series_namespace(
+            "str", "pad_end", length=length, fill_char=fill_char
+        )
+
 
 class EagerExprStructNamespace(
     EagerExprNamespace[EagerExprT], StructNamespace[EagerExprT], Generic[EagerExprT]

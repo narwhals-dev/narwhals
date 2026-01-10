@@ -507,3 +507,63 @@ class ExprStringNamespace(Generic[ExprT]):
         return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "str.zfill", width=width)
         )
+
+    def pad_start(self, length: int, fill_char: str = " ") -> ExprT:
+        """Pad the start of the string until it reaches the given length.
+
+        Arguments:
+            length: Pad the string until it reaches this length. Strings with
+                length equal to or greater than this value are returned as-is.
+            fill_char: The character to pad the string with.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> df_native = pd.DataFrame({"a": ["cow", "monkey", "hippopotamus", None]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(padded=nw.col("a").str.pad_start(8, "*"))
+            ┌─────────────────────────────┐
+            |     Narwhals DataFrame      |
+            |-----------------------------|
+            |              a        padded|
+            |0           cow      *****cow|
+            |1        monkey      **monkey|
+            |2  hippopotamus  hippopotamus|
+            |3          None          None|
+            └─────────────────────────────┘
+        """
+        return self._expr._append_node(
+            ExprNode(
+                ExprKind.ELEMENTWISE, "str.pad_start", length=length, fill_char=fill_char
+            )
+        )
+
+    def pad_end(self, length: int, fill_char: str = " ") -> ExprT:
+        """Pad the end of the string until it reaches the given length.
+
+        Arguments:
+            length: Pad the string until it reaches this length. Strings with
+                length equal to or greater than this value are returned as-is.
+            fill_char: The character to pad the string with.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> df_native = pd.DataFrame({"a": ["cow", "monkey", "hippopotamus", None]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(padded=nw.col("a").str.pad_end(8, "*"))
+            ┌─────────────────────────────┐
+            |     Narwhals DataFrame      |
+            |-----------------------------|
+            |              a        padded|
+            |0           cow      cow*****|
+            |1        monkey      monkey**|
+            |2  hippopotamus  hippopotamus|
+            |3          None          None|
+            └─────────────────────────────┘
+        """
+        return self._expr._append_node(
+            ExprNode(
+                ExprKind.ELEMENTWISE, "str.pad_end", length=length, fill_char=fill_char
+            )
+        )

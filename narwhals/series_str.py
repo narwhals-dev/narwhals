@@ -450,3 +450,63 @@ class SeriesStringNamespace(Generic[SeriesT]):
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.zfill(width)
         )
+
+    def pad_start(self, length: int, fill_char: str = " ") -> SeriesT:
+        """Pad the start of the string until it reaches the given length.
+
+        Arguments:
+            length: Pad the string until it reaches this length. Strings with
+                length equal to or greater than this value are returned as-is.
+            fill_char: The character to pad the string with.
+
+        Examples:
+        >>> import pandas as pd
+        >>> import narwhals as nw
+        >>> df_native = pd.DataFrame({"a": ["cow", "monkey", "hippopotamus", None]})
+        >>> df = nw.from_native(df_native)
+        >>> df["a"].str.pad_start(8, "*")
+        ┌──────────────────────┐
+        |   Narwhals Series    |
+        |----------------------|
+        |0        *****cow     |
+        |1        **monkey     |
+        |2    hippopotamus     |
+        |3            None     |
+        |Name: a, dtype: object|
+        └──────────────────────┘
+        """
+        return self._narwhals_series._with_compliant(
+            self._narwhals_series._compliant_series.str.pad_start(
+                length=length, fill_char=fill_char
+            )
+        )
+
+    def pad_end(self, length: int, fill_char: str = " ") -> SeriesT:
+        """Pad the end of the string until it reaches the given length.
+
+        Arguments:
+            length: Pad the string until it reaches this length. Strings with
+                length equal to or greater than this value are returned as-is.
+            fill_char: The character to pad the string with.
+
+        Examples:
+        >>> import pandas as pd
+        >>> import narwhals as nw
+        >>> df_native = pd.DataFrame({"a": ["cow", "monkey", "hippopotamus", None]})
+        >>> df = nw.from_native(df_native)
+        >>> df["a"].str.pad_end(8, "*")
+        ┌──────────────────────┐
+        |   Narwhals Series    |
+        |----------------------|
+        |0        cow*****     |
+        |1        monkey**     |
+        |2    hippopotamus     |
+        |3            None     |
+        |Name: a, dtype: object|
+        └──────────────────────┘
+        """
+        return self._narwhals_series._with_compliant(
+            self._narwhals_series._compliant_series.str.pad_end(
+                length=length, fill_char=fill_char
+            )
+        )
