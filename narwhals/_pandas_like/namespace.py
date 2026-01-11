@@ -311,11 +311,11 @@ class PandasLikeNamespace(
     ) -> NativeDataFrameT:
         out_schema = reduce(
             lambda x, y: to_supertype(x, y),
-            (Schema.from_pandas_like(frame.dtypes.to_dict()) for frame in dfs),
+            (Schema.from_pandas_like(df.dtypes.to_dict()) for df in dfs),
         ).to_pandas(
             #  dtype_backend= # TODO(FBruzzesi): what should this be?
         )
-        to_concat = [frame.astype(out_schema) for frame in dfs]
+        to_concat = [df.astype(out_schema) for df in dfs]
         if self._implementation.is_pandas() and self._backend_version < (3,):
             return self._concat(to_concat, axis=VERTICAL, copy=False)
         return self._concat(to_concat, axis=VERTICAL)

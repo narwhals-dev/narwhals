@@ -92,7 +92,7 @@ class DuckDBNamespace(
                 msg = "inputs should all have the same schema"
                 raise TypeError(msg)
 
-            res = reduce(lambda x, y: x.union(y), (item._native_frame for item in items))
+            res = reduce(lambda x, y: x.union(y), (item.native for item in items))
             return first._with_native(res)
 
         if how == "vertical_relaxed":
@@ -101,14 +101,14 @@ class DuckDBNamespace(
             native_items = (
                 item.select(
                     *(self.col(name).cast(dtype) for name, dtype in out_schema.items())
-                )._native_frame
+                ).native
                 for item in items
             )
             res = reduce(lambda x, y: x.union(y), native_items)
             return first._with_native(res)
 
         if how == "diagonal":
-            res, *others = (item._native_frame for item in items)
+            res, *others = (item.native for item in items)
             for _item in others:
                 # TODO(unassigned): use relational API when available https://github.com/duckdb/duckdb/discussions/16996
                 res = duckdb.sql("""

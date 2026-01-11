@@ -80,13 +80,13 @@ class IbisNamespace(SQLNamespace[IbisLazyFrame, IbisExpr, "ir.Table", "ir.Value"
             return self._lazyframe.from_native(ibis.union(*native_items), context=self)
 
         if how == "vertical_relaxed":
-            schemas = (Schema(df.collect_schema()) for df in items)
+            schemas = (Schema(item.collect_schema()) for item in items)
             out_schema = reduce(lambda x, y: to_supertype(x, y), schemas)
 
             native_items = (
                 item.select(
                     *(self.col(name).cast(dtype) for name, dtype in out_schema.items())
-                )._native_frame
+                ).native
                 for item in items
             )
             return self._lazyframe.from_native(ibis.union(*native_items), context=self)

@@ -233,7 +233,6 @@ class EagerNamespace(
     def concat(
         self, items: Iterable[EagerDataFrameT], *, how: ConcatMethod
     ) -> EagerDataFrameT:
-        items = tuple(items)
         dfs = [item.native for item in items]
         if how == "horizontal":
             native = self._concat_horizontal(dfs)

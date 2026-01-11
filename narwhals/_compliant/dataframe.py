@@ -323,10 +323,6 @@ class EagerDataFrame(
     def _backend_version(self) -> tuple[int, ...]:
         return self._implementation._backend_version()
 
-    @property
-    def native(self) -> NativeDataFrameT:
-        return self._native_frame
-
     def __narwhals_namespace__(
         self,
     ) -> EagerNamespace[

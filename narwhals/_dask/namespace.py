@@ -139,10 +139,7 @@ class DaskNamespace(
     def concat(
         self, items: Iterable[DaskLazyFrame], *, how: ConcatMethod
     ) -> DaskLazyFrame:
-        if not items:
-            msg = "No items to concatenate"  # pragma: no cover
-            raise AssertionError(msg)
-        dfs = [i._native_frame for i in items]
+        dfs = tuple(item.native for item in items)
         cols_0 = dfs[0].columns
         if how == "vertical":
             for i, df in enumerate(dfs[1:], start=1):
@@ -160,6 +157,18 @@ class DaskNamespace(
                 dd.concat(dfs, axis=0, join="inner"), version=self._version
             )
         if how == "diagonal":
+            return DaskLazyFrame(
+                dd.concat(dfs, axis=0, join="outer"), version=self._version
+            )
+        if how == "vertical_relaxed":
+            msg = "TODO"
+            raise NotImplementedError(msg)
+            return DaskLazyFrame(
+                dd.concat(dfs, axis=0, join="inner"), version=self._version
+            )
+        if how == "diagonal_relaxed":
+            msg = "TODO"
+            raise NotImplementedError(msg)
             return DaskLazyFrame(
                 dd.concat(dfs, axis=0, join="outer"), version=self._version
             )

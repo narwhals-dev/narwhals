@@ -149,9 +149,9 @@ class SparkLikeNamespace(
     ) -> SparkLikeLazyFrame:
         items = tuple(items)
         if how == "vertical":
-            native_items = [item._native_frame for item in items]
-            cols_0 = native_items[0].columns
-            for i, df in enumerate(native_items[1:], start=1):
+            first, *others = (item.native for item in items)
+            cols_0 = first.columns
+            for i, df in enumerate(others, start=1):
                 cols_current = df.columns
                 if not ((len(cols_current) == len(cols_0)) and (cols_current == cols_0)):
                     msg = (
@@ -162,7 +162,7 @@ class SparkLikeNamespace(
                     raise TypeError(msg)
 
             return SparkLikeLazyFrame(
-                native_dataframe=reduce(lambda x, y: x.union(y), native_items),
+                native_dataframe=reduce(lambda x, y: x.union(y), others, first),
                 version=self._version,
                 implementation=self._implementation,
             )
@@ -171,7 +171,7 @@ class SparkLikeNamespace(
             return SparkLikeLazyFrame(
                 native_dataframe=reduce(
                     lambda x, y: x.unionByName(y, allowMissingColumns=True),
-                    (item._native_frame for item in items),
+                    (item.native for item in items),
                 ),
                 version=self._version,
                 implementation=self._implementation,
@@ -183,7 +183,7 @@ class SparkLikeNamespace(
             native_items = (
                 item.select(
                     *(self.col(name).cast(dtype) for name, dtype in out_schema.items())
-                )._native_frame
+                ).native
                 for item in items
             )
             return SparkLikeLazyFrame(
@@ -193,7 +193,7 @@ class SparkLikeNamespace(
             )
 
         if how == "diagonal_relaxed":
-            schemas = [Schema(df.collect_schema()) for df in items]
+            schemas = tuple(Schema(item.collect_schema()) for item in items)
             out_schema = reduce(
                 lambda x, y: to_supertype(*combine_schemas(x, y)), schemas
             )
