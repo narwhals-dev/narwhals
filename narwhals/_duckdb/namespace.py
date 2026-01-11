@@ -96,7 +96,7 @@ class DuckDBNamespace(
             return first._with_native(res)
 
         if how == "vertical_relaxed":
-            schemas = (Schema(df.collect_schema()) for df in items)
+            schemas: Iterable[Schema] = (Schema(df.collect_schema()) for df in items)
             out_schema = reduce(lambda x, y: to_supertype(x, y), schemas)
             native_items = (
                 item.select(
