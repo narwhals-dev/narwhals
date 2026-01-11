@@ -194,6 +194,16 @@ class ArrowNamespace(
                 raise TypeError(msg)
         return pa.concat_tables(dfs)
 
+    def _concat_vertical_relaxed(self, dfs: Sequence[pa.Table], /) -> pa.Table:
+        from narwhals.schema import Schema, to_supertype
+
+        out_schema = reduce(
+            lambda x, y: to_supertype(x, y),
+            (Schema.from_arrow(table.schema) for table in dfs),
+        ).to_arrow()
+
+        return pa.concat_tables([table.cast(out_schema) for table in dfs])
+
     @property
     def selectors(self) -> ArrowSelectorNamespace:
         return ArrowSelectorNamespace.from_namespace(self)

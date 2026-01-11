@@ -21,6 +21,8 @@ from narwhals.dependencies import (
     is_pyarrow_data_type,
     is_pyarrow_schema,
 )
+from narwhals.dtypes._supertyping import get_supertype
+from narwhals.exceptions import ComputeError, SchemaMismatchError
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -363,3 +365,43 @@ class Schema(OrderedDict[str, "DType"]):
             (name, native_to_narwhals_dtype(dtype, cls._version, impl, allow_object=True))
             for name, dtype in schema.items()
         )
+
+
+def to_supertype(left: Schema, right: Schema) -> Schema:
+    # Adapted from polars https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-core/src/schema/mod.rs#L83-L96
+    if len(left) != len(right):
+        msg = "schema lengths differ"
+        raise ComputeError(msg)
+
+    into_out_schema: Mapping[str, DType] = {}
+    for (lname, ltype), (rname, rtype) in zip(left.items(), right.items()):
+        if lname != rname:
+            msg = f"schema names differ: got {rname}, expected {lname}"
+            raise ComputeError(msg)
+        if promoted_dtype := get_supertype(left=ltype, right=rtype):
+            into_out_schema[lname] = promoted_dtype
+        else:
+            msg = f"failed to determine supertype of {ltype} and {rtype}"
+            raise SchemaMismatchError(msg)
+
+    return Schema(into_out_schema)
+
+
+def combine_schemas(left: Schema, right: Schema) -> tuple[Schema, Schema]:
+    """Extend both schemas with names and dtypes missing from the other.
+
+    Returns a tuple of two schemas where each original schema is extended
+    with the columns that exist in the other schema but not in itself.
+
+    The final order for both schemas is: left schema keys first (in order),
+    followed by keys missing from left (in the order they appear in right).
+    """
+    left_names = set(left.keys())
+    missing_in_left = [(name, right[name]) for name in right if name not in left_names]
+
+    extended_left = Schema([*left.items(), *missing_in_left])
+    # Reorder right to match: left keys first, then right-only keys
+    extended_right = Schema(
+        [(name, right.get(name, left[name])) for name in extended_left]
+    )
+    return extended_left, extended_right

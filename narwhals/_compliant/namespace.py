@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from functools import partial
+from functools import partial, reduce
 from typing import TYPE_CHECKING, Any, Protocol, overload
 
 from narwhals._compliant.typing import (
@@ -224,16 +224,42 @@ class EagerNamespace(
         self, dfs: Sequence[NativeFrameT | Any], /
     ) -> NativeFrameT: ...
     def _concat_vertical(self, dfs: Sequence[NativeFrameT], /) -> NativeFrameT: ...
+    def _concat_vertical_relaxed(
+        self, dfs: Sequence[NativeFrameT], /
+    ) -> NativeFrameT: ...
     def concat(
         self, items: Iterable[EagerDataFrameT], *, how: ConcatMethod
     ) -> EagerDataFrameT:
+        items = tuple(items)
         dfs = [item.native for item in items]
         if how == "horizontal":
             native = self._concat_horizontal(dfs)
         elif how == "vertical":
             native = self._concat_vertical(dfs)
+        elif how == "vertical_relaxed":
+            native = self._concat_vertical_relaxed(dfs)
         elif how == "diagonal":
             native = self._concat_diagonal(dfs)
+        elif how == "diagonal_relaxed":
+            from narwhals.schema import Schema, combine_schemas, to_supertype
+
+            schemas = tuple(Schema(item.collect_schema()) for item in items)
+            out_schema = reduce(
+                lambda x, y: to_supertype(*combine_schemas(x, y)), schemas
+            )
+            aligned_items = tuple(
+                item.select(
+                    *(
+                        self.col(name).cast(dtype)
+                        if name in schema
+                        else self.lit(None, dtype=dtype)
+                        for name, dtype in out_schema.items()
+                    )
+                ).native
+                for item, schema in zip(items, schemas)
+            )
+            native = self._concat_vertical(aligned_items)
+
         else:  # pragma: no cover
             raise NotImplementedError
         return self._dataframe.from_native(native, context=self)

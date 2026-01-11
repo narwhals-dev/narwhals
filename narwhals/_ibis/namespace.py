@@ -18,6 +18,7 @@ from narwhals._ibis.selectors import IbisSelectorNamespace
 from narwhals._ibis.utils import function, lit, narwhals_to_native_dtype
 from narwhals._sql.namespace import SQLNamespace
 from narwhals._utils import Implementation
+from narwhals.schema import Schema, to_supertype
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -63,17 +64,34 @@ class IbisNamespace(SQLNamespace[IbisLazyFrame, IbisExpr, "ir.Table", "ir.Value"
     def concat(
         self, items: Iterable[IbisLazyFrame], *, how: ConcatMethod
     ) -> IbisLazyFrame:
-        if how == "diagonal":
-            msg = "diagonal concat not supported for Ibis. Please join instead."
+        if how in {"diagonal", "diagonal_relaxed"}:
+            msg = f"{how} concat not supported for Ibis. Please join instead."
             raise NotImplementedError(msg)
 
-        items = list(items)
-        native_items = [item.native for item in items]
-        schema = items[0].schema
-        if not all(x.schema == schema for x in items[1:]):
-            msg = "inputs should all have the same schema"
-            raise TypeError(msg)
-        return self._lazyframe.from_native(ibis.union(*native_items), context=self)
+        items = tuple(items)
+
+        if how == "vertical":
+            schema = items[0].schema
+            if not all(x.schema == schema for x in items[1:]):
+                msg = "inputs should all have the same schema"
+                raise TypeError(msg)
+
+            native_items = (item.native for item in items)
+            return self._lazyframe.from_native(ibis.union(*native_items), context=self)
+
+        if how == "vertical_relaxed":
+            schemas = (Schema(df.collect_schema()) for df in items)
+            out_schema = reduce(lambda x, y: to_supertype(x, y), schemas)
+
+            native_items = (
+                item.select(
+                    *(self.col(name).cast(dtype) for name, dtype in out_schema.items())
+                )._native_frame
+                for item in items
+            )
+            return self._lazyframe.from_native(ibis.union(*native_items), context=self)
+
+        raise NotImplementedError
 
     def concat_str(
         self, *exprs: IbisExpr, separator: str, ignore_nulls: bool

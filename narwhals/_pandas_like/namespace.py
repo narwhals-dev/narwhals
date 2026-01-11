@@ -289,6 +289,22 @@ class PandasLikeNamespace(
             return self._concat(dfs, axis=VERTICAL, copy=False)
         return self._concat(dfs, axis=VERTICAL)
 
+    def _concat_vertical_relaxed(
+        self, dfs: Sequence[NativeDataFrameT], /
+    ) -> NativeDataFrameT:
+        from narwhals.schema import Schema, to_supertype
+
+        out_schema = reduce(
+            lambda x, y: to_supertype(x, y),
+            (Schema.from_pandas_like(frame.dtypes.to_dict()) for frame in dfs),
+        ).to_pandas(
+            #  dtype_backend= # TODO(FBruzzesi): what should this be?
+        )
+        to_concat = [frame.astype(out_schema) for frame in dfs]
+        if self._implementation.is_pandas() and self._backend_version < (3,):
+            return self._concat(to_concat, axis=VERTICAL, copy=False)
+        return self._concat(to_concat, axis=VERTICAL)
+
     def concat_str(
         self, *exprs: PandasLikeExpr, separator: str, ignore_nulls: bool
     ) -> PandasLikeExpr:
