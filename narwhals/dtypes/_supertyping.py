@@ -137,6 +137,21 @@ def downcast_time_unit(left: HasTimeUnitT, right: HasTimeUnitT) -> HasTimeUnitT:
 
 @cache
 def _integer_supertyping() -> Mapping[FrozenDTypes, type[Int | Float64]]:
+    """Generate the supertype conversion table for all integer data type pairs.
+
+    The rules:
+
+        # pick the highest bit-width for matching signs
+        (Int*, Int*)               -> Int*
+        (UInt*, UInt*)             -> UInt*
+        # pick a *strictly higher* signed bit-width
+        (UInt<lower>, Int<higher>) -> Int<higher>
+        # promote unsigned to the next highest bit-width,
+        # but do not exceed `Int64`
+        (UInt{8,16,32}, Int*)      -> Int{16,32,64}
+        # all others
+        (UInt{64,128}, Int*)       -> Float64
+    """
     tps_int = SignedIntegerType.__subclasses__()
     tps_uint = UnsignedIntegerType.__subclasses__()
     get_bits: attrgetter[_Bits] = attrgetter("_bits")
@@ -163,6 +178,14 @@ def _integer_supertyping() -> Mapping[FrozenDTypes, type[Int | Float64]]:
 
 @cache
 def _primitive_numeric_supertyping() -> Mapping[FrozenDTypes, type[Float]]:
+    """Generate the supertype conversion table for all (integer, float) data type pairs.
+
+    The rules:
+
+        (Integer{8,16}, Float32)      -> Float32
+        (Integer{32,64,128}, Float32) -> Float64
+        (Integer, Float64)            -> Float64
+    """
     F32, F64 = Float32, Float64  # noqa: N806
     small_int = (Int8, Int16, UInt8, UInt16)
     small_int_f32 = ((frozen_dtypes(tp, F32), F32) for tp in small_int)
@@ -266,26 +289,30 @@ _PARAMETRIC_DISPATCH: Final[Mapping[type[DType], OpaqueDispatchFn]] = {
 
 @lru_cache(maxsize=_CACHE_SIZE_TP_MID)
 def _numeric_supertype(base_types: FrozenDTypes) -> DType | None:
-    # (Integer, Integer) -> Integer | Float64
-    # (Float, Float) -> Float
-    # (Integer, Float) -> Float
-    #  * Small integers (Int8, Int16, UInt8, UInt16) + Float32 -> Float32
-    #  * Larger integers (Int32+) + Float32 -> Float64
-    #  * Any integer + Float64 -> Float64
-    # (Decimal, {Integer, Decimal}) -> Decimal
-    # (Decimal, Float) -> Float64
-    # (Boolean, Numeric) -> Numeric
+    """Get the supertype of two numeric data types that do not share the same class.
+
+    `_{primitive_numeric,integer}_supertyping` define most valid numeric supertypes.
+
+    We generate these on first use, with all subsequent calls returning the same mapping.
+
+    The rules defined here are:
+
+        (Float32, Float64) -> Float64
+        (Decimal, Float*)  -> Float64
+        (Decimal, Integer) -> Decimal
+        (Boolean, Numeric) -> Numeric
+
+    Important:
+        `Decimal` behavior is expected to change following [#3377]
+
+    [#3377]: https://github.com/narwhals-dev/narwhals/pull/3377
+    """
     if NUMERIC.issuperset(base_types):
         if INTEGER.issuperset(base_types):
             return _integer_supertyping()[base_types]()
         if tp := _FLOAT_PROMOTE.get(base_types):
             return tp()
         if Decimal in base_types:
-            # TODO(FBruzzesi): Decimal will need to be addressed separately once
-            # https://github.com/narwhals-dev/narwhals/pull/3377 is merged as we need to:
-            #  * For (Decimal, Decimal) -> combine the scale and precision
-            #  * For (Decimal, Integer) -> check if integer type fits in decimal
-            #  * For (Decimal, Float) -> check if integer type fits in decimal
             return Decimal()
         return _primitive_numeric_supertyping()[base_types]()
     if Boolean in base_types:
@@ -294,14 +321,24 @@ def _numeric_supertype(base_types: FrozenDTypes) -> DType | None:
 
 
 def _mixed_supertype(left: DType, right: DType, base_types: FrozenDTypes) -> DType | None:
-    # !NOTE: The following rules are known, but not planned to be implemented here
-    # (Date, {UInt,Int,Float}{32,64}) -> {Int,Float}{32,64}
-    # (Time, {Int,Float}{32,64}) -> {Int,Float}64
-    # (Datetime, {UInt,Int,Float}{32,64}) -> {Int,Float}64
-    # (Duration, {UInt,Int,Float}{32,64}) -> {Int,Float}64
-    # See https://github.com/narwhals-dev/narwhals/issues/121
+    """Get the supertype of two data types that do not share the same class.
+
+    We support only one combination that requires preservation of instance attributes:
+
+        (Date, Datetime) -> Datetime
+
+    All others can match using *only* the class pairs themselves.
+
+    The following are supported in `polars`, but are not planned to be implemented here (see [#121]):
+
+        (Date, {UInt,Int,Float}{32,64})     -> {Int,Float}{32,64}
+        (Time, {Int,Float}{32,64})          -> {Int,Float}64
+        (Datetime, {UInt,Int,Float}{32,64}) -> {Int,Float}64
+        (Duration, {UInt,Int,Float}{32,64}) -> {Int,Float}64
+
+    [#121]: https://github.com/narwhals-dev/narwhals/issues/121
+    """
     if Date in base_types and _has_intersection(base_types, DATETIME):
-        # Every *other* valid mix doesn't need instance attributes, like `Datetime` does
         return left if isinstance(left, Datetime) else right
     if NUMERIC.isdisjoint(base_types):
         return tp() if (tp := _STRING_LIKE_CONVERT.get(base_types)) else None
