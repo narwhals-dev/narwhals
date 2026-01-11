@@ -32,6 +32,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping
     from types import ModuleType
 
+    from dask.dataframe import DataFrame as NativeDaskDataFrame
     from pandas._typing import Dtype as PandasDtype
     from pandas.core.dtypes.dtypes import BaseMaskedDtype
     from typing_extensions import TypeAlias, TypeIs
@@ -716,7 +717,8 @@ _DTYPE_BACKEND_PRIORITY: dict[DTypeBackend, Literal[0, 1, 2]] = {
 
 
 def promote_dtype_backend(
-    dataframes: Iterable[NativePandasLikeDataFrame], implementation: Implementation
+    dataframes: Iterable[NativePandasLikeDataFrame] | Iterable[NativeDaskDataFrame],
+    implementation: Implementation,
 ) -> dict[str, DTypeBackend]:
     """Promote dtype backends for each column based on priority rules.
 

@@ -22,7 +22,9 @@ from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
 )
+from narwhals._pandas_like.utils import promote_dtype_backend
 from narwhals._utils import Implementation, zip_strict
+from narwhals.schema import Schema, combine_schemas, to_supertype
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
@@ -139,7 +141,7 @@ class DaskNamespace(
     def concat(
         self, items: Iterable[DaskLazyFrame], *, how: ConcatMethod
     ) -> DaskLazyFrame:
-        dfs = tuple(item.native for item in items)
+        dfs = [item.native for item in items]
         cols_0 = dfs[0].columns
         if how == "vertical":
             for i, df in enumerate(dfs[1:], start=1):
@@ -161,17 +163,27 @@ class DaskNamespace(
                 dd.concat(dfs, axis=0, join="outer"), version=self._version
             )
         if how == "vertical_relaxed":
-            msg = "TODO"
-            raise NotImplementedError(msg)
+            dtypes = tuple(df.dtypes.to_dict() for df in dfs)
+            dtype_backend = promote_dtype_backend(dfs, self._implementation)
+            out_schema = reduce(
+                lambda x, y: to_supertype(x, y),
+                (Schema.from_pandas_like(dtype) for dtype in dtypes),
+            ).to_pandas(dtype_backend=dtype_backend.values())
+
+            to_concat = [df.astype(out_schema) for df in dfs]
             return DaskLazyFrame(
-                dd.concat(dfs, axis=0, join="inner"), version=self._version
+                dd.concat(to_concat, axis=0, join="inner"), version=self._version
             )
         if how == "diagonal_relaxed":
-            msg = "TODO"
-            raise NotImplementedError(msg)
-            return DaskLazyFrame(
-                dd.concat(dfs, axis=0, join="outer"), version=self._version
-            )
+            dtypes = tuple(df.dtypes.to_dict() for df in dfs)
+            dtype_backend = promote_dtype_backend(dfs, self._implementation)
+            out_schema = reduce(
+                lambda x, y: to_supertype(*combine_schemas(x, y)),
+                (Schema.from_pandas_like(dtype) for dtype in dtypes),
+            ).to_pandas(dtype_backend=dtype_backend.values())
+
+            native_res = dd.concat(dfs, axis=0, join="outer").astype(out_schema)
+            return DaskLazyFrame(native_res, version=self._version)
 
         raise NotImplementedError
 
