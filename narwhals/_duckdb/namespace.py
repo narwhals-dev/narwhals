@@ -6,7 +6,7 @@ from itertools import chain
 from typing import TYPE_CHECKING, Any
 
 import duckdb
-from duckdb import CoalesceOperator, Expression
+from duckdb import CoalesceOperator, DuckDBPyRelation, Expression
 
 from narwhals._duckdb.dataframe import DuckDBLazyFrame
 from narwhals._duckdb.expr import DuckDBExpr
@@ -31,8 +31,6 @@ from narwhals.schema import Schema, combine_schemas, to_supertype
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
-
-    from duckdb import DuckDBPyRelation  # noqa: F401
 
     from narwhals._compliant.window import WindowInputs
     from narwhals._utils import Version
@@ -92,19 +90,19 @@ class DuckDBNamespace(
                 msg = "inputs should all have the same schema"
                 raise TypeError(msg)
 
-            res = reduce(lambda x, y: x.union(y), (item.native for item in items))
+            res = reduce(DuckDBPyRelation.union, (item.native for item in items))
             return first._with_native(res)
 
         if how == "vertical_relaxed":
             schemas: Iterable[Schema] = (Schema(df.collect_schema()) for df in items)
-            out_schema = reduce(lambda x, y: to_supertype(x, y), schemas)
+            out_schema = reduce(to_supertype, schemas)
             native_items = (
                 item.select(
                     *(self.col(name).cast(dtype) for name, dtype in out_schema.items())
                 ).native
                 for item in items
             )
-            res = reduce(lambda x, y: x.union(y), native_items)
+            res = reduce(DuckDBPyRelation.union, native_items)
             return first._with_native(res)
 
         if how == "diagonal":

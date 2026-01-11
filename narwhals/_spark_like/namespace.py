@@ -179,15 +179,16 @@ class SparkLikeNamespace(
 
         if how == "vertical_relaxed":
             schemas: Iterable[Schema] = (Schema(df.collect_schema()) for df in items)
-            out_schema = reduce(lambda x, y: to_supertype(x, y), schemas)
+            out_schema = reduce(to_supertype, schemas)
             native_items = (
                 item.select(
                     *(self.col(name).cast(dtype) for name, dtype in out_schema.items())
                 ).native
                 for item in items
             )
+            union = items[0].native.__class__.union
             return SparkLikeLazyFrame(
-                native_dataframe=reduce(lambda x, y: x.union(y), native_items),
+                native_dataframe=reduce(union, native_items),
                 version=self._version,
                 implementation=self._implementation,
             )
@@ -208,8 +209,9 @@ class SparkLikeNamespace(
                 ).native
                 for item, schema in zip(items, schemas)
             )
+            union = items[0].native.__class__.union
             return SparkLikeLazyFrame(
-                native_dataframe=reduce(lambda x, y: x.union(y), native_items),
+                native_dataframe=reduce(union, native_items),
                 version=self._version,
                 implementation=self._implementation,
             )

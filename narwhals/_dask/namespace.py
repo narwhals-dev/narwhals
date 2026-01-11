@@ -166,8 +166,7 @@ class DaskNamespace(
             dtypes = tuple(df.dtypes.to_dict() for df in dfs)
             dtype_backend = promote_dtype_backend(dfs, self._implementation)
             out_schema = reduce(
-                lambda x, y: to_supertype(x, y),
-                (Schema.from_pandas_like(dtype) for dtype in dtypes),
+                to_supertype, (Schema.from_pandas_like(dtype) for dtype in dtypes)
             ).to_pandas(dtype_backend=dtype_backend.values())
 
             to_concat = [df.astype(out_schema) for df in dfs]

@@ -81,7 +81,7 @@ class IbisNamespace(SQLNamespace[IbisLazyFrame, IbisExpr, "ir.Table", "ir.Value"
 
         if how == "vertical_relaxed":
             schemas = (Schema(item.collect_schema()) for item in items)
-            out_schema = reduce(lambda x, y: to_supertype(x, y), schemas)
+            out_schema = reduce(to_supertype, schemas)
 
             native_items = (
                 item.select(

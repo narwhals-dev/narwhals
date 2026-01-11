@@ -212,8 +212,7 @@ class ArrowNamespace(
 
     def _concat_vertical_relaxed(self, dfs: Sequence[pa.Table], /) -> pa.Table:
         out_schema = reduce(
-            lambda x, y: to_supertype(x, y),
-            (Schema.from_arrow(table.schema) for table in dfs),
+            to_supertype, (Schema.from_arrow(table.schema) for table in dfs)
         ).to_arrow()
 
         return pa.concat_tables([table.cast(out_schema) for table in dfs])

@@ -319,8 +319,7 @@ class PandasLikeNamespace(
         dtypes = tuple(native_schema(df) for df in dfs)
         dtype_backend = promote_dtype_backend(dfs, self._implementation)
         out_schema = reduce(
-            lambda x, y: to_supertype(x, y),
-            (Schema.from_pandas_like(dtype) for dtype in dtypes),
+            to_supertype, (Schema.from_pandas_like(dtype) for dtype in dtypes)
         ).to_pandas(dtype_backend=dtype_backend.values())
 
         if self._implementation.is_pandas() and self._backend_version < (3,):
