@@ -294,14 +294,24 @@ def _numeric_supertype(base_types: FrozenDTypes) -> DType | None:
 
 
 def _mixed_supertype(left: DType, right: DType, base_types: FrozenDTypes) -> DType | None:
-    # !NOTE: The following rules are known, but not planned to be implemented here
-    # (Date, {UInt,Int,Float}{32,64}) -> {Int,Float}{32,64}
-    # (Time, {Int,Float}{32,64}) -> {Int,Float}64
-    # (Datetime, {UInt,Int,Float}{32,64}) -> {Int,Float}64
-    # (Duration, {UInt,Int,Float}{32,64}) -> {Int,Float}64
-    # See https://github.com/narwhals-dev/narwhals/issues/121
+    """Get the supertype of two data types that do not share the same class.
+
+    We support only one combination that requires preservation of instance attributes:
+
+        (Date, Datetime) -> Datetime
+
+    All others can match using *only* the class pairs themselves.
+
+    The following are supported in `polars`, but are not planned to be implemented here (see [#121]):
+
+        (Date, {UInt,Int,Float}{32,64})     -> {Int,Float}{32,64}
+        (Time, {Int,Float}{32,64})          -> {Int,Float}64
+        (Datetime, {UInt,Int,Float}{32,64}) -> {Int,Float}64
+        (Duration, {UInt,Int,Float}{32,64}) -> {Int,Float}64
+
+    [#121]: https://github.com/narwhals-dev/narwhals/issues/121
+    """
     if Date in base_types and _has_intersection(base_types, DATETIME):
-        # Every *other* valid mix doesn't need instance attributes, like `Datetime` does
         return left if isinstance(left, Datetime) else right
     if NUMERIC.isdisjoint(base_types):
         return tp() if (tp := _STRING_LIKE_CONVERT.get(base_types)) else None
