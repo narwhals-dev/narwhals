@@ -373,7 +373,7 @@ def to_supertype(left: Schema, right: Schema) -> Schema:
         msg = "schema lengths differ"
         raise ComputeError(msg)
 
-    into_out_schema: Mapping[str, DType] = {}
+    into_out_schema: dict[str, DType] = {}
     for (lname, ltype), (rname, rtype) in zip(left.items(), right.items()):
         if lname != rname:
             msg = f"schema names differ: got {rname}, expected {lname}"
