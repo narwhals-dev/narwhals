@@ -97,7 +97,7 @@ class DuckDBNamespace(
             temp_table_names = tuple(
                 f"nw_concat_tmp_table_{i}" for i in range(len(native_items))
             )
-            for name, item in zip(temp_table_names, native_items, strict=False):
+            for name, item in zip(temp_table_names, native_items):
                 duckdb.register(name, item)
 
             query = " union all by name ".join(
