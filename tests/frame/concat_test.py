@@ -180,6 +180,9 @@ def test_concat_diagonal_relaxed(
         reason = "Cannot convert non-finite values (NA or inf)"
         request.applymarker(pytest.mark.xfail(reason=reason))
 
+    if "ibis" in str(constructor):
+        pytest.skip(reason="NotImplementedError")
+
     data1 = {"a": [1, 2], "c": [10, 20]}
     df1 = nw.from_native(constructor(data1)).lazy().pipe(_cast, schema1)
 
