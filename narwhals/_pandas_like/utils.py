@@ -751,3 +751,18 @@ def promote_dtype_backend(
 
 def native_schema(df: Incomplete) -> IntoPandasSchema:
     return df.dtypes.to_dict()
+
+
+def cast_native(df: NativeDataFrameT, schema: IntoPandasSchema) -> NativeDataFrameT:
+    df_: Incomplete = df
+    return cast("NativeDataFrameT", df_.astype(schema))
+
+
+def iter_cast_native(
+    dfs: Iterable[NativeDataFrameT], schema: IntoPandasSchema
+) -> Iterator[NativeDataFrameT]:
+    if TYPE_CHECKING:
+        for df in dfs:
+            yield cast_native(df, schema)
+    else:
+        yield from (df.astype(schema) for df in dfs)

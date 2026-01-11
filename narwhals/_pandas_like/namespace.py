@@ -17,7 +17,9 @@ from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.typing import NativeDataFrameT, NativeSeriesT
 from narwhals._pandas_like.utils import (
+    cast_native,
     is_non_nullable_boolean,
+    iter_cast_native,
     native_schema,
     promote_dtype_backend,
 )
@@ -277,7 +279,7 @@ class PandasLikeNamespace(
             if self._implementation.is_pandas() and self._backend_version < (3,)
             else self._concat(dfs, axis=VERTICAL)
         )
-        return native_res.astype(out_schema)
+        return cast_native(native_res, out_schema)
 
     def _concat_horizontal(
         self, dfs: Sequence[NativeDataFrameT | NativeSeriesT], /
@@ -321,10 +323,11 @@ class PandasLikeNamespace(
             (Schema.from_pandas_like(dtype) for dtype in dtypes),
         ).to_pandas(dtype_backend=dtype_backend.values())
 
-        to_concat = (df.astype(out_schema) for df in dfs)
         if self._implementation.is_pandas() and self._backend_version < (3,):
-            return self._concat(to_concat, axis=VERTICAL, copy=False)
-        return self._concat(to_concat, axis=VERTICAL)
+            return self._concat(
+                iter_cast_native(dfs, out_schema), axis=VERTICAL, copy=False
+            )
+        return self._concat(iter_cast_native(dfs, out_schema), axis=VERTICAL)
 
     def concat_str(
         self, *exprs: PandasLikeExpr, separator: str, ignore_nulls: bool

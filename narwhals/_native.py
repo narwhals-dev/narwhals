@@ -224,8 +224,7 @@ class _BasePandasLike(Sized, Protocol):
         """
 
 
-class _BasePandasLikeFrame(NativeDataFrame, _BasePandasLike, Protocol):
-    def astype(self, dtype: Any, *args: Any, **kwargs: Any) -> Self: ...
+class _BasePandasLikeFrame(NativeDataFrame, _BasePandasLike, Protocol): ...
 
 
 class _BasePandasLikeSeries(NativeSeries, _BasePandasLike, Protocol):
