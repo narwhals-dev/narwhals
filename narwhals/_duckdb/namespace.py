@@ -82,23 +82,30 @@ class DuckDBNamespace(
     def concat(
         self, items: Iterable[DuckDBLazyFrame], *, how: ConcatMethod
     ) -> DuckDBLazyFrame:
-        native_items = [item._native_frame for item in items]
-        items = list(items)
-        first = items[0]
-        schema = first.schema
-        if how == "vertical" and not all(x.schema == schema for x in items[1:]):
-            msg = "inputs should all have the same schema"
-            raise TypeError(msg)
+        items = tuple(items)
+        native_items = tuple(item._native_frame for item in items)
+
+        if how == "vertical":
+            schema = items[0].schema
+            if not all(x.schema == schema for x in items[1:]):
+                msg = "inputs should all have the same schema"
+                raise TypeError(msg)
+            res = reduce(lambda x, y: x.union(y), native_items)
+
         if how == "diagonal":
-            res = first.native
-            for _item in native_items[1:]:
-                # TODO(unassigned): use relational API when available https://github.com/duckdb/duckdb/discussions/16996
-                res = duckdb.sql("""
-                    from res select * union all by name from _item select *
-                """)
-            return first._with_native(res)
-        res = reduce(lambda x, y: x.union(y), native_items)
-        return first._with_native(res)
+            # TODO(unassigned): use relational API when available https://github.com/duckdb/duckdb/discussions/16996
+            temp_table_names = tuple(
+                f"nw_concat_tmp_table_{i}" for i in range(len(native_items))
+            )
+            for name, item in zip(temp_table_names, native_items, strict=False):
+                duckdb.register(name, item)
+
+            query = " union all by name ".join(
+                f"(select * from {name})"  # noqa: S608
+                for name in temp_table_names
+            )
+            res = duckdb.sql(query, alias="result")
+        return self._lazyframe.from_native(res, context=self)
 
     def concat_str(
         self, *exprs: DuckDBExpr, separator: str, ignore_nulls: bool
