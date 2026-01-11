@@ -47,7 +47,13 @@ if TYPE_CHECKING:
         NativeSeriesT,
     )
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypeBackend, IntoDType, TimeUnit, _1DArray
+    from narwhals.typing import (
+        DTypeBackend,
+        IntoDType,
+        IntoPandasSchema,
+        TimeUnit,
+        _1DArray,
+    )
 
     ExprT = TypeVar("ExprT", bound=PandasLikeExpr)
     UnitCurrent: TypeAlias = TimeUnit
@@ -55,6 +61,7 @@ if TYPE_CHECKING:
     BinOpBroadcast: TypeAlias = Callable[[Any, int], Any]
     IntoRhs: TypeAlias = int
 
+Incomplete: TypeAlias = Any
 
 PANDAS_LIKE_IMPLEMENTATION = {
     Implementation.PANDAS,
@@ -740,3 +747,7 @@ def promote_dtype_backend(
                 column_backends[col] = backend
 
     return column_backends
+
+
+def native_schema(df: Incomplete) -> IntoPandasSchema:
+    return df.dtypes.to_dict()
