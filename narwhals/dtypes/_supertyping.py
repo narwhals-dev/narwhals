@@ -210,11 +210,13 @@ def has_nested(base_types: FrozenDTypes, /) -> bool:
     return _has_intersection(base_types, NESTED)
 
 
-def _struct_union_fields(
+def _struct_fields_union(
     left: Collection[Field], right: Collection[Field]
 ) -> Struct | None:
-    # if equal length we also take the lhs
-    # so that the lhs determines the order of the fields
+    """Adapted from [`union_struct_fields`].
+
+    [`union_struct_fields`]: https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-core/src/utils/supertype.rs#L559-L586
+    """
     longest, shortest = (left, right) if len(left) >= len(right) else (right, left)
     longest_map = {f.name: f.dtype() for f in longest}
     for f in shortest:
@@ -229,16 +231,28 @@ def _struct_union_fields(
 
 
 def _struct_supertype(left: Struct, right: Struct) -> Struct | None:
-    # https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-core/src/utils/supertype.rs#L588-L603
+    """Get the supertype of two struct data types.
+
+    Adapted from [`super_type_structs`]
+
+    Unlike all other rules, the order of *operands* is meaningful.
+    `left` defines the field order of the output `Struct` *unless* `right` has more fields.
+
+    We can derive a supertype with each `Struct`'s fields in arbitrary order,
+    and even with disjoint field names.
+    *But*, **all fields that intersect** (*by name*) must satisfy all other supertyping rules (*by dtype*).
+
+    [`super_type_structs`]: https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-core/src/utils/supertype.rs#L588-L603
+    """
     left_fields, right_fields = left.fields, right.fields
     if len(left_fields) != len(right_fields):
-        return _struct_union_fields(left_fields, right_fields)
+        return _struct_fields_union(left_fields, right_fields)
     new_fields = deque["Field"]()
-    for a, b in zip(left_fields, right_fields):
-        if a.name != b.name:
-            return _struct_union_fields(left_fields, right_fields)
-        if supertype := get_supertype(a.dtype(), b.dtype()):
-            new_fields.append(Field(a.name, supertype))
+    for left_f, right_f in zip(left_fields, right_fields):
+        if left_f.name != right_f.name:
+            return _struct_fields_union(left_fields, right_fields)
+        if supertype := get_supertype(left_f.dtype(), right_f.dtype()):
+            new_fields.append(Field(left_f.name, supertype))
         else:
             return None
     return Struct(new_fields)
