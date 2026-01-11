@@ -397,11 +397,9 @@ def combine_schemas(left: Schema, right: Schema) -> tuple[Schema, Schema]:
     followed by keys missing from left (in the order they appear in right).
     """
     left_names = set(left.keys())
-    missing_in_left = [(name, right[name]) for name in right if name not in left_names]
+    missing_in_left = (kv for kv in right.items() if kv[0] not in left_names)
 
-    extended_left = Schema([*left.items(), *missing_in_left])
+    extended_left = Schema((*left.items(), *missing_in_left))
     # Reorder right to match: left keys first, then right-only keys
-    extended_right = Schema(
-        [(name, right.get(name, left[name])) for name in extended_left]
-    )
+    extended_right = Schema((kv[0], right.get(*kv)) for kv in extended_left.items())
     return extended_left, extended_right

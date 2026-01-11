@@ -19,6 +19,7 @@ from narwhals._expression_parsing import (
     combine_evaluate_output_names,
 )
 from narwhals._utils import Implementation
+from narwhals.schema import Schema, combine_schemas, to_supertype
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
@@ -176,6 +177,21 @@ class ArrowNamespace(
             return pa.concat_tables(dfs, promote_options="default")
         return pa.concat_tables(dfs, promote=True)  # pragma: no cover
 
+    def _concat_diagonal_relaxed(self, dfs: Sequence[pa.Table], /) -> pa.Table:
+        native_schemas = tuple(table.schema for table in dfs)
+        out_schema = reduce(
+            lambda x, y: to_supertype(*combine_schemas(x, y)),
+            (Schema.from_arrow(pa_schema) for pa_schema in native_schemas),
+        ).to_arrow()
+        to_schemas = (
+            pa.schema([out_schema.field(name) for name in native_schema.names])
+            for native_schema in native_schemas
+        )
+        to_concat = tuple(
+            table.cast(to_schema) for table, to_schema in zip(dfs, to_schemas)
+        )
+        return self._concat_diagonal(to_concat)
+
     def _concat_horizontal(self, dfs: Sequence[pa.Table], /) -> pa.Table:
         names = list(chain.from_iterable(df.column_names for df in dfs))
         arrays = tuple(chain.from_iterable(df.itercolumns() for df in dfs))
@@ -195,8 +211,6 @@ class ArrowNamespace(
         return pa.concat_tables(dfs)
 
     def _concat_vertical_relaxed(self, dfs: Sequence[pa.Table], /) -> pa.Table:
-        from narwhals.schema import Schema, to_supertype
-
         out_schema = reduce(
             lambda x, y: to_supertype(x, y),
             (Schema.from_arrow(table.schema) for table in dfs),

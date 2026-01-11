@@ -126,10 +126,10 @@ class DuckDBNamespace(
                     *(
                         self.col(name).cast(dtype)
                         if name in schema
-                        else self.lit(None, dtype=dtype)
+                        else self.lit(None, dtype=dtype).alias(name)
                         for name, dtype in out_schema.items()
                     )
-                )._native_frame
+                ).native
                 for item, schema in zip(items, schemas)
             )
             for _item in others:

@@ -146,13 +146,13 @@ def test_concat_diagonal_relaxed(constructor: Constructor) -> None:
     data2 = {"a": [3.5, 4.5], "b": [30.1, 40.2]}
     df2 = nw.from_native(constructor(data2)).lazy().pipe(_cast, schema2)
 
-    schema3 = Schema({"a": nw.Int32(), "c": nw.Int32()})
+    schema3 = Schema({"b": nw.Int32(), "c": nw.Int32()})
     data3 = {"b": [5, 6], "c": [50, 60]}
     df3 = nw.from_native(constructor(data3)).lazy().pipe(_cast, schema3)
 
     result = nw.concat([df1, df2, df3], how="diagonal_relaxed")
     out_schema = result.collect_schema()
-    expected_schema = Schema({"a": nw.Float64(), "b": nw.Float64(), "c": nw.Int64()})
+    expected_schema = Schema({"a": nw.Float64(), "c": nw.Int64(), "b": nw.Float64()})
     assert out_schema == expected_schema
 
     expected_data = {

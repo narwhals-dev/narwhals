@@ -18,6 +18,7 @@ from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.typing import NativeDataFrameT, NativeSeriesT
 from narwhals._pandas_like.utils import is_non_nullable_boolean
 from narwhals._utils import zip_strict
+from narwhals.schema import Schema, combine_schemas, to_supertype
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -257,6 +258,22 @@ class PandasLikeNamespace(
             return self._concat(dfs, axis=VERTICAL, copy=False)
         return self._concat(dfs, axis=VERTICAL)
 
+    def _concat_diagonal_relaxed(
+        self, dfs: Sequence[NativeDataFrameT], /
+    ) -> NativeDataFrameT:
+        out_schema = reduce(
+            lambda x, y: to_supertype(*combine_schemas(x, y)),
+            (Schema.from_pandas_like(frame.dtypes.to_dict()) for frame in dfs),
+        ).to_pandas(
+            #  dtype_backend= # TODO(FBruzzesi): what should this be?
+        )
+        if self._implementation.is_pandas() and self._backend_version < (3,):
+            native_res = self._concat(dfs, axis=VERTICAL, copy=False)
+        else:
+            native_res = self._concat(dfs, axis=VERTICAL)
+
+        return native_res.astype(out_schema)
+
     def _concat_horizontal(
         self, dfs: Sequence[NativeDataFrameT | NativeSeriesT], /
     ) -> NativeDataFrameT:
@@ -292,8 +309,6 @@ class PandasLikeNamespace(
     def _concat_vertical_relaxed(
         self, dfs: Sequence[NativeDataFrameT], /
     ) -> NativeDataFrameT:
-        from narwhals.schema import Schema, to_supertype
-
         out_schema = reduce(
             lambda x, y: to_supertype(x, y),
             (Schema.from_pandas_like(frame.dtypes.to_dict()) for frame in dfs),
