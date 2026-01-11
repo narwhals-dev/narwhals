@@ -142,8 +142,14 @@ def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> FrameT
         raise ValueError(msg)
     items = tuple(items)
     validate_laziness(items)
-    if how not in {"horizontal", "vertical", "diagonal"}:  # pragma: no cover
-        msg = "Only vertical, horizontal and diagonal concatenations are supported."
+    if how not in {
+        "horizontal",
+        "vertical",
+        "diagonal",
+        "vertical_relaxed",
+        "diagonal_relaxed",
+    }:  # pragma: no cover
+        msg = "Only vertical, vertical_relaxed, horizontal, diagonal and diagonal_relaxed concatenations are supported."
         raise NotImplementedError(msg)
     first_item = items[0]
     if is_narwhals_lazyframe(first_item) and how == "horizontal":
