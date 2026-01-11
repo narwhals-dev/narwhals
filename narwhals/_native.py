@@ -224,7 +224,10 @@ class _BasePandasLike(Sized, Protocol):
         """
 
 
-class _BasePandasLikeFrame(NativeDataFrame, _BasePandasLike, Protocol): ...
+class _BasePandasLikeFrame(NativeDataFrame, _BasePandasLike, Protocol):
+    @property
+    def dtypes(self) -> _BasePandasLikeSeries: ...
+    def astype(self, dtype: Any, *args: Any, **kwargs: Any) -> Self: ...
 
 
 class _BasePandasLikeSeries(NativeSeries, _BasePandasLike, Protocol):
@@ -240,6 +243,7 @@ class _BasePandasLikeSeries(NativeSeries, _BasePandasLike, Protocol):
         **kwargs: Any,
     ) -> None: ...
     def where(self, cond: Any, other: Any = ..., /) -> Self | Incomplete: ...
+    def to_dict(self) -> dict[str, Any]: ...
 
 
 class NativeDask(NativeLazyFrame, Protocol):

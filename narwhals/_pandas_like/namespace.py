@@ -16,7 +16,7 @@ from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.typing import NativeDataFrameT, NativeSeriesT
-from narwhals._pandas_like.utils import is_non_nullable_boolean
+from narwhals._pandas_like.utils import is_non_nullable_boolean, promote_dtype_backend
 from narwhals._utils import zip_strict
 from narwhals.schema import Schema, combine_schemas, to_supertype
 
@@ -261,17 +261,18 @@ class PandasLikeNamespace(
     def _concat_diagonal_relaxed(
         self, dfs: Sequence[NativeDataFrameT], /
     ) -> NativeDataFrameT:
+        dtypes = tuple(df.dtypes.to_dict() for df in dfs)
+        dtype_backend = promote_dtype_backend(dfs, self._implementation)
         out_schema = reduce(
             lambda x, y: to_supertype(*combine_schemas(x, y)),
-            (Schema.from_pandas_like(frame.dtypes.to_dict()) for frame in dfs),
-        ).to_pandas(
-            #  dtype_backend= # TODO(FBruzzesi): what should this be?
-        )
-        if self._implementation.is_pandas() and self._backend_version < (3,):
-            native_res = self._concat(dfs, axis=VERTICAL, copy=False)
-        else:
-            native_res = self._concat(dfs, axis=VERTICAL)
+            (Schema.from_pandas_like(dtype) for dtype in dtypes),
+        ).to_pandas(dtype_backend=dtype_backend.values())
 
+        native_res = (
+            self._concat(dfs, axis=VERTICAL, copy=False)
+            if self._implementation.is_pandas() and self._backend_version < (3,)
+            else self._concat(dfs, axis=VERTICAL)
+        )
         return native_res.astype(out_schema)
 
     def _concat_horizontal(
@@ -309,13 +310,14 @@ class PandasLikeNamespace(
     def _concat_vertical_relaxed(
         self, dfs: Sequence[NativeDataFrameT], /
     ) -> NativeDataFrameT:
+        dtypes = tuple(df.dtypes.to_dict() for df in dfs)
+        dtype_backend = promote_dtype_backend(dfs, self._implementation)
         out_schema = reduce(
             lambda x, y: to_supertype(x, y),
-            (Schema.from_pandas_like(df.dtypes.to_dict()) for df in dfs),
-        ).to_pandas(
-            #  dtype_backend= # TODO(FBruzzesi): what should this be?
-        )
-        to_concat = [df.astype(out_schema) for df in dfs]
+            (Schema.from_pandas_like(dtype) for dtype in dtypes),
+        ).to_pandas(dtype_backend=dtype_backend.values())
+
+        to_concat = (df.astype(out_schema) for df in dfs)
         if self._implementation.is_pandas() and self._backend_version < (3,):
             return self._concat(to_concat, axis=VERTICAL, copy=False)
         return self._concat(to_concat, axis=VERTICAL)

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import functools
 import operator
 import re
+from functools import lru_cache, partial
 from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, cast
 
 import pandas as pd
@@ -26,6 +26,7 @@ from narwhals._utils import (
     requires,
 )
 from narwhals.exceptions import ShapeError
+from narwhals.typing import DTypeBackend
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping
@@ -36,6 +37,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias, TypeIs
 
     from narwhals._duration import IntervalUnit
+    from narwhals._native import NativePandasLikeDataFrame
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals._pandas_like.typing import (
@@ -211,7 +213,7 @@ def rename(
     return cast("NativeNDFrameT", result)  # type: ignore[redundant-cast]
 
 
-@functools.lru_cache(maxsize=16)
+@lru_cache(maxsize=16)
 def non_object_native_to_narwhals_dtype(native_dtype: Any, version: Version) -> DType:  # noqa: C901, PLR0912
     dtype = str(native_dtype)
 
@@ -426,7 +428,7 @@ def iter_dtype_backends(
     return (get_dtype_backend(dtype, implementation) for dtype in dtypes)
 
 
-@functools.lru_cache(maxsize=16)
+@lru_cache(maxsize=16)
 def is_dtype_pyarrow(dtype: Any) -> TypeIs[pd.ArrowDtype]:
     return hasattr(pd, "ArrowDtype") and isinstance(dtype, pd.ArrowDtype)
 
@@ -704,3 +706,35 @@ class PandasLikeSeriesNamespace(EagerSeriesNamespace["PandasLikeSeries", Any]): 
 
 def make_group_by_kwargs(*, drop_null_keys: bool) -> dict[str, bool]:
     return {"sort": False, "as_index": True, "dropna": drop_null_keys, "observed": True}
+
+
+_DTYPE_BACKEND_PRIORITY: dict[DTypeBackend, Literal[0, 1, 2]] = {
+    "pyarrow": 2,
+    "numpy_nullable": 1,
+    None: 0,
+}
+
+
+def promote_dtype_backend(
+    dataframes: Iterable[NativePandasLikeDataFrame], implementation: Implementation
+) -> dict[str, DTypeBackend]:
+    """Promote dtype backends for each column based on priority rules.
+
+    Priority: pyarrow > numpy_nullable > None
+
+    Returns:
+        Dictionary mapping column names to the promoted dtype backend
+    """
+    column_backends: dict[str, DTypeBackend] = {}
+    _get_dtype_backend_impl = partial(get_dtype_backend, implementation=implementation)
+    for df in dataframes:
+        for col in df.columns:
+            backend = _get_dtype_backend_impl(df[col].dtype)
+            current = column_backends.get(col)
+            if (
+                current is None
+                or _DTYPE_BACKEND_PRIORITY[backend] > _DTYPE_BACKEND_PRIORITY[current]
+            ):
+                column_backends[col] = backend
+
+    return column_backends
