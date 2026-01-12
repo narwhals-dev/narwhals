@@ -72,12 +72,11 @@ class SparkLikeExprListNamespace(
             sorted_expr = F.array_compact(F.sort_array(expr))
             size = F.array_size(sorted_expr)
             mid_index = (size / 2).cast("int")
-            if self.compliant._implementation.is_sqlframe():
+            impl = self.compliant._implementation
+            if impl.is_sqlframe() and impl._backend_version() < (3, 44, 1):
                 # indexing is different in sqlframe
                 # https://github.com/eakmanrq/sqlframe/issues/568
-                mid_index = mid_index + 1
-            else:
-                pass  # pragma: no cover
+                mid_index = mid_index + 1  # pragma: no cover
             odd_case = sorted_expr[mid_index]
             even_case = (sorted_expr[mid_index - 1] + sorted_expr[mid_index]) / 2
             return (
