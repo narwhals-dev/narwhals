@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any, Protocol, overload
 
 from narwhals._compliant.typing import (
     CompliantExprT,
+    CompliantExprT_co,
     CompliantFrameT,
     CompliantLazyFrameT,
     DepthTrackingExprT,
@@ -98,7 +99,13 @@ class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
         """Return `True` if `obj` can be passed to `from_native`."""
         ...
 
-    # TODO @dangotbanned: Make new minimal protocol and move this to fix typing
+
+class AlignDiagonal(Protocol[CompliantFrameT, CompliantExprT_co]):
+    """Mixin to help support `"diagonal*"` concatenation."""
+
+    def lit(
+        self, value: NonNestedLiteral, dtype: IntoDType | None
+    ) -> CompliantExprT_co: ...
     def _align_diagonal(
         self, frames: Sequence[CompliantFrameT], /
     ) -> Sequence[CompliantFrameT]:
@@ -122,10 +129,10 @@ class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
             return frames
         total_schema.update(to_add_fields)
         total_names = tuple(total_schema)
-        added_exprs: dict[str, CompliantExprT] = {}
+        added_exprs: dict[str, CompliantExprT_co] = {}
         results: list[CompliantFrameT] = []
         for frame, schema in zip(frames, schemas):
-            to_add_exprs: list[CompliantExprT] = []
+            to_add_exprs: list[CompliantExprT_co] = []
             for name, dtype in total_schema.items():
                 if name not in schema:
                     maybe_seen = added_exprs.get(name)
