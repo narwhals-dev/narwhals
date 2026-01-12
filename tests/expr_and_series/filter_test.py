@@ -35,3 +35,14 @@ def test_filter_constraints(constructor: Constructor) -> None:
     assert_equal_data(result_added, expected)
     result_only = df.filter(i=2, b=3)
     assert_equal_data(result_only, expected)
+
+
+def test_filter_windows(constructor: Constructor) -> None:
+    df = nw.from_native(constructor(data))
+    result = df.filter(nw.col("i") == nw.col("i").min())
+    expected = {"i": [0], "a": [0], "b": [1], "c": [5]}
+    assert_equal_data(result, expected)
+    df = df.with_columns(i=nw.when(nw.col("i") < 1).then(nw.col("i")), a=nw.lit(None))
+    result_with_nones = df.filter(nw.col("i") == nw.col("i").min())
+    expected_with_nones = {"i": [0], "a": [None], "b": [1], "c": [5]}
+    assert_equal_data(result_with_nones, expected_with_nones)

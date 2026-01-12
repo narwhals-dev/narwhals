@@ -52,18 +52,13 @@ class SQLLazyFrame(
     def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
         return check_columns_exist(subset, available=self.columns)
 
-    def filter(self, predicate: DuckDBExpr) -> Self:
-        breakpoint()
+    def _filter(self, predicate: CompliantExprT_contra) -> Self: ...
+
+    def filter(self, predicate: CompliantExprT_contra) -> Self:
         if not predicate._metadata.is_elementwise:
-            # make temporary column, filter on that, then drop temporary column
-            # create a (very) unlikely temporary column name
+            # add the temporary column, filter on it, then drop it
             tmp_col = generate_temporary_column_name(8, self.columns, prefix="filter")
             ns = self.__narwhals_namespace__()
-
-            breakpoint()
-            # evaluate the window expression into a native expression
-
-            # add the temporary column, filter on it, then drop it
             lf_with_tmp = self.with_columns(predicate.alias(tmp_col))
             filtered = lf_with_tmp._filter(ns.col(tmp_col))
             return filtered.drop([tmp_col], strict=False)
