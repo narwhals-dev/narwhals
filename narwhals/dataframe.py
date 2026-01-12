@@ -261,7 +261,6 @@ class BaseFrame(Generic[_FrameT]):
             *chain(flat_predicates, (col(name) == v for name, v in constraints.items())),
             ignore_nulls=False,
         )
-        plx = self.__narwhals_namespace__()
         (compliant_predicate,) = self._flatten_and_extract(predicate)
         check_expressions_preserve_length(compliant_predicate, function_name="filter")
         return self._with_compliant(self._compliant_frame.filter(compliant_predicate))
