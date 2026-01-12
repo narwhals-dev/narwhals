@@ -52,7 +52,10 @@ class SparkLikeExprListNamespace(
     def sum(self) -> SparkLikeExpr:
         def func(expr: Column) -> Column:
             F = self.compliant._F
-            return F.aggregate(F.array_compact(expr), F.lit(0.0), operator.add)
+            size = F.array_size(F.array_compact(expr))
+            return F.when((size.isNotNull()) & (size == 0), F.lit(0)).otherwise(
+                F.aggregate(F.array_compact(expr), F.lit(0.0), operator.add)
+            )
 
         return self.compliant._with_elementwise(func)
 
@@ -93,7 +96,9 @@ class SparkLikeExprListNamespace(
             if not descending and nulls_last:
                 return F.array_sort(expr)
             if descending and not nulls_last:  # pragma: no cover
-                # https://github.com/eakmanrq/sqlframe/issues/559
+                impl = self.compliant._implementation
+                if impl.is_sqlframe():
+                    return F.array_reverse(F.array_sort(expr))
                 return F.reverse(F.array_sort(expr))
             return F.sort_array(expr, asc=not descending)
 
