@@ -70,3 +70,39 @@ def test_str_pad_end_expr(constructor: Constructor) -> None:
     }
 
     assert_equal_data(result, expected)
+
+
+def test_pad_start_unicode_expr(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": ["Café", "345", "東京", None]}))
+
+    result = df.select(nw.col("a").str.pad_start(6, "日"))
+    expected = {"a": ["日日Café", "日日日345", "日日日日東京", None]}
+
+    assert_equal_data(result, expected)
+
+
+def test_pad_start_unicode_series(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager({"a": ["Café", "345", "東京", None]}))
+
+    result = {"a": df["a"].str.pad_start(6, "日")}
+    expected = {"a": ["日日Café", "日日日345", "日日日日東京", None]}
+
+    assert_equal_data(result, expected)
+
+
+def test_pad_end_unicode_expr(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": ["Café", "345", "東京", None]}))
+
+    result = df.select(nw.col("a").str.pad_end(6, "日"))
+    expected = {"a": ["Café日日", "345日日日", "東京日日日日", None]}
+
+    assert_equal_data(result, expected)
+
+
+def test_pad_end_unicode_series(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager({"a": ["Café", "345", "東京", None]}))
+
+    result = {"a": df["a"].str.pad_end(6, "日")}
+    expected = {"a": ["Café日日", "345日日日", "東京日日日日", None]}
+
+    assert_equal_data(result, expected)
