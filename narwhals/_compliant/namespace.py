@@ -29,6 +29,7 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.selectors import CompliantSelectorNamespace
     from narwhals._utils import Implementation, Version
+    from narwhals.dtypes import DType
     from narwhals.typing import (
         ConcatMethod,
         Into1DArray,
@@ -96,6 +97,49 @@ class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
     def is_native(self, obj: Any, /) -> TypeIs[Any]:
         """Return `True` if `obj` can be passed to `from_native`."""
         ...
+
+    # TODO @dangotbanned: Make new minimal protocol and move this to fix typing
+    def _align_diagonal(
+        self, frames: Sequence[CompliantFrameT], /
+    ) -> Sequence[CompliantFrameT]:
+        """Convert the inputs to `concat(..., how="diagonal")` into `concat(..., how="vertical")`.
+
+        Adapted from [`convert_diagonal_concat`].
+
+        [`convert_diagonal_concat`]: https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-plan/src/plans/conversion/dsl_to_ir/concat.rs#L10-L68
+        """
+        schemas = [frame.collect_schema() for frame in frames]
+        it_schemas = iter(schemas)
+        total_schema = dict(next(it_schemas))
+        seen_names = set(total_schema)
+        to_add_fields: dict[str, DType] = {}
+        for sch in it_schemas:
+            to_add_fields.update(
+                {name: dtype for name, dtype in sch.items() if name not in seen_names}
+            )
+            seen_names.update(to_add_fields)
+        if not seen_names:
+            return frames
+        total_schema.update(to_add_fields)
+        total_names = tuple(total_schema)
+        added_exprs: dict[str, CompliantExprT] = {}
+        results: list[CompliantFrameT] = []
+        for frame, schema in zip(frames, schemas):
+            to_add_exprs: list[CompliantExprT] = []
+            for name, dtype in total_schema.items():
+                if name not in schema:
+                    maybe_seen = added_exprs.get(name)
+                    if maybe_seen is None:
+                        to_add_expr = self.lit(None, dtype).alias(name)
+                        to_add_exprs.append(to_add_expr)
+                        added_exprs[name] = to_add_expr
+                    else:
+                        to_add_exprs.append(maybe_seen)
+            result = frame
+            if to_add_exprs:
+                result = result.with_columns(*to_add_exprs)
+            results.append(result.simple_select(*total_names))
+        return results
 
 
 class DepthTrackingNamespace(

@@ -63,14 +63,12 @@ class IbisNamespace(SQLNamespace[IbisLazyFrame, IbisExpr, "ir.Table", "ir.Value"
     def concat(
         self, items: Iterable[IbisLazyFrame], *, how: ConcatMethod
     ) -> IbisLazyFrame:
+        frames: Sequence[IbisLazyFrame] = list(items)
         if how == "diagonal":
-            msg = "diagonal concat not supported for Ibis. Please join instead."
-            raise NotImplementedError(msg)
-
-        items = list(items)
-        native_items = [item.native for item in items]
-        schema = items[0].schema
-        if not all(x.schema == schema for x in items[1:]):
+            frames = self._align_diagonal(frames)
+        native_items = [item.native for item in frames]
+        schema = frames[0].schema
+        if not all(x.schema == schema for x in frames[1:]):
             msg = "inputs should all have the same schema"
             raise TypeError(msg)
         return self._lazyframe.from_native(ibis.union(*native_items), context=self)

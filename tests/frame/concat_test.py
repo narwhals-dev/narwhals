@@ -61,11 +61,7 @@ def test_concat_vertical(constructor: Constructor) -> None:
         nw.concat([df_left, df_left.select("d")], how="vertical").collect()
 
 
-def test_concat_diagonal(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    if "ibis" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_concat_diagonal(constructor: Constructor) -> None:
     data_1 = {"a": [1, 3], "b": [4, 6]}
     data_2 = {"a": [100, 200], "z": ["x", "y"]}
     expected = {
