@@ -367,24 +367,30 @@ class Schema(OrderedDict[str, "DType"]):
         )
 
 
-def to_supertype(left: Schema, right: Schema) -> Schema:
-    # Adapted from polars https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-core/src/schema/mod.rs#L83-L96
+def _supertype(left: DType, right: DType) -> DType:
+    if promoted_dtype := get_supertype(left, right):
+        return promoted_dtype
+    msg = f"failed to determine supertype of {left} and {right}"
+    raise SchemaMismatchError(msg)
+
+
+def _ensure_names_match(left: Schema, right: Schema) -> tuple[Schema, Schema]:
     if len(left) != len(right):
         msg = "schema lengths differ"
         raise ComputeError(msg)
+    if left.names() != right.names():
+        it = ((lname, rname) for (lname, rname) in zip(left, right) if lname != rname)
+        lname, rname = next(it)
+        msg = f"schema names differ: got {rname}, expected {lname}"
+        raise ComputeError(msg)
+    return left, right
 
-    into_out_schema: dict[str, DType] = {}
-    for (lname, ltype), (rname, rtype) in zip(left.items(), right.items()):
-        if lname != rname:
-            msg = f"schema names differ: got {rname}, expected {lname}"
-            raise ComputeError(msg)
-        if promoted_dtype := get_supertype(left=ltype, right=rtype):
-            into_out_schema[lname] = promoted_dtype
-        else:
-            msg = f"failed to determine supertype of {ltype} and {rtype}"
-            raise SchemaMismatchError(msg)
 
-    return Schema(into_out_schema)
+def to_supertype(left: Schema, right: Schema) -> Schema:
+    # Adapted from polars https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-core/src/schema/mod.rs#L83-L96
+    left, right = _ensure_names_match(left, right)
+    it = zip(left.keys(), left.values(), right.values())
+    return Schema((name, _supertype(ltype, rtype)) for (name, ltype, rtype) in it)
 
 
 def combine_schemas(left: Schema, right: Schema) -> tuple[Schema, Schema]:
