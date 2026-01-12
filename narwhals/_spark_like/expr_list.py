@@ -52,10 +52,10 @@ class SparkLikeExprListNamespace(
     def sum(self) -> SparkLikeExpr:
         def func(expr: Column) -> Column:
             F = self.compliant._F
-            size = F.array_size(F.array_compact(expr))
-            return F.when((size.isNotNull()) & (size == 0), F.lit(0)).otherwise(
-                F.aggregate(F.array_compact(expr), F.lit(0.0), operator.add)
-            )
+            drop_nulls = F.array_compact(expr)
+            len = F.array_size(drop_nulls)
+            sum = F.aggregate(drop_nulls, F.lit(0.0), operator.add)
+            return F.when((len.isNotNull()) & (len == 0), F.lit(0)).otherwise(sum)
 
         return self.compliant._with_elementwise(func)
 
