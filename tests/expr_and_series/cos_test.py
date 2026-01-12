@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from math import pi
 from typing import TYPE_CHECKING
 
 import pytest
@@ -16,22 +17,22 @@ from tests.utils import (
 if TYPE_CHECKING:
     from narwhals.typing import DTypeBackend
 
-data = {"a": [-1, 0, 1, 2, 4]}
+data = {"a": [-pi, -pi / 2, 0.0, pi / 2, pi]}
 
-expected = [float("nan"), 0, 1, 1.414213, 2]
+expected = [-1, 0, 1, 0, -1]
 
 
 @pytest.mark.filterwarnings("ignore::RuntimeWarning")
-def test_sqrt_expr(constructor: Constructor) -> None:
+def test_cos_expr(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
-    result = df.select(nw.col("a").sqrt())
+    result = df.select(nw.col("a").cos())
     assert_equal_data(result, {"a": expected})
 
 
 @pytest.mark.filterwarnings("ignore::RuntimeWarning")
-def test_sqrt_series(constructor_eager: ConstructorEager) -> None:
+def test_cos_series(constructor_eager: ConstructorEager) -> None:
     series = nw.from_native(constructor_eager(data), eager_only=True)["a"]
-    result = series.sqrt()
+    result = series.cos()
     assert_equal_data({"a": result}, {"a": expected})
 
 
@@ -51,35 +52,29 @@ require_pd_2_0 = pytest.mark.skipif(PANDAS_VERSION < (2, 0, 0), reason=reason)
         None,
     ],
 )
-def test_sqrt_dtype_pandas(dtype_backend: DTypeBackend) -> None:
+def test_cos_dtype_pandas(dtype_backend: DTypeBackend) -> None:
     pytest.importorskip("pandas")
     import pandas as pd
 
-    s = pd.Series([1.0, None, 2.0], name="a", dtype="float32", index=[8, 7, 6])
+    s = pd.Series([-pi / 2, None, pi / 2], name="a", dtype="float32", index=[8, 7, 6])
     if dtype_backend:
         s = s.convert_dtypes(dtype_backend=dtype_backend)
-
-    # if working with nullable types, type is cast float32->Int64 by convert_dtypes
-    # then Int64->Float64 by the operation
-    expected_dtype = "float32" if not dtype_backend else "float64"
-    expected = pd.Series(
-        [1.0, None, 1.414213], name="a", dtype=expected_dtype, index=[8, 7, 6]
-    )
-    if dtype_backend:
-        expected = expected.convert_dtypes(dtype_backend=dtype_backend)
-    result = nw.from_native(s, series_only=True).sqrt().to_native()
-    pd.testing.assert_series_equal(result, expected)
+    result = nw.from_native(s, series_only=True).cos().to_native()
+    expected = pd.Series([0, None, 0], name="a", dtype=s.dtype, index=[8, 7, 6])
+    pd.testing.assert_series_equal(result, expected, rtol=0, atol=1e-6)
 
 
 @pytest.mark.skipif(PANDAS_VERSION < (2, 1, 0), reason="nullable types require pandas2+")
-def test_sqrt_dtype_pandas_pyarrow() -> None:
+def test_cos_dtype_pandas_pyarrow() -> None:
     pytest.importorskip("pandas")
     pytest.importorskip("pyarrow")
     import pandas as pd
 
-    s = pd.Series([1.0, None, 2.0], name="a", dtype="Float32[pyarrow]", index=[8, 7, 6])
-    result = nw.from_native(s, series_only=True).sqrt().to_native()
-    expected = pd.Series(
-        [1, None, 1.414213], name="a", dtype="Float64[pyarrow]", index=[8, 7, 6]
+    s = pd.Series(
+        [-pi / 2, None, pi / 2], name="a", dtype="Float32[pyarrow]", index=[8, 7, 6]
     )
-    pd.testing.assert_series_equal(result, expected)
+    result = nw.from_native(s, series_only=True).cos().to_native()
+    expected = pd.Series(
+        [0, None, 0], name="a", dtype="Float32[pyarrow]", index=[8, 7, 6]
+    )
+    pd.testing.assert_series_equal(result, expected, rtol=0, atol=1e-6)

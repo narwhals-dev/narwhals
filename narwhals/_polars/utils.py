@@ -362,6 +362,18 @@ class PolarsListNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
 
     unique: Method[CompliantT]
 
+    max: Method[CompliantT]
+
+    mean: Method[CompliantT]
+
+    median: Method[CompliantT]
+
+    min: Method[CompliantT]
+
+    sort: Method[CompliantT]
+
+    sum: Method[CompliantT]
+
 
 class PolarsStructNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
     _accessor: ClassVar[Accessor] = "struct"

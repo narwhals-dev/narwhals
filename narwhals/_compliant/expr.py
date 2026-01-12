@@ -809,6 +809,12 @@ class EagerExpr(
     def exp(self) -> Self:
         return self._reuse_series("exp")
 
+    def sin(self) -> Self:
+        return self._reuse_series("sin")
+
+    def cos(self) -> Self:
+        return self._reuse_series("cos")
+
     def sqrt(self) -> Self:
         return self._reuse_series("sqrt")
 
@@ -998,6 +1004,26 @@ class EagerExprListNamespace(
 
     def get(self, index: int) -> EagerExprT:
         return self.compliant._reuse_series_namespace("list", "get", index=index)
+
+    def min(self) -> EagerExprT:
+        return self.compliant._reuse_series_namespace("list", "min")
+
+    def max(self) -> EagerExprT:
+        return self.compliant._reuse_series_namespace("list", "max")
+
+    def mean(self) -> EagerExprT:
+        return self.compliant._reuse_series_namespace("list", "mean")
+
+    def median(self) -> EagerExprT:
+        return self.compliant._reuse_series_namespace("list", "median")
+
+    def sum(self) -> EagerExprT:
+        return self.compliant._reuse_series_namespace("list", "sum")
+
+    def sort(self, *, descending: bool, nulls_last: bool) -> EagerExprT:
+        return self.compliant._reuse_series_namespace(
+            "list", "sort", descending=descending, nulls_last=nulls_last
+        )
 
 
 class CompliantExprNameNamespace(  # type: ignore[misc]

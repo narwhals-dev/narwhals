@@ -18,6 +18,7 @@
         - cast
         - ceil
         - clip
+        - cos
         - count
         - cum_count
         - cum_max
@@ -79,6 +80,7 @@
         - scatter
         - shape
         - shift
+        - sin
         - skew
         - sort
         - sqrt
