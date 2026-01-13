@@ -208,6 +208,7 @@ def test_scan_fail_spark_like_without_session(
         getattr(nw, scan_method)("unused.csv", backend=backend)
 
 
+@pytest.mark.parametrize("csv_path", ["str"], indirect=True)
 def test_read_csv_raise_sep_multiple_lazy(csv_path: FileSource) -> None:
     pytest.importorskip("duckdb")
     pytest.importorskip("pandas")

@@ -604,13 +604,16 @@ def show_versions() -> None:
         print(f"{k:>13}: {stat}")  # noqa: T201
 
 
-def _validate_separator(separator: str, native_separator: str, **kwargs: Any) -> None:
-    if native_separator in kwargs and kwargs[native_separator] != separator:
-        msg = (
-            f"`separator` and `{native_separator}` do not match: "
-            f"`separator`={separator} and `{native_separator}`={kwargs[native_separator]}."
-        )
-        raise TypeError(msg)
+def _validate_separators(
+    separator: str, native_separators: tuple[str, ...], **kwargs: Any
+) -> None:
+    for native_separator in native_separators:
+        if native_separator in kwargs and kwargs[native_separator] != separator:
+            msg = (
+                f"`separator` and `{native_separator}` do not match: "
+                f"`separator`={separator} and `{native_separator}`={kwargs[native_separator]}."
+            )
+            raise TypeError(msg)
 
 
 def _validate_separator_pyarrow(separator: str, **kwargs: Any) -> Any:
@@ -666,7 +669,7 @@ def read_csv(
     native_namespace = impl.to_native_namespace()
     native_frame: NativeDataFrame
     if impl in {Implementation.PANDAS, Implementation.MODIN, Implementation.CUDF}:
-        _validate_separator(separator, "sep", **kwargs)
+        _validate_separators(separator, ("sep",), **kwargs)
         native_frame = native_namespace.read_csv(
             normalize_path(source), sep=separator, **kwargs
         )
@@ -756,11 +759,10 @@ def scan_csv(
         Implementation.DASK,
         Implementation.IBIS,
     }:
-        _validate_separator(separator, "sep", **kwargs)
+        _validate_separators(separator, ("sep",), **kwargs)
         native_frame = native_namespace.read_csv(source, sep=separator, **kwargs)
     elif implementation is Implementation.DUCKDB:
-        _validate_separator(separator, "delimiter", **kwargs)
-        _validate_separator(separator, "delim", **kwargs)
+        _validate_separators(separator, ("delimiter", "delim", "sep"), **kwargs)
         native_frame = native_namespace.read_csv(source, delimiter=separator, **kwargs)
     elif implementation is Implementation.PYARROW:
         kwargs = _validate_separator_pyarrow(separator, **kwargs)
@@ -768,8 +770,7 @@ def scan_csv(
 
         native_frame = csv.read_csv(source, **kwargs)
     elif implementation.is_spark_like():
-        _validate_separator(separator, "sep", **kwargs)
-        _validate_separator(separator, "delimiter", **kwargs)
+        _validate_separators(separator, ("sep", "delimiter"), **kwargs)
         if (session := kwargs.pop("session", None)) is None:
             msg = "Spark like backends require a session object to be passed in `kwargs`."
             raise ValueError(msg)
