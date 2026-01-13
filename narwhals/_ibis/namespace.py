@@ -69,13 +69,13 @@ class IbisNamespace(
     ) -> IbisLazyFrame:
         frames: Sequence[IbisLazyFrame] = list(items)
         if how == "diagonal":
-            frames = self._align_diagonal(frames)
+            frames = self.align_diagonal(frames)
             natives = (lf.native for lf in frames)
             try:
                 result = ibis.union(*natives)
             except ibis.IbisError:
                 first = frames[0].schema
-                if not all(x.schema == first for x in frames[1:]):
+                if not all(x.schema == first for x in frames):
                     msg = "inputs should all have the same schema"
                     raise TypeError(msg) from None
                 raise

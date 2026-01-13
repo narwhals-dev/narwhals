@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import deque
 from functools import partial
 from typing import TYPE_CHECKING, Any, Protocol, overload
 
@@ -24,13 +25,12 @@ from narwhals._utils import (
 from narwhals.dependencies import is_numpy_array_2d
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Sequence
+    from collections.abc import Collection, Iterable, Sequence
 
     from typing_extensions import TypeAlias, TypeIs
 
     from narwhals._compliant.selectors import CompliantSelectorNamespace
     from narwhals._utils import Implementation, Version
-    from narwhals.dtypes import DType
     from narwhals.typing import (
         ConcatMethod,
         Into1DArray,
@@ -106,8 +106,8 @@ class AlignDiagonal(Protocol[CompliantFrameT, CompliantExprT_co]):
     def lit(
         self, value: NonNestedLiteral, dtype: IntoDType | None
     ) -> CompliantExprT_co: ...
-    def _align_diagonal(
-        self, frames: Sequence[CompliantFrameT], /
+    def align_diagonal(
+        self, frames: Collection[CompliantFrameT], /
     ) -> Sequence[CompliantFrameT]:
         """Convert the inputs to `concat(..., how="diagonal")` into `concat(..., how="vertical")`.
 
@@ -116,37 +116,43 @@ class AlignDiagonal(Protocol[CompliantFrameT, CompliantExprT_co]):
         [`convert_diagonal_concat`]: https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-plan/src/plans/conversion/dsl_to_ir/concat.rs#L10-L68
         """
         schemas = [frame.collect_schema() for frame in frames]
+        # 1 - Take the first schema, collecting any fields from the remaining that introduce new names
+        # Subtle difference from `dict |= dict |= ...` as we preserve the first `DType`, rather than the last.
         it_schemas = iter(schemas)
-        total_schema = dict(next(it_schemas))
-        seen_names = set(total_schema)
-        to_add_fields: dict[str, DType] = {}
-        for sch in it_schemas:
-            to_add_fields.update(
-                {name: dtype for name, dtype in sch.items() if name not in seen_names}
-            )
-            seen_names.update(to_add_fields)
-        if not seen_names:
-            return frames
-        total_schema.update(to_add_fields)
-        total_names = tuple(total_schema)
-        added_exprs: dict[str, CompliantExprT_co] = {}
-        results: list[CompliantFrameT] = []
+        union = dict(next(it_schemas))
+        seen = union.keys()
+        for schema in it_schemas:
+            union.update((nm, dtype) for nm, dtype in schema.items() if nm not in seen)
+        return self._align_diagonal(frames, schemas, union)
+
+    def _align_diagonal(
+        self,
+        frames: Iterable[CompliantFrameT],
+        schemas: Iterable[IntoSchema],
+        union_schema: IntoSchema,
+    ) -> Sequence[CompliantFrameT]:
+        # 2 - Align every frame, by adding null column(s) for each missing field in each schema.
+        # Even if all fields are present, we always reorder the columns to match between frames.
+        union_names = tuple(union_schema)
+        # Likely we'll have repeats between frames, so we can share exprs between inner loops
+        null_exprs: dict[str, CompliantExprT_co] = {}
+        missing_from_frame = deque[CompliantExprT_co]()
+        aligned = deque[CompliantFrameT]()
         for frame, schema in zip(frames, schemas):
-            to_add_exprs: list[CompliantExprT_co] = []
-            for name, dtype in total_schema.items():
+            for name, dtype in union_schema.items():
                 if name not in schema:
-                    maybe_seen = added_exprs.get(name)
-                    if maybe_seen is None:
-                        to_add_expr = self.lit(None, dtype).alias(name)
-                        to_add_exprs.append(to_add_expr)
-                        added_exprs[name] = to_add_expr
+                    if cached := null_exprs.get(name):
+                        missing_from_frame.append(cached)
                     else:
-                        to_add_exprs.append(maybe_seen)
+                        null_expr = self.lit(None, dtype).alias(name)
+                        missing_from_frame.append(null_expr)
+                        null_exprs[name] = null_expr
             result = frame
-            if to_add_exprs:
-                result = result.with_columns(*to_add_exprs)
-            results.append(result.simple_select(*total_names))
-        return results
+            if missing_from_frame:
+                result = result.with_columns(*missing_from_frame)
+                missing_from_frame.clear()
+            aligned.append(result.simple_select(*union_names))
+        return aligned
 
 
 class DepthTrackingNamespace(
