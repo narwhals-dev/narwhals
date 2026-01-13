@@ -70,6 +70,16 @@ class IbisNamespace(
         frames: Sequence[IbisLazyFrame] = list(items)
         if how == "diagonal":
             frames = self._align_diagonal(frames)
+            natives = (lf.native for lf in frames)
+            try:
+                result = ibis.union(*natives)
+            except ibis.IbisError:  # pragma: no cover
+                first = frames[0].schema
+                if not all(x.schema == first for x in frames[1:]):
+                    msg = "inputs should all have the same schema"
+                    raise TypeError(msg) from None
+                raise
+            return frames[0]._with_native(result)
         native_items = [item.native for item in frames]
         schema = frames[0].schema
         if not all(x.schema == schema for x in frames[1:]):
