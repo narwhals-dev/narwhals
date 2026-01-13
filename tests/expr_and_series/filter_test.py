@@ -12,6 +12,13 @@ data = {
     "c": [5, 4, 3, 2, 1],
 }
 
+expected_over = {
+    "i": [0, 1, 2, 3],
+    "a": [0, 1, 2, 3],
+    "b": [1, 2, 3, 5],
+    "c": [5, 4, 3, 2],
+}
+
 
 def test_filter(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data))
@@ -50,3 +57,11 @@ def test_filter_windows(constructor: Constructor) -> None:
     result_with_nones = df.filter(nw.col("i") == nw.col("i").min())
     expected_with_nones = {"i": [0], "a": [None], "b": [1], "c": [5]}
     assert_equal_data(result_with_nones, expected_with_nones)
+
+
+def test_filter_windows_over(constructor: Constructor) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
+    df = nw.from_native(constructor(data))
+    result = df.filter(nw.col("i") == nw.col("i").min().over("b")).sort("i")
+    assert_equal_data(result, expected_over)
