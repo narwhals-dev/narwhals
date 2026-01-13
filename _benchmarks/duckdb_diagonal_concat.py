@@ -62,29 +62,6 @@ class BenchmarkResult:
         return {**asdict(self.config), "time": self.elapsed_time}  # pyright: ignore[reportReturnType]
 
 
-def create_duckdb_relation(
-    n_rows: int, n_cols: int, col_prefix: str = "col"
-) -> duckdb.DuckDBPyRelation:
-    """Create a DuckDB relation with the specified dimensions.
-
-    Arguments:
-        n_rows: Number of rows in the relation.
-        n_cols: Number of columns in the relation.
-        col_prefix: Prefix for column names.
-
-    Returns:
-        A DuckDB relation with random integer data.
-    """
-    col_exprs = ", ".join(
-        f"(random() * 1000)::INTEGER AS {col_prefix}_{i}" for i in range(n_cols)
-    )
-    query = f"""
-        SELECT {col_exprs}
-        FROM generate_series(1, {n_rows})
-    """  # noqa: S608
-    return duckdb.sql(query)
-
-
 def create_relations_with_overlap(
     n_frames: int, n_rows: int, n_cols: int, overlap_fraction: float = 0.5
 ) -> list[duckdb.DuckDBPyRelation]:
