@@ -181,9 +181,9 @@ def main() -> None:
     args = parser.parse_args()
 
     # Configuration parameters - adjust these as needed
-    n_frames = (2, 5, 10, 20, 30)
-    n_rows = (100, 1_000, 10_000, 100_000)
-    n_cols = (6, 10, 20, 30)
+    n_frames = (2, 5, 10)
+    n_rows = (100, 1_000, 10_000)
+    n_cols = (6, 10)
 
     run_benchmarks(n_frames, n_rows, n_cols, pathlib.Path(args.output))
 
