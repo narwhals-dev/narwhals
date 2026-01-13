@@ -27,7 +27,7 @@ import pathlib
 import time
 from dataclasses import asdict, dataclass
 from itertools import product
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 import duckdb
 
@@ -58,8 +58,8 @@ class BenchmarkResult:
     config: BenchmarkConfig
     elapsed_time: float
 
-    def to_dict(self) -> dict[str, float]:
-        return {**asdict(self.config), "time": self.elapsed_time}
+    def to_dict(self) -> dict[Literal["n_frames", "n_rows", "n_cols", "time"], float]:
+        return {**asdict(self.config), "time": self.elapsed_time}  # pyright: ignore[reportReturnType]
 
 
 def create_duckdb_relation(
@@ -149,7 +149,7 @@ def run_benchmark(
         Benchmark result with timing information.
     """
     result, elapsed = _run_concat(relations)
-    assert len(result) == config.n_rows * config.n_frames
+    assert len(result) == config.n_rows * config.n_frames  # noqa: S101
     return BenchmarkResult(config=config, elapsed_time=elapsed)
 
 
@@ -177,8 +177,8 @@ def run_benchmarks(
     total_configs = len(n_frames_list) * len(n_rows_list) * len(n_cols_list)
 
     log = f"Running {total_configs} configurations"
-    print(log)
-    print("=" * len(log))
+    print(log)  # noqa: T201
+    print("=" * len(log))  # noqa: T201
 
     # Write CSV header
     fieldnames = ("n_frames", "n_rows", "n_cols", "time")
@@ -203,7 +203,9 @@ def run_benchmarks(
         row = BenchmarkResult(config=config, elapsed_time=avg_time).to_dict()
         results.append(row)
 
-        with pathlib.Path(output_file).open(encoding="utf-8", mode="a", newline="") as file:
+        with pathlib.Path(output_file).open(
+            encoding="utf-8", mode="a", newline=""
+        ) as file:
             writer = csv.DictWriter(file, fieldnames=fieldnames)
             writer.writerow(row)
 
