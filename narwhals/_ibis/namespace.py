@@ -73,7 +73,7 @@ class IbisNamespace(
             natives = (lf.native for lf in frames)
             try:
                 result = ibis.union(*natives)
-            except ibis.IbisError:  # pragma: no cover
+            except ibis.IbisError:
                 first = frames[0].schema
                 if not all(x.schema == first for x in frames[1:]):
                     msg = "inputs should all have the same schema"

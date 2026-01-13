@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import datetime as dt
 import re
 
 import pytest
 
 import narwhals as nw
+from narwhals._utils import Implementation
 from narwhals.exceptions import InvalidOperationError
 from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
@@ -79,3 +81,25 @@ def test_concat_diagonal(constructor: Constructor) -> None:
 
     with pytest.raises(ValueError, match="No items"):
         nw.concat([], how="diagonal")
+
+
+def test_concat_diagonal_invalid(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    data_1 = {"a": [1, 3], "b": [4, 6]}
+    data_2 = {
+        "a": [dt.datetime(2000, 1, 1), dt.datetime(2000, 1, 2)],
+        "b": [4, 6],
+        "z": ["x", "y"],
+    }
+    df_1 = nw.from_native(constructor(data_1)).lazy()
+    bad_schema = nw.from_native(constructor(data_2)).lazy()
+    impl = df_1.implementation
+    request.applymarker(
+        pytest.mark.xfail(
+            impl not in {Implementation.IBIS, Implementation.POLARS},
+            reason=f"{impl!r} does not validate schemas for `concat(how='diagonal')",
+        )
+    )
+    with pytest.raises((InvalidOperationError, TypeError), match=r"same schema"):
+        nw.concat([df_1, bad_schema], how="diagonal").collect().to_dict(as_series=False)
