@@ -22,7 +22,7 @@ from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
 )
-from narwhals._pandas_like.utils import promote_dtype_backend
+from narwhals._pandas_like.utils import promote_dtype_backends
 from narwhals._utils import Implementation, zip_strict
 from narwhals.schema import Schema, combine_schemas, to_supertype
 
@@ -163,23 +163,21 @@ class DaskNamespace(
                 dd.concat(dfs, axis=0, join="outer"), version=self._version
             )
         if how == "vertical_relaxed":
-            dtypes = tuple(df.dtypes.to_dict() for df in dfs)
-            dtype_backend = promote_dtype_backend(dfs, self._implementation)
+            schemas = tuple(df.dtypes.to_dict() for df in dfs)
             out_schema = reduce(
-                to_supertype, (Schema.from_pandas_like(dtype) for dtype in dtypes)
-            ).to_pandas(dtype_backend=dtype_backend.values())
+                to_supertype, (Schema.from_pandas_like(schema) for schema in schemas)
+            ).to_pandas(promote_dtype_backends(schemas, self._implementation))
 
             to_concat = [df.astype(out_schema) for df in dfs]
             return DaskLazyFrame(
                 dd.concat(to_concat, axis=0, join="inner"), version=self._version
             )
         if how == "diagonal_relaxed":
-            dtypes = tuple(df.dtypes.to_dict() for df in dfs)
-            dtype_backend = promote_dtype_backend(dfs, self._implementation)
+            schemas = tuple(df.dtypes.to_dict() for df in dfs)
             out_schema = reduce(
                 lambda x, y: to_supertype(*combine_schemas(x, y)),
-                (Schema.from_pandas_like(dtype) for dtype in dtypes),
-            ).to_pandas(dtype_backend=dtype_backend.values())
+                (Schema.from_pandas_like(schema) for schema in schemas),
+            ).to_pandas(promote_dtype_backends(schemas, self._implementation))
 
             native_res = dd.concat(dfs, axis=0, join="outer").astype(out_schema)
             return DaskLazyFrame(native_res, version=self._version)

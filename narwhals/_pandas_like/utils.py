@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import operator
 import re
-from functools import lru_cache, partial
+from functools import lru_cache
 from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, cast
 
 import pandas as pd
@@ -32,13 +32,11 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping
     from types import ModuleType
 
-    from dask.dataframe import DataFrame as NativeDaskDataFrame
     from pandas._typing import Dtype as PandasDtype
     from pandas.core.dtypes.dtypes import BaseMaskedDtype
     from typing_extensions import TypeAlias, TypeIs
 
     from narwhals._duration import IntervalUnit
-    from narwhals._native import NativePandasLikeDataFrame
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals._pandas_like.typing import (
@@ -723,30 +721,32 @@ _DTYPE_BACKEND_PRIORITY: dict[DTypeBackend, Literal[0, 1, 2]] = {
 }
 
 
-def promote_dtype_backend(
-    dataframes: Iterable[NativePandasLikeDataFrame] | Iterable[NativeDaskDataFrame],
-    implementation: Implementation,
-) -> dict[str, DTypeBackend]:
+def iter_names_dtype_backends(
+    schema: IntoPandasSchema, impl: Implementation, /
+) -> Iterator[tuple[str, DTypeBackend]]:
+    yield from zip(schema, iter_dtype_backends(schema.values(), impl))
+
+
+def promote_dtype_backends(
+    schemas: Iterable[IntoPandasSchema], implementation: Implementation
+) -> Iterable[DTypeBackend]:
     """Promote dtype backends for each column based on priority rules.
 
     Priority: pyarrow > numpy_nullable > None
-
-    Returns:
-        Dictionary mapping column names to the promoted dtype backend
     """
-    column_backends: dict[str, DTypeBackend] = {}
-    _get_dtype_backend_impl = partial(get_dtype_backend, implementation=implementation)
-    for df in dataframes:
-        for col in df.columns:
-            backend = _get_dtype_backend_impl(df[col].dtype)
-            current = column_backends.get(col)
-            if (
-                current is None
-                or _DTYPE_BACKEND_PRIORITY[backend] > _DTYPE_BACKEND_PRIORITY[current]
-            ):
-                column_backends[col] = backend
-
-    return column_backends
+    impl = implementation
+    it_schemas = iter(schemas)
+    col_backends = dict(iter_names_dtype_backends(next(it_schemas), impl))
+    priority = _DTYPE_BACKEND_PRIORITY.__getitem__
+    current = col_backends.__getitem__
+    seen = col_backends.keys()
+    for schema in it_schemas:
+        col_backends.update(
+            (name, backend)
+            for name, backend in iter_names_dtype_backends(schema, impl)
+            if name not in seen or priority(backend) > priority(current(name))
+        )
+    return col_backends.values()
 
 
 def native_schema(df: Incomplete) -> IntoPandasSchema:

@@ -21,7 +21,7 @@ from narwhals._pandas_like.utils import (
     is_non_nullable_boolean,
     iter_cast_native,
     native_schema,
-    promote_dtype_backend,
+    promote_dtype_backends,
 )
 from narwhals._utils import zip_strict
 from narwhals.schema import Schema, combine_schemas, to_supertype
@@ -267,12 +267,11 @@ class PandasLikeNamespace(
     def _concat_diagonal_relaxed(
         self, dfs: Sequence[NativeDataFrameT], /
     ) -> NativeDataFrameT:
-        dtypes = tuple(native_schema(df) for df in dfs)
-        dtype_backend = promote_dtype_backend(dfs, self._implementation)
+        schemas = tuple(native_schema(df) for df in dfs)
         out_schema = reduce(
             lambda x, y: to_supertype(*combine_schemas(x, y)),
-            (Schema.from_pandas_like(dtype) for dtype in dtypes),
-        ).to_pandas(dtype_backend=dtype_backend.values())
+            (Schema.from_pandas_like(schema) for schema in schemas),
+        ).to_pandas(promote_dtype_backends(schemas, self._implementation))
 
         native_res = (
             self._concat(dfs, axis=VERTICAL, copy=False)
@@ -316,11 +315,10 @@ class PandasLikeNamespace(
     def _concat_vertical_relaxed(
         self, dfs: Sequence[NativeDataFrameT], /
     ) -> NativeDataFrameT:
-        dtypes = tuple(native_schema(df) for df in dfs)
-        dtype_backend = promote_dtype_backend(dfs, self._implementation)
+        schemas = tuple(native_schema(df) for df in dfs)
         out_schema = reduce(
-            to_supertype, (Schema.from_pandas_like(dtype) for dtype in dtypes)
-        ).to_pandas(dtype_backend=dtype_backend.values())
+            to_supertype, (Schema.from_pandas_like(schema) for schema in schemas)
+        ).to_pandas(promote_dtype_backends(schemas, self._implementation))
 
         if self._implementation.is_pandas() and self._backend_version < (3,):
             return self._concat(
