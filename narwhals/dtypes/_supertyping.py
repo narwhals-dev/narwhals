@@ -116,9 +116,6 @@ _FLOAT_PROMOTE: Mapping[FrozenDTypes, type[Float64]] = {
 }
 
 
-# NOTE: polars has these ordered as `["ns", "μs", "ms"]`
-# https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-core/src/datatypes/temporal/time_unit.rs#L9-L41
-# That order would align with `_max_bits` using `max`, but represent a downcast vs an upcast
 _TIME_UNIT_TO_INDEX: Mapping[TimeUnit, int] = {"s": 0, "ms": 1, "us": 2, "ns": 3}
 """Convert time unit to an index for comparison (larger = more precise)."""
 
