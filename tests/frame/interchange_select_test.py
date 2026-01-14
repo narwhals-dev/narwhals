@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
+import narwhals as nw
 import narwhals.stable.v1 as nw_v1
 
 if TYPE_CHECKING:
@@ -42,6 +43,12 @@ def test_interchange() -> None:
     df = CustomDataFrame({"a": [1, 2, 3], "b": [4, 5, 6], "z": [1, 4, 2]})
     result = nw_v1.from_native(df, eager_or_interchange_only=True).select("a", "z")
     assert result.columns == ["a", "z"]
+
+
+def test_interchange_non_v1() -> None:
+    df = CustomDataFrame({"a": [1, 2, 3], "b": [4, 5, 6], "z": [1, 4, 2]})
+    with pytest.raises(TypeError, match="Unsupported dataframe type"):
+        nw.from_native(df)  # type: ignore[arg-type]
 
 
 def test_interchange_ibis(
