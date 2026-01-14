@@ -3,8 +3,9 @@ from __future__ import annotations
 from collections import deque
 from itertools import chain, product
 from operator import attrgetter
-from typing import TYPE_CHECKING, Any, Final, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Final, Generic, cast
 
+from narwhals._typing_compat import TypeVar
 from narwhals.dtypes._classes import (
     Array,
     Binary,
@@ -48,15 +49,10 @@ from narwhals.dtypes._classes_v1 import (
 if TYPE_CHECKING:
     from collections.abc import Callable, Collection, Mapping
 
-    from typing_extensions import TypeAlias
+    from typing_extensions import TypeAlias, TypeIs
 
     from narwhals.dtypes._classes import _Bits
     from narwhals.typing import TimeUnit
-
-    SameTemporalT = TypeVar("SameTemporalT", Datetime, DatetimeV1, Duration, DurationV1)
-    """Temporal data types, with a `time_unit` attribute."""
-
-    SameDatetimeT = TypeVar("SameDatetimeT", Datetime, DatetimeV1)
 
     _Fn = TypeVar("_Fn", bound=Callable[..., Any])
 
@@ -69,6 +65,23 @@ if TYPE_CHECKING:
         return cache
 else:
     from functools import cache, lru_cache
+
+Incomplete: TypeAlias = Any
+FrozenDTypes: TypeAlias = frozenset[type[DType]]
+DTypeGroup: TypeAlias = frozenset[type[DType]]
+Nested: TypeAlias = "Array | List | Struct"
+Parametric: TypeAlias = "Datetime | DatetimeV1 | Duration | DurationV1 | Enum | Nested"
+SameTemporalT = TypeVar("SameTemporalT", Datetime, DatetimeV1, Duration, DurationV1)
+"""Temporal data types, with a `time_unit` attribute."""
+
+SameDatetimeT = TypeVar("SameDatetimeT", Datetime, DatetimeV1)
+SameT = TypeVar(
+    "SameT", Array, List, Struct, Datetime, DatetimeV1, Duration, DurationV1, Enum
+)
+DTypeT1 = TypeVar("DTypeT1", bound=DType)
+DTypeT2 = TypeVar("DTypeT2", bound=DType, default=DTypeT1)
+DTypeT1_co = TypeVar("DTypeT1_co", bound=DType, covariant=True)
+DTypeT2_co = TypeVar("DTypeT2_co", bound=DType, covariant=True, default=DTypeT1_co)
 
 
 def frozen_dtypes(*dtypes: type[DType]) -> FrozenDTypes:
@@ -86,10 +99,6 @@ _CACHE_SIZE_TP_MID = 32
 - 3 (V1) subclasses
 - Pairwise comparisons, but order (of classes) is not important
 """
-
-
-FrozenDTypes: TypeAlias = frozenset[type[DType]]
-DTypeGroup: TypeAlias = frozenset[type[DType]]
 
 
 SIGNED_INTEGER: DTypeGroup = frozenset((Int8, Int16, Int32, Int64, Int128))
@@ -124,9 +133,17 @@ def _key_fn_time_unit(obj: Datetime | Duration, /) -> int:
 
 
 @lru_cache(maxsize=_CACHE_SIZE_TP_MID * 2)
-def downcast_time_unit(left: SameTemporalT, right: SameTemporalT, /) -> SameTemporalT:
+def downcast_time_unit(
+    left: SameTemporalT, right: SameTemporalT, /
+) -> SameTemporalT | None:
     """Return the operand with the lowest precision time unit."""
     return min(left, right, key=_key_fn_time_unit)
+
+
+# TODO @dangotbanned: Reuse for https://github.com/narwhals-dev/narwhals/pull/3396#discussion_r2680000244
+@lru_cache(maxsize=_CACHE_SIZE_TP_MID // 2)
+def dtype_eq(left: DType, right: DType, /) -> bool:
+    return left == right
 
 
 @cache
@@ -205,7 +222,7 @@ def has_nested(base_types: FrozenDTypes, /) -> bool:
 
 
 def _struct_fields_union(
-    left: Collection[Field], right: Collection[Field]
+    left: Collection[Field], right: Collection[Field], /
 ) -> Struct | None:
     """Adapted from [`union_struct_fields`].
 
@@ -224,7 +241,7 @@ def _struct_fields_union(
     return Struct(longest_map)
 
 
-def _struct_supertype(left: Struct, right: Struct) -> Struct | None:
+def _struct_supertype(left: Struct, right: Struct, /) -> Struct | None:
     """Get the supertype of two struct data types.
 
     Adapted from [`super_type_structs`]
@@ -252,7 +269,7 @@ def _struct_supertype(left: Struct, right: Struct) -> Struct | None:
     return Struct(new_fields)
 
 
-def _array_supertype(left: Array, right: Array) -> Array | None:
+def _array_supertype(left: Array, right: Array, /) -> Array | None:
     if (left.shape == right.shape) and (
         inner := get_supertype(left.inner(), right.inner())
     ):
@@ -260,7 +277,7 @@ def _array_supertype(left: Array, right: Array) -> Array | None:
     return None
 
 
-def _list_supertype(left: List, right: List) -> List | None:
+def _list_supertype(left: List, right: List, /) -> List | None:
     if inner := get_supertype(left.inner(), right.inner()):
         return List(inner)
     return None
@@ -278,19 +295,15 @@ def _enum_supertype(left: Enum, right: Enum, /) -> Enum | None:
     return left if left.categories == right.categories else None
 
 
-# TODO @dangotbanned: If this stays in, it needs docs
-OpaqueDispatchFn: TypeAlias = "Callable[[DType, DType], DType | None]"
-
-# TODO @dangotbanned: Try to do this while staying in the type system
-_SAME_DISPATCH: Final[Mapping[type[DType], OpaqueDispatchFn]] = {
-    Array: cast("OpaqueDispatchFn", _array_supertype),
-    List: cast("OpaqueDispatchFn", _list_supertype),
-    Struct: cast("OpaqueDispatchFn", _struct_supertype),
-    Datetime: cast("OpaqueDispatchFn", _datetime_supertype),
-    DatetimeV1: cast("OpaqueDispatchFn", _datetime_supertype),
-    Duration: cast("OpaqueDispatchFn", downcast_time_unit),
-    DurationV1: cast("OpaqueDispatchFn", downcast_time_unit),
-    Enum: cast("OpaqueDispatchFn", _enum_supertype),
+_SAME_DISPATCH: Final[Mapping[type[Parametric], Callable[..., Incomplete | None]]] = {
+    Array: _array_supertype,
+    List: _list_supertype,
+    Struct: _struct_supertype,
+    Datetime: _datetime_supertype,
+    DatetimeV1: _datetime_supertype,
+    Duration: downcast_time_unit,
+    DurationV1: downcast_time_unit,
+    Enum: _enum_supertype,
 }
 """Specialized supertyping rules for `(T, T)`.
 
@@ -298,6 +311,28 @@ _SAME_DISPATCH: Final[Mapping[type[DType], OpaqueDispatchFn]] = {
 
 [#3393]: https://github.com/narwhals-dev/narwhals/pull/3393
 """
+
+
+def is_single_base_type(
+    st: _SupertypeCase[DTypeT1, DType],
+) -> TypeIs[_SupertypeCase[DTypeT1]]:
+    return len(st.base_types) == 1
+
+
+def is_parametric_case(
+    st: _SupertypeCase[SameT | DType],
+) -> TypeIs[_SupertypeCase[SameT]]:
+    return st.base_left in _SAME_DISPATCH
+
+
+def _get_same_supertype_fn(base: type[SameT]) -> Callable[[SameT, SameT], SameT | None]:
+    return cast("Callable[[SameT, SameT], SameT | None]", _SAME_DISPATCH[base])
+
+
+def _same_supertype(st: _SupertypeCase[SameT | DType]) -> SameT | DType | None:
+    if is_parametric_case(st):
+        return _get_same_supertype_fn(st.base_left)(st.left, st.right)
+    return st.left if dtype_eq(st.left, st.right) else None
 
 
 @lru_cache(maxsize=_CACHE_SIZE_TP_MID)
@@ -333,7 +368,7 @@ def _numeric_supertype(base_types: FrozenDTypes) -> DType | None:
     return None
 
 
-def _mixed_supertype(left: DType, right: DType, base_types: FrozenDTypes) -> DType | None:
+def _mixed_supertype(st: _SupertypeCase[DType, DType]) -> DType | None:
     """Get the supertype of two data types that do not share the same class.
 
     We support only one combination that requires preservation of instance attributes:
@@ -356,14 +391,41 @@ def _mixed_supertype(left: DType, right: DType, base_types: FrozenDTypes) -> DTy
     [#121]: https://github.com/narwhals-dev/narwhals/issues/121
     [`polars` supports mixed `Struct`]: https://github.com/pola-rs/polars/blob/d6d9d8a2c7d3e416488388a0114c6ff3eafcb66c/crates/polars-core/src/utils/supertype.rs#L499-L507
     """
-    if Date in base_types and _has_intersection(base_types, DATETIME):
-        return left if isinstance(left, Datetime) else right
-    if NUMERIC.isdisjoint(base_types):
-        return tp() if (tp := _STRING_LIKE_CONVERT.get(base_types)) else None
-    return None if has_nested(base_types) else _numeric_supertype(base_types)
+    if Date in st.base_types and _has_intersection(st.base_types, DATETIME):
+        return st.left if isinstance(st.left, Datetime) else st.right
+    if NUMERIC.isdisjoint(st.base_types):
+        return tp() if (tp := _STRING_LIKE_CONVERT.get(st.base_types)) else None
+    return None if has_nested(st.base_types) else _numeric_supertype(st.base_types)
 
 
-def get_supertype(left: DType, right: DType) -> DType | None:
+class _SupertypeCase(Generic[DTypeT1_co, DTypeT2_co]):
+    """WIP."""
+
+    __slots__ = ("base_types", "left", "right")
+
+    left: DTypeT1_co
+    right: DTypeT2_co
+    base_types: frozenset[type[DTypeT1_co | DTypeT2_co]]
+
+    def __init__(self, left: DTypeT1_co, right: DTypeT2_co) -> None:
+        self.left = left
+        self.right = right
+        self.base_types = frozenset((self.base_left, self.base_right))
+
+    @property
+    def base_left(self) -> type[DTypeT1_co]:
+        return self.left.base_type()
+
+    @property
+    def base_right(self) -> type[DTypeT2_co]:
+        return self.right.base_type()
+
+
+# NOTE @dangotbanned: Tried **many** variants of this typing
+# (to self) DO NOT TOUCH IT AGAIN
+def get_supertype(
+    left: DTypeT1, right: DTypeT2 | DType
+) -> DTypeT1 | DTypeT2 | DType | None:
     """Given two data types, determine the data type that both types can reasonably safely be cast to.
 
     Aims to follow the rules defined by [`polars_core::utils::supertype::get_supertype_with_options`].
@@ -377,12 +439,9 @@ def get_supertype(left: DType, right: DType) -> DType | None:
 
     [`polars_core::utils::supertype::get_supertype_with_options`]: https://github.com/pola-rs/polars/blob/529f7ec642912a2f15656897d06f1532c2f5d4c4/crates/polars-core/src/utils/supertype.rs#L142-L543
     """
-    base_left, base_right = left.base_type(), right.base_type()
-    base_types = frozen_dtypes(base_left, base_right)
-    if Unknown in base_types:
+    st_case = _SupertypeCase(left, right)
+    if Unknown in st_case.base_types:
         return Unknown()
-    if len(base_types) != 1:
-        return _mixed_supertype(left, right, base_types)
-    if specialized := _SAME_DISPATCH.get(base_left):
-        return specialized(left, right)
-    return left if left == right else None
+    if is_single_base_type(st_case):
+        return _same_supertype(st_case)
+    return _mixed_supertype(st_case)
