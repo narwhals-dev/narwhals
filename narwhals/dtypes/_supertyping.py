@@ -31,7 +31,6 @@ from narwhals.dtypes._classes import (
     SignedIntegerType,
     String,
     Struct,
-    Time,
     UInt8,
     UInt16,
     UInt32,
@@ -92,7 +91,7 @@ def frozen_dtypes(*dtypes: type[DType]) -> FrozenDTypes:
     return frozenset(dtypes)
 
 
-_CACHE_SIZE_TP_MID = 32
+_CACHE_SIZE = 32
 """Arbitrary size (currently).
 
 - 27 concrete `DType` classes
@@ -108,8 +107,6 @@ FLOAT: DTypeGroup = frozenset((Float32, Float64))
 NUMERIC: DTypeGroup = FLOAT.union(INTEGER).union((Decimal,))
 NESTED: DTypeGroup = frozenset((Struct, List, Array))
 DATETIME: DTypeGroup = frozen_dtypes(Datetime, DatetimeV1)
-TEMPORAL: DTypeGroup = DATETIME.union((Date, Time, Duration, DurationV1))
-STRING: DTypeGroup = frozenset((String, Binary, Categorical, Enum, EnumV1))
 
 _STRING_LIKE_CONVERT: Mapping[FrozenDTypes, type[String | Binary]] = {
     frozen_dtypes(String, Categorical): String,
@@ -132,7 +129,7 @@ def _key_fn_time_unit(obj: Datetime | Duration, /) -> int:
     return _TIME_UNIT_TO_INDEX[obj.time_unit]
 
 
-@lru_cache(maxsize=_CACHE_SIZE_TP_MID * 2)
+@lru_cache(maxsize=_CACHE_SIZE * 2)
 def downcast_time_unit(
     left: SameTemporalT, right: SameTemporalT, /
 ) -> SameTemporalT | None:
@@ -140,7 +137,7 @@ def downcast_time_unit(
     return min(left, right, key=_key_fn_time_unit)
 
 
-@lru_cache(maxsize=_CACHE_SIZE_TP_MID // 2)
+@lru_cache(maxsize=_CACHE_SIZE // 2)
 def dtype_eq(left: DType, right: DType, /) -> bool:
     return left == right
 
@@ -215,7 +212,7 @@ def _has_intersection(a: frozenset[Any], b: frozenset[Any], /) -> bool:
     return not a.isdisjoint(b)
 
 
-@lru_cache(maxsize=_CACHE_SIZE_TP_MID)
+@lru_cache(maxsize=_CACHE_SIZE)
 def has_nested(base_types: FrozenDTypes, /) -> bool:
     return _has_intersection(base_types, NESTED)
 
@@ -334,7 +331,7 @@ def _same_supertype(st: _SupertypeCase[SameT | DType]) -> SameT | DType | None:
     return st.left if dtype_eq(st.left, st.right) else None
 
 
-@lru_cache(maxsize=_CACHE_SIZE_TP_MID)
+@lru_cache(maxsize=_CACHE_SIZE)
 def _numeric_supertype(base_types: FrozenDTypes) -> DType | None:
     """Get the supertype of two numeric data types that do not share the same class.
 
