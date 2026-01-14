@@ -88,8 +88,6 @@ _CACHE_SIZE_TP_MID = 32
 - Pairwise comparisons, but order (of classes) is not important
 """
 
-# TODO @dangotbanned: If this stays in, it needs docs
-OpaqueDispatchFn: TypeAlias = "Callable[[DType, DType], DType | None]"
 
 FrozenDTypes: TypeAlias = frozenset[type[DType]]
 DTypeGroup: TypeAlias = frozenset[type[DType]]
@@ -284,21 +282,26 @@ def _enum_supertype(left: Enum, right: Enum, /) -> Enum | None:
     return left if left.categories == right.categories else None
 
 
+# TODO @dangotbanned: If this stays in, it needs docs
+OpaqueDispatchFn: TypeAlias = "Callable[[DType, DType], DType | None]"
+
 # TODO @dangotbanned: Try to do this while staying in the type system
-_NESTED_DISPATCH: Final[Mapping[type[DType], OpaqueDispatchFn]] = {
+_SAME_DISPATCH: Final[Mapping[type[DType], OpaqueDispatchFn]] = {
     Array: cast("OpaqueDispatchFn", _array_supertype),
     List: cast("OpaqueDispatchFn", _list_supertype),
     Struct: cast("OpaqueDispatchFn", _struct_supertype),
-}
-# TODO @dangotbanned: Try to do this while staying in the type system
-# TODO @dangotbanned: Probably merge with `_NESTED_DISPATCH`, after tweaking `get_supertype` flow
-_PARAMETRIC_DISPATCH: Final[Mapping[type[DType], OpaqueDispatchFn]] = {
     Datetime: cast("OpaqueDispatchFn", _datetime_supertype),
     DatetimeV1: cast("OpaqueDispatchFn", _datetime_supertype),
     Duration: cast("OpaqueDispatchFn", downcast_time_unit),
     DurationV1: cast("OpaqueDispatchFn", downcast_time_unit),
     Enum: cast("OpaqueDispatchFn", _enum_supertype),
 }
+"""Specialized supertyping rules for `(T, T)`.
+
+*When operands share the same class*, all other data types can use `DType.__eq__` (see [#3393]).
+
+[#3393]: https://github.com/narwhals-dev/narwhals/pull/3393
+"""
 
 
 @lru_cache(maxsize=_CACHE_SIZE_TP_MID)
@@ -350,13 +353,18 @@ def _mixed_supertype(left: DType, right: DType, base_types: FrozenDTypes) -> DTy
         (Datetime, {UInt,Int,Float}{32,64}) -> {Int,Float}64
         (Duration, {UInt,Int,Float}{32,64}) -> {Int,Float}64
 
+    We also reject all nested data types here, *whereas* [`polars` supports mixed `Struct`]:
+
+        (Struct, DType) -> Struct
+
     [#121]: https://github.com/narwhals-dev/narwhals/issues/121
+    [`polars` supports mixed `Struct`]: https://github.com/pola-rs/polars/blob/d6d9d8a2c7d3e416488388a0114c6ff3eafcb66c/crates/polars-core/src/utils/supertype.rs#L499-L507
     """
     if Date in base_types and _has_intersection(base_types, DATETIME):
         return left if isinstance(left, Datetime) else right
     if NUMERIC.isdisjoint(base_types):
         return tp() if (tp := _STRING_LIKE_CONVERT.get(base_types)) else None
-    return _numeric_supertype(base_types)
+    return None if has_nested(base_types) else _numeric_supertype(base_types)
 
 
 def get_supertype(left: DType, right: DType) -> DType | None:
@@ -377,17 +385,8 @@ def get_supertype(left: DType, right: DType) -> DType | None:
     base_types = frozen_dtypes(base_left, base_right)
     if Unknown in base_types:
         return Unknown()
-    has_mixed = len(base_types) != 1
-    if has_nested(base_types):
-        # NOTE: There are some other branches for `(Struct, DType) -> Struct`
-        # But we aren't planning to use those.
-        # The order of these conditions means we swallow all `(Nested, Non-Nested)` here,
-        # simplifying both `_NESTED_DISPATCH` and everything that hits `has_nested(base_types) -> False`
-        return None if has_mixed else _NESTED_DISPATCH[base_left](left, right)
-    if has_mixed:
+    if len(base_types) != 1:
         return _mixed_supertype(left, right, base_types)
-    if parametric := _PARAMETRIC_DISPATCH.get(base_left):
-        return parametric(left, right)
-    # NOTE: See for why this *isn't* the first thing we do
-    # https://github.com/narwhals-dev/narwhals/pull/3393
+    if specialized := _SAME_DISPATCH.get(base_left):
+        return specialized(left, right)
     return left if left == right else None
