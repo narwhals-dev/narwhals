@@ -31,6 +31,9 @@ class DictLazyFrame(
     def __narwhals_lazyframe__(self) -> Self:
         return self
 
+    def __dataframe__(self) -> None:
+        return None
+
     @property
     def columns(self) -> list[str]:  # pragma: no cover
         return list(self._native_frame.keys())
