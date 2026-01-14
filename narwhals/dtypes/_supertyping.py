@@ -140,7 +140,6 @@ def downcast_time_unit(
     return min(left, right, key=_key_fn_time_unit)
 
 
-# TODO @dangotbanned: Reuse for https://github.com/narwhals-dev/narwhals/pull/3396#discussion_r2680000244
 @lru_cache(maxsize=_CACHE_SIZE_TP_MID // 2)
 def dtype_eq(left: DType, right: DType, /) -> bool:
     return left == right
@@ -233,7 +232,7 @@ def _struct_fields_union(
     for f in shortest:
         name, dtype = f.name, f.dtype()
         dtype_longest = longest_map.setdefault(name, dtype)
-        if dtype != dtype_longest:
+        if not dtype_eq(dtype, dtype_longest):
             if supertype := get_supertype(dtype, dtype_longest):
                 longest_map[name] = supertype
             else:
