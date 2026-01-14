@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections import deque
 from itertools import chain, product
 from operator import attrgetter
-from typing import TYPE_CHECKING, Any, Final, Protocol, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Final, TypeVar, cast
 
 from narwhals.dtypes._classes import (
     Array,
@@ -53,10 +53,9 @@ if TYPE_CHECKING:
     from narwhals.dtypes._classes import _Bits
     from narwhals.typing import TimeUnit
 
-    class HasTimeUnit(Protocol):
-        time_unit: TimeUnit
+    SameTemporalT = TypeVar("SameTemporalT", Datetime, DatetimeV1, Duration, DurationV1)
+    """Temporal data types, with a `time_unit` attribute."""
 
-    HasTimeUnitT = TypeVar("HasTimeUnitT", bound=HasTimeUnit)
     SameDatetimeT = TypeVar("SameDatetimeT", Datetime, DatetimeV1)
 
     _Fn = TypeVar("_Fn", bound=Callable[..., Any])
@@ -120,12 +119,12 @@ _TIME_UNIT_TO_INDEX: Mapping[TimeUnit, int] = {"s": 0, "ms": 1, "us": 2, "ns": 3
 """Convert time unit to an index for comparison (larger = more precise)."""
 
 
-def _key_fn_time_unit(obj: HasTimeUnit, /) -> int:
+def _key_fn_time_unit(obj: Datetime | Duration, /) -> int:
     return _TIME_UNIT_TO_INDEX[obj.time_unit]
 
 
 @lru_cache(maxsize=_CACHE_SIZE_TP_MID * 2)
-def downcast_time_unit(left: HasTimeUnitT, right: HasTimeUnitT) -> HasTimeUnitT:
+def downcast_time_unit(left: SameTemporalT, right: SameTemporalT, /) -> SameTemporalT:
     """Return the operand with the lowest precision time unit."""
     return min(left, right, key=_key_fn_time_unit)
 
