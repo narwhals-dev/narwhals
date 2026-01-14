@@ -179,8 +179,6 @@ def test_mixed_dtype(left: DType, right: DType, expected: DType | None) -> None:
         assert result == expected
 
 
-# NOTE: Produces 140+ tests
-@pytest.mark.slow
 def test_mixed_integer_temporal(
     naive_temporal_dtype: TemporalType, numeric_dtype: NumericType
 ) -> None:
