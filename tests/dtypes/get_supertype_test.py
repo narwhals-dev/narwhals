@@ -6,14 +6,27 @@ import pytest
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
-import narwhals.stable.v2 as nw_v2  # noqa: F401
 from narwhals.dtypes._supertyping import get_supertype
-
-# TODO @dangotbanned: Un-alias import once branch is less busy
-from tests.utils import dtype_ids as _dtype_ids
+from tests.utils import dtype_ids
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
+    from typing_extensions import TypeAlias
+
     from narwhals.dtypes import DType, NumericType, TemporalType
+    from narwhals.typing import IntoDType
+
+    IntoStruct: TypeAlias = Mapping[str, IntoDType]
+
+
+def _check_supertype(left: DType, right: DType, expected: DType | None) -> None:
+    result = get_supertype(left, right)
+    if expected is None:
+        assert result is None
+    else:
+        assert result is not None
+        assert result == expected
 
 
 @pytest.mark.parametrize(
@@ -52,12 +65,10 @@ if TYPE_CHECKING:
         nw.UInt128(),
         nw.Unknown(),
     ],
-    ids=_dtype_ids,
+    ids=dtype_ids,
 )
 def test_identical_dtype(dtype: DType) -> None:
-    result = get_supertype(dtype, dtype)
-    assert result is not None
-    assert result == dtype
+    _check_supertype(dtype, dtype, dtype)
 
 
 @pytest.mark.parametrize(
@@ -73,10 +84,6 @@ def test_identical_dtype(dtype: DType) -> None:
             None,
         ),
         (nw.Enum([]), nw.Enum(["fruit", "other food"]), None),
-        (nw.List(nw.Int64), nw.List(nw.Int64()), nw.List(nw.Int64())),
-        (nw.List(nw.UInt16()), nw.List(nw.Int32), nw.List(nw.Int32())),
-        (nw.List(nw.Date), nw.List(nw.Binary), None),
-        (nw.List(nw.Unknown), nw.List(nw.Float64), nw.List(nw.Unknown())),
         (
             nw.Array(nw.Float32, shape=2),
             nw.Array(nw.Float64, shape=2),
@@ -94,67 +101,61 @@ def test_identical_dtype(dtype: DType) -> None:
             nw.Array(nw.Decimal, shape=3),
         ),
         (nw.Array(nw.String, shape=1), nw.Array(nw.Int64, shape=1), None),
-        (
-            nw.Struct({"f0": nw.Duration("ms"), "f1": nw.Int64, "f2": nw.Int64}),
-            nw.Struct({"f0": nw.Duration("us"), "f1": nw.Int64()}),
-            nw.Struct({"f0": nw.Duration("ms"), "f1": nw.Int64(), "f2": nw.Int64()}),
-        ),
-        (
-            nw.Struct({"f0": nw.Float64, "f1": nw.Date, "f2": nw.Int32}),
-            nw.Struct({"f0": nw.Float32, "f1": nw.Datetime, "f3": nw.UInt8}),
-            nw.Struct(
-                {"f0": nw.Float64, "f1": nw.Datetime(), "f2": nw.Int32, "f3": nw.UInt8}
-            ),
-        ),
-        (
-            nw.Struct({"f0": nw.Int32, "f1": nw.Boolean, "f2": nw.String}),
-            nw.Struct({"f0": nw.Unknown}),
-            nw.Struct({"f0": nw.Unknown, "f1": nw.Boolean, "f2": nw.String}),
-        ),
-        (
-            nw.Struct({"f0": nw.Object, "f1": nw.List(nw.Boolean)}),
-            nw.Struct({"f0": nw.List(nw.Boolean), "f1": nw.List(nw.Boolean)}),
-            None,
-        ),
-        (
-            nw.Struct({"f0": nw.Binary()}),
-            nw.Struct({"f0": nw.Datetime("s"), "f1": nw.Date}),
-            None,
-        ),
-        (
-            nw.Struct(
-                {"f0": nw.Int64, "f1": nw.Struct({"f1": nw.Float32, "f0": nw.String})}
-            ),
-            nw.Struct(
-                {
-                    "f0": nw.UInt8,
-                    "f1": nw.Struct(
-                        {"f0": nw.Categorical, "f1": nw.Float64(), "f2": nw.Time}
-                    ),
-                }
-            ),
-            nw.Struct(
-                {
-                    "f0": nw.Int64,
-                    "f1": nw.Struct({"f0": nw.String, "f1": nw.Float64, "f2": nw.Time}),
-                }
-            ),
-        ),
-        (
-            nw.Struct({"F0": nw.UInt8, "f0": nw.Int16}),
-            nw.Struct({"f0": nw.Int128, "f1": nw.UInt16, " f0": nw.Int8}),
-            nw.Struct({"f0": nw.Int128, "f1": nw.UInt16, " f0": nw.Int8, "F0": nw.UInt8}),
-        ),
     ],
-    ids=_dtype_ids,
+    ids=dtype_ids,
 )
 def test_same_class(left: DType, right: DType, expected: DType | None) -> None:
-    result = get_supertype(left, right)
-    if expected is None:
-        assert result is None
-    else:
-        assert result is not None
-        assert result == expected
+    _check_supertype(left, right, expected)
+
+
+@pytest.mark.parametrize(
+    ("left", "right", "expected"),
+    [
+        (
+            {"f0": nw.Duration("ms"), "f1": nw.Int64, "f2": nw.Int64},
+            {"f0": nw.Duration("us"), "f1": nw.Int64()},
+            {"f0": nw.Duration("ms"), "f1": nw.Int64(), "f2": nw.Int64()},
+        ),
+        (
+            {"f0": nw.Float64, "f1": nw.Date, "f2": nw.Int32},
+            {"f0": nw.Float32, "f1": nw.Datetime, "f3": nw.UInt8},
+            {"f0": nw.Float64, "f1": nw.Datetime(), "f2": nw.Int32, "f3": nw.UInt8},
+        ),
+        (
+            {"f0": nw.Int32, "f1": nw.Boolean, "f2": nw.String},
+            {"f0": nw.Unknown},
+            {"f0": nw.Unknown, "f1": nw.Boolean, "f2": nw.String},
+        ),
+        (
+            {"f0": nw.Object, "f1": nw.List(nw.Boolean)},
+            {"f0": nw.List(nw.Boolean), "f1": nw.List(nw.Boolean)},
+            None,
+        ),
+        ({"f0": nw.Binary()}, {"f0": nw.Datetime("s"), "f1": nw.Date}, None),
+        (
+            {"f0": nw.Int64, "f1": nw.Struct({"f1": nw.Float32, "f0": nw.String})},
+            {
+                "f0": nw.UInt8,
+                "f1": nw.Struct(
+                    {"f0": nw.Categorical, "f1": nw.Float64(), "f2": nw.Time}
+                ),
+            },
+            {
+                "f0": nw.Int64,
+                "f1": nw.Struct({"f0": nw.String, "f1": nw.Float64, "f2": nw.Time}),
+            },
+        ),
+        (
+            {"F0": nw.UInt8, "f0": nw.Int16},
+            {"f0": nw.Int128, "f1": nw.UInt16, " f0": nw.Int8},
+            {"f0": nw.Int128, "f1": nw.UInt16, " f0": nw.Int8, "F0": nw.UInt8},
+        ),
+    ],
+    ids=dtype_ids,
+)
+def test_struct(left: IntoStruct, right: IntoStruct, expected: IntoStruct | None) -> None:
+    expected_ = None if expected is None else nw.Struct(expected)
+    _check_supertype(nw.Struct(left), nw.Struct(right), expected_)
 
 
 @pytest.mark.parametrize(
@@ -168,22 +169,16 @@ def test_same_class(left: DType, right: DType, expected: DType | None) -> None:
         (nw.Enum(["hello"]), nw.String(), nw.String()),
         (nw.Binary(), nw.String(), nw.Binary()),
     ],
-    ids=_dtype_ids,
+    ids=dtype_ids,
 )
 def test_mixed_dtype(left: DType, right: DType, expected: DType | None) -> None:
-    result = get_supertype(left, right)
-    if expected is None:
-        assert result is None
-    else:
-        assert result is not None
-        assert result == expected
+    _check_supertype(left, right, expected)
 
 
 def test_mixed_integer_temporal(
     naive_temporal_dtype: TemporalType, numeric_dtype: NumericType
 ) -> None:
-    result = get_supertype(naive_temporal_dtype, numeric_dtype)
-    assert result is None
+    _check_supertype(naive_temporal_dtype, numeric_dtype, None)
 
 
 @pytest.mark.parametrize(
@@ -247,26 +242,16 @@ def test_mixed_integer_temporal(
         (nw.Decimal(), nw.Float32(), nw.Float64()),
         (nw.Decimal(), nw.Float64(), nw.Float64()),
     ],
-    ids=_dtype_ids,
+    ids=dtype_ids,
 )
 def test_numeric_promotion(left: DType, right: DType, expected: DType) -> None:
-    result = get_supertype(left, right)
-    assert result is not None
-    assert result == expected
-
-    result = get_supertype(right, left)
-    assert result is not None
-    assert result == expected
+    _check_supertype(left, right, expected)
+    _check_supertype(right, left, expected)
 
 
 def test_numeric_and_bool_promotion(numeric_dtype: NumericType) -> None:
-    result = get_supertype(numeric_dtype, nw.Boolean())
-    assert result is not None
-    assert result == numeric_dtype
-
-    result = get_supertype(nw.Boolean(), numeric_dtype)
-    assert result is not None
-    assert result == numeric_dtype
+    _check_supertype(numeric_dtype, nw.Boolean(), numeric_dtype)
+    _check_supertype(nw.Boolean(), numeric_dtype, numeric_dtype)
 
 
 @pytest.mark.parametrize(
@@ -327,7 +312,7 @@ def test_numeric_and_bool_promotion(numeric_dtype: NumericType) -> None:
             nw.Array(nw_v1.Enum(), shape=4),
         ),
     ],
-    ids=_dtype_ids,
+    ids=dtype_ids,
 )
 def test_v1_dtypes(left: DType, right: DType, expected: DType | None) -> None:
     result = get_supertype(left, right)
@@ -351,8 +336,5 @@ def test_v1_dtypes(left: DType, right: DType, expected: DType | None) -> None:
     ],
 )
 def test_mixed_versions_return_none(dtype_v1: DType, dtype_main: DType) -> None:
-    result = get_supertype(dtype_v1, dtype_main)
-    assert result is None
-
-    result = get_supertype(dtype_main, dtype_v1)
-    assert result is None
+    _check_supertype(dtype_v1, dtype_main, None)
+    _check_supertype(dtype_main, dtype_v1, None)
