@@ -48,7 +48,7 @@ def test_interchange() -> None:
 def test_interchange_non_v1() -> None:
     df = CustomDataFrame({"a": [1, 2, 3], "b": [4, 5, 6], "z": [1, 4, 2]})
     with pytest.raises(TypeError, match="Unsupported dataframe type"):
-        nw.from_native(df)  # type: ignore[arg-type]
+        nw.from_native(df)  # type: ignore[call-overload]
 
 
 def test_interchange_ibis(
