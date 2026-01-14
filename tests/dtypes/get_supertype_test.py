@@ -84,6 +84,10 @@ def test_identical_dtype(dtype: DType) -> None:
             None,
         ),
         (nw.Enum([]), nw.Enum(["fruit", "other food"]), None),
+        (nw.List(nw.Int64), nw.List(nw.Int64()), nw.List(nw.Int64())),
+        (nw.List(nw.UInt16()), nw.List(nw.Int32), nw.List(nw.Int32())),
+        (nw.List(nw.Date), nw.List(nw.Binary), None),
+        (nw.List(nw.Unknown), nw.List(nw.Float64), nw.List(nw.Unknown())),
         (
             nw.Array(nw.Float32, shape=2),
             nw.Array(nw.Float64, shape=2),
