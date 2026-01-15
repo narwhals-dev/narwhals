@@ -108,6 +108,6 @@ def test_concat_diagonal_invalid(
             NarwhalsError, match=re.compile(r"int.+datetime", re.IGNORECASE)
         )
     else:
-        context = pytest.raises(InvalidOperationError, TypeError, match=r"same schema")
+        context = pytest.raises((InvalidOperationError, TypeError), match=r"same schema")
     with context:
         nw.concat([df_1, bad_schema], how="diagonal").collect().to_dict(as_series=False)
