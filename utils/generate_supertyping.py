@@ -79,9 +79,10 @@ def collect_supertypes() -> None:
             tbl_cell_alignment="LEFT",
             tbl_width_chars=-1,
         ),
-        DESTINATION_PATH.open(mode="w", encoding="utf-8") as file,
+        DESTINATION_PATH.open(mode="w", encoding="utf-8", newline="\n") as file,
     ):
         file.write(str(frame))
+        file.write("\n")
 
 
 if __name__ == "__main__":
