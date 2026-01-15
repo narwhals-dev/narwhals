@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections import deque
 from functools import partial
 from typing import TYPE_CHECKING, Any, Protocol, overload
 
@@ -25,7 +24,7 @@ from narwhals._utils import (
 from narwhals.dependencies import is_numpy_array_2d
 
 if TYPE_CHECKING:
-    from collections.abc import Collection, Iterable, Sequence
+    from collections.abc import Collection, Iterable, Iterator, KeysView, Sequence
 
     from typing_extensions import TypeAlias, TypeIs
 
@@ -131,28 +130,25 @@ class AlignDiagonal(Protocol[CompliantFrameT, CompliantExprT_co]):
         schemas: Iterable[IntoSchema],
         union_schema: IntoSchema,
     ) -> Sequence[CompliantFrameT]:
-        # 2 - Align every frame, by adding null column(s) for each missing field in each schema.
-        # Even if all fields are present, we always reorder the columns to match between frames.
-        union_names = tuple(union_schema)
-        # Likely we'll have repeats between frames, so we can share exprs between inner loops
+        union_names = union_schema.keys()
+        # Lazily populate null expressions as needed, shared across frames
         null_exprs: dict[str, CompliantExprT_co] = {}
-        missing_from_frame = deque[CompliantExprT_co]()
-        aligned = deque[CompliantFrameT]()
-        for frame, schema in zip(frames, schemas):
-            for name, dtype in union_schema.items():
-                if name not in schema:
-                    if cached := null_exprs.get(name):
-                        missing_from_frame.append(cached)
-                    else:
-                        null_expr = self.lit(None, dtype).alias(name)
-                        missing_from_frame.append(null_expr)
-                        null_exprs[name] = null_expr
-            result = frame
-            if missing_from_frame:
-                result = result.with_columns(*missing_from_frame)
-                missing_from_frame.clear()
-            aligned.append(result.simple_select(*union_names))
-        return aligned
+
+        def iter_missing_exprs(missing: Iterable[str]) -> Iterator[CompliantExprT_co]:
+            nonlocal null_exprs
+            for name in missing:
+                if (expr := null_exprs.get(name)) is None:
+                    dtype = union_schema[name]
+                    expr = null_exprs[name] = self.lit(None, dtype).alias(name)
+                yield expr
+
+        def align(df: CompliantFrameT, columns: KeysView[str]) -> CompliantFrameT:
+            if missing := union_names - columns:
+                df = df.with_columns(*iter_missing_exprs(missing))
+            # Even if all fields are present, we always reorder the columns to match between frames.
+            return df.simple_select(*union_names)
+
+        return [align(frame, schema.keys()) for frame, schema in zip(frames, schemas)]
 
 
 class DepthTrackingNamespace(
