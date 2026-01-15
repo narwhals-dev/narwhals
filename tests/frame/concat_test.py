@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime as dt
 import re
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -10,6 +10,9 @@ import narwhals as nw
 from narwhals._utils import Implementation
 from narwhals.exceptions import InvalidOperationError, NarwhalsError
 from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 
 def test_concat_horizontal(constructor_eager: ConstructorEager) -> None:
@@ -82,6 +85,29 @@ def test_concat_diagonal(constructor: Constructor) -> None:
 
     with pytest.raises(ValueError, match="No items"):
         nw.concat([], how="diagonal")
+
+
+def _from_natives(
+    constructor: Constructor, *datas: dict[str, list[Any]]
+) -> Iterator[nw.LazyFrame[Any]]:
+    yield from (nw.from_native(constructor(data)).lazy() for data in datas)
+
+
+def test_concat_diagonal_bigger(constructor: Constructor) -> None:
+    # NOTE: `ibis.union` doesn't guarantee the order of outputs
+    # https://github.com/narwhals-dev/narwhals/pull/3404#discussion_r2694556781
+    data_1 = {"idx": [1, 2], "a": [1, 2], "b": [3, 4]}
+    data_2 = {"a": [5, 6], "c": [7, 8], "idx": [3, 4]}
+    data_3 = {"b": [9, 10], "idx": [5, 6], "c": [11, 12]}
+    expected = {
+        "idx": [1, 2, 3, 4, 5, 6],
+        "a": [1, 2, 5, 6, None, None],
+        "b": [3, 4, None, None, 9, 10],
+        "c": [None, None, 7, 8, 11, 12],
+    }
+    dfs = _from_natives(constructor, data_1, data_2, data_3)
+    result = nw.concat(dfs, how="diagonal").sort("idx")
+    assert_equal_data(result, expected)
 
 
 def test_concat_diagonal_invalid(
