@@ -88,9 +88,9 @@ def test_concat_diagonal(constructor: Constructor) -> None:
 
 
 def _from_natives(
-    constructor: Constructor, *datas: dict[str, list[Any]]
+    constructor: Constructor, *data: dict[str, list[Any]]
 ) -> Iterator[nw.LazyFrame[Any]]:
-    yield from (nw.from_native(constructor(data)).lazy() for data in datas)
+    yield from (nw.from_native(constructor(data)).lazy() for data in data)
 
 
 def test_concat_diagonal_bigger(constructor: Constructor) -> None:
