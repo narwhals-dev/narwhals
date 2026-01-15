@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import datetime as dt
 import re
+from typing import Any
 
 import pytest
 
 import narwhals as nw
 from narwhals._utils import Implementation
-from narwhals.exceptions import InvalidOperationError
-from tests.utils import Constructor, ConstructorEager, assert_equal_data
+from narwhals.exceptions import InvalidOperationError, NarwhalsError
+from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 
 def test_concat_horizontal(constructor_eager: ConstructorEager) -> None:
@@ -101,5 +102,9 @@ def test_concat_diagonal_invalid(
             reason=f"{impl!r} does not validate schemas for `concat(how='diagonal')",
         )
     )
-    with pytest.raises((InvalidOperationError, TypeError), match=r"same schema"):
+    expected_exception: Any = InvalidOperationError, TypeError
+    if impl.is_polars() and POLARS_VERSION < (1,):  # pragma: no cover
+        expected_exception = *expected_exception, NarwhalsError
+
+    with pytest.raises(expected_exception, match=r"same schema"):
         nw.concat([df_1, bad_schema], how="diagonal").collect().to_dict(as_series=False)
