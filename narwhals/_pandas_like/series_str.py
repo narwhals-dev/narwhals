@@ -97,3 +97,13 @@ class PandasLikeSeriesStringNamespace(
 
     def zfill(self, width: int) -> PandasLikeSeries:
         return self.with_native(self.native.str.zfill(width))
+
+    def pad_start(self, length: int, fill_char: str) -> PandasLikeSeries:
+        return self.with_native(
+            self.native.str.pad(width=length, fillchar=fill_char, side="left")
+        )
+
+    def pad_end(self, length: int, fill_char: str) -> PandasLikeSeries:
+        return self.with_native(
+            self.native.str.pad(width=length, fillchar=fill_char, side="right")
+        )
