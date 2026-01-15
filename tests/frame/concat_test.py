@@ -102,9 +102,12 @@ def test_concat_diagonal_invalid(
             reason=f"{impl!r} does not validate schemas for `concat(how='diagonal')",
         )
     )
-    expected_exception: Any = InvalidOperationError, TypeError
+    context: Any
     if impl.is_polars() and POLARS_VERSION < (1,):  # pragma: no cover
-        expected_exception = *expected_exception, NarwhalsError
-
-    with pytest.raises(expected_exception, match=r"same schema"):
+        context = pytest.raises(
+            NarwhalsError, match=re.compile(r"int.+datetime", re.IGNORECASE)
+        )
+    else:
+        context = pytest.raises(InvalidOperationError, TypeError, match=r"same schema")
+    with context:
         nw.concat([df_1, bad_schema], how="diagonal").collect().to_dict(as_series=False)
