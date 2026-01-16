@@ -19,6 +19,7 @@ nav:
     - concepts/column_names.md
     - concepts/boolean.md
     - concepts/null_handling.md
+    - concepts/promotion-rules.md
   - Overhead: overhead.md
   - Perfect backwards compatibility policy: backcompat.md
   - Extensions and Plugins: extending.md

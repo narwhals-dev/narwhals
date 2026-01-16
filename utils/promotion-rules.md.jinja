@@ -1,0 +1,162 @@
+# DataType's Promotion Rules
+
+When combining columns of different data types (e.g., in `concat(..., how="vertical_relaxed")`),
+Narwhals determines a common **supertype** that both types can safely be cast to.
+
+This page documents the rules used to derive that supertype.
+
+The implementation aims to follow the rules defined by
+[Polars' `get_supertype_with_options`][get_supertype_with_options].
+
+!!! tip
+
+    If you are in a hurry, we have a single view to check all the combination that we handle.
+    Skip to the following section: [Everything in a single table][#everything-in-a-single-table]
+
+## Unknown
+
+If either operand is `Unknown`, the result is always `Unknown`. This is a fast-path that short-circuits all other logic.
+
+## Same Type
+
+When both operands share the same base type, the behavior depends on whether the type is **parametric**
+(has additional attributes like time unit, inner type, or fields):
+
+* **Non-parametric types** (e.g., `Int32`, `Float64`, `String`, `Boolean`): the supertype is the type itself if both
+    are equal, otherwise no supertype exists.
+* **Parametric types** have specialized rules described in the sections below.
+
+## Nested Types
+
+Nested types (`Array`, `List`, `Struct`) require both operands to share the **same base type**.
+The supertype is then determined by recursively resolving the inner types.
+
+### Array
+
+Both arrays must have the **same shape** (size). If they do, the supertype is an `Array` with the same size and an
+inner type that is the supertype of the two inner types.
+
+### List
+
+The supertype is a `List` whose inner type is the supertype of the two inner types.
+
+### Struct
+
+Struct supertyping is more flexible and the **order of operands matters**:
+
+* If both structs have the **same number of fields** and **matching field names** (in order), the supertype is a
+    `Struct` where each field's dtype is the supertype of the corresponding fields.
+* If structs have **different numbers of fields** or **mismatched field names**, a union is performed:
+    the result contains all fields from both structs. For fields that appear in both (by name),
+    their dtypes must have a valid supertype.
+* The `left` operand defines the field order of the output, unless `right` has more fields.
+
+## String-like Types
+
+The following combinations produce a supertype:
+
+* `{String, Categorical}` -> `String`
+* `{String, Enum}` -> `String`
+* `{String, Binary}` -> `Binary`
+
+All other combinations of string-like types have no supertype.
+
+<!--
+TODO(FBruzzesi): Update once {String, other} -> String is supported
+-->
+
+### Enum
+
+Two `Enum` types have a supertype only if they share the **exact same categories**.
+In that case, the supertype is the `Enum` itself.
+
+## Numeric Types
+
+Numeric supertyping follows a hierarchy designed to preserve precision while avoiding overflow.
+
+### Integer with Integer (same sign)
+
+When both operands are signed integers or both are unsigned integers, the supertype is the one with
+the **higher bit-width**. for example:
+
+* `(Int8, Int32)` -> `Int32`
+* `(UInt16, UInt64)` -> `UInt64`
+
+### Integer with Integer (mixed sign)
+
+When mixing signed and unsigned integers:
+
+* If the signed integer has a **strictly higher** bit-width than the unsigned,
+    use the signed type: `{UInt16, Int32}` -> `Int32`
+* Otherwise, promote the unsigned to the **next higher** signed bit-width (up to `Int64`):
+
+    * `{UInt8, Int8}` -> `Int16`
+    * `{UInt16, Int16}` -> `Int32`
+    * `{UInt32, Int32}` -> `Int64`
+
+* For `UInt64` or `UInt128` mixed with any signed integer, the supertype is `Float64` (to avoid overflow).
+
+### Integer with Float
+
+* Small integers (`Int8`, `Int16`, `UInt8`, `UInt16`) combined with `Float32` are promoted to `Float32`
+* Larger integers (`Int32`, `Int64`, `Int128`, `UInt32`, `UInt64`, `UInt128`) combined with `Float32`
+    are promoted to `Float64`
+* Any integer combined with `Float64` is promoted to `Float64`
+
+### Float with Float
+
+* `{Float32, Float64}` -> `Float64`
+
+### Decimal
+
+* `{Decimal, Integer}` -> `Decimal`
+* `{Decimal, Float32}` -> `Float64`
+* `{Decimal, Float64}` -> `Float64`
+
+### Boolean
+
+`Boolean` combined with any numeric type promotes to that numeric type. For instance:
+
+* `{Boolean, Int32}` -> `Int32`
+* `{Boolean, Float64}` -> `Float64`
+
+## Temporal Types
+
+### Datetime
+
+Two `Datetime` types have a supertype only if they share the **same time zone**.
+The resulting time unit is the **less precise** (coarser) of the two:
+
+* `{Datetime("us"), Datetime("ns")}` -> `Datetime("us")`
+* `{Datetime("ms"), Datetime("s")}` -> `Datetime("s")`
+
+Time unit precision order (from coarsest to finest): `s` < `ms` < `us` < `ns`
+
+### Duration
+
+Two `Duration` types always have a supertype.
+Like `Datetime`, the resulting time unit is the **less precise** of the two:
+
+* `{Duration("us"), Duration("ms")}` -> `Duration("ms")`
+
+### Date with Datetime
+
+When combining `Date` with `Datetime`, the supertype is the `Datetime` (preserving its time unit and time zone).
+
+## No Supertype
+
+The following combinations have **no valid supertype** and will result in `None`:
+
+* Nested types (`Array`, `List`, `Struct`) combined with non-nested types
+* `Datetime` values with different time zones
+* `Enum` values with different categories
+* `Array` values with different shapes
+* Temporal types combined with numeric types (unlike Polars, Narwhals does not support these conversions)
+* Any other unlisted combination of different base types
+
+
+## Everything in a single table
+
+{{ promotion_rules_table }}
+
+[get_supertype_with_options]: https://github.com/pola-rs/polars/blob/529f7ec642912a2f15656897d06f1532c2f5d4c4/crates/polars-core/src/utils/supertype.rs#L142-L543

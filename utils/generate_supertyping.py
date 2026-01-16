@@ -10,11 +10,14 @@ from pathlib import Path
 from typing import Final, TypeVar
 
 import polars as pl
+from jinja2 import Template
 
 from narwhals.dtypes import DType, Enum, Unknown
 from narwhals.dtypes._supertyping import get_supertype
 
 T = TypeVar("T")
+
+TEMPLATE_PATH: Final[Path] = Path("utils") / "promotion-rules.md.jinja"
 DESTINATION_PATH: Final[Path] = Path("docs") / "concepts" / "promotion-rules.md"
 
 
@@ -79,9 +82,12 @@ def collect_supertypes() -> None:
             tbl_cell_alignment="LEFT",
             tbl_width_chars=-1,
         ),
+        TEMPLATE_PATH.open(mode="r") as stream,
         DESTINATION_PATH.open(mode="w", encoding="utf-8", newline="\n") as file,
     ):
-        file.write(str(frame))
+        content = Template(stream.read()).render({"promotion_rules_table": str(frame)})
+
+        file.write(content)
         file.write("\n")
 
 
