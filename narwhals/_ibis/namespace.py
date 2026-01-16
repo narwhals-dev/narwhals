@@ -67,25 +67,18 @@ class IbisNamespace(
     def concat(
         self, items: Iterable[IbisLazyFrame], *, how: ConcatMethod
     ) -> IbisLazyFrame:
-        frames: Sequence[IbisLazyFrame] = list(items)
+        frames: Sequence[IbisLazyFrame] = tuple(items)
         if how == "diagonal":
             frames = self.align_diagonal(frames)
-            natives = (lf.native for lf in frames)
-            try:
-                result = ibis.union(*natives)
-            except ibis.IbisError:
-                first = frames[0].schema
-                if not all(x.schema == first for x in frames):
-                    msg = "inputs should all have the same schema"
-                    raise TypeError(msg) from None
-                raise
-            return frames[0]._with_native(result)
-        native_items = [item.native for item in frames]
-        schema = frames[0].schema
-        if not all(x.schema == schema for x in frames[1:]):
-            msg = "inputs should all have the same schema"
-            raise TypeError(msg)
-        return self._lazyframe.from_native(ibis.union(*native_items), context=self)
+        try:
+            result = ibis.union(*(lf.native for lf in frames))
+        except ibis.IbisError:
+            first = frames[0].schema
+            if not all(x.schema == first for x in frames[1:]):
+                msg = "inputs should all have the same schema"
+                raise TypeError(msg) from None
+            raise
+        return frames[0]._with_native(result)
 
     def concat_str(
         self, *exprs: IbisExpr, separator: str, ignore_nulls: bool
