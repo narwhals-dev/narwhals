@@ -131,7 +131,8 @@ def test_concat_diagonal_invalid(
     context: Any
     if impl.is_polars() and POLARS_VERSION < (1,):  # pragma: no cover
         context = pytest.raises(
-            NarwhalsError, match=re.compile(r"int.+datetime", re.IGNORECASE)
+            NarwhalsError,
+            match=re.compile(r"(int.+datetime)|(datetime.+int)", re.IGNORECASE),
         )
     else:
         context = pytest.raises((InvalidOperationError, TypeError), match=r"same schema")
