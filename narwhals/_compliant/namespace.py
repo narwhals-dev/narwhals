@@ -108,7 +108,7 @@ class AlignDiagonal(Protocol[CompliantFrameT, CompliantExprT_co]):
     def align_diagonal(
         self, frames: Collection[CompliantFrameT], /
     ) -> Sequence[CompliantFrameT]:
-        """Convert the inputs to `concat(..., how="diagonal")` into `concat(..., how="vertical")`.
+        """Prepare frames with differing schemas for vertical concatenation.
 
         Adapted from [`convert_diagonal_concat`].
 
