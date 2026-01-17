@@ -73,6 +73,38 @@ def test_implementation_new(member: str, value: str) -> None:
     assert nw.Implementation(value) is getattr(nw.Implementation, member)
 
 
+def test_is_eager_allowed() -> None:
+    """Test that is_eager_allowed correctly identifies eager-compatible implementations."""
+    # Test eager-allowed implementations
+    assert nw.Implementation.PANDAS.is_eager_allowed()
+    assert nw.Implementation.POLARS.is_eager_allowed()
+    assert nw.Implementation.PYARROW.is_eager_allowed()
+    assert nw.Implementation.CUDF.is_eager_allowed()
+    assert nw.Implementation.MODIN.is_eager_allowed()
+
+    # Test non-eager implementations
+    assert not nw.Implementation.DASK.is_eager_allowed()
+    assert not nw.Implementation.DUCKDB.is_eager_allowed()
+    assert not nw.Implementation.IBIS.is_eager_allowed()
+    assert not nw.Implementation.PYSPARK.is_eager_allowed()
+    assert not nw.Implementation.PYSPARK_CONNECT.is_eager_allowed()
+    assert not nw.Implementation.SQLFRAME.is_eager_allowed()
+    assert not nw.Implementation.UNKNOWN.is_eager_allowed()
+
+
+def test_is_eager_allowed_with_actual_dataframes() -> None:
+    """Test is_eager_allowed with actual dataframe objects."""
+    # Test with pandas (if available)
+    pd = pytest.importorskip("pandas")
+    df_pandas = nw.from_native(pd.DataFrame({"a": [1, 2, 3]}))
+    assert df_pandas.implementation.is_eager_allowed()
+
+    # Test with polars (if available)
+    pl = pytest.importorskip("polars")
+    df_polars = nw.from_native(pl.DataFrame({"a": [1, 2, 3]}))
+    assert df_polars.implementation.is_eager_allowed()
+
+
 _TYPING_ONLY_TESTS = "_"
 """Exhaustive checks for overload matching native -> implementation.
 
