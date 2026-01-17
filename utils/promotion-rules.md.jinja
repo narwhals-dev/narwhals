@@ -184,7 +184,7 @@ The combination of a `String` with a `Categorical` or `Enum` is promoted to `Str
 
 ```python exec="1" session="promotion-rules" result="python"
 print(f"{get_supertype(nw.String(), nw.Categorical()) = !r}")
-print(f"{get_supertype(nw.String(), nw.Enum(["orca", "narwhal"])) = !r}")
+print(f"{get_supertype(nw.String(), nw.Enum(['orca', 'narwhal'])) = !r}")
 ```
 
 The combination of a `String` with a `Binary` is promoted to `Binary`:
