@@ -94,7 +94,6 @@ PD_DURATION_RGX = r"""^
         (?P<time_unit>s|ms|us|ns)                 # Match time unit: s, ms, us, or ns
     \]                                            # Closing bracket for timedelta64
 $"""
-
 PATTERN_PD_DURATION = re.compile(PD_DURATION_RGX, re.VERBOSE)
 PA_DURATION_RGX = r"""^
     duration\[
@@ -103,6 +102,15 @@ PA_DURATION_RGX = r"""^
     \[pyarrow\]                                   # Literal string "[pyarrow]"
 $"""
 PATTERN_PA_DURATION = re.compile(PA_DURATION_RGX, re.VERBOSE)
+PA_DECIMAL_RGX = r"""^
+    decimal128\(
+        (?P<precision>\d+)                        # Precision value
+        ,\s                                       # Literal string ", "
+        (?P<scale>\d+)                            # Scale value
+    \)
+    \[pyarrow\]                                   # Literal string "[pyarrow]"
+$"""
+PATTERN_PA_DECIMAL = re.compile(PA_DECIMAL_RGX, re.VERBOSE)
 
 NativeIntervalUnit: TypeAlias = Literal[
     "year",
@@ -277,8 +285,9 @@ def non_object_native_to_narwhals_dtype(native_dtype: Any, version: Version) -> 
         return dtypes.Duration(du_time_unit)
     if dtype == "date32[day][pyarrow]":
         return dtypes.Date()
-    if dtype.startswith("decimal") and dtype.endswith("[pyarrow]"):
-        return dtypes.Decimal()
+    if match_ := PATTERN_PA_DECIMAL.match(dtype):
+        precision, scale = int(match_.group("precision")), int(match_.group("scale"))
+        return dtypes.Decimal(precision, scale)
     if dtype.startswith("time") and dtype.endswith("[pyarrow]"):
         return dtypes.Time()
     if dtype.startswith("binary") and dtype.endswith("[pyarrow]"):
@@ -476,7 +485,6 @@ NW_TO_PD_DTYPES_BACKEND: Mapping[type[DType], Mapping[DTypeBackend, str | type[A
         None: "bool",
     },
 }
-UNSUPPORTED_DTYPES = (dtypes.Decimal,)
 
 
 def narwhals_to_native_dtype(  # noqa: C901, PLR0912
@@ -568,12 +576,17 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912
         msg = "Can not cast / initialize Enum without categories present"
         raise ValueError(msg)
     if issubclass(
-        base_type, (dtypes.Struct, dtypes.Array, dtypes.List, dtypes.Time, dtypes.Binary)
+        base_type,
+        (
+            dtypes.Struct,
+            dtypes.Array,
+            dtypes.List,
+            dtypes.Time,
+            dtypes.Binary,
+            dtypes.Decimal,
+        ),
     ):
         return narwhals_to_native_arrow_dtype(dtype, implementation, version)
-    if issubclass(base_type, UNSUPPORTED_DTYPES):
-        msg = f"Converting to {base_type.__name__} dtype is not supported for {implementation}."
-        raise NotImplementedError(msg)
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
 

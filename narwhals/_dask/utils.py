@@ -100,6 +100,7 @@ UNSUPPORTED_DTYPES = (
     dtypes.Array,
     dtypes.Time,
     dtypes.Binary,
+    dtypes.Decimal,
 )
 
 
