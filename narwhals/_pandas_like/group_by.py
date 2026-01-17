@@ -61,7 +61,9 @@ NonStrHashable: TypeAlias = Any
 
 _REMAP_ORDERED_INDEX: Mapping[NarwhalsAggregation, Literal[0, -1]] = {
     "first": 0,
+    "min_by": 0,
     "last": -1,
+    "max_by": -1,
     "any_value": 0,
 }
 
@@ -109,15 +111,15 @@ class AggExpr:
         return self
 
     def _getitem_aggs(
-        self, group_by: PandasLikeGroupBy, /
+        self, group_by: PandasLikeGroupBy, grouped: NativeGroupBy, /
     ) -> pd.DataFrame | pd.Series[Any]:
         """Evaluate the wrapped expression as a group_by operation."""
         result: pd.DataFrame | pd.Series[Any]
         names = self.output_names
         if self.is_len() and self.is_top_level_function():
-            result = group_by._grouped.size()
+            result = grouped.size()
         elif self.is_len():
-            result_single = group_by._grouped.size()
+            result_single = grouped.size()
             ns = group_by.compliant.__narwhals_namespace__()
             result = ns._concat_horizontal(
                 [ns.from_native(result_single).alias(name).native for name in names]
@@ -153,11 +155,11 @@ class AggExpr:
                 ]
             )
         elif self.is_last() or self.is_first() or self.is_any_value():
-            result = self.native_agg()(group_by._grouped[[*group_by._keys, *names]])
+            result = self.native_agg()(grouped[[*group_by._keys, *names]])
             result.set_index(group_by._keys, inplace=True)  # noqa: PD002
         else:
             select = names[0] if len(names) == 1 else list(names)
-            result = self.native_agg()(group_by._grouped[select])
+            result = self.native_agg()(grouped[select])
         if is_pandas_like_dataframe(result):
             result.columns = list(self.aliases)
         else:
@@ -168,10 +170,10 @@ class AggExpr:
         return self.leaf_name == "len"
 
     def is_last(self) -> bool:
-        return self.leaf_name == "last"
+        return self.leaf_name in {"last", "max_by"}
 
     def is_first(self) -> bool:
-        return self.leaf_name == "first"
+        return self.leaf_name in {"first", "min_by"}
 
     def is_mode(self) -> bool:
         return self.leaf_name == "mode"
@@ -224,7 +226,9 @@ class PandasLikeGroupBy(
         "all": "all",
         "any": "any",
         "first": "nth",
+        "min_by": "nth",
         "last": "nth",
+        "max_by": "nth",
         "any_value": "nth",
     }
     _original_columns: tuple[str, ...]
@@ -258,38 +262,51 @@ class PandasLikeGroupBy(
             df, keys
         )
         self._exclude: tuple[str, ...] = (*self._keys, *self._output_key_names)
+        self._group_by_kwargs = make_group_by_kwargs(drop_null_keys=drop_null_keys)
+
         # Drop index to avoid potential collisions:
         # https://github.com/narwhals-dev/narwhals/issues/1907.
-        native = self.compliant.native
-        if set(native.index.names).intersection(self.compliant.columns):
-            native = native.reset_index(drop=True)
-
-        self._group_by_kwargs = make_group_by_kwargs(drop_null_keys=drop_null_keys)
-        self._grouped: NativeGroupBy = native.groupby(
-            self._keys.copy(), **self._group_by_kwargs
-        )
+        self._native = self.compliant.native
+        if set(self._native.index.names).intersection(self.compliant.columns):
+            self._native = self._native.reset_index(drop=True)
 
     def agg(self, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:
         all_aggs_are_simple = True
         agg_exprs: list[AggExpr] = []
+        by = ()
         for expr in exprs:
             agg_exprs.append(AggExpr(expr).with_expand_names(self))
             if not self._is_simple(expr):
                 all_aggs_are_simple = False
+            md = next(expr._metadata.op_nodes_reversed())
+            if md.name not in _REMAP_ORDERED_INDEX:
+                continue
+            if _by := md.kwargs.get("by", ()):
+                if by and _by != by:
+                    msg = f"Only one `by` can be specified in `group_by`. Found both {by} and {_by}."
+                    raise NotImplementedError(msg)
+                by = _by
+
+        if by:
+            grouped: NativeGroupBy = self._native.sort_values(
+                list(by), na_position="first"
+            ).groupby(self._keys.copy(), **self._group_by_kwargs)
+        else:
+            grouped = self._native.groupby(self._keys.copy(), **self._group_by_kwargs)
 
         if all_aggs_are_simple:
             result: pd.DataFrame
             if agg_exprs:
                 ns = self.compliant.__narwhals_namespace__()
-                result = ns._concat_horizontal(self._getitem_aggs(agg_exprs))
+                result = ns._concat_horizontal(self._getitem_aggs(grouped, agg_exprs))
             else:
                 result = self.compliant.__native_namespace__().DataFrame(
-                    list(self._grouped.groups), columns=self._keys
+                    list(grouped.groups), columns=self._keys
                 )
         elif self.compliant.native.empty:
             raise empty_results_error()
         else:
-            result = self._apply_aggs(exprs)
+            result = self._apply_aggs(grouped, exprs)
         # NOTE: Keep `inplace=True` to avoid making a redundant copy.
         # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
         result.reset_index(inplace=True)  # noqa: PD002
@@ -310,11 +327,13 @@ class PandasLikeGroupBy(
         )
 
     def _getitem_aggs(
-        self, exprs: Iterable[AggExpr], /
+        self, grouped: NativeGroupBy, exprs: Iterable[AggExpr], /
     ) -> list[pd.DataFrame | pd.Series[Any]]:
-        return [e._getitem_aggs(self) for e in exprs]
+        return [e._getitem_aggs(self, grouped) for e in exprs]
 
-    def _apply_aggs(self, exprs: Iterable[PandasLikeExpr]) -> pd.DataFrame:
+    def _apply_aggs(
+        self, grouped: NativeGroupBy, exprs: Iterable[PandasLikeExpr]
+    ) -> pd.DataFrame:
         """Stub issue for `include_groups` [pandas-dev/pandas-stubs#1270].
 
         - [User guide] mentions `include_groups` 4 times without deprecation.
@@ -329,7 +348,7 @@ class PandasLikeGroupBy(
         warn_complex_group_by()
         impl = self.compliant._implementation
         func = self._apply_exprs_function(exprs)
-        apply = self._grouped.apply
+        apply = grouped.apply
         if impl.is_pandas() and impl._backend_version() >= (2, 2):
             return apply(func, include_groups=False)  # type: ignore[call-overload]
         return apply(func)  # pragma: no cover
@@ -351,6 +370,7 @@ class PandasLikeGroupBy(
         return fn
 
     def __iter__(self) -> Iterator[tuple[Any, PandasLikeDataFrame]]:
+        grouped = self._native.groupby(self._keys.copy(), **self._group_by_kwargs)
         with warnings.catch_warnings():
             warnings.filterwarnings(
                 "ignore",
@@ -358,7 +378,7 @@ class PandasLikeGroupBy(
                 category=FutureWarning,
             )
             with_native = self.compliant._with_native
-            for key, group in self._grouped:
+            for key, group in grouped:
                 yield (key, with_native(group).simple_select(*self._original_columns))
 
 
