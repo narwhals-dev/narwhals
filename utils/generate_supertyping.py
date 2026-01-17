@@ -48,7 +48,7 @@ from narwhals.dtypes import (
 from narwhals.dtypes._supertyping import get_supertype
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator
+    from collections.abc import Callable, Iterator, Sequence
     from datetime import timezone
 
     from typing_extensions import Self, TypeAlias
@@ -275,8 +275,17 @@ class DTypeProxy(Generic[D_co]):
     tp: type[D_co]
     _rules: tuple[Rule, ...] = ()
 
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}[{self.tp!r}]"
+
     def iter_instances(self) -> Iterator[D_co]:
+        """Yield instances of the wrapped data type."""
         raise NotImplementedError
+
+    def iter_supertypes(self) -> Iterator[SupertypeRepr]:
+        """Yield all supertype relationships the wrapped data type is the winner of."""
+        for rule in self.rules:
+            yield from rule.iter_supertypes(self)
 
     def _with_rule(self, rule: Rule[Any], /) -> Self:
         """Extend the current rules, mutating this instance."""
@@ -306,9 +315,6 @@ class Singleton(DTypeProxy[DS_co]):
     @property
     def instance(self) -> DS_co:
         return self.tp()
-
-    def __repr__(self) -> str:
-        return f"{type(self).__name__}[{self.tp!r}]"
 
 
 class Parametric(DTypeProxy[DP_co]):
@@ -367,7 +373,7 @@ def arbitrary(*args: Any) -> Todo:
     raise NotImplementedError
 
 
-def describe_supertyping() -> None:  # noqa: PLR0914
+def describe_supertyping() -> Sequence[DTypeProxy[DType]]:  # noqa: PLR0914
     """Declarative form of supertyping rules.
 
     groups (per [polars/datatypes])
@@ -439,6 +445,15 @@ def describe_supertyping() -> None:  # noqa: PLR0914
         object_,
     )
     unknown = unknown.rule.unconditional(*group_known)
+    return (*group_known, unknown)
+
+
+def display_supertypes() -> None:
+    proxies = describe_supertyping()
+    # TODO @dangotbanned: Include Nested (and Unknown which refs them) when they're finished
+    safe = (p for p in proxies if not (isinstance(p, Nested) or p.tp is Unknown))
+    supertypes = chain.from_iterable(p.iter_supertypes() for p in safe)
+    print(*supertypes, sep="\n")
 
 
 if __name__ == "__main__":
