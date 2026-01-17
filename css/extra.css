@@ -1,0 +1,75 @@
+.md-typeset ol li,
+.md-typeset ul li {
+  margin-bottom: 0.1em !important;
+}
+.md-main__inner.md-grid {
+  max-width: initial;
+  margin-left: 5vw;
+}
+
+/* API Completeness Table Styles */
+.table-container {
+  overflow-x: auto;
+}
+
+article table:not([class]) {
+  width: auto !important;
+  max-width: 100%;
+  table-layout: auto;
+}
+
+article table:not([class]) th,
+article table:not([class]) td {
+  white-space: nowrap;
+  padding: 0.6rem 1rem;
+}
+
+article table:not([class]) th:first-child,
+article table:not([class]) td:first-child {
+  min-width: 150px;
+}
+
+/* Column Selector Styles */
+.column-selector-button:hover {
+  background: var(--md-primary-fg-color--dark, #303f9f) !important;
+}
+
+.column-selector-button:active {
+  transform: scale(0.98);
+}
+
+.column-selector-dropdown {
+  scrollbar-width: thin;
+  scrollbar-color: var(--md-default-fg-color--lighter, #ccc) transparent;
+}
+
+.column-selector-dropdown::-webkit-scrollbar {
+  width: 8px;
+}
+
+.column-selector-dropdown::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.column-selector-dropdown::-webkit-scrollbar-thumb {
+  background: var(--md-default-fg-color--lighter, #ccc);
+  border-radius: 4px;
+}
+
+.column-selector-dropdown::-webkit-scrollbar-thumb:hover {
+  background: var(--md-default-fg-color--light, #999);
+}
+
+/* Dark mode adjustments */
+[data-md-color-scheme="slate"] .column-selector-dropdown {
+  background: var(--md-default-bg-color, #1e1e1e);
+  border-color: var(--md-default-fg-color--lighter, #444);
+}
+
+[data-md-color-scheme="slate"] .column-selector-button {
+  background: var(--md-primary-fg-color, #5d6cc0);
+}
+
+[data-md-color-scheme="slate"] .column-selector-button:hover {
+  background: var(--md-primary-fg-color--dark, #4051b5) !important;
+}
