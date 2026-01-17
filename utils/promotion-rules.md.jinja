@@ -136,7 +136,7 @@ print(f"{get_supertype(nw.Float64(), nw.Float32()) = !r}")
 Two `Datetime` types have a supertype only if they share the **same time zone**:
 
 ```python exec="1" session="promotion-rules" result="python"
-print(f"{get_supertype(nw.Datetime("us"), nw.Datetime("ns")) = !r}")
+print(f"{get_supertype(nw.Datetime('us'), nw.Datetime('ns')) = !r}")
 
 tz = "Europe/Berlin"
 print(f"{tz = !r}")
@@ -162,8 +162,8 @@ print(f"{get_supertype(nw.Datetime(time_zone=tz1), nw.Datetime(time_zone=tz2)) =
 When combining a `Datetime` with a `Date`, the supertype is the `Datetime` (preserving its time unit and time zone).
 
 ```python exec="1" session="promotion-rules" result="python"
-print(f"{get_supertype(nw.Datetime("us"), nw.Date()) = !r}")
-print(f"{get_supertype(nw.Datetime("ms", time_zone="Europe/Berlin"), nw.Date()) = !r}")
+print(f"{get_supertype(nw.Datetime('us'), nw.Date()) = !r}")
+print(f"{get_supertype(nw.Datetime('ms', time_zone='Europe/Berlin'), nw.Date()) = !r}")
 ```
 
 ### Duration
@@ -172,8 +172,8 @@ Two `Duration` types always have a supertype. Like `Datetime`, the resulting tim
 the two:
 
 ```python exec="1" session="promotion-rules" result="python"
-print(f"{get_supertype(nw.Duration("us"), nw.Duration("ms")) = !r}")
-print(f"{get_supertype(nw.Duration("s"), nw.Duration("ms")) = !r}")
+print(f"{get_supertype(nw.Duration('us'), nw.Duration('ms')) = !r}")
+print(f"{get_supertype(nw.Duration('s'), nw.Duration('ms')) = !r}")
 ```
 
 Time unit precision order (from coarsest to finest): `s` < `ms` < `us` < `ns`
