@@ -436,7 +436,7 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
         return ns_spark.compliant.from_native(native_object).to_narwhals()
 
     # Interchange protocol
-    if supports_dataframe_interchange(native_object):
+    if version is Version.V1 and supports_dataframe_interchange(native_object):
         from narwhals._interchange.dataframe import InterchangeFrame
 
         if eager_only or series_only:
@@ -447,17 +447,6 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
                 )
                 raise TypeError(msg)
             return native_object
-        if version is not Version.V1:
-            if pass_through:
-                return native_object
-            msg = (
-                "The Dataframe Interchange Protocol is no longer supported in the main `narwhals` namespace.\n\n"
-                "You may want to:\n"
-                " - Use `narwhals.stable.v1`, where it is still supported.\n"
-                "    - See https://narwhals-dev.github.io/narwhals/backcompat\n"
-                " - Use `pass_through=True` to pass the object through without raising."
-            )
-            raise TypeError(msg)
         return Version.V1.dataframe(InterchangeFrame(native_object), level="interchange")
 
     compliant_object = plugins.from_native(native_object, version)
