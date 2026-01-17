@@ -69,6 +69,7 @@ def collect_supertypes() -> None:
             sort_columns=True,
         )
         .sort("_")
+        .with_columns(_=pl.format("**{}**", pl.col("_")))
         .rename({"_": ""})
     )
 
@@ -91,5 +92,4 @@ def collect_supertypes() -> None:
         file.write("\n")
 
 
-if __name__ == "__main__":
-    collect_supertypes()
+collect_supertypes()
