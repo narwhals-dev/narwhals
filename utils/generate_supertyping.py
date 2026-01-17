@@ -7,12 +7,13 @@ from __future__ import annotations
 
 import inspect
 from dataclasses import dataclass
-from itertools import product
+from itertools import chain, product
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final, Generic, Literal, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Final, Generic, overload
 
 import polars as pl
 
+from narwhals._typing_compat import TypeVar
 from narwhals.dtypes import (
     Array,
     Binary,
@@ -47,7 +48,7 @@ from narwhals.dtypes import (
 from narwhals.dtypes._supertyping import get_supertype
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Callable, Iterator
     from datetime import timezone
 
     from typing_extensions import Self, TypeAlias
@@ -201,6 +202,7 @@ _Parametric: TypeAlias = "Datetime | Duration | Enum"
 _Nested: TypeAlias = "Array | List | Struct"
 _Singleton: TypeAlias = "Binary | Boolean | Categorical | Date | Time | NumericType | String | Object | Unknown"
 
+D = TypeVar("D", bound=DType, default=DType)
 D_co = TypeVar("D_co", bound=DType, covariant=True)
 DS_co = TypeVar("DS_co", bound=_Singleton, covariant=True)
 DP_co = TypeVar("DP_co", bound=_Parametric, covariant=True)
@@ -208,14 +210,53 @@ DN_co = TypeVar("DN_co", bound=_Nested, covariant=True)
 I_co = TypeVar("I_co", bound="DTypeProxy[DType]", covariant=True)
 ProxyT = TypeVar("ProxyT", bound="DTypeProxy[DType]")
 
+SupertypeRepr: TypeAlias = tuple[DType, DType, DType]
+"""However we plan to represent a supertype relationship.
 
-RuleKind: TypeAlias = Literal["unconditional"]
+Means this, but without the nesting:
 
-WipRuleRepr: TypeAlias = "tuple[RuleKind, tuple[DTypeProxy[DType], ...]]"
-"""Will do for now, but more structure might be nice."""
+    (DType, DType) -> DType
+"""
 
 
-class _RuleNs(Generic[ProxyT]):
+# TODO @dangotbanned: Special parametric
+# TODO @dangotbanned: - Datetime
+# TODO @dangotbanned: - Duration
+# TODO @dangotbanned: - Array
+# TODO @dangotbanned: - List
+# TODO @dangotbanned: - Struct
+# TODO @dangotbanned: Numeric
+# TODO @dangotbanned: - _integer_supertyping
+# TODO @dangotbanned: - _FLOAT_PROMOTE
+# TODO @dangotbanned:   - (Decimal, Float32) -> Float64
+# TODO @dangotbanned: - _primitive_numeric_supertyping
+# TODO @dangotbanned:   - (Integer{32,64,128}, Float32) -> Float64
+class Rule(Generic[D]):
+    def iter_supertypes(self, owner: DTypeProxy[D], /) -> Iterator[SupertypeRepr]:
+        raise NotImplementedError
+
+
+@dataclass
+class Unconditional(Rule[D]):
+    others: tuple[DTypeProxy[DType], ...]
+
+    def iter_supertypes(self, owner: DTypeProxy[D], /) -> Iterator[SupertypeRepr]:
+        rights = chain.from_iterable(other.iter_instances() for other in self.others)
+        for left, right in product(owner.iter_instances(), rights):
+            yield left, right, left
+
+
+@dataclass
+class MatchSame(Rule[D]):
+    predicate: Callable[[D, D], bool]
+
+    def iter_supertypes(self, owner: DTypeProxy[D], /) -> Iterator[SupertypeRepr]:
+        for left, right in product(owner.iter_instances(), owner.iter_instances()):
+            if self.predicate(left, right):
+                yield left, right, left
+
+
+class _RuleNs(Generic[ProxyT, D]):
     def __init__(self, owner: ProxyT, /) -> None:
         self._owner: ProxyT = owner
 
@@ -223,24 +264,27 @@ class _RuleNs(Generic[ProxyT]):
         self, other: DTypeProxy[DType], *others: DTypeProxy[DType]
     ) -> ProxyT:
         """For all instances producable by `others`, this side is always a valid supertype."""
-        rule_repr: WipRuleRepr = ("unconditional", (other, *others))
-        return self._owner._with_rule(rule_repr)
+        return self._owner._with_rule(Unconditional((other, *others)))
+
+    def match_same(self, predicate: Callable[[D, D], bool], /) -> ProxyT:
+        """When comparing against an instance of the same type, `predicate` return True."""
+        return self._owner._with_rule(MatchSame(predicate))
 
 
 class DTypeProxy(Generic[D_co]):
     tp: type[D_co]
-    _rules: tuple[WipRuleRepr, ...] = ()
+    _rules: tuple[Rule, ...] = ()
 
     def iter_instances(self) -> Iterator[D_co]:
         raise NotImplementedError
 
-    def _with_rule(self, rule: Any, /) -> Self:
+    def _with_rule(self, rule: Rule[Any], /) -> Self:
         """Extend the current rules, mutating this instance."""
         self._rules = *self._rules, rule
         return self
 
     @property
-    def rule(self) -> _RuleNs[Self]:
+    def rule(self) -> _RuleNs[Self, D_co]:
         """Namespace for adding a supertyping rule for this DType.
 
         When a rule has mixed data types, it should be stored on the *"winning"* side of the comparison.
@@ -248,7 +292,7 @@ class DTypeProxy(Generic[D_co]):
         return _RuleNs(self)
 
     @property
-    def rules(self) -> tuple[WipRuleRepr, ...]:
+    def rules(self) -> tuple[Rule, ...]:
         return self._rules
 
 
@@ -334,7 +378,9 @@ def describe_supertyping() -> None:  # noqa: PLR0914
 
     # String
     categorical = dtype(Categorical)
-    enum = dtype(Enum, parametrize("categories", ["a", "b", "c"], ["d", "e", "f"]))
+    enum = dtype(
+        Enum, parametrize("categories", ["a", "b", "c"], ["d", "e", "f"])
+    ).rule.match_same(lambda owner, other: owner.categories == other.categories)
     string = dtype(String).rule.unconditional(categorical, enum)
     group_string = (categorical, enum, string)
 
@@ -357,9 +403,6 @@ def describe_supertyping() -> None:  # noqa: PLR0914
     group_temporal = (date, datetime, duration, time)
 
     # Numeric
-    decimal = dtype(Decimal).rule.unconditional(boolean)
-    f32 = dtype(Float32).rule.unconditional(boolean)
-    f64 = dtype(Float64).rule.unconditional(boolean)
     i8 = dtype(Int8).rule.unconditional(boolean)
     i16 = dtype(Int16).rule.unconditional(boolean)
     i32 = dtype(Int32).rule.unconditional(boolean)
@@ -370,7 +413,13 @@ def describe_supertyping() -> None:  # noqa: PLR0914
     u32 = dtype(UInt32).rule.unconditional(boolean)
     u64 = dtype(UInt64).rule.unconditional(boolean)
     u128 = dtype(UInt128).rule.unconditional(boolean)
-    group_numeric = (decimal, f32, f64, i8, i16, i32, i64, i128, u8, u16, u32, u64, u128)
+    integer = i8, i16, i32, i64, i128, u8, u16, u32, u64, u128
+
+    decimal = dtype(Decimal).rule.unconditional(boolean, *integer)
+    f32 = dtype(Float32).rule.unconditional(boolean, i8, i16, u8, u16)
+    f64 = dtype(Float64).rule.unconditional(boolean, f32, decimal, *integer)
+    floating = f32, f64
+    group_numeric = (decimal, *floating, *integer)
 
     # Nested
     # TODO @dangotbanned: Array + List can share some stuff, but mostly these three need pretty unique handling
