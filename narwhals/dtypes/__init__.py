@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from narwhals.dtypes._classes_v1 import (
+from narwhals.dtypes._classes import (
     Array,
     Binary,
     Boolean,
@@ -28,6 +28,7 @@ from narwhals.dtypes._classes_v1 import (
     SignedIntegerType,
     String,
     Struct,
+    TemporalType,
     Time,
     UInt8,
     UInt16,
@@ -66,6 +67,7 @@ __all__ = [
     "SignedIntegerType",
     "String",
     "Struct",
+    "TemporalType",
     "Time",
     "UInt8",
     "UInt16",
