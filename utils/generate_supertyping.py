@@ -79,7 +79,8 @@ def get_leaf_subclasses(cls: type[T]) -> list[type[T]]:
     return leaves
 
 
-def collect_supertypes() -> None:
+def _collect_supertypes() -> list[tuple[str, str, str]]:
+    """Return the pre-pivot supertype tuples."""
     from narwhals.dtypes import _classes as _classes, _classes_v1 as _classes_v1  # noqa: I001, PLC0414
 
     dtypes = get_leaf_subclasses(DType)
@@ -105,7 +106,11 @@ def collect_supertypes() -> None:
             promoted = str(_promoted.__class__) if _promoted else ""
 
         supertypes.append((left_str, right_str, promoted))
+    return supertypes
 
+
+def collect_supertypes() -> None:
+    supertypes = _collect_supertypes()
     frame = (
         pl.DataFrame(supertypes, schema=["_", "right", "supertype"], orient="row")
         .pivot(
