@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import inspect
 from dataclasses import dataclass
+from importlib.util import find_spec
 from itertools import chain, product
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, Generic, overload
@@ -138,6 +139,50 @@ def collect_supertypes() -> None:
     ):
         file.write(str(frame))
         file.write("\n")
+
+
+def generate_supertypes_chart() -> Any:
+    """Repro for [altair chart].
+
+    [altair chart]: https://github.com/narwhals-dev/narwhals/pull/3396#discussion_r2702530394
+    """
+    if not find_spec("altair"):
+        msg = (
+            f"`{generate_supertypes_chart.__qualname__}()` requires `altair` to be installed.\n"
+            "Hint: Try adding 'altair' to `[dependency-groups.docs]`"
+        )
+        raise ImportError(msg)
+    import altair as alt
+
+    orig_supertypes = _collect_supertypes()
+    checkmark = pl.when("has_supertype").then(pl.lit("✔️")).otherwise(pl.lit("❌"))
+    tooltip_label = (
+        pl.when("has_supertype")
+        .then(pl.format("({}, {}) -> {}", "left", "right", "supertype"))
+        .otherwise("supertype")
+    )
+    df = (
+        pl.DataFrame(orig_supertypes, schema=["left", "right", "supertype"], orient="row")
+        .with_columns(has_supertype=pl.col("supertype") != pl.lit(""))
+        .with_columns(has_supertype_repr=checkmark, rel=tooltip_label)
+        .select("left", "right", "has_supertype_repr", "rel")
+    )
+    font_size = 14
+    font = "'Lato', 'Segoe UI', Tahoma, Verdana, sans-serif"
+    background = "#f5f5f5"  # color of code blocks
+
+    base = alt.Chart(df).encode(
+        alt.X("left").axis(orient="top"), alt.Y("right"), alt.Tooltip("rel").title(None)
+    )
+    chart = (
+        base.mark_rect(filled=False) + base.mark_text().encode(text="has_supertype_repr")
+    ).configure(
+        axis=alt.theme.AxisConfigKwds(labelFontSize=font_size, title=None),
+        mark=alt.theme.MarkConfigKwds(fontSize=font_size),
+        background=background,
+        font=font,
+    )
+    return chart  # noqa: RET504
 
 
 @dataclass(frozen=True)
