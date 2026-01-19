@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, Generic, overload
 
 import polars as pl
 
+from narwhals._constants import MS_PER_SECOND, NS_PER_SECOND, US_PER_SECOND
 from narwhals._typing_compat import TypeVar
 from narwhals.dtypes import (
     Array,
@@ -42,7 +43,7 @@ from narwhals.dtypes import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator, Sequence
+    from collections.abc import Callable, Iterator, Mapping, Sequence
     from datetime import timezone
 
     from typing_extensions import Self, TypeAlias
@@ -187,10 +188,29 @@ Means this, but without the nesting:
     (DType, DType) -> DType
 """
 
+_TIME_UNIT_PER_SECOND: Mapping[TimeUnit, int] = {
+    "s": 1,
+    "ms": MS_PER_SECOND,
+    "us": US_PER_SECOND,
+    "ns": NS_PER_SECOND,
+}
+
+
+def _key_fn_time_unit(obj: Datetime | Duration, /) -> int:
+    return _TIME_UNIT_PER_SECOND[obj.time_unit]
+
+
+SameTemporalT = TypeVar("SameTemporalT", Datetime, Duration)
+
+
+def downcast_time_unit(
+    left: SameTemporalT, right: SameTemporalT, /
+) -> SameTemporalT | None:
+    """Return the operand with the lowest precision time unit."""
+    return min(left, right, key=_key_fn_time_unit)
+
 
 # TODO @dangotbanned: Special parametric
-# TODO @dangotbanned: - Datetime
-# TODO @dangotbanned: - Duration
 # TODO @dangotbanned: - Array
 # TODO @dangotbanned: - List
 # TODO @dangotbanned: - Struct
@@ -217,12 +237,28 @@ class Unconditional(Rule[D]):
 
 @dataclass
 class MatchSame(Rule[D]):
-    predicate: Callable[[D, D], bool]
+    guard: Callable[[D, D], bool]
 
     def iter_supertypes(self, owner: DTypeProxy[D], /) -> Iterator[SupertypeRepr]:
         for left, right in product(owner.iter_instances(), owner.iter_instances()):
-            if self.predicate(left, right):
+            if self.guard(left, right):
                 yield left, right, left
+
+
+@dataclass
+class PromoteSame(Rule[D]):
+    promotion: Callable[[D, D], DType | None]
+    guard: Callable[[D, D], bool] | None
+
+    def iter_supertypes(self, owner: DTypeProxy[D], /) -> Iterator[SupertypeRepr]:
+        it: Iterator[tuple[D, D]] = product(
+            owner.iter_instances(), owner.iter_instances()
+        )
+        if self.guard is not None:
+            it = ((left, right) for left, right in it if self.guard(left, right))
+        for left, right in it:
+            if st := self.promotion(left, right):
+                yield left, right, st
 
 
 class _RuleNs(Generic[ProxyT, D]):
@@ -235,9 +271,20 @@ class _RuleNs(Generic[ProxyT, D]):
         """For all instances producable by `others`, this side is always a valid supertype."""
         return self._owner._with_rule(Unconditional((other, *others)))
 
-    def match_same(self, predicate: Callable[[D, D], bool], /) -> ProxyT:
-        """When comparing against an instance of the same type, `predicate` return True."""
-        return self._owner._with_rule(MatchSame(predicate))
+    def match_same(self, guard: Callable[[D, D], bool], /) -> ProxyT:
+        """When comparing against an instance of the same type, require `guard` for left to be a valid supertype."""
+        return self._owner._with_rule(MatchSame(guard))
+
+    def promote_same(
+        self,
+        promotion: Callable[[D, D], DType | None],
+        guard: Callable[[D, D], bool] | None = None,
+    ) -> ProxyT:
+        """When comparing against an instance of the same type, use `promotion` to determine the supertype.
+
+        Optionally first require `guard` to return True.
+        """
+        return self._owner._with_rule(PromoteSame(promotion, guard))
 
 
 class DTypeProxy(Generic[D_co]):
@@ -367,13 +414,21 @@ def describe_supertyping() -> Sequence[DTypeProxy[DType]]:  # noqa: PLR0914
 
     # Temporal
     date = dtype(Date)
-    datetime = dtype(
-        Datetime,
-        parametrize("time_unit", "ns", "us", "ms", "s").parametrize(
-            "time_zone", None, "UTC"
-        ),
-    ).rule.unconditional(date)
-    duration = dtype(Duration, parametrize("time_unit", "ns", "us", "ms", "s"))
+    datetime = (
+        dtype(
+            Datetime,
+            parametrize("time_unit", "ns", "us", "ms", "s").parametrize(
+                "time_zone", None, "UTC"
+            ),
+        )
+        .rule.unconditional(date)
+        .rule.promote_same(
+            downcast_time_unit, lambda owner, other: owner.time_zone == other.time_zone
+        )
+    )
+    duration = dtype(
+        Duration, parametrize("time_unit", "ns", "us", "ms", "s")
+    ).rule.promote_same(downcast_time_unit)
     time = dtype(Time)
     group_temporal = (date, datetime, duration, time)
 
