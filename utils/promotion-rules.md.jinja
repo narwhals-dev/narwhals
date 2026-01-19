@@ -21,7 +21,7 @@ from narwhals.dtypes._supertyping import get_supertype
 ## Same Type
 
 When both operands share the same [`base_type`][base-type], the behavior depends on whether the type is
-**parametric**[^2]. 
+**parametric**[^2].
 
 * **Non-parametric types** (e.g., `Int32`, `Float64`, `String`, `Boolean`): the supertype is the type itself if both
     are equal, otherwise no supertype exists.
@@ -39,8 +39,8 @@ When both operands are signed integers or both are unsigned integers, the supert
 the **higher bit-width**. for example:
 
 ```python exec="1" session="promotion-rules" result="python"
-print(f"{get_supertype(nw.Int8(), nw.Int32()) = !r}")
-print(f"{get_supertype(nw.UInt16(), nw.UInt64()) = !r}")
+print(f"{get_supertype(nw.Int8(), nw.Int32()) = !r}".replace(" = ", " == "))
+print(f"{get_supertype(nw.UInt16(), nw.UInt64()) = !r}".replace(" = ", " == "))
 ```
 
 ### Integer with Integer (mixed sign)
@@ -49,59 +49,58 @@ When mixing signed and unsigned integers:
 
 * If the signed integer has a **strictly higher** bit-width than the unsigned,
     use the signed type:
-    
+
     ```python exec="1" session="promotion-rules" result="python"
-    print(f"{get_supertype(nw.UInt8(), nw.Int16()) = !r}")
-    print(f"{get_supertype(nw.UInt16(), nw.Int32()) = !r}")
+    print(f"{get_supertype(nw.UInt8(), nw.Int16()) = !r}".replace(" = ", " == "))
+    print(f"{get_supertype(nw.UInt16(), nw.Int32()) = !r}".replace(" = ", " == "))
     ```
 
 * Otherwise, promote the unsigned to the **next higher** signed bit-width (up to `Int64`):
 
     ```python exec="1" session="promotion-rules" result="python"
-    print(f"{get_supertype(nw.UInt8(), nw.Int8()) = !r}")
-    print(f"{get_supertype(nw.UInt16(), nw.Int16()) = !r}")
-    print(f"{get_supertype(nw.UInt32(), nw.Int32()) = !r}")
+    print(f"{get_supertype(nw.UInt8(), nw.Int8()) = !r}".replace(" = ", " == "))
+    print(f"{get_supertype(nw.UInt16(), nw.Int16()) = !r}".replace(" = ", " == "))
+    print(f"{get_supertype(nw.UInt32(), nw.Int32()) = !r}".replace(" = ", " == "))
     ```
 
 * For `UInt64` or `UInt128` mixed with any signed integer, the supertype is `Float64`
     (since no signed integer type can safely represent the full range of `UInt64`/`UInt128`):
 
     ```python exec="1" session="promotion-rules" result="python"
-    print(f"{get_supertype(nw.UInt64(), nw.Int8()) = !r}")
-    print(f"{get_supertype(nw.UInt128(), nw.Int16()) = !r}")
-    print(f"{get_supertype(nw.UInt64(), nw.Int32()) = !r}")
+    print(f"{get_supertype(nw.UInt64(), nw.Int8()) = !r}".replace(" = ", " == "))
+    print(f"{get_supertype(nw.UInt128(), nw.Int16()) = !r}".replace(" = ", " == "))
+    print(f"{get_supertype(nw.UInt64(), nw.Int32()) = !r}".replace(" = ", " == "))
     ```
-
 
 ### Integer with Float
 
 * Small integers (`Int8`, `Int16`, `UInt8`, `UInt16`) combined with `Float32` are promoted to `Float32`
-    
+
     ```python exec="1" session="promotion-rules" result="python"
-    print(f"{get_supertype(nw.Int8(), nw.Float32()) = !r}")
-    print(f"{get_supertype(nw.Int16(), nw.Float32()) = !r}")
-    print(f"{get_supertype(nw.UInt8(), nw.Float32()) = !r}")
-    print(f"{get_supertype(nw.UInt16(), nw.Float32()) = !r}")
+    print(f"{get_supertype(nw.Int8(), nw.Float32()) = !r}".replace(" = ", " == "))
+    print(f"{get_supertype(nw.Int16(), nw.Float32()) = !r}".replace(" = ", " == "))
+    print(f"{get_supertype(nw.UInt8(), nw.Float32()) = !r}".replace(" = ", " == "))
+    print(f"{get_supertype(nw.UInt16(), nw.Float32()) = !r}".replace(" = ", " == "))
     ```
 
 * Larger integers (`Int32`, `Int64`, `Int128`, `UInt32`, `UInt64`, `UInt128`) combined with `Float32`
     are promoted to `Float64`
-    
+
     ```python exec="1" session="promotion-rules" result="python"
-    print(f"{get_supertype(nw.Int32(), nw.Float32()) = !r}")
-    print(f"{get_supertype(nw.Int64(), nw.Float32()) = !r}")
-    print(f"{get_supertype(nw.Int128(), nw.Float32()) = !r}")
-    print(f"{get_supertype(nw.UInt32(), nw.Float32()) = !r}")
-    print(f"{get_supertype(nw.UInt64(), nw.Float32()) = !r}")
-    print(f"{get_supertype(nw.UInt128(), nw.Float32()) = !r}")
+    print(f"{get_supertype(nw.Int32(), nw.Float32()) = !r}".replace(" = ", " == "))
+    print(f"{get_supertype(nw.Int64(), nw.Float32()) = !r}".replace(" = ", " == "))
+    print(f"{get_supertype(nw.Int128(), nw.Float32()) = !r}".replace(" = ", " == "))
+    print(f"{get_supertype(nw.UInt32(), nw.Float32()) = !r}".replace(" = ", " == "))
+    print(f"{get_supertype(nw.UInt64(), nw.Float32()) = !r}".replace(" = ", " == "))
+    print(f"{get_supertype(nw.UInt128(), nw.Float32()) = !r}".replace(" = ", " == "))
     ```
 
 * Any integer combined with `Float64` is promoted to `Float64`:
 
     ```python exec="1" session="promotion-rules" result="python"
-    print(f"{get_supertype(nw.Int32(), nw.Float64()) = !r}")
-    print(f"{get_supertype(nw.UInt32(), nw.Float64()) = !r}")
-    print(f"{get_supertype(nw.UInt64(), nw.Float64()) = !r}")
+    print(f"{get_supertype(nw.Int32(), nw.Float64()) = !r}".replace(" = ", " == "))
+    print(f"{get_supertype(nw.UInt32(), nw.Float64()) = !r}".replace(" = ", " == "))
+    print(f"{get_supertype(nw.UInt64(), nw.Float64()) = !r}".replace(" = ", " == "))
     ```
 
 ### Float with Float
@@ -109,8 +108,8 @@ When mixing signed and unsigned integers:
 The combination of a `Float32` with a `Float64` is promoted to `Float64`:
 
 ```python exec="1" session="promotion-rules" result="python"
-print(f"{get_supertype(nw.Float32(), nw.Float64()) = !r}")
-print(f"{get_supertype(nw.Float64(), nw.Float32()) = !r}")
+print(f"{get_supertype(nw.Float32(), nw.Float64()) = !r}".replace(" = ", " == "))
+print(f"{get_supertype(nw.Float64(), nw.Float32()) = !r}".replace(" = ", " == "))
 ```
 
 ### Decimal
@@ -118,34 +117,44 @@ print(f"{get_supertype(nw.Float64(), nw.Float32()) = !r}")
 * The combination of a `Decimal` with an integer is promoted to `Decimal`:
 
     ```python exec="1" session="promotion-rules" result="python"
-    print(f"{get_supertype(nw.Decimal(), nw.Int32()) = !r}")
-    print(f"{get_supertype(nw.Decimal(), nw.Int64()) = !r}")
+    print(f"{get_supertype(nw.Decimal(), nw.Int32()) = !r}".replace(" = ", " == "))
+    print(f"{get_supertype(nw.Decimal(), nw.Int64()) = !r}".replace(" = ", " == "))
     ```
 
 * The combination of a `Decimal` with a `Float32` or `Float64` is promoted to `Float64`:
 
     ```python exec="1" session="promotion-rules" result="python"
-    print(f"{get_supertype(nw.Decimal(), nw.Float32()) = !r}")
-    print(f"{get_supertype(nw.Decimal(), nw.Float64()) = !r}")
+    print(f"{get_supertype(nw.Decimal(), nw.Float32()) = !r}".replace(" = ", " == "))
+    print(f"{get_supertype(nw.Decimal(), nw.Float64()) = !r}".replace(" = ", " == "))
     ```
 
 ## Temporal Types
+
+### Duration
+
+Two `Duration` types always have a supertype, namely the type with the **less precise** (coarser) time unit.
+For example:
+
+```python exec="1" session="promotion-rules" result="python"
+print(f"{get_supertype(nw.Duration('us'), nw.Duration('ms')) = !r}".replace(" = ", " == "))
+print(f"{get_supertype(nw.Duration('s'), nw.Duration('ms')) = !r}".replace(" = ", " == "))
+```
+
+Time unit precision order (from coarsest to finest): `s` < `ms` < `us` < `ns`
 
 ### Datetime
 
 Two `Datetime` types have a supertype only if they share the **same time zone**:
 
 ```python exec="1" session="promotion-rules" result="python"
-print(f"{get_supertype(nw.Datetime('us'), nw.Datetime('ns')) = !r}")
+print(f"{get_supertype(nw.Datetime('us'), nw.Datetime('ns')) = !r}".replace(" = ", " == "))
 
 tz = "Europe/Berlin"
 print(f"{tz = !r}")
-print(f"{get_supertype(nw.Datetime(time_zone=tz), nw.Datetime(time_zone=tz)) = !r}")
+print(f"{get_supertype(nw.Datetime(time_zone=tz), nw.Datetime(time_zone=tz)) = !r}".replace(" = ", " == "))
 ```
 
-The resulting time unit is the **less precise** (coarser) of the two.
-
-Time unit precision order (from coarsest to finest): `s` < `ms` < `us` < `ns`
+The resulting time unit is the **less precise** (coarser) of the two as defined in the previous section on `Duration`.
 
 If they do not share the same time zone, no supertype exists:
 
@@ -154,7 +163,7 @@ tz1 = "Europe/Berlin"
 tz2 = "Europe/Paris"
 print(f"{tz1 = !r}")
 print(f"{tz2 = !r}")
-print(f"{get_supertype(nw.Datetime(time_zone=tz1), nw.Datetime(time_zone=tz2)) = !r}")
+print(f"{get_supertype(nw.Datetime(time_zone=tz1), nw.Datetime(time_zone=tz2)) = !r}".replace(" = ", " == "))
 ```
 
 ### Datetime and Date
@@ -162,35 +171,23 @@ print(f"{get_supertype(nw.Datetime(time_zone=tz1), nw.Datetime(time_zone=tz2)) =
 When combining a `Datetime` with a `Date`, the supertype is the `Datetime` (preserving its time unit and time zone).
 
 ```python exec="1" session="promotion-rules" result="python"
-print(f"{get_supertype(nw.Datetime('us'), nw.Date()) = !r}")
-print(f"{get_supertype(nw.Datetime('ms', time_zone='Europe/Berlin'), nw.Date()) = !r}")
+print(f"{get_supertype(nw.Datetime('us'), nw.Date()) = !r}".replace(" = ", " == "))
+print(f"{get_supertype(nw.Datetime('ms', time_zone='Europe/Berlin'), nw.Date()) = !r}".replace(" = ", " == "))
 ```
-
-### Duration
-
-Two `Duration` types always have a supertype. Like `Datetime`, the resulting time unit is the **less precise** of
-the two:
-
-```python exec="1" session="promotion-rules" result="python"
-print(f"{get_supertype(nw.Duration('us'), nw.Duration('ms')) = !r}")
-print(f"{get_supertype(nw.Duration('s'), nw.Duration('ms')) = !r}")
-```
-
-Time unit precision order (from coarsest to finest): `s` < `ms` < `us` < `ns`
 
 ## String-like Types
 
 The combination of a `String` with a `Categorical` or `Enum` is promoted to `String`:
 
 ```python exec="1" session="promotion-rules" result="python"
-print(f"{get_supertype(nw.String(), nw.Categorical()) = !r}")
-print(f"{get_supertype(nw.String(), nw.Enum(['orca', 'narwhal'])) = !r}")
+print(f"{get_supertype(nw.String(), nw.Categorical()) = !r}".replace(" = ", " == "))
+print(f"{get_supertype(nw.String(), nw.Enum(['orca', 'narwhal'])) = !r}".replace(" = ", " == "))
 ```
 
 The combination of a `String` with a `Binary` is promoted to `Binary`:
 
 ```python exec="1" session="promotion-rules" result="python"
-print(f"{get_supertype(nw.String(), nw.Binary()) = !r}")
+print(f"{get_supertype(nw.String(), nw.Binary()) = !r}".replace(" = ", " == "))
 ```
 
 All other combinations of string-like types have no supertype.
@@ -204,7 +201,7 @@ TODO(FBruzzesi): Update once {String, other} -> String is supported
 The combination of a `Binary` with a `String` is promoted to `Binary`:
 
 ```python exec="1" session="promotion-rules" result="python"
-print(f"{get_supertype(nw.Binary(), nw.String()) = !r}")
+print(f"{get_supertype(nw.Binary(), nw.String()) = !r}".replace(" = ", " == "))
 ```
 
 All other combinations of binary-like types have no supertype.
@@ -212,16 +209,6 @@ All other combinations of binary-like types have no supertype.
 <!--
 TODO(FBruzzesi): Update once {Binary, other} -> Binary is supported
 -->
-
-### Categorical
-
-The combination of a `Categorical` with a `String` is promoted to `String`:
-
-```python exec="1" session="promotion-rules" result="python"
-print(f"{get_supertype(nw.Categorical(), nw.String()) = !r}")
-```
-
-All other combinations of categorical-like types have no supertype.
 
 ### Enum
 
@@ -232,9 +219,10 @@ In that case, the supertype is the `Enum` itself.
 enum1 = nw.Enum(["orca", "narwhal"])
 enum2 = nw.Enum(["orca", "beluga"])
 print(f"{enum1 = !r}")
-print(f"{get_supertype(enum1, enum1) = !r}")
+print(f"{get_supertype(enum1, enum1) = !r}".replace(" = ", " == "))
+
 print(f"{enum2 = !r}")
-print(f"{get_supertype(enum1, enum2) = !r}")
+print(f"{get_supertype(enum1, enum2) = !r}".replace(" = ", " == "))
 ```
 
 ## Other non-nested types
@@ -244,8 +232,8 @@ print(f"{get_supertype(enum1, enum2) = !r}")
 A `Boolean` combined with any numeric type is promoted to that numeric type:
 
 ```python exec="1" session="promotion-rules" result="python"
-print(f"{get_supertype(nw.Boolean(), nw.Int32()) = !r}")
-print(f"{get_supertype(nw.Boolean(), nw.Float64()) = !r}")
+print(f"{get_supertype(nw.Boolean(), nw.Int32()) = !r}".replace(" = ", " == "))
+print(f"{get_supertype(nw.Boolean(), nw.Float64()) = !r}".replace(" = ", " == "))
 ```
 
 ### Unknown
@@ -257,10 +245,35 @@ If either operand is `Unknown`, the result is always `Unknown`. This is a fast-p
 Nested types (`Array`, `List`, `Struct`) require both operands to share the **same base type**.
 The supertype is then determined by recursively resolving the inner types.
 
+### List
+
+The supertype is a `List` whose inner type is the supertype of the two inner types.
+
+```python exec="1" session="promotion-rules" result="python"
+left = nw.List(nw.UInt8())
+right = nw.List(nw.Int16())
+
+print(f"{left = !r}")
+print(f"{right = !r}")
+print(f"{get_supertype(left, right) = !r}".replace(" = ", " == "))
+```
+
+If the inner types cannot be promoted, no supertype exists.
+
+```python exec="1" session="promotion-rules" result="python"
+left = nw.List(nw.Int8())
+right = nw.List(nw.Categorical())
+
+print(f"{left = !r}")
+print(f"{right = !r}")
+print(f"{get_supertype(left, right) = !r}".replace(" = ", " == "))
+```
+
 ### Array
 
-Both arrays must have the **same shape** (size). If they do, the supertype is an `Array` with the same size and an
-inner type that is the supertype of the two inner types.
+Array supertyping extends the rules followed by `List` supertyping as both arrays must have the **same shape**.
+If they do, the supertype is an `Array` whose inner type is the supertype of the two inner types,
+and the shape is the same as the operands:
 
 ```python exec="1" session="promotion-rules" result="python"
 left = nw.Array(nw.Float32(), shape=(2,))
@@ -268,7 +281,7 @@ right = nw.Array(nw.Int32(), shape=(2,))
 
 print(f"{left = !r}")
 print(f"{right = !r}")
-print(f"{get_supertype(left, right) = !r}")
+print(f"{get_supertype(left, right) = !r}".replace(" = ", " == "))
 
 ```
 
@@ -280,31 +293,7 @@ right = nw.Array(nw.Int8(), shape=(2, 3))
 
 print(f"{left = !r}")
 print(f"{right = !r}")
-print(f"{get_supertype(left, right) = !r}")
-```
-
-### List
-
-The supertype is a `List` whose inner type is the supertype of the two inner types.
-
-```python exec="1" session="promotion-rules" result="python"
-left = nw.List(nw.UInt8())
-right = nw.List(nw.Int16())
-
-print(f"{left = !r}")
-print(f"{right = !r}")
-print(f"{get_supertype(left, right) = !r}")
-```
-
-If the inner types cannot be promoted, no supertype exists.
-
-```python exec="1" session="promotion-rules" result="python"
-left = nw.List(nw.Int8())
-right = nw.List(nw.Categorical())
-
-print(f"{left = !r}")
-print(f"{right = !r}")
-print(f"{get_supertype(left, right) = !r}")
+print(f"{get_supertype(left, right) = !r}".replace(" = ", " == "))
 ```
 
 ### Struct
@@ -320,10 +309,10 @@ Struct supertyping is more flexible and the **order of operands matters**:
 
     print(f"{left = !r}")
     print(f"{right = !r}")
-    print(f"{get_supertype(left, right) = !r}")
+    print(f"{get_supertype(left, right) = !r}".replace(" = ", " == "))
     ```
 
-* If structs have **different numbers of fields** or **mismatched field names**, a union is performed:
+* If structs have positionally **mismatched field names**, a union is performed:
     the result contains all fields from both structs. For fields that appear in both (by name),
     their dtypes must have a valid supertype.
 
@@ -333,18 +322,18 @@ Struct supertyping is more flexible and the **order of operands matters**:
 
     print(f"{left = !r}")
     print(f"{right = !r}")
-    print(f"{get_supertype(left, right) = !r}")
+    print(f"{get_supertype(left, right) = !r}".replace(" = ", " == "))
     ```
 
-* The `left` operand defines the field order of the output, unless `right` has more fields.
+* The `left` operand defines the field order of the output, *unless* `right` has more fields.
 
     ```python exec="1" session="promotion-rules" result="python"
     left = nw.Struct({"f1": nw.Int32(), "f0": nw.Int8()})
-    right = nw.Struct({"f0": nw.UInt8(), "f2": nw.Int64()})
+    right = nw.Struct({"f0": nw.UInt8(), "f2": nw.Int64(), "f1": nw.Int32()})
 
     print(f"{left = !r}")
     print(f"{right = !r}")
-    print(f"{get_supertype(left, right) = !r}")
+    print(f"{get_supertype(left, right) = !r}".replace(" = ", " == "))
     ```
 
 ## No Supertype
