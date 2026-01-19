@@ -1,4 +1,4 @@
-# Data types promotion rules
+# Data type promotion rules
 
 When combining columns of different data types (e.g., in `concat(..., how="vertical_relaxed")`),
 Narwhals determines a common **supertype**[^1], the most specific type that both can safely be cast to.
