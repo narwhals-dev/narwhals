@@ -523,7 +523,7 @@ jobs:
   darts:
     strategy:
       matrix:
-        python-version: ["3.11"]
+        python-version: ["3.12"]
         os: ["ubuntu-latest"]
     runs-on: ${{ matrix.os }}
     steps:
@@ -545,12 +545,17 @@ jobs:
       - name: install-deps
         run: |
           cd darts
-          uv pip install -r requirements/core.txt -r requirements/dev.txt --system
+          uv pip install \
+          -r requirements/core.txt \
+          -r requirements/dev.txt \
+          llvmlite==0.46.0 \
+          numba==0.63.1 \
+          --system
       - name: install-narwhals-dev
         run: |
           uv pip uninstall narwhals --system
-          # TODO(FBruzzesi): Install polars from darts requirements when they introcude it
-          uv pip install -e ".[polars]" pyarrow --system
+          # TODO(FBruzzesi): Install polars & pyarrow from darts requirements when they introduce it
+          uv pip install -e ".[polars, pyarrow]" --system
       - name: show-deps
         run: uv pip freeze
       - name: Run tests
