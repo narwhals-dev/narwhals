@@ -5,6 +5,7 @@ from itertools import chain, product
 from operator import attrgetter
 from typing import TYPE_CHECKING, Any, Final, Generic, cast
 
+from narwhals._constants import MS_PER_SECOND, NS_PER_SECOND, US_PER_SECOND
 from narwhals._typing_compat import TypeVar
 from narwhals.dtypes._classes import (
     Array,
@@ -121,12 +122,16 @@ _FLOAT_PROMOTE: Mapping[FrozenDTypes, type[Float64]] = {
 }
 
 
-_TIME_UNIT_TO_INDEX: Mapping[TimeUnit, int] = {"s": 0, "ms": 1, "us": 2, "ns": 3}
-"""Convert time unit to an index for comparison (larger = more precise)."""
+_TIME_UNIT_PER_SECOND: Mapping[TimeUnit, int] = {
+    "s": 1,
+    "ms": MS_PER_SECOND,
+    "us": US_PER_SECOND,
+    "ns": NS_PER_SECOND,
+}
 
 
 def _key_fn_time_unit(obj: Datetime | Duration, /) -> int:
-    return _TIME_UNIT_TO_INDEX[obj.time_unit]
+    return _TIME_UNIT_PER_SECOND[obj.time_unit]
 
 
 @lru_cache(maxsize=_CACHE_SIZE * 2)

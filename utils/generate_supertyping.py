@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, Generic, overload
 
 import polars as pl
+from jinja2 import Template
 
 from narwhals._typing_compat import TypeVar
 from narwhals.dtypes import (
@@ -61,6 +62,8 @@ Todo: TypeAlias = Any
 
 
 T = TypeVar("T")
+
+TEMPLATE_PATH: Final[Path] = Path("utils") / "promotion-rules.md.jinja"
 DESTINATION_PATH: Final[Path] = Path("docs") / "concepts" / "promotion-rules.md"
 
 Categories: TypeAlias = list[str]
@@ -122,6 +125,7 @@ def collect_supertypes() -> None:
             sort_columns=True,
         )
         .sort("_")
+        .with_columns(_=pl.format("**{}**", pl.col("_")))
         .rename({"_": ""})
     )
 
@@ -135,9 +139,12 @@ def collect_supertypes() -> None:
             tbl_cell_alignment="LEFT",
             tbl_width_chars=-1,
         ),
+        TEMPLATE_PATH.open(mode="r") as stream,
         DESTINATION_PATH.open(mode="w", encoding="utf-8", newline="\n") as file,
     ):
-        file.write(str(frame))
+        content = Template(stream.read()).render({"promotion_rules_table": str(frame)})
+
+        file.write(content)
         file.write("\n")
 
 
@@ -506,5 +513,4 @@ def display_supertypes() -> None:
     print(*supertypes, sep="\n")
 
 
-if __name__ == "__main__":
-    collect_supertypes()
+collect_supertypes()
