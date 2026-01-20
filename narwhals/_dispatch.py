@@ -13,25 +13,26 @@ if TYPE_CHECKING:
 Incomplete: TypeAlias = Any
 R = TypeVar("R")
 R_co = TypeVar("R_co", covariant=True)
-Fn: TypeAlias = Callable[..., R]
-Passthrough = TypeVar("Passthrough", bound="Callable[..., Any]")
+Impl: TypeAlias = Callable[..., R]
+Deferred: TypeAlias = Callable[..., R]
+Passthrough = TypeVar("Passthrough", bound=Callable[..., Any])
 
 
 class JustDispatch(Generic[R_co]):
     """The type of a function decorated by `@just_dispatch`."""
 
-    def __init__(self, function: Fn[R_co], default: type[Any], /) -> None:
+    def __init__(self, function: Impl[R_co], /, default: type[Any]) -> None:
         self._function_name: str = function.__name__
         self._default: type[Any] = default
-        self._registry: dict[type[Any], Fn[R_co]] = {default: function}
-        self.__wrapped__: Fn[R_co] = function
+        self._registry: dict[type[Any], Impl[R_co]] = {default: function}
+        self.__wrapped__: Impl[R_co] = function
 
     @property
-    def registry(self) -> MappingProxyType[type[Any], Fn[R_co]]:
+    def registry(self) -> MappingProxyType[type[Any], Impl[R_co]]:
         """Read-only mapping of all registered implementations."""
         return MappingProxyType(self._registry)
 
-    def dispatch(self, tp: type[Any], /) -> Fn[R_co]:
+    def dispatch(self, tp: type[Any], /) -> Impl[R_co]:
         """Get the implementation for `tp`."""
         if f := self._registry.get(tp):
             return f
@@ -78,16 +79,18 @@ class JustDispatch(Generic[R_co]):
 # TODO @dangotbanned: Prefer examples over lots of words
 # TODO @dangotbanned: Rename `default` -> `bound`/`upper_bound`
 @overload
-def just_dispatch(function: Fn[R_co], /) -> JustDispatch[R_co]: ...
+def just_dispatch(function: Impl[R_co], /) -> JustDispatch[R_co]: ...
 @overload
 def just_dispatch(
     *, default: type[Any] = object
-) -> Callable[[Fn[R_co]], JustDispatch[R_co]]: ...
+) -> Callable[[Deferred[R]], JustDispatch[R]]: ...
 @overload
-def just_dispatch(function: Fn[R_co], /, *, default: type[Any]) -> JustDispatch[R_co]: ...
 def just_dispatch(
-    function: Fn[R_co] | None = None, /, *, default: type[Any] = object
-) -> JustDispatch[R_co] | Fn[JustDispatch[R_co]]:
+    function: Impl[R_co], /, *, default: type[Any]
+) -> JustDispatch[R_co]: ...
+def just_dispatch(
+    function: Impl[R_co] | None = None, /, *, default: type[Any] = object
+) -> JustDispatch[R_co] | Callable[[Deferred[R]], JustDispatch[R]]:
     """A less dynamic take on [`@functools.singledispatch`].
 
     Use this if you find yourself creating a global `dict` mapping types to functions.
