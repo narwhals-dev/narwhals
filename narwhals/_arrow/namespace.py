@@ -19,7 +19,7 @@ from narwhals._expression_parsing import (
     combine_evaluate_output_names,
 )
 from narwhals._utils import Implementation
-from narwhals.schema import Schema, combine_schemas, to_supertype
+from narwhals.schema import Schema, merge_schemas, to_supertype
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
@@ -180,8 +180,7 @@ class ArrowNamespace(
     def _concat_diagonal_relaxed(self, dfs: Sequence[pa.Table], /) -> pa.Table:
         native_schemas = tuple(table.schema for table in dfs)
         out_schema = reduce(
-            lambda x, y: to_supertype(*combine_schemas(x, y)),
-            (Schema.from_arrow(pa_schema) for pa_schema in native_schemas),
+            merge_schemas, (Schema.from_arrow(pa_schema) for pa_schema in native_schemas)
         ).to_arrow()
         to_schemas = (
             pa.schema([out_schema.field(name) for name in native_schema.names])

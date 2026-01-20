@@ -393,14 +393,28 @@ def to_supertype(left: Schema, right: Schema) -> Schema:
     return Schema((name, _supertype(ltype, rtype)) for (name, ltype, rtype) in it)
 
 
-def combine_schemas(left: Schema, right: Schema) -> tuple[Schema, Schema]:
-    """Extend both schemas with names and dtypes missing from the other.
+def merge_schemas(left: Schema, right: Schema) -> Schema:
+    """Merge two schemas, combining columns and resolving types to their supertype.
 
-    Returns a tuple of two schemas where each original schema is extended
-    with the columns that exist in the other schema but not in itself.
+    This function merges two schemas by:
 
-    The final order for both schemas is: left schema keys first (in order),
-    followed by keys missing from left (in the order they appear in right).
+    1. Taking all columns from the left schema (preserving order).
+    2. Appending any columns from the right schema that are missing in the left.
+    3. For columns present in both schemas, promoting to the common supertype.
+
+    Arguments:
+        left: The primary schema whose column order takes precedence.
+        right: The secondary schema to merge. Columns missing in left are appended.
+
+    Returns:
+        A new Schema with merged columns and supertypes resolved.
+
+    Raises:
+        SchemaMismatchError: If no common supertype exists for a shared column.
+
+    Note:
+        For columns present only in one schema, the type from that schema is used
+        (via `right.get(name, left_type)` fallback for right-only columns).
     """
     left_names = set(left.keys())
     missing_in_left = (kv for kv in right.items() if kv[0] not in left_names)
@@ -408,4 +422,6 @@ def combine_schemas(left: Schema, right: Schema) -> tuple[Schema, Schema]:
     extended_left = Schema((*left.items(), *missing_in_left))
     # Reorder right to match: left keys first, then right-only keys
     extended_right = Schema((kv[0], right.get(*kv)) for kv in extended_left.items())
-    return extended_left, extended_right
+
+    it = zip(extended_left.keys(), extended_left.values(), extended_right.values())
+    return Schema((name, _supertype(ltype, rtype)) for (name, ltype, rtype) in it)

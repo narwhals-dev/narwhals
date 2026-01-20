@@ -27,7 +27,7 @@ from narwhals._expression_parsing import (
 )
 from narwhals._sql.namespace import SQLNamespace
 from narwhals._utils import Implementation
-from narwhals.schema import Schema, combine_schemas, to_supertype
+from narwhals.schema import Schema, merge_schemas, to_supertype
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -116,9 +116,7 @@ class DuckDBNamespace(
 
         if how == "diagonal_relaxed":
             schemas = [Schema(df.collect_schema()) for df in items]
-            out_schema = reduce(
-                lambda x, y: to_supertype(*combine_schemas(x, y)), schemas
-            )
+            out_schema = reduce(merge_schemas, schemas)
             res, *others = (
                 item.select(
                     *(

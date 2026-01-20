@@ -24,7 +24,7 @@ from narwhals._pandas_like.utils import (
     promote_dtype_backends,
 )
 from narwhals._utils import zip_strict
-from narwhals.schema import Schema, combine_schemas, to_supertype
+from narwhals.schema import Schema, merge_schemas, to_supertype
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -269,8 +269,7 @@ class PandasLikeNamespace(
     ) -> NativeDataFrameT:
         schemas = tuple(native_schema(df) for df in dfs)
         out_schema = reduce(
-            lambda x, y: to_supertype(*combine_schemas(x, y)),
-            (Schema.from_pandas_like(schema) for schema in schemas),
+            merge_schemas, (Schema.from_pandas_like(schema) for schema in schemas)
         ).to_pandas(promote_dtype_backends(schemas, self._implementation))
 
         native_res = (

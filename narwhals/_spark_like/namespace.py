@@ -19,7 +19,7 @@ from narwhals._spark_like.utils import (
     true_divide,
 )
 from narwhals._sql.namespace import SQLNamespace
-from narwhals.schema import Schema, combine_schemas, to_supertype
+from narwhals.schema import Schema, merge_schemas, to_supertype
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -195,9 +195,7 @@ class SparkLikeNamespace(
 
         if how == "diagonal_relaxed":
             schemas = tuple(Schema(item.collect_schema()) for item in items)
-            out_schema = reduce(
-                lambda x, y: to_supertype(*combine_schemas(x, y)), schemas
-            )
+            out_schema = reduce(merge_schemas, schemas)
             native_items = (
                 item.select(
                     *(
