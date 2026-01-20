@@ -49,21 +49,27 @@ class JustDispatch(Generic[R_co]):
         raise TypeError(msg)
 
     # TODO @dangotbanned: Turn all these notes into useful docs
-    def register(
+    def register(  # noqa: D417
         self, tp: type[Any], *tps: type[Any]
     ) -> Callable[[Passthrough], Passthrough]:
-        """Register one or more types to dispatch via the decorated function.
+        """Register types to dispatch via the decorated function.
 
-        Unlike `@singledisptatch`:
-        - Registering ABCs or anything via type hints is not supported
-        - All registered types are dispatched to **by identity**
-        - Multiple types can be registered in a single call
-        - Lambda's cannot be used like `function.register(int, lambda x: x + 1)`
-            - They should be avoided anyway
+        Arguments:
+            *tps: One or more **concrete** types.
 
-        Similar to `@singledisptatch`:
-        - This can be used as a decorator
-        - The registered function is returned unchanged
+        Returns:
+            A closure that can be used as a decorator.
+
+        Notes:
+            - Unlike `@singledisptatch`
+                - Registering ABCs or anything via type hints is not supported
+                - All registered types are dispatched to **by identity**
+                - Multiple types can be registered in a single call
+                - Lambda's cannot be used like `function.register(int, lambda x: x + 1)`
+                    - They should be avoided anyway
+            - Similar to `@singledisptatch`
+                - This can be used as a decorator
+                - The registered function is returned unchanged
         """
 
         def decorate(f: Passthrough, /) -> Passthrough:
