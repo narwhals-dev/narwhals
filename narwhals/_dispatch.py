@@ -62,7 +62,7 @@ class JustDispatch(Generic[R_co]):
 
         def decorate(f: Passthrough, /) -> Passthrough:
             if tps:
-                self._registry.update((tp, f) for tp in tps)
+                self._registry.update((tp_, f) for tp_ in (tp, *tps))
             else:
                 self._registry[tp] = f
             return f
