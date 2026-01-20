@@ -71,7 +71,7 @@ class JustDispatch(Generic[R_co]):
         return decorate
 
     def __call__(self, arg: object, *args: Incomplete, **kwds: Incomplete) -> R_co:
-        """Im a doc for everything."""
+        """Dispatch on the type of the first argument, passing through all arguments."""
         return self.dispatch(arg.__class__)(arg, *args, **kwds)
 
 
