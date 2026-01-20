@@ -80,8 +80,6 @@ class JustDispatch(Generic[R_co]):
         return self.dispatch(arg.__class__)(arg, *args, **kwds)
 
 
-# TODO @dangotbanned: Polish notes/docs
-# TODO @dangotbanned: Prefer examples over lots of words
 @overload
 def just_dispatch(function: Impl[R_co], /) -> JustDispatch[R_co]: ...
 @overload
@@ -95,11 +93,13 @@ def just_dispatch(
 def just_dispatch(
     function: Impl[R_co] | None = None, /, *, upper_bound: type[Any] = object
 ) -> JustDispatch[R_co] | Callable[[Deferred[R]], JustDispatch[R]]:
-    """Transform a function into a single-dispatch generic function, similar to [`@functools.singledispatch`].
+    """Transform a function into a single-dispatch generic function.
 
-    Use this if you find yourself creating a global `dict` mapping types to functions.
+    Implements a subset of [`@singledispatch`].
 
-    Do not use this if you want subclasses to act like they've been registered.
+    **Do** use this if you find yourself creating a global `dict` mapping types to functions.
+
+    **Do not** use this if you want ABCs to work like [`@singledispatch`].
 
     Arguments:
         function: Function to decorate, where the body serves as the default implementation.
@@ -107,12 +107,12 @@ def just_dispatch(
             the type to be a subclass of `upper_bound` to use the default implementation.
 
     Notes:
-        - Implements a subset of the api, with a few extras.
-        - Most things that are *not implemented* are to improve performance.
-        - The result requires less of an understanding of [python's data model] by performing zero magic with [MRO].
-        - The `just_*` name is borrowed from [optype - Just]
+        Most things that are *not implemented* are to give predictable performance,
+        and require less of an understanding of [python's data model]. **Do not** expect [MRO] or type annotation magic.
 
-    [`@functools.singledispatch`]: https://docs.python.org/3/library/functools.html#functools.singledispatch
+        The `just_*` name is borrowed from [optype - Just].
+
+    [`@singledispatch`]: https://docs.python.org/3/library/functools.html#functools.singledispatch
     [python's data model]: https://docs.python.org/3/reference/datamodel.html
     [MRO]: https://docs.python.org/3/howto/mro.html#python-2-3-mro
     [optype - Just]: https://github.com/jorenham/optype/blob/e7221ed1d3d02989d5d01873323bac9f88459f26/README.md#just
