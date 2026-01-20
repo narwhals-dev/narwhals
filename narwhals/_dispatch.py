@@ -21,10 +21,10 @@ Passthrough = TypeVar("Passthrough", bound=Callable[..., Any])
 class JustDispatch(Generic[R_co]):
     """The type of a function decorated by `@just_dispatch`."""
 
-    def __init__(self, function: Impl[R_co], /, default: type[Any]) -> None:
+    def __init__(self, function: Impl[R_co], /, upper_bound: type[Any]) -> None:
         self._function_name: str = function.__name__
-        self._default: type[Any] = default
-        self._registry: dict[type[Any], Impl[R_co]] = {default: function}
+        self._upper_bound: type[Any] = upper_bound
+        self._registry: dict[type[Any], Impl[R_co]] = {upper_bound: function}
         self.__wrapped__: Impl[R_co] = function
 
     @property
@@ -36,11 +36,11 @@ class JustDispatch(Generic[R_co]):
         """Get the implementation for `tp`."""
         if f := self._registry.get(tp):
             return f
-        default = self._default
-        if issubclass(tp, default):
-            f = self._registry[tp] = self._registry[default]
+        upper = self._upper_bound
+        if issubclass(tp, upper):
+            f = self._registry[tp] = self._registry[upper]
             return f
-        msg = f"{self._function_name!r} does not support {qualified_type_name(tp)!r} as this is incompatible with default {qualified_type_name(default)!r}"
+        msg = f"{self._function_name!r} does not support {qualified_type_name(tp)!r} as this is incompatible with upper bound {qualified_type_name(upper)!r}"
         raise TypeError(msg)
 
     # TODO @dangotbanned: Turn all these notes into useful docs
@@ -77,19 +77,18 @@ class JustDispatch(Generic[R_co]):
 
 # TODO @dangotbanned: Polish notes/docs
 # TODO @dangotbanned: Prefer examples over lots of words
-# TODO @dangotbanned: Rename `default` -> `bound`/`upper_bound`
 @overload
 def just_dispatch(function: Impl[R_co], /) -> JustDispatch[R_co]: ...
 @overload
 def just_dispatch(
-    *, default: type[Any] = object
+    *, upper_bound: type[Any] = object
 ) -> Callable[[Deferred[R]], JustDispatch[R]]: ...
 @overload
 def just_dispatch(
-    function: Impl[R_co], /, *, default: type[Any]
+    function: Impl[R_co], /, *, upper_bound: type[Any]
 ) -> JustDispatch[R_co]: ...
 def just_dispatch(
-    function: Impl[R_co] | None = None, /, *, default: type[Any] = object
+    function: Impl[R_co] | None = None, /, *, upper_bound: type[Any] = object
 ) -> JustDispatch[R_co] | Callable[[Deferred[R]], JustDispatch[R]]:
     """A less dynamic take on [`@functools.singledispatch`].
 
@@ -99,7 +98,7 @@ def just_dispatch(
 
     Arguments:
         function: (Decorating) function to transform into a single dispatch function.
-        default: Nominal upper bound to constrain the default implementation.
+        upper_bound: Nominal upper bound to constrain the default implementation.
 
     Notes:
         - Implements a subset of the api, with a few extras.
@@ -113,5 +112,5 @@ def just_dispatch(
     [optype - Just]: https://github.com/jorenham/optype/blob/e7221ed1d3d02989d5d01873323bac9f88459f26/README.md#just
     """
     if function is None:
-        return lambda f, /: just_dispatch(f, default=default)
-    return JustDispatch(function, default)
+        return lambda f, /: just_dispatch(f, upper_bound=upper_bound)
+    return JustDispatch(function, upper_bound)

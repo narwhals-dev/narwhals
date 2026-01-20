@@ -204,7 +204,7 @@ def has_nested(base_types: FrozenDTypes, /) -> bool:
     return _has_intersection(base_types, NESTED)
 
 
-@just_dispatch(default=DType)
+@just_dispatch(upper_bound=DType)
 def same_supertype(left: DType, right: DType, /) -> DType | None:
     return left if dtype_eq(left, right) else None
 
