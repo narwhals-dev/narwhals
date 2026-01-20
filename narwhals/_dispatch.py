@@ -30,12 +30,12 @@ class JustDispatch(Generic[R_co]):
 
     @property
     def _function_name(self) -> str:
-        return self.__wrapped__.__name__
+        return self.__wrapped__.__name__  # pragma: no cover
 
     @property
     def registry(self) -> MappingProxyType[type[Any], Impl[R_co]]:
         """Read-only mapping of all registered implementations."""
-        return MappingProxyType(self._registry)
+        return MappingProxyType(self._registry)  # pragma: no cover
 
     def dispatch(self, tp: type[Any], /) -> Impl[R_co]:
         """Get the implementation for a given type."""
@@ -45,8 +45,10 @@ class JustDispatch(Generic[R_co]):
         if issubclass(tp, upper):
             f = self._registry[tp] = self._registry[upper]
             return f
-        msg = f"{self._function_name!r} does not support {qualified_type_name(tp)!r} as this is incompatible with upper bound {qualified_type_name(upper)!r}"
-        raise TypeError(msg)
+        else:  # pragma: no cover  # noqa: RET505
+            tp_name, upper_name = qualified_type_name(tp), qualified_type_name(upper)
+            msg = f"{self._function_name!r} does not support {tp_name!r} as it is incompatible with upper bound {upper_name!r}"
+            raise TypeError(msg)
 
     # TODO @dangotbanned: Turn all these notes into useful docs
     def register(  # noqa: D417
