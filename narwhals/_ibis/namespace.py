@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 import ibis
 import ibis.expr.types as ir
 
+from narwhals._compliant.namespace import AlignDiagonal
 from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
@@ -27,7 +28,10 @@ if TYPE_CHECKING:
     from narwhals.typing import ConcatMethod, IntoDType, PythonLiteral
 
 
-class IbisNamespace(SQLNamespace[IbisLazyFrame, IbisExpr, "ir.Table", "ir.Value"]):
+class IbisNamespace(
+    SQLNamespace[IbisLazyFrame, IbisExpr, "ir.Table", "ir.Value"],
+    AlignDiagonal[IbisLazyFrame, IbisExpr],
+):
     _implementation: Implementation = Implementation.IBIS
 
     def __init__(self, *, version: Version) -> None:
@@ -64,34 +68,27 @@ class IbisNamespace(SQLNamespace[IbisLazyFrame, IbisExpr, "ir.Table", "ir.Value"
     def concat(
         self, items: Iterable[IbisLazyFrame], *, how: ConcatMethod
     ) -> IbisLazyFrame:
-        if how in {"diagonal", "diagonal_relaxed"}:
-            msg = f"{how} concat not supported for Ibis. Please join instead."
-            raise NotImplementedError(msg)
+        frames: Sequence[IbisLazyFrame] = tuple(items)
+        if how.startswith("diagonal"):
+            frames = self.align_diagonal(frames)
 
-        items = tuple(items)
-
-        if how == "vertical":
-            schema = items[0].schema
-            if not all(x.schema == schema for x in items[1:]):
+        if how.endswith("relaxed"):
+            schemas = (Schema(frame.collect_schema()) for frame in frames)
+            out_schema = reduce(to_supertype, schemas).items()
+            frames = [
+                frame.select(*(self.col(name).cast(dtype) for name, dtype in out_schema))
+                for frame in frames
+            ]
+        try:
+            result = ibis.union(*(lf.native for lf in frames))
+        except ibis.IbisError:
+            first = frames[0].schema
+            if not all(x.schema == first for x in frames[1:]):
                 msg = "inputs should all have the same schema"
-                raise TypeError(msg)
-
-            native_items = (item.native for item in items)
-            return self._lazyframe.from_native(ibis.union(*native_items), context=self)
-
-        if how == "vertical_relaxed":
-            schemas = (Schema(item.collect_schema()) for item in items)
-            out_schema = reduce(to_supertype, schemas)
-
-            native_items = (
-                item.select(
-                    *(self.col(name).cast(dtype) for name, dtype in out_schema.items())
-                ).native
-                for item in items
-            )
-            return self._lazyframe.from_native(ibis.union(*native_items), context=self)
-
-        raise NotImplementedError
+                raise TypeError(msg) from None
+            raise
+        else:
+            return self._lazyframe.from_native(result, context=self)
 
     def concat_str(
         self, *exprs: IbisExpr, separator: str, ignore_nulls: bool
