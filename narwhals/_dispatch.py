@@ -21,11 +21,16 @@ Passthrough = TypeVar("Passthrough", bound=Callable[..., Any])
 class JustDispatch(Generic[R_co]):
     """Single-dispatch wrapper produced by decorating a function with `@just_dispatch`."""
 
+    __slots__ = ("__wrapped__", "_registry", "_upper_bound")
+
     def __init__(self, function: Impl[R_co], /, upper_bound: type[Any]) -> None:
-        self._function_name: str = function.__name__
         self._upper_bound: type[Any] = upper_bound
         self._registry: dict[type[Any], Impl[R_co]] = {upper_bound: function}
         self.__wrapped__: Impl[R_co] = function
+
+    @property
+    def _function_name(self) -> str:
+        return self.__wrapped__.__name__
 
     @property
     def registry(self) -> MappingProxyType[type[Any], Impl[R_co]]:
