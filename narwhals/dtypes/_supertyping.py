@@ -124,14 +124,6 @@ def _key_fn_time_unit(obj: Datetime | Duration, /) -> int:
     return _TIME_UNIT_PER_SECOND[obj.time_unit]
 
 
-@lru_cache(maxsize=_CACHE_SIZE * 2)
-def downcast_time_unit(
-    left: SameTemporalT, right: SameTemporalT, /
-) -> SameTemporalT | None:
-    """Return the operand with the lowest precision time unit."""
-    return min(left, right, key=_key_fn_time_unit)
-
-
 @lru_cache(maxsize=_CACHE_SIZE // 2)
 def dtype_eq(left: DType, right: DType, /) -> bool:
     return left == right
@@ -217,6 +209,13 @@ def same_supertype(left: DType, right: DType, /) -> DType | None:
     return left if dtype_eq(left, right) else None
 
 
+@same_supertype.register(Duration, DurationV1)
+@lru_cache(maxsize=_CACHE_SIZE * 2)
+def downcast_time_unit(left: SameTemporalT, right: SameTemporalT, /) -> SameTemporalT:
+    """Return the operand with the lowest precision time unit."""
+    return min(left, right, key=_key_fn_time_unit)
+
+
 def _struct_fields_union(
     left: Collection[Field], right: Collection[Field], /
 ) -> Struct | None:
@@ -294,9 +293,6 @@ def datetime_supertype(
 @same_supertype.register(Enum)
 def enum_supertype(left: Enum, right: Enum, /) -> Enum | None:
     return left if left.categories == right.categories else None
-
-
-same_supertype.register(Duration, DurationV1)(downcast_time_unit)
 
 
 @lru_cache(maxsize=_CACHE_SIZE)

@@ -7,30 +7,27 @@ from typing import TYPE_CHECKING, Any, Generic, TypeVar, overload
 from narwhals._utils import qualified_type_name
 
 if TYPE_CHECKING:
-    from typing_extensions import ParamSpec, TypeAlias
-
-    P = ParamSpec("P")
+    from typing_extensions import TypeAlias
 
 
 Incomplete: TypeAlias = Any
 R = TypeVar("R")
 R_co = TypeVar("R_co", covariant=True)
 Fn: TypeAlias = Callable[..., R]
-Fn_co: TypeAlias = Callable[..., R_co]
-Default = TypeVar("Default", bound=object)
+Passthrough = TypeVar("Passthrough", bound="Callable[..., Any]")
 
 
-class JustDispatch(Generic[R_co, Default]):
+class JustDispatch(Generic[R_co]):
     """The type of a function decorated by `@just_dispatch`."""
 
-    def __init__(self, function: Callable[..., R_co], default: type[Default], /) -> None:
+    def __init__(self, function: Fn[R_co], default: type[Any], /) -> None:
         self._function_name: str = function.__name__
-        self._default: type[Default] = default
-        self._registry: dict[type[Any], Fn_co[R_co]] = {default: function}
-        self.__wrapped__: Callable[..., R_co] = function
+        self._default: type[Any] = default
+        self._registry: dict[type[Any], Fn[R_co]] = {default: function}
+        self.__wrapped__: Fn[R_co] = function
 
     @property
-    def registry(self) -> MappingProxyType[type[Any], Callable[..., R_co]]:
+    def registry(self) -> MappingProxyType[type[Any], Fn[R_co]]:
         """Read-only mapping of all registered implementations."""
         return MappingProxyType(self._registry)
 
@@ -45,9 +42,10 @@ class JustDispatch(Generic[R_co, Default]):
         msg = f"{self._function_name!r} does not support {qualified_type_name(tp)!r} as this is incompatible with default {qualified_type_name(default)!r}"
         raise TypeError(msg)
 
+    # TODO @dangotbanned: Turn all these notes into useful docs
     def register(
         self, tp: type[Any], *tps: type[Any]
-    ) -> Callable[[Callable[P, R_co]], Callable[P, R_co]]:
+    ) -> Callable[[Passthrough], Passthrough]:
         """Register one or more types to dispatch to this function.
 
         Unlike `@singledisptatch`:
@@ -62,7 +60,7 @@ class JustDispatch(Generic[R_co, Default]):
         - The registered function is returned unchanged
         """
 
-        def decorate(f: Callable[P, R_co], /) -> Callable[P, R_co]:
+        def decorate(f: Passthrough, /) -> Passthrough:
             if tps:
                 self._registry.update((tp, f) for tp in tps)
             else:
@@ -71,24 +69,25 @@ class JustDispatch(Generic[R_co, Default]):
 
         return decorate
 
-    def __call__(self, arg: Default, *args: Incomplete, **kwds: Incomplete) -> R_co:
+    def __call__(self, arg: object, *args: Incomplete, **kwds: Incomplete) -> R_co:
         """Im a doc for everything."""
         return self.dispatch(arg.__class__)(arg, *args, **kwds)
 
 
+# TODO @dangotbanned: Polish notes/docs
+# TODO @dangotbanned: Prefer examples over lots of words
+# TODO @dangotbanned: Rename `default` -> `bound`/`upper_bound`
 @overload
-def just_dispatch(function: Fn[R], /) -> JustDispatch[R, object]: ...
+def just_dispatch(function: Fn[R_co], /) -> JustDispatch[R_co]: ...
 @overload
 def just_dispatch(
-    *, default: type[Default] = object
-) -> Callable[[Fn[R]], JustDispatch[R, Default]]: ...
+    *, default: type[Any] = object
+) -> Callable[[Fn[R_co]], JustDispatch[R_co]]: ...
 @overload
+def just_dispatch(function: Fn[R_co], /, *, default: type[Any]) -> JustDispatch[R_co]: ...
 def just_dispatch(
-    function: Fn[R], /, *, default: type[Default]
-) -> JustDispatch[R, Default]: ...
-def just_dispatch(
-    function: Fn[R] | None = None, /, *, default: type[Default] = object
-) -> JustDispatch[R, Default] | Fn[JustDispatch[R, Default]]:
+    function: Fn[R_co] | None = None, /, *, default: type[Any] = object
+) -> JustDispatch[R_co] | Fn[JustDispatch[R_co]]:
     """A less dynamic take on [`@functools.singledispatch`].
 
     Use this if you find yourself creating a global `dict` mapping types to functions.
