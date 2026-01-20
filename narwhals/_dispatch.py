@@ -19,7 +19,7 @@ Passthrough = TypeVar("Passthrough", bound=Callable[..., Any])
 
 
 class JustDispatch(Generic[R_co]):
-    """The type of a function decorated by `@just_dispatch`."""
+    """Single-dispatch wrapper produced by decorating a function with `@just_dispatch`."""
 
     def __init__(self, function: Impl[R_co], /, upper_bound: type[Any]) -> None:
         self._function_name: str = function.__name__
@@ -33,7 +33,7 @@ class JustDispatch(Generic[R_co]):
         return MappingProxyType(self._registry)
 
     def dispatch(self, tp: type[Any], /) -> Impl[R_co]:
-        """Get the implementation for `tp`."""
+        """Get the implementation for a given type."""
         if f := self._registry.get(tp):
             return f
         upper = self._upper_bound
@@ -47,7 +47,7 @@ class JustDispatch(Generic[R_co]):
     def register(
         self, tp: type[Any], *tps: type[Any]
     ) -> Callable[[Passthrough], Passthrough]:
-        """Register one or more types to dispatch to this function.
+        """Register one or more types to dispatch via the decorated function.
 
         Unlike `@singledisptatch`:
         - Registering ABCs or anything via type hints is not supported
@@ -90,15 +90,16 @@ def just_dispatch(
 def just_dispatch(
     function: Impl[R_co] | None = None, /, *, upper_bound: type[Any] = object
 ) -> JustDispatch[R_co] | Callable[[Deferred[R]], JustDispatch[R]]:
-    """A less dynamic take on [`@functools.singledispatch`].
+    """Transform a function into a single-dispatch generic function, similar to [`@functools.singledispatch`].
 
     Use this if you find yourself creating a global `dict` mapping types to functions.
 
     Do not use this if you want subclasses to act like they've been registered.
 
     Arguments:
-        function: (Decorating) function to transform into a single dispatch function.
-        upper_bound: Nominal upper bound to constrain the default implementation.
+        function: Function to decorate, where the body serves as the default implementation.
+        upper_bound: When there is no registered implementation for a specific type, require
+            the type to be a subclass of `upper_bound` to use the default implementation.
 
     Notes:
         - Implements a subset of the api, with a few extras.
