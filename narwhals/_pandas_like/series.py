@@ -589,6 +589,10 @@ class PandasLikeSeries(EagerSeries[Any]):
         return res_ser
 
     def fill_nan(self, value: float | None) -> Self:
+        if self._implementation.is_cudf() and (value is None):
+            # TODO(Unassigned): https://github.com/narwhals-dev/narwhals/issues/3231
+            msg = "`fill_nan(value=None)` is not support for CuDF backend"
+            raise NotImplementedError(msg)
         if not self.dtype.is_numeric():  # pragma: no cover
             msg = f"`.fill_nan` only supported for numeric dtype and not {self.dtype}, did you mean `.fill_null`?"
             raise InvalidOperationError(msg)
@@ -993,6 +997,13 @@ class PandasLikeSeries(EagerSeries[Any]):
         return self._with_native(result)
 
     def __iter__(self) -> Iterator[Any]:
+        if self._implementation.is_cudf():
+            msg = (
+                "Iterating over a cuDF Series, DataFrame or Index is not supported. "
+                "For more information see: https://docs.rapids.ai/api/cudf/stable/user_guide/pandas-comparison/#iteration"
+            )
+            raise NotImplementedError(msg)
+
         yield from self.native.__iter__()
 
     def __contains__(self, other: Any) -> bool:
@@ -1089,6 +1100,36 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     def sqrt(self) -> Self:
         return self._with_native(self.native.pow(0.5))
+
+    def sin(self) -> Self:
+        native = self.native
+        if self.is_native_dtype_pyarrow(native.dtype):
+            import pyarrow.compute as pc
+
+            result_native = self._apply_pyarrow_compute_func(
+                native,
+                pc.sin,  # type: ignore[arg-type]
+            )
+        else:
+            array_func = self._array_funcs.sin
+            result_native = self._apply_array_func(native, array_func)
+
+        return self._with_native(result_native)
+
+    def cos(self) -> Self:
+        native = self.native
+        if self.is_native_dtype_pyarrow(native.dtype):
+            import pyarrow.compute as pc
+
+            result_native = self._apply_pyarrow_compute_func(
+                native,
+                pc.cos,  # type: ignore[arg-type]
+            )
+        else:
+            array_func = self._array_funcs.cos
+            result_native = self._apply_array_func(native, array_func)
+
+        return self._with_native(result_native)
 
     def is_native_dtype_pyarrow(self, native_dtype: Any) -> bool:
         impl = self._implementation

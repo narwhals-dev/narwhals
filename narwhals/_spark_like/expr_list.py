@@ -52,7 +52,10 @@ class SparkLikeExprListNamespace(
     def sum(self) -> SparkLikeExpr:
         def func(expr: Column) -> Column:
             F = self.compliant._F
-            return F.aggregate(F.array_compact(expr), F.lit(0.0), operator.add)
+            drop_nulls = F.array_compact(expr)
+            len = F.array_size(drop_nulls)
+            sum = F.aggregate(drop_nulls, F.lit(0.0), operator.add)
+            return F.when((len.isNotNull()) & (len == 0), F.lit(0)).otherwise(sum)
 
         return self.compliant._with_elementwise(func)
 
@@ -67,12 +70,16 @@ class SparkLikeExprListNamespace(
         return self.compliant._with_elementwise(func)
 
     def median(self) -> SparkLikeExpr:
-        def func(expr: Column) -> Column:  # pragma: no cover
-            # sqlframe issue: https://github.com/eakmanrq/sqlframe/issues/548
+        def func(expr: Column) -> Column:
             F = self.compliant._F
             sorted_expr = F.array_compact(F.sort_array(expr))
             size = F.array_size(sorted_expr)
             mid_index = (size / 2).cast("int")
+            impl = self.compliant._implementation
+            if impl.is_sqlframe() and impl._backend_version() < (3, 44, 1):
+                # indexing is different in sqlframe
+                # https://github.com/eakmanrq/sqlframe/issues/568
+                mid_index = mid_index + 1  # pragma: no cover
             odd_case = sorted_expr[mid_index]
             even_case = (sorted_expr[mid_index - 1] + sorted_expr[mid_index]) / 2
             return (
@@ -88,9 +95,10 @@ class SparkLikeExprListNamespace(
             F = self.compliant._F
             if not descending and nulls_last:
                 return F.array_sort(expr)
-            if descending and not nulls_last:  # pragma: no cover
-                # https://github.com/eakmanrq/sqlframe/issues/559
-                return F.reverse(F.array_sort(expr))
+            if descending and not nulls_last:
+                impl = self.compliant._implementation
+                rev = F.array_reverse if impl.is_sqlframe() else F.reverse
+                return rev(F.array_sort(expr))
             return F.sort_array(expr, asc=not descending)
 
         return self.compliant._with_elementwise(func)
