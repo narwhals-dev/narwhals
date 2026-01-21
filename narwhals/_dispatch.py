@@ -9,6 +9,7 @@ from narwhals._utils import qualified_type_name
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
+__all__ = ["just_dispatch"]
 
 Incomplete: TypeAlias = Any
 R = TypeVar("R")
@@ -30,12 +31,12 @@ class JustDispatch(Generic[R_co]):
 
     @property
     def _function_name(self) -> str:
-        return self.__wrapped__.__name__  # pragma: no cover
+        return self.__wrapped__.__name__
 
     @property
     def registry(self) -> MappingProxyType[type[Any], Impl[R_co]]:
         """Read-only mapping of all registered implementations."""
-        return MappingProxyType(self._registry)  # pragma: no cover
+        return MappingProxyType(self._registry)
 
     def dispatch(self, tp: type[Any], /) -> Impl[R_co]:
         """Get the implementation for a given type."""
@@ -45,10 +46,9 @@ class JustDispatch(Generic[R_co]):
         if issubclass(tp, upper):
             f = self._registry[tp] = self._registry[upper]
             return f
-        else:  # pragma: no cover  # noqa: RET505
-            tp_name, upper_name = qualified_type_name(tp), qualified_type_name(upper)
-            msg = f"{self._function_name!r} does not support {tp_name!r} as it is incompatible with upper bound {upper_name!r}"
-            raise TypeError(msg)
+        tp_name, upper_name = qualified_type_name(tp), qualified_type_name(upper)
+        msg = f"{self._function_name!r} does not support {tp_name!r} as it is incompatible with upper bound {upper_name!r}"
+        raise TypeError(msg)
 
     # TODO @dangotbanned: Turn all these notes into useful docs
     def register(  # noqa: D417
@@ -63,13 +63,11 @@ class JustDispatch(Generic[R_co]):
             A closure that can be used as a decorator.
 
         Notes:
-            - Unlike `@singledisptatch`
+            - Unlike `@singledispatch`
                 - Registering ABCs or anything via type hints is not supported
                 - All registered types are dispatched to **by identity**
                 - Multiple types can be registered in a single call
-                - Lambda's cannot be used like `function.register(int, lambda x: x + 1)`
-                    - They should be avoided anyway
-            - Similar to `@singledisptatch`
+            - Similar to `@singledispatch`
                 - This can be used as a decorator
                 - The registered function is returned unchanged
         """
