@@ -94,10 +94,6 @@ def test_just_dispatch() -> None:  # noqa: PLR0915
     # Non-decorating registration is possible, if you really dislike names
     dtype_repr_code.register(nw.Duration)(lambda dtype: f"duration[{dtype.time_unit}]")
 
-    @dtype_repr_code.register(nw.Duration)
-    def repr_duration(dtype: nw.Duration) -> str:
-        return f"duration[{dtype.time_unit}]"
-
     assert dtype_repr_code(nw.Datetime()) == "datetime[us]"
     assert dtype_repr_code(nw.Datetime("s")) == "datetime[s]"
     assert (
