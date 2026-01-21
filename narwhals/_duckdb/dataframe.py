@@ -101,7 +101,7 @@ class DuckDBLazyFrame(
         if self._version is Version.V1:
             from narwhals.stable.v1 import DataFrame as DataFrameV1
 
-            return DataFrameV1(self, level="interchange")  # type: ignore[no-any-return]
+            return DataFrameV1(self, level="interchange")
         return self._version.lazyframe(self, level="lazy")
 
     def __narwhals_dataframe__(self) -> Self:  # pragma: no cover
@@ -115,7 +115,7 @@ class DuckDBLazyFrame(
         return self
 
     def __native_namespace__(self) -> ModuleType:
-        return get_duckdb()  # type: ignore[no-any-return]
+        return get_duckdb()
 
     def __narwhals_namespace__(self) -> DuckDBNamespace:
         from narwhals._duckdb.namespace import DuckDBNamespace
@@ -137,12 +137,8 @@ class DuckDBLazyFrame(
         if backend is None or backend is Implementation.PYARROW:
             from narwhals._arrow.dataframe import ArrowDataFrame
 
-            if self._backend_version < (1, 4):
-                ret = self.native.arrow()
-            else:  # pragma: no cover
-                ret = self.native.fetch_arrow_table()
             return ArrowDataFrame(
-                ret,
+                self.native.fetch_arrow_table(),
                 validate_backend_version=True,
                 version=self._version,
                 validate_column_names=True,
@@ -263,7 +259,7 @@ class DuckDBLazyFrame(
 
     def to_arrow(self) -> pa.Table:
         # only if version is v1, keep around for backcompat
-        return self.lazy().collect(Implementation.PYARROW).native  # type: ignore[no-any-return]
+        return self.lazy().collect(Implementation.PYARROW).native
 
     def _with_version(self, version: Version) -> Self:
         return self.__class__(self.native, version=version)
