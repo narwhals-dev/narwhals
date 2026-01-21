@@ -168,3 +168,5 @@ def test_just_dispatch() -> None:  # noqa: PLR0915
         @dtype_repr_code.register()  # type: ignore[call-arg]
         def no_types(dtype: DType) -> str:
             return str(dtype)
+
+    assert repr(dtype_repr_code) == "JustDispatch<dtype_repr_code>"

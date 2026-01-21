@@ -29,6 +29,9 @@ class JustDispatch(Generic[R_co]):
         self._registry: dict[type[Any], Impl[R_co]] = {upper_bound: function}
         self.__wrapped__: Impl[R_co] = function
 
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}<{self._function_name}>"
+
     @property
     def _function_name(self) -> str:
         return self.__wrapped__.__name__
