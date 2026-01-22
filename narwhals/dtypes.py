@@ -232,11 +232,11 @@ class Decimal(NumericType):
         precision = 38 if precision is None else precision
 
         if not ((is_int := isinstance(precision, int)) and 0 <= precision <= 38):
-            msg = f"`precision` must be a positive integer between 0 and 38, found {precision!r}"
+            msg = f"precision must be a positive integer between 0 and 38, found {precision!r}"
             raise ValueError(msg) if is_int else TypeError(msg)
 
         if not ((is_int := isinstance(scale, int)) and scale >= 0):
-            msg = f"`scale` must be a positive integer, found {scale!r}"
+            msg = f"scale must be a positive integer, found {scale!r}"
             raise ValueError(msg) if is_int else TypeError(msg)
 
         if scale > precision:

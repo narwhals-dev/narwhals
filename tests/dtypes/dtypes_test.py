@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Literal
 import pytest
 
 import narwhals as nw
-from narwhals.exceptions import PerformanceWarning
+from narwhals.exceptions import InvalidOperationError, PerformanceWarning
 from tests.utils import PANDAS_VERSION, POLARS_VERSION, PYARROW_VERSION, pyspark_session
 
 if TYPE_CHECKING:
@@ -437,6 +437,26 @@ def test_cast_decimal_to_native(
 
     schema = nw.from_native(native_result).collect_schema()
     assert schema["a"] == nw.Decimal(precision, scale)
+
+
+@pytest.mark.parametrize(
+    ("precision", "scale", "exception", "msg"),
+    [
+        (2.1, 0, TypeError, "precision must be a positive integer between 0 and 38"),
+        ("foo", 0, TypeError, "precision must be a positive integer between 0 and 38"),
+        (-1, 0, ValueError, "precision must be a positive integer between 0 and 38"),
+        (39, 0, ValueError, "precision must be a positive integer between 0 and 38"),
+        (None, 2.1, TypeError, "scale must be a positive integer"),
+        (None, "foo", TypeError, "scale must be a positive integer"),
+        (None, -1, ValueError, "scale must be a positive integer"),
+        (2, 3, InvalidOperationError, "scale must be less than or equal to precision"),
+    ],
+)
+def test_decimal_invalid(
+    precision: int | None, scale: int, exception: type[Exception], msg: str
+) -> None:
+    with pytest.raises(exception, match=msg):
+        nw.Decimal(precision=precision, scale=scale)
 
 
 @pytest.mark.parametrize(
