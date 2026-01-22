@@ -31,6 +31,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping
     from types import ModuleType
 
+    import pyarrow as pa
     from pandas._typing import Dtype as PandasDtype
     from pandas.core.dtypes.dtypes import BaseMaskedDtype
     from typing_extensions import TypeAlias, TypeIs
@@ -260,8 +261,6 @@ def non_object_native_to_narwhals_dtype(native_dtype: Any, version: Version) -> 
         return dtypes.String()
     if dtype in {"bool", "boolean", "boolean[pyarrow]", "bool[pyarrow]"}:
         return dtypes.Boolean()
-    if dtype.startswith("dictionary<"):
-        return dtypes.Categorical()
     if dtype == "category":
         return native_categorical_to_narwhals_dtype(native_dtype, version)
     if (match_ := PATTERN_PD_DATETIME.match(dtype)) or (
@@ -275,14 +274,6 @@ def non_object_native_to_narwhals_dtype(native_dtype: Any, version: Version) -> 
     ):
         du_time_unit: TimeUnit = match_.group("time_unit")  # type: ignore[assignment]
         return dtypes.Duration(du_time_unit)
-    if dtype == "date32[day][pyarrow]":
-        return dtypes.Date()
-    if dtype.startswith("decimal") and dtype.endswith("[pyarrow]"):
-        return dtypes.Decimal()
-    if dtype.startswith("time") and dtype.endswith("[pyarrow]"):
-        return dtypes.Time()
-    if dtype.startswith("binary") and dtype.endswith("[pyarrow]"):
-        return dtypes.Binary()
     return dtypes.Unknown()  # pragma: no cover
 
 
@@ -337,6 +328,9 @@ def _cudf_categorical_to_list(
     return fn
 
 
+CUDF_BASE_DTYPE_PREFIX = ("list", "struct", "decimal")
+
+
 def native_to_narwhals_dtype(
     native_dtype: Any,
     version: Version,
@@ -346,15 +340,16 @@ def native_to_narwhals_dtype(
 ) -> DType:
     str_dtype = str(native_dtype)
 
-    if str_dtype.startswith(("large_list", "list", "struct", "fixed_size_list")):
+    if is_dtype_pyarrow(native_dtype) or str_dtype.startswith(CUDF_BASE_DTYPE_PREFIX):
         from narwhals._arrow.utils import (
             native_to_narwhals_dtype as arrow_native_to_narwhals_dtype,
         )
 
         if hasattr(native_dtype, "to_arrow"):  # pragma: no cover
-            # cudf, cudf.pandas
-            return arrow_native_to_narwhals_dtype(native_dtype.to_arrow(), version)
-        return arrow_native_to_narwhals_dtype(native_dtype.pyarrow_dtype, version)
+            pa_dtype: pa.DataType = native_dtype.to_arrow()  # pyright: ignore[reportAttributeAccessIssue]
+        else:
+            pa_dtype = native_dtype.pyarrow_dtype
+        return arrow_native_to_narwhals_dtype(pa_dtype, version)
     if str_dtype == "category" and implementation.is_cudf():
         # https://github.com/rapidsai/cudf/issues/18536
         # https://github.com/rapidsai/cudf/issues/14027
