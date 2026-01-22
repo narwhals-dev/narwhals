@@ -236,7 +236,7 @@ def non_object_native_to_narwhals_dtype(native_dtype: Any, version: Version) -> 
         "str",
     }:
         return dtypes.String()
-    if dtype in {"bool", "boolean", "boolean[pyarrow]", "bool[pyarrow]"}:
+    if dtype in {"bool", "boolean"}:
         return dtypes.Boolean()
     if dtype == "category":
         return native_categorical_to_narwhals_dtype(native_dtype, version)
