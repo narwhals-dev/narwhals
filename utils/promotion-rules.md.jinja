@@ -133,6 +133,11 @@ st(nw.Float64(), nw.Float32())
     st(nw.Decimal(), nw.Float64())
     ```
 
+<!--
+TODO(dangotbanned): Update once Decimal is parametric
+https://github.com/narwhals-dev/narwhals/pull/3377
+-->
+
 ## Temporal Types
 
 ### Duration
@@ -349,7 +354,7 @@ The following combinations have **no valid supertype** and will result in `None`
 * `Datetime` values with different time zones
 * `Enum` values with different categories
 * `Array` values with different shapes
-* Temporal types combined with numeric types (unlike Polars, Narwhals does not support these conversions)
+* Temporal types combined with numeric types (unlike Polars, see [narwhals-dev/narwhals#121])
 * Any other unlisted combination of different base types
 
 ## Everything in a single table
@@ -358,6 +363,7 @@ The following combinations have **no valid supertype** and will result in `None`
 
 [get_supertype_with_options]: https://github.com/pola-rs/polars/blob/529f7ec642912a2f15656897d06f1532c2f5d4c4/crates/polars-core/src/utils/supertype.rs#L142-L543
 [base-type]: ../api-reference/dtypes.md#narwhals.dtypes.DType.base_type
+[narwhals-dev/narwhals#121]: https://github.com/narwhals-dev/narwhals/issues/121
 [^1]: Given two data types `A` and `B`, their supertype `S` is the smallest (most specific)
     type such that both `A` and `B` can be losslessly cast to without risk of overflow,
     truncation, or loss of precision. If no such type exists, the supertype is `None`.
