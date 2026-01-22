@@ -1,3 +1,13 @@
+"""Rules for safe type promotion.
+
+Follows a subset of `polars`' [`get_supertype_with_options`].
+
+See [Data type promotion rules] for an in-depth explanation.
+
+[`get_supertype_with_options`]: https://github.com/pola-rs/polars/blob/529f7ec642912a2f15656897d06f1532c2f5d4c4/crates/polars-core/src/utils/supertype.rs#L142-L543
+[Data type promotion rules]: https://narwhals-dev.github.io/narwhals/concepts/promotion-rules/
+"""
+
 from __future__ import annotations
 
 from collections import deque
@@ -131,21 +141,7 @@ def dtype_eq(left: DType, right: DType, /) -> bool:
 
 @cache
 def _integer_supertyping() -> Mapping[FrozenDTypes, type[Int | Float64]]:
-    """Generate the supertype conversion table for all integer data type pairs.
-
-    The rules:
-
-        # pick the highest bit-width for matching signs
-        (Int*, Int*)               -> Int*
-        (UInt*, UInt*)             -> UInt*
-        # pick a *strictly higher* signed bit-width
-        (UInt<lower>, Int<higher>) -> Int<higher>
-        # promote unsigned to the next highest bit-width,
-        # but do not exceed `Int64`
-        (UInt{8,16,32}, Int*)      -> Int{16,32,64}
-        # all others
-        (UInt{64,128}, Int*)       -> Float64
-    """
+    """Generate the supertype conversion table for all integer data type pairs."""
     tps_int = SignedIntegerType.__subclasses__()
     tps_uint = UnsignedIntegerType.__subclasses__()
     get_bits: attrgetter[_Bits] = attrgetter("_bits")
@@ -172,14 +168,7 @@ def _integer_supertyping() -> Mapping[FrozenDTypes, type[Int | Float64]]:
 
 @cache
 def _primitive_numeric_supertyping() -> Mapping[FrozenDTypes, type[Float]]:
-    """Generate the supertype conversion table for all (integer, float) data type pairs.
-
-    The rules:
-
-        (Integer{8,16}, Float32)      -> Float32
-        (Integer{32,64,128}, Float32) -> Float64
-        (Integer, Float64)            -> Float64
-    """
+    """Generate the supertype conversion table for all (integer, float) data type pairs."""
     F32, F64 = Float32, Float64  # noqa: N806
     small_int = (Int8, Int16, UInt8, UInt16)
     small_int_f32 = ((frozen_dtypes(tp, F32), F32) for tp in small_int)
@@ -219,10 +208,7 @@ def downcast_time_unit(left: SameTemporalT, right: SameTemporalT, /) -> SameTemp
 def _struct_fields_union(
     left: Collection[Field], right: Collection[Field], /
 ) -> Struct | None:
-    """Adapted from [`union_struct_fields`].
-
-    [`union_struct_fields`]: https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-core/src/utils/supertype.rs#L559-L586
-    """
+    """Adapted from [`union_struct_fields`](https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-core/src/utils/supertype.rs#L559-L586)."""
     longest, shortest = (left, right) if len(left) >= len(right) else (right, left)
     longest_map = {f.name: f.dtype() for f in longest}
     for f in shortest:
@@ -240,16 +226,7 @@ def _struct_fields_union(
 def struct_supertype(left: Struct, right: Struct, /) -> Struct | None:
     """Get the supertype of two struct data types.
 
-    Adapted from [`super_type_structs`]
-
-    Unlike all other rules, the order of *operands* is meaningful.
-    `left` defines the field order of the output `Struct` *unless* `right` has more fields.
-
-    We can derive a supertype with each `Struct`'s fields in arbitrary order,
-    and even with disjoint field names.
-    *But*, **all fields that intersect** (*by name*) must satisfy all other supertyping rules (*by dtype*).
-
-    [`super_type_structs`]: https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-core/src/utils/supertype.rs#L588-L603
+    Adapted from [`super_type_structs`](https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-core/src/utils/supertype.rs#L588-L603)
     """
     left_fields, right_fields = left.fields, right.fields
     if len(left_fields) != len(right_fields):
@@ -302,18 +279,6 @@ def _numeric_supertype(base_types: FrozenDTypes) -> DType | None:
     `_{primitive_numeric,integer}_supertyping` define most valid numeric supertypes.
 
     We generate these on first use, with all subsequent calls returning the same mapping.
-
-    The rules defined here are:
-
-        (Float32, Float64) -> Float64
-        (Decimal, Float*)  -> Float64
-        (Decimal, Integer) -> Decimal
-        (Boolean, Numeric) -> Numeric
-
-    Important:
-        `Decimal` behavior is expected to change following [#3377]
-
-    [#3377]: https://github.com/narwhals-dev/narwhals/pull/3377
     """
     if NUMERIC.issuperset(base_types):
         if INTEGER.issuperset(base_types):
@@ -331,28 +296,7 @@ def _numeric_supertype(base_types: FrozenDTypes) -> DType | None:
 def _mixed_supertype(
     left: DType, right: DType, base_types: FrozenDTypes, /
 ) -> DType | None:
-    """Get the supertype of two data types that do not share the same class.
-
-    We support only one combination that requires preservation of instance attributes:
-
-        (Date, Datetime) -> Datetime
-
-    All others can match using *only* the class pairs themselves.
-
-    The following are supported in `polars`, but are not planned to be implemented here (see [#121]):
-
-        (Date, {UInt,Int,Float}{32,64})     -> {Int,Float}{32,64}
-        (Time, {Int,Float}{32,64})          -> {Int,Float}64
-        (Datetime, {UInt,Int,Float}{32,64}) -> {Int,Float}64
-        (Duration, {UInt,Int,Float}{32,64}) -> {Int,Float}64
-
-    We also reject all nested data types here, *whereas* [`polars` supports mixed `Struct`]:
-
-        (Struct, DType) -> Struct
-
-    [#121]: https://github.com/narwhals-dev/narwhals/issues/121
-    [`polars` supports mixed `Struct`]: https://github.com/pola-rs/polars/blob/d6d9d8a2c7d3e416488388a0114c6ff3eafcb66c/crates/polars-core/src/utils/supertype.rs#L499-L507
-    """
+    """Get the supertype of two data types that do not share the same class."""
     if Date in base_types and _has_intersection(base_types, DATETIME):
         return left if isinstance(left, Datetime) else right
     if NUMERIC.isdisjoint(base_types):
@@ -363,16 +307,12 @@ def _mixed_supertype(
 def get_supertype(left: DType, right: DType) -> DType | None:
     """Given two data types, determine the data type that both types can reasonably safely be cast to.
 
-    Aims to follow the rules defined by [`polars_core::utils::supertype::get_supertype_with_options`].
-
     Arguments:
         left: First data type.
         right: Second data type.
 
     Returns:
         The common supertype that both types can be safely cast to, or None if no such type exists.
-
-    [`polars_core::utils::supertype::get_supertype_with_options`]: https://github.com/pola-rs/polars/blob/529f7ec642912a2f15656897d06f1532c2f5d4c4/crates/polars-core/src/utils/supertype.rs#L142-L543
     """
     base_types = frozen_dtypes(left.base_type(), right.base_type())
     if Unknown in base_types:
