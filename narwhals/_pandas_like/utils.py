@@ -74,22 +74,6 @@ PD_DATETIME_RGX = r"""^
     \]                                            # Closing bracket for datetime64
 $"""
 PATTERN_PD_DATETIME = re.compile(PD_DATETIME_RGX, re.VERBOSE)
-PA_DATETIME_RGX = r"""^
-    timestamp\[
-        (?P<time_unit>s|ms|us|ns)                 # Match time unit: s, ms, us, or ns
-        (?:,                                      # Begin non-capturing group for optional timezone
-            \s?tz=                                # Match "tz=" prefix
-            (?P<time_zone>                        # Start named group for timezone
-                [a-zA-Z\/]*                       # Match timezone name (e.g., UTC, America/New_York)
-                (?:                               # Begin optional non-capturing group for offset
-                    [+-]\d{2}:\d{2}               # Match offset in format +HH:MM or -HH:MM
-                )?                                # End optional offset group
-            )                                     # End time_zone group
-        )?                                        # End optional timezone group
-    \]                                            # Closing bracket for timestamp
-    \[pyarrow\]                                   # Literal string "[pyarrow]"
-$"""
-PATTERN_PA_DATETIME = re.compile(PA_DATETIME_RGX, re.VERBOSE)
 PD_DURATION_RGX = r"""^
     timedelta64\[
         (?P<time_unit>s|ms|us|ns)                 # Match time unit: s, ms, us, or ns
@@ -97,13 +81,6 @@ PD_DURATION_RGX = r"""^
 $"""
 
 PATTERN_PD_DURATION = re.compile(PD_DURATION_RGX, re.VERBOSE)
-PA_DURATION_RGX = r"""^
-    duration\[
-        (?P<time_unit>s|ms|us|ns)                 # Match time unit: s, ms, us, or ns
-    \]                                            # Closing bracket for duration
-    \[pyarrow\]                                   # Literal string "[pyarrow]"
-$"""
-PATTERN_PA_DURATION = re.compile(PA_DURATION_RGX, re.VERBOSE)
 
 NativeIntervalUnit: TypeAlias = Literal[
     "year",
@@ -263,15 +240,11 @@ def non_object_native_to_narwhals_dtype(native_dtype: Any, version: Version) -> 
         return dtypes.Boolean()
     if dtype == "category":
         return native_categorical_to_narwhals_dtype(native_dtype, version)
-    if (match_ := PATTERN_PD_DATETIME.match(dtype)) or (
-        match_ := PATTERN_PA_DATETIME.match(dtype)
-    ):
+    if match_ := PATTERN_PD_DATETIME.match(dtype):
         dt_time_unit: TimeUnit = match_.group("time_unit")  # type: ignore[assignment]
         dt_time_zone: str | None = match_.group("time_zone")
         return dtypes.Datetime(dt_time_unit, dt_time_zone)
-    if (match_ := PATTERN_PD_DURATION.match(dtype)) or (
-        match_ := PATTERN_PA_DURATION.match(dtype)
-    ):
+    if match_ := PATTERN_PD_DURATION.match(dtype):
         du_time_unit: TimeUnit = match_.group("time_unit")  # type: ignore[assignment]
         return dtypes.Duration(du_time_unit)
     return dtypes.Unknown()  # pragma: no cover
