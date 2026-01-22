@@ -226,8 +226,6 @@ def non_object_native_to_narwhals_dtype(native_dtype: Any, version: Version) -> 
         return dtypes.String()
     if dtype in {"bool", "boolean"}:
         return dtypes.Boolean()
-    if dtype == "category":
-        return native_categorical_to_narwhals_dtype(native_dtype, version)
     if match_ := PATTERN_PD_DATETIME.match(dtype):
         dt_time_unit: TimeUnit = match_.group("time_unit")  # type: ignore[assignment]
         dt_time_zone: str | None = match_.group("time_zone")
@@ -262,9 +260,7 @@ def object_native_to_narwhals_dtype(
 
 
 def native_categorical_to_narwhals_dtype(
-    native_dtype: pd.CategoricalDtype,
-    version: Version,
-    implementation: Literal[Implementation.CUDF] | None = None,
+    native_dtype: pd.CategoricalDtype, version: Version, implementation: Implementation
 ) -> DType:
     dtypes = version.dtypes
     if version is Version.V1:
@@ -283,6 +279,8 @@ def _cudf_categorical_to_list(
     native_dtype: Any,
 ) -> Callable[[], list[Any]]:  # pragma: no cover
     # NOTE: https://docs.rapids.ai/api/cudf/stable/user_guide/api_docs/api/cudf.core.dtypes.categoricaldtype/#cudf.core.dtypes.CategoricalDtype
+    # https://github.com/rapidsai/cudf/issues/18536
+    # https://github.com/rapidsai/cudf/issues/14027
     def fn() -> list[Any]:
         return native_dtype.categories.to_arrow().to_pylist()
 
@@ -311,12 +309,8 @@ def native_to_narwhals_dtype(
         else:
             pa_dtype = native_dtype.pyarrow_dtype
         return arrow_native_to_narwhals_dtype(pa_dtype, version)
-    if str_dtype == "category" and implementation.is_cudf():
-        # https://github.com/rapidsai/cudf/issues/18536
-        # https://github.com/rapidsai/cudf/issues/14027
-        return native_categorical_to_narwhals_dtype(
-            native_dtype, version, Implementation.CUDF
-        )
+    if str_dtype == "category":
+        return native_categorical_to_narwhals_dtype(native_dtype, version, implementation)
     if str_dtype != "object":
         return non_object_native_to_narwhals_dtype(native_dtype, version)
     if implementation is Implementation.DASK:
