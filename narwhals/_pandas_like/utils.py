@@ -194,21 +194,21 @@ def non_object_native_to_narwhals_dtype(native_dtype: Any, version: Version) -> 
     dtype = str(native_dtype)
 
     dtypes = version.dtypes
-    if dtype in {"int64", "Int64", "Int64[pyarrow]", "int64[pyarrow]"}:
+    if dtype in {"int64", "Int64"}:
         return dtypes.Int64()
-    if dtype in {"int32", "Int32", "Int32[pyarrow]", "int32[pyarrow]"}:
+    if dtype in {"int32", "Int32"}:
         return dtypes.Int32()
-    if dtype in {"int16", "Int16", "Int16[pyarrow]", "int16[pyarrow]"}:
+    if dtype in {"int16", "Int16"}:
         return dtypes.Int16()
-    if dtype in {"int8", "Int8", "Int8[pyarrow]", "int8[pyarrow]"}:
+    if dtype in {"int8", "Int8"}:
         return dtypes.Int8()
-    if dtype in {"uint64", "UInt64", "UInt64[pyarrow]", "uint64[pyarrow]"}:
+    if dtype in {"uint64", "UInt64"}:
         return dtypes.UInt64()
-    if dtype in {"uint32", "UInt32", "UInt32[pyarrow]", "uint32[pyarrow]"}:
+    if dtype in {"uint32", "UInt32"}:
         return dtypes.UInt32()
-    if dtype in {"uint16", "UInt16", "UInt16[pyarrow]", "uint16[pyarrow]"}:
+    if dtype in {"uint16", "UInt16"}:
         return dtypes.UInt16()
-    if dtype in {"uint8", "UInt8", "UInt8[pyarrow]", "uint8[pyarrow]"}:
+    if dtype in {"uint8", "UInt8"}:
         return dtypes.UInt8()
     if dtype in {"float64", "Float64"}:
         return dtypes.Float64()
