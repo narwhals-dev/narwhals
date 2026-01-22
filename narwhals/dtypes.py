@@ -12,6 +12,7 @@ from narwhals._utils import (
     isinstance_or_issubclass,
     qualified_type_name,
 )
+from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
@@ -225,8 +226,24 @@ class Decimal(NumericType):
     precision: int
     scale: int
 
+    # !NOTE: Reason for `precision: int | None = None` rather than `precision: int = 38`
+    # is to mirror polars signature https://github.com/pola-rs/polars/blob/bb79993c3aa91d0db7d20be8f75c8075cad97067/py-polars/src/polars/datatypes/classes.py#L450-L454
     def __init__(self, precision: int | None = None, scale: int = 0) -> None:
-        self.precision = 38 if precision is None else precision
+        precision = 38 if precision is None else precision
+
+        if not ((is_int := isinstance(precision, int)) and 0 <= precision <= 38):
+            msg = f"`precision` must be a positive integer between 0 and 38, found {precision!r}"
+            raise ValueError(msg) if is_int else TypeError(msg)
+
+        if not ((is_int := isinstance(scale, int)) and scale >= 0):
+            msg = f"`scale` must be a positive integer, found {scale!r}"
+            raise ValueError(msg) if is_int else TypeError(msg)
+
+        if scale > precision:
+            msg = "scale must be less than or equal to precision"
+            raise InvalidOperationError(msg)
+
+        self.precision = precision
         self.scale = scale
 
     def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
