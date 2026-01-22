@@ -210,21 +210,9 @@ def non_object_native_to_narwhals_dtype(native_dtype: Any, version: Version) -> 
         return dtypes.UInt16()
     if dtype in {"uint8", "UInt8", "UInt8[pyarrow]", "uint8[pyarrow]"}:
         return dtypes.UInt8()
-    if dtype in {
-        "float64",
-        "Float64",
-        "Float64[pyarrow]",
-        "float64[pyarrow]",
-        "double[pyarrow]",
-    }:
+    if dtype in {"float64", "Float64"}:
         return dtypes.Float64()
-    if dtype in {
-        "float32",
-        "Float32",
-        "Float32[pyarrow]",
-        "float32[pyarrow]",
-        "float[pyarrow]",
-    }:
+    if dtype in {"float32", "Float32"}:
         return dtypes.Float32()
     if dtype in {
         # "there is no problem which can't be solved by adding an extra string type" pandas
