@@ -284,11 +284,10 @@ class BaseFrame(Generic[NativeFrameT_co]):
         s_ir = _parse.parse_into_combined_selector_ir(columns, *more_columns)
         schema = self.collect_schema()
         subset = expand_selector_irs_names((s_ir,), schema=schema, require_any=True)
-        dtypes = self.version.dtypes
-        tp_list = dtypes.List
+        tp_list = self.version.dtypes.List
         for col_to_explode in subset:
             dtype = schema[col_to_explode]
-            if dtype != tp_list:
+            if not isinstance(dtype, tp_list):
                 msg = f"`explode` operation is not supported for dtype `{dtype}`, expected List type"
                 raise InvalidOperationError(msg)
         options = ExplodeOptions(empty_as_null=empty_as_null, keep_nulls=keep_nulls)
@@ -302,8 +301,7 @@ class BaseFrame(Generic[NativeFrameT_co]):
         s_ir = _parse.parse_into_combined_selector_ir(columns, *more_columns)
         schema = self.collect_schema()
         subset = expand_selector_irs_names((s_ir,), schema=schema, require_any=True)
-        dtypes = self.version.dtypes
-        tp_struct = dtypes.Struct
+        tp_struct = self.version.dtypes.Struct
         existing_names = schema.keys() - subset
         for col_to_unnest in subset:
             dtype = schema[col_to_unnest]
