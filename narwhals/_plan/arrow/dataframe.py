@@ -239,22 +239,19 @@ class ArrowDataFrame(
 
     def unnest(self, columns: Sequence[str]) -> Self:
         if len(columns) == 1:
-            name = columns[0]
-            s_struct = self.get_column(name)
-            index = self.columns.index(name)
-            ca_struct = s_struct.native
-            names = fn.struct.field_names(ca_struct)
             native = self.native
+            index = native.column_names.index(columns[0])
+            ca_struct = native.column(index)
+            arrays: list[ChunkedArrayAny] = ca_struct.flatten()
+            names = fn.struct.field_names(ca_struct)
             if len(names) == 1:
-                s = s_struct.struct.unnest().to_series()
-                return self._with_native(native.set_column(index, s.name, s.native))
-            result = insert_arrays(
-                native.remove_column(index), index, names, ca_struct.flatten()
-            )
+                result = native.set_column(index, names[0], arrays[0])
+            else:
+                result = insert_arrays(native.remove_column(index), index, names, arrays)
             return self._with_native(result)
         # NOTE: `pa.Table.from_pydict` internally calls `pa.Table.from_arrays`
         to_unnest = frozenset(columns)
-        arrays: list[ChunkedArrayAny] = []
+        arrays = []
         names = []
         for name, ca in self._iter_columns():
             if name in to_unnest:
