@@ -38,6 +38,8 @@ def data_1() -> Data:
     }
 
 
+# TODO @dangotbanned: Replace with `nwp.struct`
+# https://github.com/narwhals-dev/narwhals/issues/3247
 def pyarrow_struct(native: pa.Table, columns: list[str]) -> pa.StructArray:
     return pc.make_struct(*native.select(columns).columns, field_names=columns)
 
