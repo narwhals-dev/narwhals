@@ -30,7 +30,7 @@ from narwhals._plan.typing import (
 from narwhals._utils import (
     Implementation,
     Version,
-    check_column_names_are_unique,
+    check_column_names_are_unique as raise_duplicate_error,
     generate_repr,
     qualified_type_name,
 )
@@ -314,7 +314,7 @@ class BaseFrame(Generic[NativeFrameT_co]):
             if existing_names.isdisjoint(field_names):
                 existing_names |= field_names
             else:
-                check_column_names_are_unique([*existing_names, *field_names])
+                raise_duplicate_error([*existing_names, *field_names])
         return self._with_compliant(self._compliant.unnest(subset))
 
 
