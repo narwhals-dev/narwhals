@@ -39,9 +39,6 @@ def data_1() -> Data:
     }
 
 
-XFAIL_NOT_IMPL_MULTI_COLUMN_STRUCT = pytest.mark.xfail(
-    reason="TODO: ArrowDataFrame.unnest(Struct({...:..., ...:...}"
-)
 XFAIL_NOT_IMPL_MULTI_STRUCT = pytest.mark.xfail(
     reason="TODO: ArrowDataFrame.unnest(columns=[..., ...])"
 )
@@ -53,17 +50,8 @@ def pyarrow_struct(native: pa.Table, columns: list[str]) -> pa.StructArray:
 
 @pytest.mark.parametrize(
     "columns",
-    [
-        pytest.param(["t_a"], id="1-column"),
-        pytest.param(
-            ["t_a", "t_b"], id="2-column", marks=XFAIL_NOT_IMPL_MULTI_COLUMN_STRUCT
-        ),
-        pytest.param(
-            ["t_a", "t_b", "t_c", "t_d"],
-            id="4-column",
-            marks=XFAIL_NOT_IMPL_MULTI_COLUMN_STRUCT,
-        ),
-    ],
+    [["t_a"], ["t_a", "t_b"], ["t_a", "t_b", "t_c", "t_d"]],
+    ids=["1-column", "2-column", "4-column"],
 )
 def test_unnest_frame_single_struct(data_1: Data, columns: list[str]) -> None:
     expected = copy.deepcopy(data_1)

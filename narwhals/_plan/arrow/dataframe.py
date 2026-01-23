@@ -28,7 +28,7 @@ from narwhals._utils import Version, generate_repr, requires
 from narwhals.schema import Schema
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Mapping, Sequence
+    from collections.abc import Collection, Iterable, Iterator, Mapping, Sequence
     from io import BytesIO
 
     import polars as pl
@@ -235,15 +235,20 @@ class ArrowDataFrame(
         return Series.from_native(struct, name, version=self.version)
 
     def unnest(self, subset: Sequence[str]) -> Self:
+        native = self.native
         if len(subset) == 1:
             name = subset[0]
+            s_struct = self.get_column(name)
             index = self.columns.index(name)
-            df_new_columns = self.get_column(name).struct.unnest()
-            if len(df_new_columns.columns) == 1:
-                s = df_new_columns.to_series()
-                return self._with_native(self.native.set_column(index, s.name, s.native))
-            msg = "TODO: ArrowDataFrame.unnest(Struct({...:..., ...:...})"
-            raise NotImplementedError(msg)
+            ca_struct = s_struct.native
+            names = fn.struct.field_names(ca_struct)
+            if len(names) == 1:
+                s = s_struct.struct.unnest().to_series()
+                return self._with_native(native.set_column(index, s.name, s.native))
+            result = insert_arrays(
+                native.remove_column(index), index, names, ca_struct.flatten()
+            )
+            return self._with_native(result)
         msg = "TODO: ArrowDataFrame.unnest(columns=[..., ...])"
         raise NotImplementedError(msg)
 
@@ -406,4 +411,21 @@ def with_arrays(
             table = table.set_column(column_names.index(name), name, column)
         else:
             table = table.append_column(name, column)
+    return table
+
+
+# TODO @dangotbanned: Review this API later
+# - The shape isn't great and doesn't fit that nicely w/ `with_array(s)`
+# TODO @dangotbanned: Fast-path for index = last
+# TODO @dangotbanned: Fast-path for index = first
+def insert_arrays(
+    table: pa.Table,
+    index: int,
+    names: Collection[str],
+    columns: Iterable[ChunkedOrArrayAny],
+    /,
+) -> pa.Table:
+    """Add multiple columns to a table, starting at `index`."""
+    for idx, name, column in zip(range(index, index + len(names)), names, columns):
+        table = table.add_column(idx, name, column)
     return table
