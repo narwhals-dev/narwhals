@@ -9,7 +9,12 @@ import pytest
 import narwhals as nw
 import narwhals._plan as nwp
 import narwhals._plan.selectors as ncs
-from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError, ShapeError
+from narwhals.exceptions import (
+    ColumnNotFoundError,
+    DuplicateError,
+    InvalidOperationError,
+    ShapeError,
+)
 from tests.plan.utils import (
     assert_equal_data,
     assert_equal_series,
@@ -26,16 +31,23 @@ pytest.importorskip("pyarrow")
 import pyarrow as pa
 import pyarrow.compute as pc
 
+BEFORE = "before"
+A = "t_a"
+B = "t_b"
+C = "t_c"
+D = "t_d"
+AFTER = "after"
+
 
 @pytest.fixture
 def data_1() -> Data:
     return {
-        "before": ["foo", "bar"],
-        "t_a": [1, 2],
-        "t_b": ["a", "b"],
-        "t_c": [True, None],
-        "t_d": [[1, 2], [3]],
-        "after": ["baz", "womp"],
+        BEFORE: ["foo", "bar"],
+        A: [1, 2],
+        B: ["a", "b"],
+        C: [True, None],
+        D: [[1, 2], [3]],
+        AFTER: ["baz", "womp"],
     }
 
 
@@ -49,9 +61,7 @@ def pyarrow_struct(native: pa.Table, columns: list[str]) -> pa.StructArray:
 
 
 @pytest.mark.parametrize(
-    "columns",
-    [["t_a"], ["t_a", "t_b"], ["t_a", "t_b", "t_c", "t_d"]],
-    ids=["1-column", "2-column", "4-column"],
+    "columns", [[A], [A, B], [A, B, C, D]], ids=["1-column", "2-column", "4-column"]
 )
 def test_unnest_frame_single_struct(data_1: Data, columns: list[str]) -> None:
     expected = copy.deepcopy(data_1)
@@ -70,8 +80,8 @@ def test_unnest_frame_single_struct(data_1: Data, columns: list[str]) -> None:
 def test_unnest_frame_multi_struct(data_1: Data) -> None:  # pragma: no cover
     expected = copy.deepcopy(data_1)
     table = pa.Table.from_pydict(data_1)
-    columns_1 = ["t_a", "t_b"]
-    columns_2 = ["t_c", "t_d"]
+    columns_1 = [A, B]
+    columns_2 = [C, D]
     name_1 = "t_struct_1"
     name_2 = "t_struct_2"
     table_w_structs = (
@@ -107,3 +117,29 @@ def test_unnest_frame_column_not_found_error(
     df = dataframe(data_1)
     with pytest.raises(ColumnNotFoundError):
         df.unnest(columns)
+
+
+def test_unnest_frame_duplicate_error(data_1: Data) -> None:
+    columns = [A, B, C]
+    table = pa.Table.from_pydict(data_1)
+    table_w_structs = (
+        table.drop(columns)
+        .add_column(1, "one_conflict", pyarrow_struct(table, [AFTER, *columns[1:]]))
+        .add_column(2, "two_conflicts", pyarrow_struct(table, [BEFORE, columns[2], D]))
+    )
+    df = nwp.DataFrame.from_native(table_w_structs)
+
+    msg_one = r"'after'"
+    msg_two = rf"'({D}|{BEFORE})'.+'({D}|{BEFORE})'"
+    pattern_one = re_compile(msg_one)
+    pattern_two = re_compile(msg_two)
+    pattern_either = re_compile(rf"({msg_one})|({msg_two})")
+
+    with pytest.raises(DuplicateError, match=pattern_one):
+        df.unnest("one_conflict")
+    with pytest.raises(DuplicateError, match=pattern_two):
+        df.unnest("two_conflicts")
+    with pytest.raises(DuplicateError, match=pattern_either):
+        df.unnest(["one_conflict", "two_conflicts"])
+    with pytest.raises(DuplicateError, match=pattern_either):
+        df.unnest(ncs.struct())
