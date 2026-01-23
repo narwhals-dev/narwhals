@@ -27,7 +27,13 @@ from narwhals._plan.typing import (
     PartialSeries,
     Seq,
 )
-from narwhals._utils import Implementation, Version, generate_repr, qualified_type_name
+from narwhals._utils import (
+    Implementation,
+    Version,
+    check_column_names_are_unique as raise_duplicate_error,
+    generate_repr,
+    qualified_type_name,
+)
 from narwhals.dependencies import is_pyarrow_table
 from narwhals.exceptions import InvalidOperationError, ShapeError
 from narwhals.schema import Schema
@@ -278,15 +284,36 @@ class BaseFrame(Generic[NativeFrameT_co]):
         s_ir = _parse.parse_into_combined_selector_ir(columns, *more_columns)
         schema = self.collect_schema()
         subset = expand_selector_irs_names((s_ir,), schema=schema, require_any=True)
-        dtypes = self.version.dtypes
-        tp_list = dtypes.List
+        tp_list = self.version.dtypes.List
         for col_to_explode in subset:
             dtype = schema[col_to_explode]
-            if dtype != tp_list:
+            if not isinstance(dtype, tp_list):
                 msg = f"`explode` operation is not supported for dtype `{dtype}`, expected List type"
                 raise InvalidOperationError(msg)
         options = ExplodeOptions(empty_as_null=empty_as_null, keep_nulls=keep_nulls)
         return self._with_compliant(self._compliant.explode(subset, options))
+
+    def unnest(
+        self,
+        columns: OneOrIterable[ColumnNameOrSelector],
+        *more_columns: ColumnNameOrSelector,
+    ) -> Self:
+        s_ir = _parse.parse_into_combined_selector_ir(columns, *more_columns)
+        schema = self.collect_schema()
+        subset = expand_selector_irs_names((s_ir,), schema=schema, require_any=True)
+        tp_struct = self.version.dtypes.Struct
+        existing_names = schema.keys() - subset
+        for col_to_unnest in subset:
+            dtype = schema[col_to_unnest]
+            if not isinstance(dtype, tp_struct):
+                msg = f"`unnest` operation is not supported for dtype `{dtype}`, expected Struct type"
+                raise InvalidOperationError(msg)
+            field_names = {fld.name for fld in dtype.fields}
+            if existing_names.isdisjoint(field_names):
+                existing_names |= field_names
+            else:
+                raise_duplicate_error([*existing_names, *field_names])
+        return self._with_compliant(self._compliant.unnest(subset))
 
 
 def _dataframe_from_dict(

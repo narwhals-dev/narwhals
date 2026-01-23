@@ -28,7 +28,7 @@ from narwhals._utils import Version, generate_repr, requires
 from narwhals.schema import Schema
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Mapping, Sequence
+    from collections.abc import Collection, Iterable, Iterator, Mapping, Sequence
     from io import BytesIO
 
     import polars as pl
@@ -98,8 +98,11 @@ class ArrowDataFrame(
         native = pa.Table.from_pydict(data, schema=pa_schema)
         return cls.from_native(native, version=version)
 
+    def _iter_columns(self) -> Iterator[tuple[str, ChunkedArrayAny]]:
+        return zip(self.native.column_names, self.native.itercolumns())
+
     def iter_columns(self) -> Iterator[Series]:
-        for name, series in zip(self.columns, self.native.itercolumns()):
+        for name, series in self._iter_columns():
             yield Series.from_native(series, name, version=self.version)
 
     @overload
@@ -234,6 +237,33 @@ class ArrowDataFrame(
             struct = fn.struct.into_struct(native.columns, native.column_names)
         return Series.from_native(struct, name, version=self.version)
 
+    def unnest(self, columns: Sequence[str]) -> Self:
+        if len(columns) == 1:
+            native = self.native
+            index = native.column_names.index(columns[0])
+            ca_struct = native.column(index)
+            arrays: list[ChunkedArrayAny] = ca_struct.flatten()
+            names = fn.struct.field_names(ca_struct)
+            if len(names) == 1:
+                result = native.set_column(index, names[0], arrays[0])
+            else:
+                result = insert_arrays_at(
+                    native.remove_column(index), index, names, arrays
+                )
+            return self._with_native(result)
+        # NOTE: `pa.Table.from_pydict` internally calls `pa.Table.from_arrays`
+        to_unnest = frozenset(columns)
+        arrays = []
+        names = []
+        for name, ca in self._iter_columns():
+            if name in to_unnest:
+                arrays.extend(ca.flatten())
+                names.extend(fn.struct.field_names(ca))
+            else:
+                arrays.append(ca)
+                names.append(name)
+        return self._with_native(pa.Table.from_arrays(arrays, names))
+
     def get_column(self, name: str) -> Series:
         chunked = self.native.column(name)
         return Series.from_native(chunked, name, version=self.version)
@@ -249,11 +279,11 @@ class ArrowDataFrame(
             native = self.native.filter(~to_drop)
         return self._with_native(native)
 
-    def explode(self, subset: Sequence[str], options: ExplodeOptions) -> Self:
+    def explode(self, columns: Sequence[str], options: ExplodeOptions) -> Self:
         builder = fn.ExplodeBuilder.from_options(options)
-        if len(subset) == 1:
-            return self._with_native(builder.explode_column(self.native, subset[0]))
-        return self._with_native(builder.explode_columns(self.native, subset))
+        if len(columns) == 1:
+            return self._with_native(builder.explode_column(self.native, columns[0]))
+        return self._with_native(builder.explode_columns(self.native, columns))
 
     def rename(self, mapping: Mapping[str, str]) -> Self:
         names: dict[str, str] | list[str]
@@ -393,4 +423,25 @@ def with_arrays(
             table = table.set_column(column_names.index(name), name, column)
         else:
             table = table.append_column(name, column)
+    return table
+
+
+def insert_arrays_at(
+    table: pa.Table,
+    index: int,
+    names: Collection[str],
+    columns: Iterable[ChunkedOrArrayAny],
+    /,
+) -> pa.Table:
+    """Add multiple columns to a table, starting at `index`."""
+    if index in {0, table.num_columns}:
+        if index == 0:
+            arrays = (*columns, *table.columns)
+            names = (*names, *table.column_names)
+        else:
+            arrays = (*table.columns, *columns)
+            names = (*table.column_names, *names)
+        return fn.concat_horizontal(arrays, names)
+    for idx, name, column in zip(range(index, index + len(names)), names, columns):
+        table = table.add_column(idx, name, column)
     return table
