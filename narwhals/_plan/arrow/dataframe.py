@@ -247,7 +247,9 @@ class ArrowDataFrame(
             if len(names) == 1:
                 result = native.set_column(index, names[0], arrays[0])
             else:
-                result = insert_arrays(native.remove_column(index), index, names, arrays)
+                result = insert_arrays_at(
+                    native.remove_column(index), index, names, arrays
+                )
             return self._with_native(result)
         # NOTE: `pa.Table.from_pydict` internally calls `pa.Table.from_arrays`
         to_unnest = frozenset(columns)
@@ -424,11 +426,7 @@ def with_arrays(
     return table
 
 
-# TODO @dangotbanned: Review this API later
-# - The shape isn't great and doesn't fit that nicely w/ `with_array(s)`
-# TODO @dangotbanned: Fast-path for index = last
-# TODO @dangotbanned: Fast-path for index = first
-def insert_arrays(
+def insert_arrays_at(
     table: pa.Table,
     index: int,
     names: Collection[str],
@@ -436,6 +434,14 @@ def insert_arrays(
     /,
 ) -> pa.Table:
     """Add multiple columns to a table, starting at `index`."""
+    if index in {0, table.num_columns}:
+        if index == 0:
+            arrays = (*columns, *table.columns)
+            names = (*names, *table.column_names)
+        else:
+            arrays = (*table.columns, *columns)
+            names = (*table.column_names, *names)
+        return fn.concat_horizontal(arrays, names)
     for idx, name, column in zip(range(index, index + len(names)), names, columns):
         table = table.add_column(idx, name, column)
     return table
