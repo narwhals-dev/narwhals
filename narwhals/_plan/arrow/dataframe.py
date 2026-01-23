@@ -98,8 +98,11 @@ class ArrowDataFrame(
         native = pa.Table.from_pydict(data, schema=pa_schema)
         return cls.from_native(native, version=version)
 
+    def _iter_columns(self) -> Iterator[tuple[str, ChunkedArrayAny]]:
+        return zip(self.native.column_names, self.native.itercolumns())
+
     def iter_columns(self) -> Iterator[Series]:
-        for name, series in zip(self.columns, self.native.itercolumns()):
+        for name, series in self._iter_columns():
             yield Series.from_native(series, name, version=self.version)
 
     @overload
@@ -235,13 +238,13 @@ class ArrowDataFrame(
         return Series.from_native(struct, name, version=self.version)
 
     def unnest(self, subset: Sequence[str]) -> Self:
-        native = self.native
         if len(subset) == 1:
             name = subset[0]
             s_struct = self.get_column(name)
             index = self.columns.index(name)
             ca_struct = s_struct.native
             names = fn.struct.field_names(ca_struct)
+            native = self.native
             if len(names) == 1:
                 s = s_struct.struct.unnest().to_series()
                 return self._with_native(native.set_column(index, s.name, s.native))
@@ -249,8 +252,18 @@ class ArrowDataFrame(
                 native.remove_column(index), index, names, ca_struct.flatten()
             )
             return self._with_native(result)
-        msg = "TODO: ArrowDataFrame.unnest(columns=[..., ...])"
-        raise NotImplementedError(msg)
+        # NOTE: `pa.Table.from_pydict` internally calls `pa.Table.from_arrays`
+        to_unnest = frozenset(subset)
+        arrays: list[ChunkedArrayAny] = []
+        names = []
+        for name, ca in self._iter_columns():
+            if name in to_unnest:
+                arrays.extend(ca.flatten())
+                names.extend(fn.struct.field_names(ca))
+            else:
+                arrays.append(ca)
+                names.append(name)
+        return self._with_native(pa.Table.from_arrays(arrays, names))
 
     def get_column(self, name: str) -> Series:
         chunked = self.native.column(name)

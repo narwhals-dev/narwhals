@@ -1,27 +1,14 @@
 from __future__ import annotations
 
-# ruff: noqa: F401
 import copy
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING
 
 import pytest
 
-import narwhals as nw
 import narwhals._plan as nwp
 import narwhals._plan.selectors as ncs
-from narwhals.exceptions import (
-    ColumnNotFoundError,
-    DuplicateError,
-    InvalidOperationError,
-    ShapeError,
-)
-from tests.plan.utils import (
-    assert_equal_data,
-    assert_equal_series,
-    dataframe,
-    re_compile,
-    series,
-)
+from narwhals.exceptions import ColumnNotFoundError, DuplicateError, InvalidOperationError
+from tests.plan.utils import assert_equal_data, dataframe, re_compile
 
 if TYPE_CHECKING:
     from narwhals._plan.typing import ColumnNameOrSelector, OneOrIterable
@@ -51,11 +38,6 @@ def data_1() -> Data:
     }
 
 
-XFAIL_NOT_IMPL_MULTI_STRUCT = pytest.mark.xfail(
-    reason="TODO: ArrowDataFrame.unnest(columns=[..., ...])"
-)
-
-
 def pyarrow_struct(native: pa.Table, columns: list[str]) -> pa.StructArray:
     return pc.make_struct(*native.select(columns).columns, field_names=columns)
 
@@ -76,8 +58,7 @@ def test_unnest_frame_single_struct(data_1: Data, columns: list[str]) -> None:
     assert_equal_data(df.unnest(nwp.nth(1).meta.as_selector()), expected)
 
 
-@XFAIL_NOT_IMPL_MULTI_STRUCT
-def test_unnest_frame_multi_struct(data_1: Data) -> None:  # pragma: no cover
+def test_unnest_frame_multi_struct(data_1: Data) -> None:
     expected = copy.deepcopy(data_1)
     table = pa.Table.from_pydict(data_1)
     columns_1 = [A, B]
