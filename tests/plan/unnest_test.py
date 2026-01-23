@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import copy
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 import pytest
 
@@ -44,20 +44,35 @@ def pyarrow_struct(native: pa.Table, columns: list[str]) -> pa.StructArray:
     return pc.make_struct(*native.select(columns).columns, field_names=columns)
 
 
+@pytest.mark.parametrize("insert_at", [-1, 0, 1])
 @pytest.mark.parametrize(
     "columns", [[A], [A, B], [A, B, C, D]], ids=["1-column", "2-column", "4-column"]
 )
-def test_unnest_frame_single_struct(data_1: Data, columns: list[str]) -> None:
+def test_unnest_frame_single_struct(
+    data_1: Data, columns: list[str], insert_at: Literal[-1, 0, 1]
+) -> None:
     expected = copy.deepcopy(data_1)
+    if insert_at in {-1, 0}:
+        if insert_at == -1:
+            for column in columns:
+                expected[column] = expected.pop(column)
+        else:
+            _tmp: Data = {}
+            for column in columns:
+                _tmp[column] = expected.pop(column)
+            _tmp |= expected
+            expected = _tmp
     table = pa.Table.from_pydict(data_1)
-    table_w_struct = table.drop(columns).add_column(
-        1, "t_struct", pyarrow_struct(table, columns)
-    )
-
+    struct = pyarrow_struct(table, columns)
+    table = table.drop(columns)
+    if insert_at in {0, 1}:
+        table_w_struct = table.add_column(insert_at, "t_struct", struct)
+    else:
+        table_w_struct = table.append_column("t_struct", struct)
     df = nwp.DataFrame.from_native(table_w_struct)
     assert_equal_data(df.unnest("t_struct"), expected)
     assert_equal_data(df.unnest(ncs.struct()), expected)
-    assert_equal_data(df.unnest(nwp.nth(1).meta.as_selector()), expected)
+    assert_equal_data(df.unnest(nwp.nth(insert_at).meta.as_selector()), expected)
 
 
 def test_unnest_frame_multi_struct(data_1: Data) -> None:
