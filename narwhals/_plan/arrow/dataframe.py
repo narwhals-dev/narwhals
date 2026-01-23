@@ -237,9 +237,9 @@ class ArrowDataFrame(
             struct = fn.struct.into_struct(native.columns, native.column_names)
         return Series.from_native(struct, name, version=self.version)
 
-    def unnest(self, subset: Sequence[str]) -> Self:
-        if len(subset) == 1:
-            name = subset[0]
+    def unnest(self, columns: Sequence[str]) -> Self:
+        if len(columns) == 1:
+            name = columns[0]
             s_struct = self.get_column(name)
             index = self.columns.index(name)
             ca_struct = s_struct.native
@@ -253,7 +253,7 @@ class ArrowDataFrame(
             )
             return self._with_native(result)
         # NOTE: `pa.Table.from_pydict` internally calls `pa.Table.from_arrays`
-        to_unnest = frozenset(subset)
+        to_unnest = frozenset(columns)
         arrays: list[ChunkedArrayAny] = []
         names = []
         for name, ca in self._iter_columns():
@@ -280,11 +280,11 @@ class ArrowDataFrame(
             native = self.native.filter(~to_drop)
         return self._with_native(native)
 
-    def explode(self, subset: Sequence[str], options: ExplodeOptions) -> Self:
+    def explode(self, columns: Sequence[str], options: ExplodeOptions) -> Self:
         builder = fn.ExplodeBuilder.from_options(options)
-        if len(subset) == 1:
-            return self._with_native(builder.explode_column(self.native, subset[0]))
-        return self._with_native(builder.explode_columns(self.native, subset))
+        if len(columns) == 1:
+            return self._with_native(builder.explode_column(self.native, columns[0]))
+        return self._with_native(builder.explode_columns(self.native, columns))
 
     def rename(self, mapping: Mapping[str, str]) -> Self:
         names: dict[str, str] | list[str]
