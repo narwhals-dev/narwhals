@@ -336,6 +336,7 @@ class PolarsExpr:
     arg_true: Method[Self]
     ceil: Method[Self]
     count: Method[Self]
+    cos: Method[Self]
     cum_max: Method[Self]
     cum_min: Method[Self]
     cum_prod: Method[Self]

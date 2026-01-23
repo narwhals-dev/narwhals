@@ -642,6 +642,11 @@ class DaskExpr(
 
         return self._with_callable(da.sin)
 
+    def cos(self) -> Self:
+        import dask.array as da
+
+        return self._with_callable(da.cos)
+
     def sqrt(self) -> Self:
         import dask.array as da
 

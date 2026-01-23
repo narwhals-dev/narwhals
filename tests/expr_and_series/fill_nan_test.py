@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 import narwhals as nw
 from tests.conftest import (
     dask_lazy_p1_constructor,
@@ -17,7 +19,14 @@ NON_NULLABLE_CONSTRUCTORS = [
 ]
 
 
-def test_fill_nan(constructor: Constructor) -> None:
+def test_fill_nan(request: pytest.FixtureRequest, constructor: Constructor) -> None:
+    if "cudf" in str(constructor):
+        request.applymarker(
+            pytest.mark.xfail(
+                reason="https://github.com/narwhals-dev/narwhals/issues/3231",
+                raises=NotImplementedError,
+            )
+        )
     data_na = {"int": [-1, 1, None]}
     df = nw.from_native(constructor(data_na)).select(
         float=nw.col("int").cast(nw.Float64), float_na=nw.col("int") ** 0.5
