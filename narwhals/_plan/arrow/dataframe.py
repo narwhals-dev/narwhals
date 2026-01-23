@@ -244,7 +244,7 @@ class ArrowDataFrame(
                 return self._with_native(self.native.set_column(index, s.name, s.native))
             msg = "TODO: ArrowDataFrame.unnest(Struct({...:..., ...:...})"
             raise NotImplementedError(msg)
-        msg = "TODO: ArrowDataFrame.unnest(subset=[...,...])"
+        msg = "TODO: ArrowDataFrame.unnest(columns=[..., ...])"
         raise NotImplementedError(msg)
 
     def get_column(self, name: str) -> Series:

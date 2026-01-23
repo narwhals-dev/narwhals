@@ -42,6 +42,9 @@ def data_1() -> Data:
 XFAIL_NOT_IMPL_MULTI_COLUMN_STRUCT = pytest.mark.xfail(
     reason="TODO: ArrowDataFrame.unnest(Struct({...:..., ...:...}"
 )
+XFAIL_NOT_IMPL_MULTI_STRUCT = pytest.mark.xfail(
+    reason="TODO: ArrowDataFrame.unnest(columns=[..., ...])"
+)
 
 
 def pyarrow_struct(native: pa.Table, columns: list[str]) -> pa.StructArray:
@@ -73,6 +76,26 @@ def test_unnest_frame_single_struct(data_1: Data, columns: list[str]) -> None:
     assert_equal_data(df.unnest("t_struct"), expected)
     assert_equal_data(df.unnest(ncs.struct()), expected)
     assert_equal_data(df.unnest(nwp.nth(1).meta.as_selector()), expected)
+
+
+@XFAIL_NOT_IMPL_MULTI_STRUCT
+def test_unnest_frame_multi_struct(data_1: Data) -> None:  # pragma: no cover
+    expected = copy.deepcopy(data_1)
+    table = pa.Table.from_pydict(data_1)
+    columns_1 = ["t_a", "t_b"]
+    columns_2 = ["t_c", "t_d"]
+    name_1 = "t_struct_1"
+    name_2 = "t_struct_2"
+    table_w_structs = (
+        table.drop([*columns_1, *columns_2])
+        .add_column(1, name_1, pyarrow_struct(table, columns_1))
+        .add_column(2, name_2, pyarrow_struct(table, columns_2))
+    )
+
+    df = nwp.DataFrame.from_native(table_w_structs)
+    assert_equal_data(df.unnest(name_1, name_2), expected)
+    assert_equal_data(df.unnest(ncs.struct()), expected)
+    assert_equal_data(df.unnest(ncs.by_index(1, 2)), expected)
 
 
 def test_unnest_frame_invalid_operation_error(data_1: Data) -> None:
