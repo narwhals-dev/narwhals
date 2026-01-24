@@ -345,6 +345,8 @@ def test_first_last_different_orders(
             .agg(
                 nw.col("b", "c").first(order_by="i_0").name.suffix("_first_i_0"),
                 nw.col("b", "c").first(order_by="i_1").name.suffix("_first_i_1"),
+                nw.col("b", "c").last(order_by="i_0").name.suffix("_last_i_0"),
+                nw.col("b", "c").last(order_by="i_1").name.suffix("_last_i_1"),
             )
             .sort("a")
         )
@@ -354,5 +356,9 @@ def test_first_last_different_orders(
             "c_first_i_0": [7, 8],
             "b_first_i_1": [5, 6],
             "c_first_i_1": [7, 8],
+            "b_last_i_0": [4, 6],
+            "c_last_i_0": [None, 8],
+            "b_last_i_1": [4, 6],
+            "c_last_i_1": [None, 8],
         }
         assert_equal_data(result, expected)
