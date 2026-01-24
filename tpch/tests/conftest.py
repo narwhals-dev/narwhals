@@ -9,6 +9,7 @@ import polars as pl
 import pytest
 
 import narwhals as nw
+from tpch.typing_ import QueryID
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
@@ -75,29 +76,25 @@ def _build_backend_kwargs_map() -> dict[TPCHBackend, dict[str, Any]]:
 BACKEND_KWARGS_MAP = _build_backend_kwargs_map()
 
 # Queries that need to be skipped for certain backends
-DUCKDB_SKIPS = frozenset(
-    [
-        "q15"  # needs `filter` which works with window expressions
-    ]
-)
+NEEDS_FILTER_FOR_WINDOW_EXPRESSIONS = "q15"
+DUCKDB_SKIPS = frozenset[QueryID]((NEEDS_FILTER_FOR_WINDOW_EXPRESSIONS,))
 
 
-def _get_skip_backends(query_id: str) -> frozenset[str]:
+def _get_skip_backends(query_id: QueryID) -> frozenset[TPCHBackend]:
     """Return backends that should be skipped for a given query."""
     if query_id in DUCKDB_SKIPS:
         return frozenset({"duckdb", "sqlframe"})
     return frozenset()
 
 
-def skip_if_unsupported(query_id: str, backend_name: TPCHBackend) -> None:
+def skip_if_unsupported(query_id: QueryID, backend_name: TPCHBackend) -> None:
     """Skip the test if the query is not supported for the given backend."""
     skip_backends = _get_skip_backends(query_id)
     if backend_name in skip_backends:
         pytest.skip(f"Query {query_id} is not supported for {backend_name}")
 
 
-# Mapping of query IDs to their required data paths
-QUERY_DATA_PATH_MAP: dict[str, tuple[Path, ...]] = {
+QUERY_DATA_PATH_MAP: dict[QueryID, tuple[Path, ...]] = {
     "q1": (LINEITEM_PATH,),
     "q2": (REGION_PATH, NATION_PATH, SUPPLIER_PATH, PART_PATH, PARTSUPP_PATH),
     "q3": (CUSTOMER_PATH, LINEITEM_PATH, ORDERS_PATH),
@@ -146,14 +143,13 @@ QUERY_DATA_PATH_MAP: dict[str, tuple[Path, ...]] = {
 
 
 @pytest.fixture(params=list(QUERY_DATA_PATH_MAP.keys()))
-def query_id(request: pytest.FixtureRequest) -> str:
-    """Fixture that yields each query_id."""
-    return request.param  # type: ignore[no-any-return]
+def query_id(request: pytest.FixtureRequest) -> QueryID:
+    result: QueryID = request.param
+    return result
 
 
 @pytest.fixture(params=list(BACKEND_KWARGS_MAP.keys()))
 def backend_name(request: pytest.FixtureRequest) -> TPCHBackend:
-    """Fixture that yields each backend name."""
     result: TPCHBackend = request.param
     return result
 
@@ -168,7 +164,7 @@ def data_loader(backend_name: TPCHBackend) -> DataLoader:
     kwargs = BACKEND_KWARGS_MAP[backend_name]
     backend = TPCH_TO_BACKEND_NAME[backend_name]
 
-    def _load_data(query_id: str) -> tuple[nw.LazyFrame[Any], ...]:
+    def _load_data(query_id: QueryID) -> tuple[nw.LazyFrame[Any], ...]:
         data_paths = QUERY_DATA_PATH_MAP[query_id]
         return tuple(
             nw.scan_parquet(str(path), backend=backend, **kwargs) for path in data_paths
@@ -178,10 +174,10 @@ def data_loader(backend_name: TPCHBackend) -> DataLoader:
 
 
 @pytest.fixture
-def expected_result() -> Callable[[str], pl.DataFrame]:
+def expected_result() -> Callable[[QueryID], pl.DataFrame]:
     """Fixture that returns a function to load expected results for a query."""
 
-    def _load_expected(query_id: str) -> pl.DataFrame:
+    def _load_expected(query_id: QueryID) -> pl.DataFrame:
         return pl.read_parquet(DATA_DIR / f"result_{query_id}.parquet")
 
     return _load_expected
