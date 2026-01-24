@@ -6,7 +6,11 @@ from typing import TYPE_CHECKING, Any, ClassVar
 import pyarrow as pa
 import pyarrow.compute as pc
 
-from narwhals._arrow.utils import cast_to_comparable_string_types, extract_py_scalar
+from narwhals._arrow.utils import (
+    BACKEND_VERSION,
+    cast_to_comparable_string_types,
+    extract_py_scalar,
+)
 from narwhals._compliant import EagerGroupBy
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._utils import generate_temporary_column_name, requires
@@ -107,10 +111,10 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
                     msg = f"Only one `order_by` can be specified in `group_by`. Found both {order_by} and {_current_order_by}."
                     raise NotImplementedError(msg)
                 order_by = _current_order_by
-        if not use_threads and (pa_version := self.compliant._backend_version) < (14, 0):
+        if not use_threads and BACKEND_VERSION < (14,):  # pragma: no cover
             msg = (
                 f"Using `first/last` in a `group_by().agg(...)` context is only available in 'pyarrow>=14.0.0', "
-                f"found version {requires._unparse_version(pa_version)!r}.\n\n"
+                f"found version {requires._unparse_version(BACKEND_VERSION)!r}.\n\n"
                 f"See https://github.com/apache/arrow/issues/36709"
             )
             raise NotImplementedError(msg)
