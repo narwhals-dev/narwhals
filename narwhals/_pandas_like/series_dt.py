@@ -106,16 +106,18 @@ class PandasLikeSeriesDateTimeNamespace(
         return is_dtype_pyarrow(self.native.dtype)
 
     def _total_unit(self, unit: Literal["m", "s", "ms", "us", "ns"]) -> PandasLikeSeries:
-        dt_ns = self.native.dt
-        # TODO @dangotbanned: Which version added this?
-        if hasattr(dt_ns, "total_seconds"):
-            total = dt_ns.total_seconds()
+        # NOTE @dangotbanned: `total_seconds` was available in v1?
+        # Is this a `cudf` issue?
+        # https://pandas.pydata.org/pandas-docs/version/1.0/reference/api/pandas.Series.dt.total_seconds.html
+        dt_ = self.native.dt
+        if hasattr(dt_, "total_seconds"):
+            total = dt_.total_seconds()
         else:  # pragma: no cover
             total = (
-                dt_ns.days * SECONDS_PER_DAY
-                + dt_ns.seconds
-                + (dt_ns.microseconds / US_PER_SECOND)
-                + (dt_ns.nanoseconds / NS_PER_SECOND)
+                dt_.days * SECONDS_PER_DAY
+                + dt_.seconds
+                + (dt_.microseconds / US_PER_SECOND)
+                + (dt_.nanoseconds / NS_PER_SECOND)
             )
         if is_time_unit(unit) and unit != "s":
             total = total * TIME_UNIT_PER_SECOND[unit]
