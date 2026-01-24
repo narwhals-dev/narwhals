@@ -16,6 +16,7 @@ from narwhals._constants import (
     SECONDS_PER_DAY,
     US_PER_SECOND,
 )
+from narwhals._duration import TIME_UNIT_PER_SECOND
 from narwhals._exceptions import issue_warning
 from narwhals._utils import (
     Implementation,
@@ -627,16 +628,8 @@ def calculate_timestamp_datetime(
     raise AssertionError(msg)
 
 
-_TIMESTAMP_DATE_FACTOR: Mapping[TimeUnit, int] = {
-    "ns": NS_PER_SECOND,
-    "us": US_PER_SECOND,
-    "ms": MS_PER_SECOND,
-    "s": 1,
-}
-
-
 def calculate_timestamp_date(s: NativeSeriesT, time_unit: TimeUnit) -> NativeSeriesT:
-    return s * SECONDS_PER_DAY * _TIMESTAMP_DATE_FACTOR[time_unit]
+    return s * SECONDS_PER_DAY * TIME_UNIT_PER_SECOND[time_unit]
 
 
 def select_columns_by_name(

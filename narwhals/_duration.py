@@ -6,10 +6,14 @@ import datetime as dt
 import re
 from typing import TYPE_CHECKING, Literal, cast, get_args
 
+from narwhals._constants import MS_PER_SECOND, NS_PER_SECOND, US_PER_SECOND
+
 if TYPE_CHECKING:
     from collections.abc import Container, Mapping
 
     from typing_extensions import TypeAlias
+
+    from narwhals.typing import TimeUnit
 
 __all__ = ["IntervalUnit"]
 
@@ -43,6 +47,12 @@ UNIT_TO_TIMEDELTA: Mapping[IntervalUnit, TimedeltaKwd] = {
     "s": "seconds",
     "ms": "milliseconds",
     "us": "microseconds",
+}
+TIME_UNIT_PER_SECOND: Mapping[TimeUnit, int] = {
+    "ns": NS_PER_SECOND,
+    "us": US_PER_SECOND,
+    "ms": MS_PER_SECOND,
+    "s": 1,
 }
 
 

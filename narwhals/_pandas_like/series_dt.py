@@ -3,14 +3,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Final, Literal
 
 from narwhals._compliant.any_namespace import DateTimeNamespace
-from narwhals._constants import (
-    EPOCH_YEAR,
-    MS_PER_SECOND,
-    NS_PER_SECOND,
-    SECONDS_PER_DAY,
-    US_PER_SECOND,
-)
-from narwhals._duration import Interval
+from narwhals._constants import EPOCH_YEAR, NS_PER_SECOND, SECONDS_PER_DAY, US_PER_SECOND
+from narwhals._duration import TIME_UNIT_PER_SECOND, Interval
 from narwhals._pandas_like.utils import (
     ALIAS_DICT,
     NW_TO_PD_DTYPES_BACKEND,
@@ -122,8 +116,10 @@ class PandasLikeSeriesDateTimeNamespace(
                 + (dt_ns.microseconds / US_PER_SECOND)
                 + (dt_ns.nanoseconds / NS_PER_SECOND)
             )
-        unit_factor = {"ms": MS_PER_SECOND, "us": US_PER_SECOND, "ns": NS_PER_SECOND}
-        total = total_s * factor if (factor := unit_factor.get(unit)) else total_s
+        if unit in ("ms", "us", "ns"):  # noqa: PLR6201
+            total = total_s * TIME_UNIT_PER_SECOND[unit]
+        else:
+            total = total_s
         int64 = NATIVE_INT64[get_dtype_backend(self.native.dtype, self.implementation)]
         abs_ = total.abs() // (60 if unit == "m" else 1)
         # TODO @dangotbanned: Is there a less cryptic version?

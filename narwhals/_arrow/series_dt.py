@@ -19,7 +19,7 @@ from narwhals._constants import (
     US_PER_MINUTE,
     US_PER_SECOND,
 )
-from narwhals._duration import Interval
+from narwhals._duration import TIME_UNIT_PER_SECOND, Interval
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -40,12 +40,6 @@ if TYPE_CHECKING:
 class ArrowSeriesDateTimeNamespace(
     ArrowSeriesNamespace, DateTimeNamespace["ArrowSeries"]
 ):
-    _TIMESTAMP_DATE_FACTOR: ClassVar[Mapping[TimeUnit, int]] = {
-        "ns": NS_PER_SECOND,
-        "us": US_PER_SECOND,
-        "ms": MS_PER_SECOND,
-        "s": 1,
-    }
     _TIMESTAMP_DATETIME_OP_FACTOR: ClassVar[
         Mapping[tuple[UnitCurrent, UnitTarget], tuple[BinOpBroadcast, IntoRhs]]
     ] = {
@@ -103,7 +97,7 @@ class ArrowSeriesDateTimeNamespace(
             return self.with_native(result)
         if isinstance(ser.dtype, dtypes.Date):
             time_s = pc.multiply(self.native.cast(pa.int32()), lit(SECONDS_PER_DAY))
-            factor = self._TIMESTAMP_DATE_FACTOR[time_unit]
+            factor = TIME_UNIT_PER_SECOND[time_unit]
             return self.with_native(pc.multiply(time_s, lit(factor)))
         msg = "Input should be either of Date or Datetime type"
         raise TypeError(msg)
