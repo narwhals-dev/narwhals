@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import partialmethod
 from typing import TYPE_CHECKING, Final, Literal
 
 from narwhals._compliant.any_namespace import DateTimeNamespace
@@ -129,23 +130,14 @@ class PandasLikeSeriesDateTimeNamespace(
         sign_per_element = 2 * (total > 0).astype(int64) - 1
         return self.with_native(abs_ * sign_per_element)
 
-    # TODO @dangotbanned: Shrink these to be something like:
-    # `total_minutes: Callable[[Self], PandasLikeSeries] = partial(_total_unit, unit="m")`
-
-    def total_minutes(self) -> PandasLikeSeries:
-        return self._total_unit("m")
-
-    def total_seconds(self) -> PandasLikeSeries:
-        return self._total_unit("s")
-
-    def total_milliseconds(self) -> PandasLikeSeries:
-        return self._total_unit("ms")
-
-    def total_microseconds(self) -> PandasLikeSeries:
-        return self._total_unit("us")
-
-    def total_nanoseconds(self) -> PandasLikeSeries:
-        return self._total_unit("ns")
+    # TODO @dangotbanned: Fix without breaking something else
+    # error: Incompatible types in assignment (expression has type "partialmethod[PandasLikeSeries]", base class "DateTimeNamespace" defined the type as
+    # "Callable[[DateTimeNamespace[PandasLikeSeries]], PandasLikeSeries]")
+    total_minutes = partialmethod(_total_unit, unit="m")  # type: ignore[assignment]
+    total_seconds = partialmethod(_total_unit, unit="s")  # type: ignore[assignment]
+    total_milliseconds = partialmethod(_total_unit, unit="ms")  # type: ignore[assignment]
+    total_microseconds = partialmethod(_total_unit, unit="us")  # type: ignore[assignment]
+    total_nanoseconds = partialmethod(_total_unit, unit="ns")  # type: ignore[assignment]
 
     def to_string(self, format: str) -> PandasLikeSeries:
         # Polars' parser treats `'%.f'` as pandas does `'.%f'`
