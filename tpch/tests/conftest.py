@@ -11,9 +11,9 @@ import pytest
 import narwhals as nw
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-    from types import ModuleType
+    from collections.abc import Callable, Mapping
 
+    from narwhals._typing import BackendName
     from tpch.typing_ import DataLoader, TPCHBackend
 
 
@@ -30,21 +30,21 @@ PARTSUPP_PATH = DATA_DIR / "partsupp.parquet"
 ORDERS_PATH = DATA_DIR / "orders.parquet"
 CUSTOMER_PATH = DATA_DIR / "customer.parquet"
 
-
-def _build_backend_namespace_kwargs_map() -> dict[
-    TPCHBackend, tuple[ModuleType, dict[str, Any]]
-]:
-    """Build the mapping of backend names to (namespace, kwargs) tuples."""
-    backend_map: dict[TPCHBackend, tuple[ModuleType, dict[str, Any]]] = {
-        "polars[lazy]": (pl, {})
-    }
+TPCH_TO_BACKEND_NAME: Mapping[TPCHBackend, BackendName] = {
+    "polars[lazy]": "polars",
+    "pyarrow": "pyarrow",
+    "pandas[pyarrow]": "pandas",
+    "dask": "dask",
+    "duckdb": "duckdb",
+    "sqlframe": "sqlframe",
+}
+def _build_backend_kwargs_map() -> dict[TPCHBackend, dict[str, Any]]:
+    backend_map: dict[TPCHBackend, dict[str, Any]] = {"polars[lazy]": {}}
 
     pyarrow_installed = find_spec("pyarrow")
 
     if pyarrow_installed:
-        import pyarrow as pa
-
-        backend_map["pyarrow"] = (pa, {})
+        backend_map["pyarrow"] = {}
 
     if pyarrow_installed and find_spec("pandas"):
         import pandas as pd
@@ -56,31 +56,23 @@ def _build_backend_namespace_kwargs_map() -> dict[
         with suppress(Exception):
             pd.options.future.infer_string = True  # pyright: ignore[reportAttributeAccessIssue, reportOptionalMemberAccess]
 
-        backend_map["pandas[pyarrow]"] = (
-            pd,
-            {"engine": "pyarrow", "dtype_backend": "pyarrow"},
-        )
+        backend_map["pandas[pyarrow]"] = {"engine": "pyarrow", "dtype_backend": "pyarrow"}
 
     if pyarrow_installed and find_spec("dask") and find_spec("dask.dataframe"):
-        import dask.dataframe as dd
-
-        backend_map["dask"] = (dd, {"engine": "pyarrow", "dtype_backend": "pyarrow"})
+        backend_map["dask"] = {"engine": "pyarrow", "dtype_backend": "pyarrow"}
 
     if find_spec("duckdb"):
-        import duckdb
-
-        backend_map["duckdb"] = (duckdb, {})
+        backend_map["duckdb"] = {}
 
     if find_spec("sqlframe"):
-        import sqlframe
         from sqlframe.duckdb import DuckDBSession
 
-        backend_map["sqlframe"] = (sqlframe, {"session": DuckDBSession()})
+        backend_map["sqlframe"] = {"session": DuckDBSession()}
 
     return backend_map
 
 
-BACKEND_NAMESPACE_KWARGS_MAP = _build_backend_namespace_kwargs_map()
+BACKEND_KWARGS_MAP = _build_backend_kwargs_map()
 
 # Queries that need to be skipped for certain backends
 DUCKDB_SKIPS = frozenset(
@@ -159,7 +151,7 @@ def query_id(request: pytest.FixtureRequest) -> str:
     return request.param  # type: ignore[no-any-return]
 
 
-@pytest.fixture(params=list(BACKEND_NAMESPACE_KWARGS_MAP.keys()))
+@pytest.fixture(params=list(BACKEND_KWARGS_MAP.keys()))
 def backend_name(request: pytest.FixtureRequest) -> TPCHBackend:
     """Fixture that yields each backend name."""
     result: TPCHBackend = request.param
@@ -173,13 +165,13 @@ def data_loader(backend_name: TPCHBackend) -> DataLoader:
     The returned function takes a query_id and returns a tuple of DataFrames
     in the order expected by that query's function signature.
     """
-    native_namespace, kwargs = BACKEND_NAMESPACE_KWARGS_MAP[backend_name]
+    kwargs = BACKEND_KWARGS_MAP[backend_name]
+    backend = TPCH_TO_BACKEND_NAME[backend_name]
 
     def _load_data(query_id: str) -> tuple[nw.LazyFrame[Any], ...]:
         data_paths = QUERY_DATA_PATH_MAP[query_id]
         return tuple(
-            nw.scan_parquet(str(path), backend=native_namespace, **kwargs)
-            for path in data_paths
+            nw.scan_parquet(str(path), backend=backend, **kwargs) for path in data_paths
         )
 
     return _load_data
