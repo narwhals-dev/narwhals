@@ -17,8 +17,9 @@ expected = {2, 3, None}
 def test_unique_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if any(
         backend in str(constructor)
-        for backend in ("dask", "modin", "cudf", "pyarrow", "pandas")
+        for backend in ("dask", "modin", "cudf", "pyarrow", "pandas", "sqlframe")
     ):
+        # sqlframe: https://github.com/eakmanrq/sqlframe/issues/580
         request.applymarker(pytest.mark.xfail)
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
