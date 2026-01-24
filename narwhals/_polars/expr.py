@@ -187,9 +187,15 @@ class PolarsExpr:
 
     def first(self, order_by: Sequence[str] = ()) -> Self:
         if order_by:
-            # TODO(unassigned): use `min_by` if/when available: https://github.com/pola-rs/polars/issues/18347
+            # Can't use `min_by` / `max_by` as they skip nulls.
             return self._with_native(self.native.sort_by(*order_by).first())
         return self._with_native(self.native.first())
+
+    def last(self, order_by: Sequence[str] = ()) -> Self:
+        if order_by:
+            # Can't use `min_by` / `max_by` as they skip nulls.
+            return self._with_native(self.native.sort_by(*order_by).last())
+        return self._with_native(self.native.last())
 
     def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
         kwds = self._renamed_min_periods(min_samples)
@@ -353,7 +359,6 @@ class PolarsExpr:
     fill_null: Method[Self]
     fill_nan: Method[Self]
     floor: Method[Self]
-    last: Method[Self]
     gather_every: Method[Self]
     head: Method[Self]
     is_between: Method[Self]
