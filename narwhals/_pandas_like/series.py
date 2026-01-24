@@ -17,6 +17,7 @@ from narwhals._pandas_like.utils import (
     get_dtype_backend,
     has_nulls,
     import_array_module,
+    is_dtype_pyarrow,
     narwhals_to_native_dtype,
     native_to_narwhals_dtype,
     object_native_to_narwhals_dtype,
@@ -1161,6 +1162,15 @@ class PandasLikeSeries(EagerSeries[Any]):
             if self._implementation.is_cudf()
             else result_arr
         )
+
+    def _sign(self, native: Any) -> Any:
+        if not is_dtype_pyarrow(native.dtype):
+            return self._apply_array_func(native, self._array_funcs.sign)
+
+        import pyarrow.compute as pc  # ignore-banned-import()
+
+        pa_array = native.array._pa_array
+        return type(native)(pc.sign(pa_array), index=native.index, name=native.name)
 
     def any_value(self, *, ignore_nulls: bool) -> PythonLiteral:
         return self.drop_nulls().first() if ignore_nulls else self.first()

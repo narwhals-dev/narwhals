@@ -126,9 +126,7 @@ class PandasLikeSeriesDateTimeNamespace(
         abs_ = total.abs() // (60 if unit == "m" else 1)
         if not has_nulls(total):
             abs_ = abs_.astype(int64)
-        # TODO @dangotbanned: Why not something like `{np,pc}.sign`?
-        sign_per_element = 2 * (total > 0).astype(int64) - 1
-        return self.with_native(abs_ * sign_per_element)
+        return self.with_native(abs_ * self.compliant._sign(total))
 
     # TODO @dangotbanned: Fix without breaking something else
     # error: Incompatible types in assignment (expression has type "partialmethod[PandasLikeSeries]", base class "DateTimeNamespace" defined the type as
