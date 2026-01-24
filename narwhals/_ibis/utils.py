@@ -174,9 +174,14 @@ def native_to_narwhals_dtype(ibis_dtype: IbisDataType, version: Version) -> DTyp
             ]
         )
     if is_decimal(ibis_dtype):
-        return dtypes.Decimal(
-            precision=ibis_dtype.precision, scale=(ibis_dtype.scale or 0)
-        )
+        # Same default as in ibis.Decimal.{to_polars, to_pyarrow}
+        # https://github.com/ibis-project/ibis/blob/5028d8e5e1921d5de48f59fad48b86c0de541b0d/ibis/formats/polars.py#L82-L86
+        # https://github.com/ibis-project/ibis/blob/5028d8e5e1921d5de48f59fad48b86c0de541b0d/ibis/formats/pyarrow.py#L165-L177
+        # According to their own comment:
+        # > set default precision and scale to something; unclear how to choose this
+        # source: (see https://github.com/ibis-project/ibis/blob/5028d8e5e1921d5de48f59fad48b86c0de541b0d/ibis/formats/pyarrow.py#L166)
+        scale = 9 if ibis_dtype.scale is None else ibis_dtype.scale
+        return dtypes.Decimal(precision=ibis_dtype.precision, scale=scale)
     if ibis_dtype.is_time():
         return dtypes.Time()
     if ibis_dtype.is_binary():
