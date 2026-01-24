@@ -691,6 +691,17 @@ def test_selector_struct() -> None:
     df.assert_selects(~ncs.struct(), "a", "b", "d", "f", "g")
 
 
+def test_selector_decimal(schema_mixed: nw.Schema) -> None:
+    df = Frame(schema_mixed)
+    df.assert_selects(ncs.decimal())
+    df = df.from_mapping(
+        {"zz0": nw.Float64(), "zz1": nw.Decimal(38, 5), "zz2": nw.Decimal()}
+    )
+    df.assert_selects(ncs.numeric(), "zz0", "zz1", "zz2")
+    df.assert_selects(ncs.decimal(), "zz1", "zz2")
+    df.assert_selects(~ncs.decimal(), "zz0")
+
+
 def test_selector_matches_22816() -> None:
     df = Frame.from_names("ham", "hamburger", "foo", "bar")
     df.assert_selects(ncs.matches(r"^ham.*$"), "ham", "hamburger")
