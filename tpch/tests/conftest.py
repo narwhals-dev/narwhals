@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from types import ModuleType
 
-    from tpch.typing_ import DataLoader
+    from tpch.typing_ import DataLoader, TPCHBackend
 
 
 # Data paths relative to tpch directory
@@ -31,9 +31,13 @@ ORDERS_PATH = DATA_DIR / "orders.parquet"
 CUSTOMER_PATH = DATA_DIR / "customer.parquet"
 
 
-def _build_backend_namespace_kwargs_map() -> dict[str, tuple[ModuleType, dict[str, Any]]]:
+def _build_backend_namespace_kwargs_map() -> dict[
+    TPCHBackend, tuple[ModuleType, dict[str, Any]]
+]:
     """Build the mapping of backend names to (namespace, kwargs) tuples."""
-    backend_map: dict[str, tuple[ModuleType, dict[str, Any]]] = {"polars[lazy]": (pl, {})}
+    backend_map: dict[TPCHBackend, tuple[ModuleType, dict[str, Any]]] = {
+        "polars[lazy]": (pl, {})
+    }
 
     pyarrow_installed = find_spec("pyarrow")
 
@@ -93,7 +97,7 @@ def _get_skip_backends(query_id: str) -> frozenset[str]:
     return frozenset()
 
 
-def skip_if_unsupported(query_id: str, backend_name: str) -> None:
+def skip_if_unsupported(query_id: str, backend_name: TPCHBackend) -> None:
     """Skip the test if the query is not supported for the given backend."""
     skip_backends = _get_skip_backends(query_id)
     if backend_name in skip_backends:
@@ -156,13 +160,14 @@ def query_id(request: pytest.FixtureRequest) -> str:
 
 
 @pytest.fixture(params=list(BACKEND_NAMESPACE_KWARGS_MAP.keys()))
-def backend_name(request: pytest.FixtureRequest) -> str:
+def backend_name(request: pytest.FixtureRequest) -> TPCHBackend:
     """Fixture that yields each backend name."""
-    return request.param  # type: ignore[no-any-return]
+    result: TPCHBackend = request.param
+    return result
 
 
 @pytest.fixture
-def data_loader(backend_name: str) -> DataLoader:
+def data_loader(backend_name: TPCHBackend) -> DataLoader:
     """Fixture that returns a function to load data for a given query.
 
     The returned function takes a query_id and returns a tuple of DataFrames

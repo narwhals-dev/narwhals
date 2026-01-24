@@ -10,6 +10,9 @@ if TYPE_CHECKING:
 
 
 DataLoader = Callable[[str], tuple[nw.LazyFrame[Any], ...]]
+TPCHBackend: TypeAlias = Literal[
+    "polars[lazy]", "pyarrow", "pandas[pyarrow]", "dask", "duckdb", "sqlframe"
+]
 
 
 class QueryModule(Protocol):

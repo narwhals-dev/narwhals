@@ -13,13 +13,12 @@ from tpch.tests.conftest import skip_if_unsupported
 if TYPE_CHECKING:
     import polars as pl
 
-    from tpch.typing_ import DataLoader, QueryModule
+    from tpch.typing_ import DataLoader, QueryModule, TPCHBackend
 
 ROOT_PATH = Path(__file__).resolve().parent.parent
 # Directory containing all the query scripts
 QUERIES_DIR = ROOT_PATH / "queries"
-
-PACKAGE_PREFIX = ".".join(QUERIES_DIR.parts[-2])
+PACKAGE_PREFIX = "tpch.queries"
 
 
 def import_query_module(query_id: str) -> QueryModule:
@@ -29,7 +28,7 @@ def import_query_module(query_id: str) -> QueryModule:
 
 def test_execute_query(
     query_id: str,
-    backend_name: str,
+    backend_name: TPCHBackend,
     data_loader: DataLoader,
     expected_result: Callable[[str], pl.DataFrame],
 ) -> None:
