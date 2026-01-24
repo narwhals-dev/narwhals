@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Literal
 
 from narwhals._compliant.any_namespace import DateTimeNamespace
 from narwhals._constants import (
@@ -106,60 +106,49 @@ class PandasLikeSeriesDateTimeNamespace(
     def _is_pyarrow(self) -> bool:
         return is_dtype_pyarrow(self.native.dtype)
 
-    def _get_total_seconds(self) -> Any:
-        if hasattr(self.native.dt, "total_seconds"):
-            return self.native.dt.total_seconds()
-        return (  # pragma: no cover
-            self.native.dt.days * SECONDS_PER_DAY
-            + self.native.dt.seconds
-            + (self.native.dt.microseconds / US_PER_SECOND)
-            + (self.native.dt.nanoseconds / NS_PER_SECOND)
-        )
+    def _total_unit(self, unit: Literal["m", "s", "ms", "us", "ns"]) -> PandasLikeSeries:
+        dt_ns = self.native.dt
+        # TODO @dangotbanned: Which version added this?
+        if hasattr(dt_ns, "total_seconds"):
+            total_s = dt_ns.total_seconds()
+        else:  # pragma: no cover
+            total_s = (
+                dt_ns.days * SECONDS_PER_DAY
+                + dt_ns.seconds
+                + (dt_ns.microseconds / US_PER_SECOND)
+                + (dt_ns.nanoseconds / NS_PER_SECOND)
+            )
+        unit_factor = {"ms": MS_PER_SECOND, "us": US_PER_SECOND, "ns": NS_PER_SECOND}
+        total = total_s * factor if (factor := unit_factor.get(unit)) else total_s
+        # TODO @dangotbanned: Inline this function
+        # TODO @dangotbanned: Probably make more readable too (e.g. use `dtype_backend`)
+        dtype = int_dtype_mapper(total.dtype)
+        abs_ = total.abs() // (60 if unit == "m" else 1)
+        # TODO @dangotbanned: Is there a less cryptic version?
+        # does not have nulls?
+        if ~total.isna().any():
+            abs_ = abs_.astype(dtype)
+        # TODO @dangotbanned: Why not something like `{np,pc}.sign`?
+        sign_per_element = 2 * (total > 0).astype(dtype) - 1
+        return self.with_native(abs_ * sign_per_element)
+
+    # TODO @dangotbanned: Shrink these to be something like:
+    # `total_minutes: Callable[[Self], PandasLikeSeries] = partial(_total_unit, unit="m")`
 
     def total_minutes(self) -> PandasLikeSeries:
-        s = self._get_total_seconds()
-        # this calculates the sign of each series element
-        s_sign = 2 * (s > 0).astype(int_dtype_mapper(s.dtype)) - 1
-        s_abs = s.abs() // 60
-        if ~s.isna().any():
-            s_abs = s_abs.astype(int_dtype_mapper(s.dtype))
-        return self.with_native(s_abs * s_sign)
+        return self._total_unit("m")
 
     def total_seconds(self) -> PandasLikeSeries:
-        s = self._get_total_seconds()
-        # this calculates the sign of each series element
-        s_sign = 2 * (s > 0).astype(int_dtype_mapper(s.dtype)) - 1
-        s_abs = s.abs() // 1
-        if ~s.isna().any():
-            s_abs = s_abs.astype(int_dtype_mapper(s.dtype))
-        return self.with_native(s_abs * s_sign)
+        return self._total_unit("s")
 
     def total_milliseconds(self) -> PandasLikeSeries:
-        s = self._get_total_seconds() * MS_PER_SECOND
-        # this calculates the sign of each series element
-        s_sign = 2 * (s > 0).astype(int_dtype_mapper(s.dtype)) - 1
-        s_abs = s.abs() // 1
-        if ~s.isna().any():
-            s_abs = s_abs.astype(int_dtype_mapper(s.dtype))
-        return self.with_native(s_abs * s_sign)
+        return self._total_unit("ms")
 
     def total_microseconds(self) -> PandasLikeSeries:
-        s = self._get_total_seconds() * US_PER_SECOND
-        # this calculates the sign of each series element
-        s_sign = 2 * (s > 0).astype(int_dtype_mapper(s.dtype)) - 1
-        s_abs = s.abs() // 1
-        if ~s.isna().any():
-            s_abs = s_abs.astype(int_dtype_mapper(s.dtype))
-        return self.with_native(s_abs * s_sign)
+        return self._total_unit("us")
 
     def total_nanoseconds(self) -> PandasLikeSeries:
-        s = self._get_total_seconds() * NS_PER_SECOND
-        # this calculates the sign of each series element
-        s_sign = 2 * (s > 0).astype(int_dtype_mapper(s.dtype)) - 1
-        s_abs = s.abs() // 1
-        if ~s.isna().any():
-            s_abs = s_abs.astype(int_dtype_mapper(s.dtype))
-        return self.with_native(s_abs * s_sign)
+        return self._total_unit("ns")
 
     def to_string(self, format: str) -> PandasLikeSeries:
         # Polars' parser treats `'%.f'` as pandas does `'.%f'`
