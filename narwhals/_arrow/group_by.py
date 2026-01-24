@@ -98,18 +98,18 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
         use_threads = True
         for expr in exprs:
             md = next(expr._metadata.op_nodes_reversed())
-            if _order_by := md.kwargs.get("order_by", ()):
-                if order_by and _order_by != order_by:
-                    msg = f"Only one `order_by` can be specified in `group_by`. Found both {order_by} and {_order_by}."
+            if _current_order_by := md.kwargs.get("order_by", ()):
+                if order_by and _current_order_by != order_by:
+                    msg = f"Only one `order_by` can be specified in `group_by`. Found both {order_by} and {_current_order_by}."
                     raise NotImplementedError(msg)
-                order_by = _order_by
+                order_by = _current_order_by
             if md.name in self._OPTION_ORDERED:
                 # [pyarrow-36709]: https://github.com/apache/arrow/issues/36709
                 use_threads = False
-        if not use_threads and self.compliant._backend_version < (14, 0):
+        if not use_threads and (pa_version := self.compliant._backend_version) < (14, 0):
             msg = (
                 f"Using `first/last` in a `group_by().agg(...)` context is only available in 'pyarrow>=14.0.0', "
-                f"found version {requires._unparse_version(self._df._backend_version)!r}.\n\n"
+                f"found version {requires._unparse_version(pa_version)!r}.\n\n"
                 f"See https://github.com/apache/arrow/issues/36709"
             )
             raise NotImplementedError(msg)

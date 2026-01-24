@@ -273,7 +273,7 @@ def test_first_expr_invalid(
         "idx2": [9, 8, 7, 7],
     }
     df = nw.from_native(constructor(data))
-    with pytest.raises(InvalidOperationError):
+    with pytest.raises(InvalidOperationError, match="expression which isn't orderable"):
         df.select("idx", "idx2", nw.col("a").first(order_by="idx").over(order_by="idx2"))
 
 
@@ -291,7 +291,7 @@ def test_first_last_different_orders(
         pytest.skip()
 
     context = (
-        pytest.raises(NotImplementedError)
+        pytest.raises(NotImplementedError, match="Only one `order_by` can")
         if "pandas" in str(constructor) or "pyarrow" in str(constructor)
         else does_not_raise()
     )
