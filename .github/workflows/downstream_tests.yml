@@ -510,7 +510,7 @@ jobs:
           cd validoopsie
           uv sync --dev --upgrade
           # Temporary pin until it's addressed upstream.
-          uv remove pandas
+          uv remove pandas --group dev
           uv add "pandas<3"
       - name: install-narwhals-dev
         run: |
