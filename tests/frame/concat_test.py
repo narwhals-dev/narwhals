@@ -9,10 +9,21 @@ import pytest
 import narwhals as nw
 from narwhals._utils import Implementation
 from narwhals.exceptions import InvalidOperationError, NarwhalsError
+from narwhals.schema import Schema
 from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+
+    from narwhals.dtypes import DType
+    from narwhals.typing import IntoSchema
+
+if TYPE_CHECKING:
+    from narwhals.typing import LazyFrameT
+
+
+def _cast(frame: LazyFrameT, schema: IntoSchema) -> LazyFrameT:
+    return frame.select(nw.col(name).cast(dtype) for name, dtype in schema.items())
 
 
 def test_concat_horizontal(constructor_eager: ConstructorEager) -> None:
@@ -138,3 +149,113 @@ def test_concat_diagonal_invalid(
         context = pytest.raises((InvalidOperationError, TypeError), match=r"same schema")
     with context:
         nw.concat([df_1, bad_schema], how="diagonal").collect().to_dict(as_series=False)
+
+
+@pytest.mark.parametrize(
+    ("ldata", "lschema", "rdata", "rschema", "expected_data", "expected_schema"),
+    [
+        (
+            {"a": [1, 2, 3], "b": [True, False, None]},
+            {"a": nw.Int8(), "b": nw.Boolean()},
+            {"a": [43, 2, 3], "b": [32, 1, None]},
+            {"a": nw.Int16(), "b": nw.Int64()},
+            {"a": [1, 2, 3, 43, 2, 3], "b": [1, 0, None, 32, 1, None]},
+            {"a": nw.Int16(), "b": nw.Int64()},
+        ),
+        (
+            {"a": [1, 2], "b": [2, 1]},
+            {"a": nw.Int32(), "b": nw.Int32()},
+            {"a": [1.0, 0.2], "b": [None, 0.1]},
+            {"a": nw.Float32(), "b": nw.Float32()},
+            {"a": [1.0, 2.0, 1.0, 0.2], "b": [2.0, 1.0, None, 0.1]},
+            {"a": nw.Float64(), "b": nw.Float64()},
+        ),
+    ],
+    ids=["nullable-integer", "nullable-float"],
+)
+def test_concat_vertically_relaxed(
+    constructor: Constructor,
+    ldata: dict[str, Any],
+    lschema: dict[str, DType],
+    rdata: dict[str, Any],
+    rschema: dict[str, DType],
+    expected_data: dict[str, Any],
+    expected_schema: dict[str, DType],
+    request: pytest.FixtureRequest,
+) -> None:
+    # Adapted from https://github.com/pola-rs/polars/blob/b0fdbd34d430d934bda9a4ca3f75e136223bd95b/py-polars/tests/unit/functions/test_concat.py#L64
+    is_nullable_int = request.node.callspec.id.endswith("nullable-integer")
+    if is_nullable_int and any(
+        x in str(constructor)
+        for x in ("dask", "pandas_constructor", "modin_constructor", "cudf")
+    ):
+        reason = "Cannot convert non-finite values (NA or inf)"
+        request.applymarker(pytest.mark.xfail(reason=reason))
+    left = nw.from_native(constructor(ldata)).lazy().pipe(_cast, lschema)
+    right = nw.from_native(constructor(rdata)).lazy().pipe(_cast, rschema)
+    result = nw.concat([left, right], how="vertical_relaxed")
+
+    assert result.collect_schema() == Schema(expected_schema)
+    assert_equal_data(result.collect(), expected_data)
+
+    result = nw.concat([right, left], how="vertical_relaxed")
+    assert result.collect_schema() == Schema(expected_schema)
+
+
+@pytest.mark.parametrize(
+    ("schema1", "schema2", "schema3", "expected_schema"),
+    [
+        (
+            {"a": nw.Int32(), "c": nw.Int64()},
+            {"a": nw.Float64(), "b": nw.Float32()},
+            {"b": nw.Int32(), "c": nw.Int32()},
+            {"a": nw.Float64(), "c": nw.Int64(), "b": nw.Float64()},
+        ),
+        (
+            {"a": nw.Float32(), "c": nw.Float32()},
+            {"a": nw.Float64(), "b": nw.Float32()},
+            {"b": nw.Float32(), "c": nw.Float32()},
+            {"a": nw.Float64(), "c": nw.Float32(), "b": nw.Float32()},
+        ),
+    ],
+    ids=["nullable-integer", "nullable-float"],
+)
+def test_concat_diagonal_relaxed(
+    constructor: Constructor,
+    schema1: dict[str, DType],
+    schema2: dict[str, DType],
+    schema3: dict[str, DType],
+    expected_schema: dict[str, DType],
+    request: pytest.FixtureRequest,
+) -> None:
+    # Adapted from https://github.com/pola-rs/polars/blob/b0fdbd34d430d934bda9a4ca3f75e136223bd95b/py-polars/tests/unit/functions/test_concat.py#L265C1-L288C41
+    is_nullable_int = request.node.callspec.id.endswith("nullable-integer")
+    if is_nullable_int and any(
+        x in str(constructor)
+        for x in ("dask", "pandas_constructor", "modin_constructor", "cudf")
+    ):
+        reason = "Cannot convert non-finite values (NA or inf)"
+        request.applymarker(pytest.mark.xfail(reason=reason))
+
+    base_schema = {"idx": nw.Int32()}
+
+    data1 = {"idx": [0, 1], "a": [1, 2], "c": [10, 20]}
+    df1 = nw.from_native(constructor(data1)).lazy().pipe(_cast, base_schema | schema1)
+
+    data2 = {"a": [3.5, 4.5], "b": [30.1, 40.2], "idx": [2, 3]}
+    df2 = nw.from_native(constructor(data2)).lazy().pipe(_cast, base_schema | schema2)
+
+    data3 = {"b": [5, 6], "idx": [4, 5], "c": [50, 60]}
+    df3 = nw.from_native(constructor(data3)).lazy().pipe(_cast, base_schema | schema3)
+
+    result = nw.concat([df1, df2, df3], how="diagonal_relaxed").sort("idx")
+    out_schema = result.collect_schema()
+    assert out_schema == Schema(base_schema | expected_schema)
+
+    expected_data = {
+        "idx": [0, 1, 2, 3, 4, 5],
+        "a": [1.0, 2.0, 3.5, 4.5, None, None],
+        "c": [10, 20, None, None, 50, 60],
+        "b": [None, None, 30.1, 40.2, 5.0, 6.0],
+    }
+    assert_equal_data(result.collect(), expected_data)
