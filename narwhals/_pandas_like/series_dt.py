@@ -15,7 +15,7 @@ from narwhals._pandas_like.utils import (
     get_dtype_backend,
     is_dtype_pyarrow,
 )
-from narwhals._utils import Version
+from narwhals._utils import Version, is_time_unit
 
 if TYPE_CHECKING:
     from datetime import timedelta
@@ -108,18 +108,16 @@ class PandasLikeSeriesDateTimeNamespace(
         dt_ns = self.native.dt
         # TODO @dangotbanned: Which version added this?
         if hasattr(dt_ns, "total_seconds"):
-            total_s = dt_ns.total_seconds()
+            total = dt_ns.total_seconds()
         else:  # pragma: no cover
-            total_s = (
+            total = (
                 dt_ns.days * SECONDS_PER_DAY
                 + dt_ns.seconds
                 + (dt_ns.microseconds / US_PER_SECOND)
                 + (dt_ns.nanoseconds / NS_PER_SECOND)
             )
-        if unit in ("ms", "us", "ns"):  # noqa: PLR6201
-            total = total_s * TIME_UNIT_PER_SECOND[unit]  # type: ignore[index]
-        else:
-            total = total_s
+        if is_time_unit(unit) and unit != "s":
+            total = total * TIME_UNIT_PER_SECOND[unit]
         int64 = NATIVE_INT64[get_dtype_backend(self.native.dtype, self.implementation)]
         abs_ = total.abs() // (60 if unit == "m" else 1)
         # TODO @dangotbanned: Is there a less cryptic version?

@@ -1371,6 +1371,10 @@ def is_sequence_of(obj: Any, tp: type[_T]) -> TypeIs[Sequence[_T]]:
     )
 
 
+def is_time_unit(obj: Any) -> TypeIs[TimeUnit]:
+    return obj in {"s", "ms", "us", "ns"}
+
+
 def validate_strict_and_pass_though(
     strict: bool | None,  # noqa: FBT001
     pass_through: bool | None,  # noqa: FBT001

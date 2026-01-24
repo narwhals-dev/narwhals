@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 
 from narwhals._utils import (
     _DeferredIterable,
+    is_time_unit,
     isinstance_or_issubclass,
     qualified_type_name,
 )
@@ -470,7 +471,7 @@ class Datetime(TemporalType, metaclass=_DatetimeMeta):
     def __init__(
         self, time_unit: TimeUnit = "us", time_zone: str | timezone | None = None
     ) -> None:
-        if time_unit not in {"s", "ms", "us", "ns"}:
+        if not is_time_unit(time_unit):
             msg = (
                 "invalid `time_unit`"
                 f"\n\nExpected one of {{'ns','us','ms', 's'}}, got {time_unit!r}."
@@ -553,7 +554,7 @@ class Duration(TemporalType, metaclass=_DurationMeta):
     __slots__ = ("time_unit",)
 
     def __init__(self, time_unit: TimeUnit = "us") -> None:
-        if time_unit not in {"s", "ms", "us", "ns"}:
+        if not is_time_unit(time_unit):
             msg = (
                 "invalid `time_unit`"
                 f"\n\nExpected one of {{'ns','us','ms', 's'}}, got {time_unit!r}."
