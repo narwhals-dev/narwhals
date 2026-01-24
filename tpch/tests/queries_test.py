@@ -30,7 +30,7 @@ def test_execute_query(
     query_id: QueryID,
     backend_name: TPCHBackend,
     data_loader: DataLoader,
-    expected_result: Callable[[str], pl.DataFrame],
+    expected_result: Callable[[QueryID], pl.DataFrame],
 ) -> None:
     """Helper function to run a TPCH query test."""
     query_module = import_query_module(query_id)
