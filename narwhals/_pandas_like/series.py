@@ -15,6 +15,7 @@ from narwhals._pandas_like.series_struct import PandasLikeSeriesStructNamespace
 from narwhals._pandas_like.utils import (
     align_and_extract_native,
     get_dtype_backend,
+    has_nulls,
     import_array_module,
     narwhals_to_native_dtype,
     native_to_narwhals_dtype,
@@ -849,17 +850,17 @@ class PandasLikeSeries(EagerSeries[Any]):
 
         null_col_pl = f"{name}{separator}null"
 
-        has_nulls = series.isna().any()
+        has_nulls_ = has_nulls(series)
         result = plx.get_dummies(
             series,
             prefix=name,
             prefix_sep=separator,
             drop_first=drop_first,
             # Adds a null column at the end, depending on whether or not there are any.
-            dummy_na=has_nulls,
+            dummy_na=has_nulls_,
             dtype="int8",
         )
-        if has_nulls:
+        if has_nulls_:
             *cols, null_col_pd = list(result.columns)
             output_order = [null_col_pd, *cols]
             result = rename(

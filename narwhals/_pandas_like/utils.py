@@ -689,3 +689,11 @@ class PandasLikeSeriesNamespace(EagerSeriesNamespace["PandasLikeSeries", Any]): 
 
 def make_group_by_kwargs(*, drop_null_keys: bool) -> dict[str, bool]:
     return {"sort": False, "as_index": True, "dropna": drop_null_keys, "observed": True}
+
+
+def has_nulls(native: Any) -> bool:
+    """Return True if there are any NaNs.
+
+    Wraps the cached [Series.hasnans](https://pandas.pydata.org/pandas-docs/version/1.0/reference/api/pandas.Series.hasnans.html) property
+    """
+    return native.hasnans

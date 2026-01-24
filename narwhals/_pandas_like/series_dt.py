@@ -13,6 +13,7 @@ from narwhals._pandas_like.utils import (
     calculate_timestamp_date,
     calculate_timestamp_datetime,
     get_dtype_backend,
+    has_nulls,
     is_dtype_pyarrow,
 )
 from narwhals._utils import Version, is_time_unit
@@ -120,9 +121,7 @@ class PandasLikeSeriesDateTimeNamespace(
             total = total * TIME_UNIT_PER_SECOND[unit]
         int64 = NATIVE_INT64[get_dtype_backend(self.native.dtype, self.implementation)]
         abs_ = total.abs() // (60 if unit == "m" else 1)
-        # TODO @dangotbanned: Is there a less cryptic version?
-        # does not have nulls?
-        if ~total.isna().any():
+        if not has_nulls(total):
             abs_ = abs_.astype(int64)
         # TODO @dangotbanned: Why not something like `{np,pc}.sign`?
         sign_per_element = 2 * (total > 0).astype(int64) - 1
