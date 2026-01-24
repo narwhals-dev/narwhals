@@ -39,6 +39,20 @@ TPCH_TO_BACKEND_NAME: Mapping[TPCHBackend, BackendName] = {
     "duckdb": "duckdb",
     "sqlframe": "sqlframe",
 }
+
+
+def pytest_addoption(parser: pytest.Parser) -> None:
+    from tests.conftest import DEFAULT_CONSTRUCTORS
+
+    parser.addoption(
+        "--constructors",
+        action="store",
+        default=DEFAULT_CONSTRUCTORS,
+        type=str,
+        help="<sink for defaults in VSC getting injected>",
+    )
+
+
 def _build_backend_kwargs_map() -> dict[TPCHBackend, dict[str, Any]]:
     backend_map: dict[TPCHBackend, dict[str, Any]] = {"polars[lazy]": {}}
 
