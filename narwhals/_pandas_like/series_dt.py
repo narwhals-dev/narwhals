@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Final, Literal
 
 from narwhals._compliant.any_namespace import DateTimeNamespace
 from narwhals._constants import (
@@ -13,14 +13,15 @@ from narwhals._constants import (
 from narwhals._duration import Interval
 from narwhals._pandas_like.utils import (
     ALIAS_DICT,
+    NW_TO_PD_DTYPES_BACKEND,
     UNITS_DICT,
     PandasLikeSeriesNamespace,
     calculate_timestamp_date,
     calculate_timestamp_datetime,
     get_dtype_backend,
-    int_dtype_mapper,
     is_dtype_pyarrow,
 )
+from narwhals._utils import Version
 
 if TYPE_CHECKING:
     from datetime import timedelta
@@ -29,6 +30,9 @@ if TYPE_CHECKING:
 
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals.typing import TimeUnit
+
+
+NATIVE_INT64: Final = NW_TO_PD_DTYPES_BACKEND[Version.MAIN.dtypes.Int64]
 
 
 class PandasLikeSeriesDateTimeNamespace(
@@ -120,16 +124,14 @@ class PandasLikeSeriesDateTimeNamespace(
             )
         unit_factor = {"ms": MS_PER_SECOND, "us": US_PER_SECOND, "ns": NS_PER_SECOND}
         total = total_s * factor if (factor := unit_factor.get(unit)) else total_s
-        # TODO @dangotbanned: Inline this function
-        # TODO @dangotbanned: Probably make more readable too (e.g. use `dtype_backend`)
-        dtype = int_dtype_mapper(total.dtype)
+        int64 = NATIVE_INT64[get_dtype_backend(self.native.dtype, self.implementation)]
         abs_ = total.abs() // (60 if unit == "m" else 1)
         # TODO @dangotbanned: Is there a less cryptic version?
         # does not have nulls?
         if ~total.isna().any():
-            abs_ = abs_.astype(dtype)
+            abs_ = abs_.astype(int64)
         # TODO @dangotbanned: Why not something like `{np,pc}.sign`?
-        sign_per_element = 2 * (total > 0).astype(dtype) - 1
+        sign_per_element = 2 * (total > 0).astype(int64) - 1
         return self.with_native(abs_ * sign_per_element)
 
     # TODO @dangotbanned: Shrink these to be something like:

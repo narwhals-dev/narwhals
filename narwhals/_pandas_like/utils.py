@@ -597,14 +597,6 @@ def narwhals_to_native_arrow_dtype(
     raise NotImplementedError(msg)
 
 
-def int_dtype_mapper(dtype: Any) -> str:
-    if "pyarrow" in str(dtype):
-        return "Int64[pyarrow]"
-    if str(dtype).lower() != str(dtype):  # pragma: no cover
-        return "Int64"
-    return "int64"
-
-
 _TIMESTAMP_DATETIME_OP_FACTOR: Mapping[
     tuple[UnitCurrent, UnitTarget], tuple[BinOpBroadcast, IntoRhs]
 ] = {
