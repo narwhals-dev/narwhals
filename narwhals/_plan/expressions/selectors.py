@@ -329,6 +329,9 @@ class Duration(DTypeSelector, dtype=_dtypes.Duration):
 class Enum(DTypeSelector, dtype=_dtypes.Enum): ...
 
 
+class Decimal(DTypeSelector, dtype=_dtypes.Decimal): ...
+
+
 class Float(DTypeSelector, dtype=FloatType): ...
 
 
