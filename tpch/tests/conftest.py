@@ -181,7 +181,8 @@ def data_loader(backend_name: TPCHBackend) -> DataLoader:
     def _load_data(query_id: QueryID) -> tuple[nw.LazyFrame[Any], ...]:
         data_paths = QUERY_DATA_PATH_MAP[query_id]
         return tuple(
-            nw.scan_parquet(str(path), backend=backend, **kwargs) for path in data_paths
+            nw.scan_parquet(path.as_posix(), backend=backend, **kwargs)
+            for path in data_paths
         )
 
     return _load_data
