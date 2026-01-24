@@ -117,7 +117,7 @@ class PandasLikeSeriesDateTimeNamespace(
                 + (dt_ns.nanoseconds / NS_PER_SECOND)
             )
         if unit in ("ms", "us", "ns"):  # noqa: PLR6201
-            total = total_s * TIME_UNIT_PER_SECOND[unit]
+            total = total_s * TIME_UNIT_PER_SECOND[unit]  # type: ignore[index]
         else:
             total = total_s
         int64 = NATIVE_INT64[get_dtype_backend(self.native.dtype, self.implementation)]
