@@ -765,18 +765,30 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
 
         return self._with_callable(f, window_f)
 
-    def last(self) -> Self:
-        def func(
+    def last(self, order_by: Sequence[str] = ()) -> Self:
+        def f(expr: NativeExprT) -> NativeExprT:
+            if not order_by:  # pragma: no cover
+                msg = "Expected `order_by` to be specified"
+                raise InvalidOperationError(msg)
+            return self._last(expr, *order_by)
+
+        def window_f(
             df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
         ) -> Sequence[NativeExprT]:
+            if order_by and inputs.order_by:  # pragma: no cover
+                msg = "Can't specify both `order_by` in `over` and `last`."
+                raise InvalidOperationError(msg)
+            if not order_by and not inputs.order_by:  # pragma: no cover
+                msg = "Must specify `order_by` either in `over` or `last`."
+                raise InvalidOperationError(msg)
             return [
                 self._window_expression(
-                    self._last(expr, *inputs.order_by), inputs.partition_by
+                    self._last(expr, *(inputs.order_by or order_by)), inputs.partition_by
                 )
                 for expr in self(df)
             ]
 
-        return self._with_window_function(func)
+        return self._with_callable(f, window_f)
 
     def any_value(self, *, ignore_nulls: bool) -> Self:
         return self._with_callable(
