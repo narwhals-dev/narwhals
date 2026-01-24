@@ -14,7 +14,8 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from types import ModuleType
 
-    DataLoader = Callable[[str], tuple[nw.LazyFrame[Any], ...]]
+    from tpch.typing_ import DataLoader
+
 
 # Data paths relative to tpch directory
 TPCH_DIR = Path(__file__).resolve().parent.parent

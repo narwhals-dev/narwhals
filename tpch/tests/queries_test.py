@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from importlib import import_module
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Any, Callable
 
 from polars.testing import assert_frame_equal
 
@@ -13,13 +13,18 @@ from tpch.tests.conftest import skip_if_unsupported
 if TYPE_CHECKING:
     import polars as pl
 
-    from narwhals.typing import IntoFrame
-
-    DataLoader = Callable[[str], tuple[IntoFrame, ...]]
+    from tpch.typing_ import DataLoader, QueryModule
 
 ROOT_PATH = Path(__file__).resolve().parent.parent
 # Directory containing all the query scripts
 QUERIES_DIR = ROOT_PATH / "queries"
+
+PACKAGE_PREFIX = ".".join(QUERIES_DIR.parts[-2])
+
+
+def import_query_module(query_id: str) -> QueryModule:
+    result: Any = import_module(f"{PACKAGE_PREFIX}.{query_id}")
+    return result
 
 
 def test_execute_query(
@@ -29,7 +34,7 @@ def test_execute_query(
     expected_result: Callable[[str], pl.DataFrame],
 ) -> None:
     """Helper function to run a TPCH query test."""
-    query_module = import_module(f"tpch.queries.{query_id}")
+    query_module = import_query_module(query_id)
 
     skip_if_unsupported(query_id, backend_name)
 
@@ -37,11 +42,11 @@ def test_execute_query(
     data = data_loader(query_id)
 
     try:
-        result: pl.DataFrame = (
-            query_module.query(*data)  # type: ignore[union-attr]
+        result = (
+            query_module.query(*data)
             .lazy()
             .collect(backend=nw.Implementation.POLARS)
-            .to_native()
+            .to_polars()
         )
     except NarwhalsError as exc:
         msg = f"Query {query_id} with {backend_name=} failed with the following error in Narwhals:\n{exc}"
