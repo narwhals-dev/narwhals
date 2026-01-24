@@ -212,17 +212,39 @@ def test_first_expr_in_group_by(
     df = nw.from_native(constructor(data))
     result = (
         df.group_by("grp")
-        .agg(nw.col("a", "b", "c").first(order_by="idx").name.suffix("_first"))
+        .agg(
+            nw.col("a", "b", "c").first(order_by="idx").name.suffix("_first"),
+            nw.col("a", "b", "c").last(order_by="idx").name.suffix("_last"),
+        )
         .sort("grp")
     )
-    expected = {"grp": [1, 2], "a_first": [4, 3], "b_first": [7, 8], "c_first": [None, 8]}
+    expected = {
+        "grp": [1, 2],
+        "a_first": [4, 3],
+        "b_first": [7, 8],
+        "c_first": [None, 8],
+        "a_last": [None, 3],
+        "b_last": [9, 8],
+        "c_last": [9, 8],
+    }
     assert_equal_data(result, expected)
     result = (
         df.group_by("grp")
-        .agg(nw.col("a", "b", "c").first(order_by=["idx", "idx2"]).name.suffix("_first"))
+        .agg(
+            nw.col("a", "b", "c").first(order_by=["idx", "idx2"]).name.suffix("_first"),
+            nw.col("a", "b", "c").last(order_by=["idx", "idx2"]).name.suffix("_last"),
+        )
         .sort("grp")
     )
-    expected = {"grp": [1, 2], "a_first": [9, 3], "b_first": [10, 8], "c_first": [10, 8]}
+    expected = {
+        "grp": [1, 2],
+        "a_first": [9, 3],
+        "b_first": [10, 8],
+        "c_first": [10, 8],
+        "a_last": [None, 3],
+        "b_last": [9, 8],
+        "c_last": [9, 8],
+    }
     assert_equal_data(result, expected)
 
 
