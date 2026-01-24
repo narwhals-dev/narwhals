@@ -92,7 +92,7 @@ def test_first_expr_with_columns(
     )
 
 
-def test_first_expr_over_order_by(
+def test_first_last_expr_over_order_by(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
@@ -122,8 +122,13 @@ def test_first_expr_over_order_by(
         )
     )
     result = frame.with_columns(
-        nw.col("b", "c", "d").first().over(order_by="i").name.suffix("_first"),
-        nw.col("b", "c", "d").last().over(order_by="i").name.suffix("_last"),
+        nw.col("b", "c", "d")
+        .first()
+        .over(order_by="i")
+        .name.suffix("_first_ordered_over"),
+        nw.col("b", "c", "d").last().over(order_by="i").name.suffix("_last_ordered_over"),
+        nw.col("b", "c", "d").first(order_by="i").name.suffix("_first"),
+        nw.col("b", "c", "d").last(order_by="i").name.suffix("_last"),
     ).sort("i")
     expected = {
         "a": [1, 2, 1],
@@ -131,6 +136,12 @@ def test_first_expr_over_order_by(
         "c": [None, 8, 7],
         "d": ["x", "z", "y"],
         "i": [None, 1, 2],
+        "b_first_ordered_over": [4, 4, 4],
+        "c_first_ordered_over": [None, None, None],
+        "d_first_ordered_over": ["x", "x", "x"],
+        "b_last_ordered_over": [5, 5, 5],
+        "c_last_ordered_over": [7, 7, 7],
+        "d_last_ordered_over": ["y", "y", "y"],
         "b_first": [4, 4, 4],
         "c_first": [None, None, None],
         "d_first": ["x", "x", "x"],

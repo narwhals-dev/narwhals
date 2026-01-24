@@ -840,8 +840,20 @@ class EagerExpr(
             context=self,
         )
 
-    def last(self) -> Self:
-        return self._reuse_series("last", returns_scalar=True)
+    def last(self, order_by: Sequence[str] = ()) -> Self:
+        if not order_by:
+            return self._reuse_series("last", returns_scalar=True)
+
+        def func(df: EagerDataFrameT) -> Sequence[Any]:
+            df = df.sort(*order_by, descending=False, nulls_last=False)
+            return self.last()(df)
+
+        return self._from_callable(
+            func,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            context=self,
+        )
 
     def any_value(self, *, ignore_nulls: bool) -> Self:
         return self._reuse_series(
