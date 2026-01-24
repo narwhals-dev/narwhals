@@ -2614,7 +2614,7 @@ class LazyFrame(BaseFrame[LazyFrameT]):
             >>> import narwhals as nw
             >>> lf_native = duckdb.sql("SELECT * FROM VALUES (1, 4.5), (3, 2.) df(a, b)")
             >>> nw.from_native(lf_native).schema  # doctest:+SKIP
-            Schema({'a': Int32, 'b': Decimal})
+            Schema({'a': Int32, 'b': Decimal(precision=2, scale=1)})
         """
         if self._compliant_frame._version is not Version.V1:
             msg = (
@@ -2632,7 +2632,7 @@ class LazyFrame(BaseFrame[LazyFrameT]):
             >>> import narwhals as nw
             >>> lf_native = duckdb.sql("SELECT * FROM VALUES (1, 4.5), (3, 2.) df(a, b)")
             >>> nw.from_native(lf_native).collect_schema()
-            Schema({'a': Int32, 'b': Decimal})
+            Schema({'a': Int32, 'b': Decimal(precision=2, scale=1)})
         """
         return super().collect_schema()
 

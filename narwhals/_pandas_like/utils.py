@@ -79,7 +79,6 @@ PD_DURATION_RGX = r"""^
         (?P<time_unit>s|ms|us|ns)                 # Match time unit: s, ms, us, or ns
     \]                                            # Closing bracket for timedelta64
 $"""
-
 PATTERN_PD_DURATION = re.compile(PD_DURATION_RGX, re.VERBOSE)
 
 NativeIntervalUnit: TypeAlias = Literal[
@@ -426,7 +425,6 @@ NW_TO_PD_DTYPES_BACKEND: Mapping[type[DType], Mapping[DTypeBackend, str | type[A
         None: "bool",
     },
 }
-UNSUPPORTED_DTYPES = (dtypes.Decimal,)
 
 
 def narwhals_to_native_dtype(  # noqa: C901, PLR0912
@@ -518,12 +516,17 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912
         msg = "Can not cast / initialize Enum without categories present"
         raise ValueError(msg)
     if issubclass(
-        base_type, (dtypes.Struct, dtypes.Array, dtypes.List, dtypes.Time, dtypes.Binary)
+        base_type,
+        (
+            dtypes.Struct,
+            dtypes.Array,
+            dtypes.List,
+            dtypes.Time,
+            dtypes.Binary,
+            dtypes.Decimal,
+        ),
     ):
         return narwhals_to_native_arrow_dtype(dtype, implementation, version)
-    if issubclass(base_type, UNSUPPORTED_DTYPES):
-        msg = f"Converting to {base_type.__name__} dtype is not supported for {implementation}."
-        raise NotImplementedError(msg)
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
 
