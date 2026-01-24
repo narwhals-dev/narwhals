@@ -169,7 +169,7 @@ jobs:
       - name: Assert nightlies dependencies
         run: |
           DEPS=$(uv pip freeze)
-          echo "$DEPS" | grep -E 'pandas.*(dev|rc)'
+          echo "$DEPS" | grep -E 'pandas.*(dev|rc|+)'
           echo "$DEPS" | grep 'pyarrow.*dev'
           echo "$DEPS" | grep 'numpy.*dev'
           echo "$DEPS" | grep 'dask.*@'
