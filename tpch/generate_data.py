@@ -93,6 +93,7 @@ if __name__ == "__main__":
         default="0.1",
         dest="scale_factor",
         help=f"Scale the database by this factor (default: %(default)s)\n{TABLE_SCALE_FACTOR}",
+        type=float,
     )
     args = parser.parse_args()
     main(scale_factor=args.scale_factor)
