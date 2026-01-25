@@ -1,8 +1,21 @@
 from __future__ import annotations
 
 import io
+import logging
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
+
+from narwhals._utils import scale_bytes
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+log_output = logging.StreamHandler()
+log_output.setFormatter(
+    logging.Formatter(
+        "%(asctime)s.%(msecs)03d [%(levelname)s] %(message)s", "%Y-%m-%d %H:%M:%S"
+    )
+)
+logger.addHandler(log_output)
 
 REPO_ROOT = Path(__file__).parent.parent
 TPCH_ROOT = REPO_ROOT / "tpch"
@@ -37,15 +50,24 @@ def convert_schema(schema: pa.Schema) -> pa.Schema:
     return pa.schema(new_schema)
 
 
+def log_write(path: Path, n_bytes: int, unit: Literal["b", "kb", "mb"]) -> None:
+    size = float(n_bytes) if unit == "b" else scale_bytes(n_bytes, unit)
+    logger.info("Writing % 20.4f %s -> %s", size, unit, path.as_posix())
+
+
 def main(scale_factor: float = 0.1) -> None:
     import duckdb
     import pyarrow.csv as pc
     import pyarrow.parquet as pq
 
     DATA.mkdir(exist_ok=True)
+    logger.info("Connecting to in-memory DuckDB database")
     con = duckdb.connect(database=":memory:")
+    logger.info("Installing DuckDB TPC-H Extension")
     con.execute("INSTALL tpch; LOAD tpch")
+    logger.info("Generating data for `scale_factor=%s`", scale_factor)
     con.execute(f"CALL dbgen(sf={scale_factor})")
+    logger.info("Finished generating data.")
     tables = (
         "lineitem",
         "customer",
@@ -61,8 +83,11 @@ def main(scale_factor: float = 0.1) -> None:
         tbl_arrow = tbl.to_arrow_table()
         new_schema = convert_schema(tbl_arrow.schema)
         tbl_arrow = tbl_arrow.cast(new_schema)
-        pq.write_table(tbl_arrow, DATA / f"{t}.parquet")
+        path = DATA / f"{t}.parquet"
+        log_write(path, tbl_arrow.nbytes, "mb")
+        pq.write_table(tbl_arrow, path)
 
+    logger.info("Getting answers")
     results = con.query(
         f"""
         SELECT query_nr, answer
@@ -79,8 +104,9 @@ def main(scale_factor: float = 0.1) -> None:
         )
         new_schema = convert_schema(tbl_answer.schema)
         tbl_answer = tbl_answer.cast(new_schema)
-
-        pq.write_table(tbl_answer, DATA / f"result_q{query_nr}.parquet")
+        path = DATA / f"result_q{query_nr}.parquet"
+        log_write(path, tbl_answer.nbytes, "b")
+        pq.write_table(tbl_answer, path)
 
 
 if __name__ == "__main__":
