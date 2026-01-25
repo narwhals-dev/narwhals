@@ -80,13 +80,24 @@ Incomplete: TypeAlias = Any
 FrozenDTypes: TypeAlias = frozenset[type[DType]]
 DTypeGroup: TypeAlias = frozenset[type[DType]]
 Nested: TypeAlias = "Array | List | Struct"
-Parametric: TypeAlias = "Datetime | DatetimeV1 | Duration | DurationV1 | Enum | Nested"
+Parametric: TypeAlias = (
+    "Datetime | DatetimeV1 | Decimal |Duration | DurationV1 | Enum | Nested"
+)
 SameTemporalT = TypeVar("SameTemporalT", Datetime, DatetimeV1, Duration, DurationV1)
 """Temporal data types, with a `time_unit` attribute."""
 
 SameDatetimeT = TypeVar("SameDatetimeT", Datetime, DatetimeV1)
 SameT = TypeVar(
-    "SameT", Array, List, Struct, Datetime, DatetimeV1, Duration, DurationV1, Enum
+    "SameT",
+    Array,
+    List,
+    Struct,
+    Datetime,
+    DatetimeV1,
+    Decimal,
+    Duration,
+    DurationV1,
+    Enum,
 )
 DTypeT1 = TypeVar("DTypeT1", bound=DType)
 DTypeT2 = TypeVar("DTypeT2", bound=DType, default=DTypeT1)
@@ -273,6 +284,13 @@ def _enum_supertype(left: Enum, right: Enum, /) -> Enum | None:
     return left if left.categories == right.categories else None
 
 
+def _decimal_supertype(left: Decimal, right: Decimal, /) -> Decimal:
+    # https://github.com/pola-rs/polars/blob/529f7ec642912a2f15656897d06f1532c2f5d4c4/crates/polars-core/src/utils/supertype.rs#L508-L511
+    precision = max(left.precision, right.precision)
+    scale = max(left.scale, right.scale)
+    return Decimal(precision=precision, scale=scale)
+
+
 _SAME_DISPATCH: Final[Mapping[type[Parametric], Callable[..., Incomplete | None]]] = {
     Array: _array_supertype,
     List: _list_supertype,
@@ -282,6 +300,7 @@ _SAME_DISPATCH: Final[Mapping[type[Parametric], Callable[..., Incomplete | None]
     Duration: downcast_time_unit,
     DurationV1: downcast_time_unit,
     Enum: _enum_supertype,
+    Decimal: _decimal_supertype,
 }
 """Specialized supertyping rules for `(T, T)`.
 
@@ -314,20 +333,22 @@ def _same_supertype(st: _SupertypeCase[SameT | DType]) -> SameT | DType | None:
 
 
 @lru_cache(maxsize=_CACHE_SIZE)
-def _numeric_supertype(base_types: FrozenDTypes) -> DType | None:
+def _numeric_supertype(st: _SupertypeCase[DType]) -> DType | None:
     """Get the supertype of two numeric data types that do not share the same class.
 
     `_{primitive_numeric,integer}_supertyping` define most valid numeric supertypes.
 
     We generate these on first use, with all subsequent calls returning the same mapping.
     """
+    base_types = st.base_types
     if NUMERIC.issuperset(base_types):
         if INTEGER.issuperset(base_types):
             return _integer_supertyping()[base_types]()
         if tp := _FLOAT_PROMOTE.get(base_types):
             return tp()
         if Decimal in base_types:
-            return Decimal()
+            # TODO(FBruzzesi): https://github.com/pola-rs/polars/blob/529f7ec642912a2f15656897d06f1532c2f5d4c4/crates/polars-core/src/utils/supertype.rs#L517-L530
+            return st.left if isinstance(st.left, Decimal) else st.right
         return _primitive_numeric_supertyping()[base_types]()
     if Boolean in base_types:
         return _first_excluding(base_types, Boolean)()
@@ -336,11 +357,12 @@ def _numeric_supertype(base_types: FrozenDTypes) -> DType | None:
 
 def _mixed_supertype(st: _SupertypeCase[DType, DType]) -> DType | None:
     """Get the supertype of two data types that do not share the same class."""
-    if Date in st.base_types and _has_intersection(st.base_types, DATETIME):
+    base_types = st.base_types
+    if Date in base_types and _has_intersection(base_types, DATETIME):
         return st.left if isinstance(st.left, Datetime) else st.right
-    if NUMERIC.isdisjoint(st.base_types):
-        return tp() if (tp := _STRING_LIKE_CONVERT.get(st.base_types)) else None
-    return None if has_nested(st.base_types) else _numeric_supertype(st.base_types)
+    if NUMERIC.isdisjoint(base_types):
+        return tp() if (tp := _STRING_LIKE_CONVERT.get(base_types)) else None
+    return None if has_nested(base_types) else _numeric_supertype(st)
 
 
 class _SupertypeCase(Generic[DTypeT1_co, DTypeT2_co]):

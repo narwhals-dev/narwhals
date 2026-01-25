@@ -245,6 +245,9 @@ def test_mixed_integer_temporal(
         # float + decimal
         (nw.Decimal(), nw.Float32(), nw.Float64()),
         (nw.Decimal(), nw.Float64(), nw.Float64()),
+        # decimal + decimal
+        (nw.Decimal(5, 2), nw.Decimal(4, 3), nw.Decimal(5, 3)),
+        (nw.Decimal(scale=12), nw.Decimal(18, scale=9), nw.Decimal(38, 12)),
     ],
     ids=dtype_ids,
 )
