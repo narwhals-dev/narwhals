@@ -131,7 +131,7 @@ def main(scale_factor: float = 0.1) -> None:
     logger.info("Installing DuckDB TPC-H Extension")
     con.load_extension("tpch")
     logger.info("Generating data for `scale_factor=%s`", scale_factor)
-    con.execute(f"CALL dbgen(sf={scale_factor})")
+    con.sql(f"CALL dbgen(sf={scale_factor})")
     logger.info("Finished generating data.")
     tables = (
         "lineitem",
@@ -144,7 +144,7 @@ def main(scale_factor: float = 0.1) -> None:
         "supplier",
     )
     for t in tables:
-        tbl = con.query(f"SELECT * FROM {t}")
+        tbl = con.sql(f"SELECT * FROM {t}")
         tbl_arrow = tbl.to_arrow_table()
         tbl_arrow = tbl_arrow.cast(convert_schema(tbl_arrow.schema))
         path = DATA / f"{t}.parquet"
