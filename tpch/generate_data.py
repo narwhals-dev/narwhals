@@ -7,6 +7,17 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     import pyarrow as pa
 
+TABLE_SCALE_FACTOR = """
+┌──────────────┬───────────────┐
+│ Scale factor ┆ Database (MB) │
+╞══════════════╪═══════════════╡
+│ 0.1          ┆ 25            │
+│ 1.0          ┆ 250           │
+│ 3.0          ┆ 754           │
+│ 100.0        ┆ 26624         │
+└──────────────┴───────────────┘
+"""
+
 
 def convert_schema(schema: pa.Schema) -> pa.Schema:
     import pyarrow as pa
@@ -70,4 +81,18 @@ def main(scale_factor: float = 0.1) -> None:
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.RawTextHelpFormatter,
+        description="Generate the data required to run TPCH queries.",
+    )
+    parser.add_argument(
+        "-sf",
+        "--scale-factor",
+        default="0.1",
+        dest="scale_factor",
+        help=f"Scale the database by this factor (default: %(default)s)\n{TABLE_SCALE_FACTOR}",
+    )
+    args = parser.parse_args()
+    main(scale_factor=args.scale_factor)
