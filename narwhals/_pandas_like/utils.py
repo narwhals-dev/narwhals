@@ -217,9 +217,7 @@ def non_object_native_to_narwhals_dtype(native_dtype: Any, version: Version) -> 
         # "there is no problem which can't be solved by adding an extra string type" pandas
         "string",
         "string[python]",
-        "string[pyarrow]",
         "string[pyarrow_numpy]",
-        "large_string[pyarrow]",
         "str",
     }:
         return dtypes.String()
