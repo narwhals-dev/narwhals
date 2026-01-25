@@ -348,7 +348,7 @@ INT_MAX_MAP: Mapping[IntegerType, int] = {
 }
 
 
-def fits(value: int, precision: int, scale: int) -> int | None:
+def _integer_fits_in_decimal(value: int, precision: int, scale: int) -> bool:
     """Scales an integer and checks if it fits the target precision."""
     # !NOTE: Indexing is safe since `scale <= precision <= 38`
     return (precision == DEC128_MAX_PREC) or (
@@ -362,7 +362,7 @@ def _decimal_integer_supertyping(decimal: Decimal, integer: IntegerType) -> DTyp
     if integer in {UInt128(), Int128()}:
         fits_orig_prec_scale = False
     elif value := INT_MAX_MAP.get(integer, None):
-        fits_orig_prec_scale = fits(value, precision, scale)
+        fits_orig_prec_scale = _integer_fits_in_decimal(value, precision, scale)
     else:  # pragma: no cover
         msg = "Unreachable integer type"
         raise ValueError(msg)
