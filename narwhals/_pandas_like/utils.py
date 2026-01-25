@@ -218,6 +218,7 @@ def non_object_native_to_narwhals_dtype(native_dtype: Any, version: Version) -> 
         "string",
         "string[python]",
         "string[pyarrow_numpy]",
+        "<StringDtype(na_value=nan)>",  # why? why? why?
         "str",
     }:
         return dtypes.String()
