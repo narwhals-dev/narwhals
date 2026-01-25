@@ -3,6 +3,9 @@ from __future__ import annotations
 import io
 from pathlib import Path
 from typing import TYPE_CHECKING
+REPO_ROOT = Path(__file__).parent.parent
+TPCH_ROOT = REPO_ROOT / "tpch"
+DATA = TPCH_ROOT / "data"
 
 if TYPE_CHECKING:
     import pyarrow as pa
@@ -38,8 +41,7 @@ def main(scale_factor: float = 0.1) -> None:
     import pyarrow.csv as pc
     import pyarrow.parquet as pq
 
-    data_path = Path("data")
-    data_path.mkdir(exist_ok=True)
+    DATA.mkdir(exist_ok=True)
     con = duckdb.connect(database=":memory:")
     con.execute("INSTALL tpch; LOAD tpch")
     con.execute(f"CALL dbgen(sf={scale_factor})")
@@ -58,7 +60,7 @@ def main(scale_factor: float = 0.1) -> None:
         tbl_arrow = tbl.to_arrow_table()
         new_schema = convert_schema(tbl_arrow.schema)
         tbl_arrow = tbl_arrow.cast(new_schema)
-        pq.write_table(tbl_arrow, data_path / f"{t}.parquet")
+        pq.write_table(tbl_arrow, DATA / f"{t}.parquet")
 
     results = con.query(
         f"""
@@ -77,7 +79,7 @@ def main(scale_factor: float = 0.1) -> None:
         new_schema = convert_schema(tbl_answer.schema)
         tbl_answer = tbl_answer.cast(new_schema)
 
-        pq.write_table(tbl_answer, data_path / f"result_q{query_nr}.parquet")
+        pq.write_table(tbl_answer, DATA / f"result_q{query_nr}.parquet")
 
 
 if __name__ == "__main__":
