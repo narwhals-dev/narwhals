@@ -102,6 +102,12 @@ def answers_builtin(con: DuckDBPyConnection, scale: BuiltinScaleFactor) -> None:
         pq.write_table(tbl_answer, path)
 
 
+def load_tpch(con: DuckDBPyConnection) -> None:
+    logger.info("Installing DuckDB TPC-H Extension")
+    con.install_extension("tpch")
+    con.load_extension("tpch")
+
+
 def convert_schema(schema: pa.Schema) -> pa.Schema:
     import pyarrow as pa
 
@@ -128,8 +134,7 @@ def main(scale_factor: float = 0.1) -> None:
     DATA.mkdir(exist_ok=True)
     logger.info("Connecting to in-memory DuckDB database")
     con = duckdb.connect(database=":memory:")
-    logger.info("Installing DuckDB TPC-H Extension")
-    con.load_extension("tpch")
+    load_tpch(con)
     logger.info("Generating data for `scale_factor=%s`", scale_factor)
     con.sql(f"CALL dbgen(sf={scale_factor})")
     logger.info("Finished generating data.")
