@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+# ruff: noqa: S608
 import io
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, get_args
 
 from narwhals._utils import scale_bytes
+from tpch.typing_ import QueryID
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -22,7 +24,13 @@ TPCH_ROOT = REPO_ROOT / "tpch"
 DATA = TPCH_ROOT / "data"
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     import pyarrow as pa
+    from duckdb import DuckDBPyConnection
+    from typing_extensions import TypeAlias
+
+BuiltinScaleFactor: TypeAlias = Literal["0.01", "0.1", "1.0"]
 
 TABLE_SCALE_FACTOR = """
 ┌──────────────┬───────────────┐
@@ -34,6 +42,64 @@ TABLE_SCALE_FACTOR = """
 │ 100.0        ┆ 26624         │
 └──────────────┴───────────────┘
 """
+
+# Required after each call to `dbgen`, if persisting the database
+Q_CLEANUP = """
+DROP TABLE IF EXISTS customer;
+DROP TABLE IF EXISTS lineitem;
+DROP TABLE IF EXISTS nation;
+DROP TABLE IF EXISTS orders;
+DROP TABLE IF EXISTS part;
+DROP TABLE IF EXISTS partsupp;
+DROP TABLE IF EXISTS region;
+DROP TABLE IF EXISTS supplier;
+"""
+
+SF_BUILTIN_STR: Mapping[float, BuiltinScaleFactor] = {
+    0.01: "0.01",
+    0.1: "0.1",
+    1.0: "1.0",
+}
+
+
+def answers_any(con: DuckDBPyConnection) -> None:
+    import pyarrow.parquet as pq
+
+    logger.info("Executing tpch queries for answers")
+
+    for query_id in get_args(QueryID):
+        query_num = str(query_id).removeprefix("q")
+        result = con.sql(f"PRAGMA tpch({query_num})")
+        result_pa = result.to_arrow_table()
+        result_pa = result_pa.cast(convert_schema(result_pa.schema))
+        path = DATA / f"result_{query_id}.parquet"
+        log_write(path, result_pa.nbytes, "b")
+        pq.write_table(result_pa, path)
+
+
+def answers_builtin(con: DuckDBPyConnection, scale: BuiltinScaleFactor) -> None:
+    import pyarrow.csv as pc
+    import pyarrow.parquet as pq
+
+    logger.info("Fastpath for builtin tpch_answers() where scale_factor=%s", scale)
+
+    results = con.sql(
+        f"""
+        SELECT query_nr, answer
+        FROM tpch_answers()
+        WHERE scale_factor={scale}
+        """
+    )
+    while row := results.fetchmany(1):
+        query_nr, answer = row[0]
+        tbl_answer = pc.read_csv(
+            io.BytesIO(answer.encode("utf-8")),
+            parse_options=pc.ParseOptions(delimiter="|"),
+        )
+        tbl_answer = tbl_answer.cast(convert_schema(tbl_answer.schema))
+        path = DATA / f"result_q{query_nr}.parquet"
+        log_write(path, tbl_answer.nbytes, "b")
+        pq.write_table(tbl_answer, path)
 
 
 def convert_schema(schema: pa.Schema) -> pa.Schema:
@@ -57,14 +123,13 @@ def log_write(path: Path, n_bytes: int, unit: Literal["b", "kb", "mb"]) -> None:
 
 def main(scale_factor: float = 0.1) -> None:
     import duckdb
-    import pyarrow.csv as pc
     import pyarrow.parquet as pq
 
     DATA.mkdir(exist_ok=True)
     logger.info("Connecting to in-memory DuckDB database")
     con = duckdb.connect(database=":memory:")
     logger.info("Installing DuckDB TPC-H Extension")
-    con.execute("INSTALL tpch; LOAD tpch")
+    con.load_extension("tpch")
     logger.info("Generating data for `scale_factor=%s`", scale_factor)
     con.execute(f"CALL dbgen(sf={scale_factor})")
     logger.info("Finished generating data.")
@@ -79,35 +144,18 @@ def main(scale_factor: float = 0.1) -> None:
         "supplier",
     )
     for t in tables:
-        tbl = con.query(f"SELECT * FROM {t}")  # noqa: S608
+        tbl = con.query(f"SELECT * FROM {t}")
         tbl_arrow = tbl.to_arrow_table()
-        new_schema = convert_schema(tbl_arrow.schema)
-        tbl_arrow = tbl_arrow.cast(new_schema)
+        tbl_arrow = tbl_arrow.cast(convert_schema(tbl_arrow.schema))
         path = DATA / f"{t}.parquet"
         log_write(path, tbl_arrow.nbytes, "mb")
         pq.write_table(tbl_arrow, path)
 
     logger.info("Getting answers")
-    # TODO @dangotbanned: Use `PRAGMA tpch(query_id);` when `scale_factor not in {0.01, 0.1, 1}`
-    results = con.query(
-        f"""
-        SELECT query_nr, answer
-        FROM tpch_answers()
-        WHERE scale_factor={scale_factor}
-        """  # noqa: S608
-    )
-
-    while row := results.fetchmany(1):
-        query_nr, answer = row[0]
-        tbl_answer = pc.read_csv(
-            io.BytesIO(answer.encode("utf-8")),
-            parse_options=pc.ParseOptions(delimiter="|"),
-        )
-        new_schema = convert_schema(tbl_answer.schema)
-        tbl_answer = tbl_answer.cast(new_schema)
-        path = DATA / f"result_q{query_nr}.parquet"
-        log_write(path, tbl_answer.nbytes, "b")
-        pq.write_table(tbl_answer, path)
+    if scale := SF_BUILTIN_STR.get(scale_factor):
+        answers_builtin(con, scale)
+    else:
+        answers_any(con)
 
 
 if __name__ == "__main__":
