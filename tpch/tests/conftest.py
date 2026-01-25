@@ -11,10 +11,11 @@ import pytest
 import narwhals as nw
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-    from types import ModuleType
+    from collections.abc import Callable, Mapping
 
-    DataLoader = Callable[[str], tuple[nw.LazyFrame[Any], ...]]
+    from narwhals._typing import BackendName
+    from tpch.typing_ import DataLoader, QueryID, TPCHBackend
+
 
 # Data paths relative to tpch directory
 TPCH_DIR = Path(__file__).resolve().parent.parent
@@ -29,17 +30,35 @@ PARTSUPP_PATH = DATA_DIR / "partsupp.parquet"
 ORDERS_PATH = DATA_DIR / "orders.parquet"
 CUSTOMER_PATH = DATA_DIR / "customer.parquet"
 
+TPCH_TO_BACKEND_NAME: Mapping[TPCHBackend, BackendName] = {
+    "polars[lazy]": "polars",
+    "pyarrow": "pyarrow",
+    "pandas[pyarrow]": "pandas",
+    "dask": "dask",
+    "duckdb": "duckdb",
+    "sqlframe": "sqlframe",
+}
 
-def _build_backend_namespace_kwargs_map() -> dict[str, tuple[ModuleType, dict[str, Any]]]:
-    """Build the mapping of backend names to (namespace, kwargs) tuples."""
-    backend_map: dict[str, tuple[ModuleType, dict[str, Any]]] = {"polars[lazy]": (pl, {})}
+
+def pytest_addoption(parser: pytest.Parser) -> None:
+    from tests.conftest import DEFAULT_CONSTRUCTORS
+
+    parser.addoption(
+        "--constructors",
+        action="store",
+        default=DEFAULT_CONSTRUCTORS,
+        type=str,
+        help="<sink for defaults in VSC getting injected>",
+    )
+
+
+def _build_backend_kwargs_map() -> dict[TPCHBackend, dict[str, Any]]:
+    backend_map: dict[TPCHBackend, dict[str, Any]] = {"polars[lazy]": {}}
 
     pyarrow_installed = find_spec("pyarrow")
 
     if pyarrow_installed:
-        import pyarrow as pa
-
-        backend_map["pyarrow"] = (pa, {})
+        backend_map["pyarrow"] = {}
 
     if pyarrow_installed and find_spec("pandas"):
         import pandas as pd
@@ -51,56 +70,42 @@ def _build_backend_namespace_kwargs_map() -> dict[str, tuple[ModuleType, dict[st
         with suppress(Exception):
             pd.options.future.infer_string = True  # pyright: ignore[reportAttributeAccessIssue, reportOptionalMemberAccess]
 
-        backend_map["pandas[pyarrow]"] = (
-            pd,
-            {"engine": "pyarrow", "dtype_backend": "pyarrow"},
-        )
+        backend_map["pandas[pyarrow]"] = {"engine": "pyarrow", "dtype_backend": "pyarrow"}
 
     if pyarrow_installed and find_spec("dask") and find_spec("dask.dataframe"):
-        import dask.dataframe as dd
-
-        backend_map["dask"] = (dd, {"engine": "pyarrow", "dtype_backend": "pyarrow"})
+        backend_map["dask"] = {"engine": "pyarrow", "dtype_backend": "pyarrow"}
 
     if find_spec("duckdb"):
-        import duckdb
-
-        backend_map["duckdb"] = (duckdb, {})
+        backend_map["duckdb"] = {}
 
     if find_spec("sqlframe"):
-        import sqlframe
         from sqlframe.duckdb import DuckDBSession
 
-        backend_map["sqlframe"] = (sqlframe, {"session": DuckDBSession()})
+        backend_map["sqlframe"] = {"session": DuckDBSession()}
 
     return backend_map
 
 
-BACKEND_NAMESPACE_KWARGS_MAP = _build_backend_namespace_kwargs_map()
+BACKEND_KWARGS_MAP = _build_backend_kwargs_map()
+SKIPS: Mapping[QueryID, frozenset[TPCHBackend]] = {
+    "q15": frozenset(("duckdb", "sqlframe"))
+}
+"""Backends that should skip a given query.
 
-# Queries that need to be skipped for certain backends
-DUCKDB_SKIPS = frozenset(
-    [
-        "q15"  # needs `filter` which works with window expressions
-    ]
-)
+"q15"` needs DuckDB support for windows functions in `filter`.
 
-
-def _get_skip_backends(query_id: str) -> frozenset[str]:
-    """Return backends that should be skipped for a given query."""
-    if query_id in DUCKDB_SKIPS:
-        return frozenset({"duckdb", "sqlframe"})
-    return frozenset()
+- https://github.com/narwhals-dev/narwhals/issues/2226
+- https://github.com/narwhals-dev/narwhals/pull/3401
+"""
 
 
-def skip_if_unsupported(query_id: str, backend_name: str) -> None:
+def skip_if_unsupported(query_id: QueryID, backend_name: TPCHBackend) -> None:
     """Skip the test if the query is not supported for the given backend."""
-    skip_backends = _get_skip_backends(query_id)
-    if backend_name in skip_backends:
+    if query_id in SKIPS and backend_name in SKIPS[query_id]:
         pytest.skip(f"Query {query_id} is not supported for {backend_name}")
 
 
-# Mapping of query IDs to their required data paths
-QUERY_DATA_PATH_MAP: dict[str, tuple[Path, ...]] = {
+QUERY_DATA_PATH_MAP: dict[QueryID, tuple[Path, ...]] = {
     "q1": (LINEITEM_PATH,),
     "q2": (REGION_PATH, NATION_PATH, SUPPLIER_PATH, PART_PATH, PARTSUPP_PATH),
     "q3": (CUSTOMER_PATH, LINEITEM_PATH, ORDERS_PATH),
@@ -149,30 +154,31 @@ QUERY_DATA_PATH_MAP: dict[str, tuple[Path, ...]] = {
 
 
 @pytest.fixture(params=list(QUERY_DATA_PATH_MAP.keys()))
-def query_id(request: pytest.FixtureRequest) -> str:
-    """Fixture that yields each query_id."""
-    return request.param  # type: ignore[no-any-return]
+def query_id(request: pytest.FixtureRequest) -> QueryID:
+    result: QueryID = request.param
+    return result
 
 
-@pytest.fixture(params=list(BACKEND_NAMESPACE_KWARGS_MAP.keys()))
-def backend_name(request: pytest.FixtureRequest) -> str:
-    """Fixture that yields each backend name."""
-    return request.param  # type: ignore[no-any-return]
+@pytest.fixture(params=list(BACKEND_KWARGS_MAP.keys()))
+def backend_name(request: pytest.FixtureRequest) -> TPCHBackend:
+    result: TPCHBackend = request.param
+    return result
 
 
 @pytest.fixture
-def data_loader(backend_name: str) -> DataLoader:
+def data_loader(backend_name: TPCHBackend) -> DataLoader:
     """Fixture that returns a function to load data for a given query.
 
     The returned function takes a query_id and returns a tuple of DataFrames
     in the order expected by that query's function signature.
     """
-    native_namespace, kwargs = BACKEND_NAMESPACE_KWARGS_MAP[backend_name]
+    kwargs = BACKEND_KWARGS_MAP[backend_name]
+    backend = TPCH_TO_BACKEND_NAME[backend_name]
 
-    def _load_data(query_id: str) -> tuple[nw.LazyFrame[Any], ...]:
+    def _load_data(query_id: QueryID) -> tuple[nw.LazyFrame[Any], ...]:
         data_paths = QUERY_DATA_PATH_MAP[query_id]
         return tuple(
-            nw.scan_parquet(str(path), backend=native_namespace, **kwargs)
+            nw.scan_parquet(path.as_posix(), backend=backend, **kwargs)
             for path in data_paths
         )
 
@@ -180,10 +186,10 @@ def data_loader(backend_name: str) -> DataLoader:
 
 
 @pytest.fixture
-def expected_result() -> Callable[[str], pl.DataFrame]:
+def expected_result() -> Callable[[QueryID], pl.DataFrame]:
     """Fixture that returns a function to load expected results for a query."""
 
-    def _load_expected(query_id: str) -> pl.DataFrame:
+    def _load_expected(query_id: QueryID) -> pl.DataFrame:
         return pl.read_parquet(DATA_DIR / f"result_{query_id}.parquet")
 
     return _load_expected
