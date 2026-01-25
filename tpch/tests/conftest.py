@@ -9,13 +9,12 @@ import polars as pl
 import pytest
 
 import narwhals as nw
-from tpch.typing_ import QueryID
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
 
     from narwhals._typing import BackendName
-    from tpch.typing_ import DataLoader, TPCHBackend
+    from tpch.typing_ import DataLoader, QueryID, TPCHBackend
 
 
 # Data paths relative to tpch directory
@@ -88,27 +87,21 @@ def _build_backend_kwargs_map() -> dict[TPCHBackend, dict[str, Any]]:
 
 
 BACKEND_KWARGS_MAP = _build_backend_kwargs_map()
+SKIPS: Mapping[QueryID, frozenset[TPCHBackend]] = {
+    "q15": frozenset(("duckdb", "sqlframe"))
+}
+"""Backends that should skip a given query.
 
-# Queries that need to be skipped for certain backends
-DUCKDB_SKIPS = frozenset[QueryID](("q15",))
-"""`"q15"` needs to support windows functions in `filter`.
+"q15"` needs DuckDB support for windows functions in `filter`.
 
 - https://github.com/narwhals-dev/narwhals/issues/2226
 - https://github.com/narwhals-dev/narwhals/pull/3401
 """
 
 
-def _get_skip_backends(query_id: QueryID) -> frozenset[TPCHBackend]:
-    """Return backends that should be skipped for a given query."""
-    if query_id in DUCKDB_SKIPS:
-        return frozenset({"duckdb", "sqlframe"})
-    return frozenset()
-
-
 def skip_if_unsupported(query_id: QueryID, backend_name: TPCHBackend) -> None:
     """Skip the test if the query is not supported for the given backend."""
-    skip_backends = _get_skip_backends(query_id)
-    if backend_name in skip_backends:
+    if query_id in SKIPS and backend_name in SKIPS[query_id]:
         pytest.skip(f"Query {query_id} is not supported for {backend_name}")
 
 
