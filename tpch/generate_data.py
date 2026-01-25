@@ -88,6 +88,7 @@ def main(scale_factor: float = 0.1) -> None:
         pq.write_table(tbl_arrow, path)
 
     logger.info("Getting answers")
+    # TODO @dangotbanned: Use `PRAGMA tpch(query_id);` when `scale_factor not in {0.01, 0.1, 1}`
     results = con.query(
         f"""
         SELECT query_nr, answer
