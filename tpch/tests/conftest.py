@@ -90,8 +90,12 @@ def _build_backend_kwargs_map() -> dict[TPCHBackend, dict[str, Any]]:
 BACKEND_KWARGS_MAP = _build_backend_kwargs_map()
 
 # Queries that need to be skipped for certain backends
-NEEDS_FILTER_FOR_WINDOW_EXPRESSIONS = "q15"
-DUCKDB_SKIPS = frozenset[QueryID]((NEEDS_FILTER_FOR_WINDOW_EXPRESSIONS,))
+DUCKDB_SKIPS = frozenset[QueryID](("q15",))
+"""`"q15"` needs to support windows functions in `filter`.
+
+- https://github.com/narwhals-dev/narwhals/issues/2226
+- https://github.com/narwhals-dev/narwhals/pull/3401
+"""
 
 
 def _get_skip_backends(query_id: QueryID) -> frozenset[TPCHBackend]:
