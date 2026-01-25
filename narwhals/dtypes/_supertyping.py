@@ -61,6 +61,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import TypeAlias, TypeIs
 
+    from narwhals.dtypes import IntegerType
     from narwhals.dtypes._classes import _Bits
     from narwhals.typing import TimeUnit
 
@@ -332,6 +333,51 @@ def _same_supertype(st: _SupertypeCase[SameT | DType]) -> SameT | DType | None:
     return st.left if dtype_eq(st.left, st.right) else None
 
 
+DEC128_MAX_PREC = 38
+# Precomputing powers of 10 up to 10^38
+POW10_LIST = tuple(10**i for i in range(DEC128_MAX_PREC + 1))
+INT_MAX_MAP: Mapping[IntegerType, int] = {
+    UInt8(): (2**8) - 1,
+    UInt16(): (2**16) - 1,
+    UInt32(): (2**32) - 1,
+    UInt64(): (2**64) - 1,
+    Int8(): (2**7) - 1,
+    Int16(): (2**15) - 1,
+    Int32(): (2**31) - 1,
+    Int64(): (2**63) - 1,
+}
+
+
+def dec128_fits(x: int, precision: int) -> bool:
+    """Returns whether the given integer fits in the given precision."""
+    return True if precision >= DEC128_MAX_PREC else abs(x) < POW10_LIST[precision]
+
+
+def i128_to_dec128(x: int, precision: int, scale: int) -> int | None:
+    """Scales an integer and checks if it fits the target precision."""
+    # In Python, x * 10**s won't overflow like i128
+    res = x * POW10_LIST[scale]  # Safe since scale <= precision <= 38
+    return res if dec128_fits(res, precision) else None
+
+
+def _decimal_integer_supertyping(decimal: Decimal, integer: IntegerType) -> DType | None:
+    precision, scale = decimal.precision, decimal.scale
+
+    def fits(v: int) -> bool:
+        return i128_to_dec128(v, precision, scale) is not None
+
+    if integer in {UInt128(), Int128()}:
+        fits_orig_prec_scale = False
+    elif value := INT_MAX_MAP.get(integer, None):
+        fits_orig_prec_scale = fits(value)
+    else:  # pragma: no cover
+        msg = "Unreachable integer type"
+        raise ValueError(msg)
+
+    precision = precision if fits_orig_prec_scale else DEC128_MAX_PREC
+    return Decimal(precision, scale)
+
+
 @lru_cache(maxsize=_CACHE_SIZE)
 def _numeric_supertype(st: _SupertypeCase[DType]) -> DType | None:
     """Get the supertype of two numeric data types that do not share the same class.
@@ -347,8 +393,15 @@ def _numeric_supertype(st: _SupertypeCase[DType]) -> DType | None:
         if tp := _FLOAT_PROMOTE.get(base_types):
             return tp()
         if Decimal in base_types:
-            # TODO(FBruzzesi): https://github.com/pola-rs/polars/blob/529f7ec642912a2f15656897d06f1532c2f5d4c4/crates/polars-core/src/utils/supertype.rs#L517-L530
-            return st.left if isinstance(st.left, Decimal) else st.right
+            # Logic adapted from rust implementation
+            # https://github.com/pola-rs/polars/blob/529f7ec642912a2f15656897d06f1532c2f5d4c4/crates/polars-core/src/utils/supertype.rs#L517-L530
+            decimal, integer = (
+                (st.left, st.right)
+                if isinstance(st.left, Decimal)
+                else (st.right, st.left)
+            )
+            return _decimal_integer_supertyping(decimal=decimal, integer=integer)  # type: ignore[arg-type]
+
         return _primitive_numeric_supertyping()[base_types]()
     if Boolean in base_types:
         return _first_excluding(base_types, Boolean)()

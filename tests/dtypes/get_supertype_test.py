@@ -248,6 +248,17 @@ def test_mixed_integer_temporal(
         # decimal + decimal
         (nw.Decimal(5, 2), nw.Decimal(4, 3), nw.Decimal(5, 3)),
         (nw.Decimal(scale=12), nw.Decimal(18, scale=9), nw.Decimal(38, 12)),
+        # decimal + integer
+        (nw.Decimal(4, 1), nw.UInt8(), nw.Decimal(4, 1)),
+        (nw.Decimal(5, 2), nw.Int8(), nw.Decimal(5, 2)),
+        (nw.Decimal(10, 0), nw.Int32(), nw.Decimal(10, 0)),
+        (nw.Decimal(15, 2), nw.UInt32(), nw.Decimal(15, 2)),
+        (nw.Decimal(2, 1), nw.UInt8, nw.Decimal(38, 1)),
+        (nw.Decimal(10, 5), nw.Int64, nw.Decimal(38, 5)),
+        (nw.Decimal(38, 0), nw.Int128, nw.Decimal(38, 0)),
+        (nw.Decimal(1, 0), nw.UInt8(), nw.Decimal(38, 0)),
+        (nw.Decimal(38, 38), nw.Int8(), nw.Decimal(38, 38)),
+        (nw.Decimal(10, 1), nw.UInt32(), nw.Decimal(38, 1)),
     ],
     ids=dtype_ids,
 )
