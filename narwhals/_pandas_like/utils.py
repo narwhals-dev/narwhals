@@ -189,6 +189,20 @@ def rename(
 
 
 @functools.lru_cache(maxsize=16)
+def is_dtype_non_pyarrow_string(native_dtype: Any) -> bool:
+    """*There is no problem which can't be solved by adding an extra string type* pandas."""
+    # TODO @dangotbanned: Investigate how we could handle `cudf` without `str(native_dtype)`
+    # https://github.com/rapidsai/cudf/blob/a32b8cf62c9b086b645b0825b78b99f065b1887f/python/cudf/cudf/utils/dtypes.py#L646-L670
+    return isinstance(native_dtype, pd.StringDtype) or str(native_dtype) in {
+        "string",
+        "string[python]",
+        "string[pyarrow_numpy]",
+        "<StringDtype(na_value=nan)>",  # why? why? why?
+        "str",
+    }
+
+
+@functools.lru_cache(maxsize=16)
 def non_object_native_to_narwhals_dtype(native_dtype: Any, version: Version) -> DType:  # noqa: C901, PLR0912
     dtype = str(native_dtype)
 
@@ -213,14 +227,7 @@ def non_object_native_to_narwhals_dtype(native_dtype: Any, version: Version) -> 
         return dtypes.Float64()
     if dtype in {"float32", "Float32"}:
         return dtypes.Float32()
-    if dtype in {
-        # "there is no problem which can't be solved by adding an extra string type" pandas
-        "string",
-        "string[python]",
-        "string[pyarrow_numpy]",
-        "<StringDtype(na_value=nan)>",  # why? why? why?
-        "str",
-    }:
+    if is_dtype_non_pyarrow_string(native_dtype):
         return dtypes.String()
     if dtype in {"bool", "boolean"}:
         return dtypes.Boolean()
