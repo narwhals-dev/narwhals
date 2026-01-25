@@ -348,28 +348,21 @@ INT_MAX_MAP: Mapping[IntegerType, int] = {
 }
 
 
-def dec128_fits(x: int, precision: int) -> bool:
-    """Returns whether the given integer fits in the given precision."""
-    return True if precision >= DEC128_MAX_PREC else abs(x) < POW10_LIST[precision]
-
-
-def i128_to_dec128(x: int, precision: int, scale: int) -> int | None:
+def fits(value: int, precision: int, scale: int) -> int | None:
     """Scales an integer and checks if it fits the target precision."""
-    # In Python, x * 10**s won't overflow like i128
-    res = x * POW10_LIST[scale]  # Safe since scale <= precision <= 38
-    return res if dec128_fits(res, precision) else None
+    # !NOTE: Indexing is safe since `scale <= precision <= 38`
+    return (precision == DEC128_MAX_PREC) or (
+        value * POW10_LIST[scale] < POW10_LIST[precision]
+    )
 
 
 def _decimal_integer_supertyping(decimal: Decimal, integer: IntegerType) -> DType | None:
     precision, scale = decimal.precision, decimal.scale
 
-    def fits(v: int) -> bool:
-        return i128_to_dec128(v, precision, scale) is not None
-
     if integer in {UInt128(), Int128()}:
         fits_orig_prec_scale = False
     elif value := INT_MAX_MAP.get(integer, None):
-        fits_orig_prec_scale = fits(value)
+        fits_orig_prec_scale = fits(value, precision, scale)
     else:  # pragma: no cover
         msg = "Unreachable integer type"
         raise ValueError(msg)
