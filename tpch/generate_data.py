@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 from pathlib import Path
 from typing import TYPE_CHECKING
+
 REPO_ROOT = Path(__file__).parent.parent
 TPCH_ROOT = REPO_ROOT / "tpch"
 DATA = TPCH_ROOT / "data"
