@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-# ruff: noqa: S608
 import io
 import logging
 from functools import cache
@@ -65,6 +64,16 @@ SOURCES = (
     "region",
     "supplier",
 )
+
+# NOTE: Store queries here, add parameter names if needed
+SQL_DBGEN = "CALL dbgen(sf={0})"
+SQL_TPCH_ANSWER = "PRAGMA tpch({0})"
+SQL_TPCH_ANSWERS = """
+SELECT query_nr, answer
+FROM tpch_answers()
+WHERE scale_factor={0}
+"""
+SQL_FROM = "FROM {0}"
 
 
 @cache
@@ -153,7 +162,7 @@ def load_tpch_extension(con: Con) -> Con:
 
 def generate_tpch_database(con: Con, scale_factor: float) -> Con:
     logger.info("Generating data with scale_factor=%s", scale_factor)
-    con.sql(f"CALL dbgen(sf={scale_factor})")
+    con.sql(SQL_DBGEN.format(scale_factor))
     logger.info("Finished generating data.")
     return con
 
@@ -164,8 +173,7 @@ def write_tpch_database(con: Con) -> Con:
     logger.info("Writing data to: %s", DATA.as_posix())
     with TableLogger.sources() as tbl_logger:
         for t in SOURCES:
-            rel = con.sql(f"SELECT * FROM {t}")
-            table = _downcast_exotic_types(rel.to_arrow_table())
+            table = _downcast_exotic_types(con.sql(SQL_FROM.format(t)).to_arrow_table())
             path = DATA / f"{t}.parquet"
             pq.write_table(table, path)
             tbl_logger.log_row(path.name, table.nbytes)
@@ -178,8 +186,8 @@ def _answers_any(con: Con) -> Con:
     logger.info("Executing tpch queries for answers")
     with TableLogger.answers() as tbl_logger:
         for query_id in query_ids():
-            rel = con.sql(f"PRAGMA tpch({query_id.removeprefix('q')})")
-            table = _downcast_exotic_types(rel.to_arrow_table())
+            query = SQL_TPCH_ANSWER.format(query_id.removeprefix("q"))
+            table = _downcast_exotic_types(con.sql(query).to_arrow_table())
             path = DATA / f"result_{query_id}.parquet"
             pq.write_table(table, path)
             tbl_logger.log_row(path.name, table.nbytes)
@@ -191,14 +199,7 @@ def _answers_builtin(con: Con, scale: BuiltinScaleFactor) -> Con:
     from pyarrow.csv import ParseOptions, read_csv
 
     logger.info("Fastpath for builtin tpch_answers()")
-    results = con.sql(
-        f"""
-            SELECT query_nr, answer
-            FROM tpch_answers()
-            WHERE scale_factor={scale}
-            """
-    )
-
+    results = con.sql(SQL_TPCH_ANSWERS.format(scale))
     opts = ParseOptions(delimiter="|")
     with TableLogger.answers() as tbl_logger:
         while row := results.fetchmany(1):
@@ -214,10 +215,8 @@ def _answers_builtin(con: Con, scale: BuiltinScaleFactor) -> Con:
 def write_tpch_answers(con: Con, scale_factor: float) -> Con:
     logger.info("Getting answers")
     if scale := SF_BUILTIN_STR.get(scale_factor):
-        _answers_builtin(con, scale)
-    else:
-        _answers_any(con)
-    return con
+        return _answers_builtin(con, scale)
+    return _answers_any(con)
 
 
 def main(scale_factor: float = 0.1) -> None:
