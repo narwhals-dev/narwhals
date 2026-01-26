@@ -2373,13 +2373,12 @@ class LazyFrame(BaseFrame[LazyFrameT]):
         if metadata.n_orderable_ops > 0:
             msg = (
                 "Order-dependent expressions are not supported for use in LazyFrame.\n\n"
-                "Hint: To make the expression valid, use `.over` with `order_by` specified.\n\n"
-                "For example, if you wrote `nw.col('price').cum_sum()` and you have a column\n"
-                "`'date'` which orders your data, then replace:\n\n"
-                "   nw.col('price').cum_sum()\n\n"
-                " with:\n\n"
-                "   nw.col('price').cum_sum().over(order_by='date')\n"
-                "                            ^^^^^^^^^^^^^^^^^^^^^^\n\n"
+                "Hint: To make the expression valid, specify `order_by`.\n\n"
+                "For example, if you have columns `'price'` and `'date'`:\n"
+                " - Instead of `nw.col('price').cum_sum()` write `nw.col('price').cum_sum().over(order_by='date')`.\n"
+                " - Instead of `nw.col('price').diff()` write `nw.col('price').diff().over(order_by='date')`.\n"
+                " - Instead of `nw.col('price').first()` write `nw.col('price').first().over(order_by='date')`\n"
+                "   or `nw.col('price').first(order_by='date')`.\n\n"
                 "See https://narwhals-dev.github.io/narwhals/concepts/order_dependence/."
             )
             raise InvalidOperationError(msg)
