@@ -34,6 +34,12 @@ logger.addHandler(log_output)
 REPO_ROOT = Path(__file__).parent.parent
 TPCH_ROOT = REPO_ROOT / "tpch"
 DATA = TPCH_ROOT / "data"
+METADATA_PATH = DATA / "metadata.csv"
+"""For reflection in tests.
+
+E.g. if we *know* the query is not valid for a given `scale_factor`,
+then we can determine if a failure is expected.
+"""
 
 
 TABLE_SCALE_FACTOR = """
@@ -219,6 +225,20 @@ def write_tpch_answers(con: Con, scale_factor: float) -> Con:
     return _answers_any(con)
 
 
+def write_metadata(scale_factor: float) -> None:
+    import datetime as dt
+
+    import polars as pl
+
+    METADATA_PATH.touch()
+    logger.info("Writing metadata to: %s", METADATA_PATH.name)
+    meta = {
+        "scale_factor": [scale_factor],
+        "modified_time": [dt.datetime.now(dt.timezone.utc)],
+    }
+    pl.DataFrame(meta).write_csv(METADATA_PATH)
+
+
 def main(scale_factor: float = 0.1) -> None:
     DATA.mkdir(exist_ok=True)
     con = connect()
@@ -226,6 +246,7 @@ def main(scale_factor: float = 0.1) -> None:
     generate_tpch_database(con, scale_factor)
     write_tpch_database(con)
     write_tpch_answers(con, scale_factor)
+    write_metadata(scale_factor)
 
 
 if __name__ == "__main__":
