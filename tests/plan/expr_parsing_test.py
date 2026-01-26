@@ -1,0 +1,764 @@
+from __future__ import annotations
+
+import datetime as dt
+import operator
+import re
+from collections import deque
+from collections.abc import Callable, Iterable, Mapping, Sequence
+from contextlib import nullcontext
+from typing import TYPE_CHECKING, Any
+
+import pytest
+
+import narwhals as nw
+from narwhals import _plan as nwp
+from narwhals._plan import expressions as ir
+from narwhals._plan._parse import parse_into_seq_of_expr_ir
+from narwhals._plan.expressions import functions as F, operators as ops
+from narwhals._plan.expressions.literal import ScalarLiteral, SeriesLiteral
+from narwhals._plan.expressions.ranges import IntRange
+from narwhals._utils import Implementation
+from narwhals.exceptions import (
+    ComputeError,
+    InvalidIntoExprError,
+    InvalidOperationError,
+    InvalidOperationError as LengthChangingExprError,
+    MultiOutputExpressionError,
+    ShapeError,
+)
+from tests.plan.utils import assert_equal_data, assert_expr_ir_equal, re_compile
+
+if TYPE_CHECKING:
+    from contextlib import AbstractContextManager
+
+    from typing_extensions import TypeAlias
+
+    from narwhals._plan._function import Function
+    from narwhals._plan.typing import IntoExpr, IntoExprColumn, OperatorFn, Seq
+
+
+IntoIterable: TypeAlias = Callable[[Sequence[Any]], Iterable[Any]]
+
+
+@pytest.mark.parametrize(
+    ("exprs", "named_exprs"),
+    [
+        ([nwp.col("a")], {}),
+        (["a"], {}),
+        ([], {"a": "b"}),
+        ([], {"a": nwp.col("b")}),
+        (["a", "b", nwp.col("c", "d", "e")], {"g": nwp.lit(1)}),
+        ([["a", "b", "c"]], {"q": nwp.lit(5, nw.Int8())}),
+        (
+            [[nwp.nth(1), nwp.nth(2, 3, 4)]],
+            {"n": nwp.col("p").count(), "other n": nwp.len()},
+        ),
+    ],
+)
+def test_parsing(
+    exprs: Seq[IntoExpr | Iterable[IntoExpr]], named_exprs: dict[str, IntoExpr]
+) -> None:
+    assert all(
+        isinstance(node, ir.ExprIR)
+        for node in parse_into_seq_of_expr_ir(*exprs, **named_exprs)
+    )
+
+
+@pytest.mark.parametrize(
+    ("function", "ir_node"),
+    [
+        (nwp.all_horizontal, ir.boolean.AllHorizontal),
+        (nwp.any_horizontal, ir.boolean.AnyHorizontal),
+        (nwp.sum_horizontal, F.SumHorizontal),
+        (nwp.min_horizontal, F.MinHorizontal),
+        (nwp.max_horizontal, F.MaxHorizontal),
+        (nwp.mean_horizontal, F.MeanHorizontal),
+    ],
+)
+@pytest.mark.parametrize(
+    "args",
+    [
+        ("a", "b", "c"),
+        (["a", "b", "c"]),
+        (nwp.col("d", "e", "f"), nwp.col("g"), "q", nwp.nth(9)),
+        ((nwp.lit(1),)),
+        ([nwp.lit(1), nwp.lit(2, nw.Int64), nwp.lit(3, nw.Int64())]),
+    ],
+)
+def test_function_expr_horizontal(
+    function: Callable[..., nwp.Expr],
+    ir_node: type[Function],
+    args: Seq[IntoExpr | Iterable[IntoExpr]],
+) -> None:
+    variadic = function(*args)
+    sequence = function(args)
+    assert isinstance(variadic, nwp.Expr)
+    assert isinstance(sequence, nwp.Expr)
+    variadic_node = variadic._ir
+    sequence_node = sequence._ir
+    unrelated_node = nwp.lit(1)._ir
+    assert isinstance(variadic_node, ir.FunctionExpr)
+    assert isinstance(variadic_node.function, ir_node)
+    assert variadic_node == sequence_node
+    assert sequence_node != unrelated_node
+
+
+def test_valid_windows() -> None:
+    """Was planning to test this matched, but we seem to allow elementwise horizontal?
+
+    https://github.com/narwhals-dev/narwhals/blob/63c8e4771a1df4e0bfeea5559c303a4a447d5cc2/tests/expression_parsing_test.py#L10-L45
+    """
+    ELEMENTWISE_ERR = re.compile(r"cannot use.+over.+elementwise", re.IGNORECASE)  # noqa: N806
+    a = nwp.col("a")
+    assert a.cum_sum()
+    assert a.cum_sum().over(order_by="id")
+    with pytest.raises(InvalidOperationError, match=ELEMENTWISE_ERR):
+        assert a.cum_sum().abs().over(order_by="id")
+
+    assert (a.cum_sum() + 1).over(order_by="id")
+    assert a.cum_sum().cum_sum().over(order_by="id")
+    assert a.cum_sum().cum_sum()
+    assert nwp.sum_horizontal(a, a.cum_sum())
+    with pytest.raises(InvalidOperationError, match=ELEMENTWISE_ERR):
+        assert nwp.sum_horizontal(a, a.cum_sum()).over(order_by="a")
+
+    assert nwp.sum_horizontal(a, a.cum_sum().over(order_by="i"))
+    assert nwp.sum_horizontal(a.diff(), a.cum_sum().over(order_by="i"))
+    with pytest.raises(InvalidOperationError, match=ELEMENTWISE_ERR):
+        assert nwp.sum_horizontal(a.diff(), a.cum_sum()).over(order_by="i")
+
+    with pytest.raises(InvalidOperationError, match=ELEMENTWISE_ERR):
+        assert nwp.sum_horizontal(a.diff().abs(), a.cum_sum()).over(order_by="i")
+
+
+def test_repeat_agg_invalid() -> None:
+    with pytest.raises(InvalidOperationError):
+        nwp.col("a").mean().mean()
+    with pytest.raises(InvalidOperationError):
+        nwp.col("a").first().max()
+    with pytest.raises(InvalidOperationError):
+        nwp.col("a").any().std()
+    with pytest.raises(InvalidOperationError):
+        nwp.col("a").all().quantile(0.5, "linear")
+    with pytest.raises(InvalidOperationError):
+        nwp.col("a").arg_max().min()
+    with pytest.raises(InvalidOperationError):
+        nwp.col("a").arg_min().arg_max()
+
+
+# NOTE: Previously multiple different errors, but they can be reduced to the same thing
+# Once we are scalar, only elementwise is allowed
+def test_agg_non_elementwise_invalid() -> None:
+    pattern = re.compile(r"cannot use.+rank.+aggregated.+mean", re.IGNORECASE)
+    with pytest.raises(InvalidOperationError, match=pattern):
+        nwp.col("a").mean().rank()
+    pattern = re.compile(r"cannot use.+drop_nulls.+aggregated.+max", re.IGNORECASE)
+    with pytest.raises(InvalidOperationError):
+        nwp.col("a").max().drop_nulls()
+    pattern = re.compile(r"cannot use.+diff.+aggregated.+min", re.IGNORECASE)
+    with pytest.raises(InvalidOperationError):
+        nwp.col("a").min().diff()
+
+
+def test_agg_non_elementwise_range_special() -> None:
+    e = nwp.int_range(0, 100)
+    assert isinstance(e._ir, ir.RangeExpr)
+    e = nwp.int_range(nwp.len(), dtype=nw.UInt32).alias("index")
+    e_ir = e._ir
+    assert isinstance(e_ir, ir.Alias)
+    assert isinstance(e_ir.expr, ir.RangeExpr)
+    assert isinstance(e_ir.expr.input[0], ir.Literal)
+    assert isinstance(e_ir.expr.input[1], ir.Len)
+
+
+def test_int_range_invalid() -> None:
+    pattern = re.compile(r"scalar.+agg", re.IGNORECASE)
+    with pytest.raises(InvalidOperationError, match=pattern):
+        nwp.int_range(nwp.col("a"))
+    with pytest.raises(InvalidOperationError, match=pattern):
+        nwp.int_range(nwp.nth(1), 10)
+    with pytest.raises(InvalidOperationError, match=pattern):
+        nwp.int_range(0, nwp.col("a").abs())
+    with pytest.raises(InvalidOperationError, match=pattern):
+        nwp.int_range(nwp.col("a") + 1)
+    with pytest.raises(InvalidOperationError, match=pattern):
+        nwp.int_range((1 + nwp.col("b")).name.keep())
+    int_range = IntRange(step=1, dtype=nw.Int64())
+    with pytest.raises(InvalidOperationError, match=r"at least 2 inputs.+int_range"):
+        int_range.to_function_expr(ir.col("a"))
+
+
+def test_date_range_invalid() -> None:
+    start, end = dt.date(2000, 1, 1), dt.date(2001, 1, 1)
+    pattern = re.compile(r"scalar.+agg", re.IGNORECASE)
+    with pytest.raises(InvalidOperationError, match=pattern):
+        nwp.date_range(nwp.col("a"), nwp.col("b"))
+    with pytest.raises(InvalidOperationError, match=pattern):
+        nwp.date_range(start, nwp.col("b"))
+    with pytest.raises(TypeError, match=r"`closed` must be one of.+, got.+middle"):
+        nwp.date_range(start, end, closed="middle")  # type: ignore[call-overload]
+    with pytest.raises(
+        ComputeError, match="`interval` input for `date_range` must consist of full days"
+    ):
+        nwp.date_range(start, end, interval="24h")
+    with pytest.raises(NotImplementedError, match=r"not support.+'mo'.+yet"):
+        nwp.date_range(start, end, interval="1mo")
+    with pytest.raises(NotImplementedError, match=r"not support.+'q'.+yet"):
+        nwp.date_range(start, end, interval="2q")
+    with pytest.raises(NotImplementedError, match=r"not support.+'y'.+yet"):
+        nwp.date_range(start, end, interval="3y")
+
+
+def test_int_range_eager_invalid() -> None:
+    with pytest.raises(InvalidOperationError):
+        nwp.int_range(nwp.len(), eager="pyarrow")  # type: ignore[call-overload]
+    with pytest.raises(InvalidOperationError):
+        nwp.int_range(10, nwp.col("a").last(), eager=Implementation.PYARROW)  # type: ignore[call-overload]
+    with pytest.raises(NotImplementedError):
+        nwp.int_range(10, eager="pandas")
+    with pytest.raises(ValueError, match=r"lazy-only"):
+        nwp.int_range(10, eager="duckdb")  # type: ignore[call-overload]
+
+
+def test_date_range_eager_invalid() -> None:
+    start, end = dt.date(2000, 1, 1), dt.date(2001, 1, 1)
+
+    with pytest.raises(InvalidOperationError):
+        nwp.date_range(nwp.len(), end, eager="pyarrow")  # type: ignore[call-overload]
+    with pytest.raises(InvalidOperationError):
+        nwp.date_range(start, nwp.col("a").last(), eager=Implementation.PYARROW)  # type: ignore[call-overload]
+    with pytest.raises(NotImplementedError):
+        nwp.date_range(start, end, eager="cudf")
+    with pytest.raises(ValueError, match=r"lazy-only"):
+        nwp.date_range(start, end, eager="sqlframe")  # type: ignore[call-overload]
+
+
+def test_over_invalid() -> None:
+    with pytest.raises(TypeError, match=r"one of.+partition_by.+or.+order_by"):
+        nwp.col("a").last().over()
+
+    # NOTE: Non-`polars` rule
+    pattern = re.compile(r"cannot use.+over.+elementwise", re.IGNORECASE)
+    with pytest.raises(InvalidOperationError, match=pattern):
+        nwp.col("a").fill_null(3).over("b")
+
+    # NOTE: This version isn't elementwise
+    expr_ir = nwp.col("a").fill_null(strategy="backward").over("b")._ir
+    assert isinstance(expr_ir, ir.Over)
+    assert isinstance(expr_ir.expr, ir.FunctionExpr)
+    assert isinstance(expr_ir.expr.function, F.FillNullWithStrategy)
+
+
+def test_over_nested() -> None:
+    pattern = re.compile(r"cannot nest.+over", re.IGNORECASE)
+    with pytest.raises(InvalidOperationError, match=pattern):
+        nwp.col("a").mean().over("b").over("c")
+    with pytest.raises(InvalidOperationError, match=pattern):
+        nwp.col("a").mean().over("b").over("c", order_by="i")
+
+
+# NOTE: This *can* error in polars, but only if the length **actually changes**
+# The rule then breaks down to needing the same length arrays in all parts of the over
+def test_over_filtration() -> None:
+    pattern = re.compile(r"cannot use.+over.+change length", re.IGNORECASE)
+    with pytest.raises(InvalidOperationError, match=pattern):
+        nwp.col("a").drop_nulls().over("b")
+    with pytest.raises(InvalidOperationError, match=pattern):
+        nwp.col("a").drop_nulls().over("b", order_by="i")
+    with pytest.raises(InvalidOperationError, match=pattern):
+        nwp.col("a").diff().drop_nulls().over("b", order_by="i")
+
+
+def test_binary_expr_length_changing_invalid() -> None:
+    a = nwp.col("a")
+    b = nwp.col("b").exp()
+
+    with pytest.raises(LengthChangingExprError):
+        a.unique() + b.unique()
+
+    with pytest.raises(LengthChangingExprError):
+        a.mode() * b.unique()
+
+    with pytest.raises(LengthChangingExprError):
+        a.drop_nulls() - b.mode()
+
+    with pytest.raises(LengthChangingExprError):
+        a.gather_every(2, 1) / b.drop_nulls()
+
+    with pytest.raises(LengthChangingExprError):
+        a.map_batches(lambda x: x) / b.gather_every(1, 0)
+
+
+def _is_expr_ir_binary_expr(expr: nwp.Expr) -> bool:
+    return isinstance(expr._ir, ir.BinaryExpr)
+
+
+def test_binary_expr_length_changing_agg() -> None:
+    a = nwp.col("a")
+    b = nwp.col("b")
+
+    assert _is_expr_ir_binary_expr(a.unique().first() + b.unique())
+    assert _is_expr_ir_binary_expr(a.mode().last() * b.unique())
+    assert _is_expr_ir_binary_expr(a.drop_nulls().min() - b.mode())
+    assert _is_expr_ir_binary_expr(a.gather_every(2, 1) / b.drop_nulls().max())
+    assert _is_expr_ir_binary_expr(
+        b.gather_every(1, 0)
+        / a.map_batches(lambda x: x, returns_scalar=True, return_dtype=nw.Float64)
+    )
+    assert _is_expr_ir_binary_expr(
+        b.unique() * a.map_batches(lambda x: x, return_dtype=nw.Unknown).first()
+    )
+
+
+def test_binary_expr_shape_invalid() -> None:
+    pattern = re.compile(
+        re.escape("Cannot combine length-changing expressions with length-preserving"),
+        re.IGNORECASE,
+    )
+    a = nwp.col("a")
+    b = nwp.col("b")
+
+    with pytest.raises(ShapeError, match=pattern):
+        a.unique() + b
+    with pytest.raises(ShapeError, match=pattern):
+        a.map_batches(lambda x: x, is_elementwise=True) * b.gather_every(1, 0)
+    with pytest.raises(ShapeError, match=pattern):
+        a / b.drop_nulls()
+    with pytest.raises(ShapeError, match=pattern):
+        a.fill_null(1) // b.rolling_mean(5)
+
+
+def test_map_batches_invalid() -> None:
+    with pytest.raises(
+        TypeError,
+        match=r"A function cannot both return a scalar and preserve length, they are mutually exclusive",
+    ):
+        nwp.col("a").map_batches(lambda x: x, is_elementwise=True, returns_scalar=True)
+
+
+@pytest.mark.parametrize("into_iter", [list, tuple, deque, iter, dict.fromkeys, set])
+def test_is_in_seq(into_iter: IntoIterable) -> None:
+    expected = 1, 2, 3
+    other = into_iter(list(expected))
+    expr = nwp.col("a").is_in(other)
+    e_ir = expr._ir
+    assert isinstance(e_ir, ir.FunctionExpr)
+    assert isinstance(e_ir.function, ir.boolean.IsInSeq)
+    assert e_ir.function.other == expected
+
+
+def test_is_in_series() -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    native = pa.chunked_array([pa.array([1, 2, 3])])
+    other = nwp.Series.from_native(native)
+    expr = nwp.col("a").is_in(other)
+    e_ir = expr._ir
+    assert isinstance(e_ir, ir.FunctionExpr)
+    assert isinstance(e_ir.function, ir.boolean.IsInSeries)
+    assert e_ir.function.other.unwrap().to_native() is native
+
+
+@pytest.mark.parametrize(
+    ("other", "context"),
+    [
+        ("words", pytest.raises(TypeError, match=r"str \| bytes.+str")),
+        (b"words", pytest.raises(TypeError, match=r"str \| bytes.+bytes")),
+        (
+            999,
+            pytest.raises(
+                TypeError, match=re.compile(r"only.+iterable.+int", re.IGNORECASE)
+            ),
+        ),
+    ],
+)
+def test_is_in_invalid(other: Any, context: AbstractContextManager[Any]) -> None:
+    with context:
+        nwp.col("a").is_in(other)
+
+
+def test_filter_full_spellings() -> None:
+    a = nwp.col("a")
+    b = nwp.col("b")
+    c = nwp.col("c")
+    d = nwp.col("d")
+    expected = a.filter(b != b.max(), c < nwp.lit(2), d == nwp.lit(5))
+    expr_1 = a.filter([b != b.max(), c < nwp.lit(2), d == nwp.lit(5)])
+    expr_2 = a.filter([b != b.max(), c < nwp.lit(2)], d=nwp.lit(5))
+    expr_3 = a.filter([b != b.max(), c < nwp.lit(2)], d=5)
+    expr_4 = a.filter(b != b.max(), c < nwp.lit(2), d=5)
+    expr_5 = a.filter(b != b.max(), c < 2, d=5)
+    expr_6 = a.filter((b != b.max(), c < 2), d=5)
+    assert_expr_ir_equal(expected, expr_1)
+    assert_expr_ir_equal(expected, expr_2)
+    assert_expr_ir_equal(expected, expr_3)
+    assert_expr_ir_equal(expected, expr_4)
+    assert_expr_ir_equal(expected, expr_5)
+    assert_expr_ir_equal(expected, expr_6)
+
+
+@pytest.mark.parametrize(
+    ("predicates", "constraints", "context"),
+    [
+        ([nwp.col("b").is_last_distinct()], {}, nullcontext()),
+        ((), {"b": 10}, nullcontext()),
+        ((), {"b": nwp.lit(10)}, nullcontext()),
+        (
+            (),
+            {},
+            pytest.raises(
+                TypeError, match=re.compile(r"at least one predicate", re.IGNORECASE)
+            ),
+        ),
+        ((nwp.col("b") > 1, nwp.col("c").is_null()), {}, nullcontext()),
+        (
+            ([nwp.col("b") > 1], nwp.col("c").is_null()),
+            {},
+            pytest.raises(
+                InvalidIntoExprError,
+                match=re.compile(
+                    r"both iterable.+positional.+not supported", re.IGNORECASE
+                ),
+            ),
+        ),
+    ],
+)
+def test_filter_partial_spellings(
+    predicates: Iterable[IntoExprColumn],
+    constraints: dict[str, Any],
+    context: AbstractContextManager[Any],
+) -> None:
+    with context:
+        assert nwp.col("a").filter(*predicates, **constraints)
+
+
+def test_lit_series_roundtrip() -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    data = ["a", "b", "c"]
+    native = pa.chunked_array([pa.array(data)])
+    series = nwp.Series.from_native(native)
+    lit_series = nwp.lit(series)
+    assert lit_series.meta.is_literal()
+    e_ir = lit_series._ir
+    assert isinstance(e_ir, ir.Literal)
+    assert isinstance(e_ir.dtype, nw.String)
+    assert isinstance(e_ir.value, SeriesLiteral)
+    unwrapped = e_ir.unwrap()
+    assert isinstance(unwrapped, nwp.Series)
+    assert isinstance(unwrapped.to_native(), pa.ChunkedArray)
+    assert unwrapped.to_list() == data
+
+
+@pytest.mark.parametrize(
+    ("arg_1", "arg_2", "function", "op"),
+    [
+        (nwp.col("a"), 1, operator.eq, ops.Eq),
+        (nwp.col("a"), "b", operator.eq, ops.Eq),
+        (nwp.col("a"), 1, operator.ne, ops.NotEq),
+        (nwp.col("a"), "b", operator.ne, ops.NotEq),
+        (nwp.col("a"), "b", operator.ge, ops.GtEq),
+        (nwp.col("a"), "b", operator.gt, ops.Gt),
+        (nwp.col("a"), "b", operator.le, ops.LtEq),
+        (nwp.col("a"), "b", operator.lt, ops.Lt),
+        ((nwp.col("a") != 1), False, operator.and_, ops.And),
+        ((nwp.col("a") != 1), False, operator.or_, ops.Or),
+        ((nwp.col("a")), True, operator.xor, ops.ExclusiveOr),
+        (nwp.col("a"), 6, operator.add, ops.Add),
+        (nwp.col("a"), 2.1, operator.mul, ops.Multiply),
+        (nwp.col("a"), nwp.col("b"), operator.sub, ops.Sub),
+        (nwp.col("a"), 2, operator.pow, F.Pow),
+        (nwp.col("a"), 2, operator.mod, ops.Modulus),
+        (nwp.col("a"), 2, operator.floordiv, ops.FloorDivide),
+        (nwp.col("a"), 4, operator.truediv, ops.TrueDivide),
+    ],
+)
+def test_operators_left_right(
+    arg_1: IntoExpr,
+    arg_2: IntoExpr,
+    function: OperatorFn,
+    op: type[ops.Operator | Function],
+) -> None:
+    inverse: Mapping[type[ops.Operator], type[ops.Operator]] = {
+        ops.Gt: ops.Lt,
+        ops.Lt: ops.Gt,
+        ops.GtEq: ops.LtEq,
+        ops.LtEq: ops.GtEq,
+    }
+    result_1 = function(arg_1, arg_2)
+    result_2 = function(arg_2, arg_1)
+    assert isinstance(result_1, nwp.Expr)
+    assert isinstance(result_2, nwp.Expr)
+    ir_1 = result_1._ir
+    ir_2 = result_2._ir
+    if op in {ops.Eq, ops.NotEq}:
+        assert ir_1 == ir_2
+    else:
+        assert ir_1 != ir_2
+    if issubclass(op, ops.Operator):
+        assert isinstance(ir_1, ir.BinaryExpr)
+        assert isinstance(ir_1.op, op)
+        assert isinstance(ir_2, ir.BinaryExpr)
+        op_inverse = inverse.get(op, op)
+        assert isinstance(ir_2.op, op_inverse)
+        if op in {ops.Eq, ops.NotEq, *inverse}:
+            assert ir_1.left == ir_2.left
+            assert ir_1.right == ir_2.right
+        else:
+            assert ir_1.left == ir_2.right
+            assert ir_1.right == ir_2.left
+    else:
+        assert isinstance(ir_1, ir.FunctionExpr)
+        assert isinstance(ir_1.function, op)
+        assert isinstance(ir_2, ir.FunctionExpr)
+        assert isinstance(ir_2.function, op)
+        assert tuple(reversed(ir_2.input)) == ir_1.input
+
+
+def test_hist_bins() -> None:
+    bins_values = (0, 1.5, 3.0, 4.5, 6.0)
+    a = nwp.col("a")
+    hist_1 = a.hist(deque(bins_values), include_breakpoint=False)
+    hist_2 = a.hist(list(bins_values), include_breakpoint=False)
+
+    ir_1 = hist_1._ir
+    ir_2 = hist_2._ir
+    assert isinstance(ir_1, ir.FunctionExpr)
+    assert isinstance(ir_2, ir.FunctionExpr)
+    assert isinstance(ir_1.function, F.HistBins)
+    assert isinstance(ir_2.function, F.HistBins)
+    assert ir_1.function.include_breakpoint is False
+    assert_expr_ir_equal(ir_1, ir_2)
+
+
+def test_hist_bin_count() -> None:
+    bin_count_default = 10
+    include_breakpoint_default = False
+    a = nwp.col("a")
+    hist_1 = a.hist(
+        bin_count=bin_count_default, include_breakpoint=include_breakpoint_default
+    )
+    hist_2 = a.hist()
+    hist_3 = a.hist(bin_count=5)
+    hist_4 = a.hist(include_breakpoint=True)
+
+    ir_1 = hist_1._ir
+    ir_2 = hist_2._ir
+    ir_3 = hist_3._ir
+    ir_4 = hist_4._ir
+    assert isinstance(ir_1, ir.FunctionExpr)
+    assert isinstance(ir_2, ir.FunctionExpr)
+    assert isinstance(ir_3, ir.FunctionExpr)
+    assert isinstance(ir_4, ir.FunctionExpr)
+    assert isinstance(ir_1.function, F.HistBinCount)
+    assert isinstance(ir_2.function, F.HistBinCount)
+    assert isinstance(ir_3.function, F.HistBinCount)
+    assert isinstance(ir_4.function, F.HistBinCount)
+    assert ir_1.function.include_breakpoint is include_breakpoint_default
+    assert ir_2.function.bin_count == bin_count_default
+    assert_expr_ir_equal(ir_1, ir_2)
+    assert ir_3.function.include_breakpoint != ir_4.function.include_breakpoint
+    assert ir_4.function.bin_count != ir_3.function.bin_count
+    assert ir_4 != ir_2
+    assert ir_3 != ir_1
+
+
+def test_hist_invalid() -> None:
+    a = nwp.col("a")
+    with pytest.raises(ComputeError, match=r"bin_count.+or.+bins"):
+        a.hist(bins=[1], bin_count=1)
+    with pytest.raises(ComputeError, match=r"bins.+monotonic"):
+        a.hist([1, 5, 4])
+    with pytest.raises(ComputeError, match=r"bins.+monotonic"):
+        a.hist(deque((3, 2, 1)))
+    with pytest.raises(TypeError):
+        a.hist(1)  # type: ignore[arg-type]
+
+
+def test_into_expr_invalid() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    with pytest.raises(
+        TypeError, match=re_compile(r"expected.+narwhals.+got.+polars.+hint")
+    ):
+        nwp.col("a").max().over(pl.col("b"))  # type: ignore[arg-type]
+
+
+def test_when_invalid() -> None:
+    pattern = re_compile(r"multi-output expr.+not supported in.+when.+context")
+
+    when = nwp.when(nwp.col("a", "b", "c").is_finite())
+    when_then = when.then(nwp.col("d").is_unique())
+    when_then_when = when_then.when(
+        (nwp.median("a", "b", "c") > 2) | nwp.col("d").is_nan()
+    )
+    with pytest.raises(MultiOutputExpressionError, match=pattern):
+        when.then(nwp.max("c", "d"))
+    with pytest.raises(MultiOutputExpressionError, match=pattern):
+        when_then.otherwise(nwp.min("h", "i", "j"))
+    with pytest.raises(MultiOutputExpressionError, match=pattern):
+        when_then_when.then(nwp.col(["b", "y", "e"]))
+
+
+# NOTE: `Then`, `ChainedThen` use multi-inheritance, but **need** to use `Expr.__eq__`
+def test_then_equal() -> None:
+    expr = nwp.col("a").clip(nwp.col("a").kurtosis(), nwp.col("a").log())
+    other = "other"
+    then = nwp.when(a="b").then(nwp.col("c").skew())
+    chained_then = then.when("d").then("e")
+
+    assert isinstance(then == expr, nwp.Expr)
+    assert isinstance(then == other, nwp.Expr)
+
+    assert isinstance(chained_then == expr, nwp.Expr)
+    assert isinstance(chained_then == other, nwp.Expr)
+
+    assert isinstance(then == chained_then, nwp.Expr)
+
+
+def test_dt_timestamp_invalid() -> None:
+    assert nwp.col("a").dt.timestamp()
+    with pytest.raises(
+        TypeError, match=re_compile(r"invalid.+time_unit.+expected.+got 's'")
+    ):
+        nwp.col("a").dt.timestamp("s")
+
+
+def test_dt_truncate_invalid() -> None:
+    assert nwp.col("a").dt.truncate("1d")
+    with pytest.raises(ValueError, match=re_compile(r"invalid.+every.+abcd")):
+        nwp.col("a").dt.truncate("abcd")
+
+
+def test_replace_strict() -> None:
+    a = nwp.col("a")
+    remapping = a.replace_strict({1: 3, 2: 4}, return_dtype=nw.Int8)
+    sequences = a.replace_strict(old=[1, 2], new=[3, 4], return_dtype=nw.Int8())
+    assert_expr_ir_equal(remapping, sequences)
+
+
+def test_replace_strict_invalid() -> None:
+    with pytest.raises(
+        TypeError,
+        match="`new` argument is required if `old` argument is not a Mapping type",
+    ):
+        nwp.col("a").replace_strict("b")
+
+    with pytest.raises(
+        TypeError,
+        match="`new` argument cannot be used if `old` argument is a Mapping type",
+    ):
+        nwp.col("a").replace_strict(old={1: 2, 3: 4}, new=[5, 6, 7])
+
+
+def test_mode_invalid() -> None:
+    with pytest.raises(
+        TypeError, match=r"keep.+must be one of.+all.+any.+but got 'first'"
+    ):
+        nwp.col("a").mode(keep="first")  # type: ignore[arg-type]
+
+
+def test_broadcast_len_1_series_invalid() -> None:
+    pytest.importorskip("pyarrow")
+    data = {"a": [1, 2, 3]}
+    values = [4]
+    df = nwp.DataFrame.from_dict(data, backend="pyarrow")
+    ser = nwp.Series.from_iterable(values, name="bad", backend="pyarrow")
+    with pytest.raises(
+        ShapeError,
+        match=re_compile(
+            r"series.+bad.+length.+1.+match.+DataFrame.+height.+3.+broadcasted.+\.first\(\)"
+        ),
+    ):
+        df.with_columns(ser)
+
+    expected_series = {"a": [1, 2, 3], "literal": [4, 4, 4]}
+    # we can only preserve `Series.name` if we got a `lit(Series).first()`, not `lit(Series.first())`
+    expected_series_literal = {"a": [1, 2, 3], "bad": [4, 4, 4]}
+
+    assert_equal_data(df.with_columns(ser.first()), expected_series)
+    assert_equal_data(df.with_columns(ser.last()), expected_series)
+    assert_equal_data(df.with_columns(nwp.lit(ser).first()), expected_series_literal)
+
+
+@pytest.mark.parametrize(
+    ("window_size", "min_samples", "context"),
+    [
+        (-1, None, pytest.raises(ValueError, match=r"window_size.+>= 1")),
+        (2, -1, pytest.raises(ValueError, match=r"min_samples.+>= 1")),
+        (
+            1,
+            2,
+            pytest.raises(InvalidOperationError, match=r"min_samples.+<=.+window_size"),
+        ),
+        (
+            4.2,
+            None,
+            pytest.raises(TypeError, match=r"Expected.+int.+got.+float.+\s+window_size="),
+        ),
+        (
+            2,
+            4.2,
+            pytest.raises(TypeError, match=r"Expected.+int.+got.+float.+\s+min_samples="),
+        ),
+    ],
+)
+def test_rolling_expr_invalid(
+    window_size: int, min_samples: int | None, context: pytest.RaisesExc[Any]
+) -> None:
+    a = nwp.col("a")
+    with context:
+        a.rolling_sum(window_size, min_samples=min_samples)
+    with context:
+        a.rolling_mean(window_size, min_samples=min_samples)
+    with context:
+        a.rolling_var(window_size, min_samples=min_samples)
+    with context:
+        a.rolling_std(window_size, min_samples=min_samples)
+
+
+def test_list_contains_invalid() -> None:
+    a = nwp.col("a")
+
+    ok = a.list.contains("a")
+    assert_expr_ir_equal(
+        ok,
+        ir.FunctionExpr(
+            input=(
+                ir.col("a"),
+                ir.Literal(value=ScalarLiteral(value="a", dtype=nw.String())),
+            ),
+            function=ir.lists.Contains(),
+            options=ir.lists.Contains().function_options,
+        ),
+    )
+    assert a.list.contains(a.first())
+    assert a.list.contains(1)
+    assert a.list.contains(nwp.lit(1))
+    assert a.list.contains(dt.datetime(2000, 2, 1, 9, 26, 5))
+    assert a.list.contains(a.abs().fill_null(5).mode(keep="any"))
+
+    with pytest.raises(
+        InvalidOperationError, match=r"list.contains.+non-scalar.+`col\('a'\)"
+    ):
+        a.list.contains(a)
+
+    with pytest.raises(InvalidOperationError, match=r"list.contains.+non-scalar.+abs"):
+        a.list.contains(a.abs())
+
+    with pytest.raises(TypeError, match=r"list.+not.+supported.+nw.lit.+1.+2.+3"):
+        a.list.contains([1, 2, 3])  # type: ignore[arg-type]
+
+
+def test_list_get_invalid() -> None:
+    a = nwp.col("a")
+    assert a.list.get(0)
+    pattern = re_compile(r"expected.+int.+got.+str.+'not an index'")
+    with pytest.raises(TypeError, match=pattern):
+        a.list.get("not an index")  # type: ignore[arg-type]
+    pattern = re_compile(r"index.+out of bounds.+>= 0.+got -1")
+    with pytest.raises(InvalidOperationError, match=pattern):
+        a.list.get(-1)
