@@ -9,6 +9,9 @@ from typing import TYPE_CHECKING, Literal, get_args
 
 from tpch.typing_ import QueryID
 
+if TYPE_CHECKING:
+    from typing_extensions import Self
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 log_output = logging.StreamHandler()
@@ -86,7 +89,6 @@ class TableLogger:
 
     def __init__(self, file_names: Iterable[FileName]) -> None:
         self._file_width = max(len(name) for name in file_names)
-        self._started = False
 
     @staticmethod
     def sources() -> TableLogger:
@@ -96,26 +98,27 @@ class TableLogger:
     def answers() -> TableLogger:
         return TableLogger(f"result_{qid}.parquet" for qid in query_ids())
 
-    def _log_header(self) -> None:
-        fw, sw = self._file_width, self.SIZE_WIDTH
+    def __enter__(self) -> Self:
+        self._log_header()
+        return self
 
-        logger.info("┌─%s─┬─%s─┐", "─" * fw, "─" * sw)
-        logger.info("│ %s ┆ %s │", "File".rjust(fw), "Size".rjust(sw))
-        logger.info("╞═%s═╪═%s═╡", "═" * fw, "═" * sw)
+    def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
+        self._log_footer()
 
     def log_row(self, name: FileName, n_bytes: int) -> None:
-        if not self._started:
-            self._log_header()
-            self._started = True
-
         size, unit = format_size(n_bytes)
         size_str = f"{size:>6.2f} {unit:>2}"
         logger.info("│ %s ┆ %s │", name.rjust(self._file_width), size_str)
 
-    def log_footer(self) -> None:
-        if self._started:
-            fw, sw = self._file_width, self.SIZE_WIDTH
-            logger.info("└─%s─┴─%s─┘", "─" * fw, "─" * sw)
+    def _log_header(self) -> None:
+        fw, sw = self._file_width, self.SIZE_WIDTH
+        logger.info("┌─%s─┬─%s─┐", "─" * fw, "─" * sw)
+        logger.info("│ %s ┆ %s │", "File".rjust(fw), "Size".rjust(sw))
+        logger.info("╞═%s═╪═%s═╡", "═" * fw, "═" * sw)
+
+    def _log_footer(self) -> None:
+        fw, sw = self._file_width, self.SIZE_WIDTH
+        logger.info("└─%s─┴─%s─┘", "─" * fw, "─" * sw)
 
 
 @cache
@@ -126,46 +129,40 @@ def query_ids() -> tuple[str, ...]:
 def answers_any(con: DuckDBPyConnection) -> None:
     import pyarrow.parquet as pq
 
-    tbl_logger = TableLogger.answers()
     logger.info("Executing tpch queries for answers")
-
-    for query_id in query_ids():
-        result = con.sql(f"PRAGMA tpch({query_id.removeprefix('q')})")
-        result_pa = result.to_arrow_table()
-        result_pa = result_pa.cast(convert_schema(result_pa.schema))
-        path = DATA / f"result_{query_id}.parquet"
-        pq.write_table(result_pa, path)
-        tbl_logger.log_row(path.name, result_pa.nbytes)
-
-    tbl_logger.log_footer()
+    with TableLogger.answers() as tbl_logger:
+        for query_id in query_ids():
+            result = con.sql(f"PRAGMA tpch({query_id.removeprefix('q')})")
+            result_pa = result.to_arrow_table()
+            result_pa = result_pa.cast(convert_schema(result_pa.schema))
+            path = DATA / f"result_{query_id}.parquet"
+            pq.write_table(result_pa, path)
+            tbl_logger.log_row(path.name, result_pa.nbytes)
 
 
 def answers_builtin(con: DuckDBPyConnection, scale: BuiltinScaleFactor) -> None:
     import pyarrow.csv as pc
     import pyarrow.parquet as pq
 
-    tbl_logger = TableLogger.answers()
     logger.info("Fastpath for builtin tpch_answers()")
-
     results = con.sql(
         f"""
-        SELECT query_nr, answer
-        FROM tpch_answers()
-        WHERE scale_factor={scale}
-        """
+            SELECT query_nr, answer
+            FROM tpch_answers()
+            WHERE scale_factor={scale}
+            """
     )
-    while row := results.fetchmany(1):
-        query_nr, answer = row[0]
-        tbl_answer = pc.read_csv(
-            io.BytesIO(answer.encode("utf-8")),
-            parse_options=pc.ParseOptions(delimiter="|"),
-        )
-        tbl_answer = tbl_answer.cast(convert_schema(tbl_answer.schema))
-        path = DATA / f"result_q{query_nr}.parquet"
-        pq.write_table(tbl_answer, path)
-        tbl_logger.log_row(path.name, tbl_answer.nbytes)
-
-    tbl_logger.log_footer()
+    with TableLogger.answers() as tbl_logger:
+        while row := results.fetchmany(1):
+            query_nr, answer = row[0]
+            tbl_answer = pc.read_csv(
+                io.BytesIO(answer.encode("utf-8")),
+                parse_options=pc.ParseOptions(delimiter="|"),
+            )
+            tbl_answer = tbl_answer.cast(convert_schema(tbl_answer.schema))
+            path = DATA / f"result_q{query_nr}.parquet"
+            pq.write_table(tbl_answer, path)
+            tbl_logger.log_row(path.name, tbl_answer.nbytes)
 
 
 def load_tpch(con: DuckDBPyConnection) -> None:
@@ -199,18 +196,15 @@ def main(scale_factor: float = 0.1) -> None:
     logger.info("Generating data with scale_factor=%s", scale_factor)
     con.sql(f"CALL dbgen(sf={scale_factor})")
     logger.info("Finished generating data.")
-
-    tbl_logger = TableLogger.sources()
     logger.info("Writing data to: %s", DATA.as_posix())
-    for t in SOURCES:
-        tbl = con.sql(f"SELECT * FROM {t}")
-        tbl_arrow = tbl.to_arrow_table()
-        tbl_arrow = tbl_arrow.cast(convert_schema(tbl_arrow.schema))
-        path = DATA / f"{t}.parquet"
-        pq.write_table(tbl_arrow, path)
-        tbl_logger.log_row(path.name, tbl_arrow.nbytes)
-    tbl_logger.log_footer()
-
+    with TableLogger.sources() as tbl_logger:
+        for t in SOURCES:
+            tbl = con.sql(f"SELECT * FROM {t}")
+            tbl_arrow = tbl.to_arrow_table()
+            tbl_arrow = tbl_arrow.cast(convert_schema(tbl_arrow.schema))
+            path = DATA / f"{t}.parquet"
+            pq.write_table(tbl_arrow, path)
+            tbl_logger.log_row(path.name, tbl_arrow.nbytes)
     logger.info("Getting answers")
     if scale := SF_BUILTIN_STR.get(scale_factor):
         answers_builtin(con, scale)
