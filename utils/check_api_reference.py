@@ -77,6 +77,7 @@ SERIES_ONLY_METHODS = {
     "arg_max",
     "arg_min",
     "arg_true",
+    "clear",
     "dtype",
     "from_iterable",
     "from_numpy",
