@@ -221,7 +221,17 @@ def fix_q18(table: pa.Table) -> pa.Table:
     return table.drop(bad).append_column("sum", table.column(bad).cast(pa.int64()))
 
 
-FIX_ANSWERS: Mapping[QueryID, Callable[[pa.Table], pa.Table]] = {"q18": fix_q18}
+def fix_q22(table: pa.Table) -> pa.Table:
+    import pyarrow as pa
+
+    schema = table.schema
+    return table.cast(schema.set(0, schema.field("cntrycode").with_type(pa.int64())))
+
+
+FIX_ANSWERS: Mapping[QueryID, Callable[[pa.Table], pa.Table]] = {
+    "q18": fix_q18,
+    "q22": fix_q22,
+}
 
 
 def _answers_any(con: Con) -> Con:
