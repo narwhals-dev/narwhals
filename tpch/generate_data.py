@@ -10,7 +10,17 @@ from typing import TYPE_CHECKING, Literal, get_args
 from tpch.typing_ import QueryID
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
+    from collections.abc import Iterable, Mapping
+
+    import pyarrow as pa
+    from duckdb import DuckDBPyConnection
+    from typing_extensions import Self, TypeAlias
+
+    from narwhals.typing import SizeUnit
+
+    BuiltinScaleFactor: TypeAlias = Literal["0.01", "0.1", "1.0"]
+    FileName: TypeAlias = str
+    FileSize: TypeAlias = float
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -25,19 +35,6 @@ logger.addHandler(log_output)
 REPO_ROOT = Path(__file__).parent.parent
 TPCH_ROOT = REPO_ROOT / "tpch"
 DATA = TPCH_ROOT / "data"
-
-if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping
-
-    import pyarrow as pa
-    from duckdb import DuckDBPyConnection
-    from typing_extensions import TypeAlias
-
-    from narwhals.typing import SizeUnit
-
-    BuiltinScaleFactor: TypeAlias = Literal["0.01", "0.1", "1.0"]
-    FileName: TypeAlias = str
-    FileSize: TypeAlias = float
 
 
 TABLE_SCALE_FACTOR = """
