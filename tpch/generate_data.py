@@ -48,17 +48,6 @@ TABLE_SCALE_FACTOR = """
 └──────────────┴───────────────┘
 """
 
-# Required after each call to `dbgen`, if persisting the database
-Q_CLEANUP = """
-DROP TABLE IF EXISTS customer;
-DROP TABLE IF EXISTS lineitem;
-DROP TABLE IF EXISTS nation;
-DROP TABLE IF EXISTS orders;
-DROP TABLE IF EXISTS part;
-DROP TABLE IF EXISTS partsupp;
-DROP TABLE IF EXISTS region;
-DROP TABLE IF EXISTS supplier;
-"""
 
 SF_BUILTIN_STR: Mapping[float, BuiltinScaleFactor] = {
     0.01: "0.01",
