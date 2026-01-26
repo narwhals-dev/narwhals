@@ -54,10 +54,11 @@ dask = ["dask[dataframe]>=2024.8"]
 duckdb = ["duckdb>=1.1"]
 ibis = ["ibis-framework>=6.0.0", "rich", "packaging", "pyarrow_hotfix"]
 sqlframe = ["sqlframe>=3.22.0,!=3.39.3"]
+sql = ["duckdb>=1.1", "sqlparse"]
 
 [dependency-groups]
 core = [
-  "narwhals[duckdb,pandas,polars,pyarrow,sqlframe]"
+  "narwhals[duckdb,pandas,polars,pyarrow,sqlframe,sql]"
 ] 
 tests = [
   "covdefaults",
@@ -94,6 +95,7 @@ docs = [
   "jinja2",
   "duckdb",
   "narwhals[ibis]",
+  "narwhals[sql]",
   "markdown-exec[ansi]",
   "mkdocs",
   "mkdocs-autorefs",
@@ -353,6 +355,7 @@ module = [
   "numpy.*",
   "pyspark.*",
   "sklearn.*",
+  "sqlparse.*",
 ]
 # TODO: remove follow_imports
 follow_imports = "skip"
