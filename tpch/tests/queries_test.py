@@ -31,6 +31,7 @@ def test_execute_query(
     backend_name: TPCHBackend,
     data_loader: DataLoader,
     expected_result: Callable[[QueryID], pl.DataFrame],
+    scale_factor: float,
 ) -> None:
     """Helper function to run a TPCH query test."""
     query_module = import_query_module(query_id)
@@ -48,11 +49,11 @@ def test_execute_query(
             .to_polars()
         )
     except NarwhalsError as exc:
-        msg = f"Query {query_id} with {backend_name=} failed with the following error in Narwhals:\n{exc}"
+        msg = f"Query [{query_id}-{backend_name}] ({scale_factor=}) failed with the following error in Narwhals:\n{exc}"
         raise RuntimeError(msg) from exc
 
     try:
         assert_frame_equal(expected, result, check_dtypes=False)
     except AssertionError as exc:
-        msg = f"Query {query_id} with {backend_name=} resulted in wrong answer:\n{exc}"
+        msg = f"Query [{query_id}-{backend_name}] ({scale_factor=}) resulted in wrong answer:\n{exc}"
         raise AssertionError(msg) from exc

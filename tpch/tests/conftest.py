@@ -193,3 +193,15 @@ def expected_result() -> Callable[[QueryID], pl.DataFrame]:
         return pl.read_parquet(DATA_DIR / f"result_{query_id}.parquet")
 
     return _load_expected
+
+
+@pytest.fixture(scope="session")
+def generate_data_metadata() -> pl.DataFrame:
+    from tpch.generate_data import METADATA_PATH
+
+    return pl.read_csv(METADATA_PATH)
+
+
+@pytest.fixture(scope="session")
+def scale_factor(generate_data_metadata: pl.DataFrame) -> float:
+    return float(generate_data_metadata.get_column("scale_factor").item())
