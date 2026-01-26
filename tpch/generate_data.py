@@ -3,6 +3,7 @@ from __future__ import annotations
 # ruff: noqa: S608
 import io
 import logging
+from functools import cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, get_args
 
@@ -23,7 +24,7 @@ TPCH_ROOT = REPO_ROOT / "tpch"
 DATA = TPCH_ROOT / "data"
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Iterable, Mapping
 
     import pyarrow as pa
     from duckdb import DuckDBPyConnection
@@ -65,6 +66,17 @@ SF_BUILTIN_STR: Mapping[float, BuiltinScaleFactor] = {
     1.0: "1.0",
 }
 
+SOURCES = (
+    "lineitem",
+    "customer",
+    "nation",
+    "orders",
+    "part",
+    "partsupp",
+    "region",
+    "supplier",
+)
+
 
 def format_size(n_bytes: int) -> tuple[FileSize, SizeUnit]:
     """Return the best human-readable size and unit for the given byte count."""
@@ -83,9 +95,17 @@ class TableLogger:
     # Size column: 3 leading digits + 1 dot + 2 decimals + 1 space + 2 unit chars = 10 chars
     SIZE_WIDTH = 9
 
-    def __init__(self, file_names: Sequence[FileName]) -> None:
+    def __init__(self, file_names: Iterable[FileName]) -> None:
         self._file_width = max(len(name) for name in file_names)
         self._started = False
+
+    @staticmethod
+    def sources() -> TableLogger:
+        return TableLogger(f"{t}.parquet" for t in SOURCES)
+
+    @staticmethod
+    def answers() -> TableLogger:
+        return TableLogger(f"result_{qid}.parquet" for qid in query_ids())
 
     def _log_header(self) -> None:
         fw, sw = self._file_width, self.SIZE_WIDTH
@@ -109,18 +129,19 @@ class TableLogger:
             logger.info("└─%s─┴─%s─┘", "─" * fw, "─" * sw)
 
 
+@cache
+def query_ids() -> tuple[str, ...]:
+    return get_args(QueryID)
+
+
 def answers_any(con: DuckDBPyConnection) -> None:
     import pyarrow.parquet as pq
 
-    query_ids = get_args(QueryID)
-    file_names = tuple(f"result_{qid}.parquet" for qid in query_ids)
-
+    tbl_logger = TableLogger.answers()
     logger.info("Executing tpch queries for answers")
-    tbl_logger = TableLogger(file_names)
 
-    for query_id in query_ids:
-        query_num = str(query_id).removeprefix("q")
-        result = con.sql(f"PRAGMA tpch({query_num})")
+    for query_id in query_ids():
+        result = con.sql(f"PRAGMA tpch({query_id.removeprefix('q')})")
         result_pa = result.to_arrow_table()
         result_pa = result_pa.cast(convert_schema(result_pa.schema))
         path = DATA / f"result_{query_id}.parquet"
@@ -134,11 +155,8 @@ def answers_builtin(con: DuckDBPyConnection, scale: BuiltinScaleFactor) -> None:
     import pyarrow.csv as pc
     import pyarrow.parquet as pq
 
-    # Pre-compute file names for table width (queries 1-22)
-    file_names = tuple(f"result_q{i}.parquet" for i in range(1, 23))
-
+    tbl_logger = TableLogger.answers()
     logger.info("Fastpath for builtin tpch_answers()")
-    tbl_logger = TableLogger(file_names)
 
     results = con.sql(
         f"""
@@ -193,21 +211,9 @@ def main(scale_factor: float = 0.1) -> None:
     con.sql(f"CALL dbgen(sf={scale_factor})")
     logger.info("Finished generating data.")
 
-    tables = (
-        "lineitem",
-        "customer",
-        "nation",
-        "orders",
-        "part",
-        "partsupp",
-        "region",
-        "supplier",
-    )
-    file_names = tuple(f"{t}.parquet" for t in tables)
-
+    tbl_logger = TableLogger.sources()
     logger.info("Writing data to: %s", DATA.as_posix())
-    tbl_logger = TableLogger(file_names)
-    for t in tables:
+    for t in SOURCES:
         tbl = con.sql(f"SELECT * FROM {t}")
         tbl_arrow = tbl.to_arrow_table()
         tbl_arrow = tbl_arrow.cast(convert_schema(tbl_arrow.schema))
