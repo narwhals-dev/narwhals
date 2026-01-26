@@ -20,16 +20,9 @@ if TYPE_CHECKING:
     BuiltinScaleFactor: TypeAlias = Literal["0.01", "0.1", "1.0"]
     FileName: TypeAlias = str
     FileSize: TypeAlias = float
+    Artifact: TypeAlias = Literal["database", "answers"]
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-log_output = logging.StreamHandler()
-log_output.setFormatter(
-    logging.Formatter(
-        "%(asctime)s.%(msecs)03d [%(levelname)s] %(message)s", "%Y-%m-%d %H:%M:%S"
-    )
-)
-logger.addHandler(log_output)
 
 REPO_ROOT = Path(__file__).parent.parent
 TPCH_ROOT = REPO_ROOT / "tpch"
@@ -40,6 +33,33 @@ METADATA_PATH = DATA / "metadata.csv"
 E.g. if we *know* the query is not valid for a given `scale_factor`,
 then we can determine if a failure is expected.
 """
+
+GLOB_DATABASE = r"*[!0-9].parquet"
+GLOB_ANSWERS = r"result_q[0-9]*.parquet"
+
+GLOBS: Mapping[Artifact, str] = {
+    "database": r"*[!0-9].parquet",
+    "answers": r"result_q[0-9]*.parquet",
+}
+
+
+def read_fmt_schema(fp: Path) -> str:
+    import polars as pl
+
+    schema = pl.read_parquet_schema(fp).items()
+    return f"- {fp.name}\n" + "\n".join(f"  - {k:<20}: {v}" for k, v in schema)
+
+
+def show_schemas(artifact: Artifact, /) -> None:
+    if not logger.isEnabledFor(logging.DEBUG):
+        return
+    pattern = GLOBS[artifact]
+    paths = sorted(DATA.glob(pattern))
+    if not paths:
+        msg = f"Found no matching paths for {pattern!r} in {DATA.as_posix()}"
+        raise NotImplementedError(msg)
+    msg = "\n".join(read_fmt_schema(fp) for fp in paths)
+    logger.debug("Schemas (%s):\n%s", artifact, msg)
 
 
 TABLE_SCALE_FACTOR = """
@@ -183,6 +203,7 @@ def write_tpch_database(con: Con) -> Con:
             path = DATA / f"{t}.parquet"
             pq.write_table(table, path)
             tbl_logger.log_row(path.name, table.nbytes)
+    show_schemas("database")
     return con
 
 
@@ -220,9 +241,13 @@ def _answers_builtin(con: Con, scale: BuiltinScaleFactor) -> Con:
 
 def write_tpch_answers(con: Con, scale_factor: float) -> Con:
     logger.info("Getting answers")
-    if scale := SF_BUILTIN_STR.get(scale_factor):
-        return _answers_builtin(con, scale)
-    return _answers_any(con)
+    con = (
+        _answers_builtin(con, scale)
+        if (scale := SF_BUILTIN_STR.get(scale_factor))
+        else _answers_any(con)
+    )
+    show_schemas("answers")
+    return con
 
 
 def write_metadata(scale_factor: float) -> None:
@@ -249,6 +274,18 @@ def main(scale_factor: float = 0.1) -> None:
     write_metadata(scale_factor)
 
 
+def _configure_logger(
+    *,
+    debug: bool,
+    fmt: str = "%(asctime)s.%(msecs)03d [%(levelname)s] %(message)s",
+    datefmt: str = "%Y-%m-%d %H:%M:%S",
+) -> None:
+    logger.setLevel(logging.DEBUG if debug else logging.INFO)
+    output = logging.StreamHandler()
+    output.setFormatter(logging.Formatter(fmt, datefmt))
+    logger.addHandler(output)
+
+
 if __name__ == "__main__":
     import argparse
 
@@ -264,5 +301,11 @@ if __name__ == "__main__":
         help=f"Scale the database by this factor (default: %(default)s)\n{TABLE_SCALE_FACTOR}",
         type=float,
     )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable more detailed logging (default: %(default)s)",
+    )
     args = parser.parse_args()
+    _configure_logger(debug=args.debug)
     main(scale_factor=args.scale_factor)
