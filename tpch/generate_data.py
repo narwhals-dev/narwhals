@@ -6,7 +6,6 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, get_args
 
-from narwhals._utils import scale_bytes
 from tpch.typing_ import QueryID
 
 logger = logging.getLogger(__name__)
@@ -24,13 +23,18 @@ TPCH_ROOT = REPO_ROOT / "tpch"
 DATA = TPCH_ROOT / "data"
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Mapping, Sequence
 
     import pyarrow as pa
     from duckdb import DuckDBPyConnection
     from typing_extensions import TypeAlias
 
-BuiltinScaleFactor: TypeAlias = Literal["0.01", "0.1", "1.0"]
+    from narwhals.typing import SizeUnit
+
+    BuiltinScaleFactor: TypeAlias = Literal["0.01", "0.1", "1.0"]
+    FileName: TypeAlias = str
+    FileSize: TypeAlias = float
+
 
 TABLE_SCALE_FACTOR = """
 ┌──────────────┬───────────────┐
@@ -62,26 +66,79 @@ SF_BUILTIN_STR: Mapping[float, BuiltinScaleFactor] = {
 }
 
 
+def format_size(n_bytes: int) -> tuple[FileSize, SizeUnit]:
+    """Return the best human-readable size and unit for the given byte count."""
+    units = ("b", "kb", "mb", "gb", "tb")
+    size = float(n_bytes)
+    for unit in units:
+        if size < 1024 or unit == "tb":
+            return size, unit
+        size /= 1024
+    return size, "tb"
+
+
+class TableLogger:
+    """A logger that streams table rows with box-drawing characters."""
+
+    # Size column: 3 leading digits + 1 dot + 2 decimals + 1 space + 2 unit chars = 10 chars
+    SIZE_WIDTH = 9
+
+    def __init__(self, file_names: Sequence[FileName]) -> None:
+        self._file_width = max(len(name) for name in file_names)
+        self._started = False
+
+    def _log_header(self) -> None:
+        fw, sw = self._file_width, self.SIZE_WIDTH
+
+        logger.info("┌─%s─┬─%s─┐", "─" * fw, "─" * sw)
+        logger.info("│ %s ┆ %s │", "File".rjust(fw), "Size".rjust(sw))
+        logger.info("╞═%s═╪═%s═╡", "═" * fw, "═" * sw)
+
+    def log_row(self, name: FileName, n_bytes: int) -> None:
+        if not self._started:
+            self._log_header()
+            self._started = True
+
+        size, unit = format_size(n_bytes)
+        size_str = f"{size:>6.2f} {unit:>2}"
+        logger.info("│ %s ┆ %s │", name.rjust(self._file_width), size_str)
+
+    def log_footer(self) -> None:
+        if self._started:
+            fw, sw = self._file_width, self.SIZE_WIDTH
+            logger.info("└─%s─┴─%s─┘", "─" * fw, "─" * sw)
+
+
 def answers_any(con: DuckDBPyConnection) -> None:
     import pyarrow.parquet as pq
 
-    logger.info("Executing tpch queries for answers")
+    query_ids = get_args(QueryID)
+    file_names = tuple(f"result_{qid}.parquet" for qid in query_ids)
 
-    for query_id in get_args(QueryID):
+    logger.info("Executing tpch queries for answers")
+    tbl_logger = TableLogger(file_names)
+
+    for query_id in query_ids:
         query_num = str(query_id).removeprefix("q")
         result = con.sql(f"PRAGMA tpch({query_num})")
         result_pa = result.to_arrow_table()
         result_pa = result_pa.cast(convert_schema(result_pa.schema))
         path = DATA / f"result_{query_id}.parquet"
-        log_write(path, result_pa.nbytes, "b")
         pq.write_table(result_pa, path)
+        tbl_logger.log_row(path.name, result_pa.nbytes)
+
+    tbl_logger.log_footer()
 
 
 def answers_builtin(con: DuckDBPyConnection, scale: BuiltinScaleFactor) -> None:
     import pyarrow.csv as pc
     import pyarrow.parquet as pq
 
-    logger.info("Fastpath for builtin tpch_answers() where scale_factor=%s", scale)
+    # Pre-compute file names for table width (queries 1-22)
+    file_names = tuple(f"result_q{i}.parquet" for i in range(1, 23))
+
+    logger.info("Fastpath for builtin tpch_answers()")
+    tbl_logger = TableLogger(file_names)
 
     results = con.sql(
         f"""
@@ -98,8 +155,10 @@ def answers_builtin(con: DuckDBPyConnection, scale: BuiltinScaleFactor) -> None:
         )
         tbl_answer = tbl_answer.cast(convert_schema(tbl_answer.schema))
         path = DATA / f"result_q{query_nr}.parquet"
-        log_write(path, tbl_answer.nbytes, "b")
         pq.write_table(tbl_answer, path)
+        tbl_logger.log_row(path.name, tbl_answer.nbytes)
+
+    tbl_logger.log_footer()
 
 
 def load_tpch(con: DuckDBPyConnection) -> None:
@@ -122,11 +181,6 @@ def convert_schema(schema: pa.Schema) -> pa.Schema:
     return pa.schema(new_schema)
 
 
-def log_write(path: Path, n_bytes: int, unit: Literal["b", "kb", "mb"]) -> None:
-    size = float(n_bytes) if unit == "b" else scale_bytes(n_bytes, unit)
-    logger.info("Writing % 20.4f %s -> %s", size, unit, path.as_posix())
-
-
 def main(scale_factor: float = 0.1) -> None:
     import duckdb
     import pyarrow.parquet as pq
@@ -135,9 +189,10 @@ def main(scale_factor: float = 0.1) -> None:
     logger.info("Connecting to in-memory DuckDB database")
     con = duckdb.connect(database=":memory:")
     load_tpch(con)
-    logger.info("Generating data for `scale_factor=%s`", scale_factor)
+    logger.info("Generating data with scale_factor=%s", scale_factor)
     con.sql(f"CALL dbgen(sf={scale_factor})")
     logger.info("Finished generating data.")
+
     tables = (
         "lineitem",
         "customer",
@@ -148,13 +203,18 @@ def main(scale_factor: float = 0.1) -> None:
         "region",
         "supplier",
     )
+    file_names = tuple(f"{t}.parquet" for t in tables)
+
+    logger.info("Writing data to: %s", DATA.as_posix())
+    tbl_logger = TableLogger(file_names)
     for t in tables:
         tbl = con.sql(f"SELECT * FROM {t}")
         tbl_arrow = tbl.to_arrow_table()
         tbl_arrow = tbl_arrow.cast(convert_schema(tbl_arrow.schema))
         path = DATA / f"{t}.parquet"
-        log_write(path, tbl_arrow.nbytes, "mb")
         pq.write_table(tbl_arrow, path)
+        tbl_logger.log_row(path.name, tbl_arrow.nbytes)
+    tbl_logger.log_footer()
 
     logger.info("Getting answers")
     if scale := SF_BUILTIN_STR.get(scale_factor):
