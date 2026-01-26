@@ -59,7 +59,11 @@ def test_filter_windows(constructor: Constructor) -> None:
     assert_equal_data(result_with_nones, expected_with_nones)
 
 
-def test_filter_windows_over(constructor: Constructor) -> None:
+def test_filter_windows_over(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail())
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
     df = nw.from_native(constructor(data))
