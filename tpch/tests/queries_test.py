@@ -8,7 +8,6 @@ from polars.testing import assert_frame_equal
 
 import narwhals as nw
 from narwhals.exceptions import NarwhalsError
-from tpch.tests.conftest import skip_if_unsupported
 
 if TYPE_CHECKING:
     import polars as pl
@@ -34,8 +33,6 @@ def test_execute_query(
 ) -> None:
     """Helper function to run a TPCH query test."""
     query_module = import_query_module(query_id)
-
-    skip_if_unsupported(query_id, backend_name)
 
     expected = expected_result(query_id)
     data = data_loader(query_id)

@@ -222,7 +222,7 @@ class DuckDBLazyFrame(
         except Exception as e:  # noqa: BLE001
             raise catch_duckdb_exception(e, self) from None
 
-    def filter(self, predicate: DuckDBExpr) -> Self:
+    def _filter(self, predicate: DuckDBExpr) -> Self:
         # `[0]` is safe as the predicate's expression only returns a single column
         mask = predicate(self)[0]
         try:
