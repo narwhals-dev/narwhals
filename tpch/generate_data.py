@@ -1,3 +1,8 @@
+"""Generate database and answers via [DuckDB TPC-H Extension].
+
+[DuckDB TPC-H Extension]: https://duckdb.org/docs/stable/core_extensions/tpch
+"""
+
 from __future__ import annotations
 
 import io
@@ -9,7 +14,7 @@ from typing import TYPE_CHECKING, Literal, get_args
 from tpch.typing_ import QueryID
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping
+    from collections.abc import Callable, Iterable, Mapping
 
     import pyarrow as pa
     from duckdb import DuckDBPyConnection as Con
@@ -100,7 +105,7 @@ SQL_FROM = "FROM {0}"
 
 
 @cache
-def query_ids() -> tuple[str, ...]:
+def query_ids() -> tuple[QueryID, ...]:
     return get_args(QueryID)
 
 
@@ -204,6 +209,21 @@ def write_tpch_database(con: Con) -> Con:
     return con
 
 
+def fix_q18(table: pa.Table) -> pa.Table:
+    """DuckDB being weird, this is [correct] but [not this one].
+
+    [correct]: https://github.com/duckdb/duckdb/blob/47c227d7d8662586b0307d123c03b25c0db3d515/extension/tpch/dbgen/answers/sf0.01/q18.csv#L1
+    [not this one]: https://github.com/duckdb/duckdb/blob/47c227d7d8662586b0307d123c03b25c0db3d515/extension/tpch/dbgen/answers/sf100/q18.csv#L1
+    """
+    import pyarrow as pa
+
+    bad = "sum(l_quantity)"
+    return table.drop(bad).append_column("sum", table.column(bad).cast(pa.int64()))
+
+
+FIX_ANSWERS: Mapping[QueryID, Callable[[pa.Table], pa.Table]] = {"q18": fix_q18}
+
+
 def _answers_any(con: Con) -> Con:
     import pyarrow.parquet as pq
 
@@ -212,6 +232,9 @@ def _answers_any(con: Con) -> Con:
         for query_id in query_ids():
             query = SQL_TPCH_ANSWER.format(query_id.removeprefix("q"))
             table = _downcast_exotic_types(con.sql(query).to_arrow_table())
+            if fix := FIX_ANSWERS.get(query_id):
+                # TODO @dangotbanned: Insert a column into the logs to say this was patched?
+                table = fix(table)
             path = DATA / f"result_{query_id}.parquet"
             pq.write_table(table, path)
             tbl_logger.log_row(path.name, table.nbytes)
