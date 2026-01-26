@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
 
     import pyarrow as pa
-    from duckdb import DuckDBPyConnection
+    from duckdb import DuckDBPyConnection as Con
     from typing_extensions import Self, TypeAlias
 
     from narwhals.typing import SizeUnit
@@ -67,15 +67,23 @@ SOURCES = (
 )
 
 
-def format_size(n_bytes: int) -> tuple[FileSize, SizeUnit]:
-    """Return the best human-readable size and unit for the given byte count."""
-    units = ("b", "kb", "mb", "gb", "tb")
-    size = float(n_bytes)
-    for unit in units:
-        if size < 1024 or unit == "tb":
-            return size, unit
-        size /= 1024
-    return size, "tb"
+@cache
+def query_ids() -> tuple[str, ...]:
+    return get_args(QueryID)
+
+
+def _downcast_exotic_types(table: pa.Table) -> pa.Table:
+    import pyarrow as pa
+
+    new_schema = []
+    for field in table.schema:
+        if pa.types.is_decimal(field.type):
+            new_schema.append(pa.field(field.name, pa.float64()))
+        elif field.type == pa.date32():
+            new_schema.append(pa.field(field.name, pa.timestamp("ns")))
+        else:
+            new_schema.append(field)
+    return table.cast(pa.schema(new_schema))
 
 
 class TableLogger:
@@ -103,7 +111,7 @@ class TableLogger:
         self._log_footer()
 
     def log_row(self, name: FileName, n_bytes: int) -> None:
-        size, unit = format_size(n_bytes)
+        size, unit = self._format_size(n_bytes)
         size_str = f"{size:>6.2f} {unit:>2}"
         logger.info("│ %s ┆ %s │", name.rjust(self._file_width), size_str)
 
@@ -117,28 +125,70 @@ class TableLogger:
         fw, sw = self._file_width, self.SIZE_WIDTH
         logger.info("└─%s─┴─%s─┘", "─" * fw, "─" * sw)
 
+    @staticmethod
+    def _format_size(n_bytes: int) -> tuple[FileSize, SizeUnit]:
+        """Return the best human-readable size and unit for the given byte count."""
+        units = ("b", "kb", "mb", "gb", "tb")
+        size = float(n_bytes)
+        for unit in units:
+            if size < 1024 or unit == "tb":
+                return size, unit
+            size /= 1024
+        return size, "tb"
 
-@cache
-def query_ids() -> tuple[str, ...]:
-    return get_args(QueryID)
+
+def connect() -> Con:
+    import duckdb
+
+    logger.info("Connecting to in-memory DuckDB database")
+    return duckdb.connect(database=":memory:")
 
 
-def answers_any(con: DuckDBPyConnection) -> None:
+def load_tpch_extension(con: Con) -> Con:
+    logger.info("Installing DuckDB TPC-H Extension")
+    con.install_extension("tpch")
+    con.load_extension("tpch")
+    return con
+
+
+def generate_tpch_database(con: Con, scale_factor: float) -> Con:
+    logger.info("Generating data with scale_factor=%s", scale_factor)
+    con.sql(f"CALL dbgen(sf={scale_factor})")
+    logger.info("Finished generating data.")
+    return con
+
+
+def write_tpch_database(con: Con) -> Con:
+    import pyarrow.parquet as pq
+
+    logger.info("Writing data to: %s", DATA.as_posix())
+    with TableLogger.sources() as tbl_logger:
+        for t in SOURCES:
+            rel = con.sql(f"SELECT * FROM {t}")
+            table = _downcast_exotic_types(rel.to_arrow_table())
+            path = DATA / f"{t}.parquet"
+            pq.write_table(table, path)
+            tbl_logger.log_row(path.name, table.nbytes)
+    return con
+
+
+def _answers_any(con: Con) -> Con:
     import pyarrow.parquet as pq
 
     logger.info("Executing tpch queries for answers")
     with TableLogger.answers() as tbl_logger:
         for query_id in query_ids():
             rel = con.sql(f"PRAGMA tpch({query_id.removeprefix('q')})")
-            table = downcast_exotic_types(rel.to_arrow_table())
+            table = _downcast_exotic_types(rel.to_arrow_table())
             path = DATA / f"result_{query_id}.parquet"
             pq.write_table(table, path)
             tbl_logger.log_row(path.name, table.nbytes)
+    return con
 
 
-def answers_builtin(con: DuckDBPyConnection, scale: BuiltinScaleFactor) -> None:
-    import pyarrow.csv as pc
+def _answers_builtin(con: Con, scale: BuiltinScaleFactor) -> Con:
     import pyarrow.parquet as pq
+    from pyarrow.csv import ParseOptions, read_csv
 
     logger.info("Fastpath for builtin tpch_answers()")
     results = con.sql(
@@ -148,63 +198,35 @@ def answers_builtin(con: DuckDBPyConnection, scale: BuiltinScaleFactor) -> None:
             WHERE scale_factor={scale}
             """
     )
-    from pyarrow.csv import ParseOptions
 
     opts = ParseOptions(delimiter="|")
     with TableLogger.answers() as tbl_logger:
         while row := results.fetchmany(1):
             query_nr, answer = row[0]
-            table = pc.read_csv(io.BytesIO(answer.encode("utf-8")), parse_options=opts)
-            table = downcast_exotic_types(table)
+            table = read_csv(io.BytesIO(answer.encode("utf-8")), parse_options=opts)
+            table = _downcast_exotic_types(table)
             path = DATA / f"result_q{query_nr}.parquet"
             pq.write_table(table, path)
             tbl_logger.log_row(path.name, table.nbytes)
+    return con
 
 
-def load_tpch(con: DuckDBPyConnection) -> None:
-    logger.info("Installing DuckDB TPC-H Extension")
-    con.install_extension("tpch")
-    con.load_extension("tpch")
-
-
-def downcast_exotic_types(table: pa.Table) -> pa.Table:
-    import pyarrow as pa
-
-    new_schema = []
-    for field in table.schema:
-        if pa.types.is_decimal(field.type):
-            new_schema.append(pa.field(field.name, pa.float64()))
-        elif field.type == pa.date32():
-            new_schema.append(pa.field(field.name, pa.timestamp("ns")))
-        else:
-            new_schema.append(field)
-    return table.cast(pa.schema(new_schema))
+def write_tpch_answers(con: Con, scale_factor: float) -> Con:
+    logger.info("Getting answers")
+    if scale := SF_BUILTIN_STR.get(scale_factor):
+        _answers_builtin(con, scale)
+    else:
+        _answers_any(con)
+    return con
 
 
 def main(scale_factor: float = 0.1) -> None:
-    import duckdb
-    import pyarrow.parquet as pq
-
     DATA.mkdir(exist_ok=True)
-    logger.info("Connecting to in-memory DuckDB database")
-    con = duckdb.connect(database=":memory:")
-    load_tpch(con)
-    logger.info("Generating data with scale_factor=%s", scale_factor)
-    con.sql(f"CALL dbgen(sf={scale_factor})")
-    logger.info("Finished generating data.")
-    logger.info("Writing data to: %s", DATA.as_posix())
-    with TableLogger.sources() as tbl_logger:
-        for t in SOURCES:
-            rel = con.sql(f"SELECT * FROM {t}")
-            table = downcast_exotic_types(rel.to_arrow_table())
-            path = DATA / f"{t}.parquet"
-            pq.write_table(table, path)
-            tbl_logger.log_row(path.name, table.nbytes)
-    logger.info("Getting answers")
-    if scale := SF_BUILTIN_STR.get(scale_factor):
-        answers_builtin(con, scale)
-    else:
-        answers_any(con)
+    con = connect()
+    load_tpch_extension(con)
+    generate_tpch_database(con, scale_factor)
+    write_tpch_database(con)
+    write_tpch_answers(con, scale_factor)
 
 
 if __name__ == "__main__":
