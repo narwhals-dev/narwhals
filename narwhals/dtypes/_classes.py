@@ -2,61 +2,24 @@ from __future__ import annotations
 
 import enum
 from collections import OrderedDict
-from collections.abc import Iterable, Mapping
+from collections.abc import Mapping
 from datetime import timezone
 from itertools import starmap
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
-from narwhals._utils import (
-    _DeferredIterable,
-    isinstance_or_issubclass,
-    qualified_type_name,
-)
+from narwhals._utils import _DeferredIterable, isinstance_or_issubclass
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Sequence
-    from typing import Any
+    from collections.abc import Iterable, Iterator, Sequence
+    from typing import Any, Literal
 
     import _typeshed
-    from typing_extensions import Self, TypeIs
+    from typing_extensions import Self, TypeAlias
 
     from narwhals.typing import IntoDType, TimeUnit
 
-
-def _validate_dtype(dtype: DType | type[DType]) -> None:
-    if not isinstance_or_issubclass(dtype, DType):
-        msg = (
-            f"Expected Narwhals dtype, got: {type(dtype)}.\n\n"
-            "Hint: if you were trying to cast to a type, use e.g. nw.Int64 instead of 'int64'."
-        )
-        raise TypeError(msg)
-
-
-def _is_into_dtype(obj: Any) -> TypeIs[IntoDType]:
-    return isinstance(obj, DType) or (
-        isinstance(obj, DTypeClass) and not issubclass(obj, NestedType)
-    )
-
-
-def _is_nested_type(obj: Any) -> TypeIs[type[NestedType]]:
-    return isinstance(obj, DTypeClass) and issubclass(obj, NestedType)
-
-
-def _validate_into_dtype(dtype: Any) -> None:
-    if not _is_into_dtype(dtype):
-        if _is_nested_type(dtype):
-            name = f"nw.{dtype.__name__}"
-            msg = (
-                f"{name!r} is not valid in this context.\n\n"
-                f"Hint: instead of:\n\n"
-                f"    {name}\n\n"
-                "use:\n\n"
-                f"    {name}(...)"
-            )
-        else:
-            msg = f"Expected Narwhals dtype, got: {qualified_type_name(dtype)!r}."
-        raise TypeError(msg)
+    _Bits: TypeAlias = Literal[8, 16, 32, 64, 128]
 
 
 class DTypeClass(type):
@@ -176,6 +139,9 @@ class DType(metaclass=DTypeClass):
     def __hash__(self) -> int:
         return hash(self.__class__)
 
+    def __call__(self) -> Self:
+        return self
+
 
 class NumericType(DType):
     """Base class for numeric data types."""
@@ -184,12 +150,19 @@ class NumericType(DType):
 class IntegerType(NumericType):
     """Base class for integer data types."""
 
+    # NOTE: Likely going to need an `Integer` metaclass, to be able to use `Final` or a class property
+    _bits: ClassVar[_Bits]
 
-class SignedIntegerType(IntegerType):
+    def __init_subclass__(cls, *args: Any, bits: _Bits, **kwds: Any) -> None:
+        super().__init_subclass__(*args, **kwds)
+        cls._bits = bits
+
+
+class SignedIntegerType(IntegerType, bits=128):
     """Base class for signed integer data types."""
 
 
-class UnsignedIntegerType(IntegerType):
+class UnsignedIntegerType(IntegerType, bits=128):
     """Base class for unsigned integer data types."""
 
 
@@ -261,7 +234,7 @@ class Decimal(NumericType):
         return f"{class_name}(precision={self.precision!r}, scale={self.scale!r})"
 
 
-class Int128(SignedIntegerType):
+class Int128(SignedIntegerType, bits=128):
     """128-bit signed integer type.
 
     Examples:
@@ -281,7 +254,7 @@ class Int128(SignedIntegerType):
     """
 
 
-class Int64(SignedIntegerType):
+class Int64(SignedIntegerType, bits=64):
     """64-bit signed integer type.
 
     Examples:
@@ -294,7 +267,7 @@ class Int64(SignedIntegerType):
     """
 
 
-class Int32(SignedIntegerType):
+class Int32(SignedIntegerType, bits=32):
     """32-bit signed integer type.
 
     Examples:
@@ -307,7 +280,7 @@ class Int32(SignedIntegerType):
     """
 
 
-class Int16(SignedIntegerType):
+class Int16(SignedIntegerType, bits=16):
     """16-bit signed integer type.
 
     Examples:
@@ -320,7 +293,7 @@ class Int16(SignedIntegerType):
     """
 
 
-class Int8(SignedIntegerType):
+class Int8(SignedIntegerType, bits=8):
     """8-bit signed integer type.
 
     Examples:
@@ -333,7 +306,7 @@ class Int8(SignedIntegerType):
     """
 
 
-class UInt128(UnsignedIntegerType):
+class UInt128(UnsignedIntegerType, bits=128):
     """128-bit unsigned integer type.
 
     Examples:
@@ -347,7 +320,7 @@ class UInt128(UnsignedIntegerType):
     """
 
 
-class UInt64(UnsignedIntegerType):
+class UInt64(UnsignedIntegerType, bits=64):
     """64-bit unsigned integer type.
 
     Examples:
@@ -360,7 +333,7 @@ class UInt64(UnsignedIntegerType):
     """
 
 
-class UInt32(UnsignedIntegerType):
+class UInt32(UnsignedIntegerType, bits=32):
     """32-bit unsigned integer type.
 
     Examples:
@@ -373,7 +346,7 @@ class UInt32(UnsignedIntegerType):
     """
 
 
-class UInt16(UnsignedIntegerType):
+class UInt16(UnsignedIntegerType, bits=16):
     """16-bit unsigned integer type.
 
     Examples:
@@ -386,7 +359,7 @@ class UInt16(UnsignedIntegerType):
     """
 
 
-class UInt8(UnsignedIntegerType):
+class UInt8(UnsignedIntegerType, bits=8):
     """8-bit unsigned integer type.
 
     Examples:
