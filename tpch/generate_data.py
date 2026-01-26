@@ -34,9 +34,6 @@ E.g. if we *know* the query is not valid for a given `scale_factor`,
 then we can determine if a failure is expected.
 """
 
-GLOB_DATABASE = r"*[!0-9].parquet"
-GLOB_ANSWERS = r"result_q[0-9]*.parquet"
-
 GLOBS: Mapping[Artifact, str] = {
     "database": r"*[!0-9].parquet",
     "answers": r"result_q[0-9]*.parquet",
