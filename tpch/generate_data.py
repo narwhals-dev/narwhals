@@ -132,12 +132,11 @@ def answers_any(con: DuckDBPyConnection) -> None:
     logger.info("Executing tpch queries for answers")
     with TableLogger.answers() as tbl_logger:
         for query_id in query_ids():
-            result = con.sql(f"PRAGMA tpch({query_id.removeprefix('q')})")
-            result_pa = result.to_arrow_table()
-            result_pa = result_pa.cast(convert_schema(result_pa.schema))
+            rel = con.sql(f"PRAGMA tpch({query_id.removeprefix('q')})")
+            table = downcast_exotic_types(rel.to_arrow_table())
             path = DATA / f"result_{query_id}.parquet"
-            pq.write_table(result_pa, path)
-            tbl_logger.log_row(path.name, result_pa.nbytes)
+            pq.write_table(table, path)
+            tbl_logger.log_row(path.name, table.nbytes)
 
 
 def answers_builtin(con: DuckDBPyConnection, scale: BuiltinScaleFactor) -> None:
@@ -155,14 +154,14 @@ def answers_builtin(con: DuckDBPyConnection, scale: BuiltinScaleFactor) -> None:
     with TableLogger.answers() as tbl_logger:
         while row := results.fetchmany(1):
             query_nr, answer = row[0]
-            tbl_answer = pc.read_csv(
+            table = pc.read_csv(
                 io.BytesIO(answer.encode("utf-8")),
                 parse_options=pc.ParseOptions(delimiter="|"),
             )
-            tbl_answer = tbl_answer.cast(convert_schema(tbl_answer.schema))
+            table = downcast_exotic_types(table)
             path = DATA / f"result_q{query_nr}.parquet"
-            pq.write_table(tbl_answer, path)
-            tbl_logger.log_row(path.name, tbl_answer.nbytes)
+            pq.write_table(table, path)
+            tbl_logger.log_row(path.name, table.nbytes)
 
 
 def load_tpch(con: DuckDBPyConnection) -> None:
@@ -171,18 +170,18 @@ def load_tpch(con: DuckDBPyConnection) -> None:
     con.load_extension("tpch")
 
 
-def convert_schema(schema: pa.Schema) -> pa.Schema:
+def downcast_exotic_types(table: pa.Table) -> pa.Table:
     import pyarrow as pa
 
     new_schema = []
-    for field in schema:
+    for field in table.schema:
         if pa.types.is_decimal(field.type):
             new_schema.append(pa.field(field.name, pa.float64()))
         elif field.type == pa.date32():
             new_schema.append(pa.field(field.name, pa.timestamp("ns")))
         else:
             new_schema.append(field)
-    return pa.schema(new_schema)
+    return table.cast(pa.schema(new_schema))
 
 
 def main(scale_factor: float = 0.1) -> None:
@@ -199,12 +198,11 @@ def main(scale_factor: float = 0.1) -> None:
     logger.info("Writing data to: %s", DATA.as_posix())
     with TableLogger.sources() as tbl_logger:
         for t in SOURCES:
-            tbl = con.sql(f"SELECT * FROM {t}")
-            tbl_arrow = tbl.to_arrow_table()
-            tbl_arrow = tbl_arrow.cast(convert_schema(tbl_arrow.schema))
+            rel = con.sql(f"SELECT * FROM {t}")
+            table = downcast_exotic_types(rel.to_arrow_table())
             path = DATA / f"{t}.parquet"
-            pq.write_table(tbl_arrow, path)
-            tbl_logger.log_row(path.name, tbl_arrow.nbytes)
+            pq.write_table(table, path)
+            tbl_logger.log_row(path.name, table.nbytes)
     logger.info("Getting answers")
     if scale := SF_BUILTIN_STR.get(scale_factor):
         answers_builtin(con, scale)
