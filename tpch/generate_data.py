@@ -151,13 +151,13 @@ def answers_builtin(con: DuckDBPyConnection, scale: BuiltinScaleFactor) -> None:
             WHERE scale_factor={scale}
             """
     )
+    from pyarrow.csv import ParseOptions
+
+    opts = ParseOptions(delimiter="|")
     with TableLogger.answers() as tbl_logger:
         while row := results.fetchmany(1):
             query_nr, answer = row[0]
-            table = pc.read_csv(
-                io.BytesIO(answer.encode("utf-8")),
-                parse_options=pc.ParseOptions(delimiter="|"),
-            )
+            table = pc.read_csv(io.BytesIO(answer.encode("utf-8")), parse_options=opts)
             table = downcast_exotic_types(table)
             path = DATA / f"result_q{query_nr}.parquet"
             pq.write_table(table, path)
