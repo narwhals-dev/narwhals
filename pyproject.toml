@@ -45,7 +45,7 @@ Repository = "https://github.com/narwhals-dev/narwhals"
 # https://github.com/narwhals-dev/narwhals/issues/817 
 pandas = ["pandas>=1.1.3"]
 modin = ["modin"]
-cudf = ["cudf>=24.10.0"]
+cudf = ["cudf-cu12>=24.10.0"]
 pyarrow = ["pyarrow>=13.0.0"]
 pyspark = ["pyspark>=3.5.0"]
 pyspark-connect = ["pyspark[connect]>=3.5.0"]
@@ -269,6 +269,7 @@ filterwarnings = [
   'ignore:.*The distutils package is deprecated and slated for removal in Python 3.12:DeprecationWarning:pyspark',
   'ignore:.*distutils Version classes are deprecated. Use packaging.version instead.*:DeprecationWarning',
   'ignore:.*is_datetime64tz_dtype is deprecated and will be removed in a future version.*:DeprecationWarning:pyspark',
+  'ignore:.*The copy keyword is deprecated and will be removed in a future version.*:Warning:pyspark',
 
   # Warning raised by PyArrow nightly just by importing pandas
   'ignore:.*Python binding for RankQuantileOptions not exposed:RuntimeWarning:pyarrow',
