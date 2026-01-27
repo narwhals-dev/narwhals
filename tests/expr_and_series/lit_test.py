@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 from datetime import date
 from typing import TYPE_CHECKING, Any
 
@@ -17,6 +16,7 @@ from tests.utils import (
 
 if TYPE_CHECKING:
     from narwhals.dtypes import DType
+    from narwhals.typing import IntoDType, PythonLiteral
 
 
 @pytest.mark.parametrize(
@@ -45,14 +45,6 @@ def test_lit_error(constructor: Constructor) -> None:
         ValueError, match="numpy arrays are not supported as literal values"
     ):
         _ = df.with_columns(nw.lit(np.array([1, 2])).alias("lit"))  # pyright: ignore[reportArgumentType]
-    with pytest.raises(
-        NotImplementedError, match=re.escape("Nested datatypes are not supported yet.")
-    ):
-        _ = df.with_columns(nw.lit((1, 2)).alias("lit"))  # type: ignore[arg-type]
-    with pytest.raises(
-        NotImplementedError, match=re.escape("Nested datatypes are not supported yet.")
-    ):
-        _ = df.with_columns(nw.lit([1, 2]).alias("lit"))  # type: ignore[arg-type]
 
 
 def test_lit_out_name(constructor: Constructor) -> None:
@@ -143,3 +135,41 @@ def test_pyarrow_lit_string() -> None:
     assert pa.types.is_string(result.type)
     result = df.select(nw.lit("foo", dtype=nw.String)).to_native().schema.field("literal")
     assert pa.types.is_string(result.type)
+
+
+@pytest.mark.parametrize(
+    ("value", "dtype"),
+    [
+        ((), nw.List(nw.Int32())),
+        ([], nw.List(nw.Int32())),
+        ({}, nw.Struct({})),
+        (("foo", "bar"), None),
+        (["orca", "narwhal"], None),
+        ({"field_1": 42}, None),
+    ],
+)
+def test_nested_structures(
+    request: pytest.FixtureRequest,
+    constructor: Constructor,
+    value: PythonLiteral,
+    dtype: IntoDType | None,
+) -> None:
+    is_empty_dict = isinstance(value, dict) and len(value) == 0
+    if any(x in str(constructor) for x in ("duckdb", "sqlframe")) and is_empty_dict:
+        reason = "Cannot create an empty struct type for backend"
+        request.applymarker(pytest.mark.xfail(reason=reason, raises=NotImplementedError))
+
+    size = 3
+    data = {"a": list(range(size))}
+    frame = nw.from_native(constructor(data))
+    result = frame.with_columns(nested=nw.lit(value, dtype=dtype))
+
+    value = list(value) if isinstance(value, tuple) else value
+    assert_equal_data(result, {"a": data["a"], "nested": [value] * size})
+
+
+@pytest.mark.parametrize("value", [[], (), {}])
+def test_raise_empty_nested_structures(value: PythonLiteral) -> None:
+    msg = "Cannot infer dtype for empty nested structure. Please provide an explicit dtype parameter."
+    with pytest.raises(ValueError, match=msg):
+        nw.lit(value=value)

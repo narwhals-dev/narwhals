@@ -46,6 +46,7 @@ if TYPE_CHECKING:
         IntoExpr,
         IntoSchema,
         NonNestedLiteral,
+        PythonLiteral,
         _2DArray,
     )
 
@@ -1422,15 +1423,19 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool) ->
     )
 
 
-def lit(value: NonNestedLiteral, dtype: IntoDType | None = None) -> Expr:
+def lit(value: PythonLiteral, dtype: IntoDType | None = None) -> Expr:
     """Return an expression representing a literal value.
 
     Arguments:
-        value: The value to use as literal.
+        value: The value to use as literal. Can be a scalar value, list, tuple, or dict.
+            Lists and tuples are converted to `List` dtype, dicts to `Struct` dtype.
         dtype: The data type of the literal value. If not provided, the data type will
-            be inferred by the native library.
+            be inferred by the native library. For empty lists/dicts, dtype must be
+            specified explicitly.
 
     Examples:
+        Scalar literals:
+
         >>> import pandas as pd
         >>> import narwhals as nw
         >>>
@@ -1443,6 +1448,32 @@ def lit(value: NonNestedLiteral, dtype: IntoDType | None = None) -> Expr:
         |  0  1        3   |
         |  1  2        3   |
         └──────────────────┘
+
+        List literals (creates a List column):
+
+        >>> df_native = pd.DataFrame({"a": [1, 2]})
+        >>> nw.from_native(df_native).with_columns(nw.lit([1, 2, 3]).alias("list_col"))
+        ┌──────────────────────┐
+        |Narwhals DataFrame    |
+        |----------------------|
+        |     a  list_col      |
+        |  0  1  [1, 2, 3]     |
+        |  1  2  [1, 2, 3]     |
+        └──────────────────────┘
+
+        Dict literals (creates a Struct column):
+
+        >>> df_native = pd.DataFrame({"a": [1, 2]})
+        >>> nw.from_native(df_native).with_columns(
+        ...     nw.lit({"x": 1, "y": 2}).alias("struct_col")
+        ... )
+        ┌───────────────────────┐
+        |Narwhals DataFrame     |
+        |-----------------------|
+        |     a  struct_col     |
+        |  0  1  {1, 2}         |
+        |  1  2  {1, 2}         |
+        └───────────────────────┘
     """
     if is_numpy_array(value):
         msg = (
@@ -1451,9 +1482,9 @@ def lit(value: NonNestedLiteral, dtype: IntoDType | None = None) -> Expr:
         )
         raise ValueError(msg)
 
-    if isinstance(value, (list, tuple)):
-        msg = f"Nested datatypes are not supported yet. Got {value}"
-        raise NotImplementedError(msg)
+    if isinstance(value, (list, tuple, dict)) and len(value) == 0 and dtype is None:
+        msg = "Cannot infer dtype for empty nested structure. Please provide an explicit dtype parameter."
+        raise ValueError(msg)
 
     return Expr(ExprNode(ExprKind.LITERAL, "lit", value=value, dtype=dtype))
 
