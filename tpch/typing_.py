@@ -1,20 +1,15 @@
 from __future__ import annotations
 
-from functools import wraps
-from typing import TYPE_CHECKING, Any, Literal, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, Literal, Protocol
 
 from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-
-    from typing_extensions import ParamSpec, TypeAlias
+    from typing_extensions import TypeAlias
 
     import narwhals as nw
     from tpch.tests.conftest import Backend
 
-    P = ParamSpec("P")
-    R = TypeVar("R")
 
 KnownImpl: TypeAlias = Literal[_EagerAllowedImpl, _LazyAllowedImpl]
 TPCHBackend: TypeAlias = Literal[
@@ -61,22 +56,3 @@ class AssertExpected(Protocol):
     """
 
     def __call__(self, backend: Backend, scale_factor: float, /) -> bool: ...
-
-
-# TODO @dangotbanned: Remove
-def todo_mark(*_: Any, **__: Any) -> Callable[[Callable[P, R]], Callable[P, R]]:
-    """TODO: Do something useful, not just a placeholder.
-
-    - Run a callback to validate the known issue was the problem?
-      - Would only want to run *after* failing, since it needs to be eager
-    - Add pytest stuff?
-    """
-
-    def decorate(function: Callable[P, R], /) -> Callable[P, R]:
-        @wraps(function)
-        def wrapper(*args: P.args, **kwds: P.kwargs) -> R:
-            return function(*args, **kwds)
-
-        return wrapper
-
-    return decorate
