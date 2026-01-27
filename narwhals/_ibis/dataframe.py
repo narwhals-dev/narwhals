@@ -425,3 +425,4 @@ class IbisLazyFrame(
 
     # Intentionally not implemented, as Ibis does its own expression rewriting.
     _evaluate_window_expr = not_implemented()
+    _filter = not_implemented()
