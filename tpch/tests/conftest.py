@@ -8,15 +8,24 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 import polars as pl
 import pytest
+from polars.testing import assert_frame_equal as pl_assert_frame_equal
 
 import narwhals as nw
+from narwhals.exceptions import NarwhalsError
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
 
     from narwhals._typing import IntoBackendAny
     from narwhals.typing import FileSource
-    from tpch.typing_ import KnownImpl, QueryID, QueryModule, TPCHBackend
+    from tpch.typing_ import (
+        AssertExpected,
+        KnownImpl,
+        QueryID,
+        QueryModule,
+        TPCHBackend,
+        XFailRaises,
+    )
 
 
 # Data paths relative to tpch directory
@@ -77,11 +86,14 @@ class Backend:
 class Query:
     id: QueryID
     paths: tuple[Path, ...]
+    _into_xfails: tuple[tuple[AssertExpected, str, XFailRaises], ...]
+
     PACKAGE_PREFIX: ClassVar = "tpch.queries"
 
     def __init__(self, query_id: QueryID, paths: tuple[Path, ...]) -> None:
         self.id = query_id
         self.paths = paths
+        self._into_xfails = ()
 
     def __repr__(self) -> str:
         return self.id
@@ -96,8 +108,54 @@ class Query:
     def run(self, backend: Backend) -> pl.DataFrame:
         if self.id in backend.skips:
             pytest.skip(f"Query {self} is not supported for {backend}")
-        data = (backend.scan(fp.as_posix()) for fp in self.paths)
+        data = tuple(backend.scan(fp.as_posix()) for fp in self.paths)
         return self._import_module().query(*data).lazy().collect("polars").to_polars()
+
+    def try_run(self, backend: Backend, scale_factor: float) -> pl.DataFrame:
+        try:
+            result = self.run(backend)
+        except NarwhalsError as exc:
+            msg = f"Query [{self}-{backend}] ({scale_factor=}) failed with the following error in Narwhals:\n{exc}"
+            raise RuntimeError(msg) from exc
+        return result
+
+    def with_xfail(
+        self,
+        predicate: AssertExpected,
+        reason: str,
+        *,
+        raises: XFailRaises = AssertionError,
+    ) -> Query:
+        item = (predicate, reason, raises)
+        self._into_xfails = (*self._into_xfails, item)
+        return self
+
+    def _apply_xfails(
+        self,
+        result: pl.DataFrame,
+        backend: Backend,
+        scale_factor: float,
+        request: pytest.FixtureRequest,
+    ) -> None:
+        for predicate, reason, raises in self._into_xfails:
+            condition = predicate(result, backend, scale_factor)
+            request.applymarker(
+                pytest.mark.xfail(condition, reason=reason, raises=raises)
+            )
+
+    def assert_expected(
+        self,
+        result: pl.DataFrame,
+        backend: Backend,
+        scale_factor: float,
+        request: pytest.FixtureRequest,
+    ) -> None:
+        self._apply_xfails(result, backend, scale_factor, request)
+        try:
+            pl_assert_frame_equal(self.expected(), result, check_dtypes=False)
+        except AssertionError as exc:
+            msg = f"Query [{self}-{backend}] ({scale_factor=}) resulted in wrong answer:\n{exc}"
+            raise AssertionError(msg) from exc
 
 
 def iter_backends() -> Iterator[Backend]:
@@ -178,7 +236,10 @@ queries = (
     q("q14", LINEITEM_PATH, PART_PATH),
     q("q15", LINEITEM_PATH, SUPPLIER_PATH),
     q("q16", PART_PATH, PARTSUPP_PATH, SUPPLIER_PATH),
-    q("q17", LINEITEM_PATH, PART_PATH),
+    q("q17", LINEITEM_PATH, PART_PATH).with_xfail(
+        lambda _, __, scale_factor: scale_factor < 0.014,
+        reason="Generated dataset is too small, leading to 0 rows after the first two filters in `query1`.",
+    ),
     q("q18", CUSTOMER_PATH, LINEITEM_PATH, ORDERS_PATH),
     q("q19", LINEITEM_PATH, PART_PATH),
     q("q20", PART_PATH, PARTSUPP_PATH, NATION_PATH, LINEITEM_PATH, SUPPLIER_PATH),

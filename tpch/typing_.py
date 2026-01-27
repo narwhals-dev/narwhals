@@ -8,9 +8,11 @@ from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    import polars as pl
     from typing_extensions import ParamSpec, TypeAlias
 
     import narwhals as nw
+    from tpch.tests.conftest import Backend
 
     P = ParamSpec("P")
     R = TypeVar("R")
@@ -43,12 +45,24 @@ QueryID: TypeAlias = Literal[
     "q21",
     "q22",
 ]
+XFailRaises: TypeAlias = type[BaseException] | tuple[type[BaseException], ...]
 
 
 class QueryModule(Protocol):
     def query(
         self, *args: nw.LazyFrame[Any], **kwds: nw.LazyFrame[Any]
     ) -> nw.LazyFrame[Any]: ...
+
+
+class AssertExpected(Protocol):
+    """Failure-state-context callback.
+
+    The returned value will be passed to `pytest.mark.xfail(condition=...)`.
+    """
+
+    def __call__(
+        self, result: pl.DataFrame, backend: Backend, scale_factor: float, /
+    ) -> bool: ...
 
 
 def todo_mark(*_: Any, **__: Any) -> Callable[[Callable[P, R]], Callable[P, R]]:

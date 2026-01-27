@@ -3,17 +3,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import narwhals as nw
-from tpch.typing_ import todo_mark
 
 if TYPE_CHECKING:
     from narwhals.typing import FrameT
 
 
-@todo_mark(
-    "Can fail when `scale_factor<=0.1`.",
-    "Failure is guaranteed when 0 rows are returned by:\n"
-    "`part_ds.filter(nw.col('p_brand') == var1).filter(nw.col('p_container') == var2)`",
-)
 def query(lineitem_ds: FrameT, part_ds: FrameT) -> FrameT:
     var1 = "Brand#23"
     var2 = "MED BOX"
