@@ -157,7 +157,7 @@ def test_pyarrow_lit_string() -> None:
                 {"field_1": nw.Int32(), "field_2": nw.Float64(), "field_3": nw.Boolean()}
             ),
         ),
-        # TODO(FBruzzesi): double nested?
+        # TODO(FBruzzesi): deeper nesting?
     ],
 )
 def test_nested_structures(
@@ -178,11 +178,18 @@ def test_nested_structures(
 
     size = 3
     data = {"a": list(range(size))}
-    frame = nw.from_native(constructor(data))
-    result = frame.with_columns(nested=nw.lit(value, dtype=dtype))
+    expr = nw.lit(value, dtype=dtype).alias("nested")
 
-    value = list(value) if isinstance(value, tuple) else value
-    assert_equal_data(result, {"a": data["a"], "nested": [value] * size})
+    value_ = list(value) if isinstance(value, tuple) else value
+    expected_nested = {"nested": [value_] * size}
+
+    frame = nw.from_native(constructor(data))
+
+    result_with_cols = frame.with_columns(expr)
+    assert_equal_data(result_with_cols, {**data, **expected_nested})
+
+    result_select = frame.select(expr, nw.col("a"))
+    assert_equal_data(result_select, {**expected_nested, **data})
 
 
 @pytest.mark.parametrize("value", [[], (), {}])
