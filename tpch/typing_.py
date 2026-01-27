@@ -1,14 +1,16 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Literal, Protocol, TypeVar
 
-import narwhals as nw
 from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from typing_extensions import ParamSpec, TypeAlias
+
+    import narwhals as nw
 
     P = ParamSpec("P")
     R = TypeVar("R")
@@ -41,7 +43,6 @@ QueryID: TypeAlias = Literal[
     "q21",
     "q22",
 ]
-DataLoader = Callable[[QueryID], tuple[nw.LazyFrame[Any], ...]]
 
 
 class QueryModule(Protocol):
