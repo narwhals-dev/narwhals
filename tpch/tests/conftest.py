@@ -41,6 +41,22 @@ PARTSUPP_PATH = DATA_DIR / "partsupp.parquet"
 ORDERS_PATH = DATA_DIR / "orders.parquet"
 CUSTOMER_PATH = DATA_DIR / "customer.parquet"
 
+SCALE_FACTORS_BLESSED = frozenset(
+    (1.0, 10.0, 30.0, 100.0, 300.0, 1_000.0, 3_000.0, 10_000.0, 30_000.0, 100_000.0)
+)
+"""`scale_factor` values that are listed on [TPC-H v3.0.1 (Page 79)].
+
+Using any other value *can* lead to incorrect results.
+
+[TPC-H_v3.0.1 (Page 79)]: https://www.tpc.org/TPC_Documents_Current_Versions/pdf/TPC-H_v3.0.1.pdf
+"""
+
+SCALE_FACTORS_QUITE_SAFE = frozenset((0.1, 0.13, 0.23, 0.25, 0.275, 0.29, 0.3))
+"""scale_factor` values that are **lower** than [TPC-H v3.0.1 (Page 79)], but still work fine.
+
+[TPC-H_v3.0.1 (Page 79)]: https://www.tpc.org/TPC_Documents_Current_Versions/pdf/TPC-H_v3.0.1.pdf
+"""
+
 
 def pytest_addoption(parser: pytest.Parser) -> None:
     from tests.conftest import DEFAULT_CONSTRUCTORS
@@ -187,88 +203,69 @@ def q(query_id: QueryID, *paths: Path) -> Query:
     return Query(query_id, paths)
 
 
-_Q21_ALLOW = frozenset(
-    (
-        0.1,
-        0.13,
-        0.23,
-        0.25,
-        0.275,
-        0.29,
-        0.3,
-        1.0,
-        10.0,
-        30.0,
-        100.0,
-        300.0,
-        1_000.0,
-        3_000.0,
-        10_000.0,
-        30_000.0,
-        100_000.0,
+def iter_queries() -> Iterator[Query]:
+    yield from (
+        q("q1", LINEITEM_PATH),
+        q("q2", REGION_PATH, NATION_PATH, SUPPLIER_PATH, PART_PATH, PARTSUPP_PATH),
+        q("q3", CUSTOMER_PATH, LINEITEM_PATH, ORDERS_PATH),
+        q("q4", LINEITEM_PATH, ORDERS_PATH),
+        q(
+            "q5",
+            REGION_PATH,
+            NATION_PATH,
+            CUSTOMER_PATH,
+            LINEITEM_PATH,
+            ORDERS_PATH,
+            SUPPLIER_PATH,
+        ),
+        q("q6", LINEITEM_PATH),
+        q("q7", NATION_PATH, CUSTOMER_PATH, LINEITEM_PATH, ORDERS_PATH, SUPPLIER_PATH),
+        q(
+            "q8",
+            PART_PATH,
+            SUPPLIER_PATH,
+            LINEITEM_PATH,
+            ORDERS_PATH,
+            CUSTOMER_PATH,
+            NATION_PATH,
+            REGION_PATH,
+        ),
+        q(
+            "q9",
+            PART_PATH,
+            PARTSUPP_PATH,
+            NATION_PATH,
+            LINEITEM_PATH,
+            ORDERS_PATH,
+            SUPPLIER_PATH,
+        ),
+        q("q10", CUSTOMER_PATH, NATION_PATH, LINEITEM_PATH, ORDERS_PATH),
+        q("q11", NATION_PATH, PARTSUPP_PATH, SUPPLIER_PATH),
+        q("q12", LINEITEM_PATH, ORDERS_PATH),
+        q("q13", CUSTOMER_PATH, ORDERS_PATH),
+        q("q14", LINEITEM_PATH, PART_PATH),
+        q("q15", LINEITEM_PATH, SUPPLIER_PATH).with_skip(
+            lambda backend, _: backend.name in {"duckdb", "sqlframe"},
+            reason="https://github.com/narwhals-dev/narwhals/issues/2226",
+        ),
+        q("q16", PART_PATH, PARTSUPP_PATH, SUPPLIER_PATH),
+        q("q17", LINEITEM_PATH, PART_PATH).with_xfail(
+            lambda _, scale_factor: scale_factor < 0.014,
+            reason="Generated dataset is too small, leading to 0 rows after the first two filters in `query1`.",
+        ),
+        q("q18", CUSTOMER_PATH, LINEITEM_PATH, ORDERS_PATH),
+        q("q19", LINEITEM_PATH, PART_PATH),
+        q("q20", PART_PATH, PARTSUPP_PATH, NATION_PATH, LINEITEM_PATH, SUPPLIER_PATH),
+        q("q21", LINEITEM_PATH, NATION_PATH, ORDERS_PATH, SUPPLIER_PATH).with_skip(
+            lambda _, scale_factor: scale_factor
+            not in (SCALE_FACTORS_BLESSED | SCALE_FACTORS_QUITE_SAFE),
+            reason="Off-by-1 error when using *most* non-blessed `scale_factor`s",
+        ),
+        q("q22", CUSTOMER_PATH, ORDERS_PATH),
     )
-)
-queries = (
-    q("q1", LINEITEM_PATH),
-    q("q2", REGION_PATH, NATION_PATH, SUPPLIER_PATH, PART_PATH, PARTSUPP_PATH),
-    q("q3", CUSTOMER_PATH, LINEITEM_PATH, ORDERS_PATH),
-    q("q4", LINEITEM_PATH, ORDERS_PATH),
-    q(
-        "q5",
-        REGION_PATH,
-        NATION_PATH,
-        CUSTOMER_PATH,
-        LINEITEM_PATH,
-        ORDERS_PATH,
-        SUPPLIER_PATH,
-    ),
-    q("q6", LINEITEM_PATH),
-    q("q7", NATION_PATH, CUSTOMER_PATH, LINEITEM_PATH, ORDERS_PATH, SUPPLIER_PATH),
-    q(
-        "q8",
-        PART_PATH,
-        SUPPLIER_PATH,
-        LINEITEM_PATH,
-        ORDERS_PATH,
-        CUSTOMER_PATH,
-        NATION_PATH,
-        REGION_PATH,
-    ),
-    q(
-        "q9",
-        PART_PATH,
-        PARTSUPP_PATH,
-        NATION_PATH,
-        LINEITEM_PATH,
-        ORDERS_PATH,
-        SUPPLIER_PATH,
-    ),
-    q("q10", CUSTOMER_PATH, NATION_PATH, LINEITEM_PATH, ORDERS_PATH),
-    q("q11", NATION_PATH, PARTSUPP_PATH, SUPPLIER_PATH),
-    q("q12", LINEITEM_PATH, ORDERS_PATH),
-    q("q13", CUSTOMER_PATH, ORDERS_PATH),
-    q("q14", LINEITEM_PATH, PART_PATH),
-    q("q15", LINEITEM_PATH, SUPPLIER_PATH).with_skip(
-        lambda backend, _: backend.name in {"duckdb", "sqlframe"},
-        reason="https://github.com/narwhals-dev/narwhals/issues/2226",
-    ),
-    q("q16", PART_PATH, PARTSUPP_PATH, SUPPLIER_PATH),
-    q("q17", LINEITEM_PATH, PART_PATH).with_xfail(
-        lambda _, scale_factor: scale_factor < 0.014,
-        reason="Generated dataset is too small, leading to 0 rows after the first two filters in `query1`.",
-    ),
-    q("q18", CUSTOMER_PATH, LINEITEM_PATH, ORDERS_PATH),
-    q("q19", LINEITEM_PATH, PART_PATH),
-    q("q20", PART_PATH, PARTSUPP_PATH, NATION_PATH, LINEITEM_PATH, SUPPLIER_PATH),
-    q("q21", LINEITEM_PATH, NATION_PATH, ORDERS_PATH, SUPPLIER_PATH).with_skip(
-        lambda _, scale_factor: scale_factor not in _Q21_ALLOW,
-        reason="Off-by-1 error when using *most* non-blessed `scale_factor`s",
-    ),
-    q("q22", CUSTOMER_PATH, ORDERS_PATH),
-)
 
 
-@pytest.fixture(params=queries, ids=repr)
+@pytest.fixture(params=iter_queries(), ids=repr)
 def query(request: pytest.FixtureRequest) -> Query:
     result: Query = request.param
     return result
