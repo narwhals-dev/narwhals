@@ -14,7 +14,7 @@ import narwhals as nw
 from narwhals.exceptions import NarwhalsError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator
+    from collections.abc import Iterator
 
     from narwhals._typing import IntoBackendAny
     from narwhals.typing import FileSource
@@ -57,23 +57,15 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 class Backend:
     name: TPCHBackend
     implementation: KnownImpl
-    skips: frozenset[QueryID]
     kwds: dict[str, Any]
 
     def __init__(
-        self,
-        name: TPCHBackend,
-        into_backend: IntoBackendAny,
-        /,
-        *,
-        skips: Iterable[QueryID] = (),
-        **kwds: Any,
+        self, name: TPCHBackend, into_backend: IntoBackendAny, /, **kwds: Any
     ) -> None:
         self.name = name
         impl = nw.Implementation.from_backend(into_backend)
         assert impl is not nw.Implementation.UNKNOWN
         self.implementation = impl
-        self.skips = frozenset(skips)
         self.kwds = kwds
 
     def __repr__(self) -> str:
@@ -107,10 +99,7 @@ class Query:
     def expected(self) -> pl.DataFrame:
         return pl.read_parquet(DATA_DIR / f"result_{self}.parquet")
 
-    # TODO @dangotbanned: Move these skips from `Backend` -> `Query`
     def run(self, backend: Backend) -> pl.DataFrame:
-        if self.id in backend.skips:
-            pytest.skip(f"Query {self} is not supported for {backend}")
         data = tuple(backend.scan(fp.as_posix()) for fp in self.paths)
         return self._import_module().query(*data).lazy().collect("polars").to_polars()
 
@@ -181,11 +170,11 @@ def iter_backends() -> Iterator[Backend]:
             yield Backend("dask", "dask", engine="pyarrow", dtype_backend="pyarrow")
     if find_spec("duckdb"):
         # NOTE: https://github.com/narwhals-dev/narwhals/issues/2226
-        yield Backend("duckdb", "duckdb", skips=["q15"])
+        yield Backend("duckdb", "duckdb")
         if find_spec("sqlframe"):
             from sqlframe.duckdb import DuckDBSession
 
-            yield Backend("sqlframe", "sqlframe", skips=["q15"], session=DuckDBSession())
+            yield Backend("sqlframe", "sqlframe", session=DuckDBSession())
 
 
 @pytest.fixture(params=iter_backends(), ids=repr)
@@ -259,7 +248,10 @@ queries = (
     q("q12", LINEITEM_PATH, ORDERS_PATH),
     q("q13", CUSTOMER_PATH, ORDERS_PATH),
     q("q14", LINEITEM_PATH, PART_PATH),
-    q("q15", LINEITEM_PATH, SUPPLIER_PATH),
+    q("q15", LINEITEM_PATH, SUPPLIER_PATH).with_skip(
+        lambda backend, _: backend.name in {"duckdb", "sqlframe"},
+        reason="https://github.com/narwhals-dev/narwhals/issues/2226",
+    ),
     q("q16", PART_PATH, PARTSUPP_PATH, SUPPLIER_PATH),
     q("q17", LINEITEM_PATH, PART_PATH).with_xfail(
         lambda _, scale_factor: scale_factor < 0.014,
