@@ -9,7 +9,9 @@ import datetime as dt
 import io
 import logging
 from functools import cache
-from typing import TYPE_CHECKING, Literal, get_args
+from typing import TYPE_CHECKING, Any, Literal, get_args
+
+import polars as pl
 
 from tpch.constants import DATA_DIR, METADATA_PATH
 from tpch.typing_ import QueryID
@@ -18,8 +20,6 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Mapping
     from pathlib import Path
 
-    import polars as pl
-    import pyarrow as pa
     from duckdb import DuckDBPyConnection as Con
     from typing_extensions import Self, TypeAlias
 
@@ -40,8 +40,6 @@ GLOBS: Mapping[Artifact, str] = {
 
 
 def read_fmt_schema(fp: Path) -> str:
-    import polars as pl
-
     schema = pl.read_parquet_schema(fp).items()
     return f"- {fp.name}\n" + "\n".join(f"  - {k:<20}: {v}" for k, v in schema)
 
@@ -103,18 +101,15 @@ def query_ids() -> tuple[QueryID, ...]:
     return get_args(QueryID)
 
 
-def _downcast_exotic_types(table: pa.Table) -> pa.Table:
-    import pyarrow as pa
+@cache
+def cast_map() -> dict[Any, Any]:
+    import polars.selectors as cs
 
-    new_schema = []
-    for field in table.schema:
-        if pa.types.is_decimal(field.type):
-            new_schema.append(pa.field(field.name, pa.float64()))
-        elif field.type == pa.date32():
-            new_schema.append(pa.field(field.name, pa.timestamp("ns")))
-        else:
-            new_schema.append(field)
-    return table.cast(pa.schema(new_schema))
+    casts: dict[Any, Any] = {
+        cs.decimal(): float,
+        cs.date() | cs.by_name("o_orderdate", require_all=False): pl.Datetime("ns"),
+    }
+    return casts
 
 
 class TableLogger:
@@ -141,7 +136,7 @@ class TableLogger:
     def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
         self._log_footer()
 
-    def log_row(self, name: FileName, n_bytes: int) -> None:
+    def log_row(self, name: FileName, n_bytes: float) -> None:
         size, unit = self._format_size(n_bytes)
         size_str = f"{size:>6.2f} {unit:>2}"
         logger.info("│ %s ┆ %s │", name.rjust(self._file_width), size_str)
@@ -157,7 +152,7 @@ class TableLogger:
         logger.info("└─%s─┴─%s─┘", "─" * fw, "─" * sw)
 
     @staticmethod
-    def _format_size(n_bytes: int) -> tuple[FileSize, SizeUnit]:
+    def _format_size(n_bytes: float) -> tuple[FileSize, SizeUnit]:
         """Return the best human-readable size and unit for the given byte count."""
         units = ("b", "kb", "mb", "gb", "tb")
         size = float(n_bytes)
@@ -190,76 +185,56 @@ def generate_tpch_database(con: Con, scale_factor: float) -> Con:
 
 
 def write_tpch_database(con: Con) -> Con:
-    import pyarrow.parquet as pq
-
     logger.info("Writing data to: %s", DATA_DIR.as_posix())
     with TableLogger.sources() as tbl_logger:
         for t in SOURCES:
-            table = _downcast_exotic_types(con.sql(SQL_FROM.format(t)).to_arrow_table())
+            df = con.sql(SQL_FROM.format(t)).pl().cast(cast_map())
             path = DATA_DIR / f"{t}.parquet"
-            pq.write_table(table, path)
-            tbl_logger.log_row(path.name, table.nbytes)
+            df.write_parquet(path)
+            tbl_logger.log_row(path.name, df.estimated_size())
     show_schemas("database")
     return con
 
 
-def fix_q18(table: pa.Table) -> pa.Table:
-    """DuckDB being weird, this is [correct] but [not this one].
-
-    [correct]: https://github.com/duckdb/duckdb/blob/47c227d7d8662586b0307d123c03b25c0db3d515/extension/tpch/dbgen/answers/sf0.01/q18.csv#L1
-    [not this one]: https://github.com/duckdb/duckdb/blob/47c227d7d8662586b0307d123c03b25c0db3d515/extension/tpch/dbgen/answers/sf100/q18.csv#L1
-    """
-    import pyarrow as pa
-
-    bad = "sum(l_quantity)"
-    return table.drop(bad).append_column("sum", table.column(bad).cast(pa.int64()))
+def fix_q18(df: pl.DataFrame) -> pl.DataFrame:
+    return df.rename({"sum(l_quantity)": "sum"}).with_columns(pl.col("sum").cast(int))
 
 
-def fix_q22(table: pa.Table) -> pa.Table:
-    import pyarrow as pa
-
-    schema = table.schema
-    return table.cast(schema.set(0, schema.field("cntrycode").with_type(pa.int64())))
+def fix_q22(df: pl.DataFrame) -> pl.DataFrame:
+    return df.with_columns(pl.col("cntrycode").cast(int))
 
 
-FIX_ANSWERS: Mapping[QueryID, Callable[[pa.Table], pa.Table]] = {
+FIX_ANSWERS: Mapping[QueryID, Callable[[pl.DataFrame], pl.DataFrame]] = {
     "q18": fix_q18,
     "q22": fix_q22,
 }
 
 
 def _answers_any(con: Con) -> Con:
-    import pyarrow.parquet as pq
-
     logger.info("Executing tpch queries for answers")
     with TableLogger.answers() as tbl_logger:
         for query_id in query_ids():
             query = SQL_TPCH_ANSWER.format(query_id.removeprefix("q"))
-            table = _downcast_exotic_types(con.sql(query).to_arrow_table())
+            df = con.sql(query).pl().cast(cast_map())
             if fix := FIX_ANSWERS.get(query_id):
-                # TODO @dangotbanned: Insert a column into the logs to say this was patched?
-                table = fix(table)
+                df = fix(df)
             path = DATA_DIR / f"result_{query_id}.parquet"
-            pq.write_table(table, path)
-            tbl_logger.log_row(path.name, table.nbytes)
+            df.write_parquet(path)
+            tbl_logger.log_row(path.name, df.estimated_size())
     return con
 
 
 def _answers_builtin(con: Con, scale: BuiltinScaleFactor) -> Con:
-    import pyarrow.parquet as pq
-    from pyarrow.csv import ParseOptions, read_csv
-
     logger.info("Fastpath for builtin tpch_answers()")
     results = con.sql(SQL_TPCH_ANSWERS.format(scale))
-    opts = ParseOptions(delimiter="|")
     with TableLogger.answers() as tbl_logger:
         while row := results.fetchmany(1):
             query_nr, answer = row[0]
-            table = read_csv(io.BytesIO(answer.encode("utf-8")), parse_options=opts)
-            table = _downcast_exotic_types(table)
+            source = io.BytesIO(answer.encode("utf-8"))
+            df = pl.read_csv(source, separator="|", try_parse_dates=True).cast(cast_map())
             path = DATA_DIR / f"result_q{query_nr}.parquet"
-            pq.write_table(table, path)
-            tbl_logger.log_row(path.name, table.nbytes)
+            df.write_parquet(path)
+            tbl_logger.log_row(path.name, df.estimated_size())
     return con
 
 
@@ -275,8 +250,6 @@ def write_tpch_answers(con: Con, scale_factor: float) -> Con:
 
 
 def write_metadata(scale_factor: float) -> None:
-    import polars as pl
-
     METADATA_PATH.touch()
     logger.info("Writing metadata to: %s", METADATA_PATH.name)
     meta = {
@@ -315,8 +288,6 @@ def try_read_metadata() -> tuple[float, dt.datetime] | None:
     if not METADATA_PATH.exists():
         logger.info("Did not find existing metadata")
         return None
-    import polars as pl
-
     df = pl.read_csv(METADATA_PATH, try_parse_dates=True)
     return _validate_metadata(df)
 
