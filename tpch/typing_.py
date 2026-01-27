@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     import narwhals as nw
-    from tpch.tests.conftest import Backend
+    from tpch.classes import Backend
 
 
 KnownImpl: TypeAlias = Literal[_EagerAllowedImpl, _LazyAllowedImpl]

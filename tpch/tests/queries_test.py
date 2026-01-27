@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     import pytest
 
-    from tpch.tests.conftest import Backend, Query
+    from tpch.classes import Backend, Query
 
 
 def test_execute_query(
