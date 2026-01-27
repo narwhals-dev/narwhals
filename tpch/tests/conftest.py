@@ -160,7 +160,7 @@ def query(request: pytest.FixtureRequest) -> Query:
 
 @pytest.fixture(scope="session")
 def generate_data_metadata() -> pl.DataFrame:
-    return pl.read_csv(METADATA_PATH)
+    return pl.read_csv(METADATA_PATH, try_parse_dates=True)
 
 
 @pytest.fixture(scope="session")

@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import datetime as dt
 import io
 import logging
 from functools import cache
@@ -17,6 +18,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Mapping
     from pathlib import Path
 
+    import polars as pl
     import pyarrow as pa
     from duckdb import DuckDBPyConnection as Con
     from typing_extensions import Self, TypeAlias
@@ -273,8 +275,6 @@ def write_tpch_answers(con: Con, scale_factor: float) -> Con:
 
 
 def write_metadata(scale_factor: float) -> None:
-    import datetime as dt
-
     import polars as pl
 
     METADATA_PATH.touch()
@@ -286,8 +286,57 @@ def write_metadata(scale_factor: float) -> None:
     pl.DataFrame(meta).write_csv(METADATA_PATH)
 
 
-def main(scale_factor: float = 0.1) -> None:
+def _validate_metadata(metadata: pl.DataFrame) -> tuple[float, dt.datetime]:
+    meta = metadata.row(0, named=True)
+    expected_columns = "scale_factor", "modified_time"
+    if meta.keys() != set(expected_columns):
+        msg = f"Found unexpected columns in {METADATA_PATH.name!r}.\n"
+        f"Expected: {expected_columns!r}\nGot: {tuple(meta)!r}"
+        raise ValueError(msg)
+    scale_factor = meta["scale_factor"]
+    modified_time = meta["modified_time"]
+    if isinstance(scale_factor, float) and isinstance(modified_time, dt.datetime):
+        logger.info(
+            "Found existing metadata: scale_factor=%s, modified_time=%s",
+            scale_factor,
+            modified_time,
+        )
+        return (scale_factor, modified_time)
+    msg = (
+        f"Found unexpected data in {METADATA_PATH.name!r}.\n"
+        f"Expected: ({float.__name__!r}, {dt.datetime.__name__!r})\n"
+        f"Got: {(type(scale_factor).__name__, type(modified_time).__name__)!r}"
+    )
+    raise TypeError(msg)
+
+
+def try_read_metadata() -> tuple[float, dt.datetime] | None:
+    logger.info("Trying to read metadata from: %s", METADATA_PATH.name)
+    if not METADATA_PATH.exists():
+        logger.info("Did not find existing metadata")
+        return None
+    import polars as pl
+
+    df = pl.read_csv(METADATA_PATH, try_parse_dates=True)
+    return _validate_metadata(df)
+
+
+def main(*, scale_factor: float = 0.1, refresh: bool = False) -> None:
     DATA_DIR.mkdir(exist_ok=True)
+    if refresh:
+        logger.info("Refreshing data")
+    elif meta := try_read_metadata():
+        if meta[0] == scale_factor:
+            logger.info(
+                "Existing metadata matches requested scale_factor=%s", scale_factor
+            )
+            show_schemas("database")
+            show_schemas("answers")
+            logger.info("To regenerate this scale_factor, use `--refresh`")
+            return
+        logger.info(
+            "Existing metadata does not match requested scale_factor=%s", scale_factor
+        )
     con = connect()
     load_tpch_extension(con)
     generate_tpch_database(con, scale_factor)
@@ -328,6 +377,11 @@ if __name__ == "__main__":
         action="store_true",
         help="Enable more detailed logging (default: %(default)s)",
     )
+    parser.add_argument(
+        "--refresh",
+        action="store_true",
+        help="Re-run data generation, regardless of whether `--scale-factor` is already on disk (default: %(default)s)",
+    )
     args = parser.parse_args()
     _configure_logger(debug=args.debug)
-    main(scale_factor=args.scale_factor)
+    main(scale_factor=args.scale_factor, refresh=args.refresh)
