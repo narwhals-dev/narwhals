@@ -17,7 +17,7 @@ from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.typing import NativeDataFrameT, NativeSeriesT
 from narwhals._pandas_like.utils import is_non_nullable_boolean
-from narwhals._utils import qualified_type_name, zip_strict
+from narwhals._utils import zip_strict
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -86,11 +86,33 @@ class PandasLikeNamespace(
     def lit(self, value: PythonLiteral, dtype: IntoDType | None) -> PandasLikeExpr:
         def _lit_pandas_series(df: PandasLikeDataFrame) -> PandasLikeSeries:
             if isinstance(value, (list, tuple, dict)):
-                msg = (
-                    "Nested structures are not support for Pandas-like backend, "
-                    f" found {qualified_type_name(value)}"
+                try:
+                    import pandas as pd  # ignore-banned-import
+                    import pyarrow as pa  # ignore-banned-import
+                except ImportError as exc:
+                    msg = (
+                        "Nested structures require pyarrow to be installed for pandas backend. "
+                        "Please install pyarrow: pip install pyarrow"
+                    )
+                    raise ImportError(msg) from exc
+
+                from narwhals._arrow.utils import (
+                    narwhals_to_native_dtype as _to_arrow_dtype,
                 )
-                raise NotImplementedError(msg)
+
+                array_value = list(value) if isinstance(value, tuple) else value
+                pa_dtype = _to_arrow_dtype(dtype, self._version) if dtype else None
+                pa_array = pa.array([array_value], type=pa_dtype)  # type: ignore[arg-type]
+
+                # Use ArrowExtensionArray to avoid pandas unpacking the nested structure
+                ns = self._implementation.to_native_namespace()
+                pandas_series_native = ns.Series(
+                    pd.arrays.ArrowExtensionArray(pa_array),  # type: ignore[attr-defined]
+                    name="literal",
+                    index=df._native_frame.index[0:1],
+                )
+
+                return self._series.from_native(pandas_series_native, context=self)
 
             pandas_like_series = self._series.from_iterable(
                 data=[value],

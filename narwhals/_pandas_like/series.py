@@ -211,9 +211,19 @@ class PandasLikeSeries(EagerSeries[Any]):
         reindexed = []
         for s in series:
             if s._broadcast:
-                native = Series(
-                    s.native.iloc[0], index=idx, name=s.name, dtype=s.native.dtype
-                )
+                value = s.native.iloc[0]
+                if s.dtype.is_nested():
+                    import pandas as pd  # ignore-banned-import
+                    import pyarrow as pa  # ignore-banned-import
+
+                    pa_type = s.native.dtype.pyarrow_dtype
+                    pa_array = pd.arrays.ArrowExtensionArray(  # type: ignore[attr-defined]
+                        pa.repeat(pa.scalar(value, pa_type), len(idx))  # type: ignore[arg-type]
+                    )
+                    native = Series(pa_array, index=idx, name=s.name)
+                else:
+                    native = Series(value, index=idx, name=s.name, dtype=s.native.dtype)
+
                 compliant = s._with_native(native)
             elif s.native.index is not idx:
                 native = set_index(s.native, idx, implementation=s._implementation)

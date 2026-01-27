@@ -308,7 +308,19 @@ class PandasLikeDataFrame(
         index = self.native.index
         if other._broadcast:
             s = other.native
-            return type(s)(s.iloc[0], index=index, dtype=s.dtype, name=s.name)
+            value = s.iloc[0]
+            if other.dtype.is_nested():
+                import pandas as pd  # ignore-banned-import
+                import pyarrow as pa  # ignore-banned-import
+
+                pa_type = s.dtype.pyarrow_dtype
+                pa_array = pd.arrays.ArrowExtensionArray(  # type: ignore[attr-defined]
+                    pa.repeat(pa.scalar(value, pa_type), len(index))  # type: ignore[arg-type]
+                )
+                return type(s)(pa_array, index=index, name=s.name)
+
+            return type(s)(value, index=index, dtype=s.dtype, name=s.name)
+
         if (len_other := len(other)) != (len_idx := len(index)):
             msg = f"Expected object of length {len_idx}, got: {len_other}."
             raise ShapeError(msg)
