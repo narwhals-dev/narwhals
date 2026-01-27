@@ -1,5 +1,5 @@
 from __future__ import annotations
 
-from tpch import generate_data, queries, tests, typing_
+from tpch import constants, generate_data, queries, tests, typing_
 
-__all__ = ("generate_data", "queries", "tests", "typing_")
+__all__ = ("constants", "generate_data", "queries", "tests", "typing_")

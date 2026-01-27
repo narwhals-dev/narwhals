@@ -8,13 +8,14 @@ from __future__ import annotations
 import io
 import logging
 from functools import cache
-from pathlib import Path
 from typing import TYPE_CHECKING, Literal, get_args
 
+from tpch.constants import DATA_DIR, METADATA_PATH
 from tpch.typing_ import QueryID
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Mapping
+    from pathlib import Path
 
     import pyarrow as pa
     from duckdb import DuckDBPyConnection as Con
@@ -29,15 +30,6 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-REPO_ROOT = Path(__file__).parent.parent
-TPCH_ROOT = REPO_ROOT / "tpch"
-DATA = TPCH_ROOT / "data"
-METADATA_PATH = DATA / "metadata.csv"
-"""For reflection in tests.
-
-E.g. if we *know* the query is not valid for a given `scale_factor`,
-then we can determine if a failure is expected.
-"""
 
 GLOBS: Mapping[Artifact, str] = {
     "database": r"*[!0-9].parquet",
@@ -56,9 +48,9 @@ def show_schemas(artifact: Artifact, /) -> None:
     if not logger.isEnabledFor(logging.DEBUG):
         return
     pattern = GLOBS[artifact]
-    paths = sorted(DATA.glob(pattern))
+    paths = sorted(DATA_DIR.glob(pattern))
     if not paths:
-        msg = f"Found no matching paths for {pattern!r} in {DATA.as_posix()}"
+        msg = f"Found no matching paths for {pattern!r} in {DATA_DIR.as_posix()}"
         raise NotImplementedError(msg)
     msg = "\n".join(read_fmt_schema(fp) for fp in paths)
     logger.debug("Schemas (%s):\n%s", artifact, msg)
@@ -198,11 +190,11 @@ def generate_tpch_database(con: Con, scale_factor: float) -> Con:
 def write_tpch_database(con: Con) -> Con:
     import pyarrow.parquet as pq
 
-    logger.info("Writing data to: %s", DATA.as_posix())
+    logger.info("Writing data to: %s", DATA_DIR.as_posix())
     with TableLogger.sources() as tbl_logger:
         for t in SOURCES:
             table = _downcast_exotic_types(con.sql(SQL_FROM.format(t)).to_arrow_table())
-            path = DATA / f"{t}.parquet"
+            path = DATA_DIR / f"{t}.parquet"
             pq.write_table(table, path)
             tbl_logger.log_row(path.name, table.nbytes)
     show_schemas("database")
@@ -245,7 +237,7 @@ def _answers_any(con: Con) -> Con:
             if fix := FIX_ANSWERS.get(query_id):
                 # TODO @dangotbanned: Insert a column into the logs to say this was patched?
                 table = fix(table)
-            path = DATA / f"result_{query_id}.parquet"
+            path = DATA_DIR / f"result_{query_id}.parquet"
             pq.write_table(table, path)
             tbl_logger.log_row(path.name, table.nbytes)
     return con
@@ -263,7 +255,7 @@ def _answers_builtin(con: Con, scale: BuiltinScaleFactor) -> Con:
             query_nr, answer = row[0]
             table = read_csv(io.BytesIO(answer.encode("utf-8")), parse_options=opts)
             table = _downcast_exotic_types(table)
-            path = DATA / f"result_q{query_nr}.parquet"
+            path = DATA_DIR / f"result_q{query_nr}.parquet"
             pq.write_table(table, path)
             tbl_logger.log_row(path.name, table.nbytes)
     return con
@@ -295,7 +287,7 @@ def write_metadata(scale_factor: float) -> None:
 
 
 def main(scale_factor: float = 0.1) -> None:
-    DATA.mkdir(exist_ok=True)
+    DATA_DIR.mkdir(exist_ok=True)
     con = connect()
     load_tpch_extension(con)
     generate_tpch_database(con, scale_factor)

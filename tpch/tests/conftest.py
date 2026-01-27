@@ -3,7 +3,6 @@ from __future__ import annotations
 from contextlib import suppress
 from importlib import import_module
 from importlib.util import find_spec
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
 
 import polars as pl
@@ -12,9 +11,11 @@ from polars.testing import assert_frame_equal as pl_assert_frame_equal
 
 import narwhals as nw
 from narwhals.exceptions import NarwhalsError
+from tpch.constants import DATA_DIR, METADATA_PATH
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+    from pathlib import Path
 
     from narwhals._typing import IntoBackendAny
     from narwhals.typing import FileSource
@@ -27,10 +28,6 @@ if TYPE_CHECKING:
         XFailRaises,
     )
 
-
-# Data paths relative to tpch directory
-TPCH_DIR = Path(__file__).resolve().parent.parent
-DATA_DIR = TPCH_DIR / "data"
 
 LINEITEM_PATH = DATA_DIR / "lineitem.parquet"
 REGION_PATH = DATA_DIR / "region.parquet"
@@ -272,8 +269,6 @@ def query(request: pytest.FixtureRequest) -> Query:
 
 @pytest.fixture(scope="session")
 def generate_data_metadata() -> pl.DataFrame:
-    from tpch.generate_data import METADATA_PATH
-
     return pl.read_csv(METADATA_PATH)
 
 
