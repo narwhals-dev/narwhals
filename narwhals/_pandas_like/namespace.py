@@ -102,7 +102,7 @@ class PandasLikeNamespace(
 
                 array_value = list(value) if isinstance(value, tuple) else value
                 pa_dtype = _to_arrow_dtype(dtype, self._version) if dtype else None
-                pa_array = pa.array([array_value], type=pa_dtype)  # type: ignore[arg-type]
+                pa_array = pa.array([array_value], type=pa_dtype)  # type: ignore[arg-type, list-item]
 
                 # Use ArrowExtensionArray to avoid pandas unpacking the nested structure
                 ns = self._implementation.to_native_namespace()

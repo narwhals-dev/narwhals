@@ -14,6 +14,7 @@ from narwhals._pandas_like.series_str import PandasLikeSeriesStringNamespace
 from narwhals._pandas_like.series_struct import PandasLikeSeriesStructNamespace
 from narwhals._pandas_like.utils import (
     align_and_extract_native,
+    broadcast_series_to_index,
     get_dtype_backend,
     import_array_module,
     narwhals_to_native_dtype,
@@ -211,19 +212,9 @@ class PandasLikeSeries(EagerSeries[Any]):
         reindexed = []
         for s in series:
             if s._broadcast:
-                value = s.native.iloc[0]
-                if s.dtype.is_nested():
-                    import pandas as pd  # ignore-banned-import
-                    import pyarrow as pa  # ignore-banned-import
-
-                    pa_type = s.native.dtype.pyarrow_dtype
-                    pa_array = pd.arrays.ArrowExtensionArray(  # type: ignore[attr-defined]
-                        pa.repeat(pa.scalar(value, pa_type), len(idx))  # type: ignore[arg-type]
-                    )
-                    native = Series(pa_array, index=idx, name=s.name)
-                else:
-                    native = Series(value, index=idx, name=s.name, dtype=s.native.dtype)
-
+                native = broadcast_series_to_index(
+                    s.native, idx, is_nested=s.dtype.is_nested(), series_class=Series
+                )
                 compliant = s._with_native(native)
             elif s.native.index is not idx:
                 native = set_index(s.native, idx, implementation=s._implementation)

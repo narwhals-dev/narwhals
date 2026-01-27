@@ -177,6 +177,12 @@ def test_nested_structures(
         reason = "Nested structures are not support for backend"
         request.applymarker(pytest.mark.xfail(reason=reason, raises=NotImplementedError))
 
+    if any(x in str(constructor) for x in ("pandas", "modin")):
+        pytest.importorskip("pyarrow")
+
+        if PANDAS_VERSION < (2, 0):
+            pytest.skip()
+
     size = 3
     data = {"a": list(range(size))}
     expr = nw.lit(value, dtype=dtype).alias("nested")
