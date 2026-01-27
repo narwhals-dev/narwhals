@@ -140,12 +140,24 @@ def test_pyarrow_lit_string() -> None:
 @pytest.mark.parametrize(
     ("value", "dtype"),
     [
+        # Empty nested structures
         ((), nw.List(nw.Int32())),
         ([], nw.List(nw.Int32())),
         ({}, nw.Struct({})),
+        # Nested structures with different size from dataframe
         (("foo", "bar"), None),
         (["orca", "narwhal"], None),
         ({"field_1": 42}, None),
+        # Nested structures with same size as dataframe
+        (("foo", "bar", "baz"), None),
+        (["orca", "narwhal", "penguin"], None),
+        (
+            {"field_1": 42, "field_2": 1.2, "field_3": True},
+            nw.Struct(
+                {"field_1": nw.Int32(), "field_2": nw.Float64(), "field_3": nw.Boolean()}
+            ),
+        ),
+        # TODO(FBruzzesi): double nested?
     ],
 )
 def test_nested_structures(
@@ -155,8 +167,13 @@ def test_nested_structures(
     dtype: IntoDType | None,
 ) -> None:
     is_empty_dict = isinstance(value, dict) and len(value) == 0
-    if any(x in str(constructor) for x in ("duckdb", "sqlframe")) and is_empty_dict:
+    non_pyspark_sql_like = ("duckdb", "sqlframe", "ibis")
+    if any(x in str(constructor) for x in non_pyspark_sql_like) and is_empty_dict:
         reason = "Cannot create an empty struct type for backend"
+        request.applymarker(pytest.mark.xfail(reason=reason, raises=NotImplementedError))
+
+    if any(x in str(constructor) for x in ("cudf", "modin", "pandas")):
+        reason = "Nested structures are not support for backend"
         request.applymarker(pytest.mark.xfail(reason=reason, raises=NotImplementedError))
 
     size = 3

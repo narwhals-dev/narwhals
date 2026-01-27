@@ -17,7 +17,7 @@ from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.typing import NativeDataFrameT, NativeSeriesT
 from narwhals._pandas_like.utils import is_non_nullable_boolean
-from narwhals._utils import zip_strict
+from narwhals._utils import qualified_type_name, zip_strict
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals._utils import Implementation, Version
-    from narwhals.typing import IntoDType, NonNestedLiteral
+    from narwhals.typing import IntoDType, PythonLiteral
 
 
 Incomplete: TypeAlias = Any
@@ -83,17 +83,24 @@ class PandasLikeNamespace(
             context=self,
         )
 
-    def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> PandasLikeExpr:
+    def lit(self, value: PythonLiteral, dtype: IntoDType | None) -> PandasLikeExpr:
         def _lit_pandas_series(df: PandasLikeDataFrame) -> PandasLikeSeries:
-            pandas_series = self._series.from_iterable(
+            if isinstance(value, (list, tuple, dict)):
+                msg = (
+                    "Nested structures are not support for Pandas-like backend, "
+                    f" found {qualified_type_name(value)}"
+                )
+                raise NotImplementedError(msg)
+
+            pandas_like_series = self._series.from_iterable(
                 data=[value],
                 name="literal",
                 index=df._native_frame.index[0:1],
                 context=self,
             )
             if dtype:
-                return pandas_series.cast(dtype)
-            return pandas_series
+                return pandas_like_series.cast(dtype)
+            return pandas_like_series
 
         return PandasLikeExpr(
             lambda df: [_lit_pandas_series(df)],
