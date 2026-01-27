@@ -185,7 +185,6 @@ def iter_backends() -> Iterator[Backend]:
         if find_spec("dask") and find_spec("dask.dataframe"):
             yield Backend("dask", "dask", engine="pyarrow", dtype_backend="pyarrow")
     if find_spec("duckdb"):
-        # NOTE: https://github.com/narwhals-dev/narwhals/issues/2226
         yield Backend("duckdb", "duckdb")
         if find_spec("sqlframe"):
             from sqlframe.duckdb import DuckDBSession
