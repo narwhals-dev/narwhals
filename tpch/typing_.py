@@ -48,11 +48,17 @@ class QueryModule(Protocol):
     ) -> nw.LazyFrame[Any]: ...
 
 
-# TODO @dangotbanned: Rename this, it is used for `pytest.skip` too
-class AssertExpected(Protocol):
+class Predicate(Protocol):
     """Failure-state-context callback.
 
-    The returned value will be passed to `pytest.mark.xfail(condition=...)`.
+    The returned value will be used in either:
+
+        pytest.mark.xfail(predicate(backend, scale_factor))
+
+    Or:
+
+        if predicate(backend, scale_factor):
+            pytest.skip()
     """
 
     def __call__(self, backend: Backend, scale_factor: float, /) -> bool: ...

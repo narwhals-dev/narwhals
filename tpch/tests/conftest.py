@@ -19,8 +19,8 @@ if TYPE_CHECKING:
     from narwhals._typing import IntoBackendAny
     from narwhals.typing import FileSource
     from tpch.typing_ import (
-        AssertExpected,
         KnownImpl,
+        Predicate,
         QueryID,
         QueryModule,
         TPCHBackend,
@@ -86,8 +86,8 @@ class Backend:
 class Query:
     id: QueryID
     paths: tuple[Path, ...]
-    _into_xfails: tuple[tuple[AssertExpected, str, XFailRaises], ...]
-    _into_skips: tuple[tuple[AssertExpected, str], ...]
+    _into_xfails: tuple[tuple[Predicate, str, XFailRaises], ...]
+    _into_skips: tuple[tuple[Predicate, str], ...]
 
     PACKAGE_PREFIX: ClassVar = "tpch.queries"
 
@@ -123,20 +123,14 @@ class Query:
             raise RuntimeError(msg) from exc
         return result
 
-    def with_skip(self, predicate: AssertExpected, reason: str) -> Query:
-        item = (predicate, reason)
-        self._into_skips = (*self._into_skips, item)
+    def with_skip(self, predicate: Predicate, reason: str) -> Query:
+        self._into_skips = (*self._into_skips, (predicate, reason))
         return self
 
     def with_xfail(
-        self,
-        predicate: AssertExpected,
-        reason: str,
-        *,
-        raises: XFailRaises = AssertionError,
+        self, predicate: Predicate, reason: str, *, raises: XFailRaises = AssertionError
     ) -> Query:
-        item = (predicate, reason, raises)
-        self._into_xfails = (*self._into_xfails, item)
+        self._into_xfails = (*self._into_xfails, (predicate, reason, raises))
         return self
 
     def _apply_skips(self, backend: Backend, scale_factor: float) -> None:
