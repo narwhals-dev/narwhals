@@ -87,6 +87,7 @@ class Query:
     id: QueryID
     paths: tuple[Path, ...]
     _into_xfails: tuple[tuple[AssertExpected, str, XFailRaises], ...]
+    _into_skips: tuple[tuple[AssertExpected, str], ...]
 
     PACKAGE_PREFIX: ClassVar = "tpch.queries"
 
@@ -94,6 +95,7 @@ class Query:
         self.id = query_id
         self.paths = paths
         self._into_xfails = ()
+        self._into_skips = ()
 
     def __repr__(self) -> str:
         return self.id
@@ -105,6 +107,7 @@ class Query:
     def expected(self) -> pl.DataFrame:
         return pl.read_parquet(DATA_DIR / f"result_{self}.parquet")
 
+    # TODO @dangotbanned: Move these skips from `Backend` -> `Query`
     def run(self, backend: Backend) -> pl.DataFrame:
         if self.id in backend.skips:
             pytest.skip(f"Query {self} is not supported for {backend}")
@@ -112,12 +115,18 @@ class Query:
         return self._import_module().query(*data).lazy().collect("polars").to_polars()
 
     def try_run(self, backend: Backend, scale_factor: float) -> pl.DataFrame:
+        self._apply_skips(backend, scale_factor)
         try:
             result = self.run(backend)
         except NarwhalsError as exc:
             msg = f"Query [{self}-{backend}] ({scale_factor=}) failed with the following error in Narwhals:\n{exc}"
             raise RuntimeError(msg) from exc
         return result
+
+    def with_skip(self, predicate: AssertExpected, reason: str) -> Query:
+        item = (predicate, reason)
+        self._into_skips = (*self._into_skips, item)
+        return self
 
     def with_xfail(
         self,
@@ -130,15 +139,16 @@ class Query:
         self._into_xfails = (*self._into_xfails, item)
         return self
 
+    def _apply_skips(self, backend: Backend, scale_factor: float) -> None:
+        for predicate, reason in self._into_skips:
+            if predicate(backend, scale_factor):
+                pytest.skip(reason)
+
     def _apply_xfails(
-        self,
-        result: pl.DataFrame,
-        backend: Backend,
-        scale_factor: float,
-        request: pytest.FixtureRequest,
+        self, backend: Backend, scale_factor: float, request: pytest.FixtureRequest
     ) -> None:
         for predicate, reason, raises in self._into_xfails:
-            condition = predicate(result, backend, scale_factor)
+            condition = predicate(backend, scale_factor)
             request.applymarker(
                 pytest.mark.xfail(condition, reason=reason, raises=raises)
             )
@@ -150,7 +160,7 @@ class Query:
         scale_factor: float,
         request: pytest.FixtureRequest,
     ) -> None:
-        self._apply_xfails(result, backend, scale_factor, request)
+        self._apply_xfails(backend, scale_factor, request)
         try:
             pl_assert_frame_equal(self.expected(), result, check_dtypes=False)
         except AssertionError as exc:
@@ -194,6 +204,27 @@ def q(query_id: QueryID, *paths: Path) -> Query:
     return Query(query_id, paths)
 
 
+_Q21_ALLOW = frozenset(
+    (
+        0.1,
+        0.13,
+        0.23,
+        0.25,
+        0.275,
+        0.29,
+        0.3,
+        1.0,
+        10.0,
+        30.0,
+        100.0,
+        300.0,
+        1_000.0,
+        3_000.0,
+        10_000.0,
+        30_000.0,
+        100_000.0,
+    )
+)
 queries = (
     q("q1", LINEITEM_PATH),
     q("q2", REGION_PATH, NATION_PATH, SUPPLIER_PATH, PART_PATH, PARTSUPP_PATH),
@@ -237,13 +268,16 @@ queries = (
     q("q15", LINEITEM_PATH, SUPPLIER_PATH),
     q("q16", PART_PATH, PARTSUPP_PATH, SUPPLIER_PATH),
     q("q17", LINEITEM_PATH, PART_PATH).with_xfail(
-        lambda _, __, scale_factor: scale_factor < 0.014,
+        lambda _, scale_factor: scale_factor < 0.014,
         reason="Generated dataset is too small, leading to 0 rows after the first two filters in `query1`.",
     ),
     q("q18", CUSTOMER_PATH, LINEITEM_PATH, ORDERS_PATH),
     q("q19", LINEITEM_PATH, PART_PATH),
     q("q20", PART_PATH, PARTSUPP_PATH, NATION_PATH, LINEITEM_PATH, SUPPLIER_PATH),
-    q("q21", LINEITEM_PATH, NATION_PATH, ORDERS_PATH, SUPPLIER_PATH),
+    q("q21", LINEITEM_PATH, NATION_PATH, ORDERS_PATH, SUPPLIER_PATH).with_skip(
+        lambda _, scale_factor: scale_factor not in _Q21_ALLOW,
+        reason="Off-by-1 error when using *most* non-blessed `scale_factor`s",
+    ),
     q("q22", CUSTOMER_PATH, ORDERS_PATH),
 )
 

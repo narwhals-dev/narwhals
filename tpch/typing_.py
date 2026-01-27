@@ -8,7 +8,6 @@ from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    import polars as pl
     from typing_extensions import ParamSpec, TypeAlias
 
     import narwhals as nw
@@ -54,17 +53,17 @@ class QueryModule(Protocol):
     ) -> nw.LazyFrame[Any]: ...
 
 
+# TODO @dangotbanned: Rename this, it is used for `pytest.skip` too
 class AssertExpected(Protocol):
     """Failure-state-context callback.
 
     The returned value will be passed to `pytest.mark.xfail(condition=...)`.
     """
 
-    def __call__(
-        self, result: pl.DataFrame, backend: Backend, scale_factor: float, /
-    ) -> bool: ...
+    def __call__(self, backend: Backend, scale_factor: float, /) -> bool: ...
 
 
+# TODO @dangotbanned: Remove
 def todo_mark(*_: Any, **__: Any) -> Callable[[Callable[P, R]], Callable[P, R]]:
     """TODO: Do something useful, not just a placeholder.
 

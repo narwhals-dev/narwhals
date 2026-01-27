@@ -3,13 +3,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import narwhals as nw
-from tpch.typing_ import todo_mark
 
 if TYPE_CHECKING:
     from narwhals.typing import FrameT
 
 
-@todo_mark("Can fail when `scale_factor={0.05,0.09,0.11,0.2}`.")
 def query(lineitem: FrameT, nation: FrameT, orders: FrameT, supplier: FrameT) -> FrameT:
     var1 = "SAUDI ARABIA"
 
