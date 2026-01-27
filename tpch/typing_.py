@@ -5,6 +5,7 @@ from functools import wraps
 from typing import TYPE_CHECKING, Any, Literal, Protocol, TypeVar
 
 import narwhals as nw
+from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
 
 if TYPE_CHECKING:
     from typing_extensions import ParamSpec, TypeAlias
@@ -12,7 +13,7 @@ if TYPE_CHECKING:
     P = ParamSpec("P")
     R = TypeVar("R")
 
-
+KnownImpl: TypeAlias = Literal[_EagerAllowedImpl, _LazyAllowedImpl]
 TPCHBackend: TypeAlias = Literal[
     "polars[lazy]", "pyarrow", "pandas[pyarrow]", "dask", "duckdb", "sqlframe"
 ]
