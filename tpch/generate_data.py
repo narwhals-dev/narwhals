@@ -126,7 +126,7 @@ def _downcast_exotic_types(table: pa.Table) -> pa.Table:
 class TableLogger:
     """A logger that streams table rows with box-drawing characters."""
 
-    # Size column: 3 leading digits + 1 dot + 2 decimals + 1 space + 2 unit chars = 10 chars
+    # Size column: 3 leading digits + 1 dot + 2 decimals + 1 space + 2 unit chars = 9 chars
     SIZE_WIDTH = 9
 
     def __init__(self, file_names: Iterable[FileName]) -> None:
