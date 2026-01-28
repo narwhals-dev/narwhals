@@ -140,31 +140,27 @@ class TableLogger:
         self._file_width = max(len(name) for name in file_names)
 
     @staticmethod
-    def database() -> TableLogger:
-        return TableLogger(f"{t}.parquet" for t in DATABASE_TABLE_NAMES)
-
-    @staticmethod
     def answers() -> TableLogger:
         return TableLogger(f"result_{qid}.parquet" for qid in QUERY_IDS)
 
+    @staticmethod
+    def database() -> TableLogger:
+        return TableLogger(f"{t}.parquet" for t in DATABASE_TABLE_NAMES)
+
     def __enter__(self) -> Self:
-        self._log_header()
-        return self
-
-    def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
-        self._log_footer()
-
-    def log_row(self, file_name: str, n_bytes: float) -> None:
-        size = self.format_size(n_bytes)
-        logger.info("│ %s ┆ %s │", file_name.rjust(self._file_width), size)
-
-    def _log_header(self) -> None:
+        # header
         fw, sw = self._file_width, self.SIZE_WIDTH
         logger.info("┌─%s─┬─%s─┐", "─" * fw, "─" * sw)
         logger.info("│ %s ┆ %s │", "File".rjust(fw), "Size".rjust(sw))
         logger.info("╞═%s═╪═%s═╡", "═" * fw, "═" * sw)
+        return self
 
-    def _log_footer(self) -> None:
+    def log_row(self, path: Path) -> None:
+        size = self.format_size(path.stat().st_size)
+        logger.info("│ %s ┆ %s │", path.name.rjust(self._file_width), size)
+
+    def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
+        # footer
         fw, sw = self._file_width, self.SIZE_WIDTH
         logger.info("└─%s─┴─%s─┘", "─" * fw, "─" * sw)
 

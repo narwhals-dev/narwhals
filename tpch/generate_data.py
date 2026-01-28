@@ -7,10 +7,9 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
-import io
 import logging
 import os
-from functools import cache
+from functools import cache, partial
 from typing import TYPE_CHECKING, Any
 
 import polars as pl
@@ -36,6 +35,7 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger(LOGGER_NAME)
+read_csv = partial(pl.read_csv, try_parse_dates=True)
 
 
 def read_fmt_schema(fp: Path) -> str:
@@ -99,11 +99,10 @@ DuckDB being weird, this is [correct] but [not this one].
 
 @cache
 def cast_map() -> dict[Any, Any]:
-    casts: dict[Any, Any] = {
+    return {
         cs.decimal(): float,
         cs.date() | cs.by_name("o_orderdate", require_all=False): pl.Datetime("ns"),
     }
-    return casts
 
 
 def connect() -> Con:
@@ -131,10 +130,9 @@ def write_tpch_database(con: Con) -> Con:
     logger.info("Writing data to: %s", DATA_DIR.as_posix())
     with TableLogger.database() as tbl_logger:
         for t in DATABASE_TABLE_NAMES:
-            df = con.sql(SQL_FROM.format(t)).pl().cast(cast_map())
             path = DATA_DIR / f"{t}.parquet"
-            df.write_parquet(path)
-            tbl_logger.log_row(path.name, path.stat().st_size)
+            con.sql(SQL_FROM.format(t)).pl().cast(cast_map()).write_parquet(path)
+            tbl_logger.log_row(path)
     show_schemas("database")
     return con
 
@@ -143,13 +141,13 @@ def _answers_any(con: Con) -> Con:
     logger.info("Executing tpch queries for answers")
     with TableLogger.answers() as tbl_logger:
         for query_id in QUERY_IDS:
+            path = DATA_DIR / f"result_{query_id}.parquet"
             query = SQL_TPCH_ANSWER.format(query_id.removeprefix("q"))
             df = con.sql(query).pl().cast(cast_map())
             if fix := FIX_ANSWERS.get(query_id):
                 df = fix(df)
-            path = DATA_DIR / f"result_{query_id}.parquet"
             df.write_parquet(path)
-            tbl_logger.log_row(path.name, path.stat().st_size)
+            tbl_logger.log_row(path)
     return con
 
 
@@ -159,11 +157,9 @@ def _answers_builtin(con: Con, scale: BuiltinScaleFactor) -> Con:
     with TableLogger.answers() as tbl_logger:
         while row := results.fetchmany(1):
             query_nr, answer = row[0]
-            source = io.BytesIO(answer.encode("utf-8"))
-            df = pl.read_csv(source, separator="|", try_parse_dates=True).cast(cast_map())
             path = DATA_DIR / f"result_q{query_nr}.parquet"
-            df.write_parquet(path)
-            tbl_logger.log_row(path.name, path.stat().st_size)
+            read_csv(answer.encode(), separator="|").cast(cast_map()).write_parquet(path)
+            tbl_logger.log_row(path)
     return con
 
 
@@ -217,8 +213,7 @@ def try_read_metadata() -> tuple[float, dt.datetime] | None:
     if not METADATA_PATH.exists():
         logger.info("Did not find existing metadata")
         return None
-    df = pl.read_csv(METADATA_PATH, try_parse_dates=True)
-    return _validate_metadata(df)
+    return _validate_metadata(read_csv(METADATA_PATH))
 
 
 def main(*, scale_factor: float = 0.1, refresh: bool = False) -> None:
