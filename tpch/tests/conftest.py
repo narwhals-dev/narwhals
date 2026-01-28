@@ -152,10 +152,7 @@ def iter_queries() -> Iterator[Query]:
         q("q12", LINEITEM_PATH, ORDERS_PATH),
         q("q13", CUSTOMER_PATH, ORDERS_PATH),
         q("q14", LINEITEM_PATH, PART_PATH),
-        q("q15", LINEITEM_PATH, SUPPLIER_PATH).with_skip(
-            lambda backend, _: backend.name in {"duckdb", "sqlframe"},
-            reason="https://github.com/narwhals-dev/narwhals/issues/2226",
-        ),
+        q("q15", LINEITEM_PATH, SUPPLIER_PATH),
         q("q16", PART_PATH, PARTSUPP_PATH, SUPPLIER_PATH),
         q("q17", LINEITEM_PATH, PART_PATH).with_xfail(
             lambda _, scale_factor: (scale_factor < 0.014) or scale_factor == 0.5,
