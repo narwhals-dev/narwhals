@@ -89,7 +89,7 @@ class PandasLikeNamespace(
                 try:
                     import pandas as pd  # ignore-banned-import
                     import pyarrow as pa  # ignore-banned-import
-                except ImportError as exc:
+                except ImportError as exc:  # pragma: no cover
                     msg = (
                         "Nested structures require pyarrow to be installed for pandas backend. "
                         "Please install pyarrow: pip install pyarrow"

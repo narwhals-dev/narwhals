@@ -14,6 +14,7 @@ from tests.utils import (
     PYARROW_VERSION,
     Constructor,
     assert_equal_data,
+    is_pyspark_connect,
 )
 
 if TYPE_CHECKING:
@@ -170,7 +171,8 @@ def test_nested_structures(
 ) -> None:
     is_empty_dict = isinstance(value, dict) and len(value) == 0
     non_pyspark_sql_like = ("duckdb", "sqlframe", "ibis")
-    if any(x in str(constructor) for x in non_pyspark_sql_like) and is_empty_dict:
+    is_non_pyspark_sql_like = any(x in str(constructor) for x in non_pyspark_sql_like)
+    if (is_non_pyspark_sql_like or is_pyspark_connect(constructor)) and is_empty_dict:
         reason = "Cannot create an empty struct type for backend"
         request.applymarker(pytest.mark.xfail(reason=reason, raises=NotImplementedError))
 
@@ -181,7 +183,7 @@ def test_nested_structures(
 
     if any(x in str(constructor) for x in ("pandas", "modin")) and (
         PYARROW_VERSION == (0, 0, 0) or PANDAS_VERSION < (2, 0)
-    ):
+    ):  # pragma: no cover
         reason = "Requires pyarrow and pandas 2.0+"
         pytest.skip(reason=reason)
 
@@ -189,7 +191,7 @@ def test_nested_structures(
         "polars" in str(constructor)
         and isinstance(value, dict)
         and POLARS_VERSION < (1, 0, 0)
-    ):
+    ):  # pragma: no cover
         reason = "polars<1.0 does not support dict to struct in lit"
         pytest.skip(reason=reason)
 
