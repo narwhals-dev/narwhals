@@ -10,6 +10,8 @@ from tests.utils import (
     CUDF_VERSION,
     DASK_VERSION,
     PANDAS_VERSION,
+    POLARS_VERSION,
+    PYARROW_VERSION,
     Constructor,
     assert_equal_data,
 )
@@ -177,11 +179,19 @@ def test_nested_structures(
         reason = "Nested structures are not support for backend"
         request.applymarker(pytest.mark.xfail(reason=reason, raises=NotImplementedError))
 
-    if any(x in str(constructor) for x in ("pandas", "modin")):
-        pytest.importorskip("pyarrow")
+    if any(x in str(constructor) for x in ("pandas", "modin")) and (
+        PYARROW_VERSION == (0, 0, 0) or PANDAS_VERSION < (2, 0)
+    ):
+        reason = "Requires pyarrow and pandas 2.0+"
+        pytest.skip(reason=reason)
 
-        if PANDAS_VERSION < (2, 0):
-            pytest.skip()
+    if (
+        "polars" in str(constructor)
+        and isinstance(value, dict)
+        and POLARS_VERSION < (1, 0, 0)
+    ):
+        reason = "polars<1.0 does not support dict to struct in lit"
+        pytest.skip(reason=reason)
 
     size = 3
     data = {"a": list(range(size))}
