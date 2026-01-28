@@ -17,7 +17,6 @@ METADATA_PATH = DATA_DIR / "metadata.csv"
 E.g. if we *know* the query is not valid for a given `scale_factor`,
 then we can determine if a failure is expected.
 """
-
 DATABASE_TABLE_NAMES = (
     "lineitem",
     "customer",
@@ -28,16 +27,14 @@ DATABASE_TABLE_NAMES = (
     "region",
     "supplier",
 )
-
 QUERY_IDS: tuple[QueryID, ...] = get_args(QueryID)
-
 GLOBS: Mapping[Artifact, str] = {
     "database": r"*[!0-9].parquet",
     "answers": r"result_q[0-9]*.parquet",
 }
-
 LOGGER_NAME = "narwhals.tpch"
 """Per-[Logging Cookbook], pass this to `logging.getLogger(...)`.
 
 [Logging Cookbook]: https://docs.python.org/3/howto/logging-cookbook.html#using-loggers-as-attributes-in-a-class-or-passing-them-as-parameters
 """
+QUERIES_PACKAGE = "tpch.queries"

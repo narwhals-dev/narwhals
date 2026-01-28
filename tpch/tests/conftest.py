@@ -77,9 +77,9 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 
 
 def iter_backends() -> Iterator[Backend]:
-    yield Backend("polars[lazy]", "polars")
+    yield Backend("polars[lazy]")
     if find_spec("pyarrow"):
-        yield Backend("pyarrow", "pyarrow")
+        yield Backend("pyarrow")
         if find_spec("pandas"):
             import pandas as pd
 
@@ -88,17 +88,15 @@ def iter_backends() -> Iterator[Backend]:
                 pd.options.mode.copy_on_write = True
             with suppress(Exception):
                 pd.options.future.infer_string = True  # pyright: ignore[reportAttributeAccessIssue, reportOptionalMemberAccess]
-            yield Backend(
-                "pandas[pyarrow]", "pandas", engine="pyarrow", dtype_backend="pyarrow"
-            )
+            yield Backend("pandas[pyarrow]", engine="pyarrow", dtype_backend="pyarrow")
         if find_spec("dask") and find_spec("dask.dataframe"):
-            yield Backend("dask", "dask", engine="pyarrow", dtype_backend="pyarrow")
+            yield Backend("dask", engine="pyarrow", dtype_backend="pyarrow")
     if find_spec("duckdb"):
-        yield Backend("duckdb", "duckdb")
+        yield Backend("duckdb")
         if find_spec("sqlframe"):
             from sqlframe.duckdb import DuckDBSession
 
-            yield Backend("sqlframe", "sqlframe", session=DuckDBSession())
+            yield Backend("sqlframe", session=DuckDBSession())
 
 
 @pytest.fixture(params=iter_backends(), ids=repr)
