@@ -36,7 +36,28 @@ Using any other value *can* lead to incorrect results.
 [TPC-H_v3.0.1 (Page 79)]: https://www.tpc.org/TPC_Documents_Current_Versions/pdf/TPC-H_v3.0.1.pdf
 """
 
-SCALE_FACTORS_QUITE_SAFE = frozenset((0.1, 0.13, 0.23, 0.25, 0.275, 0.29, 0.3))
+SCALE_FACTORS_QUITE_SAFE = frozenset(
+    (
+        0.014,
+        0.02,
+        0.029,
+        0.04,
+        0.052,
+        0.06,
+        0.072,
+        0.081,
+        0.091,
+        0.1,
+        0.13,
+        0.23,
+        0.25,
+        0.275,
+        0.29,
+        0.3,
+        0.43,
+        0.51,
+    )
+)
 """scale_factor` values that are **lower** than [TPC-H v3.0.1 (Page 79)], but still work fine.
 
 [TPC-H_v3.0.1 (Page 79)]: https://www.tpc.org/TPC_Documents_Current_Versions/pdf/TPC-H_v3.0.1.pdf
