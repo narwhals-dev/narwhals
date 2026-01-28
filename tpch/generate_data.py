@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import argparse
 import datetime as dt
 import io
 import logging
@@ -323,30 +324,35 @@ def _configure_logger(
     logger.addHandler(output)
 
 
-if __name__ == "__main__":
-    import argparse
+class HelpFormatter(
+    argparse.RawTextHelpFormatter, argparse.ArgumentDefaultsHelpFormatter
+):
+    def start_section(self, heading: str | None) -> None:
+        title = _title.capitalize() if (_title := heading) else heading
+        super().start_section(title)
 
+
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        formatter_class=argparse.RawTextHelpFormatter,
-        description="Generate the data required to run TPCH queries.",
+        formatter_class=HelpFormatter,
+        description="Generate the data required to run TPCH queries.\n\nUsage: %(prog)s [OPTIONS]",
+        usage=argparse.SUPPRESS,
     )
     parser.add_argument(
         "-sf",
         "--scale-factor",
         default="0.1",
-        dest="scale_factor",
+        metavar="",
         help=f"Scale the database by this factor (default: %(default)s)\n{TABLE_SCALE_FACTOR}",
         type=float,
     )
     parser.add_argument(
-        "--debug",
-        action="store_true",
-        help="Enable more detailed logging (default: %(default)s)",
+        "--debug", action="store_true", help="Enable more detailed logging"
     )
     parser.add_argument(
         "--refresh",
         action="store_true",
-        help="Re-run data generation, regardless of whether `--scale-factor` is already on disk (default: %(default)s)",
+        help="Re-run data generation, regardless of whether `--scale-factor` is already on disk",
     )
     args = parser.parse_args()
     _configure_logger(debug=args.debug)
