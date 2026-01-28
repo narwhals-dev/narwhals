@@ -13,7 +13,7 @@ from functools import cache
 from typing import TYPE_CHECKING, Any
 
 import polars as pl
-from polars import col
+import polars.selectors as cs
 
 from tpch.classes import TableLogger
 from tpch.constants import (
@@ -85,10 +85,8 @@ SQL_FROM = "FROM {0}"
 
 
 FIX_ANSWERS: Mapping[QueryID, Callable[[pl.DataFrame], pl.DataFrame]] = {
-    "q18": lambda df: df.rename({"sum(l_quantity)": "sum"}).with_columns(
-        col("sum").cast(int)
-    ),
-    "q22": lambda df: df.with_columns(col("cntrycode").cast(int)),
+    "q18": lambda df: df.rename({"sum(l_quantity)": "sum"}).cast({"sum": pl.Int64()}),
+    "q22": lambda df: df.cast({"cntrycode": pl.Int64()}),
 }
 """
 DuckDB being weird, this is [correct] but [not this one].
@@ -100,8 +98,6 @@ DuckDB being weird, this is [correct] but [not this one].
 
 @cache
 def cast_map() -> dict[Any, Any]:
-    import polars.selectors as cs
-
     casts: dict[Any, Any] = {
         cs.decimal(): float,
         cs.date() | cs.by_name("o_orderdate", require_all=False): pl.Datetime("ns"),
