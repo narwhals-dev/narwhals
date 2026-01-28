@@ -177,10 +177,6 @@ def query(request: pytest.FixtureRequest) -> Query:
 
 
 @pytest.fixture(scope="session")
-def generate_data_metadata() -> pl.DataFrame:
-    return pl.read_csv(METADATA_PATH, try_parse_dates=True)
-
-
-@pytest.fixture(scope="session")
-def scale_factor(generate_data_metadata: pl.DataFrame) -> float:
-    return float(generate_data_metadata.get_column("scale_factor").item())
+def scale_factor() -> float:
+    df = pl.read_csv(METADATA_PATH, try_parse_dates=True)
+    return float(df.get_column("scale_factor").item())
