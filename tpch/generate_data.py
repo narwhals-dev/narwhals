@@ -10,35 +10,31 @@ import datetime as dt
 import io
 import logging
 from functools import cache
-from typing import TYPE_CHECKING, Any, Literal, get_args
+from typing import TYPE_CHECKING, Any
 
 import polars as pl
 from polars import col
 
-from tpch.constants import DATA_DIR, METADATA_PATH
-from tpch.typing_ import QueryID
+from tpch.classes import TableLogger
+from tpch.constants import (
+    DATA_DIR,
+    DATABASE_TABLE_NAMES,
+    GLOBS,
+    LOGGER_NAME,
+    METADATA_PATH,
+    QUERY_IDS,
+)
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Mapping
+    from collections.abc import Callable, Mapping
     from pathlib import Path
 
     from duckdb import DuckDBPyConnection as Con
-    from typing_extensions import Self, TypeAlias
 
-    from narwhals.typing import SizeUnit
-
-    BuiltinScaleFactor: TypeAlias = Literal["0.01", "0.1", "1.0"]
-    FileName: TypeAlias = str
-    FileSize: TypeAlias = float
-    Artifact: TypeAlias = Literal["database", "answers"]
-
-logger = logging.getLogger(__name__)
+    from tpch.typing_ import Artifact, BuiltinScaleFactor, QueryID
 
 
-GLOBS: Mapping[Artifact, str] = {
-    "database": r"*[!0-9].parquet",
-    "answers": r"result_q[0-9]*.parquet",
-}
+logger = logging.getLogger(LOGGER_NAME)
 
 
 def read_fmt_schema(fp: Path) -> str:
@@ -76,16 +72,6 @@ SF_BUILTIN_STR: Mapping[float, BuiltinScaleFactor] = {
     1.0: "1.0",
 }
 
-SOURCES = (
-    "lineitem",
-    "customer",
-    "nation",
-    "orders",
-    "part",
-    "partsupp",
-    "region",
-    "supplier",
-)
 
 # NOTE: Store queries here, add parameter names if needed
 SQL_DBGEN = "CALL dbgen(sf={0})"
@@ -107,11 +93,6 @@ FIX_ANSWERS: Mapping[QueryID, Callable[[pl.DataFrame], pl.DataFrame]] = {
 
 
 @cache
-def query_ids() -> tuple[QueryID, ...]:
-    return get_args(QueryID)
-
-
-@cache
 def cast_map() -> dict[Any, Any]:
     import polars.selectors as cs
 
@@ -120,57 +101,6 @@ def cast_map() -> dict[Any, Any]:
         cs.date() | cs.by_name("o_orderdate", require_all=False): pl.Datetime("ns"),
     }
     return casts
-
-
-class TableLogger:
-    """A logger that streams table rows with box-drawing characters."""
-
-    # Size column: 3 leading digits + 1 dot + 2 decimals + 1 space + 2 unit chars = 9 chars
-    SIZE_WIDTH = 9
-
-    def __init__(self, file_names: Iterable[FileName]) -> None:
-        self._file_width = max(len(name) for name in file_names)
-
-    @staticmethod
-    def sources() -> TableLogger:
-        return TableLogger(f"{t}.parquet" for t in SOURCES)
-
-    @staticmethod
-    def answers() -> TableLogger:
-        return TableLogger(f"result_{qid}.parquet" for qid in query_ids())
-
-    def __enter__(self) -> Self:
-        self._log_header()
-        return self
-
-    def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
-        self._log_footer()
-
-    def log_row(self, name: FileName, n_bytes: float) -> None:
-        size, unit = self._format_size(n_bytes)
-        size_str = f"{size:>6.2f} {unit:>2}"
-        logger.info("│ %s ┆ %s │", name.rjust(self._file_width), size_str)
-
-    def _log_header(self) -> None:
-        fw, sw = self._file_width, self.SIZE_WIDTH
-        logger.info("┌─%s─┬─%s─┐", "─" * fw, "─" * sw)
-        logger.info("│ %s ┆ %s │", "File".rjust(fw), "Size".rjust(sw))
-        logger.info("╞═%s═╪═%s═╡", "═" * fw, "═" * sw)
-
-    def _log_footer(self) -> None:
-        fw, sw = self._file_width, self.SIZE_WIDTH
-        logger.info("└─%s─┴─%s─┘", "─" * fw, "─" * sw)
-
-    @staticmethod
-    def _format_size(n_bytes: float) -> tuple[FileSize, SizeUnit]:
-        """Return the best human-readable size and unit for the given byte count."""
-        units = ("b", "kb", "mb", "gb", "tb")
-        size = float(n_bytes)
-        for unit in units:
-            if size < 1024 or unit == "tb":
-                return size, unit
-            size /= 1024
-        return size, "tb"
 
 
 def connect() -> Con:
@@ -196,8 +126,8 @@ def generate_tpch_database(con: Con, scale_factor: float) -> Con:
 
 def write_tpch_database(con: Con) -> Con:
     logger.info("Writing data to: %s", DATA_DIR.as_posix())
-    with TableLogger.sources() as tbl_logger:
-        for t in SOURCES:
+    with TableLogger.database() as tbl_logger:
+        for t in DATABASE_TABLE_NAMES:
             df = con.sql(SQL_FROM.format(t)).pl().cast(cast_map())
             path = DATA_DIR / f"{t}.parquet"
             df.write_parquet(path)
@@ -209,7 +139,7 @@ def write_tpch_database(con: Con) -> Con:
 def _answers_any(con: Con) -> Con:
     logger.info("Executing tpch queries for answers")
     with TableLogger.answers() as tbl_logger:
-        for query_id in query_ids():
+        for query_id in QUERY_IDS:
             query = SQL_TPCH_ANSWER.format(query_id.removeprefix("q"))
             df = con.sql(query).pl().cast(cast_map())
             if fix := FIX_ANSWERS.get(query_id):

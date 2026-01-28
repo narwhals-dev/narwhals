@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from importlib import import_module
 from typing import TYPE_CHECKING, Any, ClassVar
 
@@ -9,14 +10,19 @@ from polars.testing import assert_frame_equal as pl_assert_frame_equal
 
 import narwhals as nw
 from narwhals.exceptions import NarwhalsError
-from tpch.constants import DATA_DIR
+from tpch.constants import DATA_DIR, DATABASE_TABLE_NAMES, LOGGER_NAME, QUERY_IDS
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
     from pathlib import Path
 
+    from typing_extensions import Self
+
     from narwhals._typing import IntoBackendAny
-    from narwhals.typing import FileSource
+    from narwhals.typing import FileSource, SizeUnit
     from tpch.typing_ import (
+        FileName,
+        FileSize,
         KnownImpl,
         Predicate,
         QueryID,
@@ -121,3 +127,57 @@ class Query:
         except AssertionError as exc:
             msg = f"Query [{self}-{backend}] ({scale_factor=}) resulted in wrong answer:\n{exc}"
             raise AssertionError(msg) from exc
+
+
+logger = logging.getLogger(LOGGER_NAME)
+
+
+class TableLogger:
+    """A logger that streams table rows with box-drawing characters."""
+
+    # Size column: 3 leading digits + 1 dot + 2 decimals + 1 space + 2 unit chars = 9 chars
+    SIZE_WIDTH = 9
+
+    def __init__(self, file_names: Iterable[FileName]) -> None:
+        self._file_width = max(len(name) for name in file_names)
+
+    @staticmethod
+    def database() -> TableLogger:
+        return TableLogger(f"{t}.parquet" for t in DATABASE_TABLE_NAMES)
+
+    @staticmethod
+    def answers() -> TableLogger:
+        return TableLogger(f"result_{qid}.parquet" for qid in QUERY_IDS)
+
+    def __enter__(self) -> Self:
+        self._log_header()
+        return self
+
+    def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
+        self._log_footer()
+
+    def log_row(self, name: FileName, n_bytes: float) -> None:
+        size, unit = self._format_size(n_bytes)
+        size_str = f"{size:>6.2f} {unit:>2}"
+        logger.info("│ %s ┆ %s │", name.rjust(self._file_width), size_str)
+
+    def _log_header(self) -> None:
+        fw, sw = self._file_width, self.SIZE_WIDTH
+        logger.info("┌─%s─┬─%s─┐", "─" * fw, "─" * sw)
+        logger.info("│ %s ┆ %s │", "File".rjust(fw), "Size".rjust(sw))
+        logger.info("╞═%s═╪═%s═╡", "═" * fw, "═" * sw)
+
+    def _log_footer(self) -> None:
+        fw, sw = self._file_width, self.SIZE_WIDTH
+        logger.info("└─%s─┴─%s─┘", "─" * fw, "─" * sw)
+
+    @staticmethod
+    def _format_size(n_bytes: float) -> tuple[FileSize, SizeUnit]:
+        """Return the best human-readable size and unit for the given byte count."""
+        units = ("b", "kb", "mb", "gb", "tb")
+        size = float(n_bytes)
+        for unit in units:
+            if size < 1024 or unit == "tb":
+                return size, unit
+            size /= 1024
+        return size, "tb"
