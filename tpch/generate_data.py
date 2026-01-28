@@ -10,6 +10,7 @@ import datetime as dt
 import io
 import json
 import logging
+import os
 from functools import cache
 from typing import TYPE_CHECKING, Any
 
@@ -137,7 +138,7 @@ def write_tpch_database(con: Con, scale_factor: float) -> Con:
             df = con.sql(SQL_FROM.format(t)).pl().cast(cast_map())
             path = sf_dir / f"{t}.parquet"
             df.write_parquet(path)
-            tbl_logger.log_row(path.name, df.estimated_size())
+            tbl_logger.log_row(path.name, path.stat().st_size)
     show_schemas("database", scale_factor)
     return con
 
@@ -153,7 +154,7 @@ def _answers_any(con: Con, scale_factor: float) -> Con:
                 df = fix(df)
             path = sf_dir / f"result_{query_id}.parquet"
             df.write_parquet(path)
-            tbl_logger.log_row(path.name, df.estimated_size())
+            tbl_logger.log_row(path.name, path.stat().st_size)
     return con
 
 
@@ -168,7 +169,7 @@ def _answers_builtin(con: Con, scale: BuiltinScaleFactor, scale_factor: float) -
             df = pl.read_csv(source, separator="|", try_parse_dates=True).cast(cast_map())
             path = sf_dir / f"result_q{query_nr}.parquet"
             df.write_parquet(path)
-            tbl_logger.log_row(path.name, df.estimated_size())
+            tbl_logger.log_row(path.name, path.stat().st_size)
     return con
 
 
@@ -217,6 +218,8 @@ def main(*, scale_factor: float = 0.1, refresh: bool = False) -> None:
     write_tpch_database(con, scale_factor)
     write_tpch_answers(con, scale_factor)
     write_metadata(scale_factor)
+    total = TableLogger.format_size(sum(e.stat().st_size for e in os.scandir(DATA_DIR)))
+    logger.info("Finished with total file size: %s", total.strip())
 
 
 def _configure_logger(
