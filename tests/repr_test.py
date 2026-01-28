@@ -3,13 +3,18 @@ from __future__ import annotations
 import pytest
 
 import narwhals as nw
+from tests.utils import DUCKDB_VERSION, PANDAS_VERSION
 
 
-def test_repr() -> None:
+def test_repr(request: pytest.FixtureRequest) -> None:
     pytest.importorskip("duckdb")
     pytest.importorskip("pandas")
     import duckdb
     import pandas as pd
+
+    if PANDAS_VERSION >= (3,) and DUCKDB_VERSION < (1, 4, 4):
+        # https://github.com/duckdb/duckdb/issues/18297
+        request.applymarker(pytest.mark.xfail)
 
     df = pd.DataFrame({"a": [1, 2, 3], "b": ["fdaf", "fda", "cf"]})
     result = nw.from_native(df).__repr__()
