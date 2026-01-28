@@ -10,7 +10,12 @@ from polars.testing import assert_frame_equal as pl_assert_frame_equal
 
 import narwhals as nw
 from narwhals.exceptions import NarwhalsError
-from tpch.constants import DATA_DIR, DATABASE_TABLE_NAMES, LOGGER_NAME, QUERY_IDS
+from tpch.constants import (
+    DATABASE_TABLE_NAMES,
+    LOGGER_NAME,
+    QUERY_IDS,
+    get_scale_factor_dir,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -55,15 +60,15 @@ class Backend:
 
 class Query:
     id: QueryID
-    paths: tuple[Path, ...]
+    table_names: tuple[str, ...]
     _into_xfails: tuple[tuple[Predicate, str, XFailRaises], ...]
     _into_skips: tuple[tuple[Predicate, str], ...]
 
     PACKAGE_PREFIX: ClassVar = "tpch.queries"
 
-    def __init__(self, query_id: QueryID, paths: tuple[Path, ...]) -> None:
+    def __init__(self, query_id: QueryID, table_names: tuple[str, ...]) -> None:
         self.id = query_id
-        self.paths = paths
+        self.table_names = table_names
         self._into_xfails = ()
         self._into_skips = ()
 
@@ -74,17 +79,24 @@ class Query:
         result: Any = import_module(f"{self.PACKAGE_PREFIX}.{self}")
         return result
 
-    def expected(self) -> pl.DataFrame:
-        return pl.read_parquet(DATA_DIR / f"result_{self}.parquet")
+    def get_paths(self, scale_factor: float) -> tuple[Path, ...]:
+        """Get the file paths for this query's tables at the given scale factor."""
+        sf_dir = get_scale_factor_dir(scale_factor)
+        return tuple(sf_dir / f"{name}.parquet" for name in self.table_names)
 
-    def run(self, backend: Backend) -> pl.DataFrame:
-        data = tuple(backend.scan(fp.as_posix()) for fp in self.paths)
+    def expected(self, scale_factor: float) -> pl.DataFrame:
+        sf_dir = get_scale_factor_dir(scale_factor)
+        return pl.read_parquet(sf_dir / f"result_{self}.parquet")
+
+    def run(self, backend: Backend, scale_factor: float) -> pl.DataFrame:
+        paths = self.get_paths(scale_factor)
+        data = tuple(backend.scan(fp.as_posix()) for fp in paths)
         return self._import_module().query(*data).lazy().collect("polars").to_polars()
 
     def try_run(self, backend: Backend, scale_factor: float) -> pl.DataFrame:
         self._apply_skips(backend, scale_factor)
         try:
-            result = self.run(backend)
+            result = self.run(backend, scale_factor)
         except NarwhalsError as exc:
             msg = f"Query [{self}-{backend}] ({scale_factor=}) failed with the following error in Narwhals:\n{exc}"
             raise RuntimeError(msg) from exc
@@ -123,7 +135,7 @@ class Query:
     ) -> None:
         self._apply_xfails(backend, scale_factor, request)
         try:
-            pl_assert_frame_equal(self.expected(), result, check_dtypes=False)
+            pl_assert_frame_equal(self.expected(scale_factor), result, check_dtypes=False)
         except AssertionError as exc:
             msg = f"Query [{self}-{backend}] ({scale_factor=}) resulted in wrong answer:\n{exc}"
             raise AssertionError(msg) from exc

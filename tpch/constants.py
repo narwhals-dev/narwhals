@@ -11,12 +11,19 @@ if TYPE_CHECKING:
 REPO_ROOT = Path(__file__).parent.parent
 TPCH_DIR = REPO_ROOT / "tpch"
 DATA_DIR = TPCH_DIR / "data"
-METADATA_PATH = DATA_DIR / "metadata.csv"
-"""For reflection in tests.
 
-E.g. if we *know* the query is not valid for a given `scale_factor`,
-then we can determine if a failure is expected.
-"""
+
+def get_scale_factor_dir(scale_factor: float) -> Path:
+    """Get the data directory for a specific scale factor.
+
+    Args:
+        scale_factor: The TPC-H scale factor.
+
+    Returns:
+        Path to the scale factor-specific data directory.
+    """
+    return DATA_DIR / f"sf{scale_factor}"
+
 
 DATABASE_TABLE_NAMES = (
     "lineitem",
