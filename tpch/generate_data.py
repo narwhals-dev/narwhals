@@ -12,6 +12,7 @@ from functools import cache
 from typing import TYPE_CHECKING, Any, Literal, get_args
 
 import polars as pl
+from polars import col
 
 from tpch.constants import DATA_DIR, METADATA_PATH
 from tpch.typing_ import QueryID
@@ -94,6 +95,14 @@ FROM tpch_answers()
 WHERE scale_factor={0}
 """
 SQL_FROM = "FROM {0}"
+
+
+FIX_ANSWERS: Mapping[QueryID, Callable[[pl.DataFrame], pl.DataFrame]] = {
+    "q18": lambda df: df.rename({"sum(l_quantity)": "sum"}).with_columns(
+        col("sum").cast(int)
+    ),
+    "q22": lambda df: df.with_columns(col("cntrycode").cast(int)),
+}
 
 
 @cache
@@ -194,20 +203,6 @@ def write_tpch_database(con: Con) -> Con:
             tbl_logger.log_row(path.name, df.estimated_size())
     show_schemas("database")
     return con
-
-
-def fix_q18(df: pl.DataFrame) -> pl.DataFrame:
-    return df.rename({"sum(l_quantity)": "sum"}).with_columns(pl.col("sum").cast(int))
-
-
-def fix_q22(df: pl.DataFrame) -> pl.DataFrame:
-    return df.with_columns(pl.col("cntrycode").cast(int))
-
-
-FIX_ANSWERS: Mapping[QueryID, Callable[[pl.DataFrame], pl.DataFrame]] = {
-    "q18": fix_q18,
-    "q22": fix_q22,
-}
 
 
 def _answers_any(con: Con) -> Con:
