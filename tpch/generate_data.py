@@ -90,6 +90,12 @@ FIX_ANSWERS: Mapping[QueryID, Callable[[pl.DataFrame], pl.DataFrame]] = {
     ),
     "q22": lambda df: df.with_columns(col("cntrycode").cast(int)),
 }
+"""
+DuckDB being weird, this is [correct] but [not this one].
+
+[correct]: https://github.com/duckdb/duckdb/blob/47c227d7d8662586b0307d123c03b25c0db3d515/extension/tpch/dbgen/answers/sf0.01/q18.csv#L1
+[not this one]: https://github.com/duckdb/duckdb/blob/47c227d7d8662586b0307d123c03b25c0db3d515/extension/tpch/dbgen/answers/sf100/q18.csv#L1
+"""
 
 
 @cache
