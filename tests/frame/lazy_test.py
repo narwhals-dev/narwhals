@@ -10,6 +10,7 @@ import narwhals as nw
 from narwhals._utils import Implementation
 from narwhals.dependencies import get_cudf, get_modin
 from tests.utils import (
+    DUCKDB_VERSION,
     PANDAS_VERSION,
     assert_equal_data,
     pyspark_session,
@@ -84,6 +85,7 @@ def test_lazy(
         "pandas_constructor" in str(constructor_eager)
         and impl.is_duckdb()
         and PANDAS_VERSION >= (3,)
+        and DUCKDB_VERSION < (1, 4, 4)
     ):  # pragma: no cover
         # https://github.com/duckdb/duckdb/issues/18297
         request.applymarker(pytest.mark.xfail)

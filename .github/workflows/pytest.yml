@@ -157,10 +157,9 @@ jobs:
           cache-suffix: python-314-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
-        # Use `--pre` as duckdb stable not compatible with 3.14
         # TODO(FBruzzesi): Temporarily pin sqlglot to <28.6.0 to avoid breaking changes in SQLFrame
         # See https://github.com/eakmanrq/sqlframe/issues/577
-        run: uv pip install -e . --group tests --pre pandas polars pyarrow duckdb sqlframe "sqlglot<28.6.0" --system
+        run: uv pip install -e . --group tests pandas polars pyarrow duckdb sqlframe "sqlglot<28.6.0" --system
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
