@@ -19,10 +19,8 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._typing import IntoBackendAny
-    from narwhals.typing import FileSource, SizeUnit
+    from narwhals.typing import FileSource
     from tpch.typing_ import (
-        FileName,
-        FileSize,
         KnownImpl,
         Predicate,
         QueryID,
@@ -138,7 +136,7 @@ class TableLogger:
     # Size column: 3 leading digits + 1 dot + 2 decimals + 1 space + 2 unit chars = 9 chars
     SIZE_WIDTH = 9
 
-    def __init__(self, file_names: Iterable[FileName]) -> None:
+    def __init__(self, file_names: Iterable[str]) -> None:
         self._file_width = max(len(name) for name in file_names)
 
     @staticmethod
@@ -156,10 +154,9 @@ class TableLogger:
     def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
         self._log_footer()
 
-    def log_row(self, name: FileName, n_bytes: float) -> None:
-        size, unit = self._format_size(n_bytes)
-        size_str = f"{size:>6.2f} {unit:>2}"
-        logger.info("│ %s ┆ %s │", name.rjust(self._file_width), size_str)
+    def log_row(self, file_name: str, n_bytes: float) -> None:
+        size = self.format_size(n_bytes)
+        logger.info("│ %s ┆ %s │", file_name.rjust(self._file_width), size)
 
     def _log_header(self) -> None:
         fw, sw = self._file_width, self.SIZE_WIDTH
@@ -172,12 +169,12 @@ class TableLogger:
         logger.info("└─%s─┴─%s─┘", "─" * fw, "─" * sw)
 
     @staticmethod
-    def _format_size(n_bytes: float) -> tuple[FileSize, SizeUnit]:
+    def format_size(n_bytes: float, *, decimals: int = 2) -> str:
         """Return the best human-readable size and unit for the given byte count."""
-        units = ("b", "kb", "mb", "gb", "tb")
         size = float(n_bytes)
-        for unit in units:
-            if size < 1024 or unit == "tb":
-                return size, unit
+        units = iter(("b", "kb", "mb", "gb", "tb"))
+        unit = next(units)
+        while size >= 1024 and unit != "tb":
             size /= 1024
-        return size, "tb"
+            unit = next(units, "tb")
+        return f"{size:6.{decimals}f} {unit:>2}"

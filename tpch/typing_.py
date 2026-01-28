@@ -41,8 +41,6 @@ QueryID: TypeAlias = Literal[
 ]
 XFailRaises: TypeAlias = type[BaseException] | tuple[type[BaseException], ...]
 BuiltinScaleFactor: TypeAlias = Literal["0.01", "0.1", "1.0"]
-FileName: TypeAlias = str
-FileSize: TypeAlias = float
 Artifact: TypeAlias = Literal["database", "answers"]
 
 
