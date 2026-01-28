@@ -91,9 +91,9 @@ SOURCES = (
 SQL_DBGEN = "CALL dbgen(sf={0})"
 SQL_TPCH_ANSWER = "PRAGMA tpch({0})"
 SQL_TPCH_ANSWERS = """
-SELECT query_nr, answer
-FROM tpch_answers()
-WHERE scale_factor={0}
+    SELECT query_nr, answer
+    FROM tpch_answers()
+    WHERE scale_factor={0}
 """
 SQL_FROM = "FROM {0}"
 
