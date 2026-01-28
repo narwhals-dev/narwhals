@@ -114,9 +114,15 @@ class IbisNamespace(
 
         return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
-    def lit(self, value: Any, dtype: IntoDType | None) -> IbisExpr:
+    def lit(self, value: PythonLiteral, dtype: IntoDType | None) -> IbisExpr:
         def func(_df: IbisLazyFrame) -> Sequence[ir.Value]:
+            if isinstance(value, dict) and len(value) == 0:
+                msg = "Cannot create an empty struct type for Ibis backend"
+                raise NotImplementedError(msg)
+
             ibis_dtype = narwhals_to_native_dtype(dtype, self._version) if dtype else None
+            if isinstance(value, dict):
+                return [ibis.struct(value, type=ibis_dtype)]
             return [lit(value, ibis_dtype)]
 
         return self._expr(

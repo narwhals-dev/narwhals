@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import operator
 import re
-from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, cast, no_type_check
 
 import pandas as pd
 
@@ -663,3 +663,38 @@ class PandasLikeSeriesNamespace(EagerSeriesNamespace["PandasLikeSeries", Any]): 
 
 def make_group_by_kwargs(*, drop_null_keys: bool) -> dict[str, bool]:
     return {"sort": False, "as_index": True, "dropna": drop_null_keys, "observed": True}
+
+
+@no_type_check
+def broadcast_series_to_index(
+    native: NativeSeriesT,
+    index: Any,
+    *,
+    is_nested: bool,
+    series_class: type[NativeSeriesT],
+) -> NativeSeriesT:
+    """Broadcast a scalar value from a (one element) Series to match a target index.
+
+    For nested (arrow-backed) types, we rely on
+    [pandas.arrays.ArrowExtensionArray](https://pandas.pydata.org/docs/reference/api/pandas.arrays.ArrowExtensionArray.html).
+
+    Arguments:
+        native: The native pandas-like Series containing the scalar value to broadcast.
+        index: The target index to broadcast to.
+        is_nested: Whether the Series has a nested (arrow-backed) dtype.
+        series_class: Series class to use for constructing the result.
+
+    Returns:
+        A new Series with the scalar value broadcast to match the target index.
+    """
+    value = native.iloc[0]
+    if is_nested:
+        import pyarrow as pa  # ignore-banned-import
+
+        pa_type = native.dtype.pyarrow_dtype
+        pa_array = pd.arrays.ArrowExtensionArray(
+            pa.repeat(pa.scalar(value, pa_type), len(index))
+        )
+        return series_class(pa_array, index=index, name=native.name)
+
+    return series_class(value, index=index, dtype=native.dtype, name=native.name)

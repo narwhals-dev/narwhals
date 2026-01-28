@@ -653,9 +653,11 @@ def lit(value: NonNestedLiteral, dtype: IntoDType | None = None) -> Expr:
     """Return an expression representing a literal value.
 
     Arguments:
-        value: The value to use as literal.
+        value: The value to use as literal. Can be a scalar value, list, tuple, or dict.
+            Lists and tuples are converted to `List` dtype, dicts to `Struct` dtype.
         dtype: The data type of the literal value. If not provided, the data type will
-            be inferred by the native library.
+            be inferred by the native library. For empty lists/dicts, dtype must be
+            specified explicitly.
     """
     return _stableify(nw.lit(value, dtype))
 

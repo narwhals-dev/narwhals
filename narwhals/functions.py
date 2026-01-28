@@ -46,6 +46,7 @@ if TYPE_CHECKING:
         IntoExpr,
         IntoSchema,
         NonNestedLiteral,
+        PythonLiteral,
         _2DArray,
     )
 
@@ -1422,27 +1423,70 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool) ->
     )
 
 
-def lit(value: NonNestedLiteral, dtype: IntoDType | None = None) -> Expr:
+def lit(value: PythonLiteral, dtype: IntoDType | None = None) -> Expr:
     """Return an expression representing a literal value.
 
     Arguments:
-        value: The value to use as literal.
+        value: The value to use as literal. Can be a scalar value, list, tuple, or dict.
+            Lists and tuples are converted to `List` dtype, dicts to `Struct` dtype.
         dtype: The data type of the literal value. If not provided, the data type will
-            be inferred by the native library.
+            be inferred by the native library. For empty lists/dicts, dtype must be
+            specified explicitly.
 
     Examples:
-        >>> import pandas as pd
+        Scalar literals:
+
+        >>> import pyarrow as pa
         >>> import narwhals as nw
         >>>
-        >>> df_native = pd.DataFrame({"a": [1, 2]})
-        >>> nw.from_native(df_native).with_columns(nw.lit(3))
+        >>> df_nw = nw.from_native(pa.table({"a": [1, 2]}))
+        >>> df_nw.with_columns(nw.lit(3))
         ┌──────────────────┐
         |Narwhals DataFrame|
         |------------------|
-        |     a  literal   |
-        |  0  1        3   |
-        |  1  2        3   |
+        | pyarrow.Table    |
+        | a: int64         |
+        | literal: int64   |
+        | ----             |
+        | a: [[1,2]]       |
+        | literal: [[3,3]] |
         └──────────────────┘
+
+        List literals (creates a List column):
+
+        >>> df_nw.with_columns(nw.lit([1, 2, 3]).alias("list_col"))
+        ┌─────────────────────────────┐
+        |     Narwhals DataFrame      |
+        |-----------------------------|
+        |pyarrow.Table                |
+        |a: int64                     |
+        |list_col: list<item: int64>  |
+        |  child 0, item: int64       |
+        |----                         |
+        |a: [[1,2]]                   |
+        |list_col: [[[1,2,3],[1,2,3]]]|
+        └─────────────────────────────┘
+
+        Dict literals (creates a Struct column):
+
+        >>> df_nw.with_columns(nw.lit({"x": 1, "y": 2}).alias("struct_col"))
+        ┌──────────────────────────────────────┐
+        |          Narwhals DataFrame          |
+        |--------------------------------------|
+        |pyarrow.Table                         |
+        |a: int64                              |
+        |struct_col: struct<x: int64, y: int64>|
+        |  child 0, x: int64                   |
+        |  child 1, y: int64                   |
+        |----                                  |
+        |a: [[1,2]]                            |
+        |struct_col: [                         |
+        |  -- is_valid: all not null           |
+        |  -- child 0 type: int64              |
+        |[1,1]                                 |
+        |  -- child 1 type: int64              |
+        |[2,2]]                                |
+        └──────────────────────────────────────┘
     """
     if is_numpy_array(value):
         msg = (
@@ -1451,9 +1495,9 @@ def lit(value: NonNestedLiteral, dtype: IntoDType | None = None) -> Expr:
         )
         raise ValueError(msg)
 
-    if isinstance(value, (list, tuple)):
-        msg = f"Nested datatypes are not supported yet. Got {value}"
-        raise NotImplementedError(msg)
+    if isinstance(value, (list, tuple, dict)) and len(value) == 0 and dtype is None:
+        msg = "Cannot infer dtype for empty nested structure. Please provide an explicit dtype parameter."
+        raise ValueError(msg)
 
     return Expr(ExprNode(ExprKind.LITERAL, "lit", value=value, dtype=dtype))
 
