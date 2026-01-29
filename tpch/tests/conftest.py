@@ -110,6 +110,7 @@ def q(query_id: QueryID, *paths: Path) -> Query:
 
 
 def iter_queries() -> Iterator[Query]:
+    safe = SCALE_FACTORS_BLESSED | SCALE_FACTORS_QUITE_SAFE
     yield from (
         q("q1", LINEITEM_PATH),
         q("q2", REGION_PATH, NATION_PATH, SUPPLIER_PATH, PART_PATH, PARTSUPP_PATH),
@@ -152,17 +153,20 @@ def iter_queries() -> Iterator[Query]:
         q("q14", LINEITEM_PATH, PART_PATH),
         q("q15", LINEITEM_PATH, SUPPLIER_PATH),
         q("q16", PART_PATH, PARTSUPP_PATH, SUPPLIER_PATH),
-        q("q17", LINEITEM_PATH, PART_PATH).with_xfail(
-            lambda _, scale_factor: (scale_factor < 0.014) or scale_factor == 0.5,
+        q("q17", LINEITEM_PATH, PART_PATH)
+        .with_xfail(
+            lambda _, scale_factor: (scale_factor < 0.014),
             reason="Generated dataset is too small, leading to 0 rows after the first two filters in `query1`.",
+        )
+        .with_skip(
+            lambda _, scale_factor: scale_factor not in safe,
+            reason="Non-determistic fails for `duckdb`, `sqlframe`. All other always fail, except `pyarrow` which always passes 🤯.",
         ),
         q("q18", CUSTOMER_PATH, LINEITEM_PATH, ORDERS_PATH),
         q("q19", LINEITEM_PATH, PART_PATH),
         q("q20", PART_PATH, PARTSUPP_PATH, NATION_PATH, LINEITEM_PATH, SUPPLIER_PATH),
         q("q21", LINEITEM_PATH, NATION_PATH, ORDERS_PATH, SUPPLIER_PATH).with_skip(
-            lambda _, scale_factor: scale_factor
-            not in (SCALE_FACTORS_BLESSED | SCALE_FACTORS_QUITE_SAFE),
-            reason="Off-by-1 error when using *most* non-blessed `scale_factor`s",
+            lambda _, scale_factor: scale_factor not in safe, reason="Off-by-1 error"
         ),
         q("q22", CUSTOMER_PATH, ORDERS_PATH),
     )
