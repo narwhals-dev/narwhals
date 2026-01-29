@@ -160,7 +160,7 @@ def iter_queries() -> Iterator[Query]:
         )
         .with_skip(
             lambda _, scale_factor: scale_factor not in safe,
-            reason="Non-determistic fails for `duckdb`, `sqlframe`. All other always fail, except `pyarrow` which always passes 🤯.",
+            reason="Non-deterministic fails for `duckdb`, `sqlframe`. All other always fail, except `pyarrow` which always passes 🤯.",
         ),
         q("q18", CUSTOMER_PATH, LINEITEM_PATH, ORDERS_PATH),
         q("q19", LINEITEM_PATH, PART_PATH),
