@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from tpch.classes import Backend, Query
-from tpch.constants import get_scale_factor_dir
+from tpch.constants import _scale_factor_dir
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -66,7 +66,7 @@ DEFAULT_SCALE_FACTOR = 0.1
 
 def _scale_factor_data_exists(scale_factor: float) -> bool:
     """Check if data for the given scale factor exists by checking if its directory exists."""
-    sf_dir = get_scale_factor_dir(scale_factor)
+    sf_dir = _scale_factor_dir(scale_factor)
     return sf_dir.exists()
 
 

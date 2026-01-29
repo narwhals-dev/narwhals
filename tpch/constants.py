@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import cache
 from pathlib import Path
 from typing import TYPE_CHECKING, get_args
 
@@ -13,15 +14,9 @@ TPCH_DIR = REPO_ROOT / "tpch"
 DATA_DIR = TPCH_DIR / "data"
 
 
-def get_scale_factor_dir(scale_factor: float) -> Path:
-    """Get the data directory for a specific scale factor.
-
-    Args:
-        scale_factor: The TPC-H scale factor.
-
-    Returns:
-        Path to the scale factor-specific data directory.
-    """
+@cache
+def _scale_factor_dir(scale_factor: float) -> Path:
+    """Get the data directory for a specific scale factor."""
     return DATA_DIR / f"sf{scale_factor}"
 
 

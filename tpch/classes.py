@@ -15,7 +15,7 @@ from tpch.constants import (
     LOGGER_NAME,
     QUERIES_PACKAGE,
     QUERY_IDS,
-    get_scale_factor_dir,
+    _scale_factor_dir,
 )
 
 if TYPE_CHECKING:
@@ -70,20 +70,25 @@ class Query:
     def __repr__(self) -> str:
         return self.id
 
-    def get_paths(self, scale_factor: float) -> tuple[Path, ...]:
+    def inputs(
+        self, backend: Backend, scale_factor: float
+    ) -> tuple[nw.LazyFrame[Any], ...]:
         """Get the file paths for this query's tables at the given scale factor."""
-        sf_dir = get_scale_factor_dir(scale_factor)
-        return tuple(sf_dir / f"{name}.parquet" for name in self.table_names)
+        sf_dir = _scale_factor_dir(scale_factor)
+        return tuple(
+            backend.scan((sf_dir / f"{name}.parquet").as_posix())
+            for name in self.table_names
+        )
 
     def expected(self, scale_factor: float) -> pl.DataFrame:
-        sf_dir = get_scale_factor_dir(scale_factor)
+        sf_dir = _scale_factor_dir(scale_factor)
         return pl.read_parquet(sf_dir / f"result_{self}.parquet")
 
     def execute(
         self, backend: Backend, scale_factor: float, request: pytest.FixtureRequest
     ) -> None:
         self._apply_skips(backend, scale_factor)
-        data = tuple(backend.scan(fp.as_posix()) for fp in self.get_paths(scale_factor))
+        data = self.inputs(backend=backend, scale_factor=scale_factor)
         query = self._import_module().query
 
         try:

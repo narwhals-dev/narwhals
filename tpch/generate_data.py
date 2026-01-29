@@ -23,7 +23,7 @@ from tpch.constants import (
     GLOBS,
     LOGGER_NAME,
     QUERY_IDS,
-    get_scale_factor_dir,
+    _scale_factor_dir,
 )
 
 if TYPE_CHECKING:
@@ -47,7 +47,7 @@ def show_schemas(artifact: Artifact, scale_factor: float, /) -> None:
     if not logger.isEnabledFor(logging.DEBUG):
         return
     pattern = GLOBS[artifact]
-    sf_dir = get_scale_factor_dir(scale_factor)
+    sf_dir = _scale_factor_dir(scale_factor)
     paths = sorted(sf_dir.glob(pattern))
     if not paths:
         msg = f"Found no matching paths for {pattern!r} in {sf_dir.as_posix()}"
@@ -105,14 +105,14 @@ def load_tpch_extension(con: Con) -> Con:
 
 
 def generate_tpch_database(con: Con, scale_factor: float) -> Con:
-    logger.info("Generating data with scale_factor=%s", scale_factor)
+    logger.info("Generating data for scale_factor=%s", scale_factor)
     con.sql(SQL_DBGEN.format(scale_factor))
     logger.info("Finished generating data.")
     return con
 
 
 def write_tpch_database(con: Con, scale_factor: float) -> Con:
-    sf_dir = get_scale_factor_dir(scale_factor)
+    sf_dir = _scale_factor_dir(scale_factor)
     sf_dir.mkdir(parents=True, exist_ok=True)
     logger.info("Writing data to: %s", sf_dir.as_posix())
     with TableLogger.database() as tbl_logger:
@@ -125,7 +125,7 @@ def write_tpch_database(con: Con, scale_factor: float) -> Con:
 
 
 def write_tpch_answers(con: Con, scale_factor: float) -> Con:
-    sf_dir = get_scale_factor_dir(scale_factor)
+    sf_dir = _scale_factor_dir(scale_factor)
     logger.info("Executing tpch queries for answers")
     with TableLogger.answers() as tbl_logger:
         for query_id in QUERY_IDS:
@@ -143,7 +143,7 @@ def write_tpch_answers(con: Con, scale_factor: float) -> Con:
 
 def write_metadata(scale_factor: float) -> None:
     """Write metadata.json to the scale factor directory with creation timestamp."""
-    sf_dir = get_scale_factor_dir(scale_factor)
+    sf_dir = _scale_factor_dir(scale_factor)
     metadata_path = sf_dir / "_metadata.json"
     logger.info("Writing metadata to: %s", metadata_path.as_posix())
 
@@ -153,7 +153,7 @@ def write_metadata(scale_factor: float) -> None:
 
 def scale_factor_exists(scale_factor: float) -> bool:
     """Check if data for a scale factor exists by checking if its directory exists."""
-    sf_dir = get_scale_factor_dir(scale_factor)
+    sf_dir = _scale_factor_dir(scale_factor)
     return sf_dir.exists()
 
 
@@ -168,7 +168,6 @@ def main(*, scale_factor: float = 0.1, refresh: bool = False) -> None:
         logger.info("To regenerate this scale_factor, use `--refresh`")
         return
 
-    logger.info("Generating data for scale_factor=%s", scale_factor)
     con = connect()
     load_tpch_extension(con)
     generate_tpch_database(con, scale_factor)
