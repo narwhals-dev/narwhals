@@ -964,7 +964,7 @@ def test_first_last() -> None:
 
     data = {"a": [0, 0, 2, -1]}
     df = nw_v1.from_native(pd.DataFrame(data), eager_only=True)
-    result = df.select(b=nw.col("a").first(), c=nw.col("a").first())
+    result = df.select(b=nw_v1.col("a").first(), c=nw_v1.col("a").first())
     expected = {"b": [0], "c": [0]}
     assert_equal_data(result, expected)
 
