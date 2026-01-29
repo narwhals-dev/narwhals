@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION
+from tests.utils import DUCKDB_VERSION, PANDAS_VERSION
 
 
 def test_repr(request: pytest.FixtureRequest) -> None:
@@ -12,7 +12,7 @@ def test_repr(request: pytest.FixtureRequest) -> None:
     import duckdb
     import pandas as pd
 
-    if PANDAS_VERSION >= (3,):
+    if PANDAS_VERSION >= (3,) and DUCKDB_VERSION < (1, 4, 4):
         # https://github.com/duckdb/duckdb/issues/18297
         request.applymarker(pytest.mark.xfail)
 
