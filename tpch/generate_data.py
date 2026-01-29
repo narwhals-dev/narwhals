@@ -6,8 +6,6 @@
 from __future__ import annotations
 
 import argparse
-import datetime as dt
-import json
 import logging
 import os
 from functools import cache
@@ -141,16 +139,6 @@ def write_tpch_answers(con: Con, scale_factor: float) -> Con:
     return con
 
 
-def write_metadata(scale_factor: float) -> None:
-    """Write metadata.json to the scale factor directory with creation timestamp."""
-    sf_dir = _scale_factor_dir(scale_factor)
-    metadata_path = sf_dir / "_metadata.json"
-    logger.info("Writing metadata to: %s", metadata_path.as_posix())
-
-    metadata = {"created_at": dt.datetime.now(dt.timezone.utc).isoformat()}
-    metadata_path.write_text(json.dumps(metadata, indent=2))
-
-
 def scale_factor_exists(scale_factor: float) -> bool:
     """Check if data for a scale factor exists by checking if its directory exists."""
     sf_dir = _scale_factor_dir(scale_factor)
@@ -173,7 +161,6 @@ def main(*, scale_factor: float = 0.1, refresh: bool = False) -> None:
     generate_tpch_database(con, scale_factor)
     write_tpch_database(con, scale_factor)
     write_tpch_answers(con, scale_factor)
-    write_metadata(scale_factor)
     total = TableLogger.format_size(sum(e.stat().st_size for e in os.scandir(DATA_DIR)))
     logger.info("Finished with total file size: %s", total.strip())
 
