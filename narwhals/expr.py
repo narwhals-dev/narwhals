@@ -1621,7 +1621,7 @@ class Expr:
         """Get the first value.
 
         Notes:
-            For lazy backends, this can only be used with `over`.
+            For lazy backends, this can only be used with `over` or with `order_by`.
 
         Examples:
             >>> import pandas as pd
@@ -1660,7 +1660,7 @@ class Expr:
         """Get the last value.
 
         Notes:
-            For lazy backends, this can only be used with `over`.
+            For lazy backends, this can only be used with `over` or with `order_by`.
 
         Examples:
             >>> import pyarrow as pa
