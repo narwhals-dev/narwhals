@@ -9,7 +9,7 @@ import argparse
 import datetime as dt
 import logging
 import os
-from functools import cache, partial
+from functools import cache
 from typing import TYPE_CHECKING, Any
 
 import polars as pl
@@ -31,11 +31,10 @@ if TYPE_CHECKING:
 
     from duckdb import DuckDBPyConnection as Con
 
-    from tpch.typing_ import Artifact, BuiltinScaleFactor, QueryID
+    from tpch.typing_ import Artifact, QueryID
 
 
 logger = logging.getLogger(LOGGER_NAME)
-read_csv = partial(pl.read_csv, try_parse_dates=True)
 
 
 def read_fmt_schema(fp: Path) -> str:
@@ -67,23 +66,10 @@ TABLE_SCALE_FACTOR = """
 """
 
 
-SF_BUILTIN_STR: Mapping[float, BuiltinScaleFactor] = {
-    0.01: "0.01",
-    0.1: "0.1",
-    1.0: "1.0",
-}
-
-
 # NOTE: Store queries here, add parameter names if needed
 SQL_DBGEN = "CALL dbgen(sf={0})"
 SQL_TPCH_ANSWER = "PRAGMA tpch({0})"
-SQL_TPCH_ANSWERS = """
-    SELECT query_nr, answer
-    FROM tpch_answers()
-    WHERE scale_factor={0}
-"""
 SQL_FROM = "FROM {0}"
-
 
 FIX_ANSWERS: Mapping[QueryID, Callable[[pl.DataFrame], pl.DataFrame]] = {
     "q18": lambda df: df.rename({"sum(l_quantity)": "sum"}).cast({"sum": pl.Int64()}),
@@ -99,10 +85,7 @@ DuckDB being weird, this is [correct] but [not this one].
 
 @cache
 def cast_map() -> dict[Any, Any]:
-    return {
-        cs.decimal(): float,
-        cs.date() | cs.by_name("o_orderdate", require_all=False): pl.Datetime("ns"),
-    }
+    return {cs.decimal(): float, cs.date(): pl.Datetime("ns")}
 
 
 def connect() -> Con:
@@ -137,7 +120,7 @@ def write_tpch_database(con: Con) -> Con:
     return con
 
 
-def _answers_any(con: Con) -> Con:
+def write_tpch_answers(con: Con) -> Con:
     logger.info("Executing tpch queries for answers")
     with TableLogger.answers() as tbl_logger:
         for query_id in QUERY_IDS:
@@ -148,28 +131,6 @@ def _answers_any(con: Con) -> Con:
                 df = fix(df)
             df.write_parquet(path)
             tbl_logger.log_row(path)
-    return con
-
-
-def _answers_builtin(con: Con, scale: BuiltinScaleFactor) -> Con:
-    logger.info("Fastpath for builtin tpch_answers()")
-    results = con.sql(SQL_TPCH_ANSWERS.format(scale))
-    with TableLogger.answers() as tbl_logger:
-        while row := results.fetchmany(1):
-            query_nr, answer = row[0]
-            path = DATA_DIR / f"result_q{query_nr}.parquet"
-            read_csv(answer.encode(), separator="|").cast(cast_map()).write_parquet(path)
-            tbl_logger.log_row(path)
-    return con
-
-
-def write_tpch_answers(con: Con, scale_factor: float) -> Con:
-    logger.info("Getting answers")
-    con = (
-        _answers_builtin(con, scale)
-        if (scale := SF_BUILTIN_STR.get(scale_factor))
-        else _answers_any(con)
-    )
     show_schemas("answers")
     return con
 
@@ -213,7 +174,7 @@ def try_read_metadata() -> tuple[float, dt.datetime] | None:
     if not METADATA_PATH.exists():
         logger.info("Did not find existing metadata")
         return None
-    return _validate_metadata(read_csv(METADATA_PATH))
+    return _validate_metadata(pl.read_csv(METADATA_PATH, try_parse_dates=True))
 
 
 def main(*, scale_factor: float = 0.1, refresh: bool = False) -> None:
@@ -236,7 +197,7 @@ def main(*, scale_factor: float = 0.1, refresh: bool = False) -> None:
     load_tpch_extension(con)
     generate_tpch_database(con, scale_factor)
     write_tpch_database(con)
-    write_tpch_answers(con, scale_factor)
+    write_tpch_answers(con)
     write_metadata(scale_factor)
     total = TableLogger.format_size(sum(e.stat().st_size for e in os.scandir(DATA_DIR)))
     logger.info("Finished with total file size: %s", total.strip())
