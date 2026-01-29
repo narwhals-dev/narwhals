@@ -147,7 +147,10 @@ def iter_queries() -> Iterator[Query]:
             SUPPLIER_PATH,
         ),
         q("q10", CUSTOMER_PATH, NATION_PATH, LINEITEM_PATH, ORDERS_PATH),
-        q("q11", NATION_PATH, PARTSUPP_PATH, SUPPLIER_PATH),
+        q("q11", NATION_PATH, PARTSUPP_PATH, SUPPLIER_PATH).with_skip(
+            lambda _, scale_factor: scale_factor not in safe,
+            reason="https://github.com/duckdb/duckdb/issues/17965",
+        ),
         q("q12", LINEITEM_PATH, ORDERS_PATH),
         q("q13", CUSTOMER_PATH, ORDERS_PATH),
         q("q14", LINEITEM_PATH, PART_PATH),
