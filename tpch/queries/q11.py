@@ -8,9 +8,6 @@ if TYPE_CHECKING:
     from narwhals.typing import FrameT
 
 
-# NOTE: Can fail when `scale_factor=0.11`
-# Seems to be an upstream issue for hardcoded `var2 = 0.0001`
-# https://github.com/duckdb/duckdb/issues/17965
 def query(nation_ds: FrameT, partsupp_ds: FrameT, supplier_ds: FrameT) -> FrameT:
     var1 = "GERMANY"
     var2 = 0.0001

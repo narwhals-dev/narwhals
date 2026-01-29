@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from importlib import import_module
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any
 
 import polars as pl
 import pytest
@@ -13,6 +13,7 @@ from narwhals.exceptions import NarwhalsError
 from tpch.constants import (
     DATABASE_TABLE_NAMES,
     LOGGER_NAME,
+    QUERIES_PACKAGE,
     QUERY_IDS,
     get_scale_factor_dir,
 )
@@ -23,7 +24,6 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
-    from narwhals._typing import IntoBackendAny
     from narwhals.typing import FileSource
     from tpch.typing_ import (
         KnownImpl,
@@ -40,12 +40,11 @@ class Backend:
     implementation: KnownImpl
     kwds: dict[str, Any]
 
-    def __init__(
-        self, name: TPCHBackend, into_backend: IntoBackendAny, /, **kwds: Any
-    ) -> None:
+    def __init__(self, name: TPCHBackend, /, **kwds: Any) -> None:
+        backend = name.partition("[")[0]
+        impl = nw.Implementation.from_backend(backend)
+        assert impl is not nw.Implementation.UNKNOWN, f"{name!r} -> {backend!r}"  # noqa: S101
         self.name = name
-        impl = nw.Implementation.from_backend(into_backend)
-        assert impl is not nw.Implementation.UNKNOWN  # noqa: S101
         self.implementation = impl
         self.kwds = kwds
 
@@ -62,8 +61,6 @@ class Query:
     _into_xfails: tuple[tuple[Predicate, str, XFailRaises], ...]
     _into_skips: tuple[tuple[Predicate, str], ...]
 
-    PACKAGE_PREFIX: ClassVar = "tpch.queries"
-
     def __init__(self, query_id: QueryID, table_names: tuple[str, ...]) -> None:
         self.id = query_id
         self.table_names = table_names
@@ -72,10 +69,6 @@ class Query:
 
     def __repr__(self) -> str:
         return self.id
-
-    def _import_module(self) -> QueryModule:
-        result: Any = import_module(f"{self.PACKAGE_PREFIX}.{self}")
-        return result
 
     def get_paths(self, scale_factor: float) -> tuple[Path, ...]:
         """Get the file paths for this query's tables at the given scale factor."""
@@ -86,19 +79,26 @@ class Query:
         sf_dir = get_scale_factor_dir(scale_factor)
         return pl.read_parquet(sf_dir / f"result_{self}.parquet")
 
-    def run(self, backend: Backend, scale_factor: float) -> pl.DataFrame:
-        paths = self.get_paths(scale_factor)
-        data = tuple(backend.scan(fp.as_posix()) for fp in paths)
-        return self._import_module().query(*data).lazy().collect("polars").to_polars()
-
-    def try_run(self, backend: Backend, scale_factor: float) -> pl.DataFrame:
+    def execute(
+        self, backend: Backend, scale_factor: float, request: pytest.FixtureRequest
+    ) -> None:
         self._apply_skips(backend, scale_factor)
+        data = tuple(backend.scan(fp.as_posix()) for fp in self.get_paths(scale_factor))
+        query = self._import_module().query
+
         try:
-            result = self.run(backend, scale_factor)
+            result = query(*data).lazy().collect("polars").to_polars()
         except NarwhalsError as exc:
             msg = f"Query [{self}-{backend}] ({scale_factor=}) failed with the following error in Narwhals:\n{exc}"
             raise RuntimeError(msg) from exc
-        return result
+
+        self._apply_xfails(backend, scale_factor, request)
+        expected = self.expected(scale_factor=scale_factor)
+        try:
+            pl_assert_frame_equal(expected, result, check_dtypes=False)
+        except AssertionError as exc:
+            msg = f"Query [{self}-{backend}] ({scale_factor=}) resulted in wrong answer:\n{exc}"
+            raise AssertionError(msg) from exc
 
     def with_skip(self, predicate: Predicate, reason: str) -> Query:
         self._into_skips = (*self._into_skips, (predicate, reason))
@@ -120,23 +120,12 @@ class Query:
     ) -> None:
         for predicate, reason, raises in self._into_xfails:
             condition = predicate(backend, scale_factor)
-            request.applymarker(
-                pytest.mark.xfail(condition, reason=reason, raises=raises)
-            )
+            mark = pytest.mark.xfail(condition, reason=reason, raises=raises)
+            request.applymarker(mark)
 
-    def assert_expected(
-        self,
-        result: pl.DataFrame,
-        backend: Backend,
-        scale_factor: float,
-        request: pytest.FixtureRequest,
-    ) -> None:
-        self._apply_xfails(backend, scale_factor, request)
-        try:
-            pl_assert_frame_equal(self.expected(scale_factor), result, check_dtypes=False)
-        except AssertionError as exc:
-            msg = f"Query [{self}-{backend}] ({scale_factor=}) resulted in wrong answer:\n{exc}"
-            raise AssertionError(msg) from exc
+    def _import_module(self) -> QueryModule:
+        result: Any = import_module(f"{QUERIES_PACKAGE}.{self}")
+        return result
 
 
 logger = logging.getLogger(LOGGER_NAME)
@@ -145,43 +134,39 @@ logger = logging.getLogger(LOGGER_NAME)
 class TableLogger:
     """A logger that streams table rows with box-drawing characters."""
 
-    # Size column: 3 leading digits + 1 dot + 2 decimals + 1 space + 2 unit chars = 9 chars
-    SIZE_WIDTH = 9
+    # Size column: 4 leading digits + 1 dot + 2 decimals + 1 space + 2 unit chars = 10 chars
+    SIZE_WIDTH = 10
 
     def __init__(self, file_names: Iterable[str]) -> None:
         self._file_width = max(len(name) for name in file_names)
 
     @staticmethod
-    def database() -> TableLogger:
-        return TableLogger(f"{t}.parquet" for t in DATABASE_TABLE_NAMES)
-
-    @staticmethod
     def answers() -> TableLogger:
         return TableLogger(f"result_{qid}.parquet" for qid in QUERY_IDS)
 
+    @staticmethod
+    def database() -> TableLogger:
+        return TableLogger(f"{t}.parquet" for t in DATABASE_TABLE_NAMES)
+
     def __enter__(self) -> Self:
-        self._log_header()
-        return self
-
-    def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
-        self._log_footer()
-
-    def log_row(self, file_name: str, n_bytes: float) -> None:
-        size = self.format_size(n_bytes)
-        logger.info("│ %s ┆ %s │", file_name.rjust(self._file_width), size)
-
-    def _log_header(self) -> None:
+        # header
         fw, sw = self._file_width, self.SIZE_WIDTH
         logger.info("┌─%s─┬─%s─┐", "─" * fw, "─" * sw)
         logger.info("│ %s ┆ %s │", "File".rjust(fw), "Size".rjust(sw))
         logger.info("╞═%s═╪═%s═╡", "═" * fw, "═" * sw)
+        return self
 
-    def _log_footer(self) -> None:
+    def log_row(self, path: Path) -> None:
+        size = self.format_size(path.stat().st_size)
+        logger.info("│ %s ┆ %s │", path.name.rjust(self._file_width), size)
+
+    def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
+        # footer
         fw, sw = self._file_width, self.SIZE_WIDTH
         logger.info("└─%s─┴─%s─┘", "─" * fw, "─" * sw)
 
     @staticmethod
-    def format_size(n_bytes: float, *, decimals: int = 2) -> str:
+    def format_size(n_bytes: float) -> str:
         """Return the best human-readable size and unit for the given byte count."""
         size = float(n_bytes)
         units = iter(("b", "kb", "mb", "gb", "tb"))
@@ -189,4 +174,4 @@ class TableLogger:
         while size >= 1024 and unit != "tb":
             size /= 1024
             unit = next(units, "tb")
-        return f"{size:6.{decimals}f} {unit:>2}"
+        return f"{size:>7.2f} {unit:>2}"

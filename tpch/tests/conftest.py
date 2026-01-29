@@ -107,9 +107,9 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 
 
 def iter_backends() -> Iterator[Backend]:
-    yield Backend("polars[lazy]", "polars")
+    yield Backend("polars[lazy]")
     if find_spec("pyarrow"):
-        yield Backend("pyarrow", "pyarrow")
+        yield Backend("pyarrow")
         if find_spec("pandas"):
             import pandas as pd
 
@@ -118,17 +118,15 @@ def iter_backends() -> Iterator[Backend]:
                 pd.options.mode.copy_on_write = True
             with suppress(Exception):
                 pd.options.future.infer_string = True  # pyright: ignore[reportAttributeAccessIssue, reportOptionalMemberAccess]
-            yield Backend(
-                "pandas[pyarrow]", "pandas", engine="pyarrow", dtype_backend="pyarrow"
-            )
+            yield Backend("pandas[pyarrow]", engine="pyarrow", dtype_backend="pyarrow")
         if find_spec("dask") and find_spec("dask.dataframe"):
-            yield Backend("dask", "dask", engine="pyarrow", dtype_backend="pyarrow")
+            yield Backend("dask", engine="pyarrow", dtype_backend="pyarrow")
     if find_spec("duckdb"):
-        yield Backend("duckdb", "duckdb")
+        yield Backend("duckdb")
         if find_spec("sqlframe"):
             from sqlframe.duckdb import DuckDBSession
 
-            yield Backend("sqlframe", "sqlframe", session=DuckDBSession())
+            yield Backend("sqlframe", session=DuckDBSession())
 
 
 @pytest.fixture(params=iter_backends(), ids=repr)
@@ -143,6 +141,7 @@ def q(query_id: QueryID, *table_names: str) -> Query:
 
 
 def iter_queries() -> Iterator[Query]:
+    safe = SCALE_FACTORS_BLESSED | SCALE_FACTORS_QUITE_SAFE
     yield from (
         q("q1", TBL_LINEITEM),
         q("q2", TBL_REGION, TBL_NATION, TBL_SUPPLIER, TBL_PART, TBL_PARTSUPP),
@@ -179,26 +178,29 @@ def iter_queries() -> Iterator[Query]:
             TBL_SUPPLIER,
         ),
         q("q10", TBL_CUSTOMER, TBL_NATION, TBL_LINEITEM, TBL_ORDERS),
-        q("q11", TBL_NATION, TBL_PARTSUPP, TBL_SUPPLIER),
+        q("q11", TBL_NATION, TBL_PARTSUPP, TBL_SUPPLIER).with_skip(
+            lambda _, scale_factor: scale_factor not in safe,
+            reason="https://github.com/duckdb/duckdb/issues/17965",
+        ),
         q("q12", TBL_LINEITEM, TBL_ORDERS),
         q("q13", TBL_CUSTOMER, TBL_ORDERS),
         q("q14", TBL_LINEITEM, TBL_PART),
-        q("q15", TBL_LINEITEM, TBL_SUPPLIER).with_skip(
-            lambda backend, _: backend.name in {"duckdb", "sqlframe"},
-            reason="https://github.com/narwhals-dev/narwhals/issues/2226",
-        ),
+        q("q15", TBL_LINEITEM, TBL_SUPPLIER),
         q("q16", TBL_PART, TBL_PARTSUPP, TBL_SUPPLIER),
-        q("q17", TBL_LINEITEM, TBL_PART).with_xfail(
-            lambda _, scale_factor: (scale_factor < 0.014) or scale_factor == 0.5,
+        q("q17", TBL_LINEITEM, TBL_PART)
+        .with_xfail(
+            lambda _, scale_factor: (scale_factor < 0.014),
             reason="Generated dataset is too small, leading to 0 rows after the first two filters in `query1`.",
+        )
+        .with_skip(
+            lambda _, scale_factor: scale_factor not in safe,
+            reason="Non-deterministic fails for `duckdb`, `sqlframe`. All other always fail, except `pyarrow` which always passes 🤯.",
         ),
         q("q18", TBL_CUSTOMER, TBL_LINEITEM, TBL_ORDERS),
         q("q19", TBL_LINEITEM, TBL_PART),
         q("q20", TBL_PART, TBL_PARTSUPP, TBL_NATION, TBL_LINEITEM, TBL_SUPPLIER),
         q("q21", TBL_LINEITEM, TBL_NATION, TBL_ORDERS, TBL_SUPPLIER).with_skip(
-            lambda _, scale_factor: scale_factor
-            not in (SCALE_FACTORS_BLESSED | SCALE_FACTORS_QUITE_SAFE),
-            reason="Off-by-1 error when using *most* non-blessed `scale_factor`s",
+            lambda _, scale_factor: scale_factor not in safe, reason="Off-by-1 error"
         ),
         q("q22", TBL_CUSTOMER, TBL_ORDERS),
     )

@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
-import io
 import json
 import logging
 import os
@@ -33,7 +32,7 @@ if TYPE_CHECKING:
 
     from duckdb import DuckDBPyConnection as Con
 
-    from tpch.typing_ import Artifact, BuiltinScaleFactor, QueryID
+    from tpch.typing_ import Artifact, QueryID
 
 
 logger = logging.getLogger(LOGGER_NAME)
@@ -69,23 +68,10 @@ TABLE_SCALE_FACTOR = """
 """
 
 
-SF_BUILTIN_STR: Mapping[float, BuiltinScaleFactor] = {
-    0.01: "0.01",
-    0.1: "0.1",
-    1.0: "1.0",
-}
-
-
 # NOTE: Store queries here, add parameter names if needed
 SQL_DBGEN = "CALL dbgen(sf={0})"
 SQL_TPCH_ANSWER = "PRAGMA tpch({0})"
-SQL_TPCH_ANSWERS = """
-    SELECT query_nr, answer
-    FROM tpch_answers()
-    WHERE scale_factor={0}
-"""
 SQL_FROM = "FROM {0}"
-
 
 FIX_ANSWERS: Mapping[QueryID, Callable[[pl.DataFrame], pl.DataFrame]] = {
     "q18": lambda df: df.rename({"sum(l_quantity)": "sum"}).cast({"sum": pl.Int64()}),
@@ -101,11 +87,7 @@ DuckDB being weird, this is [correct] but [not this one].
 
 @cache
 def cast_map() -> dict[Any, Any]:
-    casts: dict[Any, Any] = {
-        cs.decimal(): float,
-        cs.date() | cs.by_name("o_orderdate", require_all=False): pl.Datetime("ns"),
-    }
-    return casts
+    return {cs.decimal(): float, cs.date(): pl.Datetime("ns")}
 
 
 def connect() -> Con:
@@ -135,51 +117,26 @@ def write_tpch_database(con: Con, scale_factor: float) -> Con:
     logger.info("Writing data to: %s", sf_dir.as_posix())
     with TableLogger.database() as tbl_logger:
         for t in DATABASE_TABLE_NAMES:
-            df = con.sql(SQL_FROM.format(t)).pl().cast(cast_map())
             path = sf_dir / f"{t}.parquet"
-            df.write_parquet(path)
-            tbl_logger.log_row(path.name, path.stat().st_size)
+            con.sql(SQL_FROM.format(t)).pl().cast(cast_map()).write_parquet(path)
+            tbl_logger.log_row(path)
     show_schemas("database", scale_factor)
     return con
 
 
-def _answers_any(con: Con, scale_factor: float) -> Con:
+def write_tpch_answers(con: Con, scale_factor: float) -> Con:
     sf_dir = get_scale_factor_dir(scale_factor)
     logger.info("Executing tpch queries for answers")
     with TableLogger.answers() as tbl_logger:
         for query_id in QUERY_IDS:
+            path = DATA_DIR / f"result_{query_id}.parquet"
             query = SQL_TPCH_ANSWER.format(query_id.removeprefix("q"))
             df = con.sql(query).pl().cast(cast_map())
             if fix := FIX_ANSWERS.get(query_id):
                 df = fix(df)
             path = sf_dir / f"result_{query_id}.parquet"
             df.write_parquet(path)
-            tbl_logger.log_row(path.name, path.stat().st_size)
-    return con
-
-
-def _answers_builtin(con: Con, scale: BuiltinScaleFactor, scale_factor: float) -> Con:
-    sf_dir = get_scale_factor_dir(scale_factor)
-    logger.info("Fastpath for builtin tpch_answers()")
-    results = con.sql(SQL_TPCH_ANSWERS.format(scale))
-    with TableLogger.answers() as tbl_logger:
-        while row := results.fetchmany(1):
-            query_nr, answer = row[0]
-            source = io.BytesIO(answer.encode("utf-8"))
-            df = pl.read_csv(source, separator="|", try_parse_dates=True).cast(cast_map())
-            path = sf_dir / f"result_q{query_nr}.parquet"
-            df.write_parquet(path)
-            tbl_logger.log_row(path.name, path.stat().st_size)
-    return con
-
-
-def write_tpch_answers(con: Con, scale_factor: float) -> Con:
-    logger.info("Getting answers")
-    con = (
-        _answers_builtin(con, scale, scale_factor)
-        if (scale := SF_BUILTIN_STR.get(scale_factor))
-        else _answers_any(con, scale_factor)
-    )
+            tbl_logger.log_row(path)
     show_schemas("answers", scale_factor)
     return con
 

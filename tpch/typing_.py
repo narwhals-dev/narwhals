@@ -40,7 +40,6 @@ QueryID: TypeAlias = Literal[
     "q22",
 ]
 XFailRaises: TypeAlias = type[BaseException] | tuple[type[BaseException], ...]
-BuiltinScaleFactor: TypeAlias = Literal["0.01", "0.1", "1.0"]
 Artifact: TypeAlias = Literal["database", "answers"]
 
 
