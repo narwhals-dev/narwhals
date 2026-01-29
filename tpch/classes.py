@@ -117,8 +117,8 @@ logger = logging.getLogger(constants.LOGGER_NAME)
 class TableLogger:
     """A logger that streams table rows with box-drawing characters."""
 
-    # Size column: 3 leading digits + 1 dot + 2 decimals + 1 space + 2 unit chars = 9 chars
-    SIZE_WIDTH = 9
+    # Size column: 4 leading digits + 1 dot + 2 decimals + 1 space + 2 unit chars = 10 chars
+    SIZE_WIDTH = 10
 
     def __init__(self, file_names: Iterable[str]) -> None:
         self._file_width = max(len(name) for name in file_names)
@@ -149,7 +149,7 @@ class TableLogger:
         logger.info("└─%s─┴─%s─┘", "─" * fw, "─" * sw)
 
     @staticmethod
-    def format_size(n_bytes: float, *, decimals: int = 2) -> str:
+    def format_size(n_bytes: float) -> str:
         """Return the best human-readable size and unit for the given byte count."""
         size = float(n_bytes)
         units = iter(("b", "kb", "mb", "gb", "tb"))
@@ -157,4 +157,4 @@ class TableLogger:
         while size >= 1024 and unit != "tb":
             size /= 1024
             unit = next(units, "tb")
-        return f"{size:6.{decimals}f} {unit:>2}"
+        return f"{size:>7.2f} {unit:>2}"
