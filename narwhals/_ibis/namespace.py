@@ -18,7 +18,7 @@ from narwhals._ibis.expr import IbisExpr
 from narwhals._ibis.selectors import IbisSelectorNamespace
 from narwhals._ibis.utils import function, lit, narwhals_to_native_dtype
 from narwhals._sql.namespace import SQLNamespace
-from narwhals._utils import Implementation
+from narwhals._utils import Implementation, safe_cast
 from narwhals.schema import Schema, to_supertype
 
 if TYPE_CHECKING:
@@ -74,11 +74,8 @@ class IbisNamespace(
 
         if how.endswith("relaxed"):
             schemas = (Schema(frame.collect_schema()) for frame in frames)
-            out_schema = reduce(to_supertype, schemas).items()
-            frames = [
-                frame.select(*(self.col(name).cast(dtype) for name, dtype in out_schema))
-                for frame in frames
-            ]
+            out_schema = reduce(to_supertype, schemas)
+            frames = [frame.select(*safe_cast(self, out_schema)) for frame in frames]
         try:
             result = ibis.union(*(lf.native for lf in frames))
         except ibis.IbisError:

@@ -26,7 +26,7 @@ from narwhals._expression_parsing import (
     combine_evaluate_output_names,
 )
 from narwhals._sql.namespace import SQLNamespace
-from narwhals._utils import Implementation
+from narwhals._utils import Implementation, safe_cast
 from narwhals.schema import Schema, merge_schemas, to_supertype
 
 if TYPE_CHECKING:
@@ -97,10 +97,7 @@ class DuckDBNamespace(
             schemas: Iterable[Schema] = (Schema(df.collect_schema()) for df in items)
             out_schema = reduce(to_supertype, schemas)
             native_items = (
-                item.select(
-                    *(self.col(name).cast(dtype) for name, dtype in out_schema.items())
-                ).native
-                for item in items
+                item.select(*safe_cast(self, out_schema)).native for item in items
             )
             res = reduce(DuckDBPyRelation.union, native_items)
             return first._with_native(res)
@@ -117,22 +114,20 @@ class DuckDBNamespace(
         if how == "diagonal_relaxed":
             schemas = [Schema(df.collect_schema()) for df in items]
             out_schema = reduce(merge_schemas, schemas)
-            res, *others = (
+            native_items = (
                 item.select(
                     *(
-                        self.col(name).cast(dtype)
+                        self.col(name)
                         if name in schema
                         else self.lit(None, dtype=dtype).alias(name)
                         for name, dtype in out_schema.items()
                     )
-                ).native
+                )
+                .select(*safe_cast(self, out_schema))
+                .native
                 for item, schema in zip(items, schemas)
             )
-            for _item in others:
-                # TODO(unassigned): use relational API when available https://github.com/duckdb/duckdb/discussions/16996
-                res = duckdb.sql("""
-                    from res select * union all by name from _item select *
-                """)
+            res = reduce(DuckDBPyRelation.union, native_items)
             return first._with_native(res)
         raise NotImplementedError
 

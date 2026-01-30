@@ -68,7 +68,14 @@ if TYPE_CHECKING:
         TypeIs,
     )
 
-    from narwhals._compliant import CompliantExprT, CompliantSeriesT, NativeSeriesT_co
+    from narwhals import dtypes
+    from narwhals._compliant import (
+        CompliantExprT,
+        CompliantFrameT,
+        CompliantNamespace,
+        CompliantSeriesT,
+        NativeSeriesT_co,
+    )
     from narwhals._compliant.any_namespace import NamespaceAccessor
     from narwhals._compliant.typing import (
         Accessor,
@@ -2148,3 +2155,14 @@ no_default = _NoDefault.no_default
 
 # Can be imported from types in Python 3.10
 NoneType = type(None)
+
+
+def safe_cast(
+    ns: CompliantNamespace[CompliantFrameT, CompliantExprT],
+    mapping: Mapping[str, dtypes.DType],
+) -> Iterable[CompliantExprT]:
+    Unknown = ns._version.dtypes.Unknown()  # noqa: N806
+    return (
+        ns.col(name) if dtype == Unknown else ns.col(name).cast(dtype)
+        for name, dtype in mapping.items()
+    )

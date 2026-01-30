@@ -19,6 +19,7 @@ from narwhals._spark_like.utils import (
     true_divide,
 )
 from narwhals._sql.namespace import SQLNamespace
+from narwhals._utils import safe_cast
 from narwhals.schema import Schema, merge_schemas, to_supertype
 
 if TYPE_CHECKING:
@@ -181,10 +182,7 @@ class SparkLikeNamespace(
             schemas: Iterable[Schema] = (Schema(df.collect_schema()) for df in items)
             out_schema = reduce(to_supertype, schemas)
             native_items = (
-                item.select(
-                    *(self.col(name).cast(dtype) for name, dtype in out_schema.items())
-                ).native
-                for item in items
+                item.select(*safe_cast(self, out_schema)).native for item in items
             )
             union = items[0].native.__class__.union
             return SparkLikeLazyFrame(
@@ -199,12 +197,14 @@ class SparkLikeNamespace(
             native_items = (
                 item.select(
                     *(
-                        self.col(name).cast(dtype)
+                        self.col(name)
                         if name in schema
                         else self.lit(None, dtype=dtype).alias(name)
                         for name, dtype in out_schema.items()
                     )
-                ).native
+                )
+                .select(*safe_cast(self, out_schema))
+                .native
                 for item, schema in zip(items, schemas)
             )
             union = items[0].native.__class__.union
