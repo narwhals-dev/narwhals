@@ -65,25 +65,14 @@ SCALE_FACTORS_QUITE_SAFE = frozenset(
 def pytest_configure(config: pytest.Config) -> None:
     """Generate TPC-H data if it doesn't exist for the requested scale factor.
 
-    This hook runs after command line options have been parsed,
+    [`pytest.hookspec.pytest_configure`] runs after command line options have been parsed,
     ensuring data is available before test collection.
+
+    [`pytest.hookspec.pytest_configure`]: https://docs.pytest.org/en/stable/reference/reference.html#pytest.hookspec.pytest_configure
     """
-    from tpch.generate_data import scale_factor_exists
+    from tpch.generate_data import main as generate_data
 
     scale_factor = config.getoption("--scale-factor", default=SCALE_FACTOR_DEFAULT)
-
-    if scale_factor_exists(scale_factor):
-        return
-
-    import logging
-
-    from tpch.generate_data import logger, main as generate_data
-
-    logger.setLevel(logging.INFO)
-    handler = logging.StreamHandler()
-    handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
-    logger.addHandler(handler)
-
     generate_data(scale_factor=scale_factor)
 
 

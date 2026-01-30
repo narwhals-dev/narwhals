@@ -11,9 +11,6 @@ import os
 from functools import cache
 from typing import TYPE_CHECKING, Any
 
-import polars as pl
-import polars.selectors as cs
-
 from tpch.classes import TableLogger
 from tpch.constants import (
     DATA_DIR,
@@ -29,6 +26,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
     from pathlib import Path
 
+    import polars as pl
     from duckdb import DuckDBPyConnection as Con
 
     from tpch.typing_ import Artifact, QueryID
@@ -38,6 +36,8 @@ logger = logging.getLogger(LOGGER_NAME)
 
 
 def read_fmt_schema(fp: Path) -> str:
+    import polars as pl
+
     schema = pl.read_parquet_schema(fp).items()
     return f"- {fp.name}\n" + "\n".join(f"  - {k:<20}: {v}" for k, v in schema)
 
@@ -73,8 +73,8 @@ SQL_TPCH_ANSWER = "PRAGMA tpch({0})"
 SQL_FROM = "FROM {0}"
 
 FIX_ANSWERS: Mapping[QueryID, Callable[[pl.DataFrame], pl.DataFrame]] = {
-    "q18": lambda df: df.rename({"sum(l_quantity)": "sum"}).cast({"sum": pl.Int64()}),
-    "q22": lambda df: df.cast({"cntrycode": pl.Int64()}),
+    "q18": lambda df: df.rename({"sum(l_quantity)": "sum"}).cast({"sum": int}),
+    "q22": lambda df: df.cast({"cntrycode": int}),
 }
 """
 DuckDB being weird, this is [correct] but [not this one].
@@ -86,6 +86,9 @@ DuckDB being weird, this is [correct] but [not this one].
 
 @cache
 def cast_map() -> dict[Any, Any]:
+    import polars as pl
+    import polars.selectors as cs
+
     return {cs.decimal(): float, cs.date(): pl.Datetime("ns")}
 
 
@@ -140,17 +143,12 @@ def write_tpch_answers(con: Con, scale_factor: float) -> Con:
     return con
 
 
-def scale_factor_exists(scale_factor: float) -> bool:
-    """Check if data for a scale factor exists by checking if its directory exists."""
-    sf_dir = _scale_factor_dir(scale_factor)
-    return sf_dir.exists()
-
-
-def main(*, scale_factor: float = SCALE_FACTOR_DEFAULT, refresh: bool = False) -> None:
+def main(*, scale_factor: float, refresh: bool = False, debug: bool = False) -> None:
+    _configure_logger(debug=debug)
     DATA_DIR.mkdir(exist_ok=True)
     if refresh:
         logger.info("Refreshing data for scale_factor=%s", scale_factor)
-    elif scale_factor_exists(scale_factor):
+    elif _scale_factor_dir(scale_factor).exists():
         logger.info("Data already exists for scale_factor=%s", scale_factor)
         show_schemas("database", scale_factor)
         show_schemas("answers", scale_factor)
@@ -209,5 +207,4 @@ if __name__ == "__main__":
         help="Re-run data generation, regardless of whether `--scale-factor` is already on disk",
     )
     args = parser.parse_args()
-    _configure_logger(debug=args.debug)
-    main(scale_factor=args.scale_factor, refresh=args.refresh)
+    main(scale_factor=args.scale_factor, refresh=args.refresh, debug=args.debug)

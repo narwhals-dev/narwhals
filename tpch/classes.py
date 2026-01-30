@@ -4,10 +4,6 @@ import logging
 from importlib import import_module
 from typing import TYPE_CHECKING, Any
 
-import polars as pl
-import pytest
-from polars.testing import assert_frame_equal as pl_assert_frame_equal
-
 import narwhals as nw
 from narwhals.exceptions import NarwhalsError
 from tpch.constants import (
@@ -22,6 +18,8 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
     from pathlib import Path
 
+    import polars as pl
+    import pytest
     from typing_extensions import Self
 
     from narwhals.typing import FileSource
@@ -81,12 +79,16 @@ class Query:
         )
 
     def expected(self, scale_factor: float) -> pl.DataFrame:
+        import polars as pl
+
         sf_dir = _scale_factor_dir(scale_factor)
         return pl.read_parquet(sf_dir / f"result_{self}.parquet")
 
     def execute(
         self, backend: Backend, scale_factor: float, request: pytest.FixtureRequest
     ) -> None:
+        from polars.testing import assert_frame_equal
+
         self._apply_skips(backend, scale_factor)
         data = self.inputs(backend=backend, scale_factor=scale_factor)
         query = self._import_module().query
@@ -100,7 +102,7 @@ class Query:
         self._apply_xfails(backend, scale_factor, request)
         expected = self.expected(scale_factor=scale_factor)
         try:
-            pl_assert_frame_equal(expected, result, check_dtypes=False)
+            assert_frame_equal(expected, result, check_dtypes=False)
         except AssertionError as exc:
             msg = f"Query [{self}-{backend}] ({scale_factor=}) resulted in wrong answer:\n{exc}"
             raise AssertionError(msg) from exc
@@ -116,6 +118,8 @@ class Query:
         return self
 
     def _apply_skips(self, backend: Backend, scale_factor: float) -> None:
+        import pytest
+
         for predicate, reason in self._into_skips:
             if predicate(backend, scale_factor):
                 pytest.skip(reason)
@@ -123,6 +127,8 @@ class Query:
     def _apply_xfails(
         self, backend: Backend, scale_factor: float, request: pytest.FixtureRequest
     ) -> None:
+        import pytest
+
         for predicate, reason, raises in self._into_xfails:
             condition = predicate(backend, scale_factor)
             mark = pytest.mark.xfail(condition, reason=reason, raises=raises)
