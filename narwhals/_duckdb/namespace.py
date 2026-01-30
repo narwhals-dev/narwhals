@@ -132,7 +132,7 @@ class DuckDBNamespace(
 
     def lit(self, value: PythonLiteral, dtype: IntoDType | None) -> DuckDBExpr:
         def func(df: DuckDBLazyFrame) -> list[Expression]:
-            if isinstance(value, dict) and len(value) == 0:
+            if isinstance(value, dict) and not value:
                 msg = "Cannot create an empty struct type for DuckDB backend"
                 raise NotImplementedError(msg)
 
