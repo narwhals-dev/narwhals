@@ -22,7 +22,7 @@ from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
 )
-from narwhals._utils import Implementation, qualified_type_name, zip_strict
+from narwhals._utils import Implementation, is_nested_literal, zip_strict
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
@@ -55,11 +55,8 @@ class DaskNamespace(
         self._version = version
 
     def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> DaskExpr:
-        if isinstance(value, (list, tuple, dict)):
-            msg = (
-                "Nested structures are not support for Dask backend, "
-                f" found {qualified_type_name(value)}"
-            )
+        if is_nested_literal(value):
+            msg = f"Nested structures are not supported for Dask backend, found {type(value).__name__}"
             raise NotImplementedError(msg)
 
         def func(df: DaskLazyFrame) -> list[dx.Series]:
