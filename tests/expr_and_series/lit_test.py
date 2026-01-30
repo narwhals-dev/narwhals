@@ -160,7 +160,6 @@ def test_pyarrow_lit_string() -> None:
                 {"field_1": nw.Int32(), "field_2": nw.Float64(), "field_3": nw.Boolean()}
             ),
         ),
-        # TODO(FBruzzesi): deeper nesting?
     ],
 )
 def test_nested_structures(
@@ -215,4 +214,27 @@ def test_nested_structures(
 def test_raise_empty_nested_structures(value: PythonLiteral) -> None:
     msg = "Cannot infer dtype for empty nested structure. Please provide an explicit dtype parameter."
     with pytest.raises(ValueError, match=msg):
+        nw.lit(value=value)
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        # List containing nested structures
+        [[1, 2], [3, 4]],
+        [(1, 2), (3, 4)],
+        [{"a": 1}, {"a": 2}],
+        # Tuple containing nested structures
+        ([1, 2], [3, 4]),
+        ((1, 2), (3, 4)),
+        ({"a": 1}, {"a": 2}),
+        # Dict containing nested structures
+        {"a": [1, 2], "b": [3, 4]},
+        {"a": (1, 2), "b": (3, 4)},
+        {"a": {"x": 1}, "b": {"y": 2}},
+    ],
+)
+def test_raise_nested_structures_with_nested_values(value: Any) -> None:
+    msg = "Nested structures with nested values are not supported."
+    with pytest.raises(NotImplementedError, match=msg):
         nw.lit(value=value)

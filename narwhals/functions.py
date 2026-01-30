@@ -1495,9 +1495,20 @@ def lit(value: PythonLiteral, dtype: IntoDType | None = None) -> Expr:
         )
         raise ValueError(msg)
 
-    if isinstance(value, (list, tuple, dict)) and len(value) == 0 and dtype is None:
-        msg = "Cannot infer dtype for empty nested structure. Please provide an explicit dtype parameter."
-        raise ValueError(msg)
+    is_list_or_tuple = isinstance(value, (list, tuple))
+    is_dict = isinstance(value, dict)
+    if is_list_or_tuple or is_dict:
+        if (length := len(value)) == 0 and dtype is None:
+            msg = "Cannot infer dtype for empty nested structure. Please provide an explicit dtype parameter."
+            raise ValueError(msg)
+
+        nested_types = (list, tuple, dict)
+        if length > 0 and (
+            (is_list_or_tuple and isinstance(value[0], nested_types))
+            or (is_dict and any(isinstance(v, nested_types) for v in value.values()))
+        ):
+            msg = "Nested structures with nested values are not supported."
+            raise NotImplementedError(msg)
 
     return Expr(ExprNode(ExprKind.LITERAL, "lit", value=value, dtype=dtype))
 
