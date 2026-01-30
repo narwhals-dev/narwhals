@@ -12,6 +12,7 @@ from narwhals._utils import (
     deprecate_native_namespace,
     flatten,
     is_eager_allowed,
+    is_nested_literal,
     is_sequence_but_not_str,
     normalize_path,
     supports_arrow_c_stream,
@@ -1494,22 +1495,18 @@ def lit(value: PythonLiteral, dtype: IntoDType | None = None) -> Expr:
             "Consider using `with_columns` to create a new column from the array."
         )
         raise ValueError(msg)
-
-    is_list_or_tuple = isinstance(value, (list, tuple))
-    is_dict = isinstance(value, dict)
-    if is_list_or_tuple or is_dict:
-        if (length := len(value)) == 0 and dtype is None:
-            msg = "Cannot infer dtype for empty nested structure. Please provide an explicit dtype parameter."
-            raise ValueError(msg)
-
-        nested_types = (list, tuple, dict)
-        if length > 0 and (
-            (is_list_or_tuple and isinstance(value[0], nested_types))
-            or (is_dict and any(isinstance(v, nested_types) for v in value.values()))
-        ):
+    if is_nested_literal(value):
+        if not value:
+            if not dtype:
+                msg = "Cannot infer dtype for empty nested structure. Please provide an explicit dtype parameter."
+                raise ValueError(msg)
+        elif isinstance(value, dict):
+            if any(is_nested_literal(v) for v in value.values()):
+                msg = "Nested structures with nested values are not supported."
+                raise NotImplementedError(msg)
+        elif is_nested_literal(value[0]):
             msg = "Nested structures with nested values are not supported."
             raise NotImplementedError(msg)
-
     return Expr(ExprNode(ExprKind.LITERAL, "lit", value=value, dtype=dtype))
 
 
