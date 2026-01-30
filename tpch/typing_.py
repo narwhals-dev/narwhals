@@ -2,16 +2,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Literal, Protocol
 
-from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
-
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     import narwhals as nw
-    from tpch.classes import Backend
 
 
-KnownImpl: TypeAlias = Literal[_EagerAllowedImpl, _LazyAllowedImpl]
 TPCHBackend: TypeAlias = Literal[
     "polars[lazy]", "pyarrow", "pandas[pyarrow]", "dask", "duckdb", "sqlframe"
 ]
@@ -61,7 +57,6 @@ Warning:
 [`pytest-xdist`]: https://pytest-xdist.readthedocs.io/en/stable/
 """
 
-XFailRaises: TypeAlias = type[BaseException] | tuple[type[BaseException], ...]
 Artifact: TypeAlias = Literal["database", "answers"]
 
 
@@ -69,19 +64,3 @@ class QueryModule(Protocol):
     def query(
         self, *args: nw.LazyFrame[Any], **kwds: nw.LazyFrame[Any]
     ) -> nw.LazyFrame[Any]: ...
-
-
-class Predicate(Protocol):
-    """Failure-state-context callback.
-
-    The returned value will be used in either:
-
-        pytest.mark.xfail(predicate(backend, scale_factor))
-
-    Or:
-
-        if predicate(backend, scale_factor):
-            pytest.skip()
-    """
-
-    def __call__(self, backend: Backend, scale_factor: float, /) -> bool: ...

@@ -20,6 +20,7 @@ from tpch.constants import (
     LOGGER_NAME,
     QUERY_IDS,
     SCALE_FACTOR_DEFAULT,
+    SCALE_FACTORS,
     _scale_factor_dir,
 )
 
@@ -30,8 +31,9 @@ if TYPE_CHECKING:
     import polars as pl
     import pytest
     from duckdb import DuckDBPyConnection as Con, DuckDBPyRelation as Rel
+    from typing_extensions import LiteralString
 
-    from tpch.typing_ import Artifact, QueryID
+    from tpch.typing_ import Artifact, QueryID, ScaleFactor
 
 
 logger = logging.getLogger(LOGGER_NAME)
@@ -82,7 +84,7 @@ def cast_map() -> dict[Any, Any]:
 
 @dataclasses.dataclass(**({"kw_only": True} if sys.version_info >= (3, 10) else {}))
 class TPCHGen:
-    scale_factor: float
+    scale_factor: ScaleFactor
     refresh: bool = False
     debug: bool = False
     _con: Con = dataclasses.field(init=False)
@@ -127,8 +129,7 @@ class TPCHGen:
         self._con = duckdb.connect(database=":memory:")
         return self
 
-    # TODO @dangotbanned: Change to `LiteralString` after restricting `--scale-factor`
-    def sql(self, query: str) -> Rel:
+    def sql(self, query: LiteralString) -> Rel:
         return self._con.sql(query)
 
     def load_extension(self) -> TPCHGen:
@@ -204,10 +205,10 @@ if __name__ == "__main__":
     parser.add_argument(
         "-sf",
         "--scale-factor",
-        default=str(SCALE_FACTOR_DEFAULT),
+        default=SCALE_FACTOR_DEFAULT,
         metavar="",
         help=f"Scale the database by this factor (default: %(default)s)\n{TABLE_SCALE_FACTOR}",
-        type=float,
+        choices=SCALE_FACTORS,
     )
     parser.add_argument(
         "--debug", action="store_true", help="Enable more detailed logging"
