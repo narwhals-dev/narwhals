@@ -62,6 +62,16 @@ SCALE_FACTORS_QUITE_SAFE = frozenset(
 """
 
 
+def is_xdist_worker(
+    obj: pytest.FixtureRequest | pytest.Session | pytest.Config, /
+) -> bool:
+    """Return `True` if this is an xdist worker, `False` otherwise.
+
+    Adapted from https://github.com/pytest-dev/pytest-xdist/blob/8b60b1ef5d48974a1cb69bc1a9843564bdc06498/src/xdist/plugin.py#L337-L349
+    """
+    return hasattr(obj if isinstance(obj, pytest.Config) else obj.config, "workerinput")
+
+
 def pytest_configure(config: pytest.Config) -> None:
     """Generate TPC-H data if it doesn't exist for the requested scale factor.
 
@@ -70,6 +80,9 @@ def pytest_configure(config: pytest.Config) -> None:
 
     [`pytest.hookspec.pytest_configure`]: https://docs.pytest.org/en/stable/reference/reference.html#pytest.hookspec.pytest_configure
     """
+    # Only run before the session starts, instead of 1 + (`--numprocesses`)
+    if is_xdist_worker(config):
+        return
     from tpch.generate_data import main as generate_data
 
     scale_factor = config.getoption("--scale-factor", default=SCALE_FACTOR_DEFAULT)
