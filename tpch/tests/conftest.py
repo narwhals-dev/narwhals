@@ -202,13 +202,13 @@ def iter_queries() -> Iterator[Query]:
     )
 
 
-@pytest.fixture(params=iter_queries(), ids=repr)
-def query(request: pytest.FixtureRequest) -> Query:
-    result: Query = request.param
-    return result
-
-
 @pytest.fixture(scope="session")
 def scale_factor(request: pytest.FixtureRequest) -> float:
     """Get the scale factor from pytest options."""
     return float(request.config.getoption("--scale-factor"))
+
+
+@pytest.fixture(params=iter_queries(), ids=repr)
+def query(request: pytest.FixtureRequest, scale_factor: float) -> Query:
+    result: Query = request.param
+    return result.with_scale_factor(scale_factor)
