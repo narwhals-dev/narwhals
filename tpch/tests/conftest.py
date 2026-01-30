@@ -70,10 +70,9 @@ def is_xdist_worker(obj: pytest.FixtureRequest | pytest.Config, /) -> bool:
 def pytest_configure(config: pytest.Config) -> None:
     """Generate TPC-H data if it doesn't exist for the requested scale factor.
 
-    [`pytest.hookspec.pytest_configure`] runs after command line options have been parsed,
-    ensuring data is available before test collection.
+    [`configure`] runs after `addoption`, ensuring data is available before test collection.
 
-    [`pytest.hookspec.pytest_configure`]: https://docs.pytest.org/en/stable/reference/reference.html#pytest.hookspec.pytest_configure
+    [`configure`]: https://docs.pytest.org/en/stable/reference/reference.html#pytest.hookspec.pytest_configure
     """
     # Only run before the session starts, instead of 1 + (`--numprocesses`)
     if is_xdist_worker(config):
