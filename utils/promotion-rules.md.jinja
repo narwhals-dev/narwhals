@@ -187,11 +187,19 @@ st(nw.Datetime('ms', time_zone='Europe/Berlin'), nw.Date())
 
 ## String-like Types
 
-The combination of a `String` with a `Categorical` or `Enum` is promoted to `String`:
+Any type combined with `String` is promoted to `String`, except for `Binary`:
 
 ```python exec="1" session="promotion-rules" result="python"
+st(nw.Int64(), nw.String())
+st(nw.Float32(), nw.String())
+st(nw.Boolean(), nw.String())
+st(nw.Date(), nw.String())
+st(nw.Datetime(), nw.String())
 st(nw.String(), nw.Categorical())
 st(nw.String(), nw.Enum(['orca', 'narwhal']))
+st(nw.List(nw.Int64()), nw.String())
+st(nw.Array(nw.Int64(), shape=2), nw.String())
+st(nw.Struct({"a": nw.Int64()}), nw.String())
 ```
 
 The combination of a `String` with a `Binary` is promoted to `Binary`:
@@ -199,12 +207,6 @@ The combination of a `String` with a `Binary` is promoted to `Binary`:
 ```python exec="1" session="promotion-rules" result="python"
 st(nw.String(), nw.Binary())
 ```
-
-All other combinations of string-like types have no supertype.
-
-<!--
-TODO(FBruzzesi): Update once {String, other} -> String is supported
--->
 
 ### Binary
 
@@ -214,11 +216,7 @@ The combination of a `Binary` with a `String` is promoted to `Binary`:
 st(nw.Binary(), nw.String())
 ```
 
-All other combinations of binary-like types have no supertype.
-
-<!--
-TODO(FBruzzesi): Update once {Binary, other} -> Binary is supported
--->
+All other combinations involving `Binary` have no supertype.
 
 ### Enum
 
@@ -252,8 +250,10 @@ If either operand is `Unknown`, the result is always `Unknown`. This is a fast-p
 
 ## Nested Types
 
-Nested types (`Array`, `List`, `Struct`) require both operands to share the **same base type**.
+Nested types (`Array`, `List`, `Struct`) generally require both operands to share the **same base type**.
 The supertype is then determined by recursively resolving the inner types.
+
+An exception is the combination of `List` and `Array`, which can be promoted to `List` if they have the same depth.
 
 ### List
 
@@ -306,6 +306,42 @@ print(f"{right = !r}")
 st(left, right)
 ```
 
+### List and Array
+
+When combining a `List` with an `Array`, the supertype is a `List` if both have the **same depth**
+(nesting level). The inner type is the supertype of the two inner types.
+
+```python exec="1" session="promotion-rules" result="python"
+left = nw.List(nw.Int32())
+right = nw.Array(nw.Int64(), shape=(2,))
+
+print(f"{left = !r}")
+print(f"{right = !r}")
+st(left, right)
+```
+
+This also works for nested structures with matching depth:
+
+```python exec="1" session="promotion-rules" result="python"
+left = nw.List(nw.List(nw.Int8()))
+right = nw.Array(nw.UInt8(), shape=(2, 3))
+
+print(f"{left = !r}")
+print(f"{right = !r}")
+st(left, right)
+```
+
+If the depths don't match, no supertype exists:
+
+```python exec="1" session="promotion-rules" result="python"
+left = nw.List(nw.Int64())
+right = nw.Array(nw.Int32(), shape=(2, 3))
+
+print(f"{left = !r}")
+print(f"{right = !r}")
+st(left, right)
+```
+
 ### Struct
 
 Struct supertyping is more flexible and the **order of operands matters**:
@@ -350,10 +386,11 @@ Struct supertyping is more flexible and the **order of operands matters**:
 
 The following combinations have **no valid supertype** and will result in `None`:
 
-* Nested types (`Array`, `List`, `Struct`) combined with non-nested types
+* `Struct` combined with non-nested types (note: `List` and `Array` can be combined with `String`)
 * `Datetime` values with different time zones
 * `Enum` values with different categories
 * `Array` values with different shapes
+* `List` and `Array` with different depths
 * Temporal types combined with numeric types (unlike Polars, see [narwhals-dev/narwhals#121])
 * Any other unlisted combination of different base types
 
