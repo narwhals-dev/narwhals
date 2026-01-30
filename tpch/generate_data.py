@@ -6,14 +6,15 @@
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import logging
 import os
+import sys
 from functools import cache
 from typing import TYPE_CHECKING, Any
 
 from tpch.classes import TableLogger
 from tpch.constants import (
-    DATA_DIR,
     DATABASE_TABLE_NAMES,
     GLOBS,
     LOGGER_NAME,
@@ -23,37 +24,17 @@ from tpch.constants import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping
+    from collections.abc import Callable, Iterator, Mapping
     from pathlib import Path
 
     import polars as pl
-    from duckdb import DuckDBPyConnection as Con
+    import pytest
+    from duckdb import DuckDBPyConnection as Con, DuckDBPyRelation as Rel
 
     from tpch.typing_ import Artifact, QueryID
 
 
 logger = logging.getLogger(LOGGER_NAME)
-
-
-def read_fmt_schema(fp: Path) -> str:
-    import polars as pl
-
-    schema = pl.read_parquet_schema(fp).items()
-    return f"- {fp.name}\n" + "\n".join(f"  - {k:<20}: {v}" for k, v in schema)
-
-
-def show_schemas(artifact: Artifact, scale_factor: float, /) -> None:
-    if not logger.isEnabledFor(logging.DEBUG):
-        return
-    pattern = GLOBS[artifact]
-    sf_dir = _scale_factor_dir(scale_factor)
-    paths = sorted(sf_dir.glob(pattern))
-    if not paths:
-        msg = f"Found no matching paths for {pattern!r} in {sf_dir.as_posix()}"
-        raise NotImplementedError(msg)
-    msg = "\n".join(read_fmt_schema(fp) for fp in paths)
-    logger.debug("Schemas (%s):\n%s", artifact, msg)
-
 
 TABLE_SCALE_FACTOR = """
 ┌──────────────┬───────────────┐
@@ -84,6 +65,13 @@ DuckDB being weird, this is [correct] but [not this one].
 """
 
 
+def read_fmt_schema(fp: Path) -> str:
+    import polars as pl
+
+    schema = pl.read_parquet_schema(fp).items()
+    return f"- {fp.name}\n" + "\n".join(f"  - {k:<20}: {v}" for k, v in schema)
+
+
 @cache
 def cast_map() -> dict[Any, Any]:
     import polars as pl
@@ -92,76 +80,100 @@ def cast_map() -> dict[Any, Any]:
     return {cs.decimal(): float, cs.date(): pl.Datetime("ns")}
 
 
-def connect() -> Con:
-    import duckdb
+@dataclasses.dataclass(**({"kw_only": True} if sys.version_info >= (3, 10) else {}))
+class TPCHGen:
+    scale_factor: float
+    refresh: bool = False
+    debug: bool = False
+    _con: Con = dataclasses.field(init=False)
 
-    logger.info("Connecting to in-memory DuckDB database")
-    return duckdb.connect(database=":memory:")
+    @staticmethod
+    def from_pytest(config: pytest.Config, /) -> TPCHGen:
+        return TPCHGen(scale_factor=config.getoption("--scale-factor"))
 
+    @staticmethod
+    def from_argparse(parser: argparse.ArgumentParser, /) -> TPCHGen:
+        return parser.parse_args(namespace=TPCHGen.__new__(TPCHGen))
 
-def load_tpch_extension(con: Con) -> Con:
-    logger.info("Installing DuckDB TPC-H Extension")
-    con.install_extension("tpch")
-    con.load_extension("tpch")
-    return con
+    @property
+    def scale_factor_dir(self) -> Path:
+        return _scale_factor_dir(self.scale_factor)
 
+    def glob(self, artifact: Artifact, /) -> Iterator[Path]:
+        return self.scale_factor_dir.glob(GLOBS[artifact])
 
-def generate_tpch_database(con: Con, scale_factor: float) -> Con:
-    logger.info("Generating data for scale_factor=%s", scale_factor)
-    con.sql(SQL_DBGEN.format(scale_factor))
-    logger.info("Finished generating data.")
-    return con
+    def has_data(self) -> bool:
+        both = next(self.glob("answers"), None) and next(self.glob("database"), None)
+        return bool(both)
 
+    def run(self) -> None:
+        _configure_logger(debug=self.debug)
+        if self.refresh:
+            logger.info("Refreshing data for scale_factor=%s", self.scale_factor)
+        elif self.has_data():
+            logger.info("Data already exists for scale_factor=%s", self.scale_factor)
+            self.show_schemas("database").show_schemas("answers")
+            logger.info("To regenerate this scale_factor, use `--refresh`")
+            return
+        self.connect().load_extension().generate_database().write_database().write_answers()
+        n_bytes = sum(e.stat().st_size for e in os.scandir(self.scale_factor_dir))
+        total = TableLogger.format_size(n_bytes)
+        logger.info("Finished with total file size: %s", total.strip())
 
-def write_tpch_database(con: Con, scale_factor: float) -> Con:
-    sf_dir = _scale_factor_dir(scale_factor)
-    sf_dir.mkdir(parents=True, exist_ok=True)
-    logger.info("Writing data to: %s", sf_dir.as_posix())
-    with TableLogger.database() as tbl_logger:
-        for t in DATABASE_TABLE_NAMES:
-            path = sf_dir / f"{t}.parquet"
-            con.sql(SQL_FROM.format(t)).pl().cast(cast_map()).write_parquet(path)
-            tbl_logger.log_row(path)
-    show_schemas("database", scale_factor)
-    return con
+    def connect(self) -> TPCHGen:
+        import duckdb
 
+        logger.info("Connecting to in-memory DuckDB database")
+        self._con = duckdb.connect(database=":memory:")
+        return self
 
-def write_tpch_answers(con: Con, scale_factor: float) -> Con:
-    sf_dir = _scale_factor_dir(scale_factor)
-    logger.info("Executing tpch queries for answers")
-    with TableLogger.answers() as tbl_logger:
-        for query_id in QUERY_IDS:
-            path = DATA_DIR / f"result_{query_id}.parquet"
-            query = SQL_TPCH_ANSWER.format(query_id.removeprefix("q"))
-            df = con.sql(query).pl().cast(cast_map())
-            if fix := FIX_ANSWERS.get(query_id):
-                df = fix(df)
-            path = sf_dir / f"result_{query_id}.parquet"
-            df.write_parquet(path)
-            tbl_logger.log_row(path)
-    show_schemas("answers", scale_factor)
-    return con
+    # TODO @dangotbanned: Change to `LiteralString` after restricting `--scale-factor`
+    def sql(self, query: str) -> Rel:
+        return self._con.sql(query)
 
+    def load_extension(self) -> TPCHGen:
+        logger.info("Installing DuckDB TPC-H Extension")
+        self._con.install_extension("tpch")
+        self._con.load_extension("tpch")
+        return self
 
-def main(*, scale_factor: float, refresh: bool = False, debug: bool = False) -> None:
-    _configure_logger(debug=debug)
-    DATA_DIR.mkdir(exist_ok=True)
-    if refresh:
-        logger.info("Refreshing data for scale_factor=%s", scale_factor)
-    elif _scale_factor_dir(scale_factor).exists():
-        logger.info("Data already exists for scale_factor=%s", scale_factor)
-        show_schemas("database", scale_factor)
-        show_schemas("answers", scale_factor)
-        logger.info("To regenerate this scale_factor, use `--refresh`")
-        return
+    def generate_database(self) -> TPCHGen:
+        logger.info("Generating data for scale_factor=%s", self.scale_factor)
+        self.sql(SQL_DBGEN.format(self.scale_factor))
+        logger.info("Finished generating data.")
+        return self
 
-    con = connect()
-    load_tpch_extension(con)
-    generate_tpch_database(con, scale_factor)
-    write_tpch_database(con, scale_factor)
-    write_tpch_answers(con, scale_factor)
-    total = TableLogger.format_size(sum(e.stat().st_size for e in os.scandir(DATA_DIR)))
-    logger.info("Finished with total file size: %s", total.strip())
+    def write_database(self) -> TPCHGen:
+        logger.info("Writing data to: %s", self.scale_factor_dir.as_posix())
+        with TableLogger.database() as tbl_logger:
+            for t in DATABASE_TABLE_NAMES:
+                path = self.scale_factor_dir / f"{t}.parquet"
+                self.sql(SQL_FROM.format(t)).pl().cast(cast_map()).write_parquet(path)
+                tbl_logger.log_row(path)
+        return self.show_schemas("database")
+
+    def write_answers(self) -> TPCHGen:
+        logger.info("Executing tpch queries for answers")
+        with TableLogger.answers() as tbl_logger:
+            for query_id in QUERY_IDS:
+                query = SQL_TPCH_ANSWER.format(query_id.removeprefix("q"))
+                df = self.sql(query).pl().cast(cast_map())
+                if fix := FIX_ANSWERS.get(query_id):
+                    df = fix(df)
+                path = self.scale_factor_dir / f"result_{query_id}.parquet"
+                df.write_parquet(path)
+                tbl_logger.log_row(path)
+        return self.show_schemas("answers")
+
+    def show_schemas(self, artifact: Artifact, /) -> TPCHGen:
+        if logger.isEnabledFor(logging.DEBUG):
+            if paths := sorted(self.glob(artifact)):
+                msg = "\n".join(read_fmt_schema(fp) for fp in paths)
+                logger.debug("Schemas (%s):\n%s", artifact, msg)
+            else:
+                msg = f"Found no matching paths for {artifact!r} in {self.scale_factor_dir.as_posix()}"
+                raise NotImplementedError(msg)
+        return self
 
 
 def _configure_logger(
@@ -180,8 +192,7 @@ class HelpFormatter(
     argparse.RawTextHelpFormatter, argparse.ArgumentDefaultsHelpFormatter
 ):
     def start_section(self, heading: str | None) -> None:
-        title = _title.capitalize() if (_title := heading) else heading
-        super().start_section(title)
+        super().start_section(_title.capitalize() if (_title := heading) else heading)
 
 
 if __name__ == "__main__":
@@ -206,5 +217,4 @@ if __name__ == "__main__":
         action="store_true",
         help="Re-run data generation, regardless of whether `--scale-factor` is already on disk",
     )
-    args = parser.parse_args()
-    main(scale_factor=args.scale_factor, refresh=args.refresh, debug=args.debug)
+    TPCHGen.from_argparse(parser).run()

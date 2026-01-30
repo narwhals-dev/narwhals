@@ -17,7 +17,9 @@ DATA_DIR = TPCH_DIR / "data"
 @cache
 def _scale_factor_dir(scale_factor: float) -> Path:
     """Get the data directory for a specific scale factor."""
-    return DATA_DIR / f"sf{scale_factor}"
+    sf_dir = DATA_DIR / f"sf{scale_factor}"
+    sf_dir.mkdir(parents=True, exist_ok=True)
+    return sf_dir
 
 
 SCALE_FACTOR_DEFAULT = 0.1

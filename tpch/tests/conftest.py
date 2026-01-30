@@ -78,9 +78,9 @@ def pytest_configure(config: pytest.Config) -> None:
     # Only run before the session starts, instead of 1 + (`--numprocesses`)
     if is_xdist_worker(config):
         return
-    from tpch.generate_data import main as generate_data
+    from tpch.generate_data import TPCHGen
 
-    generate_data(scale_factor=config.getoption("--scale-factor"))
+    TPCHGen.from_pytest(config).run()
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
