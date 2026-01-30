@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -174,10 +174,14 @@ def test_when_then_otherwise_multi_output(constructor: Constructor) -> None:
 def test_when_then_otherwise_aggregate_select(
     condition: nw.Expr,
     then: nw.Expr | int,
-    otherwise: nw.Expr | int,
+    otherwise: nw.Expr | int | None,
     expected: list[int],
     constructor: Constructor,
+    request: pytest.FixtureRequest,
 ) -> None:
+    if "cudf" in str(constructor) and otherwise is None:
+        reason = "cudf does not support mixed types"
+        request.applymarker(pytest.mark.xfail(reason=reason))
     df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
     result = df.select(a_when=nw.when(condition).then(then).otherwise(otherwise))
     assert_equal_data(result, {"a_when": expected})
@@ -201,13 +205,25 @@ def test_when_then_otherwise_aggregate_select(
 def test_when_then_otherwise_aggregate_with_columns(
     condition: nw.Expr,
     then: nw.Expr | int,
-    otherwise: nw.Expr | int,
+    otherwise: nw.Expr | int | None,
     expected: list[int],
     constructor: Constructor,
+    request: pytest.FixtureRequest,
 ) -> None:
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
+    if "cudf" in str(constructor) and otherwise is None:
+        reason = "cudf does not support mixed types"
+        request.applymarker(pytest.mark.xfail(reason=reason))
+
     df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
     expr = nw.when(condition).then(then).otherwise(otherwise)
     result = df.with_columns(a_when=expr)
     assert_equal_data(result.select(nw.col("a_when")), {"a_when": expected})
+
+
+def test_when_then_empty(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [-1]})).filter(nw.col("a") > 0)
+    result = df.with_columns(nw.when(nw.col("a") == 1).then(nw.lit(1)).alias("new_col"))
+    expected: dict[str, Any] = {"a": [], "new_col": []}
+    assert_equal_data(result, expected)

@@ -254,19 +254,16 @@ class BaseFrame(Generic[_FrameT]):
     def filter(
         self, *predicates: IntoExpr | Iterable[IntoExpr], **constraints: Any
     ) -> Self:
-        from narwhals.functions import col
+        from narwhals.functions import all_horizontal, col
 
         flat_predicates = flatten(predicates)
-        plx = self.__narwhals_namespace__()
-        compliant_predicates = self._flatten_and_extract(*flat_predicates)
-        check_expressions_preserve_length(*compliant_predicates, function_name="filter")
-        compliant_constraints = self._flatten_and_extract(
-            *[col(name) == v for name, v in constraints.items()]
+        predicate = all_horizontal(
+            *chain(flat_predicates, (col(name) == v for name, v in constraints.items())),
+            ignore_nulls=False,
         )
-        predicate = plx.all_horizontal(
-            *chain(compliant_predicates, compliant_constraints), ignore_nulls=False
-        )
-        return self._with_compliant(self._compliant_frame.filter(predicate))
+        (compliant_predicate,) = self._flatten_and_extract(predicate)
+        check_expressions_preserve_length(compliant_predicate, function_name="filter")
+        return self._with_compliant(self._compliant_frame.filter(compliant_predicate))
 
     def sort(
         self,
@@ -1101,6 +1098,8 @@ class DataFrame(BaseFrame[DataFrameT]):
                   `DataFrame`.
                 - `df[:, ['a', 'c']]` extracts all rows and columns `'a'` and `'c'` and returns a
                   `DataFrame`.
+                - `df[:, [True, False, True]]` extracts all rows and columns in positions 0 and 2
+                  and returns a `DataFrame`.
                 - `df[['a', 'c']]` extracts all rows and columns `'a'` and `'c'` and returns a
                   `DataFrame`.
                 - `df[0: 2, ['a', 'c']]` extracts the first two rows and columns `'a'` and `'c'` and
@@ -1164,6 +1163,8 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         compliant = self._compliant_frame
 
+        if isinstance(columns, bool):
+            raise TypeError(msg)
         if isinstance(columns, (int, str)):
             if isinstance(rows, int):
                 return self.item(rows, columns)
@@ -1236,7 +1237,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> import narwhals as nw
             >>> df_native = pa.table({"a": [1, 2], "b": [4, 5]})
             >>> nw.from_native(df_native).row(1)
-            (<pyarrow.Int64Scalar: 2>, <pyarrow.Int64Scalar: 5>)
+            (2, 5)
         """
         return self._compliant_frame.row(index)
 
@@ -2610,7 +2611,7 @@ class LazyFrame(BaseFrame[LazyFrameT]):
             >>> import narwhals as nw
             >>> lf_native = duckdb.sql("SELECT * FROM VALUES (1, 4.5), (3, 2.) df(a, b)")
             >>> nw.from_native(lf_native).schema  # doctest:+SKIP
-            Schema({'a': Int32, 'b': Decimal})
+            Schema({'a': Int32, 'b': Decimal(precision=2, scale=1)})
         """
         if self._compliant_frame._version is not Version.V1:
             msg = (
@@ -2628,7 +2629,7 @@ class LazyFrame(BaseFrame[LazyFrameT]):
             >>> import narwhals as nw
             >>> lf_native = duckdb.sql("SELECT * FROM VALUES (1, 4.5), (3, 2.) df(a, b)")
             >>> nw.from_native(lf_native).collect_schema()
-            Schema({'a': Int32, 'b': Decimal})
+            Schema({'a': Int32, 'b': Decimal(precision=2, scale=1)})
         """
         return super().collect_schema()
 

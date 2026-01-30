@@ -24,6 +24,7 @@ from narwhals._utils import (
     Implementation,
     Version,
     extend_bool,
+    no_default,
     not_implemented,
     zip_strict,
 )
@@ -43,6 +44,7 @@ if TYPE_CHECKING:
     )
     from narwhals._ibis.dataframe import IbisLazyFrame
     from narwhals._ibis.namespace import IbisNamespace
+    from narwhals._typing import NoDefault
     from narwhals._utils import _LimitedContext
     from narwhals.typing import IntoDType, RankMethod, RollingInterpolationMethod
 
@@ -124,6 +126,12 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         return cast("ir.Column", expr).last(
             order_by=self._sort(*order_by), include_null=True
         )
+
+    def _any_value(self, expr: ir.Value, *, ignore_nulls: bool) -> ir.Value:
+        # !NOTE: ibis arbitrary returns a random non-null value
+        # See: https://ibis-project.org/reference/expression-generic.html#ibis.expr.types.generic.Column.arbitrary
+        expr = cast("ir.Column", expr)
+        return expr.arbitrary() if ignore_nulls else expr.first(include_null=True)
 
     def __narwhals_namespace__(self) -> IbisNamespace:  # pragma: no cover
         from narwhals._ibis.namespace import IbisNamespace
@@ -314,6 +322,44 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
             ]
 
         return self._with_callable(_rank, window_f)
+
+    def replace_strict(
+        self,
+        default: IbisExpr | NoDefault,
+        old: Sequence[Any],
+        new: Sequence[Any],
+        *,
+        return_dtype: IntoDType | None,
+    ) -> Self:
+        if default is no_default:
+            msg = "`replace_strict` requires an explicit value for `default` for ibis backend."
+            raise ValueError(msg)
+        ns = self.__narwhals_namespace__()
+
+        keys = list(old)
+        values = list(new)
+        mapping_expr = ibis.map(keys, values)
+
+        def func(df: IbisLazyFrame) -> list[ir.Value]:
+            default_col = df._evaluate_single_output_expr(default)
+
+            results = [
+                ns._when(expr.isin(keys), mapping_expr[expr], default_col)
+                for expr in self(df)
+            ]
+
+            if return_dtype:
+                native_dtype = narwhals_to_native_dtype(return_dtype, self._version)
+                return [res.cast(native_dtype) for res in results]  # pyright: ignore[reportArgumentType, reportCallIssue]
+            return results
+
+        return self.__class__(
+            func,
+            None,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
+        )
 
     @property
     def str(self) -> IbisExprStringNamespace:

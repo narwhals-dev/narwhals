@@ -2,8 +2,6 @@ name: PyTest
 
 on:
   pull_request:
-  push:
-    branches: [main]
 
 env:
   PY_COLORS: 1
@@ -17,12 +15,12 @@ jobs:
         os: [windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: "true"
           cache-suffix: pytest-39-${{ matrix.python-version }}
@@ -34,7 +32,7 @@ jobs:
       - name: Run pytest
         run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=75 --constructors=pandas,pyarrow,polars[eager],polars[lazy]
       - name: install-test-plugin
-        run: uv pip install -e tests/test_plugin --system  
+        run: uv pip install -e test-plugin/. --system  
 
   pytest-windows:
     strategy:
@@ -43,21 +41,23 @@ jobs:
         os: [windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: "true"
           cache-suffix: pytest-windows-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
         # we are not testing pyspark, modin, or dask on Windows here because nobody got time for that
-        run: uv pip install -e ".[ibis]" --group core-tests --group extra --system
+        # TODO(FBruzzesi): Temporarily pin sqlglot to <28.6.0 to avoid breaking changes in SQLFrame
+        # See https://github.com/eakmanrq/sqlframe/issues/577
+        run: uv pip install -e ".[ibis]" --group core-tests --group extra "sqlglot<28.6.0" --system
       - name: install-test-plugin
-        run: uv pip install -e tests/test_plugin --system
+        run: uv pip install -e test-plugin/. --system
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
@@ -76,20 +76,22 @@ jobs:
     env:
       NARWHALS_POLARS_NEW_STREAMING: ${{ matrix.polars_streaming == true }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: "true"
           cache-suffix: pytest-full-coverage-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
-        run: uv pip install -e ".[dask, modin, ibis]" --group core-tests --group extra --system
+        # TODO(FBruzzesi): Temporarily pin sqlglot to <28.6.0 to avoid breaking changes in SQLFrame
+        # See https://github.com/eakmanrq/sqlframe/issues/577
+        run: uv pip install -e ".[dask, modin, ibis]" --group core-tests --group extra "sqlglot<28.6.0" --system
       - name: install-test-plugin
-        run: uv pip install -e tests/test_plugin --system
+        run: uv pip install -e test-plugin/. --system
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
@@ -107,12 +109,12 @@ jobs:
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: "true"
           cache-suffix: pytest-narrower-deps-${{ matrix.python-version }}
@@ -144,19 +146,20 @@ jobs:
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: "true"
           cache-suffix: python-314-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
-        # Use `--pre` as duckdb stable not compatible with 3.14
-        run: uv pip install -e . --group tests --pre pandas polars pyarrow duckdb sqlframe  --system
+        # TODO(FBruzzesi): Temporarily pin sqlglot to <28.6.0 to avoid breaking changes in SQLFrame
+        # See https://github.com/eakmanrq/sqlframe/issues/577
+        run: uv pip install -e . --group tests pandas polars pyarrow duckdb sqlframe "sqlglot<28.6.0" --system
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
@@ -171,12 +174,12 @@ jobs:
     env:
         PYTHON_GIL: 0
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: "true"
           cache-suffix: python-314t-${{ matrix.python-version }}

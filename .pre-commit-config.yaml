@@ -3,7 +3,7 @@ ci:
 repos:
 - repo: https://github.com/astral-sh/ruff-pre-commit
   # Ruff version.
-  rev: 'v0.14.2'
+  rev: 'v0.14.11'
   hooks:
     # Run the formatter.
     - id: ruff-format
@@ -21,8 +21,9 @@ repos:
       files: \.(py|rst|md)$
       args: [--ignore-words-list=ser]
       exclude: ^docs/api-completeness.md$
-- repo: https://github.com/crate-ci/typos
-  rev: 'v1.39.0'
+- repo: https://github.com/adhtruong/mirrors-typos
+  # Use mirror to avoid autoupdate issue: https://github.com/crate-ci/typos/issues/390
+  rev: 'v1.42.0'
   hooks:
     - id: typos
 -   repo: https://github.com/pycqa/flake8
@@ -122,7 +123,7 @@ repos:
       exclude: |
         (?x)
           ^(tests/utils\.py)
-          |^(tests/test_plugin/)
+          |^(test_plugin/)
   -   id: no-commit-to-branch
   -   id: end-of-file-fixer
       exclude: .svg$

@@ -2,8 +2,6 @@ name: Min, old, and nightly versions
 
 on:
   pull_request:
-  push:
-    branches: [main]
 
 env:
   PY_COLORS: 1
@@ -18,12 +16,12 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: "true"
           cache-suffix: min-versions-${{ matrix.python-version }}
@@ -55,12 +53,12 @@ jobs:
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: "true"
           cache-suffix: pretty-old-versions-${{ matrix.python-version }}
@@ -93,12 +91,12 @@ jobs:
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: "true"
           cache-suffix: not-so-old-versions-${{ matrix.python-version }}
@@ -130,12 +128,12 @@ jobs:
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: "true"
           cache-suffix: nightlies-${{ matrix.python-version }}
@@ -161,7 +159,7 @@ jobs:
       - name: install dask
         run: |
           uv pip uninstall dask dask-expr --system
-          python -m pip install git+https://github.com/dask/distributed git+https://github.com/dask/dask
+          uv pip install "git+https://github.com/dask/dask[dataframe]" --system
       - name: install duckdb nightly
         run: |
           uv pip uninstall duckdb --system
@@ -171,7 +169,7 @@ jobs:
       - name: Assert nightlies dependencies
         run: |
           DEPS=$(uv pip freeze)
-          echo "$DEPS" | grep 'pandas.*dev'
+          echo "$DEPS" | grep -E 'pandas.*(dev|rc|\+)'
           echo "$DEPS" | grep 'pyarrow.*dev'
           echo "$DEPS" | grep 'numpy.*dev'
           echo "$DEPS" | grep 'dask.*@'

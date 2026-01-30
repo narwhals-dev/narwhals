@@ -11,6 +11,7 @@ from narwhals._utils import Implementation, Version, isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping
+    from typing import Literal
 
     from typing_extensions import TypeAlias, TypeIs
 
@@ -186,8 +187,8 @@ def native_non_extension_to_narwhals_dtype(dtype: pa.DataType, version: Version)
         return dtypes.Array(
             native_to_narwhals_dtype(dtype.value_type, version), dtype.list_size
         )
-    if pa.types.is_decimal(dtype):
-        return dtypes.Decimal()
+    if pa.types.is_decimal128(dtype):
+        return dtypes.Decimal(precision=dtype.precision, scale=dtype.scale)
     if pa.types.is_time32(dtype) or pa.types.is_time64(dtype):
         return dtypes.Time()
     if pa.types.is_binary(dtype):
@@ -214,7 +215,7 @@ NW_TO_PA_DTYPES: Mapping[type[DType], pa.DataType] = {
     dtypes.UInt32: pa.uint32(),
     dtypes.UInt64: pa.uint64(),
 }
-UNSUPPORTED_DTYPES = (dtypes.Decimal, dtypes.Object)
+UNSUPPORTED_DTYPES = (dtypes.Object,)
 
 
 def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> pa.DataType:
@@ -236,10 +237,12 @@ def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> pa.DataType:
                 for field in dtype.fields
             ]
         )
-    if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover
+    if isinstance_or_issubclass(dtype, dtypes.Array):
         inner = narwhals_to_native_dtype(dtype.inner, version=version)
         list_size = dtype.size
         return pa.list_(inner, list_size=list_size)
+    if isinstance_or_issubclass(dtype, dtypes.Decimal):
+        return pa.decimal128(precision=dtype.precision, scale=dtype.scale)
     if issubclass(base_type, UNSUPPORTED_DTYPES):
         msg = f"Converting to {base_type.__name__} dtype is not supported for PyArrow."
         raise NotImplementedError(msg)
@@ -249,7 +252,7 @@ def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> pa.DataType:
 
 def extract_native(
     lhs: ArrowSeries, rhs: ArrowSeries | PythonLiteral | ScalarAny
-) -> tuple[ChunkedArrayAny | ScalarAny, ChunkedArrayAny | ScalarAny]:
+) -> tuple[ChunkedArrayAny, ChunkedArrayAny | ScalarAny]:
     """Extract native objects in binary  operation.
 
     If the comparison isn't supported, return `NotImplemented` so that the
@@ -485,3 +488,81 @@ def concat_tables(
 
 
 class ArrowSeriesNamespace(EagerSeriesNamespace["ArrowSeries", "ChunkedArrayAny"]): ...
+
+
+def arange(start: int, end: int, step: int) -> ArrayAny:
+    if BACKEND_VERSION < (21,):
+        import numpy as np  # ignore-banned-import
+
+        return pa.array(np.arange(start, end, step))
+    # NOTE: Added in https://github.com/apache/arrow/pull/46778
+    return pa.arange(start, end, step)  # type: ignore[attr-defined]
+
+
+def list_agg(
+    array: ChunkedArrayAny,
+    func: Literal["min", "max", "mean", "approximate_median", "sum"],
+) -> ChunkedArrayAny:
+    lit_: Incomplete = lit
+    aggregation = (
+        ("values", func, pc.ScalarAggregateOptions(min_count=0))
+        if func == "sum"
+        else ("values", func)
+    )
+    agg = pa.array(
+        pa.Table.from_arrays(
+            [pc.list_flatten(array), pc.list_parent_indices(array)],
+            names=["values", "offsets"],
+        )
+        .group_by("offsets")
+        .aggregate([aggregation])
+        .sort_by("offsets")
+        .column(f"values_{func}")
+    )
+    non_empty_mask = pa.array(pc.not_equal(pc.list_value_length(array), lit(0)))
+    if func == "sum":
+        # Make sure sum of empty list is 0.
+        base_array = pc.if_else(non_empty_mask.is_null(), None, 0)
+    else:
+        base_array = pa.repeat(lit_(None, type=agg.type), len(array))
+    return pa.chunked_array(
+        [
+            pc.replace_with_mask(
+                base_array,
+                non_empty_mask.fill_null(False),  # type: ignore[arg-type]
+                agg,
+            )
+        ]
+    )
+
+
+def list_sort(
+    array: ChunkedArrayAny, *, descending: bool, nulls_last: bool
+) -> ChunkedArrayAny:
+    sort_direction: Literal["ascending", "descending"] = (
+        "descending" if descending else "ascending"
+    )
+    nulls_position: Literal["at_start", "at_end"] = "at_end" if nulls_last else "at_start"
+    idx, v = "idx", "values"
+    is_not_sorted = pc.greater(pc.list_value_length(array), lit(0))
+    indexed = pa.Table.from_arrays(
+        [arange(start=0, end=len(array), step=1), array], names=[idx, v]
+    )
+    not_sorted_part = indexed.filter(is_not_sorted)
+    pass_through = indexed.filter(pc.fill_null(pc.invert(is_not_sorted), lit(True)))  # pyright: ignore[reportArgumentType]
+    exploded = pa.Table.from_arrays(
+        [pc.list_flatten(array), pc.list_parent_indices(array)], names=[v, idx]
+    )
+    sorted_indices = pc.sort_indices(
+        exploded,
+        sort_keys=[(idx, "ascending"), (v, sort_direction)],
+        null_placement=nulls_position,
+    )
+    offsets = not_sorted_part.column(v).combine_chunks().offsets  # type: ignore[attr-defined]
+    sorted_imploded = pa.ListArray.from_arrays(
+        offsets, pa.array(exploded.take(sorted_indices).column(v))
+    )
+    imploded_by_idx = pa.Table.from_arrays(
+        [not_sorted_part.column(idx), sorted_imploded], names=[idx, v]
+    )
+    return pa.concat_tables([imploded_by_idx, pass_through]).sort_by(idx).column(v)

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import operator
 import warnings
-from typing import TYPE_CHECKING, Any, Callable, Literal, cast
+from typing import TYPE_CHECKING, Any, Callable, Literal
 
 import numpy as np
 
@@ -24,12 +24,12 @@ from narwhals._pandas_like.utils import (
     set_index,
 )
 from narwhals._typing_compat import assert_never
-from narwhals._utils import Implementation, is_list_of, parse_version
+from narwhals._utils import Implementation, is_list_of, no_default, parse_version
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_like_series
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
-    from collections.abc import Hashable, Iterable, Iterator, Mapping, Sequence
+    from collections.abc import Hashable, Iterable, Iterator, Sequence
     from types import ModuleType
 
     import pandas as pd
@@ -41,6 +41,8 @@ if TYPE_CHECKING:
     from narwhals._compliant.series import HistData
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
+    from narwhals._pandas_like.typing import NativeSeriesT
+    from narwhals._typing import NoDefault
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.typing import (
@@ -202,8 +204,10 @@ class PandasLikeSeries(EagerSeries[Any]):
     def _align_full_broadcast(cls, *series: Self) -> Sequence[Self]:
         Series = series[0].__native_namespace__().Series
         lengths = [len(s) for s in series]
-        max_length = max(lengths)
-        idx = series[lengths.index(max_length)].native.index
+        target_length = max(
+            length for length, s in zip(lengths, series) if not s._broadcast
+        )
+        idx = series[lengths.index(target_length)].native.index
         reindexed = []
         for s in series:
             if s._broadcast:
@@ -585,6 +589,10 @@ class PandasLikeSeries(EagerSeries[Any]):
         return res_ser
 
     def fill_nan(self, value: float | None) -> Self:
+        if self._implementation.is_cudf() and (value is None):
+            # TODO(Unassigned): https://github.com/narwhals-dev/narwhals/issues/3231
+            msg = "`fill_nan(value=None)` is not support for CuDF backend"
+            raise NotImplementedError(msg)
         if not self.dtype.is_numeric():  # pragma: no cover
             msg = f"`.fill_nan` only supported for numeric dtype and not {self.dtype}, did you mean `.fill_null`?"
             raise InvalidOperationError(msg)
@@ -642,37 +650,58 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     def replace_strict(
         self,
-        old: Sequence[Any] | Mapping[Any, Any],
+        default: PandasLikeSeries | NoDefault,
+        old: Sequence[Any],
         new: Sequence[Any],
         *,
         return_dtype: IntoDType | None,
     ) -> PandasLikeSeries:
-        # Creating a temporary name if series is unnamed as merging with `on=None` would break otherwise
-        self_tmp_name = self.name if self.name is not None else "__nw_replace_strict__"
-        tmp_name = f"{self.name}_tmp"
-        dtype_backend = get_dtype_backend(self.native.dtype, self._implementation)
+        namespace = self.__native_namespace__()
+        array_funcs = self._array_funcs
+        native = self.native
+        impl = self._implementation
+
+        dtype_backend = get_dtype_backend(native.dtype, impl)
         dtype = (
-            narwhals_to_native_dtype(
-                return_dtype, dtype_backend, self._implementation, self._version
-            )
+            narwhals_to_native_dtype(return_dtype, dtype_backend, impl, self._version)
             if return_dtype
             else None
         )
-        namespace = self.__native_namespace__()
-        other = namespace.DataFrame(
-            {self_tmp_name: old, tmp_name: namespace.Series(new, dtype=dtype)}
-        )
-        native_result = self.native.to_frame(self_tmp_name).merge(
-            other, on=self_tmp_name, how="left"
-        )[tmp_name]
-        result = self._with_native(native_result).alias(self.name)
-        if result.is_null().sum() != self.is_null().sum():
-            msg = (
-                "replace_strict did not replace all non-null values.\n\n"
-                f"The following did not get replaced: {self.filter(~self.is_null() & result.is_null()).unique(maintain_order=False).to_list()}"
-            )
-            raise ValueError(msg)
-        return result
+
+        # Use pandas Index.get_indexer to find positions of values in old
+        idxs = namespace.Index(old).get_indexer(native)
+        was_matched = idxs >= 0
+
+        new_series = namespace.Series(new, dtype=dtype, name=self.name)
+        if return_dtype is None and dtype_backend is not None:
+            new_series = new_series.convert_dtypes(dtype_backend=dtype_backend)
+
+        # Take values from new_series, using index or 0 (will be masked for unmatched)
+        native_result = new_series.iloc[array_funcs.where(was_matched, idxs, 0)]
+        native_result.index = native.index
+
+        if default is no_default:
+            # Check that all non-null input values were matched
+            unmatched_mask = native.notna() & (~was_matched)
+            if unmatched_mask.any():
+                unmatched_values = (
+                    self._with_native(native[unmatched_mask])
+                    .unique(maintain_order=False)
+                    .to_list()
+                )
+                msg = (
+                    "replace_strict did not replace all non-null values.\n\n"
+                    f"The following did not get replaced: {unmatched_values}"
+                )
+                raise InvalidOperationError(msg)
+            # For unmatched values (nulls in original), set to null
+            native_result = native_result.where(was_matched, None)
+        else:
+            # For unmatched values, use default
+            _, default_native = align_and_extract_native(self, default)
+            native_result = native_result.where(was_matched, default_native)
+
+        return self._with_native(native_result)
 
     def sort(self, *, descending: bool, nulls_last: bool) -> PandasLikeSeries:
         na_position = "last" if nulls_last else "first"
@@ -791,58 +820,24 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     def floor(self) -> Self:
         native = self.native
-        native_cls = type(native)
-        implementation = self._implementation
-        if get_dtype_backend(native.dtype, implementation=implementation) == "pyarrow":
+        if self.is_native_dtype_pyarrow(native.dtype):
             import pyarrow.compute as pc
 
-            from narwhals._arrow.utils import native_to_narwhals_dtype
-
-            ca = native.array._pa_array
-            result_arr = cast("ChunkedArrayAny", pc.floor(ca))
-            nw_dtype = native_to_narwhals_dtype(result_arr.type, self._version)
-            out_dtype = narwhals_to_native_dtype(
-                nw_dtype, "pyarrow", self._implementation, self._version
-            )
-            result_native = native_cls(
-                result_arr, dtype=out_dtype, index=native.index, name=native.name
-            )
+            result_native = self._apply_pyarrow_compute_func(native, pc.floor)
         else:
-            array_funcs = self._array_funcs
-            result_arr = array_funcs.floor(self.native)
-            result_native = (
-                native_cls(result_arr, index=native.index, name=native.name)
-                if implementation.is_cudf()
-                else result_arr
-            )
+            array_func = self._array_funcs.floor
+            result_native = self._apply_array_func(native, array_func)
         return self._with_native(result_native)
 
     def ceil(self) -> Self:
         native = self.native
-        native_cls = type(native)
-        implementation = self._implementation
-        if get_dtype_backend(native.dtype, implementation=implementation) == "pyarrow":
+        if self.is_native_dtype_pyarrow(native.dtype):
             import pyarrow.compute as pc
 
-            from narwhals._arrow.utils import native_to_narwhals_dtype
-
-            ca = native.array._pa_array
-            result_arr = cast("ChunkedArrayAny", pc.ceil(ca))
-            nw_dtype = native_to_narwhals_dtype(result_arr.type, self._version)
-            out_dtype = narwhals_to_native_dtype(
-                nw_dtype, "pyarrow", self._implementation, self._version
-            )
-            result_native = native_cls(
-                result_arr, dtype=out_dtype, index=native.index, name=native.name
-            )
+            result_native = self._apply_pyarrow_compute_func(native, pc.ceil)
         else:
-            array_funcs = self._array_funcs
-            result_arr = array_funcs.ceil(self.native)
-            result_native = (
-                native_cls(result_arr, index=native.index, name=native.name)
-                if implementation.is_cudf()
-                else result_arr
-            )
+            array_func = self._array_funcs.ceil
+            result_native = self._apply_array_func(native, array_func)
         return self._with_native(result_native)
 
     def to_dummies(self, *, separator: str, drop_first: bool) -> PandasLikeDataFrame:
@@ -1002,6 +997,13 @@ class PandasLikeSeries(EagerSeries[Any]):
         return self._with_native(result)
 
     def __iter__(self) -> Iterator[Any]:
+        if self._implementation.is_cudf():
+            msg = (
+                "Iterating over a cuDF Series, DataFrame or Index is not supported. "
+                "For more information see: https://docs.rapids.ai/api/cudf/stable/user_guide/pandas-comparison/#iteration"
+            )
+            raise NotImplementedError(msg)
+
         yield from self.native.__iter__()
 
     def __contains__(self, other: Any) -> bool:
@@ -1068,65 +1070,99 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     def log(self, base: float) -> Self:
         native = self.native
-        native_cls = type(native)
-        implementation = self._implementation
-
-        if get_dtype_backend(native.dtype, implementation=implementation) == "pyarrow":
+        if self.is_native_dtype_pyarrow(native.dtype):
             import pyarrow.compute as pc
 
-            from narwhals._arrow.utils import native_to_narwhals_dtype
+            def pc_log(ca: ChunkedArrayAny) -> ChunkedArrayAny:
+                return pc.logb(ca, base)  # type: ignore[return-value]
 
-            ca = native.array._pa_array
-            result_arr = cast("ChunkedArrayAny", pc.logb(ca, base))
-            nw_dtype = native_to_narwhals_dtype(result_arr.type, self._version)
-            out_dtype = narwhals_to_native_dtype(
-                nw_dtype, "pyarrow", self._implementation, self._version
-            )
-            result_native = native_cls(
-                result_arr, dtype=out_dtype, index=native.index, name=native.name
-            )
+            result_native = self._apply_pyarrow_compute_func(native, pc_log)
         else:
-            array_funcs = self._array_funcs
-            result_arr = array_funcs.log(native) / array_funcs.log(base)
-            result_native = (
-                native_cls(result_arr, index=native.index, name=native.name)
-                if implementation.is_cudf()
-                else result_arr
-            )
+            log_func = self._array_funcs.log
 
+            def array_log(arr: NativeSeriesT) -> NativeSeriesT:
+                return log_func(arr) / log_func(base)  # pyright: ignore[reportArgumentType, reportCallIssue]
+
+            result_native = self._apply_array_func(native, array_log)
         return self._with_native(result_native)
 
     def exp(self) -> Self:
         native = self.native
-        native_cls = type(native)
-        implementation = self._implementation
-
-        if get_dtype_backend(native.dtype, implementation=implementation) == "pyarrow":
+        if self.is_native_dtype_pyarrow(native.dtype):
             import pyarrow.compute as pc
 
-            from narwhals._arrow.utils import native_to_narwhals_dtype
-
-            ca = native.array._pa_array
-            result_arr = cast("ChunkedArrayAny", pc.exp(ca))
-            nw_dtype = native_to_narwhals_dtype(result_arr.type, self._version)
-            out_dtype = narwhals_to_native_dtype(
-                nw_dtype, "pyarrow", self._implementation, self._version
-            )
-            result_native = native_cls(
-                result_arr, dtype=out_dtype, index=native.index, name=native.name
-            )
+            result_native = self._apply_pyarrow_compute_func(native, pc.exp)
         else:
-            result_arr = self._array_funcs.exp(native)
-            result_native = (
-                native_cls(result_arr, index=native.index, name=native.name)
-                if implementation.is_cudf()
-                else result_arr
-            )
+            array_func = self._array_funcs.exp
+            result_native = self._apply_array_func(native, array_func)
 
         return self._with_native(result_native)
 
     def sqrt(self) -> Self:
         return self._with_native(self.native.pow(0.5))
+
+    def sin(self) -> Self:
+        native = self.native
+        if self.is_native_dtype_pyarrow(native.dtype):
+            import pyarrow.compute as pc
+
+            result_native = self._apply_pyarrow_compute_func(
+                native,
+                pc.sin,  # type: ignore[arg-type]
+            )
+        else:
+            array_func = self._array_funcs.sin
+            result_native = self._apply_array_func(native, array_func)
+
+        return self._with_native(result_native)
+
+    def cos(self) -> Self:
+        native = self.native
+        if self.is_native_dtype_pyarrow(native.dtype):
+            import pyarrow.compute as pc
+
+            result_native = self._apply_pyarrow_compute_func(
+                native,
+                pc.cos,  # type: ignore[arg-type]
+            )
+        else:
+            array_func = self._array_funcs.cos
+            result_native = self._apply_array_func(native, array_func)
+
+        return self._with_native(result_native)
+
+    def is_native_dtype_pyarrow(self, native_dtype: Any) -> bool:
+        impl = self._implementation
+        return get_dtype_backend(native_dtype, implementation=impl) == "pyarrow"
+
+    def _apply_pyarrow_compute_func(
+        self, native: NativeSeriesT, pc_func: Callable[[ChunkedArrayAny], ChunkedArrayAny]
+    ) -> NativeSeriesT:
+        from narwhals._arrow.utils import native_to_narwhals_dtype
+
+        native_cls = type(native)
+        result_arr = pc_func(native.array._pa_array)  # type: ignore[attr-defined]
+        nw_dtype = native_to_narwhals_dtype(result_arr.type, self._version)
+        out_dtype = narwhals_to_native_dtype(
+            nw_dtype, "pyarrow", self._implementation, self._version
+        )
+        return native_cls(
+            result_arr, dtype=out_dtype, index=native.index, name=native.name
+        )
+
+    def _apply_array_func(
+        self, native: NativeSeriesT, array_func: Callable[[NativeSeriesT], NativeSeriesT]
+    ) -> NativeSeriesT:
+        native_cls = type(native)
+        result_arr = array_func(native)
+        return (
+            native_cls(result_arr, index=native.index, name=native.name)
+            if self._implementation.is_cudf()
+            else result_arr
+        )
+
+    def any_value(self, *, ignore_nulls: bool) -> PythonLiteral:
+        return self.drop_nulls().first() if ignore_nulls else self.first()
 
     @property
     def str(self) -> PandasLikeSeriesStringNamespace:

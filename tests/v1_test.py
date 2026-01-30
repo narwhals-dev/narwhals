@@ -12,7 +12,7 @@ import pytest
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
 from narwhals._utils import Implementation
-from narwhals.exceptions import InvalidOperationError, ShapeError
+from narwhals.exceptions import InvalidOperationError, NarwhalsUnstableWarning, ShapeError
 from narwhals.stable.v1.dependencies import (
     is_cudf_dataframe,
     is_cudf_series,
@@ -244,6 +244,7 @@ def test_to_dict_as_series() -> None:
 )
 def test_hist_v1() -> None:
     pytest.importorskip("pyarrow")
+    pytest.importorskip("numpy")
     import pyarrow as pa
 
     df = nw_v1.from_native(pa.table({"a": [1, 1, 2]}), eager_only=True)
@@ -253,6 +254,7 @@ def test_hist_v1() -> None:
     assert isinstance(result, nw_v1.DataFrame)
 
 
+@pytest.mark.filterwarnings("ignore:.*Interchange Protocol:DeprecationWarning")
 @pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="requires interchange protocol")
 def test_is_ordered_categorical_interchange_protocol() -> None:
     pytest.importorskip("pandas")
@@ -539,13 +541,7 @@ def test_dtypes() -> None:
 @pytest.mark.parametrize(
     ("strict", "context"),
     [
-        (
-            True,
-            pytest.raises(
-                TypeError,
-                match="Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe",
-            ),
-        ),
+        (True, pytest.raises(TypeError, match="Unsupported dataframe type")),
         (False, does_not_raise()),
     ],
 )
@@ -1164,3 +1160,27 @@ def test_mode_different_lengths(constructor_eager: ConstructorEager) -> None:
 def test_dtype___slots__(dtype: DType) -> None:
     with pytest.raises(AttributeError):
         dtype.i_also_dont_exist = 528329  # type: ignore[attr-defined]
+
+
+def test_any_value_expr(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if "dask" in str(constructor):
+        reason = "sample does not allow n, use frac instead"
+        request.applymarker(pytest.mark.xfail(reason=reason))
+
+    data = {
+        "a": [1, 1, 1, 2, 2, 3],
+        "b": [1, 2, 3, 4, 5, 6],
+        "c": [None, None, 1, None, 2, None],
+    }
+    df = nw_v1.from_native(constructor(data))
+
+    with pytest.warns(NarwhalsUnstableWarning):
+        df.select(nw_v1.col("a", "b").any_value())
+
+
+def test_any_value_series(constructor_eager: ConstructorEager) -> None:
+    data = {"a": [1, 1, 1, 2, 2, 3]}
+    df = nw_v1.from_native(constructor_eager(data))
+
+    with pytest.warns(NarwhalsUnstableWarning):
+        df["a"].any_value()

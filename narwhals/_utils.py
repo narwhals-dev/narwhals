@@ -42,8 +42,10 @@ from narwhals.dependencies import (
     get_pyspark_sql,
     get_sqlframe,
     is_narwhals_series,
+    is_narwhals_series_bool,
     is_narwhals_series_int,
     is_numpy_array_1d,
+    is_numpy_array_1d_bool,
     is_numpy_array_1d_int,
     is_pandas_like_dataframe,
     is_pandas_like_series,
@@ -121,6 +123,7 @@ if TYPE_CHECKING:
         IntoSeriesT,
         MultiIndexSelector,
         SingleIndexSelector,
+        SizedMultiBoolSelector,
         SizedMultiIndexSelector,
         SizeUnit,
         SupportsNativeNamespace,
@@ -1164,20 +1167,16 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
         >>> import pandas as pd
         >>> import polars as pl
         >>> data = ["x", "y"]
-        >>> s_pd = pd.Series(data, dtype=pd.CategoricalDtype(ordered=True))
-        >>> s_pl = pl.Series(data, dtype=pl.Categorical(ordering="lexical"))
-
-        Let's define a library-agnostic function:
-
-        >>> @nw.narwhalify
-        ... def func(s):
-        ...     return nw.is_ordered_categorical(s)
-
-        Then, we can pass any supported library to `func`:
-
-        >>> func(s_pd)
+        >>>
+        >>> s_pd = nw.from_native(
+        ...     pd.Series(data, dtype=pd.CategoricalDtype(ordered=True)), series_only=True
+        ... )
+        >>> nw.is_ordered_categorical(s_pd)
         True
-        >>> func(s_pl)
+        >>> s_pl = nw.from_native(
+        ...     pl.Series(data, dtype=pl.Categorical()), series_only=True
+        ... )
+        >>> nw.is_ordered_categorical(s_pl)
         False
     """
     from narwhals._interchange.series import InterchangeSeries
@@ -1292,7 +1291,7 @@ def is_sized_multi_index_selector(
     return (
         (
             is_sequence_but_not_str(obj)
-            and ((len(obj) > 0 and isinstance(obj[0], int)) or (len(obj) == 0))
+            and ((len(obj) > 0 and is_single_index_selector(obj[0])) or (len(obj) == 0))
         )
         or is_numpy_array_1d_int(obj)
         or is_narwhals_series_int(obj)
@@ -1315,7 +1314,11 @@ def is_slice_index(obj: Any) -> TypeIs[_SliceIndex]:
     return isinstance(obj, slice) and (
         isinstance(obj.start, int)
         or isinstance(obj.stop, int)
-        or (isinstance(obj.step, int) and obj.start is None and obj.stop is None)
+        or (
+            isinstance(obj.step, (int, NoneType))
+            and obj.start is None
+            and obj.stop is None
+        )
     )
 
 
@@ -1334,6 +1337,17 @@ def is_index_selector(
         is_single_index_selector(obj)
         or is_sized_multi_index_selector(obj)
         or is_slice_index(obj)
+    )
+
+
+def is_boolean_selector(
+    obj: Any,
+) -> TypeIs[SizedMultiBoolSelector[Series[Any] | CompliantSeries[Any]]]:
+    return (
+        (is_sequence_but_not_str(obj) and (len(obj) > 0 and isinstance(obj[0], bool)))
+        or is_numpy_array_1d_bool(obj)
+        or is_narwhals_series_bool(obj)
+        or is_compliant_series_bool(obj)
     )
 
 
@@ -1576,6 +1590,12 @@ def is_compliant_series_int(
     return is_compliant_series(obj) and obj.dtype.is_integer()
 
 
+def is_compliant_series_bool(
+    obj: CompliantSeries[NativeSeriesT_co] | Any,
+) -> TypeIs[CompliantSeries[NativeSeriesT_co]]:
+    return is_compliant_series(obj) and obj.dtype.is_boolean()
+
+
 def _is_namespace_accessor(obj: _IntoContext) -> TypeIs[NamespaceAccessor[_FullContext]]:
     # NOTE: Only `compliant` has false positives **internally**
     # - https://github.com/narwhals-dev/narwhals/blob/cc69bac35eb8c81a1106969c49bfba9fd569b856/narwhals/_compliant/group_by.py#L44-L49
@@ -1762,7 +1782,11 @@ class not_implemented:  # noqa: N801
             return self
         # NOTE: Prefer not exposing the actual class we're defining in
         # `_implementation` may not be available everywhere
-        who = getattr(instance, "_implementation", self._name_owner)
+        implementation = getattr(instance, "_implementation", Implementation.UNKNOWN)
+        if implementation is not Implementation.UNKNOWN:
+            who = repr(implementation)
+        else:
+            who = self._name_owner
         _raise_not_implemented_error(self._name, who)
         return None  # pragma: no cover
 
@@ -2107,3 +2131,20 @@ def extend_bool(
     Stolen from https://github.com/pola-rs/polars/blob/b8bfb07a4a37a8d449d6d1841e345817431142df/py-polars/polars/_utils/various.py#L580-L594
     """
     return (value,) * n_match if isinstance(value, bool) else tuple(value)
+
+
+class _NoDefault(Enum):
+    # "borrowed" from
+    # https://github.com/pandas-dev/pandas/blob/e7859983a814b1823cf26e3b491ae2fa3be47c53/pandas/_libs/lib.pyx#L2736-L2748
+    no_default = "NO_DEFAULT"
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return "<no_default>"
+
+
+# the "no_default" sentinel should typically be used when one of the valid parameter
+# values is None, as otherwise we cannot determine if the caller has set that value.
+no_default = _NoDefault.no_default
+
+# Can be imported from types in Python 3.10
+NoneType = type(None)

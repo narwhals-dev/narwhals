@@ -21,13 +21,14 @@ nav:
     - concepts/null_handling.md
   - Overhead: overhead.md
   - Perfect backwards compatibility policy: backcompat.md
-  - Supported libraries and extending Narwhals: extending.md
+  - Extensions and Plugins: extending.md
   - How it works: how_it_works.md
   - Ecosystem: ecosystem.md
   - Security: security.md
   - Resources: resources.md
   - API Completeness:
     - api-completeness/index.md
+    - Supported Top-level functions: api-completeness/functions.md
     - Supported DataFrame methods: api-completeness/dataframe.md
     - Supported LazyFrame methods: api-completeness/lazyframe.md
     - Supported Expr methods: api-completeness/expr.md
@@ -148,8 +149,10 @@ markdown_extensions:
 extra_javascript:
   - javascripts/katex.js
   - javascripts/extra.js
+  - javascripts/table.js
   - https://unpkg.com/katex@0/dist/katex.min.js
   - https://unpkg.com/katex@0/dist/contrib/auto-render.min.js
+  - https://unpkg.com/tablesort@5.3.0/dist/tablesort.min.js
 
 
 extra_css:

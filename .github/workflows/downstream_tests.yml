@@ -2,8 +2,6 @@ name: Test Downstream Libraries - Fast
 
 on:
   pull_request:
-  push:
-    branches: [main]
 
 env:
   PY_COLORS: 1
@@ -17,12 +15,12 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: "true"
           cache-suffix: altair-${{ matrix.python-version }}
@@ -37,6 +35,8 @@ jobs:
       - name: install-altair-dev
         run: |
           cd altair
+          # Temporary pin until it's addressed upstream.
+          uv pip install "pandas<3" --system
           uv pip install -e ".[dev, all]" --system
       - name: install-narwhals-dev
         run: |
@@ -64,12 +64,12 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: "true"
           cache-suffix: marimo-${{ matrix.python-version }}
@@ -88,6 +88,10 @@ jobs:
         run: |
           cd marimo
           . .venv/bin/activate
+          # Temporary pin until it's addressed upstream.
+          uv pip install "pandas<3"
+          # Temporary pin to get CI green
+          uv pip install "sqlglot<28.7.0"
           uv pip install -e ".[dev]"
           which python
       - name: install-narwhals-dev
@@ -127,12 +131,12 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: "true"
           cache-suffix: sklego-${{ matrix.python-version }}
@@ -164,12 +168,12 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: "true"
           cache-suffix: shiny-${{ matrix.python-version }}
@@ -219,7 +223,7 @@ jobs:
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
@@ -229,7 +233,7 @@ jobs:
           cd tea-tasting
           git log
       - name: install-uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
           cache-suffix: tea-tasting-${{ matrix.python-version }}
@@ -239,6 +243,8 @@ jobs:
         run: |
           cd tea-tasting
           uv sync --group test
+          # Temporary pin to get CI green
+          uv pip install "sqlglot<28.7.0"
       - name: install-narwhals-dev
         run: |
           cd tea-tasting
@@ -263,12 +269,12 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: "true"
           cache-suffix: tubular-${{ matrix.python-version }}
@@ -284,6 +290,8 @@ jobs:
       - name: install-tubular-dev
         run: |
           cd tubular
+          # Temporary pin until it's addressed upstream.
+          uv pip install "pandas<3" --system
           uv pip install -e ".[dev]" --system
       - name: install-narwhals-dev
         run: |
@@ -304,12 +312,12 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: "true"
           cache-suffix: plotly-${{ matrix.python-version }}
@@ -349,12 +357,12 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: "true"
           cache-suffix: hierarchicalforecast-${{ matrix.python-version }}
@@ -369,7 +377,9 @@ jobs:
       - name: install-deps
         run: |
           cd hierarchicalforecast
-          uv pip install --system ".[dev,polars]"
+          # Temporary pin until it's addressed upstream.
+          uv pip install "pandas<3" --system
+          uv pip install . --group dev --group polars --system
       - name: install-narwhals-dev
         run: |
           uv pip uninstall narwhals --system
@@ -389,12 +399,12 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: "true"
           cache-suffix: formulaic-${{ matrix.python-version }}
@@ -411,6 +421,8 @@ jobs:
       - name: install-formulaic-dev
         run: |
           cd formulaic
+          # Temporary pin until it's addressed upstream.
+          hatch run uv pip install "pandas<3"
           hatch run uv pip install -e ".[arrow,calculus]"
       - name: install-narwhals-dev
         run: |
@@ -431,12 +443,12 @@ jobs:
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: "true"
           cache-suffix: pointblank-${{ matrix.python-version }}
@@ -454,6 +466,8 @@ jobs:
           uv venv -p ${{ matrix.python-version }}
           . .venv/bin/activate
           uv pip install . --group dev
+          # Temporary pin to get CI green
+          uv pip install "sqlglot<28.7.0"
           uv pip install pytest pytest-cov pytest-snapshot pandas polars "ibis-framework[duckdb,mysql,postgres,sqlite]>=9.5.0" chatlas shiny
       - name: install-narwhals-dev
         run: |
@@ -482,12 +496,12 @@ jobs:
         os: ["ubuntu-latest"]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: "true"
           cache-suffix: validoopsie-${{ matrix.python-version }}
@@ -501,6 +515,9 @@ jobs:
         run: |
           cd validoopsie
           uv sync --dev --upgrade
+          # Temporary pin until it's addressed upstream.
+          uv remove pandas --group dev
+          uv add "pandas<3"
       - name: install-narwhals-dev
         run: |
           cd validoopsie
@@ -525,16 +542,16 @@ jobs:
   darts:
     strategy:
       matrix:
-        python-version: ["3.11"]
+        python-version: ["3.12"]
         os: ["ubuntu-latest"]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: "true"
           cache-suffix: darts-${{ matrix.python-version }}
@@ -547,12 +564,19 @@ jobs:
       - name: install-deps
         run: |
           cd darts
-          uv pip install -r requirements/core.txt -r requirements/dev.txt --system
+          # Temporary pin until it's addressed upstream.
+          uv pip install "pandas<3"  --system
+          uv pip install \
+          -r requirements/core.txt \
+          -r requirements/dev.txt \
+          llvmlite==0.46.0 \
+          numba==0.63.1 \
+          --system
       - name: install-narwhals-dev
         run: |
           uv pip uninstall narwhals --system
-          # TODO(FBruzzesi): Install polars from darts requirements when they introcude it
-          uv pip install -e ".[polars]" pyarrow --system
+          # TODO(FBruzzesi): Install polars & pyarrow from darts requirements when they introduce it
+          uv pip install -e ".[polars, pyarrow]" --system
       - name: show-deps
         run: uv pip freeze
       - name: Run tests
@@ -570,12 +594,12 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: "true"
           cache-suffix: gt-extras-${{ matrix.python-version }}
@@ -611,12 +635,12 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: "true"
           cache-suffix: fairlearn-${{ matrix.python-version }}
@@ -629,7 +653,8 @@ jobs:
       - name: install-deps
         run: |
           cd fairlearn
-          uv pip install -e . -r requirements.txt matplotlib polars pyarrow pytest typing-extensions --system
+          # TODO(FBruzzesi): Align with fairlearn team to get a minimal requirement to test narwhals features
+          uv pip install -e . -r requirements.txt lightgbm matplotlib polars pyarrow pytest typing-extensions --system
       - name: install-narwhals-dev
         run: |
           cd fairlearn
@@ -639,6 +664,4 @@ jobs:
       - name: run-pytest
         run: |
           cd fairlearn
-          # TODO(FBruzzesi): I hope this will be simplified once there is a decision on
-          # https://github.com/fairlearn/fairlearn/issues/1555
-          pytest test/unit/preprocessing test/unit/metrics
+          pytest test/unit -m "narwhals"

@@ -120,3 +120,13 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace, StringNamespace["ArrowSer
             native,
         )
         return self.with_native(result)
+
+    def pad_start(self, length: int, fill_char: str) -> ArrowSeries:
+        return self.with_native(
+            pc.utf8_lpad(self.native, width=length, padding=fill_char)
+        )
+
+    def pad_end(self, length: int, fill_char: str) -> ArrowSeries:
+        return self.with_native(
+            pc.utf8_rpad(self.native, width=length, padding=fill_char)
+        )
