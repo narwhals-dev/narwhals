@@ -1,16 +1,13 @@
 from __future__ import annotations
 
-from narwhals.dtypes._classes_v1 import (
+from narwhals.dtypes._classes import (
     Array,
     Binary,
     Boolean,
     Categorical,
     Date,
-    Datetime,
     Decimal,
     DType,
-    Duration,
-    Enum,
     Field,
     Float32,
     Float64,
@@ -37,6 +34,7 @@ from narwhals.dtypes._classes_v1 import (
     Unknown,
     UnsignedIntegerType,
 )
+from narwhals.dtypes._classes_v1 import Datetime, Duration, Enum
 
 __all__ = [
     "Array",

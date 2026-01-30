@@ -104,7 +104,11 @@ def test_identical_dtype(dtype: DType) -> None:
             nw.Array(nw.Decimal, shape=3),
             nw.Array(nw.Decimal, shape=3),
         ),
-        (nw.Array(nw.String, shape=1), nw.Array(nw.Int64, shape=1), None),
+        (
+            nw.Array(nw.String, shape=1),
+            nw.Array(nw.Int64, shape=1),
+            nw.Array(nw.String, shape=1),
+        ),
     ],
     ids=dtype_ids,
 )
@@ -179,6 +183,56 @@ def test_mixed_dtype(left: DType, right: DType, expected: DType | None) -> None:
     _check_supertype(left, right, expected)
 
 
+@pytest.mark.parametrize(
+    ("left", "right", "expected"),
+    [
+        # Same depth)
+        (nw.List(nw.Int64), nw.Array(nw.Int32, shape=2), nw.List(nw.Int64())),
+        (nw.List(nw.Float32), nw.Array(nw.Float64, shape=3), nw.List(nw.Float64())),
+        (
+            nw.List(nw.List(nw.Int8)),
+            nw.Array(nw.Int16, shape=(2, 3)),
+            nw.List(nw.List(nw.Int16())),
+        ),
+        (nw.List(nw.String), nw.Array(nw.Int64, shape=2), nw.List(nw.String())),
+        # Incompatible inner types
+        (nw.List(nw.Categorical), nw.Array(nw.Int64, shape=2), None),
+        # Depth mismatch
+        (nw.List(nw.Int64), nw.Array(nw.Int32, shape=(2, 3)), None),
+        (nw.List(nw.List(nw.Int64)), nw.Array(nw.Int32, shape=2), None),
+    ],
+    ids=dtype_ids,
+)
+def test_list_array_supertype(left: DType, right: DType, expected: DType | None) -> None:
+    _check_supertype(left, right, expected)
+    _check_supertype(right, left, expected)
+
+
+@pytest.mark.parametrize(
+    ("left", "right", "expected"),
+    [
+        # {X, String} -> String conversions
+        (nw.Int64(), nw.String(), nw.String()),
+        (nw.Float32(), nw.String(), nw.String()),
+        (nw.Boolean(), nw.String(), nw.String()),
+        (nw.Date(), nw.String(), nw.String()),
+        (nw.Datetime(), nw.String(), nw.String()),
+        (nw.Duration(), nw.String(), nw.String()),
+        (nw.List(nw.Int64), nw.String(), nw.String()),
+        (nw.Array(nw.Int64, shape=2), nw.String(), nw.String()),
+        (nw.Struct({"a": nw.Int64}), nw.String(), nw.String()),
+        (nw.Decimal(), nw.String(), nw.String()),
+        (nw.Time(), nw.String(), nw.String()),
+        # Binary + String -> Binary (exception to the rule)
+        (nw.Binary(), nw.String(), nw.Binary()),
+    ],
+    ids=dtype_ids,
+)
+def test_string_supertype(left: DType, right: DType, expected: DType) -> None:
+    _check_supertype(left, right, expected)
+    _check_supertype(right, left, expected)
+
+
 def test_mixed_integer_temporal(
     naive_temporal_dtype: TemporalType, numeric_dtype: NumericType
 ) -> None:
@@ -245,6 +299,20 @@ def test_mixed_integer_temporal(
         # float + decimal
         (nw.Decimal(), nw.Float32(), nw.Float64()),
         (nw.Decimal(), nw.Float64(), nw.Float64()),
+        # decimal + decimal
+        (nw.Decimal(5, 2), nw.Decimal(4, 3), nw.Decimal(5, 3)),
+        (nw.Decimal(scale=12), nw.Decimal(18, scale=9), nw.Decimal(38, 12)),
+        # decimal + integer
+        (nw.Decimal(4, 1), nw.UInt8(), nw.Decimal(4, 1)),
+        (nw.Decimal(5, 2), nw.Int8(), nw.Decimal(5, 2)),
+        (nw.Decimal(10, 0), nw.Int32(), nw.Decimal(10, 0)),
+        (nw.Decimal(15, 2), nw.UInt32(), nw.Decimal(15, 2)),
+        (nw.Decimal(2, 1), nw.UInt8, nw.Decimal(38, 1)),
+        (nw.Decimal(10, 5), nw.Int64, nw.Decimal(38, 5)),
+        (nw.Decimal(38, 0), nw.Int128, nw.Decimal(38, 0)),
+        (nw.Decimal(1, 0), nw.UInt8(), nw.Decimal(38, 0)),
+        (nw.Decimal(38, 38), nw.Int8(), nw.Decimal(38, 38)),
+        (nw.Decimal(10, 1), nw.UInt32(), nw.Decimal(38, 1)),
     ],
     ids=dtype_ids,
 )

@@ -744,11 +744,11 @@ def test_to_supertype(left: IntoSchema, right: IntoSchema, expected: IntoSchema)
             pytest.raises(ComputeError, match="schema names differ: got b, expected a"),
         ),
         (
-            {"a": nw.String()},
+            {"a": nw.Binary()},
             {"a": nw.Int64()},
             pytest.raises(
                 SchemaMismatchError,
-                match="failed to determine supertype of String and Int64",
+                match="failed to determine supertype of Binary and Int64",
             ),
         ),
     ],

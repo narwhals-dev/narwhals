@@ -53,7 +53,9 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
         # we are not testing pyspark, modin, or dask on Windows here because nobody got time for that
-        run: uv pip install -e ".[ibis]" --group core-tests --group extra --system
+        # TODO(FBruzzesi): Temporarily pin sqlglot to <28.6.0 to avoid breaking changes in SQLFrame
+        # See https://github.com/eakmanrq/sqlframe/issues/577
+        run: uv pip install -e ".[ibis]" --group core-tests --group extra "sqlglot<28.6.0" --system
       - name: install-test-plugin
         run: uv pip install -e test-plugin/. --system
       - name: show-deps
@@ -85,7 +87,9 @@ jobs:
           cache-suffix: pytest-full-coverage-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
-        run: uv pip install -e ".[dask, modin, ibis]" --group core-tests --group extra --system
+        # TODO(FBruzzesi): Temporarily pin sqlglot to <28.6.0 to avoid breaking changes in SQLFrame
+        # See https://github.com/eakmanrq/sqlframe/issues/577
+        run: uv pip install -e ".[dask, modin, ibis]" --group core-tests --group extra "sqlglot<28.6.0" --system
       - name: install-test-plugin
         run: uv pip install -e test-plugin/. --system
       - name: show-deps
@@ -153,8 +157,9 @@ jobs:
           cache-suffix: python-314-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
-        # Use `--pre` as duckdb stable not compatible with 3.14
-        run: uv pip install -e . --group tests --pre pandas polars pyarrow duckdb sqlframe  --system
+        # TODO(FBruzzesi): Temporarily pin sqlglot to <28.6.0 to avoid breaking changes in SQLFrame
+        # See https://github.com/eakmanrq/sqlframe/issues/577
+        run: uv pip install -e . --group tests pandas polars pyarrow duckdb sqlframe "sqlglot<28.6.0" --system
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
