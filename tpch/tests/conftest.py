@@ -62,13 +62,8 @@ SCALE_FACTORS_QUITE_SAFE = frozenset(
 """
 
 
-def is_xdist_worker(
-    obj: pytest.FixtureRequest | pytest.Session | pytest.Config, /
-) -> bool:
-    """Return `True` if this is an xdist worker, `False` otherwise.
-
-    Adapted from https://github.com/pytest-dev/pytest-xdist/blob/8b60b1ef5d48974a1cb69bc1a9843564bdc06498/src/xdist/plugin.py#L337-L349
-    """
+def is_xdist_worker(obj: pytest.FixtureRequest | pytest.Config, /) -> bool:
+    # Adapted from https://github.com/pytest-dev/pytest-xdist/blob/8b60b1ef5d48974a1cb69bc1a9843564bdc06498/src/xdist/plugin.py#L337-L349
     return hasattr(obj if isinstance(obj, pytest.Config) else obj.config, "workerinput")
 
 
