@@ -73,7 +73,7 @@ class Query:
     def inputs(
         self, backend: Backend, scale_factor: float
     ) -> tuple[nw.LazyFrame[Any], ...]:
-        """Get the file paths for this query's tables at the given scale factor."""
+        """Get the frame inputs for this query at the given scale factor."""
         sf_dir = _scale_factor_dir(scale_factor)
         return tuple(
             backend.scan((sf_dir / f"{name}.parquet").as_posix())
