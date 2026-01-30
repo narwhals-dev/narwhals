@@ -80,8 +80,7 @@ def pytest_configure(config: pytest.Config) -> None:
         return
     from tpch.generate_data import main as generate_data
 
-    scale_factor = config.getoption("--scale-factor", default=SCALE_FACTOR_DEFAULT)
-    generate_data(scale_factor=scale_factor)
+    generate_data(scale_factor=config.getoption("--scale-factor"))
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
