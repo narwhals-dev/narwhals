@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import operator
 import re
-from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, cast, no_type_check
+from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, cast
 
 import pandas as pd
 
@@ -665,18 +665,17 @@ def make_group_by_kwargs(*, drop_null_keys: bool) -> dict[str, bool]:
     return {"sort": False, "as_index": True, "dropna": drop_null_keys, "observed": True}
 
 
-@no_type_check
 def broadcast_series_to_index(
-    native: NativeSeriesT,
+    native: pd.Series[Any],
     index: Any,
     *,
     is_nested: bool,
-    series_class: type[NativeSeriesT],
-) -> NativeSeriesT:
+    series_class: type[pd.Series[Any]],
+) -> pd.Series[Any]:
     """Broadcast a scalar value from a (one element) Series to match a target index.
 
     For nested (arrow-backed) types, we rely on
-    [pandas.arrays.ArrowExtensionArray](https://pandas.pydata.org/docs/reference/api/pandas.arrays.ArrowExtensionArray.html).
+    [`pandas.array`](https://pandas.pydata.org/docs/reference/api/pandas.array.html).
 
     Arguments:
         native: The native pandas-like Series containing the scalar value to broadcast.
@@ -689,12 +688,12 @@ def broadcast_series_to_index(
     """
     value = native.iloc[0]
     if is_nested:
-        import pyarrow as pa  # ignore-banned-import
+        from narwhals._arrow.utils import repeat
 
-        pa_type = native.dtype.pyarrow_dtype
-        pa_array = pd.arrays.ArrowExtensionArray(
-            pa.repeat(pa.scalar(value, pa_type), len(index))
-        )
+        # NOTE: Ignore typing because `pandas-stubs` are wrong
+        # TODO(FBruzzesi): Should we pass the `copy=False` flag?
+        pa_array = pd.array(repeat(value, len(index)), dtype=native.dtype)  # type: ignore[arg-type]
+
         return series_class(pa_array, index=index, name=native.name)
 
     return series_class(value, index=index, dtype=native.dtype, name=native.name)
