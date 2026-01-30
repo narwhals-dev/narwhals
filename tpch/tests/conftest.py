@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING
 import pytest
 
 from tpch.classes import Backend, Query
-from tpch.constants import _scale_factor_dir
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -64,25 +63,27 @@ SCALE_FACTORS_QUITE_SAFE = frozenset(
 DEFAULT_SCALE_FACTOR = 0.1
 
 
-def _scale_factor_data_exists(scale_factor: float) -> bool:
-    """Check if data for the given scale factor exists by checking if its directory exists."""
-    sf_dir = _scale_factor_dir(scale_factor)
-    return sf_dir.exists()
-
-
 def pytest_configure(config: pytest.Config) -> None:
     """Generate TPC-H data if it doesn't exist for the requested scale factor.
 
     This hook runs after command line options have been parsed,
     ensuring data is available before test collection.
     """
+    from tpch.generate_data import scale_factor_exists
+
     scale_factor = config.getoption("--scale-factor", default=DEFAULT_SCALE_FACTOR)
 
-    if _scale_factor_data_exists(scale_factor):
+    if scale_factor_exists(scale_factor):
         return
 
-    # Import here to avoid circular imports and keep startup fast when data exists
-    from tpch.generate_data import main as generate_data
+    import logging
+
+    from tpch.generate_data import logger, main as generate_data
+
+    logger.setLevel(logging.INFO)
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
+    logger.addHandler(handler)
 
     generate_data(scale_factor=scale_factor)
 
