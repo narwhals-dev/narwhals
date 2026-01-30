@@ -129,6 +129,7 @@ INTEGER: DTypeGroup = SIGNED_INTEGER.union(UNSIGNED_INTEGER)
 FLOAT: DTypeGroup = frozenset((Float32, Float64))
 NUMERIC: DTypeGroup = FLOAT.union(INTEGER).union((Decimal,))
 NESTED: DTypeGroup = frozenset((Struct, List, Array))
+LIST_ARRAY: DTypeGroup = frozenset((List, Array))
 DATETIME: DTypeGroup = frozen_dtypes(Datetime, DatetimeV1)
 
 _STRING_LIKE_CONVERT: Mapping[FrozenDTypes, type[String | Binary]] = {
@@ -273,6 +274,16 @@ def _list_supertype(left: List, right: List, /) -> List | None:
     return None
 
 
+def _list_array_supertype(list_: List, array: Array, /) -> List | None:
+    """Get the supertype of a List and an Array with the same depth.
+
+    Adapted from [`get_supertype`](https://github.com/pola-rs/polars/blob/529f7ec642912a2f15656897d06f1532c2f5d4c4/crates/polars-core/src/utils/supertype.rs#L225-L228)
+    """
+    if inner := get_supertype(list_.inner(), array.inner()):
+        return List(inner)
+    return None
+
+
 def _datetime_supertype(
     left: SameDatetimeT, right: SameDatetimeT, /
 ) -> SameDatetimeT | None:
@@ -404,6 +415,11 @@ def _numeric_supertype(st: _SupertypeCase[DType]) -> DType | None:
 def _mixed_supertype(st: _SupertypeCase[DType, DType]) -> DType | None:
     """Get the supertype of two data types that do not share the same class."""
     base_types = st.base_types
+    if base_types == LIST_ARRAY:
+        list_, array = (
+            (st.left, st.right) if isinstance(st.left, List) else (st.right, st.left)
+        )
+        return _list_array_supertype(list_, array)  # type: ignore[arg-type]
     if Date in base_types and _has_intersection(base_types, DATETIME):
         return st.left if isinstance(st.left, Datetime) else st.right
     if NUMERIC.isdisjoint(base_types):

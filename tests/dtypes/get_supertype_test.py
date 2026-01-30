@@ -179,6 +179,30 @@ def test_mixed_dtype(left: DType, right: DType, expected: DType | None) -> None:
     _check_supertype(left, right, expected)
 
 
+@pytest.mark.parametrize(
+    ("left", "right", "expected"),
+    [
+        # Same depth)
+        (nw.List(nw.Int64), nw.Array(nw.Int32, shape=2), nw.List(nw.Int64())),
+        (nw.List(nw.Float32), nw.Array(nw.Float64, shape=3), nw.List(nw.Float64())),
+        (
+            nw.List(nw.List(nw.Int8)),
+            nw.Array(nw.Int16, shape=(2, 3)),
+            nw.List(nw.List(nw.Int16())),
+        ),
+        # Incompatible inner types
+        (nw.List(nw.String), nw.Array(nw.Int64, shape=2), None),
+        # Depth mismatch
+        (nw.List(nw.Int64), nw.Array(nw.Int32, shape=(2, 3)), None),
+        (nw.List(nw.List(nw.Int64)), nw.Array(nw.Int32, shape=2), None),
+    ],
+    ids=dtype_ids,
+)
+def test_list_array_supertype(left: DType, right: DType, expected: DType | None) -> None:
+    _check_supertype(left, right, expected)
+    _check_supertype(right, left, expected)
+
+
 def test_mixed_integer_temporal(
     naive_temporal_dtype: TemporalType, numeric_dtype: NumericType
 ) -> None:
