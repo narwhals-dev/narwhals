@@ -104,7 +104,11 @@ def test_identical_dtype(dtype: DType) -> None:
             nw.Array(nw.Decimal, shape=3),
             nw.Array(nw.Decimal, shape=3),
         ),
-        (nw.Array(nw.String, shape=1), nw.Array(nw.Int64, shape=1), None),
+        (
+            nw.Array(nw.String, shape=1),
+            nw.Array(nw.Int64, shape=1),
+            nw.Array(nw.String, shape=1),
+        ),
     ],
     ids=dtype_ids,
 )
@@ -190,8 +194,9 @@ def test_mixed_dtype(left: DType, right: DType, expected: DType | None) -> None:
             nw.Array(nw.Int16, shape=(2, 3)),
             nw.List(nw.List(nw.Int16())),
         ),
+        (nw.List(nw.String), nw.Array(nw.Int64, shape=2), nw.List(nw.String())),
         # Incompatible inner types
-        (nw.List(nw.String), nw.Array(nw.Int64, shape=2), None),
+        (nw.List(nw.Categorical), nw.Array(nw.Int64, shape=2), None),
         # Depth mismatch
         (nw.List(nw.Int64), nw.Array(nw.Int32, shape=(2, 3)), None),
         (nw.List(nw.List(nw.Int64)), nw.Array(nw.Int32, shape=2), None),
@@ -199,6 +204,31 @@ def test_mixed_dtype(left: DType, right: DType, expected: DType | None) -> None:
     ids=dtype_ids,
 )
 def test_list_array_supertype(left: DType, right: DType, expected: DType | None) -> None:
+    _check_supertype(left, right, expected)
+    _check_supertype(right, left, expected)
+
+
+@pytest.mark.parametrize(
+    ("left", "right", "expected"),
+    [
+        # {X, String} -> String conversions
+        (nw.Int64(), nw.String(), nw.String()),
+        (nw.Float32(), nw.String(), nw.String()),
+        (nw.Boolean(), nw.String(), nw.String()),
+        (nw.Date(), nw.String(), nw.String()),
+        (nw.Datetime(), nw.String(), nw.String()),
+        (nw.Duration(), nw.String(), nw.String()),
+        (nw.List(nw.Int64), nw.String(), nw.String()),
+        (nw.Array(nw.Int64, shape=2), nw.String(), nw.String()),
+        (nw.Struct({"a": nw.Int64}), nw.String(), nw.String()),
+        (nw.Decimal(), nw.String(), nw.String()),
+        (nw.Time(), nw.String(), nw.String()),
+        # Binary + String -> Binary (exception to the rule)
+        (nw.Binary(), nw.String(), nw.Binary()),
+    ],
+    ids=dtype_ids,
+)
+def test_string_supertype(left: DType, right: DType, expected: DType) -> None:
     _check_supertype(left, right, expected)
     _check_supertype(right, left, expected)
 

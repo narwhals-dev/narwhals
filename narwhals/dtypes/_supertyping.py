@@ -21,7 +21,6 @@ from narwhals.dtypes._classes import (
     Array,
     Binary,
     Boolean,
-    Categorical,
     Date,
     Datetime,
     Decimal,
@@ -50,11 +49,7 @@ from narwhals.dtypes._classes import (
     Unknown,
     UnsignedIntegerType,
 )
-from narwhals.dtypes._classes_v1 import (
-    Datetime as DatetimeV1,
-    Duration as DurationV1,
-    Enum as EnumV1,
-)
+from narwhals.dtypes._classes_v1 import Datetime as DatetimeV1, Duration as DurationV1
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Collection, Mapping
@@ -132,11 +127,8 @@ NESTED: DTypeGroup = frozenset((Struct, List, Array))
 LIST_ARRAY: DTypeGroup = frozenset((List, Array))
 DATETIME: DTypeGroup = frozen_dtypes(Datetime, DatetimeV1)
 
-_STRING_LIKE_CONVERT: Mapping[FrozenDTypes, type[String | Binary]] = {
-    frozen_dtypes(String, Categorical): String,
-    frozen_dtypes(String, Enum): String,
-    frozen_dtypes(String, EnumV1): String,
-    frozen_dtypes(String, Binary): Binary,
+_STRING_BINARY_CONVERT: Mapping[FrozenDTypes, type[Binary]] = {
+    frozen_dtypes(String, Binary): Binary
 }
 _FLOAT_PROMOTE: Mapping[FrozenDTypes, type[Float64]] = {
     frozen_dtypes(Float32, Float64): Float64,
@@ -275,10 +267,7 @@ def _list_supertype(left: List, right: List, /) -> List | None:
 
 
 def _list_array_supertype(list_: List, array: Array, /) -> List | None:
-    """Get the supertype of a List and an Array with the same depth.
-
-    Adapted from [`get_supertype`](https://github.com/pola-rs/polars/blob/529f7ec642912a2f15656897d06f1532c2f5d4c4/crates/polars-core/src/utils/supertype.rs#L225-L228)
-    """
+    """Get the supertype of a List and an Array with the same depth."""
     if inner := get_supertype(list_.inner(), array.inner()):
         return List(inner)
     return None
@@ -422,8 +411,11 @@ def _mixed_supertype(st: _SupertypeCase[DType, DType]) -> DType | None:
         return _list_array_supertype(list_, array)  # type: ignore[arg-type]
     if Date in base_types and _has_intersection(base_types, DATETIME):
         return st.left if isinstance(st.left, Datetime) else st.right
+    if String in base_types and Binary not in base_types:
+        # Handle {X, String} -> String (except Binary which returns Binary)
+        return String()
     if NUMERIC.isdisjoint(base_types):
-        return tp() if (tp := _STRING_LIKE_CONVERT.get(base_types)) else None
+        return tp() if (tp := _STRING_BINARY_CONVERT.get(base_types)) else None
     return None if has_nested(base_types) else _numeric_supertype(st)
 
 
