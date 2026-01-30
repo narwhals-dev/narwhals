@@ -337,6 +337,14 @@ class Expr(NwExpr):
             ExprNode(ExprKind.AGGREGATION, "any_value", ignore_nulls=ignore_nulls)
         )
 
+    def first(self) -> Self:  # type: ignore[override]
+        """Get the first value."""
+        return self._append_node(ExprNode(ExprKind.ORDERABLE_AGGREGATION, "first"))
+
+    def last(self) -> Self:  # type: ignore[override]
+        """Get the last value."""
+        return self._append_node(ExprNode(ExprKind.ORDERABLE_AGGREGATION, "last"))
+
 
 class Schema(NwSchema):
     _version = Version.V2
