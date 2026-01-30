@@ -20,6 +20,7 @@ def _scale_factor_dir(scale_factor: float) -> Path:
     return DATA_DIR / f"sf{scale_factor}"
 
 
+SCALE_FACTOR_DEFAULT = 0.1
 DATABASE_TABLE_NAMES = (
     "lineitem",
     "customer",

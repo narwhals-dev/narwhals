@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from tpch.classes import Backend, Query
+from tpch.constants import SCALE_FACTOR_DEFAULT
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -60,8 +61,6 @@ SCALE_FACTORS_QUITE_SAFE = frozenset(
 [TPC-H_v3.0.1 (Page 79)]: https://www.tpc.org/TPC_Documents_Current_Versions/pdf/TPC-H_v3.0.1.pdf
 """
 
-DEFAULT_SCALE_FACTOR = 0.1
-
 
 def pytest_configure(config: pytest.Config) -> None:
     """Generate TPC-H data if it doesn't exist for the requested scale factor.
@@ -71,7 +70,7 @@ def pytest_configure(config: pytest.Config) -> None:
     """
     from tpch.generate_data import scale_factor_exists
 
-    scale_factor = config.getoption("--scale-factor", default=DEFAULT_SCALE_FACTOR)
+    scale_factor = config.getoption("--scale-factor", default=SCALE_FACTOR_DEFAULT)
 
     if scale_factor_exists(scale_factor):
         return
@@ -101,9 +100,9 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     parser.addoption(
         "--scale-factor",
         action="store",
-        default=DEFAULT_SCALE_FACTOR,
+        default=str(SCALE_FACTOR_DEFAULT),
         type=float,
-        help=f"TPC-H scale factor to use for tests (default: {DEFAULT_SCALE_FACTOR})",
+        help="TPC-H scale factor to use for tests (default: %(default)s)",
     )
 
 

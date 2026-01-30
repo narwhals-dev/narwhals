@@ -21,6 +21,7 @@ from tpch.constants import (
     GLOBS,
     LOGGER_NAME,
     QUERY_IDS,
+    SCALE_FACTOR_DEFAULT,
     _scale_factor_dir,
 )
 
@@ -145,7 +146,7 @@ def scale_factor_exists(scale_factor: float) -> bool:
     return sf_dir.exists()
 
 
-def main(*, scale_factor: float = 0.1, refresh: bool = False) -> None:
+def main(*, scale_factor: float = SCALE_FACTOR_DEFAULT, refresh: bool = False) -> None:
     DATA_DIR.mkdir(exist_ok=True)
     if refresh:
         logger.info("Refreshing data for scale_factor=%s", scale_factor)
@@ -194,7 +195,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-sf",
         "--scale-factor",
-        default="0.1",
+        default=str(SCALE_FACTOR_DEFAULT),
         metavar="",
         help=f"Scale the database by this factor (default: %(default)s)\n{TABLE_SCALE_FACTOR}",
         type=float,
