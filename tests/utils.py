@@ -282,7 +282,7 @@ def dtype_ids(obj: DType | type[DType] | None) -> str:  # noqa: PLR0911
         return obj.__class__.__name__
     return repr(obj)
 
- 
+
 def is_pyspark_connect(constructor: Constructor) -> bool:
     is_spark_connect = bool(os.environ.get("SPARK_CONNECT", None))
     return is_spark_connect and ("pyspark" in str(constructor))
