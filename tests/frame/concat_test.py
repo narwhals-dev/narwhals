@@ -268,7 +268,7 @@ def test_concat_diagonal_relaxed(
     assert_equal_data(result.collect(), expected_data)
 
 
-@pytest.mark.skipif(PYARROW_VERSION < (19, 0, 0))
+@pytest.mark.skipif(PYARROW_VERSION < (19, 0, 0), reason="Too old for pyarrow.uuid type")
 def test_pyarrow_concat_vertical_uuid() -> None:
     # Test that concat vertical and vertical_relaxed preserves unsupported types like UUID
     pa = pytest.importorskip("pyarrow")
