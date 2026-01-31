@@ -22,7 +22,9 @@ from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
 )
+from narwhals._pandas_like.utils import promote_dtype_backends
 from narwhals._utils import Implementation, is_nested_literal, zip_strict
+from narwhals.schema import Schema, merge_schemas, to_supertype
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
@@ -143,10 +145,7 @@ class DaskNamespace(
     def concat(
         self, items: Iterable[DaskLazyFrame], *, how: ConcatMethod
     ) -> DaskLazyFrame:
-        if not items:
-            msg = "No items to concatenate"  # pragma: no cover
-            raise AssertionError(msg)
-        dfs = [i._native_frame for i in items]
+        dfs = [item.native for item in items]
         cols_0 = dfs[0].columns
         if how == "vertical":
             for i, df in enumerate(dfs[1:], start=1):
@@ -167,6 +166,24 @@ class DaskNamespace(
             return DaskLazyFrame(
                 dd.concat(dfs, axis=0, join="outer"), version=self._version
             )
+        if how == "vertical_relaxed":
+            schemas = tuple(df.dtypes.to_dict() for df in dfs)
+            out_schema = reduce(
+                to_supertype, (Schema.from_pandas_like(schema) for schema in schemas)
+            ).to_pandas(promote_dtype_backends(schemas, self._implementation))
+
+            to_concat = [df.astype(out_schema) for df in dfs]
+            return DaskLazyFrame(
+                dd.concat(to_concat, axis=0, join="inner"), version=self._version
+            )
+        if how == "diagonal_relaxed":
+            schemas = tuple(df.dtypes.to_dict() for df in dfs)
+            out_schema = reduce(
+                merge_schemas, (Schema.from_pandas_like(schema) for schema in schemas)
+            ).to_pandas(promote_dtype_backends(schemas, self._implementation))
+
+            native_res = dd.concat(dfs, axis=0, join="outer").astype(out_schema)
+            return DaskLazyFrame(native_res, version=self._version)
 
         raise NotImplementedError
 

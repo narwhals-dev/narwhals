@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import operator
-from typing import TYPE_CHECKING, Any, Literal, cast, overload
+from typing import TYPE_CHECKING, Any, cast, overload
 
 import polars as pl
 
@@ -22,7 +22,14 @@ if TYPE_CHECKING:
     from narwhals._polars.dataframe import Method, PolarsDataFrame, PolarsLazyFrame
     from narwhals._polars.typing import FrameT
     from narwhals._utils import Version, _LimitedContext
-    from narwhals.typing import Into1DArray, IntoDType, IntoSchema, TimeUnit, _2DArray
+    from narwhals.typing import (
+        ConcatMethod,
+        Into1DArray,
+        IntoDType,
+        IntoSchema,
+        TimeUnit,
+        _2DArray,
+    )
 
 
 class PolarsNamespace:
@@ -130,10 +137,7 @@ class PolarsNamespace:
         return self._expr(pl.any_horizontal(*(expr.native for expr in it)), self._version)
 
     def concat(
-        self,
-        items: Iterable[FrameT],
-        *,
-        how: Literal["vertical", "horizontal", "diagonal"],
+        self, items: Iterable[FrameT], *, how: ConcatMethod
     ) -> PolarsDataFrame | PolarsLazyFrame:
         result = pl.concat((item.native for item in items), how=how)
         if isinstance(result, pl.DataFrame):
