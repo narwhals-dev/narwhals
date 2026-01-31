@@ -20,6 +20,7 @@ site/
 todo.md
 docs/this.md
 docs/api-completeness/*.md
+docs/concepts/promotion-rules.md
 !docs/api-completeness/index.md
 
 # Lock files
