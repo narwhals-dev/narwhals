@@ -196,8 +196,9 @@ def native_to_narwhals_dtype(
         return dtypes.Datetime(time_zone=deferred_time_zone.time_zone)
 
     if duckdb_dtype_id == "decimal":
-        precision: Incomplete = duckdb_dtype.children[0][1]
-        scale: Incomplete = duckdb_dtype.children[1][1]
+        precision: Incomplete
+        scale: Incomplete
+        (_, precision), (_, scale) = duckdb_dtype.children
         return dtypes.Decimal(precision, scale)
 
     return _non_nested_native_to_narwhals_dtype(duckdb_dtype_id, version)
