@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import operator
+from contextlib import suppress
 from typing import TYPE_CHECKING, Any, Callable, cast
 
 from duckdb import CoalesceOperator, StarExpression
@@ -42,6 +43,12 @@ if TYPE_CHECKING:
     from narwhals._typing import NoDefault
     from narwhals._utils import _LimitedContext
     from narwhals.typing import FillNullStrategy, IntoDType, RollingInterpolationMethod
+
+    try:
+        import duckdb.sqltypes as duckdb_dtypes
+    except ModuleNotFoundError:
+        # DuckDB pre 1.3
+        import duckdb.typing as duckdb_dtypes
 
     DuckDBWindowFunction = WindowFunction[DuckDBLazyFrame, Expression]
     DuckDBWindowInputs = WindowInputs[Expression]
@@ -267,24 +274,26 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
         return self._with_elementwise(_fill_constant, value=value)
 
     def cast(self, dtype: IntoDType) -> Self:
-        def func(df: DuckDBLazyFrame) -> list[Expression]:
-            if (version := self._version) != Version.V1:
-                schema = df.collect_schema()
-                for name in self._evaluate_output_names(df):
-                    _validate_cast_temporal_to_numeric(source=schema[name], target=dtype)
+        def _validated_dtype(
+            dtype: IntoDType, df: DuckDBLazyFrame
+        ) -> duckdb_dtypes.DuckDBPyType:
+            if dtype.is_numeric() and (version := self._version) != Version.V1:
+                with suppress(Exception):
+                    schema = df.collect_schema()
+                    for name in self._evaluate_output_names(df):
+                        _validate_cast_temporal_to_numeric(
+                            source=schema[name], target=dtype
+                        )
 
             tz = DeferredTimeZone(df.native)
-            native_dtype = narwhals_to_native_dtype(dtype, version, tz)
+            return narwhals_to_native_dtype(dtype, version, tz)
+
+        def func(df: DuckDBLazyFrame) -> list[Expression]:
+            native_dtype = _validated_dtype(dtype, df)
             return [expr.cast(native_dtype) for expr in self(df)]
 
         def window_f(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> list[Expression]:
-            if (version := self._version) != Version.V1:
-                schema = df.collect_schema()
-                for name in self._evaluate_output_names(df):
-                    _validate_cast_temporal_to_numeric(source=schema[name], target=dtype)
-
-            tz = DeferredTimeZone(df.native)
-            native_dtype = narwhals_to_native_dtype(dtype, version, tz)
+            native_dtype = _validated_dtype(dtype, df)
             return [expr.cast(native_dtype) for expr in self.window_function(df, inputs)]
 
         return self.__class__(

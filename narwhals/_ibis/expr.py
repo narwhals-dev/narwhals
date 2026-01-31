@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import operator
+from contextlib import suppress
 from typing import TYPE_CHECKING, Any, Callable, TypeVar, cast
 
 import ibis
@@ -271,13 +272,16 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
 
     def cast(self, dtype: IntoDType) -> Self:
         def func(df: IbisLazyFrame) -> list[ir.Value]:
-            if (version := self._version) != Version.V1:
-                schema = df.collect_schema()
-                for name in self._evaluate_output_names(df):
-                    _validate_cast_temporal_to_numeric(source=schema[name], target=dtype)
+            if dtype.is_numeric() and (version := self._version) != Version.V1:
+                with suppress(Exception):
+                    schema = df.collect_schema()
+                    for name in self._evaluate_output_names(df):
+                        _validate_cast_temporal_to_numeric(
+                            source=schema[name], target=dtype
+                        )
 
             native_dtype = narwhals_to_native_dtype(dtype, version)
-            return [expr.cast(native_dtype) for expr in self(df)]  # type: ignore[misc]
+            return [expr.cast(native_dtype) for expr in self(df)]  # pyright: ignore[reportArgumentType, reportCallIssue]
 
         return self.__class__(
             func,
