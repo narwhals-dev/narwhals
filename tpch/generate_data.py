@@ -70,7 +70,7 @@ FROM
     (SHOW ALL TABLES)
 """
 
-FIX_ANSWERS: Mapping[QueryID, Callable[[pl.DataFrame], pl.DataFrame]] = {
+FIX_ANSWERS: Mapping[QueryID, Callable[[pl.LazyFrame], pl.LazyFrame]] = {
     "q18": lambda df: df.rename({"sum(l_quantity)": "sum"}).cast({"sum": int}),
     "q22": lambda df: df.cast({"cntrycode": int}),
 }
@@ -167,7 +167,7 @@ class TPCHGen:
         with TableLogger.database() as tbl_logger:
             for t in DATABASE_TABLE_NAMES:
                 path = self.scale_factor_dir / f"{t}.parquet"
-                self.sql(SQL_FROM.format(t)).pl().cast(cast_map()).write_parquet(path)
+                to_polars(self.sql(SQL_FROM.format(t))).sink_parquet(path)
                 tbl_logger.log_row(path)
         return self.show_schemas("database")
 
@@ -176,11 +176,11 @@ class TPCHGen:
         with TableLogger.answers() as tbl_logger:
             for query_id in QUERY_IDS:
                 query = SQL_TPCH_ANSWER.format(query_id.removeprefix("q"))
-                df = self.sql(query).pl().cast(cast_map())
+                lf = to_polars(self.sql(query))
                 if fix := FIX_ANSWERS.get(query_id):
-                    df = fix(df)
+                    lf = fix(lf)
                 path = self.scale_factor_dir / f"result_{query_id}.parquet"
-                df.write_parquet(path)
+                lf.sink_parquet(path)
                 tbl_logger.log_row(path)
         return self.show_schemas("answers")
 
@@ -193,6 +193,10 @@ class TPCHGen:
                 msg = f"Found no matching paths for {artifact!r} in {self.scale_factor_dir.as_posix()}"
                 raise NotImplementedError(msg)
         return self
+
+
+def to_polars(rel: Rel) -> pl.LazyFrame:
+    return rel.pl(lazy=True).cast(cast_map())
 
 
 def _configure_logger(
