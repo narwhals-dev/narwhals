@@ -10,7 +10,7 @@ try:
     import duckdb.sqltypes as duckdb_dtypes
 except ModuleNotFoundError:
     # DuckDB pre 1.3
-    import duckdb.typing as duckdb_dtypes
+    import duckdb.typing as duckdb_dtypes  # type: ignore[no-redef]
 
 from narwhals._utils import Version, extend_bool, isinstance_or_issubclass, zip_strict
 from narwhals.exceptions import ColumnNotFoundError
@@ -154,7 +154,7 @@ def native_to_narwhals_dtype(
             [
                 dtypes.Field(
                     name=child[0],
-                    dtype=native_to_narwhals_dtype(child[1], version, deferred_time_zone),
+                    dtype=native_to_narwhals_dtype(child[1], version, deferred_time_zone),  # type: ignore[arg-type]
                 )
                 for child in children
             ]
@@ -162,27 +162,27 @@ def native_to_narwhals_dtype(
 
     if duckdb_dtype_id == "array":
         child, size = duckdb_dtype.children
-        shape: list[int] = [size[1]]
+        shape: list[int] = [size[1]]  # type: ignore[list-item]
 
-        while child[1].id == "array":
-            child, size = child[1].children
-            shape.insert(0, size[1])
+        while child[1].id == "array":  # type: ignore[attr-defined]
+            child, size = child[1].children  # type: ignore[attr-defined]
+            shape.insert(0, size[1])  # type: ignore[arg-type]
 
-        inner = native_to_narwhals_dtype(child[1], version, deferred_time_zone)
+        inner = native_to_narwhals_dtype(child[1], version, deferred_time_zone)  # type: ignore[arg-type]
         return dtypes.Array(inner=inner, shape=tuple(shape))
 
     if duckdb_dtype_id == "enum":
         if version is Version.V1:
             return dtypes.Enum()  # type: ignore[call-arg]
         categories = duckdb_dtype.children[0][1]
-        return dtypes.Enum(categories=categories)
+        return dtypes.Enum(categories=categories)  # type: ignore[arg-type]
 
     if duckdb_dtype_id == "timestamp with time zone":
         return dtypes.Datetime(time_zone=deferred_time_zone.time_zone)
 
     if duckdb_dtype_id == "decimal":
         (_, precision), (_, scale) = duckdb_dtype.children
-        return dtypes.Decimal(precision=precision, scale=scale)
+        return dtypes.Decimal(precision=precision, scale=scale)  # type: ignore[arg-type]
 
     return _non_nested_native_to_narwhals_dtype(duckdb_dtype_id, version)
 

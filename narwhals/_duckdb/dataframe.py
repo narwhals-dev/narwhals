@@ -140,9 +140,9 @@ class DuckDBLazyFrame(
             if self._backend_version < (1, 4):
                 ret = self.native.arrow()
             else:  # pragma: no cover
-                ret = self.native.fetch_arrow_table()
+                ret = self.native.fetch_arrow_table()  # type: ignore[assignment]
             return ArrowDataFrame(
-                ret,
+                ret,  # type: ignore[arg-type]
                 validate_backend_version=True,
                 version=self._version,
                 validate_column_names=True,
