@@ -38,15 +38,23 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(LOGGER_NAME)
 
+
+# `mem_usage_scale = 2.705`
+# `pl.Config(tbl_hide_column_data_types=True, tbl_hide_dataframe_shape=True)`
+# https://duckdb.org/docs/stable/core_extensions/tpch#resource-usage-of-the-data-generator
 TABLE_SCALE_FACTOR = """
-┌──────────────┬───────────────┐
-│ Scale factor ┆ Database (MB) │
-╞══════════════╪═══════════════╡
-│ 0.1          ┆ 25            │
-│ 1.0          ┆ 250           │
-│ 3.0          ┆ 754           │
-│ 100.0        ┆ 26624         │
-└──────────────┴───────────────┘
+┌───────┬────────────┬─────────────┐
+│ sf    ┆ Disk       ┆ Memory (db) │
+╞═══════╪════════════╪═════════════╡
+│ 0.014 ┆    3.25 mb ┆    8.79 mb  │
+│ 0.052 ┆   12.01 mb ┆   32.49 mb  │
+│ 0.1   ┆   23.15 mb ┆   62.62 mb  │
+│ 0.25  ┆   58.90 mb ┆  159.32 mb  │
+│ 0.51  ┆  124.40 mb ┆  336.50 mb  │
+│ 1.0   ┆  247.66 mb ┆  669.92 mb  │
+│ 10.0  ┆    2.59 gb ┆    7.00 gb  │
+│ 30.0  ┆    7.76 gb ┆   21.00 gb  │
+└───────┴────────────┴─────────────┘
 """
 
 
