@@ -6,13 +6,13 @@ from typing import TYPE_CHECKING
 import duckdb
 from duckdb import Expression
 
-try:
-    import duckdb.sqltypes as duckdb_dtypes
-except ModuleNotFoundError:
-    # DuckDB pre 1.3
-    import duckdb.typing as duckdb_dtypes  # type: ignore[no-redef]
-
-from narwhals._utils import Version, extend_bool, isinstance_or_issubclass, zip_strict
+from narwhals._utils import (
+    Implementation,
+    Version,
+    extend_bool,
+    isinstance_or_issubclass,
+    zip_strict,
+)
 from narwhals.exceptions import ColumnNotFoundError
 
 if TYPE_CHECKING:
@@ -26,6 +26,13 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.typing import IntoDType, TimeUnit
 
+BACKEND_VERSION = Implementation.DUCKDB._backend_version()
+"""Static backend version for `duckdb`."""
+
+if TYPE_CHECKING or BACKEND_VERSION >= (1, 4):
+    from duckdb import sqltypes as duckdb_dtypes
+else:  # pragma: no cover
+    from duckdb import typing as duckdb_dtypes
 
 UNITS_DICT = {
     "y": "year",
