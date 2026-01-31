@@ -62,6 +62,13 @@ TABLE_SCALE_FACTOR = """
 SQL_DBGEN = "CALL dbgen(sf={0})"
 SQL_TPCH_ANSWER = "PRAGMA tpch({0})"
 SQL_FROM = "FROM {0}"
+SQL_SHOW_DB = """
+SELECT
+    "table": name,
+    "schema": MAP(column_names, column_types)
+FROM
+    (SHOW ALL TABLES)
+"""
 
 FIX_ANSWERS: Mapping[QueryID, Callable[[pl.DataFrame], pl.DataFrame]] = {
     "q18": lambda df: df.rename({"sum(l_quantity)": "sum"}).cast({"sum": int}),
@@ -150,6 +157,9 @@ class TPCHGen:
         logger.info("Generating data for scale_factor=%s", self.scale_factor)
         self.sql(SQL_DBGEN.format(self.scale_factor))
         logger.info("Finished generating data.")
+        if logger.isEnabledFor(logging.DEBUG):
+            msg = str(self.sql(SQL_SHOW_DB))[:-1]
+            logger.debug("DuckDB schemas (database):\n%s", msg)
         return self
 
     def write_database(self) -> TPCHGen:
@@ -178,7 +188,7 @@ class TPCHGen:
         if logger.isEnabledFor(logging.DEBUG):
             if paths := sorted(self.glob(artifact)):
                 msg = "\n".join(read_fmt_schema(fp) for fp in paths)
-                logger.debug("Schemas (%s):\n%s", artifact, msg)
+                logger.debug("Parquet schemas (%s):\n%s", artifact, msg)
             else:
                 msg = f"Found no matching paths for {artifact!r} in {self.scale_factor_dir.as_posix()}"
                 raise NotImplementedError(msg)
