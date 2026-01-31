@@ -20,8 +20,9 @@ from narwhals._polars.utils import (
     narwhals_to_native_dtype,
     native_to_narwhals_dtype,
 )
-from narwhals._utils import Implementation, no_default, requires
+from narwhals._utils import Implementation, Version, no_default, requires
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_index
+from narwhals.dtypes import _validate_cast_temporal_to_numeric
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
@@ -35,7 +36,7 @@ if TYPE_CHECKING:
     from narwhals._polars.dataframe import Method, PolarsDataFrame
     from narwhals._polars.namespace import PolarsNamespace
     from narwhals._typing import NoDefault
-    from narwhals._utils import Version, _LimitedContext
+    from narwhals._utils import _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.series import Series
     from narwhals.typing import (
@@ -288,7 +289,9 @@ class PolarsSeries:
         return self._from_native_object(self.native.__getitem__(item))
 
     def cast(self, dtype: IntoDType) -> Self:
-        dtype_pl = narwhals_to_native_dtype(dtype, self._version)
+        if (version := self._version) != Version.V1:
+            _validate_cast_temporal_to_numeric(source=self.dtype, target=dtype)
+        dtype_pl = narwhals_to_native_dtype(dtype, version)
         return self._with_native(self.native.cast(dtype_pl))
 
     def clip(self, lower_bound: PolarsSeries, upper_bound: PolarsSeries) -> Self:

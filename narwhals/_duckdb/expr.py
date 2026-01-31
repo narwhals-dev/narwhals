@@ -22,6 +22,7 @@ from narwhals._duckdb.utils import (
 )
 from narwhals._sql.expr import SQLExpr
 from narwhals._utils import Implementation, Version, extend_bool, no_default
+from narwhals.dtypes import _validate_cast_temporal_to_numeric
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -267,13 +268,23 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
 
     def cast(self, dtype: IntoDType) -> Self:
         def func(df: DuckDBLazyFrame) -> list[Expression]:
+            if (version := self._version) != Version.V1:
+                schema = df.collect_schema()
+                for name in self._evaluate_output_names(df):
+                    _validate_cast_temporal_to_numeric(source=schema[name], target=dtype)
+
             tz = DeferredTimeZone(df.native)
-            native_dtype = narwhals_to_native_dtype(dtype, self._version, tz)
+            native_dtype = narwhals_to_native_dtype(dtype, version, tz)
             return [expr.cast(native_dtype) for expr in self(df)]
 
         def window_f(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> list[Expression]:
+            if (version := self._version) != Version.V1:
+                schema = df.collect_schema()
+                for name in self._evaluate_output_names(df):
+                    _validate_cast_temporal_to_numeric(source=schema[name], target=dtype)
+
             tz = DeferredTimeZone(df.native)
-            native_dtype = narwhals_to_native_dtype(dtype, self._version, tz)
+            native_dtype = narwhals_to_native_dtype(dtype, version, tz)
             return [expr.cast(native_dtype) for expr in self.window_function(df, inputs)]
 
         return self.__class__(

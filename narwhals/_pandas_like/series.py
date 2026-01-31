@@ -25,8 +25,9 @@ from narwhals._pandas_like.utils import (
     set_index,
 )
 from narwhals._typing_compat import assert_never
-from narwhals._utils import Implementation, is_list_of, no_default, parse_version
+from narwhals._utils import Implementation, Version, is_list_of, no_default, parse_version
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_like_series
+from narwhals.dtypes import _validate_cast_temporal_to_numeric
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
@@ -44,7 +45,7 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals._pandas_like.typing import NativeSeriesT
     from narwhals._typing import NoDefault
-    from narwhals._utils import Version, _LimitedContext
+    from narwhals._utils import _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.typing import (
         ClosedInterval,
@@ -308,6 +309,8 @@ class PandasLikeSeries(EagerSeries[Any]):
             self.native.iloc[indices.native] = values_native
 
     def cast(self, dtype: IntoDType) -> Self:
+        if (version := self._version) != Version.V1:
+            _validate_cast_temporal_to_numeric(source=self.dtype, target=dtype)
         if self.dtype == dtype and self.native.dtype != "object":
             # Avoid dealing with pandas' type-system if we can. Note that it's only
             # safe to do this if we're not starting with object dtype, see tests/expr_and_series/cast_test.py::test_cast_object_pandas
@@ -317,7 +320,7 @@ class PandasLikeSeries(EagerSeries[Any]):
             dtype,
             dtype_backend=get_dtype_backend(self.native.dtype, self._implementation),
             implementation=self._implementation,
-            version=self._version,
+            version=version,
         )
         return self._with_native(self.native.astype(pd_dtype), preserve_broadcast=True)
 

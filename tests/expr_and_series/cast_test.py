@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, cast
 import pytest
 
 import narwhals as nw
+from narwhals.exceptions import InvalidOperationError
 from tests.utils import (
     PANDAS_VERSION,
     PYARROW_VERSION,
@@ -442,3 +443,59 @@ def test_cast_object_pandas() -> None:
     s = nw.from_native(pd.DataFrame({"a": [2, 3, None]}, dtype=object))["a"]
     assert s[0] == 2
     assert s.cast(nw.String)[0] == "2"
+
+
+NUMERIC_DTYPES = [
+    nw.Int8,
+    nw.Int16,
+    nw.Int32,
+    nw.Int64,
+    nw.Float32,
+    nw.Float64,
+    nw.UInt32,
+    nw.UInt64,
+]
+
+
+@pytest.mark.parametrize(
+    "values", [[datetime(2000, 1, 1, 12, 0), None], [timedelta(365, 59), None]]
+)
+@pytest.mark.parametrize(("target_dtype"), NUMERIC_DTYPES)
+def test_cast_temporal_to_numeric_raises_expr(
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+    values: list[datetime] | list[timedelta],
+    target_dtype: nw.dtypes.DType,
+) -> None:
+    if "polars" in str(constructor):
+        reason = "Polars expressions wrap native expressions"
+        request.applymarker(pytest.mark.xfail(reason=reason))
+
+    if isinstance(values[0], timedelta) and "spark" in str(constructor):
+        reason = "interval not implemented"
+        request.applymarker(pytest.mark.xfail(reason=reason))
+
+    df = nw.from_native(constructor({"a": values})).lazy()
+    msg = "Casting from temporal type to numeric"
+    with pytest.raises(InvalidOperationError, match=msg):
+        df.select(nw.col("a").cast(target_dtype)).collect()
+
+
+@pytest.mark.parametrize(
+    "values",
+    [
+        [datetime(2000, 1, 1, 12, 0), datetime(2000, 1, 2, 12, 0), None],
+        [timedelta(2, 59), timedelta(1, 59), None],
+    ],
+)
+@pytest.mark.parametrize(("target_dtype"), NUMERIC_DTYPES)
+def test_cast_temporal_to_numeric_raises_series(
+    constructor_eager: ConstructorEager,
+    values: list[datetime] | list[timedelta],
+    target_dtype: nw.dtypes.DType,
+) -> None:
+    df = nw.from_native(constructor_eager({"a": values}), eager_only=True)
+    series = df["a"]
+    msg = "Casting from temporal type to numeric"
+    with pytest.raises(InvalidOperationError, match=msg):
+        series.cast(target_dtype)
