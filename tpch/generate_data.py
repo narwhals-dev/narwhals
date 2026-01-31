@@ -95,7 +95,7 @@ class TPCHGen:
     scale_factor: ScaleFactor
     refresh: bool = False
     debug: bool = False
-    _con: Con = dataclasses.field(init=False)
+    _con: Con = dataclasses.field(init=False, repr=False)
 
     @staticmethod
     def from_pytest(config: pytest.Config, /) -> TPCHGen:
