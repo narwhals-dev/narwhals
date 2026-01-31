@@ -11,11 +11,13 @@ import logging
 import os
 import sys
 from functools import cache
-from typing import TYPE_CHECKING, Any
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Literal
 
 from tpch.classes import TableLogger
 from tpch.constants import (
     DATABASE_TABLE_NAMES,
+    DB_PATH,
     GLOBS,
     LOGGER_NAME,
     QUERY_IDS,
@@ -26,7 +28,6 @@ from tpch.constants import (
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator, Mapping
-    from pathlib import Path
 
     import polars as pl
     import pytest
@@ -59,7 +60,8 @@ TABLE_SCALE_FACTOR = """
 
 
 # NOTE: Store queries here, add parameter names if needed
-SQL_DBGEN = "CALL dbgen(sf={0})"
+SQL_DBGEN = "CALL dbgen(sf=$sf)"
+SQL_DBGEN_STEPPED = "CALL dbgen(sf=$sf, children=$children, step=$step)"
 SQL_TPCH_ANSWER = "PRAGMA tpch({0})"
 SQL_FROM = "FROM {0}"
 SQL_SHOW_DB = """
@@ -116,6 +118,16 @@ class TPCHGen:
     def scale_factor_dir(self) -> Path:
         return _scale_factor_dir(self.scale_factor)
 
+    @property
+    def _batches(self) -> int:
+        if self.scale_factor in {"10.0", "30.0"}:
+            return 12 if self.scale_factor == "10.0" else 4
+        return 0
+
+    @property
+    def _database(self) -> Path | Literal[":memory:"]:
+        return DB_PATH if self.scale_factor == "30.0" else ":memory:"
+
     def glob(self, artifact: Artifact, /) -> Iterator[Path]:
         return self.scale_factor_dir.glob(GLOBS[artifact])
 
@@ -137,15 +149,18 @@ class TPCHGen:
         total = TableLogger.format_size(n_bytes)
         logger.info("Finished with total file size: %s", total.strip())
 
+    # TODO @dangotbanned: Delete database file after completing the polars bits
     def connect(self) -> TPCHGen:
         import duckdb
 
-        logger.info("Connecting to in-memory DuckDB database")
-        self._con = duckdb.connect(database=":memory:")
+        database = self._database
+        name = database.as_posix() if isinstance(database, Path) else database
+        logger.info("Connecting to DuckDB database: %s", name)
+        self._con = duckdb.connect(database)
         return self
 
-    def sql(self, query: LiteralString) -> Rel:
-        return self._con.sql(query)
+    def sql(self, query: LiteralString, **params: LiteralString | int) -> Rel:
+        return self._con.sql(query, params=params or None)
 
     def load_extension(self) -> TPCHGen:
         logger.info("Installing DuckDB TPC-H Extension")
@@ -153,9 +168,22 @@ class TPCHGen:
         self._con.load_extension("tpch")
         return self
 
+    def _generate_database_batched(self, batches: int) -> TPCHGen:
+        logger.info("Welp, this may take a while...")
+        logger.info("Generating in %s batches", batches)
+        for batch in range(batches):
+            self.sql(
+                SQL_DBGEN_STEPPED, sf=self.scale_factor, children=batches, step=batch
+            )
+            logger.info("Generated (%s/%s)", batch + 1, batches)
+        return self
+
     def generate_database(self) -> TPCHGen:
         logger.info("Generating data for scale_factor=%s", self.scale_factor)
-        self.sql(SQL_DBGEN.format(self.scale_factor))
+        if batches := self._batches:
+            self._generate_database_batched(batches)
+        else:
+            self.sql(SQL_DBGEN, sf=self.scale_factor)
         logger.info("Finished generating data.")
         if logger.isEnabledFor(logging.DEBUG):
             msg = str(self.sql(SQL_SHOW_DB))[:-1]

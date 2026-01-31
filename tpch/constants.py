@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 REPO_ROOT = Path(__file__).parent.parent
 TPCH_DIR = REPO_ROOT / "tpch"
 DATA_DIR = TPCH_DIR / "data"
+DB_PATH = DATA_DIR / "narwhals.duckdb"
 
 
 @cache
