@@ -203,7 +203,7 @@ def _configure_logger(
     *,
     debug: bool,
     fmt: str = "%(asctime)s.%(msecs)03d [%(levelname)s] %(message)s",
-    datefmt: str = "%Y-%m-%d %H:%M:%S",
+    datefmt: str = "%H:%M:%S",
 ) -> None:
     logger.setLevel(logging.DEBUG if debug else logging.INFO)
     output = logging.StreamHandler()
