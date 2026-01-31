@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.typing import IntoDType, TimeUnit
 
-Incomplete131: TypeAlias = Any
+Incomplete: TypeAlias = Any
 """Review if an progress is made towards [#131].
 
 [#131]: https://github.com/duckdb/duckdb-python/issues/131"""
@@ -162,7 +162,7 @@ def native_to_narwhals_dtype(
         )
 
     if duckdb_dtype_id == "struct":
-        children: list[tuple[Incomplete131, Incomplete131]] = duckdb_dtype.children
+        children: list[tuple[Incomplete, Incomplete]] = duckdb_dtype.children
         return dtypes.Struct(
             [
                 dtypes.Field(
@@ -174,8 +174,8 @@ def native_to_narwhals_dtype(
         )
 
     if duckdb_dtype_id == "array":
-        child: Incomplete131
-        size: Incomplete131
+        child: Incomplete
+        size: Incomplete
         child, size = duckdb_dtype.children
         shape = [size[1]]
 
@@ -189,15 +189,15 @@ def native_to_narwhals_dtype(
     if duckdb_dtype_id == "enum":
         if version is Version.V1:
             return dtypes.Enum()  # type: ignore[call-arg]
-        categories: Incomplete131 = duckdb_dtype.children[0][1]
+        categories: Incomplete = duckdb_dtype.children[0][1]
         return dtypes.Enum(categories)
 
     if duckdb_dtype_id == "timestamp with time zone":
         return dtypes.Datetime(time_zone=deferred_time_zone.time_zone)
 
     if duckdb_dtype_id == "decimal":
-        precision: Incomplete131 = duckdb_dtype.children[0][1]
-        scale: Incomplete131 = duckdb_dtype.children[1][1]
+        precision: Incomplete = duckdb_dtype.children[0][1]
+        scale: Incomplete = duckdb_dtype.children[1][1]
         return dtypes.Decimal(precision, scale)
 
     return _non_nested_native_to_narwhals_dtype(duckdb_dtype_id, version)
