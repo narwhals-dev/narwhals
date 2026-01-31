@@ -24,7 +24,7 @@ from narwhals._utils import (
     not_implemented,
     zip_strict,
 )
-from narwhals.dtypes import _validate_cast_temporal_to_numeric
+from narwhals.dtypes import DType, _validate_cast_temporal_to_numeric
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping, Sequence
@@ -250,9 +250,12 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
 
     def cast(self, dtype: IntoDType) -> Self:
         def _validated_dtype(dtype: IntoDType, df: SparkLikeLazyFrame) -> _NativeDType:
-            if dtype.is_numeric() and (version := self._version) != Version.V1:
+            if (version := self._version) != Version.V1 and dtype.is_numeric():
+                schema: dict[str, DType] = {}
                 with suppress(Exception):
                     schema = df.collect_schema()
+
+                if schema:
                     for name in self._evaluate_output_names(df):
                         _validate_cast_temporal_to_numeric(
                             source=schema[name], target=dtype

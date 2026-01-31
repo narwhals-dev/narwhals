@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import warnings
-from contextlib import suppress
 from typing import TYPE_CHECKING, Any, Callable, cast
 
 import pandas as pd
@@ -617,13 +616,10 @@ class DaskExpr(
 
     def cast(self, dtype: IntoDType) -> Self:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            if dtype.is_numeric() and (version := self._version) != Version.V1:
-                with suppress(Exception):
-                    schema = df.schema
-                    for name in self._evaluate_output_names(df):
-                        _validate_cast_temporal_to_numeric(
-                            source=schema[name], target=dtype
-                        )
+            if (version := self._version) != Version.V1 and dtype.is_numeric():
+                schema = df.schema
+                for name in self._evaluate_output_names(df):
+                    _validate_cast_temporal_to_numeric(source=schema[name], target=dtype)
 
             native_dtype = narwhals_to_native_dtype(dtype, version)
             return [expr.astype(native_dtype) for expr in self._call(df)]
