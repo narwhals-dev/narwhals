@@ -1205,11 +1205,13 @@ NUMERIC_DTYPES = [nw_v1.Int64]
     "values", [[datetime(2000, 1, 1, 12, 0), None], [timedelta(365, 59), None]]
 )
 @pytest.mark.parametrize(("target_dtype"), NUMERIC_DTYPES)
-def test_cast_temporal_to_numeric_raises_expr(
+def test_cast_temporal_to_numeric_expr(
     constructor: Constructor,
     values: list[datetime] | list[timedelta],
     target_dtype: nw_v1.dtypes.DType,
 ) -> None:
+    if "pandas" in str(constructor) and PANDAS_VERSION < (2, 0, 0):
+        pytest.skip(reason="ValueError: Cannot convert NaT values to integer")
     df = nw_v1.from_native(constructor({"a": values})).lazy()
     schema = df.select(nw_v1.col("a").cast(target_dtype)).collect_schema()
     assert schema["a"] == target_dtype
@@ -1223,11 +1225,14 @@ def test_cast_temporal_to_numeric_raises_expr(
     ],
 )
 @pytest.mark.parametrize(("target_dtype"), NUMERIC_DTYPES)
-def test_cast_temporal_to_numeric_raises_series(
+def test_cast_temporal_to_numeric_series(
     constructor_eager: ConstructorEager,
     values: list[datetime] | list[timedelta],
     target_dtype: nw_v1.dtypes.DType,
 ) -> None:
+    if "pandas" in str(constructor_eager) and PANDAS_VERSION < (2, 0, 0):
+        pytest.skip(reason="ValueError: Cannot convert NaT values to integer")
+
     df = nw_v1.from_native(constructor_eager({"a": values}), eager_only=True)
     series = df["a"]
     dtype = series.cast(target_dtype).dtype
