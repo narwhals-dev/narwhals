@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime as dt
 import re
 from typing import TYPE_CHECKING, Any
+from uuid import uuid4 as make_uuid
 
 import pytest
 
@@ -259,3 +260,93 @@ def test_concat_diagonal_relaxed(
         "b": [None, None, 30.1, 40.2, 5.0, 6.0],
     }
     assert_equal_data(result.collect(), expected_data)
+
+
+def test_pyarrow_concat_vertical_uuid() -> None:
+    # Test that concat vertical and vertical_relaxed preserves unsupported types like UUID
+    pa = pytest.importorskip("pyarrow")
+
+    id1, id2, id3, id4 = [make_uuid() for _ in range(4)]
+
+    data1 = {"id": pa.array([id1.bytes, id2.bytes], type=pa.uuid()), "a": [1, 2]}
+    data2 = {"id": pa.array([id3.bytes, id4.bytes], type=pa.uuid()), "a": [3.14, 4.2]}
+    frame1, frame2 = nw.from_native(pa.table(data1)), nw.from_native(pa.table(data2))
+
+    # Vertical
+    res_v = nw.concat([frame1, frame1], how="vertical").to_native()
+
+    assert res_v.schema.field("id").type == pa.uuid()
+    assert res_v["id"].to_pylist() == [id1, id2, id1, id2]
+    assert res_v["a"].to_pylist() == [1, 2, 1, 2]
+
+    # Vertical relaxed
+    res_vr = nw.concat([frame1, frame2], how="vertical_relaxed").to_native()
+
+    assert res_vr.schema.field("id").type == pa.uuid()
+    assert res_vr["id"].to_pylist() == [id1, id2, id3, id4]
+    assert res_vr["a"].to_pylist() == [1.0, 2.0, 3.14, 4.2]
+
+
+def test_concat_vertical_relaxed_duckdb_uuid() -> None:
+    # Test that concat vertical_relaxed preserves UUID type for DuckDB
+    duckdb = pytest.importorskip("duckdb")
+
+    id1, id2, id3, id4 = [make_uuid() for _ in range(4)]
+    conn = duckdb.connect()
+
+    rel1 = conn.sql(
+        f"SELECT '{id1}'::UUID as id, 1 as a UNION ALL SELECT '{id2}'::UUID, 2"
+    )
+    rel2 = conn.sql(
+        f"SELECT '{id3}'::UUID as id, 3.14 as a UNION ALL SELECT '{id4}'::UUID, 4.2"
+    )
+
+    frame1, frame2 = nw.from_native(rel1), nw.from_native(rel2)
+
+    # Vertical
+    res_v = nw.concat([frame1, frame1], how="vertical")
+
+    assert res_v.to_native().types[0] == "UUID"
+    res_v_pa = res_v.collect().to_native()
+    assert res_v_pa["id"].to_pylist() == [str(v) for v in (id1, id2, id1, id2)]
+    assert res_v_pa["a"].to_pylist() == [1, 2, 1, 2]
+
+    # Vertical relaxed
+    res_vr = nw.concat([frame1, frame2], how="vertical_relaxed")
+
+    assert res_vr.to_native().types[0] == "UUID"
+    res_vr_pa = res_vr.collect().to_native()
+    assert res_vr_pa["id"].to_pylist() == [str(v) for v in (id1, id2, id3, id4)]
+    assert [float(v) for v in res_vr_pa["a"].to_pylist()] == [1.0, 2.0, 3.14, 4.2]
+
+
+def test_concat_vertical_relaxed_ibis_uuid() -> None:
+    """Test that concat vertical_relaxed preserves UUID type for Ibis."""
+    ibis = pytest.importorskip("ibis")
+
+    id1, id2, id3, id4 = [make_uuid() for _ in range(4)]
+
+    t1 = ibis.memtable(
+        {"id": [str(id1), str(id2)], "a": [1, 2]}, schema={"id": "uuid", "a": "int"}
+    )
+    t2 = ibis.memtable(
+        {"id": [str(id3), str(id4)], "a": [3.14, 4.2]},
+        schema={"id": "uuid", "a": "float"},
+    )
+    frame1, frame2 = nw.from_native(t1), nw.from_native(t2)
+
+    # Vertical
+    res_v = nw.concat([frame1, frame1], how="vertical")
+
+    assert res_v.to_native().schema()["id"] == ibis.dtype("uuid")
+    res_v_pa = res_v.collect().to_native()
+    assert res_v_pa["id"].to_pylist() == [str(v) for v in (id1, id2, id1, id2)]
+    assert res_v_pa["a"].to_pylist() == [1, 2, 1, 2]
+
+    # Vertical relaxed
+    res_vr = nw.concat([frame1, frame2], how="vertical_relaxed")
+
+    assert res_vr.to_native().schema()["id"] == ibis.dtype("uuid")
+    res_vr_pa = res_vr.collect().to_native()
+    assert res_vr_pa["id"].to_pylist() == [str(v) for v in (id1, id2, id3, id4)]
+    assert [float(v) for v in res_vr_pa["a"].to_pylist()] == [1.0, 2.0, 3.14, 4.2]
