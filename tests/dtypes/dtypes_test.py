@@ -594,6 +594,46 @@ def test_datetime_w_tz_pyspark() -> None:  # pragma: no cover
     assert result["a"] == nw.List(nw.Datetime("us", "UTC"))
 
 
+@pytest.mark.slow
+def test_duration_pyspark() -> None:  # pragma: no cover
+    """Test conversion of PySpark interval types to/from narwhals Duration."""
+    pytest.importorskip("pyspark")
+    from pyspark.sql import types as T  # noqa: N812
+
+    session = pyspark_session()
+
+    # Test DayTimeIntervalType -> Duration
+    schema_day_time = T.StructType([T.StructField("a", T.DayTimeIntervalType())])
+    df_day_time = session.createDataFrame(
+        [(timedelta(days=1, hours=2, minutes=3, seconds=4),)], schema=schema_day_time
+    )
+    result = nw.from_native(df_day_time).collect_schema()
+    assert result["a"] == nw.Duration("us")
+
+    # Test YearMonthIntervalType -> Duration
+    schema_year_month = T.StructType([T.StructField("a", T.YearMonthIntervalType())])
+    df_year_month = session.createDataFrame([(12,)], schema=schema_year_month)
+    result = nw.from_native(df_year_month).collect_schema()
+    assert result["a"] == nw.Duration("us")
+
+    # Test CalendarIntervalType -> Duration
+    # CalendarIntervalType cannot be used directly in createDataFrame,
+    # so we test it via SQL expression
+    df_calendar = session.sql("SELECT INTERVAL '1' DAY + INTERVAL '2' HOUR AS a")
+    result = nw.from_native(df_calendar).collect_schema()
+    # CalendarIntervalType or DayTimeIntervalType depending on Spark version
+    assert result["a"] == nw.Duration("us")
+
+    # Test Duration -> DayTimeIntervalType (cast)
+    df = nw.from_native(
+        session.createDataFrame(
+            [(1,)], schema=T.StructType([T.StructField("a", T.LongType())])
+        )
+    )
+    result = df.select(nw.col("a").cast(nw.Duration)).collect_schema()
+    assert result["a"] == nw.Duration("us")
+
+
 def test_dtype_base_type_non_nested(non_nested_type: type[NonNestedDType]) -> None:
     assert non_nested_type.base_type() is non_nested_type().base_type()
 

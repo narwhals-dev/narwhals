@@ -117,6 +117,15 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
         )
     if isinstance(dtype, native.BinaryType):
         return dtypes.Binary()
+
+    # TODO(FBruzzesi): Open issue upstream for SQLFrame
+    interval_dtypes = (
+        getattr(native, "DayTimeIntervalType", None),
+        getattr(native, "YearMonthIntervalType", None),
+        getattr(native, "CalendarIntervalType", None),
+    )
+    if isinstance(dtype, interval_dtypes):  # type: ignore[arg-type]
+        return dtypes.Duration("us")
     return dtypes.Unknown()  # pragma: no cover
 
 
@@ -143,6 +152,7 @@ NW_TO_SPARK_DTYPES: Mapping[type[DType], IntoSparkDType] = {
     dtypes.Int16: attrgetter("ShortType"),
     dtypes.Int32: attrgetter("IntegerType"),
     dtypes.Int64: attrgetter("LongType"),
+    dtypes.Duration: attrgetter("DayTimeIntervalType"),
 }
 UNSUPPORTED_DTYPES = (
     dtypes.UInt64,

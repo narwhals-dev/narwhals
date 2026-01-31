@@ -59,7 +59,7 @@ SCHEMA: Mapping[str, type[NonNestedDType]] = {
     "p": nw.Int64,
 }
 
-SPARK_LIKE_INCOMPATIBLE_COLUMNS = {"e", "f", "g", "h", "o", "p"}
+SPARK_LIKE_INCOMPATIBLE_COLUMNS = {"e", "f", "g", "h", "o"}
 DUCKDB_INCOMPATIBLE_COLUMNS = {"o"}
 IBIS_INCOMPATIBLE_COLUMNS = {"o"}
 MODIN_XFAIL_COLUMNS = {"o", "k"}
