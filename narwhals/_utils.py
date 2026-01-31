@@ -129,6 +129,7 @@ if TYPE_CHECKING:
         FileSource,
         IntoSeriesT,
         MultiIndexSelector,
+        NestedLiteral,
         SingleIndexSelector,
         SizedMultiBoolSelector,
         SizedMultiIndexSelector,
@@ -1376,6 +1377,10 @@ def is_sequence_of(obj: Any, tp: type[_T]) -> TypeIs[Sequence[_T]]:
         and (first := next(iter(obj), None))
         and isinstance(first, tp)
     )
+
+
+def is_nested_literal(obj: Any) -> TypeIs[NestedLiteral]:
+    return isinstance(obj, (list, tuple, dict))
 
 
 def validate_strict_and_pass_though(

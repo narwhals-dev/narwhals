@@ -673,6 +673,40 @@ def make_group_by_kwargs(*, drop_null_keys: bool) -> dict[str, bool]:
     return {"sort": False, "as_index": True, "dropna": drop_null_keys, "observed": True}
 
 
+def broadcast_series_to_index(
+    native: pd.Series[Any],
+    index: Any,
+    *,
+    is_nested: bool,
+    series_class: type[pd.Series[Any]],
+) -> pd.Series[Any]:
+    """Broadcast a scalar value from a (one element) Series to match a target index.
+
+    For nested (arrow-backed) types, we rely on
+    [`pandas.array`](https://pandas.pydata.org/docs/reference/api/pandas.array.html).
+
+    Arguments:
+        native: The native pandas-like Series containing the scalar value to broadcast.
+        index: The target index to broadcast to.
+        is_nested: Whether the Series has a nested (arrow-backed) dtype.
+        series_class: Series class to use for constructing the result.
+
+    Returns:
+        A new Series with the scalar value broadcast to match the target index.
+    """
+    value = native.iloc[0]
+    if is_nested:
+        from narwhals._arrow.utils import repeat
+
+        # NOTE: Ignore typing because `pandas-stubs` are wrong
+        # TODO(FBruzzesi): Should we pass the `copy=False` flag?
+        pa_array = pd.array(repeat(value, len(index)), dtype=native.dtype)  # type: ignore[arg-type]
+
+        return series_class(pa_array, index=index, name=native.name)
+
+    return series_class(value, index=index, dtype=native.dtype, name=native.name)
+
+
 _DTYPE_BACKEND_PRIORITY: dict[DTypeBackend, Literal[0, 1, 2]] = {
     "pyarrow": 2,
     "numpy_nullable": 1,
