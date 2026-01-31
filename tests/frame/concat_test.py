@@ -11,7 +11,13 @@ import narwhals as nw
 from narwhals._utils import Implementation
 from narwhals.exceptions import InvalidOperationError, NarwhalsError
 from narwhals.schema import Schema
-from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
+from tests.utils import (
+    POLARS_VERSION,
+    PYARROW_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -262,6 +268,7 @@ def test_concat_diagonal_relaxed(
     assert_equal_data(result.collect(), expected_data)
 
 
+@pytest.mark.skipif(PYARROW_VERSION < (19, 0, 0))
 def test_pyarrow_concat_vertical_uuid() -> None:
     # Test that concat vertical and vertical_relaxed preserves unsupported types like UUID
     pa = pytest.importorskip("pyarrow")
