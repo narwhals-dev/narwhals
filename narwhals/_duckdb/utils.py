@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import duckdb
 from duckdb import Expression
@@ -19,12 +19,18 @@ if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
     from duckdb import DuckDBPyRelation
+    from typing_extensions import TypeAlias
 
     from narwhals._compliant.typing import CompliantLazyFrameAny
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.expr import DuckDBExpr
     from narwhals.dtypes import DType
     from narwhals.typing import IntoDType, TimeUnit
+
+Incomplete131: TypeAlias = Any
+"""Review if an progress is made towards [#131].
+
+[#131]: https://github.com/duckdb/duckdb-python/issues/131"""
 
 BACKEND_VERSION = Implementation.DUCKDB._backend_version()
 """Static backend version for `duckdb`."""
@@ -156,40 +162,43 @@ def native_to_narwhals_dtype(
         )
 
     if duckdb_dtype_id == "struct":
-        children = duckdb_dtype.children
+        children: list[tuple[Incomplete131, Incomplete131]] = duckdb_dtype.children
         return dtypes.Struct(
             [
                 dtypes.Field(
                     name=child[0],
-                    dtype=native_to_narwhals_dtype(child[1], version, deferred_time_zone),  # type: ignore[arg-type]
+                    dtype=native_to_narwhals_dtype(child[1], version, deferred_time_zone),
                 )
                 for child in children
             ]
         )
 
     if duckdb_dtype_id == "array":
+        child: Incomplete131
+        size: Incomplete131
         child, size = duckdb_dtype.children
-        shape: list[int] = [size[1]]  # type: ignore[list-item]
+        shape = [size[1]]
 
-        while child[1].id == "array":  # type: ignore[attr-defined]
-            child, size = child[1].children  # type: ignore[attr-defined]
-            shape.insert(0, size[1])  # type: ignore[arg-type]
+        while child[1].id == "array":
+            child, size = child[1].children
+            shape.insert(0, size[1])
 
-        inner = native_to_narwhals_dtype(child[1], version, deferred_time_zone)  # type: ignore[arg-type]
+        inner = native_to_narwhals_dtype(child[1], version, deferred_time_zone)
         return dtypes.Array(inner=inner, shape=tuple(shape))
 
     if duckdb_dtype_id == "enum":
         if version is Version.V1:
             return dtypes.Enum()  # type: ignore[call-arg]
-        categories = duckdb_dtype.children[0][1]
-        return dtypes.Enum(categories=categories)  # type: ignore[arg-type]
+        categories: Incomplete131 = duckdb_dtype.children[0][1]
+        return dtypes.Enum(categories)
 
     if duckdb_dtype_id == "timestamp with time zone":
         return dtypes.Datetime(time_zone=deferred_time_zone.time_zone)
 
     if duckdb_dtype_id == "decimal":
-        (_, precision), (_, scale) = duckdb_dtype.children
-        return dtypes.Decimal(precision=precision, scale=scale)  # type: ignore[arg-type]
+        precision: Incomplete131 = duckdb_dtype.children[0][1]
+        scale: Incomplete131 = duckdb_dtype.children[1][1]
+        return dtypes.Decimal(precision, scale)
 
     return _non_nested_native_to_narwhals_dtype(duckdb_dtype_id, version)
 
