@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import cache
 from pathlib import Path
 from typing import TYPE_CHECKING, get_args
 
@@ -11,12 +12,17 @@ if TYPE_CHECKING:
 REPO_ROOT = Path(__file__).parent.parent
 TPCH_DIR = REPO_ROOT / "tpch"
 DATA_DIR = TPCH_DIR / "data"
-METADATA_PATH = DATA_DIR / "metadata.csv"
-"""For reflection in tests.
 
-E.g. if we *know* the query is not valid for a given `scale_factor`,
-then we can determine if a failure is expected.
-"""
+
+@cache
+def _scale_factor_dir(scale_factor: float) -> Path:
+    """Get the data directory for a specific scale factor."""
+    sf_dir = DATA_DIR / f"sf{scale_factor}"
+    sf_dir.mkdir(parents=True, exist_ok=True)
+    return sf_dir
+
+
+SCALE_FACTOR_DEFAULT = 0.1
 DATABASE_TABLE_NAMES = (
     "lineitem",
     "customer",

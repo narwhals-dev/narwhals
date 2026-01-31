@@ -4,27 +4,25 @@ from contextlib import suppress
 from importlib.util import find_spec
 from typing import TYPE_CHECKING
 
-import polars as pl
 import pytest
 
 from tpch.classes import Backend, Query
-from tpch.constants import DATA_DIR, METADATA_PATH
+from tpch.constants import SCALE_FACTOR_DEFAULT
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
-    from pathlib import Path
 
     from tpch.typing_ import QueryID
 
-
-LINEITEM_PATH = DATA_DIR / "lineitem.parquet"
-REGION_PATH = DATA_DIR / "region.parquet"
-NATION_PATH = DATA_DIR / "nation.parquet"
-SUPPLIER_PATH = DATA_DIR / "supplier.parquet"
-PART_PATH = DATA_DIR / "part.parquet"
-PARTSUPP_PATH = DATA_DIR / "partsupp.parquet"
-ORDERS_PATH = DATA_DIR / "orders.parquet"
-CUSTOMER_PATH = DATA_DIR / "customer.parquet"
+# Table names used to construct paths dynamically
+TBL_LINEITEM = "lineitem"
+TBL_REGION = "region"
+TBL_NATION = "nation"
+TBL_SUPPLIER = "supplier"
+TBL_PART = "part"
+TBL_PARTSUPP = "partsupp"
+TBL_ORDERS = "orders"
+TBL_CUSTOMER = "customer"
 
 SCALE_FACTORS_BLESSED = frozenset(
     (1.0, 10.0, 30.0, 100.0, 300.0, 1_000.0, 3_000.0, 10_000.0, 30_000.0, 100_000.0)
@@ -64,6 +62,26 @@ SCALE_FACTORS_QUITE_SAFE = frozenset(
 """
 
 
+def is_xdist_worker(obj: pytest.FixtureRequest | pytest.Config, /) -> bool:
+    # Adapted from https://github.com/pytest-dev/pytest-xdist/blob/8b60b1ef5d48974a1cb69bc1a9843564bdc06498/src/xdist/plugin.py#L337-L349
+    return hasattr(obj if isinstance(obj, pytest.Config) else obj.config, "workerinput")
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    """Generate TPC-H data if it doesn't exist for the requested scale factor.
+
+    [`configure`] runs after `addoption`, ensuring data is available before test collection.
+
+    [`configure`]: https://docs.pytest.org/en/stable/reference/reference.html#pytest.hookspec.pytest_configure
+    """
+    # Only run before the session starts, instead of 1 + (`--numprocesses`)
+    if is_xdist_worker(config):
+        return
+    from tpch.generate_data import TPCHGen
+
+    TPCHGen.from_pytest(config).run()
+
+
 def pytest_addoption(parser: pytest.Parser) -> None:
     from tests.conftest import DEFAULT_CONSTRUCTORS
 
@@ -73,6 +91,13 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         default=DEFAULT_CONSTRUCTORS,
         type=str,
         help="<sink for defaults in VSC getting injected>",
+    )
+    parser.addoption(
+        "--scale-factor",
+        action="store",
+        default=str(SCALE_FACTOR_DEFAULT),
+        type=float,
+        help="TPC-H scale factor to use for tests (default: %(default)s)",
     )
 
 
@@ -105,58 +130,59 @@ def backend(request: pytest.FixtureRequest) -> Backend:
     return result
 
 
-def q(query_id: QueryID, *paths: Path) -> Query:
-    return Query(query_id, paths)
+def q(query_id: QueryID, *table_names: str) -> Query:
+    """Create a Query with table names (paths resolved at runtime based on scale_factor)."""
+    return Query(query_id, table_names)
 
 
 def iter_queries() -> Iterator[Query]:
     safe = SCALE_FACTORS_BLESSED | SCALE_FACTORS_QUITE_SAFE
     yield from (
-        q("q1", LINEITEM_PATH),
-        q("q2", REGION_PATH, NATION_PATH, SUPPLIER_PATH, PART_PATH, PARTSUPP_PATH),
-        q("q3", CUSTOMER_PATH, LINEITEM_PATH, ORDERS_PATH),
-        q("q4", LINEITEM_PATH, ORDERS_PATH),
+        q("q1", TBL_LINEITEM),
+        q("q2", TBL_REGION, TBL_NATION, TBL_SUPPLIER, TBL_PART, TBL_PARTSUPP),
+        q("q3", TBL_CUSTOMER, TBL_LINEITEM, TBL_ORDERS),
+        q("q4", TBL_LINEITEM, TBL_ORDERS),
         q(
             "q5",
-            REGION_PATH,
-            NATION_PATH,
-            CUSTOMER_PATH,
-            LINEITEM_PATH,
-            ORDERS_PATH,
-            SUPPLIER_PATH,
+            TBL_REGION,
+            TBL_NATION,
+            TBL_CUSTOMER,
+            TBL_LINEITEM,
+            TBL_ORDERS,
+            TBL_SUPPLIER,
         ),
-        q("q6", LINEITEM_PATH),
-        q("q7", NATION_PATH, CUSTOMER_PATH, LINEITEM_PATH, ORDERS_PATH, SUPPLIER_PATH),
+        q("q6", TBL_LINEITEM),
+        q("q7", TBL_NATION, TBL_CUSTOMER, TBL_LINEITEM, TBL_ORDERS, TBL_SUPPLIER),
         q(
             "q8",
-            PART_PATH,
-            SUPPLIER_PATH,
-            LINEITEM_PATH,
-            ORDERS_PATH,
-            CUSTOMER_PATH,
-            NATION_PATH,
-            REGION_PATH,
+            TBL_PART,
+            TBL_SUPPLIER,
+            TBL_LINEITEM,
+            TBL_ORDERS,
+            TBL_CUSTOMER,
+            TBL_NATION,
+            TBL_REGION,
         ),
         q(
             "q9",
-            PART_PATH,
-            PARTSUPP_PATH,
-            NATION_PATH,
-            LINEITEM_PATH,
-            ORDERS_PATH,
-            SUPPLIER_PATH,
+            TBL_PART,
+            TBL_PARTSUPP,
+            TBL_NATION,
+            TBL_LINEITEM,
+            TBL_ORDERS,
+            TBL_SUPPLIER,
         ),
-        q("q10", CUSTOMER_PATH, NATION_PATH, LINEITEM_PATH, ORDERS_PATH),
-        q("q11", NATION_PATH, PARTSUPP_PATH, SUPPLIER_PATH).with_skip(
+        q("q10", TBL_CUSTOMER, TBL_NATION, TBL_LINEITEM, TBL_ORDERS),
+        q("q11", TBL_NATION, TBL_PARTSUPP, TBL_SUPPLIER).with_skip(
             lambda _, scale_factor: scale_factor not in safe,
             reason="https://github.com/duckdb/duckdb/issues/17965",
         ),
-        q("q12", LINEITEM_PATH, ORDERS_PATH),
-        q("q13", CUSTOMER_PATH, ORDERS_PATH),
-        q("q14", LINEITEM_PATH, PART_PATH),
-        q("q15", LINEITEM_PATH, SUPPLIER_PATH),
-        q("q16", PART_PATH, PARTSUPP_PATH, SUPPLIER_PATH),
-        q("q17", LINEITEM_PATH, PART_PATH)
+        q("q12", TBL_LINEITEM, TBL_ORDERS),
+        q("q13", TBL_CUSTOMER, TBL_ORDERS),
+        q("q14", TBL_LINEITEM, TBL_PART),
+        q("q15", TBL_LINEITEM, TBL_SUPPLIER),
+        q("q16", TBL_PART, TBL_PARTSUPP, TBL_SUPPLIER),
+        q("q17", TBL_LINEITEM, TBL_PART)
         .with_xfail(
             lambda _, scale_factor: (scale_factor < 0.014),
             reason="Generated dataset is too small, leading to 0 rows after the first two filters in `query1`.",
@@ -165,23 +191,23 @@ def iter_queries() -> Iterator[Query]:
             lambda _, scale_factor: scale_factor not in safe,
             reason="Non-deterministic fails for `duckdb`, `sqlframe`. All other always fail, except `pyarrow` which always passes 🤯.",
         ),
-        q("q18", CUSTOMER_PATH, LINEITEM_PATH, ORDERS_PATH),
-        q("q19", LINEITEM_PATH, PART_PATH),
-        q("q20", PART_PATH, PARTSUPP_PATH, NATION_PATH, LINEITEM_PATH, SUPPLIER_PATH),
-        q("q21", LINEITEM_PATH, NATION_PATH, ORDERS_PATH, SUPPLIER_PATH).with_skip(
+        q("q18", TBL_CUSTOMER, TBL_LINEITEM, TBL_ORDERS),
+        q("q19", TBL_LINEITEM, TBL_PART),
+        q("q20", TBL_PART, TBL_PARTSUPP, TBL_NATION, TBL_LINEITEM, TBL_SUPPLIER),
+        q("q21", TBL_LINEITEM, TBL_NATION, TBL_ORDERS, TBL_SUPPLIER).with_skip(
             lambda _, scale_factor: scale_factor not in safe, reason="Off-by-1 error"
         ),
-        q("q22", CUSTOMER_PATH, ORDERS_PATH),
+        q("q22", TBL_CUSTOMER, TBL_ORDERS),
     )
 
 
-@pytest.fixture(params=iter_queries(), ids=repr)
-def query(request: pytest.FixtureRequest) -> Query:
-    result: Query = request.param
-    return result
-
-
 @pytest.fixture(scope="session")
-def scale_factor() -> float:
-    df = pl.read_csv(METADATA_PATH, try_parse_dates=True)
-    return float(df.get_column("scale_factor").item())
+def scale_factor(request: pytest.FixtureRequest) -> float:
+    """Get the scale factor from pytest options."""
+    return float(request.config.getoption("--scale-factor"))
+
+
+@pytest.fixture(params=iter_queries(), ids=repr)
+def query(request: pytest.FixtureRequest, scale_factor: float) -> Query:
+    result: Query = request.param
+    return result.with_scale_factor(scale_factor)

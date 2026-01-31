@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 
 
 def test_execute_query(
-    query: Query, backend: Backend, scale_factor: float, request: pytest.FixtureRequest
+    query: Query, backend: Backend, request: pytest.FixtureRequest
 ) -> None:
     """Helper function to run a TPCH query test."""
-    query.execute(backend, scale_factor, request)
+    query.execute(backend, request)
