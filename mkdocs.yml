@@ -71,6 +71,7 @@ nav:
     - api-reference/dtypes.md
     - api-reference/exceptions.md
     - api-reference/selectors.md
+    - api-reference/sql.md
     - api-reference/testing.md
     - api-reference/typing.md
     - api-reference/utils.md

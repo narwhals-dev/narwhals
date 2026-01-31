@@ -8,6 +8,8 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, cast
 
+import pytest
+
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
 from narwhals._utils import Implementation, parse_version, zip_strict
@@ -19,7 +21,6 @@ if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
     import pandas as pd
-    import pytest
     from pyspark.sql import SparkSession
     from sqlframe.duckdb import DuckDBSession
     from typing_extensions import TypeAlias
@@ -280,3 +281,15 @@ def dtype_ids(obj: DType | type[DType] | None) -> str:  # noqa: PLR0911
             return repr(obj)
         return obj.__class__.__name__
     return repr(obj)
+
+ 
+def is_pyspark_connect(constructor: Constructor) -> bool:
+    is_spark_connect = bool(os.environ.get("SPARK_CONNECT", None))
+    return is_spark_connect and ("pyspark" in str(constructor))
+
+
+def xfail_if_pyspark_connect(  # pragma: no cover
+    constructor: Constructor, request: pytest.FixtureRequest, reason: str = ""
+) -> None:
+    if is_pyspark_connect(constructor):
+        request.applymarker(pytest.mark.xfail(reason=reason))

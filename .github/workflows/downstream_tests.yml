@@ -90,6 +90,8 @@ jobs:
           . .venv/bin/activate
           # Temporary pin until it's addressed upstream.
           uv pip install "pandas<3"
+          # Temporary pin to get CI green
+          uv pip install "sqlglot<28.7.0"
           uv pip install -e ".[dev]"
           which python
       - name: install-narwhals-dev
@@ -241,6 +243,8 @@ jobs:
         run: |
           cd tea-tasting
           uv sync --group test
+          # Temporary pin to get CI green
+          uv pip install "sqlglot<28.7.0"
       - name: install-narwhals-dev
         run: |
           cd tea-tasting
@@ -462,6 +466,8 @@ jobs:
           uv venv -p ${{ matrix.python-version }}
           . .venv/bin/activate
           uv pip install . --group dev
+          # Temporary pin to get CI green
+          uv pip install "sqlglot<28.7.0"
           uv pip install pytest pytest-cov pytest-snapshot pandas polars "ibis-framework[duckdb,mysql,postgres,sqlite]>=9.5.0" chatlas shiny
       - name: install-narwhals-dev
         run: |
