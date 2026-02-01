@@ -4,7 +4,7 @@ from functools import cache
 from pathlib import Path
 from typing import TYPE_CHECKING, get_args
 
-from tpch.typing_ import Artifact, QueryID
+from tpch.typing_ import Artifact, QueryID, ScaleFactor
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -12,17 +12,19 @@ if TYPE_CHECKING:
 REPO_ROOT = Path(__file__).parent.parent
 TPCH_DIR = REPO_ROOT / "tpch"
 DATA_DIR = TPCH_DIR / "data"
+DB_PATH = DATA_DIR / "narwhals.duckdb"
 
 
 @cache
-def _scale_factor_dir(scale_factor: float) -> Path:
+def _scale_factor_dir(scale_factor: ScaleFactor) -> Path:
     """Get the data directory for a specific scale factor."""
     sf_dir = DATA_DIR / f"sf{scale_factor}"
     sf_dir.mkdir(parents=True, exist_ok=True)
     return sf_dir
 
 
-SCALE_FACTOR_DEFAULT = 0.1
+SCALE_FACTORS: tuple[ScaleFactor, ...] = get_args(ScaleFactor)
+SCALE_FACTOR_DEFAULT: ScaleFactor = "0.1"
 DATABASE_TABLE_NAMES = (
     "lineitem",
     "customer",

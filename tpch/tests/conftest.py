@@ -7,12 +7,12 @@ from typing import TYPE_CHECKING
 import pytest
 
 from tpch.classes import Backend, Query
-from tpch.constants import SCALE_FACTOR_DEFAULT
+from tpch.constants import SCALE_FACTOR_DEFAULT, SCALE_FACTORS
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from tpch.typing_ import QueryID
+    from tpch.typing_ import QueryID, ScaleFactor
 
 # Table names used to construct paths dynamically
 TBL_LINEITEM = "lineitem"
@@ -23,43 +23,6 @@ TBL_PART = "part"
 TBL_PARTSUPP = "partsupp"
 TBL_ORDERS = "orders"
 TBL_CUSTOMER = "customer"
-
-SCALE_FACTORS_BLESSED = frozenset(
-    (1.0, 10.0, 30.0, 100.0, 300.0, 1_000.0, 3_000.0, 10_000.0, 30_000.0, 100_000.0)
-)
-"""`scale_factor` values that are listed on [TPC-H v3.0.1 (Page 79)].
-
-Using any other value *can* lead to incorrect results.
-
-[TPC-H_v3.0.1 (Page 79)]: https://www.tpc.org/TPC_Documents_Current_Versions/pdf/TPC-H_v3.0.1.pdf
-"""
-
-SCALE_FACTORS_QUITE_SAFE = frozenset(
-    (
-        0.014,
-        0.02,
-        0.029,
-        0.04,
-        0.052,
-        0.06,
-        0.072,
-        0.081,
-        0.091,
-        0.1,
-        0.13,
-        0.23,
-        0.25,
-        0.275,
-        0.29,
-        0.3,
-        0.43,
-        0.51,
-    )
-)
-"""scale_factor` values that are **lower** than [TPC-H v3.0.1 (Page 79)], but still work fine.
-
-[TPC-H_v3.0.1 (Page 79)]: https://www.tpc.org/TPC_Documents_Current_Versions/pdf/TPC-H_v3.0.1.pdf
-"""
 
 
 def is_xdist_worker(obj: pytest.FixtureRequest | pytest.Config, /) -> bool:
@@ -95,8 +58,8 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     parser.addoption(
         "--scale-factor",
         action="store",
-        default=str(SCALE_FACTOR_DEFAULT),
-        type=float,
+        default=SCALE_FACTOR_DEFAULT,
+        choices=SCALE_FACTORS,
         help="TPC-H scale factor to use for tests (default: %(default)s)",
     )
 
@@ -136,7 +99,6 @@ def q(query_id: QueryID, *table_names: str) -> Query:
 
 
 def iter_queries() -> Iterator[Query]:
-    safe = SCALE_FACTORS_BLESSED | SCALE_FACTORS_QUITE_SAFE
     yield from (
         q("q1", TBL_LINEITEM),
         q("q2", TBL_REGION, TBL_NATION, TBL_SUPPLIER, TBL_PART, TBL_PARTSUPP),
@@ -173,41 +135,28 @@ def iter_queries() -> Iterator[Query]:
             TBL_SUPPLIER,
         ),
         q("q10", TBL_CUSTOMER, TBL_NATION, TBL_LINEITEM, TBL_ORDERS),
-        q("q11", TBL_NATION, TBL_PARTSUPP, TBL_SUPPLIER).with_skip(
-            lambda _, scale_factor: scale_factor not in safe,
-            reason="https://github.com/duckdb/duckdb/issues/17965",
-        ),
+        q("q11", TBL_NATION, TBL_PARTSUPP, TBL_SUPPLIER),
         q("q12", TBL_LINEITEM, TBL_ORDERS),
         q("q13", TBL_CUSTOMER, TBL_ORDERS),
         q("q14", TBL_LINEITEM, TBL_PART),
         q("q15", TBL_LINEITEM, TBL_SUPPLIER),
         q("q16", TBL_PART, TBL_PARTSUPP, TBL_SUPPLIER),
-        q("q17", TBL_LINEITEM, TBL_PART)
-        .with_xfail(
-            lambda _, scale_factor: (scale_factor < 0.014),
-            reason="Generated dataset is too small, leading to 0 rows after the first two filters in `query1`.",
-        )
-        .with_skip(
-            lambda _, scale_factor: scale_factor not in safe,
-            reason="Non-deterministic fails for `duckdb`, `sqlframe`. All other always fail, except `pyarrow` which always passes 🤯.",
-        ),
+        q("q17", TBL_LINEITEM, TBL_PART),
         q("q18", TBL_CUSTOMER, TBL_LINEITEM, TBL_ORDERS),
         q("q19", TBL_LINEITEM, TBL_PART),
         q("q20", TBL_PART, TBL_PARTSUPP, TBL_NATION, TBL_LINEITEM, TBL_SUPPLIER),
-        q("q21", TBL_LINEITEM, TBL_NATION, TBL_ORDERS, TBL_SUPPLIER).with_skip(
-            lambda _, scale_factor: scale_factor not in safe, reason="Off-by-1 error"
-        ),
+        q("q21", TBL_LINEITEM, TBL_NATION, TBL_ORDERS, TBL_SUPPLIER),
         q("q22", TBL_CUSTOMER, TBL_ORDERS),
     )
 
 
 @pytest.fixture(scope="session")
-def scale_factor(request: pytest.FixtureRequest) -> float:
+def scale_factor(request: pytest.FixtureRequest) -> ScaleFactor:
     """Get the scale factor from pytest options."""
-    return float(request.config.getoption("--scale-factor"))
+    return request.config.getoption("--scale-factor")
 
 
 @pytest.fixture(params=iter_queries(), ids=repr)
-def query(request: pytest.FixtureRequest, scale_factor: float) -> Query:
+def query(request: pytest.FixtureRequest, scale_factor: ScaleFactor) -> Query:
     result: Query = request.param
     return result.with_scale_factor(scale_factor)
