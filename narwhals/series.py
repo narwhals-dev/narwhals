@@ -2909,6 +2909,24 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._compliant_series.any_value(ignore_nulls=ignore_nulls)
 
+    def implode(self) -> Self:
+        """Aggregate series values into a list.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>>
+            >>> s_native = pd.Series([1, 2, 3], name="a")
+            >>> nw.from_native(s_native, series_only=True).implode()
+            ┌──────────────────────────────────────────┐
+            |             Narwhals Series              |
+            |------------------------------------------|
+            |0    [1 2 3]                              |
+            |Name: a, dtype: list<item: int64>[pyarrow]|
+            └──────────────────────────────────────────┘
+        """
+        return self._with_compliant(self._compliant_series.implode())
+
     @property
     def str(self) -> SeriesStringNamespace[Self]:
         return SeriesStringNamespace(self)

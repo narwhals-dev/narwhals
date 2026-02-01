@@ -2485,6 +2485,34 @@ class Expr:
             ExprNode(ExprKind.AGGREGATION, "any_value", ignore_nulls=ignore_nulls)
         )
 
+    def implode(self) -> Self:
+        """Aggregate values into a list.
+
+        Warning:
+            For lazy backends the order of the elements in the resulting list is
+            non-deterministic.
+
+        Examples:
+            >>> import duckdb
+            >>> import narwhals as nw
+            >>> df_native = duckdb.sql(
+            ...     "SELECT * FROM VALUES ('orca', 1), ('narwhal', 2) df(a, b)"
+            ... )
+            >>> df = nw.from_native(df_native)
+            >>> df.select(nw.all().implode())
+            ┌─────────────────────────────┐
+            |     Narwhals LazyFrame      |
+            |-----------------------------|
+            |┌─────────────────┬─────────┐|
+            |│        a        │    b    │|
+            |│    varchar[]    │ int32[] │|
+            |├─────────────────┼─────────┤|
+            |│ [orca, narwhal] │ [1, 2]  │|
+            |└─────────────────┴─────────┘|
+            └─────────────────────────────┘
+        """
+        return self._append_node(ExprNode(ExprKind.AGGREGATION, "implode"))
+
     @property
     def str(self) -> ExprStringNamespace[Self]:
         return ExprStringNamespace(self)

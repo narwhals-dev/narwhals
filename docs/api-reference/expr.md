@@ -28,6 +28,7 @@
         - filter
         - first
         - floor
+        - implode
         - is_between
         - is_close
         - is_duplicated

@@ -41,6 +41,7 @@
         - head
         - hist
         - implementation
+        - implode
         - is_between
         - is_close
         - is_duplicated
