@@ -235,7 +235,9 @@ class PandasLikeNamespace(
 
     def min_horizontal(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            series = list(chain.from_iterable(expr(df) for expr in exprs))
+            series = self._series._align_full_broadcast(
+                *chain.from_iterable(expr(df) for expr in exprs)
+            )
             return [
                 PandasLikeSeries(
                     self.concat(
@@ -255,7 +257,9 @@ class PandasLikeNamespace(
 
     def max_horizontal(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            series = list(chain.from_iterable(expr(df) for expr in exprs))
+            series = self._series._align_full_broadcast(
+                *chain.from_iterable(expr(df) for expr in exprs)
+            )
             return [
                 PandasLikeSeries(
                     self.concat(

@@ -1217,7 +1217,9 @@ def _expr_with_horizontal_op(name: str, *exprs: IntoExpr, **kwargs: Any) -> Expr
     )
 
 
-def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
+def sum_horizontal(
+    *exprs: PythonLiteral | IntoExpr | Iterable[PythonLiteral | IntoExpr],
+) -> Expr:
     """Sum all values horizontally across columns.
 
     Warning:
@@ -1251,7 +1253,9 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     return _expr_with_horizontal_op("sum_horizontal", *flatten(exprs))
 
 
-def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
+def min_horizontal(
+    *exprs: PythonLiteral | IntoExpr | Iterable[PythonLiteral | IntoExpr],
+) -> Expr:
     """Get the minimum value horizontally across columns.
 
     Notes:
@@ -1283,7 +1287,9 @@ def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     return _expr_with_horizontal_op("min_horizontal", *flatten(exprs))
 
 
-def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
+def max_horizontal(
+    *exprs: PythonLiteral | IntoExpr | Iterable[PythonLiteral | IntoExpr],
+) -> Expr:
     """Get the maximum value horizontally across columns.
 
     Notes:
@@ -1381,7 +1387,10 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
     return When(*predicates)
 
 
-def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool) -> Expr:
+def all_horizontal(
+    *exprs: PythonLiteral | IntoExpr | Iterable[PythonLiteral | IntoExpr],
+    ignore_nulls: bool,
+) -> Expr:
     r"""Compute the bitwise AND horizontally across columns.
 
     Arguments:
@@ -1510,7 +1519,10 @@ def lit(value: PythonLiteral, dtype: IntoDType | None = None) -> Expr:
     return Expr(ExprNode(ExprKind.LITERAL, "lit", value=value, dtype=dtype))
 
 
-def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool) -> Expr:
+def any_horizontal(
+    *exprs: PythonLiteral | IntoExpr | Iterable[PythonLiteral | IntoExpr],
+    ignore_nulls: bool,
+) -> Expr:
     r"""Compute the bitwise OR horizontally across columns.
 
     Arguments:
@@ -1558,7 +1570,9 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool) ->
     )
 
 
-def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
+def mean_horizontal(
+    *exprs: PythonLiteral | IntoExpr | Iterable[PythonLiteral | IntoExpr],
+) -> Expr:
     """Compute the mean of all values horizontally across columns.
 
     Arguments:
