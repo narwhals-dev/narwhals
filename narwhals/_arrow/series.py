@@ -365,6 +365,11 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             pc.sum(self.native, min_count=0), _return_py_scalar
         )
 
+    def implode(self) -> Self:
+        native = self.native
+        result = pa.chunked_array([[native.combine_chunks()]], type=pa.list_(native.type))
+        return self._with_native(result)
+
     def drop_nulls(self) -> Self:
         return self._with_native(self.native.drop_null())
 

@@ -98,6 +98,7 @@ INHERITED_METHODS = frozenset(
         "floor",
         "gather_every",
         "head",
+        "implode",
         "is_between",
         "is_close",
         "is_duplicated",

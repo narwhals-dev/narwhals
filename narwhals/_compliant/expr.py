@@ -522,6 +522,9 @@ class EagerExpr(
     def sum(self) -> Self:
         return self._reuse_series("sum", returns_scalar=True)
 
+    def implode(self) -> Self:
+        return self._reuse_series("implode", returns_scalar=False)
+
     def count(self) -> Self:
         return self._reuse_series("count", returns_scalar=True)
 

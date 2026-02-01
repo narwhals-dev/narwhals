@@ -361,6 +361,9 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
             version=self._version,
         )
 
+    def implode(self) -> Self:
+        return self._with_callable(lambda expr: expr.collect(include_null=True))
+
     @property
     def str(self) -> IbisExprStringNamespace:
         return IbisExprStringNamespace(self)

@@ -326,6 +326,9 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
             version=self._version,
         )
 
+    def implode(self) -> Self:
+        return self._with_callable(lambda expr: F("list", expr))
+
     @property
     def str(self) -> DuckDBExprStringNamespace:
         return DuckDBExprStringNamespace(self)
