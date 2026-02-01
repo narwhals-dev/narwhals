@@ -410,6 +410,17 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
             implementation=self._implementation,
         )
 
+    def implode(self) -> Self:
+        def func(expr: Column) -> Column:
+            # !NOTE: `collect_list` excludes nulls in PySpark and there is no flag to
+            # tell otherwise.
+            # Workaround: wrap each value in an array, collect, then flatten.
+            # This preserves nulls: [1, null, 2] -> [[1], [], [2]] -> [1, null, 2]
+            F = self._F
+            return F.flatten(F.collect_list(F.array(expr)))
+
+        return self._with_callable(func)
+
     @property
     def str(self) -> SparkLikeExprStringNamespace:
         return SparkLikeExprStringNamespace(self)
