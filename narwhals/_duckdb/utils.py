@@ -1,24 +1,25 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import duckdb
 from duckdb import Expression
 
-try:
-    import duckdb.sqltypes as duckdb_dtypes
-except ModuleNotFoundError:
-    # DuckDB pre 1.3
-    import duckdb.typing as duckdb_dtypes
-
-from narwhals._utils import Version, extend_bool, isinstance_or_issubclass, zip_strict
+from narwhals._utils import (
+    Implementation,
+    Version,
+    extend_bool,
+    isinstance_or_issubclass,
+    zip_strict,
+)
 from narwhals.exceptions import ColumnNotFoundError
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
     from duckdb import DuckDBPyRelation
+    from typing_extensions import TypeAlias
 
     from narwhals._compliant.typing import CompliantLazyFrameAny
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
@@ -26,6 +27,18 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.typing import IntoDType, TimeUnit
 
+Incomplete: TypeAlias = Any
+"""Review if an progress is made towards [#131].
+
+[#131]: https://github.com/duckdb/duckdb-python/issues/131"""
+
+BACKEND_VERSION = Implementation.DUCKDB._backend_version()
+"""Static backend version for `duckdb`."""
+
+if TYPE_CHECKING or BACKEND_VERSION >= (1, 4):
+    from duckdb import sqltypes as duckdb_dtypes
+else:  # pragma: no cover
+    from duckdb import typing as duckdb_dtypes
 
 UNITS_DICT = {
     "y": "year",
@@ -149,7 +162,7 @@ def native_to_narwhals_dtype(
         )
 
     if duckdb_dtype_id == "struct":
-        children = duckdb_dtype.children
+        children: list[tuple[Incomplete, Incomplete]] = duckdb_dtype.children
         return dtypes.Struct(
             [
                 dtypes.Field(
@@ -161,8 +174,10 @@ def native_to_narwhals_dtype(
         )
 
     if duckdb_dtype_id == "array":
+        child: Incomplete
+        size: Incomplete
         child, size = duckdb_dtype.children
-        shape: list[int] = [size[1]]
+        shape = [size[1]]
 
         while child[1].id == "array":
             child, size = child[1].children
@@ -174,15 +189,17 @@ def native_to_narwhals_dtype(
     if duckdb_dtype_id == "enum":
         if version is Version.V1:
             return dtypes.Enum()  # type: ignore[call-arg]
-        categories = duckdb_dtype.children[0][1]
-        return dtypes.Enum(categories=categories)
+        categories: Incomplete = duckdb_dtype.children[0][1]
+        return dtypes.Enum(categories)
 
     if duckdb_dtype_id == "timestamp with time zone":
         return dtypes.Datetime(time_zone=deferred_time_zone.time_zone)
 
     if duckdb_dtype_id == "decimal":
+        precision: Incomplete
+        scale: Incomplete
         (_, precision), (_, scale) = duckdb_dtype.children
-        return dtypes.Decimal(precision=precision, scale=scale)
+        return dtypes.Decimal(precision, scale)
 
     return _non_nested_native_to_narwhals_dtype(duckdb_dtype_id, version)
 

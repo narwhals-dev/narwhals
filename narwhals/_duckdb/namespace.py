@@ -35,7 +35,7 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.window import WindowInputs
     from narwhals._utils import Version
-    from narwhals.typing import ConcatMethod, IntoDType, NonNestedLiteral
+    from narwhals.typing import ConcatMethod, IntoDType, PythonLiteral
 
 VARCHAR = duckdb_dtypes.VARCHAR
 
@@ -130,8 +130,12 @@ class DuckDBNamespace(
 
         return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
-    def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> DuckDBExpr:
+    def lit(self, value: PythonLiteral, dtype: IntoDType | None) -> DuckDBExpr:
         def func(df: DuckDBLazyFrame) -> list[Expression]:
+            if isinstance(value, dict) and not value:
+                msg = "Cannot create an empty struct type for DuckDB backend"
+                raise NotImplementedError(msg)
+
             tz = DeferredTimeZone(df.native)
             if dtype is not None:
                 target = narwhals_to_native_dtype(dtype, self._version, tz)
