@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from importlib import import_module
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 import narwhals as nw
 from narwhals.exceptions import NarwhalsError
@@ -20,23 +20,16 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     import polars as pl
-    import pytest
     from typing_extensions import Self
 
+    from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
     from narwhals.typing import FileSource
-    from tpch.typing_ import (
-        KnownImpl,
-        Predicate,
-        QueryID,
-        QueryModule,
-        TPCHBackend,
-        XFailRaises,
-    )
+    from tpch.typing_ import QueryID, QueryModule, ScaleFactor, TPCHBackend
 
 
 class Backend:
     name: TPCHBackend
-    implementation: KnownImpl
+    implementation: Literal[_EagerAllowedImpl, _LazyAllowedImpl]
     kwds: dict[str, Any]
 
     def __init__(self, name: TPCHBackend, /, **kwds: Any) -> None:
@@ -57,15 +50,11 @@ class Backend:
 class Query:
     id: QueryID
     table_names: tuple[str, ...]
-    scale_factor: float
-    _into_xfails: tuple[tuple[Predicate, str, XFailRaises], ...]
-    _into_skips: tuple[tuple[Predicate, str], ...]
+    scale_factor: ScaleFactor
 
     def __init__(self, query_id: QueryID, table_names: tuple[str, ...]) -> None:
         self.id = query_id
         self.table_names = table_names
-        self._into_xfails = ()
-        self._into_skips = ()
         self.scale_factor = SCALE_FACTOR_DEFAULT
 
     def __repr__(self) -> str:
@@ -85,10 +74,9 @@ class Query:
         sf_dir = _scale_factor_dir(self.scale_factor)
         return pl.read_parquet(sf_dir / f"result_{self}.parquet")
 
-    def execute(self, backend: Backend, request: pytest.FixtureRequest) -> None:
+    def execute(self, backend: Backend) -> None:
         from polars.testing import assert_frame_equal
 
-        self._apply_skips(backend)
         data = self.inputs(backend)
         query = self._import_module().query
 
@@ -97,8 +85,6 @@ class Query:
         except NarwhalsError as exc:
             msg = f"Query [{self}-{backend}] ({self.scale_factor=}) failed with the following error in Narwhals:\n{exc}"
             raise RuntimeError(msg) from exc
-
-        self._apply_xfails(backend, request)
         expected = self.expected()
         try:
             assert_frame_equal(expected, result, check_dtypes=False)
@@ -106,34 +92,9 @@ class Query:
             msg = f"Query [{self}-{backend}] ({self.scale_factor=}) resulted in wrong answer:\n{exc}"
             raise AssertionError(msg) from exc
 
-    def with_scale_factor(self, scale_factor: float, /) -> Query:
+    def with_scale_factor(self, scale_factor: ScaleFactor, /) -> Query:
         self.scale_factor = scale_factor
         return self
-
-    def with_skip(self, predicate: Predicate, reason: str) -> Query:
-        self._into_skips = (*self._into_skips, (predicate, reason))
-        return self
-
-    def with_xfail(
-        self, predicate: Predicate, reason: str, *, raises: XFailRaises = AssertionError
-    ) -> Query:
-        self._into_xfails = (*self._into_xfails, (predicate, reason, raises))
-        return self
-
-    def _apply_skips(self, backend: Backend) -> None:
-        import pytest
-
-        for predicate, reason in self._into_skips:
-            if predicate(backend, self.scale_factor):
-                pytest.skip(reason)
-
-    def _apply_xfails(self, backend: Backend, request: pytest.FixtureRequest) -> None:
-        import pytest
-
-        for predicate, reason, raises in self._into_xfails:
-            condition = predicate(backend, self.scale_factor)
-            mark = pytest.mark.xfail(condition, reason=reason, raises=raises)
-            request.applymarker(mark)
 
     def _import_module(self) -> QueryModule:
         result: Any = import_module(f"{QUERIES_PACKAGE}.{self}")
