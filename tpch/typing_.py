@@ -61,6 +61,4 @@ Artifact: TypeAlias = Literal["database", "answers"]
 
 
 class QueryModule(Protocol):
-    def query(
-        self, *args: nw.LazyFrame[Any], **kwds: nw.LazyFrame[Any]
-    ) -> nw.LazyFrame[Any]: ...
+    def query(self, *args: nw.LazyFrame[Any]) -> nw.LazyFrame[Any]: ...
