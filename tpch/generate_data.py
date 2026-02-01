@@ -61,7 +61,7 @@ TABLE_SCALE_FACTOR = """
 
 # NOTE: Store queries here, add parameter names if needed
 SQL_DBGEN = "CALL dbgen(sf=$sf)"
-SQL_DBGEN_STEPPED = "CALL dbgen(sf=$sf, children=$children, step=$step)"
+SQL_DBGEN_BATCHED = "CALL dbgen(sf=$sf, children=$children, step=$step)"
 SQL_TPCH_ANSWER = "PRAGMA tpch({0})"
 SQL_FROM = "FROM {0}"
 SQL_SHOW_DB = """
@@ -179,7 +179,7 @@ class TPCHGen:
         logger.info("Generating in %s batches", batches)
         for batch in range(batches):
             self.sql(
-                SQL_DBGEN_STEPPED, sf=self.scale_factor, children=batches, step=batch
+                SQL_DBGEN_BATCHED, sf=self.scale_factor, children=batches, step=batch
             )
             logger.info("Generated (%s/%s)", batch + 1, batches)
         return self
