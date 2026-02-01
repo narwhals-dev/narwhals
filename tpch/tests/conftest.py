@@ -14,16 +14,6 @@ if TYPE_CHECKING:
 
     from tpch.typing_ import QueryID, ScaleFactor
 
-# Table names used to construct paths dynamically
-TBL_LINEITEM = "lineitem"
-TBL_REGION = "region"
-TBL_NATION = "nation"
-TBL_SUPPLIER = "supplier"
-TBL_PART = "part"
-TBL_PARTSUPP = "partsupp"
-TBL_ORDERS = "orders"
-TBL_CUSTOMER = "customer"
-
 
 def is_xdist_worker(obj: pytest.FixtureRequest | pytest.Config, /) -> bool:
     # Adapted from https://github.com/pytest-dev/pytest-xdist/blob/8b60b1ef5d48974a1cb69bc1a9843564bdc06498/src/xdist/plugin.py#L337-L349
