@@ -45,20 +45,6 @@ TABLE_SCALE_FACTOR = """\
 └───────┴────────────┴─────────────┘
 """
 
-
-# NOTE: Store queries here, add parameter names if needed
-SQL_DBGEN = "CALL dbgen(sf=$sf)"
-SQL_DBGEN_BATCHED = "CALL dbgen(sf=$sf, children=$children, step=$step)"
-SQL_TPCH_ANSWER = "PRAGMA tpch({0})"
-SQL_FROM = "FROM {0}"
-SQL_SHOW_DB = """
-SELECT
-    "table": name,
-    "schema": MAP(column_names, column_types)
-FROM
-    (SHOW ALL TABLES)
-"""
-
 FIX_ANSWERS: Mapping[QueryID, Callable[[pl.LazyFrame], pl.LazyFrame]] = {
     "q18": lambda df: df.rename({"sum(l_quantity)": "sum"}).cast({"sum": int}),
     "q22": lambda df: df.cast({"cntrycode": int}),
@@ -160,10 +146,9 @@ class TPCHGen:
     def _generate_database_batched(self, batches: int) -> TPCHGen:
         logger.info("Whelp, this may take a while...")
         logger.info("Generating in %s batches", batches)
+        query = "CALL dbgen(sf=$sf, children=$children, step=$step)"
         for batch in range(batches):
-            self.sql(
-                SQL_DBGEN_BATCHED, sf=self.scale_factor, children=batches, step=batch
-            )
+            self.sql(query, sf=self.scale_factor, children=batches, step=batch)
             logger.info("Generated (%s/%s)", batch + 1, batches)
         return self
 
@@ -173,11 +158,11 @@ class TPCHGen:
         if sf in {"10.0", "30.0"}:
             self._generate_database_batched(12 if sf == "10.0" else 4)
         else:
-            self.sql(SQL_DBGEN, sf=sf)
+            self.sql("CALL dbgen(sf=$sf)", sf=sf)
         logger.info("Finished generating data.")
         if logger.isEnabledFor(logging.DEBUG):
-            msg = str(self.sql(SQL_SHOW_DB))[:-1]
-            logger.debug("DuckDB schemas (database):\n%s", msg)
+            query = """SELECT "table": name, "schema": MAP(column_names, column_types) FROM (SHOW ALL TABLES)"""
+            logger.debug("DuckDB schemas (database):\n%s", str(self.sql(query))[:-1])
         return self
 
     def write_database(self) -> TPCHGen:
@@ -185,7 +170,7 @@ class TPCHGen:
         with TableLogger.database() as tbl_logger:
             for t in constants.DATABASE_TABLE_NAMES:
                 path = self.scale_factor_dir / f"{t}.parquet"
-                to_polars(self.sql(SQL_FROM.format(t))).sink_parquet(path)
+                to_polars(self.sql(f"FROM {t}")).sink_parquet(path)
                 tbl_logger.log_row(path)
         return self.show_schemas("database")
 
@@ -193,8 +178,7 @@ class TPCHGen:
         logger.info("Executing TPC-H queries for answers")
         with TableLogger.answers() as tbl_logger:
             for query_id in constants.QUERY_IDS:
-                query = SQL_TPCH_ANSWER.format(query_id.removeprefix("q"))
-                lf = to_polars(self.sql(query))
+                lf = to_polars(self.sql(f"PRAGMA tpch({query_id.removeprefix('q')})"))
                 if fix := FIX_ANSWERS.get(query_id):
                     lf = fix(lf)
                 path = self.scale_factor_dir / f"result_{query_id}.parquet"

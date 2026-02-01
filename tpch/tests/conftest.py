@@ -7,12 +7,12 @@ from typing import TYPE_CHECKING
 import pytest
 
 from tpch import constants
-from tpch.classes import Backend, Query
+from tpch.classes import Backend, Query, Query as q  # noqa: N813
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from tpch.typing_ import DBTableName, QueryID, ScaleFactor
+    from tpch.typing_ import ScaleFactor
 
 
 def is_xdist_worker(obj: pytest.FixtureRequest | pytest.Config, /) -> bool:
@@ -76,13 +76,7 @@ def iter_backends() -> Iterator[Backend]:
 
 @pytest.fixture(params=iter_backends(), ids=repr)
 def backend(request: pytest.FixtureRequest) -> Backend:
-    result: Backend = request.param
-    return result
-
-
-def q(query_id: QueryID, *table_names: DBTableName) -> Query:
-    """Create a Query with table names (paths resolved at runtime based on scale_factor)."""
-    return Query(query_id, table_names)
+    return request.param
 
 
 def iter_queries() -> Iterator[Query]:
@@ -114,7 +108,6 @@ def iter_queries() -> Iterator[Query]:
 
 @pytest.fixture(scope="session")
 def scale_factor(request: pytest.FixtureRequest) -> ScaleFactor:
-    """Get the scale factor from pytest options."""
     return request.config.getoption("--scale-factor")
 
 

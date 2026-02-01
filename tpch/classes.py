@@ -45,7 +45,7 @@ class Query:
     table_names: tuple[DBTableName, ...]
     scale_factor: ScaleFactor
 
-    def __init__(self, query_id: QueryID, table_names: tuple[DBTableName, ...]) -> None:
+    def __init__(self, query_id: QueryID, *table_names: DBTableName) -> None:
         self.id = query_id
         self.table_names = table_names
         self.scale_factor = constants.SCALE_FACTOR_DEFAULT
@@ -78,9 +78,8 @@ class Query:
         except NarwhalsError as exc:
             msg = f"Query [{self}-{backend}] ({self.scale_factor=}) failed with the following error in Narwhals:\n{exc}"
             raise RuntimeError(msg) from exc
-        expected = self.expected()
         try:
-            assert_frame_equal(expected, result, check_dtypes=False)
+            assert_frame_equal(self.expected(), result, check_dtypes=False)
         except AssertionError as exc:
             msg = f"Query [{self}-{backend}] ({self.scale_factor=}) resulted in wrong answer:\n{exc}"
             raise AssertionError(msg) from exc

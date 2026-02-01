@@ -9,9 +9,7 @@ from tpch.typing_ import Artifact, DBTableName, QueryID, ScaleFactor
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-REPO_ROOT = Path(__file__).parent.parent
-TPCH_DIR = REPO_ROOT / "tpch"
-DATA_DIR = TPCH_DIR / "data"
+DATA_DIR = Path(__file__).parent / "data"
 DB_PATH = DATA_DIR / "narwhals.duckdb"
 
 
