@@ -174,7 +174,7 @@ def test_horizontal_expressions_empty(constructor: Constructor) -> None:
 def test_allh_with_scalars(
     constructor: Constructor, exprs: tuple[PythonLiteral | nw.Expr, ...], name: str
 ) -> None:
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 0, 0):
+    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 19):
         name = "a"
 
     data = {"a": [False, True]}
