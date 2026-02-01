@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, Callable, Literal, cast, overload
 
 import pyarrow as pa
@@ -37,7 +38,7 @@ from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import InvalidOperationError, ShapeError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Sequence
+    from collections.abc import Iterable, Iterator
     from types import ModuleType
 
     import pandas as pd
@@ -451,23 +452,31 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             raise NotImplementedError(msg)
         return self._with_native(self.native.slice(start, stop - start))
 
-    def scatter(self, indices: int | Sequence[int], values: Any) -> Self:
+    def scatter(
+        self,
+        indices: Self | int | Sequence[int],
+        values: Self | PythonLiteral | Sequence[PythonLiteral] | None,
+    ) -> Self:
         import numpy as np  # ignore-banned-import
 
-        values_native: ArrayAny
-        if isinstance(indices, int):
-            indices_native = pa.array([indices])
-            values_native = pa.array([values])
-        else:
-            # TODO(unassigned): we may also want to let `indices` be a Series.
-            # https://github.com/narwhals-dev/narwhals/issues/2155
-            indices_native = pa.array(indices)
-            if isinstance(values, self.__class__):
-                values_native = values.native.combine_chunks()
-            else:
-                # NOTE: Requires fixes in https://github.com/zen-xu/pyarrow-stubs/pull/209
-                pa_array: Incomplete = pa.array
-                values_native = pa_array(values)
+        indices_native = (
+            pa.array([indices])
+            if isinstance(indices, int)
+            else indices.native.combine_chunks()
+            if isinstance(indices, self.__class__)
+            else pa.array(indices)
+        )
+
+        # NOTE: Requires fixes in https://github.com/zen-xu/pyarrow-stubs/pull/209
+        pa_array: Incomplete = pa.array
+
+        values_native = (
+            values.native.combine_chunks()
+            if isinstance(values, self.__class__)
+            else pa_array(values)
+            if isinstance(values, Sequence)
+            else pa_array([values])
+        )
 
         sorting_indices = pc.sort_indices(indices_native)
         indices_native = indices_native.take(sorting_indices)

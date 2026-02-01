@@ -394,12 +394,16 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._compliant_series.native
 
-    def scatter(self, indices: int | Sequence[int], values: Any) -> Self:
-        """Set value(s) at given position(s).
+    def scatter(
+        self,
+        indices: Self | Sequence[int] | int,
+        values: Self | Sequence[PythonLiteral] | PythonLiteral | None,
+    ) -> Self:
+        """Set value(s) at the given index location(s).
 
         Arguments:
-            indices: Position(s) to set items at.
-            values: Values to set.
+            indices: Integer(s) representing the index location(s).
+            values: Replacement values.
 
         Note:
             This method always returns a new Series, without modifying the original one.
@@ -436,8 +440,10 @@ class Series(Generic[IntoSeriesT]):
             a: [[999,888,3]]
             b: [[4,5,6]]
         """
+        compliant_indices = self._extract_native(indices)
+        compliant_values = self._extract_native(values)
         return self._with_compliant(
-            self._compliant_series.scatter(indices, self._extract_native(values))
+            self._compliant_series.scatter(compliant_indices, compliant_values)
         )
 
     @property

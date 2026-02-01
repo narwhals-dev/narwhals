@@ -80,3 +80,13 @@ def test_scatter_2862(constructor_eager: ConstructorEager) -> None:
     result = ser.scatter([2, 0], [999, 888])
     expected = {"a": [888, 2, 999]}
     assert_equal_data({"a": result}, expected)
+
+
+def test_scatter_series_indices(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(
+        constructor_eager({"a": [1, 2, 3], "idx": [0, 2, 1]}), eager_only=True
+    )
+    indices = df["idx"]
+    result = df["a"].scatter(indices, [999, 888, 777])
+    expected = {"a": [999, 777, 888]}
+    assert_equal_data({"a": result}, expected)
