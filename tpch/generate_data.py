@@ -115,12 +115,6 @@ class TPCHGen:
         return _scale_factor_dir(self.scale_factor)
 
     @property
-    def _batches(self) -> int:
-        if self.scale_factor in {"10.0", "30.0"}:
-            return 12 if self.scale_factor == "10.0" else 4
-        return 0
-
-    @property
     def _database(self) -> Path | Literal[":memory:"]:
         return DB_PATH if self.scale_factor == "30.0" else ":memory:"
 
@@ -181,11 +175,12 @@ class TPCHGen:
         return self
 
     def generate_database(self) -> TPCHGen:
-        logger.info("Generating data for scale_factor=%s", self.scale_factor)
-        if batches := self._batches:
-            self._generate_database_batched(batches)
+        sf = self.scale_factor
+        logger.info("Generating data for scale_factor=%s", sf)
+        if sf in {"10.0", "30.0"}:
+            self._generate_database_batched(12 if sf == "10.0" else 4)
         else:
-            self.sql(SQL_DBGEN, sf=self.scale_factor)
+            self.sql(SQL_DBGEN, sf=sf)
         logger.info("Finished generating data.")
         if logger.isEnabledFor(logging.DEBUG):
             msg = str(self.sql(SQL_SHOW_DB))[:-1]
