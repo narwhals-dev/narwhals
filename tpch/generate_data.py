@@ -175,7 +175,7 @@ class TPCHGen:
         return self
 
     def _generate_database_batched(self, batches: int) -> TPCHGen:
-        logger.info("Welp, this may take a while...")
+        logger.info("Whelp, this may take a while...")
         logger.info("Generating in %s batches", batches)
         for batch in range(batches):
             self.sql(
