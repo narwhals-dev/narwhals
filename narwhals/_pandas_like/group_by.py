@@ -139,7 +139,7 @@ class AggExpr:
             #   `frame.groupby("group")["values"].agg(list)` will result in an exception
             #   >  ArrowNotImplementedError: Unsupported cast from list<item: int64> to int64 using function cast_int64
             #
-            #   On the other hand: `frame.groupby("group")["values"].agg(list)` is working fine
+            #   On the other hand: `frame.groupby("group")["values"].list(list)` is working fine
             _method: Literal["apply", "agg"] = (
                 "apply" if is_dtype_pyarrow(native_schema[col]) else "agg"
             )
