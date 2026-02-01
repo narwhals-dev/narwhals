@@ -143,8 +143,13 @@ class ArrowNamespace(
         agg = pc.min_element_wise if op == "min" else pc.max_element_wise
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            series = chain.from_iterable(expr(df) for expr in exprs)
-            return [reduce(lambda s1, s2: s1._with_binary(agg, s2), series)]
+            series = tuple(chain.from_iterable(expr(df) for expr in exprs))
+            native_series = agg(
+                *(s.native[0] if s._broadcast else s.native for s in series)
+            )
+            return [
+                ArrowSeries(native_series, name=series[0].name, version=self._version)
+            ]
 
         return self._expr._from_callable(
             func=func,
