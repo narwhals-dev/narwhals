@@ -130,9 +130,11 @@ class TPCHGen:
         if self.refresh:
             logger.info("Refreshing data for scale_factor=%s", self.scale_factor)
         elif self.has_data():
-            logger.info("Data already exists for scale_factor=%s", self.scale_factor)
+            print(  # noqa: T201
+                f"Reusing cached TPC-H data\n"
+                f"To regenerate this dataset, use `--scale_factor={self.scale_factor} --refresh`"
+            )
             self.show_schemas("database").show_schemas("answers")
-            logger.info("To regenerate this scale_factor, use `--refresh`")
             return
         self.connect().load_extension().generate_database().write_database().write_answers().disconnect()
         n_bytes = sum(e.stat().st_size for e in os.scandir(self.scale_factor_dir))
