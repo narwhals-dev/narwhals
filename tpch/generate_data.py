@@ -144,12 +144,11 @@ class TPCHGen:
             self.show_schemas("database").show_schemas("answers")
             logger.info("To regenerate this scale_factor, use `--refresh`")
             return
-        self.connect().load_extension().generate_database().write_database().write_answers()
+        self.connect().load_extension().generate_database().write_database().write_answers().disconnect()
         n_bytes = sum(e.stat().st_size for e in os.scandir(self.scale_factor_dir))
         total = TableLogger.format_size(n_bytes)
         logger.info("Finished with total file size: %s", total.strip())
 
-    # TODO @dangotbanned: Delete database file after completing the polars bits
     def connect(self) -> TPCHGen:
         import duckdb
 
@@ -157,6 +156,13 @@ class TPCHGen:
         name = database.as_posix() if isinstance(database, Path) else database
         logger.info("Connecting to DuckDB database: %s", name)
         self._con = duckdb.connect(database)
+        return self
+
+    def disconnect(self) -> TPCHGen:
+        self._con.close()
+        if isinstance(self._database, Path):
+            logger.info("Dropping DuckDB database: %s", self._database.as_posix())
+            self._database.unlink(missing_ok=True)
         return self
 
     def sql(self, query: LiteralString, **params: LiteralString | int) -> Rel:
