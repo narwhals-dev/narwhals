@@ -35,6 +35,10 @@ QueryID: TypeAlias = Literal[
     "q21",
     "q22",
 ]
+DBTableName: TypeAlias = Literal[
+    "lineitem", "customer", "nation", "orders", "part", "partsupp", "region", "supplier"
+]
+"""Table names used to construct paths dynamically."""
 ScaleFactor: TypeAlias = Literal[
     "0.014", "0.052", "0.1", "0.25", "0.51", "1.0", "10.0", "30.0"
 ]

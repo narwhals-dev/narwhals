@@ -12,6 +12,7 @@ from tpch.constants import (
     QUERIES_PACKAGE,
     QUERY_IDS,
     SCALE_FACTOR_DEFAULT,
+    DBTableName,
     _scale_factor_dir,
 )
 
@@ -49,10 +50,10 @@ class Backend:
 
 class Query:
     id: QueryID
-    table_names: tuple[str, ...]
+    table_names: tuple[DBTableName, ...]
     scale_factor: ScaleFactor
 
-    def __init__(self, query_id: QueryID, table_names: tuple[str, ...]) -> None:
+    def __init__(self, query_id: QueryID, table_names: tuple[DBTableName, ...]) -> None:
         self.id = query_id
         self.table_names = table_names
         self.scale_factor = SCALE_FACTOR_DEFAULT

@@ -4,7 +4,7 @@ from functools import cache
 from pathlib import Path
 from typing import TYPE_CHECKING, get_args
 
-from tpch.typing_ import Artifact, QueryID, ScaleFactor
+from tpch.typing_ import Artifact, DBTableName, QueryID, ScaleFactor
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -25,16 +25,7 @@ def _scale_factor_dir(scale_factor: ScaleFactor) -> Path:
 
 SCALE_FACTORS: tuple[ScaleFactor, ...] = get_args(ScaleFactor)
 SCALE_FACTOR_DEFAULT: ScaleFactor = "0.1"
-DATABASE_TABLE_NAMES = (
-    "lineitem",
-    "customer",
-    "nation",
-    "orders",
-    "part",
-    "partsupp",
-    "region",
-    "supplier",
-)
+DATABASE_TABLE_NAMES: tuple[DBTableName, ...] = get_args(DBTableName)
 QUERY_IDS: tuple[QueryID, ...] = get_args(QueryID)
 GLOBS: Mapping[Artifact, str] = {
     "database": r"*[!0-9].parquet",

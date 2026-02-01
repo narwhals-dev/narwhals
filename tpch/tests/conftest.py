@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from tpch.classes import Backend, Query
-from tpch.constants import SCALE_FACTOR_DEFAULT, SCALE_FACTORS
+from tpch.constants import SCALE_FACTOR_DEFAULT, SCALE_FACTORS, DBTableName
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -93,60 +93,35 @@ def backend(request: pytest.FixtureRequest) -> Backend:
     return result
 
 
-def q(query_id: QueryID, *table_names: str) -> Query:
+def q(query_id: QueryID, *table_names: DBTableName) -> Query:
     """Create a Query with table names (paths resolved at runtime based on scale_factor)."""
     return Query(query_id, table_names)
 
 
 def iter_queries() -> Iterator[Query]:
     yield from (
-        q("q1", TBL_LINEITEM),
-        q("q2", TBL_REGION, TBL_NATION, TBL_SUPPLIER, TBL_PART, TBL_PARTSUPP),
-        q("q3", TBL_CUSTOMER, TBL_LINEITEM, TBL_ORDERS),
-        q("q4", TBL_LINEITEM, TBL_ORDERS),
-        q(
-            "q5",
-            TBL_REGION,
-            TBL_NATION,
-            TBL_CUSTOMER,
-            TBL_LINEITEM,
-            TBL_ORDERS,
-            TBL_SUPPLIER,
-        ),
-        q("q6", TBL_LINEITEM),
-        q("q7", TBL_NATION, TBL_CUSTOMER, TBL_LINEITEM, TBL_ORDERS, TBL_SUPPLIER),
-        q(
-            "q8",
-            TBL_PART,
-            TBL_SUPPLIER,
-            TBL_LINEITEM,
-            TBL_ORDERS,
-            TBL_CUSTOMER,
-            TBL_NATION,
-            TBL_REGION,
-        ),
-        q(
-            "q9",
-            TBL_PART,
-            TBL_PARTSUPP,
-            TBL_NATION,
-            TBL_LINEITEM,
-            TBL_ORDERS,
-            TBL_SUPPLIER,
-        ),
-        q("q10", TBL_CUSTOMER, TBL_NATION, TBL_LINEITEM, TBL_ORDERS),
-        q("q11", TBL_NATION, TBL_PARTSUPP, TBL_SUPPLIER),
-        q("q12", TBL_LINEITEM, TBL_ORDERS),
-        q("q13", TBL_CUSTOMER, TBL_ORDERS),
-        q("q14", TBL_LINEITEM, TBL_PART),
-        q("q15", TBL_LINEITEM, TBL_SUPPLIER),
-        q("q16", TBL_PART, TBL_PARTSUPP, TBL_SUPPLIER),
-        q("q17", TBL_LINEITEM, TBL_PART),
-        q("q18", TBL_CUSTOMER, TBL_LINEITEM, TBL_ORDERS),
-        q("q19", TBL_LINEITEM, TBL_PART),
-        q("q20", TBL_PART, TBL_PARTSUPP, TBL_NATION, TBL_LINEITEM, TBL_SUPPLIER),
-        q("q21", TBL_LINEITEM, TBL_NATION, TBL_ORDERS, TBL_SUPPLIER),
-        q("q22", TBL_CUSTOMER, TBL_ORDERS),
+        q("q1", "lineitem"),
+        q("q2", "region", "nation", "supplier", "part", "partsupp"),
+        q("q3", "customer", "lineitem", "orders"),
+        q("q4", "lineitem", "orders"),
+        q("q5", "region", "nation", "customer", "lineitem", "orders", "supplier"),
+        q("q6", "lineitem"),
+        q("q7", "nation", "customer", "lineitem", "orders", "supplier"),
+        q("q8", "part", "supplier", "lineitem", "orders", "customer", "nation", "region"),
+        q("q9", "part", "partsupp", "nation", "lineitem", "orders", "supplier"),
+        q("q10", "customer", "nation", "lineitem", "orders"),
+        q("q11", "nation", "partsupp", "supplier"),
+        q("q12", "lineitem", "orders"),
+        q("q13", "customer", "orders"),
+        q("q14", "lineitem", "part"),
+        q("q15", "lineitem", "supplier"),
+        q("q16", "part", "partsupp", "supplier"),
+        q("q17", "lineitem", "part"),
+        q("q18", "customer", "lineitem", "orders"),
+        q("q19", "lineitem", "part"),
+        q("q20", "part", "partsupp", "nation", "lineitem", "supplier"),
+        q("q21", "lineitem", "nation", "orders", "supplier"),
+        q("q22", "customer", "orders"),
     )
 
 
