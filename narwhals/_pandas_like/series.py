@@ -500,6 +500,23 @@ class PandasLikeSeries(EagerSeries[Any]):
     def sum(self) -> float:
         return self.native.sum()
 
+    def implode(self) -> Self:
+        from narwhals._pandas_like.utils import narwhals_to_native_dtype
+
+        version = self._version
+        to_dtype = narwhals_to_native_dtype(
+            version.dtypes.List(self.dtype),
+            dtype_backend="pyarrow",
+            version=version,
+            implementation=self._implementation,
+        )
+        native = self.native
+        native_cls = type(native)
+
+        return self._with_native(
+            native_cls([native], name=self.name, index=[native.index[0]], dtype=to_dtype)
+        )
+
     def count(self) -> int:
         return self.native.count()
 
