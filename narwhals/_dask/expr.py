@@ -708,6 +708,7 @@ class DaskExpr(
     first = not_implemented()
     rank = not_implemented()
     last = not_implemented()
+    implode = not_implemented()
 
     # namespaces
     list: not_implemented = not_implemented()  # type: ignore[assignment]

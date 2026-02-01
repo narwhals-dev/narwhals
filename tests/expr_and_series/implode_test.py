@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 def test_implode_series(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
-    if any(backend in str(constructor_eager) for backend in ("cudf",)):
+    if any(backend in str(constructor_eager) for backend in ("cudf", "dask")):
         request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor_eager):
         pytest.importorskip("pyarrow")
@@ -27,7 +27,7 @@ def test_implode_series(
 
 
 def test_implode_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if any(backend in str(constructor) for backend in ("cudf",)):
+    if any(backend in str(constructor) for backend in ("cudf", "dask")):
         request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor):
         pytest.importorskip("pyarrow")
@@ -43,7 +43,7 @@ def test_implode_expr(request: pytest.FixtureRequest, constructor: Constructor) 
 def test_implode_group_by(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
-    if any(backend in str(constructor) for backend in ("cudf",)):
+    if any(backend in str(constructor) for backend in ("cudf", "dask")):
         request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor):
         pytest.importorskip("pyarrow")
