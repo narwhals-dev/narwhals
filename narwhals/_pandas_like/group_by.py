@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from functools import lru_cache
+from functools import lru_cache, partial
 from itertools import chain
 from operator import methodcaller
 from typing import TYPE_CHECKING, Any, ClassVar, Literal
@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal
 from narwhals._compliant import EagerGroupBy
 from narwhals._exceptions import issue_warning
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
-from narwhals._pandas_like.utils import make_group_by_kwargs
+from narwhals._pandas_like.utils import is_dtype_pyarrow, make_group_by_kwargs
 from narwhals._utils import zip_strict
 from narwhals.dependencies import is_pandas_like_dataframe
 
@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias, Unpack
 
     from narwhals._compliant.typing import NarwhalsAggregation, ScalarKwargs
+    from narwhals._native import NativeSeries
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.expr import PandasLikeExpr
 
@@ -34,6 +35,7 @@ NativeAggregation: TypeAlias = Literal[
     "count",
     "idxmax",
     "idxmin",
+    "list",  # This is a placeholder to make it look like a simple aggregation
     "max",
     "mean",
     "median",
@@ -108,6 +110,42 @@ class AggExpr:
         )
         return self
 
+    def _implode_agg(self, group_by: PandasLikeGroupBy) -> pd.DataFrame:
+        """Handle implode aggregation for group_by."""
+        from narwhals._pandas_like.utils import narwhals_to_native_dtype
+
+        grouped = group_by._grouped
+        compliant = group_by.compliant
+        ns = compliant.__narwhals_namespace__()
+        version = compliant._version
+
+        to_native_dtype = partial(
+            narwhals_to_native_dtype,
+            dtype_backend="pyarrow",
+            version=version,
+            implementation=compliant._implementation,
+        )
+
+        List = version.dtypes.List  # noqa: N806
+        nw_schema = compliant.schema
+        native_schema = compliant.native.dtypes
+
+        results: list[NativeSeries] = []
+        for col in self.output_names:
+            out_dtype = to_native_dtype(List(nw_schema[col]))
+
+            # !NOTE: You might ask "WTF is happening here?" and I would agree with you!
+            # If pandas is backed by pyarrow, then:
+            #   `frame.groupby("group")["values"].agg(list)` will result in an exception
+            #   >  ArrowNotImplementedError: Unsupported cast from list<item: int64> to int64 using function cast_int64
+            #
+            #   On the other hand: `frame.groupby("group")["values"].agg(list)` is working fine
+            _method: Literal["apply", "agg"] = (
+                "apply" if is_dtype_pyarrow(native_schema[col]) else "agg"
+            )
+            results.append(getattr(grouped[col], _method)(list).astype(out_dtype))
+        return ns._concat_horizontal(results)  # type: ignore[arg-type]
+
     def _getitem_aggs(self, group_by: PandasLikeGroupBy) -> pd.DataFrame | pd.Series[Any]:
         """Evaluate the wrapped expression as a group_by operation."""
         grouped = group_by._grouped
@@ -154,6 +192,8 @@ class AggExpr:
         elif self.is_last() or self.is_first() or self.is_any_value():
             result = self.native_agg()(grouped[[*group_by._keys, *names]])
             result.set_index(group_by._keys, inplace=True)  # noqa: PD002
+        elif self.is_implode():
+            result = self._implode_agg(group_by)
         else:
             select = names[0] if len(names) == 1 else list(names)
             result = self.native_agg()(grouped[select])
@@ -177,6 +217,9 @@ class AggExpr:
 
     def is_any_value(self) -> bool:
         return self.leaf_name == "any_value"
+
+    def is_implode(self) -> bool:
+        return self.leaf_name == "implode"
 
     def is_top_level_function(self) -> bool:
         # e.g. `nw.len()`.
@@ -225,6 +268,7 @@ class PandasLikeGroupBy(
         "first": "nth",
         "last": "nth",
         "any_value": "nth",
+        "implode": "list",  # This is a placeholder to make it look like a simple aggregation
     }
     _original_columns: tuple[str, ...]
     """Column names *prior* to any aliasing in `ParseKeysGroupBy`."""
