@@ -144,12 +144,8 @@ class ArrowNamespace(
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             series = tuple(chain.from_iterable(expr(df) for expr in exprs))
-            native_series = agg(
-                *(s.native[0] if s._broadcast else s.native for s in series)
-            )
-            return [
-                ArrowSeries(native_series, name=series[0].name, version=self._version)
-            ]
+            result = agg(*(s.native[0] if s._broadcast else s.native for s in series))
+            return [ArrowSeries(result, name=series[0].name, version=self._version)]
 
         return self._expr._from_callable(
             func=func,
