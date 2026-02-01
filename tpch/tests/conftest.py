@@ -40,14 +40,11 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 
     parser.addoption(
         "--constructors",
-        action="store",
         default=DEFAULT_CONSTRUCTORS,
-        type=str,
         help="<sink for defaults in VSC getting injected>",
     )
     parser.addoption(
         "--scale-factor",
-        action="store",
         default=SCALE_FACTOR_DEFAULT,
         choices=SCALE_FACTORS,
         help="TPC-H scale factor to use for tests (default: %(default)s)",
