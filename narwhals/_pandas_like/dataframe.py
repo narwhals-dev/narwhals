@@ -10,6 +10,7 @@ from narwhals._compliant import EagerDataFrame
 from narwhals._pandas_like.series import PANDAS_TO_NUMPY_DTYPE_MISSING, PandasLikeSeries
 from narwhals._pandas_like.utils import (
     align_and_extract_native,
+    broadcast_series_to_index,
     get_dtype_backend,
     import_array_module,
     iter_dtype_backends,
@@ -307,8 +308,12 @@ class PandasLikeDataFrame(
     def _extract_comparand(self, other: PandasLikeSeries) -> pd.Series[Any]:
         index = self.native.index
         if other._broadcast:
-            s = other.native
-            return type(s)(s.iloc[0], index=index, dtype=s.dtype, name=s.name)
+            native = other.native
+            is_nested = other.dtype.is_nested()
+            return broadcast_series_to_index(
+                native, index, is_nested=is_nested, series_class=type(native)
+            )
+
         if (len_other := len(other)) != (len_idx := len(index)):
             msg = f"Expected object of length {len_idx}, got: {len_other}."
             raise ShapeError(msg)

@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 import ibis
 import ibis.expr.types as ir
 
+from narwhals._compliant.namespace import AlignDiagonal
 from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
@@ -26,7 +27,10 @@ if TYPE_CHECKING:
     from narwhals.typing import ConcatMethod, IntoDType, PythonLiteral
 
 
-class IbisNamespace(SQLNamespace[IbisLazyFrame, IbisExpr, "ir.Table", "ir.Value"]):
+class IbisNamespace(
+    SQLNamespace[IbisLazyFrame, IbisExpr, "ir.Table", "ir.Value"],
+    AlignDiagonal[IbisLazyFrame, IbisExpr],
+):
     _implementation: Implementation = Implementation.IBIS
 
     def __init__(self, *, version: Version) -> None:
@@ -63,17 +67,18 @@ class IbisNamespace(SQLNamespace[IbisLazyFrame, IbisExpr, "ir.Table", "ir.Value"
     def concat(
         self, items: Iterable[IbisLazyFrame], *, how: ConcatMethod
     ) -> IbisLazyFrame:
+        frames: Sequence[IbisLazyFrame] = tuple(items)
         if how == "diagonal":
-            msg = "diagonal concat not supported for Ibis. Please join instead."
-            raise NotImplementedError(msg)
-
-        items = list(items)
-        native_items = [item.native for item in items]
-        schema = items[0].schema
-        if not all(x.schema == schema for x in items[1:]):
-            msg = "inputs should all have the same schema"
-            raise TypeError(msg)
-        return self._lazyframe.from_native(ibis.union(*native_items), context=self)
+            frames = self.align_diagonal(frames)
+        try:
+            result = ibis.union(*(lf.native for lf in frames))
+        except ibis.IbisError:
+            first = frames[0].schema
+            if not all(x.schema == first for x in frames[1:]):
+                msg = "inputs should all have the same schema"
+                raise TypeError(msg) from None
+            raise
+        return frames[0]._with_native(result)
 
     def concat_str(
         self, *exprs: IbisExpr, separator: str, ignore_nulls: bool
@@ -109,10 +114,15 @@ class IbisNamespace(SQLNamespace[IbisLazyFrame, IbisExpr, "ir.Table", "ir.Value"
 
         return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
-    def lit(self, value: Any, dtype: IntoDType | None) -> IbisExpr:
+    def lit(self, value: PythonLiteral, dtype: IntoDType | None) -> IbisExpr:
         def func(_df: IbisLazyFrame) -> Sequence[ir.Value]:
             ibis_dtype = narwhals_to_native_dtype(dtype, self._version) if dtype else None
-            return [lit(value, ibis_dtype)]
+            if not isinstance(value, dict):
+                return [lit(value, ibis_dtype)]
+            if value:
+                return [ibis.struct(value, type=ibis_dtype)]
+            msg = "Cannot create an empty struct type for Ibis backend"
+            raise NotImplementedError(msg)
 
         return self._expr(
             func,
