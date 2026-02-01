@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 from contextlib import nullcontext as does_not_raise
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 import narwhals as nw
 from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
+
+if TYPE_CHECKING:
+    from narwhals.typing import PythonLiteral
 
 
 def test_allh(constructor: Constructor) -> None:
@@ -157,3 +160,21 @@ def test_horizontal_expressions_empty(constructor: Constructor) -> None:
         ValueError, match=r"At least one expression must be passed.*min_horizontal"
     ):
         df.select(nw.min_horizontal())
+
+
+@pytest.mark.parametrize(
+    ("exprs", "name"),
+    [
+        ((nw.col("a"), True), "a"),
+        ((nw.col("a"), nw.lit(True)), "a"),
+        ((True, nw.col("a")), "literal"),
+        ((nw.lit(True), nw.col("a")), "literal"),
+    ],
+)
+def test_allh_with_scalars(
+    constructor: Constructor, exprs: tuple[PythonLiteral | nw.Expr, ...], name: str
+) -> None:
+    data = {"a": [False, True]}
+    df = nw.from_native(constructor(data))
+    result = df.select(nw.all_horizontal(*exprs, ignore_nulls=True))
+    assert_equal_data(result, {name: [False, True]})

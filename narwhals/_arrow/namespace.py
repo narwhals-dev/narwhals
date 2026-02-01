@@ -126,8 +126,8 @@ class ArrowNamespace(
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             expr_results = tuple(chain.from_iterable(expr(df) for expr in exprs))
-            series = [s.fill_null(0, strategy=None, limit=None) for s in expr_results]
-            non_na = [1 - s.is_null().cast(int_64) for s in expr_results]
+            series = (s.fill_null(0, strategy=None, limit=None) for s in expr_results)
+            non_na = (1 - s.is_null().cast(int_64) for s in expr_results)
             return [reduce(operator.add, series) / reduce(operator.add, non_na)]
 
         return self._expr._from_callable(
@@ -139,13 +139,11 @@ class ArrowNamespace(
 
     def min_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            init_series, *series = tuple(chain.from_iterable(expr(df) for expr in exprs))
-            native_series = reduce(
-                pc.min_element_wise, [s.native for s in series], init_series.native
+            series = tuple(chain.from_iterable(expr(df) for expr in exprs))
+            result = reduce(
+                lambda s1, s2: s1._with_binary(pc.min_element_wise, s2), series
             )
-            return [
-                ArrowSeries(native_series, name=init_series.name, version=self._version)
-            ]
+            return [result]
 
         return self._expr._from_callable(
             func=func,
@@ -156,13 +154,11 @@ class ArrowNamespace(
 
     def max_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            init_series, *series = tuple(chain.from_iterable(expr(df) for expr in exprs))
-            native_series = reduce(
-                pc.max_element_wise, [s.native for s in series], init_series.native
+            series = tuple(chain.from_iterable(expr(df) for expr in exprs))
+            result = reduce(
+                lambda s1, s2: s1._with_binary(pc.max_element_wise, s2), series
             )
-            return [
-                ArrowSeries(native_series, name=init_series.name, version=self._version)
-            ]
+            return [result]
 
         return self._expr._from_callable(
             func=func,

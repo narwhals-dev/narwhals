@@ -172,11 +172,11 @@ class DaskNamespace(
 
     def mean_horizontal(self, *exprs: DaskExpr) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            expr_results = [s for _expr in exprs for s in _expr(df)]
-            series = align_series_full_broadcast(df, *(s.fillna(0) for s in expr_results))
-            non_na = align_series_full_broadcast(
-                df, *(1 - s.isna() for s in expr_results)
+            expr_results = align_series_full_broadcast(
+                df, *[s for _expr in exprs for s in _expr(df)]
             )
+            series = (s.fillna(0) for s in expr_results)
+            non_na = (1 - s.isna() for s in expr_results)
             num = reduce(lambda x, y: x + y, series)  # pyright: ignore[reportOperatorIssue]
             den = reduce(lambda x, y: x + y, non_na)  # pyright: ignore[reportOperatorIssue]
             return [cast("dx.Series", num / den)]  # pyright: ignore[reportOperatorIssue]
