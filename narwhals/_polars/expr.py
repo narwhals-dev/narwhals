@@ -361,6 +361,7 @@ class PolarsExpr:
     floor: Method[Self]
     gather_every: Method[Self]
     head: Method[Self]
+    implode: Method[Self]
     is_between: Method[Self]
     is_duplicated: Method[Self]
     is_first_distinct: Method[Self]
