@@ -2,42 +2,84 @@ from __future__ import annotations
 
 from contextlib import suppress
 from importlib.util import find_spec
-from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
-import polars as pl
 import pytest
 
-import narwhals as nw
+from tpch.classes import Backend, Query
+from tpch.constants import SCALE_FACTOR_DEFAULT
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping
+    from collections.abc import Iterator
 
-    from narwhals._typing import BackendName
-    from tpch.typing_ import DataLoader, QueryID, TPCHBackend
+    from tpch.typing_ import QueryID
+
+# Table names used to construct paths dynamically
+TBL_LINEITEM = "lineitem"
+TBL_REGION = "region"
+TBL_NATION = "nation"
+TBL_SUPPLIER = "supplier"
+TBL_PART = "part"
+TBL_PARTSUPP = "partsupp"
+TBL_ORDERS = "orders"
+TBL_CUSTOMER = "customer"
+
+SCALE_FACTORS_BLESSED = frozenset(
+    (1.0, 10.0, 30.0, 100.0, 300.0, 1_000.0, 3_000.0, 10_000.0, 30_000.0, 100_000.0)
+)
+"""`scale_factor` values that are listed on [TPC-H v3.0.1 (Page 79)].
+
+Using any other value *can* lead to incorrect results.
+
+[TPC-H_v3.0.1 (Page 79)]: https://www.tpc.org/TPC_Documents_Current_Versions/pdf/TPC-H_v3.0.1.pdf
+"""
+
+SCALE_FACTORS_QUITE_SAFE = frozenset(
+    (
+        0.014,
+        0.02,
+        0.029,
+        0.04,
+        0.052,
+        0.06,
+        0.072,
+        0.081,
+        0.091,
+        0.1,
+        0.13,
+        0.23,
+        0.25,
+        0.275,
+        0.29,
+        0.3,
+        0.43,
+        0.51,
+    )
+)
+"""scale_factor` values that are **lower** than [TPC-H v3.0.1 (Page 79)], but still work fine.
+
+[TPC-H_v3.0.1 (Page 79)]: https://www.tpc.org/TPC_Documents_Current_Versions/pdf/TPC-H_v3.0.1.pdf
+"""
 
 
-# Data paths relative to tpch directory
-TPCH_DIR = Path(__file__).resolve().parent.parent
-DATA_DIR = TPCH_DIR / "data"
+def is_xdist_worker(obj: pytest.FixtureRequest | pytest.Config, /) -> bool:
+    # Adapted from https://github.com/pytest-dev/pytest-xdist/blob/8b60b1ef5d48974a1cb69bc1a9843564bdc06498/src/xdist/plugin.py#L337-L349
+    return hasattr(obj if isinstance(obj, pytest.Config) else obj.config, "workerinput")
 
-LINEITEM_PATH = DATA_DIR / "lineitem.parquet"
-REGION_PATH = DATA_DIR / "region.parquet"
-NATION_PATH = DATA_DIR / "nation.parquet"
-SUPPLIER_PATH = DATA_DIR / "supplier.parquet"
-PART_PATH = DATA_DIR / "part.parquet"
-PARTSUPP_PATH = DATA_DIR / "partsupp.parquet"
-ORDERS_PATH = DATA_DIR / "orders.parquet"
-CUSTOMER_PATH = DATA_DIR / "customer.parquet"
 
-TPCH_TO_BACKEND_NAME: Mapping[TPCHBackend, BackendName] = {
-    "polars[lazy]": "polars",
-    "pyarrow": "pyarrow",
-    "pandas[pyarrow]": "pandas",
-    "dask": "dask",
-    "duckdb": "duckdb",
-    "sqlframe": "sqlframe",
-}
+def pytest_configure(config: pytest.Config) -> None:
+    """Generate TPC-H data if it doesn't exist for the requested scale factor.
+
+    [`configure`] runs after `addoption`, ensuring data is available before test collection.
+
+    [`configure`]: https://docs.pytest.org/en/stable/reference/reference.html#pytest.hookspec.pytest_configure
+    """
+    # Only run before the session starts, instead of 1 + (`--numprocesses`)
+    if is_xdist_worker(config):
+        return
+    from tpch.generate_data import TPCHGen
+
+    TPCHGen.from_pytest(config).run()
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
@@ -50,130 +92,122 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         type=str,
         help="<sink for defaults in VSC getting injected>",
     )
+    parser.addoption(
+        "--scale-factor",
+        action="store",
+        default=str(SCALE_FACTOR_DEFAULT),
+        type=float,
+        help="TPC-H scale factor to use for tests (default: %(default)s)",
+    )
 
 
-def _build_backend_kwargs_map() -> dict[TPCHBackend, dict[str, Any]]:
-    backend_map: dict[TPCHBackend, dict[str, Any]] = {"polars[lazy]": {}}
+def iter_backends() -> Iterator[Backend]:
+    yield Backend("polars[lazy]")
+    if find_spec("pyarrow"):
+        yield Backend("pyarrow")
+        if find_spec("pandas"):
+            import pandas as pd
 
-    pyarrow_installed = find_spec("pyarrow")
-
-    if pyarrow_installed:
-        backend_map["pyarrow"] = {}
-
-    if pyarrow_installed and find_spec("pandas"):
-        import pandas as pd
-
-        # These options are deprecated in pandas >= 3.0 but needed for older versions
-        with suppress(Exception):
-            pd.options.mode.copy_on_write = True
-
-        with suppress(Exception):
-            pd.options.future.infer_string = True  # pyright: ignore[reportAttributeAccessIssue, reportOptionalMemberAccess]
-
-        backend_map["pandas[pyarrow]"] = {"engine": "pyarrow", "dtype_backend": "pyarrow"}
-
-    if pyarrow_installed and find_spec("dask") and find_spec("dask.dataframe"):
-        backend_map["dask"] = {"engine": "pyarrow", "dtype_backend": "pyarrow"}
-
+            # These options are deprecated in pandas >= 3.0 but needed for older versions
+            with suppress(Exception):
+                pd.options.mode.copy_on_write = True
+            with suppress(Exception):
+                pd.options.future.infer_string = True  # pyright: ignore[reportAttributeAccessIssue, reportOptionalMemberAccess]
+            yield Backend("pandas[pyarrow]", engine="pyarrow", dtype_backend="pyarrow")
+        if find_spec("dask") and find_spec("dask.dataframe"):
+            yield Backend("dask", engine="pyarrow", dtype_backend="pyarrow")
     if find_spec("duckdb"):
-        backend_map["duckdb"] = {}
+        yield Backend("duckdb")
+        if find_spec("sqlframe"):
+            from sqlframe.duckdb import DuckDBSession
 
-    if find_spec("sqlframe"):
-        from sqlframe.duckdb import DuckDBSession
-
-        backend_map["sqlframe"] = {"session": DuckDBSession()}
-
-    return backend_map
+            yield Backend("sqlframe", session=DuckDBSession())
 
 
-BACKEND_KWARGS_MAP = _build_backend_kwargs_map()
-
-
-QUERY_DATA_PATH_MAP: dict[QueryID, tuple[Path, ...]] = {
-    "q1": (LINEITEM_PATH,),
-    "q2": (REGION_PATH, NATION_PATH, SUPPLIER_PATH, PART_PATH, PARTSUPP_PATH),
-    "q3": (CUSTOMER_PATH, LINEITEM_PATH, ORDERS_PATH),
-    "q4": (LINEITEM_PATH, ORDERS_PATH),
-    "q5": (
-        REGION_PATH,
-        NATION_PATH,
-        CUSTOMER_PATH,
-        LINEITEM_PATH,
-        ORDERS_PATH,
-        SUPPLIER_PATH,
-    ),
-    "q6": (LINEITEM_PATH,),
-    "q7": (NATION_PATH, CUSTOMER_PATH, LINEITEM_PATH, ORDERS_PATH, SUPPLIER_PATH),
-    "q8": (
-        PART_PATH,
-        SUPPLIER_PATH,
-        LINEITEM_PATH,
-        ORDERS_PATH,
-        CUSTOMER_PATH,
-        NATION_PATH,
-        REGION_PATH,
-    ),
-    "q9": (
-        PART_PATH,
-        PARTSUPP_PATH,
-        NATION_PATH,
-        LINEITEM_PATH,
-        ORDERS_PATH,
-        SUPPLIER_PATH,
-    ),
-    "q10": (CUSTOMER_PATH, NATION_PATH, LINEITEM_PATH, ORDERS_PATH),
-    "q11": (NATION_PATH, PARTSUPP_PATH, SUPPLIER_PATH),
-    "q12": (LINEITEM_PATH, ORDERS_PATH),
-    "q13": (CUSTOMER_PATH, ORDERS_PATH),
-    "q14": (LINEITEM_PATH, PART_PATH),
-    "q15": (LINEITEM_PATH, SUPPLIER_PATH),
-    "q16": (PART_PATH, PARTSUPP_PATH, SUPPLIER_PATH),
-    "q17": (LINEITEM_PATH, PART_PATH),
-    "q18": (CUSTOMER_PATH, LINEITEM_PATH, ORDERS_PATH),
-    "q19": (LINEITEM_PATH, PART_PATH),
-    "q20": (PART_PATH, PARTSUPP_PATH, NATION_PATH, LINEITEM_PATH, SUPPLIER_PATH),
-    "q21": (LINEITEM_PATH, NATION_PATH, ORDERS_PATH, SUPPLIER_PATH),
-    "q22": (CUSTOMER_PATH, ORDERS_PATH),
-}
-
-
-@pytest.fixture(params=list(QUERY_DATA_PATH_MAP.keys()))
-def query_id(request: pytest.FixtureRequest) -> QueryID:
-    result: QueryID = request.param
+@pytest.fixture(params=iter_backends(), ids=repr)
+def backend(request: pytest.FixtureRequest) -> Backend:
+    result: Backend = request.param
     return result
 
 
-@pytest.fixture(params=list(BACKEND_KWARGS_MAP.keys()))
-def backend_name(request: pytest.FixtureRequest) -> TPCHBackend:
-    result: TPCHBackend = request.param
-    return result
+def q(query_id: QueryID, *table_names: str) -> Query:
+    """Create a Query with table names (paths resolved at runtime based on scale_factor)."""
+    return Query(query_id, table_names)
 
 
-@pytest.fixture
-def data_loader(backend_name: TPCHBackend) -> DataLoader:
-    """Fixture that returns a function to load data for a given query.
-
-    The returned function takes a query_id and returns a tuple of DataFrames
-    in the order expected by that query's function signature.
-    """
-    kwargs = BACKEND_KWARGS_MAP[backend_name]
-    backend = TPCH_TO_BACKEND_NAME[backend_name]
-
-    def _load_data(query_id: QueryID) -> tuple[nw.LazyFrame[Any], ...]:
-        data_paths = QUERY_DATA_PATH_MAP[query_id]
-        return tuple(
-            nw.scan_parquet(path.as_posix(), backend=backend, **kwargs)
-            for path in data_paths
+def iter_queries() -> Iterator[Query]:
+    safe = SCALE_FACTORS_BLESSED | SCALE_FACTORS_QUITE_SAFE
+    yield from (
+        q("q1", TBL_LINEITEM),
+        q("q2", TBL_REGION, TBL_NATION, TBL_SUPPLIER, TBL_PART, TBL_PARTSUPP),
+        q("q3", TBL_CUSTOMER, TBL_LINEITEM, TBL_ORDERS),
+        q("q4", TBL_LINEITEM, TBL_ORDERS),
+        q(
+            "q5",
+            TBL_REGION,
+            TBL_NATION,
+            TBL_CUSTOMER,
+            TBL_LINEITEM,
+            TBL_ORDERS,
+            TBL_SUPPLIER,
+        ),
+        q("q6", TBL_LINEITEM),
+        q("q7", TBL_NATION, TBL_CUSTOMER, TBL_LINEITEM, TBL_ORDERS, TBL_SUPPLIER),
+        q(
+            "q8",
+            TBL_PART,
+            TBL_SUPPLIER,
+            TBL_LINEITEM,
+            TBL_ORDERS,
+            TBL_CUSTOMER,
+            TBL_NATION,
+            TBL_REGION,
+        ),
+        q(
+            "q9",
+            TBL_PART,
+            TBL_PARTSUPP,
+            TBL_NATION,
+            TBL_LINEITEM,
+            TBL_ORDERS,
+            TBL_SUPPLIER,
+        ),
+        q("q10", TBL_CUSTOMER, TBL_NATION, TBL_LINEITEM, TBL_ORDERS),
+        q("q11", TBL_NATION, TBL_PARTSUPP, TBL_SUPPLIER).with_skip(
+            lambda _, scale_factor: scale_factor not in safe,
+            reason="https://github.com/duckdb/duckdb/issues/17965",
+        ),
+        q("q12", TBL_LINEITEM, TBL_ORDERS),
+        q("q13", TBL_CUSTOMER, TBL_ORDERS),
+        q("q14", TBL_LINEITEM, TBL_PART),
+        q("q15", TBL_LINEITEM, TBL_SUPPLIER),
+        q("q16", TBL_PART, TBL_PARTSUPP, TBL_SUPPLIER),
+        q("q17", TBL_LINEITEM, TBL_PART)
+        .with_xfail(
+            lambda _, scale_factor: (scale_factor < 0.014),
+            reason="Generated dataset is too small, leading to 0 rows after the first two filters in `query1`.",
         )
+        .with_skip(
+            lambda _, scale_factor: scale_factor not in safe,
+            reason="Non-deterministic fails for `duckdb`, `sqlframe`. All other always fail, except `pyarrow` which always passes 🤯.",
+        ),
+        q("q18", TBL_CUSTOMER, TBL_LINEITEM, TBL_ORDERS),
+        q("q19", TBL_LINEITEM, TBL_PART),
+        q("q20", TBL_PART, TBL_PARTSUPP, TBL_NATION, TBL_LINEITEM, TBL_SUPPLIER),
+        q("q21", TBL_LINEITEM, TBL_NATION, TBL_ORDERS, TBL_SUPPLIER).with_skip(
+            lambda _, scale_factor: scale_factor not in safe, reason="Off-by-1 error"
+        ),
+        q("q22", TBL_CUSTOMER, TBL_ORDERS),
+    )
 
-    return _load_data
+
+@pytest.fixture(scope="session")
+def scale_factor(request: pytest.FixtureRequest) -> float:
+    """Get the scale factor from pytest options."""
+    return float(request.config.getoption("--scale-factor"))
 
 
-@pytest.fixture
-def expected_result() -> Callable[[QueryID], pl.DataFrame]:
-    """Fixture that returns a function to load expected results for a query."""
-
-    def _load_expected(query_id: QueryID) -> pl.DataFrame:
-        return pl.read_parquet(DATA_DIR / f"result_{query_id}.parquet")
-
-    return _load_expected
+@pytest.fixture(params=iter_queries(), ids=repr)
+def query(request: pytest.FixtureRequest, scale_factor: float) -> Query:
+    result: Query = request.param
+    return result.with_scale_factor(scale_factor)

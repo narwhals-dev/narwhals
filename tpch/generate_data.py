@@ -1,66 +1,220 @@
+"""Generate database and answers via [DuckDB TPC-H Extension].
+
+[DuckDB TPC-H Extension]: https://duckdb.org/docs/stable/core_extensions/tpch
+"""
+
 from __future__ import annotations
 
-import io
-from pathlib import Path
+import argparse
+import dataclasses
+import logging
+import os
+import sys
+from functools import cache
+from typing import TYPE_CHECKING, Any
 
-import duckdb
-import pyarrow as pa
-import pyarrow.csv as pc
-import pyarrow.parquet as pq
-
-data_path = Path("data")
-data_path.mkdir(exist_ok=True)
-
-SCALE_FACTOR = 0.1
-con = duckdb.connect(database=":memory:")
-con.execute("INSTALL tpch; LOAD tpch")
-con.execute(f"CALL dbgen(sf={SCALE_FACTOR})")
-tables = (
-    "lineitem",
-    "customer",
-    "nation",
-    "orders",
-    "part",
-    "partsupp",
-    "region",
-    "supplier",
+from tpch.classes import TableLogger
+from tpch.constants import (
+    DATABASE_TABLE_NAMES,
+    GLOBS,
+    LOGGER_NAME,
+    QUERY_IDS,
+    SCALE_FACTOR_DEFAULT,
+    _scale_factor_dir,
 )
 
+if TYPE_CHECKING:
+    from collections.abc import Callable, Iterator, Mapping
+    from pathlib import Path
 
-def convert_schema(schema: pa.Schema) -> pa.Schema:
-    new_schema = []
-    for field in schema:
-        if pa.types.is_decimal(field.type):
-            new_schema.append(pa.field(field.name, pa.float64()))
-        elif field.type == pa.date32():
-            new_schema.append(pa.field(field.name, pa.timestamp("ns")))
-        else:
-            new_schema.append(field)
-    return pa.schema(new_schema)
+    import polars as pl
+    import pytest
+    from duckdb import DuckDBPyConnection as Con, DuckDBPyRelation as Rel
+
+    from tpch.typing_ import Artifact, QueryID
 
 
-for t in tables:
-    tbl = con.query(f"SELECT * FROM {t}")  # noqa: S608
-    tbl_arrow = tbl.to_arrow_table()
-    new_schema = convert_schema(tbl_arrow.schema)
-    tbl_arrow = tbl_arrow.cast(new_schema)
-    pq.write_table(tbl_arrow, data_path / f"{t}.parquet")
+logger = logging.getLogger(LOGGER_NAME)
+
+TABLE_SCALE_FACTOR = """
+┌──────────────┬───────────────┐
+│ Scale factor ┆ Database (MB) │
+╞══════════════╪═══════════════╡
+│ 0.1          ┆ 25            │
+│ 1.0          ┆ 250           │
+│ 3.0          ┆ 754           │
+│ 100.0        ┆ 26624         │
+└──────────────┴───────────────┘
+"""
 
 
-results = con.query(
-    f"""
-    SELECT query_nr, answer
-    FROM tpch_answers()
-    WHERE scale_factor={SCALE_FACTOR}
-    """  # noqa: S608
-)
+# NOTE: Store queries here, add parameter names if needed
+SQL_DBGEN = "CALL dbgen(sf={0})"
+SQL_TPCH_ANSWER = "PRAGMA tpch({0})"
+SQL_FROM = "FROM {0}"
 
-while row := results.fetchmany(1):
-    query_nr, answer = row[0]
-    tbl_answer = pc.read_csv(
-        io.BytesIO(answer.encode("utf-8")), parse_options=pc.ParseOptions(delimiter="|")
+FIX_ANSWERS: Mapping[QueryID, Callable[[pl.DataFrame], pl.DataFrame]] = {
+    "q18": lambda df: df.rename({"sum(l_quantity)": "sum"}).cast({"sum": int}),
+    "q22": lambda df: df.cast({"cntrycode": int}),
+}
+"""
+DuckDB being weird, this is [correct] but [not this one].
+
+[correct]: https://github.com/duckdb/duckdb/blob/47c227d7d8662586b0307d123c03b25c0db3d515/extension/tpch/dbgen/answers/sf0.01/q18.csv#L1
+[not this one]: https://github.com/duckdb/duckdb/blob/47c227d7d8662586b0307d123c03b25c0db3d515/extension/tpch/dbgen/answers/sf100/q18.csv#L1
+"""
+
+
+def read_fmt_schema(fp: Path) -> str:
+    import polars as pl
+
+    schema = pl.read_parquet_schema(fp).items()
+    return f"- {fp.name}\n" + "\n".join(f"  - {k:<20}: {v}" for k, v in schema)
+
+
+@cache
+def cast_map() -> dict[Any, Any]:
+    import polars as pl
+    import polars.selectors as cs
+
+    return {cs.decimal(): float, cs.date(): pl.Datetime("ns")}
+
+
+@dataclasses.dataclass(**({"kw_only": True} if sys.version_info >= (3, 10) else {}))
+class TPCHGen:
+    scale_factor: float
+    refresh: bool = False
+    debug: bool = False
+    _con: Con = dataclasses.field(init=False)
+
+    @staticmethod
+    def from_pytest(config: pytest.Config, /) -> TPCHGen:
+        return TPCHGen(scale_factor=config.getoption("--scale-factor"))
+
+    @staticmethod
+    def from_argparse(parser: argparse.ArgumentParser, /) -> TPCHGen:
+        return parser.parse_args(namespace=TPCHGen.__new__(TPCHGen))
+
+    @property
+    def scale_factor_dir(self) -> Path:
+        return _scale_factor_dir(self.scale_factor)
+
+    def glob(self, artifact: Artifact, /) -> Iterator[Path]:
+        return self.scale_factor_dir.glob(GLOBS[artifact])
+
+    def has_data(self) -> bool:
+        both = next(self.glob("answers"), None) and next(self.glob("database"), None)
+        return bool(both)
+
+    def run(self) -> None:
+        _configure_logger(debug=self.debug)
+        if self.refresh:
+            logger.info("Refreshing data for scale_factor=%s", self.scale_factor)
+        elif self.has_data():
+            logger.info("Data already exists for scale_factor=%s", self.scale_factor)
+            self.show_schemas("database").show_schemas("answers")
+            logger.info("To regenerate this scale_factor, use `--refresh`")
+            return
+        self.connect().load_extension().generate_database().write_database().write_answers()
+        n_bytes = sum(e.stat().st_size for e in os.scandir(self.scale_factor_dir))
+        total = TableLogger.format_size(n_bytes)
+        logger.info("Finished with total file size: %s", total.strip())
+
+    def connect(self) -> TPCHGen:
+        import duckdb
+
+        logger.info("Connecting to in-memory DuckDB database")
+        self._con = duckdb.connect(database=":memory:")
+        return self
+
+    # TODO @dangotbanned: Change to `LiteralString` after restricting `--scale-factor`
+    def sql(self, query: str) -> Rel:
+        return self._con.sql(query)
+
+    def load_extension(self) -> TPCHGen:
+        logger.info("Installing DuckDB TPC-H Extension")
+        self._con.install_extension("tpch")
+        self._con.load_extension("tpch")
+        return self
+
+    def generate_database(self) -> TPCHGen:
+        logger.info("Generating data for scale_factor=%s", self.scale_factor)
+        self.sql(SQL_DBGEN.format(self.scale_factor))
+        logger.info("Finished generating data.")
+        return self
+
+    def write_database(self) -> TPCHGen:
+        logger.info("Writing data to: %s", self.scale_factor_dir.as_posix())
+        with TableLogger.database() as tbl_logger:
+            for t in DATABASE_TABLE_NAMES:
+                path = self.scale_factor_dir / f"{t}.parquet"
+                self.sql(SQL_FROM.format(t)).pl().cast(cast_map()).write_parquet(path)
+                tbl_logger.log_row(path)
+        return self.show_schemas("database")
+
+    def write_answers(self) -> TPCHGen:
+        logger.info("Executing tpch queries for answers")
+        with TableLogger.answers() as tbl_logger:
+            for query_id in QUERY_IDS:
+                query = SQL_TPCH_ANSWER.format(query_id.removeprefix("q"))
+                df = self.sql(query).pl().cast(cast_map())
+                if fix := FIX_ANSWERS.get(query_id):
+                    df = fix(df)
+                path = self.scale_factor_dir / f"result_{query_id}.parquet"
+                df.write_parquet(path)
+                tbl_logger.log_row(path)
+        return self.show_schemas("answers")
+
+    def show_schemas(self, artifact: Artifact, /) -> TPCHGen:
+        if logger.isEnabledFor(logging.DEBUG):
+            if paths := sorted(self.glob(artifact)):
+                msg = "\n".join(read_fmt_schema(fp) for fp in paths)
+                logger.debug("Schemas (%s):\n%s", artifact, msg)
+            else:
+                msg = f"Found no matching paths for {artifact!r} in {self.scale_factor_dir.as_posix()}"
+                raise NotImplementedError(msg)
+        return self
+
+
+def _configure_logger(
+    *,
+    debug: bool,
+    fmt: str = "%(asctime)s.%(msecs)03d [%(levelname)s] %(message)s",
+    datefmt: str = "%Y-%m-%d %H:%M:%S",
+) -> None:
+    logger.setLevel(logging.DEBUG if debug else logging.INFO)
+    output = logging.StreamHandler()
+    output.setFormatter(logging.Formatter(fmt, datefmt))
+    logger.addHandler(output)
+
+
+class HelpFormatter(
+    argparse.RawTextHelpFormatter, argparse.ArgumentDefaultsHelpFormatter
+):
+    def start_section(self, heading: str | None) -> None:
+        super().start_section(_title.capitalize() if (_title := heading) else heading)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        formatter_class=HelpFormatter,
+        description="Generate the data required to run TPCH queries.\n\nUsage: %(prog)s [OPTIONS]",
+        usage=argparse.SUPPRESS,
     )
-    new_schema = convert_schema(tbl_answer.schema)
-    tbl_answer = tbl_answer.cast(new_schema)
-
-    pq.write_table(tbl_answer, data_path / f"result_q{query_nr}.parquet")
+    parser.add_argument(
+        "-sf",
+        "--scale-factor",
+        default=str(SCALE_FACTOR_DEFAULT),
+        metavar="",
+        help=f"Scale the database by this factor (default: %(default)s)\n{TABLE_SCALE_FACTOR}",
+        type=float,
+    )
+    parser.add_argument(
+        "--debug", action="store_true", help="Enable more detailed logging"
+    )
+    parser.add_argument(
+        "--refresh",
+        action="store_true",
+        help="Re-run data generation, regardless of whether `--scale-factor` is already on disk",
+    )
+    TPCHGen.from_argparse(parser).run()
