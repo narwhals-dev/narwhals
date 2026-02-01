@@ -6,15 +6,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 import narwhals as nw
 from narwhals.exceptions import NarwhalsError
-from tpch.constants import (
-    DATABASE_TABLE_NAMES,
-    LOGGER_NAME,
-    QUERIES_PACKAGE,
-    QUERY_IDS,
-    SCALE_FACTOR_DEFAULT,
-    DBTableName,
-    _scale_factor_dir,
-)
+from tpch import constants
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -25,7 +17,7 @@ if TYPE_CHECKING:
 
     from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
     from narwhals.typing import FileSource
-    from tpch.typing_ import QueryID, QueryModule, ScaleFactor, TPCHBackend
+    from tpch.typing_ import DBTableName, QueryID, QueryModule, ScaleFactor, TPCHBackend
 
 
 class Backend:
@@ -56,14 +48,14 @@ class Query:
     def __init__(self, query_id: QueryID, table_names: tuple[DBTableName, ...]) -> None:
         self.id = query_id
         self.table_names = table_names
-        self.scale_factor = SCALE_FACTOR_DEFAULT
+        self.scale_factor = constants.SCALE_FACTOR_DEFAULT
 
     def __repr__(self) -> str:
         return self.id
 
     def inputs(self, backend: Backend) -> tuple[nw.LazyFrame[Any], ...]:
         """Get the frame inputs for this query at the given scale factor."""
-        sf_dir = _scale_factor_dir(self.scale_factor)
+        sf_dir = constants._scale_factor_dir(self.scale_factor)
         return tuple(
             backend.scan((sf_dir / f"{name}.parquet").as_posix())
             for name in self.table_names
@@ -72,7 +64,7 @@ class Query:
     def expected(self) -> pl.DataFrame:
         import polars as pl
 
-        sf_dir = _scale_factor_dir(self.scale_factor)
+        sf_dir = constants._scale_factor_dir(self.scale_factor)
         return pl.read_parquet(sf_dir / f"result_{self}.parquet")
 
     def execute(self, backend: Backend) -> None:
@@ -98,11 +90,11 @@ class Query:
         return self
 
     def _import_module(self) -> QueryModule:
-        result: Any = import_module(f"{QUERIES_PACKAGE}.{self}")
+        result: Any = import_module(f"{constants.QUERIES_PACKAGE}.{self}")
         return result
 
 
-logger = logging.getLogger(LOGGER_NAME)
+logger = logging.getLogger(constants.LOGGER_NAME)
 
 
 class TableLogger:
@@ -116,11 +108,11 @@ class TableLogger:
 
     @staticmethod
     def answers() -> TableLogger:
-        return TableLogger(f"result_{qid}.parquet" for qid in QUERY_IDS)
+        return TableLogger(f"result_{qid}.parquet" for qid in constants.QUERY_IDS)
 
     @staticmethod
     def database() -> TableLogger:
-        return TableLogger(f"{t}.parquet" for t in DATABASE_TABLE_NAMES)
+        return TableLogger(f"{t}.parquet" for t in constants.DATABASE_TABLE_NAMES)
 
     def __enter__(self) -> Self:
         # header

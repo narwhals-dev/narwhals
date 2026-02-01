@@ -6,13 +6,13 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from tpch import constants
 from tpch.classes import Backend, Query
-from tpch.constants import SCALE_FACTOR_DEFAULT, SCALE_FACTORS, DBTableName
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from tpch.typing_ import QueryID, ScaleFactor
+    from tpch.typing_ import DBTableName, QueryID, ScaleFactor
 
 
 def is_xdist_worker(obj: pytest.FixtureRequest | pytest.Config, /) -> bool:
@@ -45,8 +45,8 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     )
     parser.addoption(
         "--scale-factor",
-        default=SCALE_FACTOR_DEFAULT,
-        choices=SCALE_FACTORS,
+        default=constants.SCALE_FACTOR_DEFAULT,
+        choices=constants.SCALE_FACTORS,
         help="TPC-H scale factor to use for tests (default: %(default)s)",
     )
 

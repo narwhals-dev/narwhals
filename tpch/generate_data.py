@@ -14,17 +14,8 @@ from functools import cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
+from tpch import constants
 from tpch.classes import TableLogger
-from tpch.constants import (
-    DATABASE_TABLE_NAMES,
-    DB_PATH,
-    GLOBS,
-    LOGGER_NAME,
-    QUERY_IDS,
-    SCALE_FACTOR_DEFAULT,
-    SCALE_FACTORS,
-    _scale_factor_dir,
-)
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator, Mapping
@@ -37,7 +28,7 @@ if TYPE_CHECKING:
     from tpch.typing_ import Artifact, QueryID, ScaleFactor
 
 
-logger = logging.getLogger(LOGGER_NAME)
+logger = logging.getLogger(constants.LOGGER_NAME)
 
 TABLE_SCALE_FACTOR = """\
 ┌───────┬────────────┬─────────────┐
@@ -112,14 +103,14 @@ class TPCHGen:
 
     @property
     def scale_factor_dir(self) -> Path:
-        return _scale_factor_dir(self.scale_factor)
+        return constants._scale_factor_dir(self.scale_factor)
 
     @property
     def _database(self) -> Path | Literal[":memory:"]:
-        return DB_PATH if self.scale_factor == "30.0" else ":memory:"
+        return constants.DB_PATH if self.scale_factor == "30.0" else ":memory:"
 
     def glob(self, artifact: Artifact, /) -> Iterator[Path]:
-        return self.scale_factor_dir.glob(GLOBS[artifact])
+        return self.scale_factor_dir.glob(constants.GLOBS[artifact])
 
     def has_data(self) -> bool:
         both = next(self.glob("answers"), None) and next(self.glob("database"), None)
@@ -192,7 +183,7 @@ class TPCHGen:
     def write_database(self) -> TPCHGen:
         logger.info("Writing data to: %s", self.scale_factor_dir.as_posix())
         with TableLogger.database() as tbl_logger:
-            for t in DATABASE_TABLE_NAMES:
+            for t in constants.DATABASE_TABLE_NAMES:
                 path = self.scale_factor_dir / f"{t}.parquet"
                 to_polars(self.sql(SQL_FROM.format(t))).sink_parquet(path)
                 tbl_logger.log_row(path)
@@ -201,7 +192,7 @@ class TPCHGen:
     def write_answers(self) -> TPCHGen:
         logger.info("Executing TPC-H queries for answers")
         with TableLogger.answers() as tbl_logger:
-            for query_id in QUERY_IDS:
+            for query_id in constants.QUERY_IDS:
                 query = SQL_TPCH_ANSWER.format(query_id.removeprefix("q"))
                 lf = to_polars(self.sql(query))
                 if fix := FIX_ANSWERS.get(query_id):
@@ -254,10 +245,10 @@ if __name__ == "__main__":
     parser.add_argument(
         "-sf",
         "--scale-factor",
-        default=SCALE_FACTOR_DEFAULT,
+        default=constants.SCALE_FACTOR_DEFAULT,
         metavar="",
         help=f"Scale the database by this factor (default: %(default)s)\n{TABLE_SCALE_FACTOR}",
-        choices=SCALE_FACTORS,
+        choices=constants.SCALE_FACTORS,
     )
     parser.add_argument(
         "--debug", action="store_true", help="Enable more detailed logging"
