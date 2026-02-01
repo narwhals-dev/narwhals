@@ -137,13 +137,14 @@ class ArrowNamespace(
             context=self,
         )
 
-    def min_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
+    def _min_max_horizontal(
+        self, exprs: Sequence[ArrowExpr], /, op: Literal["min", "max"]
+    ) -> ArrowExpr:
+        agg = pc.min_element_wise if op == "min" else pc.max_element_wise
+
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             series = chain.from_iterable(expr(df) for expr in exprs)
-            result = reduce(
-                lambda s1, s2: s1._with_binary(pc.min_element_wise, s2), series
-            )
-            return [result]
+            return [reduce(lambda s1, s2: s1._with_binary(agg, s2), series)]
 
         return self._expr._from_callable(
             func=func,
@@ -151,21 +152,12 @@ class ArrowNamespace(
             alias_output_names=combine_alias_output_names(*exprs),
             context=self,
         )
+
+    def min_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
+        return self._min_max_horizontal(exprs, "min")
 
     def max_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
-        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            series = chain.from_iterable(expr(df) for expr in exprs)
-            result = reduce(
-                lambda s1, s2: s1._with_binary(pc.max_element_wise, s2), series
-            )
-            return [result]
-
-        return self._expr._from_callable(
-            func=func,
-            evaluate_output_names=combine_evaluate_output_names(*exprs),
-            alias_output_names=combine_alias_output_names(*exprs),
-            context=self,
-        )
+        return self._min_max_horizontal(exprs, "max")
 
     def _concat_diagonal(self, dfs: Sequence[pa.Table], /) -> pa.Table:
         if self._backend_version >= (14,):
