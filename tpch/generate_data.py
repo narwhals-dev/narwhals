@@ -39,7 +39,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(LOGGER_NAME)
 
-TABLE_SCALE_FACTOR = """
+TABLE_SCALE_FACTOR = """\
 ┌───────┬────────────┬─────────────┐
 │ sf    ┆ Disk       ┆ Memory (db) │
 ╞═══════╪════════════╪═════════════╡
