@@ -189,9 +189,9 @@ def test_nested_structures(
     if (
         "polars" in str(constructor)
         and isinstance(value, dict)
-        and POLARS_VERSION < (1, 0, 0)
+        and POLARS_VERSION < (1, 10, 0)
     ):  # pragma: no cover
-        reason = "polars<1.0 does not support dict to struct in lit"
+        reason = "polars<1.10 does not support dict to struct in lit"
         pytest.skip(reason=reason)
 
     size = 3
