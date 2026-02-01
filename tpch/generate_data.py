@@ -40,9 +40,6 @@ if TYPE_CHECKING:
 logger = logging.getLogger(LOGGER_NAME)
 
 
-# `mem_usage_scale = 2.705`
-# `pl.Config(tbl_hide_column_data_types=True, tbl_hide_dataframe_shape=True)`
-# https://duckdb.org/docs/stable/core_extensions/tpch#resource-usage-of-the-data-generator
 TABLE_SCALE_FACTOR = """
 ┌───────┬────────────┬─────────────┐
 │ sf    ┆ Disk       ┆ Memory (db) │
