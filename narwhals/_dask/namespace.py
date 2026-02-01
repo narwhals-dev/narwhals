@@ -177,8 +177,8 @@ class DaskNamespace(
             )
             series = (s.fillna(0) for s in expr_results)
             non_na = (1 - s.isna() for s in expr_results)
-            num = reduce(lambda x, y: x + y, series)  # pyright: ignore[reportOperatorIssue]
-            den = reduce(lambda x, y: x + y, non_na)  # pyright: ignore[reportOperatorIssue]
+            num = reduce(operator.add, series)  # pyright: ignore[reportOperatorIssue]
+            den = reduce(operator.add, non_na)  # pyright: ignore[reportOperatorIssue]
             return [cast("dx.Series", num / den)]  # pyright: ignore[reportOperatorIssue]
 
         return self._expr(

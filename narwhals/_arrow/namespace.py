@@ -139,7 +139,7 @@ class ArrowNamespace(
 
     def min_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            series = tuple(chain.from_iterable(expr(df) for expr in exprs))
+            series = chain.from_iterable(expr(df) for expr in exprs)
             result = reduce(
                 lambda s1, s2: s1._with_binary(pc.min_element_wise, s2), series
             )
@@ -154,7 +154,7 @@ class ArrowNamespace(
 
     def max_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            series = tuple(chain.from_iterable(expr(df) for expr in exprs))
+            series = chain.from_iterable(expr(df) for expr in exprs)
             result = reduce(
                 lambda s1, s2: s1._with_binary(pc.max_element_wise, s2), series
             )
