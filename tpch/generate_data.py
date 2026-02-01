@@ -199,7 +199,7 @@ class TPCHGen:
         return self.show_schemas("database")
 
     def write_answers(self) -> TPCHGen:
-        logger.info("Executing tpch queries for answers")
+        logger.info("Executing TPC-H queries for answers")
         with TableLogger.answers() as tbl_logger:
             for query_id in QUERY_IDS:
                 query = SQL_TPCH_ANSWER.format(query_id.removeprefix("q"))
@@ -248,7 +248,7 @@ class HelpFormatter(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         formatter_class=HelpFormatter,
-        description="Generate the data required to run TPCH queries.\n\nUsage: %(prog)s [OPTIONS]",
+        description="Generate the data required to run TPC-H queries.\n\nUsage: %(prog)s [OPTIONS]",
         usage=argparse.SUPPRESS,
     )
     parser.add_argument(

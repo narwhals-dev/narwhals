@@ -7,5 +7,5 @@ if TYPE_CHECKING:
 
 
 def test_execute_query(query: Query, backend: Backend) -> None:
-    """Helper function to run a TPCH query test."""
+    """Helper function to run a TPC-H query test."""
     query.execute(backend)
