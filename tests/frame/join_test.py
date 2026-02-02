@@ -774,7 +774,7 @@ def test_join_duplicate_column_names(
         request.applymarker(pytest.mark.xfail)
     if any(
         x in str(constructor)
-        for x in ("pandas", "pandas[pyarrow]", "pandas[nullable]", "dask")
+        for x in ("pandas", "pandas[pyarrow]", "pandas[nullable]", "dask", "bodo")
     ) and PANDAS_VERSION >= (3,):  # pragma: no cover
         from pandas.errors import MergeError
 
