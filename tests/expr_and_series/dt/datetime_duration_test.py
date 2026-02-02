@@ -12,8 +12,8 @@ import narwhals as nw
 from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 data = {
-    "a": [None, timedelta(minutes=1, seconds=1, milliseconds=1, microseconds=1)],
-    "b": [timedelta(milliseconds=2), timedelta(milliseconds=1, microseconds=300)],
+    "a": np.array([None, timedelta(minutes=1, seconds=1, milliseconds=1, microseconds=1)], dtype="timedelta64[ns]"),
+    "b": np.array([timedelta(milliseconds=2), timedelta(milliseconds=1, microseconds=300)], dtype="timedelta64[ns]"),
     "c": np.array([None, 20], dtype="timedelta64[ns]"),
 }
 
