@@ -95,7 +95,11 @@ from narwhals._plan.arrow.functions._dtypes import (
     dtype_native,
     string_type,
 )
-from narwhals._plan.arrow.functions._horizontal import max_horizontal, min_horizontal
+from narwhals._plan.arrow.functions._horizontal import (
+    coalesce,
+    max_horizontal,
+    min_horizontal,
+)
 from narwhals._plan.arrow.functions._lists import ExplodeBuilder
 from narwhals._plan.arrow.functions._multiplex import (
     fill_nan,
@@ -161,6 +165,7 @@ __all__ = [
     "clip",
     "clip_lower",
     "clip_upper",
+    "coalesce",
     "concat_horizontal",
     "concat_tables",
     "concat_vertical",

@@ -206,6 +206,12 @@ class BinaryComp(
 class BinaryLogical(BinaryFunction["BooleanScalar", "pa.BooleanScalar"], Protocol): ...
 
 
+# TODO @dangotbanned: Use stricter typing & revisit with
+# https://github.com/narwhals-dev/narwhals/blob/0d81b8b8cd1d24a68d360e6f8cf742b45cc2bdec/narwhals/_plan/arrow/functions/_horizontal.py#L7-L15
+class VariadicFunction(Protocol):
+    def __call__(self, *args: Arrow) -> Any: ...
+
+
 BinaryNumericTemporal: TypeAlias = BinaryFunction[
     NumericOrTemporalScalarT, NumericOrTemporalScalarT
 ]
