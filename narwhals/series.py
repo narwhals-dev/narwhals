@@ -396,8 +396,8 @@ class Series(Generic[IntoSeriesT]):
 
     def scatter(
         self,
-        indices: Self | Sequence[int] | int,
-        values: Self | Sequence[PythonLiteral] | PythonLiteral | None,
+        indices: Self | Iterable[int] | int,
+        values: Self | Iterable[PythonLiteral] | PythonLiteral | None,
     ) -> Self:
         """Set value(s) at the given index location(s).
 
@@ -440,6 +440,20 @@ class Series(Generic[IntoSeriesT]):
             a: [[999,888,3]]
             b: [[4,5,6]]
         """
+        impl = self.implementation
+        if not isinstance(indices, Iterable):
+            indices = Series.from_iterable(name="", values=[indices], backend=impl)
+        elif not isinstance(indices, Series):
+            indices = Series.from_iterable(name="", values=indices, backend=impl)
+
+        if indices.is_empty():
+            return self
+
+        if isinstance(values, str) or not isinstance(values, Iterable):
+            values = Series.from_iterable(name="", values=[values], backend=impl)
+        elif not isinstance(values, Series):
+            values = Series.from_iterable(name="", values=values, backend=impl)
+
         compliant_indices = self._extract_native(indices)
         compliant_values = self._extract_native(values)
         return self._with_compliant(

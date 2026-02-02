@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, Callable, Literal, cast, overload
 
 import pyarrow as pa
@@ -38,7 +37,7 @@ from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import InvalidOperationError, ShapeError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator
+    from collections.abc import Iterable, Iterator, Sequence
     from types import ModuleType
 
     import pandas as pd
@@ -452,45 +451,11 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             raise NotImplementedError(msg)
         return self._with_native(self.native.slice(start, stop - start))
 
-    def scatter(
-        self,
-        indices: Self | int | Sequence[int],
-        values: Self | PythonLiteral | Sequence[PythonLiteral] | None,
-    ) -> Self:
-        import numpy as np  # ignore-banned-import
-
-        indices_native = (
-            pa.array([indices])
-            if isinstance(indices, int)
-            else indices.native.combine_chunks()
-            if isinstance(indices, self.__class__)
-            else pa.array(indices)
-        )
-
-        # NOTE: Requires fixes in https://github.com/zen-xu/pyarrow-stubs/pull/209
-        pa_array: Incomplete = pa.array
-
-        values_native = (
-            values.native.combine_chunks()
-            if isinstance(values, self.__class__)
-            else pa_array(values)
-            if isinstance(values, Sequence)
-            else pa_array([values])
-        )
-
-        sorting_indices = pc.sort_indices(indices_native)
-        indices_native = indices_native.take(sorting_indices)
-        values_native = values_native.take(sorting_indices)
-
-        mask: _1DArray = np.zeros(self.len(), dtype=bool)
-        mask[indices_native] = True
-        # NOTE: Multiple issues
-        # - Missing `values` type
-        # - `mask` accepts a `np.ndarray`, but not mentioned in stubs
-        # - Missing `replacements` type
-        # - Missing return type
-        pc_replace_with_mask: Incomplete = pc.replace_with_mask
-        return self._with_native(pc_replace_with_mask(self.native, mask, values_native))
+    def scatter(self, indices: Self, values: Self) -> Self:
+        mask = pc.is_in(arange(start=0, end=len(self), step=1), indices.native)
+        sorted_indices = pc.sort_indices(indices.native)
+        replacements = values.native.take(sorted_indices).combine_chunks()
+        return self._with_native(pc.replace_with_mask(self.native, mask, replacements))
 
     def to_list(self) -> list[Any]:
         return self.native.to_pylist()

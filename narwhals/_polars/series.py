@@ -504,11 +504,7 @@ class PolarsSeries:
 
         return self._with_native(result)
 
-    def scatter(
-        self,
-        indices: Self | int | Sequence[int],
-        values: Self | PythonLiteral | Sequence[PythonLiteral] | None,
-    ) -> Self:
+    def scatter(self, indices: Self, values: Self) -> Self:
         s = self.native.clone().scatter(extract_native(indices), extract_native(values))
         return self._with_native(s)
 
