@@ -106,15 +106,21 @@ class SQLExprStringNamespace(
         # using string manipulation functions.
 
         def func(expr: NativeExpr) -> NativeExpr:
+            impl = self.compliant._implementation
             less_than_width = self._function("length", expr) < self._lit(width)
-            zero, hyphen, plus = self._lit("0"), self._lit("-"), self._lit("+")
+
+            zero = (
+                "0"
+                if (impl.is_pyspark() or impl.is_pyspark_connect())
+                and impl._backend_version() < (4, 0)
+                else self._lit("0")
+            )
+            hyphen, plus = self._lit("-"), self._lit("+")
 
             starts_with_minus = self._function("starts_with", expr, hyphen)
             starts_with_plus = self._function("starts_with", expr, plus)
             substring = self._function("substr", expr, self._lit(2))
-            padded_substring = self._function(
-                "lpad", substring, self._lit(width - 1), zero
-            )
+            padded_substring = self._function("lpad", substring, width - 1, zero)
             return self._when(
                 operator.and_(starts_with_minus, less_than_width),
                 self._function("concat", hyphen, padded_substring),
@@ -122,9 +128,7 @@ class SQLExprStringNamespace(
                     operator.and_(starts_with_plus, less_than_width),
                     self._function("concat", plus, padded_substring),
                     self._when(
-                        less_than_width,
-                        self._function("lpad", expr, self._lit(width), zero),
-                        expr,
+                        less_than_width, self._function("lpad", expr, width, zero), expr
                     ),
                 ),
             )
