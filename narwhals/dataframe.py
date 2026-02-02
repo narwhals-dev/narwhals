@@ -254,19 +254,16 @@ class BaseFrame(Generic[_FrameT]):
     def filter(
         self, *predicates: IntoExpr | Iterable[IntoExpr], **constraints: Any
     ) -> Self:
-        from narwhals.functions import col
+        from narwhals.functions import all_horizontal, col
 
         flat_predicates = flatten(predicates)
-        plx = self.__narwhals_namespace__()
-        compliant_predicates = self._flatten_and_extract(*flat_predicates)
-        check_expressions_preserve_length(*compliant_predicates, function_name="filter")
-        compliant_constraints = self._flatten_and_extract(
-            *[col(name) == v for name, v in constraints.items()]
+        predicate = all_horizontal(
+            *chain(flat_predicates, (col(name) == v for name, v in constraints.items())),
+            ignore_nulls=False,
         )
-        predicate = plx.all_horizontal(
-            *chain(compliant_predicates, compliant_constraints), ignore_nulls=False
-        )
-        return self._with_compliant(self._compliant_frame.filter(predicate))
+        (compliant_predicate,) = self._flatten_and_extract(predicate)
+        check_expressions_preserve_length(compliant_predicate, function_name="filter")
+        return self._with_compliant(self._compliant_frame.filter(compliant_predicate))
 
     def sort(
         self,
@@ -2376,13 +2373,12 @@ class LazyFrame(BaseFrame[LazyFrameT]):
         if metadata.n_orderable_ops > 0:
             msg = (
                 "Order-dependent expressions are not supported for use in LazyFrame.\n\n"
-                "Hint: To make the expression valid, use `.over` with `order_by` specified.\n\n"
-                "For example, if you wrote `nw.col('price').cum_sum()` and you have a column\n"
-                "`'date'` which orders your data, then replace:\n\n"
-                "   nw.col('price').cum_sum()\n\n"
-                " with:\n\n"
-                "   nw.col('price').cum_sum().over(order_by='date')\n"
-                "                            ^^^^^^^^^^^^^^^^^^^^^^\n\n"
+                "Hint: To make the expression valid, specify `order_by`.\n\n"
+                "For example, if you have columns `'price'` and `'date'`:\n"
+                " - Instead of `nw.col('price').cum_sum()` write `nw.col('price').cum_sum().over(order_by='date')`.\n"
+                " - Instead of `nw.col('price').diff()` write `nw.col('price').diff().over(order_by='date')`.\n"
+                " - Instead of `nw.col('price').first()` write `nw.col('price').first().over(order_by='date')`\n"
+                "   or `nw.col('price').first(order_by='date')`.\n\n"
                 "See https://narwhals-dev.github.io/narwhals/concepts/order_dependence/."
             )
             raise InvalidOperationError(msg)
