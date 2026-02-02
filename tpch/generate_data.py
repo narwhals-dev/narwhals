@@ -156,6 +156,7 @@ class TPCHGen:
         sf = self.scale_factor
         logger.info("Generating data for scale_factor=%s", sf)
         if sf in {"10.0", "30.0"}:
+            # NOTE: See description https://github.com/narwhals-dev/narwhals/pull/3429#issue-3879052445
             self._generate_database_batched(12 if sf == "10.0" else 4)
         else:
             self.sql("CALL dbgen(sf=$sf)", sf=sf)
