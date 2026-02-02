@@ -436,7 +436,8 @@ def time_unit() -> TimeUnit:
 
     https://pandas.pydata.org/docs/dev/whatsnew/v3.0.0.html#datetime-resolution-inference
     """
-    return "us" if PANDAS_VERSION >= (3,) else "ns"
+    # Bodo change: always use "ns"
+    return "ns"  # "us" if PANDAS_VERSION >= (3,) else "ns"
 
 
 def _polars_schema() -> Sequence[type[pl.Schema | dict[str, pl.DataType]]]:
