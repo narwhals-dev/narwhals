@@ -179,6 +179,7 @@ class Series(Generic[IntoSeriesT]):
             if dtype:
                 return cls(compliant.cast(dtype), level="full")
             return cls(compliant, level="full")
+        # pragma: no cover
         msg = (
             f"{implementation} support in Narwhals is lazy-only, but `Series.from_numpy` is an eager-only function.\n\n"
             "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"

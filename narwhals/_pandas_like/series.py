@@ -182,6 +182,8 @@ class PandasLikeSeries(EagerSeries[Any]):
         else:
             if implementation.is_pandas():
                 kwds["copy"] = False
+            else:  # pragma: no cover
+                pass
             if index is not None and len(index):
                 kwds["index"] = index
         return cls.from_native(ns.Series(data, name=name, **kwds), context=context)

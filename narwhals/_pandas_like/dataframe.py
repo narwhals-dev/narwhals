@@ -319,7 +319,7 @@ class PandasLikeDataFrame(
             raise ShapeError(msg)
         if other.native.index is not index:
             return set_index(other.native, index, implementation=other._implementation)
-        return other.native
+        return other.native  # pragma: no cover
 
     @property
     def _array_funcs(self):  # type: ignore[no-untyped-def] # noqa: ANN202
@@ -573,7 +573,7 @@ class PandasLikeDataFrame(
                 "version": self._version,
                 "validate_column_names": False,
             }
-            if backend is not self._implementation:
+            if backend is not self._implementation:  # pragma: no cover
                 kwds.update(validate_backend_version=True)
             return PandasLikeDataFrame(self.to_pandas(), **kwds)
 

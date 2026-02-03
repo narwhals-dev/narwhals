@@ -183,7 +183,7 @@ def rename(
         implementation._backend_version() >= (3,)
     ):  # pragma: no cover
         result = obj.rename(*args, **kwargs, inplace=False)
-    else:
+    else:  # pragma: no cover
         result = obj.rename(*args, **kwargs, copy=False, inplace=False)
     return cast("NativeNDFrameT", result)  # type: ignore[redundant-cast]
 
@@ -322,7 +322,7 @@ def native_to_narwhals_dtype(
         # Per conversations with their maintainers, they don't support arbitrary
         # objects, so we can just return String.
         return version.dtypes.String()
-    if allow_object:
+    if allow_object:  # pragma: no cover
         return object_native_to_narwhals_dtype(None, version, implementation)
     msg = (
         "Unreachable code, object dtype should be handled separately"  # pragma: no cover
