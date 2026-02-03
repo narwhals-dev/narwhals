@@ -11,7 +11,8 @@ __all__ = ["just_dispatch"]
 R = TypeVar("R")
 R_co = TypeVar("R_co", covariant=True)
 Impl: TypeAlias = Callable[..., R]
-Deferred: TypeAlias = Callable[..., R]
+Deferred: TypeAlias = "Callable[[Callable[..., R]], JustDispatch[R]]"
+"""The type when using `@just_dispatch(**keywords)`."""
 Passthrough = TypeVar("Passthrough", bound=Callable[..., Any])
 
 
@@ -53,16 +54,10 @@ class JustDispatch(Generic[R_co]):
 @overload
 def just_dispatch(function: Impl[R_co], /) -> JustDispatch[R_co]: ...
 @overload
-def just_dispatch(
-    *, upper_bound: type[Any] = object
-) -> Callable[[Deferred[R]], JustDispatch[R]]: ...
-@overload
-def just_dispatch(
-    function: Impl[R_co], /, *, upper_bound: type[Any]
-) -> JustDispatch[R_co]: ...
+def just_dispatch(*, upper_bound: type[Any] = object) -> Deferred[R]: ...
 def just_dispatch(
     function: Impl[R_co] | None = None, /, *, upper_bound: type[Any] = object
-) -> JustDispatch[R_co] | Callable[[Deferred[R]], JustDispatch[R]]:
+) -> JustDispatch[R_co] | Deferred[R]:
     if function is None:
-        return lambda f, /: just_dispatch(f, upper_bound=upper_bound)
+        return lambda f, /: JustDispatch(f, upper_bound=upper_bound)
     return JustDispatch(function, upper_bound)
