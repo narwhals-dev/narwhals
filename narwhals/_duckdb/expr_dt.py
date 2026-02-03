@@ -103,8 +103,7 @@ class DuckDBExprDateTimeNamespace(SQLExprDateTimeNamesSpace["DuckDBExpr"]):
     def _no_op_time_zone(self, time_zone: str) -> DuckDBExpr:
         def func(df: DuckDBLazyFrame) -> Sequence[Expression]:
             native_series_list = self.compliant(df)
-            conn_time_zone = fetch_rel_time_zone(df.native)
-            if conn_time_zone != time_zone:
+            if (conn_time_zone := fetch_rel_time_zone(df.native)) != time_zone:
                 msg = (
                     "DuckDB stores the time zone in the connection, rather than in the "
                     f"data type, so changing the timezone to anything other than {conn_time_zone} "
