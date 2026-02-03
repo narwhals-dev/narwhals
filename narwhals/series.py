@@ -1322,7 +1322,7 @@ class Series(Generic[IntoSeriesT]):
             1     zero
             2      one
             3      two
-            Name: a, dtype: object
+            Name: a, dtype: str
 
             Replace values and set a default for values not in the mapping:
 
@@ -1337,7 +1337,7 @@ class Series(Generic[IntoSeriesT]):
             1        two
             2       orca
             3    vaquita
-            Name: a, dtype: object
+            Name: a, dtype: str
         """
         if new is None:
             if not isinstance(old, Mapping):

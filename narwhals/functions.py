@@ -1677,7 +1677,7 @@ def concat_str(
         |   full_sentence  |
         | 0   2 dogs play  |
         | 1   4 cats swim  |
-        | 2          None  |
+        | 2           NaN  |
         └──────────────────┘
     """
     flat_exprs = flatten([*flatten([exprs]), *more_exprs])
