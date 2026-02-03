@@ -179,13 +179,12 @@ class Series(Generic[IntoSeriesT]):
             if dtype:
                 return cls(compliant.cast(dtype), level="full")
             return cls(compliant, level="full")
-        # pragma: no cover
-        msg = (
+        msg = (  # pragma: no cover
             f"{implementation} support in Narwhals is lazy-only, but `Series.from_numpy` is an eager-only function.\n\n"
             "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
             f"    nw.Series.from_numpy(arr, backend='pyarrow').to_frame().lazy('{implementation}')"
         )
-        raise ValueError(msg)
+        raise ValueError(msg)  # pragma: no cover
 
     @classmethod
     def from_iterable(

@@ -333,7 +333,7 @@ exclude_also = [
   'if "ibis" in',
   'if "modin" in',
   'if "pyspark" in',
-  "if not *.is_pandas()",
+  "if not .*.is_pandas",
   "if is_ibis_table",
   "except ModuleNotFoundError",
   'request.applymarker\(pytest.mark.xfail',
