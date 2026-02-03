@@ -124,7 +124,6 @@ INTEGER: DTypeGroup = SIGNED_INTEGER.union(UNSIGNED_INTEGER)
 FLOAT: DTypeGroup = frozenset((Float32, Float64))
 NUMERIC: DTypeGroup = FLOAT.union(INTEGER).union((Decimal,))
 NESTED: DTypeGroup = frozenset((Struct, List, Array))
-LIST_ARRAY: DTypeGroup = frozenset((List, Array))
 DATETIME: DTypeGroup = frozen_dtypes(Datetime, DatetimeV1)
 
 _STRING_BINARY_CONVERT: Mapping[FrozenDTypes, type[Binary]] = {
@@ -216,6 +215,10 @@ def has_nested(base_types: FrozenDTypes, /) -> bool:
     return _has_intersection(base_types, NESTED)
 
 
+def has_inner(dtype: Any) -> TypeIs[Array | List]:
+    return isinstance(dtype, (Array, List))
+
+
 def _struct_fields_union(
     left: Collection[Field], right: Collection[Field], /
 ) -> Struct | None:
@@ -262,13 +265,6 @@ def _array_supertype(left: Array, right: Array, /) -> Array | None:
 
 def _list_supertype(left: List, right: List, /) -> List | None:
     if inner := get_supertype(left.inner(), right.inner()):
-        return List(inner)
-    return None
-
-
-def _list_array_supertype(list_: List, array: Array, /) -> List | None:
-    """Get the supertype of a List and an Array with the same depth."""
-    if inner := get_supertype(list_.inner(), array.inner()):
         return List(inner)
     return None
 
@@ -401,22 +397,30 @@ def _numeric_supertype(st: _SupertypeCase[DType]) -> DType | None:
     return None
 
 
+def _mixed_nested_supertype(left: DType, right: DType, /) -> DType | None:
+    if (
+        has_inner(left)
+        and has_inner(right)
+        and (inner := get_supertype(left.inner(), right.inner()))
+    ):
+        return List(inner)
+    return None
+
+
 def _mixed_supertype(st: _SupertypeCase[DType, DType]) -> DType | None:
     """Get the supertype of two data types that do not share the same class."""
     base_types = st.base_types
-    if base_types == LIST_ARRAY:
-        list_, array = (
-            (st.left, st.right) if isinstance(st.left, List) else (st.right, st.left)
-        )
-        return _list_array_supertype(list_, array)  # type: ignore[arg-type]
+    left, right = st.left, st.right
     if Date in base_types and _has_intersection(base_types, DATETIME):
-        return st.left if isinstance(st.left, Datetime) else st.right
+        return left if isinstance(left, Datetime) else right
     if String in base_types and Binary not in base_types:
         # Handle {X, String} -> String (except Binary which returns Binary)
         return String()
+    if has_nested(base_types):
+        return _mixed_nested_supertype(left, right)
     if NUMERIC.isdisjoint(base_types):
         return tp() if (tp := _STRING_BINARY_CONVERT.get(base_types)) else None
-    return None if has_nested(base_types) else _numeric_supertype(st)
+    return _numeric_supertype(st)
 
 
 class _SupertypeCase(Generic[DTypeT1_co, DTypeT2_co]):
