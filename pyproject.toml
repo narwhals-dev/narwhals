@@ -312,7 +312,8 @@ omit = [
   'narwhals/_arrow/typing.py',
   'narwhals/_duckdb/typing.py',
   'narwhals/_spark_like/typing.py',
-  'narwhals/_ibis/typing.py',
+  # We run Ibis in a separate CI job to the coverage one, to avoid their tight dependency pins.
+  'narwhals/_ibis/*',
   # Remove after finishing eager sub-protocols
   'narwhals/_compliant/namespace.py',
 ]
