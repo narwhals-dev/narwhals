@@ -319,10 +319,12 @@ omit = [
 exclude_also = [
   "if sys.version_info() <",
   "if .*implementation is Implementation.CUDF",
+  "if .*implementation is Implementation.IBIS",
   "if .*implementation is Implementation.MODIN",
   "if .*implementation is Implementation.PYSPARK",
   "if .*implementation is Implementation.PYSPARK_CONNECT",
   "if .*implementation.is_cudf",
+  "if .*implementation.is_ibis",
   "if .*implementation.is_modin",
   "if .*implementation.is_pyspark",
   "if .*implementation.is_pyspark_connect",
