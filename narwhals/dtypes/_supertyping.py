@@ -22,7 +22,6 @@ from narwhals.dtypes._classes import (
     Array,
     Binary,
     Boolean,
-    Categorical,
     Date,
     Datetime,
     Decimal,
@@ -51,11 +50,7 @@ from narwhals.dtypes._classes import (
     Unknown,
     UnsignedIntegerType,
 )
-from narwhals.dtypes._classes_v1 import (
-    Datetime as DatetimeV1,
-    Duration as DurationV1,
-    Enum as EnumV1,
-)
+from narwhals.dtypes._classes_v1 import Datetime as DatetimeV1, Duration as DurationV1
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Collection, Mapping
@@ -107,13 +102,11 @@ INTEGER: DTypeGroup = SIGNED_INTEGER.union(UNSIGNED_INTEGER)
 FLOAT: DTypeGroup = frozenset((Float32, Float64))
 NUMERIC: DTypeGroup = FLOAT.union(INTEGER).union((Decimal,))
 NESTED: DTypeGroup = frozenset((Struct, List, Array))
+LIST_ARRAY: DTypeGroup = frozenset((List, Array))
 DATETIME: DTypeGroup = frozen_dtypes(Datetime, DatetimeV1)
 
-_STRING_LIKE_CONVERT: Mapping[FrozenDTypes, type[String | Binary]] = {
-    frozen_dtypes(String, Categorical): String,
-    frozen_dtypes(String, Enum): String,
-    frozen_dtypes(String, EnumV1): String,
-    frozen_dtypes(String, Binary): Binary,
+_STRING_BINARY_CONVERT: Mapping[FrozenDTypes, type[Binary]] = {
+    frozen_dtypes(String, Binary): Binary
 }
 _FLOAT_PROMOTE: Mapping[FrozenDTypes, type[Float64]] = {
     frozen_dtypes(Float32, Float64): Float64,
@@ -258,6 +251,13 @@ def list_supertype(left: List, right: List, /) -> List | None:
     return None
 
 
+def _list_array_supertype(list_: List, array: Array, /) -> List | None:
+    """Get the supertype of a List and an Array with the same depth."""
+    if inner := get_supertype(list_.inner(), array.inner()):
+        return List(inner)
+    return None
+
+
 @same_supertype.register(Datetime, DatetimeV1)
 def datetime_supertype(
     left: SameDatetimeT, right: SameDatetimeT, /
@@ -272,8 +272,55 @@ def enum_supertype(left: Enum, right: Enum, /) -> Enum | None:
     return left if left.categories == right.categories else None
 
 
-@lru_cache(maxsize=_CACHE_SIZE)
-def _numeric_supertype(base_types: FrozenDTypes) -> DType | None:
+@same_supertype.register(Decimal)
+def decimal_supertype(left: Decimal, right: Decimal, /) -> Decimal:
+    # https://github.com/pola-rs/polars/blob/529f7ec642912a2f15656897d06f1532c2f5d4c4/crates/polars-core/src/utils/supertype.rs#L508-L511
+    precision = max(left.precision, right.precision)
+    scale = max(left.scale, right.scale)
+    return Decimal(precision=precision, scale=scale)
+
+
+DEC128_MAX_PREC = 38
+# Precomputing powers of 10 up to 10^38
+POW10_LIST = tuple(10**i for i in range(DEC128_MAX_PREC + 1))
+INT_MAX_MAP: Mapping[Int, int] = {
+    UInt8(): (2**8) - 1,
+    UInt16(): (2**16) - 1,
+    UInt32(): (2**32) - 1,
+    UInt64(): (2**64) - 1,
+    Int8(): (2**7) - 1,
+    Int16(): (2**15) - 1,
+    Int32(): (2**31) - 1,
+    Int64(): (2**63) - 1,
+}
+
+
+def _integer_fits_in_decimal(value: int, precision: int, scale: int) -> bool:
+    """Scales an integer and checks if it fits the target precision."""
+    # !NOTE: Indexing is safe since `scale <= precision <= 38`
+    return (precision == DEC128_MAX_PREC) or (
+        value * POW10_LIST[scale] < POW10_LIST[precision]
+    )
+
+
+def _decimal_integer_supertyping(decimal: Decimal, integer: Int) -> DType | None:
+    precision, scale = decimal.precision, decimal.scale
+
+    if integer in {UInt128(), Int128()}:
+        fits_orig_prec_scale = False
+    elif value := INT_MAX_MAP.get(integer, None):
+        fits_orig_prec_scale = _integer_fits_in_decimal(value, precision, scale)
+    else:  # pragma: no cover
+        msg = "Unreachable integer type"
+        raise ValueError(msg)
+
+    precision = precision if fits_orig_prec_scale else DEC128_MAX_PREC
+    return Decimal(precision, scale)
+
+
+def _numeric_supertype(
+    left: DType, right: DType, base_types: FrozenDTypes
+) -> DType | None:
     """Get the supertype of two numeric data types that do not share the same class.
 
     `_{primitive_numeric,integer}_supertyping` define most valid numeric supertypes.
@@ -286,7 +333,13 @@ def _numeric_supertype(base_types: FrozenDTypes) -> DType | None:
         if tp := _FLOAT_PROMOTE.get(base_types):
             return tp()
         if Decimal in base_types:
-            return Decimal()
+            # Logic adapted from rust implementation
+            # https://github.com/pola-rs/polars/blob/529f7ec642912a2f15656897d06f1532c2f5d4c4/crates/polars-core/src/utils/supertype.rs#L517-L530
+            decimal, integer = (
+                (left, right) if isinstance(left, Decimal) else (right, left)
+            )
+            return _decimal_integer_supertyping(decimal=decimal, integer=integer)  # type: ignore[arg-type]
+
         return _primitive_numeric_supertyping()[base_types]()
     if Boolean in base_types:
         return _first_excluding(base_types, Boolean)()
@@ -297,11 +350,17 @@ def _mixed_supertype(
     left: DType, right: DType, base_types: FrozenDTypes, /
 ) -> DType | None:
     """Get the supertype of two data types that do not share the same class."""
+    if base_types == LIST_ARRAY:
+        list_, array = (left, right) if isinstance(left, List) else (right, left)
+        return _list_array_supertype(list_, array)  # type: ignore[arg-type]
     if Date in base_types and _has_intersection(base_types, DATETIME):
         return left if isinstance(left, Datetime) else right
+    if String in base_types and Binary not in base_types:
+        # Handle {X, String} -> String (except Binary which returns Binary)
+        return String()
     if NUMERIC.isdisjoint(base_types):
-        return tp() if (tp := _STRING_LIKE_CONVERT.get(base_types)) else None
-    return None if has_nested(base_types) else _numeric_supertype(base_types)
+        return tp() if (tp := _STRING_BINARY_CONVERT.get(base_types)) else None
+    return None if has_nested(base_types) else _numeric_supertype(left, right, base_types)
 
 
 def get_supertype(left: DType, right: DType) -> DType | None:
