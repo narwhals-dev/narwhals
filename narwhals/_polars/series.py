@@ -505,7 +505,7 @@ class PolarsSeries:
         return self._with_native(result)
 
     def scatter(self, indices: Self, values: Self) -> Self:
-        s = self.native.clone().scatter(extract_native(indices), extract_native(values))
+        s = self.native.clone().scatter(indices.native, values.native)
         return self._with_native(s)
 
     def value_counts(

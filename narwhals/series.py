@@ -397,7 +397,7 @@ class Series(Generic[IntoSeriesT]):
     def scatter(
         self,
         indices: Self | Iterable[int] | int,
-        values: Self | Iterable[PythonLiteral] | PythonLiteral | None,
+        values: Self | Iterable[PythonLiteral] | PythonLiteral,
     ) -> Self:
         """Set value(s) at the given index location(s).
 
