@@ -1,23 +1,59 @@
 from __future__ import annotations
 
+from functools import partial
+from typing import TYPE_CHECKING, Any
+
 import pytest
 
 import narwhals as nw
-from tests.utils import ConstructorEager, assert_equal_data
+from tests.utils import ConstructorEager, assert_equal_data, assert_equal_series
+
+if TYPE_CHECKING:
+    from collections.abc import Collection
 
 
-def test_scatter(constructor_eager: ConstructorEager) -> None:
-    df = nw.from_native(
-        constructor_eager({"a": [1, 2, 3], "b": [142, 124, 132]}), eager_only=True
-    )
-    result = df.with_columns(
-        df["a"].scatter([0, 1], [999, 888]), df["b"].scatter([0, 2, 1], df["b"])
-    )
-    expected = {"a": [999, 888, 3], "b": [142, 132, 124]}
-    assert_equal_data(result, expected)
+def series(frame: ConstructorEager, name: str, values: Collection[Any]) -> nw.Series[Any]:
+    return nw.from_native(frame({name: values})).get_column(name)
 
 
-def test_scatter_indices() -> None:
+@pytest.mark.filterwarnings(
+    "ignore:.*all arguments of to_dict except for the argument:FutureWarning"
+)
+@pytest.mark.parametrize(
+    ("data", "indices", "values", "expected"),
+    [
+        ([142, 124, 13], [0, 2, 1], (142, 124, 13), [142, 13, 124]),
+        ([1, 2, 3], 0, 999, [999, 2, 3]),
+        (
+            [16, 12, 10, 9, 6, 5, 2],
+            (6, 1, 0, 5, 3, 2, 4),
+            [16, 12, 10, 9, 6, 5, 2],
+            [10, 12, 5, 6, 2, 9, 16],
+        ),
+        ([5.5, 9.2, 1.0], (), (), [5.5, 9.2, 1.0]),
+    ],
+    ids=["single-series", "integer", "unordered-indices", "empty-indices"],
+)
+def test_scatter(
+    data: list[Any],
+    indices: int | Collection[int],
+    values: int | Collection[int],
+    expected: list[Any],
+    constructor_eager: ConstructorEager,
+) -> None:
+    constructor = partial(series, constructor_eager)
+    s = constructor("s", data)
+    df = s.to_frame().with_row_index("dont change me")
+    unchanged_indexed = df.to_dict(as_series=False)
+    assert_equal_series(s.scatter(indices, values), expected, "s")
+    if not isinstance(indices, int):
+        assert_equal_series(s.scatter(constructor("i", indices), values), expected, "s")
+    if not isinstance(values, int):
+        assert_equal_series(s.scatter(indices, constructor("v", values)), expected, "s")
+    assert_equal_data(df, unchanged_indexed)
+
+
+def test_scatter_pandas_index() -> None:
     pytest.importorskip("pandas")
     import pandas as pd
 
@@ -27,66 +63,8 @@ def test_scatter_indices() -> None:
     pd.testing.assert_series_equal(result.to_native(), expected)
 
 
-def test_scatter_unchanged(constructor_eager: ConstructorEager) -> None:
-    df = nw.from_native(
-        constructor_eager({"a": [1, 2, 3], "b": [142, 124, 132]}), eager_only=True
-    )
-    df.with_columns(
-        df["a"].scatter([0, 1], [999, 888]), df["b"].scatter([0, 2, 1], [142, 124, 132])
-    )
-    expected = {"a": [1, 2, 3], "b": [142, 124, 132]}
-    assert_equal_data(df, expected)
-
-
-def test_single_series(constructor_eager: ConstructorEager) -> None:
-    df = nw.from_native(
-        constructor_eager({"a": [1, 2, 3], "b": [142, 124, 132]}), eager_only=True
-    )
-    s = df["a"]
-    s.scatter([0, 1], [999, 888])
-    expected = {"a": [1, 2, 3]}
-    assert_equal_data({"a": s}, expected)
-
-
-def test_scatter_integer(constructor_eager: ConstructorEager) -> None:
-    df = nw.from_native(
-        constructor_eager({"a": [1, 2, 3], "b": [142, 124, 132]}), eager_only=True
-    )
-    s = df["a"]
-    result = s.scatter(0, 999)
-    expected = {"a": [999, 2, 3]}
-    assert_equal_data({"a": result}, expected)
-
-
-def test_scatter_unordered_indices(constructor_eager: ConstructorEager) -> None:
-    data = {"a": [16, 12, 10, 9, 6, 5, 2]}
-    indices = [6, 1, 0, 5, 3, 2, 4]
-    df = nw.from_native(constructor_eager(data))
-    result = df["a"].scatter(indices, df["a"])
-    assert_equal_data({"a": result}, {"a": [10, 12, 5, 6, 2, 9, 16]})
-
-
 def test_scatter_2862(constructor_eager: ConstructorEager) -> None:
-    df = nw.from_native(
-        constructor_eager({"a": [1, 2, 3], "b": [142, 124, 132]}), eager_only=True
-    )
-    ser = df["a"]
-    result = ser.scatter(1, 999)
-    expected = {"a": [1, 999, 3]}
-    assert_equal_data({"a": result}, expected)
-    result = ser.scatter([0, 2], [999, 888])
-    expected = {"a": [999, 2, 888]}
-    assert_equal_data({"a": result}, expected)
-    result = ser.scatter([2, 0], [999, 888])
-    expected = {"a": [888, 2, 999]}
-    assert_equal_data({"a": result}, expected)
-
-
-def test_scatter_series_indices(constructor_eager: ConstructorEager) -> None:
-    df = nw.from_native(
-        constructor_eager({"a": [1, 2, 3], "idx": [0, 2, 1]}), eager_only=True
-    )
-    indices = df["idx"]
-    result = df["a"].scatter(indices, [999, 888, 777])
-    expected = {"a": [999, 777, 888]}
-    assert_equal_data({"a": result}, expected)
+    s = series(constructor_eager, "a", [1, 2, 3])
+    assert_equal_series(s.scatter(1, 999), [1, 999, 3], "a")
+    assert_equal_series(s.scatter([0, 2], [999, 888]), [999, 2, 888], "a")
+    assert_equal_series(s.scatter([2, 0], [999, 888]), [888, 2, 999], "a")
