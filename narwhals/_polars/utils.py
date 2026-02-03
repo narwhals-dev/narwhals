@@ -5,7 +5,9 @@ from functools import lru_cache
 from typing import TYPE_CHECKING, Any, ClassVar, Final, Protocol, TypeVar, overload
 
 import polars as pl
+import polars.exceptions as pl_exc
 
+import narwhals.exceptions as nw_exc
 from narwhals._dispatch import just_dispatch
 from narwhals._duration import Interval
 from narwhals._utils import (
@@ -16,14 +18,6 @@ from narwhals._utils import (
     _StoresNative,
     deep_getattr,
     isinstance_or_issubclass,
-)
-from narwhals.exceptions import (
-    ColumnNotFoundError,
-    ComputeError,
-    DuplicateError,
-    InvalidOperationError,
-    NarwhalsError,
-    ShapeError,
 )
 
 if TYPE_CHECKING:
@@ -215,34 +209,32 @@ def narwhals_to_native_dtype(  # noqa: C901
     return pl.Unknown()  # pragma: no cover
 
 
-def _is_polars_exception(exception: Exception) -> bool:
-    if BACKEND_VERSION >= (1,):
-        # Old versions of Polars didn't have PolarsError.
-        return isinstance(exception, pl.exceptions.PolarsError)
-    # Last attempt, for old Polars versions.
-    return "polars.exceptions" in str(type(exception))  # pragma: no cover
-
-
-def _is_cudf_exception(exception: Exception) -> bool:
+@just_dispatch
+def catch_polars_exception(exception: Exception) -> nw_exc.NarwhalsError | Exception:
     # These exceptions are raised when running polars on GPUs via cuDF
-    return str(exception).startswith("CUDF failure")
-
-
-def catch_polars_exception(exception: Exception) -> NarwhalsError | Exception:
-    if isinstance(exception, pl.exceptions.ColumnNotFoundError):
-        return ColumnNotFoundError(str(exception))
-    if isinstance(exception, pl.exceptions.ShapeError):
-        return ShapeError(str(exception))
-    if isinstance(exception, pl.exceptions.InvalidOperationError):
-        return InvalidOperationError(str(exception))
-    if isinstance(exception, pl.exceptions.DuplicateError):
-        return DuplicateError(str(exception))
-    if isinstance(exception, pl.exceptions.ComputeError):
-        return ComputeError(str(exception))
-    if _is_polars_exception(exception) or _is_cudf_exception(exception):
-        return NarwhalsError(str(exception))  # pragma: no cover
-    # Just return exception as-is.
+    message = str(exception)
+    if message.startswith("CUDF failure") or "polars.exceptions" in str(type(exception)):
+        return nw_exc.NarwhalsError(message)  # pragma: no cover
     return exception
+
+
+if BACKEND_VERSION >= (1,):
+    exc_types: Iterable[Any] = pl_exc.PolarsError.__subclasses__()
+else:
+    # Old versions of Polars didn't have PolarsError.
+    exc_types = (
+        pl_exc.ColumnNotFoundError,
+        pl_exc.ShapeError,
+        pl_exc.InvalidOperationError,
+        pl_exc.DuplicateError,
+        pl_exc.ComputeError,
+    )
+
+
+@catch_polars_exception.register(*exc_types)
+def _from_native_exception(exception: Exception) -> nw_exc.NarwhalsError:
+    tp = getattr(nw_exc, type(exception).__name__, nw_exc.NarwhalsError)
+    return tp(str(exception))
 
 
 class PolarsAnyNamespace(
