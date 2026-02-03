@@ -55,7 +55,7 @@ from narwhals.dtypes._classes_v1 import Datetime as DatetimeV1, Duration as Dura
 if TYPE_CHECKING:
     from collections.abc import Callable, Collection, Mapping
 
-    from typing_extensions import TypeAlias
+    from typing_extensions import TypeAlias, TypeIs
 
     from narwhals.dtypes._classes import _Bits
     from narwhals.typing import TimeUnit
@@ -102,12 +102,8 @@ INTEGER: DTypeGroup = SIGNED_INTEGER.union(UNSIGNED_INTEGER)
 FLOAT: DTypeGroup = frozenset((Float32, Float64))
 NUMERIC: DTypeGroup = FLOAT.union(INTEGER).union((Decimal,))
 NESTED: DTypeGroup = frozenset((Struct, List, Array))
-LIST_ARRAY: DTypeGroup = frozenset((List, Array))
 DATETIME: DTypeGroup = frozen_dtypes(Datetime, DatetimeV1)
 
-_STRING_BINARY_CONVERT: Mapping[FrozenDTypes, type[Binary]] = {
-    frozen_dtypes(String, Binary): Binary
-}
 _FLOAT_PROMOTE: Mapping[FrozenDTypes, type[Float64]] = {
     frozen_dtypes(Float32, Float64): Float64,
     frozen_dtypes(Decimal, Float64): Float64,
@@ -186,6 +182,10 @@ def has_nested(base_types: FrozenDTypes, /) -> bool:
     return _has_intersection(base_types, NESTED)
 
 
+def has_inner(dtype: Any) -> TypeIs[Array | List]:
+    return isinstance(dtype, (Array, List))
+
+
 @just_dispatch(upper_bound=DType)
 def same_supertype(left: DType, right: DType, /) -> DType | None:
     return left if dtype_eq(left, right) else None
@@ -247,13 +247,6 @@ def array_supertype(left: Array, right: Array, /) -> Array | None:
 @same_supertype.register(List)
 def list_supertype(left: List, right: List, /) -> List | None:
     if inner := get_supertype(left.inner(), right.inner()):
-        return List(inner)
-    return None
-
-
-def _list_array_supertype(list_: List, array: Array, /) -> List | None:
-    """Get the supertype of a List and an Array with the same depth."""
-    if inner := get_supertype(list_.inner(), array.inner()):
         return List(inner)
     return None
 
@@ -346,21 +339,31 @@ def _numeric_supertype(
     return None
 
 
+def _mixed_nested_supertype(left: DType, right: DType, /) -> DType | None:
+    if (
+        has_inner(left)
+        and has_inner(right)
+        and (inner := get_supertype(left.inner(), right.inner()))
+    ):
+        return List(inner)
+    return None
+
+
 def _mixed_supertype(
     left: DType, right: DType, base_types: FrozenDTypes, /
 ) -> DType | None:
     """Get the supertype of two data types that do not share the same class."""
-    if base_types == LIST_ARRAY:
-        list_, array = (left, right) if isinstance(left, List) else (right, left)
-        return _list_array_supertype(list_, array)  # type: ignore[arg-type]
     if Date in base_types and _has_intersection(base_types, DATETIME):
         return left if isinstance(left, Datetime) else right
-    if String in base_types and Binary not in base_types:
-        # Handle {X, String} -> String (except Binary which returns Binary)
-        return String()
-    if NUMERIC.isdisjoint(base_types):
-        return tp() if (tp := _STRING_BINARY_CONVERT.get(base_types)) else None
-    return None if has_nested(base_types) else _numeric_supertype(left, right, base_types)
+    if String in base_types:
+        return (Binary if Binary in base_types else String)()
+    if has_nested(base_types):
+        return _mixed_nested_supertype(left, right)
+    return (
+        _numeric_supertype(left, right, base_types)
+        if _has_intersection(NUMERIC, base_types)
+        else None
+    )
 
 
 def get_supertype(left: DType, right: DType) -> DType | None:
