@@ -126,9 +126,6 @@ NUMERIC: DTypeGroup = FLOAT.union(INTEGER).union((Decimal,))
 NESTED: DTypeGroup = frozenset((Struct, List, Array))
 DATETIME: DTypeGroup = frozen_dtypes(Datetime, DatetimeV1)
 
-_STRING_BINARY_CONVERT: Mapping[FrozenDTypes, type[Binary]] = {
-    frozen_dtypes(String, Binary): Binary
-}
 _FLOAT_PROMOTE: Mapping[FrozenDTypes, type[Float64]] = {
     frozen_dtypes(Float32, Float64): Float64,
     frozen_dtypes(Decimal, Float64): Float64,
@@ -413,14 +410,11 @@ def _mixed_supertype(st: _SupertypeCase[DType, DType]) -> DType | None:
     left, right = st.left, st.right
     if Date in base_types and _has_intersection(base_types, DATETIME):
         return left if isinstance(left, Datetime) else right
-    if String in base_types and Binary not in base_types:
-        # Handle {X, String} -> String (except Binary which returns Binary)
-        return String()
+    if String in base_types:
+        return (Binary if Binary in base_types else String)()
     if has_nested(base_types):
         return _mixed_nested_supertype(left, right)
-    if NUMERIC.isdisjoint(base_types):
-        return tp() if (tp := _STRING_BINARY_CONVERT.get(base_types)) else None
-    return _numeric_supertype(st)
+    return _numeric_supertype(st) if _has_intersection(NUMERIC, base_types) else None
 
 
 class _SupertypeCase(Generic[DTypeT1_co, DTypeT2_co]):
