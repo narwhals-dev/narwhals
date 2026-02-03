@@ -16,14 +16,13 @@ from narwhals._utils import (
     _DeferredIterable,
     _StoresCompliant,
     _StoresNative,
+    deep_attrgetter,
     deep_getattr,
     isinstance_or_issubclass,
 )
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Mapping
-
-    from typing_extensions import TypeIs
 
     from narwhals._compliant.typing import Accessor
     from narwhals._polars.dataframe import Method
@@ -62,23 +61,19 @@ FROM_DICTS_ACCEPTS_MAPPINGS: Final[bool] = BACKEND_VERSION >= (1, 30, 0)
 HAS_UINT_128 = BACKEND_VERSION >= (1, 34, 0)
 """https://github.com/pola-rs/polars/pull/24346"""
 
+get_native = deep_attrgetter("native")
 
-@overload
-def extract_native(obj: _StoresNative[NativeT]) -> NativeT: ...
-@overload
-def extract_native(obj: T) -> T: ...
-def extract_native(obj: _StoresNative[NativeT] | T) -> NativeT | T:
-    return obj.native if _is_compliant_polars(obj) else obj
+if TYPE_CHECKING:
+
+    @overload
+    def extract_native(obj: _StoresNative[NativeT], /) -> NativeT: ...
+    @overload
+    def extract_native(obj: T, /) -> T: ...
 
 
-def _is_compliant_polars(
-    obj: _StoresNative[NativeT] | Any,
-) -> TypeIs[_StoresNative[NativeT]]:
-    from narwhals._polars.dataframe import PolarsDataFrame, PolarsLazyFrame
-    from narwhals._polars.expr import PolarsExpr
-    from narwhals._polars.series import PolarsSeries
-
-    return isinstance(obj, (PolarsDataFrame, PolarsLazyFrame, PolarsSeries, PolarsExpr))
+@just_dispatch
+def extract_native(obj: Any, /) -> Any:
+    return obj
 
 
 def extract_args_kwargs(

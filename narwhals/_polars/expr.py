@@ -14,6 +14,7 @@ from narwhals._polars.utils import (
     PolarsStructNamespace,
     extract_args_kwargs,
     extract_native,
+    get_native,
     narwhals_to_native_dtype,
 )
 from narwhals._utils import Implementation, no_default, requires
@@ -395,6 +396,9 @@ class PolarsExpr:
     __rmod__: Method[Self]
     __rpow__: Method[Self]
     __rtruediv__: Method[Self]
+
+
+extract_native.register(PolarsExpr)(get_native)  # type: ignore[attr-defined]
 
 
 class PolarsExprNamespace(PolarsAnyNamespace[PolarsExpr, pl.Expr]):

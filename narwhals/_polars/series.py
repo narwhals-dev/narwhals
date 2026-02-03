@@ -17,6 +17,7 @@ from narwhals._polars.utils import (
     catch_polars_exception,
     extract_args_kwargs,
     extract_native,
+    get_native,
     narwhals_to_native_dtype,
     native_to_narwhals_dtype,
 )
@@ -765,6 +766,9 @@ class PolarsSeries:
     @property
     def list(self) -> PolarsSeriesListNamespace:
         return PolarsSeriesListNamespace(self)
+
+
+extract_native.register(PolarsSeries)(get_native)  # type: ignore[attr-defined]
 
 
 class PolarsSeriesNamespace(PolarsAnyNamespace[PolarsSeries, pl.Series]):

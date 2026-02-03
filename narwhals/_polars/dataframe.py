@@ -11,6 +11,8 @@ from narwhals._polars.utils import (
     FROM_DICTS_ACCEPTS_MAPPINGS,
     catch_polars_exception,
     extract_args_kwargs,
+    extract_native,
+    get_native,
     narwhals_to_native_dtype,
     native_to_narwhals_dtype,
 )
@@ -758,3 +760,6 @@ class PolarsLazyFrame(PolarsBaseFrame[pl.LazyFrame]):
         if self._backend_version < (1, 0, 0):
             return self._with_native(self.native.drop(columns))
         return self._with_native(self.native.drop(columns, strict=strict))
+
+
+extract_native.register(PolarsDataFrame, PolarsLazyFrame)(get_native)  # type: ignore[attr-defined]
