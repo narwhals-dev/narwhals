@@ -18,7 +18,8 @@ from narwhals._ibis.expr import IbisExpr
 from narwhals._ibis.selectors import IbisSelectorNamespace
 from narwhals._ibis.utils import function, lit, narwhals_to_native_dtype
 from narwhals._sql.namespace import SQLNamespace
-from narwhals._utils import Implementation
+from narwhals._utils import Implementation, safe_cast
+from narwhals.schema import Schema, to_supertype
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -68,8 +69,13 @@ class IbisNamespace(
         self, items: Iterable[IbisLazyFrame], *, how: ConcatMethod
     ) -> IbisLazyFrame:
         frames: Sequence[IbisLazyFrame] = tuple(items)
-        if how == "diagonal":
+        if how.startswith("diagonal"):
             frames = self.align_diagonal(frames)
+
+        if how.endswith("relaxed"):
+            schemas = (Schema(frame.collect_schema()) for frame in frames)
+            out_schema = reduce(to_supertype, schemas)
+            frames = [frame.select(*safe_cast(self, out_schema)) for frame in frames]
         try:
             result = ibis.union(*(lf.native for lf in frames))
         except ibis.IbisError:
@@ -78,7 +84,8 @@ class IbisNamespace(
                 msg = "inputs should all have the same schema"
                 raise TypeError(msg) from None
             raise
-        return frames[0]._with_native(result)
+        else:
+            return self._lazyframe.from_native(result, context=self)
 
     def concat_str(
         self, *exprs: IbisExpr, separator: str, ignore_nulls: bool

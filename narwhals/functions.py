@@ -62,11 +62,15 @@ def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> FrameT
         how: concatenating strategy
 
             - vertical: Concatenate vertically. Column names must match.
+            - vertical_relaxed: Same as vertical, but additionally coerces columns to
+                their common supertype if they are mismatched (eg: Int32 → Int64).
             - horizontal: Concatenate horizontally. If lengths don't match, then
                 missing rows are filled with null values. This is only supported
                 when all inputs are (eager) DataFrames.
             - diagonal: Finds a union between the column schemas and fills missing column
                 values with null.
+            - diagonal_relaxed: Same as diagonal, but additionally coerces columns to
+                their common supertype if they are mismatched (eg: Int32 → Int64).
 
     Raises:
         TypeError: The items to concatenate should either all be eager, or all lazy
@@ -140,8 +144,14 @@ def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> FrameT
         raise ValueError(msg)
     items = tuple(items)
     validate_laziness(items)
-    if how not in {"horizontal", "vertical", "diagonal"}:  # pragma: no cover
-        msg = "Only vertical, horizontal and diagonal concatenations are supported."
+    if how not in {
+        "horizontal",
+        "vertical",
+        "diagonal",
+        "vertical_relaxed",
+        "diagonal_relaxed",
+    }:  # pragma: no cover
+        msg = "Only vertical, vertical_relaxed, horizontal, diagonal and diagonal_relaxed concatenations are supported."
         raise NotImplementedError(msg)
     first_item = items[0]
     if is_narwhals_lazyframe(first_item) and how == "horizontal":

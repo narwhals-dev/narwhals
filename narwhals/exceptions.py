@@ -101,6 +101,10 @@ class UnsupportedDTypeError(NarwhalsError):
     """Exception raised when trying to convert to a DType which is not supported by the given backend."""
 
 
+class SchemaMismatchError(NarwhalsError):
+    """Exception raised when an unexpected schema mismatch causes an error."""
+
+
 class NarwhalsUnstableWarning(UserWarning):
     """Warning issued when a method or function is considered unstable in the stable api."""
 
