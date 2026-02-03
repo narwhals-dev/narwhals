@@ -1,18 +1,21 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, Generic, TypeVar, overload
+from functools import partial
+from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar, overload
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
+
+    class Deferred(Protocol):
+        def __call__(self, f: Impl[R], /) -> JustDispatch[R]: ...
+
 
 __all__ = ["just_dispatch"]
 
 R = TypeVar("R")
 R_co = TypeVar("R_co", covariant=True)
 Impl: TypeAlias = Callable[..., R]
-Deferred: TypeAlias = "Callable[[Callable[..., R]], JustDispatch[R]]"
-"""The type when using `@just_dispatch(**keywords)`."""
 Passthrough = TypeVar("Passthrough", bound=Callable[..., Any])
 
 
@@ -52,12 +55,12 @@ class JustDispatch(Generic[R_co]):
 
 
 @overload
-def just_dispatch(function: Impl[R_co], /) -> JustDispatch[R_co]: ...
+def just_dispatch(function: Impl[R], /) -> JustDispatch[R]: ...
 @overload
-def just_dispatch(*, upper_bound: type[Any] = object) -> Deferred[R]: ...
+def just_dispatch(*, upper_bound: type[Any] = object) -> Deferred: ...
 def just_dispatch(
-    function: Impl[R_co] | None = None, /, *, upper_bound: type[Any] = object
-) -> JustDispatch[R_co] | Deferred[R]:
-    if function is None:
-        return lambda f, /: JustDispatch(f, upper_bound=upper_bound)
-    return JustDispatch(function, upper_bound)
+    function: Impl[R] | None = None, /, *, upper_bound: type[Any] = object
+) -> JustDispatch[R] | Deferred:
+    if function is not None:
+        return JustDispatch(function, upper_bound)
+    return partial(JustDispatch[Any], upper_bound=upper_bound)
