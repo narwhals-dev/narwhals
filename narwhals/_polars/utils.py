@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Final, Protocol, TypeVar, overl
 
 import polars as pl
 
+from narwhals._dispatch import just_dispatch
 from narwhals._duration import Interval
 from narwhals._utils import (
     Implementation,
@@ -93,80 +94,56 @@ def extract_args_kwargs(
     return it_args, {k: extract_native(v) for k, v in kwds.items()}
 
 
-@lru_cache(maxsize=16)
-def native_to_narwhals_dtype(  # noqa: C901, PLR0912
-    dtype: pl.DataType, version: Version
-) -> DType:
+@just_dispatch
+def _from_native_dtype(dtype: pl.DataType, version: Version) -> DType:
     dtypes = version.dtypes
-    if dtype == pl.Float64:
-        return dtypes.Float64()
-    if dtype == pl.Float32:
-        return dtypes.Float32()
-    if HAS_INT_128 and dtype == pl.Int128:
-        return dtypes.Int128()
-    if dtype == pl.Int64:
-        return dtypes.Int64()
-    if dtype == pl.Int32:
-        return dtypes.Int32()
-    if dtype == pl.Int16:
-        return dtypes.Int16()
-    if dtype == pl.Int8:
-        return dtypes.Int8()
-    if HAS_UINT_128 and dtype == pl.UInt128:
-        return dtypes.UInt128()
-    if dtype == pl.UInt64:
-        return dtypes.UInt64()
-    if dtype == pl.UInt32:
-        return dtypes.UInt32()
-    if dtype == pl.UInt16:
-        return dtypes.UInt16()
-    if dtype == pl.UInt8:
-        return dtypes.UInt8()
-    if dtype == pl.String:
-        return dtypes.String()
-    if dtype == pl.Boolean:
-        return dtypes.Boolean()
-    if dtype == pl.Object:
-        return dtypes.Object()
-    if dtype == pl.Categorical:
-        return dtypes.Categorical()
-    if isinstance_or_issubclass(dtype, pl.Enum):
-        if version is Version.V1:
-            return dtypes.Enum()  # type: ignore[call-arg]
-        categories = _DeferredIterable(dtype.categories.to_list)
-        return dtypes.Enum(categories)
-    if dtype == pl.Date:
-        return dtypes.Date()
-    if isinstance_or_issubclass(dtype, pl.Datetime):
-        return (
-            dtypes.Datetime()
-            if dtype is pl.Datetime
-            else dtypes.Datetime(dtype.time_unit, dtype.time_zone)
-        )
-    if isinstance_or_issubclass(dtype, pl.Duration):
-        return (
-            dtypes.Duration()
-            if dtype is pl.Duration
-            else dtypes.Duration(dtype.time_unit)
-        )
-    if isinstance_or_issubclass(dtype, pl.Struct):
-        fields = [
-            dtypes.Field(name, native_to_narwhals_dtype(tp, version))
-            for name, tp in dtype
-        ]
-        return dtypes.Struct(fields)
-    if isinstance_or_issubclass(dtype, pl.List):
-        return dtypes.List(native_to_narwhals_dtype(dtype.inner, version))
-    if isinstance_or_issubclass(dtype, pl.Array):
-        outer_shape = dtype.width if BACKEND_VERSION < (0, 20, 30) else dtype.size
-        return dtypes.Array(native_to_narwhals_dtype(dtype.inner, version), outer_shape)
-    if isinstance_or_issubclass(dtype, pl.Decimal):
-        return dtypes.Decimal(dtype.precision, dtype.scale)
-    if dtype == pl.Time:
-        return dtypes.Time()
-    if dtype == pl.Binary:
-        return dtypes.Binary()
-    return dtypes.Unknown()
+    return getattr(dtypes, type(dtype).__name__, dtypes.Unknown)()
+
+
+@_from_native_dtype.register(pl.Enum)
+def enum_to_narwhals(dtype: pl.Enum, version: Version) -> DType:
+    dtypes = version.dtypes
+    if version is Version.V1:
+        return dtypes.Enum()  # type: ignore[call-arg]
+    return dtypes.Enum(_DeferredIterable(dtype.categories.to_list))
+
+
+@_from_native_dtype.register(pl.Datetime)
+def datetime_to_narwhals(dtype: pl.Datetime, version: Version) -> DType:
+    return version.dtypes.Datetime(dtype.time_unit, dtype.time_zone)
+
+
+@_from_native_dtype.register(pl.Duration)
+def duration_to_narwhals(dtype: pl.Duration, version: Version) -> DType:
+    return version.dtypes.Duration(dtype.time_unit)
+
+
+@_from_native_dtype.register(pl.Decimal)
+def decimal_to_narwhals(dtype: pl.Decimal, version: Version) -> DType:
+    return version.dtypes.Decimal(dtype.precision, dtype.scale)
+
+
+@_from_native_dtype.register(pl.List)
+def list_to_narwhals(dtype: pl.List, version: Version) -> DType:
+    return version.dtypes.List(_from_native_dtype(dtype.inner, version))
+
+
+@_from_native_dtype.register(pl.Array)
+def array_to_narwhals(dtype: pl.Array, version: Version) -> DType:
+    outer_shape = dtype.width if BACKEND_VERSION < (0, 20, 30) else dtype.size
+    return version.dtypes.Array(_from_native_dtype(dtype.inner, version), outer_shape)
+
+
+@_from_native_dtype.register(pl.Struct)
+def struct_to_narwhals(dtype: pl.Struct, version: Version) -> DType:
+    Field = dtypes.Field  # noqa: N806
+    fields = [Field(name, _from_native_dtype(tp, version)) for name, tp in dtype]
+    return version.dtypes.Struct(fields)
+
+
+@lru_cache(maxsize=16)
+def native_to_narwhals_dtype(dtype: pl.DataType, version: Version) -> DType:
+    return _from_native_dtype(dtype, version)
 
 
 dtypes = Version.MAIN.dtypes
