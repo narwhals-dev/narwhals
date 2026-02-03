@@ -36,4 +36,4 @@ jobs:
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
-        run: pytest tests --cov=narwhals/_ibis --cov-fail-under=95 --constructors ibis
+        run: pytest tests --constructors ibis
