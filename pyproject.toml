@@ -95,7 +95,6 @@ docs = [
   "black",  # required by mkdocstrings_handlers
   "jinja2",
   "duckdb",
-  "narwhals[ibis]",
   "narwhals[sql]",
   "markdown-exec[ansi]",
   "mkdocs",
