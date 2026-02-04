@@ -58,20 +58,26 @@ class DuckDBExprDateTimeNamespace(SQLExprDateTimeNamesSpace["DuckDBExpr"]):
 
     def total_seconds(self) -> DuckDBExpr:
         return self.compliant._with_elementwise(
-            lambda expr: lit(SECONDS_PER_MINUTE) * F("datepart", lit("minute"), expr)
-            + F("datepart", lit("second"), expr)
+            lambda expr: (
+                lit(SECONDS_PER_MINUTE) * F("datepart", lit("minute"), expr)
+                + F("datepart", lit("second"), expr)
+            )
         )
 
     def total_milliseconds(self) -> DuckDBExpr:
         return self.compliant._with_elementwise(
-            lambda expr: lit(MS_PER_MINUTE) * F("datepart", lit("minute"), expr)
-            + F("datepart", lit("millisecond"), expr)
+            lambda expr: (
+                lit(MS_PER_MINUTE) * F("datepart", lit("minute"), expr)
+                + F("datepart", lit("millisecond"), expr)
+            )
         )
 
     def total_microseconds(self) -> DuckDBExpr:
         return self.compliant._with_elementwise(
-            lambda expr: lit(US_PER_MINUTE) * F("datepart", lit("minute"), expr)
-            + F("datepart", lit("microsecond"), expr)
+            lambda expr: (
+                lit(US_PER_MINUTE) * F("datepart", lit("minute"), expr)
+                + F("datepart", lit("microsecond"), expr)
+            )
         )
 
     def truncate(self, every: str) -> DuckDBExpr:
