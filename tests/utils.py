@@ -167,7 +167,7 @@ def assert_equal_series(
 
 
 def assert_equal_hash(left: Any, right: Any) -> None:
-    """Assert that the left and right produce identical hash values."""
+    """Assert that left and right produce identical hash values."""
     __tracebackhide__ = True
     assert left in {right}, (  # noqa: FURB171
         f"inputs do not compare equal by `__hash__`\n[left]: {left}\n[right]: {right}"
