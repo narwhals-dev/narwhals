@@ -868,6 +868,8 @@ def evaluate_root_node(node: ExprNode, ns: CompliantNamespaceAny) -> CompliantEx
             )
         )
         ce = cast("CompliantExprAny", func(*ces, **node.kwargs))
+    if node.name == "corr":
+        ces = []
     md = ExprMetadata.from_node(node, *ces)
     ce._opt_metadata = md
     return ce

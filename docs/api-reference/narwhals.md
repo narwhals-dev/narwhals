@@ -13,6 +13,7 @@ Here are the top-level functions available in Narwhals.
         - col
         - concat
         - concat_str
+        - corr
         - exclude
         - format
         - from_arrow

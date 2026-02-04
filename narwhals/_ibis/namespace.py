@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 import ibis
 import ibis.expr.types as ir
 
+from narwhals._exceptions import issue_warning
 from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
@@ -15,12 +16,13 @@ from narwhals._expression_parsing import (
 from narwhals._ibis.dataframe import IbisLazyFrame
 from narwhals._ibis.expr import IbisExpr
 from narwhals._ibis.selectors import IbisSelectorNamespace
-from narwhals._ibis.utils import function, lit, narwhals_to_native_dtype
+from narwhals._ibis.utils import evaluate_exprs, function, lit, narwhals_to_native_dtype
 from narwhals._sql.namespace import SQLNamespace
 from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
+    from typing import Literal
 
     from narwhals._utils import Version
     from narwhals.typing import ConcatMethod, IntoDType, PythonLiteral
@@ -128,6 +130,26 @@ class IbisNamespace(SQLNamespace[IbisLazyFrame, IbisExpr, "ir.Table", "ir.Value"
         return self._expr(
             call=func,
             evaluate_output_names=lambda _df: ["len"],
+            alias_output_names=None,
+            version=self._version,
+        )
+
+    def corr(
+        self, a: IbisExpr, b: IbisExpr, method: Literal["pearson", "spearman"] = "pearson"
+    ) -> IbisExpr:
+        msg = (
+            "For wider dataframe support, Narwhals currently does not pass down coefficient "
+            'methods into Ibis .corr calls. ("pop" correlation used)'
+        )
+        issue_warning(msg, UserWarning)
+
+        def func(_df: IbisLazyFrame) -> list[ir.Value]:
+            (_, a_), (_, b_) = evaluate_exprs(_df, a, b)
+            return [a_.corr(b_, how="pop")]
+
+        return self._expr(
+            func,
+            evaluate_output_names=lambda _df: ["corr"],
             alias_output_names=None,
             version=self._version,
         )

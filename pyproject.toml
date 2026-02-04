@@ -285,6 +285,9 @@ filterwarnings = [
 
   "ignore:.*invalid value encountered in cast:RuntimeWarning:pandas",
   "ignore:.*The behavior of DataFrame concatenation with empty or all-NA entries is deprecated:FutureWarning",
+
+  # Warning raised due to correlation method support
+  "ignore:.*does not pass down coefficient methods",
 ]
 xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]

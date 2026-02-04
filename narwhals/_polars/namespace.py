@@ -225,6 +225,17 @@ class PolarsNamespace:
             PolarsSelectorNamespace(self),
         )
 
+    def corr(
+        self,
+        a: PolarsExpr | PolarsSeries,
+        b: PolarsExpr | PolarsSeries,
+        method: Literal["pearson", "spearman"] = "pearson",
+    ) -> None:
+        eager: bool = isinstance(a, PolarsSeries) and isinstance(b, PolarsSeries)
+        return self._expr(
+            pl.corr(a.native, b.native, eager=eager, method=method), self._version
+        )
+
 
 class PolarsSelectorNamespace:
     _implementation = Implementation.POLARS

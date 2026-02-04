@@ -254,3 +254,7 @@ class ArrowNamespace(
     ) -> ChunkedArrayAny:
         otherwise = pa.nulls(len(when), then.type) if otherwise is None else otherwise
         return pc.if_else(when, then, otherwise)
+
+    def corr(self, a: ArrowExpr, b: ArrowExpr, method: str = "pearson") -> ArrowExpr:
+        msg = "Correlation not implemented yet for arrow dataframes"
+        raise NotImplementedError(msg)

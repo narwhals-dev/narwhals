@@ -16,11 +16,13 @@ from narwhals._duckdb.utils import (
     F,
     concat_str,
     duckdb_dtypes,
+    evaluate_exprs_and_aliases,
     function,
     lit,
     narwhals_to_native_dtype,
     when,
 )
+from narwhals._exceptions import issue_warning
 from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
@@ -30,6 +32,7 @@ from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
+    from typing import Literal
 
     from duckdb import DuckDBPyRelation  # noqa: F401
 
@@ -158,6 +161,31 @@ class DuckDBNamespace(
         return self._expr(
             call=func,
             evaluate_output_names=lambda _df: ["len"],
+            alias_output_names=None,
+            version=self._version,
+        )
+
+    def corr(
+        self,
+        a: DuckDBExpr,
+        b: DuckDBExpr,
+        method: Literal["pearson", "spearman"] = "pearson",
+    ) -> DuckDBExpr:
+        if method != "pearson":
+            msg = (
+                f"You have requested {method} correlation but duckdb only provides "
+                "native support for pearson correlation coefficients. Correlation will "
+                "be calculated using pearson."
+            )
+            issue_warning(msg, UserWarning)
+
+        def func(df: DuckDBLazyFrame) -> list[Expression]:
+            (_, a_), (_, b_) = evaluate_exprs_and_aliases(df, a, b)
+            return [F("corr", a_, b_)]
+
+        return self._expr(
+            call=func,
+            evaluate_output_names=lambda _df: ["corr"],
             alias_output_names=None,
             version=self._version,
         )
