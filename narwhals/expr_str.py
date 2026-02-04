@@ -148,14 +148,14 @@ class ExprStringNamespace(Generic[ExprT]):
             >>> df_native = pd.DataFrame({"fruits": ["apple", "mango", None]})
             >>> df = nw.from_native(df_native)
             >>> df.with_columns(has_prefix=nw.col("fruits").str.starts_with("app"))
-            ┌───────────────────┐
-            |Narwhals DataFrame |
-            |-------------------|
-            |  fruits has_prefix|
-            |0  apple       True|
-            |1  mango      False|
-            |2   None       None|
-            └───────────────────┘
+            ┌────────────────────┐
+            | Narwhals DataFrame |
+            |--------------------|
+            |  fruits  has_prefix|
+            |0  apple        True|
+            |1  mango       False|
+            |2    NaN       False|
+            └────────────────────┘
         """
         return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "str.starts_with", prefix=prefix)
@@ -173,14 +173,14 @@ class ExprStringNamespace(Generic[ExprT]):
             >>> df_native = pd.DataFrame({"fruits": ["apple", "mango", None]})
             >>> df = nw.from_native(df_native)
             >>> df.with_columns(has_suffix=nw.col("fruits").str.ends_with("ngo"))
-            ┌───────────────────┐
-            |Narwhals DataFrame |
-            |-------------------|
-            |  fruits has_suffix|
-            |0  apple      False|
-            |1  mango       True|
-            |2   None       None|
-            └───────────────────┘
+            ┌────────────────────┐
+            | Narwhals DataFrame |
+            |--------------------|
+            |  fruits  has_suffix|
+            |0  apple       False|
+            |1  mango        True|
+            |2    NaN       False|
+            └────────────────────┘
         """
         return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "str.ends_with", suffix=suffix)
@@ -237,7 +237,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |------------------|
             |        s s_sliced|
             |0    pear         |
-            |1    None     None|
+            |1     NaN      NaN|
             |2  papaya       ya|
             └──────────────────┘
         """
@@ -415,7 +415,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |------------------|
             |  fruits upper_col|
             |0  apple     APPLE|
-            |1   None      None|
+            |1    NaN       NaN|
             └──────────────────┘
         """
         return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "str.to_uppercase"))
@@ -434,7 +434,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |------------------|
             |  fruits lower_col|
             |0  APPLE     apple|
-            |1   None      None|
+            |1    NaN       NaN|
             └──────────────────┘
         """
         return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "str.to_lowercase"))
@@ -501,7 +501,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |0     +1       +01|
             |1     -1       -01|
             |2      1       001|
-            |3   None      None|
+            |3    NaN       NaN|
             └──────────────────┘
         """
         return self._expr._append_node(
@@ -529,7 +529,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |0           cow      *****cow|
             |1        monkey      **monkey|
             |2  hippopotamus  hippopotamus|
-            |3          None          None|
+            |3           NaN           NaN|
             └─────────────────────────────┘
         """
         return self._expr._append_node(
@@ -559,7 +559,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |0           cow      cow*****|
             |1        monkey      monkey**|
             |2  hippopotamus  hippopotamus|
-            |3          None          None|
+            |3           NaN           NaN|
             └─────────────────────────────┘
         """
         return self._expr._append_node(

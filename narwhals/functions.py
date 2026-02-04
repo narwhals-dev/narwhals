@@ -580,7 +580,9 @@ def _get_deps_info() -> dict[str, str]:
             result[dist_name] = dist_version
         else:  # prefix match
             for target in target_names:
-                if not result[target] and dist_name.startswith(target):
+                if not result[target] and dist_name.startswith(
+                    target
+                ):  # pragma: no cover
                     result[target] = dist_version
                     break
 
@@ -1675,7 +1677,7 @@ def concat_str(
         |   full_sentence  |
         | 0   2 dogs play  |
         | 1   4 cats swim  |
-        | 2          None  |
+        | 2           NaN  |
         └──────────────────┘
     """
     flat_exprs = flatten([*flatten([exprs]), *more_exprs])

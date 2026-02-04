@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "2.15.0"
+version = "2.16.0"
 dependencies = []
 requires-python = ">=3.9"
 authors = [
@@ -95,7 +95,6 @@ docs = [
   "black",  # required by mkdocstrings_handlers
   "jinja2",
   "duckdb",
-  "narwhals[ibis]",
   "narwhals[sql]",
   "markdown-exec[ansi]",
   "mkdocs",
@@ -312,20 +311,19 @@ omit = [
   'narwhals/_arrow/typing.py',
   'narwhals/_duckdb/typing.py',
   'narwhals/_spark_like/typing.py',
-  'narwhals/_ibis/typing.py',
+  # We run Ibis in a separate CI job to the coverage one, to avoid their tight dependency pins.
+  'narwhals/_ibis/*',
+  "tests/ibis_test.py",
   # Remove after finishing eager sub-protocols
   'narwhals/_compliant/namespace.py',
 ]
 exclude_also = [
   "if sys.version_info() <",
-  "if .*implementation is Implementation.CUDF",
-  "if .*implementation is Implementation.MODIN",
-  "if .*implementation is Implementation.PYSPARK",
-  "if .*implementation is Implementation.PYSPARK_CONNECT",
-  "if .*implementation.is_cudf",
-  "if .*implementation.is_modin",
-  "if .*implementation.is_pyspark",
-  "if .*implementation.is_pyspark_connect",
+  "if .* is Implementation.(CUDF|MODIN|PYSPARK|PYSPARK_CONNECT|IBIS)",
+  "if .*.is_(cudf|modin|pyspark|pyspark_connect|ibis)",
+  'if "(cudf|modin|pyspark|ibis)" in',
+  "if not .*.is_pandas",
+  "if is_ibis_table",
   "except ModuleNotFoundError",
   'request.applymarker\(pytest.mark.xfail',
   'backend_version <',

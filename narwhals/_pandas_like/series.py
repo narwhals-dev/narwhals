@@ -182,6 +182,8 @@ class PandasLikeSeries(EagerSeries[Any]):
         else:
             if implementation.is_pandas():
                 kwds["copy"] = False
+            else:  # pragma: no cover
+                pass
             if index is not None and len(index):
                 kwds["index"] = index
         return cls.from_native(ns.Series(data, name=name, **kwds), context=context)
@@ -880,7 +882,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         kwargs: dict[str, Any] = {"axis": 0} if impl.is_modin() else {}
         result = self.native
 
-        if not impl.is_pandas():
+        if not impl.is_pandas():  # pragma: no cover
             # Workaround for both cudf and modin when clipping with a series
             #   * cudf: https://github.com/rapidsai/cudf/issues/17682
             #   * modin: https://github.com/modin-project/modin/issues/7415

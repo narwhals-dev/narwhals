@@ -1,0 +1,39 @@
+name: PyTest Ibis constructor
+
+on:
+  pull_request:
+
+env:
+  PY_COLORS: 1
+  PYTEST_ADDOPTS: "--numprocesses=logical"
+
+jobs:
+
+  pytest-ibis-constructor:
+    strategy:
+      matrix:
+        python-version: ["3.13"]
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: "true"
+          cache-suffix: ibis-${{ matrix.python-version }}
+          cache-dependency-glob: "pyproject.toml"
+      - name: install-reqs
+        run: uv pip install -e . --group core-tests --system
+      - name: install ibis
+        run: |
+          # Temporary pin until it's fixed upstream
+          uv pip install "sqlglot<28.6" --system
+          uv pip install -e ".[ibis]" --system
+      - name: show-deps
+        run: uv pip freeze
+      - name: Run pytest
+        run: pytest tests --constructors ibis

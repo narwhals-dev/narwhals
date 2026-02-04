@@ -56,7 +56,7 @@ solutions below (which also use sqlglot).
 
 You can also use Ibis or SQLFrame to generate SQL:
 
-```python exec="1" source="above" session="generating-sql" result="sql"
+```python
 import ibis
 
 df = nw.from_native(ibis.table({"date": "date", "price": "double"}, name="prices"))
