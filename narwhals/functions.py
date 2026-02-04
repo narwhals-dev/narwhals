@@ -1260,7 +1260,9 @@ def _expr_with_horizontal_op(name: str, *exprs: IntoExpr, **kwargs: Any) -> Expr
         msg = f"At least one expression must be passed to `{name}`"
         raise ValueError(msg)
     return Expr(
-        ExprNode(ExprKind.ELEMENTWISE, name, *exprs, **kwargs, allow_multi_output=True)
+        ExprNode(
+            ExprKind.ELEMENTWISE, name, exprs=exprs, **kwargs, allow_multi_output=True
+        )
     )
 
 
@@ -1373,8 +1375,7 @@ class When:
             ExprNode(
                 ExprKind.ELEMENTWISE,
                 "when_then",
-                self._predicate,
-                value,
+                exprs=(self._predicate, value),
                 allow_multi_output=False,
             )
         )
@@ -1383,7 +1384,9 @@ class When:
 class Then(Expr):
     def otherwise(self, value: IntoExpr | NonNestedLiteral) -> Expr:
         node = self._nodes[0]
-        return Expr(ExprNode(ExprKind.ELEMENTWISE, "when_then", *node.exprs, value))
+        return Expr(
+            ExprNode(ExprKind.ELEMENTWISE, "when_then", exprs=(*node.exprs, value))
+        )
 
 
 def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
@@ -1746,7 +1749,9 @@ def coalesce(
         raise TypeError(msg)
 
     return Expr(
-        ExprNode(ExprKind.ELEMENTWISE, "coalesce", *flat_exprs, allow_multi_output=True)
+        ExprNode(
+            ExprKind.ELEMENTWISE, "coalesce", exprs=flat_exprs, allow_multi_output=True
+        )
     )
 
 
