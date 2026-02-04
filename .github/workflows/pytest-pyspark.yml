@@ -35,7 +35,7 @@ jobs:
           cache-suffix: pyspark-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
-        run: uv pip install -e . --group core-tests --group extra --system
+        run: uv pip install -e . --group core-tests --system
       - name: install pyspark
         run: uv pip install -e ".[pyspark]" --system
       - name: show-deps

@@ -1641,9 +1641,9 @@ class Expr:
             ┌──────────────────┐
             |Narwhals DataFrame|
             |------------------|
-            |       a     b    |
-            |    0  1   foo    |
-            |    1  2  None    |
+            |       a    b     |
+            |    0  1  foo     |
+            |    1  2  NaN     |
             └──────────────────┘
         """
         if order_by is None:
@@ -1784,15 +1784,15 @@ class Expr:
             ...     nw.col("a").cum_count().alias("a_cum_count"),
             ...     nw.col("a").cum_count(reverse=True).alias("a_cum_count_reverse"),
             ... )
-            ┌─────────────────────────────────────────┐
-            |           Narwhals DataFrame            |
-            |-----------------------------------------|
-            |      a  a_cum_count  a_cum_count_reverse|
-            |0     x            1                    3|
-            |1     k            2                    2|
-            |2  None            2                    1|
-            |3     d            3                    1|
-            └─────────────────────────────────────────┘
+            ┌────────────────────────────────────────┐
+            |           Narwhals DataFrame           |
+            |----------------------------------------|
+            |     a  a_cum_count  a_cum_count_reverse|
+            |0    x            1                    3|
+            |1    k            2                    2|
+            |2  NaN            2                    1|
+            |3    d            3                    1|
+            └────────────────────────────────────────┘
         """
         return self._append_node(
             ExprNode(ExprKind.ORDERABLE_WINDOW, "cum_count", reverse=reverse)
