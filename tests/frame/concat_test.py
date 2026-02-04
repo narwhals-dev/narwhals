@@ -1,12 +1,18 @@
 from __future__ import annotations
 
+import datetime as dt
 import re
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 import narwhals as nw
-from narwhals.exceptions import InvalidOperationError
-from tests.utils import Constructor, ConstructorEager, assert_equal_data
+from narwhals._utils import Implementation
+from narwhals.exceptions import InvalidOperationError, NarwhalsError
+from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 
 def test_concat_horizontal(constructor_eager: ConstructorEager) -> None:
@@ -61,11 +67,7 @@ def test_concat_vertical(constructor: Constructor) -> None:
         nw.concat([df_left, df_left.select("d")], how="vertical").collect()
 
 
-def test_concat_diagonal(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    if "ibis" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_concat_diagonal(constructor: Constructor) -> None:
     data_1 = {"a": [1, 3], "b": [4, 6]}
     data_2 = {"a": [100, 200], "z": ["x", "y"]}
     expected = {
@@ -83,3 +85,56 @@ def test_concat_diagonal(
 
     with pytest.raises(ValueError, match="No items"):
         nw.concat([], how="diagonal")
+
+
+def _from_natives(
+    constructor: Constructor, *sources: dict[str, list[Any]]
+) -> Iterator[nw.LazyFrame[Any]]:
+    yield from (nw.from_native(constructor(data)).lazy() for data in sources)
+
+
+def test_concat_diagonal_bigger(constructor: Constructor) -> None:
+    # NOTE: `ibis.union` doesn't guarantee the order of outputs
+    # https://github.com/narwhals-dev/narwhals/pull/3404#discussion_r2694556781
+    data_1 = {"idx": [1, 2], "a": [1, 2], "b": [3, 4]}
+    data_2 = {"a": [5, 6], "c": [7, 8], "idx": [3, 4]}
+    data_3 = {"b": [9, 10], "idx": [5, 6], "c": [11, 12]}
+    expected = {
+        "idx": [1, 2, 3, 4, 5, 6],
+        "a": [1, 2, 5, 6, None, None],
+        "b": [3, 4, None, None, 9, 10],
+        "c": [None, None, 7, 8, 11, 12],
+    }
+    dfs = _from_natives(constructor, data_1, data_2, data_3)
+    result = nw.concat(dfs, how="diagonal").sort("idx")
+    assert_equal_data(result, expected)
+
+
+def test_concat_diagonal_invalid(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    data_1 = {"a": [1, 3], "b": [4, 6]}
+    data_2 = {
+        "a": [dt.datetime(2000, 1, 1), dt.datetime(2000, 1, 2)],
+        "b": [4, 6],
+        "z": ["x", "y"],
+    }
+    df_1 = nw.from_native(constructor(data_1)).lazy()
+    bad_schema = nw.from_native(constructor(data_2)).lazy()
+    impl = df_1.implementation
+    request.applymarker(
+        pytest.mark.xfail(
+            impl not in {Implementation.IBIS, Implementation.POLARS},
+            reason=f"{impl!r} does not validate schemas for `concat(how='diagonal')",
+        )
+    )
+    context: Any
+    if impl.is_polars() and POLARS_VERSION < (1, 1):  # pragma: no cover
+        context = pytest.raises(
+            NarwhalsError,
+            match=re.compile(r"(int.+datetime)|(datetime.+int)", re.IGNORECASE),
+        )
+    else:
+        context = pytest.raises((InvalidOperationError, TypeError), match=r"same schema")
+    with context:
+        nw.concat([df_1, bad_schema], how="diagonal").collect().to_dict(as_series=False)

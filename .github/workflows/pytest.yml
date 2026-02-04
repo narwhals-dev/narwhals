@@ -53,14 +53,14 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
         # we are not testing pyspark, modin, or dask on Windows here because nobody got time for that
-        run: uv pip install -e ".[ibis]" --group core-tests --group extra --system
+        run: uv pip install -e "." --group core-tests --group extra --system
       - name: install-test-plugin
         run: uv pip install -e test-plugin/. --system
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
         run: |
-          pytest tests --cov=narwhals --cov=tests --runslow --cov-fail-under=95 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe,ibis --durations=30
+          pytest tests --cov=narwhals --cov=tests --runslow --cov-fail-under=95 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe --durations=30
 
   pytest-full-coverage:
     strategy:
@@ -85,13 +85,13 @@ jobs:
           cache-suffix: pytest-full-coverage-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
-        run: uv pip install -e ".[dask, modin, ibis]" --group core-tests --group extra --system
+        run: uv pip install -e ".[dask]" --group core-tests --group extra --system
       - name: install-test-plugin
         run: uv pip install -e test-plugin/. --system
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
-        run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=100 --runslow --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,modin[pyarrow],polars[eager],polars[lazy],dask,duckdb,sqlframe,ibis --durations=30
+        run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=100 --runslow --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],dask,duckdb,sqlframe --durations=30
       - name: Run doctests
         # reprs differ between versions, so we only run doctests on the latest Python
         if: matrix.python-version == '3.13'
@@ -153,8 +153,7 @@ jobs:
           cache-suffix: python-314-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
-        # Use `--pre` as duckdb stable not compatible with 3.14
-        run: uv pip install -e . --group tests --pre pandas polars pyarrow duckdb sqlframe  --system
+        run: uv pip install -e . --group tests pandas polars pyarrow duckdb sqlframe --system
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest

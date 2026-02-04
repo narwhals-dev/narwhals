@@ -137,12 +137,8 @@ class DuckDBLazyFrame(
         if backend is None or backend is Implementation.PYARROW:
             from narwhals._arrow.dataframe import ArrowDataFrame
 
-            if self._backend_version < (1, 4):
-                ret = self.native.arrow()
-            else:  # pragma: no cover
-                ret = self.native.fetch_arrow_table()
             return ArrowDataFrame(
-                ret,
+                self.native.fetch_arrow_table(),
                 validate_backend_version=True,
                 version=self._version,
                 validate_column_names=True,
@@ -222,7 +218,7 @@ class DuckDBLazyFrame(
         except Exception as e:  # noqa: BLE001
             raise catch_duckdb_exception(e, self) from None
 
-    def filter(self, predicate: DuckDBExpr) -> Self:
+    def _filter(self, predicate: DuckDBExpr) -> Self:
         # `[0]` is safe as the predicate's expression only returns a single column
         mask = predicate(self)[0]
         try:

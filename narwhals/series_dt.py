@@ -479,7 +479,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             |---------------|
             |0    2020/03/01|
             |1    2020/04/01|
-            |dtype: object  |
+            |dtype: str     |
             └───────────────┘
         """
         return self._narwhals_series._with_compliant(
@@ -540,7 +540,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             >>> s.dt.convert_time_zone("Asia/Kathmandu").to_native()
             0   2024-01-01 05:45:00+05:45
             1   2024-01-02 05:45:00+05:45
-            dtype: datetime64[ns, Asia/Kathmandu]
+            dtype: datetime64[us, Asia/Kathmandu]
         """
         if time_zone is None:
             msg = "Target `time_zone` cannot be `None` in `convert_time_zone`. Please use `replace_time_zone(None)` if you want to remove the time zone."
@@ -608,7 +608,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             >>> s = nw.from_native(s_native, series_only=True)
             >>> s.dt.truncate("1h").to_native()
             0   2021-03-01 12:00:00
-            dtype: datetime64[ns]
+            dtype: datetime64[us]
         """
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.dt.truncate(every)
@@ -640,7 +640,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             >>> s = nw.from_native(s_native, series_only=True)
             >>> s.dt.offset_by("1h").to_native()
             0   2021-03-01 13:34:00
-            dtype: datetime64[ns]
+            dtype: datetime64[us]
         """
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.dt.offset_by(by)

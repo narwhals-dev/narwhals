@@ -122,6 +122,7 @@ if TYPE_CHECKING:
         FileSource,
         IntoSeriesT,
         MultiIndexSelector,
+        NestedLiteral,
         SingleIndexSelector,
         SizedMultiBoolSelector,
         SizedMultiIndexSelector,
@@ -1371,6 +1372,10 @@ def is_sequence_of(obj: Any, tp: type[_T]) -> TypeIs[Sequence[_T]]:
     )
 
 
+def is_nested_literal(obj: Any) -> TypeIs[NestedLiteral]:
+    return isinstance(obj, (list, tuple, dict))
+
+
 def validate_strict_and_pass_though(
     strict: bool | None,  # noqa: FBT001
     pass_through: bool | None,  # noqa: FBT001
@@ -1974,7 +1979,7 @@ def ensure_type(obj: Any, /, *valid_types: type[Any], param_name: str = "") -> N
         >>> ensure_type(df, pd.DataFrame, param_name="df")
         Traceback (most recent call last):
             ...
-        TypeError: Expected 'pandas.core.frame.DataFrame', got: 'polars.dataframe.frame.DataFrame'
+        TypeError: Expected 'pandas.DataFrame', got: 'polars.dataframe.frame.DataFrame'
             df=polars.dataframe.frame.DataFrame(...)
                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     """

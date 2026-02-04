@@ -284,7 +284,7 @@ class SparkLikeLazyFrame(
 
         return self._with_native(self.native.withColumns(dict(new_columns)))
 
-    def filter(self, predicate: SparkLikeExpr) -> Self:
+    def _filter(self, predicate: SparkLikeExpr) -> Self:
         # `[0]` is safe as the predicate's expression only returns a single column
         condition = predicate._call(self)[0]
         if self._implementation.is_pyspark():

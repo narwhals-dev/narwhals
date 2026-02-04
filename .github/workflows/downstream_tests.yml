@@ -35,6 +35,8 @@ jobs:
       - name: install-altair-dev
         run: |
           cd altair
+          # Temporary pin until it's addressed upstream.
+          uv pip install "pandas<3" --system
           uv pip install -e ".[dev, all]" --system
       - name: install-narwhals-dev
         run: |
@@ -86,6 +88,10 @@ jobs:
         run: |
           cd marimo
           . .venv/bin/activate
+          # Temporary pin until it's addressed upstream.
+          uv pip install "pandas<3"
+          # Temporary pin to get CI green
+          uv pip install "sqlglot<28.7.0"
           uv pip install -e ".[dev]"
           which python
       - name: install-narwhals-dev
@@ -237,6 +243,8 @@ jobs:
         run: |
           cd tea-tasting
           uv sync --group test
+          # Temporary pin to get CI green
+          uv pip install "sqlglot<28.7.0"
       - name: install-narwhals-dev
         run: |
           cd tea-tasting
@@ -282,6 +290,8 @@ jobs:
       - name: install-tubular-dev
         run: |
           cd tubular
+          # Temporary pin until it's addressed upstream.
+          uv pip install "pandas<3" --system
           uv pip install -e ".[dev]" --system
       - name: install-narwhals-dev
         run: |
@@ -367,6 +377,8 @@ jobs:
       - name: install-deps
         run: |
           cd hierarchicalforecast
+          # Temporary pin until it's addressed upstream.
+          uv pip install "pandas<3" --system
           uv pip install . --group dev --group polars --system
       - name: install-narwhals-dev
         run: |
@@ -409,6 +421,8 @@ jobs:
       - name: install-formulaic-dev
         run: |
           cd formulaic
+          # Temporary pin until it's addressed upstream.
+          hatch run uv pip install "pandas<3"
           hatch run uv pip install -e ".[arrow,calculus]"
       - name: install-narwhals-dev
         run: |
@@ -452,6 +466,8 @@ jobs:
           uv venv -p ${{ matrix.python-version }}
           . .venv/bin/activate
           uv pip install . --group dev
+          # Temporary pin to get CI green
+          uv pip install "sqlglot<28.7.0"
           uv pip install pytest pytest-cov pytest-snapshot pandas polars "ibis-framework[duckdb,mysql,postgres,sqlite]>=9.5.0" chatlas shiny
       - name: install-narwhals-dev
         run: |
@@ -499,6 +515,9 @@ jobs:
         run: |
           cd validoopsie
           uv sync --dev --upgrade
+          # Temporary pin until it's addressed upstream.
+          uv remove pandas --group dev
+          uv add "pandas<3"
       - name: install-narwhals-dev
         run: |
           cd validoopsie
@@ -523,7 +542,7 @@ jobs:
   darts:
     strategy:
       matrix:
-        python-version: ["3.11"]
+        python-version: ["3.12"]
         os: ["ubuntu-latest"]
     runs-on: ${{ matrix.os }}
     steps:
@@ -545,12 +564,19 @@ jobs:
       - name: install-deps
         run: |
           cd darts
-          uv pip install -r requirements/core.txt -r requirements/dev.txt --system
+          # Temporary pin until it's addressed upstream.
+          uv pip install "pandas<3"  --system
+          uv pip install \
+          -r requirements/core.txt \
+          -r requirements/dev.txt \
+          llvmlite==0.46.0 \
+          numba==0.63.1 \
+          --system
       - name: install-narwhals-dev
         run: |
           uv pip uninstall narwhals --system
-          # TODO(FBruzzesi): Install polars from darts requirements when they introcude it
-          uv pip install -e ".[polars]" pyarrow --system
+          # TODO(FBruzzesi): Install polars & pyarrow from darts requirements when they introduce it
+          uv pip install -e ".[polars, pyarrow]" --system
       - name: show-deps
         run: uv pip freeze
       - name: Run tests
