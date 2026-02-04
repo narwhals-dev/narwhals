@@ -9,7 +9,13 @@ import pytest
 
 import narwhals as nw
 from narwhals.exceptions import InvalidOperationError, PerformanceWarning
-from tests.utils import PANDAS_VERSION, POLARS_VERSION, PYARROW_VERSION, pyspark_session
+from tests.utils import (
+    PANDAS_VERSION,
+    POLARS_VERSION,
+    PYARROW_VERSION,
+    assert_equal_hash,
+    pyspark_session,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -68,7 +74,7 @@ def test_list_valid() -> None:
     assert dtype == nw.List(nw.List(nw.Int64))
     assert dtype == nw.List
     assert dtype != nw.List(nw.List(nw.Float32))
-    assert hash(dtype) == hash(nw.List(nw.List(nw.Int64)))
+    assert_equal_hash(dtype, nw.List(nw.List(nw.Int64)))
 
 
 def test_array_valid() -> None:
@@ -83,7 +89,7 @@ def test_array_valid() -> None:
     assert dtype == nw.Array(nw.Array(nw.Int64, 2), 2)
     assert dtype == nw.Array
     assert dtype != nw.Array(nw.Array(nw.Float32, 2), 2)
-    assert hash(dtype) == hash(nw.Array(nw.Array(nw.Int64, 2), 2))
+    assert_equal_hash(dtype, nw.Array(nw.Array(nw.Int64, 2), 2))
 
     with pytest.raises(TypeError, match="invalid input for shape"):
         nw.Array(nw.Int64(), shape=None)  # type: ignore[arg-type]
@@ -105,7 +111,7 @@ def test_struct_valid() -> None:
     assert dtype.to_schema() == nw.Struct({"a": nw.Int64, "b": nw.String}).to_schema()
     assert dtype == nw.Struct
     assert dtype != nw.Struct({"a": nw.Int32, "b": nw.String})
-    assert hash(dtype) == hash(nw.Struct({"a": nw.Int64, "b": nw.String}))
+    assert_equal_hash(dtype, nw.Struct({"a": nw.Int64, "b": nw.String}))
 
 
 def test_struct_reverse() -> None:
@@ -535,8 +541,10 @@ def test_enum_repr() -> None:
 
 
 def test_enum_hash() -> None:
-    assert hash(nw.Enum(["a", "b"])) == hash(nw.Enum(["a", "b"]))
-    assert hash(nw.Enum(["a", "b"])) != hash(nw.Enum(["a", "b", "c"]))
+    dtype = nw.Enum(["a", "b"])
+    assert_equal_hash(dtype, nw.Enum(["a", "b"]))
+    with pytest.raises(AssertionError):
+        assert_equal_hash(dtype, nw.Enum(["a", "b", "c"]))
 
 
 @pytest.mark.xfail(
