@@ -98,7 +98,7 @@ def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
     )
     if is_duckdb:
         result = from_native(result.collect("pyarrow"))
-    if is_ibis:
+    if is_ibis:  # pragma: no cover
         result = from_native(result.to_native().to_pyarrow())
     if hasattr(result, "collect"):
         kwargs: dict[Implementation, dict[str, Any]] = {Implementation.POLARS: {}}
@@ -193,7 +193,7 @@ def pyspark_session() -> SparkSession:  # pragma: no cover
     )
 
 
-def maybe_get_modin_df(df_pandas: pd.DataFrame) -> Any:
+def maybe_get_modin_df(df_pandas: pd.DataFrame) -> Any:  # pragma: no cover
     """Convert a pandas DataFrame to a Modin DataFrame if Modin is available."""
     try:
         import modin.pandas as mpd
