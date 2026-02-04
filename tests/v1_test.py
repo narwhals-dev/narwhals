@@ -531,10 +531,10 @@ def test_dtypes() -> None:
         pd.DataFrame({"a": [1], "b": [datetime(2020, 1, 1)], "c": [timedelta(1)]})
     )
     dtype = df.collect_schema()["b"]
-    assert dtype in {nw_v1.Datetime}  # noqa: FURB171
+    assert hash(dtype) == hash(nw_v1.Datetime)
     assert isinstance(dtype, nw_v1.Datetime)
     dtype = df.lazy().schema["c"]
-    assert dtype in {nw_v1.Duration}  # noqa: FURB171
+    assert dtype == nw_v1.Duration
     assert isinstance(dtype, nw_v1.Duration)
 
 
