@@ -68,7 +68,7 @@ def test_list_valid() -> None:
     assert dtype == nw.List(nw.List(nw.Int64))
     assert dtype == nw.List
     assert dtype != nw.List(nw.List(nw.Float32))
-    assert dtype in {nw.List(nw.List(nw.Int64))}
+    assert dtype in {nw.List(nw.List(nw.Int64))}  # noqa: FURB171
 
 
 def test_array_valid() -> None:
@@ -83,7 +83,7 @@ def test_array_valid() -> None:
     assert dtype == nw.Array(nw.Array(nw.Int64, 2), 2)
     assert dtype == nw.Array
     assert dtype != nw.Array(nw.Array(nw.Float32, 2), 2)
-    assert dtype in {nw.Array(nw.Array(nw.Int64, 2), 2)}
+    assert dtype in {nw.Array(nw.Array(nw.Int64, 2), 2)}  # noqa: FURB171
 
     with pytest.raises(TypeError, match="invalid input for shape"):
         nw.Array(nw.Int64(), shape=None)  # type: ignore[arg-type]
@@ -105,7 +105,7 @@ def test_struct_valid() -> None:
     assert dtype.to_schema() == nw.Struct({"a": nw.Int64, "b": nw.String}).to_schema()
     assert dtype == nw.Struct
     assert dtype != nw.Struct({"a": nw.Int32, "b": nw.String})
-    assert dtype in {nw.Struct({"a": nw.Int64, "b": nw.String})}
+    assert dtype in {nw.Struct({"a": nw.Int64, "b": nw.String})}  # noqa: FURB171
 
 
 def test_struct_reverse() -> None:
@@ -535,8 +535,8 @@ def test_enum_repr() -> None:
 
 
 def test_enum_hash() -> None:
-    assert nw.Enum(["a", "b"]) in {nw.Enum(["a", "b"])}
-    assert nw.Enum(["a", "b"]) not in {nw.Enum(["a", "b", "c"])}
+    assert nw.Enum(["a", "b"]) in {nw.Enum(["a", "b"])}  # noqa: FURB171
+    assert nw.Enum(["a", "b"]) not in {nw.Enum(["a", "b", "c"])}  # noqa: FURB171
 
 
 @pytest.mark.xfail(
