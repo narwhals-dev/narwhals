@@ -4,7 +4,6 @@ on:
   pull_request:
 
 env:
-  PY_COLORS: 1
   PYTEST_ADDOPTS: "--numprocesses=logical"
   
 jobs:

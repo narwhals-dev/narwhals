@@ -3,9 +3,6 @@ name: Test Downstream Libraries - Fast
 on:
   pull_request:
 
-env:
-  PY_COLORS: 1
-
 jobs:
   altair:
     strategy:

@@ -3,9 +3,6 @@ name: Type checking
 on:
   pull_request:
 
-env:
-  PY_COLORS: 1
-
 jobs:
   typing:
     strategy:
