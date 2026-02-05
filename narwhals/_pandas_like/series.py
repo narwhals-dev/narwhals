@@ -315,10 +315,6 @@ class PandasLikeSeries(EagerSeries[Any]):
     def scatter(self, indices: Self, values: Self) -> Self:
         return self._scatter(indices=indices, values=values, in_place=False)
 
-    def _scatter_in_place(self, indices: Self, values: Self) -> None:
-        # Scatter, modifying original Series. Use with care!
-        return self._scatter(indices=indices, values=values, in_place=True)
-
     def cast(self, dtype: IntoDType) -> Self:
         if self.dtype == dtype and self.native.dtype != "object":
             # Avoid dealing with pandas' type-system if we can. Note that it's only
