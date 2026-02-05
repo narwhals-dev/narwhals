@@ -441,10 +441,15 @@ class Series(Generic[IntoSeriesT]):
             b: [[4,5,6]]
         """
         impl = self.implementation
+        Int64 = self._version.dtypes.Int64()  # noqa: N806
         if not isinstance(indices, Iterable):
-            indices = Series.from_iterable(name="", values=[indices], backend=impl)
+            indices = Series.from_iterable(
+                name="", values=[indices], dtype=Int64, backend=impl
+            )
         elif not isinstance(indices, Series):
-            indices = Series.from_iterable(name="", values=indices, backend=impl)
+            indices = Series.from_iterable(
+                name="", values=indices, dtype=Int64, backend=impl
+            )
 
         if indices.is_empty():
             return self

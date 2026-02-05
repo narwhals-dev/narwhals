@@ -281,14 +281,17 @@ class PandasLikeSeries(EagerSeries[Any]):
         return self._with_native(result)
 
     def scatter(self, indices: Self, values: Self) -> Self:
+        impl = self._implementation
         indices_native = indices.native
         values_native = set_index(
-            values.native,
-            self.native.index[indices_native],
-            implementation=self._implementation,
+            values.native, self.native.index[indices_native], implementation=impl
         )
         s = self.native.copy(deep=True)
-        s.iloc[indices_native] = values_native
+        min_pd_version = (1, 2)
+        if impl.is_pandas() and self._backend_version < min_pd_version:
+            s.iloc[indices_native.values] = values_native  # noqa: PD011
+        else:
+            s.iloc[indices_native] = values_native
         s.name = self.name
         return self._with_native(s)
 
