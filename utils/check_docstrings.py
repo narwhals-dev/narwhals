@@ -10,7 +10,6 @@ import sys
 import sysconfig
 import tempfile
 from pathlib import Path
-from subprocess import CompletedProcess
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -84,63 +83,36 @@ def extract_docstring_examples(files: list[str]) -> DocstringExamples:
     return examples
 
 
-def create_temp_files(examples: DocstringExamples) -> TempFiles:
-    """Create temporary files for all examples and return their paths."""
-    temp_files: TempFiles = []
-
-    for file, name, example in examples:
-        temp_file = tempfile.NamedTemporaryFile(  # noqa: SIM115
-            encoding="utf-8", mode="w", suffix=".py", delete=False
-        )
-        temp_file.write(example)
-        temp_file_path = temp_file.name
-        temp_file.close()
-        temp_files.append((Path(temp_file_path), f"{file!s}:{name}"))
-
-    return temp_files
-
-
-def run_ruff_on_temp_files(temp_files: TempFiles) -> CompletedProcess[str] | None:
-    """Run ruff on all temporary files and collect error messages."""
-    temp_file_paths = [temp_file[0] for temp_file in temp_files]
-    select = f"--select={','.join(SELECT)}"
-    ignore = f"--ignore={','.join(IGNORE)}"
-    result = subprocess.run(  # noqa: S603
-        [find_ruff_bin(), "check", select, ignore, *temp_file_paths],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-
-    if result.returncode == 0:
-        return None
-    return result
-
-
-def report_errors(completed: CompletedProcess[str], temp_files: TempFiles) -> None:
-    """Map errors back to original examples and report them."""
-    print("Ruff issues found in examples:\n")
-    stdout = completed.stdout
-    for temp_file, original_context in temp_files:
-        stdout = stdout.replace(str(temp_file), original_context)
-    print(stdout)
-
-
-def cleanup_temp_files(temp_files: TempFiles) -> None:
-    """Remove all temporary files."""
-    for temp_file, _ in temp_files:
-        temp_file.unlink()
-
-
 def main(python_files: list[str]) -> None:
     if docstring_examples := extract_docstring_examples(python_files):
-        temp_files = create_temp_files(docstring_examples)
-        try:
-            if errors := run_ruff_on_temp_files(temp_files):
-                report_errors(errors, temp_files)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # `create_temp_files`
+            # Create temporary files for all examples and return their paths.
+            temp_files: TempFiles = []
+            for file, name, example in docstring_examples:
+                temp_file = tempfile.NamedTemporaryFile(  # noqa: SIM115
+                    encoding="utf-8", mode="w", suffix=".py", dir=tmpdir, delete=False
+                )
+                temp_file.write(example)
+                temp_file.close()
+                temp_files.append((Path(temp_file.name), f"{file!s}:{name}"))
+
+            # `run_ruff_on_temp_files`
+            # Run ruff on all temporary files and collect error messages.
+            temp_file_paths = [temp_file[0] for temp_file in temp_files]
+            select = f"--select={','.join(SELECT)}"
+            ignore = f"--ignore={','.join(IGNORE)}"
+            args = [find_ruff_bin(), "check", select, ignore, *temp_file_paths]
+            result = subprocess.run(args, capture_output=True, text=True, check=False)  # noqa: S603
+            if result.returncode:
+                # `report_errors`
+                # Map errors back to original examples and report them
+                print("Ruff issues found in examples:\n")
+                stdout = result.stdout
+                for temp_file, original_context in temp_files:
+                    stdout = stdout.replace(str(temp_file), original_context)
+                print(stdout)
                 sys.exit(1)
-        finally:
-            cleanup_temp_files(temp_files)
     sys.exit(0)
 
 
