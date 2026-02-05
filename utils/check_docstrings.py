@@ -48,15 +48,11 @@ def find_ruff_bin() -> Path:
     user_path = Path(sysconfig.get_path("scripts", scheme=user_scheme)) / ruff_exe
     if user_path.is_file():
         return user_path
-
-    # TODO @dangotbanned: Remove this branch?
-    # Search in `bin` adjacent to package root (as created by `pip install --target`).
-    pkg_root = Path(__file__).parent.parent
-    target_path = pkg_root / "bin" / ruff_exe
-    if target_path.is_file():
-        return target_path
-
-    raise FileNotFoundError(scripts_path)
+    msg = (
+        f"Unable to find ruff at:\n- {scripts_path.as_posix()}\n- {user_path.as_posix()}\n\n"
+        "Hint: did you follow this guide? https://github.com/narwhals-dev/narwhals?tab=contributing-ov-file#readme"
+    )
+    raise FileNotFoundError(msg)
 
 
 def extract_docstring_examples(files: list[str]) -> list[tuple[Path, str, str]]:
