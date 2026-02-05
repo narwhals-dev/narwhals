@@ -13,9 +13,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator
+
     from typing_extensions import TypeAlias
 
-DocstringExamples: TypeAlias = list[tuple[Path, str, str]]
+NodeName: TypeAlias = str
+Code: TypeAlias = str
+DocstringExample: TypeAlias = tuple[Path, NodeName, Code]
 TempFiles: TypeAlias = list[tuple[Path, str]]
 
 SELECT = (
@@ -61,33 +65,36 @@ def find_ruff_bin() -> Path:
     raise FileNotFoundError(msg)
 
 
-def extract_docstring_examples(files: list[str]) -> DocstringExamples:
+parser = doctest.DocTestParser()
+
+
+def try_parse(node: ast.AST) -> tuple[NodeName, Code] | None:
+    if (
+        isinstance(node, (ast.FunctionDef, ast.ClassDef))
+        and (doc := ast.get_docstring(node))
+        and (code := "\n".join(e.source for e in parser.get_examples(doc)).strip())
+    ):
+        return node.name, code
+    return None
+
+
+def iter_docstring_examples(files: Iterable[str | Path]) -> Iterator[DocstringExample]:
     """Extract examples from docstrings in Python files."""
-    examples: DocstringExamples = []
-
-    for file in files:  # noqa: PLR1702
+    for file in files:
         fp = Path(file)
-        tree = ast.parse(fp.read_text("utf-8"))
-
-        for node in ast.walk(tree):
-            if isinstance(node, (ast.FunctionDef, ast.ClassDef)):
-                docstring = ast.get_docstring(node)
-                if docstring:
-                    parsed_examples = doctest.DocTestParser().get_examples(docstring)
-                    example_code = "\n".join(
-                        example.source for example in parsed_examples
-                    )
-                    if example_code.strip():
-                        examples.append((fp, node.name, example_code))
-
-    return examples
+        for node in ast.walk(ast.parse(fp.read_text("utf-8"))):
+            if example := try_parse(node):
+                yield (fp, *example)
 
 
 def main(python_files: list[str]) -> None:
-    if docstring_examples := extract_docstring_examples(python_files):
+    # TODO @dangotbanned: Could this be kept lazy?
+    it = iter_docstring_examples(python_files)
+    if docstring_examples := tuple(it):
         with tempfile.TemporaryDirectory() as tmpdir:
             # `create_temp_files`
             # Create temporary files for all examples and return their paths.
+            # TODO @dangotbanned: Could these just be regular paths, using the names we want in the first place?
             temp_files: TempFiles = []
             for file, name, example in docstring_examples:
                 temp_file = tempfile.NamedTemporaryFile(  # noqa: SIM115
