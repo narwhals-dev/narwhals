@@ -12,6 +12,14 @@ import tempfile
 from pathlib import Path
 from subprocess import CompletedProcess
 
+SELECT = (
+    "F",  # pyflakes-f
+)
+IGNORE = (
+    "F811",  # redefined-while-unused
+    "F821",  # undefined-name (misses https://docs.python.org/3/library/doctest.html#what-s-the-execution-context)
+)
+
 
 def find_ruff_bin() -> Path:
     """Return the ruff binary path.
@@ -94,9 +102,10 @@ def run_ruff_on_temp_files(
 ) -> CompletedProcess[str] | None:
     """Run ruff on all temporary files and collect error messages."""
     temp_file_paths = [temp_file[0] for temp_file in temp_files]
-
+    select = f"--select={','.join(SELECT)}"
+    ignore = f"--ignore={','.join(IGNORE)}"
     result = subprocess.run(  # noqa: S603
-        [find_ruff_bin(), "check", "--select=F", "--ignore=F811", *temp_file_paths],
+        [find_ruff_bin(), "check", select, ignore, *temp_file_paths],
         capture_output=True,
         text=True,
         check=False,
