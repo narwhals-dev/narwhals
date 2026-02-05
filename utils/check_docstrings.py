@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 NodeName: TypeAlias = str
 Code: TypeAlias = str
 DocstringExample: TypeAlias = tuple[Path, NodeName, Code]
-TempFiles: TypeAlias = list[tuple[Path, str]]
+OriginalContext: TypeAlias = str
 
 SELECT = (
     "F",  # pyflakes-f
@@ -94,22 +94,18 @@ def main(python_files: list[str]) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             # `create_temp_files`
             # Create temporary files for all examples and return their paths.
-            # TODO @dangotbanned: Could these just be regular paths, using the names we want in the first place?
-            temp_files: TempFiles = []
-            for file, name, example in docstring_examples:
-                temp_file = tempfile.NamedTemporaryFile(  # noqa: SIM115
-                    encoding="utf-8", mode="w", suffix=".py", dir=tmpdir, delete=False
-                )
-                temp_file.write(example)
-                temp_file.close()
-                temp_files.append((Path(temp_file.name), f"{file!s}:{name}"))
+            tmpdir_path = Path(tmpdir)
+            temp_files: list[tuple[Path, OriginalContext]] = []
+            for i, (file, name, example) in enumerate(docstring_examples):
+                temp_path = tmpdir_path / f"{name}_{i}.py"
+                temp_path.write_text(example)
+                temp_files.append((temp_path, f"{file.as_posix()}:{name}"))
 
             # `run_ruff_on_temp_files`
             # Run ruff on all temporary files and collect error messages.
-            temp_file_paths = [temp_file[0] for temp_file in temp_files]
             select = f"--select={','.join(SELECT)}"
             ignore = f"--ignore={','.join(IGNORE)}"
-            args = [find_ruff_bin(), "check", select, ignore, *temp_file_paths]
+            args = [find_ruff_bin(), "check", select, ignore, *tmpdir_path.iterdir()]
             result = subprocess.run(args, capture_output=True, text=True, check=False)  # noqa: S603
             if result.returncode:
                 # `report_errors`
