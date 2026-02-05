@@ -117,11 +117,8 @@ def run_ruff_on_temp_files(temp_files: TempFiles) -> CompletedProcess[str] | Non
     return result
 
 
-def report_errors(completed: CompletedProcess[str] | None, temp_files: TempFiles) -> None:
+def report_errors(completed: CompletedProcess[str], temp_files: TempFiles) -> None:
     """Map errors back to original examples and report them."""
-    if completed is None:
-        return
-
     print("Ruff issues found in examples:\n")
     stdout = completed.stdout
     for temp_file, original_context in temp_files:
@@ -136,21 +133,14 @@ def cleanup_temp_files(temp_files: TempFiles) -> None:
 
 
 def main(python_files: list[str]) -> None:
-    docstring_examples = extract_docstring_examples(python_files)
-
-    if not docstring_examples:
-        sys.exit(0)
-
-    temp_files = create_temp_files(docstring_examples)
-
-    try:
-        errors = run_ruff_on_temp_files(temp_files)
-        report_errors(errors, temp_files)
-    finally:
-        cleanup_temp_files(temp_files)
-
-    if errors:
-        sys.exit(1)
+    if docstring_examples := extract_docstring_examples(python_files):
+        temp_files = create_temp_files(docstring_examples)
+        try:
+            if errors := run_ruff_on_temp_files(temp_files):
+                report_errors(errors, temp_files)
+                sys.exit(1)
+        finally:
+            cleanup_temp_files(temp_files)
     sys.exit(0)
 
 
