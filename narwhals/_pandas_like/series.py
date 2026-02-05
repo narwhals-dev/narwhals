@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import operator
 import warnings
-from typing import TYPE_CHECKING, Any, Callable, Literal
+from typing import TYPE_CHECKING, Any, Callable, Literal, overload
 
 import numpy as np
 
@@ -280,37 +280,44 @@ class PandasLikeSeries(EagerSeries[Any]):
         result[mask_na] = None
         return self._with_native(result)
 
-    def scatter(self, indices: Self, values: Self) -> Self:
-        impl = self._implementation
-        indices_native = indices.native
+    @overload
+    def _scatter(
+        self, indices: Self, values: Self, *, in_place: Literal[True]
+    ) -> None: ...
+    @overload
+    def _scatter(
+        self, indices: Self, values: Self, *, in_place: Literal[False]
+    ) -> Self: ...
+
+    def _scatter(self, indices: Self, values: Self, *, in_place: bool) -> Self | None:
+        impl, backend_version = self._implementation, self._backend_version
+        native_series, indices_native = self.native, indices.native
         values_native = set_index(
-            values.native, self.native.index[indices_native], implementation=impl
+            values.native, native_series.index[indices_native], implementation=impl
         )
-        s = self.native.copy(deep=True)
+        series = native_series if in_place else native_series.copy(deep=True)
+
+        if (is_pandas := impl.is_pandas()) and in_place and parse_version(np) < (2,):
+            values_native = values_native.copy()  # pragma: no cover
+
         min_pd_version = (1, 2)
-        if impl.is_pandas() and self._backend_version < min_pd_version:
-            s.iloc[indices_native.values] = values_native  # noqa: PD011
+        if is_pandas and backend_version < min_pd_version:
+            series.iloc[indices_native.values] = values_native  # noqa: PD011
         else:
-            s.iloc[indices_native] = values_native
-        s.name = self.name
-        return self._with_native(s)
+            series.iloc[indices_native] = values_native
+
+        if in_place:
+            return None
+
+        series.name = self.name
+        return self._with_native(series)
+
+    def scatter(self, indices: Self, values: Self) -> Self:
+        return self._scatter(indices=indices, values=values, in_place=False)
 
     def _scatter_in_place(self, indices: Self, values: Self) -> None:
         # Scatter, modifying original Series. Use with care!
-        implementation = self._implementation
-        backend_version = self._backend_version
-        values_native = set_index(
-            values.native,
-            self.native.index[indices.native],
-            implementation=implementation,
-        )
-        if implementation is Implementation.PANDAS and parse_version(np) < (2,):
-            values_native = values_native.copy()  # pragma: no cover
-        min_pd_version = (1, 2)
-        if implementation is Implementation.PANDAS and backend_version < min_pd_version:
-            self.native.iloc[indices.native.values] = values_native  # noqa: PD011
-        else:
-            self.native.iloc[indices.native] = values_native
+        return self._scatter(indices=indices, values=values, in_place=True)
 
     def cast(self, dtype: IntoDType) -> Self:
         if self.dtype == dtype and self.native.dtype != "object":
