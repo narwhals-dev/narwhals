@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from subprocess import CompletedProcess
 
 
 def extract_docstring_examples(files: list[str]) -> list[tuple[Path, str, str]]:
@@ -48,7 +49,9 @@ def create_temp_files(examples: list[tuple[Path, str, str]]) -> list[tuple[Path,
     return temp_files
 
 
-def run_ruff_on_temp_files(temp_files: list[tuple[Path, str]]) -> list[str]:
+def run_ruff_on_temp_files(
+    temp_files: list[tuple[Path, str]],
+) -> CompletedProcess[str] | None:
     """Run ruff on all temporary files and collect error messages."""
     temp_file_paths = [temp_file[0] for temp_file in temp_files]
 
@@ -68,21 +71,22 @@ def run_ruff_on_temp_files(temp_files: list[tuple[Path, str]]) -> list[str]:
     )
 
     if result.returncode == 0:
-        return []  # No issues found
-    return result.stdout.splitlines()  # Return ruff errors as a list of lines
+        return None
+    return result
 
 
-def report_errors(errors: list[str], temp_files: list[tuple[Path, str]]) -> None:
+def report_errors(
+    completed: CompletedProcess[str] | None, temp_files: list[tuple[Path, str]]
+) -> None:
     """Map errors back to original examples and report them."""
-    if not errors:
+    if completed is None:
         return
 
-    print("❌ Ruff issues found in examples:", *errors, sep="\n")
-    for line in errors:
-        for temp_file, original_context in temp_files:
-            if str(temp_file) in line:
-                print(f"{original_context}{line.replace(str(temp_file), '')}")
-                break
+    print("Ruff issues found in examples:\n")
+    stdout = completed.stdout
+    for temp_file, original_context in temp_files:
+        stdout = stdout.replace(str(temp_file), original_context)
+    print(stdout)
 
 
 def cleanup_temp_files(temp_files: list[tuple[Path, str]]) -> None:
