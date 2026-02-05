@@ -11,6 +11,13 @@ import sysconfig
 import tempfile
 from pathlib import Path
 from subprocess import CompletedProcess
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing_extensions import TypeAlias
+
+DocstringExamples: TypeAlias = list[tuple[Path, str, str]]
+TempFiles: TypeAlias = list[tuple[Path, str]]
 
 SELECT = (
     "F",  # pyflakes-f
@@ -55,9 +62,9 @@ def find_ruff_bin() -> Path:
     raise FileNotFoundError(msg)
 
 
-def extract_docstring_examples(files: list[str]) -> list[tuple[Path, str, str]]:
+def extract_docstring_examples(files: list[str]) -> DocstringExamples:
     """Extract examples from docstrings in Python files."""
-    examples: list[tuple[Path, str, str]] = []
+    examples: DocstringExamples = []
 
     for file in files:  # noqa: PLR1702
         fp = Path(file)
@@ -77,9 +84,9 @@ def extract_docstring_examples(files: list[str]) -> list[tuple[Path, str, str]]:
     return examples
 
 
-def create_temp_files(examples: list[tuple[Path, str, str]]) -> list[tuple[Path, str]]:
+def create_temp_files(examples: DocstringExamples) -> TempFiles:
     """Create temporary files for all examples and return their paths."""
-    temp_files: list[tuple[Path, str]] = []
+    temp_files: TempFiles = []
 
     for file, name, example in examples:
         temp_file = tempfile.NamedTemporaryFile(  # noqa: SIM115
@@ -93,9 +100,7 @@ def create_temp_files(examples: list[tuple[Path, str, str]]) -> list[tuple[Path,
     return temp_files
 
 
-def run_ruff_on_temp_files(
-    temp_files: list[tuple[Path, str]],
-) -> CompletedProcess[str] | None:
+def run_ruff_on_temp_files(temp_files: TempFiles) -> CompletedProcess[str] | None:
     """Run ruff on all temporary files and collect error messages."""
     temp_file_paths = [temp_file[0] for temp_file in temp_files]
     select = f"--select={','.join(SELECT)}"
@@ -112,9 +117,7 @@ def run_ruff_on_temp_files(
     return result
 
 
-def report_errors(
-    completed: CompletedProcess[str] | None, temp_files: list[tuple[Path, str]]
-) -> None:
+def report_errors(completed: CompletedProcess[str] | None, temp_files: TempFiles) -> None:
     """Map errors back to original examples and report them."""
     if completed is None:
         return
@@ -126,7 +129,7 @@ def report_errors(
     print(stdout)
 
 
-def cleanup_temp_files(temp_files: list[tuple[Path, str]]) -> None:
+def cleanup_temp_files(temp_files: TempFiles) -> None:
     """Remove all temporary files."""
     for temp_file, _ in temp_files:
         temp_file.unlink()
