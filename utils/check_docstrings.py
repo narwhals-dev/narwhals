@@ -98,6 +98,15 @@ def iter_docstring_examples(files: Iterable[str | Path]) -> Iterator[DocstringEx
                 yield (fp, *example)
 
 
+def _restore_context(
+    error: sp.CalledProcessError, files: Iterable[tuple[Path, OriginalContext]]
+) -> str:
+    output = str(error.output)
+    for file, context in files:
+        output = output.replace(str(file), context)
+    return output
+
+
 def main(python_files: Iterable[str | Path]) -> ExitCode:
     with tempfile.TemporaryDirectory() as tmp:
         temp_dir = Path(tmp)
@@ -111,11 +120,8 @@ def main(python_files: Iterable[str | Path]) -> ExitCode:
         try:
             return ruff_check(*temp_dir.iterdir(), select=SELECT, ignore=IGNORE)
         except sp.CalledProcessError as err:
-            # Map errors back to original examples and report them
-            output = str(err.output)
-            for temp_file, original_context in temp_files:
-                output = output.replace(str(temp_file), original_context)
-            print(f"Ruff issues found in examples:\n\n{output}")
+            msg = "Ruff issues found in examples"
+            print(f"{msg}:\n\n{_restore_context(err, temp_files)}")
             return 1
 
 
