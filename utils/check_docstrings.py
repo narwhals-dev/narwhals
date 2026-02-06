@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import TypeAlias
 
+ExitCode: TypeAlias = "Literal[0, 1] | None"
 NodeName: TypeAlias = str
 Code: TypeAlias = str
 DocstringExample: TypeAlias = tuple[Path, NodeName, Code]
@@ -97,7 +98,7 @@ def iter_docstring_examples(files: Iterable[str | Path]) -> Iterator[DocstringEx
                 yield (fp, *example)
 
 
-def main(python_files: list[str]) -> Literal[0, 1]:
+def main(python_files: Iterable[str | Path]) -> ExitCode:
     with tempfile.TemporaryDirectory() as tmp:
         temp_dir = Path(tmp)
         temp_files: deque[tuple[Path, OriginalContext]] = deque()
