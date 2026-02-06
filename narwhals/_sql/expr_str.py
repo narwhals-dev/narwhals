@@ -101,6 +101,7 @@ class SQLExprStringNamespace(
             lambda expr: self._function("upper", expr)
         )
 
+    # comment to trigger pyspark CI
     def zfill(self, width: int) -> SQLExprT:
         # There is no built-in zfill function, so we need to implement it manually
         # using string manipulation functions.
