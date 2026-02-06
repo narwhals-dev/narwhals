@@ -9,31 +9,39 @@ import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._arrow.utils import native_to_narwhals_dtype
-from narwhals._plan.arrow import acero, functions as fn
+from narwhals._plan.arrow import acero, compat, functions as fn
 from narwhals._plan.arrow.common import ArrowFrameSeries as FrameSeries
 from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
-from narwhals._plan.arrow.group_by import ArrowGroupBy as GroupBy, partition_by
+from narwhals._plan.arrow.group_by import (
+    ArrowGroupBy as GroupBy,
+    partition_by,
+    unique_keep_boolean_length_preserving,
+)
+from narwhals._plan.arrow.pivot import pivot_table
 from narwhals._plan.arrow.series import ArrowSeries as Series
+from narwhals._plan.common import temp
 from narwhals._plan.compliant.dataframe import EagerDataFrame
-from narwhals._plan.compliant.typing import namespace
+from narwhals._plan.compliant.typing import LazyFrameAny, namespace
 from narwhals._plan.exceptions import shape_error
-from narwhals._plan.expressions import NamedIR
-from narwhals._utils import Version, generate_repr
+from narwhals._plan.expressions import NamedIR, named_ir
+from narwhals._utils import Version, generate_repr, requires
 from narwhals.schema import Schema
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Mapping, Sequence
+    from collections.abc import Collection, Iterable, Iterator, Mapping, Sequence
+    from io import BytesIO
 
     import polars as pl
     from typing_extensions import Self, TypeAlias
 
-    from narwhals._plan.arrow.typing import ChunkedArrayAny, ChunkedOrArrayAny
+    from narwhals._plan.arrow.typing import ChunkedArrayAny, ChunkedOrArrayAny, Predicate
     from narwhals._plan.compliant.group_by import GroupByResolver
     from narwhals._plan.expressions import ExprIR, NamedIR
     from narwhals._plan.options import ExplodeOptions, SortMultipleOptions
     from narwhals._plan.typing import NonCrossJoinStrategy
+    from narwhals._typing import _LazyAllowedImpl
     from narwhals.dtypes import DType
-    from narwhals.typing import IntoSchema
+    from narwhals.typing import AsofJoinStrategy, IntoSchema, PivotAgg, UniqueKeepStrategy
 
 Incomplete: TypeAlias = Any
 
@@ -54,6 +62,10 @@ class ArrowDataFrame(
     @property
     def shape(self) -> tuple[int, int]:
         return self.native.shape
+
+    def lazy(self, backend: _LazyAllowedImpl | None, **kwds: Any) -> LazyFrameAny:
+        msg = "ArrowDataFrame.lazy"
+        raise NotImplementedError(msg)
 
     def group_by_resolver(self, resolver: GroupByResolver, /) -> GroupBy:
         return self._group_by.from_resolver(self, resolver)
@@ -86,8 +98,11 @@ class ArrowDataFrame(
         native = pa.Table.from_pydict(data, schema=pa_schema)
         return cls.from_native(native, version=version)
 
+    def _iter_columns(self) -> Iterator[tuple[str, ChunkedArrayAny]]:
+        return zip(self.native.column_names, self.native.itercolumns())
+
     def iter_columns(self) -> Iterator[Series]:
-        for name, series in zip(self.columns, self.native.itercolumns()):
+        for name, series in self._iter_columns():
             yield Series.from_native(series, name, version=self.version)
 
     @overload
@@ -118,6 +133,61 @@ class ArrowDataFrame(
     def sort(self, by: Sequence[str], options: SortMultipleOptions | None = None) -> Self:
         return self.gather(fn.sort_indices(self.native, *by, options=options))
 
+    def _unique(
+        self,
+        subset: Sequence[str] | None = None,
+        *,
+        order_by: Sequence[str] = (),
+        keep: UniqueKeepStrategy = "any",
+        **_: Any,
+    ) -> Self:
+        """Drop duplicate rows from this DataFrame.
+
+        Always maintains order, via `with_row_index(_by)`.
+        See [`unsort_indices`] for an example.
+
+        [`unsort_indices`]: https://github.com/narwhals-dev/narwhals/blob/9b9122b4ab38a6aebe2f09c29ad0f6191952a7a7/narwhals/_plan/arrow/functions.py#L1666-L1697
+        """
+        subset = tuple(subset or self.columns)
+        into_column_agg, mask = unique_keep_boolean_length_preserving(keep)
+        idx_name = temp.column_name(self.columns)
+        df = self.select_names(*set(subset).union(order_by))
+        if order_by:
+            df = df.with_row_index_by(idx_name, order_by)
+        else:
+            df = df.with_row_index(idx_name)
+        idx_agg = (
+            df.group_by_names(subset)
+            .agg((named_ir(idx_name, into_column_agg(idx_name)),))
+            .get_column(idx_name)
+            .native
+        )
+        return self._filter(mask(df.get_column(idx_name).native, idx_agg))
+
+    unique = _unique
+    unique_by = _unique
+
+    def unpivot(
+        self,
+        on: Sequence[str] | None,
+        index: Sequence[str] | None,
+        *,
+        variable_name: str = "variable",
+        value_name: str = "value",
+    ) -> Self:
+        n = len(self)
+        index = [] if index is None else list(index)
+        on_ = (c for c in self.columns if c not in index) if on is None else iter(on)
+        index_cols = self.native.select(index)
+        column = self.native.column
+        tables = (
+            index_cols.append_column(variable_name, fn.repeat(name, n)).append_column(
+                value_name, column(name)
+            )
+            for name in on_
+        )
+        return self._with_native(fn.concat_tables(tables, "permissive"))
+
     def with_row_index(self, name: str) -> Self:
         return self._with_native(self.native.add_column(0, name, fn.int_range(len(self))))
 
@@ -135,18 +205,64 @@ class ArrowDataFrame(
         column = fn.unsort_indices(indices)
         return self._with_native(self.native.add_column(0, name, column))
 
+    @overload
+    def write_csv(self, target: None, /) -> str: ...
+    @overload
+    def write_csv(self, target: str | BytesIO, /) -> None: ...
+    def write_csv(self, target: str | BytesIO | None, /) -> str | None:
+        import pyarrow.csv as pa_csv
+
+        if target is None:
+            csv_buffer = pa.BufferOutputStream()
+            pa_csv.write_csv(self.native, csv_buffer)
+            return csv_buffer.getvalue().to_pybytes().decode()
+        pa_csv.write_csv(self.native, target)
+        return None
+
+    def write_parquet(self, target: str | BytesIO, /) -> None:
+        import pyarrow.parquet as pp
+
+        pp.write_table(self.native, target)
+
     def to_struct(self, name: str = "") -> Series:
         native = self.native
-        if fn.TO_STRUCT_ARRAY_ACCEPTS_EMPTY:
+        if compat.TO_STRUCT_ARRAY_ACCEPTS_EMPTY:
             struct = native.to_struct_array()
-        elif fn.HAS_FROM_TO_STRUCT_ARRAY:
+        elif compat.HAS_FROM_TO_STRUCT_ARRAY:
             if len(native):
                 struct = native.to_struct_array()
             else:
                 struct = fn.chunked_array([], pa.struct(native.schema))
         else:
-            struct = fn.struct(native.column_names, native.columns)
+            struct = fn.struct.into_struct(native.columns, native.column_names)
         return Series.from_native(struct, name, version=self.version)
+
+    def unnest(self, columns: Sequence[str]) -> Self:
+        if len(columns) == 1:
+            native = self.native
+            index = native.column_names.index(columns[0])
+            ca_struct = native.column(index)
+            arrays: list[ChunkedArrayAny] = ca_struct.flatten()
+            names = fn.struct.field_names(ca_struct)
+            if len(names) == 1:
+                result = native.set_column(index, names[0], arrays[0])
+            else:
+                result = insert_arrays_at(
+                    native.remove_column(index), index, names, arrays
+                )
+            return self._with_native(result)
+        # NOTE: `pa.Table.from_pydict` internally calls `pa.Table.from_arrays`
+        to_unnest = frozenset(columns)
+        arrays = []
+        names = []
+        for name, ca in self._iter_columns():
+            if name in to_unnest:
+                arrays.extend(ca.flatten())
+                names.extend(fn.struct.field_names(ca))
+            else:
+                arrays.append(ca)
+                names.append(name)
+        return self._with_native(pa.Table.from_arrays(arrays, names))
 
     def get_column(self, name: str) -> Series:
         chunked = self.native.column(name)
@@ -163,15 +279,15 @@ class ArrowDataFrame(
             native = self.native.filter(~to_drop)
         return self._with_native(native)
 
-    def explode(self, subset: Sequence[str], options: ExplodeOptions) -> Self:
+    def explode(self, columns: Sequence[str], options: ExplodeOptions) -> Self:
         builder = fn.ExplodeBuilder.from_options(options)
-        if len(subset) == 1:
-            return self._with_native(builder.explode_column(self.native, subset[0]))
-        return self._with_native(builder.explode_columns(self.native, subset))
+        if len(columns) == 1:
+            return self._with_native(builder.explode_column(self.native, columns[0]))
+        return self._with_native(builder.explode_columns(self.native, columns))
 
     def rename(self, mapping: Mapping[str, str]) -> Self:
         names: dict[str, str] | list[str]
-        if fn.BACKEND_VERSION >= (17,):
+        if compat.TABLE_RENAME_ACCEPTS_DICT:
             names = cast("dict[str, str]", mapping)
         else:  # pragma: no cover
             names = [mapping.get(c, c) for c in self.columns]
@@ -226,6 +342,35 @@ class ArrowDataFrame(
         """Less flexible, but more direct equivalent to join(how="inner", left_on=...)`."""
         return self._with_native(acero.join_inner_tables(self.native, other.native, on))
 
+    @requires.backend_version((16,))
+    def join_asof(
+        self,
+        other: Self,
+        *,
+        left_on: str,
+        right_on: str,
+        left_by: Sequence[str] = (),
+        right_by: Sequence[str] = (),
+        strategy: AsofJoinStrategy = "backward",
+        suffix: str = "_right",
+    ) -> Self:
+        return self._with_native(
+            acero.join_asof_tables(
+                self.native,
+                other.native,
+                left_on,
+                right_on,
+                left_by=left_by,
+                right_by=right_by,
+                strategy=strategy,
+                suffix=suffix,
+            )
+        )
+
+    def _filter(self, predicate: Predicate | acero.Expr) -> Self:
+        mask: Incomplete = predicate
+        return self._with_native(self.native.filter(mask))
+
     def filter(self, predicate: NamedIR) -> Self:
         mask: pc.Expression | ChunkedArrayAny
         resolved = Expr.from_named_ir(predicate, self)
@@ -233,12 +378,33 @@ class ArrowDataFrame(
             mask = resolved.broadcast(len(self)).native
         else:
             mask = acero.lit(resolved.native)
-        return self._with_native(self.native.filter(mask))
+        return self._filter(mask)
 
     def partition_by(self, by: Sequence[str], *, include_key: bool = True) -> list[Self]:
         from_native = self._with_native
         partitions = partition_by(self.native, by, include_key=include_key)
         return [from_native(df) for df in partitions]
+
+    def pivot(
+        self,
+        on: Sequence[str],
+        on_columns: Self,
+        *,
+        index: Sequence[str],
+        values: Sequence[str],
+        aggregate_function: PivotAgg | None = None,
+        separator: str = "_",
+    ) -> Self:
+        result = pivot_table(
+            self.native,
+            list(on),
+            on_columns.native,
+            index,
+            values,
+            aggregate_function,
+            separator,
+        )
+        return self._with_native(result)
 
     def clone(self) -> Self:
         return self._with_native(self.native)
@@ -260,4 +426,25 @@ def with_arrays(
             table = table.set_column(column_names.index(name), name, column)
         else:
             table = table.append_column(name, column)
+    return table
+
+
+def insert_arrays_at(
+    table: pa.Table,
+    index: int,
+    names: Collection[str],
+    columns: Iterable[ChunkedOrArrayAny],
+    /,
+) -> pa.Table:
+    """Add multiple columns to a table, starting at `index`."""
+    if index in {0, table.num_columns}:
+        if index == 0:
+            arrays = (*columns, *table.columns)
+            names = (*names, *table.column_names)
+        else:
+            arrays = (*table.columns, *columns)
+            names = (*table.column_names, *names)
+        return fn.concat_horizontal(arrays, names)
+    for idx, name, column in zip(range(index, index + len(names)), names, columns):
+        table = table.add_column(idx, name, column)
     return table

@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, Any, ClassVar, Generic, Protocol, TypeVar, ove
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
-from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._plan import common, expressions as ir
 from narwhals._plan._guards import (
     is_function_expr,
@@ -15,7 +14,7 @@ from narwhals._plan._guards import (
     is_seq_column,
 )
 from narwhals._plan.arrow import functions as fn
-from narwhals._plan.arrow.group_by import AggSpec
+from narwhals._plan.arrow.group_by import BOOLEAN_LENGTH_PRESERVING, AggSpec
 from narwhals._plan.arrow.series import ArrowSeries as Series
 from narwhals._plan.arrow.typing import ChunkedOrScalarAny, NativeScalar, StoresNativeT_co
 from narwhals._plan.common import temp
@@ -129,7 +128,7 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
 
     def _with_native(self, native: Any, name: str, /) -> StoresNativeT_co: ...
     def cast(self, node: ir.Cast, frame: Frame, name: str) -> StoresNativeT_co:
-        data_type = narwhals_to_native_dtype(node.dtype, frame.version)
+        data_type = fn.dtype_native(node.dtype, frame.version)
         native = node.expr.dispatch(self, frame, name).native
         return self._with_native(fn.cast(native, data_type), name)
 
@@ -160,7 +159,7 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
         native = expr.dispatch(self, frame, name).native
         lower = lower_bound.dispatch(self, frame, "lower").native
         upper = upper_bound.dispatch(self, frame, "upper").native
-        result = fn.is_between(native, lower, upper, node.function.closed)
+        result = fn.is_between(native, lower, upper, closed=node.function.closed)
         return self._with_native(result, name)
 
     @overload
@@ -202,18 +201,18 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
         return func
 
     def abs(self, node: FExpr[Abs], frame: Frame, name: str) -> StoresNativeT_co:
-        return self._unary_function(fn.abs_)(node, frame, name)
+        return self._unary_function(fn.abs)(node, frame, name)
 
     def not_(self, node: FExpr[Not], frame: Frame, name: str) -> StoresNativeT_co:
         return self._unary_function(fn.not_)(node, frame, name)
 
     def all(self, node: FExpr[All], frame: Frame, name: str) -> StoresNativeT_co:
-        return self._unary_function(fn.all_)(node, frame, name)
+        return self._unary_function(fn.all)(node, frame, name)
 
     def any(
         self, node: FExpr[ir.boolean.Any], frame: Frame, name: str
     ) -> StoresNativeT_co:
-        return self._unary_function(fn.any_)(node, frame, name)
+        return self._unary_function(fn.any)(node, frame, name)
 
     def is_finite(
         self, node: FExpr[IsFinite], frame: Frame, name: str
@@ -466,16 +465,16 @@ class ArrowExpr(  # type: ignore[misc]
 
     def arg_min(self, node: ArgMin, frame: Frame, name: str) -> Scalar:
         native = self._dispatch_expr(node.expr, frame, name).native
-        result = pc.index(native, fn.min_(native))
+        result = pc.index(native, fn.min(native))
         return self._with_native(result, name)
 
     def arg_max(self, node: ArgMax, frame: Frame, name: str) -> Scalar:
         native = self._dispatch_expr(node.expr, frame, name).native
-        result: NativeScalar = pc.index(native, fn.max_(native))
+        result: NativeScalar = pc.index(native, fn.max(native))
         return self._with_native(result, name)
 
     def sum(self, node: Sum, frame: Frame, name: str) -> Scalar:
-        result = fn.sum_(self._dispatch_expr(node.expr, frame, name).native)
+        result = fn.sum(self._dispatch_expr(node.expr, frame, name).native)
         return self._with_native(result, name)
 
     def n_unique(self, node: NUnique, frame: Frame, name: str) -> Scalar:
@@ -511,7 +510,7 @@ class ArrowExpr(  # type: ignore[misc]
         return self._with_native(result, name)
 
     def max(self, node: Max, frame: Frame, name: str) -> Scalar:
-        result: NativeScalar = fn.max_(self._dispatch_expr(node.expr, frame, name).native)
+        result: NativeScalar = fn.max(self._dispatch_expr(node.expr, frame, name).native)
         return self._with_native(result, name)
 
     def mean(self, node: Mean, frame: Frame, name: str) -> Scalar:
@@ -523,7 +522,7 @@ class ArrowExpr(  # type: ignore[misc]
         return self._with_native(result, name)
 
     def min(self, node: Min, frame: Frame, name: str) -> Scalar:
-        result: NativeScalar = fn.min_(self._dispatch_expr(node.expr, frame, name).native)
+        result: NativeScalar = fn.min(self._dispatch_expr(node.expr, frame, name).native)
         return self._with_native(result, name)
 
     def null_count(self, node: FExpr[F.NullCount], frame: Frame, name: str) -> Scalar:
@@ -580,7 +579,7 @@ class ArrowExpr(  # type: ignore[misc]
         sort_indices: pa.UInt64Array | None = None,
     ) -> Self:
         # NOTE: This subset of functions can be expressed as a mask applied to indices
-        into_column_agg, mask = fn.BOOLEAN_LENGTH_PRESERVING[type(node.function)]
+        into_column_agg, mask = BOOLEAN_LENGTH_PRESERVING[type(node.function)]
         idx_name = temp.column_name(frame)
         df = frame._with_columns([node.input[0].dispatch(self, frame, name)])
         if sort_indices is not None:
@@ -662,7 +661,8 @@ class ArrowExpr(  # type: ignore[misc]
         return self.from_series(result)
 
     def drop_nulls(self, node: FExpr[F.DropNulls], frame: Frame, name: str) -> Self:
-        return self._vector_function(fn.drop_nulls)(node, frame, name)
+        series = self._dispatch_expr(node.input[0], frame, name)
+        return self.from_series(series.drop_nulls())
 
     def mode_all(self, node: FExpr[F.ModeAll], frame: Frame, name: str) -> Self:
         return self._vector_function(fn.mode_all)(node, frame, name)
@@ -750,8 +750,8 @@ class ArrowExpr(  # type: ignore[misc]
         else:
             # NOTE: `Decimal` is not supported, but excluding it from the typing is surprisingly complicated
             # https://docs.rs/polars-core/0.52.0/polars_core/datatypes/enum.DataType.html#method.is_primitive_numeric
-            lower: NativeScalar = fn.min_(native)
-            upper: NativeScalar = fn.max_(native)
+            lower: NativeScalar = fn.min(native)
+            upper: NativeScalar = fn.max(native)
             if lower.equals(upper):
                 # All data points are identical - use unit interval
                 rhs = fn.lit(0.5)
@@ -811,9 +811,8 @@ class ArrowScalar(
         dtype: IntoDType | None = None,
         version: Version = Version.MAIN,
     ) -> Self:
-        dtype_pa: pa.DataType | None = None
-        if dtype and dtype != version.dtypes.Unknown:
-            dtype_pa = narwhals_to_native_dtype(dtype, version)
+        unknown = version.dtypes.Unknown
+        dtype_pa = None if dtype == unknown else fn.dtype_native(dtype, version)
         return cls.from_native(fn.lit(value, dtype_pa), name, version)
 
     @classmethod
@@ -884,7 +883,7 @@ class ArrowScalar(
         previous = node.input[0].dispatch(self, frame, name)
         if previous.native.is_valid:
             return previous
-        chunked = fn.chunked_array([[]], previous.native.type)
+        chunked = fn.chunked_array([], previous.native.type)
         return ArrowExpr.from_native(chunked, name, version=self.version)
 
     @property
@@ -956,20 +955,20 @@ class ArrowAccessor(Generic[ExprOrScalarT]):
 class ArrowCatNamespace(ExprCatNamespace["Frame", "Expr"], ArrowAccessor[ExprOrScalarT]):
     def get_categories(self, node: FExpr[GetCategories], frame: Frame, name: str) -> Expr:
         native = node.input[0].dispatch(self.compliant, frame, name).native
-        return ArrowExpr.from_native(fn.get_categories(native), name, self.version)
+        return ArrowExpr.from_native(fn.cat.get_categories(native), name, self.version)
 
 
 class ArrowListNamespace(
     ExprListNamespace["Frame", "Expr | Scalar"], ArrowAccessor[ExprOrScalarT]
 ):
     def len(self, node: FExpr[lists.Len], frame: Frame, name: str) -> Expr | Scalar:
-        return self.unary(fn.list_len)(node, frame, name)
+        return self.unary(fn.list.len)(node, frame, name)
 
     def get(self, node: FExpr[lists.Get], frame: Frame, name: str) -> Expr | Scalar:
-        return self.unary(fn.list_get, node.function.index)(node, frame, name)
+        return self.unary(fn.list.get, node.function.index)(node, frame, name)
 
     def unique(self, node: FExpr[lists.Unique], frame: Frame, name: str) -> Expr | Scalar:
-        return self.unary(fn.list_unique)(node, frame, name)
+        return self.unary(fn.list.unique)(node, frame, name)
 
     def contains(
         self, node: FExpr[lists.Contains], frame: Frame, name: str
@@ -981,16 +980,16 @@ class ArrowListNamespace(
         if isinstance(item, ArrowExpr):
             # Maybe one day, not now
             raise NotImplementedError
-        return self.with_native(fn.list_contains(prev.native, item.native), name)
+        return self.with_native(fn.list.contains(prev.native, item.native), name)
 
     def join(self, node: FExpr[lists.Join], frame: Frame, name: str) -> Expr | Scalar:
         separator, ignore_nulls = node.function.separator, node.function.ignore_nulls
         previous = node.input[0].dispatch(self.compliant, frame, name)
         result: ChunkedOrScalarAny
         if isinstance(previous, ArrowExpr):
-            result = fn.list_join(previous.native, separator, ignore_nulls=ignore_nulls)
+            result = fn.list.join(previous.native, separator, ignore_nulls=ignore_nulls)
         else:
-            result = fn.list_join_scalar(
+            result = fn.list.join_scalar(
                 previous.native, separator, ignore_nulls=ignore_nulls
             )
         return self.with_native(result, name)
@@ -1006,11 +1005,11 @@ class ArrowListNamespace(
         previous = node.input[0].dispatch(self.compliant, frame, name)
         result: ChunkedOrScalarAny
         if isinstance(previous, ArrowScalar):
-            result = fn.list_sort_scalar(previous.native, node.function.options)
+            result = fn.list.sort_scalar(previous.native, node.function.options)
         else:
             descending = node.function.options.descending
             nulls_last = node.function.options.nulls_last
-            result = fn.list_sort(
+            result = fn.list.sort(
                 previous.native, descending=descending, nulls_last=nulls_last
             )
         return self.with_native(result, name)
@@ -1033,25 +1032,25 @@ class ArrowStringNamespace(
     def len_chars(
         self, node: FExpr[strings.LenChars], frame: Frame, name: str
     ) -> Expr | Scalar:
-        return self.unary(fn.str_len_chars)(node, frame, name)
+        return self.unary(fn.str.len_chars)(node, frame, name)
 
     def slice(self, node: FExpr[strings.Slice], frame: Frame, name: str) -> Expr | Scalar:
         offset, length = node.function.offset, node.function.length
-        return self.unary(fn.str_slice, offset, length)(node, frame, name)
+        return self.unary(fn.str.slice, offset, length)(node, frame, name)
 
     def zfill(self, node: FExpr[strings.ZFill], frame: Frame, name: str) -> Expr | Scalar:
-        return self.unary(fn.str_zfill, node.function.length)(node, frame, name)
+        return self.unary(fn.str.zfill, node.function.length)(node, frame, name)
 
     def contains(
         self, node: FExpr[strings.Contains], frame: Frame, name: str
     ) -> Expr | Scalar:
         pattern, literal = node.function.pattern, node.function.literal
-        return self.unary(fn.str_contains, pattern, literal=literal)(node, frame, name)
+        return self.unary(fn.str.contains, pattern, literal=literal)(node, frame, name)
 
     def ends_with(
         self, node: FExpr[strings.EndsWith], frame: Frame, name: str
     ) -> Expr | Scalar:
-        return self.unary(fn.str_ends_with, node.function.suffix)(node, frame, name)
+        return self.unary(fn.str.ends_with, node.function.suffix)(node, frame, name)
 
     def replace(
         self, node: FExpr[strings.Replace], frame: Frame, name: str
@@ -1062,11 +1061,11 @@ class ArrowStringNamespace(
         prev = expr.dispatch(self.compliant, frame, name)
         value = other.dispatch(self.compliant, frame, name)
         if isinstance(value, ArrowScalar):
-            result = fn.str_replace(
+            result = fn.str.replace(
                 prev.native, pattern, value.native.as_py(), literal=literal, n=n
             )
         elif isinstance(prev, ArrowExpr):
-            result = fn.str_replace_vector(
+            result = fn.str.replace_vector(
                 prev.native, pattern, value.native, literal=literal, n=n
             )
         else:
@@ -1084,32 +1083,32 @@ class ArrowStringNamespace(
         return self.replace(rewrite, frame, name)
 
     def split(self, node: FExpr[strings.Split], frame: Frame, name: str) -> Expr | Scalar:
-        return self.unary(fn.str_split, node.function.by)(node, frame, name)
+        return self.unary(fn.str.split, node.function.by)(node, frame, name)
 
     def starts_with(
         self, node: FExpr[strings.StartsWith], frame: Frame, name: str
     ) -> Expr | Scalar:
-        return self.unary(fn.str_starts_with, node.function.prefix)(node, frame, name)
+        return self.unary(fn.str.starts_with, node.function.prefix)(node, frame, name)
 
     def strip_chars(
         self, node: FExpr[strings.StripChars], frame: Frame, name: str
     ) -> Expr | Scalar:
-        return self.unary(fn.str_strip_chars, node.function.characters)(node, frame, name)
+        return self.unary(fn.str.strip_chars, node.function.characters)(node, frame, name)
 
     def to_uppercase(
         self, node: FExpr[strings.ToUppercase], frame: Frame, name: str
     ) -> Expr | Scalar:
-        return self.unary(fn.str_to_uppercase)(node, frame, name)
+        return self.unary(fn.str.to_uppercase)(node, frame, name)
 
     def to_lowercase(
         self, node: FExpr[strings.ToLowercase], frame: Frame, name: str
     ) -> Expr | Scalar:
-        return self.unary(fn.str_to_lowercase)(node, frame, name)
+        return self.unary(fn.str.to_lowercase)(node, frame, name)
 
     def to_titlecase(
         self, node: FExpr[strings.ToTitlecase], frame: Frame, name: str
     ) -> Expr | Scalar:
-        return self.unary(fn.str_to_titlecase)(node, frame, name)
+        return self.unary(fn.str.to_titlecase)(node, frame, name)
 
     to_date = not_implemented()
     to_datetime = not_implemented()
@@ -1119,4 +1118,4 @@ class ArrowStructNamespace(
     ExprStructNamespace["Frame", "Expr | Scalar"], ArrowAccessor[ExprOrScalarT]
 ):
     def field(self, node: FExpr[FieldByName], frame: Frame, name: str) -> Expr | Scalar:
-        return self.unary(fn.struct_field, node.function.name)(node, frame, name)
+        return self.unary(fn.struct.field, node.function.name)(node, frame, name)

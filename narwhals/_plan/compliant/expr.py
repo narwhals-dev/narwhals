@@ -6,6 +6,7 @@ from narwhals._plan.compliant.column import EagerBroadcast, SupportsBroadcast
 from narwhals._plan.compliant.typing import (
     FrameT_contra,
     HasVersion,
+    LazyFrameT_contra,
     LengthT,
     SeriesT,
     SeriesT_co,
@@ -44,6 +45,7 @@ if TYPE_CHECKING:
     from narwhals._plan.typing import IncompleteCyclic
 
 
+# NOTE: At some point `Series` needs to be swapped out for `Column`
 class CompliantExpr(HasVersion, Protocol[FrameT_contra, SeriesT_co]):
     """Everything common to `Expr`/`Series` and `Scalar` literal values."""
 
@@ -317,8 +319,9 @@ class EagerExpr(
         return True
 
 
+# NOTE: At some point `Series` needs to be swapped out for `Column`
 class LazyExpr(
     SupportsBroadcast[SeriesT, LengthT],
-    CompliantExpr[FrameT_contra, SeriesT],
-    Protocol[FrameT_contra, SeriesT, LengthT],
+    CompliantExpr[LazyFrameT_contra, SeriesT],
+    Protocol[LazyFrameT_contra, SeriesT, LengthT],
 ): ...

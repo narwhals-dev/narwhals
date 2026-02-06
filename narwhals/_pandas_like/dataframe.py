@@ -10,6 +10,7 @@ from narwhals._compliant import EagerDataFrame
 from narwhals._pandas_like.series import PANDAS_TO_NUMPY_DTYPE_MISSING, PandasLikeSeries
 from narwhals._pandas_like.utils import (
     align_and_extract_native,
+    broadcast_series_to_index,
     get_dtype_backend,
     import_array_module,
     iter_dtype_backends,
@@ -307,14 +308,18 @@ class PandasLikeDataFrame(
     def _extract_comparand(self, other: PandasLikeSeries) -> pd.Series[Any]:
         index = self.native.index
         if other._broadcast:
-            s = other.native
-            return type(s)(s.iloc[0], index=index, dtype=s.dtype, name=s.name)
+            native = other.native
+            is_nested = other.dtype.is_nested()
+            return broadcast_series_to_index(
+                native, index, is_nested=is_nested, series_class=type(native)
+            )
+
         if (len_other := len(other)) != (len_idx := len(index)):
             msg = f"Expected object of length {len_idx}, got: {len_other}."
             raise ShapeError(msg)
         if other.native.index is not index:
             return set_index(other.native, index, implementation=other._implementation)
-        return other.native
+        return other.native  # pragma: no cover
 
     @property
     def _array_funcs(self):  # type: ignore[no-untyped-def] # noqa: ANN202
@@ -568,7 +573,7 @@ class PandasLikeDataFrame(
                 "version": self._version,
                 "validate_column_names": False,
             }
-            if backend is not self._implementation:
+            if backend is not self._implementation:  # pragma: no cover
                 kwds.update(validate_backend_version=True)
             return PandasLikeDataFrame(self.to_pandas(), **kwds)
 

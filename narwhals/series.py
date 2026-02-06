@@ -179,12 +179,12 @@ class Series(Generic[IntoSeriesT]):
             if dtype:
                 return cls(compliant.cast(dtype), level="full")
             return cls(compliant, level="full")
-        msg = (
+        msg = (  # pragma: no cover
             f"{implementation} support in Narwhals is lazy-only, but `Series.from_numpy` is an eager-only function.\n\n"
             "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
             f"    nw.Series.from_numpy(arr, backend='pyarrow').to_frame().lazy('{implementation}')"
         )
-        raise ValueError(msg)
+        raise ValueError(msg)  # pragma: no cover
 
     @classmethod
     def from_iterable(
@@ -1322,7 +1322,7 @@ class Series(Generic[IntoSeriesT]):
             1     zero
             2      one
             3      two
-            Name: a, dtype: object
+            Name: a, dtype: str
 
             Replace values and set a default for values not in the mapping:
 
@@ -1337,7 +1337,7 @@ class Series(Generic[IntoSeriesT]):
             1        two
             2       orca
             3    vaquita
-            Name: a, dtype: object
+            Name: a, dtype: str
         """
         if new is None:
             if not isinstance(old, Mapping):
@@ -2756,6 +2756,48 @@ class Series(Generic[IntoSeriesT]):
             └───────────────────────┘
         """
         return self._with_compliant(self._compliant_series.exp())
+
+    def sin(self) -> Self:
+        r"""Compute the element-wise value for the sine.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> from math import pi
+            >>> s_native = pd.Series([0, pi / 2, 3 * pi / 2], name="a")
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.sin()
+            ┌───────────────────────┐
+            |    Narwhals Series    |
+            |-----------------------|
+            |0    0.0               |
+            |1    1.0               |
+            |2   -1.0               |
+            |Name: a, dtype: float64|
+            └───────────────────────┘
+        """
+        return self._with_compliant(self._compliant_series.sin())
+
+    def cos(self) -> Self:
+        r"""Compute the element-wise value for the cosine.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> from math import pi
+            >>> s_native = pd.Series([0, pi / 2, 3 * pi / 2], name="a")
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.cos().round(4)
+            ┌───────────────────────┐
+            |    Narwhals Series    |
+            |-----------------------|
+            |0    1.0               |
+            |1    0.0               |
+            |2   -0.0               |
+            |Name: a, dtype: float64|
+            └───────────────────────┘
+        """
+        return self._with_compliant(self._compliant_series.cos())
 
     def sqrt(self) -> Self:
         r"""Compute the square root.

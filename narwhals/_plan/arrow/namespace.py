@@ -5,11 +5,11 @@ from functools import reduce
 from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import pyarrow as pa  # ignore-banned-import
-import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._plan._guards import is_tuple_of
 from narwhals._plan.arrow import functions as fn
+from narwhals._plan.common import todo
 from narwhals._plan.compliant.namespace import EagerNamespace
 from narwhals._plan.expressions.expr import RangeExpr
 from narwhals._plan.expressions.literal import is_literal_scalar
@@ -17,13 +17,21 @@ from narwhals._utils import Implementation, Version
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Iterator, Sequence
+    from collections.abc import Iterable, Iterator, Sequence
+
+    from typing_extensions import TypeAlias
 
     from narwhals._arrow.typing import ChunkedArrayAny
+    from narwhals._plan._dispatch import BoundMethod
     from narwhals._plan.arrow.dataframe import ArrowDataFrame as Frame
     from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
     from narwhals._plan.arrow.series import ArrowSeries as Series
-    from narwhals._plan.arrow.typing import ChunkedArray, IntegerScalar
+    from narwhals._plan.arrow.typing import (
+        BinaryFunction,
+        ChunkedArray,
+        IntegerScalar,
+        VariadicFunction,
+    )
     from narwhals._plan.expressions import expr, functions as F
     from narwhals._plan.expressions.boolean import AllHorizontal, AnyHorizontal
     from narwhals._plan.expressions.expr import FunctionExpr as FExpr, RangeExpr
@@ -38,6 +46,8 @@ if TYPE_CHECKING:
         NonNestedLiteral,
         PythonLiteral,
     )
+
+    Wrapper: TypeAlias = BoundMethod[FExpr[Any], Frame, Expr | Scalar]
 
 
 Int64 = Version.MAIN.dtypes.Int64()
@@ -101,14 +111,36 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
             nw_ser.to_native(), name or node.name, nw_ser.version
         )
 
-    def _horizontal_function(
-        self, fn_native: Callable[[Any, Any], Any], /, fill: NonNestedLiteral = None
-    ) -> Callable[[FExpr[Any], Frame, str], Expr | Scalar]:
+    @overload
+    def _horizontal(
+        self, function: BinaryFunction, /, fill: NonNestedLiteral = None
+    ) -> Wrapper: ...
+    @overload
+    def _horizontal(
+        self, function: VariadicFunction, /, *, variadic: Literal[True]
+    ) -> Wrapper: ...
+    def _horizontal(
+        self,
+        function: BinaryFunction | VariadicFunction,
+        /,
+        fill: NonNestedLiteral = None,
+        *,
+        variadic: bool = False,
+    ) -> Wrapper:
+        """Generate a horizontal wrapper function.
+
+        Arguments:
+            function: Native binary or variadic function.
+            fill: Fill value to use when nulls should *not* be ignored.
+            variadic: If False (default), perform a binary reduction.
+                Otherwise, assume we can unpack directly into `function`.
+        """
+
         def func(node: FExpr[Any], frame: Frame, name: str) -> Expr | Scalar:
             it = (self._expr.from_ir(e, frame, name).native for e in node.input)
             if fill is not None:
                 it = (fn.fill_null(native, fill) for native in it)
-            result = reduce(fn_native, it)
+            result = function(*it) if variadic else reduce(function, it)
             if isinstance(result, pa.Scalar):
                 return self._scalar.from_native(result, name, self.version)
             return self._expr.from_native(result, name, self.version)
@@ -116,38 +148,34 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
         return func
 
     def coalesce(self, node: FExpr[F.Coalesce], frame: Frame, name: str) -> Expr | Scalar:
-        it = (self._expr.from_ir(e, frame, name).native for e in node.input)
-        result = pc.coalesce(*it)
-        if isinstance(result, pa.Scalar):
-            return self._scalar.from_native(result, name, self.version)
-        return self._expr.from_native(result, name, self.version)
+        return self._horizontal(fn.coalesce, variadic=True)(node, frame, name)
 
     def any_horizontal(
         self, node: FExpr[AnyHorizontal], frame: Frame, name: str
     ) -> Expr | Scalar:
         fill = False if node.function.ignore_nulls else None
-        return self._horizontal_function(fn.or_, fill)(node, frame, name)
+        return self._horizontal(fn.or_, fill)(node, frame, name)
 
     def all_horizontal(
         self, node: FExpr[AllHorizontal], frame: Frame, name: str
     ) -> Expr | Scalar:
         fill = True if node.function.ignore_nulls else None
-        return self._horizontal_function(fn.and_, fill)(node, frame, name)
+        return self._horizontal(fn.and_, fill)(node, frame, name)
 
     def sum_horizontal(
         self, node: FExpr[F.SumHorizontal], frame: Frame, name: str
     ) -> Expr | Scalar:
-        return self._horizontal_function(fn.add, fill=0)(node, frame, name)
+        return self._horizontal(fn.add, fill=0)(node, frame, name)
 
     def min_horizontal(
         self, node: FExpr[F.MinHorizontal], frame: Frame, name: str
     ) -> Expr | Scalar:
-        return self._horizontal_function(fn.min_horizontal)(node, frame, name)
+        return self._horizontal(fn.min_horizontal, variadic=True)(node, frame, name)
 
     def max_horizontal(
         self, node: FExpr[F.MaxHorizontal], frame: Frame, name: str
     ) -> Expr | Scalar:
-        return self._horizontal_function(fn.max_horizontal)(node, frame, name)
+        return self._horizontal(fn.max_horizontal, variadic=True)(node, frame, name)
 
     def mean_horizontal(
         self, node: FExpr[F.MeanHorizontal], frame: Frame, name: str
@@ -172,7 +200,9 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
         aligned = (ser.native for ser in self._expr.align(exprs))
         separator = node.function.separator
         ignore_nulls = node.function.ignore_nulls
-        result = fn.concat_str(*aligned, separator=separator, ignore_nulls=ignore_nulls)
+        result = fn.str.concat_str(
+            *aligned, separator=separator, ignore_nulls=ignore_nulls
+        )
         if isinstance(result, pa.Scalar):
             return self._scalar.from_native(result, name, self.version)
         return self._expr.from_native(result, name, self.version)
@@ -328,3 +358,18 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
                     raise TypeError(msg)
             return df._with_native(fn.concat_tables(df.native for df in dfs))
         raise TypeError(items)
+
+    def read_csv(self, source: str, /, **kwds: Any) -> Frame:
+        import pyarrow.csv as pcsv
+
+        native = pcsv.read_csv(source, **kwds)
+        return self._dataframe.from_native(native, version=self.version)
+
+    def read_parquet(self, source: str, /, **kwds: Any) -> Frame:
+        import pyarrow.parquet as pq
+
+        native = pq.read_table(source, **kwds)
+        return self._dataframe.from_native(native, version=self.version)
+
+    scan_csv = todo()
+    scan_parquet = todo()

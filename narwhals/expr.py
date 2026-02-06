@@ -191,7 +191,7 @@ class Expr:
 
     # --- binary ---
     def _with_binary(self, attr: str, other: Self | Any) -> Self:
-        node = ExprNode(ExprKind.ELEMENTWISE, attr, other, str_as_lit=True)
+        node = ExprNode(ExprKind.ELEMENTWISE, attr, exprs=(other,), str_as_lit=True)
         return self._append_node(node)
 
     def __eq__(self, other: Self | Any) -> Self:  # type: ignore[override]
@@ -926,7 +926,7 @@ class Expr:
             node = ExprNode(
                 ExprKind.ELEMENTWISE,
                 "replace_strict",
-                default,
+                exprs=(default,),
                 old=old,
                 new=new,
                 return_dtype=return_dtype,
@@ -966,7 +966,10 @@ class Expr:
             └──────────────────┘
         """
         node = ExprNode(
-            ExprKind.ELEMENTWISE, "is_between", lower_bound, upper_bound, closed=closed
+            ExprKind.ELEMENTWISE,
+            "is_between",
+            exprs=(lower_bound, upper_bound),
+            closed=closed,
         )
         return self._append_node(node)
 
@@ -1029,7 +1032,9 @@ class Expr:
             |     5  7  12     |
             └──────────────────┘
         """
-        return self._append_node(ExprNode(ExprKind.FILTRATION, "filter", *predicates))
+        return self._append_node(
+            ExprNode(ExprKind.FILTRATION, "filter", exprs=predicates)
+        )
 
     def is_null(self) -> Self:
         """Returns a boolean Series indicating which values are null.
@@ -1190,7 +1195,7 @@ class Expr:
             node = ExprNode(
                 ExprKind.ELEMENTWISE,
                 "fill_null",
-                value,
+                exprs=(value,),
                 strategy=strategy,
                 limit=limit,
                 str_as_lit=True,
@@ -1607,22 +1612,21 @@ class Expr:
         """
         if upper_bound is None:
             return self._append_node(
-                ExprNode(ExprKind.ELEMENTWISE, "clip_lower", lower_bound)
+                ExprNode(ExprKind.ELEMENTWISE, "clip_lower", exprs=(lower_bound,))
             )
         if lower_bound is None:
             return self._append_node(
-                ExprNode(ExprKind.ELEMENTWISE, "clip_upper", upper_bound)
+                ExprNode(ExprKind.ELEMENTWISE, "clip_upper", exprs=(upper_bound,))
             )
         return self._append_node(
-            ExprNode(ExprKind.ELEMENTWISE, "clip", lower_bound, upper_bound)
+            ExprNode(ExprKind.ELEMENTWISE, "clip", exprs=(lower_bound, upper_bound))
         )
 
-    def first(self) -> Self:
+    def first(self, order_by: str | Iterable[str] | None = None) -> Self:
         """Get the first value.
 
         Notes:
-            For lazy backends, this can only be used with `over`. We may introduce
-            `min_by` in the future so it can be used as an aggregation.
+            For lazy backends, this can only be used with `over` or with `order_by`.
 
         Examples:
             >>> import pandas as pd
@@ -1642,19 +1646,26 @@ class Expr:
             ┌──────────────────┐
             |Narwhals DataFrame|
             |------------------|
-            |       a     b    |
-            |    0  1   foo    |
-            |    1  2  None    |
+            |       a    b     |
+            |    0  1  foo     |
+            |    1  2  NaN     |
             └──────────────────┘
         """
-        return self._append_node(ExprNode(ExprKind.ORDERABLE_AGGREGATION, "first"))
+        if order_by is None:
+            return self._append_node(ExprNode(ExprKind.ORDERABLE_AGGREGATION, "first"))
+        return self._append_node(
+            ExprNode(
+                ExprKind.AGGREGATION,
+                "first",
+                order_by=[order_by] if isinstance(order_by, str) else order_by,
+            )
+        )
 
-    def last(self) -> Self:
+    def last(self, order_by: str | Iterable[str] | None = None) -> Self:
         """Get the last value.
 
         Notes:
-            For lazy backends, this can only be used with `over`. We may introduce
-            `max_by` in the future so it can be used as an aggregation.
+            For lazy backends, this can only be used with `over` or with `order_by`.
 
         Examples:
             >>> import pyarrow as pa
@@ -1686,7 +1697,15 @@ class Expr:
             |b: [[null,"baz"]] |
             └──────────────────┘
         """
-        return self._append_node(ExprNode(ExprKind.ORDERABLE_AGGREGATION, "last"))
+        if order_by is None:
+            return self._append_node(ExprNode(ExprKind.ORDERABLE_AGGREGATION, "last"))
+        return self._append_node(
+            ExprNode(
+                ExprKind.AGGREGATION,
+                "last",
+                order_by=[order_by] if isinstance(order_by, str) else order_by,
+            )
+        )
 
     def mode(self, *, keep: ModeKeepStrategy = "all") -> Self:
         r"""Compute the most occurring value(s).
@@ -1770,15 +1789,15 @@ class Expr:
             ...     nw.col("a").cum_count().alias("a_cum_count"),
             ...     nw.col("a").cum_count(reverse=True).alias("a_cum_count_reverse"),
             ... )
-            ┌─────────────────────────────────────────┐
-            |           Narwhals DataFrame            |
-            |-----------------------------------------|
-            |      a  a_cum_count  a_cum_count_reverse|
-            |0     x            1                    3|
-            |1     k            2                    2|
-            |2  None            2                    1|
-            |3     d            3                    1|
-            └─────────────────────────────────────────┘
+            ┌────────────────────────────────────────┐
+            |           Narwhals DataFrame           |
+            |----------------------------------------|
+            |     a  a_cum_count  a_cum_count_reverse|
+            |0    x            1                    3|
+            |1    k            2                    2|
+            |2  NaN            2                    1|
+            |3    d            3                    1|
+            └────────────────────────────────────────┘
         """
         return self._append_node(
             ExprNode(ExprKind.ORDERABLE_WINDOW, "cum_count", reverse=reverse)
@@ -2229,8 +2248,58 @@ class Expr:
         """
         return self._append_node(ExprNode(ExprKind.ELEMENTWISE, "exp"))
 
+    def sin(self) -> Self:
+        r"""Compute the element-wise value for the sine.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from math import pi
+            >>> df_native = pa.table({"values": [0, pi / 2, 3 * pi / 2]})
+            >>> df = nw.from_native(df_native)
+            >>> result = df.with_columns(sin=nw.col("values").sin())
+            >>> result
+            ┌─────────────────────────────────────────────────┐
+            |               Narwhals DataFrame                |
+            |-------------------------------------------------|
+            |pyarrow.Table                                    |
+            |values: double                                   |
+            |sin: double                                      |
+            |----                                             |
+            |values: [[0,1.5707963267948966,4.71238898038469]]|
+            |sin: [[0,1,-1]]                                  |
+            └─────────────────────────────────────────────────┘
+        """
+        return self._append_node(ExprNode(ExprKind.ELEMENTWISE, "sin"))
+
+    def cos(self) -> Self:
+        r"""Compute the element-wise value for the cosine.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from math import pi
+            >>> df_native = pa.table({"values": [0, pi / 2, pi]})
+            >>> df = nw.from_native(df_native)
+            >>> result = df.with_columns(cos=nw.col("values").cos()).select(
+            ...     nw.all().round(4)
+            ... )
+            >>> result
+            ┌───────────────────────────┐
+            |    Narwhals DataFrame     |
+            |---------------------------|
+            |pyarrow.Table              |
+            |values: double             |
+            |cos: double                |
+            |----                       |
+            |values: [[0,1.5708,3.1416]]|
+            |cos: [[1,0,-1]]            |
+            └───────────────────────────┘
+        """
+        return self._append_node(ExprNode(ExprKind.ELEMENTWISE, "cos"))
+
     def sqrt(self) -> Self:
-        r"""Compute the square root.
+        r"""Compute the square root of the elements.
 
         Examples:
             >>> import pyarrow as pa

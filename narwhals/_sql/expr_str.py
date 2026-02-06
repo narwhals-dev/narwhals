@@ -132,3 +132,23 @@ class SQLExprStringNamespace(
         # can't use `_with_elementwise` due to `when` operator.
         # TODO(unassigned): implement `window_func` like we do in `Expr.cast`
         return self.compliant._with_callable(func)
+
+    def pad_start(self, length: int, fill_char: str) -> SQLExprT:
+        def _pad_start(expr: NativeExpr) -> NativeExpr:
+            return self._when(
+                self._function("length", expr) < self._lit(length),
+                self._function("lpad", expr, self._lit(length), self._lit(fill_char)),
+                expr,
+            )
+
+        return self.compliant._with_callable(_pad_start)
+
+    def pad_end(self, length: int, fill_char: str) -> SQLExprT:
+        def _pad_end(expr: NativeExpr) -> NativeExpr:
+            return self._when(
+                self._function("length", expr) < self._lit(length),
+                self._function("rpad", expr, self._lit(length), self._lit(fill_char)),
+                expr,
+            )
+
+        return self.compliant._with_callable(_pad_end)

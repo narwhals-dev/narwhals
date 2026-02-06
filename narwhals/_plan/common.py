@@ -4,6 +4,7 @@ import datetime as dt
 import sys
 from collections.abc import Iterable
 from decimal import Decimal
+from io import BytesIO
 from secrets import token_hex
 from typing import TYPE_CHECKING, cast, overload
 
@@ -30,7 +31,7 @@ if TYPE_CHECKING:
         Seq,
     )
     from narwhals._utils import _StoresColumns
-    from narwhals.typing import NonNestedDType, NonNestedLiteral
+    from narwhals.typing import FileSource, NonNestedDType, NonNestedLiteral
 
     T = TypeVar("T")
 
@@ -108,14 +109,14 @@ def flatten_hash_safe(iterable: Iterable[OneOrIterable[Any]], /) -> Iterator[Any
             yield element
 
 
-def _not_one_or_iterable_str_error(obj: Any, /) -> TypeError:  # pragma: no cover
+def _not_one_or_iterable_str_error(obj: Any, /) -> TypeError:
     msg = f"Expected one or an iterable of strings, but got: {qualified_type_name(obj)!r}\n{obj!r}"
     return TypeError(msg)
 
 
 def ensure_seq_str(obj: OneOrIterable[str], /) -> Seq[str]:
     if not isinstance(obj, Iterable):
-        raise _not_one_or_iterable_str_error(obj)  # pragma: no cover
+        raise _not_one_or_iterable_str_error(obj)
     return (obj,) if isinstance(obj, str) else tuple(obj)
 
 
@@ -140,6 +141,22 @@ def _reprlib_repr_backport() -> reprlib.Repr:
         obj = reprlib.Repr()
         obj.maxlist = 10
         return obj
+
+
+@overload
+def normalize_target_file(target: FileSource) -> str: ...
+@overload
+def normalize_target_file(target: None) -> None: ...
+@overload
+def normalize_target_file(target: BytesIO) -> BytesIO: ...
+@overload
+def normalize_target_file(target: FileSource | BytesIO) -> str | BytesIO: ...
+def normalize_target_file(target: FileSource | BytesIO | None) -> str | BytesIO | None:
+    if target is None or isinstance(target, (str, BytesIO)):
+        return target
+    from pathlib import Path
+
+    return str(Path(target))
 
 
 class temp:  # noqa: N801
@@ -285,3 +302,21 @@ class temp:  # noqa: N801
             f"that was not present in existing ({len(current)}) columns:\n{truncated}"
         )
         return NarwhalsError(msg)
+
+
+class todo:  # pragma: no cover  # noqa: N801
+    """A variation of `not_implemented`, for shorter-lived placeholders."""
+
+    def __set_name__(self, owner: type[Any], name: str) -> None:
+        self._name_owner: str = owner.__name__
+        self.__name__: str = name
+
+    def __get__(self, instance: object | None, owner: type[Any] | None, /) -> Any:
+        if instance is None:
+            return self
+        msg = f"TODO: `{self._name_owner}.{self.__name__}(...)`"
+        raise NotImplementedError(msg)
+
+    def __call__(self, *args: Any, **kwds: Any) -> Any:
+        msg = "Stop being clever!"
+        raise NotImplementedError(msg)

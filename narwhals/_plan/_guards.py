@@ -94,11 +94,8 @@ def is_into_expr_column(obj: Any) -> TypeIs[IntoExprColumn]:
     return isinstance(obj, (str, _expr().Expr, _series().Series))
 
 
-def is_column_name_or_selector(
-    obj: Any, *, allow_expr: bool = False
-) -> TypeIs[ColumnNameOrSelector]:
-    tps = (str, _selectors().Selector) if not allow_expr else (str, _expr().Expr)
-    return isinstance(obj, tps)
+def is_column_name_or_selector(obj: Any) -> TypeIs[ColumnNameOrSelector]:
+    return isinstance(obj, (str, _selectors().Selector))
 
 
 def is_compliant_series(
@@ -138,9 +135,7 @@ def is_literal(obj: Any) -> TypeIs[ir.Literal[Any]]:
     return isinstance(obj, _ir().Literal)
 
 
-# TODO @dangotbanned: Coverage
-# Used in `ArrowNamespace._vertical`, but only horizontal is covered
-def is_tuple_of(obj: Any, tp: type[T]) -> TypeIs[Seq[T]]:  # pragma: no cover
+def is_tuple_of(obj: Any, tp: type[T]) -> TypeIs[Seq[T]]:
     """Return True if the **first** element of the tuple `obj` is an instance of `tp`."""
     return bool(isinstance(obj, tuple) and obj and isinstance(obj[0], tp))
 

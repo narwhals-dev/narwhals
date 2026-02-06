@@ -33,6 +33,7 @@ __all__ = [
     "by_name",
     "categorical",
     "datetime",
+    "decimal",
     "duration",
     "empty",
     "enum",
@@ -231,6 +232,10 @@ def enum() -> Selector:
     return s_ir.Enum().to_selector_ir().to_narwhals()
 
 
+def decimal() -> Selector:
+    return s_ir.Decimal().to_selector_ir().to_narwhals()
+
+
 def first() -> Selector:
     return s_ir.ByIndex.from_index(0).to_selector_ir().to_narwhals()
 
@@ -284,4 +289,5 @@ _HASH_SENSITIVE_TO_SELECTOR: Mapping[type[DType], Callable[[], Selector]] = {
     _dtypes.Array: array,
     _dtypes.List: list,
     _dtypes.Struct: struct,
+    _dtypes.Decimal: decimal,
 }

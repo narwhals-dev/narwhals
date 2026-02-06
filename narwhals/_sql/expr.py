@@ -18,6 +18,7 @@ from narwhals._expression_parsing import (
 )
 from narwhals._sql.typing import SQLLazyFrameT
 from narwhals._utils import Implementation, Version, extend_bool, not_implemented
+from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -189,7 +190,6 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
     def _first(self, expr: NativeExprT, *order_by: str) -> NativeExprT: ...
     def _last(self, expr: NativeExprT, *order_by: str) -> NativeExprT: ...
     def _any_value(self, expr: NativeExprT, *, ignore_nulls: bool) -> NativeExprT: ...
-
     def _when(
         self,
         condition: NativeExprT,
@@ -582,6 +582,12 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
     def ceil(self) -> Self:
         return self._with_elementwise(lambda expr: self._function("ceil", expr))
 
+    def sin(self) -> Self:
+        return self._with_elementwise(lambda expr: self._function("sin", expr))
+
+    def cos(self) -> Self:
+        return self._with_elementwise(lambda expr: self._function("cos", expr))
+
     def sqrt(self) -> Self:
         def _sqrt(expr: NativeExprT) -> NativeExprT:
             return self._when(
@@ -734,31 +740,55 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
 
         return self._with_window_function(func)
 
-    def first(self) -> Self:
-        def func(
+    def first(self, order_by: Sequence[str] = ()) -> Self:
+        def f(expr: NativeExprT) -> NativeExprT:
+            if not order_by:  # pragma: no cover
+                msg = "Expected `order_by` to be specified"
+                raise InvalidOperationError(msg)
+            return self._first(expr, *order_by)
+
+        def window_f(
             df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
         ) -> Sequence[NativeExprT]:
+            if order_by and inputs.order_by:  # pragma: no cover
+                msg = "Can't specify both `order_by` in `over` and `first`."
+                raise InvalidOperationError(msg)
+            if not order_by and not inputs.order_by:  # pragma: no cover
+                msg = "Must specify `order_by` either in `over` or `first`."
+                raise InvalidOperationError(msg)
             return [
                 self._window_expression(
-                    self._first(expr, *inputs.order_by), inputs.partition_by
+                    self._first(expr, *(inputs.order_by or order_by)), inputs.partition_by
                 )
                 for expr in self(df)
             ]
 
-        return self._with_window_function(func)
+        return self._with_callable(f, window_f)
 
-    def last(self) -> Self:
-        def func(
+    def last(self, order_by: Sequence[str] = ()) -> Self:
+        def f(expr: NativeExprT) -> NativeExprT:
+            if not order_by:  # pragma: no cover
+                msg = "Expected `order_by` to be specified"
+                raise InvalidOperationError(msg)
+            return self._last(expr, *order_by)
+
+        def window_f(
             df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
         ) -> Sequence[NativeExprT]:
+            if order_by and inputs.order_by:  # pragma: no cover
+                msg = "Can't specify both `order_by` in `over` and `last`."
+                raise InvalidOperationError(msg)
+            if not order_by and not inputs.order_by:  # pragma: no cover
+                msg = "Must specify `order_by` either in `over` or `last`."
+                raise InvalidOperationError(msg)
             return [
                 self._window_expression(
-                    self._last(expr, *inputs.order_by), inputs.partition_by
+                    self._last(expr, *(inputs.order_by or order_by)), inputs.partition_by
                 )
                 for expr in self(df)
             ]
 
-        return self._with_window_function(func)
+        return self._with_callable(f, window_f)
 
     def any_value(self, *, ignore_nulls: bool) -> Self:
         return self._with_callable(

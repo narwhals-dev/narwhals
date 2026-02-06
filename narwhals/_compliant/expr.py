@@ -138,8 +138,8 @@ class CompliantExpr(
     def mean(self) -> Self: ...
     def sum(self) -> Self: ...
     def median(self) -> Self: ...
-    def first(self) -> Self: ...
-    def last(self) -> Self: ...
+    def first(self, order_by: Sequence[str] = ()) -> Self: ...
+    def last(self, order_by: Sequence[str] = ()) -> Self: ...
     def skew(self) -> Self: ...
     def kurtosis(self) -> Self: ...
     def std(self, *, ddof: int) -> Self: ...
@@ -809,6 +809,12 @@ class EagerExpr(
     def exp(self) -> Self:
         return self._reuse_series("exp")
 
+    def sin(self) -> Self:
+        return self._reuse_series("sin")
+
+    def cos(self) -> Self:
+        return self._reuse_series("cos")
+
     def sqrt(self) -> Self:
         return self._reuse_series("sqrt")
 
@@ -819,11 +825,35 @@ class EagerExpr(
             "is_between", lower_bound=lower_bound, upper_bound=upper_bound, closed=closed
         )
 
-    def first(self) -> Self:
-        return self._reuse_series("first", returns_scalar=True)
+    def first(self, order_by: Sequence[str] = ()) -> Self:
+        if not order_by:
+            return self._reuse_series("first", returns_scalar=True)
 
-    def last(self) -> Self:
-        return self._reuse_series("last", returns_scalar=True)
+        def func(df: EagerDataFrameT) -> Sequence[Any]:
+            df = df.sort(*order_by, descending=False, nulls_last=False)
+            return self.first()(df)
+
+        return self._from_callable(
+            func,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            context=self,
+        )
+
+    def last(self, order_by: Sequence[str] = ()) -> Self:
+        if not order_by:
+            return self._reuse_series("last", returns_scalar=True)
+
+        def func(df: EagerDataFrameT) -> Sequence[Any]:
+            df = df.sort(*order_by, descending=False, nulls_last=False)
+            return self.last()(df)
+
+        return self._from_callable(
+            func,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            context=self,
+        )
 
     def any_value(self, *, ignore_nulls: bool) -> Self:
         return self._reuse_series(
@@ -1014,6 +1044,11 @@ class EagerExprListNamespace(
     def sum(self) -> EagerExprT:
         return self.compliant._reuse_series_namespace("list", "sum")
 
+    def sort(self, *, descending: bool, nulls_last: bool) -> EagerExprT:
+        return self.compliant._reuse_series_namespace(
+            "list", "sort", descending=descending, nulls_last=nulls_last
+        )
+
 
 class CompliantExprNameNamespace(  # type: ignore[misc]
     _ExprNamespace[CompliantExprT_co],
@@ -1130,6 +1165,16 @@ class EagerExprStringNamespace(
 
     def to_titlecase(self) -> EagerExprT:
         return self.compliant._reuse_series_namespace("str", "to_titlecase")
+
+    def pad_start(self, length: int, fill_char: str = " ") -> EagerExprT:
+        return self.compliant._reuse_series_namespace(
+            "str", "pad_start", length=length, fill_char=fill_char
+        )
+
+    def pad_end(self, length: int, fill_char: str = " ") -> EagerExprT:
+        return self.compliant._reuse_series_namespace(
+            "str", "pad_end", length=length, fill_char=fill_char
+        )
 
 
 class EagerExprStructNamespace(

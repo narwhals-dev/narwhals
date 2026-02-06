@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from collections.abc import Sized
+from collections.abc import Iterable, Sized
 from typing import TYPE_CHECKING, Protocol
 
-from narwhals._plan.common import flatten_hash_safe
 from narwhals._plan.compliant.typing import (
     FrameT_contra,
     HasVersion,
@@ -19,7 +18,6 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._plan import expressions as ir
-    from narwhals._plan.typing import OneOrIterable
 
 
 class SupportsBroadcast(Protocol[SeriesT, LengthT]):
@@ -52,14 +50,15 @@ class SupportsBroadcast(Protocol[SeriesT, LengthT]):
     @classmethod
     def align(
         cls,
-        *exprs: OneOrIterable[SupportsBroadcast[SeriesT, LengthT]],
+        exprs: Iterable[SupportsBroadcast[SeriesT, LengthT]],
+        /,
         default: LengthT | None = None,
     ) -> Iterator[SeriesT]:
         """Yield broadcasted `Scalar`s and unwrapped `Expr`s from `exprs`.
 
         `default` must be provided when operating in a `with_columns` context.
         """
-        exprs = tuple[SupportsBroadcast[SeriesT, LengthT], ...](flatten_hash_safe(exprs))
+        exprs = tuple(exprs)
         length = default if len(exprs) == 1 else cls._length_required(exprs, default)
         if length is None:
             for e in exprs:

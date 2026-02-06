@@ -235,7 +235,7 @@ class DaskExpr(
     def _with_binary(
         self, call: Callable[[dx.Series, Any], dx.Series], other: Any
     ) -> Self:
-        return self._with_callable(lambda expr, other: call(expr, other), other=other)
+        return self._with_callable(call, other=other)
 
     def _binary_op(self, op_name: str, other: Any) -> Self:
         return self._with_binary(lambda expr, other: getattr(expr, op_name)(other), other)
@@ -636,6 +636,16 @@ class DaskExpr(
         import dask.array as da
 
         return self._with_callable(da.exp)
+
+    def sin(self) -> Self:
+        import dask.array as da
+
+        return self._with_callable(da.sin)
+
+    def cos(self) -> Self:
+        import dask.array as da
+
+        return self._with_callable(da.cos)
 
     def sqrt(self) -> Self:
         import dask.array as da

@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "2.14.0"
+version = "2.16.0"
 dependencies = []
 requires-python = ">=3.9"
 authors = [
@@ -45,7 +45,7 @@ Repository = "https://github.com/narwhals-dev/narwhals"
 # https://github.com/narwhals-dev/narwhals/issues/817 
 pandas = ["pandas>=1.1.3"]
 modin = ["modin"]
-cudf = ["cudf>=24.10.0"]
+cudf = ["cudf-cu12>=24.10.0"]
 pyarrow = ["pyarrow>=13.0.0"]
 pyspark = ["pyspark>=3.5.0"]
 pyspark-connect = ["pyspark[connect]>=3.5.0"]
@@ -54,10 +54,11 @@ dask = ["dask[dataframe]>=2024.8"]
 duckdb = ["duckdb>=1.1"]
 ibis = ["ibis-framework>=6.0.0", "rich", "packaging", "pyarrow_hotfix"]
 sqlframe = ["sqlframe>=3.22.0,!=3.39.3"]
+sql = ["duckdb>=1.1", "sqlparse"]
 
 [dependency-groups]
 core = [
-  "narwhals[duckdb,pandas,polars,pyarrow,sqlframe]"
+  "narwhals[duckdb,pandas,polars,pyarrow,sqlframe,sql]"
 ] 
 tests = [
   "covdefaults",
@@ -72,7 +73,7 @@ extra = [  # heavier dependencies we don't necessarily need in every testing job
   "scikit-learn",
 ]
 typing = [  # keep some of these pinned and bump periodically so there's fewer surprises for contributors
-  "duckdb==1.3.0",
+  "duckdb==1.4.4",
   "hypothesis",
   "pytest",
   "pandas-stubs==2.3.0.250703",
@@ -81,9 +82,10 @@ typing = [  # keep some of these pinned and bump periodically so there's fewer s
   "pyright",
   "pyarrow-stubs==19.2",
   "sqlframe",
-  "polars>=1.36.0",
+  "polars",
   "uv",
   "narwhals[ibis]",
+  "numpy>=2.4.0", # https://numpy.org/doc/stable/release/2.4.0-notes.html#compatibility-notes
 ]
 typing-ci = [
   "narwhals[dask,modin]",
@@ -93,7 +95,7 @@ docs = [
   "black",  # required by mkdocstrings_handlers
   "jinja2",
   "duckdb",
-  "narwhals[ibis]",
+  "narwhals[sql]",
   "markdown-exec[ansi]",
   "mkdocs",
   "mkdocs-autorefs",
@@ -269,6 +271,7 @@ filterwarnings = [
   'ignore:.*The distutils package is deprecated and slated for removal in Python 3.12:DeprecationWarning:pyspark',
   'ignore:.*distutils Version classes are deprecated. Use packaging.version instead.*:DeprecationWarning',
   'ignore:.*is_datetime64tz_dtype is deprecated and will be removed in a future version.*:DeprecationWarning:pyspark',
+  'ignore:.*The copy keyword is deprecated and will be removed in a future version.*:Warning:pyspark',
 
   # Warning raised by PyArrow nightly just by importing pandas
   'ignore:.*Python binding for RankQuantileOptions not exposed:RuntimeWarning:pyarrow',
@@ -308,7 +311,9 @@ omit = [
   'narwhals/_arrow/typing.py',
   'narwhals/_duckdb/typing.py',
   'narwhals/_spark_like/typing.py',
-  'narwhals/_ibis/typing.py',
+  # We run Ibis in a separate CI job to the coverage one, to avoid their tight dependency pins.
+  'narwhals/_ibis/*',
+  "tests/ibis_test.py",
   # Remove after finishing eager sub-protocols
   'narwhals/_compliant/namespace.py',
   # NOTE: Gradually adding as things become more stable
@@ -319,14 +324,11 @@ omit = [
 ]
 exclude_also = [
   "if sys.version_info() <",
-  "if .*implementation is Implementation.CUDF",
-  "if .*implementation is Implementation.MODIN",
-  "if .*implementation is Implementation.PYSPARK",
-  "if .*implementation is Implementation.PYSPARK_CONNECT",
-  "if .*implementation.is_cudf",
-  "if .*implementation.is_modin",
-  "if .*implementation.is_pyspark",
-  "if .*implementation.is_pyspark_connect",
+  "if .* is Implementation.(CUDF|MODIN|PYSPARK|PYSPARK_CONNECT|IBIS)",
+  "if .*.is_(cudf|modin|pyspark|pyspark_connect|ibis)",
+  'if "(cudf|modin|pyspark|ibis)" in',
+  "if not .*.is_pandas",
+  "if is_ibis_table",
   "except ModuleNotFoundError",
   'request.applymarker\(pytest.mark.xfail',
   'backend_version <',
@@ -356,7 +358,6 @@ module = [
   "cupy.*",
   "dask.*",
   "dask_expr.*",
-  "duckdb.*",
   # https://github.com/ibis-project/ibis/issues/6844
   "ibis.*",
   "joblib.*",
@@ -364,6 +365,7 @@ module = [
   "numpy.*",
   "pyspark.*",
   "sklearn.*",
+  "sqlparse.*",
 ]
 # TODO: remove follow_imports
 follow_imports = "skip"

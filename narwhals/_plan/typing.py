@@ -12,7 +12,12 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals import dtypes
-    from narwhals._native import NativeDataFrame, NativeFrame, NativeSeries
+    from narwhals._native import (
+        NativeDataFrame,
+        NativeFrame,
+        NativeLazyFrame,
+        NativeSeries,
+    )
     from narwhals._plan._expr_ir import ExprIR, NamedIR, SelectorIR
     from narwhals._plan._function import Function
     from narwhals._plan.dataframe import DataFrame
@@ -108,6 +113,9 @@ NativeDataFrameT_co = TypeVar(
     bound="NativeDataFrame",
     covariant=True,
     default="NativeDataFrame",
+)
+NativeLazyFrameT = TypeVar(
+    "NativeLazyFrameT", bound="NativeLazyFrame", default="NativeLazyFrame"
 )
 LiteralT = TypeVar("LiteralT", bound="NonNestedLiteral | Series[t.Any]", default=t.Any)
 MapIR: TypeAlias = "Callable[[ExprIR], ExprIR]"

@@ -83,6 +83,7 @@ INHERITED_METHODS = frozenset(
         "arg_true",
         "ceil",
         "clip",
+        "cos",
         "count",
         "cum_max",
         "cum_min",
@@ -123,6 +124,7 @@ INHERITED_METHODS = frozenset(
         "round",
         "sample",
         "shift",
+        "sin",
         "skew",
         "sqrt",
         "std",
@@ -709,6 +711,7 @@ class PolarsSeries:
     arg_true: Method[Self]
     ceil: Method[Self]
     count: Method[int]
+    cos: Method[Self]
     cum_max: Method[Self]
     cum_min: Method[Self]
     cum_prod: Method[Self]
@@ -745,6 +748,7 @@ class PolarsSeries:
     round: Method[Self]
     sample: Method[Self]
     shift: Method[Self]
+    sin: Method[Self]
     skew: Method[float | None]
     sqrt: Method[Self]
     std: Method[float]

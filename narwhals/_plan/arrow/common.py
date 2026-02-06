@@ -2,24 +2,20 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, Generic
+from typing import TYPE_CHECKING, ClassVar, Generic
 
-from narwhals._plan.arrow.functions import BACKEND_VERSION, random_indices
+from narwhals._plan.arrow import compat
+from narwhals._plan.arrow.functions import random_indices
+from narwhals._plan.arrow.guards import is_series
 from narwhals._typing_compat import TypeVar
 from narwhals._utils import Implementation, Version, _StoresNative
 
 if TYPE_CHECKING:
     import pyarrow as pa
-    from typing_extensions import Self, TypeIs
+    from typing_extensions import Self
 
     from narwhals._plan.arrow.namespace import ArrowNamespace
     from narwhals._plan.arrow.typing import ChunkedArrayAny, Indices
-
-
-def is_series(obj: Any) -> TypeIs[_StoresNative[ChunkedArrayAny]]:
-    from narwhals._plan.arrow.series import ArrowSeries
-
-    return isinstance(obj, ArrowSeries)
 
 
 NativeT = TypeVar("NativeT", "pa.Table", "ChunkedArrayAny")
@@ -29,6 +25,10 @@ class ArrowFrameSeries(Generic[NativeT]):
     implementation: ClassVar = Implementation.PYARROW
     _native: NativeT
     _version: Version
+
+    # NOTE: Aliases to integrate with `@requires.backend_version`
+    _backend_version = compat.BACKEND_VERSION
+    _implementation = implementation
 
     @property
     def native(self) -> NativeT:
@@ -47,7 +47,7 @@ class ArrowFrameSeries(Generic[NativeT]):
         msg = f"{type(self).__name__}.__len__"
         raise NotImplementedError(msg)
 
-    if BACKEND_VERSION >= (18,):
+    if compat.TAKE_ACCEPTS_TUPLE:
 
         def _gather(self, indices: Indices) -> NativeT:
             return self.native.take(indices)
