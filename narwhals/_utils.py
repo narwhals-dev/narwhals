@@ -1254,8 +1254,7 @@ def generate_temporary_column_name(
     """
     counter = 0
     while True:
-        token = f"{prefix}{token_hex(n_bytes - 1)}"
-        if token not in columns:
+        if (token := f"{prefix}{token_hex(n_bytes - 1)}") not in columns:
             return token
 
         counter += 1

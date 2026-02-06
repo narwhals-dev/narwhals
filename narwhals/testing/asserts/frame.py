@@ -268,14 +268,13 @@ def _check_schema_equal(
         )
 
     if check_dtypes:
-        ldtypes = lschema.dtypes()
         rdtypes = (
             rschema.dtypes()
             if check_column_order
             else [rschema[col_name] for col_name in lnames]
         )
 
-        if ldtypes != rdtypes:
+        if (ldtypes := lschema.dtypes()) != rdtypes:
             raise_frame_assertion_error(
                 detail="dtypes do not match", left=ldtypes, right=rdtypes
             )
