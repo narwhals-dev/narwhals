@@ -79,7 +79,7 @@ def ruff_check(*paths: Path, select: Iterable[str], ignore: Iterable[str]) -> Li
 parser = doctest.DocTestParser()
 
 
-def try_parse(node: ast.AST) -> tuple[NodeName, Code] | None:
+def _try_parse_examples(node: ast.AST) -> tuple[NodeName, Code] | None:
     if (
         isinstance(node, (ast.FunctionDef, ast.ClassDef))
         and (doc := ast.get_docstring(node))
@@ -94,7 +94,7 @@ def iter_docstring_examples(files: Iterable[str | Path]) -> Iterator[DocstringEx
     for file in files:
         fp = Path(file)
         for node in ast.walk(ast.parse(fp.read_bytes())):
-            if example := try_parse(node):
+            if example := _try_parse_examples(node):
                 yield (fp, *example)
 
 
