@@ -14,7 +14,6 @@ from narwhals._spark_like.dataframe import SparkLikeLazyFrame
 from narwhals._spark_like.expr import SparkLikeExpr
 from narwhals._spark_like.selectors import SparkLikeSelectorNamespace
 from narwhals._spark_like.utils import (
-    evaluate_exprs,
     import_functions,
     import_native_dtypes,
     narwhals_to_native_dtype,
@@ -208,7 +207,7 @@ class SparkLikeNamespace(
     ) -> SparkLikeExpr:
         if method != "pearson":
             msg = (
-                f"You have requested {method} correlation but duckdb only provides "
+                f"You have requested {method} correlation but spark only provides "
                 "native support for pearson correlation coefficients. Correlation will "
                 "be calculated using pearson."
             )
@@ -216,7 +215,8 @@ class SparkLikeNamespace(
 
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             F = self._F
-            (_, a_), (_, b_) = evaluate_exprs(df, a, b)
+            a_ = df._evaluate_single_output_expr(a)
+            b_ = df._evaluate_single_output_expr(b)
             return [F.corr(a_, b_)]
 
         return self._expr(
