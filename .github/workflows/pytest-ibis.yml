@@ -6,7 +6,7 @@ on:
 env:
   PY_COLORS: 1
   PYTEST_ADDOPTS: "--numprocesses=logical"
-
+  UV_SYSTEM_PYTHON: 1
 jobs:
 
   pytest-ibis-constructor:
@@ -27,12 +27,12 @@ jobs:
           cache-suffix: ibis-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
-        run: uv pip install -e . --group core-tests --system
+        run: uv pip install -e . --group core-tests
       - name: install ibis
         run: |
           # Temporary pin until it's fixed upstream
-          uv pip install "sqlglot<28.6" --system
-          uv pip install -e ".[ibis]" --system
+          uv pip install "sqlglot<28.6"
+          uv pip install -e ".[ibis]"
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest

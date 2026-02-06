@@ -5,7 +5,7 @@ on:
 
 env:
   PY_COLORS: 1
-
+  UV_SYSTEM_PYTHON: 1
 jobs:
   validate-queries:
     strategy:
@@ -28,8 +28,8 @@ jobs:
       - name: local-install
         # temporary polars pin https://github.com/narwhals-dev/narwhals/issues/3450
         run: |
-          uv pip install -U -e ".[dask]" --group core-tests --system
-          uv pip install -U duckdb "polars==1.37.1" --system
+          uv pip install -U -e ".[dask]" --group core-tests
+          uv pip install -U duckdb "polars==1.37.1"
       - name: generate-data
         run: cd tpch && python generate_data.py --debug
       - name: tpch-tests 

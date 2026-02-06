@@ -4,10 +4,55 @@ from __future__ import annotations
 
 import ast
 import doctest
+import os
 import subprocess
 import sys
+import sysconfig
 import tempfile
 from pathlib import Path
+from subprocess import CompletedProcess
+
+SELECT = (
+    "F",  # pyflakes-f
+)
+IGNORE = (
+    "F811",  # redefined-while-unused
+    "F821",  # undefined-name (misses https://docs.python.org/3/library/doctest.html#what-s-the-execution-context)
+)
+
+
+def find_ruff_bin() -> Path:
+    """Return the ruff binary path.
+
+    Adapted from [`ruff.__main__.find_ruff_bin`], see also [astral-sh/ruff#18153], [astral-sh/uv#1677].
+
+    [`ruff.__main__.find_ruff_bin`]: https://github.com/astral-sh/ruff/blob/2d6ca092fa1655f14f10dab6e2a5b95f5f682c24/python/ruff/__main__.py
+    [astral-sh/ruff#18153]: https://github.com/astral-sh/ruff/issues/18153#issuecomment-2888581114
+    [astral-sh/uv#1677]: https://github.com/astral-sh/uv/issues/1677
+    """
+    ruff_exe: str = "ruff" + sysconfig.get_config_var("EXE")
+
+    scripts_path = Path(sysconfig.get_path("scripts")) / ruff_exe
+    if scripts_path.is_file():
+        return scripts_path
+
+    if sys.version_info >= (3, 10):
+        user_scheme = sysconfig.get_preferred_scheme("user")
+    elif os.name == "nt":
+        user_scheme = "nt_user"
+    elif sys.platform == "darwin" and sys._framework:
+        user_scheme = "osx_framework_user"
+    else:
+        user_scheme = "posix_user"
+
+    user_path = Path(sysconfig.get_path("scripts", scheme=user_scheme)) / ruff_exe
+    if user_path.is_file():
+        return user_path
+    msg = (
+        f"Unable to find ruff at:\n- {scripts_path.as_posix()}\n- {user_path.as_posix()}\n\n"
+        "Hint: did you follow this guide? https://github.com/narwhals-dev/narwhals?tab=contributing-ov-file#readme"
+    )
+    raise FileNotFoundError(msg)
 
 
 def extract_docstring_examples(files: list[str]) -> list[tuple[Path, str, str]]:
@@ -48,41 +93,37 @@ def create_temp_files(examples: list[tuple[Path, str, str]]) -> list[tuple[Path,
     return temp_files
 
 
-def run_ruff_on_temp_files(temp_files: list[tuple[Path, str]]) -> list[str]:
+def run_ruff_on_temp_files(
+    temp_files: list[tuple[Path, str]],
+) -> CompletedProcess[str] | None:
     """Run ruff on all temporary files and collect error messages."""
     temp_file_paths = [temp_file[0] for temp_file in temp_files]
-
+    select = f"--select={','.join(SELECT)}"
+    ignore = f"--ignore={','.join(IGNORE)}"
     result = subprocess.run(  # noqa: S603
-        [  # noqa: S607
-            "python",
-            "-m",
-            "ruff",
-            "check",
-            "--select=F",
-            "--ignore=F811",
-            *temp_file_paths,
-        ],
+        [find_ruff_bin(), "check", select, ignore, *temp_file_paths],
         capture_output=True,
         text=True,
         check=False,
     )
 
     if result.returncode == 0:
-        return []  # No issues found
-    return result.stdout.splitlines()  # Return ruff errors as a list of lines
+        return None
+    return result
 
 
-def report_errors(errors: list[str], temp_files: list[tuple[Path, str]]) -> None:
+def report_errors(
+    completed: CompletedProcess[str] | None, temp_files: list[tuple[Path, str]]
+) -> None:
     """Map errors back to original examples and report them."""
-    if not errors:
+    if completed is None:
         return
 
-    print("❌ Ruff issues found in examples:\n")
-    for line in errors:
-        for temp_file, original_context in temp_files:
-            if str(temp_file) in line:
-                print(f"{original_context}{line.replace(str(temp_file), '')}")
-                break
+    print("Ruff issues found in examples:\n")
+    stdout = completed.stdout
+    for temp_file, original_context in temp_files:
+        stdout = stdout.replace(str(temp_file), original_context)
+    print(stdout)
 
 
 def cleanup_temp_files(temp_files: list[tuple[Path, str]]) -> None:
