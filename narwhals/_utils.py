@@ -2122,7 +2122,7 @@ if sys.platform != "win32":
         from pathlib import Path
 
         return str(Path(source))
-else:
+else:  # pragma: no cover
     # NOTE: On Windows, we need to ensure strings paths do not produce escape sequences.
     # This module is an example of the issue:
     #     `WindowsPath('/narwhals/narwhals/_utils.py')`
