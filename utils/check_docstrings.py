@@ -92,7 +92,7 @@ def iter_docstring_examples(files: Iterable[str | Path]) -> Iterator[DocstringEx
     """Extract examples from docstrings in Python files."""
     for file in files:
         fp = Path(file)
-        for node in ast.walk(ast.parse(fp.read_text("utf-8"))):
+        for node in ast.walk(ast.parse(fp.read_bytes())):
             if example := try_parse(node):
                 yield (fp, *example)
 
