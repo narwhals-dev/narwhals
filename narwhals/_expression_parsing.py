@@ -99,6 +99,9 @@ class ExprKind(Enum):
     AGGREGATION = auto()
     """Reduces to a single value, not affected by row order, e.g. `nw.col('a').mean()`"""
 
+    MULTI_COLUMN_AGGREGATION = auto()
+    """Reduces to a single value, taking multiple columns as an argument, e.g. `nw.corr('a', 'b')`"""
+
     ORDERABLE_AGGREGATION = auto()
     """Reduces to a single value, affected by row order, e.g. `nw.col('a').arg_max()`"""
 
@@ -172,6 +175,7 @@ class ExprKind(Enum):
     def is_scalar_like(self) -> bool:
         return self in {
             ExprKind.AGGREGATION,
+            ExprKind.MULTI_COLUMN_AGGREGATION,
             ExprKind.LITERAL,
             ExprKind.ORDERABLE_AGGREGATION,
         }
@@ -427,6 +431,20 @@ class ExprMetadata:
 
     @classmethod
     def from_aggregation(cls, node: ExprNode) -> ExprMetadata:
+        return cls(
+            ExpansionKind.SINGLE,
+            is_elementwise=False,
+            preserves_length=False,
+            is_scalar_like=True,
+            current_node=node,
+            prev=None,
+        )
+
+    @classmethod
+    def from_multi_column_aggregation(
+        cls, node: ExprNode, *compliant_exprs: CompliantExprAny
+    ) -> ExprMetadata:
+        del compliant_exprs
         return cls(
             ExpansionKind.SINGLE,
             is_elementwise=False,
@@ -697,6 +715,7 @@ class ExprMetadata:
 
 KIND_TO_METADATA_CONSTRUCTOR: dict[ExprKind, Callable[[ExprNode], ExprMetadata]] = {
     ExprKind.AGGREGATION: ExprMetadata.from_aggregation,
+    ExprKind.MULTI_COLUMN_AGGREGATION: ExprMetadata.from_multi_column_aggregation,
     ExprKind.ALL: ExprMetadata.from_selector_multi_unnamed,
     ExprKind.ELEMENTWISE: ExprMetadata.from_elementwise,
     ExprKind.EXCLUDE: ExprMetadata.from_selector_multi_unnamed,
@@ -709,6 +728,7 @@ KIND_TO_METADATA_CONSTRUCTOR: dict[ExprKind, Callable[[ExprNode], ExprMetadata]]
 
 KIND_TO_METADATA_UPDATER: dict[ExprKind, Callable[..., ExprMetadata]] = {
     ExprKind.AGGREGATION: ExprMetadata.with_aggregation,
+    ExprKind.MULTI_COLUMN_AGGREGATION: ExprMetadata.with_aggregation,
     ExprKind.ELEMENTWISE: ExprMetadata.with_elementwise,
     ExprKind.FILTRATION: ExprMetadata.with_filtration,
     ExprKind.ORDERABLE_AGGREGATION: ExprMetadata.with_orderable_aggregation,
@@ -868,8 +888,6 @@ def evaluate_root_node(node: ExprNode, ns: CompliantNamespaceAny) -> CompliantEx
             )
         )
         ce = cast("CompliantExprAny", func(*ces, **node.kwargs))
-    if node.name == "corr":
-        ces = []
     md = ExprMetadata.from_node(node, *ces)
     ce._opt_metadata = md
     return ce

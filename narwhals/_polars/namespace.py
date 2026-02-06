@@ -231,10 +231,7 @@ class PolarsNamespace:
         b: PolarsExpr | PolarsSeries,
         method: Literal["pearson", "spearman"] = "pearson",
     ) -> None:
-        eager: bool = isinstance(a, PolarsSeries) and isinstance(b, PolarsSeries)
-        return self._expr(
-            pl.corr(a.native, b.native, eager=eager, method=method), self._version
-        )
+        return self._expr(pl.corr(a.native, b.native, method=method), self._version)
 
 
 class PolarsSelectorNamespace:
