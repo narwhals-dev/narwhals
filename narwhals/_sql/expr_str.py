@@ -105,24 +105,17 @@ class SQLExprStringNamespace(
         # There is no built-in zfill function, so we need to implement it manually
         # using string manipulation functions.
 
-        impl = self.compliant._implementation
-        # PySpark < 4.0's `lpad` expects raw Python values for `len` and `pad`,
-        # not Column literals.
-        is_spark_less_4 = (
-            impl.is_pyspark() or impl.is_pyspark_connect()
-        ) and impl._backend_version() < (4, 0)
-
         def func(expr: NativeExpr) -> NativeExpr:
             less_than_width = self._function("length", expr) < self._lit(width)
-            zero = "0" if is_spark_less_4 else self._lit("0")
-            width_after_sign = width - 1 if is_spark_less_4 else self._lit(width - 1)
-            full_width = width if is_spark_less_4 else self._lit(width)
+            # PySpark < 4.0's `lpad` expects raw Python values for `len` and `pad`.
+            # We shouldn't use F.lit in these args
+            zero = "0"
             hyphen, plus = self._lit("-"), self._lit("+")
 
             starts_with_minus = self._function("starts_with", expr, hyphen)
             starts_with_plus = self._function("starts_with", expr, plus)
             substring = self._function("substr", expr, self._lit(2))
-            padded_substring = self._function("lpad", substring, width_after_sign, zero)
+            padded_substring = self._function("lpad", substring, width - 1, zero)
             return self._when(
                 operator.and_(starts_with_minus, less_than_width),
                 self._function("concat", hyphen, padded_substring),
@@ -130,9 +123,7 @@ class SQLExprStringNamespace(
                     operator.and_(starts_with_plus, less_than_width),
                     self._function("concat", plus, padded_substring),
                     self._when(
-                        less_than_width,
-                        self._function("lpad", expr, full_width, zero),
-                        expr,
+                        less_than_width, self._function("lpad", expr, width, zero), expr
                     ),
                 ),
             )
@@ -142,38 +133,24 @@ class SQLExprStringNamespace(
         return self.compliant._with_callable(func)
 
     def pad_start(self, length: int, fill_char: str) -> SQLExprT:
-        impl = self.compliant._implementation
-        # PySpark < 4.0's `lpad` expects raw Python values for `len` and `pad`,
-        # not Column literals.
-        is_spark_less_4 = (
-            impl.is_pyspark() or impl.is_pyspark_connect()
-        ) and impl._backend_version() < (4, 0)
-        lpad_length = length if is_spark_less_4 else self._lit(length)
-        lpad_fill = fill_char if is_spark_less_4 else self._lit(fill_char)
-
+        # PySpark < 4.0's `lpad` expects raw Python values for `len` and `pad`.
+        # We shouldn't use F.lit in these args
         def _pad_start(expr: NativeExpr) -> NativeExpr:
             return self._when(
                 self._function("length", expr) < self._lit(length),
-                self._function("lpad", expr, lpad_length, lpad_fill),
+                self._function("lpad", expr, length, fill_char),
                 expr,
             )
 
         return self.compliant._with_callable(_pad_start)
 
     def pad_end(self, length: int, fill_char: str) -> SQLExprT:
-        impl = self.compliant._implementation
-        # PySpark < 4.0's `rpad` expects raw Python values for `len` and `pad`,
-        # not Column literals.
-        is_spark_less_4 = (
-            impl.is_pyspark() or impl.is_pyspark_connect()
-        ) and impl._backend_version() < (4, 0)
-        rpad_length = length if is_spark_less_4 else self._lit(length)
-        rpad_fill = fill_char if is_spark_less_4 else self._lit(fill_char)
-
+        # PySpark < 4.0's `rpad` expects raw Python values for `len` and `pad`.
+        # We shouldn't use F.lit in these args
         def _pad_end(expr: NativeExpr) -> NativeExpr:
             return self._when(
                 self._function("length", expr) < self._lit(length),
-                self._function("rpad", expr, rpad_length, rpad_fill),
+                self._function("rpad", expr, length, fill_char),
                 expr,
             )
 
