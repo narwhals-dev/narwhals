@@ -58,8 +58,8 @@ def _into_file_source(source: Path, which: IOSourceKind, /) -> FileSource:
 
 
 def _path(factory: Factory, name: str, /) -> Path:
-    # TODO @dangotbanned: Replace `data` with something to trigger:
-    # https://github.com/narwhals-dev/narwhals/issues/3422
+    # NOTE: Generates a path on windows that contains `\\n` and `\\t`
+    # See https://github.com/narwhals-dev/narwhals/issues/3422
     tmp_dir = factory.mktemp("newline")
     sub_dir = tmp_dir / "tab"
     sub_dir.mkdir(exist_ok=True)
