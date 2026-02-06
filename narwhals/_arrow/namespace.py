@@ -255,6 +255,11 @@ class ArrowNamespace(
         otherwise = pa.nulls(len(when), then.type) if otherwise is None else otherwise
         return pc.if_else(when, then, otherwise)
 
-    def corr(self, a: ArrowExpr, b: ArrowExpr, method: str = "pearson") -> ArrowExpr:
+    def corr(
+        self,
+        a: ArrowExpr,
+        b: ArrowExpr,
+        method: Literal["pearson", "spearman"] = "pearson",
+    ) -> ArrowExpr:
         msg = "Correlation not implemented yet for arrow dataframes"
         raise NotImplementedError(msg)

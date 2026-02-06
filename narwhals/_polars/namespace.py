@@ -227,8 +227,8 @@ class PolarsNamespace:
 
     def corr(
         self,
-        a: PolarsExpr | PolarsSeries,
-        b: PolarsExpr | PolarsSeries,
+        a: PolarsExpr,
+        b: PolarsExpr,
         method: Literal["pearson", "spearman"] = "pearson",
     ) -> None:
         return self._expr(pl.corr(a.native, b.native, method=method), self._version)

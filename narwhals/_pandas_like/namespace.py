@@ -351,7 +351,8 @@ class PandasLikeNamespace(
         method: Literal["pearson", "spearman"] = "pearson",
     ) -> None:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            a_name, b_name = [s.name for _expr in [a, b] for s in _expr(df)]
+            [a_series], [b_series] = a(df), b(df)
+            a_name, b_name = a_series.name, b_series.name
             return [
                 PandasLikeSeries(
                     df.native.corr(method=method).loc[a_name].loc[[b_name]],

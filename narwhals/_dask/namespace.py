@@ -15,6 +15,7 @@ from narwhals._dask.expr import DaskExpr
 from narwhals._dask.selectors import DaskSelectorNamespace
 from narwhals._dask.utils import (
     align_series_full_broadcast,
+    evaluate_exprs,
     narwhals_to_native_dtype,
     validate_comparand,
 )
@@ -322,7 +323,8 @@ class DaskNamespace(
         self, a: DaskExpr, b: DaskExpr, method: Literal["pearson", "spearman"] = "pearson"
     ) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            a_name, b_name = [s.name for _expr in [a, b] for s in _expr(df)]
+            (a_name, _), (b_name, _) = evaluate_exprs(df, a, b)
+
             return [
                 df._native_frame[a_name]
                 .corr(df._native_frame[b_name], method=method)

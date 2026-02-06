@@ -812,25 +812,6 @@ def corr(
         a: Column name or Expression
         b: Column name or Expression
         method: Correlation method ('pearson' or 'spearman')
-
-    Examples:
-        >>> import polars as pl
-        >>> import narwhals as nw
-        >>>
-        >>> df_native = pl.DataFrame({"a": [1, 2, 3], "b": [1, 3, 2]})
-        >>> nw.from_native(df_native).select(correlation=nw.corr("a", "b"))
-        ┌────────────────────┐
-        | Narwhals DataFrame |
-        |--------------------|
-        |shape: (1, 1)       |
-        |┌───────────────┐   |
-        |│ correlation   │   |
-        |│ ------------- │   |
-        |│ f64           │   |
-        |╞═══════════════╡   |
-        |│ 0.5           │   |
-        |└───────────────┘   |
-        └────────────────────┘
     """
     return _stableify(nw.corr(a, b, method=method))
 
