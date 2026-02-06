@@ -24,9 +24,7 @@ Code: TypeAlias = str
 DocstringExample: TypeAlias = tuple[Path, NodeName, Code]
 OriginalContext: TypeAlias = str
 
-SELECT = (
-    "F",  # pyflakes-f
-)
+SELECT = ("F",)  # pyflakes-f
 IGNORE = (
     "F811",  # redefined-while-unused
     "F821",  # undefined-name (misses https://docs.python.org/3/library/doctest.html#what-s-the-execution-context)
@@ -68,10 +66,9 @@ def find_ruff_bin() -> Path:
 
 
 def ruff_check(*paths: Path, select: Iterable[str], ignore: Iterable[str]) -> Literal[0]:
-    ruff = find_ruff_bin()
     select = f"--select={','.join(select)}"
     ignore = f"--ignore={','.join(ignore)}"
-    args = (ruff, "check", select, ignore, *paths)
+    args = (find_ruff_bin(), "check", select, ignore, *paths)
     sp.run(args, capture_output=True, text=True, check=True)
     return 0
 
