@@ -2114,12 +2114,25 @@ def to_pyarrow_table(tbl: pa.Table | pa.RecordBatchReader) -> pa.Table:
     return tbl
 
 
-def normalize_path(source: FileSource, /) -> str:
-    if isinstance(source, str):
-        return source
+if sys.platform != "win32":
+
+    def normalize_path(source: FileSource, /) -> str:
+        if isinstance(source, str):
+            return source
+        from pathlib import Path
+
+        return str(Path(source))
+else:
+    # NOTE: On Windows, we need to ensure strings paths do not produce escape sequences.
+    # This module is an example of the issue:
+    #     `WindowsPath('/narwhals/narwhals/_utils.py')`
+    # If we stringify that, we get:
+    #     `'\\narwhals\\narwhals\\_utils.py'`
+    # Which contains 2x `"\n"` characters
     from pathlib import Path
 
-    return str(Path(source))
+    def normalize_path(source: FileSource, /) -> str:
+        return Path(source).as_posix()
 
 
 def extend_bool(
