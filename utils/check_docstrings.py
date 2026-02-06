@@ -83,7 +83,7 @@ def _try_parse_examples(node: ast.AST) -> tuple[NodeName, Code] | None:
     if (
         isinstance(node, (ast.FunctionDef, ast.ClassDef))
         and (doc := ast.get_docstring(node))
-        and (code := "\n".join(e.source for e in parser.get_examples(doc)).strip())
+        and (code := "\n".join(e.source.strip() for e in parser.get_examples(doc)))
     ):
         return node.name, code
     return None
