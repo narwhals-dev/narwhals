@@ -4,7 +4,8 @@ on:
   push:
     branches:
       - main
-
+env:
+  UV_SYSTEM_PYTHON: 1
 permissions:
   contents: write
 jobs:
@@ -29,6 +30,6 @@ jobs:
           restore-keys: |
             mkdocs-material-
       - name: Install dependencies
-        run: uv pip install -e . --group docs --system
+        run: uv pip install -e . --group docs
       - name: Deploy docs
         run: mkdocs gh-deploy --force
