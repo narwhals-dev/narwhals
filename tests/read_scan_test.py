@@ -29,6 +29,8 @@ if TYPE_CHECKING:
     from narwhals._typing import EagerAllowed, _LazyOnly, _SparkLike
     from narwhals.typing import FileSource
 
+    Factory: TypeAlias = pytest.TempPathFactory
+
 IOSourceKind: TypeAlias = Literal["str", "Path", "PathLike"]
 
 data: Mapping[str, Any] = {"a": [1, 2, 3], "b": [4.5, 6.7, 8.9], "z": ["x", "y", "w"]}
@@ -56,29 +58,29 @@ def _into_file_source(source: Path, which: IOSourceKind, /) -> FileSource:
     return mapping[which]
 
 
+def _path(factory: Factory, name: str, /) -> Path:
+    # TODO @dangotbanned: Replace `data` with something to trigger:
+    # https://github.com/narwhals-dev/narwhals/issues/3422
+    return factory.mktemp("data") / name
+
+
 @pytest.fixture(scope="module", params=["str", "Path", "PathLike"])
-def csv_path(
-    tmp_path_factory: pytest.TempPathFactory, request: pytest.FixtureRequest
-) -> FileSource:
-    fp = tmp_path_factory.mktemp("data") / "file.csv"
+def csv_path(tmp_path_factory: Factory, request: pytest.FixtureRequest) -> FileSource:
+    fp = _path(tmp_path_factory, "file.csv")
     pl.DataFrame(data).write_csv(fp)
     return _into_file_source(fp, request.param)
 
 
 @pytest.fixture(scope="module", params=["str", "Path", "PathLike"])
-def csv_path_sep(
-    tmp_path_factory: pytest.TempPathFactory, request: pytest.FixtureRequest
-) -> FileSource:
-    fp = tmp_path_factory.mktemp("data") / "file.csv"
+def csv_path_sep(tmp_path_factory: Factory, request: pytest.FixtureRequest) -> FileSource:
+    fp = _path(tmp_path_factory, "file.csv")
     pl.DataFrame(data).write_csv(fp, separator="|")
     return _into_file_source(fp, request.param)
 
 
 @pytest.fixture(scope="module", params=["str", "Path", "PathLike"])
-def parquet_path(
-    tmp_path_factory: pytest.TempPathFactory, request: pytest.FixtureRequest
-) -> FileSource:
-    fp = tmp_path_factory.mktemp("data") / "file.parquet"
+def parquet_path(tmp_path_factory: Factory, request: pytest.FixtureRequest) -> FileSource:
+    fp = _path(tmp_path_factory, "file.parquet")
     pl.DataFrame(data).write_parquet(fp)
     return _into_file_source(fp, request.param)
 
