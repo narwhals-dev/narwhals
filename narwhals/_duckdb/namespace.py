@@ -16,7 +16,6 @@ from narwhals._duckdb.utils import (
     F,
     concat_str,
     duckdb_dtypes,
-    evaluate_exprs_and_aliases,
     function,
     lit,
     narwhals_to_native_dtype,
@@ -180,7 +179,8 @@ class DuckDBNamespace(
             issue_warning(msg, UserWarning)
 
         def func(df: DuckDBLazyFrame) -> list[Expression]:
-            (_, a_), (_, b_) = evaluate_exprs_and_aliases(df, a, b)
+            a_ = df._evaluate_single_output_expr(a)
+            b_ = df._evaluate_single_output_expr(b)
             return [F("corr", a_, b_)]
 
         return self._expr(

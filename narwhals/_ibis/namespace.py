@@ -16,7 +16,7 @@ from narwhals._expression_parsing import (
 from narwhals._ibis.dataframe import IbisLazyFrame
 from narwhals._ibis.expr import IbisExpr
 from narwhals._ibis.selectors import IbisSelectorNamespace
-from narwhals._ibis.utils import evaluate_exprs, function, lit, narwhals_to_native_dtype
+from narwhals._ibis.utils import function, lit, narwhals_to_native_dtype
 from narwhals._sql.namespace import SQLNamespace
 from narwhals._utils import Implementation
 
@@ -144,7 +144,8 @@ class IbisNamespace(SQLNamespace[IbisLazyFrame, IbisExpr, "ir.Table", "ir.Value"
         issue_warning(msg, UserWarning)
 
         def func(_df: IbisLazyFrame) -> list[ir.Value]:
-            (_, a_), (_, b_) = evaluate_exprs(_df, a, b)
+            a_ = _df._evaluate_single_output_expr(a)
+            b_ = _df._evaluate_single_output_expr(b)
             return [a_.corr(b_, how="pop")]
 
         return self._expr(
