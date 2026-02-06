@@ -5,12 +5,13 @@ from __future__ import annotations
 import ast
 import doctest
 import os
-import subprocess
+import subprocess as sp
 import sys
 import sysconfig
 import tempfile
+from collections import deque
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
@@ -65,6 +66,15 @@ def find_ruff_bin() -> Path:
     raise FileNotFoundError(msg)
 
 
+def ruff_check(*paths: Path, select: Iterable[str], ignore: Iterable[str]) -> Literal[0]:
+    ruff = find_ruff_bin()
+    select = f"--select={','.join(select)}"
+    ignore = f"--ignore={','.join(ignore)}"
+    args = (ruff, "check", select, ignore, *paths)
+    sp.run(args, capture_output=True, text=True, check=True)
+    return 0
+
+
 parser = doctest.DocTestParser()
 
 
@@ -87,37 +97,26 @@ def iter_docstring_examples(files: Iterable[str | Path]) -> Iterator[DocstringEx
                 yield (fp, *example)
 
 
-def main(python_files: list[str]) -> None:
-    # TODO @dangotbanned: Could this be kept lazy?
-    it = iter_docstring_examples(python_files)
-    if docstring_examples := tuple(it):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            # `create_temp_files`
-            # Create temporary files for all examples and return their paths.
-            tmpdir_path = Path(tmpdir)
-            temp_files: list[tuple[Path, OriginalContext]] = []
-            for i, (file, name, example) in enumerate(docstring_examples):
-                temp_path = tmpdir_path / f"{name}_{i}.py"
-                temp_path.write_text(example)
-                temp_files.append((temp_path, f"{file.as_posix()}:{name}"))
-
-            # `run_ruff_on_temp_files`
-            # Run ruff on all temporary files and collect error messages.
-            select = f"--select={','.join(SELECT)}"
-            ignore = f"--ignore={','.join(IGNORE)}"
-            args = [find_ruff_bin(), "check", select, ignore, *tmpdir_path.iterdir()]
-            result = subprocess.run(args, capture_output=True, text=True, check=False)  # noqa: S603
-            if result.returncode:
-                # `report_errors`
-                # Map errors back to original examples and report them
-                print("Ruff issues found in examples:\n")
-                stdout = result.stdout
-                for temp_file, original_context in temp_files:
-                    stdout = stdout.replace(str(temp_file), original_context)
-                print(stdout)
-                sys.exit(1)
-    sys.exit(0)
+def main(python_files: list[str]) -> Literal[0, 1]:
+    with tempfile.TemporaryDirectory() as tmp:
+        temp_dir = Path(tmp)
+        temp_files: deque[tuple[Path, OriginalContext]] = deque()
+        for i, (file, name, example) in enumerate(iter_docstring_examples(python_files)):
+            # TODO @dangotbanned: Could this be kept lazy?
+            # Iterator should yield these bits instead
+            temp_path = temp_dir / f"{name}_{i}.py"
+            temp_path.write_text(example)
+            temp_files.append((temp_path, f"{file.as_posix()}:{name}"))
+        try:
+            return ruff_check(*temp_dir.iterdir(), select=SELECT, ignore=IGNORE)
+        except sp.CalledProcessError as err:
+            # Map errors back to original examples and report them
+            output = str(err.output)
+            for temp_file, original_context in temp_files:
+                output = output.replace(str(temp_file), original_context)
+            print(f"Ruff issues found in examples:\n\n{output}")
+            return 1
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    sys.exit(main(sys.argv[1:]))

@@ -222,6 +222,7 @@ extend-ignore-names = [
 "tpch/tests/*" = ["S101"]
 "utils/*" = ["S311", "T201"]
 "utils/bump_version.py" = ["S603", "S607"]
+"utils/check_docstrings.py" = ["S603"]
 "tpch/execute/*" = ["T201"]
 "tpch/notebooks/*" = [
   "ANN001",
