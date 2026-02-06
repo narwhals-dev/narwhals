@@ -10,7 +10,6 @@ from tests.utils import (
     PANDAS_VERSION,
     Constructor,
     assert_equal_data,
-    is_windows,
     pyspark_session,
     sqlframe_session,
 )
@@ -176,10 +175,6 @@ def test_read_parquet_raise_with_lazy(backend: _LazyOnly) -> None:
 @skipif_pandas_lt_1_5
 def test_scan_parquet(parquet_path: FileSource, constructor: Constructor) -> None:
     kwargs: dict[str, Any]
-    if "sqlframe" in str(constructor) and is_windows():
-        reason = "_duckdb.IOException: IO Error: No files found that match the pattern"
-        pytest.skip(reason)
-
     if "sqlframe" in str(constructor):
         kwargs = {"session": sqlframe_session(), "inferSchema": True}
     elif "pyspark" in str(constructor):
