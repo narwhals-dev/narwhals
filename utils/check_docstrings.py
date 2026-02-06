@@ -112,8 +112,6 @@ def main(python_files: Iterable[str | Path]) -> ExitCode:
         temp_dir = Path(tmp)
         temp_files: deque[tuple[Path, OriginalContext]] = deque()
         for i, (file, name, example) in enumerate(iter_docstring_examples(python_files)):
-            # TODO @dangotbanned: Could this be kept lazy?
-            # Iterator should yield these bits instead
             temp_path = temp_dir / f"{name}_{i}.py"
             temp_path.write_text(example)
             temp_files.append((temp_path, f"{file.as_posix()}:{name}"))
