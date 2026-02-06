@@ -319,7 +319,7 @@ def _parse_constraints(constraints: dict[str, IntoExpr], /) -> Iterator[ExprIR]:
 
 
 def _combine_predicates(predicates: Iterator[ExprIR], /) -> ExprIR:
-    from narwhals._plan.expressions.boolean import AllHorizontal
+    from narwhals._plan.expressions.boolean import all_horizontal
 
     first = next(predicates, None)
     if not first:
@@ -332,7 +332,7 @@ def _combine_predicates(predicates: Iterator[ExprIR], /) -> ExprIR:
         inputs = (first,)
     else:
         return first
-    return AllHorizontal(ignore_nulls=False).to_function_expr(*inputs)
+    return all_horizontal(*inputs)
 
 
 def _is_iterable(obj: Iterable[T] | Any) -> TypeIs[Iterable[T]]:

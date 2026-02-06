@@ -374,3 +374,7 @@ def _inner_selector_matches(
     selector: Array | List, dtype: nw_dtypes.Array | nw_dtypes.List
 ) -> bool:
     return selector.inner is None or selector.inner.matches(dtype.inner)
+
+
+def all() -> RootSelector:
+    return All().to_selector_ir()

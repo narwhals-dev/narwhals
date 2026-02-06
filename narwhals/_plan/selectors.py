@@ -152,7 +152,7 @@ class SelectorV1(Selector):
 
 
 def all() -> Selector:
-    return s_ir.All().to_selector_ir().to_narwhals()
+    return s_ir.all().to_narwhals()
 
 
 def array(inner: Selector | None = None, *, size: int | None = None) -> Selector:

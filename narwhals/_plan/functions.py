@@ -153,11 +153,7 @@ def all_horizontal(
     *exprs: IntoExpr | t.Iterable[IntoExpr], ignore_nulls: bool = False
 ) -> Expr:
     it = _parse.parse_into_seq_of_expr_ir(*exprs)
-    return (
-        ir.boolean.AllHorizontal(ignore_nulls=ignore_nulls)
-        .to_function_expr(*it)
-        .to_narwhals()
-    )
+    return ir.boolean.all_horizontal(*it, ignore_nulls=ignore_nulls).to_narwhals()
 
 
 def any_horizontal(
