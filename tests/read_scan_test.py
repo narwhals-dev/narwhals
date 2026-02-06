@@ -60,7 +60,10 @@ def _into_file_source(source: Path, which: IOSourceKind, /) -> FileSource:
 def _path(factory: Factory, name: str, /) -> Path:
     # TODO @dangotbanned: Replace `data` with something to trigger:
     # https://github.com/narwhals-dev/narwhals/issues/3422
-    return factory.mktemp("data") / name
+    tmp_dir = factory.mktemp("newline")
+    sub_dir = tmp_dir / "tab"
+    sub_dir.mkdir(exist_ok=True)
+    return sub_dir / name
 
 
 @pytest.fixture(scope="module", params=["str", "Path", "PathLike"])
