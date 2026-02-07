@@ -214,7 +214,7 @@ class Collect(Sink):
         return "SINK (memory)"
 
 
-class SinkFile(Scan):
+class SinkFile(Sink):
     __slots__ = ("target",)
     target: str
     """`file: str | Path | BytesIO` on main.
