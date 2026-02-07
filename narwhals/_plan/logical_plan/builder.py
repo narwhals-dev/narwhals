@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from narwhals.typing import ConcatMethod, FileSource, PivotAgg
 
 
-__all__ = ["LpBuilder"]
+__all__ = ["LpBuilder", "concat", "from_df", "scan_csv", "scan_parquet"]
 
 Incomplete: TypeAlias = Any
 
@@ -196,3 +196,6 @@ class LpBuilder:
 
 
 concat = LpBuilder.concat
+from_df = LpBuilder.from_df
+scan_csv = LpBuilder.scan_csv
+scan_parquet = LpBuilder.scan_parquet

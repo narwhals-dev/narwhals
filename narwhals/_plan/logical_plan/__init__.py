@@ -32,7 +32,7 @@ Blindly copying from `polars` for this is likely to pull in things that aren't h
 
 from __future__ import annotations
 
-from narwhals._plan.logical_plan.builder import LpBuilder as LpBuilder
+from narwhals._plan.logical_plan.builder import LpBuilder, concat, scan_csv, scan_parquet
 from narwhals._plan.logical_plan.plan import LogicalPlan
 
-__all__ = ["LogicalPlan", "LpBuilder"]
+__all__ = ["LogicalPlan", "LpBuilder", "concat", "scan_csv", "scan_parquet"]
