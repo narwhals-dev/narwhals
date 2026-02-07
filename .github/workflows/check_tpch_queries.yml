@@ -5,7 +5,7 @@ on:
 
 env:
   PY_COLORS: 1
-
+  UV_SYSTEM_PYTHON: 1
 jobs:
   validate-queries:
     strategy:
@@ -26,10 +26,8 @@ jobs:
           cache-suffix: ${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: local-install
-        run: |
-          uv pip install -U -e ".[dask]" --group core-tests --system
-          uv pip install -U duckdb --system
+        run: uv pip install -U -e ".[dask]" --group core-tests
       - name: generate-data
-        run: cd tpch && python generate_data.py
+        run: cd tpch && python generate_data.py --debug
       - name: tpch-tests 
         run: cd tpch && pytest tests

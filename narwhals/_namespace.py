@@ -144,7 +144,6 @@ class Namespace(Generic[CompliantNamespaceT_co]):
             backend: native namespace module, string, or Implementation.
 
         Examples:
-            >>> from narwhals._namespace import Namespace
             >>> Namespace.from_backend("polars")
             Namespace[PolarsNamespace]
         """
