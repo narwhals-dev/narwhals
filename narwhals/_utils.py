@@ -11,6 +11,7 @@ from importlib.util import find_spec
 from inspect import getattr_static, getdoc
 from itertools import chain
 from operator import attrgetter
+from pathlib import Path
 from secrets import token_hex
 from typing import (
     TYPE_CHECKING,
@@ -1254,8 +1255,7 @@ def generate_temporary_column_name(
     """
     counter = 0
     while True:
-        token = f"{prefix}{token_hex(n_bytes - 1)}"
-        if token not in columns:
+        if (token := f"{prefix}{token_hex(n_bytes - 1)}") not in columns:
             return token
 
         counter += 1
@@ -1696,7 +1696,6 @@ def unstable(fn: _Fn, /) -> _Fn:
         Decorated function (unchanged).
 
     Examples:
-        >>> from narwhals._utils import unstable
         >>> @unstable
         ... def a_work_in_progress_feature(*args):
         ...     return args
@@ -1742,7 +1741,6 @@ class not_implemented:  # noqa: N801
         - Allows us to use `isinstance(...)` instead of monkeypatching an attribute to the function
 
     Examples:
-        >>> from narwhals._utils import not_implemented
         >>> class Thing:
         ...     def totally_ready(self) -> str:
         ...         return "I'm ready!"
@@ -1830,7 +1828,6 @@ class requires:  # noqa: N801
         _hint: Optional suggested alternative.
 
     Examples:
-        >>> from narwhals._utils import requires, Implementation
         >>> class SomeBackend:
         ...     _implementation = Implementation.PYARROW
         ...     _backend_version = 20, 0, 0
@@ -1963,7 +1960,6 @@ def ensure_type(obj: Any, /, *valid_types: type[Any], param_name: str = "") -> N
         TypeError: If `obj` is not an instance of any of the provided `valid_types`.
 
     Examples:
-        >>> from narwhals._utils import ensure_type
         >>> ensure_type(42, int, float)
         >>> ensure_type("hello", str)
 
@@ -1979,7 +1975,7 @@ def ensure_type(obj: Any, /, *valid_types: type[Any], param_name: str = "") -> N
         >>> ensure_type(df, pd.DataFrame, param_name="df")
         Traceback (most recent call last):
             ...
-        TypeError: Expected 'pandas.core.frame.DataFrame', got: 'polars.dataframe.frame.DataFrame'
+        TypeError: Expected 'pandas.DataFrame', got: 'polars.dataframe.frame.DataFrame'
             df=polars.dataframe.frame.DataFrame(...)
                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     """
@@ -2119,12 +2115,19 @@ def to_pyarrow_table(tbl: pa.Table | pa.RecordBatchReader) -> pa.Table:
     return tbl
 
 
-def normalize_path(source: FileSource, /) -> str:
-    if isinstance(source, str):
-        return source
-    from pathlib import Path
+if sys.platform != "win32":
 
-    return str(Path(source))
+    def normalize_path(source: FileSource, /) -> str:
+        return source if isinstance(source, str) else str(Path(source))
+else:  # pragma: no cover
+    # NOTE: On Windows, we need to ensure strings paths do not produce escape sequences.
+    # This module is an example of the issue:
+    #     `WindowsPath('/narwhals/narwhals/_utils.py')`
+    # If we stringify that, we get:
+    #     `'\\narwhals\\narwhals\\_utils.py'`
+    # Which contains 2x `"\n"` characters
+    def normalize_path(source: FileSource, /) -> str:
+        return Path(source).as_posix()
 
 
 def extend_bool(

@@ -137,12 +137,13 @@ class DuckDBLazyFrame(
         if backend is None or backend is Implementation.PYARROW:
             from narwhals._arrow.dataframe import ArrowDataFrame
 
-            if self._backend_version < (1, 4):
-                ret = self.native.arrow()
-            else:  # pragma: no cover
-                ret = self.native.fetch_arrow_table()
+            res_native = (
+                self.native.to_arrow_table()
+                if self._backend_version >= (1, 5)
+                else self.native.fetch_arrow_table()
+            )
             return ArrowDataFrame(
-                ret,
+                res_native,
                 validate_backend_version=True,
                 version=self._version,
                 validate_column_names=True,

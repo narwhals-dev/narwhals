@@ -200,7 +200,7 @@ class Expr:
 
     # --- binary ---
     def _with_binary(self, attr: str, other: Self | Any) -> Self:
-        node = ExprNode(ExprKind.ELEMENTWISE, attr, other, str_as_lit=True)
+        node = ExprNode(ExprKind.ELEMENTWISE, attr, exprs=(other,), str_as_lit=True)
         return self._append_node(node)
 
     def __eq__(self, other: Self | Any) -> Self:  # type: ignore[override]
@@ -935,7 +935,7 @@ class Expr:
             node = ExprNode(
                 ExprKind.ELEMENTWISE,
                 "replace_strict",
-                default,
+                exprs=(default,),
                 old=old,
                 new=new,
                 return_dtype=return_dtype,
@@ -975,7 +975,10 @@ class Expr:
             └──────────────────┘
         """
         node = ExprNode(
-            ExprKind.ELEMENTWISE, "is_between", lower_bound, upper_bound, closed=closed
+            ExprKind.ELEMENTWISE,
+            "is_between",
+            exprs=(lower_bound, upper_bound),
+            closed=closed,
         )
         return self._append_node(node)
 
@@ -1038,7 +1041,9 @@ class Expr:
             |     5  7  12     |
             └──────────────────┘
         """
-        return self._append_node(ExprNode(ExprKind.FILTRATION, "filter", *predicates))
+        return self._append_node(
+            ExprNode(ExprKind.FILTRATION, "filter", exprs=predicates)
+        )
 
     def is_null(self) -> Self:
         """Returns a boolean Series indicating which values are null.
@@ -1199,7 +1204,7 @@ class Expr:
             node = ExprNode(
                 ExprKind.ELEMENTWISE,
                 "fill_null",
-                value,
+                exprs=(value,),
                 strategy=strategy,
                 limit=limit,
                 str_as_lit=True,
@@ -1616,14 +1621,14 @@ class Expr:
         """
         if upper_bound is None:
             return self._append_node(
-                ExprNode(ExprKind.ELEMENTWISE, "clip_lower", lower_bound)
+                ExprNode(ExprKind.ELEMENTWISE, "clip_lower", exprs=(lower_bound,))
             )
         if lower_bound is None:
             return self._append_node(
-                ExprNode(ExprKind.ELEMENTWISE, "clip_upper", upper_bound)
+                ExprNode(ExprKind.ELEMENTWISE, "clip_upper", exprs=(upper_bound,))
             )
         return self._append_node(
-            ExprNode(ExprKind.ELEMENTWISE, "clip", lower_bound, upper_bound)
+            ExprNode(ExprKind.ELEMENTWISE, "clip", exprs=(lower_bound, upper_bound))
         )
 
     def first(self, order_by: str | Iterable[str] | None = None) -> Self:
@@ -1650,9 +1655,9 @@ class Expr:
             ┌──────────────────┐
             |Narwhals DataFrame|
             |------------------|
-            |       a     b    |
-            |    0  1   foo    |
-            |    1  2  None    |
+            |       a    b     |
+            |    0  1  foo     |
+            |    1  2  NaN     |
             └──────────────────┘
         """
         if order_by is None:
@@ -1793,15 +1798,15 @@ class Expr:
             ...     nw.col("a").cum_count().alias("a_cum_count"),
             ...     nw.col("a").cum_count(reverse=True).alias("a_cum_count_reverse"),
             ... )
-            ┌─────────────────────────────────────────┐
-            |           Narwhals DataFrame            |
-            |-----------------------------------------|
-            |      a  a_cum_count  a_cum_count_reverse|
-            |0     x            1                    3|
-            |1     k            2                    2|
-            |2  None            2                    1|
-            |3     d            3                    1|
-            └─────────────────────────────────────────┘
+            ┌────────────────────────────────────────┐
+            |           Narwhals DataFrame           |
+            |----------------------------------------|
+            |     a  a_cum_count  a_cum_count_reverse|
+            |0    x            1                    3|
+            |1    k            2                    2|
+            |2  NaN            2                    1|
+            |3    d            3                    1|
+            └────────────────────────────────────────┘
         """
         return self._append_node(
             ExprNode(ExprKind.ORDERABLE_WINDOW, "cum_count", reverse=reverse)

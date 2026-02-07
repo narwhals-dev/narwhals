@@ -39,6 +39,7 @@ from tests.utils import (
     Constructor,
     ConstructorEager,
     assert_equal_data,
+    assert_equal_hash,
     assert_equal_series,
 )
 
@@ -531,10 +532,10 @@ def test_dtypes() -> None:
         pd.DataFrame({"a": [1], "b": [datetime(2020, 1, 1)], "c": [timedelta(1)]})
     )
     dtype = df.collect_schema()["b"]
-    assert dtype in {nw_v1.Datetime}
+    assert_equal_hash(dtype, nw_v1.Datetime)
     assert isinstance(dtype, nw_v1.Datetime)
     dtype = df.lazy().schema["c"]
-    assert dtype in {nw_v1.Duration}
+    assert_equal_hash(dtype, nw_v1.Duration)
     assert isinstance(dtype, nw_v1.Duration)
 
 

@@ -12,7 +12,6 @@ class NoAutoEnum(Enum):
 
     Examples:
         >>> from enum import auto
-        >>> from narwhals._enum import NoAutoEnum
         >>>
         >>> class Colors(NoAutoEnum):
         ...     RED = 1
