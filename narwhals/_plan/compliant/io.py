@@ -17,6 +17,8 @@ if TYPE_CHECKING:
 
     from typing_extensions import TypeIs
 
+    from narwhals.schema import Schema
+
 __all__ = [
     "EagerInput",
     "EagerOutput",
@@ -31,6 +33,7 @@ __all__ = [
     "WriteParquet",
     "can_read_csv",
     "can_read_parquet",
+    "can_read_parquet_schema",
     "can_scan_csv",
     "can_scan_parquet",
     "can_sink_parquet",
@@ -45,6 +48,7 @@ class ScanCsv(Protocol[LazyFrameT_co]):
 
 class ScanParquet(Protocol[LazyFrameT_co]):
     def scan_parquet(self, source: str, /, **kwds: Any) -> LazyFrameT_co: ...
+    def read_parquet_schema(self, source: str, /) -> Schema: ...
 
 
 class ReadCsv(Protocol[DataFrameT_co]):
@@ -109,6 +113,10 @@ def can_scan_parquet(
     obj: ScanParquet[LazyFrameT] | Any,
 ) -> TypeIs[ScanParquet[LazyFrameT]]:
     return _hasattr_static(obj, "scan_parquet")
+
+
+def can_read_parquet_schema(obj: Any) -> TypeIs[ScanParquet[Any]]:
+    return _hasattr_static(obj, "read_parquet_schema")
 
 
 def can_write_csv(obj: Any) -> TypeIs[WriteCsv]:

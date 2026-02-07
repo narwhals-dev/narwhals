@@ -48,7 +48,7 @@ if TYPE_CHECKING:
         CompliantLazyFrame,
         EagerDataFrame,
     )
-    from narwhals._plan.compliant.namespace import EagerNamespace
+    from narwhals._plan.compliant.namespace import CompliantNamespace, EagerNamespace
     from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._plan.dataframe import DataFrame
     from narwhals._plan.expr import Expr
@@ -63,6 +63,7 @@ if TYPE_CHECKING:
     )
     from narwhals._typing import Arrow
     from narwhals.dtypes import IntegerType
+    from narwhals.schema import Schema
     from narwhals.typing import (
         Backend,
         ClosedInterval,
@@ -516,6 +517,16 @@ def scan_parquet(
     raise NotImplementedError(msg)
 
 
+def read_parquet_schema(source: FileSource, *, backend: IntoBackend[Backend]) -> Schema:
+    """Get the schema of a Parquet file without reading data."""
+    ns = _namespace(backend)
+    if _io.can_read_parquet_schema(ns):
+        return ns.read_parquet_schema(normalize_path(source))
+    raise unsupported_backend_operation_error(
+        backend, "read_parquet_schema"
+    )  # pragma: no cover
+
+
 def _read_csv(
     source: str,
     kwds: dict[str, t.Any],
@@ -550,6 +561,14 @@ def _scan_parquet(
     /,
 ) -> Incomplete:  # pragma: no cover
     return ns.scan_parquet(source, **kwds).to_narwhals()
+
+
+def _namespace(backend: IntoBackend[Backend]) -> CompliantNamespace[Any, Any, Any]:
+    impl = Implementation.from_backend(backend)
+    if is_eager_allowed(impl):
+        return _eager_namespace(impl)
+    msg = f"Lazy backends are not yet supported in `narwhals._plan`, got: {impl!r}"
+    raise NotImplementedError(msg)
 
 
 @t.overload

@@ -10,11 +10,12 @@ from tests.utils import PANDAS_VERSION
 
 pytest.importorskip("polars")
 pytest.importorskip("pyarrow")
+from pathlib import Path
+
 import polars as pl
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
-    from pathlib import Path
 
     from typing_extensions import TypeAlias
 
@@ -141,3 +142,10 @@ def test_read_parquet_raise_with_lazy(backend: _LazyOnly) -> None:
     pytest.importorskip(backend)
     with pytest.raises(ValueError, match="support in Narwhals is lazy-only"):
         nwp.read_parquet("unused.parquet", backend=backend)  # type: ignore[call-overload]
+
+
+def test_read_parquet_schema(parquet_path: FileSource, eager: EagerAllowed) -> None:
+    schema = nwp.read_parquet_schema(parquet_path, backend=eager)
+    expected = pl.scan_parquet(Path(parquet_path)).collect_schema()
+    result = schema.to_polars()
+    assert result == expected
