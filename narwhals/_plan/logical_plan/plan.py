@@ -209,16 +209,24 @@ class Sink(SingleInput):
     """Terminal node of a `LogicalPlan`."""
 
 
-class Collect(Sink): ...
+class Collect(Sink):
+    def __repr__(self) -> str:
+        return "SINK (memory)"
 
 
-class SinkParquet(Sink):
+class SinkFile(Scan):
     __slots__ = ("target",)
     target: str
     """`file: str | Path | BytesIO` on main.
 
     Not sure `BytesIO` makes sense here.
     """
+
+    def __repr__(self) -> str:
+        return "SINK (file)"
+
+
+class SinkParquet(SinkFile): ...
 
 
 class Select(SingleInput):
