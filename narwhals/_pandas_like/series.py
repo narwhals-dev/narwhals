@@ -1101,6 +1101,34 @@ class PandasLikeSeries(EagerSeries[Any]):
 
         return self._with_native(result_native)
 
+    def clear(self, n: int) -> Self:
+        impl = self._implementation
+        if n == 0:
+            native_result = self.head(0).native
+
+            if impl.is_modin():
+                native_dtype = self.native.dtype
+                native_result = native_result.astype(native_dtype)
+        else:
+            import pandas as pd
+
+            ns = self.__native_namespace__()
+
+            native_dtype = self.native.dtype
+            index = list(range(n))
+            if get_dtype_backend(native_dtype, impl) is None:
+                msg = (
+                    f"Unable to safely perform `Series.clear(n={n})` with non-nullable "
+                    f"dtypes backend and backend {self._implementation}."
+                )
+                raise NotImplementedError(msg)
+
+            native_result = ns.Series(
+                pd.NA, index=index, dtype=native_dtype, name=self.name
+            )
+
+        return self._with_native(native_result)
+
     def sqrt(self) -> Self:
         return self._with_native(self.native.pow(0.5))
 

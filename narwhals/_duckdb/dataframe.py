@@ -553,3 +553,15 @@ class DuckDBLazyFrame(
             (FORMAT parquet)
             """  # noqa: S608
         duckdb.sql(query)
+
+    def clear(self, n: int) -> Self:
+        if n == 0:
+            native_result = self.native.limit(0)
+        else:
+            native_schema = dict(zip(self.columns, self.native.types))
+            query = f"""
+                select {", ".join([f"NULL::{dtype} AS {name}" for name, dtype in native_schema.items()])}
+                from unnest(generate_series(1, {n}))
+            """  # noqa: S608
+            native_result = duckdb.sql(query)
+        return self._with_native(native_result)
