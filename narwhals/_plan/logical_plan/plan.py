@@ -6,12 +6,12 @@ from narwhals._plan._immutable import Immutable
 from narwhals._plan.schema import freeze_schema
 from narwhals._plan.typing import Seq
 from narwhals._typing_compat import TypeVar
-from narwhals._utils import qualified_type_name, zip_strict
+from narwhals._utils import normalize_path, qualified_type_name, zip_strict
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from typing_extensions import TypeAlias
+    from typing_extensions import Self, TypeAlias
 
     from narwhals._plan.dataframe import DataFrame
     from narwhals._plan.expressions import ExprIR, SelectorIR
@@ -24,7 +24,7 @@ if TYPE_CHECKING:
         VConcatOptions,
     )
     from narwhals._plan.schema import FrozenSchema
-    from narwhals.typing import PivotAgg
+    from narwhals.typing import FileSource, PivotAgg
 
 Incomplete: TypeAlias = Any
 _InputsT = TypeVar("_InputsT", bound="Seq[LogicalPlan]")
@@ -125,6 +125,10 @@ class ScanFile(Scan):
     # https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-plan/src/dsl/file_scan/mod.rs#L47-L74
     __slots__ = ("source",)
     source: str
+
+    @classmethod
+    def from_source(cls, source: FileSource, /) -> Self:
+        return cls(source=normalize_path(source))
 
 
 class ScanCsv(ScanFile): ...

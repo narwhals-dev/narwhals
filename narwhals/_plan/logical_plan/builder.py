@@ -59,12 +59,12 @@ class LpBuilder:
         return cls.from_plan(lp.ScanDataFrame.from_narwhals(df))
 
     @classmethod
-    def scan_csv(cls, source: str, /) -> Self:
-        return cls.from_plan(lp.ScanCsv(source=source))
+    def scan_csv(cls, source: FileSource, /) -> Self:
+        return cls.from_plan(lp.ScanCsv.from_source(source))
 
     @classmethod
-    def scan_parquet(cls, source: str, /) -> Self:
-        return cls.from_plan(lp.ScanParquet(source=source))
+    def scan_parquet(cls, source: FileSource, /) -> Self:
+        return cls.from_plan(lp.ScanParquet.from_source(source))
 
     # Single Input
     # TODO @dangotbanned: Decide on if `ProjectionOptions` should be added
