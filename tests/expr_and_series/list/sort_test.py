@@ -65,9 +65,6 @@ def test_sort_expr_args(
     if "ibis" in str(constructor) and descending:
         # https://github.com/ibis-project/ibis/issues/11735
         request.applymarker(pytest.mark.xfail)
-    if "sqlframe" in str(constructor) and descending and not nulls_last:
-        # https://github.com/eakmanrq/sqlframe/issues/559
-        request.applymarker(pytest.mark.xfail)
     if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 5):
         pytest.skip()
     if "pandas" in str(constructor):

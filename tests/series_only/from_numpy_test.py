@@ -66,7 +66,7 @@ def test_series_from_numpy_not_init_dtype(
         nw.Series.from_numpy(NAME, arr, bad_dtype, backend=eager_backend)  # type: ignore[arg-type]
 
 
-def test_series_from_numpy_not_eager() -> None:
+def test_series_from_numpy_not_eager() -> None:  # pragma: no cover
     pytest.importorskip("ibis")
     with pytest.raises(ValueError, match="lazy-only"):
         nw.Series.from_numpy(NAME, arr, backend="ibis")  # type: ignore[arg-type]

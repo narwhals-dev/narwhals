@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any, Protocol, overload
 
 from narwhals._compliant.typing import (
     CompliantExprT,
+    CompliantExprT_co,
     CompliantFrameT,
     CompliantLazyFrameT,
     DepthTrackingExprT,
@@ -23,7 +24,7 @@ from narwhals._utils import (
 from narwhals.dependencies import is_numpy_array_2d
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Sequence
+    from collections.abc import Collection, Iterable, Iterator, KeysView, Sequence
 
     from typing_extensions import TypeAlias, TypeIs
 
@@ -96,6 +97,58 @@ class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
     def is_native(self, obj: Any, /) -> TypeIs[Any]:
         """Return `True` if `obj` can be passed to `from_native`."""
         ...
+
+
+class AlignDiagonal(Protocol[CompliantFrameT, CompliantExprT_co]):
+    """Mixin to help support `"diagonal*"` concatenation."""
+
+    def lit(
+        self, value: NonNestedLiteral, dtype: IntoDType | None
+    ) -> CompliantExprT_co: ...
+    def align_diagonal(
+        self, frames: Collection[CompliantFrameT], /
+    ) -> Sequence[CompliantFrameT]:
+        """Prepare frames with differing schemas for vertical concatenation.
+
+        Adapted from [`convert_diagonal_concat`].
+
+        [`convert_diagonal_concat`]: https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-plan/src/plans/conversion/dsl_to_ir/concat.rs#L10-L68
+        """
+        schemas = [frame.collect_schema() for frame in frames]
+        # 1 - Take the first schema, collecting any fields from the remaining that introduce new names
+        # Subtle difference from `dict |= dict |= ...` as we preserve the first `DType`, rather than the last.
+        it_schemas = iter(schemas)
+        union = dict(next(it_schemas))
+        seen = union.keys()
+        for schema in it_schemas:
+            union.update((nm, dtype) for nm, dtype in schema.items() if nm not in seen)
+        return self._align_diagonal(frames, schemas, union)
+
+    def _align_diagonal(
+        self,
+        frames: Iterable[CompliantFrameT],
+        schemas: Iterable[IntoSchema],
+        union_schema: IntoSchema,
+    ) -> Sequence[CompliantFrameT]:
+        union_names = union_schema.keys()
+        # Lazily populate null expressions as needed, shared across frames
+        null_exprs: dict[str, CompliantExprT_co] = {}
+
+        def iter_missing_exprs(missing: Iterable[str]) -> Iterator[CompliantExprT_co]:
+            nonlocal null_exprs
+            for name in missing:
+                if (expr := null_exprs.get(name)) is None:
+                    dtype = union_schema[name]
+                    expr = null_exprs[name] = self.lit(None, dtype).alias(name)
+                yield expr
+
+        def align(df: CompliantFrameT, columns: KeysView[str]) -> CompliantFrameT:
+            if missing := union_names - columns:
+                df = df.with_columns(*iter_missing_exprs(missing))
+            # Even if all fields are present, we always reorder the columns to match between frames.
+            return df.simple_select(*union_names)
+
+        return [align(frame, schema.keys()) for frame, schema in zip(frames, schemas)]
 
 
 class DepthTrackingNamespace(

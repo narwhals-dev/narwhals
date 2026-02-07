@@ -15,8 +15,7 @@ expected = [11, -1, None, 0, 0]
 
 
 def test_sum_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if any(backend in str(constructor) for backend in ("dask", "cudf", "sqlframe")):
-        # sqlframe issue: https://github.com/eakmanrq/sqlframe/issues/567
+    if any(backend in str(constructor) for backend in ("dask", "cudf")):
         request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor):
         if PANDAS_VERSION < (2, 2):

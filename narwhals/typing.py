@@ -270,7 +270,8 @@ TemporalLiteral: TypeAlias = "dt.date | dt.datetime | dt.time | dt.timedelta"
 NonNestedLiteral: TypeAlias = (
     "NumericLiteral | TemporalLiteral | str | bool | bytes | None"
 )
-PythonLiteral: TypeAlias = "NonNestedLiteral | list[Any] | tuple[Any, ...]"
+NestedLiteral: TypeAlias = "list[Any] | tuple[Any, ...] | dict[str, Any]"
+PythonLiteral: TypeAlias = "NonNestedLiteral | NestedLiteral"
 
 NonNestedDType: TypeAlias = "dtypes.NumericType | dtypes.TemporalType | dtypes.String | dtypes.Boolean | dtypes.Binary | dtypes.Categorical | dtypes.Unknown | dtypes.Object"
 """Any Narwhals DType that does not have required arguments."""

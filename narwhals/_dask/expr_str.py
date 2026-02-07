@@ -77,4 +77,14 @@ class DaskExprStringNamespace(LazyExprNamespace["DaskExpr"], StringNamespace["Da
     def zfill(self, width: int) -> DaskExpr:
         return self.compliant._with_callable(lambda expr: expr.str.zfill(width))
 
+    def pad_start(self, length: int, fill_char: str) -> DaskExpr:
+        return self.compliant._with_callable(
+            lambda expr: expr.str.rjust(width=length, fillchar=fill_char)
+        )
+
+    def pad_end(self, length: int, fill_char: str) -> DaskExpr:
+        return self.compliant._with_callable(
+            lambda expr: expr.str.ljust(width=length, fillchar=fill_char)
+        )
+
     to_date = not_implemented()

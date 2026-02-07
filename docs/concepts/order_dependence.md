@@ -17,6 +17,7 @@ such as:
 - `cum_sum`, `cum_min`, ...
 - `rolling_sum`, `rolling_min`, ...
 - `is_first_distinct`, `is_last_distinct`.
+- `first`, `last`.
 
 When row-order is defined, as is the case for `DataFrame`, these operations pose
 no issue.
@@ -50,3 +51,14 @@ When writing an order-dependent function, if you want it to be executable by `La
 (and not just `DataFrame`), make sure that all order-dependent expressions are followed
 by `over` with `order_by` specified. If you forget to, don't worry, Narwhals will
 give you a loud and clear error message.
+
+## Aggregations
+
+To make `nw.col('a').first()` valid in the lazy case, you have the choice between writing:
+
+- `nw.col('a').first().over(order_by='i')`.
+- `nw.col('a').first(order_by='i')`.
+
+The first produces a new column of the same length as the original dataframe, whereas
+the other one produces a scalar. If you're using `first` in a group-by context, where
+you're required to provide aggregations, then we recommend using the latter.

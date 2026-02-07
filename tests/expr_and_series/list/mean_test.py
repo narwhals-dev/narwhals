@@ -15,8 +15,7 @@ expected = [2.75, -1, None, None, None]
 
 
 def test_mean_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if any(backend in str(constructor) for backend in ("dask", "cudf", "sqlframe")):
-        # sqlframe issue: https://github.com/eakmanrq/sqlframe/issues/567
+    if any(backend in str(constructor) for backend in ("dask", "cudf")):
         request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor):
         if PANDAS_VERSION < (2, 2):

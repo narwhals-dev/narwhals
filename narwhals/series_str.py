@@ -53,7 +53,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             >>> s.str.replace("abc", "").to_native()
             0        123
             1     abc123
-            dtype: object
+            dtype: str
         """
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.replace(
@@ -79,7 +79,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             >>> s.str.replace_all("abc", "").to_native()
             0     123
             1     123
-            dtype: object
+            dtype: str
         """
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.replace_all(
@@ -124,8 +124,8 @@ class SeriesStringNamespace(Generic[SeriesT]):
             >>> s.str.starts_with("app").to_native()
             0     True
             1    False
-            2     None
-            dtype: object
+            2    False
+            dtype: bool
         """
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.starts_with(prefix)
@@ -145,8 +145,8 @@ class SeriesStringNamespace(Generic[SeriesT]):
             >>> s.str.ends_with("ngo").to_native()
             0    False
             1     True
-            2     None
-            dtype: object
+            2    False
+            dtype: bool
         """
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.ends_with(suffix)
@@ -194,9 +194,9 @@ class SeriesStringNamespace(Generic[SeriesT]):
             >>> s = nw.from_native(s_native, series_only=True)
             >>> s.str.slice(4, 3).to_native()  # doctest: +NORMALIZE_WHITESPACE
             0
-            1    None
-            2      ya
-            dtype: object
+            1    NaN
+            2     ya
+            dtype: str
         """
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.slice(
@@ -302,8 +302,8 @@ class SeriesStringNamespace(Generic[SeriesT]):
             >>> s = nw.from_native(s_native, series_only=True)
             >>> s.str.to_uppercase().to_native()
             0    APPLE
-            1     None
-            dtype: object
+            1      NaN
+            dtype: str
         """
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.to_uppercase()
@@ -319,8 +319,8 @@ class SeriesStringNamespace(Generic[SeriesT]):
             >>> s = nw.from_native(s_native, series_only=True)
             >>> s.str.to_lowercase().to_native()
             0    apple
-            1     None
-            dtype: object
+            1      NaN
+            dtype: str
         """
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.to_lowercase()
@@ -445,8 +445,68 @@ class SeriesStringNamespace(Generic[SeriesT]):
             1     -0023
             2     00456
             3    123456
-            dtype: object
+            dtype: str
         """
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.zfill(width)
+        )
+
+    def pad_start(self, length: int, fill_char: str = " ") -> SeriesT:
+        """Pad the start of the string until it reaches the given length.
+
+        Arguments:
+            length: Pad the string until it reaches this length. Strings with
+                length equal to or greater than this value are returned as-is.
+            fill_char: The character to pad the string with.
+
+        Examples:
+        >>> import pandas as pd
+        >>> import narwhals as nw
+        >>> df_native = pd.DataFrame({"a": ["cow", "monkey", "hippopotamus", None]})
+        >>> df = nw.from_native(df_native)
+        >>> df["a"].str.pad_start(8, "*")
+        ┌───────────────────┐
+        |  Narwhals Series  |
+        |-------------------|
+        |0        *****cow  |
+        |1        **monkey  |
+        |2    hippopotamus  |
+        |3             NaN  |
+        |Name: a, dtype: str|
+        └───────────────────┘
+        """
+        return self._narwhals_series._with_compliant(
+            self._narwhals_series._compliant_series.str.pad_start(
+                length=length, fill_char=fill_char
+            )
+        )
+
+    def pad_end(self, length: int, fill_char: str = " ") -> SeriesT:
+        """Pad the end of the string until it reaches the given length.
+
+        Arguments:
+            length: Pad the string until it reaches this length. Strings with
+                length equal to or greater than this value are returned as-is.
+            fill_char: The character to pad the string with.
+
+        Examples:
+        >>> import pandas as pd
+        >>> import narwhals as nw
+        >>> df_native = pd.DataFrame({"a": ["cow", "monkey", "hippopotamus", None]})
+        >>> df = nw.from_native(df_native)
+        >>> df["a"].str.pad_end(8, "*")
+        ┌───────────────────┐
+        |  Narwhals Series  |
+        |-------------------|
+        |0        cow*****  |
+        |1        monkey**  |
+        |2    hippopotamus  |
+        |3             NaN  |
+        |Name: a, dtype: str|
+        └───────────────────┘
+        """
+        return self._narwhals_series._with_compliant(
+            self._narwhals_series._compliant_series.str.pad_end(
+                length=length, fill_char=fill_char
+            )
         )

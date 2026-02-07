@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
     from narwhals._arrow.typing import ChunkedArrayAny, Incomplete, ScalarAny
     from narwhals._utils import Version
-    from narwhals.typing import IntoDType, NonNestedLiteral
+    from narwhals.typing import IntoDType, PythonLiteral
 
 
 class ArrowNamespace(
@@ -64,7 +64,7 @@ class ArrowNamespace(
             version=self._version,
         )
 
-    def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> ArrowExpr:
+    def lit(self, value: PythonLiteral, dtype: IntoDType | None) -> ArrowExpr:
         def _lit_arrow_series(_: ArrowDataFrame) -> ArrowSeries:
             arrow_series = ArrowSeries.from_iterable(
                 data=[value], name="literal", context=self
@@ -184,8 +184,7 @@ class ArrowNamespace(
     def _concat_vertical(self, dfs: Sequence[pa.Table], /) -> pa.Table:
         cols_0 = dfs[0].column_names
         for i, df in enumerate(dfs[1:], start=1):
-            cols_current = df.column_names
-            if cols_current != cols_0:
+            if (cols_current := df.column_names) != cols_0:
                 msg = (
                     "unable to vstack, column names don't match:\n"
                     f"   - dataframe 0: {cols_0}\n"

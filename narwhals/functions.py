@@ -12,6 +12,7 @@ from narwhals._utils import (
     deprecate_native_namespace,
     flatten,
     is_eager_allowed,
+    is_nested_literal,
     is_sequence_but_not_str,
     normalize_path,
     supports_arrow_c_stream,
@@ -46,6 +47,7 @@ if TYPE_CHECKING:
         IntoExpr,
         IntoSchema,
         NonNestedLiteral,
+        PythonLiteral,
         _2DArray,
     )
 
@@ -578,7 +580,9 @@ def _get_deps_info() -> dict[str, str]:
             result[dist_name] = dist_version
         else:  # prefix match
             for target in target_names:
-                if not result[target] and dist_name.startswith(target):
+                if not result[target] and dist_name.startswith(
+                    target
+                ):  # pragma: no cover
                     result[target] = dist_version
                     break
 
@@ -604,8 +608,39 @@ def show_versions() -> None:
         print(f"{k:>13}: {stat}")  # noqa: T201
 
 
+def _validate_separators(
+    separator: str, native_separators: tuple[str, ...], **kwargs: Any
+) -> None:
+    for native_separator in native_separators:
+        if native_separator in kwargs and kwargs[native_separator] != separator:
+            msg = (
+                f"`separator` and `{native_separator}` do not match: "
+                f"`separator`={separator} and `{native_separator}`={kwargs[native_separator]}."
+            )
+            raise TypeError(msg)
+
+
+def _validate_separator_pyarrow(separator: str, **kwargs: Any) -> Any:
+    if "parse_options" in kwargs:
+        parse_options = kwargs.pop("parse_options")
+        if parse_options.delimiter != separator:
+            msg = (
+                "`separator` and `parse_options.delimiter` do not match: "
+                f"`separator`={separator} and `delimiter`={parse_options.delimiter}."
+            )
+            raise TypeError(msg)
+        return kwargs
+    from pyarrow import csv  # ignore-banned-import
+
+    return {"parse_options": csv.ParseOptions(delimiter=separator)}
+
+
 def read_csv(
-    source: FileSource, *, backend: IntoBackend[EagerAllowed], **kwargs: Any
+    source: FileSource,
+    *,
+    backend: IntoBackend[EagerAllowed],
+    separator: str = ",",
+    **kwargs: Any,
 ) -> DataFrame[Any]:
     """Read a CSV file into a DataFrame.
 
@@ -618,6 +653,7 @@ def read_csv(
                 `POLARS`, `MODIN` or `CUDF`.
             - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+        separator: Single byte character to use as separator in the file.
         kwargs: Extra keyword arguments which are passed to the native CSV reader.
             For example, you could use
             `nw.read_csv('file.csv', backend='pandas', engine='pyarrow')`.
@@ -636,14 +672,17 @@ def read_csv(
     impl = Implementation.from_backend(backend)
     native_namespace = impl.to_native_namespace()
     native_frame: NativeDataFrame
-    if impl in {
-        Implementation.POLARS,
-        Implementation.PANDAS,
-        Implementation.MODIN,
-        Implementation.CUDF,
-    }:
-        native_frame = native_namespace.read_csv(normalize_path(source), **kwargs)
+    if impl in {Implementation.PANDAS, Implementation.MODIN, Implementation.CUDF}:
+        _validate_separators(separator, ("sep",), **kwargs)
+        native_frame = native_namespace.read_csv(
+            normalize_path(source), sep=separator, **kwargs
+        )
+    elif impl is Implementation.POLARS:
+        native_frame = native_namespace.read_csv(
+            normalize_path(source), separator=separator, **kwargs
+        )
     elif impl is Implementation.PYARROW:
+        kwargs = _validate_separator_pyarrow(separator, **kwargs)
         from pyarrow import csv  # ignore-banned-import
 
         native_frame = csv.read_csv(source, **kwargs)
@@ -672,7 +711,11 @@ def read_csv(
 
 
 def scan_csv(
-    source: FileSource, *, backend: IntoBackend[Backend], **kwargs: Any
+    source: FileSource,
+    *,
+    backend: IntoBackend[Backend],
+    separator: str = ",",
+    **kwargs: Any,
 ) -> LazyFrame[Any]:
     """Lazily read from a CSV file.
 
@@ -688,6 +731,7 @@ def scan_csv(
                 `POLARS`, `MODIN` or `CUDF`.
             - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+        separator: Single byte character to use as separator in the file.
         kwargs: Extra keyword arguments which are passed to the native CSV reader.
             For example, you could use
             `nw.scan_csv('file.csv', backend=pd, engine='pyarrow')`.
@@ -711,32 +755,37 @@ def scan_csv(
     native_frame: NativeDataFrame | NativeLazyFrame
     source = normalize_path(source)
     if implementation is Implementation.POLARS:
-        native_frame = native_namespace.scan_csv(source, **kwargs)
+        native_frame = native_namespace.scan_csv(source, separator=separator, **kwargs)
     elif implementation in {
         Implementation.PANDAS,
         Implementation.MODIN,
         Implementation.CUDF,
         Implementation.DASK,
-        Implementation.DUCKDB,
         Implementation.IBIS,
     }:
-        native_frame = native_namespace.read_csv(source, **kwargs)
+        _validate_separators(separator, ("sep",), **kwargs)
+        native_frame = native_namespace.read_csv(source, sep=separator, **kwargs)
+    elif implementation is Implementation.DUCKDB:
+        _validate_separators(separator, ("delimiter", "delim", "sep"), **kwargs)
+        native_frame = native_namespace.read_csv(source, delimiter=separator, **kwargs)
     elif implementation is Implementation.PYARROW:
+        kwargs = _validate_separator_pyarrow(separator, **kwargs)
         from pyarrow import csv  # ignore-banned-import
 
         native_frame = csv.read_csv(source, **kwargs)
     elif implementation.is_spark_like():
+        _validate_separators(separator, ("sep", "delimiter"), **kwargs)
         if (session := kwargs.pop("session", None)) is None:
             msg = "Spark like backends require a session object to be passed in `kwargs`."
             raise ValueError(msg)
         csv_reader = session.read.format("csv")
         native_frame = (
-            csv_reader.load(source)
+            csv_reader.load(source, sep=separator)
             if (
                 implementation is Implementation.SQLFRAME
                 and implementation._backend_version() < (3, 27, 0)
             )
-            else csv_reader.options(**kwargs).load(source)
+            else csv_reader.options(sep=separator, **kwargs).load(source)
         )
     else:  # pragma: no cover
         try:
@@ -1211,7 +1260,9 @@ def _expr_with_horizontal_op(name: str, *exprs: IntoExpr, **kwargs: Any) -> Expr
         msg = f"At least one expression must be passed to `{name}`"
         raise ValueError(msg)
     return Expr(
-        ExprNode(ExprKind.ELEMENTWISE, name, *exprs, **kwargs, allow_multi_output=True)
+        ExprNode(
+            ExprKind.ELEMENTWISE, name, exprs=exprs, **kwargs, allow_multi_output=True
+        )
     )
 
 
@@ -1356,8 +1407,7 @@ class When:
             ExprNode(
                 ExprKind.ELEMENTWISE,
                 "when_then",
-                self._predicate,
-                value,
+                exprs=(self._predicate, value),
                 allow_multi_output=False,
             )
         )
@@ -1366,7 +1416,9 @@ class When:
 class Then(Expr):
     def otherwise(self, value: IntoExpr | NonNestedLiteral) -> Expr:
         node = self._nodes[0]
-        return Expr(ExprNode(ExprKind.ELEMENTWISE, "when_then", *node.exprs, value))
+        return Expr(
+            ExprNode(ExprKind.ELEMENTWISE, "when_then", exprs=(*node.exprs, value))
+        )
 
 
 def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
@@ -1454,27 +1506,70 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool) ->
     )
 
 
-def lit(value: NonNestedLiteral, dtype: IntoDType | None = None) -> Expr:
+def lit(value: PythonLiteral, dtype: IntoDType | None = None) -> Expr:
     """Return an expression representing a literal value.
 
     Arguments:
-        value: The value to use as literal.
+        value: The value to use as literal. Can be a scalar value, list, tuple, or dict.
+            Lists and tuples are converted to `List` dtype, dicts to `Struct` dtype.
         dtype: The data type of the literal value. If not provided, the data type will
-            be inferred by the native library.
+            be inferred by the native library. For empty lists/dicts, dtype must be
+            specified explicitly.
 
     Examples:
-        >>> import pandas as pd
+        Scalar literals:
+
+        >>> import pyarrow as pa
         >>> import narwhals as nw
         >>>
-        >>> df_native = pd.DataFrame({"a": [1, 2]})
-        >>> nw.from_native(df_native).with_columns(nw.lit(3))
+        >>> df_nw = nw.from_native(pa.table({"a": [1, 2]}))
+        >>> df_nw.with_columns(nw.lit(3))
         ┌──────────────────┐
         |Narwhals DataFrame|
         |------------------|
-        |     a  literal   |
-        |  0  1        3   |
-        |  1  2        3   |
+        | pyarrow.Table    |
+        | a: int64         |
+        | literal: int64   |
+        | ----             |
+        | a: [[1,2]]       |
+        | literal: [[3,3]] |
         └──────────────────┘
+
+        List literals (creates a List column):
+
+        >>> df_nw.with_columns(nw.lit([1, 2, 3]).alias("list_col"))
+        ┌─────────────────────────────┐
+        |     Narwhals DataFrame      |
+        |-----------------------------|
+        |pyarrow.Table                |
+        |a: int64                     |
+        |list_col: list<item: int64>  |
+        |  child 0, item: int64       |
+        |----                         |
+        |a: [[1,2]]                   |
+        |list_col: [[[1,2,3],[1,2,3]]]|
+        └─────────────────────────────┘
+
+        Dict literals (creates a Struct column):
+
+        >>> df_nw.with_columns(nw.lit({"x": 1, "y": 2}).alias("struct_col"))
+        ┌──────────────────────────────────────┐
+        |          Narwhals DataFrame          |
+        |--------------------------------------|
+        |pyarrow.Table                         |
+        |a: int64                              |
+        |struct_col: struct<x: int64, y: int64>|
+        |  child 0, x: int64                   |
+        |  child 1, y: int64                   |
+        |----                                  |
+        |a: [[1,2]]                            |
+        |struct_col: [                         |
+        |  -- is_valid: all not null           |
+        |  -- child 0 type: int64              |
+        |[1,1]                                 |
+        |  -- child 1 type: int64              |
+        |[2,2]]                                |
+        └──────────────────────────────────────┘
     """
     if is_numpy_array(value):
         msg = (
@@ -1482,11 +1577,18 @@ def lit(value: NonNestedLiteral, dtype: IntoDType | None = None) -> Expr:
             "Consider using `with_columns` to create a new column from the array."
         )
         raise ValueError(msg)
-
-    if isinstance(value, (list, tuple)):
-        msg = f"Nested datatypes are not supported yet. Got {value}"
-        raise NotImplementedError(msg)
-
+    if is_nested_literal(value):
+        if not value:
+            if not dtype:
+                msg = "Cannot infer dtype for empty nested structure. Please provide an explicit dtype parameter."
+                raise ValueError(msg)
+        elif isinstance(value, dict):
+            if any(is_nested_literal(v) for v in value.values()):
+                msg = "Nested structures with nested values are not supported."
+                raise NotImplementedError(msg)
+        elif is_nested_literal(value[0]):
+            msg = "Nested structures with nested values are not supported."
+            raise NotImplementedError(msg)
     return Expr(ExprNode(ExprKind.LITERAL, "lit", value=value, dtype=dtype))
 
 
@@ -1610,7 +1712,7 @@ def concat_str(
         |   full_sentence  |
         | 0   2 dogs play  |
         | 1   4 cats swim  |
-        | 2          None  |
+        | 2           NaN  |
         └──────────────────┘
     """
     flat_exprs = flatten([*flatten([exprs]), *more_exprs])
@@ -1679,7 +1781,9 @@ def coalesce(
         raise TypeError(msg)
 
     return Expr(
-        ExprNode(ExprKind.ELEMENTWISE, "coalesce", *flat_exprs, allow_multi_output=True)
+        ExprNode(
+            ExprKind.ELEMENTWISE, "coalesce", exprs=flat_exprs, allow_multi_output=True
+        )
     )
 
 

@@ -58,20 +58,26 @@ class DuckDBExprDateTimeNamespace(SQLExprDateTimeNamesSpace["DuckDBExpr"]):
 
     def total_seconds(self) -> DuckDBExpr:
         return self.compliant._with_elementwise(
-            lambda expr: lit(SECONDS_PER_MINUTE) * F("datepart", lit("minute"), expr)
-            + F("datepart", lit("second"), expr)
+            lambda expr: (
+                lit(SECONDS_PER_MINUTE) * F("datepart", lit("minute"), expr)
+                + F("datepart", lit("second"), expr)
+            )
         )
 
     def total_milliseconds(self) -> DuckDBExpr:
         return self.compliant._with_elementwise(
-            lambda expr: lit(MS_PER_MINUTE) * F("datepart", lit("minute"), expr)
-            + F("datepart", lit("millisecond"), expr)
+            lambda expr: (
+                lit(MS_PER_MINUTE) * F("datepart", lit("minute"), expr)
+                + F("datepart", lit("millisecond"), expr)
+            )
         )
 
     def total_microseconds(self) -> DuckDBExpr:
         return self.compliant._with_elementwise(
-            lambda expr: lit(US_PER_MINUTE) * F("datepart", lit("minute"), expr)
-            + F("datepart", lit("microsecond"), expr)
+            lambda expr: (
+                lit(US_PER_MINUTE) * F("datepart", lit("minute"), expr)
+                + F("datepart", lit("microsecond"), expr)
+            )
         )
 
     def truncate(self, every: str) -> DuckDBExpr:
@@ -103,8 +109,7 @@ class DuckDBExprDateTimeNamespace(SQLExprDateTimeNamesSpace["DuckDBExpr"]):
     def _no_op_time_zone(self, time_zone: str) -> DuckDBExpr:
         def func(df: DuckDBLazyFrame) -> Sequence[Expression]:
             native_series_list = self.compliant(df)
-            conn_time_zone = fetch_rel_time_zone(df.native)
-            if conn_time_zone != time_zone:
+            if (conn_time_zone := fetch_rel_time_zone(df.native)) != time_zone:
                 msg = (
                     "DuckDB stores the time zone in the connection, rather than in the "
                     f"data type, so changing the timezone to anything other than {conn_time_zone} "

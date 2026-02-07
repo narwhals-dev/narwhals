@@ -1,0 +1,37 @@
+from __future__ import annotations
+
+from functools import cache
+from pathlib import Path
+from typing import TYPE_CHECKING, get_args
+
+from tpch.typing_ import Artifact, DBTableName, QueryID, ScaleFactor
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+
+DATA_DIR = Path(__file__).parent / "data"
+DB_PATH = DATA_DIR / "narwhals.duckdb"
+
+
+@cache
+def _scale_factor_dir(scale_factor: ScaleFactor) -> Path:
+    """Get the data directory for a specific scale factor."""
+    sf_dir = DATA_DIR / f"sf{scale_factor}"
+    sf_dir.mkdir(parents=True, exist_ok=True)
+    return sf_dir
+
+
+SCALE_FACTORS: tuple[ScaleFactor, ...] = get_args(ScaleFactor)
+SCALE_FACTOR_DEFAULT: ScaleFactor = "0.1"
+DATABASE_TABLE_NAMES: tuple[DBTableName, ...] = get_args(DBTableName)
+QUERY_IDS: tuple[QueryID, ...] = get_args(QueryID)
+GLOBS: Mapping[Artifact, str] = {
+    "database": r"*[!0-9].parquet",
+    "answers": r"result_q[0-9]*.parquet",
+}
+LOGGER_NAME = "narwhals.tpch"
+"""Per-[Logging Cookbook], pass this to `logging.getLogger(...)`.
+
+[Logging Cookbook]: https://docs.python.org/3/howto/logging-cookbook.html#using-loggers-as-attributes-in-a-class-or-passing-them-as-parameters
+"""
+QUERIES_PACKAGE = "tpch.queries"

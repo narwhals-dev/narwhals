@@ -144,7 +144,6 @@ class Namespace(Generic[CompliantNamespaceT_co]):
             backend: native namespace module, string, or Implementation.
 
         Examples:
-            >>> from narwhals._namespace import Namespace
             >>> Namespace.from_backend("polars")
             Namespace[PolarsNamespace]
         """
@@ -273,7 +272,7 @@ class Namespace(Generic[CompliantNamespaceT_co]):
             impl = Implementation.CUDF
         elif is_native_modin(native):  # pragma: no cover
             impl = Implementation.MODIN
-        elif is_native_ibis(native):
+        elif is_native_ibis(native):  # pragma: no cover
             impl = Implementation.IBIS
         else:
             msg = f"Unsupported type: {type(native).__qualname__!r}"

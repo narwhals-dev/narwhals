@@ -71,9 +71,11 @@ class DaskExprDateTimeNamespace(
 
     def replace_time_zone(self, time_zone: str | None) -> DaskExpr:
         return self.compliant._with_callable(
-            lambda expr: expr.dt.tz_localize(None).dt.tz_localize(time_zone)
-            if time_zone is not None
-            else expr.dt.tz_localize(None)
+            lambda expr: (
+                expr.dt.tz_localize(None).dt.tz_localize(time_zone)
+                if time_zone is not None
+                else expr.dt.tz_localize(None)
+            )
         )
 
     def convert_time_zone(self, time_zone: str) -> DaskExpr:

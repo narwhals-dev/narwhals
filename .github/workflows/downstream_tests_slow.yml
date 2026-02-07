@@ -6,12 +6,9 @@ on:
 
 env:
   PY_COLORS: 1
-
+  UV_SYSTEM_PYTHON: 1
 jobs:
   vegafusion:
-     env:
-       UV_SYSTEM_PYTHON: true
-
      strategy:
        matrix:
          python-version: ["3.11"]

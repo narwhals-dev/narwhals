@@ -8,6 +8,8 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, cast
 
+import pytest
+
 import narwhals as nw
 from narwhals._utils import Implementation, parse_version, zip_strict
 from narwhals.dependencies import get_pandas
@@ -17,7 +19,6 @@ if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
     import pandas as pd
-    import pytest
     from pyspark.sql import SparkSession
     from sqlframe.duckdb import DuckDBSession
     from typing_extensions import TypeAlias
@@ -97,7 +98,7 @@ def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
     )
     if is_duckdb:
         result = from_native(result.collect("pyarrow"))
-    if is_ibis:
+    if is_ibis:  # pragma: no cover
         result = from_native(result.to_native().to_pyarrow())
     if hasattr(result, "collect"):
         kwargs: dict[Implementation, dict[str, Any]] = {Implementation.POLARS: {}}
@@ -165,6 +166,14 @@ def assert_equal_series(
     assert_equal_data(result.to_frame(), {name: expected})
 
 
+def assert_equal_hash(left: Any, right: Any) -> None:
+    """Assert that left and right produce identical hash values."""
+    __tracebackhide__ = True
+    assert left in {right}, (  # noqa: FURB171
+        f"inputs do not compare equal by `__hash__`\n[left]: {left}\n[right]: {right}"
+    )
+
+
 def sqlframe_session() -> DuckDBSession:
     from sqlframe.duckdb import DuckDBSession
 
@@ -192,7 +201,7 @@ def pyspark_session() -> SparkSession:  # pragma: no cover
     )
 
 
-def maybe_get_modin_df(df_pandas: pd.DataFrame) -> Any:
+def maybe_get_modin_df(df_pandas: pd.DataFrame) -> Any:  # pragma: no cover
     """Convert a pandas DataFrame to a Modin DataFrame if Modin is available."""
     try:
         import modin.pandas as mpd
@@ -252,3 +261,15 @@ def time_unit_compat(time_unit: TimeUnit, request: pytest.FixtureRequest, /) -> 
     if PANDAS_VERSION < (2,) and any(name in request_id for name in pandas_like):
         return "ns"
     return time_unit
+
+
+def is_pyspark_connect(constructor: Constructor) -> bool:
+    is_spark_connect = bool(os.environ.get("SPARK_CONNECT", None))
+    return is_spark_connect and ("pyspark" in str(constructor))
+
+
+def xfail_if_pyspark_connect(  # pragma: no cover
+    constructor: Constructor, request: pytest.FixtureRequest, reason: str = ""
+) -> None:
+    if is_pyspark_connect(constructor):
+        request.applymarker(pytest.mark.xfail(reason=reason))

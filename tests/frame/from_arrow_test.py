@@ -76,7 +76,9 @@ def test_dataframe_from_arrow_to_polars_no_pandas(
     assert "pandas" not in sys.modules
 
 
-def test_dataframe_from_arrow_modin(table: pa.Table, data: dict[str, Any]) -> None:
+def test_dataframe_from_arrow_modin(
+    table: pa.Table, data: dict[str, Any]
+) -> None:  # pragma: no cover
     pytest.importorskip("modin.pandas")
     result = nw.DataFrame.from_arrow(table, backend="modin")
     assert result.implementation.is_modin()

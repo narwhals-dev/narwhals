@@ -445,6 +445,14 @@ class Expr(NwExpr):
         """Find elements where boolean expression is True."""
         return self._append_node(ExprNode(ExprKind.ORDERABLE_FILTRATION, "arg_true"))
 
+    def first(self) -> Self:  # type: ignore[override]
+        """Get the first value."""
+        return self._append_node(ExprNode(ExprKind.ORDERABLE_AGGREGATION, "first"))
+
+    def last(self) -> Self:  # type: ignore[override]
+        """Get the last value."""
+        return self._append_node(ExprNode(ExprKind.ORDERABLE_AGGREGATION, "last"))
+
     def sample(
         self,
         n: int | None = None,

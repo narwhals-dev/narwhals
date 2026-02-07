@@ -8,8 +8,14 @@ from typing import TYPE_CHECKING, Any, Literal
 import pytest
 
 import narwhals as nw
-from narwhals.exceptions import PerformanceWarning
-from tests.utils import PANDAS_VERSION, POLARS_VERSION, PYARROW_VERSION, pyspark_session
+from narwhals.exceptions import InvalidOperationError, PerformanceWarning
+from tests.utils import (
+    PANDAS_VERSION,
+    POLARS_VERSION,
+    PYARROW_VERSION,
+    assert_equal_hash,
+    pyspark_session,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -68,7 +74,7 @@ def test_list_valid() -> None:
     assert dtype == nw.List(nw.List(nw.Int64))
     assert dtype == nw.List
     assert dtype != nw.List(nw.List(nw.Float32))
-    assert dtype in {nw.List(nw.List(nw.Int64))}
+    assert_equal_hash(dtype, nw.List(nw.List(nw.Int64)))
 
 
 def test_array_valid() -> None:
@@ -83,7 +89,7 @@ def test_array_valid() -> None:
     assert dtype == nw.Array(nw.Array(nw.Int64, 2), 2)
     assert dtype == nw.Array
     assert dtype != nw.Array(nw.Array(nw.Float32, 2), 2)
-    assert dtype in {nw.Array(nw.Array(nw.Int64, 2), 2)}
+    assert_equal_hash(dtype, nw.Array(nw.Array(nw.Int64, 2), 2))
 
     with pytest.raises(TypeError, match="invalid input for shape"):
         nw.Array(nw.Int64(), shape=None)  # type: ignore[arg-type]
@@ -105,7 +111,7 @@ def test_struct_valid() -> None:
     assert dtype.to_schema() == nw.Struct({"a": nw.Int64, "b": nw.String}).to_schema()
     assert dtype == nw.Struct
     assert dtype != nw.Struct({"a": nw.Int32, "b": nw.String})
-    assert dtype in {nw.Struct({"a": nw.Int64, "b": nw.String})}
+    assert_equal_hash(dtype, nw.Struct({"a": nw.Int64, "b": nw.String}))
 
 
 def test_struct_reverse() -> None:
@@ -407,38 +413,56 @@ def test_huge_int_to_native() -> None:
     assert type_a_unit == "UHUGEINT"
 
 
-def test_cast_decimal_to_native() -> None:
-    pytest.importorskip("duckdb")
-    pytest.importorskip("pandas")
-    pytest.importorskip("polars")
-    pytest.importorskip("pyarrow")
+@pytest.mark.parametrize(
+    ("precision", "scale"), [(None, 1), (None, 20), (2, 1), (10, 1), (10, 8)]
+)
+def test_cast_decimal_to_native(
+    request: pytest.FixtureRequest,
+    constructor: Constructor,
+    precision: int | None,
+    scale: int,
+) -> None:
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail(reason="Unsupported dtype"))
 
-    import duckdb
-    import pandas as pd
-    import polars as pl
-    import pyarrow as pa
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 0, 0):
+        pytest.skip(reason="too old to convert to decimal")
 
-    data = {"a": [1, 2, 3]}
+    data = {"a": [1.1, 2.2, 3.3]}
 
-    df = pl.DataFrame(data)
-    library_obj_to_test = [
-        df,
-        duckdb.sql("""
-            select cast(a as INT1) as a
-            from df
-                         """),
-        pd.DataFrame(data),
-        pa.Table.from_arrays(
-            [pa.array(data["a"])], schema=pa.schema([("a", pa.int64())])
-        ),
-    ]
-    for obj in library_obj_to_test:
-        with pytest.raises(NotImplementedError, match=r"to.+Decimal.+not supported."):
-            (
-                nw.from_native(obj)  # type: ignore[call-overload]
-                .with_columns(a=nw.col("a").cast(nw.Decimal()))
-                .to_native()
-            )
+    df = nw.from_native(constructor(data))
+
+    if df.implementation.is_pandas_like() and (
+        PYARROW_VERSION == (0, 0, 0) or PANDAS_VERSION < (2, 2)
+    ):
+        pytest.skip(reason="pyarrow is required to convert to decimal dtype")
+
+    native_result = df.with_columns(
+        a=nw.col("a").cast(nw.Decimal(precision=precision, scale=scale))
+    ).to_native()
+
+    schema = nw.from_native(native_result).collect_schema()
+    assert schema["a"] == nw.Decimal(precision, scale)
+
+
+@pytest.mark.parametrize(
+    ("precision", "scale", "exception", "msg"),
+    [
+        (2.1, 0, TypeError, "precision must be a positive integer between 0 and 38"),
+        ("foo", 0, TypeError, "precision must be a positive integer between 0 and 38"),
+        (-1, 0, ValueError, "precision must be a positive integer between 0 and 38"),
+        (39, 0, ValueError, "precision must be a positive integer between 0 and 38"),
+        (None, 2.1, TypeError, "scale must be a positive integer"),
+        (None, "foo", TypeError, "scale must be a positive integer"),
+        (None, -1, ValueError, "scale must be a positive integer"),
+        (2, 3, InvalidOperationError, "scale must be less than or equal to precision"),
+    ],
+)
+def test_decimal_invalid(
+    precision: int | None, scale: int, exception: type[Exception], msg: str
+) -> None:
+    with pytest.raises(exception, match=msg):
+        nw.Decimal(precision=precision, scale=scale)
 
 
 @pytest.mark.parametrize(
@@ -517,8 +541,10 @@ def test_enum_repr() -> None:
 
 
 def test_enum_hash() -> None:
-    assert nw.Enum(["a", "b"]) in {nw.Enum(["a", "b"])}
-    assert nw.Enum(["a", "b"]) not in {nw.Enum(["a", "b", "c"])}
+    dtype = nw.Enum(["a", "b"])
+    assert_equal_hash(dtype, nw.Enum(["a", "b"]))
+    with pytest.raises(AssertionError):
+        assert_equal_hash(dtype, nw.Enum(["a", "b", "c"]))
 
 
 @pytest.mark.xfail(

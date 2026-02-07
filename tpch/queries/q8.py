@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 import narwhals as nw
@@ -21,8 +21,8 @@ def query(
     nation = "BRAZIL"
     region = "AMERICA"
     type = "ECONOMY ANODIZED STEEL"
-    date1 = date(1995, 1, 1)
-    date2 = date(1996, 12, 31)
+    date1 = datetime(1995, 1, 1)
+    date2 = datetime(1996, 12, 31)
 
     n1 = nation_ds.select("n_nationkey", "n_regionkey")
     n2 = nation_ds.select("n_nationkey", "n_name")

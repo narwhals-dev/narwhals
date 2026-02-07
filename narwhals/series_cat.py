@@ -20,7 +20,7 @@ class SeriesCatNamespace(Generic[SeriesT]):
             >>> s.cat.get_categories().to_native()
             0    apple
             1    mango
-            dtype: object
+            dtype: str
         """
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.cat.get_categories()

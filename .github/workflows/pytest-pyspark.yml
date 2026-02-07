@@ -14,7 +14,7 @@ on:
 env:
   PY_COLORS: 1
   PYTEST_ADDOPTS: "--numprocesses=logical"
-
+  UV_SYSTEM_PYTHON: 1
 jobs:
 
   pytest-pyspark-constructor:
@@ -35,9 +35,9 @@ jobs:
           cache-suffix: pyspark-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
-        run: uv pip install -e . --group core-tests --group extra --system
+        run: uv pip install -e . --group core-tests
       - name: install pyspark
-        run: uv pip install -e ".[pyspark]" --system
+        run: uv pip install -e ".[pyspark]"
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
@@ -75,9 +75,9 @@ jobs:
 
       - name: install-reqs
         # temporary pin to get CI green
-        run: uv pip install -e . --group core-tests --group extra "pyarrow<22.0" --system
+        run: uv pip install -e . --group core-tests --group extra "pyarrow<22.0"
       - name: install pyspark
-        run: echo "setuptools<78" | uv pip install -e . "pyspark[connect]==${SPARK_VERSION}" --system
+        run: echo "setuptools<78" | uv pip install -e . "pyspark[connect]==${SPARK_VERSION}"
       - name: show-deps
         run: uv pip freeze
       

@@ -1,13 +1,18 @@
 from __future__ import annotations
 
-import os
 from typing import TYPE_CHECKING, Any
 
 import pytest
 
 import narwhals as nw
 from narwhals.exceptions import InvalidOperationError
-from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
+from tests.utils import (
+    POLARS_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+    xfail_if_pyspark_connect,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
@@ -27,15 +32,6 @@ def xfail_if_no_default(constructor: Constructor, request: pytest.FixtureRequest
     lazy_non_polars_constructors = ("dask", "duckdb", "ibis", "pyspark", "sqlframe")
     if any(x in str(constructor) for x in lazy_non_polars_constructors):
         reason = "non-polars lazy backends require default parameter to be provided"
-        request.applymarker(pytest.mark.xfail(reason=reason))
-
-
-def xfail_if_pyspark_connect(  # pragma: no cover
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    is_spark_connect = os.environ.get("SPARK_CONNECT", None)
-    if is_spark_connect and "pyspark" in str(constructor):
-        reason = "`mapping_expr[expr]` raises: pyspark.errors.exceptions.base.PySparkTypeError: [UNSUPPORTED_DATA_TYPE] Unsupported DataType `Column`."
         request.applymarker(pytest.mark.xfail(reason=reason))
 
 
@@ -139,7 +135,11 @@ def test_replace_strict_pandas_unnamed_series() -> None:
 def test_replace_strict_expr_with_default(
     constructor: Constructor, request: pytest.FixtureRequest, return_dtype: DType | None
 ) -> None:
-    xfail_if_pyspark_connect(constructor, request)
+    spark_connect_reason = (
+        "`mapping_expr[expr]` raises: pyspark.errors.exceptions.base.PySparkTypeError: "
+        "[UNSUPPORTED_DATA_TYPE] Unsupported DataType `Column`."
+    )
+    xfail_if_pyspark_connect(constructor, request, reason=spark_connect_reason)
 
     if "polars" in str(constructor) and polars_lt_v1:
         pytest.skip(reason=pl_skip_reason)

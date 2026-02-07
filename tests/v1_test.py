@@ -39,6 +39,7 @@ from tests.utils import (
     Constructor,
     ConstructorEager,
     assert_equal_data,
+    assert_equal_hash,
     assert_equal_series,
 )
 
@@ -531,10 +532,10 @@ def test_dtypes() -> None:
         pd.DataFrame({"a": [1], "b": [datetime(2020, 1, 1)], "c": [timedelta(1)]})
     )
     dtype = df.collect_schema()["b"]
-    assert dtype in {nw_v1.Datetime}
+    assert_equal_hash(dtype, nw_v1.Datetime)
     assert isinstance(dtype, nw_v1.Datetime)
     dtype = df.lazy().schema["c"]
-    assert dtype in {nw_v1.Duration}
+    assert_equal_hash(dtype, nw_v1.Duration)
     assert isinstance(dtype, nw_v1.Duration)
 
 
@@ -955,6 +956,17 @@ def test_deprecated_expr_methods() -> None:
         "g": [3, 3],
         "h": [2, 2],
     }
+    assert_equal_data(result, expected)
+
+
+def test_first_last() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    data = {"a": [0, 0, 2, -1]}
+    df = nw_v1.from_native(pd.DataFrame(data), eager_only=True)
+    result = df.select(b=nw_v1.col("a").first(), c=nw_v1.col("a").last())
+    expected = {"b": [0], "c": [-1]}
     assert_equal_data(result, expected)
 
 

@@ -173,8 +173,15 @@ def native_to_narwhals_dtype(ibis_dtype: IbisDataType, version: Version) -> DTyp
                 for name, dtype in ibis_dtype.items()
             ]
         )
-    if ibis_dtype.is_decimal():  # pragma: no cover
-        return dtypes.Decimal()
+    if is_decimal(ibis_dtype):
+        # Same default as in ibis.Decimal.{to_polars, to_pyarrow}
+        # https://github.com/ibis-project/ibis/blob/5028d8e5e1921d5de48f59fad48b86c0de541b0d/ibis/formats/polars.py#L82-L86
+        # https://github.com/ibis-project/ibis/blob/5028d8e5e1921d5de48f59fad48b86c0de541b0d/ibis/formats/pyarrow.py#L165-L177
+        # According to their own comment:
+        # > set default precision and scale to something; unclear how to choose this
+        # source: (see https://github.com/ibis-project/ibis/blob/5028d8e5e1921d5de48f59fad48b86c0de541b0d/ibis/formats/pyarrow.py#L166)
+        scale = 9 if ibis_dtype.scale is None else ibis_dtype.scale
+        return dtypes.Decimal(precision=ibis_dtype.precision, scale=scale)
     if ibis_dtype.is_time():
         return dtypes.Time()
     if ibis_dtype.is_binary():
@@ -202,6 +209,10 @@ def is_floating(obj: IbisDataType) -> TypeIs[ibis_dtypes.Floating]:
     return obj.is_floating()
 
 
+def is_decimal(obj: IbisDataType) -> TypeIs[ibis_dtypes.Decimal]:
+    return obj.is_decimal()
+
+
 dtypes = Version.MAIN.dtypes
 NW_TO_IBIS_DTYPES: Mapping[type[DType], IbisDataType] = {
     dtypes.Float64: ibis_dtypes.Float64(),
@@ -219,7 +230,6 @@ NW_TO_IBIS_DTYPES: Mapping[type[DType], IbisDataType] = {
     dtypes.UInt16: ibis_dtypes.UInt16(),
     dtypes.UInt32: ibis_dtypes.UInt32(),
     dtypes.UInt64: ibis_dtypes.UInt64(),
-    dtypes.Decimal: ibis_dtypes.Decimal(),
 }
 # Enum support: https://github.com/ibis-project/ibis/issues/10991
 UNSUPPORTED_DTYPES = (dtypes.Int128, dtypes.UInt128, dtypes.Categorical, dtypes.Enum)
@@ -246,6 +256,8 @@ def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> IbisDataType
     if isinstance_or_issubclass(dtype, dtypes.Array):
         inner = narwhals_to_native_dtype(dtype.inner, version)
         return ibis_dtypes.Array(value_type=inner, length=dtype.size)
+    if isinstance_or_issubclass(dtype, dtypes.Decimal):
+        return ibis_dtypes.Decimal(dtype.precision, dtype.scale)
     if issubclass(base_type, UNSUPPORTED_DTYPES):
         msg = f"Converting to {base_type.__name__} dtype is not supported for Ibis."
         raise NotImplementedError(msg)
