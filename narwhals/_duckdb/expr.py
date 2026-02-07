@@ -39,15 +39,10 @@ if TYPE_CHECKING:
     )
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.namespace import DuckDBNamespace
+    from narwhals._duckdb.utils import duckdb_dtypes
     from narwhals._typing import NoDefault
     from narwhals._utils import _LimitedContext
     from narwhals.typing import FillNullStrategy, IntoDType, RollingInterpolationMethod
-
-    try:
-        import duckdb.sqltypes as duckdb_dtypes
-    except ModuleNotFoundError:
-        # DuckDB pre 1.3
-        import duckdb.typing as duckdb_dtypes
 
     DuckDBWindowFunction = WindowFunction[DuckDBLazyFrame, Expression]
     DuckDBWindowInputs = WindowInputs[Expression]
