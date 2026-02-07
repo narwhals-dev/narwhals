@@ -44,10 +44,6 @@ class LpBuilder:
     """
 
     @classmethod
-    def from_df(cls, df: DataFrame[Any, Any], /) -> Self:
-        return cls.from_plan(lp.ScanDataFrame.from_narwhals(df))
-
-    @classmethod
     def from_plan(cls, plan: LogicalPlan, /) -> Self:
         obj = cls.__new__(cls)
         obj._plan = plan
@@ -55,6 +51,19 @@ class LpBuilder:
 
     def to_plan(self) -> LogicalPlan:
         return self._plan
+
+    # Scan
+    @classmethod
+    def from_df(cls, df: DataFrame[Any, Any], /) -> Self:
+        return cls.from_plan(lp.ScanDataFrame.from_narwhals(df))
+
+    @classmethod
+    def scan_csv(cls, source: str, /) -> Self:
+        return cls.from_plan(lp.ScanCsv(source=source))
+
+    @classmethod
+    def scan_parquet(cls, source: str, /) -> Self:
+        return cls.from_plan(lp.ScanParquet(source=source))
 
     # TODO @dangotbanned: Decide on if `ProjectionOptions` should be added
     # Either replace `Incomplete` or remove `options` (and the placeholder in `fill_null`)
