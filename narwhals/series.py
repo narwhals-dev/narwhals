@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Iterable, Iterator, Mapping, Sequence
+from functools import partial
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -440,30 +441,26 @@ class Series(Generic[IntoSeriesT]):
             a: [[999,888,3]]
             b: [[4,5,6]]
         """
-        impl = self.implementation
-        Int64 = self._version.dtypes.Int64()  # noqa: N806
-        if not isinstance(indices, Iterable):
-            indices = Series.from_iterable(
-                name="", values=[indices], dtype=Int64, backend=impl
-            )
-        elif not isinstance(indices, Series):
-            indices = Series.from_iterable(
-                name="", values=indices, dtype=Int64, backend=impl
-            )
+        into_series = partial(
+            type(self).from_iterable, name="", backend=self.implementation
+        )
+
+        if not isinstance(indices, Series):
+            if not isinstance(indices, Iterable):
+                indices = [indices]
+            dtypes = self._version.dtypes
+            indices = into_series(values=indices, dtype=dtypes.Int64)
 
         if indices.is_empty():
             return self
 
-        if isinstance(values, str) or not isinstance(values, Iterable):
-            values = Series.from_iterable(name="", values=[values], backend=impl)
-        elif not isinstance(values, Series):
-            values = Series.from_iterable(name="", values=values, backend=impl)
+        if not isinstance(values, Series):
+            if not isinstance(values, Iterable) or isinstance(values, str):
+                values = [values]
+            values = into_series(values=values)
 
-        compliant_indices = self._extract_native(indices)
-        compliant_values = self._extract_native(values)
-        return self._with_compliant(
-            self._compliant_series.scatter(compliant_indices, compliant_values)
-        )
+        result = self._compliant.scatter(indices._compliant, values._compliant)
+        return self._with_compliant(result)
 
     @property
     def shape(self) -> tuple[int]:

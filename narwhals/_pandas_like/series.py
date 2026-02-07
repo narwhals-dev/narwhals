@@ -4,8 +4,6 @@ import operator
 import warnings
 from typing import TYPE_CHECKING, Any, Callable, Literal, overload
 
-import numpy as np
-
 from narwhals._compliant import EagerSeries, EagerSeriesHist
 from narwhals._pandas_like.series_cat import PandasLikeSeriesCatNamespace
 from narwhals._pandas_like.series_dt import PandasLikeSeriesDateTimeNamespace
@@ -13,6 +11,7 @@ from narwhals._pandas_like.series_list import PandasLikeSeriesListNamespace
 from narwhals._pandas_like.series_str import PandasLikeSeriesStringNamespace
 from narwhals._pandas_like.series_struct import PandasLikeSeriesStructNamespace
 from narwhals._pandas_like.utils import (
+    NUMPY_VERSION,
     align_and_extract_native,
     broadcast_series_to_index,
     get_dtype_backend,
@@ -25,7 +24,7 @@ from narwhals._pandas_like.utils import (
     set_index,
 )
 from narwhals._typing_compat import assert_never
-from narwhals._utils import Implementation, is_list_of, no_default, parse_version
+from narwhals._utils import Implementation, is_list_of, no_default
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_like_series
 from narwhals.exceptions import InvalidOperationError
 
@@ -297,20 +296,15 @@ class PandasLikeSeries(EagerSeries[Any]):
         )
         series = native_series if in_place else native_series.copy(deep=True)
 
-        if (is_pandas := impl.is_pandas()) and in_place and parse_version(np) < (2,):
-            values_native = values_native.copy()  # pragma: no cover
+        if impl.is_pandas():
+            if in_place and NUMPY_VERSION < (2,):  # pragma: no cover
+                values_native = values_native.copy()
+            if backend_version < (1, 2):
+                indices_native = indices_native.array
 
-        min_pd_version = (1, 2)
-        if is_pandas and backend_version < min_pd_version:
-            series.iloc[indices_native.values] = values_native  # noqa: PD011
-        else:
-            series.iloc[indices_native] = values_native
+        series.iloc[indices_native] = values_native
 
-        if in_place:
-            return None
-
-        series.name = self.name
-        return self._with_native(series)
+        return None if in_place else self._with_native(series)
 
     def scatter(self, indices: Self, values: Self) -> Self:
         return self._scatter(indices=indices, values=values, in_place=False)
