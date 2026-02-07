@@ -66,6 +66,7 @@ class LpBuilder:
     def scan_parquet(cls, source: str, /) -> Self:
         return cls.from_plan(lp.ScanParquet(source=source))
 
+    # Single Input
     # TODO @dangotbanned: Decide on if `ProjectionOptions` should be added
     # Either replace `Incomplete` or remove `options` (and the placeholder in `fill_null`)
     def select(self, exprs: Seq[ExprIR], options: Incomplete = None) -> Self:
@@ -82,22 +83,6 @@ class LpBuilder:
 
     def sort(self, by: Seq[SelectorIR], options: SortMultipleOptions) -> Self:
         return self.from_plan(lp.Sort(input=self._plan, by=by, options=options))
-
-    def join(
-        self,
-        other: LogicalPlan,
-        left_on: Seq[str],
-        right_on: Seq[str],
-        options: JoinOptions,
-    ) -> Self:
-        return self.from_plan(
-            lp.Join(
-                inputs=(self._plan, other),
-                left_on=left_on,
-                right_on=right_on,
-                options=options,
-            )
-        )
 
     def slice(self, offset: int, length: int | None = None) -> Self:
         return self.from_plan(lp.Slice(input=self._plan, offset=offset, length=length))
@@ -125,6 +110,36 @@ class LpBuilder:
                 separator=separator,
             )
         )
+
+    # Multiple Inputs
+    def join(
+        self,
+        other: LogicalPlan,
+        left_on: Seq[str],
+        right_on: Seq[str],
+        options: JoinOptions,
+    ) -> Self:
+        return self.from_plan(
+            lp.Join(
+                inputs=(self._plan, other),
+                left_on=left_on,
+                right_on=right_on,
+                options=options,
+            )
+        )
+
+    @classmethod
+    def concat(
+        cls,
+        items: Seq[lp.LogicalPlan],
+        *,
+        how: ConcatMethod | Literal["vertical_relaxed", "diagonal_relaxed"] = "vertical",
+    ) -> Self:
+        if how == "horizontal":
+            plan: lp.LogicalPlan = lp.HConcat(inputs=items)
+        else:
+            plan = lp.VConcat(inputs=items, options=VConcatOptions.from_how(how))
+        return cls.from_plan(plan)
 
     # Terminal
     def sink(self, sink: lp.Sink) -> Self:
@@ -180,13 +195,4 @@ class LpBuilder:
         return self.map(lp.Unpivot(on=on, index=index, options=options))
 
 
-def concat(
-    items: Seq[lp.LogicalPlan],
-    *,
-    how: ConcatMethod | Literal["vertical_relaxed", "diagonal_relaxed"] = "vertical",
-) -> LpBuilder:
-    if how == "horizontal":
-        plan: lp.LogicalPlan = lp.HConcat(inputs=items)
-    else:
-        plan = lp.VConcat(inputs=items, options=VConcatOptions.from_how(how))
-    return LpBuilder.from_plan(plan)
+concat = LpBuilder.concat
