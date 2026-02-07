@@ -171,6 +171,15 @@ class Expr:
         Arguments:
             dtype: Data type that the object will be cast into.
 
+        Note:
+            Unlike polars, we don't allow to cast from a temporal to a numeric data type.
+
+            Use `.dt` accessor methods instead, such as:
+
+            * `.dt.timestamp()` for Unix timestamp.
+            * `.dt.year()`, `.dt.month()`, `.dt.day()`, ..., for date components.
+            * `.dt.total_seconds()`, `.dt.total_milliseconds(), ..., for duration total time.
+
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
