@@ -8,6 +8,8 @@ from narwhals._typing_compat import TypeVar
 from narwhals._utils import _StoresNative as StoresNative
 
 if TYPE_CHECKING:
+    from io import BytesIO
+
     import pyarrow as pa
     import pyarrow.compute as pc
     from pyarrow import lib, types
@@ -31,6 +33,7 @@ if TYPE_CHECKING:
     from narwhals._plan.typing import OneOrIterable
     from narwhals._translate import ArrowStreamExportable
     from narwhals.typing import (
+        FileSource,
         SizedMultiIndexSelector as _SizedMultiIndexSelector,
         _AnyDArray,
     )
@@ -283,3 +286,5 @@ RankMethodSingle: TypeAlias = Literal["min", "max", "dense", "ordinal"]
 """
 
 SearchSortedSide: TypeAlias = Literal["left", "right"]
+IOSource: TypeAlias = "FileSource | pa.NativeFile | BytesIO"
+"""Superset of `nw.typing.FileSource`."""

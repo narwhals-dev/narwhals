@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import datetime as dt
 from functools import reduce
 from typing import TYPE_CHECKING, Any, Literal, cast, overload
@@ -15,6 +16,7 @@ from narwhals._plan.expressions.expr import RangeExpr
 from narwhals._plan.expressions.literal import is_literal_scalar
 from narwhals._utils import Implementation, Version
 from narwhals.exceptions import InvalidOperationError
+from narwhals.schema import Schema
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Sequence
@@ -30,6 +32,7 @@ if TYPE_CHECKING:
         BinaryFunction,
         ChunkedArray,
         IntegerScalar,
+        IOSource,
         VariadicFunction,
     )
     from narwhals._plan.expressions import expr, functions as F
@@ -373,3 +376,15 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
 
     scan_csv = todo()
     scan_parquet = todo()
+
+    def read_parquet_schema(self, source: IOSource, /) -> Schema:
+        """Get the schema of a Parquet file without reading data.
+
+        This has a direct path to Cython, and a single call before C++.
+        """
+        import pyarrow.parquet as pq
+
+        reader = pq.ParquetReader()
+        with contextlib.closing(reader.open(source)):
+            schema = reader.schema_arrow
+        return Schema.from_arrow(schema)
