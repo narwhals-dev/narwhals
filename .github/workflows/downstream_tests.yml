@@ -574,13 +574,7 @@ jobs:
       - name: install-deps
         run: |
           cd darts
-          # Temporary pin until it's addressed upstream.
-          uv pip install "pandas<3"
-          uv pip install \
-          -r requirements/core.txt \
-          -r requirements/dev.txt \
-          llvmlite==0.46.0 \
-          numba==0.63.1
+          uv pip install . --group dev
       - name: install-narwhals-dev
         run: |
           uv pip uninstall narwhals
