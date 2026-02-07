@@ -300,7 +300,7 @@ class PandasLikeSeries(EagerSeries[Any]):
             if in_place and NUMPY_VERSION < (2,):  # pragma: no cover
                 values_native = values_native.copy()
             if backend_version < (1, 2):
-                indices_native = indices_native.array
+                indices_native = indices_native.to_numpy()
 
         series.iloc[indices_native] = values_native
 
