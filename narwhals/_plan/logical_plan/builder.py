@@ -21,9 +21,10 @@ if TYPE_CHECKING:
         JoinOptions,
         SortMultipleOptions,
         UniqueOptions,
+        UnpivotOptions,
     )
     from narwhals._plan.typing import Seq
-    from narwhals.typing import FileSource
+    from narwhals.typing import FileSource, PivotAgg
 
 
 __all__ = ["LpBuilder"]
@@ -94,6 +95,27 @@ class LpBuilder:
     def unique(self, subset: Seq[SelectorIR] | None, options: UniqueOptions) -> Self:
         return self.from_plan(lp.Unique(input=self._plan, subset=subset, options=options))
 
+    def pivot(
+        self,
+        on: SelectorIR,
+        on_columns: Incomplete,
+        index: SelectorIR,
+        values: SelectorIR,
+        agg: PivotAgg | None,
+        separator: str,
+    ) -> Self:
+        return self.from_plan(
+            lp.Pivot(
+                input=self._plan,
+                on=on,
+                on_columns=on_columns,
+                index=index,
+                values=values,
+                agg=agg,
+                separator=separator,
+            )
+        )
+
     # Terminal
     def sink(self, sink: lp.Sink) -> Self:
         if isinstance(self._plan, lp.Sink):
@@ -141,3 +163,8 @@ class LpBuilder:
 
     def with_row_index(self, name: str = "index") -> Self:
         return self.map(lp.RowIndex(name=name))
+
+    def unpivot(
+        self, on: SelectorIR | None, index: SelectorIR, options: UnpivotOptions
+    ) -> Self:
+        return self.map(lp.Unpivot(on=on, index=index, options=options))

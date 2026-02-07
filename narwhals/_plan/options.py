@@ -373,3 +373,13 @@ class JoinOptions(Immutable):
     __slots__ = ("how", "suffix")
     how: JoinStrategy
     suffix: str
+
+
+class UnpivotOptions(Immutable):
+    __slots__ = ("value_name", "variable_name")
+    variable_name: str
+    value_name: str
+
+    @staticmethod
+    def default() -> UnpivotOptions:
+        return UnpivotOptions(variable_name="variable", value_name="value")

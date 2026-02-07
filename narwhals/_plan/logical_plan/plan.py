@@ -11,6 +11,8 @@ from narwhals._utils import qualified_type_name, zip_strict
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
+    from typing_extensions import TypeAlias
+
     from narwhals._plan.dataframe import DataFrame
     from narwhals._plan.expressions import ExprIR, SelectorIR
     from narwhals._plan.options import (
@@ -18,14 +20,20 @@ if TYPE_CHECKING:
         JoinOptions,
         SortMultipleOptions,
         UniqueOptions,
+        UnpivotOptions,
         VConcatOptions,
     )
     from narwhals._plan.schema import FrozenSchema
+    from narwhals.typing import PivotAgg
 
+Incomplete: TypeAlias = Any
 _InputsT = TypeVar("_InputsT", bound="Seq[LogicalPlan]")
 
 
-# TODO @dangotbanned: Add `LogicalPlan`s for ops in `nw.*Frame`, that aren't yet in `nwp.*Frame`
+# NOTE: `__repr__`(s) adapted from:
+# - https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-plan/src/plans/ir/format.rs#L148-L267
+# - https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-plan/src/plans/ir/format.rs#L705-L1006
+# - https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-plan/src/plans/functions/mod.rs#L302-L382
 class LogicalPlan(Immutable):
     """Representation of `LazyFrame` operations, based on [`polars_plan::dsl::plan::DslPlan`].
 
@@ -234,6 +242,20 @@ class GroupBy(SingleInput):
         raise NotImplementedError(msg)
 
 
+# TODO @dangotbanned: Add repr
+class Pivot(SingleInput):
+    # https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-plan/src/dsl/plan.rs#L109-L115
+    __slots__ = ("agg", "index", "on", "on_columns", "separator", "values")
+    on: SelectorIR
+    on_columns: Incomplete
+    """`DataFrame` in both narwhals and polars (not `DataFrameScan`)."""
+    index: SelectorIR
+    values: SelectorIR
+    agg: PivotAgg | None
+    """polars has *just* `Expr`."""
+    separator: str
+
+
 # `DslPlan::Distinct`
 class Unique(SingleInput):
     __slots__ = ("options", "subset")
@@ -344,6 +366,21 @@ class Unnest(LpFunction):
 
     def __repr__(self) -> str:
         return f"UNNEST by: {self.columns!r}"
+
+
+# TODO @dangotbanned: Add repr
+class Unpivot(LpFunction):
+    # NOTE: polars version is different and probably more efficient, but here:
+    # - Trying to avoid `None`
+    # - Keeping selectors outside of `*Options` for now
+    # https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-plan/src/plans/functions/dsl.rs#L40-L42
+    # https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-plan/src/dsl/options/mod.rs#L189-L194
+    __slots__ = ("index", "on", "options")
+    on: SelectorIR | None
+    """Default `~index`."""
+    index: SelectorIR
+    """Default `all()`."""
+    options: UnpivotOptions
 
 
 class RowIndex(LpFunction):
