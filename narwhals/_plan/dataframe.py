@@ -758,7 +758,7 @@ class DataFrame(
     # NOTE: Using for testing
     # Actually integrating will mean rewriting the current `DataFrame`, `BaseFrame` impls
     # Everything is one-way, you can build a `LogicalPlan` but nothing useful beyond that
-    def _to_lp_builder(self) -> LpBuilder:
+    def _to_lp_builder(self) -> LpBuilder:  # pragma: no cover
         return LpBuilder.from_df(self)
 
 

@@ -374,7 +374,7 @@ class VConcatOptions(Immutable):
         /,
         *,
         maintain_order: bool = True,
-    ) -> VConcatOptions:
+    ) -> VConcatOptions:  # pragma: no cover
         return VConcatOptions(
             diagonal=(how.startswith("diagonal")),
             to_supertypes=how.endswith("relaxed"),
@@ -394,5 +394,5 @@ class UnpivotOptions(Immutable):
     value_name: str
 
     @staticmethod
-    def default() -> UnpivotOptions:
+    def default() -> UnpivotOptions:  # pragma: no cover
         return UnpivotOptions(variable_name="variable", value_name="value")
