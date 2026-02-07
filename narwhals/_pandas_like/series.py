@@ -311,8 +311,7 @@ class PandasLikeSeries(EagerSeries[Any]):
             self.native.iloc[indices.native] = values_native
 
     def cast(self, dtype: IntoDType) -> Self:
-        if (version := self._version) != Version.V1:
-            _validate_cast_temporal_to_numeric(source=self.dtype, target=dtype)
+        _validate_cast_temporal_to_numeric(source=self.dtype, target=dtype)
         if self.dtype == dtype and self.native.dtype != "object":
             # Avoid dealing with pandas' type-system if we can. Note that it's only
             # safe to do this if we're not starting with object dtype, see tests/expr_and_series/cast_test.py::test_cast_object_pandas
@@ -322,7 +321,7 @@ class PandasLikeSeries(EagerSeries[Any]):
             dtype,
             dtype_backend=get_dtype_backend(self.native.dtype, self._implementation),
             implementation=self._implementation,
-            version=version,
+            version=self._version,
         )
         return self._with_native(self.native.astype(pd_dtype), preserve_broadcast=True)
 

@@ -271,12 +271,12 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
 
     def cast(self, dtype: IntoDType) -> Self:
         def func(df: IbisLazyFrame) -> list[ir.Value]:
-            if (version := self._version) != Version.V1 and dtype.is_numeric():
+            if dtype.is_numeric():
                 schema = df.collect_schema()
                 for name in self._evaluate_output_names(df):
                     _validate_cast_temporal_to_numeric(source=schema[name], target=dtype)
 
-            native_dtype = narwhals_to_native_dtype(dtype, version)
+            native_dtype = narwhals_to_native_dtype(dtype, self._version)
             return [expr.cast(native_dtype) for expr in self(df)]  # pyright: ignore[reportArgumentType, reportCallIssue]
 
         return self.__class__(

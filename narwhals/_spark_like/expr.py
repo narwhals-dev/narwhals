@@ -250,7 +250,7 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
 
     def cast(self, dtype: IntoDType) -> Self:
         def _validated_dtype(dtype: IntoDType, df: SparkLikeLazyFrame) -> _NativeDType:
-            if (version := self._version) != Version.V1 and dtype.is_numeric():
+            if dtype.is_numeric():
                 schema: dict[str, DType] = {}
                 with suppress(Exception):
                     schema = df.collect_schema()
@@ -262,7 +262,7 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
                         )
 
             return narwhals_to_native_dtype(
-                dtype, version, self._native_dtypes, df.native.sparkSession
+                dtype, self._version, self._native_dtypes, df.native.sparkSession
             )
 
         def func(df: SparkLikeLazyFrame) -> Sequence[Column]:

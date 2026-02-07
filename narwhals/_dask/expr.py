@@ -616,12 +616,12 @@ class DaskExpr(
 
     def cast(self, dtype: IntoDType) -> Self:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            if (version := self._version) != Version.V1 and dtype.is_numeric():
+            if dtype.is_numeric():
                 schema = df.schema
                 for name in self._evaluate_output_names(df):
                     _validate_cast_temporal_to_numeric(source=schema[name], target=dtype)
 
-            native_dtype = narwhals_to_native_dtype(dtype, version)
+            native_dtype = narwhals_to_native_dtype(dtype, self._version)
             return [expr.astype(native_dtype) for expr in self._call(df)]
 
         return self.__class__(

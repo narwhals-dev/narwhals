@@ -276,13 +276,13 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
         def _validated_dtype(
             dtype: IntoDType, df: DuckDBLazyFrame
         ) -> duckdb_dtypes.DuckDBPyType:
-            if (version := self._version) != Version.V1 and dtype.is_numeric():
+            if dtype.is_numeric():
                 schema = df.collect_schema()
                 for name in self._evaluate_output_names(df):
                     _validate_cast_temporal_to_numeric(source=schema[name], target=dtype)
 
             tz = DeferredTimeZone(df.native)
-            return narwhals_to_native_dtype(dtype, version, tz)
+            return narwhals_to_native_dtype(dtype, self._version, tz)
 
         def func(df: DuckDBLazyFrame) -> list[Expression]:
             native_dtype = _validated_dtype(dtype, df)

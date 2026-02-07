@@ -571,9 +571,8 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return self._with_native(pc.is_nan(self.native), preserve_broadcast=True)
 
     def cast(self, dtype: IntoDType) -> Self:
-        if (version := self._version) != Version.V1:
-            _validate_cast_temporal_to_numeric(source=self.dtype, target=dtype)
-        data_type = narwhals_to_native_dtype(dtype, version)
+        _validate_cast_temporal_to_numeric(source=self.dtype, target=dtype)
+        data_type = narwhals_to_native_dtype(dtype, self._version)
         return self._with_native(pc.cast(self.native, data_type), preserve_broadcast=True)
 
     def null_count(self, *, _return_py_scalar: bool = True) -> int:

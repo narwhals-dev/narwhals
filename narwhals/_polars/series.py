@@ -289,9 +289,8 @@ class PolarsSeries:
         return self._from_native_object(self.native.__getitem__(item))
 
     def cast(self, dtype: IntoDType) -> Self:
-        if (version := self._version) != Version.V1:
-            _validate_cast_temporal_to_numeric(source=self.dtype, target=dtype)
-        dtype_pl = narwhals_to_native_dtype(dtype, version)
+        _validate_cast_temporal_to_numeric(source=self.dtype, target=dtype)
+        dtype_pl = narwhals_to_native_dtype(dtype, version=self._version)
         return self._with_native(self.native.cast(dtype_pl))
 
     def clip(self, lower_bound: PolarsSeries, upper_bound: PolarsSeries) -> Self:
