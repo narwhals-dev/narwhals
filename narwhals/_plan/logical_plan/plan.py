@@ -172,7 +172,7 @@ class ScanDataFrame(Scan):
     def __str__(self) -> str:
         return (
             f"{type(self).__name__}("
-            f"df=nw.DataFrame[{qualified_type_name(self.df.to_native())}](...), "
+            f"df=nw.{type(self.df).__name__}[{qualified_type_name(self.df.to_native())}](...), "
             f"schema={self.schema!s})"
         )
 
@@ -258,18 +258,15 @@ class Filter(SingleInput):
         return f"FILTER {self.predicate!r}\nFROM"
 
 
-# TODO @dangotbanned: Add repr
 class GroupBy(SingleInput):
     __slots__ = ("aggs", "keys")
     keys: Seq[ExprIR]
     aggs: Seq[ExprIR]
 
     def __repr__(self) -> str:
-        msg = f"TODO: `{type(self).__name__}.__repr__`"
-        raise NotImplementedError(msg)
+        return f"AGGREGATE\n  {list(self.aggs)!r} BY {list(self.keys)!r}"
 
 
-# TODO @dangotbanned: Add repr
 class Pivot(SingleInput):
     # https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-plan/src/dsl/plan.rs#L109-L115
     __slots__ = ("agg", "index", "on", "on_columns", "separator", "values")
@@ -282,6 +279,10 @@ class Pivot(SingleInput):
     """polars has *just* `Expr`."""
     separator: str
 
+    def __repr__(self) -> str:
+        # NOTE: Only exists in `DslPlan`, not `IR` which defines the displays
+        return "PIVOT[...]"
+
 
 # `DslPlan::Distinct`
 class Unique(SingleInput):
@@ -290,19 +291,26 @@ class Unique(SingleInput):
     options: UniqueOptions
 
     def __repr__(self) -> str:
-        opts = self.options
-        return f"UNIQUE[maintain_order: {opts.maintain_order}, keep: {opts.keep}] BY {self.subset!r}"
+        s = f"UNIQUE[maintain_order: {self.options.maintain_order}, keep: {self.options.keep}]"
+        if subset := self.subset:
+            s += f"BY {list(subset)!r}"
+        return s
 
 
-# TODO @dangotbanned: Add repr
 class Sort(SingleInput):
     __slots__ = ("by", "options")
     by: Seq[SelectorIR]
     options: SortMultipleOptions
 
     def __repr__(self) -> str:
-        msg = f"TODO: `{type(self).__name__}.__repr__`"
-        raise NotImplementedError(msg)
+        opts = self.options
+        exprs = ", ".join(f"{e!r}" for e in self.by)
+        s = f"SORT BY[{exprs}"
+        if any(opts.descending):
+            s += f", descending: {list(opts.descending)}"
+        if any(opts.nulls_last):
+            s += f", nulls_last: {list(opts.nulls_last)}"
+        return f"{s}]"
 
 
 class Slice(SingleInput):
@@ -395,7 +403,6 @@ class Unnest(LpFunction):
         return f"UNNEST by: {self.columns!r}"
 
 
-# TODO @dangotbanned: Add repr
 class Unpivot(LpFunction):
     # NOTE: polars version is different and probably more efficient, but here:
     # - Trying to avoid `None`
@@ -408,6 +415,10 @@ class Unpivot(LpFunction):
     index: SelectorIR
     """Default `all()`."""
     options: UnpivotOptions
+
+    def __repr__(self) -> str:
+        var, val = self.options.variable_name, self.options.value_name
+        return f"UNPIVOT[on: {self.on!r}, index: {self.index!r}, variable_name: {var}, value_name: {val}]"
 
 
 class RowIndex(LpFunction):
