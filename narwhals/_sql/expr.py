@@ -901,6 +901,22 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
 
         return self._with_callable(lambda expr: self._function("mode", expr))
 
+    def filter(self, *predicates: Self) -> Self:
+        plx = self.__narwhals_namespace__()
+        predicate = plx.all_horizontal(*predicates, ignore_nulls=False)
+
+        def func(df: SQLLazyFrameT) -> list[NativeExprT]:
+            mask = df._evaluate_single_output_expr(predicate)
+            return [self._when(mask, value=expr) for expr in self(df)]
+
+        return self.__class__(
+            func,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
+            implementation=self._implementation,
+        )
+
     # Namespaces
     @property
     def str(self) -> SQLExprStringNamespace[Self]: ...
@@ -909,5 +925,4 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
     def dt(self) -> SQLExprDateTimeNamesSpace[Self]: ...
 
     drop_nulls = not_implemented()  # type: ignore[misc]
-    filter = not_implemented()  # type: ignore[misc]
     unique = not_implemented()  # type: ignore[misc]
