@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 from contextlib import nullcontext as does_not_raise
+from typing import TYPE_CHECKING
 
 import pytest
 
 import narwhals as nw
 from tests.utils import Constructor, assert_equal_data
+
+if TYPE_CHECKING:
+    from narwhals.typing import PythonLiteral
 
 
 def test_anyh(constructor: Constructor) -> None:
@@ -85,3 +89,21 @@ def test_anyh_all(constructor: Constructor) -> None:
     result = df.select(nw.any_horizontal(nw.all(), ignore_nulls=False))
     expected = {"a": [False, True, True]}
     assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("exprs", "name"),
+    [
+        ((nw.col("a"), False), "a"),
+        ((nw.col("a"), nw.lit(False)), "a"),
+        ((False, nw.col("a")), "literal"),
+        ((nw.lit(False), nw.col("a")), "literal"),
+    ],
+)
+def test_anyh_with_scalars(
+    constructor: Constructor, exprs: tuple[PythonLiteral | nw.Expr, ...], name: str
+) -> None:
+    data = {"a": [False, True]}
+    df = nw.from_native(constructor(data))
+    result = df.select(nw.any_horizontal(*exprs, ignore_nulls=True))
+    assert_equal_data(result, {name: [False, True]})

@@ -1,11 +1,14 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 import narwhals as nw
 from tests.utils import DUCKDB_VERSION, Constructor, assert_equal_data
+
+if TYPE_CHECKING:
+    from narwhals.typing import PythonLiteral
 
 
 def test_sumh(constructor: Constructor) -> None:
@@ -60,3 +63,21 @@ def test_sumh_transformations(constructor: Constructor) -> None:
     result = df.select(d=nw.sum_horizontal("a", nw.lit(None, dtype=nw.Float64), "c"))
     expected = {"d": [8.0, 10.0, 12.0]}
     assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("exprs", "name"),
+    [
+        ((nw.col("a"), 1), "a"),
+        ((nw.col("a"), nw.lit(1)), "a"),
+        ((1, nw.col("a")), "literal"),
+        ((nw.lit(1), nw.col("a")), "literal"),
+    ],
+)
+def test_sumh_with_scalars(
+    constructor: Constructor, exprs: tuple[PythonLiteral | nw.Expr, ...], name: str
+) -> None:
+    data = {"a": [1, 2, 3]}
+    df = nw.from_native(constructor(data))
+    result = df.select(nw.sum_horizontal(*exprs))
+    assert_equal_data(result, {name: [2, 3, 4]})
