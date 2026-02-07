@@ -45,7 +45,7 @@ class LpBuilder:
 
     @classmethod
     def from_df(cls, df: DataFrame[Any, Any], /) -> Self:
-        return cls.from_plan(lp.DataFrameScan.from_narwhals(df))
+        return cls.from_plan(lp.ScanDataFrame.from_narwhals(df))
 
     @classmethod
     def from_plan(cls, plan: LogicalPlan, /) -> Self:

@@ -103,10 +103,15 @@ class LogicalPlan(Immutable):
         raise NotImplementedError(msg)
 
 
-# TODO @dangotbanned: Add `ScanCsv`, `ScanParquet` (after adding them in #2572)
-# TODO @dangotbanned: Maybe rename this to `Scan` for consistency with polars
-class Source(LogicalPlan):
-    """Root node of a `LogicalPlan`."""
+class Scan(LogicalPlan):
+    """Root node of a `LogicalPlan`.
+
+    All plans start with either:
+    - Reading from a file (`ScanFile`)
+    - Reading from an in-memory dataset (`ScanDataFrame`)
+
+    So the next question is, how do we introduce native lazy objects into mix?
+    """
 
     def iter_left(self) -> Iterator[LogicalPlan]:
         yield self
@@ -115,17 +120,31 @@ class Source(LogicalPlan):
         yield self
 
 
-# TODO @dangotbanned: Careful think about how (non-scan) source nodes should work
+class ScanFile(Scan):
+    # https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-plan/src/dsl/plan.rs#L43-L52
+    # https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-plan/src/dsl/file_scan/mod.rs#L47-L74
+    __slots__ = ("source",)
+    source: str
+
+
+class ScanCsv(ScanFile): ...
+
+
+class ScanParquet(ScanFile): ...
+
+
+# TODO @dangotbanned: Careful think about how (non-`ScanFile`) source nodes should work
 # - Schema only?
 # - Different for eager vs lazy?
-class DataFrameScan(Source):
+class ScanDataFrame(Scan):
+    # https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-plan/src/dsl/plan.rs#L53-L58
     __slots__ = ("df", "schema")
     df: DataFrame[Any, Any]
     schema: FrozenSchema
 
     # NOTE: Probably want a `staticmethod`, change if nothing is needed from `cls`
     @classmethod
-    def from_narwhals(cls, df: DataFrame[Any, Any]) -> DataFrameScan:
+    def from_narwhals(cls, df: DataFrame[Any, Any]) -> ScanDataFrame:
         obj = cls.__new__(cls)
         object.__setattr__(obj, "df", df.clone())
         object.__setattr__(obj, "schema", freeze_schema(df.schema))
@@ -134,7 +153,7 @@ class DataFrameScan(Source):
     @property
     def __immutable_values__(self) -> Iterator[Any]:
         # NOTE: Deferring how to handle the hash *for now*
-        # Currently, every `DataFrameSource` will have a unique pseudo-hash
+        # Currently, every `ScanDataFrame` will have a unique pseudo-hash
         # Caching a native table seems like a non-starter, once `pandas` enters the party
         yield from (id(self.df), self.schema)
 
