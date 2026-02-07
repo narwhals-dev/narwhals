@@ -192,6 +192,11 @@ class LpBuilder:
     def unpivot(
         self, on: SelectorIR | None, index: SelectorIR, options: UnpivotOptions
     ) -> Self:
+        # NOTE: polars uses `cs.empty()` when `index` is None
+        # but `on` goes through a very long chain as None:
+        #   (python) -> `PyLazyFrame` -> `LazyFrame` -> `DslPlan` -> `UnpivotArgsDSL`
+        # then finally filled in for `UnpivotArgsIR::new`
+        # https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-core/src/frame/explode.rs#L34-L49
         return self.map(lp.Unpivot(on=on, index=index, options=options))
 
 
