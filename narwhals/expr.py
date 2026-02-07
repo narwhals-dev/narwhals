@@ -12,7 +12,7 @@ from narwhals._utils import (
     no_default,
     unstable,
 )
-from narwhals.dtypes import _validate_dtype
+from narwhals.dtypes._utils import validate_dtype
 from narwhals.exceptions import ComputeError, InvalidOperationError
 from narwhals.expr_cat import ExprCatNamespace
 from narwhals.expr_dt import ExprDateTimeNamespace
@@ -186,7 +186,7 @@ class Expr:
             |   2  3.0    8    |
             └──────────────────┘
         """
-        _validate_dtype(dtype)
+        validate_dtype(dtype)
         return self._append_node(ExprNode(ExprKind.ELEMENTWISE, "cast", dtype=dtype))
 
     # --- binary ---

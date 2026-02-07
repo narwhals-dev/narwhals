@@ -19,6 +19,7 @@ nav:
     - concepts/column_names.md
     - concepts/boolean.md
     - concepts/null_handling.md
+    - concepts/promotion-rules.md
   - Overhead: overhead.md
   - Perfect backwards compatibility policy: backcompat.md
   - Extensions and Plugins: extending.md
@@ -81,8 +82,9 @@ theme:
   favicon: assets/logo.svg
   logo: assets/logo.svg
   features:
-    - content.code.copy
     - content.code.annotate
+    - content.code.copy
+    - content.footnote.tooltips
     - navigation.footer
     - navigation.indexes
     - navigation.top
@@ -126,13 +128,14 @@ plugins:
 
 hooks:
 - utils/generate_backend_completeness.py
+- utils/generate_supertyping.py
 - utils/generate_zen_content.py
-
 
 markdown_extensions:
 - admonition
 - md_in_html
 - pymdownx.details
+- footnotes
 - pymdownx.tabbed:
     alternate_style: true
 - pymdownx.superfences:
