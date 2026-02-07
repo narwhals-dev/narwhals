@@ -10,7 +10,6 @@ from tests.utils import (
     PANDAS_VERSION,
     Constructor,
     assert_equal_data,
-    is_windows,
     pyspark_session,
     sqlframe_session,
 )
@@ -28,6 +27,8 @@ if TYPE_CHECKING:
 
     from narwhals._typing import EagerAllowed, _LazyOnly, _SparkLike
     from narwhals.typing import FileSource
+
+    Factory: TypeAlias = pytest.TempPathFactory
 
 IOSourceKind: TypeAlias = Literal["str", "Path", "PathLike"]
 
@@ -56,29 +57,32 @@ def _into_file_source(source: Path, which: IOSourceKind, /) -> FileSource:
     return mapping[which]
 
 
+def _path(factory: Factory, name: str, /) -> Path:
+    # NOTE: Generates a path on windows that contains `\\n` and `\\t`
+    # See https://github.com/narwhals-dev/narwhals/issues/3422
+    tmp_dir = factory.mktemp("newline")
+    sub_dir = tmp_dir / "tab"
+    sub_dir.mkdir(exist_ok=True)
+    return sub_dir / name
+
+
 @pytest.fixture(scope="module", params=["str", "Path", "PathLike"])
-def csv_path(
-    tmp_path_factory: pytest.TempPathFactory, request: pytest.FixtureRequest
-) -> FileSource:
-    fp = tmp_path_factory.mktemp("data") / "file.csv"
+def csv_path(tmp_path_factory: Factory, request: pytest.FixtureRequest) -> FileSource:
+    fp = _path(tmp_path_factory, "file.csv")
     pl.DataFrame(data).write_csv(fp)
     return _into_file_source(fp, request.param)
 
 
 @pytest.fixture(scope="module", params=["str", "Path", "PathLike"])
-def csv_path_sep(
-    tmp_path_factory: pytest.TempPathFactory, request: pytest.FixtureRequest
-) -> FileSource:
-    fp = tmp_path_factory.mktemp("data") / "file.csv"
+def csv_path_sep(tmp_path_factory: Factory, request: pytest.FixtureRequest) -> FileSource:
+    fp = _path(tmp_path_factory, "file.csv")
     pl.DataFrame(data).write_csv(fp, separator="|")
     return _into_file_source(fp, request.param)
 
 
 @pytest.fixture(scope="module", params=["str", "Path", "PathLike"])
-def parquet_path(
-    tmp_path_factory: pytest.TempPathFactory, request: pytest.FixtureRequest
-) -> FileSource:
-    fp = tmp_path_factory.mktemp("data") / "file.parquet"
+def parquet_path(tmp_path_factory: Factory, request: pytest.FixtureRequest) -> FileSource:
+    fp = _path(tmp_path_factory, "file.parquet")
     pl.DataFrame(data).write_parquet(fp)
     return _into_file_source(fp, request.param)
 
@@ -174,10 +178,6 @@ def test_read_parquet_raise_with_lazy(backend: _LazyOnly) -> None:
 @skipif_pandas_lt_1_5
 def test_scan_parquet(parquet_path: FileSource, constructor: Constructor) -> None:
     kwargs: dict[str, Any]
-    if "sqlframe" in str(constructor) and is_windows():
-        reason = "_duckdb.IOException: IO Error: No files found that match the pattern"
-        pytest.skip(reason)
-
     if "sqlframe" in str(constructor):
         kwargs = {"session": sqlframe_session(), "inferSchema": True}
     elif "pyspark" in str(constructor):
