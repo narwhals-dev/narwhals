@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import contextlib
 import datetime as dt
 from functools import reduce
 from typing import TYPE_CHECKING, Any, Literal, cast, overload
@@ -385,6 +384,9 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
         import pyarrow.parquet as pq
 
         reader = pq.ParquetReader()
-        with contextlib.closing(reader.open(source)):
+        try:
+            reader.open(source)
             schema = reader.schema_arrow
+        finally:
+            reader.close()
         return Schema.from_arrow(schema)
