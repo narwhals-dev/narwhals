@@ -1,0 +1,654 @@
+from __future__ import annotations
+
+import builtins
+import datetime as dt
+import typing as t
+from typing import TYPE_CHECKING, Any, Final, get_args
+
+from narwhals._duration import Interval
+from narwhals._plan import _guards, _parse, common, expressions as ir, selectors as cs
+from narwhals._plan._dispatch import get_dispatch_name
+from narwhals._plan.compliant import io as _io
+from narwhals._plan.compliant.typing import namespace
+from narwhals._plan.exceptions import (
+    list_literal_error,
+    unsupported_backend_operation_error,
+)
+from narwhals._plan.expressions import functions as F
+from narwhals._plan.expressions.literal import ScalarLiteral, SeriesLiteral
+from narwhals._plan.expressions.ranges import (
+    DateRange,
+    IntRange,
+    LinearSpace,
+    RangeFunction,
+)
+from narwhals._plan.expressions.strings import ConcatStr
+from narwhals._plan.when_then import When
+from narwhals._utils import (
+    Implementation,
+    Version,
+    ensure_type,
+    flatten,
+    is_eager_allowed,
+    normalize_path,
+    qualified_type_name,
+)
+from narwhals.exceptions import ComputeError, InvalidOperationError
+from narwhals.typing import ConcatMethod
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
+    import pyarrow as pa
+    from typing_extensions import TypeAlias, TypeIs
+
+    from narwhals._plan import arrow as _arrow
+    from narwhals._plan.compliant.dataframe import (
+        CompliantDataFrame,
+        CompliantLazyFrame,
+        EagerDataFrame,
+    )
+    from narwhals._plan.compliant.namespace import EagerNamespace
+    from narwhals._plan.compliant.series import CompliantSeries
+    from narwhals._plan.dataframe import DataFrame
+    from narwhals._plan.expr import Expr
+    from narwhals._plan.series import Series
+    from narwhals._plan.typing import (
+        DataFrameT,
+        IntoExpr,
+        IntoExprColumn,
+        NativeDataFrameT,
+        NativeSeriesT,
+        NonNestedLiteralT,
+    )
+    from narwhals._typing import Arrow
+    from narwhals.dtypes import IntegerType
+    from narwhals.typing import (
+        Backend,
+        ClosedInterval,
+        EagerAllowed,
+        FileSource,
+        IntoBackend,
+        IntoDType,
+        NonNestedLiteral,
+    )
+
+    # NOTE: Use when you have a function that calls a namespace method, and eventually returns:
+    # - `DataFrame[NativeDataFrameT]`, or
+    # - `Series[NativeSeriesT]`
+    EagerNs: TypeAlias = EagerNamespace[
+        EagerDataFrame[t.Any, NativeDataFrameT, t.Any],
+        CompliantSeries[NativeSeriesT],
+        t.Any,
+        t.Any,
+    ]
+    CompliantDF: TypeAlias = CompliantDataFrame[t.Any, NativeDataFrameT, NativeSeriesT]
+
+    T = t.TypeVar("T")
+
+Incomplete: TypeAlias = t.Any
+_dtypes: Final = Version.MAIN.dtypes
+
+
+def col(*names: str | t.Iterable[str]) -> Expr:
+    flat = tuple(flatten(names))
+    return (
+        ir.col(flat[0]).to_narwhals()
+        if builtins.len(flat) == 1
+        else cs.by_name(*flat).as_expr()
+    )
+
+
+def nth(*indices: int | t.Sequence[int]) -> Expr:
+    return cs.by_index(*indices).as_expr()
+
+
+def lit(
+    value: NonNestedLiteral | Series[NativeSeriesT], dtype: IntoDType | None = None
+) -> Expr:
+    if _guards.is_series(value):
+        return SeriesLiteral(value=value).to_literal().to_narwhals()
+    if not _guards.is_non_nested_literal(value):
+        raise list_literal_error(value)
+    if dtype is None:
+        dtype = common.py_to_narwhals_dtype(value, Version.MAIN)
+    else:
+        dtype = common.into_dtype(dtype)
+    return ScalarLiteral(value=value, dtype=dtype).to_literal().to_narwhals()
+
+
+def len() -> Expr:
+    return ir.Len().to_narwhals()
+
+
+def all() -> Expr:
+    return cs.all().as_expr()
+
+
+def exclude(*names: str | t.Iterable[str]) -> Expr:
+    return cs.all().exclude(*names).as_expr()
+
+
+def max(*columns: str) -> Expr:
+    return col(columns).max()
+
+
+def mean(*columns: str) -> Expr:
+    return col(columns).mean()
+
+
+def min(*columns: str) -> Expr:
+    return col(columns).min()
+
+
+def median(*columns: str) -> Expr:
+    return col(columns).median()
+
+
+def sum(*columns: str) -> Expr:
+    return col(columns).sum()
+
+
+def all_horizontal(
+    *exprs: IntoExpr | t.Iterable[IntoExpr], ignore_nulls: bool = False
+) -> Expr:
+    it = _parse.parse_into_seq_of_expr_ir(*exprs)
+    return ir.boolean.all_horizontal(*it, ignore_nulls=ignore_nulls).to_narwhals()
+
+
+def any_horizontal(
+    *exprs: IntoExpr | t.Iterable[IntoExpr], ignore_nulls: bool = False
+) -> Expr:
+    it = _parse.parse_into_seq_of_expr_ir(*exprs)
+    return (
+        ir.boolean.AnyHorizontal(ignore_nulls=ignore_nulls)
+        .to_function_expr(*it)
+        .to_narwhals()
+    )
+
+
+def sum_horizontal(*exprs: IntoExpr | t.Iterable[IntoExpr]) -> Expr:
+    it = _parse.parse_into_seq_of_expr_ir(*exprs)
+    return F.SumHorizontal().to_function_expr(*it).to_narwhals()
+
+
+def min_horizontal(*exprs: IntoExpr | t.Iterable[IntoExpr]) -> Expr:
+    it = _parse.parse_into_seq_of_expr_ir(*exprs)
+    return F.MinHorizontal().to_function_expr(*it).to_narwhals()
+
+
+def max_horizontal(*exprs: IntoExpr | t.Iterable[IntoExpr]) -> Expr:
+    it = _parse.parse_into_seq_of_expr_ir(*exprs)
+    return F.MaxHorizontal().to_function_expr(*it).to_narwhals()
+
+
+def mean_horizontal(*exprs: IntoExpr | t.Iterable[IntoExpr]) -> Expr:
+    it = _parse.parse_into_seq_of_expr_ir(*exprs)
+    return F.MeanHorizontal().to_function_expr(*it).to_narwhals()
+
+
+def concat_str(
+    exprs: IntoExpr | t.Iterable[IntoExpr],
+    *more_exprs: IntoExpr,
+    separator: str = "",
+    ignore_nulls: bool = False,
+) -> Expr:
+    it = _parse.parse_into_seq_of_expr_ir(exprs, *more_exprs)
+    return (
+        ConcatStr(separator=separator, ignore_nulls=ignore_nulls)
+        .to_function_expr(*it)
+        .to_narwhals()
+    )
+
+
+def coalesce(exprs: IntoExpr | t.Iterable[IntoExpr], *more_exprs: IntoExpr) -> Expr:
+    it = _parse.parse_into_seq_of_expr_ir(exprs, *more_exprs)
+    return F.Coalesce().to_function_expr(*it).to_narwhals()
+
+
+def format(f_string: str, *args: IntoExpr) -> Expr:
+    """Format expressions as a string.
+
+    Arguments:
+        f_string: A string that with placeholders.
+        args: Expression(s) that fill the placeholders.
+    """
+    if (n_placeholders := f_string.count("{}")) != builtins.len(args):
+        msg = f"number of placeholders should equal the number of arguments. Expected {n_placeholders} arguments, got {builtins.len(args)}."
+        raise ValueError(msg)
+    string = _dtypes.String()
+    exprs: list[ir.ExprIR] = []
+    it = iter(args)
+    for i, s in enumerate(f_string.split("{}")):
+        if i > 0:
+            exprs.append(_parse.parse_into_expr_ir(next(it)))
+        if s:
+            exprs.append(lit(s, string)._ir)
+    f = ConcatStr(separator="", ignore_nulls=False)
+    return f.to_function_expr(*exprs).to_narwhals()
+
+
+def when(
+    *predicates: IntoExprColumn | t.Iterable[IntoExprColumn], **constraints: t.Any
+) -> When:
+    """Start a `when-then-otherwise` expression.
+
+    Examples:
+        >>> from narwhals import _plan as nw
+
+        >>> nw.when(nw.col("y") == "b").then(1)
+        nw._plan.Expr(main):
+        .when([(col('y')) == (lit(str: b))]).then(lit(int: 1)).otherwise(lit(null))
+    """
+    condition = _parse.parse_predicates_constraints_into_expr_ir(
+        *predicates, **constraints
+    )
+    return When._from_ir(condition)
+
+
+@t.overload
+def int_range(
+    start: int | IntoExprColumn = ...,
+    end: int | IntoExprColumn | None = ...,
+    step: int = ...,
+    *,
+    dtype: IntegerType | type[IntegerType] = ...,
+    eager: t.Literal[False] = ...,
+) -> Expr: ...
+@t.overload
+def int_range(
+    start: int = ...,
+    end: int | None = ...,
+    step: int = ...,
+    *,
+    dtype: IntegerType | type[IntegerType] = ...,
+    eager: Arrow,
+) -> Series[pa.ChunkedArray[t.Any]]: ...
+@t.overload
+def int_range(
+    start: int = ...,
+    end: int | None = ...,
+    step: int = ...,
+    *,
+    dtype: IntegerType | type[IntegerType] = ...,
+    eager: IntoBackend[EagerAllowed],
+) -> Series: ...
+def int_range(
+    start: int | IntoExprColumn = 0,
+    end: int | IntoExprColumn | None = None,
+    step: int = 1,
+    *,
+    dtype: IntegerType | type[IntegerType] = Version.MAIN.dtypes.Int64,
+    eager: IntoBackend[EagerAllowed] | t.Literal[False] = False,
+) -> Expr | Series:
+    if end is None:
+        end = start
+        start = 0
+    dtype = common.into_dtype(dtype)
+    if eager:
+        ns = _eager_namespace(eager)
+        start, end = _ensure_range_scalar(start, end, int, IntRange, eager)
+        return _int_range_eager(start, end, step, dtype, ns)
+    return (
+        IntRange(step=step, dtype=dtype)
+        .to_function_expr(*_parse.parse_into_seq_of_expr_ir(start, end))
+        .to_narwhals()
+    )
+
+
+@t.overload
+def date_range(
+    start: dt.date | IntoExprColumn,
+    end: dt.date | IntoExprColumn,
+    interval: str | dt.timedelta = ...,
+    *,
+    closed: ClosedInterval = ...,
+    eager: t.Literal[False] = ...,
+) -> Expr: ...
+@t.overload
+def date_range(
+    start: dt.date,
+    end: dt.date,
+    interval: str | dt.timedelta = ...,
+    *,
+    closed: ClosedInterval = ...,
+    eager: Arrow,
+) -> Series[pa.ChunkedArray[t.Any]]: ...
+@t.overload
+def date_range(
+    start: dt.date,
+    end: dt.date,
+    interval: str | dt.timedelta = ...,
+    *,
+    closed: ClosedInterval = ...,
+    eager: IntoBackend[EagerAllowed],
+) -> Series: ...
+def date_range(
+    start: dt.date | IntoExprColumn,
+    end: dt.date | IntoExprColumn,
+    interval: str | dt.timedelta = "1d",
+    *,
+    closed: ClosedInterval = "both",
+    eager: IntoBackend[EagerAllowed] | t.Literal[False] = False,
+) -> Expr | Series:
+    days = _interval_days(interval)
+    closed = _ensure_closed_interval(closed)
+    if eager:
+        ns = _eager_namespace(eager)
+        start, end = _ensure_range_scalar(start, end, dt.date, DateRange, eager)
+        return _date_range_eager(start, end, days, closed, ns)
+    return (
+        DateRange(interval=days, closed=closed)
+        .to_function_expr(*_parse.parse_into_seq_of_expr_ir(start, end))
+        .to_narwhals()
+    )
+
+
+@t.overload
+def linear_space(
+    start: float | IntoExprColumn,
+    end: float | IntoExprColumn,
+    num_samples: int,
+    *,
+    closed: ClosedInterval = ...,
+    eager: t.Literal[False] = ...,
+) -> Expr: ...
+@t.overload
+def linear_space(
+    start: float,
+    end: float,
+    num_samples: int,
+    *,
+    closed: ClosedInterval = ...,
+    eager: Arrow,
+) -> Series[pa.ChunkedArray[t.Any]]: ...
+@t.overload
+def linear_space(
+    start: float,
+    end: float,
+    num_samples: int,
+    *,
+    closed: ClosedInterval = ...,
+    eager: IntoBackend[EagerAllowed],
+) -> Series: ...
+def linear_space(
+    start: float | IntoExprColumn,
+    end: float | IntoExprColumn,
+    num_samples: int,
+    *,
+    closed: ClosedInterval = "both",
+    eager: IntoBackend[EagerAllowed] | t.Literal[False] = False,
+) -> Expr | Series:
+    """Create sequence of evenly-spaced points.
+
+    Arguments:
+        start: Lower bound of the range.
+        end: Upper bound of the range.
+        num_samples: Number of samples in the output sequence.
+        closed: Define which sides of the interval are closed (inclusive).
+        eager: If set to `False` (default), then an expression is returned.
+            If set to an (eager) implementation ("pandas", "polars" or "pyarrow"), then
+            a `Series` is returned.
+
+    Notes:
+        Unlike `pl.linear_space`, *currently* only numeric dtypes (and not temporal) are supported.
+
+    Examples:
+        >>> import narwhals._plan as nwp
+        >>> nwp.linear_space(start=0, end=1, num_samples=3, eager="pyarrow").to_list()
+        [0.0, 0.5, 1.0]
+
+        >>> nwp.linear_space(0, 1, 3, closed="left", eager="pyarrow").to_list()
+        [0.0, 0.3333333333333333, 0.6666666666666666]
+
+        >>> nwp.linear_space(0, 1, 3, closed="right", eager="pyarrow").to_list()
+        [0.3333333333333333, 0.6666666666666666, 1.0]
+
+        >>> nwp.linear_space(0, 1, 3, closed="none", eager="pyarrow").to_list()
+        [0.25, 0.5, 0.75]
+
+        >>> df = nwp.DataFrame.from_dict({"a": [1, 2, 3, 4, 5]}, backend="pyarrow")
+        >>> df.with_columns(nwp.linear_space(0, 10, 5).alias("ls"))
+        ┌──────────────────────┐
+        |     nw.DataFrame     |
+        |----------------------|
+        |pyarrow.Table         |
+        |a: int64              |
+        |ls: double            |
+        |----                  |
+        |a: [[1,2,3,4,5]]      |
+        |ls: [[0,2.5,5,7.5,10]]|
+        └──────────────────────┘
+    """
+    ensure_type(num_samples, int, param_name="num_samples")
+    closed = _ensure_closed_interval(closed)
+    if eager:
+        ns = _eager_namespace(eager)
+        start, end = _ensure_range_scalar(start, end, (float, int), LinearSpace, eager)
+        return _linear_space_eager(start, end, num_samples, closed, ns)
+    return (
+        LinearSpace(num_samples=num_samples, closed=closed)
+        .to_function_expr(*_parse.parse_into_seq_of_expr_ir(start, end))
+        .to_narwhals()
+    )
+
+
+def _ensure_same_frame(items: list[T], /) -> list[T]:
+    item_0_tp = type(items[0])
+    if builtins.all(isinstance(item, item_0_tp) for item in items):
+        return items
+    msg = f"The items to concatenate should either all be eager, or all lazy, got: {[type(item) for item in items]}"  # pragma: no cover
+    raise TypeError(msg)  # pragma: no cover
+
+
+def _is_concat_method(obj: Any) -> TypeIs[ConcatMethod]:
+    return obj in {"horizontal", "vertical", "diagonal"}
+
+
+def _validate_concat_method(how: str, /) -> ConcatMethod:
+    if _is_concat_method(how):
+        return how
+    msg = f"Only the following concatenation methods are supported: {get_args(ConcatMethod)}; found '{how}'."
+    raise NotImplementedError(msg)
+
+
+# TODO @dangotbanned: Update this when `LazyFrame` exists
+def concat(items: Iterable[DataFrameT], *, how: ConcatMethod = "vertical") -> DataFrameT:
+    elems = list(items)
+    if not elems:
+        msg = "Cannot concatenate an empty iterable."
+        raise ValueError(msg)
+    how = _validate_concat_method(how)
+    elems = _ensure_same_frame(elems)
+    compliant = namespace(elems[0]).concat((df._compliant for df in elems), how=how)
+    return elems[0]._with_compliant(compliant)
+
+
+@t.overload
+def read_csv(
+    source: FileSource, *, backend: Arrow, **kwds: t.Any
+) -> DataFrame[pa.Table, pa.ChunkedArray[t.Any]]: ...
+@t.overload
+def read_csv(
+    source: FileSource, *, backend: IntoBackend[EagerAllowed], **kwds: t.Any
+) -> DataFrame: ...
+def read_csv(
+    source: FileSource, *, backend: IntoBackend[EagerAllowed], **kwds: t.Any
+) -> DataFrame[t.Any, t.Any]:
+    source = normalize_path(source)
+    ns = _eager_namespace(backend)
+    if _io.can_read_csv(ns):
+        return _read_csv(source, kwds, ns)
+    raise unsupported_backend_operation_error(backend, "read_csv")  # pragma: no cover
+
+
+@t.overload
+def read_parquet(
+    source: FileSource, *, backend: Arrow, **kwds: t.Any
+) -> DataFrame[pa.Table, pa.ChunkedArray[t.Any]]: ...
+@t.overload
+def read_parquet(
+    source: FileSource, *, backend: IntoBackend[EagerAllowed], **kwds: t.Any
+) -> DataFrame: ...
+def read_parquet(
+    source: FileSource, *, backend: IntoBackend[EagerAllowed], **kwds: t.Any
+) -> DataFrame[t.Any, t.Any]:
+    source = normalize_path(source)
+    ns = _eager_namespace(backend)
+    if _io.can_read_parquet(ns):
+        return _read_parquet(source, kwds, ns)
+    raise unsupported_backend_operation_error(backend, "read_parquet")  # pragma: no cover
+
+
+# TODO @dangotbanned: Come back to after `nwp.LazyFrame` exists
+def scan_csv(
+    source: FileSource, *, backend: IntoBackend[Backend], **kwds: t.Any
+) -> Incomplete:
+    msg = "scan_csv"
+    raise NotImplementedError(msg)
+
+
+# TODO @dangotbanned: Come back to after `nwp.LazyFrame` exists
+def scan_parquet(
+    source: FileSource, *, backend: IntoBackend[Backend], **kwds: t.Any
+) -> Incomplete:
+    msg = "scan_parquet"
+    raise NotImplementedError(msg)
+
+
+def _read_csv(
+    source: str,
+    kwds: dict[str, t.Any],
+    ns: _io.ReadCsv[CompliantDF[NativeDataFrameT, NativeSeriesT]],
+    /,
+) -> DataFrame[NativeDataFrameT, NativeSeriesT]:
+    return ns.read_csv(source, **kwds).to_narwhals()
+
+
+def _read_parquet(
+    source: str,
+    kwds: dict[str, t.Any],
+    ns: _io.ReadParquet[CompliantDF[NativeDataFrameT, NativeSeriesT]],
+    /,
+) -> DataFrame[NativeDataFrameT, NativeSeriesT]:
+    return ns.read_parquet(source, **kwds).to_narwhals()
+
+
+def _scan_csv(
+    source: str,
+    kwds: dict[str, t.Any],
+    ns: _io.ScanCsv[CompliantLazyFrame[Incomplete]],
+    /,
+) -> Incomplete:  # pragma: no cover
+    return ns.scan_csv(source, **kwds).to_narwhals()
+
+
+def _scan_parquet(
+    source: str,
+    kwds: dict[str, t.Any],
+    ns: _io.ScanParquet[CompliantLazyFrame[Incomplete]],
+    /,
+) -> Incomplete:  # pragma: no cover
+    return ns.scan_parquet(source, **kwds).to_narwhals()
+
+
+@t.overload
+def _eager_namespace(backend: Arrow, /) -> _arrow.Namespace: ...
+@t.overload
+def _eager_namespace(backend: IntoBackend[EagerAllowed], /) -> EagerNs[t.Any, t.Any]: ...
+def _eager_namespace(
+    backend: IntoBackend[EagerAllowed], /
+) -> EagerNs[t.Any, t.Any] | _arrow.Namespace:
+    impl = Implementation.from_backend(backend)
+    if is_eager_allowed(impl):
+        if impl is Implementation.PYARROW:
+            from narwhals._plan import arrow as _arrow
+
+            return _arrow.Namespace(Version.MAIN)
+        raise NotImplementedError(impl)
+    msg = f"{impl} support in Narwhals is lazy-only"
+    raise ValueError(msg)
+
+
+# TODO @dangotbanned: Handle this in `RangeFunction` or `RangeExpr`
+# NOTE: `ArrowNamespace._range_function_inputs` has some duplicated logic too
+def _ensure_range_scalar(
+    start: t.Any,
+    end: t.Any,
+    valid_type: type[NonNestedLiteralT] | tuple[type[NonNestedLiteralT], ...],
+    function: type[RangeFunction],
+    eager: IntoBackend[EagerAllowed],
+) -> tuple[NonNestedLiteralT, NonNestedLiteralT]:
+    if isinstance(start, valid_type) and isinstance(end, valid_type):
+        return start, end
+    tp_start = qualified_type_name(start)
+    tp_end = qualified_type_name(end)
+    valid_types = (valid_type,) if not isinstance(valid_type, tuple) else valid_type
+    tp_names = " | ".join(tp.__name__ for tp in valid_types)
+    msg = (
+        f"Expected `start` and `end` to be {tp_names} values since `eager={eager}`, but got: ({tp_start}, {tp_end})\n\n"
+        f"Hint: Calling `nw.{get_dispatch_name(function)}` with expressions requires:\n"
+        "  - `eager=False`\n"
+        "  - a context such as `select` or `with_columns`"
+    )
+    raise InvalidOperationError(msg)
+
+
+# NOTE: The extra level of indirection here is to satisfy `mypy`
+# AFAICT, `pyright` is able to use bidirectional inference from the `{date,int}_range` overloads.
+# `mypy` would treat the same call as an `Any`
+def _date_range_eager(
+    start: dt.date,
+    end: dt.date,
+    interval: int,
+    closed: ClosedInterval,
+    ns: EagerNs[t.Any, NativeSeriesT],
+    /,
+) -> Series[NativeSeriesT]:
+    return ns.date_range_eager(start, end, interval, closed=closed).to_narwhals()
+
+
+# NOTE: See `_date_range_eager`
+def _int_range_eager(
+    start: int,
+    end: int,
+    step: int,
+    dtype: IntegerType,
+    ns: EagerNs[t.Any, NativeSeriesT],
+    /,
+) -> Series[NativeSeriesT]:
+    return ns.int_range_eager(start, end, step, dtype=dtype).to_narwhals()
+
+
+def _linear_space_eager(
+    start: float,
+    end: float,
+    num_samples: int,
+    closed: ClosedInterval,
+    ns: EagerNs[t.Any, NativeSeriesT],
+    /,
+) -> Series[NativeSeriesT]:
+    return ns.linear_space_eager(start, end, num_samples, closed=closed).to_narwhals()
+
+
+def _ensure_closed_interval(closed: ClosedInterval, /) -> ClosedInterval:
+    closed_intervals = "left", "right", "none", "both"
+    if closed not in closed_intervals:
+        msg = f"`closed` must be one of {closed_intervals!r}, got {closed!r}"
+        raise TypeError(msg)
+    return closed
+
+
+def _interval_days(interval: str | dt.timedelta, /) -> int:
+    if not isinstance(interval, dt.timedelta):
+        if interval == "1d":
+            return 1
+        parsed = Interval.parse_no_constraints(interval)
+        if parsed.unit not in {"d", "w", "mo", "q", "y"}:
+            msg = f"`interval` input for `date_range` must consist of full days, got: {parsed.multiple}{parsed.unit}"
+            raise ComputeError(msg)
+        if parsed.unit in {"mo", "q", "y"}:
+            msg = f"`interval` input for `date_range` does not support {parsed.unit!r} yet, got: {parsed.multiple}{parsed.unit}"
+            raise NotImplementedError(msg)
+        interval = parsed.to_timedelta()
+    return interval.days
