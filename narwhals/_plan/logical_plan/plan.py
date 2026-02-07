@@ -368,10 +368,6 @@ class VConcat(MultipleInputs[Seq[LogicalPlan]]):
 class HConcat(MultipleInputs[Seq[LogicalPlan]]):
     """`concat(how="horizontal")`."""
 
-    __slots__ = ("strict",)
-    strict: bool
-    """Require all `inputs` to be the same height, raising an error if not, default False."""
-
     def __repr__(self) -> str:
         return "HCONCAT"
 

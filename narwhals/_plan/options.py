@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import enum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from narwhals._plan._immutable import Immutable
 from narwhals._utils import Implementation, ensure_type
@@ -367,6 +367,19 @@ class VConcatOptions(Immutable):
 
     [`union`]: https://github.com/pola-rs/polars/pull/24298
     """
+
+    @staticmethod
+    def from_how(
+        how: Literal["vertical", "diagonal", "vertical_relaxed", "diagonal_relaxed"],
+        /,
+        *,
+        maintain_order: bool = True,
+    ) -> VConcatOptions:
+        return VConcatOptions(
+            diagonal=(how.startswith("diagonal")),
+            to_supertypes=how.endswith("relaxed"),
+            maintain_order=maintain_order,
+        )
 
 
 class JoinOptions(Immutable):

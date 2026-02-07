@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
 from narwhals._plan.expressions import selectors as s_ir
 from narwhals._plan.expressions.boolean import all_horizontal
 from narwhals._plan.logical_plan import plan as lp
+from narwhals._plan.options import VConcatOptions
 from narwhals._utils import normalize_path
 from narwhals.exceptions import InvalidOperationError
 
@@ -24,7 +25,7 @@ if TYPE_CHECKING:
         UnpivotOptions,
     )
     from narwhals._plan.typing import Seq
-    from narwhals.typing import FileSource, PivotAgg
+    from narwhals.typing import ConcatMethod, FileSource, PivotAgg
 
 
 __all__ = ["LpBuilder"]
@@ -177,3 +178,15 @@ class LpBuilder:
         self, on: SelectorIR | None, index: SelectorIR, options: UnpivotOptions
     ) -> Self:
         return self.map(lp.Unpivot(on=on, index=index, options=options))
+
+
+def concat(
+    items: Seq[lp.LogicalPlan],
+    *,
+    how: ConcatMethod | Literal["vertical_relaxed", "diagonal_relaxed"] = "vertical",
+) -> LpBuilder:
+    if how == "horizontal":
+        plan: lp.LogicalPlan = lp.HConcat(inputs=items)
+    else:
+        plan = lp.VConcat(inputs=items, options=VConcatOptions.from_how(how))
+    return LpBuilder.from_plan(plan)
