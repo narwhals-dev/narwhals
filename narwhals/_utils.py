@@ -11,6 +11,7 @@ from importlib.util import find_spec
 from inspect import getattr_static, getdoc
 from itertools import chain
 from operator import attrgetter
+from pathlib import Path
 from secrets import token_hex
 from typing import (
     TYPE_CHECKING,
@@ -2117,11 +2118,7 @@ def to_pyarrow_table(tbl: pa.Table | pa.RecordBatchReader) -> pa.Table:
 if sys.platform != "win32":
 
     def normalize_path(source: FileSource, /) -> str:
-        if isinstance(source, str):
-            return source
-        from pathlib import Path
-
-        return str(Path(source))
+        return source if isinstance(source, str) else str(Path(source))
 else:  # pragma: no cover
     # NOTE: On Windows, we need to ensure strings paths do not produce escape sequences.
     # This module is an example of the issue:
@@ -2129,8 +2126,6 @@ else:  # pragma: no cover
     # If we stringify that, we get:
     #     `'\\narwhals\\narwhals\\_utils.py'`
     # Which contains 2x `"\n"` characters
-    from pathlib import Path
-
     def normalize_path(source: FileSource, /) -> str:
         return Path(source).as_posix()
 
