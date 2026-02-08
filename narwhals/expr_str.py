@@ -70,7 +70,7 @@ class ExprStringNamespace(Generic[ExprT]):
             ExprNode(
                 ExprKind.ELEMENTWISE,
                 "str.replace",
-                value,
+                exprs=(value,),
                 pattern=pattern,
                 literal=literal,
                 n=n,
@@ -106,7 +106,7 @@ class ExprStringNamespace(Generic[ExprT]):
             ExprNode(
                 ExprKind.ELEMENTWISE,
                 "str.replace_all",
-                value,
+                exprs=(value,),
                 pattern=pattern,
                 literal=literal,
                 str_as_lit=True,
