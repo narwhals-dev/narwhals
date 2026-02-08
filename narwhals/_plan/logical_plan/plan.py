@@ -4,7 +4,6 @@ from itertools import chain
 from typing import TYPE_CHECKING, Any, ClassVar, Generic
 
 from narwhals._plan._immutable import Immutable
-from narwhals._plan.common import todo
 from narwhals._plan.schema import freeze_schema
 from narwhals._plan.typing import Seq
 from narwhals._typing_compat import TypeVar
@@ -133,6 +132,7 @@ class LogicalPlan(Immutable):
         raise NotImplementedError(msg)
 
     def _format_rec(self, indent: int) -> str:
+        r"""TODO: Ensure each call always starts with a `\n` if `indent != 0`."""
         # `IRDisplay._format`
         # (here) https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-plan/src/plans/ir/format.rs#L259-L265
         # (overrides) https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-plan/src/plans/ir/format.rs#L148-L229
@@ -320,7 +320,9 @@ class GroupBy(SingleInput):
         pad = INDENT * indent
         return f"{pad}AGGREGATE\n{pad + INDENT}{list(self.aggs)!r} BY {list(self.keys)!r}"
 
-    _format_rec = todo()
+    def _format_rec(self, indent: int) -> str:
+        sub_indent = indent + INDENT_INCREMENT
+        return f"{self._format_non_rec(indent)}\n{sub_indent * INDENT}FROM{self.input._format_rec(sub_indent)}"
 
 
 class Pivot(SingleInput):
@@ -386,7 +388,8 @@ class MapFunction(SingleInput):
     def _format_non_rec(self, indent: int) -> str:
         return f"{INDENT * indent}{self.function!r}"
 
-    _format_rec = todo()
+    def _format_rec(self, indent: int) -> str:
+        return f"{self._format_non_rec(indent)}{self.input._format_rec(indent + INDENT_INCREMENT)}"
 
 
 class Join(MultipleInputs[tuple[LogicalPlan, LogicalPlan]]):
@@ -405,7 +408,37 @@ class Join(MultipleInputs[tuple[LogicalPlan, LogicalPlan]]):
             return operation
         return f"{operation}:\n{pad}LEFT PLAN ON: {list(self.left_on)!r}\n{pad}RIGHT PLAN ON: {list(self.right_on)!r}"
 
-    _format_rec = todo()
+    def _format_rec(self, indent: int) -> str:
+        pad = INDENT * indent
+        sub_indent = indent + INDENT_INCREMENT
+        how = self.options.how.upper()
+        # each of these are supposed to start with `if indent != 0 {writeln!(f)?;}`, but I missed that until now
+        left, right = (input._format_rec(sub_indent) for input in self.inputs)
+        if how == "CROSS":
+            left = f"LEFT PLAN:{left}"
+            right = f"RIGHT PLAN:{right}"
+        else:
+            left = f"LEFT PLAN ON: {list(self.left_on)!r}{left}"
+            right = f"RIGHT PLAN ON: {list(self.right_on)!r}{right}"
+        # fmt: off
+        return (
+            f"{pad}{how} JOIN:\n"
+            f"{pad}{left}\n"
+            f"{pad}{right}\n"
+            f"{pad}END {how} JOIN"
+        )
+
+
+# TODO @dangotbanned: Redo in a less hacky way
+def _format_rec_concat(self: Incomplete, indent: int) -> str:
+    sub_indent = indent + INDENT_INCREMENT
+    sub_sub_indent = sub_indent + INDENT_INCREMENT
+    sub_pad = (sub_indent) * INDENT
+    self_repr = self._format_non_rec(indent)
+    for idx, input in enumerate(self.inputs):
+        self_repr += f"\n{sub_pad}PLAN {idx}:{input._format_rec(sub_sub_indent)}"
+    name = "UNION" if type(self) is VConcat else "HCONCAT"
+    return f"{self_repr}\n{indent * INDENT}END {name}"
 
 
 # `DslPlan::Union`
@@ -418,7 +451,7 @@ class VConcat(MultipleInputs[Seq[LogicalPlan]]):
     def _format_non_rec(self, indent: int) -> str:
         return f"{INDENT * indent}UNION"
 
-    _format_rec = todo()
+    _format_rec = _format_rec_concat
 
 
 class HConcat(MultipleInputs[Seq[LogicalPlan]]):
@@ -427,7 +460,7 @@ class HConcat(MultipleInputs[Seq[LogicalPlan]]):
     def _format_non_rec(self, indent: int) -> str:
         return f"{INDENT * indent}HCONCAT"
 
-    _format_rec = todo()
+    _format_rec = _format_rec_concat
 
 
 # NOTE: `DslFunction`
