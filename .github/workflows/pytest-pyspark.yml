@@ -9,7 +9,7 @@ on:
       - tests/*scan*.py
       - tests/frame/*sink*.py
   schedule:
-    - cron: 0 12 * * 0 # Sunday at mid-day
+    - cron: 0 12 * * 0  # Sunday at mid-day
 
 env:
   PY_COLORS: 1
