@@ -16,7 +16,6 @@ env:
   PYTEST_ADDOPTS: "--numprocesses=logical"
   UV_SYSTEM_PYTHON: 1
 jobs:
-
   pytest-pyspark-constructor:
     strategy:
       matrix:
@@ -43,14 +42,13 @@ jobs:
       - name: Run pytest
         run: pytest tests --cov=narwhals/_spark_like --cov-fail-under=95 --runslow --constructors pyspark
 
-
   pytest-pyspark-connect-constructor:
     strategy:
       matrix:
         python-version: ["3.11"]
         os: [ubuntu-latest]
     env:
-      SPARK_VERSION: 3.5.5
+      SPARK_VERSION: 4.1.0
       SPARK_PORT: 15002
       SPARK_CONNECT: true
     runs-on: ${{ matrix.os }}
@@ -80,7 +78,7 @@ jobs:
         run: echo "setuptools<78" | uv pip install -e . "pyspark[connect]==${SPARK_VERSION}"
       - name: show-deps
         run: uv pip freeze
-      
+
       - name: Cache Spark
         id: cache-spark
         uses: actions/cache@v5
@@ -94,7 +92,7 @@ jobs:
           wget https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop3.tgz
           tar -xzf spark-${SPARK_VERSION}-bin-hadoop3.tgz
           sudo mv spark-${SPARK_VERSION}-bin-hadoop3 /opt/spark
-      
+
       - name: Set Spark env variables
         run: |
           echo "SPARK_HOME=/opt/spark" >> $GITHUB_ENV
@@ -103,7 +101,6 @@ jobs:
       - name: Start Spark Connect server
         run: |
           $SPARK_HOME/sbin/start-connect-server.sh \
-            --packages org.apache.spark:spark-connect_2.12:${SPARK_VERSION} \
             --conf spark.connect.grpc.binding.port=${SPARK_PORT}
           sleep 5
           echo "Spark Connect server started"
