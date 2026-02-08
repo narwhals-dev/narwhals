@@ -131,6 +131,10 @@ class LogicalPlan(Immutable):
         msg = f"TODO: `{type(self).__name__}.iter_inputs`"
         raise NotImplementedError(msg)
 
+    def explain(self) -> str:
+        """Create a string representation of the query plan."""
+        return self._format_rec(0)
+
     def _format_rec(self, indent: int) -> str:
         # `IRDisplay._format`
         # (here) https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-plan/src/plans/ir/format.rs#L259-L265
