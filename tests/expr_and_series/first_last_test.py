@@ -103,9 +103,6 @@ def test_first_last_expr_over_order_by(
     if any(x in str(constructor) for x in ("pyspark", "dask")):
         # Currently unsupported.
         request.applymarker(pytest.mark.xfail)
-    if "ibis" in str(constructor):
-        # https://github.com/ibis-project/ibis/issues/11656
-        request.applymarker(pytest.mark.xfail)
     if "cudf" in str(constructor):
         reason = "Need to pass dtype when passing pd.NA or None"
         request.applymarker(pytest.mark.xfail(reason=reason))
@@ -251,8 +248,7 @@ def test_first_expr_in_group_by(
 def test_first_expr_broadcasting(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if any(x in str(constructor) for x in ("ibis", "spark", "dask")):
-        # ibis: https://github.com/ibis-project/ibis/issues/11656
+    if any(x in str(constructor) for x in ("spark", "dask")):
         request.applymarker(pytest.mark.xfail)
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
