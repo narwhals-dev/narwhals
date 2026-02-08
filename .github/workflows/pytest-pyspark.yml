@@ -9,14 +9,14 @@ on:
       - tests/*scan*.py
       - tests/frame/*sink*.py
   schedule:
-    - cron: 0 12 * * 0  # Sunday at mid-day
+    - cron: 0 12 * * 0 # Sunday at mid-day
+  workflow_dispatch:
 
 env:
   PY_COLORS: 1
   PYTEST_ADDOPTS: "--numprocesses=logical"
 
 jobs:
-
   pytest-pyspark-constructor:
     strategy:
       matrix:
@@ -42,7 +42,6 @@ jobs:
         run: uv pip freeze
       - name: Run pytest
         run: pytest tests --cov=narwhals/_spark_like --cov-fail-under=95 --runslow --constructors pyspark
-
 
   pytest-pyspark-connect-constructor:
     strategy:
@@ -80,7 +79,7 @@ jobs:
         run: echo "setuptools<78" | uv pip install -e . "pyspark[connect]==${SPARK_VERSION}" --system
       - name: show-deps
         run: uv pip freeze
-      
+
       - name: Cache Spark
         id: cache-spark
         uses: actions/cache@v5
@@ -94,7 +93,7 @@ jobs:
           wget https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop3.tgz
           tar -xzf spark-${SPARK_VERSION}-bin-hadoop3.tgz
           sudo mv spark-${SPARK_VERSION}-bin-hadoop3 /opt/spark
-      
+
       - name: Set Spark env variables
         run: |
           echo "SPARK_HOME=/opt/spark" >> $GITHUB_ENV
