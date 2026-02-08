@@ -449,8 +449,7 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
             return native_object
         return Version.V1.dataframe(InterchangeFrame(native_object), level="interchange")
 
-    compliant_object = plugins.from_native(native_object, version)
-    if compliant_object is not None:
+    if (compliant_object := plugins.from_native(native_object, version)) is not None:
         return _translate_if_compliant(
             compliant_object,
             pass_through=pass_through,

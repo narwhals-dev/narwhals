@@ -6,7 +6,7 @@ on:
 env:
   PY_COLORS: 1
   PYTEST_ADDOPTS: "--numprocesses=logical"
-
+  UV_SYSTEM_PYTHON: 1
 jobs:
 
   pytest-modin-constructor:
@@ -27,10 +27,10 @@ jobs:
           cache-suffix: modin-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
-        run: uv pip install -e . --group core-tests --system
+        run: uv pip install -e . --group core-tests
       - name: install modin
         run: |
-          uv pip install -e ".[modin]" --system
+          uv pip install -e ".[modin]"
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
