@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from itertools import chain
 from typing import TYPE_CHECKING, Any, ClassVar, Generic
 
 from narwhals._plan._immutable import Immutable
@@ -139,22 +138,40 @@ class LogicalPlan(Immutable):
         # `IRDisplay._format`
         # (here) https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-plan/src/plans/ir/format.rs#L259-L265
         # (overrides) https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-plan/src/plans/ir/format.rs#L148-L229
-        nl = "\n" if indent != 0 else ""
-        self_repr = f"{nl}{self._format_non_rec(indent)}"
-        if not self.has_inputs:
-            return self_repr
-        sub_indent = indent + INDENT_INCREMENT
-        it = (node._format_rec(sub_indent) for node in self.iter_inputs())
-        return "".join(chain([self_repr], it))
+        result = "\n".join(self._iter_format_rec(indent))
+        return result if not indent else "\n" + result
 
     def _format_non_rec(self, indent: int) -> str:
         # `ir::format::write_ir_non_recursive`
         # https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-plan/src/plans/ir/format.rs#L705-L1006
-        msg = f"TODO: `{type(self).__name__}._format_non_rec`"
-        raise NotImplementedError(msg)
+        it = self._iter_format_non_rec(indent)
+        if indent:
+            pad = INDENT * indent
+            it = (f"{pad}{line}" for line in it)
+        return "\n".join(it)
 
     def __repr__(self) -> str:
         return self._format_non_rec(0)
+
+    # TODO @dangotbanned: Plan how this could avoid intermediate strings
+    # - Yield each line?
+    # - Yield templates?
+    # - (General) Have a small cache for indents, to avoid repeating `" " * n`
+    def _iter_format_rec(self, indent: int) -> Iterator[str]:
+        if not self.has_inputs:
+            yield self._format_non_rec(indent)
+            return
+        sub_indent = indent + INDENT_INCREMENT
+        it = self._iter_format_non_rec(indent)
+        if indent:
+            pad = INDENT * indent
+            it = (f"{pad}{line}" for line in it)
+        yield from it
+        for node in self.iter_inputs():
+            yield from node._iter_format_rec(sub_indent)
+
+    def _iter_format_non_rec(self, indent: int) -> Iterator[str]:
+        raise NotImplementedError
 
 
 class Scan(LogicalPlan, has_inputs=False):
@@ -184,8 +201,8 @@ class ScanFile(Scan):
     def from_source(cls, source: FileSource, /) -> Self:
         return cls(source=normalize_path(source))
 
-    def _format_non_rec(self, indent: int) -> str:
-        return f"{INDENT * indent}{type(self).__name__.removeprefix('Scan')} SCAN [{self.source}]"
+    def _iter_format_non_rec(self, indent: int) -> Iterator[str]:
+        yield f"{type(self).__name__.removeprefix('Scan')} SCAN [{self.source}]"
 
 
 class ScanCsv(ScanFile): ...
@@ -218,7 +235,7 @@ class ScanDataFrame(Scan):
         # Caching a native table seems like a non-starter, once `pandas` enters the party
         yield from (id(self.df), self.schema)
 
-    def _format_non_rec(self, indent: int) -> str:
+    def _iter_format_non_rec(self, indent: int) -> Iterator[str]:
         names = self.schema.names
         n_columns = len(names)
         if n_columns > 4:
@@ -228,7 +245,7 @@ class ScanDataFrame(Scan):
             s = ""
         else:
             s = ", ".join(f'"{name}"' for name in names)
-        return f"{INDENT * indent}DF [{s}]; {n_columns} COLUMNS"
+        yield f"DF [{s}]; {n_columns} COLUMNS"
 
     def __str__(self) -> str:
         return (
@@ -268,8 +285,8 @@ class Sink(SingleInput):
 
 
 class Collect(Sink):
-    def _format_non_rec(self, indent: int) -> str:
-        return f"{INDENT * indent}SINK (memory)"
+    def _iter_format_non_rec(self, indent: int) -> Iterator[str]:
+        yield "SINK (memory)"
 
 
 class SinkFile(Sink):
@@ -280,8 +297,8 @@ class SinkFile(Sink):
     Not sure `BytesIO` makes sense here.
     """
 
-    def _format_non_rec(self, indent: int) -> str:
-        return f"{INDENT * indent}SINK (file)"
+    def _iter_format_non_rec(self, indent: int) -> Iterator[str]:
+        yield "SINK (file)"
 
 
 class SinkParquet(SinkFile): ...
@@ -294,8 +311,8 @@ class Select(SingleInput):
     # `options: ProjectionOptions`
     exprs: Seq[ExprIR]
 
-    def _format_non_rec(self, indent: int) -> str:
-        return f"{INDENT * indent}SELECT {list(self.exprs)!r}"
+    def _iter_format_non_rec(self, indent: int) -> Iterator[str]:
+        yield f"SELECT {list(self.exprs)!r}"
 
 
 # `DslPlan::HStack`
@@ -304,18 +321,19 @@ class WithColumns(SingleInput):
     # NOTE: Same `ProjectionOptions` comment as `Select`
     exprs: Seq[ExprIR]
 
-    def _format_non_rec(self, indent: int) -> str:
-        pad = INDENT * indent
-        return f"{pad} WITH_COLUMNS:\n {pad}{list(self.exprs)!r}"
+    def _iter_format_non_rec(self, indent: int) -> Iterator[str]:
+        # has extra indents
+        yield " WITH_COLUMNS:"
+        yield f" {list(self.exprs)!r}"
 
 
 class Filter(SingleInput):
     __slots__ = ("predicate",)
     predicate: ExprIR
 
-    def _format_non_rec(self, indent: int) -> str:
-        pad = INDENT * indent
-        return f"{pad}FILTER {self.predicate!r}\n{pad}FROM"
+    def _iter_format_non_rec(self, indent: int) -> Iterator[str]:
+        yield f"FILTER {self.predicate!r}"
+        yield "FROM"
 
 
 class GroupBy(SingleInput):
@@ -323,14 +341,15 @@ class GroupBy(SingleInput):
     keys: Seq[ExprIR]
     aggs: Seq[ExprIR]
 
-    def _format_non_rec(self, indent: int) -> str:
-        pad = INDENT * indent
-        return f"{pad}AGGREGATE\n{pad + INDENT}{list(self.aggs)!r} BY {list(self.keys)!r}"
+    def _iter_format_non_rec(self, indent: int) -> Iterator[str]:
+        yield f"{INDENT * indent}AGGREGATE"
+        yield f"{INDENT * (indent + INDENT_INCREMENT)}{list(self.aggs)!r} BY {list(self.keys)!r}"
 
-    def _format_rec(self, indent: int) -> str:
-        nl = "\n" if indent != 0 else ""
+    def _iter_format_rec(self, indent: int) -> Iterator[str]:
         sub_indent = indent + INDENT_INCREMENT
-        return f"{nl}{self._format_non_rec(indent)}\n{sub_indent * INDENT}FROM{self.input._format_rec(sub_indent)}"
+        yield from self._iter_format_non_rec(indent)
+        yield f"{INDENT * sub_indent}FROM"
+        yield from self.input._iter_format_rec(sub_indent)
 
 
 class Pivot(SingleInput):
@@ -345,9 +364,9 @@ class Pivot(SingleInput):
     """polars has *just* `Expr`."""
     separator: str
 
-    def _format_non_rec(self, indent: int) -> str:
+    def _iter_format_non_rec(self, indent: int) -> Iterator[str]:
         # NOTE: Only exists in `DslPlan`, not `IR` which defines the displays
-        return f"{INDENT * indent}PIVOT[...]"
+        yield "PIVOT[...]"
 
 
 # `DslPlan::Distinct`
@@ -356,11 +375,11 @@ class Unique(SingleInput):
     subset: Seq[SelectorIR] | None
     options: UniqueOptions
 
-    def _format_non_rec(self, indent: int) -> str:
-        s = f"{INDENT * indent}UNIQUE[maintain_order: {self.options.maintain_order}, keep: {self.options.keep}]"
+    def _iter_format_non_rec(self, indent: int) -> Iterator[str]:
+        s = ""
         if subset := self.subset:
-            s += f"BY {list(subset)!r}"
-        return s
+            s = f" BY {list(subset)!r}"
+        yield f"UNIQUE[maintain_order: {self.options.maintain_order}, keep: {self.options.keep}]{s}"
 
 
 class Sort(SingleInput):
@@ -368,15 +387,15 @@ class Sort(SingleInput):
     by: Seq[SelectorIR]
     options: SortMultipleOptions
 
-    def _format_non_rec(self, indent: int) -> str:
+    def _iter_format_non_rec(self, indent: int) -> Iterator[str]:
         opts = self.options
         exprs = ", ".join(f"{e!r}" for e in self.by)
-        s = f"{INDENT * indent}SORT BY[{exprs}"
+        s = f"SORT BY[{exprs}"
         if any(opts.descending):
             s += f", descending: {list(opts.descending)}"
         if any(opts.nulls_last):
             s += f", nulls_last: {list(opts.nulls_last)}"
-        return f"{s}]"
+        yield f"{s}]"
 
 
 class Slice(SingleInput):
@@ -384,8 +403,8 @@ class Slice(SingleInput):
     offset: int
     length: int | None
 
-    def _format_non_rec(self, indent: int) -> str:
-        return f"{INDENT * indent}SLICE[offset: {self.offset}, len: {self.length}]"
+    def _iter_format_non_rec(self, indent: int) -> Iterator[str]:
+        yield f"SLICE[offset: {self.offset}, len: {self.length}]"
 
 
 class MapFunction(SingleInput):
@@ -393,62 +412,56 @@ class MapFunction(SingleInput):
     __slots__ = ("function",)
     function: LpFunction
 
-    def _format_non_rec(self, indent: int) -> str:
-        return f"{INDENT * indent}{self.function!r}"
-
-    def _format_rec(self, indent: int) -> str:
-        nl = "\n" if indent != 0 else ""
-        return f"{nl}{self._format_non_rec(indent)}{self.input._format_rec(indent + INDENT_INCREMENT)}"
+    def _iter_format_non_rec(self, indent: int) -> Iterator[str]:
+        yield repr(self.function)
 
 
 class Join(MultipleInputs[tuple[LogicalPlan, LogicalPlan]]):
     """Join two tables in an SQL-like fashion."""
 
-    __slots__ = ("how", "left_on", "right_on", "suffix")
+    __slots__ = ("left_on", "options", "right_on")
     left_on: Seq[str]
     right_on: Seq[str]
     options: JoinOptions
 
-    def _format_non_rec(self, indent: int) -> str:
-        pad = INDENT * indent
+    def _iter_format_non_rec(self, indent: int) -> Iterator[str]:
         how = self.options.how.upper()
-        operation = f"{pad}{how} JOIN"
         if how == "CROSS":
-            return operation
-        return f"{operation}:\n{pad}LEFT PLAN ON: {list(self.left_on)!r}\n{pad}RIGHT PLAN ON: {list(self.right_on)!r}"
+            yield f"{how} JOIN"
+            return
+        yield f"{how} JOIN:"
+        yield f"LEFT PLAN ON: {list(self.left_on)!r}"
+        yield f"RIGHT PLAN ON: {list(self.right_on)!r}"
 
-    def _format_rec(self, indent: int) -> str:
-        nl = "\n" if indent != 0 else ""
-        pad = INDENT * indent
+    def _iter_format_rec(self, indent: int) -> Iterator[str]:
         sub_indent = indent + INDENT_INCREMENT
         how = self.options.how.upper()
-        left, right = (input._format_rec(sub_indent) for input in self.inputs)
+        yield f"{how} JOIN:"
+        left = self.inputs[0]._iter_format_rec(sub_indent)
+        right = self.inputs[1]._iter_format_rec(sub_indent)
         if how == "CROSS":
-            left = f"LEFT PLAN:{left}"
-            right = f"RIGHT PLAN:{right}"
+            yield "LEFT PLAN:"
+            yield from left
+            yield "RIGHT PLAN:"
+            yield from right
         else:
-            left = f"LEFT PLAN ON: {list(self.left_on)!r}{left}"
-            right = f"RIGHT PLAN ON: {list(self.right_on)!r}{right}"
-        # fmt: off
-        return (
-            f"{nl}{pad}{how} JOIN:\n"
-            f"{pad}{left}\n"
-            f"{pad}{right}\n"
-            f"{pad}END {how} JOIN"
-        )
+            yield f"LEFT PLAN ON: {list(self.left_on)!r}"
+            yield from left
+            yield f"RIGHT PLAN ON: {list(self.right_on)!r}"
+            yield from right
+        yield f"END {how} JOIN"
 
 
 # TODO @dangotbanned: Redo in a less hacky way
-def _format_rec_concat(self: Incomplete, indent: int) -> str:
+def _iter_format_rec_concat(self: VConcat | HConcat, indent: int) -> Iterator[str]:
     sub_indent = indent + INDENT_INCREMENT
     sub_sub_indent = sub_indent + INDENT_INCREMENT
-    sub_pad = (sub_indent) * INDENT
-    nl = "\n" if indent != 0 else ""
-    self_repr = f"{nl}{self._format_non_rec(indent)}"
+    sub_pad = INDENT * sub_indent
+    yield from self._iter_format_non_rec(indent)
     for idx, input in enumerate(self.inputs):
-        self_repr += f"\n{sub_pad}PLAN {idx}:{input._format_rec(sub_sub_indent)}"
-    name = "UNION" if type(self) is VConcat else "HCONCAT"
-    return f"{self_repr}\n{indent * INDENT}END {name}"
+        yield f"{sub_pad}PLAN {idx}:"
+        yield from input._iter_format_rec(sub_sub_indent)
+    yield f"{INDENT * indent}END {'UNION' if type(self) is VConcat else 'HCONCAT'}"
 
 
 # `DslPlan::Union`
@@ -458,19 +471,19 @@ class VConcat(MultipleInputs[Seq[LogicalPlan]]):
     __slots__ = ("options",)
     options: VConcatOptions
 
-    def _format_non_rec(self, indent: int) -> str:
-        return f"{INDENT * indent}UNION"
+    def _iter_format_non_rec(self, indent: int) -> Iterator[str]:
+        yield f"{INDENT * indent}UNION"
 
-    _format_rec = _format_rec_concat
+    _iter_format_rec = _iter_format_rec_concat
 
 
 class HConcat(MultipleInputs[Seq[LogicalPlan]]):
     """`concat(how="horizontal")`."""
 
-    def _format_non_rec(self, indent: int) -> str:
-        return f"{INDENT * indent}HCONCAT"
+    def _iter_format_non_rec(self, indent: int) -> Iterator[str]:
+        yield f"{INDENT * indent}HCONCAT"
 
-    _format_rec = _format_rec_concat
+    _iter_format_rec = _iter_format_rec_concat
 
 
 # NOTE: `DslFunction`
