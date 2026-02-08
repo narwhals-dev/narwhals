@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, Generic
 from narwhals._compliant import LazyExprNamespace
 from narwhals._compliant.any_namespace import StringNamespace
 from narwhals._sql.typing import SQLExprT
+from narwhals._utils import is_pyspark_pre_4
 
 if TYPE_CHECKING:
     from narwhals._compliant.expr import NativeExpr
@@ -71,8 +72,12 @@ class SQLExprStringNamespace(
         return self.compliant._with_elementwise(func)
 
     def split(self, by: str) -> SQLExprT:
+        # PySpark < 4.0's `split` expects a raw Python string for `pattern`,
+        # not a Column literal.
+        _is_pyspark_pre_4 = is_pyspark_pre_4(self.compliant._implementation)
+        split_by = by if _is_pyspark_pre_4 else self._lit(by)
         return self.compliant._with_elementwise(
-            lambda expr: self._function("str_split", expr, self._lit(by))
+            lambda expr: self._function("str_split", expr, split_by)
         )
 
     def starts_with(self, prefix: str) -> SQLExprT:
@@ -105,16 +110,21 @@ class SQLExprStringNamespace(
         # There is no built-in zfill function, so we need to implement it manually
         # using string manipulation functions.
 
+        # PySpark < 4.0's `lpad` expects raw Python values for `len` and `pad`,
+        # not Column literals.
+        _is_pyspark_pre_4 = is_pyspark_pre_4(self.compliant._implementation)
+
         def func(expr: NativeExpr) -> NativeExpr:
             less_than_width = self._function("length", expr) < self._lit(width)
-            zero, hyphen, plus = self._lit("0"), self._lit("-"), self._lit("+")
+            zero = "0" if _is_pyspark_pre_4 else self._lit("0")
+            width_after_sign = width - 1 if _is_pyspark_pre_4 else self._lit(width - 1)
+            full_width = width if _is_pyspark_pre_4 else self._lit(width)
+            hyphen, plus = self._lit("-"), self._lit("+")
 
             starts_with_minus = self._function("starts_with", expr, hyphen)
             starts_with_plus = self._function("starts_with", expr, plus)
             substring = self._function("substr", expr, self._lit(2))
-            padded_substring = self._function(
-                "lpad", substring, self._lit(width - 1), zero
-            )
+            padded_substring = self._function("lpad", substring, width_after_sign, zero)
             return self._when(
                 operator.and_(starts_with_minus, less_than_width),
                 self._function("concat", hyphen, padded_substring),
@@ -123,7 +133,7 @@ class SQLExprStringNamespace(
                     self._function("concat", plus, padded_substring),
                     self._when(
                         less_than_width,
-                        self._function("lpad", expr, self._lit(width), zero),
+                        self._function("lpad", expr, full_width, zero),
                         expr,
                     ),
                 ),
@@ -134,20 +144,32 @@ class SQLExprStringNamespace(
         return self.compliant._with_callable(func)
 
     def pad_start(self, length: int, fill_char: str) -> SQLExprT:
+        # PySpark < 4.0's `lpad` expects raw Python values for `len` and `pad`,
+        # not Column literals.
+        _is_pyspark_pre_4 = is_pyspark_pre_4(self.compliant._implementation)
+        lpad_length = length if _is_pyspark_pre_4 else self._lit(length)
+        lpad_fill = fill_char if _is_pyspark_pre_4 else self._lit(fill_char)
+
         def _pad_start(expr: NativeExpr) -> NativeExpr:
             return self._when(
                 self._function("length", expr) < self._lit(length),
-                self._function("lpad", expr, self._lit(length), self._lit(fill_char)),
+                self._function("lpad", expr, lpad_length, lpad_fill),
                 expr,
             )
 
         return self.compliant._with_callable(_pad_start)
 
     def pad_end(self, length: int, fill_char: str) -> SQLExprT:
+        # PySpark < 4.0's `rpad` expects raw Python values for `len` and `pad`,
+        # not Column literals.
+        _is_pyspark_pre_4 = is_pyspark_pre_4(self.compliant._implementation)
+        rpad_length = length if _is_pyspark_pre_4 else self._lit(length)
+        rpad_fill = fill_char if _is_pyspark_pre_4 else self._lit(fill_char)
+
         def _pad_end(expr: NativeExpr) -> NativeExpr:
             return self._when(
                 self._function("length", expr) < self._lit(length),
-                self._function("rpad", expr, self._lit(length), self._lit(fill_char)),
+                self._function("rpad", expr, rpad_length, rpad_fill),
                 expr,
             )
 

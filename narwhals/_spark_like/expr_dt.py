@@ -10,7 +10,7 @@ from narwhals._spark_like.utils import (
     strptime_to_pyspark_format,
 )
 from narwhals._sql.expr_dt import SQLExprDateTimeNamesSpace
-from narwhals._utils import not_implemented
+from narwhals._utils import is_pyspark_pre_4, not_implemented
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -109,6 +109,11 @@ class SparkLikeExprDateTimeNamespace(SQLExprDateTimeNamesSpace["SparkLikeExpr"])
         F = self.compliant._F
 
         def _offset_by(expr: Column) -> Column:
+            if is_pyspark_pre_4(self.compliant._implementation):
+                # timestamp_add was added in PySpark 4.0
+                if unit == "q":
+                    return expr + F.expr(f"INTERVAL {multiple * 3} MONTHS")
+                return expr + F.expr(f"INTERVAL {multiple} {UNITS_DICT[unit].upper()}")
             # https://github.com/eakmanrq/sqlframe/issues/441
             return F.timestamp_add(  # pyright: ignore[reportAttributeAccessIssue]
                 UNITS_DICT[unit], F.lit(multiple), expr
