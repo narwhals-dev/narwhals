@@ -101,7 +101,6 @@ jobs:
       - name: Start Spark Connect server
         run: |
           $SPARK_HOME/sbin/start-connect-server.sh \
-            --packages org.apache.spark:spark-connect_2.12:${SPARK_VERSION} \
             --conf spark.connect.grpc.binding.port=${SPARK_PORT}
           sleep 5
           echo "Spark Connect server started"
