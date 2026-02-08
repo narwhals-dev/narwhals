@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Generic
+from typing import TYPE_CHECKING, Any, ClassVar, Generic
 
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.schema import freeze_schema
@@ -92,18 +92,46 @@ class LogicalPlan(Immutable):
     [`to_expr_ir`]: https://github.com/pola-rs/polars/blob/00d7f7e1c3b24a54a13f235e69584614959f8837/crates/polars-plan/src/plans/conversion/dsl_to_ir/expr_to_ir.rs#L6-L9
     """
 
+    has_inputs: ClassVar[bool]
+    """Cheap check for `Scan` vs `SingleInput | MultipleInputs`"""
+
+    def __init_subclass__(
+        cls: type[Self], *args: Any, has_inputs: bool | None = None, **kwds: Any
+    ) -> None:
+        super().__init_subclass__(*args, **kwds)
+        if has_inputs is not None:
+            cls.has_inputs = has_inputs
+        elif getattr(cls, "has_inputs", None) is None:
+            parent_name = LogicalPlan.__name__
+            msg = (
+                f"`has_inputs` is a required argument in direct subclasses of {parent_name!r}.\n"
+                f"Hint: instead try `class {cls.__name__}({parent_name}, has_inputs=<True|False>): ...`"
+            )
+            raise TypeError(msg)
+
     def iter_left(self) -> Iterator[LogicalPlan]:
-        """Yield nodes root->leaf."""
-        msg = f"TODO: `{type(self).__name__}.iter_left`"
-        raise NotImplementedError(msg)
+        """Yield nodes recursively from root->leaf."""
+        for input in self.iter_inputs():
+            yield from input.iter_left()
+        yield self
 
     def iter_right(self) -> Iterator[LogicalPlan]:
-        """Yield nodes leaf->root."""
+        """Yield nodes recursively from leaf->root."""
         msg = f"TODO: `{type(self).__name__}.iter_right`"
         raise NotImplementedError(msg)
 
+    def iter_inputs(self) -> Iterator[LogicalPlan]:
+        """Yield direct input nodes to leaf.
 
-class Scan(LogicalPlan):
+        Equivalent to [`IR.inputs`] and [`ir::Inputs`].
+
+        [`IR.inputs`]: https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-plan/src/plans/ir/inputs.rs#L204-L239
+        [`ir::Inputs`]: https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-plan/src/plans/ir/inputs.rs#L301-L335
+        """
+        msg = f"TODO: `{type(self).__name__}.iter_inputs`"
+        raise NotImplementedError(msg)
+
+class Scan(LogicalPlan, has_inputs=False):
     """Root node of a `LogicalPlan`.
 
     All plans start with either:
@@ -113,11 +141,11 @@ class Scan(LogicalPlan):
     So the next question is, how do we introduce native lazy objects into mix?
     """
 
-    def iter_left(self) -> Iterator[LogicalPlan]:
-        yield self
-
     def iter_right(self) -> Iterator[LogicalPlan]:
         yield self
+
+    def iter_inputs(self) -> Iterator[LogicalPlan]:
+        yield from ()
 
 
 class ScanFile(Scan):
@@ -181,32 +209,29 @@ class ScanDataFrame(Scan):
         )
 
 
-class SingleInput(LogicalPlan):
+class SingleInput(LogicalPlan, has_inputs=True):
     __slots__ = ("input",)
     input: LogicalPlan
-
-    def iter_left(self) -> Iterator[LogicalPlan]:
-        yield from self.input.iter_left()
-        yield self
 
     def iter_right(self) -> Iterator[LogicalPlan]:
         yield self
         yield from self.input.iter_right()
 
+    def iter_inputs(self) -> Iterator[LogicalPlan]:
+        yield self.input
 
-class MultipleInputs(LogicalPlan, Generic[_InputsT]):
+
+class MultipleInputs(LogicalPlan, Generic[_InputsT], has_inputs=True):
     __slots__ = ("inputs",)
     inputs: _InputsT
-
-    def iter_left(self) -> Iterator[LogicalPlan]:
-        for input in self.inputs:
-            yield from input.iter_left()
-        yield self
 
     def iter_right(self) -> Iterator[LogicalPlan]:
         yield self
         for input in reversed(self.inputs):
             yield from input.iter_right()
+
+    def iter_inputs(self) -> Iterator[LogicalPlan]:
+        yield from self.inputs
 
 
 class Sink(SingleInput):
@@ -342,14 +367,6 @@ class Join(MultipleInputs[tuple[LogicalPlan, LogicalPlan]]):
     left_on: Seq[str]
     right_on: Seq[str]
     options: JoinOptions
-
-    @property
-    def input_left(self) -> LogicalPlan:
-        return self.inputs[0]
-
-    @property
-    def input_right(self) -> LogicalPlan:
-        return self.inputs[1]
 
     def __repr__(self) -> str:
         how = self.options.how.upper()
