@@ -180,6 +180,9 @@ class ScanFile(Scan):
     def from_source(cls, source: FileSource, /) -> Self:
         return cls(source=normalize_path(source))
 
+    def _format_non_rec(self, indent: int) -> str:
+        return f"{INDENT * indent}{type(self).__name__.removeprefix('Scan')} SCAN [{self.source}]"
+
 
 class ScanCsv(ScanFile): ...
 
