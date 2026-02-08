@@ -10,7 +10,6 @@ on:
       - tests/frame/*sink*.py
   schedule:
     - cron: 0 12 * * 0 # Sunday at mid-day
-  workflow_dispatch:
 
 env:
   PY_COLORS: 1
