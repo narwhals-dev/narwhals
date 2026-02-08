@@ -9,6 +9,7 @@ import ibis
 import ibis.expr.types as ir
 
 from narwhals._compliant.namespace import AlignDiagonal
+from narwhals._exceptions import issue_warning
 from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
@@ -22,6 +23,7 @@ from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
+    from typing import Literal
 
     from narwhals._utils import Version
     from narwhals.typing import ConcatMethod, IntoDType, PythonLiteral
@@ -138,6 +140,27 @@ class IbisNamespace(
         return self._expr(
             call=func,
             evaluate_output_names=lambda _df: ["len"],
+            alias_output_names=None,
+            version=self._version,
+        )
+
+    def corr(
+        self, a: IbisExpr, b: IbisExpr, method: Literal["pearson", "spearman"] = "pearson"
+    ) -> IbisExpr:
+        msg = (
+            "For wider dataframe support, Narwhals currently does not pass down coefficient "
+            'methods into Ibis .corr calls. ("pop" correlation used)'
+        )
+        issue_warning(msg, UserWarning)
+
+        def func(_df: IbisLazyFrame) -> list[ir.Value]:
+            a_ = _df._evaluate_single_output_expr(a)
+            b_ = _df._evaluate_single_output_expr(b)
+            return [a_.corr(b_, how="pop")]
+
+        return self._expr(
+            func,
+            evaluate_output_names=lambda _df: ["corr"],
             alias_output_names=None,
             version=self._version,
         )

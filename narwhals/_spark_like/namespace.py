@@ -5,6 +5,7 @@ from functools import reduce
 from itertools import chain
 from typing import TYPE_CHECKING, Any
 
+from narwhals._exceptions import issue_warning
 from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
@@ -22,6 +23,7 @@ from narwhals._sql.namespace import SQLNamespace
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
+    from typing import Literal
 
     from sqlframe.base.column import Column
 
@@ -206,6 +208,34 @@ class SparkLikeNamespace(
             call=func,
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
+            version=self._version,
+            implementation=self._implementation,
+        )
+
+    def corr(
+        self,
+        a: SparkLikeExpr,
+        b: SparkLikeExpr,
+        method: Literal["pearson", "spearman"] = "pearson",
+    ) -> SparkLikeExpr:
+        if method != "pearson":
+            msg = (
+                f"You have requested {method} correlation but spark only provides "
+                "native support for pearson correlation coefficients. Correlation will "
+                "be calculated using pearson."
+            )
+            issue_warning(msg, UserWarning)
+
+        def func(df: SparkLikeLazyFrame) -> list[Column]:
+            F = self._F
+            a_ = df._evaluate_single_output_expr(a)
+            b_ = df._evaluate_single_output_expr(b)
+            return [F.corr(a_, b_)]
+
+        return self._expr(
+            call=func,
+            evaluate_output_names=combine_evaluate_output_names(a, b),
+            alias_output_names=combine_alias_output_names(a, b),
             version=self._version,
             implementation=self._implementation,
         )

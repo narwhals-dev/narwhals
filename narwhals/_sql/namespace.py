@@ -10,6 +10,7 @@ from narwhals._sql.typing import SQLExprT, SQLLazyFrameT
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
+    from typing import Literal
 
     from narwhals.typing import PythonLiteral
 
@@ -86,3 +87,9 @@ class SQLNamespace(
         return self._expr._from_elementwise_horizontal_op(
             func_with_otherwise, then, predicate, otherwise
         )
+
+    def corr(
+        self, a: SQLExprT, b: SQLExprT, method: Literal["pearson", "spearman"] = "pearson"
+    ) -> SQLExprT:
+        msg = "Correlation not implemented yet for SQL like dataframes"
+        raise NotImplementedError(msg)
