@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, Generic
 from narwhals._compliant import LazyExprNamespace
 from narwhals._compliant.any_namespace import StringNamespace
 from narwhals._sql.typing import SQLExprT
+from narwhals._utils import is_pyspark_pre_4
 
 if TYPE_CHECKING:
     from narwhals._compliant.expr import NativeExpr
@@ -71,8 +72,12 @@ class SQLExprStringNamespace(
         return self.compliant._with_elementwise(func)
 
     def split(self, by: str) -> SQLExprT:
+        # PySpark < 4.0's `split` expects a raw Python string for `pattern`,
+        # not a Column literal.
+        _is_pyspark_pre_4 = is_pyspark_pre_4(self.compliant._implementation)
+        split_by = by if _is_pyspark_pre_4 else self._lit(by)
         return self.compliant._with_elementwise(
-            lambda expr: self._function("str_split", expr, self._lit(by))
+            lambda expr: self._function("str_split", expr, split_by)
         )
 
     def starts_with(self, prefix: str) -> SQLExprT:
@@ -105,18 +110,15 @@ class SQLExprStringNamespace(
         # There is no built-in zfill function, so we need to implement it manually
         # using string manipulation functions.
 
-        impl = self.compliant._implementation
         # PySpark < 4.0's `lpad` expects raw Python values for `len` and `pad`,
         # not Column literals.
-        is_spark_less_4 = (
-            impl.is_pyspark() or impl.is_pyspark_connect()
-        ) and impl._backend_version() < (4, 0)
+        _is_pyspark_pre_4 = is_pyspark_pre_4(self.compliant._implementation)
 
         def func(expr: NativeExpr) -> NativeExpr:
             less_than_width = self._function("length", expr) < self._lit(width)
-            zero = "0" if is_spark_less_4 else self._lit("0")
-            width_after_sign = width - 1 if is_spark_less_4 else self._lit(width - 1)
-            full_width = width if is_spark_less_4 else self._lit(width)
+            zero = "0" if _is_pyspark_pre_4 else self._lit("0")
+            width_after_sign = width - 1 if _is_pyspark_pre_4 else self._lit(width - 1)
+            full_width = width if _is_pyspark_pre_4 else self._lit(width)
             hyphen, plus = self._lit("-"), self._lit("+")
 
             starts_with_minus = self._function("starts_with", expr, hyphen)
@@ -142,14 +144,11 @@ class SQLExprStringNamespace(
         return self.compliant._with_callable(func)
 
     def pad_start(self, length: int, fill_char: str) -> SQLExprT:
-        impl = self.compliant._implementation
         # PySpark < 4.0's `lpad` expects raw Python values for `len` and `pad`,
         # not Column literals.
-        is_spark_less_4 = (
-            impl.is_pyspark() or impl.is_pyspark_connect()
-        ) and impl._backend_version() < (4, 0)
-        lpad_length = length if is_spark_less_4 else self._lit(length)
-        lpad_fill = fill_char if is_spark_less_4 else self._lit(fill_char)
+        _is_pyspark_pre_4 = is_pyspark_pre_4(self.compliant._implementation)
+        lpad_length = length if _is_pyspark_pre_4 else self._lit(length)
+        lpad_fill = fill_char if _is_pyspark_pre_4 else self._lit(fill_char)
 
         def _pad_start(expr: NativeExpr) -> NativeExpr:
             return self._when(
@@ -161,14 +160,11 @@ class SQLExprStringNamespace(
         return self.compliant._with_callable(_pad_start)
 
     def pad_end(self, length: int, fill_char: str) -> SQLExprT:
-        impl = self.compliant._implementation
         # PySpark < 4.0's `rpad` expects raw Python values for `len` and `pad`,
         # not Column literals.
-        is_spark_less_4 = (
-            impl.is_pyspark() or impl.is_pyspark_connect()
-        ) and impl._backend_version() < (4, 0)
-        rpad_length = length if is_spark_less_4 else self._lit(length)
-        rpad_fill = fill_char if is_spark_less_4 else self._lit(fill_char)
+        _is_pyspark_pre_4 = is_pyspark_pre_4(self.compliant._implementation)
+        rpad_length = length if _is_pyspark_pre_4 else self._lit(length)
+        rpad_fill = fill_char if _is_pyspark_pre_4 else self._lit(fill_char)
 
         def _pad_end(expr: NativeExpr) -> NativeExpr:
             return self._when(

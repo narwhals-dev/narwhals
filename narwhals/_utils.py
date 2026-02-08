@@ -593,6 +593,13 @@ class Implementation(NoAutoEnum):
         return backend_version(self)
 
 
+def is_pyspark_pre_4(implementation: Implementation) -> bool:
+    """Whether implementation is PySpark (or PySpark Connect) with version < 4.0."""
+    return (
+        implementation.is_pyspark() or implementation.is_pyspark_connect()
+    ) and implementation._backend_version() < (4, 0)
+
+
 MIN_VERSIONS: Mapping[Implementation, tuple[int, ...]] = {
     Implementation.PANDAS: (1, 1, 3),
     Implementation.MODIN: (0, 8, 2),
