@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from itertools import chain
 from typing import TYPE_CHECKING, Any, ClassVar, Generic
 
 from narwhals._plan._immutable import Immutable
+from narwhals._plan.common import todo
 from narwhals._plan.schema import freeze_schema
 from narwhals._plan.typing import Seq
 from narwhals._typing_compat import TypeVar
@@ -29,11 +31,10 @@ if TYPE_CHECKING:
 Incomplete: TypeAlias = Any
 _InputsT = TypeVar("_InputsT", bound="Seq[LogicalPlan]")
 
+INDENT_INCREMENT = 2
+INDENT = " "
 
-# NOTE: `__repr__`(s) adapted from:
-# - https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-plan/src/plans/ir/format.rs#L148-L267
-# - https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-plan/src/plans/ir/format.rs#L705-L1006
-# - https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-plan/src/plans/functions/mod.rs#L302-L382
+
 class LogicalPlan(Immutable):
     """Representation of `LazyFrame` operations, based on [`polars_plan::dsl::plan::DslPlan`].
 
@@ -131,6 +132,27 @@ class LogicalPlan(Immutable):
         msg = f"TODO: `{type(self).__name__}.iter_inputs`"
         raise NotImplementedError(msg)
 
+    def _format_rec(self, indent: int) -> str:
+        # `IRDisplay._format`
+        # (here) https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-plan/src/plans/ir/format.rs#L259-L265
+        # (overrides) https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-plan/src/plans/ir/format.rs#L148-L229
+        self_repr = self._format_non_rec(indent)
+        if not self.has_inputs:
+            return self_repr
+        sub_indent = indent + INDENT_INCREMENT
+        it = (node._format_rec(sub_indent) for node in self.iter_inputs())
+        return "".join(chain([self_repr], it))
+
+    def _format_non_rec(self, indent: int) -> str:
+        # `ir::format::write_ir_non_recursive`
+        # https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-plan/src/plans/ir/format.rs#L705-L1006
+        msg = f"TODO: `{type(self).__name__}._format_non_rec`"
+        raise NotImplementedError(msg)
+
+    def __repr__(self) -> str:
+        return self._format_non_rec(0)
+
+
 class Scan(LogicalPlan, has_inputs=False):
     """Root node of a `LogicalPlan`.
 
@@ -189,7 +211,7 @@ class ScanDataFrame(Scan):
         # Caching a native table seems like a non-starter, once `pandas` enters the party
         yield from (id(self.df), self.schema)
 
-    def __repr__(self) -> str:
+    def _format_non_rec(self, indent: int) -> str:
         names = self.schema.names
         n_columns = len(names)
         if n_columns > 4:
@@ -199,7 +221,7 @@ class ScanDataFrame(Scan):
             s = ""
         else:
             s = ", ".join(f'"{name}"' for name in names)
-        return f"DF [{s}]; {n_columns} COLUMNS"
+        return f"{INDENT * indent}DF [{s}]; {n_columns} COLUMNS"
 
     def __str__(self) -> str:
         return (
@@ -239,8 +261,8 @@ class Sink(SingleInput):
 
 
 class Collect(Sink):
-    def __repr__(self) -> str:
-        return "SINK (memory)"
+    def _format_non_rec(self, indent: int) -> str:
+        return f"{INDENT * indent}SINK (memory)"
 
 
 class SinkFile(Sink):
@@ -251,8 +273,8 @@ class SinkFile(Sink):
     Not sure `BytesIO` makes sense here.
     """
 
-    def __repr__(self) -> str:
-        return "SINK (file)"
+    def _format_non_rec(self, indent: int) -> str:
+        return f"{INDENT * indent}SINK (file)"
 
 
 class SinkParquet(SinkFile): ...
@@ -260,31 +282,33 @@ class SinkParquet(SinkFile): ...
 
 class Select(SingleInput):
     __slots__ = ("exprs",)
-    exprs: Seq[ExprIR]
-
     # NOTE: Contains a `should_broadcast` flag, but AFAICT
     # is only replaced with `False` during optimization (not when building the plan)
     # `options: ProjectionOptions`
-    def __repr__(self) -> str:
-        return f"SELECT {list(self.exprs)!r}"
+    exprs: Seq[ExprIR]
+
+    def _format_non_rec(self, indent: int) -> str:
+        return f"{INDENT * indent}SELECT {list(self.exprs)!r}"
 
 
 # `DslPlan::HStack`
 class WithColumns(SingleInput):
     __slots__ = ("exprs",)
-    exprs: Seq[ExprIR]
     # NOTE: Same `ProjectionOptions` comment as `Select`
+    exprs: Seq[ExprIR]
 
-    def __repr__(self) -> str:
-        return f"WITH_COLUMNS:\n{list(self.exprs)!r}"
+    def _format_non_rec(self, indent: int) -> str:
+        pad = INDENT * indent
+        return f"{pad} WITH_COLUMNS:\n {pad}{list(self.exprs)!r}"
 
 
 class Filter(SingleInput):
     __slots__ = ("predicate",)
     predicate: ExprIR
 
-    def __repr__(self) -> str:
-        return f"FILTER {self.predicate!r}\nFROM"
+    def _format_non_rec(self, indent: int) -> str:
+        pad = INDENT * indent
+        return f"{pad}FILTER {self.predicate!r}\n{pad}FROM"
 
 
 class GroupBy(SingleInput):
@@ -292,8 +316,11 @@ class GroupBy(SingleInput):
     keys: Seq[ExprIR]
     aggs: Seq[ExprIR]
 
-    def __repr__(self) -> str:
-        return f"AGGREGATE\n  {list(self.aggs)!r} BY {list(self.keys)!r}"
+    def _format_non_rec(self, indent: int) -> str:
+        pad = INDENT * indent
+        return f"{pad}AGGREGATE\n{pad + INDENT}{list(self.aggs)!r} BY {list(self.keys)!r}"
+
+    _format_rec = todo()
 
 
 class Pivot(SingleInput):
@@ -308,9 +335,9 @@ class Pivot(SingleInput):
     """polars has *just* `Expr`."""
     separator: str
 
-    def __repr__(self) -> str:
+    def _format_non_rec(self, indent: int) -> str:
         # NOTE: Only exists in `DslPlan`, not `IR` which defines the displays
-        return "PIVOT[...]"
+        return f"{INDENT * indent}PIVOT[...]"
 
 
 # `DslPlan::Distinct`
@@ -319,8 +346,8 @@ class Unique(SingleInput):
     subset: Seq[SelectorIR] | None
     options: UniqueOptions
 
-    def __repr__(self) -> str:
-        s = f"UNIQUE[maintain_order: {self.options.maintain_order}, keep: {self.options.keep}]"
+    def _format_non_rec(self, indent: int) -> str:
+        s = f"{INDENT * indent}UNIQUE[maintain_order: {self.options.maintain_order}, keep: {self.options.keep}]"
         if subset := self.subset:
             s += f"BY {list(subset)!r}"
         return s
@@ -331,10 +358,10 @@ class Sort(SingleInput):
     by: Seq[SelectorIR]
     options: SortMultipleOptions
 
-    def __repr__(self) -> str:
+    def _format_non_rec(self, indent: int) -> str:
         opts = self.options
         exprs = ", ".join(f"{e!r}" for e in self.by)
-        s = f"SORT BY[{exprs}"
+        s = f"{INDENT * indent}SORT BY[{exprs}"
         if any(opts.descending):
             s += f", descending: {list(opts.descending)}"
         if any(opts.nulls_last):
@@ -347,8 +374,8 @@ class Slice(SingleInput):
     offset: int
     length: int | None
 
-    def __repr__(self) -> str:
-        return f"SLICE[offset: {self.offset}, len: {self.length}]"
+    def _format_non_rec(self, indent: int) -> str:
+        return f"{INDENT * indent}SLICE[offset: {self.offset}, len: {self.length}]"
 
 
 class MapFunction(SingleInput):
@@ -356,8 +383,10 @@ class MapFunction(SingleInput):
     __slots__ = ("function",)
     function: LpFunction
 
-    def __repr__(self) -> str:
-        return f"{self.function!r}"
+    def _format_non_rec(self, indent: int) -> str:
+        return f"{INDENT * indent}{self.function!r}"
+
+    _format_rec = todo()
 
 
 class Join(MultipleInputs[tuple[LogicalPlan, LogicalPlan]]):
@@ -368,11 +397,15 @@ class Join(MultipleInputs[tuple[LogicalPlan, LogicalPlan]]):
     right_on: Seq[str]
     options: JoinOptions
 
-    def __repr__(self) -> str:
+    def _format_non_rec(self, indent: int) -> str:
+        pad = INDENT * indent
         how = self.options.how.upper()
+        operation = f"{pad}{how} JOIN"
         if how == "CROSS":
-            return f"{how} JOIN"
-        return f"{how} JOIN:\nLEFT PLAN ON: {list(self.left_on)!r}\nRIGHT PLAN ON: {list(self.right_on)!r}"
+            return operation
+        return f"{operation}:\n{pad}LEFT PLAN ON: {list(self.left_on)!r}\n{pad}RIGHT PLAN ON: {list(self.right_on)!r}"
+
+    _format_rec = todo()
 
 
 # `DslPlan::Union`
@@ -382,18 +415,23 @@ class VConcat(MultipleInputs[Seq[LogicalPlan]]):
     __slots__ = ("options",)
     options: VConcatOptions
 
-    def __repr__(self) -> str:
-        return "UNION"
+    def _format_non_rec(self, indent: int) -> str:
+        return f"{INDENT * indent}UNION"
+
+    _format_rec = todo()
 
 
 class HConcat(MultipleInputs[Seq[LogicalPlan]]):
     """`concat(how="horizontal")`."""
 
-    def __repr__(self) -> str:
-        return "HCONCAT"
+    def _format_non_rec(self, indent: int) -> str:
+        return f"{INDENT * indent}HCONCAT"
+
+    _format_rec = todo()
 
 
 # NOTE: `DslFunction`
+# (reprs from) https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-plan/src/plans/functions/mod.rs#L302-L382
 class LpFunction(Immutable): ...
 
 
