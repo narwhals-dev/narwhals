@@ -8,8 +8,8 @@ from typing import TYPE_CHECKING, Any
 import ibis
 import ibis.expr.types as ir
 
-from narwhals._exceptions import issue_warning
 from narwhals._compliant.namespace import AlignDiagonal
+from narwhals._exceptions import issue_warning
 from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
