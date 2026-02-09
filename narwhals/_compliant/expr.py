@@ -1135,7 +1135,7 @@ class EagerExprStringNamespace(
     def ends_with(self, suffix: str) -> EagerExprT:
         return self.compliant._reuse_series_namespace("str", "ends_with", suffix=suffix)
 
-    def contains(self, pattern: str, *, literal: bool) -> EagerExprT:
+    def contains(self, pattern: str | EagerExprT, *, literal: bool) -> EagerExprT:
         return self.compliant._reuse_series_namespace(
             "str", "contains", pattern=pattern, literal=literal
         )

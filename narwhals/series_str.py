@@ -156,10 +156,10 @@ class SeriesStringNamespace(Generic[SeriesT]):
         r"""Check if string contains a substring that matches a pattern.
 
         Arguments:
-            pattern: A Character sequence, valid regular expression pattern, or a Series
-                that evaluates to a string.
+            pattern: A Character sequence, valid regular expression pattern, or another
+                Series.
             literal: If True, treats the pattern as a literal string.
-                     If False, assumes the pattern is a regular expression.
+                If False, assumes the pattern is a regular expression.
 
         Warning:
             Passing a Series as `pattern` is only supported by Polars. Other backends

@@ -112,3 +112,34 @@ def test_contains_series_literal(constructor_eager: ConstructorEager) -> None:
             "literal_match": [False, False, False, False, True, None],
         }
     assert_equal_data(result, expected)
+
+
+def test_expr_contains_pattern_expr(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    """Test str.contains with an expression pattern."""
+    if any(x in str(constructor) for x in ("dask", "pyarrow", "pandas", "modin", "cudf")):
+        reason = "Not supported"
+        request.applymarker(pytest.mark.xfail(reason=reason, raises=TypeError))
+
+    expr_data = {"a": ["x", "y", "z"], "b": ["x", "z", "z"]}
+    df = nw.from_native(constructor(expr_data))
+    result = df.select(
+        nw.col("a").str.contains(nw.col("b"), literal=True).alias("contains_b")
+    )
+    expected: dict[str, list[Any]] = {"contains_b": [True, False, True]}
+    assert_equal_data(result, expected)
+
+
+def test_series_contains_pattern_series(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
+    if any(x in str(constructor_eager) for x in ("pyarrow", "pandas", "modin", "cudf")):
+        reason = "Not supported"
+        request.applymarker(pytest.mark.xfail(reason=reason, raises=TypeError))
+
+    expr_data = {"a": ["x", "y", "z"], "b": ["x", "z", "z"]}
+    df = nw.from_native(constructor_eager(expr_data), eager_only=True)
+    result = df.select(contains_b=df["a"].str.contains(df["b"], literal=True))
+    expected = {"contains_b": [True, False, True]}
+    assert_equal_data(result, expected)
