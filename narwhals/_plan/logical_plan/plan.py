@@ -28,6 +28,7 @@ if TYPE_CHECKING:
 
 Incomplete: TypeAlias = Any
 _InputsT = TypeVar("_InputsT", bound="Seq[LogicalPlan]")
+LpFunctionT = TypeVar("LpFunctionT", bound="LpFunction", default="LpFunction")
 
 
 class LogicalPlan(Immutable):
@@ -303,9 +304,9 @@ class Slice(SingleInput):
     length: int | None
 
 
-class MapFunction(SingleInput):
+class MapFunction(SingleInput, Generic[LpFunctionT]):
     __slots__ = ("function",)
-    function: LpFunction
+    function: LpFunctionT
 
 
 class Join(MultipleInputs[tuple[LogicalPlan, LogicalPlan]]):

@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
     from narwhals._plan.dataframe import DataFrame
     from narwhals._plan.expressions import ExprIR, SelectorIR
-    from narwhals._plan.logical_plan.plan import LogicalPlan, LpFunction
+    from narwhals._plan.logical_plan.plan import LogicalPlan
     from narwhals._plan.options import (
         ExplodeOptions,
         JoinOptions,
@@ -173,7 +173,7 @@ class LpBuilder:
         return self.with_columns((expr,))
 
     # `DslBuilder.map_private`
-    def map(self, function: LpFunction) -> Self:
+    def map(self, function: lp.LpFunctionT) -> Self:
         return self.from_plan(lp.MapFunction(input=self._plan, function=function))
 
     # `MapFunction`
