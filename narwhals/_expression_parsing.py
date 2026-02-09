@@ -230,7 +230,8 @@ class ExprNode:
         kind: ExprKind,
         name: str,
         /,
-        *exprs: IntoExpr | NonNestedLiteral,
+        *,
+        exprs: Sequence[IntoExpr | NonNestedLiteral] = (),
         str_as_lit: bool = False,
         allow_multi_output: bool = False,
         **kwargs: Any,
@@ -272,7 +273,7 @@ class ExprNode:
 
     def _with_kwargs(self, **kwargs: Any) -> ExprNode:
         return self.__class__(
-            self.kind, self.name, *self.exprs, str_as_lit=self.str_as_lit, **kwargs
+            self.kind, self.name, exprs=self.exprs, str_as_lit=self.str_as_lit, **kwargs
         )
 
     def _push_down_over_node_in_place(

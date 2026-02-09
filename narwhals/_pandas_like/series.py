@@ -14,6 +14,7 @@ from narwhals._pandas_like.series_str import PandasLikeSeriesStringNamespace
 from narwhals._pandas_like.series_struct import PandasLikeSeriesStructNamespace
 from narwhals._pandas_like.utils import (
     align_and_extract_native,
+    broadcast_series_to_index,
     get_dtype_backend,
     import_array_module,
     narwhals_to_native_dtype,
@@ -181,6 +182,8 @@ class PandasLikeSeries(EagerSeries[Any]):
         else:
             if implementation.is_pandas():
                 kwds["copy"] = False
+            else:  # pragma: no cover
+                pass
             if index is not None and len(index):
                 kwds["index"] = index
         return cls.from_native(ns.Series(data, name=name, **kwds), context=context)
@@ -211,8 +214,8 @@ class PandasLikeSeries(EagerSeries[Any]):
         reindexed = []
         for s in series:
             if s._broadcast:
-                native = Series(
-                    s.native.iloc[0], index=idx, name=s.name, dtype=s.native.dtype
+                native = broadcast_series_to_index(
+                    s.native, idx, is_nested=s.dtype.is_nested(), series_class=Series
                 )
                 compliant = s._with_native(native)
             elif s.native.index is not idx:
@@ -879,7 +882,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         kwargs: dict[str, Any] = {"axis": 0} if impl.is_modin() else {}
         result = self.native
 
-        if not impl.is_pandas():
+        if not impl.is_pandas():  # pragma: no cover
             # Workaround for both cudf and modin when clipping with a series
             #   * cudf: https://github.com/rapidsai/cudf/issues/17682
             #   * modin: https://github.com/modin-project/modin/issues/7415

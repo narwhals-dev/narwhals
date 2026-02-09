@@ -139,9 +139,6 @@ def test_offset_by(
     expected: list[datetime],
 ) -> None:
     df = nw.from_native(constructor(data))
-    if df.implementation.is_pyspark_connect():
-        # missing feature upstream
-        request.applymarker(pytest.mark.xfail())
     if any(x in by for x in ("y", "q", "mo")) and any(
         x in str(constructor) for x in ("dask", "pyarrow", "ibis")
     ):

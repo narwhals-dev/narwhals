@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals._utils import Implementation, Version
-    from narwhals.typing import IntoDType, NonNestedLiteral
+    from narwhals.typing import IntoDType, PythonLiteral
 
 
 Incomplete: TypeAlias = Any
@@ -83,17 +83,46 @@ class PandasLikeNamespace(
             context=self,
         )
 
-    def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> PandasLikeExpr:
+    def lit(self, value: PythonLiteral, dtype: IntoDType | None) -> PandasLikeExpr:
         def _lit_pandas_series(df: PandasLikeDataFrame) -> PandasLikeSeries:
-            pandas_series = self._series.from_iterable(
+            if isinstance(value, (list, tuple, dict)):
+                try:
+                    import pandas as pd  # ignore-banned-import
+                    import pyarrow as pa  # ignore-banned-import
+                except ImportError as exc:  # pragma: no cover
+                    msg = (
+                        "Nested structures require pyarrow to be installed for pandas backend. "
+                        "Please install pyarrow: pip install pyarrow"
+                    )
+                    raise ImportError(msg) from exc
+
+                from narwhals._arrow.utils import (
+                    narwhals_to_native_dtype as _to_arrow_dtype,
+                )
+
+                array_value = list(value) if isinstance(value, tuple) else value
+                pa_dtype = _to_arrow_dtype(dtype, self._version) if dtype else None
+                pa_array = pa.array([array_value], type=pa_dtype)  # type: ignore[arg-type, list-item]
+
+                # Use ArrowExtensionArray to avoid pandas unpacking the nested structure
+                ns = self._implementation.to_native_namespace()
+                pandas_series_native = ns.Series(
+                    pd.arrays.ArrowExtensionArray(pa_array),  # type: ignore[attr-defined]
+                    name="literal",
+                    index=df._native_frame.index[0:1],
+                )
+
+                return self._series.from_native(pandas_series_native, context=self)
+
+            pandas_like_series = self._series.from_iterable(
                 data=[value],
                 name="literal",
                 index=df._native_frame.index[0:1],
                 context=self,
             )
             if dtype:
-                return pandas_series.cast(dtype)
-            return pandas_series
+                return pandas_like_series.cast(dtype)
+            return pandas_like_series
 
         return PandasLikeExpr(
             lambda df: [_lit_pandas_series(df)],

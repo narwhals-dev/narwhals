@@ -9,7 +9,7 @@ from narwhals._compliant.typing import (
     NativeLazyFrameT,
 )
 from narwhals._translate import ToNarwhalsT_co
-from narwhals._utils import check_columns_exist
+from narwhals._utils import check_columns_exist, generate_temporary_column_name
 from narwhals.exceptions import MultiOutputExpressionError
 
 if TYPE_CHECKING:
@@ -51,3 +51,15 @@ class SQLLazyFrame(
 
     def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
         return check_columns_exist(subset, available=self.columns)
+
+    def _filter(self, predicate: CompliantExprT_contra) -> Self: ...
+
+    def filter(self, predicate: CompliantExprT_contra) -> Self:
+        if not predicate._metadata.is_elementwise:
+            # add the temporary column, filter on it, then drop it
+            tmp_col = generate_temporary_column_name(8, self.columns, prefix="filter")
+            ns = self.__narwhals_namespace__()
+            lf_with_tmp = self.with_columns(predicate.alias(tmp_col))
+            filtered = lf_with_tmp._filter(ns.col(tmp_col))
+            return filtered.drop([tmp_col], strict=False)
+        return self._filter(predicate)
