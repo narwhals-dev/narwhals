@@ -184,6 +184,12 @@ class LpBuilder:
         predicate = all_horizontal((subset or s_ir.all()).to_narwhals().is_not_null()._ir)
         return self.filter(predicate)
 
+    def head(self, n: int = 5) -> Self:
+        return self.slice(0, n)
+
+    def tail(self, n: int = 5) -> Self:
+        return self.slice(-n, n)
+
     def with_column(self, expr: ExprIR) -> Self:
         return self.with_columns((expr,))
 
