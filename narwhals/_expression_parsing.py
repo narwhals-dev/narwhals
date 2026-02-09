@@ -444,13 +444,12 @@ class ExprMetadata:
     def from_multi_column_aggregation(
         cls, node: ExprNode, *compliant_exprs: CompliantExprAny
     ) -> ExprMetadata:
-        del compliant_exprs
-        return cls(
-            ExpansionKind.SINGLE,
-            is_elementwise=False,
+        return combine_metadata(
+            *compliant_exprs,
+            to_single_output=True,
+            current_node=node,
             preserves_length=False,
             is_scalar_like=True,
-            current_node=node,
             prev=None,
         )
 
@@ -743,6 +742,8 @@ def combine_metadata(
     *compliant_exprs: CompliantExprAny,
     to_single_output: bool,
     current_node: ExprNode,
+    preserves_length: bool | None = None,
+    is_scalar_like: bool | None = None,
     prev: ExprMetadata | None,
 ) -> ExprMetadata:
     """Combine metadata from `args`.
@@ -752,6 +753,10 @@ def combine_metadata(
         to_single_output: Whether the result is always single-output, regardless
             of the inputs (e.g. `nw.sum_horizontal`).
         current_node: The current node being added.
+        preserves_length: Whether the length is preserved
+            (default to true if at least one does)
+        is_scalar_like: Is scalar like column
+            (default to true if all inputs are scalar)
         prev: ExprMetadata of previous node.
     """
     n_filtrations = 0
@@ -794,9 +799,9 @@ def combine_metadata(
         result_expansion_kind,
         has_windows=result_has_windows,
         n_orderable_ops=result_n_orderable_ops,
-        preserves_length=result_preserves_length,
+        preserves_length=preserves_length or result_preserves_length,
         is_elementwise=result_is_elementwise,
-        is_scalar_like=result_is_scalar_like,
+        is_scalar_like=is_scalar_like or result_is_scalar_like,
         is_literal=result_is_literal,
         current_node=current_node,
         prev=prev,
