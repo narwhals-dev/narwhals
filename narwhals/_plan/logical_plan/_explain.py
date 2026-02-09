@@ -129,7 +129,12 @@ def _(plan: lp.Filter, *_: Any) -> Iterator[str]:
 
 @_iter_format.register(lp.Unique)
 def _(plan: lp.Unique, *_: Any) -> Iterator[str]:
-    yield f"UNIQUE[maintain_order: {plan.options.maintain_order}, keep: {plan.options.keep}]{f' BY {_seq(s)}' if (s := plan.subset) else ''}"
+    opts = plan.options
+    maintain = "maintain_order: True, " if opts.maintain_order else ""
+    subset = f"subset: {_seq(s)}" if (s := plan.subset) else ""
+    yield f"UNIQUE[{', '.join((maintain, f'keep: {opts.keep}', subset))}]"
+    if isinstance(plan, lp.UniqueBy):
+        yield f" BY {_seq(plan.order_by)}"
 
 
 @_iter_format.register(lp.Sort)

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
+from narwhals._plan.common import todo
 from narwhals._plan.expressions import selectors as s_ir
 from narwhals._plan.expressions.boolean import all_horizontal
 from narwhals._plan.logical_plan import plan as lp
@@ -90,6 +91,18 @@ class LpBuilder:
     def unique(self, subset: Seq[SelectorIR] | None, options: UniqueOptions) -> Self:
         return self.from_plan(lp.Unique(input=self._plan, subset=subset, options=options))
 
+    def unique_by(
+        self,
+        subset: Seq[SelectorIR] | None,
+        options: UniqueOptions,
+        order_by: Seq[SelectorIR],
+    ) -> Self:
+        return self.from_plan(
+            lp.UniqueBy(
+                input=self._plan, subset=subset, options=options, order_by=order_by
+            )
+        )
+
     def pivot(
         self,
         on: SelectorIR,
@@ -127,6 +140,8 @@ class LpBuilder:
                 options=options,
             )
         )
+
+    join_asof = todo()
 
     @classmethod
     def concat(
@@ -188,6 +203,11 @@ class LpBuilder:
 
     def with_row_index(self, name: str = "index") -> Self:
         return self.map(lp.RowIndex(name=name))
+
+    def with_row_index_by(
+        self, name: str = "index", *, order_by: Seq[SelectorIR]
+    ) -> Self:
+        return self.map(lp.RowIndexBy(name=name, order_by=order_by))
 
     def unpivot(
         self, on: SelectorIR | None, index: SelectorIR, options: UnpivotOptions

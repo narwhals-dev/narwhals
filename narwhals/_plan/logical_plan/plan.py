@@ -292,6 +292,11 @@ class Unique(SingleInput):
     options: UniqueOptions
 
 
+class UniqueBy(Unique):
+    __slots__ = ("order_by",)
+    order_by: Seq[SelectorIR]
+
+
 class Sort(SingleInput):
     __slots__ = ("by", "options")
     by: Seq[SelectorIR]
@@ -382,6 +387,14 @@ class RowIndex(LpFunction):
 
     def __repr__(self) -> str:
         return f"ROW INDEX name: {self.name}"
+
+
+class RowIndexBy(RowIndex):
+    __slots__ = ("order_by",)
+    order_by: Seq[SelectorIR]
+
+    def __repr__(self) -> str:
+        return f"ROW INDEX[name: {self.name}, order_by: {list(self.order_by)!r}]"
 
 
 class Rename(LpFunction):
