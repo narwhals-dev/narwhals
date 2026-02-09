@@ -152,13 +152,18 @@ class SeriesStringNamespace(Generic[SeriesT]):
             self._narwhals_series._compliant_series.str.ends_with(suffix)
         )
 
-    def contains(self, pattern: str, *, literal: bool = False) -> SeriesT:
+    def contains(self, pattern: str | SeriesT, *, literal: bool = False) -> SeriesT:
         r"""Check if string contains a substring that matches a pattern.
 
         Arguments:
-            pattern: A Character sequence or valid regular expression pattern.
+            pattern: A Character sequence, valid regular expression pattern, or a Series
+                that evaluates to a string.
             literal: If True, treats the pattern as a literal string.
                      If False, assumes the pattern is a regular expression.
+
+        Warning:
+            Passing a Series as `pattern` is only supported by Polars. Other backends
+            will raise a `TypeError`.
 
         Examples:
             >>> import pyarrow as pa
@@ -176,7 +181,9 @@ class SeriesStringNamespace(Generic[SeriesT]):
             ]
         """
         return self._narwhals_series._with_compliant(
-            self._narwhals_series._compliant_series.str.contains(pattern, literal=literal)
+            self._narwhals_series._compliant_series.str.contains(
+                self._extract_compliant(pattern), literal=literal
+            )
         )
 
     def slice(self, offset: int, length: int | None = None) -> SeriesT:
