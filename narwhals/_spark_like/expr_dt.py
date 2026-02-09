@@ -109,7 +109,7 @@ class SparkLikeExprDateTimeNamespace(SQLExprDateTimeNamesSpace["SparkLikeExpr"])
         F = self.compliant._F
 
         def _offset_by(expr: Column) -> Column:
-            if is_pyspark_pre_4(self.compliant._implementation):
+            if is_pyspark_pre_4(self.compliant._implementation):  # pragma: no cover
                 # timestamp_add was added in PySpark 4.0
                 if unit == "q":
                     return expr + F.expr(f"INTERVAL {multiple * 3} MONTHS")
