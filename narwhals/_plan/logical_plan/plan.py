@@ -29,9 +29,6 @@ if TYPE_CHECKING:
 Incomplete: TypeAlias = Any
 _InputsT = TypeVar("_InputsT", bound="Seq[LogicalPlan]")
 
-INDENT_INCREMENT = 2
-INDENT = " "
-
 
 class LogicalPlan(Immutable):
     """Representation of `LazyFrame` operations, based on [`polars_plan::dsl::plan::DslPlan`].
@@ -132,46 +129,14 @@ class LogicalPlan(Immutable):
 
     def explain(self) -> str:
         """Create a string representation of the query plan."""
-        return self._format_rec(0)
+        from narwhals._plan.logical_plan import _explain
 
-    def _format_rec(self, indent: int) -> str:
-        # `IRDisplay._format`
-        # (here) https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-plan/src/plans/ir/format.rs#L259-L265
-        # (overrides) https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-plan/src/plans/ir/format.rs#L148-L229
-        result = "\n".join(self._iter_format_rec(indent))
-        return result if not indent else "\n" + result
-
-    def _format_non_rec(self, indent: int) -> str:
-        # `ir::format::write_ir_non_recursive`
-        # https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-plan/src/plans/ir/format.rs#L705-L1006
-        it = self._iter_format_non_rec(indent)
-        if indent:
-            pad = INDENT * indent
-            it = (f"{pad}{line}" for line in it)
-        return "\n".join(it)
+        return _explain.explain(self)
 
     def __repr__(self) -> str:
-        return self._format_non_rec(0)
+        from narwhals._plan.logical_plan import _explain
 
-    # TODO @dangotbanned: Plan how this could avoid intermediate strings
-    # - Yield each line?
-    # - Yield templates?
-    # - (General) Have a small cache for indents, to avoid repeating `" " * n`
-    def _iter_format_rec(self, indent: int) -> Iterator[str]:
-        if not self.has_inputs:
-            yield self._format_non_rec(indent)
-            return
-        sub_indent = indent + INDENT_INCREMENT
-        it = self._iter_format_non_rec(indent)
-        if indent:
-            pad = INDENT * indent
-            it = (f"{pad}{line}" for line in it)
-        yield from it
-        for node in self.iter_inputs():
-            yield from node._iter_format_rec(sub_indent)
-
-    def _iter_format_non_rec(self, indent: int) -> Iterator[str]:
-        raise NotImplementedError
+        return _explain._format(self, 0)
 
 
 class Scan(LogicalPlan, has_inputs=False):
@@ -201,9 +166,6 @@ class ScanFile(Scan):
     def from_source(cls, source: FileSource, /) -> Self:
         return cls(source=normalize_path(source))
 
-    def _iter_format_non_rec(self, indent: int) -> Iterator[str]:
-        yield f"{type(self).__name__.removeprefix('Scan')} SCAN [{self.source}]"
-
 
 class ScanCsv(ScanFile): ...
 
@@ -220,7 +182,6 @@ class ScanDataFrame(Scan):
     df: DataFrame[Any, Any]
     schema: FrozenSchema
 
-    # NOTE: Probably want a `staticmethod`, change if nothing is needed from `cls`
     @classmethod
     def from_narwhals(cls, df: DataFrame[Any, Any]) -> ScanDataFrame:
         obj = cls.__new__(cls)
@@ -234,18 +195,6 @@ class ScanDataFrame(Scan):
         # Currently, every `ScanDataFrame` will have a unique pseudo-hash
         # Caching a native table seems like a non-starter, once `pandas` enters the party
         yield from (id(self.df), self.schema)
-
-    def _iter_format_non_rec(self, indent: int) -> Iterator[str]:
-        names = self.schema.names
-        n_columns = len(names)
-        if n_columns > 4:
-            it = (f'"{name}"' for name in names[:4])
-            s = ", ".join((*it, "..."))
-        elif n_columns == 0:
-            s = ""
-        else:
-            s = ", ".join(f'"{name}"' for name in names)
-        yield f"DF [{s}]; {n_columns} COLUMNS"
 
     def __str__(self) -> str:
         return (
@@ -284,21 +233,13 @@ class Sink(SingleInput):
     """Terminal node of a `LogicalPlan`."""
 
 
-class Collect(Sink):
-    def _iter_format_non_rec(self, indent: int) -> Iterator[str]:
-        yield "SINK (memory)"
+class Collect(Sink): ...
 
 
 class SinkFile(Sink):
     __slots__ = ("target",)
     target: str
-    """`file: str | Path | BytesIO` on main.
-
-    Not sure `BytesIO` makes sense here.
-    """
-
-    def _iter_format_non_rec(self, indent: int) -> Iterator[str]:
-        yield "SINK (file)"
+    """`file: str | Path | BytesIO` on main."""
 
 
 class SinkParquet(SinkFile): ...
@@ -311,9 +252,6 @@ class Select(SingleInput):
     # `options: ProjectionOptions`
     exprs: Seq[ExprIR]
 
-    def _iter_format_non_rec(self, indent: int) -> Iterator[str]:
-        yield f"SELECT {list(self.exprs)!r}"
-
 
 # `DslPlan::HStack`
 class WithColumns(SingleInput):
@@ -321,35 +259,16 @@ class WithColumns(SingleInput):
     # NOTE: Same `ProjectionOptions` comment as `Select`
     exprs: Seq[ExprIR]
 
-    def _iter_format_non_rec(self, indent: int) -> Iterator[str]:
-        # has extra indents
-        yield " WITH_COLUMNS:"
-        yield f" {list(self.exprs)!r}"
-
 
 class Filter(SingleInput):
     __slots__ = ("predicate",)
     predicate: ExprIR
-
-    def _iter_format_non_rec(self, indent: int) -> Iterator[str]:
-        yield f"FILTER {self.predicate!r}"
-        yield "FROM"
 
 
 class GroupBy(SingleInput):
     __slots__ = ("aggs", "keys")
     keys: Seq[ExprIR]
     aggs: Seq[ExprIR]
-
-    def _iter_format_non_rec(self, indent: int) -> Iterator[str]:
-        yield f"{INDENT * indent}AGGREGATE"
-        yield f"{INDENT * (indent + INDENT_INCREMENT)}{list(self.aggs)!r} BY {list(self.keys)!r}"
-
-    def _iter_format_rec(self, indent: int) -> Iterator[str]:
-        sub_indent = indent + INDENT_INCREMENT
-        yield from self._iter_format_non_rec(indent)
-        yield f"{INDENT * sub_indent}FROM"
-        yield from self.input._iter_format_rec(sub_indent)
 
 
 class Pivot(SingleInput):
@@ -364,10 +283,6 @@ class Pivot(SingleInput):
     """polars has *just* `Expr`."""
     separator: str
 
-    def _iter_format_non_rec(self, indent: int) -> Iterator[str]:
-        # NOTE: Only exists in `DslPlan`, not `IR` which defines the displays
-        yield "PIVOT[...]"
-
 
 # `DslPlan::Distinct`
 class Unique(SingleInput):
@@ -375,27 +290,11 @@ class Unique(SingleInput):
     subset: Seq[SelectorIR] | None
     options: UniqueOptions
 
-    def _iter_format_non_rec(self, indent: int) -> Iterator[str]:
-        s = ""
-        if subset := self.subset:
-            s = f" BY {list(subset)!r}"
-        yield f"UNIQUE[maintain_order: {self.options.maintain_order}, keep: {self.options.keep}]{s}"
-
 
 class Sort(SingleInput):
     __slots__ = ("by", "options")
     by: Seq[SelectorIR]
     options: SortMultipleOptions
-
-    def _iter_format_non_rec(self, indent: int) -> Iterator[str]:
-        opts = self.options
-        exprs = ", ".join(f"{e!r}" for e in self.by)
-        s = f"SORT BY[{exprs}"
-        if any(opts.descending):
-            s += f", descending: {list(opts.descending)}"
-        if any(opts.nulls_last):
-            s += f", nulls_last: {list(opts.nulls_last)}"
-        yield f"{s}]"
 
 
 class Slice(SingleInput):
@@ -403,17 +302,10 @@ class Slice(SingleInput):
     offset: int
     length: int | None
 
-    def _iter_format_non_rec(self, indent: int) -> Iterator[str]:
-        yield f"SLICE[offset: {self.offset}, len: {self.length}]"
-
 
 class MapFunction(SingleInput):
-    # `polars` says this is for UDFs, but uses it for: `Rename`, `RowIndex`, `Unnest`, `Explode`
     __slots__ = ("function",)
     function: LpFunction
-
-    def _iter_format_non_rec(self, indent: int) -> Iterator[str]:
-        yield repr(self.function)
 
 
 class Join(MultipleInputs[tuple[LogicalPlan, LogicalPlan]]):
@@ -424,45 +316,6 @@ class Join(MultipleInputs[tuple[LogicalPlan, LogicalPlan]]):
     right_on: Seq[str]
     options: JoinOptions
 
-    def _iter_format_non_rec(self, indent: int) -> Iterator[str]:
-        how = self.options.how.upper()
-        if how == "CROSS":
-            yield f"{how} JOIN"
-            return
-        yield f"{how} JOIN:"
-        yield f"LEFT PLAN ON: {list(self.left_on)!r}"
-        yield f"RIGHT PLAN ON: {list(self.right_on)!r}"
-
-    def _iter_format_rec(self, indent: int) -> Iterator[str]:
-        sub_indent = indent + INDENT_INCREMENT
-        how = self.options.how.upper()
-        yield f"{how} JOIN:"
-        left = self.inputs[0]._iter_format_rec(sub_indent)
-        right = self.inputs[1]._iter_format_rec(sub_indent)
-        if how == "CROSS":
-            yield "LEFT PLAN:"
-            yield from left
-            yield "RIGHT PLAN:"
-            yield from right
-        else:
-            yield f"LEFT PLAN ON: {list(self.left_on)!r}"
-            yield from left
-            yield f"RIGHT PLAN ON: {list(self.right_on)!r}"
-            yield from right
-        yield f"END {how} JOIN"
-
-
-# TODO @dangotbanned: Redo in a less hacky way
-def _iter_format_rec_concat(self: VConcat | HConcat, indent: int) -> Iterator[str]:
-    sub_indent = indent + INDENT_INCREMENT
-    sub_sub_indent = sub_indent + INDENT_INCREMENT
-    sub_pad = INDENT * sub_indent
-    yield from self._iter_format_non_rec(indent)
-    for idx, input in enumerate(self.inputs):
-        yield f"{sub_pad}PLAN {idx}:"
-        yield from input._iter_format_rec(sub_sub_indent)
-    yield f"{INDENT * indent}END {'UNION' if type(self) is VConcat else 'HCONCAT'}"
-
 
 # `DslPlan::Union`
 class VConcat(MultipleInputs[Seq[LogicalPlan]]):
@@ -471,19 +324,9 @@ class VConcat(MultipleInputs[Seq[LogicalPlan]]):
     __slots__ = ("options",)
     options: VConcatOptions
 
-    def _iter_format_non_rec(self, indent: int) -> Iterator[str]:
-        yield f"{INDENT * indent}UNION"
-
-    _iter_format_rec = _iter_format_rec_concat
-
 
 class HConcat(MultipleInputs[Seq[LogicalPlan]]):
     """`concat(how="horizontal")`."""
-
-    def _iter_format_non_rec(self, indent: int) -> Iterator[str]:
-        yield f"{INDENT * indent}HCONCAT"
-
-    _iter_format_rec = _iter_format_rec_concat
 
 
 # NOTE: `DslFunction`
@@ -547,7 +390,6 @@ class Rename(LpFunction):
 
     @property
     def mapping(self) -> dict[str, str]:
-        # Trying to avoid adding mutable fields
         return dict(zip_strict(self.old, self.new))
 
     def __repr__(self) -> str:
