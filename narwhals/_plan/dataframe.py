@@ -9,7 +9,7 @@ from narwhals._plan._guards import is_series
 from narwhals._plan.common import ensure_seq_str, normalize_target_file, temp, todo
 from narwhals._plan.compliant.dataframe import EagerDataFrame
 from narwhals._plan.compliant.namespace import EagerNamespace
-from narwhals._plan.group_by import GroupBy, Grouped
+from narwhals._plan.group_by import GroupBy, Grouped, LazyGroupBy
 from narwhals._plan.logical_plan import LogicalPlan
 from narwhals._plan.options import (
     ExplodeOptions,
@@ -849,7 +849,6 @@ class LazyFrame(
     collect_schema = todo()
     collect = not_implemented()  # depends on resolving everything else
 
-    group_by = todo()  # haven't got a lazy builder yet
     join_asof = not_implemented()  # not in `LogicalPlan`
 
     def _unwrap_plan(self, other: Self | Any, /) -> LogicalPlan:
@@ -892,6 +891,15 @@ class LazyFrame(
     ) -> Self:  # pragma: no cover
         p = _parse.parse_predicates_constraints_into_expr_ir(*predicates, **constraints)
         return self._with_lp(self._plan.filter(p))
+
+    # TODO @dangotbanned: LazyFrame.group_by(drop_null_keys=True)
+    def group_by(
+        self,
+        *by: OneOrIterable[IntoExpr],
+        drop_null_keys: bool = False,
+        **named_by: IntoExpr,
+    ) -> LazyGroupBy[Self]:
+        return LazyGroupBy(self, *by, drop_null_keys=drop_null_keys, **named_by)
 
     def head(self, n: int = 5) -> Self:
         return self._with_lp(self._plan.head(n))

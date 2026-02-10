@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     )
     from narwhals._plan._expr_ir import ExprIR, NamedIR, SelectorIR
     from narwhals._plan._function import Function
-    from narwhals._plan.dataframe import DataFrame
+    from narwhals._plan.dataframe import DataFrame, LazyFrame
     from narwhals._plan.expr import Expr
     from narwhals._plan.expressions import operators as ops
     from narwhals._plan.expressions.functions import RollingWindow
@@ -144,6 +144,7 @@ ColumnNameOrSelector: TypeAlias = "str | Selector"
 OneOrIterable: TypeAlias = "T | Iterable[T]"
 OneOrSeq: TypeAlias = t.Union[T, Seq[T]]
 DataFrameT = TypeVar("DataFrameT", bound="DataFrame[t.Any, t.Any]")
+LazyFrameT = TypeVar("LazyFrameT", bound="LazyFrame[t.Any]")
 SeriesT = TypeVar("SeriesT", bound="Series[t.Any]")
 Order: TypeAlias = t.Literal["ascending", "descending"]
 NonCrossJoinStrategy: TypeAlias = t.Literal["inner", "left", "full", "semi", "anti"]
