@@ -13,6 +13,45 @@ from narwhals._typing_compat import TypeVar
 from narwhals._utils import normalize_path, qualified_type_name, zip_strict
 from narwhals.exceptions import InvalidOperationError
 
+__all__ = [
+    "Collect",
+    "Explode",
+    "Filter",
+    "GroupBy",
+    "HConcat",
+    "Join",
+    "LogicalPlan",
+    "MapFunction",
+    "MultipleInputs",
+    "Pivot",
+    "Rename",
+    "Rename",
+    "RowIndex",
+    "RowIndexBy",
+    "Scan",
+    "ScanCsv",
+    "ScanDataFrame",
+    "ScanFile",
+    "ScanParquet",
+    "Select",
+    "SingleInput",
+    "Sink",
+    "SinkFile",
+    "SinkParquet",
+    "Slice",
+    "Sort",
+    "Unique",
+    "UniqueBy",
+    "Unnest",
+    "Unpivot",
+    "VConcat",
+    "WithColumns",
+    "concat",
+    "from_df",
+    "scan_csv",
+    "scan_parquet",
+]
+
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
 
