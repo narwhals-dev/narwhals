@@ -5,10 +5,14 @@ from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, overload
 
 from narwhals._plan._guards import is_seq_column
 from narwhals._plan._immutable import Immutable
-from narwhals._plan.common import todo
 from narwhals._plan.expressions import selectors as s_ir
 from narwhals._plan.expressions.boolean import all_horizontal
-from narwhals._plan.options import JoinOptions, UnpivotOptions, VConcatOptions
+from narwhals._plan.options import (
+    JoinAsofOptions,
+    JoinOptions,
+    UnpivotOptions,
+    VConcatOptions,
+)
 from narwhals._plan.schema import freeze_schema
 from narwhals._plan.typing import Seq
 from narwhals._typing_compat import TypeVar
@@ -325,7 +329,18 @@ class LogicalPlan(Immutable):
     def join_cross(self, other: LogicalPlan, *, suffix: str = "_right") -> Join:
         return self.join(other, (), (), JoinOptions(how="cross", suffix=suffix))
 
-    join_asof = todo()
+    def join_asof(
+        self,
+        other: LogicalPlan,
+        left_on: str,
+        right_on: str,
+        options: JoinAsofOptions | None = None,
+    ) -> JoinAsof:
+        inputs = (self, other)
+        options = options or JoinAsofOptions.parse()
+        return JoinAsof(
+            inputs=inputs, left_on=left_on, right_on=right_on, options=options
+        )
 
     # Terminal
     def collect(self) -> Collect:
@@ -547,6 +562,13 @@ class Join(MultipleInputs[tuple[LogicalPlan, LogicalPlan]]):
     left_on: Seq[str]
     right_on: Seq[str]
     options: JoinOptions
+
+
+class JoinAsof(MultipleInputs[tuple[LogicalPlan, LogicalPlan]]):
+    __slots__ = ("left_on", "options", "right_on")
+    left_on: str
+    right_on: str
+    options: JoinAsofOptions
 
 
 # `DslPlan::Union`

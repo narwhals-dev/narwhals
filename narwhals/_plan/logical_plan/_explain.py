@@ -170,26 +170,35 @@ def _(plan: lp.GroupBy, indent: int) -> Iterator[str]:
     yield from ("AGGREGATE", f"{sub_pad}{_seq(plan.aggs)} BY {_seq(plan.keys)}")
 
 
+@_iter_format.register(lp.JoinAsof)
 @_iter_format.register(lp.Join)
-def _(plan: lp.Join, *_: Any) -> Iterator[str]:
-    how = plan.options.how.upper()
-    if how == "CROSS":
-        yield f"{how} JOIN"
-        return
+def _(plan: lp.Join | lp.JoinAsof, *_: Any) -> Iterator[str]:
+    if isinstance(plan, lp.Join):
+        how = plan.options.how.upper()
+        if how == "CROSS":
+            yield f"{how} JOIN"
+            return
+        left_on, right_on = plan.left_on, plan.right_on
+    else:
+        how = "ASOF"
+        left_on, right_on = (plan.left_on,), (plan.right_on,)
     yield from (
         f"{how} JOIN:",
-        f"LEFT PLAN ON: {_seq(plan.left_on)}",
-        f"RIGHT PLAN ON: {_seq(plan.right_on)}",
+        f"LEFT PLAN ON: {_seq(left_on)}",
+        f"RIGHT PLAN ON: {_seq(right_on)}",
     )
-    yield f"{how} JOIN:"
-    yield f"LEFT PLAN ON: {_seq(plan.left_on)}"
-    yield f"RIGHT PLAN ON: {_seq(plan.right_on)}"
 
 
+@_iter_format_recursive.register(lp.JoinAsof)
 @_iter_format_recursive.register(lp.Join)
-def _(plan: lp.Join, indent: int) -> Iterator[str]:
+def _(plan: lp.Join | lp.JoinAsof, indent: int) -> Iterator[str]:
     sub_indent = next_level(indent)
-    how = plan.options.how.upper()
+    if isinstance(plan, lp.Join):
+        how = plan.options.how.upper()
+        left_on, right_on = plan.left_on, plan.right_on
+    else:
+        how = "ASOF"
+        left_on, right_on = (plan.left_on,), (plan.right_on,)
     yield f"{how} JOIN:"
     left = _iter_format_recursive(plan.inputs[0], sub_indent)
     right = _iter_format_recursive(plan.inputs[1], sub_indent)
@@ -197,8 +206,8 @@ def _(plan: lp.Join, indent: int) -> Iterator[str]:
         l_on, r_on = "LEFT PLAN:", "RIGHT PLAN:"
     else:
         l_on, r_on = (
-            f"LEFT PLAN ON: {_seq(plan.left_on)}",
-            f"RIGHT PLAN ON: {_seq(plan.right_on)}",
+            f"LEFT PLAN ON: {_seq(left_on)}",
+            f"RIGHT PLAN ON: {_seq(right_on)}",
         )
     yield l_on
     yield from left

@@ -4,6 +4,7 @@ import enum
 from typing import TYPE_CHECKING, Literal
 
 from narwhals._plan._immutable import Immutable
+from narwhals._plan.common import ensure_seq_str
 from narwhals._utils import Implementation, ensure_type
 from narwhals.exceptions import InvalidOperationError
 
@@ -15,7 +16,12 @@ if TYPE_CHECKING:
 
     from narwhals._plan.typing import Accessor, OneOrIterable, Seq
     from narwhals._typing import Backend
-    from narwhals.typing import JoinStrategy, RankMethod, UniqueKeepStrategy
+    from narwhals.typing import (
+        AsofJoinStrategy as JoinAsofStrategy,
+        JoinStrategy,
+        RankMethod,
+        UniqueKeepStrategy,
+    )
 
 
 class FunctionFlags(enum.Flag):
@@ -395,6 +401,73 @@ class JoinOptions(Immutable):
     @staticmethod
     def default() -> JoinOptions:  # pragma: no cover
         return JoinOptions(how="inner", suffix="_right")
+
+
+class JoinAsofBy(Immutable):  # pragma: no cover
+    __slots__ = ("left_by", "right_by")
+    left_by: Seq[str]
+    right_by: Seq[str]
+
+    @staticmethod
+    def parse(
+        by_left: str | Sequence[str] | None,
+        by_right: str | Sequence[str] | None,
+        by: str | Sequence[str] | None,
+    ) -> JoinAsofBy:
+        left_by, right_by = normalize_join_asof_by(by_left, by_right, by)
+        return JoinAsofBy(left_by=left_by, right_by=right_by)
+
+
+def normalize_join_asof_by(
+    by_left: str | Sequence[str] | None,
+    by_right: str | Sequence[str] | None,
+    by: str | Sequence[str] | None,
+) -> tuple[Seq[str], Seq[str]]:
+    """Reduce the 3 potential `join_asof` (`by*`) arguments to 2."""
+    if by is None:
+        if by_left and by_right:
+            left_by = ensure_seq_str(by_left)
+            right_by = ensure_seq_str(by_right)
+            if len(left_by) != len(right_by):
+                msg = "`by_left` and `by_right` must have the same length."
+                raise ValueError(msg)
+            return left_by, right_by
+        msg = "Can not specify only `by_left` or `by_right`, you need to specify both."
+        raise ValueError(msg)
+    if by_left or by_right:
+        msg = "If `by` is specified, `by_left` and `by_right` should be None."
+        raise ValueError(msg)
+    by_ = ensure_seq_str(by)  # pragma: no cover
+    return by_, by_  # pragma: no cover
+
+
+class JoinAsofOptions(Immutable):  # pragma: no cover
+    # polars is being quite inconsistent here
+    # - LazyFrame.join_asof
+    # - AsofJoinStrategy
+    # - JoinType::AsOf(Box<AsOfOptions>)
+    # - #[cfg(feature = "asof_join")]
+    # - join::asof::
+    #   - AsofStrategy
+    #   - trait AsofJoin (fn _join_asof)
+    __slots__ = ("by", "strategy", "suffix")
+    by: JoinAsofBy | None
+    strategy: JoinAsofStrategy
+    suffix: str
+
+    @staticmethod
+    def parse(
+        by_left: str | Sequence[str] | None = None,
+        by_right: str | Sequence[str] | None = None,
+        by: str | Sequence[str] | None = None,
+        strategy: JoinAsofStrategy = "backward",
+        suffix: str = "_right",
+    ) -> JoinAsofOptions:
+        if by_left or by_right or by:
+            opts = JoinAsofBy.parse(by_left, by_right, by)
+        else:
+            opts = None
+        return JoinAsofOptions(by=opts, strategy=strategy, suffix=suffix)
 
 
 class UnpivotOptions(Immutable):

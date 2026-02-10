@@ -13,10 +13,12 @@ from narwhals._plan.group_by import GroupBy, Grouped, LazyGroupBy
 from narwhals._plan.logical_plan import LogicalPlan
 from narwhals._plan.options import (
     ExplodeOptions,
+    JoinAsofOptions,
     JoinOptions,
     SortMultipleOptions,
     UniqueOptions,
     UnpivotOptions,
+    normalize_join_asof_by,
 )
 from narwhals._plan.series import Series
 from narwhals._plan.typing import (
@@ -849,8 +851,6 @@ class LazyFrame(
     collect_schema = todo()
     collect = not_implemented()  # depends on resolving everything else
 
-    join_asof = not_implemented()  # not in `LogicalPlan`
-
     def _unwrap_plan(self, other: Self | Any, /) -> LogicalPlan:
         """Equivalent* to `BaseFrame._unwrap_compliant`, used for `join(other)`."""
         if isinstance(other, type(self)):
@@ -923,6 +923,25 @@ class LazyFrame(
         opts = JoinOptions(how=_validate_join_strategy(how), suffix=suffix)
         left_on, right_on = normalize_join_on(on, how, left_on, right_on)
         return self._with_lp(left.join(right, left_on, right_on, opts))
+
+    def join_asof(
+        self,
+        other: Self,
+        *,
+        left_on: str | None = None,
+        right_on: str | None = None,
+        on: str | None = None,
+        by_left: str | Sequence[str] | None = None,
+        by_right: str | Sequence[str] | None = None,
+        by: str | Sequence[str] | None = None,
+        strategy: AsofJoinStrategy = "backward",
+        suffix: str = "_right",
+    ) -> Self:
+        strategy = _validate_join_asof_strategy(strategy)
+        left_on_, right_on_ = normalize_join_asof_on(left_on, right_on, on)
+        opts = JoinAsofOptions.parse(by_left, by_right, by, strategy, suffix)
+        right = self._unwrap_plan(other)
+        return self._with_lp(self._plan.join_asof(right, left_on_, right_on_, opts))
 
     # TODO @dangotbanned: Figure out how `on_columns: ...` should work for lazy (besides polars)
     # See https://github.com/narwhals-dev/narwhals/issues/1901#issuecomment-3697700426
@@ -1125,29 +1144,6 @@ def normalize_join_asof_on(
         msg = "If `on` is specified, `left_on` and `right_on` should be None."
         raise ValueError(msg)
     return on, on
-
-
-def normalize_join_asof_by(
-    by_left: str | Sequence[str] | None,
-    by_right: str | Sequence[str] | None,
-    by: str | Sequence[str] | None,
-) -> tuple[Seq[str], Seq[str]]:
-    """Reduce the 3 potential `join_asof` (`by*`) arguments to 2."""
-    if by is None:
-        if by_left and by_right:
-            left_by = ensure_seq_str(by_left)
-            right_by = ensure_seq_str(by_right)
-            if len(left_by) != len(right_by):
-                msg = "`by_left` and `by_right` must have the same length."
-                raise ValueError(msg)
-            return left_by, right_by
-        msg = "Can not specify only `by_left` or `by_right`, you need to specify both."
-        raise ValueError(msg)
-    if by_left or by_right:
-        msg = "If `by` is specified, `by_left` and `by_right` should be None."
-        raise ValueError(msg)
-    by_ = ensure_seq_str(by)  # pragma: no cover
-    return by_, by_  # pragma: no cover
 
 
 def normalize_pivot_args(
