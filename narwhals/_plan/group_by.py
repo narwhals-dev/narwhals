@@ -38,7 +38,7 @@ class GroupBy(Generic[DataFrameT]):
             yield key, frame._with_compliant(df)
 
 
-class LazyGroupBy(Generic[LazyFrameT]):
+class LazyGroupBy(Generic[LazyFrameT]):  # pragma: no cover
     _frame: LazyFrameT
     _keys: Seq[ExprIR]
 
