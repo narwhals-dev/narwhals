@@ -13,6 +13,7 @@ from narwhals._plan.group_by import GroupBy, Grouped
 from narwhals._plan.logical_plan import LogicalPlan
 from narwhals._plan.options import (
     ExplodeOptions,
+    JoinOptions,
     SortMultipleOptions,
     UniqueOptions,
     UnpivotOptions,
@@ -849,10 +850,18 @@ class LazyFrame(
     collect = not_implemented()  # depends on resolving everything else
 
     group_by = todo()  # haven't got a lazy builder yet
-    join = todo()
     join_asof = not_implemented()  # not in `LogicalPlan`
     pivot = todo()  # has eager version
     fill_null = not_implemented()  # not in `{Base,Data}Frame`
+
+    def _unwrap_plan(self, other: Self | Any, /) -> LogicalPlan:
+        """Equivalent* to `BaseFrame._unwrap_compliant`, used for `join(other)`."""
+        if isinstance(other, type(self)):
+            # TODO @dangotbanned: Handle `Implementation` matching of `_plan`
+            # Requires introducing the concept to `LogicalPlan` first
+            return other._plan
+        msg = f"Expected `other` to be a {qualified_type_name(self)!r}, got: {qualified_type_name(other)!r}"  # pragma: no cover
+        raise TypeError(msg)  # pragma: no cover
 
     def __repr__(self) -> str:
         return "<LazyFrame todo>"
@@ -888,6 +897,26 @@ class LazyFrame(
 
     def head(self, n: int = 5) -> Self:
         return self._with_lp(self._plan.head(n))
+
+    def join(
+        self,
+        other: Self,
+        on: str | Sequence[str] | None = None,
+        how: JoinStrategy = "inner",
+        *,
+        left_on: str | Sequence[str] | None = None,
+        right_on: str | Sequence[str] | None = None,
+        suffix: str = "_right",
+    ) -> Self:
+        left, right = self._plan, self._unwrap_plan(other)
+        if how == "cross":
+            if left_on is not None or right_on is not None or on is not None:
+                msg = "Can not pass `left_on`, `right_on` or `on` keys for cross join"
+                raise ValueError(msg)
+            return self._with_lp(left.join_cross(right, suffix=suffix))
+        opts = JoinOptions(how=_validate_join_strategy(how), suffix=suffix)
+        left_on, right_on = normalize_join_on(on, how, left_on, right_on)
+        return self._with_lp(left.join(right, left_on, right_on, opts))
 
     def rename(self, mapping: Mapping[str, str]) -> Self:
         return self._with_lp(self._plan.rename(mapping))

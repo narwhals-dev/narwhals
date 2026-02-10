@@ -7,7 +7,7 @@ from narwhals._plan._immutable import Immutable
 from narwhals._plan.common import todo
 from narwhals._plan.expressions import selectors as s_ir
 from narwhals._plan.expressions.boolean import all_horizontal
-from narwhals._plan.options import UnpivotOptions, VConcatOptions
+from narwhals._plan.options import JoinOptions, UnpivotOptions, VConcatOptions
 from narwhals._plan.schema import freeze_schema
 from narwhals._plan.typing import Seq
 from narwhals._typing_compat import TypeVar
@@ -60,12 +60,7 @@ if TYPE_CHECKING:
 
     from narwhals._plan.dataframe import DataFrame
     from narwhals._plan.expressions import ExprIR, SelectorIR
-    from narwhals._plan.options import (
-        ExplodeOptions,
-        JoinOptions,
-        SortMultipleOptions,
-        UniqueOptions,
-    )
+    from narwhals._plan.options import ExplodeOptions, SortMultipleOptions, UniqueOptions
     from narwhals._plan.schema import FrozenSchema
     from narwhals.typing import ConcatMethod, FileSource, PivotAgg
 
@@ -308,11 +303,14 @@ class LogicalPlan(Immutable):
         other: LogicalPlan,
         left_on: Seq[str],
         right_on: Seq[str],
-        options: JoinOptions,
+        options: JoinOptions | None = None,
     ) -> Join:
-        return Join(
-            inputs=(self, other), left_on=left_on, right_on=right_on, options=options
-        )
+        options = options or JoinOptions.default()
+        inputs = (self, other)
+        return Join(inputs=inputs, left_on=left_on, right_on=right_on, options=options)
+
+    def join_cross(self, other: LogicalPlan, *, suffix: str = "_right") -> Join:
+        return self.join(other, (), (), JoinOptions(how="cross", suffix=suffix))
 
     join_asof = todo()
 

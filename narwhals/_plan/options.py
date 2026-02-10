@@ -392,6 +392,10 @@ class JoinOptions(Immutable):
     how: JoinStrategy
     suffix: str
 
+    @staticmethod
+    def default() -> JoinOptions:  # pragma: no cover
+        return JoinOptions(how="inner", suffix="_right")
+
 
 class UnpivotOptions(Immutable):
     __slots__ = ("value_name", "variable_name")
