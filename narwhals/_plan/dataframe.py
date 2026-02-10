@@ -854,8 +854,6 @@ class LazyFrame(
     pivot = todo()  # has eager version
     sink_parquet = todo()  # has eager version
     fill_null = not_implemented()  # not in `{Base,Data}Frame`
-    head = not_implemented()  # not in `{Base,Data}Frame`
-    tail = not_implemented()  # not in `{Base,Data}Frame`
 
     def __repr__(self) -> str:
         return "<LazyFrame todo>"
@@ -889,6 +887,9 @@ class LazyFrame(
         p = _parse.parse_predicates_constraints_into_expr_ir(*predicates, **constraints)
         return self._with_lp(self._plan.filter(p))
 
+    def head(self, n: int = 5) -> Self:
+        return self._with_lp(self._plan.head(n))
+
     def rename(self, mapping: Mapping[str, str]) -> Self:
         return self._with_lp(self._plan.rename(mapping))
 
@@ -906,6 +907,9 @@ class LazyFrame(
         s_irs = _parse.parse_into_seq_of_selector_ir(by, *more_by)
         opts = SortMultipleOptions.parse(descending=descending, nulls_last=nulls_last)
         return self._with_lp(self._plan.sort(s_irs, opts))
+
+    def tail(self, n: int = 5) -> Self:
+        return self._with_lp(self._plan.tail(n))
 
     def unique(
         self,
