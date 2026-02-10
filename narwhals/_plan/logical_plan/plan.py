@@ -231,9 +231,7 @@ class LogicalPlan(Immutable):
     def rename(self, mapping: Mapping[str, str]) -> MapFunction[Rename]:
         return self._map(Rename(old=tuple(mapping), new=tuple(mapping.values())))
 
-    # TODO @dangotbanned: Decide on if `ProjectionOptions` should be added
-    # Either replace `Incomplete` or remove `options` (and the placeholder in `fill_null`)
-    def select(self, exprs: Seq[ExprIR], options: Incomplete = None) -> Select:
+    def select(self, exprs: Seq[ExprIR]) -> Select:
         return Select(input=self, exprs=exprs)
 
     def slice(self, offset: int, length: int | None = None) -> Slice:
@@ -270,7 +268,7 @@ class LogicalPlan(Immutable):
         options = options or UnpivotOptions.default()
         return self._map(Unpivot(on=on, index=index or s_ir.empty(), options=options))
 
-    def with_columns(self, exprs: Seq[ExprIR], options: Incomplete = None) -> WithColumns:
+    def with_columns(self, exprs: Seq[ExprIR]) -> WithColumns:
         return WithColumns(input=self, exprs=exprs)
 
     def with_row_index(self, name: str = "index") -> MapFunction[RowIndex]:
@@ -332,12 +330,6 @@ class LogicalPlan(Immutable):
     def drop_nulls(self, subset: SelectorIR | None) -> Filter:
         predicate = all_horizontal((subset or s_ir.all()).to_narwhals().is_not_null()._ir)
         return self.filter(predicate)
-
-    def fill_null(self, fill_value: ExprIR) -> Select:
-        return self.select(
-            (s_ir.all().to_narwhals().fill_null(fill_value.to_narwhals())._ir,),
-            options={"duplicate_check": False},  # ProjectionOptions
-        )
 
     def head(self, n: int = 5) -> Slice:
         return self.slice(0, n)
@@ -466,16 +458,12 @@ class SinkParquet(SinkFile): ...
 
 class Select(SingleInput):
     __slots__ = ("exprs",)
-    # NOTE: Contains a `should_broadcast` flag, but AFAICT
-    # is only replaced with `False` during optimization (not when building the plan)
-    # `options: ProjectionOptions`
     exprs: Seq[ExprIR]
 
 
 # `DslPlan::HStack`
 class WithColumns(SingleInput):
     __slots__ = ("exprs",)
-    # NOTE: Same `ProjectionOptions` comment as `Select`
     exprs: Seq[ExprIR]
 
 

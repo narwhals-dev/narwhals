@@ -852,7 +852,6 @@ class LazyFrame(
     group_by = todo()  # haven't got a lazy builder yet
     join_asof = not_implemented()  # not in `LogicalPlan`
     pivot = todo()  # has eager version
-    fill_null = not_implemented()  # not in `{Base,Data}Frame`
 
     def _unwrap_plan(self, other: Self | Any, /) -> LogicalPlan:
         """Equivalent* to `BaseFrame._unwrap_compliant`, used for `join(other)`."""
