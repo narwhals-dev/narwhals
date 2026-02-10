@@ -6,12 +6,12 @@ from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, get_args, ove
 from narwhals._plan import _parse
 from narwhals._plan._expansion import expand_selector_irs_names, prepare_projection
 from narwhals._plan._guards import is_series
-from narwhals._plan.common import ensure_seq_str, normalize_target_file, temp
+from narwhals._plan.common import ensure_seq_str, normalize_target_file, temp, todo
 from narwhals._plan.compliant.dataframe import EagerDataFrame
 from narwhals._plan.compliant.namespace import EagerNamespace
 from narwhals._plan.group_by import GroupBy, Grouped
 from narwhals._plan.logical_plan import LogicalPlan
-from narwhals._plan.options import ExplodeOptions, SortMultipleOptions
+from narwhals._plan.options import ExplodeOptions, SortMultipleOptions, UnpivotOptions
 from narwhals._plan.series import Series
 from narwhals._plan.typing import (
     ColumnNameOrSelector,
@@ -21,6 +21,7 @@ from narwhals._plan.typing import (
     NativeDataFrameT,
     NativeDataFrameT_co,
     NativeFrameT_co,
+    NativeLazyFrameT_co,
     NativeSeriesT,
     NativeSeriesT2,
     NonCrossJoinStrategy,
@@ -33,6 +34,7 @@ from narwhals._utils import (
     Version,
     check_column_names_are_unique as raise_duplicate_error,
     generate_repr,
+    not_implemented,
     qualified_type_name,
 )
 from narwhals.dependencies import is_pyarrow_table
@@ -46,6 +48,7 @@ from narwhals.typing import (
     IntoDType,
     IntoSchema,
     JoinStrategy,
+    LazyAllowed,
     PivotAgg,
     UniqueKeepStrategy,
 )
@@ -60,7 +63,11 @@ if TYPE_CHECKING:
 
     from narwhals._native import NativeSeries
     from narwhals._plan.arrow.typing import NativeArrowDataFrame
-    from narwhals._plan.compliant.dataframe import CompliantFrame, EagerDataFrame
+    from narwhals._plan.compliant.dataframe import (
+        CompliantFrame,
+        CompliantLazyFrame,
+        EagerDataFrame,
+    )
     from narwhals._plan.compliant.namespace import EagerNamespace
     from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._typing import Arrow, _EagerAllowedImpl
@@ -760,6 +767,172 @@ class DataFrame(
     # Everything is one-way, you can build a `LogicalPlan` but nothing useful beyond that
     def _to_lp(self) -> LogicalPlan:  # pragma: no cover
         return LogicalPlan.from_df(self)
+
+    def _lazy(
+        self, backend: IntoBackend[LazyAllowed] | None = None
+    ) -> LazyFrame[Any]:  # pragma: no cover
+        if backend is not None:
+            msg = f"Lazy backends are not yet supported in `narwhals._plan`, got: {backend!r}"
+            raise NotImplementedError(msg)
+        return LazyFrame._from_lp(self._to_lp())
+
+
+class LazyFrame(
+    BaseFrame[NativeLazyFrameT_co], Generic[NativeLazyFrameT_co]
+):  # pragma: no cover
+    """WIP: need to change a lot before something useful can happen.
+
+    ## Notes
+    `CompliantLazyFrame` seems like the wrong abstraction,
+    but preserving the native type is non-negotiable.
+
+    ### Different operations
+    I'd like to acknowledge
+
+    (1) Fake lazy (needs a reference to eager data):
+
+        DataFrame(<native-df>).lazy(None)
+        # becomes
+        LazyFrame._from_lp(ScanDataFrame.from_narwhals(<narwhals-df>))
+
+    (2) Native lazy (needs a reference to lazy query):
+
+        LazyFrame.from_native(<native_lf>)
+        # becomes
+        LazyFrame._from_lp(<some-new-node>)
+
+    (3) Lazy from file (needs a reference to `Implementation`):
+
+        scan_parquet(source, backend=backend)
+        # becomes
+        LazyFrame._from_lp(ScanFile.from_source(source, Implementation.from_backend(backend)))
+
+    (4) Eager -> lazy conversion (needs a reference to lazy query, [maybe `Implementation`]):
+
+        DataFrame(<native-df>).lazy(<backend-conversion>)
+        # do the conversion ...
+        LazyFrame.from_native(<converted-to-native-lf>)
+        LazyFrame._from_lp(<some-new-node>)
+
+    [maybe `Implementation`]: https://github.com/narwhals-dev/narwhals/issues/3210
+    """
+
+    _compliant: CompliantLazyFrame[Incomplete, NativeLazyFrameT_co]
+    _plan: LogicalPlan
+
+    # NOTE: Need to override most of `BaseFrame` for now
+    @classmethod
+    def _from_lp(cls: type[LazyFrame[Any]], plan: LogicalPlan, /) -> LazyFrame[Any]:
+        obj = cls.__new__(cls)
+        obj._plan = plan
+        return obj
+
+    def _with_lp(self, plan: LogicalPlan, /) -> Self:
+        tp = type(self)
+        obj = tp.__new__(tp)
+        obj._plan = plan
+        return obj
+
+    implementation = todo()  # type: ignore[assignment]
+    to_native = todo()
+    _unwrap_compliant = todo()
+    _with_compliant = todo()
+
+    columns = todo()  # type: ignore[assignment]
+    schema = todo()  # type: ignore[assignment]
+    collect_schema = todo()
+    collect = not_implemented()  # depends on resolving everything else
+
+    group_by = todo()  # haven't got a lazy builder yet
+    join = todo()
+    join_asof = not_implemented()  # not in `LogicalPlan`
+    unique = todo()
+    pivot = todo()  # has eager version
+    sink_parquet = todo()  # has eager version
+    fill_null = not_implemented()  # not in `{Base,Data}Frame`
+    head = not_implemented()  # not in `{Base,Data}Frame`
+    tail = not_implemented()  # not in `{Base,Data}Frame`
+
+    def __repr__(self) -> str:
+        return "<LazyFrame todo>"
+
+    def drop(
+        self, *columns: OneOrIterable[ColumnNameOrSelector], strict: bool = True
+    ) -> Self:
+        s_ir = _parse.parse_into_combined_selector_ir(*columns, require_all=strict)
+        return self._with_lp(self._plan.drop(s_ir))
+
+    def drop_nulls(
+        self, subset: OneOrIterable[ColumnNameOrSelector] | None = None
+    ) -> Self:
+        s_ir = None if subset is None else _parse.parse_into_combined_selector_ir(subset)
+        return self._with_lp(self._plan.drop_nulls(s_ir))
+
+    def explode(
+        self,
+        columns: OneOrIterable[ColumnNameOrSelector],
+        *more_columns: ColumnNameOrSelector,
+        empty_as_null: bool = True,
+        keep_nulls: bool = True,
+    ) -> Self:
+        s_ir = _parse.parse_into_combined_selector_ir(columns, *more_columns)
+        options = ExplodeOptions(empty_as_null=empty_as_null, keep_nulls=keep_nulls)
+        return self._with_lp(self._plan.explode(s_ir, options))
+
+    def filter(
+        self, *predicates: OneOrIterable[IntoExprColumn], **constraints: Any
+    ) -> Self:  # pragma: no cover
+        p = _parse.parse_predicates_constraints_into_expr_ir(*predicates, **constraints)
+        return self._with_lp(self._plan.filter(p))
+
+    def rename(self, mapping: Mapping[str, str]) -> Self:
+        return self._with_lp(self._plan.rename(mapping))
+
+    def select(self, *exprs: OneOrIterable[IntoExpr], **named_exprs: Any) -> Self:
+        e_irs = _parse.parse_into_seq_of_expr_ir(*exprs, **named_exprs)
+        return self._with_lp(self._plan.select(e_irs))
+
+    def sort(
+        self,
+        by: OneOrIterable[ColumnNameOrSelector],
+        *more_by: ColumnNameOrSelector,
+        descending: OneOrIterable[bool] = False,
+        nulls_last: OneOrIterable[bool] = False,
+    ) -> Self:
+        s_irs = _parse.parse_into_seq_of_selector_ir(by, *more_by)
+        opts = SortMultipleOptions.parse(descending=descending, nulls_last=nulls_last)
+        return self._with_lp(self._plan.sort(s_irs, opts))
+
+    def unnest(
+        self,
+        columns: OneOrIterable[ColumnNameOrSelector],
+        *more_columns: ColumnNameOrSelector,
+    ) -> Self:
+        s_ir = _parse.parse_into_combined_selector_ir(columns, *more_columns)
+        return self._with_lp(self._plan.unnest(s_ir))
+
+    def unpivot(
+        self,
+        on: OneOrIterable[ColumnNameOrSelector] | None = None,
+        *,
+        index: OneOrIterable[ColumnNameOrSelector] | None = None,
+        variable_name: str = "variable",
+        value_name: str = "value",
+    ) -> Self:
+        s_on = on if on is None else _parse.parse_into_combined_selector_ir(on)
+        s_index = None if index is None else _parse.parse_into_combined_selector_ir(index)
+        options = UnpivotOptions(variable_name=variable_name, value_name=value_name)
+        return self._with_lp(self._plan.unpivot(s_on, index=s_index, options=options))
+
+    def with_columns(self, *exprs: OneOrIterable[IntoExpr], **named_exprs: Any) -> Self:
+        e_irs = _parse.parse_into_seq_of_expr_ir(*exprs, **named_exprs)
+        return self._with_lp(self._plan.with_columns(e_irs))
+
+    def with_row_index(
+        self, name: str = "index", *, order_by: OneOrIterable[ColumnNameOrSelector]
+    ) -> Self:
+        by = _parse.parse_into_seq_of_selector_ir(order_by)
+        return self._with_lp(self._plan.with_row_index_by(name, order_by=by))
 
 
 def _is_sort_by_one(

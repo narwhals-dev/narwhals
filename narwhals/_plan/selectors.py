@@ -225,7 +225,7 @@ def duration(time_unit: OneOrIterable[TimeUnit] | None = None) -> Selector:
 
 
 def empty() -> Selector:
-    return s_ir.ByDType.empty().to_selector_ir().to_narwhals()
+    return s_ir.empty().to_narwhals()
 
 
 def enum() -> Selector:

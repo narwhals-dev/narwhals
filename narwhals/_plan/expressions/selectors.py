@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, final
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.common import flatten_hash_safe
 from narwhals._plan.exceptions import column_index_error, column_not_found_error
+from narwhals._plan.expressions.expr import RootSelector
 from narwhals._utils import (
     Version,
     _parse_time_unit_and_time_zone,
@@ -378,3 +379,7 @@ def _inner_selector_matches(
 
 def all() -> RootSelector:
     return All().to_selector_ir()
+
+
+def empty() -> RootSelector:
+    return ByDType.empty().to_selector_ir()

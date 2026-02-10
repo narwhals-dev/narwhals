@@ -6,7 +6,7 @@ from narwhals._plan._immutable import Immutable
 from narwhals._plan.common import todo
 from narwhals._plan.expressions import selectors as s_ir
 from narwhals._plan.expressions.boolean import all_horizontal
-from narwhals._plan.options import VConcatOptions
+from narwhals._plan.options import UnpivotOptions, VConcatOptions
 from narwhals._plan.schema import freeze_schema
 from narwhals._plan.typing import Seq
 from narwhals._typing_compat import TypeVar
@@ -64,7 +64,6 @@ if TYPE_CHECKING:
         JoinOptions,
         SortMultipleOptions,
         UniqueOptions,
-        UnpivotOptions,
     )
     from narwhals._plan.schema import FrozenSchema
     from narwhals.typing import ConcatMethod, FileSource, PivotAgg
@@ -262,14 +261,18 @@ class LogicalPlan(Immutable):
         return self._map(Unnest(columns=columns))
 
     def unpivot(
-        self, on: SelectorIR | None, index: SelectorIR, options: UnpivotOptions
+        self,
+        on: SelectorIR | None,
+        *,
+        index: SelectorIR | None = None,
+        options: UnpivotOptions | None,
     ) -> MapFunction[Unpivot]:
-        # NOTE: polars uses `cs.empty()` when `index` is None
-        # but `on` goes through a very long chain as None:
+        # NOTE: polars `on` goes through a very long chain as None:
         #   (python) -> `PyLazyFrame` -> `LazyFrame` -> `DslPlan` -> `UnpivotArgsDSL`
         # then finally filled in for `UnpivotArgsIR::new`
         # https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-core/src/frame/explode.rs#L34-L49
-        return self._map(Unpivot(on=on, index=index, options=options))
+        options = options or UnpivotOptions.default()
+        return self._map(Unpivot(on=on, index=index or s_ir.empty(), options=options))
 
     def with_columns(self, exprs: Seq[ExprIR], options: Incomplete = None) -> WithColumns:
         return WithColumns(input=self, exprs=exprs)

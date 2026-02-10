@@ -117,6 +117,12 @@ NativeDataFrameT_co = TypeVar(
 NativeLazyFrameT = TypeVar(
     "NativeLazyFrameT", bound="NativeLazyFrame", default="NativeLazyFrame"
 )
+NativeLazyFrameT_co = TypeVar(
+    "NativeLazyFrameT_co",
+    bound="NativeLazyFrame",
+    default="NativeLazyFrame",
+    covariant=True,
+)
 LiteralT = TypeVar("LiteralT", bound="NonNestedLiteral | Series[t.Any]", default=t.Any)
 MapIR: TypeAlias = "Callable[[ExprIR], ExprIR]"
 """A function to apply to all nodes in this tree."""
