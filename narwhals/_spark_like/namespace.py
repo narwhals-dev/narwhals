@@ -19,7 +19,6 @@ from narwhals._spark_like.utils import (
     true_divide,
 )
 from narwhals._sql.namespace import SQLNamespace
-from narwhals._utils import is_pyspark_pre_4
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -105,12 +104,12 @@ class SparkLikeNamespace(
                     if impl.is_sqlframe():
                         msg = f"Cannot create an empty struct type for {self._implementation} backend"
                         raise NotImplementedError(msg)
-                    
+
                     column = (  # pragma: no cover
                         F.from_json(F.lit("{}"), df._native_dtypes.StructType())
                         if impl._backend_version() < (4, 0)
                         else F.struct([])
-                    )   
+                    )
                 else:
                     lit_values = [F.lit(v).alias(k) for k, v in value.items()]
                     column = F.struct(*lit_values)
