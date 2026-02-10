@@ -3,6 +3,7 @@ from __future__ import annotations
 from io import BytesIO
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, overload
 
+from narwhals._plan._guards import is_seq_column
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.common import todo
 from narwhals._plan.expressions import selectors as s_ir
@@ -235,8 +236,18 @@ class LogicalPlan(Immutable):
     def rename(self, mapping: Mapping[str, str]) -> MapFunction[Rename]:
         return self._map(Rename.from_dict(mapping))
 
-    def select(self, exprs: Seq[ExprIR]) -> Select:
+    def _select(self, exprs: Seq[ExprIR]) -> Select:
         return Select(input=self, exprs=exprs)
+
+    def select(self, exprs: Seq[ExprIR]) -> Select | SelectNames:
+        return (
+            self.select_names(tuple(e.name for e in exprs))
+            if is_seq_column(exprs)
+            else self._select(exprs)
+        )
+
+    def select_names(self, names: Seq[str]) -> SelectNames:
+        return SelectNames(input=self, names=names)
 
     def slice(self, offset: int, length: int | None = None) -> Slice:
         return Slice(input=self, offset=offset, length=length)
@@ -329,7 +340,7 @@ class LogicalPlan(Immutable):
 
     # Sugar
     def drop(self, columns: SelectorIR) -> Select:
-        return self.select(((~columns.to_narwhals())._ir,))
+        return self._select(((~columns.to_narwhals())._ir,))
 
     def drop_nulls(self, subset: SelectorIR | None) -> Filter:
         predicate = all_horizontal((subset or s_ir.all()).to_narwhals().is_not_null()._ir)
@@ -463,6 +474,11 @@ class SinkParquet(SinkFile): ...
 class Select(SingleInput):
     __slots__ = ("exprs",)
     exprs: Seq[ExprIR]
+
+
+class SelectNames(SingleInput):
+    __slots__ = ("names",)
+    names: Seq[str]
 
 
 # `DslPlan::HStack`

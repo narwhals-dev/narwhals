@@ -62,7 +62,7 @@ def _format_recursive(plan: lp.LogicalPlan, indent: int) -> str:
 def _iter_format(plan: lp.LogicalPlan, indent: int) -> Iterator[str]:
     # `ir::format::write_ir_non_recursive`
     # https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-plan/src/plans/ir/format.rs#L705-L1006
-    raise NotImplementedError
+    raise NotImplementedError(type(plan))
 
 
 @singledispatch
@@ -114,6 +114,11 @@ def _(plan: lp.ScanFile, *_: Any) -> Iterator[str]:
 @_iter_format.register(lp.Select)
 def _(plan: lp.Select, *_: Any) -> Iterator[str]:
     yield f"SELECT {_seq(plan.exprs)}"
+
+
+@_iter_format.register(lp.SelectNames)
+def _(plan: lp.SelectNames, *_: Any) -> Iterator[str]:
+    yield f"SELECT {_seq(plan.names)}"
 
 
 @_iter_format.register(lp.WithColumns)
