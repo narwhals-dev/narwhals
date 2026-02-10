@@ -229,7 +229,7 @@ class LogicalPlan(Immutable):
         )
 
     def rename(self, mapping: Mapping[str, str]) -> MapFunction[Rename]:
-        return self._map(Rename(old=tuple(mapping), new=tuple(mapping.values())))
+        return self._map(Rename.from_dict(mapping))
 
     def select(self, exprs: Seq[ExprIR]) -> Select:
         return Select(input=self, exprs=exprs)
@@ -607,6 +607,10 @@ class Rename(LpFunction):
     __slots__ = ("new", "old")
     old: Seq[str]
     new: Seq[str]
+
+    @staticmethod
+    def from_dict(mapping: Mapping[str, str], /) -> Rename:
+        return Rename(old=tuple(mapping), new=tuple(mapping.values()))
 
     @property
     def mapping(self) -> dict[str, str]:
