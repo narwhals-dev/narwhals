@@ -350,6 +350,11 @@ class UniqueOptions(Immutable):
     keep: UniqueKeepStrategy
     maintain_order: bool
 
+    @staticmethod
+    def lazy(keep: UniqueKeepStrategy = "any", /) -> UniqueOptions:
+        """Alt constructor, where `maintain_order` cannot be guaranteed."""
+        return UniqueOptions(keep=keep, maintain_order=False)
+
 
 class VConcatOptions(Immutable):
     __slots__ = ("diagonal", "maintain_order", "to_supertypes")

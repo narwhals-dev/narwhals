@@ -11,7 +11,12 @@ from narwhals._plan.compliant.dataframe import EagerDataFrame
 from narwhals._plan.compliant.namespace import EagerNamespace
 from narwhals._plan.group_by import GroupBy, Grouped
 from narwhals._plan.logical_plan import LogicalPlan
-from narwhals._plan.options import ExplodeOptions, SortMultipleOptions, UnpivotOptions
+from narwhals._plan.options import (
+    ExplodeOptions,
+    SortMultipleOptions,
+    UniqueOptions,
+    UnpivotOptions,
+)
 from narwhals._plan.series import Series
 from narwhals._plan.typing import (
     ColumnNameOrSelector,
@@ -846,7 +851,6 @@ class LazyFrame(
     group_by = todo()  # haven't got a lazy builder yet
     join = todo()
     join_asof = not_implemented()  # not in `LogicalPlan`
-    unique = todo()
     pivot = todo()  # has eager version
     sink_parquet = todo()  # has eager version
     fill_null = not_implemented()  # not in `{Base,Data}Frame`
@@ -902,6 +906,23 @@ class LazyFrame(
         s_irs = _parse.parse_into_seq_of_selector_ir(by, *more_by)
         opts = SortMultipleOptions.parse(descending=descending, nulls_last=nulls_last)
         return self._with_lp(self._plan.sort(s_irs, opts))
+
+    def unique(
+        self,
+        subset: OneOrIterable[ColumnNameOrSelector] | None = None,
+        *,
+        keep: UniqueKeepStrategy = "any",
+        order_by: OneOrIterable[ColumnNameOrSelector] | None = None,
+    ) -> Self:
+        opts = UniqueOptions.lazy(_validate_unique_keep_strategy(keep))
+        parse = _parse.parse_into_seq_of_selector_ir
+        s_subset = None if subset is None else parse(subset)
+        if order_by is not None:
+            return self._with_lp(self._plan.unique_by(s_subset, opts, parse(order_by)))
+        if keep in {"first", "last"}:
+            msg = "'first' and 'last' are only supported if `order_by` is passed."
+            raise InvalidOperationError(msg)
+        return self._with_lp(self._plan.unique(s_subset, opts))
 
     def unnest(
         self,
