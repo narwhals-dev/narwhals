@@ -351,7 +351,7 @@ class UniqueOptions(Immutable):
     maintain_order: bool
 
     @staticmethod
-    def lazy(keep: UniqueKeepStrategy = "any", /) -> UniqueOptions:
+    def lazy(keep: UniqueKeepStrategy = "any", /) -> UniqueOptions:  # pragma: no cover
         """Alt constructor, where `maintain_order` cannot be guaranteed."""
         return UniqueOptions(keep=keep, maintain_order=False)
 
