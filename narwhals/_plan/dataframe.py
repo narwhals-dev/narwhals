@@ -851,7 +851,6 @@ class LazyFrame(
 
     group_by = todo()  # haven't got a lazy builder yet
     join_asof = not_implemented()  # not in `LogicalPlan`
-    pivot = todo()  # has eager version
 
     def _unwrap_plan(self, other: Self | Any, /) -> LogicalPlan:
         """Equivalent* to `BaseFrame._unwrap_compliant`, used for `join(other)`."""
@@ -916,6 +915,45 @@ class LazyFrame(
         opts = JoinOptions(how=_validate_join_strategy(how), suffix=suffix)
         left_on, right_on = normalize_join_on(on, how, left_on, right_on)
         return self._with_lp(left.join(right, left_on, right_on, opts))
+
+    # TODO @dangotbanned: Figure out how `on_columns: ...` should work for lazy (besides polars)
+    # See https://github.com/narwhals-dev/narwhals/issues/1901#issuecomment-3697700426
+    def pivot(
+        self,
+        on: OneOrIterable[ColumnNameOrSelector],
+        on_columns: Sequence[str] | Series | DataFrame,
+        *,
+        index: OneOrIterable[ColumnNameOrSelector] | None = None,
+        values: OneOrIterable[ColumnNameOrSelector] | None = None,
+        aggregate_function: PivotAgg | None = None,
+        separator: str = "_",
+    ) -> Self:
+        from narwhals._plan import selectors as cs
+
+        on_ = _parse.parse_into_combined_selector_ir(on)
+        if index is None:
+            if values is None:
+                msg = "`pivot` needs either `index or `values` needs to be specified"
+                raise InvalidOperationError(msg)
+            values_ = _parse.parse_into_combined_selector_ir(values)
+            index_ = (cs.all() - on_.to_narwhals() - values_.to_narwhals())._ir
+        else:
+            index_ = _parse.parse_into_combined_selector_ir(index)
+            if values is not None:
+                values_ = _parse.parse_into_combined_selector_ir(values)
+            else:
+                values_ = (cs.all() - on_.to_narwhals() - index_.to_narwhals())._ir
+
+        return self._with_lp(
+            self._plan.pivot(
+                on_,
+                on_columns=on_columns,  # pyright: ignore[reportArgumentType]
+                index=index_,
+                values=values_,
+                agg=aggregate_function,
+                separator=separator,
+            )
+        )
 
     def rename(self, mapping: Mapping[str, str]) -> Self:
         return self._with_lp(self._plan.rename(mapping))

@@ -72,6 +72,10 @@ VConcatMethod: TypeAlias = Literal[
     "vertical", "diagonal", "vertical_relaxed", "diagonal_relaxed"
 ]
 
+PivotOnColumns: TypeAlias = "DataFrame[Any, Any]"
+"""See https://github.com/narwhals-dev/narwhals/issues/1901#issuecomment-3697700426
+"""
+
 
 class LogicalPlan(Immutable):
     """Representation of `LazyFrame` operations, based on [`polars_plan::dsl::plan::DslPlan`].
@@ -212,7 +216,7 @@ class LogicalPlan(Immutable):
     def pivot(
         self,
         on: SelectorIR,
-        on_columns: Incomplete,
+        on_columns: PivotOnColumns,
         index: SelectorIR,
         values: SelectorIR,
         agg: PivotAgg | None,
