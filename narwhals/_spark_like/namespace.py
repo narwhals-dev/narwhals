@@ -99,11 +99,20 @@ class SparkLikeNamespace(
                 lit_values = [F.lit(v) for v in value]
                 column = F.lit(F.array(lit_values))
             elif isinstance(value, dict):
-                if (not self._implementation.is_pyspark()) and (len(value) == 0):
-                    msg = f"Cannot create an empty struct type for {self._implementation} backend"
-                    raise NotImplementedError(msg)
-                lit_values = [F.lit(v).alias(k) for k, v in value.items()]
-                column = F.struct(*lit_values)
+                if not value:
+                    impl = self._implementation
+                    if impl.is_sqlframe():
+                        msg = f"Cannot create an empty struct type for {self._implementation} backend"
+                        raise NotImplementedError(msg)
+
+                    column = (  # pragma: no cover
+                        F.from_json(F.lit("{}"), df._native_dtypes.StructType())
+                        if impl._backend_version() < (4, 0)
+                        else F.struct([])
+                    )
+                else:
+                    lit_values = [F.lit(v).alias(k) for k, v in value.items()]
+                    column = F.struct(*lit_values)
             else:
                 column = F.lit(value)
 
