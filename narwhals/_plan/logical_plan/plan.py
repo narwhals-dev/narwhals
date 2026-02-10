@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, overload
 
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.common import todo
@@ -73,6 +73,9 @@ Incomplete: TypeAlias = Any
 _InputsT = TypeVar("_InputsT", bound="Seq[LogicalPlan]")
 LpFunctionT = TypeVar("LpFunctionT", bound="LpFunction", default="LpFunction")
 SinkT = TypeVar("SinkT", bound="Sink", default="Sink")
+VConcatMethod: TypeAlias = Literal[
+    "vertical", "diagonal", "vertical_relaxed", "diagonal_relaxed"
+]
 
 
 class LogicalPlan(Immutable):
@@ -280,11 +283,17 @@ class LogicalPlan(Immutable):
         return self._map(RowIndexBy(name=name, order_by=order_by))
 
     # Multiple Inputs
+    @overload
+    @staticmethod
+    def concat(items: Seq[LogicalPlan], *, how: Literal["horizontal"]) -> HConcat: ...
+    @overload
     @staticmethod
     def concat(
-        items: Seq[LogicalPlan],
-        *,
-        how: ConcatMethod | Literal["vertical_relaxed", "diagonal_relaxed"] = "vertical",
+        items: Seq[LogicalPlan], *, how: VConcatMethod = "vertical"
+    ) -> VConcat: ...
+    @staticmethod
+    def concat(
+        items: Seq[LogicalPlan], *, how: ConcatMethod | VConcatMethod = "vertical"
     ) -> HConcat | VConcat:
         if how == "horizontal":
             return HConcat(inputs=items)
