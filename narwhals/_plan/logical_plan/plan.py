@@ -1,15 +1,20 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, Generic
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal
 
 from narwhals._plan._immutable import Immutable
+from narwhals._plan.common import todo
+from narwhals._plan.expressions import selectors as s_ir
+from narwhals._plan.expressions.boolean import all_horizontal
+from narwhals._plan.options import VConcatOptions
 from narwhals._plan.schema import freeze_schema
 from narwhals._plan.typing import Seq
 from narwhals._typing_compat import TypeVar
 from narwhals._utils import normalize_path, qualified_type_name, zip_strict
+from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Iterator, Mapping
 
     from typing_extensions import Self, TypeAlias
 
@@ -21,14 +26,14 @@ if TYPE_CHECKING:
         SortMultipleOptions,
         UniqueOptions,
         UnpivotOptions,
-        VConcatOptions,
     )
     from narwhals._plan.schema import FrozenSchema
-    from narwhals.typing import FileSource, PivotAgg
+    from narwhals.typing import ConcatMethod, FileSource, PivotAgg
 
 Incomplete: TypeAlias = Any
 _InputsT = TypeVar("_InputsT", bound="Seq[LogicalPlan]")
 LpFunctionT = TypeVar("LpFunctionT", bound="LpFunction", default="LpFunction")
+SinkT = TypeVar("SinkT", bound="Sink", default="Sink")
 
 
 class LogicalPlan(Immutable):
@@ -138,6 +143,165 @@ class LogicalPlan(Immutable):
         from narwhals._plan.logical_plan import _explain
 
         return _explain._format(self, 0)
+
+    # NOTE: Methods based on [`polars_plan::dsl::builder_dsl::DslBuilder`]
+    # [`polars_plan::dsl::builder_dsl::DslBuilder`]: https://github.com/pola-rs/polars/blob/092b7ba3c9c486decb52c7b65b50a31be4892437/crates/polars-plan/src/dsl/builder_dsl.rs
+
+    # Scan
+    @classmethod
+    def from_df(cls, df: DataFrame[Any, Any], /) -> ScanDataFrame:
+        return ScanDataFrame.from_narwhals(df)
+
+    @classmethod
+    def scan_csv(cls, source: FileSource, /) -> ScanCsv:
+        return ScanCsv.from_source(source)
+
+    @classmethod
+    def scan_parquet(cls, source: FileSource, /) -> ScanParquet:
+        return ScanParquet.from_source(source)
+
+    # Single Input
+    def explode(
+        self, columns: SelectorIR, options: ExplodeOptions
+    ) -> MapFunction[Explode]:
+        return self._map(Explode(columns=columns, options=options))
+
+    def filter(self, predicate: ExprIR) -> Filter:
+        return Filter(input=self, predicate=predicate)
+
+    def group_by(self, keys: Seq[ExprIR], aggs: Seq[ExprIR]) -> GroupBy:
+        return GroupBy(input=self, keys=keys, aggs=aggs)
+
+    def pivot(
+        self,
+        on: SelectorIR,
+        on_columns: Incomplete,
+        index: SelectorIR,
+        values: SelectorIR,
+        agg: PivotAgg | None,
+        separator: str,
+    ) -> Pivot:
+        return Pivot(
+            input=self,
+            on=on,
+            on_columns=on_columns,
+            index=index,
+            values=values,
+            agg=agg,
+            separator=separator,
+        )
+
+    def rename(self, mapping: Mapping[str, str]) -> MapFunction[Rename]:
+        return self._map(Rename(old=tuple(mapping), new=tuple(mapping.values())))
+
+    # TODO @dangotbanned: Decide on if `ProjectionOptions` should be added
+    # Either replace `Incomplete` or remove `options` (and the placeholder in `fill_null`)
+    def select(self, exprs: Seq[ExprIR], options: Incomplete = None) -> Select:
+        return Select(input=self, exprs=exprs)
+
+    def slice(self, offset: int, length: int | None = None) -> Slice:
+        return Slice(input=self, offset=offset, length=length)
+
+    def sort(self, by: Seq[SelectorIR], options: SortMultipleOptions) -> Sort:
+        return Sort(input=self, by=by, options=options)
+
+    def unique(self, subset: Seq[SelectorIR] | None, options: UniqueOptions) -> Unique:
+        return Unique(input=self, subset=subset, options=options)
+
+    def unique_by(
+        self,
+        subset: Seq[SelectorIR] | None,
+        options: UniqueOptions,
+        order_by: Seq[SelectorIR],
+    ) -> UniqueBy:
+        return UniqueBy(input=self, subset=subset, options=options, order_by=order_by)
+
+    def unnest(self, columns: SelectorIR) -> MapFunction[Unnest]:
+        return self._map(Unnest(columns=columns))
+
+    def unpivot(
+        self, on: SelectorIR | None, index: SelectorIR, options: UnpivotOptions
+    ) -> MapFunction[Unpivot]:
+        # NOTE: polars uses `cs.empty()` when `index` is None
+        # but `on` goes through a very long chain as None:
+        #   (python) -> `PyLazyFrame` -> `LazyFrame` -> `DslPlan` -> `UnpivotArgsDSL`
+        # then finally filled in for `UnpivotArgsIR::new`
+        # https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-core/src/frame/explode.rs#L34-L49
+        return self._map(Unpivot(on=on, index=index, options=options))
+
+    def with_columns(self, exprs: Seq[ExprIR], options: Incomplete = None) -> WithColumns:
+        return WithColumns(input=self, exprs=exprs)
+
+    def with_row_index(self, name: str = "index") -> MapFunction[RowIndex]:
+        return self._map(RowIndex(name=name))
+
+    def with_row_index_by(
+        self, name: str = "index", *, order_by: Seq[SelectorIR]
+    ) -> MapFunction[RowIndexBy]:
+        return self._map(RowIndexBy(name=name, order_by=order_by))
+
+    # Multiple Inputs
+    @staticmethod
+    def concat(
+        items: Seq[LogicalPlan],
+        *,
+        how: ConcatMethod | Literal["vertical_relaxed", "diagonal_relaxed"] = "vertical",
+    ) -> HConcat | VConcat:
+        if how == "horizontal":
+            return HConcat(inputs=items)
+        return VConcat(inputs=items, options=VConcatOptions.from_how(how))
+
+    def join(
+        self,
+        other: LogicalPlan,
+        left_on: Seq[str],
+        right_on: Seq[str],
+        options: JoinOptions,
+    ) -> Join:
+        return Join(
+            inputs=(self, other), left_on=left_on, right_on=right_on, options=options
+        )
+
+    join_asof = todo()
+
+    # Terminal
+    def collect(self) -> Collect:
+        return self._sink(Collect(input=self))
+
+    def sink_parquet(self, target: FileSource) -> SinkParquet:
+        return self._sink(SinkParquet(input=self, target=normalize_path(target)))
+
+    # Sugar
+    def drop(self, columns: SelectorIR) -> Select:
+        return self.select(((~columns.to_narwhals())._ir,))
+
+    def drop_nulls(self, subset: SelectorIR | None) -> Filter:
+        predicate = all_horizontal((subset or s_ir.all()).to_narwhals().is_not_null()._ir)
+        return self.filter(predicate)
+
+    def fill_null(self, fill_value: ExprIR) -> Select:
+        return self.select(
+            (s_ir.all().to_narwhals().fill_null(fill_value.to_narwhals())._ir,),
+            options={"duplicate_check": False},  # ProjectionOptions
+        )
+
+    def head(self, n: int = 5) -> Slice:
+        return self.slice(0, n)
+
+    def tail(self, n: int = 5) -> Slice:
+        return self.slice(-n, n)
+
+    def with_column(self, expr: ExprIR) -> WithColumns:
+        return self.with_columns((expr,))
+
+    def _map(self, function: LpFunctionT) -> MapFunction[LpFunctionT]:
+        return MapFunction(input=self, function=function)
+
+    def _sink(self, sink: SinkT) -> SinkT:
+        if isinstance(self, Sink):
+            msg = "cannot create a sink on top of another sink"
+            raise InvalidOperationError(msg)
+        return sink
 
 
 class Scan(LogicalPlan, has_inputs=False):
@@ -408,3 +572,9 @@ class Rename(LpFunction):
 
     def __repr__(self) -> str:
         return f"RENAME {self.mapping!r}"
+
+
+concat = LogicalPlan.concat
+from_df = LogicalPlan.from_df
+scan_csv = LogicalPlan.scan_csv
+scan_parquet = LogicalPlan.scan_parquet

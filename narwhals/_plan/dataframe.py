@@ -10,7 +10,7 @@ from narwhals._plan.common import ensure_seq_str, normalize_target_file, temp
 from narwhals._plan.compliant.dataframe import EagerDataFrame
 from narwhals._plan.compliant.namespace import EagerNamespace
 from narwhals._plan.group_by import GroupBy, Grouped
-from narwhals._plan.logical_plan import LpBuilder
+from narwhals._plan.logical_plan import LogicalPlan
 from narwhals._plan.options import ExplodeOptions, SortMultipleOptions
 from narwhals._plan.series import Series
 from narwhals._plan.typing import (
@@ -758,8 +758,8 @@ class DataFrame(
     # NOTE: Using for testing
     # Actually integrating will mean rewriting the current `DataFrame`, `BaseFrame` impls
     # Everything is one-way, you can build a `LogicalPlan` but nothing useful beyond that
-    def _to_lp_builder(self) -> LpBuilder:  # pragma: no cover
-        return LpBuilder.from_df(self)
+    def _to_lp(self) -> LogicalPlan:  # pragma: no cover
+        return LogicalPlan.from_df(self)
 
 
 def _is_sort_by_one(
