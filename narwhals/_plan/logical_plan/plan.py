@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from io import BytesIO
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, overload
 
 from narwhals._plan._immutable import Immutable
@@ -319,7 +320,11 @@ class LogicalPlan(Immutable):
     def collect(self) -> Collect:
         return self._sink(Collect(input=self))
 
-    def sink_parquet(self, target: FileSource) -> SinkParquet:
+    # TODO @dangotbanned: Handle `BytesIO`
+    def sink_parquet(self, target: FileSource | BytesIO) -> SinkParquet:
+        if isinstance(target, BytesIO):
+            msg = "TODO: LazyFrame.sink_parquet(BytesIO)"
+            raise NotImplementedError(msg)
         return self._sink(SinkParquet(input=self, target=normalize_path(target)))
 
     # Sugar

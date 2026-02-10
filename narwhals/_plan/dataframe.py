@@ -852,7 +852,6 @@ class LazyFrame(
     join = todo()
     join_asof = not_implemented()  # not in `LogicalPlan`
     pivot = todo()  # has eager version
-    sink_parquet = todo()  # has eager version
     fill_null = not_implemented()  # not in `{Base,Data}Frame`
 
     def __repr__(self) -> str:
@@ -896,6 +895,12 @@ class LazyFrame(
     def select(self, *exprs: OneOrIterable[IntoExpr], **named_exprs: Any) -> Self:
         e_irs = _parse.parse_into_seq_of_expr_ir(*exprs, **named_exprs)
         return self._with_lp(self._plan.select(e_irs))
+
+    # TODO @dangotbanned: Figure out `LazyFrame.sink_parquet -> None`
+    def sink_parquet(self, file: FileSource | BytesIO) -> None:
+        _ = self._plan.sink_parquet(file)
+        msg = "TODO: LazyFrame.sink_parquet"
+        raise NotImplementedError(msg)
 
     def sort(
         self,
