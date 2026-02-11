@@ -875,6 +875,10 @@ class LazyFrame(
         s_ir = None if subset is None else _parse.parse_into_combined_selector_ir(subset)
         return self._with_lp(self._plan.drop_nulls(s_ir))
 
+    def explain(self) -> str:
+        """Create a string representation of the query plan."""
+        return self._plan.explain()
+
     def explode(
         self,
         columns: OneOrIterable[ColumnNameOrSelector],
