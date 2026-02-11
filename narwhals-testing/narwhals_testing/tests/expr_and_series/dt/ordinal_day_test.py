@@ -5,9 +5,9 @@ from datetime import datetime
 import hypothesis.strategies as st
 import pytest
 from hypothesis import given
+from tests.utils import PANDAS_VERSION
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION
 
 pytest.importorskip("pandas")
 import pandas as pd

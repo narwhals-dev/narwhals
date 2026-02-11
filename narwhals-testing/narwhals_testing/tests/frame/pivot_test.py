@@ -4,10 +4,10 @@ from contextlib import nullcontext as does_not_raise
 from typing import Any
 
 import pytest
+from tests.utils import POLARS_VERSION, ConstructorEager, assert_equal_data
 
 import narwhals as nw
 from narwhals.exceptions import NarwhalsError
-from tests.utils import POLARS_VERSION, ConstructorEager, assert_equal_data
 
 data = {
     "ix": [1, 2, 1, 1, 2, 2],

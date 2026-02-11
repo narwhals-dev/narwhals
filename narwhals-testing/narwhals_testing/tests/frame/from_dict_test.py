@@ -3,10 +3,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
+from tests.utils import Constructor, assert_equal_data
 
 import narwhals as nw
 from narwhals._utils import Implementation
-from tests.utils import Constructor, assert_equal_data
 
 if TYPE_CHECKING:
     from narwhals._typing import EagerAllowed, Polars

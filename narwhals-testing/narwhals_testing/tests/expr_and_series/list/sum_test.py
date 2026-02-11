@@ -3,9 +3,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
+from tests.utils import DUCKDB_VERSION, PANDAS_VERSION, assert_equal_data
 
 import narwhals as nw
-from tests.utils import DUCKDB_VERSION, PANDAS_VERSION, assert_equal_data
 
 if TYPE_CHECKING:
     from tests.utils import Constructor, ConstructorEager

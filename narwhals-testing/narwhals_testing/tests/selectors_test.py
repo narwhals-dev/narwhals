@@ -5,9 +5,6 @@ from datetime import datetime, timezone
 from typing import Literal
 
 import pytest
-
-import narwhals as nw
-import narwhals.selectors as ncs
 from tests.utils import (
     PANDAS_VERSION,
     POLARS_VERSION,
@@ -16,6 +13,9 @@ from tests.utils import (
     assert_equal_data,
     is_windows,
 )
+
+import narwhals as nw
+import narwhals.selectors as ncs
 
 data = {
     "a": [1, 1, 2],

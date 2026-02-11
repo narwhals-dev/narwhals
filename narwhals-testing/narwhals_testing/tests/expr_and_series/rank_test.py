@@ -4,8 +4,6 @@ from contextlib import nullcontext as does_not_raise
 from typing import Literal
 
 import pytest
-
-import narwhals as nw
 from tests.utils import (
     DUCKDB_VERSION,
     PANDAS_VERSION,
@@ -15,6 +13,8 @@ from tests.utils import (
     assert_equal_data,
     is_windows,
 )
+
+import narwhals as nw
 
 rank_methods = ["average", "min", "max", "dense", "ordinal"]
 

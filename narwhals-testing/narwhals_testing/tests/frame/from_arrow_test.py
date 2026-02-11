@@ -7,10 +7,10 @@ import pytest
 
 pytest.importorskip("pyarrow")
 import pyarrow as pa
+from tests.utils import PYARROW_VERSION, assert_equal_data
 
 import narwhals as nw
 from narwhals._utils import Implementation
-from tests.utils import PYARROW_VERSION, assert_equal_data
 
 if TYPE_CHECKING:
     from narwhals._typing import EagerAllowed

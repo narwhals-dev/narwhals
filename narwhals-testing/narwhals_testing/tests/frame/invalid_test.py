@@ -3,10 +3,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, TypeVar
 
 import pytest
+from tests.utils import NUMPY_VERSION, POLARS_VERSION, Constructor
 
 import narwhals as nw
 from narwhals.exceptions import MultiOutputExpressionError
-from tests.utils import NUMPY_VERSION, POLARS_VERSION, Constructor
 
 T = TypeVar("T")
 

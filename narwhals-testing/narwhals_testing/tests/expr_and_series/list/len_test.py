@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import pytest
+from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 data = {"a": [[1, 2], [3, 4, None], None, [], [None]]}
 expected = {"a": [2, 3, None, 0, 1]}

@@ -7,9 +7,6 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
 import pytest
-
-import narwhals as nw
-from narwhals.exceptions import DuplicateError, InvalidOperationError
 from tests.utils import (
     DUCKDB_VERSION,
     PANDAS_VERSION,
@@ -19,6 +16,9 @@ from tests.utils import (
     ConstructorEager,
     assert_equal_data,
 )
+
+import narwhals as nw
+from narwhals.exceptions import DuplicateError, InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence

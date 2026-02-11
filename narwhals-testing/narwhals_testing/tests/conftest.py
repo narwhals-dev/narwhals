@@ -8,10 +8,10 @@ from importlib.util import find_spec
 from typing import TYPE_CHECKING, Any, Callable, cast
 
 import pytest
+from tests.utils import ID_PANDAS_LIKE, PANDAS_VERSION, pyspark_session, sqlframe_session
 
 import narwhals as nw
 from narwhals._utils import Implementation, generate_temporary_column_name
-from tests.utils import ID_PANDAS_LIKE, PANDAS_VERSION, pyspark_session, sqlframe_session
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -21,17 +21,17 @@ if TYPE_CHECKING:
     import polars as pl
     import pyarrow as pa
     from ibis.backends.duckdb import Backend as IbisDuckDBBackend
-    from typing_extensions import TypeAlias
-
-    from narwhals._native import NativeDask, NativeDuckDB, NativePySpark, NativeSQLFrame
-    from narwhals._typing import EagerAllowed
-    from narwhals.typing import IntoDataFrame, NonNestedDType
     from tests.utils import (
         Constructor,
         ConstructorEager,
         ConstructorLazy,
         NestedOrEnumDType,
     )
+    from typing_extensions import TypeAlias
+
+    from narwhals._native import NativeDask, NativeDuckDB, NativePySpark, NativeSQLFrame
+    from narwhals._typing import EagerAllowed
+    from narwhals.typing import IntoDataFrame, NonNestedDType
 
     Data: TypeAlias = "dict[str, list[Any]]"
 
@@ -50,7 +50,6 @@ else:
     DEFAULT_CONSTRUCTORS = (
         "pandas,pandas[pyarrow],polars[eager],pyarrow,duckdb,sqlframe,ibis"
     )
-
 
 
 def pytest_configure(config: pytest.Config) -> None:

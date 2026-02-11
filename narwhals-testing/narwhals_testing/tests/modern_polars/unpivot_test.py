@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from datetime import datetime
 
-import narwhals as nw
 from tests.utils import Constructor, assert_equal_data
+
+import narwhals as nw
 
 
 def test_unpivot(constructor: Constructor) -> None:

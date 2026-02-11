@@ -4,9 +4,9 @@ from contextlib import nullcontext as does_not_raise
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from tests.utils import PYARROW_VERSION, Constructor, assert_equal_data
 
 import narwhals as nw
-from tests.utils import PYARROW_VERSION, Constructor, assert_equal_data
 
 if TYPE_CHECKING:
     from narwhals.stable.v1.dtypes import DType

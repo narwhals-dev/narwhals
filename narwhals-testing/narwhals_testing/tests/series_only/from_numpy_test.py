@@ -7,9 +7,9 @@ import pytest
 
 pytest.importorskip("numpy")
 import numpy as np
+from tests.utils import assert_equal_series
 
 import narwhals as nw
-from tests.utils import assert_equal_series
 
 if TYPE_CHECKING:
     from collections.abc import Sequence

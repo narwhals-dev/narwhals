@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import pytest
-
-import narwhals as nw
 from tests.utils import (
     DUCKDB_VERSION,
     POLARS_VERSION,
@@ -12,6 +10,8 @@ from tests.utils import (
     assert_equal_data,
     is_windows,
 )
+
+import narwhals as nw
 
 data = {"arg entina": [1, 2, None, 4]}
 expected = {"cum_sum": [1, 3, None, 7], "reverse_cum_sum": [7, 6, None, 4]}

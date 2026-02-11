@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import pytest
+from tests.utils import DUCKDB_VERSION, POLARS_VERSION, Constructor, assert_equal_data
 
 import narwhals as nw
 from narwhals.exceptions import InvalidOperationError
-from tests.utils import DUCKDB_VERSION, POLARS_VERSION, Constructor, assert_equal_data
 
 
 @pytest.mark.parametrize(

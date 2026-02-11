@@ -8,6 +8,17 @@ from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any, Callable, cast
 
 import pytest
+from tests.utils import (
+    DUCKDB_VERSION,
+    PANDAS_VERSION,
+    POLARS_VERSION,
+    PYARROW_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+    assert_equal_hash,
+    assert_equal_series,
+)
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
@@ -31,28 +42,17 @@ from narwhals.stable.v1.dependencies import (
     is_pyarrow_table,
 )
 from narwhals.utils import Version
-from tests.utils import (
-    DUCKDB_VERSION,
-    PANDAS_VERSION,
-    POLARS_VERSION,
-    PYARROW_VERSION,
-    Constructor,
-    ConstructorEager,
-    assert_equal_data,
-    assert_equal_hash,
-    assert_equal_series,
-)
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    from tests.utils import Constructor, ConstructorEager
     from typing_extensions import assert_type
 
     from narwhals._typing import EagerAllowed
     from narwhals.dtypes import DType
     from narwhals.stable.v1.typing import IntoDataFrameT
     from narwhals.typing import IntoDType, _1DArray, _2DArray
-    from tests.utils import Constructor, ConstructorEager
 
 
 def test_toplevel() -> None:

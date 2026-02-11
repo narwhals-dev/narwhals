@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import pytest
+from tests.utils import DUCKDB_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 import narwhals as nw
-from tests.utils import DUCKDB_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 data = {"a": [1.0, None, None, 3.0], "b": [1.0, None, 4.0, 5.0]}
 

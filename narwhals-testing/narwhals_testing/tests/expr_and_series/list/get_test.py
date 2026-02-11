@@ -4,9 +4,9 @@ import re
 from typing import Any
 
 import pytest
+from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 data = {"a": [[1, 2], [None, 3], [None], None]}
 

@@ -3,9 +3,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
+from tests.utils import PANDAS_VERSION
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
     from tests.utils import Constructor

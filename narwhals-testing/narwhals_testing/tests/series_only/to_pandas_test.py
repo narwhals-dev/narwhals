@@ -7,9 +7,9 @@ import pytest
 pytest.importorskip("pandas")
 import pandas as pd
 from pandas.testing import assert_series_equal
+from tests.utils import PANDAS_VERSION
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
     from tests.utils import ConstructorEager

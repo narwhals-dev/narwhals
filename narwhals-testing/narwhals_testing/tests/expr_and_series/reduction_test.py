@@ -4,9 +4,9 @@ from itertools import chain
 from typing import Any
 
 import pytest
+from tests.utils import DUCKDB_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 import narwhals as nw
-from tests.utils import DUCKDB_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 
 @pytest.mark.parametrize(

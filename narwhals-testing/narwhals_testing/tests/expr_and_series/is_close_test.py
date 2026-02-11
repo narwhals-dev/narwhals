@@ -9,10 +9,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 import narwhals as nw
 from narwhals.exceptions import ComputeError, InvalidOperationError
-from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 if TYPE_CHECKING:
     from narwhals.typing import NumericLiteral

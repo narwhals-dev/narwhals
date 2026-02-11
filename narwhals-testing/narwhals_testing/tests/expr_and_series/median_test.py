@@ -3,10 +3,10 @@ from __future__ import annotations
 import re
 
 import pytest
+from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 import narwhals as nw
 from narwhals.exceptions import InvalidOperationError
-from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 data = {
     "a": [3, 8, 2, None],

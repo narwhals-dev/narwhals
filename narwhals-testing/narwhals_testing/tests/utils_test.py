@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, Callable, ClassVar, Protocol, cast
 import hypothesis.strategies as st
 import pytest
 from hypothesis import given
+from tests.utils import get_module_version_as_tuple
 
 import narwhals as nw
 from narwhals._utils import (
@@ -19,7 +20,6 @@ from narwhals._utils import (
     parse_version,
     requires,
 )
-from tests.utils import get_module_version_as_tuple
 
 pytest.importorskip("pandas")
 import pandas as pd

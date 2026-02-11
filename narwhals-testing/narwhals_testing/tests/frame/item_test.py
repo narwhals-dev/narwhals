@@ -4,9 +4,9 @@ import re
 from typing import Any
 
 import pytest
+from tests.utils import ConstructorEager, assert_equal_data
 
 import narwhals as nw
-from tests.utils import ConstructorEager, assert_equal_data
 
 
 @pytest.mark.parametrize(("row", "column", "expected"), [(0, 2, 7), (1, "z", 8)])

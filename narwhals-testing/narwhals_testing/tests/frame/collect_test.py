@@ -3,11 +3,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Literal
 
 import pytest
+from tests.utils import POLARS_VERSION, Constructor, assert_equal_data
 
 import narwhals as nw
 from narwhals._utils import Implementation
 from narwhals.dependencies import get_cudf, get_modin, get_polars
-from tests.utils import POLARS_VERSION, Constructor, assert_equal_data
 
 if TYPE_CHECKING:
     from narwhals._typing import Arrow, Dask, IntoBackend, Modin, Pandas, Polars

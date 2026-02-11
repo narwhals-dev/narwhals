@@ -8,9 +8,9 @@ import pytest
 pytest.importorskip("numpy")
 import numpy as np
 from numpy.testing import assert_array_equal
+from tests.utils import PANDAS_VERSION, is_windows
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION, is_windows
 
 if TYPE_CHECKING:
     from tests.utils import ConstructorEager

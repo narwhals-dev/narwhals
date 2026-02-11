@@ -6,8 +6,6 @@ from typing import Any
 import hypothesis.strategies as st
 import pytest
 from hypothesis import HealthCheck, given, settings
-
-import narwhals as nw
 from tests.utils import (
     DUCKDB_VERSION,
     PANDAS_VERSION,
@@ -16,6 +14,8 @@ from tests.utils import (
     ConstructorEager,
     assert_equal_data,
 )
+
+import narwhals as nw
 
 pytest.importorskip("pandas")
 import pandas as pd

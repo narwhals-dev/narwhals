@@ -7,9 +7,9 @@ from typing import TYPE_CHECKING
 from unittest import mock
 
 import pytest
+from tests.utils import DASK_VERSION, PANDAS_VERSION, assert_equal_data
 
 import narwhals as nw
-from tests.utils import DASK_VERSION, PANDAS_VERSION, assert_equal_data
 
 if TYPE_CHECKING:
     from narwhals.typing import IntoFrame

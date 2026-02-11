@@ -3,10 +3,10 @@ from __future__ import annotations
 from contextlib import nullcontext as does_not_raise
 
 import pytest
+from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 import narwhals as nw
 from narwhals.exceptions import InvalidOperationError
-from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 data = {"a": [1, 1, None, 2]}
 data_str = {"a": ["x", "x", "y", None]}

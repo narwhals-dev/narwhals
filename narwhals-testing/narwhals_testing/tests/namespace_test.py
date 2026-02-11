@@ -12,6 +12,7 @@ from narwhals._namespace import Namespace
 from narwhals._utils import Version
 
 if TYPE_CHECKING:
+    from tests.utils import Constructor
     from typing_extensions import Never, TypeAlias, assert_type  # noqa: F401
 
     from narwhals._arrow.namespace import ArrowNamespace  # noqa: F401
@@ -22,7 +23,6 @@ if TYPE_CHECKING:
     from narwhals._polars.namespace import PolarsNamespace  # noqa: F401
     from narwhals._typing import BackendName, _EagerAllowed
     from narwhals.typing import _2DArray
-    from tests.utils import Constructor
 
 ExprT = TypeVar("ExprT", bound="CompliantExprAny")
 

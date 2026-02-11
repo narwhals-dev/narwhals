@@ -4,8 +4,6 @@ from math import sqrt
 from typing import Any
 
 import pytest
-
-import narwhals as nw
 from tests.utils import (
     DUCKDB_VERSION,
     PANDAS_VERSION,
@@ -14,6 +12,8 @@ from tests.utils import (
     ConstructorEager,
     assert_equal_data,
 )
+
+import narwhals as nw
 
 data = {"a": [1.0, 2.0, 1.0, 3.0, 1.0, 4.0, 1.0]}
 

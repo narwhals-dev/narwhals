@@ -90,7 +90,7 @@ p_partkey,p_name,p_mfgr,p_brand,p_type,p_size,p_container,p_retailprice,p_commen
 96320,grey hot violet blush steel,Manufacturer#3,Brand#31,SMALL PLATED COPPER,26,SM PKG,1316.32,cajole acros
 178526,tan dodger peach rosy tomato,Manufacturer#5,Brand#55,LARGE PLATED NICKEL,41,JUMBO CAN,1604.52, specia
 32135,navy spring red misty orchid,Manufacturer#5,Brand#53,MEDIUM POLISHED COPPER,20,MED BAG,1067.13,kly even de
-24876,yellow chiffon dim wheat cream,Manufacturer#1,Brand#12,MEDIUM POLISHED NICKEL,1,LG DRUM,1800.87,d platelets slee
+24876,yellow chiffon dim wheat cream,Manufacturer#1,Brand#12,MEDIUM POLISHED NICKEL,1,LG DRUM,1800.87,d platelets sleep
 14126,indian white turquoise almond brown,Manufacturer#4,Brand#42,STANDARD BRUSHED TIN,25,SM JAR,1040.12,nic package
 128965,cyan powder red blush dodger,Manufacturer#4,Brand#43,SMALL ANODIZED STEEL,46,WRAP PACK,1993.96,kly bold re
 150502,cornsilk goldenrod lime lavender dodger,Manufacturer#3,Brand#34,LARGE PLATED STEEL,17,JUMBO CAN,1552.5,tions inte
@@ -108,7 +108,7 @@ p_partkey,p_name,p_mfgr,p_brand,p_type,p_size,p_container,p_retailprice,p_commen
 154715,moccasin aquamarine smoke blanched lemon,Manufacturer#5,Brand#51,PROMO BRUSHED TIN,49,LG JAR,1769.71,ully quickly regular 
 132173,grey wheat honeydew floral ivory,Manufacturer#4,Brand#44,STANDARD BRUSHED NICKEL,47,SM CAN,1205.17,"row regular, exp"
 156307,powder thistle indian smoke lime,Manufacturer#3,Brand#31,SMALL POLISHED STEEL,36,WRAP PACK,1363.3,al packages nag. 
-148545,medium almond burlywood cornflower blush,Manufacturer#2,Brand#21,ECONOMY POLISHED NICKEL,46,JUMBO CASE,1593.54,uickly regular accoun
+148545,medium almond burlywood cornflower blush,Manufacturer#2,Brand#21,ECONOMY POLISHED NICKEL,46,JUMBO CASE,1593.54,uickly regular account
 48541,chartreuse firebrick thistle bisque burlywood,Manufacturer#2,Brand#23,PROMO ANODIZED COPPER,19,SM CAN,1489.54, can haggle quickly
 75676,royal khaki violet yellow ivory,Manufacturer#2,Brand#24,MEDIUM PLATED NICKEL,47,JUMBO BOX,1651.67,le beyon
 59541,medium grey mint khaki orchid,Manufacturer#3,Brand#35,STANDARD BURNISHED NICKEL,23,JUMBO BOX,1500.54,ly fluffily th
@@ -205,7 +205,7 @@ p_partkey,p_name,p_mfgr,p_brand,p_type,p_size,p_container,p_retailprice,p_commen
 154592,lavender dark puff linen bisque,Manufacturer#1,Brand#15,LARGE BURNISHED COPPER,44,WRAP PKG,1646.59,t the f
 108486,seashell orange red wheat green,Manufacturer#2,Brand#22,MEDIUM POLISHED NICKEL,40,MED JAR,1494.48,ts sleep never regu
 12422,dim papaya violet ghost brown,Manufacturer#5,Brand#52,MEDIUM ANODIZED TIN,19,JUMBO CASE,1334.42,ix fl
-142665,yellow green peach medium spring,Manufacturer#2,Brand#21,SMALL PLATED TIN,43,MED PACK,1707.66,uests. express i
+142665,yellow green peach medium spring,Manufacturer#2,Brand#21,SMALL PLATED TIN,43,MED PACK,1707.66,quests. express i
 35810,cornflower almond pink antique wheat,Manufacturer#5,Brand#53,STANDARD BURNISHED NICKEL,23,LG BOX,1745.81,"al, final pinto beans "
 113678,almond royal pale rose turquoise,Manufacturer#4,Brand#43,STANDARD BURNISHED STEEL,45,WRAP PKG,1691.67,"nst the ironic, regula"
 146853,wheat firebrick moccasin lemon steel,Manufacturer#4,Brand#41,SMALL PLATED TIN,47,WRAP BOX,1899.85,re regularly
@@ -230,7 +230,7 @@ p_partkey,p_name,p_mfgr,p_brand,p_type,p_size,p_container,p_retailprice,p_commen
 148165,brown yellow pink peach ivory,Manufacturer#3,Brand#33,ECONOMY ANODIZED STEEL,40,SM JAR,1213.16,iously fina
 176788,tomato lace blush metallic burnished,Manufacturer#2,Brand#21,STANDARD BRUSHED TIN,20,LG PKG,1864.78,kages
 132780,sky pale cyan peach brown,Manufacturer#4,Brand#42,LARGE POLISHED TIN,13,WRAP CASE,1812.78,s! fluffily bold s
-134788,khaki sandy almond olive peru,Manufacturer#1,Brand#13,STANDARD ANODIZED STEEL,27,SM PACK,1822.78,nto bean
+134788,khaki sandy almond olive peru,Manufacturer#1,Brand#13,STANDARD ANODIZED STEEL,27,SM PACK,1822.78,not bean
 158045,firebrick rose frosted light navajo,Manufacturer#5,Brand#51,MEDIUM BRUSHED NICKEL,5,WRAP PACK,1103.04,uction
 126055,lawn ghost puff pale almond,Manufacturer#4,Brand#45,STANDARD BURNISHED STEEL,15,MED JAR,1081.05,ecial
 126429,mint brown grey white cornsilk,Manufacturer#5,Brand#54,STANDARD BURNISHED STEEL,41,WRAP CASE,1455.42,gular accounts use fi
@@ -287,7 +287,7 @@ p_partkey,p_name,p_mfgr,p_brand,p_type,p_size,p_container,p_retailprice,p_commen
 8945,orchid tomato cyan almond indian,Manufacturer#5,Brand#51,ECONOMY BRUSHED BRASS,3,SM DRUM,1853.94,uriously alon
 151581,red magenta almond dodger sandy,Manufacturer#2,Brand#24,SMALL PLATED NICKEL,34,LG PACK,1632.58,along the quickly
 122939,black cyan light pink firebrick,Manufacturer#1,Brand#15,ECONOMY ANODIZED STEEL,49,JUMBO BOX,1961.93,cial asymptote
-54105,cream medium white honeydew lime,Manufacturer#3,Brand#32,LARGE PLATED STEEL,13,JUMBO CASE,1059.1,nto beans boost among
+54105,cream medium white honeydew lime,Manufacturer#3,Brand#32,LARGE PLATED STEEL,13,JUMBO CASE,1059.1,not beans boost among
 159333,royal honeydew mint papaya tomato,Manufacturer#3,Brand#31,MEDIUM PLATED NICKEL,43,MED CAN,1392.33,posits are acro
 58705,maroon forest midnight seashell papaya,Manufacturer#4,Brand#44,ECONOMY ANODIZED TIN,4,JUMBO BAG,1663.7,ly along
 146124,bisque pink sienna metallic blush,Manufacturer#2,Brand#21,STANDARD POLISHED TIN,18,LG CAN,1170.12,accounts. fu

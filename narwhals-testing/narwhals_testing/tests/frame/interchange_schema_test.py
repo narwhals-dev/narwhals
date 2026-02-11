@@ -3,9 +3,9 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta
 
 import pytest
+from tests.utils import IBIS_VERSION
 
 import narwhals.stable.v1 as nw_v1
-from tests.utils import IBIS_VERSION
 
 pytest.importorskip("polars")
 import polars as pl

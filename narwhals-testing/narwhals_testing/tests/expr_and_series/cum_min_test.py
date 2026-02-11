@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import pytest
-
-import narwhals as nw
 from tests.utils import (
     DUCKDB_VERSION,
     PANDAS_VERSION,
@@ -13,6 +11,8 @@ from tests.utils import (
     assert_equal_data,
     is_windows,
 )
+
+import narwhals as nw
 
 data = {"a": [3, 1, None, 2]}
 

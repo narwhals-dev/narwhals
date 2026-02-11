@@ -6,9 +6,6 @@ from typing import Any
 import hypothesis.strategies as st
 import pytest
 from hypothesis import given
-
-import narwhals as nw
-from narwhals.exceptions import InvalidOperationError
 from tests.utils import (
     DUCKDB_VERSION,
     PANDAS_VERSION,
@@ -17,6 +14,9 @@ from tests.utils import (
     ConstructorEager,
     assert_equal_data,
 )
+
+import narwhals as nw
+from narwhals.exceptions import InvalidOperationError
 
 data = {"a": [None, 1, 2, None, 4, 6, 11]}
 

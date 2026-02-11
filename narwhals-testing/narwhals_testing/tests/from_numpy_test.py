@@ -6,9 +6,9 @@ import pytest
 
 pytest.importorskip("numpy")
 import numpy as np
+from tests.utils import ConstructorEager, assert_equal_data
 
 import narwhals as nw
-from tests.utils import ConstructorEager, assert_equal_data
 
 if TYPE_CHECKING:
     from narwhals.typing import _2DArray

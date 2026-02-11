@@ -4,9 +4,9 @@ from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 from hypothesis import assume, given, strategies as st
+from tests.utils import PANDAS_VERSION, POLARS_VERSION, assert_equal_data
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION, POLARS_VERSION, assert_equal_data
 
 pytest.importorskip("pandas")
 pytest.importorskip("polars")

@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import pytest
-
-import narwhals as nw
 from tests.utils import (
     DUCKDB_VERSION,
     POLARS_VERSION,
@@ -10,6 +8,8 @@ from tests.utils import (
     ConstructorEager,
     assert_equal_data,
 )
+
+import narwhals as nw
 
 data = {"a": [1, 1, 2, 3, 2], "b": [1, 2, 3, 2, 1]}
 

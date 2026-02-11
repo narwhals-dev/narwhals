@@ -3,8 +3,6 @@ from __future__ import annotations
 from datetime import date, datetime, timezone
 
 import pytest
-
-import narwhals as nw
 from tests.utils import (
     PANDAS_VERSION,
     Constructor,
@@ -12,6 +10,8 @@ from tests.utils import (
     assert_equal_data,
     is_windows,
 )
+
+import narwhals as nw
 
 data = {
     "a": [datetime(2021, 3, 1, 12, 34, 56, 49012), datetime(2020, 1, 2, 2, 4, 14, 715123)]

@@ -27,11 +27,11 @@ from itertools import chain
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 import pytest
+from tests.conftest import sqlframe_pyspark_lazy_constructor
+from tests.utils import Constructor, maybe_get_modin_df
 
 import narwhals as nw
 from narwhals._utils import Version
-from tests.conftest import sqlframe_pyspark_lazy_constructor
-from tests.utils import Constructor, maybe_get_modin_df
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator

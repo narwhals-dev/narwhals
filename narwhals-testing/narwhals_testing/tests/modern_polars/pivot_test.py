@@ -3,9 +3,9 @@ from __future__ import annotations
 from datetime import datetime
 
 import pytest
+from tests.utils import POLARS_VERSION, ConstructorEager, assert_equal_data
 
 import narwhals as nw
-from tests.utils import POLARS_VERSION, ConstructorEager, assert_equal_data
 
 
 def test_pivot(

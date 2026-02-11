@@ -3,9 +3,9 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
+from tests.utils import DUCKDB_VERSION, Constructor, assert_equal_data
 
 import narwhals as nw
-from tests.utils import DUCKDB_VERSION, Constructor, assert_equal_data
 
 
 def test_sumh(constructor: Constructor) -> None:

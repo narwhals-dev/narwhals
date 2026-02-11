@@ -5,17 +5,17 @@ from contextlib import AbstractContextManager, nullcontext as does_not_raise
 from typing import TYPE_CHECKING, Any, Callable
 
 import pytest
+from tests.utils import PANDAS_VERSION, POLARS_VERSION, PYARROW_VERSION
 
 import narwhals as nw
 from narwhals.testing import assert_series_equal
-from tests.utils import PANDAS_VERSION, POLARS_VERSION, PYARROW_VERSION
 
 if TYPE_CHECKING:
+    from tests.conftest import Data
+    from tests.utils import ConstructorEager
     from typing_extensions import TypeAlias
 
     from narwhals.typing import IntoSchema, IntoSeriesT
-    from tests.conftest import Data
-    from tests.utils import ConstructorEager
 
     SetupFn: TypeAlias = Callable[[nw.Series[Any]], tuple[nw.Series[Any], nw.Series[Any]]]
 

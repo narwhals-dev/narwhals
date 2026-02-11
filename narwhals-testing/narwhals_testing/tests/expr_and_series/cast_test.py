@@ -4,8 +4,6 @@ from datetime import datetime, time, timedelta, timezone
 from typing import TYPE_CHECKING, cast
 
 import pytest
-
-import narwhals as nw
 from tests.utils import (
     PANDAS_VERSION,
     PYARROW_VERSION,
@@ -15,6 +13,8 @@ from tests.utils import (
     is_pyarrow_windows_no_tzdata,
     time_unit_compat,
 )
+
+import narwhals as nw
 
 if TYPE_CHECKING:
     from collections.abc import Mapping

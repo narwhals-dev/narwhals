@@ -8,10 +8,10 @@ from typing import TYPE_CHECKING, Any
 import hypothesis.strategies as st
 import pytest
 from hypothesis import given
+from tests.utils import POLARS_VERSION, ConstructorEager, assert_equal_data
 
 import narwhals as nw
 from narwhals.exceptions import ComputeError
-from tests.utils import POLARS_VERSION, ConstructorEager, assert_equal_data
 
 if TYPE_CHECKING:
     from collections.abc import Sequence

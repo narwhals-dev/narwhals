@@ -4,14 +4,14 @@ import pytest
 
 pytest.importorskip("numpy")
 import numpy as np
-
-import narwhals as nw
 from tests.utils import (
     PANDAS_VERSION,
     PYARROW_VERSION,
     ConstructorEager,
     assert_equal_data,
 )
+
+import narwhals as nw
 
 
 def test_array_dunder(

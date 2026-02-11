@@ -3,9 +3,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from tests.utils import is_pd_na
 
 import narwhals as nw
-from tests.utils import is_pd_na
 
 if TYPE_CHECKING:
     from tests.utils import ConstructorEager

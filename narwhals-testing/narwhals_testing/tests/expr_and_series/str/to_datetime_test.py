@@ -6,9 +6,6 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Literal
 
 import pytest
-
-import narwhals as nw
-from narwhals.exceptions import ComputeError
 from tests.utils import (
     PANDAS_VERSION,
     POLARS_VERSION,
@@ -16,6 +13,9 @@ from tests.utils import (
     is_pyarrow_windows_no_tzdata,
     is_windows,
 )
+
+import narwhals as nw
+from narwhals.exceptions import ComputeError
 
 if TYPE_CHECKING:
     from tests.utils import Constructor, ConstructorEager

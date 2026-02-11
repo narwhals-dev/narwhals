@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import pytest
+from tests.utils import POLARS_VERSION, PYARROW_VERSION
 
 import narwhals as nw
-from tests.utils import POLARS_VERSION, PYARROW_VERSION
 
 pytest.importorskip("polars")
 pytest.importorskip("pyarrow")

@@ -6,15 +6,16 @@ from importlib.util import find_spec
 from typing import TYPE_CHECKING, Any, Literal
 
 import pytest
+from tests.utils import PANDAS_VERSION, POLARS_VERSION, ConstructorPandasLike
 
 import narwhals as nw
 from narwhals.exceptions import PerformanceWarning
-from tests.utils import PANDAS_VERSION, POLARS_VERSION, ConstructorPandasLike
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
     import polars as pl
+    from tests.utils import Constructor, ConstructorEager
     from typing_extensions import TypeAlias
 
     from narwhals.typing import (
@@ -23,7 +24,6 @@ if TYPE_CHECKING:
         IntoPandasSchema,
         IntoPolarsSchema,
     )
-    from tests.utils import Constructor, ConstructorEager
 
     TimeUnit: TypeAlias = Literal["ns", "us"]
 

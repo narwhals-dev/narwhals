@@ -4,9 +4,9 @@ import sys
 from typing import TYPE_CHECKING
 
 import pytest
+from tests.utils import PANDAS_VERSION, POLARS_VERSION, assert_equal_data, is_windows
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION, POLARS_VERSION, assert_equal_data, is_windows
 
 if TYPE_CHECKING:
     from tests.utils import Constructor, ConstructorEager

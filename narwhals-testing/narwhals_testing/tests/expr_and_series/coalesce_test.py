@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import pytest
+from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 import narwhals as nw
-from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 
 def test_coalesce_numeric(constructor: Constructor) -> None:

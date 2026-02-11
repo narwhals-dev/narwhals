@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from tests.utils import Constructor
+
 import narwhals as nw
 from narwhals.stable.v1.dependencies import is_narwhals_lazyframe
-from tests.utils import Constructor
 
 if TYPE_CHECKING:
     from tests.utils import Constructor

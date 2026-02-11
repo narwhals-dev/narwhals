@@ -5,8 +5,6 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any, Literal
 
 import pytest
-
-import narwhals as nw
 from tests.utils import (
     DUCKDB_VERSION,
     PANDAS_VERSION,
@@ -14,6 +12,8 @@ from tests.utils import (
     Constructor,
     assert_equal_data,
 )
+
+import narwhals as nw
 
 if TYPE_CHECKING:
     from narwhals.typing import IntoDataFrame, IntoLazyFrameT, JoinStrategy

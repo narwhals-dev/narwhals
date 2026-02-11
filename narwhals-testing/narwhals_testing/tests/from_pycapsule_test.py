@@ -5,9 +5,9 @@ from dataclasses import dataclass
 from typing import Any
 
 import pytest
+from tests.utils import PYARROW_VERSION, assert_equal_data
 
 import narwhals as nw
-from tests.utils import PYARROW_VERSION, assert_equal_data
 
 pytest.importorskip("pyarrow")
 import pyarrow as pa

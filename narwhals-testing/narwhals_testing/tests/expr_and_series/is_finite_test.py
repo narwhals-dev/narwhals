@@ -3,9 +3,9 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
+from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 import narwhals as nw
-from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 NON_NULLABLE_CONSTRUCTOR_NAMES = {
     "pandas_constructor",

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import pytest
+from tests.utils import DUCKDB_VERSION
 
 import narwhals as nw
-from tests.utils import DUCKDB_VERSION
 
 
 def test_sql() -> None:

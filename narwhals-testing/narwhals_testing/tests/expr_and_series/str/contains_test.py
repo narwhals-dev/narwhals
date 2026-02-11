@@ -3,9 +3,9 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
+from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 data = {"pets": ["cat", "dog", "rabbit and parrot", "dove", "Parrot|dove", None]}
 

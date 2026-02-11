@@ -4,9 +4,9 @@ from contextlib import nullcontext as does_not_raise
 from typing import Any
 
 import pytest
+from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 import narwhals as nw
-from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 
 def test_allh(constructor: Constructor) -> None:

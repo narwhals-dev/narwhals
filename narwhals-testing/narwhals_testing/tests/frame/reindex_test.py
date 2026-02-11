@@ -6,10 +6,10 @@ import pytest
 
 pytest.importorskip("pandas")
 import pandas as pd
+from tests.utils import assert_equal_data
 
 import narwhals as nw
 from narwhals.exceptions import MultiOutputExpressionError
-from tests.utils import assert_equal_data
 
 data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
 

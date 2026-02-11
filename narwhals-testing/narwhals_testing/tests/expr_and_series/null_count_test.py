@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-import narwhals as nw
 from tests.utils import Constructor, ConstructorEager, assert_equal_data
+
+import narwhals as nw
 
 data = {"a": [1.0, None, None, 3.0], "b": [1.0, None, 4.0, 5.0]}
 

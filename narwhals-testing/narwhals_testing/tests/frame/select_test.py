@@ -3,9 +3,6 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
-
-import narwhals as nw
-from narwhals.exceptions import ColumnNotFoundError, InvalidIntoExprError, NarwhalsError
 from tests.utils import (
     DASK_VERSION,
     DUCKDB_VERSION,
@@ -14,6 +11,9 @@ from tests.utils import (
     assert_equal_data,
     maybe_collect,
 )
+
+import narwhals as nw
+from narwhals.exceptions import ColumnNotFoundError, InvalidIntoExprError, NarwhalsError
 
 
 class Foo: ...

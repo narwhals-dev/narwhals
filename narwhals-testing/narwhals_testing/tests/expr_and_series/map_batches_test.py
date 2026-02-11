@@ -6,13 +6,14 @@ import pytest
 
 pytest.importorskip("numpy")
 
-import narwhals as nw
 from tests.utils import (
     PANDAS_VERSION,
     POLARS_VERSION,
     ConstructorEager,
     assert_equal_data,
 )
+
+import narwhals as nw
 
 if TYPE_CHECKING:
     from narwhals.dtypes import DType

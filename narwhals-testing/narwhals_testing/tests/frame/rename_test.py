@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-import narwhals as nw
 from tests.utils import Constructor, assert_equal_data
+
+import narwhals as nw
 
 
 def test_rename(constructor: Constructor) -> None:

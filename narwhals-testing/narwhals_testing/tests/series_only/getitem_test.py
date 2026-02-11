@@ -3,9 +3,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
+from tests.utils import assert_equal_data, assert_equal_series
 
 import narwhals as nw
-from tests.utils import assert_equal_data, assert_equal_series
 
 if TYPE_CHECKING:
     from tests.utils import ConstructorEager

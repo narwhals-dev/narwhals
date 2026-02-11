@@ -3,9 +3,9 @@ from __future__ import annotations
 import re
 
 import pytest
+from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 import narwhals as nw
-from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 data = {"a": [1, 4, 2, 5]}
 

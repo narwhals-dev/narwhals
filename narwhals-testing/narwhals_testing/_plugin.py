@@ -44,9 +44,5 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         help="run tests with external constructor",
     )
     group.addoption(
-        "--constructors",
-        action="store",
-        default=None,
-        type=str,
-        help="libraries to test",
+        "--constructors", action="store", default=None, type=str, help="libraries to test"
     )

@@ -5,16 +5,17 @@ from contextlib import AbstractContextManager, nullcontext as does_not_raise
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from tests.utils import PANDAS_VERSION
 
 import narwhals as nw
 from narwhals.testing import assert_frame_equal
 from narwhals.testing.asserts.frame import GUARANTEES_ROW_ORDER
-from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
-    from narwhals.typing import IntoSchema
     from tests.conftest import Data
     from tests.utils import Constructor, ConstructorEager
+
+    from narwhals.typing import IntoSchema
 
 
 def _assertion_error(detail: str) -> pytest.RaisesExc:

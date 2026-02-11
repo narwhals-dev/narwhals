@@ -4,10 +4,10 @@ import types
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from tests.utils import assert_equal_data
 
 import narwhals as nw
 from narwhals._utils import qualified_type_name
-from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping

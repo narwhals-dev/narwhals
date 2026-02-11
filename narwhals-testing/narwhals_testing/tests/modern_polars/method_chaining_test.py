@@ -3,9 +3,9 @@ from __future__ import annotations
 import re
 
 import pytest
+from tests.utils import PANDAS_VERSION, Constructor, assert_equal_data
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION, Constructor, assert_equal_data
 
 data = {
     "OriginCityName": [

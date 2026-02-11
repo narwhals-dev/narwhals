@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import pytest
+from tests.utils import ConstructorEager, assert_equal_data
 
 import narwhals as nw
-from tests.utils import ConstructorEager, assert_equal_data
 
 data = {"a": [1, 1, 2], "b": [1, 2, 3]}
 

@@ -5,8 +5,6 @@ from contextlib import nullcontext as does_not_raise
 from typing import TYPE_CHECKING, Any
 
 import pytest
-
-import narwhals as nw
 from tests.utils import (
     DASK_VERSION,
     DUCKDB_VERSION,
@@ -15,6 +13,8 @@ from tests.utils import (
     ConstructorEager,
     assert_equal_data,
 )
+
+import narwhals as nw
 
 if TYPE_CHECKING:
     from narwhals.typing import FillNullStrategy

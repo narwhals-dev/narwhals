@@ -5,10 +5,10 @@ from contextlib import nullcontext as does_not_raise
 from typing import Any
 
 import pytest
+from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 import narwhals as nw
 from narwhals.exceptions import ShapeError
-from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 data = {"a": [1, 1, 2, 2, 3], "b": [1, 2, 3, 3, 4]}
 data_group = {

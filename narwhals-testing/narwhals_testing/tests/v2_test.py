@@ -8,12 +8,6 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any, cast
 
 import pytest
-
-import narwhals as nw
-import narwhals.stable.v2 as nw_v2
-from narwhals._utils import Implementation
-from narwhals.exceptions import NarwhalsUnstableWarning, ShapeError
-from narwhals.utils import Version
 from tests.utils import (
     PANDAS_VERSION,
     POLARS_VERSION,
@@ -23,6 +17,12 @@ from tests.utils import (
     assert_equal_data,
     assert_equal_series,
 )
+
+import narwhals as nw
+import narwhals.stable.v2 as nw_v2
+from narwhals._utils import Implementation
+from narwhals.exceptions import NarwhalsUnstableWarning, ShapeError
+from narwhals.utils import Version
 
 if TYPE_CHECKING:
     from collections.abc import Sequence

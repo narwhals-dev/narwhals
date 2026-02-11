@@ -5,9 +5,9 @@ from contextlib import nullcontext as does_not_raise
 from typing import Literal
 
 import pytest
+from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 import narwhals as nw
-from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 
 @pytest.mark.parametrize(

@@ -5,10 +5,10 @@ from importlib.util import find_spec
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from tests.utils import PANDAS_VERSION, assert_equal_series
 
 import narwhals as nw
 from narwhals._utils import qualified_type_name
-from tests.utils import PANDAS_VERSION, assert_equal_series
 
 if TYPE_CHECKING:
     from collections.abc import (

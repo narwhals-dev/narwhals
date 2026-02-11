@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-import narwhals as nw
 from tests.utils import ConstructorEager, assert_equal_data
+
+import narwhals as nw
 
 
 def test_arg_true_series(constructor_eager: ConstructorEager) -> None:

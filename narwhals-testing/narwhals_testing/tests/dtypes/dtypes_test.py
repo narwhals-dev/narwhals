@@ -6,9 +6,6 @@ from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any, Literal
 
 import pytest
-
-import narwhals as nw
-from narwhals.exceptions import InvalidOperationError, PerformanceWarning
 from tests.utils import (
     PANDAS_VERSION,
     POLARS_VERSION,
@@ -17,11 +14,15 @@ from tests.utils import (
     pyspark_session,
 )
 
+import narwhals as nw
+from narwhals.exceptions import InvalidOperationError, PerformanceWarning
+
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    from narwhals.typing import IntoFrame, IntoSeries, NonNestedDType
     from tests.utils import Constructor, ConstructorPandasLike, NestedOrEnumDType
+
+    from narwhals.typing import IntoFrame, IntoSeries, NonNestedDType
 
 
 @pytest.mark.parametrize("time_unit", ["us", "ns", "ms"])

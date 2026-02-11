@@ -4,8 +4,6 @@ import re
 from typing import TYPE_CHECKING, Any, Literal
 
 import pytest
-
-import narwhals as nw
 from tests.utils import (
     PANDAS_VERSION,
     Constructor,
@@ -13,6 +11,8 @@ from tests.utils import (
     pyspark_session,
     sqlframe_session,
 )
+
+import narwhals as nw
 
 pytest.importorskip("polars")
 pytest.importorskip("pyarrow")

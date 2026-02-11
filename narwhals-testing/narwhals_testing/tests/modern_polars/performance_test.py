@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import pytest
+from tests.utils import Constructor, assert_equal_data
 
 import narwhals as nw
-from tests.utils import Constructor, assert_equal_data
 
 data = {"weight": ["89kg", "83", "79kg", "68kg", "78kg", "73", "86kg"]}
 

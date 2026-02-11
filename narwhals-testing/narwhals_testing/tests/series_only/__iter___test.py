@@ -4,9 +4,9 @@ from collections.abc import Iterable
 from typing import TYPE_CHECKING
 
 import pytest
+from tests.utils import assert_equal_data
 
 import narwhals as nw
-from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
     from tests.utils import ConstructorEager

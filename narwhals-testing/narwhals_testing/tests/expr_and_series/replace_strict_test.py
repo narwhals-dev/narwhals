@@ -3,9 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import pytest
-
-import narwhals as nw
-from narwhals.exceptions import InvalidOperationError
 from tests.utils import (
     POLARS_VERSION,
     Constructor,
@@ -13,6 +10,9 @@ from tests.utils import (
     assert_equal_data,
     xfail_if_pyspark_connect,
 )
+
+import narwhals as nw
+from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence

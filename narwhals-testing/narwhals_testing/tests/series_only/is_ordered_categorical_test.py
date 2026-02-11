@@ -3,10 +3,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from tests.utils import POLARS_VERSION
 
 import narwhals as nw
 from narwhals._utils import Implementation, Version
-from tests.utils import POLARS_VERSION
 
 if TYPE_CHECKING:
     from tests.utils import ConstructorEager

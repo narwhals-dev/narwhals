@@ -4,9 +4,9 @@ from datetime import date
 from typing import TYPE_CHECKING
 
 import pytest
+from tests.utils import assert_equal_data, uses_pyarrow_backend
 
 import narwhals as nw
-from tests.utils import assert_equal_data, uses_pyarrow_backend
 
 if TYPE_CHECKING:
     from tests.utils import Constructor, ConstructorEager

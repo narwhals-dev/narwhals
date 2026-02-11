@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import pytest
+from tests.utils import PYARROW_VERSION, ConstructorEager, assert_equal_data
 
 import narwhals as nw
 from narwhals.exceptions import InvalidOperationError
-from tests.utils import PYARROW_VERSION, ConstructorEager, assert_equal_data
 
 data = {"a": ["one", "two", "two"]}
 

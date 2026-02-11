@@ -5,10 +5,10 @@ from typing import TYPE_CHECKING, Any, Callable, cast
 import hypothesis.strategies as st
 import pytest
 from hypothesis import assume, given
-
-import narwhals as nw
 from tests.conftest import pandas_constructor, pyarrow_table_constructor
 from tests.utils import assert_equal_data
+
+import narwhals as nw
 
 if TYPE_CHECKING:
     from collections.abc import Sequence

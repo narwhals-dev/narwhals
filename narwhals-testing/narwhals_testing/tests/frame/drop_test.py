@@ -4,10 +4,10 @@ from contextlib import nullcontext as does_not_raise
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from tests.utils import POLARS_VERSION
 
 import narwhals as nw
 from narwhals.exceptions import ColumnNotFoundError
-from tests.utils import POLARS_VERSION
 
 if TYPE_CHECKING:
     from tests.utils import Constructor

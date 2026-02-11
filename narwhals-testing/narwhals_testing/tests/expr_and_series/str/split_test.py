@@ -4,9 +4,9 @@ import re
 from typing import Any
 
 import pytest
+from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 import narwhals as nw
-from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 data = {"s": ["foo bar", "foo_bar", "foo_bar_baz", "foo,bar"]}
 

@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import pytest
-
-import narwhals as nw
 from tests.utils import (
     DUCKDB_VERSION,
     PANDAS_VERSION,
@@ -11,6 +9,8 @@ from tests.utils import (
     ConstructorEager,
     assert_equal_data,
 )
+
+import narwhals as nw
 
 data = {"a": [1, 3, None, 2]}
 

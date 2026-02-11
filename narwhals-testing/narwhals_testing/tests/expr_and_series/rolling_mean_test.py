@@ -6,8 +6,6 @@ from typing import Any
 import hypothesis.strategies as st
 import pytest
 from hypothesis import given
-
-import narwhals as nw
 from tests.utils import (
     DUCKDB_VERSION,
     POLARS_VERSION,
@@ -15,6 +13,8 @@ from tests.utils import (
     ConstructorEager,
     assert_equal_data,
 )
+
+import narwhals as nw
 
 data = {"a": [None, 1, 2, None, 4, 6, 11]}
 

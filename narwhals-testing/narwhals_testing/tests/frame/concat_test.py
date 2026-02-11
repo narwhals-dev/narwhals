@@ -5,11 +5,11 @@ import re
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 import narwhals as nw
 from narwhals._utils import Implementation
 from narwhals.exceptions import InvalidOperationError, NarwhalsError
-from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 if TYPE_CHECKING:
     from collections.abc import Iterator

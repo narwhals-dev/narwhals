@@ -3,9 +3,9 @@ from __future__ import annotations
 from contextlib import nullcontext as does_not_raise
 
 import pytest
+from tests.utils import Constructor, assert_equal_data
 
 import narwhals as nw
-from tests.utils import Constructor, assert_equal_data
 
 
 def test_anyh(constructor: Constructor) -> None:

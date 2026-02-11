@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import pytest
+from tests.utils import POLARS_VERSION, Constructor, assert_equal_data
 
 import narwhals as nw
-from tests.utils import POLARS_VERSION, Constructor, assert_equal_data
 
 data = {"foo": [1, 2, 3], "BAR": [4, 5, 6]}
 prefix = "with_prefix_"

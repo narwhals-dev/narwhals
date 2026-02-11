@@ -4,9 +4,9 @@ from datetime import timedelta
 from typing import Literal
 
 import pytest
+from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 data = {
     "a": [None, timedelta(minutes=1, seconds=1, milliseconds=1, microseconds=1)],

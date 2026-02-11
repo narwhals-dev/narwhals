@@ -4,9 +4,9 @@ from datetime import date, datetime
 from typing import TYPE_CHECKING, cast
 
 import pytest
+from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 import narwhals as nw
-from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 if TYPE_CHECKING:
     import dask.dataframe as dd

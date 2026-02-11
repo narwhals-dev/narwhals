@@ -21,8 +21,9 @@ from narwhals.dtypes import DType
 from narwhals.typing import IntoDType, NonNestedDType, TimeUnit
 
 if TYPE_CHECKING:
-    from narwhals.typing import DTypes
     from tests.utils import NestedOrEnumDType
+
+    from narwhals.typing import DTypes
 
 
 IntoDTypeT = TypeVar("IntoDTypeT", bound=IntoDType)

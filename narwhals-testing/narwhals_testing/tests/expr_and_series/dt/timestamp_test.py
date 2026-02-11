@@ -6,8 +6,6 @@ from typing import TYPE_CHECKING, Literal
 import hypothesis.strategies as st
 import pytest
 from hypothesis import given
-
-import narwhals as nw
 from tests.utils import (
     PANDAS_VERSION,
     POLARS_VERSION,
@@ -17,6 +15,8 @@ from tests.utils import (
     is_pyarrow_windows_no_tzdata,
     time_unit_compat,
 )
+
+import narwhals as nw
 
 if TYPE_CHECKING:
     from narwhals.typing import IntoSeriesT

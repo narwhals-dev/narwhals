@@ -5,8 +5,6 @@ from typing import TYPE_CHECKING
 from zoneinfo import ZoneInfo
 
 import pytest
-
-import narwhals as nw
 from tests.utils import (
     PANDAS_VERSION,
     POLARS_VERSION,
@@ -15,6 +13,8 @@ from tests.utils import (
     is_windows,
     pyspark_session,
 )
+
+import narwhals as nw
 
 if TYPE_CHECKING:
     from tests.utils import ConstructorEager

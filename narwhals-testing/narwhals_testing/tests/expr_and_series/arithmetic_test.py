@@ -5,8 +5,6 @@ from typing import Any
 import hypothesis.strategies as st
 import pytest
 from hypothesis import assume, given
-
-import narwhals as nw
 from tests.utils import (
     DASK_VERSION,
     DUCKDB_VERSION,
@@ -15,6 +13,8 @@ from tests.utils import (
     ConstructorEager,
     assert_equal_data,
 )
+
+import narwhals as nw
 
 
 @pytest.mark.parametrize(

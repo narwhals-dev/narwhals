@@ -3,9 +3,9 @@ from __future__ import annotations
 from typing import Callable
 
 import pytest
+from tests.utils import POLARS_VERSION, Constructor, assert_equal_data
 
 import narwhals as nw
-from tests.utils import POLARS_VERSION, Constructor, assert_equal_data
 
 pytest.importorskip("pyarrow")
 import pyarrow as pa

@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import pytest
-
-import narwhals as nw
 from tests.utils import (
     PANDAS_VERSION,
     POLARS_VERSION,
@@ -11,6 +9,8 @@ from tests.utils import (
     assert_equal_data,
     uses_pyarrow_backend,
 )
+
+import narwhals as nw
 
 data = {"a": ["-1", "+1", "1", "12", "123", "99999", "+9999", None]}
 expected = {"a": ["-01", "+01", "001", "012", "123", "99999", "+9999", None]}

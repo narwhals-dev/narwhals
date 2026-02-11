@@ -4,9 +4,6 @@ from contextlib import nullcontext as does_not_raise
 from typing import TYPE_CHECKING
 
 import pytest
-
-import narwhals as nw
-from narwhals.exceptions import InvalidOperationError
 from tests.utils import (
     DUCKDB_VERSION,
     POLARS_VERSION,
@@ -15,9 +12,13 @@ from tests.utils import (
     assert_equal_data,
 )
 
+import narwhals as nw
+from narwhals.exceptions import InvalidOperationError
+
 if TYPE_CHECKING:
-    from narwhals.typing import PythonLiteral
     from tests.utils import ConstructorEager
+
+    from narwhals.typing import PythonLiteral
 
 data: dict[str, list[PythonLiteral]] = {
     "a": [8, 2, 1, None],

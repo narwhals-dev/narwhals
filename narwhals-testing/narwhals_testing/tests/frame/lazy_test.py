@@ -5,10 +5,6 @@ import re
 from typing import TYPE_CHECKING, Any
 
 import pytest
-
-import narwhals as nw
-from narwhals._utils import Implementation
-from narwhals.dependencies import get_cudf, get_modin
 from tests.utils import (
     DUCKDB_VERSION,
     PANDAS_VERSION,
@@ -17,9 +13,14 @@ from tests.utils import (
     sqlframe_session,
 )
 
+import narwhals as nw
+from narwhals._utils import Implementation
+from narwhals.dependencies import get_cudf, get_modin
+
 if TYPE_CHECKING:
-    from narwhals._typing import LazyAllowed, SparkLike
     from tests.utils import ConstructorEager
+
+    from narwhals._typing import LazyAllowed, SparkLike
 
 
 data = {"a": [1, 2, 3], "b": ["x", "y", "z"]}

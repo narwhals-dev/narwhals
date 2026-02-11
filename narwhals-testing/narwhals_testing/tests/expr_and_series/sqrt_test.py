@@ -3,8 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
-
-import narwhals as nw
 from tests.utils import (
     PANDAS_VERSION,
     PYARROW_VERSION,
@@ -12,6 +10,8 @@ from tests.utils import (
     ConstructorEager,
     assert_equal_data,
 )
+
+import narwhals as nw
 
 if TYPE_CHECKING:
     from narwhals.typing import DTypeBackend
