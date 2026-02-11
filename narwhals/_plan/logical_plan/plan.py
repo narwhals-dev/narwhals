@@ -1,12 +1,18 @@
+"""Query plan representation that contains unresolved expressions.
+
+The schema is not known at this stage.
+"""
+
 from __future__ import annotations
 
 from io import BytesIO
-from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, overload
+from typing import TYPE_CHECKING, Any, Generic, Literal, overload
 
 from narwhals._plan._guards import is_seq_column
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.expressions import selectors as s_ir
 from narwhals._plan.expressions.boolean import all_horizontal
+from narwhals._plan.logical_plan._base import _BasePlan
 from narwhals._plan.options import (
     ExplodeOptions,
     JoinAsofOptions,
@@ -78,6 +84,7 @@ if TYPE_CHECKING:
     from narwhals.typing import ConcatMethod, FileSource, PivotAgg
 
 Incomplete: TypeAlias = Any
+_Fwd: TypeAlias = "LogicalPlan"
 _InputsT = TypeVar("_InputsT", bound="Seq[LogicalPlan]")
 LpFunctionT = TypeVar("LpFunctionT", bound="LpFunction", default="LpFunction")
 SinkT = TypeVar("SinkT", bound="Sink", default="Sink")
@@ -92,7 +99,7 @@ PivotOnColumns: TypeAlias = "DataFrame[Any, Any]"
 ImplT = TypeVar("ImplT", "_ArrowImpl", "_PolarsImpl")
 
 
-class LogicalPlan(Immutable):
+class LogicalPlan(_BasePlan[_Fwd], _root=True):
     """Representation of `LazyFrame` operations, based on [`polars_plan::dsl::plan::DslPlan`].
 
     ## Notes
@@ -150,44 +157,10 @@ class LogicalPlan(Immutable):
     [`to_expr_ir`]: https://github.com/pola-rs/polars/blob/00d7f7e1c3b24a54a13f235e69584614959f8837/crates/polars-plan/src/plans/conversion/dsl_to_ir/expr_to_ir.rs#L6-L9
     """
 
-    has_inputs: ClassVar[bool]
-    """Cheap check for `Scan` vs `SingleInput | MultipleInputs`"""
-
-    def __init_subclass__(
-        cls: type[Self], *args: Any, has_inputs: bool | None = None, **kwds: Any
-    ) -> None:
-        super().__init_subclass__(*args, **kwds)
-        if has_inputs is not None:
-            cls.has_inputs = has_inputs
-        elif getattr(cls, "has_inputs", None) is None:
-            parent_name = LogicalPlan.__name__
-            msg = (
-                f"`has_inputs` is a required argument in direct subclasses of {parent_name!r}.\n"
-                f"Hint: instead try `class {cls.__name__}({parent_name}, has_inputs=<True|False>): ...`"
-            )
-            raise TypeError(msg)
-
     def iter_left(self) -> Iterator[LogicalPlan]:
-        """Yield nodes recursively from root->leaf."""
         for input in self.iter_inputs():
             yield from input.iter_left()
         yield self
-
-    def iter_right(self) -> Iterator[LogicalPlan]:
-        """Yield nodes recursively from leaf->root."""
-        msg = f"TODO: `{type(self).__name__}.iter_right`"
-        raise NotImplementedError(msg)
-
-    def iter_inputs(self) -> Iterator[LogicalPlan]:
-        """Yield direct input nodes to leaf.
-
-        Equivalent to [`IR.inputs`] and [`ir::Inputs`].
-
-        [`IR.inputs`]: https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-plan/src/plans/ir/inputs.rs#L204-L239
-        [`ir::Inputs`]: https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-plan/src/plans/ir/inputs.rs#L301-L335
-        """
-        msg = f"TODO: `{type(self).__name__}.iter_inputs`"
-        raise NotImplementedError(msg)
 
     def explain(self) -> str:
         """Create a string representation of the query plan."""
