@@ -225,10 +225,11 @@ class LogicalPlan(Immutable):
         self,
         on: SelectorIR,
         on_columns: PivotOnColumns,
+        *,
         index: SelectorIR,
         values: SelectorIR,
-        agg: PivotAgg | None,
-        separator: str,
+        agg: PivotAgg | None = None,
+        separator: str = "_",
     ) -> Pivot:
         return Pivot(
             input=self,
@@ -265,11 +266,16 @@ class LogicalPlan(Immutable):
         return Sort(input=self, by=by, options=options or SortMultipleOptions.default())
 
     def unique(
-        self, subset: Seq[SelectorIR] | None, options: UniqueOptions | None = None
+        self, subset: Seq[SelectorIR] | None = None, options: UniqueOptions | None = None
     ) -> Unique:
         options = options or UniqueOptions.lazy()
         return Unique(input=self, subset=subset, options=options)
 
+    # NOTE: Wish there was a nice way to give `subset` a default, without complicating `unique` too
+    # - Most methods that accept `options` don't need them as keywords (too verbose)
+    # - `order_by` intentionally doesn't have a default
+    # - the parameter order is already janky
+    #  - *`options` always last* is a nice rule, but makes `unique(_by)` is the ugly duckling
     def unique_by(
         self,
         subset: Seq[SelectorIR] | None,
@@ -366,7 +372,7 @@ class LogicalPlan(Immutable):
     def drop(self, columns: SelectorIR) -> Select:
         return self._select(((~columns.to_narwhals())._ir,))
 
-    def drop_nulls(self, subset: SelectorIR | None) -> Filter:
+    def drop_nulls(self, subset: SelectorIR | None = None) -> Filter:
         predicate = all_horizontal((subset or s_ir.all()).to_narwhals().is_not_null()._ir)
         return self.filter(predicate)
 

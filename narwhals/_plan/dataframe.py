@@ -974,7 +974,7 @@ class LazyFrame(
         return self._with_lp(
             self._plan.pivot(
                 on_,
-                on_columns=on_columns,  # type: ignore[arg-type]
+                on_columns,  # type: ignore[arg-type]
                 index=index_,
                 values=values_,
                 agg=aggregate_function,
