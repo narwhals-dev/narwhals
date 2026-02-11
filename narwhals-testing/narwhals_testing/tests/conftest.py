@@ -52,30 +52,6 @@ else:
     )
 
 
-def pytest_addoption(parser: pytest.Parser) -> None:
-    parser.addoption(
-        "--runslow", action="store_true", default=False, help="run slow tests"
-    )
-    parser.addoption(
-        "--all-cpu-constructors",
-        action="store_true",
-        default=False,
-        help="run tests with all cpu constructors",
-    )
-    parser.addoption(
-        "--use-external-constructor",
-        action="store_true",
-        default=False,
-        help="run tests with external constructor",
-    )
-    parser.addoption(
-        "--constructors",
-        action="store",
-        default=DEFAULT_CONSTRUCTORS,
-        type=str,
-        help="libraries to test",
-    )
-
 
 def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line("markers", "slow: mark test as slow to run")
@@ -274,8 +250,12 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
             }
         ]
     else:  # pragma: no cover
-        opt = cast("str", metafunc.config.getoption("constructors"))
-        selected_constructors = opt.split(",")
+        opt = metafunc.config.getoption("constructors")
+        selected_constructors = (
+            cast("str", opt).split(",")
+            if opt is not None
+            else DEFAULT_CONSTRUCTORS.split(",")
+        )
 
     eager_constructors: list[ConstructorEager] = []
     eager_constructors_ids: list[str] = []

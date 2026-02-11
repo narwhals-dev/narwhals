@@ -3,20 +3,14 @@ from __future__ import annotations
 import pytest
 
 import narwhals as nw
-from tests.conftest import (
-    dask_lazy_p1_constructor,
-    dask_lazy_p2_constructor,
-    modin_constructor,
-    pandas_constructor,
-)
 from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
-NON_NULLABLE_CONSTRUCTORS = [
-    pandas_constructor,
-    dask_lazy_p1_constructor,
-    dask_lazy_p2_constructor,
-    modin_constructor,
-]
+NON_NULLABLE_CONSTRUCTOR_NAMES = {
+    "pandas_constructor",
+    "dask_lazy_p1_constructor",
+    "dask_lazy_p2_constructor",
+    "modin_constructor",
+}
 
 
 def test_fill_nan(request: pytest.FixtureRequest, constructor: Constructor) -> None:
@@ -36,7 +30,7 @@ def test_fill_nan(request: pytest.FixtureRequest, constructor: Constructor) -> N
     assert_equal_data(result, expected)
     assert result.lazy().collect()["float_na"].null_count() == 2
     result = df.select(nw.all().fill_nan(3.0))
-    if any(constructor is c for c in NON_NULLABLE_CONSTRUCTORS):
+    if constructor.__name__ in NON_NULLABLE_CONSTRUCTOR_NAMES:
         # no nan vs null distinction
         expected = {"float": [-1.0, 1.0, 3.0], "float_na": [3.0, 1.0, 3.0]}
         assert result.lazy().collect()["float_na"].null_count() == 0
@@ -55,7 +49,7 @@ def test_fill_nan_series(constructor_eager: ConstructorEager) -> None:
         "float_na"
     ]
     result = s.fill_nan(999)
-    if any(constructor_eager is c for c in NON_NULLABLE_CONSTRUCTORS):
+    if constructor_eager.__name__ in NON_NULLABLE_CONSTRUCTOR_NAMES:
         # no nan vs null distinction
         assert_equal_data({"a": result}, {"a": [999.0, 1.0, 999.0]})
     elif "pandas" in str(constructor_eager) and PANDAS_VERSION >= (3,):

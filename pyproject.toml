@@ -7,7 +7,7 @@ build-backend = "hatchling.build"
 name = "narwhals"
 version = "2.16.0"
 dependencies = []
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 authors = [
   { name = "Marco Gorelli", email = "hello_narwhals@proton.me" },
 ]
@@ -42,7 +42,7 @@ Repository = "https://github.com/narwhals-dev/narwhals"
 # `modin.pandas.__version__`. The latter is the one that we make
 # API decisions based on, so that's the one we track internally.
 # We have yet to determine the minimum Modin version we support
-# https://github.com/narwhals-dev/narwhals/issues/817 
+# https://github.com/narwhals-dev/narwhals/issues/817
 pandas = ["pandas>=1.1.3"]
 modin = ["modin"]
 cudf = ["cudf-cu12>=24.10.0"]
@@ -59,9 +59,10 @@ sql = ["duckdb>=1.1", "sqlparse"]
 [dependency-groups]
 core = [
   "narwhals[duckdb,pandas,polars,pyarrow,sqlframe,sql]"
-] 
+]
 tests = [
   "covdefaults",
+  "narwhals-testing",
   "pytest",
   "pytest-cov",
   "pytest-env",
@@ -129,7 +130,6 @@ local-dev = [
 [tool.hatch.build.targets.sdist]
 include = [
   "narwhals/*",
-  "tests/*",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -198,23 +198,23 @@ builtins-ignorelist = ["format"]
 
 [tool.ruff.lint.pep8-naming]
 extend-ignore-names = [
-  "Series", 
-  "DataFrame", 
-  "_Window", 
-  "F", 
+  "Series",
+  "DataFrame",
+  "_Window",
+  "F",
   "_F",
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"narwhals/expr_dt.py" = ["RUF002"] 
+"narwhals/expr_dt.py" = ["RUF002"]
 "narwhals/typing.py" = [
   "PYI042",  # snake-case-type-alias (catches `_1DArray`)
-] 
+]
 "narwhals/_*/utils.py" = [
   "PLR0911", # too-many-return-statements
 ]
-"tests/*" = [
-  "S101", 
+"narwhals-testing/narwhals_testing/tests/*" = [
+  "S101",
   "C901",    # complex-structure
   "PLR0912", # too-many-branches
   "PLR0916", # too-many-boolean-expressions
@@ -250,7 +250,7 @@ skip-magic-trailing-comma = true
 
 [tool.pytest.ini_options]
 norecursedirs =  ['*.egg', '.*', '_darcs', 'build', 'CVS', 'dist', 'node_modules', 'venv', '{arch}', 'narwhals/_*']
-testpaths = ["tests"]
+testpaths = ["narwhals-testing/narwhals_testing/tests"]
 filterwarnings = [
   "error",
   'ignore:.*defaulting to pandas implementation:Warning:modin',
@@ -312,7 +312,7 @@ omit = [
   'narwhals/_spark_like/typing.py',
   # We run Ibis in a separate CI job to the coverage one, to avoid their tight dependency pins.
   'narwhals/_ibis/*',
-  "tests/ibis_test.py",
+  "narwhals-testing/narwhals_testing/tests/ibis_test.py",
   # Remove after finishing eager sub-protocols
   'narwhals/_compliant/namespace.py',
 ]
@@ -335,7 +335,7 @@ exclude_also = [
 ]
 
 [tool.mypy]
-files = ["narwhals", "tests", "test-plugin"]
+files = ["narwhals", "narwhals-testing/narwhals_testing/tests", "test-plugin"]
 pretty = true
 strict = true
 
@@ -381,9 +381,12 @@ reportMissingModuleSource = "none"
 reportPrivateImportUsage = "none"
 reportUnusedExpression = "none"    # handled by (https://docs.astral.sh/ruff/rules/unused-variable/)
 typeCheckingMode = "basic"
-include = ["narwhals", "tests", "test-plugin"]
+include = ["narwhals", "narwhals-testing/narwhals_testing/tests", "test-plugin"]
 ignore = [
   "../.venv/",
   "../../../**/Lib",      # stdlib
   "../../../**/typeshed*" # typeshed-fallback
 ]
+
+[tool.uv.sources]
+narwhals-testing = { path = "narwhals-testing/", editable = true }

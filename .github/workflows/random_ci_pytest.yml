@@ -32,9 +32,11 @@ jobs:
         run: uv pip install -r random-requirements.txt --system
       - name: install-narwhals
         run: uv pip install -e . --group tests --system
+      - name: install-narwhals-testing
+        run: uv pip install -e narwhals-testing/.
       - name: show versions
         run: uv pip freeze
       - name: Run pytest
         run: |
-            pytest tests --cov=narwhals --cov=tests --cov-fail-under=75 \
+            pytest --cov=narwhals --cov=narwhals-testing/narwhals_testing/tests --cov-fail-under=75 \
             --constructors=pandas,pyarrow,polars[eager],polars[lazy]

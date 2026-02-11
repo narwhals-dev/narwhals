@@ -12,7 +12,7 @@ If you've got experience with open source contributions, the following instructi
 - `git remote add origin <your fork goes here>`
 - `uv venv -p 3.12`
 - `. .venv/bin/activate`
-- `uv pip install -U -e . --group local-dev -e test-plugin`
+- `uv pip install -U -e . --group local-dev -e test-plugin -e narwhals-testing`
 - To run tests: `pytest`
 - To run all linting checks: `pre-commit run --all-files`
 - To run static typing checks: `make typing`
@@ -124,7 +124,7 @@ If you want to run PySpark-related tests, you'll need to have Java installed. Re
 
    4. Activate it. On Linux, this is `. .venv/bin/activate`, on Windows `.\.venv\Scripts\activate`.
 
-2. Install Narwhals: `uv pip install -e . --group local-dev -e test-plugin`. This will include fast-ish core libraries and dev dependencies.
+2. Install Narwhals: `uv pip install -e . --group local-dev -e test-plugin -e narwhals-testing`. This will include fast-ish core libraries and dev dependencies.
    If you also want to test other libraries like Dask , PySpark, and Modin, you can install them too with
    `uv pip install -e ".[dask, pyspark, modin]" --group local-dev`.
 

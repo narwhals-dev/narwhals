@@ -125,7 +125,7 @@ def test_getitem(pandas_or_pyarrow_constructor: Any, selector: Any) -> None:
     # NotImplementedError: Slicing with step is not supported on PyArrow tables
     assume(
         not (
-            pandas_or_pyarrow_constructor is pyarrow_table_constructor
+            pandas_or_pyarrow_constructor.__name__ == "pyarrow_table_constructor"
             and isinstance(selector, slice)
             and selector.step is not None
         )
@@ -134,7 +134,7 @@ def test_getitem(pandas_or_pyarrow_constructor: Any, selector: Any) -> None:
     # NotImplementedError: Slicing with step is not supported on PyArrow tables
     assume(
         not (
-            pandas_or_pyarrow_constructor is pyarrow_table_constructor
+            pandas_or_pyarrow_constructor.__name__ == "pyarrow_table_constructor"
             and isinstance(selector, tuple)
             and (
                 (isinstance(selector[0], slice) and selector[0].step is not None)

@@ -1,0 +1,20 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "narwhals-testing"
+version = "0.1.0"
+description = "Narwhals test suite for plugin authors"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+dependencies = [
+    "narwhals>=2.16.0",
+    "pytest>=7.0.0",
+]
+
+[project.entry-points.pytest11]
+narwhals-testing = "narwhals_testing._plugin"
+
+[tool.hatch.build.targets.wheel]
+packages = ["narwhals_testing"]

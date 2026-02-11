@@ -31,6 +31,8 @@ jobs:
       - name: install-reqs
         run: |
           uv pip install -e . --group tests
+      - name: install-narwhals-testing
+        run: uv pip install -e narwhals-testing/.
       - name: show-deps
         run: uv pip freeze
       - name: Assert dependencies
@@ -44,7 +46,7 @@ jobs:
           echo "$DEPS" | grep 'scikit-learn==1.1.0'
           echo "$DEPS" | grep 'duckdb==1.1'
       - name: Run pytest
-        run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=50 --runslow --constructors=pandas,pyarrow,polars[eager],polars[lazy],duckdb
+        run: pytest --cov=narwhals --cov=narwhals-testing/narwhals_testing/tests --cov-fail-under=50 --runslow --constructors=pandas,pyarrow,polars[eager],polars[lazy],duckdb
 
   pretty_old_versions:
     strategy:
@@ -67,6 +69,8 @@ jobs:
         run: uv pip install pipdeptree tox virtualenv setuptools pandas==1.1.5 polars==0.20.4 numpy==1.19.3 pyarrow==14.0.0 "pyarrow-stubs<17" scipy==1.6.0 scikit-learn==1.1.0 duckdb==1.2 tzdata
       - name: install-reqs
         run: uv pip install -e . --group tests
+      - name: install-narwhals-testing
+        run: uv pip install -e narwhals-testing/.
       - name: show-deps
         run: uv pip freeze
       - name: show-deptree
@@ -82,7 +86,7 @@ jobs:
           echo "$DEPS" | grep 'scikit-learn==1.1.0'
           echo "$DEPS" | grep 'duckdb==1.2'
       - name: Run pytest
-        run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=50 --runslow --constructors=pandas,pyarrow,polars[eager],polars[lazy],duckdb
+        run: pytest --cov=narwhals --cov=narwhals-testing/narwhals_testing/tests --cov-fail-under=50 --runslow --constructors=pandas,pyarrow,polars[eager],polars[lazy],duckdb
 
   not_so_old_versions:
     strategy:
@@ -105,6 +109,8 @@ jobs:
         run: uv pip install tox virtualenv setuptools pandas==2.0.3 polars==0.20.8 numpy==1.24.4 pyarrow==15.0.0 "pyarrow-stubs<17" scipy==1.8.0 scikit-learn==1.3.0 duckdb==1.3 dask[dataframe]==2024.10 tzdata
       - name: install-reqs
         run: uv pip install -e . --group tests
+      - name: install-narwhals-testing
+        run: uv pip install -e narwhals-testing/.
       - name: show-deps
         run: uv pip freeze
       - name: Assert not so old versions dependencies
@@ -119,7 +125,7 @@ jobs:
           echo "$DEPS" | grep 'dask==2024.10'
           echo "$DEPS" | grep 'duckdb==1.3'
       - name: Run pytest
-        run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=50 --runslow --constructors=pandas,pyarrow,polars[eager],polars[lazy],dask,duckdb
+        run: pytest --cov=narwhals --cov=narwhals-testing/narwhals_testing/tests --cov-fail-under=50 --runslow --constructors=pandas,pyarrow,polars[eager],polars[lazy],dask,duckdb
 
   nightlies:
     strategy:
@@ -140,6 +146,8 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
         run: uv pip install -e . --group tests
+      - name: install-narwhals-testing
+        run: uv pip install -e narwhals-testing/.
       - name: install polars pre-release
         run: |
           uv pip uninstall polars
@@ -176,5 +184,5 @@ jobs:
           echo "$DEPS" | grep 'duckdb.*dev'
       - name: Run pytest
         run: |
-          pytest tests --cov=narwhals --cov=tests --cov-fail-under=50 --runslow \
+          pytest --cov=narwhals --cov=narwhals-testing/narwhals_testing/tests --cov-fail-under=50 --runslow \
           --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],dask,duckdb

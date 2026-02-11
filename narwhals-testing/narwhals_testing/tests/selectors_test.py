@@ -268,7 +268,7 @@ def test_tz_aware(constructor: Constructor, request: pytest.FixtureRequest) -> N
 
     data = {"a": [datetime(2020, 1, 1), datetime(2020, 1, 2)], "c": [4, 5]}
     df = nw.from_native(constructor(data)).with_columns(
-        b=nw.col("a").dt.replace_time_zone("Asia/Katmandu")
+        b=nw.col("a").dt.replace_time_zone("Asia/Kathmandu")
     )
     result = df.select(nw.selectors.by_dtype(nw.Datetime)).collect_schema().names()
     expected = ["a", "b"]
