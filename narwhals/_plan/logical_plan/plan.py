@@ -8,8 +8,11 @@ from narwhals._plan._immutable import Immutable
 from narwhals._plan.expressions import selectors as s_ir
 from narwhals._plan.expressions.boolean import all_horizontal
 from narwhals._plan.options import (
+    ExplodeOptions,
     JoinAsofOptions,
     JoinOptions,
+    SortMultipleOptions,
+    UniqueOptions,
     UnpivotOptions,
     VConcatOptions,
 )
@@ -65,7 +68,6 @@ if TYPE_CHECKING:
 
     from narwhals._plan.dataframe import DataFrame
     from narwhals._plan.expressions import ExprIR, SelectorIR
-    from narwhals._plan.options import ExplodeOptions, SortMultipleOptions, UniqueOptions
     from narwhals._plan.schema import FrozenSchema
     from narwhals.typing import ConcatMethod, FileSource, PivotAgg
 
@@ -208,8 +210,9 @@ class LogicalPlan(Immutable):
 
     # Single Input
     def explode(
-        self, columns: SelectorIR, options: ExplodeOptions
+        self, columns: SelectorIR, options: ExplodeOptions | None = None
     ) -> MapFunction[Explode]:
+        options = options or ExplodeOptions.default()
         return self._map(Explode(columns=columns, options=options))
 
     def filter(self, predicate: ExprIR) -> Filter:
@@ -256,18 +259,24 @@ class LogicalPlan(Immutable):
     def slice(self, offset: int, length: int | None = None) -> Slice:
         return Slice(input=self, offset=offset, length=length)
 
-    def sort(self, by: Seq[SelectorIR], options: SortMultipleOptions) -> Sort:
-        return Sort(input=self, by=by, options=options)
+    def sort(
+        self, by: Seq[SelectorIR], options: SortMultipleOptions | None = None
+    ) -> Sort:
+        return Sort(input=self, by=by, options=options or SortMultipleOptions.default())
 
-    def unique(self, subset: Seq[SelectorIR] | None, options: UniqueOptions) -> Unique:
+    def unique(
+        self, subset: Seq[SelectorIR] | None, options: UniqueOptions | None = None
+    ) -> Unique:
+        options = options or UniqueOptions.lazy()
         return Unique(input=self, subset=subset, options=options)
 
     def unique_by(
         self,
         subset: Seq[SelectorIR] | None,
-        options: UniqueOptions,
         order_by: Seq[SelectorIR],
+        options: UniqueOptions | None = None,
     ) -> UniqueBy:
+        options = options or UniqueOptions.lazy()
         return UniqueBy(input=self, subset=subset, options=options, order_by=order_by)
 
     def unnest(self, columns: SelectorIR) -> MapFunction[Unnest]:
@@ -278,7 +287,7 @@ class LogicalPlan(Immutable):
         on: SelectorIR | None,
         *,
         index: SelectorIR | None = None,
-        options: UnpivotOptions | None,
+        options: UnpivotOptions | None = None,
     ) -> MapFunction[Unpivot]:
         # NOTE: polars `on` goes through a very long chain as None:
         #   (python) -> `PyLazyFrame` -> `LazyFrame` -> `DslPlan` -> `UnpivotArgsDSL`

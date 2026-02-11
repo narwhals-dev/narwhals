@@ -186,6 +186,10 @@ class SortMultipleOptions(Immutable):
         return f"{type(self).__name__}({args})"
 
     @staticmethod
+    def default() -> SortMultipleOptions:  # pragma: no cover
+        return SortMultipleOptions(descending=(False,), nulls_last=(False,))
+
+    @staticmethod
     def parse(
         *, descending: OneOrIterable[bool], nulls_last: OneOrIterable[bool]
     ) -> SortMultipleOptions:
@@ -345,6 +349,10 @@ class ExplodeOptions(Immutable):
     """Explode an empty list into a `null`."""
     keep_nulls: bool
     """Explode a `null` into a `null`."""
+
+    @staticmethod
+    def default() -> ExplodeOptions:  # pragma: no cover
+        return ExplodeOptions(empty_as_null=True, keep_nulls=True)
 
     def any(self) -> bool:
         """Return True if we need to handle empty lists and/or nulls."""

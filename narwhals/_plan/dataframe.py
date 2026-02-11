@@ -1020,7 +1020,7 @@ class LazyFrame(
         parse = _parse.parse_into_seq_of_selector_ir
         s_subset = None if subset is None else parse(subset)
         if order_by is not None:
-            return self._with_lp(self._plan.unique_by(s_subset, opts, parse(order_by)))
+            return self._with_lp(self._plan.unique_by(s_subset, parse(order_by), opts))
         if keep in {"first", "last"}:
             msg = "'first' and 'last' are only supported if `order_by` is passed."
             raise InvalidOperationError(msg)
