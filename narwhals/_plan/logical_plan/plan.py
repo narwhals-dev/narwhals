@@ -421,7 +421,7 @@ class ScanParquetImpl(ScanParquet, Generic[ImplT]):
     # 1. *not* adding another class and using a default of `Implementation.Unknown in `ScanFile.from_source`
     # 2. default in `LogicalPlan.scan_parquet`, which then picks either class
     @classmethod
-    def from_source(
+    def from_source(  # type: ignore[override]
         cls: type[ScanParquetImpl[Any]], source: FileSource, /
     ) -> ScanParquetImpl[_ArrowImpl]:
         impl = Implementation.PYARROW
