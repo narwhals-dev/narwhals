@@ -50,7 +50,7 @@ if TYPE_CHECKING:
     )
     from narwhals._plan.compliant.namespace import CompliantNamespace, EagerNamespace
     from narwhals._plan.compliant.series import CompliantSeries
-    from narwhals._plan.dataframe import DataFrame
+    from narwhals._plan.dataframe import DataFrame, LazyFrame
     from narwhals._plan.expr import Expr
     from narwhals._plan.series import Series
     from narwhals._plan.typing import (
@@ -512,9 +512,23 @@ def scan_csv(
 # TODO @dangotbanned: Come back to after `nwp.LazyFrame` exists
 def scan_parquet(
     source: FileSource, *, backend: IntoBackend[Backend], **kwds: t.Any
-) -> Incomplete:
-    msg = "scan_parquet"
-    raise NotImplementedError(msg)
+) -> LazyFrame[Any]:  # pragma: no cover
+    # TODO @dangotbanned: Review whether a top-level dependency is fine here
+    from narwhals._plan.dataframe import LazyFrame
+    from narwhals._plan.logical_plan.plan import LogicalPlan, ScanParquetImpl
+
+    if kwds:
+        msg = f"Arbitrary keyword arguments are not yet supported for `scan_parquet`, got:\n{kwds!r}"
+        raise NotImplementedError(msg)
+    impl = Implementation.from_backend(backend)
+    if impl is not Implementation.PYARROW:
+        # NOTE: Would be the path for extensions
+        # Variant would require evaluating the final plan in some other context
+        return LazyFrame._from_lp(LogicalPlan.scan_parquet(source))
+    # NOTE: Would be the path for all known `Implementation`s
+    # Instead of calling `*Namespace.scan_parquet` *now*, we can resolve it later
+    plan = ScanParquetImpl(source=normalize_path(source), implementation=impl)
+    return LazyFrame._from_lp(plan)
 
 
 def read_parquet_schema(source: FileSource, *, backend: IntoBackend[Backend]) -> Schema:

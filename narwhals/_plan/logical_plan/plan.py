@@ -19,7 +19,12 @@ from narwhals._plan.options import (
 from narwhals._plan.schema import freeze_schema
 from narwhals._plan.typing import Seq
 from narwhals._typing_compat import TypeVar
-from narwhals._utils import normalize_path, qualified_type_name, zip_strict
+from narwhals._utils import (
+    Implementation,
+    normalize_path,
+    qualified_type_name,
+    zip_strict,
+)
 from narwhals.exceptions import InvalidOperationError
 
 __all__ = [
@@ -69,6 +74,7 @@ if TYPE_CHECKING:
     from narwhals._plan.dataframe import DataFrame
     from narwhals._plan.expressions import ExprIR, SelectorIR
     from narwhals._plan.schema import FrozenSchema
+    from narwhals._typing import _ArrowImpl, _PolarsImpl
     from narwhals.typing import ConcatMethod, FileSource, PivotAgg
 
 Incomplete: TypeAlias = Any
@@ -82,6 +88,8 @@ VConcatMethod: TypeAlias = Literal[
 PivotOnColumns: TypeAlias = "DataFrame[Any, Any]"
 """See https://github.com/narwhals-dev/narwhals/issues/1901#issuecomment-3697700426
 """
+
+ImplT = TypeVar("ImplT", "_ArrowImpl", "_PolarsImpl")
 
 
 class LogicalPlan(Immutable):
@@ -427,6 +435,24 @@ class ScanCsv(ScanFile): ...
 
 
 class ScanParquet(ScanFile): ...
+
+
+class ScanParquetImpl(ScanParquet, Generic[ImplT]):
+    """(experimental) Track the initial `backend` used on entry."""
+
+    __slots__ = ("implementation",)
+    implementation: ImplT
+
+    # NOTE: (temp) Hacking around adding a default in the signature
+    # Alternatives:
+    # 1. *not* adding another class and using a default of `Implementation.Unknown in `ScanFile.from_source`
+    # 2. default in `LogicalPlan.scan_parquet`, which then picks either class
+    @classmethod
+    def from_source(
+        cls: type[ScanParquetImpl[Any]], source: FileSource, /
+    ) -> ScanParquetImpl[_ArrowImpl]:
+        impl = Implementation.PYARROW
+        return cls(source=normalize_path(source), implementation=impl)
 
 
 # TODO @dangotbanned: Careful think about how (non-`ScanFile`) source nodes should work
