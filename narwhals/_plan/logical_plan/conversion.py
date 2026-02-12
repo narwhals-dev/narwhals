@@ -12,10 +12,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from narwhals._plan.logical_plan import resolved as rp
+
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
-    from narwhals._plan.logical_plan import plan as lp, resolved as rp
+    from narwhals._plan.logical_plan import plan as lp
     from narwhals._plan.schema import FrozenSchema
 
 
@@ -98,7 +100,7 @@ class Resolver:
         raise NotImplementedError
 
     def scan_dataframe(self, plan: lp.ScanDataFrame, /) -> rp.ScanDataFrame:
-        raise NotImplementedError
+        return rp.ScanDataFrame(df=plan.df, output_schema=plan.schema)
 
     def scan_parquet(self, plan: lp.ScanParquet, /) -> rp.ScanParquet:
         raise NotImplementedError
