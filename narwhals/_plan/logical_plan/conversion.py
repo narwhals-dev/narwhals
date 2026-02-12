@@ -87,7 +87,7 @@ class Resolver:
 
     # TODO @dangotbanned: Implement everything
     def collect(self, plan: lp.Collect, /) -> rp.Collect:
-        raise NotImplementedError
+        return rp.Collect(input=self.to_resolved(plan.input))
 
     def concat_horizontal(self, plan: lp.HConcat, /) -> rp.HConcat:
         raise NotImplementedError
@@ -197,7 +197,7 @@ class Resolver:
         )
 
     def sink_parquet(self, plan: lp.SinkParquet, /) -> rp.SinkParquet:
-        raise NotImplementedError
+        return rp.SinkParquet(input=self.to_resolved(plan.input), target=plan.target)
 
     def slice(self, plan: lp.Slice, /) -> rp.Slice:
         return rp.Slice(
