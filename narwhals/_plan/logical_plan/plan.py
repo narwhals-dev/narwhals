@@ -168,7 +168,7 @@ class LogicalPlan(_BasePlan[_Fwd], _root=True):
         yield self
 
     def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
-        """Lower the `LogicalPlan` into `ResolvedPlan`.
+        """Converts `LogicalPlan` to `ResolvedPlan`.
 
         Most `resolve` implementations call a method that is the
         **snake_case**-equivalent of the class name:

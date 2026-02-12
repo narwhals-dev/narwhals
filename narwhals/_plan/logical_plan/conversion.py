@@ -41,7 +41,7 @@ def schema(plan: lp.LogicalPlan) -> FrozenSchema:
 #    - https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/conversion/dsl_to_ir/utils.rs#L4-L14
 #  - (not doing this part) that leads to `ConversionOptimizer` https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/conversion/stack_opt.rs
 class Resolver:
-    """Lower the `LogicalPlan` into `ResolvedPlan`.
+    """Default conversion from `LogicalPlan` into `ResolvedPlan`.
 
     - Case branches in [`dsl_to_ir::to_alp_impl`] should correspond to methods here
       - Backends can override translations by subclassing
@@ -51,7 +51,13 @@ class Resolver:
     [`polars_plan::plans::conversion::dsl_to_ir::to_alp_impl`]: https://github.com/pola-rs/polars/blob/8f60a2d641daf7f9eeac69694b5c952f4cc34099/crates/polars-plan/src/plans/conversion/dsl_to_ir/mod.rs#L142-L1666
     """
 
+    __slots__ = ()
+
     def to_resolved(self, plan: lp.LogicalPlan, /) -> rp.ResolvedPlan:
+        """Converts `LogicalPlan` to `ResolvedPlan`.
+
+        All implementations should call this on the inputs of each plan as the first step.
+        """
         return plan.resolve(self)
 
     # TODO @dangotbanned: Implement everything
