@@ -122,7 +122,9 @@ class Resolver:
         raise NotImplementedError
 
     def slice(self, plan: lp.Slice, /) -> rp.Slice:
-        raise NotImplementedError
+        return rp.Slice(
+            input=self.to_resolved(plan.input), offset=plan.offset, length=plan.length
+        )
 
     def sort(self, plan: lp.Sort, /) -> rp.Sort:
         raise NotImplementedError
