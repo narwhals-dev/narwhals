@@ -10,15 +10,18 @@ Intending for a rough equivalence of [`dsl_to_ir`]:
 
 from __future__ import annotations
 
+from functools import lru_cache
 from typing import TYPE_CHECKING, Any
 
 from narwhals._plan.logical_plan import resolved as rp
+from narwhals._plan.schema import freeze_schema
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals._plan.logical_plan import plan as lp
     from narwhals._plan.schema import FrozenSchema
+    from narwhals.typing import Backend
 
 
 Incomplete: TypeAlias = Any
@@ -103,10 +106,11 @@ class Resolver:
         return rp.ScanDataFrame(df=plan.df, output_schema=plan.schema)
 
     def scan_parquet(self, plan: lp.ScanParquet, /) -> rp.ScanParquet:
+        """TODO: Need a way of getting `backend: IntoBackend` from an outer context."""
         raise NotImplementedError
 
-    def scan_parquet_impl(self, plan: lp.ScanParquetImpl[Any], /) -> rp.ScanParquet:
-        raise NotImplementedError
+    def scan_parquet_impl(self, plan: lp.ScanParquetImpl[lp.ImplT], /) -> rp.ScanParquet:
+        return _scan_parquet(plan.source, plan.implementation)
 
     def select(self, plan: lp.Select, /) -> rp.Select:
         raise NotImplementedError
@@ -145,3 +149,24 @@ class Resolver:
 
     def with_row_index_by(self, plan: lp.MapFunction[lp.RowIndexBy], /) -> Incomplete:
         raise NotImplementedError
+
+
+@lru_cache(maxsize=64)
+def _scan_parquet(source: str, implementation: Backend, /) -> rp.ScanParquet:
+    """Cached conversion using `read_parquet_schema`.
+
+    ## Warning
+    Very naive approach *for now* to make some progress.
+
+    Real thing needs to cache on file metadata like:
+
+        Path(source).resolve().stat()
+
+    - `str` could be a relative path, and another call changes working directory
+    - we could have correct file, but a stale schema in the cache
+    - probably 99 other concerns
+    """
+    from narwhals._plan import functions as F
+
+    schema = F.read_parquet_schema(source, backend=implementation)
+    return rp.ScanParquet(source=source, output_schema=freeze_schema(schema))
