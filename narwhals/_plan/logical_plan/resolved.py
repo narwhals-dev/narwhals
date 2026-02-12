@@ -52,6 +52,18 @@ class ResolvedPlan(_BasePlan[_Fwd], _root=True):
             yield from input.iter_left()
         yield self
 
+    # NOTE: Could probably de-dup `return self.output_schema` w/ metaprogramming
+    # but will need to make do for now
+    @property
+    def schema(self) -> FrozenSchema:
+        """Get the schema at this stage in the plan.
+
+        Nodes that change the schema store the result in `output_schema`.
+
+        All others refer to the schema of their first input.
+        """
+        return next(self.iter_inputs()).schema
+
 
 class Scan(ResolvedPlan, has_inputs=False):
     def iter_right(self) -> Iterator[ResolvedPlan]:
@@ -109,6 +121,10 @@ class ScanFile(Scan):
     Equivalent to `IR::Scan.file_info.schema`
     """
 
+    @property
+    def schema(self) -> FrozenSchema:
+        return self.output_schema
+
 
 class ScanCsv(ScanFile): ...
 
@@ -122,6 +138,10 @@ class ScanDataFrame(Scan):
     __slots__ = ("df", "output_schema")
     df: DataFrame[Any, Any]
     output_schema: FrozenSchema
+
+    @property
+    def schema(self) -> FrozenSchema:
+        return self.output_schema
 
     @property
     def __immutable_values__(self) -> Iterator[Any]:
@@ -141,6 +161,10 @@ class SelectNames(SingleInput):
     def names(self) -> tuple[str, ...]:
         return self.output_schema.names
 
+    @property
+    def schema(self) -> FrozenSchema:
+        return self.output_schema
+
 
 class Select(SingleInput):
     """Roughly `prepare_projection` + FrozenSchema update."""
@@ -149,12 +173,20 @@ class Select(SingleInput):
     exprs: Seq[NamedIR]
     output_schema: FrozenSchema
 
+    @property
+    def schema(self) -> FrozenSchema:
+        return self.output_schema
+
 
 # `IR::HStack`
 class WithColumns(SingleInput):
     __slots__ = ("exprs", "output_schema")
     exprs: Seq[NamedIR]
     output_schema: FrozenSchema
+
+    @property
+    def schema(self) -> FrozenSchema:
+        return self.output_schema
 
 
 class Filter(SingleInput):
@@ -186,6 +218,10 @@ class MapFunction(SingleInput, Generic[ResolvedFunctionT]):
     __slots__ = ("function",)
     function: ResolvedFunctionT
 
+    @property
+    def schema(self) -> FrozenSchema:
+        return self.function.output_schema
+
 
 class Join(MultipleInputs[tuple[ResolvedPlan, ResolvedPlan]]):
     __slots__ = ("left_on", "options", "output_schema", "right_on")
@@ -193,6 +229,10 @@ class Join(MultipleInputs[tuple[ResolvedPlan, ResolvedPlan]]):
     right_on: Seq[str]
     options: JoinOptions
     output_schema: FrozenSchema
+
+    @property
+    def schema(self) -> FrozenSchema:
+        return self.output_schema
 
 
 class JoinAsof(MultipleInputs[tuple[ResolvedPlan, ResolvedPlan]]):
@@ -202,6 +242,10 @@ class JoinAsof(MultipleInputs[tuple[ResolvedPlan, ResolvedPlan]]):
     options: JoinAsofOptions
     output_schema: FrozenSchema
 
+    @property
+    def schema(self) -> FrozenSchema:
+        return self.output_schema
+
 
 class GroupBy(SingleInput):
     """`GroupByResolver._from_grouper`."""
@@ -210,6 +254,10 @@ class GroupBy(SingleInput):
     keys: Seq[NamedIR]
     aggs: Seq[NamedIR]
     output_schema: FrozenSchema  # GroupByResolver._schema
+
+    @property
+    def schema(self) -> FrozenSchema:
+        return self.output_schema
 
 
 class VConcat(MultipleInputs[Seq[ResolvedPlan]]):
@@ -226,32 +274,37 @@ class HConcat(MultipleInputs[Seq[ResolvedPlan]]):
     __slots__ = ("output_schema",)
     output_schema: FrozenSchema
 
+    @property
+    def schema(self) -> FrozenSchema:
+        return self.output_schema
+
 
 # `MapFunction.function: FunctionIR`
-class ResolvedFunction(Immutable): ...
-
-
-class RowIndex(ResolvedFunction):
-    __slots__ = ("name", "output_schema")
-    name: str
+class ResolvedFunction(Immutable):
+    __slots__ = ("output_schema",)
     output_schema: FrozenSchema
 
 
+class RowIndex(ResolvedFunction):
+    __slots__ = ("name",)
+    name: str
+
+
 class Unnest(ResolvedFunction):
+    # polars doesn't store the schema on this one,
+    # but implementing for pyarrow made we wish we had it
     __slots__ = ("columns",)
     columns: Seq[str]
 
 
 class Explode(ResolvedFunction):
-    __slots__ = ("columns", "options", "output_schema")
+    __slots__ = ("columns", "options")
     columns: Seq[str]
     options: ExplodeOptions
-    output_schema: FrozenSchema
 
 
 class Unpivot(ResolvedFunction):
-    __slots__ = ("index", "on", "options", "output_schema")
+    __slots__ = ("index", "on", "options")
     on: Seq[str]
     index: Seq[str]
     options: UnpivotOptions
-    output_schema: FrozenSchema

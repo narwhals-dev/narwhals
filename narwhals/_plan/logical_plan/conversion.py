@@ -20,7 +20,6 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals._plan.logical_plan import plan as lp
-    from narwhals._plan.schema import FrozenSchema
     from narwhals.typing import Backend
 
 
@@ -31,12 +30,6 @@ Either:
 1. `polars` lowers to a simpler representation
 2. `narwhals`-only node, which *may* be able to do the same
 """
-
-
-# TODO @dangotbanned: Plan how schema resolution should work
-def schema(plan: lp.LogicalPlan) -> FrozenSchema:
-    msg = f"TODO: schema({type(plan).__name__})"
-    raise NotImplementedError(msg)
 
 
 # - `to_alp` is called with empty (`expr_arena`, `lp_arena`) for the initial plan
