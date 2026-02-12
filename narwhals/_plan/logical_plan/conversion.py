@@ -51,7 +51,7 @@ class Resolver:
     [`polars_plan::plans::conversion::dsl_to_ir::to_alp_impl`]: https://github.com/pola-rs/polars/blob/8f60a2d641daf7f9eeac69694b5c952f4cc34099/crates/polars-plan/src/plans/conversion/dsl_to_ir/mod.rs#L142-L1666
     """
 
-    def convert(self, plan: lp.LogicalPlan) -> rp.ResolvedPlan:
+    def to_resolved(self, plan: lp.LogicalPlan, /) -> rp.ResolvedPlan:
         return plan.resolve(self)
 
     # TODO @dangotbanned: Implement everything
