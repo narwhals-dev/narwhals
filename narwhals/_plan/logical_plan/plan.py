@@ -168,7 +168,18 @@ class LogicalPlan(_BasePlan[_Fwd], _root=True):
         yield self
 
     def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
-        """Lower the `LogicalPlan` into `ResolvedPlan`."""
+        """Lower the `LogicalPlan` into `ResolvedPlan`.
+
+        Most `resolve` implementations call a method that is the
+        **snake_case**-equivalent of the class name:
+
+            class ScanParquet(ScanFile):
+                def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+                    return resolver.scan_parquet(self)
+
+        Arguments:
+            resolver: Any object defining each method name, where all return a `ResolvedPlan`.
+        """
         msg = f"TODO: `{type(self).__name__}.resolve`"
         raise NotImplementedError(msg)
 
