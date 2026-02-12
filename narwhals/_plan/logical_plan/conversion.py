@@ -20,6 +20,12 @@ if TYPE_CHECKING:
 
 
 Incomplete: TypeAlias = Any
+"""Node is not represented in `ResolvedPlan` (yet?).
+
+Either:
+1. `polars` lowers to a simpler representation
+2. `narwhals`-only node, which *may* be able to do the same
+"""
 
 
 # TODO @dangotbanned: Plan how schema resolution should work
