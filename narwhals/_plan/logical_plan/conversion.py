@@ -15,11 +15,12 @@ from functools import lru_cache
 from typing import TYPE_CHECKING, Any
 
 from narwhals._plan import expressions as ir
-from narwhals._plan._expansion import prepare_projection
+from narwhals._plan._expansion import expand_selector_irs_names, prepare_projection
 from narwhals._plan.exceptions import column_not_found_error
 from narwhals._plan.logical_plan import resolved as rp
 from narwhals._plan.schema import FrozenSchema, freeze_schema
-from narwhals.exceptions import ComputeError
+from narwhals._utils import Version
+from narwhals.exceptions import ComputeError, InvalidOperationError
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
@@ -37,6 +38,8 @@ Either:
 1. `polars` lowers to a simpler representation
 2. `narwhals`-only node, which *may* be able to do the same
 """
+
+dtypes = Version.MAIN.dtypes
 
 
 # TODO @dangotbanned: Very big item
@@ -92,8 +95,30 @@ class Resolver:
     def concat_vertical(self, plan: lp.VConcat, /) -> rp.VConcat:
         raise NotImplementedError
 
-    def explode(self, plan: lp.MapFunction[lp.Explode], /) -> rp.MapFunction[rp.Explode]:
-        raise NotImplementedError
+    def explode(self, plan: lp.MapFunction[lp.Explode], /) -> rp.ResolvedPlan:
+        input = self.to_resolved(plan.input)
+        input_schema = input.schema
+        f_explode = plan.function
+        columns = expand_selector_irs_names(
+            (f_explode.columns,), schema=input_schema, require_any=True
+        )
+        allowed = dtypes.List, dtypes.Array
+        schema = dict(input_schema)
+        for to_explode in columns:
+            dtype = schema[to_explode]
+            if not isinstance(dtype, allowed):
+                msg = f"`explode` operation is not supported for dtype `{dtype}`, expected List or Array type"
+                raise InvalidOperationError(msg)
+            inner = dtype.inner
+            schema[to_explode] = inner if not isinstance(inner, type) else inner()
+        return rp.MapFunction(
+            input=input,
+            function=rp.Explode(
+                columns=columns,
+                options=f_explode.options,
+                output_schema=freeze_schema(schema),
+            ),
+        )
 
     def filter(self, plan: lp.Filter, /) -> rp.Filter:
         input = self.to_resolved(plan.input)
