@@ -138,7 +138,10 @@ class Resolver:
         raise NotImplementedError
 
     def select_names(self, plan: lp.SelectNames, /) -> rp.SelectNames:
-        raise NotImplementedError
+        input = self.to_resolved(plan.input)
+        return rp.SelectNames(
+            input=input, output_schema=input.schema.select_names(plan.names)
+        )
 
     def sink_parquet(self, plan: lp.SinkParquet, /) -> rp.SinkParquet:
         raise NotImplementedError

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Collection, Mapping
 from functools import lru_cache
 from itertools import chain
 from types import MappingProxyType
@@ -8,7 +8,8 @@ from typing import TYPE_CHECKING, Any, Protocol, TypeVar, final, overload
 
 from narwhals._plan._expr_ir import NamedIR
 from narwhals._plan._immutable import Immutable
-from narwhals._utils import _hasattr_static
+from narwhals._plan.exceptions import column_not_found_error
+from narwhals._utils import _hasattr_static, check_column_names_are_unique
 from narwhals.dtypes import Unknown
 
 if TYPE_CHECKING:
@@ -69,6 +70,23 @@ class FrozenSchema(Immutable):
 
     def select_irs(self, exprs: Seq[NamedIR]) -> Seq[NamedIR]:
         return exprs
+
+    def select_names(
+        self,
+        names: Collection[str],
+        /,
+        *,
+        check_unique: bool = True,
+        check_exists: bool = True,
+    ) -> FrozenSchema:  # pragma: no cover
+        """Return a new schema, equivalent to performing `df.select(names))`."""
+        if check_unique or check_exists:
+            requested = set(names)
+            if check_unique and len(names) != len(requested):
+                check_column_names_are_unique(names)
+            if check_exists and not (self.keys() >= requested):
+                raise column_not_found_error(names, self)
+        return freeze_schema((name, self[name]) for name in names)
 
     def with_columns(self, exprs: Seq[NamedIR]) -> FrozenSchema:  # pragma: no cover
         # similar to `merge`, but preserving known `DType`s
