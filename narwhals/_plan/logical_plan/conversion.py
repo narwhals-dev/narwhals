@@ -13,19 +13,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from typing_extensions import TypeAlias, TypeIs
+    from typing_extensions import TypeAlias
 
     from narwhals._plan.logical_plan import plan as lp, resolved as rp
     from narwhals._plan.schema import FrozenSchema
 
 
 Incomplete: TypeAlias = Any
-
-
-def is_scan(
-    plan: lp.LogicalPlan,
-) -> TypeIs[lp.ScanDataFrame | lp.ScanCsv | lp.ScanParquet | lp.ScanParquetImpl[Any]]:
-    return not plan.has_inputs
 
 
 # TODO @dangotbanned: Plan how schema resolution should work
