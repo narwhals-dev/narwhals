@@ -20,7 +20,7 @@ from narwhals._plan.exceptions import column_not_found_error
 from narwhals._plan.logical_plan import resolved as rp
 from narwhals._plan.schema import FrozenSchema, freeze_schema
 from narwhals._utils import Version
-from narwhals.exceptions import ComputeError, InvalidOperationError
+from narwhals.exceptions import ComputeError, DuplicateError, InvalidOperationError
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
@@ -222,10 +222,21 @@ class Resolver:
     def with_columns(self, plan: lp.WithColumns, /) -> rp.WithColumns:
         raise NotImplementedError
 
-    def with_row_index(
-        self, plan: lp.MapFunction[lp.RowIndex], /
-    ) -> rp.MapFunction[rp.RowIndex]:
-        raise NotImplementedError
+    # TODO @dangotbanned: Unify `DType` to either:
+    # - UInt32 (polars excluding `bigidx`)
+    # - UInt64 (pyarrow in some cases)
+    # - Int64 (most backends)
+    def with_row_index(self, plan: lp.MapFunction[lp.RowIndex], /) -> rp.ResolvedPlan:
+        input = self.to_resolved(plan.input)
+        input_schema = input.schema
+        name = plan.function.name
+        if name in input_schema:
+            msg = f"Duplicate column name {name!r}"
+            raise DuplicateError(msg)
+        output_schema = freeze_schema({name: dtypes.Int64()} | input_schema._mapping)
+        return rp.MapFunction(
+            input=input, function=rp.RowIndex(name=name, output_schema=output_schema)
+        )
 
     def with_row_index_by(self, plan: lp.MapFunction[lp.RowIndexBy], /) -> Incomplete:
         raise NotImplementedError
