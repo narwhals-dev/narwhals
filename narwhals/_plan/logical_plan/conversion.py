@@ -121,7 +121,7 @@ class Resolver:
     def pivot(self, plan: lp.Pivot, /) -> Incomplete:
         raise NotImplementedError
 
-    def rename(self, plan: lp.MapFunction[lp.Rename], /) -> Incomplete:
+    def rename(self, plan: lp.MapFunction[lp.Rename], /) -> rp.ResolvedPlan:
         input = self.to_resolved(plan.input)
         f_rename = plan.function
         if not f_rename.old:
