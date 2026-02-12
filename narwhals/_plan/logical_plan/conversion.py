@@ -10,10 +10,13 @@ Intending for a rough equivalence of [`dsl_to_ir`]:
 
 from __future__ import annotations
 
+from collections import deque
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any
 
+from narwhals._plan import expressions as ir
 from narwhals._plan._expansion import prepare_projection
+from narwhals._plan.exceptions import column_not_found_error
 from narwhals._plan.logical_plan import resolved as rp
 from narwhals._plan.schema import FrozenSchema, freeze_schema
 from narwhals.exceptions import ComputeError
@@ -112,14 +115,39 @@ class Resolver:
     def join_asof(self, plan: lp.JoinAsof, /) -> rp.JoinAsof:
         raise NotImplementedError
 
-    def map_function(self, plan: lp.MapFunction[lp.LpFunctionT_co], /) -> rp.MapFunction:
-        raise NotImplementedError
+    def map_function(self, plan: lp.MapFunction[lp.LpFunctionT_co], /) -> rp.ResolvedPlan:
+        return plan.function.resolve(self, plan)
 
     def pivot(self, plan: lp.Pivot, /) -> Incomplete:
         raise NotImplementedError
 
     def rename(self, plan: lp.MapFunction[lp.Rename], /) -> Incomplete:
-        raise NotImplementedError
+        input = self.to_resolved(plan.input)
+        f_rename = plan.function
+        if not f_rename.old:
+            return input
+        input_schema = input.schema
+        before = set(f_rename.old)
+        after = f_rename.new
+        names = deque[str]()
+        exprs = deque[ir.NamedIR]()
+        for idx, name in enumerate(input_schema):
+            if name in before:
+                actual = after[idx]
+                before.remove(name)
+            else:
+                actual = name
+            exprs.append(ir.named_ir(actual, ir.col(name)))
+            names.append(actual)
+
+        if before:
+            # we had extra names not present in the schema
+            raise column_not_found_error(f_rename.old, input.schema)
+        return rp.Select(
+            input=input,
+            exprs=tuple(exprs),
+            output_schema=freeze_schema(zip(names, input_schema.values())),
+        )
 
     def scan_csv(self, plan: lp.ScanCsv, /) -> rp.ScanCsv:
         raise NotImplementedError
