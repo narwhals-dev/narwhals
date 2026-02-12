@@ -15,13 +15,15 @@ from typing import TYPE_CHECKING, Any
 
 from narwhals._plan._expansion import prepare_projection
 from narwhals._plan.logical_plan import resolved as rp
-from narwhals._plan.schema import freeze_schema
+from narwhals._plan.schema import FrozenSchema, freeze_schema
 from narwhals.exceptions import ComputeError
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
+    from narwhals._plan._expr_ir import NamedIR
     from narwhals._plan.logical_plan import plan as lp
+    from narwhals._plan.typing import Seq
     from narwhals.typing import Backend
 
 
@@ -32,6 +34,23 @@ Either:
 1. `polars` lowers to a simpler representation
 2. `narwhals`-only node, which *may* be able to do the same
 """
+
+
+# TODO @dangotbanned: Very big item
+def expressions_to_schema(exprs: Seq[NamedIR], schema: FrozenSchema) -> FrozenSchema:
+    """[`expressions_to_schema`] is a missing step at the end of `prepare_projection`.
+
+    There's some placeholders in `FrozenSchema` ([`.select()`], [`.with_columns()`]).
+
+    Truly understanding the `DType`s will require [#3396].
+
+    [`expressions_to_schema`]: https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/utils.rs#L218-L245
+    [`.select()`]: https://github.com/narwhals-dev/narwhals/blob/ddd93cd4b95d9760fe87cf0d7e29d87b24615777/narwhals/_plan/schema.py#L56-L68
+    [`.with_columns()`]: https://github.com/narwhals-dev/narwhals/blob/ddd93cd4b95d9760fe87cf0d7e29d87b24615777/narwhals/_plan/schema.py#L73-L78
+    [#3396]: https://github.com/narwhals-dev/narwhals/pull/3396
+    """
+    msg = "TODO: expressions_to_schema"
+    raise NotImplementedError(msg)
 
 
 # - `to_alp` is called with empty (`expr_arena`, `lp_arena`) for the initial plan
