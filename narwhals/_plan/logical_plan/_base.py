@@ -27,6 +27,10 @@ class Traversable(Protocol[T_co]):
         ...
 
 
+# TODO @dangotbanned: Maybe remove `has_inputs`?
+# - Only usage left is `_explain._iter_format_recursive` (on `LogicalPlan`)
+#   - Could easily replace `if not plan.has_inputs` -> `if isinstance(plan, lp.Scan)`
+# - Would simplify `_BasePlan`, `LogicalPlan`, `ResolvedPlan`
 class _BasePlan(Immutable, Generic[T_co]):
     has_inputs: ClassVar[bool]
     """Cheap check for `Scan` vs `SingleInput | MultipleInputs`"""
