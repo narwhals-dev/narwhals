@@ -13,8 +13,10 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any
 
+from narwhals._plan._expansion import prepare_projection
 from narwhals._plan.logical_plan import resolved as rp
 from narwhals._plan.schema import freeze_schema
+from narwhals.exceptions import ComputeError
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
@@ -72,7 +74,15 @@ class Resolver:
         raise NotImplementedError
 
     def filter(self, plan: lp.Filter, /) -> rp.Filter:
-        raise NotImplementedError
+        input = self.to_resolved(plan.input)
+        named_irs, _ = prepare_projection((plan.predicate,), schema=input.schema)
+        if len(named_irs) != 1:
+            msg = (
+                f"The predicate passed to 'LazyFrame.filter' expanded to {len(named_irs)!r} expressions:\n\n{named_irs!r}\n"
+                "This is ambiguous. Try to combine the predicates with the 'all' or `any' expression."
+            )
+            raise ComputeError(msg)
+        return rp.Filter(input=input, predicate=named_irs[0])
 
     def group_by(self, plan: lp.GroupBy, /) -> rp.GroupBy:
         raise NotImplementedError
