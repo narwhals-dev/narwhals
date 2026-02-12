@@ -79,6 +79,8 @@ if TYPE_CHECKING:
 
     from narwhals._plan.dataframe import DataFrame
     from narwhals._plan.expressions import ExprIR, SelectorIR
+    from narwhals._plan.logical_plan.resolved import ResolvedPlan
+    from narwhals._plan.logical_plan.visitors import LogicalToResolved
     from narwhals._plan.schema import FrozenSchema
     from narwhals._typing import _ArrowImpl, _PolarsImpl
     from narwhals.typing import ConcatMethod, FileSource, PivotAgg
@@ -87,6 +89,9 @@ Incomplete: TypeAlias = Any
 _Fwd: TypeAlias = "LogicalPlan"
 _InputsT = TypeVar("_InputsT", bound="Seq[LogicalPlan]")
 LpFunctionT = TypeVar("LpFunctionT", bound="LpFunction", default="LpFunction")
+LpFunctionT_co = TypeVar(
+    "LpFunctionT_co", bound="LpFunction", default="LpFunction", covariant=True
+)
 SinkT = TypeVar("SinkT", bound="Sink", default="Sink")
 VConcatMethod: TypeAlias = Literal[
     "vertical", "diagonal", "vertical_relaxed", "diagonal_relaxed"
@@ -161,6 +166,11 @@ class LogicalPlan(_BasePlan[_Fwd], _root=True):
         for input in self.iter_inputs():
             yield from input.iter_left()
         yield self
+
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+        """Lower the `LogicalPlan` into `ResolvedPlan`."""
+        msg = f"TODO: `{type(self).__name__}.resolve`"
+        raise NotImplementedError(msg)
 
     def explain(self) -> str:
         """Create a string representation of the query plan."""
@@ -404,10 +414,14 @@ class ScanFile(Scan):
         return cls(source=normalize_path(source))
 
 
-class ScanCsv(ScanFile): ...
+class ScanCsv(ScanFile):
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+        return resolver.scan_csv(self)
 
 
-class ScanParquet(ScanFile): ...
+class ScanParquet(ScanFile):
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+        return resolver.scan_parquet(self)
 
 
 class ScanParquetImpl(ScanParquet, Generic[ImplT]):
@@ -415,6 +429,9 @@ class ScanParquetImpl(ScanParquet, Generic[ImplT]):
 
     __slots__ = ("implementation",)
     implementation: ImplT
+
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+        return resolver.scan_parquet_impl(self)
 
     # NOTE: (temp) Hacking around adding a default in the signature
     # Alternatives:
@@ -458,6 +475,9 @@ class ScanDataFrame(Scan):
             f"schema={self.schema!s})"
         )
 
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+        return resolver.scan_dataframe(self)
+
 
 class SingleInput(LogicalPlan, has_inputs=True):
     __slots__ = ("input",)
@@ -488,7 +508,9 @@ class Sink(SingleInput):
     """Terminal node of a `LogicalPlan`."""
 
 
-class Collect(Sink): ...
+class Collect(Sink):
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+        return resolver.collect(self)
 
 
 class SinkFile(Sink):
@@ -497,17 +519,25 @@ class SinkFile(Sink):
     """`file: str | Path | BytesIO` on main."""
 
 
-class SinkParquet(SinkFile): ...
+class SinkParquet(SinkFile):
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+        return resolver.sink_parquet(self)
 
 
 class Select(SingleInput):
     __slots__ = ("exprs",)
     exprs: Seq[ExprIR]
 
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+        return resolver.select(self)
+
 
 class SelectNames(SingleInput):
     __slots__ = ("names",)
     names: Seq[str]
+
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+        return resolver.select_names(self)
 
 
 # `DslPlan::HStack`
@@ -515,16 +545,25 @@ class WithColumns(SingleInput):
     __slots__ = ("exprs",)
     exprs: Seq[ExprIR]
 
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+        return resolver.with_columns(self)
+
 
 class Filter(SingleInput):
     __slots__ = ("predicate",)
     predicate: ExprIR
+
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+        return resolver.filter(self)
 
 
 class GroupBy(SingleInput):
     __slots__ = ("aggs", "keys")
     keys: Seq[ExprIR]
     aggs: Seq[ExprIR]
+
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+        return resolver.group_by(self)
 
 
 class Pivot(SingleInput):
@@ -539,6 +578,9 @@ class Pivot(SingleInput):
     """polars has *just* `Expr`."""
     separator: str
 
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+        return resolver.pivot(self)
+
 
 # `DslPlan::Distinct`
 class Unique(SingleInput):
@@ -546,10 +588,16 @@ class Unique(SingleInput):
     subset: Seq[SelectorIR] | None
     options: UniqueOptions
 
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+        return resolver.unique(self)
+
 
 class UniqueBy(Unique):
     __slots__ = ("order_by",)
     order_by: Seq[SelectorIR]
+
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+        return resolver.unique_by(self)
 
 
 class Sort(SingleInput):
@@ -557,16 +605,25 @@ class Sort(SingleInput):
     by: Seq[SelectorIR]
     options: SortMultipleOptions
 
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+        return resolver.sort(self)
+
 
 class Slice(SingleInput):
     __slots__ = ("length", "offset")
     offset: int
     length: int | None
 
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+        return resolver.slice(self)
+
 
 class MapFunction(SingleInput, Generic[LpFunctionT]):
     __slots__ = ("function",)
     function: LpFunctionT
+
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+        return resolver.map_function(self)
 
 
 class Join(MultipleInputs[tuple[LogicalPlan, LogicalPlan]]):
@@ -577,12 +634,18 @@ class Join(MultipleInputs[tuple[LogicalPlan, LogicalPlan]]):
     right_on: Seq[str]
     options: JoinOptions
 
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+        return resolver.join(self)
+
 
 class JoinAsof(MultipleInputs[tuple[LogicalPlan, LogicalPlan]]):
     __slots__ = ("left_on", "options", "right_on")
     left_on: str
     right_on: str
     options: JoinAsofOptions
+
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+        return resolver.join_asof(self)
 
 
 # `DslPlan::Union`
@@ -592,14 +655,26 @@ class VConcat(MultipleInputs[Seq[LogicalPlan]]):
     __slots__ = ("options",)
     options: VConcatOptions
 
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+        return resolver.concat_vertical(self)
+
 
 class HConcat(MultipleInputs[Seq[LogicalPlan]]):
     """`concat(how="horizontal")`."""
 
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+        return resolver.concat_horizontal(self)
+
 
 # NOTE: `DslFunction`
 # (reprs from) https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-plan/src/plans/functions/mod.rs#L302-L382
-class LpFunction(Immutable): ...
+class LpFunction(Immutable):
+    def resolve(
+        self, resolver: LogicalToResolved, plan: MapFunction[Incomplete], /
+    ) -> ResolvedPlan:
+        """Lower the `LogicalPlan` into `ResolvedPlan`."""
+        msg = f"TODO: `{type(self).__name__}.resolve`"
+        raise NotImplementedError(msg)
 
 
 class Explode(LpFunction):
@@ -616,6 +691,11 @@ class Explode(LpFunction):
             s += ", keep_nulls: False"
         return s
 
+    def resolve(
+        self, resolver: LogicalToResolved, plan: MapFunction[Explode], /
+    ) -> ResolvedPlan:
+        return resolver.explode(plan)
+
 
 class Unnest(LpFunction):
     __slots__ = ("columns",)
@@ -623,6 +703,11 @@ class Unnest(LpFunction):
 
     def __repr__(self) -> str:
         return f"UNNEST by: {self.columns!r}"
+
+    def resolve(
+        self, resolver: LogicalToResolved, plan: MapFunction[Unnest], /
+    ) -> ResolvedPlan:
+        return resolver.unnest(plan)
 
 
 class Unpivot(LpFunction):
@@ -642,6 +727,11 @@ class Unpivot(LpFunction):
         var, val = self.options.variable_name, self.options.value_name
         return f"UNPIVOT[on: {self.on!r}, index: {self.index!r}, variable_name: {var}, value_name: {val}]"
 
+    def resolve(
+        self, resolver: LogicalToResolved, plan: MapFunction[Unpivot], /
+    ) -> ResolvedPlan:
+        return resolver.unpivot(plan)
+
 
 class RowIndex(LpFunction):
     __slots__ = ("name",)
@@ -650,6 +740,12 @@ class RowIndex(LpFunction):
     def __repr__(self) -> str:
         return f"ROW INDEX name: {self.name}"
 
+    # TODO @dangotbanned: Try to get this and `RowIndexBy` to be nicer to eachother
+    def resolve(
+        self, resolver: LogicalToResolved, plan: MapFunction[Incomplete], /
+    ) -> ResolvedPlan:
+        return resolver.with_row_index(plan)
+
 
 class RowIndexBy(RowIndex):
     __slots__ = ("order_by",)
@@ -657,6 +753,11 @@ class RowIndexBy(RowIndex):
 
     def __repr__(self) -> str:
         return f"ROW INDEX[name: {self.name}, order_by: {list(self.order_by)!r}]"
+
+    def resolve(
+        self, resolver: LogicalToResolved, plan: MapFunction[RowIndexBy], /
+    ) -> ResolvedPlan:
+        return resolver.with_row_index_by(plan)
 
 
 class Rename(LpFunction):

@@ -12,11 +12,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from narwhals._plan.logical_plan import plan as lp, resolved as rp
-
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias, TypeIs
 
+    from narwhals._plan.logical_plan import plan as lp, resolved as rp
     from narwhals._plan.schema import FrozenSchema
 
 
@@ -52,132 +51,89 @@ class Resolver:
     [`polars_plan::plans::conversion::dsl_to_ir::to_alp_impl`]: https://github.com/pola-rs/polars/blob/8f60a2d641daf7f9eeac69694b5c952f4cc34099/crates/polars-plan/src/plans/conversion/dsl_to_ir/mod.rs#L142-L1666
     """
 
-    # TODO @dangotbanned: All transforming nodes
     def convert(self, plan: lp.LogicalPlan) -> rp.ResolvedPlan:
-        # lets do the "dumb" version first
-        if is_scan(plan):
-            if isinstance(plan, lp.ScanDataFrame):
-                return self.scan_dataframe(plan)
-            if isinstance(plan, lp.ScanParquet):
-                if isinstance(plan, lp.ScanParquetImpl):
-                    return self.scan_parquet_impl(plan)
-                return self.scan_parquet(plan)
-            return self.scan_csv(plan)
-        if isinstance(plan, (lp.Collect, lp.SinkParquet)):
-            if isinstance(plan, lp.Collect):
-                return self.collect(plan)
-            return self.sink_parquet(plan)
+        return plan.resolve(self)
 
-        msg = f"TODO: Resolver.convert({type(plan).__name__})"
-        raise NotImplementedError(msg)
-
-    # Scan
-    def scan_dataframe(
-        self, plan: lp.ScanDataFrame, *args: Any, **kwds: Any
-    ) -> rp.ScanDataFrame:
+    # TODO @dangotbanned: Implement everything
+    def collect(self, plan: lp.Collect, /) -> rp.Collect:
         raise NotImplementedError
 
-    def scan_csv(self, plan: lp.ScanCsv, *args: Any, **kwds: Any) -> rp.ScanCsv:
+    def concat_horizontal(self, plan: lp.HConcat, /) -> rp.HConcat:
         raise NotImplementedError
 
-    def scan_parquet(
-        self, plan: lp.ScanParquet, *args: Any, **kwds: Any
-    ) -> rp.ScanParquet:
+    def concat_vertical(self, plan: lp.VConcat, /) -> rp.VConcat:
         raise NotImplementedError
 
-    # NOTE: Experimental!
-    def scan_parquet_impl(
-        self, plan: lp.ScanParquetImpl[Any], *args: Any, **kwds: Any
-    ) -> rp.ScanParquet:
+    def explode(self, plan: lp.MapFunction[lp.Explode], /) -> rp.MapFunction[rp.Explode]:
         raise NotImplementedError
 
-    # Sink
-    def collect(self, plan: lp.Collect, *args: Any, **kwds: Any) -> rp.Collect:
+    def filter(self, plan: lp.Filter, /) -> rp.Filter:
         raise NotImplementedError
 
-    def sink_parquet(
-        self, plan: lp.SinkParquet, *args: Any, **kwds: Any
-    ) -> rp.SinkParquet:
+    def group_by(self, plan: lp.GroupBy, /) -> rp.GroupBy:
         raise NotImplementedError
 
-    # Everything else
-    def concat_horizontal(self, plan: lp.HConcat, *args: Any, **kwds: Any) -> rp.HConcat:
+    def join(self, plan: lp.Join, /) -> rp.Join:
         raise NotImplementedError
 
-    def concat_vertical(self, plan: lp.HConcat, *args: Any, **kwds: Any) -> rp.VConcat:
+    def join_asof(self, plan: lp.JoinAsof, /) -> rp.JoinAsof:
         raise NotImplementedError
 
-    def explode(
-        self, plan: lp.MapFunction[lp.Explode], *args: Any, **kwds: Any
-    ) -> rp.MapFunction[rp.Explode]:
+    def map_function(self, plan: lp.MapFunction[lp.LpFunctionT_co], /) -> rp.MapFunction:
         raise NotImplementedError
 
-    def filter(self, plan: lp.Filter, *args: Any, **kwds: Any) -> rp.Filter:
+    def pivot(self, plan: lp.Pivot, /) -> Incomplete:
         raise NotImplementedError
 
-    def group_by(self, plan: lp.GroupBy, *args: Any, **kwds: Any) -> rp.GroupBy:
+    def rename(self, plan: lp.MapFunction[lp.Rename], /) -> Incomplete:
         raise NotImplementedError
 
-    def join(self, plan: lp.Join, *args: Any, **kwds: Any) -> rp.Join:
+    def scan_csv(self, plan: lp.ScanCsv, /) -> rp.ScanCsv:
         raise NotImplementedError
 
-    def join_asof(self, plan: lp.JoinAsof, *args: Any, **kwds: Any) -> rp.JoinAsof:
+    def scan_dataframe(self, plan: lp.ScanDataFrame, /) -> rp.ScanDataFrame:
         raise NotImplementedError
 
-    def map_function(
-        self, plan: lp.MapFunction, *args: Any, **kwds: Any
-    ) -> rp.MapFunction:
+    def scan_parquet(self, plan: lp.ScanParquet, /) -> rp.ScanParquet:
         raise NotImplementedError
 
-    def pivot(self, plan: lp.Pivot, *args: Any, **kwds: Any) -> Incomplete:
+    def scan_parquet_impl(self, plan: lp.ScanParquetImpl[Any], /) -> rp.ScanParquet:
         raise NotImplementedError
 
-    def rename(
-        self, plan: lp.MapFunction[lp.Rename], *args: Any, **kwds: Any
-    ) -> Incomplete:
+    def select(self, plan: lp.Select, /) -> rp.Select:
         raise NotImplementedError
 
-    def select(self, plan: lp.Select, *args: Any, **kwds: Any) -> rp.Select:
+    def select_names(self, plan: lp.SelectNames, /) -> rp.SelectNames:
         raise NotImplementedError
 
-    def select_names(
-        self, plan: lp.SelectNames, *args: Any, **kwds: Any
-    ) -> rp.SelectNames:
+    def sink_parquet(self, plan: lp.SinkParquet, /) -> rp.SinkParquet:
         raise NotImplementedError
 
-    def slice(self, plan: lp.Slice, *args: Any, **kwds: Any) -> rp.Slice:
+    def slice(self, plan: lp.Slice, /) -> rp.Slice:
         raise NotImplementedError
 
-    def sort(self, plan: lp.Sort, *args: Any, **kwds: Any) -> rp.Sort:
+    def sort(self, plan: lp.Sort, /) -> rp.Sort:
         raise NotImplementedError
 
-    def unique(self, plan: lp.Unique, *args: Any, **kwds: Any) -> rp.Unique:
+    def unique(self, plan: lp.Unique, /) -> rp.Unique:
         raise NotImplementedError
 
-    def unique_by(self, plan: lp.UniqueBy, *args: Any, **kwds: Any) -> Incomplete:
+    def unique_by(self, plan: lp.UniqueBy, /) -> Incomplete:
         raise NotImplementedError
 
-    def unnest(
-        self, plan: lp.MapFunction[lp.Unnest], *args: Any, **kwds: Any
-    ) -> rp.MapFunction[rp.Unnest]:
+    def unnest(self, plan: lp.MapFunction[lp.Unnest], /) -> rp.MapFunction[rp.Unnest]:
         raise NotImplementedError
 
-    def unpivot(
-        self, plan: lp.MapFunction[lp.Unpivot], *args: Any, **kwds: Any
-    ) -> rp.MapFunction[rp.Unpivot]:
+    def unpivot(self, plan: lp.MapFunction[lp.Unpivot], /) -> rp.MapFunction[rp.Unpivot]:
         raise NotImplementedError
 
-    def with_columns(
-        self, plan: lp.WithColumns, *args: Any, **kwds: Any
-    ) -> rp.WithColumns:
+    def with_columns(self, plan: lp.WithColumns, /) -> rp.WithColumns:
         raise NotImplementedError
 
     def with_row_index(
-        self, plan: lp.MapFunction[lp.RowIndex], *args: Any, **kwds: Any
+        self, plan: lp.MapFunction[lp.RowIndex], /
     ) -> rp.MapFunction[rp.RowIndex]:
         raise NotImplementedError
 
-    def with_row_index_by(
-        self, plan: lp.MapFunction[lp.RowIndexBy], *args: Any, **kwds: Any
-    ) -> Incomplete:
+    def with_row_index_by(self, plan: lp.MapFunction[lp.RowIndexBy], /) -> Incomplete:
         raise NotImplementedError
