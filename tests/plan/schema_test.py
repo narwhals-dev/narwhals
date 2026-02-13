@@ -19,6 +19,10 @@ def test_schema() -> None:
     assert schema == nw.Schema(frozen_schema)  # type: ignore[arg-type]
     assert mapping == dict(frozen_schema)
 
+    # NOTE: This is an internal version of `Schema`, but is not interchangeable
+    assert frozen_schema != mapping
+    assert frozen_schema != schema
+
     assert frozen_schema == freeze_schema(mapping)
     assert frozen_schema == freeze_schema(**mapping)
     assert frozen_schema == freeze_schema(a=nw.Int64(), b=nw.String())

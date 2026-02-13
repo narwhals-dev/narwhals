@@ -26,7 +26,7 @@ from narwhals._utils import (
     Version,
     check_column_names_are_unique as raise_duplicate_error,
 )
-from narwhals.exceptions import ComputeError, DuplicateError
+from narwhals.exceptions import ComputeError, DuplicateError, InvalidOperationError
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
@@ -92,15 +92,36 @@ class Resolver:
         """
         return plan.resolve(self)
 
-    # TODO @dangotbanned: Implement everything
     def collect(self, plan: lp.Collect, /) -> rp.Collect:
         return rp.Collect(input=self.to_resolved(plan.input))
 
     def concat_horizontal(self, plan: lp.HConcat, /) -> rp.HConcat:
         raise NotImplementedError
 
+    # TODO @dangotbanned: concat(how="diagonal")
+    # `_relaxed` (supertypes) can wait
     def concat_vertical(self, plan: lp.VConcat, /) -> rp.VConcat:
-        raise NotImplementedError
+        opts = plan.options
+        if opts.diagonal:
+            msg = 'TODO: concat(how="diagonal")'
+            raise NotImplementedError(msg)
+        if opts.to_supertypes:
+            msg = (
+                f"TODO: `{type(opts).__name__}.to_supertypes`\nRequires:\n"
+                "- https://github.com/narwhals-dev/narwhals/pull/3396\n"
+                "- https://github.com/narwhals-dev/narwhals/issues/3386"
+            )
+            raise NotImplementedError(msg)
+        inputs = tuple(self.to_resolved(input) for input in plan.inputs)
+        if not inputs:
+            msg = "expected at least one input in 'concat'"
+            raise InvalidOperationError(msg)
+        output_schema = inputs[0].schema
+        for other in inputs[1:]:
+            if (schema := other.schema) != output_schema:
+                msg = f"'concat' inputs should all have the same schema, got\n{dict(output_schema)} and \n{dict(schema)}"
+                raise InvalidOperationError(msg)
+        return rp.VConcat(inputs=inputs, maintain_order=opts.maintain_order)
 
     def explode(self, plan: lp.MapFunction[lp.Explode], /) -> rp.ResolvedPlan:
         input = self.to_resolved(plan.input)

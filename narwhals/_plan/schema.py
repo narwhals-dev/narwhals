@@ -43,6 +43,16 @@ class FrozenSchema(Immutable):
     __slots__ = ("_mapping",)
     _mapping: MappingProxyType[str, DType]
 
+    __hash__ = Immutable.__hash__
+
+    # NOTE: Manually reimplemented as this is a hot path
+    def __eq__(self, other: object) -> bool:
+        if self is other:
+            return True
+        if type(other) is not FrozenSchema:
+            return False
+        return self._mapping.__eq__(other._mapping)
+
     def __init_subclass__(cls, *_: Never, **__: Never) -> Never:
         msg = f"Cannot subclass {FrozenSchema.__name__!r}"
         raise TypeError(msg)
