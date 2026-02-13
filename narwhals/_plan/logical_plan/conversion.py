@@ -208,7 +208,12 @@ class Resolver:
         raise NotImplementedError
 
     def unique(self, plan: lp.Unique, /) -> rp.Unique:
-        raise NotImplementedError
+        input = self.to_resolved(plan.input)
+        subset: Seq[str] | None = None
+        if s_irs := plan.subset:
+            schema = input.schema
+            subset = expand_selector_irs_names(s_irs, schema=schema, require_any=True)
+        return rp.Unique(input=input, subset=subset, options=plan.options)
 
     def unique_by(self, plan: lp.UniqueBy, /) -> Incomplete:
         raise NotImplementedError
