@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Generic
 
+from narwhals._plan import common
 from narwhals._plan._guards import is_literal
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.typing import LiteralT, NativeSeriesT, NonNestedLiteralT
@@ -14,6 +15,7 @@ if TYPE_CHECKING:
     from narwhals._plan.expressions.expr import Literal
     from narwhals._plan.series import Series
     from narwhals.dtypes import DType
+    from narwhals.typing import IntoDType
 
 
 class LiteralValue(Immutable, Generic[LiteralT]):
@@ -86,3 +88,13 @@ def is_literal_scalar(
     obj: Literal[NonNestedLiteralT] | Any,
 ) -> TypeIs[Literal[NonNestedLiteralT]]:
     return is_literal(obj) and isinstance(obj.value, ScalarLiteral)
+
+
+def lit(
+    value: NonNestedLiteralT, dtype: IntoDType | None = None
+) -> Literal[NonNestedLiteralT]:
+    if dtype is None:
+        dtype = common.py_to_narwhals_dtype(value)
+    else:
+        dtype = common.into_dtype(dtype)
+    return ScalarLiteral(value=value, dtype=dtype).to_literal()

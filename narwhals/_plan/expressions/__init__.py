@@ -44,6 +44,7 @@ from narwhals._plan.expressions.expr import (
     col,
     ternary_expr,
 )
+from narwhals._plan.expressions.literal import lit
 from narwhals._plan.expressions.name import KeepName, RenameAlias
 from narwhals._plan.expressions.window import over, over_ordered
 
@@ -82,6 +83,7 @@ __all__ = [
     "col",
     "functions",
     "lists",
+    "lit",
     "max",
     "min",
     "named_ir",

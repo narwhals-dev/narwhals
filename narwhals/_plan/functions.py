@@ -14,8 +14,8 @@ from narwhals._plan.exceptions import (
     list_literal_error,
     unsupported_backend_operation_error,
 )
-from narwhals._plan.expressions import functions as F
-from narwhals._plan.expressions.literal import ScalarLiteral, SeriesLiteral
+from narwhals._plan.expressions import functions as F, lit as _ir_lit
+from narwhals._plan.expressions.literal import SeriesLiteral
 from narwhals._plan.expressions.ranges import (
     DateRange,
     IntRange,
@@ -111,11 +111,7 @@ def lit(
         return SeriesLiteral(value=value).to_literal().to_narwhals()
     if not _guards.is_non_nested_literal(value):
         raise list_literal_error(value)
-    if dtype is None:
-        dtype = common.py_to_narwhals_dtype(value, Version.MAIN)
-    else:
-        dtype = common.into_dtype(dtype)
-    return ScalarLiteral(value=value, dtype=dtype).to_literal().to_narwhals()
+    return _ir_lit(value, dtype).to_narwhals()
 
 
 def len() -> Expr:

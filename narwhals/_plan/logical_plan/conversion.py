@@ -29,6 +29,8 @@ from narwhals._utils import (
 from narwhals.exceptions import ComputeError, DuplicateError, InvalidOperationError
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator, Mapping
+
     from typing_extensions import TypeAlias
 
     from narwhals._plan._expr_ir import NamedIR
@@ -66,6 +68,47 @@ def expressions_to_schema(exprs: Seq[NamedIR], schema: FrozenSchema) -> FrozenSc
     raise NotImplementedError(msg)
 
 
+def align_diagonal(inputs: Seq[rp.ResolvedPlan]) -> Seq[rp.ResolvedPlan]:
+    """Port of `AlignDiagonal` (used for `ibis`)."""
+    schemas = tuple(input.schema for input in inputs)
+    it_schemas = iter(schemas)
+    union = dict(next(it_schemas))
+    seen = union.keys()
+    for schema in it_schemas:
+        union.update((nm, dtype) for nm, dtype in schema.items() if nm not in seen)
+    return _align_diagonal(inputs, schemas, union)
+
+
+def _align_diagonal(
+    plans: Iterable[rp.ResolvedPlan],
+    schemas: Iterable[FrozenSchema],
+    union_schema: Mapping[str, DType],
+) -> Seq[rp.ResolvedPlan]:
+    output_schema = freeze_schema(union_schema)
+    union_names = union_schema.keys()
+    null_exprs: dict[str, NamedIR] = {}
+
+    def iter_missing_exprs(missing: Iterable[str]) -> Iterator[NamedIR]:
+        nonlocal null_exprs
+        expr: NamedIR | None
+        for name in missing:
+            if (expr := null_exprs.get(name)) is None:
+                dtype = union_schema[name]
+                expr = null_exprs[name] = ir.named_ir(name, ir.lit(None, dtype))
+            yield expr
+
+    def align(plan: rp.ResolvedPlan, columns: Iterable[str]) -> rp.ResolvedPlan:
+        # Even if all fields are present, we always reorder the columns to match between plans.
+        if missing := union_names - columns:
+            exprs = tuple(iter_missing_exprs(missing))
+            msg = 'TODO: `concat(how="diagonal")` (aligned `output_schema`)'
+            raise NotImplementedError(msg)
+            plan = rp.WithColumns(input=plan, exprs=exprs, output_schema=...)
+        return rp.SelectNames(input=plan, output_schema=output_schema)
+
+    return tuple(align(plan, schema.keys()) for plan, schema in zip(plans, schemas))
+
+
 # - `to_alp` is called with empty (`expr_arena`, `lp_arena`) for the initial plan
 #  - https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-lazy/src/frame/cached_arenas.rs#L114
 # - `to_alp_impl` is the recursive part
@@ -98,13 +141,16 @@ class Resolver:
     def concat_horizontal(self, plan: lp.HConcat, /) -> rp.HConcat:
         raise NotImplementedError
 
-    # TODO @dangotbanned: concat(how="diagonal")
-    # `_relaxed` (supertypes) can wait
+    # TODO @dangotbanned: `how="diagonal"` (Need aligned intermediate schemas for `WithColumns`)
+    # Come back to after adding `select`, `with_columns`
     def concat_vertical(self, plan: lp.VConcat, /) -> rp.VConcat:
         opts = plan.options
+        inputs = tuple(self.to_resolved(input) for input in plan.inputs)
+        if not inputs:
+            msg = "expected at least one input in 'concat'"
+            raise InvalidOperationError(msg)
         if opts.diagonal:
-            msg = 'TODO: concat(how="diagonal")'
-            raise NotImplementedError(msg)
+            inputs = align_diagonal(inputs)
         if opts.to_supertypes:
             msg = (
                 f"TODO: `{type(opts).__name__}.to_supertypes`\nRequires:\n"
@@ -112,10 +158,6 @@ class Resolver:
                 "- https://github.com/narwhals-dev/narwhals/issues/3386"
             )
             raise NotImplementedError(msg)
-        inputs = tuple(self.to_resolved(input) for input in plan.inputs)
-        if not inputs:
-            msg = "expected at least one input in 'concat'"
-            raise InvalidOperationError(msg)
         output_schema = inputs[0].schema
         for other in inputs[1:]:
             if (schema := other.schema) != output_schema:
