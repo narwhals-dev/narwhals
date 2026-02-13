@@ -205,7 +205,24 @@ class Resolver:
         )
 
     def sort(self, plan: lp.Sort, /) -> rp.Sort:
-        raise NotImplementedError
+        input = self.to_resolved(plan.input)
+        by = expand_selector_irs_names(plan.by, schema=input.schema, require_any=True)
+        opts = plan.options
+        n_by = len(by)
+        n_desc = len(opts.descending)
+        if n_desc == 1:
+            desc = opts.descending * n_by
+        elif n_desc == n_by:
+            desc = opts.descending
+        else:
+            msg = f"the length of `descending` ({n_desc}) does not match the length of `by` ({n_by})"
+            raise ComputeError(msg)
+        if len(opts.nulls_last) not in {1, n_by}:
+            msg = f"the length of `descending` ({len(opts.nulls_last)}) does not match the length of `by` ({n_by})"
+            raise ComputeError(msg)
+        # NOTE: `polars` expands `nulls_last` here too, but `pyarrow<=23` doesn't support per-key
+        # See https://github.com/apache/arrow/pull/46926
+        return rp.Sort(input=input, by=by, options=opts.__replace__(descending=desc))
 
     def unique(self, plan: lp.Unique, /) -> rp.Unique:
         input = self.to_resolved(plan.input)
