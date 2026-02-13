@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING, Any
 
 from narwhals._plan import expressions as ir
 from narwhals._plan._expansion import expand_selector_irs_names, prepare_projection
+from narwhals._plan.common import todo
 from narwhals._plan.exceptions import (
     column_not_found_error,
     invalid_dtype_operation_error,
@@ -52,6 +53,7 @@ dtypes = Version.MAIN.dtypes
 
 
 # TODO @dangotbanned: Very big item
+# `AExpr.to_field_impl`: https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/schema.rs#L45-L390
 def expressions_to_schema(exprs: Seq[NamedIR], schema: FrozenSchema) -> FrozenSchema:
     """[`expressions_to_schema`] is a missing step at the end of `prepare_projection`.
 
@@ -214,20 +216,16 @@ class Resolver:
             raise ComputeError(msg)
         return rp.Filter(input=input, predicate=named_irs[0])
 
-    def group_by(self, plan: lp.GroupBy, /) -> rp.GroupBy:
-        raise NotImplementedError
+    group_by = todo()
 
-    def join(self, plan: lp.Join, /) -> rp.Join:
-        raise NotImplementedError
+    join = todo()
 
-    def join_asof(self, plan: lp.JoinAsof, /) -> rp.JoinAsof:
-        raise NotImplementedError
+    join_asof = todo()
 
     def map_function(self, plan: lp.MapFunction[lp.LpFunctionT_co], /) -> rp.ResolvedPlan:
         return plan.function.resolve(self, plan)
 
-    def pivot(self, plan: lp.Pivot, /) -> Incomplete:
-        raise NotImplementedError
+    pivot = todo()
 
     def rename(self, plan: lp.MapFunction[lp.Rename], /) -> rp.ResolvedPlan:
         input = self.to_resolved(plan.input)
@@ -257,21 +255,18 @@ class Resolver:
             output_schema=freeze_schema(zip(names, input_schema.values())),
         )
 
-    def scan_csv(self, plan: lp.ScanCsv, /) -> rp.ScanCsv:
-        raise NotImplementedError
+    scan_csv = todo()
 
     def scan_dataframe(self, plan: lp.ScanDataFrame, /) -> rp.ScanDataFrame:
         return rp.ScanDataFrame(df=plan.df, output_schema=plan.schema)
 
-    def scan_parquet(self, plan: lp.ScanParquet, /) -> rp.ScanParquet:
-        """TODO: Need a way of getting `backend: IntoBackend` from an outer context."""
-        raise NotImplementedError
+    # TODO @dangotbanned: Need a way of getting `backend: IntoBackend` from an outer context.
+    scan_parquet = todo()
 
     def scan_parquet_impl(self, plan: lp.ScanParquetImpl[lp.ImplT], /) -> rp.ScanParquet:
         return _scan_parquet(plan.source, plan.implementation)
 
-    def select(self, plan: lp.Select, /) -> rp.Select:
-        raise NotImplementedError
+    select = todo()
 
     def select_names(self, plan: lp.SelectNames, /) -> rp.SelectNames:
         input = self.to_resolved(plan.input)
@@ -315,8 +310,7 @@ class Resolver:
             subset = expand_selector_irs_names(s_irs, schema=schema, require_any=True)
         return rp.Unique(input=input, subset=subset, options=plan.options)
 
-    def unique_by(self, plan: lp.UniqueBy, /) -> Incomplete:
-        raise NotImplementedError
+    unique_by = todo()
 
     def unnest(self, plan: lp.MapFunction[lp.Unnest], /) -> rp.MapFunction[rp.Unnest]:
         # NOTE: Pretty delicate process to optimize for
@@ -356,11 +350,9 @@ class Resolver:
             function=rp.Unnest(columns=columns, output_schema=freeze_schema(schema)),
         )
 
-    def unpivot(self, plan: lp.MapFunction[lp.Unpivot], /) -> rp.MapFunction[rp.Unpivot]:
-        raise NotImplementedError
+    unpivot = todo()
 
-    def with_columns(self, plan: lp.WithColumns, /) -> rp.WithColumns:
-        raise NotImplementedError
+    with_columns = todo()
 
     # TODO @dangotbanned: Unify `DType` to either:
     # - UInt32 (polars excluding `bigidx`)
@@ -378,8 +370,7 @@ class Resolver:
             input=input, function=rp.RowIndex(name=name, output_schema=output_schema)
         )
 
-    def with_row_index_by(self, plan: lp.MapFunction[lp.RowIndexBy], /) -> Incomplete:
-        raise NotImplementedError
+    with_row_index_by = todo()
 
 
 @lru_cache(maxsize=64)
