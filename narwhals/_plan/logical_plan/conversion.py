@@ -139,7 +139,21 @@ class Resolver:
         return rp.Collect(input=self.to_resolved(plan.input))
 
     def concat_horizontal(self, plan: lp.HConcat, /) -> rp.HConcat:
-        raise NotImplementedError
+        inputs = tuple(self.to_resolved(input) for input in plan.inputs)
+        if not inputs:
+            msg = "expected at least one input in 'concat'"
+            raise InvalidOperationError(msg)
+        merged_schema: dict[str, DType] = {**inputs[0].schema}
+        seen = merged_schema.keys()
+        for input in inputs[1:]:
+            schema = input.schema
+            if seen.isdisjoint(schema):
+                merged_schema.update(schema)
+            else:
+                duplicate = next(nm for nm in schema if nm in seen)
+                msg = f"Column with name {duplicate!r} has more than one occurrence"
+                raise DuplicateError(msg)
+        return rp.HConcat(inputs=inputs, output_schema=freeze_schema(merged_schema))
 
     # TODO @dangotbanned: `how="diagonal"` (Need aligned intermediate schemas for `WithColumns`)
     # Come back to after adding `select`, `with_columns`
