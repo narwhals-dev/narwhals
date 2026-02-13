@@ -28,7 +28,8 @@ if TYPE_CHECKING:
     from narwhals._plan.options import SortOptions
     from narwhals._plan.schema import FrozenSchema
     from narwhals._plan.typing import IntoExpr, Seq
-    from narwhals.typing import Backend, IntoBackend, IntoSchema
+    from narwhals.dtypes import DType
+    from narwhals.typing import Backend, IntoBackend, IntoDType, IntoSchema
 
 
 # NOTE: Using verbose names to start with
@@ -293,3 +294,14 @@ def unsupported_backend_operation_error(
     backend_name = Implementation.from_backend(backend).value
     msg = f"`{method_name}`() is not yet supported for {backend_name!r}"
     return NotImplementedError(msg)
+
+
+def invalid_dtype_operation_error(
+    dtype: IntoDType, method_name: str, *expected: DType | type[DType]
+) -> InvalidOperationError:  # pragma: no cover
+    if len(expected) == 1:
+        allow = f"{expected[0]}"
+    else:
+        allow = " or ".join(str(tp) for tp in expected)
+    msg = f"`{method_name}` operation is not supported for dtype `{dtype}`, expected {allow} type"
+    return InvalidOperationError(msg)

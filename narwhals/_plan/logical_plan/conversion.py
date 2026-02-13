@@ -16,11 +16,17 @@ from typing import TYPE_CHECKING, Any
 
 from narwhals._plan import expressions as ir
 from narwhals._plan._expansion import expand_selector_irs_names, prepare_projection
-from narwhals._plan.exceptions import column_not_found_error
+from narwhals._plan.exceptions import (
+    column_not_found_error,
+    invalid_dtype_operation_error,
+)
 from narwhals._plan.logical_plan import resolved as rp
 from narwhals._plan.schema import FrozenSchema, freeze_schema
-from narwhals._utils import Version
-from narwhals.exceptions import ComputeError, DuplicateError, InvalidOperationError
+from narwhals._utils import (
+    Version,
+    check_column_names_are_unique as raise_duplicate_error,
+)
+from narwhals.exceptions import ComputeError, DuplicateError
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
@@ -28,6 +34,7 @@ if TYPE_CHECKING:
     from narwhals._plan._expr_ir import NamedIR
     from narwhals._plan.logical_plan import plan as lp
     from narwhals._plan.typing import Seq
+    from narwhals.dtypes import DType
     from narwhals.typing import Backend
 
 
@@ -107,8 +114,7 @@ class Resolver:
         for to_explode in columns:
             dtype = schema[to_explode]
             if not isinstance(dtype, allowed):
-                msg = f"`explode` operation is not supported for dtype `{dtype}`, expected List or Array type"
-                raise InvalidOperationError(msg)
+                raise invalid_dtype_operation_error(dtype, "explode", *allowed)
             inner = dtype.inner
             schema[to_explode] = inner if not isinstance(inner, type) else inner()
         return rp.MapFunction(
@@ -236,7 +242,42 @@ class Resolver:
         raise NotImplementedError
 
     def unnest(self, plan: lp.MapFunction[lp.Unnest], /) -> rp.MapFunction[rp.Unnest]:
-        raise NotImplementedError
+        # NOTE: Pretty delicate process to optimize for
+        input = self.to_resolved(plan.input)
+        input_schema = input.schema
+        columns = expand_selector_irs_names(
+            (plan.function.columns,), schema=input_schema, require_any=True
+        )
+        tp_struct = dtypes.Struct
+
+        # We need to insert struct fields in the same order as the original, while removing the struct itself
+        schema: dict[str, DType] = {}
+
+        # guard against duplicates from unnesting
+        # allows skipping the duplicate check on iter 1
+        seen = schema.keys()
+
+        # struct columns that will be replaced with their fields
+        # used destructively to allow skipping everything after the last target struct is handled
+        to_unnest = set(columns)
+
+        for name, dtype in input_schema.items():
+            if not to_unnest or name not in to_unnest:
+                schema[name] = dtype
+            elif not isinstance(dtype, tp_struct):
+                raise invalid_dtype_operation_error(dtype, "unnest", tp_struct)
+            elif not seen or seen.isdisjoint(f.name for f in dtype.fields):
+                schema.update(
+                    (f.name, (f.dtype if not isinstance(f.dtype, type) else f.dtype()))
+                    for f in dtype.fields
+                )
+                to_unnest.remove(name)
+            else:
+                raise_duplicate_error((*seen, *(f.name for f in dtype.fields)))
+        return rp.MapFunction(
+            input=input,
+            function=rp.Unnest(columns=columns, output_schema=freeze_schema(schema)),
+        )
 
     def unpivot(self, plan: lp.MapFunction[lp.Unpivot], /) -> rp.MapFunction[rp.Unpivot]:
         raise NotImplementedError
