@@ -325,9 +325,7 @@ class Resolver:
     # TODO @dangotbanned: `should_coalesce`
     #  - `polars.LazyFrame.join_asof(coalesce)` defaults to `True`
     #  - `pyarrow.acero.AsofJoinNodeOptions` doesn't have a parameter for it
-    # TODO @dangotbanned: Convert the `continue` statements into negated `if` guards on the iterator
-    # Current form is mostly a direct translation from rust
-    def join_asof(self, plan: lp.JoinAsof, /) -> rp.ResolvedPlan:  # noqa: PLR0914
+    def join_asof(self, plan: lp.JoinAsof, /) -> rp.ResolvedPlan:
         """Based mainly on [`schema::det_join_schema`].
 
         [`schema::det_join_schema`]: https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/schema.rs#L109-L250
@@ -339,26 +337,22 @@ class Resolver:
             schema_left, schema_right, (left_on,), (right_on,)
         )
 
+        items: Iterable[tuple[str, DType]] = schema_right.items()
+        if by := plan.options.by:
+            # Asof join by columns are coalesced
+            # Do not add suffix. The column of the left table will be used
+            items = ((name, dtype) for name, dtype in items if name not in by.right_by)
         # NOTE: default here is a placeholder to trigger the extra code
         should_coalesce: bool = True
-        same_on = left_on == right_on
-        options = plan.options
-        right_by = frozenset(by.right_by) if (by := options.by) else frozenset[str]()
-        suffix = options.suffix
+        if should_coalesce and left_on == right_on:
+            # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/schema.rs#L207-L224
+            # Handles coalescing of asof-joins.
+            # Asof joins are not equi-joins so the columns that are joined on, may have different values
+            # so if the right has a different name, it is added to the schema
+            items = ((name, dtype) for name, dtype in items if name != right_on)
+        suffix = plan.options.suffix
         new_schema = dict(schema_left)
-        for name, dtype in schema_right.items():
-            if name in right_by:
-                # Asof join by columns are coalesced
-                # Do not add suffix. The column of the left table will be used
-                continue
-
-            if should_coalesce and name == right_on and same_on:
-                # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/schema.rs#L207-L224
-                # Handles coalescing of asof-joins.
-                # Asof joins are not equi-joins so the columns that are joined on, may have different values
-                # so if the right has a different name, it is added to the schema
-                continue
-
+        for name, dtype in items:
             new_name = name + suffix if name in schema_left else name
             if new_name in new_schema:
                 msg = f"column with name {new_name!r} already exists"
