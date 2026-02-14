@@ -376,6 +376,8 @@ class Resolver:
     def map_function(self, plan: lp.MapFunction[lp.LpFunctionT_co], /) -> rp.ResolvedPlan:
         return plan.function.resolve(self, plan)
 
+    # NOTE: Don't prioritize getting this working, it's by far the most complex node
+    # and not supported in `nw.LazyFrame` (yet?)
     pivot = todo()
 
     def rename(self, plan: lp.MapFunction[lp.Rename], /) -> rp.ResolvedPlan:
