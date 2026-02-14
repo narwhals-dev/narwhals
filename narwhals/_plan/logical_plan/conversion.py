@@ -174,12 +174,6 @@ def _with_supertypes(plan: rp.ResolvedPlan, casts: Seq[Cast]) -> rp.WithColumns:
     return rp.WithColumns(input=plan, exprs=casts, output_schema=freeze_schema(schema))  # type: ignore[arg-type]
 
 
-# - `to_alp` is called with empty (`expr_arena`, `lp_arena`) for the initial plan
-#  - https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-lazy/src/frame/cached_arenas.rs#L114
-# - `to_alp_impl` is the recursive part
-#  - each traversal passes through the (mutable) `DslConversionContext`
-#    - https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/conversion/dsl_to_ir/utils.rs#L4-L14
-#  - (not doing this part) that leads to `ConversionOptimizer` https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/conversion/stack_opt.rs
 class Resolver:
     """Default conversion from `LogicalPlan` into `ResolvedPlan`.
 
