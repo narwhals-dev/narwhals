@@ -74,8 +74,7 @@ def expressions_to_schema(exprs: Seq[NamedIR], schema: FrozenSchema) -> FrozenSc
     [`.with_columns()`]: https://github.com/narwhals-dev/narwhals/blob/ddd93cd4b95d9760fe87cf0d7e29d87b24615777/narwhals/_plan/schema.py#L73-L78
     [#3396]: https://github.com/narwhals-dev/narwhals/pull/3396
     """
-    msg = "TODO: expressions_to_schema"
-    raise NotImplementedError(msg)
+    return freeze_schema((expr.name, expr.resolve_dtype(schema)) for expr in exprs)
 
 
 def align_diagonal(inputs: Seq[rp.ResolvedPlan]) -> Seq[rp.ResolvedPlan]:
@@ -419,7 +418,7 @@ class Resolver:
     def scan_parquet_impl(self, plan: lp.ScanParquetImpl[lp.ImplT], /) -> rp.ScanParquet:
         return _scan_parquet(plan.source, plan.implementation)
 
-    # TODO @dangotbanned: Add a **limited version** of `expressions_to_schema`
+    # TODO @dangotbanned: Implement the easiest `ExprIR._resolve_dtype`s
     def select(self, plan: lp.Select, /) -> rp.Select:
         input = self.to_resolved(plan.input)
         named_irs, input_schema = prepare_projection(plan.exprs, schema=input.schema)
@@ -542,7 +541,12 @@ class Resolver:
             ),
         )
 
-    with_columns = todo()
+    # TODO @dangotbanned: Implement the easiest `ExprIR._resolve_dtype`s
+    def with_columns(self, plan: lp.WithColumns, /) -> rp.WithColumns:
+        input = self.to_resolved(plan.input)
+        named_irs, input_schema = prepare_projection(plan.exprs, schema=input.schema)
+        output_schema = input_schema.with_columns_resolved(named_irs)
+        return rp.WithColumns(input=input, exprs=named_irs, output_schema=output_schema)
 
     # TODO @dangotbanned: Unify `DType` to either:
     # - UInt32 (polars excluding `bigidx`)

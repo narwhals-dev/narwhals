@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, Protocol, TypeVar, final, overload
 from narwhals._plan._expr_ir import NamedIR
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.exceptions import column_not_found_error
-from narwhals._utils import _hasattr_static, check_column_names_are_unique
+from narwhals._utils import _hasattr_static, check_column_names_are_unique, unstable
 from narwhals.dtypes import Unknown
 
 if TYPE_CHECKING:
@@ -120,6 +120,22 @@ class FrozenSchema(Immutable):
         else:
             miss = {name: _unknown for name in names if name not in self}
         return freeze_schema(self._mapping | miss)
+
+    # TODO @dangotbanned: Update the other methods to try and avoid creating new schemas
+    @unstable
+    def with_columns_resolved(
+        self, exprs: Seq[NamedIR], /
+    ) -> FrozenSchema:  # pragma: no cover
+        """Attempt to resolve the dtypes of each expression, merging each field into a new schema if needed."""
+        current = self._mapping
+        it = ((e.name, e.resolve_dtype(self)) for e in exprs)
+        if updates := {
+            name: dtype
+            for name, dtype in it
+            if name not in current or dtype != current[name]
+        }:
+            return freeze_schema(current | updates)
+        return self
 
     def with_columns_irs(self, exprs: Seq[NamedIR]) -> Seq[NamedIR]:
         """Required for `_concat_horizontal`-based `with_columns`.

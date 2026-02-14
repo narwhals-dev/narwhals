@@ -8,8 +8,8 @@ from narwhals._plan._immutable import Immutable
 from narwhals._plan.common import replace
 from narwhals._plan.options import ExprIROptions
 from narwhals._plan.typing import ExprIRT, Ignored
+from narwhals._utils import Version, unstable
 from narwhals.exceptions import InvalidOperationError
-from narwhals.utils import Version
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -182,6 +182,10 @@ class ExprIR(Immutable):
     def _repr_html_(self) -> str:
         return self.__repr__()
 
+    def _resolve_dtype(self, schema: FrozenSchema) -> DType:
+        msg = f"`NamedIR[{type(self)}].resolve_dtype()` is not yet implemented:\n{self!r}"
+        raise NotImplementedError(msg)
+
 
 def _map_ir_child(obj: ExprIR | Seq[ExprIR], fn: MapIR, /) -> ExprIR | Seq[ExprIR]:
     return obj.map_ir(fn) if isinstance(obj, ExprIR) else tuple(e.map_ir(fn) for e in obj)
@@ -232,6 +236,10 @@ class SelectorIR(ExprIR, config=ExprIROptions.no_dispatch()):
 
     def needs_expansion(self) -> bool:
         return True
+
+    def _resolve_dtype(self, schema: FrozenSchema) -> DType:  # pragma: no cover
+        msg = f"`resolve_dtype` is not supported for selectors:\n{self!r}"
+        raise InvalidOperationError(msg)
 
 
 class NamedIR(Immutable, Generic[ExprIRT]):
@@ -312,6 +320,18 @@ class NamedIR(Immutable, Generic[ExprIRT]):
 
         ir = self.expr
         return isinstance(ir, Column) and ((self.name == ir.name) or allow_aliasing)
+
+    @unstable
+    def resolve_dtype(self, schema: FrozenSchema) -> DType:  # pragma: no cover
+        """Get the data type of an expanded expression.
+
+        Arguments:
+            schema: The same schema used to project this expression.
+
+        Warning:
+            Only a small subset of nodes support this operation.
+        """
+        return self.expr._resolve_dtype(schema)
 
 
 def named_ir(name: str, expr: ExprIRT, /) -> NamedIR[ExprIRT]:
