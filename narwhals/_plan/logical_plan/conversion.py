@@ -26,6 +26,7 @@ from narwhals._plan.schema import FrozenSchema, freeze_schema
 from narwhals._utils import (
     Version,
     check_column_names_are_unique as raise_duplicate_error,
+    zip_strict,
 )
 from narwhals.exceptions import ComputeError, DuplicateError, InvalidOperationError
 
@@ -48,6 +49,8 @@ Either:
 1. `polars` lowers to a simpler representation
 2. `narwhals`-only node, which *may* be able to do the same
 """
+
+Cast: TypeAlias = "ir.NamedIR[ir.Cast]"
 
 dtypes = Version.MAIN.dtypes
 
@@ -122,6 +125,54 @@ def _align_diagonal(
         return rp.SelectNames(input=plan, output_schema=union_freeze)
 
     return tuple(align(plan, schema) for plan, schema in zip(plans, schemas))
+
+
+def _get_supertype(left: DType, right: DType, *, error_message: str) -> DType | None:
+    """Placeholder for [#3396](https://github.com/narwhals-dev/narwhals/pull/3396)."""
+    msg = f"{error_message}\n\n{GET_SUPERTYPE_MSG}"
+    raise NotImplementedError(msg)
+
+
+def _join_supertypes(
+    left: FrozenSchema, right: FrozenSchema, left_on: Seq[str], right_on: Seq[str]
+) -> tuple[Seq[Cast], Seq[Cast]] | None:
+    """Supertyping + validating join key dtype match.
+
+    Adapted from [upstream].
+
+    If any casts were required (for either side), expressions for both sides are returned.
+
+    **However**, until we have [#3396] this function will always either return `None` or raise if
+    supertyping is required.
+
+    [upstream]: https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/conversion/dsl_to_ir/join.rs#L254-L319
+    [#3396]: https://github.com/narwhals-dev/narwhals/pull/3396
+    """
+    lhs_casts: deque[Cast] = deque()
+    rhs_casts: deque[Cast] = deque()
+    for lhs, rhs in zip(left_on, right_on):
+        lhs_dtype, rhs_dtype = left[lhs], right[rhs]
+        if lhs_dtype == rhs_dtype:
+            continue
+        error_message = f"Unable to join on columns with different dtypes:\n    {lhs}: {lhs_dtype}\n    {rhs}: {rhs_dtype}"
+        if supertype := _get_supertype(lhs_dtype, rhs_dtype, error_message=error_message):
+            if supertype != lhs_dtype:
+                lhs_casts.append(ir.named_ir(lhs, ir.col(lhs).cast(supertype)))
+            if supertype != rhs_dtype:
+                rhs_casts.append(ir.named_ir(rhs, ir.col(rhs).cast(supertype)))
+        else:
+            msg = f"datatypes of join keys don't match - {lhs}: {lhs_dtype} on left does not match {rhs}: {rhs_dtype} on right (and no other type was available to cast to)"
+            raise InvalidOperationError(msg)
+    if lhs_casts or rhs_casts:
+        return tuple(lhs_casts), tuple(rhs_casts)
+    return None
+
+
+def _with_supertypes(plan: rp.ResolvedPlan, casts: Seq[Cast]) -> rp.WithColumns:
+    schema = dict(plan.schema)
+    schema.update((e.name, e.expr.dtype) for e in casts)
+    # NOTE: https://discuss.python.org/t/make-replace-stop-interfering-with-variance-inference/96092
+    return rp.WithColumns(input=plan, exprs=casts, output_schema=freeze_schema(schema))  # type: ignore[arg-type]
 
 
 # - `to_alp` is called with empty (`expr_arena`, `lp_arena`) for the initial plan
@@ -244,22 +295,12 @@ class Resolver:
             msg = f"joining with repeated key names:\n{left_on=}\n{right_on=}"
             raise InvalidOperationError(msg)
 
-        # supertyping + validating join key dtype match: https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/conversion/dsl_to_ir/join.rs#L254-L319
-        opts = plan.options
-        how = plan.options.how
-        for lhs, rhs in zip(left_on, right_on):
-            lhs_dtype, rhs_dtype = schema_left[lhs], schema_right[rhs]
-            if lhs_dtype != rhs_dtype:
-                msg = "Unable to join on columns with different dtypes:\n"
-                f"    {lhs}: {lhs_dtype}\n"
-                f"    {rhs}: {rhs_dtype}\n\n{GET_SUPERTYPE_MSG}"
-                raise NotImplementedError(msg)
-
-        if how in {"anti", "semi"}:
+        supertype_casts = _join_supertypes(schema_left, schema_right, left_on, right_on)
+        if plan.options.how in {"anti", "semi"}:
             output_schema = schema_left
         else:
             new_schema = dict(schema_left)
-            suffix = opts.suffix
+            suffix = plan.options.suffix
             for name, dtype in schema_right.items():
                 new_name = name + suffix if name in schema_left else name
                 if new_name in new_schema:
@@ -268,11 +309,11 @@ class Resolver:
                 new_schema[new_name] = dtype
             output_schema = freeze_schema(new_schema)
 
-        if how == "full":
-            # NOTE: This check is late as we're missing a updates to the plans with any extra `with_columns` that were needed for supertyped coalesced nulls
-            # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/conversion/dsl_to_ir/join.rs#L387-L409
-            msg = f"`join({how=})` is not yet supported\n{GET_SUPERTYPE_MSG}"
-            raise NotImplementedError(msg)
+        if supertype_casts:
+            if casts_left := supertype_casts[0]:
+                input_left = _with_supertypes(input_left, casts_left)
+            if casts_right := supertype_casts[1]:
+                input_right = _with_supertypes(input_right, casts_right)
         return rp.Join(
             inputs=(input_left, input_right),
             left_on=left_on,
