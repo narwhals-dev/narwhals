@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from narwhals.typing import RollingInterpolationMethod
 
 
+# TODO @dangotbanned: `AggExpr._resolve_dtype` (+ many subclasses)
 class AggExpr(ExprIR, child=("expr",)):
     __slots__ = ("expr",)
     expr: ExprIR

@@ -10,6 +10,8 @@ from narwhals._plan.options import ExprIROptions
 if TYPE_CHECKING:
     from narwhals._compliant.typing import AliasName
     from narwhals._plan.expr import Expr
+    from narwhals._plan.schema import FrozenSchema
+    from narwhals.dtypes import DType
 
 
 class KeepName(ExprIR, child=("expr",), config=ExprIROptions.no_dispatch()):
@@ -23,6 +25,9 @@ class KeepName(ExprIR, child=("expr",), config=ExprIROptions.no_dispatch()):
     def __repr__(self) -> str:
         return f"{self.expr!r}.name.keep()"
 
+    def _resolve_dtype(self, schema: FrozenSchema) -> DType:
+        return self.expr._resolve_dtype(schema)
+
 
 class RenameAlias(ExprIR, child=("expr",), config=ExprIROptions.no_dispatch()):
     __slots__ = ("expr", "function")
@@ -35,6 +40,9 @@ class RenameAlias(ExprIR, child=("expr",), config=ExprIROptions.no_dispatch()):
 
     def __repr__(self) -> str:
         return f".rename_alias({self.expr!r})"
+
+    def _resolve_dtype(self, schema: FrozenSchema) -> DType:
+        return self.expr._resolve_dtype(schema)
 
 
 class Prefix(Immutable):

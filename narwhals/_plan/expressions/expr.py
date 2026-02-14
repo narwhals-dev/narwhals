@@ -84,6 +84,9 @@ class Alias(ExprIR, child=("expr",), config=ExprIROptions.no_dispatch()):
     def __repr__(self) -> str:
         return f"{self.expr!r}.alias({self.name!r})"
 
+    def _resolve_dtype(self, schema: FrozenSchema) -> DType:
+        return self.expr._resolve_dtype(schema)
+
 
 class Column(ExprIR, config=ExprIROptions.namespaced("col")):
     __slots__ = ("name",)
@@ -94,6 +97,9 @@ class Column(ExprIR, config=ExprIROptions.namespaced("col")):
 
     def to_selector_ir(self) -> RootSelector:
         return cs.ByName.from_name(self.name).to_selector_ir()
+
+    def _resolve_dtype(self, schema: FrozenSchema) -> DType:
+        return schema[self.name]
 
 
 class Literal(ExprIR, t.Generic[LiteralT], config=ExprIROptions.namespaced("lit")):
@@ -120,6 +126,9 @@ class Literal(ExprIR, t.Generic[LiteralT], config=ExprIROptions.namespaced("lit"
     def unwrap(self) -> LiteralT:
         return self.value.unwrap()
 
+    def _resolve_dtype(self, schema: FrozenSchema) -> DType:
+        return self.dtype
+
 
 class _BinaryOp(ExprIR, t.Generic[LeftT, OperatorT, RightT]):
     __slots__ = ("left", "op", "right")
@@ -135,6 +144,7 @@ class _BinaryOp(ExprIR, t.Generic[LeftT, OperatorT, RightT]):
         return f"[({self.left!r}) {self.op!r} ({self.right!r})]"
 
 
+# TODO @dangotbanned: `BinaryExpr._resolve_dtype`
 class BinaryExpr(
     _BinaryOp[LeftT, OperatorT, RightT],
     t.Generic[LeftT, OperatorT, RightT],
@@ -161,6 +171,9 @@ class Cast(ExprIR, child=("expr",)):
     def iter_output_name(self) -> t.Iterator[ExprIR]:
         yield from self.expr.iter_output_name()
 
+    def _resolve_dtype(self, schema: FrozenSchema) -> DType:
+        return self.dtype
+
 
 class Sort(ExprIR, child=("expr",)):
     __slots__ = ("expr", "options")
@@ -177,6 +190,9 @@ class Sort(ExprIR, child=("expr",)):
 
     def iter_output_name(self) -> t.Iterator[ExprIR]:
         yield from self.expr.iter_output_name()
+
+    def _resolve_dtype(self, schema: FrozenSchema) -> DType:
+        return self.expr._resolve_dtype(schema)
 
 
 class SortBy(ExprIR, child=("expr", "by")):
@@ -197,7 +213,11 @@ class SortBy(ExprIR, child=("expr", "by")):
     def iter_output_name(self) -> t.Iterator[ExprIR]:
         yield from self.expr.iter_output_name()
 
+    def _resolve_dtype(self, schema: FrozenSchema) -> DType:
+        return self.expr._resolve_dtype(schema)
 
+
+# TODO @dangotbanned: `FunctionExpr._resolve_dtype` (huge)
 # mypy: disable-error-code="misc"
 class FunctionExpr(ExprIR, t.Generic[FunctionT_co], child=("input",)):
     """**Representing `Expr::Function`**.
@@ -275,6 +295,7 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT_co], child=("input",)):
         return self.function.__expr_ir_dispatch__(self, ctx, frame, name)
 
 
+# TODO @dangotbanned: `FunctionExpr._resolve_dtype`
 class RollingExpr(FunctionExpr[RollingT_co]):
     def dispatch(
         self: Self, ctx: Ctx[FrameT_contra, R_co], frame: FrameT_contra, name: str
@@ -292,7 +313,13 @@ class AnonymousExpr(
     ) -> R_co:
         return self.__expr_ir_dispatch__(self, ctx, frame, name)
 
+    def _resolve_dtype(self, schema: FrozenSchema) -> DType:
+        if dtype := self.function.return_dtype:
+            return dtype
+        return super()._resolve_dtype(schema)
 
+
+# TODO @dangotbanned: `RangeExpr._resolve_dtype`
 class RangeExpr(FunctionExpr[RangeT_co]):
     """E.g. `int_range(...)`.
 
@@ -322,6 +349,7 @@ class RangeExpr(FunctionExpr[RangeT_co]):
         return f"{self.function!r}({list(self.input)!r})"
 
 
+# TODO @dangotbanned: `StructExpr._resolve_dtype`
 class StructExpr(FunctionExpr[StructT_co]):
     """E.g. `col("a").struct.field(...)`.
 
@@ -351,7 +379,11 @@ class Filter(ExprIR, child=("expr", "by")):
     def iter_output_name(self) -> t.Iterator[ExprIR]:
         yield from self.expr.iter_output_name()
 
+    def _resolve_dtype(self, schema: FrozenSchema) -> DType:
+        return self.expr._resolve_dtype(schema)
 
+
+# TODO @dangotbanned: `Over._resolve_dtype`
 class Over(ExprIR, child=("expr", "partition_by")):
     """A fully specified `.over()`, that occurred after another expression.
 
@@ -373,6 +405,7 @@ class Over(ExprIR, child=("expr", "partition_by")):
         yield from self.expr.iter_output_name()
 
 
+# TODO @dangotbanned: `OverOrdered._resolve_dtype`
 class OverOrdered(Over, child=("expr", "partition_by", "order_by")):
     __slots__ = ("order_by", "sort_options")
     expr: ExprIR
@@ -418,6 +451,7 @@ class Len(ExprIR, config=ExprIROptions.namespaced()):
         return IDX_DTYPE
 
 
+# TODO @dangotbanned: `TernaryExpr._resolve_dtype`
 class TernaryExpr(ExprIR, child=("truthy", "falsy", "predicate")):
     """When-Then-Otherwise."""
 
