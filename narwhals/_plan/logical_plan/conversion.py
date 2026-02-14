@@ -419,7 +419,12 @@ class Resolver:
     def scan_parquet_impl(self, plan: lp.ScanParquetImpl[lp.ImplT], /) -> rp.ScanParquet:
         return _scan_parquet(plan.source, plan.implementation)
 
-    select = todo()
+    # TODO @dangotbanned: Add a **limited version** of `expressions_to_schema`
+    def select(self, plan: lp.Select, /) -> rp.Select:
+        input = self.to_resolved(plan.input)
+        named_irs, input_schema = prepare_projection(plan.exprs, schema=input.schema)
+        output_schema = expressions_to_schema(named_irs, input_schema)
+        return rp.Select(input=input, exprs=named_irs, output_schema=output_schema)
 
     def select_names(self, plan: lp.SelectNames, /) -> rp.SelectNames:
         input = self.to_resolved(plan.input)
