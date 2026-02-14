@@ -350,7 +350,39 @@ class Resolver:
             function=rp.Unnest(columns=columns, output_schema=freeze_schema(schema)),
         )
 
-    unpivot = todo()
+    def unpivot(self, plan: lp.MapFunction[lp.Unpivot], /) -> rp.ResolvedPlan:
+        input = self.to_resolved(plan.input)
+        input_schema = input.schema
+        f = plan.function
+        opts = f.options
+        for nm in (opts.variable_name, opts.value_name):
+            if nm in input_schema:
+                msg = f"duplicate column name {nm!r}"
+                raise DuplicateError(msg)
+        index = expand_selector_irs_names(
+            (f.index,), schema=input_schema, require_any=True
+        )
+        if f.on:
+            on = expand_selector_irs_names((f.on,), schema=input_schema, require_any=True)
+        else:
+            on = tuple(nm for nm in input_schema if nm not in index)
+        schema = dict(input_schema)
+        on_dtypes: set[DType] = set()
+        for name in on:
+            on_dtypes.add(schema.pop(name))
+        schema[opts.variable_name] = dtypes.String()
+        if len(on_dtypes) == 1:
+            schema[opts.value_name] = on_dtypes.pop()
+        else:
+            # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/functions/schema.rs#L173-L179
+            msg = f"TODO: unpivot `output_schema` (multiple dtypes)\n{on_dtypes!r}\n\nRequires `get_supertype`"
+            raise NotImplementedError(msg)
+        return rp.MapFunction(
+            input=input,
+            function=rp.Unpivot(
+                on=on, index=index, options=opts, output_schema=freeze_schema(schema)
+            ),
+        )
 
     with_columns = todo()
 
