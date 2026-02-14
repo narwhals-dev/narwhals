@@ -86,9 +86,13 @@ def _align_diagonal(
     schemas: Iterable[FrozenSchema],
     union_schema: Mapping[str, DType],
 ) -> Seq[rp.ResolvedPlan]:
-    output_schema = freeze_schema(union_schema)
+    union_freeze = freeze_schema(union_schema)
     union_names = union_schema.keys()
     null_exprs: dict[str, NamedIR] = {}
+
+    # NOTE: Main difference from `AlignDiagonal` is adding a cache
+    # for intermediate schema changes for each `with_columns`
+    seen_schemas: dict[FrozenSchema, FrozenSchema] = {}
 
     def iter_missing_exprs(missing: Iterable[str]) -> Iterator[NamedIR]:
         nonlocal null_exprs
@@ -99,16 +103,20 @@ def _align_diagonal(
                 expr = null_exprs[name] = ir.named_ir(name, ir.lit(None, dtype))
             yield expr
 
-    def align(plan: rp.ResolvedPlan, columns: Iterable[str]) -> rp.ResolvedPlan:
-        # Even if all fields are present, we always reorder the columns to match between plans.
+    def align(plan: rp.ResolvedPlan, schema: FrozenSchema) -> rp.ResolvedPlan:
+        columns = schema.keys()
         if missing := union_names - columns:
+            nonlocal seen_schemas
             exprs = tuple(iter_missing_exprs(missing))
-            msg = 'TODO: `concat(how="diagonal")` (aligned `output_schema`)'
-            raise NotImplementedError(msg)
-            plan = rp.WithColumns(input=plan, exprs=exprs, output_schema=...)
-        return rp.SelectNames(input=plan, output_schema=output_schema)
+            if (output := seen_schemas.get(schema)) is None:
+                get = union_schema.__getitem__
+                output = seen_schemas[schema] = schema.with_columns(exprs, get)
+            plan = rp.WithColumns(input=plan, exprs=exprs, output_schema=output)
 
-    return tuple(align(plan, schema.keys()) for plan, schema in zip(plans, schemas))
+        # Even if all fields are present, we always reorder the columns to match between plans.
+        return rp.SelectNames(input=plan, output_schema=union_freeze)
+
+    return tuple(align(plan, schema) for plan, schema in zip(plans, schemas))
 
 
 # - `to_alp` is called with empty (`expr_arena`, `lp_arena`) for the initial plan
@@ -157,8 +165,6 @@ class Resolver:
                 raise DuplicateError(msg)
         return rp.HConcat(inputs=inputs, output_schema=freeze_schema(merged_schema))
 
-    # TODO @dangotbanned: `how="diagonal"` (Need aligned intermediate schemas for `WithColumns`)
-    # Come back to after adding `select`, `with_columns`
     def concat_vertical(self, plan: lp.VConcat, /) -> rp.VConcat:
         opts = plan.options
         inputs = tuple(self.to_resolved(input) for input in plan.inputs)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Collection, Mapping
+from collections.abc import Callable, Collection, Mapping
 from functools import lru_cache
 from itertools import chain
 from types import MappingProxyType
@@ -34,6 +34,8 @@ into a cache-safe proxy structure (`FrozenSchema`).
 FrozenColumns: TypeAlias = "Seq[str]"
 _FrozenSchemaHash: TypeAlias = "Seq[tuple[str, DType]]"
 _T2 = TypeVar("_T2")
+
+_unknown = Unknown()
 
 
 @final
@@ -75,8 +77,7 @@ class FrozenSchema(Immutable):
             - Any `cast` nodes are not reflected in the schema
         """
         names = (e.name for e in exprs)
-        default = Unknown()
-        return freeze_schema((name, self.get(name, default)) for name in names)
+        return freeze_schema((name, self.get(name, _unknown)) for name in names)
 
     def select_irs(self, exprs: Seq[NamedIR]) -> Seq[NamedIR]:
         return exprs
@@ -98,11 +99,26 @@ class FrozenSchema(Immutable):
                 raise column_not_found_error(names, self)
         return freeze_schema((name, self[name]) for name in names)
 
-    def with_columns(self, exprs: Seq[NamedIR]) -> FrozenSchema:  # pragma: no cover
-        # similar to `merge`, but preserving known `DType`s
+    def with_columns(
+        self,
+        exprs: Seq[NamedIR],
+        default: Callable[[str], DType | None] | Unknown = _unknown,
+        /,
+    ) -> FrozenSchema:  # pragma: no cover
+        """Similar to `merge`, but preserving known `DType`s.
+
+        When the incoming dtypes *at-least* partially known, `default` can be used to look them up:
+
+            incoming: Mapping[str, DType] = {}
+
+            partial = with_columns(exprs, incoming.get)
+            full = with_columns(exprs, incoming.__getitem__)
+        """
         names = (e.name for e in exprs)
-        default = Unknown()
-        miss = {name: default for name in names if name not in self}
+        if not isinstance(default, Unknown):
+            miss = {name: default(name) or _unknown for name in names if name not in self}
+        else:
+            miss = {name: _unknown for name in names if name not in self}
         return freeze_schema(self._mapping | miss)
 
     def with_columns_irs(self, exprs: Seq[NamedIR]) -> Seq[NamedIR]:
