@@ -322,7 +322,62 @@ class Resolver:
             output_schema=output_schema,
         )
 
-    join_asof = todo()
+    # TODO @dangotbanned: `should_coalesce`
+    #  - `polars.LazyFrame.join_asof(coalesce)` defaults to `True`
+    #  - `pyarrow.acero.AsofJoinNodeOptions` doesn't have a parameter for it
+    # TODO @dangotbanned: Convert the `continue` statements into negated `if` guards on the iterator
+    # Current form is mostly a direct translation from rust
+    def join_asof(self, plan: lp.JoinAsof, /) -> rp.ResolvedPlan:  # noqa: PLR0914
+        """Based mainly on [`schema::det_join_schema`].
+
+        [`schema::det_join_schema`]: https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/schema.rs#L109-L250
+        """
+        input_left, input_right = (self.to_resolved(input) for input in plan.inputs)
+        schema_left, schema_right = input_left.schema, input_right.schema
+        left_on, right_on = plan.left_on, plan.right_on
+        supertype_casts = _join_supertypes(
+            schema_left, schema_right, (left_on,), (right_on,)
+        )
+
+        # NOTE: default here is a placeholder to trigger the extra code
+        should_coalesce: bool = True
+        same_on = left_on == right_on
+        options = plan.options
+        right_by = frozenset(by.right_by) if (by := options.by) else frozenset[str]()
+        suffix = options.suffix
+        new_schema = dict(schema_left)
+        for name, dtype in schema_right.items():
+            if name in right_by:
+                # Asof join by columns are coalesced
+                # Do not add suffix. The column of the left table will be used
+                continue
+
+            if should_coalesce and name == right_on and same_on:
+                # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/schema.rs#L207-L224
+                # Handles coalescing of asof-joins.
+                # Asof joins are not equi-joins so the columns that are joined on, may have different values
+                # so if the right has a different name, it is added to the schema
+                continue
+
+            new_name = name + suffix if name in schema_left else name
+            if new_name in new_schema:
+                msg = f"column with name {new_name!r} already exists"
+                raise DuplicateError(msg)
+            new_schema[new_name] = dtype
+        output_schema = freeze_schema(new_schema)
+
+        if supertype_casts:
+            if casts_left := supertype_casts[0]:
+                input_left = _with_supertypes(input_left, casts_left)
+            if casts_right := supertype_casts[1]:
+                input_right = _with_supertypes(input_right, casts_right)
+        return rp.JoinAsof(
+            inputs=(input_left, input_right),
+            left_on=left_on,
+            right_on=right_on,
+            options=plan.options,
+            output_schema=output_schema,
+        )
 
     def map_function(self, plan: lp.MapFunction[lp.LpFunctionT_co], /) -> rp.ResolvedPlan:
         return plan.function.resolve(self, plan)
