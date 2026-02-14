@@ -280,7 +280,7 @@ class Resolver:
 
     group_by = todo()
 
-    def join(self, plan: lp.Join, /) -> rp.ResolvedPlan:
+    def join(self, plan: lp.Join, /) -> rp.Join:
         """Very stripped down, partial impl of [`join::resolve_join`].
 
         See also [`schema::det_join_schema`].
@@ -325,7 +325,7 @@ class Resolver:
     # TODO @dangotbanned: `should_coalesce`
     #  - `polars.LazyFrame.join_asof(coalesce)` defaults to `True`
     #  - `pyarrow.acero.AsofJoinNodeOptions` doesn't have a parameter for it
-    def join_asof(self, plan: lp.JoinAsof, /) -> rp.ResolvedPlan:
+    def join_asof(self, plan: lp.JoinAsof, /) -> rp.JoinAsof:
         """Based mainly on [`schema::det_join_schema`].
 
         [`schema::det_join_schema`]: https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/schema.rs#L109-L250
