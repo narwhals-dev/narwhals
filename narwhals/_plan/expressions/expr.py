@@ -6,7 +6,7 @@ import typing as t
 from typing import TYPE_CHECKING
 
 from narwhals._plan._expr_ir import ExprIR, SelectorIR
-from narwhals._plan.common import replace
+from narwhals._plan.common import IDX_DTYPE, replace
 from narwhals._plan.exceptions import (
     function_expr_invalid_operation_error,
     over_order_by_names_error,
@@ -413,6 +413,9 @@ class Len(ExprIR, config=ExprIROptions.namespaced()):
 
     def __repr__(self) -> str:
         return "len()"
+
+    def _resolve_dtype(self, schema: FrozenSchema) -> DType:
+        return IDX_DTYPE
 
 
 class TernaryExpr(ExprIR, child=("truthy", "falsy", "predicate")):

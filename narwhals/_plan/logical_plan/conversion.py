@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, Any
 
 from narwhals._plan import expressions as ir
 from narwhals._plan._expansion import expand_selector_irs_names, prepare_projection
-from narwhals._plan.common import todo
+from narwhals._plan.common import IDX_DTYPE, todo
 from narwhals._plan.exceptions import (
     column_not_found_error,
     invalid_dtype_operation_error,
@@ -542,10 +542,7 @@ class Resolver:
         output_schema = input_schema.with_columns_resolved(named_irs)
         return rp.WithColumns(input=input, exprs=named_irs, output_schema=output_schema)
 
-    # TODO @dangotbanned: Unify `DType` to either:
-    # - UInt32 (polars excluding `bigidx`)
-    # - UInt64 (pyarrow in some cases)
-    # - Int64 (most backends)
+    # TODO @dangotbanned: Unify `IDX_DTYPE` to either:
     def with_row_index(self, plan: lp.MapFunction[lp.RowIndex], /) -> rp.ResolvedPlan:
         input = self.to_resolved(plan.input)
         input_schema = input.schema
@@ -553,7 +550,7 @@ class Resolver:
         if name in input_schema:
             msg = f"Duplicate column name {name!r}"
             raise DuplicateError(msg)
-        output_schema = freeze_schema({name: dtypes.Int64()} | input_schema._mapping)
+        output_schema = freeze_schema({name: IDX_DTYPE} | input_schema._mapping)
         return rp.MapFunction(
             input=input, function=rp.RowIndex(name=name, output_schema=output_schema)
         )

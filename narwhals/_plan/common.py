@@ -49,6 +49,18 @@ else:  # pragma: no cover
         return func(obj, **changes)  # type: ignore[no-any-return]
 
 
+IDX_DTYPE = Version.MAIN.dtypes.Int64()
+"""TODO @dangotbanned: Unify `IDX_DTYPE` as backends are mixed:
+
+- UInt32 ([polars] excluding `bigidx`)
+- UInt64 ([pyarrow] in some cases)
+- Int64 (most backends)
+
+[polars]: https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-core/src/datatypes/aliases.rs#L14
+[pyarrow]: https://github.com/narwhals-dev/narwhals/blob/bbc5d4492667eb3b9a364caba35e51308c86cf7d/narwhals/_arrow/dataframe.py#L534-L547
+"""
+
+
 def py_to_narwhals_dtype(obj: NonNestedLiteral, version: Version = Version.MAIN) -> DType:
     dtypes = version.dtypes
     mapping: dict[type[NonNestedLiteral], type[NonNestedDType]] = {
