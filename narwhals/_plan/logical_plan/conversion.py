@@ -51,6 +51,11 @@ Either:
 
 dtypes = Version.MAIN.dtypes
 
+GET_SUPERTYPE_MSG = (
+    "This operation requires `get_supertype` to determine if a valid cast exists.\n"
+    "https://github.com/narwhals-dev/narwhals/pull/3396)"
+)
+
 
 # TODO @dangotbanned: Very big item
 # `AExpr.to_field_impl`: https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/schema.rs#L45-L390
@@ -224,7 +229,57 @@ class Resolver:
 
     group_by = todo()
 
-    join = todo()
+    def join(self, plan: lp.Join, /) -> rp.ResolvedPlan:
+        """Very stripped down, partial impl of [`join::resolve_join`].
+
+        See also [`schema::det_join_schema`].
+
+        [`join::resolve_join`]: https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/conversion/dsl_to_ir/join.rs#L27-L441
+        [`schema::det_join_schema`]: https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/schema.rs#L109-L250
+        """
+        input_left, input_right = (self.to_resolved(input) for input in plan.inputs)
+        schema_left, schema_right = input_left.schema, input_right.schema
+        left_on, right_on = plan.left_on, plan.right_on
+        if len(set(zip_strict(left_on, right_on))) != len(left_on):
+            msg = f"joining with repeated key names:\n{left_on=}\n{right_on=}"
+            raise InvalidOperationError(msg)
+
+        # supertyping + validating join key dtype match: https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/conversion/dsl_to_ir/join.rs#L254-L319
+        opts = plan.options
+        how = plan.options.how
+        for lhs, rhs in zip(left_on, right_on):
+            lhs_dtype, rhs_dtype = schema_left[lhs], schema_right[rhs]
+            if lhs_dtype != rhs_dtype:
+                msg = "Unable to join on columns with different dtypes:\n"
+                f"    {lhs}: {lhs_dtype}\n"
+                f"    {rhs}: {rhs_dtype}\n\n{GET_SUPERTYPE_MSG}"
+                raise NotImplementedError(msg)
+
+        if how in {"anti", "semi"}:
+            output_schema = schema_left
+        else:
+            new_schema = dict(schema_left)
+            suffix = opts.suffix
+            for name, dtype in schema_right.items():
+                new_name = name + suffix if name in schema_left else name
+                if new_name in new_schema:
+                    msg = f"column with name {new_name!r} already exists"
+                    raise DuplicateError(msg)
+                new_schema[new_name] = dtype
+            output_schema = freeze_schema(new_schema)
+
+        if how == "full":
+            # NOTE: This check is late as we're missing a updates to the plans with any extra `with_columns` that were needed for supertyped coalesced nulls
+            # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/conversion/dsl_to_ir/join.rs#L387-L409
+            msg = f"`join({how=})` is not yet supported\n{GET_SUPERTYPE_MSG}"
+            raise NotImplementedError(msg)
+        return rp.Join(
+            inputs=(input_left, input_right),
+            left_on=left_on,
+            right_on=right_on,
+            options=plan.options,
+            output_schema=output_schema,
+        )
 
     join_asof = todo()
 
