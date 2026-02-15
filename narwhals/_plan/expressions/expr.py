@@ -325,7 +325,6 @@ class AnonymousExpr(
         return super()._resolve_dtype(schema)
 
 
-# TODO @dangotbanned: `RangeExpr._resolve_dtype`
 class RangeExpr(FunctionExpr[RangeT_co]):
     """E.g. `int_range(...)`.
 
