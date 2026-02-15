@@ -144,7 +144,6 @@ class _BinaryOp(ExprIR, t.Generic[LeftT, OperatorT, RightT]):
         return f"[({self.left!r}) {self.op!r} ({self.right!r})]"
 
 
-# TODO @dangotbanned: `BinaryExpr._resolve_dtype`
 class BinaryExpr(
     _BinaryOp[LeftT, OperatorT, RightT],
     t.Generic[LeftT, OperatorT, RightT],
@@ -154,6 +153,9 @@ class BinaryExpr(
 
     def iter_output_name(self) -> t.Iterator[ExprIR]:
         yield from self.left.iter_output_name()
+
+    def _resolve_dtype(self, schema: FrozenSchema) -> DType:
+        return self.op._resolve_dtype(schema, self.left, self.right)
 
 
 class Cast(ExprIR, child=("expr",)):
@@ -352,7 +354,6 @@ class RangeExpr(FunctionExpr[RangeT_co]):
         return f"{self.function!r}({list(self.input)!r})"
 
 
-# TODO @dangotbanned: `StructExpr._resolve_dtype`
 class StructExpr(FunctionExpr[StructT_co]):
     """E.g. `col("a").struct.field(...)`.
 
