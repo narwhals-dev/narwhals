@@ -21,11 +21,12 @@ def run_common(session: Session, coverage_threshold: float) -> None:
     else:
         session.install("-e .[dask,modin,pyspark,ibis] --group dev-core --group extra")
 
+    session.install("-e", "narwhals-testing/.")
     session.run(
         "pytest",
-        "tests",
+        "narwhals-testing/narwhals_testing/tests",
         "--cov=narwhals",
-        "--cov=tests",
+        "--cov=narwhals-testing/narwhals_testing/tests",
         f"--cov-fail-under={coverage_threshold}",
         "--runslow",
     )

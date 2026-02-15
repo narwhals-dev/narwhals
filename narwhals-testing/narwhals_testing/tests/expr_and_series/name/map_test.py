@@ -1,0 +1,36 @@
+from __future__ import annotations
+
+import pytest
+from tests.utils import POLARS_VERSION, Constructor, assert_equal_data
+
+import narwhals as nw
+
+data = {"foo": [1, 2, 3], "BAR": [4, 5, 6]}
+
+
+def map_func(s: str | None) -> str:
+    return str(s)[::-1].lower()
+
+
+def test_map(constructor: Constructor) -> None:
+    df = nw.from_native(constructor(data))
+    result = df.select((nw.col("foo", "BAR") * 2).name.map(function=map_func))
+    expected = {"oof": [2, 4, 6], "rab": [8, 10, 12]}
+    assert_equal_data(result, expected)
+
+
+def test_map_after_alias(constructor: Constructor) -> None:
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 32):
+        pytest.skip(reason="https://github.com/pola-rs/polars/issues/23765")
+    df = nw.from_native(constructor(data))
+    result = df.select((nw.col("foo")).alias("alias_for_foo").name.map(function=map_func))
+    expected = {"oof_rof_saila": data["foo"]}
+    assert_equal_data(result, expected)
+
+
+def test_map_anonymous(constructor: Constructor) -> None:
+    df_raw = constructor(data)
+    df = nw.from_native(df_raw)
+    result = df.select(nw.all().name.map(function=map_func))
+    expected = {"oof": [1, 2, 3], "rab": [4, 5, 6]}
+    assert_equal_data(result, expected)
