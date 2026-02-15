@@ -383,7 +383,6 @@ class Filter(ExprIR, child=("expr", "by")):
         return self.expr._resolve_dtype(schema)
 
 
-# TODO @dangotbanned: `Over._resolve_dtype`
 class Over(ExprIR, child=("expr", "partition_by")):
     """A fully specified `.over()`, that occurred after another expression.
 
@@ -404,8 +403,10 @@ class Over(ExprIR, child=("expr", "partition_by")):
     def iter_output_name(self) -> t.Iterator[ExprIR]:
         yield from self.expr.iter_output_name()
 
+    def _resolve_dtype(self, schema: FrozenSchema) -> DType:
+        return self.expr._resolve_dtype(schema)
 
-# TODO @dangotbanned: `OverOrdered._resolve_dtype`
+
 class OverOrdered(Over, child=("expr", "partition_by", "order_by")):
     __slots__ = ("order_by", "sort_options")
     expr: ExprIR
