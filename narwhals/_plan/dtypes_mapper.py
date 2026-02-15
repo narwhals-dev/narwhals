@@ -38,6 +38,7 @@ IDX_DTYPE = I64
 """
 
 BOOLEAN_DTYPE = dtypes.Boolean()
+STRING_DTYPE = String()
 
 
 def map_dtype(

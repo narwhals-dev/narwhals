@@ -2,16 +2,22 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
+import narwhals._plan.dtypes_mapper as dtm
 from narwhals._plan._function import Function
 from narwhals._plan.expressions.namespace import ExprNamespace, IRNamespace
 
 if TYPE_CHECKING:
     from narwhals._plan.expr import Expr
+    from narwhals._plan.expressions.expr import FunctionExpr as FExpr
+    from narwhals._plan.schema import FrozenSchema
+    from narwhals.dtypes import DType
 
 
 # fmt: off
 class CategoricalFunction(Function, accessor="cat"): ...
-class GetCategories(CategoricalFunction): ...
+class GetCategories(CategoricalFunction):
+    def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
+        return dtm.STRING_DTYPE
 # fmt: on
 class IRCatNamespace(IRNamespace):
     get_categories: ClassVar = GetCategories
