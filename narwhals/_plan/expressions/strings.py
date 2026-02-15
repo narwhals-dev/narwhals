@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
+import narwhals._plan.dtypes_mapper as dtm
 from narwhals._plan._function import Function, HorizontalFunction
 from narwhals._plan._parse import parse_into_expr_ir
 from narwhals._plan.expressions.namespace import ExprNamespace, IRNamespace
@@ -12,33 +13,47 @@ if TYPE_CHECKING:
 
     from narwhals._plan.expr import Expr
     from narwhals._plan.expressions import ExprIR, FunctionExpr as FExpr
+    from narwhals._plan.schema import FrozenSchema
+    from narwhals.dtypes import DType
 
 
 # fmt: off
 class StringFunction(Function, accessor="str", options=FunctionOptions.elementwise): ...
-class LenChars(StringFunction): ...
-class ToLowercase(StringFunction): ...
-class ToUppercase(StringFunction): ...
-class ToTitlecase(StringFunction): ...
+class _StringSame(StringFunction):
+    # e.g. call this on a string-like type and that type is preserved
+    def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
+        return node.input[0]._resolve_dtype(schema)
+class _StringBoolean(StringFunction):
+    def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
+        return dtm.BOOLEAN_DTYPE
+class LenChars(StringFunction):
+    def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
+        return dtm.U32
+class ToLowercase(_StringSame): ...
+class ToUppercase(_StringSame): ...
+class ToTitlecase(_StringSame): ...
 # fmt: on
 class ConcatStr(HorizontalFunction, StringFunction):
     __slots__ = ("ignore_nulls", "separator")
     separator: str
     ignore_nulls: bool
 
+    def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
+        return dtm.STRING_DTYPE
 
-class Contains(StringFunction):
+
+class Contains(_StringBoolean):
     __slots__ = ("literal", "pattern")
     pattern: str
     literal: bool
 
 
-class EndsWith(StringFunction):
+class EndsWith(_StringBoolean):
     __slots__ = ("suffix",)
     suffix: str
 
 
-class Replace(StringFunction):
+class Replace(_StringSame):
     """N-ary (expr, value)."""
 
     def unwrap_input(self, node: FExpr[Self], /) -> tuple[ExprIR, ExprIR]:
@@ -51,7 +66,7 @@ class Replace(StringFunction):
     n: int
 
 
-class ReplaceAll(StringFunction):
+class ReplaceAll(_StringSame):
     """N-ary (expr, value)."""
 
     def unwrap_input(
@@ -68,7 +83,7 @@ class ReplaceAll(StringFunction):
     literal: bool
 
 
-class Slice(StringFunction):
+class Slice(_StringSame):
     __slots__ = ("length", "offset")
     offset: int
     length: int | None
@@ -78,13 +93,16 @@ class Split(StringFunction):
     __slots__ = ("by",)
     by: str
 
+    def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
+        return dtm.dtypes.List(dtm.STRING_DTYPE)
 
-class StartsWith(StringFunction):
+
+class StartsWith(_StringBoolean):
     __slots__ = ("prefix",)
     prefix: str
 
 
-class StripChars(StringFunction):
+class StripChars(_StringSame):
     __slots__ = ("characters",)
     characters: str | None
 
@@ -93,13 +111,22 @@ class ToDate(StringFunction):
     __slots__ = ("format",)
     format: str | None
 
+    def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
+        return dtm.DATE_DTYPE
 
+
+# TODO @dangotbanned: `_resolve_dtype`
 class ToDatetime(StringFunction):
     __slots__ = ("format",)
     format: str | None
 
+    def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
+        msg = "TODO: Get @MarcoGorelli's opinion on `str.to_datetime` resolve_dtype.\n\n"
+        "Can we work with (one of) `format: str | None`?"
+        raise NotImplementedError(msg)
 
-class ZFill(StringFunction, config=FEOptions.renamed("zfill")):
+
+class ZFill(_StringSame, config=FEOptions.renamed("zfill")):
     __slots__ = ("length",)
     length: int
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import narwhals._plan.dtypes_mapper as dtm
 from narwhals._plan._function import Function
 from narwhals._plan.options import FEOptions, FunctionOptions
 from narwhals._utils import Version
@@ -16,7 +17,6 @@ if TYPE_CHECKING:
     from narwhals.typing import ClosedInterval
 
 dtypes = Version.MAIN.dtypes
-DATE = dtypes.Date()
 _FLOAT_32 = dtypes.Float32
 F64 = dtypes.Float64()
 
@@ -51,7 +51,7 @@ class DateRange(RangeFunction, options=FunctionOptions.row_separable):
     closed: ClosedInterval
 
     def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Function]) -> DType:
-        return DATE
+        return dtm.DATE_DTYPE
 
 
 class LinearSpace(RangeFunction, options=FunctionOptions.row_separable):

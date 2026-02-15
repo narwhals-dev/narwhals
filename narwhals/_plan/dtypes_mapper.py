@@ -25,6 +25,7 @@ _INVALID_VAR = dtypes.Duration
 _INVALID_SUM = String, Binary, List, Array, Struct
 
 I64 = dtypes.Int64()
+U32 = dtypes.UInt32()
 
 IDX_DTYPE = I64
 """TODO @dangotbanned: Unify `IDX_DTYPE` as backends are mixed:
@@ -39,6 +40,7 @@ IDX_DTYPE = I64
 
 BOOLEAN_DTYPE = dtypes.Boolean()
 STRING_DTYPE = String()
+DATE_DTYPE = dtypes.Date()
 
 
 def map_dtype(
