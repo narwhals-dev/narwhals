@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import narwhals._plan.dtypes_mapper as dtm
 from narwhals._plan._function import Function, HorizontalFunction
 from narwhals._plan.exceptions import hist_bins_monotonic_error
 from narwhals._plan.options import FunctionFlags, FunctionOptions
@@ -18,6 +19,7 @@ if TYPE_CHECKING:
     from narwhals._plan._expr_ir import ExprIR
     from narwhals._plan.expressions.expr import AnonymousExpr, FunctionExpr, RollingExpr
     from narwhals._plan.options import EWMOptions, RankOptions, RollingOptionsFixedWindow
+    from narwhals._plan.schema import FrozenSchema
     from narwhals._plan.typing import Seq, Udf
     from narwhals.dtypes import DType
     from narwhals.typing import FillNullStrategy
@@ -37,6 +39,14 @@ class RollingWindow(Function, options=FunctionOptions.length_preserving):
 
         options = self.function_options
         return RollingExpr(input=inputs, function=self, options=options)
+
+    def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Function]) -> DType:
+        return {
+            RollingSum: dtm.sum_dtype,
+            RollingMean: dtm.moment_dtype,
+            RollingVar: dtm.var_dtype,
+            RollingStd: dtm.moment_dtype,
+        }[type(self)](node.input[0]._resolve_dtype(schema))
 
 
 # fmt: off

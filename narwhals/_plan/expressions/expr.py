@@ -301,7 +301,6 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT_co], child=("input",)):
         return self.function._resolve_dtype(schema, self)
 
 
-# TODO @dangotbanned: `FunctionExpr._resolve_dtype`
 class RollingExpr(FunctionExpr[RollingT_co]):
     def dispatch(
         self: Self, ctx: Ctx[FrameT_contra, R_co], frame: FrameT_contra, name: str
