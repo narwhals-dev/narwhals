@@ -85,9 +85,6 @@ class Alias(ExprIR, child=("expr",), config=ExprIROptions.no_dispatch()):
     def __repr__(self) -> str:
         return f"{self.expr!r}.alias({self.name!r})"
 
-    def _resolve_dtype(self, schema: FrozenSchema) -> DType:
-        return resolve_dtype_root(self, schema)
-
 
 class Column(ExprIR, config=ExprIROptions.namespaced("col")):
     __slots__ = ("name",)

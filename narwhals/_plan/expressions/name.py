@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals._plan._expr_ir import ExprIR, resolve_dtype_root
+from narwhals._plan._expr_ir import ExprIR
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.expressions.namespace import ExprNamespace, IRNamespace
 from narwhals._plan.options import ExprIROptions
@@ -10,8 +10,6 @@ from narwhals._plan.options import ExprIROptions
 if TYPE_CHECKING:
     from narwhals._compliant.typing import AliasName
     from narwhals._plan.expr import Expr
-    from narwhals._plan.schema import FrozenSchema
-    from narwhals.dtypes import DType
 
 
 class KeepName(ExprIR, child=("expr",), config=ExprIROptions.no_dispatch()):
@@ -25,9 +23,6 @@ class KeepName(ExprIR, child=("expr",), config=ExprIROptions.no_dispatch()):
     def __repr__(self) -> str:
         return f"{self.expr!r}.name.keep()"
 
-    def _resolve_dtype(self, schema: FrozenSchema) -> DType:
-        return resolve_dtype_root(self, schema)
-
 
 class RenameAlias(ExprIR, child=("expr",), config=ExprIROptions.no_dispatch()):
     __slots__ = ("expr", "function")
@@ -40,9 +35,6 @@ class RenameAlias(ExprIR, child=("expr",), config=ExprIROptions.no_dispatch()):
 
     def __repr__(self) -> str:
         return f".rename_alias({self.expr!r})"
-
-    def _resolve_dtype(self, schema: FrozenSchema) -> DType:
-        return resolve_dtype_root(self, schema)
 
 
 class Prefix(Immutable):
