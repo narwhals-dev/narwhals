@@ -294,6 +294,9 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT_co], child=("input",)):
     ) -> R_co:
         return self.function.__expr_ir_dispatch__(self, ctx, frame, name)
 
+    def _resolve_dtype(self, schema: FrozenSchema) -> DType:
+        return self.function._resolve_dtype(schema, self)
+
 
 # TODO @dangotbanned: `FunctionExpr._resolve_dtype`
 class RollingExpr(FunctionExpr[RollingT_co]):

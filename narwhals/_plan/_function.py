@@ -13,7 +13,9 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._plan.expressions import ExprIR, FunctionExpr
+    from narwhals._plan.schema import FrozenSchema
     from narwhals._plan.typing import Accessor
+    from narwhals.dtypes import DType
 
 __all__ = ["Function", "HorizontalFunction"]
 
@@ -62,6 +64,13 @@ class Function(Immutable):
 
     def __repr__(self) -> str:
         return self.__expr_ir_dispatch__.name
+
+    # TODO @dangotbanned: Try to avoid a contravariant (`Self` or `Function`)
+    # Makes things complicated in the namespaces, which can only use
+    # `FunctionExpr[FunctionT_co]` *because* it is a return type
+    def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Function]) -> DType:
+        msg = f"`NamedIR[{type(node).__name__}[{type(self).__name__}]].resolve_dtype()` is not yet implemented:\n{node!r}"
+        raise NotImplementedError(msg)
 
 
 class HorizontalFunction(

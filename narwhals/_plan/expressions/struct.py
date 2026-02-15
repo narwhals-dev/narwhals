@@ -3,15 +3,22 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, ClassVar
 
 from narwhals._plan._function import Function
+from narwhals._plan.common import into_dtype
 from narwhals._plan.expressions.namespace import ExprNamespace, IRNamespace
 from narwhals._plan.options import FEOptions, FunctionOptions
+from narwhals._utils import Version
+from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._plan._expr_ir import ExprIR
     from narwhals._plan.expr import Expr
-    from narwhals._plan.expressions.expr import StructExpr
+    from narwhals._plan.expressions.expr import FunctionExpr, StructExpr
+    from narwhals._plan.schema import FrozenSchema
+    from narwhals.dtypes import DType, Field, Struct
+
+STRUCT = Version.MAIN.dtypes.Struct
 
 
 class StructFunction(Function, accessor="struct"):
@@ -38,6 +45,22 @@ class FieldByName(
     @property
     def needs_expansion(self) -> bool:
         return True
+
+    def _field(self, dtype: Struct) -> Field:
+        if field := next((f for f in dtype.fields if f.name == self.name), None):
+            return field
+        msg = f"Struct field not found {self.name!r}"
+        raise InvalidOperationError(msg)
+
+    def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Function]) -> DType:
+        if (
+            (struct_name := node.input[0].meta.output_name(raise_if_undetermined=False))
+            and (struct := schema.get(struct_name))
+            and isinstance(struct, STRUCT)
+        ):
+            return into_dtype(self._field(struct).dtype)
+        msg = f"Struct field not found {self.name!r}"
+        raise InvalidOperationError(msg)
 
 
 class IRStructNamespace(IRNamespace):
