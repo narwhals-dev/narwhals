@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 from narwhals._plan._guards import is_function_expr
 from narwhals._plan._immutable import Immutable
-from narwhals._plan.common import BOOLEAN_DTYPE
+from narwhals._plan.dtypes_mapper import BOOLEAN_DTYPE
 from narwhals._plan.exceptions import (
     binary_expr_length_changing_error,
     binary_expr_shape_error,

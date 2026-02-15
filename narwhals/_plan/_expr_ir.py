@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Generic
+from typing import TYPE_CHECKING, Generic, Protocol
 
 from narwhals._plan._dispatch import Dispatcher
 from narwhals._plan._guards import is_function_expr, is_literal
@@ -336,3 +336,13 @@ class NamedIR(Immutable, Generic[ExprIRT]):
 
 def named_ir(name: str, expr: ExprIRT, /) -> NamedIR[ExprIRT]:
     return NamedIR(expr=expr, name=name)
+
+
+class _HasChildExpr(Protocol):
+    @property
+    def expr(self) -> ExprIR: ...
+
+
+# TODO @dangotbanned: Make this an `ExprIR.__init_subclass__` option?
+def resolve_dtype_root(expr: _HasChildExpr, schema: FrozenSchema, /) -> DType:
+    return expr.expr._resolve_dtype(schema)

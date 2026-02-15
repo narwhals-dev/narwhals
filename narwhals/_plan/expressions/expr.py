@@ -5,8 +5,9 @@ from __future__ import annotations
 import typing as t
 from typing import TYPE_CHECKING
 
-from narwhals._plan._expr_ir import ExprIR, SelectorIR
-from narwhals._plan.common import IDX_DTYPE, replace
+from narwhals._plan._expr_ir import ExprIR, SelectorIR, resolve_dtype_root
+from narwhals._plan.common import replace
+from narwhals._plan.dtypes_mapper import IDX_DTYPE
 from narwhals._plan.exceptions import (
     function_expr_invalid_operation_error,
     over_order_by_names_error,
@@ -85,7 +86,7 @@ class Alias(ExprIR, child=("expr",), config=ExprIROptions.no_dispatch()):
         return f"{self.expr!r}.alias({self.name!r})"
 
     def _resolve_dtype(self, schema: FrozenSchema) -> DType:
-        return self.expr._resolve_dtype(schema)
+        return resolve_dtype_root(self, schema)
 
 
 class Column(ExprIR, config=ExprIROptions.namespaced("col")):
@@ -194,7 +195,7 @@ class Sort(ExprIR, child=("expr",)):
         yield from self.expr.iter_output_name()
 
     def _resolve_dtype(self, schema: FrozenSchema) -> DType:
-        return self.expr._resolve_dtype(schema)
+        return resolve_dtype_root(self, schema)
 
 
 class SortBy(ExprIR, child=("expr", "by")):
@@ -216,7 +217,7 @@ class SortBy(ExprIR, child=("expr", "by")):
         yield from self.expr.iter_output_name()
 
     def _resolve_dtype(self, schema: FrozenSchema) -> DType:
-        return self.expr._resolve_dtype(schema)
+        return resolve_dtype_root(self, schema)
 
 
 # TODO @dangotbanned: `FunctionExpr._resolve_dtype` (huge)
@@ -384,7 +385,7 @@ class Filter(ExprIR, child=("expr", "by")):
         yield from self.expr.iter_output_name()
 
     def _resolve_dtype(self, schema: FrozenSchema) -> DType:
-        return self.expr._resolve_dtype(schema)
+        return resolve_dtype_root(self, schema)
 
 
 class Over(ExprIR, child=("expr", "partition_by")):
@@ -408,7 +409,7 @@ class Over(ExprIR, child=("expr", "partition_by")):
         yield from self.expr.iter_output_name()
 
     def _resolve_dtype(self, schema: FrozenSchema) -> DType:
-        return self.expr._resolve_dtype(schema)
+        return resolve_dtype_root(self, schema)
 
 
 class OverOrdered(Over, child=("expr", "partition_by", "order_by")):

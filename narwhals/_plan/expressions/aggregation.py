@@ -2,16 +2,18 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from narwhals._plan._expr_ir import ExprIR
+import narwhals._plan.dtypes_mapper as dtm
+from narwhals._plan._expr_ir import ExprIR, resolve_dtype_root
 from narwhals._plan.exceptions import agg_scalar_error
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
+    from narwhals._plan.schema import FrozenSchema
+    from narwhals.dtypes import DType
     from narwhals.typing import RollingInterpolationMethod
 
 
-# TODO @dangotbanned: `AggExpr._resolve_dtype` (+ many subclasses)
 class AggExpr(ExprIR, child=("expr",)):
     __slots__ = ("expr",)
     expr: ExprIR
@@ -25,6 +27,21 @@ class AggExpr(ExprIR, child=("expr",)):
 
     def iter_output_name(self) -> Iterator[ExprIR]:
         yield from self.expr.iter_output_name()
+
+    def _resolve_dtype(self, schema: FrozenSchema) -> DType:
+        tp = type(self)
+        if tp in {NUnique, Count, Len, ArgMin, ArgMax}:
+            return dtm.IDX_DTYPE
+        dtype = resolve_dtype_root(self, schema)
+        if tp in {Max, Min, First, Last}:
+            return dtype
+        if tp is Sum:
+            return dtm.sum_dtype(dtype)
+        if tp in {Median, Mean, Std, Quantile}:
+            return dtm.moment_dtype(dtype)
+        if tp is Var:
+            return dtm.var_dtype(dtype)
+        return super()._resolve_dtype(schema)
 
     # NOTE: Interacting badly with `pyright` synthesizing the `__replace__` signature
     if not TYPE_CHECKING:

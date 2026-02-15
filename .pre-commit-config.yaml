@@ -108,7 +108,8 @@ repos:
             narwhals/_plan/functions\.py|
             narwhals/_plan/expressions/ranges\.py|
             narwhals/_plan/schema\.py|
-            narwhals/_plan/expressions/selectors\.py
+            narwhals/_plan/expressions/selectors\.py|
+            narwhals/_plan/dtype.*\.py
           )
     - id: pull-request-target
       name: don't use `pull_request_target`

@@ -299,9 +299,11 @@ def unsupported_backend_operation_error(
 def invalid_dtype_operation_error(
     dtype: IntoDType, method_name: str, *expected: DType | type[DType]
 ) -> InvalidOperationError:  # pragma: no cover
-    if len(expected) == 1:
-        allow = f"{expected[0]}"
-    else:
-        allow = " or ".join(str(tp) for tp in expected)
-    msg = f"`{method_name}` operation is not supported for dtype `{dtype}`, expected {allow} type"
+    msg = f"`{method_name}` operation is not supported for dtype `{dtype}`"
+    if expected:
+        if len(expected) == 1:
+            allow = f"{expected[0]}"
+        else:
+            allow = " or ".join(str(tp) for tp in expected)
+        msg = f"{msg}, expected {allow} type"
     return InvalidOperationError(msg)

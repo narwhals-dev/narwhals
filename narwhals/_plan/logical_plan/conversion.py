@@ -16,7 +16,8 @@ from typing import TYPE_CHECKING, Any
 
 from narwhals._plan import expressions as ir
 from narwhals._plan._expansion import expand_selector_irs_names, prepare_projection
-from narwhals._plan.common import IDX_DTYPE, todo
+from narwhals._plan.common import todo
+from narwhals._plan.dtypes_mapper import IDX_DTYPE
 from narwhals._plan.exceptions import (
     column_not_found_error,
     invalid_dtype_operation_error,
