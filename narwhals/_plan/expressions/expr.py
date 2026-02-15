@@ -455,7 +455,6 @@ class Len(ExprIR, config=ExprIROptions.namespaced()):
         return IDX_DTYPE
 
 
-# TODO @dangotbanned: `TernaryExpr._resolve_dtype`
 class TernaryExpr(ExprIR, child=("truthy", "falsy", "predicate")):
     """When-Then-Otherwise."""
 
@@ -475,6 +474,14 @@ class TernaryExpr(ExprIR, child=("truthy", "falsy", "predicate")):
 
     def iter_output_name(self) -> t.Iterator[ExprIR]:
         yield from self.truthy.iter_output_name()
+
+    def _resolve_dtype(self, schema: FrozenSchema) -> DType:
+        msg = f"Unable to resolve dtype for {(type(self).__name__)!r}:\n{self!r}\n\n"
+        "Requires `get_supertype` and `nw.Null`:\n"
+        " - https://github.com/narwhals-dev/narwhals/issues/2835\n"
+        " - https://github.com/narwhals-dev/narwhals/pull/3396\n\n"
+        "See Also: https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/schema.rs#L257-L273"
+        raise NotImplementedError(msg)
 
 
 class RootSelector(SelectorIR):
