@@ -5,6 +5,7 @@ from __future__ import annotations
 import typing as t
 from typing import TYPE_CHECKING
 
+import narwhals._plan.dtypes_mapper as dtm
 from narwhals._plan._function import Function, HorizontalFunction
 from narwhals._plan.options import FEOptions, FunctionOptions
 from narwhals._plan.typing import NativeSeriesT
@@ -14,21 +15,25 @@ if TYPE_CHECKING:
 
     from narwhals._plan._expr_ir import ExprIR
     from narwhals._plan.expressions.expr import FunctionExpr as FExpr, Literal
+    from narwhals._plan.schema import FrozenSchema
     from narwhals._plan.series import Series
     from narwhals._plan.typing import Seq
+    from narwhals.dtypes import DType
     from narwhals.typing import ClosedInterval
 
 
 # fmt: off
-class BooleanFunction(Function, options=FunctionOptions.elementwise): ...
+class BooleanFunction(Function, options=FunctionOptions.elementwise):
+    def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
+        return dtm.BOOLEAN_DTYPE
+class _HorizontalBoolean(HorizontalFunction, BooleanFunction):
+    __slots__ = ("ignore_nulls",)
+    ignore_nulls: bool
+    _resolve_dtype = BooleanFunction._resolve_dtype
 class All(BooleanFunction, options=FunctionOptions.aggregation): ...
 class Any(BooleanFunction, options=FunctionOptions.aggregation): ...
-class AllHorizontal(HorizontalFunction, BooleanFunction):
-    __slots__ = ("ignore_nulls",)
-    ignore_nulls: bool
-class AnyHorizontal(HorizontalFunction, BooleanFunction):
-    __slots__ = ("ignore_nulls",)
-    ignore_nulls: bool
+class AllHorizontal(_HorizontalBoolean):...
+class AnyHorizontal(_HorizontalBoolean):...
 class IsDuplicated(BooleanFunction, options=FunctionOptions.length_preserving): ...
 class IsFinite(BooleanFunction): ...
 class IsFirstDistinct(BooleanFunction, options=FunctionOptions.length_preserving): ...
@@ -38,7 +43,11 @@ class IsNull(BooleanFunction): ...
 class IsNotNan(BooleanFunction): ...
 class IsNotNull(BooleanFunction): ...
 class IsUnique(BooleanFunction, options=FunctionOptions.length_preserving): ...
-class Not(BooleanFunction, config=FEOptions.renamed("not_")): ...
+class Not(BooleanFunction, config=FEOptions.renamed("not_")):
+    def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
+        # https://github.com/pola-rs/polars/pull/14049
+        dtype = node.input[0]._resolve_dtype(schema)
+        return dtype if dtype.is_integer() else dtm.BOOLEAN_DTYPE
 # fmt: on
 class IsBetween(BooleanFunction):
     """N-ary (expr, lower_bound, upper_bound)."""
