@@ -6,6 +6,7 @@ import pytest
 
 import narwhals as nw
 from tests.utils import (
+    DUCKDB_VERSION,
     PANDAS_VERSION,
     Constructor,
     ConstructorEager,
@@ -263,6 +264,8 @@ def test_offset_by_date_pandas() -> None:
 def test_offset_by_3471(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if any(x in str(constructor) for x in ("dask", "ibis")):
         request.applymarker(pytest.mark.xfail())
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        request.applymarker(pytest.mark.xfail)
     date_nw = nw.from_native(constructor({"date": [date(2026, 1, 31)]}))
 
     existent_col_offset = nw.col("date").dt.offset_by("-1d")
