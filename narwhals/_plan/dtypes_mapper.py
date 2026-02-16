@@ -14,6 +14,7 @@ from narwhals.dtypes import (
     Array,
     Binary,
     Boolean,
+    Duration,
     Float32,
     Float64,
     List,
@@ -27,6 +28,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
 
     from narwhals.dtypes import DType
+    from narwhals.typing import TimeUnit
 
 dtypes = Version.MAIN.dtypes
 dtypes_v1 = Version.V1.dtypes
@@ -166,3 +168,42 @@ def _sum_transform() -> Mapping[type[DType], DType]:
         dtypes.UInt16: I64,
         dtypes.Boolean: IDX_DTYPE,
     }
+
+
+@cache
+def _diff_int_transform() -> Mapping[type[DType], DType]:
+    return {
+        dtypes.UInt64: I64,
+        dtypes.UInt32: I64,
+        dtypes.UInt16: dtypes.Int32(),
+        dtypes.UInt8: dtypes.Int16(),
+    }
+
+
+@cache
+def _duration_type() -> Mapping[type[DType], type[Duration]]:
+    return {
+        dtypes.Datetime: dtypes.Duration,
+        dtypes_v1.Datetime: dtypes_v1.Duration,
+        dtypes.Date: dtypes.Duration,
+        dtypes_v1.Date: dtypes_v1.Duration,
+        dtypes.Time: dtypes.Duration,
+    }
+
+
+def diff_dtype(dtype: DType) -> DType:
+    # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L246-L261
+    if dtype.is_temporal():
+        if duration := _duration_type().get(type(dtype)):
+            tu: TimeUnit = "us"
+            if isinstance(dtype, dtypes.Datetime):
+                tu = dtype.time_unit
+            if isinstance(dtype, dtypes.Time):
+                tu = "ns"
+            return duration(tu)
+        return dtype
+    if int_dtype := _diff_int_transform().get(type(dtype)):
+        return int_dtype
+    if isinstance(dtype, dtypes.Decimal):
+        return dtypes.Decimal(38, dtype.scale)
+    return dtype

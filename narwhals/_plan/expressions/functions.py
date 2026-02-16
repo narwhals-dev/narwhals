@@ -88,6 +88,11 @@ class Exp(Function, options=FunctionOptions.elementwise):
         return dtm.float_dtype(node.input[0]._resolve_dtype(schema))
 
 
+class Diff(Function, options=FunctionOptions.length_preserving):
+    def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Function]) -> DType:
+        return dtm.diff_dtype(node.input[0]._resolve_dtype(schema))
+
+
 # fmt: off
 class Abs(_SameDType, options=FunctionOptions.elementwise): ...
 class Sqrt(_NumericToFloatDType, options=FunctionOptions.elementwise): ...
@@ -119,7 +124,6 @@ class RollingSum(RollingWindow): ...
 class RollingMean(RollingWindow): ...
 class RollingVar(RollingWindow): ...
 class RollingStd(RollingWindow): ...
-class Diff(Function, options=FunctionOptions.length_preserving): ... # Special (https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L246-L261)
 class Unique(_SameDType): ...
 class SumHorizontal(HorizontalFunction): ... # map_to_supertype + https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L404-L409
 class MinHorizontal(HorizontalFunction): ... # map_to_supertype
@@ -273,7 +277,7 @@ class GatherEvery(_SameDType):
     offset: int
 
 
-class MapBatches(Function):  # partially handled in `AnonymousExpr`
+class MapBatches(Function):
     __slots__ = ("function", "is_elementwise", "return_dtype", "returns_scalar")
     function: Udf
     return_dtype: DType | None
