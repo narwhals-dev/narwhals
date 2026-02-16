@@ -1295,7 +1295,7 @@ def corr(
         |└───────────────┘   |
         └────────────────────┘
     """
-    return Expr(ExprNode(ExprKind.MULTI_COLUMN_AGGREGATION, "corr", a, b, method=method))
+    return Expr(ExprNode(ExprKind.AGGREGATION, "corr", exprs=(a, b), method=method))
 
 
 def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:

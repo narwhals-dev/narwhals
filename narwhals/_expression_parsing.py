@@ -99,9 +99,6 @@ class ExprKind(Enum):
     AGGREGATION = auto()
     """Reduces to a single value, not affected by row order, e.g. `nw.col('a').mean()`"""
 
-    MULTI_COLUMN_AGGREGATION = auto()
-    """Reduces to a single value, taking multiple columns as an argument, e.g. `nw.corr('a', 'b')`"""
-
     ORDERABLE_AGGREGATION = auto()
     """Reduces to a single value, affected by row order, e.g. `nw.col('a').arg_max()`"""
 
@@ -172,10 +169,13 @@ class ExprKind(Enum):
         }
 
     @property
+    def preserves_length(self) -> bool:
+        return self.is_elementwise or self in {ExprKind.WINDOW, ExprKind.ORDERABLE_WINDOW}
+
+    @property
     def is_scalar_like(self) -> bool:
         return self in {
             ExprKind.AGGREGATION,
-            ExprKind.MULTI_COLUMN_AGGREGATION,
             ExprKind.LITERAL,
             ExprKind.ORDERABLE_AGGREGATION,
         }
@@ -431,27 +431,11 @@ class ExprMetadata:
         )
 
     @classmethod
-    def from_aggregation(cls, node: ExprNode) -> ExprMetadata:
-        return cls(
-            ExpansionKind.SINGLE,
-            is_elementwise=False,
-            preserves_length=False,
-            is_scalar_like=True,
-            current_node=node,
-            prev=None,
-        )
-
-    @classmethod
-    def from_multi_column_aggregation(
+    def from_aggregation(
         cls, node: ExprNode, *compliant_exprs: CompliantExprAny
     ) -> ExprMetadata:
         return combine_metadata(
-            *compliant_exprs,
-            to_single_output=True,
-            current_node=node,
-            preserves_length=False,
-            is_scalar_like=True,
-            prev=None,
+            *compliant_exprs, to_single_output=True, current_node=node, prev=None
         )
 
     @classmethod
@@ -715,7 +699,6 @@ class ExprMetadata:
 
 KIND_TO_METADATA_CONSTRUCTOR: dict[ExprKind, Callable[[ExprNode], ExprMetadata]] = {
     ExprKind.AGGREGATION: ExprMetadata.from_aggregation,
-    ExprKind.MULTI_COLUMN_AGGREGATION: ExprMetadata.from_multi_column_aggregation,
     ExprKind.ALL: ExprMetadata.from_selector_multi_unnamed,
     ExprKind.ELEMENTWISE: ExprMetadata.from_elementwise,
     ExprKind.EXCLUDE: ExprMetadata.from_selector_multi_unnamed,
@@ -728,7 +711,6 @@ KIND_TO_METADATA_CONSTRUCTOR: dict[ExprKind, Callable[[ExprNode], ExprMetadata]]
 
 KIND_TO_METADATA_UPDATER: dict[ExprKind, Callable[..., ExprMetadata]] = {
     ExprKind.AGGREGATION: ExprMetadata.with_aggregation,
-    ExprKind.MULTI_COLUMN_AGGREGATION: ExprMetadata.with_aggregation,
     ExprKind.ELEMENTWISE: ExprMetadata.with_elementwise,
     ExprKind.FILTRATION: ExprMetadata.with_filtration,
     ExprKind.ORDERABLE_AGGREGATION: ExprMetadata.with_orderable_aggregation,
@@ -743,8 +725,6 @@ def combine_metadata(
     *compliant_exprs: CompliantExprAny,
     to_single_output: bool,
     current_node: ExprNode,
-    preserves_length: bool | None = None,
-    is_scalar_like: bool | None = None,
     prev: ExprMetadata | None,
 ) -> ExprMetadata:
     """Combine metadata from `args`.
@@ -754,24 +734,18 @@ def combine_metadata(
         to_single_output: Whether the result is always single-output, regardless
             of the inputs (e.g. `nw.sum_horizontal`).
         current_node: The current node being added.
-        preserves_length: Whether the length is preserved
-            (default to true if at least one does)
-        is_scalar_like: Is scalar like column
-            (default to true if all inputs are scalar)
         prev: ExprMetadata of previous node.
     """
     n_filtrations = 0
     result_expansion_kind = ExpansionKind.SINGLE
     result_has_windows = False
     result_n_orderable_ops = 0
-    # result preserves length if at least one input does
-    result_preserves_length = False
-    # result is elementwise if all inputs are elementwise
-    result_is_elementwise = True
-    # result is scalar-like if all inputs are scalar-like
-    result_is_scalar_like = True
+    # result is elementwise if all inputs are elementwise, and if current operation is elementwise
+    result_is_elementwise = current_node.kind.is_elementwise
     # result is literal if all inputs are literal
     result_is_literal = True
+
+    all_inputs_are_scalar_like = True
 
     for i, ce in enumerate(compliant_exprs):
         metadata = ce._metadata
@@ -785,24 +759,34 @@ def combine_metadata(
 
         result_has_windows |= metadata.has_windows
         result_n_orderable_ops += metadata.n_orderable_ops
-        result_preserves_length |= metadata.preserves_length
         result_is_elementwise &= metadata.is_elementwise
-        result_is_scalar_like &= metadata.is_scalar_like
+        all_inputs_are_scalar_like &= metadata.is_scalar_like
         result_is_literal &= metadata.is_literal
         n_filtrations += int(metadata.is_filtration)
+
     if n_filtrations > 1:
         msg = "Length-changing expressions can only be used in isolation, or followed by an aggregation"
         raise InvalidOperationError(msg)
-    if result_preserves_length and n_filtrations:
-        msg = "Cannot combine length-changing expressions with length-preserving ones or aggregations"
-        raise InvalidOperationError(msg)
+
+    # result is scalar-like if all inputs are scalar-like, or if current operation is an aggregation
+    result_is_scalar_like = current_node.kind.is_scalar_like or all_inputs_are_scalar_like
+    # result preserves length if:
+    # - the current operation preserves length
+    # - there are no filtrations
+    # - the result is not scalar-like
+    result_preserves_length = (
+        current_node.kind.preserves_length
+        and n_filtrations == 0
+        and not result_is_scalar_like
+    )
+
     return ExprMetadata(
         result_expansion_kind,
         has_windows=result_has_windows,
         n_orderable_ops=result_n_orderable_ops,
-        preserves_length=preserves_length or result_preserves_length,
+        preserves_length=result_preserves_length,
         is_elementwise=result_is_elementwise,
-        is_scalar_like=is_scalar_like or result_is_scalar_like,
+        is_scalar_like=result_is_scalar_like,
         is_literal=result_is_literal,
         current_node=current_node,
         prev=prev,
