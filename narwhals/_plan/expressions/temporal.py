@@ -28,30 +28,46 @@ def _is_polars_time_unit(obj: Any) -> TypeIs[PolarsTimeUnit]:
 
 # fmt: off
 class TemporalFunction(Function, accessor="dt", options=FunctionOptions.elementwise): ...
-class Date(TemporalFunction): ... # Date
-class Year(TemporalFunction): ... # Int32
-class Month(TemporalFunction): ... # Int8
-class Day(TemporalFunction): ... # Int8
-class Hour(TemporalFunction): ... # Int8
-class Minute(TemporalFunction): ... # Int8
-class Second(TemporalFunction): ... # Int8
-class Millisecond(TemporalFunction): ... # Int32
-class Microsecond(TemporalFunction): ... # Int32
-class Nanosecond(TemporalFunction): ... # Int32
-class OrdinalDay(TemporalFunction): ... # Int16
-class WeekDay(TemporalFunction): ... # Int8
-class TotalMinutes(TemporalFunction): ... # Int64
-class TotalSeconds(TemporalFunction): ... # Int64
-class TotalMilliseconds(TemporalFunction): ... # Int64
-class TotalMicroseconds(TemporalFunction): ... # Int64
-class TotalNanoseconds(TemporalFunction): ... # Int64
-# fmt: on
-class ToString(TemporalFunction):  # String
+class _TemporalInt8(TemporalFunction):
+    def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
+        return dtm.I8
+class _TemporalInt16(TemporalFunction):
+    def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
+        return dtm.I16
+class _TemporalInt32(TemporalFunction):
+    def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
+        return dtm.I32
+class _TemporalInt64(TemporalFunction):
+    def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
+        return dtm.I64
+class Date(TemporalFunction):
+    def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
+        return dtm.DATE_DTYPE
+class Year(_TemporalInt32): ...
+class Month(_TemporalInt8): ...
+class Day(_TemporalInt8): ...
+class Hour(_TemporalInt8): ...
+class Minute(_TemporalInt8): ...
+class Second(_TemporalInt8): ...
+class Millisecond(_TemporalInt32): ...
+class Microsecond(_TemporalInt32): ...
+class Nanosecond(_TemporalInt32): ...
+class OrdinalDay(_TemporalInt16): ...
+class WeekDay(_TemporalInt8): ...
+class TotalMinutes(_TemporalInt64): ...
+class TotalSeconds(_TemporalInt64): ...
+class TotalMilliseconds(_TemporalInt64): ...
+class TotalMicroseconds(_TemporalInt64): ...
+class TotalNanoseconds(_TemporalInt64): ...
+class ToString(TemporalFunction):
     __slots__ = ("format",)
     format: str
-
-
-class ReplaceTimeZone(TemporalFunction):  # map_datetime_dtype_timezone
+    def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
+        return dtm.STRING_DTYPE
+# fmt: on
+class ReplaceTimeZone(
+    TemporalFunction
+):  # TODO @dangotbanned: `map_datetime_dtype_timezone` (https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L676-L686)
     __slots__ = ("time_zone",)
     time_zone: str | None
 
@@ -68,7 +84,7 @@ class ConvertTimeZone(TemporalFunction):
         raise ComputeError(msg)
 
 
-class Timestamp(TemporalFunction):  # Int64
+class Timestamp(_TemporalInt64):
     __slots__ = ("time_unit",)
     time_unit: PolarsTimeUnit
 
