@@ -61,6 +61,21 @@ def just_dispatch(*, upper_bound: type[Any] = object) -> Deferred: ...
 def just_dispatch(
     function: Impl[R] | None = None, /, *, upper_bound: type[Any] = object
 ) -> JustDispatch[R] | Deferred:
+    """Transform a function into a single-dispatch generic function.
+
+    An alternative take on [`@functools.singledispatch`]:
+    - without [MRO] fallback
+    - allows [*just*] the types registered and optionally an `upper_bound`
+
+    Arguments:
+        function: Function to decorate, where the body serves as the default implementation.
+        upper_bound: When there is no registered implementation for a specific type, it must
+            be a subclass of `upper_bound` to use the default implementation.
+
+    [`@functools.singledispatch`]: https://docs.python.org/3/library/functools.html#functools.singledispatch
+    [MRO]: https://docs.python.org/3/howto/mro.html#python-2-3-mro
+    [*just*]: https://github.com/jorenham/optype/blob/e7221ed1d3d02989d5d01873323bac9f88459f26/README.md#just
+    """
     if function is not None:
         return JustDispatch(function, upper_bound)
     return partial(JustDispatch[Any], upper_bound=upper_bound)
