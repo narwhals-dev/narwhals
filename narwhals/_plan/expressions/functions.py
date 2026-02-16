@@ -131,9 +131,7 @@ class MaxHorizontal(HorizontalFunction): ... # map_to_supertype
 class MeanHorizontal(HorizontalFunction): ... # map_to_supertype + https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L410-L420
 class Coalesce(HorizontalFunction): ... # map_to_supertype
 # fmt: on
-class Hist(
-    Function
-):  # Special (https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L220-L244)
+class Hist(Function):
     __slots__ = ("include_breakpoint",)
     include_breakpoint: bool
 
@@ -161,18 +159,25 @@ class Hist(
 
     @property
     def empty_data(self) -> Mapping[str, Iterable[Any]]:
-        # NOTE: May need to adapt for `include_category`?
+        # NOTE: Need to adapt for `include_category`
         return (
             {"breakpoint": [], "count": []} if self.include_breakpoint else {"count": []}
         )
 
+    def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Function]) -> DType:
+        # NOTE: Need to adapt for `include_category`
+        # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L220-L243
+        if self.include_breakpoint:
+            return dtm.Struct({"breakpoint": dtm.F64, "count": dtm.IDX_DTYPE})
+        return dtm.IDX_DTYPE
 
-class HistBins(Hist):  # Special
+
+class HistBins(Hist):
     __slots__ = ("bins",)
     bins: Seq[float]
 
 
-class HistBinCount(Hist):  # Special
+class HistBinCount(Hist):
     __slots__ = ("bin_count",)
     bin_count: int
 
