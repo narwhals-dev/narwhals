@@ -248,7 +248,7 @@ def test_cross_join_suffix(constructor: Constructor, suffix: str) -> None:
     assert_equal_data(result, expected)
 
 
-def test_cross_join_non_pandas() -> None:
+def test_cross_join_non_pandas() -> None:  # pragma: no cover
     _ = pytest.importorskip("modin")
     import modin.pandas as mpd
     import pandas as pd
