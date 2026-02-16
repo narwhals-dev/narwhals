@@ -241,15 +241,26 @@ class EwmMean(_NumericToFloatDType, options=FunctionOptions.length_preserving):
     options: EWMOptions
 
 
-class ReplaceStrict(
-    Function, options=FunctionOptions.elementwise
-):  # (return dtype passed through) https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L768-L786
+class ReplaceStrict(Function, options=FunctionOptions.elementwise):
     __slots__ = ("new", "old", "return_dtype")
     old: Seq[Any]
     new: Seq[Any]
     return_dtype: DType | None
 
+    def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Function]) -> DType:
+        if dtype := self.return_dtype:
+            return dtype
+        # NOTE: polars would use the dtype of `new` here
+        # Would need to run a sample through `common.py_to_narwhals_dtype`
+        # https://github.com/narwhals-dev/narwhals/blob/a44792702c107c97b97e3f4a42977c0c9213e1d4/narwhals/_plan/common.py#L52-L67
+        # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L773
+        # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L777
+        # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L781
+        return super()._resolve_dtype(schema, node)
 
+
+# NOTE: similar to `ReplaceStrict._resolve_dtype`, but use `get_supertype(new, default)`
+# https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L780
 class ReplaceStrictDefault(
     ReplaceStrict
 ):  # like `ReplaceStrict`, but uses supertyping w/ default
