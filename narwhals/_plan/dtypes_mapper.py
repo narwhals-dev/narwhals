@@ -10,7 +10,17 @@ from typing import TYPE_CHECKING
 
 from narwhals._plan.exceptions import invalid_dtype_operation_error
 from narwhals._utils import Version
-from narwhals.dtypes import Array, Binary, Float32, List, String, Struct
+from narwhals.dtypes import (
+    Array,
+    Binary,
+    Boolean,
+    Float32,
+    Float64,
+    List,
+    NumericType,
+    String,
+    Struct,
+)
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
@@ -27,6 +37,7 @@ _INVALID_SUM = String, Binary, List, Array, Struct
 
 I64 = dtypes.Int64()
 U32 = dtypes.UInt32()
+F32 = dtypes.Float32()
 F64 = dtypes.Float64()
 
 IDX_DTYPE = I64
@@ -67,6 +78,18 @@ def map_dtype(
     return mapper(dtype)
 
 
+def float_dtype(dtype: DType) -> Float32 | Float64:
+    return F32 if type(dtype) is Float32 else F64
+
+
+def numeric_to_float_dtype_coerce_decimal(dtype: DType) -> DType:
+    # `coerce_decimal: false` is only used for an expression we don't support
+    # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L271-L272
+    if isinstance(dtype, (NumericType, Boolean)):
+        return float_dtype(dtype)
+    return dtype
+
+
 def inner_dtype(
     dtype: DType,
     method_name: str = "",
@@ -102,10 +125,9 @@ def nested_sum_dtype(dtype: DType) -> DType:
 
 def nested_mean_median_dtype(dtype: DType) -> DType:
     inner = inner_dtype(dtype, expected=(List,))
-    tp_inner = type(inner)
     if inner.is_temporal():
-        return _date_to_datetime_transform().get(tp_inner, inner)
-    return inner if tp_inner is Float32 else F64
+        return _date_to_datetime_transform().get(type(inner), inner)
+    return float_dtype(inner)
 
 
 def list_join_dtype(dtype: DType) -> String:

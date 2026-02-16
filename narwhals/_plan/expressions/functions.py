@@ -35,6 +35,13 @@ class _F64DType(Function):
         return dtm.F64
 
 
+class _NumericToFloatDType(Function):
+    def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Function]) -> DType:
+        return dtm.numeric_to_float_dtype_coerce_decimal(
+            node.input[0]._resolve_dtype(schema)
+        )
+
+
 # TODO @dangotbanned: CumProd, CumSum
 class CumAgg(Function, options=FunctionOptions.length_preserving):
     __slots__ = ("reverse",)
@@ -76,10 +83,14 @@ class NullCount(Function, options=FunctionOptions.aggregation):
         return dtm.IDX_DTYPE
 
 
+class Exp(Function, options=FunctionOptions.elementwise):
+    def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Function]) -> DType:
+        return dtm.float_dtype(node.input[0]._resolve_dtype(schema))
+
+
 # fmt: off
 class Abs(_SameDType, options=FunctionOptions.elementwise): ...
-class Exp(Function, options=FunctionOptions.elementwise): ... # map_to_float_dtype
-class Sqrt(Function, options=FunctionOptions.elementwise): ... # (IRPowFunction::Sqrt) # map_numeric_to_float_dtype(coerce_decimal: true)
+class Sqrt(_NumericToFloatDType, options=FunctionOptions.elementwise): ...
 class Ceil(_SameDType, options=FunctionOptions.elementwise): ...
 class Floor(_SameDType, options=FunctionOptions.elementwise): ...
 class DropNulls(_SameDType, options=FunctionOptions.row_separable): ...
@@ -162,9 +173,13 @@ class HistBinCount(Hist):  # Special
     bin_count: int
 
 
-class Log(Function, options=FunctionOptions.elementwise):  # log_dtype
+class Log(Function, options=FunctionOptions.elementwise):
     __slots__ = ("base",)
     base: float
+
+    def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Function]) -> DType:
+        dtype = node.input[0]._resolve_dtype(schema)
+        return dtype if dtype.is_float() else dtm.F64
 
 
 class Pow(Function, options=FunctionOptions.elementwise):
@@ -221,9 +236,7 @@ class Round(_SameDType, options=FunctionOptions.elementwise):
     decimals: int
 
 
-class EwmMean(
-    Function, options=FunctionOptions.length_preserving
-):  # map_numeric_to_float_dtype(coerce_decimal: true)
+class EwmMean(_NumericToFloatDType, options=FunctionOptions.length_preserving):
     __slots__ = ("options",)
     options: EWMOptions
 
