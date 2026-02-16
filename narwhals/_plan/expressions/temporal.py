@@ -2,16 +2,21 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
+import narwhals._plan.dtypes_mapper as dtm
 from narwhals._duration import Interval
 from narwhals._plan._function import Function
 from narwhals._plan.expressions.namespace import ExprNamespace, IRNamespace
 from narwhals._plan.options import FunctionOptions
+from narwhals.exceptions import ComputeError
 
 if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias, TypeIs
 
     from narwhals._duration import IntervalUnit
     from narwhals._plan.expr import Expr
+    from narwhals._plan.expressions import FunctionExpr as FExpr
+    from narwhals._plan.schema import FrozenSchema
+    from narwhals.dtypes import DType
     from narwhals.typing import TimeUnit
 
 PolarsTimeUnit: TypeAlias = Literal["ns", "us", "ms"]
@@ -23,30 +28,30 @@ def _is_polars_time_unit(obj: Any) -> TypeIs[PolarsTimeUnit]:
 
 # fmt: off
 class TemporalFunction(Function, accessor="dt", options=FunctionOptions.elementwise): ...
-class Date(TemporalFunction): ...
-class Year(TemporalFunction): ...
-class Month(TemporalFunction): ...
-class Day(TemporalFunction): ...
-class Hour(TemporalFunction): ...
-class Minute(TemporalFunction): ...
-class Second(TemporalFunction): ...
-class Millisecond(TemporalFunction): ...
-class Microsecond(TemporalFunction): ...
-class Nanosecond(TemporalFunction): ...
-class OrdinalDay(TemporalFunction): ...
-class WeekDay(TemporalFunction): ...
-class TotalMinutes(TemporalFunction): ...
-class TotalSeconds(TemporalFunction): ...
-class TotalMilliseconds(TemporalFunction): ...
-class TotalMicroseconds(TemporalFunction): ...
-class TotalNanoseconds(TemporalFunction): ...
+class Date(TemporalFunction): ... # Date
+class Year(TemporalFunction): ... # Int32
+class Month(TemporalFunction): ... # Int8
+class Day(TemporalFunction): ... # Int8
+class Hour(TemporalFunction): ... # Int8
+class Minute(TemporalFunction): ... # Int8
+class Second(TemporalFunction): ... # Int8
+class Millisecond(TemporalFunction): ... # Int32
+class Microsecond(TemporalFunction): ... # Int32
+class Nanosecond(TemporalFunction): ... # Int32
+class OrdinalDay(TemporalFunction): ... # Int16
+class WeekDay(TemporalFunction): ... # Int8
+class TotalMinutes(TemporalFunction): ... # Int64
+class TotalSeconds(TemporalFunction): ... # Int64
+class TotalMilliseconds(TemporalFunction): ... # Int64
+class TotalMicroseconds(TemporalFunction): ... # Int64
+class TotalNanoseconds(TemporalFunction): ... # Int64
 # fmt: on
-class ToString(TemporalFunction):
+class ToString(TemporalFunction):  # String
     __slots__ = ("format",)
     format: str
 
 
-class ReplaceTimeZone(TemporalFunction):
+class ReplaceTimeZone(TemporalFunction):  # map_datetime_dtype_timezone
     __slots__ = ("time_zone",)
     time_zone: str | None
 
@@ -55,8 +60,15 @@ class ConvertTimeZone(TemporalFunction):
     __slots__ = ("time_zone",)
     time_zone: str
 
+    def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
+        dtype = node.input[0]._resolve_dtype(schema)
+        if isinstance(dtype, dtm.dtypes.Datetime):
+            return type(dtype)(dtype.time_unit, self.time_zone)
+        msg = f"Expected Datetime, got {dtype}"
+        raise ComputeError(msg)
 
-class Timestamp(TemporalFunction):
+
+class Timestamp(TemporalFunction):  # Int64
     __slots__ = ("time_unit",)
     time_unit: PolarsTimeUnit
 
@@ -83,6 +95,9 @@ class _IntervalFunction(TemporalFunction):
     @classmethod
     def from_interval(cls, interval: Interval, /) -> Self:
         return cls(multiple=interval.multiple, unit=interval.unit)
+
+    def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
+        return node.input[0]._resolve_dtype(schema)
 
 
 # fmt: off
