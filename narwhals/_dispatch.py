@@ -35,8 +35,8 @@ class JustDispatch(Generic[R_co]):
         if issubclass(tp, self._upper_bound):
             f = self._registry[tp] = self._registry[self._upper_bound]
             return f
-        msg = f"{self._registry[self._upper_bound].__name__!r} does not support {tp.__name__!r}"  # pragma: no cover
-        raise TypeError(msg)  # pragma: no cover
+        msg = f"{self._registry[self._upper_bound].__name__!r} does not support {tp.__name__!r}"
+        raise TypeError(msg)
 
     def register(
         self, tp: type[Any], *tps: type[Any]
