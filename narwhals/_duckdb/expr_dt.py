@@ -10,7 +10,7 @@ from narwhals._constants import (
     US_PER_MINUTE,
     US_PER_SECOND,
 )
-from narwhals._duckdb.utils import UNITS_DICT, F, fetch_rel_time_zone, lit
+from narwhals._duckdb.utils import UNITS_DICT, F, fetch_rel_time_zone, lit, sql_expression
 from narwhals._duration import Interval
 from narwhals._sql.expr_dt import SQLExprDateTimeNamesSpace
 from narwhals._utils import not_implemented
@@ -102,7 +102,7 @@ class DuckDBExprDateTimeNamespace(SQLExprDateTimeNamesSpace["DuckDBExpr"]):
         format = lit(f"{interval.multiple!s} {UNITS_DICT[interval.unit]}")
 
         def _offset_by(expr: Expression) -> Expression:
-            return F("date_add", format, expr)
+            return expr + sql_expression(f"interval {format}")
 
         return self.compliant._with_elementwise(_offset_by)
 

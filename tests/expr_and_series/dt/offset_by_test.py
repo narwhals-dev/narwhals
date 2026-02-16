@@ -261,7 +261,7 @@ def test_offset_by_date_pandas() -> None:
 
 
 def test_offset_by_3471(constructor: Constructor) -> None:
-    date_nw = nw.from_native(constructor({"date": [datetime(2026, 1, 31)]}))
+    date_nw = nw.from_native(constructor({"date": [date(2026, 1, 31)]}))
 
     existent_col_offset = nw.col("date").dt.offset_by("-1d")
     result = date_nw.with_columns(existent_col_offset)
