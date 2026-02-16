@@ -273,10 +273,16 @@ class EagerNamespace(
         return self._series.from_numpy(data, context=self)
 
     def _concat_diagonal(self, dfs: Sequence[NativeFrameT], /) -> NativeFrameT: ...
+    def _concat_diagonal_relaxed(
+        self, dfs: Sequence[NativeFrameT], /
+    ) -> NativeFrameT: ...
     def _concat_horizontal(
         self, dfs: Sequence[NativeFrameT | Any], /
     ) -> NativeFrameT: ...
     def _concat_vertical(self, dfs: Sequence[NativeFrameT], /) -> NativeFrameT: ...
+    def _concat_vertical_relaxed(
+        self, dfs: Sequence[NativeFrameT], /
+    ) -> NativeFrameT: ...
     def concat(
         self, items: Iterable[EagerDataFrameT], *, how: ConcatMethod
     ) -> EagerDataFrameT:
@@ -285,8 +291,12 @@ class EagerNamespace(
             native = self._concat_horizontal(dfs)
         elif how == "vertical":
             native = self._concat_vertical(dfs)
+        elif how == "vertical_relaxed":
+            native = self._concat_vertical_relaxed(dfs)
         elif how == "diagonal":
             native = self._concat_diagonal(dfs)
+        elif how == "diagonal_relaxed":
+            native = self._concat_diagonal_relaxed(dfs)
         else:  # pragma: no cover
             raise NotImplementedError
         return self._dataframe.from_native(native, context=self)

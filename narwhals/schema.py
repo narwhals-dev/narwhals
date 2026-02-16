@@ -21,6 +21,8 @@ from narwhals.dependencies import (
     is_pyarrow_data_type,
     is_pyarrow_schema,
 )
+from narwhals.dtypes._supertyping import get_supertype
+from narwhals.exceptions import ComputeError, SchemaMismatchError
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -363,3 +365,63 @@ class Schema(OrderedDict[str, "DType"]):
             (name, native_to_narwhals_dtype(dtype, cls._version, impl, allow_object=True))
             for name, dtype in schema.items()
         )
+
+
+def _supertype(left: DType, right: DType) -> DType:
+    if promoted_dtype := get_supertype(left, right):
+        return promoted_dtype
+    msg = f"failed to determine supertype of {left} and {right}"
+    raise SchemaMismatchError(msg)
+
+
+def _ensure_names_match(left: Schema, right: Schema) -> tuple[Schema, Schema]:
+    if len(left) != len(right):
+        msg = "schema lengths differ"
+        raise ComputeError(msg)
+    if left.names() != right.names():
+        it = ((lname, rname) for (lname, rname) in zip(left, right) if lname != rname)
+        lname, rname = next(it)
+        msg = f"schema names differ: got {rname}, expected {lname}"
+        raise ComputeError(msg)
+    return left, right
+
+
+def to_supertype(left: Schema, right: Schema) -> Schema:
+    # Adapted from polars https://github.com/pola-rs/polars/blob/c2412600210a21143835c9dfcb0a9182f462b619/crates/polars-core/src/schema/mod.rs#L83-L96
+    left, right = _ensure_names_match(left, right)
+    it = zip(left.keys(), left.values(), right.values())
+    return Schema((name, _supertype(ltype, rtype)) for (name, ltype, rtype) in it)
+
+
+def merge_schemas(left: Schema, right: Schema) -> Schema:
+    """Merge two schemas, combining columns and resolving types to their supertype.
+
+    This function merges two schemas by:
+
+    1. Taking all columns from the left schema (preserving order).
+    2. Appending any columns from the right schema that are missing in the left.
+    3. For columns present in both schemas, promoting to the common supertype.
+
+    Arguments:
+        left: The primary schema whose column order takes precedence.
+        right: The secondary schema to merge. Columns missing in left are appended.
+
+    Returns:
+        A new Schema with merged columns and supertypes resolved.
+
+    Raises:
+        SchemaMismatchError: If no common supertype exists for a shared column.
+
+    Note:
+        For columns present only in one schema, the type from that schema is used
+        (via `right.get(name, left_type)` fallback for right-only columns).
+    """
+    left_names = set(left.keys())
+    missing_in_left = (kv for kv in right.items() if kv[0] not in left_names)
+
+    extended_left = Schema((*left.items(), *missing_in_left))
+    # Reorder right to match: left keys first, then right-only keys
+    extended_right = Schema((kv[0], right.get(*kv)) for kv in extended_left.items())
+
+    it = zip(extended_left.keys(), extended_left.values(), extended_right.values())
+    return Schema((name, _supertype(ltype, rtype)) for (name, ltype, rtype) in it)

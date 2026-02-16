@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import functools
 import operator
 import re
+from functools import lru_cache
 from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, cast
 
 import pandas as pd
@@ -26,6 +26,7 @@ from narwhals._utils import (
     requires,
 )
 from narwhals.exceptions import ShapeError
+from narwhals.typing import DTypeBackend
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping
@@ -45,7 +46,13 @@ if TYPE_CHECKING:
         NativeSeriesT,
     )
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypeBackend, IntoDType, TimeUnit, _1DArray
+    from narwhals.typing import (
+        DTypeBackend,
+        IntoDType,
+        IntoPandasSchema,
+        TimeUnit,
+        _1DArray,
+    )
 
     ExprT = TypeVar("ExprT", bound=PandasLikeExpr)
     UnitCurrent: TypeAlias = TimeUnit
@@ -53,6 +60,7 @@ if TYPE_CHECKING:
     BinOpBroadcast: TypeAlias = Callable[[Any, int], Any]
     IntoRhs: TypeAlias = int
 
+Incomplete: TypeAlias = Any
 
 PANDAS_LIKE_IMPLEMENTATION = {
     Implementation.PANDAS,
@@ -188,7 +196,7 @@ def rename(
     return cast("NativeNDFrameT", result)  # type: ignore[redundant-cast]
 
 
-@functools.lru_cache(maxsize=16)
+@lru_cache(maxsize=16)
 def is_dtype_non_pyarrow_string(native_dtype: Any) -> bool:
     """*There is no problem which can't be solved by adding an extra string type* pandas."""
     # TODO @dangotbanned: Investigate how we could handle `cudf` without `str(native_dtype)`
@@ -202,7 +210,7 @@ def is_dtype_non_pyarrow_string(native_dtype: Any) -> bool:
     }
 
 
-@functools.lru_cache(maxsize=16)
+@lru_cache(maxsize=16)
 def non_object_native_to_narwhals_dtype(native_dtype: Any, version: Version) -> DType:  # noqa: C901, PLR0912
     dtype = str(native_dtype)
 
@@ -381,7 +389,7 @@ def iter_dtype_backends(
     return (get_dtype_backend(dtype, implementation) for dtype in dtypes)
 
 
-@functools.lru_cache(maxsize=16)
+@lru_cache(maxsize=16)
 def is_dtype_pyarrow(dtype: Any) -> TypeIs[pd.ArrowDtype]:
     return hasattr(pd, "ArrowDtype") and isinstance(dtype, pd.ArrowDtype)
 
@@ -697,3 +705,57 @@ def broadcast_series_to_index(
         return series_class(pa_array, index=index, name=native.name)
 
     return series_class(value, index=index, dtype=native.dtype, name=native.name)
+
+
+_DTYPE_BACKEND_PRIORITY: dict[DTypeBackend, Literal[0, 1, 2]] = {
+    "pyarrow": 2,
+    "numpy_nullable": 1,
+    None: 0,
+}
+
+
+def iter_names_dtype_backends(
+    schema: IntoPandasSchema, impl: Implementation, /
+) -> Iterator[tuple[str, DTypeBackend]]:
+    yield from zip(schema, iter_dtype_backends(schema.values(), impl))
+
+
+def promote_dtype_backends(
+    schemas: Iterable[IntoPandasSchema], implementation: Implementation
+) -> Iterable[DTypeBackend]:
+    """Promote dtype backends for each column based on priority rules.
+
+    Priority: pyarrow > numpy_nullable > None
+    """
+    impl = implementation
+    it_schemas = iter(schemas)
+    col_backends = dict(iter_names_dtype_backends(next(it_schemas), impl))
+    priority = _DTYPE_BACKEND_PRIORITY.__getitem__
+    current = col_backends.__getitem__
+    seen = col_backends.keys()
+    for schema in it_schemas:
+        col_backends.update(
+            (name, backend)
+            for name, backend in iter_names_dtype_backends(schema, impl)
+            if name not in seen or priority(backend) > priority(current(name))
+        )
+    return col_backends.values()
+
+
+def native_schema(df: Incomplete) -> IntoPandasSchema:
+    return df.dtypes.to_dict()
+
+
+def cast_native(df: NativeDataFrameT, schema: IntoPandasSchema) -> NativeDataFrameT:
+    df_: Incomplete = df
+    return cast("NativeDataFrameT", df_.astype(schema))
+
+
+def iter_cast_native(
+    dfs: Iterable[NativeDataFrameT], schema: IntoPandasSchema
+) -> Iterator[NativeDataFrameT]:
+    if TYPE_CHECKING:
+        for df in dfs:
+            yield cast_native(df, schema)
+    else:
+        yield from (df.astype(schema) for df in dfs)

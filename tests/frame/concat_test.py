@@ -3,16 +3,34 @@ from __future__ import annotations
 import datetime as dt
 import re
 from typing import TYPE_CHECKING, Any
+from uuid import uuid4 as make_uuid
 
 import pytest
 
 import narwhals as nw
 from narwhals._utils import Implementation
 from narwhals.exceptions import InvalidOperationError, NarwhalsError
-from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
+from narwhals.schema import Schema
+from tests.utils import (
+    POLARS_VERSION,
+    PYARROW_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+
+    from narwhals.dtypes import DType
+    from narwhals.typing import IntoSchema
+
+if TYPE_CHECKING:
+    from narwhals.typing import LazyFrameT
+
+
+def _cast(frame: LazyFrameT, schema: IntoSchema) -> LazyFrameT:
+    return frame.select(nw.col(name).cast(dtype) for name, dtype in schema.items())
 
 
 def test_concat_horizontal(constructor_eager: ConstructorEager) -> None:
@@ -138,3 +156,204 @@ def test_concat_diagonal_invalid(
         context = pytest.raises((InvalidOperationError, TypeError), match=r"same schema")
     with context:
         nw.concat([df_1, bad_schema], how="diagonal").collect().to_dict(as_series=False)
+
+
+@pytest.mark.parametrize(
+    ("ldata", "lschema", "rdata", "rschema", "expected_data", "expected_schema"),
+    [
+        (
+            {"a": [1, 2, 3], "b": [True, False, None]},
+            {"a": nw.Int8(), "b": nw.Boolean()},
+            {"a": [43, 2, 3], "b": [32, 1, None]},
+            {"a": nw.Int16(), "b": nw.Int64()},
+            {"a": [1, 2, 3, 43, 2, 3], "b": [1, 0, None, 32, 1, None]},
+            {"a": nw.Int16(), "b": nw.Int64()},
+        ),
+        (
+            {"a": [1, 2], "b": [2, 1]},
+            {"a": nw.Int32(), "b": nw.Int32()},
+            {"a": [1.0, 0.2], "b": [None, 0.1]},
+            {"a": nw.Float32(), "b": nw.Float32()},
+            {"a": [1.0, 2.0, 1.0, 0.2], "b": [2.0, 1.0, None, 0.1]},
+            {"a": nw.Float64(), "b": nw.Float64()},
+        ),
+    ],
+    ids=["nullable-integer", "nullable-float"],
+)
+def test_concat_vertically_relaxed(
+    constructor: Constructor,
+    ldata: dict[str, Any],
+    lschema: dict[str, DType],
+    rdata: dict[str, Any],
+    rschema: dict[str, DType],
+    expected_data: dict[str, Any],
+    expected_schema: dict[str, DType],
+    request: pytest.FixtureRequest,
+) -> None:
+    # Adapted from https://github.com/pola-rs/polars/blob/b0fdbd34d430d934bda9a4ca3f75e136223bd95b/py-polars/tests/unit/functions/test_concat.py#L64
+    is_nullable_int = request.node.callspec.id.endswith("nullable-integer")
+    if is_nullable_int and any(
+        x in str(constructor)
+        for x in ("dask", "pandas_constructor", "modin_constructor", "cudf")
+    ):
+        reason = "Cannot convert non-finite values (NA or inf)"
+        request.applymarker(pytest.mark.xfail(reason=reason))
+    left = nw.from_native(constructor(ldata)).lazy().pipe(_cast, lschema)
+    right = nw.from_native(constructor(rdata)).lazy().pipe(_cast, rschema)
+    result = nw.concat([left, right], how="vertical_relaxed")
+
+    assert result.collect_schema() == Schema(expected_schema)
+    assert_equal_data(result.collect(), expected_data)
+
+    result = nw.concat([right, left], how="vertical_relaxed")
+    assert result.collect_schema() == Schema(expected_schema)
+
+
+@pytest.mark.parametrize(
+    ("schema1", "schema2", "schema3", "expected_schema"),
+    [
+        (
+            {"a": nw.Int32(), "c": nw.Int64()},
+            {"a": nw.Float64(), "b": nw.Float32()},
+            {"b": nw.Int32(), "c": nw.Int32()},
+            {"a": nw.Float64(), "c": nw.Int64(), "b": nw.Float64()},
+        ),
+        (
+            {"a": nw.Float32(), "c": nw.Float32()},
+            {"a": nw.Float64(), "b": nw.Float32()},
+            {"b": nw.Float32(), "c": nw.Float32()},
+            {"a": nw.Float64(), "c": nw.Float32(), "b": nw.Float32()},
+        ),
+    ],
+    ids=["nullable-integer", "nullable-float"],
+)
+def test_concat_diagonal_relaxed(
+    constructor: Constructor,
+    schema1: dict[str, DType],
+    schema2: dict[str, DType],
+    schema3: dict[str, DType],
+    expected_schema: dict[str, DType],
+    request: pytest.FixtureRequest,
+) -> None:
+    # Adapted from https://github.com/pola-rs/polars/blob/b0fdbd34d430d934bda9a4ca3f75e136223bd95b/py-polars/tests/unit/functions/test_concat.py#L265C1-L288C41
+    is_nullable_int = request.node.callspec.id.endswith("nullable-integer")
+    if is_nullable_int and any(
+        x in str(constructor)
+        for x in ("dask", "pandas_constructor", "modin_constructor", "cudf")
+    ):
+        reason = "Cannot convert non-finite values (NA or inf)"
+        request.applymarker(pytest.mark.xfail(reason=reason))
+
+    base_schema = {"idx": nw.Int32()}
+
+    data1 = {"idx": [0, 1], "a": [1, 2], "c": [10, 20]}
+    df1 = nw.from_native(constructor(data1)).lazy().pipe(_cast, base_schema | schema1)
+
+    data2 = {"a": [3.5, 4.5], "b": [30.1, 40.2], "idx": [2, 3]}
+    df2 = nw.from_native(constructor(data2)).lazy().pipe(_cast, base_schema | schema2)
+
+    data3 = {"b": [5, 6], "idx": [4, 5], "c": [50, 60]}
+    df3 = nw.from_native(constructor(data3)).lazy().pipe(_cast, base_schema | schema3)
+
+    result = nw.concat([df1, df2, df3], how="diagonal_relaxed").sort("idx")
+    out_schema = result.collect_schema()
+    assert out_schema == Schema(base_schema | expected_schema)
+
+    expected_data = {
+        "idx": [0, 1, 2, 3, 4, 5],
+        "a": [1.0, 2.0, 3.5, 4.5, None, None],
+        "c": [10, 20, None, None, 50, 60],
+        "b": [None, None, 30.1, 40.2, 5.0, 6.0],
+    }
+    assert_equal_data(result.collect(), expected_data)
+
+
+@pytest.mark.skipif(PYARROW_VERSION < (19, 0, 0), reason="Too old for pyarrow.uuid type")
+def test_pyarrow_concat_vertical_uuid() -> None:
+    # Test that concat vertical and vertical_relaxed preserves unsupported types like UUID
+    pa = pytest.importorskip("pyarrow")
+
+    id1, id2, id3, id4 = [make_uuid() for _ in range(4)]
+
+    data1 = {"id": pa.array([id1.bytes, id2.bytes], type=pa.uuid()), "a": [1, 2]}
+    data2 = {"id": pa.array([id3.bytes, id4.bytes], type=pa.uuid()), "a": [3.14, 4.2]}
+    frame1, frame2 = nw.from_native(pa.table(data1)), nw.from_native(pa.table(data2))
+
+    # Vertical
+    res_v = nw.concat([frame1, frame1], how="vertical").to_native()
+
+    assert res_v.schema.field("id").type == pa.uuid()
+    assert res_v["id"].to_pylist() == [id1, id2, id1, id2]
+    assert res_v["a"].to_pylist() == [1, 2, 1, 2]
+
+    # Vertical relaxed
+    res_vr = nw.concat([frame1, frame2], how="vertical_relaxed").to_native()
+
+    assert res_vr.schema.field("id").type == pa.uuid()
+    assert res_vr["id"].to_pylist() == [id1, id2, id3, id4]
+    assert res_vr["a"].to_pylist() == [1.0, 2.0, 3.14, 4.2]
+
+
+def test_concat_vertical_relaxed_duckdb_uuid() -> None:
+    # Test that concat vertical_relaxed preserves UUID type for DuckDB
+    duckdb = pytest.importorskip("duckdb")
+
+    id1, id2, id3, id4 = [make_uuid() for _ in range(4)]
+    conn = duckdb.connect()
+
+    rel1 = conn.sql(
+        f"SELECT '{id1}'::UUID as id, 1 as a UNION ALL SELECT '{id2}'::UUID, 2"
+    )
+    rel2 = conn.sql(
+        f"SELECT '{id3}'::UUID as id, 3.14 as a UNION ALL SELECT '{id4}'::UUID, 4.2"
+    )
+
+    frame1, frame2 = nw.from_native(rel1), nw.from_native(rel2)
+
+    # Vertical
+    res_v = nw.concat([frame1, frame1], how="vertical")
+
+    assert res_v.to_native().types[0] == "UUID"
+    res_v_pa = res_v.collect().to_native()
+    assert res_v_pa["id"].to_pylist() == [str(v) for v in (id1, id2, id1, id2)]
+    assert res_v_pa["a"].to_pylist() == [1, 2, 1, 2]
+
+    # Vertical relaxed
+    res_vr = nw.concat([frame1, frame2], how="vertical_relaxed")
+
+    assert res_vr.to_native().types[0] == "UUID"
+    res_vr_pa = res_vr.collect().to_native()
+    assert res_vr_pa["id"].to_pylist() == [str(v) for v in (id1, id2, id3, id4)]
+    assert [float(v) for v in res_vr_pa["a"].to_pylist()] == [1.0, 2.0, 3.14, 4.2]
+
+
+def test_concat_vertical_relaxed_ibis_uuid() -> None:
+    """Test that concat vertical_relaxed preserves UUID type for Ibis."""
+    ibis = pytest.importorskip("ibis")
+
+    id1, id2, id3, id4 = [make_uuid() for _ in range(4)]
+
+    t1 = ibis.memtable(
+        {"id": [str(id1), str(id2)], "a": [1, 2]}, schema={"id": "uuid", "a": "int"}
+    )
+    t2 = ibis.memtable(
+        {"id": [str(id3), str(id4)], "a": [3.14, 4.2]},
+        schema={"id": "uuid", "a": "float"},
+    )
+    frame1, frame2 = nw.from_native(t1), nw.from_native(t2)
+
+    # Vertical
+    res_v = nw.concat([frame1, frame1], how="vertical")
+
+    assert res_v.to_native().schema()["id"] == ibis.dtype("uuid")
+    res_v_pa = res_v.collect().to_native()
+    assert res_v_pa["id"].to_pylist() == [str(v) for v in (id1, id2, id1, id2)]
+    assert res_v_pa["a"].to_pylist() == [1, 2, 1, 2]
+
+    # Vertical relaxed
+    res_vr = nw.concat([frame1, frame2], how="vertical_relaxed")
+
+    assert res_vr.to_native().schema()["id"] == ibis.dtype("uuid")
+    res_vr_pa = res_vr.collect().to_native()
+    assert res_vr_pa["id"].to_pylist() == [str(v) for v in (id1, id2, id3, id4)]
+    assert [float(v) for v in res_vr_pa["a"].to_pylist()] == [1.0, 2.0, 3.14, 4.2]

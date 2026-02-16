@@ -6,7 +6,7 @@ from itertools import chain
 from typing import TYPE_CHECKING, Any
 
 import duckdb
-from duckdb import CoalesceOperator, Expression
+from duckdb import CoalesceOperator, DuckDBPyRelation, Expression
 
 from narwhals._duckdb.dataframe import DuckDBLazyFrame
 from narwhals._duckdb.expr import DuckDBExpr
@@ -26,12 +26,11 @@ from narwhals._expression_parsing import (
     combine_evaluate_output_names,
 )
 from narwhals._sql.namespace import SQLNamespace
-from narwhals._utils import Implementation
+from narwhals._utils import Implementation, safe_cast
+from narwhals.schema import Schema, merge_schemas, to_supertype
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
-
-    from duckdb import DuckDBPyRelation  # noqa: F401
 
     from narwhals._compliant.window import WindowInputs
     from narwhals._utils import Version
@@ -82,23 +81,55 @@ class DuckDBNamespace(
     def concat(
         self, items: Iterable[DuckDBLazyFrame], *, how: ConcatMethod
     ) -> DuckDBLazyFrame:
-        native_items = [item._native_frame for item in items]
-        items = list(items)
+        items = tuple(items)
         first = items[0]
-        schema = first.schema
-        if how == "vertical" and not all(x.schema == schema for x in items[1:]):
-            msg = "inputs should all have the same schema"
-            raise TypeError(msg)
+
+        if how == "vertical":
+            schema = first.schema
+            if not all(x.schema == schema for x in items[1:]):
+                msg = "inputs should all have the same schema"
+                raise TypeError(msg)
+
+            res = reduce(DuckDBPyRelation.union, (item.native for item in items))
+            return first._with_native(res)
+
+        if how == "vertical_relaxed":
+            schemas: Iterable[Schema] = (Schema(df.collect_schema()) for df in items)
+            out_schema = reduce(to_supertype, schemas)
+            native_items = (
+                item.select(*safe_cast(self, out_schema)).native for item in items
+            )
+            res = reduce(DuckDBPyRelation.union, native_items)
+            return first._with_native(res)
+
         if how == "diagonal":
-            res = first.native
-            for _item in native_items[1:]:
+            res, *others = (item.native for item in items)
+            for _item in others:
                 # TODO(unassigned): use relational API when available https://github.com/duckdb/duckdb/discussions/16996
                 res = duckdb.sql("""
                     from res select * union all by name from _item select *
                 """)
             return first._with_native(res)
-        res = reduce(lambda x, y: x.union(y), native_items)
-        return first._with_native(res)
+
+        if how == "diagonal_relaxed":
+            schemas = [Schema(df.collect_schema()) for df in items]
+            out_schema = reduce(merge_schemas, schemas)
+            native_items = (
+                item.select(
+                    *(
+                        self.col(name)
+                        if name in schema
+                        else self.lit(None, dtype=dtype).alias(name)
+                        for name, dtype in out_schema.items()
+                    )
+                )
+                .select(*safe_cast(self, out_schema))
+                .native
+                for item, schema in zip(items, schemas)
+            )
+            res = reduce(DuckDBPyRelation.union, native_items)
+            return first._with_native(res)
+        raise NotImplementedError
 
     def concat_str(
         self, *exprs: DuckDBExpr, separator: str, ignore_nulls: bool

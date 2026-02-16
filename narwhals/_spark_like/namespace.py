@@ -19,6 +19,8 @@ from narwhals._spark_like.utils import (
     true_divide,
 )
 from narwhals._sql.namespace import SQLNamespace
+from narwhals._utils import safe_cast
+from narwhals.schema import Schema, merge_schemas, to_supertype
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -168,10 +170,11 @@ class SparkLikeNamespace(
     def concat(
         self, items: Iterable[SparkLikeLazyFrame], *, how: ConcatMethod
     ) -> SparkLikeLazyFrame:
-        dfs = [item._native_frame for item in items]
+        items = tuple(items)
         if how == "vertical":
-            cols_0 = dfs[0].columns
-            for i, df in enumerate(dfs[1:], start=1):
+            first, *others = (item.native for item in items)
+            cols_0 = first.columns
+            for i, df in enumerate(others, start=1):
                 cols_current = df.columns
                 if not ((len(cols_current) == len(cols_0)) and (cols_current == cols_0)):
                     msg = (
@@ -182,7 +185,7 @@ class SparkLikeNamespace(
                     raise TypeError(msg)
 
             return SparkLikeLazyFrame(
-                native_dataframe=reduce(lambda x, y: x.union(y), dfs),
+                native_dataframe=reduce(lambda x, y: x.union(y), others, first),
                 version=self._version,
                 implementation=self._implementation,
             )
@@ -190,8 +193,45 @@ class SparkLikeNamespace(
         if how == "diagonal":
             return SparkLikeLazyFrame(
                 native_dataframe=reduce(
-                    lambda x, y: x.unionByName(y, allowMissingColumns=True), dfs
+                    lambda x, y: x.unionByName(y, allowMissingColumns=True),
+                    (item.native for item in items),
                 ),
+                version=self._version,
+                implementation=self._implementation,
+            )
+
+        if how == "vertical_relaxed":
+            schemas: Iterable[Schema] = (Schema(df.collect_schema()) for df in items)
+            out_schema = reduce(to_supertype, schemas)
+            native_items = (
+                item.select(*safe_cast(self, out_schema)).native for item in items
+            )
+            union = items[0].native.__class__.union
+            return SparkLikeLazyFrame(
+                native_dataframe=reduce(union, native_items),
+                version=self._version,
+                implementation=self._implementation,
+            )
+
+        if how == "diagonal_relaxed":
+            schemas = tuple(Schema(item.collect_schema()) for item in items)
+            out_schema = reduce(merge_schemas, schemas)
+            native_items = (
+                item.select(
+                    *(
+                        self.col(name)
+                        if name in schema
+                        else self.lit(None, dtype=dtype).alias(name)
+                        for name, dtype in out_schema.items()
+                    )
+                )
+                .select(*safe_cast(self, out_schema))
+                .native
+                for item, schema in zip(items, schemas)
+            )
+            union = items[0].native.__class__.union
+            return SparkLikeLazyFrame(
+                native_dataframe=reduce(union, native_items),
                 version=self._version,
                 implementation=self._implementation,
             )
