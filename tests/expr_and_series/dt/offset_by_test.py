@@ -258,3 +258,16 @@ def test_offset_by_date_pandas() -> None:
     result = df.select(nw.col("a").dt.offset_by("1d"))
     expected = {"a": [date(2020, 1, 2)]}
     assert_equal_data(result, expected)
+
+
+def test_offset_by_3471(constructor: Constructor) -> None:
+    date_nw = nw.from_native(constructor({"date": [datetime(2026, 1, 31)]}))
+
+    existent_col_offset = nw.col("date").dt.offset_by("-1d")
+    result = date_nw.with_columns(existent_col_offset)
+    expected = {"date": [datetime(2026, 1, 30)]}
+    assert_equal_data(result, expected)
+
+    new_lit_offset = nw.lit(datetime(2026, 1, 31)).dt.offset_by("-1d")
+    result = date_nw.with_columns(date=new_lit_offset)
+    assert_equal_data(result, expected)

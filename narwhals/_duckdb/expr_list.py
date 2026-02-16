@@ -29,7 +29,7 @@ class DuckDBExprListNamespace(
                 F("list_append", expr_distinct, lit(None)),
             ).otherwise(expr_distinct)
 
-        return self.compliant._with_callable(func)
+        return self.compliant._with_elementwise(func)
 
     def contains(self, item: NonNestedLiteral) -> DuckDBExpr:
         return self.compliant._with_elementwise(
@@ -63,7 +63,7 @@ class DuckDBExprListNamespace(
                 expr_sum
             )
 
-        return self.compliant._with_callable(func)
+        return self.compliant._with_elementwise(func)
 
     def sort(self, *, descending: bool, nulls_last: bool) -> DuckDBExpr:
         sort_direction = "DESC" if descending else "ASC"

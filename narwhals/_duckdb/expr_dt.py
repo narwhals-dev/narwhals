@@ -104,7 +104,7 @@ class DuckDBExprDateTimeNamespace(SQLExprDateTimeNamesSpace["DuckDBExpr"]):
         def _offset_by(expr: Expression) -> Expression:
             return F("date_add", format, expr)
 
-        return self.compliant._with_callable(_offset_by)
+        return self.compliant._with_elementwise(_offset_by)
 
     def _no_op_time_zone(self, time_zone: str) -> DuckDBExpr:
         def func(df: DuckDBLazyFrame) -> Sequence[Expression]:
