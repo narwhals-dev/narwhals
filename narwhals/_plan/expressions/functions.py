@@ -42,7 +42,6 @@ class _NumericToFloatDType(Function):
         )
 
 
-# TODO @dangotbanned: CumProd, CumSum
 class CumAgg(Function, options=FunctionOptions.length_preserving):
     __slots__ = ("reverse",)
     reverse: bool
@@ -51,12 +50,23 @@ class CumAgg(Function, options=FunctionOptions.length_preserving):
         tp = type(self)
         if tp is CumCount:
             return dtm.IDX_DTYPE
+        dtype = node.input[0]._resolve_dtype(schema)
         if tp in {CumMin, CumMax}:
-            return node.input[0]._resolve_dtype(schema)
-
-        # map_dtype(cum::dtypes::cum_prod)
-        # map_dtype(cum::dtypes::cum_sum)
-        return super()._resolve_dtype(schema, node)
+            return dtype
+        if tp is CumProd:
+            if dtype.is_float() or dtype in {dtm.U64, dtm.I128}:
+                return dtype
+            return dtm.I64
+        ret: DType = dtm.I64
+        if dtype.is_boolean():
+            ret = dtm.U32
+        if not dtype.is_numeric() or (
+            dtype.is_float()
+            or dtype in {dtm.I32, dtm.U32, dtm.I64, dtm.U64, dtm.I128}
+            or dtype.is_decimal()
+        ):
+            ret = dtype
+        return ret
 
 
 class RollingWindow(Function, options=FunctionOptions.length_preserving):

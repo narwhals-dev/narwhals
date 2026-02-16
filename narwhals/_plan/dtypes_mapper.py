@@ -20,7 +20,7 @@ from narwhals.dtypes import (
     List,
     NumericType,
     String,
-    Struct,
+    Struct as Struct,  # noqa: PLC0414
 )
 from narwhals.exceptions import InvalidOperationError
 
@@ -37,10 +37,13 @@ _HAS_INNER = List, Array
 _INVALID_VAR = dtypes.Duration
 _INVALID_SUM = String, Binary, List, Array, Struct
 
+I128 = dtypes.Int128()
 I64 = dtypes.Int64()
+I32 = dtypes.Int32()
+U64 = dtypes.UInt64()
 U32 = dtypes.UInt32()
-F32 = dtypes.Float32()
 F64 = dtypes.Float64()
+F32 = dtypes.Float32()
 
 IDX_DTYPE = I64
 """TODO @dangotbanned: Unify `IDX_DTYPE` as backends are mixed:
@@ -175,7 +178,7 @@ def _diff_int_transform() -> Mapping[type[DType], DType]:
     return {
         dtypes.UInt64: I64,
         dtypes.UInt32: I64,
-        dtypes.UInt16: dtypes.Int32(),
+        dtypes.UInt16: I32,
         dtypes.UInt8: dtypes.Int16(),
     }
 
