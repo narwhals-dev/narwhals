@@ -476,6 +476,8 @@ jobs:
           uv pip install . --group dev
           # Temporary pin to get CI green
           uv pip install "sqlglot<28.7.0"
+          # Temporary pin to get CI green
+          uv pip install "pandas<3"
           uv pip install pytest pytest-cov pytest-snapshot pandas polars "ibis-framework[duckdb,mysql,postgres,sqlite]>=9.5.0" chatlas shiny
       - name: install-narwhals-dev
         run: |
