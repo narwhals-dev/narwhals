@@ -261,9 +261,7 @@ class ReplaceStrict(Function, options=FunctionOptions.elementwise):
 
 # NOTE: similar to `ReplaceStrict._resolve_dtype`, but use `get_supertype(new, default)`
 # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L780
-class ReplaceStrictDefault(
-    ReplaceStrict
-):  # like `ReplaceStrict`, but uses supertyping w/ default
+class ReplaceStrictDefault(ReplaceStrict):
     def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR]:
         expr, default = node.input
         return expr, default
