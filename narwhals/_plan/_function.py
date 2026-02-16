@@ -69,6 +69,11 @@ class Function(Immutable):
     # Makes things complicated in the namespaces, which can only use
     # `FunctionExpr[FunctionT_co]` *because* it is a return type
     def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Function]) -> DType:
+        """HACK @dangotbanned: Most of these should be generated during `Function.__init_subclass__`.
+
+        There's a LOT of content to port over from rust, so doing everything manually *first* and then working out
+        what common patterns we have.
+        """
         msg = f"`NamedIR[{type(node).__name__}[{type(self).__name__}]].resolve_dtype()` is not yet implemented:\n{node!r}"
         raise NotImplementedError(msg)
 
