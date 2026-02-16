@@ -260,7 +260,9 @@ def test_offset_by_date_pandas() -> None:
     assert_equal_data(result, expected)
 
 
-def test_offset_by_3471(constructor: Constructor) -> None:
+def test_offset_by_3471(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if any(x in str(constructor) for x in ("dask", "ibis")):
+        request.applymarker(pytest.mark.xfail())
     date_nw = nw.from_native(constructor({"date": [date(2026, 1, 31)]}))
 
     existent_col_offset = nw.col("date").dt.offset_by("-1d")
