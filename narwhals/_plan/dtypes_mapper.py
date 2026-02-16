@@ -10,7 +10,8 @@ from typing import TYPE_CHECKING
 
 from narwhals._plan.exceptions import invalid_dtype_operation_error
 from narwhals._utils import Version
-from narwhals.dtypes import Array, Binary, List, String, Struct
+from narwhals.dtypes import Array, Binary, Float32, List, String, Struct
+from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
@@ -26,6 +27,7 @@ _INVALID_SUM = String, Binary, List, Array, Struct
 
 I64 = dtypes.Int64()
 U32 = dtypes.UInt32()
+F64 = dtypes.Float64()
 
 IDX_DTYPE = I64
 """TODO @dangotbanned: Unify `IDX_DTYPE` as backends are mixed:
@@ -43,11 +45,19 @@ STRING_DTYPE = String()
 DATE_DTYPE = dtypes.Date()
 
 
+def _inner_into_dtype(dtype: List | Array, /) -> DType:
+    """Return the initialized inner dtype.
+
+    `dtype.inner: IntoDType` -> `DType`
+    """
+    return dtype.inner if not isinstance(dtype.inner, type) else dtype.inner()
+
+
 def map_dtype(
     mapper: Callable[[DType], DType], /, dtype: DType, *, map_inner: bool
 ) -> DType:
     if map_inner and isinstance(dtype, _HAS_INNER):
-        inner_in = dtype.inner if not isinstance(dtype.inner, type) else dtype.inner()
+        inner_in = _inner_into_dtype(dtype)
         inner_out = mapper(inner_in)
         if inner_out == inner_in:
             return dtype
@@ -55,6 +65,20 @@ def map_dtype(
             return List(inner_out)
         return Array(inner_out, dtype.shape)
     return mapper(dtype)
+
+
+def inner_dtype(
+    dtype: DType,
+    method_name: str = "",
+    expected: tuple[type[List | Array], ...] = (List,),
+) -> DType:
+    """Validate we have `expected` nested type, then unwrap `dtype.inner`."""
+    if isinstance(dtype, expected):
+        return _inner_into_dtype(dtype)  # type: ignore[arg-type]
+    if method_name:
+        raise invalid_dtype_operation_error(dtype, method_name, *expected)
+    msg = f"expected {' or '.join(str(tp) for tp in expected)} type, got dtype: {dtype}"
+    raise InvalidOperationError(msg)
 
 
 def moment_dtype(dtype: DType) -> DType:
@@ -71,6 +95,26 @@ def sum_dtype(dtype: DType) -> DType:
     return _sum_transform().get(type(dtype), dtype)
 
 
+# NOTE @dangotbanned: If we add `arr.sum`, expose `inner_dtype` parameters
+def nested_sum_dtype(dtype: DType) -> DType:
+    return sum_dtype(inner_dtype(dtype, "list.sum"))
+
+
+def nested_mean_median_dtype(dtype: DType) -> DType:
+    inner = inner_dtype(dtype, expected=(List,))
+    tp_inner = type(inner)
+    if inner.is_temporal():
+        return _date_to_datetime_transform().get(tp_inner, inner)
+    return inner if tp_inner is Float32 else F64
+
+
+def list_join_dtype(dtype: DType) -> String:
+    inner = inner_dtype(dtype, "list.join")
+    if isinstance(inner, String):
+        return inner
+    raise invalid_dtype_operation_error(dtype, "list.join", List(STRING_DTYPE))
+
+
 def _var_dtype(dtype: DType) -> DType:
     if isinstance(dtype, _INVALID_VAR):
         raise invalid_dtype_operation_error(dtype, "var")
@@ -82,13 +126,13 @@ def _moment_dtype(dtype: DType) -> DType:
 
 
 @cache
+def _date_to_datetime_transform() -> Mapping[type[DType], DType]:
+    return {dtypes.Date: dtypes.Datetime(), dtypes_v1.Date: dtypes_v1.Datetime()}
+
+
+@cache
 def _moment_transform() -> Mapping[type[DType], DType]:
-    return {
-        dtypes.Boolean: dtypes.Float64(),
-        dtypes.Date: dtypes.Datetime(),
-        dtypes_v1.Date: dtypes_v1.Datetime(),
-        dtypes.Decimal: dtypes.Float64(),
-    }
+    return {dtypes.Boolean: F64, dtypes.Decimal: F64, **_date_to_datetime_transform()}
 
 
 @cache

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
+import narwhals._plan.dtypes_mapper as dtm
 from narwhals._plan._function import Function
 from narwhals._plan._parse import parse_into_expr_ir
 from narwhals._plan.exceptions import function_arg_non_scalar_error
@@ -15,42 +16,62 @@ if TYPE_CHECKING:
 
     from narwhals._plan.expr import Expr
     from narwhals._plan.expressions import ExprIR, FunctionExpr as FExpr
+    from narwhals._plan.schema import FrozenSchema
     from narwhals._plan.typing import IntoExpr
+    from narwhals.dtypes import DType
 
 
 # fmt: off
 class ListFunction(Function, accessor="list", options=FunctionOptions.elementwise): ...
-class Any(ListFunction): ...
-class All(ListFunction): ...
-class First(ListFunction): ...
-class Last(ListFunction): ...
-class Min(ListFunction): ...
-class Max(ListFunction): ...
-class Mean(ListFunction): ...
-class Median(ListFunction): ...
-class NUnique(ListFunction): ...
-class Sum(ListFunction): ...
-class Len(ListFunction): ...
-class Unique(ListFunction): ...
-class Get(ListFunction):
-    __slots__ = ("index",)
-    index: int
-class Sort(ListFunction):
-    __slots__ = ("options",)
-    options: SortOptions
+class _ListSame(ListFunction):
+    def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
+        return node.input[0]._resolve_dtype(schema)
+class _ListBoolean(ListFunction):
+    def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
+        return dtm.BOOLEAN_DTYPE
+class _ListIdxDType(ListFunction):
+    def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
+        return dtm.IDX_DTYPE
+class _ListInner(ListFunction):
+    def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
+        return dtm.inner_dtype(node.input[0]._resolve_dtype(schema), repr(self))
+class _ListMeanMedian(ListFunction):
+    def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
+        return dtm.nested_mean_median_dtype(node.input[0]._resolve_dtype(schema))
+class Sum(ListFunction):
+    def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
+        return dtm.nested_sum_dtype(node.input[0]._resolve_dtype(schema))
 class Join(ListFunction):
-    """Join all string items in a sublist and place a separator between them."""
-
     __slots__ = ("ignore_nulls", "separator")
     separator: str
     ignore_nulls: bool
-# fmt: on
-class Contains(ListFunction):
+
+    def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
+        return dtm.list_join_dtype(node.input[0]._resolve_dtype(schema))
+class Contains(_ListBoolean):
     """N-ary (expr, item)."""
 
     def unwrap_input(self, node: FExpr[Self], /) -> tuple[ExprIR, ExprIR]:
         expr, item = node.input
         return expr, item
+class Any(_ListBoolean): ...
+class All(_ListBoolean): ...
+class First(_ListInner): ...
+class Last(_ListInner): ...
+class Min(_ListInner): ...
+class Max(_ListInner): ...
+class Mean(_ListMeanMedian): ...
+class Median(_ListMeanMedian): ...
+class NUnique(_ListIdxDType): ...
+class Len(_ListIdxDType): ...
+class Unique(_ListSame): ...
+class Get(_ListInner):
+    __slots__ = ("index",)
+    index: int
+class Sort(_ListSame):
+    __slots__ = ("options",)
+    options: SortOptions
+# fmt: on
 
 
 Aggregation: TypeAlias = (

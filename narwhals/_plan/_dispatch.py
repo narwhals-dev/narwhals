@@ -57,6 +57,29 @@ class Dispatcher(Generic[Node]):
 
     @property
     def name(self) -> str:
+        """Compliant-level method name.
+
+        They're often the lowercase transform of the class name:
+
+            from narwhals._plan import expressions as ir
+            ir.Cast.__expr_ir_dispatch__.name
+            'cast'
+
+        *PascalCase* becomes *snake_case*:
+
+            ir.OverOrdered.__expr_ir_dispatch__.name
+            'over_ordered'
+
+        Namespaced-methods reflect the accessor in their name:
+
+            ir.lists.NUnique.__expr_ir_dispatch__.name
+            'list.n_unique'
+
+        Generated names can always be overriden at class definition time:
+
+            ir.Column.__expr_ir_dispatch__.name
+            'col'
+        """
         return self._name
 
     def __repr__(self) -> str:
