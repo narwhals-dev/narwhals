@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import narwhals._plan.dtypes_mapper as dtm
-from narwhals._plan._expr_ir import ExprIR, resolve_dtype_root
+from narwhals._plan._expr_ir import ExprIR
 from narwhals._plan.exceptions import agg_scalar_error
 
 if TYPE_CHECKING:
@@ -32,7 +32,7 @@ class AggExpr(ExprIR, child=("expr",)):
         tp = type(self)
         if tp in {NUnique, Count, Len, ArgMin, ArgMax}:
             return dtm.IDX_DTYPE
-        dtype = resolve_dtype_root(self, schema)
+        dtype = dtm.resolve_dtype_root(self, schema)
         if tp in {Max, Min, First, Last}:
             return dtype
         if tp is Sum:

@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 from functools import cache
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol
 
 from narwhals._plan.exceptions import invalid_dtype_operation_error
 from narwhals._utils import Version
@@ -27,8 +27,15 @@ from narwhals.exceptions import InvalidOperationError
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
 
+    from narwhals._plan.expressions import ExprIR
+    from narwhals._plan.schema import FrozenSchema
     from narwhals.dtypes import DType
     from narwhals.typing import TimeUnit
+
+    class _HasChildExpr(Protocol):
+        @property
+        def expr(self) -> ExprIR: ...
+
 
 dtypes = Version.MAIN.dtypes
 dtypes_v1 = Version.V1.dtypes
@@ -61,6 +68,12 @@ IDX_DTYPE = I64
 BOOLEAN_DTYPE = dtypes.Boolean()
 STRING_DTYPE = String()
 DATE_DTYPE = dtypes.Date()
+
+
+# TODO @dangotbanned: Make this an `ExprIR.__init_subclass__` option?
+def resolve_dtype_root(expr: _HasChildExpr, schema: FrozenSchema, /) -> DType:
+    """Call `expr.expr._resolve_dtype(schema)`."""
+    return expr.expr._resolve_dtype(schema)
 
 
 def _inner_into_dtype(dtype: List | Array, /) -> DType:
