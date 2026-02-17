@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import sys
 from typing import TYPE_CHECKING
 
@@ -22,8 +21,6 @@ def test_median_expr(request: pytest.FixtureRequest, constructor: Constructor) -
         "polars" in str(constructor) and POLARS_VERSION < (0, 20, 7)
     ):
         # ibis issue: https://github.com/ibis-project/ibis/issues/11788
-        request.applymarker(pytest.mark.xfail)
-    if os.environ.get("SPARK_CONNECT", None) and "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor):
         if PANDAS_VERSION < (2, 2):

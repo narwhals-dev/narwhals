@@ -477,8 +477,6 @@ class Series(Generic[IntoSeriesT]):
         return (self._compliant_series.len(),)
 
     def _extract_native(self, arg: Any) -> Any:
-        from narwhals.series import Series
-
         if isinstance(arg, Series):
             return arg._compliant_series
         return arg
