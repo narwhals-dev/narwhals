@@ -135,11 +135,16 @@ class RollingMean(RollingWindow): ...
 class RollingVar(RollingWindow): ...
 class RollingStd(RollingWindow): ...
 class Unique(_SameDType): ...
-class SumHorizontal(HorizontalFunction): ... # map_to_supertype + https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L404-L409
-class MinHorizontal(HorizontalFunction): ... # map_to_supertype
-class MaxHorizontal(HorizontalFunction): ... # map_to_supertype
-class MeanHorizontal(HorizontalFunction): ... # map_to_supertype + https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L410-L420
-class Coalesce(HorizontalFunction): ... # map_to_supertype
+# TODO @dangotbanned: `map_to_supertype` (`*Horizontal`)
+# - https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L45
+# - https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L402-L420
+# - https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L410-L420
+# - https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L806-L830
+class SumHorizontal(HorizontalFunction): ...
+class MinHorizontal(HorizontalFunction): ...
+class MaxHorizontal(HorizontalFunction): ...
+class MeanHorizontal(HorizontalFunction): ...
+class Coalesce(HorizontalFunction): ...
 # fmt: on
 class Hist(Function):
     __slots__ = ("include_breakpoint",)
@@ -215,7 +220,8 @@ class Pow(Function, options=FunctionOptions.elementwise):
         return base
 
 
-class FillNull(Function, options=FunctionOptions.elementwise):  # map_to_supertype
+# TODO @dangotbanned: `map_to_supertype`
+class FillNull(Function, options=FunctionOptions.elementwise):
     """N-ary (expr, value)."""
 
     def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR]:
@@ -260,6 +266,8 @@ class EwmMean(_NumericToFloatDType, options=FunctionOptions.length_preserving):
     options: EWMOptions
 
 
+# TODO @dangotbanned: (partial)
+# Need to run a sample of `new` through `nwp.common.py_to_narwhals_dtype`
 class ReplaceStrict(Function, options=FunctionOptions.elementwise):
     __slots__ = ("new", "old", "return_dtype")
     old: Seq[Any]
@@ -270,15 +278,14 @@ class ReplaceStrict(Function, options=FunctionOptions.elementwise):
         if dtype := self.return_dtype:
             return dtype
         # NOTE: polars would use the dtype of `new` here
-        # Would need to run a sample through `common.py_to_narwhals_dtype`
-        # https://github.com/narwhals-dev/narwhals/blob/a44792702c107c97b97e3f4a42977c0c9213e1d4/narwhals/_plan/common.py#L52-L67
         # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L773
         # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L777
         # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L781
         return super()._resolve_dtype(schema, node)
 
 
-# NOTE: similar to `ReplaceStrict._resolve_dtype`, but use `get_supertype(new, default)`
+# TODO @dangotbanned: (partial) `get_supertype(new, default)`
+# Similar to `ReplaceStrict._resolve_dtype`
 # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L780
 class ReplaceStrictDefault(ReplaceStrict):
     def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR]:

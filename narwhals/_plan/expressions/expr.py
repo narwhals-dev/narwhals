@@ -153,6 +153,18 @@ class BinaryExpr(
         yield from self.left.iter_output_name()
 
     def _resolve_dtype(self, schema: FrozenSchema) -> DType:
+        """NOTE: Supported on **logical operators only**.
+
+        Requires `get_supertype`:
+        - `add`
+        - `sub`
+        - `mul`
+        - `floordiv`
+        - `mod`
+
+        Complex special casing:
+        - `truediv`
+        """
         return self.op._resolve_dtype(schema, self.left, self.right)
 
 
@@ -217,7 +229,6 @@ class SortBy(ExprIR, child=("expr", "by")):
         return dtm.resolve_dtype_root(self, schema)
 
 
-# TODO @dangotbanned: `FunctionExpr._resolve_dtype` (huge)
 # mypy: disable-error-code="misc"
 class FunctionExpr(ExprIR, t.Generic[FunctionT_co], child=("input",)):
     """**Representing `Expr::Function`**.
@@ -295,6 +306,17 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT_co], child=("input",)):
         return self.function.__expr_ir_dispatch__(self, ctx, frame, name)
 
     def _resolve_dtype(self, schema: FrozenSchema) -> DType:
+        """NOTE: Supported on many functions, but there are important gaps.
+
+        Requires `get_supertype`:
+        - `{max,mean,min,sum}_horizontal`
+        - `coalesce`
+        - `fill_null(value)`
+        - `replace_strict(..., dtype=None)`
+
+        Unlikely to ever be supported:
+        - `map_batches(..., dtype=None)`
+        """
         return self.function._resolve_dtype(schema, self)
 
 
@@ -452,6 +474,7 @@ class Len(ExprIR, config=ExprIROptions.namespaced()):
         return dtm.IDX_DTYPE
 
 
+# TODO @dangotbanned: `get_supertype`, `nw.Null`
 class TernaryExpr(ExprIR, child=("truthy", "falsy", "predicate")):
     """When-Then-Otherwise."""
 

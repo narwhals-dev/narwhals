@@ -329,7 +329,10 @@ class NamedIR(Immutable, Generic[ExprIRT]):
             schema: The same schema used to project this expression.
 
         Warning:
-            Only a small subset of nodes support this operation.
+            Most `ExprIR`(s) and `Function`(s) support this operation, but
+            may be composed of others that cannot until [#3396] is merged.
+
+        [#3396]: https://github.com/narwhals-dev/narwhals/pull/3396
         """
         return self.expr._resolve_dtype(schema)
 
