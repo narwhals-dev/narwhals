@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from functools import cache
+from functools import cache, lru_cache
 from typing import TYPE_CHECKING, Protocol
 
 from narwhals._plan.exceptions import invalid_dtype_operation_error
@@ -14,22 +14,33 @@ from narwhals.dtypes import (
     Array,
     Binary,
     Boolean,
+    Decimal,
+    DType,
     Duration,
     Float32,
     Float64,
+    FloatType,
+    Int8,
+    Int16,
+    IntegerType,
     List,
+    NestedType,
     NumericType,
     String,
     Struct as Struct,  # noqa: PLC0414
+    TemporalType,
+    UInt8,
+    UInt16,
 )
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
 
+    from typing_extensions import TypeAlias, TypeIs
+
     from narwhals._plan.expressions import ExprIR
     from narwhals._plan.schema import FrozenSchema
-    from narwhals.dtypes import DType
     from narwhals.typing import TimeUnit
 
     class _HasChildExpr(Protocol):
@@ -43,6 +54,7 @@ dtypes_v1 = Version.V1.dtypes
 _HAS_INNER = List, Array
 _INVALID_VAR = dtypes.Duration
 _INVALID_SUM = String, Binary, List, Array, Struct
+_PRIMITIVE_NUMERIC = IntegerType, FloatType
 
 I128 = dtypes.Int128()
 I64 = dtypes.Int64()
@@ -225,3 +237,82 @@ def diff_dtype(dtype: DType) -> DType:
     if isinstance(dtype, dtypes.Decimal):
         return dtypes.Decimal(38, dtype.scale)
     return dtype
+
+
+_TrueDivSpecial: TypeAlias = "UInt8 | Int8 | UInt16 | Int16 | Boolean | Float32 | Decimal"
+"""Data types with complex special-casing in `__truediv__`.
+
+They are split out to reduce the number of narrowing checks all other cases need to make.
+E.g., the sooner we can rule them out on the *left*, the faster we can handle more common pairs.
+"""
+
+
+@lru_cache(maxsize=8)
+def truediv_dtype(left: DType, right: DType, /) -> DType:
+    """Adapted from [`schema::get_truediv_dtype`].
+
+    [`schema::get_truediv_dtype`]: https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/schema.rs#L749-L877
+    """
+    if isinstance(left, (NestedType, String)) or isinstance(right, (NestedType, String)):
+        if String in {left.base_type(), right.base_type()}:
+            raise _invalid_division_error(String)
+        # NOTE: Low priority + high complexity
+        msg = f"Division with nested data types is not yet implemented: \n(left: {left}, right: {right})"
+        raise NotImplementedError(msg)
+
+    if isinstance(left, TemporalType):
+        if isinstance(left, Duration):
+            if left.base_type() is right.base_type():
+                return F64
+            if isinstance(right, _PRIMITIVE_NUMERIC):
+                return left
+        raise _invalid_division_error(left)
+
+    if _is_truediv_special(left) and (dtype := _truediv_special(left, right)):
+        return dtype
+
+    if isinstance(left, _PRIMITIVE_NUMERIC):
+        return F64
+
+    return left
+
+
+def _is_truediv_special(left: DType, /) -> TypeIs[_TrueDivSpecial]:
+    return isinstance(left, (UInt8, Int8, UInt16, Int16, Boolean, Float32, Decimal))
+
+
+if not TYPE_CHECKING:
+    # NOTE: Hack to get mypy to recognize a cached `TypeIs`
+    _is_truediv_special = lru_cache(maxsize=16)(_is_truediv_special)
+
+
+def _truediv_special(left: _TrueDivSpecial, right: DType, /) -> DType | None:
+    ret: DType | None = None
+
+    if not isinstance(left, NumericType):
+        if isinstance(right, Float32):
+            ret = right
+        elif isinstance(right, (NumericType, Boolean)):
+            ret = F64
+
+    elif isinstance(left, Decimal):
+        if isinstance(right, Decimal):
+            ret = dtypes.Decimal(38, max(left.scale, right.scale))
+
+    elif isinstance(left, Float32):
+        if isinstance(right, (UInt8, Int8, UInt16, Int16)):
+            ret = F32
+        elif isinstance(right, (IntegerType, Float64)):
+            ret = F64
+        else:
+            ret = F32
+
+    elif isinstance(right, Float32) and isinstance(left, (UInt8, Int8, UInt16, Int16)):
+        ret = F32
+
+    return ret
+
+
+def _invalid_division_error(dtype: DType | type[DType], /) -> InvalidOperationError:
+    msg = f"Division with {dtype.base_type()!r} datatypes is not allowed"
+    return InvalidOperationError(msg)

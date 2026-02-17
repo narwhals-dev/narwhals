@@ -153,17 +153,14 @@ class BinaryExpr(
         yield from self.left.iter_output_name()
 
     def _resolve_dtype(self, schema: FrozenSchema) -> DType:
-        """NOTE: Supported on **logical operators only**.
+        """NOTE: Supported on `Logical` and `TrueDivide` operators only.
 
         Requires `get_supertype`:
-        - `add`
-        - `sub`
-        - `mul`
-        - `floordiv`
-        - `mod`
-
-        Complex special casing:
-        - `truediv`
+        - `Add`
+        - `Sub`
+        - `Multiply`
+        - `FloorDivide`
+        - `Modulus`
         """
         return self.op._resolve_dtype(schema, self.left, self.right)
 
