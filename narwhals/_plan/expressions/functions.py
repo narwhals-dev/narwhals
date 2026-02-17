@@ -143,7 +143,6 @@ class Unique(_SameDType): ...
 class SumHorizontal(HorizontalFunction): ...
 class MinHorizontal(HorizontalFunction): ...
 class MaxHorizontal(HorizontalFunction): ...
-class MeanHorizontal(HorizontalFunction): ...
 class Coalesce(HorizontalFunction): ...
 # fmt: on
 class Hist(Function):
@@ -185,6 +184,17 @@ class Hist(Function):
         if self.include_breakpoint:
             return dtm.Struct({"breakpoint": dtm.F64, "count": dtm.IDX_DTYPE})
         return dtm.IDX_DTYPE
+
+
+class MeanHorizontal(HorizontalFunction):
+    def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Function]) -> DType:
+        # NOTE: There are 6 supertype pairs (that we support) that could produce `Float32`
+        # Otherwise, it is always `Float64`
+        if dtm.F32 in {e._resolve_dtype(schema) for e in node.input}:
+            msg = f"{self!r} is not yet supported when inputs contain a {dtm.F32!r} dtype.\n"
+            "This operation requires https://github.com/narwhals-dev/narwhals/pull/3396"
+            raise NotImplementedError(msg)
+        return dtm.F64
 
 
 class HistBins(Hist):

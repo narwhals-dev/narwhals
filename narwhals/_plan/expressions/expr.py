@@ -306,7 +306,7 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT_co], child=("input",)):
         """NOTE: Supported on many functions, but there are important gaps.
 
         Requires `get_supertype`:
-        - `{max,mean,min,sum}_horizontal`
+        - `{max,min,sum}_horizontal`
         - `coalesce`
         - `fill_null(value)`
         - `replace_strict(..., dtype=None)`
