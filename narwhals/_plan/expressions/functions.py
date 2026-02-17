@@ -187,6 +187,7 @@ class Hist(Function):
 
 
 class MeanHorizontal(HorizontalFunction):
+    # TODO @dangotbanned: `map_to_supertype`
     def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Function]) -> DType:
         # NOTE: There are 6 supertype pairs (that we support) that could produce `Float32`
         # Otherwise, it is always `Float64`
@@ -230,13 +231,21 @@ class Pow(Function, options=FunctionOptions.elementwise):
         return base
 
 
-# TODO @dangotbanned: `map_to_supertype`
 class FillNull(Function, options=FunctionOptions.elementwise):
     """N-ary (expr, value)."""
 
     def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR]:
         expr, value = node.input
         return expr, value
+
+    # TODO @dangotbanned: `map_to_supertype`
+    def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Function]) -> DType:
+        expr, value = (e._resolve_dtype(schema) for e in node.input)
+        if expr != value:
+            msg = f"{self!r} is currently only supported when the dtype of the expression {expr!r} matches the fill value {value!r}.\n"
+            "This operation requires https://github.com/narwhals-dev/narwhals/pull/3396"
+            raise NotImplementedError(msg)
+        return expr
 
 
 class FillNan(_SameDType, options=FunctionOptions.elementwise):

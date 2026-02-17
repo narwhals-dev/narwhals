@@ -308,8 +308,11 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT_co], child=("input",)):
         Requires `get_supertype`:
         - `{max,min,sum}_horizontal`
         - `coalesce`
-        - `fill_null(value)`
         - `replace_strict(..., dtype=None)`
+
+        Partially requires `get_supertype`:
+        - `mean_horizontal`
+        - `fill_null(value)`
 
         Unlikely to ever be supported:
         - `map_batches(..., dtype=None)`
