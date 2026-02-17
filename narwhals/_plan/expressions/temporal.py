@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, Literal
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, TypeVar
 
 import narwhals._plan.dtypes_mapper as dtm
 from narwhals._duration import Interval
@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from narwhals.typing import TimeUnit
 
 PolarsTimeUnit: TypeAlias = Literal["ns", "us", "ms"]
+_Tz = TypeVar("_Tz", str, "str | None")
 
 
 def _is_polars_time_unit(obj: Any) -> TypeIs[PolarsTimeUnit]:
@@ -40,9 +41,59 @@ class _TemporalInt32(TemporalFunction):
 class _TemporalInt64(TemporalFunction):
     def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
         return dtm.I64
+
+class _TemporalTimeZone(TemporalFunction, Generic[_Tz]):
+    __slots__ = ("time_zone",)
+    time_zone: _Tz
+
+    def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
+        dtype = node.input[0]._resolve_dtype(schema)
+        if isinstance(dtype, dtm.dtypes.Datetime):
+            return type(dtype)(dtype.time_unit, self.time_zone)
+        msg = f"Expected Datetime, got {dtype}"
+        raise ComputeError(msg)
+
+class _TemporalInterval(TemporalFunction):
+    __slots__ = ("multiple", "unit")
+    multiple: int
+    unit: IntervalUnit
+
+    @classmethod
+    def from_string(cls, interval: str, /) -> Self:
+        return cls.from_interval(Interval.parse(interval))
+
+    @classmethod
+    def from_interval(cls, interval: Interval, /) -> Self:
+        return cls(multiple=interval.multiple, unit=interval.unit)
+
+    def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
+        return node.input[0]._resolve_dtype(schema)
+
 class Date(TemporalFunction):
     def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
         return dtm.DATE_DTYPE
+
+class ToString(TemporalFunction):
+    __slots__ = ("format",)
+    format: str
+
+    def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
+        return dtm.STRING_DTYPE
+
+class Timestamp(_TemporalInt64):
+    __slots__ = ("time_unit",)
+    time_unit: PolarsTimeUnit
+
+    @staticmethod
+    def from_time_unit(time_unit: TimeUnit = "us", /) -> Timestamp:
+        if not _is_polars_time_unit(time_unit):
+            msg = f"invalid `time_unit` \n\nExpected one of ['ns', 'us', 'ms'], got {time_unit!r}."
+            raise TypeError(msg)
+        return Timestamp(time_unit=time_unit)
+
+    def __repr__(self) -> str:
+        return f"{super().__repr__()}[{self.time_unit!r}]"
+
 class Year(_TemporalInt32): ...
 class Month(_TemporalInt8): ...
 class Day(_TemporalInt8): ...
@@ -59,66 +110,10 @@ class TotalSeconds(_TemporalInt64): ...
 class TotalMilliseconds(_TemporalInt64): ...
 class TotalMicroseconds(_TemporalInt64): ...
 class TotalNanoseconds(_TemporalInt64): ...
-class ToString(TemporalFunction):
-    __slots__ = ("format",)
-    format: str
-    def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
-        return dtm.STRING_DTYPE
-# fmt: on
-class ReplaceTimeZone(
-    TemporalFunction
-):  # TODO @dangotbanned: `map_datetime_dtype_timezone` (https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L676-L686)
-    __slots__ = ("time_zone",)
-    time_zone: str | None
-
-
-class ConvertTimeZone(TemporalFunction):
-    __slots__ = ("time_zone",)
-    time_zone: str
-
-    def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
-        dtype = node.input[0]._resolve_dtype(schema)
-        if isinstance(dtype, dtm.dtypes.Datetime):
-            return type(dtype)(dtype.time_unit, self.time_zone)
-        msg = f"Expected Datetime, got {dtype}"
-        raise ComputeError(msg)
-
-
-class Timestamp(_TemporalInt64):
-    __slots__ = ("time_unit",)
-    time_unit: PolarsTimeUnit
-
-    @staticmethod
-    def from_time_unit(time_unit: TimeUnit = "us", /) -> Timestamp:
-        if not _is_polars_time_unit(time_unit):
-            msg = f"invalid `time_unit` \n\nExpected one of ['ns', 'us', 'ms'], got {time_unit!r}."
-            raise TypeError(msg)
-        return Timestamp(time_unit=time_unit)
-
-    def __repr__(self) -> str:
-        return f"{super().__repr__()}[{self.time_unit!r}]"
-
-
-class _IntervalFunction(TemporalFunction):
-    __slots__ = ("multiple", "unit")
-    multiple: int
-    unit: IntervalUnit
-
-    @classmethod
-    def from_string(cls, interval: str, /) -> Self:
-        return cls.from_interval(Interval.parse(interval))
-
-    @classmethod
-    def from_interval(cls, interval: Interval, /) -> Self:
-        return cls(multiple=interval.multiple, unit=interval.unit)
-
-    def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
-        return node.input[0]._resolve_dtype(schema)
-
-
-# fmt: off
-class Truncate(_IntervalFunction): ...
-class OffsetBy(_IntervalFunction): ...
+class ReplaceTimeZone(_TemporalTimeZone["str | None"]): ...
+class ConvertTimeZone(_TemporalTimeZone[str]): ...
+class Truncate(_TemporalInterval): ...
+class OffsetBy(_TemporalInterval): ...
 # fmt: on
 
 
