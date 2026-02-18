@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import narwhals._plan.dtypes_mapper as dtm
+from narwhals._plan._dtype import ResolveDType
 from narwhals._plan._function import Function
 from narwhals._plan.options import FEOptions, FunctionOptions
 from narwhals._utils import Version
@@ -32,7 +33,9 @@ class RangeFunction(Function, config=FEOptions.namespaced()):
         return start, end
 
 
-class IntRange(RangeFunction, options=FunctionOptions.row_separable):
+class IntRange(
+    RangeFunction, options=FunctionOptions.row_separable, dtype=ResolveDType.get_dtype()
+):
     """N-ary (start, end)."""
 
     __slots__ = ("step", "dtype")  # noqa: RUF023
@@ -43,15 +46,14 @@ class IntRange(RangeFunction, options=FunctionOptions.row_separable):
         return self.dtype
 
 
-class DateRange(RangeFunction, options=FunctionOptions.row_separable):
+class DateRange(
+    RangeFunction, options=FunctionOptions.row_separable, dtype=dtm.DATE_DTYPE
+):
     """N-ary (start, end)."""
 
     __slots__ = ("interval", "closed")  # noqa: RUF023
     interval: int
     closed: ClosedInterval
-
-    def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Function]) -> DType:
-        return dtm.DATE_DTYPE
 
 
 class LinearSpace(RangeFunction, options=FunctionOptions.row_separable):

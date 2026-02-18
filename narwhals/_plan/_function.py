@@ -3,9 +3,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from narwhals._plan._dispatch import Dispatcher
+from narwhals._plan._dtype import ResolveDType
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.common import replace
 from narwhals._plan.options import FEOptions, FunctionOptions
+from narwhals.dtypes import DType
 
 if TYPE_CHECKING:
     from typing import Any, Callable, ClassVar
@@ -15,7 +17,6 @@ if TYPE_CHECKING:
     from narwhals._plan.expressions import ExprIR, FunctionExpr
     from narwhals._plan.schema import FrozenSchema
     from narwhals._plan.typing import Accessor
-    from narwhals.dtypes import DType
 
 __all__ = ["Function", "HorizontalFunction"]
 
@@ -31,6 +32,7 @@ class Function(Immutable):
     )
     __expr_ir_config__: ClassVar[FEOptions] = FEOptions.default()
     __expr_ir_dispatch__: ClassVar[Dispatcher[FunctionExpr[Self]]]
+    __expr_ir_dtype__: ClassVar[ResolveDType[FunctionExpr[Self]]] = ResolveDType.default()
 
     @property
     def function_options(self) -> FunctionOptions:
@@ -51,6 +53,7 @@ class Function(Immutable):
         accessor: Accessor | None = None,
         options: Callable[[], FunctionOptions] | None = None,
         config: FEOptions | None = None,
+        dtype: DType | ResolveDType[Any] | Callable[[Self], DType] | None = None,
         **kwds: Any,
     ) -> None:
         super().__init_subclass__(*args, **kwds)
@@ -61,6 +64,12 @@ class Function(Immutable):
         if config:
             cls.__expr_ir_config__ = config
         cls.__expr_ir_dispatch__ = Dispatcher.from_function(cls)
+        if dtype is not None:
+            if isinstance(dtype, DType):
+                dtype = ResolveDType.from_dtype(dtype)
+            elif not isinstance(dtype, ResolveDType):
+                dtype = ResolveDType.function_visitor(dtype)
+            cls.__expr_ir_dtype__ = dtype
 
     def __repr__(self) -> str:
         return self.__expr_ir_dispatch__.name
@@ -68,14 +77,12 @@ class Function(Immutable):
     # TODO @dangotbanned: Try to avoid a contravariant (`Self` or `Function`)
     # Makes things complicated in the namespaces, which can only use
     # `FunctionExpr[FunctionT_co]` *because* it is a return type
-    def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Function]) -> DType:
-        """HACK @dangotbanned: Most of these should be generated during `Function.__init_subclass__`.
 
-        There's a LOT of content to port over from rust, so doing everything manually *first* and then working out
-        what common patterns we have.
-        """
-        msg = f"`NamedIR[{type(node).__name__}[{type(self).__name__}]].resolve_dtype()` is not yet implemented:\n{node!r}"
-        raise NotImplementedError(msg)
+    # TODO @dangotbanned: Flip `(schema, node)` -> `(node, schema)`
+    # Will match the convention for `Dispatcher`
+    def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Function]) -> DType:
+        # TODO @dangotbanned: Replace `_resolve_dtype` entirely with an identical pattern to `FunctionExpr.dispatch`?
+        return self.__expr_ir_dtype__(node, schema)  # type: ignore[arg-type]
 
 
 class HorizontalFunction(

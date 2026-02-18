@@ -3,16 +3,18 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Generic
 
 from narwhals._plan._dispatch import Dispatcher
+from narwhals._plan._dtype import ResolveDType
 from narwhals._plan._guards import is_function_expr, is_literal
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.common import replace
 from narwhals._plan.options import ExprIROptions
 from narwhals._plan.typing import ExprIRT, Ignored
 from narwhals._utils import Version, unstable
+from narwhals.dtypes import DType
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Callable, Iterator
     from typing import Any, ClassVar
 
     from typing_extensions import Self
@@ -24,7 +26,6 @@ if TYPE_CHECKING:
     from narwhals._plan.schema import FrozenSchema
     from narwhals._plan.selectors import Selector
     from narwhals._plan.typing import ExprIRT2, MapIR, Seq
-    from narwhals.dtypes import DType
     from narwhals.typing import IntoDType
 
 
@@ -36,12 +37,14 @@ class ExprIR(Immutable):
 
     __expr_ir_config__: ClassVar[ExprIROptions] = ExprIROptions.default()
     __expr_ir_dispatch__: ClassVar[Dispatcher[Self]]
+    __expr_ir_dtype__: ClassVar[ResolveDType[Self]] = ResolveDType.default()
 
     def __init_subclass__(
         cls: type[Self],
         *args: Any,
         child: Seq[str] = (),
         config: ExprIROptions | None = None,
+        dtype: DType | ResolveDType[Any] | Callable[[Self], DType] | None = None,
         **kwds: Any,
     ) -> None:
         super().__init_subclass__(*args, **kwds)
@@ -50,12 +53,23 @@ class ExprIR(Immutable):
         if config:
             cls.__expr_ir_config__ = config
         cls.__expr_ir_dispatch__ = Dispatcher.from_expr_ir(cls)
+        if dtype is not None:
+            if isinstance(dtype, DType):
+                dtype = ResolveDType.from_dtype(dtype)
+            elif not isinstance(dtype, ResolveDType):
+                dtype = ResolveDType.function_visitor(dtype)
+            cls.__expr_ir_dtype__ = dtype
 
     def dispatch(
         self: Self, ctx: Ctx[FrameT_contra, R_co], frame: FrameT_contra, name: str, /
     ) -> R_co:
         """Evaluate this expression in `frame`, using implementation(s) provided by `ctx`."""
         return self.__expr_ir_dispatch__(self, ctx, frame, name)
+
+    # TODO @dangotbanned: Make this more like `dispatch`/ `__expr_ir_dispatch__`
+    def _resolve_dtype(self, schema: FrozenSchema) -> DType:
+        msg = f"`NamedIR[{type(self)}].resolve_dtype()` is not yet implemented:\n{self!r}"
+        raise NotImplementedError(msg)
 
     def to_narwhals(self, version: Version = Version.MAIN) -> Expr:
         from narwhals._plan import expr
@@ -182,10 +196,6 @@ class ExprIR(Immutable):
     def _repr_html_(self) -> str:
         return self.__repr__()
 
-    def _resolve_dtype(self, schema: FrozenSchema) -> DType:
-        msg = f"`NamedIR[{type(self)}].resolve_dtype()` is not yet implemented:\n{self!r}"
-        raise NotImplementedError(msg)
-
 
 def _map_ir_child(obj: ExprIR | Seq[ExprIR], fn: MapIR, /) -> ExprIR | Seq[ExprIR]:
     return obj.map_ir(fn) if isinstance(obj, ExprIR) else tuple(e.map_ir(fn) for e in obj)
@@ -238,8 +248,7 @@ class SelectorIR(ExprIR, config=ExprIROptions.no_dispatch()):
         return True
 
     def _resolve_dtype(self, schema: FrozenSchema) -> DType:  # pragma: no cover
-        msg = f"`resolve_dtype` is not supported for selectors:\n{self!r}"
-        raise InvalidOperationError(msg)
+        return self.__expr_ir_dtype__(self, schema)
 
 
 class NamedIR(Immutable, Generic[ExprIRT]):
