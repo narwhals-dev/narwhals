@@ -13,7 +13,7 @@ from narwhals.exceptions import InvalidOperationError
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    from typing_extensions import TypeAlias, TypeIs
+    from typing_extensions import Self, TypeAlias, TypeIs
 
     from narwhals._plan.options import ExprIROptions
     from narwhals._plan.schema import FrozenSchema
@@ -105,7 +105,6 @@ class ResolveDType(Generic[_ExprIRT]):
         """Always returns exactly `dtype`."""
         return FromDType(dtype)
 
-    # TODO @dangotbanned: Make the 0-arg classes singletons
     @staticmethod
     def get_dtype() -> GetDType[Any]:
         """Propagate a `dtype` attribute from the `ExprIR` or `Function` instance."""
@@ -149,7 +148,17 @@ class ResolveDType(Generic[_ExprIRT]):
         return FunctionVisitor(visitor)
 
 
-class GetDType(ResolveDType[_HasDTypeT]):
+class _Singleton(ResolveDType[_ExprIRT], Generic[_ExprIRT]):
+    __slots__ = ()
+    __instance: ClassVar[Any | None] = None
+
+    def __new__(cls) -> Self:
+        if not isinstance(cls.__instance, cls):
+            cls.__instance = object.__new__(cls)
+        return cls.__instance
+
+
+class GetDType(_Singleton[_HasDTypeT]):
     __slots__ = ()
 
     def __call__(self, node: _HasDTypeT, _: FrozenSchema, /) -> DType:
@@ -168,7 +177,7 @@ class FromDType(ResolveDType[Any]):
         return self._dtype
 
 
-class ExprIRSameDType(ResolveDType[_HasParentExprIR]):
+class ExprIRSameDType(_Singleton[_HasParentExprIR]):
     __slots__ = ()
 
     def __call__(self, node: _HasParentExprIR, schema: FrozenSchema, /) -> DType:
@@ -205,7 +214,7 @@ class FunctionVisitor(ResolveDType[_FunctionExpr[_FunctionT]], Generic[_Function
         return self._visitor(node.function)
 
 
-class FunctionSameDType(ResolveDType[_FunctionExprT]):
+class FunctionSameDType(_Singleton[_FunctionExprT]):
     __slots__ = ()
 
     def __call__(self, node: _FunctionExprT, schema: FrozenSchema, /) -> DType:
