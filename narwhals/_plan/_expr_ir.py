@@ -57,7 +57,7 @@ class ExprIR(Immutable):
             if isinstance(dtype, DType):
                 dtype = ResolveDType.from_dtype(dtype)
             elif not isinstance(dtype, ResolveDType):
-                dtype = ResolveDType.function_visitor(dtype)
+                dtype = ResolveDType.expr_ir_visitor(dtype)
             cls.__expr_ir_dtype__ = dtype
 
     def dispatch(
@@ -67,9 +67,8 @@ class ExprIR(Immutable):
         return self.__expr_ir_dispatch__(self, ctx, frame, name)
 
     # TODO @dangotbanned: Make this more like `dispatch`/ `__expr_ir_dispatch__`
-    def _resolve_dtype(self, schema: FrozenSchema) -> DType:
-        msg = f"`NamedIR[{type(self)}].resolve_dtype()` is not yet implemented:\n{self!r}"
-        raise NotImplementedError(msg)
+    def _resolve_dtype(self: Self, schema: FrozenSchema) -> DType:
+        return self.__expr_ir_dtype__(self, schema)
 
     def to_narwhals(self, version: Version = Version.MAIN) -> Expr:
         from narwhals._plan import expr
@@ -246,9 +245,6 @@ class SelectorIR(ExprIR, config=ExprIROptions.no_dispatch()):
 
     def needs_expansion(self) -> bool:
         return True
-
-    def _resolve_dtype(self, schema: FrozenSchema) -> DType:  # pragma: no cover
-        return self.__expr_ir_dtype__(self, schema)
 
 
 class NamedIR(Immutable, Generic[ExprIRT]):

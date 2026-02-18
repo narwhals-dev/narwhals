@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-import operator
-from collections.abc import Callable, Iterable
-from typing import TYPE_CHECKING, Any, Generic, Protocol, final
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, Protocol
 
 from narwhals._plan._guards import is_function_expr
 from narwhals._typing_compat import TypeVar
@@ -12,170 +11,206 @@ from narwhals.dtypes import DType
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
-    from typing_extensions import TypeAlias
+    from collections.abc import Iterable
 
-    from narwhals._plan.dtypes_mapper import _HasChildExpr
-    from narwhals._plan.expressions import ExprIR, Function, FunctionExpr as FExpr
+    from typing_extensions import TypeAlias, TypeIs
+
+    from narwhals._plan.options import ExprIROptions
     from narwhals._plan.schema import FrozenSchema
-    from narwhals._plan.typing import ExprIRT, FunctionT
-
+    from narwhals._plan.typing import Seq
 
 T = TypeVar("T")
-Node = TypeVar("Node", bound="ExprIR | FExpr[Any] | _HasChildExpr")
-Node_contra = TypeVar(
-    "Node_contra",
-    bound="ExprIR | FExpr[Any] | _HasChildExpr",
-    contravariant=True,
-    default=Any,
-)
-FunctionExprT = TypeVar("FunctionExprT", bound="FExpr[Function]")
-
 
 # NOTE: `Column` is the exception, which uses `schema[self.name]` and so it is manually defined
 # rather than accepting 2 arguments here and ignoring in all other cases
 Visitor: TypeAlias = Callable[[T], DType]
 """A function requiring a single argument to derive the resolved `DType`."""
 
-MapDType: TypeAlias = Visitor[DType]
-ReduceDTypes: TypeAlias = Visitor[Iterable[DType]]
+
+class _ExprIR(Protocol):
+    """Minimized hierarchy to [avoid cycles].
+
+    [avoid cycles]: https://github.com/microsoft/pyright/issues/10661
+    """
+
+    __expr_ir_config__: ClassVar[ExprIROptions]
+    __expr_ir_dtype__: ClassVar[ResolveDType]
+
+    def _resolve_dtype(self, schema: FrozenSchema, /) -> DType: ...
 
 
-class _Resolver(Protocol[Node_contra]):
-    def __call__(self, node: Node_contra, schema: FrozenSchema, /) -> DType: ...
+class _HasParentExprIR(_ExprIR, Protocol):
+    @property
+    def expr(self) -> _ExprIR: ...
 
 
-# TODO @dangotbanned: Un-`@final` this and use subclasses for the static methods
-@final
-class ResolveDType(Generic[Node]):
-    __slots__ = ("_dtype",)
-    _dtype: _Resolver[Node]
+class _Function(Protocol):
+    __expr_ir_dtype__: ClassVar[ResolveDType]
 
-    def __call__(self, node: Node, schema: FrozenSchema, /) -> DType:
-        """Note how (node, schema) are flipped to match `Dispatcher`."""
-        return self._dtype(node, schema)
+
+class _ExprIRDType(_ExprIR, Protocol):
+    @property
+    def dtype(self) -> DType: ...
+
+
+class _FunctionDType(_Function, Protocol):
+    @property
+    def dtype(self) -> DType: ...
+
+
+def _is_function_expr_dtype(node: Any) -> TypeIs[_FunctionExpr[_FunctionDType]]:
+    return is_function_expr(node)
+
+
+_HasDTypeT = TypeVar("_HasDTypeT", bound="_ExprIRDType | _FunctionExpr[_FunctionDType]")
+_FunctionExprT = TypeVar("_FunctionExprT", bound="_FunctionExpr[Any]")
+_ExprIRT = TypeVar("_ExprIRT", bound=_ExprIR, default=Any)
+_FunctionT = TypeVar("_FunctionT", bound=_Function)
+_FunctionT_co = TypeVar("_FunctionT_co", bound=_Function, covariant=True, default=Any)
+
+
+class _FunctionExpr(_ExprIR, Protocol[_FunctionT_co]):
+    @property
+    def function(self) -> _FunctionT_co: ...
+    @property
+    def input(self) -> Seq[_ExprIR]: ...
+
+
+class ResolveDType(Generic[_ExprIRT]):
+    __slots__ = ()
+
+    def __call__(self, node: _ExprIRT, schema: FrozenSchema, /) -> DType:
+        node_name = type(node).__name__
+        if is_function_expr(node):
+            generic_name = f"{node_name}[{type(node.function).__name__}]"
+        elif not node.__expr_ir_config__.allow_dispatch:
+            msg = f"`resolve_dtype` is not supported for {node_name!r}.\n"
+            "This method should only be called as `NamedIR.resolve_dtype(...)`,\n"
+            f"to ensure all expressions have been expanded, got:\n{node!r}"
+            raise InvalidOperationError(msg)
+        else:
+            generic_name = node_name
+        msg = f"`NamedIR[{generic_name}].resolve_dtype()` is not yet implemented, got:\n{node!r}"
+        raise NotImplementedError(msg)
 
     @staticmethod
-    def default() -> ResolveDType[Any]:
+    def default() -> ResolveDType:
         """By default, the only appropriate behavior is to raise as an unsupported operation."""
-        return ResolveDType(_no_default_error)
+        return ResolveDType()
 
+    # TODO @dangotbanned: Look into caching these on `dtype`
     @staticmethod
-    def from_dtype(dtype: DType, /) -> ResolveDType[Any]:
+    def from_dtype(dtype: DType, /) -> FromDType:
         """Always returns exactly `dtype`."""
-        return ResolveDType(_from_dtype(dtype))
+        return FromDType(dtype)
 
+    # TODO @dangotbanned: Make the 0-arg classes singletons
     @staticmethod
-    def get_dtype() -> ResolveDType[Any]:
+    def get_dtype() -> GetDType[Any]:
         """Propagate a `dtype` attribute from the `ExprIR` or `Function` instance."""
-        return ResolveDType(_get_dtype)
+        return GetDType()
 
     # NOTE: Poor man's namespace (1)
-
     @staticmethod
-    def expr_ir_visitor(visitor: Visitor[ExprIRT], /) -> ResolveDType[ExprIRT]:
-        """Derive the `DType` by calling `visitor` on an instance of `ExprIRT`."""
-        return ResolveDType(_expr_ir_visitor(visitor))
-
-    # NOTE: I think I mixed up child/parent
-    @staticmethod
-    def expr_ir_root() -> ResolveDType[_HasChildExpr]:
+    def expr_ir_root() -> ExprIRRoot:
         """Propagate the dtype of first expression input."""
-        return ResolveDType(_expr_ir_root)
+        return ExprIRRoot()
+
+    @staticmethod
+    def expr_ir_visitor(visitor: Visitor[_ExprIRT], /) -> ExprIRVisitor[_ExprIRT]:
+        """Derive the dtype by calling `visitor` on an instance of `ExprIRT`."""
+        return ExprIRVisitor(visitor)
+
+    @staticmethod
+    def function_same_dtype() -> FunctionSameDType[Any]:
+        """Propagate the dtype of first function input."""
+        return FunctionSameDType()
 
     # NOTE: Poor man's namespace (2)
+    @staticmethod
+    def function_map_first(mapper: Visitor[DType], /) -> FunctionMapFirst[Any]:
+        """Derive the dtype by calling `mapper` on the dtype of first function input."""
+        return FunctionMapFirst(mapper)
 
     @staticmethod
-    def function_same_dtype() -> ResolveDType[FExpr[Any]]:
-        """Propagate the dtype of first function input."""
-        return ResolveDType(_function_same_dtype)
+    def function_map_all(mapper: Visitor[Iterable[DType]], /) -> FunctionMapAll[Any]:
+        """Derive the dtype by calling `mapper` on the dtypes of all function inputs."""
+        return FunctionMapAll(mapper)
 
     @staticmethod
-    def function_map_first(mapper: MapDType, /) -> ResolveDType[FExpr[Any]]:
-        """Derive the `DType` by calling `mapper` on the dtype of first function input."""
-        return ResolveDType(_function_map_first(mapper))
-
-    # TODO @dangotbanned: This isn't what "horizontal" or "reduce" mean
-    # You *can* implement reduce with it, but I'm not asking for the binary function
-    @staticmethod
-    def function_map_horizontal(mapper: ReduceDTypes, /) -> ResolveDType[FExpr[Any]]:
-        """Derive the `DType` by calling `mapper` on the dtypes of all function inputs."""
-        return ResolveDType(_function_map_horizontal(mapper))
-
-    @staticmethod
-    def function_visitor(
-        visitor: Visitor[FunctionT], /
-    ) -> ResolveDType[FExpr[FunctionT]]:
-        """Derive the `DType` by calling `visitor` on an instance of `FunctionT`."""
-        return ResolveDType(_function_visitor(visitor))
-
-    # TODO @dangotbanned: Maybe just replace with an `__init__`?
-    def __init__(self, resolver: _Resolver[Node], /) -> None:
-        self._dtype = resolver
+    def function_visitor(visitor: Visitor[_FunctionT], /) -> FunctionVisitor[_FunctionT]:
+        """Derive the dtype by calling `visitor` on an instance of `FunctionT`."""
+        return FunctionVisitor(visitor)
 
 
-def _from_dtype(dtype: DType, /) -> _Resolver:
-    # TODO @dangotbanned: Look into caching these on `dtype`
-    def inner(_: Any, __: FrozenSchema, /) -> DType:
-        return dtype
+class GetDType(ResolveDType[_HasDTypeT]):
+    __slots__ = ()
 
-    return inner
-
-
-_dtype_getter = operator.attrgetter("dtype")
+    def __call__(self, node: _HasDTypeT, _: FrozenSchema, /) -> DType:
+        if _is_function_expr_dtype(node):
+            return node.function.dtype
+        return node.dtype
 
 
-def _get_dtype(node: ExprIR, _: FrozenSchema, /) -> DType:
-    if is_function_expr(node):
-        return _dtype_getter(node.function)
-    return _dtype_getter(node)
+class FromDType(ResolveDType[Any]):
+    __slots__ = ("_dtype",)
+
+    def __init__(self, dtype: DType, /) -> None:
+        self._dtype: DType = dtype
+
+    def __call__(self, _: Any, __: FrozenSchema, /) -> DType:
+        return self._dtype
 
 
-def _expr_ir_root(node: _HasChildExpr, schema: FrozenSchema, /) -> DType:
-    return node.expr._resolve_dtype(schema)
+class ExprIRRoot(ResolveDType[_HasParentExprIR]):
+    __slots__ = ()
+
+    def __call__(self, node: _HasParentExprIR, schema: FrozenSchema, /) -> DType:
+        return node.expr._resolve_dtype(schema)
 
 
-def _no_default_error(node: ExprIR, _: FrozenSchema, /) -> DType:
-    node_name = type(node).__name__
-    if is_function_expr(node):
-        generic_name = f"{node_name}[{type(node.function).__name__}]"
-    elif not node.__expr_ir_config__.allow_dispatch:
-        msg = f"`resolve_dtype` is not supported for {node_name!r}.\n"
-        "This method should only be called as `NamedIR.resolve_dtype(...)`,\n"
-        f"to ensure all expressions have been expanded, got:\n{node!r}"
-        raise InvalidOperationError(msg)
-    else:
-        generic_name = node_name
-    msg = f"`NamedIR[{generic_name}].resolve_dtype()` is not yet implemented, got:\n{node!r}"
-    raise NotImplementedError(msg)
+class ExprIRVisitor(ResolveDType[_ExprIRT], Generic[_ExprIRT]):
+    __slots__ = ("_visitor",)
+
+    def __init__(self, visitor: Visitor[_ExprIRT], /) -> None:
+        self._visitor = visitor
+
+    def __call__(self, node: _ExprIRT, _: FrozenSchema, /) -> DType:
+        return self._visitor(node)
 
 
-def _expr_ir_visitor(visitor: Visitor[ExprIRT], /) -> _Resolver[ExprIRT]:
-    def inner(node: ExprIRT, _: FrozenSchema, /) -> DType:
-        return visitor(node)
+class FunctionVisitor(ResolveDType[_FunctionExpr[_FunctionT]], Generic[_FunctionT]):
+    __slots__ = ("_visitor",)
 
-    return inner
+    def __init__(self, visitor: Visitor[_FunctionT], /) -> None:
+        self._visitor = visitor
 
-
-def _function_visitor(visitor: Visitor[FunctionT], /) -> _Resolver[FExpr[FunctionT]]:
-    def inner(node: FExpr[FunctionT], _: FrozenSchema, /) -> DType:
-        return visitor(node.function)
-
-    return inner
+    def __call__(self, node: _FunctionExpr[_FunctionT], _: FrozenSchema, /) -> DType:
+        return self._visitor(node.function)
 
 
-def _function_same_dtype(node: FExpr[Any], schema: FrozenSchema, /) -> DType:
-    return node.input[0]._resolve_dtype(schema)
+class FunctionSameDType(ResolveDType[_FunctionExprT]):
+    __slots__ = ()
+
+    def __call__(self, node: _FunctionExprT, schema: FrozenSchema, /) -> DType:
+        return node.input[0]._resolve_dtype(schema)
 
 
-def _function_map_first(mapper: MapDType, /) -> _Resolver[FExpr[Any]]:
-    def inner(node: FExpr[Any], schema: FrozenSchema, /) -> DType:
-        return mapper(node.input[0]._resolve_dtype(schema))
+class FunctionMapFirst(ResolveDType[_FunctionExprT]):
+    __slots__ = ("_mapper",)
 
-    return inner
+    def __init__(self, mapper: Visitor[DType], /) -> None:
+        self._mapper = mapper
+
+    def __call__(self, node: _FunctionExprT, schema: FrozenSchema, /) -> DType:
+        return self._mapper(node.input[0]._resolve_dtype(schema))
 
 
-def _function_map_horizontal(mapper: ReduceDTypes, /) -> _Resolver[FExpr[Any]]:
-    def inner(node: FExpr[Any], schema: FrozenSchema, /) -> DType:
-        return mapper(e._resolve_dtype(schema) for e in node.input)
+class FunctionMapAll(ResolveDType[_FunctionExprT]):
+    __slots__ = ("_mapper",)
 
-    return inner
+    def __init__(self, mapper: Visitor[Iterable[DType]], /) -> None:
+        self._mapper = mapper
+
+    def __call__(self, node: _FunctionExprT, schema: FrozenSchema, /) -> DType:
+        return self._mapper(e._resolve_dtype(schema) for e in node.input)

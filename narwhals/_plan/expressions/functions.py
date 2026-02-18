@@ -293,7 +293,7 @@ class ReplaceStrict(Function, options=FunctionOptions.elementwise):
     new: Seq[Any]
     return_dtype: DType | None
 
-    def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Function]) -> DType:
+    def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Self]) -> DType:
         if dtype := self.return_dtype:
             return dtype
         # NOTE: polars would use the dtype of `new` here

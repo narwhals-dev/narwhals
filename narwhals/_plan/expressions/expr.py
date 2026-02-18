@@ -6,6 +6,7 @@ import typing as t
 from typing import TYPE_CHECKING
 
 import narwhals._plan.dtypes_mapper as dtm
+from narwhals._plan._dtype import ResolveDType
 from narwhals._plan._expr_ir import ExprIR, SelectorIR
 from narwhals._plan.common import replace
 from narwhals._plan.exceptions import (
@@ -100,7 +101,12 @@ class Column(ExprIR, config=ExprIROptions.namespaced("col")):
         return schema[self.name]
 
 
-class Literal(ExprIR, t.Generic[LiteralT], config=ExprIROptions.namespaced("lit")):
+class Literal(
+    ExprIR,
+    t.Generic[LiteralT],
+    config=ExprIROptions.namespaced("lit"),
+    dtype=ResolveDType.get_dtype(),
+):
     """https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/expr.rs#L81."""
 
     __slots__ = ("value",)
@@ -123,9 +129,6 @@ class Literal(ExprIR, t.Generic[LiteralT], config=ExprIROptions.namespaced("lit"
 
     def unwrap(self) -> LiteralT:
         return self.value.unwrap()
-
-    def _resolve_dtype(self, schema: FrozenSchema) -> DType:
-        return self.dtype
 
 
 class _BinaryOp(ExprIR, t.Generic[LeftT, OperatorT, RightT]):
@@ -165,7 +168,7 @@ class BinaryExpr(
         return self.op._resolve_dtype(schema, self.left, self.right)
 
 
-class Cast(ExprIR, child=("expr",)):
+class Cast(ExprIR, child=("expr",), dtype=ResolveDType.get_dtype()):
     __slots__ = ("expr", "dtype")  # noqa: RUF023
     expr: ExprIR
     dtype: DType
@@ -180,11 +183,8 @@ class Cast(ExprIR, child=("expr",)):
     def iter_output_name(self) -> t.Iterator[ExprIR]:
         yield from self.expr.iter_output_name()
 
-    def _resolve_dtype(self, schema: FrozenSchema) -> DType:
-        return self.dtype
 
-
-class Sort(ExprIR, child=("expr",)):
+class Sort(ExprIR, child=("expr",), dtype=ResolveDType.expr_ir_root()):
     __slots__ = ("expr", "options")
     expr: ExprIR
     options: SortOptions
@@ -200,11 +200,8 @@ class Sort(ExprIR, child=("expr",)):
     def iter_output_name(self) -> t.Iterator[ExprIR]:
         yield from self.expr.iter_output_name()
 
-    def _resolve_dtype(self, schema: FrozenSchema) -> DType:
-        return dtm.resolve_dtype_root(self, schema)
 
-
-class SortBy(ExprIR, child=("expr", "by")):
+class SortBy(ExprIR, child=("expr", "by"), dtype=ResolveDType.expr_ir_root()):
     """https://github.com/narwhals-dev/narwhals/issues/2534."""
 
     __slots__ = ("expr", "by", "options")  # noqa: RUF023
@@ -221,9 +218,6 @@ class SortBy(ExprIR, child=("expr", "by")):
 
     def iter_output_name(self) -> t.Iterator[ExprIR]:
         yield from self.expr.iter_output_name()
-
-    def _resolve_dtype(self, schema: FrozenSchema) -> DType:
-        return dtm.resolve_dtype_root(self, schema)
 
 
 # mypy: disable-error-code="misc"
@@ -386,7 +380,7 @@ class StructExpr(FunctionExpr[StructT_co]):
         yield from super().iter_output_name()  # pragma: no cover
 
 
-class Filter(ExprIR, child=("expr", "by")):
+class Filter(ExprIR, child=("expr", "by"), dtype=ResolveDType.expr_ir_root()):
     __slots__ = ("expr", "by")  # noqa: RUF023
     expr: ExprIR
     by: ExprIR
@@ -401,11 +395,8 @@ class Filter(ExprIR, child=("expr", "by")):
     def iter_output_name(self) -> t.Iterator[ExprIR]:
         yield from self.expr.iter_output_name()
 
-    def _resolve_dtype(self, schema: FrozenSchema) -> DType:
-        return dtm.resolve_dtype_root(self, schema)
 
-
-class Over(ExprIR, child=("expr", "partition_by")):
+class Over(ExprIR, child=("expr", "partition_by"), dtype=ResolveDType.expr_ir_root()):
     """A fully specified `.over()`, that occurred after another expression.
 
     Related:
@@ -424,9 +415,6 @@ class Over(ExprIR, child=("expr", "partition_by")):
 
     def iter_output_name(self) -> t.Iterator[ExprIR]:
         yield from self.expr.iter_output_name()
-
-    def _resolve_dtype(self, schema: FrozenSchema) -> DType:
-        return dtm.resolve_dtype_root(self, schema)
 
 
 class OverOrdered(Over, child=("expr", "partition_by", "order_by")):
@@ -458,7 +446,7 @@ class OverOrdered(Over, child=("expr", "partition_by", "order_by")):
                 raise over_order_by_names_error(self, by)
 
 
-class Len(ExprIR, config=ExprIROptions.namespaced()):
+class Len(ExprIR, config=ExprIROptions.namespaced(), dtype=dtm.IDX_DTYPE):
     @property
     def is_scalar(self) -> bool:
         return True
@@ -469,9 +457,6 @@ class Len(ExprIR, config=ExprIROptions.namespaced()):
 
     def __repr__(self) -> str:
         return "len()"
-
-    def _resolve_dtype(self, schema: FrozenSchema) -> DType:
-        return dtm.IDX_DTYPE
 
 
 # TODO @dangotbanned: `get_supertype`, `nw.Null`

@@ -69,7 +69,10 @@ class Function(Immutable):
                 dtype = ResolveDType.from_dtype(dtype)
             elif not isinstance(dtype, ResolveDType):
                 dtype = ResolveDType.function_visitor(dtype)
-            cls.__expr_ir_dtype__ = dtype
+            # TODO @dangotbanned: fix mypy
+            # error: Incompatible types in assignment (expression has type "FunctionVisitor[Any] | ResolveDType[Any]",
+            # variable has type "ResolveDType[FunctionExpr[Self]]"
+            cls.__expr_ir_dtype__ = dtype  # type: ignore[assignment]
 
     def __repr__(self) -> str:
         return self.__expr_ir_dispatch__.name
@@ -80,9 +83,9 @@ class Function(Immutable):
 
     # TODO @dangotbanned: Flip `(schema, node)` -> `(node, schema)`
     # Will match the convention for `Dispatcher`
-    def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Function]) -> DType:
+    def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Any]) -> DType:
         # TODO @dangotbanned: Replace `_resolve_dtype` entirely with an identical pattern to `FunctionExpr.dispatch`?
-        return self.__expr_ir_dtype__(node, schema)  # type: ignore[arg-type]
+        return self.__expr_ir_dtype__(node, schema)
 
 
 class HorizontalFunction(

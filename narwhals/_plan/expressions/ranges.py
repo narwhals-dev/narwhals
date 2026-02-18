@@ -42,9 +42,6 @@ class IntRange(
     step: int
     dtype: IntegerType
 
-    def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Function]) -> DType:
-        return self.dtype
-
 
 class DateRange(
     RangeFunction, options=FunctionOptions.row_separable, dtype=dtm.DATE_DTYPE
@@ -63,7 +60,7 @@ class LinearSpace(RangeFunction, options=FunctionOptions.row_separable):
     num_samples: int
     closed: ClosedInterval
 
-    def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Function]) -> DType:
+    def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Self]) -> DType:
         start = node.input[0]._resolve_dtype(schema)
         end = node.input[1]._resolve_dtype(schema)
         if isinstance(start, _FLOAT_32) and isinstance(end, _FLOAT_32):
