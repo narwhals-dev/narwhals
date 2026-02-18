@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 # fmt: off
 class BooleanFunction(Function, options=FunctionOptions.elementwise):
     def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
-        return dtm.BOOLEAN_DTYPE
+        return dtm.BOOL
 class _HorizontalBoolean(HorizontalFunction, BooleanFunction):
     __slots__ = ("ignore_nulls",)
     ignore_nulls: bool
@@ -47,7 +47,7 @@ class Not(BooleanFunction, config=FEOptions.renamed("not_")):
     def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
         # https://github.com/pola-rs/polars/pull/14049
         dtype = node.input[0]._resolve_dtype(schema)
-        return dtype if dtype.is_integer() else dtm.BOOLEAN_DTYPE
+        return dtype if dtype.is_integer() else dtm.BOOL
 # fmt: on
 class IsBetween(BooleanFunction):
     """N-ary (expr, lower_bound, upper_bound)."""

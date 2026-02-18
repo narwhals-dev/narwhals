@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 class CategoricalFunction(Function, accessor="cat"): ...
 class GetCategories(CategoricalFunction):
     def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
-        return dtm.STRING_DTYPE
+        return dtm.STR
 # fmt: on
 class IRCatNamespace(IRNamespace):
     get_categories: ClassVar = GetCategories

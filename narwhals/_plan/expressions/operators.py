@@ -85,7 +85,7 @@ class SelectorOperator(Operator, func=None):
 
 class Logical(Operator, func=None):
     def _resolve_dtype(self, schema: FrozenSchema, left: ExprIR, right: ExprIR) -> DType:
-        return dtm.BOOLEAN_DTYPE
+        return dtm.BOOL
 
 
 # TODO @dangotbanned: Review adding a subset of `get_arithmetic_field` *after* `get_supertype`
@@ -102,7 +102,7 @@ class Arithmetic(Operator, func=None):
 # TODO @dangotbanned: Review if needed for mro ambiguity
 class SelectorLogical(SelectorOperator, func=None):
     def _resolve_dtype(self, schema: FrozenSchema, left: ExprIR, right: ExprIR) -> DType:
-        return dtm.BOOLEAN_DTYPE
+        return dtm.BOOL
 
 
 class SelectorArithmetic(SelectorOperator, func=None): ...

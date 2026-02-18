@@ -66,6 +66,11 @@ U32 = dtypes.UInt32()
 F64 = dtypes.Float64()
 F32 = dtypes.Float32()
 
+BOOL = dtypes.Boolean()
+STR = String()
+DATE = dtypes.Date()
+
+
 IDX_DTYPE = I64
 """TODO @dangotbanned: Unify `IDX_DTYPE` as backends are mixed:
 
@@ -76,10 +81,6 @@ IDX_DTYPE = I64
 [polars]: https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-core/src/datatypes/aliases.rs#L14
 [pyarrow]: https://github.com/narwhals-dev/narwhals/blob/bbc5d4492667eb3b9a364caba35e51308c86cf7d/narwhals/_arrow/dataframe.py#L534-L547
 """
-
-BOOLEAN_DTYPE = dtypes.Boolean()
-STRING_DTYPE = String()
-DATE_DTYPE = dtypes.Date()
 
 
 # TODO @dangotbanned: Make this an `ExprIR.__init_subclass__` option?
@@ -166,7 +167,7 @@ def list_join_dtype(dtype: DType) -> String:
     inner = inner_dtype(dtype, "list.join")
     if isinstance(inner, String):
         return inner
-    raise invalid_dtype_operation_error(dtype, "list.join", List(STRING_DTYPE))
+    raise invalid_dtype_operation_error(dtype, "list.join", List(STR))
 
 
 def _var_dtype(dtype: DType) -> DType:

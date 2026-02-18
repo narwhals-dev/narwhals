@@ -25,7 +25,7 @@ class _StringSame(StringFunction):
         return node.input[0]._resolve_dtype(schema)
 class _StringBoolean(StringFunction):
     def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
-        return dtm.BOOLEAN_DTYPE
+        return dtm.BOOL
 class LenChars(StringFunction):
     def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
         return dtm.U32
@@ -39,7 +39,7 @@ class ConcatStr(HorizontalFunction, StringFunction):
     ignore_nulls: bool
 
     def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
-        return dtm.STRING_DTYPE
+        return dtm.STR
 
 
 class Contains(_StringBoolean):
@@ -94,7 +94,7 @@ class Split(StringFunction):
     by: str
 
     def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
-        return dtm.dtypes.List(dtm.STRING_DTYPE)
+        return dtm.dtypes.List(dtm.STR)
 
 
 class StartsWith(_StringBoolean):
@@ -112,7 +112,7 @@ class ToDate(StringFunction):
     format: str | None
 
     def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
-        return dtm.DATE_DTYPE
+        return dtm.DATE
 
 
 # TODO @dangotbanned: `_resolve_dtype`

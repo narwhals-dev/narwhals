@@ -71,14 +71,14 @@ class _TemporalInterval(TemporalFunction):
 
 class Date(TemporalFunction):
     def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
-        return dtm.DATE_DTYPE
+        return dtm.DATE
 
 class ToString(TemporalFunction):
     __slots__ = ("format",)
     format: str
 
     def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
-        return dtm.STRING_DTYPE
+        return dtm.STR
 
 class Timestamp(_TemporalInt64):
     __slots__ = ("time_unit",)

@@ -43,9 +43,7 @@ class IntRange(
     dtype: IntegerType
 
 
-class DateRange(
-    RangeFunction, options=FunctionOptions.row_separable, dtype=dtm.DATE_DTYPE
-):
+class DateRange(RangeFunction, options=FunctionOptions.row_separable, dtype=dtm.DATE):
     """N-ary (start, end)."""
 
     __slots__ = ("interval", "closed")  # noqa: RUF023
