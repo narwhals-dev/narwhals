@@ -32,7 +32,7 @@ class AggExpr(ExprIR, child=("expr",)):
         tp = type(self)
         if tp in {NUnique, Count, Len, ArgMin, ArgMax}:
             return dtm.IDX_DTYPE
-        dtype = dtm.resolve_dtype_root(self, schema)
+        dtype = self.expr._resolve_dtype(schema)
         if tp in {Max, Min, First, Last}:
             return dtype
         if tp is Sum:

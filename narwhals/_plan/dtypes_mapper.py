@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 from functools import cache, lru_cache
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING
 
 from narwhals._plan.exceptions import invalid_dtype_operation_error
 from narwhals._utils import Version
@@ -39,13 +39,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import TypeAlias, TypeIs
 
-    from narwhals._plan.expressions import ExprIR
-    from narwhals._plan.schema import FrozenSchema
     from narwhals.typing import TimeUnit
-
-    class _HasChildExpr(Protocol):
-        @property
-        def expr(self) -> ExprIR: ...
 
 
 dtypes = Version.MAIN.dtypes
@@ -81,12 +75,6 @@ IDX_DTYPE = I64
 [polars]: https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-core/src/datatypes/aliases.rs#L14
 [pyarrow]: https://github.com/narwhals-dev/narwhals/blob/bbc5d4492667eb3b9a364caba35e51308c86cf7d/narwhals/_arrow/dataframe.py#L534-L547
 """
-
-
-# TODO @dangotbanned: Make this an `ExprIR.__init_subclass__` option?
-def resolve_dtype_root(expr: _HasChildExpr, schema: FrozenSchema, /) -> DType:
-    """Call `expr.expr._resolve_dtype(schema)`."""
-    return expr.expr._resolve_dtype(schema)
 
 
 def _inner_into_dtype(dtype: List | Array, /) -> DType:
