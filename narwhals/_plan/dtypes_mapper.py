@@ -35,7 +35,7 @@ from narwhals.dtypes import (
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping
+    from collections.abc import Callable, Iterable, Mapping
 
     from typing_extensions import TypeAlias, TypeIs
 
@@ -101,6 +101,10 @@ def map_dtype(
 
 def float_dtype(dtype: DType) -> Float32 | Float64:
     return F32 if type(dtype) is Float32 else F64
+
+
+def floats_dtype(dtypes: Iterable[DType], /) -> Float32 | Float64:
+    return F32 if all(isinstance(d, Float32) for d in dtypes) else F64
 
 
 def numeric_to_float_dtype_coerce_decimal(dtype: DType) -> DType:
