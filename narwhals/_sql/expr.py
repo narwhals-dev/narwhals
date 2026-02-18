@@ -17,7 +17,13 @@ from narwhals._expression_parsing import (
     combine_evaluate_output_names,
 )
 from narwhals._sql.typing import SQLLazyFrameT
-from narwhals._utils import Implementation, Version, extend_bool, not_implemented
+from narwhals._utils import (
+    Implementation,
+    Version,
+    extend_bool,
+    is_pyspark_pre_4,
+    not_implemented,
+)
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
@@ -572,8 +578,12 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
         return self._with_elementwise(lambda expr: self._function("isnull", expr))
 
     def round(self, decimals: int) -> Self:
+        # PySpark < 4.0's `round` expects a raw Python int for `scale`,
+        # not a Column literal.
+        _is_pre4 = is_pyspark_pre_4(self._implementation)
+        round_decimals = decimals if _is_pre4 else self._lit(decimals)
         return self._with_elementwise(
-            lambda expr: self._function("round", expr, self._lit(decimals))
+            lambda expr: self._function("round", expr, round_decimals)
         )
 
     def floor(self) -> Self:
