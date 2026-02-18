@@ -8,16 +8,11 @@ from narwhals._plan.expressions.namespace import ExprNamespace, IRNamespace
 
 if TYPE_CHECKING:
     from narwhals._plan.expr import Expr
-    from narwhals._plan.expressions.expr import FunctionExpr as FExpr
-    from narwhals._plan.schema import FrozenSchema
-    from narwhals.dtypes import DType
 
 
 # fmt: off
 class CategoricalFunction(Function, accessor="cat"): ...
-class GetCategories(CategoricalFunction):
-    def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
-        return dtm.STR
+class GetCategories(CategoricalFunction, dtype=dtm.STR): ...
 # fmt: on
 class IRCatNamespace(IRNamespace):
     get_categories: ClassVar = GetCategories
