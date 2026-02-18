@@ -3,14 +3,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import narwhals._plan.dtypes_mapper as dtm
+from narwhals._plan._dtype import ResolveDType
 from narwhals._plan._expr_ir import ExprIR
 from narwhals._plan.exceptions import agg_scalar_error
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from narwhals._plan.schema import FrozenSchema
-    from narwhals.dtypes import DType
     from narwhals.typing import RollingInterpolationMethod
 
 
@@ -28,21 +27,6 @@ class AggExpr(ExprIR, child=("expr",)):
     def iter_output_name(self) -> Iterator[ExprIR]:
         yield from self.expr.iter_output_name()
 
-    def _resolve_dtype(self, schema: FrozenSchema) -> DType:
-        tp = type(self)
-        if tp in {NUnique, Count, Len, ArgMin, ArgMax}:
-            return dtm.IDX_DTYPE
-        dtype = self.expr._resolve_dtype(schema)
-        if tp in {Max, Min, First, Last}:
-            return dtype
-        if tp is Sum:
-            return dtm.sum_dtype(dtype)
-        if tp in {Median, Mean, Std, Quantile}:
-            return dtm.moment_dtype(dtype)
-        if tp is Var:
-            return dtm.var_dtype(dtype)
-        return super()._resolve_dtype(schema)
-
     # NOTE: Interacting badly with `pyright` synthesizing the `__replace__` signature
     if not TYPE_CHECKING:
 
@@ -55,34 +39,35 @@ class AggExpr(ExprIR, child=("expr",)):
 
 
 # fmt: off
-class Count(AggExpr):
+class _MomentAggExpr(AggExpr, dtype=ResolveDType.expr_ir_map_first(dtm.moment_dtype)): ...
+class Count(AggExpr, dtype=dtm.IDX_DTYPE):
     """Non-null count."""
-class Len(AggExpr):
+class Len(AggExpr, dtype=dtm.IDX_DTYPE):
     """Null-inclusive count."""
-class Max(AggExpr): ...
-class Mean(AggExpr): ...
-class Median(AggExpr): ...
-class Min(AggExpr): ...
-class NUnique(AggExpr): ...
-class Sum(AggExpr): ...
+class Max(AggExpr, dtype=ResolveDType.expr_ir_same_dtype()): ...
+class Mean(_MomentAggExpr): ...
+class Median(_MomentAggExpr): ...
+class Min(AggExpr, dtype=ResolveDType.expr_ir_same_dtype()): ...
+class NUnique(AggExpr, dtype=dtm.IDX_DTYPE): ...
+class Sum(AggExpr, dtype=ResolveDType.expr_ir_map_first(dtm.sum_dtype)): ...
 class OrderableAggExpr(AggExpr): ...
-class First(OrderableAggExpr): ...
-class Last(OrderableAggExpr): ...
-class ArgMin(OrderableAggExpr): ...
-class ArgMax(OrderableAggExpr): ...
+class First(OrderableAggExpr, dtype=ResolveDType.expr_ir_same_dtype()): ...
+class Last(OrderableAggExpr, dtype=ResolveDType.expr_ir_same_dtype()): ...
+class ArgMin(OrderableAggExpr, dtype=dtm.IDX_DTYPE): ...
+class ArgMax(OrderableAggExpr, dtype=dtm.IDX_DTYPE): ...
 # fmt: on
-class Quantile(AggExpr):
+class Quantile(_MomentAggExpr):
     __slots__ = ("interpolation", "quantile")
     quantile: float
     interpolation: RollingInterpolationMethod
 
 
-class Std(AggExpr):
+class Std(_MomentAggExpr):
     __slots__ = ("ddof",)
     ddof: int
 
 
-class Var(AggExpr):
+class Var(AggExpr, dtype=ResolveDType.expr_ir_map_first(dtm.var_dtype)):
     __slots__ = ("ddof",)
     ddof: int
 

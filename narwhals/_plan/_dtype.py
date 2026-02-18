@@ -63,6 +63,7 @@ def _is_function_expr_dtype(node: Any) -> TypeIs[_FunctionExpr[_FunctionDType]]:
 
 
 _HasDTypeT = TypeVar("_HasDTypeT", bound="_ExprIRDType | _FunctionExpr[_FunctionDType]")
+_HasParentExprIRT = TypeVar("_HasParentExprIRT", bound="_HasParentExprIR")
 _FunctionExprT = TypeVar("_FunctionExprT", bound="_FunctionExpr[Any]")
 _ExprIRT = TypeVar("_ExprIRT", bound=_ExprIR, default=Any)
 _FunctionT = TypeVar("_FunctionT", bound=_Function)
@@ -112,9 +113,14 @@ class ResolveDType(Generic[_ExprIRT]):
 
     # NOTE: Poor man's namespace (1)
     @staticmethod
-    def expr_ir_root() -> ExprIRRoot:
+    def expr_ir_same_dtype() -> ExprIRSameDType:
         """Propagate the dtype of first expression input."""
-        return ExprIRRoot()
+        return ExprIRSameDType()
+
+    @staticmethod
+    def expr_ir_map_first(mapper: Visitor[DType], /) -> ExprIRMapFirst[Any]:
+        """Derive the dtype by calling `mapper` on the dtype of first expression input."""
+        return ExprIRMapFirst(mapper)
 
     @staticmethod
     def expr_ir_visitor(visitor: Visitor[_ExprIRT], /) -> ExprIRVisitor[_ExprIRT]:
@@ -162,11 +168,21 @@ class FromDType(ResolveDType[Any]):
         return self._dtype
 
 
-class ExprIRRoot(ResolveDType[_HasParentExprIR]):
+class ExprIRSameDType(ResolveDType[_HasParentExprIR]):
     __slots__ = ()
 
     def __call__(self, node: _HasParentExprIR, schema: FrozenSchema, /) -> DType:
         return node.expr._resolve_dtype(schema)
+
+
+class ExprIRMapFirst(ResolveDType[_HasParentExprIRT]):
+    __slots__ = ("_mapper",)
+
+    def __init__(self, mapper: Visitor[DType], /) -> None:
+        self._mapper = mapper
+
+    def __call__(self, node: _HasParentExprIRT, schema: FrozenSchema, /) -> DType:
+        return self._mapper(node.expr._resolve_dtype(schema))
 
 
 class ExprIRVisitor(ResolveDType[_ExprIRT], Generic[_ExprIRT]):

@@ -184,7 +184,7 @@ class Cast(ExprIR, child=("expr",), dtype=ResolveDType.get_dtype()):
         yield from self.expr.iter_output_name()
 
 
-class Sort(ExprIR, child=("expr",), dtype=ResolveDType.expr_ir_root()):
+class Sort(ExprIR, child=("expr",), dtype=ResolveDType.expr_ir_same_dtype()):
     __slots__ = ("expr", "options")
     expr: ExprIR
     options: SortOptions
@@ -201,7 +201,7 @@ class Sort(ExprIR, child=("expr",), dtype=ResolveDType.expr_ir_root()):
         yield from self.expr.iter_output_name()
 
 
-class SortBy(ExprIR, child=("expr", "by"), dtype=ResolveDType.expr_ir_root()):
+class SortBy(ExprIR, child=("expr", "by"), dtype=ResolveDType.expr_ir_same_dtype()):
     """https://github.com/narwhals-dev/narwhals/issues/2534."""
 
     __slots__ = ("expr", "by", "options")  # noqa: RUF023
@@ -380,7 +380,7 @@ class StructExpr(FunctionExpr[StructT_co]):
         yield from super().iter_output_name()  # pragma: no cover
 
 
-class Filter(ExprIR, child=("expr", "by"), dtype=ResolveDType.expr_ir_root()):
+class Filter(ExprIR, child=("expr", "by"), dtype=ResolveDType.expr_ir_same_dtype()):
     __slots__ = ("expr", "by")  # noqa: RUF023
     expr: ExprIR
     by: ExprIR
@@ -396,7 +396,9 @@ class Filter(ExprIR, child=("expr", "by"), dtype=ResolveDType.expr_ir_root()):
         yield from self.expr.iter_output_name()
 
 
-class Over(ExprIR, child=("expr", "partition_by"), dtype=ResolveDType.expr_ir_root()):
+class Over(
+    ExprIR, child=("expr", "partition_by"), dtype=ResolveDType.expr_ir_same_dtype()
+):
     """A fully specified `.over()`, that occurred after another expression.
 
     Related:
