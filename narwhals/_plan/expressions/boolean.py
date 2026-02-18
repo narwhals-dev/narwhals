@@ -6,6 +6,7 @@ import typing as t
 from typing import TYPE_CHECKING
 
 import narwhals._plan.dtypes_mapper as dtm
+from narwhals._plan._dtype import ResolveDType
 from narwhals._plan._function import Function, HorizontalFunction
 from narwhals._plan.options import FEOptions, FunctionOptions
 from narwhals._plan.typing import NativeSeriesT
@@ -15,21 +16,16 @@ if TYPE_CHECKING:
 
     from narwhals._plan._expr_ir import ExprIR
     from narwhals._plan.expressions.expr import FunctionExpr as FExpr, Literal
-    from narwhals._plan.schema import FrozenSchema
     from narwhals._plan.series import Series
     from narwhals._plan.typing import Seq
-    from narwhals.dtypes import DType
     from narwhals.typing import ClosedInterval
 
 
 # fmt: off
-class BooleanFunction(Function, options=FunctionOptions.elementwise):
-    def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
-        return dtm.BOOL
-class _HorizontalBoolean(HorizontalFunction, BooleanFunction):
+class BooleanFunction(Function, options=FunctionOptions.elementwise, dtype=dtm.BOOL):...
+class _HorizontalBoolean(HorizontalFunction, BooleanFunction, dtype=dtm.BOOL):
     __slots__ = ("ignore_nulls",)
     ignore_nulls: bool
-    _resolve_dtype = BooleanFunction._resolve_dtype
 class All(BooleanFunction, options=FunctionOptions.aggregation): ...
 class Any(BooleanFunction, options=FunctionOptions.aggregation): ...
 class AllHorizontal(_HorizontalBoolean):...
@@ -43,11 +39,7 @@ class IsNull(BooleanFunction): ...
 class IsNotNan(BooleanFunction): ...
 class IsNotNull(BooleanFunction): ...
 class IsUnique(BooleanFunction, options=FunctionOptions.length_preserving): ...
-class Not(BooleanFunction, config=FEOptions.renamed("not_")):
-    def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
-        # https://github.com/pola-rs/polars/pull/14049
-        dtype = node.input[0]._resolve_dtype(schema)
-        return dtype if dtype.is_integer() else dtm.BOOL
+class Not(BooleanFunction, config=FEOptions.renamed("not_"), dtype=ResolveDType.function_map_first(lambda dtype: dtype if dtype.is_integer() else dtm.BOOL)): ...
 # fmt: on
 class IsBetween(BooleanFunction):
     """N-ary (expr, lower_bound, upper_bound)."""
