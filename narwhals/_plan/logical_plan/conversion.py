@@ -61,8 +61,6 @@ GET_SUPERTYPE_MSG = (
 )
 
 
-# TODO @dangotbanned: Very big item
-# `AExpr.to_field_impl`: https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/schema.rs#L45-L390
 def expressions_to_schema(exprs: Seq[NamedIR], schema: FrozenSchema) -> FrozenSchema:
     """[`expressions_to_schema`] is a missing step at the end of `prepare_projection`.
 
@@ -413,7 +411,6 @@ class Resolver:
     def scan_parquet_impl(self, plan: lp.ScanParquetImpl[lp.ImplT], /) -> rp.ScanParquet:
         return _scan_parquet(plan.source, plan.implementation)
 
-    # TODO @dangotbanned: Implement the easiest `ExprIR.resolve_dtype`s
     def select(self, plan: lp.Select, /) -> rp.Select:
         input = self.to_resolved(plan.input)
         named_irs, input_schema = prepare_projection(plan.exprs, schema=input.schema)
@@ -536,7 +533,6 @@ class Resolver:
             ),
         )
 
-    # TODO @dangotbanned: Implement the easiest `ExprIR.resolve_dtype`s
     def with_columns(self, plan: lp.WithColumns, /) -> rp.WithColumns:
         input = self.to_resolved(plan.input)
         named_irs, input_schema = prepare_projection(plan.exprs, schema=input.schema)
