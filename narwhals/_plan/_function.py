@@ -21,6 +21,7 @@ if TYPE_CHECKING:
 __all__ = ["Function", "HorizontalFunction"]
 
 
+# TODO @dangotbanned: Really needs a better doc
 class Function(Immutable):
     """Shared by expr functions and namespace functions.
 
