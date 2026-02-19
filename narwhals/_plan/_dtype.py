@@ -77,6 +77,58 @@ class _FunctionExpr(_ExprIR, Protocol[_FunctionT_co]):
     def input(self) -> Seq[_ExprIR]: ...
 
 
+class _ClassAccessorDescriptor:
+    """Namespace accessor that acts like if `@classmethod` and `@property` had a baby."""
+
+    __slots__ = ()
+
+    def __get__(self, instance: Any, owner: Any) -> Self:
+        return self
+
+
+class _FunctionAccessor(_ClassAccessorDescriptor):
+    __slots__ = ()
+
+    @staticmethod
+    def same_dtype() -> FunctionSameDType[Any]:
+        """Propagate the dtype of first function input."""
+        return FunctionSameDType()
+
+    @staticmethod
+    def map_first(mapper: Visitor[DType], /) -> FunctionMapFirst[Any]:
+        """Derive the dtype by calling `mapper` on the dtype of first function input."""
+        return FunctionMapFirst(mapper)
+
+    @staticmethod
+    def map_all(mapper: Visitor[Iterable[DType]], /) -> FunctionMapAll[Any]:
+        """Derive the dtype by calling `mapper` on the dtypes of all function inputs."""
+        return FunctionMapAll(mapper)
+
+    @staticmethod
+    def visitor(visitor: Visitor[_FunctionT], /) -> FunctionVisitor[_FunctionT]:
+        """Derive the dtype by calling `visitor` on an instance of `FunctionT`."""
+        return FunctionVisitor(visitor)
+
+
+class _ExprIRAccessor(_ClassAccessorDescriptor):
+    __slots__ = ()
+
+    @staticmethod
+    def same_dtype() -> ExprIRSameDType:
+        """Propagate the dtype of first expression input."""
+        return ExprIRSameDType()
+
+    @staticmethod
+    def map_first(mapper: Visitor[DType], /) -> ExprIRMapFirst[Any]:
+        """Derive the dtype by calling `mapper` on the dtype of first expression input."""
+        return ExprIRMapFirst(mapper)
+
+    @staticmethod
+    def visitor(visitor: Visitor[_ExprIRT], /) -> ExprIRVisitor[_ExprIRT]:
+        """Derive the dtype by calling `visitor` on an instance of `ExprIRT`."""
+        return ExprIRVisitor(visitor)
+
+
 class ResolveDType(Generic[_ExprIRT]):
     """Resolve the data type of an expanded expression.
 
@@ -127,42 +179,11 @@ class ResolveDType(Generic[_ExprIRT]):
         """Propagate a `dtype` attribute from the `ExprIR` or `Function` instance."""
         return GetDType()
 
-    # NOTE: Poor man's namespace (1)
-    @staticmethod
-    def expr_ir_same_dtype() -> ExprIRSameDType:
-        """Propagate the dtype of first expression input."""
-        return ExprIRSameDType()
+    expr_ir = _ExprIRAccessor()
+    """`ExprIR`-based constructors."""
 
-    @staticmethod
-    def expr_ir_map_first(mapper: Visitor[DType], /) -> ExprIRMapFirst[Any]:
-        """Derive the dtype by calling `mapper` on the dtype of first expression input."""
-        return ExprIRMapFirst(mapper)
-
-    @staticmethod
-    def expr_ir_visitor(visitor: Visitor[_ExprIRT], /) -> ExprIRVisitor[_ExprIRT]:
-        """Derive the dtype by calling `visitor` on an instance of `ExprIRT`."""
-        return ExprIRVisitor(visitor)
-
-    @staticmethod
-    def function_same_dtype() -> FunctionSameDType[Any]:
-        """Propagate the dtype of first function input."""
-        return FunctionSameDType()
-
-    # NOTE: Poor man's namespace (2)
-    @staticmethod
-    def function_map_first(mapper: Visitor[DType], /) -> FunctionMapFirst[Any]:
-        """Derive the dtype by calling `mapper` on the dtype of first function input."""
-        return FunctionMapFirst(mapper)
-
-    @staticmethod
-    def function_map_all(mapper: Visitor[Iterable[DType]], /) -> FunctionMapAll[Any]:
-        """Derive the dtype by calling `mapper` on the dtypes of all function inputs."""
-        return FunctionMapAll(mapper)
-
-    @staticmethod
-    def function_visitor(visitor: Visitor[_FunctionT], /) -> FunctionVisitor[_FunctionT]:
-        """Derive the dtype by calling `visitor` on an instance of `FunctionT`."""
-        return FunctionVisitor(visitor)
+    function = _FunctionAccessor()
+    """`Function`-based constructors."""
 
 
 class _Singleton(ResolveDType[_ExprIRT], Generic[_ExprIRT]):

@@ -71,7 +71,7 @@ __all__ = [
 
 # NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
 get_dtype = ResolveDType.get_dtype
-same_dtype = ResolveDType.expr_ir_same_dtype
+same_dtype = ResolveDType.expr_ir.same_dtype
 no_dispatch = ExprIROptions.no_dispatch
 namespaced = ExprIROptions.namespaced
 renamed = ExprIROptions.renamed

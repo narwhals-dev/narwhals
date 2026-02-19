@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 aggregation = FunctionOptions.aggregation
 elementwise = FunctionOptions.elementwise
 length_preserving = FunctionOptions.length_preserving
-map_first = ResolveDType.function_map_first
+map_first = ResolveDType.function.map_first
 
 
 # fmt: off

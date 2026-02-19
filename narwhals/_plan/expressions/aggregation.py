@@ -13,8 +13,8 @@ if TYPE_CHECKING:
     from narwhals.typing import RollingInterpolationMethod
 
 # NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
-map_first = ResolveDType.expr_ir_map_first
-same_dtype = ResolveDType.expr_ir_same_dtype
+map_first = ResolveDType.expr_ir.map_first
+same_dtype = ResolveDType.expr_ir.same_dtype
 
 
 class AggExpr(ExprIR, child=("expr",)):

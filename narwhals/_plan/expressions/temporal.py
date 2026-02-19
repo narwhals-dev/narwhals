@@ -25,7 +25,7 @@ _Tz = TypeVar("_Tz", str, "str | None")
 
 # NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
 elementwise = FunctionOptions.elementwise
-same_dtype = ResolveDType.function_same_dtype
+same_dtype = ResolveDType.function.same_dtype
 
 
 def _is_polars_time_unit(obj: Any) -> TypeIs[PolarsTimeUnit]:

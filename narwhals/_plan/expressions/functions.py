@@ -32,8 +32,8 @@ aggregation = FunctionOptions.aggregation
 elementwise = FunctionOptions.elementwise
 length_preserving = FunctionOptions.length_preserving
 row_separable = FunctionOptions.row_separable
-map_first = ResolveDType.function_map_first
-same_dtype = ResolveDType.function_same_dtype
+map_first = ResolveDType.function.map_first
+same_dtype = ResolveDType.function.same_dtype
 
 
 # fmt: off

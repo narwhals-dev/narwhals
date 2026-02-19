@@ -68,7 +68,7 @@ class Function(Immutable):
             if isinstance(dtype, DType):
                 dtype = ResolveDType.from_dtype(dtype)
             elif not isinstance(dtype, ResolveDType):
-                dtype = ResolveDType.function_visitor(dtype)
+                dtype = ResolveDType.function.visitor(dtype)
             # TODO @dangotbanned: fix mypy
             # error: Incompatible types in assignment (expression has type "FunctionVisitor[Any] | ResolveDType[Any]",
             # variable has type "ResolveDType[FunctionExpr[Self]]"

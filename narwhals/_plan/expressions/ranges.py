@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 # NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
 row_separable = FunctionOptions.row_separable
 get_dtype = ResolveDType.get_dtype
-map_all = ResolveDType.function_map_all
+map_all = ResolveDType.function.map_all
 
 
 # TODO @dangotbanned: Review upstream `row_separable` fix https://github.com/pola-rs/polars/pull/26549

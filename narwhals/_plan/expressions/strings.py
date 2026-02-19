@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 # NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
 elementwise = FunctionOptions.elementwise
-same_dtype = ResolveDType.function_same_dtype
+same_dtype = ResolveDType.function.same_dtype
 
 
 # fmt: off
