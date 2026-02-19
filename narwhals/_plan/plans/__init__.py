@@ -1,5 +1,3 @@
-# TODO @dangotbanned: Rename `logical_plan` -> `plans`
-# TODO @dangotbanned: Rename `logical_plan.plan` -> `plans.logical`
 """Researching logical plan implementations.
 
 ## Why?
@@ -34,6 +32,7 @@ Blindly copying from `polars` for this is likely to pull in things that aren't h
 
 from __future__ import annotations
 
-from narwhals._plan.plans.plan import LogicalPlan, concat, scan_csv, scan_parquet
+from narwhals._plan.plans.logical import LogicalPlan, concat, scan_csv, scan_parquet
+from narwhals._plan.plans.resolved import ResolvedPlan
 
-__all__ = ["LogicalPlan", "concat", "scan_csv", "scan_parquet"]
+__all__ = ["LogicalPlan", "ResolvedPlan", "concat", "scan_csv", "scan_parquet"]

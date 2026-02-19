@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Protocol, TypeVar
 
 if TYPE_CHECKING:
-    from narwhals._plan.plans import plan as lp
+    from narwhals._plan.plans import logical as lp
     from narwhals._plan.plans.resolved import ResolvedPlan
 
 

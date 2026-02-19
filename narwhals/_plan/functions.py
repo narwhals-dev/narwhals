@@ -511,7 +511,7 @@ def scan_parquet(
 ) -> LazyFrame[Any]:  # pragma: no cover
     # TODO @dangotbanned: Review whether a top-level dependency is fine here
     from narwhals._plan.dataframe import LazyFrame
-    from narwhals._plan.plans.plan import LogicalPlan, ScanParquetImpl
+    from narwhals._plan.plans.logical import LogicalPlan, ScanParquetImpl
 
     if kwds:
         msg = f"Arbitrary keyword arguments are not yet supported for `scan_parquet`, got:\n{kwds!r}"

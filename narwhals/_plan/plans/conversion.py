@@ -42,7 +42,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals._plan._expr_ir import NamedIR
-    from narwhals._plan.plans import plan as lp
+    from narwhals._plan.plans import logical as lp
     from narwhals._plan.typing import Seq
     from narwhals.dtypes import DType
     from narwhals.typing import Backend
