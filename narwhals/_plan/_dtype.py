@@ -78,6 +78,23 @@ class _FunctionExpr(_ExprIR, Protocol[_FunctionT_co]):
 
 
 class ResolveDType(Generic[_ExprIRT]):
+    """Resolve the data type of an expanded expression.
+
+    An `ExprIR` or `Function` can use this to define how the node derives
+    a `DType` and (optionally) how the incoming `DType` should be transformed.
+
+    `ResolveDType` provides constructors (`@staticmethod`s) targetting patterns observed in:
+    - [`AExpr.to_field_impl`]
+    - [`IRFunctionExpr.get_field`]
+    - [`FieldsMapper`]
+
+    <!---TODO @dangotbanned: Add examples after finalizing the naming -->
+
+    [`AExpr.to_field_impl`]: https://github.com/pola-rs/polars/blob/375fdc81c846c2c35e1b96677d0b483b33a6c3d1/crates/polars-plan/src/plans/aexpr/schema.rs#L45-L877
+    [`IRFunctionExpr.get_field`]: https://github.com/pola-rs/polars/blob/375fdc81c846c2c35e1b96677d0b483b33a6c3d1/crates/polars-plan/src/plans/aexpr/function_expr/schema.rsL6-L463
+    [`FieldsMapper`]: https://github.com/pola-rs/polars/blob/375fdc81c846c2c35e1b96677d0b483b33a6c3d1/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L476-L838
+    """
+
     __slots__ = ()
 
     def __call__(self, node: _ExprIRT, schema: FrozenSchema, /) -> DType:
