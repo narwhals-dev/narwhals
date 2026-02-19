@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import cache
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Protocol
 
 from narwhals._plan._guards import is_function_expr
@@ -143,11 +144,13 @@ class ResolveDType(Generic[_ExprIRT], metaclass=SlottedMeta):
         msg = f"`NamedIR[{generic_name}].resolve_dtype()` is not yet implemented, got:\n{node!r}"
         raise NotImplementedError(msg)
 
-    # TODO @dangotbanned: Look into caching these on `dtype`
     @staticmethod
     def just_dtype(dtype: DType, /) -> JustDType:
-        """Always returns exactly `dtype`, disregarding any prior context."""
-        return JustDType(dtype)
+        """Always returns exactly `dtype`, disregarding any prior context.
+
+        Instances will be shared between classes when more than one uses the same `dtype`.
+        """
+        return _just_dtype(dtype)
 
     @staticmethod
     def get_dtype() -> GetDType[Any]:
@@ -175,6 +178,14 @@ class GetDType(_Singleton[_HasDTypeT]):
         if _is_function_expr_dtype(node):
             return node.function.dtype
         return node.dtype
+
+
+# NOTE: An unbound cache is safe here:
+# - ~10 unique dtypes
+# - 1 is parametric, but fixed
+@cache
+def _just_dtype(dtype: DType, /) -> JustDType:
+    return JustDType(dtype)
 
 
 class JustDType(ResolveDType[Any]):
