@@ -280,16 +280,20 @@ class PandasLikeSeries(EagerSeries[Any]):
         return self._with_native(result)
 
     @overload
-    def _scatter(
+    def scatter(
         self, indices: Self, values: Self, *, in_place: Literal[True]
     ) -> None: ...
     @overload
-    def _scatter(
-        self, indices: Self, values: Self, *, in_place: Literal[False]
+    def scatter(
+        self, indices: Self, values: Self, *, in_place: Literal[False] = False
     ) -> Self: ...
 
-    def _scatter(self, indices: Self, values: Self, *, in_place: bool) -> Self | None:
-        impl, backend_version = self._implementation, self._backend_version
+    def scatter(
+        self, indices: Self, values: Self, *, in_place: bool = False
+    ) -> Self | None:
+        # !NOTE: See conversation at https://github.com/narwhals-dev/narwhals/pull/3444#discussion_r2787546529
+        # to understand why signature differs from `CompliantSeries`
+        impl = self._implementation
         native_series, indices_native = self.native, indices.native
         values_native = set_index(
             values.native, native_series.index[indices_native], implementation=impl
@@ -299,15 +303,12 @@ class PandasLikeSeries(EagerSeries[Any]):
         if impl.is_pandas():
             if in_place and NUMPY_VERSION < (2,):  # pragma: no cover
                 values_native = values_native.copy()
-            if backend_version < (1, 2):
+            if self._backend_version < (1, 2):
                 indices_native = indices_native.to_numpy()
 
         series.iloc[indices_native] = values_native
 
         return None if in_place else self._with_native(series)
-
-    def scatter(self, indices: Self, values: Self) -> Self:
-        return self._scatter(indices=indices, values=values, in_place=False)
 
     def cast(self, dtype: IntoDType) -> Self:
         if self.dtype == dtype and self.native.dtype != "object":
