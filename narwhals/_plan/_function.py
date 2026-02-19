@@ -77,14 +77,9 @@ class Function(Immutable):
     def __repr__(self) -> str:
         return self.__expr_ir_dispatch__.name
 
-    # TODO @dangotbanned: Try to avoid a contravariant (`Self` or `Function`)
-    # Makes things complicated in the namespaces, which can only use
-    # `FunctionExpr[FunctionT_co]` *because* it is a return type
-
     # TODO @dangotbanned: Flip `(schema, node)` -> `(node, schema)`
     # Will match the convention for `Dispatcher`
-    def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Any]) -> DType:
-        # TODO @dangotbanned: Replace `_resolve_dtype` entirely with an identical pattern to `FunctionExpr.dispatch`?
+    def resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Any]) -> DType:
         return self.__expr_ir_dtype__(node, schema)
 
 

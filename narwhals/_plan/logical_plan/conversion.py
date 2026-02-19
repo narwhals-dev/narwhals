@@ -413,7 +413,7 @@ class Resolver:
     def scan_parquet_impl(self, plan: lp.ScanParquetImpl[lp.ImplT], /) -> rp.ScanParquet:
         return _scan_parquet(plan.source, plan.implementation)
 
-    # TODO @dangotbanned: Implement the easiest `ExprIR._resolve_dtype`s
+    # TODO @dangotbanned: Implement the easiest `ExprIR.resolve_dtype`s
     def select(self, plan: lp.Select, /) -> rp.Select:
         input = self.to_resolved(plan.input)
         named_irs, input_schema = prepare_projection(plan.exprs, schema=input.schema)
@@ -536,7 +536,7 @@ class Resolver:
             ),
         )
 
-    # TODO @dangotbanned: Implement the easiest `ExprIR._resolve_dtype`s
+    # TODO @dangotbanned: Implement the easiest `ExprIR.resolve_dtype`s
     def with_columns(self, plan: lp.WithColumns, /) -> rp.WithColumns:
         input = self.to_resolved(plan.input)
         named_irs, input_schema = prepare_projection(plan.exprs, schema=input.schema)

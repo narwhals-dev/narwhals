@@ -96,10 +96,10 @@ class Coalesce(HorizontalFunction): ...
 # fmt: on
 class MeanHorizontal(HorizontalFunction):
     # TODO @dangotbanned: `map_to_supertype`
-    def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Self]) -> DType:
+    def resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Self]) -> DType:
         # NOTE: There are 6 supertype pairs (that we support) that could produce `Float32`
         # Otherwise, it is always `Float64`
-        if dtm.F32 in {e._resolve_dtype(schema) for e in node.input}:
+        if dtm.F32 in {e.resolve_dtype(schema) for e in node.input}:
             msg = f"{self!r} is not yet supported when inputs contain a {dtm.F32!r} dtype.\n"
             "This operation requires https://github.com/narwhals-dev/narwhals/pull/3396"
             raise NotImplementedError(msg)
@@ -170,9 +170,9 @@ class Pow(Function, options=elementwise):
         base, exponent = node.input
         return base, exponent
 
-    def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Self]) -> DType:
-        base = node.input[0]._resolve_dtype(schema)
-        if base.is_integer() and (exp := node.input[1]._resolve_dtype(schema)).is_float():
+    def resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Self]) -> DType:
+        base = node.input[0].resolve_dtype(schema)
+        if base.is_integer() and (exp := node.input[1].resolve_dtype(schema)).is_float():
             return exp
         return base
 
@@ -185,8 +185,8 @@ class FillNull(Function, options=elementwise):
         return expr, value
 
     # TODO @dangotbanned: `map_to_supertype`
-    def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Self]) -> DType:
-        expr, value = (e._resolve_dtype(schema) for e in node.input)
+    def resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Self]) -> DType:
+        expr, value = (e.resolve_dtype(schema) for e in node.input)
         if expr != value:
             msg = f"{self!r} is currently only supported when the dtype of the expression {expr!r} matches the fill value {value!r}.\n"
             "This operation requires https://github.com/narwhals-dev/narwhals/pull/3396"
@@ -242,18 +242,18 @@ class ReplaceStrict(Function, options=elementwise):
     new: Seq[Any]
     return_dtype: DType | None
 
-    def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Self]) -> DType:
+    def resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Self]) -> DType:
         if dtype := self.return_dtype:
             return dtype
         # NOTE: polars would use the dtype of `new` here
         # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L773
         # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L777
         # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L781
-        return super()._resolve_dtype(schema, node)
+        return super().resolve_dtype(schema, node)
 
 
 # TODO @dangotbanned: (partial) `get_supertype(new, default)`
-# Similar to `ReplaceStrict._resolve_dtype`
+# Similar to `ReplaceStrict.resolve_dtype`
 # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L780
 class ReplaceStrictDefault(ReplaceStrict):
     def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR]:

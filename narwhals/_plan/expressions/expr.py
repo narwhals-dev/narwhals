@@ -104,7 +104,7 @@ class Column(ExprIR, config=namespaced("col")):
     def to_selector_ir(self) -> RootSelector:
         return cs.ByName.from_name(self.name).to_selector_ir()
 
-    def _resolve_dtype(self, schema: FrozenSchema) -> DType:
+    def resolve_dtype(self, schema: FrozenSchema) -> DType:
         return schema[self.name]
 
 
@@ -157,7 +157,7 @@ class BinaryExpr(
     def iter_output_name(self) -> t.Iterator[ExprIR]:
         yield from self.left.iter_output_name()
 
-    def _resolve_dtype(self, schema: FrozenSchema) -> DType:
+    def resolve_dtype(self, schema: FrozenSchema) -> DType:
         """NOTE: Supported on `Logical` and `TrueDivide` operators only.
 
         Requires `get_supertype`:
@@ -167,7 +167,7 @@ class BinaryExpr(
         - `FloorDivide`
         - `Modulus`
         """
-        return self.op._resolve_dtype(schema, self.left, self.right)
+        return self.op.resolve_dtype(schema, self.left, self.right)
 
 
 class Cast(ExprIR, child=("expr",), dtype=get_dtype()):
@@ -298,7 +298,7 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT_co], child=("input",)):
     ) -> R_co:
         return self.function.__expr_ir_dispatch__(self, ctx, frame, name)
 
-    def _resolve_dtype(self, schema: FrozenSchema) -> DType:
+    def resolve_dtype(self, schema: FrozenSchema) -> DType:
         """NOTE: Supported on many functions, but there are important gaps.
 
         Requires `get_supertype`:
@@ -313,7 +313,7 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT_co], child=("input",)):
         Unlikely to ever be supported:
         - `map_batches(..., dtype=None)`
         """
-        return self.function._resolve_dtype(schema, self)
+        return self.function.resolve_dtype(schema, self)
 
 
 class RollingExpr(FunctionExpr[RollingT_co]):
@@ -331,10 +331,10 @@ class AnonymousExpr(FunctionExpr["MapBatches"], config=renamed("map_batches")):
     ) -> R_co:
         return self.__expr_ir_dispatch__(self, ctx, frame, name)
 
-    def _resolve_dtype(self, schema: FrozenSchema) -> DType:
+    def resolve_dtype(self, schema: FrozenSchema) -> DType:
         if dtype := self.function.return_dtype:
             return dtype
-        return super()._resolve_dtype(schema)
+        return super().resolve_dtype(schema)
 
 
 class RangeExpr(FunctionExpr[RangeT_co]):
@@ -480,7 +480,7 @@ class TernaryExpr(ExprIR, child=("truthy", "falsy", "predicate")):
     def iter_output_name(self) -> t.Iterator[ExprIR]:
         yield from self.truthy.iter_output_name()
 
-    def _resolve_dtype(self, schema: FrozenSchema) -> DType:
+    def resolve_dtype(self, schema: FrozenSchema) -> DType:
         msg = f"Unable to resolve dtype for {(type(self).__name__)!r}:\n{self!r}\n\n"
         "Requires `get_supertype` and `nw.Null`:\n"
         " - https://github.com/narwhals-dev/narwhals/issues/2835\n"

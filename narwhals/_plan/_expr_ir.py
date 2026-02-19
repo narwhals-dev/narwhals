@@ -66,8 +66,12 @@ class ExprIR(Immutable):
         """Evaluate this expression in `frame`, using implementation(s) provided by `ctx`."""
         return self.__expr_ir_dispatch__(self, ctx, frame, name)
 
-    # TODO @dangotbanned: Make this more like `dispatch`/ `__expr_ir_dispatch__`
-    def _resolve_dtype(self: Self, schema: FrozenSchema) -> DType:
+    def resolve_dtype(self: Self, schema: FrozenSchema) -> DType:
+        """Get the data type of an expanded expression.
+
+        Arguments:
+            schema: The same schema used to project this expression.
+        """
         return self.__expr_ir_dtype__(self, schema)
 
     def to_narwhals(self, version: Version = Version.MAIN) -> Expr:
@@ -343,7 +347,7 @@ class NamedIR(Immutable, Generic[ExprIRT]):
 
         [#3396]: https://github.com/narwhals-dev/narwhals/pull/3396
         """
-        return self.expr._resolve_dtype(schema)
+        return self.expr.resolve_dtype(schema)
 
 
 def named_ir(name: str, expr: ExprIRT, /) -> NamedIR[ExprIRT]:

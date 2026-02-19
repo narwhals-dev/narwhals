@@ -62,7 +62,7 @@ class Operator(Immutable):
         """Apply binary operator to `left`, `right` operands."""
         return self.__class__._func(lhs, rhs)
 
-    def _resolve_dtype(self, schema: FrozenSchema, left: ExprIR, right: ExprIR) -> DType:
+    def resolve_dtype(self, schema: FrozenSchema, left: ExprIR, right: ExprIR) -> DType:
         msg = f"`NamedIR[...].resolve_dtype()` is not yet implemented for {self!r}\n"
         f"[({left!r}) {self!r} ({right!r})]"
         raise NotImplementedError(msg)
@@ -84,24 +84,24 @@ class SelectorOperator(Operator, func=None):
 
 
 class Logical(Operator, func=None):
-    def _resolve_dtype(self, schema: FrozenSchema, left: ExprIR, right: ExprIR) -> DType:
+    def resolve_dtype(self, schema: FrozenSchema, left: ExprIR, right: ExprIR) -> DType:
         return dtm.BOOL
 
 
 # TODO @dangotbanned: Review adding a subset of `get_arithmetic_field` *after* `get_supertype`
 class Arithmetic(Operator, func=None):
-    def _resolve_dtype(self, schema: FrozenSchema, left: ExprIR, right: ExprIR) -> DType:
+    def resolve_dtype(self, schema: FrozenSchema, left: ExprIR, right: ExprIR) -> DType:
         if type(self) is TrueDivide:
             return dtm.truediv_dtype(
-                left._resolve_dtype(schema), right._resolve_dtype(schema)
+                left.resolve_dtype(schema), right.resolve_dtype(schema)
             )
         # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/schema.rs#L475-L766
-        return super()._resolve_dtype(schema, left, right)
+        return super().resolve_dtype(schema, left, right)
 
 
 # TODO @dangotbanned: Review if needed for mro ambiguity
 class SelectorLogical(SelectorOperator, func=None):
-    def _resolve_dtype(self, schema: FrozenSchema, left: ExprIR, right: ExprIR) -> DType:
+    def resolve_dtype(self, schema: FrozenSchema, left: ExprIR, right: ExprIR) -> DType:
         return dtm.BOOL
 
 

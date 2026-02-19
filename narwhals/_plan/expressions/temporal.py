@@ -40,8 +40,8 @@ class _TemporalInt64(TemporalFunction, dtype=dtm.I64): ...
 class _TemporalTimeZone(TemporalFunction, Generic[_Tz]):
     __slots__ = ("time_zone",)
     time_zone: _Tz
-    def _resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
-        dtype = node.input[0]._resolve_dtype(schema)
+    def resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
+        dtype = node.input[0].resolve_dtype(schema)
         if isinstance(dtype, dtm.dtypes.Datetime):
             return type(dtype)(dtype.time_unit, self.time_zone)
         msg = f"Expected Datetime, got {dtype}"

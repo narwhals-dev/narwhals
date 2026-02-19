@@ -34,7 +34,7 @@ class _ExprIR(Protocol):
     __expr_ir_config__: ClassVar[ExprIROptions]
     __expr_ir_dtype__: ClassVar[ResolveDType]
 
-    def _resolve_dtype(self, schema: FrozenSchema, /) -> DType: ...
+    def resolve_dtype(self, schema: FrozenSchema, /) -> DType: ...
 
 
 class _HasParentExprIR(_ExprIR, Protocol):
@@ -217,7 +217,7 @@ class ExprIRSameDType(_Singleton[_HasParentExprIR]):
     __slots__ = ()
 
     def __call__(self, node: _HasParentExprIR, schema: FrozenSchema, /) -> DType:
-        return node.expr._resolve_dtype(schema)
+        return node.expr.resolve_dtype(schema)
 
 
 class ExprIRMapFirst(ResolveDType[_HasParentExprIRT]):
@@ -227,7 +227,7 @@ class ExprIRMapFirst(ResolveDType[_HasParentExprIRT]):
         self._mapper = mapper
 
     def __call__(self, node: _HasParentExprIRT, schema: FrozenSchema, /) -> DType:
-        return self._mapper(node.expr._resolve_dtype(schema))
+        return self._mapper(node.expr.resolve_dtype(schema))
 
 
 class ExprIRVisitor(ResolveDType[_ExprIRT], Generic[_ExprIRT]):
@@ -254,7 +254,7 @@ class FunctionSameDType(_Singleton[_FunctionExprT]):
     __slots__ = ()
 
     def __call__(self, node: _FunctionExprT, schema: FrozenSchema, /) -> DType:
-        return node.input[0]._resolve_dtype(schema)
+        return node.input[0].resolve_dtype(schema)
 
 
 class FunctionMapFirst(ResolveDType[_FunctionExprT]):
@@ -264,7 +264,7 @@ class FunctionMapFirst(ResolveDType[_FunctionExprT]):
         self._mapper = mapper
 
     def __call__(self, node: _FunctionExprT, schema: FrozenSchema, /) -> DType:
-        return self._mapper(node.input[0]._resolve_dtype(schema))
+        return self._mapper(node.input[0].resolve_dtype(schema))
 
 
 class FunctionMapAll(ResolveDType[_FunctionExprT]):
@@ -274,4 +274,4 @@ class FunctionMapAll(ResolveDType[_FunctionExprT]):
         self._mapper = mapper
 
     def __call__(self, node: _FunctionExprT, schema: FrozenSchema, /) -> DType:
-        return self._mapper(e._resolve_dtype(schema) for e in node.input)
+        return self._mapper(e.resolve_dtype(schema) for e in node.input)
