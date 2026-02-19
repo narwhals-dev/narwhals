@@ -201,40 +201,69 @@ class EagerNamespace(
     def _series(self) -> type[EagerSeriesT_co]: ...
     def _if_then_else(
         self,
-        when: NativeSeriesT,
-        then: NativeSeriesT,
+        when: NativeSeriesT | list[NativeSeriesT],
+        then: NativeSeriesT | list[NativeSeriesT],
         otherwise: NativeSeriesT | None = None,
     ) -> NativeSeriesT: ...
-    def when_then(
-        self, predicate: EagerExprT, then: EagerExprT, otherwise: EagerExprT | None = None
-    ) -> EagerExprT:
+    def _when_then_simple(
+        self, df: EagerDataFrameT, predicate: EagerExprT, then: EagerExprT
+    ) -> Sequence[EagerSeriesT_co]:
+        predicate_s = df._evaluate_single_output_expr(predicate)
+        then_s = df._evaluate_single_output_expr(then)
+        predicate_s, then_s = predicate_s._align_full_broadcast(predicate_s, then_s)
+        result = self._if_then_else(predicate_s.native, then_s.native)
+        return [then_s._with_native(result)]
+
+    def _when_then_chained(
+        self, df: EagerDataFrameT, args: tuple[EagerExprT, ...]
+    ) -> Sequence[EagerSeriesT_co]:
+        evaluated = [df._evaluate_single_output_expr(arg) for arg in args]
+        *pairs_list, otherwise_s = (
+            evaluated if len(evaluated) % 2 == 1 else (*evaluated, None)
+        )
+        conditions = pairs_list[::2]
+        values = pairs_list[1::2]
+
+        all_series = (
+            [*conditions, *values, otherwise_s]
+            if otherwise_s is not None
+            else [*conditions, *values]
+        )
+        aligned = conditions[0]._align_full_broadcast(*all_series)
+
+        num_conditions = len(conditions)
+        aligned_conditions = aligned[:num_conditions]
+        aligned_values = aligned[num_conditions : num_conditions * 2]
+        aligned_otherwise = aligned[-1] if otherwise_s is not None else None
+
+        if len(conditions) == 1:
+            result = self._if_then_else(
+                aligned_conditions[0].native,
+                aligned_values[0].native,
+                aligned_otherwise.native if aligned_otherwise is not None else None,
+            )
+        else:
+            result = self._if_then_else(
+                [c.native for c in aligned_conditions],
+                [v.native for v in aligned_values],
+                aligned_otherwise.native if aligned_otherwise is not None else None,
+            )
+
+        return [values[0]._with_native(result)]
+
+    def when_then(self, *args: EagerExprT) -> EagerExprT:
         def func(df: EagerDataFrameT) -> Sequence[EagerSeriesT_co]:
-            predicate_s = df._evaluate_single_output_expr(predicate)
-            align = predicate_s._align_full_broadcast
-
-            then_s = df._evaluate_single_output_expr(then)
-            if otherwise is None:
-                predicate_s, then_s = align(predicate_s, then_s)
-                result = self._if_then_else(predicate_s.native, then_s.native)
-
-            if otherwise is None:
-                predicate_s, then_s = align(predicate_s, then_s)
-                result = self._if_then_else(predicate_s.native, then_s.native)
-            else:
-                otherwise_s = df._evaluate_single_output_expr(otherwise)
-                predicate_s, then_s, otherwise_s = align(predicate_s, then_s, otherwise_s)
-                result = self._if_then_else(
-                    predicate_s.native, then_s.native, otherwise_s.native
-                )
-            return [then_s._with_native(result)]
+            if len(args) == 2:
+                return self._when_then_simple(df, args[0], args[1])
+            return self._when_then_chained(df, args)
 
         return self._expr._from_callable(
             func=func,
             evaluate_output_names=getattr(
-                then, "_evaluate_output_names", lambda _df: ["literal"]
+                args[1], "_evaluate_output_names", lambda _df: ["literal"]
             ),
-            alias_output_names=getattr(then, "_alias_output_names", None),
-            context=predicate,
+            alias_output_names=getattr(args[1], "_alias_output_names", None),
+            context=args[0],
         )
 
     def is_native(self, obj: Any, /) -> TypeIs[NativeFrameT | NativeSeriesT]:
