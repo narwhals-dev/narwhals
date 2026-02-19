@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Any, Generic
 
 from narwhals._plan import expressions as ir
 from narwhals._plan._immutable import Immutable
-from narwhals._plan.logical_plan._base import _BasePlan
+from narwhals._plan.plans._base import _BasePlan
 from narwhals._plan.schema import freeze_schema
 from narwhals._plan.typing import Seq
 from narwhals._typing_compat import TypeVar

@@ -27,7 +27,7 @@ from narwhals._plan.exceptions import (
     column_not_found_error,
     invalid_dtype_operation_error,
 )
-from narwhals._plan.logical_plan import resolved as rp
+from narwhals._plan.plans import resolved as rp
 from narwhals._plan.schema import FrozenSchema, freeze_schema
 from narwhals._utils import (
     Version,
@@ -42,7 +42,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals._plan._expr_ir import NamedIR
-    from narwhals._plan.logical_plan import plan as lp
+    from narwhals._plan.plans import plan as lp
     from narwhals._plan.typing import Seq
     from narwhals.dtypes import DType
     from narwhals.typing import Backend

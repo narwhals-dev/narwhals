@@ -12,7 +12,6 @@ from narwhals._plan._guards import is_seq_column
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.expressions import selectors as s_ir
 from narwhals._plan.expressions.boolean import all_horizontal
-from narwhals._plan.logical_plan._base import _BasePlan
 from narwhals._plan.options import (
     ExplodeOptions,
     JoinAsofOptions,
@@ -22,6 +21,7 @@ from narwhals._plan.options import (
     UnpivotOptions,
     VConcatOptions,
 )
+from narwhals._plan.plans._base import _BasePlan
 from narwhals._plan.schema import freeze_schema
 from narwhals._plan.typing import Seq
 from narwhals._typing_compat import TypeVar
@@ -79,8 +79,8 @@ if TYPE_CHECKING:
 
     from narwhals._plan.dataframe import DataFrame
     from narwhals._plan.expressions import ExprIR, SelectorIR
-    from narwhals._plan.logical_plan.resolved import ResolvedPlan
-    from narwhals._plan.logical_plan.visitors import LogicalToResolved
+    from narwhals._plan.plans.resolved import ResolvedPlan
+    from narwhals._plan.plans.visitors import LogicalToResolved
     from narwhals._plan.schema import FrozenSchema
     from narwhals._typing import _ArrowImpl, _PolarsImpl
     from narwhals.typing import ConcatMethod, FileSource, PivotAgg
@@ -185,12 +185,12 @@ class LogicalPlan(_BasePlan[_Fwd], _root=True):
 
     def explain(self) -> str:
         """Create a string representation of the query plan."""
-        from narwhals._plan.logical_plan import _explain
+        from narwhals._plan.plans import _explain
 
         return _explain.explain(self)
 
     def __repr__(self) -> str:
-        from narwhals._plan.logical_plan import _explain
+        from narwhals._plan.plans import _explain
 
         return _explain._format(self, 0)
 

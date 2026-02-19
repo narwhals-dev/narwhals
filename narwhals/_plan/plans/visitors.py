@@ -3,8 +3,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Protocol, TypeVar
 
 if TYPE_CHECKING:
-    from narwhals._plan.logical_plan import plan as lp
-    from narwhals._plan.logical_plan.resolved import ResolvedPlan
+    from narwhals._plan.plans import plan as lp
+    from narwhals._plan.plans.resolved import ResolvedPlan
 
 
 R_co = TypeVar("R_co", covariant=True)

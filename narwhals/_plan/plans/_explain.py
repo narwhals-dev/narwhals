@@ -5,7 +5,7 @@ from __future__ import annotations
 from functools import singledispatch
 from typing import TYPE_CHECKING, Any, Final
 
-from narwhals._plan.logical_plan import plan as lp
+from narwhals._plan.plans import plan as lp
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping

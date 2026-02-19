@@ -10,7 +10,6 @@ from narwhals._plan.common import ensure_seq_str, normalize_target_file, temp, t
 from narwhals._plan.compliant.dataframe import EagerDataFrame
 from narwhals._plan.compliant.namespace import EagerNamespace
 from narwhals._plan.group_by import GroupBy, Grouped, LazyGroupBy
-from narwhals._plan.logical_plan import LogicalPlan
 from narwhals._plan.options import (
     ExplodeOptions,
     JoinAsofOptions,
@@ -20,6 +19,7 @@ from narwhals._plan.options import (
     UnpivotOptions,
     normalize_join_asof_by,
 )
+from narwhals._plan.plans import LogicalPlan
 from narwhals._plan.series import Series
 from narwhals._plan.typing import (
     ColumnNameOrSelector,
