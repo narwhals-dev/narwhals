@@ -254,3 +254,27 @@ def test_is_close_pandas_unnamed() -> None:
     ser = nw.from_native(pd.Series([1.1, 1.2], name="ab"), series_only=True)
     res = ser.is_close(ser)
     assert res.name == "ab"
+
+
+def test_issue_3474_series_decimal(constructor_eager: ConstructorEager) -> None:
+    frame = nw.from_native(constructor_eager({"a": [0, 1, 2]})).with_columns(
+        nw.col("a").cast(nw.Decimal())
+    )
+    assert frame["a"].is_close(frame["a"]).all()
+
+
+def test_issue_3474_expr_decimal(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if any(x in str(constructor) for x in ("dask", "sqlframe")):
+        # TODO(FBruzzesi): Figure out a MRE and report upstream
+        reason = (
+            "SQLFrame: duckdb.duckdb.ParserException: Parser Error: syntax error at or near '='\n"
+            "Dask: Converting to Decimal dtype is not supported."
+        )
+        request.applymarker(pytest.mark.xfail(reason=reason))
+
+    frame = nw.from_native(constructor({"a": [0, 1, 2]})).with_columns(
+        nw.col("a").cast(nw.Decimal())
+    )
+    assert frame.select((nw.col("a").is_close(nw.col("a"))).all()).lazy().collect().item()
