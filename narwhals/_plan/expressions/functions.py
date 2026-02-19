@@ -96,7 +96,7 @@ class Coalesce(HorizontalFunction): ...
 # fmt: on
 class MeanHorizontal(HorizontalFunction):
     # TODO @dangotbanned: `map_to_supertype`
-    def resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Self]) -> DType:
+    def resolve_dtype(self, node: FunctionExpr[Self], schema: FrozenSchema, /) -> DType:
         # NOTE: There are 6 supertype pairs (that we support) that could produce `Float32`
         # Otherwise, it is always `Float64`
         if dtm.F32 in {e.resolve_dtype(schema) for e in node.input}:
@@ -170,7 +170,7 @@ class Pow(Function, options=elementwise):
         base, exponent = node.input
         return base, exponent
 
-    def resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Self]) -> DType:
+    def resolve_dtype(self, node: FunctionExpr[Self], schema: FrozenSchema, /) -> DType:
         base = node.input[0].resolve_dtype(schema)
         if base.is_integer() and (exp := node.input[1].resolve_dtype(schema)).is_float():
             return exp
@@ -185,7 +185,7 @@ class FillNull(Function, options=elementwise):
         return expr, value
 
     # TODO @dangotbanned: `map_to_supertype`
-    def resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Self]) -> DType:
+    def resolve_dtype(self, node: FunctionExpr[Self], schema: FrozenSchema, /) -> DType:
         expr, value = (e.resolve_dtype(schema) for e in node.input)
         if expr != value:
             msg = f"{self!r} is currently only supported when the dtype of the expression {expr!r} matches the fill value {value!r}.\n"
@@ -242,14 +242,14 @@ class ReplaceStrict(Function, options=elementwise):
     new: Seq[Any]
     return_dtype: DType | None
 
-    def resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Self]) -> DType:
+    def resolve_dtype(self, node: FunctionExpr[Self], schema: FrozenSchema, /) -> DType:
         if dtype := self.return_dtype:
             return dtype
         # NOTE: polars would use the dtype of `new` here
         # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L773
         # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L777
         # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L781
-        return super().resolve_dtype(schema, node)
+        return super().resolve_dtype(node, schema)
 
 
 # TODO @dangotbanned: (partial) `get_supertype(new, default)`

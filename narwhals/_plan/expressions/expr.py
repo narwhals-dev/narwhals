@@ -313,7 +313,7 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT_co], child=("input",)):
         Unlikely to ever be supported:
         - `map_batches(..., dtype=None)`
         """
-        return self.function.resolve_dtype(schema, self)
+        return self.function.resolve_dtype(self, schema)
 
 
 class RollingExpr(FunctionExpr[RollingT_co]):

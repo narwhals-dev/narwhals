@@ -52,7 +52,7 @@ class FieldByName(StructFunction, options=elementwise, config=FEOptions.renamed(
         msg = f"Struct field not found {self.name!r}"
         raise InvalidOperationError(msg)
 
-    def resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Self]) -> DType:
+    def resolve_dtype(self, node: FunctionExpr[Self], schema: FrozenSchema, /) -> DType:
         if (
             (struct_name := node.input[0].meta.output_name(raise_if_undetermined=False))
             and (struct := schema.get(struct_name))

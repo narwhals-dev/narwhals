@@ -30,7 +30,7 @@ same_dtype = ResolveDType.function.same_dtype
 # fmt: off
 class ListFunction(Function, accessor="list", options=elementwise): ...
 class _ListInner(ListFunction):
-    def resolve_dtype(self, schema: FrozenSchema, node: FExpr[Function]) -> DType:
+    def resolve_dtype(self, node: FExpr[Self], schema: FrozenSchema, /) -> DType:
         return dtm.inner_dtype(node.input[0].resolve_dtype(schema), repr(self))
 class Sum(ListFunction, dtype=map_first(dtm.nested_sum_dtype)): ...
 class Join(ListFunction, dtype=map_first(dtm.list_join_dtype)):

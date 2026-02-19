@@ -77,9 +77,13 @@ class Function(Immutable):
     def __repr__(self) -> str:
         return self.__expr_ir_dispatch__.name
 
-    # TODO @dangotbanned: Flip `(schema, node)` -> `(node, schema)`
-    # Will match the convention for `Dispatcher`
-    def resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Any]) -> DType:
+    def resolve_dtype(self, node: FunctionExpr[Any], schema: FrozenSchema, /) -> DType:
+        """Get the data type of an expanded expression.
+
+        Arguments:
+            node: The expanded expression, wrapping this function.
+            schema: The same schema used to project `node`.
+        """
         return self.__expr_ir_dtype__(node, schema)
 
 
