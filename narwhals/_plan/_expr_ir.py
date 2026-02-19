@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Generic
+from typing import TYPE_CHECKING, Generic, final
 
 from narwhals._plan._dispatch import Dispatcher
 from narwhals._plan._dtype import ResolveDType
@@ -8,7 +8,7 @@ from narwhals._plan._guards import is_function_expr, is_literal
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.common import replace
 from narwhals._plan.options import ExprIROptions
-from narwhals._plan.typing import ExprIRT, Ignored
+from narwhals._typing_compat import TypeVar
 from narwhals._utils import Version, unstable
 from narwhals.dtypes import DType
 from narwhals.exceptions import InvalidOperationError
@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from narwhals._plan.meta import MetaNamespace
     from narwhals._plan.schema import FrozenSchema
     from narwhals._plan.selectors import Selector
-    from narwhals._plan.typing import ExprIRT2, MapIR, Seq
+    from narwhals._plan.typing import ExprIRT, ExprIRT2, Ignored, MapIR, Seq
     from narwhals.typing import IntoDType
 
 
@@ -255,7 +255,11 @@ class SelectorIR(ExprIR, config=no_dispatch()):
         return True
 
 
-class NamedIR(Immutable, Generic[ExprIRT]):
+ExprIRT_co = TypeVar("ExprIRT_co", bound="ExprIR", default="ExprIR", covariant=True)
+
+
+@final
+class NamedIR(Immutable, Generic[ExprIRT_co]):
     """Post-projection expansion wrapper for `ExprIR`.
 
     - Somewhat similar to [`polars_plan::plans::expr_ir::ExprIR`].
@@ -268,7 +272,7 @@ class NamedIR(Immutable, Generic[ExprIRT]):
     """
 
     __slots__ = ("expr", "name")
-    expr: ExprIRT
+    expr: ExprIRT_co
     name: str
 
     @staticmethod

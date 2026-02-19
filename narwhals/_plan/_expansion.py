@@ -160,6 +160,12 @@ class Expander:
             yield from s.iter_expand_names(self.schema, self.ignored)
 
     def prepare_projection(self, exprs: Collection[ExprIR], /) -> Seq[NamedIR]:
+        named_irs, _ = self._prepare_projection(exprs)
+        return named_irs
+
+    def _prepare_projection(
+        self, exprs: Collection[ExprIR], /
+    ) -> tuple[Seq[NamedIR], deque[str]]:
         output_names = deque[str]()
         named_irs = deque[NamedIR]()
         root_names = set[str]()
@@ -188,7 +194,7 @@ class Expander:
             raise duplicate_error(expanded)
         if not (set(self.schema).issuperset(root_names)):
             raise column_not_found_error(root_names, self.schema)
-        return tuple(named_irs)
+        return tuple(named_irs), output_names
 
     def _expand(self, expr: ExprIR, /) -> Iterator[ExprIR]:
         # For a single expr, fully expand all parts of it

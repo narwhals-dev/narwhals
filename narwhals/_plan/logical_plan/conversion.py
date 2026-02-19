@@ -12,11 +12,16 @@ from __future__ import annotations
 
 from collections import deque
 from functools import lru_cache
+from itertools import chain
 from typing import TYPE_CHECKING, Any
 
 from narwhals._plan import expressions as ir
-from narwhals._plan._expansion import expand_selector_irs_names, prepare_projection
-from narwhals._plan.common import todo
+from narwhals._plan._expansion import (
+    Expander,
+    expand_selector_irs_names,
+    prepare_projection,
+)
+from narwhals._plan.common import temp, todo
 from narwhals._plan.dtypes_mapper import IDX_DTYPE
 from narwhals._plan.exceptions import (
     column_not_found_error,
@@ -61,7 +66,7 @@ GET_SUPERTYPE_MSG = (
 )
 
 
-def expressions_to_schema(exprs: Seq[NamedIR], schema: FrozenSchema) -> FrozenSchema:
+def expressions_to_schema(exprs: Iterable[NamedIR], schema: FrozenSchema) -> FrozenSchema:
     """[`expressions_to_schema`] is a missing step at the end of `prepare_projection`.
 
     There's some placeholders in `FrozenSchema` ([`.select()`], [`.with_columns()`]).
@@ -74,6 +79,11 @@ def expressions_to_schema(exprs: Seq[NamedIR], schema: FrozenSchema) -> FrozenSc
     [#3396]: https://github.com/narwhals-dev/narwhals/pull/3396
     """
     return freeze_schema((expr.name, expr.resolve_dtype(schema)) for expr in exprs)
+
+
+def resolve_dtype_auto_implode(expr: NamedIR, schema: FrozenSchema, /) -> DType:
+    dtype = expr.resolve_dtype(schema)
+    return dtype if expr.expr.is_scalar else dtypes.List(dtype)
 
 
 def align_diagonal(inputs: Seq[rp.ResolvedPlan]) -> Seq[rp.ResolvedPlan]:
@@ -270,7 +280,75 @@ class Resolver:
             raise ComputeError(msg)
         return rp.Filter(input=input, predicate=named_irs[0])
 
-    group_by = todo()
+    # TODO @dangotbanned: NEEDS SO MUCH WORK!
+    def group_by(self, plan: lp.GroupBy) -> rp.ResolvedPlan:
+        """Combines like 10 (current) abstractions into 1 method and it is felt!"""
+        # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/conversion/dsl_to_ir/mod.rs#L1523-L1618
+
+        input = self.to_resolved(plan.input)
+        input_schema = input.schema
+        # https://github.com/narwhals-dev/narwhals/blob/580142d389950003f3c4538e840b0cba831a457a/narwhals/_plan/compliant/group_by.py#L142-L154
+
+        expander = Expander(input_schema)
+        keys, key_names_mut = expander._prepare_projection(plan.keys)
+
+        # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/conversion/dsl_to_ir/mod.rs#L1536-L1537
+        keys_require_projection: bool = False
+        output_schema_mut: dict[str, DType] = {}
+
+        for key in keys:
+            output_schema_mut[key.name] = key.resolve_dtype(input_schema)
+            keys_require_projection = keys_require_projection or not (
+                isinstance(key.expr, ir.Column) and (key.name == key.expr.name)
+            )
+
+        key_names = tuple(key_names_mut)
+        expander.ignored = key_names
+        aggs = expander.prepare_projection(plan.aggs)
+
+        # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/conversion/dsl_to_ir/mod.rs#L1586-L1587
+        # NOTE: Auto implode is here
+        # Probably wanna keep things mutable until needing to merge
+        # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/conversion/dsl_to_ir/mod.rs#L1597-L1603
+        aggs_schema_mut = {
+            expr.name: resolve_dtype_auto_implode(expr, input_schema) for expr in aggs
+        }
+
+        if not keys_require_projection:
+            group_output_schema = freeze_schema(output_schema_mut | aggs_schema_mut)
+            return rp.GroupByNames(
+                input=input,
+                key_names=key_names,
+                aggs=aggs,
+                output_schema=group_output_schema,
+            )
+
+        # NOTE: Waaaaaay too complicated!!!!!!!
+        # https://github.com/narwhals-dev/narwhals/blob/580142d389950003f3c4538e840b0cba831a457a/narwhals/_plan/compliant/group_by.py#L84-L100
+        # `output_schema_mut |= aggs_schema_mut`
+        # here I want to reuse the resolved dtype of each aliased key expression
+        # it should use the dtype from the keys, not the one w/ aggs
+        with_output_schema_extra: dict[str, DType] = {}
+        safe_named_irs_keys: list[ir.NamedIR[Any]] = []
+
+        for key, safe_name in zip(
+            keys, temp.column_names(chain(key_names, input_schema))
+        ):
+            safe_named_irs_keys.append(ir.NamedIR(expr=key.expr, name=safe_name))
+            with_output_schema_extra[safe_name] = output_schema_mut[key.name]
+
+        safe_keys = tuple(safe_named_irs_keys)
+        group_output_schema = freeze_schema(with_output_schema_extra | aggs_schema_mut)
+        return rp.GroupBy(
+            input=rp.WithColumns(
+                input=input,
+                exprs=safe_keys,
+                output_schema=freeze_schema(output_schema_mut | with_output_schema_extra),
+            ),
+            keys=safe_keys,
+            aggs=aggs,
+            output_schema=group_output_schema,
+        ).rename(dict(zip(with_output_schema_extra, key_names)))
 
     def join(self, plan: lp.Join, /) -> rp.Join:
         """Very stripped down, partial impl of [`join::resolve_join`].

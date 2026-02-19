@@ -16,13 +16,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Generic
 
+from narwhals._plan import expressions as ir
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.logical_plan._base import _BasePlan
+from narwhals._plan.schema import freeze_schema
 from narwhals._plan.typing import Seq
 from narwhals._typing_compat import TypeVar
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Iterator, Mapping
 
     from typing_extensions import TypeAlias
 
@@ -63,6 +65,12 @@ class ResolvedPlan(_BasePlan[_Fwd], _root=True):
         All others refer to the schema of their first input.
         """
         return next(self.iter_inputs()).schema
+
+    def rename(self, mapping: Mapping[str, str]) -> Select:
+        schema = self.schema
+        exprs = tuple(ir.named_ir(mapping.get(old, old), ir.col(old)) for old in schema)
+        output_schema = freeze_schema(zip((e.name for e in exprs), schema.values()))
+        return Select(input=self, exprs=exprs, output_schema=output_schema)
 
 
 class Scan(ResolvedPlan, has_inputs=False):
@@ -254,6 +262,19 @@ class GroupBy(SingleInput):
     keys: Seq[NamedIR]
     aggs: Seq[NamedIR]
     output_schema: FrozenSchema  # GroupByResolver._schema
+
+    @property
+    def schema(self) -> FrozenSchema:
+        return self.output_schema
+
+
+class GroupByNames(SingleInput):
+    """`DataFrameGroupBy.by_names`/`not resolver.requires_projection()`."""
+
+    __slots__ = ("aggs", "key_names", "output_schema")
+    key_names: Seq[str]
+    aggs: Seq[NamedIR]
+    output_schema: FrozenSchema
 
     @property
     def schema(self) -> FrozenSchema:
