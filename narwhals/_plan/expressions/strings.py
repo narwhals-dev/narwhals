@@ -16,12 +16,17 @@ if TYPE_CHECKING:
     from narwhals._plan.expressions import ExprIR, FunctionExpr as FExpr
 
 
+# NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
+elementwise = FunctionOptions.elementwise
+same_dtype = ResolveDType.function_same_dtype
+
+
 # fmt: off
-class StringFunction(Function, accessor="str", options=FunctionOptions.elementwise): ...
+class StringFunction(Function, accessor="str", options=elementwise): ...
 class LenChars(StringFunction, dtype=dtm.U32): ...
-class ToLowercase(StringFunction, dtype=ResolveDType.function_same_dtype()): ...
-class ToUppercase(StringFunction, dtype=ResolveDType.function_same_dtype()): ...
-class ToTitlecase(StringFunction, dtype=ResolveDType.function_same_dtype()): ...
+class ToLowercase(StringFunction, dtype=same_dtype()): ...
+class ToUppercase(StringFunction, dtype=same_dtype()): ...
+class ToTitlecase(StringFunction, dtype=same_dtype()): ...
 class ConcatStr(HorizontalFunction, StringFunction, dtype=dtm.STR):
     __slots__ = ("ignore_nulls", "separator")
     separator: str
@@ -33,7 +38,7 @@ class Contains(StringFunction, dtype=dtm.BOOL):
 class EndsWith(StringFunction, dtype=dtm.BOOL):
     __slots__ = ("suffix",)
     suffix: str
-class Replace(StringFunction, dtype=ResolveDType.function_same_dtype()):
+class Replace(StringFunction, dtype=same_dtype()):
     """N-ary (expr, value)."""
 
     __slots__ = ("literal", "n", "pattern")
@@ -44,7 +49,7 @@ class Replace(StringFunction, dtype=ResolveDType.function_same_dtype()):
         expr, value = node.input
         return expr, value
 
-class ReplaceAll(StringFunction, dtype=ResolveDType.function_same_dtype()):
+class ReplaceAll(StringFunction, dtype=same_dtype()):
     """N-ary (expr, value)."""
 
     __slots__ = ("literal", "pattern")
@@ -57,7 +62,7 @@ class ReplaceAll(StringFunction, dtype=ResolveDType.function_same_dtype()):
     def to_replace_n(self, n: int) -> Replace:
         return Replace(pattern=self.pattern, literal=self.literal, n=n)
 
-class Slice(StringFunction, dtype=ResolveDType.function_same_dtype()):
+class Slice(StringFunction, dtype=same_dtype()):
     __slots__ = ("length", "offset")
     offset: int
     length: int | None
@@ -67,13 +72,13 @@ class Split(StringFunction, dtype=dtm.dtypes.List(dtm.STR)):
 class StartsWith(StringFunction, dtype=dtm.BOOL):
     __slots__ = ("prefix",)
     prefix: str
-class StripChars(StringFunction, dtype=ResolveDType.function_same_dtype()):
+class StripChars(StringFunction, dtype=same_dtype()):
     __slots__ = ("characters",)
     characters: str | None
 class ToDate(StringFunction, dtype=dtm.DATE):
     __slots__ = ("format",)
     format: str | None
-class ZFill(StringFunction, config=FEOptions.renamed("zfill"), dtype=ResolveDType.function_same_dtype()):
+class ZFill(StringFunction, config=FEOptions.renamed("zfill"), dtype=same_dtype()):
     __slots__ = ("length",)
     length: int
 # TODO @dangotbanned: Get @MarcoGorelli's opinion on `str.to_datetime` resolve_dtype.

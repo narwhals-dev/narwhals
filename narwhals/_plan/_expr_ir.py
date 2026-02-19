@@ -200,7 +200,11 @@ def _map_ir_child(obj: ExprIR | Seq[ExprIR], fn: MapIR, /) -> ExprIR | Seq[ExprI
     return obj.map_ir(fn) if isinstance(obj, ExprIR) else tuple(e.map_ir(fn) for e in obj)
 
 
-class SelectorIR(ExprIR, config=ExprIROptions.no_dispatch()):
+# NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
+no_dispatch = ExprIROptions.no_dispatch
+
+
+class SelectorIR(ExprIR, config=no_dispatch()):
     def to_narwhals(self, version: Version = Version.MAIN) -> Selector:
         from narwhals._plan.selectors import Selector, SelectorV1
 

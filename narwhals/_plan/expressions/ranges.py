@@ -14,11 +14,14 @@ if TYPE_CHECKING:
     from narwhals.dtypes import IntegerType
     from narwhals.typing import ClosedInterval
 
+# NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
+row_separable = FunctionOptions.row_separable
+get_dtype = ResolveDType.get_dtype
+map_all = ResolveDType.function_map_all
 
-# TODO @dangotbanned: Review upstream fix https://github.com/pola-rs/polars/pull/26549
-class RangeFunction(
-    Function, options=FunctionOptions.row_separable, config=FEOptions.namespaced()
-):
+
+# TODO @dangotbanned: Review upstream `row_separable` fix https://github.com/pola-rs/polars/pull/26549
+class RangeFunction(Function, options=row_separable, config=FEOptions.namespaced()):
     def to_function_expr(self, *inputs: ExprIR) -> RangeExpr[Self]:
         from narwhals._plan.expressions.expr import RangeExpr
 
@@ -29,7 +32,7 @@ class RangeFunction(
         return start, end
 
 
-class IntRange(RangeFunction, dtype=ResolveDType.get_dtype()):
+class IntRange(RangeFunction, dtype=get_dtype()):
     """N-ary (start, end)."""
 
     __slots__ = ("step", "dtype")  # noqa: RUF023
@@ -45,7 +48,7 @@ class DateRange(RangeFunction, dtype=dtm.DATE):
     closed: ClosedInterval
 
 
-class LinearSpace(RangeFunction, dtype=ResolveDType.function_map_all(dtm.floats_dtype)):
+class LinearSpace(RangeFunction, dtype=map_all(dtm.floats_dtype)):
     """N-ary (start, end)."""
 
     __slots__ = ("num_samples", "closed")  # noqa: RUF023

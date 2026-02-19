@@ -23,13 +23,17 @@ if TYPE_CHECKING:
 PolarsTimeUnit: TypeAlias = Literal["ns", "us", "ms"]
 _Tz = TypeVar("_Tz", str, "str | None")
 
+# NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
+elementwise = FunctionOptions.elementwise
+same_dtype = ResolveDType.function_same_dtype
+
 
 def _is_polars_time_unit(obj: Any) -> TypeIs[PolarsTimeUnit]:
     return obj in {"ns", "us", "ms"}
 
 
 # fmt: off
-class TemporalFunction(Function, accessor="dt", options=FunctionOptions.elementwise): ...
+class TemporalFunction(Function, accessor="dt", options=elementwise): ...
 class _TemporalInt8(TemporalFunction, dtype=dtm.I8): ...
 class _TemporalInt32(TemporalFunction, dtype=dtm.I32): ...
 class _TemporalInt64(TemporalFunction, dtype=dtm.I64): ...
@@ -42,7 +46,8 @@ class _TemporalTimeZone(TemporalFunction, Generic[_Tz]):
             return type(dtype)(dtype.time_unit, self.time_zone)
         msg = f"Expected Datetime, got {dtype}"
         raise ComputeError(msg)
-class _TemporalInterval(TemporalFunction, dtype=ResolveDType.function_same_dtype()):
+
+class _TemporalInterval(TemporalFunction, dtype=same_dtype()):
     __slots__ = ("multiple", "unit")
     multiple: int
     unit: IntervalUnit
@@ -83,7 +88,7 @@ class Timestamp(_TemporalInt64):
     @staticmethod
     def from_time_unit(time_unit: TimeUnit = "us", /) -> Timestamp:
         if not _is_polars_time_unit(time_unit):
-            msg = f"invalid `time_unit` \n\nExpected one of ['ns', 'us', 'ms'], got {time_unit!r}."
+            msg = f"invalid `time_unit`\n\nExpected one of ['ns', 'us', 'ms'], got {time_unit!r}."
             raise TypeError(msg)
         return Timestamp(time_unit=time_unit)
     def __repr__(self) -> str:

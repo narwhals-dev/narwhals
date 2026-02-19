@@ -11,8 +11,11 @@ if TYPE_CHECKING:
     from narwhals._compliant.typing import AliasName
     from narwhals._plan.expr import Expr
 
+# NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
+no_dispatch = ExprIROptions.no_dispatch
 
-class KeepName(ExprIR, child=("expr",), config=ExprIROptions.no_dispatch()):
+
+class KeepName(ExprIR, child=("expr",), config=no_dispatch()):
     __slots__ = ("expr",)
     expr: ExprIR
 
@@ -24,7 +27,7 @@ class KeepName(ExprIR, child=("expr",), config=ExprIROptions.no_dispatch()):
         return f"{self.expr!r}.name.keep()"
 
 
-class RenameAlias(ExprIR, child=("expr",), config=ExprIROptions.no_dispatch()):
+class RenameAlias(ExprIR, child=("expr",), config=no_dispatch()):
     __slots__ = ("expr", "function")
     expr: ExprIR
     function: AliasName

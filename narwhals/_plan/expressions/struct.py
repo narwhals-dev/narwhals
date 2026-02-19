@@ -19,6 +19,8 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType, Field, Struct
 
 STRUCT = Version.MAIN.dtypes.Struct
+# NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
+elementwise = FunctionOptions.elementwise
 
 
 class StructFunction(Function, accessor="struct"):
@@ -33,9 +35,7 @@ class StructFunction(Function, accessor="struct"):
         raise NotImplementedError(msg)
 
 
-class FieldByName(
-    StructFunction, options=FunctionOptions.elementwise, config=FEOptions.renamed("field")
-):
+class FieldByName(StructFunction, options=elementwise, config=FEOptions.renamed("field")):
     __slots__ = ("name",)
     name: str
 

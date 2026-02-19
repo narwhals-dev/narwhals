@@ -69,12 +69,19 @@ __all__ = [
     "ternary_expr",
 ]
 
+# NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
+get_dtype = ResolveDType.get_dtype
+same_dtype = ResolveDType.expr_ir_same_dtype
+no_dispatch = ExprIROptions.no_dispatch
+namespaced = ExprIROptions.namespaced
+renamed = ExprIROptions.renamed
+
 
 def col(name: str, /) -> Column:
     return Column(name=name)
 
 
-class Alias(ExprIR, child=("expr",), config=ExprIROptions.no_dispatch()):
+class Alias(ExprIR, child=("expr",), config=no_dispatch()):
     __slots__ = ("expr", "name")
     expr: ExprIR
     name: str
@@ -87,7 +94,7 @@ class Alias(ExprIR, child=("expr",), config=ExprIROptions.no_dispatch()):
         return f"{self.expr!r}.alias({self.name!r})"
 
 
-class Column(ExprIR, config=ExprIROptions.namespaced("col")):
+class Column(ExprIR, config=namespaced("col")):
     __slots__ = ("name",)
     name: str
 
@@ -101,12 +108,7 @@ class Column(ExprIR, config=ExprIROptions.namespaced("col")):
         return schema[self.name]
 
 
-class Literal(
-    ExprIR,
-    t.Generic[LiteralT],
-    config=ExprIROptions.namespaced("lit"),
-    dtype=ResolveDType.get_dtype(),
-):
+class Literal(ExprIR, t.Generic[LiteralT], config=namespaced("lit"), dtype=get_dtype()):
     """https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/expr.rs#L81."""
 
     __slots__ = ("value",)
@@ -168,7 +170,7 @@ class BinaryExpr(
         return self.op._resolve_dtype(schema, self.left, self.right)
 
 
-class Cast(ExprIR, child=("expr",), dtype=ResolveDType.get_dtype()):
+class Cast(ExprIR, child=("expr",), dtype=get_dtype()):
     __slots__ = ("expr", "dtype")  # noqa: RUF023
     expr: ExprIR
     dtype: DType
@@ -184,7 +186,7 @@ class Cast(ExprIR, child=("expr",), dtype=ResolveDType.get_dtype()):
         yield from self.expr.iter_output_name()
 
 
-class Sort(ExprIR, child=("expr",), dtype=ResolveDType.expr_ir_same_dtype()):
+class Sort(ExprIR, child=("expr",), dtype=same_dtype()):
     __slots__ = ("expr", "options")
     expr: ExprIR
     options: SortOptions
@@ -201,7 +203,7 @@ class Sort(ExprIR, child=("expr",), dtype=ResolveDType.expr_ir_same_dtype()):
         yield from self.expr.iter_output_name()
 
 
-class SortBy(ExprIR, child=("expr", "by"), dtype=ResolveDType.expr_ir_same_dtype()):
+class SortBy(ExprIR, child=("expr", "by"), dtype=same_dtype()):
     """https://github.com/narwhals-dev/narwhals/issues/2534."""
 
     __slots__ = ("expr", "by", "options")  # noqa: RUF023
@@ -321,9 +323,7 @@ class RollingExpr(FunctionExpr[RollingT_co]):
         return self.__expr_ir_dispatch__(self, ctx, frame, name)
 
 
-class AnonymousExpr(
-    FunctionExpr["MapBatches"], config=ExprIROptions.renamed("map_batches")
-):
+class AnonymousExpr(FunctionExpr["MapBatches"], config=renamed("map_batches")):
     """https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/expr.rs#L158-L166."""
 
     def dispatch(
@@ -380,7 +380,7 @@ class StructExpr(FunctionExpr[StructT_co]):
         yield from super().iter_output_name()  # pragma: no cover
 
 
-class Filter(ExprIR, child=("expr", "by"), dtype=ResolveDType.expr_ir_same_dtype()):
+class Filter(ExprIR, child=("expr", "by"), dtype=same_dtype()):
     __slots__ = ("expr", "by")  # noqa: RUF023
     expr: ExprIR
     by: ExprIR
@@ -396,9 +396,7 @@ class Filter(ExprIR, child=("expr", "by"), dtype=ResolveDType.expr_ir_same_dtype
         yield from self.expr.iter_output_name()
 
 
-class Over(
-    ExprIR, child=("expr", "partition_by"), dtype=ResolveDType.expr_ir_same_dtype()
-):
+class Over(ExprIR, child=("expr", "partition_by"), dtype=same_dtype()):
     """A fully specified `.over()`, that occurred after another expression.
 
     Related:
@@ -448,7 +446,7 @@ class OverOrdered(Over, child=("expr", "partition_by", "order_by")):
                 raise over_order_by_names_error(self, by)
 
 
-class Len(ExprIR, config=ExprIROptions.namespaced(), dtype=dtm.IDX_DTYPE):
+class Len(ExprIR, config=namespaced(), dtype=dtm.IDX_DTYPE):
     @property
     def is_scalar(self) -> bool:
         return True
