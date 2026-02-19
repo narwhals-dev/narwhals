@@ -22,6 +22,9 @@ from narwhals.dtypes import (
     FloatType,
     Int8,
     Int16,
+    Int32,
+    Int64,
+    Int128,
     IntegerType,
     List,
     NestedType,
@@ -31,6 +34,8 @@ from narwhals.dtypes import (
     TemporalType,
     UInt8,
     UInt16,
+    UInt32,
+    UInt64,
 )
 from narwhals.exceptions import InvalidOperationError
 
@@ -141,6 +146,20 @@ def sum_dtype(dtype: DType) -> DType:
     if isinstance(dtype, _INVALID_SUM):
         raise invalid_dtype_operation_error(dtype, "sum")
     return _sum_transform().get(type(dtype), dtype)
+
+
+def cum_sum_dtype(dtype: DType) -> DType:
+    if isinstance(dtype, Boolean):
+        return U32
+    if not isinstance(dtype, NumericType) or (
+        isinstance(dtype, (FloatType, Decimal, UInt32, UInt64, Int32, Int64, Int128))
+    ):
+        return dtype
+    return I64
+
+
+def cum_prod_dtype(dtype: DType) -> DType:
+    return dtype if isinstance(dtype, (FloatType, UInt64, Int128)) else I64
 
 
 # NOTE @dangotbanned: If we add `arr.sum`, expose `inner_dtype` parameters

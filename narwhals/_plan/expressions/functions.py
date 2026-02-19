@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import narwhals._plan.dtypes_mapper as dtm
+from narwhals._plan._dtype import ResolveDType
 from narwhals._plan._function import Function, HorizontalFunction
 from narwhals._plan.exceptions import hist_bins_monotonic_error
 from narwhals._plan.options import FunctionFlags, FunctionOptions
@@ -24,52 +25,53 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.typing import FillNullStrategy
 
+# NOTE: `pylance` (via `pyright`) doesn't show `__init_subclass__` usage in *Find All References*,
+# but hopefully `ty` will https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
+# These aliases work around that limitation (+ are shorter 🙂)
+aggregation = FunctionOptions.aggregation
+elementwise = FunctionOptions.elementwise
+length_preserving = FunctionOptions.length_preserving
+row_separable = FunctionOptions.row_separable
 
+map_first = ResolveDType.function_map_first
+
+
+# fmt: off
 class _SameDType(Function):
-    def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Function]) -> DType:
+    def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Self]) -> DType:
         return node.input[0]._resolve_dtype(schema)
-
-
-class _F64DType(Function):
-    def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Function]) -> DType:
-        return dtm.F64
-
-
-class _NumericToFloatDType(Function):
-    def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Function]) -> DType:
-        return dtm.numeric_to_float_dtype_coerce_decimal(
-            node.input[0]._resolve_dtype(schema)
-        )
-
-
-class CumAgg(Function, options=FunctionOptions.length_preserving):
+class Abs(_SameDType, options=elementwise): ...
+class NullCount(Function, options=aggregation, dtype=dtm.IDX_DTYPE): ...
+class Exp(Function, options=elementwise, dtype=map_first(dtm.float_dtype)): ...
+class Sqrt(Function, options=elementwise, dtype=map_first(dtm.numeric_to_float_dtype_coerce_decimal)): ...
+class Ceil(_SameDType, options=elementwise): ...
+class Floor(_SameDType, options=elementwise): ...
+class DropNulls(_SameDType, options=row_separable): ...
+class ModeAll(_SameDType): ...
+class ModeAny(_SameDType, options=aggregation): ...
+class Kurtosis(Function, options=aggregation, dtype=dtm.F64): ...
+class Skew(Function, options=aggregation, dtype=dtm.F64): ...
+class Clip(_SameDType, options=elementwise):
+    def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR, ExprIR]:
+        expr, lower_bound, upper_bound = node.input
+        return expr, lower_bound, upper_bound
+class ClipLower(_SameDType, options=elementwise):
+    def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR]:
+        expr, lower_bound = node.input
+        return expr, lower_bound
+class ClipUpper(_SameDType, options=elementwise):
+    def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR]:
+        expr, upper_bound = node.input
+        return expr, upper_bound
+class CumAgg(Function, options=length_preserving):
     __slots__ = ("reverse",)
     reverse: bool
-
-    def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Function]) -> DType:
-        tp = type(self)
-        if tp is CumCount:
-            return dtm.IDX_DTYPE
-        dtype = node.input[0]._resolve_dtype(schema)
-        if tp in {CumMin, CumMax}:
-            return dtype
-        if tp is CumProd:
-            if dtype.is_float() or dtype in {dtm.U64, dtm.I128}:
-                return dtype
-            return dtm.I64
-        ret: DType = dtm.I64
-        if dtype.is_boolean():
-            ret = dtm.U32
-        if not dtype.is_numeric() or (
-            dtype.is_float()
-            or dtype in {dtm.I32, dtm.U32, dtm.I64, dtm.U64, dtm.I128}
-            or dtype.is_decimal()
-        ):
-            ret = dtype
-        return ret
-
-
-class RollingWindow(Function, options=FunctionOptions.length_preserving):
+class CumCount(CumAgg, dtype=dtm.IDX_DTYPE): ...
+class CumMin(CumAgg, dtype=ResolveDType.function_same_dtype()): ...
+class CumMax(CumAgg, dtype=ResolveDType.function_same_dtype()): ...
+class CumProd(CumAgg, dtype=map_first(dtm.cum_prod_dtype)): ...
+class CumSum(CumAgg, dtype=map_first(dtm.cum_sum_dtype)): ...
+class RollingWindow(Function, options=length_preserving):
     __slots__ = ("options",)
     options: RollingOptionsFixedWindow
 
@@ -78,62 +80,11 @@ class RollingWindow(Function, options=FunctionOptions.length_preserving):
 
         options = self.function_options
         return RollingExpr(input=inputs, function=self, options=options)
-
-    def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Function]) -> DType:
-        return {
-            RollingSum: dtm.sum_dtype,
-            RollingMean: dtm.moment_dtype,
-            RollingVar: dtm.var_dtype,
-            RollingStd: dtm.moment_dtype,
-        }[type(self)](node.input[0]._resolve_dtype(schema))
-
-
-class NullCount(Function, options=FunctionOptions.aggregation):
-    def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Function]) -> DType:
-        return dtm.IDX_DTYPE
-
-
-class Exp(Function, options=FunctionOptions.elementwise):
-    def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Function]) -> DType:
-        return dtm.float_dtype(node.input[0]._resolve_dtype(schema))
-
-
-class Diff(Function, options=FunctionOptions.length_preserving):
-    def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Function]) -> DType:
-        return dtm.diff_dtype(node.input[0]._resolve_dtype(schema))
-
-
-# fmt: off
-class Abs(_SameDType, options=FunctionOptions.elementwise): ...
-class Sqrt(_NumericToFloatDType, options=FunctionOptions.elementwise): ...
-class Ceil(_SameDType, options=FunctionOptions.elementwise): ...
-class Floor(_SameDType, options=FunctionOptions.elementwise): ...
-class DropNulls(_SameDType, options=FunctionOptions.row_separable): ...
-class ModeAll(_SameDType): ...
-class ModeAny(_SameDType, options=FunctionOptions.aggregation): ...
-class Kurtosis(_F64DType, options=FunctionOptions.aggregation): ...
-class Skew(_F64DType, options=FunctionOptions.aggregation): ...
-class Clip(_SameDType, options=FunctionOptions.elementwise):
-    def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR, ExprIR]:
-        expr, lower_bound, upper_bound = node.input
-        return expr, lower_bound, upper_bound
-class ClipLower(_SameDType, options=FunctionOptions.elementwise):
-    def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR]:
-        expr, lower_bound = node.input
-        return expr, lower_bound
-class ClipUpper(_SameDType, options=FunctionOptions.elementwise):
-    def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR]:
-        expr, upper_bound = node.input
-        return expr, upper_bound
-class CumCount(CumAgg): ...
-class CumMin(CumAgg): ...
-class CumMax(CumAgg): ...
-class CumProd(CumAgg): ...
-class CumSum(CumAgg): ...
-class RollingSum(RollingWindow): ...
-class RollingMean(RollingWindow): ...
-class RollingVar(RollingWindow): ...
-class RollingStd(RollingWindow): ...
+class RollingSum(RollingWindow, dtype=map_first(dtm.sum_dtype)): ...
+class RollingMean(RollingWindow, dtype=map_first(dtm.moment_dtype)): ...
+class RollingVar(RollingWindow, dtype=map_first(dtm.var_dtype)): ...
+class RollingStd(RollingWindow, dtype=map_first(dtm.moment_dtype)): ...
+class Diff(Function, options=length_preserving, dtype=map_first(dtm.diff_dtype)): ...
 class Unique(_SameDType): ...
 # TODO @dangotbanned: `map_to_supertype` (`*Horizontal`)
 # - https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L45
@@ -145,7 +96,27 @@ class MinHorizontal(HorizontalFunction): ...
 class MaxHorizontal(HorizontalFunction): ...
 class Coalesce(HorizontalFunction): ...
 # fmt: on
-class Hist(Function):
+class MeanHorizontal(HorizontalFunction):
+    # TODO @dangotbanned: `map_to_supertype`
+    def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Self]) -> DType:
+        # NOTE: There are 6 supertype pairs (that we support) that could produce `Float32`
+        # Otherwise, it is always `Float64`
+        if dtm.F32 in {e._resolve_dtype(schema) for e in node.input}:
+            msg = f"{self!r} is not yet supported when inputs contain a {dtm.F32!r} dtype.\n"
+            "This operation requires https://github.com/narwhals-dev/narwhals/pull/3396"
+            raise NotImplementedError(msg)
+        return dtm.F64
+
+
+class Hist(
+    Function,
+    # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L220-L243
+    dtype=lambda f: (
+        dtm.Struct({"breakpoint": dtm.F64, "count": dtm.IDX_DTYPE})
+        if f.include_breakpoint
+        else dtm.IDX_DTYPE
+    ),
+):
     __slots__ = ("include_breakpoint",)
     include_breakpoint: bool
 
@@ -178,25 +149,6 @@ class Hist(Function):
             {"breakpoint": [], "count": []} if self.include_breakpoint else {"count": []}
         )
 
-    def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Function]) -> DType:
-        # NOTE: Need to adapt for `include_category`
-        # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L220-L243
-        if self.include_breakpoint:
-            return dtm.Struct({"breakpoint": dtm.F64, "count": dtm.IDX_DTYPE})
-        return dtm.IDX_DTYPE
-
-
-class MeanHorizontal(HorizontalFunction):
-    # TODO @dangotbanned: `map_to_supertype`
-    def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Function]) -> DType:
-        # NOTE: There are 6 supertype pairs (that we support) that could produce `Float32`
-        # Otherwise, it is always `Float64`
-        if dtm.F32 in {e._resolve_dtype(schema) for e in node.input}:
-            msg = f"{self!r} is not yet supported when inputs contain a {dtm.F32!r} dtype.\n"
-            "This operation requires https://github.com/narwhals-dev/narwhals/pull/3396"
-            raise NotImplementedError(msg)
-        return dtm.F64
-
 
 class HistBins(Hist):
     __slots__ = ("bins",)
@@ -208,30 +160,26 @@ class HistBinCount(Hist):
     bin_count: int
 
 
-class Log(Function, options=FunctionOptions.elementwise):
+class Log(Function, options=elementwise, dtype=map_first(dtm.float_dtype)):
     __slots__ = ("base",)
     base: float
 
-    def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Function]) -> DType:
-        dtype = node.input[0]._resolve_dtype(schema)
-        return dtype if dtype.is_float() else dtm.F64
 
-
-class Pow(Function, options=FunctionOptions.elementwise):
+class Pow(Function, options=elementwise):
     """N-ary (base, exponent)."""
 
     def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR]:
         base, exponent = node.input
         return base, exponent
 
-    def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Function]) -> DType:
+    def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Self]) -> DType:
         base = node.input[0]._resolve_dtype(schema)
         if base.is_integer() and (exp := node.input[1]._resolve_dtype(schema)).is_float():
             return exp
         return base
 
 
-class FillNull(Function, options=FunctionOptions.elementwise):
+class FillNull(Function, options=elementwise):
     """N-ary (expr, value)."""
 
     def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR]:
@@ -239,7 +187,7 @@ class FillNull(Function, options=FunctionOptions.elementwise):
         return expr, value
 
     # TODO @dangotbanned: `map_to_supertype`
-    def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Function]) -> DType:
+    def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Self]) -> DType:
         expr, value = (e._resolve_dtype(schema) for e in node.input)
         if expr != value:
             msg = f"{self!r} is currently only supported when the dtype of the expression {expr!r} matches the fill value {value!r}.\n"
@@ -248,7 +196,7 @@ class FillNull(Function, options=FunctionOptions.elementwise):
         return expr
 
 
-class FillNan(_SameDType, options=FunctionOptions.elementwise):
+class FillNan(_SameDType, options=elementwise):
     """N-ary (expr, value)."""
 
     def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR]:
@@ -262,32 +210,35 @@ class FillNullWithStrategy(_SameDType):
     limit: int | None
 
 
-class Shift(_SameDType, options=FunctionOptions.length_preserving):
+class Shift(_SameDType, options=length_preserving):
     __slots__ = ("n",)
     n: int
 
 
-class Rank(Function):
+class Rank(
+    Function, dtype=lambda f: dtm.F64 if f.options.method == "average" else dtm.IDX_DTYPE
+):
     __slots__ = ("options",)
     options: RankOptions
 
-    def _resolve_dtype(self, schema: FrozenSchema, node: FunctionExpr[Function]) -> DType:
-        return dtm.F64 if self.options.method == "average" else dtm.IDX_DTYPE
 
-
-class Round(_SameDType, options=FunctionOptions.elementwise):
+class Round(_SameDType, options=elementwise):
     __slots__ = ("decimals",)
     decimals: int
 
 
-class EwmMean(_NumericToFloatDType, options=FunctionOptions.length_preserving):
+class EwmMean(
+    Function,
+    options=length_preserving,
+    dtype=map_first(dtm.numeric_to_float_dtype_coerce_decimal),
+):
     __slots__ = ("options",)
     options: EWMOptions
 
 
 # TODO @dangotbanned: (partial)
 # Need to run a sample of `new` through `nwp.common.py_to_narwhals_dtype`
-class ReplaceStrict(Function, options=FunctionOptions.elementwise):
+class ReplaceStrict(Function, options=elementwise):
     __slots__ = ("new", "old", "return_dtype")
     old: Seq[Any]
     new: Seq[Any]
