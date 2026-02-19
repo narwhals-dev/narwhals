@@ -2393,6 +2393,7 @@ class Expr:
 
         from decimal import Decimal
 
+        other_f: Expr | Series[Any] | NumericLiteral
         other_abs: Expr | Series[Any] | NumericLiteral
         other_is_nan: Expr | Series[Any] | bool
         other_is_inf: Expr | Series[Any] | bool
