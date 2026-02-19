@@ -140,7 +140,7 @@ def test_offset_by(
     expected: list[datetime],
 ) -> None:
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
     if any(x in by for x in ("y", "q", "mo")) and any(
         x in str(constructor) for x in ("dask", "pyarrow", "ibis")
     ):
@@ -242,6 +242,8 @@ def test_offset_by_series(constructor_eager: ConstructorEager) -> None:
 
 
 def test_offset_by_invalid_interval(constructor: Constructor) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
     df = nw.from_native(constructor(data))
     msg = "Invalid `every` string"
     with pytest.raises(ValueError, match=msg):
@@ -268,7 +270,7 @@ def test_offset_by_3471(constructor: Constructor, request: pytest.FixtureRequest
     if any(x in str(constructor) for x in ("dask", "ibis")):
         request.applymarker(pytest.mark.xfail())
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
     date_nw = nw.from_native(constructor({"date": [date(2026, 1, 31)]}))
 
     existent_col_offset = nw.col("date").dt.offset_by("-1d")
