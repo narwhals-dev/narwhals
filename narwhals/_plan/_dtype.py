@@ -3,7 +3,7 @@ from __future__ import annotations
 from functools import cache
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Protocol
 
-from narwhals._plan._guards import is_function_expr
+from narwhals._plan._guards import is_binary_expr, is_function_expr
 from narwhals._plan._meta import SlottedMeta
 from narwhals._typing_compat import TypeVar
 from narwhals.exceptions import InvalidOperationError
@@ -139,6 +139,8 @@ class ResolveDType(Generic[_ExprIRT], metaclass=SlottedMeta):
             "This method should only be called as `NamedIR.resolve_dtype(...)`,\n"
             f"to ensure all expressions have been expanded, got:\n{node!r}"
             raise InvalidOperationError(msg)
+        elif is_binary_expr(node):
+            generic_name = f"{node_name}[{type(node.op).__name__}]"
         else:
             generic_name = node_name
         msg = f"`NamedIR[{generic_name}].resolve_dtype()` is not yet implemented, got:\n{node!r}"

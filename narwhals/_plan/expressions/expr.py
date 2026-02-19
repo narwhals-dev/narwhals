@@ -167,7 +167,7 @@ class BinaryExpr(
         - `FloorDivide`
         - `Modulus`
         """
-        return self.op.resolve_dtype(schema, self.left, self.right)
+        return self.op.resolve_dtype(self, schema)
 
 
 class Cast(ExprIR, child=("expr",), dtype=get_dtype()):
