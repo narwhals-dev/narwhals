@@ -366,12 +366,24 @@ class PandasLikeNamespace(
 
     def _if_then_else(
         self,
-        when: NativeSeriesT,
-        then: NativeSeriesT,
+        when: NativeSeriesT | list[NativeSeriesT],
+        then: NativeSeriesT | list[NativeSeriesT],
         otherwise: NativeSeriesT | None = None,
     ) -> NativeSeriesT:
-        where: Incomplete = then.where
-        return where(when) if otherwise is None else where(when, otherwise)
+        if not isinstance(when, list):
+            where: Incomplete = then.where
+            return where(when) if otherwise is None else where(when, otherwise)
+
+        import numpy as np
+
+        condlist = when
+        choicelist = then
+
+        default = otherwise if otherwise is not None else np.nan
+
+        result = np.select(condlist, choicelist, default=default)
+
+        return then[0].__class__(result, index=then[0].index)
 
 
 class _NativeConcat(Protocol[NativeDataFrameT, NativeSeriesT]):

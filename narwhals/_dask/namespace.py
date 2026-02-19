@@ -273,50 +273,114 @@ class DaskNamespace(
             version=self._version,
         )
 
-    def when_then(
-        self, predicate: DaskExpr, then: DaskExpr, otherwise: DaskExpr | None = None
-    ) -> DaskExpr:
-        def func(df: DaskLazyFrame) -> list[dx.Series]:
-            then_value = df._evaluate_single_output_expr(then)
-            otherwise_value = (
-                df._evaluate_single_output_expr(otherwise)
-                if otherwise is not None
-                else otherwise
+    def _when_then_simple(
+        self,
+        df: DaskLazyFrame,
+        predicate: DaskExpr,
+        then: DaskExpr,
+        otherwise: DaskExpr | None,
+    ) -> list[dx.Series]:
+        then_value = df._evaluate_single_output_expr(then)
+        otherwise_value = (
+            df._evaluate_single_output_expr(otherwise)
+            if otherwise is not None
+            else otherwise
+        )
+
+        condition = df._evaluate_single_output_expr(predicate)
+        if all(
+            x._metadata.is_scalar_like
+            for x in (
+                (predicate, then) if otherwise is None else (predicate, then, otherwise)
             )
+        ):
+            new_df = df._with_native(condition.to_frame())
+            condition = df._evaluate_single_output_expr(predicate.broadcast())
+            df = new_df
 
-            condition = df._evaluate_single_output_expr(predicate)
-            # re-evaluate DataFrame if the condition aggregates to force
-            # then/otherwise to be evaluated against the aggregated frame
-            if all(
-                x._metadata.is_scalar_like
-                for x in (
-                    (predicate, then)
-                    if otherwise is None
-                    else (predicate, then, otherwise)
-                )
-            ):
-                new_df = df._with_native(condition.to_frame())
-                condition = df._evaluate_single_output_expr(predicate.broadcast())
-                df = new_df
-
-            if otherwise is None:
-                (condition, then_series) = align_series_full_broadcast(
-                    df, condition, then_value
-                )
-                validate_comparand(condition, then_series)
-                return [then_series.where(condition)]  # pyright: ignore[reportArgumentType]
-            (condition, then_series, otherwise_series) = align_series_full_broadcast(
-                df, condition, then_value, otherwise_value
+        if otherwise is None:
+            (condition, then_series) = align_series_full_broadcast(
+                df, condition, then_value
             )
             validate_comparand(condition, then_series)
-            validate_comparand(condition, otherwise_series)
-            return [then_series.where(condition, otherwise_series)]  # pyright: ignore[reportArgumentType]
+            return [then_series.where(condition)]  # pyright: ignore[reportArgumentType]
+        (condition, then_series, otherwise_series) = align_series_full_broadcast(
+            df, condition, then_value, otherwise_value
+        )
+        validate_comparand(condition, then_series)
+        validate_comparand(condition, otherwise_series)
+        return [then_series.where(condition, otherwise_series)]  # pyright: ignore[reportArgumentType]
+
+    def _when_then_chained(
+        self, df: DaskLazyFrame, args: tuple[DaskExpr, ...]
+    ) -> list[dx.Series]:
+        import numpy as np  # ignore-banned-import
+
+        evaluated = [df._evaluate_single_output_expr(arg) for arg in args]
+        *pairs_list, otherwise_value = (
+            evaluated if len(evaluated) % 2 == 1 else (*evaluated, None)
+        )
+        conditions = pairs_list[::2]
+        values = pairs_list[1::2]
+
+        all_series = (
+            [*conditions, *values, otherwise_value]
+            if otherwise_value is not None
+            else [*conditions, *values]
+        )
+        aligned = align_series_full_broadcast(df, *all_series)
+
+        num_conditions = len(conditions)
+        aligned_conditions = aligned[:num_conditions]
+        aligned_values = aligned[num_conditions : num_conditions * 2]
+        aligned_otherwise = aligned[-1] if otherwise_value is not None else None
+
+        for cond, val in zip_strict(aligned_conditions, aligned_values):
+            validate_comparand(cond, val)
+        if aligned_otherwise is not None:
+            validate_comparand(aligned_conditions[0], aligned_otherwise)
+
+        def apply_select(*partition_series: pd.Series) -> pd.Series:
+            num_conds = len(aligned_conditions)
+            cond_parts = partition_series[:num_conds]
+            val_parts = partition_series[num_conds : num_conds * 2]
+            otherwise_part = (
+                partition_series[-1] if aligned_otherwise is not None else None
+            )
+            result = np.select(
+                list(cond_parts),
+                list(val_parts),
+                default=otherwise_part if otherwise_part is not None else np.nan,
+            )
+            return pd.Series(result, index=cond_parts[0].index)
+
+        map_args = [*aligned_conditions, *aligned_values]
+        if aligned_otherwise is not None:
+            map_args.append(aligned_otherwise)
+
+        return [
+            dd.map_partitions(
+                apply_select,
+                *map_args,
+                meta=(aligned_values[0].name, aligned_values[0].dtype),
+            )
+        ]
+
+    def when_then(self, *args: DaskExpr) -> DaskExpr:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            if len(args) <= 3:
+                return self._when_then_simple(
+                    df, args[0], args[1], args[2] if len(args) == 3 else None
+                )
+            return self._when_then_chained(df, args)
+
+        then_arg = args[1]
 
         return self._expr(
             call=func,
             evaluate_output_names=getattr(
-                then, "_evaluate_output_names", lambda _df: ["literal"]
+                then_arg, "_evaluate_output_names", lambda _df: ["literal"]
             ),
-            alias_output_names=getattr(then, "_alias_output_names", None),
+            alias_output_names=getattr(then_arg, "_alias_output_names", None),
             version=self._version,
         )

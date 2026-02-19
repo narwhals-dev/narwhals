@@ -72,17 +72,48 @@ class SQLNamespace(
 
         return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
-    def when_then(
-        self, predicate: SQLExprT, then: SQLExprT, otherwise: SQLExprT | None = None
-    ) -> SQLExprT:
-        def func(cols: list[NativeExprT]) -> NativeExprT:
-            return self._when(cols[1], cols[0])
+    def when_then(self, *args: SQLExprT) -> SQLExprT:
+        # Handle variable arguments for chaining:
+        # - 2 args: (predicate, then) - single condition without otherwise
+        # - 3 args: (predicate, then, otherwise) - single condition with otherwise
+        # - 4+ args: (pred1, then1, pred2, then2, ..., [otherwise]) - chained conditions
 
-        def func_with_otherwise(cols: list[NativeExprT]) -> NativeExprT:
-            return self._when(cols[1], cols[0], cols[2])
+        if len(args) == 2:
+            # Simple case: when().then() without otherwise
+            predicate, then = args
 
-        if otherwise is None:
+            def func(cols: list[NativeExprT]) -> NativeExprT:
+                return self._when(cols[1], cols[0])
+
             return self._expr._from_elementwise_horizontal_op(func, then, predicate)
-        return self._expr._from_elementwise_horizontal_op(
-            func_with_otherwise, then, predicate, otherwise
-        )
+
+        if len(args) == 3:
+            # Simple case: when().then().otherwise()
+            predicate, then, otherwise = args
+
+            def func_with_otherwise(cols: list[NativeExprT]) -> NativeExprT:
+                return self._when(cols[1], cols[0], cols[2])
+
+            return self._expr._from_elementwise_horizontal_op(
+                func_with_otherwise, then, predicate, otherwise
+            )
+
+        # Chained conditions: (pred1, then1, pred2, then2, ..., [otherwise])
+        def func_chained(cols: list[NativeExprT]) -> NativeExprT:
+            from itertools import chain
+
+            pairs = list(zip(cols[1::2], cols[::2]))
+            reordered = list(chain.from_iterable(pairs))
+            if len(cols) % 2 == 1:
+                reordered.append(cols[-1])
+
+            return self._when(reordered[0], reordered[1], *reordered[2:])
+
+        from itertools import chain
+
+        pairs = list(zip(args[1::2], args[::2]))
+        call_args = list(chain.from_iterable(pairs))
+        if len(args) % 2 == 1:
+            call_args.append(args[-1])
+
+        return self._expr._from_elementwise_horizontal_op(func_chained, *call_args)

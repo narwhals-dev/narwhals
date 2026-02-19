@@ -81,12 +81,33 @@ class SparkLikeNamespace(
     def _lit(self, value: Any) -> Column:
         return self._F.lit(value)
 
-    def _when(
-        self, condition: Column, value: Column, otherwise: Column | None = None
-    ) -> Column:
-        if otherwise is None:
+    def _when(self, condition: Column, value: Column, *args: Column) -> Column:
+        if not args:
             return self._F.when(condition, value)
-        return self._F.when(condition, value).otherwise(otherwise)
+
+        if len(args) == 1:
+            otherwise = args[0]
+            return self._F.when(condition, value).otherwise(otherwise)
+
+        all_exprs = [condition, value, *args]
+
+        has_otherwise = len(all_exprs) % 2 == 1
+
+        if has_otherwise:
+            *pairs, otherwise_expr = all_exprs
+        else:
+            pairs = all_exprs
+            otherwise_expr = None
+
+        result = self._F.when(pairs[0], pairs[1])
+
+        for cond, val in zip(pairs[2::2], pairs[3::2]):
+            result = result.when(cond, val)
+
+        if has_otherwise:
+            result = result.otherwise(otherwise_expr)
+
+        return result
 
     def _coalesce(self, *exprs: Column) -> Column:
         return self._F.coalesce(*exprs)

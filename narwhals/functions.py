@@ -1382,7 +1382,91 @@ class When:
 
 
 class Then(Expr):
+    def when(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> ChainedWhen:
+        """Add another condition to the when-then chain.
+
+        Arguments:
+            predicates: Additional condition(s) to evaluate. Accepts one or more
+                boolean expressions, which are implicitly combined with `&`.
+
+        Returns:
+            A "chained when" object, which `.then` can be called on to continue the chain.
+        """
+        condition = all_horizontal(*flatten(predicates), ignore_nulls=False)
+        node = self._nodes[0]
+        return ChainedWhen(previous_exprs=node.exprs, new_condition=condition)
+
     def otherwise(self, value: IntoExpr | NonNestedLiteral) -> Expr:
+        node = self._nodes[0]
+        return Expr(
+            ExprNode(ExprKind.ELEMENTWISE, "when_then", exprs=(*node.exprs, value))
+        )
+
+
+class ChainedWhen:
+    """Subsequent when condition in a when-then chain.
+
+    This class is returned when calling `.when()` on a `Then` or `ChainedThen` object,
+    allowing for chained conditional expressions like:
+    `nw.when(c1).then(v1).when(c2).then(v2).otherwise(default)`
+    """
+
+    def __init__(
+        self, previous_exprs: Sequence[IntoExpr | NonNestedLiteral], new_condition: Expr
+    ) -> None:
+        self._previous_exprs = previous_exprs
+        self._new_condition = new_condition
+
+    def then(self, value: IntoExpr | NonNestedLiteral) -> ChainedThen:
+        """Complete the chained when-then pair.
+
+        Arguments:
+            value: Value to use when the condition is met.
+
+        Returns:
+            A "chained then" object which can continue the chain with another `.when()`
+            or terminate with `.otherwise()`.
+        """
+        return ChainedThen(
+            ExprNode(
+                ExprKind.ELEMENTWISE,
+                "when_then",
+                exprs=(*self._previous_exprs, self._new_condition, value),
+                allow_multi_output=False,
+            )
+        )
+
+
+class ChainedThen(Expr):
+    """Subsequent then value in a when-then chain with continued chaining capability.
+
+    This class allows both continuing the chain with another `.when()` or
+    terminating with `.otherwise()`.
+    """
+
+    def when(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> ChainedWhen:
+        """Add another condition to the when-then chain.
+
+        Arguments:
+            predicates: Additional condition(s) to evaluate. Accepts one or more
+                boolean expressions, which are implicitly combined with `&`.
+
+        Returns:
+            A "chained when" object, which `.then` can be called on to continue the chain.
+        """
+        condition = all_horizontal(*flatten(predicates), ignore_nulls=False)
+        node = self._nodes[0]
+        return ChainedWhen(previous_exprs=node.exprs, new_condition=condition)
+
+    def otherwise(self, value: IntoExpr | NonNestedLiteral) -> Expr:
+        """Terminate the chain with a default value.
+
+        Arguments:
+            value: Default value to use when none of the conditions are met.
+
+        Returns:
+            An expression with the complete when-then-otherwise chain.
+        """
         node = self._nodes[0]
         return Expr(
             ExprNode(ExprKind.ELEMENTWISE, "when_then", exprs=(*node.exprs, value))
@@ -1393,14 +1477,10 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
     """Start a `when-then-otherwise` expression.
 
     Expression similar to an `if-else` statement in Python. Always initiated by a
-    `pl.when(<condition>).then(<value if condition>)`, and optionally followed by a
-    `.otherwise(<value if condition is false>)` can be appended at the end. If not
-    appended, and the condition is not `True`, `None` will be returned.
-
-    Info:
-        Chaining multiple `.when(<condition>).then(<value>)` statements is currently
-        not supported.
-        See [Narwhals#668](https://github.com/narwhals-dev/narwhals/issues/668).
+    `nw.when(<condition>).then(<value if condition>)`. Multiple conditions can be
+    chained by calling `.when(<condition>).then(<value>)` repeatedly. Optionally
+    followed by `.otherwise(<value if all conditions false>)` at the end. If not
+    appended, and no condition matches, `None` will be returned.
 
     Arguments:
         predicates: Condition(s) that must be met in order to apply the subsequent
@@ -1411,6 +1491,8 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
         A "when" object, which `.then` can be called on.
 
     Examples:
+        Single condition:
+
         >>> import pandas as pd
         >>> import narwhals as nw
         >>>
@@ -1427,6 +1509,25 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
         | 1  2  10       5 |
         | 2  3  15       6 |
         └──────────────────┘
+
+        Multiple chained conditions:
+
+        >>> nw.from_native(df_native).with_columns(
+        ...     nw.when(nw.col("a") == 1)
+        ...     .then(100)
+        ...     .when(nw.col("a") == 2)
+        ...     .then(200)
+        ...     .otherwise(300)
+        ...     .alias("result")
+        ... )
+        ┌────────────────────────┐
+        |  Narwhals DataFrame    |
+        |------------------------|
+        |    a   b      result   |
+        | 0  1   5         100   |
+        | 1  2  10         200   |
+        | 2  3  15         300   |
+        └────────────────────────┘
     """
     return When(*predicates)
 

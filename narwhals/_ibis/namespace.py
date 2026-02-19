@@ -54,12 +54,29 @@ class IbisNamespace(
     def _lit(self, value: Any) -> ir.Value:
         return lit(value)
 
-    def _when(
-        self, condition: ir.Value, value: ir.Value, otherwise: ir.Expr | None = None
-    ) -> ir.Value:
-        if otherwise is None:
+    def _when(self, condition: ir.Value, value: ir.Value, *args: ir.Value) -> ir.Value:
+        if not args:
             return ibis.cases((condition, value))
-        return ibis.cases((condition, value), else_=otherwise)  # pragma: no cover
+
+        if len(args) == 1:
+            otherwise = args[0]
+            return ibis.cases((condition, value), else_=otherwise)  # pragma: no cover
+
+        all_exprs = [condition, value, *args]
+
+        has_otherwise = len(all_exprs) % 2 == 1
+
+        if has_otherwise:
+            *pairs, otherwise_expr = all_exprs
+        else:
+            pairs = all_exprs
+            otherwise_expr = None
+
+        tuples = list(zip(pairs[::2], pairs[1::2]))
+
+        if has_otherwise:
+            return ibis.cases(*tuples, else_=otherwise_expr)
+        return ibis.cases(*tuples)
 
     def _coalesce(self, *exprs: ir.Value) -> ir.Value:
         return ibis.coalesce(*exprs)
