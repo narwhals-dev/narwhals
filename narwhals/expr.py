@@ -2432,11 +2432,11 @@ class Expr:
 
         # Values are close if abs_diff <= tolerance, and both finite
         is_close = (
-            ((self_f - other).abs() <= tolerance) & self_is_not_inf & other_is_not_inf
+            ((self_f - other_f).abs() <= tolerance) & self_is_not_inf & other_is_not_inf
         )
 
         # Handle infinity cases: infinities are close/equal if they have the same sign
-        self_sign, other_sign = self_f > 0, other > 0
+        self_sign, other_sign = self_f > 0, other_f > 0
         is_same_inf = (~self_is_not_inf) & other_is_inf & (self_sign == other_sign)
 
         # Handle nan cases:
