@@ -8,7 +8,7 @@ from narwhals._plan._guards import is_function_expr, is_literal
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.common import replace
 from narwhals._plan.options import ExprIROptions
-from narwhals._typing_compat import TypeVar
+from narwhals._plan.typing import ExprIRT_co
 from narwhals._utils import Version, unstable
 from narwhals.dtypes import DType
 from narwhals.exceptions import InvalidOperationError
@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from narwhals._plan.meta import MetaNamespace
     from narwhals._plan.schema import FrozenSchema
     from narwhals._plan.selectors import Selector
-    from narwhals._plan.typing import ExprIRT, ExprIRT2, Ignored, MapIR, Seq
+    from narwhals._plan.typing import ExprIRT, Ignored, MapIR, Seq
     from narwhals.typing import IntoDType
 
 
@@ -255,9 +255,6 @@ class SelectorIR(ExprIR, config=no_dispatch()):
         return True
 
 
-ExprIRT_co = TypeVar("ExprIRT_co", bound="ExprIR", default="ExprIR", covariant=True)
-
-
 @final
 class NamedIR(Immutable, Generic[ExprIRT_co]):
     """Post-projection expansion wrapper for `ExprIR`.
@@ -272,7 +269,8 @@ class NamedIR(Immutable, Generic[ExprIRT_co]):
     """
 
     __slots__ = ("expr", "name")
-    expr: ExprIRT_co
+    # NOTE: https://discuss.python.org/t/make-replace-stop-interfering-with-variance-inference/96092
+    expr: ExprIRT_co  # type: ignore[misc]
     name: str
 
     @staticmethod
@@ -286,7 +284,7 @@ class NamedIR(Immutable, Generic[ExprIRT_co]):
         return NamedIR(expr=col(name), name=name)
 
     @staticmethod
-    def from_ir(expr: ExprIRT2, /) -> NamedIR[ExprIRT2]:
+    def from_ir(expr: ExprIRT, /) -> NamedIR[ExprIRT]:
         """Construct from an already expanded `ExprIR`.
 
         Should be cheap to get the output name from cache, but will raise if used

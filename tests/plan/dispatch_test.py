@@ -36,7 +36,7 @@ def df(data: dict[str, Any]) -> DataFrame[pa.Table, pa.ChunkedArray[Any]]:
 def test_dispatch(df: DataFrame[pa.Table, pa.ChunkedArray[Any]]) -> None:
     implemented_full = nwp.col("a").is_null()
     forgot_to_expand = (named_ir("howdy", nwp.nth(3, 4).first()),)
-    aliased_after_expand: tuple[ir.NamedIR[Any]] = (
+    aliased_after_expand: tuple[ir.NamedIR] = (
         ir.NamedIR.from_ir(ir.col("a").alias("b")),
     )
 

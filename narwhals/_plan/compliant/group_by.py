@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
 
 class CompliantGroupBy(Protocol[FrameT_co]):
-    def agg(self, irs: Seq[NamedIR[Any]]) -> FrameT_co: ...
+    def agg(self, irs: Seq[NamedIR]) -> FrameT_co: ...
     @property
     def compliant(self) -> FrameT_co: ...
 
@@ -64,7 +64,7 @@ class EagerDataFrameGroupBy(DataFrameGroupBy[EagerDataFrameT], Protocol[EagerDat
     def compliant(self) -> EagerDataFrameT:
         return self._df
 
-    def agg_over(self, irs: Seq[NamedIR[Any]]) -> EagerDataFrameT:
+    def agg_over(self, irs: Seq[NamedIR]) -> EagerDataFrameT:
         """Perform a windowed aggregation.
 
         Returns the re-joined aggregation results.

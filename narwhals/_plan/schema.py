@@ -142,7 +142,7 @@ class FrozenSchema(Immutable):
 
         Fills in any unreferenced columns present in `self`, but not in `exprs` as selections.
         """
-        named: dict[str, NamedIR[Any]] = {e.name: e for e in exprs}
+        named: dict[str, NamedIR] = {e.name: e for e in exprs}
         it = (named.pop(name, NamedIR.from_name(name)) for name in self)
         return tuple(chain(it, named.values()))
 

@@ -179,8 +179,7 @@ def _join_supertypes(
 def _with_supertypes(plan: rp.ResolvedPlan, casts: Seq[Cast]) -> rp.WithColumns:
     schema = dict(plan.schema)
     schema.update((e.name, e.expr.dtype) for e in casts)
-    # NOTE: https://discuss.python.org/t/make-replace-stop-interfering-with-variance-inference/96092
-    return rp.WithColumns(input=plan, exprs=casts, output_schema=freeze_schema(schema))  # type: ignore[arg-type]
+    return rp.WithColumns(input=plan, exprs=casts, output_schema=freeze_schema(schema))
 
 
 class Resolver:
@@ -329,7 +328,7 @@ class Resolver:
         # here I want to reuse the resolved dtype of each aliased key expression
         # it should use the dtype from the keys, not the one w/ aggs
         with_output_schema_extra: dict[str, DType] = {}
-        safe_named_irs_keys: list[ir.NamedIR[Any]] = []
+        safe_named_irs_keys: list[ir.NamedIR] = []
 
         for key, safe_name in zip(
             keys, temp.column_names(chain(key_names, input_schema))

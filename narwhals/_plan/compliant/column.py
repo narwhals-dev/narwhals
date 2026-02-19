@@ -114,5 +114,5 @@ class ExprDispatch(HasVersion, Protocol[FrameT_contra, R_co, NamespaceT_co]):
         return node.dispatch(obj, frame, name)
 
     @classmethod
-    def from_named_ir(cls, named_ir: ir.NamedIR[ir.ExprIR], frame: FrameT_contra) -> R_co:
+    def from_named_ir(cls, named_ir: ir.NamedIR, frame: FrameT_contra) -> R_co:
         return cls.from_ir(named_ir.expr, frame, named_ir.name)

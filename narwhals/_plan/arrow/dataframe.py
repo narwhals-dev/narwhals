@@ -36,7 +36,7 @@ if TYPE_CHECKING:
 
     from narwhals._plan.arrow.typing import ChunkedArrayAny, ChunkedOrArrayAny, Predicate
     from narwhals._plan.compliant.group_by import GroupByResolver
-    from narwhals._plan.expressions import ExprIR, NamedIR
+    from narwhals._plan.expressions import NamedIR
     from narwhals._plan.options import ExplodeOptions, SortMultipleOptions
     from narwhals._plan.typing import NonCrossJoinStrategy
     from narwhals._typing import _LazyAllowedImpl
@@ -124,7 +124,7 @@ class ArrowDataFrame(
         return pl.DataFrame(self.native)
 
     def _evaluate_irs(
-        self, nodes: Iterable[NamedIR[ExprIR]], /, *, length: int | None = None
+        self, nodes: Iterable[NamedIR], /, *, length: int | None = None
     ) -> Iterator[Series]:
         expr = namespace(self)._expr
         from_named_ir = expr.from_named_ir

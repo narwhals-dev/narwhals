@@ -75,7 +75,7 @@ OperatorT = TypeVar("OperatorT", bound="ops.Operator", default="ops.Operator")
 RightT = TypeVar("RightT", bound="ExprIR", default="ExprIR")
 OperatorFn: TypeAlias = "Callable[[t.Any, t.Any], t.Any]"
 ExprIRT = TypeVar("ExprIRT", bound="ExprIR", default="ExprIR")
-ExprIRT2 = TypeVar("ExprIRT2", bound="ExprIR", default="ExprIR")
+ExprIRT_co = TypeVar("ExprIRT_co", bound="ExprIR", default="ExprIR", covariant=True)
 NamedOrExprIRT = TypeVar("NamedOrExprIRT", "NamedIR[t.Any]", "ExprIR")
 
 SelectorT = TypeVar("SelectorT", bound="SelectorIR", default="SelectorIR")
