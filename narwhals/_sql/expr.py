@@ -162,7 +162,7 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
             if current_alias_output_names is None
             else lambda output_names: func(current_alias_output_names(output_names))
         )
-        return type(self)(
+        return self.__class__(
             self._call,
             self._window_function,
             evaluate_output_names=self._evaluate_output_names,
