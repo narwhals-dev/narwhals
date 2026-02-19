@@ -66,7 +66,7 @@ class Function(Immutable):
         cls.__expr_ir_dispatch__ = Dispatcher.from_function(cls)
         if dtype is not None:
             if isinstance(dtype, DType):
-                dtype = ResolveDType.from_dtype(dtype)
+                dtype = ResolveDType.just_dtype(dtype)
             elif not isinstance(dtype, ResolveDType):
                 dtype = ResolveDType.function.visitor(dtype)
             # TODO @dangotbanned: fix mypy

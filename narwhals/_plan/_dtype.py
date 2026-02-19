@@ -170,9 +170,9 @@ class ResolveDType(Generic[_ExprIRT]):
 
     # TODO @dangotbanned: Look into caching these on `dtype`
     @staticmethod
-    def from_dtype(dtype: DType, /) -> FromDType:
-        """Always returns exactly `dtype`."""
-        return FromDType(dtype)
+    def just_dtype(dtype: DType, /) -> JustDType:
+        """Always returns exactly `dtype`, disregarding any prior context."""
+        return JustDType(dtype)
 
     @staticmethod
     def get_dtype() -> GetDType[Any]:
@@ -205,7 +205,7 @@ class GetDType(_Singleton[_HasDTypeT]):
         return node.dtype
 
 
-class FromDType(ResolveDType[Any]):
+class JustDType(ResolveDType[Any]):
     __slots__ = ("_dtype",)
 
     def __init__(self, dtype: DType, /) -> None:

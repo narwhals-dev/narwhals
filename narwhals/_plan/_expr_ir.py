@@ -55,7 +55,7 @@ class ExprIR(Immutable):
         cls.__expr_ir_dispatch__ = Dispatcher.from_expr_ir(cls)
         if dtype is not None:
             if isinstance(dtype, DType):
-                dtype = ResolveDType.from_dtype(dtype)
+                dtype = ResolveDType.just_dtype(dtype)
             elif not isinstance(dtype, ResolveDType):
                 dtype = ResolveDType.expr_ir.visitor(dtype)
             cls.__expr_ir_dtype__ = dtype
