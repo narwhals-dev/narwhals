@@ -37,7 +37,7 @@ class ExprIR(Immutable):
 
     __expr_ir_config__: ClassVar[ExprIROptions] = ExprIROptions.default()
     __expr_ir_dispatch__: ClassVar[Dispatcher[Self]]
-    __expr_ir_dtype__: ClassVar[ResolveDType[Self]] = ResolveDType.default()
+    __expr_ir_dtype__: ClassVar[ResolveDType[Self]] = ResolveDType()
 
     def __init_subclass__(
         cls: type[Self],

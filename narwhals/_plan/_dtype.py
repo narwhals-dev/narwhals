@@ -1,78 +1,57 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Protocol
 
 from narwhals._plan._guards import is_function_expr
+from narwhals._plan._meta import SlottedMeta
 from narwhals._typing_compat import TypeVar
-from narwhals.dtypes import DType
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Callable, Iterable
 
     from typing_extensions import Self, TypeAlias, TypeIs
 
     from narwhals._plan.options import ExprIROptions
     from narwhals._plan.schema import FrozenSchema
-    from narwhals._plan.typing import Seq
+    from narwhals.dtypes import DType
 
-T = TypeVar("T")
 
 # NOTE: `Column` is the exception, which uses `schema[self.name]` and so it is manually defined
 # rather than accepting 2 arguments here and ignoring in all other cases
-Visitor: TypeAlias = Callable[[T], DType]
+T = TypeVar("T")
+Visitor: TypeAlias = "Callable[[T], DType]"
 """A function requiring a single argument to derive the resolved `DType`."""
 
-
-class _ExprIR(Protocol):
-    """Minimized hierarchy to [avoid cycles].
-
-    [avoid cycles]: https://github.com/microsoft/pyright/issues/10661
-    """
-
-    __expr_ir_config__: ClassVar[ExprIROptions]
-    __expr_ir_dtype__: ClassVar[ResolveDType]
-
-    def resolve_dtype(self, schema: FrozenSchema, /) -> DType: ...
-
-
-class _HasParentExprIR(_ExprIR, Protocol):
-    @property
-    def expr(self) -> _ExprIR: ...
-
-
-class _Function(Protocol):
-    __expr_ir_dtype__: ClassVar[ResolveDType]
-
-
-class _ExprIRDType(_ExprIR, Protocol):
-    @property
-    def dtype(self) -> DType: ...
-
-
-class _FunctionDType(_Function, Protocol):
-    @property
-    def dtype(self) -> DType: ...
-
-
-def _is_function_expr_dtype(node: Any) -> TypeIs[_FunctionExpr[_FunctionDType]]:
-    return is_function_expr(node)
-
-
+# fmt: off
+# NOTE: Structural typing to prevent cycles
+# See https://github.com/microsoft/pyright/issues/10661
 _HasDTypeT = TypeVar("_HasDTypeT", bound="_ExprIRDType | _FunctionExpr[_FunctionDType]")
 _HasParentExprIRT = TypeVar("_HasParentExprIRT", bound="_HasParentExprIR")
 _FunctionExprT = TypeVar("_FunctionExprT", bound="_FunctionExpr[Any]")
-_ExprIRT = TypeVar("_ExprIRT", bound=_ExprIR, default=Any)
-_FunctionT = TypeVar("_FunctionT", bound=_Function)
-_FunctionT_co = TypeVar("_FunctionT_co", bound=_Function, covariant=True, default=Any)
+_ExprIRT = TypeVar("_ExprIRT", bound="_ExprIR", default=Any)
+_FunctionT = TypeVar("_FunctionT", bound="_Function", default=Any)
+_FunctionT_co = TypeVar("_FunctionT_co", bound="_Function", covariant=True, default=Any)
 
-
+class _ExprIR(Protocol):
+    __expr_ir_config__: ClassVar[ExprIROptions]
+    def resolve_dtype(self, schema: FrozenSchema, /) -> DType: ...
+class _HasParentExprIR(_ExprIR, Protocol):
+    @property
+    def expr(self) -> _ExprIR: ...
+class _Function(Protocol):
+    def resolve_dtype(self, node: Any, schema: FrozenSchema, /) -> DType: ...
+class _HasDType(Protocol):
+    @property
+    def dtype(self) -> DType: ...
+class _ExprIRDType(_ExprIR, _HasDType, Protocol): ...
+class _FunctionDType(_Function, _HasDType, Protocol): ...
 class _FunctionExpr(_ExprIR, Protocol[_FunctionT_co]):
     @property
     def function(self) -> _FunctionT_co: ...
     @property
-    def input(self) -> Seq[_ExprIR]: ...
+    def input(self) -> tuple[_ExprIR,...]: ...
+# fmt: on
 
 
 class _ClassAccessorDescriptor:
@@ -127,13 +106,16 @@ class _ExprIRAccessor(_ClassAccessorDescriptor):
         return ExprIRVisitor(visitor)
 
 
-class ResolveDType(Generic[_ExprIRT]):
+class ResolveDType(Generic[_ExprIRT], metaclass=SlottedMeta):
     """Resolve the data type of an expanded expression.
 
     An `ExprIR` or `Function` can use this to define how the node derives
     a `DType` and (optionally) how the incoming `DType` should be transformed.
 
-    `ResolveDType` provides constructors (`@staticmethod`s) targetting patterns observed in:
+    By default, this operation is unsupported and when called `ResolveDType` will raise an
+    appropriate error.
+
+    `ResolveDType` provides constructors (`@staticmethod`s) targeting patterns observed in:
     - [`AExpr.to_field_impl`]
     - [`IRFunctionExpr.get_field`]
     - [`FieldsMapper`]
@@ -161,11 +143,6 @@ class ResolveDType(Generic[_ExprIRT]):
         msg = f"`NamedIR[{generic_name}].resolve_dtype()` is not yet implemented, got:\n{node!r}"
         raise NotImplementedError(msg)
 
-    @staticmethod
-    def default() -> ResolveDType:
-        """By default, the only appropriate behavior is to raise as an unsupported operation."""
-        return ResolveDType()
-
     # TODO @dangotbanned: Look into caching these on `dtype`
     @staticmethod
     def just_dtype(dtype: DType, /) -> JustDType:
@@ -185,7 +162,6 @@ class ResolveDType(Generic[_ExprIRT]):
 
 
 class _Singleton(ResolveDType[_ExprIRT], Generic[_ExprIRT]):
-    __slots__ = ()
     __instance: ClassVar[Any | None] = None
 
     def __new__(cls) -> Self:
@@ -195,8 +171,6 @@ class _Singleton(ResolveDType[_ExprIRT], Generic[_ExprIRT]):
 
 
 class GetDType(_Singleton[_HasDTypeT]):
-    __slots__ = ()
-
     def __call__(self, node: _HasDTypeT, _: FrozenSchema, /) -> DType:
         if _is_function_expr_dtype(node):
             return node.function.dtype
@@ -214,8 +188,6 @@ class JustDType(ResolveDType[Any]):
 
 
 class ExprIRSameDType(_Singleton[_HasParentExprIR]):
-    __slots__ = ()
-
     def __call__(self, node: _HasParentExprIR, schema: FrozenSchema, /) -> DType:
         return node.expr.resolve_dtype(schema)
 
@@ -251,8 +223,6 @@ class FunctionVisitor(ResolveDType[_FunctionExpr[_FunctionT]], Generic[_Function
 
 
 class FunctionSameDType(_Singleton[_FunctionExprT]):
-    __slots__ = ()
-
     def __call__(self, node: _FunctionExprT, schema: FrozenSchema, /) -> DType:
         return node.input[0].resolve_dtype(schema)
 
@@ -275,3 +245,7 @@ class FunctionMapAll(ResolveDType[_FunctionExprT]):
 
     def __call__(self, node: _FunctionExprT, schema: FrozenSchema, /) -> DType:
         return self._mapper(e.resolve_dtype(schema) for e in node.input)
+
+
+def _is_function_expr_dtype(node: Any) -> TypeIs[_FunctionExpr[_FunctionDType]]:
+    return is_function_expr(node)

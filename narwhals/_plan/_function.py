@@ -32,7 +32,7 @@ class Function(Immutable):
     )
     __expr_ir_config__: ClassVar[FEOptions] = FEOptions.default()
     __expr_ir_dispatch__: ClassVar[Dispatcher[FunctionExpr[Self]]]
-    __expr_ir_dtype__: ClassVar[ResolveDType[FunctionExpr[Self]]] = ResolveDType.default()
+    __expr_ir_dtype__: ClassVar[ResolveDType[FunctionExpr[Self]]] = ResolveDType()
 
     @property
     def function_options(self) -> FunctionOptions:
