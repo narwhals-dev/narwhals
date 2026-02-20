@@ -384,7 +384,7 @@ class PandasLikeNamespace(
             a_series = df._evaluate_single_output_expr(a)
             b_series = df._evaluate_single_output_expr(b)
             _df = self._concat_horizontal([a_series.native, b_series.native])
-            corr = _df.corr(method=method).iloc[0, [1]]  # type: ignore[arg-type]
+            corr = _df.corr(method=method).iloc[0, [1]]  # type: ignore[union-attr]
             return [
                 PandasLikeSeries(
                     corr, implementation=self._implementation, version=self._version

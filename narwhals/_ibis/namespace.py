@@ -153,7 +153,7 @@ class IbisNamespace(
         def func(_df: IbisLazyFrame) -> list[ir.Value]:
             a_ = _df._evaluate_single_output_expr(a)
             b_ = _df._evaluate_single_output_expr(b)
-            return [a_.corr(b_, how="pop")]
+            return [a_.corr(b_, how="pop")]  # pyright: ignore[reportAttributeAccessIssue]
 
         return self._expr(
             func,
