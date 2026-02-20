@@ -471,6 +471,12 @@ class PolarsExprStringNamespace(
             self.native.str.replace_all(pattern, value_native, literal=literal)
         )
 
+    def contains(self, pattern: PolarsExpr, *, literal: bool) -> PolarsExpr:
+        pattern_native = extract_native(pattern)
+        return self.compliant._with_native(
+            self.native.str.contains(pattern_native, literal=literal)
+        )
+
 
 class PolarsExprCatNamespace(
     PolarsExprNamespace, PolarsCatNamespace[PolarsExpr, pl.Expr]
