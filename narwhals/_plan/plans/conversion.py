@@ -29,7 +29,9 @@ from narwhals._plan.exceptions import (
 )
 from narwhals._plan.plans import resolved as rp
 from narwhals._plan.schema import FrozenSchema, freeze_schema
+from narwhals._typing import IntoBackend
 from narwhals._utils import (
+    Implementation,
     Version,
     check_column_names_are_unique as raise_duplicate_error,
     zip_strict,
@@ -39,14 +41,18 @@ from narwhals.exceptions import ComputeError, DuplicateError, InvalidOperationEr
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping
 
-    from typing_extensions import TypeAlias
+    from typing_extensions import Self, TypeAlias
 
     from narwhals._plan._expr_ir import NamedIR
     from narwhals._plan.plans import logical as lp
     from narwhals._plan.typing import Seq
+    from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
     from narwhals.dtypes import DType
-    from narwhals.typing import Backend
+    from narwhals.typing import Backend, IntoBackend
 
+    KnownImpl: TypeAlias = _EagerAllowedImpl | _LazyAllowedImpl
+
+__all__ = ["Resolver"]
 
 Incomplete: TypeAlias = Any
 """Node is not represented in `ResolvedPlan` (yet?).
@@ -182,6 +188,16 @@ def _with_supertypes(plan: rp.ResolvedPlan, casts: Seq[Cast]) -> rp.WithColumns:
     return rp.WithColumns(input=plan, exprs=casts, output_schema=freeze_schema(schema))
 
 
+# NOTE: Eventually need to add a different way in for that
+def _from_backend_ensure_known(backend: IntoBackend[Backend], /) -> KnownImpl:
+    """Reject the possibility of plugins via this path."""
+    impl = Implementation.from_backend(backend)
+    if impl is Implementation.UNKNOWN:
+        msg = f"{impl!r} is not supported in this context"
+        raise NotImplementedError(msg)
+    return impl
+
+
 class Resolver:
     """Default conversion from `LogicalPlan` into `ResolvedPlan`.
 
@@ -193,7 +209,15 @@ class Resolver:
     [`polars_plan::plans::conversion::dsl_to_ir::to_alp_impl`]: https://github.com/pola-rs/polars/blob/8f60a2d641daf7f9eeac69694b5c952f4cc34099/crates/polars-plan/src/plans/conversion/dsl_to_ir/mod.rs#L142-L1666
     """
 
-    __slots__ = ()
+    __slots__ = ("implementation",)
+
+    implementation: KnownImpl
+
+    @classmethod
+    def from_backend(cls, backend: IntoBackend[Backend], /) -> Self:
+        obj = cls.__new__(cls)
+        obj.implementation = _from_backend_ensure_known(backend)
+        return obj
 
     def to_resolved(self, plan: lp.LogicalPlan, /) -> rp.ResolvedPlan:
         """Converts `LogicalPlan` to `ResolvedPlan`.
@@ -477,14 +501,18 @@ class Resolver:
             output_schema=freeze_schema(zip(names, input_schema.values())),
         )
 
+    # TODO @dangotbanned: Investigate if there is a path to something like `read_csv_schema`
+    # Seems unlikely for `pyarrow`, but worth a look
     scan_csv = todo()
 
     def scan_dataframe(self, plan: lp.ScanDataFrame, /) -> rp.ScanDataFrame:
         return rp.ScanDataFrame(df=plan.df, output_schema=plan.schema)
 
-    # TODO @dangotbanned: Need a way of getting `backend: IntoBackend` from an outer context.
-    scan_parquet = todo()
+    def scan_parquet(self, plan: lp.ScanParquet, /) -> rp.ScanParquet:
+        return _scan_parquet(plan.source, self.implementation)
 
+    # TODO @dangotbanned: Possibly remove `lp.ScanParquetImpl`?
+    # E.g. use `backend` to instantiate `LazyFrame` and propagate from there to `Resolver`
     def scan_parquet_impl(self, plan: lp.ScanParquetImpl[lp.ImplT], /) -> rp.ScanParquet:
         return _scan_parquet(plan.source, plan.implementation)
 
