@@ -81,14 +81,11 @@ typing = [  # keep some of these pinned and bump periodically so there's fewer s
   "mypy~=1.15.0",
   "pyright",
   "pyarrow-stubs==19.2",
+  "narwhals[dask]",
   "sqlframe",
   "polars",
   "uv",
   "narwhals[ibis]",
-]
-typing-ci = [
-  "narwhals[dask,modin]",
-  {include-group = "typing"}
 ]
 docs = [
   "black",  # required by mkdocstrings_handlers
