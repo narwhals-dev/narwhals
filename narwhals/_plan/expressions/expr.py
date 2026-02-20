@@ -222,6 +222,8 @@ class SortBy(ExprIR, child=("expr", "by"), dtype=same_dtype()):
         yield from self.expr.iter_output_name()
 
 
+# TODO @dangotbanned: Docs should complement `Function`
+# - The two are very tightly coupled
 # mypy: disable-error-code="misc"
 class FunctionExpr(ExprIR, t.Generic[FunctionT_co], child=("input",)):
     """**Representing `Expr::Function`**.

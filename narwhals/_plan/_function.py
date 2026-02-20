@@ -1,3 +1,38 @@
+"""Where the base `Function` lives.
+
+### Implementation Notes
+The design was adapted from an *older* version of (rust) polars.
+
+[`dsl::function_expr::FunctionExpr`] became `Function`
+
+```rust
+pub enum Expr {                    // class ExprIR: ...
+                                   // class Function: ...
+                                   //
+    Function {                     // class FunctionExpr(ExprIR):
+        input: Vec<Expr>,          //     input: Seq[ExprIR]
+        function: FunctionExpr,    //     function: Function
+    //            ^^^^^^^^^^^^                      ^^^^^^^^
+        options: FunctionOptions,  //     options: FunctionOptions
+    },
+```
+
+This *fleeting* version was bookended by 2 PRs landing a couple months apart:
+- [refactor: Separate `FunctionOptions` from DSL calls]
+- [refactor: Separate `FunctionExpr` and `IRFunctionExpr`]
+
+Interestingly, that meant:
+- we got all the definitions of [`FunctionOptions`]
+- but didn't need to introduce [another layer] to access them at their [new home]
+
+[`dsl::function_expr::FunctionExpr`]: https://github.com/pola-rs/polars/blob/112cab39380d8bdb82c6b76b31aca9b58c98fd93/crates/polars-plan/src/dsl/function_expr/mod.rs#L121-L1402
+[refactor: Separate `FunctionOptions` from DSL calls]: https://github.com/pola-rs/polars/pull/22133
+[refactor: Separate `FunctionExpr` and `IRFunctionExpr`]: https://github.com/pola-rs/polars/pull/23140
+[`FunctionOptions`]: https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/options.rs#L54-L281
+[new home]: https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/mod.rs#L994-L1238
+[another layer]: https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/mod.rs#L258-L267
+"""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -21,13 +56,48 @@ if TYPE_CHECKING:
 __all__ = ["Function", "HorizontalFunction"]
 
 
-# TODO @dangotbanned: Really needs a better doc
+# TODO @dangotbanned: Finish `Function` class doc
+# TODO @dangotbanned: Add `ClassVar` docs
+# TODO @dangotbanned: Introduce the concept of *arity* + replace `unwrap_input`
 class Function(Immutable):
-    """Shared by expr functions and namespace functions.
+    r"""A general transformation applied to an expression.
 
-    https://github.com/pola-rs/polars/blob/112cab39380d8bdb82c6b76b31aca9b58c98fd93/crates/polars-plan/src/dsl/expr.rs#L114
+    A `Function` is distinct from an expression but appears in many of them as:
+
+        class FunctionExpr(ExprIR):
+            function: Function
+
+    Instances capture non-expression arguments to `Expr` methods:
+
+        >>> import narwhals._plan as nwp
+        >>> from narwhals._plan import expressions as ir
+
+        >>> expr = nwp.col("a").shift(2)
+        >>> expr_ir = expr._ir
+        >>> isinstance(expr_ir, ir.FunctionExpr)
+        True
+
+        >>> print(
+        ...     f"Function(args) : {expr_ir.function}\n"
+        ...     f"ExprIR input(s): {expr_ir.input[0]}"
+        ... )
+        Function(args) : Shift(n=2)
+        ExprIR input(s): Column(name='a')
+
+
+    <!--TODO @dangotbanned: Finish this section -->
+
+    Classes store all other details:
+    - Which `CompliantExpr` method to call (`__expr_ir_dispatch__: Dispatcher`)
+    - How the function changes the larger expression it is part of (`function_options: FunctionOptions`)
+
+    See Also:
+        `narwhals._plan._function.py` doc for implementation notes
     """
 
+    # TODO @dangotbanned: Fix this wart
+    # - `ExprIR` was updated a while back to remove `ClassVar[staticmethod]`
+    # - Naming convention isn't consistent
     _function_options: ClassVar[staticmethod[[], FunctionOptions]] = staticmethod(
         FunctionOptions.default
     )
