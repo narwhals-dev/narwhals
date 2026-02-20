@@ -544,7 +544,9 @@ def narwhals_to_native_arrow_dtype(
         try:
             import pyarrow as pa  # ignore-banned-import  # noqa: F401
         except ImportError as exc:  # pragma: no cover
-            msg = f"Unable to convert to {dtype} to to the following exception: {exc.msg}"
+            msg = (
+                f"Unable to convert to {dtype} due to the following exception: {exc.msg}"
+            )
             raise ImportError(msg) from exc
         from narwhals._arrow.utils import narwhals_to_native_dtype as _to_arrow_dtype
 
