@@ -71,6 +71,9 @@ def just_dispatch(
         upper_bound: When there is no registered implementation for a specific type, it must
             be a subclass of `upper_bound` to use the default implementation.
 
+    Tip:
+        `@just_dispatch` should only be used to decorate **internal functions** as we lose the docstring.
+
     [`@functools.singledispatch`]: https://docs.python.org/3/library/functools.html#functools.singledispatch
     [MRO]: https://docs.python.org/3/howto/mro.html#python-2-3-mro
     [*just*]: https://github.com/jorenham/optype/blob/e7221ed1d3d02989d5d01873323bac9f88459f26/README.md#just
