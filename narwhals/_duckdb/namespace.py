@@ -171,6 +171,7 @@ class DuckDBNamespace(
         self,
         a: DuckDBExpr,
         b: DuckDBExpr,
+        *,
         method: Literal["pearson", "spearman"] = "pearson",
     ) -> DuckDBExpr:
         if method != "pearson":

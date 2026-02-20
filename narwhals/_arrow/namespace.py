@@ -255,10 +255,7 @@ class ArrowNamespace(
         return pc.if_else(when, then, otherwise)
 
     def corr(
-        self,
-        a: ArrowExpr,
-        b: ArrowExpr,
-        method: Literal["pearson", "spearman"] = "pearson",
+        self, a: ArrowExpr, b: ArrowExpr, *, method: Literal["pearson", "spearman"]
     ) -> ArrowExpr:
         if method != "pearson":
             msg = "Only 'pearson' correlation is supported for Spark."

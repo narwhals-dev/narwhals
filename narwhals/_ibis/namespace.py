@@ -144,7 +144,7 @@ class IbisNamespace(
         )
 
     def corr(
-        self, a: IbisExpr, b: IbisExpr, method: Literal["pearson", "spearman"] = "pearson"
+        self, a: IbisExpr, b: IbisExpr, *, method: Literal["pearson", "spearman"]
     ) -> IbisExpr:
         if method != "pearson":
             msg = "Only 'pearson' correlation is supported for Spark."

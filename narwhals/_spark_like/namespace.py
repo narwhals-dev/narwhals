@@ -224,7 +224,8 @@ class SparkLikeNamespace(
         self,
         a: SparkLikeExpr,
         b: SparkLikeExpr,
-        method: Literal["pearson", "spearman"] = "pearson",
+        *,
+        method: Literal["pearson", "spearman"],
     ) -> SparkLikeExpr:
         if method != "pearson":
             msg = "Only 'pearson' correlation is supported for Spark."

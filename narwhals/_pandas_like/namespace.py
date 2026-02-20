@@ -377,7 +377,8 @@ class PandasLikeNamespace(
         self,
         a: PandasLikeExpr,
         b: PandasLikeExpr,
-        method: Literal["pearson", "spearman"] = "pearson",
+        *,
+        method: Literal["pearson", "spearman"],
     ) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             a_series = df._evaluate_single_output_expr(a)
