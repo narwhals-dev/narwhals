@@ -4,6 +4,7 @@
     handler: python
     options:
       members:
+        - clear
         - collect
         - collect_schema
         - columns

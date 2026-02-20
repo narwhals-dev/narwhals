@@ -2885,6 +2885,47 @@ class Series(Generic[IntoSeriesT]):
         result = result.rename(orig_name) if name_is_none else result
         return cast("Self", result)
 
+    def clear(self, n: int = 0) -> Self:
+        """Create an empty (n=0) or n-row null-filled (n>0) copy of the Series.
+
+        Returns a n-row null-filled Series with same dtype and name. n can be greater
+        than the current number of rows in the Series.
+
+        Arguments:
+            n: Number of (null-filled) rows to return in the cleared series.
+
+        Example:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s_native = pl.Series("a", [None, True])
+            >>> nw.from_native(s_native, series_only=True).clear()
+            ┌──────────────────┐
+            | Narwhals Series  |
+            |------------------|
+            |shape: (0,)       |
+            |Series: 'a' [bool]|
+            |[                 |
+            |]                 |
+            └──────────────────┘
+            >>> nw.from_native(s_native, series_only=True).clear(n=3)
+            ┌──────────────────┐
+            | Narwhals Series  |
+            |------------------|
+            |shape: (3,)       |
+            |Series: 'a' [bool]|
+            |[                 |
+            |        null      |
+            |        null      |
+            |        null      |
+            |]                 |
+            └──────────────────┘
+        """
+        if not (is_int := isinstance(n, int)) or n < 0:
+            msg = f"`n` should be an integer >= 0, got {n}"
+            err = TypeError if not is_int else ValueError
+            raise err(msg)
+        return self._with_compliant(self._compliant_series.clear(n=n))
+
     @unstable
     def any_value(self, *, ignore_nulls: bool = False) -> PythonLiteral:
         """Get a random value from the column.

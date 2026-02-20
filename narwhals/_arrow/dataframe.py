@@ -832,4 +832,17 @@ class ArrowDataFrame(
         )
         return self._with_native(concat_tables(tables, "permissive"))
 
+    def clear(self, n: int) -> Self:
+        native_schema = self.native.schema
+        if n == 0:
+            native_result = native_schema.empty_table()
+        else:
+            data = {
+                name: pa.nulls(n, dtype)  # type: ignore[call-overload]
+                for name, dtype in zip(native_schema.names, native_schema.types)
+            }
+            native_result = pa.table(data)
+
+        return self._with_native(native_result)
+
     pivot = not_implemented()

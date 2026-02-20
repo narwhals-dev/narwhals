@@ -17,6 +17,7 @@
         - arg_true
         - cast
         - ceil
+        - clear
         - clip
         - cos
         - count

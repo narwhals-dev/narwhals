@@ -73,6 +73,7 @@ Where `R` is the return type.
 # DataFrame methods where PolarsDataFrame just defers to Polars.DataFrame directly.
 INHERITED_METHODS = frozenset(
     [
+        "clear",
         "clone",
         "drop_nulls",
         "estimated_size",
@@ -104,6 +105,7 @@ NativePolarsFrame = TypeVar("NativePolarsFrame", pl.DataFrame, pl.LazyFrame)
 
 
 class PolarsBaseFrame(Generic[NativePolarsFrame]):
+    clear: Method[Self]
     drop_nulls: Method[Self]
     explode: Method[Self]
     filter: Method[Self]
