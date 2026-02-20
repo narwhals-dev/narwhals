@@ -10,10 +10,10 @@ from narwhals._constants import (
     US_PER_MINUTE,
     US_PER_SECOND,
 )
-from narwhals._duckdb.utils import UNITS_DICT, F, fetch_rel_time_zone, lit
+from narwhals._duckdb.utils import UNITS_DICT, F, fetch_rel_time_zone, lit, sql_expression
 from narwhals._duration import Interval
 from narwhals._sql.expr_dt import SQLExprDateTimeNamesSpace
-from narwhals._utils import not_implemented
+from narwhals._utils import not_implemented, requires
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -97,14 +97,15 @@ class DuckDBExprDateTimeNamespace(SQLExprDateTimeNamesSpace["DuckDBExpr"]):
 
         return self.compliant._with_elementwise(_truncate)
 
+    @requires.backend_version((1, 3))
     def offset_by(self, by: str) -> DuckDBExpr:
         interval = Interval.parse_no_constraints(by)
         format = lit(f"{interval.multiple!s} {UNITS_DICT[interval.unit]}")
 
         def _offset_by(expr: Expression) -> Expression:
-            return F("date_add", format, expr)
+            return expr + sql_expression(f"interval {format}")
 
-        return self.compliant._with_callable(_offset_by)
+        return self.compliant._with_elementwise(_offset_by)
 
     def _no_op_time_zone(self, time_zone: str) -> DuckDBExpr:
         def func(df: DuckDBLazyFrame) -> Sequence[Expression]:
