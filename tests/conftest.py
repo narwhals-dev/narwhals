@@ -10,8 +10,15 @@ from typing import TYPE_CHECKING, Any, Callable, cast
 import pytest
 
 import narwhals as nw
+from narwhals import dtypes
 from narwhals._utils import Implementation, generate_temporary_column_name
-from tests.utils import ID_PANDAS_LIKE, PANDAS_VERSION, pyspark_session, sqlframe_session
+from tests.utils import (
+    ID_PANDAS_LIKE,
+    PANDAS_VERSION,
+    dtype_ids,
+    pyspark_session,
+    sqlframe_session,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -371,7 +378,7 @@ def eager_implementation(request: pytest.FixtureRequest) -> EagerAllowed:
         nw.Unknown,
         nw.Binary,
     ],
-    ids=lambda tp: tp.__name__,
+    ids=dtype_ids,
 )
 def non_nested_type(request: pytest.FixtureRequest) -> type[NonNestedDType]:
     tp_dtype: type[NonNestedDType] = request.param
@@ -385,8 +392,44 @@ def non_nested_type(request: pytest.FixtureRequest) -> type[NonNestedDType]:
         nw.Struct({"a": nw.Boolean}),
         nw.Enum(["beluga", "narwhal"]),
     ],
-    ids=lambda obj: type(obj).__name__,
+    ids=dtype_ids,
 )
 def nested_dtype(request: pytest.FixtureRequest) -> NestedOrEnumDType:
     dtype: NestedOrEnumDType = request.param
+    return dtype
+
+
+@pytest.fixture(
+    params=[
+        nw.Decimal(),
+        *dtypes.SignedIntegerType.__subclasses__(),
+        *dtypes.UnsignedIntegerType.__subclasses__(),
+        *dtypes.FloatType.__subclasses__(),
+    ],
+    ids=dtype_ids,
+)
+def numeric_dtype(request: pytest.FixtureRequest) -> dtypes.NumericType:
+    dtype: dtypes.NumericType = request.param
+    return dtype
+
+
+@pytest.fixture(
+    params=[
+        nw.Time(),
+        nw.Date(),
+        nw.Datetime(),
+        nw.Datetime("s"),
+        nw.Datetime("ns"),
+        nw.Datetime("us"),
+        nw.Datetime("ms"),
+        nw.Duration("s"),
+        nw.Duration("ns"),
+        nw.Duration("us"),
+        nw.Duration("ms"),
+    ],
+    ids=dtype_ids,
+)
+def naive_temporal_dtype(request: pytest.FixtureRequest) -> dtypes.TemporalType:
+    """All `TemporalType`s in `nw.dtypes`, excluding `time_zone` info."""
+    dtype: dtypes.TemporalType = request.param
     return dtype

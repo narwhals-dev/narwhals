@@ -3,49 +3,20 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from narwhals._utils import inherit_doc
-from narwhals.dtypes import (
-    Array,
-    Binary,
-    Boolean,
-    Categorical,
-    Date,
+from narwhals.dtypes._classes import (
     Datetime as NwDatetime,
-    Decimal,
     DType,
     DTypeClass,
     Duration as NwDuration,
     Enum as NwEnum,
-    Field,
-    Float32,
-    Float64,
-    FloatType,
-    Int8,
-    Int16,
-    Int32,
-    Int64,
-    Int128,
-    IntegerType,
-    List,
-    NestedType,
-    NumericType,
-    Object,
-    SignedIntegerType,
-    String,
-    Struct,
-    Time,
-    UInt8,
-    UInt16,
-    UInt32,
-    UInt64,
-    UInt128,
-    Unknown,
-    UnsignedIntegerType,
 )
 
 if TYPE_CHECKING:
     from datetime import timezone
 
     from narwhals.typing import TimeUnit
+
+__all__ = ["Datetime", "Duration", "Enum"]
 
 
 class Datetime(NwDatetime):
@@ -95,42 +66,3 @@ class Enum(NwEnum):
 
     def __repr__(self) -> str:  # pragma: no cover
         return super(NwEnum, self).__repr__()
-
-
-__all__ = [
-    "Array",
-    "Binary",
-    "Boolean",
-    "Categorical",
-    "DType",
-    "Date",
-    "Datetime",
-    "Decimal",
-    "Duration",
-    "Enum",
-    "Field",
-    "Float32",
-    "Float64",
-    "FloatType",
-    "Int8",
-    "Int16",
-    "Int32",
-    "Int64",
-    "Int128",
-    "IntegerType",
-    "List",
-    "NestedType",
-    "NumericType",
-    "Object",
-    "SignedIntegerType",
-    "String",
-    "Struct",
-    "Time",
-    "UInt8",
-    "UInt16",
-    "UInt32",
-    "UInt64",
-    "UInt128",
-    "Unknown",
-    "UnsignedIntegerType",
-]

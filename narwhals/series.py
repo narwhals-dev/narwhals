@@ -30,7 +30,7 @@ from narwhals._utils import (
     unstable,
 )
 from narwhals.dependencies import is_numpy_array, is_numpy_array_1d, is_numpy_scalar
-from narwhals.dtypes import _validate_dtype, _validate_into_dtype
+from narwhals.dtypes._utils import validate_dtype, validate_into_dtype
 from narwhals.exceptions import ComputeError, InvalidOperationError
 from narwhals.expr import Expr
 from narwhals.functions import col
@@ -171,7 +171,7 @@ class Series(Generic[IntoSeriesT]):
             msg = "`from_numpy` only accepts 1D numpy arrays"
             raise ValueError(msg)
         if dtype:
-            _validate_into_dtype(dtype)
+            validate_into_dtype(dtype)
         implementation = Implementation.from_backend(backend)
         if is_eager_allowed(implementation):
             ns = cls._version.namespace.from_backend(implementation).compliant
@@ -230,7 +230,7 @@ class Series(Generic[IntoSeriesT]):
         if is_numpy_array(values):
             return cls.from_numpy(name, values, dtype, backend=backend)
         if dtype:
-            _validate_into_dtype(dtype)
+            validate_into_dtype(dtype)
         if not isinstance(values, Iterable):
             msg = f"Expected values to be an iterable, got: {qualified_type_name(values)!r}."
             raise TypeError(msg)
@@ -621,7 +621,7 @@ class Series(Generic[IntoSeriesT]):
               ]
             ]
         """
-        _validate_dtype(dtype)
+        validate_dtype(dtype)
         return self._with_compliant(self._compliant_series.cast(dtype))
 
     def to_frame(self) -> DataFrame[Any]:

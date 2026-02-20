@@ -1,0 +1,411 @@
+# Data type promotion rules
+
+When combining columns of different data types (e.g., in `concat(..., how="vertical_relaxed")`),
+Narwhals determines a common **supertype**[^1], the most specific type that both can safely be cast to.
+
+This page documents the rules used to derive that supertype.
+
+The implementation aims to follow the rules defined by
+[Polars' `get_supertype_with_options`][get_supertype_with_options].
+
+!!! tip
+
+    If you are in a hurry, we have a single view to check all the combination that we handle.
+    Skip to the following section: [Everything in a single table](#everything-in-a-single-table)
+
+```python exec="1" session="promotion-rules"
+import narwhals as nw
+from narwhals.dtypes._supertyping import get_supertype
+def st(left, right):
+    s_left, s_right = f"nw.{left!r}", f"nw.{right!r}"
+    reprs = (s if s.endswith(")") else s + "()" for s in (s_left, s_right))
+    args = ", ".join(reprs)
+    print(f"get_supertype({args}) == {get_supertype(left, right)}")
+```
+
+## Same Type
+
+When both operands share the same [`base_type`][base-type], the behavior depends on whether the type is
+**parametric**[^2].
+
+* **Non-parametric types** (e.g., `Int32`, `Float64`, `String`, `Boolean`): the supertype is the type itself if both
+    are equal, otherwise no supertype exists.
+* For **parametric types** (such as `Datetime`, `Duration`, `List`, `Struct`, `Enum`) the equality of the base type is
+    not sufficient — the parameters must also be compatible.
+    We have specialized rules for each parametric type described in the following sections.
+
+## Numeric Types
+
+Numeric supertyping follows a hierarchy designed to preserve precision while avoiding overflow.
+
+### Integer with Integer (same sign)
+
+When both operands are signed integers or both are unsigned integers, the supertype is the one with
+the **higher bit-width**. for example:
+
+```python exec="1" session="promotion-rules" result="python"
+st(nw.Int8(), nw.Int32())
+st(nw.UInt16(), nw.UInt64())
+```
+
+### Integer with Integer (mixed sign)
+
+When mixing signed and unsigned integers:
+
+* If the signed integer has a **strictly higher** bit-width than the unsigned,
+    use the signed type:
+
+    ```python exec="1" session="promotion-rules" result="python"
+    st(nw.UInt8(), nw.Int16())
+    st(nw.UInt16(), nw.Int32())
+    ```
+
+* Otherwise, promote the unsigned to the **next higher** signed bit-width (up to `Int64`):
+
+    ```python exec="1" session="promotion-rules" result="python"
+    st(nw.UInt8(), nw.Int8())
+    st(nw.UInt16(), nw.Int16())
+    st(nw.UInt32(), nw.Int32())
+    ```
+
+* For `UInt64` or `UInt128` mixed with any signed integer, the supertype is `Float64`
+    (since no signed integer type can safely represent the full range of `UInt64`/`UInt128`):
+
+    ```python exec="1" session="promotion-rules" result="python"
+    st(nw.UInt64(), nw.Int8())
+    st(nw.UInt128(), nw.Int16())
+    st(nw.UInt64(), nw.Int32())
+    ```
+
+### Integer with Float
+
+* Small integers (`Int8`, `Int16`, `UInt8`, `UInt16`) combined with `Float32` are promoted to `Float32`
+
+    ```python exec="1" session="promotion-rules" result="python"
+    st(nw.Int8(), nw.Float32())
+    st(nw.Int16(), nw.Float32())
+    st(nw.UInt8(), nw.Float32())
+    st(nw.UInt16(), nw.Float32())
+    ```
+
+* Larger integers (`Int32`, `Int64`, `Int128`, `UInt32`, `UInt64`, `UInt128`) combined with `Float32`
+    are promoted to `Float64`
+
+    ```python exec="1" session="promotion-rules" result="python"
+    st(nw.Int32(), nw.Float32())
+    st(nw.Int64(), nw.Float32())
+    st(nw.Int128(), nw.Float32())
+    st(nw.UInt32(), nw.Float32())
+    st(nw.UInt64(), nw.Float32())
+    st(nw.UInt128(), nw.Float32())
+    ```
+
+* Any integer combined with `Float64` is promoted to `Float64`:
+
+    ```python exec="1" session="promotion-rules" result="python"
+    st(nw.Int32(), nw.Float64())
+    st(nw.UInt32(), nw.Float64())
+    st(nw.UInt64(), nw.Float64())
+    ```
+
+### Float with Float
+
+The combination of a `Float32` with a `Float64` is promoted to `Float64`:
+
+```python exec="1" session="promotion-rules" result="python"
+st(nw.Float32(), nw.Float64())
+st(nw.Float64(), nw.Float32())
+```
+
+### Decimal
+
+* The combination of a `Decimal` with an integer is promoted to `Decimal`:
+
+    ```python exec="1" session="promotion-rules" result="python"
+    st(nw.Decimal(), nw.Int32())
+    st(nw.Decimal(), nw.Int64())
+    ```
+
+* The combination of a `Decimal` with a `Float32` or `Float64` is promoted to `Float64`:
+
+    ```python exec="1" session="promotion-rules" result="python"
+    st(nw.Decimal(), nw.Float32())
+    st(nw.Decimal(), nw.Float64())
+    ```
+
+<!--
+TODO(dangotbanned): Update once Decimal is parametric
+https://github.com/narwhals-dev/narwhals/pull/3377
+-->
+
+## Temporal Types
+
+### Duration
+
+Two `Duration` types always have a supertype, namely the type with the **less precise** (coarser) time unit.
+For example:
+
+```python exec="1" session="promotion-rules" result="python"
+st(nw.Duration('us'), nw.Duration('ms'))
+st(nw.Duration('s'), nw.Duration('ms'))
+```
+
+Time unit precision order (from coarsest to finest): `s` < `ms` < `us` < `ns`
+
+### Datetime
+
+Two `Datetime` types have a supertype only if they share the **same time zone**:
+
+```python exec="1" session="promotion-rules" result="python"
+st(nw.Datetime('us'), nw.Datetime('ns'))
+
+tz = "Europe/Berlin"
+print(f"{tz = !r}")
+st(nw.Datetime(time_zone=tz), nw.Datetime(time_zone=tz))
+```
+
+The resulting time unit is the **less precise** (coarser) of the two as defined in the previous section on `Duration`.
+
+If they do not share the same time zone, no supertype exists:
+
+```python exec="1" session="promotion-rules" result="python"
+tz1 = "Europe/Berlin"
+tz2 = "Europe/Paris"
+print(f"{tz1 = !r}")
+print(f"{tz2 = !r}")
+st(nw.Datetime(time_zone=tz1), nw.Datetime(time_zone=tz2))
+```
+
+### Datetime and Date
+
+When combining a `Datetime` with a `Date`, the supertype is the `Datetime` (preserving its time unit and time zone).
+
+```python exec="1" session="promotion-rules" result="python"
+st(nw.Datetime('us'), nw.Date())
+st(nw.Datetime('ms', time_zone='Europe/Berlin'), nw.Date())
+```
+
+## String-like Types
+
+Any type combined with `String` is promoted to `String`, except for `Binary`:
+
+```python exec="1" session="promotion-rules" result="python"
+st(nw.Int64(), nw.String())
+st(nw.Float32(), nw.String())
+st(nw.Boolean(), nw.String())
+st(nw.Date(), nw.String())
+st(nw.Datetime(), nw.String())
+st(nw.String(), nw.Categorical())
+st(nw.String(), nw.Enum(['orca', 'narwhal']))
+st(nw.List(nw.Int64()), nw.String())
+st(nw.Array(nw.Int64(), shape=2), nw.String())
+st(nw.Struct({"a": nw.Int64()}), nw.String())
+```
+
+The combination of a `String` with a `Binary` is promoted to `Binary`:
+
+```python exec="1" session="promotion-rules" result="python"
+st(nw.String(), nw.Binary())
+```
+
+### Binary
+
+The combination of a `Binary` with a `String` is promoted to `Binary`:
+
+```python exec="1" session="promotion-rules" result="python"
+st(nw.Binary(), nw.String())
+```
+
+All other combinations involving `Binary` have no supertype.
+
+### Enum
+
+Two `Enum` types have a supertype only if they share the **exact same categories**.
+In that case, the supertype is the `Enum` itself.
+
+```python exec="1" session="promotion-rules" result="python"
+enum1 = nw.Enum(["orca", "narwhal"])
+enum2 = nw.Enum(["orca", "beluga"])
+print(f"{enum1 = !r}")
+st(enum1, enum1)
+
+print(f"{enum2 = !r}")
+st(enum1, enum2)
+```
+
+## Other non-nested types
+
+### Boolean
+
+A `Boolean` combined with any numeric type is promoted to that numeric type:
+
+```python exec="1" session="promotion-rules" result="python"
+st(nw.Boolean(), nw.Int32())
+st(nw.Boolean(), nw.Float64())
+```
+
+### Unknown
+
+If either operand is `Unknown`, the result is always `Unknown`. This is a fast-path that short-circuits all other logic.
+
+## Nested Types
+
+Nested types (`Array`, `List`, `Struct`) generally require both operands to share the **same base type**.
+The supertype is then determined by recursively resolving the inner types.
+
+An exception is the combination of `List` and `Array`, which can be promoted to `List` if they have the same depth.
+
+### List
+
+The supertype is a `List` whose inner type is the supertype of the two inner types.
+
+```python exec="1" session="promotion-rules" result="python"
+left = nw.List(nw.UInt8())
+right = nw.List(nw.Int16())
+
+print(f"{left = !r}")
+print(f"{right = !r}")
+st(left, right)
+```
+
+If the inner types cannot be promoted, no supertype exists.
+
+```python exec="1" session="promotion-rules" result="python"
+left = nw.List(nw.Int8())
+right = nw.List(nw.Categorical())
+
+print(f"{left = !r}")
+print(f"{right = !r}")
+st(left, right)
+```
+
+### Array
+
+Array supertyping extends the rules followed by `List` supertyping as both arrays must have the **same shape**.
+If they do, the supertype is an `Array` whose inner type is the supertype of the two inner types,
+and the shape is the same as the operands:
+
+```python exec="1" session="promotion-rules" result="python"
+left = nw.Array(nw.Float32(), shape=(2,))
+right = nw.Array(nw.Int32(), shape=(2,))
+
+print(f"{left = !r}")
+print(f"{right = !r}")
+st(left, right)
+
+```
+
+If the shapes are different, no supertype exists.
+
+```python exec="1" session="promotion-rules" result="python"
+left = nw.Array(nw.Int8(), shape=(2, ))
+right = nw.Array(nw.Int8(), shape=(2, 3))
+
+print(f"{left = !r}")
+print(f"{right = !r}")
+st(left, right)
+```
+
+### List and Array
+
+When combining a `List` with an `Array`, the supertype is a `List` if both have the **same depth**
+(nesting level). The inner type is the supertype of the two inner types.
+
+```python exec="1" session="promotion-rules" result="python"
+left = nw.List(nw.Int32())
+right = nw.Array(nw.Int64(), shape=(2,))
+
+print(f"{left = !r}")
+print(f"{right = !r}")
+st(left, right)
+```
+
+This also works for nested structures with matching depth:
+
+```python exec="1" session="promotion-rules" result="python"
+left = nw.List(nw.List(nw.Int8()))
+right = nw.Array(nw.UInt8(), shape=(2, 3))
+
+print(f"{left = !r}")
+print(f"{right = !r}")
+st(left, right)
+```
+
+If the depths don't match, no supertype exists:
+
+```python exec="1" session="promotion-rules" result="python"
+left = nw.List(nw.Int64())
+right = nw.Array(nw.Int32(), shape=(2, 3))
+
+print(f"{left = !r}")
+print(f"{right = !r}")
+st(left, right)
+```
+
+### Struct
+
+Struct supertyping is more flexible and the **order of operands matters**:
+
+* If both structs have the **same number of fields** and **matching field names** (in order), the supertype is a
+    `Struct` where each field's dtype is the supertype of the corresponding fields.
+
+    ```python exec="1" session="promotion-rules" result="python"
+    left = nw.Struct({"f0": nw.Int8(), "f1": nw.Int32()})
+    right = nw.Struct({"f0": nw.UInt8(), "f1": nw.Int32()})
+
+    print(f"{left = !r}")
+    print(f"{right = !r}")
+    st(left, right)
+    ```
+
+* If structs have positionally **mismatched field names**, a union is performed:
+    the result contains all fields from both structs. For fields that appear in both (by name),
+    their dtypes must have a valid supertype.
+
+    ```python exec="1" session="promotion-rules" result="python"
+    left = nw.Struct({"f0": nw.Int8(), "f1": nw.Int32()})
+    right = nw.Struct({"f0": nw.UInt8(), "f2": nw.Int64()})
+
+    print(f"{left = !r}")
+    print(f"{right = !r}")
+    st(left, right)
+    ```
+
+* The `left` operand defines the field order of the output, *unless* `right` has more fields.
+
+    ```python exec="1" session="promotion-rules" result="python"
+    left = nw.Struct({"f1": nw.Int32(), "f0": nw.Int8()})
+    right = nw.Struct({"f0": nw.UInt8(), "f2": nw.Int64(), "f1": nw.Int32()})
+
+    print(f"{left = !r}")
+    print(f"{right = !r}")
+    st(left, right)
+    ```
+
+## No Supertype
+
+The following combinations have **no valid supertype** and will result in `None`:
+
+* `Struct` combined with non-nested types (note: `List` and `Array` can be combined with `String`)
+* `Datetime` values with different time zones
+* `Enum` values with different categories
+* `Array` values with different shapes
+* `List` and `Array` with different depths
+* Temporal types combined with numeric types (unlike Polars, see [narwhals-dev/narwhals#121])
+* Any other unlisted combination of different base types
+
+## Everything in a single table
+
+{{ promotion_rules_table }}
+
+[get_supertype_with_options]: https://github.com/pola-rs/polars/blob/529f7ec642912a2f15656897d06f1532c2f5d4c4/crates/polars-core/src/utils/supertype.rs#L142-L543
+[base-type]: ../api-reference/dtypes.md#narwhals.dtypes.DType.base_type
+[narwhals-dev/narwhals#121]: https://github.com/narwhals-dev/narwhals/issues/121
+[^1]: Given two data types `A` and `B`, their supertype `S` is the smallest (most specific)
+    type such that both `A` and `B` can be losslessly cast to without risk of overflow,
+    truncation, or loss of precision. If no such type exists, the supertype is `None`.
+[^2]: Types that are parameterized by additional metadata beyond their base classification.
+    Two values of the same parametric type may still be incompatible if their parameters differ.
+    For example, `Datetime` is parameterized by `time_unit` and `time_zone`;
+    `List` and `Array` by their inner element type; `Struct` by its field names and types;
+    and `Enum` by its set of categories.
