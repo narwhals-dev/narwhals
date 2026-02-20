@@ -431,7 +431,7 @@ class EagerExpr(
                 results.append(result)
             return results
 
-        return type(self)(
+        return self.__class__(
             func,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
@@ -647,7 +647,7 @@ class EagerExpr(
                 raise MultiOutputExpressionError(msg)
             return [name]
 
-        return type(self)(
+        return self.__class__(
             lambda df: [series.alias(name) for series in self(df)],
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=alias_output_names,
