@@ -5,7 +5,6 @@ from functools import reduce
 from itertools import chain
 from typing import TYPE_CHECKING, Any
 
-from narwhals._exceptions import issue_warning
 from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
@@ -228,12 +227,8 @@ class SparkLikeNamespace(
         method: Literal["pearson", "spearman"] = "pearson",
     ) -> SparkLikeExpr:
         if method != "pearson":
-            msg = (
-                f"You have requested {method} correlation but spark only provides "
-                "native support for pearson correlation coefficients. Correlation will "
-                "be calculated using pearson."
-            )
-            issue_warning(msg, UserWarning)
+            msg = "Only 'pearson' correlation is supported for Spark."
+            raise NotImplementedError(msg)
 
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             F = self._F

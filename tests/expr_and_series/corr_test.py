@@ -8,7 +8,6 @@ from tests.utils import Constructor, ConstructorEager, assert_equal_data
 data = {"a": [1, 3, 2], "b": [1, 2, 3]}
 
 
-@pytest.mark.filterwarnings("ignore::UserWarning")
 def test_expr_mean_expr(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     if any(x in str(constructor) for x in ("pyarrow_table_constructor",)):
@@ -20,7 +19,6 @@ def test_expr_mean_expr(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-@pytest.mark.filterwarnings("ignore::UserWarning")
 def test_expr_mean_expr_str(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     if any(x in str(constructor) for x in ("pyarrow_table_constructor",)):
@@ -32,7 +30,6 @@ def test_expr_mean_expr_str(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-@pytest.mark.filterwarnings("ignore::UserWarning")
 def test_expr_mean_expr_series(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data))
     if any(x in str(constructor_eager) for x in ("pyarrow_table_constructor",)):

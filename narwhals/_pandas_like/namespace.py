@@ -375,16 +375,17 @@ class PandasLikeNamespace(
 
     def corr(
         self,
-        a: NativeSeriesT,
-        b: NativeSeriesT,
+        a: PandasLikeExpr,
+        b: PandasLikeExpr,
         method: Literal["pearson", "spearman"] = "pearson",
-    ) -> None:
+    ) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            [a_series], [b_series] = a(df), b(df)
+            a_series = df._evaluate_single_output_expr(a)
+            b_series = df._evaluate_single_output_expr(b)
             a_name, b_name = a_series.name, b_series.name
             return [
                 PandasLikeSeries(
-                    df.native.corr(method=method).loc[a_name].loc[[b_name]],
+                    df.native.corr(method=method).loc[a_name, [b_name]],
                     implementation=self._implementation,
                     version=self._version,
                 )

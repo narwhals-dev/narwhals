@@ -9,7 +9,6 @@ import ibis
 import ibis.expr.types as ir
 
 from narwhals._compliant.namespace import AlignDiagonal
-from narwhals._exceptions import issue_warning
 from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
@@ -147,11 +146,9 @@ class IbisNamespace(
     def corr(
         self, a: IbisExpr, b: IbisExpr, method: Literal["pearson", "spearman"] = "pearson"
     ) -> IbisExpr:
-        msg = (
-            "For wider dataframe support, Narwhals currently does not pass down coefficient "
-            'methods into Ibis .corr calls. ("pop" correlation used)'
-        )
-        issue_warning(msg, UserWarning)
+        if method != "pearson":
+            msg = "Only 'pearson' correlation is supported for Spark."
+            raise NotImplementedError(msg)
 
         def func(_df: IbisLazyFrame) -> list[ir.Value]:
             a_ = _df._evaluate_single_output_expr(a)

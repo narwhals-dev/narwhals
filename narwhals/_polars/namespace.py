@@ -33,6 +33,7 @@ class PolarsNamespace:
     sum_horizontal: Method[PolarsExpr]
     min_horizontal: Method[PolarsExpr]
     max_horizontal: Method[PolarsExpr]
+    corr: Method[PolarsExpr]
 
     _implementation: Implementation = Implementation.POLARS
     _version: Version
@@ -224,14 +225,6 @@ class PolarsNamespace:
             "CompliantSelectorNamespace[PolarsDataFrame, PolarsSeries]",
             PolarsSelectorNamespace(self),
         )
-
-    def corr(
-        self,
-        a: PolarsExpr,
-        b: PolarsExpr,
-        method: Literal["pearson", "spearman"] = "pearson",
-    ) -> None:
-        return self._expr(pl.corr(a.native, b.native, method=method), self._version)
 
 
 class PolarsSelectorNamespace:

@@ -21,7 +21,6 @@ from narwhals._duckdb.utils import (
     narwhals_to_native_dtype,
     when,
 )
-from narwhals._exceptions import issue_warning
 from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
@@ -175,12 +174,8 @@ class DuckDBNamespace(
         method: Literal["pearson", "spearman"] = "pearson",
     ) -> DuckDBExpr:
         if method != "pearson":
-            msg = (
-                f"You have requested {method} correlation but duckdb only provides "
-                "native support for pearson correlation coefficients. Correlation will "
-                "be calculated using pearson."
-            )
-            issue_warning(msg, UserWarning)
+            msg = "Only 'pearson' correlation is supported for Spark."
+            raise NotImplementedError(msg)
 
         def func(df: DuckDBLazyFrame) -> list[Expression]:
             a_ = df._evaluate_single_output_expr(a)
