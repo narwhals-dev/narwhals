@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import partial
-from typing import TYPE_CHECKING, Any, Protocol, overload
+from typing import TYPE_CHECKING, Any, Literal, Protocol, overload
 
 from narwhals._compliant.typing import (
     CompliantExprT,
@@ -71,6 +71,13 @@ class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
     def nth(self, indices: Sequence[int]) -> CompliantExprT:
         return self._expr.from_column_indices(*indices, context=self)
 
+    def corr(
+        self,
+        a: CompliantExprT,
+        b: CompliantExprT,
+        *,
+        method: Literal["pearson", "spearman"],
+    ) -> CompliantExprT: ...
     def len(self) -> CompliantExprT: ...
     def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> CompliantExprT: ...
     def all_horizontal(

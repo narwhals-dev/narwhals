@@ -30,6 +30,7 @@ from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
+    from typing import Literal
 
     from duckdb import DuckDBPyRelation  # noqa: F401
 
@@ -163,5 +164,28 @@ class DuckDBNamespace(
             call=func,
             evaluate_output_names=lambda _df: ["len"],
             alias_output_names=None,
+            version=self._version,
+        )
+
+    def corr(
+        self,
+        a: DuckDBExpr,
+        b: DuckDBExpr,
+        *,
+        method: Literal["pearson", "spearman"] = "pearson",
+    ) -> DuckDBExpr:
+        if method != "pearson":
+            msg = "Only 'pearson' correlation is supported for Spark."
+            raise NotImplementedError(msg)
+
+        def func(df: DuckDBLazyFrame) -> list[Expression]:
+            a_ = df._evaluate_single_output_expr(a)
+            b_ = df._evaluate_single_output_expr(b)
+            return [F("corr", a_, b_)]
+
+        return self._expr(
+            call=func,
+            evaluate_output_names=combine_evaluate_output_names(a, b),
+            alias_output_names=combine_alias_output_names(a, b),
             version=self._version,
         )

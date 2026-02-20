@@ -253,3 +253,39 @@ class ArrowNamespace(
     ) -> ChunkedArrayAny:
         otherwise = pa.nulls(len(when), then.type) if otherwise is None else otherwise
         return pc.if_else(when, then, otherwise)
+
+    def corr(
+        self, a: ArrowExpr, b: ArrowExpr, *, method: Literal["pearson", "spearman"]
+    ) -> ArrowExpr:
+        if method != "pearson":
+            msg = "Only 'pearson' correlation is supported for Spark."
+            raise NotImplementedError(msg)
+
+        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+            a_series = df._evaluate_single_output_expr(a)
+            arr1 = a_series.native
+            arr2 = df._evaluate_single_output_expr(b).native
+            mean1 = pc.mean(arr1)
+            mean2 = pc.mean(arr2)
+
+            dev1 = pc.subtract(arr1, mean1)
+            dev2 = pc.subtract(arr2, mean2)
+
+            covariance = pc.mean(pc.multiply(dev1, dev2))
+
+            std1 = pc.stddev(arr1)
+            std2 = pc.stddev(arr2)
+
+            correlation = pc.divide(covariance, pc.multiply(std1, std2))
+            return [
+                ArrowSeries.from_iterable(
+                    data=[correlation], name=a_series.name, context=self
+                )
+            ]
+
+        return self._expr._from_callable(
+            func=func,
+            evaluate_output_names=combine_evaluate_output_names(a, b),
+            alias_output_names=combine_alias_output_names(a, b),
+            context=self,
+        )

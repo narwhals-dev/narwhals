@@ -373,6 +373,31 @@ class PandasLikeNamespace(
         where: Incomplete = then.where
         return where(when) if otherwise is None else where(when, otherwise)
 
+    def corr(
+        self,
+        a: PandasLikeExpr,
+        b: PandasLikeExpr,
+        *,
+        method: Literal["pearson", "spearman"],
+    ) -> PandasLikeExpr:
+        def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+            a_series = df._evaluate_single_output_expr(a)
+            b_series = df._evaluate_single_output_expr(b)
+            _df = self._concat_horizontal([a_series.native, b_series.native])
+            corr = _df.corr(method=method).iloc[0, [1]]  # type: ignore[union-attr]
+            return [
+                PandasLikeSeries(
+                    corr, implementation=self._implementation, version=self._version
+                )
+            ]
+
+        return self._expr._from_callable(
+            func=func,
+            evaluate_output_names=combine_evaluate_output_names(a, b),
+            alias_output_names=combine_alias_output_names(a, b),
+            context=self,
+        )
+
 
 class _NativeConcat(Protocol[NativeDataFrameT, NativeSeriesT]):
     @overload

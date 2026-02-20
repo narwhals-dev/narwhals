@@ -22,6 +22,7 @@ from narwhals._sql.namespace import SQLNamespace
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
+    from typing import Literal
 
     from sqlframe.base.column import Column
 
@@ -215,6 +216,31 @@ class SparkLikeNamespace(
             call=func,
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
+            version=self._version,
+            implementation=self._implementation,
+        )
+
+    def corr(
+        self,
+        a: SparkLikeExpr,
+        b: SparkLikeExpr,
+        *,
+        method: Literal["pearson", "spearman"],
+    ) -> SparkLikeExpr:
+        if method != "pearson":
+            msg = "Only 'pearson' correlation is supported for Spark."
+            raise NotImplementedError(msg)
+
+        def func(df: SparkLikeLazyFrame) -> list[Column]:
+            F = self._F
+            a_ = df._evaluate_single_output_expr(a)
+            b_ = df._evaluate_single_output_expr(b)
+            return [F.corr(a_, b_)]
+
+        return self._expr(
+            call=func,
+            evaluate_output_names=combine_evaluate_output_names(a, b),
+            alias_output_names=combine_alias_output_names(a, b),
             version=self._version,
             implementation=self._implementation,
         )

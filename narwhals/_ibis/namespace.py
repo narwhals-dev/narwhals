@@ -22,6 +22,7 @@ from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
+    from typing import Literal
 
     from narwhals._utils import Version
     from narwhals.typing import ConcatMethod, IntoDType, PythonLiteral
@@ -139,5 +140,24 @@ class IbisNamespace(
             call=func,
             evaluate_output_names=lambda _df: ["len"],
             alias_output_names=None,
+            version=self._version,
+        )
+
+    def corr(
+        self, a: IbisExpr, b: IbisExpr, *, method: Literal["pearson", "spearman"]
+    ) -> IbisExpr:
+        if method != "pearson":
+            msg = "Only 'pearson' correlation is supported for Spark."
+            raise NotImplementedError(msg)
+
+        def func(_df: IbisLazyFrame) -> list[ir.Value]:
+            a_ = _df._evaluate_single_output_expr(a)
+            b_ = _df._evaluate_single_output_expr(b)
+            return [a_.corr(b_, how="pop")]  # pyright: ignore[reportAttributeAccessIssue]
+
+        return self._expr(
+            func,
+            evaluate_output_names=combine_evaluate_output_names(a, b),
+            alias_output_names=combine_alias_output_names(a, b),
             version=self._version,
         )

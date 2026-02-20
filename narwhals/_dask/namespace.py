@@ -26,6 +26,7 @@ from narwhals._utils import Implementation, is_nested_literal, zip_strict
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
+    from typing import Literal
 
     import dask.dataframe.dask_expr as dx
 
@@ -318,5 +319,24 @@ class DaskNamespace(
                 then, "_evaluate_output_names", lambda _df: ["literal"]
             ),
             alias_output_names=getattr(then, "_alias_output_names", None),
+            version=self._version,
+        )
+
+    def corr(
+        self,
+        a: DaskExpr,
+        b: DaskExpr,
+        *,
+        method: Literal["pearson", "spearman"] = "pearson",
+    ) -> DaskExpr:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            a_ = df._evaluate_single_output_expr(a)
+            b_ = df._evaluate_single_output_expr(b)
+            return [a_.corr(b_, method=method).to_series()]
+
+        return self._expr(
+            call=func,
+            evaluate_output_names=combine_evaluate_output_names(a, b),
+            alias_output_names=combine_alias_output_names(a, b),
             version=self._version,
         )
