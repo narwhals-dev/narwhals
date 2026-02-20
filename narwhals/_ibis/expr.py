@@ -28,6 +28,7 @@ from narwhals._utils import (
     not_implemented,
     zip_strict,
 )
+from narwhals.dtypes import _validate_cast_temporal_to_numeric
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
@@ -269,12 +270,21 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         return self._with_callable(_fill_null, value=value)
 
     def cast(self, dtype: IntoDType) -> Self:
-        def _func(expr: ir.Column) -> ir.Value:
-            native_dtype = narwhals_to_native_dtype(dtype, self._version)
-            # ibis `cast` overloads do not include DataType, only literals
-            return expr.cast(native_dtype)  # type: ignore[unused-ignore]
+        def func(df: IbisLazyFrame) -> list[ir.Value]:
+            if dtype.is_numeric():
+                schema = df.collect_schema()
+                for name in self._evaluate_output_names(df):
+                    _validate_cast_temporal_to_numeric(source=schema[name], target=dtype)
 
-        return self._with_callable(_func)
+            native_dtype = narwhals_to_native_dtype(dtype, self._version)
+            return [expr.cast(native_dtype) for expr in self(df)]  # pyright: ignore[reportArgumentType, reportCallIssue]
+
+        return self.__class__(
+            func,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
+        )
 
     def is_unique(self) -> Self:
         return self._with_callable(
