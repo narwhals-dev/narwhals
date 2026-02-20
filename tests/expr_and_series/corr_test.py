@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from contextlib import nullcontext as does_not_raise
+
 import pytest
 
 import narwhals as nw
@@ -22,12 +24,8 @@ def test_corr_expr(
     a: str | nw.Expr,
     b: str | nw.Expr,
     expected_corr: float,
-    request: pytest.FixtureRequest,
 ) -> None:
     df = nw.from_native(constructor(data))
-    if any(x in str(constructor) for x in ("pyarrow_table_constructor",)):
-        # not implemented yet
-        request.applymarker(pytest.mark.xfail)
     result = df.select(nw.corr(a, b))
     expected = {output_name: [expected_corr]}
     assert_equal_data(result, expected)
@@ -36,12 +34,22 @@ def test_corr_expr(
     assert_equal_data(result, expected)
 
 
+def test_corr_expr_spearman(constructor: Constructor) -> None:
+    data = {"a": [1, 6, 2, 3, 3], "b": [1, 1, 1, 3, 3]}
+    context = (
+        does_not_raise()
+        if any(x in str(constructor) for x in ("pandas", "polars"))
+        else pytest.raises(NotImplementedError)
+    )
+    df = nw.from_native(constructor(data))
+    with context:
+        result = df.select(result=nw.corr("a", "b", method="spearman"))
+        expected = {"result": [0.29617443887954614]}
+        assert_equal_data(result, expected)
+
+
 def test_corr_series(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data))
-    if any(x in str(constructor_eager) for x in ("pyarrow_table_constructor",)):
-        with pytest.raises(NotImplementedError, match="Correlation"):
-            df.select(corr=nw.corr(df["a"], df["b"]))
-        return
     result = df.select(corr=nw.corr(df["a"], df["b"]))
     expected = {"corr": [0.5]}
     assert_equal_data(result, expected)
