@@ -1282,18 +1282,18 @@ def corr(
         >>>
         >>> df_native = pl.DataFrame({"a": [1, 2, 3], "b": [1, 3, 2]})
         >>> nw.from_native(df_native).select(correlation=nw.corr("a", "b"))
-        ┌────────────────────┐
-        | Narwhals DataFrame |
-        |--------------------|
-        |shape: (1, 1)       |
-        |┌───────────────┐   |
-        |│ correlation   │   |
-        |│ ------------- │   |
-        |│ f64           │   |
-        |╞═══════════════╡   |
-        |│ 0.5           │   |
-        |└───────────────┘   |
-        └────────────────────┘
+        ┌──────────────────┐
+        |Narwhals DataFrame|
+        |------------------|
+        | shape: (1, 1)    |
+        | ┌─────────────┐  |
+        | │ correlation │  |
+        | │ ---         │  |
+        | │ f64         │  |
+        | ╞═════════════╡  |
+        | │ 0.5         │  |
+        | └─────────────┘  |
+        └──────────────────┘
     """
     return Expr(ExprNode(ExprKind.AGGREGATION, "corr", exprs=(a, b), method=method))
 
