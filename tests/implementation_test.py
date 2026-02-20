@@ -259,8 +259,10 @@ if TYPE_CHECKING:
         any_ldf.collect(df_impl)  # pyright: ignore[reportArgumentType]
         any_ldf.collect(ser_impl)  # pyright: ignore[reportArgumentType]
 
-        assert_type(df_impl, _ModinImpl)
-        assert_type(ser_impl, _ModinImpl)
+        # These pass if Modin is installed in the environment, but we keep it
+        # out of the typing CI job due to its too-tight pin on pandas.
+        assert_type(df_impl, _ModinImpl)  # pyright: ignore[reportAssertTypeFailure]
+        assert_type(ser_impl, _ModinImpl)  # pyright: ignore[reportAssertTypeFailure]
 
     def test_any_typing() -> None:
         df_impl = any_df.implementation
