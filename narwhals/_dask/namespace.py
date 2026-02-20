@@ -323,7 +323,11 @@ class DaskNamespace(
         )
 
     def corr(
-        self, a: DaskExpr, b: DaskExpr, method: Literal["pearson", "spearman"] = "pearson"
+        self,
+        a: DaskExpr,
+        b: DaskExpr,
+        *,
+        method: Literal["pearson", "spearman"] = "pearson",
     ) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             a_ = df._evaluate_single_output_expr(a)
