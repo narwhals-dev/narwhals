@@ -126,8 +126,8 @@ class ArrowNamespace(
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             expr_results = tuple(chain.from_iterable(expr(df) for expr in exprs))
-            series = [s.fill_null(0, strategy=None, limit=None) for s in expr_results]
-            non_na = [1 - s.is_null().cast(int_64) for s in expr_results]
+            series = (s.fill_null(0, strategy=None, limit=None) for s in expr_results)
+            non_na = (1 - s.is_null().cast(int_64) for s in expr_results)
             return [reduce(operator.add, series) / reduce(operator.add, non_na)]
 
         return self._expr._from_callable(
@@ -137,15 +137,15 @@ class ArrowNamespace(
             context=self,
         )
 
-    def min_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
+    def _min_max_horizontal(
+        self, exprs: Sequence[ArrowExpr], /, op: Literal["min", "max"]
+    ) -> ArrowExpr:
+        agg = pc.min_element_wise if op == "min" else pc.max_element_wise
+
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            init_series, *series = tuple(chain.from_iterable(expr(df) for expr in exprs))
-            native_series = reduce(
-                pc.min_element_wise, [s.native for s in series], init_series.native
-            )
-            return [
-                ArrowSeries(native_series, name=init_series.name, version=self._version)
-            ]
+            series = tuple(chain.from_iterable(expr(df) for expr in exprs))
+            result = agg(*(s.native[0] if s._broadcast else s.native for s in series))
+            return [ArrowSeries(result, name=series[0].name, version=self._version)]
 
         return self._expr._from_callable(
             func=func,
@@ -153,23 +153,12 @@ class ArrowNamespace(
             alias_output_names=combine_alias_output_names(*exprs),
             context=self,
         )
+
+    def min_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
+        return self._min_max_horizontal(exprs, "min")
 
     def max_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
-        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            init_series, *series = tuple(chain.from_iterable(expr(df) for expr in exprs))
-            native_series = reduce(
-                pc.max_element_wise, [s.native for s in series], init_series.native
-            )
-            return [
-                ArrowSeries(native_series, name=init_series.name, version=self._version)
-            ]
-
-        return self._expr._from_callable(
-            func=func,
-            evaluate_output_names=combine_evaluate_output_names(*exprs),
-            alias_output_names=combine_alias_output_names(*exprs),
-            context=self,
-        )
+        return self._min_max_horizontal(exprs, "max")
 
     def _concat_diagonal(self, dfs: Sequence[pa.Table], /) -> pa.Table:
         if self._backend_version >= (14,):
