@@ -764,7 +764,7 @@ def combine_metadata(
         result_is_literal &= metadata.is_literal
         n_filtrations += int(metadata.is_filtration)
 
-    if n_filtrations > 1:
+    if n_filtrations and len(compliant_exprs) > 1:
         msg = "Length-changing expressions can only be used in isolation, or followed by an aggregation"
         raise InvalidOperationError(msg)
 
