@@ -118,11 +118,7 @@ if TYPE_CHECKING:
     from sqlframe.base.dataframe import BaseDataFrame
     from typing_extensions import assert_type
 
-    try:
-        import modin.pandas as _mpd
-    except ImportError:
-        import tests._modin_stub as _mpd
-    mpd = _mpd
+    import tests._modin_stub as mpd
 
     any_df: nw.DataFrame[Any] = cast("nw.DataFrame[Any]", "")
     any_ldf: nw.LazyFrame[Any] = cast("nw.LazyFrame[Any]", "")
