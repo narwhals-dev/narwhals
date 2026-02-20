@@ -14,7 +14,8 @@ __all__ = ["just_dispatch"]
 
 R = TypeVar("R")
 R_co = TypeVar("R_co", covariant=True)
-Passthrough = TypeVar("Passthrough", bound=Callable[..., Any])
+PassthroughFn = TypeVar("PassthroughFn", bound=Callable[..., Any])
+"""Original function is passed-through unchanged."""
 
 
 class JustDispatch(Generic[R_co]):
@@ -38,10 +39,10 @@ class JustDispatch(Generic[R_co]):
 
     def register(
         self, tp: type[Any], *tps: type[Any]
-    ) -> Callable[[Passthrough], Passthrough]:
+    ) -> Callable[[PassthroughFn], PassthroughFn]:
         """Register types to dispatch via the decorated function."""
 
-        def decorate(f: Passthrough, /) -> Passthrough:
+        def decorate(f: PassthroughFn, /) -> PassthroughFn:
             self._registry.update((tp_, f) for tp_ in (tp, *tps))
             return f
 
