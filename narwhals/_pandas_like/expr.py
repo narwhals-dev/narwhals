@@ -238,7 +238,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
 
             sorting_indices = df.get_column(token)
             for s in results:
-                s._scatter_in_place(sorting_indices, s)
+                s.scatter(sorting_indices, s, in_place=True)
             return results
 
         return self.__class__(
@@ -384,7 +384,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     # Ignore settingwithcopy warnings/errors, they're false-positives here.
                     warnings.filterwarnings("ignore", message="\n.*copy of a slice")
                     for s in results:
-                        s._scatter_in_place(sorting_indices, s)
+                        s.scatter(sorting_indices, s, in_place=True)
                     return results
             if reverse:
                 return [s._gather_slice(slice(None, None, -1)) for s in results]

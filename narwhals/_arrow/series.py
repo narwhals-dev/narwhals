@@ -451,37 +451,11 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             raise NotImplementedError(msg)
         return self._with_native(self.native.slice(start, stop - start))
 
-    def scatter(self, indices: int | Sequence[int], values: Any) -> Self:
-        import numpy as np  # ignore-banned-import
-
-        values_native: ArrayAny
-        if isinstance(indices, int):
-            indices_native = pa.array([indices])
-            values_native = pa.array([values])
-        else:
-            # TODO(unassigned): we may also want to let `indices` be a Series.
-            # https://github.com/narwhals-dev/narwhals/issues/2155
-            indices_native = pa.array(indices)
-            if isinstance(values, self.__class__):
-                values_native = values.native.combine_chunks()
-            else:
-                # NOTE: Requires fixes in https://github.com/zen-xu/pyarrow-stubs/pull/209
-                pa_array: Incomplete = pa.array
-                values_native = pa_array(values)
-
-        sorting_indices = pc.sort_indices(indices_native)
-        indices_native = indices_native.take(sorting_indices)
-        values_native = values_native.take(sorting_indices)
-
-        mask: _1DArray = np.zeros(self.len(), dtype=bool)
-        mask[indices_native] = True
-        # NOTE: Multiple issues
-        # - Missing `values` type
-        # - `mask` accepts a `np.ndarray`, but not mentioned in stubs
-        # - Missing `replacements` type
-        # - Missing return type
-        pc_replace_with_mask: Incomplete = pc.replace_with_mask
-        return self._with_native(pc_replace_with_mask(self.native, mask, values_native))
+    def scatter(self, indices: Self, values: Self) -> Self:
+        mask = pc.is_in(arange(start=0, end=len(self), step=1), indices.native)
+        sorted_indices = pc.sort_indices(indices.native)
+        replacements = values.native.take(sorted_indices).combine_chunks()
+        return self._with_native(pc.replace_with_mask(self.native, mask, replacements))
 
     def to_list(self) -> list[Any]:
         return self.native.to_pylist()
