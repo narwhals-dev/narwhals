@@ -85,6 +85,7 @@ typing = [  # keep some of these pinned and bump periodically so there's fewer s
   "polars",
   "uv",
   "narwhals[ibis]",
+  "numpy>=2.4.0", # https://numpy.org/doc/stable/release/2.4.0-notes.html#compatibility-notes
 ]
 typing-ci = [
   "narwhals[dask,modin]",
@@ -315,6 +316,10 @@ omit = [
   "tests/ibis_test.py",
   # Remove after finishing eager sub-protocols
   'narwhals/_compliant/namespace.py',
+  # NOTE: Gradually adding as things become more stable
+  'narwhals/_plan/arrow/*',
+  'narwhals/_plan/compliant/*',
+  'narwhals/_plan/**/typing.py',
 ]
 exclude_also = [
   "if sys.version_info() <",
@@ -331,7 +336,14 @@ exclude_also = [
   'if ".*" in str\(constructor',
   'pytest.skip\(',
   'assert_never\(',
-  'PANDAS_VERSION < \('
+  'PANDAS_VERSION < \(',
+  'def __repr__',
+  'def __str__',
+  # Extends a `covdefaults` pattern to account for `EM10{1,2}`
+  # https://github.com/asottile/covdefaults/blob/a5228df597ffc7933bb2fb5b7bad94119a40a896/covdefaults.py#L90-L92
+  # https://docs.astral.sh/ruff/rules/raw-string-in-exception/
+  # https://docs.astral.sh/ruff/rules/f-string-in-exception/
+  '^\s*msg = .+\n\s*raise NotImplementedError\b'
 ]
 
 [tool.mypy]
@@ -367,6 +379,7 @@ module = [
   "narwhals._arrow.*",
   "narwhals._dask.*",
   "narwhals._spark_like.*",
+  "narwhals._plan.expressions.expr"
 ]
 warn_return_any = false
 

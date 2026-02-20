@@ -19,7 +19,7 @@ repos:
   hooks:
     - id: codespell
       files: \.(py|rst|md)$
-      args: [--ignore-words-list=ser]
+      args: [--ignore-words-list=ser, --ignore-words-list=RightT]
       exclude: ^docs/api-completeness.md$
 - repo: https://github.com/adhtruong/mirrors-typos
   # Use mirror to avoid autoupdate issue: https://github.com/crate-ci/typos/issues/390
@@ -84,6 +84,8 @@ repos:
       entry: "self: Self"
       language: pygrep
       files: ^narwhals/
+      # mypy needs `Self` for `ExprIR.dispatch`
+      exclude: ^narwhals/_plan/.*\.py
     - id: dtypes-import
       name: don't import from narwhals.dtypes (use `Version.dtypes` instead)
       entry: |
@@ -102,7 +104,11 @@ repos:
             narwhals/_utils\.py|
             narwhals/stable/v./_?dtypes.py|
             narwhals/.*__init__.py|
-            narwhals/.*typing\.py
+            narwhals/.*typing\.py|
+            narwhals/_plan/functions\.py|
+            narwhals/_plan/expressions/ranges\.py|
+            narwhals/_plan/schema\.py|
+            narwhals/_plan/expressions/selectors\.py
           )
     - id: pull-request-target
       name: don't use `pull_request_target`
@@ -124,6 +130,7 @@ repos:
         (?x)
           ^(tests/utils\.py)
           |^(test_plugin/)
+          |^(tests/plan/utils\.py)
   -   id: no-commit-to-branch
   -   id: end-of-file-fixer
       exclude: .svg$
