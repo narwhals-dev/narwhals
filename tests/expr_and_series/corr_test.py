@@ -38,7 +38,7 @@ def test_corr_expr_spearman(constructor: Constructor) -> None:
     data = {"a": [1, 6, 2, 3, 3], "b": [1, 1, 1, 3, 3]}
     context = (
         does_not_raise()
-        if any(x in str(constructor) for x in ("pandas", "polars"))
+        if any(x in str(constructor) for x in ("pandas", "polars", "modin", "cudf"))
         else pytest.raises(NotImplementedError)
     )
     df = nw.from_native(constructor(data))
