@@ -184,7 +184,7 @@ class DuckDBNamespace(
 
         return self._expr(
             call=func,
-            evaluate_output_names=lambda _df: ["corr"],
-            alias_output_names=None,
+            evaluate_output_names=combine_evaluate_output_names(a, b),
+            alias_output_names=combine_alias_output_names(a, b),
             version=self._version,
         )

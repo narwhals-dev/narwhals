@@ -382,12 +382,12 @@ class PandasLikeNamespace(
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             a_series = df._evaluate_single_output_expr(a)
             b_series = df._evaluate_single_output_expr(b)
+            _df = self._concat_horizontal([a_series.native, b_series.native])
             a_name, b_name = a_series.name, b_series.name
+            corr = _df.corr(method=method).loc[a_name, [b_name]]  # type: ignore[arg-type]
             return [
                 PandasLikeSeries(
-                    df.native.corr(method=method).loc[a_name, [b_name]],
-                    implementation=self._implementation,
-                    version=self._version,
+                    corr, implementation=self._implementation, version=self._version
                 )
             ]
 
