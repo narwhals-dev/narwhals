@@ -29,7 +29,7 @@ jobs:
         run: uv venv .venv --clear
       - name: install-reqs
         # TODO: add more dependencies/backends incrementally
-        run: uv pip install -e ".[pyspark]" --group core --group typing-ci
+        run: uv pip install -e ".[pyspark]" --group core --group typing
       - name: show-deps
         run: uv pip freeze
       - name: Run mypy and pyright
