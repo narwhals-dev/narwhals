@@ -143,8 +143,8 @@ class ScanParquet(ScanFile): ...
 
 
 class ScanDataFrame(Scan):
-    __slots__ = ("df", "output_schema")
-    df: DataFrame[Any, Any]
+    __slots__ = ("frame", "output_schema")
+    frame: DataFrame[Any, Any]
     output_schema: FrozenSchema
 
     @property
@@ -153,7 +153,7 @@ class ScanDataFrame(Scan):
 
     @property
     def __immutable_values__(self) -> Iterator[Any]:
-        yield from (id(self.df), self.output_schema)
+        yield from (id(self.frame), self.output_schema)
 
     def __str__(self) -> str:
         # not redoing, just avoiding `DataFrame.__repr__`

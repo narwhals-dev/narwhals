@@ -505,7 +505,7 @@ class Resolver:
         return _scan(plan.source, self.implementation, "csv")
 
     def scan_dataframe(self, plan: lp.ScanDataFrame, /) -> rp.ScanDataFrame:
-        return rp.ScanDataFrame(df=plan.df, output_schema=plan.schema)
+        return rp.ScanDataFrame(frame=plan.frame, output_schema=plan.schema)
 
     def scan_parquet(self, plan: lp.ScanParquet, /) -> rp.ScanParquet:
         return _scan(plan.source, self.implementation, "parquet")

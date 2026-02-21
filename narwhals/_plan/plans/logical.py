@@ -463,15 +463,15 @@ class ScanParquetImpl(ScanParquet, Generic[ImplT]):
 # - Different for eager vs lazy?
 class ScanDataFrame(Scan):
     # https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-plan/src/dsl/plan.rs#L53-L58
-    __slots__ = ("df", "schema")
-    df: DataFrame[Any, Any]
+    __slots__ = ("frame", "schema")
+    frame: DataFrame[Any, Any]
     schema: FrozenSchema
 
     @classmethod
-    def from_narwhals(cls, df: DataFrame[Any, Any]) -> ScanDataFrame:
+    def from_narwhals(cls, frame: DataFrame[Any, Any], /) -> ScanDataFrame:
         obj = cls.__new__(cls)
-        object.__setattr__(obj, "df", df.clone())
-        object.__setattr__(obj, "schema", freeze_schema(df.schema))
+        object.__setattr__(obj, "frame", frame.clone())
+        object.__setattr__(obj, "schema", freeze_schema(frame.schema))
         return obj
 
     @property
@@ -479,12 +479,12 @@ class ScanDataFrame(Scan):
         # NOTE: Deferring how to handle the hash *for now*
         # Currently, every `ScanDataFrame` will have a unique pseudo-hash
         # Caching a native table seems like a non-starter, once `pandas` enters the party
-        yield from (id(self.df), self.schema)
+        yield from (id(self.frame), self.schema)
 
     def __str__(self) -> str:
         return (
             f"{type(self).__name__}("
-            f"df=nw.{type(self.df).__name__}[{qualified_type_name(self.df.to_native())}](...), "
+            f"frame=nw.{type(self.frame).__name__}[{qualified_type_name(self.frame.to_native())}](...), "
             f"schema={self.schema!s})"
         )
 
@@ -503,6 +503,22 @@ class ScanLazyFrame(Scan, Generic[Native]):
     __slots__ = ("frame", "schema")
     frame: CompliantLazyFrame[Native]
     schema: FrozenSchema
+
+    @classmethod
+    def from_compliant(
+        cls, frame: CompliantLazyFrame[Native], /
+    ) -> ScanLazyFrame[Native]:
+        obj = cls.__new__(cls)
+        object.__setattr__(obj, "frame", frame)
+        object.__setattr__(obj, "schema", freeze_schema(frame.collect_schema()))
+        return obj
+
+    def __str__(self) -> str:
+        return (
+            f"{type(self).__name__}("
+            f"frame=nw.{type(self.frame).__name__}[{qualified_type_name(self.frame.native)}](...), "
+            f"schema={self.schema!s})"
+        )
 
 
 class SingleInput(LogicalPlan, has_inputs=True):
