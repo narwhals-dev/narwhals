@@ -2,7 +2,7 @@ from __future__ import annotations
 
 # ruff: noqa: PLC0414
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Literal, Protocol, overload
+from typing import TYPE_CHECKING, Any, Literal, Protocol, TypedDict, overload
 
 from narwhals._typing_compat import TypeVar
 from narwhals._utils import _StoresNative as StoresNative
@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 
     import pyarrow as pa
     import pyarrow.compute as pc
+    import pyarrow.csv
     from pyarrow import lib, types
     from pyarrow.lib import (
         BoolType as BoolType,
@@ -92,6 +93,11 @@ if TYPE_CHECKING:
         def __call__(
             self, indices: ChunkedArrayAny, aggregated: ChunkedArrayAny, /
         ) -> ChunkedArrayAny: ...
+
+    class CSVReaderOptions(TypedDict, total=False):
+        parse_options: pyarrow.csv.ParseOptions | None
+        convert_options: pyarrow.csv.ConvertOptions | None
+        read_options: pyarrow.csv.ReadOptions | None
 
 
 BooleanScalar: TypeAlias = "Scalar[BoolType]"
