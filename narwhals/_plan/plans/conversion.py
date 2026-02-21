@@ -13,7 +13,7 @@ from __future__ import annotations
 from collections import deque
 from functools import lru_cache
 from itertools import chain
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal, overload
 
 from narwhals._plan import expressions as ir
 from narwhals._plan._expansion import (
@@ -501,19 +501,19 @@ class Resolver:
             output_schema=freeze_schema(zip(names, input_schema.values())),
         )
 
-    # TODO @dangotbanned: Get coverage for `read_csv_schema`
-    scan_csv = todo()
+    def scan_csv(self, plan: lp.ScanCsv, /) -> rp.ScanCsv:
+        return _scan(plan.source, self.implementation, "csv")
 
     def scan_dataframe(self, plan: lp.ScanDataFrame, /) -> rp.ScanDataFrame:
         return rp.ScanDataFrame(df=plan.df, output_schema=plan.schema)
 
     def scan_parquet(self, plan: lp.ScanParquet, /) -> rp.ScanParquet:
-        return _scan_parquet(plan.source, self.implementation)
+        return _scan(plan.source, self.implementation, "parquet")
 
     # TODO @dangotbanned: Possibly remove `lp.ScanParquetImpl`?
     # E.g. use `backend` to instantiate `LazyFrame` and propagate from there to `Resolver`
     def scan_parquet_impl(self, plan: lp.ScanParquetImpl[lp.ImplT], /) -> rp.ScanParquet:
-        return _scan_parquet(plan.source, plan.implementation)
+        return _scan(plan.source, plan.implementation, "parquet")
 
     def select(self, plan: lp.Select, /) -> rp.Select:
         input = self.to_resolved(plan.input)
@@ -659,9 +659,16 @@ class Resolver:
     with_row_index_by = todo()
 
 
-@lru_cache(maxsize=64)
-def _scan_parquet(source: str, implementation: Backend, /) -> rp.ScanParquet:
-    """Cached conversion using `read_parquet_schema`.
+@overload
+def _scan(source: str, backend: Backend, /, format: Literal["csv"]) -> rp.ScanCsv: ...
+@overload
+def _scan(
+    source: str, backend: Backend, /, format: Literal["parquet"]
+) -> rp.ScanParquet: ...
+def _scan(
+    source: str, backend: Backend, /, format: Literal["csv", "parquet"]
+) -> rp.ScanFile:
+    """Cached conversion using `read_{csv,parquet}_schema`.
 
     ## Warning
     Very naive approach *for now* to make some progress.
@@ -676,5 +683,14 @@ def _scan_parquet(source: str, implementation: Backend, /) -> rp.ScanParquet:
     """
     from narwhals._plan import functions as F
 
-    schema = F.read_parquet_schema(source, backend=implementation)
-    return rp.ScanParquet(source=source, output_schema=freeze_schema(schema))
+    schema, tp = (
+        (F.read_csv_schema, rp.ScanCsv)
+        if format == "csv"
+        else (F.read_parquet_schema, rp.ScanParquet)
+    )
+    return tp(source=source, output_schema=freeze_schema(schema(source, backend=backend)))
+
+
+if not TYPE_CHECKING:
+    # NOTE: Hack to preserve the `@overload`s when cached
+    _scan = lru_cache(maxsize=64)(_scan)
