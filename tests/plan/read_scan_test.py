@@ -149,3 +149,26 @@ def test_read_parquet_schema(parquet_path: FileSource, eager: EagerAllowed) -> N
     expected = pl.scan_parquet(Path(parquet_path)).collect_schema()
     result = schema.to_polars()
     assert result == expected
+
+
+def test_read_csv_schema(csv_path: FileSource, eager: EagerAllowed) -> None:
+    schema = nwp.read_csv_schema(csv_path, backend=eager)
+    expected = pl.scan_csv(Path(csv_path)).collect_schema()
+    result = schema.to_polars()
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    "include_columns", [["b", "z"], ["a", "b"], ["z", "a"], ["z"]], ids=str
+)
+@pytest.mark.parametrize("csv_path", ["str"], indirect=True)
+def test_read_csv_schema_kwargs_pyarrow(
+    csv_path: str, include_columns: list[str]
+) -> None:
+    from pyarrow import csv
+
+    convert = csv.ConvertOptions(include_columns=include_columns)
+    schema = nwp.read_csv_schema(csv_path, backend="pyarrow", convert_options=convert)
+    expected = pl.scan_csv(csv_path).select(include_columns).collect_schema()
+    result = schema.to_polars()
+    assert result == expected

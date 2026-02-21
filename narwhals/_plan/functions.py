@@ -32,6 +32,7 @@ from narwhals._utils import (
     is_eager_allowed,
     normalize_path,
     qualified_type_name,
+    unstable,
 )
 from narwhals.exceptions import ComputeError, InvalidOperationError
 from narwhals.typing import ConcatMethod
@@ -525,6 +526,19 @@ def scan_parquet(
     # Instead of calling `*Namespace.scan_parquet` *now*, we can resolve it later
     plan = ScanParquetImpl(source=normalize_path(source), implementation=impl)
     return LazyFrame._from_lp(plan)
+
+
+@unstable
+def read_csv_schema(
+    source: FileSource, *, backend: IntoBackend[Backend], **kwds: Any
+) -> Schema:
+    """Infer the schema of a Csv file."""
+    ns = _namespace(backend)
+    if _io.can_read_csv_schema(ns):
+        return ns.read_csv_schema(normalize_path(source), **kwds)
+    raise unsupported_backend_operation_error(
+        backend, "read_csv_schema"
+    )  # pragma: no cover
 
 
 def read_parquet_schema(source: FileSource, *, backend: IntoBackend[Backend]) -> Schema:
