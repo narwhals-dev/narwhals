@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any, Generic, Literal, overload
 
 from narwhals._plan._guards import is_seq_column
 from narwhals._plan._immutable import Immutable
+from narwhals._plan.compliant.typing import Native
 from narwhals._plan.expressions import selectors as s_ir
 from narwhals._plan.expressions.boolean import all_horizontal
 from narwhals._plan.options import (
@@ -32,6 +33,20 @@ from narwhals._utils import (
     zip_strict,
 )
 from narwhals.exceptions import InvalidOperationError
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator, Mapping
+
+    from typing_extensions import Self, TypeAlias
+
+    from narwhals._plan.compliant.lazyframe import CompliantLazyFrame
+    from narwhals._plan.dataframe import DataFrame
+    from narwhals._plan.expressions import ExprIR, SelectorIR
+    from narwhals._plan.plans.resolved import ResolvedPlan
+    from narwhals._plan.plans.visitors import LogicalToResolved
+    from narwhals._plan.schema import FrozenSchema
+    from narwhals._typing import _ArrowImpl, _PolarsImpl
+    from narwhals.typing import ConcatMethod, FileSource, PivotAgg
 
 __all__ = [
     "Collect",
@@ -71,19 +86,6 @@ __all__ = [
     "scan_csv",
     "scan_parquet",
 ]
-
-if TYPE_CHECKING:
-    from collections.abc import Iterator, Mapping
-
-    from typing_extensions import Self, TypeAlias
-
-    from narwhals._plan.dataframe import DataFrame
-    from narwhals._plan.expressions import ExprIR, SelectorIR
-    from narwhals._plan.plans.resolved import ResolvedPlan
-    from narwhals._plan.plans.visitors import LogicalToResolved
-    from narwhals._plan.schema import FrozenSchema
-    from narwhals._typing import _ArrowImpl, _PolarsImpl
-    from narwhals.typing import ConcatMethod, FileSource, PivotAgg
 
 Incomplete: TypeAlias = Any
 _Fwd: TypeAlias = "LogicalPlan"
@@ -488,6 +490,19 @@ class ScanDataFrame(Scan):
 
     def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
         return resolver.scan_dataframe(self)
+
+
+class ScanLazyFrame(Scan, Generic[Native]):
+    """Target for `LazyFrame.from_native`.
+
+    The resulting `LazyFrame` stores this as:
+
+        LazyFrame._plan: ScanLazyFrame[Native]
+    """
+
+    __slots__ = ("frame", "schema")
+    frame: CompliantLazyFrame[Native]
+    schema: FrozenSchema
 
 
 class SingleInput(LogicalPlan, has_inputs=True):

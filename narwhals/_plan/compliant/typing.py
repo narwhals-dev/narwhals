@@ -27,6 +27,11 @@ ConcatT1 = TypeVar("ConcatT1")
 ConcatT2 = TypeVar("ConcatT2", default=ConcatT1)
 ColumnT_co = TypeVar("ColumnT_co", covariant=True)
 ResolverT_co = TypeVar("ResolverT_co", bound="GroupByResolver", covariant=True)
+Native = TypeVar("Native")
+"""Unbounded type variable, representing *any* native object.
+
+Assume nothing, permit anything; rely on well-defined protocols to do the talking.
+"""
 
 ExprAny: TypeAlias = "CompliantExpr[Any, Any]"
 ScalarAny: TypeAlias = "CompliantScalar[Any, Any]"
