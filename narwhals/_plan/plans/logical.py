@@ -201,8 +201,12 @@ class LogicalPlan(_BasePlan[_Fwd], _root=True):
 
     # Scan
     @classmethod
-    def from_df(cls, df: DataFrame[Any, Any], /) -> ScanDataFrame:
-        return ScanDataFrame.from_narwhals(df)
+    def from_df(cls, frame: DataFrame[Any, Any], /) -> ScanDataFrame:
+        return ScanDataFrame.from_narwhals(frame)
+
+    @staticmethod
+    def from_lf(frame: CompliantLazyFrame[Native], /) -> ScanLazyFrame[Native]:
+        return ScanLazyFrame.from_compliant(frame)
 
     @classmethod
     def scan_csv(cls, source: FileSource, /) -> ScanCsv:
@@ -492,6 +496,10 @@ class ScanDataFrame(Scan):
         return resolver.scan_dataframe(self)
 
 
+# NOTE: This one is for the constructor-only
+_Native = TypeVar("_Native")
+
+
 class ScanLazyFrame(Scan, Generic[Native]):
     """Target for `LazyFrame.from_native`.
 
@@ -504,11 +512,9 @@ class ScanLazyFrame(Scan, Generic[Native]):
     frame: CompliantLazyFrame[Native]
     schema: FrozenSchema
 
-    @classmethod
-    def from_compliant(
-        cls, frame: CompliantLazyFrame[Native], /
-    ) -> ScanLazyFrame[Native]:
-        obj = cls.__new__(cls)
+    @staticmethod
+    def from_compliant(frame: CompliantLazyFrame[_Native], /) -> ScanLazyFrame[_Native]:
+        obj: ScanLazyFrame[_Native] = ScanLazyFrame.__new__(ScanLazyFrame)
         object.__setattr__(obj, "frame", frame)
         object.__setattr__(obj, "schema", freeze_schema(frame.collect_schema()))
         return obj
