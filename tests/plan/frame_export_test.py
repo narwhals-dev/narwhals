@@ -82,10 +82,8 @@ def test_write_parquet(data: Data, parquet_path: FileSource) -> None:
     assert Path(parquet_path).exists()
 
 
-@pytest.mark.xfail(
-    reason="TODO: `DataFrame.lazy()`, `LazyFrame.sink_parquet()`", raises=AttributeError
-)
+@pytest.mark.xfail(reason="TODO: `LazyFrame.sink_parquet()`", raises=NotImplementedError)
 def test_sink_parquet(data: Data, parquet_path: FileSource) -> None:  # pragma: no cover
     df = dataframe(data)
-    df.lazy().sink_parquet(parquet_path)  # type: ignore[attr-defined]
+    df.lazy().sink_parquet(parquet_path)
     assert Path(parquet_path).exists()

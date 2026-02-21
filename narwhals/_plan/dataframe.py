@@ -770,19 +770,15 @@ class DataFrame(
         """Create a copy of this DataFrame."""
         return type(self)(self._compliant.clone())
 
-    # NOTE: Using for testing
-    # Actually integrating will mean rewriting the current `DataFrame`, `BaseFrame` impls
-    # Everything is one-way, you can build a `LogicalPlan` but nothing useful beyond that
-    def _to_lp(self) -> LogicalPlan:  # pragma: no cover
-        return LogicalPlan.from_df(self)
-
-    def _lazy(
-        self, backend: IntoBackend[LazyAllowed] | None = None
-    ) -> LazyFrame[Any]:  # pragma: no cover
-        if backend is not None:
+    def lazy(self, backend: IntoBackend[LazyAllowed] | None = None) -> LazyFrame[Any]:
+        if backend is None:
+            # (1) Fake lazy (needs a reference to eager data)
+            return LazyFrame._from_lp(LogicalPlan.from_df(self))
+        else:  # noqa: RET505
+            # (4) Eager -> lazy conversion (needs a reference to lazy query, [maybe `Implementation`])
+            # [maybe `Implementation`]: https://github.com/narwhals-dev/narwhals/issues/3210
             msg = f"Lazy backends are not yet supported in `narwhals._plan`, got: {backend!r}"
             raise NotImplementedError(msg)
-        return LazyFrame._from_lp(self._to_lp())
 
 
 class LazyFrame(
