@@ -501,7 +501,7 @@ class Resolver:
             output_schema=freeze_schema(zip(names, input_schema.values())),
         )
 
-    # TODO @dangotbanned: Add `read_csv_schema` to protocol(s)
+    # TODO @dangotbanned: Get coverage for `read_csv_schema`
     scan_csv = todo()
 
     def scan_dataframe(self, plan: lp.ScanDataFrame, /) -> rp.ScanDataFrame:

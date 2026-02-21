@@ -32,6 +32,7 @@ __all__ = [
     "WriteCsv",
     "WriteParquet",
     "can_read_csv",
+    "can_read_csv_schema",
     "can_read_parquet",
     "can_read_parquet_schema",
     "can_scan_csv",
@@ -44,6 +45,7 @@ __all__ = [
 
 class ScanCsv(Protocol[LazyFrameT_co]):
     def scan_csv(self, source: str, /, **kwds: Any) -> LazyFrameT_co: ...
+    def read_csv_schema(self, source: str, /, **kwds: Any) -> Schema: ...
 
 
 class ScanParquet(Protocol[LazyFrameT_co]):
@@ -113,6 +115,10 @@ def can_scan_parquet(
     obj: ScanParquet[LazyFrameT] | Any,
 ) -> TypeIs[ScanParquet[LazyFrameT]]:
     return _hasattr_static(obj, "scan_parquet")
+
+
+def can_read_csv_schema(obj: Any) -> TypeIs[ScanCsv[Any]]:
+    return _hasattr_static(obj, "read_csv_schema")
 
 
 def can_read_parquet_schema(obj: Any) -> TypeIs[ScanParquet[Any]]:
