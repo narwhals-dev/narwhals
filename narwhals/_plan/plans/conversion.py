@@ -501,8 +501,7 @@ class Resolver:
             output_schema=freeze_schema(zip(names, input_schema.values())),
         )
 
-    # TODO @dangotbanned: Investigate if there is a path to something like `read_csv_schema`
-    # Seems unlikely for `pyarrow`, but worth a look
+    # TODO @dangotbanned: Add `read_csv_schema` to protocol(s)
     scan_csv = todo()
 
     def scan_dataframe(self, plan: lp.ScanDataFrame, /) -> rp.ScanDataFrame:
