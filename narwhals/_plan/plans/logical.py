@@ -520,6 +520,9 @@ class ScanLazyFrame(Scan, Generic[Native]):
             f"schema={self.schema!s})"
         )
 
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+        return resolver.scan_lazyframe(self)
+
 
 class SingleInput(LogicalPlan, has_inputs=True):
     __slots__ = ("input",)

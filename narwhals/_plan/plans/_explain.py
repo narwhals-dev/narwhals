@@ -95,15 +95,17 @@ def _(plan: lp.LogicalPlan, *_: Any) -> Iterator[str]:
     yield _NO_ATTRS[type(plan)]
 
 
+@_iter_format.register(lp.ScanLazyFrame)
 @_iter_format.register(lp.ScanDataFrame)
-def _(plan: lp.ScanDataFrame, *_: Any) -> Iterator[str]:
+def _(plan: lp.ScanDataFrame | lp.ScanLazyFrame[Any], *_: Any) -> Iterator[str]:
     names = plan.schema.names
     fmt_names = ""
     if n_columns := len(names):
         fmt_names = ", ".join(f'"{name}"' for name in names[:4])
         if n_columns > 4:
             fmt_names += ", ..."
-    yield f"DF [{fmt_names}]; {n_columns} COLUMNS"
+    frame = "DF" if isinstance(plan, lp.ScanDataFrame) else "LF"
+    yield f"{frame} [{fmt_names}]; {n_columns} COLUMNS"
 
 
 @_iter_format.register(lp.ScanFile)

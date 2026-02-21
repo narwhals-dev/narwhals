@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Any, Generic
 
 from narwhals._plan import expressions as ir
 from narwhals._plan._immutable import Immutable
+from narwhals._plan.compliant.typing import Native
 from narwhals._plan.plans._base import _BasePlan
 from narwhals._plan.schema import freeze_schema
 from narwhals._plan.typing import Seq
@@ -29,6 +30,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals._plan._expr_ir import NamedIR
+    from narwhals._plan.compliant.lazyframe import CompliantLazyFrame
     from narwhals._plan.dataframe import DataFrame
     from narwhals._plan.options import (
         ExplodeOptions,
@@ -157,6 +159,20 @@ class ScanDataFrame(Scan):
 
     def __str__(self) -> str:
         # not redoing, just avoiding `DataFrame.__repr__`
+        return f"<{type(self).__module__}.{type(self).__name__} todo>"
+
+
+class ScanLazyFrame(Scan, Generic[Native]):
+    __slots__ = ("frame", "output_schema")
+    frame: CompliantLazyFrame[Native]
+    output_schema: FrozenSchema
+
+    @property
+    def schema(self) -> FrozenSchema:
+        return self.output_schema
+
+    def __str__(self) -> str:
+        # not redoing, just avoiding `LazyFrame.__repr__`
         return f"<{type(self).__module__}.{type(self).__name__} todo>"
 
 

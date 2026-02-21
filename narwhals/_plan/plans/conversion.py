@@ -44,6 +44,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
 
     from narwhals._plan._expr_ir import NamedIR
+    from narwhals._plan.compliant.typing import Native
     from narwhals._plan.plans import logical as lp
     from narwhals._plan.typing import Seq
     from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
@@ -506,6 +507,11 @@ class Resolver:
 
     def scan_dataframe(self, plan: lp.ScanDataFrame, /) -> rp.ScanDataFrame:
         return rp.ScanDataFrame(frame=plan.frame, output_schema=plan.schema)
+
+    def scan_lazyframe(
+        self, plan: lp.ScanLazyFrame[Native], /
+    ) -> rp.ScanLazyFrame[Native]:
+        return rp.ScanLazyFrame(frame=plan.frame, output_schema=plan.schema)
 
     def scan_parquet(self, plan: lp.ScanParquet, /) -> rp.ScanParquet:
         return _scan(plan.source, self.implementation, "parquet")
