@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, get_args, overload
 
-from narwhals._plan import _parse
+from narwhals._plan import _parse, translate
 from narwhals._plan._expansion import expand_selector_irs_names, prepare_projection
 from narwhals._plan._guards import is_series
 from narwhals._plan.common import ensure_seq_str, normalize_target_file, temp
@@ -35,7 +35,6 @@ from narwhals._utils import (
     generate_repr,
     qualified_type_name,
 )
-from narwhals.dependencies import is_pyarrow_table
 from narwhals.exceptions import InvalidOperationError, ShapeError
 from narwhals.schema import Schema
 from narwhals.typing import (
@@ -400,12 +399,7 @@ class DataFrame(
     def from_native(
         cls: type[DataFrame[Any, Any]], native: NativeDataFrameT, /
     ) -> DataFrame[Any, Any]:
-        if is_pyarrow_table(native):
-            from narwhals._plan import arrow as _arrow
-
-            return cls(_arrow.DataFrame.from_native(native, cls._version))
-
-        raise NotImplementedError(type(native))
+        return cls(translate.from_native_dataframe(native))
 
     @overload
     @classmethod

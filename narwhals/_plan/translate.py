@@ -2,19 +2,25 @@ from __future__ import annotations
 
 import functools
 import threading
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any, Literal, TypeVar
 
 import narwhals.dependencies as deps
-from narwhals._utils import qualified_type_name
+from narwhals._utils import Version, qualified_type_name
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
     import polars as pl
+    import pyarrow as pa
     from typing_extensions import TypeAlias, TypeIs
 
+    from narwhals._plan.compliant.dataframe import EagerDataFrame
     from narwhals._plan.compliant.lazyframe import CompliantLazyFrame
-    from narwhals._plan.compliant.typing import Native
+    from narwhals._plan.compliant.typing import Native as Lazy
+    from narwhals._plan.typing import NativeDataFrameT as Eager
+
+    CompliantDataFrame: TypeAlias = EagerDataFrame[Any, Eager, Any]
+    """This is a lie, but needed until `DataFrame` doesn't depend on `EagerDataFrame` features."""
 
     T = TypeVar("T")
     R = TypeVar("R")
@@ -25,25 +31,37 @@ if TYPE_CHECKING:
     _Constructor: TypeAlias = "Callable[[T], R]"
     # ^ For (NativeLazyFrame) -> CompliantLazyFrame[NativeLazyFrame]
     _ConstructorLazy: TypeAlias = _Constructor[T, CompliantLazyFrame[T]]
+    _ConstructorEager: TypeAlias = _Constructor[Eager, CompliantDataFrame[Eager]]
     # Zero-argument importer of the concrete native class
     # If we matched a subclass, we would want to avoid registering that on
     # the dispatch function
     _ImportKnown: TypeAlias = Callable[[], type[T]]
 
 
-__all__ = ["from_native_lazyframe"]
+__all__ = ["from_native_dataframe", "from_native_lazyframe"]
 
 
 @functools.singledispatch
-def from_native_lazyframe(native: Native, /) -> CompliantLazyFrame[Native]:
+def from_native_lazyframe(native: Lazy, /) -> CompliantLazyFrame[Lazy]:
     if (compliant := _try_known_lazyframes(native)) is not None:
         return compliant
+    raise _from_native_error(native, "lazyframe")
+
+
+@functools.singledispatch
+def from_native_dataframe(native: Eager, /) -> CompliantDataFrame[Eager]:
+    if (compliant := _try_known_dataframes(native)) is not None:
+        return compliant
+    raise _from_native_error(native, "dataframe")
+
+
+def _from_native_error(native: Any, kind: Literal["dataframe", "lazyframe"]) -> TypeError:
     name = qualified_type_name(native)
-    msg = f"Unsupported dataframe type, got: {name!r}\n\n{native!r}"
-    raise TypeError(msg)
+    msg = f"Unsupported {kind} type, got: {name!r}\n\n{native!r}"
+    return TypeError(msg)
 
 
-def _try_known_lazyframes(native: Native, /) -> CompliantLazyFrame[Native] | None:
+def _try_known_lazyframes(native: Lazy, /) -> CompliantLazyFrame[Lazy] | None:
     """Search through known lazyframes and stop if we hit something expected.
 
     ## Super high-level
@@ -60,18 +78,39 @@ def _try_known_lazyframes(native: Native, /) -> CompliantLazyFrame[Native] | Non
 
     [`threading.local`]: https://py-free-threading.github.io/porting/#converting-global-state-to-thread-local-state
     """
-    matched: tuple[type[Native], _Guard[Native], _ConstructorLazy[Native]] | None = None
-    search: dict[
-        _Guard[Native], tuple[_ConstructorLazy[Native], _ImportKnown[Native]]
-    ] = _local.lazy_known
+    matched: tuple[type[Lazy], _Guard[Lazy], _ConstructorLazy[Lazy]] | None = None
+    search: dict[_Guard[Lazy], tuple[_ConstructorLazy[Lazy], _ImportKnown[Lazy]]] = (
+        _local.lazy_known
+    )
     for guard, (constructor, import_known) in search.items():
         if guard(native):
             matched = (import_known(), guard, constructor)
             break
+        else:  # pragma: no cover  # noqa: RET508
+            ...
     if matched:
         tp_native, guard, constructor = matched
         from_native_lazyframe.register(tp_native, constructor)
-        del _local.guard_constructor[guard]
+        del _local.lazy_known[guard]
+        return constructor(native)
+    return None
+
+
+def _try_known_dataframes(native: Eager, /) -> EagerDataFrame[Any, Eager, Any] | None:
+    matched: tuple[type[Eager], _Guard[Eager], _ConstructorEager[Eager]] | None = None
+    search: dict[_Guard[Eager], tuple[_ConstructorEager[Eager], _ImportKnown[Eager]]] = (
+        _local.eager_known
+    )
+    for guard, (constructor, import_known) in search.items():
+        if guard(native):
+            matched = (import_known(), guard, constructor)
+            break
+        else:  # pragma: no cover  # noqa: RET508
+            ...
+    if matched:
+        tp_native, guard, constructor = matched
+        from_native_dataframe.register(tp_native, constructor)
+        del _local.eager_known[guard]
         return constructor(native)
     return None
 
@@ -79,7 +118,7 @@ def _try_known_lazyframes(native: Native, /) -> CompliantLazyFrame[Native] | Non
 def _from_polars_lazyframe(native: pl.LazyFrame, /) -> CompliantLazyFrame[pl.LazyFrame]:
     from narwhals._plan.polars import LazyFrame
 
-    return LazyFrame.from_native(native)
+    return LazyFrame.from_native(native, Version.MAIN)
 
 
 def _import_polars_lazyframe() -> type[pl.LazyFrame]:
@@ -88,7 +127,22 @@ def _import_polars_lazyframe() -> type[pl.LazyFrame]:
     return pl.LazyFrame
 
 
+def _from_pyarrow_table(
+    native: pa.Table, /
+) -> EagerDataFrame[Any, pa.Table, pa.ChunkedArray[Any]]:
+    from narwhals._plan.arrow import DataFrame
+
+    return DataFrame.from_native(native, Version.MAIN)
+
+
+def _import_pyarrow_table() -> type[pa.Table]:
+    import pyarrow as pa
+
+    return pa.Table
+
+
 _local = threading.local()
 _local.lazy_known = {
     deps.is_polars_lazyframe: (_from_polars_lazyframe, _import_polars_lazyframe)
 }
+_local.eager_known = {deps.is_pyarrow_table: (_from_pyarrow_table, _import_pyarrow_table)}
