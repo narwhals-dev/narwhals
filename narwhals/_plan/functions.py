@@ -47,8 +47,9 @@ if TYPE_CHECKING:
     from narwhals._plan.compliant.dataframe import CompliantDataFrame, EagerDataFrame
     from narwhals._plan.compliant.namespace import CompliantNamespace, EagerNamespace
     from narwhals._plan.compliant.series import CompliantSeries
-    from narwhals._plan.dataframe import DataFrame, LazyFrame
+    from narwhals._plan.dataframe import DataFrame
     from narwhals._plan.expr import Expr
+    from narwhals._plan.lazyframe import LazyFrame
     from narwhals._plan.series import Series
     from narwhals._plan.typing import (
         DataFrameT,

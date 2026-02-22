@@ -44,8 +44,9 @@ if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
 
     from narwhals._plan.compliant.lazyframe import CompliantLazyFrame
-    from narwhals._plan.dataframe import DataFrame, LazyFrame
+    from narwhals._plan.dataframe import DataFrame
     from narwhals._plan.expressions import ExprIR, SelectorIR
+    from narwhals._plan.lazyframe import LazyFrame
     from narwhals._plan.plans.resolved import ResolvedPlan
     from narwhals._plan.plans.visitors import LogicalToResolved
     from narwhals._plan.schema import FrozenSchema
@@ -280,7 +281,7 @@ class LogicalPlan(_BasePlan[_Fwd], _root=True):
     def unique(
         self, subset: Seq[SelectorIR] | None = None, options: UniqueOptions | None = None
     ) -> Unique:
-        options = options or UniqueOptions.lazy()
+        options = options or UniqueOptions.default()
         return Unique(input=self, subset=subset, options=options)
 
     # NOTE: Wish there was a nice way to give `subset` a default, without complicating `unique` too
@@ -294,7 +295,7 @@ class LogicalPlan(_BasePlan[_Fwd], _root=True):
         order_by: Seq[SelectorIR],
         options: UniqueOptions | None = None,
     ) -> UniqueBy:
-        options = options or UniqueOptions.lazy()
+        options = options or UniqueOptions.default()
         return UniqueBy(input=self, subset=subset, options=options, order_by=order_by)
 
     def unnest(self, columns: SelectorIR) -> MapFunction[Unnest]:

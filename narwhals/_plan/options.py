@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import enum
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Generic, Literal, get_args
 
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.common import ensure_seq_str
+from narwhals._typing_compat import TypeVar
 from narwhals._utils import Implementation, ensure_type
 from narwhals.exceptions import InvalidOperationError
+from narwhals.typing import AsofJoinStrategy, JoinStrategy, UniqueKeepStrategy
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -14,14 +16,9 @@ if TYPE_CHECKING:
     import pyarrow.compute as pc
     from typing_extensions import Self
 
-    from narwhals._plan.typing import Accessor, OneOrIterable, Seq
+    from narwhals._plan.typing import Accessor, NonCrossJoinStrategy, OneOrIterable, Seq
     from narwhals._typing import Backend
-    from narwhals.typing import (
-        AsofJoinStrategy as JoinAsofStrategy,
-        JoinStrategy,
-        RankMethod,
-        UniqueKeepStrategy,
-    )
+    from narwhals.typing import AsofJoinStrategy as JoinAsofStrategy, RankMethod
 
 
 class FunctionFlags(enum.Flag):
@@ -365,9 +362,17 @@ class UniqueOptions(Immutable):
     maintain_order: bool
 
     @staticmethod
-    def lazy(keep: UniqueKeepStrategy = "any", /) -> UniqueOptions:  # pragma: no cover
-        """Alt constructor, where `maintain_order` cannot be guaranteed."""
-        return UniqueOptions(keep=keep, maintain_order=False)
+    def default() -> UniqueOptions:  # pragma: no cover
+        return UniqueOptions(keep="any", maintain_order=False)
+
+    @staticmethod
+    def parse(
+        keep: UniqueKeepStrategy, /, *, maintain_order: bool
+    ) -> UniqueOptions:  # pragma: no cover
+        if keep in {"any", "first", "last", "none"}:
+            return UniqueOptions(keep=keep, maintain_order=maintain_order)
+        msg = f"Only the following keep strategies are supported: {get_args(UniqueKeepStrategy)}; found '{keep}'."
+        raise NotImplementedError(msg)
 
 
 class VConcatOptions(Immutable):
@@ -401,14 +406,54 @@ class VConcatOptions(Immutable):
         )
 
 
-class JoinOptions(Immutable):
+JoinStrategyT = TypeVar("JoinStrategyT", bound=JoinStrategy)
+JoinStrategyT_co = TypeVar(
+    "JoinStrategyT_co", bound=JoinStrategy, default=JoinStrategy, covariant=True
+)
+
+
+class JoinOptions(Immutable, Generic[JoinStrategyT_co]):
     __slots__ = ("how", "suffix")
-    how: JoinStrategy
+    how: JoinStrategyT_co  # type: ignore[misc]
     suffix: str
 
     @staticmethod
     def default() -> JoinOptions:  # pragma: no cover
         return JoinOptions(how="inner", suffix="_right")
+
+    @staticmethod
+    def parse(how: JoinStrategyT, suffix: str) -> JoinOptions[JoinStrategyT]:
+        if how in {"inner", "left", "full", "cross", "anti", "semi"}:
+            return JoinOptions(how=how, suffix=suffix)
+        msg = f"Only the following join strategies are supported: {get_args(JoinStrategy)}; found '{how}'."
+        raise NotImplementedError(msg)
+
+    def normalize_on(
+        self: JoinOptions[NonCrossJoinStrategy],
+        on: OneOrIterable[str] | None,
+        left_on: OneOrIterable[str] | None,
+        right_on: OneOrIterable[str] | None,
+        /,
+    ) -> tuple[Seq[str], Seq[str]]:
+        """Reduce the 3 potential key (`*on`) arguments to 2.
+
+        Ensures the keys spelling is compatible with the join strategy.
+        """
+        if on is None:
+            if left_on is None or right_on is None:
+                msg = f"Either (`left_on` and `right_on`) or `on` keys should be specified for {self.how}."
+                raise ValueError(msg)
+            left_on = ensure_seq_str(left_on)
+            right_on = ensure_seq_str(right_on)
+            if len(left_on) != len(right_on):
+                msg = "`left_on` and `right_on` must have the same length."
+                raise ValueError(msg)
+            return left_on, right_on
+        if left_on is not None or right_on is not None:
+            msg = f"If `on` is specified, `left_on` and `right_on` should be None for {self.how}."
+            raise ValueError(msg)
+        on = ensure_seq_str(on)
+        return on, on
 
 
 class JoinAsofBy(Immutable):  # pragma: no cover
@@ -422,31 +467,23 @@ class JoinAsofBy(Immutable):  # pragma: no cover
         by_right: str | Sequence[str] | None,
         by: str | Sequence[str] | None,
     ) -> JoinAsofBy:
-        left_by, right_by = normalize_join_asof_by(by_left, by_right, by)
-        return JoinAsofBy(left_by=left_by, right_by=right_by)
-
-
-def normalize_join_asof_by(
-    by_left: str | Sequence[str] | None,
-    by_right: str | Sequence[str] | None,
-    by: str | Sequence[str] | None,
-) -> tuple[Seq[str], Seq[str]]:
-    """Reduce the 3 potential `join_asof` (`by*`) arguments to 2."""
-    if by is None:
-        if by_left and by_right:
-            left_by = ensure_seq_str(by_left)
-            right_by = ensure_seq_str(by_right)
-            if len(left_by) != len(right_by):
-                msg = "`by_left` and `by_right` must have the same length."
-                raise ValueError(msg)
-            return left_by, right_by
-        msg = "Can not specify only `by_left` or `by_right`, you need to specify both."
-        raise ValueError(msg)
-    if by_left or by_right:
-        msg = "If `by` is specified, `by_left` and `by_right` should be None."
-        raise ValueError(msg)
-    by_ = ensure_seq_str(by)  # pragma: no cover
-    return by_, by_  # pragma: no cover
+        if by is None:
+            if by_left and by_right:
+                left_by = ensure_seq_str(by_left)
+                right_by = ensure_seq_str(by_right)
+                if len(left_by) != len(right_by):
+                    msg = "`by_left` and `by_right` must have the same length."
+                    raise ValueError(msg)
+                return JoinAsofBy(left_by=left_by, right_by=right_by)
+            msg = (
+                "Can not specify only `by_left` or `by_right`, you need to specify both."
+            )
+            raise ValueError(msg)
+        if by_left or by_right:
+            msg = "If `by` is specified, `by_left` and `by_right` should be None."
+            raise ValueError(msg)
+        by_ = ensure_seq_str(by)  # pragma: no cover
+        return JoinAsofBy(left_by=by_, right_by=by_)  # pragma: no cover
 
 
 class JoinAsofOptions(Immutable):  # pragma: no cover
@@ -475,7 +512,27 @@ class JoinAsofOptions(Immutable):  # pragma: no cover
             opts = JoinAsofBy.parse(by_left, by_right, by)
         else:
             opts = None
-        return JoinAsofOptions(by=opts, strategy=strategy, suffix=suffix)
+        if strategy in {"backward", "forward", "nearest"}:
+            return JoinAsofOptions(by=opts, strategy=strategy, suffix=suffix)
+        msg = f"Only the following join strategies are supported: {get_args(AsofJoinStrategy)}; found '{strategy}'."
+        raise NotImplementedError(msg)
+
+    @staticmethod
+    def normalize_on(
+        left_on: str | None, right_on: str | None, on: str | None
+    ) -> tuple[str, str]:
+        """Reduce the 3 potential `join_asof` (`*on`) arguments to 2."""
+        if on is None:
+            if left_on is None or right_on is None:
+                msg = (
+                    "Either (`left_on` and `right_on`) or `on` keys should be specified."
+                )
+                raise ValueError(msg)
+            return left_on, right_on
+        if left_on is not None or right_on is not None:
+            msg = "If `on` is specified, `left_on` and `right_on` should be None."
+            raise ValueError(msg)
+        return on, on
 
 
 class UnpivotOptions(Immutable):

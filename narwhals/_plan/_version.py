@@ -5,10 +5,8 @@ from typing import TYPE_CHECKING, Any
 from narwhals._utils import Version as _NwVersion
 
 if TYPE_CHECKING:
-    from narwhals._plan.dataframe import (
-        DataFrame as NwDataFrame,
-        LazyFrame as NwLazyFrame,
-    )
+    from narwhals._plan.dataframe import DataFrame as NwDataFrame
+    from narwhals._plan.lazyframe import LazyFrame as NwLazyFrame
     from narwhals._plan.series import Series as NwSeries
 
 __all__ = ["into_version"]
@@ -40,7 +38,7 @@ class _Version:
     @property
     def lazyframe(self) -> type[NwLazyFrame[Any]]:
         if self._version is _NwVersion.MAIN:
-            from narwhals._plan.dataframe import LazyFrame as NwLazyFrame
+            from narwhals._plan.lazyframe import LazyFrame as NwLazyFrame
 
             return NwLazyFrame
         raise self._not_implemented()
