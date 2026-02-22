@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Generic
+from typing import TYPE_CHECKING, Any, ClassVar, Generic
 
-from narwhals._plan import _parse
+from narwhals._plan import _parse, translate
 from narwhals._plan.common import todo
 from narwhals._plan.compliant.typing import Native
 from narwhals._plan.group_by import LazyGroupBy
@@ -14,7 +14,8 @@ from narwhals._plan.options import (
     UniqueOptions,
     UnpivotOptions,
 )
-from narwhals._utils import Implementation, not_implemented, qualified_type_name
+from narwhals._typing_compat import TypeVar
+from narwhals._utils import Implementation, Version, not_implemented, qualified_type_name
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
@@ -40,6 +41,9 @@ if TYPE_CHECKING:
         PivotAgg,
         UniqueKeepStrategy,
     )
+
+# NOTE: This one is for the constructor-only
+_Native = TypeVar("_Native")
 
 
 # TODO @dangotbanned: Figure out `from_native` + remove `self._compliant`
@@ -84,6 +88,11 @@ class LazyFrame(Generic[Native]):  # pragma: no cover
     _compliant: CompliantLazyFrame[Native]
     _plan: LogicalPlan
     _implementation: Implementation
+    _version: ClassVar[Version] = Version.MAIN
+
+    @property
+    def version(self) -> Version:
+        return self._version
 
     @property
     def implementation(self) -> Implementation:
@@ -107,6 +116,14 @@ class LazyFrame(Generic[Native]):  # pragma: no cover
         obj._plan = plan
         obj._implementation = self._implementation
         return obj
+
+    @classmethod
+    def from_native(cls: type[LazyFrame[Any]], native: _Native, /) -> LazyFrame[_Native]:
+        return (
+            translate.from_native_lazyframe(native)
+            .to_plan()
+            .to_narwhals(version=cls._version)
+        )
 
     to_native = todo()
     columns = todo()

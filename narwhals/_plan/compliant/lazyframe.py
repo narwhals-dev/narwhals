@@ -19,6 +19,7 @@ if TYPE_CHECKING:
 
     from narwhals._plan.compliant.dataframe import CompliantDataFrame
     from narwhals._plan.dataframe import DataFrame as NwDataFrame
+    from narwhals._plan.plans import logical as lp
     from narwhals._translate import ArrowStreamExportable
     from narwhals.schema import Schema
     from narwhals.typing import EagerAllowed, IntoBackend
@@ -147,3 +148,8 @@ class CompliantLazyFrame(NarwhalsHash, Protocol[Native]):
     def native(self) -> Native: ...
     @property
     def version(self) -> Version: ...
+
+    def to_plan(self) -> lp.ScanLazyFrame[Native]:
+        from narwhals._plan.plans import LogicalPlan
+
+        return LogicalPlan.from_lf(self)
