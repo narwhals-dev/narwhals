@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar, Protocol, get_args
 
+from narwhals._plan._version import into_version
 from narwhals._plan.compliant.typing import Native
 from narwhals._typing import _LazyFrameCollectImpl
 from narwhals._utils import Implementation, Version, can_lazyframe_collect
@@ -135,12 +136,7 @@ class CompliantLazyFrame(NarwhalsHash, Protocol[Native]):
         }
         impl = Implementation.from_backend(backend)
         if can_lazyframe_collect(impl):
-            if self.version is Version.MAIN:
-                from narwhals._plan.dataframe import DataFrame as NwDataFrame
-
-                return NwDataFrame.from_native(mapping[impl]())
-            msg = f"{self.version!r} is not yet implemented"
-            raise NotImplementedError(msg)
+            return into_version(self.version).dataframe.from_native(mapping[impl]())
         msg = f"Unsupported `backend` value.\nExpected one of {get_args(_LazyFrameCollectImpl)} or None, got: {impl}."
         raise TypeError(msg)
 
