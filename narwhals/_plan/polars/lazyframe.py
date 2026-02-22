@@ -85,5 +85,4 @@ class PolarsLazyFrame(CompliantLazyFrame[pl.LazyFrame]):
     from_arrow_c_stream = from_arrow
     collect_polars = collect_native
 
-    __hash__ = todo()
     collect_narwhals = todo()

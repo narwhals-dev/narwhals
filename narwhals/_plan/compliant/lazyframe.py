@@ -8,7 +8,7 @@ from narwhals._plan.compliant.typing import Native
 from narwhals._utils import Version
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Iterator, Sequence
 
     import pandas as pd
     import polars as pl
@@ -26,7 +26,60 @@ if TYPE_CHECKING:
 MAIN = Version.MAIN
 
 
-class CompliantLazyFrame(Protocol[Native]):
+class NarwhalsHash(Protocol):
+    __slots__ = ()
+
+    def __narwhals_hash_values__(self) -> Iterator[object]:
+        """Yield one or more attributes to seed a hash.
+
+        All backends *could* use a psuedo hash:
+
+            if slots := self.__slots__:
+                yield from (id(getattr(self, key)) for key in slots)
+            else:
+                yield from (id(value) for value in vars(self).values())
+
+        Each of these could work as a pre-computed hash, but be careful
+
+        Polars:
+
+            seed: bytes = pl.LazyFrame(...).serialize()
+
+        DuckDB:
+
+            seed: str = duckdb.DuckDBPyRelation(...).sql_query()
+
+
+        SQLFrame:
+
+            seed: str = sqlframe.base.dataframe.BaseDataFrame(...).sql(optimize=False, pretty=False)
+
+
+        <!--TODO @dangotbanned: Find what the docs refer to as "Unlike the standard hash code ..."
+        The example gives a hash that ignores aliases (bad)
+        -->
+
+        [PySpark]:
+
+            seed: int = pyspark.sql.DataFrame(...).semanticHash()
+
+
+        [PySpark]: https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.semanticHash.html#pyspark.sql.DataFrame.semanticHash
+        """
+        ...
+
+    def __hash__(self) -> int:
+        return hash((type(self), *self.__narwhals_hash_values__()))
+
+    def __eq__(self, other: object) -> bool:
+        if self is other:
+            return True
+        if type(self) is not type(other):
+            return False
+        return hash(self) == hash(other)
+
+
+class CompliantLazyFrame(NarwhalsHash, Protocol[Native]):
     """Clean-slate rework of `CompliantFrame`-based design.
 
     Focused on features for `LogicalPlan`:
@@ -35,7 +88,12 @@ class CompliantLazyFrame(Protocol[Native]):
     - exposing the schema
     """
 
+    __slots__ = ()
+
     implementation: ClassVar[Implementation]
+
+    def __narwhals_hash_values__(self) -> Iterator[object]:
+        yield self.version, self.implementation, id(self.native)
 
     @classmethod
     def from_native(
@@ -73,4 +131,3 @@ class CompliantLazyFrame(Protocol[Native]):
     def native(self) -> Native: ...
     @property
     def version(self) -> Version: ...
-    def __hash__(self) -> int: ...
