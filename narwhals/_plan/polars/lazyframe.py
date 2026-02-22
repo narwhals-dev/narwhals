@@ -31,7 +31,7 @@ class PolarsLazyFrame(CompliantLazyFrame[pl.LazyFrame]):
     _version: Version
 
     @classmethod
-    def from_arrow(  # type: ignore[override]
+    def from_arrow(
         cls, frame: pa.Table | ArrowStreamExportable, /, version: Version = MAIN, **_: Any
     ) -> Self:
         return cls.from_polars(pl.DataFrame(frame), version)
@@ -57,21 +57,21 @@ class PolarsLazyFrame(CompliantLazyFrame[pl.LazyFrame]):
     ) -> Self:
         return cls.from_polars(frame.to_polars(), frame.version)
 
+    def collect_arrow(self) -> pa.Table:
+        return self.collect_native().to_arrow()
+
     def collect_native(self) -> pl.DataFrame:
         return self.native.collect()
 
-    def to_arrow(self) -> pa.Table:
-        return self.collect_native().to_arrow()
-
-    def to_pandas(self) -> pd.DataFrame:
+    def collect_pandas(self) -> pd.DataFrame:
         return self.collect_native().to_pandas()
+
+    def collect_schema(self) -> Schema:
+        return Schema.from_polars(self.native.collect_schema())
 
     @property
     def columns(self) -> Sequence[str]:
         return self.native.collect_schema().names()
-
-    def collect_schema(self) -> Schema:
-        return Schema.from_polars(self.native.collect_schema())
 
     @property
     def native(self) -> pl.LazyFrame:
@@ -83,7 +83,7 @@ class PolarsLazyFrame(CompliantLazyFrame[pl.LazyFrame]):
 
     from_compliant = from_narwhals
     from_arrow_c_stream = from_arrow
-    to_polars = collect_native
+    collect_polars = collect_native
 
     __hash__ = todo()
-    to_narwhals = todo()
+    collect_narwhals = todo()
