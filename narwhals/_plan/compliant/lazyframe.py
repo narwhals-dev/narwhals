@@ -2,25 +2,29 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, Protocol
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol, get_args
 
 from narwhals._plan.compliant.typing import Native
-from narwhals._utils import Version
+from narwhals._typing import _LazyFrameCollectImpl
+from narwhals._utils import Implementation, Version, can_lazyframe_collect
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Sequence
+    from collections.abc import Callable, Iterator, Mapping, Sequence
 
     import pandas as pd
     import polars as pl
     import pyarrow as pa
-    from typing_extensions import Self
+    from typing_extensions import Self, TypeAlias
 
     from narwhals._plan.compliant.dataframe import CompliantDataFrame
     from narwhals._plan.dataframe import DataFrame as NwDataFrame
     from narwhals._translate import ArrowStreamExportable
-    from narwhals._utils import Implementation
     from narwhals.schema import Schema
     from narwhals.typing import EagerAllowed, IntoBackend
+
+    CollectMap: TypeAlias = Mapping[
+        _LazyFrameCollectImpl, Callable[[], pa.Table | pd.DataFrame | pl.DataFrame]
+    ]
 
 
 MAIN = Version.MAIN
@@ -123,7 +127,23 @@ class CompliantLazyFrame(NarwhalsHash, Protocol[Native]):
     def collect_polars(self) -> pl.DataFrame: ...
     def collect_narwhals(
         self, backend: IntoBackend[EagerAllowed]
-    ) -> NwDataFrame[Any, Any]: ...
+    ) -> NwDataFrame[Any, Any]:
+        mapping: CollectMap = {
+            Implementation.PANDAS: self.collect_pandas,
+            Implementation.PYARROW: self.collect_arrow,
+            Implementation.POLARS: self.collect_polars,
+        }
+        impl = Implementation.from_backend(backend)
+        if can_lazyframe_collect(impl):
+            if self.version is Version.MAIN:
+                from narwhals._plan.dataframe import DataFrame as NwDataFrame
+
+                return NwDataFrame.from_native(mapping[impl]())
+            msg = f"{self.version!r} is not yet implemented"
+            raise NotImplementedError(msg)
+        msg = f"Unsupported `backend` value.\nExpected one of {get_args(_LazyFrameCollectImpl)} or None, got: {impl}."
+        raise TypeError(msg)
+
     def collect_schema(self) -> Schema: ...
     @property
     def columns(self) -> Sequence[str]: ...

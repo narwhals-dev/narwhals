@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 import polars as pl
 
-from narwhals._plan.common import todo
 from narwhals._plan.compliant.lazyframe import CompliantLazyFrame
 from narwhals._utils import Implementation, Version
 from narwhals.schema import Schema
@@ -84,5 +83,3 @@ class PolarsLazyFrame(CompliantLazyFrame[pl.LazyFrame]):
     from_compliant = from_narwhals
     from_arrow_c_stream = from_arrow
     collect_polars = collect_native
-
-    collect_narwhals = todo()
