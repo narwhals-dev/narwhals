@@ -11,13 +11,13 @@ if TYPE_CHECKING:
     from narwhals._plan.compliant.dataframe import (
         CompliantDataFrame,
         CompliantFrame,
-        CompliantLazyFrame,
         EagerDataFrame,
     )
-    from narwhals._plan.compliant.expr import CompliantExpr, EagerExpr, LazyExpr
+    from narwhals._plan.compliant.expr import CompliantExpr, EagerExpr
     from narwhals._plan.compliant.group_by import GroupByResolver
+    from narwhals._plan.compliant.lazyframe import CompliantLazyFrame
     from narwhals._plan.compliant.namespace import CompliantNamespace
-    from narwhals._plan.compliant.scalar import CompliantScalar, EagerScalar, LazyScalar
+    from narwhals._plan.compliant.scalar import CompliantScalar, EagerScalar
     from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._utils import Version
 
@@ -38,15 +38,13 @@ ScalarAny: TypeAlias = "CompliantScalar[Any, Any]"
 SeriesAny: TypeAlias = "CompliantSeries[Any]"
 FrameAny: TypeAlias = "CompliantFrame[Any, Any]"
 DataFrameAny: TypeAlias = "CompliantDataFrame[Any, Any, Any]"
-LazyFrameAny: TypeAlias = "CompliantLazyFrame[Any, Any]"
+LazyFrameAny: TypeAlias = "CompliantLazyFrame[Any]"
 NamespaceAny: TypeAlias = "CompliantNamespace[Any, Any, Any]"
 
 EagerExprAny: TypeAlias = "EagerExpr[Any, Any]"
 EagerScalarAny: TypeAlias = "EagerScalar[Any, Any]"
 EagerDataFrameAny: TypeAlias = "EagerDataFrame[Any, Any, Any]"
 
-LazyExprAny: TypeAlias = "LazyExpr[Any, Any, Any]"
-LazyScalarAny: TypeAlias = "LazyScalar[Any, Any, Any]"
 
 ExprT_co = TypeVar("ExprT_co", bound=ExprAny, covariant=True)
 ScalarT_co = TypeVar("ScalarT_co", bound=ScalarAny, covariant=True)
@@ -66,8 +64,6 @@ EagerExprT_co = TypeVar("EagerExprT_co", bound=EagerExprAny, covariant=True)
 EagerScalarT_co = TypeVar("EagerScalarT_co", bound=EagerScalarAny, covariant=True)
 EagerDataFrameT = TypeVar("EagerDataFrameT", bound=EagerDataFrameAny)
 
-LazyExprT_co = TypeVar("LazyExprT_co", bound=LazyExprAny, covariant=True)
-LazyScalarT_co = TypeVar("LazyScalarT_co", bound=LazyScalarAny, covariant=True)
 
 Ctx: TypeAlias = "ExprDispatch[FrameT_contra, R_co, NamespaceAny]"
 """Type of an unknown expression dispatch context.

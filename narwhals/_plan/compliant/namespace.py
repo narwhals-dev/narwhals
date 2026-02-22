@@ -12,9 +12,6 @@ from narwhals._plan.compliant.typing import (
     ExprT_co,
     FrameT,
     HasVersion,
-    LazyExprT_co,
-    LazyFrameT,
-    LazyScalarT_co,
     ScalarT_co,
     SeriesT,
 )
@@ -176,16 +173,3 @@ class EagerNamespace(
         closed: ClosedInterval = "both",
         name: str = "literal",
     ) -> SeriesT: ...
-
-
-class LazyNamespace(
-    io.LazyInput[LazyFrameT],
-    Concat[LazyFrameT, LazyFrameT],
-    CompliantNamespace[LazyFrameT, LazyExprT_co, LazyScalarT_co],
-    Protocol[LazyFrameT, LazyExprT_co, LazyScalarT_co],
-):
-    @property
-    def _lazyframe(self) -> type[LazyFrameT]: ...
-    @property
-    def _frame(self) -> type[LazyFrameT]:
-        return self._lazyframe

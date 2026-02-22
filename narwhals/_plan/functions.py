@@ -3,7 +3,7 @@ from __future__ import annotations
 import builtins
 import datetime as dt
 import typing as t
-from typing import TYPE_CHECKING, Any, Final, get_args
+from typing import TYPE_CHECKING, Any, Final, Literal, get_args
 
 from narwhals._duration import Interval
 from narwhals._plan import _guards, _parse, common, expressions as ir, selectors as cs
@@ -44,11 +44,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias, TypeIs
 
     from narwhals._plan import arrow as _arrow
-    from narwhals._plan.compliant.dataframe import (
-        CompliantDataFrame,
-        CompliantLazyFrame,
-        EagerDataFrame,
-    )
+    from narwhals._plan.compliant.dataframe import CompliantDataFrame, EagerDataFrame
     from narwhals._plan.compliant.namespace import CompliantNamespace, EagerNamespace
     from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._plan.dataframe import DataFrame, LazyFrame
@@ -501,31 +497,15 @@ def read_parquet(
 # TODO @dangotbanned: Come back to after `nwp.LazyFrame` exists
 def scan_csv(
     source: FileSource, *, backend: IntoBackend[Backend], **kwds: t.Any
-) -> Incomplete:
-    msg = "scan_csv"
-    raise NotImplementedError(msg)
+) -> LazyFrame[Any]:  # pragma: no cover
+    return _scan_file(source, backend, kwds, "scan_csv")
 
 
 # TODO @dangotbanned: Come back to after `nwp.LazyFrame` exists
 def scan_parquet(
     source: FileSource, *, backend: IntoBackend[Backend], **kwds: t.Any
 ) -> LazyFrame[Any]:  # pragma: no cover
-    # TODO @dangotbanned: Review whether a top-level dependency is fine here
-    from narwhals._plan.dataframe import LazyFrame
-    from narwhals._plan.plans.logical import LogicalPlan, ScanParquetImpl
-
-    if kwds:
-        msg = f"Arbitrary keyword arguments are not yet supported for `scan_parquet`, got:\n{kwds!r}"
-        raise NotImplementedError(msg)
-    impl = Implementation.from_backend(backend)
-    if impl is not Implementation.PYARROW:
-        # NOTE: Would be the path for extensions
-        # Variant would require evaluating the final plan in some other context
-        return LazyFrame._from_lp(LogicalPlan.scan_parquet(source))
-    # NOTE: Would be the path for all known `Implementation`s
-    # Instead of calling `*Namespace.scan_parquet` *now*, we can resolve it later
-    plan = ScanParquetImpl(source=normalize_path(source), implementation=impl)
-    return LazyFrame._from_lp(plan)
+    return _scan_file(source, backend, kwds, "scan_parquet")
 
 
 @unstable
@@ -569,22 +549,23 @@ def _read_parquet(
     return ns.read_parquet(source, **kwds).to_narwhals()
 
 
-def _scan_csv(
-    source: str,
-    kwds: dict[str, t.Any],
-    ns: _io.ScanCsv[CompliantLazyFrame[Incomplete]],
-    /,
-) -> Incomplete:  # pragma: no cover
-    return ns.scan_csv(source, **kwds).to_narwhals()
+def _scan_file(  # pragma: no cover
+    source: FileSource,
+    backend: IntoBackend[Backend],
+    kwds: dict[str, Any],
+    method: Literal["scan_csv", "scan_parquet"],
+) -> LazyFrame[Any]:
+    from narwhals._plan.plans import LogicalPlan
 
-
-def _scan_parquet(
-    source: str,
-    kwds: dict[str, t.Any],
-    ns: _io.ScanParquet[CompliantLazyFrame[Incomplete]],
-    /,
-) -> Incomplete:  # pragma: no cover
-    return ns.scan_parquet(source, **kwds).to_narwhals()
+    if kwds:
+        msg = f"Passing arbitrary keywords arguments to `{method}()` is not yet implemented, got: {kwds!r}"
+        raise NotImplementedError(msg)
+    ns = _namespace(backend)
+    if method == "scan_csv" and _io.can_scan_csv(ns):
+        return LogicalPlan.scan_csv(source).to_narwhals(backend)
+    if method == "scan_parquet" and _io.can_scan_parquet(ns):
+        return LogicalPlan.scan_parquet(source).to_narwhals(backend)
+    raise unsupported_backend_operation_error(backend, method)  # pragma: no cover
 
 
 def _namespace(backend: IntoBackend[Backend]) -> CompliantNamespace[Any, Any, Any]:

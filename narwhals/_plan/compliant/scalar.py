@@ -2,14 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Literal, Protocol
 
-from narwhals._plan.compliant.expr import CompliantExpr, EagerExpr, LazyExpr
-from narwhals._plan.compliant.typing import (
-    FrameT_contra,
-    LazyFrameT_contra,
-    LengthT,
-    SeriesT,
-    SeriesT_co,
-)
+from narwhals._plan.compliant.expr import CompliantExpr, EagerExpr
+from narwhals._plan.compliant.typing import FrameT_contra, SeriesT, SeriesT_co
 from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
@@ -165,11 +159,3 @@ class EagerScalar(
     # but seems low-priority for a deprecated method
     sample_n = not_implemented()  # type: ignore[misc]
     sample_frac = not_implemented()  # type: ignore[misc]
-
-
-# NOTE: At some point `Series` needs to be swapped out for `Column`
-class LazyScalar(
-    CompliantScalar[LazyFrameT_contra, SeriesT],
-    LazyExpr[LazyFrameT_contra, SeriesT, LengthT],
-    Protocol[LazyFrameT_contra, SeriesT, LengthT],
-): ...

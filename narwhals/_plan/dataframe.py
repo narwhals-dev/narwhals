@@ -9,6 +9,7 @@ from narwhals._plan._guards import is_series
 from narwhals._plan.common import ensure_seq_str, normalize_target_file, temp, todo
 from narwhals._plan.compliant.dataframe import EagerDataFrame
 from narwhals._plan.compliant.namespace import EagerNamespace
+from narwhals._plan.compliant.typing import Native
 from narwhals._plan.group_by import GroupBy, Grouped, LazyGroupBy
 from narwhals._plan.options import (
     ExplodeOptions,
@@ -19,7 +20,7 @@ from narwhals._plan.options import (
     UnpivotOptions,
     normalize_join_asof_by,
 )
-from narwhals._plan.plans import LogicalPlan
+from narwhals._plan.plans import LogicalPlan, logical as lp
 from narwhals._plan.series import Series
 from narwhals._plan.typing import (
     ColumnNameOrSelector,
@@ -29,7 +30,6 @@ from narwhals._plan.typing import (
     NativeDataFrameT,
     NativeDataFrameT_co,
     NativeFrameT_co,
-    NativeLazyFrameT_co,
     NativeSeriesT,
     NativeSeriesT2,
     NonCrossJoinStrategy,
@@ -71,11 +71,8 @@ if TYPE_CHECKING:
 
     from narwhals._native import NativeSeries
     from narwhals._plan.arrow.typing import NativeArrowDataFrame
-    from narwhals._plan.compliant.dataframe import (
-        CompliantFrame,
-        CompliantLazyFrame,
-        EagerDataFrame,
-    )
+    from narwhals._plan.compliant.dataframe import CompliantFrame, EagerDataFrame
+    from narwhals._plan.compliant.lazyframe import CompliantLazyFrame
     from narwhals._plan.compliant.namespace import EagerNamespace
     from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._typing import Arrow, _EagerAllowedImpl
@@ -771,19 +768,11 @@ class DataFrame(
         return type(self)(self._compliant.clone())
 
     def lazy(self, backend: IntoBackend[LazyAllowed] | None = None) -> LazyFrame[Any]:
-        if backend is None:
-            # (1) Fake lazy (needs a reference to eager data)
-            return LazyFrame._from_lp(LogicalPlan.from_df(self))
-        else:  # noqa: RET505
-            # (4) Eager -> lazy conversion (needs a reference to lazy query, [maybe `Implementation`])
-            # [maybe `Implementation`]: https://github.com/narwhals-dev/narwhals/issues/3210
-            msg = f"Lazy backends are not yet supported in `narwhals._plan`, got: {backend!r}"
-            raise NotImplementedError(msg)
+        return LogicalPlan.from_df(self).to_narwhals(backend, self.version)
 
 
-class LazyFrame(
-    BaseFrame[NativeLazyFrameT_co], Generic[NativeLazyFrameT_co]
-):  # pragma: no cover
+# TODO @dangotbanned: Figure out `from_native` + remove `self._compliant`
+class LazyFrame(Generic[Native]):  # pragma: no cover
     """WIP: need to change a lot before something useful can happen.
 
     ## Notes
@@ -821,29 +810,36 @@ class LazyFrame(
     [maybe `Implementation`]: https://github.com/narwhals-dev/narwhals/issues/3210
     """
 
-    _compliant: CompliantLazyFrame[Incomplete, NativeLazyFrameT_co]
+    _compliant: CompliantLazyFrame[Native]
     _plan: LogicalPlan
+    _implementation: Implementation
 
-    # NOTE: Need to override most of `BaseFrame` for now
+    @property
+    def implementation(self) -> Implementation:
+        """The implementation that will execute the plan."""
+        return self._implementation
+
+    # TODO @dangotbanned: Propagate typing from `ScanLazyFrame`
+    # TODO @dangotbanned: `@overload` matching for the other typing
     @classmethod
-    def _from_lp(cls: type[LazyFrame[Any]], plan: LogicalPlan, /) -> LazyFrame[Any]:
+    def _from_lp_scan(
+        cls, plan: lp.Scan, implementation: Implementation
+    ) -> LazyFrame[Any]:
         obj = cls.__new__(cls)
         obj._plan = plan
+        obj._implementation = implementation
         return obj
 
-    def _with_lp(self, plan: LogicalPlan, /) -> Self:
+    def _with_lp(self, plan: lp.SingleInput | lp.MultipleInputs[Any], /) -> Self:
         tp = type(self)
         obj = tp.__new__(tp)
         obj._plan = plan
+        obj._implementation = self._implementation
         return obj
 
-    implementation = todo()  # type: ignore[assignment]
     to_native = todo()
-    _unwrap_compliant = todo()
-    _with_compliant = todo()
-
-    columns = todo()  # type: ignore[assignment]
-    schema = todo()  # type: ignore[assignment]
+    columns = todo()
+    schema = todo()
     collect_schema = todo()
     collect = not_implemented()  # depends on resolving everything else
 

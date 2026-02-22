@@ -5,19 +5,12 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, overload
 
 from narwhals._plan.compliant import io
 from narwhals._plan.compliant.group_by import Grouped
-from narwhals._plan.compliant.typing import (
-    ColumnT_co,
-    DataFrameAny,
-    HasVersion,
-    LazyFrameAny,
-    SeriesT,
-)
+from narwhals._plan.compliant.typing import ColumnT_co, HasVersion, LazyFrameAny, SeriesT
 from narwhals._plan.typing import (
     IncompleteCyclic,
     IntoExpr,
     NativeDataFrameT,
     NativeFrameT_co,
-    NativeLazyFrameT,
     NativeSeriesT,
     NonCrossJoinStrategy,
     OneOrIterable,
@@ -120,42 +113,6 @@ class CompliantFrame(HasVersion, Protocol[ColumnT_co, NativeFrameT_co]):
     def with_row_index_by(
         self, name: str, order_by: Sequence[str], *, nulls_last: bool = False
     ) -> Self: ...
-
-
-class CompliantLazyFrame(
-    io.LazyOutput,
-    CompliantFrame[ColumnT_co, NativeLazyFrameT],
-    Protocol[ColumnT_co, NativeLazyFrameT],
-):
-    """Very incomplete!
-
-    Using mostly as a placeholder for typing lazy I/O.
-    """
-
-    _native: NativeLazyFrameT
-
-    def __narwhals_lazyframe__(self) -> Self:
-        return self
-
-    def _with_native(self, native: NativeLazyFrameT) -> Self:
-        return self.from_native(native, self.version)
-
-    @classmethod
-    def from_native(cls, native: NativeLazyFrameT, /, version: Version) -> Self:
-        obj = cls.__new__(cls)
-        obj._native = native
-        obj._version = version
-        return obj
-
-    def to_narwhals(self) -> Incomplete:
-        msg = f"{type(self).__name__}.to_narwhals"
-        raise NotImplementedError(msg)
-
-    @property
-    def native(self) -> NativeLazyFrameT:
-        return self._native
-
-    def collect(self, backend: _EagerAllowedImpl | None, **kwds: Any) -> DataFrameAny: ...
 
 
 class CompliantDataFrame(

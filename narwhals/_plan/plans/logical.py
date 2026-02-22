@@ -6,10 +6,11 @@ The schema is not known at this stage.
 from __future__ import annotations
 
 from io import BytesIO
-from typing import TYPE_CHECKING, Any, Generic, Literal, overload
+from typing import TYPE_CHECKING, Any, Generic, Literal, get_args, overload
 
 from narwhals._plan._guards import is_seq_column
 from narwhals._plan._immutable import Immutable
+from narwhals._plan._version import into_version
 from narwhals._plan.compliant.typing import Native
 from narwhals._plan.expressions import selectors as s_ir
 from narwhals._plan.expressions.boolean import all_horizontal
@@ -25,9 +26,12 @@ from narwhals._plan.options import (
 from narwhals._plan.plans._base import _BasePlan
 from narwhals._plan.schema import freeze_schema
 from narwhals._plan.typing import Seq
+from narwhals._typing import _LazyAllowedImpl
 from narwhals._typing_compat import TypeVar
 from narwhals._utils import (
     Implementation,
+    Version,
+    is_lazy_allowed,
     normalize_path,
     qualified_type_name,
     zip_strict,
@@ -40,13 +44,13 @@ if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
 
     from narwhals._plan.compliant.lazyframe import CompliantLazyFrame
-    from narwhals._plan.dataframe import DataFrame
+    from narwhals._plan.dataframe import DataFrame, LazyFrame
     from narwhals._plan.expressions import ExprIR, SelectorIR
     from narwhals._plan.plans.resolved import ResolvedPlan
     from narwhals._plan.plans.visitors import LogicalToResolved
     from narwhals._plan.schema import FrozenSchema
     from narwhals._typing import _ArrowImpl, _PolarsImpl
-    from narwhals.typing import ConcatMethod, FileSource, PivotAgg
+    from narwhals.typing import Backend, ConcatMethod, FileSource, IntoBackend, PivotAgg
 
 __all__ = [
     "Collect",
@@ -419,6 +423,12 @@ class Scan(LogicalPlan, has_inputs=False):
     def iter_inputs(self) -> Iterator[LogicalPlan]:
         yield from ()
 
+    def to_narwhals(
+        self, backend: IntoBackend[Backend] | None = None, version: Version = Version.MAIN
+    ) -> LazyFrame[Any]:
+        msg = f"TODO: `{type(self).__name__}.to_narwhals`"
+        raise NotImplementedError(msg)
+
 
 class ScanFile(Scan):
     # https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-plan/src/dsl/plan.rs#L43-L52
@@ -429,6 +439,15 @@ class ScanFile(Scan):
     @classmethod
     def from_source(cls, source: FileSource, /) -> Self:
         return cls(source=normalize_path(source))
+
+    def to_narwhals(
+        self, backend: IntoBackend[Backend] | None = None, version: Version = Version.MAIN
+    ) -> LazyFrame[Any]:
+        if backend is None:
+            raise NotImplementedError
+        return into_version(version).lazyframe._from_lp_scan(
+            self, Implementation.from_backend(backend)
+        )
 
 
 class ScanCsv(ScanFile):
@@ -495,6 +514,29 @@ class ScanDataFrame(Scan):
     def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
         return resolver.scan_dataframe(self)
 
+    def to_narwhals(
+        self, backend: IntoBackend[Backend] | None = None, version: Version = Version.MAIN
+    ) -> LazyFrame[Any]:
+        current = self.frame.implementation
+        lf = into_version(version).lazyframe
+        backend_ = backend or "unknown"
+        if current is Implementation.POLARS or (
+            (impl := Implementation.from_backend(backend_)) is Implementation.POLARS
+        ):
+            # (4-1) Eager -> lazy conversion (needs a reference to lazy query, [maybe `Implementation`])
+            # We can avoid storing the dataframe on the graph, by letting polars do it instead
+            from narwhals._plan.polars.lazyframe import PolarsLazyFrame
+
+            return self.from_lf(PolarsLazyFrame.from_narwhals(self.frame)).to_narwhals()
+        if impl is current or impl is Implementation.UNKNOWN:
+            # (1) Fake lazy (needs a reference to eager data)
+            return lf._from_lp_scan(self, current)
+        if is_lazy_allowed(impl):
+            msg = f"TODO: Other conversions\n({current=}) -> ({impl=})"
+            raise NotImplementedError(msg)
+        msg = f"Unsupported `backend` value.\nExpected one of {get_args(_LazyAllowedImpl)} or `None`, got {impl}"
+        raise TypeError(msg)
+
 
 # NOTE: This one is for the constructor-only
 _Native = TypeVar("_Native")
@@ -528,6 +570,13 @@ class ScanLazyFrame(Scan, Generic[Native]):
 
     def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
         return resolver.scan_lazyframe(self)
+
+    def to_narwhals(
+        self, backend: IntoBackend[Backend] | None = None, version: Version = Version.MAIN
+    ) -> LazyFrame[Native]:
+        return into_version(version).lazyframe._from_lp_scan(
+            self, self.frame.implementation
+        )
 
 
 class SingleInput(LogicalPlan, has_inputs=True):

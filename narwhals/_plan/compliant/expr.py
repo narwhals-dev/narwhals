@@ -2,15 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Literal, Protocol
 
-from narwhals._plan.compliant.column import EagerBroadcast, SupportsBroadcast
-from narwhals._plan.compliant.typing import (
-    FrameT_contra,
-    HasVersion,
-    LazyFrameT_contra,
-    LengthT,
-    SeriesT,
-    SeriesT_co,
-)
+from narwhals._plan.compliant.column import EagerBroadcast
+from narwhals._plan.compliant.typing import FrameT_contra, HasVersion, SeriesT, SeriesT_co
 from narwhals._utils import Version
 
 if TYPE_CHECKING:
@@ -317,11 +310,3 @@ class EagerExpr(
     def __bool__(self) -> Literal[True]:
         # NOTE: Avoids falling back to `__len__` when truth-testing on dispatch
         return True
-
-
-# NOTE: At some point `Series` needs to be swapped out for `Column`
-class LazyExpr(
-    SupportsBroadcast[SeriesT, LengthT],
-    CompliantExpr[LazyFrameT_contra, SeriesT],
-    Protocol[LazyFrameT_contra, SeriesT, LengthT],
-): ...
