@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any, Generic, Literal, get_args, overload
 from narwhals._plan._guards import is_seq_column
 from narwhals._plan._immutable import Immutable
 from narwhals._plan._version import into_version
-from narwhals._plan.compliant.typing import Native
+from narwhals._plan.compliant.typing import FromNative, Native
 from narwhals._plan.expressions import selectors as s_ir
 from narwhals._plan.expressions.boolean import all_horizontal
 from narwhals._plan.options import (
@@ -24,6 +24,7 @@ from narwhals._plan.options import (
     VConcatOptions,
 )
 from narwhals._plan.plans._base import _BasePlan
+from narwhals._plan.plans.typing import FrameT
 from narwhals._plan.schema import freeze_schema
 from narwhals._plan.typing import Seq
 from narwhals._typing import _LazyAllowedImpl
@@ -104,8 +105,7 @@ VConcatMethod: TypeAlias = Literal[
 ]
 
 PivotOnColumns: TypeAlias = "DataFrame[Any, Any]"
-"""See https://github.com/narwhals-dev/narwhals/issues/1901#issuecomment-3697700426
-"""
+"""See https://github.com/narwhals-dev/narwhals/issues/1901#issuecomment-3697700426"""
 
 
 class LogicalPlan(_BasePlan[_Fwd], _root=True):
@@ -458,20 +458,31 @@ class ScanParquet(ScanFile):
         return resolver.scan_parquet(self)
 
 
-# TODO @dangotbanned: Careful think about how (non-`ScanFile`) source nodes should work
-# - Schema only?
-# - Different for eager vs lazy?
-class ScanDataFrame(Scan):
-    # https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-plan/src/dsl/plan.rs#L53-L58
+class ScanFrame(Scan, Generic[FrameT]):
     __slots__ = ("frame", "schema")
-    frame: DataFrame[Any, Any]
+    frame: FrameT
     schema: FrozenSchema
 
-    @classmethod
-    def from_narwhals(cls, frame: DataFrame[Any, Any], /) -> ScanDataFrame:
-        obj = cls.__new__(cls)
+    def __str__(self) -> str:
+        scan = type(self).__name__
+        outer = f"nw.{type(self.frame).__name__}"
+        inner = qualified_type_name(self.frame.to_native())
+        return f"{scan}(frame={outer}[{inner}](...), schema={self.schema!s})"
+
+    @property
+    def implementation(self) -> Implementation:
+        return self.frame.implementation
+
+
+# NOTE: (low priority) Maybe use `CompliantDataFrame`?
+class ScanDataFrame(ScanFrame["DataFrame[Any, Any]"]):
+    # https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-plan/src/dsl/plan.rs#L53-L58
+
+    @staticmethod
+    def from_narwhals(frame: DataFrame[Any, Any], /) -> ScanDataFrame:
+        obj = ScanDataFrame.__new__(ScanDataFrame)
         object.__setattr__(obj, "frame", frame.clone())
-        object.__setattr__(obj, "schema", freeze_schema(frame.schema))
+        object.__setattr__(obj, "schema", freeze_schema(frame.collect_schema()))
         return obj
 
     @property
@@ -481,45 +492,34 @@ class ScanDataFrame(Scan):
         # Caching a native table seems like a non-starter, once `pandas` enters the party
         yield from (id(self.frame), self.schema)
 
-    def __str__(self) -> str:
-        return (
-            f"{type(self).__name__}("
-            f"frame=nw.{type(self.frame).__name__}[{qualified_type_name(self.frame.to_native())}](...), "
-            f"schema={self.schema!s})"
-        )
-
     def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
         return resolver.scan_dataframe(self)
 
     def to_narwhals(
         self, backend: IntoBackend[Backend] | None = None, version: Version = Version.MAIN
     ) -> LazyFrame[Any]:
-        current = self.frame.implementation
-        lf = into_version(version).lazyframe
+        current = self.implementation
         backend_ = backend or "unknown"
-        if current is Implementation.POLARS or (
-            (impl := Implementation.from_backend(backend_)) is Implementation.POLARS
+        POLARS = Implementation.POLARS  # noqa: N806
+        if current is POLARS or (
+            (requested := Implementation.from_backend(backend_)) is POLARS
         ):
             # (4-1) Eager -> lazy conversion (needs a reference to lazy query, [maybe `Implementation`])
             # We can avoid storing the dataframe on the graph, by letting polars do it instead
             from narwhals._plan.polars.lazyframe import PolarsLazyFrame
 
-            return self.from_lf(PolarsLazyFrame.from_narwhals(self.frame)).to_narwhals()
-        if impl is current or impl is Implementation.UNKNOWN:
+            return PolarsLazyFrame.from_narwhals(self.frame).to_plan().to_narwhals()
+        if requested is current or requested is Implementation.UNKNOWN:
             # (1) Fake lazy (needs a reference to eager data)
-            return lf._from_lp_scan(self, current)
-        if is_lazy_allowed(impl):
-            msg = f"TODO: Other conversions\n({current=}) -> ({impl=})"
+            return into_version(version).lazyframe._from_lp_scan(self, current)
+        if is_lazy_allowed(requested):
+            msg = f"TODO: Other conversions\n({current=}) -> ({requested=})"
             raise NotImplementedError(msg)
-        msg = f"Unsupported `backend` value.\nExpected one of {get_args(_LazyAllowedImpl)} or `None`, got {impl}"
+        msg = f"Unsupported `backend` value.\nExpected one of {get_args(_LazyAllowedImpl)} or `None`, got {requested}"
         raise TypeError(msg)
 
 
-# NOTE: This one is for the constructor-only
-_Native = TypeVar("_Native")
-
-
-class ScanLazyFrame(Scan, Generic[Native]):
+class ScanLazyFrame(ScanFrame["CompliantLazyFrame[Native]"], Generic[Native]):
     """Target for `LazyFrame.from_native`.
 
     The resulting `LazyFrame` stores this as:
@@ -527,23 +527,14 @@ class ScanLazyFrame(Scan, Generic[Native]):
         LazyFrame._plan: ScanLazyFrame[Native]
     """
 
-    __slots__ = ("frame", "schema")
-    frame: CompliantLazyFrame[Native]
-    schema: FrozenSchema
-
     @staticmethod
-    def from_compliant(frame: CompliantLazyFrame[_Native], /) -> ScanLazyFrame[_Native]:
-        obj: ScanLazyFrame[_Native] = ScanLazyFrame.__new__(ScanLazyFrame)
+    def from_compliant(
+        frame: CompliantLazyFrame[FromNative], /
+    ) -> ScanLazyFrame[FromNative]:
+        obj: ScanLazyFrame[FromNative] = ScanLazyFrame.__new__(ScanLazyFrame)
         object.__setattr__(obj, "frame", frame)
         object.__setattr__(obj, "schema", freeze_schema(frame.collect_schema()))
         return obj
-
-    def __str__(self) -> str:
-        return (
-            f"{type(self).__name__}("
-            f"frame=nw.{type(self.frame).__name__}[{qualified_type_name(self.frame.native)}](...), "
-            f"schema={self.schema!s})"
-        )
 
     def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
         return resolver.scan_lazyframe(self)
@@ -551,9 +542,7 @@ class ScanLazyFrame(Scan, Generic[Native]):
     def to_narwhals(
         self, backend: IntoBackend[Backend] | None = None, version: Version = Version.MAIN
     ) -> LazyFrame[Native]:
-        return into_version(version).lazyframe._from_lp_scan(
-            self, self.frame.implementation
-        )
+        return into_version(version).lazyframe._from_lp_scan(self, self.implementation)
 
 
 class SingleInput(LogicalPlan, has_inputs=True):

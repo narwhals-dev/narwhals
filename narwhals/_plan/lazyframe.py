@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Generic
 
 from narwhals._plan import _parse, translate
 from narwhals._plan.common import todo
-from narwhals._plan.compliant.typing import Native
+from narwhals._plan.compliant.typing import FromNative, Native
 from narwhals._plan.group_by import LazyGroupBy
 from narwhals._plan.options import (
     ExplodeOptions,
@@ -14,7 +14,6 @@ from narwhals._plan.options import (
     UniqueOptions,
     UnpivotOptions,
 )
-from narwhals._typing_compat import TypeVar
 from narwhals._utils import Implementation, Version, not_implemented, qualified_type_name
 from narwhals.exceptions import InvalidOperationError
 
@@ -41,9 +40,6 @@ if TYPE_CHECKING:
         PivotAgg,
         UniqueKeepStrategy,
     )
-
-# NOTE: This one is for the constructor-only
-_Native = TypeVar("_Native")
 
 
 # TODO @dangotbanned: Figure out `from_native` + remove `self._compliant`
@@ -118,7 +114,9 @@ class LazyFrame(Generic[Native]):  # pragma: no cover
         return obj
 
     @classmethod
-    def from_native(cls: type[LazyFrame[Any]], native: _Native, /) -> LazyFrame[_Native]:
+    def from_native(
+        cls: type[LazyFrame[Any]], native: FromNative, /
+    ) -> LazyFrame[FromNative]:
         return (
             translate.from_native_lazyframe(native)
             .to_plan()

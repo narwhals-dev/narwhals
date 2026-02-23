@@ -32,6 +32,8 @@ Native = TypeVar("Native")
 
 Assume nothing, permit anything; rely on well-defined protocols to do the talking.
 """
+FromNative = TypeVar("FromNative")
+"""Same as `Native`, but should be scoped to constructor method(s) and not the class."""
 
 ExprAny: TypeAlias = "CompliantExpr[Any, Any]"
 ScalarAny: TypeAlias = "CompliantScalar[Any, Any]"

@@ -148,6 +148,8 @@ class CompliantLazyFrame(NarwhalsHash, Protocol[Native]):
     def native(self) -> Native: ...
     @property
     def version(self) -> Version: ...
+    def to_native(self) -> Native:
+        return self.native
 
     def to_plan(self) -> lp.ScanLazyFrame[Native]:
         from narwhals._plan.plans import LogicalPlan
