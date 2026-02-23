@@ -54,6 +54,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping
     from io import BytesIO
 
+    import pandas as pd
     import polars as pl
     import pyarrow as pa
     from typing_extensions import Self, TypeAlias, TypeIs
@@ -483,6 +484,12 @@ class DataFrame(
 
     def to_struct(self, name: str = "") -> Series[NativeSeriesT]:
         return self._series(self._compliant.to_struct(name))
+
+    def to_arrow(self) -> pa.Table:  # pragma: no cover
+        return self._compliant.to_arrow()
+
+    def to_pandas(self) -> pd.DataFrame:  # pragma: no cover
+        return self._compliant.to_pandas()
 
     def to_polars(self) -> pl.DataFrame:
         return self._compliant.to_polars()

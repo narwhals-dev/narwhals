@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from narwhals._plan.compliant.dataframe import CompliantDataFrame
     from narwhals._plan.dataframe import DataFrame as NwDataFrame
     from narwhals._plan.plans import logical as lp
-    from narwhals._translate import ArrowStreamExportable
+    from narwhals._translate import ArrowStreamExportable, IntoArrowTable
     from narwhals.schema import Schema
     from narwhals.typing import EagerAllowed, IntoBackend
 
@@ -106,7 +106,7 @@ class CompliantLazyFrame(NarwhalsHash, Protocol[Native]):
         cls: type[CompliantLazyFrame[Any]], native: Native, /, version: Version = MAIN
     ) -> CompliantLazyFrame[Native]: ...
     @classmethod
-    def from_arrow(cls, frame: pa.Table, /, version: Version = MAIN) -> Self: ...
+    def from_arrow(cls, frame: IntoArrowTable, /, version: Version = MAIN) -> Self: ...
     @classmethod
     def from_arrow_c_stream(
         cls,
@@ -115,7 +115,12 @@ class CompliantLazyFrame(NarwhalsHash, Protocol[Native]):
         version: Version = MAIN,
         *,
         requested_schema: object | None = None,
-    ) -> Self: ...
+    ) -> Self:
+        if requested_schema is not None:
+            msg = f"{cls.__name__}.from_arrow_c_stream"
+            raise NotImplementedError(msg)
+        return cls.from_arrow(exportable, version)
+
     @classmethod
     def from_pandas(cls, frame: pd.DataFrame, /, version: Version = MAIN) -> Self: ...
     @classmethod

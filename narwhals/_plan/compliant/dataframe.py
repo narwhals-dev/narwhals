@@ -15,12 +15,15 @@ from narwhals._plan.typing import (
     NonCrossJoinStrategy,
     OneOrIterable,
 )
+from narwhals._utils import Version
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping, Sequence
     from io import BytesIO
 
+    import pandas as pd
     import polars as pl
+    import pyarrow as pa
     from typing_extensions import Self, TypeAlias
 
     from narwhals._plan import expressions as ir
@@ -35,12 +38,15 @@ if TYPE_CHECKING:
     from narwhals._plan.expressions import NamedIR
     from narwhals._plan.options import ExplodeOptions, SortMultipleOptions
     from narwhals._plan.typing import Seq
+    from narwhals._translate import ArrowStreamExportable, IntoArrowTable
     from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
-    from narwhals._utils import Implementation, Version
+    from narwhals._utils import Implementation
     from narwhals.dtypes import DType
     from narwhals.typing import AsofJoinStrategy, IntoSchema, PivotAgg, UniqueKeepStrategy
 
 Incomplete: TypeAlias = Any
+
+MAIN = Version.MAIN
 
 
 class CompliantFrame(HasVersion, Protocol[ColumnT_co, NativeFrameT_co]):
@@ -150,6 +156,31 @@ class CompliantDataFrame(
         obj._version = version
         return obj
 
+    @classmethod
+    def from_arrow(cls, frame: IntoArrowTable, /, version: Version = MAIN) -> Self: ...
+    @classmethod
+    def from_arrow_c_stream(
+        cls,
+        exportable: ArrowStreamExportable,
+        /,
+        version: Version = MAIN,
+        *,
+        requested_schema: object | None = None,
+    ) -> Self:
+        if requested_schema is not None:
+            msg = f"{cls.__name__}.from_arrow_c_stream"
+            raise NotImplementedError(msg)
+        return cls.from_arrow(exportable, version)
+
+    @classmethod
+    def from_pandas(cls, frame: pd.DataFrame, /, version: Version = MAIN) -> Self: ...
+    @classmethod
+    def from_polars(cls, frame: pl.DataFrame, /, version: Version = MAIN) -> Self: ...
+    @classmethod
+    def from_narwhals(cls, frame: DataFrame[Any, Any], /) -> Self: ...
+    @classmethod
+    def from_compliant(cls, frame: CompliantDataFrame[Any, Any, Any], /) -> Self: ...
+
     @property
     def native(self) -> NativeDataFrameT:
         return self._native
@@ -223,6 +254,8 @@ class CompliantDataFrame(
 
     def to_series(self, index: int = 0) -> SeriesT: ...
     def to_struct(self, name: str = "") -> SeriesT: ...
+    def to_arrow(self) -> pa.Table: ...
+    def to_pandas(self) -> pd.DataFrame: ...
     def to_polars(self) -> pl.DataFrame: ...
     def unique(
         self,

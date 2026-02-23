@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import operator
+from collections.abc import Collection
 from functools import reduce
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Literal, cast, overload
@@ -24,26 +25,31 @@ from narwhals._plan.compliant.dataframe import EagerDataFrame
 from narwhals._plan.compliant.typing import LazyFrameAny, namespace
 from narwhals._plan.exceptions import shape_error
 from narwhals._plan.expressions import NamedIR, named_ir
-from narwhals._utils import Version, generate_repr, requires
+from narwhals._utils import Version, generate_repr, requires, supports_arrow_c_stream
 from narwhals.schema import Schema
 
 if TYPE_CHECKING:
-    from collections.abc import Collection, Iterable, Iterator, Mapping, Sequence
+    from collections.abc import Iterable, Iterator, Mapping, Sequence
     from io import BytesIO
 
+    import pandas as pd
     import polars as pl
     from typing_extensions import Self, TypeAlias
 
     from narwhals._plan.arrow.typing import ChunkedArrayAny, ChunkedOrArrayAny, Predicate
+    from narwhals._plan.compliant.dataframe import CompliantDataFrame
     from narwhals._plan.compliant.group_by import GroupByResolver
+    from narwhals._plan.dataframe import DataFrame as NwDataFrame
     from narwhals._plan.expressions import NamedIR
     from narwhals._plan.options import ExplodeOptions, SortMultipleOptions
     from narwhals._plan.typing import NonCrossJoinStrategy
+    from narwhals._translate import IntoArrowTable
     from narwhals._typing import _LazyAllowedImpl
     from narwhals.dtypes import DType
     from narwhals.typing import AsofJoinStrategy, IntoSchema, PivotAgg, UniqueKeepStrategy
 
 Incomplete: TypeAlias = Any
+MAIN = Version.MAIN
 
 
 class ArrowDataFrame(
@@ -86,13 +92,42 @@ class ArrowDataFrame(
         return self.native.num_rows
 
     @classmethod
+    def from_arrow(cls, data: IntoArrowTable, /, version: Version = MAIN) -> Self:
+        if isinstance(data, pa.Table):
+            native = data
+        elif compat.BACKEND_VERSION >= (14,) or isinstance(data, Collection):
+            native = pa.table(data)
+        elif supports_arrow_c_stream(data):  # pragma: no cover
+            msg = f"'pyarrow>=14.0.0' is required for `from_arrow` for object of type {type(data).__name__!r}."
+            raise ModuleNotFoundError(msg)
+        else:  # pragma: no cover
+            msg = f"`from_arrow` is not supported for object of type {type(data).__name__!r}."
+            raise TypeError(msg)
+        return cls.from_native(native, version)
+
+    @classmethod
+    def from_pandas(cls, frame: pd.DataFrame, /, version: Version = MAIN) -> Self:
+        return cls.from_native(pa.Table.from_pandas(frame), version)
+
+    @classmethod
+    def from_compliant(
+        cls,
+        frame: pl.DataFrame | NwDataFrame[Any, Any] | CompliantDataFrame[Any, Any, Any],
+        /,
+        version: Version = MAIN,
+    ) -> Self:
+        return cls.from_native(frame.to_arrow(), version)
+
+    from_polars = from_narwhals = from_compliant
+
+    @classmethod
     def from_dict(
         cls,
         data: Mapping[str, Any],
         /,
         *,
         schema: IntoSchema | None = None,
-        version: Version = Version.MAIN,
+        version: Version = MAIN,
     ) -> Self:
         pa_schema = Schema(schema).to_arrow() if schema is not None else schema
         native = pa.Table.from_pydict(data, schema=pa_schema)
@@ -116,6 +151,12 @@ class ArrowDataFrame(
         if as_series:
             return {ser.name: ser for ser in it}
         return {ser.name: ser.to_list() for ser in it}
+
+    def to_arrow(self) -> pa.Table:
+        return self.native
+
+    def to_pandas(self) -> pd.DataFrame:
+        return self.native.to_pandas()
 
     def to_polars(self) -> pl.DataFrame:
         import polars as pl  # ignore-banned-import
