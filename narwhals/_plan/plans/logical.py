@@ -838,10 +838,16 @@ class Rename(LpFunction):
 
     @property
     def mapping(self) -> dict[str, str]:
+        """Return a new dictionary representing `{old: new}`."""
         return dict(zip_strict(self.old, self.new))
 
     def __repr__(self) -> str:
         return f"RENAME {self.mapping!r}"
+
+    def resolve(
+        self, resolver: LogicalToResolved, plan: MapFunction[Rename], /
+    ) -> ResolvedPlan:
+        return resolver.rename(plan)
 
 
 concat = LogicalPlan.concat

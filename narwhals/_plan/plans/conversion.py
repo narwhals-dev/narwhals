@@ -480,20 +480,15 @@ class Resolver:
         if not f_rename.old:
             return input
         input_schema = input.schema
-        before = set(f_rename.old)
-        after = f_rename.new
+        before_after = f_rename.mapping
         names = deque[str]()
         exprs = deque[ir.NamedIR]()
-        for idx, name in enumerate(input_schema):
-            if name in before:
-                actual = after[idx]
-                before.remove(name)
-            else:
-                actual = name
+        for name in input_schema:
+            actual = before_after.pop(name, name)
             exprs.append(ir.named_ir(actual, ir.col(name)))
             names.append(actual)
 
-        if before:
+        if before_after:
             # we had extra names not present in the schema
             raise column_not_found_error(f_rename.old, input.schema)
         return rp.Select(
