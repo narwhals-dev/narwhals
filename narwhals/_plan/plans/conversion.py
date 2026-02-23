@@ -516,11 +516,6 @@ class Resolver:
     def scan_parquet(self, plan: lp.ScanParquet, /) -> rp.ScanParquet:
         return _scan(plan.source, self.implementation, "parquet")
 
-    # TODO @dangotbanned: Possibly remove `lp.ScanParquetImpl`?
-    # E.g. use `backend` to instantiate `LazyFrame` and propagate from there to `Resolver`
-    def scan_parquet_impl(self, plan: lp.ScanParquetImpl[lp.ImplT], /) -> rp.ScanParquet:
-        return _scan(plan.source, plan.implementation, "parquet")
-
     def select(self, plan: lp.Select, /) -> rp.Select:
         input = self.to_resolved(plan.input)
         named_irs, input_schema = prepare_projection(plan.exprs, schema=input.schema)

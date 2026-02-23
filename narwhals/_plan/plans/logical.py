@@ -50,7 +50,6 @@ if TYPE_CHECKING:
     from narwhals._plan.plans.resolved import ResolvedPlan
     from narwhals._plan.plans.visitors import LogicalToResolved
     from narwhals._plan.schema import FrozenSchema
-    from narwhals._typing import _ArrowImpl, _PolarsImpl
     from narwhals.typing import Backend, ConcatMethod, FileSource, IntoBackend, PivotAgg
 
 __all__ = [
@@ -107,8 +106,6 @@ VConcatMethod: TypeAlias = Literal[
 PivotOnColumns: TypeAlias = "DataFrame[Any, Any]"
 """See https://github.com/narwhals-dev/narwhals/issues/1901#issuecomment-3697700426
 """
-
-ImplT = TypeVar("ImplT", "_ArrowImpl", "_PolarsImpl")
 
 
 class LogicalPlan(_BasePlan[_Fwd], _root=True):
@@ -459,27 +456,6 @@ class ScanCsv(ScanFile):
 class ScanParquet(ScanFile):
     def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
         return resolver.scan_parquet(self)
-
-
-class ScanParquetImpl(ScanParquet, Generic[ImplT]):
-    """(experimental) Track the initial `backend` used on entry."""
-
-    __slots__ = ("implementation",)
-    implementation: ImplT
-
-    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
-        return resolver.scan_parquet_impl(self)
-
-    # NOTE: (temp) Hacking around adding a default in the signature
-    # Alternatives:
-    # 1. *not* adding another class and using a default of `Implementation.Unknown in `ScanFile.from_source`
-    # 2. default in `LogicalPlan.scan_parquet`, which then picks either class
-    @classmethod
-    def from_source(  # type: ignore[override]
-        cls: type[ScanParquetImpl[Any]], source: FileSource, /
-    ) -> ScanParquetImpl[_ArrowImpl]:
-        impl = Implementation.PYARROW
-        return cls(source=normalize_path(source), implementation=impl)
 
 
 # TODO @dangotbanned: Careful think about how (non-`ScanFile`) source nodes should work

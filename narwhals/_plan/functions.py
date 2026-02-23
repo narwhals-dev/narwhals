@@ -495,14 +495,12 @@ def read_parquet(
     raise unsupported_backend_operation_error(backend, "read_parquet")  # pragma: no cover
 
 
-# TODO @dangotbanned: Come back to after `nwp.LazyFrame` exists
 def scan_csv(
     source: FileSource, *, backend: IntoBackend[Backend], **kwds: t.Any
 ) -> LazyFrame[Any]:  # pragma: no cover
     return _scan_file(source, backend, kwds, "scan_csv")
 
 
-# TODO @dangotbanned: Come back to after `nwp.LazyFrame` exists
 def scan_parquet(
     source: FileSource, *, backend: IntoBackend[Backend], **kwds: t.Any
 ) -> LazyFrame[Any]:  # pragma: no cover

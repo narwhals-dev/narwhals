@@ -139,8 +139,6 @@ class ScanFile(Scan):
 class ScanCsv(ScanFile): ...
 
 
-# NOTE: Not sure about the impl variant
-# If we already have the schema, then no need to propagate?
 class ScanParquet(ScanFile): ...
 
 
