@@ -438,6 +438,7 @@ class ScanFile(Scan):
     def from_source(cls, source: FileSource, /) -> Self:
         return cls(source=normalize_path(source))
 
+    # TODO @dangotbanned: Typing needs injecting here
     def to_narwhals(
         self, backend: IntoBackend[Backend] | None = None, version: Version = Version.MAIN
     ) -> LazyFrame[Any]:
@@ -533,7 +534,7 @@ class ScanLazyFrame(ScanFrame["CompliantLazyFrame[Native]"], Generic[Native]):
     ) -> ScanLazyFrame[FromNative]:
         obj: ScanLazyFrame[FromNative] = ScanLazyFrame.__new__(ScanLazyFrame)
         object.__setattr__(obj, "frame", frame)
-        object.__setattr__(obj, "schema", freeze_schema(frame.collect_schema()))
+        object.__setattr__(obj, "schema", freeze_schema(frame.input_schema))
         return obj
 
     def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:

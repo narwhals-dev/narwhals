@@ -1,17 +1,15 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, ClassVar
 
 import polars as pl
 
+from narwhals._plan._version import into_version
+from narwhals._plan.common import todo
 from narwhals._plan.compliant.lazyframe import CompliantLazyFrame
 from narwhals._utils import Implementation, Version
-from narwhals.schema import Schema
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
-
     import pandas as pd
     import pyarrow as pa
     from typing_extensions import Self
@@ -19,15 +17,18 @@ if TYPE_CHECKING:
     from narwhals._plan.compliant.dataframe import CompliantDataFrame
     from narwhals._plan.dataframe import DataFrame as NwDataFrame
     from narwhals._translate import ArrowStreamExportable
+    from narwhals.schema import Schema
+
 
 MAIN = Version.MAIN
 
 
 class PolarsLazyFrame(CompliantLazyFrame[pl.LazyFrame]):
-    __slots__ = ("_native", "_version")
+    __slots__ = ("_input_schema", "_native", "_version")
     implementation: ClassVar = Implementation.POLARS
     _native: pl.LazyFrame
     _version: Version
+    _input_schema: Schema | None
 
     @classmethod
     def from_arrow(
@@ -40,6 +41,7 @@ class PolarsLazyFrame(CompliantLazyFrame[pl.LazyFrame]):
         obj = cls.__new__(cls)
         obj._native = native
         obj._version = version
+        obj._input_schema = None
         return obj
 
     @classmethod
@@ -56,21 +58,13 @@ class PolarsLazyFrame(CompliantLazyFrame[pl.LazyFrame]):
     ) -> Self:
         return cls.from_polars(frame.to_polars(), frame.version)
 
-    def collect_arrow(self) -> pa.Table:
-        return self.collect_native().to_arrow()
-
-    def collect_native(self) -> pl.DataFrame:
-        return self.native.collect()
-
-    def collect_pandas(self) -> pd.DataFrame:
-        return self.collect_native().to_pandas()
-
-    def collect_schema(self) -> Schema:
-        return Schema.from_polars(self.native.collect_schema())
-
     @property
-    def columns(self) -> Sequence[str]:
-        return self.native.collect_schema().names()
+    def input_schema(self) -> Schema:
+        if self._input_schema is None:
+            self._input_schema = into_version(self.version).schema.from_polars(
+                self.native.collect_schema()
+            )
+        return self._input_schema
 
     @property
     def native(self) -> pl.LazyFrame:
@@ -80,6 +74,10 @@ class PolarsLazyFrame(CompliantLazyFrame[pl.LazyFrame]):
     def version(self) -> Version:
         return self._version
 
+    collect_schema = todo()
+    collect_arrow = todo()
+    collect_polars = todo()
+    collect_pandas = todo()
+
     from_compliant = from_narwhals
     from_arrow_c_stream = from_arrow
-    collect_polars = collect_native

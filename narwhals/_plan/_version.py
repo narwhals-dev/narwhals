@@ -8,6 +8,7 @@ if TYPE_CHECKING:
     from narwhals._plan.dataframe import DataFrame as NwDataFrame
     from narwhals._plan.lazyframe import LazyFrame as NwLazyFrame
     from narwhals._plan.series import Series as NwSeries
+    from narwhals.schema import Schema as NwSchema
 
 __all__ = ["into_version"]
 
@@ -54,3 +55,18 @@ class _Version:
 
             return NwSeriesV1
         raise self._not_implemented()
+
+    @property
+    def schema(self) -> type[NwSchema]:
+        """TODO @dangotbanned: Upstream this, it has the same meaning as `Version.dtypes`."""
+        if self._version is _NwVersion.MAIN:
+            from narwhals.schema import Schema as NwSchema
+
+            return NwSchema
+        if self._version is _NwVersion.V1:
+            from narwhals.stable.v1 import Schema as NwSchemaV1
+
+            return NwSchemaV1
+        from narwhals.stable.v2 import Schema as NwSchemaV2
+
+        return NwSchemaV2

@@ -28,7 +28,7 @@ if TYPE_CHECKING:
         _LazyFrameCollectImpl, Callable[[], pa.Table | pd.DataFrame | pl.DataFrame]
     ]
 
-
+Incomplete: TypeAlias = Any
 MAIN = Version.MAIN
 
 
@@ -141,17 +141,34 @@ class CompliantLazyFrame(NarwhalsHash, Protocol[Native]):
         msg = f"Unsupported `backend` value.\nExpected one of {get_args(_LazyFrameCollectImpl)} or None, got: {impl}."
         raise TypeError(msg)
 
-    def collect_schema(self) -> Schema: ...
     @property
-    def columns(self) -> Sequence[str]: ...
+    def input_schema(self) -> Schema:
+        """Schema at the time of construction."""
+        ...
+
+    @property
+    def input_columns(self) -> Sequence[str]:
+        """Column names at the time of construction."""
+        return self.input_schema.names()
+
     @property
     def native(self) -> Native: ...
     @property
     def version(self) -> Version: ...
-    def to_native(self) -> Native:
-        return self.native
 
     def to_plan(self) -> lp.ScanLazyFrame[Native]:
         from narwhals._plan.plans import LogicalPlan
 
         return LogicalPlan.from_lf(self)
+
+    # TODO @dangotbanned: Need to think more about these
+    # - Separating them from the `input_*`s was a good first step
+    # - The result should be `ResolvedPlan.schema`
+    #   - But `CompliantLazyFrame` only refers to a `Scan*` step
+    # - `Resolver.collect_schema(plan: LogicalPlan)` might be the better place?
+    def collect_schema(self, *args: Incomplete, **kwds: Incomplete) -> Schema: ...
+    def collect_columns(self, *args: Incomplete, **kwds: Incomplete) -> Sequence[str]:
+        return self.collect_schema(*args, **kwds).names()
+
+    def to_native(self) -> Native:
+        return self.native
