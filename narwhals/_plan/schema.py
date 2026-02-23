@@ -8,8 +8,14 @@ from typing import TYPE_CHECKING, Any, Protocol, TypeVar, final, overload
 
 from narwhals._plan._expr_ir import NamedIR
 from narwhals._plan._immutable import Immutable
+from narwhals._plan._version import into_version
 from narwhals._plan.exceptions import column_not_found_error
-from narwhals._utils import _hasattr_static, check_column_names_are_unique, unstable
+from narwhals._utils import (
+    Version,
+    _hasattr_static,
+    check_column_names_are_unique,
+    unstable,
+)
 from narwhals.dtypes import Unknown
 
 if TYPE_CHECKING:
@@ -19,6 +25,7 @@ if TYPE_CHECKING:
 
     from narwhals._plan.typing import Seq
     from narwhals.dtypes import DType
+    from narwhals.schema import Schema
     from narwhals.typing import IntoSchema
 
 
@@ -200,6 +207,9 @@ class FrozenSchema(Immutable):
         sep, nl, indent = ",", "\n", " "
         items = f"{sep}{nl}{indent}".join(repr(tuple(els)) for els in self.items())
         return f"{type(self).__name__}([{nl}{indent}{items}{sep}{nl}])"
+
+    def to_narwhals(self, version: Version = Version.MAIN) -> Schema:
+        return into_version(version).schema(self._mapping)
 
 
 class HasSchema(Protocol):

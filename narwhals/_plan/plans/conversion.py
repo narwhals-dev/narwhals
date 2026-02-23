@@ -56,12 +56,6 @@ if TYPE_CHECKING:
 __all__ = ["Resolver"]
 
 Incomplete: TypeAlias = Any
-"""Node is not represented in `ResolvedPlan` (yet?).
-
-Either:
-1. `polars` lowers to a simpler representation
-2. `narwhals`-only node, which *may* be able to do the same
-"""
 
 Cast: TypeAlias = "ir.NamedIR[ir.Cast]"
 
@@ -190,7 +184,9 @@ def _with_supertypes(plan: rp.ResolvedPlan, casts: Seq[Cast]) -> rp.WithColumns:
 
 
 # NOTE: Eventually need to add a different way in for that
-def _from_backend_ensure_known(backend: IntoBackend[Backend], /) -> KnownImpl:
+def _from_backend_ensure_known(
+    backend: IntoBackend[Backend] | Incomplete, /
+) -> KnownImpl:
     """Reject the possibility of plugins via this path."""
     impl = Implementation.from_backend(backend)
     if impl is Implementation.UNKNOWN:
@@ -202,10 +198,8 @@ def _from_backend_ensure_known(backend: IntoBackend[Backend], /) -> KnownImpl:
 class Resolver:
     """Default conversion from `LogicalPlan` into `ResolvedPlan`.
 
-    - Case branches in [`dsl_to_ir::to_alp_impl`] should correspond to methods here
+    - Case branches in [`dsl_to_ir::to_alp_impl`] correspond to methods here
       - Backends can override translations by subclassing
-    - Likely need some outer context
-      - Most of these will be recursive
 
     [`polars_plan::plans::conversion::dsl_to_ir::to_alp_impl`]: https://github.com/pola-rs/polars/blob/8f60a2d641daf7f9eeac69694b5c952f4cc34099/crates/polars-plan/src/plans/conversion/dsl_to_ir/mod.rs#L142-L1666
     """
@@ -215,7 +209,7 @@ class Resolver:
     implementation: KnownImpl
 
     @classmethod
-    def from_backend(cls, backend: IntoBackend[Backend], /) -> Self:
+    def from_backend(cls, backend: IntoBackend[Backend] | Incomplete, /) -> Self:
         obj = cls.__new__(cls)
         obj.implementation = _from_backend_ensure_known(backend)
         return obj
@@ -226,6 +220,9 @@ class Resolver:
         All implementations should call this on the inputs of each plan as the first step.
         """
         return plan.resolve(self)
+
+    def collect_schema(self, plan: lp.LogicalPlan, /) -> FrozenSchema:
+        return self.to_resolved(plan).schema
 
     def collect(self, plan: lp.Collect, /) -> rp.Collect:
         return rp.Collect(input=self.to_resolved(plan.input))

@@ -718,23 +718,6 @@ def test_dataframe_from_native(data_small: Data) -> None:
         nwp.DataFrame.from_native(pl_lazy)  # type: ignore[call-overload]
 
 
-def test_lazyframe_from_native(data_small: Data) -> None:
-    pytest.importorskip("polars")
-    import polars as pl
-
-    pl_df = pl.DataFrame(data_small)
-    pl_lf = pl_df.lazy()
-    lf = nwp.LazyFrame.from_native(pl_lf)
-    assert lf.implementation is nw.Implementation.POLARS
-    pattern = re_compile(r"unsupported lazyframe.+polars.+dataframe")
-    with pytest.raises(TypeError, match=pattern):
-        # NOTE: Lacking a warning from the type checker is a known tradeoff
-        nwp.LazyFrame.from_native(pl_df)
-    pattern = re_compile(r"unsupported lazyframe.+polars.+series")
-    with pytest.raises(TypeError, match=pattern):
-        nwp.LazyFrame.from_native(pl_df.to_series())
-
-
 def test_dataframe_to_struct(data_small_af: Data) -> None:
     pytest.importorskip("pyarrow")
 

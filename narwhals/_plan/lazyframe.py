@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar, Generic
 
+from narwhals._exceptions import issue_warning
 from narwhals._plan import _parse, translate
-from narwhals._plan.common import todo
 from narwhals._plan.compliant.typing import FromNative, Native
 from narwhals._plan.group_by import LazyGroupBy
 from narwhals._plan.options import (
@@ -14,8 +14,9 @@ from narwhals._plan.options import (
     UniqueOptions,
     UnpivotOptions,
 )
+from narwhals._plan.plans.conversion import Resolver
 from narwhals._utils import Implementation, Version, not_implemented, qualified_type_name
-from narwhals.exceptions import InvalidOperationError
+from narwhals.exceptions import InvalidOperationError, PerformanceWarning
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
@@ -33,6 +34,7 @@ if TYPE_CHECKING:
         IntoExprColumn,
         OneOrIterable,
     )
+    from narwhals.schema import Schema
     from narwhals.typing import (
         AsofJoinStrategy,
         FileSource,
@@ -81,10 +83,13 @@ class LazyFrame(Generic[Native]):  # pragma: no cover
     [maybe `Implementation`]: https://github.com/narwhals-dev/narwhals/issues/3210
     """
 
-    _compliant: CompliantLazyFrame[Native]
     _plan: LogicalPlan
     _implementation: Implementation
     _version: ClassVar[Version] = Version.MAIN
+
+    _compliant: CompliantLazyFrame[Native]
+    to_native = not_implemented()  # look into this *after* `collect`
+    collect = not_implemented()  # depends on resolving everything else
 
     @property
     def version(self) -> Version:
@@ -122,12 +127,6 @@ class LazyFrame(Generic[Native]):  # pragma: no cover
             .to_plan()
             .to_narwhals(version=cls._version)
         )
-
-    to_native = todo()
-    columns = todo()
-    schema = todo()
-    collect_schema = todo()
-    collect = not_implemented()  # depends on resolving everything else
 
     def _unwrap_plan(self, other: Self | Any, /) -> LogicalPlan:
         """Equivalent* to `BaseFrame._unwrap_compliant`, used for `join(other)`."""
@@ -275,6 +274,36 @@ class LazyFrame(Generic[Native]):  # pragma: no cover
         _ = self._plan.sink_parquet(file)
         msg = "TODO: LazyFrame.sink_parquet"
         raise NotImplementedError(msg)
+
+    # TODO @dangotbanned: Open an issue to find out why we don't have this on main?
+    @property
+    def columns(self) -> list[str]:
+        if self._version is not Version.V1:
+            issue_warning(
+                "Determining the column names of a LazyFrame requires resolving its schema,"
+                " which is a potentially expensive operation. Use `LazyFrame.collect_schema().names()`"
+                " to get the column names without this warning.",
+                category=PerformanceWarning,
+            )
+        return self.collect_schema().names()
+
+    @property
+    def schema(self) -> Schema:
+        if self._version is not Version.V1:
+            msg = (
+                "Resolving the schema of a LazyFrame is a potentially expensive operation. "
+                "Use `LazyFrame.collect_schema()` to get the schema without this warning."
+            )
+            issue_warning(msg, PerformanceWarning)
+        return self.collect_schema()
+
+    def collect_schema(self) -> Schema:
+        """Resolve the schema of this LazyFrame."""
+        return (
+            Resolver.from_backend(self.implementation)
+            .collect_schema(self._plan)
+            .to_narwhals(self._version)
+        )
 
     def sort(
         self,
