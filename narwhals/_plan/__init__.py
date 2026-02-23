@@ -35,12 +35,14 @@ from narwhals._plan.functions import (
     sum_horizontal,
     when,
 )
+from narwhals._plan.lazyframe import LazyFrame
 from narwhals._plan.selectors import Selector
 from narwhals._plan.series import Series
 
 __all__ = [
     "DataFrame",
     "Expr",
+    "LazyFrame",
     "Selector",
     "Series",
     "all",

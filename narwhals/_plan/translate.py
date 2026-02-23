@@ -96,7 +96,7 @@ def _try_known_lazyframes(native: Lazy, /) -> CompliantLazyFrame[Lazy] | None:
     return None
 
 
-def _try_known_dataframes(native: Eager, /) -> EagerDataFrame[Any, Eager, Any] | None:
+def _try_known_dataframes(native: Eager, /) -> CompliantDataFrame[Eager] | None:
     matched: tuple[type[Eager], _Guard[Eager], _ConstructorEager[Eager]] | None = None
     search: dict[_Guard[Eager], tuple[_ConstructorEager[Eager], _ImportKnown[Eager]]] = (
         _local.eager_known
