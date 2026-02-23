@@ -213,12 +213,14 @@ def named_ir(name: str, expr: nwp.Expr | ir.ExprIR, /) -> ir.NamedIR[ir.ExprIR]:
     return ir.NamedIR(expr=expr._ir if isinstance(expr, nwp.Expr) else expr, name=name)
 
 
+# TODO @dangotbanned: Make this a fixture, move to `tests.plan.conftest.py`
 def dataframe(
     data: Mapping[str, Any], /
 ) -> nwp.DataFrame[pa.Table, pa.ChunkedArray[Any]]:
     return nwp.DataFrame.from_native(pa.Table.from_pydict(data))
 
 
+# TODO @dangotbanned: Make this a fixture, move to `tests.plan.conftest.py`
 def series(values: Iterable[Any], /) -> nwp.Series[pa.ChunkedArray[Any]]:
     return nwp.Series.from_native(pa.chunked_array([values]))
 

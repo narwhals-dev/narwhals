@@ -1,21 +1,25 @@
 from __future__ import annotations
 
 import datetime as dt
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any, Literal, TypeVar
 
 import pytest
+
+pytest.importorskip("polars")
+import polars as pl
 
 import narwhals as nw
 from narwhals import _plan as nwp
 from narwhals._plan import selectors as ncs
-from tests.plan.utils import re_compile
+from narwhals._utils import Implementation
+from tests.plan.utils import dataframe, re_compile
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    import polars as pl
     from typing_extensions import TypeAlias
 
+    from narwhals.typing import IntoBackend, LazyAllowed
     from tests.conftest import Data
 
     Outer = TypeVar("Outer")
@@ -117,3 +121,69 @@ def test_lazyframe_collect_schema(lazyframe: ConstructorLazy[pl.LazyFrame]) -> N
         .sort(cs.by_name("B"))
         .with_columns(b=pl.col("B").str.to_uppercase()),
     )
+
+
+@pytest.mark.parametrize(
+    ("backend", "expected"),
+    [
+        (None, "same"),
+        ("empty", "same"),
+        ("polars", Implementation.POLARS),
+        (Implementation.POLARS, Implementation.POLARS),
+        (pl, Implementation.POLARS),
+    ],
+)
+def test_dataframe_lazy(
+    data_small: Data,
+    backend: IntoBackend[LazyAllowed] | None | Literal["empty"],
+    expected: Implementation | Literal["same"],
+) -> None:
+    pytest.importorskip("polars")
+    pytest.importorskip("pyarrow")
+    df = dataframe(data_small).select(nwp.nth(-1, -2, -3), "g")
+    schema = nw.Schema(
+        {"o": nw.String(), "n": nw.String(), "m": nw.Int64(), "g": nw.Boolean()}
+    )
+    assert df.schema == schema
+
+    lazy = df.lazy() if backend == "empty" else df.lazy(backend)
+    assert isinstance(lazy, nwp.LazyFrame)
+    if expected == "same":
+        assert lazy.implementation is df.implementation
+    else:
+        assert lazy.implementation is expected
+    assert lazy.collect_schema() == schema
+
+
+def test_dataframe_lazy_invalid(data_small: Data) -> None:
+    pytest.importorskip("pyarrow")
+    df = dataframe(data_small)
+    pattern = re_compile("unsupported.+backend.+expected.+got.+pandas")
+    with pytest.raises(TypeError, match=pattern):
+        df.lazy("pandas")  # type: ignore[arg-type]
+    with pytest.raises(TypeError, match=pattern):
+        df.lazy(Implementation.PANDAS)  # type: ignore[arg-type]
+
+
+@pytest.mark.xfail(reason="Not yet implemented", raises=NotImplementedError)
+@pytest.mark.parametrize(
+    "backend",
+    [
+        Implementation.DUCKDB,
+        Implementation.DASK,
+        Implementation.IBIS,
+        Implementation.PYSPARK,
+        Implementation.SQLFRAME,
+        "duckdb",
+        "dask",
+        "ibis",
+        "pyspark",
+        "sqlframe",
+    ],
+)
+def test_dataframe_lazy_todo(data_small: Data, backend: LazyAllowed) -> None:
+    pytest.importorskip("pyarrow")
+    impl = Implementation.from_backend(backend)
+    pytest.importorskip(impl.name.lower())
+    df = dataframe(data_small).select("e")
+    assert df.lazy(backend).implementation is impl
