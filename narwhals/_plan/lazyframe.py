@@ -45,7 +45,7 @@ if TYPE_CHECKING:
 
 
 # TODO @dangotbanned: Figure out `from_native` + remove `self._compliant`
-class LazyFrame(Generic[Native]):  # pragma: no cover
+class LazyFrame(Generic[Native]):
     """WIP: need to change a lot before something useful can happen.
 
     ## Notes
@@ -92,7 +92,7 @@ class LazyFrame(Generic[Native]):  # pragma: no cover
     collect = not_implemented()  # depends on resolving everything else
 
     @property
-    def version(self) -> Version:
+    def version(self) -> Version:  # pragma: no cover
         return self._version
 
     @property
@@ -128,7 +128,7 @@ class LazyFrame(Generic[Native]):  # pragma: no cover
             .to_narwhals(version=cls._version)
         )
 
-    def _unwrap_plan(self, other: Self | Any, /) -> LogicalPlan:
+    def _unwrap_plan(self, other: Self | Any, /) -> LogicalPlan:  # pragma: no cover
         """Equivalent* to `BaseFrame._unwrap_compliant`, used for `join(other)`."""
         if isinstance(other, type(self)):
             # TODO @dangotbanned: Handle `Implementation` matching of `_plan`
@@ -148,11 +148,11 @@ class LazyFrame(Generic[Native]):  # pragma: no cover
 
     def drop_nulls(
         self, subset: OneOrIterable[ColumnNameOrSelector] | None = None
-    ) -> Self:
+    ) -> Self:  # pragma: no cover
         s_ir = None if subset is None else _parse.parse_into_combined_selector_ir(subset)
         return self._with_lp(self._plan.drop_nulls(s_ir))
 
-    def explain(self) -> str:
+    def explain(self) -> str:  # pragma: no cover
         """Create a string representation of the query plan."""
         return self._plan.explain()
 
@@ -162,7 +162,7 @@ class LazyFrame(Generic[Native]):  # pragma: no cover
         *more_columns: ColumnNameOrSelector,
         empty_as_null: bool = True,
         keep_nulls: bool = True,
-    ) -> Self:
+    ) -> Self:  # pragma: no cover
         s_ir = _parse.parse_into_combined_selector_ir(columns, *more_columns)
         options = ExplodeOptions(empty_as_null=empty_as_null, keep_nulls=keep_nulls)
         return self._with_lp(self._plan.explode(s_ir, options))
@@ -179,10 +179,10 @@ class LazyFrame(Generic[Native]):  # pragma: no cover
         *by: OneOrIterable[IntoExpr],
         drop_null_keys: bool = False,
         **named_by: IntoExpr,
-    ) -> LazyGroupBy[Self]:
+    ) -> LazyGroupBy[Self]:  # pragma: no cover
         return LazyGroupBy(self, *by, drop_null_keys=drop_null_keys, **named_by)
 
-    def head(self, n: int = 5) -> Self:
+    def head(self, n: int = 5) -> Self:  # pragma: no cover
         return self._with_lp(self._plan.head(n))
 
     def join(
@@ -194,7 +194,7 @@ class LazyFrame(Generic[Native]):  # pragma: no cover
         left_on: str | Sequence[str] | None = None,
         right_on: str | Sequence[str] | None = None,
         suffix: str = "_right",
-    ) -> Self:
+    ) -> Self:  # pragma: no cover
         left, right = self._plan, self._unwrap_plan(other)
         if how == "cross":
             if left_on is not None or right_on is not None or on is not None:
@@ -217,7 +217,7 @@ class LazyFrame(Generic[Native]):  # pragma: no cover
         by: str | Sequence[str] | None = None,
         strategy: AsofJoinStrategy = "backward",
         suffix: str = "_right",
-    ) -> Self:
+    ) -> Self:  # pragma: no cover
         opts = JoinAsofOptions.parse(by_left, by_right, by, strategy, suffix)
         left_on_, right_on_ = opts.normalize_on(left_on, right_on, on)
         right = self._unwrap_plan(other)
@@ -234,7 +234,7 @@ class LazyFrame(Generic[Native]):  # pragma: no cover
         values: OneOrIterable[ColumnNameOrSelector] | None = None,
         aggregate_function: PivotAgg | None = None,
         separator: str = "_",
-    ) -> Self:
+    ) -> Self:  # pragma: no cover
         from narwhals._plan import selectors as cs
 
         on_ = _parse.parse_into_combined_selector_ir(on)
@@ -277,7 +277,7 @@ class LazyFrame(Generic[Native]):  # pragma: no cover
 
     # TODO @dangotbanned: Open an issue to find out why we don't have this on main?
     @property
-    def columns(self) -> list[str]:
+    def columns(self) -> list[str]:  # pragma: no cover
         if self._version is not Version.V1:
             issue_warning(
                 "Determining the column names of a LazyFrame requires resolving its schema,"
@@ -288,7 +288,7 @@ class LazyFrame(Generic[Native]):  # pragma: no cover
         return self.collect_schema().names()
 
     @property
-    def schema(self) -> Schema:
+    def schema(self) -> Schema:  # pragma: no cover
         if self._version is not Version.V1:
             msg = (
                 "Resolving the schema of a LazyFrame is a potentially expensive operation. "
@@ -316,7 +316,7 @@ class LazyFrame(Generic[Native]):  # pragma: no cover
         opts = SortMultipleOptions.parse(descending=descending, nulls_last=nulls_last)
         return self._with_lp(self._plan.sort(s_irs, opts))
 
-    def tail(self, n: int = 5) -> Self:
+    def tail(self, n: int = 5) -> Self:  # pragma: no cover
         return self._with_lp(self._plan.tail(n))
 
     def unique(
@@ -325,7 +325,7 @@ class LazyFrame(Generic[Native]):  # pragma: no cover
         *,
         keep: UniqueKeepStrategy = "any",
         order_by: OneOrIterable[ColumnNameOrSelector] | None = None,
-    ) -> Self:
+    ) -> Self:  # pragma: no cover
         opts = UniqueOptions.parse(keep, maintain_order=False)
         parse = _parse.parse_into_seq_of_selector_ir
         s_subset = None if subset is None else parse(subset)
@@ -340,7 +340,7 @@ class LazyFrame(Generic[Native]):  # pragma: no cover
         self,
         columns: OneOrIterable[ColumnNameOrSelector],
         *more_columns: ColumnNameOrSelector,
-    ) -> Self:
+    ) -> Self:  # pragma: no cover
         s_ir = _parse.parse_into_combined_selector_ir(columns, *more_columns)
         return self._with_lp(self._plan.unnest(s_ir))
 
@@ -351,7 +351,7 @@ class LazyFrame(Generic[Native]):  # pragma: no cover
         index: OneOrIterable[ColumnNameOrSelector] | None = None,
         variable_name: str = "variable",
         value_name: str = "value",
-    ) -> Self:
+    ) -> Self:  # pragma: no cover
         s_on = on if on is None else _parse.parse_into_combined_selector_ir(on)
         s_index = None if index is None else _parse.parse_into_combined_selector_ir(index)
         options = UnpivotOptions(variable_name=variable_name, value_name=value_name)
@@ -363,6 +363,6 @@ class LazyFrame(Generic[Native]):  # pragma: no cover
 
     def with_row_index(
         self, name: str = "index", *, order_by: OneOrIterable[ColumnNameOrSelector]
-    ) -> Self:
+    ) -> Self:  # pragma: no cover
         by = _parse.parse_into_seq_of_selector_ir(order_by)
         return self._with_lp(self._plan.with_row_index_by(name, order_by=by))

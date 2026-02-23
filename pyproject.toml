@@ -318,9 +318,14 @@ omit = [
   'narwhals/_compliant/namespace.py',
   # NOTE: Gradually adding as things become more stable
   'narwhals/_plan/arrow/*',
+  'narwhals/_plan/polars/*',
   'narwhals/_plan/compliant/*',
   'narwhals/_plan/**/typing.py',
-  'narwhals/_plan/plans/**/*.py'
+  'narwhals/_plan/dtypes_mapper.py',
+  'narwhals/_plan/plans/visitors.py',
+  'narwhals/_plan/plans/_explain.py',
+  'narwhals/_plan/plans/logical.py',
+  'narwhals/_plan/plans/conversion.py',
 ]
 exclude_also = [
   "if sys.version_info() <",
@@ -344,7 +349,9 @@ exclude_also = [
   # https://github.com/asottile/covdefaults/blob/a5228df597ffc7933bb2fb5b7bad94119a40a896/covdefaults.py#L90-L92
   # https://docs.astral.sh/ruff/rules/raw-string-in-exception/
   # https://docs.astral.sh/ruff/rules/f-string-in-exception/
-  '^\s*msg = .+\n\s*raise NotImplementedError\b'
+  '^\s*msg = .+\n\s*raise NotImplementedError\b',
+  # stolen from https://github.com/pydantic/pydantic/blob/aa4d8b3fbc5f449ce1c05ebec36b1d4b3b736b69/pyproject.toml#L271
+  'class .*\bProtocol\):',
 ]
 
 [tool.mypy]

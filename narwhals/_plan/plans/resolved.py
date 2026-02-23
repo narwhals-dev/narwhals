@@ -53,7 +53,7 @@ ResolvedFunctionT = TypeVar(
 
 
 class ResolvedPlan(_BasePlan[_Fwd], _root=True):
-    def iter_left(self) -> Iterator[ResolvedPlan]:
+    def iter_left(self) -> Iterator[ResolvedPlan]:  # pragma: no cover
         for input in self.iter_inputs():
             yield from input.iter_left()
         yield self
@@ -70,7 +70,7 @@ class ResolvedPlan(_BasePlan[_Fwd], _root=True):
         """
         return next(self.iter_inputs()).schema
 
-    def rename(self, mapping: Mapping[str, str]) -> Select:
+    def rename(self, mapping: Mapping[str, str]) -> Select:  # pragma: no cover
         schema = self.schema
         exprs = tuple(ir.named_ir(mapping.get(old, old), ir.col(old)) for old in schema)
         output_schema = freeze_schema(zip((e.name for e in exprs), schema.values()))
@@ -78,10 +78,10 @@ class ResolvedPlan(_BasePlan[_Fwd], _root=True):
 
 
 class Scan(ResolvedPlan, has_inputs=False):
-    def iter_right(self) -> Iterator[ResolvedPlan]:
+    def iter_right(self) -> Iterator[ResolvedPlan]:  # pragma: no cover
         yield self
 
-    def iter_inputs(self) -> Iterator[ResolvedPlan]:
+    def iter_inputs(self) -> Iterator[ResolvedPlan]:  # pragma: no cover
         yield from ()
 
 
@@ -89,7 +89,7 @@ class SingleInput(ResolvedPlan, has_inputs=True):
     __slots__ = ("input",)
     input: ResolvedPlan
 
-    def iter_right(self) -> Iterator[ResolvedPlan]:
+    def iter_right(self) -> Iterator[ResolvedPlan]:  # pragma: no cover
         yield self
         yield from self.input.iter_right()
 
@@ -101,12 +101,12 @@ class MultipleInputs(ResolvedPlan, Generic[_InputsT], has_inputs=True):
     __slots__ = ("inputs",)
     inputs: _InputsT
 
-    def iter_right(self) -> Iterator[ResolvedPlan]:
+    def iter_right(self) -> Iterator[ResolvedPlan]:  # pragma: no cover
         yield self
         for input in reversed(self.inputs):
             yield from input.iter_right()
 
-    def iter_inputs(self) -> Iterator[ResolvedPlan]:
+    def iter_inputs(self) -> Iterator[ResolvedPlan]:  # pragma: no cover
         yield from self.inputs
 
 
@@ -134,7 +134,7 @@ class ScanFile(Scan):
     """
 
     @property
-    def schema(self) -> FrozenSchema:
+    def schema(self) -> FrozenSchema:  # pragma: no cover
         return self.output_schema
 
 
@@ -150,7 +150,7 @@ class ScanFrame(Scan, Generic[FrameT]):
     output_schema: FrozenSchema
 
     @property
-    def implementation(self) -> Implementation:
+    def implementation(self) -> Implementation:  # pragma: no cover
         return self.frame.implementation
 
     @property
@@ -164,7 +164,7 @@ class ScanFrame(Scan, Generic[FrameT]):
 
 class ScanDataFrame(ScanFrame["DataFrame[Any, Any]"]):
     @property
-    def __immutable_values__(self) -> Iterator[Any]:
+    def __immutable_values__(self) -> Iterator[Any]:  # pragma: no cover
         yield from (id(self.frame), self.output_schema)
 
 
@@ -177,7 +177,7 @@ class SelectNames(SingleInput):
     output_schema: FrozenSchema
 
     @property
-    def names(self) -> tuple[str, ...]:
+    def names(self) -> tuple[str, ...]:  # pragma: no cover
         return self.output_schema.names
 
     @property
@@ -238,7 +238,7 @@ class MapFunction(SingleInput, Generic[ResolvedFunctionT]):
     function: ResolvedFunctionT
 
     @property
-    def schema(self) -> FrozenSchema:
+    def schema(self) -> FrozenSchema:  # pragma: no cover
         return self.function.output_schema
 
 
@@ -250,7 +250,7 @@ class Join(MultipleInputs[tuple[ResolvedPlan, ResolvedPlan]]):
     output_schema: FrozenSchema
 
     @property
-    def schema(self) -> FrozenSchema:
+    def schema(self) -> FrozenSchema:  # pragma: no cover
         return self.output_schema
 
 
@@ -262,7 +262,7 @@ class JoinAsof(MultipleInputs[tuple[ResolvedPlan, ResolvedPlan]]):
     output_schema: FrozenSchema
 
     @property
-    def schema(self) -> FrozenSchema:
+    def schema(self) -> FrozenSchema:  # pragma: no cover
         return self.output_schema
 
 
@@ -272,10 +272,10 @@ class GroupBy(SingleInput):
     __slots__ = ("aggs", "keys", "output_schema")
     keys: Seq[NamedIR]
     aggs: Seq[NamedIR]
-    output_schema: FrozenSchema  # GroupByResolver._schema
+    output_schema: FrozenSchema
 
     @property
-    def schema(self) -> FrozenSchema:
+    def schema(self) -> FrozenSchema:  # pragma: no cover
         return self.output_schema
 
 
@@ -288,7 +288,7 @@ class GroupByNames(SingleInput):
     output_schema: FrozenSchema
 
     @property
-    def schema(self) -> FrozenSchema:
+    def schema(self) -> FrozenSchema:  # pragma: no cover
         return self.output_schema
 
 
@@ -307,7 +307,7 @@ class HConcat(MultipleInputs[Seq[ResolvedPlan]]):
     output_schema: FrozenSchema
 
     @property
-    def schema(self) -> FrozenSchema:
+    def schema(self) -> FrozenSchema:  # pragma: no cover
         return self.output_schema
 
 

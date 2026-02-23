@@ -46,13 +46,15 @@ class FieldByName(StructFunction, options=elementwise, config=FEOptions.renamed(
     def needs_expansion(self) -> bool:
         return True
 
-    def _field(self, dtype: Struct) -> Field:
+    def _field(self, dtype: Struct) -> Field:  # pragma: no cover
         if field := next((f for f in dtype.fields if f.name == self.name), None):
             return field
         msg = f"Struct field not found {self.name!r}"
         raise InvalidOperationError(msg)
 
-    def resolve_dtype(self, node: FunctionExpr[Self], schema: FrozenSchema, /) -> DType:
+    def resolve_dtype(
+        self, node: FunctionExpr[Self], schema: FrozenSchema, /
+    ) -> DType:  # pragma: no cover
         if (
             (struct_name := node.input[0].meta.output_name(raise_if_undetermined=False))
             and (struct := schema.get(struct_name))

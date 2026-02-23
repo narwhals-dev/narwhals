@@ -45,7 +45,7 @@ class _BasePlan(Immutable, Generic[T_co]):
         super().__init_subclass__(*args, **kwds)
         if has_inputs is not None:
             cls.has_inputs = has_inputs
-        elif getattr(cls, "has_inputs", None) is None and not _root:
+        elif getattr(cls, "has_inputs", None) is None and not _root:  # pragma: no cover
             raise _invalid_subclass_error(cls)
 
     def iter_left(self) -> Iterator[T_co]:
@@ -70,7 +70,7 @@ class _BasePlan(Immutable, Generic[T_co]):
         raise NotImplementedError(msg)
 
 
-def _invalid_subclass_error(child: type[_BasePlan[Any]]) -> TypeError:
+def _invalid_subclass_error(child: type[_BasePlan[Any]]) -> TypeError:  # pragma: no cover
     # https://docs.python.org/3/reference/datamodel.html#type.__base__
     # https://docs.python.org/3/reference/datamodel.html#type.__bases__
     bases = child.__bases__

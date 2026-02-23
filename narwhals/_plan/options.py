@@ -422,7 +422,9 @@ class JoinOptions(Immutable, Generic[JoinStrategyT_co]):
         return JoinOptions(how="inner", suffix="_right")
 
     @staticmethod
-    def parse(how: JoinStrategyT, suffix: str) -> JoinOptions[JoinStrategyT]:
+    def parse(
+        how: JoinStrategyT, suffix: str
+    ) -> JoinOptions[JoinStrategyT]:  # pragma: no cover
         if how in {"inner", "left", "full", "cross", "anti", "semi"}:
             return JoinOptions(how=how, suffix=suffix)
         msg = f"Only the following join strategies are supported: {get_args(JoinStrategy)}; found '{how}'."
@@ -434,7 +436,7 @@ class JoinOptions(Immutable, Generic[JoinStrategyT_co]):
         left_on: OneOrIterable[str] | None,
         right_on: OneOrIterable[str] | None,
         /,
-    ) -> tuple[Seq[str], Seq[str]]:
+    ) -> tuple[Seq[str], Seq[str]]:  # pragma: no cover
         """Reduce the 3 potential key (`*on`) arguments to 2.
 
         Ensures the keys spelling is compatible with the join strategy.

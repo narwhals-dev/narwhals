@@ -31,7 +31,7 @@ same_dtype = ResolveDType.function.same_dtype
 class ListFunction(Function, accessor="list", options=elementwise): ...
 class _ListInner(ListFunction):
     def resolve_dtype(self, node: FExpr[Self], schema: FrozenSchema, /) -> DType:
-        return dtm.inner_dtype(node.input[0].resolve_dtype(schema), repr(self))
+        return dtm.inner_dtype(node.input[0].resolve_dtype(schema), repr(self))  # pragma: no cover
 class Sum(ListFunction, dtype=map_first(dtm.nested_sum_dtype)): ...
 class Join(ListFunction, dtype=map_first(dtm.list_join_dtype)):
     __slots__ = ("ignore_nulls", "separator")

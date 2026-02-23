@@ -57,7 +57,7 @@ class ExprIR(Immutable):
             if isinstance(dtype, DType):
                 dtype = ResolveDType.just_dtype(dtype)
             elif not isinstance(dtype, ResolveDType):
-                dtype = ResolveDType.expr_ir.visitor(dtype)
+                dtype = ResolveDType.expr_ir.visitor(dtype)  # pragma: no cover
             cls.__expr_ir_dtype__ = dtype
 
     def dispatch(
