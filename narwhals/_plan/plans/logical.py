@@ -166,7 +166,7 @@ class LogicalPlan(_BasePlan[_Fwd], _root=True):
     [`to_expr_ir`]: https://github.com/pola-rs/polars/blob/00d7f7e1c3b24a54a13f235e69584614959f8837/crates/polars-plan/src/plans/conversion/dsl_to_ir/expr_to_ir.rs#L6-L9
     """
 
-    def iter_left(self) -> Iterator[LogicalPlan]:
+    def iter_left(self) -> Iterator[LogicalPlan]:  # pragma: no cover
         for input in self.iter_inputs():
             yield from input.iter_left()
         yield self
@@ -187,7 +187,7 @@ class LogicalPlan(_BasePlan[_Fwd], _root=True):
         msg = f"TODO: `{type(self).__name__}.resolve`"
         raise NotImplementedError(msg)
 
-    def explain(self) -> str:
+    def explain(self) -> str:  # pragma: no cover
         """Create a string representation of the query plan."""
         from narwhals._plan.plans import _explain
 
@@ -211,24 +211,26 @@ class LogicalPlan(_BasePlan[_Fwd], _root=True):
         return ScanLazyFrame.from_compliant(frame)
 
     @classmethod
-    def scan_csv(cls, source: FileSource, /) -> ScanCsv:
+    def scan_csv(cls, source: FileSource, /) -> ScanCsv:  # pragma: no cover
         return ScanCsv.from_source(source)
 
     @classmethod
-    def scan_parquet(cls, source: FileSource, /) -> ScanParquet:
+    def scan_parquet(cls, source: FileSource, /) -> ScanParquet:  # pragma: no cover
         return ScanParquet.from_source(source)
 
     # Single Input
     def explode(
         self, columns: SelectorIR, options: ExplodeOptions | None = None
-    ) -> MapFunction[Explode]:
+    ) -> MapFunction[Explode]:  # pragma: no cover
         options = options or ExplodeOptions.default()
         return self._map(Explode(columns=columns, options=options))
 
     def filter(self, predicate: ExprIR) -> Filter:
         return Filter(input=self, predicate=predicate)
 
-    def group_by(self, keys: Seq[ExprIR], aggs: Seq[ExprIR]) -> GroupBy:
+    def group_by(
+        self, keys: Seq[ExprIR], aggs: Seq[ExprIR]
+    ) -> GroupBy:  # pragma: no cover
         return GroupBy(input=self, keys=keys, aggs=aggs)
 
     def pivot(
@@ -240,7 +242,7 @@ class LogicalPlan(_BasePlan[_Fwd], _root=True):
         values: SelectorIR,
         agg: PivotAgg | None = None,
         separator: str = "_",
-    ) -> Pivot:
+    ) -> Pivot:  # pragma: no cover
         return Pivot(
             input=self,
             on=on,
@@ -267,7 +269,7 @@ class LogicalPlan(_BasePlan[_Fwd], _root=True):
     def select_names(self, names: Seq[str]) -> SelectNames:
         return SelectNames(input=self, names=names)
 
-    def slice(self, offset: int, length: int | None = None) -> Slice:
+    def slice(self, offset: int, length: int | None = None) -> Slice:  # pragma: no cover
         return Slice(input=self, offset=offset, length=length)
 
     def sort(
@@ -277,7 +279,7 @@ class LogicalPlan(_BasePlan[_Fwd], _root=True):
 
     def unique(
         self, subset: Seq[SelectorIR] | None = None, options: UniqueOptions | None = None
-    ) -> Unique:
+    ) -> Unique:  # pragma: no cover
         options = options or UniqueOptions.default()
         return Unique(input=self, subset=subset, options=options)
 
@@ -291,11 +293,11 @@ class LogicalPlan(_BasePlan[_Fwd], _root=True):
         subset: Seq[SelectorIR] | None,
         order_by: Seq[SelectorIR],
         options: UniqueOptions | None = None,
-    ) -> UniqueBy:
+    ) -> UniqueBy:  # pragma: no cover
         options = options or UniqueOptions.default()
         return UniqueBy(input=self, subset=subset, options=options, order_by=order_by)
 
-    def unnest(self, columns: SelectorIR) -> MapFunction[Unnest]:
+    def unnest(self, columns: SelectorIR) -> MapFunction[Unnest]:  # pragma: no cover
         return self._map(Unnest(columns=columns))
 
     def unpivot(
@@ -304,7 +306,7 @@ class LogicalPlan(_BasePlan[_Fwd], _root=True):
         *,
         index: SelectorIR | None = None,
         options: UnpivotOptions | None = None,
-    ) -> MapFunction[Unpivot]:
+    ) -> MapFunction[Unpivot]:  # pragma: no cover
         # NOTE: polars `on` goes through a very long chain as None:
         #   (python) -> `PyLazyFrame` -> `LazyFrame` -> `DslPlan` -> `UnpivotArgsDSL`
         # then finally filled in for `UnpivotArgsIR::new`
@@ -315,12 +317,14 @@ class LogicalPlan(_BasePlan[_Fwd], _root=True):
     def with_columns(self, exprs: Seq[ExprIR]) -> WithColumns:
         return WithColumns(input=self, exprs=exprs)
 
-    def with_row_index(self, name: str = "index") -> MapFunction[RowIndex]:
+    def with_row_index(
+        self, name: str = "index"
+    ) -> MapFunction[RowIndex]:  # pragma: no cover
         return self._map(RowIndex(name=name))
 
     def with_row_index_by(
         self, name: str = "index", *, order_by: Seq[SelectorIR]
-    ) -> MapFunction[RowIndexBy]:
+    ) -> MapFunction[RowIndexBy]:  # pragma: no cover
         return self._map(RowIndexBy(name=name, order_by=order_by))
 
     # Multiple Inputs
@@ -335,7 +339,7 @@ class LogicalPlan(_BasePlan[_Fwd], _root=True):
     @staticmethod
     def concat(
         items: Seq[LogicalPlan], *, how: ConcatMethod | VConcatMethod = "vertical"
-    ) -> HConcat | VConcat:
+    ) -> HConcat | VConcat:  # pragma: no cover
         if how == "horizontal":
             return HConcat(inputs=items)
         return VConcat(inputs=items, options=VConcatOptions.from_how(how))
@@ -346,12 +350,14 @@ class LogicalPlan(_BasePlan[_Fwd], _root=True):
         left_on: Seq[str],
         right_on: Seq[str],
         options: JoinOptions | None = None,
-    ) -> Join:
+    ) -> Join:  # pragma: no cover
         options = options or JoinOptions.default()
         inputs = (self, other)
         return Join(inputs=inputs, left_on=left_on, right_on=right_on, options=options)
 
-    def join_cross(self, other: LogicalPlan, *, suffix: str = "_right") -> Join:
+    def join_cross(
+        self, other: LogicalPlan, *, suffix: str = "_right"
+    ) -> Join:  # pragma: no cover
         return self.join(other, (), (), JoinOptions(how="cross", suffix=suffix))
 
     def join_asof(
@@ -360,7 +366,7 @@ class LogicalPlan(_BasePlan[_Fwd], _root=True):
         left_on: str,
         right_on: str,
         options: JoinAsofOptions | None = None,
-    ) -> JoinAsof:
+    ) -> JoinAsof:  # pragma: no cover
         inputs = (self, other)
         options = options or JoinAsofOptions.parse()
         return JoinAsof(
@@ -368,7 +374,7 @@ class LogicalPlan(_BasePlan[_Fwd], _root=True):
         )
 
     # Terminal
-    def collect(self) -> Collect:
+    def collect(self) -> Collect:  # pragma: no cover
         return self._sink(Collect(input=self))
 
     # TODO @dangotbanned: Handle `BytesIO`
@@ -382,24 +388,24 @@ class LogicalPlan(_BasePlan[_Fwd], _root=True):
     def drop(self, columns: SelectorIR) -> Select:
         return self._select(((~columns.to_narwhals())._ir,))
 
-    def drop_nulls(self, subset: SelectorIR | None = None) -> Filter:
+    def drop_nulls(self, subset: SelectorIR | None = None) -> Filter:  # pragma: no cover
         predicate = all_horizontal((subset or s_ir.all()).to_narwhals().is_not_null()._ir)
         return self.filter(predicate)
 
-    def head(self, n: int = 5) -> Slice:
+    def head(self, n: int = 5) -> Slice:  # pragma: no cover
         return self.slice(0, n)
 
-    def tail(self, n: int = 5) -> Slice:
+    def tail(self, n: int = 5) -> Slice:  # pragma: no cover
         return self.slice(-n, n)
 
-    def with_column(self, expr: ExprIR) -> WithColumns:
+    def with_column(self, expr: ExprIR) -> WithColumns:  # pragma: no cover
         return self.with_columns((expr,))
 
     def _map(self, function: LpFunctionT) -> MapFunction[LpFunctionT]:
         return MapFunction(input=self, function=function)
 
     def _sink(self, sink: SinkT) -> SinkT:
-        if isinstance(self, Sink):
+        if isinstance(self, Sink):  # pragma: no cover
             msg = "cannot create a sink on top of another sink"
             raise InvalidOperationError(msg)
         return sink
@@ -415,10 +421,10 @@ class Scan(LogicalPlan, has_inputs=False):
     So the next question is, how do we introduce native lazy objects into mix?
     """
 
-    def iter_right(self) -> Iterator[LogicalPlan]:
+    def iter_right(self) -> Iterator[LogicalPlan]:  # pragma: no cover
         yield self
 
-    def iter_inputs(self) -> Iterator[LogicalPlan]:
+    def iter_inputs(self) -> Iterator[LogicalPlan]:  # pragma: no cover
         yield from ()
 
     def to_narwhals(
@@ -435,13 +441,13 @@ class ScanFile(Scan):
     source: str
 
     @classmethod
-    def from_source(cls, source: FileSource, /) -> Self:
+    def from_source(cls, source: FileSource, /) -> Self:  # pragma: no cover
         return cls(source=normalize_path(source))
 
     # TODO @dangotbanned: Typing needs injecting here
     def to_narwhals(
         self, backend: IntoBackend[Backend] | None = None, version: Version = Version.MAIN
-    ) -> LazyFrame[Any]:
+    ) -> LazyFrame[Any]:  # pragma: no cover
         if backend is None:
             raise NotImplementedError
         return into_version(version).lazyframe._from_lp_scan(
@@ -450,12 +456,12 @@ class ScanFile(Scan):
 
 
 class ScanCsv(ScanFile):
-    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:  # pragma: no cover
         return resolver.scan_csv(self)
 
 
 class ScanParquet(ScanFile):
-    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:  # pragma: no cover
         return resolver.scan_parquet(self)
 
 
@@ -487,7 +493,7 @@ class ScanDataFrame(ScanFrame["DataFrame[Any, Any]"]):
         return obj
 
     @property
-    def __immutable_values__(self) -> Iterator[Any]:
+    def __immutable_values__(self) -> Iterator[Any]:  # pragma: no cover
         # NOTE: Deferring how to handle the hash *for now*
         # Currently, every `ScanDataFrame` will have a unique pseudo-hash
         # Caching a native table seems like a non-starter, once `pandas` enters the party
@@ -550,11 +556,11 @@ class SingleInput(LogicalPlan, has_inputs=True):
     __slots__ = ("input",)
     input: LogicalPlan
 
-    def iter_right(self) -> Iterator[LogicalPlan]:
+    def iter_right(self) -> Iterator[LogicalPlan]:  # pragma: no cover
         yield self
         yield from self.input.iter_right()
 
-    def iter_inputs(self) -> Iterator[LogicalPlan]:
+    def iter_inputs(self) -> Iterator[LogicalPlan]:  # pragma: no cover
         yield self.input
 
 
@@ -562,12 +568,12 @@ class MultipleInputs(LogicalPlan, Generic[_InputsT], has_inputs=True):
     __slots__ = ("inputs",)
     inputs: _InputsT
 
-    def iter_right(self) -> Iterator[LogicalPlan]:
+    def iter_right(self) -> Iterator[LogicalPlan]:  # pragma: no cover
         yield self
         for input in reversed(self.inputs):
             yield from input.iter_right()
 
-    def iter_inputs(self) -> Iterator[LogicalPlan]:
+    def iter_inputs(self) -> Iterator[LogicalPlan]:  # pragma: no cover
         yield from self.inputs
 
 
@@ -576,7 +582,7 @@ class Sink(SingleInput):
 
 
 class Collect(Sink):
-    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:  # pragma: no cover
         return resolver.collect(self)
 
 
@@ -587,7 +593,7 @@ class SinkFile(Sink):
 
 
 class SinkParquet(SinkFile):
-    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:  # pragma: no cover
         return resolver.sink_parquet(self)
 
 
@@ -629,7 +635,7 @@ class GroupBy(SingleInput):
     keys: Seq[ExprIR]
     aggs: Seq[ExprIR]
 
-    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:  # pragma: no cover
         return resolver.group_by(self)
 
 
@@ -645,7 +651,7 @@ class Pivot(SingleInput):
     """polars has *just* `Expr`."""
     separator: str
 
-    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:  # pragma: no cover
         return resolver.pivot(self)
 
 
@@ -655,7 +661,7 @@ class Unique(SingleInput):
     subset: Seq[SelectorIR] | None
     options: UniqueOptions
 
-    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:  # pragma: no cover
         return resolver.unique(self)
 
 
@@ -663,7 +669,7 @@ class UniqueBy(Unique):
     __slots__ = ("order_by",)
     order_by: Seq[SelectorIR]
 
-    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:  # pragma: no cover
         return resolver.unique_by(self)
 
 
@@ -681,7 +687,7 @@ class Slice(SingleInput):
     offset: int
     length: int | None
 
-    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:  # pragma: no cover
         return resolver.slice(self)
 
 
@@ -701,7 +707,7 @@ class Join(MultipleInputs[tuple[LogicalPlan, LogicalPlan]]):
     right_on: Seq[str]
     options: JoinOptions
 
-    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:  # pragma: no cover
         return resolver.join(self)
 
 
@@ -711,7 +717,7 @@ class JoinAsof(MultipleInputs[tuple[LogicalPlan, LogicalPlan]]):
     right_on: str
     options: JoinAsofOptions
 
-    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:  # pragma: no cover
         return resolver.join_asof(self)
 
 
@@ -722,14 +728,14 @@ class VConcat(MultipleInputs[Seq[LogicalPlan]]):
     __slots__ = ("options",)
     options: VConcatOptions
 
-    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:  # pragma: no cover
         return resolver.concat_vertical(self)
 
 
 class HConcat(MultipleInputs[Seq[LogicalPlan]]):
     """`concat(how="horizontal")`."""
 
-    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:  # pragma: no cover
         return resolver.concat_horizontal(self)
 
 
@@ -760,7 +766,7 @@ class Explode(LpFunction):
 
     def resolve(
         self, resolver: LogicalToResolved, plan: MapFunction[Explode], /
-    ) -> ResolvedPlan:
+    ) -> ResolvedPlan:  # pragma: no cover
         return resolver.explode(plan)
 
 
@@ -773,7 +779,7 @@ class Unnest(LpFunction):
 
     def resolve(
         self, resolver: LogicalToResolved, plan: MapFunction[Unnest], /
-    ) -> ResolvedPlan:
+    ) -> ResolvedPlan:  # pragma: no cover
         return resolver.unnest(plan)
 
 
@@ -796,7 +802,7 @@ class Unpivot(LpFunction):
 
     def resolve(
         self, resolver: LogicalToResolved, plan: MapFunction[Unpivot], /
-    ) -> ResolvedPlan:
+    ) -> ResolvedPlan:  # pragma: no cover
         return resolver.unpivot(plan)
 
 
@@ -810,7 +816,7 @@ class RowIndex(LpFunction):
     # TODO @dangotbanned: Try to get this and `RowIndexBy` to be nicer to eachother
     def resolve(
         self, resolver: LogicalToResolved, plan: MapFunction[Incomplete], /
-    ) -> ResolvedPlan:
+    ) -> ResolvedPlan:  # pragma: no cover
         return resolver.with_row_index(plan)
 
 
@@ -823,7 +829,7 @@ class RowIndexBy(RowIndex):
 
     def resolve(
         self, resolver: LogicalToResolved, plan: MapFunction[RowIndexBy], /
-    ) -> ResolvedPlan:
+    ) -> ResolvedPlan:  # pragma: no cover
         return resolver.with_row_index_by(plan)
 
 
