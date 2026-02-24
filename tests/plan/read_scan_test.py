@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 import pytest
 
+import narwhals as nw
 import narwhals._plan as nwp
 from tests.plan.utils import assert_equal_data
 from tests.utils import PANDAS_VERSION
@@ -19,7 +20,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import TypeAlias
 
-    from narwhals._typing import EagerAllowed, _LazyOnly
+    from narwhals._typing import BackendName, EagerAllowed, _LazyOnly
     from narwhals.typing import FileSource
     from tests.conftest import Data
 
@@ -40,6 +41,18 @@ param_pandas_import = pytest.param(
     marks=[
         pytest.mark.xfail(reason="Not implemented pandas", raises=NotImplementedError),
         pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow"),
+    ],
+)
+scan_backend = pytest.mark.parametrize(
+    "backend",
+    [
+        "pyarrow",
+        pytest.param(
+            "polars",
+            marks=pytest.mark.xfail(
+                reason="TODO: `PolarsNamespace`", raises=NotImplementedError
+            ),
+        ),
     ],
 )
 
@@ -142,6 +155,30 @@ def test_read_parquet_raise_with_lazy(backend: _LazyOnly) -> None:
     pytest.importorskip(backend)
     with pytest.raises(ValueError, match="support in Narwhals is lazy-only"):
         nwp.read_parquet("unused.parquet", backend=backend)  # type: ignore[call-overload]
+
+
+# TODO @dangotbanned: Transform steps, change the schema
+# TODO @dangotbanned: Collect (pretty far from being able to do this)
+@scan_backend
+def test_scan_parquet(parquet_path: FileSource, backend: BackendName) -> None:
+    pytest.importorskip(backend)
+    lf = nwp.scan_parquet(parquet_path, backend=backend)
+    schema = lf.collect_schema()
+    expected = nw.Schema({"a": nw.Int64(), "b": nw.Float64(), "z": nw.String()})
+    assert len(schema) == 3
+    assert schema == expected
+    assert expected == nwp.read_parquet_schema(parquet_path, backend=backend)
+
+
+@scan_backend
+def test_scan_csv(csv_path: FileSource, backend: BackendName) -> None:
+    pytest.importorskip(backend)
+    lf = nwp.scan_csv(csv_path, backend=backend)
+    schema = lf.collect_schema()
+    expected = nw.Schema({"a": nw.Int64(), "b": nw.Float64(), "z": nw.String()})
+    assert len(schema) == 3
+    assert schema == expected
+    assert expected == nwp.read_csv_schema(csv_path, backend=backend)
 
 
 def test_read_parquet_schema(parquet_path: FileSource, eager: EagerAllowed) -> None:

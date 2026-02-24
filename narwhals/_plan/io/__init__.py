@@ -60,13 +60,13 @@ def read_parquet(
 
 def scan_csv(
     source: FileSource, *, backend: IntoBackend[Backend], **kwds: Any
-) -> LazyFrame[Any]:  # pragma: no cover
+) -> LazyFrame[Any]:
     return _scan_file(source, backend, kwds, "scan_csv")
 
 
 def scan_parquet(
     source: FileSource, *, backend: IntoBackend[Backend], **kwds: Any
-) -> LazyFrame[Any]:  # pragma: no cover
+) -> LazyFrame[Any]:
     return _scan_file(source, backend, kwds, "scan_parquet")
 
 
@@ -112,7 +112,7 @@ def _read_parquet(
 
 
 # TODO @dangotbanned: Coordinate overloads with `ScanFile.to_narwhals`?
-def _scan_file(  # pragma: no cover
+def _scan_file(
     source: FileSource,
     backend: IntoBackend[Backend],
     kwds: dict[str, Any],

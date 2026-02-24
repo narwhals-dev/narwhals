@@ -288,6 +288,8 @@ filterwarnings = [
 
   "ignore:.*invalid value encountered in cast:RuntimeWarning:pandas",
   "ignore:.*The behavior of DataFrame concatenation with empty or all-NA entries is deprecated:FutureWarning",
+
+  "ignore:.*The pandas version installed.*is outside the supported range in Modin.*:Warning:modin"
 ]
 xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
@@ -324,7 +326,6 @@ omit = [
   'narwhals/_plan/dtypes_mapper.py',
   'narwhals/_plan/plans/visitors.py',
   'narwhals/_plan/plans/_explain.py',
-  'narwhals/_plan/plans/logical.py',
   'narwhals/_plan/plans/conversion.py',
 ]
 exclude_also = [

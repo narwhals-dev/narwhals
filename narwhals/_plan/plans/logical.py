@@ -211,11 +211,11 @@ class LogicalPlan(_BasePlan[_Fwd], _root=True):
         return ScanLazyFrame.from_compliant(frame)
 
     @classmethod
-    def scan_csv(cls, source: FileSource, /) -> ScanCsv:  # pragma: no cover
+    def scan_csv(cls, source: FileSource, /) -> ScanCsv:
         return ScanCsv.from_source(source)
 
     @classmethod
-    def scan_parquet(cls, source: FileSource, /) -> ScanParquet:  # pragma: no cover
+    def scan_parquet(cls, source: FileSource, /) -> ScanParquet:
         return ScanParquet.from_source(source)
 
     # Single Input
@@ -441,13 +441,13 @@ class ScanFile(Scan):
     source: str
 
     @classmethod
-    def from_source(cls, source: FileSource, /) -> Self:  # pragma: no cover
+    def from_source(cls, source: FileSource, /) -> Self:
         return cls(source=normalize_path(source))
 
     # TODO @dangotbanned: Typing needs injecting here
     def to_narwhals(
         self, backend: IntoBackend[Backend] | None = None, version: Version = Version.MAIN
-    ) -> LazyFrame[Any]:  # pragma: no cover
+    ) -> LazyFrame[Any]:
         if backend is None:
             raise NotImplementedError
         return into_version(version).lazyframe._from_lp_scan(
@@ -456,12 +456,12 @@ class ScanFile(Scan):
 
 
 class ScanCsv(ScanFile):
-    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:  # pragma: no cover
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
         return resolver.scan_csv(self)
 
 
 class ScanParquet(ScanFile):
-    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:  # pragma: no cover
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
         return resolver.scan_parquet(self)
 
 

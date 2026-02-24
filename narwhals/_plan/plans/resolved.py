@@ -134,7 +134,7 @@ class ScanFile(Scan):
     """
 
     @property
-    def schema(self) -> FrozenSchema:  # pragma: no cover
+    def schema(self) -> FrozenSchema:
         return self.output_schema
 
 
