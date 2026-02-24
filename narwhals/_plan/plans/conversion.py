@@ -674,12 +674,12 @@ def _scan(
     - we could have correct file, but a stale schema in the cache
     - probably 99 other concerns
     """
-    from narwhals._plan import functions as F
+    from narwhals._plan import io
 
     schema, tp = (
-        (F.read_csv_schema, rp.ScanCsv)
+        (io.read_csv_schema, rp.ScanCsv)
         if format == "csv"
-        else (F.read_parquet_schema, rp.ScanParquet)
+        else (io.read_parquet_schema, rp.ScanParquet)
     )
     return tp(source=source, output_schema=freeze_schema(schema(source, backend=backend)))
 

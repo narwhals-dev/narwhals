@@ -1,0 +1,131 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, Literal, overload
+
+from narwhals._plan._namespace import eager_namespace, namespace
+from narwhals._plan.compliant import io as _io
+from narwhals._plan.exceptions import unsupported_backend_operation_error
+from narwhals._utils import normalize_path, unstable
+
+if TYPE_CHECKING:
+    import pyarrow as pa
+    from typing_extensions import TypeAlias
+
+    from narwhals._plan.compliant.dataframe import CompliantDataFrame
+    from narwhals._plan.dataframe import DataFrame
+    from narwhals._plan.lazyframe import LazyFrame
+    from narwhals._plan.typing import NativeDataFrameT, NativeSeriesT
+    from narwhals._typing import Arrow
+    from narwhals.schema import Schema
+    from narwhals.typing import Backend, EagerAllowed, FileSource, IntoBackend
+
+    CompliantDF: TypeAlias = CompliantDataFrame[Any, NativeDataFrameT, NativeSeriesT]
+
+
+@overload
+def read_csv(
+    source: FileSource, *, backend: Arrow, **kwds: Any
+) -> DataFrame[pa.Table, pa.ChunkedArray[Any]]: ...
+@overload
+def read_csv(
+    source: FileSource, *, backend: IntoBackend[EagerAllowed], **kwds: Any
+) -> DataFrame: ...
+def read_csv(
+    source: FileSource, *, backend: IntoBackend[EagerAllowed], **kwds: Any
+) -> DataFrame[Any, Any]:
+    source = normalize_path(source)
+    ns = eager_namespace(backend)
+    if _io.can_read_csv(ns):
+        return _read_csv(source, kwds, ns)
+    raise unsupported_backend_operation_error(backend, "read_csv")  # pragma: no cover
+
+
+@overload
+def read_parquet(
+    source: FileSource, *, backend: Arrow, **kwds: Any
+) -> DataFrame[pa.Table, pa.ChunkedArray[Any]]: ...
+@overload
+def read_parquet(
+    source: FileSource, *, backend: IntoBackend[EagerAllowed], **kwds: Any
+) -> DataFrame: ...
+def read_parquet(
+    source: FileSource, *, backend: IntoBackend[EagerAllowed], **kwds: Any
+) -> DataFrame[Any, Any]:
+    source = normalize_path(source)
+    ns = eager_namespace(backend)
+    if _io.can_read_parquet(ns):
+        return _read_parquet(source, kwds, ns)
+    raise unsupported_backend_operation_error(backend, "read_parquet")  # pragma: no cover
+
+
+def scan_csv(
+    source: FileSource, *, backend: IntoBackend[Backend], **kwds: Any
+) -> LazyFrame[Any]:  # pragma: no cover
+    return _scan_file(source, backend, kwds, "scan_csv")
+
+
+def scan_parquet(
+    source: FileSource, *, backend: IntoBackend[Backend], **kwds: Any
+) -> LazyFrame[Any]:  # pragma: no cover
+    return _scan_file(source, backend, kwds, "scan_parquet")
+
+
+@unstable
+def read_csv_schema(
+    source: FileSource, *, backend: IntoBackend[Backend], **kwds: Any
+) -> Schema:
+    """Infer the schema of a Csv file."""
+    ns = namespace(backend)
+    if _io.can_read_csv_schema(ns):
+        return ns.read_csv_schema(normalize_path(source), **kwds)
+    raise unsupported_backend_operation_error(
+        backend, "read_csv_schema"
+    )  # pragma: no cover
+
+
+def read_parquet_schema(source: FileSource, *, backend: IntoBackend[Backend]) -> Schema:
+    """Get the schema of a Parquet file without reading data."""
+    ns = namespace(backend)
+    if _io.can_read_parquet_schema(ns):
+        return ns.read_parquet_schema(normalize_path(source))
+    raise unsupported_backend_operation_error(
+        backend, "read_parquet_schema"
+    )  # pragma: no cover
+
+
+def _read_csv(
+    source: str,
+    kwds: dict[str, Any],
+    ns: _io.ReadCsv[CompliantDF[NativeDataFrameT, NativeSeriesT]],
+    /,
+) -> DataFrame[NativeDataFrameT, NativeSeriesT]:
+    return ns.read_csv(source, **kwds).to_narwhals()
+
+
+def _read_parquet(
+    source: str,
+    kwds: dict[str, Any],
+    ns: _io.ReadParquet[CompliantDF[NativeDataFrameT, NativeSeriesT]],
+    /,
+) -> DataFrame[NativeDataFrameT, NativeSeriesT]:
+    return ns.read_parquet(source, **kwds).to_narwhals()
+
+
+# TODO @dangotbanned: Coordinate overloads with `ScanFile.to_narwhals`?
+def _scan_file(  # pragma: no cover
+    source: FileSource,
+    backend: IntoBackend[Backend],
+    kwds: dict[str, Any],
+    method: Literal["scan_csv", "scan_parquet"],
+) -> LazyFrame[Any]:
+    from narwhals._plan.plans import LogicalPlan
+
+    if kwds:
+        msg = f"Passing arbitrary keywords arguments to `{method}()` is not yet implemented, got: {kwds!r}"
+        raise NotImplementedError(msg)
+    ns = namespace(backend)
+    if method == "scan_csv" and _io.can_scan_csv(ns):
+        return LogicalPlan.scan_csv(source).to_narwhals(backend)
+    if method == "scan_parquet" and _io.can_scan_parquet(ns):
+        return LogicalPlan.scan_parquet(source).to_narwhals(backend)
+    raise unsupported_backend_operation_error(backend, method)  # pragma: no cover

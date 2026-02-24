@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any, Generic
 from narwhals._plan import common
 from narwhals._plan._guards import is_literal
 from narwhals._plan._immutable import Immutable
+from narwhals._plan.expressions.expr import Literal
 from narwhals._plan.typing import LiteralT, NativeSeriesT, NonNestedLiteralT
 
 if TYPE_CHECKING:
@@ -98,3 +99,7 @@ def lit(
     else:
         dtype = common.into_dtype(dtype)
     return ScalarLiteral(value=value, dtype=dtype).to_literal()
+
+
+def lit_series(value: Series[NativeSeriesT], /) -> Literal[Series[NativeSeriesT]]:
+    return SeriesLiteral(value=value).to_literal()

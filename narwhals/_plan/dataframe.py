@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, get_args, ove
 from narwhals._plan import _parse, translate
 from narwhals._plan._expansion import expand_selector_irs_names, prepare_projection
 from narwhals._plan._guards import is_series
+from narwhals._plan._namespace import eager_namespace
 from narwhals._plan.common import ensure_seq_str, normalize_target_file, temp
 from narwhals._plan.compliant.dataframe import EagerDataFrame
 from narwhals._plan.compliant.namespace import EagerNamespace
@@ -435,7 +436,6 @@ class DataFrame(
         *,
         backend: IntoBackend[EagerAllowed] | None = None,
     ) -> DataFrame[Any, Any]:
-        from narwhals._plan import functions as F
 
         if backend is None:
             unwrapped: dict[str, NativeSeries | Any] = {}
@@ -454,9 +454,9 @@ class DataFrame(
             if impl is None:
                 msg = "Calling `from_dict` without `backend` is only supported if all input values are already Narwhals Series"
                 raise TypeError(msg)
-            return _dataframe_from_dict(unwrapped, schema, F._eager_namespace(impl))
+            return _dataframe_from_dict(unwrapped, schema, eager_namespace(impl))
 
-        ns = F._eager_namespace(backend)
+        ns = eager_namespace(backend)
         return _dataframe_from_dict(data, schema, ns)
 
     @overload

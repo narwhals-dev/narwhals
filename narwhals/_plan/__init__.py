@@ -26,18 +26,21 @@ from narwhals._plan.functions import (
     min,
     min_horizontal,
     nth,
+    sum,
+    sum_horizontal,
+)
+from narwhals._plan.io import (
     read_csv,
     read_csv_schema,
     read_parquet,
     read_parquet_schema,
+    scan_csv,
     scan_parquet,
-    sum,
-    sum_horizontal,
-    when,
 )
 from narwhals._plan.lazyframe import LazyFrame
 from narwhals._plan.selectors import Selector
 from narwhals._plan.series import Series
+from narwhals._plan.when_then import when
 
 __all__ = [
     "DataFrame",
@@ -71,6 +74,7 @@ __all__ = [
     "read_csv_schema",
     "read_parquet",
     "read_parquet_schema",
+    "scan_csv",
     "scan_parquet",
     "selectors",
     "sum",

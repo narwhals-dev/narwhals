@@ -36,11 +36,11 @@ if TYPE_CHECKING:
     SubList: TypeAlias = list[T] | list[T | None] | list[None] | None
 
 
-def first(*names: str | Sequence[str]) -> nwp.Expr:
+def first(*names: str) -> nwp.Expr:
     return nwp.col(*names).first()
 
 
-def last(*names: str | Sequence[str]) -> nwp.Expr:
+def last(*names: str) -> nwp.Expr:
     return nwp.col(*names).last()
 
 
