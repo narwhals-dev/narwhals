@@ -21,6 +21,7 @@ from narwhals._plan._expansion import (
     expand_selector_irs_names,
     prepare_projection,
 )
+from narwhals._plan._namespace import known_implementation
 from narwhals._plan.common import temp, todo
 from narwhals._plan.dtypes_mapper import IDX_DTYPE
 from narwhals._plan.exceptions import (
@@ -31,7 +32,6 @@ from narwhals._plan.plans import resolved as rp
 from narwhals._plan.schema import FrozenSchema, freeze_schema
 from narwhals._typing import IntoBackend
 from narwhals._utils import (
-    Implementation,
     Version,
     check_column_names_are_unique as raise_duplicate_error,
     zip_strict,
@@ -44,14 +44,13 @@ if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
 
     from narwhals._plan._expr_ir import NamedIR
+    from narwhals._plan._namespace import KnownImpl
     from narwhals._plan.compliant.typing import Native
     from narwhals._plan.plans import logical as lp
     from narwhals._plan.typing import Seq
-    from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
     from narwhals.dtypes import DType
     from narwhals.typing import Backend, IntoBackend
 
-    KnownImpl: TypeAlias = _EagerAllowedImpl | _LazyAllowedImpl
 
 __all__ = ["Resolver"]
 
@@ -183,18 +182,6 @@ def _with_supertypes(plan: rp.ResolvedPlan, casts: Seq[Cast]) -> rp.WithColumns:
     return rp.WithColumns(input=plan, exprs=casts, output_schema=freeze_schema(schema))
 
 
-# NOTE: Eventually need to add a different way in for that
-def _from_backend_ensure_known(
-    backend: IntoBackend[Backend] | Incomplete, /
-) -> KnownImpl:
-    """Reject the possibility of plugins via this path."""
-    impl = Implementation.from_backend(backend)
-    if impl is Implementation.UNKNOWN:
-        msg = f"{impl!r} is not supported in this context"
-        raise NotImplementedError(msg)
-    return impl
-
-
 class Resolver:
     """Default conversion from `LogicalPlan` into `ResolvedPlan`.
 
@@ -211,7 +198,7 @@ class Resolver:
     @classmethod
     def from_backend(cls, backend: IntoBackend[Backend] | Incomplete, /) -> Self:
         obj = cls.__new__(cls)
-        obj.implementation = _from_backend_ensure_known(backend)
+        obj.implementation = known_implementation(backend)
         return obj
 
     def to_resolved(self, plan: lp.LogicalPlan, /) -> rp.ResolvedPlan:

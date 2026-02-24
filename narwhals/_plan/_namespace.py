@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from narwhals._plan.compliant.namespace import CompliantNamespace, EagerNamespace
     from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._plan.typing import NativeDataFrameT, NativeSeriesT
-    from narwhals._typing import Arrow
+    from narwhals._typing import Arrow, _EagerAllowedImpl, _LazyAllowedImpl
     from narwhals.typing import Backend, EagerAllowed, IntoBackend
 
     # NOTE: Use when you have a function that calls a namespace method, and eventually returns:
@@ -25,6 +25,9 @@ if TYPE_CHECKING:
         Any,
         Any,
     ]
+
+KnownImpl: TypeAlias = "_EagerAllowedImpl | _LazyAllowedImpl"
+"""Equivalent to `Backend - BackendName`."""
 
 
 def namespace(backend: IntoBackend[Backend]) -> CompliantNamespace[Any, Any, Any]:
@@ -51,3 +54,13 @@ def eager_namespace(
         raise NotImplementedError(impl)
     msg = f"{impl} support in Narwhals is lazy-only"
     raise ValueError(msg)
+
+
+# TODO @dangotbanned: Need to be able to store a closure for getting namespaces
+def known_implementation(backend: IntoBackend[Backend] | Any) -> KnownImpl:
+    """Reject the possibility of plugins via this path."""
+    impl = Implementation.from_backend(backend)
+    if impl is Implementation.UNKNOWN:
+        msg = f"{impl!r} is not supported in this context, got:\n{backend!r}"
+        raise NotImplementedError(msg)
+    return impl
