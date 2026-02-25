@@ -31,7 +31,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals._plan._expr_ir import NamedIR
-    from narwhals._plan.compliant.lazyframe import CompliantLazyFrame  # noqa: F401
+    from narwhals._plan.compliant.lazyframe import CompliantLazyFrame
     from narwhals._plan.dataframe import DataFrame  # noqa: F401
     from narwhals._plan.options import (
         ExplodeOptions,
@@ -78,7 +78,9 @@ class ResolvedPlan(_BasePlan[_Fwd], _root=True):
         return Select(input=self, exprs=exprs, output_schema=output_schema)
 
     # or maybe `execute`?
-    def evaluate(self, evaluator: ResolvedToCompliant | Incomplete, /) -> Incomplete:
+    def evaluate(
+        self, evaluator: ResolvedToCompliant[Native] | Incomplete, /
+    ) -> CompliantLazyFrame[Native] | Incomplete:
         """Evaluate this `ResolvedPlan`.
 
         This is not the same as materializing, unless called on a `Sink` node
@@ -99,6 +101,9 @@ class Scan(ResolvedPlan, has_inputs=False):
         yield from ()
 
 
+# TODO @dangotbanned: The inputs need to be typed as not allowing a `Sink`
+# This is enforced at `LogicalPlan._sink`, but not having the typing means everything needs to check
+# if it got a lazyframe or none or dataframe
 class SingleInput(ResolvedPlan, has_inputs=True):
     __slots__ = ("input",)
     input: ResolvedPlan
@@ -132,7 +137,7 @@ class Collect(Sink):
     kwds: ClosedKwds
 
     def evaluate(
-        self, evaluator: ResolvedToCompliant, /
+        self, evaluator: ResolvedToCompliant[Incomplete], /
     ) -> CompliantDataFrameAny:  # pragma: no cover
         return evaluator.collect(self)
 
@@ -142,7 +147,11 @@ class SinkFile(Sink):
     target: str
 
 
-class SinkParquet(SinkFile): ...
+class SinkParquet(SinkFile):
+    def evaluate(
+        self, evaluator: ResolvedToCompliant[Incomplete], /
+    ) -> None:  # pragma: no cover
+        return evaluator.sink_parquet(self)
 
 
 class ScanFile(Scan):
@@ -159,10 +168,18 @@ class ScanFile(Scan):
         return self.output_schema
 
 
-class ScanCsv(ScanFile): ...
+class ScanCsv(ScanFile):
+    def evaluate(
+        self, evaluator: ResolvedToCompliant[Native], /
+    ) -> CompliantLazyFrame[Native]:  # pragma: no cover
+        return evaluator.scan_csv(self)
 
 
-class ScanParquet(ScanFile): ...
+class ScanParquet(ScanFile):
+    def evaluate(
+        self, evaluator: ResolvedToCompliant[Native], /
+    ) -> CompliantLazyFrame[Native]:  # pragma: no cover
+        return evaluator.scan_parquet(self)
 
 
 class ScanFrame(Scan, Generic[FrameT]):
@@ -188,8 +205,17 @@ class ScanDataFrame(ScanFrame["DataFrame[Any, Any]"]):
     def __immutable_values__(self) -> Iterator[Any]:  # pragma: no cover
         yield from (id(self.frame), self.output_schema)
 
+    def evaluate(
+        self, evaluator: ResolvedToCompliant[Native], /
+    ) -> CompliantLazyFrame[Native]:  # pragma: no cover
+        return evaluator.scan_dataframe(self)
 
-class ScanLazyFrame(ScanFrame["CompliantLazyFrame[Native]"], Generic[Native]): ...
+
+class ScanLazyFrame(ScanFrame["CompliantLazyFrame[Native]"], Generic[Native]):
+    def evaluate(
+        self, evaluator: ResolvedToCompliant[Native] | Incomplete, /
+    ) -> CompliantLazyFrame[Native]:  # pragma: no cover
+        return evaluator.scan_lazyframe(self)
 
 
 # `IR::SimpleProjection`

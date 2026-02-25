@@ -2,14 +2,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Protocol, TypeVar
 
+from narwhals._plan.compliant.typing import Native
+
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals._plan.compliant.lazyframe import CompliantLazyFrame
-    from narwhals._plan.compliant.typing import (
-        DataFrameAny as CompliantDataFrameAny,
-        Native,
-    )
+    from narwhals._plan.compliant.typing import DataFrameAny as CompliantDataFrameAny
     from narwhals._plan.plans import logical as lp, resolved as rp
     from narwhals._plan.plans.resolved import ResolvedPlan
 
@@ -59,7 +58,7 @@ class LogicalToResolved(LogicalVisitor["ResolvedPlan"], Protocol):
         return plan.function.resolve(self, plan)
 
 
-class ResolvedToCompliant(Protocol):
+class ResolvedToCompliant(Protocol[Native]):
     """`ResolverPlan` -> `...` evaluator?
 
     This would be like narwhals -> compliant is now.
@@ -67,10 +66,10 @@ class ResolvedToCompliant(Protocol):
 
     def collect(self, plan: rp.Collect, /) -> CompliantDataFrameAny: ...
     # TODO @dangotbanned: `lp.Scan*[Native]` -> `rp.Scan*[Native]` -> `CompliantLazyFrame[Native]`
-    def scan_csv(self, plan: rp.ScanCsv, /) -> CompliantLazyFrame[Any]: ...
-    def scan_dataframe(self, plan: rp.ScanDataFrame, /) -> CompliantLazyFrame[Any]: ...
+    def scan_csv(self, plan: rp.ScanCsv, /) -> CompliantLazyFrame[Native]: ...
+    def scan_dataframe(self, plan: rp.ScanDataFrame, /) -> CompliantLazyFrame[Native]: ...
     def scan_lazyframe(
         self, plan: rp.ScanLazyFrame[Native], /
     ) -> CompliantLazyFrame[Native]: ...
-    def scan_parquet(self, plan: rp.ScanParquet, /) -> CompliantLazyFrame[Any]: ...
+    def scan_parquet(self, plan: rp.ScanParquet, /) -> CompliantLazyFrame[Native]: ...
     def sink_parquet(self, plan: rp.SinkParquet, /) -> None: ...
