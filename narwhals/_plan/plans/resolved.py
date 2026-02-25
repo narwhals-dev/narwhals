@@ -373,10 +373,22 @@ class ResolvedFunction(Immutable):
     __slots__ = ("output_schema",)
     output_schema: FrozenSchema
 
+    def evaluate(
+        self, evaluator: ResolvedToCompliant[Native], plan: MapFunction[Incomplete], /
+    ) -> CompliantLazyFrame[Native]:
+        """Evaluate this `ResolvedPlan`."""
+        msg = f"TODO: `{type(self).__name__}.evaluate`"
+        raise NotImplementedError(msg)
+
 
 class RowIndex(ResolvedFunction):
     __slots__ = ("name",)
     name: str
+
+    def evaluate(
+        self, evaluator: ResolvedToCompliant[Native], plan: MapFunction[RowIndex], /
+    ) -> CompliantLazyFrame[Native]:
+        return evaluator.with_row_index(plan)
 
 
 class Unnest(ResolvedFunction):
@@ -385,11 +397,21 @@ class Unnest(ResolvedFunction):
     __slots__ = ("columns",)
     columns: Seq[str]
 
+    def evaluate(
+        self, evaluator: ResolvedToCompliant[Native], plan: MapFunction[Unnest], /
+    ) -> CompliantLazyFrame[Native]:
+        return evaluator.unnest(plan)
+
 
 class Explode(ResolvedFunction):
     __slots__ = ("columns", "options")
     columns: Seq[str]
     options: ExplodeOptions
+
+    def evaluate(
+        self, evaluator: ResolvedToCompliant[Native], plan: MapFunction[Explode], /
+    ) -> CompliantLazyFrame[Native]:
+        return evaluator.explode(plan)
 
 
 class Unpivot(ResolvedFunction):
@@ -397,3 +419,8 @@ class Unpivot(ResolvedFunction):
     on: Seq[str]
     index: Seq[str]
     options: UnpivotOptions
+
+    def evaluate(
+        self, evaluator: ResolvedToCompliant[Native], plan: MapFunction[Unpivot], /
+    ) -> CompliantLazyFrame[Native]:
+        return evaluator.unpivot(plan)

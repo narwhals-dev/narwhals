@@ -76,6 +76,14 @@ class ResolvedToCompliant(Protocol[Native]):
         backend: EagerAllowed | None = None,
         version: Version = Version.MAIN,
     ) -> CompliantDataFrameAny: ...
+    def explode(
+        self, plan: rp.MapFunction[rp.Explode], /
+    ) -> CompliantLazyFrame[Native]: ...
+    def map_function(
+        self, plan: rp.MapFunction[rp.ResolvedFunctionT], /
+    ) -> CompliantLazyFrame[Native]:
+        return plan.function.evaluate(self, plan)
+
     @classmethod
     def sink_parquet(
         cls, plan: rp.SinkParquet, /, version: Version = Version.MAIN
@@ -90,3 +98,12 @@ class ResolvedToCompliant(Protocol[Native]):
     def select_names(self, plan: rp.SelectNames, /) -> CompliantLazyFrame[Native]: ...
     def slice(self, plan: rp.Slice, /) -> CompliantLazyFrame[Native]: ...
     def sort(self, plan: rp.Sort, /) -> CompliantLazyFrame[Native]: ...
+    def unnest(
+        self, plan: rp.MapFunction[rp.Unnest], /
+    ) -> CompliantLazyFrame[Native]: ...
+    def unpivot(
+        self, plan: rp.MapFunction[rp.Unpivot], /
+    ) -> CompliantLazyFrame[Native]: ...
+    def with_row_index(
+        self, plan: rp.MapFunction[rp.RowIndex], /
+    ) -> CompliantLazyFrame[Native]: ...

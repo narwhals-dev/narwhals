@@ -140,3 +140,33 @@ class PolarsWhatever(ResolvedToCompliant[pl.LazyFrame]):
                 plan.by, descending=opts.descending, nulls_last=opts.nulls_last
             )
         )
+
+    # TODO @dangotbanned: Add version branching for False in `Explode.options`
+    # Default is backwards compatible
+    def explode(self, plan: rp.MapFunction[rp.Explode]) -> PolarsLazyFrame:
+        f = plan.function
+        opts = f.options
+        if not (opts.empty_as_null or opts.keep_nulls):
+            msg = f"TODO @dangotbanned: Add version branching for False in `Explode.options`, got: {opts}"
+            raise NotImplementedError(msg)
+        return self._into_compliant(plan.input.evaluate(self).native.explode(f.columns))
+
+    def unnest(self, plan: rp.MapFunction[rp.Unnest]) -> PolarsLazyFrame:
+        f = plan.function
+        return self._into_compliant(plan.input.evaluate(self).native.unnest(f.columns))
+
+    def unpivot(self, plan: rp.MapFunction[rp.Unpivot]) -> PolarsLazyFrame:
+        f = plan.function
+        return self._into_compliant(
+            plan.input.evaluate(self).native.unpivot(
+                f.on,
+                index=f.index,
+                variable_name=f.options.variable_name,
+                value_name=f.options.value_name,
+            )
+        )
+
+    def with_row_index(self, plan: rp.MapFunction[rp.RowIndex]) -> PolarsLazyFrame:
+        return self._into_compliant(
+            plan.input.evaluate(self).native.with_row_index(plan.function.name)
+        )
