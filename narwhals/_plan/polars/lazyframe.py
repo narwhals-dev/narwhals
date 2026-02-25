@@ -122,6 +122,9 @@ class PolarsWhatever(ResolvedToCompliant[pl.LazyFrame]):
     def scan_parquet(self, plan: rp.ScanParquet) -> PolarsLazyFrame:
         return self._into_compliant(pl.scan_parquet(plan.source))
 
+    def select_names(self, plan: rp.SelectNames) -> PolarsLazyFrame:
+        return self._into_compliant(plan.input.evaluate(self).native.select(plan.names))
+
     def slice(self, plan: rp.Slice) -> PolarsLazyFrame:
         # NOTE: This is just `head`/`tail`
         # `duckdb` & `ibis` support this as `limit`
