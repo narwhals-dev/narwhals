@@ -212,7 +212,7 @@ class Resolver:
         return self.to_resolved(plan).schema
 
     def collect(self, plan: lp.Collect, /) -> rp.Collect:
-        return rp.Collect(input=self.to_resolved(plan.input))
+        return rp.Collect(input=self.to_resolved(plan.input), kwds=plan.kwds)
 
     def concat_horizontal(self, plan: lp.HConcat, /) -> rp.HConcat:
         inputs = tuple(self.to_resolved(input) for input in plan.inputs)

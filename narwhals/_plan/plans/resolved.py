@@ -18,11 +18,11 @@ from typing import TYPE_CHECKING, Any, Generic
 
 from narwhals._plan import expressions as ir
 from narwhals._plan._immutable import Immutable
-from narwhals._plan.compliant.typing import Native
+from narwhals._plan.compliant.typing import DataFrameAny as CompliantDataFrameAny, Native
 from narwhals._plan.plans._base import _BasePlan
 from narwhals._plan.plans.typing import FrameT
 from narwhals._plan.schema import freeze_schema
-from narwhals._plan.typing import Seq
+from narwhals._plan.typing import ClosedKwds, Seq
 from narwhals._typing_compat import TypeVar
 
 if TYPE_CHECKING:
@@ -41,10 +41,11 @@ if TYPE_CHECKING:
         UniqueOptions,
         UnpivotOptions,
     )
+    from narwhals._plan.plans.visitors import ResolvedToCompliant
     from narwhals._plan.schema import FrozenSchema
     from narwhals._utils import Implementation
 
-
+Incomplete: TypeAlias = Any
 _Fwd: TypeAlias = "ResolvedPlan"
 _InputsT = TypeVar("_InputsT", bound="Seq[ResolvedPlan]")
 ResolvedFunctionT = TypeVar(
@@ -75,6 +76,19 @@ class ResolvedPlan(_BasePlan[_Fwd], _root=True):
         exprs = tuple(ir.named_ir(mapping.get(old, old), ir.col(old)) for old in schema)
         output_schema = freeze_schema(zip((e.name for e in exprs), schema.values()))
         return Select(input=self, exprs=exprs, output_schema=output_schema)
+
+    # or maybe `execute`?
+    def evaluate(self, evaluator: ResolvedToCompliant | Incomplete, /) -> Incomplete:
+        """Evaluate this `ResolvedPlan`.
+
+        This is not the same as materializing, unless called on a `Sink` node
+        (e.g. `Collect`).
+
+        For example, you could call evaluate on the resolved plan of `lf.select().with_columns()`
+        which should not materialize.
+        """
+        msg = f"TODO: `{type(self).__name__}.evaluate`"
+        raise NotImplementedError(msg)
 
 
 class Scan(ResolvedPlan, has_inputs=False):
@@ -113,7 +127,14 @@ class MultipleInputs(ResolvedPlan, Generic[_InputsT], has_inputs=True):
 class Sink(SingleInput): ...
 
 
-class Collect(Sink): ...
+class Collect(Sink):
+    __slots__ = ("kwds",)
+    kwds: ClosedKwds
+
+    def evaluate(
+        self, evaluator: ResolvedToCompliant, /
+    ) -> CompliantDataFrameAny:  # pragma: no cover
+        return evaluator.collect(self)
 
 
 class SinkFile(Sink):

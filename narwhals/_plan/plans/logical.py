@@ -26,7 +26,7 @@ from narwhals._plan.options import (
 from narwhals._plan.plans._base import _BasePlan
 from narwhals._plan.plans.typing import FrameT
 from narwhals._plan.schema import freeze_schema
-from narwhals._plan.typing import Seq
+from narwhals._plan.typing import ClosedKwds, Seq
 from narwhals._typing import _LazyAllowedImpl
 from narwhals._typing_compat import TypeVar
 from narwhals._utils import (
@@ -374,8 +374,8 @@ class LogicalPlan(_BasePlan[_Fwd], _root=True):
         )
 
     # Terminal
-    def collect(self) -> Collect:  # pragma: no cover
-        return self._sink(Collect(input=self))
+    def collect(self, kwds: ClosedKwds) -> Collect:  # pragma: no cover
+        return self._sink(Collect(input=self, kwds=kwds))
 
     # TODO @dangotbanned: Handle `BytesIO`
     def sink_parquet(self, target: FileSource | BytesIO) -> SinkParquet:
@@ -582,6 +582,9 @@ class Sink(SingleInput):
 
 
 class Collect(Sink):
+    __slots__ = ("kwds",)
+    kwds: ClosedKwds
+
     def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:  # pragma: no cover
         return resolver.collect(self)
 

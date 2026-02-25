@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
     from narwhals._plan.compliant.dataframe import CompliantDataFrame
     from narwhals._plan.dataframe import DataFrame as NwDataFrame
-    from narwhals._plan.plans import logical as lp
+    from narwhals._plan.plans import ResolvedPlan, logical as lp
     from narwhals._translate import ArrowStreamExportable, IntoArrowTable
     from narwhals.schema import Schema
     from narwhals.typing import EagerAllowed, IntoBackend
@@ -146,6 +146,8 @@ class CompliantLazyFrame(NarwhalsHash, Protocol[Native]):
         msg = f"Unsupported `backend` value.\nExpected one of {get_args(_LazyFrameCollectImpl)} or None, got: {impl}."
         raise TypeError(msg)
 
+    @classmethod
+    def from_resolved(cls, plan: ResolvedPlan, /) -> Self: ...
     @property
     def input_schema(self) -> Schema:
         """Schema at the time of construction."""

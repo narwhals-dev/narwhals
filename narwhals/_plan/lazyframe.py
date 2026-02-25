@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING, Any, ClassVar, Generic
 
 from narwhals._exceptions import issue_warning
 from narwhals._plan import _parse, translate
+from narwhals._plan._namespace import KnownImpl, known_implementation
+from narwhals._plan.common import closed_kwds
 from narwhals._plan.compliant.typing import FromNative, Native
 from narwhals._plan.group_by import LazyGroupBy
 from narwhals._plan.options import (
@@ -22,11 +24,11 @@ if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
     from io import BytesIO
 
-    from typing_extensions import Self
+    from typing_extensions import Self, TypeAlias
 
     from narwhals._plan.compliant.lazyframe import CompliantLazyFrame
     from narwhals._plan.dataframe import DataFrame
-    from narwhals._plan.plans import LogicalPlan, logical as lp
+    from narwhals._plan.plans import LogicalPlan, ResolvedPlan, logical as lp
     from narwhals._plan.series import Series
     from narwhals._plan.typing import (
         ColumnNameOrSelector,
@@ -34,14 +36,29 @@ if TYPE_CHECKING:
         IntoExprColumn,
         OneOrIterable,
     )
+    from narwhals._typing import Arrow, Pandas, Polars
     from narwhals.schema import Schema
     from narwhals.typing import (
         AsofJoinStrategy,
         FileSource,
+        IntoBackend,
         JoinStrategy,
         PivotAgg,
         UniqueKeepStrategy,
     )
+
+Incomplete: TypeAlias = Any
+
+
+def evaluator(plan: ResolvedPlan, backend: KnownImpl | None) -> Incomplete:
+    # need to pick where this combination dispatches to
+    # so `ResolvedPlan` or `Resolver` will have the original `Implementation`, to use when None
+    raise NotImplementedError
+
+
+def to_compliant(plan: ResolvedPlan, backend: KnownImpl | None) -> Incomplete:
+    msg = "TODO @dangotbanned: (plan:ResolvedPlan, backend:KnownImpl | None) -> CompliantLazyFrame.from_resolved?"
+    raise NotImplementedError(msg)
 
 
 # TODO @dangotbanned: Figure out `from_native` + remove `self._compliant`
@@ -89,7 +106,6 @@ class LazyFrame(Generic[Native]):
 
     _compliant: CompliantLazyFrame[Native]
     to_native = not_implemented()  # look into this *after* `collect`
-    collect = not_implemented()  # depends on resolving everything else
 
     @property
     def version(self) -> Version:  # pragma: no cover
@@ -304,6 +320,31 @@ class LazyFrame(Generic[Native]):
             .collect_schema(self._plan)
             .to_narwhals(self._version)
         )
+
+    def collect(
+        self, backend: IntoBackend[Polars | Pandas | Arrow] | None = None, **kwds: Any
+    ) -> DataFrame[Any]:  # pragma: no cover
+        """WIP.
+
+        Expecting this to look like:
+
+            # raises early, even though we won't be using for a while
+            impl = known_implementation(backend) if backend else None
+
+            logical = self._plan.collect(closed_kwds(**kwds))
+            resolved = Resolver.from_backend(self.implementation).to_resolved(plan)
+
+            evaluated: CompliantDataFrame = resolved.to_compliant(impl)
+            # this will become                       ^^^^^^^^^^^^
+            # ResolvedPlan().evaluate(<what is now Compliant{LazyFrame,Namespace}>)
+
+        """
+        # `CompliantLazyFrame.collect_narwhals` sort of has the next step
+        impl_evaluate = known_implementation(backend) if backend else None  # noqa: F841
+        plan = self._plan.collect(closed_kwds(**kwds))
+        resolved = Resolver.from_backend(self.implementation).to_resolved(plan)  # noqa: F841
+        # depends on resolving everything else
+        raise NotImplementedError
 
     def sort(
         self,
