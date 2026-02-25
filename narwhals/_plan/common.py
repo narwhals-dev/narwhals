@@ -3,10 +3,12 @@ from __future__ import annotations
 import datetime as dt
 import sys
 from collections.abc import Iterable
+from copy import deepcopy
 from decimal import Decimal
 from io import BytesIO
 from secrets import token_hex
-from typing import TYPE_CHECKING, cast, overload
+from types import MappingProxyType
+from typing import TYPE_CHECKING, Literal, cast, overload
 
 from narwhals._plan._guards import is_iterable_reject
 from narwhals._utils import _hasattr_static, qualified_type_name
@@ -19,11 +21,12 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
     from typing import Any, ClassVar, TypeVar
 
-    from typing_extensions import TypeIs
+    from typing_extensions import TypeAlias, TypeIs
 
     from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._plan.series import Series
     from narwhals._plan.typing import (
+        ClosedKwds,
         ColumnNameOrSelector,
         DTypeT,
         NonNestedDTypeT,
@@ -320,3 +323,134 @@ class todo:  # pragma: no cover  # noqa: N801
     def __call__(self, *args: Any, **kwds: Any) -> Any:
         msg = "Stop being clever!"
         raise NotImplementedError(msg)
+
+
+_Proxy: TypeAlias = "MappingProxyType[str, Any]"
+
+
+def closed_kwds(
+    strategy: Literal["reusable", "single_copy", "zero_copy"] = "zero_copy", **kwds: Any
+) -> ClosedKwds:
+    """Create a callable that returns *closed-over* keyword-only arguments.
+
+    Arguments:
+        strategy: {"reusable", "single_copy", "zero_copy"}
+
+            Strategy to balance mutability and memory usage.
+
+            - *"reusable"*: Updates to mutable *results* persist only for the result of the **current** call.
+            - *"single_copy"*: Updates to mutable *results* will be reflected across **all** calls.
+            - *"zero_copy"*: Updates to mutable *arguments* or the *results* will be reflected across **all** calls.
+        **kwds: Arbitrary keyword-only arguments.
+
+    Examples:
+        By default, this provides a lightweight wrapper for unhashable objects:
+
+        >>> f = closed_kwds(a={"mutable": [1, 2, 3]}, b=[4, 5, 6])
+        >>> hash(f) == hash(f)
+        True
+
+        >>> f == f
+        True
+
+        >>> f()
+        {'a': {'mutable': [1, 2, 3]}, 'b': [4, 5, 6]}
+
+        `strategy` comparison:
+
+        >>> def show_mutation(
+        ...     strategy: Literal["reusable", "single_copy", "zero_copy"],
+        ...     mutable: list[int],
+        ... ) -> None:
+        ...     function = closed_kwds(strategy, a="dog", b=mutable)
+        ...     result = function()
+        ...     print("First result    :", result)
+        ...     mutable.append(2)
+        ...     print("Mutated argument:", result)
+        ...     result["b"].append(3)
+        ...     print("Mutated result  :", result)
+        ...     print("Second result   :", function())
+
+        `"zero_copy"` may be reasonable if any of these apply:
+        - all arguments are immutable
+        - their types do not support `copy.deepcopy`
+        - making a single copy would be prohibitive
+
+        >>> show_mutation("zero_copy", [1])
+        First result    : {'a': 'dog', 'b': [1]}
+        Mutated argument: {'a': 'dog', 'b': [1, 2]}
+        Mutated result  : {'a': 'dog', 'b': [1, 2, 3]}
+        Second result   : {'a': 'dog', 'b': [1, 2, 3]}
+
+        `"single_copy"` provides some extra safety and should be considered if:
+        - at least one argument may be mutable
+        - the returned function will only be called once
+        - the result of the function will not be mutated
+
+        >>> show_mutation("single_copy", [1])
+        First result    : {'a': 'dog', 'b': [1]}
+        Mutated argument: {'a': 'dog', 'b': [1]}
+        Mutated result  : {'a': 'dog', 'b': [1, 3]}
+        Second result   : {'a': 'dog', 'b': [1, 3]}
+
+        `"reusable"` is both the safest and most expensive strategy, consider if:
+        - both mutable arguments and updates to them are expected
+        - the returned function will be called multiple times, and each should
+            be isolated from previous calls
+        - the cost of `copy.deepcopy`(s) is small/irrelevant
+
+        >>> show_mutation("reusable", [1])
+        First result    : {'a': 'dog', 'b': [1]}
+        Mutated argument: {'a': 'dog', 'b': [1]}
+        Mutated result  : {'a': 'dog', 'b': [1, 3]}
+        Second result   : {'a': 'dog', 'b': [1]}
+    """
+    if not kwds:
+        return _closed_kwds_empty
+    if strategy == "zero_copy":
+        return _closed_kwds_impl(kwds, copy=False)
+    if strategy == "single_copy":
+        return _closed_kwds_impl(kwds, copy=True)
+    return _closed_kwds_reusable_impl(kwds)
+
+
+_EMPTY_MAPPING_PROXY: _Proxy = MappingProxyType({})
+
+
+def _closed_kwds_empty() -> _Proxy:
+    return _EMPTY_MAPPING_PROXY
+
+
+def _closed_kwds_impl(mapping: dict[str, Any] | _Proxy, /, *, copy: bool) -> ClosedKwds:
+    # NOTE: `proxy` is assigned like this so `_.__closure__` has 1 cell and is not a `dict`
+    proxy = MappingProxyType(
+        mapping
+        if not copy
+        else deepcopy(mapping if isinstance(mapping, dict) else mapping.copy())
+    )
+
+    def _() -> _Proxy:
+        return proxy
+
+    return _
+
+
+def _closed_kwds_reusable_impl(mapping: dict[str, Any], /) -> ClosedKwds:
+    # ensure the next call produces the original `mapping`, while removing the input from this scope
+    next_copy = _closed_kwds_impl(mapping, copy=True)
+    del mapping
+
+    def iter_clone() -> Iterator[_Proxy]:
+        # infinte generator, maintaining the `next_copy` and exposing already deepcopy'd output
+        nonlocal next_copy
+        while True:
+            out = next_copy()
+            next_copy = _closed_kwds_impl(out, copy=True)
+            yield out
+
+    clones = iter(iter_clone())
+
+    def _() -> _Proxy:
+        return next(clones)
+
+    return _

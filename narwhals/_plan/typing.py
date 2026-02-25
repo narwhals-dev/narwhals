@@ -8,6 +8,7 @@ from narwhals._typing_compat import TypeVar
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
+    from types import MappingProxyType
 
     from typing_extensions import TypeAlias
 
@@ -150,7 +151,11 @@ SeriesT = TypeVar("SeriesT", bound="Series[t.Any]")
 Order: TypeAlias = t.Literal["ascending", "descending"]
 NonCrossJoinStrategy: TypeAlias = t.Literal["inner", "left", "full", "semi", "anti"]
 PartialSeries: TypeAlias = "Callable[[Iterable[t.Any]], Series[NativeSeriesAnyT]]"
+ClosedKwds: TypeAlias = "Callable[[], MappingProxyType[str, t.Any]]"
+"""A zero-argument callable that produces *closed-over* keyword arguments.
 
+The return type of `closed_kwds`.
+"""
 
 Ignored: TypeAlias = Container[str]
 """Names of `group_by` columns, which are excluded[^1] when expanding a `Selector`.
