@@ -77,6 +77,9 @@ class PolarsWhatever(ResolvedToCompliant[pl.LazyFrame]):
     __slots__ = ("_version",)
     _version: Version
 
+    def __init__(self, version: Version = Version.MAIN) -> None:
+        self._version = version
+
     @classmethod
     def collect(
         cls,
@@ -85,10 +88,16 @@ class PolarsWhatever(ResolvedToCompliant[pl.LazyFrame]):
         backend: EagerAllowed | None = None,
         version: Version = Version.MAIN,
     ) -> DataFrameAny:
-        self = cls.__new__(cls)
-        self._version = version
         kwds = plan.kwds()
-        return plan.input.evaluate(self).collect_compliant(backend or "polars", **kwds)
+        return plan.input.evaluate(cls(version)).collect_compliant(
+            backend or "polars", **kwds
+        )
+
+    @classmethod
+    def sink_parquet(
+        cls, plan: rp.SinkParquet, /, version: Version = Version.MAIN
+    ) -> None:
+        plan.input.evaluate(cls(version)).native.sink_parquet(plan.target)
 
     def scan_csv(self, plan: rp.ScanCsv) -> PolarsLazyFrame:
         return PolarsLazyFrame.from_native(pl.scan_csv(plan.source))
@@ -105,6 +114,3 @@ class PolarsWhatever(ResolvedToCompliant[pl.LazyFrame]):
 
     def scan_parquet(self, plan: rp.ScanParquet) -> PolarsLazyFrame:
         return PolarsLazyFrame.from_native(pl.scan_parquet(plan.source))
-
-    def sink_parquet(self, plan: rp.SinkParquet) -> None:
-        plan.input.evaluate(self).native.sink_parquet(plan.target)

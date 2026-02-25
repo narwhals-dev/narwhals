@@ -134,15 +134,26 @@ class MultipleInputs(ResolvedPlan, Generic[_InputsT], has_inputs=True):
         yield from self.inputs
 
 
-class Sink(SingleInput): ...
+class Sink(SingleInput):
+    def evaluate(
+        self, evaluator: ResolvedToCompliant[Any], /
+    ) -> Incomplete:  # pragma: no cover
+        from narwhals._plan._dispatch import _pascal_to_snake_case
+
+        evaluator_name = type(evaluator).__name__
+        node_name = type(self).__name__
+        method = _pascal_to_snake_case(node_name)
+        msg = (
+            f"`Sink` nodes do not support `evaluate()`.\n"
+            f"Instead of calling: `{node_name}.evaluate({evaluator_name})\n"
+            f"Try: `{evaluator_name}.{method}({node_name}, ...)"
+        )
+        raise InvalidOperationError(msg)
 
 
 class Collect(Sink):
     __slots__ = ("kwds",)
     kwds: ClosedKwds
-
-    def evaluate(self, _: Incomplete, /) -> Incomplete:  # pragma: no cover
-        raise InvalidOperationError
 
 
 class SinkFile(Sink):
@@ -150,11 +161,7 @@ class SinkFile(Sink):
     target: str
 
 
-class SinkParquet(SinkFile):
-    def evaluate(
-        self, evaluator: ResolvedToCompliant[Incomplete], /
-    ) -> None:  # pragma: no cover
-        return evaluator.sink_parquet(self)
+class SinkParquet(SinkFile): ...
 
 
 class ScanFile(Scan):

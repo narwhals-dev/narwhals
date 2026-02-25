@@ -278,12 +278,6 @@ class LazyFrame(Generic[Native]):
         e_irs = _parse.parse_into_seq_of_expr_ir(*exprs, **named_exprs)
         return self._with_lp(self._plan.select(e_irs))
 
-    # TODO @dangotbanned: Figure out `LazyFrame.sink_parquet -> None`
-    def sink_parquet(self, file: FileSource | BytesIO) -> None:
-        _ = self._plan.sink_parquet(file)
-        msg = "TODO: LazyFrame.sink_parquet"
-        raise NotImplementedError(msg)
-
     # TODO @dangotbanned: Open an issue to find out why we don't have this on main?
     @property
     def columns(self) -> list[str]:  # pragma: no cover
@@ -323,6 +317,12 @@ class LazyFrame(Generic[Native]):
         logical = self._plan.collect(closed_kwds(**kwds))
         resolved = Resolver.from_backend(lazy).collect(logical)
         return evaluator(lazy).collect(resolved, eager, self.version).to_narwhals()
+
+    def sink_parquet(self, file: FileSource | BytesIO) -> None:
+        lazy = known_implementation(self.implementation)
+        logical = self._plan.sink_parquet(file)
+        resolved = Resolver.from_backend(lazy).sink_parquet(logical)
+        evaluator(lazy).sink_parquet(resolved, self.version)
 
     def sort(
         self,
