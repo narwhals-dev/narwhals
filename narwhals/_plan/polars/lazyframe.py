@@ -132,3 +132,11 @@ class PolarsWhatever(ResolvedToCompliant[pl.LazyFrame]):
         return self._into_compliant(
             plan.input.evaluate(self).native.slice(plan.offset, plan.length)
         )
+
+    def sort(self, plan: rp.Sort, /) -> PolarsLazyFrame:
+        opts = plan.options
+        return self._into_compliant(
+            plan.input.evaluate(self).native.sort(
+                plan.by, descending=opts.descending, nulls_last=opts.nulls_last
+            )
+        )
