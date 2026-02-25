@@ -1371,22 +1371,31 @@ class When:
         self._predicate = all_horizontal(*flatten(predicates), ignore_nulls=False)
 
     def then(self, value: IntoExpr | NonNestedLiteral) -> Then:
-        return Then(
-            ExprNode(
-                ExprKind.ELEMENTWISE,
-                "when_then",
-                exprs=(self._predicate, value),
-                allow_multi_output=False,
-            )
-        )
+        return Then._from_exprs(self._predicate, value)
 
 
 class Then(Expr):
-    def otherwise(self, value: IntoExpr | NonNestedLiteral) -> Expr:
-        node = self._nodes[0]
-        return Expr(
-            ExprNode(ExprKind.ELEMENTWISE, "when_then", exprs=(*node.exprs, value))
+    @classmethod
+    def _from_exprs(
+        cls,
+        predicate: Expr,
+        then_value: IntoExpr | NonNestedLiteral,
+        otherwise_value: IntoExpr | NonNestedLiteral = None,
+    ) -> Then:
+        cls._predicate = predicate
+        cls._then_value = then_value
+        cls._otherwise_value = otherwise_value
+        if otherwise_value is None:
+            exprs = (predicate, then_value)
+        else:
+            exprs = (predicate, then_value, otherwise_value)
+        node = ExprNode(
+            ExprKind.ELEMENTWISE, "when_then", exprs=exprs, allow_multi_output=False
         )
+        return cls(node)
+
+    def otherwise(self, value: IntoExpr | NonNestedLiteral) -> Expr:
+        return Then._from_exprs(self._predicate, self._then_value, value)
 
 
 def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
