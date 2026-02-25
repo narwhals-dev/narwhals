@@ -124,7 +124,7 @@ class LazyFrame(Generic[Native]):
     ) -> LazyFrame[FromNative]:
         return (
             translate.from_native_lazyframe(native)
-            .to_plan()
+            .to_logical()
             .to_narwhals(version=cls._version)
         )
 

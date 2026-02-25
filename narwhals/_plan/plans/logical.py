@@ -515,7 +515,7 @@ class ScanDataFrame(ScanFrame["DataFrame[Any, Any]"]):
             # We can avoid storing the dataframe on the graph, by letting polars do it instead
             from narwhals._plan.polars.lazyframe import PolarsLazyFrame
 
-            return PolarsLazyFrame.from_narwhals(self.frame).to_plan().to_narwhals()
+            return PolarsLazyFrame.from_narwhals(self.frame).to_logical().to_narwhals()
         if requested is current or requested is Implementation.UNKNOWN:
             # (1) Fake lazy (needs a reference to eager data)
             return into_version(version).lazyframe._from_lp_scan(self, current)
