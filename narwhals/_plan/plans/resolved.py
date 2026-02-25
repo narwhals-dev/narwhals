@@ -18,12 +18,13 @@ from typing import TYPE_CHECKING, Any, Generic
 
 from narwhals._plan import expressions as ir
 from narwhals._plan._immutable import Immutable
-from narwhals._plan.compliant.typing import DataFrameAny as CompliantDataFrameAny, Native
+from narwhals._plan.compliant.typing import Native
 from narwhals._plan.plans._base import _BasePlan
 from narwhals._plan.plans.typing import FrameT
 from narwhals._plan.schema import freeze_schema
 from narwhals._plan.typing import ClosedKwds, Seq
 from narwhals._typing_compat import TypeVar
+from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
@@ -51,6 +52,10 @@ _InputsT = TypeVar("_InputsT", bound="Seq[ResolvedPlan]")
 ResolvedFunctionT = TypeVar(
     "ResolvedFunctionT", bound="ResolvedFunction", default="ResolvedFunction"
 )
+
+# TODO @dangotbanned: Figure out how to integrate this *without* obliterating typing
+NonSink: TypeAlias = "Scan | SingleInput | MultipleInputs[Any]"
+"""Any `ResolvedPlan` node which evaluates to a `CompliantLazyFrame`."""
 
 
 class ResolvedPlan(_BasePlan[_Fwd], _root=True):
@@ -136,10 +141,8 @@ class Collect(Sink):
     __slots__ = ("kwds",)
     kwds: ClosedKwds
 
-    def evaluate(
-        self, evaluator: ResolvedToCompliant[Incomplete], /
-    ) -> CompliantDataFrameAny:  # pragma: no cover
-        return evaluator.collect(self)
+    def evaluate(self, _: Incomplete, /) -> Incomplete:  # pragma: no cover
+        raise InvalidOperationError
 
 
 class SinkFile(Sink):

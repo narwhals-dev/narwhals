@@ -16,8 +16,8 @@ if TYPE_CHECKING:
 
     from narwhals._plan.compliant.typing import DataFrameAny
     from narwhals._plan.plans import resolved as rp
-    from narwhals._plan.polars.dataframe import PolarsDataFrame
     from narwhals.schema import Schema
+    from narwhals.typing import EagerAllowed
 
 
 MAIN = Version.MAIN
@@ -68,20 +68,27 @@ class PolarsLazyFrame(PolarsFrame, CompliantLazyFrame[pl.LazyFrame]):
     collect_pandas = todo()
 
 
-def wrap_df(df: pl.DataFrame, /, version: Version = MAIN) -> PolarsDataFrame:
-    from narwhals._plan.polars.dataframe import PolarsDataFrame
-
-    return PolarsDataFrame.from_native(df, version)
-
-
 class PolarsWhatever(ResolvedToCompliant[pl.LazyFrame]):
     """No idea what to call this yet.
 
     *Somewhat* of a mix between `*Namespace` and `*LazyFrame`
     """
 
-    def collect(self, plan: rp.Collect, /) -> DataFrameAny:
-        return wrap_df(plan.input.evaluate(self).collect_polars(**plan.kwds()))
+    __slots__ = ("_version",)
+    _version: Version
+
+    @classmethod
+    def collect(
+        cls,
+        plan: rp.Collect,
+        /,
+        backend: EagerAllowed | None = None,
+        version: Version = Version.MAIN,
+    ) -> DataFrameAny:
+        self = cls.__new__(cls)
+        self._version = version
+        kwds = plan.kwds()
+        return plan.input.evaluate(self).collect_compliant(backend or "polars", **kwds)
 
     def scan_csv(self, plan: rp.ScanCsv) -> PolarsLazyFrame:
         return PolarsLazyFrame.from_native(pl.scan_csv(plan.source))

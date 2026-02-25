@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from narwhals._plan.compliant.dataframe import EagerDataFrame
     from narwhals._plan.compliant.namespace import CompliantNamespace, EagerNamespace
     from narwhals._plan.compliant.series import CompliantSeries
+    from narwhals._plan.plans.visitors import ResolvedToCompliant
     from narwhals._plan.typing import NativeDataFrameT, NativeSeriesT
     from narwhals._typing import Arrow, _EagerAllowedImpl, _LazyAllowedImpl
     from narwhals.typing import Backend, EagerAllowed, IntoBackend
@@ -45,15 +46,12 @@ def eager_namespace(backend: IntoBackend[EagerAllowed], /) -> EagerNs[Any, Any]:
 def eager_namespace(
     backend: IntoBackend[EagerAllowed], /
 ) -> EagerNs[t.Any, t.Any] | _arrow.Namespace:
-    impl = Implementation.from_backend(backend)
-    if is_eager_allowed(impl):
-        if impl is Implementation.PYARROW:
-            from narwhals._plan import arrow as _arrow
+    impl = eager_implementation(backend)
+    if impl is Implementation.PYARROW:
+        from narwhals._plan import arrow as _arrow
 
-            return _arrow.Namespace(Version.MAIN)
-        raise NotImplementedError(impl)
-    msg = f"{impl} support in Narwhals is lazy-only"
-    raise ValueError(msg)
+        return _arrow.Namespace(Version.MAIN)
+    raise NotImplementedError(impl)
 
 
 # TODO @dangotbanned: Need to be able to store a closure for getting namespaces
@@ -64,3 +62,19 @@ def known_implementation(backend: IntoBackend[Backend] | Any) -> KnownImpl:
         msg = f"{impl!r} is not supported in this context, got:\n{backend!r}"
         raise NotImplementedError(msg)
     return impl
+
+
+def eager_implementation(backend: IntoBackend[Backend] | Any) -> _EagerAllowedImpl:
+    impl = Implementation.from_backend(backend)
+    if is_eager_allowed(impl):
+        return impl
+    msg = f"{impl} support in Narwhals is lazy-only"
+    raise ValueError(msg)
+
+
+def evaluator(backend: KnownImpl) -> type[ResolvedToCompliant[Any]]:
+    if backend is Implementation.POLARS:
+        from narwhals._plan.polars.lazyframe import PolarsWhatever
+
+        return PolarsWhatever
+    raise NotImplementedError(backend)

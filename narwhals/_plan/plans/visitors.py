@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Protocol, TypeVar
 
 from narwhals._plan.compliant.typing import Native
+from narwhals._utils import Version
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
@@ -11,6 +12,7 @@ if TYPE_CHECKING:
     from narwhals._plan.compliant.typing import DataFrameAny as CompliantDataFrameAny
     from narwhals._plan.plans import logical as lp, resolved as rp
     from narwhals._plan.plans.resolved import ResolvedPlan
+    from narwhals.typing import EagerAllowed
 
 R_co = TypeVar("R_co", covariant=True)
 Incomplete: TypeAlias = Any
@@ -64,7 +66,16 @@ class ResolvedToCompliant(Protocol[Native]):
     This would be like narwhals -> compliant is now.
     """
 
-    def collect(self, plan: rp.Collect, /) -> CompliantDataFrameAny: ...
+    __slots__ = ()
+
+    @classmethod
+    def collect(
+        cls,
+        plan: rp.Collect,
+        /,
+        backend: EagerAllowed | None = None,
+        version: Version = Version.MAIN,
+    ) -> CompliantDataFrameAny: ...
     # TODO @dangotbanned: `lp.Scan*[Native]` -> `rp.Scan*[Native]` -> `CompliantLazyFrame[Native]`
     def scan_csv(self, plan: rp.ScanCsv, /) -> CompliantLazyFrame[Native]: ...
     def scan_dataframe(self, plan: rp.ScanDataFrame, /) -> CompliantLazyFrame[Native]: ...

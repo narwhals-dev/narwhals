@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, overload
 
+from narwhals._plan._version import into_version
 from narwhals._plan.compliant import io
 from narwhals._plan.compliant.group_by import Grouped
 from narwhals._plan.compliant.typing import ColumnT_co, HasVersion, LazyFrameAny, SeriesT
@@ -248,9 +249,7 @@ class CompliantDataFrame(
         self, *, as_series: bool
     ) -> dict[str, SeriesT] | dict[str, list[Any]]: ...
     def to_narwhals(self) -> DataFrame[NativeDataFrameT, NativeSeriesT]:
-        from narwhals._plan.dataframe import DataFrame
-
-        return DataFrame[NativeDataFrameT, NativeSeriesT](self)
+        return into_version(self.version).dataframe(self)
 
     def to_series(self, index: int = 0) -> SeriesT: ...
     def to_struct(self, name: str = "") -> SeriesT: ...

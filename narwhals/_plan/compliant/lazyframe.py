@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar, Protocol, get_args
 
-from narwhals._plan._version import into_version
 from narwhals._plan.compliant.typing import Native
 from narwhals._typing import _LazyFrameCollectImpl
+from narwhals._typing_compat import assert_never
 from narwhals._utils import Implementation, Version, can_lazyframe_collect
 
 if TYPE_CHECKING:
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
     from narwhals._plan.compliant.dataframe import CompliantDataFrame
     from narwhals._plan.dataframe import DataFrame as NwDataFrame
-    from narwhals._plan.plans import ResolvedPlan, logical as lp
+    from narwhals._plan.plans import logical as lp
     from narwhals._translate import ArrowStreamExportable, IntoArrowTable
     from narwhals.schema import Schema
     from narwhals.typing import EagerAllowed, IntoBackend
@@ -129,25 +129,33 @@ class CompliantLazyFrame(NarwhalsHash, Protocol[Native]):
     def from_narwhals(cls, frame: NwDataFrame[Any, Any], /) -> Self: ...
     @classmethod
     def from_compliant(cls, frame: CompliantDataFrame[Any, Any, Any], /) -> Self: ...
-    def collect_arrow(self) -> pa.Table: ...
-    def collect_pandas(self) -> pd.DataFrame: ...
+    def collect_arrow(self, **kwds: Any) -> pa.Table: ...
+    def collect_pandas(self, **kwds: Any) -> pd.DataFrame: ...
     def collect_polars(self, **kwds: Any) -> pl.DataFrame: ...
-    def collect_narwhals(
-        self, backend: IntoBackend[EagerAllowed]
-    ) -> NwDataFrame[Any, Any]:
-        mapping: CollectMap = {
-            Implementation.PANDAS: self.collect_pandas,
-            Implementation.PYARROW: self.collect_arrow,
-            Implementation.POLARS: self.collect_polars,
-        }
+    def collect_compliant(
+        self, backend: IntoBackend[EagerAllowed], **kwds: Any
+    ) -> CompliantDataFrame[Any, Any, Any]:
         impl = Implementation.from_backend(backend)
-        if can_lazyframe_collect(impl):
-            return into_version(self.version).dataframe.from_native(mapping[impl]())
-        msg = f"Unsupported `backend` value.\nExpected one of {get_args(_LazyFrameCollectImpl)} or None, got: {impl}."
-        raise TypeError(msg)
+        if not can_lazyframe_collect(impl):
+            msg = f"Unsupported `backend` value.\nExpected one of {get_args(_LazyFrameCollectImpl)} or None, got: {impl}."
+            raise TypeError(msg)
+        if impl is Implementation.PYARROW:
+            from narwhals._plan import arrow
 
-    @classmethod
-    def from_resolved(cls, plan: ResolvedPlan, /) -> Self: ...
+            return arrow.DataFrame.from_native(self.collect_arrow(**kwds), self.version)
+        if impl is Implementation.POLARS:
+            from narwhals._plan import polars
+
+            return polars.DataFrame.from_native(self.collect_polars(**kwds), self.version)
+        if impl is Implementation.PANDAS:
+            raise NotImplementedError(impl)
+        assert_never(impl)
+
+    def collect_narwhals(
+        self, backend: IntoBackend[EagerAllowed], **kwds: Any
+    ) -> NwDataFrame[Any, Any]:
+        return self.collect_compliant(backend, **kwds).to_narwhals()
+
     @property
     def input_schema(self) -> Schema:
         """Schema at the time of construction."""
