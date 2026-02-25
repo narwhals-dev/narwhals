@@ -77,6 +77,10 @@ class PolarsWhatever(ResolvedToCompliant[pl.LazyFrame]):
     __slots__ = ("_version",)
     _version: Version
 
+    @property
+    def version(self) -> Version:
+        return self._version
+
     def __init__(self, version: Version = Version.MAIN) -> None:
         self._version = version
 
@@ -99,8 +103,11 @@ class PolarsWhatever(ResolvedToCompliant[pl.LazyFrame]):
     ) -> None:
         plan.input.evaluate(cls(version)).native.sink_parquet(plan.target)
 
+    def _into_compliant(self, native: pl.LazyFrame, /) -> PolarsLazyFrame:
+        return PolarsLazyFrame.from_native(native, self.version)
+
     def scan_csv(self, plan: rp.ScanCsv) -> PolarsLazyFrame:
-        return PolarsLazyFrame.from_native(pl.scan_csv(plan.source))
+        return self._into_compliant(pl.scan_csv(plan.source))
 
     def scan_dataframe(self, plan: rp.ScanDataFrame, /) -> PolarsLazyFrame:
         return PolarsLazyFrame.from_narwhals(plan.frame)
@@ -113,4 +120,12 @@ class PolarsWhatever(ResolvedToCompliant[pl.LazyFrame]):
         raise NotImplementedError(plan.frame.implementation, type(plan.frame))
 
     def scan_parquet(self, plan: rp.ScanParquet) -> PolarsLazyFrame:
-        return PolarsLazyFrame.from_native(pl.scan_parquet(plan.source))
+        return self._into_compliant(pl.scan_parquet(plan.source))
+
+    def slice(self, plan: rp.Slice) -> PolarsLazyFrame:
+        # NOTE: This is just `head`/`tail`
+        # `duckdb` & `ibis` support this as `limit`
+        # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-lazy/src/frame/mod.rs#L1825-L1838
+        return self._into_compliant(
+            plan.input.evaluate(self).native.slice(plan.offset, plan.length)
+        )
