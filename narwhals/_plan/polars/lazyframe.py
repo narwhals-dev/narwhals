@@ -110,6 +110,17 @@ class PolarsWhatever(ResolvedToCompliant[pl.LazyFrame]):
         inputs = (input.evaluate(self).native for input in plan.inputs)
         return self._into_compliant(pl.concat(inputs, how="horizontal"))
 
+    def concat_vertical(self, plan: rp.VConcat) -> PolarsLazyFrame:
+        inputs = (input.evaluate(self).native for input in plan.inputs)
+        if not plan.maintain_order:
+            # TODO @dangotbanned: low priority, since we don't have `nw.union`
+            msg = (
+                f"TODO @dangotbanned: Add version branching for {plan.maintain_order=}\n"
+                "Should dispatch to `pl.union` or raise if not available"
+            )
+            raise NotImplementedError(msg)
+        return self._into_compliant(pl.concat(inputs, how="vertical"))
+
     def scan_csv(self, plan: rp.ScanCsv) -> PolarsLazyFrame:
         return self._into_compliant(pl.scan_csv(plan.source))
 
@@ -183,7 +194,6 @@ class PolarsWhatever(ResolvedToCompliant[pl.LazyFrame]):
             plan.input.evaluate(self).native.with_row_index(plan.function.name)
         )
 
-    concat_vertical = todo()
     filter = todo()
     group_by = todo()
     group_by_names = todo()
