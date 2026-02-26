@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import operator
-from functools import reduce
+from functools import partial, reduce
 from itertools import chain
 from typing import TYPE_CHECKING, Literal
 
@@ -18,7 +18,8 @@ from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
 )
-from narwhals._utils import Implementation
+from narwhals._utils import Implementation, safe_cast
+from narwhals.schema import Schema, merge_schemas, to_supertype
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
@@ -176,6 +177,32 @@ class ArrowNamespace(
             return pa.concat_tables(dfs, promote_options="default")
         return pa.concat_tables(dfs, promote=True)  # pragma: no cover
 
+    def _concat_diagonal_relaxed(self, dfs: Sequence[pa.Table], /) -> pa.Table:
+        native_schemas = tuple(table.schema for table in dfs)
+        out_schema = reduce(
+            merge_schemas, (Schema.from_arrow(pa_schema) for pa_schema in native_schemas)
+        )
+        to_schemas = (
+            {
+                name: dtype
+                for name, dtype in out_schema.items()
+                if name in native_schema.names
+            }
+            for native_schema in native_schemas
+        )
+        version = self._version
+        to_compliant = partial(
+            self._dataframe,
+            version=version,
+            validate_backend_version=False,
+            validate_column_names=False,
+        )
+        tables = tuple(
+            to_compliant(tbl).select(*safe_cast(self, to_schema)).native
+            for tbl, to_schema in zip(dfs, to_schemas)
+        )
+        return self._concat_diagonal(tables)
+
     def _concat_horizontal(self, dfs: Sequence[pa.Table], /) -> pa.Table:
         names = list(chain.from_iterable(df.column_names for df in dfs))
         arrays = tuple(chain.from_iterable(df.itercolumns() for df in dfs))
@@ -192,6 +219,21 @@ class ArrowNamespace(
                 )
                 raise TypeError(msg)
         return pa.concat_tables(dfs)
+
+    def _concat_vertical_relaxed(self, dfs: Sequence[pa.Table], /) -> pa.Table:
+        out_schema = reduce(to_supertype, (Schema.from_arrow(tbl.schema) for tbl in dfs))
+        version = self._version
+        to_compliant = partial(
+            self._dataframe,
+            version=version,
+            validate_backend_version=False,
+            validate_column_names=False,
+        )
+        tables = (
+            to_compliant(tbl).select(*safe_cast(self, out_schema)).native for tbl in dfs
+        )
+
+        return pa.concat_tables(tables)
 
     @property
     def selectors(self) -> ArrowSelectorNamespace:
