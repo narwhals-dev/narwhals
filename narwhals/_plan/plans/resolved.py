@@ -50,8 +50,8 @@ if TYPE_CHECKING:
 Incomplete: TypeAlias = Any
 _Fwd: TypeAlias = "ResolvedPlan"
 _InputsT = TypeVar("_InputsT", bound="Seq[ResolvedPlan]")
-ResolvedFunctionT = TypeVar(
-    "ResolvedFunctionT", bound="ResolvedFunction", default="ResolvedFunction"
+RpFunctionT_co = TypeVar(
+    "RpFunctionT_co", bound="RpFunction", default="RpFunction", covariant=True
 )
 
 # TODO @dangotbanned: Figure out how to integrate this *without* obliterating typing
@@ -333,9 +333,10 @@ class Unique(SingleInput):
         return evaluator.unique(self)
 
 
-class MapFunction(SingleInput, Generic[ResolvedFunctionT]):
+class MapFunction(SingleInput, Generic[RpFunctionT_co]):
     __slots__ = ("function",)
-    function: ResolvedFunctionT
+    # NOTE: https://discuss.python.org/t/make-replace-stop-interfering-with-variance-inference/96092
+    function: RpFunctionT_co  # type: ignore[misc]
 
     @property
     def schema(self) -> FrozenSchema:  # pragma: no cover
@@ -447,7 +448,7 @@ class HConcat(MultipleInputs[Seq[ResolvedPlan]]):
 
 
 # `MapFunction.function: FunctionIR`
-class ResolvedFunction(Immutable):
+class RpFunction(Immutable):
     __slots__ = ("output_schema",)
     output_schema: FrozenSchema
 
@@ -459,17 +460,27 @@ class ResolvedFunction(Immutable):
         raise NotImplementedError(msg)
 
 
-class RowIndex(ResolvedFunction):
+class RowIndex(RpFunction):
     __slots__ = ("name",)
     name: str
 
     def evaluate(
-        self, evaluator: ResolvedToCompliant[Native], plan: MapFunction[RowIndex], /
+        self, evaluator: ResolvedToCompliant[Native], plan: MapFunction[Incomplete], /
     ) -> CompliantLazyFrame[Native]:
         return evaluator.with_row_index(plan)
 
 
-class Rename(ResolvedFunction):
+class RowIndexBy(RowIndex):
+    __slots__ = ("order_by",)
+    order_by: Seq[str]
+
+    def evaluate(
+        self, evaluator: ResolvedToCompliant[Native], plan: MapFunction[RowIndexBy], /
+    ) -> CompliantLazyFrame[Native]:
+        return evaluator.with_row_index_by(plan)
+
+
+class Rename(RpFunction):
     """Rename when the backend supports this operation natively."""
 
     __slots__ = ("new", "old")
@@ -487,7 +498,7 @@ class Rename(ResolvedFunction):
         return evaluator.rename(plan)
 
 
-class Unnest(ResolvedFunction):
+class Unnest(RpFunction):
     # polars doesn't store the schema on this one,
     # but implementing for pyarrow made we wish we had it
     __slots__ = ("columns",)
@@ -499,7 +510,7 @@ class Unnest(ResolvedFunction):
         return evaluator.unnest(plan)
 
 
-class Explode(ResolvedFunction):
+class Explode(RpFunction):
     __slots__ = ("columns", "options")
     columns: Seq[str]
     options: ExplodeOptions
@@ -510,7 +521,7 @@ class Explode(ResolvedFunction):
         return evaluator.explode(plan)
 
 
-class Unpivot(ResolvedFunction):
+class Unpivot(RpFunction):
     __slots__ = ("index", "on", "options")
     on: Seq[str]
     index: Seq[str]

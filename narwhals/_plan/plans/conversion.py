@@ -657,20 +657,30 @@ class Resolver:
         output_schema = input_schema.with_columns_resolved(named_irs)
         return rp.WithColumns(input=input, exprs=named_irs, output_schema=output_schema)
 
-    # TODO @dangotbanned: Unify `IDX_DTYPE` to either:
     def with_row_index(self, plan: lp.MapFunction[lp.RowIndex], /) -> rp.ResolvedPlan:
+        input, output_schema = self._row_index(plan)
+        function = rp.RowIndex(name=plan.function.name, output_schema=output_schema)
+        return rp.MapFunction(input=input, function=function)
+
+    def with_row_index_by(
+        self, plan: lp.MapFunction[lp.RowIndexBy], /
+    ) -> rp.ResolvedPlan:
+        input, output_schema = self._row_index(plan)
+        f = plan.function
+        by = expand_selector_irs_names(f.order_by, schema=input.schema, require_any=True)
+        function = rp.RowIndexBy(name=f.name, output_schema=output_schema, order_by=by)
+        return rp.MapFunction(input=input, function=function)
+
+    def _row_index(
+        self, plan: lp.MapFunction[lp.RowIndex], /
+    ) -> tuple[rp.ResolvedPlan, FrozenSchema]:
         input = self.to_resolved(plan.input)
         input_schema = input.schema
         name = plan.function.name
         if name in input_schema:
             msg = f"Duplicate column name {name!r}"
             raise DuplicateError(msg)
-        output_schema = freeze_schema({name: IDX_DTYPE} | input_schema._mapping)
-        return rp.MapFunction(
-            input=input, function=rp.RowIndex(name=name, output_schema=output_schema)
-        )
-
-    with_row_index_by = todo()
+        return input, freeze_schema({name: IDX_DTYPE} | input_schema._mapping)
 
 
 @overload

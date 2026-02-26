@@ -230,6 +230,12 @@ class PolarsWhatever(ResolvedToCompliant[pl.LazyFrame]):
             plan.input.evaluate(self).native.with_row_index(plan.function.name)
         )
 
+    def with_row_index_by(self, plan: rp.MapFunction[rp.RowIndexBy]) -> PolarsLazyFrame:
+        f = plan.function
+        native = plan.input.evaluate(self).native
+        int_range = pl.int_range(pl.len()).over(order_by=f.order_by).alias(f.name)
+        return self._into_compliant(native.select(int_range, pl.all()))
+
     # TODO @dangotbanned: All require adding an `Expr` layer
     # Revisit after getting coverage for everything else
     filter = todo()

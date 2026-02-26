@@ -693,9 +693,10 @@ class Slice(SingleInput):
         return resolver.slice(self)
 
 
-class MapFunction(SingleInput, Generic[LpFunctionT]):
+class MapFunction(SingleInput, Generic[LpFunctionT_co]):
     __slots__ = ("function",)
-    function: LpFunctionT
+    # NOTE: https://discuss.python.org/t/make-replace-stop-interfering-with-variance-inference/96092
+    function: LpFunctionT_co  # type: ignore[misc]
 
     def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
         return resolver.map_function(self)

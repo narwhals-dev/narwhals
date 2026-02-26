@@ -81,7 +81,7 @@ class ResolvedToCompliant(Protocol[Native]):
         cls, plan: rp.SinkParquet, /, version: Version = Version.MAIN
     ) -> None: ...
     def map_function(
-        self, plan: rp.MapFunction[rp.ResolvedFunctionT], /
+        self, plan: rp.MapFunction[rp.RpFunctionT_co], /
     ) -> CompliantLazyFrame[Native]:
         return plan.function.evaluate(self, plan)
 
@@ -122,5 +122,6 @@ class ResolvedToCompliant(Protocol[Native]):
     def with_row_index(
         self, plan: rp.MapFunction[rp.RowIndex], /
     ) -> CompliantLazyFrame[Native]: ...
-
-    # TODO @dangotbanned: with_row_index_by
+    def with_row_index_by(
+        self, plan: rp.MapFunction[rp.RowIndexBy], /
+    ) -> CompliantLazyFrame[Native]: ...
