@@ -141,6 +141,14 @@ class PolarsWhatever(ResolvedToCompliant[pl.LazyFrame]):
             )
         )
 
+    def unique(self, plan: rp.Unique) -> PolarsLazyFrame:
+        opts = plan.options
+        return self._into_compliant(
+            plan.input.evaluate(self).native.unique(
+                plan.subset, keep=opts.keep, maintain_order=opts.maintain_order
+            )
+        )
+
     # TODO @dangotbanned: Add version branching for False in `Explode.options`
     # Default is backwards compatible
     def explode(self, plan: rp.MapFunction[rp.Explode]) -> PolarsLazyFrame:
@@ -179,5 +187,4 @@ class PolarsWhatever(ResolvedToCompliant[pl.LazyFrame]):
     join = todo()
     join_asof = todo()
     select = todo()
-    unique = todo()
     with_columns = todo()
