@@ -121,6 +121,18 @@ class PolarsWhatever(ResolvedToCompliant[pl.LazyFrame]):
             raise NotImplementedError(msg)
         return self._into_compliant(pl.concat(inputs, how="vertical"))
 
+    def join(self, plan: rp.Join) -> PolarsLazyFrame:
+        left, right = (input.evaluate(self).native for input in plan.inputs)
+        return self._into_compliant(
+            left.join(
+                right,
+                plan.options.how,
+                left_on=plan.left_on,
+                right_on=plan.right_on,
+                suffix=plan.options.suffix,
+            )
+        )
+
     def scan_csv(self, plan: rp.ScanCsv) -> PolarsLazyFrame:
         return self._into_compliant(pl.scan_csv(plan.source))
 
@@ -197,7 +209,6 @@ class PolarsWhatever(ResolvedToCompliant[pl.LazyFrame]):
     filter = todo()
     group_by = todo()
     group_by_names = todo()
-    join = todo()
     join_asof = todo()
     select = todo()
     with_columns = todo()
