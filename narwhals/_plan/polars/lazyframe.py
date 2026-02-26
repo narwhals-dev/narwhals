@@ -152,6 +152,11 @@ class PolarsWhatever(ResolvedToCompliant[pl.LazyFrame]):
             )
         )
 
+    def rename(self, plan: rp.MapFunction[rp.Rename]) -> PolarsLazyFrame:
+        return self._into_compliant(
+            plan.input.evaluate(self).native.rename(plan.function.mapping)
+        )
+
     def scan_csv(self, plan: rp.ScanCsv) -> PolarsLazyFrame:
         return self._into_compliant(pl.scan_csv(plan.source))
 

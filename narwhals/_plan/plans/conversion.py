@@ -13,7 +13,7 @@ from __future__ import annotations
 from collections import deque
 from functools import lru_cache
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Literal, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, overload
 
 from narwhals._plan import expressions as ir
 from narwhals._plan._expansion import (
@@ -182,6 +182,8 @@ def _with_supertypes(plan: rp.ResolvedPlan, casts: Seq[Cast]) -> rp.WithColumns:
     return rp.WithColumns(input=plan, exprs=casts, output_schema=freeze_schema(schema))
 
 
+# TODO @dangotbanned: (When sinking from LazyFrame) where should subclasses be retrieved from?
+# TODO @dangotbanned: Add a sugar-y `__init_subclass__` to configure rules
 class Resolver:
     """Default conversion from `LogicalPlan` into `ResolvedPlan`.
 
@@ -194,6 +196,19 @@ class Resolver:
     __slots__ = ("implementation",)
 
     implementation: KnownImpl
+
+    # NOTE: If the number of rules goes beyond 3, move them into some sort of *rewrites* attribute
+    # NOTE: Cheaper to *not* go through the ceremony of exprs
+    # - (dask, pandas, polars) `rename`
+    # - (ibis, pyarrow) `rename` (with modifications)
+    # - (pyspark, sqlframe) `withColumnsRenamed`
+    _RENAME_METHOD: ClassVar[Literal["native", "select"]] = "native"
+    """How the backend supports frame-level `{old: new}` column renaming.
+
+    - *"native"*: A mapping can be passed directly (default)
+    - *"select"*: Columns must be aliased individually, therefore
+        this operation requires expressions (override in subclass).
+    """
 
     @classmethod
     def from_backend(cls, backend: IntoBackend[Backend] | Incomplete, /) -> Self:
@@ -458,7 +473,26 @@ class Resolver:
     # and not supported in `nw.LazyFrame` (yet?)
     pivot = todo()
 
-    def rename(self, plan: lp.MapFunction[lp.Rename], /) -> rp.ResolvedPlan:
+    def rename(
+        self, plan: lp.MapFunction[lp.Rename], /
+    ) -> rp.MapFunction[rp.Rename] | rp.Select | rp.ResolvedPlan:
+        if self._RENAME_METHOD == "select":
+            return self._rename_to_select(plan)
+        input = self.to_resolved(plan.input)
+        old, new = plan.function.old, plan.function.new
+        if not old:
+            return input
+        mapping = plan.function.mapping
+        return rp.MapFunction(
+            input=input,
+            function=rp.Rename(
+                output_schema=input.schema.rename(mapping), old=old, new=new
+            ),
+        )
+
+    def _rename_to_select(
+        self, plan: lp.MapFunction[lp.Rename], /
+    ) -> rp.Select | rp.ResolvedPlan:
         input = self.to_resolved(plan.input)
         f_rename = plan.function
         if not f_rename.old:
@@ -474,7 +508,7 @@ class Resolver:
 
         if before_after:
             # we had extra names not present in the schema
-            raise column_not_found_error(f_rename.old, input.schema)
+            raise column_not_found_error(f_rename.old, input_schema)
         return rp.Select(
             input=input,
             exprs=tuple(exprs),

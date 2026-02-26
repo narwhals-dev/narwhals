@@ -95,16 +95,10 @@ class ResolvedToCompliant(Protocol[Native]):
     def group_by_names(self, plan: rp.GroupByNames, /) -> CompliantLazyFrame[Native]: ...
     def join(self, plan: rp.Join, /) -> CompliantLazyFrame[Native]: ...
     def join_asof(self, plan: rp.JoinAsof, /) -> CompliantLazyFrame[Native]: ...
-
     # TODO @dangotbanned: `pivot` (low priority)
-
-    # TODO @dangotbanned: `rename`
-    # - `Resolver.rename` transforms to `rp.Select`, but that should be an optional rewrite
-    # - Cheaper to *not* go through the ceremony of exprs
-    #   - (dask, pandas, polars) `rename`
-    #   - (ibis, pyarrow) `rename` (with modifications)
-    #   - (pyspark, sqlframe) `withColumnsRenamed`
-
+    def rename(
+        self, plan: rp.MapFunction[rp.Rename], /
+    ) -> CompliantLazyFrame[Native]: ...
     # TODO @dangotbanned: `lp.Scan*[Native]` -> `rp.Scan*[Native]` -> `CompliantLazyFrame[Native]`
     def scan_csv(self, plan: rp.ScanCsv, /) -> CompliantLazyFrame[Native]: ...
     def scan_dataframe(self, plan: rp.ScanDataFrame, /) -> CompliantLazyFrame[Native]: ...

@@ -97,7 +97,13 @@ class FrozenSchema(Immutable):
         check_unique: bool = True,
         check_exists: bool = True,
     ) -> FrozenSchema:  # pragma: no cover
-        """Return a new schema, equivalent to performing `df.select(names))`."""
+        """Return a new schema, equivalent to performing `df.select(names))`.
+
+        Arguments:
+            names: Column names to select.
+            check_unique: Validate that `names` does not contain duplicates.
+            check_exists: Validate that all `names` exist in the schema.
+        """
         if check_unique or check_exists:
             requested = set(names)
             if check_unique and len(names) != len(requested):
@@ -105,6 +111,26 @@ class FrozenSchema(Immutable):
             if check_exists and not (self.keys() >= requested):
                 raise column_not_found_error(names, self)
         return freeze_schema((name, self[name]) for name in names)
+
+    def rename(
+        self, mapping: Mapping[str, str], /, *, check_exists: bool = True
+    ) -> FrozenSchema:  # pragma: no cover
+        """Return a new schema, equivalent to performing `df.rename(mapping))`.
+
+        Arguments:
+            mapping: Key value pairs that map `{old: new}` names.
+            check_exists: Validate that all keys (*old*) exist in the schema.
+        """
+        if not check_exists:
+            it = ((mapping.get(name, name), dtype) for name, dtype in self.items())
+            return freeze_schema(it)
+        renames = mapping if isinstance(mapping, dict) else dict(mapping)
+        old = tuple(renames)
+        it = ((renames.pop(name, name), dtype) for name, dtype in self.items())
+        result = freeze_schema(it)
+        if renames:
+            raise column_not_found_error(old, self)
+        return result
 
     def with_columns(
         self,

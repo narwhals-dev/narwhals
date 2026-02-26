@@ -65,7 +65,6 @@ __all__ = [
     "MultipleInputs",
     "Pivot",
     "Rename",
-    "Rename",
     "RowIndex",
     "RowIndexBy",
     "Scan",

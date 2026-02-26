@@ -24,6 +24,7 @@ from narwhals._plan.plans.typing import FrameT
 from narwhals._plan.schema import freeze_schema
 from narwhals._plan.typing import ClosedKwds, Seq
 from narwhals._typing_compat import TypeVar
+from narwhals._utils import zip_strict
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
@@ -466,6 +467,24 @@ class RowIndex(ResolvedFunction):
         self, evaluator: ResolvedToCompliant[Native], plan: MapFunction[RowIndex], /
     ) -> CompliantLazyFrame[Native]:
         return evaluator.with_row_index(plan)
+
+
+class Rename(ResolvedFunction):
+    """Rename when the backend supports this operation natively."""
+
+    __slots__ = ("new", "old")
+    old: Seq[str]
+    new: Seq[str]
+
+    @property
+    def mapping(self) -> dict[str, str]:
+        """Return a new dictionary representing `{old: new}`."""
+        return dict(zip_strict(self.old, self.new))
+
+    def evaluate(
+        self, evaluator: ResolvedToCompliant[Native], plan: MapFunction[Rename], /
+    ) -> CompliantLazyFrame[Native]:
+        return evaluator.rename(plan)
 
 
 class Unnest(ResolvedFunction):
