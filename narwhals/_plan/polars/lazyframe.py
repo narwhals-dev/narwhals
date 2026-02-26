@@ -225,6 +225,8 @@ class PolarsWhatever(ResolvedToCompliant[pl.LazyFrame]):
             plan.input.evaluate(self).native.with_row_index(plan.function.name)
         )
 
+    # TODO @dangotbanned: All require adding an `Expr` layer
+    # Revisit after getting coverage for everything else
     filter = todo()
     group_by = todo()
     group_by_names = todo()
