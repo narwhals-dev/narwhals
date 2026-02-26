@@ -84,8 +84,8 @@ class ResolvedPlan(_BasePlan[_Fwd], _root=True):
 
     # or maybe `execute`?
     def evaluate(
-        self, evaluator: ResolvedToCompliant[Native] | Incomplete, /
-    ) -> CompliantLazyFrame[Native] | Incomplete:
+        self, evaluator: ResolvedToCompliant[Native], /
+    ) -> CompliantLazyFrame[Native]:
         """Evaluate this `ResolvedPlan`.
 
         This is not the same as materializing, unless called on a `Sink` node
@@ -134,6 +134,9 @@ class MultipleInputs(ResolvedPlan, Generic[_InputsT], has_inputs=True):
         yield from self.inputs
 
 
+# TODO @dangotbanned: Don't define `ResolvePlan.evaluate`
+# - Also can't do `SingleInput.evaluate`, unless this stops inheriting
+# - Possibly add the concept of *transforming* nodes?
 class Sink(SingleInput):
     def evaluate(
         self, evaluator: ResolvedToCompliant[Any], /
@@ -221,8 +224,12 @@ class ScanDataFrame(ScanFrame["DataFrame[Any, Any]"]):
         return evaluator.scan_dataframe(self)
 
 
+# TODO @dangotbanned: `[override]` is because this is the **only correct** node
+# - All of the others need to propagate `Native` from `LogicalPlan`
+# - Which requires making `LogicalPlan` generic
+#   - This also removes the need for the `LazyFrame._compiant: CompliantLazyFrame[Native]` hack
 class ScanLazyFrame(ScanFrame["CompliantLazyFrame[Native]"], Generic[Native]):
-    def evaluate(
+    def evaluate(  # type: ignore[override]
         self, evaluator: ResolvedToCompliant[Native] | Incomplete, /
     ) -> CompliantLazyFrame[Native]:  # pragma: no cover
         return evaluator.scan_lazyframe(self)
@@ -241,6 +248,11 @@ class SelectNames(SingleInput):
     def schema(self) -> FrozenSchema:
         return self.output_schema
 
+    def evaluate(
+        self, evaluator: ResolvedToCompliant[Native], /
+    ) -> CompliantLazyFrame[Native]:  # pragma: no cover
+        return evaluator.select_names(self)
+
 
 class Select(SingleInput):
     """Roughly `prepare_projection` + FrozenSchema update."""
@@ -253,6 +265,11 @@ class Select(SingleInput):
     def schema(self) -> FrozenSchema:
         return self.output_schema
 
+    def evaluate(
+        self, evaluator: ResolvedToCompliant[Native], /
+    ) -> CompliantLazyFrame[Native]:  # pragma: no cover
+        return evaluator.select(self)
+
 
 # `IR::HStack`
 class WithColumns(SingleInput):
@@ -264,16 +281,31 @@ class WithColumns(SingleInput):
     def schema(self) -> FrozenSchema:
         return self.output_schema
 
+    def evaluate(
+        self, evaluator: ResolvedToCompliant[Native], /
+    ) -> CompliantLazyFrame[Native]:  # pragma: no cover
+        return evaluator.with_columns(self)
+
 
 class Filter(SingleInput):
     __slots__ = ("predicate",)
     predicate: NamedIR
+
+    def evaluate(
+        self, evaluator: ResolvedToCompliant[Native], /
+    ) -> CompliantLazyFrame[Native]:  # pragma: no cover
+        return evaluator.filter(self)
 
 
 class Slice(SingleInput):
     __slots__ = ("length", "offset")
     offset: int
     length: int | None  # probably should have `int`
+
+    def evaluate(
+        self, evaluator: ResolvedToCompliant[Native], /
+    ) -> CompliantLazyFrame[Native]:  # pragma: no cover
+        return evaluator.slice(self)
 
 
 class Sort(SingleInput):
@@ -282,12 +314,22 @@ class Sort(SingleInput):
     """Deviation from polars, resolved selector names."""
     options: SortMultipleOptions
 
+    def evaluate(
+        self, evaluator: ResolvedToCompliant[Native], /
+    ) -> CompliantLazyFrame[Native]:  # pragma: no cover
+        return evaluator.sort(self)
+
 
 # `UniqueBy` might be composable from other steps?
 class Unique(SingleInput):
     __slots__ = ("options", "subset")
     subset: Seq[str] | None
     options: UniqueOptions
+
+    def evaluate(
+        self, evaluator: ResolvedToCompliant[Native], /
+    ) -> CompliantLazyFrame[Native]:  # pragma: no cover
+        return evaluator.unique(self)
 
 
 class MapFunction(SingleInput, Generic[ResolvedFunctionT]):
@@ -297,6 +339,11 @@ class MapFunction(SingleInput, Generic[ResolvedFunctionT]):
     @property
     def schema(self) -> FrozenSchema:  # pragma: no cover
         return self.function.output_schema
+
+    def evaluate(
+        self, evaluator: ResolvedToCompliant[Native], /
+    ) -> CompliantLazyFrame[Native]:  # pragma: no cover
+        return evaluator.map_function(self)
 
 
 class Join(MultipleInputs[tuple[ResolvedPlan, ResolvedPlan]]):
@@ -310,6 +357,11 @@ class Join(MultipleInputs[tuple[ResolvedPlan, ResolvedPlan]]):
     def schema(self) -> FrozenSchema:  # pragma: no cover
         return self.output_schema
 
+    def evaluate(
+        self, evaluator: ResolvedToCompliant[Native], /
+    ) -> CompliantLazyFrame[Native]:  # pragma: no cover
+        return evaluator.join(self)
+
 
 class JoinAsof(MultipleInputs[tuple[ResolvedPlan, ResolvedPlan]]):
     __slots__ = ("left_on", "options", "output_schema", "right_on")
@@ -321,6 +373,11 @@ class JoinAsof(MultipleInputs[tuple[ResolvedPlan, ResolvedPlan]]):
     @property
     def schema(self) -> FrozenSchema:  # pragma: no cover
         return self.output_schema
+
+    def evaluate(
+        self, evaluator: ResolvedToCompliant[Native], /
+    ) -> CompliantLazyFrame[Native]:  # pragma: no cover
+        return evaluator.join_asof(self)
 
 
 class GroupBy(SingleInput):
@@ -335,6 +392,11 @@ class GroupBy(SingleInput):
     def schema(self) -> FrozenSchema:  # pragma: no cover
         return self.output_schema
 
+    def evaluate(
+        self, evaluator: ResolvedToCompliant[Native], /
+    ) -> CompliantLazyFrame[Native]:  # pragma: no cover
+        return evaluator.group_by(self)
+
 
 class GroupByNames(SingleInput):
     """`DataFrameGroupBy.by_names`/`not resolver.requires_projection()`."""
@@ -348,6 +410,11 @@ class GroupByNames(SingleInput):
     def schema(self) -> FrozenSchema:  # pragma: no cover
         return self.output_schema
 
+    def evaluate(
+        self, evaluator: ResolvedToCompliant[Native], /
+    ) -> CompliantLazyFrame[Native]:  # pragma: no cover
+        return evaluator.group_by_names(self)
+
 
 class VConcat(MultipleInputs[Seq[ResolvedPlan]]):
     # - Only 1 attribute we have carries over from UnionArgs -> UnionOptions
@@ -358,6 +425,11 @@ class VConcat(MultipleInputs[Seq[ResolvedPlan]]):
     __slots__ = ("maintain_order",)
     maintain_order: bool
 
+    def evaluate(
+        self, evaluator: ResolvedToCompliant[Native], /
+    ) -> CompliantLazyFrame[Native]:  # pragma: no cover
+        return evaluator.concat_vertical(self)
+
 
 class HConcat(MultipleInputs[Seq[ResolvedPlan]]):
     __slots__ = ("output_schema",)
@@ -366,6 +438,11 @@ class HConcat(MultipleInputs[Seq[ResolvedPlan]]):
     @property
     def schema(self) -> FrozenSchema:  # pragma: no cover
         return self.output_schema
+
+    def evaluate(
+        self, evaluator: ResolvedToCompliant[Native], /
+    ) -> CompliantLazyFrame[Native]:  # pragma: no cover
+        return evaluator.concat_horizontal(self)
 
 
 # `MapFunction.function: FunctionIR`

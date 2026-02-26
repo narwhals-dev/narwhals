@@ -436,7 +436,6 @@ class DataFrame(
         *,
         backend: IntoBackend[EagerAllowed] | None = None,
     ) -> DataFrame[Any, Any]:
-
         if backend is None:
             unwrapped: dict[str, NativeSeries | Any] = {}
             impl: _EagerAllowedImpl | None = backend

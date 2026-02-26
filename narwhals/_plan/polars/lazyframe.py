@@ -170,3 +170,14 @@ class PolarsWhatever(ResolvedToCompliant[pl.LazyFrame]):
         return self._into_compliant(
             plan.input.evaluate(self).native.with_row_index(plan.function.name)
         )
+
+    concat_horizontal = todo()
+    concat_vertical = todo()
+    filter = todo()
+    group_by = todo()
+    group_by_names = todo()
+    join = todo()
+    join_asof = todo()
+    select = todo()
+    unique = todo()
+    with_columns = todo()
