@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 import polars as pl
 
 from narwhals._plan._version import into_version
-from narwhals._plan.common import todo
+from narwhals._plan.common import temp, todo
 from narwhals._plan.compliant.lazyframe import CompliantLazyFrame
 from narwhals._plan.plans.visitors import ResolvedToCompliant
 from narwhals._plan.polars.frame import PolarsFrame
@@ -198,6 +198,25 @@ class PolarsWhatever(ResolvedToCompliant[pl.LazyFrame]):
             plan.input.evaluate(self).native.unique(
                 plan.subset, keep=opts.keep, maintain_order=opts.maintain_order
             )
+        )
+
+    # Adapted from (https://github.com/narwhals-dev/narwhals/blob/dd929a36839c4ab7c63a5e8e799f773d81e553a4/narwhals/_polars/dataframe.py#L189-L197)
+    # TODO @dangotbanned: Check if the newer `pyarrow` version was simpler than this
+    # 2x `sort` + `with_row_index` seems pretty expensive to add to `unique`
+    def unique_by(self, plan: rp.UniqueBy) -> PolarsLazyFrame:
+        native = plan.input.evaluate(self).native
+        opts = plan.options
+        if not opts.maintain_order:
+            result = native.sort(plan.order_by).unique(plan.subset, keep=opts.keep)
+            return self._into_compliant(result)
+        names = plan.schema.names
+        idx = temp.column_name(names)
+        return self._into_compliant(
+            native.with_row_index(idx)
+            .sort(plan.order_by)
+            .unique(plan.subset, keep=opts.keep)
+            .sort(idx)
+            .select(names)
         )
 
     # TODO @dangotbanned: Add version branching for False in `Explode.options`

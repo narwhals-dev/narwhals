@@ -570,14 +570,21 @@ class Resolver:
         return rp.Sort(input=input, by=by, options=opts.__replace__(descending=desc))
 
     def unique(self, plan: lp.Unique, /) -> rp.Unique:
-        input = self.to_resolved(plan.input)
-        subset: Seq[str] | None = None
-        if s_irs := plan.subset:
-            schema = input.schema
-            subset = expand_selector_irs_names(s_irs, schema=schema, require_any=True)
+        input, subset = self._unique(plan)
         return rp.Unique(input=input, subset=subset, options=plan.options)
 
-    unique_by = todo()
+    def unique_by(self, plan: lp.UniqueBy, /) -> rp.UniqueBy:
+        input, subset = self._unique(plan)
+        schema = input.schema
+        by = expand_selector_irs_names(plan.order_by, schema=schema, require_any=True)
+        return rp.UniqueBy(input=input, subset=subset, options=plan.options, order_by=by)
+
+    def _unique(self, plan: lp.Unique, /) -> tuple[rp.ResolvedPlan, Seq[str] | None]:
+        input = self.to_resolved(plan.input)
+        if (subset := plan.subset) is None:
+            return input, subset
+        schema = input.schema
+        return input, expand_selector_irs_names(subset, schema=schema, require_any=True)
 
     def unnest(self, plan: lp.MapFunction[lp.Unnest], /) -> rp.MapFunction[rp.Unnest]:
         # NOTE: Pretty delicate process to optimize for
@@ -658,20 +665,20 @@ class Resolver:
         return rp.WithColumns(input=input, exprs=named_irs, output_schema=output_schema)
 
     def with_row_index(self, plan: lp.MapFunction[lp.RowIndex], /) -> rp.ResolvedPlan:
-        input, output_schema = self._row_index(plan)
+        input, output_schema = self._with_row_index(plan)
         function = rp.RowIndex(name=plan.function.name, output_schema=output_schema)
         return rp.MapFunction(input=input, function=function)
 
     def with_row_index_by(
         self, plan: lp.MapFunction[lp.RowIndexBy], /
     ) -> rp.ResolvedPlan:
-        input, output_schema = self._row_index(plan)
+        input, output_schema = self._with_row_index(plan)
         f = plan.function
         by = expand_selector_irs_names(f.order_by, schema=input.schema, require_any=True)
         function = rp.RowIndexBy(name=f.name, output_schema=output_schema, order_by=by)
         return rp.MapFunction(input=input, function=function)
 
-    def _row_index(
+    def _with_row_index(
         self, plan: lp.MapFunction[lp.RowIndex], /
     ) -> tuple[rp.ResolvedPlan, FrozenSchema]:
         input = self.to_resolved(plan.input)

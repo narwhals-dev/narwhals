@@ -321,7 +321,6 @@ class Sort(SingleInput):
         return evaluator.sort(self)
 
 
-# `UniqueBy` might be composable from other steps?
 class Unique(SingleInput):
     __slots__ = ("options", "subset")
     subset: Seq[str] | None
@@ -331,6 +330,17 @@ class Unique(SingleInput):
         self, evaluator: ResolvedToCompliant[Native], /
     ) -> CompliantLazyFrame[Native]:  # pragma: no cover
         return evaluator.unique(self)
+
+
+class UniqueBy(Unique):
+    # NOTE: May want to provide a rewrite *from* this
+    __slots__ = ("order_by",)
+    order_by: Seq[str]
+
+    def evaluate(
+        self, evaluator: ResolvedToCompliant[Native], /
+    ) -> CompliantLazyFrame[Native]:  # pragma: no cover
+        return evaluator.unique_by(self)
 
 
 class MapFunction(SingleInput, Generic[RpFunctionT_co]):
