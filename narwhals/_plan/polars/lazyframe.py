@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 
     from narwhals._plan.compliant.typing import DataFrameAny
     from narwhals._plan.plans import resolved as rp
+    from narwhals._plan.typing import Seq
     from narwhals.schema import Schema
     from narwhals.typing import EagerAllowed
 
@@ -133,6 +134,24 @@ class PolarsWhatever(ResolvedToCompliant[pl.LazyFrame]):
             )
         )
 
+    def join_asof(self, plan: rp.JoinAsof) -> PolarsLazyFrame:
+        left, right = (input.evaluate(self).native for input in plan.inputs)
+        by_left: Seq[str] | None = None
+        by_right: Seq[str] | None = None
+        if by := plan.options.by:
+            by_left, by_right = by.left_by, by.right_by
+        return self._into_compliant(
+            left.join_asof(
+                right,
+                left_on=plan.left_on,
+                right_on=plan.right_on,
+                by_left=by_left,
+                by_right=by_right,
+                strategy=plan.options.strategy,
+                suffix=plan.options.suffix,
+            )
+        )
+
     def scan_csv(self, plan: rp.ScanCsv) -> PolarsLazyFrame:
         return self._into_compliant(pl.scan_csv(plan.source))
 
@@ -209,6 +228,5 @@ class PolarsWhatever(ResolvedToCompliant[pl.LazyFrame]):
     filter = todo()
     group_by = todo()
     group_by_names = todo()
-    join_asof = todo()
     select = todo()
     with_columns = todo()
