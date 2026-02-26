@@ -11,16 +11,22 @@ from narwhals._utils import _hasattr_static
 from narwhals.dtypes import DType
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from typing_extensions import TypeIs
 
     from narwhals._plan import expressions as ir
     from narwhals._plan.compliant.series import CompliantSeries
+    from narwhals._plan.dataframe import DataFrame
     from narwhals._plan.expr import Expr
+    from narwhals._plan.lazyframe import LazyFrame
     from narwhals._plan.selectors import Selector
     from narwhals._plan.series import Series
     from narwhals._plan.typing import (
         ColumnNameOrSelector,
+        DataFrameT,
         IntoExprColumn,
+        LazyFrameT,
         NativeSeriesT,
         Seq,
     )
@@ -152,3 +158,33 @@ def is_seq_column(exprs: Seq[ir.ExprIR], /) -> TypeIs[Seq[ir.Column]]:
     """
     Column = _ir().Column  # noqa: N806
     return all(isinstance(e, Column) for e in exprs)
+
+
+def is_lazyframe(obj: LazyFrameT | Any) -> TypeIs[LazyFrameT]:
+    """Return True if `obj` is a `LazyFrame`.
+
+    Tip:
+        Prefer `is_sequence_lazyframe` if you need to check multiple frames,
+        as `is_lazyframe` will import `LazyFrame` once per item.
+    """
+    from narwhals._plan.lazyframe import LazyFrame
+
+    return isinstance(obj, LazyFrame)
+
+
+def is_sequence_lazyframe(
+    obj: Sequence[LazyFrameT | DataFrame[Any, Any]] | Any,
+) -> TypeIs[Sequence[LazyFrameT]]:
+    """Return True if **every** element is a `LazyFrame`."""
+    from narwhals._plan.lazyframe import LazyFrame
+
+    return all(isinstance(item, LazyFrame) for item in obj)
+
+
+def is_sequence_dataframe(
+    obj: Sequence[DataFrameT | LazyFrame[Any]] | Any,
+) -> TypeIs[Sequence[DataFrameT]]:
+    """Return True if **every** element is a `DataFrame`."""
+    from narwhals._plan.dataframe import DataFrame
+
+    return all(isinstance(item, DataFrame) for item in obj)

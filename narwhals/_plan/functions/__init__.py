@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-import builtins
-import typing as t
-from typing import TYPE_CHECKING, get_args
+from typing import TYPE_CHECKING, get_args, overload
 
-from narwhals._plan import selectors as cs
+from narwhals._plan import _guards, selectors as cs
 from narwhals._plan.compliant.typing import namespace
 from narwhals._plan.functions.aggregation import max, mean, median, min, sum
 from narwhals._plan.functions.col import col
@@ -25,12 +23,10 @@ from narwhals._plan.functions.ranges import date_range, int_range, linear_space
 from narwhals.typing import ConcatMethod
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Sequence
 
     from narwhals._plan.expr import Expr
-    from narwhals._plan.typing import DataFrameT, OneOrIterable
-
-    T = t.TypeVar("T")
+    from narwhals._plan.typing import DataFrameT, LazyFrameT, OneOrIterable
 
 
 __all__ = (
@@ -73,23 +69,47 @@ def exclude(*names: OneOrIterable[str]) -> Expr:
     return cs.all().exclude(*names).as_expr()
 
 
-# TODO @dangotbanned: Update this when `LazyFrame` exists
-def concat(items: Iterable[DataFrameT], *, how: ConcatMethod = "vertical") -> DataFrameT:
-    elems = list(items)
-    if not elems:
+@overload
+def concat(
+    items: Iterable[DataFrameT], *, how: ConcatMethod = "vertical"
+) -> DataFrameT: ...
+@overload
+def concat(
+    items: Iterable[LazyFrameT], *, how: ConcatMethod = "vertical"
+) -> LazyFrameT: ...
+def concat(
+    items: Iterable[DataFrameT] | Iterable[LazyFrameT], *, how: ConcatMethod = "vertical"
+) -> DataFrameT | LazyFrameT:
+    frames: Sequence[DataFrameT | LazyFrameT] = tuple(items)
+    if not frames:
         msg = "Cannot concatenate an empty iterable."
         raise ValueError(msg)
     if how not in {"horizontal", "vertical", "diagonal"}:
         msg = f"Only the following concatenation methods are supported: {get_args(ConcatMethod)}; found '{how}'."
         raise NotImplementedError(msg)
-    elems = _ensure_same_frame(elems)
-    compliant = namespace(elems[0]).concat((df._compliant for df in elems), how=how)
-    return elems[0]._with_compliant(compliant)
+    return _concat(frames, how)
 
 
-def _ensure_same_frame(items: list[T], /) -> list[T]:
-    item_0_tp = type(items[0])
-    if builtins.all(isinstance(item, item_0_tp) for item in items):
-        return items
-    msg = f"The items to concatenate should either all be eager, or all lazy, got: {[type(item) for item in items]}"  # pragma: no cover
+def _concat(
+    frames: Sequence[DataFrameT | LazyFrameT], /, how: ConcatMethod
+) -> DataFrameT | LazyFrameT:
+    if _guards.is_lazyframe(frames[0]):
+        if _guards.is_sequence_lazyframe(frames):
+            return _concat_lazy(frames, how)
+
+    elif _guards.is_sequence_dataframe(frames):
+        return _concat_eager(frames, how)
+
+    msg = f"The items to concatenate should either all be eager, or all lazy, got: {[type(item) for item in frames]}"  # pragma: no cover
     raise TypeError(msg)  # pragma: no cover
+
+
+def _concat_lazy(frames: Sequence[LazyFrameT], how: ConcatMethod) -> LazyFrameT:
+    from narwhals._plan.plans import logical
+
+    return frames[0]._with_lp(logical.concat(tuple(lf._plan for lf in frames), how=how))
+
+
+def _concat_eager(frames: Sequence[DataFrameT], how: ConcatMethod) -> DataFrameT:
+    compliant = namespace(frames[0]).concat((df._compliant for df in frames), how=how)
+    return frames[0]._with_compliant(compliant)
