@@ -106,6 +106,10 @@ class PolarsWhatever(ResolvedToCompliant[pl.LazyFrame]):
     def _into_compliant(self, native: pl.LazyFrame, /) -> PolarsLazyFrame:
         return PolarsLazyFrame.from_native(native, self.version)
 
+    def concat_horizontal(self, plan: rp.HConcat) -> PolarsLazyFrame:
+        inputs = (input.evaluate(self).native for input in plan.inputs)
+        return self._into_compliant(pl.concat(inputs, how="horizontal"))
+
     def scan_csv(self, plan: rp.ScanCsv) -> PolarsLazyFrame:
         return self._into_compliant(pl.scan_csv(plan.source))
 
@@ -179,7 +183,6 @@ class PolarsWhatever(ResolvedToCompliant[pl.LazyFrame]):
             plan.input.evaluate(self).native.with_row_index(plan.function.name)
         )
 
-    concat_horizontal = todo()
     concat_vertical = todo()
     filter = todo()
     group_by = todo()
