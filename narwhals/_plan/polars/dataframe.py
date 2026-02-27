@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, overload
 
 import polars as pl
 from typing_extensions import Self
@@ -11,6 +11,9 @@ from narwhals._plan.polars.frame import PolarsFrame
 from narwhals._utils import Version, not_implemented
 
 if TYPE_CHECKING:
+    from io import BytesIO
+    from pathlib import Path
+
     import pandas as pd
     import pyarrow as pa
     from typing_extensions import Self, TypeAlias
@@ -70,6 +73,18 @@ class PolarsDataFrame(
 
         return PolarsLazyFrame.from_native(self.native.lazy(), self.version)
 
+    @overload
+    def write_csv(self, target: None, /, **kwds: Any) -> str: ...
+    @overload
+    def write_csv(self, target: str | Path | BytesIO, /, **kwds: Any) -> None: ...
+    def write_csv(
+        self, target: str | Path | BytesIO | None, /, **kwds: Any
+    ) -> str | None:
+        return self.native.write_csv(target, **kwds)
+
+    def write_parquet(self, target: str | BytesIO, /, **kwds: Any) -> None:
+        self.native.write_parquet(target, **kwds)
+
     __narwhals_namespace__ = not_implemented()
     _evaluate_irs = not_implemented()
     _group_by = not_implemented()  # type: ignore[assignment]
@@ -105,8 +120,6 @@ class PolarsDataFrame(
     with_columns = not_implemented()
     with_row_index = not_implemented()
     with_row_index_by = not_implemented()
-    write_csv = not_implemented()
-    write_parquet = not_implemented()
 
 
 PolarsDataFrame()

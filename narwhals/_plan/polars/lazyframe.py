@@ -9,9 +9,13 @@ from narwhals._plan.common import temp, todo
 from narwhals._plan.compliant.lazyframe import CompliantLazyFrame
 from narwhals._plan.plans.visitors import ResolvedToCompliant
 from narwhals._plan.polars.frame import PolarsFrame
+from narwhals._plan.polars.namespace import PolarsNamespace as Namespace
 from narwhals._utils import Version
 
 if TYPE_CHECKING:
+    from io import BytesIO
+    from pathlib import Path
+
     from typing_extensions import Self
 
     from narwhals._plan.compliant.typing import DataFrameAny
@@ -47,6 +51,9 @@ class PolarsLazyFrame(PolarsFrame, CompliantLazyFrame[pl.LazyFrame]):
             msg = "TODO @dangotbanned: handle `LazyFrame.collect(background=True) -> InProcessQuery`"
             raise NotImplementedError(msg)
         return self.native.collect(**kwds, background=False)
+
+    def sink_parquet(self, target: str | BytesIO | Path, /, **kwds: Any) -> None:
+        self.native.sink_parquet(target, **kwds)
 
     @property
     def input_schema(self) -> Schema:
@@ -158,7 +165,7 @@ class PolarsWhatever(ResolvedToCompliant[pl.LazyFrame]):
         )
 
     def scan_csv(self, plan: rp.ScanCsv) -> PolarsLazyFrame:
-        return self._into_compliant(pl.scan_csv(plan.source))
+        return Namespace(self.version).scan_csv(plan.source)
 
     def scan_dataframe(self, plan: rp.ScanDataFrame, /) -> PolarsLazyFrame:
         return PolarsLazyFrame.from_narwhals(plan.frame)
@@ -171,7 +178,7 @@ class PolarsWhatever(ResolvedToCompliant[pl.LazyFrame]):
         raise NotImplementedError(plan.frame.implementation, type(plan.frame))
 
     def scan_parquet(self, plan: rp.ScanParquet) -> PolarsLazyFrame:
-        return self._into_compliant(pl.scan_parquet(plan.source))
+        return Namespace(self.version).scan_parquet(plan.source)
 
     def select_names(self, plan: rp.SelectNames) -> PolarsLazyFrame:
         return self._into_compliant(plan.input.evaluate(self).native.select(plan.names))

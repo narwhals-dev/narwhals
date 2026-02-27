@@ -33,12 +33,19 @@ KnownImpl: TypeAlias = "_EagerAllowedImpl | _LazyAllowedImpl"
 
 def namespace(backend: IntoBackend[Backend]) -> CompliantNamespace[Any, Any, Any]:
     impl = Implementation.from_backend(backend)
+    if impl is Implementation.POLARS:
+        from narwhals._plan import polars as _polars
+
+        return _polars.Namespace(Version.MAIN)
     if is_eager_allowed(impl):
         return eager_namespace(impl)
     msg = f"Lazy backends are not yet supported in `narwhals._plan`, got: {impl!r}"
     raise NotImplementedError(msg)
 
 
+# TODO @dangotbanned: Use the more granualar protocols instead
+# (file) `io` has been weaned off, but ranges and memory io still use it
+# the overloads are fine, just need to avoid exposing `Eager*` classes
 @overload
 def eager_namespace(backend: Arrow, /) -> _arrow.Namespace: ...
 @overload
@@ -51,6 +58,7 @@ def eager_namespace(
         from narwhals._plan import arrow as _arrow
 
         return _arrow.Namespace(Version.MAIN)
+
     raise NotImplementedError(impl)
 
 

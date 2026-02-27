@@ -43,18 +43,7 @@ param_pandas_import = pytest.param(
         pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow"),
     ],
 )
-scan_backend = pytest.mark.parametrize(
-    "backend",
-    [
-        "pyarrow",
-        pytest.param(
-            "polars",
-            marks=pytest.mark.xfail(
-                reason="TODO: `PolarsNamespace`", raises=NotImplementedError
-            ),
-        ),
-    ],
-)
+scan_backend = pytest.mark.parametrize("backend", ["pyarrow", "polars"])
 
 
 def pyarrow_read_csv_kwds() -> dict[str, Any]:
@@ -181,15 +170,17 @@ def test_scan_csv(csv_path: FileSource, backend: BackendName) -> None:
     assert expected == nwp.read_csv_schema(csv_path, backend=backend)
 
 
-def test_read_parquet_schema(parquet_path: FileSource, eager: EagerAllowed) -> None:
-    schema = nwp.read_parquet_schema(parquet_path, backend=eager)
+@scan_backend
+def test_read_parquet_schema(parquet_path: FileSource, backend: BackendName) -> None:
+    schema = nwp.read_parquet_schema(parquet_path, backend=backend)
     expected = pl.scan_parquet(Path(parquet_path)).collect_schema()
     result = schema.to_polars()
     assert result == expected
 
 
-def test_read_csv_schema(csv_path: FileSource, eager: EagerAllowed) -> None:
-    schema = nwp.read_csv_schema(csv_path, backend=eager)
+@scan_backend
+def test_read_csv_schema(csv_path: FileSource, backend: BackendName) -> None:
+    schema = nwp.read_csv_schema(csv_path, backend=backend)
     expected = pl.scan_csv(Path(csv_path)).collect_schema()
     result = schema.to_polars()
     assert result == expected

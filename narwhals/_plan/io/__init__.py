@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Literal, overload
 
-from narwhals._plan._namespace import eager_namespace, namespace
+from narwhals._plan._namespace import namespace
 from narwhals._plan.compliant import io as _io
 from narwhals._plan.exceptions import unsupported_backend_operation_error
 from narwhals._utils import normalize_path, unstable
@@ -34,7 +34,7 @@ def read_csv(
     source: FileSource, *, backend: IntoBackend[EagerAllowed], **kwds: Any
 ) -> DataFrame[Any, Any]:
     source = normalize_path(source)
-    ns = eager_namespace(backend)
+    ns = namespace(backend)
     if _io.can_read_csv(ns):
         return _read_csv(source, kwds, ns)
     raise unsupported_backend_operation_error(backend, "read_csv")  # pragma: no cover
@@ -52,7 +52,7 @@ def read_parquet(
     source: FileSource, *, backend: IntoBackend[EagerAllowed], **kwds: Any
 ) -> DataFrame[Any, Any]:
     source = normalize_path(source)
-    ns = eager_namespace(backend)
+    ns = namespace(backend)
     if _io.can_read_parquet(ns):
         return _read_parquet(source, kwds, ns)
     raise unsupported_backend_operation_error(backend, "read_parquet")  # pragma: no cover
