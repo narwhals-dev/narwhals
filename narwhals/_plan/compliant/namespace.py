@@ -36,6 +36,8 @@ Int64 = Version.MAIN.dtypes.Int64()
 
 
 class CompliantNamespace(HasVersion, Protocol[FrameT, ExprT_co, ScalarT_co]):
+    """`[FrameT, ExprT_co, ScalarT_co]`."""
+
     implementation: ClassVar[Implementation]
 
     @property
@@ -116,6 +118,8 @@ class EagerNamespace(
     CompliantNamespace[EagerDataFrameT, EagerExprT_co, EagerScalarT_co],
     Protocol[EagerDataFrameT, SeriesT, EagerExprT_co, EagerScalarT_co],
 ):
+    """`[EagerDataFrameT, SeriesT, EagerExprT_co, EagerScalarT_co]`."""
+
     @property
     def _dataframe(self) -> type[EagerDataFrameT]: ...
     @property

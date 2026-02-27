@@ -40,7 +40,10 @@ if TYPE_CHECKING:
 
 # NOTE: At some point `Series` needs to be swapped out for `Column`
 class CompliantExpr(HasVersion, Protocol[FrameT_contra, SeriesT_co]):
-    """Everything common to `Expr`/`Series` and `Scalar` literal values."""
+    """Everything common to `Expr`/`Series` and `Scalar` literal values.
+
+    `[FrameT_contra, SeriesT_co]`.
+    """
 
     _evaluated: Any
     """Compliant or native value."""
@@ -286,6 +289,8 @@ class EagerExpr(
     CompliantExpr[FrameT_contra, SeriesT],
     Protocol[FrameT_contra, SeriesT],
 ):
+    """`[FrameT_contra, SeriesT]`."""
+
     def gather_every(
         self, node: FunctionExpr[F.GatherEvery], frame: FrameT_contra, name: str
     ) -> Self: ...

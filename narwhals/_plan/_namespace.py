@@ -82,7 +82,7 @@ def eager_implementation(backend: IntoBackend[Backend] | Any) -> _EagerAllowedIm
 
 def evaluator(backend: KnownImpl) -> type[ResolvedToCompliant[Any]]:
     if backend is Implementation.POLARS:
-        from narwhals._plan.polars.lazyframe import PolarsWhatever
+        from narwhals._plan.polars.lazyframe import PolarsEvaluator
 
-        return PolarsWhatever
+        return PolarsEvaluator
     raise NotImplementedError(backend)

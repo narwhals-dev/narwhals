@@ -61,9 +61,9 @@ class LogicalToResolved(LogicalVisitor["ResolvedPlan"], Protocol):
 
 
 class ResolvedToCompliant(Protocol[Native]):
-    """`ResolverPlan` -> `...` evaluator?
+    """`[Native]`.
 
-    This would be like narwhals -> compliant is now.
+    `ResolvedPlan` -> `CompliantLazyFrame[Native]`.
     """
 
     __slots__ = ()

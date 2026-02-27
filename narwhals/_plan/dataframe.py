@@ -34,6 +34,7 @@ from narwhals._utils import (
     Version,
     check_column_names_are_unique as raise_duplicate_error,
     generate_repr,
+    is_eager_allowed,
     qualified_type_name,
 )
 from narwhals.exceptions import InvalidOperationError, ShapeError
@@ -346,7 +347,11 @@ class DataFrame(
 
     @property
     def implementation(self) -> _EagerAllowedImpl:
-        return self._compliant.implementation
+        impl = self._compliant.implementation
+        if is_eager_allowed(impl):
+            return impl
+        msg = "TODO @dangotbanned: Stop relying on  `CompliantDataFrame.implementation: ClassVar[_EagerAllowedImpl]`"
+        raise NotImplementedError(msg)
 
     @property
     def shape(self) -> tuple[int, int]:

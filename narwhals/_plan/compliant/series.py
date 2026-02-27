@@ -32,6 +32,8 @@ if TYPE_CHECKING:
 
 
 class CompliantSeries(HasVersion, Protocol[NativeSeriesT]):
+    """`[NativeSeriesT]`."""
+
     implementation: ClassVar[_EagerAllowedImpl]
     _native: NativeSeriesT
     _name: str

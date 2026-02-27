@@ -76,11 +76,8 @@ class PolarsLazyFrame(PolarsFrame, CompliantLazyFrame[pl.LazyFrame]):
     collect_pandas = todo()
 
 
-class PolarsWhatever(ResolvedToCompliant[pl.LazyFrame]):
-    """No idea what to call this yet.
-
-    *Somewhat* of a mix between `*Namespace` and `*LazyFrame`
-    """
+class PolarsEvaluator(ResolvedToCompliant[pl.LazyFrame]):
+    """*Somewhat* of a mix between `*Namespace` and `*LazyFrame`."""
 
     __slots__ = ("_version",)
     _version: Version

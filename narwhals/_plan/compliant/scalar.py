@@ -23,6 +23,8 @@ if TYPE_CHECKING:
 class CompliantScalar(
     CompliantExpr[FrameT_contra, SeriesT_co], Protocol[FrameT_contra, SeriesT_co]
 ):
+    """`[FrameT_contra, SeriesT_co]`."""
+
     _name: str
 
     def _cast_float(self, node: ir.ExprIR, frame: FrameT_contra, name: str) -> Self:
@@ -145,6 +147,8 @@ class EagerScalar(
     EagerExpr[FrameT_contra, SeriesT],
     Protocol[FrameT_contra, SeriesT],
 ):
+    """`[FrameT_contra, SeriesT]`."""
+
     def __len__(self) -> int:
         return 1
 

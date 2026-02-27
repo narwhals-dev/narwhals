@@ -40,7 +40,7 @@ if TYPE_CHECKING:
     from narwhals._plan.options import ExplodeOptions, SortMultipleOptions
     from narwhals._plan.typing import Seq
     from narwhals._translate import ArrowStreamExportable, IntoArrowTable
-    from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
+    from narwhals._typing import _LazyAllowedImpl
     from narwhals._utils import Implementation
     from narwhals.dtypes import DType
     from narwhals.typing import AsofJoinStrategy, IntoSchema, PivotAgg, UniqueKeepStrategy
@@ -51,6 +51,8 @@ MAIN = Version.MAIN
 
 
 class CompliantFrame(HasVersion, Protocol[ColumnT_co, NativeFrameT_co]):
+    """`[ColumnT_co, NativeFrameT_co]`."""
+
     implementation: ClassVar[Implementation]
 
     def __narwhals_namespace__(self) -> IncompleteCyclic: ...
@@ -127,7 +129,8 @@ class CompliantDataFrame(
     CompliantFrame[SeriesT, NativeDataFrameT],
     Protocol[SeriesT, NativeDataFrameT, NativeSeriesT],
 ):
-    implementation: ClassVar[_EagerAllowedImpl]
+    """`[SeriesT, NativeDataFrameT, NativeSeriesT]`."""
+
     _native: NativeDataFrameT
 
     def __narwhals_dataframe__(self) -> Self:
@@ -289,6 +292,8 @@ class EagerDataFrame(
     CompliantDataFrame[SeriesT, NativeDataFrameT, NativeSeriesT],
     Protocol[SeriesT, NativeDataFrameT, NativeSeriesT],
 ):
+    """`[SeriesT, NativeDataFrameT, NativeSeriesT]`."""
+
     def __narwhals_namespace__(self) -> EagerNamespace[Self, SeriesT, Any, Any]: ...
     @property
     def _group_by(self) -> type[EagerDataFrameGroupBy[Self]]: ...
