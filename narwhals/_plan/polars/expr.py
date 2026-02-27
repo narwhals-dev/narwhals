@@ -2,19 +2,74 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+import polars as pl
+
 from narwhals._plan.common import todo
 from narwhals._plan.compliant.expr import CompliantExpr
+from narwhals._plan.polars.namespace import PolarsNamespace, dtype_native
+from narwhals._utils import Version
 
 if TYPE_CHECKING:
-    from typing_extensions import TypeAlias
+    from typing_extensions import Self, TypeAlias
+
+    from narwhals._plan import expressions as ir
+    from narwhals.typing import IntoDType, PythonLiteral
+
 
 Incomplete: TypeAlias = Any
 
 
 class PolarsExpr(CompliantExpr[Incomplete, Incomplete]):
-    _evaluated = todo()
-    _version = todo()  # type: ignore[assignment]
-    _with_native = todo()
+    _evaluated: pl.Expr
+    _version: Version
+
+    def _with_native(self, native: pl.Expr, name: str = "", /) -> Self:
+        return self.from_native(native, name, self.version)
+
+    # NOTE: Unsure how much of `name` might be needed for polars
+    @classmethod
+    def from_native(
+        cls, native: pl.Expr, name: str = "", /, version: Version = Version.MAIN
+    ) -> Self:
+        obj = cls.__new__(cls)
+        obj._evaluated = native if not name else native.alias(name)
+        obj._version = version
+        return obj
+
+    @classmethod
+    def from_python(
+        cls,
+        value: PythonLiteral,
+        name: str = "literal",
+        /,
+        *,
+        dtype: IntoDType | None = None,
+        version: Version = Version.MAIN,
+    ) -> Self:
+        unknown = version.dtypes.Unknown
+        dtype_pl = None if dtype == unknown else dtype_native(dtype, version)
+        return cls.from_native(pl.lit(value, dtype_pl), name, version)
+
+    @property
+    def name(self) -> str:
+        """**Currently a noop for polars**."""
+        return ""
+
+    # NOTE: `ExprDispatch` isn't part of the `Compliant*` protocols,
+    # but is required for `ExprIR.dispatch`
+    def __narwhals_namespace__(self) -> PolarsNamespace:
+        return PolarsNamespace(self.version)
+
+    @classmethod
+    def from_ir(cls, node: ir.ExprIR, frame: Incomplete, name: str) -> PolarsExpr:
+        obj = cls.__new__(cls)
+        obj._version = frame.version
+        return node.dispatch(obj, frame, name)
+
+    @classmethod
+    def from_named_ir(cls, named_ir: ir.NamedIR, frame: Incomplete) -> PolarsExpr:
+        return cls.from_ir(named_ir.expr, frame, named_ir.name)
+
     abs = todo()
     all = todo()
     any = todo()
@@ -42,7 +97,6 @@ class PolarsExpr(CompliantExpr[Incomplete, Incomplete]):
     filter = todo()
     first = todo()
     floor = todo()
-    from_native = todo()
     hist_bin_count = todo()
     hist_bins = todo()
     is_between = todo()
@@ -92,10 +146,8 @@ class PolarsExpr(CompliantExpr[Incomplete, Incomplete]):
 
     cat = todo()  # type: ignore[assignment]
     list = todo()  # type: ignore[assignment]
-    name = todo()  # type: ignore[assignment]
     str = todo()  # type: ignore[assignment]
     struct = todo()  # type: ignore[assignment]
-    version = todo()  # type: ignore[assignment]
 
 
 PolarsExpr()

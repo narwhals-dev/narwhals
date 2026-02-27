@@ -54,8 +54,9 @@ class CompliantPackage(Protocol[NativeLazy]):
         """Optional for lazy-only."""
 
     @property
-    def Expr(self) -> type[CompliantExpr[Incomplete, Incomplete]] | Incomplete:
+    def Expr(self) -> type[CompliantExpr[Incomplete, Incomplete]]:
         """Required, but not implemented for `polars` yet."""
+        ...
 
     @property
     def Scalar(self) -> type[CompliantScalar[Incomplete, Incomplete]] | None:
