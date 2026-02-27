@@ -41,6 +41,7 @@ if TYPE_CHECKING:
     from narwhals.series import Series
     from narwhals.typing import (
         ConcatMethod,
+        CorrMethod,
         FileSource,
         FrameT,
         IntoDType,
@@ -1266,9 +1267,7 @@ def _expr_with_horizontal_op(name: str, *exprs: IntoExpr, **kwargs: Any) -> Expr
     )
 
 
-def corr(
-    a: IntoExpr, b: IntoExpr, method: Literal["pearson", "spearman"] = "pearson"
-) -> Expr:
+def corr(a: IntoExpr, b: IntoExpr, method: CorrMethod = "pearson") -> Expr:
     """Compute the Pearson's or Spearman rank correlation between two columns. Ddof is implictly 1.
 
     Arguments:

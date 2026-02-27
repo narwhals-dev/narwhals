@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.window import WindowInputs
     from narwhals._spark_like.dataframe import SQLFrameDataFrame  # noqa: F401
     from narwhals._utils import Implementation, Version
-    from narwhals.typing import ConcatMethod, IntoDType, PythonLiteral
+    from narwhals.typing import ConcatMethod, CorrMethod, IntoDType, PythonLiteral
 
 # Adjust slight SQL vs PySpark differences
 FUNCTION_REMAPPINGS = {
@@ -221,11 +221,7 @@ class SparkLikeNamespace(
         )
 
     def corr(
-        self,
-        a: SparkLikeExpr,
-        b: SparkLikeExpr,
-        *,
-        method: Literal["pearson", "spearman"],
+        self, a: SparkLikeExpr, b: SparkLikeExpr, *, method: CorrMethod
     ) -> SparkLikeExpr:
         if method != "pearson":
             msg = "Only 'pearson' correlation is supported for Spark."

@@ -32,6 +32,7 @@ if TYPE_CHECKING:
     from narwhals._utils import Implementation, Version
     from narwhals.typing import (
         ConcatMethod,
+        CorrMethod,
         Into1DArray,
         IntoDType,
         IntoSchema,
@@ -72,11 +73,7 @@ class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
         return self._expr.from_column_indices(*indices, context=self)
 
     def corr(
-        self,
-        a: CompliantExprT,
-        b: CompliantExprT,
-        *,
-        method: Literal["pearson", "spearman"],
+        self, a: CompliantExprT, b: CompliantExprT, *, method: CorrMethod
     ) -> CompliantExprT: ...
     def len(self) -> CompliantExprT: ...
     def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> CompliantExprT: ...

@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from typing import Literal
 
     from narwhals._utils import Version
-    from narwhals.typing import ConcatMethod, IntoDType, PythonLiteral
+    from narwhals.typing import ConcatMethod, CorrMethod, IntoDType, PythonLiteral
 
 
 class IbisNamespace(
@@ -143,9 +143,7 @@ class IbisNamespace(
             version=self._version,
         )
 
-    def corr(
-        self, a: IbisExpr, b: IbisExpr, *, method: Literal["pearson", "spearman"]
-    ) -> IbisExpr:
+    def corr(self, a: IbisExpr, b: IbisExpr, *, method: CorrMethod) -> IbisExpr:
         if method != "pearson":
             msg = "Only 'pearson' correlation is supported for Spark."
             raise NotImplementedError(msg)

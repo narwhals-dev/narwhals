@@ -31,7 +31,7 @@ if TYPE_CHECKING:
     import dask.dataframe.dask_expr as dx
 
     from narwhals._utils import Version
-    from narwhals.typing import ConcatMethod, IntoDType, NonNestedLiteral
+    from narwhals.typing import ConcatMethod, CorrMethod, IntoDType, NonNestedLiteral
 
 
 class DaskNamespace(
@@ -322,13 +322,7 @@ class DaskNamespace(
             version=self._version,
         )
 
-    def corr(
-        self,
-        a: DaskExpr,
-        b: DaskExpr,
-        *,
-        method: Literal["pearson", "spearman"] = "pearson",
-    ) -> DaskExpr:
+    def corr(self, a: DaskExpr, b: DaskExpr, *, method: CorrMethod) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             a_ = df._evaluate_single_output_expr(a)
             b_ = df._evaluate_single_output_expr(b)
