@@ -12,4 +12,13 @@ Series = None
 Scalar = None
 PlanResolver = None
 
-__all__ = ["DataFrame", "Expr", "LazyFrame", "Namespace", "PlanEvaluator"]
+__all__ = [
+    "DataFrame",
+    "Expr",
+    "LazyFrame",
+    "Namespace",
+    "PlanEvaluator",
+    "PlanResolver",
+    "Scalar",
+    "Series",
+]

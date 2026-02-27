@@ -38,7 +38,7 @@ def dtype_native(dtype: IntoDType | None, /, version: Version) -> pl.DataType | 
     return dtype if dtype is None else _dtype_native(dtype, version)
 
 
-class PolarsNamespace(CompliantNamespace[Incomplete, Incomplete, Incomplete]):
+class PolarsNamespace(CompliantNamespace[Incomplete, "Expr", Incomplete]):
     __slots__ = ("_version",)
     _version: Version
     implementation: ClassVar = Implementation.POLARS
