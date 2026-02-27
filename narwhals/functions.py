@@ -1386,9 +1386,6 @@ class Then(Expr):
         then_value: IntoExpr | NonNestedLiteral,
         otherwise_value: IntoExpr | NonNestedLiteral = None,
     ) -> Then:
-        cls._predicate = predicate
-        cls._then_value = then_value
-        cls._otherwise_value = otherwise_value
         exprs: tuple[IntoExpr | NonNestedLiteral, ...]
         if otherwise_value is None:
             exprs = (predicate, then_value)
@@ -1397,7 +1394,11 @@ class Then(Expr):
         node = ExprNode(
             ExprKind.ELEMENTWISE, "when_then", exprs=exprs, allow_multi_output=False
         )
-        return cls(node)
+        ret = cls(node)
+        ret._predicate = predicate
+        ret._then_value = then_value
+        ret._otherwise_value = otherwise_value
+        return ret
 
     def otherwise(self, value: IntoExpr | NonNestedLiteral) -> Expr:
         return Then._from_exprs(self._predicate, self._then_value, value)
