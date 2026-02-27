@@ -1269,7 +1269,7 @@ def _expr_with_horizontal_op(name: str, *exprs: IntoExpr, **kwargs: Any) -> Expr
 def corr(
     a: IntoExpr, b: IntoExpr, method: Literal["pearson", "spearman"] = "pearson"
 ) -> Expr:
-    """Compute the Pearson's or Spearman rank correlation between two columns.
+    """Compute the Pearson's or Spearman rank correlation between two columns. Ddof is implictly 1.
 
     Arguments:
         a: Column name or Expression
