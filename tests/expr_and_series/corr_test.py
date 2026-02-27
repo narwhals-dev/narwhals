@@ -7,13 +7,14 @@ import pytest
 import narwhals as nw
 from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
-data = {"a": [1, 3, 2], "b": [1, 2, 3]}
+data = {"a": [1, 3, 2], "b": [1, 2, 3], "c": [1, None, 1]}
 
 
 @pytest.mark.parametrize(
     ("output_name", "a", "b", "expected_corr"),
     [
         ("a", "a", "b", 0.5),
+        ("a", "a", "c", None),
         ("b", nw.col("a").alias("b"), nw.col("b").alias("c"), 0.5),
         ("a", nw.col("a") * nw.col("b"), nw.col("b") - 0.5, 0.8660254037844386),
     ],
