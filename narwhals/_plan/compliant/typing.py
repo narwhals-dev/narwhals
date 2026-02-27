@@ -84,10 +84,17 @@ def namespace(obj: SupportsNarwhalsNamespace[NamespaceT_co], /) -> NamespaceT_co
     return obj.__narwhals_namespace__()
 
 
-# NOTE: Unlike `nw._utils._StoresVersion`, here the property is public
+# TODO @dangotbanned: `_version` (attribute) is not implemented, but typed in a `HasVersion` as `Version`
+# - `version` (property) is implemented there, defined as referencing `self._version`
+# - I remember this being an issue for pyarrow typing
+# NOTE: Most of the `Compliant*` protocols are using this detail to provide constructors that assign to it
+# - Would be better if we didn't need to pass this around everywhere
+# - Really the version should be scoped to all operations
+#  - the property would reference that new place
 class HasVersion(Protocol):
     _version: Version
 
+    # NOTE: Unlike `nw._utils._StoresVersion`, here the property is public
     @property
     def version(self) -> Version:
         """Narwhals API version (V1 or MAIN)."""
