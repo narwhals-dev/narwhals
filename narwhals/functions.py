@@ -3,7 +3,7 @@ from __future__ import annotations
 import platform
 import sys
 from collections.abc import Iterable, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any
 
 from narwhals._expression_parsing import ExprKind, ExprNode, is_expr, is_series
 from narwhals._utils import (
@@ -1268,7 +1268,7 @@ def _expr_with_horizontal_op(name: str, *exprs: IntoExpr, **kwargs: Any) -> Expr
 
 
 def corr(a: IntoExpr, b: IntoExpr, method: CorrMethod = "pearson") -> Expr:
-    """Compute the Pearson's or Spearman rank correlation between two columns. Ddof is implictly 1.
+    """Compute the Pearson's or Spearman rank correlation between two columns. Ddof is implicitly 1.
 
     Arguments:
         a: Column name or Expression

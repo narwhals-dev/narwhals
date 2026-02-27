@@ -26,7 +26,6 @@ from narwhals._utils import Implementation, is_nested_literal, zip_strict
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
-    from typing import Literal
 
     import dask.dataframe.dask_expr as dx
 

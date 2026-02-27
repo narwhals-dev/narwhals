@@ -22,7 +22,6 @@ from narwhals._sql.namespace import SQLNamespace
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
-    from typing import Literal
 
     from sqlframe.base.column import Column
 

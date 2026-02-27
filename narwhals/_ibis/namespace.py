@@ -22,7 +22,6 @@ from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
-    from typing import Literal
 
     from narwhals._utils import Version
     from narwhals.typing import ConcatMethod, CorrMethod, IntoDType, PythonLiteral
