@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import typing as t
 from typing import TYPE_CHECKING, Any, overload
 
+from narwhals._typing_compat import deprecated
 from narwhals._utils import Implementation, Version, is_eager_allowed
 
 if TYPE_CHECKING:
@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from narwhals._plan.compliant.dataframe import EagerDataFrame
     from narwhals._plan.compliant.namespace import CompliantNamespace, EagerNamespace
     from narwhals._plan.compliant.series import CompliantSeries
+    from narwhals._plan.compliant.typing import NamespaceT_co, SupportsNarwhalsNamespace
     from narwhals._plan.plans.visitors import ResolvedToCompliant
     from narwhals._plan.typing import NativeDataFrameT, NativeSeriesT
     from narwhals._typing import Arrow, _EagerAllowedImpl, _LazyAllowedImpl
@@ -31,14 +32,22 @@ KnownImpl: TypeAlias = "_EagerAllowedImpl | _LazyAllowedImpl"
 """Equivalent to `Backend - BackendName`."""
 
 
-def namespace(backend: IntoBackend[Backend]) -> CompliantNamespace[Any, Any, Any]:
+def namespace(obj: SupportsNarwhalsNamespace[NamespaceT_co], /) -> NamespaceT_co:
+    """Get the compliant namespace from `obj`."""
+    return obj.__narwhals_namespace__()
+
+
+def namespace_from_backend(
+    backend: IntoBackend[Backend],
+) -> CompliantNamespace[Any, Any, Any]:
+    """Instantiate a compliant namespace from `backend`, routing through `Implementation`."""
     impl = Implementation.from_backend(backend)
     if impl is Implementation.POLARS:
         from narwhals._plan import polars as _polars
 
         return _polars.Namespace(Version.MAIN)
     if is_eager_allowed(impl):
-        return eager_namespace(impl)
+        return eager_namespace_from_backend(impl)
     msg = f"Lazy backends are not yet supported in `narwhals._plan`, got: {impl!r}"
     raise NotImplementedError(msg)
 
@@ -47,12 +56,15 @@ def namespace(backend: IntoBackend[Backend]) -> CompliantNamespace[Any, Any, Any
 # (file) `io` has been weaned off, but ranges and memory io still use it
 # the overloads are fine, just need to avoid exposing `Eager*` classes
 @overload
-def eager_namespace(backend: Arrow, /) -> _arrow.Namespace: ...
+def eager_namespace_from_backend(backend: Arrow, /) -> _arrow.Namespace: ...
 @overload
-def eager_namespace(backend: IntoBackend[EagerAllowed], /) -> EagerNs[Any, Any]: ...
-def eager_namespace(
+def eager_namespace_from_backend(
     backend: IntoBackend[EagerAllowed], /
-) -> EagerNs[t.Any, t.Any] | _arrow.Namespace:
+) -> EagerNs[Any, Any]: ...
+@deprecated("Use the more granualar protocols instead")
+def eager_namespace_from_backend(
+    backend: IntoBackend[EagerAllowed], /
+) -> EagerNs[Any, Any] | _arrow.Namespace:
     impl = eager_implementation(backend)
     if impl is Implementation.PYARROW:
         from narwhals._plan import arrow as _arrow

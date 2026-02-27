@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, Literal, overload
 from narwhals._duration import Interval
 from narwhals._plan import _parse, common
 from narwhals._plan._dispatch import get_dispatch_name
-from narwhals._plan._namespace import eager_namespace
+from narwhals._plan._namespace import eager_namespace_from_backend
 from narwhals._plan.expressions.ranges import (
     DateRange,
     IntRange,
@@ -68,7 +68,7 @@ def int_range(
         start = 0
     dtype = common.into_dtype(dtype)
     if eager:
-        ns = eager_namespace(eager)
+        ns = eager_namespace_from_backend(eager)
         start, end = _ensure_range_scalar(start, end, int, IntRange, eager)
         return _int_range_eager(start, end, step, dtype, ns)
     return (
@@ -116,7 +116,7 @@ def date_range(
     days = _interval_days(interval)
     closed = _ensure_closed_interval(closed)
     if eager:
-        ns = eager_namespace(eager)
+        ns = eager_namespace_from_backend(eager)
         start, end = _ensure_range_scalar(start, end, dt.date, DateRange, eager)
         return _date_range_eager(start, end, days, closed, ns)
     return (
@@ -205,7 +205,7 @@ def linear_space(
     ensure_type(num_samples, int, param_name="num_samples")
     closed = _ensure_closed_interval(closed)
     if eager:
-        ns = eager_namespace(eager)
+        ns = eager_namespace_from_backend(eager)
         start, end = _ensure_range_scalar(start, end, (float, int), LinearSpace, eager)
         return _linear_space_eager(start, end, num_samples, closed, ns)
     return (

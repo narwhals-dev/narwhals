@@ -10,6 +10,7 @@ import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._arrow.utils import native_to_narwhals_dtype
+from narwhals._plan._namespace import namespace
 from narwhals._plan.arrow import acero, compat, functions as fn
 from narwhals._plan.arrow.common import ArrowFrameSeries as FrameSeries
 from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
@@ -22,7 +23,6 @@ from narwhals._plan.arrow.pivot import pivot_table
 from narwhals._plan.arrow.series import ArrowSeries as Series
 from narwhals._plan.common import temp
 from narwhals._plan.compliant.dataframe import EagerDataFrame
-from narwhals._plan.compliant.typing import LazyFrameAny, namespace
 from narwhals._plan.exceptions import shape_error
 from narwhals._plan.expressions import NamedIR, named_ir
 from narwhals._utils import Version, generate_repr, requires, supports_arrow_c_stream
@@ -39,6 +39,7 @@ if TYPE_CHECKING:
     from narwhals._plan.arrow.typing import ChunkedArrayAny, ChunkedOrArrayAny, Predicate
     from narwhals._plan.compliant.dataframe import CompliantDataFrame
     from narwhals._plan.compliant.group_by import GroupByResolver
+    from narwhals._plan.compliant.typing import LazyFrameAny
     from narwhals._plan.dataframe import DataFrame as NwDataFrame
     from narwhals._plan.expressions import NamedIR
     from narwhals._plan.options import ExplodeOptions, SortMultipleOptions

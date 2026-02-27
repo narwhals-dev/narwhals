@@ -13,7 +13,7 @@ from narwhals._plan.exceptions import (
     function_expr_invalid_operation_error,
     over_order_by_names_error,
 )
-from narwhals._plan.expressions import selectors as cs
+from narwhals._plan.expressions.selectors import ByName
 from narwhals._plan.options import ExprIROptions
 from narwhals._plan.typing import (
     FunctionT_co,
@@ -39,6 +39,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._plan.compliant.typing import Ctx, FrameT_contra, R_co
+    from narwhals._plan.expressions import selectors as cs
     from narwhals._plan.expressions.functions import MapBatches  # noqa: F401
     from narwhals._plan.expressions.literal import LiteralValue
     from narwhals._plan.options import FunctionOptions, SortMultipleOptions, SortOptions
@@ -60,7 +61,6 @@ __all__ = [
     "Over",
     "RollingExpr",
     "RootSelector",
-    "SelectorIR",
     "Sort",
     "SortBy",
     "StructExpr",
@@ -102,7 +102,8 @@ class Column(ExprIR, config=namespaced("col")):
         return f"col({self.name!r})"
 
     def to_selector_ir(self) -> RootSelector:
-        return cs.ByName.from_name(self.name).to_selector_ir()
+
+        return ByName.from_name(self.name).to_selector_ir()
 
     def resolve_dtype(self, schema: FrozenSchema) -> DType:
         return schema[self.name]

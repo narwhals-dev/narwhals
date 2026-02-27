@@ -6,11 +6,11 @@ import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc
 
 from narwhals._arrow.utils import native_to_narwhals_dtype
+from narwhals._plan._namespace import namespace
 from narwhals._plan.arrow import compat, functions as fn, options
 from narwhals._plan.arrow.common import ArrowFrameSeries as FrameSeries
 from narwhals._plan.compliant.accessors import SeriesStructNamespace as StructNamespace
 from narwhals._plan.compliant.series import CompliantSeries
-from narwhals._plan.compliant.typing import namespace
 from narwhals._plan.expressions import functions as F
 from narwhals._utils import Version, generate_repr
 from narwhals.dependencies import is_numpy_array_1d

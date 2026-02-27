@@ -79,11 +79,6 @@ class SupportsNarwhalsNamespace(Protocol[NamespaceT_co]):
     def __narwhals_namespace__(self) -> NamespaceT_co: ...
 
 
-def namespace(obj: SupportsNarwhalsNamespace[NamespaceT_co], /) -> NamespaceT_co:
-    """Return the compliant namespace."""
-    return obj.__narwhals_namespace__()
-
-
 # TODO @dangotbanned: `_version` (attribute) is not implemented, but typed in a `HasVersion` as `Version`
 # - `version` (property) is implemented there, defined as referencing `self._version`
 # - I remember this being an issue for pyarrow typing

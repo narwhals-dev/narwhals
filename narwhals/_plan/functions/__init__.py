@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, get_args, overload
 
 from narwhals._plan import _guards, selectors as cs
-from narwhals._plan.compliant.typing import namespace
+from narwhals._plan._namespace import namespace
 from narwhals._plan.functions.aggregation import max, mean, median, min, sum
 from narwhals._plan.functions.col import col
 from narwhals._plan.functions.horizontal import (

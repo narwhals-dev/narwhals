@@ -6,34 +6,35 @@ from operator import attrgetter
 from typing import TYPE_CHECKING, Any, Generic, Literal, Protocol, final, overload
 
 from narwhals._plan._guards import is_function_expr
-from narwhals._plan.compliant.typing import FrameT_contra, R_co
 from narwhals._typing_compat import TypeVar
 
 if TYPE_CHECKING:
     from typing_extensions import Never, TypeAlias
 
-    from narwhals._plan.compliant.typing import Ctx
+    from narwhals._plan.compliant.typing import Ctx, FrameT_contra, R_co
     from narwhals._plan.expressions import ExprIR, Function, FunctionExpr
     from narwhals._plan.typing import ExprIRT, FunctionT
+
+    Node_contra = TypeVar(
+        "Node_contra", bound="ExprIR | FunctionExpr[Any]", contravariant=True
+    )
+
+    class Binder(Protocol[Node_contra]):
+        def __call__(
+            self, ctx: Ctx[FrameT_contra, R_co], /
+        ) -> BoundMethod[Node_contra, FrameT_contra, R_co]: ...
+
+    class BoundMethod(Protocol[Node_contra, FrameT_contra, R_co]):
+        def __call__(
+            self, node: Node_contra, frame: FrameT_contra, name: str, /
+        ) -> R_co: ...
+
 
 __all__ = ["Dispatcher", "get_dispatch_name"]
 
 
 Node = TypeVar("Node", bound="ExprIR | FunctionExpr[Any]")
-Node_contra = TypeVar(
-    "Node_contra", bound="ExprIR | FunctionExpr[Any]", contravariant=True
-)
 Raiser: TypeAlias = Callable[..., "Never"]
-
-
-class Binder(Protocol[Node_contra]):
-    def __call__(
-        self, ctx: Ctx[FrameT_contra, R_co], /
-    ) -> BoundMethod[Node_contra, FrameT_contra, R_co]: ...
-
-
-class BoundMethod(Protocol[Node_contra, FrameT_contra, R_co]):
-    def __call__(self, node: Node_contra, frame: FrameT_contra, name: str, /) -> R_co: ...
 
 
 @final

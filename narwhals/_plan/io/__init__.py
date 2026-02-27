@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Literal, overload
 
-from narwhals._plan._namespace import namespace
+from narwhals._plan._namespace import namespace_from_backend
 from narwhals._plan.compliant import io as _io
 from narwhals._plan.exceptions import unsupported_backend_operation_error
 from narwhals._utils import normalize_path, unstable
@@ -34,7 +34,7 @@ def read_csv(
     source: FileSource, *, backend: IntoBackend[EagerAllowed], **kwds: Any
 ) -> DataFrame[Any, Any]:
     source = normalize_path(source)
-    ns = namespace(backend)
+    ns = namespace_from_backend(backend)
     if _io.can_read_csv(ns):
         return _read_csv(source, kwds, ns)
     raise unsupported_backend_operation_error(backend, "read_csv")  # pragma: no cover
@@ -52,7 +52,7 @@ def read_parquet(
     source: FileSource, *, backend: IntoBackend[EagerAllowed], **kwds: Any
 ) -> DataFrame[Any, Any]:
     source = normalize_path(source)
-    ns = namespace(backend)
+    ns = namespace_from_backend(backend)
     if _io.can_read_parquet(ns):
         return _read_parquet(source, kwds, ns)
     raise unsupported_backend_operation_error(backend, "read_parquet")  # pragma: no cover
@@ -75,7 +75,7 @@ def read_csv_schema(
     source: FileSource, *, backend: IntoBackend[Backend], **kwds: Any
 ) -> Schema:
     """Infer the schema of a Csv file."""
-    ns = namespace(backend)
+    ns = namespace_from_backend(backend)
     if _io.can_read_csv_schema(ns):
         return ns.read_csv_schema(normalize_path(source), **kwds)
     raise unsupported_backend_operation_error(
@@ -85,7 +85,7 @@ def read_csv_schema(
 
 def read_parquet_schema(source: FileSource, *, backend: IntoBackend[Backend]) -> Schema:
     """Get the schema of a Parquet file without reading data."""
-    ns = namespace(backend)
+    ns = namespace_from_backend(backend)
     if _io.can_read_parquet_schema(ns):
         return ns.read_parquet_schema(normalize_path(source))
     raise unsupported_backend_operation_error(
@@ -123,7 +123,7 @@ def _scan_file(
     if kwds:
         msg = f"Passing arbitrary keywords arguments to `{method}()` is not yet implemented, got: {kwds!r}"
         raise NotImplementedError(msg)
-    ns = namespace(backend)
+    ns = namespace_from_backend(backend)
     if method == "scan_csv" and _io.can_scan_csv(ns):
         return LogicalPlan.scan_csv(source).to_narwhals(backend)
     if method == "scan_parquet" and _io.can_scan_parquet(ns):

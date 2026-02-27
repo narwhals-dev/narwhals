@@ -13,6 +13,7 @@ from narwhals._plan._guards import (
     is_python_literal,
     is_seq_column,
 )
+from narwhals._plan._namespace import namespace
 from narwhals._plan.arrow import functions as fn
 from narwhals._plan.arrow.group_by import BOOLEAN_LENGTH_PRESERVING, AggSpec
 from narwhals._plan.arrow.series import ArrowSeries as Series
@@ -27,7 +28,6 @@ from narwhals._plan.compliant.accessors import (
 from narwhals._plan.compliant.column import ExprDispatch
 from narwhals._plan.compliant.expr import EagerExpr
 from narwhals._plan.compliant.scalar import EagerScalar
-from narwhals._plan.compliant.typing import namespace
 from narwhals._plan.exceptions import shape_error
 from narwhals._plan.expressions import FunctionExpr as FExpr, functions as F
 from narwhals._plan.expressions.boolean import (
