@@ -256,7 +256,7 @@ class ArrowNamespace(
 
     def corr(self, a: ArrowExpr, b: ArrowExpr, *, method: CorrMethod) -> ArrowExpr:
         if method != "pearson":
-            msg = "Only 'pearson' correlation is supported for Spark."
+            msg = "Only 'pearson' correlation is supported for Pyarrow."
             raise NotImplementedError(msg)
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:

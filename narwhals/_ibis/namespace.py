@@ -145,7 +145,7 @@ class IbisNamespace(
 
     def corr(self, a: IbisExpr, b: IbisExpr, *, method: CorrMethod) -> IbisExpr:
         if method != "pearson":
-            msg = "Only 'pearson' correlation is supported for Spark."
+            msg = "Only 'pearson' correlation is supported for Ibis."
             raise NotImplementedError(msg)
 
         def func(_df: IbisLazyFrame) -> list[ir.Value]:
