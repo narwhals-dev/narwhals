@@ -1375,6 +1375,10 @@ class When:
 
 
 class Then(Expr):
+    _predicate: Expr
+    _then_value: IntoExpr | NonNestedLiteral
+    _otherwise_value: IntoExpr | NonNestedLiteral
+
     @classmethod
     def _from_exprs(
         cls,
@@ -1385,6 +1389,7 @@ class Then(Expr):
         cls._predicate = predicate
         cls._then_value = then_value
         cls._otherwise_value = otherwise_value
+        exprs: tuple[IntoExpr | NonNestedLiteral, ...]
         if otherwise_value is None:
             exprs = (predicate, then_value)
         else:
