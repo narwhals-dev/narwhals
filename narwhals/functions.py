@@ -31,7 +31,7 @@ from narwhals.translate import from_native, to_native
 if TYPE_CHECKING:
     from types import ModuleType
 
-    from typing_extensions import TypeAlias, TypeIs
+    from typing_extensions import Self, TypeAlias, TypeIs
 
     from narwhals._native import NativeDataFrame, NativeLazyFrame, NativeSeries
     from narwhals._translate import IntoArrowTable
@@ -1385,7 +1385,7 @@ class Then(Expr):
         predicate: Expr,
         then_value: IntoExpr | NonNestedLiteral,
         otherwise_value: IntoExpr | NonNestedLiteral = None,
-    ) -> Then:
+    ) -> Self:
         exprs: tuple[IntoExpr | NonNestedLiteral, ...]
         if otherwise_value is None:
             exprs = (predicate, then_value)
@@ -1401,7 +1401,7 @@ class Then(Expr):
         return ret
 
     def otherwise(self, value: IntoExpr | NonNestedLiteral) -> Expr:
-        return Then._from_exprs(self._predicate, self._then_value, value)
+        return self._from_exprs(self._predicate, self._then_value, value)
 
 
 def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:

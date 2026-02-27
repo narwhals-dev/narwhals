@@ -869,16 +869,10 @@ class When(nw_f.When):
         return cls(when._predicate)
 
     def then(self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Then:
-        return Then.from_then(super().then(value))
+        return Then._from_exprs(self._predicate, value)
 
 
-class Then(nw_f.Then, Expr):
-    @classmethod
-    def from_then(cls, then: nw_f.Then) -> Then:
-        return cls(*then._nodes)
-
-    def otherwise(self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Expr:
-        return _stableify(super().otherwise(value))
+class Then(nw_f.Then, Expr): ...
 
 
 def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
