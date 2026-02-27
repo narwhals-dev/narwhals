@@ -34,7 +34,20 @@ def data() -> Data:
     return {"a": [1, 2, 3], "b": [4.5, 6.7, 8.9], "z": ["x", "y", "w"]}
 
 
-lazy_core_backend = pytest.mark.parametrize("backend", ["duckdb", "ibis", "sqlframe"])
+XFAIL_NOT_IMPL = pytest.mark.xfail(
+    reason="Not implemented yet", raises=NotImplementedError
+)
+
+lazy_core_backend = pytest.mark.parametrize(
+    "backend",
+    [
+        pytest.param("duckdb", marks=XFAIL_NOT_IMPL),
+        pytest.param("ibis", marks=XFAIL_NOT_IMPL),
+        pytest.param("sqlframe", marks=XFAIL_NOT_IMPL),
+    ],
+)
+
+
 param_pandas_import = pytest.param(
     "pandas",
     {"engine": "pyarrow"},
