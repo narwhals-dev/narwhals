@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Callable, Generic, overload
 
 import polars as pl
 
@@ -9,6 +9,7 @@ from narwhals._plan._version import into_version
 from narwhals._plan.common import todo
 from narwhals._plan.compliant.accessors import SeriesStructNamespace as StructNamespace
 from narwhals._plan.compliant.series import CompliantSeries
+from narwhals._plan.compliant.typing import SeriesT
 from narwhals._plan.polars.namespace import (
     PolarsNamespace as Namespace,
     dtype_from_native,
@@ -24,7 +25,7 @@ from narwhals._utils import Implementation, Version, requires
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_index
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Callable, Iterable
 
     from typing_extensions import Self, TypeAlias
 
@@ -74,6 +75,62 @@ else:
 
     def min_samples_periods(min_samples: int, /, **kwds: Any) -> dict[str, Any]:
         return {"min_periods": min_samples, **kwds}
+
+
+def _make_bin_op(name: str, /) -> Callable[[SeriesT, Any], SeriesT]:
+    method_native = getattr(pl.Series, name)
+
+    def f(self: SeriesT, other: Any, /) -> SeriesT:
+        other = other.native if isinstance(other, type(self)) else other
+        result = method_native(self.native, other)
+        return self.from_native(result, version=self.version)
+
+    return f
+
+
+class bin_op(Generic[SeriesT]):  # noqa: N801
+    """Descriptor adding a lazy proxy for binary Series operations.
+
+    Note:
+        - `pyright` is fine with a `TypeVar` default of `PolarsSeries`
+        - `mypy` requires annotating as `bin_op[Self]`
+    """
+
+    __slots__ = ("__name__", "_method_native", "_name_owner")
+
+    def __init__(self) -> None:
+        self._method_native: Callable[[SeriesT, Any], SeriesT] | None = None
+        """Generated *iff* the method was ever used.
+
+        After the first call, the same wrapper function is reused for all instances.
+        """
+
+    def __set_name__(self, owner: type[SeriesT], name: str) -> None:
+        self._name_owner: str = owner.__name__
+        self.__name__: str = name
+
+    def __repr__(self) -> str:
+        return f"bin_op<{self._name_owner}.{self.__name__}>"
+
+    @overload
+    def __get__(
+        self, instance: SeriesT, owner: Any, /
+    ) -> Callable[[SeriesT, Any], SeriesT]: ...
+    @overload
+    def __get__(self, instance: None, owner: type[SeriesT], /) -> Self: ...
+    def __get__(
+        self, instance: SeriesT | None, owner: type[SeriesT] | None, /
+    ) -> Self | Callable[[SeriesT, Any], SeriesT]:
+        if instance is None:
+            return self
+        if (method_native := self._method_native) is None:
+            method_native = self._method_native = _make_bin_op(self.__name__)
+        return method_native
+
+    def __call__(self, instance: SeriesT | None, other: Any, /) -> SeriesT:
+        if instance is None:
+            raise NotImplementedError
+        return self.__get__(instance, None)(instance, other)
 
 
 class PolarsSeries(CompliantSeries[pl.Series]):
@@ -213,40 +270,41 @@ class PolarsSeries(CompliantSeries[pl.Series]):
         explode_todo(empty_as_null=empty_as_null, keep_nulls=keep_nulls)
         return self._with_native(self.native.explode())
 
-    __add__ = todo()
-    __and__ = todo()
-    __eq__ = todo()
-    __floordiv__ = todo()
-    __ge__ = todo()
-    __gt__ = todo()
-
     def __invert__(self) -> Self:
         return self._with_native(self.native.__invert__())
 
-    __le__ = todo()
-    __lt__ = todo()
-    __mod__ = todo()
-    __mul__ = todo()
-    __ne__ = todo()
-    __or__ = todo()
-    __pow__ = todo()
-    __radd__ = todo()
-    __rand__ = todo()
+    __add__ = bin_op["Self"]()
+    __and__ = bin_op["Self"]()
+    __eq__ = bin_op["Self"]()
+    __floordiv__ = bin_op["Self"]()
+    __ge__ = bin_op["Self"]()
+    __gt__ = bin_op["Self"]()
+    __le__ = bin_op["Self"]()
+    __lt__ = bin_op["Self"]()
+    __mod__ = bin_op["Self"]()
+    __mul__ = bin_op["Self"]()
+    __ne__ = bin_op["Self"]()
+    __or__ = bin_op["Self"]()
+    __pow__ = bin_op["Self"]()
+    __radd__ = bin_op["Self"]()
+    __rand__ = bin_op["Self"]()
+    __rmod__ = bin_op["Self"]()
+    __rmul__ = bin_op["Self"]()
+    __ror__ = bin_op["Self"]()
+    __rsub__ = bin_op["Self"]()
+    __rtruediv__ = bin_op["Self"]()
+    __rxor__ = bin_op["Self"]()
+    __sub__ = bin_op["Self"]()
+    __truediv__ = bin_op["Self"]()
+    __xor__ = bin_op["Self"]()
+
     # NOTE: Needs compat
     # https://github.com/narwhals-dev/narwhals/blob/c207fc096263ce174470240748e0c568f38f93e2/narwhals/_polars/series.py#L259-L268
     __rfloordiv__ = todo()
-    __rmod__ = todo()
-    __rmul__ = todo()
-    __ror__ = todo()
+
     # # NOTE: Needs compat
     # https://github.com/narwhals-dev/narwhals/blob/c207fc096263ce174470240748e0c568f38f93e2/narwhals/_polars/series.py#L357-L362
     __rpow__ = todo()
-    __rsub__ = todo()
-    __rtruediv__ = todo()
-    __rxor__ = todo()
-    __sub__ = todo()
-    __truediv__ = todo()
-    __xor__ = todo()
 
     def all(self) -> bool:
         return self.native.all()
