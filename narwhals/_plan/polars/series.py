@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import polars as pl
-from typing_extensions import Self
 
 from narwhals._plan._namespace import namespace
 from narwhals._plan._version import into_version
@@ -21,7 +20,7 @@ from narwhals._polars.utils import (
     SERIES_ACCEPTS_PD_INDEX,
     SERIES_RESPECTS_DTYPE,
 )
-from narwhals._utils import Implementation, Version
+from narwhals._utils import Implementation, Version, requires
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_index
 
 if TYPE_CHECKING:
@@ -46,6 +45,16 @@ if TYPE_CHECKING:
 
 Incomplete: TypeAlias = Any
 
+
+SERIES_SORT_SUPPORTS_NULLS_LAST = BACKEND_VERSION >= (0, 20, 6)
+"""https://github.com/pola-rs/polars/pull/13794
+
+Prior this this version, `nulls_last` was [only available on `*Frame` and `Expr`].
+
+[only available on `*Frame` and `Expr`]: https://github.com/pola-rs/polars/issues/13788
+"""
+
+
 SERIES_HAS_FIRST_LAST = BACKEND_VERSION >= (1, 10)
 """https://github.com/pola-rs/polars/pull/19093"""
 
@@ -57,10 +66,24 @@ IS_NAN_ANY_NUMERIC = BACKEND_VERSION >= (1, 18)
 #   __hash__
 
 
+if BACKEND_VERSION >= (1, 21, 0):
+
+    def min_samples_periods(min_samples: int, /, **kwds: Any) -> dict[str, Any]:
+        return {"min_samples": min_samples, **kwds}
+else:
+
+    def min_samples_periods(min_samples: int, /, **kwds: Any) -> dict[str, Any]:
+        return {"min_periods": min_samples, **kwds}
+
+
 class PolarsSeries(CompliantSeries[pl.Series]):
     implementation = Implementation.POLARS
     _native: pl.Series
     _version: Version
+
+    # NOTE: Aliases to integrate with `@requires.backend_version`
+    _backend_version = BACKEND_VERSION
+    _implementation = implementation
 
     @property
     def native(self) -> pl.Series:
@@ -196,7 +219,10 @@ class PolarsSeries(CompliantSeries[pl.Series]):
     __floordiv__ = todo()
     __ge__ = todo()
     __gt__ = todo()
-    __invert__ = todo()
+
+    def __invert__(self) -> Self:
+        return self._with_native(self.native.__invert__())
+
     __le__ = todo()
     __lt__ = todo()
     __mod__ = todo()
@@ -264,12 +290,35 @@ class PolarsSeries(CompliantSeries[pl.Series]):
     def null_count(self) -> int:
         return self.native.null_count()
 
-    # NOTE: Needs compat (but check Expr first)
-    # https://github.com/narwhals-dev/narwhals/blob/c207fc096263ce174470240748e0c568f38f93e2/narwhals/_polars/series.py#L441-L494
-    rolling_mean = todo()
-    rolling_std = todo()
-    rolling_sum = todo()
-    rolling_var = todo()
+    def rolling_mean(
+        self, window_size: int, *, min_samples: int, center: bool = False
+    ) -> Self:
+        kwds = min_samples_periods(min_samples, window_size=window_size, center=center)
+        return self._with_native(self.native.rolling_mean(**kwds))
+
+    def rolling_sum(
+        self, window_size: int, *, min_samples: int, center: bool = False
+    ) -> Self:
+        kwds = min_samples_periods(min_samples, window_size=window_size, center=center)
+        return self._with_native(self.native.rolling_sum(**kwds))
+
+    @requires.backend_version((1,))
+    def rolling_std(
+        self, window_size: int, *, min_samples: int, center: bool = False, ddof: int = 1
+    ) -> Self:
+        kwds = min_samples_periods(
+            min_samples, window_size=window_size, center=center, ddof=ddof
+        )
+        return self._with_native(self.native.rolling_std(**kwds))
+
+    @requires.backend_version((1,))
+    def rolling_var(
+        self, window_size: int, *, min_samples: int, center: bool = False, ddof: int = 1
+    ) -> Self:
+        kwds = min_samples_periods(
+            min_samples, window_size=window_size, center=center, ddof=ddof
+        )
+        return self._with_native(self.native.rolling_var(**kwds))
 
     def sample_n(
         self, n: int = 1, *, with_replacement: bool = False, seed: int | None = None
@@ -279,7 +328,9 @@ class PolarsSeries(CompliantSeries[pl.Series]):
         )
 
     def scatter(self, indices: Self, values: Self) -> Self:
-        return self._with_native(self.native.scatter(indices.native, values.native))
+        return self._with_native(
+            self.native.clone().scatter(indices.native, values.native)
+        )
 
     def shift(self, n: int, *, fill_value: NonNestedLiteral = None) -> Self:
         return self._with_native(self.native.shift(n, fill_value=fill_value))
@@ -287,9 +338,18 @@ class PolarsSeries(CompliantSeries[pl.Series]):
     def slice(self, offset: int, length: int | None = None) -> Self:
         return self._with_native(self.native.slice(offset, length))
 
-    # NOTE: Needs compat
-    # https://github.com/narwhals-dev/narwhals/blob/c207fc096263ce174470240748e0c568f38f93e2/narwhals/_polars/series.py#L495-L505
-    sort = todo()
+    def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
+        if SERIES_SORT_SUPPORTS_NULLS_LAST:
+            result = self.native.sort(descending=descending, nulls_last=nulls_last)
+        elif not (nulls_last and self.has_nulls()):
+            result = self.native.sort(descending=descending)
+        else:
+            result = (
+                self.native.to_frame()
+                .sort(self.name, descending=descending, nulls_last=nulls_last)
+                .to_series()
+            )
+        return self._with_native(result)
 
     def sum(self) -> float:
         return self.native.sum()
