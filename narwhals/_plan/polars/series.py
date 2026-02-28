@@ -59,6 +59,13 @@ Prior this this version, `nulls_last` was [only available on `*Frame` and `Expr`
 SERIES_HAS_FIRST_LAST = BACKEND_VERSION >= (1, 10)
 """https://github.com/pola-rs/polars/pull/19093"""
 
+RFLOORDIV_HANDLES_ZERO = BACKEND_VERSION >= (1, 10)
+"""https://github.com/pola-rs/polars/issues/19142
+
+Note:
+    The bug impacts `__rmod__` as well, but didn't get fixed in narwhals?
+"""
+
 IS_NAN_ANY_NUMERIC = BACKEND_VERSION >= (1, 18)
 """https://github.com/pola-rs/polars/pull/20386"""
 
@@ -298,9 +305,16 @@ class PolarsSeries(CompliantSeries[pl.Series]):
     __truediv__ = bin_op["Self"]()
     __xor__ = bin_op["Self"]()
 
-    # NOTE: Needs compat
-    # https://github.com/narwhals-dev/narwhals/blob/c207fc096263ce174470240748e0c568f38f93e2/narwhals/_polars/series.py#L259-L268
-    __rfloordiv__ = todo()
+    def __rfloordiv__(self, other: Any) -> PolarsSeries:
+        other = other.native if isinstance(other, type(self)) else other
+        if RFLOORDIV_HANDLES_ZERO:
+            return self._with_native(other // self.native)
+        expr = pl.col(self.name)
+        return self._with_native(
+            self.native.to_frame()
+            .select(pl.when(expr != 0).then(other // expr).alias(self.name))
+            .to_series()
+        )
 
     # # NOTE: Needs compat
     # https://github.com/narwhals-dev/narwhals/blob/c207fc096263ce174470240748e0c568f38f93e2/narwhals/_polars/series.py#L357-L362
