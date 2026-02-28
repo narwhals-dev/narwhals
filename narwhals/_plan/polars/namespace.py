@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, overload
 
 import polars as pl
 
@@ -47,6 +47,17 @@ def dtype_to_native(dtype: IntoDType | None, /, version: Version) -> pl.DataType
 def dtype_from_native(dtype: pl.DataType, version: Version, /) -> DType:
     """Convert a `polars.DataType` to a Narwhals `DType`."""
     return _dtype_from_native(dtype, version)
+
+
+# TODO @dangotbanned: Add version branching for False in `Explode.options`
+# Default is backwards compatible
+def explode_todo(
+    *, empty_as_null: bool, keep_nulls: bool
+) -> tuple[Literal[True], Literal[True]]:
+    if not (empty_as_null and keep_nulls):
+        msg = f"TODO @dangotbanned: Add version branching for False in `Explode.options`, got: {empty_as_null=}, {keep_nulls=}"
+        raise NotImplementedError(msg)
+    return True, True
 
 
 class PolarsNamespace(CompliantNamespace[Incomplete, "Expr", Incomplete]):

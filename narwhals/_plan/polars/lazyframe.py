@@ -9,7 +9,7 @@ from narwhals._plan.common import temp, todo
 from narwhals._plan.compliant.lazyframe import CompliantLazyFrame
 from narwhals._plan.plans.visitors import ResolvedToCompliant
 from narwhals._plan.polars.frame import PolarsFrame
-from narwhals._plan.polars.namespace import PolarsNamespace as Namespace
+from narwhals._plan.polars.namespace import PolarsNamespace as Namespace, explode_todo
 from narwhals._utils import Version
 
 if TYPE_CHECKING:
@@ -223,14 +223,10 @@ class PolarsEvaluator(ResolvedToCompliant[pl.LazyFrame]):
             .select(names)
         )
 
-    # TODO @dangotbanned: Add version branching for False in `Explode.options`
-    # Default is backwards compatible
     def explode(self, plan: rp.MapFunction[rp.Explode]) -> PolarsLazyFrame:
         f = plan.function
         opts = f.options
-        if not (opts.empty_as_null or opts.keep_nulls):
-            msg = f"TODO @dangotbanned: Add version branching for False in `Explode.options`, got: {opts}"
-            raise NotImplementedError(msg)
+        explode_todo(empty_as_null=opts.empty_as_null, keep_nulls=opts.keep_nulls)
         return self._into_compliant(plan.input.evaluate(self).native.explode(f.columns))
 
     def unnest(self, plan: rp.MapFunction[rp.Unnest]) -> PolarsLazyFrame:
