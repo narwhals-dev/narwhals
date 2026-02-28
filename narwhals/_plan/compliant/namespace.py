@@ -31,6 +31,8 @@ if TYPE_CHECKING:
 Incomplete: TypeAlias = Any
 
 
+# TODO @dangotbanned: Define `CompliantNamespace().from_native`
+# - will reduce direct calls to `*Namespace._<compliant-type>`
 class CompliantNamespace(
     HasVersion,
     ranges.LazyRangeGenerator[FrameT, ExprT_co],

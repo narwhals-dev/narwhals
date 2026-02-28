@@ -19,7 +19,6 @@ from narwhals._plan.compliant.typing import Native as NativeLazy
 from narwhals._plan.typing import (
     NativeDataFrameT as NativeEager,
     NativeSeriesT as NativeSeries,
-    NativeSeriesT_co as NativeSeries_co,
 )
 from narwhals._typing_compat import TypeVar
 from narwhals._utils import unstable
@@ -47,6 +46,7 @@ if TYPE_CHECKING:
     from narwhals._plan.polars.dataframe import PolarsDataFrame
     from narwhals._plan.polars.expr import PolarsExpr
     from narwhals._plan.polars.lazyframe import PolarsLazyFrame
+    from narwhals._plan.polars.series import PolarsSeries
 
 Incomplete: TypeAlias = Any
 
@@ -98,9 +98,9 @@ class HasDataFrame(Protocol[NativeEager, NativeSeries]):
     ) -> type[CompliantDataFrame[Incomplete, NativeEager, NativeSeries]]: ...
 
 
-class HasSeries(Protocol[NativeSeries_co]):
+class HasSeries(Protocol[NativeSeries]):
     @property
-    def Series(self) -> type[CompliantSeries[NativeSeries_co]] | Incomplete: ...
+    def Series(self) -> type[CompliantSeries[NativeSeries]]: ...
 
 
 class HasPlanResolver(Protocol):
@@ -215,7 +215,7 @@ def try_arrow_1() -> tuple[
     tuple[
         type[CompliantLazyFrame[pa.Table]],
         type[CompliantDataFrame[Incomplete, pa.Table, pa.ChunkedArray[Any]]],
-        type[CompliantSeries[pa.ChunkedArray[Any]]] | Incomplete,
+        type[CompliantSeries[pa.ChunkedArray[Any]]],
         type[CompliantExpr[Incomplete, Incomplete]],
     ],
 ]:
@@ -240,7 +240,7 @@ def try_polars_1() -> tuple[
     HybridPackage[pl.LazyFrame, pl.DataFrame, pl.Series],
     type[CompliantLazyFrame[pl.LazyFrame]],
     type[CompliantDataFrame[Incomplete, pl.DataFrame, pl.Series]],
-    type[CompliantSeries[pl.Series]] | Incomplete,
+    type[CompliantSeries[pl.Series]],
     type[CompliantExpr[Incomplete, Incomplete]],
 ]:
     import narwhals._plan.polars
@@ -250,7 +250,11 @@ def try_polars_1() -> tuple[
 
 
 def try_polars_2() -> tuple[
-    ModuleType, type[PolarsLazyFrame], type[PolarsDataFrame], None, type[PolarsExpr]
+    ModuleType,
+    type[PolarsLazyFrame],
+    type[PolarsDataFrame],
+    type[PolarsSeries],
+    type[PolarsExpr],
 ]:
     import narwhals._plan.polars
 

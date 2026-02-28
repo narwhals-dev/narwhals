@@ -46,7 +46,8 @@ def bin_op(
 
     def f(self: SeriesT, other: SeriesT | Any, /) -> SeriesT:
         right = other.native if isinstance(other, type(self)) else fn.lit(other)
-        return self._with_native(function(self.native, right))
+        version = self.version
+        return self.from_native(function(self.native, right), self.name, version=version)
 
     def f_reflect(self: SeriesT, other: SeriesT | Any, /) -> SeriesT:
         if isinstance(other, type(self)):
@@ -55,13 +56,18 @@ def bin_op(
         else:
             name = "literal"
             right = fn.lit(other)
-        return self.from_native(function(right, self.native), name, version=self.version)
+        version = self.version
+        return self.from_native(function(right, self.native), name, version=version)
 
     return f_reflect if reflect else f
 
 
 class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayAny"]):
     _name: str
+
+    @property
+    def name(self) -> str:
+        return self._name
 
     def __repr__(self) -> str:
         return generate_repr(f"nw.{type(self).__name__}", self.native.__repr__())
@@ -76,6 +82,7 @@ class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayA
         return self.native.to_pylist()
 
     def to_numpy(self, dtype: Any = None, *, copy: bool | None = None) -> _1DArray:
+        # TODO @dangotbanned: `zero_copy_only=copy is False`?
         return self.native.to_numpy()
 
     def to_polars(self) -> pl.Series:
@@ -90,6 +97,21 @@ class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayA
     @property
     def dtype(self) -> DType:
         return native_to_narwhals_dtype(self.native.type, self._version)
+
+    @classmethod
+    def from_native(
+        cls,
+        native: ChunkedArrayAny,
+        name: str = "",
+        /,
+        *,
+        version: Version = Version.MAIN,
+    ) -> Self:
+        obj = cls.__new__(cls)
+        obj._native = native
+        obj._name = name
+        obj._version = version
+        return obj
 
     @classmethod
     def from_numpy(
@@ -341,6 +363,9 @@ class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayA
         return SeriesStructNamespace(self)
 
 
+ArrowSeries()
+
+
 class SeriesStructNamespace(StructNamespace["DataFrame", ArrowSeries]):
     def __init__(self, compliant: ArrowSeries, /) -> None:
         self._compliant: ArrowSeries = compliant
@@ -355,10 +380,6 @@ class SeriesStructNamespace(StructNamespace["DataFrame", ArrowSeries]):
 
     def __narwhals_namespace__(self) -> Namespace:
         return namespace(self.compliant)
-
-    @property
-    def version(self) -> Version:
-        return self.compliant.version
 
     def with_native(self, native: ChunkedArrayAny, name: str, /) -> ArrowSeries:
         return self.compliant.from_native(native, name, version=self.version)

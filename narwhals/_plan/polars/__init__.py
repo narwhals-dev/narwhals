@@ -7,8 +7,8 @@ from narwhals._plan.polars.lazyframe import (
     PolarsLazyFrame as LazyFrame,
 )
 from narwhals._plan.polars.namespace import PolarsNamespace as Namespace
+from narwhals._plan.polars.series import PolarsSeries as Series
 
-Series = None
 Scalar = None
 PlanResolver = None
 

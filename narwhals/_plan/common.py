@@ -310,6 +310,8 @@ class temp:  # noqa: N801
 class todo:  # pragma: no cover  # noqa: N801
     """A variation of `not_implemented`, for shorter-lived placeholders."""
 
+    __slots__ = ("__name__", "_name_owner")
+
     def __set_name__(self, owner: type[Any], name: str) -> None:
         self._name_owner: str = owner.__name__
         self.__name__: str = name

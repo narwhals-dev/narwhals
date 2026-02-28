@@ -8,7 +8,10 @@ from narwhals._plan._version import into_version
 from narwhals._plan.common import todo
 from narwhals._plan.compliant.namespace import CompliantNamespace
 from narwhals._plan.expressions.literal import is_literal_scalar
-from narwhals._polars.utils import narwhals_to_native_dtype as _dtype_native
+from narwhals._polars.utils import (
+    narwhals_to_native_dtype as _dtype_native,
+    native_to_narwhals_dtype as _dtype_from_native,
+)
 from narwhals._utils import Implementation, Version
 from narwhals.exceptions import InvalidOperationError
 
@@ -21,6 +24,7 @@ if TYPE_CHECKING:
     from narwhals._plan.polars.expr import PolarsExpr as Expr
     from narwhals._plan.polars.lazyframe import PolarsLazyFrame as LazyFrame
     from narwhals._plan.series import Series as NwSeries
+    from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.typing import IntoDType, NonNestedLiteral
 
@@ -28,14 +32,21 @@ Incomplete: TypeAlias = Any
 
 
 @overload
-def dtype_native(dtype: IntoDType, /, version: Version) -> pl.DataType: ...
+def dtype_to_native(dtype: IntoDType, /, version: Version) -> pl.DataType: ...
 @overload
-def dtype_native(dtype: None, /, version: Version) -> None: ...
+def dtype_to_native(dtype: None, /, version: Version) -> None: ...
 @overload
-def dtype_native(dtype: IntoDType | None, /, version: Version) -> pl.DataType | None: ...
-def dtype_native(dtype: IntoDType | None, /, version: Version) -> pl.DataType | None:
+def dtype_to_native(
+    dtype: IntoDType | None, /, version: Version
+) -> pl.DataType | None: ...
+def dtype_to_native(dtype: IntoDType | None, /, version: Version) -> pl.DataType | None:
     """Convert a Narwhals `DType` to a `polars.DataType`, or passthrough `None`."""
     return dtype if dtype is None else _dtype_native(dtype, version)
+
+
+def dtype_from_native(dtype: pl.DataType, version: Version, /) -> DType:
+    """Convert a `polars.DataType` to a Narwhals `DType`."""
+    return _dtype_from_native(dtype, version)
 
 
 class PolarsNamespace(CompliantNamespace[Incomplete, "Expr", Incomplete]):

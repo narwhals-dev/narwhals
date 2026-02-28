@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from narwhals._plan.expressions import FunctionExpr as FExpr, lists, strings
     from narwhals._plan.expressions.categorical import GetCategories
     from narwhals._plan.expressions.struct import FieldByName
+    from narwhals._utils import Version
     from narwhals.schema import Schema
 
 
@@ -132,3 +133,8 @@ class SeriesStructNamespace(Protocol[DataFrameT_co, SeriesT_co]):
     def unnest(self) -> DataFrameT_co: ...
     @property
     def schema(self) -> Schema: ...
+    @property
+    def compliant(self) -> SeriesT_co: ...
+    @property
+    def version(self) -> Version:
+        return self.compliant.version

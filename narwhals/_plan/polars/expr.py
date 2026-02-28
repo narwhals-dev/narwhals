@@ -6,7 +6,7 @@ import polars as pl
 
 from narwhals._plan.common import todo
 from narwhals._plan.compliant.expr import CompliantExpr
-from narwhals._plan.polars.namespace import PolarsNamespace, dtype_native
+from narwhals._plan.polars.namespace import PolarsNamespace, dtype_to_native
 from narwhals._utils import Version
 
 if TYPE_CHECKING:
@@ -47,7 +47,7 @@ class PolarsExpr(CompliantExpr[Incomplete, Incomplete]):
         version: Version = Version.MAIN,
     ) -> Self:
         unknown = version.dtypes.Unknown
-        dtype_pl = None if dtype == unknown else dtype_native(dtype, version)
+        dtype_pl = None if dtype == unknown else dtype_to_native(dtype, version)
         return cls.from_native(pl.lit(value, dtype_pl), name, version)
 
     @property
