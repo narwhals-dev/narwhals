@@ -27,6 +27,7 @@ from narwhals._plan.compliant import (
     lazyframe,
     namespace,
     package,
+    ranges,
     scalar,
     series,
 )
@@ -58,6 +59,7 @@ __all__ = [
     "lazyframe",
     "namespace",
     "package",
+    "ranges",
     "scalar",
     "series",
 ]

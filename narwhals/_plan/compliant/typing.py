@@ -47,7 +47,7 @@ EagerExprAny: TypeAlias = "EagerExpr[Any, Any]"
 EagerScalarAny: TypeAlias = "EagerScalar[Any, Any]"
 EagerDataFrameAny: TypeAlias = "EagerDataFrame[Any, Any, Any]"
 
-
+ExprT = TypeVar("ExprT", bound=ExprAny)
 ExprT_co = TypeVar("ExprT_co", bound=ExprAny, covariant=True)
 ScalarT_co = TypeVar("ScalarT_co", bound=ScalarAny, covariant=True)
 SeriesT = TypeVar("SeriesT", bound=SeriesAny)
