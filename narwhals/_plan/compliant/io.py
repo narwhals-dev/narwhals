@@ -97,41 +97,23 @@ class EagerOutput(WriteCsv, WriteParquet, Protocol):
     """Supports all `write_*` methods, for eagerly writing to files."""
 
 
+# fmt: off
 def can_read_csv(obj: ReadCsv[DataFrameT] | Any) -> TypeIs[ReadCsv[DataFrameT]]:
     return _hasattr_static(obj, "read_csv")
-
-
-def can_read_parquet(
-    obj: ReadParquet[DataFrameT] | Any,
-) -> TypeIs[ReadParquet[DataFrameT]]:
+def can_read_parquet(obj: ReadParquet[DataFrameT] | Any) -> TypeIs[ReadParquet[DataFrameT]]:
     return _hasattr_static(obj, "read_parquet")
-
-
 def can_scan_csv(obj: ScanCsv[LazyFrameT] | Any) -> TypeIs[ScanCsv[LazyFrameT]]:
     return _hasattr_static(obj, "scan_csv")
-
-
-def can_scan_parquet(
-    obj: ScanParquet[LazyFrameT] | Any,
-) -> TypeIs[ScanParquet[LazyFrameT]]:
+def can_scan_parquet(obj: ScanParquet[LazyFrameT] | Any) -> TypeIs[ScanParquet[LazyFrameT]]:
     return _hasattr_static(obj, "scan_parquet")
-
-
 def can_read_csv_schema(obj: Any) -> TypeIs[ScanCsv[Any]]:
     return _hasattr_static(obj, "read_csv_schema")
-
-
 def can_read_parquet_schema(obj: Any) -> TypeIs[ScanParquet[Any]]:
     return _hasattr_static(obj, "read_parquet_schema")
-
-
 def can_write_csv(obj: Any) -> TypeIs[WriteCsv]:
     return _hasattr_static(obj, "write_csv")
-
-
 def can_write_parquet(obj: Any) -> TypeIs[WriteParquet]:
     return _hasattr_static(obj, "write_parquet")
-
-
 def can_sink_parquet(obj: Any) -> TypeIs[SinkParquet]:
     return _hasattr_static(obj, "sink_parquet")
+# fmt: on
