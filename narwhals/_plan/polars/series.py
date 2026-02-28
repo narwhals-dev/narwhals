@@ -6,7 +6,6 @@ import polars as pl
 
 from narwhals._plan._namespace import namespace
 from narwhals._plan._version import into_version
-from narwhals._plan.common import todo
 from narwhals._plan.compliant.accessors import SeriesStructNamespace as StructNamespace
 from narwhals._plan.compliant.series import CompliantSeries
 from narwhals._plan.compliant.typing import SeriesT
@@ -65,6 +64,9 @@ RFLOORDIV_HANDLES_ZERO = BACKEND_VERSION >= (1, 10)
 Note:
     The bug impacts `__rmod__` as well, but didn't get fixed in narwhals?
 """
+
+RPOW_PRESERVES_SERIES_NAME = BACKEND_VERSION >= (1, 16, 1)
+"""https://github.com/pola-rs/polars/pull/20072"""
 
 IS_NAN_ANY_NUMERIC = BACKEND_VERSION >= (1, 18)
 """https://github.com/pola-rs/polars/pull/20386"""
@@ -316,9 +318,12 @@ class PolarsSeries(CompliantSeries[pl.Series]):
             .to_series()
         )
 
-    # # NOTE: Needs compat
-    # https://github.com/narwhals-dev/narwhals/blob/c207fc096263ce174470240748e0c568f38f93e2/narwhals/_polars/series.py#L357-L362
-    __rpow__ = todo()
+    def __rpow__(self, other: float | Self) -> Self:
+        other_ = other.native if isinstance(other, type(self)) else other
+        result = other_**self.native
+        if not RPOW_PRESERVES_SERIES_NAME:
+            result = result.alias(self.native.name)
+        return self._with_native(result)
 
     def all(self) -> bool:
         return self.native.all()
