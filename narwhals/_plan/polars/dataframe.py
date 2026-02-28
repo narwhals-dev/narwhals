@@ -4,7 +4,6 @@ from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Literal, overload
 
 import polars as pl
-from typing_extensions import Self
 
 from narwhals._plan._version import into_version
 from narwhals._plan.compliant.dataframe import CompliantDataFrame
@@ -30,11 +29,18 @@ if TYPE_CHECKING:
     from narwhals._plan.options import ExplodeOptions, SortMultipleOptions
     from narwhals._plan.polars.lazyframe import PolarsLazyFrame
     from narwhals.schema import Schema
-    from narwhals.typing import IntoSchema, UniqueKeepStrategy
+    from narwhals.typing import (
+        AsofJoinStrategy,
+        IntoSchema,
+        JoinStrategy,
+        UniqueKeepStrategy,
+    )
 
 
 Incomplete: TypeAlias = Any
 MAIN = Version.MAIN
+
+JOIN_OUTER_RENAMED_TO_FULL = BACKEND_VERSION >= (0, 20, 29)
 MELT_RENAMED_TO_UNPIVOT = BACKEND_VERSION >= (1, 0, 0)
 
 
@@ -137,6 +143,50 @@ class PolarsDataFrame(
         for series in self.native.iter_columns():
             yield Series.from_native(series, version=self.version)
 
+    def join(
+        self,
+        other: Self,
+        *,
+        how: JoinStrategy,
+        left_on: Sequence[str],
+        right_on: Sequence[str],
+        suffix: str = "_right",
+    ) -> Self:
+        how_: Any = "outer" if how == "full" and JOIN_OUTER_RENAMED_TO_FULL else how
+        return self._with_native(
+            self.native.join(
+                other.native, how=how_, left_on=left_on, right_on=right_on, suffix=suffix
+            )
+        )
+
+    def join_asof(
+        self,
+        other: Self,
+        *,
+        left_on: str,
+        right_on: str,
+        left_by: Sequence[str] = (),
+        right_by: Sequence[str] = (),
+        strategy: AsofJoinStrategy = "backward",
+        suffix: str = "_right",
+    ) -> Self:
+        return self._with_native(
+            self.native.join_asof(
+                other.native,
+                left_on=left_on,
+                right_on=right_on,
+                by_left=left_by,
+                by_right=right_by,
+                strategy=strategy,
+                suffix=suffix,
+            )
+        )
+
+    def join_cross(self, other: Self, *, suffix: str = "_right") -> Self:
+        return self._with_native(
+            self.native.join(other.native, how="cross", suffix=suffix)
+        )
+
     def select_names(self, *column_names: str) -> Self:
         return self._with_native(self.native.select(column_names))
 
@@ -235,9 +285,6 @@ class PolarsDataFrame(
     _group_by = not_implemented()  # type: ignore[assignment]
     lazy = not_implemented()
     filter = not_implemented()
-    join = not_implemented()
-    join_asof = not_implemented()
-    join_cross = not_implemented()
     pivot = not_implemented()
     select = not_implemented()
     unique_by = not_implemented()
