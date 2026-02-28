@@ -16,6 +16,8 @@ from narwhals._utils import Implementation, Version
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
+    import datetime as dt
+
     from typing_extensions import TypeAlias
 
     from narwhals._plan import expressions as ir
@@ -23,12 +25,15 @@ if TYPE_CHECKING:
     from narwhals._plan.polars.dataframe import PolarsDataFrame as DataFrame
     from narwhals._plan.polars.expr import PolarsExpr as Expr
     from narwhals._plan.polars.lazyframe import PolarsLazyFrame as LazyFrame
+    from narwhals._plan.polars.series import PolarsSeries as Series
     from narwhals._plan.series import Series as NwSeries
-    from narwhals.dtypes import DType
+    from narwhals.dtypes import Date, DType, FloatType, IntegerType
     from narwhals.schema import Schema
-    from narwhals.typing import IntoDType, NonNestedLiteral
+    from narwhals.typing import ClosedInterval, IntoDType, NonNestedLiteral
 
 Incomplete: TypeAlias = Any
+MAIN = Version.MAIN
+Int64 = MAIN.dtypes.Int64()
 
 
 @overload
@@ -42,6 +47,14 @@ def dtype_to_native(
 def dtype_to_native(dtype: IntoDType | None, /, version: Version) -> pl.DataType | None:
     """Convert a Narwhals `DType` to a `polars.DataType`, or passthrough `None`."""
     return dtype if dtype is None else _dtype_native(dtype, version)
+
+
+def dtype_to_native_fast(dtype: IntegerType | FloatType | Date) -> Any:
+    name = dtype.__class__.__name__
+    if native := getattr(pl, name, None):
+        return native
+    # NOTE: Purely an error path for 128-bit ints
+    return dtype_to_native(dtype, MAIN)
 
 
 def dtype_from_native(dtype: pl.DataType, version: Version, /) -> DType:
@@ -90,6 +103,12 @@ class PolarsNamespace(CompliantNamespace[Incomplete, "Expr", Incomplete]):
 
         return PolarsExpr
 
+    @property
+    def _series(self) -> type[Series]:
+        from narwhals._plan.polars.series import PolarsSeries
+
+        return PolarsSeries
+
     _scalar = todo()  # type: ignore[assignment]
     _frame = todo()  # type: ignore[assignment]
 
@@ -133,12 +152,6 @@ class PolarsNamespace(CompliantNamespace[Incomplete, "Expr", Incomplete]):
             node.unwrap(), name, dtype=node.dtype, version=version
         )
 
-    all_horizontal = todo()
-    any_horizontal = todo()
-    concat_str = todo()
-    coalesce = todo()
-    date_range = todo()
-
     def int_range(
         self, node: ir.RangeExpr[IntRange], frame: Incomplete, name: str
     ) -> Expr:
@@ -146,7 +159,7 @@ class PolarsNamespace(CompliantNamespace[Incomplete, "Expr", Incomplete]):
         if is_literal_scalar(start) and is_literal_scalar(end):
             start_, end_ = start.unwrap(), end.unwrap()
             if isinstance(start_, int) and isinstance(end_, int):
-                dtype = getattr(pl, node.function.dtype.__class__.__name__)
+                dtype = dtype_to_native_fast(node.function.dtype)
                 native = pl.int_range(start_, end_, node.function.step, dtype=dtype)
                 return self._expr.from_native(native, name, self.version)
             msg = f"All inputs for `{node.function}()` must resolve to int, but got \n{start_!r}\n{end_!r}"
@@ -154,6 +167,48 @@ class PolarsNamespace(CompliantNamespace[Incomplete, "Expr", Incomplete]):
         msg = f"TODO @dangotbanned: `{self.int_range.__qualname__}()` w/ non-`ScalarLiteral` inputs, got \n{start!r}\n{end!r}"
         raise NotImplementedError(msg)
 
+    def int_range_eager(
+        self,
+        start: int,
+        end: int,
+        step: int = 1,
+        *,
+        dtype: IntegerType = Int64,
+        name: str = "literal",
+    ) -> Series:
+        dtype_ = dtype_to_native_fast(dtype)
+        native = pl.int_range(start, end, step, dtype=dtype_, eager=True)
+        return self._series.from_native(native, name, version=self.version)
+
+    def date_range_eager(
+        self,
+        start: dt.date,
+        end: dt.date,
+        interval: int = 1,
+        *,
+        closed: ClosedInterval = "both",
+        name: str = "literal",
+    ) -> Series:
+        native = pl.date_range(start, end, f"{interval}d", closed=closed, eager=True)
+        return self._series.from_native(native, name, version=self.version)
+
+    def linear_space_eager(
+        self,
+        start: float,
+        end: float,
+        num_samples: int,
+        *,
+        closed: ClosedInterval = "both",
+        name: str = "literal",
+    ) -> Series:
+        native = pl.linear_space(start, end, num_samples, closed=closed, eager=True)
+        return self._series.from_native(native, name, version=self.version)
+
+    all_horizontal = todo()
+    any_horizontal = todo()
+    concat_str = todo()
+    coalesce = todo()
+    date_range = todo()
     linear_space = todo()
     max_horizontal = todo()
     mean_horizontal = todo()
