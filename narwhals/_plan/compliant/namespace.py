@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, overload
 
-from narwhals._plan.compliant import io
+from narwhals._plan.compliant import io, ranges
 from narwhals._plan.compliant.typing import (
     ConcatT1,
     ConcatT2,
@@ -15,27 +15,27 @@ from narwhals._plan.compliant.typing import (
     ScalarT_co,
     SeriesT,
 )
-from narwhals._utils import Implementation, Version
 
 if TYPE_CHECKING:
-    import datetime as dt
     from collections.abc import Iterable
 
     from typing_extensions import TypeAlias, TypeIs
 
     from narwhals._plan import expressions as ir
     from narwhals._plan.expressions import FunctionExpr, boolean, functions as F
-    from narwhals._plan.expressions.ranges import DateRange, IntRange, LinearSpace
     from narwhals._plan.expressions.strings import ConcatStr
     from narwhals._plan.series import Series
-    from narwhals.dtypes import IntegerType
-    from narwhals.typing import ClosedInterval, ConcatMethod, NonNestedLiteral
+    from narwhals._utils import Implementation
+    from narwhals.typing import ConcatMethod, NonNestedLiteral
 
 Incomplete: TypeAlias = Any
-Int64 = Version.MAIN.dtypes.Int64()
 
 
-class CompliantNamespace(HasVersion, Protocol[FrameT, ExprT_co, ScalarT_co]):
+class CompliantNamespace(
+    HasVersion,
+    ranges.LazyRangeGenerator[FrameT, ExprT_co],
+    Protocol[FrameT, ExprT_co, ScalarT_co],
+):
     """`[FrameT, ExprT_co, ScalarT_co]`."""
 
     implementation: ClassVar[Implementation]
@@ -59,15 +59,6 @@ class CompliantNamespace(HasVersion, Protocol[FrameT, ExprT_co, ScalarT_co]):
     def coalesce(
         self, node: FunctionExpr[F.Coalesce], frame: FrameT, name: str
     ) -> ExprT_co | ScalarT_co: ...
-    def date_range(
-        self, node: ir.RangeExpr[DateRange], frame: FrameT, name: str
-    ) -> ExprT_co: ...
-    def int_range(
-        self, node: ir.RangeExpr[IntRange], frame: FrameT, name: str
-    ) -> ExprT_co: ...
-    def linear_space(
-        self, node: ir.RangeExpr[LinearSpace], frame: FrameT, name: str
-    ) -> ExprT_co: ...
     def len(self, node: ir.Len, frame: FrameT, name: str) -> ScalarT_co: ...
     def lit(
         self, node: ir.Literal[Any], frame: FrameT, name: str
@@ -112,6 +103,7 @@ class EagerConcat(Concat[ConcatT1, ConcatT2], Protocol[ConcatT1, ConcatT2]):  # 
 
 
 class EagerNamespace(
+    ranges.EagerRangeGenerator[SeriesT],
     io.LazyInput[Incomplete],
     io.EagerInput[EagerDataFrameT],
     EagerConcat[EagerDataFrameT, SeriesT],
@@ -150,30 +142,3 @@ class EagerNamespace(
     def lit(
         self, node: ir.Literal[Any], frame: EagerDataFrameT, name: str
     ) -> EagerExprT_co | EagerScalarT_co: ...
-    def date_range_eager(
-        self,
-        start: dt.date,
-        end: dt.date,
-        interval: int = 1,
-        *,
-        closed: ClosedInterval = "both",
-        name: str = "literal",
-    ) -> SeriesT: ...
-    def int_range_eager(
-        self,
-        start: int,
-        end: int,
-        step: int = 1,
-        *,
-        dtype: IntegerType = Int64,
-        name: str = "literal",
-    ) -> SeriesT: ...
-    def linear_space_eager(
-        self,
-        start: float,
-        end: float,
-        num_samples: int,
-        *,
-        closed: ClosedInterval = "both",
-        name: str = "literal",
-    ) -> SeriesT: ...
