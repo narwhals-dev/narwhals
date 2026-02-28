@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, overload
+from collections.abc import Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Literal, overload
 
 import polars as pl
 from typing_extensions import Self
@@ -8,9 +9,17 @@ from typing_extensions import Self
 from narwhals._plan._version import into_version
 from narwhals._plan.compliant.dataframe import CompliantDataFrame
 from narwhals._plan.polars.frame import PolarsFrame
+from narwhals._plan.polars.namespace import (
+    PolarsNamespace as Namespace,
+    dtype_to_native,
+    explode_todo,
+)
+from narwhals._plan.polars.series import PolarsSeries as Series
+from narwhals._polars.utils import BACKEND_VERSION
 from narwhals._utils import Version, not_implemented
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator, Mapping, Sequence
     from io import BytesIO
     from pathlib import Path
 
@@ -18,12 +27,15 @@ if TYPE_CHECKING:
     import pyarrow as pa
     from typing_extensions import Self, TypeAlias
 
+    from narwhals._plan.options import ExplodeOptions, SortMultipleOptions
     from narwhals._plan.polars.lazyframe import PolarsLazyFrame
     from narwhals.schema import Schema
+    from narwhals.typing import IntoSchema, UniqueKeepStrategy
 
 
 Incomplete: TypeAlias = Any
 MAIN = Version.MAIN
+MELT_RENAMED_TO_UNPIVOT = BACKEND_VERSION >= (1, 0, 0)
 
 
 class PolarsDataFrame(
@@ -85,41 +97,151 @@ class PolarsDataFrame(
     def write_parquet(self, target: str | BytesIO, /, **kwds: Any) -> None:
         self.native.write_parquet(target, **kwds)
 
-    __narwhals_namespace__ = not_implemented()
+    def __narwhals_namespace__(self) -> Namespace:
+        return Namespace(self.version)
+
+    def clone(self) -> Self:
+        return self._with_native(self.native.clone())
+
+    def drop(self, columns: Sequence[str]) -> Self:
+        return self._with_native(self.native.drop(columns))
+
+    def drop_nulls(self, subset: Sequence[str] | None) -> Self:
+        return self._with_native(self.native.drop_nulls(subset))
+
+    def explode(self, columns: Sequence[str], options: ExplodeOptions) -> Self:
+        explode_todo(empty_as_null=options.empty_as_null, keep_nulls=options.keep_nulls)
+        return self._with_native(self.native.explode(columns))
+
+    @classmethod
+    def from_dict(
+        cls,
+        data: Mapping[str, Any],
+        /,
+        *,
+        schema: IntoSchema | None = None,
+        version: Version = MAIN,
+    ) -> Self:
+        if not schema:
+            return cls.from_native(pl.from_dict(data), version)
+        s: Any = {k: (dtype_to_native(d, version) if d else d) for k, d in schema.items()}
+        return cls.from_native(pl.from_dict(data, s), version)
+
+    def gather_every(self, n: int, offset: int = 0) -> Self:
+        return self._with_native(self.native.gather_every(n, offset))
+
+    def get_column(self, name: str) -> Series:
+        return Series.from_native(self.native.get_column(name), version=self.version)
+
+    def iter_columns(self) -> Iterator[Series]:
+        for series in self.native.iter_columns():
+            yield Series.from_native(series, version=self.version)
+
+    def select_names(self, *column_names: str) -> Self:
+        return self._with_native(self.native.select(column_names))
+
+    def slice(self, offset: int, length: int | None = None) -> Self:
+        return self._with_native(self.native.slice(offset, length))
+
+    def sort(self, by: Sequence[str], options: SortMultipleOptions) -> Self:
+        opts = options
+        return self._with_native(
+            self.native.sort(by, descending=opts.descending, nulls_last=opts.nulls_last)
+        )
+
+    @overload
+    def to_dict(self, *, as_series: Literal[True]) -> dict[str, Series]: ...
+    @overload
+    def to_dict(self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
+    @overload
+    def to_dict(self, *, as_series: bool) -> dict[str, Series] | dict[str, list[Any]]: ...
+    def to_dict(self, *, as_series: bool) -> dict[str, Series] | dict[str, list[Any]]:
+        if as_series:
+            return {s.name: s for s in self.iter_columns()}
+        return self.native.to_dict(as_series=False)
+
+    def to_series(self, index: int = 0) -> Series:
+        return Series.from_native(self.native.to_series(index), version=self.version)
+
+    def rename(self, mapping: Mapping[str, str]) -> Self:
+        return self._with_native(self.native.rename(mapping))
+
+    def row(self, index: int) -> tuple[Any, ...]:
+        return self.native.row(index)
+
+    def sample_n(
+        self, n: int = 1, *, with_replacement: bool = False, seed: int | None = None
+    ) -> Self:
+        return self._with_native(
+            self.native.sample(n, with_replacement=with_replacement, seed=seed)
+        )
+
+    def to_struct(self, name: str = "") -> Any:
+        return Series.from_native(self.native.to_struct(name), version=self.version)
+
+    def partition_by(self, by: Sequence[str], *, include_key: bool = True) -> list[Self]:
+        results = self.native.partition_by(by, include_key=include_key, as_dict=False)
+        return [self._with_native(p) for p in results]
+
+    def unique(
+        self,
+        subset: Sequence[str] | None = None,
+        *,
+        keep: UniqueKeepStrategy = "any",
+        maintain_order: bool = False,
+    ) -> Self:
+        return self._with_native(
+            self.native.unique(subset, keep=keep, maintain_order=maintain_order)
+        )
+
+    def unnest(self, columns: Sequence[str]) -> Self:
+        return self._with_native(self.native.unnest(columns))
+
+    def unpivot(
+        self,
+        on: Sequence[str] | None,
+        index: Sequence[str] | None,
+        *,
+        variable_name: str = "variable",
+        value_name: str = "value",
+    ) -> Self:
+        if MELT_RENAMED_TO_UNPIVOT:
+            result = self.native.unpivot(
+                on, index=index, variable_name=variable_name, value_name=value_name
+            )
+        else:
+            result = self.native.melt(
+                id_vars=index,
+                value_vars=on,
+                variable_name=variable_name,
+                value_name=value_name,
+            )
+        return self._with_native(result)
+
+    def with_row_index(self, name: str) -> Self:
+        return self._with_native(self.native.with_row_index(name))
+
+    def with_row_index_by(
+        self, name: str, order_by: Sequence[str], *, nulls_last: bool = False
+    ) -> Self:
+        int_range = (
+            pl.int_range(pl.len())
+            .over(order_by=order_by, nulls_last=nulls_last)
+            .alias(name)
+        )
+        return self._with_native(self.native.select(int_range, pl.all()))
+
     _evaluate_irs = not_implemented()
     _group_by = not_implemented()  # type: ignore[assignment]
     lazy = not_implemented()
-    clone = not_implemented()
-    drop = not_implemented()
-    drop_nulls = not_implemented()
-    explode = not_implemented()
     filter = not_implemented()
-    from_dict = not_implemented()
-    gather_every = not_implemented()
-    get_column = not_implemented()
-    iter_columns = not_implemented()
     join = not_implemented()
     join_asof = not_implemented()
     join_cross = not_implemented()
-    partition_by = not_implemented()
     pivot = not_implemented()
-    rename = not_implemented()
-    row = not_implemented()
-    sample_n = not_implemented()
     select = not_implemented()
-    select_names = not_implemented()
-    slice = not_implemented()
-    sort = not_implemented()
-    to_dict = not_implemented()
-    to_series = not_implemented()
-    to_struct = not_implemented()
-    unique = not_implemented()
     unique_by = not_implemented()
-    unnest = not_implemented()
-    unpivot = not_implemented()
     with_columns = not_implemented()
-    with_row_index = not_implemented()
-    with_row_index_by = not_implemented()
 
 
 PolarsDataFrame()

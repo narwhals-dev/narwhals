@@ -192,7 +192,12 @@ class CompliantDataFrame(
     def clone(self) -> Self: ...
     @classmethod
     def from_dict(
-        cls, data: Mapping[str, Any], /, *, schema: IntoSchema | None = None
+        cls,
+        data: Mapping[str, Any],
+        /,
+        *,
+        schema: IntoSchema | None = None,
+        version: Version = MAIN,
     ) -> Self: ...
     def gather_every(self, n: int, offset: int = 0) -> Self: ...
     def get_column(self, name: str) -> SeriesT: ...
