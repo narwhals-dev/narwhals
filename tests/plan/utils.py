@@ -1,19 +1,26 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Any, overload
+import threading
+from collections import defaultdict
+from importlib.util import find_spec
+from itertools import chain
+from operator import attrgetter
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, overload
 
 import pytest
 
 import narwhals as nw
 from narwhals import _plan as nwp
 from narwhals._plan import Expr, Selector, _expansion, _parse, expressions as ir
-from narwhals._utils import qualified_type_name
+from narwhals._plan.compliant.typing import Native as NativeLazyFrame
+from narwhals._plan.typing import NativeDataFrameT_co, NativeSeriesT_co
+from narwhals._utils import Implementation, Version, qualified_type_name
 from tests.utils import assert_equal_data as _assert_equal_data
 
 pytest.importorskip("pyarrow")
 
-from collections.abc import Sequence
+from collections.abc import Iterable, Mapping, Sequence
 
 import pyarrow as pa
 
@@ -22,10 +29,19 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
     from typing import TypeVar
 
+    import polars as pl
     from typing_extensions import LiteralString, TypeAlias
 
     from narwhals._plan.typing import IntoExpr, OneOrIterable, Seq
-    from narwhals.typing import IntoSchema
+    from narwhals._typing import BackendName
+    from narwhals.schema import Schema
+    from narwhals.typing import (
+        EagerAllowed,
+        IntoBackend,
+        IntoDType,
+        IntoSchema,
+        LazyAllowed,
+    )
 
     if sys.version_info >= (3, 11):
         _Flags: TypeAlias = "int | re.RegexFlag"
@@ -34,6 +50,12 @@ if TYPE_CHECKING:
 
     T = TypeVar("T")
     SubList: TypeAlias = list[T] | list[T | None] | list[None] | None
+
+
+Incomplete: TypeAlias = Any
+ModuleName: TypeAlias = "LiteralString"
+Identifier: TypeAlias = "BackendName | ModuleName | LiteralString"
+"""String used for test ids and backend `include`/`exclude` filters."""
 
 
 def first(*names: str) -> nwp.Expr:
@@ -211,6 +233,196 @@ def is_expr_ir_equal(actual: Expr | ir.ExprIR, expected: Expr | ir.ExprIR, /) ->
 def named_ir(name: str, expr: nwp.Expr | ir.ExprIR, /) -> ir.NamedIR[ir.ExprIR]:
     """Helper constructor for test compare."""
     return ir.NamedIR(expr=expr._ir if isinstance(expr, nwp.Expr) else expr, name=name)
+
+
+_lock = threading.Lock()
+
+
+def _parse_identifiers(ids: OneOrIterable[Identifier], /) -> frozenset[Identifier]:
+    return frozenset((ids,) if isinstance(ids, str) else ids)
+
+
+class TestBackend(Generic[NativeLazyFrame, NativeDataFrameT_co, NativeSeriesT_co]):
+    """TODO @dangotbanned: set up so fixtures are populated by importorskip success."""
+
+    import_or_skip_module: ClassVar[ModuleName]
+    """Equivalent to[^1] the string used in `pytest.importorskip(...)`.
+
+    [^1]: Currently passed to `importlib.util.find_spec`, as it is needed before
+          test collection.
+    """
+
+    implementation: ClassVar[Implementation] = Implementation.UNKNOWN
+    """Required for internal backends, plugins use the default `UNKNOWN`."""
+
+    backend_eager: ClassVar[IntoBackend[EagerAllowed]]
+    """Argument passed to `backend` or `eager` for `DataFrame`, `Series` constructors."""
+
+    backend_lazy: ClassVar[IntoBackend[LazyAllowed]]
+    """Argument passed to `backend` for `LazyFrame` constructors."""
+
+    _BACKENDS: ClassVar[defaultdict[ModuleName, set[type[TestBackend[Any, Any]]]]] = (
+        defaultdict(set)
+    )
+
+    def lazyframe(self, data: Mapping[str, Any], /, **kwds: Any) -> NativeLazyFrame:
+        """Construct a native lazyframe."""
+        msg = f"`{self.lazyframe.__qualname__}()` is not yet implemented"
+        raise NotImplementedError(msg)
+
+    def dataframe(self, data: Mapping[str, Any], /, **kwds: Any) -> NativeDataFrameT_co:
+        """Construct a native dataframe."""
+        msg = f"`{self.dataframe.__qualname__}()` is not yet implemented"
+        raise NotImplementedError(msg)
+
+    def series(self, values: Iterable[Any], /, **kwds: Any) -> NativeSeriesT_co:
+        """Construct a native series."""
+        msg = f"`{self.series.__qualname__}()` is not yet implemented"
+        raise NotImplementedError(msg)
+
+    def schema_to_native(self, schema: Schema, /, **kwds: Any) -> Any:
+        """Convert a narwhals schema into a native representation."""
+        msg = f"`{self.schema_to_native.__qualname__}()` is not yet implemented"
+        raise NotImplementedError(msg)
+
+    def dtype_to_native(self, dtype: IntoDType, /, **kwds: Any) -> Any:
+        """Convert a narwhals dtype into a native dtype."""
+        msg = f"`{self.dtype_to_native.__qualname__}()` is not yet implemented"
+        raise NotImplementedError(msg)
+
+    def __repr__(self) -> str:
+        return type(self).__name__
+
+    @property
+    def identifier(self) -> BackendName | ModuleName | LiteralString:
+        """Base parameter for generating test ids.
+
+        - Instance property to support variation in the same subclass
+        - Should be built entirely from **literal string(s)**, to support predictable filtering
+        """
+        if self.implementation is Implementation.UNKNOWN:
+            return self.import_or_skip_module
+        return self.implementation.value
+
+    def __init_subclass__(
+        cls, *args: Any, import_or_skip_module: ModuleName | None = None, **kwds: Any
+    ) -> None:
+        super().__init_subclass__(*args, **kwds)
+        if module := import_or_skip_module:
+            cls.import_or_skip_module = module
+        elif not (
+            hasattr(cls, "import_or_skip_module")
+            and (module := cls.import_or_skip_module)
+        ):
+            msg = f"`import_or_skip_module` is a required argument for direct subclasses of `EagerBackend`, got: {import_or_skip_module=} for {cls!r}"
+            raise TypeError(msg)
+        if not (hasattr(cls, "backend_eager") or hasattr(cls, "backend_lazy")):
+            msg = f"At least one of `backend_eager` or `backend_lazy` must be set as a class attribute for {cls!r}"
+            raise TypeError(msg)
+
+        with _lock:
+            TestBackend._BACKENDS[module].add(cls)
+
+    @staticmethod
+    def prepare_backends(
+        *,
+        include: OneOrIterable[Identifier] | Literal["ALL"] = "ALL",
+        exclude: OneOrIterable[Identifier] | None = None,
+    ) -> tuple[TestBackend[Any, Any, Any], ...]:
+        """Initialize all known backends that are currently installed.
+
+        Arguments:
+            include: Backend(s) that should be selected if available.
+            exclude: Backend(s) that should not be selected, has lower precedence than `include`.
+        """
+        with _lock:
+            # NOTE: Although we're not mutating anything, we could run into issues
+            # if the size of `_BACKENDS` changes during iteration
+            known = TestBackend._BACKENDS
+            installed = chain.from_iterable(
+                (backend_tps for name, backend_tps in known.items() if find_spec(name))
+            )
+            selected = (tp() for tp in installed)
+            if include != "ALL":
+                including = _parse_identifiers(include)
+                selected = (b for b in selected if b.identifier in including)
+            if exclude is not None:
+                excluding = _parse_identifiers(exclude)
+                selected = (b for b in selected if b.identifier not in excluding)
+            return tuple(sorted(selected, key=attrgetter("identifier")))
+
+
+class PolarsBackend(
+    TestBackend["pl.LazyFrame", "pl.DataFrame", "pl.Series"],
+    import_or_skip_module="polars",
+):
+    backend_eager = "polars"
+    backend_lazy = "polars"
+
+    def schema_to_native(self, schema: Schema, /, **kwds: Any) -> pl.Schema:
+        return schema.to_polars()
+
+    def dtype_to_native(self, dtype: IntoDType, /, **kwds: Any) -> pl.DataType:
+        from narwhals._plan.polars.namespace import dtype_to_native
+
+        return dtype_to_native(dtype, Version.MAIN)
+
+    def lazyframe(
+        self, data: Mapping[str, Any], /, *, schema: Schema | None = None, **kwds: Any
+    ) -> pl.LazyFrame:
+        import polars as pl
+
+        return pl.LazyFrame(data, self.schema_to_native(schema) if schema else None)
+
+    def dataframe(
+        self, data: Mapping[str, Any], /, *, schema: Schema | None = None, **kwds: Any
+    ) -> pl.DataFrame:
+        import polars as pl
+
+        return pl.DataFrame(data, self.schema_to_native(schema) if schema else None)
+
+    def series(
+        self, values: Iterable[Any], /, *, dtype: IntoDType | None = None, **kwds: Any
+    ) -> pl.Series:
+        import polars as pl
+
+        # NOTE: polars accepts a lot of specific types, + Sequence, Arrow streams, unsized iterables
+        # but doesn't declare `Iterable` support
+        data: Incomplete = values
+        return pl.Series(data, dtype=(self.dtype_to_native(dtype) if dtype else None))
+
+
+class ArrowBackend(
+    TestBackend[Incomplete, "pa.Table", "pa.ChunkedArray[Any]"],
+    import_or_skip_module="pyarrow",
+):
+    backend_eager = "pyarrow"
+
+    def schema_to_native(self, schema: Schema, /, **kwds: Any) -> pa.Schema:
+        return schema.to_arrow()
+
+    def dtype_to_native(self, dtype: IntoDType, /, **kwds: Any) -> pa.DataType:
+        from narwhals._plan.arrow.functions import dtype_native
+
+        return dtype_native(dtype, Version.MAIN)
+
+    def dataframe(
+        self, data: Mapping[str, Any], /, *, schema: Schema | None = None, **kwds: Any
+    ) -> pa.Table:
+        import pyarrow as pa
+
+        return pa.Table.from_pydict(
+            data, self.schema_to_native(schema) if schema else None
+        )
+
+    def series(
+        self, values: Iterable[Any], /, *, dtype: IntoDType | None = None, **kwds: Any
+    ) -> pa.ChunkedArray[Any]:
+        import pyarrow as pa
+
+        # NOTE: The stubs crash language servers due to how many overlapping overloads this hits
+        array: Incomplete = pa.chunked_array
+        return array([values], self.dtype_to_native(dtype) if dtype else None)
 
 
 # TODO @dangotbanned: Make this a fixture, move to `tests.plan.conftest.py`
