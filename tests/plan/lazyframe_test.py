@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import datetime as dt
-from typing import TYPE_CHECKING, Any, Literal, TypeVar
+from typing import TYPE_CHECKING, Any, Literal
 
 import pytest
 
@@ -15,17 +15,9 @@ from narwhals._utils import Implementation
 from tests.plan.utils import dataframe, re_compile
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-
-    from typing_extensions import TypeAlias
-
     from narwhals.typing import IntoBackend, LazyAllowed
     from tests.conftest import Data
-
-    Outer = TypeVar("Outer")
-    Inner = TypeVar("Inner")
-    Constructor: TypeAlias = Callable[[Data], Outer]
-    ConstructorLazy: TypeAlias = Callable[[Data], nwp.LazyFrame[Inner]]
+    from tests.plan.utils import LazyFrame
 
 
 @pytest.fixture
@@ -47,17 +39,6 @@ def data_small() -> dict[str, Any]:
         "n": ["dogs", "cats", None],
         "o": ["play", "swim", "walk"],
     }
-
-
-@pytest.fixture(scope="session")
-def lazyframe() -> ConstructorLazy[pl.LazyFrame]:
-    pytest.importorskip("polars")
-    import polars as pl
-
-    def _(data: Data, /) -> nwp.LazyFrame[pl.LazyFrame]:
-        return nwp.LazyFrame.from_native(pl.DataFrame(data).lazy())
-
-    return _
 
 
 def test_lazyframe_from_native(data_small: Data) -> None:
@@ -86,7 +67,7 @@ def assert_equal_schema(
     assert actual_schema == expected_schema
 
 
-def test_lazyframe_collect_schema(lazyframe: ConstructorLazy[pl.LazyFrame]) -> None:
+def test_lazyframe_collect_schema(lazyframe: LazyFrame) -> None:
     pytest.importorskip("polars")
     import polars as pl
     import polars.selectors as cs

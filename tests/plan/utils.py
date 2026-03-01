@@ -7,7 +7,16 @@ from collections import defaultdict
 from importlib.util import find_spec
 from itertools import chain
 from operator import attrgetter
-from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    ClassVar,
+    Generic,
+    Literal,
+    Protocol,
+    TypedDict,
+    overload,
+)
 
 import pytest
 
@@ -22,16 +31,16 @@ from tests.utils import assert_equal_data as _assert_equal_data
 pytest.importorskip("pyarrow")
 
 from collections.abc import Iterable, Mapping, Sequence
+from typing import TypeVar
 
 import pyarrow as pa
 
 if TYPE_CHECKING:
     import sys
     from collections.abc import Iterable, Mapping
-    from typing import TypeVar
 
     import polars as pl
-    from typing_extensions import LiteralString, TypeAlias
+    from typing_extensions import LiteralString, ReadOnly, TypeAlias
 
     from narwhals._plan.typing import IntoExpr, OneOrIterable, Seq
     from narwhals._typing import BackendName
@@ -51,6 +60,36 @@ if TYPE_CHECKING:
 
     T = TypeVar("T")
     SubList: TypeAlias = list[T] | list[T | None] | list[None] | None
+    TestBackendAny: TypeAlias = "TestBackend[Any, Any, Any]"
+
+R_co = TypeVar("R_co", covariant=True)
+
+
+class Constructor(Protocol[R_co]):
+    def __call__(self, data: Any, *args: Any, **kwds: Any) -> R_co: ...
+
+
+LazyFrame: TypeAlias = Constructor[nwp.LazyFrame[Any]]
+"""The type of the `lazyframe` fixture."""
+
+DataFrame: TypeAlias = Constructor[nwp.DataFrame[Any, Any]]
+"""The type of the `dataframe` fixture."""
+
+Series: TypeAlias = Constructor[nwp.Series[Any]]
+"""The type of the `series` fixture."""
+
+ConstructorFixtureName: TypeAlias = Literal["lazyframe", "dataframe", "series"]
+
+
+class SupportProfile(TypedDict):
+    """Flags declaring support for a fixture of the same name."""
+
+    lazyframe: ReadOnly[bool]
+    """Supports `lazyframe`."""
+    dataframe: ReadOnly[bool]
+    """Supports `dataframe`."""
+    series: ReadOnly[bool]
+    """Supports `series`."""
 
 
 Incomplete: TypeAlias = Any
@@ -262,6 +301,12 @@ class TestBackend(Generic[NativeLazyFrame, NativeDataFrameT_co, NativeSeriesT_co
     backend_lazy: ClassVar[IntoBackend[LazyAllowed]]
     """Argument passed to `backend` for `LazyFrame` constructors."""
 
+    supports: ClassVar[SupportProfile]
+    """Which fixtures the backend should populate.
+
+    Added during `__init_subclass__`.
+    """
+
     _BACKENDS: ClassVar[defaultdict[ModuleName, set[type[TestBackend[Any, Any]]]]] = (
         defaultdict(set)
     )
@@ -328,6 +373,9 @@ class TestBackend(Generic[NativeLazyFrame, NativeDataFrameT_co, NativeSeriesT_co
         cls, *args: Any, import_or_skip_module: ModuleName | None = None, **kwds: Any
     ) -> None:
         super().__init_subclass__(*args, **kwds)
+        if not (hasattr(cls, "backend_eager") or hasattr(cls, "backend_lazy")):
+            msg = f"At least one of `backend_eager` or `backend_lazy` must be set as a class attribute for {cls!r}"
+            raise TypeError(msg)
         if module := import_or_skip_module:
             cls.import_or_skip_module = module
         elif not (
@@ -336,9 +384,8 @@ class TestBackend(Generic[NativeLazyFrame, NativeDataFrameT_co, NativeSeriesT_co
         ):
             msg = f"`import_or_skip_module` is a required argument for direct subclasses of `EagerBackend`, got: {import_or_skip_module=} for {cls!r}"
             raise TypeError(msg)
-        if not (hasattr(cls, "backend_eager") or hasattr(cls, "backend_lazy")):
-            msg = f"At least one of `backend_eager` or `backend_lazy` must be set as a class attribute for {cls!r}"
-            raise TypeError(msg)
+
+        cls.supports = backend_support_profile(cls)
 
         with _lock:
             TestBackend._BACKENDS[module].add(cls)
@@ -370,6 +417,18 @@ class TestBackend(Generic[NativeLazyFrame, NativeDataFrameT_co, NativeSeriesT_co
                 excluding = _parse_identifiers(exclude)
                 selected = (b for b in selected if b.identifier not in excluding)
             return tuple(sorted(selected, key=attrgetter("identifier")))
+
+
+def backend_support_profile(backend: type[TestBackend[Any, Any, Any]]) -> SupportProfile:
+    """Check `native_*` methods and return True for all overrides."""
+
+    def _(name: str, /) -> bool:
+        native = f"native_{name}"
+        return getattr(backend, native) != getattr(TestBackend, native)
+
+    return SupportProfile(
+        lazyframe=_("lazyframe"), dataframe=_("dataframe"), series=_("series")
+    )
 
 
 class PolarsBackend(
