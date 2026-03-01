@@ -26,6 +26,7 @@ if TYPE_CHECKING:
         CompliantSeries[NativeSeriesT],
         Any,
         Any,
+        NativeSeriesT,
     ]
 
 KnownImpl: TypeAlias = "_EagerAllowedImpl | _LazyAllowedImpl"

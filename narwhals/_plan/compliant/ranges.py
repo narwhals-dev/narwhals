@@ -4,14 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Protocol
 
-from narwhals._plan.compliant.typing import (
-    ExprT,
-    ExprT_co,
-    FrameT,
-    FrameT_contra,
-    SeriesT,
-    SeriesT_co,
-)
+from narwhals._plan.compliant.typing import ExprT, ExprT_co, FrameT, FrameT_contra
+from narwhals._plan.typing import NativeSeriesT, NativeSeriesT_co
 from narwhals._utils import Version, _hasattr_static
 
 if TYPE_CHECKING:
@@ -20,6 +14,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeIs
 
     from narwhals._plan import expressions as ir
+    from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._plan.expressions import ranges
     from narwhals.dtypes import IntegerType
     from narwhals.typing import ClosedInterval
@@ -64,7 +59,7 @@ class LinearSpace(Protocol[FrameT_contra, ExprT_co]):
     ) -> ExprT_co: ...
 
 
-class DateRangeEager(Protocol[SeriesT_co]):
+class DateRangeEager(Protocol[NativeSeriesT_co]):
     def date_range_eager(
         self,
         start: dt.date,
@@ -73,10 +68,10 @@ class DateRangeEager(Protocol[SeriesT_co]):
         *,
         closed: ClosedInterval = "both",
         name: str = "literal",
-    ) -> SeriesT_co: ...
+    ) -> CompliantSeries[NativeSeriesT_co]: ...
 
 
-class IntRangeEager(Protocol[SeriesT_co]):
+class IntRangeEager(Protocol[NativeSeriesT_co]):
     def int_range_eager(
         self,
         start: int,
@@ -85,10 +80,10 @@ class IntRangeEager(Protocol[SeriesT_co]):
         *,
         dtype: IntegerType = Int64,
         name: str = "literal",
-    ) -> SeriesT_co: ...
+    ) -> CompliantSeries[NativeSeriesT_co]: ...
 
 
-class LinearSpaceEager(Protocol[SeriesT_co]):
+class LinearSpaceEager(Protocol[NativeSeriesT_co]):
     def linear_space_eager(
         self,
         start: float,
@@ -97,7 +92,7 @@ class LinearSpaceEager(Protocol[SeriesT_co]):
         *,
         closed: ClosedInterval = "both",
         name: str = "literal",
-    ) -> SeriesT_co: ...
+    ) -> CompliantSeries[NativeSeriesT_co]: ...
 
 
 class LazyRangeGenerator(
@@ -110,16 +105,16 @@ class LazyRangeGenerator(
 
 
 class EagerRangeGenerator(
-    DateRangeEager[SeriesT_co],
-    IntRangeEager[SeriesT_co],
-    LinearSpaceEager[SeriesT_co],
-    Protocol[SeriesT_co],
+    DateRangeEager[NativeSeriesT_co],
+    IntRangeEager[NativeSeriesT_co],
+    LinearSpaceEager[NativeSeriesT_co],
+    Protocol[NativeSeriesT_co],
 ):
     """Supports all range generation methods that return series."""
 
 
 class HybridRangeGenerator(
-    LazyRangeGenerator[FrameT_contra, ExprT_co], EagerRangeGenerator[SeriesT_co]
+    LazyRangeGenerator[FrameT_contra, ExprT_co], EagerRangeGenerator[NativeSeriesT_co]
 ):
     """Supports all range generation methods.."""
 
@@ -132,10 +127,10 @@ def can_int_range(obj: IntRange[FrameT, ExprT] | Any) -> TypeIs[IntRange[FrameT,
     return _hasattr_static(obj, "int_range")
 def can_linear_space(obj: LinearSpace[FrameT, ExprT] | Any) -> TypeIs[LinearSpace[FrameT, ExprT]]:
     return _hasattr_static(obj, "linear_space")
-def can_date_range_eager(obj: DateRangeEager[SeriesT] | Any) -> TypeIs[DateRangeEager[SeriesT]]:
+def can_date_range_eager(obj: DateRangeEager[NativeSeriesT] | Any) -> TypeIs[DateRangeEager[NativeSeriesT]]:
     return _hasattr_static(obj, "date_range_eager")
-def can_int_range_eager(obj: IntRangeEager[SeriesT] | Any) -> TypeIs[IntRangeEager[SeriesT]]:
+def can_int_range_eager(obj: IntRangeEager[NativeSeriesT] | Any) -> TypeIs[IntRangeEager[NativeSeriesT]]:
     return _hasattr_static(obj, "int_range_eager")
-def can_linear_space_eager(obj: LinearSpaceEager[SeriesT] | Any) -> TypeIs[LinearSpaceEager[SeriesT]]:
+def can_linear_space_eager(obj: LinearSpaceEager[NativeSeriesT] | Any) -> TypeIs[LinearSpaceEager[NativeSeriesT]]:
     return _hasattr_static(obj, "linear_space_eager")
 # fmt: on

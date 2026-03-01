@@ -19,6 +19,7 @@ from narwhals._plan.compliant.typing import Native as NativeLazy
 from narwhals._plan.typing import (
     NativeDataFrameT as NativeEager,
     NativeSeriesT as NativeSeries,
+    NativeSeriesT_co as NativeSeries_co,
 )
 from narwhals._typing_compat import TypeVar
 from narwhals._utils import unstable
@@ -91,16 +92,16 @@ class HasPlanEvaluator(Protocol[NativeLazy_co]):
         """Required, but not implemented for `pyarrow` yet."""
 
 
-class HasDataFrame(Protocol[NativeEager, NativeSeries]):
+class HasDataFrame(Protocol[NativeEager, NativeSeries_co]):
     @property
     def DataFrame(
         self,
-    ) -> type[CompliantDataFrame[Incomplete, NativeEager, NativeSeries]]: ...
+    ) -> type[CompliantDataFrame[Incomplete, NativeEager, NativeSeries_co]]: ...
 
 
-class HasSeries(Protocol[NativeSeries]):
+class HasSeries(Protocol[NativeSeries_co]):
     @property
-    def Series(self) -> type[CompliantSeries[NativeSeries]]: ...
+    def Series(self) -> type[CompliantSeries[NativeSeries_co]]: ...
 
 
 class HasPlanResolver(Protocol):
@@ -141,9 +142,9 @@ class LazyPackage(
 class EagerPackage(
     HasExpr,
     HasNamespace,
-    HasDataFrame[NativeEager, NativeSeries],
-    HasSeries[NativeSeries],
-    Protocol[NativeEager, NativeSeries],
+    HasDataFrame[NativeEager, NativeSeries_co],
+    HasSeries[NativeSeries_co],
+    Protocol[NativeEager, NativeSeries_co],
 ): ...
 
 
@@ -151,11 +152,11 @@ class EagerPackage(
 class HybridPackage(
     HasExpr,
     HasNamespace,
-    HasDataFrame[NativeEager, NativeSeries],
+    HasDataFrame[NativeEager, NativeSeries_co],
     HasLazyFrame[NativeLazy],
     HasPlanEvaluator[NativeLazy],
-    HasSeries[NativeSeries],
-    Protocol[NativeLazy, NativeEager, NativeSeries],
+    HasSeries[NativeSeries_co],
+    Protocol[NativeLazy, NativeEager, NativeSeries_co],
 ): ...
 
 

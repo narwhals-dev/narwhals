@@ -4,7 +4,7 @@ import operator
 from collections.abc import Collection
 from functools import reduce
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Literal, cast, overload
+from typing import TYPE_CHECKING, Any, cast, overload
 
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
@@ -141,17 +141,8 @@ class ArrowDataFrame(
         for name, series in self._iter_columns():
             yield Series.from_native(series, name, version=self.version)
 
-    @overload
-    def to_dict(self, *, as_series: Literal[True]) -> dict[str, Series]: ...
-    @overload
-    def to_dict(self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
-    @overload
-    def to_dict(self, *, as_series: bool) -> dict[str, Series] | dict[str, list[Any]]: ...
-    def to_dict(self, *, as_series: bool) -> dict[str, Series] | dict[str, list[Any]]:
-        it = self.iter_columns()
-        if as_series:
-            return {ser.name: ser for ser in it}
-        return {ser.name: ser.to_list() for ser in it}
+    def to_series(self, index: int = 0) -> Series:
+        return self.get_column(self.columns[index])
 
     def to_arrow(self) -> pa.Table:
         return self.native

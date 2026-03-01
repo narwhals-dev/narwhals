@@ -15,6 +15,7 @@ from narwhals._plan.compliant.typing import (
     ScalarT_co,
     SeriesT,
 )
+from narwhals._plan.typing import NativeSeriesT_co
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -105,14 +106,14 @@ class EagerConcat(Concat[ConcatT1, ConcatT2], Protocol[ConcatT1, ConcatT2]):  # 
 
 
 class EagerNamespace(
-    ranges.EagerRangeGenerator[SeriesT],
+    ranges.EagerRangeGenerator[NativeSeriesT_co],
     io.LazyInput[Incomplete],
     io.EagerInput[EagerDataFrameT],
     EagerConcat[EagerDataFrameT, SeriesT],
     CompliantNamespace[EagerDataFrameT, EagerExprT_co, EagerScalarT_co],
-    Protocol[EagerDataFrameT, SeriesT, EagerExprT_co, EagerScalarT_co],
+    Protocol[EagerDataFrameT, SeriesT, EagerExprT_co, EagerScalarT_co, NativeSeriesT_co],
 ):
-    """`[EagerDataFrameT, SeriesT, EagerExprT_co, EagerScalarT_co]`."""
+    """`[EagerDataFrameT, SeriesT, EagerExprT_co, EagerScalarT_co,  NativeSeriesT_co]`."""
 
     @property
     def _dataframe(self) -> type[EagerDataFrameT]: ...

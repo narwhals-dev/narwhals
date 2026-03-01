@@ -3,14 +3,14 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol
 
 from narwhals._plan.compliant.typing import HasVersion
-from narwhals._plan.typing import IncompleteCyclic, NativeSeriesT
+from narwhals._plan.typing import IncompleteCyclic, NativeSeriesT_co
 from narwhals._utils import Version, unstable
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
 
     import polars as pl
-    from typing_extensions import Self
+    from typing_extensions import Self, TypeAlias
 
     from narwhals._plan.compliant.accessors import SeriesStructNamespace
     from narwhals._plan.compliant.dataframe import CompliantDataFrame
@@ -29,23 +29,21 @@ if TYPE_CHECKING:
         _1DArray,
     )
 
+Incomplete: TypeAlias = Any
+"""Hack to get covariance on `CompliantSeries`.
 
-class CompliantSeries(HasVersion, Protocol[NativeSeriesT]):
-    """`[NativeSeriesT]`."""
+We need to define a constructor, but it can only be typed (and remain covariant),
+if it is named `__init__`.
+
+Defining `__init__` in a protocol is buggy, so `from_native` uses `Incomplete`.
+"""
+
+
+class CompliantSeries(HasVersion, Protocol[NativeSeriesT_co]):
+    """`[NativeSeriesT_co]`."""
 
     implementation: ClassVar[_EagerAllowedImpl]
 
-    # TODO @dangotbanned: Getting covariance requires changing:
-    # - [x] `_native`
-    #  - remove entirely (marks as mutable)
-    # - [x] `gather`
-    #  - `Series` always passes `CompliantSeries[NativeSeriesT_co@Series]`
-    #  - Also have this in `ArrowFrameSeries``:
-    #  -   `def gather(self, indices: Indices | _StoresNative[ChunkedArrayAny]) -> Self:`
-    # - [x] `_with_native`
-    #   - move to `ArrowSeries`
-    # - [ ] `from_native` [maybe]
-    #  - switch to `__init__` (special-cased for variance, but runtime has other issues before 3.12)
     def __narwhals_series__(self) -> Self:
         return self
 
@@ -79,10 +77,10 @@ class CompliantSeries(HasVersion, Protocol[NativeSeriesT]):
         n = int(len(self) * fraction)
         return self.sample_n(n, with_replacement=with_replacement, seed=seed)
 
-    def to_narwhals(self) -> Series[NativeSeriesT]:
+    def to_narwhals(self) -> Series[NativeSeriesT_co]:
         from narwhals._plan.series import Series
 
-        return Series[NativeSeriesT](self)
+        return Series(self)
 
     @unstable
     def hist(
@@ -93,7 +91,7 @@ class CompliantSeries(HasVersion, Protocol[NativeSeriesT]):
         include_breakpoint: bool = True,
         include_category: bool = False,
         _compatibility_behavior: Literal["narwhals", "polars"] = "narwhals",
-    ) -> CompliantDataFrame[Self, IncompleteCyclic, NativeSeriesT]:
+    ) -> CompliantDataFrame[Self, IncompleteCyclic, NativeSeriesT_co]:
         from narwhals._plan.expressions import col as ir_col
 
         expr = (
@@ -106,7 +104,7 @@ class CompliantSeries(HasVersion, Protocol[NativeSeriesT]):
                 include_category=include_category,
             )
         )
-        df: DataFrame[IncompleteCyclic, NativeSeriesT] = (
+        df: DataFrame[IncompleteCyclic, NativeSeriesT_co] = (
             self.to_narwhals().to_frame().select(expr)
         )
         if not include_breakpoint and not include_category:
@@ -157,7 +155,7 @@ class CompliantSeries(HasVersion, Protocol[NativeSeriesT]):
     ) -> Self: ...
     @classmethod
     def from_native(
-        cls, native: NativeSeriesT, name: str = "", /, *, version: Version = Version.MAIN
+        cls, native: Incomplete, name: str = "", /, *, version: Version = Version.MAIN
     ) -> Self: ...
     @classmethod
     def from_numpy(
@@ -168,7 +166,7 @@ class CompliantSeries(HasVersion, Protocol[NativeSeriesT]):
     @property
     def name(self) -> str: ...
     @property
-    def native(self) -> NativeSeriesT: ...
+    def native(self) -> NativeSeriesT_co: ...
     def all(self) -> bool: ...
     def any(self) -> bool: ...
     def sum(self) -> float: ...

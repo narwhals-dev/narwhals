@@ -200,12 +200,14 @@ class PolarsDataFrame(
         )
 
     @overload
-    def to_dict(self, *, as_series: Literal[True]) -> dict[str, Series]: ...
+    def to_dict(self, *, as_series: Literal[True]) -> Mapping[str, Series]: ...
     @overload
     def to_dict(self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
     @overload
-    def to_dict(self, *, as_series: bool) -> dict[str, Series] | dict[str, list[Any]]: ...
-    def to_dict(self, *, as_series: bool) -> dict[str, Series] | dict[str, list[Any]]:
+    def to_dict(
+        self, *, as_series: bool
+    ) -> Mapping[str, Series] | dict[str, list[Any]]: ...
+    def to_dict(self, *, as_series: bool) -> Mapping[str, Series] | dict[str, list[Any]]:
         if as_series:
             return {s.name: s for s in self.iter_columns()}
         return self.native.to_dict(as_series=False)

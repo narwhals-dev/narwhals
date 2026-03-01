@@ -12,7 +12,7 @@ from narwhals._plan.typing import (
     IntoExpr,
     NativeDataFrameT,
     NativeFrameT_co,
-    NativeSeriesT,
+    NativeSeriesT_co,
     NonCrossJoinStrategy,
     OneOrIterable,
 )
@@ -35,6 +35,7 @@ if TYPE_CHECKING:
         GroupByResolver,
     )
     from narwhals._plan.compliant.namespace import EagerNamespace
+    from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._plan.dataframe import BaseFrame, DataFrame
     from narwhals._plan.expressions import NamedIR
     from narwhals._plan.options import ExplodeOptions, SortMultipleOptions
@@ -124,12 +125,12 @@ class CompliantFrame(HasVersion, Protocol[ColumnT_co, NativeFrameT_co]):
     ) -> Self: ...
 
 
-class CompliantDataFrame(
+class CompliantDataFrame(  # type: ignore[misc]
     io.EagerOutput,
     CompliantFrame[SeriesT, NativeDataFrameT],
-    Protocol[SeriesT, NativeDataFrameT, NativeSeriesT],
+    Protocol[SeriesT, NativeDataFrameT, NativeSeriesT_co],
 ):
-    """`[SeriesT, NativeDataFrameT, NativeSeriesT]`."""
+    """`[SeriesT, NativeDataFrameT, NativeSeriesT_co]`."""
 
     _native: NativeDataFrameT
 
@@ -200,7 +201,7 @@ class CompliantDataFrame(
         version: Version = MAIN,
     ) -> Self: ...
     def gather_every(self, n: int, offset: int = 0) -> Self: ...
-    def get_column(self, name: str) -> SeriesT: ...
+    def get_column(self, name: str) -> CompliantSeries[NativeSeriesT_co]: ...
     def group_by_agg(
         self, by: OneOrIterable[IntoExpr], aggs: OneOrIterable[IntoExpr], /
     ) -> Self:
@@ -230,7 +231,7 @@ class CompliantDataFrame(
         return self._group_by.from_resolver(self, resolver)
 
     def filter(self, predicate: NamedIR, /) -> Self: ...
-    def iter_columns(self) -> Iterator[SeriesT]: ...
+    def iter_columns(self) -> Iterator[CompliantSeries[NativeSeriesT_co]]: ...
     def partition_by(
         self, by: Sequence[str], *, include_key: bool = True
     ) -> list[Self]: ...
@@ -246,21 +247,28 @@ class CompliantDataFrame(
     ) -> Self: ...
     def row(self, index: int) -> tuple[Any, ...]: ...
     @overload
-    def to_dict(self, *, as_series: Literal[True]) -> dict[str, SeriesT]: ...
+    def to_dict(
+        self, *, as_series: Literal[True]
+    ) -> Mapping[str, CompliantSeries[NativeSeriesT_co]]: ...
     @overload
     def to_dict(self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
     @overload
     def to_dict(
         self, *, as_series: bool
-    ) -> dict[str, SeriesT] | dict[str, list[Any]]: ...
+    ) -> Mapping[str, CompliantSeries[NativeSeriesT_co]] | dict[str, list[Any]]: ...
     def to_dict(
         self, *, as_series: bool
-    ) -> dict[str, SeriesT] | dict[str, list[Any]]: ...
-    def to_narwhals(self) -> DataFrame[NativeDataFrameT, NativeSeriesT]:
+    ) -> Mapping[str, CompliantSeries[NativeSeriesT_co]] | dict[str, list[Any]]:
+        it = self.iter_columns()
+        if as_series:
+            return {ser.name: ser for ser in it}
+        return {ser.name: ser.to_list() for ser in it}
+
+    def to_narwhals(self) -> DataFrame[NativeDataFrameT, NativeSeriesT_co]:
         return into_version(self.version).dataframe(self)
 
-    def to_series(self, index: int = 0) -> SeriesT: ...
-    def to_struct(self, name: str = "") -> SeriesT: ...
+    def to_series(self, index: int = 0) -> CompliantSeries[NativeSeriesT_co]: ...
+    def to_struct(self, name: str = "") -> CompliantSeries[NativeSeriesT_co]: ...
     def to_arrow(self) -> pa.Table: ...
     def to_pandas(self) -> pd.DataFrame: ...
     def to_polars(self) -> pl.DataFrame: ...
@@ -292,14 +300,14 @@ class CompliantDataFrame(
     ) -> Self: ...
 
 
-class EagerDataFrame(
+class EagerDataFrame(  # pyright: ignore[reportInvalidTypeVarUse]
     io.LazyOutput,
-    CompliantDataFrame[SeriesT, NativeDataFrameT, NativeSeriesT],
-    Protocol[SeriesT, NativeDataFrameT, NativeSeriesT],
+    CompliantDataFrame[SeriesT, NativeDataFrameT, NativeSeriesT_co],
+    Protocol[SeriesT, NativeDataFrameT, NativeSeriesT_co],
 ):
-    """`[SeriesT, NativeDataFrameT, NativeSeriesT]`."""
+    """`[SeriesT, NativeDataFrameT, NativeSeriesT_co]`."""
 
-    def __narwhals_namespace__(self) -> EagerNamespace[Self, SeriesT, Any, Any]: ...
+    def __narwhals_namespace__(self) -> EagerNamespace[Self, SeriesT, Any, Any, Any]: ...
     @property
     def _group_by(self) -> type[EagerDataFrameGroupBy[Self]]: ...
     def _evaluate_irs(
@@ -318,9 +326,6 @@ class EagerDataFrame(
         return self.__narwhals_namespace__()._concat_horizontal(
             self._evaluate_irs(irs, length=len(self))
         )
-
-    def to_series(self, index: int = 0) -> SeriesT:
-        return self.get_column(self.columns[index])
 
     def sink_parquet(self, target: str | BytesIO, /) -> None:
         self.write_parquet(target)

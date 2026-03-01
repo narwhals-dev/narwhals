@@ -24,6 +24,7 @@ from narwhals._plan.typing import (
     NativeFrameT_co,
     NativeSeriesT,
     NativeSeriesT2,
+    NativeSeriesT_co,
     NonCrossJoinStrategy,
     OneOrIterable,
     PartialSeries,
@@ -74,6 +75,7 @@ if TYPE_CHECKING:
         CompliantSeries[NativeSeriesT],
         Any,
         Any,
+        NativeSeriesT,
     ]
 
 
@@ -331,15 +333,15 @@ def _dataframe_from_dict(
 
 
 class DataFrame(
-    BaseFrame[NativeDataFrameT_co], Generic[NativeDataFrameT_co, NativeSeriesT]
+    BaseFrame[NativeDataFrameT_co], Generic[NativeDataFrameT_co, NativeSeriesT_co]
 ):
-    _compliant: EagerDataFrame[IncompleteCyclic, NativeDataFrameT_co, NativeSeriesT]
+    _compliant: EagerDataFrame[IncompleteCyclic, NativeDataFrameT_co, NativeSeriesT_co]
 
     def __narwhals_namespace__(
         self,
     ) -> EagerNamespace[
-        EagerDataFrame[Any, NativeDataFrameT_co, NativeSeriesT],
-        CompliantSeries[NativeSeriesT],
+        EagerDataFrame[Any, NativeDataFrameT_co, NativeSeriesT_co],
+        CompliantSeries[NativeSeriesT_co],
         Any,
         Any,
     ]:
@@ -361,24 +363,24 @@ class DataFrame(
         return len(self._compliant)
 
     @property
-    def _series(self) -> type[Series[NativeSeriesT]]:
-        return Series[NativeSeriesT]
+    def _series(self) -> type[Series[NativeSeriesT_co]]:
+        return Series[NativeSeriesT_co]
 
     def _partial_series(
         self, *, dtype: IntoDType | None = None
-    ) -> PartialSeries[NativeSeriesT]:
+    ) -> PartialSeries[NativeSeriesT_co]:
         it_names = temp.column_names(self.columns)
         backend = self.implementation
         series = self._series.from_iterable
 
-        def fn(values: Iterable[Any], /) -> Series[NativeSeriesT]:
+        def fn(values: Iterable[Any], /) -> Series[NativeSeriesT_co]:
             return series(values, name=next(it_names), dtype=dtype, backend=backend)
 
         return fn
 
     def _parse_into_compliant_series(
         self, other: Series[Any] | Iterable[Any], /, name: str = ""
-    ) -> CompliantSeries[NativeSeriesT]:
+    ) -> CompliantSeries[NativeSeriesT_co]:
         if columns := self.columns:
             compliant = self.get_column(columns[0])._parse_into_compliant(other)
             return compliant if not name or compliant.name else compliant.alias(name)
@@ -468,16 +470,16 @@ class DataFrame(
     @overload
     def to_dict(
         self, *, as_series: Literal[True] = ...
-    ) -> dict[str, Series[NativeSeriesT]]: ...
+    ) -> dict[str, Series[NativeSeriesT_co]]: ...
     @overload
     def to_dict(self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
     @overload
     def to_dict(
         self, *, as_series: bool
-    ) -> dict[str, Series[NativeSeriesT]] | dict[str, list[Any]]: ...
+    ) -> dict[str, Series[NativeSeriesT_co]] | dict[str, list[Any]]: ...
     def to_dict(
         self, *, as_series: bool = True
-    ) -> dict[str, Series[NativeSeriesT]] | dict[str, list[Any]]:
+    ) -> dict[str, Series[NativeSeriesT_co]] | dict[str, list[Any]]:
         if as_series:  # pragma: no cover
             return {
                 key: self._series(value)
@@ -485,10 +487,10 @@ class DataFrame(
             }
         return self._compliant.to_dict(as_series=as_series)
 
-    def to_series(self, index: int = 0) -> Series[NativeSeriesT]:
+    def to_series(self, index: int = 0) -> Series[NativeSeriesT_co]:
         return self._series(self._compliant.to_series(index))
 
-    def to_struct(self, name: str = "") -> Series[NativeSeriesT]:
+    def to_struct(self, name: str = "") -> Series[NativeSeriesT_co]:
         return self._series(self._compliant.to_struct(name))
 
     def to_arrow(self) -> pa.Table:  # pragma: no cover
@@ -503,7 +505,7 @@ class DataFrame(
     def gather_every(self, n: int, offset: int = 0) -> Self:
         return self._with_compliant(self._compliant.gather_every(n, offset))
 
-    def get_column(self, name: str) -> Series[NativeSeriesT]:
+    def get_column(self, name: str) -> Series[NativeSeriesT_co]:
         return self._series(self._compliant.get_column(name))
 
     @overload
@@ -532,7 +534,7 @@ class DataFrame(
     def row(self, index: int) -> tuple[Any, ...]:
         return self._compliant.row(index)
 
-    def iter_columns(self) -> Iterator[Series[NativeSeriesT]]:
+    def iter_columns(self) -> Iterator[Series[NativeSeriesT_co]]:
         for series in self._compliant.iter_columns():
             yield self._series(series)
 
@@ -619,7 +621,7 @@ class DataFrame(
             on, index=index, values=values, frame_columns=self.columns
         )
         dtype_str = self.version.dtypes.String()
-        on_cols: EagerDataFrame[IncompleteCyclic, NativeDataFrameT_co, NativeSeriesT]
+        on_cols: EagerDataFrame[IncompleteCyclic, NativeDataFrameT_co, NativeSeriesT_co]
 
         if on_columns is None:
             nw_on_cols = self.select(F.col(name).cast(dtype_str) for name in on_).unique(

@@ -56,7 +56,9 @@ if TYPE_CHECKING:
 Int64 = Version.MAIN.dtypes.Int64()
 
 
-class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
+class ArrowNamespace(
+    EagerNamespace["Frame", "Series", "Expr", "Scalar", "ChunkedArrayAny"]
+):
     implementation = Implementation.PYARROW
 
     def __init__(self, version: Version = Version.MAIN) -> None:
