@@ -6,7 +6,9 @@ from typing import TYPE_CHECKING, Any, Literal, overload
 from narwhals._duration import Interval
 from narwhals._plan import _parse, common
 from narwhals._plan._dispatch import get_dispatch_name
-from narwhals._plan._namespace import eager_namespace_from_backend
+from narwhals._plan._namespace import namespace_from_backend
+from narwhals._plan.compliant import ranges as _ranges
+from narwhals._plan.exceptions import unsupported_backend_operation_error
 from narwhals._plan.expressions.ranges import (
     DateRange,
     IntRange,
@@ -19,10 +21,9 @@ from narwhals.exceptions import ComputeError, InvalidOperationError
 if TYPE_CHECKING:
     import pyarrow as pa
 
-    from narwhals._plan._namespace import EagerNs
     from narwhals._plan.expr import Expr
     from narwhals._plan.series import Series
-    from narwhals._plan.typing import IntoExprColumn, NativeSeriesT, NonNestedLiteralT
+    from narwhals._plan.typing import IntoExprColumn, NonNestedLiteralT
     from narwhals._typing import Arrow
     from narwhals.dtypes import IntegerType
     from narwhals.typing import ClosedInterval, EagerAllowed, IntoBackend
@@ -68,9 +69,11 @@ def int_range(
         start = 0
     dtype = common.into_dtype(dtype)
     if eager:
-        ns = eager_namespace_from_backend(eager)
         start, end = _ensure_range_scalar(start, end, int, IntRange, eager)
-        return _int_range_eager(start, end, step, dtype, ns)
+        ns_ = namespace_from_backend(eager)
+        if _ranges.can_int_range_eager(ns_):
+            return ns_.int_range_eager(start, end, step, dtype=dtype).to_narwhals()
+        raise unsupported_backend_operation_error(eager, "int_range")
     return (
         IntRange(step=step, dtype=dtype)
         .to_function_expr(*_parse.parse_into_seq_of_expr_ir(start, end))
@@ -116,9 +119,11 @@ def date_range(
     days = _interval_days(interval)
     closed = _ensure_closed_interval(closed)
     if eager:
-        ns = eager_namespace_from_backend(eager)
         start, end = _ensure_range_scalar(start, end, dt.date, DateRange, eager)
-        return _date_range_eager(start, end, days, closed, ns)
+        ns_ = namespace_from_backend(eager)
+        if _ranges.can_date_range_eager(ns_):
+            return ns_.date_range_eager(start, end, days, closed=closed).to_narwhals()
+        raise unsupported_backend_operation_error(eager, "date_range")
     return (
         DateRange(interval=days, closed=closed)
         .to_function_expr(*_parse.parse_into_seq_of_expr_ir(start, end))
@@ -205,9 +210,13 @@ def linear_space(
     ensure_type(num_samples, int, param_name="num_samples")
     closed = _ensure_closed_interval(closed)
     if eager:
-        ns = eager_namespace_from_backend(eager)
         start, end = _ensure_range_scalar(start, end, (float, int), LinearSpace, eager)
-        return _linear_space_eager(start, end, num_samples, closed, ns)
+        ns_ = namespace_from_backend(eager)
+        if _ranges.can_linear_space_eager(ns_):
+            return ns_.linear_space_eager(
+                start, end, num_samples, closed=closed
+            ).to_narwhals()
+        raise unsupported_backend_operation_error(eager, "linear_space")
     return (
         LinearSpace(num_samples=num_samples, closed=closed)
         .to_function_expr(*_parse.parse_into_seq_of_expr_ir(start, end))
@@ -237,43 +246,6 @@ def _ensure_range_scalar(
         "  - a context such as `select` or `with_columns`"
     )
     raise InvalidOperationError(msg)
-
-
-# NOTE: The extra level of indirection here is to satisfy `mypy`
-# AFAICT, `pyright` is able to use bidirectional inference from the `{date,int}_range` overloads.
-# `mypy` would treat the same call as an `Any`
-def _date_range_eager(
-    start: dt.date,
-    end: dt.date,
-    interval: int,
-    closed: ClosedInterval,
-    ns: EagerNs[Any, NativeSeriesT],
-    /,
-) -> Series[NativeSeriesT]:
-    return ns.date_range_eager(start, end, interval, closed=closed).to_narwhals()
-
-
-# NOTE: See `_date_range_eager`
-def _int_range_eager(
-    start: int,
-    end: int,
-    step: int,
-    dtype: IntegerType,
-    ns: EagerNs[Any, NativeSeriesT],
-    /,
-) -> Series[NativeSeriesT]:
-    return ns.int_range_eager(start, end, step, dtype=dtype).to_narwhals()
-
-
-def _linear_space_eager(
-    start: float,
-    end: float,
-    num_samples: int,
-    closed: ClosedInterval,
-    ns: EagerNs[Any, NativeSeriesT],
-    /,
-) -> Series[NativeSeriesT]:
-    return ns.linear_space_eager(start, end, num_samples, closed=closed).to_narwhals()
 
 
 def _ensure_closed_interval(closed: ClosedInterval, /) -> ClosedInterval:

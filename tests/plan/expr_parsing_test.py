@@ -216,7 +216,7 @@ def test_int_range_eager_invalid() -> None:
         nwp.int_range(10, nwp.col("a").last(), eager=Implementation.PYARROW)  # type: ignore[call-overload]
     with pytest.raises(NotImplementedError):
         nwp.int_range(10, eager="pandas")
-    with pytest.raises(ValueError, match=r"lazy-only"):
+    with pytest.raises(NotImplementedError, match="duckdb"):
         nwp.int_range(10, eager="duckdb")  # type: ignore[call-overload]
 
 
@@ -229,7 +229,7 @@ def test_date_range_eager_invalid() -> None:
         nwp.date_range(start, nwp.col("a").last(), eager=Implementation.PYARROW)  # type: ignore[call-overload]
     with pytest.raises(NotImplementedError):
         nwp.date_range(start, end, eager="cudf")
-    with pytest.raises(ValueError, match=r"lazy-only"):
+    with pytest.raises(NotImplementedError, match="sqlframe"):
         nwp.date_range(start, end, eager="sqlframe")  # type: ignore[call-overload]
 
 

@@ -47,15 +47,15 @@ def namespace_from_backend(
         from narwhals._plan import polars as _polars
 
         return _polars.Namespace(Version.MAIN)
-    if is_eager_allowed(impl):
-        return eager_namespace_from_backend(impl)
-    msg = f"Lazy backends are not yet supported in `narwhals._plan`, got: {impl!r}"
+    if impl is Implementation.PYARROW:
+        from narwhals._plan import arrow as _arrow
+
+        return _arrow.Namespace(Version.MAIN)
+    msg = f"Not yet supported in `narwhals._plan`, got: {impl!r}"
     raise NotImplementedError(msg)
 
 
-# TODO @dangotbanned: Use the more granualar protocols instead
-# (file) `io` has been weaned off, but ranges and memory io still use it
-# the overloads are fine, just need to avoid exposing `Eager*` classes
+# TODO @dangotbanned: Use the more granular protocols for `DataFrame.from_dict`
 @overload
 def eager_namespace_from_backend(backend: Arrow, /) -> _arrow.Namespace: ...
 @overload
