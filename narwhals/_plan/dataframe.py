@@ -403,7 +403,7 @@ class DataFrame(
     @classmethod
     def from_native(
         cls: type[DataFrame[Any, Any]], native: NativeDataFrameT, /
-    ) -> DataFrame[NativeDataFrameT]: ...
+    ) -> DataFrame[NativeDataFrameT, Any]: ...
     @classmethod
     def from_native(
         cls: type[DataFrame[Any, Any]], native: NativeDataFrameT, /

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# mypy: disable-error-code="no-any-return"
 import re
 import threading
 from collections import defaultdict
@@ -265,19 +266,38 @@ class TestBackend(Generic[NativeLazyFrame, NativeDataFrameT_co, NativeSeriesT_co
         defaultdict(set)
     )
 
-    def lazyframe(self, data: Mapping[str, Any], /, **kwds: Any) -> NativeLazyFrame:
+    def lazyframe(
+        self, data: Mapping[str, Any], /, **kwds: Any
+    ) -> nwp.LazyFrame[NativeLazyFrame]:
+        return nwp.LazyFrame.from_native(self.native_lazyframe(data, **kwds))
+
+    def dataframe(
+        self, data: Mapping[str, Any], /, **kwds: Any
+    ) -> nwp.DataFrame[NativeDataFrameT_co, NativeSeriesT_co]:
+        return nwp.DataFrame.from_native(self.native_dataframe(data, **kwds))
+
+    def series(
+        self, values: Iterable[Any], /, **kwds: Any
+    ) -> nwp.Series[NativeSeriesT_co]:
+        return nwp.Series.from_native(self.native_series(values, **kwds))
+
+    def native_lazyframe(
+        self, data: Mapping[str, Any], /, **kwds: Any
+    ) -> NativeLazyFrame:
         """Construct a native lazyframe."""
-        msg = f"`{self.lazyframe.__qualname__}()` is not yet implemented"
+        msg = f"`{self.native_lazyframe.__qualname__}()` is not yet implemented"
         raise NotImplementedError(msg)
 
-    def dataframe(self, data: Mapping[str, Any], /, **kwds: Any) -> NativeDataFrameT_co:
+    def native_dataframe(
+        self, data: Mapping[str, Any], /, **kwds: Any
+    ) -> NativeDataFrameT_co:
         """Construct a native dataframe."""
-        msg = f"`{self.dataframe.__qualname__}()` is not yet implemented"
+        msg = f"`{self.native_dataframe.__qualname__}()` is not yet implemented"
         raise NotImplementedError(msg)
 
-    def series(self, values: Iterable[Any], /, **kwds: Any) -> NativeSeriesT_co:
+    def native_series(self, values: Iterable[Any], /, **kwds: Any) -> NativeSeriesT_co:
         """Construct a native series."""
-        msg = f"`{self.series.__qualname__}()` is not yet implemented"
+        msg = f"`{self.native_series.__qualname__}()` is not yet implemented"
         raise NotImplementedError(msg)
 
     def schema_to_native(self, schema: Schema, /, **kwds: Any) -> Any:
@@ -367,21 +387,21 @@ class PolarsBackend(
 
         return dtype_to_native(dtype, Version.MAIN)
 
-    def lazyframe(
+    def native_lazyframe(
         self, data: Mapping[str, Any], /, *, schema: Schema | None = None, **kwds: Any
     ) -> pl.LazyFrame:
         import polars as pl
 
         return pl.LazyFrame(data, self.schema_to_native(schema) if schema else None)
 
-    def dataframe(
+    def native_dataframe(
         self, data: Mapping[str, Any], /, *, schema: Schema | None = None, **kwds: Any
     ) -> pl.DataFrame:
         import polars as pl
 
         return pl.DataFrame(data, self.schema_to_native(schema) if schema else None)
 
-    def series(
+    def native_series(
         self, values: Iterable[Any], /, *, dtype: IntoDType | None = None, **kwds: Any
     ) -> pl.Series:
         import polars as pl
@@ -406,7 +426,7 @@ class ArrowBackend(
 
         return dtype_native(dtype, Version.MAIN)
 
-    def dataframe(
+    def native_dataframe(
         self, data: Mapping[str, Any], /, *, schema: Schema | None = None, **kwds: Any
     ) -> pa.Table:
         import pyarrow as pa
@@ -415,7 +435,7 @@ class ArrowBackend(
             data, self.schema_to_native(schema) if schema else None
         )
 
-    def series(
+    def native_series(
         self, values: Iterable[Any], /, *, dtype: IntoDType | None = None, **kwds: Any
     ) -> pa.ChunkedArray[Any]:
         import pyarrow as pa
