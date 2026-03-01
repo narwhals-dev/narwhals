@@ -384,6 +384,14 @@ class TestBackend(Generic[NativeLazyFrame, NativeDataFrameT_co, NativeSeriesT_co
         ):
             msg = f"`import_or_skip_module` is a required argument for direct subclasses of `EagerBackend`, got: {import_or_skip_module=} for {cls!r}"
             raise TypeError(msg)
+        if cls.implementation is Implementation.UNKNOWN and cls.import_or_skip_module in {
+            impl.value for impl in Implementation
+        }:
+            msg = (
+                f"`{cls.import_or_skip_module=}` implies {cls!r} should use {Implementation(import_or_skip_module)!r},\n"
+                f"but got: `{cls.implementation=}`"
+            )
+            raise TypeError(msg)
 
         cls.supports = backend_support_profile(cls)
 
@@ -437,6 +445,7 @@ class PolarsBackend(
 ):
     backend_eager = "polars"
     backend_lazy = "polars"
+    implementation = Implementation.POLARS
 
     def schema_to_native(self, schema: Schema, /, **kwds: Any) -> pl.Schema:
         return schema.to_polars()
@@ -476,6 +485,7 @@ class ArrowBackend(
     import_or_skip_module="pyarrow",
 ):
     backend_eager = "pyarrow"
+    implementation = Implementation.PYARROW
 
     def schema_to_native(self, schema: Schema, /, **kwds: Any) -> pa.Schema:
         return schema.to_arrow()

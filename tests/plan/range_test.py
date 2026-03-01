@@ -67,6 +67,7 @@ EXPECTED_DATE_4: Final = [
 ]
 
 
+# TODO @dangotbanned: Add polars: `date_range`, `Expr.cast`, `DataFrame.select`
 @pytest.mark.parametrize(
     ("expr", "expected"),
     [
@@ -138,6 +139,7 @@ def test_date_range_eager(
     assert result == expected
 
 
+# TODO @dangotbanned: Add polars: `int_range` (full), `binary_expr`, `Expr.<aggregations>`, `DataFrame.select`
 @pytest.mark.parametrize(
     ("expr", "expected"),
     [
@@ -161,6 +163,7 @@ def test_int_range_eager(eager: EagerAllowed) -> None:
     assert ser.to_list() == list(range(50))
 
 
+# TODO @dangotbanned: Add polars: `linear_space`, `DataFrame.select`
 @pytest.mark.parametrize(("start", "end"), [(0, 0), (0, 1), (-1, 0), (-2.1, 3.4)])
 @pytest.mark.parametrize("num_samples", [0, 1, 2, 5, 1_000])
 @pytest.mark.parametrize("interval", ["both", "left", "right", "none"])
@@ -199,6 +202,7 @@ def test_linear_space_values(
     assert_equal_series(result, expected, "ls")
 
 
+# TODO @dangotbanned: Add polars: `linear_space` (full), `Expr.len`, `DataFrame.select`, `Series.from_iterable`
 def test_linear_space_expr() -> None:
     # NOTE: Adapted from https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/py-polars/tests/unit/functions/range/test_linear_space.py#L59-L68
     pytest.importorskip("pyarrow")
@@ -219,6 +223,7 @@ def test_linear_space_expr() -> None:
     assert_equal_data(result, expected)
 
 
+# TODO @dangotbanned: Add polars: `linear_space`,`DataFrame.select`, `Series.from_iterable`
 # NOTE: More general "supertyping" behavior would need `pyarrow.unify_schemas`
 # (https://arrow.apache.org/docs/14.0/python/generated/pyarrow.unify_schemas.html)
 @pytest.mark.parametrize(
@@ -259,6 +264,7 @@ def test_linear_space_expr_numeric_dtype(
     assert_equal_data(result, expected)
 
 
+# TODO @dangotbanned: Add polars: `linear_space`,`DataFrame.with_columns`
 def test_linear_space_expr_wrong_length() -> None:
     # NOTE: Adapted from https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/py-polars/tests/unit/functions/range/test_linear_space.py#L194-L199
     pytest.importorskip("pyarrow")

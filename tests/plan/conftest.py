@@ -2,14 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal
 
-import pytest
-
-import narwhals as nw
-from tests.conftest import TEST_EAGER_BACKENDS
-
 if TYPE_CHECKING:
     from collections.abc import Collection
 
+    import pytest
     from typing_extensions import LiteralString
 
     from narwhals.typing import EagerAllowed
@@ -28,36 +24,10 @@ if TYPE_CHECKING:
     def dataframe() -> DataFrame: ...
     @pytest.fixture
     def series() -> Series: ...
-
-
-_HAS_IMPLEMENTATION = frozenset((nw.Implementation.PYARROW, "pyarrow"))
-"""Using to filter *the source* of `eager_backend` - which includes `polars` and `pandas` when available.
-
-For now, this lets some tests be written in a backend agnostic way.
-"""
-
-
-@pytest.fixture(
-    scope="session", params=_HAS_IMPLEMENTATION.intersection(TEST_EAGER_BACKENDS)
-)
-def eager(request: pytest.FixtureRequest) -> EagerAllowed:
-    result: EagerAllowed = request.param
-    return result
-
-
-_HAS_IMPLEMENTATION_IMPL = frozenset(
-    el for el in _HAS_IMPLEMENTATION if isinstance(el, nw.Implementation)
-)
-"""Filtered for heavily parametric tests."""
-
-
-@pytest.fixture(
-    scope="session",
-    params=_HAS_IMPLEMENTATION_IMPL.intersection(TEST_EAGER_BACKENDS).union([False]),
-)
-def eager_or_false(request: pytest.FixtureRequest) -> EagerAllowed | Literal[False]:
-    result: EagerAllowed | Literal[False] = request.param
-    return result
+    @pytest.fixture
+    def eager() -> EagerAllowed: ...
+    @pytest.fixture
+    def eager_or_false() -> EagerAllowed | Literal[False]: ...
 
 
 _MAIN_DEFAULT_CONSTRUCTORS = (
@@ -114,8 +84,23 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
 
     include, exclude = _resolve_options(metafunc.config)
     test_backends = TestBackend.prepare_backends(include=include, exclude=exclude)
-    for name in "lazyframe", "dataframe", "series":
-        _parametrize_constructor_fixture(name, metafunc, test_backends)
+    for constructor in "lazyframe", "dataframe", "series":
+        _parametrize_constructor_fixture(constructor, metafunc, test_backends)
+
+    if {"eager", "eager_or_false"}.intersection(metafunc.fixturenames):
+        eager_values = []
+        eager_ids = []
+        for backend in test_backends:
+            if eager := getattr(backend, "backend_eager", None):
+                eager_values.append(eager)
+                eager_ids.append(backend.identifier)
+        if eager_values:
+            if "eager" in metafunc.fixturenames:
+                metafunc.parametrize("eager", eager_values, ids=eager_ids)
+            if "eager_or_false" in metafunc.fixturenames:
+                metafunc.parametrize(
+                    "eager_or_false", (*eager_values, False), ids=(*eager_ids, "False")
+                )
 
 
 def _parametrize_constructor_fixture(
