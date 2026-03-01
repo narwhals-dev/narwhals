@@ -8,6 +8,7 @@ from narwhals._plan.exceptions import unsupported_backend_operation_error
 from narwhals._utils import normalize_path, unstable
 
 if TYPE_CHECKING:
+    import polars as pl
     import pyarrow as pa
     from typing_extensions import TypeAlias
 
@@ -15,7 +16,7 @@ if TYPE_CHECKING:
     from narwhals._plan.dataframe import DataFrame
     from narwhals._plan.lazyframe import LazyFrame
     from narwhals._plan.typing import NativeDataFrameT, NativeSeriesT
-    from narwhals._typing import Arrow
+    from narwhals._typing import Arrow, Polars
     from narwhals.schema import Schema
     from narwhals.typing import Backend, EagerAllowed, FileSource, IntoBackend
 
@@ -26,6 +27,10 @@ if TYPE_CHECKING:
 def read_csv(
     source: FileSource, *, backend: Arrow, **kwds: Any
 ) -> DataFrame[pa.Table, pa.ChunkedArray[Any]]: ...
+@overload
+def read_csv(
+    source: FileSource, *, backend: Polars, **kwds: Any
+) -> DataFrame[pl.DataFrame, pl.Series]: ...
 @overload
 def read_csv(
     source: FileSource, *, backend: IntoBackend[EagerAllowed], **kwds: Any
@@ -44,6 +49,10 @@ def read_csv(
 def read_parquet(
     source: FileSource, *, backend: Arrow, **kwds: Any
 ) -> DataFrame[pa.Table, pa.ChunkedArray[Any]]: ...
+@overload
+def read_parquet(
+    source: FileSource, *, backend: Polars, **kwds: Any
+) -> DataFrame[pl.DataFrame, pl.Series]: ...
 @overload
 def read_parquet(
     source: FileSource, *, backend: IntoBackend[EagerAllowed], **kwds: Any

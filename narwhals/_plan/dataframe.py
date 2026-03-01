@@ -68,7 +68,8 @@ if TYPE_CHECKING:
     from narwhals._plan.compliant.namespace import EagerNamespace
     from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._plan.lazyframe import LazyFrame
-    from narwhals._typing import Arrow, _EagerAllowedImpl
+    from narwhals._plan.polars.typing import NativePolarsDataFrame
+    from narwhals._typing import Arrow, Polars, _EagerAllowedImpl
 
     EagerNs: TypeAlias = EagerNamespace[
         EagerDataFrame[Any, NativeDataFrameT, Any],
@@ -402,6 +403,11 @@ class DataFrame(
     @overload
     @classmethod
     def from_native(
+        cls: type[DataFrame[Any, Any]], native: NativePolarsDataFrame, /
+    ) -> DataFrame[pl.DataFrame, pl.Series]: ...
+    @overload
+    @classmethod
+    def from_native(
         cls: type[DataFrame[Any, Any]], native: NativeDataFrameT, /
     ) -> DataFrame[NativeDataFrameT, Any]: ...
     @classmethod
@@ -419,6 +425,15 @@ class DataFrame(
         *,
         backend: Arrow,
     ) -> DataFrame[pa.Table, pa.ChunkedArray[Any]]: ...
+    @overload
+    @classmethod
+    def from_dict(
+        cls: type[DataFrame[Any, Any]],
+        data: Mapping[str, Any],
+        schema: IntoSchema | None = ...,
+        *,
+        backend: Polars,
+    ) -> DataFrame[pl.DataFrame, pl.Series]: ...
     @overload
     @classmethod
     def from_dict(

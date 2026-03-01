@@ -19,12 +19,13 @@ from narwhals._utils import Version, ensure_type, qualified_type_name
 from narwhals.exceptions import ComputeError, InvalidOperationError
 
 if TYPE_CHECKING:
+    import polars as pl
     import pyarrow as pa
 
     from narwhals._plan.expr import Expr
     from narwhals._plan.series import Series
     from narwhals._plan.typing import IntoExprColumn, NonNestedLiteralT
-    from narwhals._typing import Arrow
+    from narwhals._typing import Arrow, Polars
     from narwhals.dtypes import IntegerType
     from narwhals.typing import ClosedInterval, EagerAllowed, IntoBackend
 
@@ -47,6 +48,15 @@ def int_range(
     dtype: IntegerType | type[IntegerType] = ...,
     eager: Arrow,
 ) -> Series[pa.ChunkedArray[Any]]: ...
+@overload
+def int_range(
+    start: int = ...,
+    end: int | None = ...,
+    step: int = ...,
+    *,
+    dtype: IntegerType | type[IntegerType] = ...,
+    eager: Polars,
+) -> Series[pl.Series]: ...
 @overload
 def int_range(
     start: int = ...,
@@ -106,6 +116,15 @@ def date_range(
     interval: str | dt.timedelta = ...,
     *,
     closed: ClosedInterval = ...,
+    eager: Polars,
+) -> Series[pl.Series]: ...
+@overload
+def date_range(
+    start: dt.date,
+    end: dt.date,
+    interval: str | dt.timedelta = ...,
+    *,
+    closed: ClosedInterval = ...,
     eager: IntoBackend[EagerAllowed],
 ) -> Series: ...
 def date_range(
@@ -149,6 +168,15 @@ def linear_space(
     closed: ClosedInterval = ...,
     eager: Arrow,
 ) -> Series[pa.ChunkedArray[Any]]: ...
+@overload
+def linear_space(
+    start: float,
+    end: float,
+    num_samples: int,
+    *,
+    closed: ClosedInterval = ...,
+    eager: Polars,
+) -> Series[pl.Series]: ...
 @overload
 def linear_space(
     start: float,

@@ -805,6 +805,7 @@ def test_series_cast() -> None:
 
 
 if TYPE_CHECKING:
+    import polars as pl
     from typing_extensions import assert_type
 
     def test_protocol_expr() -> None:
@@ -829,26 +830,49 @@ if TYPE_CHECKING:
     def test_dataframe_from_native_overloads() -> None:
         """Ensure we can reveal the `NativeSeries` **without** a dependency."""
         data: dict[str, Any] = {}
-        native_good = pa.table(data)
-        result_good = nwp.DataFrame.from_native(native_good)
-        assert_type(result_good, "nwp.DataFrame[pa.Table, pa.ChunkedArray[Any]]")
+        native_good_1 = pa.table(data)
+        result_good_1 = nwp.DataFrame.from_native(native_good_1)
+        assert_type(result_good_1, "nwp.DataFrame[pa.Table, pa.ChunkedArray[Any]]")
 
-        native_bad = native_good.to_batches()[0]
-        nwp.DataFrame.from_native(native_bad)  # type: ignore[call-overload]
-        assert_type(native_bad, "pa.RecordBatch")
+        native_bad_1 = native_good_1.to_batches()[0]
+        nwp.DataFrame.from_native(native_bad_1)  # type: ignore[call-overload]
+        assert_type(native_bad_1, "pa.RecordBatch")
+
+        native_good_2 = pl.DataFrame(data)
+        result_good_2 = nwp.DataFrame.from_native(native_good_2)
+        assert_type(result_good_2, "nwp.DataFrame[pl.DataFrame, pl.Series]")
+
+        native_bad_2 = native_good_2.lazy()
+        nwp.DataFrame.from_native(native_bad_2)  # type: ignore[call-overload]
+        assert_type(native_bad_2, "pl.LazyFrame")
 
     def test_int_range_overloads() -> None:
-        series = nwp.int_range(50, eager="pyarrow")
-        assert_type(series, "nwp.Series[pa.ChunkedArray[Any]]")
-        native = series.to_native()
-        assert_type(native, "pa.ChunkedArray[Any]")
-        roundtrip = nwp.Series.from_native(native)
-        assert_type(roundtrip, "nwp.Series[pa.ChunkedArray[Any]]")
+        series_1 = nwp.int_range(50, eager="pyarrow")
+        assert_type(series_1, "nwp.Series[pa.ChunkedArray[Any]]")
+        native_1 = series_1.to_native()
+        assert_type(native_1, "pa.ChunkedArray[Any]")
+        roundtrip_1 = nwp.Series.from_native(native_1)
+        assert_type(roundtrip_1, "nwp.Series[pa.ChunkedArray[Any]]")
+
+        series_2 = nwp.int_range(50, eager="polars")
+        assert_type(series_2, "nwp.Series[pl.Series]")
+        native_2 = series_2.to_native()
+        assert_type(native_2, "pl.Series")
+        roundtrip_2 = nwp.Series.from_native(native_2)
+        assert_type(roundtrip_2, "nwp.Series[pl.Series]")
 
     def test_date_range_overloads() -> None:
-        series = nwp.date_range(dt.date(2000, 1, 1), dt.date(2002, 1, 1), eager="pyarrow")
-        assert_type(series, "nwp.Series[pa.ChunkedArray[Any]]")
-        native = series.to_native()
-        assert_type(native, "pa.ChunkedArray[Any]")
-        roundtrip = nwp.Series.from_native(native)
-        assert_type(roundtrip, "nwp.Series[pa.ChunkedArray[Any]]")
+        start, end = dt.date(2000, 1, 1), dt.date(2002, 1, 1)
+        series_1 = nwp.date_range(start, end, eager="pyarrow")
+        assert_type(series_1, "nwp.Series[pa.ChunkedArray[Any]]")
+        native_1 = series_1.to_native()
+        assert_type(native_1, "pa.ChunkedArray[Any]")
+        roundtrip_1 = nwp.Series.from_native(native_1)
+        assert_type(roundtrip_1, "nwp.Series[pa.ChunkedArray[Any]]")
+
+        series_2 = nwp.date_range(start, end, eager="polars")
+        assert_type(series_2, "nwp.Series[pl.Series]")
+        native_2 = series_2.to_native()
+        assert_type(native_2, "pl.Series")
+        roundtrip_2 = nwp.Series.from_native(native_2)
+        assert_type(roundtrip_2, "nwp.Series[pl.Series]")
