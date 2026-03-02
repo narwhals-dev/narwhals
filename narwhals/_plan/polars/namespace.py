@@ -7,6 +7,7 @@ import polars as pl
 from narwhals._plan._version import into_version
 from narwhals._plan.common import todo
 from narwhals._plan.compliant.namespace import CompliantNamespace
+from narwhals._plan.compliant.translate import FromDict, FromIterable
 from narwhals._plan.expressions.literal import is_literal_scalar
 from narwhals._polars.utils import (
     narwhals_to_native_dtype as _dtype_native,
@@ -17,6 +18,7 @@ from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     import datetime as dt
+    from collections.abc import Iterable, Mapping
 
     from typing_extensions import TypeAlias
 
@@ -29,7 +31,7 @@ if TYPE_CHECKING:
     from narwhals._plan.series import Series as NwSeries
     from narwhals.dtypes import Date, DType, FloatType, IntegerType
     from narwhals.schema import Schema
-    from narwhals.typing import ClosedInterval, IntoDType, NonNestedLiteral
+    from narwhals.typing import ClosedInterval, IntoDType, IntoSchema, NonNestedLiteral
 
 Incomplete: TypeAlias = Any
 MAIN = Version.MAIN
@@ -73,7 +75,11 @@ def explode_todo(
     return True, True
 
 
-class PolarsNamespace(CompliantNamespace[Incomplete, "Expr", Incomplete]):
+class PolarsNamespace(
+    FromIterable[pl.Series],
+    FromDict[pl.DataFrame, pl.Series],
+    CompliantNamespace[Incomplete, "Expr", Incomplete],
+):
     __slots__ = ("_version",)
     _version: Version
     implementation: ClassVar = Implementation.POLARS
@@ -111,6 +117,26 @@ class PolarsNamespace(CompliantNamespace[Incomplete, "Expr", Incomplete]):
 
     _scalar = todo()  # type: ignore[assignment]
     _frame = todo()  # type: ignore[assignment]
+
+    def from_dict(
+        self,
+        data: Mapping[str, Any],
+        /,
+        *,
+        schema: IntoSchema | None = None,
+        version: Version = Version.MAIN,
+    ) -> DataFrame:
+        return self._dataframe.from_dict(data, schema=schema, version=version)
+
+    def from_iterable(
+        self,
+        data: Iterable[Any],
+        *,
+        name: str = "",
+        dtype: IntoDType | None = None,
+        version: Version = Version.MAIN,
+    ) -> Series:
+        return self._series.from_iterable(data, name=name, dtype=dtype, version=version)
 
     def read_csv(self, source: str, /, **kwds: Any) -> DataFrame:
         return self._dataframe.from_native(pl.read_csv(source, **kwds), self.version)

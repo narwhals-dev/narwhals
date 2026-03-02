@@ -202,7 +202,7 @@ def test_linear_space_values(
     assert_equal_series(result, expected, "ls")
 
 
-# TODO @dangotbanned: Add polars: `linear_space` (full), `Expr.len`, `DataFrame.select`, `Series.from_iterable`
+# TODO @dangotbanned: Add polars: `linear_space` (full), `Expr.len`, `DataFrame.select`
 def test_linear_space_expr() -> None:
     # NOTE: Adapted from https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/py-polars/tests/unit/functions/range/test_linear_space.py#L59-L68
     pytest.importorskip("pyarrow")
@@ -223,7 +223,7 @@ def test_linear_space_expr() -> None:
     assert_equal_data(result, expected)
 
 
-# TODO @dangotbanned: Add polars: `linear_space`,`DataFrame.select`, `Series.from_iterable`
+# TODO @dangotbanned: Add polars: `linear_space`,`DataFrame.select`
 # NOTE: More general "supertyping" behavior would need `pyarrow.unify_schemas`
 # (https://arrow.apache.org/docs/14.0/python/generated/pyarrow.unify_schemas.html)
 @pytest.mark.parametrize(

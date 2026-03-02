@@ -6,10 +6,11 @@ from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, get_args, ove
 from narwhals._plan import _parse, translate
 from narwhals._plan._expansion import expand_selector_irs_names, prepare_projection
 from narwhals._plan._guards import is_series
-from narwhals._plan._namespace import eager_namespace_from_backend
+from narwhals._plan._namespace import namespace_from_backend
 from narwhals._plan.common import ensure_seq_str, normalize_target_file, temp
 from narwhals._plan.compliant.dataframe import EagerDataFrame
-from narwhals._plan.compliant.namespace import EagerNamespace
+from narwhals._plan.compliant.translate import can_from_dict
+from narwhals._plan.exceptions import unsupported_backend_operation_error
 from narwhals._plan.group_by import GroupBy, Grouped
 from narwhals._plan.options import ExplodeOptions, SortMultipleOptions
 from narwhals._plan.plans import LogicalPlan
@@ -22,7 +23,6 @@ from narwhals._plan.typing import (
     NativeDataFrameT,
     NativeDataFrameT_co,
     NativeFrameT_co,
-    NativeSeriesT,
     NativeSeriesT2,
     NativeSeriesT_co,
     NonCrossJoinStrategy,
@@ -65,15 +65,11 @@ if TYPE_CHECKING:
     from narwhals._native import NativeSeries
     from narwhals._plan.arrow.typing import NativeArrowDataFrame
     from narwhals._plan.compliant.dataframe import CompliantFrame, EagerDataFrame
-    from narwhals._plan.compliant.namespace import CompliantNamespace, EagerNamespace
+    from narwhals._plan.compliant.namespace import CompliantNamespace
     from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._plan.lazyframe import LazyFrame
     from narwhals._plan.polars.typing import NativePolarsDataFrame
     from narwhals._typing import Arrow, Polars, _EagerAllowedImpl
-
-    EagerNs: TypeAlias = EagerNamespace[
-        EagerDataFrame[Any, NativeDataFrameT, Any], Any, Any, Any, NativeSeriesT
-    ]
 
 
 Incomplete: TypeAlias = Any
@@ -320,19 +316,6 @@ class BaseFrame(Generic[NativeFrameT_co]):
         return self._with_compliant(self._compliant.unnest(subset))
 
 
-# TODO @dangotbanned: Weaning off `EagerNamespace` (tricky)
-# - Using `EagerNamespace._dataframe.from_dict`
-# - `CompliantNamespace` has `._frame`, but really need to add
-#   `from_dict` as a protocol, add to namespace, check with `can_from_dict`
-def _dataframe_from_dict(
-    data: Mapping[str, Any],
-    schema: IntoSchema | None,
-    ns: EagerNs[NativeDataFrameT, NativeSeriesT],
-    /,
-) -> DataFrame[NativeDataFrameT, NativeSeriesT]:
-    return ns._dataframe.from_dict(data, schema=schema).to_narwhals()
-
-
 class DataFrame(
     BaseFrame[NativeDataFrameT_co], Generic[NativeDataFrameT_co, NativeSeriesT_co]
 ):
@@ -473,12 +456,14 @@ class DataFrame(
             if impl is None:
                 msg = "Calling `from_dict` without `backend` is only supported if all input values are already Narwhals Series"
                 raise TypeError(msg)
-            return _dataframe_from_dict(
-                unwrapped, schema, eager_namespace_from_backend(impl)
-            )
-
-        ns = eager_namespace_from_backend(backend)
-        return _dataframe_from_dict(data, schema, ns)
+            backend = impl
+            data = unwrapped
+        ns = namespace_from_backend(backend)
+        if can_from_dict(ns):
+            return ns.from_dict(data, schema=schema, version=cls._version).to_narwhals()
+        raise unsupported_backend_operation_error(
+            backend, "from_dict"
+        )  # pragma: no cover
 
     @overload
     def to_dict(

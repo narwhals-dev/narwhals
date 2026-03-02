@@ -1,28 +1,18 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, overload
+from typing import TYPE_CHECKING, Any
 
-from narwhals._typing_compat import deprecated
 from narwhals._utils import Implementation, Version, is_eager_allowed
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
-    from narwhals._plan import arrow as _arrow
-    from narwhals._plan.compliant.dataframe import EagerDataFrame
-    from narwhals._plan.compliant.namespace import CompliantNamespace, EagerNamespace
+    from narwhals._plan.compliant.namespace import CompliantNamespace
     from narwhals._plan.compliant.typing import NamespaceT_co, SupportsNarwhalsNamespace
     from narwhals._plan.plans.visitors import ResolvedToCompliant
-    from narwhals._plan.typing import NativeDataFrameT, NativeSeriesT
-    from narwhals._typing import Arrow, _EagerAllowedImpl, _LazyAllowedImpl
-    from narwhals.typing import Backend, EagerAllowed, IntoBackend
+    from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
+    from narwhals.typing import Backend, IntoBackend
 
-    # NOTE: Use when you have a function that calls a namespace method, and eventually returns:
-    # - `DataFrame[NativeDataFrameT]`, or
-    # - `Series[NativeSeriesT]`
-    EagerNs: TypeAlias = EagerNamespace[
-        EagerDataFrame[Any, NativeDataFrameT, Any], Any, Any, Any, NativeSeriesT
-    ]
 
 KnownImpl: TypeAlias = "_EagerAllowedImpl | _LazyAllowedImpl"
 """Equivalent to `Backend - BackendName`."""
@@ -48,26 +38,6 @@ def namespace_from_backend(
         return _arrow.Namespace(Version.MAIN)
     msg = f"Not yet supported in `narwhals._plan`, got: {impl!r}"
     raise NotImplementedError(msg)
-
-
-# TODO @dangotbanned: Use the more granular protocols for `DataFrame.from_dict`
-@overload
-def eager_namespace_from_backend(backend: Arrow, /) -> _arrow.Namespace: ...
-@overload
-def eager_namespace_from_backend(
-    backend: IntoBackend[EagerAllowed], /
-) -> EagerNs[Any, Any]: ...
-@deprecated("Use the more granualar protocols instead")
-def eager_namespace_from_backend(
-    backend: IntoBackend[EagerAllowed], /
-) -> EagerNs[Any, Any] | _arrow.Namespace:
-    impl = eager_implementation(backend)
-    if impl is Implementation.PYARROW:
-        from narwhals._plan import arrow as _arrow
-
-        return _arrow.Namespace(Version.MAIN)
-
-    raise NotImplementedError(impl)
 
 
 # TODO @dangotbanned: Need to be able to store a closure for getting namespaces

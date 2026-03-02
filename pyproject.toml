@@ -290,9 +290,6 @@ filterwarnings = [
   "ignore:.*The behavior of DataFrame concatenation with empty or all-NA entries is deprecated:FutureWarning",
 
   "ignore:.*The pandas version installed.*is outside the supported range in Modin.*:Warning:modin",
-
-  # TODO @dangotbanned: (eager_namespace) Can't do typing-only `@deprecated` with current `_typing_compat`
-  "ignore:.*Use the more granualar protocols instead.*:DeprecationWarning",
 ]
 xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]

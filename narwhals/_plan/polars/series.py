@@ -171,9 +171,9 @@ class PolarsSeries(CompliantSeries[pl.Series]):
         cls,
         data: Iterable[Any],
         *,
-        version: Version,
         name: str = "",
         dtype: IntoDType | None = None,
+        version: Version = Version.MAIN,
     ) -> Self:
         dtype_pl = dtype_to_native(dtype, version)
         values: Incomplete = data

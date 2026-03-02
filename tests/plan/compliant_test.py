@@ -35,7 +35,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from narwhals._plan.typing import ColumnNameOrSelector, OneOrIterable
-    from narwhals.typing import PythonLiteral
+    from narwhals.typing import EagerAllowed, PythonLiteral
     from tests.conftest import Data
 
 
@@ -691,12 +691,11 @@ def test_dataframe_iter_columns(data_small: Data) -> None:
     assert_equal_data(df, result)
 
 
-def test_dataframe_from_dict_misc(data_small: Data) -> None:
-    pytest.importorskip("pyarrow")
+def test_dataframe_from_dict_misc(data_small: Data, eager: EagerAllowed) -> None:
     items = iter(data_small.items())
     name, values = next(items)
     mapping: dict[str, Any] = {
-        name: nwp.Series.from_iterable(values, name=name, backend="pyarrow")
+        name: nwp.Series.from_iterable(values, name=name, backend=eager)
     }
     mapping.update(items)
     result = nwp.DataFrame.from_dict(mapping)

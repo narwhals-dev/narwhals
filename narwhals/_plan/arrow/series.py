@@ -126,9 +126,9 @@ class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayA
         cls,
         data: Iterable[Any],
         *,
-        version: Version,
         name: str = "",
         dtype: IntoDType | None = None,
+        version: Version = Version.MAIN,
     ) -> Self:
         dtype_pa = fn.dtype_native(dtype, version)
         return cls.from_native(fn.chunked_array([data], dtype_pa), name, version=version)

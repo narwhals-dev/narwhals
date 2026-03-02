@@ -11,6 +11,7 @@ from narwhals._plan._guards import is_tuple_of
 from narwhals._plan.arrow import functions as fn, io
 from narwhals._plan.common import todo
 from narwhals._plan.compliant.namespace import EagerNamespace
+from narwhals._plan.compliant.translate import FromDict, FromIterable
 from narwhals._plan.expressions.expr import RangeExpr
 from narwhals._plan.expressions.literal import is_literal_scalar
 from narwhals._utils import Implementation, Version
@@ -18,7 +19,7 @@ from narwhals.exceptions import InvalidOperationError
 from narwhals.schema import Schema
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Sequence
+    from collections.abc import Iterable, Iterator, Mapping, Sequence
 
     from typing_extensions import TypeAlias
 
@@ -46,6 +47,8 @@ if TYPE_CHECKING:
         ClosedInterval,
         ConcatMethod,
         FileSource,
+        IntoDType,
+        IntoSchema,
         NonNestedLiteral,
         PythonLiteral,
     )
@@ -57,7 +60,9 @@ Int64 = Version.MAIN.dtypes.Int64()
 
 
 class ArrowNamespace(
-    EagerNamespace["Frame", "Series", "Expr", "Scalar", "ChunkedArrayAny"]
+    FromIterable["ChunkedArrayAny"],
+    FromDict["pa.Table", "ChunkedArrayAny"],
+    EagerNamespace["Frame", "Series", "Expr", "Scalar", "ChunkedArrayAny"],
 ):
     implementation = Implementation.PYARROW
 
@@ -87,6 +92,26 @@ class ArrowNamespace(
         from narwhals._plan.arrow.dataframe import ArrowDataFrame
 
         return ArrowDataFrame
+
+    def from_dict(
+        self,
+        data: Mapping[str, Any],
+        /,
+        *,
+        schema: IntoSchema | None = None,
+        version: Version = Version.MAIN,
+    ) -> Frame:
+        return self._dataframe.from_dict(data, schema=schema, version=version)
+
+    def from_iterable(
+        self,
+        data: Iterable[Any],
+        *,
+        name: str = "",
+        dtype: IntoDType | None = None,
+        version: Version = Version.MAIN,
+    ) -> Series:
+        return self._series.from_iterable(data, name=name, dtype=dtype, version=version)
 
     def col(self, node: expr.Column, frame: Frame, name: str) -> Expr:
         return self._expr.from_native(

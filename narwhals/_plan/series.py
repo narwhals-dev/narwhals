@@ -4,6 +4,9 @@ from collections.abc import Iterable, Sequence
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal
 
 from narwhals._plan._guards import is_series
+from narwhals._plan._namespace import namespace_from_backend
+from narwhals._plan.compliant.translate import can_from_iterable
+from narwhals._plan.exceptions import unsupported_backend_operation_error
 from narwhals._plan.typing import (
     IncompleteCyclic,
     NativeSeriesT,
@@ -11,14 +14,7 @@ from narwhals._plan.typing import (
     OneOrIterable,
     SeriesT,
 )
-from narwhals._utils import (
-    Implementation,
-    Version,
-    generate_repr,
-    is_eager_allowed,
-    qualified_type_name,
-    unstable,
-)
+from narwhals._utils import Version, generate_repr, qualified_type_name, unstable
 from narwhals.dependencies import is_pyarrow_chunked_array
 from narwhals.exceptions import ShapeError
 
@@ -82,21 +78,16 @@ class Series(Generic[NativeSeriesT_co]):
         dtype: IntoDType | None = None,
         backend: IntoBackend[EagerAllowed],
     ) -> Series[Any]:
-        implementation = Implementation.from_backend(backend)
-        if is_eager_allowed(implementation):
-            if implementation is Implementation.PYARROW:
-                from narwhals._plan import arrow as _arrow
+        ns = namespace_from_backend(backend)
+        if can_from_iterable(ns):
+            return cls(
+                ns.from_iterable(values, name=name, dtype=dtype, version=cls._version)
+            )
+        raise unsupported_backend_operation_error(
+            backend, "from_iterable"
+        )  # pragma: no cover
 
-                return cls(
-                    _arrow.Series.from_iterable(
-                        values, name=name, version=cls._version, dtype=dtype
-                    )
-                )
-            raise NotImplementedError(implementation)
-        else:  # pragma: no cover  # noqa: RET506
-            msg = f"{implementation} support in Narwhals is lazy-only"
-            raise ValueError(msg)
-
+    # TODO @dangotbanned: Add a protocol in `translate`, rinse/repeat `from_{dict,iterable}`
     @classmethod
     def from_native(
         cls: type[Series[Any]], native: NativeSeriesT, name: str = "", /
