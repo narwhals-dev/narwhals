@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from collections import deque
+from collections.abc import Collection
+from itertools import chain
 from typing import TYPE_CHECKING, Any, overload
 
 import pyarrow as pa  # ignore-banned-import
@@ -9,7 +12,7 @@ import pyarrow as pa  # ignore-banned-import
 from narwhals._arrow.utils import concat_tables
 
 if TYPE_CHECKING:
-    from collections.abc import Collection, Iterable
+    from collections.abc import Iterable, Iterator
 
     from typing_extensions import TypeAlias
 
@@ -34,6 +37,7 @@ __all__ = [
     "chunked_array",
     "concat_horizontal",
     "concat_tables",
+    "concat_tables_horizontal",
     "concat_vertical",
     "lit",
     "to_table",
@@ -172,16 +176,34 @@ def chunked_array(
 def concat_horizontal(
     arrays: Collection[ChunkedOrArrayAny], names: Collection[str]
 ) -> pa.Table:
-    """Concatenate `arrays` as columns in a new table."""
+    """Concatenate `arrays` as columns in a new (wider) table."""
     table: Incomplete = pa.Table.from_arrays
     result: pa.Table = table(arrays, names)
     return result
 
 
+def concat_tables_horizontal(tables: Iterable[pa.Table], /) -> pa.Table:
+    """Concatenate the columns of `tables` into a new (wider) table."""
+    it_columns: Iterable[Iterator[ChunkedOrArrayAny]]
+    names: Collection[str]
+    if isinstance(tables, Collection):
+        it_columns = (tbl.itercolumns() for tbl in tables)
+        names = tuple(chain.from_iterable(tbl.column_names for tbl in tables))
+    else:
+        columns: deque[Iterator[ChunkedOrArrayAny]] = deque()
+        names_ = []
+        for df in tables:
+            columns.append(df.itercolumns())
+            names_.extend(df.column_names)
+        it_columns = columns
+        names = names_
+    return concat_horizontal(tuple(chain.from_iterable(it_columns)), names)
+
+
 def concat_vertical(
     arrays: Iterable[ChunkedOrArrayAny], dtype: DataType | None = None, /
 ) -> ChunkedArrayAny:
-    """Concatenate `arrays` into a new array."""
+    """Concatenate `arrays` into a new (longer) array."""
     v_concat: Incomplete = pa.chunked_array
     result: ChunkedArrayAny = v_concat(arrays, dtype)
     return result

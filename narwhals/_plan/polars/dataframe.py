@@ -74,8 +74,13 @@ class PolarsDataFrame(
         return self.native.shape
 
     @classmethod
-    def from_polars(cls, frame: pl.DataFrame, /, version: Version = MAIN) -> Self:
-        return cls.from_native(frame, version)
+    def from_native(cls, native: pl.DataFrame, /, version: Version = MAIN) -> Self:
+        obj = cls.__new__(cls)
+        obj._native = native
+        obj._version = version
+        return obj
+
+    from_polars = from_native
 
     def to_arrow(self) -> pa.Table:
         return self.native.to_arrow()

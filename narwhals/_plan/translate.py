@@ -14,24 +14,16 @@ if TYPE_CHECKING:
     import pyarrow as pa
     from typing_extensions import TypeAlias, TypeIs
 
-    from narwhals._plan.compliant.dataframe import CompliantDataFrame, EagerDataFrame
+    from narwhals._plan.compliant.dataframe import CompliantDataFrame
     from narwhals._plan.compliant.lazyframe import CompliantLazyFrame
     from narwhals._plan.compliant.typing import Native as Lazy
     from narwhals._plan.typing import NativeDataFrameT as Eager
 
-    CompliantDataFrame_: TypeAlias = EagerDataFrame[Any, Eager, Any]
-    """This is a lie, but needed until `DataFrame` doesn't depend on `EagerDataFrame` features."""
-
     T = TypeVar("T")
-    R = TypeVar("R")
-
     # A lazy type guard like in `narwhals.dependencies` or `narwhals._native`
     _Guard: TypeAlias = "Callable[[Any], TypeIs[T]]"
-    # Single-argument constructor
-    _Constructor: TypeAlias = "Callable[[T], R]"
-    # ^ For (NativeLazyFrame) -> CompliantLazyFrame[NativeLazyFrame]
-    _ConstructorLazy: TypeAlias = _Constructor[T, CompliantLazyFrame[T]]
-    _ConstructorEager: TypeAlias = _Constructor[Eager, CompliantDataFrame_[Eager]]
+    _ConstructorLazy: TypeAlias = Callable[[T], CompliantLazyFrame[T]]
+    _ConstructorEager: TypeAlias = Callable[[Eager], CompliantDataFrame[Any, Eager, Any]]
     # Zero-argument importer of the concrete native class
     # If we matched a subclass, we would want to avoid registering that on
     # the dispatch function
@@ -49,7 +41,7 @@ def from_native_lazyframe(native: Lazy, /) -> CompliantLazyFrame[Lazy]:
 
 
 @functools.singledispatch
-def from_native_dataframe(native: Eager, /) -> CompliantDataFrame_[Eager]:
+def from_native_dataframe(native: Eager, /) -> CompliantDataFrame[Any, Eager, Any]:
     if (compliant := _try_known_dataframes(native)) is not None:
         return compliant
     raise _from_native_error(native, "dataframe")
@@ -96,7 +88,7 @@ def _try_known_lazyframes(native: Lazy, /) -> CompliantLazyFrame[Lazy] | None:
     return None
 
 
-def _try_known_dataframes(native: Eager, /) -> CompliantDataFrame_[Eager] | None:
+def _try_known_dataframes(native: Eager, /) -> CompliantDataFrame[Any, Eager, Any] | None:
     matched: tuple[type[Eager], _Guard[Eager], _ConstructorEager[Eager]] | None = None
     search: dict[_Guard[Eager], tuple[_ConstructorEager[Eager], _ImportKnown[Eager]]] = (
         _local.eager_known
@@ -143,7 +135,7 @@ def _import_polars_dataframe() -> type[pl.DataFrame]:
 
 def _from_pyarrow_table(
     native: pa.Table, /
-) -> EagerDataFrame[Any, pa.Table, pa.ChunkedArray[Any]]:
+) -> CompliantDataFrame[Any, pa.Table, pa.ChunkedArray[Any]]:
     from narwhals._plan.arrow import DataFrame
 
     return DataFrame.from_native(native, Version.MAIN)

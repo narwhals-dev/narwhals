@@ -1,16 +1,17 @@
 from __future__ import annotations
 
 import datetime as dt
+from collections.abc import Collection
 from functools import reduce
-from typing import TYPE_CHECKING, Any, Literal, cast, overload
+from typing import TYPE_CHECKING, Any, Literal, overload
 
 import pyarrow as pa  # ignore-banned-import
 
 from narwhals._arrow.utils import narwhals_to_native_dtype
-from narwhals._plan._guards import is_tuple_of
 from narwhals._plan.arrow import functions as fn, io
 from narwhals._plan.common import todo
 from narwhals._plan.compliant.namespace import EagerNamespace
+from narwhals._plan.compliant.series import CompliantSeries
 from narwhals._plan.compliant.translate import FromDict, FromIterable
 from narwhals._plan.expressions.expr import RangeExpr
 from narwhals._plan.expressions.literal import is_literal_scalar
@@ -19,7 +20,7 @@ from narwhals.exceptions import InvalidOperationError
 from narwhals.schema import Schema
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Mapping, Sequence
+    from collections.abc import Iterable, Mapping
 
     from typing_extensions import TypeAlias
 
@@ -35,6 +36,8 @@ if TYPE_CHECKING:
         IOSource,
         VariadicFunction,
     )
+    from narwhals._plan.compliant.dataframe import CompliantDataFrame
+    from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._plan.expressions import expr, functions as F
     from narwhals._plan.expressions.boolean import AllHorizontal, AnyHorizontal
     from narwhals._plan.expressions.expr import FunctionExpr as FExpr, RangeExpr
@@ -45,7 +48,6 @@ if TYPE_CHECKING:
     from narwhals.dtypes import IntegerType
     from narwhals.typing import (
         ClosedInterval,
-        ConcatMethod,
         FileSource,
         IntoDType,
         IntoSchema,
@@ -62,7 +64,7 @@ Int64 = Version.MAIN.dtypes.Int64()
 class ArrowNamespace(
     FromIterable["ChunkedArrayAny"],
     FromDict["pa.Table", "ChunkedArrayAny"],
-    EagerNamespace["Frame", "Series", "Expr", "Scalar", "ChunkedArrayAny"],
+    EagerNamespace["Frame", "Series", "Expr", "Scalar", "pa.Table", "ChunkedArrayAny"],
 ):
     implementation = Implementation.PYARROW
 
@@ -333,61 +335,55 @@ class ArrowNamespace(
         native = fn.linear_space(start, end, num_samples, closed=closed)
         return self._series.from_native(native, name, version=self.version)
 
-    @overload
-    def concat(self, items: Iterable[Frame], *, how: ConcatMethod) -> Frame: ...
-    @overload
-    def concat(self, items: Iterable[Series], *, how: Literal["vertical"]) -> Series: ...
-    def concat(
-        self, items: Iterable[Frame | Series], *, how: ConcatMethod
-    ) -> Frame | Series:
-        if how == "vertical":
-            return self._concat_vertical(items)
-        if how == "horizontal":
-            return self._concat_horizontal(items)
-        it = iter(items)
-        first = next(it)
-        if self._is_series(first):
-            raise TypeError(first)
-        dfs = cast("Sequence[Frame]", (first, *it))
-        return self._concat_diagonal(dfs)
+    def concat_df(
+        self, dfs: Iterable[CompliantDataFrame[Any, pa.Table, ChunkedArrayAny]]
+    ) -> Frame:
+        dfs = dfs if isinstance(dfs, tuple) else tuple(dfs)
+        cols_0 = dfs[0].columns
+        for i, df in enumerate(dfs[1:], start=1):
+            cols_current = df.columns
+            if cols_current != cols_0:
+                msg = (
+                    "unable to vstack, column names don't match:\n"
+                    f"   - dataframe 0: {cols_0}\n"
+                    f"   - dataframe {i}: {cols_current}\n"
+                )
+                raise TypeError(msg)
+        result = fn.concat_tables(df.native for df in dfs)
+        return self._dataframe.from_native(result, self.version)
 
-    def _concat_diagonal(self, items: Iterable[Frame]) -> Frame:
+    def concat_df_diagonal(
+        self, dfs: Iterable[CompliantDataFrame[Any, pa.Table, ChunkedArrayAny]]
+    ) -> Frame:
         return self._dataframe.from_native(
-            fn.concat_tables((df.native for df in items), "default"), self.version
+            fn.concat_tables((df.native for df in dfs), "default"), self.version
         )
 
-    def _concat_horizontal(self, items: Iterable[Frame | Series]) -> Frame:
-        def gen(objs: Iterable[Frame | Series]) -> Iterator[tuple[ChunkedArrayAny, str]]:
-            for item in objs:
-                if self._is_series(item):
-                    yield item.native, item.name
-                else:
-                    yield from zip(item.native.itercolumns(), item.columns)
+    def concat_df_horizontal(
+        self, dfs: Iterable[CompliantDataFrame[Any, pa.Table, ChunkedArrayAny]]
+    ) -> Frame:
+        return self._dataframe.from_native(
+            fn.concat_tables_horizontal(df.native for df in dfs), self.version
+        )
 
-        arrays, names = zip(*gen(items))
-        native = fn.concat_horizontal(arrays, names)
-        return self._dataframe.from_native(native, self.version)
+    def concat_series(self, series: Iterable[CompliantSeries[ChunkedArrayAny]]) -> Series:
+        series = series if isinstance(series, tuple) else tuple(series)
+        result = fn.concat_vertical(ser.native for ser in series)
+        return self._series.from_native(result, series[0].name, version=self.version)
 
-    def _concat_vertical(self, items: Iterable[Frame | Series]) -> Frame | Series:
-        collected = items if isinstance(items, tuple) else tuple(items)
-        if is_tuple_of(collected, self._series):
-            sers = collected
-            chunked = fn.concat_vertical(ser.native for ser in sers)
-            return sers[0]._with_native(chunked)
-        if is_tuple_of(collected, self._dataframe):
-            dfs = collected
-            cols_0 = dfs[0].columns
-            for i, df in enumerate(dfs[1:], start=1):
-                cols_current = df.columns
-                if cols_current != cols_0:
-                    msg = (
-                        "unable to vstack, column names don't match:\n"
-                        f"   - dataframe 0: {cols_0}\n"
-                        f"   - dataframe {i}: {cols_current}\n"
-                    )
-                    raise TypeError(msg)
-            return df._with_native(fn.concat_tables(df.native for df in dfs))
-        raise TypeError(items)
+    def concat_series_horizontal(
+        self, series: Iterable[CompliantSeries[ChunkedArrayAny]], /
+    ) -> Frame:
+        """Used for `ArrowExpr.sort_by`, seems like only pandas needs `stack_horizontal`?"""
+        if isinstance(series, Collection):
+            arrays, names = [s.native for s in series], [s.name for s in series]
+        else:
+            arrays, names = [], []
+            for s in series:
+                arrays.append(s.native)
+                names.append(s.name)
+        result = fn.concat_horizontal(arrays, names)
+        return self._dataframe.from_native(result, self.version)
 
     def read_csv(self, source: FileSource, /, **kwds: Any) -> Frame:
         native = io.read_csv(source, **kwds)

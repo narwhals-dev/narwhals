@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, get_args, overload
 
 from narwhals._plan import _guards, selectors as cs
 from narwhals._plan._namespace import namespace
+from narwhals._plan.compliant.concat import can_concat_dataframe
 from narwhals._plan.functions.aggregation import max, mean, median, min, sum
 from narwhals._plan.functions.col import col
 from narwhals._plan.functions.horizontal import (
@@ -111,5 +112,13 @@ def _concat_lazy(frames: Sequence[LazyFrameT], how: ConcatMethod) -> LazyFrameT:
 
 
 def _concat_eager(frames: Sequence[DataFrameT], how: ConcatMethod) -> DataFrameT:
-    compliant = namespace(frames[0]).concat((df._compliant for df in frames), how=how)
+    ns = namespace(frames[0])
+    if can_concat_dataframe(ns):
+        items = (df._compliant for df in frames)
+        if how == "vertical":
+            compliant = ns.concat_df(items)
+        elif how == "horizontal":
+            compliant = ns.concat_df_horizontal(items)
+        else:
+            compliant = ns.concat_df_diagonal(items)
     return frames[0]._with_compliant(compliant)

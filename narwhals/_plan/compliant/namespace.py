@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol, overload
 
 from narwhals._plan.compliant import io, ranges
+from narwhals._plan.compliant.concat import ConcatDataFrame, ConcatSeriesHorizontal
 from narwhals._plan.compliant.typing import (
-    ConcatT1,
-    ConcatT2,
     EagerDataFrameT,
     EagerExprT_co,
     EagerScalarT_co,
@@ -13,40 +12,21 @@ from narwhals._plan.compliant.typing import (
     FrameT,
     HasVersion,
     ScalarT_co,
-    SeriesT,
+    SeriesT_co,
 )
-from narwhals._plan.typing import NativeSeriesT_co
+from narwhals._plan.typing import NativeDataFrameT, NativeSeriesT_co
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
-
-    from typing_extensions import TypeAlias, TypeIs
+    from typing_extensions import TypeAlias
 
     from narwhals._plan import expressions as ir
     from narwhals._plan.expressions import FunctionExpr, boolean, functions as F
     from narwhals._plan.expressions.strings import ConcatStr
     from narwhals._plan.series import Series
     from narwhals._utils import Implementation
-    from narwhals.typing import ConcatMethod, NonNestedLiteral
+    from narwhals.typing import NonNestedLiteral
 
 Incomplete: TypeAlias = Any
-
-
-# TODO @dangotbanned: Move `Concat`, `EagerConcat` to new module
-# TODO @dangotbanned: Make the incompatible parts separate methods
-# NOTE: `mypy` is wrong
-# error: Invariant type variable "ConcatT2" used in protocol where covariant one is expected  [misc]
-class Concat(Protocol[ConcatT1, ConcatT2]):  # type: ignore[misc]
-    @overload
-    def concat(self, items: Iterable[ConcatT1], *, how: ConcatMethod) -> ConcatT1: ...
-    # Series only supports vertical publicly (like in polars)
-    @overload
-    def concat(
-        self, items: Iterable[ConcatT2], *, how: Literal["vertical"]
-    ) -> ConcatT2: ...
-    def concat(
-        self, items: Iterable[ConcatT1 | ConcatT2], *, how: ConcatMethod
-    ) -> ConcatT1 | ConcatT2: ...
 
 
 # TODO @dangotbanned: Define `CompliantNamespace().from_native`
@@ -54,7 +34,6 @@ class Concat(Protocol[ConcatT1, ConcatT2]):  # type: ignore[misc]
 class CompliantNamespace(
     HasVersion,
     ranges.LazyRangeGenerator[FrameT, ExprT_co],
-    Concat[FrameT, Any],
     Protocol[FrameT, ExprT_co, ScalarT_co],
 ):
     """`[FrameT, ExprT_co, ScalarT_co]`."""
@@ -98,25 +77,30 @@ class CompliantNamespace(
     ) -> ExprT_co | ScalarT_co: ...
 
 
-class EagerConcat(Concat[ConcatT1, ConcatT2], Protocol[ConcatT1, ConcatT2]):  # type: ignore[misc]
-    def _concat_diagonal(self, items: Iterable[ConcatT1], /) -> ConcatT1: ...
-    # Series can be used here to go from [Series, Series] -> DataFrame
-    # but that is only available privately
-    def _concat_horizontal(self, items: Iterable[ConcatT1 | ConcatT2], /) -> ConcatT1: ...
-    def _concat_vertical(
-        self, items: Iterable[ConcatT1 | ConcatT2], /
-    ) -> ConcatT1 | ConcatT2: ...
-
-
 class EagerNamespace(
     ranges.EagerRangeGenerator[NativeSeriesT_co],
     io.LazyInput[Incomplete],
     io.EagerInput[EagerDataFrameT],
-    EagerConcat[EagerDataFrameT, SeriesT],
+    ConcatDataFrame[NativeDataFrameT, Incomplete],
+    ConcatSeriesHorizontal[NativeDataFrameT, Incomplete],
     CompliantNamespace[EagerDataFrameT, EagerExprT_co, EagerScalarT_co],
-    Protocol[EagerDataFrameT, SeriesT, EagerExprT_co, EagerScalarT_co, NativeSeriesT_co],
+    Protocol[
+        EagerDataFrameT,
+        SeriesT_co,
+        EagerExprT_co,
+        EagerScalarT_co,
+        NativeDataFrameT,
+        NativeSeriesT_co,
+    ],
 ):
-    """`[EagerDataFrameT, SeriesT, EagerExprT_co, EagerScalarT_co,  NativeSeriesT_co]`."""
+    """`[EagerDataFrameT, SeriesT_co, EagerExprT_co, EagerScalarT_co, NativeDataFrameT, NativeSeriesT_co]`.
+
+    ## Important
+    Trying to
+    - reduce the number of type params
+    - ensure most are covariant
+    - rely on native types when possible
+    """
 
     @property
     def _dataframe(self) -> type[EagerDataFrameT]: ...
@@ -125,12 +109,7 @@ class EagerNamespace(
         return self._dataframe
 
     @property
-    def _series(self) -> type[SeriesT]: ...
-    def _is_dataframe(self, obj: Any) -> TypeIs[EagerDataFrameT]:
-        return isinstance(obj, self._dataframe)
-
-    def _is_series(self, obj: Any) -> TypeIs[SeriesT]:
-        return isinstance(obj, self._series)
+    def _series(self) -> type[SeriesT_co]: ...
 
     def len(self, node: ir.Len, frame: EagerDataFrameT, name: str) -> EagerScalarT_co:
         return self._scalar.from_python(

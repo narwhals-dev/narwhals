@@ -43,7 +43,7 @@ if TYPE_CHECKING:
     from narwhals._plan.dataframe import DataFrame as NwDataFrame
     from narwhals._plan.expressions import NamedIR
     from narwhals._plan.options import ExplodeOptions, SortMultipleOptions
-    from narwhals._plan.typing import NonCrossJoinStrategy
+    from narwhals._plan.typing import NonCrossJoinStrategy, Seq
     from narwhals._translate import IntoArrowTable
     from narwhals._typing import _LazyAllowedImpl
     from narwhals.dtypes import DType
@@ -59,6 +59,13 @@ class ArrowDataFrame(
     def __repr__(self) -> str:
         return generate_repr(f"nw.{type(self).__name__}", self.native.__repr__())
 
+    @classmethod
+    def from_native(cls, native: pa.Table, /, version: Version) -> Self:
+        obj = cls.__new__(cls)
+        obj._native = native
+        obj._version = version
+        return obj
+
     def _with_native(self, native: pa.Table) -> Self:
         return self.from_native(native, self.version)
 
@@ -69,6 +76,10 @@ class ArrowDataFrame(
     @property
     def shape(self) -> tuple[int, int]:
         return self.native.shape
+
+    @property
+    def version(self) -> Version:
+        return self._version
 
     def lazy(self, backend: _LazyAllowedImpl | None, **kwds: Any) -> LazyFrameAny:
         msg = "ArrowDataFrame.lazy"
@@ -162,6 +173,14 @@ class ArrowDataFrame(
         expr = namespace(self)._expr
         from_named_ir = expr.from_named_ir
         yield from expr.align((from_named_ir(e, self) for e in nodes), default=length)
+
+    def select(self, irs: Seq[NamedIR]) -> ArrowDataFrame:
+        return namespace(self).concat_series_horizontal(self._evaluate_irs(irs))
+
+    def with_columns(self, irs: Seq[NamedIR]) -> ArrowDataFrame:
+        return namespace(self).concat_series_horizontal(
+            self._evaluate_irs(irs, length=len(self))
+        )
 
     def sort(self, by: Sequence[str], options: SortMultipleOptions | None = None) -> Self:
         return self.gather(fn.sort_indices(self.native, *by, options=options))

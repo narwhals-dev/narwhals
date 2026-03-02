@@ -8,7 +8,6 @@ from narwhals._plan._expansion import expand_selector_irs_names, prepare_project
 from narwhals._plan._guards import is_series
 from narwhals._plan._namespace import namespace_from_backend
 from narwhals._plan.common import ensure_seq_str, normalize_target_file, temp
-from narwhals._plan.compliant.dataframe import EagerDataFrame
 from narwhals._plan.compliant.translate import can_from_dict
 from narwhals._plan.exceptions import unsupported_backend_operation_error
 from narwhals._plan.group_by import GroupBy, Grouped
@@ -64,7 +63,7 @@ if TYPE_CHECKING:
 
     from narwhals._native import NativeSeries
     from narwhals._plan.arrow.typing import NativeArrowDataFrame
-    from narwhals._plan.compliant.dataframe import CompliantFrame, EagerDataFrame
+    from narwhals._plan.compliant.dataframe import CompliantDataFrame, CompliantFrame
     from narwhals._plan.compliant.namespace import CompliantNamespace
     from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._plan.lazyframe import LazyFrame
@@ -319,12 +318,14 @@ class BaseFrame(Generic[NativeFrameT_co]):
 class DataFrame(
     BaseFrame[NativeDataFrameT_co], Generic[NativeDataFrameT_co, NativeSeriesT_co]
 ):
-    _compliant: EagerDataFrame[IncompleteCyclic, NativeDataFrameT_co, NativeSeriesT_co]
+    _compliant: CompliantDataFrame[
+        IncompleteCyclic, NativeDataFrameT_co, NativeSeriesT_co
+    ]
 
     def __narwhals_namespace__(
         self,
     ) -> CompliantNamespace[
-        EagerDataFrame[Any, NativeDataFrameT_co, NativeSeriesT_co], Any, Any
+        CompliantDataFrame[Any, NativeDataFrameT_co, NativeSeriesT_co], Any, Any
     ]:
         return self._compliant.__narwhals_namespace__()
 
@@ -619,7 +620,9 @@ class DataFrame(
             on, index=index, values=values, frame_columns=self.columns
         )
         dtype_str = self.version.dtypes.String()
-        on_cols: EagerDataFrame[IncompleteCyclic, NativeDataFrameT_co, NativeSeriesT_co]
+        on_cols: CompliantDataFrame[
+            IncompleteCyclic, NativeDataFrameT_co, NativeSeriesT_co
+        ]
 
         if on_columns is None:
             nw_on_cols = self.select(F.col(name).cast(dtype_str) for name in on_).unique(

@@ -23,8 +23,6 @@ if TYPE_CHECKING:
 
 R_co = TypeVar("R_co", covariant=True)
 LengthT = TypeVar("LengthT")
-ConcatT1 = TypeVar("ConcatT1")
-ConcatT2 = TypeVar("ConcatT2", default=ConcatT1)
 ColumnT_co = TypeVar("ColumnT_co", covariant=True)
 ResolverT_co = TypeVar("ResolverT_co", bound="GroupByResolver", covariant=True)
 Native = TypeVar("Native")
