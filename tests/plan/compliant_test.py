@@ -27,7 +27,6 @@ from tests.plan.utils import (
     first,
     last,
     re_compile,
-    series,
 )
 
 if TYPE_CHECKING:
@@ -503,9 +502,12 @@ def test_first_last_expr_with_columns(
     ("index", "expected"), [(3, (None, 12, 0.9, 3, 3)), (1, (2, 5, 1.0, 1, 1))]
 )
 def test_row_is_py_literal(
-    data_indexed: dict[str, Any], index: int, expected: tuple[PythonLiteral, ...]
+    data_indexed: dict[str, Any],
+    index: int,
+    expected: tuple[PythonLiteral, ...],
+    eager: EagerAllowed,
 ) -> None:
-    frame = dataframe(data_indexed)
+    frame = nwp.DataFrame.from_dict(data_indexed, backend=eager)
     result = frame.row(index)
     assert all(v is None or isinstance(v, (int, float)) for v in result)
     assert result == expected
@@ -532,9 +534,11 @@ def test_row_is_py_literal(
         (ncs.struct(), ["a", "b", "c"]),
     ],
 )
-def test_drop(columns: OneOrIterable[ColumnNameOrSelector], expected: list[str]) -> None:
+def test_drop(
+    columns: OneOrIterable[ColumnNameOrSelector], expected: list[str], eager: EagerAllowed
+) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "c": [7.0, 8.0, 9.0]}
-    df = dataframe(data)
+    df = nwp.DataFrame.from_dict(data, backend=eager)
     if isinstance(columns, (str, nwp.Selector, list)):
         assert df.drop(columns).collect_schema().names() == expected
     else:  # pragma: no cover
@@ -543,9 +547,9 @@ def test_drop(columns: OneOrIterable[ColumnNameOrSelector], expected: list[str])
         assert df.drop(*columns).collect_schema().names() == expected
 
 
-def test_drop_strict() -> None:
+def test_drop_strict(eager: EagerAllowed) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6]}
-    df = dataframe(data)
+    df = nwp.DataFrame.from_dict(data, backend=eager)
     with pytest.raises(ColumnNotFoundError):
         df.drop("z")
     with pytest.raises(ColumnNotFoundError, match=re.escape("not found: ['z']")):
@@ -554,21 +558,21 @@ def test_drop_strict() -> None:
     assert df.drop(ncs.last(), "z", strict=False).collect_schema().names() == ["a"]
 
 
-def test_drop_invalid(data_small_dh: Data) -> None:
-    df = dataframe(data_small_dh)
+def test_drop_invalid(data_small_dh: Data, eager: EagerAllowed) -> None:
+    df = nwp.DataFrame.from_dict(data_small_dh, backend=eager)
     with pytest.raises(InvalidOperationError):
         df.drop(ncs.first().first())
 
 
-def test_drop_nulls(data_small_dh: Data) -> None:
-    df = dataframe(data_small_dh)
+def test_drop_nulls(data_small_dh: Data, eager: EagerAllowed) -> None:
+    df = nwp.DataFrame.from_dict(data_small_dh, backend=eager)
     expected: Data = {"d": [], "e": [], "f": [], "g": [], "h": []}
     result = df.drop_nulls()
     assert_equal_data(result, expected)
 
 
-def test_drop_nulls_invalid(data_small_dh: Data) -> None:
-    df = dataframe(data_small_dh)
+def test_drop_nulls_invalid(data_small_dh: Data, eager: EagerAllowed) -> None:
+    df = nwp.DataFrame.from_dict(data_small_dh, backend=eager)
     with pytest.raises(TypeError, match=r"cannot turn.+int.+into a selector"):
         df.drop_nulls(123)  # type: ignore[arg-type]
     with pytest.raises(
@@ -586,14 +590,26 @@ def test_drop_nulls_invalid(data_small_dh: Data) -> None:
         df.drop_nulls(ncs.by_index(-999))
 
 
-def test_sort() -> None:
+# TODO @dangotbanned: Unwrap single-element `SortMultipleOptions` for polars
+def test_sort(request: pytest.FixtureRequest, eager: EagerAllowed) -> None:
     data_sort = {
         "a": [8, 8, 1, None, 1, 1],
         "b": [None, 0.9, 3.0, 0.9, None, None],
         "c": [1, 1, 1, 2, 1, 2],
         "idx": [0, 1, 2, 3, 4, 5],
     }
-    result = dataframe(data_sort).sort(
+
+    request.applymarker(
+        pytest.mark.xfail(
+            (eager == "polars"),
+            raises=ValueError,
+            reason=(
+                "`the length of `nulls_last` (1) does not match the length of `by` (3)`"
+                "TODO @dangotbanned: Unwrap single-element `SortMultipleOptions` for polars"
+            ),
+        )
+    )
+    result = nwp.DataFrame.from_dict(data_sort, backend=eager).sort(
         ncs.first(), "c", ncs.float(), descending=[True, False, False], nulls_last=True
     )
     expected = {
@@ -605,8 +621,8 @@ def test_sort() -> None:
     assert_equal_data(result, expected)
 
 
-def test_sort_invalid(data_small_dh: Data) -> None:
-    df = dataframe(data_small_dh)
+def test_sort_invalid(data_small_dh: Data, eager: EagerAllowed) -> None:
+    df = nwp.DataFrame.from_dict(data_small_dh, backend=eager)
     with pytest.raises(ColumnNotFoundError):
         df.sort(())
     with pytest.raises(
@@ -639,14 +655,17 @@ KEEP_ROW_3: Data = {"d": [8], "e": [7], "f": [None], "g": [False], "h": [True]}
     ],
 )
 def test_drop_nulls_subset(
-    data_small_dh: Data, subset: OneOrIterable[ColumnNameOrSelector], expected: Data
+    data_small_dh: Data,
+    subset: OneOrIterable[ColumnNameOrSelector],
+    expected: Data,
+    eager: EagerAllowed,
 ) -> None:
-    df = dataframe(data_small_dh)
+    df = nwp.DataFrame.from_dict(data_small_dh, backend=eager)
     result = df.drop_nulls(subset)
     assert_equal_data(result, expected)
 
 
-def test_dataframe_to_polars() -> None:
+def test_dataframe_to_polars(eager: EagerAllowed) -> None:
     pytest.importorskip("polars")
     import polars as pl
     from polars.testing import assert_frame_equal as pl_assert_frame_equal
@@ -660,7 +679,7 @@ def test_dataframe_to_polars() -> None:
         "f": [1.5, 3.4, None],
     }
     expected = pl.DataFrame(data)
-    result = dataframe(data).to_polars()
+    result = nwp.DataFrame.from_dict(data, backend=eager).to_polars()
     pl_assert_frame_equal(result, expected)
 
 
@@ -675,13 +694,13 @@ def test_dataframe_to_polars() -> None:
         [1.5, 3.4, None],
     ],
 )
-def test_series_to_polars(values: Sequence[PythonLiteral]) -> None:
+def test_series_to_polars(values: Sequence[PythonLiteral], eager: EagerAllowed) -> None:
     pytest.importorskip("polars")
     import polars as pl
     from polars.testing import assert_series_equal as pl_assert_series_equal
 
     expected = pl.Series(values)
-    result = series(values).to_polars()
+    result = nwp.Series.from_iterable(values, backend=eager).to_polars()
     pl_assert_series_equal(result, expected)
 
 
@@ -779,8 +798,8 @@ def test_series_misc(eager: EagerAllowed) -> None:
     assert len(list(ser)) == len(values)
 
 
-def test_series_sort() -> None:
-    ser = series([1.0, 7.1, None, 4.9])
+def test_series_sort(eager: EagerAllowed) -> None:
+    ser = nwp.Series.from_iterable([1.0, 7.1, None, 4.9], backend=eager)
     assert_equal_series(ser.sort(), [None, 1.0, 4.9, 7.1], "")
     assert_equal_series(ser.sort(nulls_last=True), [1.0, 4.9, 7.1, None], "")
     assert_equal_series(ser.sort(descending=True), [None, 7.1, 4.9, 1.0], "")
@@ -789,9 +808,8 @@ def test_series_sort() -> None:
     )
 
 
-def test_series_cast() -> None:
-    pytest.importorskip("pyarrow")
-    ser = nwp.int_range(10, step=2, eager="pyarrow", dtype=nw.Int64)
+def test_series_cast(eager: EagerAllowed) -> None:
+    ser = nwp.int_range(10, step=2, eager=eager, dtype=nw.Int64)
     assert ser.dtype == nw.Int64
     ser_float = ser.cast(nw.Float64)
     assert ser_float.dtype == nw.Float64
