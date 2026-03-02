@@ -65,18 +65,14 @@ if TYPE_CHECKING:
     from narwhals._native import NativeSeries
     from narwhals._plan.arrow.typing import NativeArrowDataFrame
     from narwhals._plan.compliant.dataframe import CompliantFrame, EagerDataFrame
-    from narwhals._plan.compliant.namespace import EagerNamespace
+    from narwhals._plan.compliant.namespace import CompliantNamespace, EagerNamespace
     from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._plan.lazyframe import LazyFrame
     from narwhals._plan.polars.typing import NativePolarsDataFrame
     from narwhals._typing import Arrow, Polars, _EagerAllowedImpl
 
     EagerNs: TypeAlias = EagerNamespace[
-        EagerDataFrame[Any, NativeDataFrameT, Any],
-        CompliantSeries[NativeSeriesT],
-        Any,
-        Any,
-        NativeSeriesT,
+        EagerDataFrame[Any, NativeDataFrameT, Any], Any, Any, Any, NativeSeriesT
     ]
 
 
@@ -324,6 +320,10 @@ class BaseFrame(Generic[NativeFrameT_co]):
         return self._with_compliant(self._compliant.unnest(subset))
 
 
+# TODO @dangotbanned: Weaning off `EagerNamespace` (tricky)
+# - Using `EagerNamespace._dataframe.from_dict`
+# - `CompliantNamespace` has `._frame`, but really need to add
+#   `from_dict` as a protocol, add to namespace, check with `can_from_dict`
 def _dataframe_from_dict(
     data: Mapping[str, Any],
     schema: IntoSchema | None,
@@ -340,11 +340,8 @@ class DataFrame(
 
     def __narwhals_namespace__(
         self,
-    ) -> EagerNamespace[
-        EagerDataFrame[Any, NativeDataFrameT_co, NativeSeriesT_co],
-        CompliantSeries[NativeSeriesT_co],
-        Any,
-        Any,
+    ) -> CompliantNamespace[
+        EagerDataFrame[Any, NativeDataFrameT_co, NativeSeriesT_co], Any, Any
     ]:
         return self._compliant.__narwhals_namespace__()
 
@@ -386,13 +383,14 @@ class DataFrame(
             compliant = self.get_column(columns[0])._parse_into_compliant(other)
             return compliant if not name or compliant.name else compliant.alias(name)
         else:  # pragma: no cover # noqa: RET505
-            tp_series = self.__narwhals_namespace__()._series
+            backend = self.implementation
+            series = self._series.from_iterable
             if not is_series(other):
-                return tp_series.from_iterable(other, version=self.version, name=name)
-            s = other._compliant
-            if isinstance(s, tp_series):
+                return series(other, name=name, backend=backend)._compliant
+            s: CompliantSeries[Any] = other._compliant
+            if s.implementation is backend:
                 return s
-            msg = f"Expected {qualified_type_name(tp_series)!r}, got {qualified_type_name(s)!r}"
+            msg = f"Expected {backend!r}, got {s.implementation!r}"
             raise NotImplementedError(msg)
 
     @overload

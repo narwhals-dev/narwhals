@@ -32,11 +32,29 @@ if TYPE_CHECKING:
 Incomplete: TypeAlias = Any
 
 
+# TODO @dangotbanned: Move `Concat`, `EagerConcat` to new module
+# TODO @dangotbanned: Make the incompatible parts separate methods
+# NOTE: `mypy` is wrong
+# error: Invariant type variable "ConcatT2" used in protocol where covariant one is expected  [misc]
+class Concat(Protocol[ConcatT1, ConcatT2]):  # type: ignore[misc]
+    @overload
+    def concat(self, items: Iterable[ConcatT1], *, how: ConcatMethod) -> ConcatT1: ...
+    # Series only supports vertical publicly (like in polars)
+    @overload
+    def concat(
+        self, items: Iterable[ConcatT2], *, how: Literal["vertical"]
+    ) -> ConcatT2: ...
+    def concat(
+        self, items: Iterable[ConcatT1 | ConcatT2], *, how: ConcatMethod
+    ) -> ConcatT1 | ConcatT2: ...
+
+
 # TODO @dangotbanned: Define `CompliantNamespace().from_native`
 # - will reduce direct calls to `*Namespace._<compliant-type>`
 class CompliantNamespace(
     HasVersion,
     ranges.LazyRangeGenerator[FrameT, ExprT_co],
+    Concat[FrameT, Any],
     Protocol[FrameT, ExprT_co, ScalarT_co],
 ):
     """`[FrameT, ExprT_co, ScalarT_co]`."""
@@ -78,21 +96,6 @@ class CompliantNamespace(
     def sum_horizontal(
         self, node: FunctionExpr[F.SumHorizontal], frame: FrameT, name: str
     ) -> ExprT_co | ScalarT_co: ...
-
-
-# NOTE: `mypy` is wrong
-# error: Invariant type variable "ConcatT2" used in protocol where covariant one is expected  [misc]
-class Concat(Protocol[ConcatT1, ConcatT2]):  # type: ignore[misc]
-    @overload
-    def concat(self, items: Iterable[ConcatT1], *, how: ConcatMethod) -> ConcatT1: ...
-    # Series only supports vertical publicly (like in polars)
-    @overload
-    def concat(
-        self, items: Iterable[ConcatT2], *, how: Literal["vertical"]
-    ) -> ConcatT2: ...
-    def concat(
-        self, items: Iterable[ConcatT1 | ConcatT2], *, how: ConcatMethod
-    ) -> ConcatT1 | ConcatT2: ...
 
 
 class EagerConcat(Concat[ConcatT1, ConcatT2], Protocol[ConcatT1, ConcatT2]):  # type: ignore[misc]

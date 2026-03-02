@@ -204,6 +204,7 @@ class PolarsNamespace(CompliantNamespace[Incomplete, "Expr", Incomplete]):
         native = pl.linear_space(start, end, num_samples, closed=closed, eager=True)
         return self._series.from_native(native, name, version=self.version)
 
+    concat = todo()
     all_horizontal = todo()
     any_horizontal = todo()
     concat_str = todo()

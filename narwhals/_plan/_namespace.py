@@ -11,7 +11,6 @@ if TYPE_CHECKING:
     from narwhals._plan import arrow as _arrow
     from narwhals._plan.compliant.dataframe import EagerDataFrame
     from narwhals._plan.compliant.namespace import CompliantNamespace, EagerNamespace
-    from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._plan.compliant.typing import NamespaceT_co, SupportsNarwhalsNamespace
     from narwhals._plan.plans.visitors import ResolvedToCompliant
     from narwhals._plan.typing import NativeDataFrameT, NativeSeriesT
@@ -22,11 +21,7 @@ if TYPE_CHECKING:
     # - `DataFrame[NativeDataFrameT]`, or
     # - `Series[NativeSeriesT]`
     EagerNs: TypeAlias = EagerNamespace[
-        EagerDataFrame[Any, NativeDataFrameT, Any],
-        CompliantSeries[NativeSeriesT],
-        Any,
-        Any,
-        NativeSeriesT,
+        EagerDataFrame[Any, NativeDataFrameT, Any], Any, Any, Any, NativeSeriesT
     ]
 
 KnownImpl: TypeAlias = "_EagerAllowedImpl | _LazyAllowedImpl"
