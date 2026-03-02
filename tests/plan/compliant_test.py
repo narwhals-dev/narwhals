@@ -747,12 +747,10 @@ def test_dataframe_to_struct(data_small_af: Data) -> None:
 
 
 # TODO @dangotbanned: Split this up
-def test_series_misc() -> None:
-    pytest.importorskip("pyarrow")
-
+def test_series_misc(eager: EagerAllowed) -> None:
     values = [1.0, None, 7.1, float("nan"), 4.9, 12.0, 1.1, float("nan"), 0.2, None]
     name = "ser"
-    ser = nwp.Series.from_iterable(values, name=name, dtype=nw.Float64, backend="pyarrow")
+    ser = nwp.Series.from_iterable(values, name=name, dtype=nw.Float64, backend=eager)
     assert ser.is_empty() is False
     assert ser.has_nulls()
     assert ser.null_count() == 2

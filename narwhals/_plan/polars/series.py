@@ -86,13 +86,20 @@ else:
         return {"min_periods": min_samples, **kwds}
 
 
-def _make_bin_op(name: str, /) -> Callable[[SeriesT, Any], SeriesT]:
+# TODO @dangotbanned: Remove the `getattr` indirection and just bind the normal way
+# Needing an inner function to get the original idea working loses the benefit of skipping
+# the creation of a new function
+def _make_bin_op(name: str, /) -> Callable[[SeriesT], Callable[[Any], SeriesT]]:
     method_native = getattr(pl.Series, name)
 
-    def f(self: SeriesT, other: Any, /) -> SeriesT:
-        other = other.native if isinstance(other, type(self)) else other
-        result = method_native(self.native, other)
-        return self.from_native(result, version=self.version)
+    def f(self: SeriesT, /) -> Callable[[Any], SeriesT]:
+
+        def inner(other: Any, /) -> SeriesT:
+            other = other.native if isinstance(other, type(self)) else other
+            result = method_native(self.native, other)
+            return self.from_native(result, version=self.version)
+
+        return inner
 
     return f
 
@@ -108,7 +115,7 @@ class bin_op(Generic[SeriesT]):  # noqa: N801
     __slots__ = ("__name__", "_method_native", "_name_owner")
 
     def __init__(self) -> None:
-        self._method_native: Callable[[SeriesT, Any], SeriesT] | None = None
+        self._method_native: Callable[[SeriesT], Callable[[Any], SeriesT]] | None = None
         """Generated *iff* the method was ever used.
 
         After the first call, the same wrapper function is reused for all instances.
@@ -122,24 +129,20 @@ class bin_op(Generic[SeriesT]):  # noqa: N801
         return f"bin_op<{self._name_owner}.{self.__name__}>"
 
     @overload
-    def __get__(
-        self, instance: SeriesT, owner: Any, /
-    ) -> Callable[[SeriesT, Any], SeriesT]: ...
+    def __get__(self, instance: SeriesT, owner: Any, /) -> Callable[[Any], SeriesT]: ...
     @overload
     def __get__(self, instance: None, owner: type[SeriesT], /) -> Self: ...
     def __get__(
         self, instance: SeriesT | None, owner: type[SeriesT] | None, /
-    ) -> Self | Callable[[SeriesT, Any], SeriesT]:
+    ) -> Self | Callable[[Any], SeriesT]:
         if instance is None:
             return self
-        if (method_native := self._method_native) is None:
-            method_native = self._method_native = _make_bin_op(self.__name__)
-        return method_native
+        if self._method_native is None:
+            self._method_native = _make_bin_op(self.__name__)
+        return self._method_native(instance)
 
-    def __call__(self, instance: SeriesT | None, other: Any, /) -> SeriesT:
-        if instance is None:
-            raise NotImplementedError
-        return self.__get__(instance, None)(instance, other)
+    def __call__(self, instance: SeriesT, other: Any, /) -> SeriesT:
+        raise NotImplementedError
 
 
 class PolarsSeries(CompliantSeries[pl.Series]):
@@ -319,7 +322,7 @@ class PolarsSeries(CompliantSeries[pl.Series]):
         )
 
     def __rpow__(self, other: float | Self) -> Self:
-        other_ = other.native if isinstance(other, type(self)) else other
+        other_ = other.native if isinstance(other, PolarsSeries) else other
         result = other_**self.native
         if not RPOW_PRESERVES_SERIES_NAME:
             result = result.alias(self.native.name)
