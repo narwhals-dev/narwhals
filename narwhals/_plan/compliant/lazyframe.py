@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, Protocol, get_args
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol
 
+from narwhals._plan._namespace import collect_implementation
 from narwhals._plan.compliant.typing import Native
-from narwhals._typing import _LazyFrameCollectImpl
 from narwhals._typing_compat import assert_never
-from narwhals._utils import Implementation, Version, can_lazyframe_collect
+from narwhals._utils import Implementation, Version
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator, Mapping, Sequence
@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     from narwhals._plan.dataframe import DataFrame as NwDataFrame
     from narwhals._plan.plans import logical as lp
     from narwhals._translate import ArrowStreamExportable, IntoArrowTable
+    from narwhals._typing import _LazyFrameCollectImpl
     from narwhals.schema import Schema
     from narwhals.typing import EagerAllowed, IntoBackend
 
@@ -135,10 +136,7 @@ class CompliantLazyFrame(NarwhalsHash, Protocol[Native]):
     def collect_compliant(
         self, backend: IntoBackend[EagerAllowed], **kwds: Any
     ) -> CompliantDataFrame[Any, Any, Any]:
-        impl = Implementation.from_backend(backend)
-        if not can_lazyframe_collect(impl):
-            msg = f"Unsupported `backend` value.\nExpected one of {get_args(_LazyFrameCollectImpl)} or None, got: {impl}."
-            raise TypeError(msg)
+        impl = collect_implementation(backend)
         if impl is Implementation.PYARROW:
             from narwhals._plan import arrow
 

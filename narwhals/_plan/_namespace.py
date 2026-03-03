@@ -1,8 +1,14 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, get_args
 
-from narwhals._utils import Implementation, Version, is_eager_allowed
+from narwhals._typing import _LazyFrameCollectImpl
+from narwhals._utils import (
+    Implementation,
+    Version,
+    can_lazyframe_collect,
+    is_eager_allowed,
+)
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
@@ -51,11 +57,23 @@ def known_implementation(backend: IntoBackend[Backend] | Any) -> KnownImpl:
 
 
 def eager_implementation(backend: IntoBackend[Backend] | Any) -> _EagerAllowedImpl:
-    impl = Implementation.from_backend(backend)
+    impl = known_implementation(backend)
     if is_eager_allowed(impl):
         return impl
     msg = f"{impl} support in Narwhals is lazy-only"
-    raise ValueError(msg)
+    raise TypeError(msg)
+
+
+def collect_implementation(backend: IntoBackend[Backend] | Any) -> _LazyFrameCollectImpl:
+    """Parse `backend` into an `Implementation`, ensuring it can be used in `LazyFrame.collect`."""
+    impl = Implementation.from_backend(backend)
+    if can_lazyframe_collect(impl):
+        return impl
+    msg = (
+        f"Unsupported `backend` value.\n"
+        f"Expected one of {get_args(_LazyFrameCollectImpl)} or None, got: {impl}."
+    )
+    raise TypeError(msg)
 
 
 def evaluator(backend: KnownImpl) -> type[ResolvedToCompliant[Any]]:

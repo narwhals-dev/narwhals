@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, get_args, ove
 from narwhals._plan import _parse, translate
 from narwhals._plan._expansion import expand_selector_irs_names, prepare_projection
 from narwhals._plan._guards import is_series
-from narwhals._plan._namespace import namespace_from_backend
+from narwhals._plan._namespace import eager_implementation, namespace_from_backend
 from narwhals._plan.common import ensure_seq_str, normalize_target_file, temp
 from narwhals._plan.compliant.translate import can_from_dict
 from narwhals._plan.exceptions import unsupported_backend_operation_error
@@ -34,7 +34,6 @@ from narwhals._utils import (
     Version,
     check_column_names_are_unique as raise_duplicate_error,
     generate_repr,
-    is_eager_allowed,
     qualified_type_name,
 )
 from narwhals.exceptions import InvalidOperationError, ShapeError
@@ -331,11 +330,7 @@ class DataFrame(
 
     @property
     def implementation(self) -> _EagerAllowedImpl:
-        impl = self._compliant.implementation
-        if is_eager_allowed(impl):
-            return impl
-        msg = "TODO @dangotbanned: Stop relying on  `CompliantDataFrame.implementation: ClassVar[_EagerAllowedImpl]`"
-        raise NotImplementedError(msg)
+        return eager_implementation(self._compliant.implementation)
 
     @property
     def shape(self) -> tuple[int, int]:
