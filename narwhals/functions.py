@@ -752,7 +752,7 @@ def scan_csv(
     """
     implementation = Implementation.from_backend(backend)
     native_namespace = implementation.to_native_namespace()
-    native_frame: NativeDataFrame | NativeFrame
+    native_frame: NativeFrame
     source = normalize_path(source)
     if implementation is Implementation.POLARS:
         native_frame = native_namespace.scan_csv(source, separator=separator, **kwargs)
@@ -935,7 +935,7 @@ def scan_parquet(
     """
     implementation = Implementation.from_backend(backend)
     native_namespace = implementation.to_native_namespace()
-    native_frame: NativeDataFrame | NativeFrame
+    native_frame: NativeFrame
     source = normalize_path(source)
     if implementation is Implementation.POLARS:
         native_frame = native_namespace.scan_parquet(source, **kwargs)

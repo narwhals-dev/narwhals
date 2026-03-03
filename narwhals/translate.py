@@ -506,7 +506,7 @@ def _get_native_namespace_single_obj(
     if has_native_namespace(obj):
         return obj.__native_namespace__()
     return Version.MAIN.namespace.from_native_object(
-        obj  # pyright: ignore[reportArgumentType]
+        obj
     ).implementation.to_native_namespace()
 
 

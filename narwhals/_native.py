@@ -105,7 +105,7 @@ They differ by checking **all** native types/protocols in a single-call and usin
 from __future__ import annotations
 
 from collections.abc import Callable, Collection, Iterable, Sized
-from typing import TYPE_CHECKING, Any, Protocol, TypeVar, Union, cast
+from typing import TYPE_CHECKING, Any, Protocol, TypeVar, cast
 
 from narwhals.dependencies import (
     get_cudf,
@@ -282,7 +282,7 @@ NativePySpark: TypeAlias = _PySparkDataFrame
 NativePySparkConnect: TypeAlias = _PySparkDataFrame
 NativeSparkLike: TypeAlias = "NativeSQLFrame | NativePySpark | NativePySparkConnect"
 NativeKnown: TypeAlias = "NativePolars | NativeArrow | NativePandasLike | NativeSparkLike | NativeDuckDB | NativeDask | NativeIbis"
-NativeUnknown: TypeAlias = "NativeDataFrame | NativeSeries | NativeFrame"
+NativeUnknown: TypeAlias = "NativeSeries | NativeFrame"
 NativeAny: TypeAlias = "NativeKnown | NativeUnknown"
 
 IntoDataFrame: TypeAlias = NativeDataFrame
@@ -299,7 +299,7 @@ Examples:
 """
 
 IntoLazyFrame: TypeAlias = NativeFrame
-IntoFrame: TypeAlias = Union[IntoDataFrame, IntoLazyFrame]
+IntoFrame: TypeAlias = NativeFrame
 """Anything which can be converted to a Narwhals DataFrame or LazyFrame.
 
 Use this if your function can accept an object which can be converted to either
