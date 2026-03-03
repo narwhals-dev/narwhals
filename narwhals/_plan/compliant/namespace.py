@@ -33,6 +33,7 @@ Incomplete: TypeAlias = Any
 # - will reduce direct calls to `*Namespace._<compliant-type>`
 class CompliantNamespace(
     HasVersion,
+    # NOTE: Using `FrameT` in `LazyRangeGenerator` *could* be an issue if that can be either eager or lazy
     ranges.LazyRangeGenerator[FrameT, ExprT_co],
     Protocol[FrameT, ExprT_co, ScalarT_co],
 ):

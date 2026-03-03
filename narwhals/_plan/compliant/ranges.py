@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Protocol
 
-from narwhals._plan.compliant.typing import ExprT, ExprT_co, FrameT, FrameT_contra
+from narwhals._plan.compliant.typing import ExprT_co, FrameT_contra
 from narwhals._plan.typing import NativeSeriesT, NativeSeriesT_co
 from narwhals._utils import Version, _hasattr_static
 
@@ -19,7 +19,6 @@ if TYPE_CHECKING:
     from narwhals.dtypes import IntegerType
     from narwhals.typing import ClosedInterval
 
-# TODO @dangotbanned: Redo `*Namespace` in terms of these
 __all__ = [
     "DateRange",
     "DateRangeEager",
@@ -30,11 +29,8 @@ __all__ = [
     "LazyRangeGenerator",
     "LinearSpace",
     "LinearSpaceEager",
-    "can_date_range",
     "can_date_range_eager",
-    "can_int_range",
     "can_int_range_eager",
-    "can_linear_space",
     "can_linear_space_eager",
 ]
 
@@ -119,14 +115,7 @@ class HybridRangeGenerator(
     """Supports all range generation methods.."""
 
 
-# TODO @dangotbanned: Use these in https://github.com/narwhals-dev/narwhals/blob/40bf84f1f226f29e86b8ba8534f87a026cdf62ae/narwhals/_plan/functions/ranges.py
 # fmt: off
-def can_date_range(obj: DateRange[FrameT, ExprT] | Any) -> TypeIs[DateRange[FrameT, ExprT]]:
-    return _hasattr_static(obj, "date_range")
-def can_int_range(obj: IntRange[FrameT, ExprT] | Any) -> TypeIs[IntRange[FrameT, ExprT]]:
-    return _hasattr_static(obj, "int_range")
-def can_linear_space(obj: LinearSpace[FrameT, ExprT] | Any) -> TypeIs[LinearSpace[FrameT, ExprT]]:
-    return _hasattr_static(obj, "linear_space")
 def can_date_range_eager(obj: DateRangeEager[NativeSeriesT] | Any) -> TypeIs[DateRangeEager[NativeSeriesT]]:
     return _hasattr_static(obj, "date_range_eager")
 def can_int_range_eager(obj: IntRangeEager[NativeSeriesT] | Any) -> TypeIs[IntRangeEager[NativeSeriesT]]:
