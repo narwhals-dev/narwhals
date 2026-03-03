@@ -151,4 +151,7 @@ _local = threading.local()
 _local.lazy_known = {
     deps.is_polars_lazyframe: (_from_polars_lazyframe, _import_polars_lazyframe)
 }
-_local.eager_known = {deps.is_pyarrow_table: (_from_pyarrow_table, _import_pyarrow_table)}
+_local.eager_known = {
+    deps.is_pyarrow_table: (_from_pyarrow_table, _import_pyarrow_table),
+    deps.is_polars_dataframe: (_from_polars_dataframe, _import_polars_dataframe),
+}

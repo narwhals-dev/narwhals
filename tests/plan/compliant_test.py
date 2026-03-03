@@ -717,12 +717,15 @@ def test_dataframe_from_native(data_small: Data) -> None:
     pytest.importorskip("pyarrow")
     pytest.importorskip("polars")
     table = pa.Table.from_pydict(data_small)
-    df = nwp.DataFrame.from_native(table)
-    assert df.implementation is nw.Implementation.PYARROW
-    pl_lazy = df.to_polars().lazy()
-    pattern = re_compile(r"unsupported dataframe.+polars.+lazyframe")
-    with pytest.raises(TypeError, match=pattern):
-        nwp.DataFrame.from_native(pl_lazy)  # type: ignore[call-overload]
+    pa_df = nwp.DataFrame.from_native(table)
+    assert pa_df.implementation is nw.Implementation.PYARROW
+    pl_df = nwp.DataFrame.from_native(pa_df.to_polars())
+    assert pl_df.implementation is nw.Implementation.POLARS
+    lazy = pl_df.to_polars().lazy()
+    with pytest.raises(
+        TypeError, match=re_compile(r"unsupported dataframe.+polars.+lazyframe")
+    ):
+        nwp.DataFrame.from_native(lazy)  # type: ignore[call-overload]
 
 
 def test_dataframe_to_struct(data_small_af: Data) -> None:
