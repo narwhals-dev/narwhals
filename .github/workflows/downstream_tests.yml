@@ -104,7 +104,7 @@ jobs:
         if: ${{ matrix.dependencies == 'core,optional' }}
         run: |
           cd marimo
-          uv run --python ${{ matrix.python-version }} -c "import narwhals; print(narwhals.__file__)"
+          uv run --python ${{ matrix.python-version }} python -c "import narwhals; print(narwhals.__file__)"
           scripts/test-narwhals.sh --python=${{ matrix.python-version }}
         timeout-minutes: 15
 
