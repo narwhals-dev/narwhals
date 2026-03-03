@@ -693,8 +693,8 @@ def test_series_to_polars(values: Sequence[PythonLiteral], eager: EagerAllowed) 
     pl_assert_series_equal(result, expected)
 
 
-def test_dataframe_iter_columns(data_small: Data) -> None:
-    df = dataframe(data_small)
+def test_dataframe_iter_columns(data_small: Data, eager: EagerAllowed) -> None:
+    df = nwp.DataFrame.from_dict(data_small, backend=eager)
     result = df.from_dict({s.name: s for s in df.iter_columns()}).to_dict(as_series=False)
     assert_equal_data(df, result)
 
