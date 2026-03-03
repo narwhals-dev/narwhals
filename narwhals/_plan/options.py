@@ -12,6 +12,7 @@ from narwhals.typing import AsofJoinStrategy, JoinStrategy, UniqueKeepStrategy
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    from typing import TypedDict
 
     import pyarrow.compute as pc
     from typing_extensions import Self
@@ -19,6 +20,12 @@ if TYPE_CHECKING:
     from narwhals._plan.typing import Accessor, NonCrossJoinStrategy, OneOrIterable, Seq
     from narwhals._typing import Backend
     from narwhals.typing import AsofJoinStrategy as JoinAsofStrategy, RankMethod
+
+    # TODO @dangotbanned: Replace with `dict[Literal["descending", "nulls_last"], Seq[bool]]` after bumping mypy
+    # to include https://github.com/python/mypy/pull/20416
+    class _SortOptions(TypedDict):
+        descending: bool | Seq[bool]
+        nulls_last: bool | Seq[bool]
 
 
 class FunctionFlags(enum.Flag):
@@ -206,6 +213,18 @@ class SortMultipleOptions(Immutable):
 
         nulls_last = self._ensure_single_nulls_last("pyarrow")
         return sort(*by, descending=self.descending, nulls_last=nulls_last)
+
+    def to_polars(self, by: Sequence[str]) -> _SortOptions:
+        """[`extend_bool`] doesn't broadcast length 1 sequences, so we do it here.
+
+        [`extend_bool`]: https://github.com/pola-rs/polars/blob/b8bfb07a4a37a8d449d6d1841e345817431142df/py-polars/polars/_utils/various.py#L580-L594
+        """
+        len_by = len(by)
+        desc, nulls = self.descending, self.nulls_last
+        if len_by != 1:
+            desc = desc if len(desc) != 1 else desc * len_by
+            nulls = nulls if len(nulls) != 1 else nulls * len_by
+        return {"descending": desc, "nulls_last": nulls}
 
 
 class RankOptions(Immutable):

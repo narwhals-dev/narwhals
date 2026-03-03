@@ -189,11 +189,9 @@ class PolarsEvaluator(ResolvedToCompliant[pl.LazyFrame]):
         )
 
     def sort(self, plan: rp.Sort, /) -> PolarsLazyFrame:
-        opts = plan.options
+        by = plan.by
         return self._into_compliant(
-            plan.input.evaluate(self).native.sort(
-                plan.by, descending=opts.descending, nulls_last=opts.nulls_last
-            )
+            plan.input.evaluate(self).native.sort(by, **plan.options.to_polars(by))
         )
 
     def unique(self, plan: rp.Unique) -> PolarsLazyFrame:

@@ -590,8 +590,7 @@ def test_drop_nulls_invalid(data_small_dh: Data, eager: EagerAllowed) -> None:
         df.drop_nulls(ncs.by_index(-999))
 
 
-# TODO @dangotbanned: Unwrap single-element `SortMultipleOptions` for polars
-def test_sort(request: pytest.FixtureRequest, eager: EagerAllowed) -> None:
+def test_sort(eager: EagerAllowed) -> None:
     data_sort = {
         "a": [8, 8, 1, None, 1, 1],
         "b": [None, 0.9, 3.0, 0.9, None, None],
@@ -599,16 +598,6 @@ def test_sort(request: pytest.FixtureRequest, eager: EagerAllowed) -> None:
         "idx": [0, 1, 2, 3, 4, 5],
     }
 
-    request.applymarker(
-        pytest.mark.xfail(
-            (eager == "polars"),
-            raises=ValueError,
-            reason=(
-                "`the length of `nulls_last` (1) does not match the length of `by` (3)`"
-                "TODO @dangotbanned: Unwrap single-element `SortMultipleOptions` for polars"
-            ),
-        )
-    )
     result = nwp.DataFrame.from_dict(data_sort, backend=eager).sort(
         ncs.first(), "c", ncs.float(), descending=[True, False, False], nulls_last=True
     )

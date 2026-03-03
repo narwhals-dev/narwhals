@@ -199,10 +199,7 @@ class PolarsDataFrame(
         return self._with_native(self.native.slice(offset, length))
 
     def sort(self, by: Sequence[str], options: SortMultipleOptions) -> Self:
-        opts = options
-        return self._with_native(
-            self.native.sort(by, descending=opts.descending, nulls_last=opts.nulls_last)
-        )
+        return self._with_native(self.native.sort(by, **options.to_polars(by)))
 
     @overload
     def to_dict(self, *, as_series: Literal[True]) -> Mapping[str, Series]: ...
