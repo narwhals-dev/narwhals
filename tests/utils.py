@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from sqlframe.duckdb import DuckDBSession
     from typing_extensions import TypeAlias
 
-    from narwhals._native import NativeLazyFrame
+    from narwhals._native import NativeFrame
     from narwhals.typing import Frame, IntoDataFrame, TimeUnit
 
 
@@ -44,9 +44,9 @@ PYARROW_VERSION: tuple[int, ...] = get_module_version_as_tuple("pyarrow")
 PYSPARK_VERSION: tuple[int, ...] = get_module_version_as_tuple("pyspark")
 CUDF_VERSION: tuple[int, ...] = get_module_version_as_tuple("cudf")
 
-Constructor: TypeAlias = Callable[[Any], "NativeLazyFrame | IntoDataFrame"]
+Constructor: TypeAlias = Callable[[Any], "NativeFrame | IntoDataFrame"]
 ConstructorEager: TypeAlias = Callable[[Any], "IntoDataFrame"]
-ConstructorLazy: TypeAlias = Callable[[Any], "NativeLazyFrame"]
+ConstructorLazy: TypeAlias = Callable[[Any], "NativeFrame"]
 ConstructorPandasLike: TypeAlias = Callable[[Any], "pd.DataFrame"]
 
 NestedOrEnumDType: TypeAlias = "nw.List | nw.Array | nw.Struct | nw.Enum"

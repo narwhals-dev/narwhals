@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import TypeAlias, TypeIs
 
-    from narwhals._native import NativeDataFrame, NativeLazyFrame, NativeSeries
+    from narwhals._native import NativeDataFrame, NativeFrame, NativeSeries
     from narwhals._translate import IntoArrowTable
     from narwhals._typing import Backend, EagerAllowed, IntoBackend
     from narwhals.dataframe import DataFrame, LazyFrame
@@ -752,7 +752,7 @@ def scan_csv(
     """
     implementation = Implementation.from_backend(backend)
     native_namespace = implementation.to_native_namespace()
-    native_frame: NativeDataFrame | NativeLazyFrame
+    native_frame: NativeDataFrame | NativeFrame
     source = normalize_path(source)
     if implementation is Implementation.POLARS:
         native_frame = native_namespace.scan_csv(source, separator=separator, **kwargs)
@@ -935,7 +935,7 @@ def scan_parquet(
     """
     implementation = Implementation.from_backend(backend)
     native_namespace = implementation.to_native_namespace()
-    native_frame: NativeDataFrame | NativeLazyFrame
+    native_frame: NativeDataFrame | NativeFrame
     source = normalize_path(source)
     if implementation is Implementation.POLARS:
         native_frame = native_namespace.scan_parquet(source, **kwargs)

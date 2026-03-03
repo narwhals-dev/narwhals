@@ -505,7 +505,7 @@ def test_eager_only_pass_through_main(constructor: Constructor) -> None:
     assert not isinstance(r3, nw.LazyFrame)
 
     with pytest.raises(TypeError, match=r"Cannot.+use.+eager_only"):
-        nw.from_native(df, eager_only=True, pass_through=False)  # type: ignore[type-var]
+        nw.from_native(df, eager_only=True, pass_through=False)  # type: ignore[call-overload]
 
 
 def test_from_native_lazyframe_exhaustive() -> None:  # noqa: PLR0914, PLR0915

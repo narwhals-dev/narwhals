@@ -129,7 +129,7 @@ def from_native(
 @overload
 def from_native(native_object: LazyFrameT, **kwds: Unpack[AllowLazy]) -> LazyFrameT: ...
 @overload
-def from_native(
+def from_native(  # type: ignore[overload-overlap]
     native_object: IntoDataFrameT, **kwds: Unpack[ExcludeSeries]
 ) -> DataFrame[IntoDataFrameT]: ...
 @overload
@@ -141,7 +141,7 @@ def from_native(
     native_object: IntoSeriesT, **kwds: Unpack[AllowSeries]
 ) -> Series[IntoSeriesT]: ...
 @overload
-def from_native(
+def from_native(  # type: ignore[overload-overlap]
     native_object: IntoLazyFrameT, **kwds: Unpack[AllowLazy]
 ) -> LazyFrame[IntoLazyFrameT]: ...
 @overload
@@ -506,7 +506,7 @@ def _get_native_namespace_single_obj(
     if has_native_namespace(obj):
         return obj.__native_namespace__()
     return Version.MAIN.namespace.from_native_object(
-        obj
+        obj  # pyright: ignore[reportArgumentType]
     ).implementation.to_native_namespace()
 
 

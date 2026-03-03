@@ -560,11 +560,11 @@ def from_native(
     native_object: IntoDataFrameT, **kwds: Unpack[OnlyEagerOrInterchangeStrict]
 ) -> DataFrame[IntoDataFrameT]: ...
 @overload
-def from_native(
+def from_native(  # type: ignore[overload-overlap]
     native_object: IntoDataFrameT, **kwds: Unpack[ExcludeSeries]
 ) -> DataFrame[IntoDataFrameT]: ...
 @overload
-def from_native(
+def from_native(  # type: ignore[overload-overlap]
     native_object: IntoDataFrameT, **kwds: Unpack[ExcludeSeriesStrict]
 ) -> DataFrame[IntoDataFrameT]: ...
 @overload
@@ -576,11 +576,11 @@ def from_native(
     native_object: IntoSeriesT, **kwds: Unpack[OnlySeriesStrict]
 ) -> Series[IntoSeriesT]: ...
 @overload
-def from_native(
+def from_native(  # type: ignore[overload-overlap]
     native_object: IntoDataFrameT | IntoSeriesT, **kwds: Unpack[AllowSeries]
 ) -> DataFrame[IntoDataFrameT] | Series[IntoSeriesT]: ...
 @overload
-def from_native(
+def from_native(  # type: ignore[overload-overlap]
     native_object: IntoDataFrameT | IntoSeriesT, **kwds: Unpack[AllowSeriesStrict]
 ) -> DataFrame[IntoDataFrameT] | Series[IntoSeriesT]: ...
 @overload

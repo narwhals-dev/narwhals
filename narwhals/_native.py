@@ -152,7 +152,6 @@ __all__ = [
     "NativeFrame",
     "NativeIbis",
     "NativeKnown",
-    "NativeLazyFrame",
     "NativeModin",
     "NativePandas",
     "NativePandasLike",
@@ -192,10 +191,6 @@ class NativeFrame(Protocol):
 
 class NativeDataFrame(Sized, NativeFrame, Protocol):
     def drop(self, *args: Any, **kwargs: Any) -> Any: ...
-
-
-class NativeLazyFrame(NativeFrame, Protocol):
-    def explain(self, *args: Any, **kwargs: Any) -> Any: ...
 
 
 class NativeSeries(Sized, Iterable[Any], Protocol):
@@ -242,7 +237,7 @@ class _BasePandasLikeSeries(NativeSeries, _BasePandasLike, Protocol):
     def where(self, cond: Any, other: Any = ..., /) -> Self | Incomplete: ...
 
 
-class NativeDask(NativeLazyFrame, Protocol):
+class NativeDask(NativeFrame, Protocol):
     _partition_type: type[pd.DataFrame]
 
 
@@ -269,7 +264,7 @@ class _ModinSeries(_BasePandasLikeSeries, Protocol):
     _pandas_class: type[pd.Series[Any]]
 
 
-class _PySparkDataFrame(NativeLazyFrame, Protocol):
+class _PySparkDataFrame(NativeFrame, Protocol):
     def dropDuplicatesWithinWatermark(self, *arg: Any, **kwargs: Any) -> Any: ...  # noqa: N802
 
 
@@ -287,7 +282,7 @@ NativePySpark: TypeAlias = _PySparkDataFrame
 NativePySparkConnect: TypeAlias = _PySparkDataFrame
 NativeSparkLike: TypeAlias = "NativeSQLFrame | NativePySpark | NativePySparkConnect"
 NativeKnown: TypeAlias = "NativePolars | NativeArrow | NativePandasLike | NativeSparkLike | NativeDuckDB | NativeDask | NativeIbis"
-NativeUnknown: TypeAlias = "NativeDataFrame | NativeSeries | NativeLazyFrame"
+NativeUnknown: TypeAlias = "NativeDataFrame | NativeSeries | NativeFrame"
 NativeAny: TypeAlias = "NativeKnown | NativeUnknown"
 
 IntoDataFrame: TypeAlias = NativeDataFrame
@@ -303,7 +298,7 @@ Examples:
     ...     return df.shape
 """
 
-IntoLazyFrame: TypeAlias = Union[NativeLazyFrame, NativeIbis]
+IntoLazyFrame: TypeAlias = NativeFrame
 IntoFrame: TypeAlias = Union[IntoDataFrame, IntoLazyFrame]
 """Anything which can be converted to a Narwhals DataFrame or LazyFrame.
 

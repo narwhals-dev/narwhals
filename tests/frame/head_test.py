@@ -18,5 +18,5 @@ def test_head(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
     # negative indices not allowed for lazyframes
-    result = df.lazy().collect().head(-1)
-    assert_equal_data(result, expected)
+    result_eager = df.lazy().collect().head(-1)
+    assert_equal_data(result_eager, expected)

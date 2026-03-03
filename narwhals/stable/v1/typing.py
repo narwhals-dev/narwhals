@@ -8,7 +8,7 @@ from narwhals._typing_compat import TypeVar
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
-    from narwhals._native import NativeDataFrame, NativeDuckDB, NativeLazyFrame
+    from narwhals._native import NativeDataFrame, NativeDuckDB, NativeFrame
     from narwhals.stable.v1 import DataFrame, Expr, LazyFrame, Series
 
     class DataFrameLike(Protocol):
@@ -38,7 +38,7 @@ Examples:
     ...     return df.shape
 """
 
-IntoLazyFrame: TypeAlias = "NativeLazyFrame"
+IntoLazyFrame: TypeAlias = "NativeFrame"
 IntoFrame: TypeAlias = Union["IntoDataFrame", "IntoLazyFrame"]
 """Anything which can be converted to a Narwhals DataFrame or LazyFrame.
 

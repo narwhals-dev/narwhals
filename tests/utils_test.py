@@ -134,11 +134,11 @@ def test_maybe_set_index_pandas_direct_index(
     result = nw.maybe_set_index(df, index=narwhals_index)
     if isinstance(native_df_or_series, pd.Series):
         assert isinstance(result, nw.Series)
-        native_df_or_series.index = pandas_index  # type: ignore[assignment]
+        native_df_or_series.index = pandas_index  # pyright: ignore[reportAttributeAccessIssue]
         assert_series_equal(nw.to_native(result), native_df_or_series)
     else:
         assert isinstance(result, nw.DataFrame)
-        expected = native_df_or_series.set_index(pandas_index)  # type: ignore[arg-type]
+        expected = native_df_or_series.set_index(pandas_index)  # pyright: ignore[reportArgumentType]
         assert_frame_equal(nw.to_native(result), expected)
 
 

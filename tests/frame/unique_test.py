@@ -56,8 +56,8 @@ def test_unique_first_last(
     assert_equal_data(result, expected)
 
     if isinstance(df, nw.DataFrame):
-        result = df.unique("b", keep=keep, order_by="i", maintain_order=True)
-        assert_equal_data(result, expected)
+        result = df.unique("b", keep=keep, order_by="i", maintain_order=True)  # pyright: ignore[reportCallIssue]
+        assert_equal_data(result, expected)  # pyright: ignore[reportCallIssue]
 
 
 @pytest.mark.parametrize(
@@ -81,7 +81,7 @@ def test_unique_first_last_no_subset(
     assert_equal_data(result, expected)
 
     if isinstance(df, nw.DataFrame):
-        result = df.unique(keep=keep, order_by="i", maintain_order=True)
+        result = df.unique(keep=keep, order_by="i", maintain_order=True)  # pyright: ignore[reportCallIssue]
         assert_equal_data(result, expected)
 
 
