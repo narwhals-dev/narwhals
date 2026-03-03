@@ -284,7 +284,7 @@ def expand_multi_output_error(
 
 
 def unsupported_backend_operation_error(
-    backend: IntoBackend[Backend], method_name: str, /
+    backend: IntoBackend[Backend] | Any, method_name: str, /
 ) -> NotImplementedError:  # pragma: no cover
     """Currently only needed for typing purposes.
 
