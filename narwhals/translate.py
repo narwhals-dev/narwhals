@@ -55,6 +55,7 @@ if TYPE_CHECKING:
         Frame,
         IntoDataFrameT,
         IntoFrame,
+        IntoFrameT,
         IntoLazyFrameT,
         IntoSeries,
         IntoSeriesT,
@@ -70,12 +71,12 @@ TEMPORAL_SCALAR_TYPES = (dt.date, dt.timedelta, dt.time)
 
 @overload
 def to_native(
-    narwhals_object: DataFrame[IntoDataFrameT], *, pass_through: Literal[False] = ...
-) -> IntoDataFrameT: ...
+    narwhals_object: DataFrame[IntoFrameT], *, pass_through: Literal[False] = ...
+) -> IntoFrameT: ...
 @overload
 def to_native(
-    narwhals_object: LazyFrame[IntoLazyFrameT], *, pass_through: Literal[False] = ...
-) -> IntoLazyFrameT: ...
+    narwhals_object: LazyFrame[IntoFrameT], *, pass_through: Literal[False] = ...
+) -> IntoFrameT: ...
 @overload
 def to_native(
     narwhals_object: Series[IntoSeriesT], *, pass_through: Literal[False] = ...
@@ -85,12 +86,10 @@ def to_native(narwhals_object: Any, *, pass_through: bool) -> Any: ...
 
 
 def to_native(
-    narwhals_object: DataFrame[IntoDataFrameT]
-    | LazyFrame[IntoLazyFrameT]
-    | Series[IntoSeriesT],
+    narwhals_object: DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series[IntoSeriesT],
     *,
     pass_through: bool = False,
-) -> IntoDataFrameT | IntoLazyFrameT | IntoSeriesT | Any:
+) -> IntoFrameT | IntoSeriesT | Any:
     """Convert Narwhals object to native one.
 
     Arguments:
@@ -145,6 +144,10 @@ def from_native(
     native_object: IntoLazyFrameT, **kwds: Unpack[AllowLazy]
 ) -> LazyFrame[IntoLazyFrameT]: ...
 @overload
+def from_native(  # type: ignore[overload-overlap]
+    native_object: IntoFrameT, **kwds: Unpack[AllowLazy]
+) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT]: ...
+@overload
 def from_native(
     native_object: IntoDataFrameT | IntoSeriesT, **kwds: Unpack[AllowSeries]
 ) -> DataFrame[IntoDataFrameT] | Series[IntoSeriesT]: ...
@@ -164,7 +167,7 @@ def from_native(
     series_only: bool,
     allow_series: bool | None,
 ) -> Any: ...
-def from_native(
+def from_native(  # pyright: ignore[reportInconsistentOverload]
     native_object: IntoLazyFrameT
     | IntoDataFrameT
     | IntoSeriesT
