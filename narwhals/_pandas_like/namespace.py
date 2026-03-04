@@ -332,7 +332,7 @@ class PandasLikeNamespace(
                 null_mask_result = reduce(operator.or_, null_mask)
                 result = series[0]
                 for s in series[1:]:
-                    _, s_native = align_and_extract_native(result, s)
+                    r_native, s_native = align_and_extract_native(result, s)
                     if str(result.native.dtype) == "large_string[pyarrow]":
                         # https://github.com/pandas-dev/pandas/issues/64393
                         import pyarrow as pa  # ignore-banned-import
@@ -341,13 +341,15 @@ class PandasLikeNamespace(
                             separator, type=pa.large_string()
                         )
                         if isinstance(s_native, str):
-                            result = (
-                                result
+                            result = result._with_native(
+                                r_native
                                 + separator_pa_large_string
                                 + pa.scalar(s_native, type=pa.large_string())
                             )
                         else:
-                            result = result + separator_pa_large_string + s
+                            result = result._with_native(
+                                r_native + separator_pa_large_string + s_native
+                            )
                     else:
                         result = result + separator + s
                 result = result.zip_with(~null_mask_result, None)
