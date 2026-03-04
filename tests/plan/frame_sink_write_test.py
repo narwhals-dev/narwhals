@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Literal
 
 import pytest
 
-from tests.plan.utils import dataframe
 from tests.utils import is_windows
 
 if TYPE_CHECKING:
@@ -15,6 +14,7 @@ if TYPE_CHECKING:
 
     from narwhals.typing import FileSource
     from tests.conftest import Data
+    from tests.plan.utils import DataFrame, LazyFrame
 
 pytest.importorskip("pyarrow")
 
@@ -63,7 +63,7 @@ def data() -> Data:
     return {"a": [1, 2, 3]}
 
 
-def test_write_csv(data: Data, csv_path: FileSource) -> None:
+def test_write_csv(data: Data, csv_path: FileSource, dataframe: DataFrame) -> None:
     df = dataframe(data)
     result_none = df.write_csv(csv_path)
     assert Path(csv_path).exists()
@@ -77,13 +77,27 @@ def test_write_csv(data: Data, csv_path: FileSource) -> None:
         assert result == "a\n1\n2\n3\n"
 
 
-def test_write_parquet(data: Data, parquet_path: FileSource) -> None:
+def test_write_parquet(
+    data: Data, parquet_path: FileSource, dataframe: DataFrame
+) -> None:
     dataframe(data).write_parquet(parquet_path)
     assert Path(parquet_path).exists()
 
 
-@pytest.mark.xfail(reason="TODO: `LazyFrame.sink_parquet()`", raises=NotImplementedError)
-def test_sink_parquet(data: Data, parquet_path: FileSource) -> None:  # pragma: no cover
-    df = dataframe(data)
-    df.lazy().sink_parquet(parquet_path)
+# TODO @dangotbanned: `Arrow*Frame.sink_parquet`
+def test_sink_parquet(
+    data: Data,
+    parquet_path: FileSource,
+    lazyframe: LazyFrame,
+    request: pytest.FixtureRequest,
+) -> None:
+    lf = lazyframe(data)
+    request.applymarker(
+        pytest.mark.xfail(
+            lf.implementation.is_pyarrow(),
+            raises=NotImplementedError,
+            reason="TODO @dangotbanned: `Arrow*Frame.sink_parquet`",
+        )
+    )
+    lf.sink_parquet(parquet_path)
     assert Path(parquet_path).exists()

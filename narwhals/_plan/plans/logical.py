@@ -404,9 +404,9 @@ class LogicalPlan(_BasePlan[_Fwd], _root=True):
         return MapFunction(input=self, function=function)
 
     def _sink(self, sink: SinkT) -> SinkT:
-        if isinstance(self, Sink):  # pragma: no cover
-            msg = "cannot create a sink on top of another sink"
-            raise InvalidOperationError(msg)
+        if isinstance(self, Sink):
+            msg = "cannot create a sink on top of another sink"  # pragma: no cover
+            raise InvalidOperationError(msg)  # pragma: no cover
         return sink
 
 
@@ -584,6 +584,8 @@ class Collect(Sink):
     __slots__ = ("kwds",)
     kwds: ClosedKwds
 
+    # NOTE: `LazyFrame` skips this and directly calls `Resolver.collect`
+    # https://github.com/narwhals-dev/narwhals/blob/da1cc83cacd81446c5ef70ec60c7cd076f458b5e/narwhals/_plan/lazyframe.py#L311-L319
     def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:  # pragma: no cover
         return resolver.collect(self)
 
@@ -595,6 +597,8 @@ class SinkFile(Sink):
 
 
 class SinkParquet(SinkFile):
+    # NOTE: `LazyFrame` skips this and directly calls `Resolver.sink_parquet`
+    # https://github.com/narwhals-dev/narwhals/blob/da1cc83cacd81446c5ef70ec60c7cd076f458b5e/narwhals/_plan/lazyframe.py#L321-L325
     def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:  # pragma: no cover
         return resolver.sink_parquet(self)
 

@@ -160,7 +160,7 @@ def test_read_parquet_raise_with_lazy(backend: _LazyOnly) -> None:
 
 
 # TODO @dangotbanned: Transform steps, change the schema
-# TODO @dangotbanned: Collect (pretty far from being able to do this)
+# TODO @dangotbanned: Collect
 @scan_backend
 def test_scan_parquet(parquet_path: FileSource, backend: BackendName) -> None:
     pytest.importorskip(backend)
