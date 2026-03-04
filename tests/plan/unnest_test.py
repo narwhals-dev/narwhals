@@ -38,6 +38,7 @@ def data_1() -> Data:
     }
 
 
+# TODO @dangotbanned: Decouple this test suite from `pyarrow`
 # TODO @dangotbanned: Replace with `nwp.struct`
 # https://github.com/narwhals-dev/narwhals/issues/3247
 def pyarrow_struct(native: pa.Table, columns: list[str]) -> pa.StructArray:
