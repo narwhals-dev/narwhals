@@ -31,6 +31,10 @@ if TYPE_CHECKING:
     from typing_extensions import ParamSpec, TypeAlias
 
     from narwhals._native import NativeDataFrame, NativeSeries
+    from narwhals._plan.compliant.dataframe import (
+        CompliantDataFrame as _CompliantDataFrame,
+    )
+    from narwhals._plan.compliant.series import CompliantSeries as _CompliantSeries
     from narwhals._plan.typing import OneOrIterable
     from narwhals._translate import ArrowStreamExportable
     from narwhals.typing import (
@@ -294,3 +298,8 @@ RankMethodSingle: TypeAlias = Literal["min", "max", "dense", "ordinal"]
 SearchSortedSide: TypeAlias = Literal["left", "right"]
 IOSource: TypeAlias = "FileSource | pa.NativeFile | BytesIO"
 """Superset of `nw.typing.FileSource`."""
+
+CompliantDataFrame: TypeAlias = "_CompliantDataFrame[Any, pa.Table, ChunkedArrayAny]"
+"""Alias for `ArrowDataFrame` when used in the parameter position of a protocol method."""
+CompliantSeries: TypeAlias = "_CompliantSeries[ChunkedArrayAny]"
+"""Alias for `ArrowSeries` when used in the parameter position of a protocol method."""

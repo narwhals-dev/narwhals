@@ -28,10 +28,17 @@ if TYPE_CHECKING:
     from narwhals._plan.polars.expr import PolarsExpr as Expr
     from narwhals._plan.polars.lazyframe import PolarsLazyFrame as LazyFrame
     from narwhals._plan.polars.series import PolarsSeries as Series
+    from narwhals._plan.polars.typing import CompliantDataFrame
     from narwhals._plan.series import Series as NwSeries
     from narwhals.dtypes import Date, DType, FloatType, IntegerType
     from narwhals.schema import Schema
-    from narwhals.typing import ClosedInterval, IntoDType, IntoSchema, NonNestedLiteral
+    from narwhals.typing import (
+        ClosedInterval,
+        ConcatMethod,
+        IntoDType,
+        IntoSchema,
+        NonNestedLiteral,
+    )
 
 Incomplete: TypeAlias = Any
 MAIN = Version.MAIN
@@ -230,7 +237,20 @@ class PolarsNamespace(
         native = pl.linear_space(start, end, num_samples, closed=closed, eager=True)
         return self._series.from_native(native, name, version=self.version)
 
-    concat = todo()
+    def concat_df(
+        self, dfs: Iterable[CompliantDataFrame], /, how: ConcatMethod = "vertical"
+    ) -> DataFrame:
+        result = pl.concat((df.native for df in dfs), how=how)
+        return self._dataframe.from_native(result, version=self.version)
+
+    concat_df_vertical = concat_df
+
+    def concat_df_horizontal(self, dfs: Iterable[CompliantDataFrame], /) -> DataFrame:
+        return self.concat_df(dfs, how="horizontal")
+
+    def concat_df_diagonal(self, dfs: Iterable[CompliantDataFrame], /) -> DataFrame:
+        return self.concat_df(dfs, how="diagonal")
+
     all_horizontal = todo()
     any_horizontal = todo()
     concat_str = todo()

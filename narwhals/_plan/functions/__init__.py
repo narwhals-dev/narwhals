@@ -114,13 +114,6 @@ def _concat_lazy(frames: Sequence[LazyFrameT], how: ConcatMethod) -> LazyFrameT:
 
 def _concat_eager(frames: Sequence[DataFrameT], how: ConcatMethod) -> DataFrameT:
     ns = namespace(frames[0])
-    if can_concat_dataframe(ns):
-        items = (df._compliant for df in frames)
-        if how == "vertical":
-            compliant = ns.concat_df(items)
-        elif how == "horizontal":
-            compliant = ns.concat_df_horizontal(items)
-        else:
-            compliant = ns.concat_df_diagonal(items)
-        return frames[0]._with_compliant(compliant)
-    raise unsupported_backend_operation_error(ns.implementation, "concat")
+    if not can_concat_dataframe(ns):
+        raise unsupported_backend_operation_error(ns.implementation, "concat")
+    return frames[0]._with_compliant(ns.concat_df((df._compliant for df in frames), how))

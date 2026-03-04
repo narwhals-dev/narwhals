@@ -15,11 +15,26 @@ if TYPE_CHECKING:
 
     from narwhals._plan.compliant.dataframe import CompliantDataFrame
     from narwhals._plan.compliant.series import CompliantSeries
+    from narwhals.typing import ConcatMethod
 
 
 class ConcatDataFrame(Protocol[NativeDataFrameT, NativeSeriesT]):
-    # NOTE: from `polars._plr.pyi`
     def concat_df(
+        self,
+        dfs: Iterable[CompliantDataFrame[Any, NativeDataFrameT, NativeSeriesT]],
+        /,
+        how: ConcatMethod,
+    ) -> CompliantDataFrame[Any, NativeDataFrameT, NativeSeriesT]:
+        if how == "vertical":
+            compliant = self.concat_df_vertical(dfs)
+        elif how == "horizontal":
+            compliant = self.concat_df_horizontal(dfs)
+        else:
+            compliant = self.concat_df_diagonal(dfs)
+        return compliant
+
+    # NOTE: Names adapted from from `polars._plr.pyi`
+    def concat_df_vertical(
         self, dfs: Iterable[CompliantDataFrame[Any, NativeDataFrameT, NativeSeriesT]], /
     ) -> CompliantDataFrame[Any, NativeDataFrameT, NativeSeriesT]: ...
     def concat_df_diagonal(

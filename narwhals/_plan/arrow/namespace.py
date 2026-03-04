@@ -11,7 +11,6 @@ from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._plan.arrow import functions as fn, io
 from narwhals._plan.common import todo
 from narwhals._plan.compliant.namespace import EagerNamespace
-from narwhals._plan.compliant.series import CompliantSeries
 from narwhals._plan.compliant.translate import FromDict, FromIterable
 from narwhals._plan.expressions.expr import RangeExpr
 from narwhals._plan.expressions.literal import is_literal_scalar
@@ -32,12 +31,12 @@ if TYPE_CHECKING:
     from narwhals._plan.arrow.typing import (
         BinaryFunction,
         ChunkedArray,
+        CompliantDataFrame,
+        CompliantSeries,
         IntegerScalar,
         IOSource,
         VariadicFunction,
     )
-    from narwhals._plan.compliant.dataframe import CompliantDataFrame
-    from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._plan.expressions import expr, functions as F
     from narwhals._plan.expressions.boolean import AllHorizontal, AnyHorizontal
     from narwhals._plan.expressions.expr import FunctionExpr as FExpr, RangeExpr
@@ -335,9 +334,7 @@ class ArrowNamespace(
         native = fn.linear_space(start, end, num_samples, closed=closed)
         return self._series.from_native(native, name, version=self.version)
 
-    def concat_df(
-        self, dfs: Iterable[CompliantDataFrame[Any, pa.Table, ChunkedArrayAny]]
-    ) -> Frame:
+    def concat_df_vertical(self, dfs: Iterable[CompliantDataFrame]) -> Frame:
         dfs = dfs if isinstance(dfs, tuple) else tuple(dfs)
         cols_0 = dfs[0].columns
         for i, df in enumerate(dfs[1:], start=1):
@@ -352,28 +349,22 @@ class ArrowNamespace(
         result = fn.concat_tables(df.native for df in dfs)
         return self._dataframe.from_native(result, self.version)
 
-    def concat_df_diagonal(
-        self, dfs: Iterable[CompliantDataFrame[Any, pa.Table, ChunkedArrayAny]]
-    ) -> Frame:
+    def concat_df_diagonal(self, dfs: Iterable[CompliantDataFrame]) -> Frame:
         return self._dataframe.from_native(
             fn.concat_tables((df.native for df in dfs), "default"), self.version
         )
 
-    def concat_df_horizontal(
-        self, dfs: Iterable[CompliantDataFrame[Any, pa.Table, ChunkedArrayAny]]
-    ) -> Frame:
+    def concat_df_horizontal(self, dfs: Iterable[CompliantDataFrame]) -> Frame:
         return self._dataframe.from_native(
             fn.concat_tables_horizontal(df.native for df in dfs), self.version
         )
 
-    def concat_series(self, series: Iterable[CompliantSeries[ChunkedArrayAny]]) -> Series:
+    def concat_series(self, series: Iterable[CompliantSeries]) -> Series:
         series = series if isinstance(series, tuple) else tuple(series)
         result = fn.concat_vertical(ser.native for ser in series)
         return self._series.from_native(result, series[0].name, version=self.version)
 
-    def concat_series_horizontal(
-        self, series: Iterable[CompliantSeries[ChunkedArrayAny]], /
-    ) -> Frame:
+    def concat_series_horizontal(self, series: Iterable[CompliantSeries], /) -> Frame:
         """Used for `ArrowExpr.sort_by`, seems like only pandas needs `stack_horizontal`?"""
         if isinstance(series, Collection):
             arrays, names = [s.native for s in series], [s.name for s in series]

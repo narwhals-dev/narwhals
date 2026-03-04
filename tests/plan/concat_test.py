@@ -12,7 +12,6 @@ from tests.plan.utils import DataFrame, assert_equal_data
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
 
-    from narwhals._utils import Implementation
     from tests.conftest import Data
 
 
@@ -26,23 +25,8 @@ def right() -> Data:
     return {"c": [6, 12, -1], "d": [0, -4, 2]}
 
 
-# TODO @dangotbanned: Impl `ConcatDataFrame` for `PolarsNamespace`
-def xfail_polars_concat(request: pytest.FixtureRequest, impl: Implementation) -> None:
-    request.applymarker(
-        pytest.mark.xfail(
-            impl.is_polars(),
-            raises=NotImplementedError,
-            reason="`concat`() is not yet supported for 'polars'",
-        )
-    )
-
-
-def test_concat_horizontal(
-    left: Data, right: Data, dataframe: DataFrame, request: pytest.FixtureRequest
-) -> None:
-    df_left = dataframe(left)
-    xfail_polars_concat(request, df_left.implementation)
-    result = nwp.concat((df_left, dataframe(right)), how="horizontal")
+def test_concat_horizontal(left: Data, right: Data, dataframe: DataFrame) -> None:
+    result = nwp.concat((dataframe(left), dataframe(right)), how="horizontal")
     expected = {
         "a": [1, 3, 2],
         "b": [4, 4, 6],
@@ -57,7 +41,6 @@ def test_concat_vertical(
     left: Data, right: Data, dataframe: DataFrame, request: pytest.FixtureRequest
 ) -> None:
     df_left = dataframe(left).rename({"a": "c", "b": "d"}).drop("z")
-    xfail_polars_concat(request, df_left.implementation)
     df_right = dataframe(right)
     result = nwp.concat([df_left, df_right], how="vertical")
     expected = {"c": [1, 3, 2, 6, 12, -1], "d": [4, 4, 6, 0, -4, 2]}
@@ -67,6 +50,14 @@ def test_concat_vertical(
         match=r"unable to vstack|inputs should all have the same schema",
     ):
         nwp.concat([df_left, df_right.rename({"d": "i"})])
+
+    request.applymarker(
+        pytest.mark.xfail(
+            df_left.implementation.is_polars(),
+            raises=AssertionError,
+            reason="'select' is not implemented for: 'PolarsDataFrame'",
+        )
+    )
     with pytest.raises(
         (Exception, TypeError),
         match=r"unable to vstack|unable to append|inputs should all have the same schema",
@@ -74,7 +65,7 @@ def test_concat_vertical(
         nwp.concat([df_left, df_left.select("d")], how="vertical")
 
 
-def test_concat_diagonal(dataframe: DataFrame, request: pytest.FixtureRequest) -> None:
+def test_concat_diagonal(dataframe: DataFrame) -> None:
     data_1 = {"a": [1, 3], "b": [4, 6]}
     data_2 = {"a": [100, 200], "z": ["x", "y"]}
     expected = {
@@ -82,9 +73,7 @@ def test_concat_diagonal(dataframe: DataFrame, request: pytest.FixtureRequest) -
         "b": [4, 6, None, None],
         "z": [None, None, "x", "y"],
     }
-    df_left = dataframe(data_1)
-    xfail_polars_concat(request, df_left.implementation)
-    result = nwp.concat([df_left, dataframe(data_2)], how="diagonal")
+    result = nwp.concat([dataframe(data_1), dataframe(data_2)], how="diagonal")
     assert_equal_data(result, expected)
 
 

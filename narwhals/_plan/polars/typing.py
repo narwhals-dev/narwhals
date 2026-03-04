@@ -5,9 +5,13 @@ from typing import TYPE_CHECKING, Any, Protocol
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from typing_extensions import Self
+    import polars as pl
+    from typing_extensions import Self, TypeAlias
 
     from narwhals._native import NativeDataFrame, NativeLazyFrame, NativeSeries
+    from narwhals._plan.compliant.dataframe import (
+        CompliantDataFrame as _CompliantDataFrame,
+    )
 
     # NOTE: Some obscure picks to make each protocol disjoint from `Native*`
     # and creating a link between each `NativePolars*`
@@ -38,3 +42,7 @@ if TYPE_CHECKING:
         def sink_ndjson(
             self, *args: Any, **kwds: Any
         ) -> NativePolarsLazyFrame | None: ...
+
+
+CompliantDataFrame: TypeAlias = "_CompliantDataFrame[Any, pl.DataFrame, pl.Series]"
+"""Alias for `PolarsDataFrame` when used in the parameter position of a protocol method."""
