@@ -5,7 +5,7 @@ from typing import Callable
 import pytest
 
 import narwhals as nw
-from tests.utils import POLARS_VERSION, Constructor, assert_equal_data
+from tests.utils import PANDAS_VERSION, POLARS_VERSION, Constructor, assert_equal_data
 
 pytest.importorskip("pyarrow")
 import pyarrow as pa
@@ -102,6 +102,9 @@ def test_pyarrow_string_type(
     assert expected_function(result.field("store_item").type)
 
 
+@pytest.mark.skipif(
+    PANDAS_VERSION < (2, 2), reason='"add" was not implemented yet for large-string'
+)
 def test_concat_str_with_large_string() -> None:
     # https://github.com/pandas-dev/pandas/issues/64393
     pytest.importorskip("pandas")
