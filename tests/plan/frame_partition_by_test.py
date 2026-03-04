@@ -9,7 +9,7 @@ import narwhals as nw
 from narwhals._plan import Selector, selectors as ncs
 from narwhals._utils import zip_strict
 from narwhals.exceptions import ColumnNotFoundError, DuplicateError
-from tests.plan.utils import assert_equal_data, dataframe, re_compile
+from tests.plan.utils import DataFrame, assert_equal_data, re_compile
 
 if TYPE_CHECKING:
     from narwhals._plan.typing import ColumnNameOrSelector, OneOrIterable
@@ -55,7 +55,12 @@ def data() -> Data:
     ids=["str", "ncs.string", "ncs.matches", "ncs.by_name", "ncs.by_dtype"],
 )
 def test_partition_by_single(
-    data: Data, by: ColumnNameOrSelector, *, include_key: bool, expected: Any
+    data: Data,
+    by: ColumnNameOrSelector,
+    *,
+    include_key: bool,
+    expected: Any,
+    dataframe: DataFrame,
 ) -> None:
     df = dataframe(data)
     results = df.partition_by(by, include_key=include_key)
@@ -108,6 +113,7 @@ def test_partition_by_multiple(
     *,
     include_key: bool,
     expected: Any,
+    dataframe: DataFrame,
 ) -> None:
     df = dataframe(data)
     if isinstance(more_by, (str, Selector)):
@@ -118,7 +124,7 @@ def test_partition_by_multiple(
         assert_equal_data(df, expect)
 
 
-def test_partition_by_missing_names(data: Data) -> None:
+def test_partition_by_missing_names(data: Data, dataframe: DataFrame) -> None:
     df = dataframe(data)
     with pytest.raises(ColumnNotFoundError, match=re.escape("not found: ['d']")):
         df.partition_by("d")
@@ -126,13 +132,13 @@ def test_partition_by_missing_names(data: Data) -> None:
         df.partition_by("c", "e")
 
 
-def test_partition_by_duplicate_names(data: Data) -> None:
+def test_partition_by_duplicate_names(data: Data, dataframe: DataFrame) -> None:
     df = dataframe(data)
     with pytest.raises(DuplicateError, match=re_compile(r"expected.+unique.+got.+'c'")):
         df.partition_by("c", ncs.numeric())
 
 
-def test_partition_by_fully_empty_selector(data: Data) -> None:
+def test_partition_by_fully_empty_selector(data: Data, dataframe: DataFrame) -> None:
     df = dataframe(data)
     with pytest.raises(
         ColumnNotFoundError, match=re_compile(r"ncs.array.+ncs.struct.+ncs.duration")
@@ -141,7 +147,9 @@ def test_partition_by_fully_empty_selector(data: Data) -> None:
 
 
 # NOTE: Matching polars behavior
-def test_partition_by_partially_missing_selector(data: Data) -> None:
+def test_partition_by_partially_missing_selector(
+    data: Data, dataframe: DataFrame
+) -> None:
     df = dataframe(data)
     results = df.partition_by(ncs.string() | ncs.list() | ncs.enum())
     expected = nw.Schema({"a": nw.String(), "b": nw.Int64(), "c": nw.Int64()})
