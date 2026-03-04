@@ -346,7 +346,7 @@ class PandasLikeNamespace(
                                 + separator_pa_large_string
                                 + pa.scalar(s_native, type=pa.large_string())
                             )
-                        elif result.native.dtype == "large_string[pyarrow]":
+                        else:
                             result = result + separator_pa_large_string + s
                     else:
                         result = result + separator + s
