@@ -15,7 +15,7 @@ from narwhals._plan.typing import (
     SeriesT,
 )
 from narwhals._utils import Version, generate_repr, qualified_type_name, unstable
-from narwhals.dependencies import is_pyarrow_chunked_array
+from narwhals.dependencies import is_polars_series, is_pyarrow_chunked_array
 from narwhals.exceptions import ShapeError
 
 if TYPE_CHECKING:
@@ -96,6 +96,10 @@ class Series(Generic[NativeSeriesT_co]):
             from narwhals._plan import arrow as _arrow
 
             return cls(_arrow.Series.from_native(native, name, version=cls._version))
+        if is_polars_series(native):
+            from narwhals._plan import polars as _polars
+
+            return cls(_polars.Series.from_native(native, name, version=cls._version))
 
         raise NotImplementedError(type(native))
 
