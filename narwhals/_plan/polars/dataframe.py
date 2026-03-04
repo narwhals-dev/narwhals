@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, Literal, overload
 import polars as pl
 
 from narwhals._plan._version import into_version
+from narwhals._plan.common import temp
 from narwhals._plan.compliant.dataframe import CompliantDataFrame
 from narwhals._plan.polars.frame import PolarsFrame
 from narwhals._plan.polars.namespace import (
@@ -248,6 +249,29 @@ class PolarsDataFrame(
             self.native.unique(subset, keep=keep, maintain_order=maintain_order)
         )
 
+    # NOTE: @dangotbanned: Try wrapping with `.lazy()<query>.collect()` once running older versions in ci
+    def unique_by(
+        self,
+        subset: Sequence[str] | None = None,
+        *,
+        order_by: Sequence[str],
+        keep: UniqueKeepStrategy = "any",
+        maintain_order: bool = False,
+    ) -> Self:
+        if not maintain_order:
+            return self._with_native(self.native.sort(order_by).unique(subset, keep=keep))
+        # NOTE: Unresolved performance question
+        # https://github.com/narwhals-dev/narwhals/blob/3642b8c545be26136ca42306622cf1ade4807d86/narwhals/_plan/polars/lazyframe.py#L205-L222
+        names = self.columns
+        idx = temp.column_name(names)
+        return self._with_native(
+            self.native.with_row_index(idx)
+            .sort(order_by)
+            .unique(subset or names, keep=keep)
+            .sort(idx)
+            .select(names)
+        )
+
     def unnest(self, columns: Sequence[str]) -> Self:
         return self._with_native(self.native.unnest(columns))
 
@@ -291,7 +315,6 @@ class PolarsDataFrame(
     filter = not_implemented()
     pivot = not_implemented()
     select = not_implemented()
-    unique_by = not_implemented()
     with_columns = not_implemented()
 
 

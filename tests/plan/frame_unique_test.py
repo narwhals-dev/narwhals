@@ -4,10 +4,11 @@ from typing import TYPE_CHECKING, Any, Literal
 
 import pytest
 
+# ruff: noqa: FBT001
 from narwhals import _plan as nwp
 from narwhals._plan import selectors as ncs
 from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError
-from tests.plan.utils import assert_equal_data, dataframe, re_compile
+from tests.plan.utils import DataFrame, assert_equal_data, re_compile
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -26,7 +27,13 @@ def data() -> Data:
     return {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
 
 
-def test_unique_invalid_keep(data: Data) -> None:
+maintain_order = pytest.mark.parametrize(
+    "maintain_order", [True, False], ids=["maintain-ordered", "allow-unordered"]
+)
+"""`vscode_pytest` breaks if this is a fixture?"""
+
+
+def test_unique_invalid_keep(data: Data, dataframe: DataFrame) -> None:
     with pytest.raises(NotImplementedError, match=re_compile(r"found.+cabbage")):
         dataframe(data).unique(keep="cabbage")  # type: ignore[arg-type]
 
@@ -42,18 +49,12 @@ def test_unique_invalid_keep(data: Data) -> None:
         (ncs.first().last(), InvalidOperationError),
     ],
 )
-def test_unique_invalid_subset(data: Data, subset: Any, err: type[Exception]) -> None:
+def test_unique_invalid_subset(
+    data: Data, subset: Any, err: type[Exception], dataframe: DataFrame
+) -> None:
     df = dataframe(data)
     with pytest.raises(err):
         df.unique(subset)
-
-
-@pytest.fixture(
-    scope="module", params=[True, False], ids=["maintain-ordered", "allow-unordered"]
-)
-def maintain_order(request: pytest.FixtureRequest) -> bool:
-    result: bool = request.param
-    return result
 
 
 @pytest.mark.parametrize("subset", ["b", ["b"]])
@@ -65,12 +66,17 @@ def maintain_order(request: pytest.FixtureRequest) -> bool:
     ],
 )
 def test_unique_eager(
-    data: Data, subset: str | list[str] | None, keep: OrderedStrategy, expected: Data
+    data: Data,
+    subset: str | list[str] | None,
+    keep: OrderedStrategy,
+    expected: Data,
+    dataframe: DataFrame,
 ) -> None:
     result = dataframe(data).unique(subset, keep=keep).sort("z")
     assert_equal_data(result, expected)
 
 
+@maintain_order
 @pytest.mark.parametrize("order_by", ["i", ncs.first()])
 @pytest.mark.parametrize(
     ("keep", "expected"),
@@ -83,8 +89,8 @@ def test_unique_first_last(
     keep: OrderedStrategy,
     order_by: ColumnNameOrSelector | Sequence[ColumnNameOrSelector],
     expected: Data,
-    *,
     maintain_order: bool,
+    dataframe: DataFrame,
 ) -> None:
     data = {"i": [0, 1, None, 2], "a": [1, 3, 2, 1], "b": [4, 4, 4, 6]}
     result = dataframe(data).unique(
@@ -95,6 +101,7 @@ def test_unique_first_last(
     assert_equal_data(result, expected)
 
 
+@maintain_order
 @pytest.mark.parametrize(
     ("keep", "expected"),
     [
@@ -103,7 +110,7 @@ def test_unique_first_last(
     ],
 )
 def test_unique_first_last_no_subset(
-    keep: OrderedStrategy, expected: Data, *, maintain_order: bool
+    keep: OrderedStrategy, expected: Data, maintain_order: bool, dataframe: DataFrame
 ) -> None:
     data = {"i": [0, 1, 1, 2], "b": [4, 4, 4, 6]}
     result = dataframe(data).unique(
@@ -127,6 +134,7 @@ def test_unique(
     subset: OneOrIterable[ColumnNameOrSelector] | None,
     keep: UnorderedStrategy,
     expected: Data,
+    dataframe: DataFrame,
 ) -> None:
     result = dataframe(data).unique(subset, keep=keep).sort("z")
     assert_equal_data(result, expected)
@@ -141,22 +149,33 @@ def test_unique_full_subset(
     subset: OneOrIterable[ColumnNameOrSelector] | None,
     keep: UnorderedStrategy,
     expected: Data,
+    dataframe: DataFrame,
 ) -> None:
     data = {"a": [1, 1, 1, 2], "b": [3, 3, 4, 4]}
     result = dataframe(data).unique(subset, keep=keep).sort("a", "b")
     assert_equal_data(result, expected)
 
 
-def test_unique_none(data: Data, *, maintain_order: bool) -> None:
+@maintain_order
+def test_unique_none(data: Data, *, maintain_order: bool, dataframe: DataFrame) -> None:
     result = dataframe(data).unique(maintain_order=maintain_order)
     if not maintain_order:
         result = result.sort("z")
     assert_equal_data(result, data)
 
 
-def test_unique_3069() -> None:
+# TODO @dangotbanned: `PolarsDataFrame.select`
+def test_unique_3069(dataframe: DataFrame, request: pytest.FixtureRequest) -> None:
     data = {"name": ["a", "b", "c"], "group": ["d", "e", "f"], "value": [1, 2, 3]}
     group = ncs.by_name("group")
-    result = dataframe(data).select(group).unique().sort(group)
+    df = dataframe(data)
+    request.applymarker(
+        pytest.mark.xfail(
+            df.implementation.is_polars(),
+            raises=NotImplementedError,
+            reason="TODO @dangotbanned: `PolarsDataFrame.select`",
+        )
+    )
+    result = df.select(group).unique().sort(group)
     expected = {"group": ["d", "e", "f"]}
     assert_equal_data(result, expected)
