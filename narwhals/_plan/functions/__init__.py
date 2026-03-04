@@ -102,8 +102,8 @@ def _concat(
     elif _guards.is_sequence_dataframe(frames):
         return _concat_eager(frames, how)
 
-    msg = f"The items to concatenate should either all be eager, or all lazy, got: {[type(item) for item in frames]}"  # pragma: no cover
-    raise TypeError(msg)  # pragma: no cover
+    msg = f"The items to concatenate should either all be eager, or all lazy, got: {[type(item) for item in frames]}"
+    raise TypeError(msg)
 
 
 def _concat_lazy(frames: Sequence[LazyFrameT], how: ConcatMethod) -> LazyFrameT:

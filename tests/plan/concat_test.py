@@ -7,7 +7,7 @@ import pytest
 
 import narwhals._plan as nwp
 from narwhals.typing import ConcatMethod
-from tests.plan.utils import DataFrame, assert_equal_data
+from tests.plan.utils import DataFrame, LazyFrame, assert_equal_data, re_compile
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
@@ -86,3 +86,12 @@ def test_concat_empty_invalid(
 ) -> None:
     with pytest.raises(ValueError, match="Cannot concatenate an empty iterable"):
         nwp.concat(into_iterable(), how=how)
+
+
+@pytest.mark.parametrize("how", get_args(ConcatMethod))
+def test_concat_mixed_laziness(lazyframe: LazyFrame, how: ConcatMethod) -> None:
+    pytest.importorskip("polars")
+    lf = lazyframe({"a": [1, 2, 3], "b": [4, 5, 6]})
+    df = lf.collect("polars")
+    with pytest.raises(TypeError, match=re_compile(r"all.+eager.+or.+all.+lazy")):
+        nwp.concat((lf, df), how=how)  # type: ignore[type-var]
