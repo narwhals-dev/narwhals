@@ -333,7 +333,7 @@ class PandasLikeNamespace(
                 result = series[0]
                 for s in series[1:]:
                     _, s_native = align_and_extract_native(result, s)
-                    if result.native.dtype == "large_string[pyarrow]":
+                    if str(result.native.dtype) == "large_string[pyarrow]":
                         # https://github.com/pandas-dev/pandas/issues/64393
                         import pyarrow as pa  # ignore-banned-import
 
