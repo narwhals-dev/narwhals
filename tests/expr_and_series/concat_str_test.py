@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Callable
+from typing import Any, Callable
 
 import pytest
 
@@ -117,7 +117,7 @@ def test_concat_str_with_large_string() -> None:
     native_pd = native_pa.to_pandas(types_mapper=pd.ArrowDtype)
 
     expr = nw.concat_str("store", "item", separator="-").alias("store_item")
-    result = nw.from_native(native_pa).with_columns(expr)
+    result: nw.DataFrame[Any] = nw.from_native(native_pa).with_columns(expr)
     expected = {
         "store": ["foo", "bar"],
         "item": ["axe", "saw"],
