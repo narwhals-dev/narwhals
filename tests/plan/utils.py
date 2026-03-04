@@ -283,7 +283,12 @@ def _parse_identifiers(ids: OneOrIterable[Identifier], /) -> frozenset[Identifie
 
 
 class TestBackend(Generic[NativeLazyFrame, NativeDataFrameT_co, NativeSeriesT_co]):
-    """TODO @dangotbanned: set up so fixtures are populated by importorskip success."""
+    """Helper for parametrizing multiple fixtures for a single backend.
+
+    Each backend should subclass and filling in any relevant `ClassVar`(s) & `native_*` constructors.
+
+    `conftest.py` will take care of the rest 😄
+    """
 
     import_or_skip_module: ClassVar[ModuleName]
     """Equivalent to[^1] the string used in `pytest.importorskip(...)`.
@@ -368,6 +373,26 @@ class TestBackend(Generic[NativeLazyFrame, NativeDataFrameT_co, NativeSeriesT_co
         if self.implementation is Implementation.UNKNOWN:
             return self.import_or_skip_module
         return self.implementation.value
+
+    # TODO @dangotbanned: Add the constructor concept
+    def try_get_constructor(
+        self, name: ConstructorFixtureName, /
+    ) -> Constructor[Incomplete] | None:
+        """Return a constructor if the backend supports fixture `name`.
+
+        Intending to replace using a bound method *later*, and return a callable instance instead.
+
+        Would support everything it does already, but the fixture could provide properties like:
+
+            implementation
+            backend_name
+            ...
+
+        Which saves initializing the constructor just to skip a test.
+        """
+        if self.supports[name]:
+            return getattr(self, name)
+        return None
 
     def __init_subclass__(
         cls, *args: Any, import_or_skip_module: ModuleName | None = None, **kwds: Any

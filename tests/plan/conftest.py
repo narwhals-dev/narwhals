@@ -112,8 +112,10 @@ def _parametrize_constructor_fixture(
         methods = []
         ids = []
         for backend in backends:
-            if backend.supports[name]:
-                methods.append(getattr(backend, name))
+            if constructor := backend.try_get_constructor(name):
+                methods.append(constructor)
+                # TODO @dangotbanned: Replace this `ids` bit with a callable (e.g. `attrgetter("identifier")`)
+                # Need to finish converting the bound methods to instances *first though
                 ids.append(backend.identifier)
         if methods:
             metafunc.parametrize(name, methods, ids=ids)
