@@ -170,7 +170,7 @@ class DuckDBNamespace(
         self, a: DuckDBExpr, b: DuckDBExpr, *, method: CorrelationMethod
     ) -> DuckDBExpr:
         if method != "pearson":
-            msg = "Only 'pearson' correlation is supported for Spark."
+            msg = "Only 'pearson' correlation is supported for DuckDB."
             raise NotImplementedError(msg)
 
         def func(df: DuckDBLazyFrame) -> list[Expression]:
