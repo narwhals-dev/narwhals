@@ -2,9 +2,7 @@ from __future__ import annotations
 
 import operator
 import warnings
-from typing import TYPE_CHECKING, Any, Callable, Literal
-
-import numpy as np
+from typing import TYPE_CHECKING, Any, Callable, Literal, overload
 
 from narwhals._compliant import EagerSeries, EagerSeriesHist
 from narwhals._pandas_like.series_cat import PandasLikeSeriesCatNamespace
@@ -13,6 +11,7 @@ from narwhals._pandas_like.series_list import PandasLikeSeriesListNamespace
 from narwhals._pandas_like.series_str import PandasLikeSeriesStringNamespace
 from narwhals._pandas_like.series_struct import PandasLikeSeriesStructNamespace
 from narwhals._pandas_like.utils import (
+    NUMPY_VERSION,
     align_and_extract_native,
     broadcast_series_to_index,
     get_dtype_backend,
@@ -25,7 +24,7 @@ from narwhals._pandas_like.utils import (
     set_index,
 )
 from narwhals._typing_compat import assert_never
-from narwhals._utils import Implementation, is_list_of, no_default, parse_version
+from narwhals._utils import Implementation, is_list_of, no_default
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_like_series
 from narwhals.exceptions import InvalidOperationError
 
@@ -280,34 +279,36 @@ class PandasLikeSeries(EagerSeries[Any]):
         result[mask_na] = None
         return self._with_native(result)
 
-    def scatter(self, indices: int | Sequence[int], values: Any) -> Self:
-        if isinstance(values, self.__class__):
-            values = set_index(
-                values.native,
-                self.native.index[indices],
-                implementation=self._implementation,
-            )
-        s = self.native.copy(deep=True)
-        s.iloc[indices] = values
-        s.name = self.name
-        return self._with_native(s)
+    @overload
+    def scatter(
+        self, indices: Self, values: Self, *, in_place: Literal[True]
+    ) -> None: ...
+    @overload
+    def scatter(
+        self, indices: Self, values: Self, *, in_place: Literal[False] = False
+    ) -> Self: ...
 
-    def _scatter_in_place(self, indices: Self, values: Self) -> None:
-        # Scatter, modifying original Series. Use with care!
-        implementation = self._implementation
-        backend_version = self._backend_version
+    def scatter(
+        self, indices: Self, values: Self, *, in_place: bool = False
+    ) -> Self | None:
+        # !NOTE: See conversation at https://github.com/narwhals-dev/narwhals/pull/3444#discussion_r2787546529
+        # to understand why signature differs from `CompliantSeries`
+        impl = self._implementation
+        native_series, indices_native = self.native, indices.native
         values_native = set_index(
-            values.native,
-            self.native.index[indices.native],
-            implementation=implementation,
+            values.native, native_series.index[indices_native], implementation=impl
         )
-        if implementation is Implementation.PANDAS and parse_version(np) < (2,):
-            values_native = values_native.copy()  # pragma: no cover
-        min_pd_version = (1, 2)
-        if implementation is Implementation.PANDAS and backend_version < min_pd_version:
-            self.native.iloc[indices.native.values] = values_native  # noqa: PD011
-        else:
-            self.native.iloc[indices.native] = values_native
+        series = native_series if in_place else native_series.copy(deep=True)
+
+        if impl.is_pandas():
+            if in_place and NUMPY_VERSION < (2,):  # pragma: no cover
+                values_native = values_native.copy()
+            if self._backend_version < (1, 2):
+                indices_native = indices_native.to_numpy()
+
+        series.iloc[indices_native] = values_native
+
+        return None if in_place else self._with_native(series)
 
     def cast(self, dtype: IntoDType) -> Self:
         if self.dtype == dtype and self.native.dtype != "object":

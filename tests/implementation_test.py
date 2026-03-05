@@ -112,12 +112,13 @@ if TYPE_CHECKING:
     import dask.dataframe as dd
     import duckdb
     import ibis
-    import modin.pandas as mpd
     import pandas as pd
     import polars as pl
     import pyarrow as pa
     from sqlframe.base.dataframe import BaseDataFrame
     from typing_extensions import assert_type
+
+    import tests._modin_stub as mpd
 
     any_df: nw.DataFrame[Any] = cast("nw.DataFrame[Any]", "")
     any_ldf: nw.LazyFrame[Any] = cast("nw.LazyFrame[Any]", "")
