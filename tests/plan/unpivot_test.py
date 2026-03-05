@@ -91,12 +91,12 @@ def test_unpivot_default_var_value_names(data: Data, dataframe: DataFrame) -> No
 def test_unpivot_mixed_types(
     dataframe: DataFrame, request: pytest.FixtureRequest
 ) -> None:
-    df = dataframe({"idx": [0, 1], "a": [1, 2], "b": [1.5, 2.5]})
     request.applymarker(
         pytest.mark.xfail(
-            df.implementation.is_pyarrow() and PYARROW_VERSION < (14, 0, 0),
+            dataframe.is_pyarrow() and PYARROW_VERSION < (14, 0, 0),
             reason="`unpivot_mixed_types` requires `pyarrow>=14`",
         )
     )
-    result = df.unpivot(["a", "b"], index="idx")
+    data = {"idx": [0, 1], "a": [1, 2], "b": [1.5, 2.5]}
+    result = dataframe(data).unpivot(["a", "b"], index="idx")
     assert result.collect_schema().dtypes() == [nw.Int64(), nw.String(), nw.Float64()]

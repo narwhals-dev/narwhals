@@ -91,13 +91,12 @@ def test_sink_parquet(
     lazyframe: LazyFrame,
     request: pytest.FixtureRequest,
 ) -> None:
-    lf = lazyframe(data)
     request.applymarker(
         pytest.mark.xfail(
-            lf.implementation.is_pyarrow(),
+            lazyframe.is_pyarrow(),
             raises=NotImplementedError,
             reason="TODO @dangotbanned: `Arrow*Frame.sink_parquet`",
         )
     )
-    lf.sink_parquet(parquet_path)
+    lazyframe(data).sink_parquet(parquet_path)
     assert Path(parquet_path).exists()

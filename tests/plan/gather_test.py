@@ -61,15 +61,14 @@ def test_gather_series(
     series: Series,
     request: pytest.FixtureRequest,
 ) -> None:
-    ser = series(data[column]).alias(column)
     request.applymarker(
         pytest.mark.xfail(
-            ser.implementation.is_pyarrow() and any(idx < 0 for idx in indices),
+            series.is_pyarrow() and any(idx < 0 for idx in indices),
             reason="TODO @dangotbanned: Handle negative indices for `ArrowSeries.gather`",
             raises=IndexError,
         )
     )
-    result = ser.gather(indices)
+    result = series(data[column]).alias(column).gather(indices)
     assert_equal_series(result, expected, column)
 
 

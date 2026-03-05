@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+from operator import attrgetter
+from typing import TYPE_CHECKING, Any, Literal
 
 if TYPE_CHECKING:
-    from collections.abc import Collection
+    from collections.abc import Callable, Collection
 
     import pytest
     from typing_extensions import LiteralString
@@ -79,6 +80,9 @@ def _resolve_options(
     return (include or "ALL"), (exclude or None)
 
 
+get_identifier: Callable[[Any], str] = attrgetter("identifier")
+
+
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     from tests.plan.utils import TestBackend
 
@@ -108,14 +112,9 @@ def _parametrize_constructor_fixture(
     metafunc: pytest.Metafunc,
     backends: tuple[TestBackendAny, ...],
 ) -> None:
-    if name in metafunc.fixturenames:
-        methods = []
-        ids = []
-        for backend in backends:
-            if constructor := backend.try_get_constructor(name):
-                methods.append(constructor)
-                # TODO @dangotbanned: Replace this `ids` bit with a callable (e.g. `attrgetter("identifier")`)
-                # Need to finish converting the bound methods to instances *first though
-                ids.append(backend.identifier)
-        if methods:
-            metafunc.parametrize(name, methods, ids=ids)
+    if name in metafunc.fixturenames and (
+        impls := [
+            impl for backend in backends if (impl := backend.try_get_constructor(name))
+        ]
+    ):
+        metafunc.parametrize(name, impls, ids=get_identifier)

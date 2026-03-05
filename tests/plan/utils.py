@@ -65,18 +65,9 @@ if TYPE_CHECKING:
 R_co = TypeVar("R_co", covariant=True)
 
 
-class Constructor(Protocol[R_co]):
+class _Constructor(Protocol[R_co]):
     def __call__(self, data: Any, *args: Any, **kwds: Any) -> R_co: ...
 
-
-LazyFrame: TypeAlias = Constructor[nwp.LazyFrame[Any]]
-"""The type of the `lazyframe` fixture."""
-
-DataFrame: TypeAlias = Constructor[nwp.DataFrame[Any, Any]]
-"""The type of the `dataframe` fixture."""
-
-Series: TypeAlias = Constructor[nwp.Series[Any]]
-"""The type of the `series` fixture."""
 
 ConstructorFixtureName: TypeAlias = Literal["lazyframe", "dataframe", "series"]
 
@@ -95,7 +86,10 @@ class SupportProfile(TypedDict):
 Incomplete: TypeAlias = Any
 ModuleName: TypeAlias = "LiteralString"
 Identifier: TypeAlias = "BackendName | ModuleName | LiteralString"
-"""String used for test ids and backend `include`/`exclude` filters."""
+"""String used for `parametrize` test ids and backend `include`/`exclude` filters."""
+
+UnknownBehavior: TypeAlias = Literal["raise", "ignore"]
+"""How to treat `Implementation.UNKNOWN` for an operation."""
 
 
 def first(*names: str) -> nwp.Expr:
@@ -374,24 +368,23 @@ class TestBackend(Generic[NativeLazyFrame, NativeDataFrameT_co, NativeSeriesT_co
             return self.import_or_skip_module
         return self.implementation.value
 
-    # TODO @dangotbanned: Add the constructor concept
     def try_get_constructor(
         self, name: ConstructorFixtureName, /
     ) -> Constructor[Incomplete] | None:
-        """Return a constructor if the backend supports fixture `name`.
+        """Return a `Constructor` if the backend supports fixture `name`.
 
-        Intending to replace using a bound method *later*, and return a callable instance instead.
+        The returned instance is callable, and gives easy access to:
 
-        Would support everything it does already, but the fixture could provide properties like:
-
-            implementation
-            backend_name
-            ...
-
-        Which saves initializing the constructor just to skip a test.
+            Implementation
+            Implementation.is_*()
+            backend_version
+            identifier  # [<this-guy>] inside a `parametrize` id
         """
         if self.supports[name]:
-            return getattr(self, name)
+            # TODO @dangotbanned: Probably should type `method`
+            # since it can only be 1/3 return types (`ConstructorFixtureName`)
+            method = getattr(self, name)
+            return Constructor(method, name, self.identifier, self.implementation)
         return None
 
     def __init_subclass__(
@@ -462,6 +455,61 @@ def backend_support_profile(backend: type[TestBackend[Any, Any, Any]]) -> Suppor
     return SupportProfile(
         lazyframe=_("lazyframe"), dataframe=_("dataframe"), series=_("series")
     )
+
+
+class Constructor(Generic[R_co]):
+    """Metadata-rich constructor wrapper.
+
+    Fixtures wrapped in this way provide access to things you may need in `request.applymarker`.
+    """
+
+    __slots__ = ("_function", "fixture_name", "identifier", "implementation")
+    _function: _Constructor[R_co]
+    fixture_name: ConstructorFixtureName
+    identifier: Identifier
+    implementation: Implementation
+
+    def __init__(
+        self,
+        bound_method: _Constructor[R_co],
+        name: ConstructorFixtureName,
+        identifier: BackendName | ModuleName | LiteralString,
+        implementation: Implementation,
+        /,
+    ) -> None:
+        self._function = bound_method
+        self.fixture_name = name
+        self.identifier = identifier
+        self.implementation = implementation
+
+    def __call__(self, data: Any, *args: Any, **kwds: Any) -> R_co:
+        return self._function(data, *args, **kwds)
+
+    def __repr__(self) -> str:
+        return f"Constructor<{self.fixture_name}[{self.identifier}]>"
+
+    def is_polars(self) -> bool:
+        return self.implementation.is_polars()
+
+    def is_pyarrow(self) -> bool:
+        return self.implementation.is_pyarrow()
+
+    def backend_version(self, *, unknown: UnknownBehavior = "ignore") -> tuple[int, ...]:
+        version = self.implementation._backend_version()
+        if (self.implementation is not Implementation.UNKNOWN) or unknown == "ignore":
+            return version
+        msg = f"TODO: Add support for {self.backend_version.__qualname__}({unknown=}) when integrating plugins\n{self!r}"
+        raise NotImplementedError(msg)
+
+
+LazyFrame: TypeAlias = Constructor[nwp.LazyFrame[Any]]
+"""The type of the `lazyframe` fixture."""
+
+DataFrame: TypeAlias = Constructor[nwp.DataFrame[Any, Any]]
+"""The type of the `dataframe` fixture."""
+
+Series: TypeAlias = Constructor[nwp.Series[Any]]
+"""The type of the `series` fixture."""
 
 
 class PolarsBackend(

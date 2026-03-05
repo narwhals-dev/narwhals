@@ -53,7 +53,7 @@ def test_concat_vertical(
 
     request.applymarker(
         pytest.mark.xfail(
-            df_left.implementation.is_polars(),
+            dataframe.is_polars(),
             raises=AssertionError,
             reason="'select' is not implemented for: 'PolarsDataFrame'",
         )

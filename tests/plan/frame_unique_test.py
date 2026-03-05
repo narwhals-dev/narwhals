@@ -168,14 +168,13 @@ def test_unique_none(data: Data, *, maintain_order: bool, dataframe: DataFrame) 
 def test_unique_3069(dataframe: DataFrame, request: pytest.FixtureRequest) -> None:
     data = {"name": ["a", "b", "c"], "group": ["d", "e", "f"], "value": [1, 2, 3]}
     group = ncs.by_name("group")
-    df = dataframe(data)
     request.applymarker(
         pytest.mark.xfail(
-            df.implementation.is_polars(),
+            dataframe.is_polars(),
             raises=NotImplementedError,
             reason="TODO @dangotbanned: `PolarsDataFrame.select`",
         )
     )
-    result = df.select(group).unique().sort(group)
+    result = dataframe(data).select(group).unique().sort(group)
     expected = {"group": ["d", "e", "f"]}
     assert_equal_data(result, expected)
