@@ -1429,18 +1429,13 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
     `.otherwise(<value if condition is false>)` can be appended at the end. If not
     appended, and the condition is not `True`, `None` will be returned.
 
-    Info:
-        Chaining multiple `.when(<condition>).then(<value>)` statements is currently
-        not supported.
-        See [Narwhals#668](https://github.com/narwhals-dev/narwhals/issues/668).
-
     Arguments:
         predicates: Condition(s) that must be met in order to apply the subsequent
             statement. Accepts one or more boolean expressions, which are implicitly
             combined with `&`. String input is parsed as a column name.
 
     Returns:
-        A "when" object, which `.then` can be called on.
+        A "When" object, which `.then` can be called on.
 
     Examples:
         >>> import pandas as pd
