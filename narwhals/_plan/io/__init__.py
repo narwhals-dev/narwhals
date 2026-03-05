@@ -10,7 +10,6 @@ from narwhals._utils import normalize_path, unstable
 if TYPE_CHECKING:
     import polars as pl
     import pyarrow as pa
-    from typing_extensions import TypeAlias
 
     from narwhals._plan.compliant.dataframe import CompliantDataFrame
     from narwhals._plan.dataframe import DataFrame
@@ -19,8 +18,6 @@ if TYPE_CHECKING:
     from narwhals._typing import Arrow, Polars
     from narwhals.schema import Schema
     from narwhals.typing import Backend, EagerAllowed, FileSource, IntoBackend
-
-    CompliantDF: TypeAlias = CompliantDataFrame[Any, NativeDataFrameT, NativeSeriesT]
 
 
 @overload
@@ -105,7 +102,7 @@ def read_parquet_schema(source: FileSource, *, backend: IntoBackend[Backend]) ->
 def _read_csv(
     source: str,
     kwds: dict[str, Any],
-    ns: _io.ReadCsv[CompliantDF[NativeDataFrameT, NativeSeriesT]],
+    ns: _io.ReadCsv[CompliantDataFrame[NativeDataFrameT, NativeSeriesT]],
     /,
 ) -> DataFrame[NativeDataFrameT, NativeSeriesT]:
     return ns.read_csv(source, **kwds).to_narwhals()
@@ -114,7 +111,7 @@ def _read_csv(
 def _read_parquet(
     source: str,
     kwds: dict[str, Any],
-    ns: _io.ReadParquet[CompliantDF[NativeDataFrameT, NativeSeriesT]],
+    ns: _io.ReadParquet[CompliantDataFrame[NativeDataFrameT, NativeSeriesT]],
     /,
 ) -> DataFrame[NativeDataFrameT, NativeSeriesT]:
     return ns.read_parquet(source, **kwds).to_narwhals()

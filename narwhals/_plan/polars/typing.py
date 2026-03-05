@@ -44,5 +44,5 @@ if TYPE_CHECKING:
         ) -> NativePolarsLazyFrame | None: ...
 
 
-CompliantDataFrame: TypeAlias = "_CompliantDataFrame[Any, pl.DataFrame, pl.Series]"
+CompliantDataFrame: TypeAlias = "_CompliantDataFrame[pl.DataFrame, pl.Series]"
 """Alias for `PolarsDataFrame` when used in the parameter position of a protocol method."""

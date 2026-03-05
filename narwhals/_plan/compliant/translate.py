@@ -60,7 +60,7 @@ class FromDict(Protocol[NativeDataFrameT, NativeSeriesT_co]):
         *,
         schema: IntoSchema | None = None,
         version: Version = Version.MAIN,
-    ) -> CompliantDataFrame[Any, NativeDataFrameT, NativeSeriesT_co]: ...
+    ) -> CompliantDataFrame[NativeDataFrameT, NativeSeriesT_co]: ...
 
 
 class FromIterable(Protocol[NativeSeriesT_co]):

@@ -299,7 +299,7 @@ SearchSortedSide: TypeAlias = Literal["left", "right"]
 IOSource: TypeAlias = "FileSource | pa.NativeFile | BytesIO"
 """Superset of `nw.typing.FileSource`."""
 
-CompliantDataFrame: TypeAlias = "_CompliantDataFrame[Any, pa.Table, ChunkedArrayAny]"
+CompliantDataFrame: TypeAlias = "_CompliantDataFrame[pa.Table, ChunkedArrayAny]"
 """Alias for `ArrowDataFrame` when used in the parameter position of a protocol method."""
 CompliantSeries: TypeAlias = "_CompliantSeries[ChunkedArrayAny]"
 """Alias for `ArrowSeries` when used in the parameter position of a protocol method."""

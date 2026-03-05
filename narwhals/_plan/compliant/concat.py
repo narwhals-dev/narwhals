@@ -3,8 +3,6 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any, Protocol
 
-from narwhals._plan.compliant.dataframe import CompliantDataFrame
-from narwhals._plan.compliant.series import CompliantSeries
 from narwhals._plan.typing import NativeDataFrameT, NativeSeriesT
 from narwhals._utils import _hasattr_static
 
@@ -21,10 +19,10 @@ if TYPE_CHECKING:
 class ConcatDataFrame(Protocol[NativeDataFrameT, NativeSeriesT]):
     def concat_df(
         self,
-        dfs: Iterable[CompliantDataFrame[Any, NativeDataFrameT, NativeSeriesT]],
+        dfs: Iterable[CompliantDataFrame[NativeDataFrameT, NativeSeriesT]],
         /,
         how: ConcatMethod,
-    ) -> CompliantDataFrame[Any, NativeDataFrameT, NativeSeriesT]:
+    ) -> CompliantDataFrame[NativeDataFrameT, NativeSeriesT]:
         if how == "vertical":
             compliant = self.concat_df_vertical(dfs)
         elif how == "horizontal":
@@ -35,14 +33,14 @@ class ConcatDataFrame(Protocol[NativeDataFrameT, NativeSeriesT]):
 
     # NOTE: Names adapted from from `polars._plr.pyi`
     def concat_df_vertical(
-        self, dfs: Iterable[CompliantDataFrame[Any, NativeDataFrameT, NativeSeriesT]], /
-    ) -> CompliantDataFrame[Any, NativeDataFrameT, NativeSeriesT]: ...
+        self, dfs: Iterable[CompliantDataFrame[NativeDataFrameT, NativeSeriesT]], /
+    ) -> CompliantDataFrame[NativeDataFrameT, NativeSeriesT]: ...
     def concat_df_diagonal(
-        self, dfs: Iterable[CompliantDataFrame[Any, NativeDataFrameT, NativeSeriesT]], /
-    ) -> CompliantDataFrame[Any, NativeDataFrameT, NativeSeriesT]: ...
+        self, dfs: Iterable[CompliantDataFrame[NativeDataFrameT, NativeSeriesT]], /
+    ) -> CompliantDataFrame[NativeDataFrameT, NativeSeriesT]: ...
     def concat_df_horizontal(
-        self, dfs: Iterable[CompliantDataFrame[Any, NativeDataFrameT, NativeSeriesT]], /
-    ) -> CompliantDataFrame[Any, NativeDataFrameT, NativeSeriesT]: ...
+        self, dfs: Iterable[CompliantDataFrame[NativeDataFrameT, NativeSeriesT]], /
+    ) -> CompliantDataFrame[NativeDataFrameT, NativeSeriesT]: ...
 
 
 class ConcatSeries(Protocol[NativeSeriesT]):
@@ -54,7 +52,7 @@ class ConcatSeries(Protocol[NativeSeriesT]):
 class ConcatSeriesHorizontal(Protocol[NativeDataFrameT, NativeSeriesT]):
     def concat_series_horizontal(
         self, series: Iterable[CompliantSeries[NativeSeriesT]], /
-    ) -> CompliantDataFrame[Any, NativeDataFrameT, NativeSeriesT]: ...
+    ) -> CompliantDataFrame[NativeDataFrameT, NativeSeriesT]: ...
 
 
 def can_concat_dataframe(

@@ -45,9 +45,7 @@ JOIN_OUTER_RENAMED_TO_FULL = BACKEND_VERSION >= (0, 20, 29)
 MELT_RENAMED_TO_UNPIVOT = BACKEND_VERSION >= (1, 0, 0)
 
 
-class PolarsDataFrame(
-    PolarsFrame, CompliantDataFrame[Incomplete, pl.DataFrame, pl.Series]
-):
+class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
     _native: pl.DataFrame
     _version: Version
 

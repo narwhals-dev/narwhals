@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, overload
 from narwhals._plan._version import into_version
 from narwhals._plan.compliant import io
 from narwhals._plan.compliant.group_by import Grouped
-from narwhals._plan.compliant.typing import ColumnT_co, LazyFrameAny, SeriesT_co
+from narwhals._plan.compliant.typing import LazyFrameAny, SeriesT_co
 from narwhals._plan.typing import (
     IncompleteCyclic,
     IntoExpr,
@@ -51,13 +51,12 @@ Incomplete: TypeAlias = Any
 MAIN = Version.MAIN
 
 
-class CompliantFrame(Protocol[ColumnT_co, NativeFrameT_co]):
-    """`[ColumnT_co, NativeFrameT_co]`."""
+class CompliantFrame(Protocol[NativeFrameT_co]):
+    """`[NativeFrameT_co]`."""
 
     implementation: ClassVar[Implementation]
 
     def __narwhals_namespace__(self) -> IncompleteCyclic: ...
-    def _evaluate_irs(self, nodes: Iterable[NamedIR], /) -> Iterator[ColumnT_co]: ...
     @property
     def _group_by(self) -> type[CompliantGroupBy[Self]]: ...
     def _with_native(self, native: Incomplete) -> Self: ...
@@ -129,10 +128,10 @@ class CompliantFrame(Protocol[ColumnT_co, NativeFrameT_co]):
 
 class CompliantDataFrame(  # pyright: ignore[reportInvalidTypeVarUse]
     io.EagerOutput,
-    CompliantFrame[SeriesT_co, NativeDataFrameT],
-    Protocol[SeriesT_co, NativeDataFrameT, NativeSeriesT_co],
+    CompliantFrame[NativeDataFrameT],
+    Protocol[NativeDataFrameT, NativeSeriesT_co],
 ):
-    """`[SeriesT_co, NativeDataFrameT, NativeSeriesT_co]`.
+    """`[NativeDataFrameT, NativeSeriesT_co]`.
 
     - pyright is rejecting *any* covariant type vars?
     - Doesn't seem to be based on usage?
@@ -239,7 +238,7 @@ class CompliantDataFrame(  # pyright: ignore[reportInvalidTypeVarUse]
     @classmethod
     def from_narwhals(cls, frame: DataFrame[Any, Any], /) -> Self: ...
     @classmethod
-    def from_compliant(cls, frame: CompliantDataFrame[Any, Any, Any], /) -> Self: ...
+    def from_compliant(cls, frame: CompliantDataFrame[Any, Any], /) -> Self: ...
     @property
     def native(self) -> NativeDataFrameT: ...
     def clone(self) -> Self: ...
@@ -299,7 +298,7 @@ class CompliantDataFrame(  # pyright: ignore[reportInvalidTypeVarUse]
 
 class EagerDataFrame(  # pyright: ignore[reportInvalidTypeVarUse]
     io.LazyOutput,
-    CompliantDataFrame[SeriesT_co, NativeDataFrameT, NativeSeriesT_co],
+    CompliantDataFrame[NativeDataFrameT, NativeSeriesT_co],
     Protocol[SeriesT_co, NativeDataFrameT, NativeSeriesT_co],
 ):
     """`[SeriesT, NativeDataFrameT, NativeSeriesT_co]`."""

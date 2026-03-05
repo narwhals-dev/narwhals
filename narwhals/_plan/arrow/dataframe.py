@@ -124,7 +124,7 @@ class ArrowDataFrame(
     @classmethod
     def from_compliant(
         cls,
-        frame: pl.DataFrame | NwDataFrame[Any, Any] | CompliantDataFrame[Any, Any, Any],
+        frame: pl.DataFrame | NwDataFrame[Any, Any] | CompliantDataFrame[Any, Any],
         /,
         version: Version = MAIN,
     ) -> Self:

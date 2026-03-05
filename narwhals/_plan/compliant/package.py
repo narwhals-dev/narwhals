@@ -94,9 +94,7 @@ class HasPlanEvaluator(Protocol[NativeLazy_co]):
 
 class HasDataFrame(Protocol[NativeEager, NativeSeries_co]):
     @property
-    def DataFrame(
-        self,
-    ) -> type[CompliantDataFrame[Incomplete, NativeEager, NativeSeries_co]]: ...
+    def DataFrame(self) -> type[CompliantDataFrame[NativeEager, NativeSeries_co]]: ...
 
 
 class HasSeries(Protocol[NativeSeries_co]):
@@ -215,7 +213,7 @@ def try_arrow_1() -> tuple[
     HybridPackage[pa.Table, pa.Table, pa.ChunkedArray[Any]],
     tuple[
         type[CompliantLazyFrame[pa.Table]],
-        type[CompliantDataFrame[Incomplete, pa.Table, pa.ChunkedArray[Any]]],
+        type[CompliantDataFrame[pa.Table, pa.ChunkedArray[Any]]],
         type[CompliantSeries[pa.ChunkedArray[Any]]],
         type[CompliantExpr[Incomplete, Incomplete]],
     ],
@@ -240,7 +238,7 @@ def try_arrow_2() -> tuple[
 def try_polars_1() -> tuple[
     HybridPackage[pl.LazyFrame, pl.DataFrame, pl.Series],
     type[CompliantLazyFrame[pl.LazyFrame]],
-    type[CompliantDataFrame[Incomplete, pl.DataFrame, pl.Series]],
+    type[CompliantDataFrame[pl.DataFrame, pl.Series]],
     type[CompliantSeries[pl.Series]],
     type[CompliantExpr[Incomplete, Incomplete]],
 ]:

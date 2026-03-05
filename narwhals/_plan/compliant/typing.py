@@ -23,7 +23,6 @@ if TYPE_CHECKING:
 
 R_co = TypeVar("R_co", covariant=True)
 LengthT = TypeVar("LengthT")
-ColumnT_co = TypeVar("ColumnT_co", covariant=True)
 ResolverT_co = TypeVar("ResolverT_co", bound="GroupByResolver", covariant=True)
 Native = TypeVar("Native")
 """Unbounded type variable, representing *any* native object.
@@ -36,8 +35,8 @@ FromNative = TypeVar("FromNative")
 ExprAny: TypeAlias = "CompliantExpr[Any, Any]"
 ScalarAny: TypeAlias = "CompliantScalar[Any, Any]"
 SeriesAny: TypeAlias = "CompliantSeries[Any]"
-FrameAny: TypeAlias = "CompliantFrame[Any, Any]"
-DataFrameAny: TypeAlias = "CompliantDataFrame[Any, Any, Any]"
+FrameAny: TypeAlias = "CompliantFrame[Any]"
+DataFrameAny: TypeAlias = "CompliantDataFrame[Any, Any]"
 LazyFrameAny: TypeAlias = "CompliantLazyFrame[Any]"
 NamespaceAny: TypeAlias = "CompliantNamespace[Any, Any, Any]"
 

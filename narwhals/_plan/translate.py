@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     # A lazy type guard like in `narwhals.dependencies` or `narwhals._native`
     _Guard: TypeAlias = "Callable[[Any], TypeIs[T]]"
     _ConstructorLazy: TypeAlias = Callable[[T], CompliantLazyFrame[T]]
-    _ConstructorEager: TypeAlias = Callable[[Eager], CompliantDataFrame[Any, Eager, Any]]
+    _ConstructorEager: TypeAlias = Callable[[Eager], CompliantDataFrame[Eager, Any]]
     # Zero-argument importer of the concrete native class
     # If we matched a subclass, we would want to avoid registering that on
     # the dispatch function
@@ -41,7 +41,7 @@ def from_native_lazyframe(native: Lazy, /) -> CompliantLazyFrame[Lazy]:
 
 
 @functools.singledispatch
-def from_native_dataframe(native: Eager, /) -> CompliantDataFrame[Any, Eager, Any]:
+def from_native_dataframe(native: Eager, /) -> CompliantDataFrame[Eager, Any]:
     if (compliant := _try_known_dataframes(native)) is not None:
         return compliant
     raise _from_native_error(native, "dataframe")
@@ -88,7 +88,7 @@ def _try_known_lazyframes(native: Lazy, /) -> CompliantLazyFrame[Lazy] | None:
     return None
 
 
-def _try_known_dataframes(native: Eager, /) -> CompliantDataFrame[Any, Eager, Any] | None:
+def _try_known_dataframes(native: Eager, /) -> CompliantDataFrame[Eager, Any] | None:
     matched: tuple[type[Eager], _Guard[Eager], _ConstructorEager[Eager]] | None = None
     search: dict[_Guard[Eager], tuple[_ConstructorEager[Eager], _ImportKnown[Eager]]] = (
         _local.eager_known
@@ -115,7 +115,7 @@ def _from_polars_lazyframe(native: pl.LazyFrame, /) -> CompliantLazyFrame[pl.Laz
 
 def _from_polars_dataframe(
     native: pl.DataFrame, /
-) -> CompliantDataFrame[Any, pl.DataFrame, pl.Series]:
+) -> CompliantDataFrame[pl.DataFrame, pl.Series]:
     from narwhals._plan.polars import DataFrame
 
     return DataFrame.from_native(native, Version.MAIN)
@@ -135,7 +135,7 @@ def _import_polars_dataframe() -> type[pl.DataFrame]:
 
 def _from_pyarrow_table(
     native: pa.Table, /
-) -> CompliantDataFrame[Any, pa.Table, pa.ChunkedArray[Any]]:
+) -> CompliantDataFrame[pa.Table, pa.ChunkedArray[Any]]:
     from narwhals._plan.arrow import DataFrame
 
     return DataFrame.from_native(native, Version.MAIN)

@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 import polars as pl
 
-from narwhals._plan.compliant.dataframe import CompliantDataFrame
 from narwhals._utils import Implementation, Version, _into_arrow_table
 
 if TYPE_CHECKING:
@@ -46,10 +45,10 @@ class PolarsFrame:
 
     @classmethod
     def from_narwhals(
-        cls, frame: NwDataFrame[Any, Any] | CompliantDataFrame[Any, Any, Any], /
+        cls, frame: NwDataFrame[Any, Any] | CompliantDataFrame[Any, Any], /
     ) -> Self:
         return cls.from_polars(frame.to_polars(), frame.version)
 
     @classmethod
-    def from_compliant(cls, frame: CompliantDataFrame[Any, Any, Any], /) -> Self:
+    def from_compliant(cls, frame: CompliantDataFrame[Any, Any], /) -> Self:
         return cls.from_narwhals(frame)

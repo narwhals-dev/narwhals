@@ -91,7 +91,7 @@ class CompliantSeries(HasVersion, Protocol[NativeSeriesT_co]):
         include_breakpoint: bool = True,
         include_category: bool = False,
         _compatibility_behavior: Literal["narwhals", "polars"] = "narwhals",
-    ) -> CompliantDataFrame[Self, IncompleteCyclic, NativeSeriesT_co]:
+    ) -> CompliantDataFrame[IncompleteCyclic, NativeSeriesT_co]:
         from narwhals._plan.expressions import col as ir_col
 
         expr = (

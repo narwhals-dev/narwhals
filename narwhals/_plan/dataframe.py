@@ -16,7 +16,6 @@ from narwhals._plan.plans import LogicalPlan
 from narwhals._plan.series import Series
 from narwhals._plan.typing import (
     ColumnNameOrSelector,
-    IncompleteCyclic,
     IntoExpr,
     IntoExprColumn,
     NativeDataFrameT,
@@ -74,7 +73,7 @@ Incomplete: TypeAlias = Any
 
 
 class BaseFrame(Generic[NativeFrameT_co]):
-    _compliant: CompliantFrame[Any, NativeFrameT_co]
+    _compliant: CompliantFrame[NativeFrameT_co]
     _version: ClassVar[Version] = Version.MAIN
 
     @property
@@ -96,7 +95,7 @@ class BaseFrame(Generic[NativeFrameT_co]):
     def __repr__(self) -> str:
         return generate_repr(f"nw.{type(self).__name__}", self.to_native().__repr__())
 
-    def __init__(self, compliant: CompliantFrame[Any, NativeFrameT_co], /) -> None:
+    def __init__(self, compliant: CompliantFrame[NativeFrameT_co], /) -> None:
         self._compliant = compliant
 
     def _unwrap_compliant(self, other: Self | Any, /) -> Incomplete:
@@ -114,7 +113,7 @@ class BaseFrame(Generic[NativeFrameT_co]):
         msg = f"Expected `other` to be a {qualified_type_name(self)!r}, got: {qualified_type_name(other)!r}"  # pragma: no cover
         raise TypeError(msg)  # pragma: no cover
 
-    def _with_compliant(self, compliant: CompliantFrame[Any, Incomplete], /) -> Self:
+    def _with_compliant(self, compliant: CompliantFrame[Incomplete], /) -> Self:
         return type(self)(compliant)
 
     def to_native(self) -> NativeFrameT_co:
@@ -222,7 +221,7 @@ class BaseFrame(Generic[NativeFrameT_co]):
         suffix: str = "_right",
     ) -> Self:
         left = self._compliant
-        right: CompliantFrame[Any, NativeFrameT_co] = self._unwrap_compliant(other)
+        right: CompliantFrame[NativeFrameT_co] = self._unwrap_compliant(other)
         how = _validate_join_strategy(how)
         if how == "cross":
             if left_on is not None or right_on is not None or on is not None:
@@ -248,7 +247,7 @@ class BaseFrame(Generic[NativeFrameT_co]):
         suffix: str = "_right",
     ) -> Self:
         left = self._compliant
-        right: CompliantFrame[Any, NativeFrameT_co] = self._unwrap_compliant(other)
+        right: CompliantFrame[NativeFrameT_co] = self._unwrap_compliant(other)
         strategy = _validate_join_asof_strategy(strategy)
         left_on_, right_on_ = normalize_join_asof_on(left_on, right_on, on)
         if by_left or by_right or by:
@@ -317,14 +316,12 @@ class BaseFrame(Generic[NativeFrameT_co]):
 class DataFrame(
     BaseFrame[NativeDataFrameT_co], Generic[NativeDataFrameT_co, NativeSeriesT_co]
 ):
-    _compliant: CompliantDataFrame[
-        IncompleteCyclic, NativeDataFrameT_co, NativeSeriesT_co
-    ]
+    _compliant: CompliantDataFrame[NativeDataFrameT_co, NativeSeriesT_co]
 
     def __narwhals_namespace__(
         self,
     ) -> CompliantNamespace[
-        CompliantDataFrame[Any, NativeDataFrameT_co, NativeSeriesT_co], Any, Any
+        CompliantDataFrame[NativeDataFrameT_co, NativeSeriesT_co], Any, Any
     ]:
         return self._compliant.__narwhals_namespace__()
 
@@ -615,9 +612,7 @@ class DataFrame(
             on, index=index, values=values, frame_columns=self.columns
         )
         dtype_str = self.version.dtypes.String()
-        on_cols: CompliantDataFrame[
-            IncompleteCyclic, NativeDataFrameT_co, NativeSeriesT_co
-        ]
+        on_cols: CompliantDataFrame[NativeDataFrameT_co, NativeSeriesT_co]
 
         if on_columns is None:
             nw_on_cols = self.select(F.col(name).cast(dtype_str) for name in on_).unique(
