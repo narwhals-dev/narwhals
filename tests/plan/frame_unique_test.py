@@ -164,10 +164,9 @@ def test_unique_none(data: Data, *, maintain_order: bool, dataframe: DataFrame) 
     assert_equal_data(result, data)
 
 
-def test_unique_3069(dataframe: DataFrame, request: pytest.FixtureRequest) -> None:
+def test_unique_3069(dataframe: DataFrame) -> None:
     data = {"name": ["a", "b", "c"], "group": ["d", "e", "f"], "value": [1, 2, 3]}
     group = ncs.by_name("group")
-    dataframe.xfail_polars_select(request)
     result = dataframe(data).select(group).unique().sort(group)
     expected = {"group": ["d", "e", "f"]}
     assert_equal_data(result, expected)

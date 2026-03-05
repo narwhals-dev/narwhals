@@ -8,6 +8,7 @@ import polars as pl
 from narwhals._plan._version import into_version
 from narwhals._plan.common import temp
 from narwhals._plan.compliant.dataframe import CompliantDataFrame
+from narwhals._plan.polars.expr import PolarsExpr as Expr
 from narwhals._plan.polars.frame import PolarsFrame
 from narwhals._plan.polars.namespace import (
     PolarsNamespace as Namespace,
@@ -19,7 +20,7 @@ from narwhals._polars.utils import BACKEND_VERSION
 from narwhals._utils import Implementation, Version, not_implemented, requires
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Mapping, Sequence
+    from collections.abc import Iterable, Iterator, Mapping, Sequence
     from io import BytesIO
     from pathlib import Path
 
@@ -27,8 +28,10 @@ if TYPE_CHECKING:
     import pyarrow as pa
     from typing_extensions import Self, TypeAlias
 
+    from narwhals._plan import expressions as ir
     from narwhals._plan.options import ExplodeOptions, SortMultipleOptions
     from narwhals._plan.polars.lazyframe import PolarsLazyFrame
+    from narwhals._plan.typing import Seq
     from narwhals.schema import Schema
     from narwhals.typing import (
         AsofJoinStrategy,
@@ -254,6 +257,8 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
         aggregate_function: PivotAgg | None = None,
         separator: str = "_",
     ) -> Self:
+        # TODO @dangotbanned: Handle native exceptions
+        # `polars.exceptions.ComputeError: aggregation 'item' expected no or a single value, got 2 values`
         result = self.native.pivot(
             on,
             index=index,
@@ -334,12 +339,18 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
         )
         return self._with_native(self.native.select(int_range, pl.all()))
 
-    _evaluate_irs = not_implemented()
     _group_by = not_implemented()  # type: ignore[assignment]
     lazy = not_implemented()
     filter = not_implemented()
-    select = not_implemented()
     with_columns = not_implemented()
+
+    def _evaluate_irs(self, nodes: Iterable[ir.NamedIR]) -> Iterator[Expr]:
+        yield from (Expr.from_named_ir(e, self) for e in nodes)
+
+    def select(self, irs: Seq[ir.NamedIR]) -> Self:
+        return self._with_native(
+            self.native.select(e.native for e in self._evaluate_irs(irs))
+        )
 
 
 PolarsDataFrame()

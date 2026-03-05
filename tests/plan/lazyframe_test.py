@@ -119,10 +119,8 @@ def test_dataframe_lazy(
     backend: IntoBackend[LazyAllowed] | None | Literal["empty"],
     expected: Implementation | Literal["same"],
     dataframe: DataFrame,
-    request: pytest.FixtureRequest,
 ) -> None:
     pytest.importorskip("polars")
-    dataframe.xfail_polars_select(request)
     df = dataframe(data_small).select(nwp.nth(-1, -2, -3), "g")
     schema = nw.Schema(
         {"o": nw.String(), "n": nw.String(), "m": nw.Int64(), "g": nw.Boolean()}

@@ -55,6 +55,10 @@ class PolarsExpr(CompliantExpr[Incomplete, Incomplete]):
         """**Currently a noop for polars**."""
         return ""
 
+    @property
+    def native(self) -> pl.Expr:
+        return self._evaluated
+
     # NOTE: `ExprDispatch` isn't part of the `Compliant*` protocols,
     # but is required for `ExprIR.dispatch`
     def __narwhals_namespace__(self) -> PolarsNamespace:
@@ -76,7 +80,11 @@ class PolarsExpr(CompliantExpr[Incomplete, Incomplete]):
     arg_max = todo()
     arg_min = todo()
     binary_expr = todo()
-    cast = todo()
+
+    def cast(self, node: ir.Cast, frame: Incomplete, name: str) -> Self:
+        dtype = dtype_to_native(node.dtype, version=frame.version)
+        return self._with_native(node.expr.dispatch(self, frame, name).native.cast(dtype))
+
     ceil = todo()
     clip = todo()
     clip_lower = todo()

@@ -16,20 +16,6 @@ if TYPE_CHECKING:
     from narwhals.typing import PivotAgg
     from tests.conftest import Data
 
-# TODO @dangotbanned: Add more values for `median`, like in
-# https://github.com/narwhals-dev/narwhals/blob/b3d8c7349bbf7ecb7f11ea590c334e12d5c1d43e/tests/plan/list_agg_test.py#L24-L34
-XFAIL_PYARROW_MEDIAN = pytest.mark.xfail(
-    reason="Tried to use `'approximate_median'` but groups are too small",
-    raises=(AssertionError, NotImplementedError),
-)
-
-# TODO @dangotbanned: Consider fixing this?
-# The `pandas` impl on `main` has the same issue
-XFAIL_ALWAYS_ZERO_AGG = pytest.mark.xfail(
-    reason="`sum` & `len` are special-cased in `polars` to always return 0 instead on `None`",
-    raises=(AssertionError, NotImplementedError),
-)
-
 
 @pytest.fixture(scope="module")
 def scores() -> Data:
@@ -161,7 +147,7 @@ def assert_names_match_polars(
                 "bar_b": [9.0, 4.0],
             },
         ),
-        pytest.param(
+        (
             "median",
             {
                 "idx_1": [1, 2],
@@ -170,7 +156,6 @@ def assert_names_match_polars(
                 "bar_a": [1.0, 0.0],
                 "bar_b": [9.0, 4.0],
             },
-            marks=XFAIL_PYARROW_MEDIAN,
         ),
         (
             "len",
@@ -199,7 +184,14 @@ def test_pivot_agg(
 ) -> None:
     df = dataframe(data)
     dataframe.xfail_pyarrow_pivot_too_old(request)
-    dataframe.xfail_polars_select(request)
+    dataframe.xfail(
+        # TODO @dangotbanned: Add more values for `median`, like in
+        # https://github.com/narwhals-dev/narwhals/blob/b3d8c7349bbf7ecb7f11ea590c334e12d5c1d43e/tests/plan/list_agg_test.py#L24-L34
+        request,
+        dataframe.is_pyarrow() and agg_func == "median",
+        reason="Tried to use `'approximate_median'` but groups are too small",
+        raises=(AssertionError, NotImplementedError),
+    )
     result = df.pivot(
         on,
         index=index,
@@ -211,6 +203,7 @@ def test_pivot_agg(
     assert_equal_data(result, expected)
 
 
+# TODO @dangotbanned: `DataFrame[pl.DataFrame].pivot(sort_columns=True)`
 @pytest.mark.parametrize(
     ("sort_columns", "expected"),
     [
@@ -227,7 +220,12 @@ def test_pivot_sort_columns(
 ) -> None:
     df = dataframe(data_no_dups_unordered)
     dataframe.xfail_pyarrow_pivot_too_old(request)
-    dataframe.xfail_polars_select(request)
+    dataframe.xfail(
+        request,
+        dataframe.is_polars() and sort_columns,
+        reason="TODO @dangotbanned: `DataFrame[pl.DataFrame].pivot(sort_columns=True)`",
+        raises=AssertionError,
+    )
     values = ["foo", "bar"]
     result = df.pivot("on_lower", index="idx_1", values=values, sort_columns=sort_columns)
     assert result.columns == expected
@@ -271,7 +269,6 @@ def test_pivot_on_multiple_names(
     data_ = data_no_dups_unordered
     df = dataframe(data_)
     dataframe.xfail_pyarrow_pivot_too_old(request)
-    dataframe.xfail_polars_select(request)
     result = df.pivot(on, values=values, index=index)
     assert result.columns == expected
     assert_names_match_polars(data_, on, index, values, result_columns=result.columns)
@@ -314,7 +311,6 @@ def test_pivot_on_multiple_names_agg(
     index = "idx_1"
     df = dataframe(data)
     dataframe.xfail_pyarrow_pivot_too_old(request)
-    dataframe.xfail_polars_select(request)
     result = df.pivot(on, values=values, aggregate_function="min", index=index)
     assert result.columns == expected
     assert_names_match_polars(
@@ -322,12 +318,15 @@ def test_pivot_on_multiple_names_agg(
     )
 
 
+# TODO @dangotbanned: Handle native (polars) exceptions
 def test_pivot_no_agg_duplicated(
     data: Data, request: pytest.FixtureRequest, dataframe: DataFrame
 ) -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
     dataframe.xfail_pyarrow_pivot_too_old(request)
-    dataframe.xfail_polars_select(request)
-    with pytest.raises((ValueError, NarwhalsError)):
+    with pytest.raises((ValueError, NarwhalsError, pl.exceptions.ComputeError)):
         dataframe(data).pivot("on_lower", index="idx_1")
 
 
@@ -335,7 +334,6 @@ def test_pivot_no_agg_no_duplicates(
     data_no_dups: Data, request: pytest.FixtureRequest, dataframe: DataFrame
 ) -> None:
     dataframe.xfail_pyarrow_pivot_too_old(request)
-    dataframe.xfail_polars_select(request)
     result = dataframe(data_no_dups).pivot("on_lower", index="idx_1")
     expected = {
         "idx_1": [1, 2],
@@ -364,7 +362,6 @@ def test_pivot_no_values(dataframe: DataFrame, request: pytest.FixtureRequest) -
         ),
         raises=(AssertionError, NotImplementedError),
     )
-    dataframe.xfail_polars_select(request)
     df = dataframe(data)
     result = df.pivot(on="bar", index="foo")
     expected = {
@@ -397,14 +394,11 @@ def test_pivot_on_invalid(data: Data, dataframe: DataFrame) -> None:
         df.pivot([], index="idx_1", values="foo")
 
 
-def test_pivot_on_columns_invalid(
-    data: Data, dataframe: DataFrame, request: pytest.FixtureRequest
-) -> None:
+def test_pivot_on_columns_invalid(data: Data, dataframe: DataFrame) -> None:
     df = dataframe(data)
     on_1 = "on_lower"
     on_2 = ["on_lower", "on_upper"]
     index = "idx_1"
-    dataframe.xfail_polars_select(request)
     df_1 = df.select(on_1)
     df_2 = df.select(on_2)
     df_2_mismatch = df_2.rename(dict(zip(on_2, reversed(on_2))))
@@ -448,7 +442,6 @@ def test_pivot_implicit_index(
 ) -> None:
     df = dataframe(data_no_dups)
     dataframe.xfail_pyarrow_pivot_too_old(request)
-    dataframe.xfail_polars_select(request)
     expected = {
         "idx_1": [1, 1, 2, 2],
         "bar": ["x", "y", "w", "z"],
@@ -464,7 +457,6 @@ def test_pivot_test_scores_1(
 ) -> None:
     df = dataframe(scores)
     dataframe.xfail_pyarrow_pivot_too_old(request)
-    dataframe.xfail_polars_select(request)
     expected = {"name": ["Cady", "Karen"], "maths": [98, 61], "physics": [99, 58]}
     result = df.pivot("subject", index="name", values="test_1")
     assert_equal_data(result, expected)
@@ -479,7 +471,6 @@ def test_pivot_test_scores_2(
 ) -> None:
     df = dataframe(scores)
     dataframe.xfail_pyarrow_pivot_too_old(request)
-    dataframe.xfail_polars_select(request)
     expected = {
         "name": ["Cady", "Karen"],
         "test_1_maths": [98, 61],
@@ -494,12 +485,8 @@ def test_pivot_test_scores_2(
 @pytest.mark.parametrize(
     ("agg_fn", "expected_rows"),
     [
-        pytest.param(
-            "sum", [("a", 6, 0, 0), ("b", 0, 8, 10)], marks=XFAIL_ALWAYS_ZERO_AGG
-        ),
-        pytest.param(
-            "len", [("a", 2, 0, 0), ("b", 0, 2, 1)], marks=XFAIL_ALWAYS_ZERO_AGG
-        ),
+        ("sum", [("a", 6, 0, 0), ("b", 0, 8, 10)]),
+        ("len", [("a", 2, 0, 0), ("b", 0, 2, 1)]),
         ("first", [("a", 2, None, None), ("b", None, None, 10)]),
         ("min", [("a", 2, None, None), ("b", None, 8, 10)]),
         ("max", [("a", 4, None, None), ("b", None, 8, 10)]),
@@ -517,7 +504,14 @@ def test_pivot_aggregate(
         {"a": [1, 1, 2, 2, 3], "b": ["a", "a", "b", "b", "b"], "c": [2, 4, None, 8, 10]}
     )
     dataframe.xfail_pyarrow_pivot_too_old(request)
-    dataframe.xfail_polars_select(request)
+    dataframe.xfail(
+        # TODO @dangotbanned: Consider fixing this?
+        # The `pandas` impl on `main` has the same issue
+        request,
+        dataframe.is_pyarrow() and agg_fn in {"sum", "len"},
+        reason="`sum` & `len` are special-cased in `polars` to always return 0 instead on `None`",
+        raises=(AssertionError, NotImplementedError),
+    )
     result = df.pivot(
         "a", index="b", values="c", aggregate_function=agg_fn, sort_columns=True
     )

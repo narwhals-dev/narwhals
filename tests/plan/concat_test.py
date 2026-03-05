@@ -37,9 +37,7 @@ def test_concat_horizontal(left: Data, right: Data, dataframe: DataFrame) -> Non
     assert_equal_data(result, expected)
 
 
-def test_concat_vertical(
-    left: Data, right: Data, dataframe: DataFrame, request: pytest.FixtureRequest
-) -> None:
+def test_concat_vertical(left: Data, right: Data, dataframe: DataFrame) -> None:
     df_left = dataframe(left).rename({"a": "c", "b": "d"}).drop("z")
     df_right = dataframe(right)
     result = nwp.concat([df_left, df_right], how="vertical")
@@ -50,7 +48,6 @@ def test_concat_vertical(
         match=r"unable to vstack|inputs should all have the same schema",
     ):
         nwp.concat([df_left, df_right.rename({"d": "i"})])
-    dataframe.xfail_polars_select(request, raises=AssertionError)
     with pytest.raises(
         (Exception, TypeError),
         match=r"unable to vstack|unable to append|inputs should all have the same schema",
