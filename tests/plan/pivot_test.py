@@ -222,8 +222,10 @@ def test_pivot_sort_columns(
     dataframe.xfail_pyarrow_pivot_too_old(request)
     dataframe.xfail(
         request,
-        dataframe.is_polars() and sort_columns,
-        reason="TODO @dangotbanned: `DataFrame[pl.DataFrame].pivot(sort_columns=True)`",
+        dataframe.is_polars()
+        and sort_columns
+        and dataframe.backend_version() < (1, 36, 0),
+        reason="TODO @dangotbanned: backcompat `DataFrame[pl.DataFrame].pivot(sort_columns=True)`",
         raises=AssertionError,
     )
     values = ["foo", "bar"]

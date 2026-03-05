@@ -47,6 +47,8 @@ MAIN = Version.MAIN
 
 JOIN_OUTER_RENAMED_TO_FULL = BACKEND_VERSION >= (0, 20, 29)
 MELT_RENAMED_TO_UNPIVOT = BACKEND_VERSION >= (1, 0, 0)
+PIVOT_SUPPORTS_ON_COLUMNS = BACKEND_VERSION >= (1, 36, 0)
+"""https://github.com/pola-rs/polars/pull/25016"""
 
 
 class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
@@ -244,12 +246,14 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
         results = self.native.partition_by(by, include_key=include_key, as_dict=False)
         return [self._with_native(p) for p in results]
 
+    # TODO @dangotbanned: backcompat for `on_columns: DataFrame`?
+    # - `sort_columns` has already been consumed to build `on_columns`
+    # TODO @dangotbanned: Handle native exceptions
+    # - `polars.exceptions.ComputeError: aggregation 'item' expected no or a single value, got 2 values`
     @requires.backend_version((1,))
     def pivot(
         self,
         on: Sequence[str],
-        # TODO @dangotbanned: backcompat for `on_columns: DataFrame`?
-        # `sort_columns` has already been consumed to build `on_columns`
         on_columns: Self,
         *,
         index: Sequence[str],
@@ -257,16 +261,18 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
         aggregate_function: PivotAgg | None = None,
         separator: str = "_",
     ) -> Self:
-        # TODO @dangotbanned: Handle native exceptions
-        # `polars.exceptions.ComputeError: aggregation 'item' expected no or a single value, got 2 values`
-        result = self.native.pivot(
-            on,
-            index=index,
-            values=values,
-            aggregate_function=aggregate_function,
-            separator=separator,
-        )
-        return self._with_native(result)
+        if PIVOT_SUPPORTS_ON_COLUMNS:
+            result = self.native.pivot(
+                on,
+                on_columns.native,
+                index=index,
+                values=values,
+                aggregate_function=aggregate_function,
+                separator=separator,
+            )
+            return self._with_native(result)
+        msg = "TODO @dangotbanned: backcompat for `on_columns: DataFrame`"
+        raise NotImplementedError(msg)
 
     def unique(
         self,
