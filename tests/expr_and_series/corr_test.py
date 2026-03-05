@@ -21,11 +21,16 @@ data = {"a": [1, 3, 2], "b": [1, 2, 3], "c": [1, None, 1]}
 )
 def test_corr_expr(
     constructor: Constructor,
+    request: pytest.FixtureRequest,
     output_name: str,
     a: str | nw.Expr,
     b: str | nw.Expr,
     expected_corr: float,
 ) -> None:
+    if "pyspark" in str(constructor) and expected_corr is None:
+        request.applymarker(
+            pytest.mark.xfail(reason="Pyspark corr function does not allow None values")
+        )
     df = nw.from_native(constructor(data))
     result = df.select(nw.corr(a, b))
     expected = {output_name: [expected_corr]}
