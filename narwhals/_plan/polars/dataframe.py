@@ -4,7 +4,9 @@ from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Literal, overload
 
 import polars as pl
+import polars.exceptions as pl_exc
 
+import narwhals.exceptions as nw_exc
 from narwhals._plan._version import into_version
 from narwhals._plan.common import temp
 from narwhals._plan.compliant.dataframe import CompliantDataFrame
@@ -18,11 +20,13 @@ from narwhals._plan.polars.namespace import (
 from narwhals._plan.polars.series import PolarsSeries as Series
 from narwhals._polars.utils import BACKEND_VERSION
 from narwhals._utils import Implementation, Version, not_implemented, requires
+from narwhals.exceptions import NarwhalsError
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
     from io import BytesIO
     from pathlib import Path
+    from types import TracebackType
 
     import pandas as pd
     import pyarrow as pa
@@ -49,6 +53,45 @@ JOIN_OUTER_RENAMED_TO_FULL = BACKEND_VERSION >= (0, 20, 29)
 MELT_RENAMED_TO_UNPIVOT = BACKEND_VERSION >= (1, 0, 0)
 PIVOT_SUPPORTS_ON_COLUMNS = BACKEND_VERSION >= (1, 36, 0)
 """https://github.com/pola-rs/polars/pull/25016"""
+
+
+# TODO @dangotbanned: Remove this dead code path on main, it is fixed at our minimum
+HAS_POLARS_ERROR = BACKEND_VERSION >= (0, 20, 4)
+"""https://github.com/pola-rs/polars/pull/13615"""
+
+
+class map_errs:  # noqa: N801
+    """Fancy version of `catch_polars_exception`.
+
+    Just write *potentially raising* code `with`-in the context manager:
+
+        with map_errs():
+            risky_business()
+
+        business_as_usual()
+    """
+
+    _REMAP: Mapping[type[BaseException], type[NarwhalsError]] = {
+        tp: getattr(nw_exc, tp.__name__, NarwhalsError)
+        for tp in pl_exc.PolarsError.__subclasses__()
+    }
+
+    def __enter__(self) -> None:
+        return
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+        /,
+    ) -> bool | None:
+        # See https://docs.python.org/3/reference/compound_stmts.html#the-with-statement
+        if exc_type is None or exc_value is None:
+            return None
+        if to_exc := map_errs._REMAP.get(exc_type):
+            raise to_exc(str(exc_value)) from None
+        return False
 
 
 class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
@@ -248,8 +291,6 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
 
     # TODO @dangotbanned: backcompat for `on_columns: DataFrame`?
     # - `sort_columns` has already been consumed to build `on_columns`
-    # TODO @dangotbanned: Handle native exceptions
-    # - `polars.exceptions.ComputeError: aggregation 'item' expected no or a single value, got 2 values`
     @requires.backend_version((1,))
     def pivot(
         self,
@@ -262,15 +303,17 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
         separator: str = "_",
     ) -> Self:
         if PIVOT_SUPPORTS_ON_COLUMNS:
-            result = self.native.pivot(
-                on,
-                on_columns.native,
-                index=index,
-                values=values,
-                aggregate_function=aggregate_function,
-                separator=separator,
-            )
-            return self._with_native(result)
+            with map_errs():
+                return self._with_native(
+                    self.native.pivot(
+                        on,
+                        on_columns.native,
+                        index=index,
+                        values=values,
+                        aggregate_function=aggregate_function,
+                        separator=separator,
+                    )
+                )
         msg = "TODO @dangotbanned: backcompat for `on_columns: DataFrame`"
         raise NotImplementedError(msg)
 

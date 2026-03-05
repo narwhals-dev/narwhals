@@ -320,15 +320,11 @@ def test_pivot_on_multiple_names_agg(
     )
 
 
-# TODO @dangotbanned: Handle native (polars) exceptions
 def test_pivot_no_agg_duplicated(
     data: Data, request: pytest.FixtureRequest, dataframe: DataFrame
 ) -> None:
-    pytest.importorskip("polars")
-    import polars as pl
-
     dataframe.xfail_pyarrow_pivot_too_old(request)
-    with pytest.raises((ValueError, NarwhalsError, pl.exceptions.ComputeError)):
+    with pytest.raises((ValueError, NarwhalsError)):
         dataframe(data).pivot("on_lower", index="idx_1")
 
 
