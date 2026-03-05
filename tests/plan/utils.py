@@ -26,7 +26,7 @@ from narwhals._plan import Expr, Selector, _expansion, _parse, expressions as ir
 from narwhals._plan.compliant.typing import Native as NativeLazyFrame
 from narwhals._plan.typing import NativeDataFrameT_co, NativeSeriesT_co
 from narwhals._utils import Implementation, Version, qualified_type_name
-from tests.utils import assert_equal_data as _assert_equal_data
+from tests.utils import PYARROW_VERSION, assert_equal_data as _assert_equal_data
 
 pytest.importorskip("pyarrow")
 
@@ -501,6 +501,17 @@ class Constructor(Generic[R_co]):
         msg = f"TODO: Add support for {self.backend_version.__qualname__}({unknown=}) when integrating plugins\n{self!r}"
         raise NotImplementedError(msg)
 
+    def xfail(
+        self,
+        request: pytest.FixtureRequest,
+        /,
+        condition: bool,  # noqa: FBT001
+        *,
+        reason: LiteralString,
+        raises: type[Exception] | tuple[type[Exception], ...],
+    ) -> None:
+        request.applymarker(pytest.mark.xfail(condition, raises=raises, reason=reason))
+
     def xfail_not_implemented(
         self,
         request: pytest.FixtureRequest,
@@ -510,12 +521,11 @@ class Constructor(Generic[R_co]):
         *,
         raises: type[Exception] | tuple[type[Exception], ...] = NotImplementedError,
     ) -> None:
-        request.applymarker(
-            pytest.mark.xfail(
-                condition,
-                raises=raises,
-                reason=f"TODO @dangotbanned: `{self.fixture_name}[{self.identifier}].{method}`",
-            )
+        self.xfail(
+            request,
+            condition,
+            reason=f"TODO @dangotbanned: `{self.fixture_name}[{self.identifier}].{method}`",
+            raises=raises,
         )
 
     def xfail_polars_select(
@@ -529,6 +539,14 @@ class Constructor(Generic[R_co]):
 
     def xfail_polars_with_columns(self, request: pytest.FixtureRequest, /) -> None:
         self.xfail_not_implemented(request, self.is_polars(), "with_columns")
+
+    def xfail_pyarrow_pivot_too_old(self, request: pytest.FixtureRequest, /) -> None:
+        self.xfail(
+            request,
+            (self.is_pyarrow() and PYARROW_VERSION < (20, 0, 0)),
+            reason="pyarrow too old for `pivot` support",
+            raises=NotImplementedError,
+        )
 
 
 LazyFrame: TypeAlias = Constructor[nwp.LazyFrame[Any]]

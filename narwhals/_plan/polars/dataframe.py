@@ -16,7 +16,7 @@ from narwhals._plan.polars.namespace import (
 )
 from narwhals._plan.polars.series import PolarsSeries as Series
 from narwhals._polars.utils import BACKEND_VERSION
-from narwhals._utils import Version, not_implemented
+from narwhals._utils import Implementation, Version, not_implemented, requires
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping, Sequence
@@ -34,6 +34,7 @@ if TYPE_CHECKING:
         AsofJoinStrategy,
         IntoSchema,
         JoinStrategy,
+        PivotAgg,
         UniqueKeepStrategy,
     )
 
@@ -48,6 +49,10 @@ MELT_RENAMED_TO_UNPIVOT = BACKEND_VERSION >= (1, 0, 0)
 class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
     _native: pl.DataFrame
     _version: Version
+
+    # NOTE: Aliases to integrate with `@requires.backend_version`
+    _backend_version = BACKEND_VERSION
+    _implementation = Implementation.POLARS
 
     def __len__(self) -> int:
         return self.native.__len__()
@@ -236,6 +241,28 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
         results = self.native.partition_by(by, include_key=include_key, as_dict=False)
         return [self._with_native(p) for p in results]
 
+    @requires.backend_version((1,))
+    def pivot(
+        self,
+        on: Sequence[str],
+        # TODO @dangotbanned: backcompat for `on_columns: DataFrame`?
+        # `sort_columns` has already been consumed to build `on_columns`
+        on_columns: Self,
+        *,
+        index: Sequence[str],
+        values: Sequence[str],
+        aggregate_function: PivotAgg | None = None,
+        separator: str = "_",
+    ) -> Self:
+        result = self.native.pivot(
+            on,
+            index=index,
+            values=values,
+            aggregate_function=aggregate_function,
+            separator=separator,
+        )
+        return self._with_native(result)
+
     def unique(
         self,
         subset: Sequence[str] | None = None,
@@ -311,7 +338,6 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
     _group_by = not_implemented()  # type: ignore[assignment]
     lazy = not_implemented()
     filter = not_implemented()
-    pivot = not_implemented()
     select = not_implemented()
     with_columns = not_implemented()
 
