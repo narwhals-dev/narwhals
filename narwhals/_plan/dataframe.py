@@ -609,29 +609,21 @@ class DataFrame(
         sort_columns: bool = False,
         separator: str = "_",
     ) -> Self:
-        from narwhals._plan import functions as F
 
         on_, index_, values_ = normalize_pivot_args(
             on, index=index, values=values, frame_columns=self.columns
         )
-        dtype_str = self.version.dtypes.String()
         on_cols: CompliantDataFrame[NativeDataFrameT_co, NativeSeriesT_co]
 
         if on_columns is None:
-            nw_on_cols = self.select(F.col(name).cast(dtype_str) for name in on_).unique(
-                on_, maintain_order=True
-            )
+            nw_on_cols = self.select(on_).unique(on_, maintain_order=True)
             if sort_columns:
                 nw_on_cols = nw_on_cols.sort(on_)
             on_cols = nw_on_cols._compliant
         elif isinstance(on_columns, DataFrame):
             on_cols = on_columns._compliant
         else:
-            on_cols = (
-                self._parse_into_compliant_series(on_columns, on_[0])
-                .cast(dtype_str)
-                .to_frame()
-            )
+            on_cols = self._parse_into_compliant_series(on_columns, on_[0]).to_frame()
 
         if len(on_) != on_cols.width:
             msg = "`pivot` expected `on` and `on_columns` to have the same amount of columns."
