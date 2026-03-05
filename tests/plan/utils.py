@@ -616,14 +616,14 @@ class ArrowBackend(
         return array([values], self.dtype_to_native(dtype) if dtype else None)
 
 
-# TODO @dangotbanned: Make this a fixture, move to `tests.plan.conftest.py`
+# TODO @dangotbanned: Finish replacing with `tests.plan.conftest.dataframe`
 def dataframe(
     data: Mapping[str, Any], /
 ) -> nwp.DataFrame[pa.Table, pa.ChunkedArray[Any]]:
     return nwp.DataFrame.from_native(pa.Table.from_pydict(data))
 
 
-# TODO @dangotbanned: Make this a fixture, move to `tests.plan.conftest.py`
+# TODO @dangotbanned: Finish replacing with `tests.plan.conftest.series`
 def series(values: Iterable[Any], /) -> nwp.Series[pa.ChunkedArray[Any]]:
     return nwp.Series.from_native(pa.chunked_array([values]))
 

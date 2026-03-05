@@ -1,13 +1,17 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
 
 import narwhals as nw
 from narwhals._plan.schema import FrozenSchema, freeze_schema
-from tests.plan.utils import dataframe
+
+if TYPE_CHECKING:
+    from tests.plan.utils import DataFrame
 
 
-def test_schema() -> None:
+def test_schema(dataframe: DataFrame) -> None:
     mapping = {"a": nw.Int64(), "b": nw.String()}
     schema = nw.Schema(mapping)
     frozen_schema = freeze_schema(mapping)

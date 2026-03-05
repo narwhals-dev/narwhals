@@ -8,7 +8,7 @@ import pytest
 import narwhals._plan as nwp
 import narwhals._plan.selectors as ncs
 from narwhals.exceptions import ColumnNotFoundError, DuplicateError, InvalidOperationError
-from tests.plan.utils import assert_equal_data, dataframe, re_compile
+from tests.plan.utils import DataFrame, assert_equal_data, re_compile
 
 if TYPE_CHECKING:
     from narwhals._plan.typing import ColumnNameOrSelector, OneOrIterable
@@ -45,6 +45,7 @@ def pyarrow_struct(native: pa.Table, columns: list[str]) -> pa.StructArray:
     return pc.make_struct(*native.select(columns).columns, field_names=columns)
 
 
+# TODO @dangotbanned: Decouple test from `pyarrow`
 @pytest.mark.parametrize("insert_at", [-1, 0, 1])
 @pytest.mark.parametrize(
     "columns", [[A], [A, B], [A, B, C, D]], ids=["1-column", "2-column", "4-column"]
@@ -76,6 +77,7 @@ def test_unnest_frame_single_struct(
     assert_equal_data(df.unnest(nwp.nth(insert_at).meta.as_selector()), expected)
 
 
+# TODO @dangotbanned: Decouple test from `pyarrow`
 def test_unnest_frame_multi_struct(data_1: Data) -> None:
     expected = copy.deepcopy(data_1)
     table = pa.Table.from_pydict(data_1)
@@ -95,7 +97,7 @@ def test_unnest_frame_multi_struct(data_1: Data) -> None:
     assert_equal_data(df.unnest(ncs.by_index(1, 2)), expected)
 
 
-def test_unnest_frame_invalid_operation_error(data_1: Data) -> None:
+def test_unnest_frame_invalid_operation_error(data_1: Data, dataframe: DataFrame) -> None:
     df = dataframe(data_1)
     with pytest.raises(
         InvalidOperationError,
@@ -111,13 +113,14 @@ def test_unnest_frame_invalid_operation_error(data_1: Data) -> None:
     "columns", [ncs.array(), "hello", nwp.nth(29).meta.as_selector(), ["a", "b", "A"]]
 )
 def test_unnest_frame_column_not_found_error(
-    data_1: Data, columns: OneOrIterable[ColumnNameOrSelector]
+    data_1: Data, columns: OneOrIterable[ColumnNameOrSelector], dataframe: DataFrame
 ) -> None:
     df = dataframe(data_1)
     with pytest.raises(ColumnNotFoundError):
         df.unnest(columns)
 
 
+# TODO @dangotbanned: Decouple test from `pyarrow`
 def test_unnest_frame_duplicate_error(data_1: Data) -> None:
     columns = [A, B, C]
     table = pa.Table.from_pydict(data_1)

@@ -507,8 +507,8 @@ class ScanDataFrame(ScanFrame["DataFrame[Any, Any]"]):
         current = self.implementation
         backend_ = backend or "unknown"
         POLARS = Implementation.POLARS  # noqa: N806
-        if current is POLARS or (
-            (requested := Implementation.from_backend(backend_)) is POLARS
+        if ((requested := Implementation.from_backend(backend_)) is POLARS) or (
+            current is POLARS and requested is Implementation.UNKNOWN
         ):
             # (4-1) Eager -> lazy conversion (needs a reference to lazy query, [maybe `Implementation`])
             # We can avoid storing the dataframe on the graph, by letting polars do it instead

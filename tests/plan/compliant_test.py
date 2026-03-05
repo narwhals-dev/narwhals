@@ -6,24 +6,19 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
+import narwhals as nw
+from narwhals import _plan as nwp
 from narwhals._plan import selectors as ncs
 from narwhals.exceptions import (
     ColumnNotFoundError,
     InvalidIntoExprError,
     InvalidOperationError,
 )
-
-pytest.importorskip("pyarrow")
-pytest.importorskip("numpy")
-
-import pyarrow as pa
-
-import narwhals as nw
-from narwhals import _plan as nwp
 from tests.plan.utils import (
+    DataFrame,
+    Series,
     assert_equal_data,
     assert_equal_series,
-    dataframe,
     first,
     last,
     re_compile,
@@ -91,11 +86,11 @@ def _ids_ir(expr: nwp.Expr | Any) -> str:
     return repr(expr)
 
 
-XFAIL_KLEENE_ALL_NULL = pytest.mark.xfail(
+# TODO @dangotbanned: Add the `raises` back one `polars` is running the same query
+XFAIL_PYARROW_KLEENE_ALL_NULL = pytest.mark.xfail(
     reason="`pyarrow` uses `pa.null()`, which also fails in current `narwhals`.\n"
     "In `polars`, the same op is supported and it uses `pl.Null`.\n\n"
-    "Function 'or_kleene' has no kernel matching input types (bool, null)",
-    raises=pa.ArrowNotImplementedError,
+    "Function 'or_kleene' has no kernel matching input types (bool, null)"
 )
 
 
@@ -300,7 +295,7 @@ XFAIL_KLEENE_ALL_NULL = pytest.mark.xfail(
                 "False-None": [None, None, None],
             },
             id="any-horizontal-kleene-full-null",
-            marks=XFAIL_KLEENE_ALL_NULL,
+            marks=XFAIL_PYARROW_KLEENE_ALL_NULL,
         ),
         pytest.param(
             [
@@ -378,7 +373,10 @@ def test_select(
     expr: nwp.Expr | Sequence[nwp.Expr],
     expected: dict[str, Any],
     data_small: dict[str, Any],
+    dataframe: DataFrame,
+    request: pytest.FixtureRequest,
 ) -> None:
+    dataframe.xfail_polars_select(request)
     result = dataframe(data_small).select(expr)
     assert_equal_data(result, expected)
 
@@ -450,7 +448,10 @@ def test_with_columns(
     expr: nwp.Expr | Sequence[nwp.Expr],
     expected: dict[str, Any],
     data_small_af: dict[str, Any],
+    dataframe: DataFrame,
+    request: pytest.FixtureRequest,
 ) -> None:
+    dataframe.xfail_polars_with_columns(request)
     result = dataframe(data_small_af).with_columns(expr)
     assert_equal_data(result, expected)
 
@@ -467,8 +468,13 @@ def test_with_columns(
     ],
 )
 def test_with_columns_all_aggregates(
-    data_indexed: dict[str, Any], expr: nwp.Expr, expected: dict[str, PythonLiteral]
+    data_indexed: dict[str, Any],
+    expr: nwp.Expr,
+    expected: dict[str, PythonLiteral],
+    dataframe: DataFrame,
+    request: pytest.FixtureRequest,
 ) -> None:
+    dataframe.xfail_polars_with_columns(request)
     height = len(next(iter(data_indexed.values())))
     expected_full = {k: height * [v] for k, v in expected.items()}
     result = dataframe(data_indexed).with_columns(expr)
@@ -487,8 +493,13 @@ def test_with_columns_all_aggregates(
     ],
 )
 def test_first_last_expr_with_columns(
-    data_indexed: dict[str, Any], agg: nwp.Expr, expected: PythonLiteral
+    data_indexed: dict[str, Any],
+    agg: nwp.Expr,
+    expected: PythonLiteral,
+    dataframe: DataFrame,
+    request: pytest.FixtureRequest,
 ) -> None:
+    dataframe.xfail_polars_with_columns(request)
     """Related https://github.com/narwhals-dev/narwhals/pull/2528#discussion_r2225930065."""
     height = len(next(iter(data_indexed.values())))
     expected_full = {"result": height * [expected]}
@@ -505,9 +516,9 @@ def test_row_is_py_literal(
     data_indexed: dict[str, Any],
     index: int,
     expected: tuple[PythonLiteral, ...],
-    eager: EagerAllowed,
+    dataframe: DataFrame,
 ) -> None:
-    frame = nwp.DataFrame.from_dict(data_indexed, backend=eager)
+    frame = dataframe(data_indexed)
     result = frame.row(index)
     assert all(v is None or isinstance(v, (int, float)) for v in result)
     assert result == expected
@@ -535,10 +546,12 @@ def test_row_is_py_literal(
     ],
 )
 def test_drop(
-    columns: OneOrIterable[ColumnNameOrSelector], expected: list[str], eager: EagerAllowed
+    columns: OneOrIterable[ColumnNameOrSelector],
+    expected: list[str],
+    dataframe: DataFrame,
 ) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "c": [7.0, 8.0, 9.0]}
-    df = nwp.DataFrame.from_dict(data, backend=eager)
+    df = dataframe(data)
     if isinstance(columns, (str, nwp.Selector, list)):
         assert df.drop(columns).collect_schema().names() == expected
     else:  # pragma: no cover
@@ -547,9 +560,9 @@ def test_drop(
         assert df.drop(*columns).collect_schema().names() == expected
 
 
-def test_drop_strict(eager: EagerAllowed) -> None:
+def test_drop_strict(dataframe: DataFrame) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6]}
-    df = nwp.DataFrame.from_dict(data, backend=eager)
+    df = dataframe(data)
     with pytest.raises(ColumnNotFoundError):
         df.drop("z")
     with pytest.raises(ColumnNotFoundError, match=re.escape("not found: ['z']")):
@@ -558,21 +571,21 @@ def test_drop_strict(eager: EagerAllowed) -> None:
     assert df.drop(ncs.last(), "z", strict=False).collect_schema().names() == ["a"]
 
 
-def test_drop_invalid(data_small_dh: Data, eager: EagerAllowed) -> None:
-    df = nwp.DataFrame.from_dict(data_small_dh, backend=eager)
+def test_drop_invalid(data_small_dh: Data, dataframe: DataFrame) -> None:
+    df = dataframe(data_small_dh)
     with pytest.raises(InvalidOperationError):
         df.drop(ncs.first().first())
 
 
-def test_drop_nulls(data_small_dh: Data, eager: EagerAllowed) -> None:
-    df = nwp.DataFrame.from_dict(data_small_dh, backend=eager)
+def test_drop_nulls(data_small_dh: Data, dataframe: DataFrame) -> None:
+    df = dataframe(data_small_dh)
     expected: Data = {"d": [], "e": [], "f": [], "g": [], "h": []}
     result = df.drop_nulls()
     assert_equal_data(result, expected)
 
 
-def test_drop_nulls_invalid(data_small_dh: Data, eager: EagerAllowed) -> None:
-    df = nwp.DataFrame.from_dict(data_small_dh, backend=eager)
+def test_drop_nulls_invalid(data_small_dh: Data, dataframe: DataFrame) -> None:
+    df = dataframe(data_small_dh)
     with pytest.raises(TypeError, match=r"cannot turn.+int.+into a selector"):
         df.drop_nulls(123)  # type: ignore[arg-type]
     with pytest.raises(
@@ -590,7 +603,7 @@ def test_drop_nulls_invalid(data_small_dh: Data, eager: EagerAllowed) -> None:
         df.drop_nulls(ncs.by_index(-999))
 
 
-def test_sort(eager: EagerAllowed) -> None:
+def test_sort(dataframe: DataFrame) -> None:
     data_sort = {
         "a": [8, 8, 1, None, 1, 1],
         "b": [None, 0.9, 3.0, 0.9, None, None],
@@ -598,7 +611,7 @@ def test_sort(eager: EagerAllowed) -> None:
         "idx": [0, 1, 2, 3, 4, 5],
     }
 
-    result = nwp.DataFrame.from_dict(data_sort, backend=eager).sort(
+    result = dataframe(data_sort).sort(
         ncs.first(), "c", ncs.float(), descending=[True, False, False], nulls_last=True
     )
     expected = {
@@ -610,8 +623,8 @@ def test_sort(eager: EagerAllowed) -> None:
     assert_equal_data(result, expected)
 
 
-def test_sort_invalid(data_small_dh: Data, eager: EagerAllowed) -> None:
-    df = nwp.DataFrame.from_dict(data_small_dh, backend=eager)
+def test_sort_invalid(data_small_dh: Data, dataframe: DataFrame) -> None:
+    df = dataframe(data_small_dh)
     with pytest.raises(ColumnNotFoundError):
         df.sort(())
     with pytest.raises(
@@ -645,16 +658,15 @@ KEEP_ROW_3: Data = {"d": [8], "e": [7], "f": [None], "g": [False], "h": [True]}
 )
 def test_drop_nulls_subset(
     data_small_dh: Data,
+    dataframe: DataFrame,
     subset: OneOrIterable[ColumnNameOrSelector],
     expected: Data,
-    eager: EagerAllowed,
 ) -> None:
-    df = nwp.DataFrame.from_dict(data_small_dh, backend=eager)
-    result = df.drop_nulls(subset)
+    result = dataframe(data_small_dh).drop_nulls(subset)
     assert_equal_data(result, expected)
 
 
-def test_dataframe_to_polars(eager: EagerAllowed) -> None:
+def test_dataframe_to_polars(dataframe: DataFrame) -> None:
     pytest.importorskip("polars")
     import polars as pl
     from polars.testing import assert_frame_equal as pl_assert_frame_equal
@@ -668,7 +680,7 @@ def test_dataframe_to_polars(eager: EagerAllowed) -> None:
         "f": [1.5, 3.4, None],
     }
     expected = pl.DataFrame(data)
-    result = nwp.DataFrame.from_dict(data, backend=eager).to_polars()
+    result = dataframe(data).to_polars()
     pl_assert_frame_equal(result, expected)
 
 
@@ -683,18 +695,18 @@ def test_dataframe_to_polars(eager: EagerAllowed) -> None:
         [1.5, 3.4, None],
     ],
 )
-def test_series_to_polars(values: Sequence[PythonLiteral], eager: EagerAllowed) -> None:
+def test_series_to_polars(values: Sequence[PythonLiteral], series: Series) -> None:
     pytest.importorskip("polars")
     import polars as pl
     from polars.testing import assert_series_equal as pl_assert_series_equal
 
     expected = pl.Series(values)
-    result = nwp.Series.from_iterable(values, backend=eager).to_polars()
+    result = series(values).to_polars()
     pl_assert_series_equal(result, expected)
 
 
-def test_dataframe_iter_columns(data_small: Data, eager: EagerAllowed) -> None:
-    df = nwp.DataFrame.from_dict(data_small, backend=eager)
+def test_dataframe_iter_columns(data_small: Data, dataframe: DataFrame) -> None:
+    df = dataframe(data_small)
     result = df.from_dict({s.name: s for s in df.iter_columns()}).to_dict(as_series=False)
     assert_equal_data(df, result)
 
@@ -716,6 +728,8 @@ def test_dataframe_from_dict_misc(data_small: Data, eager: EagerAllowed) -> None
 def test_dataframe_from_native(data_small: Data) -> None:
     pytest.importorskip("pyarrow")
     pytest.importorskip("polars")
+    import pyarrow as pa
+
     table = pa.Table.from_pydict(data_small)
     pa_df = nwp.DataFrame.from_native(table)
     assert pa_df.implementation is nw.Implementation.PYARROW
@@ -728,7 +742,9 @@ def test_dataframe_from_native(data_small: Data) -> None:
         nwp.DataFrame.from_native(lazy)  # type: ignore[call-overload]
 
 
-def test_dataframe_to_struct(data_small_af: Data) -> None:
+def test_dataframe_to_struct(
+    data_small_af: Data, dataframe: DataFrame, request: pytest.FixtureRequest
+) -> None:
     pytest.importorskip("pyarrow")
 
     schema = {
@@ -739,7 +755,7 @@ def test_dataframe_to_struct(data_small_af: Data) -> None:
         "e": nw.Int64(),
         "f": nw.Boolean(),
     }
-
+    dataframe.xfail_polars_with_columns(request)
     df = dataframe(data_small_af).with_columns(
         nwp.col(name).cast(dtype) for name, dtype in schema.items()
     )
@@ -813,6 +829,7 @@ def test_series_cast(eager: EagerAllowed) -> None:
 
 if TYPE_CHECKING:
     import polars as pl
+    import pyarrow as pa
     from typing_extensions import assert_type
 
     def test_protocol_expr() -> None:
@@ -821,7 +838,6 @@ if TYPE_CHECKING:
         There's a lot left to implement, but only gets detected if we invoke `__init__`, which
         doesn't happen elsewhere at the moment.
         """
-        pytest.importorskip("pyarrow")
         from narwhals._plan import arrow as _arrow
 
         # NOTE: Intentionally leaving `ewm_mean` without a `not_implemented()` for another test

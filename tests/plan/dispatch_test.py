@@ -5,17 +5,14 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
-pytest.importorskip("pyarrow")
 import narwhals as nw
 from narwhals import _plan as nwp
 from narwhals._plan import expressions as ir, selectors as ncs
 from narwhals._plan._dispatch import get_dispatch_name
-from tests.plan.utils import assert_equal_data, dataframe, named_ir, re_compile
+from tests.plan.utils import DataFrame, assert_equal_data, named_ir, re_compile
 
 if TYPE_CHECKING:
-    import pyarrow as pa
-
-    from narwhals._plan.dataframe import DataFrame
+    from tests.conftest import Data
 
 
 @pytest.fixture
@@ -28,18 +25,16 @@ def data() -> dict[str, Any]:
     }
 
 
-@pytest.fixture
-def df(data: dict[str, Any]) -> DataFrame[pa.Table, pa.ChunkedArray[Any]]:
-    return dataframe(data)
-
-
-def test_dispatch(df: DataFrame[pa.Table, pa.ChunkedArray[Any]]) -> None:
+def test_dispatch(
+    data: Data, dataframe: DataFrame, request: pytest.FixtureRequest
+) -> None:
+    df = dataframe(data)
     implemented_full = nwp.col("a").is_null()
     forgot_to_expand = (named_ir("howdy", nwp.nth(3, 4).first()),)
     aliased_after_expand: tuple[ir.NamedIR] = (
         ir.NamedIR.from_ir(ir.col("a").alias("b")),
     )
-
+    dataframe.xfail_polars_select(request)
     assert_equal_data(df.select(implemented_full), {"a": [False, True, False]})
 
     missing_backend = r"ewm_mean.+is not yet implemented for"

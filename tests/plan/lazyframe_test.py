@@ -12,7 +12,7 @@ import narwhals as nw
 from narwhals import _plan as nwp
 from narwhals._plan import selectors as ncs
 from narwhals._utils import Implementation
-from tests.plan.utils import dataframe, re_compile
+from tests.plan.utils import DataFrame, re_compile
 
 if TYPE_CHECKING:
     from narwhals.typing import IntoBackend, LazyAllowed
@@ -118,9 +118,11 @@ def test_dataframe_lazy(
     data_small: Data,
     backend: IntoBackend[LazyAllowed] | None | Literal["empty"],
     expected: Implementation | Literal["same"],
+    dataframe: DataFrame,
+    request: pytest.FixtureRequest,
 ) -> None:
     pytest.importorskip("polars")
-    pytest.importorskip("pyarrow")
+    dataframe.xfail_polars_select(request)
     df = dataframe(data_small).select(nwp.nth(-1, -2, -3), "g")
     schema = nw.Schema(
         {"o": nw.String(), "n": nw.String(), "m": nw.Int64(), "g": nw.Boolean()}
@@ -136,8 +138,7 @@ def test_dataframe_lazy(
     assert lazy.collect_schema() == schema
 
 
-def test_dataframe_lazy_invalid(data_small: Data) -> None:
-    pytest.importorskip("pyarrow")
+def test_dataframe_lazy_invalid(data_small: Data, dataframe: DataFrame) -> None:
     df = dataframe(data_small)
     pattern = re_compile("unsupported.+backend.+expected.+got.+pandas")
     with pytest.raises(TypeError, match=pattern):
@@ -146,6 +147,8 @@ def test_dataframe_lazy_invalid(data_small: Data) -> None:
         df.lazy(Implementation.PANDAS)  # type: ignore[arg-type]
 
 
+# TODO @dangotbanned: Add a `lazy` fixture, which is like `eager`/`eager-or_false`
+# https://github.com/narwhals-dev/narwhals/blob/6e9575548c20b02dd0a6974ea526a762f0025d8f/tests/plan/conftest.py#L94-L107
 @pytest.mark.xfail(reason="Not yet implemented", raises=NotImplementedError)
 @pytest.mark.parametrize(
     "backend",
@@ -162,8 +165,9 @@ def test_dataframe_lazy_invalid(data_small: Data) -> None:
         "sqlframe",
     ],
 )
-def test_dataframe_lazy_todo(data_small: Data, backend: LazyAllowed) -> None:
-    pytest.importorskip("pyarrow")
+def test_dataframe_lazy_todo(
+    data_small: Data, backend: LazyAllowed, dataframe: DataFrame
+) -> None:
     impl = Implementation.from_backend(backend)
     pytest.importorskip(impl.name.lower())
     df = dataframe(data_small).select("e")
