@@ -525,12 +525,10 @@ class Constructor(Generic[R_co]):
         *,
         raises: type[Exception] | tuple[type[Exception], ...] = NotImplementedError,
     ) -> None:
-        self.xfail_not_implemented(
-            request, dataframe.is_polars(), "select", raises=raises
-        )
+        self.xfail_not_implemented(request, self.is_polars(), "select", raises=raises)
 
     def xfail_polars_with_columns(self, request: pytest.FixtureRequest, /) -> None:
-        self.xfail_not_implemented(request, dataframe.is_polars(), "with_columns")
+        self.xfail_not_implemented(request, self.is_polars(), "with_columns")
 
 
 LazyFrame: TypeAlias = Constructor[nwp.LazyFrame[Any]]
