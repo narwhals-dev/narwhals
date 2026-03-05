@@ -29,7 +29,7 @@ def test_corr_expr(
 ) -> None:
     if "pyspark" in str(constructor) and expected_corr is None:
         request.applymarker(
-            pytest.mark.xfail(reason="Pyspark corr function does not allow None values")
+            pytest.skip(reason="Pyspark corr function does not allow None values")
         )
     df = nw.from_native(constructor(data))
     result = df.select(nw.corr(a, b))
