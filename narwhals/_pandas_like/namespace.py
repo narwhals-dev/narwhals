@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals._utils import Implementation, Version
-    from narwhals.typing import CorrMethod, IntoDType, PythonLiteral
+    from narwhals.typing import CorrelationMethod, IntoDType, PythonLiteral
 
 
 Incomplete: TypeAlias = Any
@@ -374,7 +374,7 @@ class PandasLikeNamespace(
         return where(when) if otherwise is None else where(when, otherwise)
 
     def corr(
-        self, a: PandasLikeExpr, b: PandasLikeExpr, *, method: CorrMethod
+        self, a: PandasLikeExpr, b: PandasLikeExpr, *, method: CorrelationMethod
     ) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             a_series = df._evaluate_single_output_expr(a)

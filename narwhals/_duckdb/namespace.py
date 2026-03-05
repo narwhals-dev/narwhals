@@ -35,7 +35,7 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.window import WindowInputs
     from narwhals._utils import Version
-    from narwhals.typing import ConcatMethod, CorrMethod, IntoDType, PythonLiteral
+    from narwhals.typing import ConcatMethod, CorrelationMethod, IntoDType, PythonLiteral
 
 VARCHAR = duckdb_dtypes.VARCHAR
 
@@ -166,7 +166,9 @@ class DuckDBNamespace(
             version=self._version,
         )
 
-    def corr(self, a: DuckDBExpr, b: DuckDBExpr, *, method: CorrMethod) -> DuckDBExpr:
+    def corr(
+        self, a: DuckDBExpr, b: DuckDBExpr, *, method: CorrelationMethod
+    ) -> DuckDBExpr:
         if method != "pearson":
             msg = "Only 'pearson' correlation is supported for Spark."
             raise NotImplementedError(msg)

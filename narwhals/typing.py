@@ -244,7 +244,7 @@ RollingInterpolationMethod: TypeAlias = Literal[
 ]
 """Interpolation method."""
 
-CorrMethod: TypeAlias = Literal["pearson", "spearman"]
+CorrelationMethod: TypeAlias = Literal["pearson", "spearman"]
 
 UniqueKeepStrategy: TypeAlias = Literal["any", "first", "last", "none"]
 """Which of the duplicate rows to keep.

@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
 
     from narwhals._utils import Version
-    from narwhals.typing import ConcatMethod, CorrMethod, IntoDType, PythonLiteral
+    from narwhals.typing import ConcatMethod, CorrelationMethod, IntoDType, PythonLiteral
 
 
 class IbisNamespace(
@@ -142,7 +142,7 @@ class IbisNamespace(
             version=self._version,
         )
 
-    def corr(self, a: IbisExpr, b: IbisExpr, *, method: CorrMethod) -> IbisExpr:
+    def corr(self, a: IbisExpr, b: IbisExpr, *, method: CorrelationMethod) -> IbisExpr:
         if method != "pearson":
             msg = "Only 'pearson' correlation is supported for Ibis."
             raise NotImplementedError(msg)

@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
     from narwhals._arrow.typing import ChunkedArrayAny, Incomplete, ScalarAny
     from narwhals._utils import Version
-    from narwhals.typing import CorrMethod, IntoDType, PythonLiteral
+    from narwhals.typing import CorrelationMethod, IntoDType, PythonLiteral
 
 
 class ArrowNamespace(
@@ -254,7 +254,7 @@ class ArrowNamespace(
         otherwise = pa.nulls(len(when), then.type) if otherwise is None else otherwise
         return pc.if_else(when, then, otherwise)
 
-    def corr(self, a: ArrowExpr, b: ArrowExpr, *, method: CorrMethod) -> ArrowExpr:
+    def corr(self, a: ArrowExpr, b: ArrowExpr, *, method: CorrelationMethod) -> ArrowExpr:
         if method != "pearson":
             msg = "Only 'pearson' correlation is supported for Pyarrow."
             raise NotImplementedError(msg)
