@@ -9,12 +9,12 @@ import pytest
 import narwhals._plan as nwp
 import narwhals._plan.selectors as ncs
 from narwhals.exceptions import ShapeError
-from tests.plan.utils import dataframe, series
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
     from tests.conftest import Data
+    from tests.plan.utils import DataFrame, Series
 
 
 @pytest.fixture(scope="module")
@@ -36,20 +36,20 @@ else:  # pragma: no cover
 
 
 @pytest.mark.parametrize("n", [None, 1, 7, 29])
-def test_sample_n_series(data: Data, n: int | None) -> None:
+def test_sample_n_series(data: Data, n: int | None, series: Series) -> None:
     result = series(data["a"]).sample(n).shape
     expected = (1,) if n is None else (n,)
     assert result == expected
 
 
-def test_sample_fraction_series(data: Data) -> None:
+def test_sample_fraction_series(data: Data, series: Series) -> None:
     result = series(data["a"]).sample(fraction=0.1).shape
     expected = (3,)
     assert result == expected
 
 
 @pytest.mark.parametrize("n", [10])
-def test_sample_with_seed_series(data_big: Data, n: int) -> None:
+def test_sample_with_seed_series(data_big: Data, n: int, series: Series) -> None:
     ser = series(data_big["a"])
     seed1 = ser.sample(n, seed=123)
     seed2 = ser.sample(n, seed=123)
@@ -60,20 +60,20 @@ def test_sample_with_seed_series(data_big: Data, n: int) -> None:
 
 
 @pytest.mark.parametrize("n", [2, None, 1, 18])
-def test_sample_n_dataframe(data: Data, n: int | None) -> None:
+def test_sample_n_dataframe(data: Data, n: int | None, dataframe: DataFrame) -> None:
     result = dataframe(data).sample(n=n).shape
     expected = (1, 2) if n is None else (n, 2)
     assert result == expected
 
 
-def test_sample_fraction_dataframe(data: Data) -> None:
+def test_sample_fraction_dataframe(data: Data, dataframe: DataFrame) -> None:
     result = dataframe(data).sample(fraction=0.5).shape
     expected = (15, 2)
     assert result == expected
 
 
 @pytest.mark.parametrize("n", [10])
-def test_sample_with_seed_dataframe(data_big: Data, n: int) -> None:
+def test_sample_with_seed_dataframe(data_big: Data, n: int, dataframe: DataFrame) -> None:
     df = dataframe(data_big)
     r1 = df.sample(n, seed=123).to_native()
     r2 = df.sample(n, seed=123).to_native()
@@ -83,17 +83,20 @@ def test_sample_with_seed_dataframe(data_big: Data, n: int) -> None:
 
 
 @pytest.mark.parametrize("n", [39, 42, 20, 99])
-def test_sample_with_replacement_series(data: Data, n: int) -> None:
+def test_sample_with_replacement_series(data: Data, n: int, series: Series) -> None:
     result = series(data["a"]).slice(0, 10).sample(n, with_replacement=True)
     assert len(result) == n
 
 
 @pytest.mark.parametrize("n", [10, 15, 28, 100])
-def test_sample_with_replacement_dataframe(data: Data, n: int) -> None:
+def test_sample_with_replacement_dataframe(
+    data: Data, n: int, dataframe: DataFrame
+) -> None:
     result = dataframe(data).slice(0, 5).sample(n, with_replacement=True)
     assert len(result) == n
 
 
+# TODO @dangotbanned: `PolarsExpr.sample`
 @pytest.mark.parametrize(
     ("base", "kwds", "expected"),
     [
@@ -105,15 +108,23 @@ def test_sample_with_replacement_dataframe(data: Data, n: int) -> None:
     ],
 )
 def test_sample_expr(
-    data: Data, base: nwp.Expr, kwds: dict[str, Any], expected: tuple[int, int]
+    data: Data,
+    base: nwp.Expr,
+    kwds: dict[str, Any],
+    expected: tuple[int, int],
+    dataframe: DataFrame,
+    request: pytest.FixtureRequest,
 ) -> None:
     with deprecated_call():
         expr = base.sample(**kwds)
+    dataframe.xfail_polars_select(request)
     result = dataframe(data).select(expr).shape
     assert result == expected
 
 
-def test_sample_invalid(data: Data) -> None:
+def test_sample_invalid(
+    data: Data, dataframe: DataFrame, request: pytest.FixtureRequest
+) -> None:
     df = dataframe(data)
     ser = df.to_series()
 
@@ -130,5 +141,6 @@ def test_sample_invalid(data: Data) -> None:
         df.sample(n=1_000)
     with pytest.raises(ShapeError, match=too_high_n):
         ser.sample(n=2_000)
+    dataframe.xfail_polars_with_columns(request)
     with pytest.raises(ShapeError), deprecated_call():
         df.with_columns(nwp.col("b").sample(123, with_replacement=True))
