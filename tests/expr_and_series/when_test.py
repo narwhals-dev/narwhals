@@ -373,9 +373,9 @@ def test_when_chain_complex_conditions(constructor: Constructor) -> None:
 
 
 def test_when_chain_with_nulls(
-    request: pytest.FixtureRequest, constructor: Constructor
+    constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if uses_pyarrow_backend(constructor) or "pyarrow" in str(constructor):
+    if "pyarrow_table" in str(constructor):
         reason = (
             "PyArrow uses SQL-like null semantics: when condition is null, "
             "result is null (not the otherwise value). This is pre-existing "

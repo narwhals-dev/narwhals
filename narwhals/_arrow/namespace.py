@@ -247,23 +247,9 @@ class ArrowNamespace(
 
     def _if_then_else(
         self,
-        when: ChunkedArrayAny | list[ChunkedArrayAny],
-        then: ChunkedArrayAny | list[ChunkedArrayAny],
+        when: ChunkedArrayAny,
+        then: ChunkedArrayAny,
         otherwise: ChunkedArrayAny | None = None,
     ) -> ChunkedArrayAny:
-        if not isinstance(when, list):
-            otherwise = pa.nulls(len(when), then.type) if otherwise is None else otherwise
-            return pc.if_else(when, then, otherwise)
-
-        conditions = when
-        values = then
-
-        if otherwise is None:
-            result = pa.nulls(len(conditions[-1]), values[-1].type)
-        else:
-            result = otherwise
-
-        for cond, val in reversed(list(zip(conditions, values))):
-            result = pc.if_else(cond, val, result)
-
-        return result
+        otherwise = pa.nulls(len(when), then.type) if otherwise is None else otherwise
+        return pc.if_else(when, then, otherwise)

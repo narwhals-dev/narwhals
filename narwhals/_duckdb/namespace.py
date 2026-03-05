@@ -67,34 +67,14 @@ class DuckDBNamespace(
         return lit(value)
 
     def _when(
-        self, condition: Expression, value: Expression, *args: Expression
+        self,
+        condition: Expression,
+        value: Expression,
+        otherwise: Expression | None = None,
     ) -> Expression:
-        if not args:
+        if otherwise is None:
             return when(condition, value)
-
-        if len(args) == 1:
-            otherwise = args[0]
-            return when(condition, value).otherwise(otherwise)
-
-        all_exprs = [condition, value, *args]
-
-        has_otherwise = len(all_exprs) % 2 == 1
-
-        if has_otherwise:
-            *pairs, otherwise_expr = all_exprs
-        else:
-            pairs = all_exprs
-            otherwise_expr = None
-
-        result = when(pairs[0], pairs[1])
-
-        for cond, val in zip(pairs[2::2], pairs[3::2]):
-            result = result.when(cond, val)
-
-        if has_otherwise:
-            result = result.otherwise(otherwise_expr)
-
-        return result
+        return when(condition, value).otherwise(otherwise)
 
     def _coalesce(self, *exprs: Expression) -> Expression:
         return CoalesceOperator(*exprs)
