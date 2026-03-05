@@ -3,7 +3,7 @@ from __future__ import annotations
 import platform
 import sys
 from collections.abc import Iterable, Mapping, Sequence
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from narwhals._expression_parsing import ExprKind, ExprNode, is_expr, is_series
 from narwhals._utils import (
@@ -1388,7 +1388,7 @@ class Then(Expr):
         result = None
         for predicate, then_value in reversed(chain):
             result = cls._from_exprs(predicate, then_value, result)
-        assert isinstance(result, Then)  # noqa: S101
+        result = cast("Self", result)
         result._chain = chain
         return result
 
