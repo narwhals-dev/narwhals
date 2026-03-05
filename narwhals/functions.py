@@ -1384,7 +1384,7 @@ class Then(Expr):
     _chain: list[tuple[Expr, IntoExpr | NonNestedLiteral]]
 
     @classmethod
-    def _from_chain(cls, chain: list[tuple[Expr, IntoExpr | NonNestedLiteral]]) -> Then:
+    def _from_chain(cls, chain: list[tuple[Expr, IntoExpr | NonNestedLiteral]]) -> Self:
         result = None
         for predicate, then_value in reversed(chain):
             result = cls._from_exprs(predicate, then_value, result)
