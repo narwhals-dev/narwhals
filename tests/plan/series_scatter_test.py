@@ -4,52 +4,64 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
-import narwhals._plan as nwp
-from tests.plan.utils import assert_equal_data, assert_equal_series, dataframe, series
+from tests.plan.utils import DataFrame, Series, assert_equal_data, assert_equal_series
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
-
-    from narwhals._plan.typing import OneOrIterable
+    from collections.abc import Iterable, Sequence
 
 
 @pytest.mark.parametrize(
-    ("data", "indices", "values", "expected"),
+    ("data", "indices", "values", "expected", "values_into_series"),
     [
-        ([1, 2, 3], [0, 1], [999, 888], [999, 888, 3]),
-        ([142, 124, 13], [0, 2, 1], series([142, 124, 13]), [142, 13, 124]),
-        ([1, 2, 3], 0, 999, [999, 2, 3]),
+        ([1, 2, 3], [0, 1], [999, 888], [999, 888, 3], False),
+        ([142, 124, 13], [0, 2, 1], [142, 124, 13], [142, 13, 124], True),
+        ([1, 2, 3], 0, 999, [999, 2, 3], False),
         (
             [16, 12, 10, 9, 6, 5, 2],
             [6, 1, 0, 5, 3, 2, 4],
-            series([16, 12, 10, 9, 6, 5, 2]),
+            [16, 12, 10, 9, 6, 5, 2],
             [10, 12, 5, 6, 2, 9, 16],
+            True,
         ),
-        ([5.5, 9.2, 1.0], (), (), [5.5, 9.2, 1.0]),
+        ([5.5, 9.2, 1.0], (), (), [5.5, 9.2, 1.0], False),
     ],
     ids=["lists", "single-series", "integer", "unordered-indices", "empty-indices"],
 )
 def test_scatter(
+    series: Series,
     data: list[Any],
     indices: int | Sequence[int],
-    values: OneOrIterable[int],
+    values: Iterable[int],
     expected: list[Any],
+    values_into_series: bool,  # noqa: FBT001
 ) -> None:
-    ser = series(data).alias("ser")
-    if isinstance(values, nwp.Series):
-        assert ser.implementation is values.implementation
-    assert_equal_series(ser.scatter(indices, values), expected, "ser")
+    if values_into_series:
+        values = series(values)
+    result = series(data).alias("ser").scatter(indices, values)
+    assert_equal_series(result, expected, "ser")
 
 
-def test_scatter_unchanged() -> None:
+# TODO @dangotbanned: `PolarsDataFrame.with_columns`
+def test_scatter_unchanged(dataframe: DataFrame, request: pytest.FixtureRequest) -> None:
     df = dataframe({"a": [1, 2, 3], "b": [142, 124, 132]})
     a = df.get_column("a")
     b = df.get_column("b")
-    df.with_columns(a.scatter([0, 1], [999, 888]), b.scatter([0, 2, 1], [142, 124, 132]))
+    a_scatter, b_scatter = (
+        a.scatter([0, 1], [999, 888]),
+        b.scatter([0, 2, 1], [142, 124, 132]),
+    )
+    request.applymarker(
+        pytest.mark.xfail(
+            dataframe.is_polars(),
+            raises=NotImplementedError,
+            reason="TODO @dangotbanned: `PolarsDataFrame.with_columns`",
+        )
+    )
+    df.with_columns(a_scatter, b_scatter)
     assert_equal_data(df, {"a": [1, 2, 3], "b": [142, 124, 132]})
 
 
-def test_scatter_2862() -> None:
+def test_scatter_2862(series: Series) -> None:
     ser = series([1, 2, 3]).alias("a")
     assert_equal_series(ser.scatter(1, 999), [1, 999, 3], "a")
     assert_equal_series(ser.scatter([0, 2], [999, 888]), [999, 2, 888], "a")
