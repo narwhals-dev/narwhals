@@ -8,13 +8,7 @@ import pytest
 import narwhals._plan as nwp
 import narwhals._plan.selectors as ncs
 from narwhals.exceptions import ShapeError
-from tests.plan.utils import (
-    DataFrame,
-    Series,
-    assert_equal_data,
-    assert_equal_series,
-    dataframe as dataframe_old,
-)
+from tests.plan.utils import DataFrame, Series, assert_equal_data, assert_equal_series
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -85,8 +79,11 @@ def test_gather_every_dataframe(
 
 @pytest.mark.parametrize("n", [1, 2, 3])
 @pytest.mark.parametrize("offset", [0, 1, 2, 3])
-def test_gather_every_expr(data: Data, n: int, offset: int) -> None:
-    df = dataframe_old(data)
+def test_gather_every_expr(
+    data: Data, n: int, offset: int, dataframe: DataFrame, request: pytest.FixtureRequest
+) -> None:
+    dataframe.xfail_polars_select(request)
+    df = dataframe(data)
     indices = slice(offset, None, n)
     v_idx, v_name = data["idx"][indices], data["name"][indices]
     e_idx, e_name = nwp.col("idx"), nwp.col("name")

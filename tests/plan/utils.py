@@ -501,6 +501,37 @@ class Constructor(Generic[R_co]):
         msg = f"TODO: Add support for {self.backend_version.__qualname__}({unknown=}) when integrating plugins\n{self!r}"
         raise NotImplementedError(msg)
 
+    def xfail_not_implemented(
+        self,
+        request: pytest.FixtureRequest,
+        /,
+        condition: bool,  # noqa: FBT001
+        method: LiteralString,
+        *,
+        raises: type[Exception] | tuple[type[Exception], ...] = NotImplementedError,
+    ) -> None:
+        request.applymarker(
+            pytest.mark.xfail(
+                condition,
+                raises=raises,
+                reason=f"TODO @dangotbanned: `{self.fixture_name}[{self.identifier}].{method}`",
+            )
+        )
+
+    def xfail_polars_select(
+        self,
+        request: pytest.FixtureRequest,
+        /,
+        *,
+        raises: type[Exception] | tuple[type[Exception], ...] = NotImplementedError,
+    ) -> None:
+        self.xfail_not_implemented(
+            request, dataframe.is_polars(), "select", raises=raises
+        )
+
+    def xfail_polars_with_columns(self, request: pytest.FixtureRequest, /) -> None:
+        self.xfail_not_implemented(request, dataframe.is_polars(), "with_columns")
+
 
 LazyFrame: TypeAlias = Constructor[nwp.LazyFrame[Any]]
 """The type of the `lazyframe` fixture."""

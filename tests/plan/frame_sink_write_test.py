@@ -84,19 +84,12 @@ def test_write_parquet(
     assert Path(parquet_path).exists()
 
 
-# TODO @dangotbanned: `Arrow*Frame.sink_parquet`
 def test_sink_parquet(
     data: Data,
     parquet_path: FileSource,
     lazyframe: LazyFrame,
     request: pytest.FixtureRequest,
 ) -> None:
-    request.applymarker(
-        pytest.mark.xfail(
-            lazyframe.is_pyarrow(),
-            raises=NotImplementedError,
-            reason="TODO @dangotbanned: `Arrow*Frame.sink_parquet`",
-        )
-    )
+    lazyframe.xfail_not_implemented(request, lazyframe.is_pyarrow(), "sink_parquet")
     lazyframe(data).sink_parquet(parquet_path)
     assert Path(parquet_path).exists()
