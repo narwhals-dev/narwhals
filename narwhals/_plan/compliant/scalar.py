@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Literal, Protocol
 
 from narwhals._plan.compliant.expr import CompliantExpr, EagerExpr
-from narwhals._plan.compliant.typing import FrameT_contra, SeriesT, SeriesT_co
+from narwhals._plan.compliant.typing import FrameT_contra, SeriesT
 from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
@@ -20,10 +20,8 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoDType, PythonLiteral
 
 
-class CompliantScalar(
-    CompliantExpr[FrameT_contra, SeriesT_co], Protocol[FrameT_contra, SeriesT_co]
-):
-    """`[FrameT_contra, SeriesT_co]`."""
+class CompliantScalar(CompliantExpr[FrameT_contra], Protocol[FrameT_contra]):
+    """`[FrameT_contra]`."""
 
     _name: str
 
@@ -110,7 +108,7 @@ class CompliantScalar(
 
     def drop_nulls(  # type: ignore[override]
         self, node: FunctionExpr[F.DropNulls], frame: FrameT_contra, name: str
-    ) -> Self | CompliantExpr[FrameT_contra, SeriesT_co]:
+    ) -> Self | CompliantExpr[FrameT_contra]:
         """Returns a 0-length Series if null, else noop."""
         ...
 
@@ -143,7 +141,7 @@ class CompliantScalar(
 
 
 class EagerScalar(
-    CompliantScalar[FrameT_contra, SeriesT],
+    CompliantScalar[FrameT_contra],
     EagerExpr[FrameT_contra, SeriesT],
     Protocol[FrameT_contra, SeriesT],
 ):

@@ -32,8 +32,8 @@ Assume nothing, permit anything; rely on well-defined protocols to do the talkin
 FromNative = TypeVar("FromNative")
 """Same as `Native`, but should be scoped to constructor method(s) and not the class."""
 
-ExprAny: TypeAlias = "CompliantExpr[Any, Any]"
-ScalarAny: TypeAlias = "CompliantScalar[Any, Any]"
+ExprAny: TypeAlias = "CompliantExpr[Any]"
+ScalarAny: TypeAlias = "CompliantScalar[Any]"
 SeriesAny: TypeAlias = "CompliantSeries[Any]"
 FrameAny: TypeAlias = "CompliantFrame[Any]"
 DataFrameAny: TypeAlias = "CompliantDataFrame[Any, Any]"

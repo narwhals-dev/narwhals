@@ -79,7 +79,7 @@ class HasExpr(Protocol):
     """
 
     @property
-    def Expr(self) -> type[CompliantExpr[Incomplete, Incomplete]]:
+    def Expr(self) -> type[CompliantExpr[Incomplete]]:
         """Required, but barely implemented for `polars` yet."""
         ...
 
@@ -121,7 +121,7 @@ class HasScalar(Protocol):
     """
 
     @property
-    def Scalar(self) -> type[CompliantScalar[Incomplete, Incomplete]] | None:
+    def Scalar(self) -> type[CompliantScalar[Incomplete]] | None:
         """Optional for *at-least* `polars`."""
         ...
 
@@ -215,7 +215,7 @@ def try_arrow_1() -> tuple[
         type[CompliantLazyFrame[pa.Table]],
         type[CompliantDataFrame[pa.Table, pa.ChunkedArray[Any]]],
         type[CompliantSeries[pa.ChunkedArray[Any]]],
-        type[CompliantExpr[Incomplete, Incomplete]],
+        type[CompliantExpr[Incomplete]],
     ],
 ]:
     import narwhals._plan.arrow
@@ -240,7 +240,7 @@ def try_polars_1() -> tuple[
     type[CompliantLazyFrame[pl.LazyFrame]],
     type[CompliantDataFrame[pl.DataFrame, pl.Series]],
     type[CompliantSeries[pl.Series]],
-    type[CompliantExpr[Incomplete, Incomplete]],
+    type[CompliantExpr[Incomplete]],
 ]:
     import narwhals._plan.polars
 

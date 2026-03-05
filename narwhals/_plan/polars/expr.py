@@ -13,13 +13,14 @@ if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
 
     from narwhals._plan import expressions as ir
+    from narwhals._plan.polars.dataframe import PolarsDataFrame as DataFrame  # noqa: F401
     from narwhals.typing import IntoDType, PythonLiteral
 
 
 Incomplete: TypeAlias = Any
 
 
-class PolarsExpr(CompliantExpr[Incomplete, Incomplete]):
+class PolarsExpr(CompliantExpr["DataFrame"]):
     _evaluated: pl.Expr
     _version: Version
 
@@ -103,7 +104,12 @@ class PolarsExpr(CompliantExpr[Incomplete, Incomplete]):
     fill_null = todo()
     fill_null_with_strategy = todo()
     filter = todo()
-    first = todo()
+
+    # TODO @dangotbanned: Make `CompliantScalar` more optional
+    # Return type here should be fine, but need a way to communicate that scalar-ness is handled elsewhere
+    def first(self, node: ir.aggregation.First, frame: Any, name: str) -> Self:  # type: ignore[override]
+        return self._with_native(node.expr.dispatch(self, frame, name).native.first())
+
     floor = todo()
     hist_bin_count = todo()
     hist_bins = todo()
