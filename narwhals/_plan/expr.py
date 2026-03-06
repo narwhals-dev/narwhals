@@ -594,6 +594,7 @@ class Expr:
 
     @property
     def meta(self) -> MetaNamespace:
+        """Methods to traverse and introspect existing expressions."""
         from narwhals._plan.meta import MetaNamespace
 
         return MetaNamespace.from_expr(self)

@@ -29,15 +29,84 @@ if TYPE_CHECKING:
 
 
 class ExprIR(Immutable):
-    """Anything that can be a node on a graph of expressions."""
+    r"""An immutable representation of an expression.
 
+    All functions and methods that return an `Expr` are backed by an `ExprIR`.
+
+    That may be a single node:
+
+        >>> import narwhals._plan as nw
+        >>> column = nw.col("howdy")
+        >>> column._ir
+        col('howdy')
+        >>> print(column._ir)
+        Column(name='howdy')
+
+    Or something more deeply nested:
+
+        >>> bigger = (column + 10.5).alias("more")
+        >>> bigger_ir = bigger._ir
+        >>> print(bigger_ir)
+        Alias(expr=BinaryExpr(left=Column(name='howdy'), op=Add(), right=Literal(value=ScalarLiteral(dtype=Float64, value=10.5))), name='more')
+
+    An `ExprIR` is an easily traversable graph, supporting iteration from *root to leaf*:
+
+        >>> root_to_leaf = bigger_ir.iter_left()
+        >>> print("\n".join(f"{idx}: {node}" for idx, node in enumerate(root_to_leaf)))
+        0: Column(name='howdy')
+        1: Literal(value=ScalarLiteral(dtype=Float64, value=10.5))
+        2: BinaryExpr(left=..., op=Add(), right=...)
+        3: Alias(expr=BinaryExpr(...), name='more')
+
+    And *leaf to root* - both have the same cost:
+
+        >>> leaf_to_root = bigger_ir.iter_right()
+        >>> print("\n".join(f"{idx}: {node}" for idx, node in enumerate(leaf_to_root)))
+        0: Alias(expr=BinaryExpr(...), name='more')
+        1: BinaryExpr(left=..., op=Add(), right=...)
+        2: Literal(value=ScalarLiteral(dtype=Float64, value=10.5))
+        3: Column(name='howdy')
+
+    That comes in handy for [`meta`] operations, which are available for both `Expr` and `ExprIR`:
+
+        >>> bigger_ir.meta.root_names()
+        ['howdy']
+        >>> bigger_ir.meta.output_name()
+        'more'
+
+    We can apply functions to transform each node in the graph:
+
+        # TODO: show `map_ir`
+        # example(s) ...
+
+    [`meta`]: https://docs.pola.rs/api/python/stable/reference/expressions/meta.html
+    """
+
+    # TODO @dangotbanned: Docs
+
+    # TODO @dangotbanned: How this relates to:
+    # - `__init_subclass__(child)`
     _child: ClassVar[Seq[str]] = ()
     """Nested node names, in iteration order."""
 
+    # TODO @dangotbanned: How this relates to:
+    # - `__init_subclass__(config)`
+    # - `__expr_ir_dispatch__`
+    # TODO @dangotbanned: Inheritance
     __expr_ir_config__: ClassVar[ExprIROptions] = ExprIROptions.default()
+
+    # TODO @dangotbanned: How this relates to:
+    # - `dispatch`
+    # - `ExprDispatch` (compliant)
     __expr_ir_dispatch__: ClassVar[Dispatcher[Self]]
+
+    # TODO @dangotbanned: How this relates to:
+    # - `__init_subclass__(dtype)`
+    # - `resolve_dtype`
+    # - `dtypes_mapper.py`
     __expr_ir_dtype__: ClassVar[ResolveDType[Self]] = ResolveDType()
 
+    # NOTE: May need to add docs, even though it won't show in an IDE
     def __init_subclass__(
         cls: type[Self],
         *args: Any,
@@ -59,6 +128,7 @@ class ExprIR(Immutable):
                 dtype = ResolveDType.expr_ir.visitor(dtype)  # pragma: no cover
             cls.__expr_ir_dtype__ = dtype
 
+    # TODO @dangotbanned: Really deserves a good doc
     def dispatch(
         self: Self, ctx: Ctx[FrameT_contra, R_co], frame: FrameT_contra, name: str, /
     ) -> R_co:
@@ -74,22 +144,69 @@ class ExprIR(Immutable):
         return self.__expr_ir_dtype__(self, schema)
 
     def to_narwhals(self, version: Version = Version.MAIN) -> Expr:
+        """Convert this `ExprIR` into an `Expr`."""
         from narwhals._plan import expr
 
         tp = expr.Expr if version is Version.MAIN else expr.ExprV1
         return tp._from_ir(self)
 
     def to_selector_ir(self) -> SelectorIR:
+        """Try to convert this `ExprIR` into a `SelectorIR`.
+
+        This is a noop for `SelectorIR`, and raises for all `ExprIR` *except* `Column`.
+        """
         msg = f"cannot turn `{self!r}` into a selector"
         raise InvalidOperationError(msg)
 
+    # TODO @dangotbanned: Fill out the examples
+    # TODO @dangotbanned: do another pass on the phrasing
     @property
     def is_scalar(self) -> bool:
+        """Return True if this leaf produces a single value.
+
+        Some expressions are always scalar:
+
+            >>> import narwhals._plan as nw
+            >>> nw.len()._ir.is_scalar
+            True
+            >>> nw.lit(123)._ir.is_scalar
+            True
+
+        Others are never scalar:
+
+            >>> nw.col("a")._ir.is_scalar
+            False
+            >>> nw.int_range(0, 10)._ir.is_scalar
+            False
+
+        Many depend on the scalar-ness of child expressions:
+
+            >>> (nw.col("a") + nw.len())._ir.is_scalar
+            False
+            >>> (nw.col("a").first() + nw.len())._ir.is_scalar
+            True
+        """
         return False
 
     def needs_expansion(self) -> bool:
+        """Return True if this expression contains selectors.
+
+        Examples:
+            >>> import narwhals._plan as nw
+            >>> a = nw.col("a")
+            >>> bc = nw.col("b", "c")
+            >>> a._ir.needs_expansion()
+            False
+            >>> bc._ir.needs_expansion()
+            True
+            >>> (a * bc)._ir.needs_expansion()
+            True
+        """
         return any(isinstance(e, SelectorIR) for e in self.iter_left())
 
+    # TODO @dangotbanned: Docs should explain a bit + give an example
+    # E.g. rewrite `sum_horizontal("a", "b", "c")` -> `col("a") + col("b") + col("c")`
+    # We have multiple versions of that in various backends, but it would be easy to write a backend-agnostic version
     def map_ir(self, function: MapIR, /) -> ExprIR:
         """Apply `function` to each child node, returning a new `ExprIR`.
 
@@ -171,6 +288,10 @@ class ExprIR(Immutable):
                 for node in reversed(child):  # pragma: no cover
                     yield from node.iter_right()
 
+    # TODO @dangotbanned: Can this be factored out?
+    # - Only `FunctionExpr`, `StructExpr` do anything fancy here
+    # - Everything else just iterates the first child
+    #   - `FunctionExpr` stores `input: Seq[ExprIR]` there, and need to stop on the first element
     def iter_output_name(self) -> Iterator[ExprIR]:
         """Override for different iteration behavior in `ExprIR.meta.output_name`.
 
@@ -181,21 +302,30 @@ class ExprIR(Immutable):
 
     @property
     def meta(self) -> MetaNamespace:
+        """Methods to traverse and introspect existing expressions."""
         from narwhals._plan.meta import MetaNamespace
 
         return MetaNamespace(_ir=self)
 
     def cast(self, dtype: DType) -> Cast:
+        """Syntax sugar for `Cast(expr=self, dtype=dtype)`."""
         from narwhals._plan.expressions.expr import Cast
 
         return Cast(expr=self, dtype=dtype)
 
     def alias(self, name: str) -> Alias:
+        """Syntax sugar for `Alias(expr=self, name=name)`."""
         from narwhals._plan.expressions.expr import Alias
 
         return Alias(expr=self, name=name)
 
     def _repr_html_(self) -> str:
+        """Return a html representation of this expression, used by [IPython].
+
+        Although this is identical to `__repr__`; a notebook will render the string in a prettier way.
+
+        [IPython]: https://ipython.readthedocs.io/en/stable/config/integrating.html#custom-methods
+        """
         return self.__repr__()
 
 

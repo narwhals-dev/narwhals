@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
 
 class MetaNamespace(IRNamespace):
-    """Methods to modify and traverse existing expressions."""
+    """Methods to traverse and introspect existing expressions."""
 
     def has_multiple_outputs(self) -> bool:
         return any(isinstance(e, ir.SelectorIR) for e in self._ir.iter_left())
@@ -83,7 +83,7 @@ class MetaNamespace(IRNamespace):
     def as_selector(self) -> Selector:
         """Try to turn this expression into a selector.
 
-        Raises if the underlying expressions is not a column or selector.
+        Raises if the underlying expression is not a column or selector.
         """
         return self._ir.to_selector_ir().to_narwhals()
 
