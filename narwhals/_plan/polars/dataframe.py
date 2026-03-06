@@ -4,9 +4,8 @@ from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Literal, overload
 
 import polars as pl
-import polars.exceptions as pl_exc
 
-import narwhals.exceptions as nw_exc
+import narwhals.exceptions
 from narwhals._plan._version import into_version
 from narwhals._plan.common import temp
 from narwhals._plan.compliant.dataframe import CompliantDataFrame
@@ -26,7 +25,6 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
     from io import BytesIO
     from pathlib import Path
-    from types import TracebackType
 
     import pandas as pd
     import pyarrow as pa
@@ -60,20 +58,28 @@ HAS_POLARS_ERROR = BACKEND_VERSION >= (0, 20, 4)
 """https://github.com/pola-rs/polars/pull/13615"""
 
 
-class map_errs:  # noqa: N801
+class remap_exceptions:  # noqa: N801
     """Fancy version of `catch_polars_exception`.
 
-    Just write *potentially raising* code `with`-in the context manager:
+    Just write *potentially-raising* code `with`-in the context manager:
 
-        with map_errs():
-            risky_business()
-
+        with remap_exceptions():
+            risky_business()  # Any native exceptions will be re-raised
+                              # as their narwhals-equivalent
         business_as_usual()
+
+    Works in a similar way to the implementation of [`suppress.__exit__`].
+
+    See Also:
+        [The `with` statement]
+
+    [`suppress.__exit__`]: https://github.com/python/cpython/blob/fa7212b0af1c3d4e0cf8ac2ead35df3541436fb4/Lib/contextlib.py#L450-L469
+    [The `with` statement]: https://docs.python.org/3/reference/compound_stmts.html#the-with-statement
     """
 
     _REMAP: Mapping[type[BaseException], type[NarwhalsError]] = {
-        tp: getattr(nw_exc, tp.__name__, NarwhalsError)
-        for tp in pl_exc.PolarsError.__subclasses__()
+        tp: getattr(narwhals.exceptions, tp.__name__, NarwhalsError)
+        for tp in pl.exceptions.PolarsError.__subclasses__()
     }
 
     def __enter__(self) -> None:
@@ -83,13 +89,12 @@ class map_errs:  # noqa: N801
         self,
         exc_type: type[BaseException] | None,
         exc_value: BaseException | None,
-        traceback: TracebackType | None,
+        _: object,
         /,
     ) -> bool | None:
-        # See https://docs.python.org/3/reference/compound_stmts.html#the-with-statement
         if exc_type is None or exc_value is None:
             return None
-        if to_exc := map_errs._REMAP.get(exc_type):
+        if to_exc := remap_exceptions._REMAP.get(exc_type):
             raise to_exc(str(exc_value)) from None
         return False
 
@@ -303,7 +308,7 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
         separator: str = "_",
     ) -> Self:
         if PIVOT_SUPPORTS_ON_COLUMNS:
-            with map_errs():
+            with remap_exceptions():
                 return self._with_native(
                     self.native.pivot(
                         on,
