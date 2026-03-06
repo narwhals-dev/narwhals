@@ -816,7 +816,7 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 def corr(
     a: IntoExpr, b: IntoExpr, method: Literal["pearson", "spearman"] = "pearson"
 ) -> Expr:
-    """Compute the Pearson's or Spearman rank correlation between two columns. Ddof is implicitly 1.
+    """Compute the Pearson's or Spearman rank correlation between two columns.
 
     Arguments:
         a: Column name or Expression

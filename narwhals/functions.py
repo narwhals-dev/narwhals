@@ -1268,7 +1268,7 @@ def _expr_with_horizontal_op(name: str, *exprs: IntoExpr, **kwargs: Any) -> Expr
 
 
 def corr(a: IntoExpr, b: IntoExpr, method: CorrelationMethod = "pearson") -> Expr:
-    """Compute the Pearson's or Spearman rank correlation between two columns. Ddof is implicitly 1.
+    """Compute the Pearson's or Spearman rank correlation between two columns.
 
     Arguments:
         a: Column name or Expression
@@ -1279,20 +1279,23 @@ def corr(a: IntoExpr, b: IntoExpr, method: CorrelationMethod = "pearson") -> Exp
         >>> import polars as pl
         >>> import narwhals as nw
         >>>
-        >>> df_native = pl.DataFrame({"a": [1, 2, 3], "b": [1, 3, 2]})
-        >>> nw.from_native(df_native).select(correlation=nw.corr("a", "b"))
-        ┌──────────────────┐
-        |Narwhals DataFrame|
-        |------------------|
-        | shape: (1, 1)    |
-        | ┌─────────────┐  |
-        | │ correlation │  |
-        | │ ---         │  |
-        | │ f64         │  |
-        | ╞═════════════╡  |
-        | │ 0.5         │  |
-        | └─────────────┘  |
-        └──────────────────┘
+        >>> df_native = pl.DataFrame({"a": [1, 2, 3], "b": [0, 3, 2]})
+        >>> nw.from_native(df_native).select(
+        >>>     pearson=nw.corr("a", "b", method="pearson),
+        >>>     spearman=pl.corr("a", "b", method="spearman"),
+        >>> )
+        ┌───────────────────────────┐
+        |Narwhals DataFrame         |
+        |---------------------------|
+        | shape: (1, 2)             |
+        | ┌───────────┬───────────┐ |
+        | │ pearson   ┆ spearman  | |
+        | │ ---       ┆ ---       | |
+        | │ f64       ┆ f64       | |
+        | ╞═══════════╪═══════════╡ |
+        | │ 0.654654  ┆ 0.5       | |
+        | └───────────┴───────────┘ |
+        └───────────────────────────┘
     """
     return Expr(ExprNode(ExprKind.AGGREGATION, "corr", exprs=(a, b), method=method))
 
