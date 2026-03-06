@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Iterable, Iterator, Mapping, Sequence
+from functools import partial
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -179,12 +180,12 @@ class Series(Generic[IntoSeriesT]):
             if dtype:
                 return cls(compliant.cast(dtype), level="full")
             return cls(compliant, level="full")
-        msg = (
+        msg = (  # pragma: no cover
             f"{implementation} support in Narwhals is lazy-only, but `Series.from_numpy` is an eager-only function.\n\n"
             "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
             f"    nw.Series.from_numpy(arr, backend='pyarrow').to_frame().lazy('{implementation}')"
         )
-        raise ValueError(msg)
+        raise ValueError(msg)  # pragma: no cover
 
     @classmethod
     def from_iterable(
@@ -394,12 +395,16 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._compliant_series.native
 
-    def scatter(self, indices: int | Sequence[int], values: Any) -> Self:
-        """Set value(s) at given position(s).
+    def scatter(
+        self,
+        indices: Self | Iterable[int] | int,
+        values: Self | Iterable[PythonLiteral] | PythonLiteral,
+    ) -> Self:
+        """Set value(s) at the given index location(s).
 
         Arguments:
-            indices: Position(s) to set items at.
-            values: Values to set.
+            indices: Integer(s) representing the index location(s).
+            values: Replacement values.
 
         Note:
             This method always returns a new Series, without modifying the original one.
@@ -436,9 +441,26 @@ class Series(Generic[IntoSeriesT]):
             a: [[999,888,3]]
             b: [[4,5,6]]
         """
-        return self._with_compliant(
-            self._compliant_series.scatter(indices, self._extract_native(values))
+        into_series = partial(
+            type(self).from_iterable, name="", backend=self.implementation
         )
+
+        if not isinstance(indices, Series):
+            if not isinstance(indices, Iterable):
+                indices = [indices]
+            dtypes = self._version.dtypes
+            indices = into_series(values=indices, dtype=dtypes.Int64)
+
+        if indices.is_empty():
+            return self
+
+        if not isinstance(values, Series):
+            if not isinstance(values, Iterable) or isinstance(values, str):
+                values = [values]
+            values = into_series(values=values)
+
+        result = self._compliant.scatter(indices._compliant, values._compliant)
+        return self._with_compliant(result)
 
     @property
     def shape(self) -> tuple[int]:
@@ -455,8 +477,6 @@ class Series(Generic[IntoSeriesT]):
         return (self._compliant_series.len(),)
 
     def _extract_native(self, arg: Any) -> Any:
-        from narwhals.series import Series
-
         if isinstance(arg, Series):
             return arg._compliant_series
         return arg
@@ -1322,7 +1342,7 @@ class Series(Generic[IntoSeriesT]):
             1     zero
             2      one
             3      two
-            Name: a, dtype: object
+            Name: a, dtype: str
 
             Replace values and set a default for values not in the mapping:
 
@@ -1337,7 +1357,7 @@ class Series(Generic[IntoSeriesT]):
             1        two
             2       orca
             3    vaquita
-            Name: a, dtype: object
+            Name: a, dtype: str
         """
         if new is None:
             if not isinstance(old, Mapping):

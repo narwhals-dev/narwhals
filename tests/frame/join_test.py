@@ -248,7 +248,7 @@ def test_cross_join_suffix(constructor: Constructor, suffix: str) -> None:
     assert_equal_data(result, expected)
 
 
-def test_cross_join_non_pandas() -> None:
+def test_cross_join_non_pandas() -> None:  # pragma: no cover
     _ = pytest.importorskip("modin")
     import modin.pandas as mpd
     import pandas as pd
@@ -785,11 +785,7 @@ def test_join_duplicate_column_names(
         from pandas.errors import MergeError
 
         exception = MergeError
-    elif "sqlframe" in str(constructor):
-        import duckdb
-
-        exception = duckdb.BinderException
-    elif "pyspark" in str(constructor):
+    elif "pyspark" in str(constructor) and "sqlframe" not in str(constructor):
         from pyspark.errors import AnalysisException
 
         exception = AnalysisException

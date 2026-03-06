@@ -5,6 +5,7 @@ import operator
 import re
 from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, cast
 
+import numpy as np
 import pandas as pd
 
 from narwhals._compliant import EagerSeriesNamespace
@@ -23,6 +24,7 @@ from narwhals._utils import (
     _DeferredIterable,
     check_columns_exist,
     isinstance_or_issubclass,
+    parse_version,
     requires,
 )
 from narwhals.exceptions import ShapeError
@@ -114,6 +116,13 @@ PANDAS_VERSION = Implementation.PANDAS._backend_version()
 Always available if we reached here, due to a module-level import.
 """
 
+NUMPY_VERSION = parse_version(np)
+"""Static version for `numpy`.
+
+Always available if we reached here, as imported in both _pandas_like/dataframe.py and
+_pandas_like/series.py.
+"""
+
 
 def is_pandas_or_modin(implementation: Implementation) -> bool:
     return implementation in {Implementation.PANDAS, Implementation.MODIN}
@@ -183,7 +192,7 @@ def rename(
         implementation._backend_version() >= (3,)
     ):  # pragma: no cover
         result = obj.rename(*args, **kwargs, inplace=False)
-    else:
+    else:  # pragma: no cover
         result = obj.rename(*args, **kwargs, copy=False, inplace=False)
     return cast("NativeNDFrameT", result)  # type: ignore[redundant-cast]
 
@@ -322,7 +331,7 @@ def native_to_narwhals_dtype(
         # Per conversations with their maintainers, they don't support arbitrary
         # objects, so we can just return String.
         return version.dtypes.String()
-    if allow_object:
+    if allow_object:  # pragma: no cover
         return object_native_to_narwhals_dtype(None, version, implementation)
     msg = (
         "Unreachable code, object dtype should be handled separately"  # pragma: no cover
@@ -544,7 +553,9 @@ def narwhals_to_native_arrow_dtype(
         try:
             import pyarrow as pa  # ignore-banned-import  # noqa: F401
         except ImportError as exc:  # pragma: no cover
-            msg = f"Unable to convert to {dtype} to to the following exception: {exc.msg}"
+            msg = (
+                f"Unable to convert to {dtype} due to the following exception: {exc.msg}"
+            )
             raise ImportError(msg) from exc
         from narwhals._arrow.utils import narwhals_to_native_dtype as _to_arrow_dtype
 

@@ -1868,11 +1868,11 @@ class DataFrame(BaseFrame[DataFrameT]):
             ┌──────────────────┐
             |Narwhals DataFrame|
             |------------------|
-            |          a  b    |
-            |    3     b  3    |
-            |    0     a  2    |
-            |    4  None  2    |
-            |    5     c  1    |
+            |         a  b     |
+            |    3    b  3     |
+            |    0    a  2     |
+            |    4  NaN  2     |
+            |    5    c  1     |
             └──────────────────┘
         """
         return super().top_k(k, by=by, reverse=reverse)

@@ -8,6 +8,8 @@ env:
 
 jobs:
   altair:
+    env:
+      UV_SYSTEM_PYTHON: 1
     strategy:
       matrix:
         python-version: ["3.12"]
@@ -31,29 +33,27 @@ jobs:
           cd altair
           git log
       - name: install-basics
-        run: uv pip install --upgrade tox virtualenv setuptools --system
+        run: uv pip install --upgrade tox virtualenv setuptools
       - name: install-altair-dev
         run: |
           cd altair
           # Temporary pin until it's addressed upstream.
-          uv pip install "pandas<3" --system
-          uv pip install -e ".[dev, all]" --system
+          uv pip install "pandas<3"
+          uv pip install -e ".[dev, all]"
       - name: install-narwhals-dev
         run: |
-          uv pip uninstall narwhals --system
-          uv pip install -e . --system
+          uv pip uninstall narwhals
+          uv pip install -e .
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
         run: |
           cd altair
           pytest tests
-      # Temporarily commented-out to get CI green
-      # https://github.com/narwhals-dev/narwhals/issues/3013
-      # - name: Run mypy
-      #   run: |
-      #     cd altair
-      #     mypy altair tests
+      - name: Run mypy
+        run: |
+          cd altair
+          mypy altair tests
 
   marimo:
     strategy:
@@ -76,35 +76,22 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
       - name: clone-marimo
         run: |
-          git clone https://github.com/marimo-team/marimo.git --depth=1
+          # TODO: remove branch pin once https://github.com/marimo-team/marimo/pull/8510 is merged
+          git clone https://github.com/marimo-team/marimo.git --depth=1 --branch=push-kmswtyynuukw
           cd marimo
-          uv venv -p 3.12
           git log
-      - name: install-basics
-        run:
-          uv pip install --upgrade tox virtualenv setuptools hatch
-          "click!=8.3.0" --system
-      - name: install-marimo-dev
-        run: |
-          cd marimo
-          . .venv/bin/activate
-          # Temporary pin until it's addressed upstream.
-          uv pip install "pandas<3"
-          # Temporary pin to get CI green
-          uv pip install "sqlglot<28.7.0"
-          uv pip install -e ".[dev]"
-          which python
       - name: install-narwhals-dev
         run: |
           cd marimo
-          . .venv/bin/activate
-          uv pip uninstall narwhals
-          uv pip install -e ./..
+          uv add ../ --editable
+          # Temporary pin until it's addressed upstream.
+          uv add "pandas<3" --group test-optional
+          # Temporary pin to get CI green
+          uv add "sqlglot<28.7.0" --group test-optional
       - name: show-deps
         run: |
           cd marimo
-          . .venv/bin/activate
-          uv pip freeze
+          uv tree --group test-optional
       - name: Create assets directory, copy over index.html
         continue-on-error: true
         run: |
@@ -115,15 +102,13 @@ jobs:
         if: ${{ matrix.dependencies == 'core,optional' }}
         run: |
           cd marimo
-          . .venv/bin/activate
-          # make sure that we use the .venv when running tests, so that
-          # the local narwhals install is picked up
-          sed -i '/^\[tool.hatch.envs.default\]/a path = ".venv"' pyproject.toml
-          hatch run python -c "import narwhals; print(narwhals.__file__)"
-          hatch run +py=${{ matrix.python-version }} test-optional:test-narwhals
+          uv run --python ${{ matrix.python-version }} python -c "import narwhals; print(narwhals.__file__)"
+          scripts/test-narwhals.sh --python=${{ matrix.python-version }}
         timeout-minutes: 15
 
   scikit-lego:
+    env:
+      UV_SYSTEM_PYTHON: 1
     strategy:
       matrix:
         python-version: ["3.11"]
@@ -144,15 +129,15 @@ jobs:
       - name: clone-scikit-lego
         run: git clone https://github.com/koaning/scikit-lego.git --depth 1
       - name: install-basics
-        run: uv pip install --upgrade tox virtualenv setuptools --system
+        run: uv pip install --upgrade tox virtualenv setuptools
       - name: install-scikit-lego-dev
         run: |
           cd scikit-lego
-          uv pip install -e ".[test]" --system
+          uv pip install -e ".[test]"
       - name: install-narwhals-dev
         run: |
-          uv pip uninstall narwhals --system
-          uv pip install -e . --system
+          uv pip uninstall narwhals
+          uv pip install -e .
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
@@ -262,6 +247,8 @@ jobs:
           uv run --no-sync pytest tests
 
   tubular:
+    env:
+      UV_SYSTEM_PYTHON: 1
     strategy:
       matrix:
         python-version: ["3.12"]
@@ -286,17 +273,17 @@ jobs:
           git log
       - name: install-basics
         run:
-          uv pip install --upgrade tox virtualenv setuptools pytest-env --system
+          uv pip install --upgrade tox virtualenv setuptools pytest-env
       - name: install-tubular-dev
         run: |
           cd tubular
           # Temporary pin until it's addressed upstream.
-          uv pip install "pandas<3" --system
-          uv pip install -e ".[dev]" --system
+          uv pip install "pandas<3"
+          uv pip install -e ".[dev]"
       - name: install-narwhals-dev
         run: |
-          uv pip uninstall narwhals --system
-          uv pip install -e . --system
+          uv pip uninstall narwhals
+          uv pip install -e .
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
@@ -350,6 +337,8 @@ jobs:
           pytest tests/test_optional/test_px
 
   hierarchicalforecast:
+    env:
+      UV_SYSTEM_PYTHON: 1
     strategy:
       matrix:
         python-version: ["3.12"]
@@ -373,17 +362,17 @@ jobs:
           cd hierarchicalforecast
           git log
       - name: install-basics
-        run: uv pip install --upgrade tox virtualenv setuptools --system
+        run: uv pip install --upgrade tox virtualenv setuptools
       - name: install-deps
         run: |
           cd hierarchicalforecast
           # Temporary pin until it's addressed upstream.
-          uv pip install "pandas<3" --system
-          uv pip install . --group dev --group polars --system
+          uv pip install "pandas<3"
+          uv pip install . --group dev --group polars
       - name: install-narwhals-dev
         run: |
-          uv pip uninstall narwhals --system
-          uv pip install -e . --system
+          uv pip uninstall narwhals
+          uv pip install -e .
       - name: show-deps
         run: uv pip freeze
       - name: Run tests
@@ -468,6 +457,8 @@ jobs:
           uv pip install . --group dev
           # Temporary pin to get CI green
           uv pip install "sqlglot<28.7.0"
+          # Temporary pin to get CI green
+          uv pip install "pandas<3"
           uv pip install pytest pytest-cov pytest-snapshot pandas polars "ibis-framework[duckdb,mysql,postgres,sqlite]>=9.5.0" chatlas shiny
       - name: install-narwhals-dev
         run: |
@@ -540,6 +531,8 @@ jobs:
         timeout-minutes: 15
 
   darts:
+    env:
+      UV_SYSTEM_PYTHON: 1
     strategy:
       matrix:
         python-version: ["3.12"]
@@ -564,19 +557,15 @@ jobs:
       - name: install-deps
         run: |
           cd darts
-          # Temporary pin until it's addressed upstream.
-          uv pip install "pandas<3"  --system
-          uv pip install \
-          -r requirements/core.txt \
-          -r requirements/dev.txt \
+          uv pip install . \
+          --group dev \
           llvmlite==0.46.0 \
-          numba==0.63.1 \
-          --system
+          numba==0.63.1
       - name: install-narwhals-dev
         run: |
-          uv pip uninstall narwhals --system
+          uv pip uninstall narwhals
           # TODO(FBruzzesi): Install polars & pyarrow from darts requirements when they introduce it
-          uv pip install -e ".[polars, pyarrow]" --system
+          uv pip install -e ".[polars, pyarrow]"
       - name: show-deps
         run: uv pip freeze
       - name: Run tests
@@ -628,6 +617,8 @@ jobs:
           uv run --no-sync pytest
 
   fairlearn:
+    env:
+      UV_SYSTEM_PYTHON: 1
     strategy:
       matrix:
         python-version: ["3.12"]
@@ -654,12 +645,12 @@ jobs:
         run: |
           cd fairlearn
           # TODO(FBruzzesi): Align with fairlearn team to get a minimal requirement to test narwhals features
-          uv pip install -e . -r requirements.txt lightgbm matplotlib polars pyarrow pytest typing-extensions --system
+          uv pip install -e . -r requirements.txt lightgbm matplotlib polars pyarrow pytest typing-extensions
       - name: install-narwhals-dev
         run: |
           cd fairlearn
-          uv pip uninstall narwhals --system
-          uv pip install -e ./.. --system
+          uv pip uninstall narwhals
+          uv pip install -e ./..
           uv pip freeze
       - name: run-pytest
         run: |

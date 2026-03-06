@@ -14,7 +14,6 @@ from tests.utils import (
     PYARROW_VERSION,
     Constructor,
     assert_equal_data,
-    is_pyspark_connect,
 )
 
 if TYPE_CHECKING:
@@ -171,7 +170,7 @@ def test_nested_structures(
     is_empty_dict = isinstance(value, dict) and len(value) == 0
     non_pyspark_sql_like = ("duckdb", "sqlframe", "ibis")
     is_non_pyspark_sql_like = any(x in str(constructor) for x in non_pyspark_sql_like)
-    if (is_non_pyspark_sql_like or is_pyspark_connect(constructor)) and is_empty_dict:
+    if is_non_pyspark_sql_like and is_empty_dict:
         reason = "Cannot create an empty struct type for backend"
         request.applymarker(pytest.mark.xfail(reason=reason, raises=NotImplementedError))
 

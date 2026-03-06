@@ -449,8 +449,7 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
             return native_object
         return Version.V1.dataframe(InterchangeFrame(native_object), level="interchange")
 
-    compliant_object = plugins.from_native(native_object, version)
-    if compliant_object is not None:
+    if (compliant_object := plugins.from_native(native_object, version)) is not None:
         return _translate_if_compliant(
             compliant_object,
             pass_through=pass_through,
@@ -570,7 +569,7 @@ def narwhalify(
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
-            args = [
+            args_nw = [
                 from_native(
                     arg,
                     pass_through=pass_through,
@@ -579,9 +578,9 @@ def narwhalify(
                     allow_series=allow_series,
                 )
                 for arg in args
-            ]  # type: ignore[assignment]
+            ]
 
-            kwargs = {
+            kwargs_nw = {
                 name: from_native(
                     value,
                     pass_through=pass_through,
@@ -594,7 +593,7 @@ def narwhalify(
 
             backends = {
                 b()
-                for v in (*args, *kwargs.values())
+                for v in (*args_nw, *kwargs_nw.values())
                 if (b := getattr(v, "__native_namespace__", None))
             }
 
@@ -602,7 +601,7 @@ def narwhalify(
                 msg = "Found multiple backends. Make sure that all dataframe/series inputs come from the same backend."
                 raise ValueError(msg)
 
-            result = func(*args, **kwargs)
+            result = func(*args_nw, **kwargs_nw)
 
             return to_native(result, pass_through=pass_through)
 

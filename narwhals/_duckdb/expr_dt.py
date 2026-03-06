@@ -10,10 +10,10 @@ from narwhals._constants import (
     US_PER_MINUTE,
     US_PER_SECOND,
 )
-from narwhals._duckdb.utils import UNITS_DICT, F, fetch_rel_time_zone, lit
+from narwhals._duckdb.utils import UNITS_DICT, F, fetch_rel_time_zone, lit, sql_expression
 from narwhals._duration import Interval
 from narwhals._sql.expr_dt import SQLExprDateTimeNamesSpace
-from narwhals._utils import not_implemented
+from narwhals._utils import not_implemented, requires
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -58,20 +58,26 @@ class DuckDBExprDateTimeNamespace(SQLExprDateTimeNamesSpace["DuckDBExpr"]):
 
     def total_seconds(self) -> DuckDBExpr:
         return self.compliant._with_elementwise(
-            lambda expr: lit(SECONDS_PER_MINUTE) * F("datepart", lit("minute"), expr)
-            + F("datepart", lit("second"), expr)
+            lambda expr: (
+                lit(SECONDS_PER_MINUTE) * F("datepart", lit("minute"), expr)
+                + F("datepart", lit("second"), expr)
+            )
         )
 
     def total_milliseconds(self) -> DuckDBExpr:
         return self.compliant._with_elementwise(
-            lambda expr: lit(MS_PER_MINUTE) * F("datepart", lit("minute"), expr)
-            + F("datepart", lit("millisecond"), expr)
+            lambda expr: (
+                lit(MS_PER_MINUTE) * F("datepart", lit("minute"), expr)
+                + F("datepart", lit("millisecond"), expr)
+            )
         )
 
     def total_microseconds(self) -> DuckDBExpr:
         return self.compliant._with_elementwise(
-            lambda expr: lit(US_PER_MINUTE) * F("datepart", lit("minute"), expr)
-            + F("datepart", lit("microsecond"), expr)
+            lambda expr: (
+                lit(US_PER_MINUTE) * F("datepart", lit("minute"), expr)
+                + F("datepart", lit("microsecond"), expr)
+            )
         )
 
     def truncate(self, every: str) -> DuckDBExpr:
@@ -91,20 +97,20 @@ class DuckDBExprDateTimeNamespace(SQLExprDateTimeNamesSpace["DuckDBExpr"]):
 
         return self.compliant._with_elementwise(_truncate)
 
+    @requires.backend_version((1, 3))
     def offset_by(self, by: str) -> DuckDBExpr:
         interval = Interval.parse_no_constraints(by)
         format = lit(f"{interval.multiple!s} {UNITS_DICT[interval.unit]}")
 
         def _offset_by(expr: Expression) -> Expression:
-            return F("date_add", format, expr)
+            return expr + sql_expression(f"interval {format}")
 
-        return self.compliant._with_callable(_offset_by)
+        return self.compliant._with_elementwise(_offset_by)
 
     def _no_op_time_zone(self, time_zone: str) -> DuckDBExpr:
         def func(df: DuckDBLazyFrame) -> Sequence[Expression]:
             native_series_list = self.compliant(df)
-            conn_time_zone = fetch_rel_time_zone(df.native)
-            if conn_time_zone != time_zone:
+            if (conn_time_zone := fetch_rel_time_zone(df.native)) != time_zone:
                 msg = (
                     "DuckDB stores the time zone in the connection, rather than in the "
                     f"data type, so changing the timezone to anything other than {conn_time_zone} "
