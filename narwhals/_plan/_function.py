@@ -40,7 +40,6 @@ from typing import TYPE_CHECKING
 from narwhals._plan._dispatch import Dispatcher
 from narwhals._plan._dtype import ResolveDType
 from narwhals._plan._immutable import Immutable
-from narwhals._plan.common import replace
 from narwhals._plan.options import FEOptions, FunctionOptions
 from narwhals.dtypes import DType
 
@@ -129,7 +128,8 @@ class Function(Immutable):
     ) -> None:
         super().__init_subclass__(*args, **kwds)
         if accessor_name := accessor or cls.__expr_ir_config__.accessor_name:
-            config = replace(config or FEOptions.default(), accessor_name=accessor_name)
+            config = config or FEOptions.default()
+            config = config.__replace__(accessor_name=accessor_name)
         if options:
             cls._function_options = staticmethod(options)
         if config:

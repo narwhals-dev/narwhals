@@ -6,7 +6,6 @@ from narwhals._plan._dispatch import Dispatcher
 from narwhals._plan._dtype import ResolveDType
 from narwhals._plan._guards import is_function_expr, is_literal
 from narwhals._plan._immutable import Immutable
-from narwhals._plan.common import replace
 from narwhals._plan.options import ExprIROptions
 from narwhals._plan.typing import ExprIRT_co
 from narwhals._utils import Version, unstable
@@ -103,7 +102,7 @@ class ExprIR(Immutable):
             return function(self)
         children = ((name, getattr(self, name)) for name in self._child)
         changed = {name: _map_ir_child(child, function) for name, child in children}
-        return function(replace(self, **changed))
+        return function(self.__replace__(**changed))
 
     def iter_left(self) -> Iterator[ExprIR]:
         """Yield nodes root->leaf.
@@ -292,9 +291,9 @@ class NamedIR(Immutable, Generic[ExprIRT_co]):
         """
         return NamedIR(expr=expr, name=expr.meta.output_name(raise_if_undetermined=True))
 
-    def map_ir(self, function: MapIR, /) -> Self:
+    def map_ir(self, function: MapIR, /) -> NamedIR[ExprIR]:
         """**WARNING**: don't use renaming ops here, or `self.name` is invalid."""
-        return replace(self, expr=function(self.expr.map_ir(function)))
+        return NamedIR.__replace__(self, expr=function(self.expr.map_ir(function)))
 
     def __repr__(self) -> str:
         return f"{self.name}={self.expr!r}"

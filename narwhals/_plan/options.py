@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import enum
-from typing import TYPE_CHECKING, Generic, Literal, get_args
+from typing import TYPE_CHECKING, Generic, Literal, cast, get_args
 
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.common import ensure_seq_str
@@ -322,15 +322,17 @@ class _BaseIROptions(Immutable):
 
     @classmethod
     def renamed(cls, name: str, /) -> Self:
-        from narwhals._plan.common import replace
-
-        return replace(cls.default(), override_name=name)
+        # NOTE: `cast` is for `mypy`, `__replace__` return ignores `Self`
+        result = cls.default().__replace__(override_name=name)
+        return cast("Self", result)
 
     @classmethod
     def namespaced(cls, override_name: str = "", /) -> Self:
-        from narwhals._plan.common import replace
-
-        return replace(cls.default(), is_namespaced=True, override_name=override_name)
+        # NOTE: `cast` is for `mypy`, `__replace__` return ignores `Self`
+        result = cls.default().__replace__(
+            is_namespaced=True, override_name=override_name
+        )
+        return cast("Self", result)
 
 
 class ExprIROptions(_BaseIROptions):

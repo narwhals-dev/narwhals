@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import typing as t
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, final
 
 import narwhals._plan.dtypes_mapper as dtm
 from narwhals._plan._dtype import ResolveDType
 from narwhals._plan._expr_ir import ExprIR, SelectorIR
-from narwhals._plan.common import replace
 from narwhals._plan.exceptions import (
     function_expr_invalid_operation_error,
     over_order_by_names_error,
@@ -492,6 +491,7 @@ class TernaryExpr(ExprIR, child=("truthy", "falsy", "predicate")):
         raise NotImplementedError(msg)
 
 
+@final
 class RootSelector(SelectorIR):
     """A single selector expression."""
 
@@ -510,9 +510,10 @@ class RootSelector(SelectorIR):
         return self.selector.to_dtype_selector().matches(dtype)
 
     def to_dtype_selector(self) -> Self:
-        return replace(self, selector=self.selector.to_dtype_selector())
+        return self.__replace__(selector=self.selector.to_dtype_selector())
 
 
+@final
 class BinarySelector(
     _BinaryOp[LeftSelectorT, SelectorOperatorT, RightSelectorT],
     SelectorIR,
@@ -546,11 +547,12 @@ class BinarySelector(
         return bool(self.op(left, right))
 
     def to_dtype_selector(self) -> Self:
-        return replace(
-            self, left=self.left.to_dtype_selector(), right=self.right.to_dtype_selector()
+        return self.__replace__(
+            left=self.left.to_dtype_selector(), right=self.right.to_dtype_selector()
         )
 
 
+@final
 class InvertSelector(SelectorIR, t.Generic[SelectorT]):
     __slots__ = ("selector",)
     selector: SelectorT
@@ -581,7 +583,7 @@ class InvertSelector(SelectorIR, t.Generic[SelectorT]):
         return not self.selector.to_dtype_selector().matches(dtype)
 
     def to_dtype_selector(self) -> Self:
-        return replace(self, selector=self.selector.to_dtype_selector())
+        return self.__replace__(selector=self.selector.to_dtype_selector())
 
 
 def ternary_expr(predicate: ExprIR, truthy: ExprIR, falsy: ExprIR, /) -> TernaryExpr:

@@ -40,7 +40,7 @@ from __future__ import annotations
 from collections import deque
 from typing import TYPE_CHECKING, Any, Union
 
-from narwhals._plan import common, expressions as ir, meta
+from narwhals._plan import expressions as ir, meta
 from narwhals._plan.exceptions import (
     binary_expr_multi_output_error,
     column_not_found_error,
@@ -279,9 +279,9 @@ class Expander:
                 changes["by"] = tuple(self._expand_inner(origin.by))
             else:
                 changes["by"] = self._expand_only(origin, origin.by)
-            replaced = common.replace(origin, **changes)
+            replaced = origin.__replace__(**changes)
             for root in self._expand_recursive(replaced.expr):
-                yield common.replace(replaced, expr=root)
+                yield replaced.__replace__(expr=root)
         elif isinstance(origin, ir.BinaryExpr):
             yield from self._expand_binary_expr(origin)
         elif isinstance(origin, ir.TernaryExpr):
