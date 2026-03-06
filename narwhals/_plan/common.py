@@ -356,7 +356,7 @@ def closed_kwds(
         True
 
         >>> f()
-        {'a': {'mutable': [1, 2, 3]}, 'b': [4, 5, 6]}
+        mappingproxy({'a': {'mutable': [1, 2, 3]}, 'b': [4, 5, 6]})
 
         `strategy` comparison:
 
