@@ -595,9 +595,6 @@ class DataFrame(
         return [self._with_compliant(p) for p in partitions]
 
     # TODO @dangotbanned: (Follow-up) Accept selectors in `on`, `index`, `values`
-    # TODO @dangotbanned: polars integration will need a rethink
-    # - consumes `sort_columns`
-    # - `on_columns: DataFrame` isn't too helpful before `LazyFrame.pivot`
     def pivot(
         self,
         on: OneOrIterable[str],

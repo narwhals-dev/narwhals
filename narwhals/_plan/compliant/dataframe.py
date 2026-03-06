@@ -267,7 +267,21 @@ class CompliantDataFrame(  # pyright: ignore[reportInvalidTypeVarUse]
         values: Sequence[str],
         aggregate_function: PivotAgg | None = None,
         separator: str = "_",
-    ) -> Self: ...
+        sort_columns: bool = False,
+    ) -> Self:
+        """Create a spreadsheet-style pivot table as a DataFrame.
+
+        Note:
+            `sort_columns` is passed down for backwards compatibility with [`polars<1.36.0`],
+            where [`sort_columns` moved] from being handled in rust to python.
+            All other backends **should ignore `sort_columns`**, as the narwhals-level
+            sorts *into* `on_columns` when needed.
+
+        [`polars<1.36.0`]: https://github.com/pola-rs/polars/pull/25016
+        [`sort_columns` moved]: https://github.com/pola-rs/polars/pull/25016/changes#diff-d2e79c12d0d5ed35f2015c678f5be62199581d902d25069b9635817c673ca6ebR9450-R9459
+        """
+        ...
+
     def row(self, index: int) -> tuple[Any, ...]: ...
     def to_series(self, index: int = 0) -> CompliantSeries[NativeSeriesT_co]: ...
     def to_struct(self, name: str = "") -> CompliantSeries[NativeSeriesT_co]: ...

@@ -446,6 +446,7 @@ class ArrowDataFrame(
         values: Sequence[str],
         aggregate_function: PivotAgg | None = None,
         separator: str = "_",
+        sort_columns: bool = False,  # polars compat
     ) -> Self:
         result = pivot_table(
             self.native,

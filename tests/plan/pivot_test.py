@@ -203,7 +203,6 @@ def test_pivot_agg(
     assert_equal_data(result, expected)
 
 
-# TODO @dangotbanned: `DataFrame[pl.DataFrame].pivot(sort_columns=True)`
 @pytest.mark.parametrize(
     ("sort_columns", "expected"),
     [
@@ -220,14 +219,6 @@ def test_pivot_sort_columns(
 ) -> None:
     df = dataframe(data_no_dups_unordered)
     dataframe.xfail_pyarrow_pivot_too_old(request)
-    dataframe.xfail(
-        request,
-        dataframe.is_polars()
-        and sort_columns
-        and dataframe.backend_version() < (1, 36, 0),
-        reason="TODO @dangotbanned: backcompat `DataFrame[pl.DataFrame].pivot(sort_columns=True)`",
-        raises=AssertionError,
-    )
     values = ["foo", "bar"]
     result = df.pivot("on_lower", index="idx_1", values=values, sort_columns=sort_columns)
     assert result.columns == expected

@@ -298,21 +298,24 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
         values: Sequence[str],
         aggregate_function: PivotAgg | None = None,
         separator: str = "_",
+        sort_columns: bool = False,
     ) -> Self:
-        if compat.PIVOT_SUPPORTS_ON_COLUMNS:
-            with remap_exceptions():
-                return self._with_native(
-                    self.native.pivot(
-                        on,
-                        on_columns.native,
-                        index=index,
-                        values=values,
-                        aggregate_function=aggregate_function,
-                        separator=separator,
-                    )
+        kwds: dict[str, Incomplete] = (
+            {"on_columns": on_columns.native}
+            if compat.PIVOT_SUPPORTS_ON_COLUMNS
+            else {"sort_columns": sort_columns}
+        )
+        with remap_exceptions():
+            return self._with_native(
+                self.native.pivot(
+                    on,
+                    index=index,
+                    values=values,
+                    aggregate_function=aggregate_function,
+                    separator=separator,
+                    **kwds,
                 )
-        msg = "TODO @dangotbanned: backcompat for `on_columns: DataFrame`"
-        raise NotImplementedError(msg)
+            )
 
     def unique(
         self,
