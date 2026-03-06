@@ -51,8 +51,8 @@ def test_skew_expr(
         # Can not infer schema from empty dataset.
         pytest.skip()
 
-    if "sqlframe" in str(constructor):
-        # https://github.com/eakmanrq/sqlframe/issues/522
+    if "sqlframe" in str(constructor) and int(request.node.callspec.id[-1]) in {2, 4}:
+        # https://github.com/eakmanrq/sqlframe/issues/610
         request.applymarker(pytest.mark.xfail)
 
     result = nw.from_native(constructor({"a": data})).select(nw.col("a").skew())

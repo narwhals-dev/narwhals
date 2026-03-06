@@ -18,7 +18,13 @@ from tests.conftest import (
     modin_constructor,
     pandas_constructor,
 )
-from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
+from tests.utils import (
+    PANDAS_VERSION,
+    PYARROW_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 if TYPE_CHECKING:
     from narwhals.typing import NumericLiteral
@@ -254,3 +260,37 @@ def test_is_close_pandas_unnamed() -> None:
     ser = nw.from_native(pd.Series([1.1, 1.2], name="ab"), series_only=True)
     res = ser.is_close(ser)
     assert res.name == "ab"
+
+
+def test_issue_3474_series_decimal(constructor_eager: ConstructorEager) -> None:
+    frame = nw.from_native(constructor_eager({"a": [0, 1, 2]}))
+
+    if frame.implementation.is_pandas_like() and (
+        PYARROW_VERSION == (0, 0, 0) or PANDAS_VERSION < (2, 2)
+    ):
+        pytest.skip(reason="pyarrow is required to convert to decimal dtype")
+
+    frame = frame.with_columns(nw.col("a").cast(nw.Decimal()))
+    assert frame["a"].is_close(frame["a"]).all()
+
+
+def test_issue_3474_expr_decimal(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if any(x in str(constructor) for x in ("dask", "sqlframe")):
+        # TODO(FBruzzesi): Figure out a MRE and report upstream
+        reason = (
+            "SQLFrame: duckdb.duckdb.ParserException: Parser Error: syntax error at or near '='\n"
+            "Dask: Converting to Decimal dtype is not supported."
+        )
+        request.applymarker(pytest.mark.xfail(reason=reason))
+
+    frame = nw.from_native(constructor({"a": [0, 1, 2]}))
+
+    if frame.implementation.is_pandas_like() and (
+        PYARROW_VERSION == (0, 0, 0) or PANDAS_VERSION < (2, 2)
+    ):
+        pytest.skip(reason="pyarrow is required to convert to decimal dtype")
+
+    frame = frame.lazy().with_columns(nw.col("a").cast(nw.Decimal()))
+    assert frame.select((nw.col("a").is_close(nw.col("a"))).all()).collect().item()
