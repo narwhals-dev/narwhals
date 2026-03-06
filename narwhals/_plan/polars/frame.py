@@ -4,20 +4,18 @@ from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 import polars as pl
 
+from narwhals._plan.polars import compat
 from narwhals._utils import Implementation, Version, _into_arrow_table
 
 if TYPE_CHECKING:
     import pandas as pd
-    from typing_extensions import Self, TypeAlias
+    from typing_extensions import Self
 
     from narwhals._plan.compliant.dataframe import CompliantDataFrame
     from narwhals._plan.dataframe import DataFrame as NwDataFrame
     from narwhals._translate import IntoArrowTable
 
-
-Incomplete: TypeAlias = Any
 MAIN = Version.MAIN
-POLARS = Implementation.POLARS
 
 
 class PolarsFrame:
@@ -26,7 +24,7 @@ class PolarsFrame:
 
     @classmethod
     def from_arrow(cls, data: IntoArrowTable, /, version: Version = MAIN) -> Self:
-        if POLARS._backend_version() >= (1, 3):
+        if compat.CONSTRUCTOR_ACCEPTS_PYCAPSULE:
             native = pl.DataFrame(data)
         else:  # pragma: no cover
             # NOTE: Hack to reuse `main`

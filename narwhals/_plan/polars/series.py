@@ -9,16 +9,12 @@ from narwhals._plan._version import into_version
 from narwhals._plan.compliant.accessors import SeriesStructNamespace as StructNamespace
 from narwhals._plan.compliant.series import CompliantSeries
 from narwhals._plan.compliant.typing import SeriesT
+from narwhals._plan.polars import compat
 from narwhals._plan.polars.namespace import (
     PolarsNamespace as Namespace,
     dtype_from_native,
     dtype_to_native,
     explode_todo,
-)
-from narwhals._polars.utils import (
-    BACKEND_VERSION,
-    SERIES_ACCEPTS_PD_INDEX,
-    SERIES_RESPECTS_DTYPE,
 )
 from narwhals._utils import Implementation, Version, requires
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_index
@@ -45,45 +41,14 @@ if TYPE_CHECKING:
 
 Incomplete: TypeAlias = Any
 
-
-SERIES_SORT_SUPPORTS_NULLS_LAST = BACKEND_VERSION >= (0, 20, 6)
-"""https://github.com/pola-rs/polars/pull/13794
-
-Prior this this version, `nulls_last` was [only available on `*Frame` and `Expr`].
-
-[only available on `*Frame` and `Expr`]: https://github.com/pola-rs/polars/issues/13788
-"""
-
-
-SERIES_HAS_FIRST_LAST = BACKEND_VERSION >= (1, 10)
-"""https://github.com/pola-rs/polars/pull/19093"""
-
-RFLOORDIV_HANDLES_ZERO = BACKEND_VERSION >= (1, 10)
-"""https://github.com/pola-rs/polars/issues/19142
-
-Note:
-    The bug impacts `__rmod__` as well, but didn't get fixed in narwhals?
-"""
-
-RPOW_PRESERVES_SERIES_NAME = BACKEND_VERSION >= (1, 16, 1)
-"""https://github.com/pola-rs/polars/pull/20072"""
-
-IS_NAN_ANY_NUMERIC = BACKEND_VERSION >= (1, 18)
-"""https://github.com/pola-rs/polars/pull/20386"""
-
-# NOTE: (10-20) already had impls, should detect that during generation
-# bug?:
-#   __hash__
-
-
-if BACKEND_VERSION >= (1, 21, 0):
-
-    def min_samples_periods(min_samples: int, /, **kwds: Any) -> dict[str, Any]:
-        return {"min_samples": min_samples, **kwds}
+if compat.MIN_PERIODS_RENAMED_TO_MIN_SAMPLES:
+    _MIN_SAMPLES = "min_samples"
 else:
+    _MIN_SAMPLES = "min_periods"
 
-    def min_samples_periods(min_samples: int, /, **kwds: Any) -> dict[str, Any]:
-        return {"min_periods": min_samples, **kwds}
+
+def min_samples_periods(min_samples: int, /, **kwds: Any) -> dict[str, Any]:
+    return {_MIN_SAMPLES: min_samples, **kwds}
 
 
 # TODO @dangotbanned: Remove the `getattr` indirection and just bind the normal way
@@ -151,7 +116,7 @@ class PolarsSeries(CompliantSeries[pl.Series]):
     _version: Version
 
     # NOTE: Aliases to integrate with `@requires.backend_version`
-    _backend_version = BACKEND_VERSION
+    _backend_version = compat.BACKEND_VERSION
     _implementation = implementation
 
     @property
@@ -180,10 +145,10 @@ class PolarsSeries(CompliantSeries[pl.Series]):
     ) -> Self:
         dtype_pl = dtype_to_native(dtype, version)
         values: Incomplete = data
-        if SERIES_RESPECTS_DTYPE:
+        if compat.SERIES_RESPECTS_DTYPE:
             native = pl.Series(name, values, dtype=dtype_pl)
         else:  # pragma: no cover
-            if (not SERIES_ACCEPTS_PD_INDEX) and is_pandas_index(values):
+            if (not compat.SERIES_ACCEPTS_PD_INDEX) and is_pandas_index(values):
                 values = values.to_series()
             native = pl.Series(name, values)
             if dtype_pl:
@@ -228,7 +193,7 @@ class PolarsSeries(CompliantSeries[pl.Series]):
     # NOTE: Needs compat
     # https://github.com/narwhals-dev/narwhals/blob/c207fc096263ce174470240748e0c568f38f93e2/narwhals/_polars/series.py#L364-L372
     def is_nan(self) -> Self:
-        if IS_NAN_ANY_NUMERIC:
+        if compat.IS_NAN_NUMERIC_PROPAGATES_NULLS:
             return self._with_native(self.native.is_nan())
         msg = "TODO @dangotbanned: `is_nan` backcompat\nSee https://github.com/narwhals-dev/narwhals/pull/1625#issuecomment-2565591385"
         raise NotImplementedError(msg)
@@ -251,17 +216,15 @@ class PolarsSeries(CompliantSeries[pl.Series]):
 
     def __array__(self, dtype: Any, *, copy: bool | None) -> _1DArray:
         method = self.native.__array__
-        if BACKEND_VERSION < (0, 20, 29):
-            return method(dtype=dtype)
-        return method(dtype=dtype, copy=copy)
+        return method(dtype, copy) if compat.DUNDER_ARRAY_SUPPORTS_COPY else method(dtype)
 
     def first(self) -> PythonLiteral | Incomplete:
-        if SERIES_HAS_FIRST_LAST:
+        if compat.SERIES_HAS_FIRST_LAST:
             return self.native.first()
         return None if self.is_empty() else self.native.item(0)
 
     def last(self) -> PythonLiteral | Incomplete:
-        if SERIES_HAS_FIRST_LAST:
+        if compat.SERIES_HAS_FIRST_LAST:
             return self.native.last()
         return None if self.is_empty() else self.native.item(-1)
 
@@ -312,7 +275,7 @@ class PolarsSeries(CompliantSeries[pl.Series]):
 
     def __rfloordiv__(self, other: Any) -> PolarsSeries:
         other = other.native if isinstance(other, type(self)) else other
-        if RFLOORDIV_HANDLES_ZERO:
+        if compat.SERIES_RFLOORDIV_HANDLES_ZERO:
             return self._with_native(other // self.native)
         expr = pl.col(self.name)
         return self._with_native(
@@ -324,7 +287,7 @@ class PolarsSeries(CompliantSeries[pl.Series]):
     def __rpow__(self, other: float | Self) -> Self:
         other_ = other.native if isinstance(other, PolarsSeries) else other
         result = other_**self.native
-        if not RPOW_PRESERVES_SERIES_NAME:
+        if not compat.SERIES_RPOW_PRESERVES_NAME:
             result = result.alias(self.native.name)
         return self._with_native(result)
 
@@ -419,7 +382,7 @@ class PolarsSeries(CompliantSeries[pl.Series]):
         return self._with_native(self.native.slice(offset, length))
 
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
-        if SERIES_SORT_SUPPORTS_NULLS_LAST:
+        if compat.SERIES_SORT_SUPPORTS_NULLS_LAST:
             result = self.native.sort(descending=descending, nulls_last=nulls_last)
         elif not (nulls_last and self.has_nulls()):
             result = self.native.sort(descending=descending)

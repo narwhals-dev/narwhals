@@ -9,6 +9,7 @@ import narwhals.exceptions
 from narwhals._plan._version import into_version
 from narwhals._plan.common import temp
 from narwhals._plan.compliant.dataframe import CompliantDataFrame
+from narwhals._plan.polars import compat
 from narwhals._plan.polars.expr import PolarsExpr as Expr
 from narwhals._plan.polars.frame import PolarsFrame
 from narwhals._plan.polars.namespace import (
@@ -17,7 +18,6 @@ from narwhals._plan.polars.namespace import (
     explode_todo,
 )
 from narwhals._plan.polars.series import PolarsSeries as Series
-from narwhals._polars.utils import BACKEND_VERSION
 from narwhals._utils import Implementation, Version, not_implemented, requires
 from narwhals.exceptions import NarwhalsError
 
@@ -46,16 +46,6 @@ if TYPE_CHECKING:
 
 Incomplete: TypeAlias = Any
 MAIN = Version.MAIN
-
-JOIN_OUTER_RENAMED_TO_FULL = BACKEND_VERSION >= (0, 20, 29)
-MELT_RENAMED_TO_UNPIVOT = BACKEND_VERSION >= (1, 0, 0)
-PIVOT_SUPPORTS_ON_COLUMNS = BACKEND_VERSION >= (1, 36, 0)
-"""https://github.com/pola-rs/polars/pull/25016"""
-
-
-# TODO @dangotbanned: Remove this dead code path on main, it is fixed at our minimum
-HAS_POLARS_ERROR = BACKEND_VERSION >= (0, 20, 4)
-"""https://github.com/pola-rs/polars/pull/13615"""
 
 
 class remap_exceptions:  # noqa: N801
@@ -104,7 +94,7 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
     _version: Version
 
     # NOTE: Aliases to integrate with `@requires.backend_version`
-    _backend_version = BACKEND_VERSION
+    _backend_version = compat.BACKEND_VERSION
     _implementation = Implementation.POLARS
 
     def __len__(self) -> int:
@@ -214,7 +204,9 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
         right_on: Sequence[str],
         suffix: str = "_right",
     ) -> Self:
-        how_: Any = "outer" if how == "full" and JOIN_OUTER_RENAMED_TO_FULL else how
+        how_: Any = (
+            "outer" if how == "full" and compat.JOIN_OUTER_RENAMED_TO_FULL else how
+        )
         return self._with_native(
             self.native.join(
                 other.native, how=how_, left_on=left_on, right_on=right_on, suffix=suffix
@@ -307,7 +299,7 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
         aggregate_function: PivotAgg | None = None,
         separator: str = "_",
     ) -> Self:
-        if PIVOT_SUPPORTS_ON_COLUMNS:
+        if compat.PIVOT_SUPPORTS_ON_COLUMNS:
             with remap_exceptions():
                 return self._with_native(
                     self.native.pivot(
@@ -367,7 +359,7 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
         variable_name: str = "variable",
         value_name: str = "value",
     ) -> Self:
-        if MELT_RENAMED_TO_UNPIVOT:
+        if compat.MELT_RENAMED_TO_UNPIVOT:
             result = self.native.unpivot(
                 on, index=index, variable_name=variable_name, value_name=value_name
             )

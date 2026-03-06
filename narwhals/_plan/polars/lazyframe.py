@@ -86,7 +86,7 @@ class PolarsEvaluator(ResolvedToCompliant[pl.LazyFrame]):
     def version(self) -> Version:
         return self._version
 
-    def __init__(self, version: Version = Version.MAIN) -> None:
+    def __init__(self, version: Version = MAIN) -> None:
         self._version = version
 
     @classmethod
@@ -95,7 +95,7 @@ class PolarsEvaluator(ResolvedToCompliant[pl.LazyFrame]):
         plan: rp.Collect,
         /,
         backend: EagerAllowed | None = None,
-        version: Version = Version.MAIN,
+        version: Version = MAIN,
     ) -> DataFrameAny:
         kwds = plan.kwds()
         return plan.input.evaluate(cls(version)).collect_compliant(
@@ -103,9 +103,7 @@ class PolarsEvaluator(ResolvedToCompliant[pl.LazyFrame]):
         )
 
     @classmethod
-    def sink_parquet(
-        cls, plan: rp.SinkParquet, /, version: Version = Version.MAIN
-    ) -> None:
+    def sink_parquet(cls, plan: rp.SinkParquet, /, version: Version = MAIN) -> None:
         plan.input.evaluate(cls(version)).native.sink_parquet(plan.target)
 
     def _into_compliant(self, native: pl.LazyFrame, /) -> PolarsLazyFrame:

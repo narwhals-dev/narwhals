@@ -91,7 +91,7 @@ class PolarsNamespace(
     _version: Version
     implementation: ClassVar = Implementation.POLARS
 
-    def __init__(self, version: Version = Version.MAIN) -> None:
+    def __init__(self, version: Version = MAIN) -> None:
         self._version = version
 
     @property
@@ -131,7 +131,7 @@ class PolarsNamespace(
         /,
         *,
         schema: IntoSchema | None = None,
-        version: Version = Version.MAIN,
+        version: Version = MAIN,
     ) -> DataFrame:
         return self._dataframe.from_dict(data, schema=schema, version=version)
 
@@ -141,7 +141,7 @@ class PolarsNamespace(
         *,
         name: str = "",
         dtype: IntoDType | None = None,
-        version: Version = Version.MAIN,
+        version: Version = MAIN,
     ) -> Series:
         return self._series.from_iterable(data, name=name, dtype=dtype, version=version)
 
