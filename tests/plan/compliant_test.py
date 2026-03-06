@@ -28,6 +28,8 @@ if TYPE_CHECKING:
     import datetime as dt
     from collections.abc import Sequence
 
+    from _pytest.fixtures import TopRequest  # `pytest.FixtureRequest.node` returns `Any`
+
     from narwhals._plan.typing import ColumnNameOrSelector, OneOrIterable
     from narwhals.typing import EagerAllowed, PythonLiteral
     from tests.conftest import Data
@@ -384,7 +386,7 @@ def test_select(
 @pytest.mark.parametrize(
     ("expr", "expected"),
     [
-        (
+        pytest.param(
             ["d", nwp.col("a"), "b", nwp.col("e")],
             {
                 "a": ["A", "B", "A"],
@@ -394,8 +396,9 @@ def test_select(
                 "e": [None, 9, 7],
                 "f": [True, False, None],
             },
+            id="col",
         ),
-        (
+        pytest.param(
             ncs.numeric().cast(nw.String),
             {
                 "a": ["A", "B", "A"],
@@ -405,8 +408,9 @@ def test_select(
                 "e": [None, "9", "7"],
                 "f": [True, False, None],
             },
+            id="cast",
         ),
-        (
+        pytest.param(
             [
                 nwp.col("e").fill_null(nwp.col("e").last()),
                 nwp.col("f").sort(),
@@ -420,6 +424,7 @@ def test_select(
                 "e": [7, 9, 7],
                 "f": [None, False, True],
             },
+            id="fill_null_last_sort_max",
         ),
         pytest.param(
             [
@@ -449,9 +454,16 @@ def test_with_columns(
     expected: dict[str, Any],
     data_small_af: dict[str, Any],
     dataframe: DataFrame,
-    request: pytest.FixtureRequest,
+    request: TopRequest,
 ) -> None:
-    dataframe.xfail_polars_with_columns(request)
+    id_ = request.node.callspec.id
+    dataframe.xfail(
+        request,
+        dataframe.is_polars()
+        and ("with_columns-extend" in id_ or "fill_null_last_sort_max" in id_),
+        reason="`PolarsExpr` is only partially implemented",
+        raises=NotImplementedError,
+    )
     result = dataframe(data_small_af).with_columns(expr)
     assert_equal_data(result, expected)
 
@@ -466,15 +478,23 @@ def test_with_columns(
             {"a": False, "b": True, "c": True, "d": True, "idx": False},
         ),
     ],
+    ids=["first", "null_count", "cast_fill_null_all"],
 )
 def test_with_columns_all_aggregates(
     data_indexed: dict[str, Any],
     expr: nwp.Expr,
     expected: dict[str, PythonLiteral],
     dataframe: DataFrame,
-    request: pytest.FixtureRequest,
+    request: TopRequest,
 ) -> None:
-    dataframe.xfail_polars_with_columns(request)
+    id_ = request.node.callspec.id
+    dataframe.xfail(
+        request,
+        dataframe.is_polars() and ("null_count" in id_ or "cast_fill_null_all" in id_),
+        reason="`PolarsExpr` is only partially implemented",
+        raises=NotImplementedError,
+    )
+
     height = len(next(iter(data_indexed.values())))
     expected_full = {k: height * [v] for k, v in expected.items()}
     result = dataframe(data_indexed).with_columns(expr)
@@ -742,9 +762,7 @@ def test_dataframe_from_native(data_small: Data) -> None:
         nwp.DataFrame.from_native(lazy)  # type: ignore[call-overload]
 
 
-def test_dataframe_to_struct(
-    data_small_af: Data, dataframe: DataFrame, request: pytest.FixtureRequest
-) -> None:
+def test_dataframe_to_struct(data_small_af: Data, dataframe: DataFrame) -> None:
     pytest.importorskip("pyarrow")
 
     schema = {
@@ -755,7 +773,6 @@ def test_dataframe_to_struct(
         "e": nw.Int64(),
         "f": nw.Boolean(),
     }
-    dataframe.xfail_polars_with_columns(request)
     df = dataframe(data_small_af).with_columns(
         nwp.col(name).cast(dtype) for name, dtype in schema.items()
     )

@@ -391,7 +391,6 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
     _group_by = not_implemented()  # type: ignore[assignment]
     lazy = not_implemented()
     filter = not_implemented()
-    with_columns = not_implemented()
 
     def _evaluate_irs(self, nodes: Iterable[ir.NamedIR]) -> Iterator[Expr]:
         yield from (Expr.from_named_ir(e, self) for e in nodes)
@@ -399,6 +398,11 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
     def select(self, irs: Seq[ir.NamedIR]) -> Self:
         return self._with_native(
             self.native.select(e.native for e in self._evaluate_irs(irs))
+        )
+
+    def with_columns(self, irs: Seq[ir.NamedIR]) -> Self:
+        return self._with_native(
+            self.native.with_columns(e.native for e in self._evaluate_irs(irs))
         )
 
 

@@ -41,7 +41,7 @@ def test_scatter(
     assert_equal_series(result, expected, "ser")
 
 
-def test_scatter_unchanged(dataframe: DataFrame, request: pytest.FixtureRequest) -> None:
+def test_scatter_unchanged(dataframe: DataFrame) -> None:
     df = dataframe({"a": [1, 2, 3], "b": [142, 124, 132]})
     a = df.get_column("a")
     b = df.get_column("b")
@@ -49,7 +49,6 @@ def test_scatter_unchanged(dataframe: DataFrame, request: pytest.FixtureRequest)
         a.scatter([0, 1], [999, 888]),
         b.scatter([0, 2, 1], [142, 124, 132]),
     )
-    dataframe.xfail_polars_with_columns(request)
     df.with_columns(a_scatter, b_scatter)
     assert_equal_data(df, {"a": [1, 2, 3], "b": [142, 124, 132]})
 
