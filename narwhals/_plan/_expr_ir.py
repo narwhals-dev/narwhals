@@ -208,7 +208,6 @@ class ExprIR(Immutable):
         msg = f"cannot turn `{self!r}` into a selector"
         raise InvalidOperationError(msg)
 
-    # TODO @dangotbanned: Fill out the examples
     # TODO @dangotbanned: do another pass on the phrasing
     @property
     def is_scalar(self) -> bool:
