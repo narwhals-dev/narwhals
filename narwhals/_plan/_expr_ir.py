@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Generic, final
 
 from narwhals._plan._dispatch import Dispatcher
-from narwhals._plan._dtype import ResolveDType
+from narwhals._plan._dtype import IntoResolveDType, ResolveDType
 from narwhals._plan._guards import is_function_expr, is_literal
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.options import ExprIROptions
@@ -13,7 +13,7 @@ from narwhals.dtypes import DType
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator
+    from collections.abc import Iterator
     from typing import Any, ClassVar
 
     from typing_extensions import Self
@@ -158,16 +158,43 @@ class ExprIR(Immutable):
     # - `dtypes_mapper.py`
     __expr_ir_dtype__: ClassVar[ResolveDType[Self]] = ResolveDType()
 
-    # NOTE: May need to add docs, even though it won't show in an IDE
     def __init_subclass__(
         cls: type[Self],
         *,
         child: Seq[str] = (),
         config: ExprIROptions | None = None,
-        dtype: DType | ResolveDType[Any] | Callable[[Self], DType] | None = None,
-        **kwds: Any,
-    ) -> None:
-        super().__init_subclass__(**kwds)
+        dtype: IntoResolveDType[Self] | None = None,
+        **_: Any,
+    ) -> None:  # TODO @dangotbanned: Do another pass on the short description phrasing
+        """[Subclass-definition time] hook for customizing an `ExprIR` class.
+
+        All parameters are optional and will be inherited when not provided to `__init_subclass__`.
+
+        Arguments:
+            child: Name(s) of fields that store one or more `ExprIR`(s).
+                Stored in `_child`.
+
+                The order of `child` defines iteration order in `iter_left`.
+
+                **Note**: Unlike `__slots__`, a subclass that needs to extend a non-empty `_child`
+                must use:
+
+                    child=(*<parent-field-names>, *<more-names>)  # (sorry, need to fix this!)
+            config: Instructions defining how to build a `Dispatcher`.
+                Stored in `__expr_ir_config__`.
+
+            dtype: Defines how a `DType` is derived when `resolve_dtype` is called.
+                Stored in `__expr_ir_dtype__`.
+
+                See `IntoResolveDType` and `ResolveDType` for usage.
+
+                **Warning**: This functionality is considered **unstable**.
+                Full support depends on [#3396].
+
+        [Subclass-definition time]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
+        [#3396]: https://github.com/narwhals-dev/narwhals/pull/3396
+        """
+        super().__init_subclass__(**_)
         if child:
             cls._child = child
         if config:

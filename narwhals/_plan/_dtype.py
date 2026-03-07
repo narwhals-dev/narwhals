@@ -24,6 +24,42 @@ T = TypeVar("T")
 Visitor: TypeAlias = "Callable[[T], DType]"
 """A function requiring a single argument to derive the resolved `DType`."""
 
+IntoResolveDType: TypeAlias = "DType | ResolveDType[Any] | Callable[[T], DType]"
+"""Anything that can be converted into a `ResolveDType`.
+
+When passed as `__init_subclass__(dtype=...)`, any of the following forms are accepted:
+
+1. An existing instance of `ResolveDType`:
+
+    ResolveDType.get_dtype()
+    ResolveDType.expr_ir.same_dtype()
+    ResolveDType.function.map_first(lambda dtype: dtype if dtype.is_integer() else Boolean())
+
+2. A constant `DType`:
+
+    UInt32()
+    String()
+    Float64()
+
+Which is equivalent to:
+
+    dtype=ResolveDType.just_dtype(dtype)
+
+3. A visitor function, that will be called on an instance of the enclosing class:
+
+    lambda hist: (
+        Struct({"breakpoint": Float64(), "count": Int64()})
+        if hist.include_breakpoint
+        else Int64()
+    )
+    lambda rank: Float64() if rank.options.method == "average" else Int64()
+
+Which (depending on the base class) is equivalent to either:
+
+    dtype=ResolveDType.function.visitor(dtype)
+    dtype=ResolveDType.expr_ir.visitor(dtype)
+"""
+
 # fmt: off
 # NOTE: Structural typing to prevent cycles
 # See https://github.com/microsoft/pyright/issues/10661

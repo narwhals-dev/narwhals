@@ -38,7 +38,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from narwhals._plan._dispatch import Dispatcher
-from narwhals._plan._dtype import ResolveDType
+from narwhals._plan._dtype import IntoResolveDType, ResolveDType
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.options import FEOptions, FunctionOptions
 from narwhals.dtypes import DType
@@ -123,7 +123,7 @@ class Function(Immutable):
         accessor: Accessor | None = None,
         options: Callable[[], FunctionOptions] | None = None,
         config: FEOptions | None = None,
-        dtype: DType | ResolveDType[Any] | Callable[[Self], DType] | None = None,
+        dtype: IntoResolveDType[Self] | None = None,
         **kwds: Any,
     ) -> None:
         super().__init_subclass__(**kwds)
