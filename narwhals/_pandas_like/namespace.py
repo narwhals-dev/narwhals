@@ -330,9 +330,20 @@ class PandasLikeNamespace(
 
             if not ignore_nulls:
                 null_mask_result = reduce(operator.or_, null_mask)
-                result = reduce(lambda x, y: x + separator + y, series).zip_with(
-                    ~null_mask_result, None
+                init_value, *values = series
+                sep_array = init_value._with_native(
+                    init_value.__native_namespace__().Series(
+                        separator,
+                        name="sep",
+                        index=init_value.native.index,
+                        dtype=init_value.native.dtype,
+                    )
                 )
+                result = reduce(
+                    operator.add,
+                    (sep_array + value for value in values),
+                    init_value,
+                ).zip_with(~null_mask_result, None)
             else:
                 # NOTE: Trying to help `mypy` later
                 # error: Cannot determine type of "values"  [has-type]

@@ -9,6 +9,7 @@ from tests.utils import POLARS_VERSION, Constructor, assert_equal_data
 
 pytest.importorskip("pyarrow")
 import pyarrow as pa
+pandas = pytest.importorskip("pandas")
 
 data = {"a": [1, 2, 3], "b": ["dogs", "cats", None], "c": ["play", "swim", "walk"]}
 
@@ -100,3 +101,21 @@ def test_pyarrow_string_type(
         .schema
     )
     assert expected_function(result.field("store_item").type)
+
+
+@pytest.mark.skipif(pandas.__version__.startswith("2."), reason="Issue reproduces on pandas>=3")
+def test_concat_str_pandas_pyarrow_large_string() -> None:
+    native_pa = pa.table(
+        {"store": ["foo", "bar"], "item": ["axe", "saw"]},
+        schema=pa.schema([("store", pa.large_string()), ("item", pa.large_string())]),
+    )
+    native_pd = native_pa.to_pandas(types_mapper=pandas.ArrowDtype)
+
+    result = nw.from_native(native_pd).with_columns(
+        store_item=nw.concat_str("store", "item", separator="-")
+    )
+
+    assert_equal_data(
+        result,
+        {"store": ["foo", "bar"], "item": ["axe", "saw"], "store_item": ["foo-axe", "bar-saw"]},
+    )
