@@ -101,7 +101,6 @@ class Column(ExprIR, config=namespaced("col")):
         return f"col({self.name!r})"
 
     def to_selector_ir(self) -> RootSelector:
-
         return ByName.from_name(self.name).to_selector_ir()
 
     def resolve_dtype(self, schema: FrozenSchema) -> DType:
