@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Generic, TypeVar
 
 from narwhals._expression_parsing import ExprKind, ExprNode
+from narwhals._utils import qualified_type_name
 
 if TYPE_CHECKING:
     from narwhals.expr import Expr
@@ -186,13 +187,19 @@ class ExprStringNamespace(Generic[ExprT]):
             ExprNode(ExprKind.ELEMENTWISE, "str.ends_with", suffix=suffix)
         )
 
-    def contains(self, pattern: str, *, literal: bool = False) -> ExprT:
+    def contains(self, pattern: str | IntoExpr, *, literal: bool = False) -> ExprT:
         r"""Check if string contains a substring that matches a pattern.
 
         Arguments:
-            pattern: A Character sequence or valid regular expression pattern.
+            pattern: A Character sequence, valid regular expression pattern, or another
+                Expr.
             literal: If True, treats the pattern as a literal string.
-                     If False, assumes the pattern is a regular expression.
+                If False, assumes the pattern is a regular expression.
+
+        Warning:
+            Passing an expression as `pattern` is only supported by DuckDB, Ibis, Polars,
+            PySpark and SQLFrame. Other backends, such as pandas and PyArrow, will raise
+            a `TypeError`.
 
         Examples:
             >>> import pyarrow as pa
@@ -212,11 +219,25 @@ class ExprStringNamespace(Generic[ExprT]):
             default_match: [[true,false,true]]
             case_insensitive_match: [[true,false,true]]
         """
-        return self._expr._append_node(
-            ExprNode(
+        from narwhals.expr import Expr
+
+        if isinstance(pattern, str):
+            node = ExprNode(
                 ExprKind.ELEMENTWISE, "str.contains", pattern=pattern, literal=literal
             )
-        )
+        elif isinstance(pattern, Expr):
+            node = ExprNode(
+                ExprKind.ELEMENTWISE,
+                "str.contains",
+                exprs=(pattern,),
+                literal=literal,
+                str_as_lit=True,
+            )
+        else:  # pragma: no cover
+            msg = f"pattern should be either a str or an Expr. Found {qualified_type_name(pattern)}"
+            raise TypeError(msg)
+
+        return self._expr._append_node(node)
 
     def slice(self, offset: int, length: int | None = None) -> ExprT:
         r"""Create subslices of the string values of an expression.

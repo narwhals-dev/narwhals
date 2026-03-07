@@ -26,13 +26,18 @@ class SQLExprStringNamespace(
     ) -> NativeExpr:
         return self.compliant._when(condition, value, otherwise)  # type: ignore[no-any-return]
 
-    def contains(self, pattern: str, *, literal: bool) -> SQLExprT:
-        def func(expr: NativeExpr) -> NativeExpr:
-            if literal:
-                return self._function("contains", expr, self._lit(pattern))
-            return self._function("regexp_matches", expr, self._lit(pattern))
+    def contains(self, pattern: str | SQLExprT, *, literal: bool) -> SQLExprT:
 
-        return self.compliant._with_elementwise(func)
+        def func(expr: NativeExpr, pattern: NativeExpr) -> NativeExpr:
+            func_name = "contains" if literal else "regexp_matches"
+            return self._function(func_name, expr, pattern)
+
+        compliant_pattern = (
+            self.compliant.__narwhals_namespace__().lit(pattern, dtype=None)
+            if isinstance(pattern, str)
+            else pattern
+        )
+        return self.compliant._with_elementwise(func, pattern=compliant_pattern)
 
     def ends_with(self, suffix: str) -> SQLExprT:
         return self.compliant._with_elementwise(

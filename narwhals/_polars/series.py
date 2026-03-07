@@ -824,6 +824,12 @@ class PolarsSeriesStringNamespace(
             self.native.str.replace_all(pattern, value_native, literal=literal)  # type: ignore[arg-type]
         )
 
+    def contains(self, pattern: str | PolarsSeries, *, literal: bool) -> PolarsSeries:
+        pattern_native = extract_native(pattern)
+        return self.compliant._with_native(
+            self.native.str.contains(pattern_native, literal=literal)  # type: ignore[arg-type]
+        )
+
 
 class PolarsSeriesCatNamespace(
     PolarsSeriesNamespace, PolarsCatNamespace[PolarsSeries, pl.Series]
