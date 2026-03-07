@@ -89,11 +89,61 @@ class ExprIR(Immutable):
     _child: ClassVar[Seq[str]] = ()
     """Nested node names, in iteration order."""
 
-    # TODO @dangotbanned: How this relates to:
-    # - `__init_subclass__(config)`
-    # - `__expr_ir_dispatch__`
-    # TODO @dangotbanned: Inheritance
     __expr_ir_config__: ClassVar[ExprIROptions] = ExprIROptions.default()
+    """Class-level configuration for how a `Dispatcher` should be built.
+
+    Defined via the (optional) `config` parameter at [subclass-definition time].
+
+    Many expressions simply use the default:
+
+        >>> from narwhals._plan import expressions as ir
+        >>> from narwhals._plan.options import ExprIROptions
+        >>>
+        >>> class Explode(ir.ExprIR, child=("expr",)):
+        ... #                                      ^^ # default `config`
+        ...     __slots__ = ("expr",)
+        ...     expr: ir.ExprIR
+
+        >>> Explode.__expr_ir_config__
+        ExprIROptions(is_namespaced=False, override_name='', allow_dispatch=True)
+
+        >>> Explode.__expr_ir_dispatch__
+        Dispatcher<explode>
+
+    `config` provides a bit more flexibility when you want it:
+
+        >>> class Explode2(Explode, config=ExprIROptions.renamed("explodier")): ...
+        >>> #                       ^^^^^^ custom `config`
+
+        >>> Explode2.__expr_ir_config__
+        ExprIROptions(is_namespaced=False, override_name='explodier', allow_dispatch=True)
+
+        >>> Explode2.__expr_ir_dispatch__
+        Dispatcher<explodier>
+
+    Keep in mind that `__expr_ir_config__` is inherited:
+
+        >>> class Explode21(Explode2): ...
+        >>> Explode21.__expr_ir_dispatch__
+        Dispatcher<explodier>
+
+    So we'd need another override to get the default back:
+
+        >>> from narwhals._plan.options import ExplodeOptions
+        >>>
+        >>> class ExplodeWithOptions(Explode2, config=ExprIROptions.default()):
+        ...     __slots__ = ("options",)
+        ...     options: ExplodeOptions
+
+        >>> ExplodeWithOptions.__expr_ir_dispatch__
+        Dispatcher<explode_with_options>
+
+    Warning:
+        This attribute should be considered immutable once [`__init_subclass__`] finishes executing.
+
+    [`__init_subclass__`]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
+    [subclass-definition time]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
+    """
 
     # TODO @dangotbanned: How this relates to:
     # - `dispatch`
