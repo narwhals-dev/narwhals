@@ -340,9 +340,7 @@ class PandasLikeNamespace(
                     )
                 )
                 result = reduce(
-                    operator.add,
-                    (sep_array + value for value in values),
-                    init_value,
+                    operator.add, (sep_array + value for value in values), init_value
                 ).zip_with(~null_mask_result, None)
             else:
                 # NOTE: Trying to help `mypy` later
