@@ -388,9 +388,9 @@ class TestBackend(Generic[NativeLazyFrame, NativeDataFrameT_co, NativeSeriesT_co
         return None
 
     def __init_subclass__(
-        cls, *args: Any, import_or_skip_module: ModuleName | None = None, **kwds: Any
+        cls, *, import_or_skip_module: ModuleName | None = None, **kwds: Any
     ) -> None:
-        super().__init_subclass__(*args, **kwds)
+        super().__init_subclass__(**kwds)
         if not (hasattr(cls, "backend_eager") or hasattr(cls, "backend_lazy")):
             msg = f"At least one of `backend_eager` or `backend_lazy` must be set as a class attribute for {cls!r}"
             raise TypeError(msg)

@@ -41,13 +41,13 @@ class Operator(Immutable):
 
     def __init_subclass__(
         cls,
-        *args: Any,
+        *,
         func: OperatorFn | None,
         symbol: str = "",
         dtype: DType | None = None,
         **kwds: Any,
     ) -> None:
-        super().__init_subclass__(*args, **kwds)
+        super().__init_subclass__(**kwds)
         if func:
             cls._func = func
         cls._symbol = symbol or cls.__name__

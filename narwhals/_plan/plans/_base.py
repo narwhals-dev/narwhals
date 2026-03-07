@@ -37,12 +37,12 @@ class _BasePlan(Immutable, Generic[T_co]):
 
     def __init_subclass__(
         cls: type[Self],
-        *args: Any,
+        *,
         has_inputs: bool | None = None,
         _root: bool = False,
         **kwds: Any,
     ) -> None:
-        super().__init_subclass__(*args, **kwds)
+        super().__init_subclass__(**kwds)
         if has_inputs is not None:
             cls.has_inputs = has_inputs
         elif getattr(cls, "has_inputs", None) is None and not _root:  # pragma: no cover

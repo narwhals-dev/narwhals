@@ -62,7 +62,7 @@ class FrozenSchema(Immutable):
             return False
         return self._mapping.__eq__(other._mapping)
 
-    def __init_subclass__(cls, *_: Never, **__: Never) -> Never:
+    def __init_subclass__(cls, **__: Never) -> Never:
         msg = f"Cannot subclass {FrozenSchema.__name__!r}"
         raise TypeError(msg)
 

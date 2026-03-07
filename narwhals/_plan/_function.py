@@ -119,14 +119,14 @@ class Function(Immutable):
 
     def __init_subclass__(
         cls: type[Self],
-        *args: Any,
+        *,
         accessor: Accessor | None = None,
         options: Callable[[], FunctionOptions] | None = None,
         config: FEOptions | None = None,
         dtype: DType | ResolveDType[Any] | Callable[[Self], DType] | None = None,
         **kwds: Any,
     ) -> None:
-        super().__init_subclass__(*args, **kwds)
+        super().__init_subclass__(**kwds)
         if accessor_name := accessor or cls.__expr_ir_config__.accessor_name:
             config = config or FEOptions.default()
             config = config.__replace__(accessor_name=accessor_name)

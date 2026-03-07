@@ -71,8 +71,8 @@ class DTypeSelector(Selector):
     # https://github.com/pola-rs/polars/blob/2b241543851800595efd343be016b65cdbdd3c9f/crates/polars-plan/src/dsl/selector.rs#L110-L172
     _dtype: ClassVar[type[DType]]
 
-    def __init_subclass__(cls, *args: Any, dtype: type[DType], **kwds: Any) -> None:
-        super().__init_subclass__(*args, **kwds)
+    def __init_subclass__(cls, *, dtype: type[DType], **kwds: Any) -> None:
+        super().__init_subclass__(**kwds)
         cls._dtype = dtype
 
     def to_dtype_selector(self) -> DTypeSelector:

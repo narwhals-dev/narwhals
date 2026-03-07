@@ -159,13 +159,13 @@ class ExprIR(Immutable):
     # NOTE: May need to add docs, even though it won't show in an IDE
     def __init_subclass__(
         cls: type[Self],
-        *args: Any,
+        *,
         child: Seq[str] = (),
         config: ExprIROptions | None = None,
         dtype: DType | ResolveDType[Any] | Callable[[Self], DType] | None = None,
         **kwds: Any,
     ) -> None:
-        super().__init_subclass__(*args, **kwds)
+        super().__init_subclass__(**kwds)
         if child:
             cls._child = child
         if config:
