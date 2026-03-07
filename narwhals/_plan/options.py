@@ -309,26 +309,79 @@ def rolling_options(
 
 
 class _BaseIROptions(Immutable):
+    """Instructions for how a `Dispatcher` should be built.
+
+    The configuration is stored as `__expr_ir_config__`.
+    """
+
     __slots__ = ("is_namespaced", "override_name")
     is_namespaced: bool
+    """True if expression dispatch routes through `__narwhals_namespace__`.
+
+    Required for expressions like:
+
+        nw.all_horizontal(...)
+        # ^
+
+    But not for methods *on* `Expr` like:
+
+        nw.col("a").max()
+        #          ^
+    """
+
     override_name: str
+    """Manual override to the auto-generated expression dispatch method name.
+
+    By default the name is derived from the [snake_case] transform of the [PascalCase] class name:
+
+        >>> from narwhals._plan import expressions as ir
+        >>> def show_dispatch_names(*tps: type[ir.ExprIR | ir.Function]) -> None:
+        ...     length = max(len(tp.__name__) for tp in tps)
+        ...     for tp in tps:
+        ...         print(f"{tp.__name__:<{length}} -> {tp.__expr_ir_dispatch__.name}")
+        >>>
+        >>>
+        >>> show_dispatch_names(ir.Cast, ir.BinaryExpr, ir.strings.StartsWith)
+        Cast       -> cast
+        BinaryExpr -> binary_expr
+        StartsWith -> str.starts_with
+
+    `override_name` provides an escape hatch for edge cases:
+
+        >>> show_dispatch_names(ir.Column, ir.Literal, ir.boolean.Not)
+        Column  -> col
+        Literal -> lit
+        Not     -> not_
+
+    [snake_case]: https://en.wikipedia.org/wiki/Snake_case
+    [PascalCase]: https://en.wikipedia.org/wiki/Naming_convention_(programming)#Examples_of_multiple-word_identifier_formats
+    """
 
     def __repr__(self) -> str:
         return self.__str__()
 
     @classmethod
     def default(cls) -> Self:  # pragma: no cover[abstract]
+        """Return the default configuration."""
         return cls(is_namespaced=False, override_name="")
 
     @classmethod
-    def renamed(cls, name: str, /) -> Self:
-        # NOTE: `cast` is for `mypy`, `__replace__` return ignores `Self`
-        result = cls.default().__replace__(override_name=name)
+    def renamed(cls, override_name: str, /) -> Self:
+        """Override the auto-generated expression dispatch method name.
+
+        Syntax sugar for `cls(**defaults, override_name=override_name)`.
+        """
+        # NOTE: `cast` is for `mypy`, as `__replace__` return ignores `Self`
+        result = cls.default().__replace__(override_name=override_name)
         return cast("Self", result)
 
     @classmethod
     def namespaced(cls, override_name: str = "", /) -> Self:
-        # NOTE: `cast` is for `mypy`, `__replace__` return ignores `Self`
+        """Route expression dispatch through `__narwhals_namespace__`.
+
+        Syntax sugar for `cls(**defaults, is_namespaced=True, override_name=override_name)`.
+        """
+        # NOTE: `cast` is for `mypy`, as `__replace__` return ignores `Self`
         result = cls.default().__replace__(
             is_namespaced=True, override_name=override_name
         )
@@ -336,8 +389,26 @@ class _BaseIROptions(Immutable):
 
 
 class ExprIROptions(_BaseIROptions):
+    """Instructions for how a `Dispatcher` should be built for an `ExprIR`.
+
+    The configuration is stored as `ExprIR.__expr_ir_config__`.
+    """
+
     __slots__ = ("allow_dispatch",)
     allow_dispatch: bool
+    """Whether the expression is supported at the compliant-level.
+
+    When `False`, **any** attempts to dispatch will raise a `TypeError`:
+
+        >>> import narwhals._plan as nw
+        >>> selector = nw.col("a", "b", "c")._ir
+        >>> selector.dispatch(..., ..., ...)
+        Traceback (most recent call last):
+        TypeError: 'RootSelector' should not appear at the compliant-level.
+        <BLANKLINE>
+        Make sure to expand all expressions first, got:
+        ncs.by_name('a', 'b', 'c', require_all=True)
+    """
 
     @classmethod
     def default(cls) -> Self:
@@ -345,13 +416,30 @@ class ExprIROptions(_BaseIROptions):
 
     @staticmethod
     def no_dispatch() -> ExprIROptions:
+        """Raise a `TypeError` on **any** attempts to dispatch to the compliant-level.
+
+        Syntax sugar for `ExprIROptions(allow_dispatch=False, is_namespaced=False, override_name="")`.
+        """
         return ExprIROptions(is_namespaced=False, override_name="", allow_dispatch=False)
 
 
+# NOTE: Unfortunate that the name `FunctionOptions` is already in use for a different concept
+# The config builds a `Dispatcher[FunctionExpr[FunctionT]]`, so that was the next best choice
 class FunctionExprOptions(_BaseIROptions):
+    """Instructions for how a `Dispatcher` should be built for a `Function` inside a `FunctionExpr`.
+
+    The configuration is stored as `Function.__expr_ir_config__`.
+    """
+
     __slots__ = ("accessor_name",)
     accessor_name: Accessor | None
-    """Namespace accessor name, if any."""
+    """Name of an (optional) expression namespace accessor.
+
+    Required for expressions like:
+
+        nw.col("a").str.len_chars()
+        #           ^^^
+    """
 
     @classmethod
     def default(cls) -> Self:
