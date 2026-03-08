@@ -372,17 +372,7 @@ def test_when_chain_complex_conditions(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_when_chain_with_nulls(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    if "pyarrow_table" in str(constructor):
-        reason = (
-            "PyArrow uses SQL-like null semantics: when condition is null, "
-            "result is null (not the otherwise value). This is pre-existing "
-            "PyArrow behavior, not a chaining limitation."
-        )
-        request.applymarker(pytest.mark.xfail(reason=reason))
-
+def test_when_chain_with_nulls(constructor: Constructor) -> None:
     df = nw.from_native(constructor({"a": [1, None, 3, None, 5]}))
 
     result = df.select(
@@ -582,14 +572,4 @@ def test_when_chain_boolean_column_condition(constructor: Constructor) -> None:
     # Row 2: a=True -> 100
     # Row 3: a=False, b=4 >2 -> 200
     expected = {"result": [100, 300, 100, 200]}
-    assert_equal_data(result, expected)
-
-
-def test_when_chain_with_nulls(constructor: Constructor) -> None:
-    df = nw.from_native(constructor({"a": [1, None, 3, None, 5]}))
-
-    result = df.select(nw.when(nw.col("a") == 1).then(10).otherwise(99).alias("result"))
-
-    # Null values don't match any condition, so they get otherwise value
-    expected = {"result": [10, 99, 99, 99, 99]}
     assert_equal_data(result, expected)
