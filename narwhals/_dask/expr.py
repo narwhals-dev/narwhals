@@ -19,10 +19,12 @@ from narwhals._pandas_like.expr import window_kwargs_to_pandas_equivalent
 from narwhals._pandas_like.utils import get_dtype_backend, native_to_narwhals_dtype
 from narwhals._utils import (
     Implementation,
+    Version,
     generate_temporary_column_name,
     no_default,
     not_implemented,
 )
+from narwhals.dtypes import _validate_cast_temporal_to_numeric
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
@@ -40,7 +42,7 @@ if TYPE_CHECKING:
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.namespace import DaskNamespace
     from narwhals._typing import NoDefault
-    from narwhals._utils import Version, _LimitedContext
+    from narwhals._utils import _LimitedContext
     from narwhals.typing import (
         FillNullStrategy,
         IntoDType,
@@ -613,11 +615,21 @@ class DaskExpr(
         )
 
     def cast(self, dtype: IntoDType) -> Self:
-        def func(expr: dx.Series) -> dx.Series:
-            native_dtype = narwhals_to_native_dtype(dtype, self._version)
-            return expr.astype(native_dtype)
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            if dtype.is_numeric():
+                schema = df.schema
+                for name in self._evaluate_output_names(df):
+                    _validate_cast_temporal_to_numeric(source=schema[name], target=dtype)
 
-        return self._with_callable(func)
+            native_dtype = narwhals_to_native_dtype(dtype, self._version)
+            return [expr.astype(native_dtype) for expr in self._call(df)]
+
+        return self.__class__(
+            func,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
+        )
 
     def is_finite(self) -> Self:
         import dask.array as da
