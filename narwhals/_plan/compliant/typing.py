@@ -57,14 +57,16 @@ DataFrameT_co = TypeVar("DataFrameT_co", bound=DataFrameAny, covariant=True)
 LazyFrameT = TypeVar("LazyFrameT", bound=LazyFrameAny)
 LazyFrameT_co = TypeVar("LazyFrameT_co", bound=LazyFrameAny, covariant=True)
 LazyFrameT_contra = TypeVar("LazyFrameT_contra", bound=LazyFrameAny, contravariant=True)
-NamespaceT_co = TypeVar("NamespaceT_co", bound="NamespaceAny", covariant=True)
+NamespaceT_co = TypeVar(
+    "NamespaceT_co", bound="NamespaceAny", covariant=True, default="NamespaceAny"
+)
 
 EagerExprT_co = TypeVar("EagerExprT_co", bound=EagerExprAny, covariant=True)
 EagerScalarT_co = TypeVar("EagerScalarT_co", bound=EagerScalarAny, covariant=True)
 EagerDataFrameT = TypeVar("EagerDataFrameT", bound=EagerDataFrameAny)
 
 
-Ctx: TypeAlias = "ExprDispatch[FrameT_contra, R_co, NamespaceAny]"
+Ctx: TypeAlias = "ExprDispatch[FrameT_contra, R_co]"
 """Type of an unknown expression dispatch context.
 
 - `FrameT_contra`: Compliant data/lazyframe

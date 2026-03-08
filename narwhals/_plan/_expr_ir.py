@@ -17,7 +17,8 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
-    from narwhals._plan.compliant.typing import Ctx, FrameT_contra, R_co
+    from narwhals._plan.compliant.column import ExprDispatch
+    from narwhals._plan.compliant.typing import FrameT_contra, R_co
     from narwhals._plan.expr import Expr
     from narwhals._plan.expressions.expr import Alias, Cast, Column
     from narwhals._plan.meta import MetaNamespace
@@ -149,11 +150,28 @@ class ExprIR(Immutable):
                 dtype = ResolveDType.expr_ir.visitor(dtype)  # pragma: no cover
             cls.__expr_ir_dtype__ = dtype
 
-    # TODO @dangotbanned: Really deserves a good doc
+    # TODO @dangotbanned: Come back to this doc after slimming down `Compliant{Expr,Scalar}`
     def dispatch(
-        self: Self, ctx: Ctx[FrameT_contra, R_co], frame: FrameT_contra, name: str, /
+        self: Self,
+        ctx: ExprDispatch[FrameT_contra, R_co],
+        frame: FrameT_contra,
+        name: str,
+        /,
     ) -> R_co:
-        """Evaluate this expression in `frame`, using implementation(s) provided by `ctx`."""
+        """Evaluate this expression in `frame`, using implementation(s) provided by `ctx`.
+
+        Arguments:
+            ctx: Anything that can return a `CompliantExpr`.
+            frame: A`*Frame` that shares a namespace with `ctx`.
+            name: Output column name, usually `NamedIR.name`.
+
+        Notes:
+            - `ctx`/`ExprDispatch` is intended to be typed in a permissive way
+              but seems to have gone too far in that direction
+            - `_ArrowDispatch` utilizes it to define a common base for `*Expr`, `*Scalar`
+              while refining `R_co` -> `StoresNativeT_co`
+            - Neither of those types are `CompliantExpr`
+        """
         return self.__expr_ir_dispatch__(self, ctx, frame, name)
 
     def resolve_dtype(self: Self, schema: FrozenSchema) -> DType:
