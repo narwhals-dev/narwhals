@@ -58,7 +58,6 @@ def _make_bin_op(name: str, /) -> Callable[[SeriesT], Callable[[Any], SeriesT]]:
     method_native = getattr(pl.Series, name)
 
     def f(self: SeriesT, /) -> Callable[[Any], SeriesT]:
-
         def inner(other: Any, /) -> SeriesT:
             other = other.native if isinstance(other, type(self)) else other
             result = method_native(self.native, other)

@@ -606,7 +606,6 @@ class DataFrame(
         sort_columns: bool = False,
         separator: str = "_",
     ) -> Self:
-
         on_, index_, values_ = normalize_pivot_args(
             on, index=index, values=values, frame_columns=self.columns
         )
