@@ -23,6 +23,13 @@ if TYPE_CHECKING:
 class CompliantScalar(CompliantExpr[FrameT_contra], Protocol[FrameT_contra]):
     """`[FrameT_contra]`."""
 
+    _evaluated: Any
+    """Compliant or native value.
+
+    - `ArrowExpr` uses `ArrowSeries`
+    - `ArrowScalar` uses `pa.Scalar[Any]`
+    - `PolarsExpr` uses `pl.Expr`
+    """
     _name: str
 
     def _cast_float(self, node: ir.ExprIR, frame: FrameT_contra, name: str) -> Self:

@@ -21,7 +21,7 @@ Incomplete: TypeAlias = Any
 
 
 class PolarsExpr(CompliantExpr["DataFrame"]):
-    _evaluated: pl.Expr
+    _native: pl.Expr
     _version: Version
 
     def _with_native(self, native: pl.Expr, name: str = "", /) -> Self:
@@ -33,7 +33,7 @@ class PolarsExpr(CompliantExpr["DataFrame"]):
         cls, native: pl.Expr, name: str = "", /, version: Version = Version.MAIN
     ) -> Self:
         obj = cls.__new__(cls)
-        obj._evaluated = native if not name else native.alias(name)
+        obj._native = native if not name else native.alias(name)
         obj._version = version
         return obj
 
@@ -52,13 +52,8 @@ class PolarsExpr(CompliantExpr["DataFrame"]):
         return cls.from_native(pl.lit(value, dtype_pl), name, version)
 
     @property
-    def name(self) -> str:
-        """**Currently a noop for polars**."""
-        return ""
-
-    @property
     def native(self) -> pl.Expr:
-        return self._evaluated
+        return self._native
 
     # NOTE: `ExprDispatch` isn't part of the `Compliant*` protocols,
     # but is required for `ExprIR.dispatch`

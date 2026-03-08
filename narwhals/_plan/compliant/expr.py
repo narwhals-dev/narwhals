@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal, Protocol
+from typing import TYPE_CHECKING, Literal, Protocol
 
 from narwhals._plan.compliant.column import EagerBroadcast
 from narwhals._plan.compliant.typing import FrameT_contra, HasVersion, SeriesT
-from narwhals._utils import Version
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -52,35 +51,6 @@ class CompliantExpr(HasVersion, Protocol[FrameT_contra]):
 
     `[FrameT_contra]`.
     """
-
-    # TODO @dangotbanned: Move to `CompliantScalar`
-    # - `ArrowExpr` uses `ArrowSeries`
-    # - `ArrowScalar` uses `pa.Scalar[Any]`
-    # - `PolarsExpr` uses `pl.Expr`
-    # - But how any of them manage the internals is not important here
-    _evaluated: Any
-    """Compliant or native value."""
-
-    # TODO @dangotbanned: Remove from protocol
-    # - Overriden by arrow & polars
-    # - No other protocols require `CompliantExpr._with_native`
-    def _with_native(self, native: Any, name: str, /) -> Self:
-        return self.from_native(native, name or self.name, self.version)
-
-    # TODO @dangotbanned: (Probably) Remove from protocol
-    # - `Arrow{Expr,Scalar}`, `PolarsExpr` implements
-    # - `*Namespace` implementations use, but `CompliantNamespace` doesn't
-    @classmethod
-    def from_native(
-        cls, native: Any, name: str = "", /, version: Version = Version.MAIN
-    ) -> Self: ...
-
-    # TODO @dangotbanned: (Probably) remove from protocol
-    # - `CompliantScalar._with_evaluated` uses, but implements `name` itself
-    # - `ArrowExpr` implements
-    # - `PolarsExpr` doesn't need
-    @property
-    def name(self) -> str: ...
 
     # Expr -> Expr
     # Scalar -> Scalar
