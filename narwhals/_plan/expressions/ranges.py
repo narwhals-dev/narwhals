@@ -3,9 +3,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import narwhals._plan.dtypes_mapper as dtm
+from narwhals._plan._dispatch import DispatcherOptions
 from narwhals._plan._dtype import ResolveDType
 from narwhals._plan._function import Function
-from narwhals._plan.options import FEOptions, FunctionOptions
+from narwhals._plan.options import FunctionOptions
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -18,10 +19,11 @@ if TYPE_CHECKING:
 row_separable = FunctionOptions.row_separable
 get_dtype = ResolveDType.get_dtype
 map_all = ResolveDType.function.map_all
+namespaced = DispatcherOptions.namespaced
 
 
 # TODO @dangotbanned: Review upstream `row_separable` fix https://github.com/pola-rs/polars/pull/26549
-class RangeFunction(Function, options=row_separable, config=FEOptions.namespaced()):
+class RangeFunction(Function, options=row_separable, dispatch=namespaced()):
     def to_function_expr(self, *inputs: ExprIR) -> RangeExpr[Self]:
         from narwhals._plan.expressions.expr import RangeExpr
 

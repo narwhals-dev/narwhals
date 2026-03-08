@@ -6,9 +6,10 @@ import typing as t
 from typing import TYPE_CHECKING
 
 import narwhals._plan.dtypes_mapper as dtm
+from narwhals._plan._dispatch import DispatcherOptions
 from narwhals._plan._dtype import ResolveDType
 from narwhals._plan._function import Function, HorizontalFunction
-from narwhals._plan.options import FEOptions, FunctionOptions
+from narwhals._plan.options import FunctionOptions
 from narwhals._plan.typing import NativeSeriesT
 
 if TYPE_CHECKING:
@@ -25,6 +26,7 @@ aggregation = FunctionOptions.aggregation
 elementwise = FunctionOptions.elementwise
 length_preserving = FunctionOptions.length_preserving
 map_first = ResolveDType.function.map_first
+renamed = DispatcherOptions.renamed
 
 
 # fmt: off
@@ -45,7 +47,7 @@ class IsNull(BooleanFunction): ...
 class IsNotNan(BooleanFunction): ...
 class IsNotNull(BooleanFunction): ...
 class IsUnique(BooleanFunction, options=length_preserving): ...
-class Not(BooleanFunction, config=FEOptions.renamed("not_"), dtype=map_first(lambda dtype: dtype if dtype.is_integer() else dtm.BOOL)): ...
+class Not(BooleanFunction, dispatch=renamed("not_"), dtype=map_first(lambda dtype: dtype if dtype.is_integer() else dtm.BOOL)): ...
 # fmt: on
 class IsBetween(BooleanFunction):
     """N-ary (expr, lower_bound, upper_bound)."""

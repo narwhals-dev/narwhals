@@ -67,6 +67,7 @@ def test_dispatch(
     ("expr", "expected"),
     [
         (nwp.col("a"), "col"),
+        (nwp.len(), "len"),
         (nwp.col("a").min().over("b"), "over"),
         (nwp.col("a").first().over(order_by="b"), "over_ordered"),
         (nwp.all_horizontal("a", "b", nwp.nth(4, 5, 6)), "all_horizontal"),
@@ -84,6 +85,7 @@ def test_dispatch(
         (nwp.col("a").str.head(), ("str.slice")),
         (nwp.col("a").str.tail(), ("str.slice")),
         (nwp.col("a").struct.field("b"), "struct.field"),
+        (nwp.col("a").str.zfill(4), "str.zfill"),
         (nwp.mean("a"), "mean"),
         (nwp.nth(1).first(), "first"),
         (nwp.col("a").sum(), "sum"),

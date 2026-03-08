@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Generic, final
+from typing import TYPE_CHECKING, Generic, Literal, final
 
-from narwhals._plan._dispatch import Dispatcher
+from narwhals._plan._dispatch import Dispatcher, DispatcherOptions
 from narwhals._plan._dtype import IntoResolveDType, ResolveDType
 from narwhals._plan._guards import is_function_expr, is_literal
 from narwhals._plan._immutable import Immutable
-from narwhals._plan.options import ExprIROptions
 from narwhals._plan.typing import ExprIRT_co
 from narwhals._utils import Version, unstable
 from narwhals.dtypes import DType
@@ -91,66 +90,10 @@ class ExprIR(Immutable):
     _child: ClassVar[Seq[str]] = ()
     """Nested node names, in iteration order."""
 
-    __expr_ir_config__: ClassVar[ExprIROptions] = ExprIROptions.default()
-    """Class-level configuration for how a `Dispatcher` should be built.
-
-    Defined via the (optional) `config` parameter at [subclass-definition time].
-
-    Many expressions simply use the default:
-
-        >>> from narwhals._plan import expressions as ir
-        >>> from narwhals._plan.options import ExprIROptions
-        >>>
-        >>> class Explode(ir.ExprIR, child=("expr",)):
-        ... #                                      ^^ # default `config`
-        ...     __slots__ = ("expr",)
-        ...     expr: ir.ExprIR
-
-        >>> Explode.__expr_ir_config__
-        ExprIROptions(is_namespaced=False, override_name='', allow_dispatch=True)
-
-        >>> Explode.__expr_ir_dispatch__
-        Dispatcher<explode>
-
-    `config` provides a bit more flexibility when you want it:
-
-        >>> class Explode2(Explode, config=ExprIROptions.renamed("explodier")): ...
-        >>> #                       ^^^^^^ custom `config`
-
-        >>> Explode2.__expr_ir_config__
-        ExprIROptions(is_namespaced=False, override_name='explodier', allow_dispatch=True)
-
-        >>> Explode2.__expr_ir_dispatch__
-        Dispatcher<explodier>
-
-    Keep in mind that `__expr_ir_config__` is inherited:
-
-        >>> class Explode21(Explode2): ...
-        >>> Explode21.__expr_ir_dispatch__
-        Dispatcher<explodier>
-
-    So we'd need another override to get the default back:
-
-        >>> from narwhals._plan.options import ExplodeOptions
-        >>>
-        >>> class ExplodeWithOptions(Explode2, config=ExprIROptions.default()):
-        ...     __slots__ = ("options",)
-        ...     options: ExplodeOptions
-
-        >>> ExplodeWithOptions.__expr_ir_dispatch__
-        Dispatcher<explode_with_options>
-
-    Warning:
-        This attribute should be considered immutable once [`__init_subclass__`] finishes executing.
-
-    [`__init_subclass__`]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
-    [subclass-definition time]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
-    """
-
     # TODO @dangotbanned: How this relates to:
     # - `dispatch`
     # - `ExprDispatch` (compliant)
-    __expr_ir_dispatch__: ClassVar[Dispatcher[Self]]
+    __expr_ir_dispatch__: ClassVar[Dispatcher[Self]] = Dispatcher()
 
     # TODO @dangotbanned: How this relates to:
     # - `__init_subclass__(dtype)`
@@ -162,7 +105,7 @@ class ExprIR(Immutable):
         cls: type[Self],
         *,
         child: Seq[str] = (),
-        config: ExprIROptions | None = None,
+        dispatch: DispatcherOptions | Literal["no_dispatch"] | None = None,
         dtype: IntoResolveDType[Self] | None = None,
         **_: Any,
     ) -> None:  # TODO @dangotbanned: Do another pass on the short description phrasing
@@ -180,8 +123,9 @@ class ExprIR(Immutable):
                 must use:
 
                     child=(*<parent-field-names>, *<more-names>)  # (sorry, need to fix this!)
-            config: Instructions defining how to build a `Dispatcher`.
-                Stored in `__expr_ir_config__`.
+
+            dispatch: Instructions defining how to build a `Dispatcher`.
+                Stored in `__expr_ir_dispatch__.options`.
 
             dtype: Defines how a `DType` is derived when `resolve_dtype` is called.
                 Stored in `__expr_ir_dtype__`.
@@ -197,9 +141,7 @@ class ExprIR(Immutable):
         super().__init_subclass__(**_)
         if child:
             cls._child = child
-        if config:
-            cls.__expr_ir_config__ = config
-        cls.__expr_ir_dispatch__ = Dispatcher.from_expr_ir(cls)
+        cls.__expr_ir_dispatch__ = Dispatcher.from_expr_ir(cls, dispatch)
         if dtype is not None:
             if isinstance(dtype, DType):
                 dtype = ResolveDType.just_dtype(dtype)
@@ -411,11 +353,7 @@ def _map_ir_child(obj: ExprIR | Seq[ExprIR], fn: MapIR, /) -> ExprIR | Seq[ExprI
     return obj.map_ir(fn) if isinstance(obj, ExprIR) else tuple(e.map_ir(fn) for e in obj)
 
 
-# NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
-no_dispatch = ExprIROptions.no_dispatch
-
-
-class SelectorIR(ExprIR, config=no_dispatch()):
+class SelectorIR(ExprIR, dispatch="no_dispatch"):
     def to_narwhals(self, version: Version = Version.MAIN) -> Selector:
         from narwhals._plan.selectors import Selector, SelectorV1
 

@@ -6,6 +6,7 @@ import typing as t
 from typing import TYPE_CHECKING, final
 
 import narwhals._plan.dtypes_mapper as dtm
+from narwhals._plan._dispatch import DispatcherOptions
 from narwhals._plan._dtype import ResolveDType
 from narwhals._plan._expr_ir import ExprIR, SelectorIR
 from narwhals._plan.exceptions import (
@@ -13,7 +14,6 @@ from narwhals._plan.exceptions import (
     over_order_by_names_error,
 )
 from narwhals._plan.expressions.selectors import ByName
-from narwhals._plan.options import ExprIROptions
 from narwhals._plan.typing import (
     FunctionT_co,
     Ignored,
@@ -71,16 +71,15 @@ __all__ = [
 # NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
 get_dtype = ResolveDType.get_dtype
 same_dtype = ResolveDType.expr_ir.same_dtype
-no_dispatch = ExprIROptions.no_dispatch
-namespaced = ExprIROptions.namespaced
-renamed = ExprIROptions.renamed
+namespaced = DispatcherOptions.namespaced
+renamed = DispatcherOptions.renamed
 
 
 def col(name: str, /) -> Column:
     return Column(name=name)
 
 
-class Alias(ExprIR, child=("expr",), config=no_dispatch()):
+class Alias(ExprIR, child=("expr",), dispatch="no_dispatch"):
     __slots__ = ("expr", "name")
     expr: ExprIR
     name: str
@@ -93,7 +92,7 @@ class Alias(ExprIR, child=("expr",), config=no_dispatch()):
         return f"{self.expr!r}.alias({self.name!r})"
 
 
-class Column(ExprIR, config=namespaced("col")):
+class Column(ExprIR, dispatch=namespaced("col")):
     __slots__ = ("name",)
     name: str
 
@@ -107,7 +106,7 @@ class Column(ExprIR, config=namespaced("col")):
         return schema[self.name]
 
 
-class Literal(ExprIR, t.Generic[LiteralT], config=namespaced("lit"), dtype=get_dtype()):
+class Literal(ExprIR, t.Generic[LiteralT], dispatch=namespaced("lit"), dtype=get_dtype()):
     """https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/expr.rs#L81."""
 
     __slots__ = ("value",)
@@ -324,7 +323,7 @@ class RollingExpr(FunctionExpr[RollingT_co]):
         return self.__expr_ir_dispatch__(self, ctx, frame, name)
 
 
-class AnonymousExpr(FunctionExpr["MapBatches"], config=renamed("map_batches")):
+class AnonymousExpr(FunctionExpr["MapBatches"], dispatch=renamed("map_batches")):
     """https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/expr.rs#L158-L166."""
 
     def dispatch(
@@ -447,7 +446,7 @@ class OverOrdered(Over, child=("expr", "partition_by", "order_by")):
                 raise over_order_by_names_error(self, by)
 
 
-class Len(ExprIR, config=namespaced(), dtype=dtm.IDX_DTYPE):
+class Len(ExprIR, dispatch=namespaced(), dtype=dtm.IDX_DTYPE):
     @property
     def is_scalar(self) -> bool:
         return True

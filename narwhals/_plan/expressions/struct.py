@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
+from narwhals._plan._dispatch import DispatcherOptions
 from narwhals._plan._function import Function
 from narwhals._plan.common import into_dtype
 from narwhals._plan.expressions.namespace import ExprNamespace, IRNamespace
-from narwhals._plan.options import FEOptions, FunctionOptions
+from narwhals._plan.options import FunctionOptions
 from narwhals._utils import Version
 from narwhals.exceptions import InvalidOperationError
 
@@ -21,6 +22,7 @@ if TYPE_CHECKING:
 STRUCT = Version.MAIN.dtypes.Struct
 # NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
 elementwise = FunctionOptions.elementwise
+renamed = DispatcherOptions.renamed
 
 
 class StructFunction(Function, accessor="struct"):
@@ -35,7 +37,7 @@ class StructFunction(Function, accessor="struct"):
         raise NotImplementedError(msg)
 
 
-class FieldByName(StructFunction, options=elementwise, config=FEOptions.renamed("field")):
+class FieldByName(StructFunction, options=elementwise, dispatch=renamed("field")):
     __slots__ = ("name",)
     name: str
 

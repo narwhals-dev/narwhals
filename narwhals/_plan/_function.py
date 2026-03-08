@@ -37,10 +37,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals._plan._dispatch import Dispatcher
+from narwhals._plan._dispatch import Dispatcher, DispatcherOptions
 from narwhals._plan._dtype import IntoResolveDType, ResolveDType
 from narwhals._plan._immutable import Immutable
-from narwhals._plan.options import FEOptions, FunctionOptions
+from narwhals._plan.options import FunctionOptions
 from narwhals.dtypes import DType
 
 if TYPE_CHECKING:
@@ -53,6 +53,10 @@ if TYPE_CHECKING:
     from narwhals._plan.typing import Accessor
 
 __all__ = ["Function", "HorizontalFunction"]
+
+# NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
+namespaced = DispatcherOptions.namespaced
+horizontal = FunctionOptions.horizontal
 
 
 # TODO @dangotbanned: Finish `Function` class doc
@@ -100,8 +104,7 @@ class Function(Immutable):
     _function_options: ClassVar[staticmethod[[], FunctionOptions]] = staticmethod(
         FunctionOptions.default
     )
-    __expr_ir_config__: ClassVar[FEOptions] = FEOptions.default()
-    __expr_ir_dispatch__: ClassVar[Dispatcher[FunctionExpr[Self]]]
+    __expr_ir_dispatch__: ClassVar[Dispatcher[FunctionExpr[Self]]] = Dispatcher()
     __expr_ir_dtype__: ClassVar[ResolveDType[FunctionExpr[Self]]] = ResolveDType()
 
     @property
@@ -122,19 +125,14 @@ class Function(Immutable):
         *,
         accessor: Accessor | None = None,
         options: Callable[[], FunctionOptions] | None = None,
-        config: FEOptions | None = None,
+        dispatch: DispatcherOptions | None = None,
         dtype: IntoResolveDType[Self] | None = None,
         **kwds: Any,
     ) -> None:
         super().__init_subclass__(**kwds)
-        if accessor_name := accessor or cls.__expr_ir_config__.accessor_name:
-            config = config or FEOptions.default()
-            config = config.__replace__(accessor_name=accessor_name)
         if options:
             cls._function_options = staticmethod(options)
-        if config:
-            cls.__expr_ir_config__ = config
-        cls.__expr_ir_dispatch__ = Dispatcher.from_function(cls)
+        cls.__expr_ir_dispatch__ = Dispatcher.from_function(cls, dispatch, accessor)
         if dtype is not None:
             if isinstance(dtype, DType):
                 dtype = ResolveDType.just_dtype(dtype)
@@ -158,6 +156,4 @@ class Function(Immutable):
         return self.__expr_ir_dtype__(node, schema)
 
 
-class HorizontalFunction(
-    Function, options=FunctionOptions.horizontal, config=FEOptions.namespaced()
-): ...
+class HorizontalFunction(Function, options=horizontal, dispatch=namespaced()): ...

@@ -3,17 +3,17 @@ from __future__ import annotations
 import re
 from collections.abc import Callable
 from operator import attrgetter
-from typing import TYPE_CHECKING, Any, Generic, Literal, Protocol, final, overload
+from typing import TYPE_CHECKING, Any, Generic, Literal, Protocol, final
 
 from narwhals._plan._guards import is_function_expr
 from narwhals._typing_compat import TypeVar
 
 if TYPE_CHECKING:
-    from typing_extensions import Never, TypeAlias
+    from typing_extensions import Never, Self, TypeAlias
 
     from narwhals._plan.compliant.typing import Ctx, FrameT_contra, R_co
     from narwhals._plan.expressions import ExprIR, Function, FunctionExpr
-    from narwhals._plan.typing import ExprIRT, FunctionT
+    from narwhals._plan.typing import Accessor, ExprIRT, FunctionT
 
     Node_contra = TypeVar(
         "Node_contra", bound="ExprIR | FunctionExpr[Any]", contravariant=True
@@ -30,18 +30,22 @@ if TYPE_CHECKING:
         ) -> R_co: ...
 
 
-__all__ = ["Dispatcher", "get_dispatch_name"]
+__all__ = ["Dispatcher", "DispatcherOptions", "get_dispatch_name"]
 
+Incomplete: TypeAlias = Any
 
 Node = TypeVar("Node", bound="ExprIR | FunctionExpr[Any]")
 Raiser: TypeAlias = Callable[..., "Never"]
 
 
+# TODO @dangotbanned: Pick a focus for the docstring and start again
 @final
 class Dispatcher(Generic[Node]):
-    """Translate class definitions into error-wrapped method calls.
+    """Dispatch an expression to the compliant-level.
 
-    Operates over `ExprIR` and `Function` nodes.
+    Translates class definitions into error-wrapped method calls.
+
+    All `ExprIR` and `Function` nodes store one of these guys in `__expr_ir_dispatch__`.
 
     By default, we dispatch to the compliant-level by calling a method that is the
     **snake_case**-equivalent of the class name:
@@ -52,8 +56,18 @@ class Dispatcher(Generic[Node]):
             def binary_expr(self, *args: Any): ...
     """
 
-    __slots__ = ("_bind", "_name")
-    _bind: Binder[Node]
+    __slots__ = ("_name", "_options", "bind")
+
+    # TODO @dangotbanned: Improve or remnove doc
+    bind: Binder[Node]
+    """Retrieve the implementation of this expression from `ctx`.
+
+    Binds an instance method, most commonly via:
+
+        expr: CompliantExpr
+        method = getattr(expr, "method_name")
+    """
+    _options: DispatcherOptions
     _name: str
 
     @property
@@ -83,23 +97,21 @@ class Dispatcher(Generic[Node]):
         """
         return self._name
 
+    # TODO @dangotbanned: Maybe explain in terms of descriptor language?
+    # e.g. "when the owner is subclassed ..."
+    @property
+    def options(self) -> DispatcherOptions:
+        """Configuration describing how this instance was built.
+
+        When a dispatchable (...) class is subclassed, this property is inherited
+        while each class gets its own instance of `Dispatcher`.
+
+        See `DispatcherOptions` for examples.
+        """
+        return self._options
+
     def __repr__(self) -> str:
         return f"{type(self).__name__}<{self.name}>"
-
-    def bind(
-        self, ctx: Ctx[FrameT_contra, R_co], /
-    ) -> BoundMethod[Node, FrameT_contra, R_co]:
-        """Retrieve the implementation of this expression from `ctx`.
-
-        Binds an instance method, most commonly via:
-
-            expr: CompliantExpr
-            method = getattr(expr, "method_name")
-        """
-        try:
-            return self._bind(ctx)
-        except AttributeError:
-            raise self._not_implemented_error(ctx, "compliant") from None
 
     def __call__(
         self,
@@ -110,47 +122,84 @@ class Dispatcher(Generic[Node]):
         /,
     ) -> R_co:
         """Evaluate this expression in `frame`, using implementation(s) provided by `ctx`."""
-        method = self.bind(ctx)
+        try:
+            method = self.bind(ctx)
+        except AttributeError:
+            raise self._not_implemented_error(ctx, "compliant") from None
         if result := method(node, frame, name):
             return result
         raise self._not_implemented_error(ctx, "context")
 
     @staticmethod
-    def from_expr_ir(tp: type[ExprIRT], /) -> Dispatcher[ExprIRT]:
-        if not tp.__expr_ir_config__.allow_dispatch:
-            return Dispatcher._no_dispatch(tp)
-        return Dispatcher._from_type(tp)
+    def from_expr_ir(
+        tp: type[ExprIRT], options: DispatcherOptions | Literal["no_dispatch"] | None, /
+    ) -> Dispatcher[ExprIRT]:
+        if options == "no_dispatch":
+            options = DispatcherOptions(allow_dispatch=False)
+        options = options or tp.__expr_ir_dispatch__.options
+        if not options.allow_dispatch:
+            return Dispatcher(tp.__name__, options=options)
+        return Dispatcher._from_type(tp, options)
+
+    # TODO @dangotbanned: Clean up explanation
+    @staticmethod
+    def from_function(
+        tp: type[FunctionT],
+        options: DispatcherOptions | None,
+        accessor: Accessor | None,
+        /,
+    ) -> Dispatcher[FunctionExpr[FunctionT]]:
+        # merge `Function.__init_subclass__(accessor=)` with any inherited or newly defined options
+        # very fiddly, but the idea is an `accessor_name` in a parent is sticky
+        # and should be preserved when other dispatcher options are applied to children
+        # `FieldByName` -> `struct.field`
+        # `ZFill`       -> `str.zfill`
+        options_parent = tp.__expr_ir_dispatch__.options
+        options = options or options_parent
+        if accessor_name := (
+            accessor or options_parent.accessor_name or options.accessor_name
+        ):
+            options = DispatcherOptions(
+                is_namespaced=options.is_namespaced,
+                override_name=options.override_name,
+                accessor_name=accessor_name,
+            )
+        return Dispatcher._from_type(tp, options)
 
     @staticmethod
-    def from_function(tp: type[FunctionT], /) -> Dispatcher[FunctionExpr[FunctionT]]:
-        return Dispatcher._from_type(tp)
+    def _from_type(
+        tp: type[Incomplete], options: DispatcherOptions, /
+    ) -> Dispatcher[Incomplete]:
+        name = options.override_name or _pascal_to_snake_case(tp.__name__)
+        if ns := options.accessor_name:
+            name = f"{ns}.{name}"
+        getter = attrgetter(name)
+        bind = _via_namespace(getter) if options.is_namespaced else getter
+        return Dispatcher(name, bind, options)
 
-    @staticmethod
-    @overload
-    def _from_type(tp: type[ExprIRT], /) -> Dispatcher[ExprIRT]: ...
-    @staticmethod
-    @overload
-    def _from_type(tp: type[FunctionT], /) -> Dispatcher[FunctionExpr[FunctionT]]: ...
-    @staticmethod
-    def _from_type(tp: type[ExprIRT | FunctionT], /) -> Dispatcher[Any]:
-        obj = Dispatcher.__new__(Dispatcher)
-        obj._name = _method_name(tp)
-        getter = attrgetter(obj._name)
-        is_namespaced = tp.__expr_ir_config__.is_namespaced
-        obj._bind = _via_namespace(getter) if is_namespaced else getter
-        return obj
+    def __get__(self, instance: Any, owner: Any) -> Self:
+        return self
 
-    @staticmethod
-    def _no_dispatch(tp: type[ExprIRT], /) -> Dispatcher[ExprIRT]:
-        obj = Dispatcher.__new__(Dispatcher)
-        obj._name = tp.__name__
-        obj._bind = obj._make_no_dispatch_error()
-        return obj
+    # TODO @dangotbanned: Clean up explanation
+    def __set_name__(self, owner: type[Any], name: str) -> None:
+        # `Function` and `ExprIR` invoke this by using `Dispatcher()` in the class body
+        # This allows special-casing for base class raising an error, but not propagating the behavior (via options)
+        self._name = owner.__name__
+
+    def __init__(
+        self,
+        name: str = "",
+        bind: Binder[Node] | None = None,
+        options: DispatcherOptions | None = None,
+    ) -> None:
+        self._name = name
+        self.bind = bind or self._make_no_dispatch_error()
+        self._options = options or DispatcherOptions()
 
     def _make_no_dispatch_error(self) -> Callable[[Any], Raiser]:
         def _no_dispatch_error(node: Node, *_: Any) -> Never:
             msg = (
-                f"{self.name!r} should not appear at the compliant-level.\n\n"
+                f"{type(node).__name__!r} should not appear at the compliant-level.\n\n"
                 f"Make sure to expand all expressions first, got:\n{node!r}"
             )
             raise TypeError(msg)
@@ -171,6 +220,169 @@ class Dispatcher(Generic[Node]):
                 f"Hint: Try adding `CompliantExpr.{self.name}()` or `CompliantNamespace.{self.name}()`"
             )
         return NotImplementedError(msg)
+
+
+@final
+class DispatcherOptions:
+    """Class-level configuration for how a `Dispatcher` should be built.
+
+    Defined via the (optional) `dispatch` parameter at [subclass-definition time].
+
+    Many expressions simply use the default:
+
+        >>> from narwhals._plan import expressions as ir
+        >>> from narwhals._plan._dispatch import DispatcherOptions
+        >>>
+        >>> class Explode(ir.ExprIR, child=("expr",)):
+        ...     #                                  ^^ # default `dispatch`
+        ...     __slots__ = ("expr",)
+        ...     expr: ir.ExprIR
+
+        >>> Explode.__expr_ir_dispatch__
+        Dispatcher<explode>
+
+        >>> Explode.__expr_ir_dispatch__.options
+        DispatcherOptions(<default>)
+
+    `dispatch` provides a bit more flexibility when you want it:
+
+        >>> class Explode2(Explode, dispatch=DispatcherOptions.renamed("explodier")): ...
+        >>> #                       ^^^^^^^^ custom `dispatch`
+
+        >>> Explode2.__expr_ir_dispatch__
+        Dispatcher<explodier>
+
+        >>> Explode2.__expr_ir_dispatch__.options
+        DispatcherOptions(override_name='explodier')
+
+    Keep in mind that `options` are inherited:
+
+        >>> class Explode21(Explode2): ...
+        >>> Explode21.__expr_ir_dispatch__
+        Dispatcher<explodier>
+
+    So we'd need another override to get the default back:
+
+        >>> from narwhals._plan.options import ExplodeOptions
+        >>>
+        >>> class ExplodeWithOptions(Explode2, dispatch=DispatcherOptions()):
+        ...     __slots__ = ("options",)
+        ...     options: ExplodeOptions
+
+        >>> ExplodeWithOptions.__expr_ir_dispatch__
+        Dispatcher<explode_with_options>
+
+    [subclass-definition time]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
+    """
+
+    __slots__ = ("accessor_name", "allow_dispatch", "is_namespaced", "override_name")
+    accessor_name: Accessor | None
+    """Name of an (optional) expression namespace accessor.
+
+    Required for expressions like:
+
+        nw.col("a").str.len_chars()
+        #           ^^^
+    """
+
+    allow_dispatch: bool
+    """Whether the expression is supported at the compliant-level.
+
+    When `False`, **any** attempts to dispatch will raise a `TypeError`:
+
+        >>> import narwhals._plan as nw
+        >>> selector = nw.col("a", "b", "c")._ir
+        >>> selector.dispatch(..., ..., ...)
+        Traceback (most recent call last):
+        TypeError: 'RootSelector' should not appear at the compliant-level.
+        <BLANKLINE>
+        Make sure to expand all expressions first, got:
+        ncs.by_name('a', 'b', 'c', require_all=True)
+    """
+
+    is_namespaced: bool
+    """True if expression dispatch routes through `__narwhals_namespace__`.
+
+    Required for expressions like:
+
+        nw.all_horizontal(...)
+        # ^
+
+    But not for methods *on* `Expr` like:
+
+        nw.col("a").max()
+        #          ^
+    """
+
+    override_name: str
+    """Manual override to the auto-generated expression dispatch method name.
+
+    By default the name is derived from the [snake_case] transform of the [PascalCase] class name:
+
+        >>> from narwhals._plan import expressions as ir
+        >>> def show_dispatch_names(*tps: type[ir.ExprIR | ir.Function]) -> None:
+        ...     length = max(len(tp.__name__) for tp in tps)
+        ...     for tp in tps:
+        ...         print(f"{tp.__name__:<{length}} -> {tp.__expr_ir_dispatch__.name}")
+        >>>
+        >>>
+        >>> show_dispatch_names(ir.Cast, ir.BinaryExpr, ir.strings.StartsWith)
+        Cast       -> cast
+        BinaryExpr -> binary_expr
+        StartsWith -> str.starts_with
+
+    `override_name` provides an escape hatch for edge cases:
+
+        >>> show_dispatch_names(ir.Column, ir.Literal, ir.boolean.Not)
+        Column  -> col
+        Literal -> lit
+        Not     -> not_
+
+    [snake_case]: https://en.wikipedia.org/wiki/Snake_case
+    [PascalCase]: https://en.wikipedia.org/wiki/Naming_convention_(programming)#Examples_of_multiple-word_identifier_formats
+    """
+
+    def __init__(
+        self,
+        *,
+        accessor_name: Accessor | None = None,
+        allow_dispatch: bool = True,
+        is_namespaced: bool = False,
+        override_name: str = "",
+    ) -> None:
+        self.accessor_name = accessor_name
+        self.allow_dispatch = allow_dispatch
+        self.is_namespaced = is_namespaced
+        self.override_name = override_name
+
+    @staticmethod
+    def namespaced(override_name: str = "", /) -> DispatcherOptions:
+        """Route expression dispatch through `__narwhals_namespace__`.
+
+        Syntax sugar for `DispatcherOptions(is_namespaced=True, override_name=override_name)`.
+        """
+        return DispatcherOptions(is_namespaced=True, override_name=override_name)
+
+    @staticmethod
+    def renamed(override_name: str, /) -> DispatcherOptions:
+        """Override the auto-generated expression dispatch method name.
+
+        Syntax sugar for `DispatcherOptions(override_name=override_name)`.
+        """
+        return DispatcherOptions(override_name=override_name)
+
+    def __repr__(self) -> str:
+        parts = []
+        if accessor := self.accessor_name:
+            parts.append(f"accessor_name={accessor!r}")
+        if not self.allow_dispatch:
+            parts.append(f"allow_dispatch={self.allow_dispatch}")
+        if namespaced := self.is_namespaced:
+            parts.append(f"is_namespaced={namespaced}")
+        if override := self.override_name:
+            parts.append(f"override_name={override!r}")
+        inner = (", ".join(parts)) if parts else "<default>"
+        return f"{type(self).__name__}({inner})"
 
 
 def _via_namespace(getter: Callable[[Any], Any], /) -> Callable[[Any], Any]:
@@ -197,12 +409,6 @@ _PATTERN_LOWER_UPPER = re.compile(r"([a-z])([A-Z])")
 
 def _re_repl_snake(match: re.Match[str], /) -> str:
     return f"{match.group(1)}_{match.group(2)}"
-
-
-def _method_name(tp: type[ExprIRT | FunctionT]) -> str:
-    config = tp.__expr_ir_config__
-    name = config.override_name or _pascal_to_snake_case(tp.__name__)
-    return f"{ns}.{name}" if (ns := getattr(config, "accessor_name", "")) else name
 
 
 def get_dispatch_name(expr: ExprIR | type[Function], /) -> str:
