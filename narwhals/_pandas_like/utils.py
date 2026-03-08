@@ -5,6 +5,7 @@ import operator
 import re
 from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, cast
 
+import numpy as np
 import pandas as pd
 
 from narwhals._compliant import EagerSeriesNamespace
@@ -23,6 +24,7 @@ from narwhals._utils import (
     _DeferredIterable,
     check_columns_exist,
     isinstance_or_issubclass,
+    parse_version,
     requires,
 )
 from narwhals.exceptions import ShapeError
@@ -112,6 +114,13 @@ PANDAS_VERSION = Implementation.PANDAS._backend_version()
 """Static backend version for `pandas`.
 
 Always available if we reached here, due to a module-level import.
+"""
+
+NUMPY_VERSION = parse_version(np)
+"""Static version for `numpy`.
+
+Always available if we reached here, as imported in both _pandas_like/dataframe.py and
+_pandas_like/series.py.
 """
 
 
@@ -544,7 +553,9 @@ def narwhals_to_native_arrow_dtype(
         try:
             import pyarrow as pa  # ignore-banned-import  # noqa: F401
         except ImportError as exc:  # pragma: no cover
-            msg = f"Unable to convert to {dtype} to to the following exception: {exc.msg}"
+            msg = (
+                f"Unable to convert to {dtype} due to the following exception: {exc.msg}"
+            )
             raise ImportError(msg) from exc
         from narwhals._arrow.utils import narwhals_to_native_dtype as _to_arrow_dtype
 
