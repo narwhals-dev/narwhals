@@ -3,7 +3,7 @@ from __future__ import annotations
 import platform
 import sys
 from collections.abc import Iterable, Mapping, Sequence
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from narwhals._expression_parsing import ExprKind, ExprNode, is_expr, is_series
 from narwhals._utils import (
@@ -31,7 +31,7 @@ from narwhals.translate import from_native, to_native
 if TYPE_CHECKING:
     from types import ModuleType
 
-    from typing_extensions import TypeAlias, TypeIs
+    from typing_extensions import Self, TypeAlias, TypeIs
 
     from narwhals._native import NativeDataFrame, NativeLazyFrame, NativeSeries
     from narwhals._translate import IntoArrowTable
@@ -1367,26 +1367,58 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 
 
 class When:
-    def __init__(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> None:
+    def __init__(
+        self,
+        *predicates: IntoExpr | Iterable[IntoExpr],
+        chain: list[tuple[Expr, IntoExpr | NonNestedLiteral]],
+    ) -> None:
         self._predicate = all_horizontal(*flatten(predicates), ignore_nulls=False)
+        self._chain = chain
 
     def then(self, value: IntoExpr | NonNestedLiteral) -> Then:
-        return Then(
-            ExprNode(
-                ExprKind.ELEMENTWISE,
-                "when_then",
-                exprs=(self._predicate, value),
-                allow_multi_output=False,
-            )
-        )
+        new_chain = [*self._chain, (self._predicate, value)]
+        return Then._from_chain(new_chain)
 
 
 class Then(Expr):
-    def otherwise(self, value: IntoExpr | NonNestedLiteral) -> Expr:
-        node = self._nodes[0]
-        return Expr(
-            ExprNode(ExprKind.ELEMENTWISE, "when_then", exprs=(*node.exprs, value))
+    _chain: list[tuple[Expr, IntoExpr | NonNestedLiteral]]
+
+    @classmethod
+    def _from_chain(cls, chain: list[tuple[Expr, IntoExpr | NonNestedLiteral]]) -> Self:
+        result = None
+        for predicate, then_value in reversed(chain):
+            result = cls._from_exprs(predicate, then_value, result)
+        result = cast("Self", result)
+        result._chain = chain
+        return result
+
+    @classmethod
+    def _from_exprs(
+        cls,
+        predicate: Expr,
+        then_value: IntoExpr | NonNestedLiteral,
+        otherwise_value: IntoExpr | NonNestedLiteral = None,
+    ) -> Self:
+        exprs: tuple[IntoExpr | NonNestedLiteral, ...]
+        if otherwise_value is None:
+            exprs = (predicate, then_value)
+        else:
+            exprs = (predicate, then_value, otherwise_value)
+        node = ExprNode(
+            ExprKind.ELEMENTWISE, "when_then", exprs=exprs, allow_multi_output=False
         )
+        return cls(node)
+
+    def otherwise(self, otherwise_value: IntoExpr | NonNestedLiteral) -> Then:
+        # Build the nested structure from the chain (innermost first)
+        result = otherwise_value
+        for predicate, then_value in reversed(self._chain):
+            result = Then._from_exprs(predicate, then_value, result)
+        assert isinstance(result, Then)  # noqa: S101
+        return result
+
+    def when(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> When:
+        return When(*predicates, chain=self._chain)
 
 
 def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
@@ -1397,18 +1429,13 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
     `.otherwise(<value if condition is false>)` can be appended at the end. If not
     appended, and the condition is not `True`, `None` will be returned.
 
-    Info:
-        Chaining multiple `.when(<condition>).then(<value>)` statements is currently
-        not supported.
-        See [Narwhals#668](https://github.com/narwhals-dev/narwhals/issues/668).
-
     Arguments:
         predicates: Condition(s) that must be met in order to apply the subsequent
             statement. Accepts one or more boolean expressions, which are implicitly
             combined with `&`. String input is parsed as a column name.
 
     Returns:
-        A "when" object, which `.then` can be called on.
+        A "When" object, which `.then` can be called on.
 
     Examples:
         >>> import pandas as pd
@@ -1428,7 +1455,7 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
         | 2  3  15       6 |
         └──────────────────┘
     """
-    return When(*predicates)
+    return When(*predicates, chain=[])
 
 
 def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool) -> Expr:
