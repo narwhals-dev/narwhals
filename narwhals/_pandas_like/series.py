@@ -24,7 +24,7 @@ from narwhals._pandas_like.utils import (
     set_index,
 )
 from narwhals._typing_compat import assert_never
-from narwhals._utils import Implementation, Version, is_list_of, no_default, parse_version
+from narwhals._utils import Implementation, Version, is_list_of, no_default
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_like_series
 from narwhals.dtypes import _validate_cast_temporal_to_numeric
 from narwhals.exceptions import InvalidOperationError
