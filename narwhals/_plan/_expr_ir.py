@@ -91,10 +91,26 @@ class ExprIR(Immutable):
     _child: ClassVar[Seq[str]] = ()
     """Nested node names, in iteration order."""
 
-    # TODO @dangotbanned: How this relates to:
-    # - `dispatch`
-    # - `ExprDispatch` (compliant)
     __expr_ir_dispatch__: ClassVar[Dispatcher[Self]] = Dispatcher()
+    """Callable that dispatches to the appropriate compliant-level method.
+
+    See `Dispatcher` and `DispatcherOptions` for examples.
+
+    To customize the behavior, use the `dispatch` **parameter** [when subclassing]:
+
+        class When(ExprIR, dispatch=<something-different>): ...
+
+    If nothing there *quite* scratches the itch, override the `dispatch` **method** instead:
+
+        class When(ExprIR):
+            def dispatch(self, ctx, frame, name, /):
+                return ctx.when_then(self, frame, name)
+
+    Notes:
+        Each class has their own `Dispatcher` instance, and inheritance is only on the `options` property.
+
+    [when subclassing]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
+    """
 
     # TODO @dangotbanned: How this relates to:
     # - `__init_subclass__(dtype)`
