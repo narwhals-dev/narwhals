@@ -197,7 +197,9 @@ class ExprIR(Immutable):
         msg = f"cannot turn `{self!r}` into a selector"
         raise InvalidOperationError(msg)
 
-    # TODO @dangotbanned: do another pass on the phrasing
+    # TODO @dangotbanned: Rewrite `is_scalar` as a method?
+    # Not really an expensive check, but `Function.is_scalar` leads to `FunctionOptions.returns_scalar()`
+    # so it would be more consistent
     @property
     def is_scalar(self) -> bool:
         """Return True if this leaf produces a single value.
@@ -205,23 +207,25 @@ class ExprIR(Immutable):
         Some expressions are always scalar:
 
             >>> import narwhals._plan as nw
-            >>> nw.len()._ir.is_scalar
+            >>> length = nw.len()
+            >>> length._ir.is_scalar
             True
             >>> nw.lit(123)._ir.is_scalar
             True
 
-        Others are never scalar:
+        Others always output a column:
 
-            >>> nw.col("a")._ir.is_scalar
+            >>> column = nw.col("a")
+            >>> column._ir.is_scalar
             False
             >>> nw.int_range(0, 10)._ir.is_scalar
             False
 
-        Many depend on the scalar-ness of child expressions:
+        Many depend on the scalar-ness of child expressions, and require traversal:
 
-            >>> (nw.col("a") + nw.len())._ir.is_scalar
+            >>> (column + length)._ir.is_scalar
             False
-            >>> (nw.col("a").first() + nw.len())._ir.is_scalar
+            >>> (column.first() + length)._ir.is_scalar
             True
         """
         return False
