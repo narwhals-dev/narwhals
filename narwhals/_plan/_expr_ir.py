@@ -48,7 +48,7 @@ class ExprIR(Immutable):
         >>> bigger = (column + 10.5).alias("more")
         >>> bigger_ir = bigger._ir
         >>> print(bigger_ir)
-        Alias(expr=BinaryExpr(left=Column(name='howdy'), op=Add(), right=Literal(value=ScalarLiteral(dtype=Float64, value=10.5))), name='more')
+        Alias(expr=BinaryExpr(left=..., op=Add(), right=Literal(..., value=10.5))), name='more')
 
     An `ExprIR` is an easily traversable graph, supporting iteration from *root to leaf*:
 
