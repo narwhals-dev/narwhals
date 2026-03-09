@@ -7,16 +7,16 @@ import pytest
 import narwhals as nw
 from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
-data = {"a": [1, 3, 2], "b": [1, 2, 3], "c": [1, None, 1]}
+data = {"a": [1, 3, 3], "b": [1, 2, 3], "c": [1, None, 1]}
 
 
 @pytest.mark.parametrize(
     ("output_name", "a", "b", "expected_corr"),
     [
-        ("a", "a", "b", 0.5),
+        ("a", "a", "b", 0.87),
         ("a", "a", "c", None),
-        ("b", nw.col("a").alias("b"), nw.col("b").alias("c"), 0.5),
-        ("a", nw.col("a") * nw.col("b"), nw.col("b") - 0.5, 0.8660254037844386),
+        ("b", nw.col("a").alias("b"), nw.col("b").alias("c"), 0.87),
+        ("a", nw.col("a") * nw.col("b"), nw.col("b") - 0.5, 0.99),
     ],
 )
 def test_corr_expr(
@@ -32,16 +32,27 @@ def test_corr_expr(
             pytest.skip(reason="Pyspark corr function does not allow None values")
         )
     df = nw.from_native(constructor(data))
-    result = df.select(nw.corr(a, b))
+    result = df.select(nw.corr(a, b).round(2))
     expected = {output_name: [expected_corr]}
     assert_equal_data(result, expected)
-    result = df.select(result=nw.corr(a, b))
-    expected = {"result": [expected_corr]}
-    assert_equal_data(result, expected)
 
 
-def test_corr_expr_spearman(constructor: Constructor) -> None:
-    data = {"a": [1, 6, 2, 3, 3], "b": [1, 1, 1, 3, 3]}
+@pytest.mark.parametrize(
+    ("output_name", "a", "b", "expected_corr"),
+    [
+        ("a", "a", "b", 0.87),
+        ("a", "a", "c", None),
+        ("b", nw.col("a").alias("b"), nw.col("b").alias("c"), 0.87),
+        ("a", nw.col("a") * nw.col("b"), nw.col("b") - 0.5, 1),
+    ],
+)
+def test_corr_expr_spearman(
+    constructor: Constructor,
+    output_name: str,
+    a: str | nw.Expr,
+    b: str | nw.Expr,
+    expected_corr: float,
+) -> None:
     context = (
         does_not_raise()
         if any(x in str(constructor) for x in ("pandas", "polars", "modin", "cudf"))
@@ -49,13 +60,13 @@ def test_corr_expr_spearman(constructor: Constructor) -> None:
     )
     df = nw.from_native(constructor(data))
     with context:
-        result = df.select(result=nw.corr("a", "b", method="spearman"))
-        expected = {"result": [0.29617443887954614]}
+        result = df.select(nw.corr(a, b, method="spearman").round(2))
+        expected = {output_name: [expected_corr]}
         assert_equal_data(result, expected)
 
 
 def test_corr_series(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data))
-    result = df.select(corr=nw.corr(df["a"], df["b"]))
-    expected = {"corr": [0.5]}
+    result = df.select(corr=nw.corr(df["a"], df["b"]).round(2))
+    expected = {"corr": [0.87]}
     assert_equal_data(result, expected)
