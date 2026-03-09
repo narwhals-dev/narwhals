@@ -54,6 +54,28 @@ class Dispatcher(Generic[Node]):
 
         class CompliantExpr(Protocol):
             def binary_expr(self, *args: Any): ...
+
+    ## Rewrite idea
+    For a given `Node`, we want to answer:
+    1. What is the name of the method we need to call?
+    2. Is that name an instance method or do we need to access it from somewhere else?
+    3. Once we know where to look, did we actually find the method?
+    4. If we found it, did calling it return a value?
+
+    If all goes well - these steps are equivalent to just calling the method directly (if we knew the name at the start).
+
+    If something goes wrong though - we'd like to raise a more helpful error than this:
+
+        AttributeError: "<compliant-somthing> object has no attribute <method-or-namespace-or-accessor-name>"
+
+    Instead, for a user-facing error we would have:
+
+        NotImplementedError: "`ewm_mean` is not yet implemented for 'ArrowExpr'"
+
+    And a developer-facing error might be:
+
+        NotImplementedError: "`all_horizontal` has not been implemented at the compliant-level."
+        "Hint: Try adding `CompliantNamespace.all_horizontal()`"
     """
 
     __slots__ = ("_name", "_options", "bind")
