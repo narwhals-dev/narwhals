@@ -94,6 +94,11 @@ def test_dispatch(
         (nwp.col("a").map_batches(lambda x: x), "map_batches"),
         pytest.param(nwp.col("a").alias("b"), "Alias", id="no_dispatch-Alias"),
         pytest.param(ncs.string(), "RootSelector", id="no_dispatch-RootSelector"),
+        pytest.param(
+            ncs.by_name("a") | ncs.float(),
+            "BinarySelector",
+            id="no_dispatch-BinarySelector",
+        ),
     ],
 )
 def test_dispatch_name(expr: nwp.Expr, expected: str) -> None:

@@ -513,8 +513,9 @@ class RootSelector(SelectorIR):
 
 @final
 class BinarySelector(
-    _BinaryOp[LeftSelectorT, SelectorOperatorT, RightSelectorT],
+    # NOTE: The order of `BinarySelector`s bases must preserve `SelectorIR` overrides of `ExprIR`.
     SelectorIR,
+    _BinaryOp[LeftSelectorT, SelectorOperatorT, RightSelectorT],
     t.Generic[LeftSelectorT, SelectorOperatorT, RightSelectorT],
 ):
     """Application of two selector exprs via a set operator."""
