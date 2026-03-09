@@ -70,3 +70,16 @@ def test_corr_series(constructor_eager: ConstructorEager) -> None:
     result = df.select(corr=nw.corr(df["a"], df["b"]).round(2))
     expected = {"corr": [0.87]}
     assert_equal_data(result, expected)
+
+
+def test_corr_series_spearman(constructor_eager: ConstructorEager) -> None:
+    context = (
+        does_not_raise()
+        if any(x in str(constructor_eager) for x in ("pandas", "polars", "modin", "cudf"))
+        else pytest.raises(NotImplementedError)
+    )
+    df = nw.from_native(constructor_eager(data))
+    with context:
+        result = df.select(corr=nw.corr(df["a"], df["b"], method="spearman").round(2))
+        expected = {"corr": [0.87]}
+        assert_equal_data(result, expected)
