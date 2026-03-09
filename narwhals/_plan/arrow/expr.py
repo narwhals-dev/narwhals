@@ -777,6 +777,8 @@ class ArrowExpr(  # type: ignore[misc]
     def struct(self) -> ArrowStructNamespace[Expr]:
         return ArrowStructNamespace(self)
 
+    dt = not_implemented()  # type: ignore[assignment]
+
 
 class ArrowScalar(
     _ArrowDispatch["ArrowScalar"],
@@ -901,6 +903,8 @@ class ArrowScalar(
     @property
     def struct(self) -> ArrowStructNamespace[Scalar]:
         return ArrowStructNamespace(self)
+
+    dt = not_implemented()  # type: ignore[assignment]
 
     filter = not_implemented()
     over = not_implemented()

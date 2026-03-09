@@ -154,6 +154,7 @@ class PolarsExpr(CompliantExpr["DataFrame"]):
     var = todo()
 
     cat = todo()  # type: ignore[assignment]
+    dt = todo()  # type: ignore[assignment]
     list = todo()  # type: ignore[assignment]
     str = todo()  # type: ignore[assignment]
     struct = todo()  # type: ignore[assignment]
