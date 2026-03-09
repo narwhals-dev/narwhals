@@ -402,8 +402,10 @@ class PandasLikeSeries(EagerSeries[Any]):
     def _with_binary(self, op: Callable[..., PandasLikeSeries], other: Any) -> Self:
         ser, other_native = align_and_extract_native(self, other)
         preserve_broadcast = self._broadcast and getattr(other, "_broadcast", True)
-        if str(self.native.dtype) == "large_string[pyarrow]" and isinstance(
-            other_native, str
+        if (
+            str(self.native.dtype) == "large_string[pyarrow]"
+            and isinstance(other_native, str)
+            and op.__name__ == "add"
         ):
             # https://github.com/pandas-dev/pandas/issues/64393
             import pyarrow as pa  # ignore-banned-import
