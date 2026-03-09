@@ -103,3 +103,40 @@ def test_dispatch(
 )
 def test_dispatch_name(expr: nwp.Expr, expected: str) -> None:
     assert get_dispatch_name(expr._ir) == expected
+
+
+def test_dispatcher__set_name__() -> None:
+    # Did the special base class magic work?
+    expr_ir = ir.ExprIR.__expr_ir_dispatch__
+    function = ir.Function.__expr_ir_dispatch__
+    assert expr_ir.name == "ExprIR"
+    assert function.name == "Function"
+    assert expr_ir.options.allow_dispatch is True
+    assert function.options.allow_dispatch is True
+
+
+def test_options_sharing() -> None:
+    expr_ir = ir.ExprIR.__expr_ir_dispatch__
+    selector_ir = ir.SelectorIR.__expr_ir_dispatch__
+    agg_expr = ir.AggExpr.__expr_ir_dispatch__
+    root_selector = ir.RootSelector.__expr_ir_dispatch__
+    first = ir.aggregation.First.__expr_ir_dispatch__
+
+    # A `Dispatcher` is unique to each class
+    assert expr_ir is not selector_ir
+    assert agg_expr is not expr_ir
+    assert agg_expr is not first
+    assert selector_ir is not root_selector
+
+    # Since the same options produce different results
+    assert selector_ir.options is root_selector.options
+    assert selector_ir.name == "SelectorIR"
+    assert root_selector.name == "RootSelector"
+    assert agg_expr.options is first.options
+    assert first.name == "first"
+    assert first.name != agg_expr.name
+
+    # And different options should definitely be different
+    assert selector_ir.options.allow_dispatch is False
+    assert agg_expr.options.allow_dispatch is True
+    assert first.options is not root_selector.options
