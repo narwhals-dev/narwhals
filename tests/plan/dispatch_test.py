@@ -8,7 +8,7 @@ import pytest
 import narwhals as nw
 from narwhals import _plan as nwp
 from narwhals._plan import expressions as ir, selectors as ncs
-from narwhals._plan._dispatch import get_dispatch_name
+from narwhals._plan._dispatch import DispatcherOptions, get_dispatch_name
 from tests.plan.utils import DataFrame, assert_equal_data, named_ir, re_compile
 
 if TYPE_CHECKING:
@@ -41,13 +41,6 @@ def test_dispatch(
     with pytest.raises(NotImplementedError, match=missing_backend):
         df.select(nwp.col("c").ewm_mean())
 
-    missing_protocol = re_compile(
-        r"dt\.offset_by.+has not been implemented.+compliant.+"
-        r"Hint.+try adding.+CompliantExpr\.dt\.offset_by\(\)"
-    )
-    with pytest.raises(NotImplementedError, match=missing_protocol):
-        df.select(nwp.col("d").dt.offset_by("1d"))
-
     with pytest.raises(
         TypeError,
         match=re_compile(r"RootSelector.+not.+appear.+compliant.+expand.+expr.+first"),
@@ -61,6 +54,45 @@ def test_dispatch(
     # Not a narwhals method, to make sure this doesn't allow arbitrary calls
     with pytest.raises(AttributeError):
         nwp.col("a").max().to_physical()  # type: ignore[attr-defined]
+
+
+def test_missing_compliant(
+    data: Data, dataframe: DataFrame, request: pytest.FixtureRequest
+) -> None:
+    # Covers a narwhals dev error path, by making the mistakes it is intended to catch
+    # If you add a new expression, but don't update the compliant-level this should 🙏
+    # nudge you in the right direction
+
+    class MissingMethod(ir.Function, accessor="str"): ...
+
+    class MissingNamespaced(
+        ir.ExprIR, child=("expr",), dispatch=DispatcherOptions.namespaced()
+    ):
+        __slots__ = ("expr",)
+        expr: ir.ExprIR
+
+    df = dataframe(data)
+    expr = MissingNamespaced(expr=ir.col("b")).to_narwhals()
+    pattern = re_compile(
+        r"missing_namespaced.+has not been implemented at.+compliant-level.+"
+        r"Hint.+try adding.+CompliantNamespace\.missing_namespaced\(\)"
+    )
+    with pytest.raises(NotImplementedError, match=pattern):
+        df.select(expr)
+
+    dataframe.xfail(
+        request,
+        dataframe.is_polars(),
+        reason="'TODO: `PolarsExpr.str(...)`'",
+        raises=AssertionError,
+    )
+    expr = MissingMethod().to_function_expr(ir.col("d")).to_narwhals()
+    pattern = re_compile(
+        r"str\.missing_method.+has not been implemented at.+compliant-level.+"
+        r"Hint.+try adding.+CompliantExpr\.str\.missing_method\(\)"
+    )
+    with pytest.raises(NotImplementedError, match=pattern):
+        df.select(expr)
 
 
 @pytest.mark.parametrize(

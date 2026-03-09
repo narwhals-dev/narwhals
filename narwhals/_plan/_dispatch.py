@@ -210,14 +210,17 @@ class Dispatcher(Generic[Node]):
         return getter
 
     def _not_implemented_error(
-        self, ctx: object, /, missing: Literal["compliant", "context"]
+        self, ctx: Ctx[Any, Any], /, missing: Literal["compliant", "context"]
     ) -> NotImplementedError:
+        is_namespaced = self.options.is_namespaced
         if missing == "context":
-            msg = f"`{self.name}` is not yet implemented for {type(ctx).__name__!r}"
+            owner = ctx.__narwhals_namespace__() if is_namespaced else ctx
+            msg = f"`{self.name}` is not yet implemented for {type(owner).__name__!r}"
         else:
+            base_name = "Namespace" if is_namespaced else "Expr"
             msg = (
                 f"`{self.name}` has not been implemented at the compliant-level.\n"
-                f"Hint: Try adding `CompliantExpr.{self.name}()` or `CompliantNamespace.{self.name}()`"
+                f"Hint: Try adding `Compliant{base_name}.{self.name}()`"
             )
         return NotImplementedError(msg)
 
