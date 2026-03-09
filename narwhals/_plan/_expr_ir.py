@@ -199,7 +199,11 @@ class ExprIR(Immutable):
         return self.__expr_ir_dtype__(self, schema)
 
     def to_narwhals(self, version: Version = Version.MAIN) -> Expr:
-        """Convert this `ExprIR` into an `Expr`."""
+        """Convert this `ExprIR` into an narwhals-level `Expr`.
+
+        Arguments:
+            version: API version to export into.
+        """
         from narwhals._plan import expr
 
         tp = expr.Expr if version is Version.MAIN else expr.ExprV1
@@ -267,6 +271,9 @@ class ExprIR(Immutable):
     # We have multiple versions of that in various backends, but it would be easy to write a backend-agnostic version
     def map_ir(self, function: MapIR, /) -> ExprIR:
         """Apply `function` to each child node, returning a new `ExprIR`.
+
+        Arguments:
+            function: A single argument function to call on all nodes in this tree.
 
         See [`polars_plan::plans::iterator::Expr.map_expr`] and [`polars_plan::plans::visitor::visitors`].
 
