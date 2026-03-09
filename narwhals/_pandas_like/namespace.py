@@ -16,7 +16,7 @@ from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.typing import NativeDataFrameT, NativeSeriesT
-from narwhals._pandas_like.utils import align_and_extract_native, is_non_nullable_boolean
+from narwhals._pandas_like.utils import is_non_nullable_boolean
 from narwhals._utils import zip_strict
 
 if TYPE_CHECKING:
@@ -330,29 +330,9 @@ class PandasLikeNamespace(
 
             if not ignore_nulls:
                 null_mask_result = reduce(operator.or_, null_mask)
-                result = series[0]
-                for s in series[1:]:
-                    r_native, s_native = align_and_extract_native(result, s)
-                    if str(result.native.dtype) == "large_string[pyarrow]":
-                        # https://github.com/pandas-dev/pandas/issues/64393
-                        import pyarrow as pa  # ignore-banned-import
-
-                        separator_pa_large_string = pa.scalar(
-                            separator, type=pa.large_string()
-                        )
-                        if isinstance(s_native, str):
-                            result = result._with_native(
-                                r_native
-                                + separator_pa_large_string
-                                + pa.scalar(s_native, type=pa.large_string())
-                            )
-                        else:
-                            result = result._with_native(
-                                r_native + separator_pa_large_string + s_native
-                            )
-                    else:
-                        result = result + separator + s
-                result = result.zip_with(~null_mask_result, None)
+                result = reduce(lambda x, y: x + separator + y, series).zip_with(
+                    ~null_mask_result, None
+                )
             else:
                 # NOTE: Trying to help `mypy` later
                 # error: Cannot determine type of "values"  [has-type]
