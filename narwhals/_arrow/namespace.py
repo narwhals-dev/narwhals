@@ -252,7 +252,7 @@ class ArrowNamespace(
         otherwise: ChunkedArrayAny | None = None,
     ) -> ChunkedArrayAny:
         otherwise = pa.nulls(len(when), then.type) if otherwise is None else otherwise
-        return pc.if_else(when, then, otherwise)
+        return pc.if_else(when.fill_null(pa.scalar(False)), then, otherwise)
 
     def corr(self, a: ArrowExpr, b: ArrowExpr, *, method: CorrelationMethod) -> ArrowExpr:
         if method != "pearson":

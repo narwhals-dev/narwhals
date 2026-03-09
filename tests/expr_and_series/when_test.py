@@ -227,3 +227,13 @@ def test_when_then_empty(constructor: Constructor) -> None:
     result = df.with_columns(nw.when(nw.col("a") == 1).then(nw.lit(1)).alias("new_col"))
     expected: dict[str, Any] = {"a": [], "new_col": []}
     assert_equal_data(result, expected)
+
+
+def test_when_chain_with_nulls(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, None, 3, None, 5]}))
+
+    result = df.select(nw.when(nw.col("a") == 1).then(10).otherwise(99).alias("result"))
+
+    # Null values don't match any condition, so they get otherwise value
+    expected = {"result": [10, 99, 99, 99, 99]}
+    assert_equal_data(result, expected)

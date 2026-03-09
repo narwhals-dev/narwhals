@@ -22,10 +22,6 @@ if TYPE_CHECKING:
 polars_lt_v1 = POLARS_VERSION < (1, 0, 0)
 skip_reason = "replace_strict only available after 1.0"
 pl_skip_reason = "replace_strict only available after 1.0"
-sqlframe_xfail_reason = (
-    "AttributeError: module 'sqlframe.duckdb.functions' has no attribute 'map_keys'.\n"
-    "Issue tracker: https://github.com/eakmanrq/sqlframe/issues/545"
-)
 
 
 def xfail_if_no_default(constructor: Constructor, request: pytest.FixtureRequest) -> None:
@@ -144,9 +140,6 @@ def test_replace_strict_expr_with_default(
     if "polars" in str(constructor) and polars_lt_v1:
         pytest.skip(reason=pl_skip_reason)
 
-    if "sqlframe" in str(constructor):
-        request.applymarker(pytest.mark.xfail(reason=sqlframe_xfail_reason))
-
     df = nw.from_native(constructor({"a": [1, 2, 3, 4]}))
     result = df.select(
         nw.col("a").replace_strict(
@@ -180,9 +173,6 @@ def test_replace_strict_with_default_and_nulls(
     if "polars" in str(constructor) and polars_lt_v1:
         pytest.skip(reason=pl_skip_reason)
 
-    if "sqlframe" in str(constructor):
-        request.applymarker(pytest.mark.xfail(reason=sqlframe_xfail_reason))
-
     df = nw.from_native(constructor({"a": [1, 2, None, 4]}))
     result = df.select(
         nw.col("a").replace_strict([1, 2], [10, 20], default=99, return_dtype=nw.Int64)
@@ -197,9 +187,6 @@ def test_replace_strict_with_default_mapping(
 
     if "polars" in str(constructor) and polars_lt_v1:
         pytest.skip(reason=pl_skip_reason)
-
-    if "sqlframe" in str(constructor):
-        request.applymarker(pytest.mark.xfail(reason=sqlframe_xfail_reason))
 
     df = nw.from_native(constructor({"a": [1, 2, 3, 4]}))
     result = df.select(
@@ -217,9 +204,6 @@ def test_replace_strict_with_expressified_default(
 
     if "polars" in str(constructor) and polars_lt_v1:
         pytest.skip(reason=pl_skip_reason)
-
-    if "sqlframe" in str(constructor):
-        request.applymarker(pytest.mark.xfail(reason=sqlframe_xfail_reason))
 
     data = {"a": [1, 2, 3, 4], "b": ["beluga", "narwhal", "orca", "vaquita"]}
     df = nw.from_native(constructor(data))
@@ -253,9 +237,6 @@ def test_mapping_key_not_in_expr(
 
     if "polars" in str(constructor) and polars_lt_v1:
         pytest.skip(reason=pl_skip_reason)
-
-    if "sqlframe" in str(constructor):
-        request.applymarker(pytest.mark.xfail(reason=sqlframe_xfail_reason))
 
     data = {"a": [1, 2]}
     df = nw.from_native(constructor(data))
