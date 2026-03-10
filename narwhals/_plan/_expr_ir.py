@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING, Generic, Literal, final
 
 from narwhals._plan._dispatch import Dispatcher, DispatcherOptions
 from narwhals._plan._dtype import IntoResolveDType, ResolveDType
-from narwhals._plan._guards import is_function_expr, is_literal
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.typing import ExprIRT_co
 from narwhals._utils import Version, unstable
@@ -554,26 +553,6 @@ class NamedIR(Immutable, Generic[ExprIRT_co]):
 
     def _repr_html_(self) -> str:  # pragma: no cover
         return f"<b>{self.name}</b>={self.expr._repr_html_()}"
-
-    def is_elementwise_top_level(self) -> bool:  # pragma: no cover
-        """Return True if the outermost node is elementwise.
-
-        Based on [`polars_plan::plans::aexpr::properties::AExpr.is_elementwise_top_level`]
-
-        This check:
-        - Is not recursive
-        - Is not valid on `ExprIR` *prior* to being expanded
-
-        [`polars_plan::plans::aexpr::properties::AExpr.is_elementwise_top_level`]: https://github.com/pola-rs/polars/blob/2c7a3e77f0faa37c86a3745db4ef7707ae50c72e/crates/polars-plan/src/plans/aexpr/properties.rs#L16-L44
-        """
-        from narwhals._plan.expressions import expr
-
-        ir = self.expr
-        if is_function_expr(ir):
-            return ir.options.is_elementwise()
-        if is_literal(ir):
-            return ir.is_scalar
-        return isinstance(ir, (expr.BinaryExpr, expr.Column, expr.TernaryExpr, expr.Cast))
 
     def is_column(self, *, allow_aliasing: bool = False) -> bool:
         """Return True if wrapping a single `Column` node.
