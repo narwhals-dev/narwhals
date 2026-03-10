@@ -272,7 +272,7 @@ class ExprIR(Immutable):
                 Called *recursively* on any inputs and then the current node.
 
         Tip:
-            Use `NamedIR.map_ir` if `function` is sensitive to selector expansion.
+            Use `NamedIR.map_ir` if `function` requires selector expansion.
 
         Returns:
             Either
@@ -527,7 +527,26 @@ class NamedIR(Immutable, Generic[ExprIRT_co]):
         return NamedIR(expr=expr, name=expr.meta.output_name(raise_if_undetermined=True))
 
     def map_ir(self, function: MapIR, /) -> NamedIR[ExprIR]:
-        """**WARNING**: don't use renaming ops here, or `self.name` is invalid."""
+        """Transform the wrapped expression by applying a function to all nodes in it's graph.
+
+        See `ExprIR.map_ir` for examples.
+
+        Arguments:
+            function: A single argument [idempotent] function.
+
+                Called *recursively* on any inputs to `self.expr` and then `self.expr` itself.
+
+        Warning:
+            If `function` performs any kind of renaming operation, use `ExprIR.map_ir` **before**
+            selector expansion instead.
+
+        Returns:
+            Either
+            - A new `NamedIR`, with any changes made as a result of `function`
+            - The same `NamedIR` (by identity)
+
+        [idempotent]: https://en.wikipedia.org/wiki/Idempotence#Computer_science_meaning
+        """
         return NamedIR.__replace__(self, expr=function(self.expr.map_ir(function)))
 
     def __repr__(self) -> str:
