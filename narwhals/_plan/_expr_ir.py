@@ -235,11 +235,29 @@ class ExprIR(Immutable):
         tp = expr.Expr if version is Version.MAIN else expr.ExprV1
         return tp._from_ir(self)
 
-    # TODO @dangotbanned: Example for (Column->ByName) -> show noop on result -> mention raising, don't show
     def to_selector_ir(self) -> SelectorIR:
         """Try to convert this `ExprIR` into a `SelectorIR`.
 
-        This is a noop for `SelectorIR`, and raises for all `ExprIR` *except* `Column`.
+        >>> import narwhals._plan as nw
+
+        The only valid conversion is for a `Column`:
+        >>> column = nw.col("a")._ir
+        >>> column
+        col('a')
+
+        >>> selector = column.to_selector_ir()
+        >>> selector
+        ncs.by_name('a', require_all=True)
+
+        For a `SelectorIR`, this is a noop:
+        >>> selector.to_selector_ir()
+        ncs.by_name('a', require_all=True)
+
+        Everything else will raise:
+        >>> alias = nw.col("a").alias("bad")._ir
+        >>> alias.to_selector_ir()
+        Traceback (most recent call last):
+        narwhals.exceptions.InvalidOperationError: cannot turn `col('a').alias('bad')` into a selector
         """
         msg = f"cannot turn `{self!r}` into a selector"
         raise InvalidOperationError(msg)
