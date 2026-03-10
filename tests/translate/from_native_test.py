@@ -39,6 +39,8 @@ if TYPE_CHECKING:
     from _pytest.mark import ParameterSet
     from typing_extensions import assert_type
 
+    from narwhals.typing import IntoFrameT
+
 
 class MockDataFrame:
     def __init__(self, version: Version) -> None:
@@ -775,3 +777,17 @@ def test_from_native_series_exhaustive() -> None:  # noqa: PLR0914, PLR0915
 
     for series in chain(pls, pds, pas):
         assert isinstance(series, nw.Series)
+
+
+def test_readme_example() -> None:
+    # check that readme example (as of March 2026) passes
+    def _agnostic_function(
+        df_native: IntoFrameT, date_column: str, price_column: str
+    ) -> IntoFrameT:
+        return (
+            nw.from_native(df_native)
+            .group_by(nw.col(date_column).dt.truncate("1mo"))
+            .agg(nw.col(price_column).mean())
+            .sort(date_column)
+            .to_native()
+        )

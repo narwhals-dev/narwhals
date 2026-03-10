@@ -145,12 +145,16 @@ def from_native(
 ) -> LazyFrame[IntoLazyFrameT]: ...
 @overload
 def from_native(  # type: ignore[overload-overlap]
-    native_object: IntoFrameT, **kwds: Unpack[AllowLazy]
-) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT]: ...
-@overload
-def from_native(
     native_object: IntoDataFrameT | IntoSeriesT, **kwds: Unpack[AllowSeries]
 ) -> DataFrame[IntoDataFrameT] | Series[IntoSeriesT]: ...
+@overload
+def from_native(
+    native_object: IntoDataFrameT | IntoLazyFrameT, **kwds: Unpack[AllowLazy]
+) -> DataFrame[IntoDataFrameT] | LazyFrame[IntoLazyFrameT]: ...
+@overload
+def from_native(  # type: ignore[overload-overlap]
+    native_object: IntoFrameT, **kwds: Unpack[AllowLazy]
+) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT]: ...
 @overload
 def from_native(
     native_object: IntoDataFrameT | IntoLazyFrameT | IntoSeriesT, **kwds: Unpack[AllowAny]
