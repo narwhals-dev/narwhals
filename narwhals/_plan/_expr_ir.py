@@ -81,13 +81,18 @@ class ExprIR(Immutable):
     [`meta`]: https://docs.pola.rs/api/python/stable/reference/expressions/meta.html
     """
 
-    # TODO @dangotbanned: How this relates to:
-    # - `__init_subclass__(child)`
     # NOTE: Idea for removing this as boilerplate:
     # - https://github.com/narwhals-dev/narwhals/pull/3066#issuecomment-3242037939
     # - https://github.com/narwhals-dev/narwhals/commit/4b0431a234808450a61d8b5260c8769f8cebff7b
     _child: ClassVar[Seq[str]] = ()
-    """Nested node names, in iteration order."""
+    """Name(s) of fields that store one or more `ExprIR`(s).
+
+    The order of `_child` defines the order that `iter_left` traverses the graph.
+
+    Set via the `child` **parameter** [when subclassing].
+
+    [when subclassing]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
+    """
 
     __expr_ir_dispatch__: ClassVar[Dispatcher[Self]] = Dispatcher()
     """Callable that dispatches to the appropriate compliant-level method.
