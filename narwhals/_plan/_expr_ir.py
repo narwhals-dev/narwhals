@@ -75,10 +75,7 @@ class ExprIR(Immutable):
         >>> bigger_ir.meta.output_name()
         'more'
 
-    We can apply functions to transform each node in the graph:
-
-        # TODO: show `map_ir`
-        # example(s) ...
+    See `ExprIR.map_ir` for other superpowers this gives us.
 
     [`meta`]: https://docs.pola.rs/api/python/stable/reference/expressions/meta.html
     """
@@ -266,19 +263,66 @@ class ExprIR(Immutable):
         """
         return any(isinstance(e, SelectorIR) for e in self.iter_left())
 
-    # TODO @dangotbanned: Docs should explain a bit + give an example
-    # E.g. rewrite `sum_horizontal("a", "b", "c")` -> `col("a") + col("b") + col("c")`
-    # We have multiple versions of that in various backends, but it would be easy to write a backend-agnostic version
     def map_ir(self, function: MapIR, /) -> ExprIR:
-        """Apply `function` to each child node, returning a new `ExprIR`.
+        """Transform an expression by applying a function to all nodes in the graph.
 
         Arguments:
-            function: A single argument function to call on all nodes in this tree.
+            function: A single argument [idempotent] function.
 
-        See [`polars_plan::plans::iterator::Expr.map_expr`] and [`polars_plan::plans::visitor::visitors`].
+                Called *recursively* on any inputs and then the current node.
 
-        [`polars_plan::plans::iterator::Expr.map_expr`]: https://github.com/pola-rs/polars/blob/0fa7141ce718c6f0a4d6ae46865c867b177a59ed/crates/polars-plan/src/plans/iterator.rs#L152-L159
-        [`polars_plan::plans::visitor::visitors`]: https://github.com/pola-rs/polars/blob/0fa7141ce718c6f0a4d6ae46865c867b177a59ed/crates/polars-plan/src/plans/visitor/visitors.rs
+        Tip:
+            Use `NamedIR.map_ir` if `function` is sensitive to selector expansion.
+
+        Returns:
+            Either
+            - A new `ExprIR`, with any changes made as a result of `function`
+            - The same `ExprIR` (by identity)
+
+        Examples:
+            >>> import narwhals._plan as nw
+            >>> import narwhals._plan.expressions as ir
+            >>> import narwhals._plan.expressions.functions as F
+
+            `nw.*_horizontal` functions allow us to aggregate *across* columns:
+            >>> expr = nw.sum_horizontal("a", "b", "c").alias("sum")
+
+            However, most backends **do not** have a direct analogue to this concept.
+
+            `map_ir` helps us rewrite an `ExprIR` *in terms of* others that they **do** support:
+            >>> from collections import deque
+            >>> def sum_horizontal_to_add(expr: ir.ExprIR) -> ir.ExprIR:
+            ...     if isinstance(expr, ir.FunctionExpr) and isinstance(
+            ...         expr.function, F.SumHorizontal
+            ...     ):
+            ...         inputs = deque(expr.input)
+            ...         left = inputs.popleft()
+            ...         add = ir.operators.Add()
+            ...         while inputs:
+            ...             left = ir.BinaryExpr(
+            ...                 left=left, op=add, right=inputs.popleft()
+            ...             )
+            ...         return left
+            ...     # Anything else, we return unchanged
+            ...     return expr
+
+            So while this version works for `polars`:
+            >>> before = expr._ir
+            >>> before
+            col('a').sum_horizontal([col('b'), col('c')]).alias('sum')
+
+            Any backend that supports `+` can understand this guy and we only needed to write it once:
+            >>> after = before.map_ir(sum_horizontal_to_add)
+            >>> after
+            [([(col('a')) + (col('b'))]) + (col('c'))].alias('sum')
+
+        Notes:
+            - The name `map_ir` is a nod to [`plans::iterator::Expr.map_expr`]
+            - The iteration pattern is adapted from [`plans::iterator::!push_expr`]
+
+        [idempotent]: https://en.wikipedia.org/wiki/Idempotence#Computer_science_meaning
+        [`plans::iterator::Expr.map_expr`]: https://github.com/pola-rs/polars/blob/3ea81c45e0c184af2cf5a93f8378cf330e4658c9/crates/polars-plan/src/plans/iterator.rs#L166-L169
+        [`plans::iterator::!push_expr`]: https://github.com/pola-rs/polars/blob/3ea81c45e0c184af2cf5a93f8378cf330e4658c9/crates/polars-plan/src/plans/iterator.rs#L10-L124
         """
         if not self._child:
             return function(self)
