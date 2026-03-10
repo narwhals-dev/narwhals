@@ -143,6 +143,7 @@ class ExprIR(Immutable):
     [when subclassing]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
     """
 
+    # TODO @dangotbanned: Do another pass on the short description phrasing
     def __init_subclass__(
         cls: type[Self],
         *,
@@ -150,7 +151,7 @@ class ExprIR(Immutable):
         dispatch: DispatcherOptions | Literal["no_dispatch"] | None = None,
         dtype: IntoResolveDType[Self] | None = None,
         **_: Any,
-    ) -> None:  # TODO @dangotbanned: Do another pass on the short description phrasing
+    ) -> None:
         """[Subclass-definition time] hook for customizing an `ExprIR` class.
 
         All parameters are optional and will be inherited when not provided to `__init_subclass__`.
@@ -234,6 +235,7 @@ class ExprIR(Immutable):
         tp = expr.Expr if version is Version.MAIN else expr.ExprV1
         return tp._from_ir(self)
 
+    # TODO @dangotbanned: Example for (Column->ByName) -> show noop on result -> mention raising, don't show
     def to_selector_ir(self) -> SelectorIR:
         """Try to convert this `ExprIR` into a `SelectorIR`.
 
@@ -358,6 +360,7 @@ class ExprIR(Immutable):
         changed = {name: _map_ir_child(child, function) for name, child in children}
         return function(self.__replace__(**changed))
 
+    # TODO @dangotbanned: Use `...` to reduce examples width
     def iter_left(self) -> Iterator[ExprIR]:
         """Yield nodes root->leaf.
 
@@ -390,6 +393,7 @@ class ExprIR(Immutable):
                     yield from node.iter_left()
         yield self
 
+    # TODO @dangotbanned: Use `...` to reduce examples width
     def iter_right(self) -> Iterator[ExprIR]:
         """Yield nodes leaf->root.
 
