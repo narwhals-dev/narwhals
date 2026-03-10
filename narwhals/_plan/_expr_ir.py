@@ -27,7 +27,6 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoDType
 
 
-# TODO @dangotbanned: Docs
 class ExprIR(Immutable):
     r"""An immutable representation of an expression.
 
@@ -49,19 +48,22 @@ class ExprIR(Immutable):
         >>> print(bigger_ir)
         Alias(expr=BinaryExpr(left=..., op=Add(), right=Literal(..., value=10.5))), name='more')
 
-    An `ExprIR` is an easily traversable graph, supporting iteration from *root to leaf*:
+    An `ExprIR` is an easily traversable graph:
 
-        >>> root_to_leaf = bigger_ir.iter_left()
-        >>> print("\n".join(f"{idx}: {node}" for idx, node in enumerate(root_to_leaf)))
+        >>> def show_order(nodes: Iterator[ExprIR]) -> None:
+        ...     print("\n".join(f"{idx}: {node}" for idx, node in enumerate(nodes)))
+
+    Supporting iteration from both *root to leaf*:
+
+        >>> show_order(bigger_ir.iter_left())
         0: Column(name='howdy')
         1: Literal(value=ScalarLiteral(dtype=Float64, value=10.5))
         2: BinaryExpr(left=..., op=Add(), right=...)
         3: Alias(expr=BinaryExpr(...), name='more')
 
-    And *leaf to root* - both have the same cost:
+    And *leaf to root* - for the same cost:
 
-        >>> leaf_to_root = bigger_ir.iter_right()
-        >>> print("\n".join(f"{idx}: {node}" for idx, node in enumerate(leaf_to_root)))
+        >>> show_order(bigger_ir.iter_right())
         0: Alias(expr=BinaryExpr(...), name='more')
         1: BinaryExpr(left=..., op=Add(), right=...)
         2: Literal(value=ScalarLiteral(dtype=Float64, value=10.5))
