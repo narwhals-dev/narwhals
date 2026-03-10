@@ -143,7 +143,6 @@ class ExprIR(Immutable):
     [when subclassing]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
     """
 
-    # TODO @dangotbanned: Do another pass on the short description phrasing
     def __init_subclass__(
         cls: type[Self],
         *,
@@ -152,7 +151,7 @@ class ExprIR(Immutable):
         dtype: IntoResolveDType[Self] | None = None,
         **_: Any,
     ) -> None:
-        """[Subclass-definition time] hook for customizing an `ExprIR` class.
+        """Hook to [customize a new subclass] of `ExprIR`.
 
         All parameters are optional and will be inherited when not provided to `__init_subclass__`.
 
@@ -165,9 +164,14 @@ class ExprIR(Immutable):
                 **Note**: Unlike `__slots__`, a subclass that needs to extend a non-empty `_child`
                 must use:
 
-                    child=(*<parent-field-names>, *<more-names>)  # (sorry, need to fix this!)
+                    class Subclass(
+                        # (sorry, need to fix this!)
+                        ParentIR, child=(*parent_field_names, *more_names)
+                    ):
+                        ___slots___ = (*more_names)
+                        ...
 
-            dispatch: Instructions defining how to build a `Dispatcher`.
+            dispatch: Defines how to build a `Dispatcher`.
                 Stored in `__expr_ir_dispatch__.options`.
 
             dtype: Defines how a `DType` is derived when `resolve_dtype` is called.
@@ -178,7 +182,7 @@ class ExprIR(Immutable):
                 **Warning**: This functionality is considered **unstable**.
                 Full support depends on [#3396].
 
-        [Subclass-definition time]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
+        [customize a new subclass]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
         [#3396]: https://github.com/narwhals-dev/narwhals/pull/3396
         """
         super().__init_subclass__(**_)
