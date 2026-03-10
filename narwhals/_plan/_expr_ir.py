@@ -108,11 +108,38 @@ class ExprIR(Immutable):
     [when subclassing]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
     """
 
-    # TODO @dangotbanned: How this relates to:
-    # - `__init_subclass__(dtype)`
-    # - `resolve_dtype`
-    # - `dtypes_mapper.py`
     __expr_ir_dtype__: ClassVar[ResolveDType[Self]] = ResolveDType()
+    """Callable defining how a `DType` is derived when `resolve_dtype` is called.
+
+    If the logic fits an existing pattern, use the `dtype` **parameter** [when subclassing]:
+
+        class Slice(
+            ExprIR, child=("expr",), dtype=ResolveDType.expr_ir.same_dtype()
+        ):
+            __slots__ = ("expr", "length", "offset")
+            expr: ExprIR
+            offset: int
+            length: int | None
+
+    See `IntoResolveDType` and `ResolveDType` for more examples.
+
+    If nothing there *quite* scratches the itch, override `resolve_dtype` instead:
+
+        from narwhals.dtypes import Array, List
+
+        class Explode(ExprIR, child=("expr",)):
+            __slots__ = ("expr",)
+            expr: ExprIR
+
+            def resolve_dtype(self, schema: FrozenSchema) -> DType:
+                dtype = self.expr.resolve_dtype(schema)
+                if not isinstance(dtype, (Array, List)):
+                    raise NotImplementedError(dtype)
+                inner = dtype.inner
+                return inner if not isinstance(inner, type) else inner()
+
+    [when subclassing]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
+    """
 
     def __init_subclass__(
         cls: type[Self],
