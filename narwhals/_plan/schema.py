@@ -6,7 +6,7 @@ from itertools import chain
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Protocol, TypeVar, final, overload
 
-from narwhals._plan._expr_ir import NamedIR
+from narwhals._plan._expr_ir import named_ir
 from narwhals._plan._immutable import Immutable
 from narwhals._plan._version import into_version
 from narwhals._plan.exceptions import column_not_found_error
@@ -23,6 +23,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import Never, TypeAlias, TypeIs
 
+    from narwhals._plan.expressions import NamedIR
     from narwhals._plan.typing import Seq
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
@@ -171,12 +172,16 @@ class FrozenSchema(Immutable):
         return self
 
     def with_columns_irs(self, exprs: Seq[NamedIR]) -> Seq[NamedIR]:
-        """Required for `_concat_horizontal`-based `with_columns`.
+        """Required for `concat(how="horizontal")`-based `with_columns`.
 
         Fills in any unreferenced columns present in `self`, but not in `exprs` as selections.
         """
-        named: dict[str, NamedIR] = {e.name: e for e in exprs}
-        it = (named.pop(name, NamedIR.from_name(name)) for name in self)
+        # NOTE: `mypy` is narrowing incorrectly on `dict.pop(..., None)`
+        # https://github.com/python/mypy/issues/18297
+        from narwhals._plan.expressions import col
+
+        named = {e.name: e for e in exprs}
+        it = (named.pop(name, None) or named_ir(name, col(name)) for name in self)  # type: ignore[arg-type]
         return tuple(chain(it, named.values()))
 
     @property

@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from narwhals._plan.compliant.column import ExprDispatch
     from narwhals._plan.compliant.typing import FrameT_contra, R_co
     from narwhals._plan.expr import Expr
-    from narwhals._plan.expressions.expr import Alias, Cast, Column
+    from narwhals._plan.expressions.expr import Alias, Cast
     from narwhals._plan.meta import MetaNamespace
     from narwhals._plan.schema import FrozenSchema
     from narwhals._plan.selectors import Selector
@@ -505,16 +505,6 @@ class NamedIR(Immutable, Generic[ExprIRT_co]):
     # NOTE: https://discuss.python.org/t/make-replace-stop-interfering-with-variance-inference/96092
     expr: ExprIRT_co  # type: ignore[misc]
     name: str
-
-    @staticmethod
-    def from_name(name: str, /) -> NamedIR[Column]:
-        """Construct as a simple, unaliased `col(name)` expression.
-
-        Intended to be used in `with_columns` from a `FrozenSchema`'s keys.
-        """
-        from narwhals._plan.expressions.expr import col
-
-        return NamedIR(expr=col(name), name=name)
 
     def map_ir(self, function: MapIR, /) -> NamedIR[ExprIR]:
         """Transform the wrapped expression by applying a function to all nodes in it's graph.
