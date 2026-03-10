@@ -360,29 +360,40 @@ class ExprIR(Immutable):
         changed = {name: _map_ir_child(child, function) for name, child in children}
         return function(self.__replace__(**changed))
 
-    # TODO @dangotbanned: Use `...` to reduce examples width
+    # NOTE: Pylance renders "Examples:" sections poorly if there isn't "Arguments:" as well
+    # This style still runs in `doctest` and looks better in vscode
     def iter_left(self) -> Iterator[ExprIR]:
-        """Yield nodes root->leaf.
+        r"""Yield nodes root->leaf.
 
-        Examples:
-            >>> from narwhals import _plan as nw
-            >>>
-            >>> a = nw.col("a")
-            >>> b = a.alias("b")
-            >>> c = b.min().alias("c")
-            >>> d = c.over(nw.col("e"), nw.col("f"))
-            >>>
-            >>> list(a._ir.iter_left())
-            [col('a')]
-            >>>
-            >>> list(b._ir.iter_left())
-            [col('a'), col('a').alias('b')]
-            >>>
-            >>> list(c._ir.iter_left())
-            [col('a'), col('a').alias('b'), col('a').alias('b').min(), col('a').alias('b').min().alias('c')]
-            >>>
-            >>> list(d._ir.iter_left())
-            [col('a'), col('a').alias('b'), col('a').alias('b').min(), col('a').alias('b').min().alias('c'), col('e'), col('f'), col('a').alias('b').min().alias('c').over([col('e'), col('f')])]
+        `iter_left` will always yield the current node **last**.
+
+        >>> import narwhals._plan as nw
+        >>> def show(nodes: Iterator[ExprIR]) -> None:
+        ...     print("\n".join(repr(e) for e in nodes))
+
+        A root node just yields itself:
+        >>> show(nw.col("a")._ir.iter_left())
+        col('a')
+
+        A binary expression is a little more interesting:
+        >>> binary = nw.col("a").alias("b") + nw.col("c").min().alias("d")
+        >>> show(binary._ir.iter_left())
+        col('a')
+        col('a').alias('b')
+        col('c')
+        col('c').min()
+        col('c').min().alias('d')
+        [(col('a').alias('b')) + (col('c').min().alias('d'))]
+
+        And we can go fancier:
+        >>> window = nw.col("e").first().over("f", order_by=["g", "h"])
+        >>> show(window._ir.iter_left())
+        col('e')
+        col('e').first()
+        col('f')
+        col('g')
+        col('h')
+        col('e').first().over(partition_by=[col('f')], order_by=[col('g'), col('h')])
         """
         for name in self._child:
             child: ExprIR | Seq[ExprIR] = getattr(self, name)
@@ -393,32 +404,38 @@ class ExprIR(Immutable):
                     yield from node.iter_left()
         yield self
 
-    # TODO @dangotbanned: Use `...` to reduce examples width
     def iter_right(self) -> Iterator[ExprIR]:
-        """Yield nodes leaf->root.
+        r"""Yield nodes leaf->root.
 
-        Note:
-            Identical to `iter_left` for root nodes.
+        `iter_right` will always yield the current node **first**.
 
-        Examples:
-            >>> from narwhals import _plan as nw
-            >>>
-            >>> a = nw.col("a")
-            >>> b = a.alias("b")
-            >>> c = b.min().alias("c")
-            >>> d = c.over(nw.col("e"), nw.col("f"))
-            >>>
-            >>> list(a._ir.iter_right())
-            [col('a')]
-            >>>
-            >>> list(b._ir.iter_right())
-            [col('a').alias('b'), col('a')]
-            >>>
-            >>> list(c._ir.iter_right())
-            [col('a').alias('b').min().alias('c'), col('a').alias('b').min(), col('a').alias('b'), col('a')]
-            >>>
-            >>> list(d._ir.iter_right())
-            [col('a').alias('b').min().alias('c').over([col('e'), col('f')]), col('f'), col('e'), col('a').alias('b').min().alias('c'), col('a').alias('b').min(), col('a').alias('b'), col('a')]
+        >>> import narwhals._plan as nw
+        >>> def show(nodes: Iterator[ExprIR]) -> None:
+        ...     print("\n".join(repr(e) for e in nodes))
+
+        A root node just yields itself:
+        >>> show(nw.col("a")._ir.iter_right())
+        col('a')
+
+        A binary expression is a little more interesting:
+        >>> binary = nw.col("a").alias("b") + nw.col("c").min().alias("d")
+        >>> show(binary._ir.iter_right())
+        [(col('a').alias('b')) + (col('c').min().alias('d'))]
+        col('c').min().alias('d')
+        col('c').min()
+        col('c')
+        col('a').alias('b')
+        col('a')
+
+        And we can go fancier:
+        >>> window = nw.col("e").first().over("f", order_by=["g", "h"])
+        >>> show(window._ir.iter_right())
+        col('e').first().over(partition_by=[col('f')], order_by=[col('g'), col('h')])
+        col('h')
+        col('g')
+        col('f')
+        col('e').first()
+        col('e')
         """
         yield self
         for name in reversed(self._child):
