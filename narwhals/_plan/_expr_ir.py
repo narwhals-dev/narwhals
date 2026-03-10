@@ -33,48 +33,42 @@ class ExprIR(Immutable):
     All functions and methods that return an `Expr` are backed by an `ExprIR`.
 
     That may be a single node:
-
-        >>> import narwhals._plan as nw
-        >>> column = nw.col("howdy")
-        >>> column._ir
-        col('howdy')
-        >>> print(column._ir)
-        Column(name='howdy')
+    >>> import narwhals._plan as nw
+    >>> column = nw.col("howdy")
+    >>> column._ir
+    col('howdy')
+    >>> print(column._ir)
+    Column(name='howdy')
 
     Or something more deeply nested:
-
-        >>> bigger = (column + 10.5).alias("more")
-        >>> bigger_ir = bigger._ir
-        >>> print(bigger_ir)
-        Alias(expr=BinaryExpr(left=..., op=Add(), right=Literal(..., value=10.5))), name='more')
+    >>> bigger = (column + 10.5).alias("more")
+    >>> bigger_ir = bigger._ir
+    >>> print(bigger_ir)
+    Alias(expr=BinaryExpr(left=..., op=Add(), right=Literal(..., value=10.5))), name='more')
 
     An `ExprIR` is an easily traversable graph:
-
-        >>> def show_order(nodes: Iterator[ExprIR]) -> None:
-        ...     print("\n".join(f"{idx}: {node}" for idx, node in enumerate(nodes)))
+    >>> def show_order(nodes: Iterator[ExprIR]) -> None:
+    ...     print("\n".join(f"{idx}: {node}" for idx, node in enumerate(nodes)))
 
     Supporting iteration from both *root to leaf*:
-
-        >>> show_order(bigger_ir.iter_left())
-        0: Column(name='howdy')
-        1: Literal(value=ScalarLiteral(dtype=Float64, value=10.5))
-        2: BinaryExpr(left=..., op=Add(), right=...)
-        3: Alias(expr=BinaryExpr(...), name='more')
+    >>> show_order(bigger_ir.iter_left())
+    0: Column(name='howdy')
+    1: Literal(value=ScalarLiteral(dtype=Float64, value=10.5))
+    2: BinaryExpr(left=..., op=Add(), right=...)
+    3: Alias(expr=BinaryExpr(...), name='more')
 
     And *leaf to root* - for the same cost:
-
-        >>> show_order(bigger_ir.iter_right())
-        0: Alias(expr=BinaryExpr(...), name='more')
-        1: BinaryExpr(left=..., op=Add(), right=...)
-        2: Literal(value=ScalarLiteral(dtype=Float64, value=10.5))
-        3: Column(name='howdy')
+    >>> show_order(bigger_ir.iter_right())
+    0: Alias(expr=BinaryExpr(...), name='more')
+    1: BinaryExpr(left=..., op=Add(), right=...)
+    2: Literal(value=ScalarLiteral(dtype=Float64, value=10.5))
+    3: Column(name='howdy')
 
     That comes in handy for [`meta`] operations, which are available for both `Expr` and `ExprIR`:
-
-        >>> bigger_ir.meta.root_names()
-        ['howdy']
-        >>> bigger_ir.meta.output_name()
-        'more'
+    >>> bigger_ir.meta.root_names()
+    ['howdy']
+    >>> bigger_ir.meta.output_name()
+    'more'
 
     See `ExprIR.map_ir` for other superpowers this gives us.
 
@@ -279,44 +273,40 @@ class ExprIR(Immutable):
         """Return True if this leaf produces a single value.
 
         Some expressions are always scalar:
-
-            >>> import narwhals._plan as nw
-            >>> length = nw.len()
-            >>> length._ir.is_scalar
-            True
-            >>> nw.lit(123)._ir.is_scalar
-            True
+        >>> import narwhals._plan as nw
+        >>> length = nw.len()
+        >>> length._ir.is_scalar
+        True
+        >>> nw.lit(123)._ir.is_scalar
+        True
 
         Others always output a column:
-
-            >>> column = nw.col("a")
-            >>> column._ir.is_scalar
-            False
-            >>> nw.int_range(0, 10)._ir.is_scalar
-            False
+        >>> column = nw.col("a")
+        >>> column._ir.is_scalar
+        False
+        >>> nw.int_range(0, 10)._ir.is_scalar
+        False
 
         Many depend on the scalar-ness of child expressions, and require traversal:
-
-            >>> (column + length)._ir.is_scalar
-            False
-            >>> (column.first() + length)._ir.is_scalar
-            True
+        >>> (column + length)._ir.is_scalar
+        False
+        >>> (column.first() + length)._ir.is_scalar
+        True
         """
         return False
 
     def needs_expansion(self) -> bool:
         """Return True if this expression contains selectors.
 
-        Examples:
-            >>> import narwhals._plan as nw
-            >>> a = nw.col("a")
-            >>> bc = nw.col("b", "c")
-            >>> a._ir.needs_expansion()
-            False
-            >>> bc._ir.needs_expansion()
-            True
-            >>> (a * bc)._ir.needs_expansion()
-            True
+        >>> import narwhals._plan as nw
+        >>> a = nw.col("a")
+        >>> bc = nw.col("b", "c")
+        >>> a._ir.needs_expansion()
+        False
+        >>> bc._ir.needs_expansion()
+        True
+        >>> (a * bc)._ir.needs_expansion()
+        True
         """
         return any(isinstance(e, SelectorIR) for e in self.iter_left())
 

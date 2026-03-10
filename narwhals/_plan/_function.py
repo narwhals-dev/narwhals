@@ -68,24 +68,22 @@ class Function(Immutable):
     A `Function` is distinct from an expression but appears in many of them as:
 
         class FunctionExpr(ExprIR):
+            input: tuple[ExprIR, ...]
             function: Function
 
     Instances capture non-expression arguments to `Expr` methods:
 
-        >>> import narwhals._plan as nwp
-        >>> from narwhals._plan import expressions as ir
+    >>> import narwhals._plan as nw
+    >>> from narwhals._plan import expressions as ir
 
-        >>> expr = nwp.col("a").shift(2)
-        >>> expr_ir = expr._ir
-        >>> isinstance(expr_ir, ir.FunctionExpr)
-        True
+    >>> expr = nw.col("a").shift(2)
+    >>> expr_ir = expr._ir
+    >>> isinstance(expr_ir, ir.FunctionExpr)
+    True
 
-        >>> print(
-        ...     f"Function(args) : {expr_ir.function}\n"
-        ...     f"ExprIR input(s): {expr_ir.input[0]}"
-        ... )
-        Function(args) : Shift(n=2)
-        ExprIR input(s): Column(name='a')
+    >>> print(f"Function(args) : {expr_ir.function}\nExprIR input(s): {expr_ir.input[0]}")
+    Function(args) : Shift(n=2)
+    ExprIR input(s): Column(name='a')
 
 
     <!--TODO @dangotbanned: Finish this section -->

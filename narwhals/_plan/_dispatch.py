@@ -254,48 +254,44 @@ class DispatcherOptions:
     Defined via the (optional) `dispatch` parameter at [subclass-definition time].
 
     Many expressions simply use the default:
+    >>> from narwhals._plan import expressions as ir
+    >>> from narwhals._plan._dispatch import DispatcherOptions
+    >>> from narwhals._plan.options import ExplodeOptions
+    >>>
+    >>> class Explode(ir.ExprIR, child=("expr",)):
+    ...     #                                  ^^ # default `dispatch`
+    ...     __slots__ = ("expr",)
+    ...     expr: ir.ExprIR
 
-        >>> from narwhals._plan import expressions as ir
-        >>> from narwhals._plan._dispatch import DispatcherOptions
-        >>>
-        >>> class Explode(ir.ExprIR, child=("expr",)):
-        ...     #                                  ^^ # default `dispatch`
-        ...     __slots__ = ("expr",)
-        ...     expr: ir.ExprIR
+    >>> Explode.__expr_ir_dispatch__
+    Dispatcher<explode>
 
-        >>> Explode.__expr_ir_dispatch__
-        Dispatcher<explode>
-
-        >>> Explode.__expr_ir_dispatch__.options
-        DispatcherOptions(<default>)
+    >>> Explode.__expr_ir_dispatch__.options
+    DispatcherOptions(<default>)
 
     `dispatch` provides a bit more flexibility when you want it:
 
-        >>> class Explode2(Explode, dispatch=DispatcherOptions.renamed("explodier")): ...
-        >>> #                       ^^^^^^^^ custom `dispatch`
+    >>> class Explode2(Explode, dispatch=DispatcherOptions.renamed("explodier")): ...
+    >>> #                       ^^^^^^^^ custom `dispatch`
 
-        >>> Explode2.__expr_ir_dispatch__
-        Dispatcher<explodier>
+    >>> Explode2.__expr_ir_dispatch__
+    Dispatcher<explodier>
 
-        >>> Explode2.__expr_ir_dispatch__.options
-        DispatcherOptions(override_name='explodier')
+    >>> Explode2.__expr_ir_dispatch__.options
+    DispatcherOptions(override_name='explodier')
 
     Keep in mind that `options` are inherited:
-
-        >>> class Explode21(Explode2): ...
-        >>> Explode21.__expr_ir_dispatch__
-        Dispatcher<explodier>
+    >>> class Explode21(Explode2): ...
+    >>> Explode21.__expr_ir_dispatch__
+    Dispatcher<explodier>
 
     So we'd need another override to get the default back:
+    >>> class ExplodeWithOptions(Explode2, dispatch=DispatcherOptions()):
+    ...     __slots__ = ("options",)
+    ...     options: ExplodeOptions
 
-        >>> from narwhals._plan.options import ExplodeOptions
-        >>>
-        >>> class ExplodeWithOptions(Explode2, dispatch=DispatcherOptions()):
-        ...     __slots__ = ("options",)
-        ...     options: ExplodeOptions
-
-        >>> ExplodeWithOptions.__expr_ir_dispatch__
-        Dispatcher<explode_with_options>
+    >>> ExplodeWithOptions.__expr_ir_dispatch__
+    Dispatcher<explode_with_options>
 
     [subclass-definition time]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
     """
@@ -314,15 +310,14 @@ class DispatcherOptions:
     """Whether the expression is supported at the compliant-level.
 
     When `False`, **any** attempts to dispatch will raise a `TypeError`:
-
-        >>> import narwhals._plan as nw
-        >>> selector = nw.col("a", "b", "c")._ir
-        >>> selector.dispatch(..., ..., ...)
-        Traceback (most recent call last):
-        TypeError: 'RootSelector' should not appear at the compliant-level.
-        <BLANKLINE>
-        Make sure to expand all expressions first, got:
-        ncs.by_name('a', 'b', 'c', require_all=True)
+    >>> import narwhals._plan as nw
+    >>> selector = nw.col("a", "b", "c")._ir
+    >>> selector.dispatch(..., ..., ...)
+    Traceback (most recent call last):
+    TypeError: 'RootSelector' should not appear at the compliant-level.
+    <BLANKLINE>
+    Make sure to expand all expressions first, got:
+    ncs.by_name('a', 'b', 'c', require_all=True)
     """
 
     is_namespaced: bool
