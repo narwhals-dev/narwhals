@@ -31,9 +31,7 @@ def test_dispatch(
     df = dataframe(data)
     implemented_full = nwp.col("a").is_null()
     forgot_to_expand = (named_ir("howdy", nwp.nth(3, 4).first()),)
-    aliased_after_expand: tuple[ir.NamedIR] = (
-        ir.NamedIR.from_ir(ir.col("a").alias("b")),
-    )
+    aliased_after_expand: tuple[ir.NamedIR] = (named_ir("b", ir.col("a").alias("b")),)
     dataframe.xfail_polars_select(request)
     assert_equal_data(df.select(implemented_full), {"a": [False, True, False]})
 

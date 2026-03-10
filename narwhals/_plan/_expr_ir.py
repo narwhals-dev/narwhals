@@ -516,15 +516,6 @@ class NamedIR(Immutable, Generic[ExprIRT_co]):
 
         return NamedIR(expr=col(name), name=name)
 
-    @staticmethod
-    def from_ir(expr: ExprIRT, /) -> NamedIR[ExprIRT]:
-        """Construct from an already expanded `ExprIR`.
-
-        Should be cheap to get the output name from cache, but will raise if used
-        without care.
-        """
-        return NamedIR(expr=expr, name=expr.meta.output_name(raise_if_undetermined=True))
-
     def map_ir(self, function: MapIR, /) -> NamedIR[ExprIR]:
         """Transform the wrapped expression by applying a function to all nodes in it's graph.
 
