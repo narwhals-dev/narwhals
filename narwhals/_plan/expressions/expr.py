@@ -138,10 +138,6 @@ class _BinaryOp(ExprIR, t.Generic[LeftT, OperatorT, RightT]):
     op: OperatorT
     right: RightT
 
-    @property
-    def is_scalar(self) -> bool:
-        return self.left.is_scalar and self.right.is_scalar
-
     def __repr__(self) -> str:
         return f"[({self.left!r}) {self.op!r} ({self.right!r})]"
 
@@ -152,6 +148,10 @@ class BinaryExpr(
     child=("left", "right"),
 ):
     """Application of two exprs via an `Operator`."""
+
+    @property
+    def is_scalar(self) -> bool:
+        return self.left.is_scalar and self.right.is_scalar
 
     def iter_output_name(self) -> t.Iterator[ExprIR]:
         yield from self.left.iter_output_name()
