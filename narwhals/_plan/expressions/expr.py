@@ -12,6 +12,7 @@ from narwhals._plan._expr_ir import ExprIR, SelectorIR
 from narwhals._plan.exceptions import (
     function_expr_invalid_operation_error,
     over_order_by_names_error,
+    range_expr_non_scalar_error,
 )
 from narwhals._plan.expressions.selectors import ByName
 from narwhals._plan.typing import (
@@ -356,8 +357,7 @@ class RangeExpr(FunctionExpr[RangeT_co]):
             msg = f"Expected at least 2 inputs for `{function!r}()`, but got `{len(input)}`.\n`{input}`"
             raise InvalidOperationError(msg)
         if not all(e.is_scalar for e in input):
-            msg = f"All inputs for `{function!r}()` must be scalar or aggregations, but got \n`{input}`"
-            raise InvalidOperationError(msg)
+            raise range_expr_non_scalar_error(input, function)
         super(ExprIR, self).__init__(
             **dict(input=input, function=function, options=options, **kwds)
         )
@@ -384,10 +384,6 @@ class Filter(ExprIR, child=("expr", "by"), dtype=same_dtype()):
     __slots__ = ("expr", "by")  # noqa: RUF023
     expr: ExprIR
     by: ExprIR
-
-    @property
-    def is_scalar(self) -> bool:
-        return self.expr.is_scalar and self.by.is_scalar
 
     def __repr__(self) -> str:
         return f"{self.expr!r}.filter({self.by!r})"

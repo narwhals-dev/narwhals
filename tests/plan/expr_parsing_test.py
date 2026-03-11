@@ -172,16 +172,17 @@ def test_agg_non_elementwise_range_special() -> None:
 
 
 def test_int_range_invalid() -> None:
-    pattern = re.compile(r"scalar.+agg", re.IGNORECASE)
-    with pytest.raises(InvalidOperationError, match=pattern):
+    with pytest.raises(ShapeError, match=r"int_range.+end.+non-scalar.+col"):
         nwp.int_range(nwp.col("a"))
-    with pytest.raises(InvalidOperationError, match=pattern):
+    with pytest.raises(ShapeError, match=r"int_range.+start.+non-scalar"):
         nwp.int_range(nwp.nth(1), 10)
-    with pytest.raises(InvalidOperationError, match=pattern):
+    with pytest.raises(ShapeError, match=r"int_range.+start.+non-scalar.+filter"):
+        nwp.int_range(nwp.col("a").filter(nwp.col("a") == 1), 100)
+    with pytest.raises(ShapeError, match=r"int_range.+end.+non-scalar.+abs"):
         nwp.int_range(0, nwp.col("a").abs())
-    with pytest.raises(InvalidOperationError, match=pattern):
+    with pytest.raises(ShapeError, match=r"int_range.+end.+non-scalar"):
         nwp.int_range(nwp.col("a") + 1)
-    with pytest.raises(InvalidOperationError, match=pattern):
+    with pytest.raises(ShapeError, match=r"int_range.+end.+non-scalar.+keep"):
         nwp.int_range((1 + nwp.col("b")).name.keep())
     int_range = IntRange(step=1, dtype=nw.Int64())
     with pytest.raises(InvalidOperationError, match=r"at least 2 inputs.+int_range"):
@@ -190,10 +191,9 @@ def test_int_range_invalid() -> None:
 
 def test_date_range_invalid() -> None:
     start, end = dt.date(2000, 1, 1), dt.date(2001, 1, 1)
-    pattern = re.compile(r"scalar.+agg", re.IGNORECASE)
-    with pytest.raises(InvalidOperationError, match=pattern):
+    with pytest.raises(ShapeError, match=r"date_range.+start.+non-scalar"):
         nwp.date_range(nwp.col("a"), nwp.col("b"))
-    with pytest.raises(InvalidOperationError, match=pattern):
+    with pytest.raises(ShapeError, match=r"date_range.+end.+non-scalar"):
         nwp.date_range(start, nwp.col("b"))
     with pytest.raises(TypeError, match=r"`closed` must be one of.+, got.+middle"):
         nwp.date_range(start, end, closed="middle")  # type: ignore[call-overload]
@@ -741,12 +741,10 @@ def test_list_contains_invalid() -> None:
     assert a.list.contains(dt.datetime(2000, 2, 1, 9, 26, 5))
     assert a.list.contains(a.abs().fill_null(5).mode(keep="any"))
 
-    with pytest.raises(
-        InvalidOperationError, match=r"list.contains.+non-scalar.+`col\('a'\)"
-    ):
+    with pytest.raises(ShapeError, match=r"list.contains.+non-scalar.+`col\('a'\)"):
         a.list.contains(a)
 
-    with pytest.raises(InvalidOperationError, match=r"list.contains.+non-scalar.+abs"):
+    with pytest.raises(ShapeError, match=r"list.contains.+non-scalar.+abs"):
         a.list.contains(a.abs())
 
     with pytest.raises(TypeError, match=r"list.+not.+supported.+nw.lit.+1.+2.+3"):

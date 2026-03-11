@@ -1,5 +1,6 @@
 """Exceptions and tools to format them."""
 
+# ruff: noqa: A002
 from __future__ import annotations
 
 from collections import Counter
@@ -19,12 +20,13 @@ from narwhals.exceptions import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Collection, Iterable
+    from collections.abc import Collection, Iterable, Sequence
     from typing import Any
 
     from narwhals._plan import expressions as ir
     from narwhals._plan._function import Function
     from narwhals._plan.expressions.operators import Operator
+    from narwhals._plan.expressions.ranges import RangeFunction
     from narwhals._plan.options import SortOptions
     from narwhals._plan.schema import FrozenSchema
     from narwhals._plan.typing import IntoExpr, Seq
@@ -49,11 +51,20 @@ def function_expr_invalid_operation_error(
     return InvalidOperationError(msg)
 
 
+def range_expr_non_scalar_error(
+    input: Sequence[ir.ExprIR], function: RangeFunction
+) -> ShapeError:
+    arg_name, arg_value = (
+        ("start", input[0]) if not (input[0].is_scalar) else ("end", input[1])
+    )
+    return function_arg_non_scalar_error(function, arg_name, arg_value)
+
+
 def function_arg_non_scalar_error(
     function: Function, arg_name: str, arg_value: Any
-) -> InvalidOperationError:
+) -> ShapeError:
     msg = f"`{function!r}({arg_name}=...)` does not support non-scalar expression `{arg_value!r}`."
-    return InvalidOperationError(msg)
+    return ShapeError(msg)
 
 
 def list_literal_error(value: Any) -> TypeError:
