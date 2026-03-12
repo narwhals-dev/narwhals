@@ -794,6 +794,9 @@ def test_readme_example() -> None:
 
 
 def test_from_eager_or_lazy_polars() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
     lf = pl.LazyFrame()
     df = pl.DataFrame()
     either = lf if df.height else df
