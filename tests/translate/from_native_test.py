@@ -781,7 +781,7 @@ def test_from_native_series_exhaustive() -> None:  # noqa: PLR0914, PLR0915
 
 def test_readme_example() -> None:
     # check that readme example (as of March 2026) passes
-    def _agnostic_function(
+    def _agnostic_function(  # pragma: no cover
         df_native: IntoFrameT, date_column: str, price_column: str
     ) -> IntoFrameT:
         return (
