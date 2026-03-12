@@ -76,8 +76,7 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
       - name: clone-marimo
         run: |
-          # TODO: remove branch pin once https://github.com/marimo-team/marimo/pull/8510 is merged
-          git clone https://github.com/marimo-team/marimo.git --depth=1 --branch=push-kmswtyynuukw
+          git clone https://github.com/marimo-team/marimo.git --depth=1
           cd marimo
           git log
       - name: install-narwhals-dev
@@ -358,7 +357,7 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
       - name: clone-hierarchicalforecast
         run: |
-          git clone https://github.com/Nixtla/hierarchicalforecast --depth=1
+          git clone https://github.com/Nixtla/hierarchicalforecast --depth=1 --recurse-submodules --shallow-submodules
           cd hierarchicalforecast
           git log
       - name: install-basics
@@ -366,9 +365,8 @@ jobs:
       - name: install-deps
         run: |
           cd hierarchicalforecast
-          # Temporary pin until it's addressed upstream.
-          uv pip install "pandas<3"
-          uv pip install . --group dev --group polars
+          uv pip install datasetsforecast "statsforecast>=1.0.0" scipy "polars[numpy]<=1.32.0" pytest pytest-benchmark pytest-cov
+          uv pip install .
       - name: install-narwhals-dev
         run: |
           uv pip uninstall narwhals
@@ -378,7 +376,8 @@ jobs:
       - name: Run tests
         run: |
           cd hierarchicalforecast
-          pytest tests
+          pytest tests --no-cov --import-mode=importlib 
+
 
   formulaic:
     strategy:
