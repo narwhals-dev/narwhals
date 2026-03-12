@@ -27,6 +27,7 @@ from itertools import chain
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 import pytest
+from typing_extensions import assert_type
 
 import narwhals as nw
 from narwhals._utils import Version
@@ -37,7 +38,6 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
 
     from _pytest.mark import ParameterSet
-    from typing_extensions import assert_type
 
     from narwhals.typing import IntoFrameT
 
@@ -791,3 +791,22 @@ def test_readme_example() -> None:
             .sort(date_column)
             .to_native()
         )
+
+
+def test_from_eager_or_lazy_polars() -> None:
+    lf = pl.LazyFrame()
+    df = pl.DataFrame()
+    either = lf if df.height else df
+
+    r_lf = nw.from_native(lf)
+    assert_type(r_lf, nw.LazyFrame[pl.LazyFrame])
+    r_df = nw.from_native(df)
+    assert_type(r_df, nw.DataFrame[pl.DataFrame])
+    r_either = nw.from_native(either)
+    assert_type(r_either, nw.DataFrame[pl.DataFrame] | nw.LazyFrame[pl.LazyFrame])
+
+    r2_lf = nw.from_native(r_lf)
+    assert_type(r2_lf, nw.LazyFrame[pl.LazyFrame])
+    r2_df = nw.from_native(r_df)
+    assert_type(r2_df, nw.DataFrame[pl.DataFrame])
+    _r2_either = nw.from_native(r_either)
