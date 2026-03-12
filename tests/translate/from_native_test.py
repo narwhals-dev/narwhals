@@ -809,4 +809,5 @@ def test_from_eager_or_lazy_polars() -> None:
     assert_type(r2_lf, nw.LazyFrame[pl.LazyFrame])
     r2_df = nw.from_native(r_df)
     assert_type(r2_df, nw.DataFrame[pl.DataFrame])
-    _r2_either = nw.from_native(r_either)
+    r2_either = nw.from_native(r_either)
+    assert_type(r2_either, nw.DataFrame[pl.DataFrame] | nw.LazyFrame[pl.LazyFrame])
