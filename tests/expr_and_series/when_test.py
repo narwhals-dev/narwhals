@@ -6,6 +6,7 @@ import pytest
 
 import narwhals as nw
 from narwhals.exceptions import MultiOutputExpressionError
+from narwhals.functions import Then
 from tests.utils import (
     DUCKDB_VERSION,
     Constructor,
@@ -572,4 +573,30 @@ def test_when_chain_boolean_column_condition(constructor: Constructor) -> None:
     # Row 2: a=True -> 100
     # Row 3: a=False, b=4 >2 -> 200
     expected = {"result": [100, 300, 100, 200]}
+    assert_equal_data(result, expected)
+
+
+def test_when_chain_materialize_caches(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 2, 3]}))
+
+    then_expr = nw.when(nw.col("a") == 1).then(10).when(nw.col("a") == 2).then(20)
+    assert isinstance(then_expr, Then)
+
+    _ = df.select(then_expr.alias("result"))
+    first_cached = then_expr._cached_expr
+
+    _ = df.select(then_expr.alias("result"))
+    second_cached = then_expr._cached_expr
+
+    assert first_cached is second_cached
+
+
+def test_when_chain_branching_does_not_mutate(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 2, 3, 4]}))
+
+    base_expr = nw.when(nw.col("a") == 1).then(10)
+    derived_expr = base_expr.when(nw.col("a") > 2).then(nw.col("a") * 10).otherwise(0)
+
+    result = df.select(base_expr.alias("base"), derived_expr.alias("derived"))
+    expected = {"base": [10, None, None, None], "derived": [10, None, 30, 40]}
     assert_equal_data(result, expected)

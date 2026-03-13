@@ -33,6 +33,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self, TypeAlias, TypeIs
 
+    from narwhals._compliant import CompliantExpr, CompliantNamespace
     from narwhals._native import NativeDataFrame, NativeLazyFrame, NativeSeries
     from narwhals._translate import IntoArrowTable
     from narwhals._typing import Backend, EagerAllowed, IntoBackend
@@ -1385,35 +1386,60 @@ _MISSING: Any = object()
 
 class Then(Expr):
     _chain: list[tuple[Expr, IntoExpr | NonNestedLiteral]]
+    _otherwise_value: IntoExpr | NonNestedLiteral
+    _cached_expr: Self | None = None
 
     @classmethod
-    def _from_chain(cls, chain: list[tuple[Expr, IntoExpr | NonNestedLiteral]]) -> Self:
-        result = cls._build_nested(chain)
-        result._chain = chain
-        return result
-
-    @classmethod
-    def _build_nested(
+    def _from_chain(
         cls,
         chain: list[tuple[Expr, IntoExpr | NonNestedLiteral]],
         otherwise_value: IntoExpr | NonNestedLiteral = _MISSING,
     ) -> Self:
-        """Build the full nested when/then expression tree from a chain."""
-        result: Self = cast("Self", otherwise_value)
-        exprs: tuple[IntoExpr | NonNestedLiteral, ...]
-        for predicate, then_value in reversed(chain):
-            if result is _MISSING:
-                exprs = (predicate, then_value)
-            else:
-                exprs = (predicate, then_value, result)
-            node = ExprNode(
-                ExprKind.ELEMENTWISE, "when_then", exprs=exprs, allow_multi_output=False
-            )
-            result = cls(node)
+        # Lazy: don't build the expression tree yet, just store the chain.
+        # The tree is built on demand in `_materialize`.
+        result = cls.__new__(cls)
+        result._chain = chain
+        result._otherwise_value = otherwise_value
+        result._cached_expr = None
         return result
 
+    def _build_node_tree(self) -> Self:
+        """Build the full nested when/then expression tree from the stored chain.
+
+        The result is cached so repeated access (e.g. `_to_compliant_expr`,
+        `_append_node`) doesn't rebuild the tree.
+        """
+        if self._cached_expr is None:
+            result: Self = cast("Self", self._otherwise_value)
+            for predicate, then_value in reversed(self._chain):
+                exprs: tuple[IntoExpr | NonNestedLiteral, ...] = (
+                    (predicate, then_value)
+                    if result is _MISSING
+                    else (predicate, then_value, result)
+                )
+                node = ExprNode(
+                    ExprKind.ELEMENTWISE,
+                    "when_then",
+                    exprs=exprs,
+                    allow_multi_output=False,
+                )
+                result = self.__class__(node)
+            self._cached_expr = result
+        return self._cached_expr
+
+    def _to_compliant_expr(
+        self, ns: CompliantNamespace[Any, Any]
+    ) -> CompliantExpr[Any, Any]:
+        return self._build_node_tree()._to_compliant_expr(ns)
+
+    def _append_node(self, node: ExprNode) -> Self:
+        return self._build_node_tree()._append_node(node)
+
+    def _with_over_node(self, node: ExprNode) -> Self:
+        return self._build_node_tree()._with_over_node(node)
+
     def otherwise(self, otherwise_value: IntoExpr | NonNestedLiteral) -> Self:
-        return self._build_nested(self._chain, otherwise_value)
+        return self._from_chain(self._chain, otherwise_value)
 
     def when(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> When:
         return When(*predicates, chain=self._chain)
