@@ -45,7 +45,11 @@ class DaskExprStringNamespace(LazyExprNamespace["DaskExpr"], StringNamespace["Da
     def ends_with(self, suffix: str) -> DaskExpr:
         return self.compliant._with_callable(lambda expr: expr.str.endswith(suffix))
 
-    def contains(self, pattern: str, *, literal: bool) -> DaskExpr:
+    def contains(self, pattern: str | DaskExpr, *, literal: bool) -> DaskExpr:
+        if not isinstance(pattern, str):
+            msg = "`Expr.str.contains` only supports str pattern values for Dask backend"
+            raise TypeError(msg)
+
         return self.compliant._with_callable(
             lambda expr: expr.str.contains(pat=pattern, regex=not literal)
         )
