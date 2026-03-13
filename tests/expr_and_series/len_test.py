@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 import narwhals as nw
 from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
@@ -16,10 +18,15 @@ def test_len_no_filter(constructor: Constructor) -> None:
     assert_equal_data(df, expected)
 
 
-def test_len_chaining(constructor_eager: ConstructorEager) -> None:
-    data = {"a": list("xyz"), "b": [1, 2, 1]}
+def test_len_chaining(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    lazy_non_polars = ("dask", "duckdb", "ibis", "spark")
+    if any(x in str(constructor) for x in lazy_non_polars):
+        reason = "not implemented"
+        request.applymarker(pytest.mark.xfail(reason=reason))
+
+    data = {"a": [0, 1, None], "b": [1, 2, 1]}
     expected = {"a1": [2], "a2": [1]}
-    df = nw.from_native(constructor_eager(data)).select(
+    df = nw.from_native(constructor(data)).select(
         nw.col("a").filter(nw.col("b") == 1).len().alias("a1"),
         nw.col("a").filter(nw.col("b") == 2).len().alias("a2"),
     )

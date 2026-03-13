@@ -310,11 +310,20 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         return self._with_elementwise(_is_in)
 
     def len(self) -> Self:
-        def _len(_expr: Column) -> Column:
-            # Use count(*) to count all rows including nulls
-            return self._F.count("*")
+        def func(df: SparkLikeLazyFrame) -> list[Column]:
+            if not self._metadata.preserves_length:
+                msg = "`len` is not supported after a length-changing expression"
+                raise NotImplementedError(msg)
 
-        return self._with_callable(_len)
+            return [self._F.count("*") for _ in self(df)]
+
+        return self.__class__(
+            func,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
+            implementation=self._implementation,
+        )
 
     def skew(self) -> Self:
         return self._with_callable(self._F.skewness)
