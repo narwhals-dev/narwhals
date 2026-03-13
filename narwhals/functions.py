@@ -1394,10 +1394,9 @@ class Then(Expr):
         # When created via Expr.__init__ path (e.g. from _append_node),
         # _chain won't be set. Mark as already materialized since _nodes
         # is set directly.
-        if not hasattr(self, "_chain"):
-            self._chain = []
-            self._otherwise_value = _MISSING
-            self._materialized = True
+        self._chain = []
+        self._otherwise_value = _MISSING
+        self._materialized = True
 
     @classmethod
     def _from_chain(
@@ -1430,7 +1429,7 @@ class Then(Expr):
                 node = ExprNode(
                     expr_kind, "when_then", exprs=exprs, allow_multi_output=False
                 )
-                result = self.__class__(node)
+                result = cast("Self", self.__class__(node))
             self._nodes = result._nodes
             self._materialized = True
 
