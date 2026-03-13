@@ -125,11 +125,13 @@ class ExprIRMeta(ImmutableMeta):
         **kwds: Any,
     ) -> _typeshed.Self:
         nodes, namespace = _expr_meta_massage_namespace(cls_name, namespace)
-        tp = super().__new__(metacls, cls_name, bases, namespace, **kwds)
-        if nodes and not TYPE_CHECKING:
-            # pyright is quite unhappy w/ this, thinks that `Self` means `object` but it is a `type`!
-            _inherit_traverser(metacls, tp, nodes)
-        return tp  # type: ignore[no-any-return, misc]
+        tp = super().__new__(metacls, cls_name, bases, namespace, **kwds)  # type: ignore[misc]
+        if not TYPE_CHECKING:  # noqa: SIM102
+            # `pyright` is quite unhappy w/ this, thinks that `Self` means `object` but it is a `type`!
+            # `mypy` forgets how `TYPE_CHECKING` works when multiple conditions appear
+            if nodes:
+                _inherit_traverser(metacls, tp, nodes)
+        return tp  # type: ignore[no-any-return]
 
 
 def _expr_meta_massage_namespace(

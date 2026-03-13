@@ -177,20 +177,20 @@ class BinarySelector(
 def what_does_type_checker_say() -> None:  # noqa: PLR0914
     """All looking like pyright understands the typing correctly!"""
     no_args_good = ExprIR()
-    no_args_bad = Column()  # pyright: ignore[reportCallIssue]
+    no_args_bad = Column()  # type: ignore[call-arg]
     one_arg_good = Column(name="hello")
 
-    no_args_node_bad_0 = Alias()  # pyright: ignore[reportCallIssue]
-    no_args_node_bad_1_1 = Alias(expr=one_arg_good)  # pyright: ignore[reportCallIssue]
-    no_args_node_bad_1_2 = Alias(name="hello")  # pyright: ignore[reportCallIssue]
+    no_args_node_bad_0 = Alias()  # type: ignore[call-arg]
+    no_args_node_bad_1_1 = Alias(expr=one_arg_good)  # type: ignore[call-arg]
+    no_args_node_bad_1_2 = Alias(name="hello")  # type: ignore[call-arg]
     mixed_good = Alias(expr=Column(name="hello"), name="goodbye")
-    mixed_non_node_bad = Alias(expr="hello", name="goodbye")  # pyright: ignore[reportArgumentType]
+    mixed_non_node_bad = Alias(expr="hello", name="goodbye")  # type: ignore[arg-type]
 
     opts = SortMultipleOptions.default()
-    _ = SortBy()  # pyright: ignore[reportCallIssue]
-    _ = SortBy(options=opts)  # pyright: ignore[reportCallIssue]
-    _ = SortBy(expr=one_arg_good, options=opts)  # pyright: ignore[reportCallIssue]
-    _ = SortBy(expr=one_arg_good, by=one_arg_good, options=opts)  # pyright: ignore[reportArgumentType]
+    _ = SortBy()  # type: ignore[call-arg]
+    _ = SortBy(options=opts)  # type: ignore[call-arg]
+    _ = SortBy(expr=one_arg_good, options=opts)  # type: ignore[call-arg]
+    _ = SortBy(expr=one_arg_good, by=one_arg_good, options=opts)  # type: ignore[arg-type]
     _ = SortBy(expr=one_arg_good, by=(one_arg_good,), options=opts)
 
     expr_ir_nodes = SortBy.__expr_ir_nodes__
