@@ -1387,7 +1387,17 @@ _MISSING: Any = object()
 class Then(Expr):
     _chain: list[tuple[Expr, IntoExpr | NonNestedLiteral]]
     _otherwise_value: IntoExpr | NonNestedLiteral
-    _cached_expr: Self | None = None
+    _materialized: bool
+
+    def __init__(self, *nodes: ExprNode) -> None:
+        super().__init__(*nodes)
+        # When created via Expr.__init__ path (e.g. from _append_node),
+        # _chain won't be set. Mark as already materialized since _nodes
+        # is set directly.
+        if not hasattr(self, "_chain"):
+            self._chain = []
+            self._otherwise_value = _MISSING
+            self._materialized = True
 
     @classmethod
     def _from_chain(
@@ -1395,22 +1405,22 @@ class Then(Expr):
         chain: list[tuple[Expr, IntoExpr | NonNestedLiteral]],
         otherwise_value: IntoExpr | NonNestedLiteral = _MISSING,
     ) -> Self:
-        # Lazy: don't build the expression tree yet, just store the chain.
-        # The tree is built on demand in `_materialize`.
         result = cls.__new__(cls)
         result._chain = chain
         result._otherwise_value = otherwise_value
-        result._cached_expr = None
+        result._materialized = False
+        result._nodes = ()
         return result
 
-    def _build_node_tree(self) -> Self:
-        """Build the full nested when/then expression tree from the stored chain.
+    def _build_node_tree(self) -> None:
+        """Build the full nested when/then expression tree, populating self._nodes.
 
-        The result is cached so repeated access (e.g. `_to_compliant_expr`,
-        `_append_node`) doesn't rebuild the tree.
+        The result is cached so repeated access (e.g. `_to_compliant_expr`, `_append_node`)
+        doesn't rebuild the tree.
         """
-        if self._cached_expr is None:
-            result: Self = cast("Self", self._otherwise_value)
+        expr_kind = ExprKind.ELEMENTWISE
+        if not self._materialized:
+            result = cast("Self", self._otherwise_value)
             for predicate, then_value in reversed(self._chain):
                 exprs: tuple[IntoExpr | NonNestedLiteral, ...] = (
                     (predicate, then_value)
@@ -1418,25 +1428,25 @@ class Then(Expr):
                     else (predicate, then_value, result)
                 )
                 node = ExprNode(
-                    ExprKind.ELEMENTWISE,
-                    "when_then",
-                    exprs=exprs,
-                    allow_multi_output=False,
+                    expr_kind, "when_then", exprs=exprs, allow_multi_output=False
                 )
                 result = self.__class__(node)
-            self._cached_expr = result
-        return self._cached_expr
+            self._nodes = result._nodes
+            self._materialized = True
 
     def _to_compliant_expr(
         self, ns: CompliantNamespace[Any, Any]
     ) -> CompliantExpr[Any, Any]:
-        return self._build_node_tree()._to_compliant_expr(ns)
+        self._build_node_tree()
+        return super()._to_compliant_expr(ns)
 
     def _append_node(self, node: ExprNode) -> Self:
-        return self._build_node_tree()._append_node(node)
+        self._build_node_tree()
+        return super()._append_node(node)
 
     def _with_over_node(self, node: ExprNode) -> Self:
-        return self._build_node_tree()._with_over_node(node)
+        self._build_node_tree()
+        return super()._with_over_node(node)
 
     def otherwise(self, otherwise_value: IntoExpr | NonNestedLiteral) -> Self:
         return self._from_chain(self._chain, otherwise_value)

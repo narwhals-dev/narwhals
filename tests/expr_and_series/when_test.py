@@ -581,14 +581,21 @@ def test_when_chain_materialize_caches(constructor: Constructor) -> None:
 
     then_expr = nw.when(nw.col("a") == 1).then(10).when(nw.col("a") == 2).then(20)
     assert isinstance(then_expr, Then)
+    assert not then_expr._materialized
 
     _ = df.select(then_expr.alias("result"))
-    first_cached = then_expr._cached_expr
+    assert then_expr._materialized
+    first_nodes = then_expr._nodes
 
     _ = df.select(then_expr.alias("result"))
-    second_cached = then_expr._cached_expr
+    second_nodes = then_expr._nodes
 
-    assert first_cached is second_cached
+    # Verify the tree is built only once (same object identity)
+    assert first_nodes is second_nodes
+
+    # Also verify _build_node_tree is a no-op after materialization
+    then_expr._build_node_tree()
+    assert then_expr._nodes is first_nodes
 
 
 def test_when_chain_branching_does_not_mutate(constructor: Constructor) -> None:
@@ -598,5 +605,23 @@ def test_when_chain_branching_does_not_mutate(constructor: Constructor) -> None:
     derived_expr = base_expr.when(nw.col("a") > 2).then(nw.col("a") * 10).otherwise(0)
 
     result = df.select(base_expr.alias("base"), derived_expr.alias("derived"))
-    expected = {"base": [10, None, None, None], "derived": [10, None, 30, 40]}
+    expected = {"base": [10, None, None, None], "derived": [10, 0, 30, 40]}
+    assert_equal_data(result, expected)
+
+
+def test_when_then_composes_with_expr_operations(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 2, 3, 4]}))
+
+    result = df.select(
+        (
+            nw.when(nw.col("a") < 3)
+            .then(nw.col("a"))
+            .when(nw.col("a") == 3)
+            .then(10)
+            .otherwise(0)
+            * 2
+        ).alias("result")
+    )
+
+    expected = {"result": [2, 4, 20, 0]}
     assert_equal_data(result, expected)
