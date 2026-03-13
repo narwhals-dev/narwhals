@@ -22,6 +22,7 @@ from narwhals._duckdb.utils import (
 )
 from narwhals._sql.expr import SQLExpr
 from narwhals._utils import Implementation, Version, extend_bool, no_default
+from narwhals.dtypes import _validate_cast_temporal_to_numeric
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -38,6 +39,7 @@ if TYPE_CHECKING:
     )
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.namespace import DuckDBNamespace
+    from narwhals._duckdb.utils import duckdb_dtypes
     from narwhals._typing import NoDefault
     from narwhals._utils import _LimitedContext
     from narwhals.typing import FillNullStrategy, IntoDType, RollingInterpolationMethod
@@ -266,14 +268,23 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
         return self._with_elementwise(_fill_constant, value=value)
 
     def cast(self, dtype: IntoDType) -> Self:
-        def func(df: DuckDBLazyFrame) -> list[Expression]:
+        def _validated_dtype(
+            dtype: IntoDType, df: DuckDBLazyFrame
+        ) -> duckdb_dtypes.DuckDBPyType:
+            if dtype.is_numeric():
+                schema = df.collect_schema()
+                for name in self._evaluate_output_names(df):
+                    _validate_cast_temporal_to_numeric(source=schema[name], target=dtype)
+
             tz = DeferredTimeZone(df.native)
-            native_dtype = narwhals_to_native_dtype(dtype, self._version, tz)
+            return narwhals_to_native_dtype(dtype, self._version, tz)
+
+        def func(df: DuckDBLazyFrame) -> list[Expression]:
+            native_dtype = _validated_dtype(dtype, df)
             return [expr.cast(native_dtype) for expr in self(df)]
 
         def window_f(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> list[Expression]:
-            tz = DeferredTimeZone(df.native)
-            native_dtype = narwhals_to_native_dtype(dtype, self._version, tz)
+            native_dtype = _validated_dtype(dtype, df)
             return [expr.cast(native_dtype) for expr in self.window_function(df, inputs)]
 
         return self.__class__(
