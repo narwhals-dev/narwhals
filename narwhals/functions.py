@@ -1425,9 +1425,10 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
     """Start a `when-then-otherwise` expression.
 
     Expression similar to an `if-else` statement in Python. Always initiated by a
-    `pl.when(<condition>).then(<value if condition>)`, and optionally followed by a
-    `.otherwise(<value if condition is false>)` can be appended at the end. If not
-    appended, and the condition is not `True`, `None` will be returned.
+    `nw.when(<condition>).then(<value if condition>)`, and optionally followed by
+    chained `.when(<condition>).then(<value>)` calls.
+    An `.otherwise(<value if condition is false>)` can be appended at the end.
+    If not appended, and the condition is not `True`, `None` will be returned.
 
     Arguments:
         predicates: Condition(s) that must be met in order to apply the subsequent
@@ -1453,6 +1454,25 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
         | 0  1   5       5 |
         | 1  2  10       5 |
         | 2  3  15       6 |
+        └──────────────────┘
+
+        Multiple conditions can be chained:
+
+        >>> nw.from_native(df_native).with_columns(
+        ...     nw.when(nw.col("a") == 1)
+        ...     .then(10)
+        ...     .when(nw.col("a") == 2)
+        ...     .then(20)
+        ...     .otherwise(30)
+        ...     .alias("a_when")
+        ... )
+        ┌──────────────────┐
+        |Narwhals DataFrame|
+        |------------------|
+        |    a   b  a_when |
+        | 0  1   5      10 |
+        | 1  2  10      20 |
+        | 2  3  15      30 |
         └──────────────────┘
     """
     return When(*predicates, chain=[])
