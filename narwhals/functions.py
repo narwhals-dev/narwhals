@@ -1380,42 +1380,40 @@ class When:
         return Then._from_chain(new_chain)
 
 
+_MISSING: Any = object()
+
+
 class Then(Expr):
     _chain: list[tuple[Expr, IntoExpr | NonNestedLiteral]]
 
     @classmethod
     def _from_chain(cls, chain: list[tuple[Expr, IntoExpr | NonNestedLiteral]]) -> Self:
-        result = None
-        for predicate, then_value in reversed(chain):
-            result = cls._from_exprs(predicate, then_value, result)
-        result = cast("Self", result)
+        result = cls._build_nested(chain)
         result._chain = chain
         return result
 
     @classmethod
-    def _from_exprs(
+    def _build_nested(
         cls,
-        predicate: Expr,
-        then_value: IntoExpr | NonNestedLiteral,
-        otherwise_value: IntoExpr | NonNestedLiteral = None,
+        chain: list[tuple[Expr, IntoExpr | NonNestedLiteral]],
+        otherwise_value: IntoExpr | NonNestedLiteral = _MISSING,
     ) -> Self:
+        """Build the full nested when/then expression tree from a chain."""
+        result: Self = cast("Self", otherwise_value)
         exprs: tuple[IntoExpr | NonNestedLiteral, ...]
-        if otherwise_value is None:
-            exprs = (predicate, then_value)
-        else:
-            exprs = (predicate, then_value, otherwise_value)
-        node = ExprNode(
-            ExprKind.ELEMENTWISE, "when_then", exprs=exprs, allow_multi_output=False
-        )
-        return cls(node)
-
-    def otherwise(self, otherwise_value: IntoExpr | NonNestedLiteral) -> Then:
-        # Build the nested structure from the chain (innermost first)
-        result = otherwise_value
-        for predicate, then_value in reversed(self._chain):
-            result = Then._from_exprs(predicate, then_value, result)
-        assert isinstance(result, Then)  # noqa: S101
+        for predicate, then_value in reversed(chain):
+            if result is _MISSING:
+                exprs = (predicate, then_value)
+            else:
+                exprs = (predicate, then_value, result)
+            node = ExprNode(
+                ExprKind.ELEMENTWISE, "when_then", exprs=exprs, allow_multi_output=False
+            )
+            result = cls(node)
         return result
+
+    def otherwise(self, otherwise_value: IntoExpr | NonNestedLiteral) -> Self:
+        return self._build_nested(self._chain, otherwise_value)
 
     def when(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> When:
         return When(*predicates, chain=self._chain)
