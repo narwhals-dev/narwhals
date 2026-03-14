@@ -86,11 +86,18 @@ def nodes() -> Any:
 
 class Node(Protocol[NodeT, Get]):
     # Hoping to make it easier to document this way
+    # overlaps with https://github.com/narwhals-dev/narwhals/blob/c5a624885b845a1a9fcab849296424879197f6e5/narwhals/_plan/plans/_base.py#L13-L27
     __slots__ = ("name",)
     name: str
 
-    def iter_left(self, instance: NodeT, /) -> Iterator[NodeT]: ...
-    def iter_right(self, instance: NodeT, /) -> Iterator[NodeT]: ...
+    def iter_left(self, instance: NodeT, /) -> Iterator[NodeT]:
+        """Yield nodes recursively from root->leaf."""
+        ...
+
+    def iter_right(self, instance: NodeT, /) -> Iterator[NodeT]:
+        """Yield nodes recursively from leaf->root."""
+        ...
+
     def with_name(self, name: str, /) -> Self:
         # - Called during `type.__new__`, when we have the `name`
         # - If we used a descriptor with `__set_name__`, that would be too late to move
@@ -99,6 +106,7 @@ class Node(Protocol[NodeT, Get]):
         return self
 
     def get(self, instance: NodeT, /) -> Get:
+        """Get the implementation of this node from `instance`."""
         node: Get = getattr(instance, self.name)
         return node
 
@@ -118,6 +126,7 @@ class ExprNode(Node["ExprIR", Get], Protocol[Get, IsScalarT]):
 
     @property
     def observe_scalar(self) -> IsScalarT: ...
+    def iter_output_name(self, instance: ExprIR, /) -> Iterator[ExprIR]: ...
 
 
 class SingleExpr(ExprNode["ExprIR", IsScalarT]):
@@ -144,6 +153,9 @@ class SingleExpr(ExprNode["ExprIR", IsScalarT]):
 
     def iter_right(self, instance: ExprIR) -> Iterator[ExprIR]:
         yield from self.get(instance).iter_right()
+
+    def iter_output_name(self, instance: ExprIR) -> Iterator[ExprIR]:
+        yield from self.get(instance).iter_output_name()
 
     def is_scalar(self, instance: ExprIR) -> bool:
         return self.get(instance).is_scalar()
@@ -175,6 +187,10 @@ class MultipleExpr(ExprNode["Seq[ExprIR]", _Skip]):
             for expr in reversed(exprs):
                 yield from expr.iter_right()
 
+    def iter_output_name(self, instance: ExprIR) -> Iterator[ExprIR]:
+        for lhs in self.get(instance)[:1]:
+            yield from lhs.iter_output_name()
+
     def map_nodes(self, instance: ExprIR, function: MapIR, /) -> Seq[ExprIR] | None:
         if before := self.get(instance):
             after = tuple(e.map_ir(function) for e in before)
@@ -190,7 +206,6 @@ _EXPR_NODE_TYPES = (SingleExpr, MultipleExpr)
 """Do not use outside of `ExprIRMeta.__new__`."""
 
 
-# TODO @dangotbanned: generalize `iter_output_name`?
 # TODO @dangotbanned: Maybe *this* should be a descriptor?
 #  - `instance` would be bound on `ExprIR().__expr_ir_nodes__`
 class ExprTraverser:
@@ -217,15 +232,25 @@ class ExprTraverser:
         return ExprTraverser((*parent._nodes, *nodes))
 
     def iter_left(self, instance: ExprIR) -> Iterator[ExprIR]:
+        """Yield nodes recursively from root->leaf."""
         for node in self._nodes:
             yield from node.iter_left(instance)
         yield instance
 
     def iter_right(self, instance: ExprIR) -> Iterator[ExprIR]:
+        """Yield nodes recursively from leaf->root."""
         yield instance
         if nodes := self._nodes:
             for node in reversed(nodes):
                 yield from node.iter_right(instance)
+
+    def iter_output_name(self, instance: ExprIR) -> Iterator[ExprIR]:
+        """Follow the **left-hand-side** of the graph until we can derive an output name.
+
+        See `ExprIR.iter_output_name` for examples.
+        """
+        if nodes := self._nodes:
+            yield from nodes[0].iter_output_name(instance)
 
     def is_scalar(self, instance: ExprIR) -> bool:
         # NOTE: Acrobatics because `all(...)` returns True on an empty iterable,

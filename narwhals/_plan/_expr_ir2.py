@@ -58,16 +58,23 @@ from typing import TYPE_CHECKING, Any, ClassVar, Generic
 from narwhals._plan._immutable import Immutable
 from narwhals._plan._meta import ExprIRMeta
 from narwhals._plan._nodes import ExprTraverser, MapIR, node, nodes
-from narwhals._plan.options import SortMultipleOptions, SortOptions
+from narwhals._plan.options import FunctionOptions, SortMultipleOptions, SortOptions
 from narwhals._plan.typing import OperatorT, SelectorOperatorT
 from narwhals._typing_compat import TypeVar
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
+    from typing_extensions import TypeAlias
+
+    from narwhals._compliant.typing import AliasName
     from narwhals._plan._dispatch import Dispatcher
     from narwhals._plan._dtype import ResolveDType
+    from narwhals._plan.expressions import selectors as cs
     from narwhals._plan.typing import Seq
+    from narwhals.dtypes import DType
+
+Incomplete: TypeAlias = Any
 
 
 class ExprIR(Immutable, metaclass=ExprIRMeta):
@@ -83,11 +90,50 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
     def iter_right(self) -> Iterator[ExprIR]:
         yield from self.__expr_ir_nodes__.iter_right(self)
 
-    # TODO @dangotbanned: *Do* need to override on
-    # - `Len`, `Literal.value`, `FunctionExpr.function`
-    # NOTE: Don't need to override on False anymore (0 observing scalar == False)
-    # - `Column`, `Filter`, `Over`, `OverOrdered`,`SelectorIR`
+    def iter_output_name(self) -> Iterator[ExprIR]:
+        """Follow the **left-hand-side** of the graph until we can derive an output name.
+
+        Used for `ExprIR.meta.output_name` and will stop as soon as we see one of:
+
+        A root node with a `name`:
+
+            Column
+            Literal
+            Len
+
+        A leaf node with a `name`:
+
+            Alias
+
+        A special case where we can navigate to a name:
+
+            RootSelector(selector=cs.ByName(names=("name",), ...))
+            #                                       ^^^^
+            #                 Equivalent to `col("name")`
+
+            StructExpr(function=FieldByName(name="name"), ...)
+            #                                     ^^^^
+            #    Same idea, but with a `Struct` schema
+
+        A leaf node that transforms the name of the above:
+
+            RenameAlias
+
+        A leaf node that requires schema context for expansion, raising
+        instead of recursing further:
+
+            KeepName
+        """
+        yield from self.__expr_ir_nodes__.iter_output_name(self)
+
     def is_scalar(self) -> bool:
+        """Return True if this leaf produces a single value.
+
+        Subclasses should override in 2 cases.
+
+        1. They are unconditionally scalar (`Len`, `AggExpr`)
+        2. They answer the question using non-node fields (`FunctionExpr.function`, `Literal.value`)
+        """
         return self.__expr_ir_nodes__.is_scalar(self)
 
     def map_ir(self, function: MapIR, /) -> ExprIR:
@@ -102,9 +148,37 @@ class SelectorIR(ExprIR):
         return True
 
 
+class AggExpr(ExprIR):
+    __slots__ = ("expr",)
+    expr: ExprIR = node()
+
+    def is_scalar(self) -> bool:
+        return True
+
+
+class KeepName(ExprIR):
+    __slots__ = ("expr",)
+    expr: ExprIR = node()
+
+    def iter_output_name(self) -> Iterator[ExprIR]:
+        yield self
+
+
+class RenameAlias(ExprIR):
+    __slots__ = ("expr", "function")
+    expr: ExprIR = node()
+    function: AliasName
+
+    def iter_output_name(self) -> Iterator[ExprIR]:
+        yield self
+
+
 class Column(ExprIR):
     __slots__ = ("name",)
     name: str
+
+    def iter_output_name(self) -> Iterator[ExprIR]:
+        yield self
 
 
 class Alias(ExprIR):
@@ -112,12 +186,70 @@ class Alias(ExprIR):
     expr: ExprIR = node()
     name: str
 
+    def iter_output_name(self) -> Iterator[ExprIR]:
+        yield self
+
+
+class Literal(ExprIR):
+    __slots__ = ("value",)
+    value: Incomplete
+
+    def iter_output_name(self) -> Iterator[ExprIR]:
+        yield self
+
+    def is_scalar(self) -> bool:
+        return self.value.is_scalar  # type: ignore[no-any-return]
+
+    @property
+    def dtype(self) -> DType:
+        return self.value.dtype  # type: ignore[no-any-return]
+
+    @property
+    def name(self) -> str:
+        return self.value.name  # type: ignore[no-any-return]
+
+
+class Cast(ExprIR):
+    __slots__ = ("dtype", "expr")
+    expr: ExprIR = node()
+    dtype: DType
+
+
+class Sort(ExprIR):
+    __slots__ = ("expr", "options")
+    expr: ExprIR = node()
+    options: SortOptions
+
 
 class SortBy(ExprIR):
     __slots__ = ("by", "expr", "options")
     expr: ExprIR = node()
     by: Seq[ExprIR] = nodes()
     options: SortMultipleOptions
+
+
+class FunctionExpr(ExprIR):
+    __slots__ = ("function", "input", "options")
+    input: Seq[ExprIR] = nodes()
+    function: Incomplete
+    options: FunctionOptions
+
+    def is_scalar(self) -> bool:
+        return self.function.is_scalar  # type: ignore[no-any-return]
+
+
+class StructExpr(FunctionExpr):
+    def needs_expansion(self) -> bool:
+        return self.function.needs_expansion or super().needs_expansion()
+
+    def iter_output_name(self) -> Iterator[ExprIR]:
+        yield self
+
+
+class Filter(ExprIR):
+    __slots__ = ("by", "expr")
+    expr: ExprIR = node(observe_scalar=False)
+    by: ExprIR = node(observe_scalar=False)
 
 
 class Over(ExprIR):
@@ -131,6 +263,18 @@ class OverOrdered(Over):
     __slots__ = ("order_by", "sort_options")
     order_by: Seq[ExprIR] = nodes()
     sort_options: SortOptions
+
+
+class Len(ExprIR):
+    def is_scalar(self) -> bool:
+        return True
+
+    @property
+    def name(self) -> str:
+        return "len"
+
+    def iter_output_name(self) -> Iterator[ExprIR]:
+        yield self
 
 
 LeftT = TypeVar("LeftT", bound="ExprIR", default="ExprIR")
@@ -147,6 +291,23 @@ class BinaryExpr(ExprIR, Generic[LeftT, OperatorT, RightT]):
         return f"[({self.left!r}) {self.op!r} ({self.right!r})]"
 
 
+class TernaryExpr(ExprIR):
+    __slots__ = ("falsy", "predicate", "truthy")
+    # `truthy` is defined first because the root is from `when(...).then(<here>)`
+    truthy: ExprIR = node()
+    predicate: ExprIR = node()
+    falsy: ExprIR = node()
+
+
+class RootSelector(SelectorIR):
+    __slots__ = ("selector",)
+    selector: cs.Selector
+
+    def iter_output_name(self) -> Iterator[ExprIR]:
+        yield self
+
+
+SelectorT = TypeVar("SelectorT", bound="SelectorIR", default="SelectorIR")
 LeftSelectorT = TypeVar("LeftSelectorT", bound="SelectorIR", default="SelectorIR")
 RightSelectorT = TypeVar("RightSelectorT", bound="SelectorIR", default="SelectorIR")
 
@@ -171,6 +332,11 @@ class BinarySelector(
 
     def __repr__(self) -> str:
         return f"[({self.left!r}) {self.op!r} ({self.right!r})]"
+
+
+class InvertSelector(SelectorIR, Generic[SelectorT]):
+    __slots__ = ("selector",)
+    selector: SelectorT
 
 
 # ruff: noqa: F841
