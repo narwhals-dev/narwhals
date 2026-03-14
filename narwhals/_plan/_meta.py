@@ -95,7 +95,6 @@ class ImmutableMeta(SlottedMeta):
         return super().__new__(metacls, cls_name, bases, namespace, **kwds)  # type: ignore[no-any-return, misc]
 
 
-# towards https://github.com/narwhals-dev/narwhals/commit/4b0431a234808450a61d8b5260c8769f8cebff7b
 @dataclass_transform(
     kw_only_default=True,
     frozen_default=True,
@@ -133,12 +132,15 @@ class ExprIRMeta(ImmutableMeta):
         return tp  # type: ignore[no-any-return]
 
 
+# TODO @dangotbanned: probably turn into a `@staticmethod`
 def _expr_meta_massage_namespace(
     namespace: dict[str, Any],
 ) -> tuple[dict[str, Any], _nodes.IntoExprNodes]:
     """What on earth is this?
 
-    The steps after this are needed if the new class used the following syntax:
+    ## What?
+
+    These steps are needed *iff* the new class used the following syntax:
 
         class Subclass(ExprIR):
             __slots__ = ("expr", "non_node")
@@ -148,9 +150,9 @@ def _expr_meta_massage_namespace(
             non_node: str
 
     Because `expr` appears both in `__slots__` (1) and in `__dict__` (2),
-    we would normally see a runtime error:
+    we would normally see:
 
-        # TODO @dangotbanned: Add error output
+        ValueError: 'expr' in __slots__ conflicts with class variable
 
     However, what we actually want is to transform the definition into this:
 
@@ -169,37 +171,51 @@ def _expr_meta_massage_namespace(
             # ^                                         | ExprTraverser[1]
             # |                                         |     expr: ExprIR = node()
             # has a repr that looks like the source definition
+
+    ## How?
+    A simple, unoptimized version might look like this:
+
+        def pop_nodes(namespace: dict[str, Any]) -> tuple[dict[str, Any], list[Any]]:
+            slots = namespace.get("__slots__", ())
+            pop = namespace.pop
+            nodes = [pop(name).with_name(name) for name in tuple(namespace) if name in slots]
+            return namespace, nodes
+
+    *But*, since this code will be [executed for each new subclass] - we take 4 steps
+    to avoid hogging cycles at import-time.
+
+    If either of these are true, we have no work to do:
+    1. we *don't* have new `__slots__`
+    2. we do, but they *don't* intersect with `namespace`
+
+    If we have some work, we can avoid iterating over `namespace` *iff*:
+
+    3. Our intersection is a single name
+
+    Surprisingly, that covers 87% of cases (34/39) *already*.
+
+    For everything else (4), we do a `namespace`-ordered pass
+    but work destructively on the intersection to stop as early as we can.
+
+    [executed for each new subclass]: https://docs.python.org/3/reference/datamodel.html#class-object-creation
     """
     slots: tuple[str, ...]
     nodes = []
 
-    # - The order defined in `namespace` is significant and must be preserved
-    #   when moving to `__expr_ir_nodes__`
-    # - The order in `__slots__` is probably different ([RUF023]), so we *may*
-    #   need to do a (relatively) slow `namespace`-ordered search
-    # - Since this code will run at import-time, there are **4** guards to stop as early as possible
-    # [RUF023]: https://docs.astral.sh/ruff/rules/unsorted-dunder-slots/
-
-    # (1): If there were no new slots, or
-    # (2): All new slots did not *also* assign to `__dict__` then we're done
+    # Steps 1, 2
     if (slots := namespace.get("__slots__", ())) and (
         intersection := namespace.keys() & slots
     ):
-        # NOTE: ^^^ These acrobatics gave us the right names, but no guarantee on order ...
-
-        # (3): ... but who needs order anyway?
+        # Step 3
         if len(intersection) == 1:
             name = intersection.pop()
             nodes.append(_ensure_node(name, namespace.pop(name)))
             return namespace, nodes
 
-        # NOTE: ... I do!
-        # We need ownership for the iterator as `namespace` is going to be mutated at least twice
+        # Step 4
         for name in tuple(namespace):
             if name in intersection:
                 nodes.append(_ensure_node(name, namespace.pop(name)))
-                # (4): In most cases `len(intersection) == 1`, but here will be <= 3`
-                #      Whereas these classes have `len(namespace) >= 8`
                 intersection.remove(name)
                 if not intersection:
                     break
