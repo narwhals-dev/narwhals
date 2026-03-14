@@ -81,7 +81,7 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
     __expr_ir_dispatch__: ClassVar[Dispatcher[Any]]
     __expr_ir_dtype__: ClassVar[ResolveDType[Any]]
 
-    __expr_ir_nodes__: ClassVar[ExprTraverser]
+    __expr_ir_nodes__: ClassVar[ExprTraverser] = ExprTraverser(())
     """Brand new fancy boi"""
 
     def iter_left(self) -> Iterator[ExprIR]:

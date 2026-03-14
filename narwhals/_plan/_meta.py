@@ -108,10 +108,9 @@ class ExprIRMeta(ImmutableMeta):
     `ExprIRMeta` is intended to work within the following (narrow) constraints:
     - It is the [most derived metaclass]
       - You can use `Generic`, but cannot use `Protocol`
-    - It is used as the `metaclass` hint for a single base class named `ExprIR`, which all other
+    - It is used as the `metaclass` hint for a single base class (`ExprIR`), which all other
       callers of `ExprIRMeta.__new__` inherit from
     - Only the types returned by `field_specifiers` may be present in both `__slots__` and `namespace`
-
 
     [most derived metaclass]: https://docs.python.org/3/reference/datamodel.html#determining-the-appropriate-metaclass
     """
@@ -124,7 +123,7 @@ class ExprIRMeta(ImmutableMeta):
         /,
         **kwds: Any,
     ) -> _typeshed.Self:
-        nodes, namespace = _expr_meta_massage_namespace(cls_name, namespace)
+        namespace, nodes = _expr_meta_massage_namespace(namespace)
         tp = super().__new__(metacls, cls_name, bases, namespace, **kwds)  # type: ignore[misc]
         if not TYPE_CHECKING:  # noqa: SIM102
             # `pyright` is quite unhappy w/ this, thinks that `Self` means `object` but it is a `type`!
@@ -135,8 +134,8 @@ class ExprIRMeta(ImmutableMeta):
 
 
 def _expr_meta_massage_namespace(
-    cls_name: str, namespace: dict[str, Any]
-) -> tuple[_nodes.IntoExprNodes, dict[str, Any]]:
+    namespace: dict[str, Any],
+) -> tuple[dict[str, Any], _nodes.IntoExprNodes]:
     """What on earth is this?
 
     The steps after this are needed if the new class used the following syntax:
@@ -173,8 +172,6 @@ def _expr_meta_massage_namespace(
     """
     slots: tuple[str, ...]
     nodes = []
-    if cls_name == "ExprIR":
-        namespace["__expr_ir_nodes__"] = _nodes.ExprTraverser(())
 
     # - The order defined in `namespace` is significant and must be preserved
     #   when moving to `__expr_ir_nodes__`
@@ -185,7 +182,7 @@ def _expr_meta_massage_namespace(
 
     # (1): If there were no new slots, or
     # (2): All new slots did not *also* assign to `__dict__` then we're done
-    elif (slots := namespace.get("__slots__", ())) and (
+    if (slots := namespace.get("__slots__", ())) and (
         intersection := namespace.keys() & slots
     ):
         # NOTE: ^^^ These acrobatics gave us the right names, but no guarantee on order ...
@@ -194,7 +191,7 @@ def _expr_meta_massage_namespace(
         if len(intersection) == 1:
             name = intersection.pop()
             nodes.append(_ensure_node(name, namespace.pop(name)))
-            return nodes, namespace
+            return namespace, nodes
 
         # NOTE: ... I do!
         # We need ownership for the iterator as `namespace` is going to be mutated at least twice
@@ -206,7 +203,7 @@ def _expr_meta_massage_namespace(
                 intersection.remove(name)
                 if not intersection:
                     break
-    return nodes, namespace
+    return namespace, nodes
 
 
 def _ensure_node(name: str, node: Any) -> _nodes._ExprNode:
