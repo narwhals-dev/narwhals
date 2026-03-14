@@ -256,12 +256,13 @@ class DispatcherOptions:
     Many expressions simply use the default:
     >>> from narwhals._plan import expressions as ir
     >>> from narwhals._plan._dispatch import DispatcherOptions
+    >>> from narwhals._plan._nodes import node
     >>> from narwhals._plan.options import ExplodeOptions
     >>>
-    >>> class Explode(ir.ExprIR, child=("expr",)):
-    ...     #                                  ^^ # default `dispatch`
+    >>> class Explode(ir.ExprIR):
+    ...     #                  ^ # default `dispatch`
     ...     __slots__ = ("expr",)
-    ...     expr: ir.ExprIR
+    ...     expr: ir.ExprIR = node()
 
     >>> Explode.__expr_ir_dispatch__
     Dispatcher<explode>

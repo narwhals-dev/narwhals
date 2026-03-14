@@ -606,7 +606,7 @@ class ArrowExpr(  # type: ignore[misc]
         series = self._dispatch_expr(node.input[0], frame, name)
         udf = node.function.function
         udf_result: Series | Iterable[Any] | Any = udf(series)
-        if node.is_scalar:
+        if node.is_scalar():
             return ArrowScalar.from_unknown(
                 udf_result, name, dtype=node.function.return_dtype, version=self.version
             )

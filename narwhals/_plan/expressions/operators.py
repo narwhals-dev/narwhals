@@ -62,10 +62,10 @@ class Operator(Immutable):
         if _is_filtration(left):
             if _is_filtration(right):
                 raise binary_expr_length_changing_error(left, self, right)
-            if not right.is_scalar:
+            if not right.is_scalar():
                 raise binary_expr_shape_error(left, self, right)
         elif _is_filtration(right):
-            if not left.is_scalar:
+            if not left.is_scalar():
                 raise binary_expr_shape_error(left, self, right)
         return BinaryExpr(left=left, op=self, right=right)
 
@@ -78,7 +78,7 @@ class Operator(Immutable):
 
 
 def _is_filtration(ir: ExprIR) -> bool:
-    return not ir.is_scalar and is_function_expr(ir) and not ir.options.is_elementwise()
+    return not ir.is_scalar() and is_function_expr(ir) and not ir.options.is_elementwise()
 
 
 class SelectorOperator(Operator, func=None):

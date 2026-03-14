@@ -231,7 +231,7 @@ def _parse_sort_by_into_iter_expr_ir(
     by: OneOrIterable[IntoExprColumn], more_by: Iterable[IntoExprColumn]
 ) -> Iterator[ExprIR]:
     for e in _parse_into_iter_expr_ir(by, *more_by):
-        if e.is_scalar:
+        if e.is_scalar():
             msg = f"All expressions sort keys must preserve length, but got:\n{e!r}"  # pragma: no cover
             raise InvalidOperationError(msg)  # pragma: no cover
         yield e

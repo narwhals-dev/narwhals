@@ -83,7 +83,7 @@ def expressions_to_schema(exprs: Iterable[NamedIR], schema: FrozenSchema) -> Fro
 
 def resolve_dtype_auto_implode(expr: NamedIR, schema: FrozenSchema, /) -> DType:
     dtype = expr.resolve_dtype(schema)
-    return dtype if expr.expr.is_scalar else dtypes.List(dtype)
+    return dtype if expr.expr.is_scalar() else dtypes.List(dtype)
 
 
 def align_diagonal(inputs: Seq[rp.ResolvedPlan]) -> Seq[rp.ResolvedPlan]:

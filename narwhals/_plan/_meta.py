@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     import _typeshed
     from typing_extensions import TypeAlias, dataclass_transform
 
-    from narwhals._plan import _expr_ir2
+    from narwhals._plan._expr_ir import ExprIR
     from narwhals._plan.typing import Seq
 
     T = TypeVar("T")
@@ -237,7 +237,7 @@ def _ensure_node(name: str, node: Any) -> _nodes._ExprNode:
 
 
 def _inherit_traverser(
-    metacls: type[ExprIRMeta], cls: type[_expr_ir2.ExprIR], extra: _nodes.IntoExprNodes
+    metacls: type[ExprIRMeta], cls: type[ExprIR], extra: _nodes.IntoExprNodes
 ) -> None:
     traverser = _nodes.ExprTraverser.inherit_from(cls.__expr_ir_nodes__, extra)
     metacls.__setattr__(cls, "__expr_ir_nodes__", traverser)

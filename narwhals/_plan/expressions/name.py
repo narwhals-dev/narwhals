@@ -4,33 +4,34 @@ from typing import TYPE_CHECKING
 
 from narwhals._plan._expr_ir import ExprIR
 from narwhals._plan._immutable import Immutable
+from narwhals._plan._nodes import node
 from narwhals._plan.expressions.namespace import ExprNamespace, IRNamespace
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from narwhals._compliant.typing import AliasName
     from narwhals._plan.expr import Expr
 
 
-class KeepName(ExprIR, child=("expr",), dispatch="no_dispatch"):
+class KeepName(ExprIR, dispatch="no_dispatch"):
     __slots__ = ("expr",)
-    expr: ExprIR
+    expr: ExprIR = node()
 
-    @property
-    def is_scalar(self) -> bool:
-        return self.expr.is_scalar
+    def iter_output_name(self) -> Iterator[ExprIR]:
+        yield self
 
     def __repr__(self) -> str:
         return f"{self.expr!r}.name.keep()"
 
 
-class RenameAlias(ExprIR, child=("expr",), dispatch="no_dispatch"):
+class RenameAlias(ExprIR, dispatch="no_dispatch"):
     __slots__ = ("expr", "function")
-    expr: ExprIR
+    expr: ExprIR = node()
     function: AliasName
 
-    @property
-    def is_scalar(self) -> bool:
-        return self.expr.is_scalar
+    def iter_output_name(self) -> Iterator[ExprIR]:
+        yield self
 
     def __repr__(self) -> str:
         return f".rename_alias({self.expr!r})"

@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import typing as t
-from typing import TYPE_CHECKING, final
+from typing import TYPE_CHECKING, Generic, final
 
 import narwhals._plan.dtypes_mapper as dtm
 from narwhals._plan._dispatch import DispatcherOptions
 from narwhals._plan._dtype import ResolveDType
 from narwhals._plan._expr_ir import ExprIR, SelectorIR
+from narwhals._plan._nodes import node, nodes
 from narwhals._plan.exceptions import (
     function_expr_invalid_operation_error,
     over_order_by_names_error,
@@ -80,14 +81,13 @@ def col(name: str, /) -> Column:
     return Column(name=name)
 
 
-class Alias(ExprIR, child=("expr",), dispatch="no_dispatch"):
+class Alias(ExprIR, dispatch="no_dispatch"):
     __slots__ = ("expr", "name")
-    expr: ExprIR
+    expr: ExprIR = node()
     name: str
 
-    @property
-    def is_scalar(self) -> bool:
-        return self.expr.is_scalar
+    def iter_output_name(self) -> Iterator[ExprIR]:
+        yield self
 
     def __repr__(self) -> str:
         return f"{self.expr!r}.alias({self.name!r})"
@@ -106,16 +106,21 @@ class Column(ExprIR, dispatch=namespaced("col")):
     def resolve_dtype(self, schema: FrozenSchema) -> DType:
         return schema[self.name]
 
+    def iter_output_name(self) -> Iterator[ExprIR]:
+        yield self
 
-class Literal(ExprIR, t.Generic[LiteralT], dispatch=namespaced("lit"), dtype=get_dtype()):
+
+class Literal(ExprIR, Generic[LiteralT], dispatch=namespaced("lit"), dtype=get_dtype()):
     """https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/expr.rs#L81."""
 
     __slots__ = ("value",)
     value: LiteralValue[LiteralT]
 
-    @property
     def is_scalar(self) -> bool:
         return self.value.is_scalar
+
+    def iter_output_name(self) -> Iterator[ExprIR]:
+        yield self
 
     @property
     def dtype(self) -> DType:
@@ -132,29 +137,16 @@ class Literal(ExprIR, t.Generic[LiteralT], dispatch=namespaced("lit"), dtype=get
         return self.value.unwrap()
 
 
-class _BinaryOp(ExprIR, t.Generic[LeftT, OperatorT, RightT]):
+class BinaryExpr(ExprIR, Generic[LeftT, OperatorT, RightT]):
+    """Application of two exprs via an `Operator`."""
+
     __slots__ = ("left", "op", "right")
-    left: LeftT
+    left: LeftT = node()
     op: OperatorT
-    right: RightT
+    right: RightT = node()
 
     def __repr__(self) -> str:
         return f"[({self.left!r}) {self.op!r} ({self.right!r})]"
-
-
-class BinaryExpr(
-    _BinaryOp[LeftT, OperatorT, RightT],
-    t.Generic[LeftT, OperatorT, RightT],
-    child=("left", "right"),
-):
-    """Application of two exprs via an `Operator`."""
-
-    @property
-    def is_scalar(self) -> bool:
-        return self.left.is_scalar and self.right.is_scalar
-
-    def iter_output_name(self) -> t.Iterator[ExprIR]:
-        yield from self.left.iter_output_name()
 
     def resolve_dtype(self, schema: FrozenSchema) -> DType:
         """NOTE: Supported on `Logical` and `TrueDivide` operators only.
@@ -169,62 +161,39 @@ class BinaryExpr(
         return self.op.resolve_dtype(self, schema)
 
 
-class Cast(ExprIR, child=("expr",), dtype=get_dtype()):
-    __slots__ = ("expr", "dtype")  # noqa: RUF023
-    expr: ExprIR
+class Cast(ExprIR, dtype=get_dtype()):
+    __slots__ = ("dtype", "expr")
+    expr: ExprIR = node()
     dtype: DType
-
-    @property
-    def is_scalar(self) -> bool:
-        return self.expr.is_scalar
 
     def __repr__(self) -> str:
         return f"{self.expr!r}.cast({self.dtype!r})"
 
-    def iter_output_name(self) -> t.Iterator[ExprIR]:
-        yield from self.expr.iter_output_name()
 
-
-class Sort(ExprIR, child=("expr",), dtype=same_dtype()):
+class Sort(ExprIR, dtype=same_dtype()):
     __slots__ = ("expr", "options")
-    expr: ExprIR
+    expr: ExprIR = node()
     options: SortOptions
-
-    @property
-    def is_scalar(self) -> bool:
-        return self.expr.is_scalar
 
     def __repr__(self) -> str:
         direction = "desc" if self.options.descending else "asc"
         return f"{self.expr!r}.sort({direction})"
 
-    def iter_output_name(self) -> t.Iterator[ExprIR]:
-        yield from self.expr.iter_output_name()
 
-
-class SortBy(ExprIR, child=("expr", "by"), dtype=same_dtype()):
-    """https://github.com/narwhals-dev/narwhals/issues/2534."""
-
+class SortBy(ExprIR, dtype=same_dtype()):
     __slots__ = ("expr", "by", "options")  # noqa: RUF023
-    expr: ExprIR
-    by: Seq[ExprIR]
+    expr: ExprIR = node()
+    by: Seq[ExprIR] = nodes()
     options: SortMultipleOptions
-
-    @property
-    def is_scalar(self) -> bool:
-        return self.expr.is_scalar
 
     def __repr__(self) -> str:
         return f"{self.expr!r}.sort_by(by={self.by!r}, options={self.options!r})"
-
-    def iter_output_name(self) -> t.Iterator[ExprIR]:
-        yield from self.expr.iter_output_name()
 
 
 # TODO @dangotbanned: Docs should complement `Function`
 # - The two are very tightly coupled
 # mypy: disable-error-code="misc"
-class FunctionExpr(ExprIR, t.Generic[FunctionT_co], child=("input",)):
+class FunctionExpr(ExprIR, Generic[FunctionT_co]):
     """**Representing `Expr::Function`**.
 
     https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/expr.rs#L114-L120
@@ -232,7 +201,7 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT_co], child=("input",)):
     """
 
     __slots__ = ("function", "input", "options")
-    input: Seq[ExprIR]
+    input: Seq[ExprIR] = nodes()
     # NOTE: mypy being mypy - the top error can't be silenced 🤦‍♂️
     # narwhals/_plan/expr.py: error: Cannot use a covariant type variable as a parameter  [misc]
     # narwhals/_plan/expr.py:272:15: error: Cannot use a covariant type variable as a parameter  [misc]
@@ -245,7 +214,6 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT_co], child=("input",)):
     options: FunctionOptions
     """Combined flags from chained operations."""
 
-    @property
     def is_scalar(self) -> bool:
         return self.function.is_scalar
 
@@ -256,24 +224,6 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT_co], child=("input",)):
                 return f"{first!r}.{self.function!r}({list(self.input[1:])!r})"
             return f"{first!r}.{self.function!r}()"
         return f"{self.function!r}()"
-
-    def iter_output_name(self) -> t.Iterator[ExprIR]:
-        """When we have multiple inputs, we want the name of the left-most expression.
-
-        For expr:
-
-            col("c").alias("x").fill_null(50)
-
-        We are interested in the name which comes from the root:
-
-            FunctionExpr(..., [Alias(..., name='...'), Literal(...), ...])
-            #                  ^^^^^            ^^^
-        """
-        for e in self.input[:1]:
-            yield from e.iter_output_name()
-        # NOTE: Covering the empty case doesn't make sense without implementing `FunctionFlags.ALLOW_EMPTY_INPUTS`
-        # https://github.com/pola-rs/polars/blob/df69276daf5d195c8feb71eef82cbe9804e0f47f/crates/polars-plan/src/plans/options.rs#L106-L107
-        return  # pragma: no cover
 
     # NOTE: Interacting badly with `pyright` synthesizing the `__replace__` signature
     if not TYPE_CHECKING:
@@ -287,7 +237,7 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT_co], child=("input",)):
             **kwds: t.Any,
         ) -> None:
             parent = input[0]
-            if parent.is_scalar and not options.is_elementwise():
+            if parent.is_scalar() and not options.is_elementwise():
                 raise function_expr_invalid_operation_error(function, parent)
             kwargs = dict(input=input, function=function, options=options, **kwds)
             super().__init__(**kwargs)
@@ -356,7 +306,7 @@ class RangeExpr(FunctionExpr[RangeT_co]):
         if len(input) < 2:
             msg = f"Expected at least 2 inputs for `{function!r}()`, but got `{len(input)}`.\n`{input}`"
             raise InvalidOperationError(msg)
-        if not all(e.is_scalar for e in input):
+        if not all(e.is_scalar() for e in input):
             raise range_expr_non_scalar_error(input, function)
         super(ExprIR, self).__init__(
             **dict(input=input, function=function, options=options, **kwds)
@@ -375,24 +325,20 @@ class StructExpr(FunctionExpr[StructT_co]):
     def needs_expansion(self) -> bool:
         return self.function.needs_expansion or super().needs_expansion()
 
-    def iter_output_name(self) -> t.Iterator[ExprIR]:
+    def iter_output_name(self) -> Iterator[ExprIR]:
         yield self
-        yield from super().iter_output_name()  # pragma: no cover
 
 
-class Filter(ExprIR, child=("expr", "by"), dtype=same_dtype()):
+class Filter(ExprIR, dtype=same_dtype()):
     __slots__ = ("expr", "by")  # noqa: RUF023
-    expr: ExprIR
-    by: ExprIR
+    expr: ExprIR = node(observe_scalar=False)
+    by: ExprIR = node(observe_scalar=False)
 
     def __repr__(self) -> str:
         return f"{self.expr!r}.filter({self.by!r})"
 
-    def iter_output_name(self) -> t.Iterator[ExprIR]:
-        yield from self.expr.iter_output_name()
 
-
-class Over(ExprIR, child=("expr", "partition_by"), dtype=same_dtype()):
+class Over(ExprIR, dtype=same_dtype()):
     """A fully specified `.over()`, that occurred after another expression.
 
     Related:
@@ -402,22 +348,17 @@ class Over(ExprIR, child=("expr", "partition_by"), dtype=same_dtype()):
     """
 
     __slots__ = ("expr", "partition_by")
-    expr: ExprIR
+    expr: ExprIR = node(observe_scalar=False)
     """For lazy backends, this should be the only place we allow `rolling_*`, `cum_*`."""
-    partition_by: Seq[ExprIR]
+    partition_by: Seq[ExprIR] = nodes()
 
     def __repr__(self) -> str:
         return f"{self.expr!r}.over({list(self.partition_by)!r})"
 
-    def iter_output_name(self) -> t.Iterator[ExprIR]:
-        yield from self.expr.iter_output_name()
 
-
-class OverOrdered(Over, child=("expr", "partition_by", "order_by")):
+class OverOrdered(Over):
     __slots__ = ("order_by", "sort_options")
-    expr: ExprIR
-    partition_by: Seq[ExprIR]
-    order_by: Seq[ExprIR]
+    order_by: Seq[ExprIR] = nodes()
     sort_options: SortOptions
 
     def __repr__(self) -> str:
@@ -443,7 +384,6 @@ class OverOrdered(Over, child=("expr", "partition_by", "order_by")):
 
 
 class Len(ExprIR, dispatch=namespaced(), dtype=dtm.IDX_DTYPE):
-    @property
     def is_scalar(self) -> bool:
         return True
 
@@ -454,27 +394,24 @@ class Len(ExprIR, dispatch=namespaced(), dtype=dtm.IDX_DTYPE):
     def __repr__(self) -> str:
         return "len()"
 
+    def iter_output_name(self) -> Iterator[ExprIR]:
+        yield self
+
 
 # TODO @dangotbanned: `get_supertype`, `nw.Null`
-class TernaryExpr(ExprIR, child=("truthy", "falsy", "predicate")):
+class TernaryExpr(ExprIR):
     """When-Then-Otherwise."""
 
     __slots__ = ("truthy", "falsy", "predicate")  # noqa: RUF023
-    predicate: ExprIR
-    truthy: ExprIR
-    falsy: ExprIR
-
-    @property
-    def is_scalar(self) -> bool:
-        return self.predicate.is_scalar and self.truthy.is_scalar and self.falsy.is_scalar
+    # `truthy` is defined first because the root is from `when(...).then(<here>)`
+    truthy: ExprIR = node()
+    predicate: ExprIR = node()
+    falsy: ExprIR = node()
 
     def __repr__(self) -> str:
         return (
             f".when({self.predicate!r}).then({self.truthy!r}).otherwise({self.falsy!r})"
         )
-
-    def iter_output_name(self) -> t.Iterator[ExprIR]:
-        yield from self.truthy.iter_output_name()
 
     def resolve_dtype(self, schema: FrozenSchema) -> DType:
         msg = f"Unable to resolve dtype for {(type(self).__name__)!r}:\n{self!r}\n\n"
@@ -500,6 +437,9 @@ class RootSelector(SelectorIR):
     ) -> Iterator[str]:
         yield from self.selector.iter_expand(schema, ignored_columns)
 
+    def iter_output_name(self) -> Iterator[ExprIR]:
+        yield self
+
     def matches(self, dtype: IntoDType) -> bool:
         return self.selector.to_dtype_selector().matches(dtype)
 
@@ -509,12 +449,17 @@ class RootSelector(SelectorIR):
 
 @final
 class BinarySelector(
-    # NOTE: The order of `BinarySelector`s bases must preserve `SelectorIR` overrides of `ExprIR`.
-    SelectorIR,
-    _BinaryOp[LeftSelectorT, SelectorOperatorT, RightSelectorT],
-    t.Generic[LeftSelectorT, SelectorOperatorT, RightSelectorT],
+    SelectorIR, Generic[LeftSelectorT, SelectorOperatorT, RightSelectorT]
 ):
     """Application of two selector exprs via a set operator."""
+
+    __slots__ = ("left", "op", "right")
+    left: LeftSelectorT
+    op: SelectorOperatorT
+    right: RightSelectorT
+
+    def __repr__(self) -> str:
+        return f"[({self.left!r}) {self.op!r} ({self.right!r})]"
 
     def iter_expand_names(
         self, schema: FrozenSchema, ignored_columns: Ignored
@@ -548,7 +493,7 @@ class BinarySelector(
 
 
 @final
-class InvertSelector(SelectorIR, t.Generic[SelectorT]):
+class InvertSelector(SelectorIR, Generic[SelectorT]):
     __slots__ = ("selector",)
     selector: SelectorT
 

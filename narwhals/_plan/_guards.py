@@ -134,7 +134,7 @@ def is_agg_expr(obj: Any) -> TypeIs[ir.AggExpr]:
 
 def is_aggregation(obj: Any) -> TypeIs[ir.AggExpr | ir.FunctionExpr[Any]]:
     """Superset of `ExprIR.is_scalar`, excludes literals & len."""
-    return is_agg_expr(obj) or (is_function_expr(obj) and obj.is_scalar)
+    return is_agg_expr(obj) or (is_function_expr(obj) and obj.is_scalar())
 
 
 def is_literal(obj: Any) -> TypeIs[ir.Literal[Any]]:

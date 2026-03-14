@@ -123,7 +123,7 @@ class ExprListNamespace(ExprNamespace[IRListNamespace]):
     def contains(self, item: IntoExpr) -> Expr:
         item_ir = parse_into_expr_ir(item, str_as_lit=True)
         contains = self._ir.contains()
-        if not item_ir.is_scalar:
+        if not item_ir.is_scalar():
             raise function_arg_non_scalar_error(contains, "item", item_ir)
         return self._expr._from_ir(contains.to_function_expr(self._expr._ir, item_ir))
 

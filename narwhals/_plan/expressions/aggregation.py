@@ -5,11 +5,10 @@ from typing import TYPE_CHECKING, Any
 import narwhals._plan.dtypes_mapper as dtm
 from narwhals._plan._dtype import ResolveDType
 from narwhals._plan._expr_ir import ExprIR
+from narwhals._plan._nodes import node
 from narwhals._plan.exceptions import agg_scalar_error
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
-
     from narwhals.typing import RollingInterpolationMethod
 
 # NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
@@ -17,25 +16,21 @@ map_first = ResolveDType.expr_ir.map_first
 same_dtype = ResolveDType.expr_ir.same_dtype
 
 
-class AggExpr(ExprIR, child=("expr",)):
+class AggExpr(ExprIR):
     __slots__ = ("expr",)
-    expr: ExprIR
+    expr: ExprIR = node()
 
-    @property
     def is_scalar(self) -> bool:
         return True
 
     def __repr__(self) -> str:
         return f"{self.expr!r}.{self.__expr_ir_dispatch__.name}()"
 
-    def iter_output_name(self) -> Iterator[ExprIR]:
-        yield from self.expr.iter_output_name()
-
     # NOTE: Interacting badly with `pyright` synthesizing the `__replace__` signature
     if not TYPE_CHECKING:
 
         def __init__(self, *, expr: ExprIR, **kwds: Any) -> None:
-            if expr.is_scalar:
+            if expr.is_scalar():
                 raise agg_scalar_error(self, expr)
             super().__init__(expr=expr, **kwds)  # pyright: ignore[reportCallIssue]
     else:  # pragma: no cover

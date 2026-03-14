@@ -24,12 +24,11 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self, TypeAlias
 
-    from narwhals._plan._expr_ir2 import ExprIR
-    from narwhals._plan.typing import Seq
+    from narwhals._plan._expr_ir import ExprIR
+    from narwhals._plan.typing import MapIR, Seq
 
 NodeT = TypeVar("NodeT")
 Get = TypeVar("Get", covariant=True)  # noqa: PLC0105
-MapIR: TypeAlias = "Callable[[ExprIR], ExprIR]"
 
 
 class IsScalar(enum.Enum):
@@ -57,6 +56,7 @@ IsScalarT = TypeVar(  # noqa: PLC0105
 )
 
 
+# TODO @dangotbanned: Doc needs to focus on `node(...)`
 def node(*, observe_scalar: bool = True) -> Any:
     """Singular `ExprIR` field specifier.
 
@@ -72,6 +72,7 @@ def node(*, observe_scalar: bool = True) -> Any:
     return SingleExpr(_OBSERVE) if observe_scalar else SingleExpr(_SKIP)
 
 
+# TODO @dangotbanned: Doc needs to focus on `nodes()`
 def nodes() -> Any:
     """Multiple `ExprIR` field specifier.
 
@@ -84,10 +85,12 @@ def nodes() -> Any:
     return MultipleExpr()
 
 
+# TODO @dangotbanned: Class doc, focus on why a convention for traversal matters
 class Node(Protocol[NodeT, Get]):
     # Hoping to make it easier to document this way
     # overlaps with https://github.com/narwhals-dev/narwhals/blob/c5a624885b845a1a9fcab849296424879197f6e5/narwhals/_plan/plans/_base.py#L13-L27
     __slots__ = ("name",)
+    # TODO @dangotbanned: Doc
     name: str
 
     def iter_left(self, instance: NodeT, /) -> Iterator[NodeT]:
@@ -98,6 +101,7 @@ class Node(Protocol[NodeT, Get]):
         """Yield nodes recursively from leaf->root."""
         ...
 
+    # TODO @dangotbanned: Doc (maybe)
     def with_name(self, name: str, /) -> Self:
         # - Called during `type.__new__`, when we have the `name`
         # - If we used a descriptor with `__set_name__`, that would be too late to move
@@ -206,8 +210,6 @@ _EXPR_NODE_TYPES = (SingleExpr, MultipleExpr)
 """Do not use outside of `ExprIRMeta.__new__`."""
 
 
-# TODO @dangotbanned: Maybe *this* should be a descriptor?
-#  - `instance` would be bound on `ExprIR().__expr_ir_nodes__`
 class ExprTraverser:
     """Field specifier based iteration backend for `ExprIR`.
 

@@ -9,6 +9,7 @@ import narwhals as nw
 from narwhals import _plan as nwp
 from narwhals._plan import expressions as ir, selectors as ncs
 from narwhals._plan._dispatch import DispatcherOptions, get_dispatch_name
+from narwhals._plan._nodes import node
 from tests.plan.utils import DataFrame, assert_equal_data, named_ir, re_compile
 
 if TYPE_CHECKING:
@@ -63,11 +64,9 @@ def test_missing_compliant(
 
     class MissingMethod(ir.Function, accessor="str"): ...
 
-    class MissingNamespaced(
-        ir.ExprIR, child=("expr",), dispatch=DispatcherOptions.namespaced()
-    ):
+    class MissingNamespaced(ir.ExprIR, dispatch=DispatcherOptions.namespaced()):
         __slots__ = ("expr",)
-        expr: ir.ExprIR
+        expr: ir.ExprIR = node()
 
     df = dataframe(data)
     expr = MissingNamespaced(expr=ir.col("b")).to_narwhals()

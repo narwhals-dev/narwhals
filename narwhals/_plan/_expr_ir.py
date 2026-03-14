@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING, Generic, Literal, final
 from narwhals._plan._dispatch import Dispatcher, DispatcherOptions
 from narwhals._plan._dtype import IntoResolveDType, ResolveDType
 from narwhals._plan._immutable import Immutable
+from narwhals._plan._meta import ExprIRMeta
+from narwhals._plan._nodes import ExprTraverser
 from narwhals._plan.typing import ExprIRT_co
 from narwhals._utils import Version, unstable
 from narwhals.dtypes import DType
@@ -23,11 +25,11 @@ if TYPE_CHECKING:
     from narwhals._plan.meta import MetaNamespace
     from narwhals._plan.schema import FrozenSchema
     from narwhals._plan.selectors import Selector
-    from narwhals._plan.typing import ExprIRT, Ignored, MapIR, Seq
+    from narwhals._plan.typing import ExprIRT, Ignored, MapIR
     from narwhals.typing import IntoDType
 
 
-class ExprIR(Immutable):
+class ExprIR(Immutable, metaclass=ExprIRMeta):
     r"""An immutable representation of an expression.
 
     All functions and methods that return an `Expr` are backed by an `ExprIR`.
@@ -75,10 +77,8 @@ class ExprIR(Immutable):
     [`meta`]: https://docs.pola.rs/api/python/stable/reference/expressions/meta.html
     """
 
-    # NOTE: Idea for removing this as boilerplate:
-    # - https://github.com/narwhals-dev/narwhals/pull/3066#issuecomment-3242037939
-    # - https://github.com/narwhals-dev/narwhals/commit/4b0431a234808450a61d8b5260c8769f8cebff7b
-    _child: ClassVar[Seq[str]] = ()
+    # TODO @dangotbanned: Replace outdated doc (was for `ExprIR._child`)
+    __expr_ir_nodes__: ClassVar[ExprTraverser] = ExprTraverser(())
     """Name(s) of fields that store one or more `ExprIR`(s).
 
     The order of `_child` defines the order that `iter_left` traverses the graph.
@@ -114,11 +114,9 @@ class ExprIR(Immutable):
 
     If the logic fits an existing pattern, use the `dtype` **parameter** [when subclassing]:
 
-        class Slice(
-            ExprIR, child=("expr",), dtype=ResolveDType.expr_ir.same_dtype()
-        ):
+        class Slice(ExprIR, dtype=ResolveDType.expr_ir.same_dtype()):
             __slots__ = ("expr", "length", "offset")
-            expr: ExprIR
+            expr: ExprIR = node()
             offset: int
             length: int | None
 
@@ -128,9 +126,9 @@ class ExprIR(Immutable):
 
         from narwhals.dtypes import Array, List
 
-        class Explode(ExprIR, child=("expr",)):
+        class Explode(ExprIR):
             __slots__ = ("expr",)
-            expr: ExprIR
+            expr: ExprIR = node()
 
             def resolve_dtype(self, schema: FrozenSchema) -> DType:
                 dtype = self.expr.resolve_dtype(schema)
@@ -145,7 +143,6 @@ class ExprIR(Immutable):
     def __init_subclass__(
         cls: type[Self],
         *,
-        child: Seq[str] = (),
         dispatch: DispatcherOptions | Literal["no_dispatch"] | None = None,
         dtype: IntoResolveDType[Self] | None = None,
         **_: Any,
@@ -155,21 +152,6 @@ class ExprIR(Immutable):
         All parameters are optional and will be inherited when not provided to `__init_subclass__`.
 
         Arguments:
-            child: Name(s) of fields that store one or more `ExprIR`(s).
-                Stored in `_child`.
-
-                The order of `child` defines iteration order in `iter_left`.
-
-                **Note**: Unlike `__slots__`, a subclass that needs to extend a non-empty `_child`
-                must use:
-
-                    class Subclass(
-                        # (sorry, need to fix this!)
-                        ParentIR, child=(*parent_field_names, *more_names)
-                    ):
-                        ___slots___ = (*more_names)
-                        ...
-
             dispatch: Defines how to build a `Dispatcher`.
                 Stored in `__expr_ir_dispatch__.options`.
 
@@ -185,8 +167,6 @@ class ExprIR(Immutable):
         [#3396]: https://github.com/narwhals-dev/narwhals/pull/3396
         """
         super().__init_subclass__(**_)
-        if child:
-            cls._child = child
         cls.__expr_ir_dispatch__ = Dispatcher.from_expr_ir(cls, dispatch)
         if dtype is not None:
             if isinstance(dtype, DType):
@@ -265,35 +245,36 @@ class ExprIR(Immutable):
         msg = f"cannot turn `{self!r}` into a selector"
         raise InvalidOperationError(msg)
 
-    # TODO @dangotbanned: Rewrite `is_scalar` as a method?
-    # Not really an expensive check, but `Function.is_scalar` leads to `FunctionOptions.returns_scalar()`
-    # so it would be more consistent
-    @property
     def is_scalar(self) -> bool:
         """Return True if this leaf produces a single value.
 
         Some expressions are always scalar:
         >>> import narwhals._plan as nw
         >>> length = nw.len()
-        >>> length._ir.is_scalar
+        >>> length._ir.is_scalar()
         True
-        >>> nw.lit(123)._ir.is_scalar
+        >>> nw.lit(123)._ir.is_scalar()
         True
 
         Others always output a column:
         >>> column = nw.col("a")
-        >>> column._ir.is_scalar
+        >>> column._ir.is_scalar()
         False
-        >>> nw.int_range(0, 10)._ir.is_scalar
+        >>> nw.int_range(0, 10)._ir.is_scalar()
         False
 
         Many depend on the scalar-ness of child expressions, and require traversal:
-        >>> (column + length)._ir.is_scalar
+        >>> (column + length)._ir.is_scalar()
         False
-        >>> (column.first() + length)._ir.is_scalar
+        >>> (column.first() + length)._ir.is_scalar()
         True
+
+        ## Notes
+        Subclasses should override in 2 cases:
+        1. They are unconditionally scalar (`Len`, `AggExpr`)
+        2. They answer the question using non-node fields (`FunctionExpr.function`, `Literal.value`)
         """
-        return False
+        return self.__expr_ir_nodes__.is_scalar(self)
 
     def needs_expansion(self) -> bool:
         """Return True if this expression contains selectors.
@@ -371,11 +352,7 @@ class ExprIR(Immutable):
         [`plans::iterator::Expr.map_expr`]: https://github.com/pola-rs/polars/blob/3ea81c45e0c184af2cf5a93f8378cf330e4658c9/crates/polars-plan/src/plans/iterator.rs#L166-L169
         [`plans::iterator::!push_expr`]: https://github.com/pola-rs/polars/blob/3ea81c45e0c184af2cf5a93f8378cf330e4658c9/crates/polars-plan/src/plans/iterator.rs#L10-L124
         """
-        if not self._child:
-            return function(self)
-        children = ((name, getattr(self, name)) for name in self._child)
-        changed = {name: _map_ir_child(child, function) for name, child in children}
-        return function(self.__replace__(**changed))
+        return self.__expr_ir_nodes__.map_ir(self, function)
 
     # NOTE: Pylance renders "Examples:" sections poorly if there isn't "Arguments:" as well
     # This style still runs in `doctest` and looks better in vscode
@@ -412,14 +389,7 @@ class ExprIR(Immutable):
         col('h')
         col('e').first().over(partition_by=[col('f')], order_by=[col('g'), col('h')])
         """
-        for name in self._child:
-            child: ExprIR | Seq[ExprIR] = getattr(self, name)
-            if isinstance(child, ExprIR):
-                yield from child.iter_left()
-            else:
-                for node in child:
-                    yield from node.iter_left()
-        yield self
+        yield from self.__expr_ir_nodes__.iter_left(self)
 
     def iter_right(self) -> Iterator[ExprIR]:
         r"""Yield nodes leaf->root.
@@ -454,26 +424,43 @@ class ExprIR(Immutable):
         col('e').first()
         col('e')
         """
-        yield self
-        for name in reversed(self._child):
-            child: ExprIR | Seq[ExprIR] = getattr(self, name)
-            if isinstance(child, ExprIR):
-                yield from child.iter_right()
-            else:
-                for node in reversed(child):  # pragma: no cover
-                    yield from node.iter_right()
+        yield from self.__expr_ir_nodes__.iter_right(self)
 
-    # TODO @dangotbanned: Can this be factored out?
-    # - Only `FunctionExpr`, `StructExpr` do anything fancy here
-    # - Everything else just iterates the first child
-    #   - `FunctionExpr` stores `input: Seq[ExprIR]` there, and need to stop on the first element
     def iter_output_name(self) -> Iterator[ExprIR]:
-        """Override for different iteration behavior in `ExprIR.meta.output_name`.
+        """Follow the **left-hand-side** of the graph until we can derive an output name.
 
-        Note:
-            Identical to `iter_right` by default.
+        Used for `ExprIR.meta.output_name` and will stop as soon as we see one of:
+
+        A root node with a `name`:
+
+            Column
+            Literal
+            Len
+
+        A leaf node with a `name`:
+
+            Alias
+
+        A special case where we can navigate to a name:
+
+            RootSelector(selector=cs.ByName(names=("name",), ...))
+            #                                       ^^^^
+            #                 Equivalent to `col("name")`
+
+            StructExpr(function=FieldByName(name="name"), ...)
+            #                                     ^^^^
+            #    Same idea, but with a `Struct` schema
+
+        A leaf node that transforms the name of the above:
+
+            RenameAlias
+
+        A leaf node that requires schema context for expansion, raising
+        instead of recursing further:
+
+            KeepName
         """
-        yield from self.iter_right()
+        yield from self.__expr_ir_nodes__.iter_output_name(self)
 
     @property
     def meta(self) -> MetaNamespace:
@@ -502,10 +489,6 @@ class ExprIR(Immutable):
         [IPython]: https://ipython.readthedocs.io/en/stable/config/integrating.html#custom-methods
         """
         return self.__repr__()
-
-
-def _map_ir_child(obj: ExprIR | Seq[ExprIR], fn: MapIR, /) -> ExprIR | Seq[ExprIR]:
-    return obj.map_ir(fn) if isinstance(obj, ExprIR) else tuple(e.map_ir(fn) for e in obj)
 
 
 class SelectorIR(ExprIR, dispatch="no_dispatch"):

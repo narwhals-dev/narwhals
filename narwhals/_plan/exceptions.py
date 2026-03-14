@@ -55,7 +55,7 @@ def range_expr_non_scalar_error(
     input: Sequence[ir.ExprIR], function: RangeFunction
 ) -> ShapeError:
     arg_name, arg_value = (
-        ("start", input[0]) if not (input[0].is_scalar) else ("end", input[1])
+        ("start", input[0]) if not (input[0].is_scalar()) else ("end", input[1])
     )
     return function_arg_non_scalar_error(function, arg_name, arg_value)
 
