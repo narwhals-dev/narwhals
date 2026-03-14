@@ -1,8 +1,9 @@
 """Metaclasses and other unholy metaprogramming nonsense."""
 
+# ruff: noqa: N806
 from __future__ import annotations
 
-# ruff: noqa: N806
+from collections import deque
 from itertools import chain
 from typing import TYPE_CHECKING, Any
 
@@ -220,12 +221,12 @@ class ExprIRMeta(ImmutableMeta):
                 return namespace, nodes
 
             # Step 4
-            for name in tuple(namespace):
+            names = deque(namespace)
+            while intersection:
+                name = names.popleft()
                 if name in intersection:
                     nodes.append(_ensure_node(name, namespace.pop(name)))
                     intersection.remove(name)
-                    if not intersection:
-                        break
         return namespace, nodes
 
 
