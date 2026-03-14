@@ -8,19 +8,25 @@ from itertools import chain
 from typing import TYPE_CHECKING, Any
 
 from narwhals._plan import _nodes
-from narwhals._plan._nodes import _EXPR_NODE_TYPES
+from narwhals._plan._nodes import _EXPR_NODE_TYPES, ExprTraverser
 
 if TYPE_CHECKING:
     from collections.abc import Callable
     from typing import Final, TypeVar
 
-    import _typeshed
     from typing_extensions import TypeAlias, dataclass_transform
 
-    from narwhals._plan._expr_ir import ExprIR
     from narwhals._plan.typing import Seq
 
     T = TypeVar("T")
+
+    # NOTE: Similar to `_typeshed.Self`
+    # https://github.com/astral-sh/ruff/issues/8353#issuecomment-1786238311
+    # https://github.com/python/typeshed/blob/f8f0794d0fe249c06dc9f31a004d85be6cca6ced/stdlib/_typeshed/__init__.pyi#L36-L40
+    # https://github.com/python/typeshed/blob/f8f0794d0fe249c06dc9f31a004d85be6cca6ced/stdlib/abc.pyi#L13-L23
+    S = TypeVar("S", bound="SlottedMeta")
+    I = TypeVar("I", bound="ImmutableMeta")  # noqa: E741
+    E = TypeVar("E", bound="ExprIRMeta")
 
 else:
     # https://docs.python.org/3/library/typing.html#typing.dataclass_transform
@@ -58,6 +64,7 @@ Marked so that mutating it is visible.
 flatten = chain.from_iterable
 _KEYS_NAME: Final = "__immutable_keys__"
 _HASH_NAME: Final = "__immutable_hash_value__"
+_NODES_NAME: Final = "__expr_ir_nodes__"
 
 
 class SlottedMeta(type):
@@ -66,32 +73,28 @@ class SlottedMeta(type):
     [`__slots__`]: https://docs.python.org/3/reference/datamodel.html#object.__slots__
     """
 
-    # https://github.com/python/typeshed/blob/776508741d76b58f9dcb2aaf42f7d4596a48d580/stdlib/abc.pyi#L13-L19
-    # https://github.com/python/typeshed/blob/776508741d76b58f9dcb2aaf42f7d4596a48d580/stdlib/_typeshed/__init__.pyi#L36-L40
-    # https://github.com/astral-sh/ruff/issues/8353#issuecomment-1786238311
-    # https://docs.python.org/3/reference/datamodel.html#creating-the-class-object
     def __new__(
-        metacls: type[_typeshed.Self],
+        metacls: type[S],
         cls_name: str,
         bases: tuple[type, ...],
-        namespace: dict[str, Any],
+        namespace: Ns,
         /,
         **kwds: Any,
-    ) -> _typeshed.Self:
+    ) -> S:
         namespace.setdefault("__slots__", ())
-        return super().__new__(metacls, cls_name, bases, namespace, **kwds)  # type: ignore[no-any-return, misc]
+        return super().__new__(metacls, cls_name, bases, namespace, **kwds)
 
 
 @dataclass_transform(kw_only_default=True, frozen_default=True)
 class ImmutableMeta(SlottedMeta):
     def __new__(
-        metacls: type[_typeshed.Self],
+        metacls: type[I],
         cls_name: str,
         bases: tuple[type, ...],
-        namespace: dict[str, Any],
+        namespace: Ns,
         /,
         **kwds: Any,
-    ) -> _typeshed.Self:
+    ) -> I:
         KEYS, HASH = _KEYS_NAME, _HASH_NAME
         getattr_: Callable[..., Seq[str]] = getattr
         it_bases = (getattr_(b, KEYS, ()) for b in bases)
@@ -99,7 +102,7 @@ class ImmutableMeta(SlottedMeta):
             flatten(it_bases), namespace.get(KEYS, namespace.get("__slots__", ()))
         )
         namespace[KEYS] = tuple(key for key in it_all if key != HASH)
-        return super().__new__(metacls, cls_name, bases, namespace, **kwds)  # type: ignore[no-any-return, misc]
+        return super().__new__(metacls, cls_name, bases, namespace, **kwds)
 
 
 @dataclass_transform(
@@ -121,22 +124,23 @@ class ExprIRMeta(ImmutableMeta):
     [most derived metaclass]: https://docs.python.org/3/reference/datamodel.html#determining-the-appropriate-metaclass
     """
 
+    if TYPE_CHECKING:
+        # NOTE: Refers to `ExprIR.__expr_ir_nodes__: ClassVar[ExprTraverser]`
+        __expr_ir_nodes__: ExprTraverser
+
     def __new__(
-        metacls: type[_typeshed.Self],
+        metacls: type[E],
         cls_name: str,
         bases: tuple[type, ...],
         namespace: Ns,
         /,
         **kwds: Any,
-    ) -> _typeshed.Self:
-        namespace, nodes = ExprIRMeta._pop_nodes(namespace)
-        tp = super().__new__(metacls, cls_name, bases, namespace, **kwds)  # type: ignore[misc]
-        if not TYPE_CHECKING:  # noqa: SIM102
-            # `pyright` is quite unhappy w/ this, thinks that `Self` means `object` but it is a `type`!
-            # `mypy` forgets how `TYPE_CHECKING` works when multiple conditions appear
-            if nodes:
-                _inherit_traverser(metacls, tp, nodes)
-        return tp  # type: ignore[no-any-return]
+    ) -> E:
+        namespace, nodes = metacls._pop_nodes(namespace)
+        tp = super().__new__(metacls, cls_name, bases, namespace, **kwds)
+        if nodes:
+            metacls.__setattr__(tp, _NODES_NAME, ExprTraverser.inherit_from(tp, nodes))
+        return tp
 
     @staticmethod
     def _pop_nodes(namespace: Ns) -> tuple[Ns, _nodes.IntoExprNodes]:
@@ -235,10 +239,3 @@ def _ensure_node(name: str, node: Any) -> _nodes._ExprNode:
         msg = f"Expected field specifier of type {_EXPR_NODE_TYPES!r}, got:\n`{name}={node!r}`"
         raise TypeError(msg)
     return node.with_name(name)
-
-
-def _inherit_traverser(
-    metacls: type[ExprIRMeta], cls: type[ExprIR], extra: _nodes.IntoExprNodes
-) -> None:
-    traverser = _nodes.ExprTraverser.inherit_from(cls.__expr_ir_nodes__, extra)
-    metacls.__setattr__(cls, "__expr_ir_nodes__", traverser)

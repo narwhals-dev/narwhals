@@ -27,6 +27,11 @@ if TYPE_CHECKING:
     from narwhals._plan._expr_ir import ExprIR
     from narwhals._plan.typing import MapIR, Seq
 
+    class HasExprTraverser(Protocol):
+        @property
+        def __expr_ir_nodes__(self) -> ExprTraverser: ...
+
+
 NodeT = TypeVar("NodeT")
 Get = TypeVar("Get", covariant=True)  # noqa: PLC0105
 
@@ -230,8 +235,8 @@ class ExprTraverser:
         return f"{tp_name}[]"
 
     @staticmethod
-    def inherit_from(parent: ExprTraverser, nodes: IntoExprNodes) -> ExprTraverser:
-        return ExprTraverser((*parent._nodes, *nodes))
+    def inherit_from(parent: HasExprTraverser, nodes: IntoExprNodes) -> ExprTraverser:
+        return ExprTraverser((*parent.__expr_ir_nodes__._nodes, *nodes))
 
     def iter_left(self, instance: ExprIR) -> Iterator[ExprIR]:
         """Yield nodes recursively from root->leaf."""
