@@ -231,10 +231,18 @@ class ExprTraverser:
         self._nodes = nodes
 
     def __repr__(self) -> str:
+        return self._repr_with("\n", " ")
+
+    def _repr_html_(self) -> str:
+        return self._repr_with("<br>", "&nbsp;")
+
+    def _repr_with(
+        self, new_line: Literal["\n", "<br>"], indent: Literal[" ", "&nbsp;"], /
+    ) -> str:
         tp_name = type(self).__name__
-        if nodes := self._nodes:
-            members = "\n".join(f"    {n!r}" for n in nodes)
-            return f"{tp_name}[{len(nodes)}]\n{members}"
+        if self:
+            members = new_line.join(f"{indent * 4}{n!r}" for n in self)
+            return f"{tp_name}[{len(self)}]{new_line}{members}"
         return f"{tp_name}[]"
 
     @staticmethod
