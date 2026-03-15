@@ -187,7 +187,20 @@ class SortBy(ExprIR, dtype=same_dtype()):
     options: SortMultipleOptions
 
     def __repr__(self) -> str:
-        return f"{self.expr!r}.sort_by(by={self.by!r}, options={self.options!r})"
+        opts = ""
+        if any(self.descending):
+            opts += f", descending={list(self.descending)}"
+        if any(self.nulls_last):
+            opts += f", nulls_last={list(self.nulls_last)}"
+        return f"{self.expr!r}.sort_by({list(self.by)!r}{opts})"
+
+    @property
+    def descending(self) -> Seq[bool]:
+        return self.options.descending
+
+    @property
+    def nulls_last(self) -> Seq[bool]:
+        return self.options.nulls_last
 
 
 # TODO @dangotbanned: Docs should complement `Function`
