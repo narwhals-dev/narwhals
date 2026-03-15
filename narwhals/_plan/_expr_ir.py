@@ -77,15 +77,43 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
     [`meta`]: https://docs.pola.rs/api/python/stable/reference/expressions/meta.html
     """
 
-    # TODO @dangotbanned: Replace outdated doc (was for `ExprIR._child`)
     __expr_ir_nodes__: ClassVar[ExprTraverser] = ExprTraverser(())
-    """Name(s) of fields that store one or more `ExprIR`(s).
+    """Graph traversal backend.
 
-    The order of `_child` defines the order that `iter_left` traverses the graph.
+    Populated through the use of the `node`, `nodes` field specifiers in the class body:
+    >>> from narwhals._plan._nodes import node, nodes
+    >>> from narwhals._plan.typing import Seq
+    >>> class Over(ExprIR):
+    ...     __slots__ = ("expr", "partition_by")
+    ...     expr: ExprIR = node(observe_scalar=False)
+    ...     partition_by: Seq[ExprIR] = nodes()
 
-    Set via the `child` **parameter** [when subclassing].
+    Aaaaand there it is:
+    >>> Over.__expr_ir_nodes__
+    ExprTraverser[2]
+        expr: ExprIR = node(observe_scalar=False)
+        partition_by: Seq[ExprIR] = nodes()
 
-    [when subclassing]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
+    The order they are defined is meaningful, and extends to subclasses:
+    >>> from narwhals._plan.options import SortOptions
+    >>> class OverOrdered(Over):
+    ...     __slots__ = ("order_by", "sort_options")
+    ...     order_by: Seq[ExprIR] = nodes()
+    ...     sort_options: SortOptions
+
+    Note how `sort_options` does not use a field specifier, and is ignored for traversal:
+    >>> OverOrdered.__expr_ir_nodes__
+    ExprTraverser[3]
+        expr: ExprIR = node(observe_scalar=False)
+        partition_by: Seq[ExprIR] = nodes()
+        order_by: Seq[ExprIR] = nodes()
+
+    This is what provides the default implementation of:
+    - `iter_left`
+    - `iter_right`
+    - `iter_output_name`
+    - `is_scalar`
+    - `map_ir`
     """
 
     __expr_ir_dispatch__: ClassVar[Dispatcher[Self]] = Dispatcher()
