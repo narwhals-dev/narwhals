@@ -17,7 +17,7 @@ There's a couple *big ideas* in here, but they could broadly fit into:
 from __future__ import annotations
 
 import enum
-from typing import TYPE_CHECKING, Any, Final, Literal, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, Final, Literal, Protocol, SupportsIndex, TypeVar
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator
@@ -216,15 +216,18 @@ _EXPR_NODE_TYPES = (SingleExpr, MultipleExpr)
 
 
 class ExprTraverser:
-    """Field specifier based iteration backend for `ExprIR`.
+    """Field specifier-based iteration backend for `ExprIR`.
 
-    Stored as `ExprIR.__expr_ir_nodes__`.
+    ## Notes
+    - Methods *accepting* an `instance` correspond to those in `ExprIR` with the same name
+    - The rest expose a subset of `Sequence[_ExprNode]`
+        - Excluding the `value`-based methods
     """
 
     __slots__ = ("_nodes",)
     _nodes: ExprNodes
 
-    def __init__(self, nodes: ExprNodes) -> None:
+    def __init__(self, nodes: ExprNodes, /) -> None:
         self._nodes = nodes
 
     def __repr__(self) -> str:
@@ -236,46 +239,58 @@ class ExprTraverser:
 
     @staticmethod
     def inherit_from(parent: HasExprTraverser, nodes: IntoExprNodes) -> ExprTraverser:
-        return ExprTraverser((*parent.__expr_ir_nodes__._nodes, *nodes))
+        return ExprTraverser((*parent.__expr_ir_nodes__, *nodes))
 
-    def iter_left(self, instance: ExprIR) -> Iterator[ExprIR]:
-        """Yield nodes recursively from root->leaf."""
-        for node in self._nodes:
+    # NOTE: `ExprIR` API
+    def iter_left(self, instance: ExprIR, /) -> Iterator[ExprIR]:
+        """Yield from nodes recursively from root->leaf."""
+        for node in self:
             yield from node.iter_left(instance)
         yield instance
 
-    def iter_right(self, instance: ExprIR) -> Iterator[ExprIR]:
-        """Yield nodes recursively from leaf->root."""
+    def iter_right(self, instance: ExprIR, /) -> Iterator[ExprIR]:
+        """Yield from nodes recursively from leaf->root."""
         yield instance
-        if nodes := self._nodes:
-            for node in reversed(nodes):
-                yield from node.iter_right(instance)
+        for node in reversed(self):
+            yield from node.iter_right(instance)
 
-    def iter_output_name(self, instance: ExprIR) -> Iterator[ExprIR]:
+    def iter_output_name(self, instance: ExprIR, /) -> Iterator[ExprIR]:
         """Follow the **left-hand-side** of the graph until we can derive an output name.
 
         See `ExprIR.iter_output_name` for examples.
         """
-        if nodes := self._nodes:
-            yield from nodes[0].iter_output_name(instance)
+        if self:
+            yield from self[0].iter_output_name(instance)
 
-    def is_scalar(self, instance: ExprIR) -> bool:
+    def is_scalar(self, instance: ExprIR, /) -> bool:
         # NOTE: Acrobatics because `all(...)` returns True on an empty iterable,
         # and there's 2 ways we can get there
         it = (
-            node.is_scalar(instance)
-            for node in self._nodes
-            if node.observe_scalar is _OBSERVE
+            node.is_scalar(instance) for node in self if node.observe_scalar is _OBSERVE
         )
         return (next(it, False)) and all(it)
 
     def map_ir(self, instance: ExprIR, function: MapIR, /) -> ExprIR:
-        if (nodes := self._nodes) and (
+        if self and (
             changes := {
                 node.name: change
-                for node in nodes
+                for node in self
                 if (change := node.map_nodes(instance, function))
             }
         ):
             instance = instance.__replace__(**changes)
         return function(instance)
+
+    # NOTE: `Sequence[_ExprNode]` API
+    def __getitem__(self, key: SupportsIndex, /) -> _ExprNode:
+        return self._nodes.__getitem__(key)
+
+    def __iter__(self) -> Iterator[_ExprNode]:
+        yield from self._nodes
+
+    def __len__(self) -> int:
+        return self._nodes.__len__()
+
+    def __reversed__(self) -> Iterator[_ExprNode]:
+        if self:
+            yield from reversed(self._nodes)
