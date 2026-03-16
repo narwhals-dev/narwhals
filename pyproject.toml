@@ -250,7 +250,13 @@ docstring-code-format = true
 skip-magic-trailing-comma = true
 
 [tool.pytest.ini_options]
-norecursedirs =  ['*.egg', '.*', '_darcs', 'build', 'CVS', 'dist', 'node_modules', 'venv', '{arch}', 'narwhals/_*']
+norecursedirs =  [
+  '*.egg', '.*', '_darcs', 'build', 'CVS', 'dist', 'node_modules', 'venv', '{arch}', 
+  # `narwhals/_*` ignores `_plan` which has doctests at multiple levels
+  'narwhals/_arrow', 'narwhals/_compliant', 'narwhals/_dask', 'narwhals/_duckdb', 'narwhals/_ibis', 
+  'narwhals/_interchange', 'narwhals/_pandas_like', 'narwhals/_polars', 'narwhals/_spark_like', 
+  'narwhals/_sql', 
+]
 testpaths = ["tests"]
 filterwarnings = [
   "error",

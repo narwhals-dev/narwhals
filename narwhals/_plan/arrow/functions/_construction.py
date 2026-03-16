@@ -120,8 +120,8 @@ def chunked_array(
         >>> ones = fn.array(one)
         >>> fn.chunked_array(one).equals(fn.chunked_array(ones))
         True
-        >>> fn.chunked_array(ones)  # doctest: +ELLIPSIS
-        <pyarrow.lib.ChunkedArray object at ...>
+        >>> fn.chunked_array(ones)
+        <pyarrow.lib.ChunkedArray ...>
         [
           [
             1
@@ -130,10 +130,10 @@ def chunked_array(
 
         An empty list and a `DataType` produce an empty array
 
-        >>> fn.chunked_array([], pa.string())  # doctest: +ELLIPSIS
-        <pyarrow.lib.ChunkedArray object at ...>
+        >>> fn.chunked_array([], pa.string())
+        <pyarrow.lib.ChunkedArray ...>
         [
-
+        <BLANKLINE>
         ]
 
         Chunks can be specified using nested lists

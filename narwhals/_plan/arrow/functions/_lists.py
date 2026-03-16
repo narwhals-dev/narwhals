@@ -126,14 +126,16 @@ class ExplodeBuilder:
     def explode_with_indices(self, native: ChunkedList | ListArray) -> pa.Table:
         """Explode list elements, expanding one-level into a table indexing the origin.
 
-        Returns a 2-column table, with names `"idx"` and `"values"`:
+        Returns a 2-column table:
 
-            >>> from narwhals._plan.arrow import functions as fn
-            >>>
-            >>> arr = fn.array([[1, 2, 3], None, [4, 5, 6], []])
-            >>> fn.ExplodeBuilder().explode_with_indices(arr).to_pydict()
-            {'idx': [0, 0, 0, 1, 2, 2, 2, 3], 'values': [1, 2, 3, None, 4, 5, 6, None]}
-            # ^ Which sublist values come from ^ The exploded values themselves
+        >>> from narwhals._plan.arrow import functions as fn
+        >>> arr = fn.array([[1, 2, 3], None, [4, 5, 6], []])
+        >>> fn.ExplodeBuilder().explode_with_indices(arr).to_pydict()
+        {'idx': [0, 0, 0, 1, 2, 2, 2, 3], 'values': [1, 2, 3, None, 4, 5, 6, None]}
+
+        Where the names mean:
+        - *"idx"*: Which sublist values come from
+        - *"values"*: The exploded values themselves
         """
         safe = self._fill_with_null(native) if self.options.any() else native
         arrays = [_list_parent_indices(safe), _explode(safe)]
