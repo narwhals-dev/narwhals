@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 from narwhals._plan._meta import ImmutableMeta
 
 if TYPE_CHECKING:
+    import dataclasses
     from collections.abc import Iterable, Iterator
     from typing import Any, ClassVar, Final
 
@@ -27,12 +28,12 @@ class Immutable(metaclass=ImmutableMeta):
     """
 
     __slots__ = (_HASH_NAME,)
-    if not TYPE_CHECKING:
-        # NOTE: Trying to avoid this being added to synthesized `__init__`
-        # Seems to be the only difference when decorating the metaclass
+    if TYPE_CHECKING:
+        # NOTE: Omiting the annotation avoids this being added to synthesized `__init__`
+        # https://typing.python.org/en/latest/spec/dataclasses.html#field-specifier-parameters
+        __immutable_hash_value__ = dataclasses.field(init=False)
+    else:
         __immutable_hash_value__: int
-    else:  # pragma: no cover
-        ...
 
     __immutable_keys__: ClassVar[tuple[str, ...]]
 
@@ -53,7 +54,7 @@ class Immutable(metaclass=ImmutableMeta):
     def __immutable_hash__(self) -> int:
         HASH = _HASH_NAME
         if hasattr(self, HASH):
-            hash_value: int = getattr(self, HASH)
+            hash_value: int = self.__immutable_hash_value__
         else:
             hash_value = hash((self.__class__, *self.__immutable_values__))
             object.__setattr__(self, HASH, hash_value)
