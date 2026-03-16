@@ -106,6 +106,8 @@ VConcatMethod: TypeAlias = Literal[
 PivotOnColumns: TypeAlias = "DataFrame[Any, Any]"
 """See https://github.com/narwhals-dev/narwhals/issues/1901#issuecomment-3697700426"""
 
+_OBJ_SETATTR = object.__setattr__
+
 
 class LogicalPlan(_BasePlan[_Fwd], _root=True):
     """Representation of `LazyFrame` operations, based on [`polars_plan::dsl::plan::DslPlan`].
@@ -487,8 +489,8 @@ class ScanDataFrame(ScanFrame["DataFrame[Any, Any]"]):
     @staticmethod
     def from_narwhals(frame: DataFrame[Any, Any], /) -> ScanDataFrame:
         obj = ScanDataFrame.__new__(ScanDataFrame)
-        object.__setattr__(obj, "frame", frame.clone())
-        object.__setattr__(obj, "schema", freeze_schema(frame.collect_schema()))
+        _OBJ_SETATTR(obj, "frame", frame.clone())
+        _OBJ_SETATTR(obj, "schema", freeze_schema(frame.collect_schema()))
         return obj
 
     @property
@@ -538,8 +540,8 @@ class ScanLazyFrame(ScanFrame["CompliantLazyFrame[Native]"], Generic[Native]):
         frame: CompliantLazyFrame[FromNative], /
     ) -> ScanLazyFrame[FromNative]:
         obj: ScanLazyFrame[FromNative] = ScanLazyFrame.__new__(ScanLazyFrame)
-        object.__setattr__(obj, "frame", frame)
-        object.__setattr__(obj, "schema", freeze_schema(frame.input_schema))
+        _OBJ_SETATTR(obj, "frame", frame)
+        _OBJ_SETATTR(obj, "schema", freeze_schema(frame.input_schema))
         return obj
 
     def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:

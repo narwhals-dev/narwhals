@@ -86,6 +86,7 @@ class FunctionFlags(enum.Flag):
 
 
 _INVALID = FunctionFlags.RETURNS_SCALAR | FunctionFlags.LENGTH_PRESERVING
+_OBJ_SETATTR = object.__setattr__
 
 
 class FunctionOptions(Immutable):
@@ -118,7 +119,7 @@ class FunctionOptions(Immutable):
             msg = "A function cannot both return a scalar and preserve length, they are mutually exclusive."
             raise TypeError(msg)
         obj = FunctionOptions.__new__(FunctionOptions)
-        object.__setattr__(obj, "flags", new_flags)
+        _OBJ_SETATTR(obj, "flags", new_flags)
         return obj
 
     def with_elementwise(self) -> FunctionOptions:
@@ -129,7 +130,7 @@ class FunctionOptions(Immutable):
     @staticmethod
     def default() -> FunctionOptions:
         obj = FunctionOptions.__new__(FunctionOptions)
-        object.__setattr__(obj, "flags", FunctionFlags.default())
+        _OBJ_SETATTR(obj, "flags", FunctionFlags.default())
         return obj
 
     @staticmethod

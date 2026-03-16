@@ -44,6 +44,7 @@ _FrozenSchemaHash: TypeAlias = "Seq[tuple[str, DType]]"
 _T2 = TypeVar("_T2")
 
 _unknown = Unknown()
+_OBJ_SETATTR = object.__setattr__
 
 
 @final
@@ -197,7 +198,7 @@ class FrozenSchema(Immutable):
     @staticmethod
     def _from_mapping(mapping: MappingProxyType[str, DType], /) -> FrozenSchema:
         obj = FrozenSchema.__new__(FrozenSchema)
-        object.__setattr__(obj, "_mapping", mapping)
+        _OBJ_SETATTR(obj, "_mapping", mapping)
         return obj
 
     @staticmethod

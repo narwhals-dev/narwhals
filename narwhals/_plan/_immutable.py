@@ -14,6 +14,8 @@ if TYPE_CHECKING:
 
 
 _HASH_NAME: Final = "__immutable_hash_value__"
+_OBJ_SETATTR = object.__setattr__
+"""Borrowed from [`attrs`](https://github.com/search?q=repo%3Apython-attrs%2Fattrs%20%22_OBJ_SETATTR%22&type=code)"""
 
 
 class Immutable(metaclass=ImmutableMeta):
@@ -40,15 +42,15 @@ class Immutable(metaclass=ImmutableMeta):
     @property
     def __immutable_values__(self) -> Iterator[Any]:
         """Override to configure hash seed."""
-        getattr_ = getattr
+        get = self.__getattribute__
         for name in self.__immutable_keys__:
-            yield getattr_(self, name)
+            yield get(name)
 
     @property
     def __immutable_items__(self) -> Iterator[tuple[str, Any]]:
-        getattr_ = getattr
+        get = self.__getattribute__
         for name in self.__immutable_keys__:
-            yield name, getattr_(self, name)
+            yield name, get(name)
 
     @property
     def __immutable_hash__(self) -> int:
@@ -57,7 +59,7 @@ class Immutable(metaclass=ImmutableMeta):
             hash_value: int = self.__immutable_hash_value__
         else:
             hash_value = hash((self.__class__, *self.__immutable_values__))
-            object.__setattr__(self, HASH, hash_value)
+            _OBJ_SETATTR(self, HASH, hash_value)
         return hash_value
 
     def __setattr__(self, name: str, value: Never) -> Never:
@@ -87,10 +89,8 @@ class Immutable(metaclass=ImmutableMeta):
             return True
         if type(self) is not type(other):
             return False
-        getattr_ = getattr
-        return all(
-            getattr_(self, key) == getattr_(other, key) for key in self.__immutable_keys__
-        )
+        get_self, get_other = self.__getattribute__, other.__getattribute__
+        return all(get_self(key) == get_other(key) for key in self.__immutable_keys__)
 
     def __str__(self) -> str:
         fields = ", ".join(f"{_field_str(k, v)}" for k, v in self.__immutable_items__)
@@ -100,9 +100,11 @@ class Immutable(metaclass=ImmutableMeta):
         if (keys := self.__immutable_keys__) or kwds:
             required = set(keys)
             if required == kwds.keys():
-                object__setattr__ = object.__setattr__
+                # NOTE: Bound descriptor idea borrowed from `attrs`
+                # https://github.com/search?q=repo%3Apython-attrs%2Fattrs%20%22_OBJ_SETATTR%22&type=code
+                self__setattr__ = _OBJ_SETATTR.__get__(self)
                 for name, value in kwds.items():
-                    object__setattr__(self, name, value)
+                    self__setattr__(name, value)
             elif missing := required.difference(kwds):
                 raise _init_missing_error(self, required, missing)
             else:
