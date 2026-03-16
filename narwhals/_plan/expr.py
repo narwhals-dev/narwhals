@@ -603,12 +603,9 @@ class Expr:
     def name(self) -> ExprNameNamespace:
         """Specialized expressions for modifying the name of existing expressions.
 
-        Examples:
-            >>> from narwhals import _plan as nw
-            >>>
-            >>> renamed = nw.col("a", "b").name.suffix("_changed")
-            >>> str(renamed._ir)
-            "RenameAlias(expr=RootSelector(selector=ByName(names=['a', 'b'], require_all=True)), function=Suffix(suffix='_changed'))"
+        >>> import narwhals._plan as nw
+        >>> nw.col("a", "b").name.suffix("_changed")._ir
+        ncs.by_name('a', 'b', require_all=True).name.suffix('_changed')
         """
         from narwhals._plan.expressions.name import ExprNameNamespace
 

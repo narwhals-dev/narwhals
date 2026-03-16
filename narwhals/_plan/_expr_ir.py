@@ -582,7 +582,44 @@ class NamedIR(Immutable, Generic[ExprIRT_co]):
     __slots__ = ("expr", "name")
     # NOTE: https://discuss.python.org/t/make-replace-stop-interfering-with-variance-inference/96092
     expr: ExprIRT_co  # type: ignore[misc]
+    """The expanded expression.
+
+    For an expression with multiple outputs:
+    >>> import narwhals._plan as nw
+    >>> expr_ir = nw.col("a", "b").first()._ir
+    >>> expr_ir
+    col('a', 'b').first()
+
+    We expand each output into a new `NamedIR`:
+    >>> from narwhals._plan import expressions as ir
+    >>> for name in expr_ir.expr.selector.names:
+    ...     expanded = expr_ir.__replace__(expr=ir.col(name))
+    ...     print(f"{ir.NamedIR(expr=expanded, name=name)!r}")
+    ...     #                   ^^^^
+    a=col('a').first()
+    b=col('b').first()
+    """
+
     name: str
+    """The resolved output column name.
+
+    When an expression contains one or more renaming operations, like:
+    >>> import narwhals._plan as nw
+    >>> expr_ir = (
+    ...     nw.col("a")
+    ...     .cum_sum()
+    ...     .alias("b")
+    ...     .over(order_by="c")
+    ...     .name.suffix("_cum_sum")
+    ...     ._ir
+    ... )
+    >>> expr_ir
+    col('a').cum_sum().alias('b').over(order_by=[col('c')]).name.suffix('_cum_sum')
+
+    `name` represents the column name *produced by* the original expression:
+    >>> expr_ir.meta.output_name()
+    'b_cum_sum'
+    """
 
     def map_ir(self, function: MapIR, /) -> NamedIR[ExprIR]:
         """Transform the wrapped expression by applying a function to all nodes in it's graph.

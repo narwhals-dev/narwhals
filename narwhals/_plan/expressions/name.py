@@ -34,7 +34,14 @@ class RenameAlias(ExprIR, dispatch="no_dispatch"):
         yield self
 
     def __repr__(self) -> str:
-        return f".rename_alias({self.expr!r})"
+        f = self.function
+        if isinstance(f, (Prefix, Suffix)):
+            s = repr(f)
+        elif f in {str.upper, str.lower}:
+            s = f"to_{f.__name__}case()"
+        else:
+            s = "map()"
+        return f"{self.expr!r}.name.{s}"
 
 
 class Prefix(Immutable):
@@ -44,6 +51,9 @@ class Prefix(Immutable):
     def __call__(self, name: str, /) -> str:
         return f"{self.prefix}{name}"
 
+    def __repr__(self) -> str:
+        return f"prefix({self.prefix!r})"
+
 
 class Suffix(Immutable):
     __slots__ = ("suffix",)
@@ -51,6 +61,9 @@ class Suffix(Immutable):
 
     def __call__(self, name: str, /) -> str:
         return f"{name}{self.suffix}"
+
+    def __repr__(self) -> str:
+        return f"suffix({self.suffix!r})"
 
 
 class IRNameNamespace(IRNamespace):
