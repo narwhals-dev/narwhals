@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable
@@ -19,8 +19,8 @@ class FormattedKeyError(KeyError):
     Needed by https://github.com/tensorflow/tensorflow/issues/36857.
     """
 
-    message: Final[str]
-
+    message: str
+    
     def __init__(self, message: str) -> None:
         self.message = message
 
@@ -31,7 +31,10 @@ class FormattedKeyError(KeyError):
 class ColumnNotFoundError(FormattedKeyError, NarwhalsError):
     """Exception raised when column name isn't present."""
 
+    message: str
+
     def __init__(self, message: str) -> None:
+        self.message = message
         super().__init__(self.message)
 
     @classmethod
@@ -78,7 +81,7 @@ class InvalidOperationError(NarwhalsError):
 class InvalidIntoExprError(TypeError, NarwhalsError):
     """Exception raised when object can't be converted to expression."""
 
-    message: Final[str]
+    message: str
 
     def __init__(self, message: str) -> None:
         self.message = message
