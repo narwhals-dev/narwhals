@@ -1,6 +1,6 @@
 """Where the base `Function` lives.
 
-### Implementation Notes
+## Implementation Notes
 The design was adapted from an *older* version of (rust) polars.
 
 [`dsl::function_expr::FunctionExpr`] became `Function`
