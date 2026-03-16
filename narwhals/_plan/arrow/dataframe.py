@@ -16,6 +16,7 @@ from narwhals._plan.arrow.common import ArrowFrameSeries as FrameSeries
 from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
 from narwhals._plan.arrow.group_by import (
     ArrowGroupBy as GroupBy,
+    named_ir_agg,
     partition_by,
     unique_keep_boolean_length_preserving,
 )
@@ -24,7 +25,6 @@ from narwhals._plan.arrow.series import ArrowSeries as Series
 from narwhals._plan.common import temp
 from narwhals._plan.compliant.dataframe import EagerDataFrame
 from narwhals._plan.exceptions import shape_error
-from narwhals._plan.expressions import NamedIR, named_ir
 from narwhals._utils import Version, generate_repr, requires, supports_arrow_c_stream
 from narwhals.schema import Schema
 
@@ -201,7 +201,7 @@ class ArrowDataFrame(
         [`unsort_indices`]: https://github.com/narwhals-dev/narwhals/blob/9b9122b4ab38a6aebe2f09c29ad0f6191952a7a7/narwhals/_plan/arrow/functions.py#L1666-L1697
         """
         subset = tuple(subset or self.columns)
-        into_column_agg, mask = unique_keep_boolean_length_preserving(keep)
+        into_agg, mask = unique_keep_boolean_length_preserving(keep)
         idx_name = temp.column_name(self.columns)
         df = self.select_names(*set(subset).union(order_by))
         if order_by:
@@ -210,7 +210,7 @@ class ArrowDataFrame(
             df = df.with_row_index(idx_name)
         idx_agg = (
             df.group_by_names(subset)
-            .agg((named_ir(idx_name, into_column_agg(idx_name)),))
+            .agg((named_ir_agg(idx_name, into_agg),))
             .get_column(idx_name)
             .native
         )

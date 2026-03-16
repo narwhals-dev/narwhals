@@ -14,8 +14,7 @@ from narwhals._plan._guards import (
     is_seq_column,
 )
 from narwhals._plan._namespace import namespace
-from narwhals._plan.arrow import functions as fn
-from narwhals._plan.arrow.group_by import BOOLEAN_LENGTH_PRESERVING, AggSpec
+from narwhals._plan.arrow import functions as fn, group_by
 from narwhals._plan.arrow.series import ArrowSeries as Series
 from narwhals._plan.arrow.typing import ChunkedOrScalarAny, NativeScalar, StoresNativeT_co
 from narwhals._plan.common import temp
@@ -579,7 +578,7 @@ class ArrowExpr(  # type: ignore[misc]
         sort_indices: pa.UInt64Array | None = None,
     ) -> Self:
         # NOTE: This subset of functions can be expressed as a mask applied to indices
-        into_column_agg, mask = BOOLEAN_LENGTH_PRESERVING[type(node.function)]
+        into_agg, mask = group_by._BOOLEAN_LENGTH_PRESERVING[type(node.function)]
         idx_name = temp.column_name(frame)
         df = frame._with_columns([node.input[0].dispatch(self, frame, name)])
         if sort_indices is not None:
@@ -587,12 +586,13 @@ class ArrowExpr(  # type: ignore[misc]
             df = df._with_native(df.native.add_column(0, idx_name, column))
         else:
             df = df.with_row_index(idx_name)
-        agg_node = into_column_agg(idx_name)
         if not (partition_by or sort_indices is not None):
             aggregated = df.group_by_names((name,)).agg(
-                (ir.named_ir(idx_name, agg_node),)
+                (group_by.named_ir_agg(idx_name, into_agg),)
             )
         else:
+            # TODO @dangotbanned: Try to align using `NamedIR` on both `agg` clauses
+            agg_node = into_agg(expr=ir.col(idx_name))
             aggregated = df.group_by_agg_irs((ir.col(name), *partition_by), agg_node)
         index = df.to_series().alias(name)
         final_result = mask(index.native, aggregated.get_column(idx_name).native)
@@ -1002,7 +1002,7 @@ class ArrowListNamespace(
         self, node: FExpr[lists.Aggregation], frame: Frame, name: str
     ) -> Expr | Scalar:
         previous = node.input[0].dispatch(self.compliant, frame, name)
-        agg = AggSpec._from_list_agg(node.function, "values")
+        agg = group_by.AggSpec._from_list_agg(node.function, "values")
         return self.with_native(agg.agg_list(previous.native), name)
 
     def sort(self, node: FExpr[lists.Sort], frame: Frame, name: str) -> Expr | Scalar:

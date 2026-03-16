@@ -65,15 +65,3 @@ class Var(AggExpr, dtype=map_first(dtm.var_dtype)):
     __slots__ = ("ddof",)
     ddof: int
 # fmt: on
-
-
-def min(name: str, /) -> Min:
-    from narwhals._plan.expressions import col
-
-    return Min(expr=col(name))
-
-
-def max(name: str, /) -> Max:
-    from narwhals._plan.expressions import col
-
-    return Max(expr=col(name))

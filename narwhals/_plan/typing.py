@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from narwhals._plan.dataframe import DataFrame
     from narwhals._plan.expr import Expr
     from narwhals._plan.expressions import operators as ops
+    from narwhals._plan.expressions.aggregation import AggExpr
     from narwhals._plan.expressions.functions import RollingWindow
     from narwhals._plan.expressions.namespace import IRNamespace
     from narwhals._plan.expressions.ranges import RangeFunction
@@ -34,6 +35,7 @@ if TYPE_CHECKING:
     from narwhals.typing import NonNestedDType, NonNestedLiteral
 
 __all__ = [
+    "AggExprT_co",
     "ColumnNameOrSelector",
     "DataFrameT",
     "FunctionT",
@@ -79,7 +81,7 @@ OperatorFn: TypeAlias = "Callable[[t.Any, t.Any], t.Any]"
 ExprIRT = TypeVar("ExprIRT", bound="ExprIR", default="ExprIR")
 ExprIRT_co = TypeVar("ExprIRT_co", bound="ExprIR", default="ExprIR", covariant=True)
 NamedOrExprIRT = TypeVar("NamedOrExprIRT", "NamedIR[t.Any]", "ExprIR")
-
+AggExprT_co = TypeVar("AggExprT_co", bound="AggExpr", default="AggExpr", covariant=True)
 SelectorT = TypeVar("SelectorT", bound="SelectorIR", default="SelectorIR")
 LeftSelectorT = TypeVar("LeftSelectorT", bound="SelectorIR", default="SelectorIR")
 RightSelectorT = TypeVar("RightSelectorT", bound="SelectorIR", default="SelectorIR")

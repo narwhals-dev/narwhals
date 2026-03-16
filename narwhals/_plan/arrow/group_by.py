@@ -1,7 +1,9 @@
+"""Implements `DataFrame.group_by` and operations that can be expressed via `group_by`."""
+
 from __future__ import annotations
 
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Literal, cast, overload
+from typing import TYPE_CHECKING, Any, Literal, Protocol, cast, overload
 
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
@@ -13,11 +15,12 @@ from narwhals._plan.arrow import acero, compat, functions as fn, options
 from narwhals._plan.common import temp
 from narwhals._plan.compliant.group_by import EagerDataFrameGroupBy
 from narwhals._plan.expressions import aggregation as agg
+from narwhals._plan.typing import AggExprT_co
 from narwhals._utils import Implementation, qualified_type_name
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
+    from collections.abc import Iterable, Iterator, Mapping, Sequence
 
     from typing_extensions import Self, TypeAlias
 
@@ -38,8 +41,10 @@ if TYPE_CHECKING:
     from narwhals.typing import UniqueKeepStrategy
 
 Incomplete: TypeAlias = Any
-IntoColumnAgg: TypeAlias = "Callable[[str], ir.AggExpr]"
-"""Helper constructor for single-column aggregations."""
+
+
+class _IntoAggExpr(Protocol[AggExprT_co]):
+    def __call__(self, *, expr: ir.ExprIR) -> AggExprT_co: ...
 
 
 class MinMax(ir.AggExpr):
@@ -47,6 +52,11 @@ class MinMax(ir.AggExpr):
 
     https://arrow.apache.org/docs/python/generated/pyarrow.compute.min_max.html#pyarrow.compute.min_max
     """
+
+
+def named_ir_agg(name: str, agg: _IntoAggExpr[AggExprT_co]) -> ir.NamedIR[AggExprT_co]:
+    """Helper constructor for single-column, non parametric aggregations."""
+    return ir.NamedIR(expr=agg(expr=ir.Column(name=name)), name=name)
 
 
 SUPPORTED_AGG: Mapping[type[agg.AggExpr], acero.Aggregation] = {
@@ -430,10 +440,6 @@ Dynamically built for use in `ListScalar` aggregations, accounting for version a
 """
 
 
-def _ir_min_max(name: str, /) -> MinMax:
-    return MinMax(expr=ir.col(name))
-
-
 def _boolean_is_unique(
     indices: ChunkedArrayAny, aggregated: ChunkedStruct, /
 ) -> ChunkedArrayAny:
@@ -448,20 +454,21 @@ def _boolean_is_duplicated(
 
 
 # TODO @dangotbanned: Replace with a function for export?
-BOOLEAN_LENGTH_PRESERVING: Mapping[
-    type[ir.boolean.BooleanFunction], tuple[IntoColumnAgg, BooleanLengthPreserving]
+_BOOLEAN_LENGTH_PRESERVING: Mapping[
+    type[ir.boolean.BooleanFunction],
+    tuple[_IntoAggExpr[agg.Min | agg.Max | MinMax], BooleanLengthPreserving],
 ] = {
-    ir.boolean.IsFirstDistinct: (ir.min, fn.is_in),
-    ir.boolean.IsLastDistinct: (ir.max, fn.is_in),
-    ir.boolean.IsUnique: (_ir_min_max, _boolean_is_unique),
-    ir.boolean.IsDuplicated: (_ir_min_max, _boolean_is_duplicated),
+    ir.boolean.IsFirstDistinct: (agg.Min, fn.is_in),
+    ir.boolean.IsLastDistinct: (agg.Max, fn.is_in),
+    ir.boolean.IsUnique: (MinMax, _boolean_is_unique),
+    ir.boolean.IsDuplicated: (MinMax, _boolean_is_duplicated),
 }
 
 
 def unique_keep_boolean_length_preserving(
     keep: UniqueKeepStrategy,
-) -> tuple[IntoColumnAgg, BooleanLengthPreserving]:
-    return BOOLEAN_LENGTH_PRESERVING[_UNIQUE_KEEP_BOOLEAN_LENGTH_PRESERVING[keep]]
+) -> tuple[_IntoAggExpr[agg.Min | agg.Max | MinMax], BooleanLengthPreserving]:
+    return _BOOLEAN_LENGTH_PRESERVING[_UNIQUE_KEEP_BOOLEAN_LENGTH_PRESERVING[keep]]
 
 
 _UNIQUE_KEEP_BOOLEAN_LENGTH_PRESERVING: Mapping[

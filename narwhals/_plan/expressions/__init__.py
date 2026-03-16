@@ -19,7 +19,7 @@ from narwhals._plan.expressions import (
     struct,
     temporal,
 )
-from narwhals._plan.expressions.aggregation import AggExpr, OrderableAggExpr, max, min
+from narwhals._plan.expressions.aggregation import AggExpr, OrderableAggExpr
 from narwhals._plan.expressions.expr import (
     Alias,
     AnonymousExpr,
@@ -85,8 +85,6 @@ __all__ = [
     "lists",
     "lit",
     "lit_series",
-    "max",
-    "min",
     "named_ir",
     "operators",
     "over",
