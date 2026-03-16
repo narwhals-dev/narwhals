@@ -82,9 +82,21 @@ def col(name: str, /) -> Column:
 
 
 class Alias(ExprIR, dispatch="no_dispatch"):
+    """Rename an expression.
+
+    Important:
+        All expressions that change the output name are
+        resolved and removed following expression expansion.
+        This means that you can do arbitrarily complex renames,
+        **at the narwhals-level** but there is intentionally no support
+        for them at the compliant-level.
+    """
+
     __slots__ = ("expr", "name")
     expr: ExprIR = node()
+    """The expression to rename."""
     name: str
+    """The new name."""
 
     def iter_output_name(self) -> Iterator[ExprIR]:
         yield self
