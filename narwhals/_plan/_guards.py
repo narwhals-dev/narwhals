@@ -137,11 +137,6 @@ def is_aggregation(obj: Any) -> TypeIs[ir.AggExpr | ir.FunctionExpr[Any]]:
     return is_agg_expr(obj) or (is_function_expr(obj) and obj.is_scalar())
 
 
-def is_tuple_of(obj: Any, tp: type[T]) -> TypeIs[Seq[T]]:
-    """Return True if the **first** element of the tuple `obj` is an instance of `tp`."""
-    return bool(isinstance(obj, tuple) and obj and isinstance(obj[0], tp))
-
-
 def is_re_pattern(obj: Any) -> TypeIs[re.Pattern[str]]:
     return isinstance(obj, re.Pattern)
 
