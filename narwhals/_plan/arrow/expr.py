@@ -230,7 +230,7 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
     def is_in_series(
         self, node: FExpr[IsInSeries[ChunkedArrayAny]], frame: Frame, name: str
     ) -> StoresNativeT_co:
-        other = node.function.other.unwrap().to_native()
+        other = node.function.other.native
         return self._unary_function(fn.is_in, other)(node, frame, name)
 
     def is_in_seq(

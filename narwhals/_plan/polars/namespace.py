@@ -4,11 +4,11 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, overload
 
 import polars as pl
 
+from narwhals._plan import expressions as ir
 from narwhals._plan._version import into_version
 from narwhals._plan.common import todo
 from narwhals._plan.compliant.namespace import CompliantNamespace
 from narwhals._plan.compliant.translate import FromDict, FromIterable
-from narwhals._plan.expressions.literal import is_literal_scalar
 from narwhals._polars.utils import (
     narwhals_to_native_dtype as _dtype_native,
     native_to_narwhals_dtype as _dtype_from_native,
@@ -22,14 +22,12 @@ if TYPE_CHECKING:
 
     from typing_extensions import TypeAlias
 
-    from narwhals._plan import expressions as ir
     from narwhals._plan.expressions.ranges import IntRange
     from narwhals._plan.polars.dataframe import PolarsDataFrame as DataFrame
     from narwhals._plan.polars.expr import PolarsExpr as Expr
     from narwhals._plan.polars.lazyframe import PolarsLazyFrame as LazyFrame
     from narwhals._plan.polars.series import PolarsSeries as Series
     from narwhals._plan.polars.typing import CompliantDataFrame
-    from narwhals._plan.series import Series as NwSeries
     from narwhals.dtypes import Date, DType, FloatType, IntegerType
     from narwhals.schema import Schema
     from narwhals.typing import (
@@ -171,33 +169,29 @@ class PolarsNamespace(
     def len(self, node: ir.Len, frame: Incomplete, name: str) -> Expr:
         return self._expr.from_native(pl.len(), name, self.version)
 
-    def lit(
-        self,
-        node: ir.Literal[NonNestedLiteral] | ir.Literal[NwSeries[pl.Series]],
-        frame: Incomplete,
-        name: str,
-    ) -> Expr:
-        version = self.version
-        if not is_literal_scalar(node):
-            series = node.unwrap().to_native()
-            return self._expr.from_native(pl.lit(series), name, version)
+    def lit(self, node: ir.Lit[NonNestedLiteral], frame: Incomplete, name: str) -> Expr:
         return self._expr.from_python(
-            node.unwrap(), name, dtype=node.dtype, version=version
+            node.value, name, dtype=node.dtype, version=self.version
         )
+
+    def lit_series(
+        self, node: ir.LitSeries[pl.Series], frame: Incomplete, name: str
+    ) -> Expr:
+        return self._expr.from_native(pl.lit(node.native), name, self.version)
 
     def int_range(
         self, node: ir.RangeExpr[IntRange], frame: Incomplete, name: str
     ) -> Expr:
         start, end = node.function.unwrap_input(node)
-        if is_literal_scalar(start) and is_literal_scalar(end):
-            start_, end_ = start.unwrap(), end.unwrap()
+        if isinstance(start, ir.Lit) and isinstance(end, ir.Lit):
+            start_, end_ = start.value, end.value
             if isinstance(start_, int) and isinstance(end_, int):
                 dtype = dtype_to_native_fast(node.function.dtype)
                 native = pl.int_range(start_, end_, node.function.step, dtype=dtype)
                 return self._expr.from_native(native, name, self.version)
             msg = f"All inputs for `{node.function}()` must resolve to int, but got \n{start_!r}\n{end_!r}"
             raise InvalidOperationError(msg)
-        msg = f"TODO @dangotbanned: `{self.int_range.__qualname__}()` w/ non-`ScalarLiteral` inputs, got \n{start!r}\n{end!r}"
+        msg = f"TODO @dangotbanned: `{self.int_range.__qualname__}()` w/ non-`Lit` inputs, got \n{start!r}\n{end!r}"
         raise NotImplementedError(msg)
 
     def int_range_eager(

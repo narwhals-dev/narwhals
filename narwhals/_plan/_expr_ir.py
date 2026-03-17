@@ -46,7 +46,7 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
     >>> bigger = (column + 10.5).alias("more")
     >>> bigger_ir = bigger._ir
     >>> print(bigger_ir)
-    Alias(expr=BinaryExpr(left=..., op=Add(), right=Literal(..., value=10.5))), name='more')
+    Alias(expr=BinaryExpr(left=..., op=Add(), right=Lit(..., value=10.5)), name='more')
 
     An `ExprIR` is an easily traversable graph:
     >>> def show_order(nodes: Iterator[ExprIR]) -> None:
@@ -55,7 +55,7 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
     Supporting iteration from both *root to leaf*:
     >>> show_order(bigger_ir.iter_left())
     0: Column(name='howdy')
-    1: Literal(value=ScalarLiteral(dtype=Float64, value=10.5))
+    1: Lit(dtype=Float64, value=10.5)
     2: BinaryExpr(left=..., op=Add(), right=...)
     3: Alias(expr=BinaryExpr(...), name='more')
 
@@ -63,7 +63,7 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
     >>> show_order(bigger_ir.iter_right())
     0: Alias(expr=BinaryExpr(...), name='more')
     1: BinaryExpr(left=..., op=Add(), right=...)
-    2: Literal(value=ScalarLiteral(dtype=Float64, value=10.5))
+    2: Lit(dtype=Float64, value=10.5)
     3: Column(name='howdy')
 
     That comes in handy for [`meta`] operations, which are available for both `Expr` and `ExprIR`:

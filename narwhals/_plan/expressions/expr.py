@@ -21,7 +21,6 @@ from narwhals._plan.typing import (
     Ignored,
     LeftSelectorT,
     LeftT,
-    LiteralT,
     OperatorT,
     RangeT_co,
     RightSelectorT,
@@ -42,7 +41,6 @@ if TYPE_CHECKING:
     from narwhals._plan.compliant.typing import Ctx, FrameT_contra, R_co
     from narwhals._plan.expressions import selectors as cs
     from narwhals._plan.expressions.functions import MapBatches  # noqa: F401
-    from narwhals._plan.expressions.literal import LiteralValue
     from narwhals._plan.options import FunctionOptions, SortMultipleOptions, SortOptions
     from narwhals._plan.schema import FrozenSchema
     from narwhals.dtypes import DType
@@ -58,7 +56,6 @@ __all__ = [
     "Filter",
     "FunctionExpr",
     "Len",
-    "Literal",
     "Over",
     "RollingExpr",
     "RootSelector",
@@ -120,33 +117,6 @@ class Column(ExprIR, dispatch=namespaced("col")):
 
     def iter_output_name(self) -> Iterator[ExprIR]:
         yield self
-
-
-class Literal(ExprIR, Generic[LiteralT], dispatch=namespaced("lit"), dtype=get_dtype()):
-    """https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/expr.rs#L81."""
-
-    __slots__ = ("value",)
-    value: LiteralValue[LiteralT]
-
-    def is_scalar(self) -> bool:
-        return self.value.is_scalar
-
-    def iter_output_name(self) -> Iterator[ExprIR]:
-        yield self
-
-    @property
-    def dtype(self) -> DType:
-        return self.value.dtype
-
-    @property
-    def name(self) -> str:
-        return self.value.name
-
-    def __repr__(self) -> str:
-        return f"lit({self.value!r})"
-
-    def unwrap(self) -> LiteralT:
-        return self.value.unwrap()
 
 
 class BinaryExpr(ExprIR, Generic[LeftT, OperatorT, RightT]):

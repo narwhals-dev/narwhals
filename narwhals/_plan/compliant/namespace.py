@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, Protocol, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol
 
 from narwhals._plan.compliant import io, ranges
 from narwhals._plan.compliant.concat import ConcatDataFrame, ConcatSeriesHorizontal
@@ -22,7 +22,6 @@ if TYPE_CHECKING:
     from narwhals._plan import expressions as ir
     from narwhals._plan.expressions import FunctionExpr, boolean, functions as F
     from narwhals._plan.expressions.strings import ConcatStr
-    from narwhals._plan.series import Series
     from narwhals._utils import Implementation
     from narwhals.typing import NonNestedLiteral
 
@@ -62,8 +61,8 @@ class CompliantNamespace(
     ) -> ExprT_co | ScalarT_co: ...
     def len(self, node: ir.Len, frame: FrameT, name: str) -> ScalarT_co: ...
     def lit(
-        self, node: ir.Literal[Any], frame: FrameT, name: str
-    ) -> ExprT_co | ScalarT_co: ...
+        self, node: ir.Lit[NonNestedLiteral], frame: FrameT, name: str
+    ) -> ScalarT_co: ...
     def max_horizontal(
         self, node: FunctionExpr[F.MaxHorizontal], frame: FrameT, name: str
     ) -> ExprT_co | ScalarT_co: ...
@@ -117,14 +116,6 @@ class EagerNamespace(
             len(frame), name or node.name, dtype=None, version=frame.version
         )
 
-    @overload
-    def lit(
-        self, node: ir.Literal[NonNestedLiteral], frame: EagerDataFrameT, name: str
-    ) -> EagerScalarT_co: ...
-    @overload
-    def lit(
-        self, node: ir.Literal[Series[Any]], frame: EagerDataFrameT, name: str
+    def lit_series(
+        self, node: ir.LitSeries[Any], frame: EagerDataFrameT, name: str
     ) -> EagerExprT_co: ...
-    def lit(
-        self, node: ir.Literal[Any], frame: EagerDataFrameT, name: str
-    ) -> EagerExprT_co | EagerScalarT_co: ...

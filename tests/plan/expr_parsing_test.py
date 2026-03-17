@@ -15,7 +15,6 @@ from narwhals import _plan as nwp
 from narwhals._plan import expressions as ir
 from narwhals._plan._parse import parse_into_seq_of_expr_ir
 from narwhals._plan.expressions import functions as F, operators as ops
-from narwhals._plan.expressions.literal import ScalarLiteral, SeriesLiteral
 from narwhals._plan.expressions.ranges import IntRange
 from narwhals._utils import Implementation
 from narwhals.exceptions import (
@@ -167,7 +166,7 @@ def test_agg_non_elementwise_range_special() -> None:
     e_ir = e._ir
     assert isinstance(e_ir, ir.Alias)
     assert isinstance(e_ir.expr, ir.RangeExpr)
-    assert isinstance(e_ir.expr.input[0], ir.Literal)
+    assert isinstance(e_ir.expr.input[0], ir.Lit)
     assert isinstance(e_ir.expr.input[1], ir.Len)
 
 
@@ -357,7 +356,7 @@ def test_is_in_series() -> None:
     e_ir = expr._ir
     assert isinstance(e_ir, ir.FunctionExpr)
     assert isinstance(e_ir.function, ir.boolean.IsInSeries)
-    assert e_ir.function.other.unwrap().to_native() is native
+    assert e_ir.function.other.value.to_native() is native
 
 
 @pytest.mark.parametrize(
@@ -443,13 +442,11 @@ def test_lit_series_roundtrip() -> None:
     lit_series = nwp.lit(series)
     assert lit_series.meta.is_literal()
     e_ir = lit_series._ir
-    assert isinstance(e_ir, ir.Literal)
+    assert isinstance(e_ir, ir.LitSeries)
     assert isinstance(e_ir.dtype, nw.String)
-    assert isinstance(e_ir.value, SeriesLiteral)
-    unwrapped = e_ir.unwrap()
-    assert isinstance(unwrapped, nwp.Series)
-    assert isinstance(unwrapped.to_native(), pa.ChunkedArray)
-    assert unwrapped.to_list() == data
+    assert isinstance(e_ir.value, nwp.Series)
+    assert isinstance(e_ir.value.to_native(), pa.ChunkedArray)
+    assert e_ir.value.to_list() == data
 
 
 @pytest.mark.parametrize(
@@ -727,10 +724,7 @@ def test_list_contains_invalid() -> None:
     assert_expr_ir_equal(
         ok,
         ir.FunctionExpr(
-            input=(
-                ir.col("a"),
-                ir.Literal(value=ScalarLiteral(value="a", dtype=nw.String())),
-            ),
+            input=(ir.col("a"), ir.lit("a", nw.String)),
             function=ir.lists.Contains(),
             options=ir.lists.Contains().function_options,
         ),

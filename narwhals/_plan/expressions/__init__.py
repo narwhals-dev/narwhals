@@ -31,7 +31,6 @@ from narwhals._plan.expressions.expr import (
     FunctionExpr,
     InvertSelector,
     Len,
-    Literal,
     Over,
     OverOrdered,
     RangeExpr,
@@ -44,7 +43,7 @@ from narwhals._plan.expressions.expr import (
     col,
     ternary_expr,
 )
-from narwhals._plan.expressions.literal import lit, lit_series
+from narwhals._plan.expressions.literal import Lit, LitSeries, lit, lit_series
 from narwhals._plan.expressions.name import KeepName, RenameAlias
 from narwhals._plan.expressions.window import over, over_ordered
 
@@ -63,7 +62,8 @@ __all__ = [
     "InvertSelector",
     "KeepName",
     "Len",
-    "Literal",
+    "Lit",
+    "LitSeries",
     "NamedIR",
     "OrderableAggExpr",
     "Over",

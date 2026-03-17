@@ -1,82 +1,95 @@
+# mypy: disable-error-code="misc", warn-unused-configs=True
+# see `LiteralExpr.value`
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Generic
+from typing import TYPE_CHECKING, Any, Generic, final
 
 from narwhals._plan import common
-from narwhals._plan._guards import is_literal
-from narwhals._plan._immutable import Immutable
-from narwhals._plan.typing import LiteralT, NativeSeriesT, NonNestedLiteralT
+from narwhals._plan._dispatch import DispatcherOptions
+from narwhals._plan._dtype import ResolveDType
+from narwhals._plan._expr_ir import ExprIR
+from narwhals._plan.typing import (
+    LiteralT_co,
+    NativeSeriesT,
+    NativeSeriesT_co,
+    NonNestedLiteralT,
+    NonNestedLiteralT_co,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from typing_extensions import TypeIs
-
-    from narwhals._plan.expressions.expr import Literal
     from narwhals._plan.series import Series
+    from narwhals._utils import Version
     from narwhals.dtypes import DType
     from narwhals.typing import IntoDType
 
+__all__ = ["Lit", "LitSeries", "lit", "lit_series"]
 
-class LiteralValue(Immutable, Generic[LiteralT]):
-    """https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/plans/lit.rs#L67-L73."""
+# NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
+get_dtype = ResolveDType.get_dtype
+namespaced = DispatcherOptions.namespaced
 
-    @property
-    def dtype(self) -> DType:
-        raise NotImplementedError
+
+# TODO @dangotbanned: (low-prio) Define `__str__` to use (`value`, `dtype`)-order instead
+# - Generated from alphabetical-ordered slots
+# - Will break some doctests on a change
+# TODO @dangotbanned: Maybe skip this and keep the classes separate?
+# - Don't want dispatching for `LiteralExpr`
+# - All base class checks have been replaced now
+# - Only benefits will be:
+#   - a few lines saved
+#   - shared slots
+#   - sharing attribute docstrings
+class LiteralExpr(ExprIR, Generic[LiteralT_co], dtype=get_dtype()):
+    __slots__ = ("dtype", "value")
+    # NOTE: https://discuss.python.org/t/make-replace-stop-interfering-with-variance-inference/96092
+    value: LiteralT_co
+    dtype: DType
 
     @property
     def name(self) -> str:
         return "literal"
 
-    @property
-    def is_scalar(self) -> bool:
-        return False
-
-    def to_literal(self) -> Literal[LiteralT]:
-        from narwhals._plan.expressions.expr import Literal
-
-        return Literal(value=self)
-
-    def unwrap(self) -> LiteralT:
-        raise NotImplementedError
+    def iter_output_name(self) -> Iterator[ExprIR]:
+        yield self
 
 
-class ScalarLiteral(LiteralValue[NonNestedLiteralT]):
-    __slots__ = ("dtype", "value")  # pyright: ignore[reportIncompatibleMethodOverride]
-    value: NonNestedLiteralT
-    dtype: DType
-
-    @property
+# TODO @dangotbanned: Doc
+@final
+class Lit(LiteralExpr[NonNestedLiteralT_co], dispatch=namespaced()):
     def is_scalar(self) -> bool:
         return True
 
     def __repr__(self) -> str:
-        if self.value is not None:
-            return f"{type(self.value).__name__}: {self.value!s}"
-        return "null"
-
-    def unwrap(self) -> NonNestedLiteralT:
-        return self.value
+        v = self.value
+        return f"lit({'null' if v is None else f'{type(v).__name__}: {v!s}'})"
 
 
-class SeriesLiteral(LiteralValue["Series[NativeSeriesT]"]):
-    __slots__ = ("value",)
-    value: Series[NativeSeriesT]
+# TODO @dangotbanned: Doc
+@final
+class LitSeries(LiteralExpr["Series[NativeSeriesT_co]"], dispatch=namespaced()):
+    def is_scalar(self) -> bool:
+        return False
 
-    @property
-    def dtype(self) -> DType:
-        return self.value.dtype
+    @staticmethod
+    def from_series(series: Series[NativeSeriesT], /) -> LitSeries[NativeSeriesT]:
+        return LitSeries(value=series, dtype=series.dtype)
 
     @property
     def name(self) -> str:
         return self.value.name
 
-    def __repr__(self) -> str:
-        return "Series"
+    @property
+    def native(self) -> NativeSeriesT_co:
+        return self.value.to_native()
 
-    def unwrap(self) -> Series[NativeSeriesT]:
-        return self.value
+    @property
+    def version(self) -> Version:
+        return self.value.version
+
+    def __repr__(self) -> str:
+        return "lit(Series)"
 
     @property
     def __immutable_values__(self) -> Iterator[Any]:
@@ -84,21 +97,14 @@ class SeriesLiteral(LiteralValue["Series[NativeSeriesT]"]):
         yield from (self.name, self.dtype, id(self.value))
 
 
-def is_literal_scalar(
-    obj: Literal[NonNestedLiteralT] | Any,
-) -> TypeIs[Literal[NonNestedLiteralT]]:
-    return is_literal(obj) and isinstance(obj.value, ScalarLiteral)
-
-
 def lit(
     value: NonNestedLiteralT, dtype: IntoDType | None = None
-) -> Literal[NonNestedLiteralT]:
+) -> Lit[NonNestedLiteralT]:
     if dtype is None:
         dtype = common.py_to_narwhals_dtype(value)
     else:
         dtype = common.into_dtype(dtype)
-    return ScalarLiteral(value=value, dtype=dtype).to_literal()
+    return Lit(value=value, dtype=dtype)
 
 
-def lit_series(value: Series[NativeSeriesT], /) -> Literal[Series[NativeSeriesT]]:
-    return SeriesLiteral(value=value).to_literal()
+lit_series = LitSeries.from_series

@@ -333,7 +333,7 @@ class Expander:
                 yield origin.__replace__(input=(root, *children))
 
 
-_EXPAND_NONE = (ir.Column, ir.Literal, ir.Len)
+_EXPAND_NONE = (ir.Column, ir.Lit, ir.LitSeries, ir.Len)
 """we're at the root, nothing left to expand."""
 _EXPAND_SINGLE = (ir.Alias, ir.Cast, ir.AggExpr, ir.Sort, ir.KeepName, ir.RenameAlias)
 """one (direct) child, always stored in `self.expr`.

@@ -21,7 +21,7 @@ from narwhals._plan.typing import (
     NativeDataFrameT,
     NativeDataFrameT_co,
     NativeFrameT_co,
-    NativeSeriesT2,
+    NativeSeriesT,
     NativeSeriesT_co,
     NonCrossJoinStrategy,
     OneOrIterable,
@@ -421,9 +421,9 @@ class DataFrame(
     @classmethod
     def from_dict(
         cls: type[DataFrame[Any, Any]],
-        data: Mapping[str, Series[NativeSeriesT2]],
+        data: Mapping[str, Series[NativeSeriesT]],
         schema: IntoSchema | None = ...,
-    ) -> DataFrame[Any, NativeSeriesT2]: ...
+    ) -> DataFrame[Any, NativeSeriesT]: ...
     @classmethod
     def from_dict(
         cls: type[DataFrame[Any, Any]],

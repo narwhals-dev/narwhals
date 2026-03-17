@@ -3,20 +3,21 @@ from __future__ import annotations
 # NOTE: Needed to avoid naming collisions
 # - Any
 import typing as t
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Generic
 
 import narwhals._plan.dtypes_mapper as dtm
 from narwhals._plan._dispatch import DispatcherOptions
 from narwhals._plan._dtype import ResolveDType
 from narwhals._plan._function import Function, HorizontalFunction
 from narwhals._plan.options import FunctionOptions
-from narwhals._plan.typing import NativeSeriesT
+from narwhals._plan.typing import NativeSeriesT, NativeSeriesT_co
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._plan._expr_ir import ExprIR
-    from narwhals._plan.expressions.expr import FunctionExpr as FExpr, Literal
+    from narwhals._plan.expressions.expr import FunctionExpr as FExpr
+    from narwhals._plan.expressions.literal import LitSeries
     from narwhals._plan.series import Series
     from narwhals._plan.typing import Seq
     from narwhals.typing import ClosedInterval
@@ -75,18 +76,18 @@ class IsInSeq(BooleanFunction):
         raise TypeError(msg)
 
 
-class IsInSeries(BooleanFunction, t.Generic[NativeSeriesT]):
+class IsInSeries(BooleanFunction, Generic[NativeSeriesT_co]):
     __slots__ = ("other",)
-    other: Literal[Series[NativeSeriesT]]
+    other: LitSeries[NativeSeriesT_co]
 
     def __repr__(self) -> str:
         return "is_in"
 
-    @classmethod
-    def from_series(cls, other: Series[NativeSeriesT], /) -> IsInSeries[NativeSeriesT]:
-        from narwhals._plan.expressions.literal import SeriesLiteral
+    @staticmethod
+    def from_series(other: Series[NativeSeriesT], /) -> IsInSeries[NativeSeriesT]:
+        from narwhals._plan.expressions.literal import lit_series
 
-        return IsInSeries(other=SeriesLiteral(value=other).to_literal())
+        return IsInSeries(other=lit_series(other))
 
 
 class IsInExpr(BooleanFunction):

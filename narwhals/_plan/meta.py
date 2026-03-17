@@ -10,9 +10,8 @@ from functools import lru_cache
 from typing import TYPE_CHECKING, Literal, overload
 
 from narwhals._plan import expressions as ir
-from narwhals._plan._guards import is_literal
 from narwhals._plan.expressions import selectors as cs
-from narwhals._plan.expressions.literal import is_literal_scalar
+from narwhals._plan.expressions.literal import Lit, LitSeries
 from narwhals._plan.expressions.namespace import IRNamespace
 from narwhals._plan.expressions.struct import FieldByName
 from narwhals.exceptions import ComputeError, InvalidOperationError
@@ -42,8 +41,21 @@ class MetaNamespace(IRNamespace):
         return all(isinstance(e, targets) for e in nodes)
 
     def is_literal(self, *, allow_aliasing: bool = False) -> bool:
+        """Indicate if this expression is a literal value (optionally aliased).
+
+        Arguments:
+            allow_aliasing: If False (default), only a bare literal will match.
+        """
+        it = self._ir.iter_left()
+        selection = (Lit, LitSeries) if not allow_aliasing else (Lit, LitSeries, ir.Alias)
         return all(
-            _is_literal(e, allow_aliasing=allow_aliasing) for e in self._ir.iter_left()
+            isinstance(e, selection)
+            or (
+                isinstance(e, ir.Cast)
+                and isinstance(e.expr, Lit)
+                and isinstance(e.expr.dtype, _TP_DATETIME)
+            )
+            for e in it
         )
 
     @overload
@@ -88,6 +100,9 @@ class MetaNamespace(IRNamespace):
         return self._ir.to_selector_ir().to_narwhals()
 
 
+_TP_DATETIME = Version.MAIN.dtypes.Datetime
+
+
 def iter_root_names(expr: ir.ExprIR, /) -> Iterator[str]:
     yield from (e.name for e in expr.iter_left() if isinstance(e, ir.Column))
 
@@ -102,7 +117,7 @@ def root_name_first(expr: ir.ExprIR, /) -> str:
 @lru_cache(maxsize=32)
 def _expr_output_name(expr: ir.ExprIR, /) -> str | ComputeError:
     for e in expr.iter_output_name():
-        if isinstance(e, (ir.Column, ir.Alias, ir.Literal, ir.Len)):
+        if isinstance(e, (ir.Column, ir.Alias, ir.Lit, ir.LitSeries, ir.Len)):
             return e.name
         if isinstance(e, ir.RenameAlias):
             parent = _expr_output_name(e.expr)
@@ -130,15 +145,3 @@ def has_expr_ir(expr: ir.ExprIR, *matches: type[ir.ExprIR]) -> bool:
     [`polars_plan::utils::has_expr`]: https://github.com/pola-rs/polars/blob/0fa7141ce718c6f0a4d6ae46865c867b177a59ed/crates/polars-plan/src/utils.rs#L70-L77
     """
     return any(isinstance(e, matches) for e in expr.iter_right())
-
-
-def _is_literal(expr: ir.ExprIR, /, *, allow_aliasing: bool) -> bool:
-    return (
-        is_literal(expr)
-        or (allow_aliasing and isinstance(expr, ir.Alias))
-        or (
-            isinstance(expr, ir.Cast)
-            and is_literal_scalar(expr.expr)
-            and isinstance(expr.expr.dtype, Version.MAIN.dtypes.Datetime)
-        )
-    )

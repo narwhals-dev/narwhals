@@ -44,7 +44,7 @@ __all__ = [
     "IntoExprColumn",
     "LeftSelectorT",
     "LeftT",
-    "LiteralT",
+    "LiteralT_co",
     "MapIR",
     "NonNestedLiteralT",
     "OperatorFn",
@@ -100,8 +100,13 @@ NonNestedDTypeT = TypeVar("NonNestedDTypeT", bound="NonNestedDType")
 NonNestedLiteralT = TypeVar(
     "NonNestedLiteralT", bound="NonNestedLiteral", default="NonNestedLiteral"
 )
+NonNestedLiteralT_co = TypeVar(
+    "NonNestedLiteralT_co",
+    bound="NonNestedLiteral",
+    covariant=True,
+    default="NonNestedLiteral",
+)
 NativeSeriesT = TypeVar("NativeSeriesT", bound="NativeSeries", default="NativeSeries")
-NativeSeriesT2 = TypeVar("NativeSeriesT2", bound="NativeSeries", default="NativeSeries")
 NativeSeriesAnyT = TypeVar("NativeSeriesAnyT", bound="NativeSeries", default="t.Any")
 NativeSeriesT_co = TypeVar(
     "NativeSeriesT_co", bound="NativeSeries", covariant=True, default="NativeSeries"
@@ -127,7 +132,9 @@ NativeLazyFrameT_co = TypeVar(
     default="NativeLazyFrame",
     covariant=True,
 )
-LiteralT = TypeVar("LiteralT", bound="NonNestedLiteral | Series[t.Any]", default=t.Any)
+LiteralT_co = TypeVar(
+    "LiteralT_co", bound="NonNestedLiteral | Series[t.Any]", covariant=True, default=t.Any
+)
 MapIR: TypeAlias = "Callable[[ExprIR], ExprIR]"
 """A function to apply to all nodes in this tree."""
 

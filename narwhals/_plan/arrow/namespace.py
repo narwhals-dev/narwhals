@@ -8,12 +8,11 @@ from typing import TYPE_CHECKING, Any, Literal, overload
 import pyarrow as pa  # ignore-banned-import
 
 from narwhals._arrow.utils import narwhals_to_native_dtype
+from narwhals._plan import expressions as ir
 from narwhals._plan.arrow import functions as fn, io
 from narwhals._plan.common import todo
 from narwhals._plan.compliant.namespace import EagerNamespace
 from narwhals._plan.compliant.translate import FromDict, FromIterable
-from narwhals._plan.expressions.expr import RangeExpr
-from narwhals._plan.expressions.literal import is_literal_scalar
 from narwhals._utils import Implementation, Version
 from narwhals.exceptions import InvalidOperationError
 from narwhals.schema import Schema
@@ -23,7 +22,6 @@ if TYPE_CHECKING:
 
     from typing_extensions import TypeAlias
 
-    from narwhals._arrow.typing import ChunkedArrayAny
     from narwhals._plan._dispatch import BoundMethod
     from narwhals._plan.arrow.dataframe import ArrowDataFrame as Frame
     from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
@@ -31,18 +29,18 @@ if TYPE_CHECKING:
     from narwhals._plan.arrow.typing import (
         BinaryFunction,
         ChunkedArray,
+        ChunkedArrayAny,
         CompliantDataFrame,
         CompliantSeries,
         IntegerScalar,
         IOSource,
         VariadicFunction,
     )
-    from narwhals._plan.expressions import expr, functions as F
+    from narwhals._plan.expressions import functions as F
     from narwhals._plan.expressions.boolean import AllHorizontal, AnyHorizontal
     from narwhals._plan.expressions.expr import FunctionExpr as FExpr, RangeExpr
     from narwhals._plan.expressions.ranges import DateRange, IntRange, LinearSpace
     from narwhals._plan.expressions.strings import ConcatStr
-    from narwhals._plan.series import Series as NwSeries
     from narwhals._plan.typing import NonNestedLiteralT
     from narwhals.dtypes import IntegerType
     from narwhals.typing import (
@@ -114,33 +112,20 @@ class ArrowNamespace(
     ) -> Series:
         return self._series.from_iterable(data, name=name, dtype=dtype, version=version)
 
-    def col(self, node: expr.Column, frame: Frame, name: str) -> Expr:
+    def col(self, node: ir.Column, frame: Frame, name: str) -> Expr:
         return self._expr.from_native(
             frame.native.column(node.name), name, version=frame.version
         )
 
-    @overload
-    def lit(
-        self, node: expr.Literal[NonNestedLiteral], frame: Frame, name: str
-    ) -> Scalar: ...
-    @overload
-    def lit(
-        self, node: expr.Literal[NwSeries[ChunkedArrayAny]], frame: Frame, name: str
-    ) -> Expr: ...
-    def lit(
-        self,
-        node: expr.Literal[NonNestedLiteral] | expr.Literal[NwSeries[ChunkedArrayAny]],
-        frame: Frame,
-        name: str,
-    ) -> Expr | Scalar:
-        if is_literal_scalar(node):
-            return self._scalar.from_python(
-                node.unwrap(), name, dtype=node.dtype, version=frame.version
-            )
-        nw_ser = node.unwrap()
-        return self._expr.from_native(
-            nw_ser.to_native(), name or node.name, nw_ser.version
+    def lit(self, node: ir.Lit[NonNestedLiteral], frame: Frame, name: str) -> Scalar:
+        return self._scalar.from_python(
+            node.value, name, dtype=node.dtype, version=frame.version
         )
+
+    def lit_series(
+        self, node: ir.LitSeries[ChunkedArrayAny], frame: Frame, name: str
+    ) -> Expr:
+        return self._expr.from_native(node.native, name or node.name, node.version)
 
     @overload
     def _horizontal(
@@ -249,8 +234,8 @@ class ArrowNamespace(
         start_: PythonLiteral
         end_: PythonLiteral
         start, end = node.function.unwrap_input(node)
-        if is_literal_scalar(start) and is_literal_scalar(end):
-            start_, end_ = start.unwrap(), end.unwrap()
+        if isinstance(start, ir.Lit) and isinstance(end, ir.Lit):
+            start_, end_ = start.value, end.value
         else:
             scalar_start = self._expr.from_ir(start, frame, "start")
             scalar_end = self._expr.from_ir(end, frame, "end")
