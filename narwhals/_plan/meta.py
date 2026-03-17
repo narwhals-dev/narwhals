@@ -14,7 +14,8 @@ from narwhals._plan.expressions import selectors as cs
 from narwhals._plan.expressions.literal import Lit, LitSeries
 from narwhals._plan.expressions.namespace import IRNamespace
 from narwhals._plan.expressions.struct import FieldByName
-from narwhals.exceptions import ComputeError, InvalidOperationError
+from narwhals._utils import unstable
+from narwhals.exceptions import ComputeError
 from narwhals.utils import Version
 
 if TYPE_CHECKING:
@@ -27,12 +28,19 @@ class MetaNamespace(IRNamespace):
     """Methods to traverse and introspect existing expressions."""
 
     def has_multiple_outputs(self) -> bool:
+        """Indicate if this expression expands into multiple expressions."""
         return any(isinstance(e, ir.SelectorIR) for e in self._ir.iter_left())
 
     def is_column(self) -> bool:
+        """Indicate if this expression is a basic/unaliased column."""
         return isinstance(self._ir, ir.Column)
 
     def is_column_selection(self, *, allow_aliasing: bool = False) -> bool:
+        """Indicate if this expression only selects columns (optionally aliased).
+
+        Arguments:
+            allow_aliasing: If False (default), any aliasing is not considered to be column selection.
+        """
         nodes = self._ir.iter_left()
         selection = ir.Column, ir.SelectorIR
         if not allow_aliasing:
@@ -63,21 +71,32 @@ class MetaNamespace(IRNamespace):
     @overload
     def output_name(self, *, raise_if_undetermined: Literal[False]) -> str | None: ...
     def output_name(self, *, raise_if_undetermined: bool = True) -> str | None:
-        """Get the output name of this expression.
+        """Get the column name that this expression would produce.
+
+        Arguments:
+            raise_if_undetermined: If True (default), a `ComputeError` will be raised
+                if the output name depends on the schema of the context.
+                Otherwise `None` is returned.
 
         Examples:
-            >>> from narwhals import _plan as nw
-            >>>
-            >>> a = nw.col("a")
-            >>> b = a.alias("b")
-            >>> c = b.min().alias("c")
-            >>>
-            >>> a.meta.output_name()
+            >>> import narwhals._plan as nw
+            >>> import narwhals._plan.selectors as ncs
+            >>> nw.col("a").meta.output_name()
             'a'
-            >>> b.meta.output_name()
+
+            Aliasing is supported:
+            >>> nw.col("a").alias("b").meta.output_name()
             'b'
-            >>> c.meta.output_name()
-            'c'
+
+            And chained renaming operations:
+            >>> nw.col("a").alias("b").min().name.to_uppercase().meta.output_name()
+            'B'
+
+            But selectors always require a schema:
+            >>> ncs.string().meta.output_name(raise_if_undetermined=False)
+            >>> ncs.string().meta.output_name()
+            Traceback (most recent call last):
+            narwhals.exceptions.ComputeError: unable to find root column name for expr 'ncs.string()' when calling 'output_name'
         """
         ok_or_err = _expr_output_name(self._ir)
         if isinstance(ok_or_err, ComputeError):
@@ -92,6 +111,7 @@ class MetaNamespace(IRNamespace):
         """Get the root column names."""
         return list(iter_root_names(self._ir))
 
+    @unstable
     def as_selector(self) -> Selector:
         """Try to turn this expression into a selector.
 
@@ -105,13 +125,6 @@ _TP_DATETIME = Version.MAIN.dtypes.Datetime
 
 def iter_root_names(expr: ir.ExprIR, /) -> Iterator[str]:
     yield from (e.name for e in expr.iter_left() if isinstance(e, ir.Column))
-
-
-def root_name_first(expr: ir.ExprIR, /) -> str:
-    if name := next(iter_root_names(expr), None):
-        return name
-    msg = f"`name.keep_name` expected at least one column name, got `{expr!r}`"
-    raise InvalidOperationError(msg)
 
 
 @lru_cache(maxsize=32)
@@ -135,13 +148,3 @@ def _expr_output_name(expr: ir.ExprIR, /) -> str | ComputeError:
         f"unable to find root column name for expr '{expr!r}' when calling 'output_name'"
     )
     return ComputeError(msg)
-
-
-def has_expr_ir(expr: ir.ExprIR, *matches: type[ir.ExprIR]) -> bool:
-    """Return True if any node in the tree is in type `matches`.
-
-    Based on [`polars_plan::utils::has_expr`]
-
-    [`polars_plan::utils::has_expr`]: https://github.com/pola-rs/polars/blob/0fa7141ce718c6f0a4d6ae46865c867b177a59ed/crates/polars-plan/src/utils.rs#L70-L77
-    """
-    return any(isinstance(e, matches) for e in expr.iter_right())

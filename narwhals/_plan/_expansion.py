@@ -59,6 +59,7 @@ from narwhals._plan.expressions import (
 from narwhals._plan.schema import FrozenSchema, IntoFrozenSchema, freeze_schema
 from narwhals._typing_compat import assert_never
 from narwhals._utils import check_column_names_are_unique, zip_strict
+from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable, Iterator, Sequence
@@ -130,11 +131,14 @@ def remove_alias(origin: ExprIR, /) -> ExprIR:
     return origin.map_ir(fn)
 
 
+# TODO @dangotbanned: Update error message to use `name.keep`, (`KeepName` is the variant name only)
 def replace_keep_name(origin: ExprIR, /) -> ExprIR:
-    root_name = meta.root_name_first(origin)
+    if (name := next(meta.iter_root_names(origin), None)) is None:
+        msg = f"`name.keep_name` expected at least one column name, got `{origin!r}`"
+        raise InvalidOperationError(msg)
 
     def fn(child: ExprIR, /) -> ExprIR:
-        return child.expr.alias(root_name) if isinstance(child, KeepName) else child
+        return child.expr.alias(name) if isinstance(child, KeepName) else child
 
     return origin.map_ir(fn)
 
@@ -180,7 +184,7 @@ class Expander:
             # NOTE: Empty string is allowed as a name, but is falsy
             if (name := e.meta.output_name(raise_if_undetermined=False)) is not None:
                 target = e
-            elif meta.has_expr_ir(e, KeepName):
+            elif any(isinstance(e_, KeepName) for e_ in e.iter_right()):
                 replaced = replace_keep_name(e)
                 name = replaced.meta.output_name()
                 target = replaced
