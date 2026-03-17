@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import datetime as dt
-import re  # `_utils` imports at module-level
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any, TypeVar
 
@@ -18,18 +17,9 @@ if TYPE_CHECKING:
     from narwhals._plan import expressions as ir
     from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._plan.dataframe import DataFrame
-    from narwhals._plan.expr import Expr
     from narwhals._plan.lazyframe import LazyFrame
-    from narwhals._plan.selectors import Selector
     from narwhals._plan.series import Series
-    from narwhals._plan.typing import (
-        ColumnNameOrSelector,
-        DataFrameT,
-        IntoExprColumn,
-        LazyFrameT,
-        NativeSeriesT,
-        Seq,
-    )
+    from narwhals._plan.typing import DataFrameT, LazyFrameT, NativeSeriesT, Seq
     from narwhals.typing import NonNestedLiteral, PythonLiteral
 
     T = TypeVar("T")
@@ -53,18 +43,6 @@ def _ir(*_: Any):  # type: ignore[no-untyped-def]  # noqa: ANN202
     return ir
 
 
-def _expr(*_: Any):  # type: ignore[no-untyped-def]  # noqa: ANN202
-    from narwhals._plan import expr
-
-    return expr
-
-
-def _selectors(*_: Any):  # type: ignore[no-untyped-def]  # noqa: ANN202
-    from narwhals._plan import selectors
-
-    return selectors
-
-
 def _series(*_: Any):  # type: ignore[no-untyped-def]  # noqa: ANN202
     from narwhals._plan import series
 
@@ -79,29 +57,8 @@ def is_python_literal(obj: Any) -> TypeIs[PythonLiteral]:
     return isinstance(obj, _PYTHON_LITERAL_TPS)
 
 
-def is_expr(obj: Any) -> TypeIs[Expr]:
-    return isinstance(obj, _expr().Expr)
-
-
-def is_selector(obj: Any) -> TypeIs[Selector]:
-    return isinstance(obj, _selectors().Selector)
-
-
-def is_expr_column(obj: Any) -> TypeIs[Expr]:
-    """Indicate if the given object is a basic/unaliased column."""
-    return is_expr(obj) and obj.meta.is_column()
-
-
 def is_series(obj: Series[NativeSeriesT] | Any) -> TypeIs[Series[NativeSeriesT]]:
     return isinstance(obj, _series().Series)
-
-
-def is_into_expr_column(obj: Any) -> TypeIs[IntoExprColumn]:
-    return isinstance(obj, (str, _expr().Expr, _series().Series))
-
-
-def is_column_name_or_selector(obj: Any) -> TypeIs[ColumnNameOrSelector]:
-    return isinstance(obj, (str, _selectors().Selector))
 
 
 def is_compliant_series(
@@ -135,10 +92,6 @@ def is_agg_expr(obj: Any) -> TypeIs[ir.AggExpr]:
 def is_aggregation(obj: Any) -> TypeIs[ir.AggExpr | ir.FunctionExpr[Any]]:
     """Superset of `ExprIR.is_scalar`, excludes literals & len."""
     return is_agg_expr(obj) or (is_function_expr(obj) and obj.is_scalar())
-
-
-def is_re_pattern(obj: Any) -> TypeIs[re.Pattern[str]]:
-    return isinstance(obj, re.Pattern)
 
 
 def is_seq_column(exprs: Seq[ir.ExprIR], /) -> TypeIs[Seq[ir.Column]]:

@@ -5,7 +5,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
 
 from narwhals._plan import common, expressions as ir
-from narwhals._plan._guards import is_expr, is_series
+from narwhals._plan._guards import is_series
 from narwhals._plan._parse import (
     parse_into_expr_ir,
     parse_into_seq_of_expr_ir,
@@ -488,7 +488,7 @@ class Expr:
             return self._with_unary(ir.boolean.IsInSeries.from_series(other))
         if isinstance(other, Iterable):
             return self._with_unary(ir.boolean.IsInSeq.from_iterable(other))
-        if is_expr(other):
+        if isinstance(other, Expr):
             return self._from_ir(
                 ir.boolean.IsInExpr().to_function_expr(self._ir, other._ir)
             )

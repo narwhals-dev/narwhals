@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import operator
+import re
 from collections import deque
 from functools import reduce
 from typing import TYPE_CHECKING, Any, ClassVar, overload
 
 from narwhals._plan import expressions as ir
-from narwhals._plan._guards import is_expr_column, is_re_pattern
 from narwhals._plan.common import flatten_hash_safe
 from narwhals._plan.expr import Expr, ExprV1
 from narwhals._plan.expressions import operators as ops, selectors as s_ir
@@ -14,11 +14,10 @@ from narwhals._utils import Version
 from narwhals.dtypes import DType
 
 if TYPE_CHECKING:
-    import re
     from collections.abc import Callable, Mapping
     from datetime import timezone
 
-    from typing_extensions import Never, Self
+    from typing_extensions import Never, Self, TypeIs
 
     from narwhals._plan.typing import OneOrIterable
     from narwhals.typing import TimeUnit
@@ -51,6 +50,10 @@ __all__ = [
 
 _dtypes = Version.MAIN.dtypes
 _dtypes_v1 = Version.V1.dtypes
+
+
+def _is_expr_column(obj: Any) -> TypeIs[Expr]:
+    return isinstance(obj, Expr) and isinstance(obj._ir, ir.Column)
 
 
 class Selector(Expr):
@@ -88,7 +91,7 @@ class Selector(Expr):
     @overload
     def __and__(self, other: Any) -> Expr: ...
     def __and__(self, other: Any) -> Self | Expr:
-        if is_expr_column(other):  # @polars>=2.0: remove
+        if _is_expr_column(other):  # @polars>=2.0: remove
             other = by_name(other.meta.output_name())
         if isinstance(other, type(self)):
             op = ops.And()
@@ -103,7 +106,7 @@ class Selector(Expr):
     @overload
     def __or__(self, other: Any) -> Expr: ...
     def __or__(self, other: Any) -> Self | Expr:
-        if is_expr_column(other):  # @polars>=2.0: remove
+        if _is_expr_column(other):  # @polars>=2.0: remove
             other = by_name(other.meta.output_name())
         if isinstance(other, type(self)):
             op = ops.Or()
@@ -111,7 +114,7 @@ class Selector(Expr):
         return self.as_expr().__or__(other)
 
     def __ror__(self, other: Any) -> Expr:  # type: ignore[override]
-        if is_expr_column(other):
+        if _is_expr_column(other):
             other = by_name(other.meta.output_name())
         return self.as_expr().__ror__(other)
 
@@ -134,7 +137,7 @@ class Selector(Expr):
     @overload
     def __xor__(self, other: Any) -> Expr: ...
     def __xor__(self, other: Any) -> Self | Expr:
-        if is_expr_column(other):  # @polars>=2.0: remove
+        if _is_expr_column(other):  # @polars>=2.0: remove
             other = by_name(other.meta.output_name())
         if isinstance(other, type(self)):
             op = ops.ExclusiveOr()
@@ -142,7 +145,7 @@ class Selector(Expr):
         return self.as_expr().__xor__(other)
 
     def __rxor__(self, other: Any) -> Expr:  # type: ignore[override]
-        if is_expr_column(other):  # @polars>=2.0: remove
+        if _is_expr_column(other):  # @polars>=2.0: remove
             other = by_name(other.meta.output_name())
         return self.as_expr().__rxor__(other)
 
@@ -259,7 +262,11 @@ def list(inner: Selector | None = None) -> Selector:
 
 def matches(pattern: str | re.Pattern[str]) -> Selector:
     tp = s_ir.Matches
-    s = tp(pattern=pattern) if is_re_pattern(pattern) else tp.from_string(pattern)
+    s = (
+        tp(pattern=pattern)
+        if isinstance(pattern, re.Pattern)
+        else tp.from_string(pattern)
+    )
     return s.to_selector_ir().to_narwhals()
 
 

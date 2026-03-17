@@ -10,12 +10,7 @@ from itertools import chain
 from typing import TYPE_CHECKING
 
 from narwhals._native import is_native_pandas
-from narwhals._plan._guards import (
-    is_column_name_or_selector,
-    is_expr,
-    is_into_expr_column,
-    is_iterable_reject,
-)
+from narwhals._plan._guards import is_iterable_reject
 from narwhals._plan.common import flatten_hash_safe
 from narwhals._plan.exceptions import (
     invalid_into_expr_error,
@@ -122,9 +117,9 @@ def parse_into_expr_ir(
         dtype: If the input is expected to resolve to a literal with a known dtype, pass
             this to the `lit` constructor.
     """
-    from narwhals._plan import col, lit
+    from narwhals._plan import Expr, col, lit
 
-    if is_expr(input):
+    if isinstance(input, Expr):
         expr = input
     elif isinstance(input, str) and not str_as_lit:
         expr = col(input)
@@ -146,7 +141,9 @@ def parse_into_selector_ir(
 def _parse_into_selector(
     input: ColumnNameOrSelector | Expr, /, *, require_all: bool = True
 ) -> Selector:
-    if is_expr(input):
+    from narwhals._plan import Expr
+
+    if isinstance(input, Expr):
         selector = input.meta.as_selector()
     elif isinstance(input, str):
         import narwhals._plan.selectors as cs
@@ -248,7 +245,9 @@ def _parse_into_iter_selector_ir(
     more_inputs: tuple[ColumnNameOrSelector, ...],
     /,
 ) -> Iterator[SelectorIR]:
-    if is_column_name_or_selector(first_input) and not more_inputs:
+    from narwhals._plan.selectors import Selector
+
+    if isinstance(first_input, (str, Selector)) and not more_inputs:
         yield parse_into_selector_ir(first_input)
         return
 
@@ -271,6 +270,8 @@ def _parse_into_iter_expr_ir(
     _list_as_series: PartialSeries | None = None,
     **named_inputs: IntoExpr,
 ) -> Iterator[ExprIR]:
+    from narwhals._plan import Expr, Series
+
     if not _is_empty_sequence(first_input):
         # NOTE: These need to be separated to introduce an intersection type
         # Otherwise, `str | bytes` always passes through typing
@@ -283,7 +284,7 @@ def _parse_into_iter_expr_ir(
             elif (
                 _list_as_series is not None
                 and isinstance(first_input, list)
-                and not is_into_expr_column(first_input[0])
+                and not isinstance(first_input[0], (str, Expr, Series))
             ):
                 yield parse_into_expr_ir(first_input, list_as_series=_list_as_series)
             else:

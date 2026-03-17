@@ -8,7 +8,7 @@ from __future__ import annotations
 import operator
 import re
 from datetime import timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -16,7 +16,6 @@ import narwhals as nw
 import narwhals.stable.v1 as nw_v1
 from narwhals import _plan as nwp
 from narwhals._plan import Selector, selectors as ncs
-from narwhals._plan._guards import is_expr, is_selector
 from narwhals._utils import zip_strict
 from narwhals.exceptions import ColumnNotFoundError, DuplicateError, InvalidOperationError
 from tests.plan.utils import (
@@ -563,6 +562,10 @@ def _is_selector_operator(function: OperatorFn) -> bool:
     return function in {operator.and_, operator.or_, operator.xor, operator.sub}
 
 
+def is_selector(obj: Any) -> bool:
+    return isinstance(obj, Selector)
+
+
 @pytest.mark.parametrize(
     "arg_2",
     [1, nwp.col("a"), nwp.col("a").max(), ncs.numeric()],
@@ -580,7 +583,7 @@ def test_selector_arith_binary_ops(
     result_1 = function(arg_1, arg_2)
     if (
         _is_binary_operator(function)
-        and is_expr(arg_2)
+        and isinstance(arg_2, nwp.Expr)
         and is_expr_ir_equal(arg_2, nwp.col("a"))
     ) or (_is_selector_operator(function) and is_selector(arg_2)):
         assert is_selector(result_1)
