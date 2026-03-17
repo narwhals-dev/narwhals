@@ -45,7 +45,9 @@ class LiteralExpr(ExprIR, Generic[LiteralT_co], dtype=get_dtype()):
     __slots__ = ("dtype", "value")
     # NOTE: https://discuss.python.org/t/make-replace-stop-interfering-with-variance-inference/96092
     value: LiteralT_co
+    """The literal value."""
     dtype: DType
+    """The data type inferred or explicitly given at construction time."""
 
     @property
     def name(self) -> str:
@@ -55,9 +57,20 @@ class LiteralExpr(ExprIR, Generic[LiteralT_co], dtype=get_dtype()):
         yield self
 
 
-# TODO @dangotbanned: Doc
 @final
 class Lit(LiteralExpr[NonNestedLiteralT_co], dispatch=namespaced()):
+    """An expression representing a scalar literal value.
+
+    >>> import narwhals._plan as nw
+    >>> expr = nw.lit(1)
+    >>> expr._ir
+    lit(int: 1)
+    >>> expr.meta.is_literal()
+    True
+    >>> expr._ir.is_scalar()
+    True
+    """
+
     def is_scalar(self) -> bool:
         return True
 
@@ -66,9 +79,23 @@ class Lit(LiteralExpr[NonNestedLiteralT_co], dispatch=namespaced()):
         return f"lit({'null' if v is None else f'{type(v).__name__}: {v!s}'})"
 
 
-# TODO @dangotbanned: Doc
 @final
 class LitSeries(LiteralExpr["Series[NativeSeriesT_co]"], dispatch=namespaced()):
+    """An expression representing a series literal.
+
+    >>> import narwhals._plan as nw
+    >>> series = nw.Series.from_iterable([1], backend="pyarrow")
+    >>> expr = nw.lit(series)
+    >>> expr._ir
+    lit(Series)
+    >>> expr.meta.is_literal()
+    True
+
+    A length-1 series literal is not considered scalar
+    >>> expr._ir.is_scalar()
+    False
+    """
+
     def is_scalar(self) -> bool:
         return False
 
@@ -88,6 +115,10 @@ class LitSeries(LiteralExpr["Series[NativeSeriesT_co]"], dispatch=namespaced()):
     def version(self) -> Version:
         return self.value.version
 
+    # TODO @dangotbanned: Maybe show more detail on origin (not values)?
+    # - `lit(Series[polars])`
+    # - `lit(Series[pl.Series])`
+    # - `lit(Series<Implementation.POLARS: 'polars'>)`
     def __repr__(self) -> str:
         return "lit(Series)"
 

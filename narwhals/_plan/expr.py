@@ -59,6 +59,8 @@ if TYPE_CHECKING:
     R = TypeVar("R")
 
 
+# TODO @dangotbanned: (low-prio) Remove repr/str headers, or make them opt-in?
+# Using `Expr._ir` a lot in doctests to work around the fact I don't like it
 class Expr:
     _ir: ir.ExprIR
     _version: ClassVar[Version] = Version.MAIN
