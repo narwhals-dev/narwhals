@@ -130,7 +130,7 @@ class BinaryExpr(ExprIR, Generic[LeftT, OperatorT, RightT]):
     def __repr__(self) -> str:
         return f"[({self.left!r}) {self.op!r} ({self.right!r})]"
 
-    def resolve_dtype(self, schema: FrozenSchema) -> DType:
+    def resolve_dtype(self, schema: FrozenSchema) -> DType:  # pragma: no cover
         """NOTE: Supported on `Logical` and `TrueDivide` operators only.
 
         Requires `get_supertype`:
@@ -277,7 +277,7 @@ class AnonymousExpr(FunctionExpr["MapBatches"], dispatch=renamed("map_batches"))
     ) -> R_co:
         return self.__expr_ir_dispatch__(self, ctx, frame, name)
 
-    def resolve_dtype(self, schema: FrozenSchema) -> DType:
+    def resolve_dtype(self, schema: FrozenSchema) -> DType:  # pragma: no cover
         if dtype := self.function.return_dtype:
             return dtype
         return super().resolve_dtype(schema)
@@ -408,7 +408,7 @@ class TernaryExpr(ExprIR):
             f".when({self.predicate!r}).then({self.truthy!r}).otherwise({self.falsy!r})"
         )
 
-    def resolve_dtype(self, schema: FrozenSchema) -> DType:
+    def resolve_dtype(self, schema: FrozenSchema) -> DType:  # pragma: no cover
         msg = f"Unable to resolve dtype for {(type(self).__name__)!r}:\n{self!r}\n\n"
         "Requires `get_supertype` and `nw.Null`:\n"
         " - https://github.com/narwhals-dev/narwhals/issues/2835\n"

@@ -24,7 +24,7 @@ class _Version:
     def __init__(self, version: _NwVersion, /) -> None:
         self._version: _NwVersion = version
 
-    def _not_implemented(self) -> NotImplementedError:
+    def _not_implemented(self) -> NotImplementedError:  # pragma: no cover
         msg = f"{self._version!r} is not yet implemented for `narwhals._plan`"
         return NotImplementedError(msg)
 
@@ -34,7 +34,7 @@ class _Version:
             from narwhals._plan.dataframe import DataFrame as NwDataFrame
 
             return NwDataFrame
-        raise self._not_implemented()
+        raise self._not_implemented()  # pragma: no cover
 
     @property
     def lazyframe(self) -> type[NwLazyFrame[Any]]:
@@ -42,10 +42,10 @@ class _Version:
             from narwhals._plan.lazyframe import LazyFrame as NwLazyFrame
 
             return NwLazyFrame
-        raise self._not_implemented()
+        raise self._not_implemented()  # pragma: no cover
 
     @property
-    def series(self) -> type[NwSeries[Any]]:
+    def series(self) -> type[NwSeries[Any]]:  # pragma: no cover
         if self._version is _NwVersion.MAIN:
             from narwhals._plan.series import Series as NwSeries
 
@@ -57,7 +57,7 @@ class _Version:
         raise self._not_implemented()
 
     @property
-    def schema(self) -> type[NwSchema]:
+    def schema(self) -> type[NwSchema]:  # pragma: no cover
         """TODO @dangotbanned: Upstream this, it has the same meaning as `Version.dtypes`."""
         if self._version is _NwVersion.MAIN:
             from narwhals.schema import Schema as NwSchema

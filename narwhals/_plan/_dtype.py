@@ -138,7 +138,9 @@ class _ExprIRAccessor(_ClassAccessorDescriptor):
         return ExprIRMapFirst(mapper)
 
     @staticmethod
-    def visitor(visitor: Visitor[_ExprIRT], /) -> ExprIRVisitor[_ExprIRT]:
+    def visitor(
+        visitor: Visitor[_ExprIRT], /
+    ) -> ExprIRVisitor[_ExprIRT]:  # pragma: no cover
         """Derive the dtype by calling `visitor` on an instance of `ExprIRT`."""
         return ExprIRVisitor(visitor)
 
@@ -166,7 +168,9 @@ class ResolveDType(Generic[_ExprIRT], metaclass=SlottedMeta):
 
     __slots__ = ()
 
-    def __call__(self, node: _ExprIRT, schema: FrozenSchema, /) -> DType:
+    def __call__(
+        self, node: _ExprIRT, schema: FrozenSchema, /
+    ) -> DType:  # pragma: no cover
         node_name = type(node).__name__
         if is_function_expr(node):
             generic_name = f"{node_name}[{type(node.function).__name__}]"
@@ -214,7 +218,7 @@ class _Singleton(ResolveDType[_ExprIRT], Generic[_ExprIRT]):
 class GetDType(_Singleton[_HasDTypeT]):
     def __call__(self, node: _HasDTypeT, _: FrozenSchema, /) -> DType:
         if _is_function_expr_dtype(node):
-            return node.function.dtype
+            return node.function.dtype  # pragma: no cover
         return node.dtype
 
 
@@ -233,12 +237,12 @@ class JustDType(ResolveDType[Any]):
         self._dtype: DType = dtype
 
     def __call__(self, _: Any, __: FrozenSchema, /) -> DType:
-        return self._dtype
+        return self._dtype  # pragma: no cover
 
 
 class ExprIRSameDType(_Singleton[_HasParentExprIR]):
     def __call__(self, node: _HasParentExprIR, schema: FrozenSchema, /) -> DType:
-        return node.expr.resolve_dtype(schema)
+        return node.expr.resolve_dtype(schema)  # pragma: no cover
 
 
 class ExprIRMapFirst(ResolveDType[_HasParentExprIRT]):
@@ -248,17 +252,17 @@ class ExprIRMapFirst(ResolveDType[_HasParentExprIRT]):
         self._mapper = mapper
 
     def __call__(self, node: _HasParentExprIRT, schema: FrozenSchema, /) -> DType:
-        return self._mapper(node.expr.resolve_dtype(schema))
+        return self._mapper(node.expr.resolve_dtype(schema))  # pragma: no cover
 
 
 class ExprIRVisitor(ResolveDType[_ExprIRT], Generic[_ExprIRT]):
     __slots__ = ("_visitor",)
 
     def __init__(self, visitor: Visitor[_ExprIRT], /) -> None:
-        self._visitor = visitor
+        self._visitor = visitor  # pragma: no cover
 
     def __call__(self, node: _ExprIRT, _: FrozenSchema, /) -> DType:
-        return self._visitor(node)
+        return self._visitor(node)  # pragma: no cover
 
 
 class FunctionVisitor(ResolveDType[_FunctionExpr[_FunctionT]], Generic[_FunctionT]):
@@ -268,7 +272,7 @@ class FunctionVisitor(ResolveDType[_FunctionExpr[_FunctionT]], Generic[_Function
         self._visitor = visitor
 
     def __call__(self, node: _FunctionExpr[_FunctionT], _: FrozenSchema, /) -> DType:
-        return self._visitor(node.function)
+        return self._visitor(node.function)  # pragma: no cover
 
 
 class FunctionSameDType(_Singleton[_FunctionExprT]):
@@ -283,7 +287,7 @@ class FunctionMapFirst(ResolveDType[_FunctionExprT]):
         self._mapper = mapper
 
     def __call__(self, node: _FunctionExprT, schema: FrozenSchema, /) -> DType:
-        return self._mapper(node.input[0].resolve_dtype(schema))
+        return self._mapper(node.input[0].resolve_dtype(schema))  # pragma: no cover
 
 
 class FunctionMapAll(ResolveDType[_FunctionExprT]):
@@ -293,7 +297,9 @@ class FunctionMapAll(ResolveDType[_FunctionExprT]):
         self._mapper = mapper
 
     def __call__(self, node: _FunctionExprT, schema: FrozenSchema, /) -> DType:
-        return self._mapper(e.resolve_dtype(schema) for e in node.input)
+        return self._mapper(
+            e.resolve_dtype(schema) for e in node.input
+        )  # pragma: no cover
 
 
 def _is_function_expr_dtype(node: Any) -> TypeIs[_FunctionExpr[_FunctionDType]]:

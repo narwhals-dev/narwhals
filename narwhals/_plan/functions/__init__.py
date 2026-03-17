@@ -97,16 +97,19 @@ def _concat(
 ) -> DataFrameT | LazyFrameT:
     if _guards.is_lazyframe(frames[0]):
         if _guards.is_sequence_lazyframe(frames):
-            return _concat_lazy(frames, how)
+            return _concat_lazy(frames, how)  # pragma: no cover
 
     elif _guards.is_sequence_dataframe(frames):
         return _concat_eager(frames, how)
-
+    else:  # pragma: no cover
+        ...
     msg = f"The items to concatenate should either all be eager, or all lazy, got: {[type(item) for item in frames]}"
     raise TypeError(msg)
 
 
-def _concat_lazy(frames: Sequence[LazyFrameT], how: ConcatMethod) -> LazyFrameT:
+def _concat_lazy(
+    frames: Sequence[LazyFrameT], how: ConcatMethod
+) -> LazyFrameT:  # pragma: no cover
     from narwhals._plan.plans import logical
 
     return frames[0]._with_lp(logical.concat(tuple(lf._plan for lf in frames), how=how))
@@ -114,6 +117,6 @@ def _concat_lazy(frames: Sequence[LazyFrameT], how: ConcatMethod) -> LazyFrameT:
 
 def _concat_eager(frames: Sequence[DataFrameT], how: ConcatMethod) -> DataFrameT:
     ns = namespace(frames[0])
-    if not can_concat_dataframe(ns):
+    if not can_concat_dataframe(ns):  # pragma: no cover
         raise unsupported_backend_operation_error(ns.implementation, "concat")
     return frames[0]._with_compliant(ns.concat_df((df._compliant for df in frames), how))

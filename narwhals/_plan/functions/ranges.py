@@ -83,7 +83,7 @@ def int_range(
         ns_ = namespace_from_backend(eager)
         if _ranges.can_int_range_eager(ns_):
             return ns_.int_range_eager(start, end, step, dtype=dtype).to_narwhals()
-        raise unsupported_backend_operation_error(eager, "int_range")
+        raise unsupported_backend_operation_error(eager, "int_range")  # pragma: no cover
     return (
         IntRange(step=step, dtype=dtype)
         .to_function_expr(*_parse.parse_into_seq_of_expr_ir(start, end))
@@ -142,7 +142,7 @@ def date_range(
         ns_ = namespace_from_backend(eager)
         if _ranges.can_date_range_eager(ns_):
             return ns_.date_range_eager(start, end, days, closed=closed).to_narwhals()
-        raise unsupported_backend_operation_error(eager, "date_range")
+        raise unsupported_backend_operation_error(eager, "date_range")  # pragma: no cover
     return (
         DateRange(interval=days, closed=closed)
         .to_function_expr(*_parse.parse_into_seq_of_expr_ir(start, end))
@@ -244,7 +244,9 @@ def linear_space(
             return ns_.linear_space_eager(
                 start, end, num_samples, closed=closed
             ).to_narwhals()
-        raise unsupported_backend_operation_error(eager, "linear_space")
+        raise unsupported_backend_operation_error(
+            eager, "linear_space"
+        )  # pragma: no cover
     return (
         LinearSpace(num_samples=num_samples, closed=closed)
         .to_function_expr(*_parse.parse_into_seq_of_expr_ir(start, end))

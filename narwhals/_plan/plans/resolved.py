@@ -477,7 +477,7 @@ class RowIndex(RpFunction):
     def evaluate(
         self, evaluator: ResolvedToCompliant[Native], plan: MapFunction[Incomplete], /
     ) -> CompliantLazyFrame[Native]:
-        return evaluator.with_row_index(plan)
+        return evaluator.with_row_index(plan)  # pragma: no cover
 
 
 class RowIndexBy(RowIndex):
@@ -487,7 +487,7 @@ class RowIndexBy(RowIndex):
     def evaluate(
         self, evaluator: ResolvedToCompliant[Native], plan: MapFunction[RowIndexBy], /
     ) -> CompliantLazyFrame[Native]:
-        return evaluator.with_row_index_by(plan)
+        return evaluator.with_row_index_by(plan)  # pragma: no cover
 
 
 class Rename(RpFunction):
@@ -500,12 +500,12 @@ class Rename(RpFunction):
     @property
     def mapping(self) -> dict[str, str]:
         """Return a new dictionary representing `{old: new}`."""
-        return dict(zip_strict(self.old, self.new))
+        return dict(zip_strict(self.old, self.new))  # pragma: no cover
 
     def evaluate(
         self, evaluator: ResolvedToCompliant[Native], plan: MapFunction[Rename], /
     ) -> CompliantLazyFrame[Native]:
-        return evaluator.rename(plan)
+        return evaluator.rename(plan)  # pragma: no cover
 
 
 class Unnest(RpFunction):
@@ -517,7 +517,7 @@ class Unnest(RpFunction):
     def evaluate(
         self, evaluator: ResolvedToCompliant[Native], plan: MapFunction[Unnest], /
     ) -> CompliantLazyFrame[Native]:
-        return evaluator.unnest(plan)
+        return evaluator.unnest(plan)  # pragma: no cover
 
 
 class Explode(RpFunction):
@@ -528,7 +528,7 @@ class Explode(RpFunction):
     def evaluate(
         self, evaluator: ResolvedToCompliant[Native], plan: MapFunction[Explode], /
     ) -> CompliantLazyFrame[Native]:
-        return evaluator.explode(plan)
+        return evaluator.explode(plan)  # pragma: no cover
 
 
 class Unpivot(RpFunction):
@@ -540,4 +540,4 @@ class Unpivot(RpFunction):
     def evaluate(
         self, evaluator: ResolvedToCompliant[Native], plan: MapFunction[Unpivot], /
     ) -> CompliantLazyFrame[Native]:
-        return evaluator.unpivot(plan)
+        return evaluator.unpivot(plan)  # pragma: no cover

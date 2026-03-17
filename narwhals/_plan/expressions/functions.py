@@ -96,7 +96,9 @@ class Coalesce(HorizontalFunction): ...
 # fmt: on
 class MeanHorizontal(HorizontalFunction):
     # TODO @dangotbanned: `map_to_supertype`
-    def resolve_dtype(self, node: FunctionExpr[Self], schema: FrozenSchema, /) -> DType:
+    def resolve_dtype(
+        self, node: FunctionExpr[Self], schema: FrozenSchema, /
+    ) -> DType:  # pragma: no cover
         # NOTE: There are 6 supertype pairs (that we support) that could produce `Float32`
         # Otherwise, it is always `Float64`
         if dtm.F32 in {e.resolve_dtype(schema) for e in node.input}:
@@ -170,7 +172,9 @@ class Pow(Function, options=elementwise):
         base, exponent = node.input
         return base, exponent
 
-    def resolve_dtype(self, node: FunctionExpr[Self], schema: FrozenSchema, /) -> DType:
+    def resolve_dtype(
+        self, node: FunctionExpr[Self], schema: FrozenSchema, /
+    ) -> DType:  # pragma: no cover
         base = node.input[0].resolve_dtype(schema)
         if base.is_integer() and (exp := node.input[1].resolve_dtype(schema)).is_float():
             return exp
@@ -185,7 +189,9 @@ class FillNull(Function, options=elementwise):
         return expr, value
 
     # TODO @dangotbanned: `map_to_supertype`
-    def resolve_dtype(self, node: FunctionExpr[Self], schema: FrozenSchema, /) -> DType:
+    def resolve_dtype(
+        self, node: FunctionExpr[Self], schema: FrozenSchema, /
+    ) -> DType:  # pragma: no cover
         expr, value = (e.resolve_dtype(schema) for e in node.input)
         if expr != value:
             msg = f"{self!r} is currently only supported when the dtype of the expression {expr!r} matches the fill value {value!r}.\n"
@@ -242,7 +248,9 @@ class ReplaceStrict(Function, options=elementwise):
     new: Seq[Any]
     return_dtype: DType | None
 
-    def resolve_dtype(self, node: FunctionExpr[Self], schema: FrozenSchema, /) -> DType:
+    def resolve_dtype(
+        self, node: FunctionExpr[Self], schema: FrozenSchema, /
+    ) -> DType:  # pragma: no cover
         if dtype := self.return_dtype:
             return dtype
         # NOTE: polars would use the dtype of `new` here

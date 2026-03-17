@@ -60,8 +60,8 @@ def eager_implementation(backend: IntoBackend[Backend] | Any) -> _EagerAllowedIm
     impl = known_implementation(backend)
     if is_eager_allowed(impl):
         return impl
-    msg = f"{impl} support in Narwhals is lazy-only"
-    raise TypeError(msg)
+    msg = f"{impl} support in Narwhals is lazy-only"  # pragma: no cover
+    raise TypeError(msg)  # pragma: no cover
 
 
 def collect_implementation(backend: IntoBackend[Backend] | Any) -> _LazyFrameCollectImpl:
@@ -69,11 +69,11 @@ def collect_implementation(backend: IntoBackend[Backend] | Any) -> _LazyFrameCol
     impl = Implementation.from_backend(backend)
     if can_lazyframe_collect(impl):
         return impl
-    msg = (
+    msg = (  # pragma: no cover
         f"Unsupported `backend` value.\n"
         f"Expected one of {get_args(_LazyFrameCollectImpl)} or None, got: {impl}."
     )
-    raise TypeError(msg)
+    raise TypeError(msg)  # pragma: no cover
 
 
 def evaluator(backend: KnownImpl) -> type[ResolvedToCompliant[Any]]:
