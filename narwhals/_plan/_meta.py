@@ -8,7 +8,7 @@ from itertools import chain
 from typing import TYPE_CHECKING, Any
 
 from narwhals._plan import _nodes
-from narwhals._plan._nodes import _EXPR_NODE_TYPES, ExprTraverser
+from narwhals._plan._nodes import ExprTraverser
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -136,14 +136,14 @@ class ExprIRMeta(ImmutableMeta):
         /,
         **kwds: Any,
     ) -> E:
-        namespace, nodes = metacls._pop_nodes(namespace)
+        namespace, nodes = metacls._pop_nodes(cls_name, namespace)
         tp = super().__new__(metacls, cls_name, bases, namespace, **kwds)
         if nodes:
             metacls.__setattr__(tp, _NODES_NAME, ExprTraverser.inherit_from(tp, nodes))
         return tp
 
     @staticmethod
-    def _pop_nodes(namespace: Ns) -> tuple[Ns, _nodes.IntoExprNodes]:
+    def _pop_nodes(cls_name: str, namespace: Ns) -> tuple[Ns, _nodes.IntoExprNodes]:
         """Extract any field specifiers from the class namespace.
 
         ## What?
@@ -218,10 +218,11 @@ class ExprIRMeta(ImmutableMeta):
         if (slots := namespace.get("__slots__", ())) and (
             intersection := namespace.keys() & slots
         ):
+            ns_pop = namespace.pop
             # Step 3
             if len(intersection) == 1:
                 name = intersection.pop()
-                nodes.append(_ensure_node(name, namespace.pop(name)))
+                nodes.append(_nodes.into_expr_node(name, ns_pop(name), cls_name))
                 return namespace, nodes
 
             # Step 4
@@ -229,13 +230,6 @@ class ExprIRMeta(ImmutableMeta):
             while intersection:
                 name = names.popleft()
                 if name in intersection:
-                    nodes.append(_ensure_node(name, namespace.pop(name)))
+                    nodes.append(_nodes.into_expr_node(name, ns_pop(name), cls_name))
                     intersection.remove(name)
         return namespace, nodes
-
-
-def _ensure_node(name: str, node: Any) -> _nodes._ExprNode:
-    if not isinstance(node, _EXPR_NODE_TYPES):
-        msg = f"Expected field specifier of type {_EXPR_NODE_TYPES!r}, got:\n`{name}={node!r}`"
-        raise TypeError(msg)
-    return node.with_name(name)

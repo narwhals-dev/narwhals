@@ -19,6 +19,8 @@ from __future__ import annotations
 import enum
 from typing import TYPE_CHECKING, Any, Final, Literal, Protocol, SupportsIndex, TypeVar
 
+from narwhals._utils import qualified_type_name
+
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator
 
@@ -211,8 +213,36 @@ _ExprNode: TypeAlias = "SingleExpr[_Observe] | SingleExpr[_Skip] | MultipleExpr"
 ExprNodes: TypeAlias = "Seq[_ExprNode]"
 IntoExprNodes: TypeAlias = "Iterable[_ExprNode]"
 
-_EXPR_NODE_TYPES = (SingleExpr, MultipleExpr)
-"""Do not use outside of `ExprIRMeta.__new__`."""
+_EXPR_NODE_TYPES: Final = (SingleExpr, MultipleExpr)
+_EXPR_FIELD_SPECIFIER_NAMES: Final = (node.__name__, nodes.__name__)
+
+
+def _into_expr_node_error(assigned_name: str, node: Any, cls_name: str) -> TypeError:
+    name = assigned_name
+    value = repr(node)
+    value = value[:10] + "..." if len(value) > 10 else value
+    value = f"`{value}`"
+    hints = (
+        f"if {name!r} is a class variable,\n  remove it from __slots__",
+        f"if {value} is a default, for `{cls_name}({name}=...)`,"
+        "\n  define the it in a classmethod, staticmethod or function instead of the class body",
+        f"if {value} came from a new fancy field specifier,\n  fix the check that raised this!",
+    )
+    node_examples = ", ".join(f"`{nm}()`" for nm in _EXPR_FIELD_SPECIFIER_NAMES)
+    what = f"Incompatible assignment in ExprIR subclass {cls_name!r}."
+    cause = f"The class body tried to assign a {qualified_type_name(node)!r} to {name!r}, while also declaring {name!r} in __slots__."
+    nl = "\n"
+    return TypeError(
+        f"{what}\n\n{cause}\n"
+        f"This syntax is reserved for field specifiers: {node_examples}\n\n"
+        f"Hints:\n{nl.join(f'- {hint}' for hint in hints)}"
+    )
+
+
+def into_expr_node(assigned_name: str, node: Any, cls_name: str) -> _ExprNode:
+    if not isinstance(node, _EXPR_NODE_TYPES):
+        raise _into_expr_node_error(assigned_name, node, cls_name)
+    return node.with_name(assigned_name)
 
 
 class ExprTraverser:
