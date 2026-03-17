@@ -34,32 +34,21 @@ if TYPE_CHECKING:
         def __expr_ir_nodes__(self) -> ExprTraverser: ...
 
 
-NodeT = TypeVar("NodeT")
-Get = TypeVar("Get", covariant=True)  # noqa: PLC0105
-
-
 class IsScalar(enum.Enum):
-    """Annoying workaround for union simplification.
-
-    Originally wanted something like this:
-
-        bool | Literal[False]
-
-    But that simplifies to:
-
-        bool
-    """
-
     OBSERVE = enum.auto()
     SKIP = enum.auto()
 
 
 _OBSERVE: Final = IsScalar.OBSERVE
 _SKIP: Final = IsScalar.SKIP
-_Observe: TypeAlias = Literal[IsScalar.OBSERVE]
-_Skip: TypeAlias = Literal[IsScalar.SKIP]
+
+NodeT = TypeVar("NodeT")
+Get = TypeVar("Get", covariant=True)  # noqa: PLC0105
+_ExprNode: TypeAlias = "SingleExpr[Literal[IsScalar.OBSERVE]] | SingleExpr[Literal[IsScalar.SKIP]] | MultipleExpr"
+ExprNodes: TypeAlias = "Seq[_ExprNode]"
+IntoExprNodes: TypeAlias = "Iterable[_ExprNode]"
 IsScalarT = TypeVar(  # noqa: PLC0105
-    "IsScalarT", _Observe, _Skip, covariant=True
+    "IsScalarT", Literal[IsScalar.OBSERVE], Literal[IsScalar.SKIP], covariant=True
 )
 
 
@@ -90,6 +79,12 @@ def nodes() -> Any:
     [`dataclasses.field`]: https://docs.python.org/3/library/dataclasses.html#dataclasses.field
     """
     return MultipleExpr()
+
+
+def into_expr_node(assigned_name: str, node: Any, cls_name: str) -> _ExprNode:
+    if not isinstance(node, (SingleExpr, MultipleExpr)):
+        raise _into_expr_node_error(assigned_name, node, cls_name)
+    return node.with_name(assigned_name)
 
 
 # TODO @dangotbanned: Class doc, focus on why a convention for traversal matters
@@ -177,7 +172,7 @@ class SingleExpr(ExprNode["ExprIR", IsScalarT]):
         return None if after == before else after
 
 
-class MultipleExpr(ExprNode["Seq[ExprIR]", _Skip]):
+class MultipleExpr(ExprNode["Seq[ExprIR]", Literal[IsScalar.SKIP]]):
     __slots__ = ()
 
     def __repr__(self) -> str:
@@ -186,7 +181,7 @@ class MultipleExpr(ExprNode["Seq[ExprIR]", _Skip]):
         return f"{self.name}: Seq[ExprIR] = {nodes.__name__}()"
 
     @property
-    def observe_scalar(self) -> _Skip:
+    def observe_scalar(self) -> Literal[IsScalar.SKIP]:
         return _SKIP
 
     def iter_left(self, instance: ExprIR) -> Iterator[ExprIR]:
@@ -206,42 +201,6 @@ class MultipleExpr(ExprNode["Seq[ExprIR]", _Skip]):
             after = tuple(e.map_ir(function) for e in before)
             return None if after == before else after
         return None
-
-
-_ExprNode: TypeAlias = "SingleExpr[_Observe] | SingleExpr[_Skip] | MultipleExpr"
-ExprNodes: TypeAlias = "Seq[_ExprNode]"
-IntoExprNodes: TypeAlias = "Iterable[_ExprNode]"
-
-_EXPR_NODE_TYPES: Final = (SingleExpr, MultipleExpr)
-_EXPR_FIELD_SPECIFIER_NAMES: Final = (node.__name__, nodes.__name__)
-
-
-def _into_expr_node_error(assigned_name: str, node: Any, cls_name: str) -> TypeError:
-    name = assigned_name
-    value = repr(node)
-    value = value[:10] + "..." if len(value) > 10 else value
-    value = f"`{value}`"
-    hints = (
-        f"if {name!r} is a class variable,\n  remove it from __slots__",
-        f"if {value} is a default, for `{cls_name}({name}=...)`,"
-        "\n  define the it in a classmethod, staticmethod or function instead of the class body",
-        f"if {value} came from a new fancy field specifier,\n  fix the check that raised this!",
-    )
-    node_examples = ", ".join(f"`{nm}()`" for nm in _EXPR_FIELD_SPECIFIER_NAMES)
-    what = f"Incompatible assignment in ExprIR subclass {cls_name!r}."
-    cause = f"The class body tried to assign a {qualified_type_name(node)!r} to {name!r}, while also declaring {name!r} in __slots__."
-    nl = "\n"
-    return TypeError(
-        f"{what}\n\n{cause}\n"
-        f"This syntax is reserved for field specifiers: {node_examples}\n\n"
-        f"Hints:\n{nl.join(f'- {hint}' for hint in hints)}"
-    )
-
-
-def into_expr_node(assigned_name: str, node: Any, cls_name: str) -> _ExprNode:
-    if not isinstance(node, _EXPR_NODE_TYPES):
-        raise _into_expr_node_error(assigned_name, node, cls_name)
-    return node.with_name(assigned_name)
 
 
 class ExprTraverser:
@@ -331,3 +290,28 @@ class ExprTraverser:
     def __reversed__(self) -> Iterator[_ExprNode]:
         if self:
             yield from reversed(self._nodes)
+
+
+_EXPR_FIELD_SPECIFIER_NAMES: Final = (node.__name__, nodes.__name__)
+
+
+def _into_expr_node_error(assigned_name: str, node: Any, cls_name: str) -> TypeError:
+    name = assigned_name
+    value = repr(node)
+    value = value[:10] + "..." if len(value) > 10 else value
+    value = f"`{value}`"
+    hints = (
+        f"if {name!r} is a class variable,\n  remove it from __slots__",
+        f"if {value} is a default, for `{cls_name}({name}=...)`,"
+        "\n  define the it in a classmethod, staticmethod or function instead of the class body",
+        f"if {value} came from a new fancy field specifier,\n  fix the check that raised this!",
+    )
+    node_examples = ", ".join(f"`{nm}()`" for nm in _EXPR_FIELD_SPECIFIER_NAMES)
+    what = f"Incompatible assignment in ExprIR subclass {cls_name!r}."
+    cause = f"The class body tried to assign a {qualified_type_name(node)!r} to {name!r}, while also declaring {name!r} in __slots__."
+    nl = "\n"
+    return TypeError(
+        f"{what}\n\n{cause}\n"
+        f"This syntax is reserved for field specifiers: {node_examples}\n\n"
+        f"Hints:\n{nl.join(f'- {hint}' for hint in hints)}"
+    )
