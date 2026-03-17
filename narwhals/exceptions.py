@@ -19,6 +19,8 @@ class FormattedKeyError(KeyError):
     Needed by https://github.com/tensorflow/tensorflow/issues/36857.
     """
 
+    message: str
+
     def __init__(self, message: str) -> None:
         self.message = message
 
@@ -28,6 +30,8 @@ class FormattedKeyError(KeyError):
 
 class ColumnNotFoundError(FormattedKeyError, NarwhalsError):
     """Exception raised when column name isn't present."""
+
+    message: str
 
     def __init__(self, message: str) -> None:
         self.message = message
@@ -76,6 +80,8 @@ class InvalidOperationError(NarwhalsError):
 
 class InvalidIntoExprError(TypeError, NarwhalsError):
     """Exception raised when object can't be converted to expression."""
+
+    message: str
 
     def __init__(self, message: str) -> None:
         self.message = message
