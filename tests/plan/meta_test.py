@@ -248,6 +248,11 @@ def test_root_and_output_names() -> None:
         nwp.all().name.suffix("_").meta.output_name(raise_if_undetermined=False) is None
     )
 
+    with pytest.raises(ComputeError):
+        (ncs.string() | ncs.last()).meta.output_name()
+    with pytest.raises(ComputeError):
+        (~ncs.list()).cum_count().meta.output_name()
+
 
 def test_meta_has_multiple_outputs() -> None:
     e = nwp.col(["a", "b"]).name.suffix("_foo")

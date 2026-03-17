@@ -194,9 +194,8 @@ class MultipleExpr(ExprNode["Seq[ExprIR]", _Skip]):
             yield from expr.iter_left()
 
     def iter_right(self, instance: ExprIR) -> Iterator[ExprIR]:
-        if exprs := self.get(instance):
-            for expr in reversed(exprs):
-                yield from expr.iter_right()
+        for expr in reversed(self.get(instance)):
+            yield from expr.iter_right()
 
     def iter_output_name(self, instance: ExprIR) -> Iterator[ExprIR]:
         for lhs in self.get(instance)[:1]:
