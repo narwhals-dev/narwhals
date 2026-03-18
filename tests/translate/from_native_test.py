@@ -233,10 +233,14 @@ def test_init_already_narwhals_unstable_to_stable() -> None:
 
     native = pl.DataFrame({"a": [1, 2, 3]})
 
-    unstable = nw.from_native(native)
-    stablified = nw_v1.from_native(unstable)
+    unstable_df = nw.from_native(native)
+    stablified_df = nw_v1.from_native(unstable_df)
+    assert isinstance(stablified_df, nw_v1.DataFrame)
 
-    assert isinstance(stablified, nw_v1.DataFrame)
+    s = native["a"]
+    unstable_s = nw.from_native(s, allow_series=True)
+    stablified_s = nw_v1.from_native(unstable_s, allow_series=True)
+    assert isinstance(stablified_s, nw_v1.Series)
 
 
 @pytest.mark.skipif(lf_pl is None, reason="polars not found")
@@ -245,10 +249,14 @@ def test_init_already_narwhals_stable_to_unstable() -> None:
 
     native = pl.DataFrame({"a": [1, 2, 3]})
 
-    stable_v1 = nw_v1.from_native(native)
-    unstablified = nw.from_native(stable_v1)
+    stable_df = nw_v1.from_native(native)
+    unstablified_df = nw.from_native(stable_df)
+    assert isinstance(unstablified_df, nw.DataFrame)
 
-    assert isinstance(unstablified, nw.DataFrame)
+    s = native["a"]
+    stable_s = nw_v1.from_native(s, allow_series=True)
+    unstablified_s = nw.from_native(stable_s, allow_series=True)
+    assert isinstance(unstablified_s, nw.Series)
 
 
 @pytest.mark.skipif(df_pd is None, reason="pandas not found")
