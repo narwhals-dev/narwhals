@@ -227,6 +227,30 @@ def test_init_already_narwhals_unstable() -> None:
     assert result_s is s
 
 
+@pytest.mark.skipif(lf_pl is None, reason="polars not found")
+def test_init_already_narwhals_unstable_to_stable() -> None:
+    from narwhals.stable import v1 as nw_v1
+
+    native = pl.DataFrame({"a": [1, 2, 3]})
+
+    unstable = nw.from_native(native)
+    stablified = nw_v1.from_native(unstable)
+
+    assert isinstance(stablified, nw_v1.DataFrame)
+
+
+@pytest.mark.skipif(lf_pl is None, reason="polars not found")
+def test_init_already_narwhals_stable_to_unstable() -> None:
+    from narwhals.stable import v1 as nw_v1
+
+    native = pl.DataFrame({"a": [1, 2, 3]})
+
+    stable_v1 = nw_v1.from_native(native)
+    unstablified = nw.from_native(stable_v1)
+
+    assert isinstance(unstablified, nw.DataFrame)
+
+
 @pytest.mark.skipif(df_pd is None, reason="pandas not found")
 def test_series_only_dask() -> None:
     pytest.importorskip("dask")
