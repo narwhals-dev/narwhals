@@ -53,7 +53,7 @@ else:
         return decorator
 
 
-__all__ = ["ImmutableMeta", "SlottedMeta", "dataclass_transform"]
+__all__ = ["ExprIRMeta", "ImmutableMeta", "SlottedMeta"]
 
 Ns: TypeAlias = dict[str, Any]
 """The class `namespace`.
@@ -116,6 +116,23 @@ class SlottedMeta(type):
 
 @dataclass_transform(kw_only_default=True, frozen_default=True)
 class ImmutableMeta(SlottedMeta):
+    """Metaclass for `Immutable`.
+
+    We do two things here ...
+
+    ## 1. Introduce [`@dataclass_transform`]
+    This let's type checkers understand what subclasses of `Immutable` can (and can't!) do.
+
+    Note that subclasses of `ImmutableMeta` must repeat the decorator, even if it uses
+    the same arguments.
+
+    ## 2. Track what is a *"field"*
+    The rest is some housekeeping of `__slots__` -> `__immutable_keys__`, which avoids needing
+    to inspect `__annotations__` for field names.
+
+    [`@dataclass_transform`]: https://typing.python.org/en/latest/spec/dataclasses.html#the-dataclass-transform-decorator
+    """
+
     def __new__(
         metacls: type[I],
         cls_name: str,
@@ -171,6 +188,7 @@ class ExprIRMeta(ImmutableMeta):
             metacls.__setattr__(tp, _NODES_NAME, ExprTraverser.inherit_from(tp, nodes))
         return tp
 
+    # TODO @dangotbanned: Move out of metaclass, since `ExprIR` also gets this as a `staticmethod`
     @staticmethod
     def _pop_nodes(cls_name: str, namespace: Ns) -> tuple[Ns, _nodes.IntoExprNodes]:
         """Extract any field specifiers from the class namespace.
