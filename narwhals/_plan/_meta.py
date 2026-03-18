@@ -68,9 +68,38 @@ _NODES_NAME: Final = "__expr_ir_nodes__"
 
 
 class SlottedMeta(type):
-    """Ensure [`__slots__`] are always defined to prevent `__dict__` creation.
+    """Metaclass ensuring [`__slots__`] are always defined.
+
+    Consider using this metaclass if you have something like:
+    >>> class Base:
+    ...     __slots__ = ("a", "b")
+    ...     a: int
+    ...     b: int
+    >>> class Sub1(Base):
+    ...     __slots__ = ()
+    >>> class Sub2(Base):
+    ...     __slots__ = ("c",)
+    ...     c: int
+    >>> class Sub21(Sub2):
+    ...     __slots__ = ()
+
+    But you'd prefer to write this:
+    >>> class Base(metaclass=SlottedMeta):
+    ...     __slots__ = ("a", "b")
+    ...     a: int
+    ...     b: int
+    >>> class Sub1(Base): ...
+    >>> class Sub2(Base):
+    ...     __slots__ = ("c",)
+    ...     c: int
+    >>> class Sub21(Sub2): ...
+
+    And still [avoid these issues]:
+    >>> any(hasattr(tp(), "__dict__") for tp in (Base, Sub1, Sub2, Sub21))
+    False
 
     [`__slots__`]: https://docs.python.org/3/reference/datamodel.html#object.__slots__
+    [avoid these issues]: https://dev.arie.bovenberg.net/blog/finding-broken-slots-in-popular-python-libraries/
     """
 
     def __new__(
