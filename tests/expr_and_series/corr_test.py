@@ -65,21 +65,54 @@ def test_corr_expr_spearman(
         assert_equal_data(result, expected)
 
 
-def test_corr_series(constructor_eager: ConstructorEager) -> None:
+@pytest.mark.parametrize(
+    ("output_name", "a", "b", "expected_corr"),
+    [("a", "a", "b", 0.87), ("a", "a", "c", None)],
+)
+def test_corr_series(
+    constructor_eager: ConstructorEager,
+    request: pytest.FixtureRequest,
+    output_name: str,
+    a: str | nw.Expr,
+    b: str | nw.Expr,
+    expected_corr: float,
+) -> None:
+    if "pyspark" in str(constructor_eager) and expected_corr is None:
+        request.applymarker(
+            pytest.skip(reason="Pyspark corr function does not allow None values")
+        )
     df = nw.from_native(constructor_eager(data))
-    result = df.select(corr=nw.corr(df["a"], df["b"]).round(2))
-    expected = {"corr": [0.87]}
+    result = df.select(nw.corr(df[a], df[b]).round(2))
+    expected = {output_name: [expected_corr]}
     assert_equal_data(result, expected)
 
 
-def test_corr_series_spearman(constructor_eager: ConstructorEager) -> None:
+@pytest.mark.parametrize(
+    ("output_name", "a", "b", "expected_corr"),
+    [("a", "a", "b", 0.87), ("a", "a", "c", None)],
+)
+def test_corr_series_spearman(
+    constructor_eager: ConstructorEager,
+    request: pytest.FixtureRequest,
+    output_name: str,
+    a: str | nw.Expr,
+    b: str | nw.Expr,
+    expected_corr: float,
+) -> None:
+    if "pyspark" in str(constructor_eager) and expected_corr is None:
+        request.applymarker(
+            pytest.skip(reason="Pyspark corr function does not allow None values")
+        )
     context = (
         does_not_raise()
-        if any(x in str(constructor_eager) for x in ("pandas", "polars", "modin", "cudf"))
+        if any(
+            x in str(constructor_eager)
+            for x in ("pandas", "polars", "modin", "cudf", "pyarrow")
+        )
         else pytest.raises(NotImplementedError)
     )
     df = nw.from_native(constructor_eager(data))
     with context:
-        result = df.select(corr=nw.corr(df["a"], df["b"], method="spearman").round(2))
-        expected = {"corr": [0.87]}
+        result = df.select(nw.corr(df[a], df[b]).round(2))
+        expected = {output_name: [expected_corr]}
         assert_equal_data(result, expected)
