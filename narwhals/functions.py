@@ -1281,21 +1281,21 @@ def corr(a: IntoExpr, b: IntoExpr, method: CorrelationMethod = "pearson") -> Exp
         >>>
         >>> df_native = pl.DataFrame({"a": [1, 2, 3], "b": [0, 3, 2]})
         >>> nw.from_native(df_native).select(
-        >>>     pearson=nw.corr("a", "b", method="pearson),
-        >>>     spearman=pl.corr("a", "b", method="spearman"),
-        >>> )
-        ┌───────────────────────────┐
-        |Narwhals DataFrame         |
-        |---------------------------|
-        | shape: (1, 2)             |
-        | ┌───────────┬───────────┐ |
-        | │ pearson   ┆ spearman  | |
-        | │ ---       ┆ ---       | |
-        | │ f64       ┆ f64       | |
-        | ╞═══════════╪═══════════╡ |
-        | │ 0.654654  ┆ 0.5       | |
-        | └───────────┴───────────┘ |
-        └───────────────────────────┘
+        ...     pearson=nw.corr("a", "b", method="pearson"),
+        ...     spearman=nw.corr("a", "b", method="spearman"),
+        ... )
+        ┌───────────────────────┐
+        |  Narwhals DataFrame   |
+        |-----------------------|
+        |shape: (1, 2)          |
+        |┌──────────┬──────────┐|
+        |│ pearson  ┆ spearman │|
+        |│ ---      ┆ ---      │|
+        |│ f64      ┆ f64      │|
+        |╞══════════╪══════════╡|
+        |│ 0.654654 ┆ 0.5      │|
+        |└──────────┴──────────┘|
+        └───────────────────────┘
     """
     return Expr(ExprNode(ExprKind.AGGREGATION, "corr", exprs=(a, b), method=method))
 
