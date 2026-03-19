@@ -95,54 +95,41 @@ class FunctionFlags(enum.Flag):
 
         head_1(x) -> [1]
         sum(x) -> [4]
-
-    ## Invariants
-    Mutually exclusive with `LENGTH_PRESERVING`
     """
 
-    # TODO @dangotbanned: Doc
-    # 1. Summary line should at-least hint at what it means
-    # 2. Write example in python or use expressions
-    # 3. Mention `ELEMENTWISE = ROW_SEPARABLE | LENGTH_PRESERVING`
     ROW_SEPARABLE = 1 << 6
-    """Given a function `f` and a column of values `[v1, ..., vn]`.
+    """Does not depend on the context of surrounding rows.
 
-    `f` is row-separable *iff*:
+    Only `drop_nulls`, `drop_nans`.
 
-        f([v1, ..., vn]) == concat(f(v1, ... vm), f(vm+1, ..., vn))
+    ## Important
+    Row-separable functions are partially defined by what they are **not**:
 
-    In isolation, used on `drop_nulls`, `drop_nans`
-    (+ not implemented `arr.explode`, `reshape`)
+        ELEMENTWISE = ROW_SEPARABLE | LENGTH_PRESERVING
+        #             ✔️              ❌
+
+    This definition means they change the length of input columns.
+
+    But this property **does not** extend to elementwise.
 
     ## History
-    - Added in [#22573]
-    - ~~`*_range`~~ since [#26549]
-
-    [#22573]: https://github.com/pola-rs/polars/pull/22573
-    [#26549]: https://github.com/pola-rs/polars/pull/26549
+    ~~`*_range`~~ since [#26549](https://github.com/pola-rs/polars/pull/26549)
     """
 
-    # TODO @dangotbanned: Doc
-    # 1. Summary line should use the "in isolation" bit instead
-    # 2. Write example in python or use expressions
-    # 3. Invariants -> `FunctionOptions.{length_preserving,is_length_preserving}`
-    # 4. Mention `ELEMENTWISE = ROW_SEPARABLE | LENGTH_PRESERVING`
     LENGTH_PRESERVING = 1 << 7
-    """Given a function `f` and a column of values `[v1, ..., vn]`.
+    """Does not change the length of input columns.
 
-    In isolation, means that the function is dependent on the context of surrounding rows.
+    Includes `rolling_*`, `cum_*`, `shift`.
 
-    `f` is length preserving *iff*:
+    ## Important
+    Length-preserving functions are partially defined by what they are **not**:
 
-        len(f([v1, ..., vn])) == n
+        ELEMENTWISE = ROW_SEPARABLE | LENGTH_PRESERVING
+        #             ❌              ✔️
 
-    ## Invariants
-    Mutually exclusive with `RETURNS_SCALAR`
+    This definition means they depend on the context of surrounding rows.
 
-    ## History
-    - Added in [#22573]
-
-    [#22573]: https://github.com/pola-rs/polars/pull/22573
+    But this property **does not** extend to elementwise.
     """
 
     ELEMENTWISE = ROW_SEPARABLE | LENGTH_PRESERVING
@@ -231,12 +218,20 @@ class FunctionOptions(Immutable):
 
     @staticmethod
     def length_preserving() -> FunctionOptions:
-        """_summary_."""
+        """Does not change the length of input columns.
+
+        Depends on the context of surrounding rows.
+
+        Mutually exclusive with `aggregation`
+        """
         return FunctionOptions._default_with_flags(_LENGTH_PRESERVING)
 
     @staticmethod
     def row_separable() -> FunctionOptions:
-        """_summary_."""
+        """Does not depend on the context of surrounding rows.
+
+        Changes the length of input columns.
+        """
         return FunctionOptions._default_with_flags(_ROW_SEPARABLE)
 
     def with_flags(self, flags: FunctionFlags, /) -> FunctionOptions:
