@@ -111,7 +111,7 @@ class Function(Immutable):
 
     @property
     def is_scalar(self) -> bool:
-        return self.function_options.returns_scalar()
+        return self.function_options.is_aggregation()
 
     def to_function_expr(self, *inputs: ExprIR) -> FunctionExpr[Self]:
         from narwhals._plan.expressions.expr import FunctionExpr

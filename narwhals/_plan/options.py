@@ -84,8 +84,7 @@ class FunctionFlags(enum.Flag):
     #    but they aren't now (find relevant examples)
     #    - `sum`, `min` are `AggExpr`
     #    - `head_1` probably means `Gather` or `Slice`
-    # 3. Invariants -> `FunctionOptions.{aggregation,returns_scalar}`
-    RETURNS_SCALAR = 1 << 3
+    AGGREGATION = 1 << 3
     """Automatically explode on unit length if it ran as final aggregation.
 
     this is the case for aggregations like sum, min, covariance etc.
@@ -158,12 +157,12 @@ class FunctionFlags(enum.Flag):
 # If `FunctionOptions` is in scope, these aliases are too and save a bunch of lookups
 _DEFAULT = _ALLOW_GROUP_AWARE = FunctionFlags.ALLOW_GROUP_AWARE
 _REDUCE_EXPANSION = FunctionFlags.REDUCE_EXPANSION
-_RETURNS_SCALAR = FunctionFlags.RETURNS_SCALAR
+_AGGREGATION = FunctionFlags.AGGREGATION
 _ROW_SEPARABLE = FunctionFlags.ROW_SEPARABLE
 _LENGTH_PRESERVING = FunctionFlags.LENGTH_PRESERVING
 _ELEMENTWISE = FunctionFlags.ELEMENTWISE
 _HORIZONTAL = FunctionFlags.HORIZONTAL
-_INVALID = FunctionFlags.RETURNS_SCALAR | FunctionFlags.LENGTH_PRESERVING
+_INVALID = FunctionFlags.AGGREGATION | FunctionFlags.LENGTH_PRESERVING
 
 
 # TODO @dangotbanned: Explain `FunctionOptions` (class)
@@ -201,14 +200,17 @@ class FunctionOptions(Immutable):
         """_summary_."""
         return _ROW_SEPARABLE in self.flags
 
-    def returns_scalar(self) -> bool:
+    def is_aggregation(self) -> bool:
         """_summary_."""
-        return _RETURNS_SCALAR in self.flags
+        return _AGGREGATION in self.flags
 
     @staticmethod
     def aggregation() -> FunctionOptions:
-        """_summary_."""
-        return FunctionOptions._default_with_flags(_RETURNS_SCALAR)
+        """_summary_.
+
+        Mutually exclusive with `length_preserving`
+        """
+        return FunctionOptions._default_with_flags(_AGGREGATION)
 
     @staticmethod
     def elementwise() -> FunctionOptions:
@@ -256,7 +258,7 @@ class FunctionOptions(Immutable):
         if is_elementwise:
             opts = self.with_flags(_ELEMENTWISE)
         if returns_scalar:
-            opts = opts.with_flags(_RETURNS_SCALAR)
+            opts = opts.with_flags(_AGGREGATION)
         return opts
 
     # TODO @dangotbanned: Remove at the same time as `ALLOW_GROUP_AWARE`
