@@ -325,7 +325,7 @@ class Expander:
     def _expand_function_expr(
         self, origin: ir.FunctionExpr, /
     ) -> Iterator[ir.FunctionExpr]:
-        if origin.options.is_input_wildcard_expansion():
+        if origin.options.is_reduce_expansion():
             reduced = tuple(self._expand_inner(origin.input))
             yield origin.__replace__(input=reduced)
         else:

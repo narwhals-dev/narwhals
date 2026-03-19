@@ -30,42 +30,124 @@ if TYPE_CHECKING:
 _OBJ_SETATTR = object.__setattr__
 
 
+# TODO @dangotbanned: Finish content and move most to `FunctionOptions`
+# TODO @dangotbanned: Class doc?
 class FunctionFlags(enum.Flag):
+    # TODO @dangotbanned: Figure out new default + remove
     ALLOW_GROUP_AWARE = 1 << 0
-    """> Raise if use in group by
+    """Raise if use in group by
 
-    Not sure where this is disabled.
+    ## History
+    - Flag removed in [#23690], but left a vestigial `FunctionOptions.groupwise()`
+    - Acts as a default
+
+    [#23690]: https://github.com/pola-rs/polars/pull/23690
     """
 
-    INPUT_WILDCARD_EXPANSION = 1 << 4
-    """Appears on all the horizontal aggs.
+    REDUCE_EXPANSION = 1 << 2
+    """Use different semantics when expanding selectors.
 
-    https://github.com/pola-rs/polars/blob/e8ad1059721410e65a3d5c1d84055fb22a4d6d43/crates/polars-plan/src/plans/options.rs#L49-L58
+    Upstream this is named [`INPUT_WILDCARD_EXPANSION`].
+
+    ## Examples
+    Say we have the following schema:
+    >>> from tests.plan.utils import Frame
+    >>> import narwhals._plan as nw
+
+    >>> df = Frame.from_names("a", "b", "c")
+    >>> df.schema
+    Schema({'a': Int64, 'b': Int64, 'c': Int64})
+
+    This kind of expansion is used for inputs to horizontal functions:
+    >>> before = nw.sum_horizontal(nw.all())
+    >>> (reduced,) = df.project(before)
+    >>> before._ir
+    ncs.all().sum_horizontal()
+    >>> reduced
+    a=col('a').sum_horizontal([col('b'), col('c')])
+
+    Whereas the more common form of expansion produces multiple outputs:
+    >>> before = nw.all().clip("b")
+    >>> before._ir
+    ncs.all().clip_lower([col('b')])
+    >>> df.project(before)  # doctest: +NORMALIZE_WHITESPACE
+    (a=col('a').clip_lower([col('b')]),
+     b=col('b').clip_lower([col('b')]),
+     c=col('c').clip_lower([col('b')]))
+
+    [`INPUT_WILDCARD_EXPANSION`]: https://github.com/pola-rs/polars/blob/b6ae11535a9a45a442446ad13f687616ca97ee95/crates/polars-plan/src/plans/options.rs#L66-L76
     """
 
-    RETURNS_SCALAR = 1 << 5
-    """Automatically explode on unit length if it ran as final aggregation."""
+    # TODO @dangotbanned: Doc (full rewrite)
+    # 1. AFAIK, using "unit" in this way isn't common in python
+    # 2. These might have been `Function`s in an early version,
+    #    but they aren't now (find relevant examples)
+    #    - `sum`, `min` are `AggExpr`
+    #    - `head_1` probably means `Gather` or `Slice`
+    # 3. Invariants -> `FunctionOptions.{aggregation,returns_scalar}`
+    RETURNS_SCALAR = 1 << 3
+    """Automatically explode on unit length if it ran as final aggregation.
 
-    ROW_SEPARABLE = 1 << 8
+    this is the case for aggregations like sum, min, covariance etc.
+    We need to know this because we cannot see the difference between
+    the following functions based on the output type and number of elements:
+
+        x = [1, 2, 3]
+
+        head_1(x) -> [1]
+        sum(x) -> [4]
+
+    ## Invariants
+    Mutually exclusive with `LENGTH_PRESERVING`
+    """
+
+    # TODO @dangotbanned: Doc
+    # 1. Summary line should at-least hint at what it means
+    # 2. Write example in python or use expressions
+    # 3. Mention `ELEMENTWISE = ROW_SEPARABLE | LENGTH_PRESERVING`
+    ROW_SEPARABLE = 1 << 6
     """Given a function `f` and a column of values `[v1, ..., vn]`.
 
     `f` is row-separable *iff*:
 
-        f([v1, ..., vn]) = concat(f(v1, ... vm), f(vm+1, ..., vn))
+        f([v1, ..., vn]) == concat(f(v1, ... vm), f(vm+1, ..., vn))
 
-    In isolation, used on `drop_nulls`, `int_range`
+    In isolation, used on `drop_nulls`, `drop_nans`
+    (+ not implemented `arr.explode`, `reshape`)
 
-    https://github.com/pola-rs/polars/pull/22573
+    ## History
+    - Added in [#22573]
+    - ~~`*_range`~~ since [#26549]
+
+    [#22573]: https://github.com/pola-rs/polars/pull/22573
+    [#26549]: https://github.com/pola-rs/polars/pull/26549
     """
 
-    LENGTH_PRESERVING = 1 << 9
-    """In isolation, means that the function is dependent on the context of surrounding rows.
+    # TODO @dangotbanned: Doc
+    # 1. Summary line should use the "in isolation" bit instead
+    # 2. Write example in python or use expressions
+    # 3. Invariants -> `FunctionOptions.{length_preserving,is_length_preserving}`
+    # 4. Mention `ELEMENTWISE = ROW_SEPARABLE | LENGTH_PRESERVING`
+    LENGTH_PRESERVING = 1 << 7
+    """Given a function `f` and a column of values `[v1, ..., vn]`.
 
-    Mutually exclusive with `RETURNS_SCALAR`.
+    In isolation, means that the function is dependent on the context of surrounding rows.
+
+    `f` is length preserving *iff*:
+
+        len(f([v1, ..., vn])) == n
+
+    ## Invariants
+    Mutually exclusive with `RETURNS_SCALAR`
+
+    ## History
+    - Added in [#22573]
+
+    [#22573]: https://github.com/pola-rs/polars/pull/22573
     """
 
     ELEMENTWISE = ROW_SEPARABLE | LENGTH_PRESERVING
-    HORIZONTAL = INPUT_WILDCARD_EXPANSION | ELEMENTWISE
+    HORIZONTAL = REDUCE_EXPANSION | ELEMENTWISE
 
     def __str__(self) -> str:
         name = self.name or "<FUNCTION_FLAGS_UNKNOWN>"
@@ -75,7 +157,7 @@ class FunctionFlags(enum.Flag):
 # NOTE: `FunctionFlag`s get some heavy use, but always within the context of a `FunctionOptions`
 # If `FunctionOptions` is in scope, these aliases are too and save a bunch of lookups
 _DEFAULT = _ALLOW_GROUP_AWARE = FunctionFlags.ALLOW_GROUP_AWARE
-_INPUT_WILDCARD_EXPANSION = FunctionFlags.INPUT_WILDCARD_EXPANSION
+_REDUCE_EXPANSION = FunctionFlags.REDUCE_EXPANSION
 _RETURNS_SCALAR = FunctionFlags.RETURNS_SCALAR
 _ROW_SEPARABLE = FunctionFlags.ROW_SEPARABLE
 _LENGTH_PRESERVING = FunctionFlags.LENGTH_PRESERVING
@@ -84,60 +166,82 @@ _HORIZONTAL = FunctionFlags.HORIZONTAL
 _INVALID = FunctionFlags.RETURNS_SCALAR | FunctionFlags.LENGTH_PRESERVING
 
 
-# TODO @dangotbanned: Class-level doc
+# TODO @dangotbanned: Explain `FunctionOptions` (class)
+# TODO @dangotbanned: Explain `flags` (attr)
+# TODO @dangotbanned: Decide on how to split `FunctionFlags` docs
+# TODO @dangotbanned: Explain `FunctionOptions` (staticmethods)
+# TODO @dangotbanned: Explain `FunctionOptions` (guards)
 @final
 class FunctionOptions(Immutable):
-    """https://github.com/pola-rs/polars/blob/3fd7ecc5f9de95f62b70ea718e7e5dbf951b6d1c/crates/polars-plan/src/plans/options.rs"""  # noqa: D415
+    """_summary_.
+
+    https://github.com/pola-rs/polars/blob/3fd7ecc5f9de95f62b70ea718e7e5dbf951b6d1c/crates/polars-plan/src/plans/options.rs
+    """
 
     __slots__ = ("flags",)
-    # TODO @dangotbanned: Doc
     flags: FunctionFlags
+    """_summary_."""
 
     def __str__(self) -> str:
         return f"{type(self).__name__}(flags='{self.flags}')"
 
     def is_elementwise(self) -> bool:
+        """_summary_."""
         return _ELEMENTWISE in self.flags
 
-    def is_input_wildcard_expansion(self) -> bool:
-        return _INPUT_WILDCARD_EXPANSION in self.flags
+    def is_reduce_expansion(self) -> bool:
+        """_summary_."""
+        return _REDUCE_EXPANSION in self.flags
 
     def is_length_preserving(self) -> bool:
+        """_summary_."""
         return _LENGTH_PRESERVING in self.flags  # pragma: no cover
 
     def is_row_separable(self) -> bool:
+        """_summary_."""
         return _ROW_SEPARABLE in self.flags
 
     def returns_scalar(self) -> bool:
+        """_summary_."""
         return _RETURNS_SCALAR in self.flags
 
     @staticmethod
     def aggregation() -> FunctionOptions:
+        """_summary_."""
         return FunctionOptions._default_with_flags(_RETURNS_SCALAR)
 
     @staticmethod
     def elementwise() -> FunctionOptions:
+        """_summary_."""
         return FunctionOptions._default_with_flags(_ELEMENTWISE)
 
     @staticmethod
     def groupwise() -> FunctionOptions:
+        """_summary_."""
         obj = FunctionOptions.__new__(FunctionOptions)
         _OBJ_SETATTR(obj, "flags", _ALLOW_GROUP_AWARE)
         return obj
 
     @staticmethod
     def horizontal() -> FunctionOptions:
+        """_summary_."""
         return FunctionOptions._default_with_flags(_HORIZONTAL)
 
     @staticmethod
     def length_preserving() -> FunctionOptions:
+        """_summary_."""
         return FunctionOptions._default_with_flags(_LENGTH_PRESERVING)
 
     @staticmethod
     def row_separable() -> FunctionOptions:
+        """_summary_."""
         return FunctionOptions._default_with_flags(_ROW_SEPARABLE)
 
     def with_flags(self, flags: FunctionFlags, /) -> FunctionOptions:
+        """Create a new set of options, combining `flags` with self.
+
+        Ensures `flags` is compatible with current expression.
+        """
         new_flags = self.flags | flags
         if _INVALID in new_flags:
             msg = "A function cannot both return a scalar and preserve length, they are mutually exclusive."
@@ -147,7 +251,7 @@ class FunctionOptions(Immutable):
         return obj
 
     def with_udf(self, *, is_elementwise: bool, returns_scalar: bool) -> FunctionOptions:
-        """Ensure `map_batches` flags are compatible with the current expression."""
+        """Special-case of `with_flags` for inputs from `map_batches`."""
         opts = self
         if is_elementwise:
             opts = self.with_flags(_ELEMENTWISE)
@@ -155,6 +259,7 @@ class FunctionOptions(Immutable):
             opts = opts.with_flags(_RETURNS_SCALAR)
         return opts
 
+    # TODO @dangotbanned: Remove at the same time as `ALLOW_GROUP_AWARE`
     @staticmethod
     def _default_with_flags(flags: FunctionFlags, /) -> FunctionOptions:
         obj = FunctionOptions.__new__(FunctionOptions)
