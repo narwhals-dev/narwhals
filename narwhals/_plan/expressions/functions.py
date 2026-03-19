@@ -8,7 +8,7 @@ import narwhals._plan.dtypes_mapper as dtm
 from narwhals._plan._dtype import ResolveDType
 from narwhals._plan._function import Function, HorizontalFunction
 from narwhals._plan.exceptions import hist_bins_monotonic_error
-from narwhals._plan.options import FunctionFlags, FunctionOptions
+from narwhals._plan.options import FunctionOptions
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -284,12 +284,9 @@ class MapBatches(Function):
 
     @property
     def function_options(self) -> FunctionOptions:
-        options = super().function_options
-        if self.is_elementwise:
-            options = options.with_elementwise()
-        if self.returns_scalar:
-            options = options.with_flags(FunctionFlags.RETURNS_SCALAR)
-        return options
+        return super().function_options.with_udf(
+            is_elementwise=self.is_elementwise, returns_scalar=self.returns_scalar
+        )
 
     def to_function_expr(self, *inputs: ExprIR) -> AnonymousExpr:
         from narwhals._plan.expressions.expr import AnonymousExpr

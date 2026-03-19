@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import enum
-from typing import TYPE_CHECKING, Generic, Literal, get_args
+from typing import TYPE_CHECKING, Generic, Literal, final, get_args
 
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.common import ensure_seq_str
@@ -25,6 +25,9 @@ if TYPE_CHECKING:
     class _SortOptions(TypedDict):
         descending: bool | Seq[bool]
         nulls_last: bool | Seq[bool]
+
+
+_OBJ_SETATTR = object.__setattr__
 
 
 class FunctionFlags(enum.Flag):
@@ -61,57 +64,78 @@ class FunctionFlags(enum.Flag):
     Mutually exclusive with `RETURNS_SCALAR`.
     """
 
-    def is_elementwise(self) -> bool:
-        return (FunctionFlags.ROW_SEPARABLE | FunctionFlags.LENGTH_PRESERVING) in self
-
-    def returns_scalar(self) -> bool:
-        return FunctionFlags.RETURNS_SCALAR in self
-
-    def is_length_preserving(self) -> bool:
-        return FunctionFlags.LENGTH_PRESERVING in self  # pragma: no cover
-
-    def is_row_separable(self) -> bool:
-        return FunctionFlags.ROW_SEPARABLE in self
-
-    def is_input_wildcard_expansion(self) -> bool:
-        return FunctionFlags.INPUT_WILDCARD_EXPANSION in self
-
-    @staticmethod
-    def default() -> FunctionFlags:
-        return FunctionFlags.ALLOW_GROUP_AWARE
+    ELEMENTWISE = ROW_SEPARABLE | LENGTH_PRESERVING
+    HORIZONTAL = INPUT_WILDCARD_EXPANSION | ELEMENTWISE
 
     def __str__(self) -> str:
         name = self.name or "<FUNCTION_FLAGS_UNKNOWN>"
         return name.replace("|", " | ")
 
 
+# NOTE: `FunctionFlag`s get some heavy use, but always within the context of a `FunctionOptions`
+# If `FunctionOptions` is in scope, these aliases are too and save a bunch of lookups
+_DEFAULT = _ALLOW_GROUP_AWARE = FunctionFlags.ALLOW_GROUP_AWARE
+_INPUT_WILDCARD_EXPANSION = FunctionFlags.INPUT_WILDCARD_EXPANSION
+_RETURNS_SCALAR = FunctionFlags.RETURNS_SCALAR
+_ROW_SEPARABLE = FunctionFlags.ROW_SEPARABLE
+_LENGTH_PRESERVING = FunctionFlags.LENGTH_PRESERVING
+_ELEMENTWISE = FunctionFlags.ELEMENTWISE
+_HORIZONTAL = FunctionFlags.HORIZONTAL
 _INVALID = FunctionFlags.RETURNS_SCALAR | FunctionFlags.LENGTH_PRESERVING
-_OBJ_SETATTR = object.__setattr__
 
 
+# TODO @dangotbanned: Class-level doc
+@final
 class FunctionOptions(Immutable):
     """https://github.com/pola-rs/polars/blob/3fd7ecc5f9de95f62b70ea718e7e5dbf951b6d1c/crates/polars-plan/src/plans/options.rs"""  # noqa: D415
 
     __slots__ = ("flags",)
+    # TODO @dangotbanned: Doc
     flags: FunctionFlags
 
     def __str__(self) -> str:
         return f"{type(self).__name__}(flags='{self.flags}')"
 
     def is_elementwise(self) -> bool:
-        return self.flags.is_elementwise()
-
-    def returns_scalar(self) -> bool:
-        return self.flags.returns_scalar()
-
-    def is_length_preserving(self) -> bool:
-        return self.flags.is_length_preserving()  # pragma: no cover
-
-    def is_row_separable(self) -> bool:
-        return self.flags.is_row_separable()
+        return _ELEMENTWISE in self.flags
 
     def is_input_wildcard_expansion(self) -> bool:
-        return self.flags.is_input_wildcard_expansion()
+        return _INPUT_WILDCARD_EXPANSION in self.flags
+
+    def is_length_preserving(self) -> bool:
+        return _LENGTH_PRESERVING in self.flags  # pragma: no cover
+
+    def is_row_separable(self) -> bool:
+        return _ROW_SEPARABLE in self.flags
+
+    def returns_scalar(self) -> bool:
+        return _RETURNS_SCALAR in self.flags
+
+    @staticmethod
+    def aggregation() -> FunctionOptions:
+        return FunctionOptions._default_with_flags(_RETURNS_SCALAR)
+
+    @staticmethod
+    def elementwise() -> FunctionOptions:
+        return FunctionOptions._default_with_flags(_ELEMENTWISE)
+
+    @staticmethod
+    def groupwise() -> FunctionOptions:
+        obj = FunctionOptions.__new__(FunctionOptions)
+        _OBJ_SETATTR(obj, "flags", _ALLOW_GROUP_AWARE)
+        return obj
+
+    @staticmethod
+    def horizontal() -> FunctionOptions:
+        return FunctionOptions._default_with_flags(_HORIZONTAL)
+
+    @staticmethod
+    def length_preserving() -> FunctionOptions:
+        return FunctionOptions._default_with_flags(_LENGTH_PRESERVING)
+
+    @staticmethod
+    def row_separable() -> FunctionOptions:
+        return FunctionOptions._default_with_flags(_ROW_SEPARABLE)
 
     def with_flags(self, flags: FunctionFlags, /) -> FunctionOptions:
         new_flags = self.flags | flags
@@ -122,42 +146,22 @@ class FunctionOptions(Immutable):
         _OBJ_SETATTR(obj, "flags", new_flags)
         return obj
 
-    def with_elementwise(self) -> FunctionOptions:
-        return self.with_flags(
-            FunctionFlags.ROW_SEPARABLE | FunctionFlags.LENGTH_PRESERVING
-        )
+    def with_udf(self, *, is_elementwise: bool, returns_scalar: bool) -> FunctionOptions:
+        """Ensure `map_batches` flags are compatible with the current expression."""
+        opts = self
+        if is_elementwise:
+            opts = self.with_flags(_ELEMENTWISE)
+        if returns_scalar:
+            opts = opts.with_flags(_RETURNS_SCALAR)
+        return opts
 
     @staticmethod
-    def default() -> FunctionOptions:
+    def _default_with_flags(flags: FunctionFlags, /) -> FunctionOptions:
         obj = FunctionOptions.__new__(FunctionOptions)
-        _OBJ_SETATTR(obj, "flags", FunctionFlags.default())
+        _OBJ_SETATTR(obj, "flags", _DEFAULT | flags)
         return obj
 
-    @staticmethod
-    def elementwise() -> FunctionOptions:
-        return FunctionOptions.default().with_elementwise()
-
-    @staticmethod
-    def row_separable() -> FunctionOptions:
-        return FunctionOptions.groupwise().with_flags(FunctionFlags.ROW_SEPARABLE)
-
-    @staticmethod
-    def length_preserving() -> FunctionOptions:
-        return FunctionOptions.default().with_flags(FunctionFlags.LENGTH_PRESERVING)
-
-    @staticmethod
-    def groupwise() -> FunctionOptions:
-        return FunctionOptions.default()
-
-    @staticmethod
-    def aggregation() -> FunctionOptions:
-        return FunctionOptions.groupwise().with_flags(FunctionFlags.RETURNS_SCALAR)
-
-    @staticmethod
-    def horizontal() -> FunctionOptions:
-        return FunctionOptions.elementwise().with_flags(
-            FunctionFlags.INPUT_WILDCARD_EXPANSION
-        )
+    default = groupwise
 
 
 class SortOptions(Immutable):
