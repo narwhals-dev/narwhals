@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import enum
-from typing import TYPE_CHECKING, Generic, Literal, final, get_args
+from typing import TYPE_CHECKING, Callable, Generic, Literal, final, get_args
 
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.common import ensure_seq_str
@@ -204,13 +204,30 @@ class FunctionFlags(enum.Flag):
 # NOTE: `FunctionFlag`s get some heavy use, but always within the context of a `FunctionOptions`
 # If `FunctionOptions` is in scope, these aliases are too and save a bunch of lookups
 _DEFAULT = _ALLOW_GROUP_AWARE = FunctionFlags.ALLOW_GROUP_AWARE
-_REDUCE_EXPANSION = FunctionFlags.REDUCE_EXPANSION
 _AGGREGATION = FunctionFlags.AGGREGATION
 _ROW_SEPARABLE = FunctionFlags.ROW_SEPARABLE
 _LENGTH_PRESERVING = FunctionFlags.LENGTH_PRESERVING
 _ELEMENTWISE = FunctionFlags.ELEMENTWISE
 _HORIZONTAL = FunctionFlags.HORIZONTAL
 _INVALID = FunctionFlags.AGGREGATION | FunctionFlags.LENGTH_PRESERVING
+
+
+# NOTE: Primarily using so enum members show somewhere you can use a hover context to see their docs
+# NOTE: Maybe another step up is making options generic over flags?
+def options_guard(
+    flag: Literal[
+        FunctionFlags.AGGREGATION,
+        FunctionFlags.ELEMENTWISE,
+        FunctionFlags.LENGTH_PRESERVING,
+        FunctionFlags.REDUCE_EXPANSION,
+        FunctionFlags.ROW_SEPARABLE,
+    ],
+    /,
+) -> Callable[[FunctionOptions], bool]:
+    def _(self: FunctionOptions, /) -> bool:
+        return flag in self.flags
+
+    return _
 
 
 # TODO @dangotbanned: Explain `FunctionOptions` (class)
@@ -232,29 +249,15 @@ class FunctionOptions(Immutable):
     def __str__(self) -> str:
         return f"{type(self).__name__}(flags='{self.flags}')"
 
-    def is_elementwise(self) -> bool:
-        """_summary_."""
-        return _ELEMENTWISE in self.flags
-
-    def is_reduce_expansion(self) -> bool:
-        """_summary_."""
-        return _REDUCE_EXPANSION in self.flags
-
-    def is_length_preserving(self) -> bool:
-        """_summary_."""
-        return _LENGTH_PRESERVING in self.flags  # pragma: no cover
-
-    def is_row_separable(self) -> bool:
-        """_summary_."""
-        return _ROW_SEPARABLE in self.flags
-
-    def is_aggregation(self) -> bool:
-        """_summary_."""
-        return _AGGREGATION in self.flags
+    is_aggregation = options_guard(FunctionFlags.AGGREGATION)
+    is_elementwise = options_guard(FunctionFlags.ELEMENTWISE)
+    is_length_preserving = options_guard(FunctionFlags.LENGTH_PRESERVING)
+    is_reduce_expansion = options_guard(FunctionFlags.REDUCE_EXPANSION)
+    is_row_separable = options_guard(FunctionFlags.ROW_SEPARABLE)
 
     @staticmethod
     def aggregation() -> FunctionOptions:
-        """_summary_.
+        """Always returns a scalar and supports broadcasting.
 
         Mutually exclusive with `length_preserving`
         """
