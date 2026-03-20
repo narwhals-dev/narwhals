@@ -78,23 +78,84 @@ class FunctionFlags(enum.Flag):
     [`INPUT_WILDCARD_EXPANSION`]: https://github.com/pola-rs/polars/blob/b6ae11535a9a45a442446ad13f687616ca97ee95/crates/polars-plan/src/plans/options.rs#L66-L76
     """
 
-    # TODO @dangotbanned: Doc (full rewrite)
-    # 1. AFAIK, using "unit" in this way isn't common in python
-    # 2. These might have been `Function`s in an early version,
-    #    but they aren't now (find relevant examples)
-    #    - `sum`, `min` are `AggExpr`
-    #    - `head_1` probably means `Gather` or `Slice`
     AGGREGATION = 1 << 3
-    """Automatically explode on unit length if it ran as final aggregation.
+    """Always returns a scalar and supports broadcasting.
 
-    this is the case for aggregations like sum, min, covariance etc.
-    We need to know this because we cannot see the difference between
-    the following functions based on the output type and number of elements:
+    ## Examples
+    >>> import narwhals._plan as nw
+    >>> def show(frame: nw.DataFrame) -> None:
+    ...     print(frame.to_polars())
+    >>> data = {"a": [1, None], "b": [1, 2]}
+    >>> df = nw.DataFrame.from_dict(data, backend="pyarrow")
+    >>> show(df)
+    shape: (2, 2)
+    ┌──────┬─────┐
+    │ a    ┆ b   │
+    │ ---  ┆ --- │
+    │ i64  ┆ i64 │
+    ╞══════╪═════╡
+    │ 1    ┆ 1   │
+    │ null ┆ 2   │
+    └──────┴─────┘
 
-        x = [1, 2, 3]
+    These expressions each use a different kind of function:
+    >>> aggregation = nw.col("a").null_count().alias("c")
+    >>> aggregation._ir.is_scalar()
+    True
+    >>> row_separable = nw.col("a").drop_nulls().alias("c")
+    >>> row_separable._ir.is_scalar()
+    False
 
-        head_1(x) -> [1]
-        sum(x) -> [4]
+    But in an isolated `select` context, that detail isn't always visible:
+    >>> show(df.select(aggregation))
+    shape: (1, 1)
+    ┌─────┐
+    │ c   │
+    │ --- │
+    │ i64 │
+    ╞═════╡
+    │ 1   │
+    └─────┘
+
+    Since they return the same result *for this dataset*:
+    >>> show(df.select(row_separable))
+    shape: (1, 1)
+    ┌─────┐
+    │ c   │
+    │ --- │
+    │ i64 │
+    ╞═════╡
+    │ 1   │
+    └─────┘
+
+    Aggregation functions support broadcasting, because we know they **always return a scalar**:
+    >>> show(df.with_columns(aggregation))
+    shape: (2, 3)
+    ┌──────┬─────┬─────┐
+    │ a    ┆ b   ┆ c   │
+    │ ---  ┆ --- ┆ --- │
+    │ i64  ┆ i64 ┆ i64 │
+    ╞══════╪═════╪═════╡
+    │ 1    ┆ 1   ┆ 1   │
+    │ null ┆ 2   ┆ 1   │
+    └──────┴─────┴─────┘
+
+    Whereas row-separable functions do not support broadcasting:
+    >>> show(df.with_columns(row_separable))
+    Traceback (most recent call last):
+    narwhals.exceptions.ShapeError: Series c, length 1 doesn't match the DataFrame height of 2...
+
+    Because returning a single value is data-dependent:
+    >>> show(df.select(nw.col("b").drop_nulls()))
+    shape: (2, 1)
+    ┌─────┐
+    │ b   │
+    │ --- │
+    │ i64 │
+    ╞═════╡
+    │ 1   │
+    │ 2   │
+    └─────┘
     """
 
     ROW_SEPARABLE = 1 << 6
