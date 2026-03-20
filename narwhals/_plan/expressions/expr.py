@@ -9,6 +9,7 @@ import narwhals._plan.dtypes_mapper as dtm
 from narwhals._plan._dispatch import DispatcherOptions
 from narwhals._plan._dtype import ResolveDType
 from narwhals._plan._expr_ir import ExprIR, SelectorIR
+from narwhals._plan._flags import FunctionFlags
 from narwhals._plan._nodes import node, nodes
 from narwhals._plan.exceptions import (
     function_expr_invalid_operation_error,
@@ -41,7 +42,7 @@ if TYPE_CHECKING:
     from narwhals._plan.compliant.typing import Ctx, FrameT_contra, R_co
     from narwhals._plan.expressions import selectors as cs
     from narwhals._plan.expressions.functions import MapBatches  # noqa: F401
-    from narwhals._plan.options import FunctionOptions, SortMultipleOptions, SortOptions
+    from narwhals._plan.options import SortMultipleOptions, SortOptions
     from narwhals._plan.schema import FrozenSchema
     from narwhals.dtypes import DType
     from narwhals.typing import IntoDType
@@ -195,22 +196,16 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
     https://github.com/pola-rs/polars/blob/112cab39380d8bdb82c6b76b31aca9b58c98fd93/crates/polars-plan/src/dsl/function_expr/mod.rs#L123
     """
 
-    __slots__ = ("function", "input", "options")
+    __slots__ = ("flags", "function", "input")
     input: Seq[ExprIR] = nodes()
-    # NOTE: mypy being mypy - the top error can't be silenced 🤦‍♂️
-    # narwhals/_plan/expr.py: error: Cannot use a covariant type variable as a parameter  [misc]
-    # narwhals/_plan/expr.py:272:15: error: Cannot use a covariant type variable as a parameter  [misc]
-    #         function: FunctionT_co  # noqa: ERA001
-    #                   ^
-    # Found 2 errors in 1 file (checked 476 source files)
     function: FunctionT_co
     """Operation applied to each element of `input`."""
 
-    options: FunctionOptions
+    flags: FunctionFlags
     """Combined flags from chained operations."""
 
     def is_scalar(self) -> bool:
-        return self.function.is_scalar
+        return FunctionFlags.AGGREGATION in self.flags
 
     def __repr__(self) -> str:
         if self.input:
@@ -228,13 +223,13 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
             *,
             input: Seq[ExprIR],  # noqa: A002
             function: FunctionT_co,
-            options: FunctionOptions,
+            flags: FunctionFlags,
             **kwds: t.Any,
         ) -> None:
             parent = input[0]
-            if parent.is_scalar() and not options.is_elementwise():
+            if parent.is_scalar() and not flags.is_elementwise():
                 raise function_expr_invalid_operation_error(function, parent)
-            kwargs = dict(input=input, function=function, options=options, **kwds)
+            kwargs = dict(input=input, function=function, flags=flags, **kwds)
             super().__init__(**kwargs)
     else:  # pragma: no cover
         ...
@@ -294,7 +289,7 @@ class RangeExpr(FunctionExpr[RangeT_co]):
         *,
         input: Seq[ExprIR],  # noqa: A002
         function: RangeT_co,
-        options: FunctionOptions,
+        flags: FunctionFlags,
         **kwds: t.Any,
     ) -> None:
         # NOTE: `IntRange` has 2x scalar inputs, so always triggered error in parent
@@ -304,7 +299,7 @@ class RangeExpr(FunctionExpr[RangeT_co]):
         if not all(e.is_scalar() for e in input):
             raise range_expr_non_scalar_error(input, function)
         super(ExprIR, self).__init__(
-            **dict(input=input, function=function, options=options, **kwds)
+            **dict(input=input, function=function, flags=flags, **kwds)
         )
 
     def __repr__(self) -> str:

@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING
 import narwhals._plan.dtypes_mapper as dtm
 from narwhals._plan._dispatch import DispatcherOptions
 from narwhals._plan._dtype import ResolveDType
+from narwhals._plan._flags import FunctionFlags
 from narwhals._plan._function import Function
-from narwhals._plan.options import FunctionOptions
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -16,18 +16,18 @@ if TYPE_CHECKING:
     from narwhals.typing import ClosedInterval
 
 # NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
-row_separable = FunctionOptions.row_separable
+ROW_SEPARABLE = FunctionFlags.ROW_SEPARABLE
 get_dtype = ResolveDType.get_dtype
 map_all = ResolveDType.function.map_all
 namespaced = DispatcherOptions.namespaced
 
 
 # TODO @dangotbanned: Review upstream `row_separable` fix https://github.com/pola-rs/polars/pull/26549
-class RangeFunction(Function, options=row_separable, dispatch=namespaced()):
+class RangeFunction(Function, flags=ROW_SEPARABLE, dispatch=namespaced()):
     def to_function_expr(self, *inputs: ExprIR) -> RangeExpr[Self]:
         from narwhals._plan.expressions.expr import RangeExpr
 
-        return RangeExpr(input=inputs, function=self, options=self.function_options)
+        return RangeExpr(input=inputs, function=self, flags=self.flags)
 
     def unwrap_input(self, node: RangeExpr[Self], /) -> tuple[ExprIR, ExprIR]:
         start, end = node.input

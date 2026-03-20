@@ -13,7 +13,7 @@ pub enum Expr {                    // class ExprIR: ...
         input: Vec<Expr>,          //     input: Seq[ExprIR]
         function: FunctionExpr,    //     function: Function
     //            ^^^^^^^^^^^^                      ^^^^^^^^
-        options: FunctionOptions,  //     options: FunctionOptions
+        options: FunctionOptions,  //     flags: FunctionFlags
     },
 ```
 
@@ -39,12 +39,12 @@ from typing import TYPE_CHECKING
 
 from narwhals._plan._dispatch import Dispatcher, DispatcherOptions
 from narwhals._plan._dtype import IntoResolveDType, ResolveDType
+from narwhals._plan._flags import FunctionFlags
 from narwhals._plan._immutable import Immutable
-from narwhals._plan.options import FunctionOptions
 from narwhals.dtypes import DType
 
 if TYPE_CHECKING:
-    from typing import Any, Callable, ClassVar
+    from typing import Any, ClassVar
 
     from typing_extensions import Self
 
@@ -56,7 +56,7 @@ __all__ = ["Function", "HorizontalFunction"]
 
 # NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
 namespaced = DispatcherOptions.namespaced
-horizontal = FunctionOptions.horizontal
+HORIZONTAL = FunctionFlags.HORIZONTAL
 
 
 # TODO @dangotbanned: Finish `Function` class doc
@@ -90,46 +90,41 @@ class Function(Immutable):
 
     Classes store all other details:
     - Which `CompliantExpr` method to call (`__expr_ir_dispatch__: Dispatcher`)
-    - How the function changes the larger expression it is part of (`function_options: FunctionOptions`)
+    - How the function changes the larger expression it is part of (`flags: FunctionFlags`)
 
     See Also:
         `narwhals._plan._function.py` doc for implementation notes
     """
 
-    # TODO @dangotbanned: Fix this wart
-    # - `ExprIR` was updated a while back to remove `ClassVar[staticmethod]`
-    # - Naming convention isn't consistent
-    _function_options: ClassVar[staticmethod[[], FunctionOptions]] = staticmethod(
-        FunctionOptions.default
-    )
+    # TODO @dangotbanned: Naming convention isn't consistent
+    _flags: ClassVar[FunctionFlags] = FunctionFlags.DEFAULT
     __expr_ir_dispatch__: ClassVar[Dispatcher[FunctionExpr[Self]]] = Dispatcher()
     __expr_ir_dtype__: ClassVar[ResolveDType[FunctionExpr[Self]]] = ResolveDType()
 
     @property
-    def function_options(self) -> FunctionOptions:
-        return self._function_options()
+    def flags(self) -> FunctionFlags:
+        return self._flags
 
-    @property
-    def is_scalar(self) -> bool:
-        return self.function_options.is_aggregation()
+    def is_scalar(self) -> bool:  # pragma: no cover
+        return FunctionFlags.AGGREGATION in self.flags
 
     def to_function_expr(self, *inputs: ExprIR) -> FunctionExpr[Self]:
         from narwhals._plan.expressions.expr import FunctionExpr
 
-        return FunctionExpr(input=inputs, function=self, options=self.function_options)
+        return FunctionExpr(input=inputs, function=self, flags=self.flags)
 
     def __init_subclass__(
         cls: type[Self],
         *,
         accessor: Accessor | None = None,
-        options: Callable[[], FunctionOptions] | None = None,
+        flags: FunctionFlags | None = None,
         dispatch: DispatcherOptions | None = None,
         dtype: IntoResolveDType[Self] | None = None,
         **kwds: Any,
     ) -> None:
         super().__init_subclass__(**kwds)
-        if options:
-            cls._function_options = staticmethod(options)
+        if flags is not None:
+            cls._flags = flags
         cls.__expr_ir_dispatch__ = Dispatcher.from_function(cls, dispatch, accessor)
         if dtype is not None:
             if isinstance(dtype, DType):
@@ -154,4 +149,4 @@ class Function(Immutable):
         return self.__expr_ir_dtype__(node, schema)
 
 
-class HorizontalFunction(Function, options=horizontal, dispatch=namespaced()): ...
+class HorizontalFunction(Function, flags=HORIZONTAL, dispatch=namespaced()): ...

@@ -5,10 +5,10 @@ from typing import TYPE_CHECKING, ClassVar
 import narwhals._plan.dtypes_mapper as dtm
 from narwhals._plan._dispatch import DispatcherOptions
 from narwhals._plan._dtype import ResolveDType
+from narwhals._plan._flags import FunctionFlags
 from narwhals._plan._function import Function, HorizontalFunction
 from narwhals._plan._parse import parse_into_expr_ir
 from narwhals._plan.expressions.namespace import ExprNamespace, IRNamespace
-from narwhals._plan.options import FunctionOptions
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -18,13 +18,13 @@ if TYPE_CHECKING:
 
 
 # NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
-elementwise = FunctionOptions.elementwise
+ELEMENTWISE = FunctionFlags.ELEMENTWISE
 same_dtype = ResolveDType.function.same_dtype
 renamed = DispatcherOptions.renamed
 
 
 # fmt: off
-class StringFunction(Function, accessor="str", options=elementwise): ...
+class StringFunction(Function, accessor="str", flags=ELEMENTWISE): ...
 class LenChars(StringFunction, dtype=dtm.U32): ...
 class ToLowercase(StringFunction, dtype=same_dtype()): ...
 class ToUppercase(StringFunction, dtype=same_dtype()): ...

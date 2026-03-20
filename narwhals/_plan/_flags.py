@@ -3,13 +3,7 @@ from __future__ import annotations
 import enum
 
 
-# TODO @dangotbanned: rename a loads of other things
-# - would be nice to have `FunctionExpr.flags`, `Function.flags`
 # TODO @dangotbanned: Explain `FunctionFlags` (class)
-# NOTE: Few things might be redundant
-# - `staticmethod`s: could just be the members instead?
-# - `is_*` guards: pretty low usage: (2,4,0,1,1) and doesn't provide type checking
-#   - can export members for short paths, but loses member docs
 class FunctionFlags(enum.Flag):
     """Properties of functions."""
 
@@ -211,6 +205,9 @@ class FunctionFlags(enum.Flag):
             msg = "A function cannot both return a scalar and preserve length, they are mutually exclusive."
             raise TypeError(msg)
         return opts
+
+    def is_elementwise(self) -> bool:
+        return FunctionFlags.ELEMENTWISE in self
 
 
 _INVALID = FunctionFlags.AGGREGATION | FunctionFlags.LENGTH_PRESERVING

@@ -726,7 +726,7 @@ def test_list_contains_invalid() -> None:
         ir.FunctionExpr(
             input=(ir.col("a"), ir.lit("a", nw.String)),
             function=ir.lists.Contains(),
-            options=ir.lists.Contains().function_options,
+            flags=ir.lists.Contains().flags,
         ),
     )
     assert a.list.contains(a.first())

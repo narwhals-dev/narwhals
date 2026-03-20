@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-import enum
-from typing import TYPE_CHECKING, Callable, Generic, Literal, final, get_args
+from typing import TYPE_CHECKING, Generic, Literal, get_args
 
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.common import ensure_seq_str
@@ -25,93 +24,6 @@ if TYPE_CHECKING:
     class _SortOptions(TypedDict):
         descending: bool | Seq[bool]
         nulls_last: bool | Seq[bool]
-
-
-_OBJ_SETATTR = object.__setattr__
-
-
-class FunctionFlags(enum.Flag):
-    DEFAULT = 1 << 0
-    REDUCE_EXPANSION = 1 << 2
-    AGGREGATION = 1 << 3
-    ROW_SEPARABLE = 1 << 6
-    LENGTH_PRESERVING = 1 << 7
-    ELEMENTWISE = ROW_SEPARABLE | LENGTH_PRESERVING
-    HORIZONTAL = REDUCE_EXPANSION | ELEMENTWISE
-
-    def __str__(self) -> str:
-        name = self.name or "<FUNCTION_FLAGS_UNKNOWN>"
-        return name.replace("|", " | ")
-
-
-_INVALID = FunctionFlags.AGGREGATION | FunctionFlags.LENGTH_PRESERVING
-
-
-def options_guard(flag: FunctionFlags, /) -> Callable[[FunctionOptions], bool]:
-    def _(self: FunctionOptions, /) -> bool:
-        return flag in self.flags
-
-    return _
-
-
-@final
-class FunctionOptions(Immutable):
-    __slots__ = ("flags",)
-    flags: FunctionFlags
-
-    def __str__(self) -> str:
-        return f"{type(self).__name__}(flags='{self.flags}')"
-
-    is_aggregation = options_guard(FunctionFlags.AGGREGATION)
-    is_elementwise = options_guard(FunctionFlags.ELEMENTWISE)
-    is_length_preserving = options_guard(FunctionFlags.LENGTH_PRESERVING)
-    is_reduce_expansion = options_guard(FunctionFlags.REDUCE_EXPANSION)
-    is_row_separable = options_guard(FunctionFlags.ROW_SEPARABLE)
-
-    @staticmethod
-    def aggregation() -> FunctionOptions:
-        return FunctionOptions(flags=FunctionFlags.AGGREGATION)
-
-    @staticmethod
-    def elementwise() -> FunctionOptions:
-        return FunctionOptions(flags=FunctionFlags.ELEMENTWISE)
-
-    @staticmethod
-    def groupwise() -> FunctionOptions:
-        obj = FunctionOptions.__new__(FunctionOptions)
-        _OBJ_SETATTR(obj, "flags", FunctionFlags.DEFAULT)
-        return obj
-
-    @staticmethod
-    def horizontal() -> FunctionOptions:
-        return FunctionOptions(flags=FunctionFlags.HORIZONTAL)
-
-    @staticmethod
-    def length_preserving() -> FunctionOptions:
-        return FunctionOptions(flags=FunctionFlags.LENGTH_PRESERVING)
-
-    @staticmethod
-    def row_separable() -> FunctionOptions:
-        return FunctionOptions(flags=FunctionFlags.ROW_SEPARABLE)
-
-    def with_flags(self, flags: FunctionFlags, /) -> FunctionOptions:
-        new_flags = self.flags | flags
-        if _INVALID in new_flags:
-            msg = "A function cannot both return a scalar and preserve length, they are mutually exclusive."
-            raise TypeError(msg)
-        obj = FunctionOptions.__new__(FunctionOptions)
-        _OBJ_SETATTR(obj, "flags", new_flags)
-        return obj
-
-    def with_udf(self, *, is_elementwise: bool, returns_scalar: bool) -> FunctionOptions:
-        opts = self
-        if is_elementwise:
-            opts = self.with_flags(FunctionFlags.ELEMENTWISE)
-        if returns_scalar:
-            opts = opts.with_flags(FunctionFlags.AGGREGATION)
-        return opts
-
-    default = groupwise
 
 
 class SortOptions(Immutable):

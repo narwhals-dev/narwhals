@@ -6,9 +6,9 @@ from typing import TYPE_CHECKING
 
 import narwhals._plan.dtypes_mapper as dtm
 from narwhals._plan._dtype import ResolveDType
+from narwhals._plan._flags import FunctionFlags
 from narwhals._plan._function import Function, HorizontalFunction
 from narwhals._plan.exceptions import hist_bins_monotonic_error
-from narwhals._plan.options import FunctionOptions
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -28,40 +28,40 @@ if TYPE_CHECKING:
 # NOTE: `pylance` (via `pyright`) doesn't show `__init_subclass__` usage in *Find All References*,
 # but hopefully `ty` will https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
 # These aliases work around that limitation (+ are shorter 🙂)
-aggregation = FunctionOptions.aggregation
-elementwise = FunctionOptions.elementwise
-length_preserving = FunctionOptions.length_preserving
-row_separable = FunctionOptions.row_separable
+AGGREGATION = FunctionFlags.AGGREGATION
+ELEMENTWISE = FunctionFlags.ELEMENTWISE
+LENGTH_PRESERVING = FunctionFlags.LENGTH_PRESERVING
+ROW_SEPARABLE = FunctionFlags.ROW_SEPARABLE
 map_first = ResolveDType.function.map_first
 same_dtype = ResolveDType.function.same_dtype
 
 
 # fmt: off
 class _SameDType(Function, dtype=same_dtype()): ...
-class Abs(_SameDType, options=elementwise): ...
-class NullCount(Function, options=aggregation, dtype=dtm.IDX_DTYPE): ...
-class Exp(Function, options=elementwise, dtype=map_first(dtm.float_dtype)): ...
-class Sqrt(Function, options=elementwise, dtype=map_first(dtm.numeric_to_float_dtype_coerce_decimal)): ...
-class Ceil(_SameDType, options=elementwise): ...
-class Floor(_SameDType, options=elementwise): ...
-class DropNulls(_SameDType, options=row_separable): ...
+class Abs(_SameDType, flags=ELEMENTWISE): ...
+class NullCount(Function, flags=AGGREGATION, dtype=dtm.IDX_DTYPE): ...
+class Exp(Function, flags=ELEMENTWISE, dtype=map_first(dtm.float_dtype)): ...
+class Sqrt(Function, flags=ELEMENTWISE, dtype=map_first(dtm.numeric_to_float_dtype_coerce_decimal)): ...
+class Ceil(_SameDType, flags=ELEMENTWISE): ...
+class Floor(_SameDType, flags=ELEMENTWISE): ...
+class DropNulls(_SameDType, flags=ROW_SEPARABLE): ...
 class ModeAll(_SameDType): ...
-class ModeAny(_SameDType, options=aggregation): ...
-class Kurtosis(Function, options=aggregation, dtype=dtm.F64): ...
-class Skew(Function, options=aggregation, dtype=dtm.F64): ...
-class Clip(_SameDType, options=elementwise):
+class ModeAny(_SameDType, flags=AGGREGATION): ...
+class Kurtosis(Function, flags=AGGREGATION, dtype=dtm.F64): ...
+class Skew(Function, flags=AGGREGATION, dtype=dtm.F64): ...
+class Clip(_SameDType, flags=ELEMENTWISE):
     def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR, ExprIR]:
         expr, lower_bound, upper_bound = node.input
         return expr, lower_bound, upper_bound
-class ClipLower(_SameDType, options=elementwise):
+class ClipLower(_SameDType, flags=ELEMENTWISE):
     def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR]:
         expr, lower_bound = node.input
         return expr, lower_bound
-class ClipUpper(_SameDType, options=elementwise):
+class ClipUpper(_SameDType, flags=ELEMENTWISE):
     def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR]:
         expr, upper_bound = node.input
         return expr, upper_bound
-class CumAgg(Function, options=length_preserving):
+class CumAgg(Function, flags=LENGTH_PRESERVING):
     __slots__ = ("reverse",)
     reverse: bool
 class CumCount(CumAgg, dtype=dtm.IDX_DTYPE): ...
@@ -69,20 +69,19 @@ class CumMin(CumAgg, dtype=same_dtype()): ...
 class CumMax(CumAgg, dtype=same_dtype()): ...
 class CumProd(CumAgg, dtype=map_first(dtm.cum_prod_dtype)): ...
 class CumSum(CumAgg, dtype=map_first(dtm.cum_sum_dtype)): ...
-class RollingWindow(Function, options=length_preserving):
+class RollingWindow(Function, flags=LENGTH_PRESERVING):
     __slots__ = ("options",)
     options: RollingOptionsFixedWindow
 
     def to_function_expr(self, *inputs: ExprIR) -> RollingExpr[Self]:
         from narwhals._plan.expressions.expr import RollingExpr
 
-        options = self.function_options
-        return RollingExpr(input=inputs, function=self, options=options)
+        return RollingExpr(input=inputs, function=self, flags=self.flags)
 class RollingSum(RollingWindow, dtype=map_first(dtm.sum_dtype)): ...
 class RollingMean(RollingWindow, dtype=map_first(dtm.moment_dtype)): ...
 class RollingVar(RollingWindow, dtype=map_first(dtm.var_dtype)): ...
 class RollingStd(RollingWindow, dtype=map_first(dtm.moment_dtype)): ...
-class Diff(Function, options=length_preserving, dtype=map_first(dtm.diff_dtype)): ...
+class Diff(Function, flags=LENGTH_PRESERVING, dtype=map_first(dtm.diff_dtype)): ...
 class Unique(_SameDType): ...
 # TODO @dangotbanned: `map_to_supertype` (`*Horizontal`)
 # - https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L45
@@ -160,12 +159,12 @@ class HistBinCount(Hist):
     bin_count: int
 
 
-class Log(Function, options=elementwise, dtype=map_first(dtm.float_dtype)):
+class Log(Function, flags=ELEMENTWISE, dtype=map_first(dtm.float_dtype)):
     __slots__ = ("base",)
     base: float
 
 
-class Pow(Function, options=elementwise):
+class Pow(Function, flags=ELEMENTWISE):
     """N-ary (base, exponent)."""
 
     def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR]:
@@ -181,7 +180,7 @@ class Pow(Function, options=elementwise):
         return base
 
 
-class FillNull(Function, options=elementwise):
+class FillNull(Function, flags=ELEMENTWISE):
     """N-ary (expr, value)."""
 
     def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR]:
@@ -200,7 +199,7 @@ class FillNull(Function, options=elementwise):
         return expr
 
 
-class FillNan(_SameDType, options=elementwise):
+class FillNan(_SameDType, flags=ELEMENTWISE):
     """N-ary (expr, value)."""
 
     def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR]:
@@ -214,7 +213,7 @@ class FillNullWithStrategy(_SameDType):
     limit: int | None
 
 
-class Shift(_SameDType, options=length_preserving):
+class Shift(_SameDType, flags=LENGTH_PRESERVING):
     __slots__ = ("n",)
     n: int
 
@@ -226,14 +225,14 @@ class Rank(
     options: RankOptions
 
 
-class Round(_SameDType, options=elementwise):
+class Round(_SameDType, flags=ELEMENTWISE):
     __slots__ = ("decimals",)
     decimals: int
 
 
 class EwmMean(
     Function,
-    options=length_preserving,
+    flags=LENGTH_PRESERVING,
     dtype=map_first(dtm.numeric_to_float_dtype_coerce_decimal),
 ):
     __slots__ = ("options",)
@@ -242,7 +241,7 @@ class EwmMean(
 
 # TODO @dangotbanned: (partial)
 # Need to run a sample of `new` through `nwp.common.py_to_narwhals_dtype`
-class ReplaceStrict(Function, options=elementwise):
+class ReplaceStrict(Function, flags=ELEMENTWISE):
     __slots__ = ("new", "old", "return_dtype")
     old: Seq[Any]
     new: Seq[Any]
@@ -275,6 +274,8 @@ class GatherEvery(_SameDType):
     offset: int
 
 
+# TODO @dangotbanned: `map_batches` is the only case that needs an instance for `FunctionFlags`
+# Would be great to reduce the `function_options`/_`flags` pair
 class MapBatches(Function):
     __slots__ = ("function", "is_elementwise", "return_dtype", "returns_scalar")
     function: Udf
@@ -283,16 +284,15 @@ class MapBatches(Function):
     returns_scalar: bool
 
     @property
-    def function_options(self) -> FunctionOptions:
-        return super().function_options.with_udf(
+    def flags(self) -> FunctionFlags:
+        return super().flags.with_udf(
             is_elementwise=self.is_elementwise, returns_scalar=self.returns_scalar
         )
 
     def to_function_expr(self, *inputs: ExprIR) -> AnonymousExpr:
         from narwhals._plan.expressions.expr import AnonymousExpr
 
-        options = self.function_options
-        return AnonymousExpr(input=inputs, function=self, options=options)
+        return AnonymousExpr(input=inputs, function=self, flags=self.flags)
 
 
 class SampleN(_SameDType):

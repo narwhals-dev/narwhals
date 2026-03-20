@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from narwhals._plan._flags import FunctionFlags
 from narwhals._plan._guards import is_function_expr, is_over
 from narwhals._plan.exceptions import (
     over_elementwise_error as elementwise_error,
@@ -16,6 +17,8 @@ if TYPE_CHECKING:
     from narwhals._plan.typing import Seq
     from narwhals.exceptions import InvalidOperationError
 
+ROW_SEPARABLE = FunctionFlags.ROW_SEPARABLE
+
 
 def _validate_over(
     expr: ExprIR,
@@ -27,9 +30,9 @@ def _validate_over(
     if is_over(expr):
         return nested_error(expr, partition_by, order_by, sort_options)
     if is_function_expr(expr):
-        if expr.options.is_elementwise():
+        if expr.flags.is_elementwise():
             return elementwise_error(expr, partition_by, order_by, sort_options)
-        if expr.options.is_row_separable():
+        if ROW_SEPARABLE in expr.flags:
             return row_separable_error(expr, partition_by, order_by, sort_options)
     return None
 

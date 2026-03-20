@@ -51,7 +51,7 @@ def rewrite_elementwise_over(window: ExprIR, /) -> ExprIR:
     if (
         is_over(window)
         and is_function_expr(window.expr)
-        and window.expr.options.is_elementwise()
+        and window.expr.flags.is_elementwise()
     ):
         func = window.expr
         parent, *args = func.input

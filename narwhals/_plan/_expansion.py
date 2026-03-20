@@ -41,6 +41,7 @@ from collections import deque
 from typing import TYPE_CHECKING, Any, Union
 
 from narwhals._plan import expressions as ir, meta
+from narwhals._plan._flags import FunctionFlags
 from narwhals._plan.exceptions import (
     binary_expr_multi_output_error,
     column_not_found_error,
@@ -68,6 +69,7 @@ if TYPE_CHECKING:
 
     from narwhals._plan.typing import Ignored, Seq
 
+REDUCE_EXPANSION = FunctionFlags.REDUCE_EXPANSION
 
 OutputNames: TypeAlias = "Seq[str]"
 """Fully expanded, validated output column names, for `NamedIR`s."""
@@ -325,7 +327,7 @@ class Expander:
     def _expand_function_expr(
         self, origin: ir.FunctionExpr, /
     ) -> Iterator[ir.FunctionExpr]:
-        if origin.options.is_reduce_expansion():
+        if REDUCE_EXPANSION in origin.flags:
             reduced = tuple(self._expand_inner(origin.input))
             yield origin.__replace__(input=reduced)
         else:

@@ -192,7 +192,7 @@ class CompliantExpr(HasVersion, Protocol[FrameT_contra]):
 
     # Expr -> Scalar
     # TODO @dangotbanned: Move this concept to the ExprIR layer?
-    # - Every `Function` has `function_options = FunctionOptions.aggregation`
+    # - Every `Function` has `FunctionFlags.AGGREGATION`
     # - Everything* else is an `AggExpr`
     # - `OverOrdered` is an outlier, and it also doesn't specify `is_scalar`?
     def all(

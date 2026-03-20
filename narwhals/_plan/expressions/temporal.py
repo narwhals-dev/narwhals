@@ -5,9 +5,9 @@ from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, TypeVar
 import narwhals._plan.dtypes_mapper as dtm
 from narwhals._duration import Interval
 from narwhals._plan._dtype import ResolveDType
+from narwhals._plan._flags import FunctionFlags
 from narwhals._plan._function import Function
 from narwhals._plan.expressions.namespace import ExprNamespace, IRNamespace
-from narwhals._plan.options import FunctionOptions
 from narwhals.exceptions import ComputeError
 
 if TYPE_CHECKING:
@@ -24,7 +24,7 @@ PolarsTimeUnit: TypeAlias = Literal["ns", "us", "ms"]
 _Tz = TypeVar("_Tz", str, "str | None")
 
 # NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
-elementwise = FunctionOptions.elementwise
+ELEMENTWISE = FunctionFlags.ELEMENTWISE
 same_dtype = ResolveDType.function.same_dtype
 
 
@@ -33,7 +33,7 @@ def _is_polars_time_unit(obj: Any) -> TypeIs[PolarsTimeUnit]:
 
 
 # fmt: off
-class TemporalFunction(Function, accessor="dt", options=elementwise): ...
+class TemporalFunction(Function, accessor="dt", flags=ELEMENTWISE): ...
 class _TemporalInt8(TemporalFunction, dtype=dtm.I8): ...
 class _TemporalInt32(TemporalFunction, dtype=dtm.I32): ...
 class _TemporalInt64(TemporalFunction, dtype=dtm.I64): ...
