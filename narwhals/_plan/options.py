@@ -30,171 +30,12 @@ if TYPE_CHECKING:
 _OBJ_SETATTR = object.__setattr__
 
 
-# TODO @dangotbanned: Finish content and move most to `FunctionOptions`
-# TODO @dangotbanned: Class doc?
 class FunctionFlags(enum.Flag):
     DEFAULT = 1 << 0
-    """No flags set.
-
-    This flag is compatible with all others, but in isolation it's defining
-    trait is that it is not any other flag.
-
-    ## History
-    - Upstream this *was* named `ALLOW_GROUP_AWARE`, but removed in [#23690]
-    - Left a vestigial `FunctionOptions.groupwise()`
-
-    [#23690]: https://github.com/pola-rs/polars/pull/23690
-    """
-
     REDUCE_EXPANSION = 1 << 2
-    """Use different semantics when expanding selectors.
-
-    Upstream this is named [`INPUT_WILDCARD_EXPANSION`].
-
-    ## Examples
-    Say we have the following schema:
-    >>> from tests.plan.utils import Frame
-    >>> import narwhals._plan as nw
-
-    >>> df = Frame.from_names("a", "b", "c")
-    >>> df.schema
-    Schema({'a': Int64, 'b': Int64, 'c': Int64})
-
-    This kind of expansion is used for inputs to horizontal functions:
-    >>> before = nw.sum_horizontal(nw.all())
-    >>> (reduced,) = df.project(before)
-    >>> before._ir
-    ncs.all().sum_horizontal()
-    >>> reduced
-    a=col('a').sum_horizontal([col('b'), col('c')])
-
-    Whereas the more common form of expansion produces multiple outputs:
-    >>> before = nw.all().clip("b")
-    >>> before._ir
-    ncs.all().clip_lower([col('b')])
-    >>> df.project(before)  # doctest: +NORMALIZE_WHITESPACE
-    (a=col('a').clip_lower([col('b')]),
-     b=col('b').clip_lower([col('b')]),
-     c=col('c').clip_lower([col('b')]))
-
-    [`INPUT_WILDCARD_EXPANSION`]: https://github.com/pola-rs/polars/blob/b6ae11535a9a45a442446ad13f687616ca97ee95/crates/polars-plan/src/plans/options.rs#L66-L76
-    """
-
     AGGREGATION = 1 << 3
-    """Always returns a scalar and supports broadcasting.
-
-    ## Examples
-    >>> import narwhals._plan as nw
-    >>> def show(frame: nw.DataFrame) -> None:
-    ...     print(frame.to_polars())
-    >>> data = {"a": [1, None], "b": [1, 2]}
-    >>> df = nw.DataFrame.from_dict(data, backend="pyarrow")
-    >>> show(df)
-    shape: (2, 2)
-    ┌──────┬─────┐
-    │ a    ┆ b   │
-    │ ---  ┆ --- │
-    │ i64  ┆ i64 │
-    ╞══════╪═════╡
-    │ 1    ┆ 1   │
-    │ null ┆ 2   │
-    └──────┴─────┘
-
-    These expressions each use a different kind of function:
-    >>> aggregation = nw.col("a").null_count().alias("c")
-    >>> aggregation._ir.is_scalar()
-    True
-    >>> row_separable = nw.col("a").drop_nulls().alias("c")
-    >>> row_separable._ir.is_scalar()
-    False
-
-    But in an isolated `select` context, that detail isn't always visible:
-    >>> show(df.select(aggregation))
-    shape: (1, 1)
-    ┌─────┐
-    │ c   │
-    │ --- │
-    │ i64 │
-    ╞═════╡
-    │ 1   │
-    └─────┘
-
-    Since they return the same result *for this dataset*:
-    >>> show(df.select(row_separable))
-    shape: (1, 1)
-    ┌─────┐
-    │ c   │
-    │ --- │
-    │ i64 │
-    ╞═════╡
-    │ 1   │
-    └─────┘
-
-    Aggregation functions support broadcasting, because we know they **always return a scalar**:
-    >>> show(df.with_columns(aggregation))
-    shape: (2, 3)
-    ┌──────┬─────┬─────┐
-    │ a    ┆ b   ┆ c   │
-    │ ---  ┆ --- ┆ --- │
-    │ i64  ┆ i64 ┆ i64 │
-    ╞══════╪═════╪═════╡
-    │ 1    ┆ 1   ┆ 1   │
-    │ null ┆ 2   ┆ 1   │
-    └──────┴─────┴─────┘
-
-    Whereas row-separable functions do not support broadcasting:
-    >>> show(df.with_columns(row_separable))
-    Traceback (most recent call last):
-    narwhals.exceptions.ShapeError: Series c, length 1 doesn't match the DataFrame height of 2...
-
-    Because returning a single value is data-dependent:
-    >>> show(df.select(nw.col("b").drop_nulls()))
-    shape: (2, 1)
-    ┌─────┐
-    │ b   │
-    │ --- │
-    │ i64 │
-    ╞═════╡
-    │ 1   │
-    │ 2   │
-    └─────┘
-    """
-
     ROW_SEPARABLE = 1 << 6
-    """Does not depend on the context of surrounding rows.
-
-    Only `drop_nulls`, `drop_nans`.
-
-    ## Important
-    Row-separable functions are partially defined by what they are **not**:
-
-        ELEMENTWISE = ROW_SEPARABLE | LENGTH_PRESERVING
-        #             ✔️              ❌
-
-    This definition means they change the length of input columns.
-
-    But this property **does not** extend to elementwise.
-
-    ## History
-    ~~`*_range`~~ since [#26549](https://github.com/pola-rs/polars/pull/26549)
-    """
-
     LENGTH_PRESERVING = 1 << 7
-    """Does not change the length of input columns.
-
-    Includes `rolling_*`, `cum_*`, `shift`.
-
-    ## Important
-    Length-preserving functions are partially defined by what they are **not**:
-
-        ELEMENTWISE = ROW_SEPARABLE | LENGTH_PRESERVING
-        #             ❌              ✔️
-
-    This definition means they depend on the context of surrounding rows.
-
-    But this property **does not** extend to elementwise.
-    """
-
     ELEMENTWISE = ROW_SEPARABLE | LENGTH_PRESERVING
     HORIZONTAL = REDUCE_EXPANSION | ELEMENTWISE
 
@@ -206,38 +47,17 @@ class FunctionFlags(enum.Flag):
 _INVALID = FunctionFlags.AGGREGATION | FunctionFlags.LENGTH_PRESERVING
 
 
-# NOTE: Primarily using so enum members show somewhere you can use a hover context to see their docs
-def options_guard(
-    flag: Literal[
-        FunctionFlags.AGGREGATION,
-        FunctionFlags.ELEMENTWISE,
-        FunctionFlags.LENGTH_PRESERVING,
-        FunctionFlags.REDUCE_EXPANSION,
-        FunctionFlags.ROW_SEPARABLE,
-    ],
-    /,
-) -> Callable[[FunctionOptions], bool]:
+def options_guard(flag: FunctionFlags, /) -> Callable[[FunctionOptions], bool]:
     def _(self: FunctionOptions, /) -> bool:
         return flag in self.flags
 
     return _
 
 
-# TODO @dangotbanned: Explain `FunctionOptions` (class)
-# TODO @dangotbanned: Explain `flags` (attr)
-# TODO @dangotbanned: Decide on how to split `FunctionFlags` docs
-# TODO @dangotbanned: Explain `FunctionOptions` (staticmethods)
-# TODO @dangotbanned: Explain `FunctionOptions` (guards)
 @final
 class FunctionOptions(Immutable):
-    """_summary_.
-
-    https://github.com/pola-rs/polars/blob/3fd7ecc5f9de95f62b70ea718e7e5dbf951b6d1c/crates/polars-plan/src/plans/options.rs
-    """
-
     __slots__ = ("flags",)
     flags: FunctionFlags
-    """_summary_."""
 
     def __str__(self) -> str:
         return f"{type(self).__name__}(flags='{self.flags}')"
@@ -250,52 +70,31 @@ class FunctionOptions(Immutable):
 
     @staticmethod
     def aggregation() -> FunctionOptions:
-        """Always returns a scalar and supports broadcasting.
-
-        Mutually exclusive with `length_preserving`
-        """
         return FunctionOptions(flags=FunctionFlags.AGGREGATION)
 
     @staticmethod
     def elementwise() -> FunctionOptions:
-        """_summary_."""
         return FunctionOptions(flags=FunctionFlags.ELEMENTWISE)
 
     @staticmethod
     def groupwise() -> FunctionOptions:
-        """_summary_."""
         obj = FunctionOptions.__new__(FunctionOptions)
         _OBJ_SETATTR(obj, "flags", FunctionFlags.DEFAULT)
         return obj
 
     @staticmethod
     def horizontal() -> FunctionOptions:
-        """_summary_."""
         return FunctionOptions(flags=FunctionFlags.HORIZONTAL)
 
     @staticmethod
     def length_preserving() -> FunctionOptions:
-        """Does not change the length of input columns.
-
-        Depends on the context of surrounding rows.
-
-        Mutually exclusive with `aggregation`
-        """
         return FunctionOptions(flags=FunctionFlags.LENGTH_PRESERVING)
 
     @staticmethod
     def row_separable() -> FunctionOptions:
-        """Does not depend on the context of surrounding rows.
-
-        Changes the length of input columns.
-        """
         return FunctionOptions(flags=FunctionFlags.ROW_SEPARABLE)
 
     def with_flags(self, flags: FunctionFlags, /) -> FunctionOptions:
-        """Create a new set of options, combining `flags` with self.
-
-        Ensures `flags` is compatible with current expression.
-        """
         new_flags = self.flags | flags
         if _INVALID in new_flags:
             msg = "A function cannot both return a scalar and preserve length, they are mutually exclusive."
@@ -305,7 +104,6 @@ class FunctionOptions(Immutable):
         return obj
 
     def with_udf(self, *, is_elementwise: bool, returns_scalar: bool) -> FunctionOptions:
-        """Special-case of `with_flags` for inputs from `map_batches`."""
         opts = self
         if is_elementwise:
             opts = self.with_flags(FunctionFlags.ELEMENTWISE)
