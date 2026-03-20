@@ -33,13 +33,15 @@ _OBJ_SETATTR = object.__setattr__
 # TODO @dangotbanned: Finish content and move most to `FunctionOptions`
 # TODO @dangotbanned: Class doc?
 class FunctionFlags(enum.Flag):
-    # TODO @dangotbanned: Figure out new default + remove
-    ALLOW_GROUP_AWARE = 1 << 0
-    """Raise if use in group by
+    DEFAULT = 1 << 0
+    """No flags set.
+
+    This flag is compatible with all others, but in isolation it's defining
+    trait is that it is not any other flag.
 
     ## History
-    - Flag removed in [#23690], but left a vestigial `FunctionOptions.groupwise()`
-    - Acts as a default
+    - Upstream this *was* named `ALLOW_GROUP_AWARE`, but removed in [#23690]
+    - Left a vestigial `FunctionOptions.groupwise()`
 
     [#23690]: https://github.com/pola-rs/polars/pull/23690
     """
@@ -201,19 +203,10 @@ class FunctionFlags(enum.Flag):
         return name.replace("|", " | ")
 
 
-# NOTE: `FunctionFlag`s get some heavy use, but always within the context of a `FunctionOptions`
-# If `FunctionOptions` is in scope, these aliases are too and save a bunch of lookups
-_DEFAULT = _ALLOW_GROUP_AWARE = FunctionFlags.ALLOW_GROUP_AWARE
-_AGGREGATION = FunctionFlags.AGGREGATION
-_ROW_SEPARABLE = FunctionFlags.ROW_SEPARABLE
-_LENGTH_PRESERVING = FunctionFlags.LENGTH_PRESERVING
-_ELEMENTWISE = FunctionFlags.ELEMENTWISE
-_HORIZONTAL = FunctionFlags.HORIZONTAL
 _INVALID = FunctionFlags.AGGREGATION | FunctionFlags.LENGTH_PRESERVING
 
 
 # NOTE: Primarily using so enum members show somewhere you can use a hover context to see their docs
-# NOTE: Maybe another step up is making options generic over flags?
 def options_guard(
     flag: Literal[
         FunctionFlags.AGGREGATION,
@@ -261,24 +254,24 @@ class FunctionOptions(Immutable):
 
         Mutually exclusive with `length_preserving`
         """
-        return FunctionOptions._default_with_flags(_AGGREGATION)
+        return FunctionOptions(flags=FunctionFlags.AGGREGATION)
 
     @staticmethod
     def elementwise() -> FunctionOptions:
         """_summary_."""
-        return FunctionOptions._default_with_flags(_ELEMENTWISE)
+        return FunctionOptions(flags=FunctionFlags.ELEMENTWISE)
 
     @staticmethod
     def groupwise() -> FunctionOptions:
         """_summary_."""
         obj = FunctionOptions.__new__(FunctionOptions)
-        _OBJ_SETATTR(obj, "flags", _ALLOW_GROUP_AWARE)
+        _OBJ_SETATTR(obj, "flags", FunctionFlags.DEFAULT)
         return obj
 
     @staticmethod
     def horizontal() -> FunctionOptions:
         """_summary_."""
-        return FunctionOptions._default_with_flags(_HORIZONTAL)
+        return FunctionOptions(flags=FunctionFlags.HORIZONTAL)
 
     @staticmethod
     def length_preserving() -> FunctionOptions:
@@ -288,7 +281,7 @@ class FunctionOptions(Immutable):
 
         Mutually exclusive with `aggregation`
         """
-        return FunctionOptions._default_with_flags(_LENGTH_PRESERVING)
+        return FunctionOptions(flags=FunctionFlags.LENGTH_PRESERVING)
 
     @staticmethod
     def row_separable() -> FunctionOptions:
@@ -296,7 +289,7 @@ class FunctionOptions(Immutable):
 
         Changes the length of input columns.
         """
-        return FunctionOptions._default_with_flags(_ROW_SEPARABLE)
+        return FunctionOptions(flags=FunctionFlags.ROW_SEPARABLE)
 
     def with_flags(self, flags: FunctionFlags, /) -> FunctionOptions:
         """Create a new set of options, combining `flags` with self.
@@ -315,17 +308,10 @@ class FunctionOptions(Immutable):
         """Special-case of `with_flags` for inputs from `map_batches`."""
         opts = self
         if is_elementwise:
-            opts = self.with_flags(_ELEMENTWISE)
+            opts = self.with_flags(FunctionFlags.ELEMENTWISE)
         if returns_scalar:
-            opts = opts.with_flags(_AGGREGATION)
+            opts = opts.with_flags(FunctionFlags.AGGREGATION)
         return opts
-
-    # TODO @dangotbanned: Remove at the same time as `ALLOW_GROUP_AWARE`
-    @staticmethod
-    def _default_with_flags(flags: FunctionFlags, /) -> FunctionOptions:
-        obj = FunctionOptions.__new__(FunctionOptions)
-        _OBJ_SETATTR(obj, "flags", _DEFAULT | flags)
-        return obj
 
     default = groupwise
 
