@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import enum
+from typing import Any
 
 
 # TODO @dangotbanned: Explain `FunctionFlags` (class)
@@ -56,7 +57,7 @@ class FunctionFlags(enum.Flag):
     [`INPUT_WILDCARD_EXPANSION`]: https://github.com/pola-rs/polars/blob/b6ae11535a9a45a442446ad13f687616ca97ee95/crates/polars-plan/src/plans/options.rs#L66-L76
     """
 
-    AGGREGATION = 1 << 3
+    AGGREGATION = 1 << 3  # (keep synced w/ `_MUTUALLY_EXCLUSIVE`)
     """Always returns a scalar and supports broadcasting.
 
     Mutually exclusive with `LENGTH_PRESERVING`.
@@ -157,7 +158,7 @@ class FunctionFlags(enum.Flag):
     ~~`*_range`~~ since [#26549](https://github.com/pola-rs/polars/pull/26549)
     """
 
-    LENGTH_PRESERVING = 1 << 7
+    LENGTH_PRESERVING = 1 << 7  # (keep synced w/ `_MUTUALLY_EXCLUSIVE`)
     """Does not change the length of input columns.
 
     Mutually exclusive with `AGGREGATION`.
@@ -194,20 +195,25 @@ class FunctionFlags(enum.Flag):
 
     def with_udf(self, *, is_elementwise: bool, returns_scalar: bool) -> FunctionFlags:
         """Special-case of `__or__` for inputs from `map_batches`."""
-        # NOTE: Want this to be checked on `self.__class__`, since all operators go through that
-        # https://docs.python.org/3/howto/enum.html#duplicatefreeenum
         opts = self
         if is_elementwise:
             opts |= FunctionFlags.ELEMENTWISE
         if returns_scalar:
             opts |= FunctionFlags.AGGREGATION
-        if _INVALID in opts:
+        return opts
+
+    @classmethod
+    def _missing_(cls, value: Any) -> Any:
+        # Matches `enum.Flag.__contains__`
+        if (value & _MUTUALLY_EXCLUSIVE) == _MUTUALLY_EXCLUSIVE:
             msg = "A function cannot both return a scalar and preserve length, they are mutually exclusive."
             raise TypeError(msg)
-        return opts
+        return super()._missing_(value)
 
     def is_elementwise(self) -> bool:
         return FunctionFlags.ELEMENTWISE in self
 
 
-_INVALID = FunctionFlags.AGGREGATION | FunctionFlags.LENGTH_PRESERVING
+# NOTE: value needs to be declared external to the Enum, as `_missing_` raises on creation
+# AGGREGATION | LENGTH_PRESERVING
+_MUTUALLY_EXCLUSIVE = (1 << 3) | (1 << 7)
