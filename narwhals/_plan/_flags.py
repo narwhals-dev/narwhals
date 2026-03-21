@@ -33,9 +33,7 @@ _V_MUTUALLY_EXCLUSIVE: Final = _V_AGGREGATION | _V_LENGTH_PRESERVING
 class FunctionFlags(enum.Flag):
     """Behaviors of a function."""
 
-    # TODO @dangotbanned: Experiment with using `0` instead of `1`
-    # https://docs.python.org/3/howto/enum.html#flag
-    DEFAULT = 1 << 0
+    DEFAULT = 0
     """No flags set.
 
     This flag is compatible with all others, but in isolation it's defining
@@ -206,7 +204,7 @@ class FunctionFlags(enum.Flag):
         if (value & _V_MUTUALLY_EXCLUSIVE) == _V_MUTUALLY_EXCLUSIVE:
             msg = "A function cannot both return a scalar and preserve length, they are mutually exclusive."
             raise TypeError(msg)
-        return super()._missing_(value)
+        return super()._missing_(value)  # pragma: no cover
 
     def is_elementwise(self) -> bool:
         return FunctionFlags.ELEMENTWISE in self
