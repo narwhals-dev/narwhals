@@ -23,8 +23,8 @@ from __future__ import annotations
 import enum
 from typing import Any, Final
 
-_V_AGGREGATION: Final = 1 << 3
-_V_LENGTH_PRESERVING: Final = 1 << 7
+_V_AGGREGATION: Final = 1 << 1
+_V_LENGTH_PRESERVING: Final = 1 << 3
 # NOTE: Declared externally, as `_missing_` raises on creation if the invariant is broken
 _V_MUTUALLY_EXCLUSIVE: Final = _V_AGGREGATION | _V_LENGTH_PRESERVING
 
@@ -40,7 +40,7 @@ class FunctionFlags(enum.Flag):
     trait is that it is not any other flag.
     """
 
-    REDUCE_EXPANSION = 1 << 2
+    REDUCE_EXPANSION = 1 << 0
     """Use different semantics when expanding selectors.
 
     ## Examples
@@ -152,7 +152,7 @@ class FunctionFlags(enum.Flag):
     └─────┘
     """
 
-    ROW_SEPARABLE = 1 << 6
+    ROW_SEPARABLE = 1 << 2
     """Does not depend on the context of surrounding rows.
 
     Only `drop_nulls`, `drop_nans`.
