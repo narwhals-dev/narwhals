@@ -2,9 +2,9 @@
 
 ## Implementation Notes
 - Adapted from [`plans::options::FunctionFlags`] and folds the outer struct [`FunctionOptions`] into a single enum
-- `REDUCE_EXPANSION` was renamed from [`INPUT_WILDCARD_EXPANSION`]
-  - *Wildcard* references an old name for `col('*')`
-  - *Reduce* references what `*_horizontal` functions do
+- [`INPUT_WILDCARD_EXPANSION`] removal
+  - Defined selector expansion behavior for horizontal functions
+  - *Instead*, `HorizontalFunction` is now used for that
 - There will be another concept to integrate (dependent on [#3396]) which approximates [`FunctionOptions.cast_options`]
   - Based on ([1], [2], [3]), this *could* just mean adding 1-3 members to `FunctionFlags`
 
@@ -23,8 +23,8 @@ from __future__ import annotations
 import enum
 from typing import Any, Final
 
-_V_AGGREGATION: Final = 1 << 1
-_V_LENGTH_PRESERVING: Final = 1 << 3
+_V_AGGREGATION: Final = 1 << 0
+_V_LENGTH_PRESERVING: Final = 1 << 2
 # NOTE: Declared externally, as `_missing_` raises on creation if the invariant is broken
 _V_MUTUALLY_EXCLUSIVE: Final = _V_AGGREGATION | _V_LENGTH_PRESERVING
 
@@ -38,36 +38,6 @@ class FunctionFlags(enum.Flag):
 
     This flag is compatible with all others, but in isolation it's defining
     trait is that it is not any other flag.
-    """
-
-    REDUCE_EXPANSION = 1 << 0
-    """Use different semantics when expanding selectors.
-
-    ## Examples
-    Say we have the following schema:
-    >>> from tests.plan.utils import Frame
-    >>> import narwhals._plan as nw
-
-    >>> df = Frame.from_names("a", "b", "c")
-    >>> df.schema
-    Schema({'a': Int64, 'b': Int64, 'c': Int64})
-
-    This kind of expansion is used for inputs to horizontal functions:
-    >>> before = nw.sum_horizontal(nw.all())
-    >>> (reduced,) = df.project(before)
-    >>> before._ir
-    ncs.all().sum_horizontal()
-    >>> reduced
-    a=col('a').sum_horizontal([col('b'), col('c')])
-
-    Whereas the more common form of expansion produces multiple outputs:
-    >>> before = nw.all().clip("b")
-    >>> before._ir
-    ncs.all().clip_lower([col('b')])
-    >>> df.project(before)  # doctest: +NORMALIZE_WHITESPACE
-    (a=col('a').clip_lower([col('b')]),
-     b=col('b').clip_lower([col('b')]),
-     c=col('c').clip_lower([col('b')]))
     """
 
     AGGREGATION = _V_AGGREGATION
@@ -154,7 +124,7 @@ class FunctionFlags(enum.Flag):
 
     # TODO @dangotbanned: Remove from `*_range`
     # https://github.com/pola-rs/polars/pull/26549
-    ROW_SEPARABLE = 1 << 2
+    ROW_SEPARABLE = 1 << 1
     """Does not depend on the context of surrounding rows.
 
     Only `drop_nulls`, `drop_nans`.
@@ -189,7 +159,6 @@ class FunctionFlags(enum.Flag):
     """
 
     ELEMENTWISE = ROW_SEPARABLE | LENGTH_PRESERVING
-    HORIZONTAL = REDUCE_EXPANSION | ELEMENTWISE
 
     def __str__(self) -> str:
         # NOTE: Appeared as `self.flags` in:
