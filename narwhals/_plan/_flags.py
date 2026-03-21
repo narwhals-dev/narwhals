@@ -174,6 +174,10 @@ class FunctionFlags(enum.Flag):
     """
 
     ELEMENTWISE = ROW_SEPARABLE | LENGTH_PRESERVING
+    """Does not depend on the context of surrounding rows, nor change the length of input columns.
+
+    They're the most common kind and can often be used freely in SQL.
+    """
 
     def __str__(self) -> str:
         # NOTE: Appeared as `self.flags` in:
