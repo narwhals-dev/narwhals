@@ -60,7 +60,7 @@ def test_invalid_select(constructor: Constructor, invalid_select: Any) -> None:
 
 def test_select_boolean_cols(request: pytest.FixtureRequest) -> None:
     pytest.importorskip("pandas")
-    if PANDAS_VERSION >= (3, 1):
+    if PANDAS_VERSION >= (3, 1):  # pragma: no cover
         request.applymarker(
             pytest.mark.xfail(reason="https://github.com/pandas-dev/pandas/issues/64749")
         )
