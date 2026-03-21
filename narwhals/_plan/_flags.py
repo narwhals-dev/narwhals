@@ -21,7 +21,12 @@
 from __future__ import annotations
 
 import enum
-from typing import Any
+from typing import Any, Final
+
+_V_AGGREGATION: Final = 1 << 3
+_V_LENGTH_PRESERVING: Final = 1 << 7
+# NOTE: Declared externally, as `_missing_` raises on creation if the invariant is broken
+_V_MUTUALLY_EXCLUSIVE: Final = _V_AGGREGATION | _V_LENGTH_PRESERVING
 
 
 # TODO @dangotbanned: Explain `FunctionFlags` (class)
@@ -67,7 +72,7 @@ class FunctionFlags(enum.Flag):
      c=col('c').clip_lower([col('b')]))
     """
 
-    AGGREGATION = 1 << 3  # (keep synced w/ `_MUTUALLY_EXCLUSIVE`)
+    AGGREGATION = _V_AGGREGATION
     """Always returns a scalar and supports broadcasting.
 
     Mutually exclusive with `LENGTH_PRESERVING`.
@@ -168,7 +173,7 @@ class FunctionFlags(enum.Flag):
     ~~`*_range`~~ since [pola-rs/polars#26549](https://github.com/pola-rs/polars/pull/26549)
     """
 
-    LENGTH_PRESERVING = 1 << 7  # (keep synced w/ `_MUTUALLY_EXCLUSIVE`)
+    LENGTH_PRESERVING = _V_LENGTH_PRESERVING
     """Does not change the length of input columns.
 
     Mutually exclusive with `AGGREGATION`.
@@ -198,15 +203,10 @@ class FunctionFlags(enum.Flag):
     @classmethod
     def _missing_(cls, value: Any) -> Any:
         # Matches `enum.Flag.__contains__`
-        if (value & _MUTUALLY_EXCLUSIVE) == _MUTUALLY_EXCLUSIVE:
+        if (value & _V_MUTUALLY_EXCLUSIVE) == _V_MUTUALLY_EXCLUSIVE:
             msg = "A function cannot both return a scalar and preserve length, they are mutually exclusive."
             raise TypeError(msg)
         return super()._missing_(value)
 
     def is_elementwise(self) -> bool:
         return FunctionFlags.ELEMENTWISE in self
-
-
-# NOTE: value needs to be declared external to the Enum, as `_missing_` raises on creation
-# AGGREGATION | LENGTH_PRESERVING
-_MUTUALLY_EXCLUSIVE = (1 << 3) | (1 << 7)
