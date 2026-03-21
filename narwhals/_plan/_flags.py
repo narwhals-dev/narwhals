@@ -1,3 +1,23 @@
+"""Home to `FunctionFlags`.
+
+## Implementation Notes
+- Adapted from [`plans::options::FunctionFlags`] and folds the outer struct [`FunctionOptions`] into a single enum
+- `REDUCE_EXPANSION` was renamed from [`INPUT_WILDCARD_EXPANSION`]
+  - *Wildcard* references an old name for `col('*')`
+  - *Reduce* references what `*_horizontal` functions do
+- There will be another concept to integrate (dependent on [#3396]) which approximates [`FunctionOptions.cast_options`]
+  - Based on ([1], [2], [3]), this *could* just mean adding 1-3 members to `FunctionFlags`
+
+[`plans::options::FunctionFlags`]: https://github.com/pola-rs/polars/blob/cd9de5da9d081acd33a5e886422062651ec6e2c4/crates/polars-plan/src/plans/options.rs#L54-L166
+[`FunctionOptions`]: https://github.com/pola-rs/polars/blob/cd9de5da9d081acd33a5e886422062651ec6e2c4/crates/polars-plan/src/plans/options.rs#L183-L281
+[`INPUT_WILDCARD_EXPANSION`]: https://github.com/pola-rs/polars/blob/b6ae11535a9a45a442446ad13f687616ca97ee95/crates/polars-plan/src/plans/options.rs#L66-L76
+[#3396]: https://github.com/narwhals-dev/narwhals/pull/3396
+[`FunctionOptions.cast_options`]: https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/crates/polars-plan/src/plans/options.rs#L192-L195
+[1]: https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/crates/polars-plan/src/plans/options.rs#L263-L265
+[2]: https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/crates/polars-plan/src/plans/options.rs#L174
+[3]: https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/crates/polars-core/src/utils/supertype.rs#L101-L138
+"""
+
 from __future__ import annotations
 
 import enum
@@ -6,7 +26,7 @@ from typing import Any
 
 # TODO @dangotbanned: Explain `FunctionFlags` (class)
 class FunctionFlags(enum.Flag):
-    """Properties of functions."""
+    """Behaviors of a function."""
 
     # TODO @dangotbanned: Experiment with using `0` instead of `1`
     # https://docs.python.org/3/howto/enum.html#flag
@@ -15,18 +35,10 @@ class FunctionFlags(enum.Flag):
 
     This flag is compatible with all others, but in isolation it's defining
     trait is that it is not any other flag.
-
-    ## History
-    - Upstream this *was* named `ALLOW_GROUP_AWARE`, but removed in [#23690]
-    - Left a vestigial `FunctionOptions.groupwise()`
-
-    [#23690]: https://github.com/pola-rs/polars/pull/23690
     """
 
     REDUCE_EXPANSION = 1 << 2
     """Use different semantics when expanding selectors.
-
-    Upstream this is named [`INPUT_WILDCARD_EXPANSION`].
 
     ## Examples
     Say we have the following schema:
@@ -53,8 +65,6 @@ class FunctionFlags(enum.Flag):
     (a=col('a').clip_lower([col('b')]),
      b=col('b').clip_lower([col('b')]),
      c=col('c').clip_lower([col('b')]))
-
-    [`INPUT_WILDCARD_EXPANSION`]: https://github.com/pola-rs/polars/blob/b6ae11535a9a45a442446ad13f687616ca97ee95/crates/polars-plan/src/plans/options.rs#L66-L76
     """
 
     AGGREGATION = 1 << 3  # (keep synced w/ `_MUTUALLY_EXCLUSIVE`)
@@ -155,7 +165,7 @@ class FunctionFlags(enum.Flag):
     But this property **does not** extend to elementwise.
 
     ## History
-    ~~`*_range`~~ since [#26549](https://github.com/pola-rs/polars/pull/26549)
+    ~~`*_range`~~ since [pola-rs/polars#26549](https://github.com/pola-rs/polars/pull/26549)
     """
 
     LENGTH_PRESERVING = 1 << 7  # (keep synced w/ `_MUTUALLY_EXCLUSIVE`)
@@ -175,14 +185,6 @@ class FunctionFlags(enum.Flag):
 
     But this property **does not** extend to elementwise.
     """
-
-    # NOTE: Placeholder for 1 or more supertyping flags
-    # `SUPERTYPING = ...`
-    # (Mirroring the `rust` version created more problems than it solved)
-    # https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/crates/polars-plan/src/plans/options.rs#L174
-    # https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/crates/polars-plan/src/plans/options.rs#L192-L195
-    # https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/crates/polars-plan/src/plans/options.rs#L263-L265
-    # https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/crates/polars-core/src/utils/supertype.rs#L101-L138
 
     ELEMENTWISE = ROW_SEPARABLE | LENGTH_PRESERVING
     HORIZONTAL = REDUCE_EXPANSION | ELEMENTWISE
