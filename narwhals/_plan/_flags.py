@@ -195,15 +195,6 @@ class FunctionFlags(enum.Flag):
         name = self.name or "<FUNCTION_FLAGS_UNKNOWN>"
         return name.replace("|", " | ")
 
-    def with_udf(self, *, is_elementwise: bool, returns_scalar: bool) -> FunctionFlags:
-        """Special-case of `__or__` for inputs from `map_batches`."""
-        opts = self
-        if is_elementwise:
-            opts |= FunctionFlags.ELEMENTWISE
-        if returns_scalar:
-            opts |= FunctionFlags.AGGREGATION
-        return opts
-
     @classmethod
     def _missing_(cls, value: Any) -> Any:
         # Matches `enum.Flag.__contains__`

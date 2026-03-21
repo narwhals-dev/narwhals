@@ -275,7 +275,7 @@ class GatherEvery(_SameDType):
 
 
 # TODO @dangotbanned: `map_batches` is the only case that needs an instance for `FunctionFlags`
-# Would be great to reduce the `function_options`/_`flags` pair
+# Would be great to reduce the `flags`/_`flags` pair
 class MapBatches(Function):
     __slots__ = ("function", "is_elementwise", "return_dtype", "returns_scalar")
     function: Udf
@@ -285,9 +285,12 @@ class MapBatches(Function):
 
     @property
     def flags(self) -> FunctionFlags:
-        return super().flags.with_udf(
-            is_elementwise=self.is_elementwise, returns_scalar=self.returns_scalar
-        )
+        flags = super().flags
+        if self.is_elementwise:
+            flags |= ELEMENTWISE
+        if self.returns_scalar:
+            flags |= AGGREGATION
+        return flags
 
     def to_function_expr(self, *inputs: ExprIR) -> AnonymousExpr:
         from narwhals._plan.expressions.expr import AnonymousExpr
