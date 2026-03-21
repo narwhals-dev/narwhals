@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 import narwhals._plan.dtypes_mapper as dtm
 from narwhals._plan._dispatch import DispatcherOptions
 from narwhals._plan._dtype import ResolveDType
-from narwhals._plan._flags import FunctionFlags
 from narwhals._plan._function import Function
 
 if TYPE_CHECKING:
@@ -16,14 +15,12 @@ if TYPE_CHECKING:
     from narwhals.typing import ClosedInterval
 
 # NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
-ROW_SEPARABLE = FunctionFlags.ROW_SEPARABLE
 get_dtype = ResolveDType.get_dtype
 map_all = ResolveDType.function.map_all
 namespaced = DispatcherOptions.namespaced
 
 
-# TODO @dangotbanned: Review upstream `row_separable` fix https://github.com/pola-rs/polars/pull/26549
-class RangeFunction(Function, flags=ROW_SEPARABLE, dispatch=namespaced()):
+class RangeFunction(Function, dispatch=namespaced()):
     def to_function_expr(self, *inputs: ExprIR) -> RangeExpr[Self]:
         from narwhals._plan.expressions.expr import RangeExpr
 

@@ -62,6 +62,7 @@ ELEMENTWISE = FunctionFlags.ELEMENTWISE
 # TODO @dangotbanned: Finish `Function` class doc
 # TODO @dangotbanned: Add `ClassVar` docs
 # TODO @dangotbanned: Introduce the concept of *arity* + replace `unwrap_input`
+# TODO @dangotbanned: `RangeExpr` (and probably others) have input shape requirements
 class Function(Immutable):
     r"""A general transformation applied to an expression.
 

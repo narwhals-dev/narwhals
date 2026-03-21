@@ -1,9 +1,9 @@
 """Top-level `Expr` nodes."""
 
+# ruff: noqa: A002
 from __future__ import annotations
 
-import typing as t
-from typing import TYPE_CHECKING, Generic, final
+from typing import TYPE_CHECKING, Any, Generic, final
 
 import narwhals._plan.dtypes_mapper as dtm
 from narwhals._plan._dispatch import DispatcherOptions
@@ -32,13 +32,14 @@ from narwhals._plan.typing import (
     Seq,
     StructT_co,
 )
-from narwhals.exceptions import InvalidOperationError
+from narwhals.exceptions import InvalidOperationError, NarwhalsError
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
 
     from typing_extensions import Self
 
+    from narwhals._plan._function import Function
     from narwhals._plan.compliant.typing import Ctx, FrameT_contra, R_co
     from narwhals._plan.expressions import selectors as cs
     from narwhals._plan.expressions.functions import MapBatches  # noqa: F401
@@ -215,24 +216,34 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
             return f"{first!r}.{self.function!r}()"
         return f"{self.function!r}()"
 
-    # NOTE: Interacting badly with `pyright` synthesizing the `__replace__` signature
-    if not TYPE_CHECKING:
+    @staticmethod
+    def _validate_input(
+        input: Seq[ExprIR], function: Function, flags: FunctionFlags, /
+    ) -> NarwhalsError | None:
+        # NOTE: (Hacky) hook for arbitary validation
+        # Ideally this would be more declarative
+        parent = input[0]
+        if parent.is_scalar() and not flags.is_elementwise():
+            return function_expr_invalid_operation_error(function, parent)
+        return None
+
+    if TYPE_CHECKING:
+        ...
+    else:
 
         def __init__(
             self,
             *,
-            input: Seq[ExprIR],  # noqa: A002
+            input: Seq[ExprIR],
             function: FunctionT_co,
             flags: FunctionFlags,
-            **kwds: t.Any,
+            **kwds: Any,
         ) -> None:
-            parent = input[0]
-            if parent.is_scalar() and not flags.is_elementwise():
-                raise function_expr_invalid_operation_error(function, parent)
-            kwargs = dict(input=input, function=function, flags=flags, **kwds)
-            super().__init__(**kwargs)
-    else:  # pragma: no cover
-        ...
+            # NOTE: Needs to skip type checking to avoid incorrectly synthesized `__replace__` signature
+            # https://discuss.python.org/t/dataclass-transform-and-replace/69067
+            if err := self._validate_input(input, function, flags, **kwds):
+                raise err
+            super().__init__(input=input, function=function, flags=flags, **kwds)
 
     def dispatch(
         self: Self, ctx: Ctx[FrameT_contra, R_co], frame: FrameT_contra, name: str
@@ -279,28 +290,18 @@ class AnonymousExpr(FunctionExpr["MapBatches"], dispatch=renamed("map_batches"))
 
 
 class RangeExpr(FunctionExpr[RangeT_co]):
-    """E.g. `int_range(...)`.
+    """E.g. `int_range(...)`."""
 
-    Special-cased as it is only allowed scalar inputs, and is row_separable.
-    """
-
-    def __init__(
-        self,
-        *,
-        input: Seq[ExprIR],  # noqa: A002
-        function: RangeT_co,
-        flags: FunctionFlags,
-        **kwds: t.Any,
-    ) -> None:
-        # NOTE: `IntRange` has 2x scalar inputs, so always triggered error in parent
+    @staticmethod
+    def _validate_input(
+        input: Seq[ExprIR], function: Function, _: FunctionFlags, /
+    ) -> NarwhalsError | None:
         if len(input) < 2:
             msg = f"Expected at least 2 inputs for `{function!r}()`, but got `{len(input)}`.\n`{input}`"
-            raise InvalidOperationError(msg)
+            return InvalidOperationError(msg)
         if not all(e.is_scalar() for e in input):
-            raise range_expr_non_scalar_error(input, function)
-        super(ExprIR, self).__init__(
-            **dict(input=input, function=function, flags=flags, **kwds)
-        )
+            return range_expr_non_scalar_error(input, function)
+        return None
 
     def __repr__(self) -> str:
         return f"{self.function!r}({list(self.input)!r})"

@@ -171,8 +171,6 @@ class FunctionFlags(enum.Flag):
     └─────┘
     """
 
-    # TODO @dangotbanned: Remove from `*_range`
-    # https://github.com/pola-rs/polars/pull/26549
     ROW_SEPARABLE = 1 << 1
     """Does not depend on the context of surrounding rows.
 

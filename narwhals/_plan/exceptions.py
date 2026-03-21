@@ -26,7 +26,6 @@ if TYPE_CHECKING:
     from narwhals._plan import expressions as ir
     from narwhals._plan._function import Function
     from narwhals._plan.expressions.operators import Operator
-    from narwhals._plan.expressions.ranges import RangeFunction
     from narwhals._plan.options import SortOptions
     from narwhals._plan.schema import FrozenSchema
     from narwhals._plan.typing import IntoExpr, Seq
@@ -52,7 +51,7 @@ def function_expr_invalid_operation_error(
 
 
 def range_expr_non_scalar_error(
-    input: Sequence[ir.ExprIR], function: RangeFunction
+    input: Sequence[ir.ExprIR], function: Function
 ) -> ShapeError:
     arg_name, arg_value = (
         ("start", input[0]) if not (input[0].is_scalar()) else ("end", input[1])
