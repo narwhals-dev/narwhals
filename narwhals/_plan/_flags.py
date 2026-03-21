@@ -29,15 +29,30 @@ _V_LENGTH_PRESERVING: Final = 1 << 2
 _V_MUTUALLY_EXCLUSIVE: Final = _V_AGGREGATION | _V_LENGTH_PRESERVING
 
 
-# TODO @dangotbanned: Explain `FunctionFlags` (class)
 class FunctionFlags(enum.Flag):
-    """Behaviors of a function."""
+    """Properties of functions.
+
+    Flags tell us how a function transforms the shape of it's input:
+
+        ┌───────────────────┬───────────────┬───────────┐
+        │ Flag              ┆ Input         ┆ Output    │
+        ╞═══════════════════╪═══════════════╪═══════════╡
+        │ AGGREGATION       ┆ Column        ┆ Scalar    │
+        │ ROW_SEPARABLE     ┆ Column        ┆ Unknown   │
+        │ LENGTH_PRESERVING ┆ Column/Scalar ┆ Preserved │
+        │ ELEMENTWISE       ┆ Column/Scalar ┆ Preserved │
+        └───────────────────┴───────────────┴───────────┘
+
+    And that's the main nugget we can use to answer the question:
+    > Is this function valid *here*?
+    """
 
     DEFAULT = 0
     """No flags set.
 
-    This flag is compatible with all others, but in isolation it's defining
-    trait is that it is not any other flag.
+    Takes on the identity of other flags when combined:
+    >>> FunctionFlags.DEFAULT | FunctionFlags.AGGREGATION
+    <FunctionFlags.AGGREGATION: 1>
     """
 
     AGGREGATION = _V_AGGREGATION
