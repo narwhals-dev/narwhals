@@ -152,6 +152,8 @@ class FunctionFlags(enum.Flag):
     └─────┘
     """
 
+    # TODO @dangotbanned: Remove from `*_range`
+    # https://github.com/pola-rs/polars/pull/26549
     ROW_SEPARABLE = 1 << 2
     """Does not depend on the context of surrounding rows.
 
@@ -166,9 +168,6 @@ class FunctionFlags(enum.Flag):
     This definition means they change the length of input columns.
 
     But this property **does not** extend to elementwise.
-
-    ## History
-    ~~`*_range`~~ since [pola-rs/polars#26549](https://github.com/pola-rs/polars/pull/26549)
     """
 
     LENGTH_PRESERVING = _V_LENGTH_PRESERVING
