@@ -149,14 +149,14 @@ class Function(Immutable):
         return self.__expr_ir_dtype__(node, schema)
 
 
-# TODO @dangotbanned: Add summary that's about the reduction behavior
-# (selectors examples are fine later)
 class HorizontalFunction(Function, flags=ELEMENTWISE, dispatch=namespaced()):
-    """_summary_.
+    """Transformations *across* columns.
 
-    These functions use different semantics when expanding selectors.
+    Special cases of [fold] or [reduce].
 
     ## Examples
+    These functions use different semantics when expanding selectors.
+
     Say we have the following schema:
     >>> from tests.plan.utils import Frame
     >>> import narwhals._plan as nw
@@ -181,4 +181,7 @@ class HorizontalFunction(Function, flags=ELEMENTWISE, dispatch=namespaced()):
     (a=col('a').clip_lower([col('b')]),
      b=col('b').clip_lower([col('b')]),
      c=col('c').clip_lower([col('b')]))
+
+    [fold]: https://docs.pola.rs/user-guide/expressions/folds/
+    [reduce]: https://mathspp.com/blog/pydonts/the-power-of-reduce
     """
