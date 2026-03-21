@@ -45,6 +45,40 @@ class FunctionFlags(enum.Flag):
 
     And that's the main nugget we can use to answer the question:
     > Is this function valid *here*?
+
+    ## Examples
+    Canonical members are returned on iteration:
+    >>> AGGREGATION, ROW_SEPARABLE, LENGTH_PRESERVING = FunctionFlags
+
+    Members can be compared by identity:
+    >>> AGGREGATION is FunctionFlags.AGGREGATION
+    True
+    >>> ROW_SEPARABLE is FunctionFlags.ROW_SEPARABLE
+    True
+    >>> LENGTH_PRESERVING is FunctionFlags.LENGTH_PRESERVING
+    True
+
+    Aliases can use containment for members they are composed of:
+    >>> ELEMENTWISE = FunctionFlags.ELEMENTWISE
+    >>> LENGTH_PRESERVING in ELEMENTWISE
+    True
+    >>> ROW_SEPARABLE in ELEMENTWISE
+    True
+
+    That relationship goes in a single direction:
+    >>> ELEMENTWISE in LENGTH_PRESERVING
+    False
+    >>> ELEMENTWISE in ROW_SEPARABLE
+    False
+
+    Recomposing an alias still has the same identity:
+    >>> (LENGTH_PRESERVING | ROW_SEPARABLE) is FunctionFlags.ELEMENTWISE
+    True
+
+    Not all aliases are valid:
+    >>> LENGTH_PRESERVING | AGGREGATION
+    Traceback (most recent call last):
+    TypeError: A function cannot both return a scalar and preserve length, they are mutually exclusive.
     """
 
     DEFAULT = 0
