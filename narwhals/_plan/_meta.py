@@ -8,7 +8,6 @@ from itertools import chain
 from typing import TYPE_CHECKING, Any
 
 from narwhals._plan import _nodes
-from narwhals._plan._nodes import ExprTraverser
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -16,6 +15,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import TypeAlias, dataclass_transform
 
+    from narwhals._plan._nodes import ExprTraverser
     from narwhals._plan.typing import Seq
 
     T = TypeVar("T")
@@ -185,7 +185,7 @@ class ExprIRMeta(ImmutableMeta):
         namespace, nodes = metacls._pop_nodes(cls_name, namespace)
         tp = super().__new__(metacls, cls_name, bases, namespace, **kwds)
         if nodes:
-            metacls.__setattr__(tp, _NODES_NAME, ExprTraverser.inherit_from(tp, nodes))
+            metacls.__setattr__(tp, _NODES_NAME, tp.__expr_ir_nodes__.extend_with(nodes))
         return tp
 
     # TODO @dangotbanned: Move out of metaclass, since `ExprIR` also gets this as a `staticmethod`

@@ -17,7 +17,7 @@ There's a couple *big ideas* in here, but they could broadly fit into:
 from __future__ import annotations
 
 import enum
-from typing import TYPE_CHECKING, Any, Final, Literal, Protocol, SupportsIndex, TypeVar
+from typing import TYPE_CHECKING, Any, Final, Literal, Protocol, TypeVar, final
 
 from narwhals._utils import qualified_type_name
 
@@ -28,10 +28,6 @@ if TYPE_CHECKING:
 
     from narwhals._plan._expr_ir import ExprIR
     from narwhals._plan.typing import MapIR, Seq
-
-    class HasExprTraverser(Protocol):
-        @property
-        def __expr_ir_nodes__(self) -> ExprTraverser: ...
 
 
 class IsScalar(enum.Enum):
@@ -203,6 +199,7 @@ class MultipleExpr(ExprNode["Seq[ExprIR]", Literal[IsScalar.SKIP]]):
         return None
 
 
+@final
 class ExprTraverser:
     """Field specifier-based iteration backend for `ExprIR`.
 
@@ -233,9 +230,15 @@ class ExprTraverser:
             return f"{tp_name}[{len(self)}]{new_line}{members}"
         return f"{tp_name}[]"
 
-    @staticmethod
-    def inherit_from(parent: HasExprTraverser, nodes: IntoExprNodes) -> ExprTraverser:
-        return ExprTraverser((*parent.__expr_ir_nodes__, *nodes))
+    def extend_with(self, nodes: IntoExprNodes, /) -> ExprTraverser:
+        """Create a new traverser, extending with `nodes`.
+
+        Arguments:
+            nodes: New nodes extracted from a subclass `__dict__`.
+                - The order of the current (parent) nodes is preserved.
+                - `nodes` follow immediately after
+        """
+        return ExprTraverser((*self, *nodes))
 
     # NOTE: `ExprIR` API
     def iter_left(self, instance: ExprIR, /) -> Iterator[ExprIR]:
@@ -278,7 +281,7 @@ class ExprTraverser:
         return function(instance)
 
     # NOTE: `Sequence[_ExprNode]` API
-    def __getitem__(self, key: SupportsIndex, /) -> _ExprNode:
+    def __getitem__(self, key: int, /) -> _ExprNode:
         return self._nodes.__getitem__(key)
 
     def __iter__(self) -> Iterator[_ExprNode]:
