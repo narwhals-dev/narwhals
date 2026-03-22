@@ -48,18 +48,56 @@ IsScalarT = TypeVar(  # noqa: PLC0105
 )
 
 
-# TODO @dangotbanned: Doc needs to focus on `node(...)`
 def node(*, observe_scalar: bool = True) -> Any:
-    """Singular `ExprIR` field specifier.
-
-    Part of the spec for [`@dataclass_transform`], and is similar to [`dataclasses.field`]
-    but for more niche use cases.
+    """Declare that a field stores a single (`ExprIR`) node.
 
     Arguments:
-        observe_scalar: Should `is_scalar` look here?
+        observe_scalar: If True (default), include the node when evaluating `is_scalar()`.
 
-    [`@dataclass_transform`]: https://typing.python.org/en/latest/spec/dataclasses.html#field-specifiers
-    [`dataclasses.field`]: https://docs.python.org/3/library/dataclasses.html#dataclasses.field
+            The result is a logical AND over observed nodes.
+
+    Examples:
+        If an expression contains another expression, we mark the field with a [field specifier]:
+        >>> from narwhals._plan import expressions as ir
+        >>> class Alias(ir.ExprIR):
+        ...     __slots__ = ("expr", "name")
+        ...     expr: ir.ExprIR = node()
+        ...     name: str
+        ...
+        ...     def __repr__(self) -> str:
+        ...         return f"{self.expr!r}.alias({self.name!r})"
+
+        Which populates `__expr_ir_nodes__` at the class-level:
+        >>> Alias.__expr_ir_nodes__
+        ExprTraverser[1]
+            expr: ExprIR = node()
+
+        An instance can use the field as normal:
+        >>> aliased = Alias(expr=ir.col("a"), name="b")
+        >>> aliased
+        col('a').alias('b')
+        >>> aliased.expr
+        col('a')
+
+        But the field is understood as being traversable:
+        >>> first, second = aliased.iter_left()
+        >>> first
+        col('a')
+        >>> second
+        col('a').alias('b')
+
+        By default a `node` is *observed* in `is_scalar()`:
+        >>> aliased.is_scalar()
+        False
+
+        Meaning we depend on it to answer that question:
+        >>> lit_aliased = aliased.__replace__(expr=ir.lit(1))
+        >>> lit_aliased
+        lit(int: 1).alias('b')
+        >>> lit_aliased.is_scalar()
+        True
+
+    [field specifier]: https://typing.python.org/en/latest/spec/dataclasses.html#field-specifiers
     """
     return SingleExpr(_OBSERVE) if observe_scalar else SingleExpr(_SKIP)
 
