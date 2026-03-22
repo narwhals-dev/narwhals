@@ -93,7 +93,7 @@ docs = [
   "duckdb",
   "narwhals[sql]",
   "markdown-exec[ansi]",
-  "mkdocs",
+  "mkdocs==1.6.1",
   "mkdocs-autorefs",
   "mkdocs-material",
   "mkdocstrings[python]",
