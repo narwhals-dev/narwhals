@@ -19,8 +19,6 @@ from __future__ import annotations
 import enum
 from typing import TYPE_CHECKING, Any, Final, Literal, Protocol, TypeVar, final
 
-from narwhals._utils import qualified_type_name
-
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator
 
@@ -49,7 +47,7 @@ IsScalarT = TypeVar(  # noqa: PLC0105
 
 
 def node(*, observe_scalar: bool = True) -> Any:
-    """Declare that a field stores a single (`ExprIR`) node.
+    """Declare that a field stores a single node.
 
     Arguments:
         observe_scalar: If True (default), include the node when evaluating `is_scalar()`.
@@ -102,15 +100,55 @@ def node(*, observe_scalar: bool = True) -> Any:
     return SingleExpr(_OBSERVE) if observe_scalar else SingleExpr(_SKIP)
 
 
-# TODO @dangotbanned: Doc needs to focus on `nodes()`
 def nodes() -> Any:
-    """Multiple `ExprIR` field specifier.
+    """Declare that a field stores multiple nodes.
 
-    Part of the spec for [`@dataclass_transform`], and is similar to [`dataclasses.field`]
-    but for more niche use cases.
+    Unlike `node`, these are never used for `is_scalar()`.
 
-    [`@dataclass_transform`]: https://typing.python.org/en/latest/spec/dataclasses.html#field-specifiers
-    [`dataclasses.field`]: https://docs.python.org/3/library/dataclasses.html#dataclasses.field
+    ## Examples
+    If an expression accepts a variable number of expressions, we mark the variadic field(s)
+    with a [field specifier]:
+
+    >>> from narwhals._plan import expressions as ir
+    >>> from narwhals._plan.typing import Seq
+    >>> class Over(ir.ExprIR):
+    ...     __slots__ = ("expr", "partition_by")
+    ...     expr: ir.ExprIR = node(observe_scalar=False)
+    ...     partition_by: Seq[ir.ExprIR] = nodes()
+    ...
+    ...     def __repr__(self) -> str:
+    ...         return f"{self.expr!r}.over({list(self.partition_by)!r})"
+
+    Which populates `__expr_ir_nodes__` at the class-level:
+    >>> Over.__expr_ir_nodes__
+    ExprTraverser[2]
+        expr: ExprIR = node(observe_scalar=False)
+        partition_by: Seq[ExprIR] = nodes()
+
+    An instance can use the field as normal:
+    >>> from narwhals._plan.expressions.aggregation import First
+    >>> root = First(expr=ir.col("a"))
+    >>> variadic = tuple(ir.col(s) for s in "bcdef")
+    >>> over = Over(expr=root, partition_by=variadic)
+    >>> over
+    col('a').first().over([col('b'), col('c'), col('d'), col('e'), col('f')])
+
+    >>> over.partition_by
+    (col('b'), col('c'), col('d'), col('e'), col('f'))
+
+    But the field is understood as being traversable:
+    >>> it = over.iter_right()
+    >>> next(it) is over
+    True
+    >>> next(it) == ir.col("f")
+    True
+    >>> e, d, c, b, *rest = it
+    >>> e, d, c, b
+    (col('e'), col('d'), col('c'), col('b'))
+    >>> rest == list(over.expr.iter_right())
+    True
+
+    [field specifier]: https://typing.python.org/en/latest/spec/dataclasses.html#field-specifiers
     """
     return MultipleExpr()
 
@@ -337,6 +375,8 @@ _EXPR_FIELD_SPECIFIER_NAMES: Final = (node.__name__, nodes.__name__)
 
 
 def _into_expr_node_error(assigned_name: str, node: Any, cls_name: str) -> TypeError:
+    from narwhals._utils import qualified_type_name
+
     name = assigned_name
     value = repr(node)
     value = value[:10] + "..." if len(value) > 10 else value
