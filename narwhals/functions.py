@@ -3,7 +3,7 @@ from __future__ import annotations
 import platform
 import sys
 from collections.abc import Iterable, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 from narwhals._expression_parsing import ExprKind, ExprNode, is_expr, is_series
 from narwhals._utils import (
@@ -1370,52 +1370,60 @@ class When:
     def __init__(
         self,
         *predicates: IntoExpr | Iterable[IntoExpr],
-        chain: list[tuple[Expr, IntoExpr | NonNestedLiteral]],
+        chain: tuple[tuple[Expr, IntoExpr | NonNestedLiteral], ...],
     ) -> None:
         self._predicate = all_horizontal(*flatten(predicates), ignore_nulls=False)
         self._chain = chain
 
     def then(self, value: IntoExpr | NonNestedLiteral) -> Then:
-        new_chain = [*self._chain, (self._predicate, value)]
+        new_chain = (*self._chain, (self._predicate, value))
         return Then._from_chain(new_chain)
 
 
 class Then(Expr):
-    _chain: list[tuple[Expr, IntoExpr | NonNestedLiteral]]
+    _chain: tuple[tuple[Expr, IntoExpr | NonNestedLiteral], ...]
+    _cached_nodes: tuple[ExprNode, ...] | None = None
+    _otherwise: IntoExpr | NonNestedLiteral | None = None
+
+    @property
+    def _nodes(self) -> tuple[ExprNode, ...]:
+        if self._cached_nodes:
+            return self._cached_nodes
+        expr = self._otherwise
+        for predicate, then_value in reversed(self._chain):
+            if expr is None:
+                exprs = (predicate, then_value)
+            else:
+                exprs = (predicate, then_value, expr)
+            expr = Expr(
+                ExprNode(
+                    ExprKind.ELEMENTWISE,
+                    "when_then",
+                    exprs=exprs,
+                    allow_multi_output=False,
+                )
+            )
+        assert isinstance(expr, Expr)  # noqa: S101
+        self._cached_nodes = expr._nodes
+        return self._cached_nodes
+
+    @_nodes.setter
+    def _nodes(self, nodes: tuple[ExprNode, ...]) -> None:
+        assert self._cached_nodes is None  # noqa: S101 (debug assertion)
+        self._cached_nodes = nodes
 
     @classmethod
-    def _from_chain(cls, chain: list[tuple[Expr, IntoExpr | NonNestedLiteral]]) -> Self:
-        result = None
-        for predicate, then_value in reversed(chain):
-            result = cls._from_exprs(predicate, then_value, result)
-        result = cast("Self", result)
+    def _from_chain(
+        cls, chain: tuple[tuple[Expr, IntoExpr | NonNestedLiteral], ...]
+    ) -> Self:
+        result = cls()
         result._chain = chain
         return result
 
-    @classmethod
-    def _from_exprs(
-        cls,
-        predicate: Expr,
-        then_value: IntoExpr | NonNestedLiteral,
-        otherwise_value: IntoExpr | NonNestedLiteral = None,
-    ) -> Self:
-        exprs: tuple[IntoExpr | NonNestedLiteral, ...]
-        if otherwise_value is None:
-            exprs = (predicate, then_value)
-        else:
-            exprs = (predicate, then_value, otherwise_value)
-        node = ExprNode(
-            ExprKind.ELEMENTWISE, "when_then", exprs=exprs, allow_multi_output=False
-        )
-        return cls(node)
-
     def otherwise(self, otherwise_value: IntoExpr | NonNestedLiteral) -> Then:
-        # Build the nested structure from the chain (innermost first)
-        result = otherwise_value
-        for predicate, then_value in reversed(self._chain):
-            result = Then._from_exprs(predicate, then_value, result)
-        assert isinstance(result, Then)  # noqa: S101
-        return result
+        expr = self._from_chain(self._chain)
+        expr._otherwise = otherwise_value
+        return expr
 
     def when(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> When:
         return When(*predicates, chain=self._chain)
@@ -1455,7 +1463,7 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
         | 2  3  15       6 |
         └──────────────────┘
     """
-    return When(*predicates, chain=[])
+    return When(*predicates, chain=())
 
 
 def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool) -> Expr:
