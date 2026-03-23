@@ -385,7 +385,7 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
     # NOTE: Pylance renders "Examples:" sections poorly if there isn't "Arguments:" as well
     # This style still runs in `doctest` and looks better in vscode
     def iter_left(self) -> Iterator[ExprIR]:
-        r"""Yield nodes root->leaf.
+        r"""Yield nodes recursively from root->leaf.
 
         `iter_left` will always yield the current node **last**.
 
@@ -420,7 +420,7 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
         yield from self.__expr_ir_nodes__.iter_left(self)
 
     def iter_right(self) -> Iterator[ExprIR]:
-        r"""Yield nodes leaf->root.
+        r"""Yield nodes recursively from leaf->root.
 
         `iter_right` will always yield the current node **first**.
 

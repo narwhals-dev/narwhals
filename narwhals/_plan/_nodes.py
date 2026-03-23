@@ -1,14 +1,12 @@
 """Traversal of `ExprIR`, maybe `*Plan` eventually too.
 
+## Implementation Notes
 There's a couple *big ideas* in here, but they could broadly fit into:
 
 > Try to encode as much as possible **into the classes**
 
-## Misc Notes
-- Minimize the amount of `isinstance` calls within methods
-  - ATOW, all expressions can be fully traversed **and** transformed without a single runtime type check
-- Implements [Field specifiers] from [PEP 681]
-
+With a helping hand from [field specifiers] ([PEP 681]), all expressions can be fully traversed
+**and** transformed without a single runtime type check.
 
 [Field specifiers]: https://typing.python.org/en/latest/spec/dataclasses.html#field-specifiers
 [PEP 681]: https://peps.python.org/pep-0681/#field-specifiers
@@ -159,13 +157,18 @@ def into_expr_node(assigned_name: str, node: Any, cls_name: str) -> _ExprNode:
     return node.with_name(assigned_name)
 
 
-# TODO @dangotbanned: Class doc, focus on why a convention for traversal matters
+# TODO @dangotbanned: (low-prio): Migrate the `*Plan` bits to use this instead
+# (https://github.com/narwhals-dev/narwhals/blob/c5a624885b845a1a9fcab849296424879197f6e5/narwhals/_plan/plans/_base.py#L13-L27)
 class Node(Protocol[NodeT, Get]):
-    # Hoping to make it easier to document this way
-    # overlaps with https://github.com/narwhals-dev/narwhals/blob/c5a624885b845a1a9fcab849296424879197f6e5/narwhals/_plan/plans/_base.py#L13-L27
+    """A field that participates in graph traversal.
+
+    Describes the field in the class (`type[NodeT]`), and how we iterate over
+    instances of it (`NodeT`).
+    """
+
     __slots__ = ("name",)
-    # TODO @dangotbanned: Doc
     name: str
+    """The name of the field."""
 
     def iter_left(self, instance: NodeT, /) -> Iterator[NodeT]:
         """Yield nodes recursively from root->leaf."""
@@ -175,11 +178,20 @@ class Node(Protocol[NodeT, Get]):
         """Yield nodes recursively from leaf->root."""
         ...
 
-    # TODO @dangotbanned: Doc (maybe)
     def with_name(self, name: str, /) -> Self:
-        # - Called during `type.__new__`, when we have the `name`
-        # - If we used a descriptor with `__set_name__`, that would be too late to move
-        #   the instance from the class namespace
+        """Set the name the field specifier refers to.
+
+        Arguments:
+            name: The name used in the assignment of the class body.
+
+        Notes:
+            Serves a similar purpose to [`__set_name__`], but:
+            - Is called at an [earlier stage] in class creation
+            - Points at an instance slot (for data)
+
+        [`__set_name__`]: https://docs.python.org/3/reference/datamodel.html#object.__set_name__
+        [earlier stage]: https://docs.python.org/3/reference/datamodel.html#class-object-creation
+        """
         self.name = name
         return self
 
@@ -200,14 +212,26 @@ class Node(Protocol[NodeT, Get]):
 
 
 class ExprNode(Node["ExprIR", Get], Protocol[Get, IsScalarT]):
+    """Extensions to `Node` for `ExprIR`."""
+
     __slots__ = ()
 
     @property
-    def observe_scalar(self) -> IsScalarT: ...
-    def iter_output_name(self, instance: ExprIR, /) -> Iterator[ExprIR]: ...
+    def observe_scalar(self) -> IsScalarT:
+        """Include the node when evaluating `is_scalar()`."""
+        ...
+
+    def iter_output_name(self, instance: ExprIR, /) -> Iterator[ExprIR]:
+        """Follow the **left-hand-side** of the graph until we can derive an output name.
+
+        See `ExprIR.iter_output_name` for examples.
+        """
+        ...
 
 
 class SingleExpr(ExprNode["ExprIR", IsScalarT]):
+    """Representation for `node(...)`."""
+
     __slots__ = ("_observe_scalar",)
     _observe_scalar: IsScalarT
 
@@ -245,6 +269,8 @@ class SingleExpr(ExprNode["ExprIR", IsScalarT]):
 
 
 class MultipleExpr(ExprNode["Seq[ExprIR]", Literal[IsScalar.SKIP]]):
+    """Representation for `nodes()`."""
+
     __slots__ = ()
 
     def __repr__(self) -> str:
