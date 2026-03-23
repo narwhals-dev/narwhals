@@ -239,7 +239,7 @@ def test_init_already_narwhals_unstable_to_stable() -> None:
 
     s = native["a"]
     unstable_s = nw.from_native(s, allow_series=True)
-    stablified_s = nw_v1.from_native(unstable_s, allow_series=True)
+    stablified_s = nw_v1.from_native(unstable_s, allow_series=True)  # type: ignore[var-annotated]
     assert isinstance(stablified_s, nw_v1.Series)
 
 
@@ -254,8 +254,8 @@ def test_init_already_narwhals_stable_to_unstable() -> None:
     assert isinstance(unstablified_df, nw.DataFrame)
 
     s = native["a"]
-    stable_s = nw_v1.from_native(s, allow_series=True)
-    unstablified_s = nw.from_native(stable_s, allow_series=True)
+    stable_s = nw_v1.from_native(s, allow_series=True)  # type: ignore[var-annotated]
+    unstablified_s = nw.from_native(stable_s, allow_series=True)  # type: ignore[var-annotated]
     assert isinstance(unstablified_s, nw.Series)
 
 
