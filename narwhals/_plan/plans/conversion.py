@@ -687,7 +687,7 @@ class Resolver:
         if name in input_schema:
             msg = f"Duplicate column name {name!r}"
             raise DuplicateError(msg)
-        return input, freeze_schema({name: IDX_DTYPE} | input_schema._mapping)
+        return input, freeze_schema(name=IDX_DTYPE, **input_schema)
 
 
 @overload

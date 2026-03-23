@@ -56,3 +56,16 @@ def test_schema(dataframe: DataFrame) -> None:
     with pytest.raises(TypeError, match="Cannot subclass 'FrozenSchema'"):
 
         class MutableSchema(FrozenSchema): ...  # type: ignore[misc]
+
+
+def test_schema_hash() -> None:
+    mapping = {
+        "a": nw.List(nw.Float32()),
+        "b": nw.Struct({"a": nw.String(), "c": nw.Boolean()}),
+    }
+    schema_1 = freeze_schema(mapping)
+    schema_2 = freeze_schema(**mapping)
+
+    hash_1 = hash(schema_1)
+    hash_2 = hash(schema_2)
+    assert hash_1 == hash_2

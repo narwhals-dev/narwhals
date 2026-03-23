@@ -47,26 +47,107 @@ _unknown = Unknown()
 _OBJ_SETATTR = object.__setattr__
 
 
+# TODO @dangotbanned: (low-prio) Disable `__init__`
+# - `Immutable.__replace__` needs overriding first
 @final
 class FrozenSchema(Immutable):
-    """Use `freeze_schema(...)` constructor to trigger caching!"""
+    """A cache-friendly - **internal** - extension to `nw.Schema`.
+
+    - Not a subclass of `dict`, `Mapping`
+      - But implements *enough* to look like it
+    - Has some extra methods inspired by [`polars-schema::schema::Schema`]
+
+    ## Important
+    Use the `freeze_schema(...)` constructor to trigger caching.
+
+    ## Examples
+    >>> import narwhals as nw
+    >>> mapping = {"a": nw.Int64(), "b": nw.String()}
+    >>> schema = freeze_schema(mapping)
+    >>> schema
+    FrozenSchema({'a': Int64, 'b': String})
+
+    A `FrozenSchema` can be used *almost* anywhere a `Mapping` is expected:
+    >>> nw.Schema(mapping) == nw.Schema(schema)
+    True
+    >>> mapping == dict(schema)
+    True
+    >>> dict(**schema)
+    {'a': Int64, 'b': String}
+
+    *Provided* the duck typing is respected:
+    >>> from collections.abc import Mapping
+    >>> isinstance(schema, (Mapping, dict))
+    False
+
+    Calls to `freeze_schema` are cached:
+    >>> schema is freeze_schema(mapping)
+    True
+
+    While still providing the flexibilty of `dict()`:
+    >>> schema is freeze_schema(**mapping)
+    True
+    >>> schema is freeze_schema(a=nw.Int64(), b=nw.String())
+    True
+    >>> schema == freeze_schema(index=nw.UInt32(), **schema)
+    False
+    >>> schema is freeze_schema(nw.Schema(mapping))
+    True
+    >>> schema is freeze_schema(schema)
+    True
+    >>> schema is freeze_schema(schema.items())
+    True
+
+    And then some:
+    >>> from narwhals._plan import DataFrame
+    >>> frame = DataFrame.from_dict({"a": [1], "b": ["ooh"]}, backend="polars")
+    >>> schema is freeze_schema(frame)
+    True
+
+    [`polars-schema::schema::Schema`]: https://github.com/pola-rs/polars/blob/5ee71f3ee4dd1573b45f44714da7843a6205895c/crates/polars-schema/src/schema.rs
+    """
 
     __slots__ = ("_mapping",)
+    # TODO @dangotbanned: (long-term) Add version branching for [`frozendict`] when available
+    # [`frozendict`]: https://docs.python.org/3.15/library/stdtypes.html#frozendict
     _mapping: MappingProxyType[str, DType]
 
+    # NOTE: Import, export
+    @staticmethod
+    def _from_mapping(mapping: MappingProxyType[str, DType], /) -> FrozenSchema:
+        obj = FrozenSchema.__new__(FrozenSchema)
+        _OBJ_SETATTR(obj, "_mapping", mapping)
+        return obj
+
+    @staticmethod
+    def _from_hash_safe(items: _FrozenSchemaHash, /) -> FrozenSchema:
+        return FrozenSchema._from_mapping(MappingProxyType(dict(items)))
+
+    def to_narwhals(self, version: Version = Version.MAIN) -> Schema:
+        """Convert this `FrozenSchema` into `narwhals.Schema`."""
+        return into_version(version).schema(self._mapping)
+
+    # NOTE: `Immutable`-related
     __hash__ = Immutable.__hash__
 
-    # NOTE: Manually reimplemented as this is a hot path
+    @property
+    def __immutable_values__(self) -> Iterator[Any]:
+        # NOTE: hash seed
+        yield from tuple(self.items())
+
     def __eq__(self, other: object) -> bool:
+        # NOTE: Manually reimplemented as this is a hot path
         if self is other:
             return True
         if type(other) is not FrozenSchema:
             return False
         return self._mapping.__eq__(other._mapping)
 
-    def __init_subclass__(cls, **__: Never) -> Never:
-        msg = f"Cannot subclass {FrozenSchema.__name__!r}"
-        raise TypeError(msg)
+    # NOTE: Convenience methods/properties
+    @property
+    def names(self) -> FrozenColumns:
+        """Get the column names of the schema."""
+        return freeze_columns(self)
 
     def merge(self, other: FrozenSchema, /) -> FrozenSchema:
         """Return a new schema, merging `other` with `self` (see [upstream]).
@@ -75,6 +156,7 @@ class FrozenSchema(Immutable):
         """
         return freeze_schema(self._mapping | other._mapping)
 
+    # TODO @dangotbanned: Add resolved variant(s)?
     def select(self, exprs: Seq[NamedIR]) -> FrozenSchema:
         """Return a new schema, equivalent to performing `df.select(*exprs)`.
 
@@ -87,9 +169,6 @@ class FrozenSchema(Immutable):
         """
         names = (e.name for e in exprs)
         return freeze_schema((name, self.get(name, _unknown)) for name in names)
-
-    def select_irs(self, exprs: Seq[NamedIR]) -> Seq[NamedIR]:
-        return exprs
 
     def select_names(
         self,
@@ -185,25 +264,32 @@ class FrozenSchema(Immutable):
         it = (named.pop(name, None) or named_ir(name, col(name)) for name in self)  # type: ignore[arg-type]
         return tuple(chain(it, named.values()))
 
-    @property
-    def __immutable_values__(self) -> Iterator[Any]:
-        # Repurposed `self._mapping.items()` as a hash seed
-        yield from tuple(self.items())
+    def __repr__(self) -> str:
+        s = repr(dict(self))
+        tp_name = type(self).__name__
+        if (len(s) + len(tp_name) + 2) < 80:
+            return f"{tp_name}({s})"
+        # See https://github.com/astral-sh/ruff/discussions/22992
+        s = "\n".join(f"{' ' * 4}{name!r}: {dtype}," for name, dtype in self.items())
+        # NOTE: Use this after `1.19.*` https://github.com/python/mypy/pull/20325
+        # `lb, rb = "{}"`
+        lb, rb = "{", "}"
+        hugging_parentheses = f"({lb}\n{s}\n{rb})"
+        return f"{tp_name}{hugging_parentheses}"
 
-    @property
-    def names(self) -> FrozenColumns:
-        """Get the column names of the schema."""
-        return freeze_columns(self)
+    def __init_subclass__(cls, **__: Never) -> Never:
+        msg = f"Cannot subclass {FrozenSchema.__name__!r}"
+        raise TypeError(msg)
 
-    @staticmethod
-    def _from_mapping(mapping: MappingProxyType[str, DType], /) -> FrozenSchema:
-        obj = FrozenSchema.__new__(FrozenSchema)
-        _OBJ_SETATTR(obj, "_mapping", mapping)
-        return obj
-
-    @staticmethod
-    def _from_hash_safe(items: _FrozenSchemaHash, /) -> FrozenSchema:
-        return FrozenSchema._from_mapping(MappingProxyType(dict(items)))
+    # NOTE: `Mapping` API
+    @overload
+    def get(self, key: str, /) -> DType | None: ...
+    @overload
+    def get(self, key: str, default: DType | _T2, /) -> DType | _T2: ...
+    def get(self, key: str, default: DType | _T2 | None = None, /) -> DType | _T2 | None:
+        if default is not None:
+            return self._mapping.get(key, default)
+        return self._mapping.get(key)
 
     def items(self) -> ItemsView[str, DType]:
         return self._mapping.items()
@@ -214,34 +300,17 @@ class FrozenSchema(Immutable):
     def values(self) -> ValuesView[DType]:
         return self._mapping.values()
 
-    @overload
-    def get(self, key: str, /) -> DType | None: ...
-    @overload
-    def get(self, key: str, default: DType | _T2, /) -> DType | _T2: ...
-    def get(self, key: str, default: DType | _T2 | None = None, /) -> DType | _T2 | None:
-        if default is not None:
-            return self._mapping.get(key, default)
-        return self._mapping.get(key)
+    def __contains__(self, key: object) -> bool:
+        return self._mapping.__contains__(key)
 
     def __iter__(self) -> Iterator[str]:
         yield from self._mapping
-
-    def __contains__(self, key: object) -> bool:
-        return self._mapping.__contains__(key)
 
     def __getitem__(self, key: str, /) -> DType:
         return self._mapping.__getitem__(key)
 
     def __len__(self) -> int:
         return self._mapping.__len__()
-
-    def __repr__(self) -> str:
-        sep, nl, indent = ",", "\n", " "
-        items = f"{sep}{nl}{indent}".join(repr(tuple(els)) for els in self.items())
-        return f"{type(self).__name__}([{nl}{indent}{items}{sep}{nl}])"
-
-    def to_narwhals(self, version: Version = Version.MAIN) -> Schema:
-        return into_version(version).schema(self._mapping)
 
 
 class HasSchema(Protocol):
@@ -253,6 +322,7 @@ def has_schema(obj: Any) -> TypeIs[HasSchema]:
     return _hasattr_static(obj, "schema")
 
 
+# TODO @dangotbanned: Explain `freeze_schema`
 @overload
 def freeze_schema(mapping: IntoFrozenSchema, /) -> FrozenSchema: ...
 @overload
@@ -260,6 +330,12 @@ def freeze_schema(**schema: DType) -> FrozenSchema: ...
 def freeze_schema(
     iterable: IntoFrozenSchema | None = None, /, **schema: DType
 ) -> FrozenSchema:
+    """Create or retrieve a `FrozenSchema`.
+
+    Arguments:
+        iterable: _description_
+        **schema: _description_
+    """
     if isinstance(iterable, FrozenSchema):
         return iterable
     into = iterable.schema if has_schema(iterable) else (iterable or schema)
