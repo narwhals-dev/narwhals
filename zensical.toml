@@ -1,0 +1,157 @@
+[project]
+site_name = "Narwhals"
+site_description = "Narwhals documentation"
+site_url = "https://narwhals-dev.github.io/narwhals/"
+site_author = "hello_narwhals@proton.me"
+
+nav = [
+    { "Home" = "index.md" },
+    { "Why" = "why.md" },
+    { "Installation and quick start" = "installation.md"},
+    { "Intro tutorial" = [
+        "basics/dataframe.md",
+        "basics/series.md",
+        "basics/complete_example.md",
+        "basics/dataframe_conversion.md",
+        ]},
+    {"Narwhals and SQL" = "generating_sql.md"},
+    { "Concepts" = [
+        "concepts/order_dependence.md",
+        "concepts/pandas_index.md",
+        "concepts/improve_group_by_operation.md",
+        "concepts/column_names.md",
+        "concepts/boolean.md",
+        "concepts/null_handling.md",
+    ]},
+    {"Overhead" = "overhead.md"},
+    {"Perfect backwards compatibility policy" = "backcompat.md"},
+    {"Extensions and Plugins" = "extending.md"},
+    {"How it works" = "how_it_works.md"},
+    {"Ecosystem" = "ecosystem.md"},
+    {"Security" = "security.md"},
+    {"Resources" = "resources.md"},
+    {"API Completeness" = [
+        {"API Completeness" = "api-completeness/index.md"},
+        {"Supported Top-level functions" = "api-completeness/functions.md"},
+        {"Supported DataFrame methods" = "api-completeness/dataframe.md"},
+        {"Supported LazyFrame methods" = "api-completeness/lazyframe.md"},
+        {"Supported Expr methods" = "api-completeness/expr.md"},
+        {"Supported Expr.cat methods" = "api-completeness/expr_cat.md"},
+        {"Supported Expr.dt methods" = "api-completeness/expr_dt.md"},
+        {"Supported Expr.list methods" = "api-completeness/expr_list.md"},
+        {"Supported Expr.name methods" = "api-completeness/expr_name.md"},
+        {"Supported Expr.str methods" = "api-completeness/expr_str.md"},
+        {"Supported Expr.struct methods" = "api-completeness/expr_struct.md"},
+        {"Supported Series methods" = "api-completeness/series.md"},
+        {"Supported Series.cat methods" = "api-completeness/series_cat.md"},
+        {"Supported Series.dt methods" = "api-completeness/series_dt.md"},
+        {"Supported Series.list methods" = "api-completeness/series_list.md"},
+        {"Supported Series.str methods" = "api-completeness/series_str.md"},
+        {"Supported Series.struct methods" = "api-completeness/series_struct.md"},
+    ]},
+    {"API Reference" = [
+        "api-reference/index.md",
+        "api-reference/narwhals.md",
+        "api-reference/dataframe.md",
+        "api-reference/expr.md",
+        "api-reference/expr_cat.md",
+        "api-reference/expr_dt.md",
+        "api-reference/expr_list.md",
+        "api-reference/expr_name.md",
+        "api-reference/expr_str.md",
+        "api-reference/expr_struct.md",
+        "api-reference/group_by.md",
+        "api-reference/lazy_group_by.md",
+        "api-reference/lazyframe.md",
+        "api-reference/schema.md",
+        "api-reference/series.md",
+        "api-reference/series_cat.md",
+        "api-reference/series_dt.md",
+        "api-reference/series_list.md",
+        "api-reference/series_str.md",
+        "api-reference/series_struct.md",
+        "api-reference/dependencies.md",
+        "api-reference/implementation.md",
+        "api-reference/dtypes.md",
+        "api-reference/exceptions.md",
+        "api-reference/selectors.md",
+        "api-reference/sql.md",
+        "api-reference/testing.md",
+        "api-reference/typing.md",
+        "api-reference/utils.md",
+    ]},
+    {"This" = "this.md"}
+]
+
+extra_css = [
+    "css/extra.css",
+    "https://unpkg.com/katex@0/dist/katex.min.css",
+]
+extra_javascript = [
+    "javascripts/katex.js",
+    "javascripts/extra.js",
+    "javascripts/table.js",
+    "https://unpkg.com/katex@0/dist/katex.min.js",
+    "https://unpkg.com/katex@0/dist/contrib/auto-render.min.js",
+    "https://unpkg.com/tablesort@5.3.0/dist/tablesort.min.js",
+]
+
+[project.theme]
+variant = "modern"  # "classic"
+favicon = "assets/logo.svg"
+logo = "assets/logo.svg"
+language = "en"
+features = [
+    "content.code.annotate",
+    "content.code.copy",
+    "navigation.footer",
+    "navigation.indexes",
+    "navigation.top",
+    "search.highlight",
+    "toc.follow",
+]
+
+#[project.theme.font]
+#text = "Inter"
+#code = "Jetbrains Mono"
+
+[[project.theme.palette]]
+scheme = "default"
+toggle.icon = "lucide/sun"
+toggle.name = "Switch to dark mode"
+
+[[project.theme.palette]]
+scheme = "slate"
+toggle.icon = "lucide/moon"
+toggle.name = "Switch to light mode"
+
+[[project.extra.social]]
+icon = "fontawesome/brands/github"
+link = "https://github.com/narwhals-dev/narwhals"
+
+[project.plugins.mkdocstrings.handlers.python]
+inventories = ["https://docs.python.org/3/objects.inv"]
+paths = ["narwhals"]
+
+[project.plugins.mkdocstrings.handlers.python.options]
+docstring_style = "google"
+members_order = "alphabetical"
+separate_signature = true
+show_signature_annotations = true
+
+[project.markdown_extensions.admonition]
+[project.markdown_extensions.md_in_html]
+[project.markdown_extensions.pymdownx.details]
+[project.markdown_extensions.pymdownx.tabbed]
+alternate_style = true
+[project.markdown_extensions.pymdownx.superfences]
+custom_fences = [
+  { name = "python", class = "python", format = "pymdownx.superfences.fence_code_format" }
+]
+
+[project.markdown_extensions.pymdownx.emoji]
+emoji_index = "zensical.extensions.emoji.twemoji" 
+emoji_generator = "zensical.extensions.emoji.to_svg"
+
+[project.markdown_extensions.pymdownx.arithmatex]
+generic = true

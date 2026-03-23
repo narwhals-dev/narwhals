@@ -3,7 +3,7 @@
 Suppose you want to write Polars syntax and translate it to SQL.
 For example, what's the SQL equivalent to:
 
-```python exec="1" source="above" session="generating-sql"
+```py exec="1" source="above" session="generating-sql"
 import narwhals as nw
 from narwhals.typing import FrameT
 
@@ -27,7 +27,7 @@ Narwhals provides you with a `narwhals.sql` module to do just that!
 
 You can generate SQL directly from DuckDB.
 
-```python exec="1" source="above" session="generating-sql" result="sql"
+```py exec="1" source="above" session="generating-sql" result="sql"
 import narwhals as nw
 from narwhals.sql import table
 
@@ -44,7 +44,7 @@ print(result.to_sql())
 To make it look a bit prettier, you can pass `pretty=True`, but
 note that this currently requires [sqlparse](https://github.com/andialbrecht/sqlparse) to be installed.
 
-```python exec="1" source="above" session="generating-sql" result="sql"
+```py exec="1" source="above" session="generating-sql" result="sql"
 print(result.to_sql(pretty=True))
 ```
 
@@ -56,7 +56,7 @@ solutions below (which also use sqlglot).
 
 You can also use Ibis or SQLFrame to generate SQL:
 
-```python
+```py
 import ibis
 
 df = nw.from_native(ibis.table({"date": "date", "price": "double"}, name="prices"))
@@ -67,7 +67,7 @@ print(ibis.to_sql(avg_monthly_price(df).to_native()))
 
 You can also use SQLFrame:
 
-```python exec="1" source="above" session="generating-sql" result="sql"
+```py exec="1" source="above" session="generating-sql" result="sql"
 from sqlframe.standalone import StandaloneSession
 
 session = StandaloneSession.builder.getOrCreate()

@@ -12,7 +12,7 @@ If you haven't, this is also for you as you might experience it and you need to 
 Take the following two codes as an example.
 
 === "Approach 1"
-    ```python exec="true" source="above" result="python" session="df_ex1" hl_lines="12"
+    ```py exec="true" source="above" result="python" session="df_ex1" hl_lines="12"
     import narwhals as nw
     import pandas as pd
     from narwhals.typing import IntoFrameT
@@ -32,7 +32,7 @@ Take the following two codes as an example.
     ```
 
 === "Approach 2"
-    ```python exec="true" source="above" result="python" session="df_ex2" hl_lines="11"
+    ```py exec="true" source="above" result="python" session="df_ex2" hl_lines="11"
     import narwhals as nw
     import pandas as pd
 
@@ -60,7 +60,7 @@ pandas API lets us express.
 
 The literal pandas translation is:
 
-```python
+```py
 df.groupby("a").apply(
     lambda df: pd.Series([(df["b"] + df["c"]).sum()], index=["d"]), include_groups=False
 )
@@ -74,7 +74,7 @@ Let's take a look at how "approach 2" gets translated to pandas to see the diffe
 
 The literal pandas translation is:
 
-```python
+```py
 df.assign(d=lambda df: df["b"] + df["c"]).groupby("a").agg({"d": "sum"})
 ```
 

@@ -11,7 +11,7 @@ order to make sense of Narwhals:
 For example, `nw.col('a')` means "given a dataframe `df`, give me the Series `'a'` from `df`".
 Translating this to pandas syntax, we get:
 
-```python exec="1" source="above"
+```py exec="1" source="above"
 def col_a(df):
     return [df.loc[:, "a"]]
 ```
@@ -19,7 +19,7 @@ def col_a(df):
 Let's step up the complexity. How about `nw.col('a')+1`? We already know what the
 `nw.col('a')` part looks like, so we just need to add `1` to each of its outputs:
 
-```python exec="1" source="above"
+```py exec="1" source="above"
 def col_a(df):
     return [df.loc[:, "a"]]
 
@@ -30,7 +30,7 @@ def col_a_plus_1(df):
 
 Expressions can return multiple Series - for example, `nw.col('a', 'b')` translates to:
 
-```python exec="1" source="above"
+```py exec="1" source="above"
 def col_a_b(df):
     return [df.loc[:, "a"], df.loc[:, "b"]]
 ```
@@ -38,7 +38,7 @@ def col_a_b(df):
 Expressions can also take multiple columns as input - for example, `nw.sum_horizontal('a', 'b')`
 translates to:
 
-```python exec="1" source="above"
+```py exec="1" source="above"
 def sum_horizontal_a_b(df):
     return [df.loc[:, "a"] + df.loc[:, "b"]]
 ```
@@ -65,7 +65,7 @@ The pandas namespace (`pd`) isn't Narwhals-compliant, as the pandas API is very 
 from Polars'. So...Narwhals implements a `PandasLikeNamespace`, which includes the top-level
 Polars functions included in the Narwhals API:
 
-```python exec="1" source="above", result="python" session="pandas_impl"
+```py exec="1" source="above", result="python" session="pandas_impl"
 import pandas as pd
 import narwhals as nw
 from narwhals._pandas_like.namespace import PandasLikeNamespace
@@ -91,7 +91,7 @@ Note: the following examples use `PandasLikeDataFrame` and `PandasLikeSeries`. T
 by actual `pandas.DataFrame`s and `pandas.Series` respectively and are Narwhals-compliant. We can access the 
 underlying pandas objects via `PandasLikeDataFrame._native_frame` and `PandasLikeSeries._native_series`.
 
-```python exec="1" result="python" session="pandas_impl" source="above"
+```py exec="1" result="python" session="pandas_impl" source="above"
 import narwhals as nw
 from narwhals._pandas_like.namespace import PandasLikeNamespace
 from narwhals._pandas_like.utils import Implementation
@@ -156,7 +156,7 @@ and `narwhals.series` coordinate how to dispatch the Narwhals API to each backen
 
 If an end user executes some Narwhals code, such as
 
-```python
+```py
 df.select(nw.col("a") + 1)
 ```
 then how does that get mapped to the underlying dataframe's native API? Let's walk through
@@ -187,7 +187,7 @@ Each backend is expected to implement a Narwhals-compliant
 namespace (`PandasLikeNamespace`, `ArrowNamespace`, `PolarsNamespace`). These can be used to interact with the Narwhals-compliant
 Dataframe and Series objects described above - let's work through the motivating example to see how.
 
-```python exec="1" session="pandas_api_mapping" source="above"
+```py exec="1" session="pandas_api_mapping" source="above"
 import narwhals as nw
 from narwhals._pandas_like.namespace import PandasLikeNamespace
 from narwhals._pandas_like.utils import Implementation
@@ -208,7 +208,7 @@ df.select(nw.col("a") + 1)
 The first thing `narwhals.DataFrame.select` does is to parse each input expression to end up with a compliant expression for the given
 backend, and it does so by passing a Narwhals-compliant namespace to `nw.Expr._to_compliant_expr`:
 
-```python exec="1" result="python" session="pandas_api_mapping" source="above"
+```py exec="1" result="python" session="pandas_api_mapping" source="above"
 pn = PandasLikeNamespace(
     implementation=Implementation.PANDAS,
     version=Version.MAIN,
@@ -220,20 +220,20 @@ print(expr)
 If we then extract a Narwhals-compliant dataframe from `df` by
 calling `._compliant_frame`, we get a `PandasLikeDataFrame` - and that's an object which we can pass `expr` to!
 
-```python exec="1" session="pandas_api_mapping" source="above"
+```py exec="1" session="pandas_api_mapping" source="above"
 df_compliant = df._compliant_frame
 result = df_compliant.select(expr)
 ```
 
 We can then view the underlying pandas Dataframe which was produced by calling `._native_frame`:
 
-```python exec="1" result="python" session="pandas_api_mapping" source="above"
+```py exec="1" result="python" session="pandas_api_mapping" source="above"
 print(result._native_frame)
 ```
 
 which is the same as we'd have obtained by just using the Narwhals API directly:
 
-```python exec="1" result="python" session="pandas_api_mapping" source="above"
+```py exec="1" result="python" session="pandas_api_mapping" source="above"
 print(nw.to_native(df.select(nw.col("a") + 1)))
 ```
 
@@ -242,7 +242,7 @@ print(nw.to_native(df.select(nw.col("a") + 1)))
 Group-by is probably one of Polars' most significant innovations (on the syntax side) with respect
 to pandas. We can write something like
 
-```python
+```py
 df: pl.DataFrame
 df.group_by("a").agg((pl.col("c") > pl.col("b").mean()).max())
 ```
@@ -255,7 +255,7 @@ In Narwhals, here's what we do:
 - if somebody uses a simple group-by aggregation (e.g. `df.group_by('a').agg(nw.col('b').mean())`),
   then on the pandas side we translate it to
 
-    ```python
+    ```py
     df: pd.DataFrame
     df.groupby("a").agg({"b": ["mean"]})
     ```
@@ -268,7 +268,7 @@ In Narwhals, here's what we do:
 
 If we have a Narwhals expression, we can look at the operations which make it up by accessing `_nodes`:
 
-```python exec="1" result="python" session="pandas_impl" source="above"
+```py exec="1" result="python" session="pandas_impl" source="above"
 import narwhals as nw
 
 expr = nw.col("a").abs().std(ddof=1) + nw.col("b")
@@ -284,7 +284,7 @@ Each node represents an operation. Here, we have 4 operations:
 
 Let's take a look at a couple of these nodes. Let's start with the third one:
 
-```python exec="1" result="python" session="pandas_impl" source="above"
+```py exec="1" result="python" session="pandas_impl" source="above"
 print(expr._nodes[2].as_dict())
 ```
 
@@ -302,7 +302,7 @@ unpack a `ExprNode` and turn it into a valid call.
 
 Let's take a look at the fourth node:
 
-```python exec="1" result="python" session="pandas_impl" source="above"
+```py exec="1" result="python" session="pandas_impl" source="above"
 print(expr._nodes[3].as_dict())
 ```
 
@@ -314,7 +314,7 @@ or columns (e.g. `col('foo')`). Finally `allow_multi_output` tells us whether mu
 
 Note that the expression in `exprs` also has its own nodes:
 
-```python exec="1" result="python" session="pandas_impl" source="above"
+```py exec="1" result="python" session="pandas_impl" source="above"
 print(expr._nodes[3].exprs[0]._nodes)
 ```
 
@@ -324,7 +324,7 @@ It's nodes all the way down!
 
 Let's try printing out some compliant expressions' metadata to see what it shows us:
 
-```python exec="1" result="python" session="pandas_impl" source="above"
+```py exec="1" result="python" session="pandas_impl" source="above"
 import narwhals as nw
 
 print(nw.col("a")._to_compliant_expr(pn)._metadata)
@@ -448,7 +448,7 @@ How can we retain Polars' level of flexibility when translating to SQL engines?
 The answer is: by rewriting expressions. Specifically, we push down `over` nodes past elementwise ones.
 To see this, let's try printing the Narwhals equivalent of the last expression above (the one that SQL rejects):
 
-```python exec="1" result="python" session="pushdown" source="above"
+```py exec="1" result="python" session="pushdown" source="above"
 import narwhals as nw
 
 print(nw.col("a").sum().abs().over("b"))
@@ -475,7 +475,7 @@ This is what we refer to as "pushing down `over` nodes". The idea is:
 Note that the pushdown also applies to any arguments to the elementwise operation.
 For example, if we have
 
-```python
+```py
 (nw.col("a").sum() + nw.col("b").sum()).over("c")
 ```
 
@@ -483,7 +483,7 @@ then `+` is an elementwise operation and so can be swapped with `over`. We just 
 to take care to apply the `over` operation to all the arguments of `+`, so that we
 end up with
 
-```python
+```py
 nw.col("a").sum().over("c") + nw.col("b").sum().over("c")
 ```
 

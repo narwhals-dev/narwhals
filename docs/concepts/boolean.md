@@ -8,7 +8,7 @@ For example, if you do `nw.col('a')*2`, then:
 - Values which were non-null get multiplied by 2.
 - Null values stay null.
 
-```python exec="1" source="above" session="boolean"
+```py exec="1" source="above" session="boolean"
 import narwhals as nw
 from narwhals.typing import IntoFrameT
 
@@ -20,7 +20,7 @@ def multiplication(df: IntoFrameT) -> IntoFrameT:
 ```
 
 === "pandas"
-    ```python exec="true" source="material-block" result="python" session="boolean"
+    ```py exec="true" source="material-block" result="python" session="boolean"
     import pandas as pd
 
     df = pd.DataFrame(data)
@@ -28,7 +28,7 @@ def multiplication(df: IntoFrameT) -> IntoFrameT:
     ```
 
 === "Polars (eager)"
-    ```python exec="true" source="material-block" result="python" session="boolean"
+    ```py exec="true" source="material-block" result="python" session="boolean"
     import polars as pl
 
     df = pl.DataFrame(data)
@@ -36,7 +36,7 @@ def multiplication(df: IntoFrameT) -> IntoFrameT:
     ```
 
 === "PyArrow"
-    ```python exec="true" source="material-block" result="python" session="boolean"
+    ```py exec="true" source="material-block" result="python" session="boolean"
     import pyarrow as pa
 
     table = pa.table(data)
@@ -58,7 +58,7 @@ so we hope that the classical NumPy dtypes not supporting null values will just
 be a temporary legacy pandas issue which will eventually go
 away anyway.
 
-```python exec="1" source="above" session="boolean"
+```py exec="1" source="above" session="boolean"
 from narwhals.typing import FrameT
 
 
@@ -67,7 +67,7 @@ def comparison(df: FrameT) -> FrameT:
 ```
 
 === "pandas"
-    ```python exec="true" source="material-block" result="python" session="boolean"
+    ```py exec="true" source="material-block" result="python" session="boolean"
     import pandas as pd
 
     df = pd.DataFrame(data)
@@ -75,7 +75,7 @@ def comparison(df: FrameT) -> FrameT:
     ```
 
 === "Polars (eager)"
-    ```python exec="true" source="material-block" result="python" session="boolean"
+    ```py exec="true" source="material-block" result="python" session="boolean"
     import polars as pl
 
     df = pl.DataFrame(data)
@@ -83,7 +83,7 @@ def comparison(df: FrameT) -> FrameT:
     ```
 
 === "PyArrow"
-    ```python exec="true" source="material-block" result="python" session="boolean"
+    ```py exec="true" source="material-block" result="python" session="boolean"
     import pyarrow as pa
 
     table = pa.table(data)

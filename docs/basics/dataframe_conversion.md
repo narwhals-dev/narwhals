@@ -11,7 +11,7 @@ and easier to write than special casing each input library's `to_pandas` method 
 
 To illustrate, we create dataframes in various formats:
 
-```python exec="1" source="above" session="conversion"
+```py exec="1" source="above" session="conversion"
 import narwhals as nw
 from narwhals.typing import IntoDataFrame
 from typing import Any
@@ -34,7 +34,7 @@ df_duckdb = duckdb.sql("SELECT * FROM df_polars")
 
 Now, we define a function that can ingest any dataframe type supported by Narwhals, and convert it to a pandas DataFrame for internal use:
 
-```python exec="1" source="above" session="conversion" result="python"
+```py exec="1" source="above" session="conversion" result="python"
 def df_to_pandas(df: IntoDataFrame) -> pd.DataFrame:
     return nw.from_native(df).to_pandas()
 
@@ -49,7 +49,7 @@ print(df_to_pandas(df_polars))
 Similarly, if your library uses Polars internally, you can convert any user-supplied dataframe
 which implements `__arrow_c_stream__`:
 
-```python exec="1" source="above" session="conversion" result="python"
+```py exec="1" source="above" session="conversion" result="python"
 def df_to_polars(df_native: Any) -> pl.DataFrame:
     if hasattr(df_native, "__arrow_c_stream__"):
         return nw.from_arrow(df_native, backend=pl).to_native()

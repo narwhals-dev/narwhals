@@ -18,7 +18,7 @@ Let's learn about what Narwhals promises.
 
 ## 1. Narwhals will preserve your index for common dataframe operations
 
-```python exec="1" source="above" session="ex1"
+```py exec="1" source="above" session="ex1"
 import narwhals as nw
 from narwhals.typing import IntoFrameT
 
@@ -31,7 +31,7 @@ def my_func(df: IntoFrameT) -> IntoFrameT:
 
 Let's start with a dataframe with an Index with values `[7, 8, 9]`.
 
-```python exec="true" source="material-block" result="python" session="ex1"
+```py exec="true" source="material-block" result="python" session="ex1"
 import pandas as pd
 
 df = pd.DataFrame({"a": [2, 1, 3], "b": [3, 5, -3]}, index=[7, 8, 9])
@@ -48,7 +48,7 @@ raise errors.
 
 pandas automatically aligns indices for users. For example:
 
-```python exec="1" source="above" session="ex2"
+```py exec="1" source="above" session="ex2"
 import pandas as pd
 
 df_pd = pd.DataFrame({"a": [2, 1, 3], "b": [4, 5, 6]})
@@ -61,7 +61,7 @@ values `[1, 2, 3]`.
 
 **However**, here's what actually happens:
 
-```python exec="1" source="material-block" session="ex2" result="python"
+```py exec="1" source="material-block" session="ex2" result="python"
 print(df_pd)
 ```
 
@@ -70,7 +70,7 @@ In other words, pandas' index alignment undid the `sort_values` operation!
 Narwhals, on the other hand, preserves the index of the left-hand-side argument.
 Everything else will be inserted positionally, just like Polars would do:
 
-```python exec="1" source="material-block" session="ex2" result="python"
+```py exec="1" source="material-block" session="ex2" result="python"
 import narwhals as nw
 
 df = nw.from_native(df_pd)
