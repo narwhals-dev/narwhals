@@ -146,7 +146,7 @@ show_signature_annotations = true
 alternate_style = true
 [project.markdown_extensions.pymdownx.superfences]
 custom_fences = [
-  { name = "python", class = "python", format = "pymdownx.superfences.fence_code_format" }
+  { name = "python", class = "python", format = "markdown_exec.formatter", validator = "markdown_exec.validator"}
 ]
 
 [project.markdown_extensions.pymdownx.emoji]

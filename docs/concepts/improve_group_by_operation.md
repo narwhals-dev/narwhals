@@ -12,7 +12,7 @@ If you haven't, this is also for you as you might experience it and you need to 
 Take the following two codes as an example.
 
 === "Approach 1"
-    ```py exec="true" source="above" result="python" session="df_ex1" hl_lines="12"
+    ```python exec="yes" source="above" result="python" session="df_ex1" hl_lines="12"
     import narwhals as nw
     import pandas as pd
     from narwhals.typing import IntoFrameT
@@ -32,9 +32,10 @@ Take the following two codes as an example.
     ```
 
 === "Approach 2"
-    ```py exec="true" source="above" result="python" session="df_ex2" hl_lines="11"
+    ```python exec="yes" source="above" result="python" session="df_ex2" hl_lines="12"
     import narwhals as nw
     import pandas as pd
+    from narwhals.typing import IntoFrameT
 
     data = {"a": [1, 2, 3, 4, 5], "b": [5, 4, 3, 2, 1], "c": [10, 20, 30, 40, 50]}
 

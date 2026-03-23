@@ -198,7 +198,7 @@ So far, nothing, everything non-unstable from the main namespace should be avail
     `time_zone`.
     The effect of this can be seen when placing these dtypes in sets:
 
-    ```py exec="1" source="above" session="backcompat"
+    ```python exec="yes" source="above" session="backcompat"
     import narwhals.stable.v1 as nw_v1
     import narwhals as nw
 
@@ -214,7 +214,7 @@ So far, nothing, everything non-unstable from the main namespace should be avail
     we recommend using `==` instead, as that works consistently
     across namespaces:
 
-    ```py exec="1" source="above" session="backcompat"
+    ```python exec="yes" source="above" session="backcompat"
     # Recommended
     assert nw.Datetime("us") == nw.Datetime
     assert nw_v1.Datetime("us") == nw_v1.Datetime

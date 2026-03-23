@@ -127,7 +127,7 @@ Here is our dataframe-agnostic standard scaler:
     ```
 
 === "@narwhalify"
-    ```py exec="1" source="above" session="standard-scaler-example"
+    ```python exec="yes" source="above" session="standard-scaler-example"
     from typing import Self
     import narwhals as nw
     from narwhals.typing import DataFrameT
@@ -155,7 +155,7 @@ any eager-only features, we can pass a Polars LazyFrame to it and have it
 stay lazy!
 
 === "pandas"
-    ```py exec="true" source="material-block" result="python" session="standard-scaler-example"
+    ```python exec="yes" source="material-block" result="python" session="standard-scaler-example"
     import pandas as pd
 
     df_train = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 7]})
@@ -166,7 +166,7 @@ stay lazy!
     ```
 
 === "Polars"
-    ```py exec="true" source="material-block" result="python" session="standard-scaler-example"
+    ```python exec="yes" source="material-block" result="python" session="standard-scaler-example"
     import polars as pl
 
     df_train = pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 7]})

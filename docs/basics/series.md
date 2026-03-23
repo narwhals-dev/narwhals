@@ -23,7 +23,7 @@ user-provided Series. In that case, you'll need to pass `eager_only=True` to
 This can stay lazy, so we just use expressions:
 
 === "from/to_native"
-    ```py exec="1" source="above" session="series_ex1"
+    ```python exec="yes" source="above" session="series_ex1"
     import narwhals as nw
     from narwhals.typing import IntoFrameT
 
@@ -33,7 +33,7 @@ This can stay lazy, so we just use expressions:
     ```
 
 === "@narwhalify"
-    ```py exec="1" source="above" session="series_ex1"
+    ```python exec="yes" source="above" session="series_ex1"
     import narwhals as nw
     from narwhals.typing import FrameT
 
@@ -46,7 +46,7 @@ This can stay lazy, so we just use expressions:
 and call it either on a eager or lazy dataframe:
 
 === "pandas"
-    ```py exec="true" source="material-block" result="python" session="series_ex1"
+    ```python exec="yes" source="material-block" result="python" session="series_ex1"
     import pandas as pd
 
     df = pd.DataFrame({"a": [-1, 1, 3], "b": [3, 5, -3]})
@@ -54,7 +54,7 @@ and call it either on a eager or lazy dataframe:
     ```
 
 === "Polars (eager)"
-    ```py exec="true" source="material-block" result="python" session="series_ex1"
+    ```python exec="yes" source="material-block" result="python" session="series_ex1"
     import polars as pl
 
     df = pl.DataFrame({"a": [-1, 1, 3], "b": [3, 5, -3]})
@@ -62,7 +62,7 @@ and call it either on a eager or lazy dataframe:
     ```
 
 === "Polars (lazy)"
-    ```py exec="true" source="material-block" result="python" session="series_ex1"
+    ```python exec="yes" source="material-block" result="python" session="series_ex1"
     import polars as pl
 
     df = pl.LazyFrame({"a": [-1, 1, 3], "b": [3, 5, -3]})
@@ -70,7 +70,7 @@ and call it either on a eager or lazy dataframe:
     ```
 
 === "PyArrow"
-    ```py exec="true" source="material-block" result="python" session="series_ex1"
+    ```python exec="yes" source="material-block" result="python" session="series_ex1"
     import pyarrow as pa
 
     table = pa.table({"a": [-1, 1, 3], "b": [3, 5, -3]})
@@ -83,7 +83,7 @@ Let's write a dataframe-agnostic function which multiplies the values in column
 `'a'` by 2. This can also stay lazy, and can use expressions:
 
 === "from/to_native"
-    ```py exec="1" source="above" session="series_ex2"
+    ```python exec="yes" source="above" session="series_ex2"
     import narwhals as nw
     from narwhals.typing import IntoFrameT
 
@@ -93,7 +93,7 @@ Let's write a dataframe-agnostic function which multiplies the values in column
     ```
 
 === "@narwhalify"
-    ```py exec="1" source="above" session="series_ex2"
+    ```python exec="yes" source="above" session="series_ex2"
     import narwhals as nw
     from narwhals.typing import FrameT
 
@@ -106,7 +106,7 @@ Let's write a dataframe-agnostic function which multiplies the values in column
 and call it either on a eager or lazy dataframe:
 
 === "pandas"
-    ```py exec="true" source="material-block" result="python" session="series_ex2"
+    ```python exec="yes" source="material-block" result="python" session="series_ex2"
     import pandas as pd
 
     df = pd.DataFrame({"a": [-1, 1, 3], "b": [3, 5, -3]})
@@ -114,7 +114,7 @@ and call it either on a eager or lazy dataframe:
     ```
 
 === "Polars (eager)"
-    ```py exec="true" source="material-block" result="python" session="series_ex2"
+    ```python exec="yes" source="material-block" result="python" session="series_ex2"
     import polars as pl
 
     df = pl.DataFrame({"a": [-1, 1, 3], "b": [3, 5, -3]})
@@ -122,7 +122,7 @@ and call it either on a eager or lazy dataframe:
     ```
 
 === "Polars (lazy)"
-    ```py exec="true" source="material-block" result="python" session="series_ex2"
+    ```python exec="yes" source="material-block" result="python" session="series_ex2"
     import polars as pl
 
     df = pl.LazyFrame({"a": [-1, 1, 3], "b": [3, 5, -3]})
@@ -130,7 +130,7 @@ and call it either on a eager or lazy dataframe:
     ```
 
 === "PyArrow"
-    ```py exec="true" source="material-block" result="python" session="series_ex2"
+    ```python exec="yes" source="material-block" result="python" session="series_ex2"
     import pyarrow as pa
 
     table = pa.table({"a": [-1, 1, 3], "b": [3, 5, -3]})
@@ -140,7 +140,7 @@ and call it either on a eager or lazy dataframe:
 Note that column `'a'` was overwritten. If we had wanted to add a new column called `'c'` containing column `'a'`'s
 values multiplied by 2, we could have used `Expr.alias`:
 
-```py exec="1" source="above" session="series_ex2.1"
+```python exec="yes" source="above" session="series_ex2.1"
 import narwhals as nw
 from narwhals.typing import FrameT
 
@@ -151,7 +151,7 @@ def my_func(df: FrameT) -> FrameT:
 ```
 
 === "pandas"
-    ```py exec="true" source="material-block" result="python" session="series_ex2.1"
+    ```python exec="yes" source="material-block" result="python" session="series_ex2.1"
     import pandas as pd
 
     df = pd.DataFrame({"a": [-1, 1, 3], "b": [3, 5, -3]})
@@ -159,7 +159,7 @@ def my_func(df: FrameT) -> FrameT:
     ```
 
 === "Polars (eager)"
-    ```py exec="true" source="material-block" result="python" session="series_ex2.1"
+    ```python exec="yes" source="material-block" result="python" session="series_ex2.1"
     import polars as pl
 
     df = pl.DataFrame({"a": [-1, 1, 3], "b": [3, 5, -3]})
@@ -167,7 +167,7 @@ def my_func(df: FrameT) -> FrameT:
     ```
 
 === "Polars (lazy)"
-    ```py exec="true" source="material-block" result="python" session="series_ex2.1"
+    ```python exec="yes" source="material-block" result="python" session="series_ex2.1"
     import polars as pl
 
     df = pl.LazyFrame({"a": [-1, 1, 3], "b": [3, 5, -3]})
@@ -175,7 +175,7 @@ def my_func(df: FrameT) -> FrameT:
     ```
 
 === "PyArrow"
-    ```py exec="true" source="material-block" result="python" session="series_ex2.1"
+    ```python exec="yes" source="material-block" result="python" session="series_ex2.1"
     import pyarrow as pa
 
     table = pa.table({"a": [-1, 1, 3], "b": [3, 5, -3]})
@@ -190,7 +190,7 @@ Therefore, we'll pass `eager_only=True` to `nw.from_native` (or `nw.narwhalify`)
 and then, instead of using expressions, we'll extract a `Series`.
 
 === "from/to_native"
-    ```py exec="1" source="above" session="series_ex3"
+    ```python exec="yes" source="above" session="series_ex3"
     import narwhals as nw
     from narwhals.typing import IntoDataFrameT
 
@@ -200,7 +200,7 @@ and then, instead of using expressions, we'll extract a `Series`.
     ```
 
 === "@narwhalify"
-    ```py exec="1" source="above" session="series_ex3"
+    ```python exec="yes" source="above" session="series_ex3"
     import narwhals as nw
     from narwhals.typing import DataFrameT
 
@@ -213,7 +213,7 @@ and then, instead of using expressions, we'll extract a `Series`.
 Now we can call it on a eager dataframe only:
 
 === "pandas"
-    ```py exec="true" source="material-block" result="python" session="series_ex3"
+    ```python exec="yes" source="material-block" result="python" session="series_ex3"
     import pandas as pd
 
     df = pd.DataFrame({"a": [-1, 1, 3], "b": [3, 5, -3]})
@@ -221,7 +221,7 @@ Now we can call it on a eager dataframe only:
     ```
 
 === "Polars (eager)"
-    ```py exec="true" source="material-block" result="python" session="series_ex3"
+    ```python exec="yes" source="material-block" result="python" session="series_ex3"
     import polars as pl
 
     df = pl.DataFrame({"a": [-1, 1, 3], "b": [3, 5, -3]})
@@ -229,7 +229,7 @@ Now we can call it on a eager dataframe only:
     ```
 
 === "PyArrow"
-    ```py exec="true" source="material-block" result="python" session="series_ex3"
+    ```python exec="yes" source="material-block" result="python" session="series_ex3"
     import pyarrow as pa
 
     table = pa.table({"a": [-1, 1, 3], "b": [3, 5, -3]})

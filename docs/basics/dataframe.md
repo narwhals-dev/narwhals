@@ -22,7 +22,7 @@ Just like in Polars, we can pass expressions to `DataFrame.select` or `LazyFrame
 Make a Python file with the following content:
 
 === "from/to_native"
-    ```py exec="1" source="above" session="df_ex1"
+    ```python exec="yes" source="above" session="df_ex1"
     import narwhals as nw
     from narwhals.typing import IntoFrameT
 
@@ -40,7 +40,7 @@ Make a Python file with the following content:
     ```
 
 === "@narwhalify"
-    ```py exec="1" source="above" session="df_ex1"
+    ```python exec="yes" source="above" session="df_ex1"
     import narwhals as nw
     from narwhals.typing import FrameT
 
@@ -57,7 +57,7 @@ Make a Python file with the following content:
 Let's try it out:
 
 === "pandas"
-    ```py exec="true" source="material-block" result="python" session="df_ex1"
+    ```python exec="yes"" source="material-block" result="python" session="df_ex1"
     import pandas as pd
 
     df = pd.DataFrame({"a": [1, 1, 2]})
@@ -65,7 +65,7 @@ Let's try it out:
     ```
 
 === "Polars (eager)"
-    ```py exec="true" source="material-block" result="python" session="df_ex1"
+    ```python exec="yes"" source="material-block" result="python" session="df_ex1"
     import polars as pl
 
     df = pl.DataFrame({"a": [1, 1, 2]})
@@ -73,7 +73,7 @@ Let's try it out:
     ```
 
 === "Polars (lazy)"
-    ```py exec="true" source="material-block" result="python" session="df_ex1"
+    ```python exec="yes"" source="material-block" result="python" session="df_ex1"
     import polars as pl
 
     df = pl.LazyFrame({"a": [1, 1, 2]})
@@ -81,7 +81,7 @@ Let's try it out:
     ```
 
 === "PyArrow"
-    ```py exec="true" source="material-block" result="python" session="df_ex1"
+    ```python exec="yes"" source="material-block" result="python" session="df_ex1"
     import pyarrow as pa
 
     table = pa.table({"a": [1, 1, 2]})
@@ -94,7 +94,7 @@ Just like in Polars, we can pass expressions to `GroupBy.agg`.
 Make a Python file with the following content:
 
 === "from/to_native"
-    ```py exec="1" source="above" session="df_ex2"
+    ```python exec="yes" source="above" session="df_ex2"
     import narwhals as nw
     from narwhals.typing import IntoFrameT
 
@@ -106,7 +106,7 @@ Make a Python file with the following content:
     ```
 
 === "@narwhalify"
-    ```py exec="1" source="above" session="df_ex2"
+    ```python exec="yes" source="above" session="df_ex2"
     import narwhals as nw
     from narwhals.typing import FrameT
 
@@ -119,7 +119,7 @@ Make a Python file with the following content:
 Let's try it out:
 
 === "pandas"
-    ```py exec="true" source="material-block" result="python" session="df_ex2"
+    ```python exec="yes" source="material-block" result="python" session="df_ex2"
     import pandas as pd
 
     df = pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
@@ -127,7 +127,7 @@ Let's try it out:
     ```
 
 === "Polars (eager)"
-    ```py exec="true" source="material-block" result="python" session="df_ex2"
+    ```python exec="yes" source="material-block" result="python" session="df_ex2"
     import polars as pl
 
     df = pl.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
@@ -135,7 +135,7 @@ Let's try it out:
     ```
 
 === "Polars (lazy)"
-    ```py exec="true" source="material-block" result="python" session="df_ex2"
+    ```python exec="yes" source="material-block" result="python" session="df_ex2"
     import polars as pl
 
     df = pl.LazyFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
@@ -143,7 +143,7 @@ Let's try it out:
     ```
 
 === "PyArrow"
-    ```py exec="true" source="material-block" result="python" session="df_ex2"
+    ```python exec="yes" source="material-block" result="python" session="df_ex2"
     import pyarrow as pa
 
     table = pa.table({"a": [1, 1, 2], "b": [4, 5, 6]})
@@ -158,7 +158,7 @@ For example, we can compute a horizontal sum using `nw.sum_horizontal`.
 Make a Python file with the following content:
 
 === "from/to_native"
-    ```py exec="1" source="above" session="df_ex3"
+    ```python exec="yes" source="above" session="df_ex3"
     import narwhals as nw
     from narwhals.typing import IntoFrameT
 
@@ -172,7 +172,7 @@ Make a Python file with the following content:
     ```
 
 === "@narwhalify"
-    ```py exec="1" source="above" session="df_ex3"
+    ```python exec="yes" source="above" session="df_ex3"
     import narwhals as nw
     from narwhals.typing import FrameT
 
@@ -185,7 +185,7 @@ Make a Python file with the following content:
 Let's try it out:
 
 === "pandas"
-    ```py exec="true" source="material-block" result="python" session="df_ex3"
+    ```python exec="yes" source="material-block" result="python" session="df_ex3"
     import pandas as pd
 
     df = pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
@@ -193,7 +193,7 @@ Let's try it out:
     ```
 
 === "Polars (eager)"
-    ```py exec="true" source="material-block" result="python" session="df_ex3"
+    ```python exec="yes" source="material-block" result="python" session="df_ex3"
     import polars as pl
 
     df = pl.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
@@ -201,7 +201,7 @@ Let's try it out:
     ```
 
 === "Polars (lazy)"
-    ```py exec="true" source="material-block" result="python" session="df_ex3"
+    ```python exec="yes" source="material-block" result="python" session="df_ex3"
     import polars as pl
 
     df = pl.LazyFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
@@ -209,7 +209,7 @@ Let's try it out:
     ```
 
 === "PyArrow"
-    ```py exec="true" source="material-block" result="python" session="df_ex3"
+    ```python exec="yes" source="material-block" result="python" session="df_ex3"
     import pyarrow as pa
 
     table = pa.table({"a": [1, 1, 2], "b": [4, 5, 6]})
@@ -226,7 +226,7 @@ on a series.
 
 Make a Python file with the following content:
 
-```py exec="1" source="above" session="df_ex4"
+```python exec="yes" source="above" session="df_ex4"
 import narwhals as nw
 from narwhals.typing import DataFrameT
 
@@ -241,7 +241,7 @@ We require `eager_only=True` here because lazyframe doesn't support `.shape`.
 Let's try it out:
 
 === "pandas"
-    ```py exec="true" source="material-block" result="python" session="df_ex4"
+    ```python exec="yes" source="material-block" result="python" session="df_ex4"
     import pandas as pd
 
     df = pd.DataFrame({"a": [1, 1, 2, 2, 3], "b": [4, 5, 6, 7, 8]})
@@ -250,7 +250,7 @@ Let's try it out:
     ```
 
 === "Polars (eager)"
-    ```py exec="true" source="material-block" result="python" session="df_ex4"
+    ```python exec="yes" source="material-block" result="python" session="df_ex4"
     import polars as pl
 
     df = pl.DataFrame({"a": [1, 1, 2, 2, 3], "b": [4, 5, 6, 7, 8]})
@@ -259,7 +259,7 @@ Let's try it out:
     ```
 
 === "PyArrow"
-    ```py exec="true" source="material-block" result="python" session="df_ex4"
+    ```python exec="yes" source="material-block" result="python" session="df_ex4"
     import pyarrow as pa
 
     table = pa.table({"a": [1, 1, 2, 2, 3], "b": [4, 5, 6, 7, 8]})

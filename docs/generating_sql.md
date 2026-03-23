@@ -3,7 +3,7 @@
 Suppose you want to write Polars syntax and translate it to SQL.
 For example, what's the SQL equivalent to:
 
-```py exec="1" source="above" session="generating-sql"
+```python exec="yes" source="above" session="generating-sql"
 import narwhals as nw
 from narwhals.typing import FrameT
 
@@ -27,7 +27,7 @@ Narwhals provides you with a `narwhals.sql` module to do just that!
 
 You can generate SQL directly from DuckDB.
 
-```py exec="1" source="above" session="generating-sql" result="sql"
+```python exec="yes" source="above" session="generating-sql" result="sql"
 import narwhals as nw
 from narwhals.sql import table
 
@@ -44,7 +44,7 @@ print(result.to_sql())
 To make it look a bit prettier, you can pass `pretty=True`, but
 note that this currently requires [sqlparse](https://github.com/andialbrecht/sqlparse) to be installed.
 
-```py exec="1" source="above" session="generating-sql" result="sql"
+```python exec="yes" source="above" session="generating-sql" result="sql"
 print(result.to_sql(pretty=True))
 ```
 
@@ -67,7 +67,7 @@ print(ibis.to_sql(avg_monthly_price(df).to_native()))
 
 You can also use SQLFrame:
 
-```py exec="1" source="above" session="generating-sql" result="sql"
+```python exec="yes" source="above" session="generating-sql" result="sql"
 from sqlframe.standalone import StandaloneSession
 
 session = StandaloneSession.builder.getOrCreate()
