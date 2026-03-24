@@ -357,10 +357,10 @@ class DispatcherOptions:
 
     `override_name` provides an escape hatch for edge cases:
 
-        >>> show_dispatch_names(ir.Column, ir.Literal, ir.boolean.Not)
-        Column  -> col
-        Literal -> lit
-        Not     -> not_
+        >>> show_dispatch_names(ir.Column, ir.Lit, ir.boolean.Not)
+        Column -> col
+        Lit    -> lit
+        Not    -> not_
 
     [snake_case]: https://en.wikipedia.org/wiki/Snake_case
     [PascalCase]: https://en.wikipedia.org/wiki/Naming_convention_(programming)#Examples_of_multiple-word_identifier_formats

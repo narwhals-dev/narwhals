@@ -300,7 +300,7 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
         ## Notes
         Subclasses should override in 2 cases:
         1. They are unconditionally scalar (`Len`, `AggExpr`)
-        2. They answer the question using non-node fields (`FunctionExpr.function`, `Literal.value`)
+        2. They answer the question using non-node fields (`FunctionExpr.function`, `Lit.value`)
         """
         return self.__expr_ir_nodes__.is_scalar(self)
 
@@ -462,7 +462,8 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
         A root node with a `name`:
 
             Column
-            Literal
+            Lit
+            LitSeries
             Len
 
         A leaf node with a `name`:
