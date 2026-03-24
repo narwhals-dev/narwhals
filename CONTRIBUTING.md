@@ -312,9 +312,24 @@ Full discussion at [narwhals#1943](https://github.com/narwhals-dev/narwhals/issu
 
 ### 9. Building the docs
 
-To build the docs, run `mkdocs serve`, and then open the link provided in a browser.
-The docs should refresh when you make changes. If they don't, press `ctrl+C`, and then
-do `mkdocs build` and then `mkdocs serve`.
+To serve the docs locally, run:
+  
+  ```terminal
+  python utils/generate_backend_completeness.py
+  python utils/generate_zen_content.py
+  zensical serve
+  ```
+
+and then open the link provided in a browser.
+
+The docs should refresh when you make changes. If they don't, press `ctrl+C`, and then run:
+
+```terminal
+  python utils/generate_backend_completeness.py
+  python utils/generate_zen_content.py
+  zensical build --clean
+  zensical serve
+  ```
 
 ### 10. Pull requests
 
