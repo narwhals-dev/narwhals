@@ -35,6 +35,7 @@ Interestingly, that meant:
 
 from __future__ import annotations
 
+from functools import cache
 from typing import TYPE_CHECKING
 
 from narwhals._plan._dispatch import Dispatcher, DispatcherOptions
@@ -60,7 +61,6 @@ ELEMENTWISE = FunctionFlags.ELEMENTWISE
 
 
 # TODO @dangotbanned: Finish `Function` class doc
-# TODO @dangotbanned: Add `ClassVar` docs
 # TODO @dangotbanned: Introduce the concept of *arity* + replace `unwrap_input`
 # TODO @dangotbanned: `RangeExpr` (and probably others) have input shape requirements
 class Function(Immutable):
@@ -86,7 +86,6 @@ class Function(Immutable):
     Function(args) : Shift(n=2)
     ExprIR input(s): Column(name='a')
 
-
     <!--TODO @dangotbanned: Finish this section -->
 
     Classes store all other details:
@@ -107,12 +106,19 @@ class Function(Immutable):
         return self._flags
 
     def is_scalar(self) -> bool:  # pragma: no cover
+        """Return True if this function produces a single value."""
         return FunctionFlags.AGGREGATION in self.flags
 
     def to_function_expr(self, *inputs: ExprIR) -> FunctionExpr[Self]:
-        from narwhals._plan.expressions.expr import FunctionExpr
+        """Wrap this `Function` in a `FunctionExpr`.
 
-        return FunctionExpr(input=inputs, function=self, flags=self.flags)
+        Arguments:
+            *inputs: Expression arguments for the function.
+                The first input is the root and responsible for the output name.
+        """
+        # NOTE: Defined as a method to allow these guys to override:
+        # - `RollingWindow`, `MapBatches`, `RangeFunction`, `StructFunction`
+        return import_function_expr()(input=inputs, function=self, flags=self.flags)
 
     def __init_subclass__(
         cls: type[Self],
@@ -186,3 +192,11 @@ class HorizontalFunction(Function, flags=ELEMENTWISE, dispatch=namespaced()):
     [fold]: https://docs.pola.rs/user-guide/expressions/folds/
     [reduce]: https://mathspp.com/blog/pydonts/the-power-of-reduce
     """
+
+
+@cache
+def import_function_expr() -> type[FunctionExpr[Any]]:
+    # NOTE: Very heavily used (`Function.to_function_expr`), but creates a cycle
+    from narwhals._plan.expressions.expr import FunctionExpr
+
+    return FunctionExpr
