@@ -54,7 +54,7 @@ def two() -> TwoSlot:
     return TwoSlot(a=1, b="two")
 
 
-def test_immutable_really_immutable(
+def test_immutable_setattr(
     empty: Empty, empty_derived: EmptyDerived, one: OneSlot, two: TwoSlot
 ) -> None:
     with pytest.raises(AttributeError, match=r"Empty.+immutable.+'a'"):
@@ -70,6 +70,19 @@ def test_immutable_really_immutable(
         two.a += 2  # type: ignore[misc]
     with pytest.raises(AttributeError, match=r"TwoSlot.+immutable.+'b'"):
         two.b = 2  # type: ignore[assignment, misc]
+
+
+def test_immutable_delattr(
+    empty_derived: EmptyDerived, one: OneSlot, two: TwoSlot
+) -> None:
+    with pytest.raises(AttributeError, match=r"EmptyDerived.+immutable.+'a'"):
+        del empty_derived.a  # pyright: ignore[reportAttributeAccessIssue]
+    with pytest.raises(AttributeError, match=r"OneSlot.+immutable.+'a'"):
+        del one.a  # pyright: ignore[reportAttributeAccessIssue]
+    with pytest.raises(AttributeError, match=r"OneSlot.+immutable.+'b'"):
+        del one.b  # type: ignore[attr-defined]
+    with pytest.raises(AttributeError, match=r"TwoSlot.+immutable.+'a'"):
+        del two.a, two.b  # pyright: ignore[reportAttributeAccessIssue]
 
 
 def test_immutable_hash(

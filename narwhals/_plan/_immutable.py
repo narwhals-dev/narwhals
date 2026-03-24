@@ -163,10 +163,17 @@ class Immutable(metaclass=ImmutableMeta):
             _OBJ_SETATTR(self, HASH, hash_value)
         return hash_value
 
-    # TODO @dangotbanned: Implement the same for `__delattr__`
     def __setattr__(self, name: str, value: Never) -> Never:
         msg = f"{type(self).__name__!r} is immutable, {name!r} cannot be set."
         raise AttributeError(msg)
+
+    if TYPE_CHECKING:
+        ...
+    else:
+
+        def __delattr__(self, name: str) -> Never:
+            msg = f"{type(self).__name__!r} is immutable, {name!r} cannot be deleted."
+            raise AttributeError(msg)
 
     def __replace__(self, **changes: Any) -> Self:
         """Create a new object of the same type, [replacing] fields with values from `changes`.
