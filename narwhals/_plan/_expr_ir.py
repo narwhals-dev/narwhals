@@ -528,6 +528,9 @@ class SelectorIR(ExprIR, dispatch="no_dispatch"):
 
     # NOTE: Corresponds with `Selector.iter_expand`
     # A longer name is used here to distinguish expression and name-only expansion
+    # TODO @dangotbanned: Docs must stay synced with inner!
+    # - [ ] Use markdown that renders better w/ pylance
+    # - [ ] Add an example?
     def iter_expand_names(
         self, schema: FrozenSchema, ignored_columns: Ignored
     ) -> Iterator[str]:
@@ -550,11 +553,13 @@ class SelectorIR(ExprIR, dispatch="no_dispatch"):
         msg = f"{type(self).__name__}.iter_expand_names"
         raise NotImplementedError(msg)
 
+    # TODO @dangotbanned: Explain `matches`
     def matches(self, dtype: IntoDType) -> bool:
         """Return True if we can select this dtype."""
         msg = f"{type(self).__name__}.matches"
         raise NotImplementedError(msg)
 
+    # TODO @dangotbanned: Explain `to_dtype_selector`
     def to_dtype_selector(self) -> Self:
         msg = f"{type(self).__name__}.to_dtype_selector"
         raise NotImplementedError(msg)
@@ -566,10 +571,12 @@ class SelectorIR(ExprIR, dispatch="no_dispatch"):
         return True
 
 
+# TODO @dangotbanned: Class-doc is a mess
 @final
 class NamedIR(Immutable, Generic[ExprIRT_co]):
     """Post-projection expansion wrapper for `ExprIR`.
 
+    - Multi-output (selectors) expressions have been expanded at this stage.
     - Somewhat similar to [`polars_plan::plans::expr_ir::ExprIR`].
     - The [`polars_plan::plans::aexpr::AExpr`] stage has been skipped (*for now*)
       - Parts of that will probably be in here too
@@ -652,9 +659,6 @@ class NamedIR(Immutable, Generic[ExprIRT_co]):
 
     def is_column(self, *, allow_aliasing: bool = False) -> bool:
         """Return True if wrapping a single `Column` node.
-
-        Note:
-            Multi-output (including selectors) expressions have been expanded at this stage.
 
         Arguments:
             allow_aliasing: If False (default), any aliasing is not considered to be column selection.
