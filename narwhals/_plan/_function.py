@@ -96,14 +96,37 @@ class Function(Immutable):
         `narwhals._plan._function.py` doc for implementation notes
     """
 
-    # TODO @dangotbanned: Naming convention isn't consistent
-    _flags: ClassVar[FunctionFlags] = FunctionFlags.DEFAULT
+    __function_flags__: ClassVar[FunctionFlags] = FunctionFlags.DEFAULT
+    """Defines properties of the function.
+
+    Flags tell us how a function transforms the shape of it's input:
+
+        ┌───────────────────┬───────────────┬───────────┐
+        │ Flag              ┆ Input         ┆ Output    │
+        ╞═══════════════════╪═══════════════╪═══════════╡
+        │ AGGREGATION       ┆ Column        ┆ Scalar    │
+        │ ROW_SEPARABLE     ┆ Column        ┆ Unknown   │
+        │ LENGTH_PRESERVING ┆ Column/Scalar ┆ Preserved │
+        │ ELEMENTWISE       ┆ Column/Scalar ┆ Preserved │
+        └───────────────────┴───────────────┴───────────┘
+
+    And that's the main nugget we can use to answer the question:
+    > Is this function valid *here*?
+
+    See `FunctionFlags` for examples.
+
+    To customize the behavior, use the `flags` **parameter** [when subclassing]:
+
+        class FillNull(Function, flags=FunctionFlags.ELEMENTWISE): ...
+
+    [when subclassing]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
+    """
     __expr_ir_dispatch__: ClassVar[Dispatcher[FunctionExpr[Self]]] = Dispatcher()
     __expr_ir_dtype__: ClassVar[ResolveDType[FunctionExpr[Self]]] = ResolveDType()
 
     @property
     def flags(self) -> FunctionFlags:
-        return self._flags
+        return self.__function_flags__
 
     def is_scalar(self) -> bool:  # pragma: no cover
         """Return True if this function produces a single value."""
@@ -131,7 +154,7 @@ class Function(Immutable):
     ) -> None:
         super().__init_subclass__(**kwds)
         if flags is not None:
-            cls._flags = flags
+            cls.__function_flags__ = flags
         cls.__expr_ir_dispatch__ = Dispatcher.from_function(cls, dispatch, accessor)
         if dtype is not None:
             if isinstance(dtype, DType):

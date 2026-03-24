@@ -275,7 +275,7 @@ class GatherEvery(_SameDType):
 
 
 # TODO @dangotbanned: `map_batches` is the only case that needs an instance for `FunctionFlags`
-# Would be great to reduce the `flags`/_`flags` pair
+# Would be great to reduce the `flags`/`__function_flags__` pair
 class MapBatches(Function):
     __slots__ = ("function", "is_elementwise", "return_dtype", "returns_scalar")
     function: Udf
