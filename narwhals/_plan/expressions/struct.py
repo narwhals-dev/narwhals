@@ -25,7 +25,7 @@ ELEMENTWISE = FunctionFlags.ELEMENTWISE
 renamed = DispatcherOptions.renamed
 
 
-class StructFunction(Function, accessor="struct"):
+class StructFunction(Function, dispatch=DispatcherOptions(accessor_name="struct")):
     def to_function_expr(self, *inputs: ExprIR) -> StructExpr[Self]:
         from narwhals._plan.expressions.expr import StructExpr
 

@@ -163,24 +163,27 @@ class Dispatcher(Generic[Node]):
             return Dispatcher(tp.__name__, options=options)
         return Dispatcher._from_type(tp, options)
 
-    # TODO @dangotbanned: Clean up explanation
     @staticmethod
     def from_function(
-        tp: type[FunctionT],
-        options: DispatcherOptions | None,
-        accessor: Accessor | None,
-        /,
+        tp: type[FunctionT], options: DispatcherOptions | None, /
     ) -> Dispatcher[FunctionExpr[FunctionT]]:
-        # merge `Function.__init_subclass__(accessor=)` with any inherited or newly defined options
-        # very fiddly, but the idea is an `accessor_name` in a parent is sticky
-        # and should be preserved when other dispatcher options are applied to children
-        # `FieldByName` -> `struct.field`
-        # `ZFill`       -> `str.zfill`
+        """Create a new `Function` dispatcher.
+
+        When `options` is None, the options of the parent are inherited.
+
+        If a parent defines an `accessor_name`, it is **sticky** and will be merged
+        with options of a child:
+
+        >>> from narwhals._plan._function import Function
+        >>> options = DispatcherOptions
+        >>> class StringFunction(Function, dispatch=options(accessor_name="str")): ...
+        >>> class ZFill(StringFunction, dispatch=options.renamed("zfill")): ...
+        >>> get_dispatch_name(ZFill)
+        'str.zfill'
+        """
         options_parent = tp.__expr_ir_dispatch__.options
         options = options or options_parent
-        if accessor_name := (
-            accessor or options_parent.accessor_name or options.accessor_name
-        ):
+        if accessor_name := (options_parent.accessor_name or options.accessor_name):
             options = DispatcherOptions(
                 is_namespaced=options.is_namespaced,
                 override_name=options.override_name,

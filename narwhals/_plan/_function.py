@@ -52,7 +52,7 @@ if TYPE_CHECKING:
 
     from narwhals._plan.expressions import ExprIR, FunctionExpr
     from narwhals._plan.schema import FrozenSchema
-    from narwhals._plan.typing import Accessor, Seq
+    from narwhals._plan.typing import Seq
 
 __all__ = ["Function", "HorizontalFunction"]
 
@@ -150,16 +150,15 @@ class Function(Immutable):
     def __init_subclass__(
         cls: type[Self],
         *,
-        accessor: Accessor | None = None,
-        flags: FunctionFlags | None = None,
         dispatch: DispatcherOptions | None = None,
         dtype: IntoResolveDType[Self] | None = None,
-        **kwds: Any,
+        flags: FunctionFlags | None = None,
+        **_: Any,
     ) -> None:
-        super().__init_subclass__(**kwds)
+        super().__init_subclass__(**_)
         if flags is not None:
             cls.__function_flags__ = flags
-        cls.__expr_ir_dispatch__ = Dispatcher.from_function(cls, dispatch, accessor)
+        cls.__expr_ir_dispatch__ = Dispatcher.from_function(cls, dispatch)
         if dtype is not None:
             if isinstance(dtype, DType):
                 dtype = ResolveDType.just_dtype(dtype)

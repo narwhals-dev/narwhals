@@ -62,7 +62,7 @@ def test_missing_compliant(
     # If you add a new expression, but don't update the compliant-level this should 🙏
     # nudge you in the right direction
 
-    class MissingMethod(ir.Function, accessor="str"): ...
+    class MissingMethod(ir.Function, dispatch=DispatcherOptions(accessor_name="str")): ...
 
     class MissingNamespaced(ir.ExprIR, dispatch=DispatcherOptions.namespaced()):
         __slots__ = ("expr",)

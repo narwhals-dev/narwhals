@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, TypeVar
 
 import narwhals._plan.dtypes_mapper as dtm
 from narwhals._duration import Interval
+from narwhals._plan._dispatch import DispatcherOptions
 from narwhals._plan._dtype import ResolveDType
 from narwhals._plan._flags import FunctionFlags
 from narwhals._plan._function import Function
@@ -33,7 +34,7 @@ def _is_polars_time_unit(obj: Any) -> TypeIs[PolarsTimeUnit]:
 
 
 # fmt: off
-class TemporalFunction(Function, accessor="dt", flags=ELEMENTWISE): ...
+class TemporalFunction(Function, dispatch=DispatcherOptions(accessor_name="dt"), flags=ELEMENTWISE): ...
 class _TemporalInt8(TemporalFunction, dtype=dtm.I8): ...
 class _TemporalInt32(TemporalFunction, dtype=dtm.I32): ...
 class _TemporalInt64(TemporalFunction, dtype=dtm.I64): ...

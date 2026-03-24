@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, ClassVar
 
 import narwhals._plan.dtypes_mapper as dtm
+from narwhals._plan._dispatch import DispatcherOptions
 from narwhals._plan._function import Function
 from narwhals._plan.expressions.namespace import ExprNamespace, IRNamespace
 
@@ -11,7 +12,7 @@ if TYPE_CHECKING:
 
 
 # fmt: off
-class CategoricalFunction(Function, accessor="cat"): ...
+class CategoricalFunction(Function, dispatch=DispatcherOptions(accessor_name="cat")): ...
 class GetCategories(CategoricalFunction, dtype=dtm.STR): ...
 # fmt: on
 class IRCatNamespace(IRNamespace):
