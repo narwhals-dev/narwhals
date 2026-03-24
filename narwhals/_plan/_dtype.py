@@ -94,10 +94,13 @@ class _FunctionExpr(_ExprIR, Protocol[_FunctionT_co]):
 class _ClassAccessorDescriptor:
     """Namespace accessor that acts like if `@classmethod` and `@property` had a baby."""
 
-    __slots__ = ()
+    __slots__ = ("__name__",)
 
     def __get__(self, instance: Any, owner: Any) -> Self:
         return self
+
+    def __set_name__(self, owner: type[Any], name: str) -> None:
+        self.__name__: str = name
 
 
 class _FunctionAccessor(_ClassAccessorDescriptor):
@@ -221,6 +224,9 @@ class GetDType(_Singleton[_HasDTypeT]):
             return node.function.dtype  # pragma: no cover
         return node.dtype
 
+    def __repr__(self) -> str:
+        return f"{ResolveDType.get_dtype.__name__}()"
+
 
 # NOTE: An unbound cache is safe here:
 # - ~10 unique dtypes
@@ -239,10 +245,17 @@ class JustDType(ResolveDType[Any]):
     def __call__(self, _: Any, __: FrozenSchema, /) -> DType:
         return self._dtype  # pragma: no cover
 
+    def __repr__(self) -> str:
+        return f"{ResolveDType.just_dtype.__name__}({self._dtype})"
+
 
 class ExprIRSameDType(_Singleton[_HasParentExprIR]):
     def __call__(self, node: _HasParentExprIR, schema: FrozenSchema, /) -> DType:
         return node.expr.resolve_dtype(schema)  # pragma: no cover
+
+    def __repr__(self) -> str:
+        accessor = ResolveDType.expr_ir
+        return f"{accessor.__name__}.{accessor.same_dtype.__name__}()"
 
 
 class ExprIRMapFirst(ResolveDType[_HasParentExprIRT]):
@@ -254,6 +267,10 @@ class ExprIRMapFirst(ResolveDType[_HasParentExprIRT]):
     def __call__(self, node: _HasParentExprIRT, schema: FrozenSchema, /) -> DType:
         return self._mapper(node.expr.resolve_dtype(schema))  # pragma: no cover
 
+    def __repr__(self) -> str:
+        accessor = ResolveDType.expr_ir
+        return f"{accessor.__name__}.{accessor.map_first.__name__}({self._mapper!r})"
+
 
 class ExprIRVisitor(ResolveDType[_ExprIRT], Generic[_ExprIRT]):
     __slots__ = ("_visitor",)
@@ -263,6 +280,10 @@ class ExprIRVisitor(ResolveDType[_ExprIRT], Generic[_ExprIRT]):
 
     def __call__(self, node: _ExprIRT, _: FrozenSchema, /) -> DType:
         return self._visitor(node)  # pragma: no cover
+
+    def __repr__(self) -> str:
+        accessor = ResolveDType.expr_ir
+        return f"{accessor.__name__}.{accessor.visitor.__name__}({self._visitor!r})"
 
 
 class FunctionVisitor(ResolveDType[_FunctionExpr[_FunctionT]], Generic[_FunctionT]):
@@ -274,10 +295,18 @@ class FunctionVisitor(ResolveDType[_FunctionExpr[_FunctionT]], Generic[_Function
     def __call__(self, node: _FunctionExpr[_FunctionT], _: FrozenSchema, /) -> DType:
         return self._visitor(node.function)  # pragma: no cover
 
+    def __repr__(self) -> str:
+        accessor = ResolveDType.function
+        return f"{accessor.__name__}.{accessor.visitor.__name__}({self._visitor!r})"
+
 
 class FunctionSameDType(_Singleton[_FunctionExprT]):
     def __call__(self, node: _FunctionExprT, schema: FrozenSchema, /) -> DType:
         return node.input[0].resolve_dtype(schema)
+
+    def __repr__(self) -> str:
+        accessor = ResolveDType.function
+        return f"{accessor.__name__}.{accessor.same_dtype.__name__}()"
 
 
 class FunctionMapFirst(ResolveDType[_FunctionExprT]):
@@ -288,6 +317,10 @@ class FunctionMapFirst(ResolveDType[_FunctionExprT]):
 
     def __call__(self, node: _FunctionExprT, schema: FrozenSchema, /) -> DType:
         return self._mapper(node.input[0].resolve_dtype(schema))  # pragma: no cover
+
+    def __repr__(self) -> str:
+        accessor = ResolveDType.function
+        return f"{accessor.__name__}.{accessor.map_first.__name__}({self._mapper!r})"
 
 
 class FunctionMapAll(ResolveDType[_FunctionExprT]):
@@ -300,6 +333,10 @@ class FunctionMapAll(ResolveDType[_FunctionExprT]):
         return self._mapper(
             e.resolve_dtype(schema) for e in node.input
         )  # pragma: no cover
+
+    def __repr__(self) -> str:
+        accessor = ResolveDType.function
+        return f"{accessor.__name__}.{accessor.map_all.__name__}({self._mapper!r})"
 
 
 def _is_function_expr_dtype(node: Any) -> TypeIs[_FunctionExpr[_FunctionDType]]:
