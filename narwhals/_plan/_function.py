@@ -122,7 +122,12 @@ class Function(Immutable):
 
     [when subclassing]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
     """
+    # TODO @dangotbanned: Explain, by adapting `ExprIR.__expr_ir_dispatch__`
+    # https://github.com/narwhals-dev/narwhals/blob/d61cd823b9bb75958fe47f979c6fadda4d3cb557/narwhals/_plan/_expr_ir.py#L119-L138
     __expr_ir_dispatch__: ClassVar[Dispatcher[FunctionExpr[Self]]] = Dispatcher()
+
+    # TODO @dangotbanned: Explain, by adapting `ExprIR.__expr_ir_dtype__`
+    # https://github.com/narwhals-dev/narwhals/blob/d61cd823b9bb75958fe47f979c6fadda4d3cb557/narwhals/_plan/_expr_ir.py#L140-L169
     __expr_ir_dtype__: ClassVar[ResolveDType[FunctionExpr[Self]]] = ResolveDType()
 
     def is_elementwise(self) -> bool:
@@ -155,6 +160,28 @@ class Function(Immutable):
         flags: FunctionFlags | None = None,
         **_: Any,
     ) -> None:
+        """Hook to [customize a new subclass] of `Function`.
+
+        All parameters are optional and will be inherited when not provided to `__init_subclass__`.
+
+        Arguments:
+            dispatch: Defines how to build a `Dispatcher`.
+                Stored in `__expr_ir_dispatch__.options`.
+
+            dtype: Defines how a `DType` is derived when `resolve_dtype` is called.
+                Stored in `__expr_ir_dtype__`.
+
+                See `IntoResolveDType` and `ResolveDType` for usage.
+
+                **Warning**: This functionality is considered **unstable**.
+                Full support depends on [#3396].
+
+            flags: Defines how a function transforms the shape of it's input.
+                Stored in `__function_flags__`.
+
+        [customize a new subclass]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
+        [#3396]: https://github.com/narwhals-dev/narwhals/pull/3396
+        """
         super().__init_subclass__(**_)
         if flags is not None:
             cls.__function_flags__ = flags
