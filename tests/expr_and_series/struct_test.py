@@ -7,7 +7,7 @@ from tests.utils import Constructor, assert_equal_data
 
 data = {"a": [1, 2, 3], "b": ["dogs", "cats", None], "c": ["play", "swim", "walk"]}
 
-UNSUPPORTED_BACKENDS = ("dask", "ibis")
+UNSUPPORTED_BACKENDS = ("dask",)
 
 
 def test_struct(request: pytest.FixtureRequest, constructor: Constructor) -> None:

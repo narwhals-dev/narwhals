@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals._utils import Implementation, Version
+    from narwhals.schema import Schema
     from narwhals.typing import IntoDType, PythonLiteral
 
 
@@ -364,31 +365,43 @@ class PandasLikeNamespace(
             context=self,
         )
 
-    def struct(self, *exprs: PandasLikeExpr, schema: Any = None) -> PandasLikeExpr:
+    def struct(
+        self, *exprs: PandasLikeExpr, schema: Schema | None = None
+    ) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            import pyarrow as pa
+            try:
+                import pandas as pd  # ignore-banned-import
+                import pyarrow as pa  # ignore-banned-import
+            except ImportError as exc:  # pragma: no cover
+                msg = (
+                    "struct requires pyarrow to be installed for pandas backend. "
+                    "Please install pyarrow: pip install pyarrow"
+                )
+                raise ImportError(msg) from exc
 
-            series = list(chain.from_iterable(expr(df) for expr in exprs))
+            series = tuple(chain.from_iterable(expr(df) for expr in exprs))
             name = series[0].name
             pa_arrays = [pa.array(s.native, from_pandas=True) for s in series]
             pa_fields = [
                 pa.field(s.name, arr.type) for s, arr in zip_strict(series, pa_arrays)
             ]
             if schema is not None:
-                from narwhals._arrow.utils import narwhals_to_native_dtype
+                from narwhals._arrow.utils import (
+                    narwhals_to_native_dtype as _to_arrow_dtype,
+                )
 
+                version = self._version
                 pa_fields = [
-                    pa.field(f.name, narwhals_to_native_dtype(dtype, self._version))
-                    if dtype is not None
-                    else f
-                    for f, dtype in zip_strict(pa_fields, schema.values())
+                    pa.field(field.name, _to_arrow_dtype(dtype, version))
+                    if (dtype := schema.get(field.name)) is not None
+                    else field
+                    for field in pa_fields
                 ]
             struct_array = pa.StructArray.from_arrays(pa_arrays, fields=pa_fields)
             ns = self._implementation.to_native_namespace()
-            import pandas as pd
 
             result_native = ns.Series(
-                pd.arrays.ArrowExtensionArray(struct_array),
+                pd.arrays.ArrowExtensionArray(struct_array),  # type: ignore[attr-defined]
                 name=name,
                 index=series[0].native.index,
             )

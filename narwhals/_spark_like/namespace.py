@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.window import WindowInputs
     from narwhals._spark_like.dataframe import SQLFrameDataFrame  # noqa: F401
     from narwhals._utils import Implementation, Version
+    from narwhals.schema import Schema
     from narwhals.typing import ConcatMethod, IntoDType, PythonLiteral
 
 # Adjust slight SQL vs PySpark differences
@@ -165,22 +166,25 @@ class SparkLikeNamespace(
 
         return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
-    def struct(self, *exprs: SparkLikeExpr, schema: Any = None) -> SparkLikeExpr:
+    def struct(
+        self, *exprs: SparkLikeExpr, schema: Schema | None = None
+    ) -> SparkLikeExpr:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             F = self._F
             cols_with_names: list[tuple[str, Column]] = []
-            for e in exprs:
-                native_exprs = e(df)
-                output_names = e._evaluate_output_names(df)
+            for expr in exprs:
+                native_exprs = expr(df)
+                output_names = expr._evaluate_output_names(df)
                 field_names = (
-                    e._alias_output_names(output_names)
-                    if e._alias_output_names is not None
+                    alias_fn(output_names)
+                    if (alias_fn := expr._alias_output_names) is not None
                     else output_names
                 )
                 cols_with_names.extend(zip(field_names, native_exprs))
             aliased = [col.alias(name) for name, col in cols_with_names]
             return [F.struct(*aliased)]
 
+        # TODO(FBruzzesi): Cast to schema
         return self._expr(
             call=func,
             evaluate_output_names=combine_evaluate_output_names(*exprs),

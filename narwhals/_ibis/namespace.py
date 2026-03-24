@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
 
     from narwhals._utils import Version
+    from narwhals.schema import Schema
     from narwhals.typing import ConcatMethod, IntoDType, PythonLiteral
 
 
@@ -140,4 +141,27 @@ class IbisNamespace(
             evaluate_output_names=lambda _df: ["len"],
             alias_output_names=None,
             version=self._version,
+        )
+
+    def struct(self, *exprs: IbisExpr, schema: Schema | None = None) -> IbisExpr:
+        def func(df: IbisLazyFrame) -> list[ir.Value]:
+            cols_with_names: list[tuple[str, ir.Value]] = []
+            for expr in exprs:
+                native_exprs = expr(df)
+                output_names = expr._evaluate_output_names(df)
+                field_names = (
+                    alias_fn(output_names)
+                    if (alias_fn := expr._alias_output_names) is not None
+                    else output_names
+                )
+                cols_with_names.extend(zip(field_names, native_exprs))
+            return [ibis.struct(cols_with_names)]
+
+        # TODO(FBruzzesi): Cast to schema
+        return self._expr(
+            call=func,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            version=self._version,
+            implementation=self._implementation,
         )

@@ -36,6 +36,7 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.window import WindowInputs
     from narwhals._utils import Version
+    from narwhals.schema import Schema
     from narwhals.typing import ConcatMethod, IntoDType, PythonLiteral
 
 VARCHAR = duckdb_dtypes.VARCHAR
@@ -120,21 +121,22 @@ class DuckDBNamespace(
             version=self._version,
         )
 
-    def struct(self, *exprs: DuckDBExpr, schema: Any = None) -> DuckDBExpr:
+    def struct(self, *exprs: DuckDBExpr, schema: Schema | None = None) -> DuckDBExpr:
         def func(df: DuckDBLazyFrame) -> list[Expression]:
             cols_with_names: list[tuple[str, Expression]] = []
-            for e in exprs:
-                native_exprs = e(df)
-                output_names = e._evaluate_output_names(df)
+            for expr in exprs:
+                native_exprs = expr(df)
+                output_names = expr._evaluate_output_names(df)
                 field_names = (
-                    e._alias_output_names(output_names)
-                    if e._alias_output_names is not None
+                    alias_fn(output_names)
+                    if (alias_fn := expr._alias_output_names) is not None
                     else output_names
                 )
                 cols_with_names.extend(zip(field_names, native_exprs))
             field_args = ", ".join(f'"{name}" := {col}' for name, col in cols_with_names)
             return [sql_expression(f"struct_pack({field_args})")]
 
+        # TODO(FBruzzesi): Cast to schema
         return self._expr(
             call=func,
             evaluate_output_names=combine_evaluate_output_names(*exprs),

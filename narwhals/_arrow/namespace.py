@@ -25,6 +25,7 @@ if TYPE_CHECKING:
 
     from narwhals._arrow.typing import ChunkedArrayAny, Incomplete, ScalarAny
     from narwhals._utils import Version
+    from narwhals.schema import Schema
     from narwhals.typing import IntoDType, PythonLiteral
 
 
@@ -226,26 +227,27 @@ class ArrowNamespace(
             context=self,
         )
 
-    def struct(self, *exprs: ArrowExpr, schema: Any = None) -> ArrowExpr:
+    def struct(self, *exprs: ArrowExpr, schema: Schema | None = None) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             series = tuple(chain.from_iterable(expr(df) for expr in exprs))
             name = series[0].name
-            native = [s.native for s in series]
+            native = (s.native for s in series)
             # Ensure we have flat arrays, not chunked
-            pa_arrays = [
+            pa_arrays = tuple(
                 arr.combine_chunks() if isinstance(arr, pa.ChunkedArray) else arr
                 for arr in native
-            ]
+            )
 
             pa_fields = [pa.field(s.name, arr.type) for s, arr in zip(series, pa_arrays)]
             if schema is not None:
                 from narwhals._arrow.utils import narwhals_to_native_dtype
 
+                version = self._version
                 pa_fields = [
-                    pa.field(f.name, narwhals_to_native_dtype(dtype, self._version))
-                    if dtype is not None
-                    else f
-                    for f, dtype in zip(pa_fields, schema.values())
+                    pa.field(field.name, narwhals_to_native_dtype(dtype, version))
+                    if (dtype := schema.get(field.name)) is not None
+                    else field
+                    for field in pa_fields
                 ]
             struct_array = pa.StructArray.from_arrays(pa_arrays, fields=pa_fields)
             result = pa.chunked_array([struct_array])

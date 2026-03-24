@@ -1854,18 +1854,16 @@ def struct(
         >>> df.select(pl.struct(p="int", q="bool").alias("my_struct")).schema
         Schema({'my_struct': Struct({'p': Int64, 'q': Boolean})})
     """
-    flat_exprs: list[IntoExpr | NonNestedLiteral] = [
-        *flatten(exprs),
-        *(expr.alias(alias) for alias, expr in named_exprs.items()),
+    from narwhals.schema import Schema
+    from narwhals.series import Series
+
+    flat_exprs = [
+        *(e if isinstance(e, (Expr, Series)) else col(e) for e in flatten(exprs)),
+        *(
+            (e if isinstance(e, (Expr, Series)) else col(e)).alias(n)
+            for n, e in named_exprs.items()
+        ),
     ]
-    if (not flat_exprs) and (schema is not None):
-        flat_exprs = [col(name) for name in schema]
-    return Expr(
-        ExprNode(
-            ExprKind.ELEMENTWISE,
-            "struct",
-            exprs=flat_exprs,
-            schema=schema,
-            allow_multi_output=True,
-        )
-    )
+
+    schema = Schema(schema) if schema is not None else None
+    return Expr(ExprNode(ExprKind.ELEMENTWISE, "struct", exprs=flat_exprs, schema=schema))
