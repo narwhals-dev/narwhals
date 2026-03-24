@@ -122,9 +122,21 @@ class Function(Immutable):
 
     [when subclassing]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
     """
-    # TODO @dangotbanned: Explain, by adapting `ExprIR.__expr_ir_dispatch__`
-    # https://github.com/narwhals-dev/narwhals/blob/d61cd823b9bb75958fe47f979c6fadda4d3cb557/narwhals/_plan/_expr_ir.py#L119-L138
+
     __expr_ir_dispatch__: ClassVar[Dispatcher[FunctionExpr[Self]]] = Dispatcher()
+    """Callable that dispatches to the appropriate compliant-level method.
+
+    See `Dispatcher` and `DispatcherOptions` for examples.
+
+    To customize the behavior, use the `dispatch` **parameter** [when subclassing]:
+
+        class AllHorizontal(Function, dispatch=DispatcherOptions.namespaced()): ...
+
+    Notes:
+        Each class has their own `Dispatcher` instance, and inheritance is only on the `options` property.
+
+    [when subclassing]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
+    """
 
     __expr_ir_dtype__: ClassVar[ResolveDType[FunctionExpr[Self]]] = ResolveDType()
     """Callable defining how a `DType` is derived when `resolve_dtype` is called.
@@ -140,7 +152,7 @@ class Function(Immutable):
 
     If nothing there *quite* scratches the itch, override `resolve_dtype` instead:
 
-        class Pow(Function, flags=FunctionFlags.ELEMENTWISE):
+        class Pow(Function):
             def resolve_dtype(self, node: FunctionExpr, schema: FrozenSchema, /) -> DType:
                 base = node.input[0].resolve_dtype(schema)
                 if base.is_integer():
