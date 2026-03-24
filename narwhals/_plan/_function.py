@@ -61,7 +61,6 @@ namespaced = DispatcherOptions.namespaced
 ELEMENTWISE = FunctionFlags.ELEMENTWISE
 
 
-# TODO @dangotbanned: Finish `Function` class doc
 # TODO @dangotbanned: Introduce the concept of *arity* + replace `unwrap_input`
 # TODO @dangotbanned: `RangeExpr` (and probably others) have input shape requirements
 class Function(Immutable):
@@ -69,14 +68,13 @@ class Function(Immutable):
 
     A `Function` is distinct from an expression but appears in many of them as:
 
-        class FunctionExpr(ExprIR):
-            input: tuple[ExprIR, ...]
-            function: Function
+        FunctionExpr[Function]
 
-    Instances capture non-expression arguments to `Expr` methods:
+    **Instances** capture non-expression arguments to `Expr` methods:
 
     >>> import narwhals._plan as nw
     >>> from narwhals._plan import expressions as ir
+    >>> from narwhals._plan.expressions import functions as F
 
     >>> expr = nw.col("a").shift(2)
     >>> expr_ir = expr._ir
@@ -87,11 +85,19 @@ class Function(Immutable):
     Function(args) : Shift(n=2)
     ExprIR input(s): Column(name='a')
 
-    <!--TODO @dangotbanned: Finish this section -->
+    Whereas **classes** encode most of the details, like...
 
-    Classes store all other details:
-    - Which `CompliantExpr` method to call (`__expr_ir_dispatch__: Dispatcher`)
-    - How the function changes the larger expression it is part of (`__function_flags__: FunctionFlags`)
+    What properties does the function have?
+    >>> F.Shift.__function_flags__
+    <FunctionFlags.LENGTH_PRESERVING: 4>
+
+    Which `CompliantExpr` method to call?
+    >>> F.Shift.__expr_ir_dispatch__
+    Dispatcher<shift>
+
+    Does it transform the datatype?
+    >>> F.Shift.__expr_ir_dtype__
+    function.same_dtype()
 
     See Also:
         `narwhals._plan._function.py` doc for implementation notes
