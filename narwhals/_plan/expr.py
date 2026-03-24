@@ -418,9 +418,9 @@ class Expr:
         if return_dtype is not None:
             return_dtype = common.into_dtype(return_dtype)
         return self._with_unary(
-            F.MapBatches(
-                function=function,
-                return_dtype=return_dtype,
+            F.MapBatches.from_udf(
+                function,
+                return_dtype,
                 is_elementwise=is_elementwise,
                 returns_scalar=returns_scalar,
             )

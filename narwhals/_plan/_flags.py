@@ -214,8 +214,6 @@ class FunctionFlags(enum.Flag):
     """
 
     def __str__(self) -> str:
-        # NOTE: Appeared as `self.flags` in:
-        #   `f"{type(self).__name__}(flags='{self.flags}')"``
         name = self.name or "<FUNCTION_FLAGS_UNKNOWN>"
         return name.replace("|", " | ")
 

@@ -42,6 +42,7 @@ from narwhals._plan._dispatch import Dispatcher, DispatcherOptions
 from narwhals._plan._dtype import IntoResolveDType, ResolveDType
 from narwhals._plan._flags import FunctionFlags
 from narwhals._plan._immutable import Immutable
+from narwhals._plan.exceptions import function_expr_invalid_operation_error
 from narwhals.dtypes import DType
 
 if TYPE_CHECKING:
@@ -51,7 +52,7 @@ if TYPE_CHECKING:
 
     from narwhals._plan.expressions import ExprIR, FunctionExpr
     from narwhals._plan.schema import FrozenSchema
-    from narwhals._plan.typing import Accessor
+    from narwhals._plan.typing import Accessor, Seq
 
 __all__ = ["Function", "HorizontalFunction"]
 
@@ -90,7 +91,7 @@ class Function(Immutable):
 
     Classes store all other details:
     - Which `CompliantExpr` method to call (`__expr_ir_dispatch__: Dispatcher`)
-    - How the function changes the larger expression it is part of (`flags: FunctionFlags`)
+    - How the function changes the larger expression it is part of (`__function_flags__: FunctionFlags`)
 
     See Also:
         `narwhals._plan._function.py` doc for implementation notes
@@ -124,13 +125,16 @@ class Function(Immutable):
     __expr_ir_dispatch__: ClassVar[Dispatcher[FunctionExpr[Self]]] = Dispatcher()
     __expr_ir_dtype__: ClassVar[ResolveDType[FunctionExpr[Self]]] = ResolveDType()
 
-    @property
-    def flags(self) -> FunctionFlags:
-        return self.__function_flags__
+    def is_elementwise(self) -> bool:
+        return self.__function_flags__.is_elementwise()
 
-    def is_scalar(self) -> bool:  # pragma: no cover
-        """Return True if this function produces a single value."""
-        return FunctionFlags.AGGREGATION in self.flags
+    def _validate_input(self, input: Seq[ExprIR], /) -> Seq[ExprIR]:  # noqa: A002
+        # NOTE: (Hacky) hook for arbitrary validation
+        # Ideally this would be more declarative
+        parent = input[0]
+        if parent.is_scalar() and not self.is_elementwise():
+            raise function_expr_invalid_operation_error(self, parent)
+        return input
 
     def to_function_expr(self, *inputs: ExprIR) -> FunctionExpr[Self]:
         """Wrap this `Function` in a `FunctionExpr`.
@@ -141,7 +145,7 @@ class Function(Immutable):
         """
         # NOTE: Defined as a method to allow these guys to override:
         # - `RollingWindow`, `MapBatches`, `RangeFunction`, `StructFunction`
-        return import_function_expr()(input=inputs, function=self, flags=self.flags)
+        return _import_function_expr()(input=self._validate_input(inputs), function=self)
 
     def __init_subclass__(
         cls: type[Self],
@@ -218,7 +222,7 @@ class HorizontalFunction(Function, flags=ELEMENTWISE, dispatch=namespaced()):
 
 
 @cache
-def import_function_expr() -> type[FunctionExpr[Any]]:
+def _import_function_expr() -> type[FunctionExpr[Any]]:
     # NOTE: Very heavily used (`Function.to_function_expr`), but creates a cycle
     from narwhals._plan.expressions.expr import FunctionExpr
 

@@ -29,7 +29,7 @@ class StructFunction(Function, accessor="struct"):
     def to_function_expr(self, *inputs: ExprIR) -> StructExpr[Self]:
         from narwhals._plan.expressions.expr import StructExpr
 
-        return StructExpr(input=inputs, function=self, flags=self.flags)
+        return StructExpr(input=inputs, function=self)
 
     @property
     def needs_expansion(self) -> bool:

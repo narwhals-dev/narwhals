@@ -75,8 +75,7 @@ class RollingWindow(Function, flags=LENGTH_PRESERVING):
 
     def to_function_expr(self, *inputs: ExprIR) -> RollingExpr[Self]:
         from narwhals._plan.expressions.expr import RollingExpr
-
-        return RollingExpr(input=inputs, function=self, flags=self.flags)
+        return RollingExpr(input=self._validate_input(inputs), function=self)
 class RollingSum(RollingWindow, dtype=map_first(dtm.sum_dtype)): ...
 class RollingMean(RollingWindow, dtype=map_first(dtm.moment_dtype)): ...
 class RollingVar(RollingWindow, dtype=map_first(dtm.var_dtype)): ...
@@ -274,28 +273,34 @@ class GatherEvery(_SameDType):
     offset: int
 
 
-# TODO @dangotbanned: `map_batches` is the only case that needs an instance for `FunctionFlags`
-# Would be great to reduce the `flags`/`__function_flags__` pair
 class MapBatches(Function):
-    __slots__ = ("function", "is_elementwise", "return_dtype", "returns_scalar")
+    __slots__ = ("flags", "function", "return_dtype")
     function: Udf
     return_dtype: DType | None
-    is_elementwise: bool
-    returns_scalar: bool
+    flags: FunctionFlags
 
-    @property
-    def flags(self) -> FunctionFlags:
-        flags = super().flags
-        if self.is_elementwise:
+    @staticmethod
+    def from_udf(
+        function: Udf,
+        return_dtype: DType | None,
+        *,
+        is_elementwise: bool,
+        returns_scalar: bool,
+    ) -> MapBatches:
+        flags = Function.__function_flags__
+        if is_elementwise:
             flags |= ELEMENTWISE
-        if self.returns_scalar:
+        if returns_scalar:
             flags |= AGGREGATION
-        return flags
+        return MapBatches(function=function, return_dtype=return_dtype, flags=flags)
+
+    def is_elementwise(self) -> bool:
+        return self.flags.is_elementwise()
 
     def to_function_expr(self, *inputs: ExprIR) -> AnonymousExpr:
         from narwhals._plan.expressions.expr import AnonymousExpr
 
-        return AnonymousExpr(input=inputs, function=self, flags=self.flags)
+        return AnonymousExpr(input=self._validate_input(inputs), function=self)
 
 
 class SampleN(_SameDType):

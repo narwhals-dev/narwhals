@@ -157,6 +157,9 @@ def test_agg_non_elementwise_invalid() -> None:
     pattern = re.compile(r"cannot use.+diff.+aggregated.+min", re.IGNORECASE)
     with pytest.raises(InvalidOperationError):
         nwp.col("a").min().diff()
+    pattern = re.compile(r"cannot use.+map_batches.+aggregated.+first", re.IGNORECASE)
+    with pytest.raises(InvalidOperationError):
+        nwp.col("a").first().map_batches(lambda x: x, nw.Int64(), returns_scalar=True)
 
 
 def test_agg_non_elementwise_range_special() -> None:
@@ -724,9 +727,7 @@ def test_list_contains_invalid() -> None:
     assert_expr_ir_equal(
         ok,
         ir.FunctionExpr(
-            input=(ir.col("a"), ir.lit("a", nw.String)),
-            function=ir.lists.Contains(),
-            flags=ir.lists.Contains().flags,
+            input=(ir.col("a"), ir.lit("a", nw.String)), function=ir.lists.Contains()
         ),
     )
     assert a.list.contains(a.first())

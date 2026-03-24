@@ -1,9 +1,8 @@
 """Top-level `Expr` nodes."""
 
-# ruff: noqa: A002
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Generic, final
+from typing import TYPE_CHECKING, Generic, final
 
 import narwhals._plan.dtypes_mapper as dtm
 from narwhals._plan._dispatch import DispatcherOptions
@@ -11,11 +10,7 @@ from narwhals._plan._dtype import ResolveDType
 from narwhals._plan._expr_ir import ExprIR, SelectorIR
 from narwhals._plan._flags import FunctionFlags
 from narwhals._plan._nodes import node, nodes
-from narwhals._plan.exceptions import (
-    function_expr_invalid_operation_error,
-    over_order_by_names_error,
-    range_expr_non_scalar_error,
-)
+from narwhals._plan.exceptions import over_order_by_names_error
 from narwhals._plan.expressions.selectors import ByName
 from narwhals._plan.typing import (
     FunctionT_co,
@@ -32,14 +27,12 @@ from narwhals._plan.typing import (
     Seq,
     StructT_co,
 )
-from narwhals.exceptions import InvalidOperationError, NarwhalsError
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
 
     from typing_extensions import Self
 
-    from narwhals._plan._function import Function
     from narwhals._plan.compliant.typing import Ctx, FrameT_contra, R_co
     from narwhals._plan.expressions import selectors as cs
     from narwhals._plan.expressions.functions import MapBatches  # noqa: F401
@@ -197,13 +190,14 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
     https://github.com/pola-rs/polars/blob/112cab39380d8bdb82c6b76b31aca9b58c98fd93/crates/polars-plan/src/dsl/function_expr/mod.rs#L123
     """
 
-    __slots__ = ("flags", "function", "input")
+    __slots__ = ("function", "input")
     input: Seq[ExprIR] = nodes()
     function: FunctionT_co
     """Operation applied to each element of `input`."""
 
-    flags: FunctionFlags
-    """Combined flags from chained operations."""
+    @property
+    def flags(self) -> FunctionFlags:
+        return self.function.__function_flags__
 
     def is_scalar(self) -> bool:
         return FunctionFlags.AGGREGATION in self.flags
@@ -215,35 +209,6 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
                 return f"{first!r}.{self.function!r}({list(self.input[1:])!r})"
             return f"{first!r}.{self.function!r}()"
         return f"{self.function!r}()"
-
-    @staticmethod
-    def _validate_input(
-        input: Seq[ExprIR], function: Function, flags: FunctionFlags, /
-    ) -> NarwhalsError | None:
-        # NOTE: (Hacky) hook for arbitary validation
-        # Ideally this would be more declarative
-        parent = input[0]
-        if parent.is_scalar() and not flags.is_elementwise():
-            return function_expr_invalid_operation_error(function, parent)
-        return None
-
-    if TYPE_CHECKING:
-        ...
-    else:
-
-        def __init__(
-            self,
-            *,
-            input: Seq[ExprIR],
-            function: FunctionT_co,
-            flags: FunctionFlags,
-            **kwds: Any,
-        ) -> None:
-            # NOTE: Needs to skip type checking to avoid incorrectly synthesized `__replace__` signature
-            # https://discuss.python.org/t/dataclass-transform-and-replace/69067
-            if err := self._validate_input(input, function, flags, **kwds):
-                raise err
-            super().__init__(input=input, function=function, flags=flags, **kwds)
 
     def dispatch(
         self: Self, ctx: Ctx[FrameT_contra, R_co], frame: FrameT_contra, name: str
@@ -278,6 +243,10 @@ class RollingExpr(FunctionExpr[RollingT_co]):
 class AnonymousExpr(FunctionExpr["MapBatches"], dispatch=renamed("map_batches")):
     """https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/expr.rs#L158-L166."""
 
+    @property
+    def flags(self) -> FunctionFlags:
+        return self.function.flags
+
     def dispatch(
         self: Self, ctx: Ctx[FrameT_contra, R_co], frame: FrameT_contra, name: str
     ) -> R_co:
@@ -291,17 +260,6 @@ class AnonymousExpr(FunctionExpr["MapBatches"], dispatch=renamed("map_batches"))
 
 class RangeExpr(FunctionExpr[RangeT_co]):
     """E.g. `int_range(...)`."""
-
-    @staticmethod
-    def _validate_input(
-        input: Seq[ExprIR], function: Function, _: FunctionFlags, /
-    ) -> NarwhalsError | None:
-        if len(input) < 2:
-            msg = f"Expected at least 2 inputs for `{function!r}()`, but got `{len(input)}`.\n`{input}`"
-            return InvalidOperationError(msg)
-        if not all(e.is_scalar() for e in input):
-            return range_expr_non_scalar_error(input, function)
-        return None
 
     def __repr__(self) -> str:
         return f"{self.function!r}({list(self.input)!r})"

@@ -6,11 +6,14 @@ import narwhals._plan.dtypes_mapper as dtm
 from narwhals._plan._dispatch import DispatcherOptions
 from narwhals._plan._dtype import ResolveDType
 from narwhals._plan._function import Function
+from narwhals._plan.exceptions import range_expr_non_scalar_error
+from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._plan.expressions import ExprIR, RangeExpr
+    from narwhals._plan.typing import Seq
     from narwhals.dtypes import IntegerType
     from narwhals.typing import ClosedInterval
 
@@ -21,10 +24,18 @@ namespaced = DispatcherOptions.namespaced
 
 
 class RangeFunction(Function, dispatch=namespaced()):
+    def _validate_input(self, input: Seq[ExprIR], /) -> Seq[ExprIR]:  # noqa: A002
+        if len(input) < 2:
+            msg = f"Expected at least 2 inputs for `{self!r}()`, but got `{len(input)}`.\n`{input}`"
+            raise InvalidOperationError(msg)
+        if not all(e.is_scalar() for e in input):
+            raise range_expr_non_scalar_error(input, self)
+        return input
+
     def to_function_expr(self, *inputs: ExprIR) -> RangeExpr[Self]:
         from narwhals._plan.expressions.expr import RangeExpr
 
-        return RangeExpr(input=inputs, function=self, flags=self.flags)
+        return RangeExpr(input=self._validate_input(inputs), function=self)
 
     def unwrap_input(self, node: RangeExpr[Self], /) -> tuple[ExprIR, ExprIR]:
         start, end = node.input
