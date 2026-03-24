@@ -681,4 +681,17 @@ class NamedIR(Immutable, Generic[ExprIRT_co]):
 
 
 def named_ir(name: str, expr: ExprIRT, /) -> NamedIR[ExprIRT]:
+    """Positional-only `NamedIR` constructor.
+
+    Arguments:
+        name: The resolved output column name.
+        expr: The expanded expression.
+
+    Examples:
+        >>> from narwhals._plan.expressions import col
+        >>> short = named_ir("b", col("a"))
+        >>> longer = NamedIR(name="b", expr=col("a"))
+        >>> short == longer
+        True
+    """
     return NamedIR(expr=expr, name=name)
