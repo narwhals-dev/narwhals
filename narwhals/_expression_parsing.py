@@ -75,9 +75,9 @@ def evaluate_output_names_and_aliases(
 ) -> tuple[Sequence[str], Sequence[str]]:
     output_names = expr._evaluate_output_names(df)
     aliases = (
-        output_names
-        if expr._alias_output_names is None
-        else expr._alias_output_names(output_names)
+        alias_fn(output_names)
+        if (alias_fn := expr._alias_output_names) is not None
+        else output_names
     )
     if exclude and expr._metadata.expansion_kind.is_multi_unnamed():
         output_names, aliases = zip_strict(

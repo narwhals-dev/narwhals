@@ -6,13 +6,13 @@ from itertools import chain
 from typing import TYPE_CHECKING, Any
 
 import ibis
-import ibis.expr.datatypes as ibis_dtypes
 import ibis.expr.types as ir
 
 from narwhals._compliant.namespace import AlignDiagonal
 from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
+    evaluate_output_names_and_aliases,
 )
 from narwhals._ibis.dataframe import IbisLazyFrame
 from narwhals._ibis.expr import IbisExpr
@@ -145,32 +145,30 @@ class IbisNamespace(
         )
 
     def struct(self, *exprs: IbisExpr, schema: Schema | None = None) -> IbisExpr:
+        version = self._version
+
         def func(df: IbisLazyFrame) -> list[ir.Value]:
-            cols_with_names: list[tuple[str, ir.Value]] = []
-            for expr in exprs:
-                native_exprs = expr(df)
-                output_names = expr._evaluate_output_names(df)
-                field_names = (
-                    alias_fn(output_names)
-                    if (alias_fn := expr._alias_output_names) is not None
-                    else output_names
+            cols_with_names: Iterable[tuple[str, ir.Value]] = (
+                (aliases, native_exprs)
+                for expr in exprs
+                for native_exprs, _, aliases in zip(
+                    expr(df),
+                    *evaluate_output_names_and_aliases(expr, df, []),
+                    strict=True,
                 )
-                cols_with_names.extend(zip(field_names, native_exprs))
+            )
 
             result = ibis.struct(cols_with_names)
             if schema:
-                version = self._version
-                dtype = ibis_dtypes.Struct.from_tuples(
-                    (name, narwhals_to_native_dtype(dtype, version))
-                    for name, dtype in schema.items()
-                )
+                nw_dtype = version.dtypes.Struct(schema)
+                dtype = narwhals_to_native_dtype(nw_dtype, version)
                 result = result.cast(dtype)  # pyright: ignore[reportArgumentType, reportCallIssue]
+
             return [result]
 
         return self._expr(
             call=func,
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            version=self._version,
-            implementation=self._implementation,
+            version=version,
         )

@@ -25,6 +25,7 @@ from narwhals._duckdb.utils import (
 from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
+    evaluate_output_names_and_aliases,
 )
 from narwhals._sql.namespace import SQLNamespace
 from narwhals._utils import Implementation
@@ -169,29 +170,26 @@ class DuckDBNamespace(
         )
 
     def struct(self, *exprs: DuckDBExpr, schema: Schema | None = None) -> DuckDBExpr:
-        def func(df: DuckDBLazyFrame) -> list[Expression]:
-            cols_with_names: list[tuple[str, Expression]] = []
-            for expr in exprs:
-                native_exprs = expr(df)
-                output_names = expr._evaluate_output_names(df)
-                field_names = (
-                    alias_fn(output_names)
-                    if (alias_fn := expr._alias_output_names) is not None
-                    else output_names
-                )
-                cols_with_names.extend(zip(field_names, native_exprs))
-            field_args = ", ".join(f'"{name}" := {col}' for name, col in cols_with_names)
+        version = self._version
 
-            result = sql_expression(f"struct_pack({field_args})")
-            if schema:
-                version = self._version
-                tz = DeferredTimeZone(df.native)
-                dtype = duckdb.struct_type(
-                    {
-                        name: narwhals_to_native_dtype(dtype, version, tz)
-                        for name, dtype in schema.items()
-                    }
+        def func(df: DuckDBLazyFrame) -> list[Expression]:
+            cols_with_names: Iterable[tuple[str, Expression]] = (
+                (aliases, native_exprs)
+                for expr in exprs
+                for native_exprs, _, aliases in zip(
+                    expr(df),
+                    *evaluate_output_names_and_aliases(expr, df, []),
+                    strict=True,
                 )
+            )
+
+            field_args = ", ".join(f'"{name}" := {col}' for name, col in cols_with_names)
+            result = sql_expression(f"struct_pack({field_args})")
+
+            if schema:
+                nw_dtype = version.dtypes.Struct(schema)
+                tz = DeferredTimeZone(df.native)
+                dtype = narwhals_to_native_dtype(nw_dtype, version, tz)
                 result = result.cast(dtype)
             return [result]
 
@@ -199,5 +197,5 @@ class DuckDBNamespace(
             call=func,
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            version=self._version,
+            version=version,
         )

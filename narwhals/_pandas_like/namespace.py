@@ -372,6 +372,7 @@ class PandasLikeNamespace(
             try:
                 import pandas as pd  # ignore-banned-import
                 import pyarrow as pa  # ignore-banned-import
+                import pyarrow.compute as pc  # ignore-banned-import
             except ImportError as exc:  # pragma: no cover
                 msg = (
                     "struct requires pyarrow to be installed for pandas backend. "
@@ -381,41 +382,31 @@ class PandasLikeNamespace(
 
             series = tuple(chain.from_iterable(expr(df) for expr in exprs))
             name = series[0].name
-            pa_arrays = [pa.array(s.native, from_pandas=True) for s in series]
-            pa_fields = [
-                pa.field(s.name, arr.type) for s, arr in zip_strict(series, pa_arrays)
-            ]
-            if schema is not None:
+            struct_array = pc.make_struct(
+                *(pa.array(s.native, from_pandas=True) for s in series),
+                field_names=[s.name for s in series],
+            )
+            result = pa.chunked_array([struct_array])
+
+            version = self._version
+            if schema:
                 from narwhals._arrow.utils import (
                     narwhals_to_native_dtype as _to_arrow_dtype,
                 )
 
-                version = self._version
-                pa_fields = [
-                    pa.field(field.name, _to_arrow_dtype(dtype, version))
-                    if (dtype := schema.get(field.name)) is not None
-                    else field
-                    for field in pa_fields
-                ]
-                pa_arrays = [
-                    arr.cast(field.type) if arr.type != field.type else arr
-                    for arr, field in zip_strict(pa_arrays, pa_fields)
-                ]
-            struct_array = pa.StructArray.from_arrays(pa_arrays, fields=pa_fields)
-            ns = self._implementation.to_native_namespace()
+                nw_dtype = version.dtypes.Struct(schema)
+                dtype = _to_arrow_dtype(nw_dtype, version)
+                result = result.cast(dtype)
+
+            impl = self._implementation
+            ns = impl.to_native_namespace()
 
             result_native = ns.Series(
-                pd.arrays.ArrowExtensionArray(struct_array),  # type: ignore[attr-defined]
+                pd.arrays.ArrowExtensionArray(result),  # type: ignore[attr-defined]
                 name=name,
                 index=series[0].native.index,
             )
-            return [
-                self._series(
-                    result_native,
-                    implementation=self._implementation,
-                    version=self._version,
-                )
-            ]
+            return [self._series(result_native, implementation=impl, version=version)]
 
         return self._expr._from_callable(
             func=func,

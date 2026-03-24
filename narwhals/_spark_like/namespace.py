@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
+    evaluate_output_names_and_aliases,
 )
 from narwhals._spark_like.dataframe import SparkLikeLazyFrame
 from narwhals._spark_like.expr import SparkLikeExpr
@@ -223,33 +224,26 @@ class SparkLikeNamespace(
     def struct(
         self, *exprs: SparkLikeExpr, schema: Schema | None = None
     ) -> SparkLikeExpr:
+        version = self._version
+
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             F = self._F
-            cols_with_names: list[tuple[str, Column]] = []
-            for expr in exprs:
-                native_exprs = expr(df)
-                output_names = expr._evaluate_output_names(df)
-                field_names = (
-                    alias_fn(output_names)
-                    if (alias_fn := expr._alias_output_names) is not None
-                    else output_names
+            cols_with_names: Iterable[tuple[str, Column]] = (
+                (aliases, native_exprs)
+                for expr in exprs
+                for native_exprs, _, aliases in zip(
+                    expr(df),
+                    *evaluate_output_names_and_aliases(expr, df, []),
+                    strict=True,
                 )
-                cols_with_names.extend(zip(field_names, native_exprs))
+            )
             aliased = [col.alias(name) for name, col in cols_with_names]
 
             result = F.struct(*aliased)
             if schema:
-                version = self._version
-                dtypes = self._native_dtypes
-                session = df.native.sparkSession
-                dtype = dtypes.StructType(
-                    [
-                        dtypes.StructField(
-                            name,
-                            narwhals_to_native_dtype(dtype, version, dtypes, session),
-                        )
-                        for name, dtype in schema.items()
-                    ]
+                nw_dtype = version.dtypes.Struct(schema)
+                dtype = narwhals_to_native_dtype(
+                    nw_dtype, version, self._native_dtypes, df.native.sparkSession
                 )
                 result = result.cast(dtype)
             return [result]
@@ -258,6 +252,6 @@ class SparkLikeNamespace(
             call=func,
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            version=self._version,
+            version=version,
             implementation=self._implementation,
         )

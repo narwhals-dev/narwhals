@@ -250,31 +250,20 @@ class ArrowNamespace(
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             series = tuple(chain.from_iterable(expr(df) for expr in exprs))
             name = series[0].name
-            native = (s.native for s in series)
-            # Ensure we have flat arrays, not chunked
-            pa_arrays = tuple(
-                arr.combine_chunks() if isinstance(arr, pa.ChunkedArray) else arr
-                for arr in native
+            struct_array = pc.make_struct(
+                *(s.native for s in series), field_names=[s.name for s in series]
             )
+            result = pa.chunked_array([struct_array])
+            version = self._version
 
-            pa_fields = [pa.field(s.name, arr.type) for s, arr in zip(series, pa_arrays)]
-            if schema is not None:
+            if schema:
                 from narwhals._arrow.utils import narwhals_to_native_dtype
 
-                version = self._version
-                pa_fields = [
-                    pa.field(field.name, narwhals_to_native_dtype(dtype, version))
-                    if (dtype := schema.get(field.name)) is not None
-                    else field
-                    for field in pa_fields
-                ]
-                pa_arrays = tuple(
-                    arr.cast(field.type) if arr.type != field.type else arr
-                    for arr, field in zip(pa_arrays, pa_fields)
-                )
-            struct_array = pa.StructArray.from_arrays(pa_arrays, fields=pa_fields)
-            result = pa.chunked_array([struct_array])
-            return [ArrowSeries(result, name=name, version=self._version)]
+                nw_dtype = version.dtypes.Struct(schema)
+                dtype = narwhals_to_native_dtype(nw_dtype, version)
+                result = result.cast(dtype)
+
+            return [ArrowSeries(result, name=name, version=version)]
 
         return self._expr._from_callable(
             func=func,

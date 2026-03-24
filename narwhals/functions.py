@@ -1816,43 +1816,43 @@ def struct(
     Examples:
         Collect all columns of a dataframe into a struct by passing `pl.all()`.
 
-        >>> df = pl.DataFrame(
-        ...     {
-        ...         "int": [1, 2],
-        ...         "str": ["a", "b"],
-        ...         "bool": [True, None],
-        ...         "list": [[1, 2], [3]],
-        ...     }
+        >>> import duckdb
+        >>> import narwhals as nw
+        >>> rel = duckdb.sql(
+        ...     "select * from values (1, 'a', True, [1, 2]), (2, 'b', False, [3]) df(int, str, bool, list)"
         ... )
-        >>> df.select(pl.struct(pl.all()).alias("my_struct"))
-        shape: (2, 1)
-        ┌─────────────────────┐
-        │ my_struct           │
-        │ ---                 │
-        │ struct[4]           │
-        ╞═════════════════════╡
-        │ {1,"a",true,[1, 2]} │
-        │ {2,"b",null,[3]}    │
-        └─────────────────────┘
+        >>> df = nw.from_native(rel)
+        >>> df.select(nw.struct(nw.all()).alias("my_struct"))
+        ┌────────────────────────────────────────────────────────────────────┐
+        |                         Narwhals LazyFrame                         |
+        |--------------------------------------------------------------------|
+        |┌──────────────────────────────────────────────────────────────────┐|
+        |│                            my_struct                             │|
+        |│ struct("int" integer, str varchar, bool boolean, list integer[]) │|
+        |├──────────────────────────────────────────────────────────────────┤|
+        |│ {'int': 1, 'str': a, 'bool': true, 'list': [1, 2]}               │|
+        |│ {'int': 2, 'str': b, 'bool': false, 'list': [3]}                 │|
+        |└──────────────────────────────────────────────────────────────────┘|
+        └────────────────────────────────────────────────────────────────────┘
 
-        Collect selected columns into a struct by either passing a list of
-        columns, or by specifying each column as a positional argument.
+        It's possible to specify the column names directly and use named expressions:
 
-        >>> df.select(pl.struct("int", False).alias("my_struct"))
-        shape: (2, 1)
-        ┌───────────┐
-        │ my_struct │
-        │ ---       │
-        │ struct[2] │
-        ╞═══════════╡
-        │ {1,false} │
-        │ {2,false} │
-        └───────────┘
-
-        Use keyword arguments to easily name each struct field.
-
-        >>> df.select(pl.struct(p="int", q="bool").alias("my_struct")).schema
-        Schema({'my_struct': Struct({'p': Int64, 'q': Boolean})})
+        >>> df.select(
+        ...     nw.struct("int", x=nw.col("str").str.len_chars(), q="bool").alias(
+        ...         "my_struct"
+        ...     )
+        ... )
+        ┌──────────────────────────────────────────────┐
+        |              Narwhals LazyFrame              |
+        |----------------------------------------------|
+        |┌────────────────────────────────────────────┐|
+        |│                 my_struct                  │|
+        |│ struct("int" integer, x bigint, q boolean) │|
+        |├────────────────────────────────────────────┤|
+        |│ {'int': 1, 'x': 1, 'q': true}              │|
+        |│ {'int': 2, 'x': 1, 'q': false}             │|
+        |└────────────────────────────────────────────┘|
+        └──────────────────────────────────────────────┘
     """
     from narwhals.schema import Schema
     from narwhals.series import Series
@@ -1866,4 +1866,12 @@ def struct(
     ]
 
     schema = Schema(schema) if schema is not None else None
-    return Expr(ExprNode(ExprKind.ELEMENTWISE, "struct", exprs=flat_exprs, schema=schema))
+    return Expr(
+        ExprNode(
+            ExprKind.ELEMENTWISE,
+            "struct",
+            exprs=flat_exprs,
+            schema=schema,
+            allow_multi_output=True,
+        )
+    )
