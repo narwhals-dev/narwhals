@@ -165,6 +165,30 @@ class SparkLikeNamespace(
 
         return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
+    def struct(self, *exprs: SparkLikeExpr, schema: Any = None) -> SparkLikeExpr:
+        def func(df: SparkLikeLazyFrame) -> list[Column]:
+            F = self._F
+            cols_with_names: list[tuple[str, Column]] = []
+            for e in exprs:
+                native_exprs = e(df)
+                output_names = e._evaluate_output_names(df)
+                field_names = (
+                    e._alias_output_names(output_names)
+                    if e._alias_output_names is not None
+                    else output_names
+                )
+                cols_with_names.extend(zip(field_names, native_exprs))
+            aliased = [col.alias(name) for name, col in cols_with_names]
+            return [F.struct(*aliased)]
+
+        return self._expr(
+            call=func,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            version=self._version,
+            implementation=self._implementation,
+        )
+
     def concat(
         self, items: Iterable[SparkLikeLazyFrame], *, how: ConcatMethod
     ) -> SparkLikeLazyFrame:

@@ -1793,3 +1793,79 @@ def format(f_string: str, *args: IntoExpr) -> Expr:
         if len(s) > 0:
             exprs.append(lit(s))
     return concat_str(exprs, separator="")
+
+
+def struct(
+    *exprs: IntoExpr | Sequence[IntoExpr],
+    schema: IntoSchema | None = None,
+    **named_exprs: IntoExpr,
+) -> Expr:
+    """Collect columns into a struct column.
+
+    Arguments:
+        *exprs: Column(s) to collect into a struct column, specified as
+            positional arguments. Accepts expression input. Strings are parsed
+            as column names, other non-expression inputs are parsed as literals.
+        schema: Optional schema that explicitly defines the struct field dtypes.
+            If no columns or expressions are provided, schema keys are used to
+            define columns.
+        **named_exprs: Additional columns to collect into the struct column,
+            specified as keyword arguments.
+            The columns will be renamed to the keyword used.
+
+    Examples:
+        Collect all columns of a dataframe into a struct by passing `pl.all()`.
+
+        >>> df = pl.DataFrame(
+        ...     {
+        ...         "int": [1, 2],
+        ...         "str": ["a", "b"],
+        ...         "bool": [True, None],
+        ...         "list": [[1, 2], [3]],
+        ...     }
+        ... )
+        >>> df.select(pl.struct(pl.all()).alias("my_struct"))
+        shape: (2, 1)
+        ┌─────────────────────┐
+        │ my_struct           │
+        │ ---                 │
+        │ struct[4]           │
+        ╞═════════════════════╡
+        │ {1,"a",true,[1, 2]} │
+        │ {2,"b",null,[3]}    │
+        └─────────────────────┘
+
+        Collect selected columns into a struct by either passing a list of
+        columns, or by specifying each column as a positional argument.
+
+        >>> df.select(pl.struct("int", False).alias("my_struct"))
+        shape: (2, 1)
+        ┌───────────┐
+        │ my_struct │
+        │ ---       │
+        │ struct[2] │
+        ╞═══════════╡
+        │ {1,false} │
+        │ {2,false} │
+        └───────────┘
+
+        Use keyword arguments to easily name each struct field.
+
+        >>> df.select(pl.struct(p="int", q="bool").alias("my_struct")).schema
+        Schema({'my_struct': Struct({'p': Int64, 'q': Boolean})})
+    """
+    flat_exprs: list[IntoExpr | NonNestedLiteral] = [
+        *flatten(exprs),
+        *(expr.alias(alias) for alias, expr in named_exprs.items()),
+    ]
+    if (not flat_exprs) and (schema is not None):
+        flat_exprs = [col(name) for name in schema]
+    return Expr(
+        ExprNode(
+            ExprKind.ELEMENTWISE,
+            "struct",
+            exprs=flat_exprs,
+            schema=schema,
+            allow_multi_output=True,
+        )
+    )

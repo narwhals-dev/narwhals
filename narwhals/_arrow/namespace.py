@@ -226,6 +226,38 @@ class ArrowNamespace(
             context=self,
         )
 
+    def struct(self, *exprs: ArrowExpr, schema: Any = None) -> ArrowExpr:
+        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+            series = tuple(chain.from_iterable(expr(df) for expr in exprs))
+            name = series[0].name
+            native = [s.native for s in series]
+            # Ensure we have flat arrays, not chunked
+            pa_arrays = [
+                arr.combine_chunks() if isinstance(arr, pa.ChunkedArray) else arr
+                for arr in native
+            ]
+
+            pa_fields = [pa.field(s.name, arr.type) for s, arr in zip(series, pa_arrays)]
+            if schema is not None:
+                from narwhals._arrow.utils import narwhals_to_native_dtype
+
+                pa_fields = [
+                    pa.field(f.name, narwhals_to_native_dtype(dtype, self._version))
+                    if dtype is not None
+                    else f
+                    for f, dtype in zip(pa_fields, schema.values())
+                ]
+            struct_array = pa.StructArray.from_arrays(pa_arrays, fields=pa_fields)
+            result = pa.chunked_array([struct_array])
+            return [ArrowSeries(result, name=name, version=self._version)]
+
+        return self._expr._from_callable(
+            func=func,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            context=self,
+        )
+
     def coalesce(self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             align = self._series._align_full_broadcast

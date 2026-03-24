@@ -19,6 +19,7 @@ from narwhals._duckdb.utils import (
     function,
     lit,
     narwhals_to_native_dtype,
+    sql_expression,
     when,
 )
 from narwhals._expression_parsing import (
@@ -111,6 +112,28 @@ class DuckDBNamespace(
             null_mask = reduce(operator.or_, (s.isnull() for s in cols))
             cols_str = (c.cast(VARCHAR) for c in cols)
             return [when(~null_mask, concat_str(*cols_str, separator=separator))]
+
+        return self._expr(
+            call=func,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            version=self._version,
+        )
+
+    def struct(self, *exprs: DuckDBExpr, schema: Any = None) -> DuckDBExpr:
+        def func(df: DuckDBLazyFrame) -> list[Expression]:
+            cols_with_names: list[tuple[str, Expression]] = []
+            for e in exprs:
+                native_exprs = e(df)
+                output_names = e._evaluate_output_names(df)
+                field_names = (
+                    e._alias_output_names(output_names)
+                    if e._alias_output_names is not None
+                    else output_names
+                )
+                cols_with_names.extend(zip(field_names, native_exprs))
+            field_args = ", ".join(f'"{name}" := {col}' for name, col in cols_with_names)
+            return [sql_expression(f"struct_pack({field_args})")]
 
         return self._expr(
             call=func,

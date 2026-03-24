@@ -364,6 +364,49 @@ class PandasLikeNamespace(
             context=self,
         )
 
+    def struct(self, *exprs: PandasLikeExpr, schema: Any = None) -> PandasLikeExpr:
+        def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+            import pyarrow as pa
+
+            series = list(chain.from_iterable(expr(df) for expr in exprs))
+            name = series[0].name
+            pa_arrays = [pa.array(s.native, from_pandas=True) for s in series]
+            pa_fields = [
+                pa.field(s.name, arr.type) for s, arr in zip_strict(series, pa_arrays)
+            ]
+            if schema is not None:
+                from narwhals._arrow.utils import narwhals_to_native_dtype
+
+                pa_fields = [
+                    pa.field(f.name, narwhals_to_native_dtype(dtype, self._version))
+                    if dtype is not None
+                    else f
+                    for f, dtype in zip_strict(pa_fields, schema.values())
+                ]
+            struct_array = pa.StructArray.from_arrays(pa_arrays, fields=pa_fields)
+            ns = self._implementation.to_native_namespace()
+            import pandas as pd
+
+            result_native = ns.Series(
+                pd.arrays.ArrowExtensionArray(struct_array),
+                name=name,
+                index=series[0].native.index,
+            )
+            return [
+                self._series(
+                    result_native,
+                    implementation=self._implementation,
+                    version=self._version,
+                )
+            ]
+
+        return self._expr._from_callable(
+            func=func,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            context=self,
+        )
+
     def _if_then_else(
         self,
         when: NativeSeriesT,
