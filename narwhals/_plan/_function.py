@@ -126,9 +126,30 @@ class Function(Immutable):
     # https://github.com/narwhals-dev/narwhals/blob/d61cd823b9bb75958fe47f979c6fadda4d3cb557/narwhals/_plan/_expr_ir.py#L119-L138
     __expr_ir_dispatch__: ClassVar[Dispatcher[FunctionExpr[Self]]] = Dispatcher()
 
-    # TODO @dangotbanned: Explain, by adapting `ExprIR.__expr_ir_dtype__`
-    # https://github.com/narwhals-dev/narwhals/blob/d61cd823b9bb75958fe47f979c6fadda4d3cb557/narwhals/_plan/_expr_ir.py#L140-L169
     __expr_ir_dtype__: ClassVar[ResolveDType[FunctionExpr[Self]]] = ResolveDType()
+    """Callable defining how a `DType` is derived when `resolve_dtype` is called.
+
+    If the logic fits an existing pattern, use the `dtype` **parameter** [when subclassing]:
+
+        class FillNullWithStrategy(Function, dtype=ResolveDType.function.same_dtype()):
+            __slots__ = ("limit", "strategy")
+            strategy: FillNullStrategy
+            limit: int | None
+
+    See `IntoResolveDType` and `ResolveDType` for more examples.
+
+    If nothing there *quite* scratches the itch, override `resolve_dtype` instead:
+
+        class Pow(Function, flags=FunctionFlags.ELEMENTWISE):
+            def resolve_dtype(self, node: FunctionExpr, schema: FrozenSchema, /) -> DType:
+                base = node.input[0].resolve_dtype(schema)
+                if base.is_integer():
+                    if (exp := node.input[1].resolve_dtype(schema)).is_float():
+                        return exp
+                return base
+
+    [when subclassing]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
+    """
 
     def is_elementwise(self) -> bool:
         return self.__function_flags__.is_elementwise()
