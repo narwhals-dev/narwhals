@@ -227,6 +227,25 @@ class ArrowNamespace(
             context=self,
         )
 
+    def coalesce(self, *exprs: ArrowExpr) -> ArrowExpr:
+        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+            align = self._series._align_full_broadcast
+            init_series, *series = align(*chain.from_iterable(expr(df) for expr in exprs))
+            return [
+                ArrowSeries(
+                    pc.coalesce(init_series.native, *(s.native for s in series)),
+                    name=init_series.name,
+                    version=self._version,
+                )
+            ]
+
+        return self._expr._from_callable(
+            func=func,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            context=self,
+        )
+
     def struct(self, *exprs: ArrowExpr, schema: Schema | None = None) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             series = tuple(chain.from_iterable(expr(df) for expr in exprs))
@@ -249,28 +268,13 @@ class ArrowNamespace(
                     else field
                     for field in pa_fields
                 ]
+                pa_arrays = tuple(
+                    arr.cast(field.type) if arr.type != field.type else arr
+                    for arr, field in zip(pa_arrays, pa_fields)
+                )
             struct_array = pa.StructArray.from_arrays(pa_arrays, fields=pa_fields)
             result = pa.chunked_array([struct_array])
             return [ArrowSeries(result, name=name, version=self._version)]
-
-        return self._expr._from_callable(
-            func=func,
-            evaluate_output_names=combine_evaluate_output_names(*exprs),
-            alias_output_names=combine_alias_output_names(*exprs),
-            context=self,
-        )
-
-    def coalesce(self, *exprs: ArrowExpr) -> ArrowExpr:
-        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            align = self._series._align_full_broadcast
-            init_series, *series = align(*chain.from_iterable(expr(df) for expr in exprs))
-            return [
-                ArrowSeries(
-                    pc.coalesce(init_series.native, *(s.native for s in series)),
-                    name=init_series.name,
-                    version=self._version,
-                )
-            ]
 
         return self._expr._from_callable(
             func=func,

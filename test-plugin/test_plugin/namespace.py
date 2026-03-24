@@ -33,3 +33,4 @@ class DictNamespace(CompliantNamespace[DictLazyFrame, Any]):
     concat_str: Any = not_implemented()
     selectors: Any = not_implemented()
     coalesce: Any = not_implemented()
+    struct: Any = not_implemented()

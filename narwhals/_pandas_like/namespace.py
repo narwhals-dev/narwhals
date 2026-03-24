@@ -397,6 +397,10 @@ class PandasLikeNamespace(
                     else field
                     for field in pa_fields
                 ]
+                pa_arrays = [
+                    arr.cast(field.type) if arr.type != field.type else arr
+                    for arr, field in zip_strict(pa_arrays, pa_fields)
+                ]
             struct_array = pa.StructArray.from_arrays(pa_arrays, fields=pa_fields)
             ns = self._implementation.to_native_namespace()
 

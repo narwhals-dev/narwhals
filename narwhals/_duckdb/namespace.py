@@ -121,29 +121,6 @@ class DuckDBNamespace(
             version=self._version,
         )
 
-    def struct(self, *exprs: DuckDBExpr, schema: Schema | None = None) -> DuckDBExpr:
-        def func(df: DuckDBLazyFrame) -> list[Expression]:
-            cols_with_names: list[tuple[str, Expression]] = []
-            for expr in exprs:
-                native_exprs = expr(df)
-                output_names = expr._evaluate_output_names(df)
-                field_names = (
-                    alias_fn(output_names)
-                    if (alias_fn := expr._alias_output_names) is not None
-                    else output_names
-                )
-                cols_with_names.extend(zip(field_names, native_exprs))
-            field_args = ", ".join(f'"{name}" := {col}' for name, col in cols_with_names)
-            return [sql_expression(f"struct_pack({field_args})")]
-
-        # TODO(FBruzzesi): Cast to schema
-        return self._expr(
-            call=func,
-            evaluate_output_names=combine_evaluate_output_names(*exprs),
-            alias_output_names=combine_alias_output_names(*exprs),
-            version=self._version,
-        )
-
     def mean_horizontal(self, *exprs: DuckDBExpr) -> DuckDBExpr:
         def func(cols: Iterable[Expression]) -> Expression:
             cols = tuple(cols)
@@ -188,5 +165,39 @@ class DuckDBNamespace(
             call=func,
             evaluate_output_names=lambda _df: ["len"],
             alias_output_names=None,
+            version=self._version,
+        )
+
+    def struct(self, *exprs: DuckDBExpr, schema: Schema | None = None) -> DuckDBExpr:
+        def func(df: DuckDBLazyFrame) -> list[Expression]:
+            cols_with_names: list[tuple[str, Expression]] = []
+            for expr in exprs:
+                native_exprs = expr(df)
+                output_names = expr._evaluate_output_names(df)
+                field_names = (
+                    alias_fn(output_names)
+                    if (alias_fn := expr._alias_output_names) is not None
+                    else output_names
+                )
+                cols_with_names.extend(zip(field_names, native_exprs))
+            field_args = ", ".join(f'"{name}" := {col}' for name, col in cols_with_names)
+
+            result = sql_expression(f"struct_pack({field_args})")
+            if schema:
+                version = self._version
+                tz = DeferredTimeZone(df.native)
+                dtype = duckdb.struct_type(
+                    {
+                        name: narwhals_to_native_dtype(dtype, version, tz)
+                        for name, dtype in schema.items()
+                    }
+                )
+                result = result.cast(dtype)
+            return [result]
+
+        return self._expr(
+            call=func,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
             version=self._version,
         )

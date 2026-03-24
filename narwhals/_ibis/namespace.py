@@ -6,6 +6,7 @@ from itertools import chain
 from typing import TYPE_CHECKING, Any
 
 import ibis
+import ibis.expr.datatypes as ibis_dtypes
 import ibis.expr.types as ir
 
 from narwhals._compliant.namespace import AlignDiagonal
@@ -155,9 +156,17 @@ class IbisNamespace(
                     else output_names
                 )
                 cols_with_names.extend(zip(field_names, native_exprs))
-            return [ibis.struct(cols_with_names)]
 
-        # TODO(FBruzzesi): Cast to schema
+            result = ibis.struct(cols_with_names)
+            if schema:
+                version = self._version
+                dtype = ibis_dtypes.Struct.from_tuples(
+                    (name, narwhals_to_native_dtype(dtype, version))
+                    for name, dtype in schema.items()
+                )
+                result = result.cast(dtype)  # pyright: ignore[reportArgumentType, reportCallIssue]
+            return [result]
+
         return self._expr(
             call=func,
             evaluate_output_names=combine_evaluate_output_names(*exprs),

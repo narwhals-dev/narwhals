@@ -166,33 +166,6 @@ class SparkLikeNamespace(
 
         return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
-    def struct(
-        self, *exprs: SparkLikeExpr, schema: Schema | None = None
-    ) -> SparkLikeExpr:
-        def func(df: SparkLikeLazyFrame) -> list[Column]:
-            F = self._F
-            cols_with_names: list[tuple[str, Column]] = []
-            for expr in exprs:
-                native_exprs = expr(df)
-                output_names = expr._evaluate_output_names(df)
-                field_names = (
-                    alias_fn(output_names)
-                    if (alias_fn := expr._alias_output_names) is not None
-                    else output_names
-                )
-                cols_with_names.extend(zip(field_names, native_exprs))
-            aliased = [col.alias(name) for name, col in cols_with_names]
-            return [F.struct(*aliased)]
-
-        # TODO(FBruzzesi): Cast to schema
-        return self._expr(
-            call=func,
-            evaluate_output_names=combine_evaluate_output_names(*exprs),
-            alias_output_names=combine_alias_output_names(*exprs),
-            version=self._version,
-            implementation=self._implementation,
-        )
-
     def concat(
         self, items: Iterable[SparkLikeLazyFrame], *, how: ConcatMethod
     ) -> SparkLikeLazyFrame:
@@ -237,6 +210,48 @@ class SparkLikeNamespace(
                 null_mask = reduce(operator.or_, (F.isnull(s) for s in cols))
                 result = F.when(~null_mask, result).otherwise(F.lit(None))
 
+            return [result]
+
+        return self._expr(
+            call=func,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            version=self._version,
+            implementation=self._implementation,
+        )
+
+    def struct(
+        self, *exprs: SparkLikeExpr, schema: Schema | None = None
+    ) -> SparkLikeExpr:
+        def func(df: SparkLikeLazyFrame) -> list[Column]:
+            F = self._F
+            cols_with_names: list[tuple[str, Column]] = []
+            for expr in exprs:
+                native_exprs = expr(df)
+                output_names = expr._evaluate_output_names(df)
+                field_names = (
+                    alias_fn(output_names)
+                    if (alias_fn := expr._alias_output_names) is not None
+                    else output_names
+                )
+                cols_with_names.extend(zip(field_names, native_exprs))
+            aliased = [col.alias(name) for name, col in cols_with_names]
+
+            result = F.struct(*aliased)
+            if schema:
+                version = self._version
+                dtypes = self._native_dtypes
+                session = df.native.sparkSession
+                dtype = dtypes.StructType(
+                    [
+                        dtypes.StructField(
+                            name,
+                            narwhals_to_native_dtype(dtype, version, dtypes, session),
+                        )
+                        for name, dtype in schema.items()
+                    ]
+                )
+                result = result.cast(dtype)
             return [result]
 
         return self._expr(
