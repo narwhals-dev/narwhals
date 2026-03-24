@@ -73,8 +73,8 @@ def test_corr_series(
     constructor_eager: ConstructorEager,
     request: pytest.FixtureRequest,
     output_name: str,
-    a: str | nw.Expr,
-    b: str | nw.Expr,
+    a: str,
+    b: str,
     expected_corr: float,
 ) -> None:
     if "pyspark" in str(constructor_eager) and expected_corr is None:
@@ -95,8 +95,8 @@ def test_corr_series_spearman(
     constructor_eager: ConstructorEager,
     request: pytest.FixtureRequest,
     output_name: str,
-    a: str | nw.Expr,
-    b: str | nw.Expr,
+    a: str,
+    b: str,
     expected_corr: float,
 ) -> None:
     if "pyspark" in str(constructor_eager) and expected_corr is None:
