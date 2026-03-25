@@ -109,6 +109,28 @@ def test_struct_with_expressions(
     assert_equal_data(result, expected)
 
 
+def test_struct_with_literals(
+    request: pytest.FixtureRequest, constructor: Constructor
+) -> None:
+    if any(x in str(constructor) for x in UNSUPPORTED_BACKENDS):
+        request.applymarker(pytest.mark.xfail)
+
+    skip_pandas(constructor=constructor)
+
+    df = nw.from_native(constructor(data))
+    result = df.select(nw.struct("a", x="c", y=False).alias("struct"))
+
+    expected = {
+        "struct": [
+            {"a": 1, "x": "play", "y": False},
+            {"a": 2, "x": "swim", "y": False},
+            {"a": 3, "x": "walk", "y": False},
+        ]
+    }
+
+    assert_equal_data(result, expected)
+
+
 def test_struct_with_schema(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:

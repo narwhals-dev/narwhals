@@ -46,6 +46,7 @@ if TYPE_CHECKING:
         IntoDType,
         IntoExpr,
         IntoSchema,
+        IntoSeriesT,
         NonNestedLiteral,
         PythonLiteral,
         _2DArray,
@@ -1796,9 +1797,12 @@ def format(f_string: str, *args: IntoExpr) -> Expr:
 
 
 def struct(
-    *exprs: IntoExpr | Sequence[IntoExpr],
+    *exprs: Expr
+    | Series[IntoSeriesT]
+    | PythonLiteral
+    | Sequence[Expr | Series[IntoSeriesT] | PythonLiteral],
     schema: IntoSchema | None = None,
-    **named_exprs: IntoExpr,
+    **named_exprs: Expr | Series[IntoSeriesT] | PythonLiteral,
 ) -> Expr:
     """Collect columns into a struct column.
 
@@ -1807,8 +1811,6 @@ def struct(
             positional arguments. Accepts expression input. Strings are parsed
             as column names, other non-expression inputs are parsed as literals.
         schema: Optional schema that explicitly defines the struct field dtypes.
-            If no columns or expressions are provided, schema keys are used to
-            define columns.
         **named_exprs: Additional columns to collect into the struct column,
             specified as keyword arguments.
             The columns will be renamed to the keyword used.
@@ -1857,13 +1859,24 @@ def struct(
     from narwhals.schema import Schema
     from narwhals.series import Series
 
+    def _parse_into_expr(
+        into_expr: Expr | Series[IntoSeriesT] | PythonLiteral,
+    ) -> Expr | Series[IntoSeriesT]:
+        return (
+            into_expr
+            if isinstance(into_expr, (Expr, Series))
+            else col(into_expr)
+            if isinstance(into_expr, str)
+            else lit(into_expr)
+        )
+
     flat_exprs = [
-        *(e if isinstance(e, (Expr, Series)) else col(e) for e in flatten(exprs)),
-        *(
-            (e if isinstance(e, (Expr, Series)) else col(e)).alias(n)
-            for n, e in named_exprs.items()
-        ),
+        *(_parse_into_expr(e) for e in flatten(exprs)),
+        *(_parse_into_expr(e).alias(n) for n, e in named_exprs.items()),
     ]
+    if not flat_exprs:
+        msg = "expected at least 1 expression in 'struct'"
+        raise ValueError(msg)
 
     schema = Schema(schema) if schema is not None else None
     return Expr(

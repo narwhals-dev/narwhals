@@ -248,7 +248,8 @@ class ArrowNamespace(
 
     def struct(self, *exprs: ArrowExpr, schema: Schema | None = None) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            series = tuple(chain.from_iterable(expr(df) for expr in exprs))
+            align = self._series._align_full_broadcast
+            series = align(*chain.from_iterable(expr(df) for expr in exprs))
             name = series[0].name
             struct_array = pc.make_struct(
                 *(s.native for s in series), field_names=[s.name for s in series]

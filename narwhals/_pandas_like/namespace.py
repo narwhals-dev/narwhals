@@ -380,7 +380,8 @@ class PandasLikeNamespace(
                 )
                 raise ImportError(msg) from exc
 
-            series = tuple(chain.from_iterable(expr(df) for expr in exprs))
+            align = self._series._align_full_broadcast
+            series = align(*chain.from_iterable(expr(df) for expr in exprs))
             name = series[0].name
             struct_array = pc.make_struct(
                 *(pa.array(s.native, from_pandas=True) for s in series),

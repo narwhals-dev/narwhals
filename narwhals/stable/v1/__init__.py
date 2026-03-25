@@ -1066,9 +1066,12 @@ def scan_parquet(
 
 
 def struct(
-    *exprs: IntoExpr | Sequence[IntoExpr],
+    *exprs: Expr
+    | Series[IntoSeriesT]
+    | PythonLiteral
+    | Sequence[Expr | Series[IntoSeriesT] | PythonLiteral],
     schema: IntoSchema | None = None,
-    **named_exprs: IntoExpr,
+    **named_exprs: Expr | Series[IntoSeriesT] | PythonLiteral,
 ) -> Expr:
     """Collect columns into a struct column.
 
@@ -1077,8 +1080,6 @@ def struct(
             positional arguments. Accepts expression input. Strings are parsed
             as column names, other non-expression inputs are parsed as literals.
         schema: Optional schema that explicitly defines the struct field dtypes.
-            If no columns or expressions are provided, schema keys are used to
-            define columns.
         **named_exprs: Additional columns to collect into the struct column,
             specified as keyword arguments.
             The columns will be renamed to the keyword used.
