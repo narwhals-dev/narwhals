@@ -178,13 +178,23 @@ def parse_predicates_constraints_into_expr_ir(
 
     The result is an AND-reduction of all inputs.
     """
-    all_predicates = _parse_into_iter_expr_ir(
+    predicates = _parse_into_iter_expr_ir(
         first_predicate, *more_predicates, _list_as_series=_list_as_series
     )
     if constraints:
-        chained = chain(all_predicates, _parse_constraints(constraints))
-        return _combine_predicates(chained)
-    return _combine_predicates(all_predicates)
+        items = constraints.items()
+        it = (ir.col(nm).eq(parse_into_expr_ir(v, str_as_lit=True)) for nm, v in items)
+        predicates = chain(predicates, it)
+
+    if (first := next(predicates, None)) is None:
+        msg = "at least one predicate or constraint must be provided"
+        raise TypeError(msg)
+    if second := next(predicates, None):
+        return ir.all_horizontal(first, second, *predicates)
+    if first.meta.has_multiple_outputs():
+        # NOTE: Safeguarding against https://github.com/pola-rs/polars/issues/25022
+        return ir.all_horizontal(first)
+    return first
 
 
 def parse_sort_by_into_seq_of_expr_ir(
@@ -276,7 +286,8 @@ def _parse_into_iter_expr_ir(
     if more_inputs:
         yield from _parse_positional_inputs(more_inputs, _list_as_series)
     if named_inputs:
-        yield from _parse_named_inputs(named_inputs)
+        for name, input in named_inputs.items():
+            yield parse_into_expr_ir(input).alias(name)
 
 
 def _parse_positional_inputs(
@@ -284,31 +295,6 @@ def _parse_positional_inputs(
 ) -> Iterator[ExprIR]:
     for into in inputs:
         yield parse_into_expr_ir(into, list_as_series=list_as_series)
-
-
-def _parse_named_inputs(named_inputs: dict[str, IntoExpr], /) -> Iterator[ExprIR]:
-    for name, input in named_inputs.items():
-        yield parse_into_expr_ir(input).alias(name)
-
-
-def _parse_constraints(constraints: dict[str, IntoExpr], /) -> Iterator[ExprIR]:
-    for name, value in constraints.items():
-        yield ir.col(name).eq(parse_into_expr_ir(value, str_as_lit=True))
-
-
-def _combine_predicates(predicates: Iterator[ExprIR], /) -> ExprIR:
-    first = next(predicates, None)
-    if not first:
-        msg = "at least one predicate or constraint must be provided"
-        raise TypeError(msg)
-    if second := next(predicates, None):
-        inputs = first, second, *predicates
-    elif first.meta.has_multiple_outputs():
-        # NOTE: Safeguarding against https://github.com/pola-rs/polars/issues/25022
-        inputs = (first,)
-    else:
-        return first
-    return ir.all_horizontal(*inputs)
 
 
 def _is_iterable(obj: Iterable[T] | Any) -> TypeIs[Iterable[T]]:
