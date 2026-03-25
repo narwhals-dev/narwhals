@@ -20,6 +20,7 @@ from narwhals._spark_like.utils import (
     true_divide,
 )
 from narwhals._sql.namespace import SQLNamespace
+from narwhals._utils import zip_strict
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -231,10 +232,8 @@ class SparkLikeNamespace(
             cols_with_names: Iterable[tuple[str, Column]] = (
                 (aliases, native_exprs)
                 for expr in exprs
-                for native_exprs, _, aliases in zip(
-                    expr(df),
-                    *evaluate_output_names_and_aliases(expr, df, []),
-                    strict=True,
+                for native_exprs, _, aliases in zip_strict(
+                    expr(df), *evaluate_output_names_and_aliases(expr, df, [])
                 )
             )
             aliased = [col.alias(name) for name, col in cols_with_names]

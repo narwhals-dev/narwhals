@@ -19,7 +19,7 @@ from narwhals._ibis.expr import IbisExpr
 from narwhals._ibis.selectors import IbisSelectorNamespace
 from narwhals._ibis.utils import function, lit, narwhals_to_native_dtype
 from narwhals._sql.namespace import SQLNamespace
-from narwhals._utils import Implementation
+from narwhals._utils import Implementation, zip_strict
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -151,10 +151,8 @@ class IbisNamespace(
             cols_with_names: Iterable[tuple[str, ir.Value]] = (
                 (aliases, native_exprs)
                 for expr in exprs
-                for native_exprs, _, aliases in zip(
-                    expr(df),
-                    *evaluate_output_names_and_aliases(expr, df, []),
-                    strict=True,
+                for native_exprs, _, aliases in zip_strict(
+                    expr(df), *evaluate_output_names_and_aliases(expr, df, [])
                 )
             )
 
