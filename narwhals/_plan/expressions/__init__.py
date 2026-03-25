@@ -20,6 +20,7 @@ from narwhals._plan.expressions import (
     temporal,
 )
 from narwhals._plan.expressions.aggregation import AggExpr, OrderableAggExpr
+from narwhals._plan.expressions.boolean import all_horizontal
 from narwhals._plan.expressions.expr import (
     Alias,
     AnonymousExpr,
@@ -78,6 +79,7 @@ __all__ = [
     "StructExpr",
     "TernaryExpr",
     "aggregation",
+    "all_horizontal",
     "boolean",
     "categorical",
     "col",

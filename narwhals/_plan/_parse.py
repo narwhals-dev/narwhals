@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-import operator
 from collections import deque
-from collections.abc import Collection, Iterable, Sequence
+from collections.abc import Iterable, Sequence
 
 # ruff: noqa: A002
-from functools import reduce
+from functools import lru_cache
 from itertools import chain
 from typing import TYPE_CHECKING
 
-from narwhals._native import is_native_pandas
+import narwhals._plan.expressions as ir
+import narwhals._plan.expressions.selectors as s_ir
 from narwhals._plan._guards import is_iterable_reject
 from narwhals._plan.common import flatten_hash_safe
 from narwhals._plan.exceptions import (
@@ -18,7 +18,7 @@ from narwhals._plan.exceptions import (
     list_literal_error,
 )
 from narwhals._utils import qualified_type_name
-from narwhals.dependencies import get_polars
+from narwhals.dependencies import get_pandas, get_polars
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
@@ -29,7 +29,6 @@ if TYPE_CHECKING:
 
     from narwhals._plan.expr import Expr
     from narwhals._plan.expressions import ExprIR, SelectorIR
-    from narwhals._plan.selectors import Selector
     from narwhals._plan.typing import (
         ColumnNameOrSelector,
         IntoExpr,
@@ -98,7 +97,12 @@ We only support cases `a`, `b`, but the typing for most contexts is more permiss
  └───────────┴─────┘]
 """
 
+# TODO @dangotbanned: Remaining inline imports should share a cache
+# - Dont cache modules
+# - Try to use as few functions/types as possible
 
+
+# NOTE: Unavoidable inline imports
 def parse_into_expr_ir(
     input: IntoExpr | list[Any],
     *,
@@ -117,13 +121,13 @@ def parse_into_expr_ir(
         dtype: If the input is expected to resolve to a literal with a known dtype, pass
             this to the `lit` constructor.
     """
-    from narwhals._plan import Expr, col, lit
+    from narwhals._plan import Expr, lit
 
     if isinstance(input, Expr):
-        expr = input
-    elif isinstance(input, str) and not str_as_lit:
-        expr = col(input)
-    elif isinstance(input, list):
+        return input._ir
+    if isinstance(input, str) and not str_as_lit:
+        return ir.col(input)
+    if isinstance(input, list):
         if list_as_series is None:
             raise list_literal_error(input)
         expr = lit(list_as_series(input))
@@ -132,55 +136,34 @@ def parse_into_expr_ir(
     return expr._ir
 
 
+# NOTE: Unavoidable inline import
 def parse_into_selector_ir(
     input: ColumnNameOrSelector | Expr, /, *, require_all: bool = True
 ) -> SelectorIR:
-    return _parse_into_selector(input, require_all=require_all)._ir
-
-
-def _parse_into_selector(
-    input: ColumnNameOrSelector | Expr, /, *, require_all: bool = True
-) -> Selector:
     from narwhals._plan import Expr
 
     if isinstance(input, Expr):
-        selector = input.meta.as_selector()
-    elif isinstance(input, str):
-        import narwhals._plan.selectors as cs
-
-        selector = cs.by_name(input, require_all=require_all)
-    else:
-        msg = f"cannot turn {qualified_type_name(input)!r} into a selector"
-        raise TypeError(msg)
-    return selector
+        return input._ir.to_selector_ir()
+    if isinstance(input, str):
+        return s_ir.ByName.from_name(input, require_all=require_all).to_selector_ir()
+    msg = f"cannot turn {qualified_type_name(input)!r} into a selector"
+    raise TypeError(msg)
 
 
 def parse_into_combined_selector_ir(
     *inputs: OneOrIterable[ColumnNameOrSelector], require_all: bool = True
 ) -> SelectorIR:
-    import narwhals._plan.selectors as cs
-
     flat = tuple(flatten_hash_safe(inputs))
-    selectors = deque["Selector"]()
+    selectors = deque[ir.SelectorIR]()
     if names := tuple(el for el in flat if isinstance(el, str)):
-        selector = cs.by_name(names, require_all=require_all)
+        selector_ir = s_ir.ByName(names=names, require_all=require_all).to_selector_ir()
         if len(names) == len(flat):
-            return selector._ir
-        selectors.append(selector)
-    selectors.extend(_parse_into_selector(el) for el in flat if not isinstance(el, str))
-    return _any_of(selectors)._ir
-
-
-def _any_of(selectors: Collection[Selector], /) -> Selector:
-    import narwhals._plan.selectors as cs
-
+            return selector_ir
+        selectors.append(selector_ir)
+    selectors.extend(parse_into_selector_ir(el) for el in flat if not isinstance(el, str))
     if not selectors:
-        s: Selector = cs.empty()
-    elif len(selectors) == 1:
-        s = next(iter(selectors))
-    else:
-        s = reduce(operator.or_, selectors)
-    return s
+        return s_ir.empty()
+    return selectors.popleft().or_(*selectors)
 
 
 def parse_into_seq_of_expr_ir(
@@ -234,17 +217,22 @@ def _parse_sort_by_into_iter_expr_ir(
         yield e
 
 
+# TODO @dangotbanned: Possibly remove? see `_parse_into_iter_selector_ir`
 def parse_into_seq_of_selector_ir(
     first_input: OneOrIterable[ColumnNameOrSelector], *more_inputs: ColumnNameOrSelector
 ) -> Seq[SelectorIR]:
     return tuple(_parse_into_iter_selector_ir(first_input, more_inputs))
 
 
+# NOTE: ^^^ is the exposed one,
+# but collecting -> `expand_selector_irs_names(require_any=...)` seems a bit much
+# `require_any` should be enough, right?
 def _parse_into_iter_selector_ir(
     first_input: OneOrIterable[ColumnNameOrSelector],
     more_inputs: tuple[ColumnNameOrSelector, ...],
     /,
 ) -> Iterator[SelectorIR]:
+    # TODO @dangotbanned: Is this avoidable or at least replace w/ Expr?
     from narwhals._plan.selectors import Selector
 
     if isinstance(first_input, (str, Selector)) and not more_inputs:
@@ -264,6 +252,8 @@ def _parse_into_iter_selector_ir(
         yield parse_into_selector_ir(into)
 
 
+# NOTE: Unavoidable inline imports
+# TODO @dangotbanned: Too complicated!
 def _parse_into_iter_expr_ir(
     first_input: OneOrIterable[IntoExpr],
     *more_inputs: IntoExpr | list[Any],
@@ -313,15 +303,11 @@ def _parse_named_inputs(named_inputs: dict[str, IntoExpr], /) -> Iterator[ExprIR
 
 
 def _parse_constraints(constraints: dict[str, IntoExpr], /) -> Iterator[ExprIR]:
-    from narwhals._plan import col
-
     for name, value in constraints.items():
-        yield (col(name) == value)._ir
+        yield ir.col(name).eq(parse_into_expr_ir(value, str_as_lit=True))
 
 
 def _combine_predicates(predicates: Iterator[ExprIR], /) -> ExprIR:
-    from narwhals._plan.expressions.boolean import all_horizontal
-
     first = next(predicates, None)
     if not first:
         msg = "at least one predicate or constraint must be provided"
@@ -333,17 +319,35 @@ def _combine_predicates(predicates: Iterator[ExprIR], /) -> ExprIR:
         inputs = (first,)
     else:
         return first
-    return all_horizontal(*inputs)
+    return ir.all_horizontal(*inputs)
 
 
 def _is_iterable(obj: Iterable[T] | Any) -> TypeIs[Iterable[T]]:
-    if is_native_pandas(obj) or (
-        (pl := get_polars())
-        and isinstance(obj, (pl.Series, pl.Expr, pl.DataFrame, pl.LazyFrame))
-    ):
+    """Equivalent to `isinstance(obj, Iterable)` but raises on native types.
+
+    Used on a very hot path, so subclass checks are cached.
+    """
+    tp = type(obj)
+    if _type_cached_is_iterable_is_native(tp):  # type: ignore[arg-type]
         raise is_iterable_error(obj)
-    return isinstance(obj, Iterable)
+    return _type_cached_is_iterable(tp)  # type: ignore[arg-type]
 
 
 def _is_empty_sequence(obj: Any) -> bool:
     return isinstance(obj, Sequence) and not obj
+
+
+@lru_cache(maxsize=128)
+def _type_cached_is_iterable_is_native(tp: type[Any], /) -> bool:
+    tps: tuple[type[Any], ...] = (pd.DataFrame, pd.Series) if (pd := get_pandas()) else ()
+    tps = (
+        (*tps, pl.Series, pl.Expr, pl.DataFrame, pl.LazyFrame)
+        if (pl := get_polars())
+        else tps
+    )
+    return bool(tps and issubclass(tp, tps))
+
+
+@lru_cache(maxsize=128)
+def _type_cached_is_iterable(tp: type[Any], /) -> bool:
+    return issubclass(tp, Iterable)

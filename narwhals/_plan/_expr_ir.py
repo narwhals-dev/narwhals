@@ -39,6 +39,7 @@ You could think of these sharing a role in lowering an IR:
 
 from __future__ import annotations
 
+from functools import reduce
 from typing import TYPE_CHECKING, Generic, Literal, final
 
 from narwhals._plan._dispatch import Dispatcher, DispatcherOptions
@@ -60,7 +61,8 @@ if TYPE_CHECKING:
     from narwhals._plan.compliant.column import ExprDispatch
     from narwhals._plan.compliant.typing import FrameT_contra, R_co
     from narwhals._plan.expr import Expr
-    from narwhals._plan.expressions.expr import Alias, Cast
+    from narwhals._plan.expressions.expr import Alias, BinaryExpr, Cast
+    from narwhals._plan.expressions.operators import Eq
     from narwhals._plan.meta import MetaNamespace
     from narwhals._plan.schema import FrozenSchema
     from narwhals._plan.selectors import Selector
@@ -559,6 +561,12 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
 
         return Alias(expr=self, name=name)
 
+    def eq(self, other: ExprIR) -> BinaryExpr[Self, Eq, ExprIR]:
+        """Syntax sugar for `BinaryExpr(left=self, op=Eq(), right=other)`."""
+        from narwhals._plan.expressions.operators import Eq
+
+        return Eq().to_binary_expr(self, other)
+
     def _repr_html_(self) -> str:
         """Return a html representation of this expression, used by [IPython].
 
@@ -620,6 +628,17 @@ class SelectorIR(ExprIR, dispatch="no_dispatch"):
 
     def needs_expansion(self) -> bool:
         return True
+
+    def or_(self: SelectorIR, *others: SelectorIR) -> SelectorIR:
+        """Syntax sugar for `BinarySelector(left=self, op=Or(), right=others[0])`.
+
+        - Noop when `others` is empty
+        - Reduction when `len(others) > 1`
+        """
+        # NOTE: `Self@SelectorIR.or_(*SelectorIR)` is obliterating pylance
+        from narwhals._plan.expressions.operators import Or
+
+        return reduce(Or().to_binary_selector, others, self)
 
 
 # TODO @dangotbanned: Class-level doc
