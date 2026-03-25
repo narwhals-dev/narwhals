@@ -1,3 +1,42 @@
+"""Core expression intermediate representations.
+
+## Implementation Notes
+The design is *based on* (rust) polars, with *deviations* where:
+- `rust != python`
+  - Lack of (typing) support for non-trivial [algebraic data types]
+  - (*Unsurprisingly*) memory management architecture
+- If our subset of polars doesn't/can't support things
+- A more faithful adaptation would require considerably more code
+
+### `ExprIR`
+Variants of [`dsl::expr::Expr`] are subclasses of `ExprIR`.
+
+### `SelectorIR`
+[`dsl::expr::Expr::Selector`] is `class SelectorIR(ExprIR)`.
+
+*Some* variants of [`dsl::selector::Selector`] relate to *subclasses of* `SelectorIR`.
+
+### `NamedIR`
+[`plans::expr_ir::ExprIR`] introduced storing a single output name.
+
+While that and [`plans::aexpr::AExpr`] have a focus on memory management (*not here*).
+
+You could think of these sharing a role in lowering an IR:
+
+    # Polars
+    Expr   -> AExpr
+
+    # Narwhals
+    ExprIR -> NamedIR[ExprIR]
+
+[`dsl::expr::Expr`]: https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/crates/polars-plan/src/dsl/expr/mod.rs#L88-L223
+[`dsl::expr::Expr::Selector`]: https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/crates/polars-plan/src/dsl/expr/mod.rs#L104
+[`dsl::selector::Selector`]: https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/crates/polars-plan/src/dsl/selector.rs#L148-L152
+[algebraic data types]: https://github.com/jspahrsummers/adt
+[`plans::expr_ir::ExprIR`]: https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/crates/polars-plan/src/plans/expr_ir.rs#L63-L74
+[`plans::aexpr::AExpr`]: https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/crates/polars-plan/src/plans/aexpr/mod.rs#L179-L269
+"""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Generic, Literal, final
