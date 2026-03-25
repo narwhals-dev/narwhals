@@ -228,10 +228,10 @@ def _parse_into_iter_selector_ir(
     more_inputs: tuple[ColumnNameOrSelector, ...],
     /,
 ) -> Iterator[SelectorIR]:
-    # TODO @dangotbanned: Is this avoidable or at least replace w/ Expr?
-    from narwhals._plan.selectors import Selector
+    # TODO @dangotbanned: Is this import avoidable?
+    from narwhals._plan import Expr
 
-    if isinstance(first_input, (str, Selector)) and not more_inputs:
+    if isinstance(first_input, (str, Expr)) and not more_inputs:
         yield parse_into_selector_ir(first_input)
         return
 
