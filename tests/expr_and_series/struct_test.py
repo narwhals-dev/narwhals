@@ -3,11 +3,25 @@ from __future__ import annotations
 import pytest
 
 import narwhals as nw
-from tests.utils import Constructor, ConstructorEager, assert_equal_data
+from tests.utils import (
+    PANDAS_VERSION,
+    PYARROW_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 data = {"a": [1, 2, 3], "b": ["dogs", "cats", None], "c": ["play", "swim", "walk"]}
 
 UNSUPPORTED_BACKENDS = ("dask",)
+
+
+def skip_pandas(constructor: Constructor | ConstructorEager) -> None:
+    if "pandas" in str(constructor) and (
+        PANDAS_VERSION < (2, 2, 0) or PYARROW_VERSION == (0, 0, 0)
+    ):
+        reason = "too old or pyarrow not installed"
+        pytest.skip(reason=reason)
 
 
 @pytest.mark.parametrize(
@@ -46,6 +60,9 @@ def test_struct_named_exprs(
 ) -> None:
     if any(x in str(constructor) for x in UNSUPPORTED_BACKENDS):
         request.applymarker(pytest.mark.xfail)
+
+    skip_pandas(constructor=constructor)
+
     df = nw.from_native(constructor(data))
     result = df.select(nw.struct(x="a", y="b").alias("struct"))
 
@@ -61,6 +78,9 @@ def test_struct_positional_and_named(
 ) -> None:
     if any(x in str(constructor) for x in UNSUPPORTED_BACKENDS):
         request.applymarker(pytest.mark.xfail)
+
+    skip_pandas(constructor=constructor)
+
     df = nw.from_native(constructor(data))
     result = df.select(nw.struct("a", z="c").alias("struct"))
 
@@ -76,6 +96,9 @@ def test_struct_with_expressions(
 ) -> None:
     if any(x in str(constructor) for x in UNSUPPORTED_BACKENDS):
         request.applymarker(pytest.mark.xfail)
+
+    skip_pandas(constructor=constructor)
+
     df = nw.from_native(constructor(data))
     result = df.select(
         nw.struct(nw.col("a") * 2, nw.col("c").str.len_chars()).alias("struct")
@@ -92,6 +115,8 @@ def test_struct_with_schema(
     if any(x in str(constructor) for x in UNSUPPORTED_BACKENDS):
         request.applymarker(pytest.mark.xfail)
 
+    skip_pandas(constructor=constructor)
+
     data_numeric = {"a": [1, 2, 3], "b": [4.0, 5.0, 6.0]}
     schema = {"a": nw.Float64(), "b": nw.Float32()}
     df = nw.from_native(constructor(data_numeric))
@@ -105,6 +130,8 @@ def test_struct_with_schema(
 
 
 def test_struct_with_series(constructor_eager: ConstructorEager) -> None:
+    skip_pandas(constructor=constructor_eager)
+
     df = nw.from_native(constructor_eager(data), eager_only=True)
     s_a, s_b = df.get_column("a"), df.get_column("b")
     result = df.select(nw.struct(s_a, s_b).alias("struct"))
@@ -117,6 +144,8 @@ def test_struct_with_series(constructor_eager: ConstructorEager) -> None:
 
 
 def test_struct_mixed_series_and_exprs(constructor_eager: ConstructorEager) -> None:
+    skip_pandas(constructor=constructor_eager)
+
     df = nw.from_native(constructor_eager(data), eager_only=True)
     s_a = df.get_column("a")
     result = df.select(nw.struct(s_a, nw.col("c")).alias("struct"))
@@ -129,6 +158,8 @@ def test_struct_mixed_series_and_exprs(constructor_eager: ConstructorEager) -> N
 
 
 def test_struct_named_with_series(constructor_eager: ConstructorEager) -> None:
+    skip_pandas(constructor=constructor_eager)
+
     df = nw.from_native(constructor_eager(data), eager_only=True)
     s_a = df.get_column("a")
     result = df.select(nw.struct(x=s_a, y="b").alias("struct"))
