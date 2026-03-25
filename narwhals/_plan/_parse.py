@@ -37,7 +37,6 @@ if TYPE_CHECKING:
         PartialSeries,
         Seq,
     )
-    from narwhals.typing import IntoDType
 
     T = TypeVar("T")
 
@@ -108,7 +107,6 @@ def parse_into_expr_ir(
     *,
     str_as_lit: bool = False,
     list_as_series: PartialSeries | None = None,
-    dtype: IntoDType | None = None,
 ) -> ExprIR:
     """Parse a single input into an `ExprIR` node.
 
@@ -118,8 +116,6 @@ def parse_into_expr_ir(
             strings are parsed as column names.
         list_as_series: Interpret list input as a Series literal, using the provided constructor.
             If set to `None` (default), lists will raise when passed to `lit`.
-        dtype: If the input is expected to resolve to a literal with a known dtype, pass
-            this to the `lit` constructor.
     """
     from narwhals._plan import Expr, lit
 
@@ -132,7 +128,7 @@ def parse_into_expr_ir(
             raise list_literal_error(input)
         expr = lit(list_as_series(input))
     else:
-        expr = lit(input, dtype=dtype)
+        expr = lit(input)
     return expr._ir
 
 
