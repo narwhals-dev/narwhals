@@ -41,10 +41,22 @@ into a cache-safe proxy structure (`FrozenSchema`).
 
 FrozenColumns: TypeAlias = "Seq[str]"
 _FrozenSchemaHash: TypeAlias = "Seq[tuple[str, DType]]"
-_T2 = TypeVar("_T2")
+T = TypeVar("T")
 
 _unknown = Unknown()
 _OBJ_SETATTR = object.__setattr__
+
+
+def set_flatten(iterable: Iterable[Iterator[T]], /) -> set[T]:
+    """Equivalent to `set(chain.from_iterable(iterable))`.
+
+    - Uses a set comprehension (despite the readability) since it has a unique [opcode].
+    - *Technically* accepts `Iterable[Iterable[T]]`
+      - but the typing overlaps with `str`
+
+    [opcode]: https://docs.python.org/3.14/library/dis.html#opcode-SET_ADD
+    """
+    return {name for sub_it in iterable for name in sub_it}
 
 
 # TODO @dangotbanned: (low-prio) Disable `__init__`
@@ -264,6 +276,10 @@ class FrozenSchema(Immutable):
         it = (named.pop(name, None) or named_ir(name, col(name)) for name in self)  # type: ignore[arg-type]
         return tuple(chain(it, named.values()))
 
+    def contains_all(self, names: Iterable[Iterator[str]], /) -> bool:
+        """Return True if this schema is a superset of columns in all of `names`."""
+        return set_flatten(names).issubset(self._mapping)
+
     def __repr__(self) -> str:
         s = repr(dict(self))
         tp_name = type(self).__name__
@@ -285,8 +301,8 @@ class FrozenSchema(Immutable):
     @overload
     def get(self, key: str, /) -> DType | None: ...
     @overload
-    def get(self, key: str, default: DType | _T2, /) -> DType | _T2: ...
-    def get(self, key: str, default: DType | _T2 | None = None, /) -> DType | _T2 | None:
+    def get(self, key: str, default: DType | T, /) -> DType | T: ...
+    def get(self, key: str, default: DType | T | None = None, /) -> DType | T | None:
         if default is not None:
             return self._mapping.get(key, default)
         return self._mapping.get(key)

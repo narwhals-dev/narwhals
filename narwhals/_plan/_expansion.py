@@ -38,6 +38,8 @@ Their dependencies are **quite** complex, with the main ones being:
 from __future__ import annotations
 
 from collections import deque
+from collections.abc import Iterator
+from itertools import chain
 from typing import TYPE_CHECKING, Any, Union
 
 from narwhals._plan import expressions as ir, meta
@@ -60,10 +62,10 @@ from narwhals._plan.expressions import (
 from narwhals._plan.schema import FrozenSchema, IntoFrozenSchema, freeze_schema
 from narwhals._typing_compat import assert_never
 from narwhals._utils import check_column_names_are_unique, zip_strict
-from narwhals.exceptions import InvalidOperationError
+from narwhals.exceptions import ComputeError, InvalidOperationError
 
 if TYPE_CHECKING:
-    from collections.abc import Collection, Iterable, Iterator, Sequence
+    from collections.abc import Collection, Iterable, Sequence
 
     from typing_extensions import TypeAlias
 
@@ -172,32 +174,26 @@ class Expander:
     ) -> tuple[Seq[NamedIR], deque[str]]:
         output_names = deque[str]()
         named_irs = deque[NamedIR]()
-        root_names = set[str]()
-
-        # NOTE: Collecting here isn't ideal (perf-wise), but the expanded `ExprIR`s
-        # have more useful information to add in an error message
-        # Another option could be keeping things lazy, but repeating the work for the error case?
-        # that way, there isn't a cost paid on the happy path - and it doesn't matter when we're raising
-        # if we take our time displaying the message
-        expanded = tuple(self.iter_expand_exprs(exprs))
-        for e in expanded:
-            # NOTE: Empty string is allowed as a name, but is falsy
+        root_names = deque[Iterator[str]]()
+        expand = self.iter_expand_exprs
+        for e in expand(exprs):
+            # NOTE: "" is allowed as a name, but falsy
             if (name := e.meta.output_name(raise_if_undetermined=False)) is not None:
-                target = e
-            elif any(isinstance(e_, KeepName) for e_ in e.iter_right()):
+                target = remove_alias(e)
+            else:
                 replaced = replace_keep_name(e)
                 name = replaced.meta.output_name()
-                target = replaced
-            else:
-                msg = f"Unable to determine output name for expression, got: `{e!r}`"
-                raise NotImplementedError(msg)
+                target = remove_alias(replaced)
             output_names.append(name)
-            named_irs.append(ir.named_ir(name, remove_alias(target)))
-            root_names.update(meta.iter_root_names(e))
+            named_irs.append(ir.named_ir(name, target))
+            root_names.append(meta.iter_root_names(e))
+
+        # NOTE: On failure, we repeat the expansion so the happy path doesn't need to collect as much
         if len(output_names) != len(set(output_names)):
-            raise duplicate_error(expanded)
-        if not (set(self.schema).issuperset(root_names)):
-            raise column_not_found_error(root_names, self.schema)
+            raise duplicate_error(tuple(expand(exprs)))
+        if not self.schema.contains_all(root_names):
+            roots = chain.from_iterable(meta.iter_root_names(e) for e in expand(exprs))
+            raise column_not_found_error(roots, self.schema)
         return tuple(named_irs), output_names
 
     def _expand(self, expr: ExprIR, /) -> Iterator[ExprIR]:
@@ -223,9 +219,10 @@ class Expander:
             yield from self._expand_combination(origin)
         elif isinstance(origin, ir.FunctionExpr):
             yield from self._expand_function_expr(origin)
-        else:
+        # TODO @dangotbanned: Avoidable by replacing class-specific branching -> methods
+        else:  # pragma: no cover
             msg = f"Didn't expect to see {type(origin).__name__}"
-            raise NotImplementedError(msg)
+            raise ComputeError(msg)
 
     def _expand_inner(self, children: Seq[ExprIR], /) -> Iterator[ExprIR]:
         """Use when we want to expand non-root nodes, *without* duplicating the root.
