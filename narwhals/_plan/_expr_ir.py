@@ -569,6 +569,7 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
         return self.__repr__()
 
 
+# TODO @dangotbanned: Class-level doc
 class SelectorIR(ExprIR, dispatch="no_dispatch"):
     def to_narwhals(self, version: Version = Version.MAIN) -> Selector:
         from narwhals._plan.selectors import Selector, SelectorV1
@@ -621,19 +622,27 @@ class SelectorIR(ExprIR, dispatch="no_dispatch"):
         return True
 
 
-# TODO @dangotbanned: Class-doc is a mess
+# TODO @dangotbanned: Class-level doc
+# Turn notes into something literate
 @final
 class NamedIR(Immutable, Generic[ExprIRT_co]):
-    """Post-projection expansion wrapper for `ExprIR`.
+    """Post-expansion representation of an expression.
 
-    - Multi-output (selectors) expressions have been expanded at this stage.
-    - Somewhat similar to [`polars_plan::plans::expr_ir::ExprIR`].
-    - The [`polars_plan::plans::aexpr::AExpr`] stage has been skipped (*for now*)
-      - Parts of that will probably be in here too
-      - `AExpr` seems like too much duplication when we won't get the memory allocation benefits in python
+    ## Notes
+    - Each *top-level* `ExprIR` expands into one or more `NamedIR[ExprIR]`
+      - E.g `select(*top_level_exprs)`
+    - Within that, each `ExprIR` expands into one or more `ExprIR`
+    - Each `NamedIR` is
+      - A *single* output column name
+      - An `ExprIR` with all of the following expanded, resolved and removed:
+        - `SelectorIR`, `Alias`, `RenameAlias`, `KeepName`
 
-    [`polars_plan::plans::expr_ir::ExprIR`]: https://github.com/pola-rs/polars/blob/2c7a3e77f0faa37c86a3745db4ef7707ae50c72e/crates/polars-plan/src/plans/expr_ir.rs#L63-L74
-    [`polars_plan::plans::aexpr::AExpr`]: https://github.com/pola-rs/polars/blob/2c7a3e77f0faa37c86a3745db4ef7707ae50c72e/crates/polars-plan/src/plans/aexpr/mod.rs#L145-L231
+    ### Questions to consider
+    - What is [expression expansion]?
+    - What is resolving? (names)
+    - What do we need to do this? (schema)
+
+    [expression expansion]: https://docs.pola.rs/user-guide/expressions/expression-expansion/
     """
 
     __slots__ = ("expr", "name")
