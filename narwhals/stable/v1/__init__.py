@@ -1066,12 +1066,9 @@ def scan_parquet(
 
 
 def struct(
-    *exprs: Expr
-    | Series[IntoSeriesT]
-    | PythonLiteral
-    | Sequence[Expr | Series[IntoSeriesT] | PythonLiteral],
+    *exprs: IntoExpr | NonNestedLiteral | Sequence[IntoExpr | NonNestedLiteral],
     schema: IntoSchema | None = None,
-    **named_exprs: Expr | Series[IntoSeriesT] | PythonLiteral,
+    **named_exprs: IntoExpr | NonNestedLiteral,
 ) -> Expr:
     """Collect columns into a struct column.
 

@@ -5,7 +5,13 @@ import sys
 from collections.abc import Iterable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any
 
-from narwhals._expression_parsing import ExprKind, ExprNode, is_expr, is_series
+from narwhals._expression_parsing import (
+    ExprKind,
+    ExprNode,
+    _parse_into_expr,
+    is_expr,
+    is_series,
+)
 from narwhals._utils import (
     Implementation,
     Version,
@@ -46,7 +52,6 @@ if TYPE_CHECKING:
         IntoDType,
         IntoExpr,
         IntoSchema,
-        IntoSeriesT,
         NonNestedLiteral,
         PythonLiteral,
         _2DArray,
@@ -1797,12 +1802,9 @@ def format(f_string: str, *args: IntoExpr) -> Expr:
 
 
 def struct(
-    *exprs: Expr
-    | Series[IntoSeriesT]
-    | PythonLiteral
-    | Sequence[Expr | Series[IntoSeriesT] | PythonLiteral],
+    *exprs: IntoExpr | NonNestedLiteral | Sequence[IntoExpr | NonNestedLiteral],
     schema: IntoSchema | None = None,
-    **named_exprs: Expr | Series[IntoSeriesT] | PythonLiteral,
+    **named_exprs: IntoExpr | NonNestedLiteral,
 ) -> Expr:
     """Collect columns into a struct column.
 
@@ -1857,18 +1859,6 @@ def struct(
         └──────────────────────────────────────────────┘
     """
     from narwhals.schema import Schema
-    from narwhals.series import Series
-
-    def _parse_into_expr(
-        into_expr: Expr | Series[IntoSeriesT] | PythonLiteral,
-    ) -> Expr | Series[IntoSeriesT]:
-        return (
-            into_expr
-            if isinstance(into_expr, (Expr, Series))
-            else col(into_expr)
-            if isinstance(into_expr, str)
-            else lit(into_expr)
-        )
 
     flat_exprs = [
         *(_parse_into_expr(e) for e in flatten(exprs)),
