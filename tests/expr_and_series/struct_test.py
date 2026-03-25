@@ -6,6 +6,7 @@ import pytest
 
 import narwhals as nw
 from tests.utils import (
+    DUCKDB_VERSION,
     PANDAS_VERSION,
     PYARROW_VERSION,
     Constructor,
@@ -18,11 +19,15 @@ data = {"a": [1, 2, 3], "b": ["dogs", "cats", None], "c": ["play", "swim", "walk
 UNSUPPORTED_BACKENDS = ("dask",)
 
 
-def skip_pandas(constructor: Constructor | ConstructorEager) -> None:
+def maybe_skip(constructor: Constructor | ConstructorEager) -> None:
     if "pandas" in str(constructor) and (
         PANDAS_VERSION < (2, 2, 0) or PYARROW_VERSION == (0, 0, 0)
     ):
-        reason = "too old or pyarrow not installed"
+        reason = "pandas is too old or pyarrow not installed"
+        pytest.skip(reason=reason)
+
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        reason = "duckdb requires v1.3.0"
         pytest.skip(reason=reason)
 
 
@@ -42,6 +47,8 @@ def test_struct_positional_exprs(
 ) -> None:
     if any(x in str(constructor) for x in UNSUPPORTED_BACKENDS):
         request.applymarker(pytest.mark.xfail)
+
+    maybe_skip(constructor=constructor)
 
     df = nw.from_native(constructor(data))
     result = df.select(nw.struct(*exprs))
@@ -63,7 +70,7 @@ def test_struct_named_exprs(
     if any(x in str(constructor) for x in UNSUPPORTED_BACKENDS):
         request.applymarker(pytest.mark.xfail)
 
-    skip_pandas(constructor=constructor)
+    maybe_skip(constructor=constructor)
 
     df = nw.from_native(constructor(data))
     result = df.select(nw.struct(x="a", y="b").alias("struct"))
@@ -81,7 +88,7 @@ def test_struct_positional_and_named(
     if any(x in str(constructor) for x in UNSUPPORTED_BACKENDS):
         request.applymarker(pytest.mark.xfail)
 
-    skip_pandas(constructor=constructor)
+    maybe_skip(constructor=constructor)
 
     df = nw.from_native(constructor(data))
     result = df.select(nw.struct("a", z="c").alias("struct"))
@@ -99,7 +106,7 @@ def test_struct_with_expressions(
     if any(x in str(constructor) for x in UNSUPPORTED_BACKENDS):
         request.applymarker(pytest.mark.xfail)
 
-    skip_pandas(constructor=constructor)
+    maybe_skip(constructor=constructor)
 
     df = nw.from_native(constructor(data))
     result = df.select(
@@ -117,7 +124,7 @@ def test_struct_with_literals(
     if any(x in str(constructor) for x in UNSUPPORTED_BACKENDS):
         request.applymarker(pytest.mark.xfail)
 
-    skip_pandas(constructor=constructor)
+    maybe_skip(constructor=constructor)
 
     df = nw.from_native(constructor(data))
     result = df.select(nw.struct("a", x="c", y=False).alias("struct"))
@@ -148,7 +155,7 @@ def test_struct_with_schema(
     if any(x in str(constructor) for x in UNSUPPORTED_BACKENDS):
         request.applymarker(pytest.mark.xfail)
 
-    skip_pandas(constructor=constructor)
+    maybe_skip(constructor=constructor)
 
     data_numeric = {"a": [1, 2, 3], "b": [4.0, 5.0, 6.0]}
     schema = {"a": nw.Float64(), "b": nw.Float32()}
@@ -181,7 +188,7 @@ def test_struct_schema_mismatch(
     if any(x in str(constructor) for x in UNSUPPORTED_BACKENDS):
         request.applymarker(pytest.mark.xfail)
 
-    skip_pandas(constructor=constructor)
+    maybe_skip(constructor=constructor)
 
     df = nw.from_native(constructor(data))
     result = df.select(nw.struct(nw.all(), schema=schema).alias("struct"))
@@ -190,7 +197,7 @@ def test_struct_schema_mismatch(
 
 
 def test_struct_with_series(constructor_eager: ConstructorEager) -> None:
-    skip_pandas(constructor=constructor_eager)
+    maybe_skip(constructor=constructor_eager)
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
     s_a, s_b = df.get_column("a"), df.get_column("b")
@@ -204,7 +211,7 @@ def test_struct_with_series(constructor_eager: ConstructorEager) -> None:
 
 
 def test_struct_mixed_series_and_exprs(constructor_eager: ConstructorEager) -> None:
-    skip_pandas(constructor=constructor_eager)
+    maybe_skip(constructor=constructor_eager)
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
     s_a = df.get_column("a")
@@ -218,7 +225,7 @@ def test_struct_mixed_series_and_exprs(constructor_eager: ConstructorEager) -> N
 
 
 def test_struct_named_with_series(constructor_eager: ConstructorEager) -> None:
-    skip_pandas(constructor=constructor_eager)
+    maybe_skip(constructor=constructor_eager)
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
     s_a = df.get_column("a")

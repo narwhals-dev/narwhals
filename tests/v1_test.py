@@ -80,7 +80,6 @@ def test_toplevel() -> None:
         first=nw_v1.nth(0),
         no_first=nw_v1.exclude("a", "c"),
         coalesce=nw_v1.coalesce("c", "a"),
-        struct=nw_v1.struct("a", "c"),
     )
     expected = {
         "min": [1, 1, 1],
@@ -100,7 +99,6 @@ def test_toplevel() -> None:
         "first": [1, 2, 3],
         "no_first": [4, 5, 6],
         "coalesce": [7, 2, 9],
-        "struct": [{"a": 1, "c": 7}, {"a": 2, "c": None}, {"a": 3, "c": 9}],
     }
     assert_equal_data(result, expected)
     assert isinstance(result, nw_v1.DataFrame)
@@ -428,6 +426,18 @@ def test_any_horizontal() -> None:
     )
     result = df.select(nw_v1.any_horizontal("a", "b"))
     expected = {"a": [True, True, None]}
+    assert_equal_data(result, expected)
+
+
+def test_struct() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    data = {"a": [1, 2], "b": ["dogs", None], "c": ["play", "walk"]}
+
+    df = nw_v1.from_native(pl.DataFrame(data))
+    result = df.select(my_struct=nw_v1.struct("a", "b"))
+    expected = {"my_struct": [{"a": 1, "b": "dogs"}, {"a": 2, "b": None}]}
     assert_equal_data(result, expected)
 
 

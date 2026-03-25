@@ -251,19 +251,27 @@ class ArrowNamespace(
             align = self._series._align_full_broadcast
             series = align(*chain.from_iterable(expr(df) for expr in exprs))
             name = series[0].name
-            struct_array = pc.make_struct(
-                *(s.native for s in series), field_names=[s.name for s in series]
-            )
-            result = pa.chunked_array([struct_array])
             version = self._version
 
             if schema:
                 from narwhals._arrow.utils import narwhals_to_native_dtype
 
-                nw_dtype = version.dtypes.Struct(schema)
-                dtype = narwhals_to_native_dtype(nw_dtype, version)
-                result = result.cast(dtype)  # type: ignore[assignment]
+                size = len(series[0])
+                names_to_arrays = {s.name: s.native for s in series}
+                pa_arrays = (
+                    names_to_arrays.get(col, pa.nulls(size)).cast(
+                        narwhals_to_native_dtype(dtype, version)
+                    )
+                    for col, dtype in schema.items()
+                )
+                struct_array = pc.make_struct(*pa_arrays, field_names=list(schema))
+                result = pa.chunked_array([struct_array])
 
+            else:
+                struct_array = pc.make_struct(
+                    *(s.native for s in series), field_names=[s.name for s in series]
+                )
+                result = pa.chunked_array([struct_array])
             return [ArrowSeries(result, name=name, version=version)]
 
         return self._expr._from_callable(
