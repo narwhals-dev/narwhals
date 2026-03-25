@@ -123,13 +123,23 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
 
     To customize the behavior, use the `dispatch` **parameter** [when subclassing]:
 
-        class When(ExprIR, dispatch=<something-different>): ...
+        class Column(ExprIR, dispatch=DispatcherOptions.namespaced("col")):
+            __slots__ = ("name",)
+            name: str
 
     If nothing there *quite* scratches the itch, override the `dispatch` **method** instead:
 
-        class When(ExprIR):
-            def dispatch(self, ctx, frame, name, /):
-                return ctx.when_then(self, frame, name)
+        from narwhals._plan._function import Function
+        from narwhals._plan._nodes import nodes
+        from narwhals._plan.compliant import ExprDispatch
+
+        class FunctionExpr(ExprIR):
+            __slots__ = ("input", "function")
+            input: tuple[ExprIR, ...] = nodes()
+            function: Function
+
+            def dispatch(self, ctx: ExprDispatch[T, R], frame: T, name: str) -> R:
+                return self.function.__expr_ir_dispatch__(self, ctx, frame, name)
 
     Notes:
         Each class has their own `Dispatcher` instance, and inheritance is only on the `options` property.
