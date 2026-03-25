@@ -31,7 +31,7 @@ from narwhals._sql.namespace import SQLNamespace
 from narwhals._utils import Implementation, zip_strict
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Mapping
 
     from duckdb import DuckDBPyRelation  # noqa: F401
 
@@ -173,22 +173,30 @@ class DuckDBNamespace(
         version = self._version
 
         def func(df: DuckDBLazyFrame) -> list[Expression]:
-            cols_with_names: Iterable[tuple[str, Expression]] = (
-                (aliases, native_exprs)
+            names_to_cols: Mapping[str, Expression] = {
+                alias: native_expr
                 for expr in exprs
-                for native_exprs, _, aliases in zip_strict(
+                for native_expr, _, alias in zip_strict(
                     expr(df), *evaluate_output_names_and_aliases(expr, df, [])
                 )
-            )
-
-            field_args = ", ".join(f'"{name}" := {col}' for name, col in cols_with_names)
-            result = sql_expression(f"struct_pack({field_args})")
+            }
 
             if schema:
                 nw_dtype = version.dtypes.Struct(schema)
                 tz = DeferredTimeZone(df.native)
                 dtype = narwhals_to_native_dtype(nw_dtype, version, tz)
-                result = result.cast(dtype)
+
+                field_args = ", ".join(
+                    f'"{name}" := {names_to_cols.get(name, lit(None))}' for name in schema
+                )
+                result = sql_expression(f"struct_pack({field_args})").cast(dtype)
+
+            else:
+                field_args = ", ".join(
+                    f'"{name}" := {col}' for name, col in names_to_cols.items()
+                )
+                result = sql_expression(f"struct_pack({field_args})")
+
             return [result]
 
         return self._expr(

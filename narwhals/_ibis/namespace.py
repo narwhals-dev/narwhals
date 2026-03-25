@@ -22,7 +22,7 @@ from narwhals._sql.namespace import SQLNamespace
 from narwhals._utils import Implementation, zip_strict
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Sequence
+    from collections.abc import Iterable, Mapping, Sequence
 
     from narwhals._utils import Version
     from narwhals.schema import Schema
@@ -148,20 +148,22 @@ class IbisNamespace(
         version = self._version
 
         def func(df: IbisLazyFrame) -> list[ir.Value]:
-            cols_with_names: Iterable[tuple[str, ir.Value]] = (
-                (aliases, native_exprs)
+            names_to_cols: Mapping[str, ir.Value] = {
+                alias: native_expr
                 for expr in exprs
-                for native_exprs, _, aliases in zip_strict(
+                for native_expr, _, alias in zip_strict(
                     expr(df), *evaluate_output_names_and_aliases(expr, df, [])
                 )
-            )
+            }
 
-            result = ibis.struct(cols_with_names)
             if schema:
                 nw_dtype = version.dtypes.Struct(schema)
                 dtype = narwhals_to_native_dtype(nw_dtype, version)
-                result = result.cast(dtype)  # pyright: ignore[reportArgumentType, reportCallIssue]
-
+                result = ibis.struct(
+                    {name: names_to_cols.get(name, lit(None)) for name in schema}
+                ).cast(dtype)  # pyright: ignore[reportArgumentType, reportCallIssue]
+            else:
+                result = ibis.struct(names_to_cols)
             return [result]
 
         return self._expr(
