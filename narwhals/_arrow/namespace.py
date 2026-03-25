@@ -262,7 +262,7 @@ class ArrowNamespace(
 
                 nw_dtype = version.dtypes.Struct(schema)
                 dtype = narwhals_to_native_dtype(nw_dtype, version)
-                result = result.cast(dtype)
+                result = result.cast(dtype)  # type: ignore[assignment]
 
             return [ArrowSeries(result, name=name, version=version)]
 
