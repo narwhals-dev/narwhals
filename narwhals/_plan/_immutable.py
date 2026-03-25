@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, final
+from typing import TYPE_CHECKING, Literal, final
 
 # ruff: noqa: N806
 from narwhals._plan._meta import ImmutableMeta
 
 if TYPE_CHECKING:
     import dataclasses
-    from collections.abc import Iterable, Iterator
+    from collections.abc import Iterator
     from typing import Any, ClassVar, Final
 
     from typing_extensions import Never, Self
@@ -15,7 +15,11 @@ if TYPE_CHECKING:
 
 _HASH_NAME: Final = "__immutable_hash_value__"
 _OBJ_SETATTR = object.__setattr__
-"""Borrowed from [`attrs`](https://github.com/search?q=repo%3Apython-attrs%2Fattrs%20%22_OBJ_SETATTR%22&type=code)"""
+"""Borrowed from [`attrs`](https://github.com/search?q=repo%3Apython-attrs%2Fattrs%20%22_OBJ_SETATTR%22&type=code).
+
+- Adds the reference to `object.__setattr__` into globals
+- `__init__` goes further and binds the descriptor
+"""
 
 
 class Immutable(metaclass=ImmutableMeta):
@@ -175,6 +179,12 @@ class Immutable(metaclass=ImmutableMeta):
             msg = f"{type(self).__name__!r} is immutable, {name!r} cannot be deleted."
             raise AttributeError(msg)
 
+    def __copy__(self) -> Self:
+        return self
+
+    def __deepcopy__(self, memo: Any) -> Self:
+        return self
+
     def __replace__(self, **changes: Any) -> Self:
         """Create a new object of the same type, [replacing] fields with values from `changes`.
 
@@ -226,26 +236,17 @@ class Immutable(metaclass=ImmutableMeta):
         fields = ", ".join(f"{_field_str(k, v)}" for k, v in self.__immutable_items__)
         return f"{type(self).__name__}({fields})"
 
-    # TODO @dangotbanned: Review `__init__` error handling cost
-    # - Was needed more when slots were broken
-    # - Should only need a `__len__` match (not `__eq__`)
-    #   - incorrect names will raise anyway (extra)
-    #   - subset of names needs a custom error (missing)
-    # - `len(cls.__immutable_keys__)` can be computed once per-class
-    #   - vs `__bool__` -> `__iter__` (set) -> `__eq__` per-instance
     def __init__(self, **kwds: Any) -> None:
-        if (keys := self.__immutable_keys__) or kwds:
-            required = set(keys)
-            if required == kwds.keys():
-                # NOTE: Bound descriptor idea borrowed from `attrs`
-                # https://github.com/search?q=repo%3Apython-attrs%2Fattrs%20%22_OBJ_SETATTR%22&type=code
+        # NOTE: Matching lengths means either:
+        # 1. We have the correct args (great)
+        # 2. At least one is incorrect (__slots__ will raise an `AttributeError`)
+        if (n := len(kwds)) == len(self.__immutable_keys__):
+            if n:
                 self__setattr__ = _OBJ_SETATTR.__get__(self)
                 for name, value in kwds.items():
                     self__setattr__(name, value)
-            elif missing := required.difference(kwds):
-                raise _init_missing_error(self, required, missing)
-            else:
-                raise _init_extra_error(self, required, set(kwds).difference(required))
+        else:
+            raise _init_error(self, kwds)
 
 
 # TODO @dangotbanned: Replace with `@singledispatch` on `type(value)`
@@ -260,21 +261,22 @@ def _field_str(name: str, value: Any) -> str:
     return f"{name}={value}"
 
 
-def _init_missing_error(
-    obj: object, required: Iterable[str], missing: Iterable[str]
-) -> TypeError:
-    msg = (
-        f"{type(obj).__name__!r} requires attributes {sorted(required)!r}, \n"
-        f"but missing values for {sorted(missing)!r}"
-    )
-    return TypeError(msg)
-
-
-def _init_extra_error(
-    obj: object, required: Iterable[str], extra: Iterable[str]
-) -> TypeError:
-    msg = (
-        f"{type(obj).__name__!r} only supports attributes {sorted(required)!r}, \n"
-        f"but got unknown arguments {sorted(extra)!r}"
-    )
+def _init_error(obj: Immutable, got: dict[str, Any], /) -> TypeError:
+    # Slightly better error than you'd get from `inspect.Signature`
+    want = obj.__immutable_keys__
+    n = len(want)
+    invalid = set(want).difference(got)
+    wants, gots = ", ".join(map(repr, want)), ", ".join(map(repr, got))
+    kind: Literal["got unexpected", "expected", "missing required"]
+    if invalid and not set(want).intersection(got):
+        kind = "got unexpected"
+        body = gots
+        n = len(got)
+    elif invalid:
+        kind = "expected"
+        body = f"{wants}, \nbut got: {gots}"
+    else:
+        kind = "missing required"
+        body = wants
+    msg = f"{type(obj).__name__!r} {kind} {'argument' if n == 1 else 'arguments'}: {body}"
     return TypeError(msg)

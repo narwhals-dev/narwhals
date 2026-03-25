@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import string
+from copy import copy, deepcopy
 from itertools import repeat
 from typing import TYPE_CHECKING, Any, TypeVar
 
@@ -11,7 +12,9 @@ from narwhals._plan import when_then
 from narwhals._plan._immutable import Immutable
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Callable, Iterator
+
+
 T_co = TypeVar("T_co", covariant=True)
 
 
@@ -123,16 +126,26 @@ def test_immutable_hash(
     assert hash(empty_again) != hash(empty)
 
 
+@pytest.mark.parametrize("function", [copy, deepcopy], ids=["copy", "deepcopy"])
+def test_immutable_copy(two: TwoSlot, function: Callable[[TwoSlot], TwoSlot]) -> None:
+    # NOTE: `__setattr__` is called unconditionally here and raises if we don't "implement" it
+    # This is just being considerate of others who might try to copy 🙂
+    # https://github.com/python/cpython/blob/60093096ba62110151d822b072a01061876e9404/Lib/copy.py#L267
+    clone = function(two)
+    assert clone == two
+    assert clone is two
+
+
 def test_immutable_invalid_constructor() -> None:
     with pytest.raises(TypeError):
         Empty(a=1)  # pyright: ignore[reportCallIssue]
-    with pytest.raises(TypeError):
+    with pytest.raises(AttributeError):
         EmptyDerived(b="two")  # type: ignore[call-arg]
     with pytest.raises(TypeError):
         EmptyDerived(a=1, b="two")  # type: ignore[call-arg]
     with pytest.raises(TypeError):
         EmptyDerived()  # type: ignore[call-arg]
-    with pytest.raises(TypeError):
+    with pytest.raises(AttributeError):
         OneSlot(b="two")  # type: ignore[call-arg]
     with pytest.raises(TypeError):
         OneSlot(a=1, b="two")  # type: ignore[call-arg]
