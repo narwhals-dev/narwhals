@@ -12,11 +12,7 @@ import narwhals._plan.expressions as ir
 import narwhals._plan.expressions.selectors as s_ir
 from narwhals._plan._guards import is_iterable_reject
 from narwhals._plan.common import flatten_hash_safe
-from narwhals._plan.exceptions import (
-    invalid_into_expr_error,
-    is_iterable_error,
-    list_literal_error,
-)
+from narwhals._plan.exceptions import invalid_into_expr_error, is_iterable_error
 from narwhals._utils import qualified_type_name
 from narwhals.dependencies import get_pandas, get_polars
 from narwhals.exceptions import InvalidOperationError
@@ -121,15 +117,12 @@ def parse_into_expr_ir(
 
     if isinstance(input, Expr):
         return input._ir
-    if isinstance(input, str) and not str_as_lit:
+    if not str_as_lit and isinstance(input, str):
         return ir.col(input)
-    if isinstance(input, list):
-        if list_as_series is None:
-            raise list_literal_error(input)
-        expr = lit(list_as_series(input))
-    else:
-        expr = lit(input)
-    return expr._ir
+    if list_as_series is not None and isinstance(input, list):
+        input = list_as_series(input)
+    # NOTE: Raises in `lit` when we pass a `list`
+    return lit(input)._ir  # type: ignore[arg-type]
 
 
 # NOTE: Unavoidable inline import
