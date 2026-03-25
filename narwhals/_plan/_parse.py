@@ -261,40 +261,31 @@ def _parse_into_iter_expr_ir(
 ) -> Iterator[ExprIR]:
     from narwhals._plan import Expr, Series
 
+    into_expr_ir = parse_into_expr_ir
+    as_series = _list_as_series
     if not _is_empty_sequence(first_input):
         # NOTE: These need to be separated to introduce an intersection type
         # Otherwise, `str | bytes` always passes through typing
         if _is_iterable(first_input) and not is_iterable_reject(first_input):
-            if more_inputs and (
-                _list_as_series is None or not isinstance(first_input, list)
-            ):
+            if more_inputs and (as_series is None or not isinstance(first_input, list)):
                 raise invalid_into_expr_error(first_input, more_inputs, named_inputs)
-            # NOTE: Ensures `first_input = [False, True, True] -> lit(Series([False, True, True]))`
-            elif (
-                _list_as_series is not None
+
+            if (
+                as_series is not None
                 and isinstance(first_input, list)
                 and not isinstance(first_input[0], (str, Expr, Series))
             ):
-                yield parse_into_expr_ir(first_input, list_as_series=_list_as_series)
+                # NOTE: Ensures `first_input = [False, True, True] -> lit(Series([False, True, True]))`
+                yield into_expr_ir(first_input, list_as_series=as_series)
             else:
-                yield from _parse_positional_inputs(first_input, _list_as_series)
+                for into in first_input:
+                    yield into_expr_ir(into, list_as_series=as_series)
         else:
-            yield parse_into_expr_ir(first_input, list_as_series=_list_as_series)
-    else:
-        # NOTE: Passthrough case for no inputs - but gets skipped when calling next
-        yield from ()
-    if more_inputs:
-        yield from _parse_positional_inputs(more_inputs, _list_as_series)
-    if named_inputs:
-        for name, input in named_inputs.items():
-            yield parse_into_expr_ir(input).alias(name)
-
-
-def _parse_positional_inputs(
-    inputs: Iterable[IntoExpr | list[Any]], /, list_as_series: PartialSeries | None = None
-) -> Iterator[ExprIR]:
-    for into in inputs:
-        yield parse_into_expr_ir(into, list_as_series=list_as_series)
+            yield into_expr_ir(first_input, list_as_series=as_series)
+    for into in more_inputs:
+        yield into_expr_ir(into, list_as_series=as_series)
+    for name, input in named_inputs.items():
+        yield into_expr_ir(input).alias(name)
 
 
 def _is_iterable(obj: Iterable[T] | Any) -> TypeIs[Iterable[T]]:
