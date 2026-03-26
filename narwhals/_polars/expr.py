@@ -515,4 +515,5 @@ class PolarsExprListNamespace(
 
 class PolarsExprStructNamespace(
     PolarsExprNamespace, PolarsStructNamespace[PolarsExpr, pl.Expr]
-): ...
+):
+    unnest: Method[PolarsExpr]
