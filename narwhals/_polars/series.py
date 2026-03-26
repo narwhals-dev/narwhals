@@ -846,4 +846,9 @@ class PolarsSeriesListNamespace(
 
 class PolarsSeriesStructNamespace(
     PolarsSeriesNamespace, PolarsStructNamespace[PolarsSeries, pl.Series]
-): ...
+):
+    def unnest(self) -> PolarsDataFrame:
+        from narwhals._polars.dataframe import PolarsDataFrame
+
+        result = self.native.struct.unnest()
+        return PolarsDataFrame(result, version=self.compliant._version)

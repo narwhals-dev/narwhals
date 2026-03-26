@@ -378,3 +378,4 @@ class PolarsListNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
 class PolarsStructNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
     _accessor: ClassVar[Accessor] = "struct"
     field: Method[CompliantT]
+    unnest: Method[CompliantT]
