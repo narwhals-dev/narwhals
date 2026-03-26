@@ -103,10 +103,9 @@ def prepare_projection(
 def expand_selector_irs_names(
     selectors: Sequence[SelectorIR],
     /,
-    ignored: Ignored = (),  # TODO @dangotbanned: Remove? havent got any usage selector version
     *,
     schema: IntoFrozenSchema,
-    require_any: bool = False,
+    require_any: bool = True,
 ) -> OutputNames:
     """Expand selector-only input into the column names that match.
 
@@ -117,9 +116,9 @@ def expand_selector_irs_names(
         selectors: IRs that **only** contain subclasses of `SelectorIR`.
         ignored: Names of `group_by` columns.
         schema: Scope to expand selectors in.
-        require_any: Raise if the entire expansion selected zero columns.
+        require_any: If True (default) raise if the entire expansion selected zero columns.
     """
-    expander = Expander(schema, ignored)
+    expander = Expander(schema, ())
     if (names := expander.expand_selector_names(selectors)) or not require_any:
         return names
     raise selectors_not_found_error(selectors, expander.schema)
@@ -131,7 +130,7 @@ def parse_expand_selectors(
     /,
     *,
     schema: IntoFrozenSchema,
-    require_any: bool = False,  # TODO @dangotbanned: use `True` as the default (way more common)
+    require_any: bool = True,
 ) -> OutputNames:
     """Convert input(s) into selector(s), expanding them into the column names that match.
 
@@ -146,8 +145,8 @@ def parse_expand_selectors(
         first_input: One or more column names or selectors.
         more_inputs: Use if `*args` were accepted *in-addition-to* `first_input` as syntax sugar.
         schema: Scope to expand selectors in.
-        require_any: Raise if the entire expansion selected zero columns.
-            When False, we can always defer iterator collection until finishing expansion.
+        require_any: If True (default) raise if the entire expansion selected zero columns.
+            If False, we can always defer iterator collection until finishing expansion.
     """
     expander = Expander(schema, ())
     into_iter = parse_into_iter_selector_ir

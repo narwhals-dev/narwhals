@@ -273,9 +273,7 @@ class Resolver:
         input = self.to_resolved(plan.input)
         input_schema = input.schema
         f_explode = plan.function
-        columns = expand_selector_irs_names(
-            (f_explode.columns,), schema=input_schema, require_any=True
-        )
+        columns = expand_selector_irs_names((f_explode.columns,), schema=input_schema)
         allowed = dtypes.List, dtypes.Array
         schema = dict(input_schema)
         for to_explode in columns:
@@ -552,7 +550,7 @@ class Resolver:
 
     def sort(self, plan: lp.Sort, /) -> rp.Sort:
         input = self.to_resolved(plan.input)
-        by = expand_selector_irs_names(plan.by, schema=input.schema, require_any=True)
+        by = expand_selector_irs_names(plan.by, schema=input.schema)
         opts = plan.options
         n_by = len(by)
         n_desc = len(opts.descending)
@@ -577,7 +575,7 @@ class Resolver:
     def unique_by(self, plan: lp.UniqueBy, /) -> rp.UniqueBy:
         input, subset = self._unique(plan)
         schema = input.schema
-        by = expand_selector_irs_names(plan.order_by, schema=schema, require_any=True)
+        by = expand_selector_irs_names(plan.order_by, schema=schema)
         return rp.UniqueBy(input=input, subset=subset, options=plan.options, order_by=by)
 
     def _unique(self, plan: lp.Unique, /) -> tuple[rp.ResolvedPlan, Seq[str] | None]:
@@ -585,15 +583,13 @@ class Resolver:
         if (subset := plan.subset) is None:
             return input, subset
         schema = input.schema
-        return input, expand_selector_irs_names(subset, schema=schema, require_any=True)
+        return input, expand_selector_irs_names(subset, schema=schema)
 
     def unnest(self, plan: lp.MapFunction[lp.Unnest], /) -> rp.MapFunction[rp.Unnest]:
         # NOTE: Pretty delicate process to optimize for
         input = self.to_resolved(plan.input)
         input_schema = input.schema
-        columns = expand_selector_irs_names(
-            (plan.function.columns,), schema=input_schema, require_any=True
-        )
+        columns = expand_selector_irs_names((plan.function.columns,), schema=input_schema)
         tp_struct = dtypes.Struct
 
         # We need to insert struct fields in the same order as the original, while removing the struct itself
@@ -638,11 +634,9 @@ class Resolver:
         if f.index == s_ir.empty():
             index: tuple[str, ...] = ()
         else:
-            index = expand_selector_irs_names(
-                (f.index,), schema=input_schema, require_any=True
-            )
+            index = expand_selector_irs_names((f.index,), schema=input_schema)
         if f.on:
-            on = expand_selector_irs_names((f.on,), schema=input_schema, require_any=True)
+            on = expand_selector_irs_names((f.on,), schema=input_schema)
         else:
             on = tuple(nm for nm in input_schema if nm not in index)
         schema = dict(input_schema)
@@ -679,7 +673,7 @@ class Resolver:
     ) -> rp.ResolvedPlan:
         input, output_schema = self._with_row_index(plan)
         f = plan.function
-        by = expand_selector_irs_names(f.order_by, schema=input.schema, require_any=True)
+        by = expand_selector_irs_names(f.order_by, schema=input.schema)
         function = rp.RowIndexBy(name=f.name, output_schema=output_schema, order_by=by)
         return rp.MapFunction(input=input, function=function)
 

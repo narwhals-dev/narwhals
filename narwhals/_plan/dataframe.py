@@ -155,7 +155,7 @@ class BaseFrame(Generic[NativeFrameT_co]):
         descending: OneOrIterable[bool] = False,
         nulls_last: OneOrIterable[bool] = False,
     ) -> Self:
-        names = parse_expand_selectors(by, more_by, schema=self, require_any=True)
+        names = parse_expand_selectors(by, more_by, schema=self)
         opts = SortMultipleOptions.parse(descending=descending, nulls_last=nulls_last)
         return self._with_compliant(self._compliant.sort(names, opts))
 
@@ -163,7 +163,7 @@ class BaseFrame(Generic[NativeFrameT_co]):
         self, *columns: OneOrIterable[ColumnNameOrSelector], strict: bool = True
     ) -> Self:
         s_ir = _parse.parse_into_combined_selector_ir(*columns, require_all=strict)
-        if names := expand_selector_irs_names((s_ir,), schema=self):
+        if names := expand_selector_irs_names((s_ir,), schema=self, require_any=False):
             compliant = self._compliant.drop(names)
         else:
             compliant = self._compliant._with_native(self.to_native())
@@ -197,10 +197,10 @@ class BaseFrame(Generic[NativeFrameT_co]):
         schema = self.collect_schema()
         if on is not None:
             s_irs = _parse.parse_into_seq_of_selector_ir(on)
-            on_ = expand_selector_irs_names(s_irs, schema=schema, require_any=True)
+            on_ = expand_selector_irs_names(s_irs, schema=schema)
         if index is not None:
             s_irs = _parse.parse_into_seq_of_selector_ir(index)
-            index_ = expand_selector_irs_names(s_irs, schema=schema, require_any=True)
+            index_ = expand_selector_irs_names(s_irs, schema=schema)
         return self._with_compliant(
             self._compliant.unpivot(
                 on_, index_, variable_name=variable_name, value_name=value_name
@@ -210,7 +210,7 @@ class BaseFrame(Generic[NativeFrameT_co]):
     def with_row_index(
         self, name: str = "index", *, order_by: OneOrIterable[ColumnNameOrSelector]
     ) -> Self:
-        by_names = parse_expand_selectors(order_by, schema=self, require_any=True)
+        by_names = parse_expand_selectors(order_by, schema=self)
         return self._with_compliant(self._compliant.with_row_index_by(name, by_names))
 
     def join(
@@ -282,9 +282,7 @@ class BaseFrame(Generic[NativeFrameT_co]):
         keep_nulls: bool = True,
     ) -> Self:
         schema = self.collect_schema()
-        subset = parse_expand_selectors(
-            columns, more_columns, schema=schema, require_any=True
-        )
+        subset = parse_expand_selectors(columns, more_columns, schema=schema)
         tp_list = self.version.dtypes.List
         for col_to_explode in subset:
             dtype = schema[col_to_explode]
@@ -300,9 +298,7 @@ class BaseFrame(Generic[NativeFrameT_co]):
         *more_columns: ColumnNameOrSelector,
     ) -> Self:
         schema = self.collect_schema()
-        subset = parse_expand_selectors(
-            columns, more_columns, schema=schema, require_any=True
-        )
+        subset = parse_expand_selectors(columns, more_columns, schema=schema)
         tp_struct = self.version.dtypes.Struct
         existing_names = schema.keys() - subset
         for col_to_unnest in subset:
@@ -594,7 +590,7 @@ class DataFrame(
         *more_by: ColumnNameOrSelector,
         include_key: bool = True,
     ) -> list[Self]:
-        names = parse_expand_selectors(by, more_by, schema=self, require_any=True)
+        names = parse_expand_selectors(by, more_by, schema=self)
         partitions = self._compliant.partition_by(names, include_key=include_key)
         return [self._with_compliant(p) for p in partitions]
 
@@ -675,7 +671,7 @@ class DataFrame(
         schema = self.collect_schema()
         subset_names: Sequence[str] | None = None
         if subset is not None:
-            subset_names = parse_expand_selectors(subset, schema=schema, require_any=True)
+            subset_names = parse_expand_selectors(subset, schema=schema)
         if order_by is None:
             if len(schema) == 1 and keep in {"any", "first"}:
                 # NOTE: Fastpath for single-column frame
@@ -689,7 +685,7 @@ class DataFrame(
                     subset_names, keep=keep, maintain_order=maintain_order
                 )
             return self._with_compliant(result)
-        by_names = parse_expand_selectors(order_by, schema=schema, require_any=True)
+        by_names = parse_expand_selectors(order_by, schema=schema)
         return self._with_compliant(
             self._compliant.unique_by(
                 subset_names, keep=keep, maintain_order=maintain_order, order_by=by_names
