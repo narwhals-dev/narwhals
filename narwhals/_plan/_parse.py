@@ -135,33 +135,6 @@ def parse_into_expr_ir(
     return _import_lit()(input)._ir
 
 
-def parse_into_selector_ir(
-    input: ColumnNameOrSelector | Expr, /, *, require_all: bool = True
-) -> SelectorIR:
-    if isinstance(input, _import_expr()):
-        return input._ir.to_selector_ir()
-    if isinstance(input, str):
-        return s_ir.ByName.from_name(input, require_all=require_all).to_selector_ir()
-    msg = f"cannot turn {qualified_type_name(input)!r} into a selector"
-    raise TypeError(msg)
-
-
-def parse_into_combined_selector_ir(
-    *inputs: OneOrIterable[ColumnNameOrSelector], require_all: bool = True
-) -> SelectorIR:
-    flat = tuple(flatten_hash_safe(inputs))
-    selectors = deque[ir.SelectorIR]()
-    if names := tuple(el for el in flat if isinstance(el, str)):
-        selector_ir = s_ir.ByName(names=names, require_all=require_all).to_selector_ir()
-        if len(names) == len(flat):
-            return selector_ir
-        selectors.append(selector_ir)
-    selectors.extend(parse_into_selector_ir(el) for el in flat if not isinstance(el, str))
-    if not selectors:
-        return s_ir.empty()
-    return selectors.popleft().or_(*selectors)
-
-
 def parse_into_seq_of_expr_ir(
     first_input: OneOrIterable[IntoExpr] = (),
     *more_inputs: IntoExpr | _RaisesInvalidIntoExprError,
@@ -213,51 +186,6 @@ def parse_sort_by_into_seq_of_expr_ir(
     raise at_least_one_error("sort_by")
 
 
-# TODO @dangotbanned: Fix the rejection predicate by adding `ExprIR.is_length_preserving`
-# - This doesn't cover all length-changing expressions, only aggregations/literals
-# - Adapt from `window._is_filtration` and replace that in `over`
-def _parse_sort_by_into_iter_expr_ir(
-    by: OneOrIterable[IntoExprColumn], more_by: Iterable[IntoExprColumn]
-) -> Iterator[ExprIR]:
-    for e in _parse_into_iter_expr_ir(by, *more_by):
-        if e.is_scalar():
-            msg = f"All expressions sort keys must preserve length, but got:\n{e!r}"
-            raise InvalidOperationError(msg)
-        yield e
-
-
-# TODO @dangotbanned: Possibly remove? see `_parse_into_iter_selector_ir`
-def parse_into_seq_of_selector_ir(
-    first_input: OneOrIterable[ColumnNameOrSelector], *more_inputs: ColumnNameOrSelector
-) -> Seq[SelectorIR]:
-    return tuple(_parse_into_iter_selector_ir(first_input, more_inputs))
-
-
-# NOTE: ^^^ is the exposed one,
-# but collecting -> `expand_selector_irs_names(require_any=...)` seems a bit much
-# `require_any` should be enough, right?
-def _parse_into_iter_selector_ir(
-    first_input: OneOrIterable[ColumnNameOrSelector],
-    more_inputs: tuple[ColumnNameOrSelector, ...],
-    /,
-) -> Iterator[SelectorIR]:
-    if isinstance(first_input, (str, _import_expr())) and not more_inputs:
-        yield parse_into_selector_ir(first_input)
-        return
-
-    if not _is_empty_sequence(first_input):
-        if _is_iterable(first_input) and not isinstance(first_input, str):
-            if more_inputs:
-                raise invalid_into_expr_error(first_input, more_inputs, {})
-            else:
-                for into in first_input:  # type: ignore[var-annotated]
-                    yield parse_into_selector_ir(into)
-        else:
-            yield parse_into_selector_ir(first_input)
-    for into in more_inputs:
-        yield parse_into_selector_ir(into)
-
-
 # TODO @dangotbanned: Too complicated!
 def _parse_into_iter_expr_ir(
     first_input: OneOrIterable[IntoExpr],
@@ -292,6 +220,78 @@ def _parse_into_iter_expr_ir(
         yield into_expr_ir(into, list_as_series=as_series)
     for name, input in named_inputs.items():
         yield into_expr_ir(input).alias(name)
+
+
+# TODO @dangotbanned: Fix the rejection predicate by adding `ExprIR.is_length_preserving`
+# - This doesn't cover all length-changing expressions, only aggregations/literals
+# - Adapt from `window._is_filtration` and replace that in `over`
+def _parse_sort_by_into_iter_expr_ir(
+    by: OneOrIterable[IntoExprColumn], more_by: Iterable[IntoExprColumn]
+) -> Iterator[ExprIR]:
+    for e in _parse_into_iter_expr_ir(by, *more_by):
+        if e.is_scalar():
+            msg = f"All expressions sort keys must preserve length, but got:\n{e!r}"
+            raise InvalidOperationError(msg)
+        yield e
+
+
+def parse_into_selector_ir(
+    input: ColumnNameOrSelector | Expr, /, *, require_all: bool = True
+) -> SelectorIR:
+    if isinstance(input, _import_expr()):
+        return input._ir.to_selector_ir()
+    if isinstance(input, str):
+        return s_ir.ByName.from_name(input, require_all=require_all).to_selector_ir()
+    msg = f"cannot turn {qualified_type_name(input)!r} into a selector"
+    raise TypeError(msg)
+
+
+def parse_into_combined_selector_ir(
+    *inputs: OneOrIterable[ColumnNameOrSelector], require_all: bool = True
+) -> SelectorIR:
+    flat = tuple(flatten_hash_safe(inputs))
+    selectors = deque[ir.SelectorIR]()
+    if names := tuple(el for el in flat if isinstance(el, str)):
+        selector_ir = s_ir.ByName(names=names, require_all=require_all).to_selector_ir()
+        if len(names) == len(flat):
+            return selector_ir
+        selectors.append(selector_ir)
+    selectors.extend(parse_into_selector_ir(el) for el in flat if not isinstance(el, str))
+    if not selectors:
+        return s_ir.empty()
+    return selectors.popleft().or_(*selectors)
+
+
+# TODO @dangotbanned: Possibly remove? see `_parse_into_iter_selector_ir`
+def parse_into_seq_of_selector_ir(
+    first_input: OneOrIterable[ColumnNameOrSelector], *more_inputs: ColumnNameOrSelector
+) -> Seq[SelectorIR]:
+    return tuple(_parse_into_iter_selector_ir(first_input, more_inputs))
+
+
+# NOTE: ^^^ is the exposed one,
+# but collecting -> `expand_selector_irs_names(require_any=...)` seems a bit much
+# `require_any` should be enough, right?
+def _parse_into_iter_selector_ir(
+    first_input: OneOrIterable[ColumnNameOrSelector],
+    more_inputs: tuple[ColumnNameOrSelector, ...],
+    /,
+) -> Iterator[SelectorIR]:
+    if isinstance(first_input, (str, _import_expr())) and not more_inputs:
+        yield parse_into_selector_ir(first_input)
+        return
+
+    if not _is_empty_sequence(first_input):
+        if _is_iterable(first_input) and not isinstance(first_input, str):
+            if more_inputs:
+                raise invalid_into_expr_error(first_input, more_inputs, {})
+            else:
+                for into in first_input:  # type: ignore[var-annotated]
+                    yield parse_into_selector_ir(into)
+        else:
+            yield parse_into_selector_ir(first_input)
+    for into in more_inputs:
+        yield parse_into_selector_ir(into)
 
 
 def _is_iterable(obj: Iterable[T] | Any) -> TypeIs[Iterable[T]]:
