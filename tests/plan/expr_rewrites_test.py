@@ -39,8 +39,8 @@ def schema_2() -> dict[str, DType]:
 
 def _over(into_expr: IntoExpr, *partition_by: IntoExpr) -> ir.Over:
     return ir.Over(
-        expr=_parse.parse_into_expr_ir(into_expr),
-        partition_by=_parse.parse_into_seq_of_expr_ir(*partition_by),
+        expr=_parse.into_expr_ir(into_expr),
+        partition_by=_parse.into_seq_of_expr_ir(*partition_by),
     )
 
 

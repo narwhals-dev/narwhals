@@ -86,7 +86,7 @@ def int_range(
         raise unsupported_backend_operation_error(eager, "int_range")  # pragma: no cover
     return (
         IntRange(step=step, dtype=dtype)
-        .to_function_expr(*_parse.parse_into_seq_of_expr_ir(start, end))
+        .to_function_expr(*_parse.into_seq_of_expr_ir(start, end))
         .to_narwhals()
     )
 
@@ -145,7 +145,7 @@ def date_range(
         raise unsupported_backend_operation_error(eager, "date_range")  # pragma: no cover
     return (
         DateRange(interval=days, closed=closed)
-        .to_function_expr(*_parse.parse_into_seq_of_expr_ir(start, end))
+        .to_function_expr(*_parse.into_seq_of_expr_ir(start, end))
         .to_narwhals()
     )
 
@@ -249,7 +249,7 @@ def linear_space(
         )  # pragma: no cover
     return (
         LinearSpace(num_samples=num_samples, closed=closed)
-        .to_function_expr(*_parse.parse_into_seq_of_expr_ir(start, end))
+        .to_function_expr(*_parse.into_seq_of_expr_ir(start, end))
         .to_narwhals()
     )
 

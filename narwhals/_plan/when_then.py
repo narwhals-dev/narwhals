@@ -19,13 +19,10 @@ def _multi_output_error(expr: ExprIR) -> MultiOutputExpressionError:
 
 
 def _parse_into_expr_ir(statement: IntoExpr, /) -> ExprIR:
-    expr_ir = _parse.parse_into_expr_ir(statement)
+    expr_ir = _parse.into_expr_ir(statement)
     if expr_ir.meta.has_multiple_outputs():
         raise _multi_output_error(expr_ir)
     return expr_ir
-
-
-_parse_predicates = _parse.parse_predicates_constraints_into_expr_ir
 
 
 class When(Immutable):
@@ -48,7 +45,7 @@ class Then(Immutable, Expr):
     def when(
         self, *predicates: OneOrIterable[IntoExprColumn], **constraints: Any
     ) -> ChainedWhen:
-        condition = _parse_predicates(*predicates, **constraints)
+        condition = _parse.predicates_constraints_into_expr_ir(*predicates, **constraints)
         return ChainedWhen(
             conditions=(self.condition, condition), statements=(self.statement,)
         )
@@ -93,7 +90,7 @@ class ChainedThen(Immutable, Expr):
     def when(
         self, *predicates: OneOrIterable[IntoExprColumn], **constraints: Any
     ) -> ChainedWhen:
-        condition = _parse_predicates(*predicates, **constraints)
+        condition = _parse.predicates_constraints_into_expr_ir(*predicates, **constraints)
         return ChainedWhen(
             conditions=(*self.conditions, condition), statements=self.statements
         )
@@ -129,5 +126,5 @@ def when(*predicates: OneOrIterable[IntoExprColumn], **constraints: Any) -> When
         nw._plan.Expr(main):
         .when([(col('y')) == (lit(str: b))]).then(lit(int: 1)).otherwise(lit(null))
     """
-    condition = _parse_predicates(*predicates, **constraints)
+    condition = _parse.predicates_constraints_into_expr_ir(*predicates, **constraints)
     return When._from_ir(condition)

@@ -42,9 +42,9 @@ if TYPE_CHECKING:
 
     from narwhals._plan.expr import Expr
     from narwhals._plan.expressions import ExprIR, SelectorIR
+    from narwhals._plan.selectors import Selector
     from narwhals._plan.series import Series
     from narwhals._plan.typing import (
-        ColumnNameOrSelector,
         IntoExpr,
         IntoExprColumn,
         OneOrIterable,
@@ -111,13 +111,13 @@ We only support cases `a`, `b`, but the typing for most contexts is more permiss
 """
 
 
-def parse_into_expr_ir(
+def into_expr_ir(
     input: IntoExpr | list[Any],
     *,
     str_as_lit: bool = False,
     list_as_series: PartialSeries | None = None,
 ) -> ExprIR:
-    """Parse a single input into an `ExprIR` node.
+    """Parse a single input into an expression.
 
     Arguments:
         input: The input to be parsed as an expression.
@@ -135,35 +135,33 @@ def parse_into_expr_ir(
     return _import_lit()(input)._ir
 
 
-def parse_into_seq_of_expr_ir(
+def into_seq_of_expr_ir(
     first_input: OneOrIterable[IntoExpr] = (),
     *more_inputs: IntoExpr | _RaisesInvalidIntoExprError,
     **named_inputs: IntoExpr,
 ) -> Seq[ExprIR]:
-    """Parse variadic inputs into a flat sequence of `ExprIR` nodes."""
+    """Parse variadic inputs into a flat sequence of expressions."""
     return tuple(
-        _parse_into_iter_expr_ir(
-            first_input, *more_inputs, _list_as_series=None, **named_inputs
-        )
+        into_iter_expr_ir(first_input, *more_inputs, _list_as_series=None, **named_inputs)
     )
 
 
-def parse_predicates_constraints_into_expr_ir(
+def predicates_constraints_into_expr_ir(
     first_predicate: OneOrIterable[IntoExprColumn] | list[bool] = (),
     *more_predicates: IntoExprColumn | list[bool] | _RaisesInvalidIntoExprError,
     _list_as_series: PartialSeries | None = None,
     **constraints: IntoExpr,
 ) -> ExprIR:
-    """Parse variadic predicates and constraints into an `ExprIR` node.
+    """Parse variadic predicates and constraints into an expression.
 
     The result is an AND-reduction of all inputs.
     """
-    predicates = _parse_into_iter_expr_ir(
+    predicates = into_iter_expr_ir(
         first_predicate, *more_predicates, _list_as_series=_list_as_series
     )
     if constraints:
         items = constraints.items()
-        it = (ir.col(nm).eq(parse_into_expr_ir(v, str_as_lit=True)) for nm, v in items)
+        it = (ir.col(nm).eq(into_expr_ir(v, str_as_lit=True)) for nm, v in items)
         predicates = chain(predicates, it)
 
     if (first := next(predicates, None)) is None:
@@ -176,24 +174,23 @@ def parse_predicates_constraints_into_expr_ir(
     return first
 
 
-def parse_sort_by_into_seq_of_expr_ir(
+def sort_by_into_seq_of_expr_ir(
     by: OneOrIterable[IntoExprColumn] = (), *more_by: IntoExprColumn
 ) -> Seq[ExprIR]:
-    """Parse `DataFrame.sort` and `Expr.sort_by` keys into a flat sequence of `ExprIR` nodes."""
-    it = _parse_sort_by_into_iter_expr_ir(by, more_by)
+    """Parse `DataFrame.sort` and `Expr.sort_by` keys into a flat sequence of expressions."""
+    it = _sort_by_into_iter_expr_ir(by, more_by)
     if first := next(it, None):
         return (first, *it)
     raise at_least_one_error("sort_by")
 
 
 # TODO @dangotbanned: Too complicated!
-def _parse_into_iter_expr_ir(
+def into_iter_expr_ir(
     first_input: OneOrIterable[IntoExpr],
     *more_inputs: IntoExpr | list[Any],
     _list_as_series: PartialSeries | None = None,
     **named_inputs: IntoExpr,
 ) -> Iterator[ExprIR]:
-    into_expr_ir = parse_into_expr_ir
     as_series = _list_as_series
     if not _is_empty_sequence(first_input):
         # NOTE: These need to be separated to introduce an intersection type
@@ -225,10 +222,10 @@ def _parse_into_iter_expr_ir(
 # TODO @dangotbanned: Fix the rejection predicate by adding `ExprIR.is_length_preserving`
 # - This doesn't cover all length-changing expressions, only aggregations/literals
 # - Adapt from `window._is_filtration` and replace that in `over`
-def _parse_sort_by_into_iter_expr_ir(
+def _sort_by_into_iter_expr_ir(
     by: OneOrIterable[IntoExprColumn], more_by: Iterable[IntoExprColumn]
 ) -> Iterator[ExprIR]:
-    for e in _parse_into_iter_expr_ir(by, *more_by):
+    for e in into_iter_expr_ir(by, *more_by):
         if e.is_scalar():
             msg = f"All expressions sort keys must preserve length, but got:\n{e!r}"
             raise InvalidOperationError(msg)
@@ -239,9 +236,17 @@ def _by_name(name: str, /, *, require_all: bool = True) -> SelectorIR:
     return s_ir.ByName.from_name(name, require_all=require_all).to_selector_ir()
 
 
-def parse_into_selector_ir(
-    input: ColumnNameOrSelector | Expr, /, *, require_all: bool = True
+def into_selector_ir(
+    input: str | Selector | Expr, /, *, require_all: bool = True
 ) -> SelectorIR:
+    """Parse a single input into a selector.
+
+    Arguments:
+        input: The input to be parsed as a selector.
+        require_all: Whether to match *all* names (the default) or *any* of the names.
+
+            This parameter is ignored if `input` is not a string.
+    """
     if isinstance(input, _import_expr()):
         return input._ir.to_selector_ir()
     if isinstance(input, str):
@@ -250,9 +255,17 @@ def parse_into_selector_ir(
     raise TypeError(msg)
 
 
-def parse_into_combined_selector_ir(
-    *inputs: OneOrIterable[ColumnNameOrSelector], require_all: bool = True
+def into_combined_selector_ir(
+    *inputs: OneOrIterable[str | Selector], require_all: bool = True
 ) -> SelectorIR:
+    """Parse and reduce input(s) into a single selector.
+
+    Arguments:
+        inputs: One or more column names or selectors.
+        require_all: Whether to match *all* names (the default) or *any* of the names.
+
+            This parameter is ignored for any input that is not a string.
+    """
     flat = tuple(flatten_hash_safe(inputs))
     selectors = deque[ir.SelectorIR]()
     if names := tuple(el for el in flat if isinstance(el, str)):
@@ -260,37 +273,32 @@ def parse_into_combined_selector_ir(
         if len(names) == len(flat):
             return selector_ir
         selectors.append(selector_ir)
-    selectors.extend(parse_into_selector_ir(el) for el in flat if not isinstance(el, str))
+    selectors.extend(into_selector_ir(el) for el in flat if not isinstance(el, str))
     if not selectors:
         return s_ir.empty()
     return selectors.popleft().or_(*selectors)
 
 
-# TODO @dangotbanned: Possibly remove?
-# both collecting here and in`expand_selectors(require_any=...)` seems a bit much
-# `require_any` should be enough, right?
-def parse_into_seq_of_selector_ir(
-    first: OneOrIterable[ColumnNameOrSelector],
-    more: tuple[ColumnNameOrSelector, ...] = (),
-    /,
-) -> Seq[SelectorIR]:
-    return tuple(parse_into_iter_selector_ir(first, more))
-
-
-def parse_into_iter_selector_ir(
-    first: OneOrIterable[ColumnNameOrSelector], more: tuple[ColumnNameOrSelector, ...], /
+def into_iter_selector_ir(
+    first_input: OneOrIterable[str | Selector], more_inputs: Seq[str | Selector] = (), /
 ) -> Iterator[SelectorIR]:
-    if isinstance(first, str):
-        yield _by_name(first)
-    elif not isinstance(first, Iterable):
-        yield parse_into_selector_ir(first)
-    elif more:
-        raise invalid_into_expr_error(first, more, {})
+    """Yield input(s) parsed into selector(s).
+
+    Arguments:
+        first_input: One or more column names or selectors.
+        more_inputs: Use if `*args` were accepted *in-addition-to* `first_input` as syntax sugar.
+    """
+    if isinstance(first_input, str):
+        yield _by_name(first_input)
+    elif not isinstance(first_input, Iterable):
+        yield into_selector_ir(first_input)
+    elif more_inputs:
+        raise invalid_into_expr_error(first_input, more_inputs, {})
     else:
-        for into in first:
-            yield parse_into_selector_ir(into)
-    for into in more:
-        yield parse_into_selector_ir(into)
+        for into in first_input:
+            yield into_selector_ir(into)
+    for into in more_inputs:
+        yield into_selector_ir(into)
 
 
 def _is_iterable(obj: Iterable[T] | Any) -> TypeIs[Iterable[T]]:

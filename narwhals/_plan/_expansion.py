@@ -44,7 +44,7 @@ from typing import TYPE_CHECKING, Any, Union
 
 from narwhals._plan import expressions as ir, meta
 from narwhals._plan._function import HorizontalFunction
-from narwhals._plan._parse import parse_into_iter_selector_ir
+from narwhals._plan._parse import into_iter_selector_ir
 from narwhals._plan.exceptions import (
     binary_expr_multi_output_error,
     column_not_found_error,
@@ -136,7 +136,7 @@ def parse_expand_selectors(
 
     Semantically equivalent to these independent steps:
 
-        irs: tuple[SelectorIR, ...] = parse_into_seq_of_selector_ir(first_input, more_inputs)
+        irs: Iterator[SelectorIR] = _parse.into_iter_selector_ir(first_input, more_inputs)
         output_names: tuple[str, ...] = expand_selectors(irs, schema=..., require_any=...)
 
     With the possibility of performing the entire operation in a single pass.
@@ -149,17 +149,18 @@ def parse_expand_selectors(
             If False, we can always defer iterator collection until finishing expansion.
     """
     expander = Expander(schema)
-    into_iter = parse_into_iter_selector_ir
     expand = expander.expand_selectors
     first, more = first_input, more_inputs
 
     if not require_any:
-        return expand(into_iter(first, more))
+        return expand(into_iter_selector_ir(first, more))
     # Balancing act to keep enough context for an error message,
     # but avoid collection if we can just repeat on fail
-    if not isinstance(first, Iterator) and (names := expand(into_iter(first, more))):
+    if not isinstance(first, Iterator) and (
+        names := expand(into_iter_selector_ir(first, more))
+    ):
         return names
-    parsed = tuple(into_iter(first, more))
+    parsed = tuple(into_iter_selector_ir(first, more))
     if names := expand(parsed):
         return names
     raise selectors_not_found_error(parsed, expander.schema)

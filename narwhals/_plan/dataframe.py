@@ -126,7 +126,7 @@ class BaseFrame(Generic[NativeFrameT_co]):
     def filter(
         self, *predicates: OneOrIterable[IntoExprColumn], **constraints: Any
     ) -> Self:  # pragma: no cover
-        e = _parse.parse_predicates_constraints_into_expr_ir(*predicates, **constraints)
+        e = _parse.predicates_constraints_into_expr_ir(*predicates, **constraints)
         named_irs, _ = prepare_projection((e,), schema=self)
         if len(named_irs) != 1:
             # Should be unreachable, but I guess we will see
@@ -136,13 +136,13 @@ class BaseFrame(Generic[NativeFrameT_co]):
 
     def select(self, *exprs: OneOrIterable[IntoExpr], **named_exprs: Any) -> Self:
         named_irs, _ = prepare_projection(
-            _parse.parse_into_seq_of_expr_ir(*exprs, **named_exprs), schema=self
+            _parse.into_seq_of_expr_ir(*exprs, **named_exprs), schema=self
         )
         return self._with_compliant(self._compliant.select(named_irs))
 
     def with_columns(self, *exprs: OneOrIterable[IntoExpr], **named_exprs: Any) -> Self:
         named_irs, schema = prepare_projection(
-            _parse.parse_into_seq_of_expr_ir(*exprs, **named_exprs), schema=self
+            _parse.into_seq_of_expr_ir(*exprs, **named_exprs), schema=self
         )
         return self._with_compliant(
             self._compliant.with_columns(schema.with_columns_irs(named_irs))
@@ -162,7 +162,7 @@ class BaseFrame(Generic[NativeFrameT_co]):
     def drop(
         self, *columns: OneOrIterable[ColumnNameOrSelector], strict: bool = True
     ) -> Self:
-        s_ir = _parse.parse_into_combined_selector_ir(*columns, require_all=strict)
+        s_ir = _parse.into_combined_selector_ir(*columns, require_all=strict)
         if names := expand_selectors((s_ir,), schema=self, require_any=False):
             compliant = self._compliant.drop(names)
         else:
@@ -570,7 +570,7 @@ class DataFrame(
     def filter(
         self, *predicates: OneOrIterable[IntoExprColumn] | list[bool], **constraints: Any
     ) -> Self:
-        e = _parse.parse_predicates_constraints_into_expr_ir(
+        e = _parse.predicates_constraints_into_expr_ir(
             *predicates,
             _list_as_series=self._partial_series(dtype=self.version.dtypes.Boolean()),
             **constraints,

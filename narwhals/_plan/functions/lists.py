@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals._plan._parse import parse_into_expr_ir
+from narwhals._plan import _parse
 from narwhals._plan.exceptions import function_arg_non_scalar_error
 from narwhals._plan.expressions.lists import IRListNamespace
 from narwhals._plan.expressions.namespace import ExprNamespace
@@ -49,7 +49,7 @@ class ExprListNamespace(ExprNamespace[IRListNamespace]):
         return self._with_unary(self._ir.get(index=index))
 
     def contains(self, item: IntoExpr) -> Expr:
-        item_ir = parse_into_expr_ir(item, str_as_lit=True)
+        item_ir = _parse.into_expr_ir(item, str_as_lit=True)
         contains = self._ir.contains()
         if not item_ir.is_scalar():
             raise function_arg_non_scalar_error(contains, "item", item_ir)

@@ -3,8 +3,8 @@ from __future__ import annotations
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Protocol
 
+from narwhals._plan import _parse
 from narwhals._plan._expansion import prepare_projection
-from narwhals._plan._parse import parse_into_seq_of_expr_ir
 from narwhals._plan.common import replace, temp
 from narwhals._plan.compliant.typing import (
     DataFrameT,
@@ -114,13 +114,13 @@ class Grouper(Protocol[ResolverT_co]):
     @property
     def _resolver(self) -> type[ResolverT_co]: ...
     def agg(self, *aggs: OneOrIterable[IntoExpr]) -> Self:
-        self._aggs = parse_into_seq_of_expr_ir(*aggs)
+        self._aggs = _parse.into_seq_of_expr_ir(*aggs)
         return self
 
     @classmethod
     def by(cls, *by: OneOrIterable[IntoExpr]) -> Self:
         obj = cls.__new__(cls)
-        obj._keys = parse_into_seq_of_expr_ir(*by)
+        obj._keys = _parse.into_seq_of_expr_ir(*by)
         return obj
 
     def resolve(self, context: IntoFrozenSchema, /) -> ResolverT_co:

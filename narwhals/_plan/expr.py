@@ -4,14 +4,8 @@ import math
 from collections.abc import Iterable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
 
-from narwhals._plan import common, expressions as ir
+from narwhals._plan import _parse, common, expressions as ir
 from narwhals._plan._guards import is_series
-from narwhals._plan._parse import (
-    parse_into_expr_ir,
-    parse_into_seq_of_expr_ir,
-    parse_predicates_constraints_into_expr_ir,
-    parse_sort_by_into_seq_of_expr_ir,
-)
 from narwhals._plan.expressions import (
     aggregation as agg,
     functions as F,
@@ -155,13 +149,12 @@ class Expr:
         if not (partition_by) and order_by is None:
             msg = "At least one of `partition_by` or `order_by` must be specified."
             raise TypeError(msg)
-        parse = parse_into_seq_of_expr_ir
         fn = self._ir
-        group = parse(*partition_by) if partition_by else ()
+        group = _parse.into_seq_of_expr_ir(*partition_by) if partition_by else ()
         if order_by is None:
             return self._from_ir(ir.over(fn, group))
         over = ir.over_ordered
-        order = parse(order_by)
+        order = _parse.into_seq_of_expr_ir(order_by)
         desc, nulls = descending, nulls_last
         return self._from_ir(over(fn, group, order, descending=desc, nulls_last=nulls))
 
@@ -176,14 +169,14 @@ class Expr:
         descending: OneOrIterable[bool] = False,
         nulls_last: OneOrIterable[bool] = False,
     ) -> Self:
-        keys = parse_sort_by_into_seq_of_expr_ir(by, *more_by)
+        keys = _parse.sort_by_into_seq_of_expr_ir(by, *more_by)
         opts = SortMultipleOptions.parse(descending=descending, nulls_last=nulls_last)
         return self._from_ir(ir.SortBy(expr=self._ir, by=keys, options=opts))
 
     def filter(
         self, *predicates: OneOrIterable[IntoExprColumn], **constraints: Any
     ) -> Self:
-        by = parse_predicates_constraints_into_expr_ir(*predicates, **constraints)
+        by = _parse.predicates_constraints_into_expr_ir(*predicates, **constraints)
         return self._from_ir(ir.Filter(expr=self._ir, by=by))
 
     def _with_unary(self, function: Function, /) -> Self:
@@ -231,7 +224,7 @@ class Expr:
         return self._with_unary(F.NullCount())
 
     def fill_nan(self, value: float | Self | None) -> Self:
-        fill_value = parse_into_expr_ir(value, str_as_lit=True)
+        fill_value = _parse.into_expr_ir(value, str_as_lit=True)
         root = self._ir
         if any(e.meta.has_multiple_outputs() for e in (root, fill_value)):
             return self._from_ir(F.FillNan().to_function_expr(root, fill_value))
@@ -246,7 +239,7 @@ class Expr:
         limit: int | None = None,
     ) -> Self:
         if strategy is None:
-            e = parse_into_expr_ir(value, str_as_lit=True)
+            e = _parse.into_expr_ir(value, str_as_lit=True)
             return self._from_ir(F.FillNull().to_function_expr(self._ir, e))
         return self._with_unary(F.FillNullWithStrategy(strategy=strategy, limit=limit))
 
@@ -276,11 +269,11 @@ class Expr:
     ) -> Self:
         f: ir.FunctionExpr
         if upper_bound is None:
-            f = F.ClipLower().to_function_expr(self._ir, parse_into_expr_ir(lower_bound))
+            f = F.ClipLower().to_function_expr(self._ir, _parse.into_expr_ir(lower_bound))
         elif lower_bound is None:
-            f = F.ClipUpper().to_function_expr(self._ir, parse_into_expr_ir(upper_bound))
+            f = F.ClipUpper().to_function_expr(self._ir, _parse.into_expr_ir(upper_bound))
         else:
-            it = parse_into_seq_of_expr_ir(lower_bound, upper_bound)
+            it = _parse.into_seq_of_expr_ir(lower_bound, upper_bound)
             f = F.Clip().to_function_expr(self._ir, *it)
         return self._from_ir(f)
 
@@ -401,7 +394,7 @@ class Expr:
         function = F.ReplaceStrictDefault(
             old=before, new=after, return_dtype=return_dtype
         )
-        default_ir = parse_into_expr_ir(default, str_as_lit=True)
+        default_ir = _parse.into_expr_ir(default, str_as_lit=True)
         return self._from_ir(function.to_function_expr(self._ir, default_ir))
 
     def gather_every(self, n: int, offset: int = 0) -> Self:
@@ -478,7 +471,7 @@ class Expr:
         upper_bound: IntoExpr,
         closed: ClosedInterval = "both",
     ) -> Self:
-        it = parse_into_seq_of_expr_ir(lower_bound, upper_bound)
+        it = _parse.into_seq_of_expr_ir(lower_bound, upper_bound)
         return self._from_ir(
             ir.boolean.IsBetween(closed=closed).to_function_expr(self._ir, *it)
         )
@@ -508,7 +501,7 @@ class Expr:
         str_as_lit: bool = False,
         reflect: bool = False,
     ) -> Self:
-        other_ir = parse_into_expr_ir(other, str_as_lit=str_as_lit)
+        other_ir = _parse.into_expr_ir(other, str_as_lit=str_as_lit)
         args = (self._ir, other_ir) if not reflect else (other_ir, self._ir)
         return self._from_ir(op().to_binary_expr(*args))
 
@@ -585,11 +578,13 @@ class Expr:
         return self._with_binary(ops.ExclusiveOr, other, reflect=True)
 
     def __pow__(self, exponent: IntoExprColumn | float) -> Self:
-        exp = parse_into_expr_ir(exponent)
+        exp = _parse.into_expr_ir(exponent)
         return self._from_ir(F.Pow().to_function_expr(self._ir, exp))
 
     def __rpow__(self, base: IntoExprColumn | float) -> Self:
-        return self._from_ir(F.Pow().to_function_expr(parse_into_expr_ir(base), self._ir))
+        return self._from_ir(
+            F.Pow().to_function_expr(_parse.into_expr_ir(base), self._ir)
+        )
 
     def __invert__(self) -> Self:
         return self._with_unary(ir.boolean.Not())

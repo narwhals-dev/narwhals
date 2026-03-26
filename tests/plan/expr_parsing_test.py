@@ -13,7 +13,7 @@ import pytest
 import narwhals as nw
 from narwhals import _plan as nwp
 from narwhals._plan import expressions as ir, selectors as ncs
-from narwhals._plan._parse import parse_into_seq_of_expr_ir
+from narwhals._plan._parse import into_seq_of_expr_ir
 from narwhals._plan.expressions import functions as F, operators as ops
 from narwhals._plan.expressions.ranges import IntRange
 from narwhals._utils import Implementation
@@ -64,8 +64,7 @@ def test_parsing(
     exprs: Seq[IntoExpr | Iterable[IntoExpr]], named_exprs: dict[str, IntoExpr]
 ) -> None:
     assert all(
-        isinstance(node, ir.ExprIR)
-        for node in parse_into_seq_of_expr_ir(*exprs, **named_exprs)
+        isinstance(node, ir.ExprIR) for node in into_seq_of_expr_ir(*exprs, **named_exprs)
     )
 
 

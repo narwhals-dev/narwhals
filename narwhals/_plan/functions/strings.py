@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals._plan._parse import parse_into_expr_ir
+from narwhals._plan import _parse
 from narwhals._plan.expressions.namespace import ExprNamespace
 from narwhals._plan.expressions.strings import IRStringNamespace
 
@@ -21,14 +21,14 @@ class ExprStringNamespace(ExprNamespace[IRStringNamespace]):
     def replace(
         self, pattern: str, value: str | Expr, *, literal: bool = False, n: int = 1
     ) -> Expr:
-        other = parse_into_expr_ir(value, str_as_lit=True)
+        other = _parse.into_expr_ir(value, str_as_lit=True)
         replace = self._ir.replace(pattern, literal=literal, n=n)
         return self._expr._from_ir(replace.to_function_expr(self._expr._ir, other))
 
     def replace_all(
         self, pattern: str, value: str | Expr, *, literal: bool = False
     ) -> Expr:
-        other = parse_into_expr_ir(value, str_as_lit=True)
+        other = _parse.into_expr_ir(value, str_as_lit=True)
         replace = self._ir.replace_all(pattern, literal=literal)
         return self._expr._from_ir(replace.to_function_expr(self._expr._ir, other))
 

@@ -152,13 +152,13 @@ class LazyFrame(Generic[Native]):
     def drop(
         self, *columns: OneOrIterable[ColumnNameOrSelector], strict: bool = True
     ) -> Self:
-        s_ir = _parse.parse_into_combined_selector_ir(*columns, require_all=strict)
+        s_ir = _parse.into_combined_selector_ir(*columns, require_all=strict)
         return self._with_lp(self._plan.drop(s_ir))
 
     def drop_nulls(
         self, subset: OneOrIterable[ColumnNameOrSelector] | None = None
     ) -> Self:  # pragma: no cover
-        s_ir = None if subset is None else _parse.parse_into_combined_selector_ir(subset)
+        s_ir = None if subset is None else _parse.into_combined_selector_ir(subset)
         return self._with_lp(self._plan.drop_nulls(s_ir))
 
     def explain(self) -> str:  # pragma: no cover
@@ -172,14 +172,14 @@ class LazyFrame(Generic[Native]):
         empty_as_null: bool = True,
         keep_nulls: bool = True,
     ) -> Self:  # pragma: no cover
-        s_ir = _parse.parse_into_combined_selector_ir(columns, *more_columns)
+        s_ir = _parse.into_combined_selector_ir(columns, *more_columns)
         options = ExplodeOptions(empty_as_null=empty_as_null, keep_nulls=keep_nulls)
         return self._with_lp(self._plan.explode(s_ir, options))
 
     def filter(
         self, *predicates: OneOrIterable[IntoExprColumn], **constraints: Any
     ) -> Self:  # pragma: no cover
-        p = _parse.parse_predicates_constraints_into_expr_ir(*predicates, **constraints)
+        p = _parse.predicates_constraints_into_expr_ir(*predicates, **constraints)
         return self._with_lp(self._plan.filter(p))
 
     # TODO @dangotbanned: LazyFrame.group_by(drop_null_keys=True)
@@ -246,17 +246,17 @@ class LazyFrame(Generic[Native]):
     ) -> Self:  # pragma: no cover
         from narwhals._plan import selectors as cs
 
-        on_ = _parse.parse_into_combined_selector_ir(on)
+        on_ = _parse.into_combined_selector_ir(on)
         if index is None:
             if values is None:
                 msg = "`pivot` needs either `index or `values` needs to be specified"
                 raise InvalidOperationError(msg)
-            values_ = _parse.parse_into_combined_selector_ir(values)
+            values_ = _parse.into_combined_selector_ir(values)
             index_ = (cs.all() - on_.to_narwhals() - values_.to_narwhals())._ir
         else:
-            index_ = _parse.parse_into_combined_selector_ir(index)
+            index_ = _parse.into_combined_selector_ir(index)
             if values is not None:
-                values_ = _parse.parse_into_combined_selector_ir(values)
+                values_ = _parse.into_combined_selector_ir(values)
             else:
                 values_ = (cs.all() - on_.to_narwhals() - index_.to_narwhals())._ir
 
@@ -275,7 +275,7 @@ class LazyFrame(Generic[Native]):
         return self._with_lp(self._plan.rename(mapping))
 
     def select(self, *exprs: OneOrIterable[IntoExpr], **named_exprs: Any) -> Self:
-        e_irs = _parse.parse_into_seq_of_expr_ir(*exprs, **named_exprs)
+        e_irs = _parse.into_seq_of_expr_ir(*exprs, **named_exprs)
         return self._with_lp(self._plan.select(e_irs))
 
     # TODO @dangotbanned: Open an issue to find out why we don't have this on main?
@@ -331,7 +331,7 @@ class LazyFrame(Generic[Native]):
         descending: OneOrIterable[bool] = False,
         nulls_last: OneOrIterable[bool] = False,
     ) -> Self:
-        s_irs = _parse.parse_into_seq_of_selector_ir(by, more_by)
+        s_irs = tuple(_parse.into_iter_selector_ir(by, more_by))
         opts = SortMultipleOptions.parse(descending=descending, nulls_last=nulls_last)
         return self._with_lp(self._plan.sort(s_irs, opts))
 
@@ -346,10 +346,10 @@ class LazyFrame(Generic[Native]):
         order_by: OneOrIterable[ColumnNameOrSelector] | None = None,
     ) -> Self:  # pragma: no cover
         opts = UniqueOptions.parse(keep, maintain_order=False)
-        parse = _parse.parse_into_seq_of_selector_ir
-        s_subset = None if subset is None else parse(subset)
+        s_subset = None if subset is None else tuple(_parse.into_iter_selector_ir(subset))
         if order_by is not None:
-            return self._with_lp(self._plan.unique_by(s_subset, parse(order_by), opts))
+            by = tuple(_parse.into_iter_selector_ir(order_by))
+            return self._with_lp(self._plan.unique_by(s_subset, by, opts))
         if keep in {"first", "last"}:
             msg = "'first' and 'last' are only supported if `order_by` is passed."
             raise InvalidOperationError(msg)
@@ -360,7 +360,7 @@ class LazyFrame(Generic[Native]):
         columns: OneOrIterable[ColumnNameOrSelector],
         *more_columns: ColumnNameOrSelector,
     ) -> Self:  # pragma: no cover
-        s_ir = _parse.parse_into_combined_selector_ir(columns, *more_columns)
+        s_ir = _parse.into_combined_selector_ir(columns, *more_columns)
         return self._with_lp(self._plan.unnest(s_ir))
 
     def unpivot(
@@ -371,17 +371,17 @@ class LazyFrame(Generic[Native]):
         variable_name: str = "variable",
         value_name: str = "value",
     ) -> Self:
-        s_on = on if on is None else _parse.parse_into_combined_selector_ir(on)
-        s_index = None if index is None else _parse.parse_into_combined_selector_ir(index)
+        s_on = on if on is None else _parse.into_combined_selector_ir(on)
+        s_index = None if index is None else _parse.into_combined_selector_ir(index)
         options = UnpivotOptions(variable_name=variable_name, value_name=value_name)
         return self._with_lp(self._plan.unpivot(s_on, index=s_index, options=options))
 
     def with_columns(self, *exprs: OneOrIterable[IntoExpr], **named_exprs: Any) -> Self:
-        e_irs = _parse.parse_into_seq_of_expr_ir(*exprs, **named_exprs)
+        e_irs = _parse.into_seq_of_expr_ir(*exprs, **named_exprs)
         return self._with_lp(self._plan.with_columns(e_irs))
 
     def with_row_index(
         self, name: str = "index", *, order_by: OneOrIterable[ColumnNameOrSelector]
     ) -> Self:  # pragma: no cover
-        by = _parse.parse_into_seq_of_selector_ir(order_by)
+        by = tuple(_parse.into_iter_selector_ir(order_by))
         return self._with_lp(self._plan.with_row_index_by(name, order_by=by))
