@@ -602,6 +602,7 @@ def test_drop_nulls(data_small_dh: Data, dataframe: DataFrame) -> None:
     expected: Data = {"d": [], "e": [], "f": [], "g": [], "h": []}
     result = df.drop_nulls()
     assert_equal_data(result, expected)
+    assert_equal_data(df.drop_nulls(iter(expected)), expected)
 
 
 def test_drop_nulls_invalid(data_small_dh: Data, dataframe: DataFrame) -> None:

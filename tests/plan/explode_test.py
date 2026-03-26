@@ -156,7 +156,7 @@ def test_explode_frame_shape_error(data: Data) -> None:
     ):
         dataframe(data).with_columns(
             nwp.col("l1", "l2", "l3").cast(nw.List(nw.Int32()))
-        ).explode(ncs.list())
+        ).explode(iter([ncs.list()]))
 
 
 def test_explode_frame_invalid_operation_error(data: Data) -> None:

@@ -4,7 +4,11 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, get_args, overload
 
 from narwhals._plan import _parse, translate
-from narwhals._plan._expansion import expand_selector_irs_names, prepare_projection
+from narwhals._plan._expansion import (
+    expand_selector_irs_names,
+    parse_expand_selectors,
+    prepare_projection,
+)
 from narwhals._plan._guards import is_series
 from narwhals._plan._namespace import eager_implementation, namespace_from_backend
 from narwhals._plan.common import ensure_seq_str, normalize_target_file, temp
@@ -151,8 +155,7 @@ class BaseFrame(Generic[NativeFrameT_co]):
         descending: OneOrIterable[bool] = False,
         nulls_last: OneOrIterable[bool] = False,
     ) -> Self:
-        s_irs = _parse.parse_into_seq_of_selector_ir(by, *more_by)
-        names = expand_selector_irs_names(s_irs, schema=self, require_any=True)
+        names = parse_expand_selectors(by, more_by, schema=self, require_any=True)
         opts = SortMultipleOptions.parse(descending=descending, nulls_last=nulls_last)
         return self._with_compliant(self._compliant.sort(names, opts))
 
@@ -170,8 +173,9 @@ class BaseFrame(Generic[NativeFrameT_co]):
         self, subset: OneOrIterable[ColumnNameOrSelector] | None = None
     ) -> Self:
         if subset is not None:
-            s_irs = _parse.parse_into_seq_of_selector_ir(subset)
-            subset = expand_selector_irs_names(s_irs, schema=self) or None
+            subset = (
+                parse_expand_selectors(subset, schema=self, require_any=False) or None
+            )
         return self._with_compliant(self._compliant.drop_nulls(subset))
 
     def rename(self, mapping: Mapping[str, str]) -> Self:
@@ -190,7 +194,7 @@ class BaseFrame(Generic[NativeFrameT_co]):
     ) -> Self:
         on_: Seq[str] | None = None
         index_: Seq[str] | None = None
-        schema = self.schema
+        schema = self.collect_schema()
         if on is not None:
             s_irs = _parse.parse_into_seq_of_selector_ir(on)
             on_ = expand_selector_irs_names(s_irs, schema=schema, require_any=True)
@@ -206,8 +210,7 @@ class BaseFrame(Generic[NativeFrameT_co]):
     def with_row_index(
         self, name: str = "index", *, order_by: OneOrIterable[ColumnNameOrSelector]
     ) -> Self:
-        by_selectors = _parse.parse_into_seq_of_selector_ir(order_by)
-        by_names = expand_selector_irs_names(by_selectors, schema=self, require_any=True)
+        by_names = parse_expand_selectors(order_by, schema=self, require_any=True)
         return self._with_compliant(self._compliant.with_row_index_by(name, by_names))
 
     def join(
@@ -278,9 +281,10 @@ class BaseFrame(Generic[NativeFrameT_co]):
         empty_as_null: bool = True,
         keep_nulls: bool = True,
     ) -> Self:
-        s_ir = _parse.parse_into_combined_selector_ir(columns, *more_columns)
         schema = self.collect_schema()
-        subset = expand_selector_irs_names((s_ir,), schema=schema, require_any=True)
+        subset = parse_expand_selectors(
+            columns, more_columns, schema=schema, require_any=True
+        )
         tp_list = self.version.dtypes.List
         for col_to_explode in subset:
             dtype = schema[col_to_explode]
@@ -295,9 +299,10 @@ class BaseFrame(Generic[NativeFrameT_co]):
         columns: OneOrIterable[ColumnNameOrSelector],
         *more_columns: ColumnNameOrSelector,
     ) -> Self:
-        s_ir = _parse.parse_into_combined_selector_ir(columns, *more_columns)
         schema = self.collect_schema()
-        subset = expand_selector_irs_names((s_ir,), schema=schema, require_any=True)
+        subset = parse_expand_selectors(
+            columns, more_columns, schema=schema, require_any=True
+        )
         tp_struct = self.version.dtypes.Struct
         existing_names = schema.keys() - subset
         for col_to_unnest in subset:
@@ -589,8 +594,7 @@ class DataFrame(
         *more_by: ColumnNameOrSelector,
         include_key: bool = True,
     ) -> list[Self]:
-        by_selectors = _parse.parse_into_seq_of_selector_ir(by, *more_by)
-        names = expand_selector_irs_names(by_selectors, schema=self, require_any=True)
+        names = parse_expand_selectors(by, more_by, schema=self, require_any=True)
         partitions = self._compliant.partition_by(names, include_key=include_key)
         return [self._with_compliant(p) for p in partitions]
 
@@ -668,13 +672,10 @@ class DataFrame(
         order_by: OneOrIterable[ColumnNameOrSelector] | None = None,
     ) -> Self:
         keep = _validate_unique_keep_strategy(keep)
-        schema = self.schema
+        schema = self.collect_schema()
         subset_names: Sequence[str] | None = None
         if subset is not None:
-            s_irs = _parse.parse_into_seq_of_selector_ir(subset)
-            subset_names = expand_selector_irs_names(
-                s_irs, schema=schema, require_any=True
-            )
+            subset_names = parse_expand_selectors(subset, schema=schema, require_any=True)
         if order_by is None:
             if len(schema) == 1 and keep in {"any", "first"}:
                 # NOTE: Fastpath for single-column frame
@@ -688,8 +689,7 @@ class DataFrame(
                     subset_names, keep=keep, maintain_order=maintain_order
                 )
             return self._with_compliant(result)
-        s_irs = _parse.parse_into_seq_of_selector_ir(order_by)
-        by_names = expand_selector_irs_names(s_irs, schema=schema, require_any=True)
+        by_names = parse_expand_selectors(order_by, schema=schema, require_any=True)
         return self._with_compliant(
             self._compliant.unique_by(
                 subset_names, keep=keep, maintain_order=maintain_order, order_by=by_names

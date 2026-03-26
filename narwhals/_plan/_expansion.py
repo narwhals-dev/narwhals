@@ -44,6 +44,7 @@ from typing import TYPE_CHECKING, Any, Union
 
 from narwhals._plan import expressions as ir, meta
 from narwhals._plan._function import HorizontalFunction
+from narwhals._plan._parse import parse_into_iter_selector_ir
 from narwhals._plan.exceptions import (
     binary_expr_multi_output_error,
     column_not_found_error,
@@ -70,7 +71,8 @@ if TYPE_CHECKING:
 
     from typing_extensions import TypeAlias
 
-    from narwhals._plan.typing import Ignored, Seq
+    from narwhals._plan.selectors import Selector
+    from narwhals._plan.typing import Ignored, OneOrIterable, Seq
 
 OutputNames: TypeAlias = "Seq[str]"
 """Fully expanded, validated output column names, for `NamedIR`s."""
@@ -121,6 +123,48 @@ def expand_selector_irs_names(
     if (names := expander.expand_selector_names(selectors)) or not require_any:
         return names
     raise selectors_not_found_error(selectors, expander.schema)
+
+
+def parse_expand_selectors(
+    first_input: OneOrIterable[str | Selector],
+    more_inputs: tuple[str | Selector, ...] = (),
+    /,
+    *,
+    schema: IntoFrozenSchema,
+    require_any: bool = False,  # TODO @dangotbanned: use `True` as the default (way more common)
+) -> OutputNames:
+    """Convert input(s) into selector(s), expanding them into the column names that match.
+
+    Semantically equivalent to these independent steps:
+
+        irs: tuple[SelectorIR, ...] = parse_into_seq_of_selector_ir(first_input, more_inputs)
+        output_names: tuple[str, ...] = expand_selector_irs_names(irs, schema=..., require_any=...)
+
+    With the possibility of performing the entire operation in a single pass.
+
+    Arguments:
+        first_input: One or more column names or selectors.
+        more_inputs: Use if `*args` were accepted *in-addition-to* `first_input` as syntax sugar.
+        schema: Scope to expand selectors in.
+        require_any: Raise if the entire expansion selected zero columns.
+            When False, we can always defer iterator collection until finishing expansion.
+    """
+    expander = Expander(schema, ())
+    into_iter = parse_into_iter_selector_ir
+    expand = expander.expand_selector_names
+    first, more = first_input, more_inputs
+
+    if not require_any:
+        return expand(into_iter(first, more))
+    # Balancing act to keep enough context for an error message,
+    # but avoid collection if we can just repeat on fail
+    if not isinstance(first, Iterator) and (names := expand(into_iter(first, more))):
+        return names
+    parsed = tuple(into_iter(first, more))
+    if names := expand(parsed):
+        return names
+    raise selectors_not_found_error(parsed, expander.schema)
+
 
 def is_duplicated(names: Collection[str]) -> bool:
     return len(names) != len(set(names))

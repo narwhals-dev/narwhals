@@ -331,7 +331,7 @@ class LazyFrame(Generic[Native]):
         descending: OneOrIterable[bool] = False,
         nulls_last: OneOrIterable[bool] = False,
     ) -> Self:
-        s_irs = _parse.parse_into_seq_of_selector_ir(by, *more_by)
+        s_irs = _parse.parse_into_seq_of_selector_ir(by, more_by)
         opts = SortMultipleOptions.parse(descending=descending, nulls_last=nulls_last)
         return self._with_lp(self._plan.sort(s_irs, opts))
 
@@ -370,7 +370,7 @@ class LazyFrame(Generic[Native]):
         index: OneOrIterable[ColumnNameOrSelector] | None = None,
         variable_name: str = "variable",
         value_name: str = "value",
-    ) -> Self:  # pragma: no cover
+    ) -> Self:
         s_on = on if on is None else _parse.parse_into_combined_selector_ir(on)
         s_index = None if index is None else _parse.parse_into_combined_selector_ir(index)
         options = UnpivotOptions(variable_name=variable_name, value_name=value_name)

@@ -28,6 +28,7 @@ from narwhals._plan.exceptions import (
     column_not_found_error,
     invalid_dtype_operation_error,
 )
+from narwhals._plan.expressions import selectors as s_ir
 from narwhals._plan.plans import resolved as rp
 from narwhals._plan.schema import FrozenSchema, freeze_schema
 from narwhals._typing import IntoBackend
@@ -633,9 +634,13 @@ class Resolver:
             if nm in input_schema:
                 msg = f"duplicate column name {nm!r}"
                 raise DuplicateError(msg)
-        index = expand_selector_irs_names(
-            (f.index,), schema=input_schema, require_any=True
-        )
+        # https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/py-polars/src/polars/lazyframe/frame.py#L8484-L8488
+        if f.index == s_ir.empty():
+            index: tuple[str, ...] = ()
+        else:
+            index = expand_selector_irs_names(
+                (f.index,), schema=input_schema, require_any=True
+            )
         if f.on:
             on = expand_selector_irs_names((f.on,), schema=input_schema, require_any=True)
         else:

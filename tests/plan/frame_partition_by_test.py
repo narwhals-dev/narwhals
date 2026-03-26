@@ -130,14 +130,18 @@ def test_partition_by_missing_names(data: Data, dataframe: DataFrame) -> None:
         df.partition_by("d")
     with pytest.raises(ColumnNotFoundError, match=re.escape("not found: ['e']")):
         df.partition_by("c", "e")
+    with pytest.raises(ColumnNotFoundError, match=re.escape("not found: ['q']")):
+        df.partition_by(iter(("q", "c")))
 
 
 def test_partition_by_duplicate_names(data: Data, dataframe: DataFrame) -> None:
     df = dataframe(data)
-    with pytest.raises(
-        DuplicateError, match=re_compile(r"expected.+unique.+found.+'c' 2 times")
-    ):
+    pattern = re_compile(r"expected.+unique.+found.+'c' 2 times")
+    context = pytest.raises(DuplicateError, match=pattern)
+    with context:
         df.partition_by("c", ncs.numeric())
+    with context:
+        df.partition_by(iter(("c", ncs.numeric())))
 
 
 def test_partition_by_fully_empty_selector(data: Data, dataframe: DataFrame) -> None:

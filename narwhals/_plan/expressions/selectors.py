@@ -380,5 +380,6 @@ def all() -> RootSelector:
     return All().to_selector_ir()
 
 
+# TODO @dangobanned: Probably should make this a singleton
 def empty() -> RootSelector:
     return ByDType.empty().to_selector_ir()

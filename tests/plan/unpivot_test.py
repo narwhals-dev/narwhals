@@ -7,7 +7,8 @@ import pytest
 import narwhals as nw
 from narwhals import _plan as nwp
 from narwhals._plan import selectors as ncs
-from tests.plan.utils import DataFrame, assert_equal_data
+from narwhals.exceptions import ColumnNotFoundError
+from tests.plan.utils import DataFrame, LazyFrame, assert_equal_data
 from tests.utils import PYARROW_VERSION
 
 if TYPE_CHECKING:
@@ -100,3 +101,13 @@ def test_unpivot_mixed_types(
     data = {"idx": [0, 1], "a": [1, 2], "b": [1.5, 2.5]}
     result = dataframe(data).unpivot(["a", "b"], index="idx")
     assert result.collect_schema().dtypes() == [nw.Int64(), nw.String(), nw.Float64()]
+
+
+def test_unpivot_empty(data: Data, dataframe: DataFrame) -> None:
+    with pytest.raises(ColumnNotFoundError, match=r"ncs\.boolean"):
+        dataframe(data).unpivot(ncs.boolean())
+
+
+def test_unpivot_empty_lazy(data: Data, lazyframe: LazyFrame) -> None:
+    with pytest.raises(ColumnNotFoundError, match=r"ncs\.boolean"):
+        lazyframe(data).unpivot(ncs.boolean()).collect()

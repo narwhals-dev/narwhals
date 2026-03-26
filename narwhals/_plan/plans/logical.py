@@ -307,7 +307,7 @@ class LogicalPlan(_BasePlan[_Fwd], _root=True):
         *,
         index: SelectorIR | None = None,
         options: UnpivotOptions | None = None,
-    ) -> MapFunction[Unpivot]:  # pragma: no cover
+    ) -> MapFunction[Unpivot]:
         # NOTE: polars `on` goes through a very long chain as None:
         #   (python) -> `PyLazyFrame` -> `LazyFrame` -> `DslPlan` -> `UnpivotArgsDSL`
         # then finally filled in for `UnpivotArgsIR::new`
