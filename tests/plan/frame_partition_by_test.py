@@ -134,7 +134,9 @@ def test_partition_by_missing_names(data: Data, dataframe: DataFrame) -> None:
 
 def test_partition_by_duplicate_names(data: Data, dataframe: DataFrame) -> None:
     df = dataframe(data)
-    with pytest.raises(DuplicateError, match=re_compile(r"expected.+unique.+got.+'c'")):
+    with pytest.raises(
+        DuplicateError, match=re_compile(r"expected.+unique.+found.+'c' 2 times")
+    ):
         df.partition_by("c", ncs.numeric())
 
 

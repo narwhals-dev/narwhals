@@ -48,6 +48,7 @@ from narwhals._plan.exceptions import (
     binary_expr_multi_output_error,
     column_not_found_error,
     duplicate_error,
+    duplicate_names_error,
     expand_multi_output_error,
     selectors_not_found_error,
 )
@@ -61,7 +62,7 @@ from narwhals._plan.expressions import (
 )
 from narwhals._plan.schema import FrozenSchema, IntoFrozenSchema, freeze_schema
 from narwhals._typing_compat import assert_never
-from narwhals._utils import check_column_names_are_unique, zip_strict
+from narwhals._utils import zip_strict
 from narwhals.exceptions import ComputeError, InvalidOperationError
 
 if TYPE_CHECKING:
@@ -100,7 +101,7 @@ def prepare_projection(
 def expand_selector_irs_names(
     selectors: Sequence[SelectorIR],
     /,
-    ignored: Ignored = (),
+    ignored: Ignored = (),  # TODO @dangotbanned: Remove? havent got any usage selector version
     *,
     schema: IntoFrozenSchema,
     require_any: bool = False,
@@ -117,13 +118,12 @@ def expand_selector_irs_names(
         require_any: Raise if the entire expansion selected zero columns.
     """
     expander = Expander(schema, ignored)
-    if names := tuple(expander.iter_expand_selector_names(selectors)):
-        if len(names) != len(set(names)):
-            # NOTE: Can't easily reuse `duplicate_error`, falling back to main for now
-            check_column_names_are_unique(names)
-    elif require_any:
-        raise selectors_not_found_error(selectors, expander.schema)
-    return names
+    if (names := expander.expand_selector_names(selectors)) or not require_any:
+        return names
+    raise selectors_not_found_error(selectors, expander.schema)
+
+def is_duplicated(names: Collection[str]) -> bool:
+    return len(names) != len(set(names))
 
 
 def remove_alias(origin: ExprIR, /) -> ExprIR:
@@ -165,6 +165,14 @@ class Expander:
         for s in selectors:
             yield from s.iter_expand_names(self.schema, self.ignored)
 
+    def expand_selector_names(
+        self, selectors: Iterable[SelectorIR], /, *, check_unique: bool = True
+    ) -> OutputNames:
+        names = tuple(self.iter_expand_selector_names(selectors))
+        if check_unique and is_duplicated(names):
+            raise duplicate_names_error(names)
+        return names
+
     def prepare_projection(self, exprs: Collection[ExprIR], /) -> Seq[NamedIR]:
         named_irs, _ = self._prepare_projection(exprs)
         return named_irs
@@ -189,7 +197,7 @@ class Expander:
             root_names.append(meta.iter_root_names(e))
 
         # NOTE: On failure, we repeat the expansion so the happy path doesn't need to collect as much
-        if len(output_names) != len(set(output_names)):
+        if is_duplicated(output_names):
             raise duplicate_error(tuple(expand(exprs)))
         if not self.schema.contains_all(root_names):
             roots = chain.from_iterable(meta.iter_root_names(e) for e in expand(exprs))

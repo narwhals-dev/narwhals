@@ -237,6 +237,12 @@ def duplicate_error(exprs: Collection[ir.ExprIR]) -> DuplicateError:
     return DuplicateError(msg)
 
 
+def duplicate_names_error(names: Collection[str]) -> DuplicateError:
+    msg = "\n".join(f"- {k!r} {v} times" for k, v in Counter(names).items() if v > 1)
+    msg = f"Expected unique column names, but found duplicates:\n\n{msg}"
+    return DuplicateError(msg)
+
+
 def _output_name(expr: ir.ExprIR) -> str:
     return expr.meta.output_name()
 
