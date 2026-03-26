@@ -235,13 +235,17 @@ def _parse_sort_by_into_iter_expr_ir(
         yield e
 
 
+def _by_name(name: str, /, *, require_all: bool = True) -> SelectorIR:
+    return s_ir.ByName.from_name(name, require_all=require_all).to_selector_ir()
+
+
 def parse_into_selector_ir(
     input: ColumnNameOrSelector | Expr, /, *, require_all: bool = True
 ) -> SelectorIR:
     if isinstance(input, _import_expr()):
         return input._ir.to_selector_ir()
     if isinstance(input, str):
-        return s_ir.ByName.from_name(input, require_all=require_all).to_selector_ir()
+        return _by_name(input, require_all=require_all)
     msg = f"cannot turn {qualified_type_name(input)!r} into a selector"
     raise TypeError(msg)
 
@@ -262,35 +266,30 @@ def parse_into_combined_selector_ir(
     return selectors.popleft().or_(*selectors)
 
 
-# TODO @dangotbanned: Possibly remove? see `_parse_into_iter_selector_ir`
-def parse_into_seq_of_selector_ir(
-    first_input: OneOrIterable[ColumnNameOrSelector], *more_inputs: ColumnNameOrSelector
-) -> Seq[SelectorIR]:
-    return tuple(_parse_into_iter_selector_ir(first_input, more_inputs))
-
-
-# NOTE: ^^^ is the exposed one,
+# TODO @dangotbanned: Possibly remove?
 # but collecting -> `expand_selector_irs_names(require_any=...)` seems a bit much
 # `require_any` should be enough, right?
-def _parse_into_iter_selector_ir(
-    first_input: OneOrIterable[ColumnNameOrSelector],
-    more_inputs: tuple[ColumnNameOrSelector, ...],
+def parse_into_seq_of_selector_ir(
+    first: OneOrIterable[ColumnNameOrSelector],
+    more: tuple[ColumnNameOrSelector, ...] = (),
     /,
-) -> Iterator[SelectorIR]:
-    if isinstance(first_input, (str, _import_expr())) and not more_inputs:
-        yield parse_into_selector_ir(first_input)
-        return
+) -> Seq[SelectorIR]:
+    return tuple(parse_into_iter_selector_ir(first, more))
 
-    if not _is_empty_sequence(first_input):
-        if _is_iterable(first_input) and not isinstance(first_input, str):
-            if more_inputs:
-                raise invalid_into_expr_error(first_input, more_inputs, {})
-            else:
-                for into in first_input:  # type: ignore[var-annotated]
-                    yield parse_into_selector_ir(into)
-        else:
-            yield parse_into_selector_ir(first_input)
-    for into in more_inputs:
+
+def parse_into_iter_selector_ir(
+    first: OneOrIterable[ColumnNameOrSelector], more: tuple[ColumnNameOrSelector, ...], /
+) -> Iterator[SelectorIR]:
+    if isinstance(first, str):
+        yield _by_name(first)
+    elif not isinstance(first, Iterable):
+        yield parse_into_selector_ir(first)
+    elif more:
+        raise invalid_into_expr_error(first, more, {})
+    else:
+        for into in first:
+            yield parse_into_selector_ir(into)
+    for into in more:
         yield parse_into_selector_ir(into)
 
 
