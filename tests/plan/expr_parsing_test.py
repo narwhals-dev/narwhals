@@ -12,7 +12,7 @@ import pytest
 
 import narwhals as nw
 from narwhals import _plan as nwp
-from narwhals._plan import expressions as ir
+from narwhals._plan import expressions as ir, selectors as ncs
 from narwhals._plan._parse import parse_into_seq_of_expr_ir
 from narwhals._plan.expressions import functions as F, operators as ops
 from narwhals._plan.expressions.ranges import IntRange
@@ -33,7 +33,13 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals._plan._function import Function
-    from narwhals._plan.typing import IntoExpr, IntoExprColumn, OperatorFn, Seq
+    from narwhals._plan.typing import (
+        IntoExpr,
+        IntoExprColumn,
+        OneOrIterable,
+        OperatorFn,
+        Seq,
+    )
 
 
 IntoIterable: TypeAlias = Callable[[Sequence[Any]], Iterable[Any]]
@@ -450,6 +456,52 @@ def test_lit_series_roundtrip() -> None:
     assert isinstance(e_ir.value, nwp.Series)
     assert isinstance(e_ir.value.to_native(), pa.ChunkedArray)
     assert e_ir.value.to_list() == data
+
+
+def test_sort_by_empty() -> None:
+    with pytest.raises(TypeError, match=re_compile("at least one sort key")):
+        nwp.col("a").sort_by(())
+
+
+XFAIL_SORT_BY_PREDICATE = pytest.mark.xfail(
+    reason="TODO @dangotbanned: Review the rejection predicate, this doesn't preserve length"
+)
+
+
+@pytest.mark.parametrize(
+    ("by", "more_by"),
+    [
+        (1, ()),
+        (nwp.len(), ()),
+        (nwp.col("b").first(), ()),
+        ((), [nwp.lit(1)]),
+        ([nwp.len()], ()),
+        ([nwp.col("b"), ncs.last().kurtosis()], ()),
+        (["c", "d", ncs.last(), nwp.col("b").mode(keep="any")], ()),
+        pytest.param(nwp.int_range(2), (), marks=XFAIL_SORT_BY_PREDICATE),
+        pytest.param(nwp.col("b").filter(c=2), (), marks=XFAIL_SORT_BY_PREDICATE),
+        pytest.param(nwp.col("b").drop_nulls(), (), marks=XFAIL_SORT_BY_PREDICATE),
+    ],
+    ids=[
+        "scalar",
+        "len",
+        "agg",
+        "lit",
+        "iterable-len",
+        "selector-agg",
+        "agg-function",
+        "range",
+        "filter",
+        "row-separable",
+    ],
+)
+def test_sort_by_invalid(
+    by: OneOrIterable[IntoExprColumn], more_by: Iterable[IntoExprColumn]
+) -> None:
+    pattern = re_compile(r"all.+sort.+must preserve length")
+    a = nwp.col("a")
+    with pytest.raises(InvalidOperationError, match=pattern):
+        a.sort_by(by, *more_by)
 
 
 @pytest.mark.parametrize(

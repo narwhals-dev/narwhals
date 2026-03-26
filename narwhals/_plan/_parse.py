@@ -12,7 +12,11 @@ import narwhals._plan.expressions as ir
 import narwhals._plan.expressions.selectors as s_ir
 from narwhals._plan._guards import is_iterable_reject
 from narwhals._plan.common import flatten_hash_safe
-from narwhals._plan.exceptions import invalid_into_expr_error, is_iterable_error
+from narwhals._plan.exceptions import (
+    at_least_one_error,
+    invalid_into_expr_error,
+    is_iterable_error,
+)
 from narwhals._utils import qualified_type_name
 from narwhals.dependencies import get_pandas, get_polars
 from narwhals.exceptions import InvalidOperationError
@@ -187,8 +191,7 @@ def parse_predicates_constraints_into_expr_ir(
         predicates = chain(predicates, it)
 
     if (first := next(predicates, None)) is None:
-        msg = "at least one predicate or constraint must be provided"
-        raise TypeError(msg)
+        raise at_least_one_error("filter")
     if second := next(predicates, None):
         return ir.all_horizontal(first, second, *predicates)
     if first.meta.has_multiple_outputs():
@@ -201,18 +204,22 @@ def parse_sort_by_into_seq_of_expr_ir(
     by: OneOrIterable[IntoExprColumn] = (), *more_by: IntoExprColumn
 ) -> Seq[ExprIR]:
     """Parse `DataFrame.sort` and `Expr.sort_by` keys into a flat sequence of `ExprIR` nodes."""
-    return tuple(_parse_sort_by_into_iter_expr_ir(by, more_by))
+    it = _parse_sort_by_into_iter_expr_ir(by, more_by)
+    if first := next(it, None):
+        return (first, *it)
+    raise at_least_one_error("sort_by")
 
 
-# TODO @dangotbanned: Review the rejection predicate
-# It doesn't cover all length-changing expressions, only aggregations/literals
+# TODO @dangotbanned: Fix the rejection predicate by adding `ExprIR.is_length_preserving`
+# - This doesn't cover all length-changing expressions, only aggregations/literals
+# - Adapt from `window._is_filtration` and replace that in `over`
 def _parse_sort_by_into_iter_expr_ir(
     by: OneOrIterable[IntoExprColumn], more_by: Iterable[IntoExprColumn]
 ) -> Iterator[ExprIR]:
     for e in _parse_into_iter_expr_ir(by, *more_by):
         if e.is_scalar():
-            msg = f"All expressions sort keys must preserve length, but got:\n{e!r}"  # pragma: no cover
-            raise InvalidOperationError(msg)  # pragma: no cover
+            msg = f"All expressions sort keys must preserve length, but got:\n{e!r}"
+            raise InvalidOperationError(msg)
         yield e
 
 

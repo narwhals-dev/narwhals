@@ -197,6 +197,9 @@ ignore = [
 [tool.ruff.lint.flake8-builtins]
 builtins-ignorelist = ["format"]
 
+[tool.ruff.lint.flake8-errmsg]
+max-string-length = 15
+
 [tool.ruff.lint.pep8-naming]
 extend-ignore-names = [
   "Series", 

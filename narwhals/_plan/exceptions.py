@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from collections import Counter
 from itertools import groupby
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from narwhals._utils import Implementation, qualified_type_name
 from narwhals.exceptions import (
@@ -23,6 +23,8 @@ if TYPE_CHECKING:
     from collections.abc import Collection, Iterable, Sequence
     from typing import Any
 
+    from typing_extensions import TypeAlias
+
     from narwhals._plan import expressions as ir
     from narwhals._plan._function import Function
     from narwhals._plan.expressions.operators import Operator
@@ -32,6 +34,7 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.typing import Backend, IntoBackend, IntoDType, IntoSchema
 
+ExprMethod: TypeAlias = Literal["filter", "sort_by"]
 
 # NOTE: Using verbose names to start with
 # TODO @dangotbanned: Think about something better/more consistent once the new messages are finalized
@@ -200,6 +203,12 @@ def invalid_into_expr_error(
         f"{first_input!r}\n{more_inputs!r}{named}"
     )
     return InvalidIntoExprError(msg)
+
+
+def at_least_one_error(method: ExprMethod, /) -> TypeError:
+    kind = {"filter": "predicate or constraint", "sort_by": "sort key"}[method]
+    msg = f"at least one {kind} must be provided"
+    return TypeError(msg)
 
 
 def is_iterable_error(obj: object, /) -> TypeError:
