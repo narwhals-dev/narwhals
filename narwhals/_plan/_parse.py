@@ -4,7 +4,7 @@
 The **only** inline dependencies this module should have are for:
 -  `Expr`
 - `Series`
-- `lit`?
+- `lit`
 
 It should not be used in `_plan.expressions.*` at all.
 
@@ -12,13 +12,12 @@ These constraints allow top-level modules and the `functions` & `compliant` pack
 to freely import from here.
 """
 
+# ruff: noqa: A002
 from __future__ import annotations
 
 from collections import deque
-from collections.abc import Iterable, Sequence
-
-# ruff: noqa: A002
-from functools import lru_cache
+from collections.abc import Callable, Iterable, Sequence
+from functools import cache, lru_cache
 from itertools import chain
 from typing import TYPE_CHECKING
 
@@ -43,6 +42,7 @@ if TYPE_CHECKING:
 
     from narwhals._plan.expr import Expr
     from narwhals._plan.expressions import ExprIR, SelectorIR
+    from narwhals._plan.series import Series
     from narwhals._plan.typing import (
         ColumnNameOrSelector,
         IntoExpr,
@@ -110,12 +110,7 @@ We only support cases `a`, `b`, but the typing for most contexts is more permiss
  └───────────┴─────┘]
 """
 
-# TODO @dangotbanned: Remaining inline imports should share a cache
-# - Dont cache modules
-# - Try to use as few functions/types as possible
 
-
-# NOTE: Unavoidable inline imports
 def parse_into_expr_ir(
     input: IntoExpr | list[Any],
     *,
@@ -131,25 +126,19 @@ def parse_into_expr_ir(
         list_as_series: Interpret list input as a Series literal, using the provided constructor.
             If set to `None` (default), lists will raise when passed to `lit`.
     """
-    from narwhals._plan import Expr, lit
-
-    if isinstance(input, Expr):
+    if isinstance(input, _import_expr()):
         return input._ir
     if not str_as_lit and isinstance(input, str):
         return ir.col(input)
     if list_as_series is not None and isinstance(input, list):
         input = list_as_series(input)
-    # NOTE: Raises in `lit` when we pass a `list`
-    return lit(input)._ir  # type: ignore[arg-type]
+    return _import_lit()(input)._ir
 
 
-# NOTE: Unavoidable inline import
 def parse_into_selector_ir(
     input: ColumnNameOrSelector | Expr, /, *, require_all: bool = True
 ) -> SelectorIR:
-    from narwhals._plan import Expr
-
-    if isinstance(input, Expr):
+    if isinstance(input, _import_expr()):
         return input._ir.to_selector_ir()
     if isinstance(input, str):
         return s_ir.ByName.from_name(input, require_all=require_all).to_selector_ir()
@@ -252,10 +241,7 @@ def _parse_into_iter_selector_ir(
     more_inputs: tuple[ColumnNameOrSelector, ...],
     /,
 ) -> Iterator[SelectorIR]:
-    # TODO @dangotbanned: Is this import avoidable?
-    from narwhals._plan import Expr
-
-    if isinstance(first_input, (str, Expr)) and not more_inputs:
+    if isinstance(first_input, (str, _import_expr())) and not more_inputs:
         yield parse_into_selector_ir(first_input)
         return
 
@@ -272,7 +258,6 @@ def _parse_into_iter_selector_ir(
         yield parse_into_selector_ir(into)
 
 
-# NOTE: Unavoidable inline imports
 # TODO @dangotbanned: Too complicated!
 def _parse_into_iter_expr_ir(
     first_input: OneOrIterable[IntoExpr],
@@ -280,8 +265,6 @@ def _parse_into_iter_expr_ir(
     _list_as_series: PartialSeries | None = None,
     **named_inputs: IntoExpr,
 ) -> Iterator[ExprIR]:
-    from narwhals._plan import Expr, Series
-
     into_expr_ir = parse_into_expr_ir
     as_series = _list_as_series
     if not _is_empty_sequence(first_input):
@@ -294,7 +277,9 @@ def _parse_into_iter_expr_ir(
             if (
                 as_series is not None
                 and isinstance(first_input, list)
-                and not isinstance(first_input[0], (str, Expr, Series))
+                and not isinstance(
+                    first_input[0], (str, _import_expr(), _import_series())
+                )
             ):
                 # NOTE: Ensures `first_input = [False, True, True] -> lit(Series([False, True, True]))`
                 yield into_expr_ir(first_input, list_as_series=as_series)
@@ -335,6 +320,20 @@ def _type_cached_is_iterable_is_native(tp: type[Any], /) -> bool:
     return bool(tps and issubclass(tp, tps))
 
 
+# fmt: off
 @lru_cache(maxsize=128)
 def _type_cached_is_iterable(tp: type[Any], /) -> bool:
     return issubclass(tp, Iterable)
+@cache
+def _import_expr() -> type[Expr]:
+    from narwhals._plan.expr import Expr
+    return Expr
+@cache
+def _import_series() -> type[Series]:
+    from narwhals._plan.series import Series
+    return Series
+@cache
+def _import_lit() -> Callable[[Any], Expr]:
+    from narwhals._plan.functions.literal import lit
+    return lit
+# fmt: on
