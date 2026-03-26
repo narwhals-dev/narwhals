@@ -100,7 +100,7 @@ def prepare_projection(
     return expander.prepare_projection(exprs), expander.schema
 
 
-def expand_selector_irs_names(
+def expand_selectors(
     selectors: Sequence[SelectorIR],
     /,
     *,
@@ -118,8 +118,8 @@ def expand_selector_irs_names(
         schema: Scope to expand selectors in.
         require_any: If True (default) raise if the entire expansion selected zero columns.
     """
-    expander = Expander(schema, ())
-    if (names := expander.expand_selector_names(selectors)) or not require_any:
+    expander = Expander(schema)
+    if (names := expander.expand_selectors(selectors)) or not require_any:
         return names
     raise selectors_not_found_error(selectors, expander.schema)
 
@@ -137,7 +137,7 @@ def parse_expand_selectors(
     Semantically equivalent to these independent steps:
 
         irs: tuple[SelectorIR, ...] = parse_into_seq_of_selector_ir(first_input, more_inputs)
-        output_names: tuple[str, ...] = expand_selector_irs_names(irs, schema=..., require_any=...)
+        output_names: tuple[str, ...] = expand_selectors(irs, schema=..., require_any=...)
 
     With the possibility of performing the entire operation in a single pass.
 
@@ -148,9 +148,9 @@ def parse_expand_selectors(
         require_any: If True (default) raise if the entire expansion selected zero columns.
             If False, we can always defer iterator collection until finishing expansion.
     """
-    expander = Expander(schema, ())
+    expander = Expander(schema)
     into_iter = parse_into_iter_selector_ir
-    expand = expander.expand_selector_names
+    expand = expander.expand_selectors
     first, more = first_input, more_inputs
 
     if not require_any:
@@ -197,21 +197,18 @@ class Expander:
         self.schema = freeze_schema(scope)
         self.ignored = ignored
 
-    def iter_expand_exprs(self, exprs: Iterable[ExprIR], /) -> Iterator[ExprIR]:
-        # Iteratively expand all of exprs
+    def iter_expand_expressions(self, exprs: Iterable[ExprIR], /) -> Iterator[ExprIR]:
         for expr in exprs:
             yield from self._expand(expr)
 
-    def iter_expand_selector_names(
-        self, selectors: Iterable[SelectorIR], /
-    ) -> Iterator[str]:
+    def iter_expand_selectors(self, selectors: Iterable[SelectorIR], /) -> Iterator[str]:
         for s in selectors:
             yield from s.iter_expand_names(self.schema, self.ignored)
 
-    def expand_selector_names(
+    def expand_selectors(
         self, selectors: Iterable[SelectorIR], /, *, check_unique: bool = True
     ) -> OutputNames:
-        names = tuple(self.iter_expand_selector_names(selectors))
+        names = tuple(self.iter_expand_selectors(selectors))
         if check_unique and is_duplicated(names):
             raise duplicate_names_error(names)
         return names
@@ -226,7 +223,7 @@ class Expander:
         output_names = deque[str]()
         named_irs = deque[NamedIR]()
         root_names = deque[Iterator[str]]()
-        expand = self.iter_expand_exprs
+        expand = self.iter_expand_expressions
         for e in expand(exprs):
             # NOTE: "" is allowed as a name, but falsy
             if (name := e.meta.output_name(raise_if_undetermined=False)) is not None:

@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, get_args, ove
 
 from narwhals._plan import _parse, translate
 from narwhals._plan._expansion import (
-    expand_selector_irs_names,
+    expand_selectors,
     parse_expand_selectors,
     prepare_projection,
 )
@@ -163,7 +163,7 @@ class BaseFrame(Generic[NativeFrameT_co]):
         self, *columns: OneOrIterable[ColumnNameOrSelector], strict: bool = True
     ) -> Self:
         s_ir = _parse.parse_into_combined_selector_ir(*columns, require_all=strict)
-        if names := expand_selector_irs_names((s_ir,), schema=self, require_any=False):
+        if names := expand_selectors((s_ir,), schema=self, require_any=False):
             compliant = self._compliant.drop(names)
         else:
             compliant = self._compliant._with_native(self.to_native())

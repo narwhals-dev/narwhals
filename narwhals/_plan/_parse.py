@@ -267,7 +267,7 @@ def parse_into_combined_selector_ir(
 
 
 # TODO @dangotbanned: Possibly remove?
-# but collecting -> `expand_selector_irs_names(require_any=...)` seems a bit much
+# both collecting here and in`expand_selectors(require_any=...)` seems a bit much
 # `require_any` should be enough, right?
 def parse_into_seq_of_selector_ir(
     first: OneOrIterable[ColumnNameOrSelector],
