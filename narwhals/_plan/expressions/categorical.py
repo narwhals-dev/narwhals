@@ -1,14 +1,11 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import ClassVar
 
 import narwhals._plan.dtypes_mapper as dtm
 from narwhals._plan._dispatch import DispatcherOptions
 from narwhals._plan._function import Function
-from narwhals._plan.expressions.namespace import ExprNamespace, IRNamespace
-
-if TYPE_CHECKING:
-    from narwhals._plan.expr import Expr
+from narwhals._plan.expressions.namespace import IRNamespace
 
 
 # fmt: off
@@ -17,12 +14,3 @@ class GetCategories(CategoricalFunction, dtype=dtm.STR): ...
 # fmt: on
 class IRCatNamespace(IRNamespace):
     get_categories: ClassVar = GetCategories
-
-
-class ExprCatNamespace(ExprNamespace[IRCatNamespace]):
-    @property
-    def _ir_namespace(self) -> type[IRCatNamespace]:
-        return IRCatNamespace
-
-    def get_categories(self) -> Expr:
-        return self._with_unary(self._ir.get_categories())

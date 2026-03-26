@@ -17,6 +17,13 @@ from narwhals._plan.expressions import (
     functions as F,
     operators as ops,
 )
+from narwhals._plan.functions.categorical import ExprCatNamespace
+from narwhals._plan.functions.lists import ExprListNamespace
+from narwhals._plan.functions.name import ExprNameNamespace
+from narwhals._plan.functions.strings import ExprStringNamespace
+from narwhals._plan.functions.struct import ExprStructNamespace
+from narwhals._plan.functions.temporal import ExprDateTimeNamespace
+from narwhals._plan.meta import MetaNamespace
 from narwhals._plan.options import (
     EWMOptions,
     RankOptions,
@@ -35,13 +42,6 @@ if TYPE_CHECKING:
     from typing_extensions import Concatenate, ParamSpec, Self
 
     from narwhals._plan._function import Function
-    from narwhals._plan.expressions.categorical import ExprCatNamespace
-    from narwhals._plan.expressions.lists import ExprListNamespace
-    from narwhals._plan.expressions.name import ExprNameNamespace
-    from narwhals._plan.expressions.strings import ExprStringNamespace
-    from narwhals._plan.expressions.struct import ExprStructNamespace
-    from narwhals._plan.expressions.temporal import ExprDateTimeNamespace
-    from narwhals._plan.meta import MetaNamespace
     from narwhals._plan.typing import IntoExpr, IntoExprColumn, OneOrIterable, Seq, Udf
     from narwhals._typing import NoDefault
     from narwhals.typing import (
@@ -597,8 +597,6 @@ class Expr:
     @property
     def meta(self) -> MetaNamespace:
         """Methods to traverse and introspect existing expressions."""
-        from narwhals._plan.meta import MetaNamespace
-
         return MetaNamespace.from_expr(self)
 
     @property
@@ -609,38 +607,26 @@ class Expr:
         >>> nw.col("a", "b").name.suffix("_changed")._ir
         ncs.by_name('a', 'b', require_all=True).name.suffix('_changed')
         """
-        from narwhals._plan.expressions.name import ExprNameNamespace
-
         return ExprNameNamespace(_expr=self)
 
     @property
     def cat(self) -> ExprCatNamespace:
-        from narwhals._plan.expressions.categorical import ExprCatNamespace
-
         return ExprCatNamespace(_expr=self)
 
     @property
     def struct(self) -> ExprStructNamespace:
-        from narwhals._plan.expressions.struct import ExprStructNamespace
-
         return ExprStructNamespace(_expr=self)
 
     @property
     def dt(self) -> ExprDateTimeNamespace:
-        from narwhals._plan.expressions.temporal import ExprDateTimeNamespace
-
         return ExprDateTimeNamespace(_expr=self)
 
     @property
     def list(self) -> ExprListNamespace:
-        from narwhals._plan.expressions.lists import ExprListNamespace
-
         return ExprListNamespace(_expr=self)
 
     @property
     def str(self) -> ExprStringNamespace:
-        from narwhals._plan.expressions.strings import ExprStringNamespace
-
         return ExprStringNamespace(_expr=self)
 
     is_close = not_implemented()

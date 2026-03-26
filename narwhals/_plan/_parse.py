@@ -1,3 +1,17 @@
+"""Parsing for narwhals-level expressions.
+
+## Important
+The **only** inline dependencies this module should have are for:
+-  `Expr`
+- `Series`
+- `lit`?
+
+It should not be used in `_plan.expressions.*` at all.
+
+These constraints allow top-level modules and the `functions` & `compliant` packages
+to freely import from here.
+"""
+
 from __future__ import annotations
 
 from collections import deque

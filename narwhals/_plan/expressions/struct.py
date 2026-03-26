@@ -6,7 +6,7 @@ from narwhals._plan._dispatch import DispatcherOptions
 from narwhals._plan._flags import FunctionFlags
 from narwhals._plan._function import Function
 from narwhals._plan.common import into_dtype
-from narwhals._plan.expressions.namespace import ExprNamespace, IRNamespace
+from narwhals._plan.expressions.namespace import IRNamespace
 from narwhals._utils import Version
 from narwhals.exceptions import InvalidOperationError
 
@@ -14,7 +14,6 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._plan._expr_ir import ExprIR
-    from narwhals._plan.expr import Expr
     from narwhals._plan.expressions.expr import FunctionExpr, StructExpr
     from narwhals._plan.schema import FrozenSchema
     from narwhals.dtypes import DType, Field, Struct
@@ -69,12 +68,3 @@ class FieldByName(StructFunction, flags=ELEMENTWISE, dispatch=renamed("field")):
 
 class IRStructNamespace(IRNamespace):
     field: ClassVar = FieldByName
-
-
-class ExprStructNamespace(ExprNamespace[IRStructNamespace]):
-    @property
-    def _ir_namespace(self) -> type[IRStructNamespace]:
-        return IRStructNamespace
-
-    def field(self, name: str) -> Expr:
-        return self._with_unary(self._ir.field(name=name))
