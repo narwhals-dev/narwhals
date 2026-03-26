@@ -196,11 +196,9 @@ class BaseFrame(Generic[NativeFrameT_co]):
         index_: Seq[str] | None = None
         schema = self.collect_schema()
         if on is not None:
-            s_irs = _parse.parse_into_seq_of_selector_ir(on)
-            on_ = expand_selector_irs_names(s_irs, schema=schema)
+            on_ = parse_expand_selectors(on, schema=schema)
         if index is not None:
-            s_irs = _parse.parse_into_seq_of_selector_ir(index)
-            index_ = expand_selector_irs_names(s_irs, schema=schema)
+            index_ = parse_expand_selectors(index, schema=schema)
         return self._with_compliant(
             self._compliant.unpivot(
                 on_, index_, variable_name=variable_name, value_name=value_name
