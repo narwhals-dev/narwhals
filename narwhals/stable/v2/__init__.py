@@ -866,10 +866,10 @@ def coalesce(exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr) -> Exp
 class When(nw_f.When):
     @classmethod
     def from_when(cls, when: nw_f.When) -> When:
-        return cls(when._predicate, chain=[])
+        return cls(when._predicate, chain=())
 
     def then(self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Then:
-        new_chain = [*self._chain, (self._predicate, value)]
+        new_chain = (*self._chain, (self._predicate, value))
         return Then._from_chain(new_chain)
 
 
