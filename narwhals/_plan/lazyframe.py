@@ -152,13 +152,14 @@ class LazyFrame(Generic[Native]):
     def drop(
         self, *columns: OneOrIterable[ColumnNameOrSelector], strict: bool = True
     ) -> Self:
-        s_ir = _parse.into_combined_selector_ir(*columns, require_all=strict)
+        first, more = (columns[0], columns[1:]) if columns else ((), ())
+        s_ir = _parse.into_selector_ir(first, more, require_all=strict)
         return self._with_lp(self._plan.drop(s_ir))
 
     def drop_nulls(
         self, subset: OneOrIterable[ColumnNameOrSelector] | None = None
     ) -> Self:  # pragma: no cover
-        s_ir = None if subset is None else _parse.into_combined_selector_ir(subset)
+        s_ir = None if subset is None else _parse.into_selector_ir(subset)
         return self._with_lp(self._plan.drop_nulls(s_ir))
 
     def explain(self) -> str:  # pragma: no cover
@@ -172,7 +173,7 @@ class LazyFrame(Generic[Native]):
         empty_as_null: bool = True,
         keep_nulls: bool = True,
     ) -> Self:  # pragma: no cover
-        s_ir = _parse.into_combined_selector_ir(columns, *more_columns)
+        s_ir = _parse.into_selector_ir(columns, more_columns)
         options = ExplodeOptions(empty_as_null=empty_as_null, keep_nulls=keep_nulls)
         return self._with_lp(self._plan.explode(s_ir, options))
 
@@ -246,17 +247,17 @@ class LazyFrame(Generic[Native]):
     ) -> Self:  # pragma: no cover
         from narwhals._plan import selectors as cs
 
-        on_ = _parse.into_combined_selector_ir(on)
+        on_ = _parse.into_selector_ir(on)
         if index is None:
             if values is None:
                 msg = "`pivot` needs either `index or `values` needs to be specified"
                 raise InvalidOperationError(msg)
-            values_ = _parse.into_combined_selector_ir(values)
+            values_ = _parse.into_selector_ir(values)
             index_ = (cs.all() - on_.to_narwhals() - values_.to_narwhals())._ir
         else:
-            index_ = _parse.into_combined_selector_ir(index)
+            index_ = _parse.into_selector_ir(index)
             if values is not None:
-                values_ = _parse.into_combined_selector_ir(values)
+                values_ = _parse.into_selector_ir(values)
             else:
                 values_ = (cs.all() - on_.to_narwhals() - index_.to_narwhals())._ir
 
@@ -360,7 +361,7 @@ class LazyFrame(Generic[Native]):
         columns: OneOrIterable[ColumnNameOrSelector],
         *more_columns: ColumnNameOrSelector,
     ) -> Self:  # pragma: no cover
-        s_ir = _parse.into_combined_selector_ir(columns, *more_columns)
+        s_ir = _parse.into_selector_ir(columns, more_columns)
         return self._with_lp(self._plan.unnest(s_ir))
 
     def unpivot(
@@ -371,8 +372,8 @@ class LazyFrame(Generic[Native]):
         variable_name: str = "variable",
         value_name: str = "value",
     ) -> Self:
-        s_on = on if on is None else _parse.into_combined_selector_ir(on)
-        s_index = None if index is None else _parse.into_combined_selector_ir(index)
+        s_on = on if on is None else _parse.into_selector_ir(on)
+        s_index = None if index is None else _parse.into_selector_ir(index)
         options = UnpivotOptions(variable_name=variable_name, value_name=value_name)
         return self._with_lp(self._plan.unpivot(s_on, index=s_index, options=options))
 

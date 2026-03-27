@@ -162,7 +162,8 @@ class BaseFrame(Generic[NativeFrameT_co]):
     def drop(
         self, *columns: OneOrIterable[ColumnNameOrSelector], strict: bool = True
     ) -> Self:
-        s_ir = _parse.into_combined_selector_ir(*columns, require_all=strict)
+        first, more = (columns[0], columns[1:]) if columns else ((), ())
+        s_ir = _parse.into_selector_ir(first, more, require_all=strict)
         if names := expand_selectors((s_ir,), schema=self, require_any=False):
             compliant = self._compliant.drop(names)
         else:

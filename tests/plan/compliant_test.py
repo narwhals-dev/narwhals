@@ -560,7 +560,7 @@ def test_row_is_py_literal(
         (~ncs.last(), ["c"]),
         ([ncs.integer() | ncs.enum()], ["c"]),
         ([ncs.first(), "b"], ["c"]),
-        (ncs.all(), []),
+        ([ncs.by_name("a"), ncs.by_index(1), ncs.float()], []),
         ([], ["a", "b", "c"]),
         (ncs.struct(), ["a", "b", "c"]),
     ],

@@ -1,4 +1,6 @@
-"""Based on [polars-plan/src/plans/conversion/expr_expansion.rs].
+"""Expanding expressions/selectors.
+
+Based on [polars-plan/src/plans/conversion/expr_expansion.rs].
 
 ## Notes
 - Goal is to expand every selection into a named column.

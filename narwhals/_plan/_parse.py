@@ -24,7 +24,6 @@ from typing import TYPE_CHECKING
 import narwhals._plan.expressions as ir
 import narwhals._plan.expressions.selectors as s_ir
 from narwhals._plan._guards import is_iterable_reject
-from narwhals._plan.common import flatten_hash_safe
 from narwhals._plan.exceptions import (
     at_least_one_error,
     invalid_into_expr_error,
@@ -53,6 +52,16 @@ if TYPE_CHECKING:
     )
 
     T = TypeVar("T")
+
+__all__ = [
+    "into_expr_ir",
+    "into_iter_expr_ir",
+    "into_iter_selector_ir",  # stable
+    "into_selector_ir",  # stable
+    "into_seq_of_expr_ir",
+    "predicates_constraints_into_expr_ir",  # functionality stable, name? eh
+    "sort_by_into_seq_of_expr_ir",
+]
 
 _RaisesInvalidIntoExprError: TypeAlias = "Any"
 """
@@ -232,51 +241,65 @@ def _sort_by_into_iter_expr_ir(
         yield e
 
 
-def _by_name(name: str, /, *, require_all: bool = True) -> SelectorIR:
-    return s_ir.ByName.from_name(name, require_all=require_all).to_selector_ir()
-
-
+# TODO @dangotbanned: Would be cool to have something like:
+# `into_selector_ir(...).expand_names(schema, **kwds)`
 def into_selector_ir(
-    input: str | Selector | Expr, /, *, require_all: bool = True
+    first_input: OneOrIterable[str | Selector],
+    more_inputs: Seq[OneOrIterable[str | Selector]] = (),
+    /,
+    *,
+    require_all: bool = True,
 ) -> SelectorIR:
-    """Parse a single input into a selector.
+    """Parse and reduce input(s) into a **single** selector.
+
+    Tip:
+        Prefer `into_iter_selector_ir` if there isn't a requirement for just one.
 
     Arguments:
-        input: The input to be parsed as a selector.
+        first_input: One or more column names or selectors.
+        more_inputs: Use if `*args` were accepted *in-addition-to* `first_input` as syntax sugar.
         require_all: Whether to match *all* names (the default) or *any* of the names.
 
-            This parameter is ignored if `input` is not a string.
+    Examples:
+        The goal is for the final selector to be as simple as possible:
+        >>> into_selector_ir("a")
+        ncs.by_name('a', require_all=True)
+        >>> into_selector_ir("a", ("b",))
+        ncs.by_name('a', 'b', require_all=True)
+        >>> into_selector_ir(["a"], ("b", "c", ["d", "e"]), require_all=False)
+        ncs.by_name('a', 'b', 'c', 'd', 'e', require_all=False)
+        >>> into_selector_ir(())
+        ncs.empty()
+        >>> into_selector_ir((), ((),))
+        ncs.empty()
+
+        And saving `__or__` for just the bits we can't (cheaply) reduce:
+        >>> import narwhals._plan.selectors as ncs
+        >>> into_selector_ir(("a", "b"), (ncs.integer(), ncs.float(), "c"))
+        [([(ncs.by_name('a', 'b', 'c', ...)) | (ncs.integer())]) | (ncs.float())]
     """
-    if isinstance(input, _import_expr()):
-        return input._ir.to_selector_ir()
-    if isinstance(input, str):
-        return _by_name(input, require_all=require_all)
-    msg = f"cannot turn {qualified_type_name(input)!r} into a selector"
-    raise TypeError(msg)
-
-
-def into_combined_selector_ir(
-    *inputs: OneOrIterable[str | Selector], require_all: bool = True
-) -> SelectorIR:
-    """Parse and reduce input(s) into a single selector.
-
-    Arguments:
-        inputs: One or more column names or selectors.
-        require_all: Whether to match *all* names (the default) or *any* of the names.
-
-            This parameter is ignored for any input that is not a string.
-    """
-    flat = tuple(flatten_hash_safe(inputs))
-    selectors = deque[ir.SelectorIR]()
-    if names := tuple(el for el in flat if isinstance(el, str)):
-        selector_ir = s_ir.ByName(names=names, require_all=require_all).to_selector_ir()
-        if len(names) == len(flat):
-            return selector_ir
-        selectors.append(selector_ir)
-    selectors.extend(into_selector_ir(el) for el in flat if not isinstance(el, str))
-    if not selectors:
+    if not more_inputs and (
+        isinstance(first_input, str) or not isinstance(first_input, Iterable)
+    ):
+        return _into_selector_ir(first_input, require_all=require_all)
+    flat = _flatten_column_names_or_selectors((first_input, *more_inputs))
+    if (first := next(flat, None)) is None:
         return s_ir.empty()
-    return selectors.popleft().or_(*selectors)
+    if (second := next(flat, None)) is None:
+        return _into_selector_ir(first, require_all=require_all)
+
+    names = deque[str]()
+    irs = deque[ir.SelectorIR]()
+    for into in chain((first, second), flat):
+        if isinstance(into, str):
+            names.append(into)
+        else:
+            irs.append(_into_selector_ir(into, require_all=require_all))
+    if not names:
+        s = irs.popleft()
+    else:
+        s = s_ir.ByName(names=tuple(names), require_all=require_all).to_selector_ir()
+    return s.or_(*irs)
 
 
 def into_iter_selector_ir(
@@ -289,18 +312,44 @@ def into_iter_selector_ir(
         more_inputs: Use if `*args` were accepted *in-addition-to* `first_input` as syntax sugar.
     """
     if isinstance(first_input, str):
-        yield _by_name(first_input)
+        yield s_ir.ByName.from_name(first_input).to_selector_ir()
     elif not isinstance(first_input, Iterable):
-        yield into_selector_ir(first_input)
+        yield _into_selector_ir(first_input)
     elif more_inputs:
         raise invalid_into_expr_error(first_input, more_inputs, {})
     else:
         for into in first_input:
-            yield into_selector_ir(into)
+            yield _into_selector_ir(into)
     for into in more_inputs:
-        yield into_selector_ir(into)
+        yield _into_selector_ir(into)
 
 
+def _into_selector_ir(
+    input: str | Selector | Expr, /, *, require_all: bool = True
+) -> SelectorIR:
+    if isinstance(input, _import_expr()):
+        return input._ir.to_selector_ir()
+    if isinstance(input, str):
+        return s_ir.ByName.from_name(input, require_all=require_all).to_selector_ir()
+    msg = f"cannot turn {qualified_type_name(input)!r} into a selector"
+    raise TypeError(msg)
+
+
+def _flatten_column_names_or_selectors(
+    iterable: Iterable[OneOrIterable[str | Selector]], /
+) -> Iterator[str | Selector]:
+    # A more restrictive & cheaper version of `common.flatten_hash_safe`
+    for element in iterable:
+        if isinstance(element, str) or not isinstance(element, Iterable):
+            yield element
+        else:
+            yield from _flatten_column_names_or_selectors(element)
+
+
+# TODO @dangotbanned: make this `_is_iterable_raise_native` (or something)
+# TODO @dangotbanned: Use just the `_is_iterable` part for selectors
+# - The base case in `_into_selector_ir` *could* do this extra error before raising the more general thing
+# - `into_expr_ir` should probably handle this differently too
 def _is_iterable(obj: Iterable[T] | Any) -> TypeIs[Iterable[T]]:
     """Equivalent to `isinstance(obj, Iterable)` but raises on native types.
 
