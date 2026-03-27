@@ -41,6 +41,7 @@ if TYPE_CHECKING:
     from narwhals.series import Series
     from narwhals.typing import (
         ConcatMethod,
+        CorrelationMethod,
         FileSource,
         FrameT,
         IntoDType,
@@ -1264,6 +1265,39 @@ def _expr_with_horizontal_op(name: str, *exprs: IntoExpr, **kwargs: Any) -> Expr
             ExprKind.ELEMENTWISE, name, exprs=exprs, **kwargs, allow_multi_output=True
         )
     )
+
+
+def corr(a: IntoExpr, b: IntoExpr, method: CorrelationMethod = "pearson") -> Expr:
+    """Compute the Pearson's or Spearman rank correlation between two columns.
+
+    Arguments:
+        a: Column name or Expression
+        b: Column name or Expression
+        method: Correlation method ('pearson' or 'spearman')
+
+    Examples:
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>>
+        >>> df_native = pl.DataFrame({"a": [1, 2, 3], "b": [0, 3, 2]})
+        >>> nw.from_native(df_native).select(
+        ...     pearson=nw.corr("a", "b", method="pearson"),
+        ...     spearman=nw.corr("a", "b", method="spearman"),
+        ... )
+        ┌───────────────────────┐
+        |  Narwhals DataFrame   |
+        |-----------------------|
+        |shape: (1, 2)          |
+        |┌──────────┬──────────┐|
+        |│ pearson  ┆ spearman │|
+        |│ ---      ┆ ---      │|
+        |│ f64      ┆ f64      │|
+        |╞══════════╪══════════╡|
+        |│ 0.654654 ┆ 0.5      │|
+        |└──────────┴──────────┘|
+        └───────────────────────┘
+    """
+    return Expr(ExprNode(ExprKind.AGGREGATION, "corr", exprs=(a, b), method=method))
 
 
 def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
