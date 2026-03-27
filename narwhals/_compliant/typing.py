@@ -150,7 +150,7 @@ EagerSeriesT = TypeVar("EagerSeriesT", bound=EagerSeriesAny)
 EagerSeriesT_co = TypeVar("EagerSeriesT_co", bound=EagerSeriesAny, covariant=True)
 
 # NOTE: `pyright` gives false (8) positives if this uses `EagerDataFrameAny`?
-EagerDataFrameT = TypeVar("EagerDataFrameT", bound="EagerDataFrameAny")
+EagerDataFrameT = TypeVar("EagerDataFrameT", bound="EagerDataFrame[Any, Any, Any, Any]")
 
 LazyExprT = TypeVar("LazyExprT", bound=LazyExprAny)
 LazyExprT_contra = TypeVar("LazyExprT_contra", bound=LazyExprAny, contravariant=True)

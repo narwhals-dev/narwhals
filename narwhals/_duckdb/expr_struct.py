@@ -31,7 +31,7 @@ class DuckDBExprStructNamespace(
                 for native_expr, name in zip(
                     compliant(df), compliant._evaluate_output_names(df)
                 )
-                for field in schema[name].fields  # pyright: ignore[reportAttributeAccessIssue]
+                for field in schema[name].fields  # type: ignore[attr-defined]
             ]
 
         def evaluate_output_names(df: DuckDBLazyFrame) -> list[str]:
@@ -39,7 +39,7 @@ class DuckDBExprStructNamespace(
             return [
                 field.name
                 for name in compliant._evaluate_output_names(df)
-                for field in schema[name].fields  # pyright: ignore[reportAttributeAccessIssue]
+                for field in schema[name].fields  # type: ignore[attr-defined]
             ]
 
         return compliant.__class__(

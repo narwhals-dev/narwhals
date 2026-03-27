@@ -1192,9 +1192,11 @@ class EagerExprStructNamespace(
         )
 
     def unnest(self) -> EagerExprT:
+        compliant = self.compliant
+
         def inner(df: EagerDataFrameAny) -> list[EagerSeriesAny]:
             result: list[EagerSeriesAny] = []
-            for series in self.compliant(df):
+            for series in compliant(df):
                 unnested_df: EagerDataFrameAny = series.struct.unnest()
                 result.extend(
                     unnested_df.get_column(col_name) for col_name in unnested_df.columns
@@ -1203,14 +1205,12 @@ class EagerExprStructNamespace(
 
         def evaluate_output_names(df: EagerDataFrameAny) -> Sequence[str]:
             return [
-                field.name
-                for series in self.compliant(df)
-                for field in series.dtype.fields
+                field.name for series in compliant(df) for field in series.dtype.fields
             ]
 
         return self.compliant._from_callable(
             inner,
             evaluate_output_names=evaluate_output_names,
             alias_output_names=None,
-            context=self.compliant,
+            context=compliant,
         )
