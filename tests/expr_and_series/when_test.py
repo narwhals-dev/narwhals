@@ -573,3 +573,32 @@ def test_when_chain_boolean_column_condition(constructor: Constructor) -> None:
     # Row 3: a=False, b=4 >2 -> 200
     expected = {"result": [100, 300, 100, 200]}
     assert_equal_data(result, expected)
+
+
+def test_when_chain_branching_does_not_mutate(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 2, 3, 4]}))
+
+    base_expr = nw.when(nw.col("a") == 1).then(10)
+    derived_expr = base_expr.when(nw.col("a") > 2).then(nw.col("a") * 10).otherwise(0)
+
+    result = df.select(base_expr.alias("base"), derived_expr.alias("derived"))
+    expected = {"base": [10, None, None, None], "derived": [10, 0, 30, 40]}
+    assert_equal_data(result, expected)
+
+
+def test_when_then_composes_with_expr_operations(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 2, 3, 4]}))
+
+    result = df.select(
+        (
+            nw.when(nw.col("a") < 3)
+            .then(nw.col("a"))
+            .when(nw.col("a") == 3)
+            .then(10)
+            .otherwise(0)
+            * 2
+        ).alias("result")
+    )
+
+    expected = {"result": [2, 4, 20, 0]}
+    assert_equal_data(result, expected)
