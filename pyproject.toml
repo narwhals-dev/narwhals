@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "2.17.0"
+version = "2.18.1"
 dependencies = []
 requires-python = ">=3.9"
 authors = [
@@ -93,7 +93,7 @@ docs = [
   "duckdb",
   "narwhals[sql]",
   "markdown-exec[ansi]",
-  "mkdocs",
+  "mkdocs==1.6.1",
   "mkdocs-autorefs",
   "mkdocs-material",
   "mkdocstrings[python]",
@@ -253,6 +253,10 @@ filterwarnings = [
   'ignore:.*defaulting to pandas implementation:Warning:modin',
   'ignore:.*implementation has mismatches with pandas:Warning:modin',
   'ignore:.*You are using pyarrow version',
+  
+  # Deprecation raised by DuckDB
+  'ignore:.*fetch_arrow_table\(\) is deprecated:DeprecationWarning:sqlframe',
+  'ignore:.*fetch_arrow_table\(\) is deprecated:DeprecationWarning:ibis',
 
   # https://discuss.python.org/t/types-uniontype-was-merged-with-wrong-class-not-even-a-class/102275/31
   "ignore:.*'_UnionGenericAlias' is deprecated:DeprecationWarning",

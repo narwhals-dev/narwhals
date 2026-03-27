@@ -9,6 +9,7 @@ from narwhals.exceptions import ColumnNotFoundError, InvalidIntoExprError, Narwh
 from tests.utils import (
     DASK_VERSION,
     DUCKDB_VERSION,
+    PANDAS_VERSION,
     Constructor,
     ConstructorEager,
     assert_equal_data,
@@ -57,8 +58,12 @@ def test_invalid_select(constructor: Constructor, invalid_select: Any) -> None:
         nw.from_native(constructor({"a": [1, 2, 3]})).select(invalid_select)
 
 
-def test_select_boolean_cols() -> None:
+def test_select_boolean_cols(request: pytest.FixtureRequest) -> None:
     pytest.importorskip("pandas")
+    if PANDAS_VERSION >= (3, 1):  # pragma: no cover
+        request.applymarker(
+            pytest.mark.xfail(reason="https://github.com/pandas-dev/pandas/issues/64749")
+        )
     import pandas as pd
 
     df = nw.from_native(pd.DataFrame({True: [1, 2], False: [3, 4]}), eager_only=True)
