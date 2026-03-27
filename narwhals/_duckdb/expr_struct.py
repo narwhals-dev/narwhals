@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from narwhals._compliant import LazyExprNamespace
 from narwhals._compliant.any_namespace import StructNamespace
@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.expr import DuckDBExpr
+    from narwhals.dtypes import Struct
 
 
 class DuckDBExprStructNamespace(
@@ -31,7 +32,7 @@ class DuckDBExprStructNamespace(
                 for native_expr, name in zip(
                     compliant(df), compliant._evaluate_output_names(df)
                 )
-                for field in schema[name].fields  # type: ignore[attr-defined]
+                for field in cast("Struct", schema[name]).fields
             ]
 
         def evaluate_output_names(df: DuckDBLazyFrame) -> list[str]:
@@ -39,7 +40,7 @@ class DuckDBExprStructNamespace(
             return [
                 field.name
                 for name in compliant._evaluate_output_names(df)
-                for field in schema[name].fields  # type: ignore[attr-defined]
+                for field in cast("Struct", schema[name]).fields
             ]
 
         return compliant.__class__(

@@ -13,7 +13,7 @@ from tests.utils import (
 
 
 def test_unnest_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if any(backend in str(constructor) for backend in ("dask", "sqlframe")):
+    if any(backend in str(constructor) for backend in ("dask",)):
         request.applymarker(pytest.mark.xfail)
 
     if "pandas" in str(constructor) and (

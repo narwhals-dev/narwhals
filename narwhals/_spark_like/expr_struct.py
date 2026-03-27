@@ -6,11 +6,11 @@ from narwhals._compliant import LazyExprNamespace
 from narwhals._compliant.any_namespace import StructNamespace
 
 if TYPE_CHECKING:
-    from sqlframe.base import types as native_dtypes
     from sqlframe.base.column import Column
 
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.expr import SparkLikeExpr
+    from narwhals.dtypes import Struct
 
 
 class SparkLikeExprStructNamespace(
@@ -32,7 +32,7 @@ class SparkLikeExprStructNamespace(
                 for native_expr, name in zip(
                     compliant(df), compliant._evaluate_output_names(df)
                 )
-                for field in cast("native_dtypes.StructType", schema[name]).fields
+                for field in cast("Struct", schema[name]).fields
             ]
 
         def evaluate_output_names(df: SparkLikeLazyFrame) -> list[str]:
@@ -40,7 +40,7 @@ class SparkLikeExprStructNamespace(
             return [
                 field.name
                 for name in compliant._evaluate_output_names(df)
-                for field in cast("native_dtypes.StructType", schema[name]).fields
+                for field in cast("Struct", schema[name]).fields
             ]
 
         return compliant.__class__(

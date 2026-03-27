@@ -7,10 +7,10 @@ from narwhals._compliant.any_namespace import StructNamespace
 
 if TYPE_CHECKING:
     import ibis.expr.types as ir
-    from ibis.expr.datatypes import Struct as StructDtype
 
     from narwhals._ibis.dataframe import IbisLazyFrame
     from narwhals._ibis.expr import IbisExpr
+    from narwhals.dtypes import Struct
 
 
 class IbisExprStructNamespace(LazyExprNamespace["IbisExpr"], StructNamespace["IbisExpr"]):
@@ -30,7 +30,7 @@ class IbisExprStructNamespace(LazyExprNamespace["IbisExpr"], StructNamespace["Ib
                 for native_expr, name in zip(
                     compliant(df), compliant._evaluate_output_names(df)
                 )
-                for field in cast("StructDtype", schema[name]).fields
+                for field in cast("Struct", schema[name]).fields
             ]
 
         def evaluate_output_names(df: IbisLazyFrame) -> list[str]:
@@ -38,7 +38,7 @@ class IbisExprStructNamespace(LazyExprNamespace["IbisExpr"], StructNamespace["Ib
             return [
                 field.name
                 for name in compliant._evaluate_output_names(df)
-                for field in cast("StructDtype", schema[name]).fields
+                for field in cast("Struct", schema[name]).fields
             ]
 
         return compliant.__class__(
