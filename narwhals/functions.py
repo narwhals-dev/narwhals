@@ -1392,7 +1392,7 @@ class Then(Expr):
         expr = self._otherwise
         for predicate, then_value in reversed(self._chain):
             if expr is None:
-                exprs = (predicate, then_value)
+                exprs: tuple[IntoExpr | NonNestedLiteral, ...] = (predicate, then_value)
             else:
                 exprs = (predicate, then_value, expr)
             expr = Expr(
