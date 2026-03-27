@@ -130,7 +130,7 @@ def test_maybe_set_index_pandas_direct_index(
     pandas_index: pd.Series[Any] | list[pd.Series[Any]],
     native_df_or_series: pd.DataFrame | pd.Series[Any],
 ) -> None:
-    df = nw.from_native(native_df_or_series, allow_series=True, eager_only=True)
+    df = nw.from_native(native_df_or_series, allow_series=True)
     result = nw.maybe_set_index(df, index=narwhals_index)
     if isinstance(native_df_or_series, pd.Series):
         assert isinstance(result, nw.Series)
