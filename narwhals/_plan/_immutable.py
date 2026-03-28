@@ -194,6 +194,12 @@ class Immutable(metaclass=ImmutableMeta):
             return True
         if type(self) is not type(other):
             return False
+        # NOTE: No observable difference (in current tests) when switching to:
+        #   `hash(self) == hash(other)`
+        # Save more optimizing until there's some granular benchmarks, e.g.:
+        # - https://github.com/python-attrs/attrs/blob/4885c5b1af4e9fa4d97b6bffa2fb78a2efa5f047/bench/test_benchmarks.py
+        # - https://github.com/python-attrs/attrs/blob/4885c5b1af4e9fa4d97b6bffa2fb78a2efa5f047/tox.ini#L69-L77
+        # - https://github.com/python-attrs/attrs/blob/4885c5b1af4e9fa4d97b6bffa2fb78a2efa5f047/.github/workflows/codspeed.yml
         get_self, get_other = self.__getattribute__, other.__getattribute__
         return all(get_self(key) == get_other(key) for key in self.__immutable_keys__)
 
