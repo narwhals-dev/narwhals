@@ -150,11 +150,11 @@ class Expr:
             msg = "At least one of `partition_by` or `order_by` must be specified."
             raise TypeError(msg)
         fn = self._ir
-        group = _parse.into_seq_of_expr_ir(*partition_by) if partition_by else ()
+        group = tuple(_parse.into_iter_expr_ir(*partition_by)) if partition_by else ()
         if order_by is None:
             return self._from_ir(ir.over(fn, group))
         over = ir.over_ordered
-        order = _parse.into_seq_of_expr_ir(order_by)
+        order = tuple(_parse.into_iter_expr_ir(order_by))
         desc, nulls = descending, nulls_last
         return self._from_ir(over(fn, group, order, descending=desc, nulls_last=nulls))
 
@@ -273,7 +273,7 @@ class Expr:
         elif lower_bound is None:
             f = F.ClipUpper().to_function_expr(self._ir, _parse.into_expr_ir(upper_bound))
         else:
-            it = _parse.into_seq_of_expr_ir(lower_bound, upper_bound)
+            it = _parse.into_iter_expr_ir(lower_bound, upper_bound)
             f = F.Clip().to_function_expr(self._ir, *it)
         return self._from_ir(f)
 
@@ -471,7 +471,7 @@ class Expr:
         upper_bound: IntoExpr,
         closed: ClosedInterval = "both",
     ) -> Self:
-        it = _parse.into_seq_of_expr_ir(lower_bound, upper_bound)
+        it = _parse.into_iter_expr_ir(lower_bound, upper_bound)
         return self._from_ir(
             ir.boolean.IsBetween(closed=closed).to_function_expr(self._ir, *it)
         )

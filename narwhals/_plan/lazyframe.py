@@ -276,7 +276,7 @@ class LazyFrame(Generic[Native]):
         return self._with_lp(self._plan.rename(mapping))
 
     def select(self, *exprs: OneOrIterable[IntoExpr], **named_exprs: Any) -> Self:
-        e_irs = _parse.into_seq_of_expr_ir(*exprs, **named_exprs)
+        e_irs = tuple(_parse.into_iter_expr_ir(*exprs, **named_exprs))
         return self._with_lp(self._plan.select(e_irs))
 
     # TODO @dangotbanned: Open an issue to find out why we don't have this on main?
@@ -378,7 +378,7 @@ class LazyFrame(Generic[Native]):
         return self._with_lp(self._plan.unpivot(s_on, index=s_index, options=options))
 
     def with_columns(self, *exprs: OneOrIterable[IntoExpr], **named_exprs: Any) -> Self:
-        e_irs = _parse.into_seq_of_expr_ir(*exprs, **named_exprs)
+        e_irs = tuple(_parse.into_iter_expr_ir(*exprs, **named_exprs))
         return self._with_lp(self._plan.with_columns(e_irs))
 
     def with_row_index(

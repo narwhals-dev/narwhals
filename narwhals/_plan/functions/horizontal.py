@@ -27,21 +27,20 @@ _string: Final = Version.MAIN.dtypes.String()
 
 
 def all_horizontal(*exprs: OneOrIterable[IntoExpr], ignore_nulls: bool = False) -> Expr:
-    it = _parse.into_seq_of_expr_ir(*exprs)
+    it = _parse.into_iter_expr_ir(*exprs)
     return ir.boolean.all_horizontal(*it, ignore_nulls=ignore_nulls).to_narwhals()
 
 
 def any_horizontal(*exprs: OneOrIterable[IntoExpr], ignore_nulls: bool = False) -> Expr:
-    it = _parse.into_seq_of_expr_ir(*exprs)
     return (
         ir.boolean.AnyHorizontal(ignore_nulls=ignore_nulls)
-        .to_function_expr(*it)
+        .to_function_expr(*_parse.into_iter_expr_ir(*exprs))
         .to_narwhals()
     )
 
 
 def coalesce(exprs: OneOrIterable[IntoExpr], *more_exprs: IntoExpr) -> Expr:
-    it = _parse.into_seq_of_expr_ir(exprs, *more_exprs)
+    it = _parse.into_iter_expr_ir(exprs, *more_exprs)
     return F.Coalesce().to_function_expr(*it).to_narwhals()
 
 
@@ -51,10 +50,9 @@ def concat_str(
     separator: str = "",
     ignore_nulls: bool = False,
 ) -> Expr:
-    it = _parse.into_seq_of_expr_ir(exprs, *more_exprs)
     return (
         ConcatStr(separator=separator, ignore_nulls=ignore_nulls)
-        .to_function_expr(*it)
+        .to_function_expr(*_parse.into_iter_expr_ir(exprs, *more_exprs))
         .to_narwhals()
     )
 
@@ -81,20 +79,20 @@ def format(f_string: str, *args: IntoExpr) -> Expr:
 
 
 def max_horizontal(*exprs: OneOrIterable[IntoExpr]) -> Expr:
-    it = _parse.into_seq_of_expr_ir(*exprs)
+    it = _parse.into_iter_expr_ir(*exprs)
     return F.MaxHorizontal().to_function_expr(*it).to_narwhals()
 
 
 def mean_horizontal(*exprs: OneOrIterable[IntoExpr]) -> Expr:
-    it = _parse.into_seq_of_expr_ir(*exprs)
+    it = _parse.into_iter_expr_ir(*exprs)
     return F.MeanHorizontal().to_function_expr(*it).to_narwhals()
 
 
 def min_horizontal(*exprs: OneOrIterable[IntoExpr]) -> Expr:
-    it = _parse.into_seq_of_expr_ir(*exprs)
+    it = _parse.into_iter_expr_ir(*exprs)
     return F.MinHorizontal().to_function_expr(*it).to_narwhals()
 
 
 def sum_horizontal(*exprs: OneOrIterable[IntoExpr]) -> Expr:
-    it = _parse.into_seq_of_expr_ir(*exprs)
+    it = _parse.into_iter_expr_ir(*exprs)
     return F.SumHorizontal().to_function_expr(*it).to_narwhals()

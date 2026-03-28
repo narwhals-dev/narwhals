@@ -136,13 +136,13 @@ class BaseFrame(Generic[NativeFrameT_co]):
 
     def select(self, *exprs: OneOrIterable[IntoExpr], **named_exprs: Any) -> Self:
         named_irs, _ = prepare_projection(
-            _parse.into_seq_of_expr_ir(*exprs, **named_exprs), schema=self
+            tuple(_parse.into_iter_expr_ir(*exprs, **named_exprs)), schema=self
         )
         return self._with_compliant(self._compliant.select(named_irs))
 
     def with_columns(self, *exprs: OneOrIterable[IntoExpr], **named_exprs: Any) -> Self:
         named_irs, schema = prepare_projection(
-            _parse.into_seq_of_expr_ir(*exprs, **named_exprs), schema=self
+            tuple(_parse.into_iter_expr_ir(*exprs, **named_exprs)), schema=self
         )
         return self._with_compliant(
             self._compliant.with_columns(schema.with_columns_irs(named_irs))

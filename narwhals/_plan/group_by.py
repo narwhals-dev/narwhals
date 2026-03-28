@@ -53,11 +53,11 @@ class LazyGroupBy(Generic[LazyFrameT]):  # pragma: no cover
             msg = f"TODO: LazyFrame.group_by({drop_null_keys=})"
             raise NotImplementedError(msg)
         self._frame = frame
-        self._keys = _parse.into_seq_of_expr_ir(*by, **named_by)
+        self._keys = tuple(_parse.into_iter_expr_ir(*by, **named_by))
 
     def agg(self, *aggs: OneOrIterable[IntoExpr], **named_aggs: IntoExpr) -> LazyFrameT:
         frame = self._frame
-        aggs_ir = _parse.into_seq_of_expr_ir(*aggs, **named_aggs)
+        aggs_ir = tuple(_parse.into_iter_expr_ir(*aggs, **named_aggs))
         return frame._with_lp(frame._plan.group_by(self._keys, aggs_ir))
 
 
@@ -76,12 +76,12 @@ class Grouped(Grouper["Resolved"]):
         **named_by: IntoExpr,
     ) -> Self:
         obj = cls.__new__(cls)
-        obj._keys = _parse.into_seq_of_expr_ir(*by, **named_by)
+        obj._keys = tuple(_parse.into_iter_expr_ir(*by, **named_by))
         obj._drop_null_keys = drop_null_keys
         return obj
 
     def agg(self, *aggs: OneOrIterable[IntoExpr], **named_aggs: IntoExpr) -> Self:
-        self._aggs = _parse.into_seq_of_expr_ir(*aggs, **named_aggs)
+        self._aggs = tuple(_parse.into_iter_expr_ir(*aggs, **named_aggs))
         return self
 
     @property

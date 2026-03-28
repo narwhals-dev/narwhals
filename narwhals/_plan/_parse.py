@@ -15,7 +15,6 @@ to freely import from here.
 # ruff: noqa: A002
 from __future__ import annotations
 
-import sys
 from collections import deque
 from collections.abc import Callable, Iterable
 from functools import cache, lru_cache
@@ -49,19 +48,6 @@ if TYPE_CHECKING:
         PartialSeries,
         Seq,
     )
-    from narwhals._typing_compat import deprecated
-
-
-else:  # pragma: no cover  # noqa: PLR5501
-    if sys.version_info >= (3, 13):
-        from narwhals._typing_compat import deprecated
-    else:
-
-        def deprecated(_: str, /, **__: Any) -> Any:
-            def wrapper(func: Any, /) -> Any:
-                return func
-
-            return wrapper
 
 
 __all__ = [
@@ -69,7 +55,6 @@ __all__ = [
     "into_iter_expr_ir",  # stable
     "into_iter_selector_ir",  # stable
     "into_selector_ir",  # stable
-    "into_seq_of_expr_ir",  # DEPRECATED (12 files)
     "predicates_constraints_into_expr_ir",  # functionality stable, name? eh
     "sort_by_into_seq_of_expr_ir",  # needs an invasive fix
 ]
@@ -96,16 +81,6 @@ def into_expr_ir(input: IntoExpr | dict[Any, Any], *, str_as_lit: bool = False) 
     if not str_as_lit and isinstance(input, str):
         return ir.col(input)
     return _import_lit()(input)._ir
-
-
-@deprecated("Use `into_iter_expr_ir` instead", category=None)
-def into_seq_of_expr_ir(
-    first_input: OneOrIterable[IntoExpr] = (),
-    *more_inputs: IntoExpr | Incomplete,
-    **named_inputs: IntoExpr,
-) -> Seq[ExprIR]:
-    """Parse variadic inputs into a flat sequence of expressions."""
-    return tuple(into_iter_expr_ir(first_input, *more_inputs, **named_inputs))
 
 
 def predicates_constraints_into_expr_ir(
@@ -168,7 +143,9 @@ def sort_by_into_seq_of_expr_ir(
 
 
 def into_iter_expr_ir(
-    first_input: OneOrIterable[IntoExpr], *more_inputs: IntoExpr, **named_inputs: IntoExpr
+    first_input: OneOrIterable[IntoExpr] = (),
+    *more_inputs: IntoExpr | Incomplete,
+    **named_inputs: IntoExpr,
 ) -> Iterator[ExprIR]:
     """Yield variadic inputs parsed into expressions.
 

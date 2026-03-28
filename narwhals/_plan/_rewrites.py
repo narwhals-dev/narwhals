@@ -19,11 +19,14 @@ if TYPE_CHECKING:
 
     from narwhals._plan.expressions import ExprIR, NamedIR
     from narwhals._plan.schema import IntoFrozenSchema
-    from narwhals._plan.typing import IntoExpr, MapIR, NamedOrExprIRT, Seq
+    from narwhals._plan.typing import IntoExpr, MapIR, NamedOrExprIRT, OneOrIterable, Seq
 
 
 def rewrite_all(
-    *exprs: IntoExpr, schema: IntoFrozenSchema, rewrites: Sequence[MapIR]
+    exprs: OneOrIterable[IntoExpr],
+    *more_exprs: IntoExpr,
+    schema: IntoFrozenSchema,
+    rewrites: Sequence[MapIR],
 ) -> Seq[NamedIR]:
     """Very naive approach, but should work for a demo.
 
@@ -31,7 +34,8 @@ def rewrite_all(
       - Currently we do a full traversal of each tree per-rewrite function
     - There's no caching *after* `prepare_projection` yet
     """
-    named_irs, _ = prepare_projection(_parse.into_seq_of_expr_ir(*exprs), schema=schema)
+    it = _parse.into_iter_expr_ir(exprs, *more_exprs)
+    named_irs, _ = prepare_projection(tuple(it), schema=schema)
     return tuple(map_ir(ir, *rewrites) for ir in named_irs)
 
 
