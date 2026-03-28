@@ -167,41 +167,11 @@ class Immutable(metaclass=ImmutableMeta):
             _OBJ_SETATTR(self, HASH, hash_value)
         return hash_value
 
-    def __setattr__(self, name: str, value: Never) -> Never:
-        msg = f"{type(self).__name__!r} is immutable, {name!r} cannot be set."
-        raise AttributeError(msg)
-
-    if TYPE_CHECKING:
-        ...
-    else:
-
-        def __delattr__(self, name: str) -> Never:
-            msg = f"{type(self).__name__!r} is immutable, {name!r} cannot be deleted."
-            raise AttributeError(msg)
-
     def __copy__(self) -> Self:
         return self
 
     def __deepcopy__(self, memo: Any) -> Self:
         return self
-
-    def __replace__(self, **changes: Any) -> Self:
-        """Create a new object of the same type, [replacing] fields with values from `changes`.
-
-        [replacing]: https://docs.python.org/3.13/library/copy.html#copy.replace
-        """
-        if len(changes) == 1:
-            # The most common case is a single field replacement.
-            # Iff that field happens to be equal, we can noop, preserving the current object's hash.
-            name, value_changed = next(iter(changes.items()))
-            if getattr(self, name) == value_changed:
-                return self
-            changes = dict(self.__immutable_items__, **changes)
-        else:
-            for name, value_current in self.__immutable_items__:
-                if name not in changes or value_current == changes[name]:
-                    changes[name] = value_current
-        return type(self)(**changes)
 
     def __hash__(self) -> int:
         """Do not override [`__hash__`] in an `Immutable` subclass.
@@ -247,6 +217,41 @@ class Immutable(metaclass=ImmutableMeta):
                     self__setattr__(name, value)
         else:
             raise _init_error(self, kwds)
+
+    if TYPE_CHECKING:
+        ...
+    else:
+        # NOTE: Everything here is synthesized by `@dataclass_transform`
+        # Having it visible to a type checker can cause weird things to happen
+        # - `mypy` pretty much doesn't understand it
+        # - `pyright` is fine until a subclass overrides something
+        # https://github.com/pydantic/pydantic/blob/ac249284616890d91c746dc890fb0f6407df2843/pydantic/main.py#L1011-L1143
+
+        def __setattr__(self, name: str, value: Never) -> Never:
+            msg = f"{type(self).__name__!r} is immutable, {name!r} cannot be set."
+            raise AttributeError(msg)
+
+        def __delattr__(self, name: str) -> Never:
+            msg = f"{type(self).__name__!r} is immutable, {name!r} cannot be deleted."
+            raise AttributeError(msg)
+
+        def __replace__(self, **changes: Any) -> Self:
+            """Create a new object of the same type, [replacing] fields with values from `changes`.
+
+            [replacing]: https://docs.python.org/3.13/library/copy.html#copy.replace
+            """
+            if len(changes) == 1:
+                # The most common case is a single field replacement.
+                # Iff that field happens to be equal, we can noop, preserving the current object's hash.
+                name, value_changed = next(iter(changes.items()))
+                if getattr(self, name) == value_changed:
+                    return self
+                changes = dict(self.__immutable_items__, **changes)
+            else:
+                for name, value_current in self.__immutable_items__:
+                    if name not in changes or value_current == changes[name]:
+                        changes[name] = value_current
+            return type(self)(**changes)
 
 
 # TODO @dangotbanned: Replace with `@singledispatch` on `type(value)`

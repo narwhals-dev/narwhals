@@ -61,14 +61,14 @@ def test_immutable_setattr(
     empty: Empty, empty_derived: EmptyDerived, one: OneSlot, two: TwoSlot
 ) -> None:
     with pytest.raises(AttributeError, match=r"Empty.+immutable.+'a'"):
-        empty.a = 1  # type: ignore[assignment]
+        empty.a = 1  # type: ignore[attr-defined]
     assert empty_derived.a == 1
     with pytest.raises(AttributeError, match=r"EmptyDerived.+immutable.+'a'"):
         empty_derived.a = 2  # type: ignore[misc]
     with pytest.raises(AttributeError, match=r"OneSlot.+immutable.+'a'"):
         one.a = 2  # type: ignore[misc]
     with pytest.raises(AttributeError, match=r"OneSlot.+immutable.+'b'"):
-        one.b = "two"  # type: ignore[assignment]
+        one.b = "two"  # type: ignore[attr-defined]
     with pytest.raises(AttributeError, match=r"TwoSlot.+immutable.+'a'"):
         two.a += 2  # type: ignore[misc]
     with pytest.raises(AttributeError, match=r"TwoSlot.+immutable.+'b'"):
@@ -229,7 +229,7 @@ def test_immutable___slots___(immutable_type: type[Immutable]) -> None:
 
     # NOTE: If this fails, `__setattr__` has been overridden
     with pytest.raises(AttributeError, match=r"immutable"):
-        featureless_instance.i_dont_exist = 999  # type: ignore[assignment]
+        featureless_instance.i_dont_exist = 999  # type: ignore[attr-defined]
 
     # NOTE: If this fails, `__slots__` lose the size benefit
     with pytest.raises(AttributeError, match=re.escape("has no attribute '__dict__'")):
