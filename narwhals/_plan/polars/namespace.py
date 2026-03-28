@@ -35,7 +35,7 @@ if TYPE_CHECKING:
         ConcatMethod,
         IntoDType,
         IntoSchema,
-        NonNestedLiteral,
+        PythonLiteral,
     )
 
 Incomplete: TypeAlias = Any
@@ -169,7 +169,7 @@ class PolarsNamespace(
     def len(self, node: ir.Len, frame: Incomplete, name: str) -> Expr:
         return self._expr.from_native(pl.len(), name, self.version)
 
-    def lit(self, node: ir.Lit[NonNestedLiteral], frame: Incomplete, name: str) -> Expr:
+    def lit(self, node: ir.Lit[PythonLiteral], frame: Incomplete, name: str) -> Expr:
         return self._expr.from_python(
             node.value, name, dtype=node.dtype, version=self.version
         )

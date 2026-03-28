@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-import datetime as dt
 import sys
 from collections.abc import Iterable
 from copy import deepcopy
-from decimal import Decimal
 from io import BytesIO
 from secrets import token_hex
 from types import MappingProxyType
@@ -14,7 +12,6 @@ from narwhals._plan._guards import is_iterable_reject
 from narwhals._utils import _hasattr_static, qualified_type_name
 from narwhals.dtypes import DType
 from narwhals.exceptions import NarwhalsError
-from narwhals.utils import Version
 
 if TYPE_CHECKING:
     import reprlib
@@ -34,7 +31,7 @@ if TYPE_CHECKING:
         Seq,
     )
     from narwhals._utils import _StoresColumns
-    from narwhals.typing import FileSource, NonNestedDType, NonNestedLiteral
+    from narwhals.typing import FileSource
 
     T = TypeVar("T")
 
@@ -50,24 +47,6 @@ else:  # pragma: no cover
             msg = f"replace() does not support {cls.__name__} objects"
             raise TypeError(msg)
         return func(obj, **changes)  # type: ignore[no-any-return]
-
-
-def py_to_narwhals_dtype(obj: NonNestedLiteral, version: Version = Version.MAIN) -> DType:
-    dtypes = version.dtypes
-    mapping: dict[type[NonNestedLiteral], type[NonNestedDType]] = {
-        int: dtypes.Int64,
-        float: dtypes.Float64,
-        str: dtypes.String,
-        bool: dtypes.Boolean,
-        dt.datetime: dtypes.Datetime,
-        dt.date: dtypes.Date,
-        dt.time: dtypes.Time,
-        dt.timedelta: dtypes.Duration,
-        bytes: dtypes.Binary,
-        Decimal: dtypes.Decimal,
-        type(None): dtypes.Unknown,
-    }
-    return mapping.get(type(obj), dtypes.Unknown)()
 
 
 @overload

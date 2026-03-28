@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from narwhals._plan.expressions import FunctionExpr, boolean, functions as F
     from narwhals._plan.expressions.strings import ConcatStr
     from narwhals._utils import Implementation
-    from narwhals.typing import NonNestedLiteral
+    from narwhals.typing import PythonLiteral
 
 Incomplete: TypeAlias = Any
 
@@ -61,7 +61,7 @@ class CompliantNamespace(
     ) -> ExprT_co | ScalarT_co: ...
     def len(self, node: ir.Len, frame: FrameT, name: str) -> ScalarT_co: ...
     def lit(
-        self, node: ir.Lit[NonNestedLiteral], frame: FrameT, name: str
+        self, node: ir.Lit[PythonLiteral], frame: FrameT, name: str
     ) -> ScalarT_co: ...
     def max_horizontal(
         self, node: FunctionExpr[F.MaxHorizontal], frame: FrameT, name: str

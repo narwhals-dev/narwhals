@@ -2,27 +2,33 @@
 # see `LiteralExpr.value`
 from __future__ import annotations
 
+import datetime as dt
+from decimal import Decimal
+from functools import cache
 from typing import TYPE_CHECKING, Any, Generic, final
 
 from narwhals._plan import common
 from narwhals._plan._dispatch import DispatcherOptions
 from narwhals._plan._dtype import ResolveDType
 from narwhals._plan._expr_ir import ExprIR
+from narwhals._plan._guards import is_python_literal_type
+from narwhals._plan.exceptions import literal_type_error
 from narwhals._plan.typing import (
     LiteralT_co,
     NativeSeriesT,
     NativeSeriesT_co,
-    NonNestedLiteralT,
-    NonNestedLiteralT_co,
+    PythonLiteralT,
+    PythonLiteralT_co,
 )
+from narwhals._utils import Version
+from narwhals.dtypes import Field, List, Struct, Unknown
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from narwhals._plan.series import Series
-    from narwhals._utils import Version
     from narwhals.dtypes import DType
-    from narwhals.typing import IntoDType
+    from narwhals.typing import IntoDType, NonNestedDType, PythonLiteral
 
 __all__ = ["Lit", "LitSeries", "lit", "lit_series"]
 
@@ -58,7 +64,7 @@ class LiteralExpr(ExprIR, Generic[LiteralT_co], dtype=get_dtype()):
 
 
 @final
-class Lit(LiteralExpr[NonNestedLiteralT_co], dispatch=namespaced()):
+class Lit(LiteralExpr[PythonLiteralT_co], dispatch=namespaced()):
     """An expression representing a scalar literal value.
 
     >>> import narwhals._plan as nw
@@ -77,6 +83,12 @@ class Lit(LiteralExpr[NonNestedLiteralT_co], dispatch=namespaced()):
     def __repr__(self) -> str:
         v = self.value
         return f"lit({'null' if v is None else f'{type(v).__name__}: {v!s}'})"
+
+    @property
+    def __immutable_values__(self) -> Iterator[Any]:
+        dtype = self.dtype
+        value: Any = self.value
+        yield from (id(value) if dtype.is_nested() else value, dtype)
 
 
 @final
@@ -128,14 +140,73 @@ class LitSeries(LiteralExpr["Series[NativeSeriesT_co]"], dispatch=namespaced()):
         yield from (self.name, self.dtype, id(self.value))
 
 
-def lit(
-    value: NonNestedLiteralT, dtype: IntoDType | None = None
-) -> Lit[NonNestedLiteralT]:
-    if dtype is None:
-        dtype = common.py_to_narwhals_dtype(value)
-    else:
-        dtype = common.into_dtype(dtype)
+lit_series = LitSeries.from_series
+
+
+def lit(value: PythonLiteralT, dtype: IntoDType | None = None) -> Lit[PythonLiteralT]:
+    dtype = (
+        _py_value_to_dtype(value, Version.MAIN, allow_null=True)
+        if dtype is None
+        else common.into_dtype(dtype)
+    )
     return Lit(value=value, dtype=dtype)
 
 
-lit_series = LitSeries.from_series
+def _py_value_to_dtype(
+    obj: PythonLiteral, version: Version = Version.MAIN, *, allow_null: bool
+) -> DType:
+    # NOTE: Surely mypy must have fixed `_lru_cache_wrapper` hashable in a new version?
+    if dtype := _py_type_to_dtype(type(obj), version):  # type: ignore[arg-type]
+        if allow_null or not isinstance(dtype, Unknown):
+            return dtype
+        msg = "Nested dtypes containing nulls are not yet supported"
+        raise TypeError(msg)
+    if not isinstance(obj, (list, dict, tuple)):
+        # Just a type narrowing issue
+        msg = f"Expected unreachable, got {obj!r}"
+        raise NotImplementedError(msg)
+
+    if not obj:
+        msg = "Cannot infer dtype for empty nested structure. Please provide an explicit dtype parameter."
+        raise TypeError(msg)
+    if not isinstance(obj, dict):
+        first_value = next((el for el in obj if el is not None), None)
+        return List(_py_value_to_dtype(first_value, version, allow_null=False))
+    return Struct(
+        [
+            Field(k, _py_value_to_dtype(v, version, allow_null=False))
+            for k, v in obj.items()
+        ]
+    )
+
+
+@cache
+def _py_type_to_dtype(
+    py_type: type[PythonLiteral], version: Version = Version.MAIN, /
+) -> NonNestedDType | None:
+    """SAFETY.
+
+    Cache size is bound by these dimensions:
+
+        n_valid_py_types = len(non_nested) + len([list, dict, tuple])
+        maxsize = n_valid_py_types * len(Version)
+    """
+    dtypes = version.dtypes
+    non_nested: dict[type[PythonLiteral], type[NonNestedDType]] = {
+        int: dtypes.Int64,
+        float: dtypes.Float64,
+        str: dtypes.String,
+        bool: dtypes.Boolean,
+        dt.datetime: dtypes.Datetime,
+        dt.date: dtypes.Date,
+        dt.time: dtypes.Time,
+        dt.timedelta: dtypes.Duration,
+        bytes: dtypes.Binary,
+        Decimal: dtypes.Decimal,
+        type(None): dtypes.Unknown,
+    }
+    if dtype := non_nested.get(py_type):
+        return dtype()
+    if not is_python_literal_type(py_type):
+        raise literal_type_error(py_type)
+    return None

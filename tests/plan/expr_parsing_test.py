@@ -17,6 +17,7 @@ from narwhals._plan._parse import into_seq_of_expr_ir
 from narwhals._plan.expressions import functions as F, operators as ops
 from narwhals._plan.expressions.ranges import IntRange
 from narwhals._utils import Implementation
+from narwhals.dtypes import DType, Int64, List, Struct
 from narwhals.exceptions import (
     ComputeError,
     InvalidIntoExprError,
@@ -40,6 +41,7 @@ if TYPE_CHECKING:
         OperatorFn,
         Seq,
     )
+    from narwhals.typing import IntoDType, PythonLiteral
 
 
 IntoIterable: TypeAlias = Callable[[Sequence[Any]], Iterable[Any]]
@@ -457,6 +459,133 @@ def test_lit_series_roundtrip() -> None:
     assert e_ir.value.to_list() == data
 
 
+def test_lit_invalid() -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    pattern = re_compile(r"is not supported in `nw.lit`")
+    context = pytest.raises(TypeError, match=pattern)
+    with context:
+        nwp.lit(object())  # type: ignore[arg-type]
+    with context:
+        nwp.lit({1, 2, 3})  # type: ignore[arg-type]
+
+    # NOTE: The overloads are broken
+    # this gets the right error without making the LSP blow up
+    value: Any = 1
+    bad: pa.Scalar[Any] = pa.scalar(value)
+    with context:
+        nwp.lit(bad)  # type: ignore[arg-type]
+    with context:
+        nwp.lit([bad])
+
+
+@pytest.mark.parametrize(
+    ("value", "dtype", "expected"),
+    [
+        pytest.param((), nw.List(nw.Int32()), nw.List(nw.Int32()), id="list-empty-tuple"),
+        pytest.param(
+            [], nw.List(nw.Binary()), nw.List(nw.Binary()), id="list-empty-list"
+        ),
+        pytest.param({}, nw.Struct({}), nw.Struct([]), id="struct-empty-dict"),
+        pytest.param(("foo", "bar"), None, nw.List(nw.String()), id="list-str"),
+        pytest.param([1.0, 2.2], None, nw.List(nw.Float64()), id="list-float"),
+        pytest.param(
+            {"field_1": 42}, None, nw.Struct({"field_1": nw.Int64()}), id="struct-int"
+        ),
+        pytest.param(
+            (None, dt.time(1, 1, 1), dt.time(2, 1, 1)),
+            None,
+            nw.List(nw.Time()),
+            id="list-time",
+        ),
+        pytest.param(
+            [dt.date(2000, 1, 1), None, None], None, nw.List(nw.Date()), id="list-date"
+        ),
+        pytest.param(
+            {"field_1": dt.datetime(2002, 1, 1)},
+            None,
+            nw.Struct({"field_1": nw.Datetime()}),
+            id="struct-datetime",
+        ),
+        pytest.param(
+            {"field_1": 42, "field_2": 1.2, "field_3": True},
+            nw.Struct(
+                {"field_1": nw.Int32(), "field_2": nw.Float64(), "field_3": nw.Boolean()}
+            ),
+            nw.Struct(
+                {"field_1": nw.Int32(), "field_2": nw.Float64(), "field_3": nw.Boolean()}
+            ),
+            id="struct-multiple",
+        ),
+    ],
+)
+def test_lit_nested(
+    value: PythonLiteral, dtype: IntoDType | None, expected: DType
+) -> None:
+    """Adapted from [`test_nested_structures`].
+
+    Just covering the inference + error handling.
+
+    [`test_nested_structures`]: https://github.com/narwhals-dev/narwhals/blob/228fee8d83d92d06e6cb32646d0e131acf0c1e2e/tests/expr_and_series/lit_test.py#L142-L209
+    """
+    lit = nwp.lit(value, dtype)
+    assert lit.meta.is_literal()
+    e_ir = lit._ir
+    assert isinstance(e_ir, ir.Lit)
+    assert e_ir.dtype == expected
+    assert hash(e_ir) == hash(nwp.lit(value, dtype)._ir)
+
+
+@pytest.mark.parametrize("value", [[], (), {}], ids=["list", "tuple", "dict"])
+def test_lit_nested_empty_invalid(value: PythonLiteral) -> None:
+    msg = "Cannot infer dtype for empty nested structure. Please provide an explicit dtype parameter."
+    with pytest.raises(TypeError, match=msg):
+        nwp.lit(value)
+
+
+@pytest.mark.parametrize(
+    "value", [[None, None], (None,), {"a": 1, "b": None}], ids=["list", "tuple", "dict"]
+)
+def test_lit_nested_inner_invalid(value: PythonLiteral) -> None:
+    msg = "Nested dtypes containing nulls are not yet supported"
+    with pytest.raises(TypeError, match=msg):
+        nwp.lit(value)
+
+
+# TODO @dangotbanned: Mix up the dtypes
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        # List containing nested structures
+        ([[1, 2], [3, 4]], List(List(Int64()))),
+        ([(1, 2), (3, 4)], List(List(Int64()))),
+        ([{"a": 1}, {"a": 2}], List(Struct({"a": Int64()}))),
+        # Tuple containing nested structures
+        (([1, 2], [3, 4]), List(List(Int64()))),
+        (((1, 2), (3, 4)), List(List(Int64()))),
+        (({"a": 1}, {"a": 2}), List(Struct({"a": Int64()}))),
+        # Dict containing nested structures
+        ({"a": [1, 2], "b": [3, 4]}, Struct({"a": List(Int64()), "b": List(Int64())})),
+        ({"a": (1, 2), "b": (3, 4)}, Struct({"a": List(Int64()), "b": List(Int64())})),
+        (
+            {"a": {"x": 1}, "b": {"y": 2}},
+            Struct({"a": Struct({"x": Int64()}), "b": Struct({"y": Int64()})}),
+        ),
+    ],
+    ids=str,
+)
+def test_lit_nested_inception(
+    value: dict[str, Any] | list[Any] | tuple[Any, ...], expected: DType
+) -> None:
+    lit = nwp.lit(value)
+    assert lit.meta.is_literal()
+    e_ir = lit._ir
+    assert isinstance(e_ir, ir.Lit)
+    assert e_ir.dtype == expected
+    assert hash(e_ir) == hash(nwp.lit(value)._ir)
+
+
 def test_sort_by_empty() -> None:
     with pytest.raises(TypeError, match=re_compile("at least one sort key")):
         nwp.col("a").sort_by(())
@@ -792,9 +921,6 @@ def test_list_contains_invalid() -> None:
 
     with pytest.raises(ShapeError, match=r"list.contains.+non-scalar.+abs"):
         a.list.contains(a.abs())
-
-    with pytest.raises(TypeError, match=r"list.+not.+supported.+nw.lit.+1.+2.+3"):
-        a.list.contains([1, 2, 3])  # type: ignore[arg-type]
 
 
 def test_list_get_invalid() -> None:

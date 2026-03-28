@@ -73,3 +73,16 @@ def test_list_contains_scalar(
     df = dataframe(data).select(a.cast(nw.List(nw.String)))
     result = df.select(a.first().list.contains(item))
     assert_equal_data(result, {"a": [expected]})
+
+
+@pytest.mark.xfail(
+    reason="Function 'is_in' has no kernel matching input types (list<item: int32>)",
+    raises=NotImplementedError,
+)
+def test_list_contains_nested() -> None:
+    # NOTE: This works in polars
+    data = {"a": [[[3, 2, 1]], [[]], [[1, 2]]]}
+    item = [3, 2, 1]
+    expected = [True, False, False]
+    df = dataframe(data).select(a.cast(nw.List(nw.List(nw.Int32))))
+    assert_equal_data(df.select(a.list.contains(item)), {"a": expected})  # type: ignore[arg-type]

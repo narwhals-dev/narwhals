@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from narwhals._plan.lazyframe import LazyFrame
     from narwhals._plan.selectors import Selector
     from narwhals._plan.series import Series
-    from narwhals.typing import NonNestedDType, NonNestedLiteral
+    from narwhals.typing import NonNestedDType, NonNestedLiteral, PythonLiteral
 
 __all__ = [
     "AggExprT_co",
@@ -100,11 +100,9 @@ NonNestedDTypeT = TypeVar("NonNestedDTypeT", bound="NonNestedDType")
 NonNestedLiteralT = TypeVar(
     "NonNestedLiteralT", bound="NonNestedLiteral", default="NonNestedLiteral"
 )
-NonNestedLiteralT_co = TypeVar(
-    "NonNestedLiteralT_co",
-    bound="NonNestedLiteral",
-    covariant=True,
-    default="NonNestedLiteral",
+PythonLiteralT = TypeVar("PythonLiteralT", bound="PythonLiteral", default="PythonLiteral")
+PythonLiteralT_co = TypeVar(
+    "PythonLiteralT_co", bound="PythonLiteral", covariant=True, default="PythonLiteral"
 )
 NativeSeriesT = TypeVar("NativeSeriesT", bound="NativeSeries", default="NativeSeries")
 NativeSeriesAnyT = TypeVar("NativeSeriesAnyT", bound="NativeSeries", default="t.Any")
@@ -133,7 +131,7 @@ NativeLazyFrameT_co = TypeVar(
     covariant=True,
 )
 LiteralT_co = TypeVar(
-    "LiteralT_co", bound="NonNestedLiteral | Series[t.Any]", covariant=True, default=t.Any
+    "LiteralT_co", bound="PythonLiteral | Series[t.Any]", covariant=True, default=t.Any
 )
 MapIR: TypeAlias = "Callable[[ExprIR], ExprIR]"
 """A function to apply to all nodes in this tree."""
@@ -151,6 +149,8 @@ Udf: TypeAlias = "Callable[[t.Any], t.Any]"
 
 IntoExprColumn: TypeAlias = "Expr | Series[t.Any] | str"
 IntoExpr: TypeAlias = "NonNestedLiteral | IntoExprColumn"
+"""TODO @dangotbanned: Update this alias to include nested data types (131 refs, be careful!)"""
+
 ColumnNameOrSelector: TypeAlias = "str | Selector"
 OneOrIterable: TypeAlias = "T | Iterable[T]"
 OneOrSeq: TypeAlias = t.Union[T, Seq[T]]

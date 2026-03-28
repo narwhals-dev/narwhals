@@ -117,7 +117,7 @@ class ArrowNamespace(
             frame.native.column(node.name), name, version=frame.version
         )
 
-    def lit(self, node: ir.Lit[NonNestedLiteral], frame: Frame, name: str) -> Scalar:
+    def lit(self, node: ir.Lit[PythonLiteral], frame: Frame, name: str) -> Scalar:
         return self._scalar.from_python(
             node.value, name, dtype=node.dtype, version=frame.version
         )

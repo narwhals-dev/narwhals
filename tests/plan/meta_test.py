@@ -46,11 +46,6 @@ else:  # pragma: no cover
     LEN_CASE = (nwp.len().alias("count"), pl.count(), "count")
 
 
-XFAIL_LITERAL_LIST = pytest.mark.xfail(
-    reason="'list' is not supported in `nw.lit`", raises=TypeError
-)
-
-
 @pytest.mark.parametrize(
     ("nw_expr", "pl_expr", "expected"),
     [
@@ -315,9 +310,9 @@ def test_is_column_selection(expr: nwp.Expr, *, is_column_selection: bool) -> No
         dt.datetime(1974, 1, 1, 12, 45, 1),
         dt.time(10, 30, 45),
         dt.timedelta(hours=-24),
-        pytest.param(["x", "y", "z"], marks=XFAIL_LITERAL_LIST),
+        ["x", "y", "z"],
         series([None, None]),
-        pytest.param([[10, 20], [30, 40]], marks=XFAIL_LITERAL_LIST),
+        [[10, 20], [30, 40]],
         "this is the way",
     ],
 )

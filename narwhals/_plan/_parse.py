@@ -63,61 +63,9 @@ __all__ = [
     "sort_by_into_seq_of_expr_ir",
 ]
 
-_RaisesInvalidIntoExprError: TypeAlias = "Any"
-"""
-Placeholder for multiple `Iterable[IntoExpr]`.
-
-We only support cases `a`, `b`, but the typing for most contexts is more permissive:
-
->>> import polars as pl
->>> df = pl.DataFrame({"one": ["A", "B", "A"], "two": [1, 2, 3], "three": [4, 5, 6]})
->>> a = ("one", "two")
->>> b = (["one", "two"],)
->>>
->>> c = ("one", ["two"])
->>> d = (["one"], "two")
->>> [df.select(*into) for into in (a, b, c, d)]
-[shape: (3, 2)
- ┌─────┬─────┐
- │ one ┆ two │
- │ --- ┆ --- │
- │ str ┆ i64 │
- ╞═════╪═════╡
- │ A   ┆ 1   │
- │ B   ┆ 2   │
- │ A   ┆ 3   │
- └─────┴─────┘,
- shape: (3, 2)
- ┌─────┬─────┐
- │ one ┆ two │
- │ --- ┆ --- │
- │ str ┆ i64 │
- ╞═════╪═════╡
- │ A   ┆ 1   │
- │ B   ┆ 2   │
- │ A   ┆ 3   │
- └─────┴─────┘,
- shape: (3, 2)
- ┌─────┬───────────┐
- │ one ┆ literal   │
- │ --- ┆ ---       │
- │ str ┆ list[str] │
- ╞═════╪═══════════╡
- │ A   ┆ ["two"]   │
- │ B   ┆ ["two"]   │
- │ A   ┆ ["two"]   │
- └─────┴───────────┘,
- shape: (3, 2)
- ┌───────────┬─────┐
- │ literal   ┆ two │
- │ ---       ┆ --- │
- │ list[str] ┆ i64 │
- ╞═══════════╪═════╡
- │ ["one"]   ┆ 1   │
- │ ["one"]   ┆ 2   │
- │ ["one"]   ┆ 3   │
- └───────────┴─────┘]
-"""
+# TODO @dangotbanned: Simplify the `list` special-casing, now that it is supported
+Incomplete: TypeAlias = "Any"
+"""Artifact from previous `lit(list)` rejection"""
 
 
 def into_expr_ir(
@@ -146,7 +94,7 @@ def into_expr_ir(
 
 def into_seq_of_expr_ir(
     first_input: OneOrIterable[IntoExpr] = (),
-    *more_inputs: IntoExpr | _RaisesInvalidIntoExprError,
+    *more_inputs: IntoExpr | Incomplete,
     **named_inputs: IntoExpr,
 ) -> Seq[ExprIR]:
     """Parse variadic inputs into a flat sequence of expressions."""
@@ -157,7 +105,7 @@ def into_seq_of_expr_ir(
 
 def predicates_constraints_into_expr_ir(
     first_predicate: OneOrIterable[IntoExprColumn] | list[bool] = (),
-    *more_predicates: IntoExprColumn | list[bool] | _RaisesInvalidIntoExprError,
+    *more_predicates: IntoExprColumn | list[bool] | Incomplete,
     _list_as_series: PartialSeries | None = None,
     **constraints: IntoExpr,
 ) -> ExprIR:

@@ -69,8 +69,10 @@ def function_arg_non_scalar_error(
     return ShapeError(msg)
 
 
-def list_literal_error(value: Any) -> TypeError:
-    msg = f"{type(value).__name__!r} is not supported in `nw.lit`, got: {value!r}."
+def literal_type_error(value: Any) -> TypeError:
+    msg = f"{qualified_type_name(value)!r} is not supported in `nw.lit`"
+    if not isinstance(value, type):
+        msg = f"{msg}, got: {value!r}."
     return TypeError(msg)
 
 
