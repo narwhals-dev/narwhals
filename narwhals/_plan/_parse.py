@@ -68,27 +68,19 @@ Incomplete: TypeAlias = "Any"
 """Artifact from previous `lit(list)` rejection"""
 
 
-def into_expr_ir(
-    input: IntoExpr | list[Any],
-    *,
-    str_as_lit: bool = False,
-    list_as_series: PartialSeries | None = None,
-) -> ExprIR:
+# TODO @dangotbanned: `str_as_lit` maybe stays, but could do some inheritance instead?
+def into_expr_ir(input: IntoExpr | list[Any], *, str_as_lit: bool = False) -> ExprIR:
     """Parse a single input into an expression.
 
     Arguments:
         input: The input to be parsed as an expression.
         str_as_lit: Interpret string input as a string literal. If set to `False` (default),
             strings are parsed as column names.
-        list_as_series: Interpret list input as a Series literal, using the provided constructor.
-            If set to `None` (default), lists will raise when passed to `lit`.
     """
     if isinstance(input, _import_expr()):
         return input._ir
     if not str_as_lit and isinstance(input, str):
         return ir.col(input)
-    if list_as_series is not None and isinstance(input, list):
-        input = list_as_series(input)
     return _import_lit()(input)._ir
 
 
@@ -98,24 +90,43 @@ def into_seq_of_expr_ir(
     **named_inputs: IntoExpr,
 ) -> Seq[ExprIR]:
     """Parse variadic inputs into a flat sequence of expressions."""
-    return tuple(
-        into_iter_expr_ir(first_input, *more_inputs, _list_as_series=None, **named_inputs)
-    )
+    return tuple(into_iter_expr_ir(first_input, *more_inputs, **named_inputs))
 
 
 def predicates_constraints_into_expr_ir(
     first_predicate: OneOrIterable[IntoExprColumn] | list[bool] = (),
     *more_predicates: IntoExprColumn | list[bool] | Incomplete,
-    _list_as_series: PartialSeries | None = None,
     **constraints: IntoExpr,
 ) -> ExprIR:
     """Parse variadic predicates and constraints into an expression.
 
     The result is an AND-reduction of all inputs.
     """
-    predicates = into_iter_expr_ir(
-        first_predicate, *more_predicates, _list_as_series=_list_as_series
+    predicates = into_iter_expr_ir(first_predicate, *more_predicates)
+    return _predicates_constraints_into_expr_ir(predicates, constraints)
+
+
+def df_filter_predicates_constraints_into_expr_ir(
+    first_predicate: OneOrIterable[IntoExprColumn] | list[bool] = (),
+    *more_predicates: IntoExprColumn | list[bool] | Incomplete,
+    _into_series: PartialSeries,
+    **constraints: IntoExpr,
+) -> ExprIR:
+    """Special-casing for `DataFrame.filter` boolean masks.
+
+    **Eager-only**, since this requires creating new `Series`:
+
+        [False, True, True] -> lit(Series([False, True, True]))
+    """
+    predicates = _df_filter_into_iter_expr_ir(
+        first_predicate, more_predicates, into_series=_into_series
     )
+    return _predicates_constraints_into_expr_ir(predicates, constraints)
+
+
+def _predicates_constraints_into_expr_ir(
+    predicates: Iterator[ExprIR], constraints: dict[str, IntoExpr], /
+) -> ExprIR:
     if constraints:
         items = constraints.items()
         it = (ir.col(nm).eq(into_expr_ir(v, str_as_lit=True)) for nm, v in items)
@@ -142,38 +153,53 @@ def sort_by_into_seq_of_expr_ir(
 
 
 # TODO @dangotbanned: Too complicated!
+# Try simplifying, based on the related bits in `_df_filter_into_iter_expr_ir`
 def into_iter_expr_ir(
     first_input: OneOrIterable[IntoExpr],
     *more_inputs: IntoExpr | list[Any],
-    _list_as_series: PartialSeries | None = None,
     **named_inputs: IntoExpr,
 ) -> Iterator[ExprIR]:
-    as_series = _list_as_series
+    # 1 - Skip `first_input` entirely
+    # 2 - Raise if we got `[...], [...]`
+    # 3 - Loop over `[...]`
+    # 4 - Just a single input
     if not _is_empty_sequence(first_input):
         # NOTE: These need to be separated to introduce an intersection type
         # Otherwise, `str | bytes` always passes through typing
         if _is_iterable(first_input) and not is_iterable_reject(first_input):
-            if more_inputs and (as_series is None or not isinstance(first_input, list)):
+            if more_inputs:
                 raise invalid_into_expr_error(first_input, more_inputs, named_inputs)
-
-            if (
-                as_series is not None
-                and isinstance(first_input, list)
-                and not isinstance(
-                    first_input[0], (str, _import_expr(), _import_series())
-                )
-            ):
-                # NOTE: Ensures `first_input = [False, True, True] -> lit(Series([False, True, True]))`
-                yield into_expr_ir(first_input, list_as_series=as_series)
-            else:
-                for into in first_input:
-                    yield into_expr_ir(into, list_as_series=as_series)
+            for into in first_input:
+                yield into_expr_ir(into)
         else:
-            yield into_expr_ir(first_input, list_as_series=as_series)
+            yield into_expr_ir(first_input)
     for into in more_inputs:
-        yield into_expr_ir(into, list_as_series=as_series)
+        yield into_expr_ir(into)
     for name, input in named_inputs.items():
         yield into_expr_ir(input).alias(name)
+
+
+def _df_filter_into_iter_expr_ir(
+    first_predicate: OneOrIterable[IntoExpr],
+    more_predicates: Iterable[IntoExpr | list[Any]],
+    into_series: PartialSeries,
+) -> Iterator[ExprIR]:
+    first = first_predicate
+    expr, lit = _import_expr(), _import_lit()
+    non_mask_fast = (_import_series(), expr, str, bytes)
+    if isinstance(first, non_mask_fast) or not _is_iterable(first):
+        yield into_expr_ir(first)
+    elif isinstance(first, list) and first and not isinstance(first[0], non_mask_fast):
+        more_predicates = chain([first], more_predicates)
+    else:
+        more_predicates = chain(first, more_predicates)
+    for p in more_predicates:
+        if isinstance(p, expr):
+            yield p._ir
+        elif isinstance(p, str):
+            yield ir.col(p)
+        else:
+            yield lit(into_series(p) if isinstance(p, list) else p)._ir
 
 
 # TODO @dangotbanned: Fix the rejection predicate by adding `ExprIR.is_length_preserving`

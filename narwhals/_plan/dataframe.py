@@ -571,9 +571,9 @@ class DataFrame(
     def filter(
         self, *predicates: OneOrIterable[IntoExprColumn] | list[bool], **constraints: Any
     ) -> Self:
-        e = _parse.predicates_constraints_into_expr_ir(
+        e = _parse.df_filter_predicates_constraints_into_expr_ir(
             *predicates,
-            _list_as_series=self._partial_series(dtype=self.version.dtypes.Boolean()),
+            _into_series=self._partial_series(dtype=self.version.dtypes.Boolean()),
             **constraints,
         )
         named_irs, _ = prepare_projection((e,), schema=self)
