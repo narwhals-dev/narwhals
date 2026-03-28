@@ -4,7 +4,6 @@ from narwhals._plan._expr_ir import (  # prob should move into package?
     ExprIR,
     NamedIR,
     SelectorIR,
-    named_ir,
 )
 from narwhals._plan._function import Function
 from narwhals._plan.expressions import (
@@ -87,7 +86,6 @@ __all__ = [
     "lists",
     "lit",
     "lit_series",
-    "named_ir",
     "operators",
     "over",
     "over_ordered",

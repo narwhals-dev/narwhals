@@ -113,7 +113,7 @@ def _align_diagonal(
         for name in missing:
             if (expr := null_exprs.get(name)) is None:
                 dtype = union_schema[name]
-                expr = null_exprs[name] = ir.named_ir(name, ir.lit(None, dtype))
+                expr = null_exprs[name] = ir.NamedIR(name, ir.lit(None, dtype))
             yield expr
 
     def align(plan: rp.ResolvedPlan, schema: FrozenSchema) -> rp.ResolvedPlan:
@@ -162,9 +162,9 @@ def _join_supertypes(
         error_message = f"Unable to join on columns with different dtypes:\n    {lhs}: {lhs_dtype}\n    {rhs}: {rhs_dtype}"
         if supertype := _get_supertype(lhs_dtype, rhs_dtype, error_message=error_message):
             if supertype != lhs_dtype:
-                lhs_casts.append(ir.named_ir(lhs, ir.col(lhs).cast(supertype)))
+                lhs_casts.append(ir.NamedIR(lhs, ir.col(lhs).cast(supertype)))
             if supertype != rhs_dtype:
-                rhs_casts.append(ir.named_ir(rhs, ir.col(rhs).cast(supertype)))
+                rhs_casts.append(ir.NamedIR(rhs, ir.col(rhs).cast(supertype)))
         else:
             msg = f"datatypes of join keys don't match - {lhs}: {lhs_dtype} on left does not match {rhs}: {rhs_dtype} on right (and no other type was available to cast to)"
             raise InvalidOperationError(msg)
@@ -352,7 +352,7 @@ class Resolver:
         for key, safe_name in zip(
             keys, temp.column_names(chain(key_names, input_schema))
         ):
-            safe_named_irs_keys.append(ir.NamedIR(expr=key.expr, name=safe_name))
+            safe_named_irs_keys.append(ir.NamedIR(safe_name, key.expr))
             with_output_schema_extra[safe_name] = output_schema_mut[key.name]
 
         safe_keys = tuple(safe_named_irs_keys)
@@ -498,7 +498,7 @@ class Resolver:
         exprs = deque[ir.NamedIR]()
         for name in input_schema:
             actual = before_after.pop(name, name)
-            exprs.append(ir.named_ir(actual, ir.col(name)))
+            exprs.append(ir.NamedIR(actual, ir.col(name)))
             names.append(actual)
 
         if before_after:

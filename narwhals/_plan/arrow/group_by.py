@@ -56,7 +56,7 @@ class MinMax(ir.AggExpr):
 
 def named_ir_agg(name: str, agg: _IntoAggExpr[AggExprT_co]) -> ir.NamedIR[AggExprT_co]:
     """Helper constructor for single-column, non parametric aggregations."""
-    return ir.NamedIR(expr=agg(expr=ir.Column(name=name)), name=name)
+    return ir.NamedIR(name, agg(expr=ir.Column(name=name)))
 
 
 SUPPORTED_AGG: Mapping[type[agg.AggExpr], acero.Aggregation] = {

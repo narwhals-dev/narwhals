@@ -79,7 +79,7 @@ class ResolvedPlan(_BasePlan[_Fwd], _root=True):
 
     def rename(self, mapping: Mapping[str, str]) -> Select:  # pragma: no cover
         schema = self.schema
-        exprs = tuple(ir.named_ir(mapping.get(old, old), ir.col(old)) for old in schema)
+        exprs = tuple(ir.NamedIR(mapping.get(old, old), ir.col(old)) for old in schema)
         output_schema = freeze_schema(zip((e.name for e in exprs), schema.values()))
         return Select(input=self, exprs=exprs, output_schema=output_schema)
 

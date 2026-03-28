@@ -6,7 +6,7 @@ from itertools import chain
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Protocol, TypeVar, final, overload
 
-from narwhals._plan._expr_ir import named_ir
+from narwhals._plan._expr_ir import NamedIR
 from narwhals._plan._immutable import Immutable
 from narwhals._plan._version import into_version
 from narwhals._plan.exceptions import column_not_found_error
@@ -23,7 +23,6 @@ if TYPE_CHECKING:
 
     from typing_extensions import Never, TypeAlias, TypeIs
 
-    from narwhals._plan.expressions import NamedIR
     from narwhals._plan.typing import Seq
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
@@ -273,7 +272,7 @@ class FrozenSchema(Immutable):
         from narwhals._plan.expressions import col
 
         named = {e.name: e for e in exprs}
-        it = (named.pop(name, None) or named_ir(name, col(name)) for name in self)  # type: ignore[arg-type]
+        it = (named.pop(name, None) or NamedIR(name, col(name)) for name in self)  # type: ignore[arg-type]
         return tuple(chain(it, named.values()))
 
     def contains_all(self, names: Iterable[Iterator[str]], /) -> bool:

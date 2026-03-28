@@ -10,7 +10,7 @@ from narwhals import _plan as nwp
 from narwhals._plan import expressions as ir, selectors as ncs
 from narwhals._plan._dispatch import DispatcherOptions, get_dispatch_name
 from narwhals._plan._nodes import node
-from tests.plan.utils import DataFrame, assert_equal_data, named_ir, re_compile
+from tests.plan.utils import DataFrame, assert_equal_data, re_compile
 
 if TYPE_CHECKING:
     from tests.conftest import Data
@@ -31,8 +31,8 @@ def test_dispatch(
 ) -> None:
     df = dataframe(data)
     implemented_full = nwp.col("a").is_null()
-    forgot_to_expand = (named_ir("howdy", nwp.nth(3, 4).first()),)
-    aliased_after_expand: tuple[ir.NamedIR] = (named_ir("b", ir.col("a").alias("b")),)
+    forgot_to_expand = (ir.NamedIR("howdy", nwp.nth(3, 4).first()._ir),)
+    aliased_after_expand: tuple[ir.NamedIR] = (ir.NamedIR("b", ir.col("a").alias("b")),)
     dataframe.xfail_polars_select(request)
     assert_equal_data(df.select(implemented_full), {"a": [False, True, False]})
 

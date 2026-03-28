@@ -44,7 +44,7 @@ from typing import TYPE_CHECKING, Generic, Literal, final
 
 from narwhals._plan._dispatch import Dispatcher, DispatcherOptions
 from narwhals._plan._dtype import IntoResolveDType, ResolveDType
-from narwhals._plan._immutable import Immutable
+from narwhals._plan._immutable import _OBJ_SETATTR, Immutable
 from narwhals._plan._meta import ExprIRMeta
 from narwhals._plan._nodes import ExprTraverser
 from narwhals._plan.typing import ExprIRT_co
@@ -66,7 +66,7 @@ if TYPE_CHECKING:
     from narwhals._plan.meta import MetaNamespace
     from narwhals._plan.schema import FrozenSchema
     from narwhals._plan.selectors import Selector
-    from narwhals._plan.typing import ExprIRT, Ignored, MapIR
+    from narwhals._plan.typing import Ignored, MapIR
     from narwhals.typing import IntoDType
 
 
@@ -706,6 +706,10 @@ class NamedIR(Immutable, Generic[ExprIRT_co]):
     'b_cum_sum'
     """
 
+    def __init__(self, name: str, expr: ExprIRT_co) -> None:
+        _OBJ_SETATTR(self, "name", name)
+        _OBJ_SETATTR(self, "expr", expr)
+
     def map_ir(self, function: MapIR, /) -> NamedIR[ExprIR]:
         """Transform the wrapped expression by applying a function to all nodes in it's graph.
 
@@ -728,6 +732,16 @@ class NamedIR(Immutable, Generic[ExprIRT_co]):
         [idempotent]: https://en.wikipedia.org/wiki/Idempotence#Computer_science_meaning
         """
         return NamedIR.__replace__(self, expr=function(self.expr.map_ir(function)))
+
+    def __replace__(
+        self, *, expr: ExprIR | None = None, name: str | None = None
+    ) -> NamedIR[ExprIR]:
+        name = self.name if name is None else name
+        if (changed := expr) and changed != self.expr:
+            return NamedIR(name, changed)
+        if name != self.name:
+            return NamedIR(name, self.expr)
+        return self
 
     def __repr__(self) -> str:
         return f"{self.name}={self.expr!r}"
@@ -760,20 +774,3 @@ class NamedIR(Immutable, Generic[ExprIRT_co]):
         [#3396]: https://github.com/narwhals-dev/narwhals/pull/3396
         """
         return self.expr.resolve_dtype(schema)
-
-
-def named_ir(name: str, expr: ExprIRT, /) -> NamedIR[ExprIRT]:
-    """Positional-only `NamedIR` constructor.
-
-    Arguments:
-        name: The resolved output column name.
-        expr: The expanded expression.
-
-    Examples:
-        >>> from narwhals._plan.expressions import col
-        >>> short = named_ir("b", col("a"))
-        >>> longer = NamedIR(name="b", expr=col("a"))
-        >>> short == longer
-        True
-    """
-    return NamedIR(expr=expr, name=name)

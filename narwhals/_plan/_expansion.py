@@ -236,7 +236,7 @@ class Expander:
                 name = replaced.meta.output_name()
                 target = remove_alias(replaced)
             output_names.append(name)
-            named_irs.append(ir.named_ir(name, target))
+            named_irs.append(ir.NamedIR(name, target))
             root_names.append(meta.iter_root_names(e))
 
         # NOTE: On failure, we repeat the expansion so the happy path doesn't need to collect as much
