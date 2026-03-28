@@ -81,8 +81,16 @@ class Lit(LiteralExpr[PythonLiteralT_co], dispatch=namespaced()):
         return True
 
     def __repr__(self) -> str:
-        v = self.value
-        return f"lit({'null' if v is None else f'{type(v).__name__}: {v!s}'})"
+        v: Any = self.value
+        if v is None:
+            return "lit(null)"
+        name = type(v).__name__
+        if self.dtype.is_nested():
+            if isinstance(v, dict):
+                name = f"struct[{len(v)}]"
+            elif isinstance(v, (tuple)):
+                name, v = "list", list(v)
+        return f"lit({name}: {v})"
 
     @property
     def __immutable_values__(self) -> Iterator[Any]:

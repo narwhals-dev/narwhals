@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 
     from _pytest.fixtures import TopRequest  # `pytest.FixtureRequest.node` returns `Any`
 
-    from narwhals._plan.typing import ColumnNameOrSelector, OneOrIterable
+    from narwhals._plan.typing import ColumnNameOrSelector, IntoExpr, OneOrIterable
     from narwhals.typing import EagerAllowed, PythonLiteral
     from tests.conftest import Data
 
@@ -380,6 +380,27 @@ def test_select(
 ) -> None:
     dataframe.xfail_polars_select(request)
     result = dataframe(data_small).select(expr)
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("into_exprs", "expected"),
+    [
+        (("one", "two"), {"one": ["A", "B", "A"], "two": [1, 2, 3]}),
+        ((["one", "two"],), {"one": ["A", "B", "A"], "two": [1, 2, 3]}),
+        (
+            ("one", ["two"]),
+            {"one": ["A", "B", "A"], "literal": [["two"], ["two"], ["two"]]},
+        ),
+        ((["one"], "two"), {"literal": [["one"], ["one"], ["one"]], "two": [1, 2, 3]}),
+    ],
+    ids=["str-str", "list[str]", "str-list[str]", "list[str]-str"],
+)
+def test_select_positional_iterable(
+    dataframe: DataFrame, into_exprs: Iterable[IntoExpr], expected: Data
+) -> None:
+    data = {"one": ["A", "B", "A"], "two": [1, 2, 3], "three": [4, 5, 6]}
+    result = dataframe(data).select(*into_exprs)
     assert_equal_data(result, expected)
 
 

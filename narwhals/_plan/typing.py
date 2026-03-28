@@ -148,9 +148,7 @@ Udf: TypeAlias = "Callable[[t.Any], t.Any]"
 """Placeholder for `map_batches(function=...)`."""
 
 IntoExprColumn: TypeAlias = "Expr | Series[t.Any] | str"
-IntoExpr: TypeAlias = "NonNestedLiteral | IntoExprColumn"
-"""TODO @dangotbanned: Update this alias to include nested data types (131 refs, be careful!)"""
-
+IntoExpr: TypeAlias = "PythonLiteral | IntoExprColumn"
 ColumnNameOrSelector: TypeAlias = "str | Selector"
 OneOrIterable: TypeAlias = "T | Iterable[T]"
 OneOrSeq: TypeAlias = t.Union[T, Seq[T]]

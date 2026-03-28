@@ -85,4 +85,4 @@ def test_list_contains_nested() -> None:
     item = [3, 2, 1]
     expected = [True, False, False]
     df = dataframe(data).select(a.cast(nw.List(nw.List(nw.Int32))))
-    assert_equal_data(df.select(a.list.contains(item)), {"a": expected})  # type: ignore[arg-type]
+    assert_equal_data(df.select(a.list.contains(item)), {"a": expected})

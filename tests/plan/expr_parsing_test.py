@@ -20,7 +20,6 @@ from narwhals._utils import Implementation
 from narwhals.dtypes import DType, Int64, List, Struct
 from narwhals.exceptions import (
     ComputeError,
-    InvalidIntoExprError,
     InvalidOperationError,
     InvalidOperationError as LengthChangingExprError,
     MultiOutputExpressionError,
@@ -413,22 +412,13 @@ def test_filter_full_spellings() -> None:
         ([nwp.col("b").is_last_distinct()], {}, nullcontext()),
         ((), {"b": 10}, nullcontext()),
         ((), {"b": nwp.lit(10)}, nullcontext()),
-        (
-            (),
-            {},
-            pytest.raises(
-                TypeError, match=re.compile(r"at least one predicate", re.IGNORECASE)
-            ),
-        ),
+        ((), {}, pytest.raises(TypeError, match=re_compile(r"at least one predicate"))),
         ((nwp.col("b") > 1, nwp.col("c").is_null()), {}, nullcontext()),
         (
             ([nwp.col("b") > 1], nwp.col("c").is_null()),
             {},
             pytest.raises(
-                InvalidIntoExprError,
-                match=re.compile(
-                    r"both iterable.+positional.+not supported", re.IGNORECASE
-                ),
+                TypeError, match=re_compile(r"Expr.+ is not supported in `nw.lit`")
             ),
         ),
     ],
@@ -542,6 +532,8 @@ def test_lit_nested_empty_invalid(value: PythonLiteral) -> None:
     msg = "Cannot infer dtype for empty nested structure. Please provide an explicit dtype parameter."
     with pytest.raises(TypeError, match=msg):
         nwp.lit(value)
+    with pytest.raises(TypeError, match=msg):
+        nwp.col("a").sort_by(value, nwp.lit(1))  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize(
@@ -602,7 +594,7 @@ XFAIL_SORT_BY_PREDICATE = pytest.mark.xfail(
         (1, ()),
         (nwp.len(), ()),
         (nwp.col("b").first(), ()),
-        ((), [nwp.lit(1)]),
+        (nwp.lit(1), []),
         ([nwp.len()], ()),
         ([nwp.col("b"), ncs.last().kurtosis()], ()),
         (["c", "d", ncs.last(), nwp.col("b").mode(keep="any")], ()),

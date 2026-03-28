@@ -15,15 +15,15 @@ to freely import from here.
 # ruff: noqa: A002
 from __future__ import annotations
 
+import sys
 from collections import deque
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Iterable
 from functools import cache, lru_cache
 from itertools import chain
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, TypeVar
 
 import narwhals._plan.expressions as ir
 import narwhals._plan.expressions.selectors as s_ir
-from narwhals._plan._guards import is_iterable_reject
 from narwhals._plan.exceptions import (
     at_least_one_error,
     invalid_into_expr_error,
@@ -35,7 +35,6 @@ from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
-    from typing import Any, TypeVar
 
     from typing_extensions import TypeAlias, TypeIs
 
@@ -50,26 +49,41 @@ if TYPE_CHECKING:
         PartialSeries,
         Seq,
     )
+    from narwhals._typing_compat import deprecated
 
-    T = TypeVar("T")
+
+else:  # pragma: no cover  # noqa: PLR5501
+    if sys.version_info >= (3, 13):
+        from narwhals._typing_compat import deprecated
+    else:
+
+        def deprecated(_: str, /, **__: Any) -> Any:
+            def wrapper(func: Any, /) -> Any:
+                return func
+
+            return wrapper
+
 
 __all__ = [
     "into_expr_ir",
-    "into_iter_expr_ir",
+    "into_iter_expr_ir",  # stable
     "into_iter_selector_ir",  # stable
     "into_selector_ir",  # stable
-    "into_seq_of_expr_ir",
+    "into_seq_of_expr_ir",  # DEPRECATED (12 files)
     "predicates_constraints_into_expr_ir",  # functionality stable, name? eh
-    "sort_by_into_seq_of_expr_ir",
+    "sort_by_into_seq_of_expr_ir",  # needs an invasive fix
 ]
 
-# TODO @dangotbanned: Simplify the `list` special-casing, now that it is supported
+T = TypeVar("T")
 Incomplete: TypeAlias = "Any"
-"""Artifact from previous `lit(list)` rejection"""
+"""Marks unsound `*exprs: OneOrIterable[IntoExpr]` unpacking.
+
+Some functions use the `expr: OneOrIterable[IntoExpr], *more: IntoExpr` pattern, but not all.
+"""
 
 
 # TODO @dangotbanned: `str_as_lit` maybe stays, but could do some inheritance instead?
-def into_expr_ir(input: IntoExpr | list[Any], *, str_as_lit: bool = False) -> ExprIR:
+def into_expr_ir(input: IntoExpr | dict[Any, Any], *, str_as_lit: bool = False) -> ExprIR:
     """Parse a single input into an expression.
 
     Arguments:
@@ -84,6 +98,7 @@ def into_expr_ir(input: IntoExpr | list[Any], *, str_as_lit: bool = False) -> Ex
     return _import_lit()(input)._ir
 
 
+@deprecated("Use `into_iter_expr_ir` instead", category=None)
 def into_seq_of_expr_ir(
     first_input: OneOrIterable[IntoExpr] = (),
     *more_inputs: IntoExpr | Incomplete,
@@ -94,8 +109,8 @@ def into_seq_of_expr_ir(
 
 
 def predicates_constraints_into_expr_ir(
-    first_predicate: OneOrIterable[IntoExprColumn] | list[bool] = (),
-    *more_predicates: IntoExprColumn | list[bool] | Incomplete,
+    first_predicate: OneOrIterable[IntoExpr] = (),
+    *more_predicates: IntoExpr | Incomplete,
     **constraints: IntoExpr,
 ) -> ExprIR:
     """Parse variadic predicates and constraints into an expression.
@@ -107,8 +122,8 @@ def predicates_constraints_into_expr_ir(
 
 
 def df_filter_predicates_constraints_into_expr_ir(
-    first_predicate: OneOrIterable[IntoExprColumn] | list[bool] = (),
-    *more_predicates: IntoExprColumn | list[bool] | Incomplete,
+    first_predicate: OneOrIterable[IntoExpr] = (),
+    *more_predicates: IntoExpr | Incomplete,
     _into_series: PartialSeries,
     **constraints: IntoExpr,
 ) -> ExprIR:
@@ -152,27 +167,60 @@ def sort_by_into_seq_of_expr_ir(
     raise at_least_one_error("sort_by")
 
 
-# TODO @dangotbanned: Too complicated!
-# Try simplifying, based on the related bits in `_df_filter_into_iter_expr_ir`
 def into_iter_expr_ir(
-    first_input: OneOrIterable[IntoExpr],
-    *more_inputs: IntoExpr | list[Any],
-    **named_inputs: IntoExpr,
+    first_input: OneOrIterable[IntoExpr], *more_inputs: IntoExpr, **named_inputs: IntoExpr
 ) -> Iterator[ExprIR]:
-    # 1 - Skip `first_input` entirely
-    # 2 - Raise if we got `[...], [...]`
-    # 3 - Loop over `[...]`
-    # 4 - Just a single input
-    if not _is_empty_sequence(first_input):
-        # NOTE: These need to be separated to introduce an intersection type
-        # Otherwise, `str | bytes` always passes through typing
-        if _is_iterable(first_input) and not is_iterable_reject(first_input):
-            if more_inputs:
-                raise invalid_into_expr_error(first_input, more_inputs, named_inputs)
-            for into in first_input:
-                yield into_expr_ir(into)
-        else:
-            yield into_expr_ir(first_input)
+    """Yield variadic inputs parsed into expressions.
+
+    Arguments:
+        first_input: Input(s) to be parsed as expressions.
+        *more_inputs: Additional inputs to parse.
+        **named_inputs: Keyword-arguments from one of `select`, `with_columns`, `group_by`.
+            The columns will be renamed to the keyword used.
+
+    *Most* cases are covered by these rules, see examples for special-cases:
+
+        # IntoExpr: TypeAlias = Expr | str | Series | PythonLiteral
+        Expr                   -> ExprIR
+        str                    -> Column
+        Series                 -> LitSeries
+        PythonLiteral          -> Lit
+
+    Examples:
+        `first_input` is separate as how it is parsed *depends on* `more_inputs`.
+
+        >>> def parse(*args, **kwds):
+        ...     return list(into_iter_expr_ir(*args, **kwds))
+
+        The general case is that we support these as all meaning, *select those two columns*:
+        >>> parse("one", "two")
+        [col('one'), col('two')]
+        >>> parse(["one", "two"])
+        [col('one'), col('two')]
+        >>> parse("one", "two")
+        [col('one'), col('two')]
+        >>> parse(iter(("one", "two")))
+        [col('one'), col('two')]
+
+        Whereas `list | tuple` will otherwise be considered literals:
+        >>> parse("one", ["two"])
+        [col('one'), lit(list: ['two'])]
+        >>> parse(["one"], "two")
+        [lit(list: ['one']), col('two')]
+        >>> parse(["one"], ("two",))
+        [lit(list: ['one']), lit(list: ['two'])]
+
+        *This behavior matches `polars`*
+    """
+    first = first_input
+    always_expr_or_lit = (_import_series(), _import_expr(), str, bytes, dict)
+    if (isinstance(first, always_expr_or_lit) or not _is_iterable(first)) or (
+        more_inputs and isinstance(first, (list, tuple))
+    ):
+        yield into_expr_ir(first)
+    else:
+        for into in first:
+            yield into_expr_ir(into)
     for into in more_inputs:
         yield into_expr_ir(into)
     for name, input in named_inputs.items():
@@ -333,10 +381,6 @@ def _is_iterable(obj: Iterable[T] | Any) -> TypeIs[Iterable[T]]:
     if _type_cached_is_iterable_is_native(tp):  # type: ignore[arg-type]
         raise is_iterable_error(obj)
     return _type_cached_is_iterable(tp)  # type: ignore[arg-type]
-
-
-def _is_empty_sequence(obj: Any) -> bool:
-    return isinstance(obj, Sequence) and not obj
 
 
 @lru_cache(maxsize=128)
