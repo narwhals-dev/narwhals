@@ -641,26 +641,65 @@ class SelectorIR(ExprIR, dispatch="no_dispatch"):
         return reduce(Or().to_binary_selector, others, self)
 
 
-# TODO @dangotbanned: Class-level doc
-# Turn notes into something literate
+# TODO @dangotbanned: Final polish on class-level doc
 @final
 class NamedIR(Immutable, Generic[ExprIRT_co]):
-    """Post-expansion representation of an expression.
+    """A post-expansion representation of an expression.
 
-    ## Notes
-    - Each *top-level* `ExprIR` expands into one or more `NamedIR[ExprIR]`
-      - E.g `select(*top_level_exprs)`
-    - Within that, each `ExprIR` expands into one or more `ExprIR`
-    - Each `NamedIR` is
-      - A *single* output column name
-      - An `ExprIR` with all of the following expanded, resolved and removed:
-        - `SelectorIR`, `Alias`, `RenameAlias`, `KeepName`
+    Each *top-level* `ExprIR` goes on a journey of [expression expansion].
 
-    ### Questions to consider
-    - What is [expression expansion]?
-    - What is resolving? (names)
-    - What do we need to do this? (schema)
+    That begins in a [projection context], like `select`:
 
+        df.select(nw.col("weight", "height").mean().name.prefix("avg_"))
+
+    `NamedIR` *wraps* a `ExprIR` as a promise we've resolved it against a schema and:
+    1. Converted selectors into column references
+    2. Checked all column references exist in the schema
+    3. Finished any renaming operations without producing duplicates
+
+    Each *expanded* expression produces one or more `NamedIR[ExprIR]`s, stripped of all:
+
+        SelectorIR
+        Alias
+        RenameAlias
+        KeepName
+
+    And in their place, we get a *single* output column name, bound to the schema we expanded with.
+
+    ## Examples
+    >>> import narwhals as nw
+    >>> import narwhals._plan as nwp
+    >>> import narwhals._plan.selectors as ncs
+    >>> from tests.plan.utils import Frame
+    >>> schema = {
+    ...     "name": nw.String(),
+    ...     "birthdate": nw.String(),
+    ...     "weight": nw.Float64(),
+    ...     "height": nw.String(),
+    ... }
+    >>> df = Frame.from_mapping(schema)
+
+    Suppose we have this expression:
+    >>> expr = (
+    ...     nwp.col("weight", "height")
+    ...     .mean()
+    ...     .name.prefix("avg_")
+    ...     .over(ncs.matches(r"date").str.slice(0, 3))
+    ... )
+
+    Before expansion we have 1 `ExprIR` with:
+    - a root selector
+    - a renaming operation
+    - another selector inside a window
+    >>> expr._ir
+    ncs.by_name('weight', 'height', require_all=True).mean().name.prefix('avg_').over([ncs.matches('date').str.slice()])
+
+    After expansion, its `col`(s) all the way down, multiple outputs + the names are ready too:
+    >>> df.project(expr)  # doctest: +NORMALIZE_WHITESPACE
+    (avg_weight=col('weight').mean().over([col('birthdate').str.slice()]),
+     avg_height=col('height').mean().over([col('birthdate').str.slice()]))
+
+    [projection context]: https://docs.pola.rs/user-guide/concepts/expressions-and-contexts/#contexts
     [expression expansion]: https://docs.pola.rs/user-guide/expressions/expression-expansion/
     """
 
