@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import datetime as dt
+from copy import copy, deepcopy
 from typing import TYPE_CHECKING
 
 import pytest
@@ -8,13 +10,17 @@ import narwhals as nw
 from narwhals._plan.schema import FrozenSchema, freeze_schema
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from tests.plan.utils import DataFrame
 
 
-def test_schema(dataframe: DataFrame) -> None:
+@pytest.mark.parametrize("into_schema", [freeze_schema, FrozenSchema])
+def test_schema(into_schema: Callable[..., FrozenSchema]) -> None:
+
     mapping = {"a": nw.Int64(), "b": nw.String()}
     schema = nw.Schema(mapping)
-    frozen_schema = freeze_schema(mapping)
+    frozen_schema = into_schema(mapping)
 
     assert frozen_schema.keys() == schema.keys()
     assert tuple(frozen_schema.values()) == tuple(schema.values())
@@ -27,22 +33,18 @@ def test_schema(dataframe: DataFrame) -> None:
     assert frozen_schema != mapping
     assert frozen_schema != schema
 
-    assert frozen_schema == freeze_schema(mapping)
-    assert frozen_schema == freeze_schema(**mapping)
-    assert frozen_schema == freeze_schema(a=nw.Int64(), b=nw.String())
-    assert frozen_schema == freeze_schema(schema)
-    assert frozen_schema == freeze_schema(frozen_schema)
-    assert frozen_schema == freeze_schema(frozen_schema.items())
+    assert frozen_schema == into_schema(mapping)
+    assert frozen_schema == into_schema(**mapping)
+    assert frozen_schema == into_schema(a=nw.Int64(), b=nw.String())
+    assert frozen_schema == into_schema(schema)
+    assert frozen_schema == into_schema(frozen_schema)
+    assert frozen_schema == into_schema(frozen_schema.items())
 
     # NOTE: Using `**` unpacking, despite not inheriting from `Mapping` or `dict`
-    assert frozen_schema == freeze_schema(**frozen_schema)
-
-    # NOTE: Using `HasSchema`
-    df = dataframe({"a": [1, 2, 3], "b": ["c", "d", "e"]})
-    assert frozen_schema == freeze_schema(df)
+    assert frozen_schema == into_schema(**frozen_schema)
 
     # NOTE: In case this all looks *too good* to be true
-    assert frozen_schema != freeze_schema(**mapping, c=nw.Float64())
+    assert frozen_schema != into_schema(**mapping, c=nw.Float64())
 
     assert frozen_schema["a"] == schema["a"]
 
@@ -58,14 +60,53 @@ def test_schema(dataframe: DataFrame) -> None:
         class MutableSchema(FrozenSchema): ...  # type: ignore[misc]
 
 
-def test_schema_hash() -> None:
+@pytest.mark.parametrize("into_schema", [freeze_schema, FrozenSchema])
+def test_from_has_schema(
+    dataframe: DataFrame, into_schema: Callable[..., FrozenSchema]
+) -> None:
+    data = {"a": [{"a": dt.datetime(2001, 1, 1)}], "b": [dt.time(1, 1, 1)]}
+    expected = into_schema({"a": nw.Struct({"a": nw.Datetime()}), "b": nw.Time()})
+    df = dataframe(data)
+    assert expected == into_schema(df)
+    assert expected is into_schema(df)
+    assert expected is into_schema(dataframe(deepcopy(data)))
+
+
+@pytest.mark.parametrize("into_schema", [freeze_schema, FrozenSchema])
+def test_schema_hash(into_schema: Callable[..., FrozenSchema]) -> None:
     mapping = {
         "a": nw.List(nw.Float32()),
         "b": nw.Struct({"a": nw.String(), "c": nw.Boolean()}),
     }
-    schema_1 = freeze_schema(mapping)
-    schema_2 = freeze_schema(**mapping)
+    schema_1 = into_schema(mapping)
+    schema_2 = into_schema(**mapping)
 
     hash_1 = hash(schema_1)
     hash_2 = hash(schema_2)
     assert hash_1 == hash_2
+
+
+@pytest.mark.parametrize("function", [copy, deepcopy], ids=["copy", "deepcopy"])
+def test_schema_copy(function: Callable[[FrozenSchema], FrozenSchema]) -> None:
+    # See https://github.com/narwhals-dev/narwhals/blob/41d8c8e06240b8cdfbfb85082ce8a73bdc5fae12/tests/plan/immutable_test.py#L129-L136
+    schema = FrozenSchema({"a": nw.Date(), "b": nw.String(), "c": nw.Binary()})
+    clone = function(schema)
+    assert clone == schema
+    assert clone is schema
+
+
+def test_schema_setattr_delattr__() -> None:
+    mapping = {"a": nw.Date(), "b": nw.String(), "c": nw.Binary()}
+    schema = FrozenSchema(mapping)
+    with pytest.raises(AttributeError, match=r"FrozenSchema.+immutable.+'_mapping'"):
+        schema._mapping = mapping  # type: ignore[assignment]
+    with pytest.raises(
+        AttributeError, match=r"'FrozenSchema' object has no attribute 'hey_i_dont_exist'"
+    ):
+        schema.hey_i_dont_exist = 1  # type: ignore[assignment]
+    with pytest.raises(AttributeError, match=r"FrozenSchema.+immutable.+'_mapping'"):
+        del schema._mapping
+    with pytest.raises(
+        AttributeError, match=r"'FrozenSchema' object has no attribute 'me_either'"
+    ):
+        del schema.me_either  # type: ignore[attr-defined]

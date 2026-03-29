@@ -189,11 +189,10 @@ def _collect_immutable_descendants() -> list[type[Immutable]]:
         _function,
         expressions,
         options,
-        schema,
         when_then,
     )
 
-    _ = expressions, schema, options, _expansion, _expr_ir, _function, when_then
+    _ = expressions, options, _expansion, _expr_ir, _function, when_then
     return sorted(set(_iter_descendants(Immutable)), key=repr)
 
 
