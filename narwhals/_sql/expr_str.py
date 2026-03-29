@@ -26,7 +26,7 @@ class SQLExprStringNamespace(
     ) -> NativeExpr:
         return self.compliant._when(condition, value, otherwise)  # type: ignore[no-any-return]
 
-    def contains(self, pattern: str | SQLExprT, *, literal: bool) -> SQLExprT:
+    def contains(self, pattern: SQLExprT, *, literal: bool) -> SQLExprT:
 
         def func(expr: NativeExpr, pattern: NativeExpr) -> NativeExpr:
             func_name = "contains" if literal else "regexp_matches"

@@ -45,9 +45,7 @@ class PandasLikeSeriesStringNamespace(
     def ends_with(self, suffix: str) -> PandasLikeSeries:
         return self.with_native(self.native.str.endswith(suffix))
 
-    def contains(
-        self, pattern: str | PandasLikeSeries, *, literal: bool
-    ) -> PandasLikeSeries:
+    def contains(self, pattern: PandasLikeSeries, *, literal: bool) -> PandasLikeSeries:
         _, pattern_native = align_and_extract_native(self.compliant, pattern)
         if not isinstance(pattern_native, str):
             msg = f"`.str.contains` only supports str pattern values for {self.compliant._implementation} backend"

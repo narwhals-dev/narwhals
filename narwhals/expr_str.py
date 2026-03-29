@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Generic, TypeVar
 
 from narwhals._expression_parsing import ExprKind, ExprNode
-from narwhals._utils import qualified_type_name
 
 if TYPE_CHECKING:
     from narwhals.expr import Expr
@@ -219,25 +218,15 @@ class ExprStringNamespace(Generic[ExprT]):
             default_match: [[true,false,true]]
             case_insensitive_match: [[true,false,true]]
         """
-        from narwhals.expr import Expr
-
-        if isinstance(pattern, str):
-            node = ExprNode(
-                ExprKind.ELEMENTWISE, "str.contains", pattern=pattern, literal=literal
-            )
-        elif isinstance(pattern, Expr):
-            node = ExprNode(
+        return self._expr._append_node(
+            ExprNode(
                 ExprKind.ELEMENTWISE,
                 "str.contains",
                 exprs=(pattern,),
                 literal=literal,
                 str_as_lit=True,
             )
-        else:  # pragma: no cover
-            msg = f"pattern should be either a str or an Expr. Found {qualified_type_name(pattern)}"
-            raise TypeError(msg)
-
-        return self._expr._append_node(node)
+        )
 
     def slice(self, offset: int, length: int | None = None) -> ExprT:
         r"""Create subslices of the string values of an expression.
