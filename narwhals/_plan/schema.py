@@ -58,12 +58,19 @@ def set_flatten(iterable: Iterable[Iterator[T]], /) -> set[T]:
     return {name for sub_it in iterable for name in sub_it}
 
 
+if TYPE_CHECKING:
+    # NOTE: Avoids adding `ABCMeta`,
+    # while still getting a type checker to understand it as a `Mapping`
+    # https://github.com/python/cpython/issues/92810
+    _BaseSchema = Mapping[str, DType]
+else:
+    _BaseSchema = object
+
+
 @final
-class FrozenSchema:
+class FrozenSchema(_BaseSchema):
     """A cache-friendly - **internal** - extension to `nw.Schema`.
 
-    - Not a subclass of `dict`, `Mapping`
-      - But implements *enough* to look like it
     - Accepts **either** a single positional-only argument or **kwds
     - Has some extra methods inspired by [`polars-schema::schema::Schema`]
 
@@ -78,23 +85,16 @@ class FrozenSchema:
         >>> schema
         FrozenSchema({'a': Int64, 'b': String})
 
-        A `FrozenSchema` can be used *almost* anywhere a `Mapping` is expected:
+        A `FrozenSchema` can be used anywhere a `Mapping` is expected:
+        >>> from collections.abc import Mapping
         >>> nw.Schema(mapping) == nw.Schema(schema)
         True
         >>> mapping == dict(schema)
         True
         >>> dict(**schema)
         {'a': Int64, 'b': String}
-
-        <!-- TODO @dangotbanned: Possibly fixable now that `Immutable` isn't involved
-        - Runtime needs to do `Mapping.register(FrozenSchema)`
-        - Type checking may work with some trickery using `object` as the real base class
-        -->
-
-        *Provided* the duck typing is respected:
-        >>> from collections.abc import Mapping
-        >>> isinstance(schema, (Mapping, dict))
-        False
+        >>> isinstance(schema, Mapping)
+        True
 
         Calls to `FrozenSchema` are cached:
         >>> schema is FrozenSchema(mapping)
@@ -373,6 +373,10 @@ class FrozenSchema:
 
     def __len__(self) -> int:
         return self._mapping.__len__()
+
+
+# NOTE: https://github.com/microsoft/pylance-release/issues/6316#issuecomment-4150641522
+Mapping.register(FrozenSchema)  # pyright: ignore[reportAttributeAccessIssue]
 
 
 class HasSchema(Protocol):

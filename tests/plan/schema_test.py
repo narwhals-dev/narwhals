@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime as dt
+from collections.abc import Mapping
 from copy import copy, deepcopy
 from typing import TYPE_CHECKING
 
@@ -8,6 +9,7 @@ import pytest
 
 import narwhals as nw
 from narwhals._plan.schema import FrozenSchema
+from narwhals._typing_compat import assert_never
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -15,6 +17,7 @@ if TYPE_CHECKING:
     from tests.plan.utils import DataFrame
 
 
+# TODO @dangotbanned: Split this up into at least 3 tests
 def test_schema() -> None:
     mapping = {"a": nw.Int64(), "b": nw.String()}
     schema = nw.Schema(mapping)
@@ -23,8 +26,7 @@ def test_schema() -> None:
     assert frozen_schema.keys() == schema.keys()
     assert tuple(frozen_schema.values()) == tuple(schema.values())
 
-    # NOTE: Would type-check if `Schema.__init__` didn't make liskov unhappy
-    assert schema == nw.Schema(frozen_schema)  # type: ignore[arg-type]
+    assert schema == nw.Schema(frozen_schema)
     assert mapping == dict(frozen_schema)
 
     # NOTE: This is an internal version of `Schema`, but is not interchangeable
@@ -56,6 +58,12 @@ def test_schema() -> None:
     with pytest.raises(TypeError, match="Cannot subclass 'FrozenSchema'"):
 
         class MutableSchema(FrozenSchema): ...  # type: ignore[misc]
+
+    # Make sure typing check works first
+    if not isinstance(frozen_schema, Mapping):
+        assert_never(frozen_schema)
+    assert isinstance(frozen_schema, Mapping)
+    assert Mapping not in FrozenSchema.__bases__
 
 
 def test_from_has_schema(dataframe: DataFrame) -> None:
