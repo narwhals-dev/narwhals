@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals as nw
-from narwhals._plan.schema import FrozenSchema, freeze_schema
+from narwhals._plan.schema import FrozenSchema
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -15,12 +15,10 @@ if TYPE_CHECKING:
     from tests.plan.utils import DataFrame
 
 
-@pytest.mark.parametrize("into_schema", [freeze_schema, FrozenSchema])
-def test_schema(into_schema: Callable[..., FrozenSchema]) -> None:
-
+def test_schema() -> None:
     mapping = {"a": nw.Int64(), "b": nw.String()}
     schema = nw.Schema(mapping)
-    frozen_schema = into_schema(mapping)
+    frozen_schema = FrozenSchema(mapping)
 
     assert frozen_schema.keys() == schema.keys()
     assert tuple(frozen_schema.values()) == tuple(schema.values())
@@ -33,18 +31,18 @@ def test_schema(into_schema: Callable[..., FrozenSchema]) -> None:
     assert frozen_schema != mapping
     assert frozen_schema != schema
 
-    assert frozen_schema == into_schema(mapping)
-    assert frozen_schema == into_schema(**mapping)
-    assert frozen_schema == into_schema(a=nw.Int64(), b=nw.String())
-    assert frozen_schema == into_schema(schema)
-    assert frozen_schema == into_schema(frozen_schema)
-    assert frozen_schema == into_schema(frozen_schema.items())
+    assert frozen_schema == FrozenSchema(mapping)
+    assert frozen_schema == FrozenSchema(**mapping)
+    assert frozen_schema == FrozenSchema(a=nw.Int64(), b=nw.String())
+    assert frozen_schema == FrozenSchema(schema)
+    assert frozen_schema == FrozenSchema(frozen_schema)
+    assert frozen_schema == FrozenSchema(frozen_schema.items())
 
     # NOTE: Using `**` unpacking, despite not inheriting from `Mapping` or `dict`
-    assert frozen_schema == into_schema(**frozen_schema)
+    assert frozen_schema == FrozenSchema(**frozen_schema)
 
     # NOTE: In case this all looks *too good* to be true
-    assert frozen_schema != into_schema(**mapping, c=nw.Float64())
+    assert frozen_schema != FrozenSchema(**mapping, c=nw.Float64())
 
     assert frozen_schema["a"] == schema["a"]
 
@@ -60,26 +58,22 @@ def test_schema(into_schema: Callable[..., FrozenSchema]) -> None:
         class MutableSchema(FrozenSchema): ...  # type: ignore[misc]
 
 
-@pytest.mark.parametrize("into_schema", [freeze_schema, FrozenSchema])
-def test_from_has_schema(
-    dataframe: DataFrame, into_schema: Callable[..., FrozenSchema]
-) -> None:
+def test_from_has_schema(dataframe: DataFrame) -> None:
     data = {"a": [{"a": dt.datetime(2001, 1, 1)}], "b": [dt.time(1, 1, 1)]}
-    expected = into_schema({"a": nw.Struct({"a": nw.Datetime()}), "b": nw.Time()})
+    expected = FrozenSchema({"a": nw.Struct({"a": nw.Datetime()}), "b": nw.Time()})
     df = dataframe(data)
-    assert expected == into_schema(df)
-    assert expected is into_schema(df)
-    assert expected is into_schema(dataframe(deepcopy(data)))
+    assert expected == FrozenSchema(df)
+    assert expected is FrozenSchema(df)
+    assert expected is FrozenSchema(dataframe(deepcopy(data)))
 
 
-@pytest.mark.parametrize("into_schema", [freeze_schema, FrozenSchema])
-def test_schema_hash(into_schema: Callable[..., FrozenSchema]) -> None:
+def test_schema_hash() -> None:
     mapping = {
         "a": nw.List(nw.Float32()),
         "b": nw.Struct({"a": nw.String(), "c": nw.Boolean()}),
     }
-    schema_1 = into_schema(mapping)
-    schema_2 = into_schema(**mapping)
+    schema_1 = FrozenSchema(mapping)
+    schema_2 = FrozenSchema(**mapping)
 
     hash_1 = hash(schema_1)
     hash_2 = hash(schema_2)

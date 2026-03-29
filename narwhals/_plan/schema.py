@@ -173,7 +173,7 @@ class FrozenSchema:
 
         [upstream]: https://github.com/pola-rs/polars/blob/cdd247aaba8db3332be0bd031e0f31bc3fc33f77/crates/polars-schema/src/schema.rs#L265-L274.
         """
-        return freeze_schema(self._mapping | other._mapping)
+        return FrozenSchema(self._mapping | other._mapping)
 
     # TODO @dangotbanned: Add resolved variant(s)?
     def select(self, exprs: Seq[NamedIR]) -> FrozenSchema:
@@ -187,7 +187,7 @@ class FrozenSchema:
             - Any `cast` nodes are not reflected in the schema
         """
         names = (e.name for e in exprs)
-        return freeze_schema((name, self.get(name, _unknown)) for name in names)
+        return FrozenSchema((name, self.get(name, _unknown)) for name in names)
 
     def select_names(
         self,
@@ -210,7 +210,7 @@ class FrozenSchema:
                 check_column_names_are_unique(names)
             if check_exists and not (self.keys() >= requested):
                 raise column_not_found_error(names, self)
-        return freeze_schema((name, self[name]) for name in names)
+        return FrozenSchema((name, self[name]) for name in names)
 
     def rename(
         self, mapping: Mapping[str, str], /, *, check_exists: bool = True
@@ -223,11 +223,11 @@ class FrozenSchema:
         """
         if not check_exists:
             it = ((mapping.get(name, name), dtype) for name, dtype in self.items())
-            return freeze_schema(it)
+            return FrozenSchema(it)
         renames = mapping if isinstance(mapping, dict) else dict(mapping)
         old = tuple(renames)
         it = ((renames.pop(name, name), dtype) for name, dtype in self.items())
-        result = freeze_schema(it)
+        result = FrozenSchema(it)
         if renames:
             raise column_not_found_error(old, self)
         return result
@@ -252,7 +252,7 @@ class FrozenSchema:
             miss = {name: default(name) or _unknown for name in names if name not in self}
         else:
             miss = {name: _unknown for name in names if name not in self}
-        return freeze_schema(self._mapping | miss)
+        return FrozenSchema(self._mapping | miss)
 
     # TODO @dangotbanned: Update the other methods to try and avoid creating new schemas
     @unstable
@@ -267,7 +267,7 @@ class FrozenSchema:
             for name, dtype in it
             if name not in current or dtype != current[name]
         }:
-            return freeze_schema(current | updates)
+            return FrozenSchema(current | updates)
         return self
 
     def with_columns_irs(self, exprs: Seq[NamedIR]) -> Seq[NamedIR]:
@@ -382,10 +382,6 @@ class HasSchema(Protocol):
 
 def has_schema(obj: Any) -> TypeIs[HasSchema]:
     return _hasattr_static(obj, "schema")
-
-
-# TODO @dangotbanned: Update all the references to this **in the commit after**
-freeze_schema = FrozenSchema
 
 
 @lru_cache(maxsize=100)

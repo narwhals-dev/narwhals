@@ -26,7 +26,7 @@ from narwhals._plan.exceptions import (
 )
 from narwhals._plan.expressions import selectors as s_ir
 from narwhals._plan.plans import resolved as rp
-from narwhals._plan.schema import FrozenSchema, freeze_schema
+from narwhals._plan.schema import FrozenSchema
 from narwhals._typing import IntoBackend
 from narwhals._utils import (
     Version,
@@ -75,7 +75,7 @@ def expressions_to_schema(exprs: Iterable[NamedIR], schema: FrozenSchema) -> Fro
     [`.with_columns()`]: https://github.com/narwhals-dev/narwhals/blob/ddd93cd4b95d9760fe87cf0d7e29d87b24615777/narwhals/_plan/schema.py#L73-L78
     [#3396]: https://github.com/narwhals-dev/narwhals/pull/3396
     """
-    return freeze_schema((expr.name, expr.resolve_dtype(schema)) for expr in exprs)
+    return FrozenSchema((expr.name, expr.resolve_dtype(schema)) for expr in exprs)
 
 
 def resolve_dtype_auto_implode(expr: NamedIR, schema: FrozenSchema, /) -> DType:
@@ -99,7 +99,7 @@ def _align_diagonal(
     schemas: Iterable[FrozenSchema],
     union_schema: Mapping[str, DType],
 ) -> Seq[rp.ResolvedPlan]:
-    union_freeze = freeze_schema(union_schema)
+    union_freeze = FrozenSchema(union_schema)
     union_names = union_schema.keys()
     null_exprs: dict[str, NamedIR] = {}
 
@@ -176,7 +176,7 @@ def _join_supertypes(
 def _with_supertypes(plan: rp.ResolvedPlan, casts: Seq[Cast]) -> rp.WithColumns:
     schema = dict(plan.schema)
     schema.update((e.name, e.expr.dtype) for e in casts)
-    return rp.WithColumns(input=plan, exprs=casts, output_schema=freeze_schema(schema))
+    return rp.WithColumns(input=plan, exprs=casts, output_schema=FrozenSchema(schema))
 
 
 # TODO @dangotbanned: (When sinking from LazyFrame) where should subclasses be retrieved from?
@@ -241,7 +241,7 @@ class Resolver:
                 duplicate = next(nm for nm in schema if nm in seen)
                 msg = f"Column with name {duplicate!r} has more than one occurrence"
                 raise DuplicateError(msg)
-        return rp.HConcat(inputs=inputs, output_schema=freeze_schema(merged_schema))
+        return rp.HConcat(inputs=inputs, output_schema=FrozenSchema(merged_schema))
 
     def concat_vertical(self, plan: lp.VConcat, /) -> rp.VConcat:
         opts = plan.options
@@ -283,7 +283,7 @@ class Resolver:
             function=rp.Explode(
                 columns=columns,
                 options=f_explode.options,
-                output_schema=freeze_schema(schema),
+                output_schema=FrozenSchema(schema),
             ),
         )
 
@@ -333,7 +333,7 @@ class Resolver:
         }
 
         if not keys_require_projection:
-            group_output_schema = freeze_schema(output_schema_mut | aggs_schema_mut)
+            group_output_schema = FrozenSchema(output_schema_mut | aggs_schema_mut)
             return rp.GroupByNames(
                 input=input,
                 key_names=key_names,
@@ -356,12 +356,12 @@ class Resolver:
             with_output_schema_extra[safe_name] = output_schema_mut[key.name]
 
         safe_keys = tuple(safe_named_irs_keys)
-        group_output_schema = freeze_schema(with_output_schema_extra | aggs_schema_mut)
+        group_output_schema = FrozenSchema(with_output_schema_extra | aggs_schema_mut)
         return rp.GroupBy(
             input=rp.WithColumns(
                 input=input,
                 exprs=safe_keys,
-                output_schema=freeze_schema(output_schema_mut | with_output_schema_extra),
+                output_schema=FrozenSchema(output_schema_mut | with_output_schema_extra),
             ),
             keys=safe_keys,
             aggs=aggs,
@@ -395,7 +395,7 @@ class Resolver:
                     msg = f"column with name {new_name!r} already exists"
                     raise DuplicateError(msg)
                 new_schema[new_name] = dtype
-            output_schema = freeze_schema(new_schema)
+            output_schema = FrozenSchema(new_schema)
 
         if supertype_casts:
             if casts_left := supertype_casts[0]:
@@ -446,7 +446,7 @@ class Resolver:
                 msg = f"column with name {new_name!r} already exists"
                 raise DuplicateError(msg)
             new_schema[new_name] = dtype
-        output_schema = freeze_schema(new_schema)
+        output_schema = FrozenSchema(new_schema)
 
         if supertype_casts:
             if casts_left := supertype_casts[0]:
@@ -507,7 +507,7 @@ class Resolver:
         return rp.Select(
             input=input,
             exprs=tuple(exprs),
-            output_schema=freeze_schema(zip(names, input_schema.values())),
+            output_schema=FrozenSchema(zip(names, input_schema.values())),
         )
 
     def scan_csv(self, plan: lp.ScanCsv, /) -> rp.ScanCsv:
@@ -614,7 +614,7 @@ class Resolver:
                 raise_duplicate_error((*seen, *(f.name for f in dtype.fields)))
         return rp.MapFunction(
             input=input,
-            function=rp.Unnest(columns=columns, output_schema=freeze_schema(schema)),
+            function=rp.Unnest(columns=columns, output_schema=FrozenSchema(schema)),
         )
 
     def unpivot(self, plan: lp.MapFunction[lp.Unpivot], /) -> rp.ResolvedPlan:
@@ -649,7 +649,7 @@ class Resolver:
         return rp.MapFunction(
             input=input,
             function=rp.Unpivot(
-                on=on, index=index, options=opts, output_schema=freeze_schema(schema)
+                on=on, index=index, options=opts, output_schema=FrozenSchema(schema)
             ),
         )
 
@@ -682,7 +682,7 @@ class Resolver:
         if name in input_schema:
             msg = f"Duplicate column name {name!r}"
             raise DuplicateError(msg)
-        return input, freeze_schema(name=IDX_DTYPE, **input_schema)
+        return input, FrozenSchema(name=IDX_DTYPE, **input_schema)
 
 
 @overload
@@ -714,7 +714,7 @@ def _scan(
         if format == "csv"
         else (io.read_parquet_schema, rp.ScanParquet)
     )
-    return tp(source=source, output_schema=freeze_schema(schema(source, backend=backend)))
+    return tp(source=source, output_schema=FrozenSchema(schema(source, backend=backend)))
 
 
 if not TYPE_CHECKING:

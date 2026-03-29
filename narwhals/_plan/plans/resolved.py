@@ -21,7 +21,7 @@ from narwhals._plan._immutable import Immutable
 from narwhals._plan.compliant.typing import Native
 from narwhals._plan.plans._base import _BasePlan
 from narwhals._plan.plans.typing import FrameT
-from narwhals._plan.schema import freeze_schema
+from narwhals._plan.schema import FrozenSchema
 from narwhals._plan.typing import ClosedKwds, Seq
 from narwhals._typing_compat import TypeVar
 from narwhals._utils import zip_strict
@@ -44,7 +44,6 @@ if TYPE_CHECKING:
         UnpivotOptions,
     )
     from narwhals._plan.plans.visitors import ResolvedToCompliant
-    from narwhals._plan.schema import FrozenSchema
     from narwhals._utils import Implementation
 
 Incomplete: TypeAlias = Any
@@ -80,7 +79,7 @@ class ResolvedPlan(_BasePlan[_Fwd], _root=True):
     def rename(self, mapping: Mapping[str, str]) -> Select:  # pragma: no cover
         schema = self.schema
         exprs = tuple(ir.NamedIR(mapping.get(old, old), ir.col(old)) for old in schema)
-        output_schema = freeze_schema(zip((e.name for e in exprs), schema.values()))
+        output_schema = FrozenSchema(zip((e.name for e in exprs), schema.values()))
         return Select(input=self, exprs=exprs, output_schema=output_schema)
 
     # or maybe `execute`?

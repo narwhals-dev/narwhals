@@ -25,7 +25,7 @@ from narwhals._plan.options import (
 )
 from narwhals._plan.plans._base import _BasePlan
 from narwhals._plan.plans.typing import FrameT
-from narwhals._plan.schema import freeze_schema
+from narwhals._plan.schema import FrozenSchema
 from narwhals._plan.typing import ClosedKwds, Seq
 from narwhals._typing import _LazyAllowedImpl
 from narwhals._typing_compat import TypeVar
@@ -50,7 +50,6 @@ if TYPE_CHECKING:
     from narwhals._plan.lazyframe import LazyFrame
     from narwhals._plan.plans.resolved import ResolvedPlan
     from narwhals._plan.plans.visitors import LogicalToResolved
-    from narwhals._plan.schema import FrozenSchema
     from narwhals.typing import Backend, ConcatMethod, FileSource, IntoBackend, PivotAgg
 
 __all__ = [
@@ -490,7 +489,7 @@ class ScanDataFrame(ScanFrame["DataFrame[Any, Any]"]):
     def from_narwhals(frame: DataFrame[Any, Any], /) -> ScanDataFrame:
         obj = ScanDataFrame.__new__(ScanDataFrame)
         _OBJ_SETATTR(obj, "frame", frame.clone())
-        _OBJ_SETATTR(obj, "schema", freeze_schema(frame.collect_schema()))
+        _OBJ_SETATTR(obj, "schema", FrozenSchema(frame.collect_schema()))
         return obj
 
     @property
@@ -541,7 +540,7 @@ class ScanLazyFrame(ScanFrame["CompliantLazyFrame[Native]"], Generic[Native]):
     ) -> ScanLazyFrame[FromNative]:
         obj: ScanLazyFrame[FromNative] = ScanLazyFrame.__new__(ScanLazyFrame)
         _OBJ_SETATTR(obj, "frame", frame)
-        _OBJ_SETATTR(obj, "schema", freeze_schema(frame.input_schema))
+        _OBJ_SETATTR(obj, "schema", FrozenSchema(frame.input_schema))
         return obj
 
     def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:

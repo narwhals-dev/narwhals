@@ -63,7 +63,7 @@ from narwhals._plan.expressions import (
     RenameAlias,
     SelectorIR,
 )
-from narwhals._plan.schema import FrozenSchema, IntoFrozenSchema, freeze_schema
+from narwhals._plan.schema import FrozenSchema, IntoFrozenSchema
 from narwhals._typing_compat import assert_never
 from narwhals._utils import zip_strict
 from narwhals.exceptions import ComputeError, InvalidOperationError
@@ -197,7 +197,7 @@ class Expander:
     ignored: Ignored
 
     def __init__(self, scope: IntoFrozenSchema, ignored: Ignored = ()) -> None:
-        self.schema = freeze_schema(scope)
+        self.schema = FrozenSchema(scope)
         self.ignored = ignored
 
     def iter_expand_expressions(self, exprs: Iterable[ExprIR], /) -> Iterator[ExprIR]:
