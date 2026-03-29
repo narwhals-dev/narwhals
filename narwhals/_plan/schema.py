@@ -4,7 +4,7 @@ from collections.abc import Callable, Collection, Mapping
 from functools import lru_cache
 from itertools import chain
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, Final, Protocol, TypeVar, final, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Final, Protocol, TypeVar, final, overload
 
 from narwhals._plan._expr_ir import NamedIR
 from narwhals._plan._version import into_version
@@ -25,21 +25,16 @@ if TYPE_CHECKING:
     from narwhals._plan.typing import Seq
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
-    from narwhals.typing import IntoSchema
 
-
-IntoFrozenSchema: TypeAlias = (
-    "IntoSchema | Iterable[tuple[str, DType]] | FrozenSchema | HasSchema"
-)
+T = TypeVar("T")
+IntoSchema: TypeAlias = "Mapping[str, DType] | Iterable[tuple[str, DType]]"
+IntoFrozenSchema: TypeAlias = "IntoSchema | FrozenSchema | HasSchema"
 """A schema to freeze, or an already frozen one.
 
 As `DType` instances (`.values()`) are hashable, we can coerce the schema
 into a cache-safe proxy structure (`FrozenSchema`).
 """
-
-FrozenColumns: TypeAlias = "Seq[str]"
-_FrozenSchemaHash: TypeAlias = "Seq[tuple[str, DType]]"
-T = TypeVar("T")
+_ReadOnlyMapping: TypeAlias = "MappingProxyType[str, DType]"
 
 _unknown = Unknown()
 _OBJ_SETATTR = object.__setattr__
@@ -71,12 +66,12 @@ else:
 class FrozenSchema(_BaseSchema):
     """A cache-friendly - **internal** - extension to `nw.Schema`.
 
-    - Accepts **either** a single positional-only argument or **kwds
-    - Has some extra methods inspired by [`polars-schema::schema::Schema`]
-
     Arguments:
-        iterable: A schema, an iterable over one, or an object that defines `obj.schema: IntoSchema`.
+        iterable: A schema, an iterable over one, or an object that defines `obj.schema`.
         **schema: Keywords mapping column names to datatypes.
+
+    Note:
+        Besides the caching, there's also some methods inspired by [`polars-schema::schema::Schema`].
 
     Examples:
         >>> import narwhals as nw
@@ -96,11 +91,15 @@ class FrozenSchema(_BaseSchema):
         >>> isinstance(schema, Mapping)
         True
 
-        Calls to `FrozenSchema` are cached:
+        Calls to `FrozenSchema(...)` are cached:
         >>> schema is FrozenSchema(mapping)
         True
 
-        While still providing the flexibilty of `dict()`:
+        The hash is agnostic to whatever wraps/yields the fields:
+        >>> schema is FrozenSchema((k, v) for k, v in mapping.items())
+        True
+
+        So we still get the flexibilty of `dict(...)`:
         >>> schema is FrozenSchema(**mapping)
         True
         >>> schema is FrozenSchema(a=nw.Int64(), b=nw.String())
@@ -114,49 +113,55 @@ class FrozenSchema(_BaseSchema):
         >>> schema is FrozenSchema(schema.items())
         True
 
-        And then some:
+        *And* if the first argument *has* a `schema` - that'll do too:
         >>> from narwhals._plan import DataFrame
         >>> frame = DataFrame.from_dict({"a": [1], "b": ["ooh"]}, backend="polars")
         >>> schema is FrozenSchema(frame)
+        True
+        >>> schema is FrozenSchema(frame._compliant)
         True
 
     [`polars-schema::schema::Schema`]: https://github.com/pola-rs/polars/blob/5ee71f3ee4dd1573b45f44714da7843a6205895c/crates/polars-schema/src/schema.rs
     """
 
     __slots__ = (_HASH_NAME, "_mapping")
-    # TODO @dangotbanned: (long-term) Add version branching for `frozendict` when available
-    # https://docs.python.org/3.15/library/stdtypes.html#frozendict
-    _mapping: MappingProxyType[str, DType]
+    _mapping: _ReadOnlyMapping
     _hash_value: int
+    __empty: ClassVar[FrozenSchema | None] = None
 
     # NOTE: Import, export
-    @overload
-    def __new__(cls, iterable: IntoFrozenSchema, /) -> FrozenSchema: ...
-    # TODO @dangotbanned: (low-priority) Support the merging variant
-    # https://docs.python.org/3.15/library/stdtypes.html#dict
-    @overload
-    def __new__(cls, /, **schema: DType) -> FrozenSchema: ...
-    def __new__(
-        cls, iterable: IntoFrozenSchema | None = None, /, **schema: DType
-    ) -> FrozenSchema:
-        # Making any kind of assignment in `__init__` would break the caching concept
+    def __new__(cls, iterable: IntoFrozenSchema = (), /, **named: DType) -> FrozenSchema:
+        # We use `__new__` to intercept (and hopefully avoid) the creation of new instances
         # https://docs.python.org/3/reference/datamodel.html#object.__new__
         if isinstance(iterable, FrozenSchema):
+            if named:
+                return _from_items(tuple((iterable._mapping | named).items()))
             return iterable
-        into = iterable.schema if has_schema(iterable) else (iterable or schema)
-        hashable = tuple(into.items() if isinstance(into, Mapping) else into)
-        return _FrozenSchema_from_items_cached(hashable)
+        if named:
+            merged = named if not iterable else (dict(_unwrap_schema(iterable), **named))
+            return _from_items(tuple(merged.items()))
+        if isinstance((map_or_it := _unwrap_schema(iterable)), Mapping):
+            return _from_items(tuple(map_or_it.items()))
+        if map_or_it:
+            return _from_items(tuple(map_or_it))
+        return FrozenSchema.empty()
 
     @staticmethod
-    def _from_mapping(mapping: MappingProxyType[str, DType], /) -> FrozenSchema:
+    def _from_read_only(mapping: _ReadOnlyMapping, /) -> FrozenSchema:
         obj = object.__new__(FrozenSchema)
         _OBJ_SETATTR(obj, "_mapping", mapping)
         return obj
 
     @staticmethod
-    def _from_items(items: _FrozenSchemaHash, /) -> FrozenSchema:
-        # `frozendict` could slot in here, but should be a version-branch-defined function
-        return FrozenSchema._from_mapping(MappingProxyType(dict(items)))
+    def _from_items(items: Seq[tuple[str, DType]], /) -> FrozenSchema:
+        return FrozenSchema._from_read_only(_read_only_mapping(items))
+
+    @staticmethod
+    def empty() -> FrozenSchema:
+        if (empty := FrozenSchema.__empty) is not None:
+            return empty
+        FrozenSchema.__empty = FrozenSchema._from_read_only(_read_only_mapping(()))
+        return FrozenSchema.__empty
 
     def to_narwhals(self, version: Version = Version.MAIN) -> Schema:
         """Convert this `FrozenSchema` into `narwhals.Schema`."""
@@ -164,9 +169,9 @@ class FrozenSchema(_BaseSchema):
 
     # NOTE: Convenience methods/properties
     @property
-    def names(self) -> FrozenColumns:
+    def names(self) -> Seq[str]:
         """Get the column names of the schema."""
-        return freeze_columns(self)
+        return _freeze_columns(self)
 
     def merge(self, other: FrozenSchema, /) -> FrozenSchema:
         """Return a new schema, merging `other` with `self` (see [upstream]).
@@ -301,7 +306,6 @@ class FrozenSchema(_BaseSchema):
         return f"{tp_name}{hugging_parentheses}"
 
     # NOTE: `Immutable`-related
-    # `__str__`?
     def __hash__(self) -> int:
         if hasattr(self, _HASH_NAME):
             hash_value = self._hash_value
@@ -381,18 +385,28 @@ Mapping.register(FrozenSchema)  # pyright: ignore[reportAttributeAccessIssue]
 
 class HasSchema(Protocol):
     @property
-    def schema(self) -> IntoSchema: ...
+    def schema(self) -> Mapping[str, DType]: ...
 
 
 def has_schema(obj: Any) -> TypeIs[HasSchema]:
     return _hasattr_static(obj, "schema")
 
 
+def _unwrap_schema(obj: IntoSchema | HasSchema) -> IntoSchema:
+    return obj.schema if has_schema(obj) else obj
+
+
+def _read_only_mapping(items: Seq[tuple[str, DType]], /) -> _ReadOnlyMapping:
+    # TODO @dangotbanned: (long-term) Add version branching for `frozendict` when available
+    # https://docs.python.org/3.15/library/stdtypes.html#frozendict
+    return MappingProxyType(dict(items))
+
+
 @lru_cache(maxsize=100)
-def _FrozenSchema_from_items_cached(schema: _FrozenSchemaHash, /) -> FrozenSchema:  # noqa: N802
+def _from_items(schema: Seq[tuple[str, DType]], /) -> FrozenSchema:
     return FrozenSchema._from_items(schema)
 
 
 @lru_cache(maxsize=100)
-def freeze_columns(schema: FrozenSchema, /) -> FrozenColumns:
+def _freeze_columns(schema: FrozenSchema, /) -> Seq[str]:
     return tuple(schema)
