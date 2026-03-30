@@ -119,7 +119,7 @@ class SparkLikeExprDateTimeNamespace(SQLExprDateTimeNamesSpace["SparkLikeExpr"])
                 UNITS_DICT[unit], F.lit(multiple), expr
             )
 
-        return self.compliant._with_callable(_offset_by)
+        return self.compliant._with_elementwise(_offset_by)
 
     def _no_op_time_zone(self, time_zone: str) -> SparkLikeExpr:  # pragma: no cover
         def func(df: SparkLikeLazyFrame) -> Sequence[Column]:
