@@ -302,11 +302,8 @@ class PandasLikeSeries(EagerSeries[Any]):
         )
         series = native_series if in_place else native_series.copy(deep=True)
 
-        if impl.is_pandas():
-            if in_place and NUMPY_VERSION < (2,):  # pragma: no cover
-                values_native = values_native.copy()
-            if self._backend_version < (1, 2):
-                indices_native = indices_native.to_numpy()
+        if impl.is_pandas() and in_place and NUMPY_VERSION < (2,):  # pragma: no cover
+            values_native = values_native.copy()
 
         series.iloc[indices_native] = values_native
 
