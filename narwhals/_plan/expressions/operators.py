@@ -17,7 +17,8 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self, TypeAlias
 
-    from narwhals._plan.expressions import BinaryExpr, BinarySelector, ExprIR
+    from narwhals._plan.expressions import BinaryExpr, ExprIR
+    from narwhals._plan.expressions.selectors import BinarySelector
     from narwhals._plan.schema import FrozenSchema
     from narwhals._plan.typing import (
         LeftSelectorT,
@@ -87,7 +88,7 @@ class SelectorOperator(Operator, func=None):
     def to_binary_selector(
         self, left: LeftSelectorT, right: RightSelectorT, /
     ) -> BinarySelector[LeftSelectorT, Self, RightSelectorT]:
-        from narwhals._plan.expressions.expr import BinarySelector
+        from narwhals._plan.expressions.selectors import BinarySelector
 
         return BinarySelector(left=left, op=self, right=right)
 

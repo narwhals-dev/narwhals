@@ -28,7 +28,7 @@ from tests.plan.utils import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Callable, Iterable
 
     from narwhals._plan.typing import IntoExpr, OperatorFn
     from narwhals.dtypes import DType
@@ -645,21 +645,27 @@ def test_selector_array(schema_nested_2: nw.Schema) -> None:
     df.assert_selects(ncs.array(ncs.all()), "b", "c", "d", "f")
     df.assert_selects(ncs.array(size=4), "b", "c", "f")
     df.assert_selects(ncs.array(inner=ncs.integer()), "b", "c", "d")
-    df.assert_selects(ncs.array(inner=ncs.string()), "f")
+    df.assert_selects(ncs.array(inner=ncs.string() | ncs.boolean()), "f")
+    df.assert_selects(ncs.array(~ncs.integer()), "f")
+    df.assert_selects(ncs.array(ncs.all() | ncs.array(ncs.all())), "b", "c", "d", "f")
 
 
-def test_selector_non_dtype_inside_dtype(schema_nested_2: nw.Schema) -> None:
-    df = Frame(schema_nested_2)
-
-    with pytest.raises(
-        TypeError, match=r"expected datatype based expression got.+by_name\("
-    ):
-        df.project(ncs.list(inner=ncs.by_name("???")))
-
-    with pytest.raises(
-        TypeError, match=r"expected datatype based expression got.+by_name\("
-    ):
-        df.project(ncs.array(inner=ncs.by_name("???")))
+@pytest.mark.parametrize("outer", [ncs.list, ncs.array], ids=["list", "array"])
+@pytest.mark.parametrize(
+    "inner",
+    [
+        ncs.by_name("???"),
+        ~ncs.by_index(1),
+        ncs.matches(r"any") | ncs.by_index(0, 1),
+        ncs.boolean() & ncs.last(),
+    ],
+    ids=["root", "invert", "binary", "binary-mixed"],
+)
+def test_selector_non_dtype_inside_dtype(
+    outer: Callable[[Selector | None], Selector], inner: Selector
+) -> None:
+    with pytest.raises(TypeError, match=r"expected datatype based expression"):
+        outer(inner)
 
 
 def test_selector_enum() -> None:

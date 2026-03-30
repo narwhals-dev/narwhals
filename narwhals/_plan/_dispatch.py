@@ -318,7 +318,7 @@ class DispatcherOptions:
     >>> selector = nw.col("a", "b", "c")._ir
     >>> selector.dispatch(..., ..., ...)
     Traceback (most recent call last):
-    TypeError: 'RootSelector' should not appear at the compliant-level.
+    TypeError: 'ByName' should not appear at the compliant-level.
     <BLANKLINE>
     Make sure to expand all expressions first, got:
     ncs.by_name('a', 'b', 'c', require_all=True)
@@ -357,9 +357,8 @@ class DispatcherOptions:
 
     `override_name` provides an escape hatch for edge cases:
 
-        >>> show_dispatch_names(ir.Column, ir.Lit, ir.boolean.Not)
+        >>> show_dispatch_names(ir.Column, ir.boolean.Not)
         Column -> col
-        Lit    -> lit
         Not    -> not_
 
     [snake_case]: https://en.wikipedia.org/wiki/Snake_case

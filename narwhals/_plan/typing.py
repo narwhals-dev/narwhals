@@ -85,6 +85,15 @@ AggExprT_co = TypeVar("AggExprT_co", bound="AggExpr", default="AggExpr", covaria
 SelectorT = TypeVar("SelectorT", bound="SelectorIR", default="SelectorIR")
 LeftSelectorT = TypeVar("LeftSelectorT", bound="SelectorIR", default="SelectorIR")
 RightSelectorT = TypeVar("RightSelectorT", bound="SelectorIR", default="SelectorIR")
+SelectorT_co = TypeVar(
+    "SelectorT_co", bound="SelectorIR", default="SelectorIR", covariant=True
+)
+LeftSelectorT_co = TypeVar(
+    "LeftSelectorT_co", bound="SelectorIR", default="SelectorIR", covariant=True
+)
+RightSelectorT_co = TypeVar(
+    "RightSelectorT_co", bound="SelectorIR", default="SelectorIR", covariant=True
+)
 SelectorOperatorT = TypeVar(
     "SelectorOperatorT", bound="ops.SelectorOperator", default="ops.SelectorOperator"
 )

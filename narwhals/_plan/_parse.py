@@ -297,7 +297,7 @@ def into_selector_ir(
     if not names:
         s = irs.popleft()
     else:
-        s = s_ir.ByName(names=tuple(names), require_all=require_all).to_selector_ir()
+        s = s_ir.ByName(names=tuple(names), require_all=require_all)
     return s.or_(*irs)
 
 
@@ -311,7 +311,7 @@ def into_iter_selector_ir(
         more_inputs: Use if `*args` were accepted *in-addition-to* `first_input` as syntax sugar.
     """
     if isinstance(first_input, str):
-        yield s_ir.ByName.from_name(first_input).to_selector_ir()
+        yield s_ir.ByName.from_name(first_input)
     elif not isinstance(first_input, Iterable):
         yield _into_selector_ir(first_input)
     elif more_inputs:
@@ -329,7 +329,7 @@ def _into_selector_ir(
     if isinstance(input, _import_expr()):
         return input._ir.to_selector_ir()
     if isinstance(input, str):
-        return s_ir.ByName.from_name(input, require_all=require_all).to_selector_ir()
+        return s_ir.ByName.from_name(input, require_all=require_all)
     msg = f"cannot turn {qualified_type_name(input)!r} into a selector"
     raise TypeError(msg)
 

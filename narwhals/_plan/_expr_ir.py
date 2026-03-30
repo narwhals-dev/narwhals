@@ -39,6 +39,7 @@ You could think of these sharing a role in lowering an IR:
 
 from __future__ import annotations
 
+import functools
 from functools import reduce
 from typing import TYPE_CHECKING, Generic, Literal, final
 
@@ -523,9 +524,9 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
 
         A special case where we can navigate to a name:
 
-            RootSelector(selector=cs.ByName(names=("name",), ...))
-            #                                       ^^^^
-            #                 Equivalent to `col("name")`
+            ByName(names=("name",), ...)
+            #              ^^^^
+            #              Equivalent to `col("name")`
 
             StructExpr(function=FieldByName(name="name"), ...)
             #                                     ^^^^
@@ -580,16 +581,16 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
 # TODO @dangotbanned: Class-level doc
 class SelectorIR(ExprIR, dispatch="no_dispatch"):
     def to_narwhals(self, version: Version = Version.MAIN) -> Selector:
+        # TODO @dangotbanned: Use `into_version`
         from narwhals._plan.selectors import Selector, SelectorV1
 
         tp = Selector if version is Version.MAIN else SelectorV1
         return tp._from_ir(self)
 
-    # NOTE: Corresponds with `Selector.iter_expand`
-    # A longer name is used here to distinguish expression and name-only expansion
-    # TODO @dangotbanned: Docs must stay synced with inner!
-    # - [ ] Use markdown that renders better w/ pylance
-    # - [ ] Add an example?
+    # TODO @dangotbanned: Docs should use markdown that renders better w/ pylance
+    # TODO @dangotbanned: Docs example?
+    # TODO @dangotbanned: Relax `schema: FrozenSchema` to `Mapping[str, DType]`
+    # - re-expose and use `_freeze_columns(schema)` where indexing is needed
     def iter_expand_names(
         self, schema: FrozenSchema, ignored_columns: Ignored
     ) -> Iterator[str]:
@@ -612,16 +613,26 @@ class SelectorIR(ExprIR, dispatch="no_dispatch"):
         msg = f"{type(self).__name__}.iter_expand_names"
         raise NotImplementedError(msg)
 
-    # TODO @dangotbanned: Explain `matches`
+    # TODO @dangotbanned: Doc needs another pass since moving up a level
+    @final
     def matches(self, dtype: IntoDType) -> bool:
-        """Return True if we can select this dtype."""
-        msg = f"{type(self).__name__}.matches"
+        """Return True if this selector matches `dtype`.
+
+        Important:
+            The result will *only* be cached if this method is **not overridden**.
+            Instead, use `SelectorIR._matches` to customize the check.
+        """
+        return _selector_matches(self, dtype)
+
+    # TODO @dangotbanned: Explain `_matches`
+    def _matches(self, dtype: IntoDType) -> bool:
+        msg = f"{type(self).__name__}._matches"
         raise NotImplementedError(msg)
 
     # TODO @dangotbanned: Explain `to_dtype_selector`
-    def to_dtype_selector(self) -> Self:
-        msg = f"{type(self).__name__}.to_dtype_selector"
-        raise NotImplementedError(msg)
+    def to_dtype_selector(self) -> SelectorIR:
+        msg = f"expected datatype based expression got {self!r}"
+        raise TypeError(msg)
 
     def to_selector_ir(self) -> Self:
         return self
@@ -813,3 +824,11 @@ class NamedIR(Immutable, Generic[ExprIRT_co]):
         [#3396]: https://github.com/narwhals-dev/narwhals/pull/3396
         """
         return self.expr.resolve_dtype(schema)
+
+
+@functools.lru_cache(maxsize=128)
+def _selector_matches(selector: SelectorIR, dtype: IntoDType, /) -> bool:
+    # `SelectorIR.matches`       (uncached)
+    # -> `_selector_matches`     (cached)
+    # -> `SelectorIR._matches`   (impl)
+    return selector._matches(dtype)

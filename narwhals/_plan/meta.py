@@ -138,10 +138,8 @@ def _expr_output_name(expr: ir.ExprIR, /) -> str | ComputeError:
         if isinstance(e, ir.KeepName):
             msg = "cannot determine output column without a context for this expression"
             return ComputeError(msg)
-        if isinstance(e, ir.RootSelector) and (
-            isinstance(e.selector, cs.ByName) and len(e.selector.names) == 1
-        ):
-            return e.selector.names[0]
+        if isinstance(e, cs.ByName) and len(e.names) == 1:
+            return e.names[0]
         if isinstance(e, ir.StructExpr) and isinstance(e.function, FieldByName):
             return e.function.name
     msg = (

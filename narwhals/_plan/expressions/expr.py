@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Generic, final
+from typing import TYPE_CHECKING, Generic
 
 import narwhals._plan.dtypes_mapper as dtm
 from narwhals._plan._dispatch import DispatcherOptions
@@ -14,38 +14,30 @@ from narwhals._plan.exceptions import over_order_by_names_error
 from narwhals._plan.expressions.selectors import ByName
 from narwhals._plan.typing import (
     FunctionT_co,
-    Ignored,
-    LeftSelectorT,
     LeftT,
     OperatorT,
     RangeT_co,
-    RightSelectorT,
     RightT,
     RollingT_co,
-    SelectorOperatorT,
-    SelectorT,
     Seq,
     StructT_co,
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator
+    from collections.abc import Iterator
 
     from typing_extensions import Self
 
     from narwhals._plan.compliant.typing import Ctx, FrameT_contra, R_co
-    from narwhals._plan.expressions import selectors as cs
     from narwhals._plan.expressions.functions import MapBatches  # noqa: F401
     from narwhals._plan.options import SortMultipleOptions, SortOptions
     from narwhals._plan.schema import FrozenSchema
     from narwhals.dtypes import DType
-    from narwhals.typing import IntoDType
 
 __all__ = [
     "Alias",
     "AnonymousExpr",
     "BinaryExpr",
-    "BinarySelector",
     "Cast",
     "Column",
     "Filter",
@@ -53,7 +45,6 @@ __all__ = [
     "Len",
     "Over",
     "RollingExpr",
-    "RootSelector",
     "Sort",
     "SortBy",
     "StructExpr",
@@ -104,8 +95,8 @@ class Column(ExprIR, dispatch=namespaced("col")):
     def __repr__(self) -> str:
         return f"col({self.name!r})"
 
-    def to_selector_ir(self) -> RootSelector:
-        return ByName.from_name(self.name).to_selector_ir()
+    def to_selector_ir(self) -> SelectorIR:
+        return ByName.from_name(self.name)
 
     def resolve_dtype(self, schema: FrozenSchema) -> DType:
         return schema[self.name]
@@ -369,110 +360,6 @@ class TernaryExpr(ExprIR):
         " - https://github.com/narwhals-dev/narwhals/pull/3396\n\n"
         "See Also: https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/schema.rs#L257-L273"
         raise NotImplementedError(msg)
-
-
-@final
-class RootSelector(SelectorIR):
-    """A single selector expression."""
-
-    __slots__ = ("selector",)
-    selector: cs.Selector
-
-    def __repr__(self) -> str:
-        return f"{self.selector!r}"
-
-    def iter_expand_names(
-        self, schema: FrozenSchema, ignored_columns: Ignored
-    ) -> Iterator[str]:
-        yield from self.selector.iter_expand(schema, ignored_columns)
-
-    def iter_output_name(self) -> Iterator[ExprIR]:
-        yield self
-
-    def matches(self, dtype: IntoDType) -> bool:
-        return self.selector.to_dtype_selector().matches(dtype)
-
-    def to_dtype_selector(self) -> Self:
-        return self.__replace__(selector=self.selector.to_dtype_selector())
-
-
-@final
-class BinarySelector(
-    SelectorIR, Generic[LeftSelectorT, SelectorOperatorT, RightSelectorT]
-):
-    """Application of two selector exprs via a set operator."""
-
-    __slots__ = ("left", "op", "right")
-    left: LeftSelectorT
-    op: SelectorOperatorT
-    right: RightSelectorT
-
-    def __repr__(self) -> str:
-        return f"[({self.left!r}) {self.op!r} ({self.right!r})]"
-
-    def iter_expand_names(
-        self, schema: FrozenSchema, ignored_columns: Ignored
-    ) -> Iterator[str]:
-        # by_name, by_index (upstream) lose their ability to reorder when used as a binary op
-        # (As designed) https://github.com/pola-rs/polars/issues/19384
-        names = schema.names
-        left = frozenset(self.left.iter_expand_names(schema, ignored_columns))
-        right = frozenset(self.right.iter_expand_names(schema, ignored_columns))
-        remaining: frozenset[str] = self.op(left, right)
-        target: Iterable[str]
-        if remaining:
-            target = (
-                names
-                if len(remaining) == len(names)
-                else (nm for nm in names if nm in remaining)
-            )
-        else:
-            target = ()
-        yield from target
-
-    def matches(self, dtype: IntoDType) -> bool:
-        left = self.left.matches(dtype)
-        right = self.right.matches(dtype)
-        return bool(self.op(left, right))
-
-    def to_dtype_selector(self) -> Self:
-        return self.__replace__(
-            left=self.left.to_dtype_selector(), right=self.right.to_dtype_selector()
-        )
-
-
-@final
-class InvertSelector(SelectorIR, Generic[SelectorT]):
-    __slots__ = ("selector",)
-    selector: SelectorT
-
-    def __repr__(self) -> str:
-        return f"~{self.selector!r}"
-
-    def iter_expand_names(
-        self, schema: FrozenSchema, ignored_columns: Ignored
-    ) -> Iterator[str]:
-        # by_name, by_index (upstream) lose their ability to reorder when used as a binary op
-        # that includes invert, which is implemented as Difference(All, Selector)
-        # (As designed) https://github.com/pola-rs/polars/issues/19384
-        names = schema.names
-        ignore = frozenset(self.selector.iter_expand_names(schema, ignored_columns))
-        target: Iterable[str]
-        if ignore:
-            target = (
-                ()
-                if len(ignore) == len(names)
-                else (nm for nm in names if nm not in ignore)
-            )
-        else:
-            target = names
-        yield from target
-
-    def matches(self, dtype: IntoDType) -> bool:
-        return not self.selector.to_dtype_selector().matches(dtype)
-
-    def to_dtype_selector(self) -> Self:
-        return self.__replace__(selector=self.selector.to_dtype_selector())
 
 
 def ternary_expr(predicate: ExprIR, truthy: ExprIR, falsy: ExprIR, /) -> TernaryExpr:

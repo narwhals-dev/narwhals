@@ -389,7 +389,7 @@ class LogicalPlan(_BasePlan[_Fwd], _root=True):
         return self._select(((~columns.to_narwhals())._ir,))
 
     def drop_nulls(self, subset: SelectorIR | None = None) -> Filter:  # pragma: no cover
-        predicate = all_horizontal((subset or s_ir.all()).to_narwhals().is_not_null()._ir)
+        predicate = all_horizontal((subset or s_ir.All()).to_narwhals().is_not_null()._ir)
         return self.filter(predicate)
 
     def head(self, n: int = 5) -> Slice:  # pragma: no cover

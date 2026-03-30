@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import operator
-import re
 from collections import deque
 from functools import reduce
 from typing import TYPE_CHECKING, Any, ClassVar, overload
@@ -14,6 +13,7 @@ from narwhals._utils import Version
 from narwhals.dtypes import DType
 
 if TYPE_CHECKING:
+    import re
     from collections.abc import Callable, Mapping
     from datetime import timezone
 
@@ -155,12 +155,12 @@ class SelectorV1(Selector):
 
 
 def all() -> Selector:
-    return s_ir.all().to_narwhals()
+    return s_ir.All().to_narwhals()
 
 
 def array(inner: Selector | None = None, *, size: int | None = None) -> Selector:
-    s = inner._ir.to_dtype_selector() if inner is not None else None
-    return s_ir.Array(inner=s, size=size).to_selector_ir().to_narwhals()
+    s = inner if inner is None else inner._ir.to_dtype_selector()
+    return s_ir.Array(inner=s, size=size).to_narwhals()
 
 
 def by_dtype(*dtypes: OneOrIterable[DType | type[DType]]) -> Selector:
@@ -178,9 +178,7 @@ def by_dtype(*dtypes: OneOrIterable[DType | type[DType]]) -> Selector:
             msg = f"invalid dtype: {tp!r}"
             raise TypeError(msg)
     if dtypes_:
-        dtype_selector = (
-            s_ir.ByDType(dtypes=frozenset(dtypes_)).to_selector_ir().to_narwhals()
-        )
+        dtype_selector = s_ir.ByDType(dtypes=frozenset(dtypes_)).to_narwhals()
         selectors.appendleft(dtype_selector)
     it = iter(selectors)
     if first := next(it, None):
@@ -193,7 +191,7 @@ def by_index(*indices: OneOrIterable[int], require_all: bool = True) -> Selector
         sel = s_ir.ByIndex.from_index(indices[0], require_all=require_all)
     else:
         sel = s_ir.ByIndex.from_indices(*indices, require_all=require_all)
-    return sel.to_selector_ir().to_narwhals()
+    return sel.to_narwhals()
 
 
 def by_name(*names: OneOrIterable[str], require_all: bool = True) -> Selector:
@@ -201,30 +199,26 @@ def by_name(*names: OneOrIterable[str], require_all: bool = True) -> Selector:
         sel = s_ir.ByName.from_name(names[0], require_all=require_all)
     else:
         sel = s_ir.ByName.from_names(*names, require_all=require_all)
-    return sel.to_selector_ir().to_narwhals()
+    return sel.to_narwhals()
 
 
 def boolean() -> Selector:
-    return s_ir.Boolean().to_selector_ir().to_narwhals()
+    return s_ir.Boolean().to_narwhals()
 
 
 def categorical() -> Selector:
-    return s_ir.Categorical().to_selector_ir().to_narwhals()
+    return s_ir.Categorical().to_narwhals()
 
 
 def datetime(
     time_unit: OneOrIterable[TimeUnit] | None = None,
     time_zone: OneOrIterable[str | timezone | None] = ("*", None),
 ) -> Selector:
-    return (
-        s_ir.Datetime.from_time_unit_and_time_zone(time_unit, time_zone)
-        .to_selector_ir()
-        .to_narwhals()
-    )
+    return s_ir.Datetime.from_time_unit_and_time_zone(time_unit, time_zone).to_narwhals()
 
 
 def duration(time_unit: OneOrIterable[TimeUnit] | None = None) -> Selector:
-    return s_ir.Duration.from_time_unit(time_unit).to_selector_ir().to_narwhals()
+    return s_ir.Duration.from_time_unit(time_unit).to_narwhals()
 
 
 def empty() -> Selector:
@@ -232,58 +226,54 @@ def empty() -> Selector:
 
 
 def enum() -> Selector:
-    return s_ir.Enum().to_selector_ir().to_narwhals()
+    return s_ir.Enum().to_narwhals()
 
 
 def decimal() -> Selector:
-    return s_ir.Decimal().to_selector_ir().to_narwhals()
+    return s_ir.Decimal().to_narwhals()
 
 
 def first() -> Selector:
-    return s_ir.ByIndex.from_index(0).to_selector_ir().to_narwhals()
+    return s_ir.ByIndex.from_index(0).to_narwhals()
 
 
 def float() -> Selector:
-    return s_ir.Float().to_selector_ir().to_narwhals()
+    return s_ir.Float().to_narwhals()
 
 
 def integer() -> Selector:
-    return s_ir.Integer().to_selector_ir().to_narwhals()
+    return s_ir.Integer().to_narwhals()
 
 
 def last() -> Selector:
-    return s_ir.ByIndex.from_index(-1).to_selector_ir().to_narwhals()
+    return s_ir.ByIndex.from_index(-1).to_narwhals()
 
 
 def list(inner: Selector | None = None) -> Selector:
-    s = inner._ir.to_dtype_selector() if inner is not None else None
-    return s_ir.List(inner=s).to_selector_ir().to_narwhals()
+    s = inner if inner is None else inner._ir.to_dtype_selector()
+    return s_ir.List(inner=s).to_narwhals()
 
 
 def matches(pattern: str | re.Pattern[str]) -> Selector:
     tp = s_ir.Matches
-    s = (
-        tp(pattern=pattern)
-        if isinstance(pattern, re.Pattern)
-        else tp.from_string(pattern)
-    )
-    return s.to_selector_ir().to_narwhals()
+    p = pattern
+    return (tp.from_string(p) if isinstance(p, str) else tp(pattern=p)).to_narwhals()
 
 
 def numeric() -> Selector:
-    return s_ir.Numeric().to_selector_ir().to_narwhals()
+    return s_ir.Numeric().to_narwhals()
 
 
 def string() -> Selector:
-    return s_ir.String().to_selector_ir().to_narwhals()
+    return s_ir.String().to_narwhals()
 
 
 def struct() -> Selector:
-    return s_ir.Struct().to_selector_ir().to_narwhals()
+    return s_ir.Struct().to_narwhals()
 
 
 def temporal() -> Selector:
-    return s_ir.Temporal().to_selector_ir().to_narwhals()
+    return s_ir.Temporal().to_narwhals()
 
 
 _HASH_SENSITIVE_TO_SELECTOR: Mapping[type[DType], Callable[[], Selector]] = {

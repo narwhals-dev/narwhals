@@ -42,7 +42,7 @@ def test_dispatch(
 
     with pytest.raises(
         TypeError,
-        match=re_compile(r"RootSelector.+not.+appear.+compliant.+expand.+expr.+first"),
+        match=re_compile(r"ByIndex.+not.+appear.+compliant.+expand.+expr.+first"),
     ):
         df._compliant.select(forgot_to_expand)
 
@@ -122,7 +122,7 @@ def test_missing_compliant(
         (nwp.col("a").drop_nulls().arg_min(), "arg_min"),
         (nwp.col("a").map_batches(lambda x: x), "map_batches"),
         pytest.param(nwp.col("a").alias("b"), "Alias", id="no_dispatch-Alias"),
-        pytest.param(ncs.string(), "RootSelector", id="no_dispatch-RootSelector"),
+        pytest.param(ncs.string(), "String", id="no_dispatch-RootSelector"),
         pytest.param(
             ncs.by_name("a") | ncs.float(),
             "BinarySelector",

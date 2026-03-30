@@ -24,18 +24,15 @@ from narwhals._plan.expressions.expr import (
     Alias,
     AnonymousExpr,
     BinaryExpr,
-    BinarySelector,
     Cast,
     Column,
     Filter,
     FunctionExpr,
-    InvertSelector,
     Len,
     Over,
     OverOrdered,
     RangeExpr,
     RollingExpr,
-    RootSelector,
     Sort,
     SortBy,
     StructExpr,
@@ -45,6 +42,11 @@ from narwhals._plan.expressions.expr import (
 )
 from narwhals._plan.expressions.literal import Lit, LitSeries, lit, lit_series
 from narwhals._plan.expressions.name import KeepName, RenameAlias
+from narwhals._plan.expressions.selectors import (
+    BinarySelector,
+    InvertSelector,
+    RootSelector,
+)
 from narwhals._plan.expressions.window import over, over_ordered
 
 __all__ = [
