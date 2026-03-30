@@ -192,14 +192,20 @@ AsofJoinStrategy: TypeAlias = Literal["backward", "forward", "nearest"]
 ClosedInterval: TypeAlias = Literal["left", "right", "none", "both"]
 """Define which sides of the interval are closed (inclusive)."""
 
-ConcatMethod: TypeAlias = Literal["horizontal", "vertical", "diagonal"]
+ConcatMethod: TypeAlias = Literal[
+    "horizontal", "vertical", "vertical_relaxed", "diagonal", "diagonal_relaxed"
+]
 """Concatenating strategy.
 
 - *"vertical"*: Concatenate vertically. Column names must match.
+- *"vertical_relaxed"*: Same as vertical, but additionally coerces columns to their common
+    supertype if they are mismatched (eg: Int32 → Int64).
 - *"horizontal"*: Concatenate horizontally. If lengths don't match, then
     missing rows are filled with null values.
 - *"diagonal"*: Finds a union between the column schemas and fills missing
     column values with null.
+- *"diagonal_relaxed"*: Same as diagonal, but additionally coerces columns to their common
+    supertype if they are mismatched (eg: Int32 → Int64).
 """
 
 FillNullStrategy: TypeAlias = Literal["forward", "backward"]

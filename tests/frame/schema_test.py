@@ -8,7 +8,8 @@ from typing import TYPE_CHECKING, Any, Literal
 import pytest
 
 import narwhals as nw
-from narwhals.exceptions import PerformanceWarning
+from narwhals.exceptions import ComputeError, PerformanceWarning, SchemaMismatchError
+from narwhals.schema import to_supertype
 from tests.utils import PANDAS_VERSION, POLARS_VERSION, ConstructorPandasLike
 
 if TYPE_CHECKING:
@@ -22,6 +23,7 @@ if TYPE_CHECKING:
         IntoArrowSchema,
         IntoPandasSchema,
         IntoPolarsSchema,
+        IntoSchema,
     )
     from tests.utils import Constructor, ConstructorEager
 
@@ -704,3 +706,55 @@ def test_schema_from_to_roundtrip() -> None:
     assert nw_schema_1 == nw_schema_2
     assert nw_schema_2 == nw_schema_3
     assert py_schema_1 == py_schema_2
+
+
+@pytest.mark.parametrize(
+    ("left", "right", "expected"),
+    [
+        (
+            {"a": nw.Int64(), "b": nw.String()},
+            {"a": nw.Int64(), "b": nw.String()},
+            {"a": nw.Int64(), "b": nw.String()},
+        ),
+        (
+            {"a": nw.Int32(), "b": nw.Float32()},
+            {"a": nw.Int64(), "b": nw.Float64()},
+            {"a": nw.Int64(), "b": nw.Float64()},
+        ),
+        ({"a": nw.Int32()}, {"a": nw.Float64()}, {"a": nw.Float64()}),
+        ({"a": nw.Datetime("ns")}, {"a": nw.Datetime("us")}, {"a": nw.Datetime("us")}),
+    ],
+)
+def test_to_supertype(left: IntoSchema, right: IntoSchema, expected: IntoSchema) -> None:
+    result = to_supertype(nw.Schema(left), nw.Schema(right))
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    ("left", "right", "context"),
+    [
+        (
+            {"a": nw.Int64()},
+            {"a": nw.Int64(), "b": nw.String()},
+            pytest.raises(ComputeError, match="schema lengths differ"),
+        ),
+        (
+            {"a": nw.Int64()},
+            {"b": nw.Int64()},
+            pytest.raises(ComputeError, match="schema names differ: got b, expected a"),
+        ),
+        (
+            {"a": nw.Binary()},
+            {"a": nw.Int64()},
+            pytest.raises(
+                SchemaMismatchError,
+                match="failed to determine supertype of Binary and Int64",
+            ),
+        ),
+    ],
+)
+def test_to_supertype_exceptions(
+    left: IntoSchema, right: IntoSchema, context: pytest.RaisesExc
+) -> None:
+    with context:
+        to_supertype(nw.Schema(left), nw.Schema(right))
