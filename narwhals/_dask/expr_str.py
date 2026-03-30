@@ -45,10 +45,18 @@ class DaskExprStringNamespace(LazyExprNamespace["DaskExpr"], StringNamespace["Da
     def ends_with(self, suffix: str) -> DaskExpr:
         return self.compliant._with_callable(lambda expr: expr.str.endswith(suffix))
 
-    def contains(self, pattern: str, *, literal: bool) -> DaskExpr:
-        return self.compliant._with_callable(
-            lambda expr: expr.str.contains(pat=pattern, regex=not literal)
-        )
+    def contains(self, pattern: DaskExpr, *, literal: bool) -> DaskExpr:
+        if not pattern._metadata.is_literal:
+            msg = "dask backed `Expr.str.contains` only supports str replacement values"
+            raise TypeError(msg)
+
+        def _contains(expr: dx.Series, pattern: dx.Series) -> dx.Series:
+            # OK to call `compute` here as `pattern` is just a literal expression.
+            return expr.str.contains(  # pyright: ignore[reportAttributeAccessIssue]
+                pat=pattern.compute(), regex=not literal
+            )
+
+        return self.compliant._with_callable(_contains, pattern=pattern)
 
     def slice(self, offset: int, length: int | None) -> DaskExpr:
         return self.compliant._with_callable(
